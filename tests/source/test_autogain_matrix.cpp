@@ -324,6 +324,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         const double best = oracle(g.r, g.tgt);
         g.run(60);
         const double conv = convergeAt(g.log, 0, 60, best, 1.0, clipLim);
+        if (gVerbose) { printf("  start %.0f: conv %.1f, q at 60 s %.1f (best %.1f), gain %.1f split", start, conv, g.log.back().q, best, g.r.live.totalDb); for (double x : g.r.live.db) printf(" %.0f", x); printf("\n"); if (start != mid) { for (const auto& e : g.c.log()) if (e.t < 30) printf("      %6.1f %5.1f -> %5.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str()); } }
         row.settle = std::max(row.settle, conv);
         row.acqClip = std::max(row.acqClip, clipSeconds(g.log, 0, 60, clipLim));
         if (start == mid) {
@@ -339,7 +340,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
                 oracle(g.r, g.tgt, &bg);
                 printf("  %s/%s best %.1f at gain %.1f, final gain %.1f (true q %.1f) changes %d, status: %s\n", rr.id, kModeName[m], best, bg, g.r.live.totalDb, g.r.trueQuality(), moves, g.c.status().c_str());
                 const auto& lg = g.c.log();
-                for (size_t i = lg.size() > 25 ? lg.size() - 25 : 0; i < lg.size(); i++) printf("    %7.1f %5.1f -> %5.1f  %s\n", lg[i].t, lg[i].fromDb, lg[i].toDb, lg[i].why.c_str());
+                for (size_t i = 0; i < lg.size(); i++) printf("    %7.1f %5.1f -> %5.1f  %s\n", lg[i].t, lg[i].fromDb, lg[i].toDb, lg[i].why.c_str());
             }
         } else row.dq = std::max(row.dq, best - medianQ(g.log, 45, 60));
     }

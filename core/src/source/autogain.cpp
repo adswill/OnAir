@@ -243,7 +243,8 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
     const double tgtH = headroomTarget(), win = tgt_.windowDb;
     if (br_) return tickBracket(in, out);   // the short search owns the gain until it is done (it backs off on a clip by itself)
     // overload acts at once, whatever else is going on (settling included: a burst does not wait)
-    const bool over = in.adc.clipFraction > tgt_.clipLimit || (in.adc.peak >= 0.999 && in.adc.clipFraction > 0);
+    // v2: the clipped fraction decides. A lone sample at full scale in half a million is the tail of an OFDM signal's peak, not an overload (it cut 6 dB and forced the linear split)
+    const bool over = in.adc.clipFraction > tgt_.clipLimit || (!set_.v2 && in.adc.peak >= 0.999 && in.adc.clipFraction > 0);
     if (over && now >= changedAt_ + radio_.settleSec + 0.1) {   // only the radio's own delay: a burst does not wait for the loop's settle time
         const double c = in.adc.clipFraction;
         // at acquisition (start, retune) the start gain may be anywhere in the range: cut much harder while the ADC is hard against full scale
@@ -261,18 +262,23 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         while (!ovTimes_.empty() && ovTimes_.front() < now - 60) ovTimes_.erase(ovTimes_.begin());
         // a soft ceiling under the gain that clipped: 20 s, 90 s when it keeps happening (three episodes in a minute)
         if (episode && !returning) { ceil_ = cur_.totalDb - 3; preOvDb_ = cur_.totalDb; }
+        if (set_.v2) noteCut(now);
         ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
-        linearUntil_ = now + (set_.v2 && tgt_.kind != ModeKind::Pulsed ? 300 : 30);   // v2: the sensitivity split probe overloaded a strong signal again every minute (HackRF, strong DVB-T2): the linear split stays 5 minutes (not for pulsed ADS-B: a long linear split costs the far aircraft, tests adsb_autogain)
+        // the linear split costs noise figure, so only an overload from outside the channel (or products) earns it: then it stays 5 minutes (not for pulsed ADS-B: a long linear split
+        // costs the far aircraft). The ADC clipped on the wanted signal itself: the gain is cut, the split stays as the mode wants it
+        const bool frontOverload = !set_.v2 || imdSeen_ || (fl_.valid && fl_.strongestDbfs > fl_.chanDbfs + 10);
+        const Policy cutPol = frontOverload ? Policy::Linearity : pol_;
+        if (frontOverload) linearUntil_ = now + (set_.v2 && tgt_.kind != ModeKind::Pulsed ? 300 : 30);
         probe_ = 0; guard_ = false;
         havePrior_ = false;   // a remembered gain that clips is stale: the search is the wide one
         if (cur_.ampOn && set_.ampAllowed) {   // the amp first: it is the most exposed stage
             const double t = cur_.totalDb;
             cur_.ampOn = false;
-            move(now, std::max(minGain(), t - cut), Policy::Linearity, fmt("overload (%.2f %% clipped): amp off, gain cut", c * 100), out);
+            move(now, std::max(minGain(), t - cut), cutPol, fmt("overload (%.2f %% clipped): amp off, gain cut", c * 100), out);
             return true;
         }
-        const double to = nextStep(cur_.totalDb, -cut, Policy::Linearity);
-        if (to < cur_.totalDb - 0.01 || pol_ != Policy::Linearity) { move(now, to, Policy::Linearity, fmt("overload (%.2f %% clipped): gain cut %.0f dB", c * 100, cur_.totalDb - to), out); return true; }
+        const double to = nextStep(cur_.totalDb, -cut, cutPol);
+        if (to < cur_.totalDb - 0.01 || pol_ != cutPol) { move(now, to, cutPol, fmt("overload (%.2f %% clipped): gain cut %.0f dB", c * 100, cur_.totalDb - to), out); return true; }
         return false;
     }
     if (now < changedAt_ + settleTime()) { phase_ = Phase::Settling; return false; }
@@ -405,7 +411,8 @@ void AutoGainController::accumulate(AgTrial& t, const AgInput& in) {
     t.n++;
     double v = 0;
     const Metric mm = set_.metric != Metric::Auto ? set_.metric : tgt_.metric;
-    if ((mm == Metric::Mer || mm == Metric::Snr || mm == Metric::Ber || mm == Metric::Lock) && score(mm, in.q, fl_, in.adc, tgt_, headroomTarget(), v) &&
+    // the quick search dwells 0.15 s on each gain: a decoder's number is from before the step (a DVB-T2 frame, a DMR superframe), so the search judges by the spectrum and the climb refines by the decoder
+    if (!br_ && (mm == Metric::Mer || mm == Metric::Snr || mm == Metric::Ber || mm == Metric::Lock) && score(mm, in.q, fl_, in.adc, tgt_, headroomTarget(), v) &&
         (mm == Metric::Lock || in.q.locked)) { t.metricSum += v; t.nMetric++; }
     if (in.q.locked) t.nLocked++;
     if (fl_.valid) { t.floorSum += fl_.floorDbfs; t.nFloor++; t.snrSum += fl_.snrDb; t.nSnr++; }
@@ -419,6 +426,7 @@ void AutoGainController::accumulate(AgTrial& t, const AgInput& in) {
 
 int AutoGainController::chooseTrial(Metric& used, double minHead, double maxMargin) const {
     const double tgtH = headroomTarget();
+    const double penalH = mode_ == AgMode::Auto && set_.v2 ? tgt_.minHeadroomDb : tgtH;   // Auto v2: headroom is a floor (minHeadroomDb), not a set-point
     auto marginOf = [&](const AgTrial& t) { return t.nFloor ? t.floor() + (6.02 * radio_.adcBits + 1.76) + 10 * std::log10((double)std::max<size_t>(t.spec.size(), 64)) - 1.76 : -1e9; };
     auto safe = [&](const AgTrial& t) { return t.done && t.n > 0 && t.clipMax <= tgt_.clipLimit && !t.imd && t.headroomMin >= minHead && marginOf(t) <= maxMargin; };
     bool anyMetric = false, anySnr = false;
@@ -443,7 +451,7 @@ int AutoGainController::chooseTrial(Metric& used, double minHead, double maxMarg
             if (t.nFloor) {
                 // the floor over the ADC's own noise: worth nothing past goal + 6 dB; less headroom than the target costs
                 const double qPerBin = -(6.02 * radio_.adcBits + 1.76) - 10 * std::log10((double)std::max<size_t>(t.spec.size(), 64)) + 1.76;
-                s = std::min(t.floor() - qPerBin, tgt_.marginGoalDb + 6) - 2.0 * std::max(0.0, tgtH - t.headroomMin);
+                s = std::min(t.floor() - qPerBin, tgt_.marginGoalDb + 6) - 2.0 * std::max(0.0, penalH - t.headroomMin);
             }
             break;
         default: s = -std::fabs(t.headroomMin - tgtH);
@@ -628,7 +636,7 @@ std::vector<AgAdvice> AutoGainController::advice() const {
     if (met_.clipping) v.push_back({Advice::Overload, "ADC overload: the signal is too strong for this gain; reduce the gain"});
     if (fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20)
         v.push_back({Advice::StrongNeighbour, "Strong signal nearby: reduce the gain or add a filter (band-pass, or an FM / GSM notch)"});
-    if (imdSeen_) v.push_back({Advice::Intermod, "Spurs that move when the gain changes: the front end is overloading; lower the LNA (or the amp) or add a filter"});
+    if (imdSeen_ && met_.valid) v.push_back({Advice::Intermod, "Spurs that move when the gain changes: the front end is overloading; lower the LNA (or the amp) or add a filter"});
     if (compSeen_) v.push_back({Advice::Compressed, "The front end is compressing (power no longer follows the gain): lower the gain"});
     const bool atMax = cur_.totalDb >= maxGain() - 0.01;
     const bool noisy = met_.floorValid && met_.adcMarginDb > tgt_.marginGoalDb;   // the radio's noise is already above the ADC's: more gain will not help
@@ -849,6 +857,7 @@ namespace dect2::ag {
 // ones are safe, a clip or an intermodulation product stops the climb. The best of them by the mode's metric (as Optimise once chooses) is applied.
 void AutoGainController::beginBracket(const AgInput& in) {
     wantBracket_ = false;
+    cutActive_ = false;   // the search finds the right gain itself: an acquisition's cut from a start gain is not a gain to come back to
     trials_.clear(); queue_.clear(); ti_ = -1; refined_ = false;
     const double tgtH = bracketHead();
     const double star = havePrior_ ? prior_.totalDb + 3.0 : cur_.totalDb + (headAvg_ - tgtH);

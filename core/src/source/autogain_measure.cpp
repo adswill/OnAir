@@ -274,6 +274,11 @@ void applyModeRefinement(ModeTarget& t, int std_) {
     }
 }
 
+bool retuneNeedsSearch(double deltaHz, double rateHz, bool bandChanged) {
+    if (bandChanged || rateHz <= 0) return true;
+    return std::fabs(deltaHz) > 0.05 * rateHz;
+}
+
 ModeTarget modeTargetFor(int std_, double bwHz, double rateHz, double freqHz) {
     ModeTarget t;
     auto in = [&](std::initializer_list<int> l) { for (int x : l) if (x == std_) return true; return false; };
@@ -298,9 +303,9 @@ ModeTarget modeTargetFor(int std_, double bwHz, double rateHz, double freqHz) {
         t.headroomDb = 12; t.marginGoalDb = 10; t.floorRiseDb = 10; t.lockSnrDb = 1e9;
         t.why = "GNSS: the signals are below the noise; the noise floor must sit well above the ADC's own noise";
     } else if (in({44, 50, 34, 56, 71, 54})) {
-        t.kind = ModeKind::WideSpan; t.metric = Metric::Headroom; t.policy = Policy::Linearity;
+        t.kind = ModeKind::WideSpan; t.metric = Metric::Sensitivity; t.policy = Policy::Linearity;
         t.headroomDb = 12; t.windowDb = 4; t.marginGoalDb = 6; t.floorRiseDb = 3; t.lockSnrDb = 1e9;
-        t.why = "a wide span: everything in it reaches the ADC, so headroom first";
+        t.why = "a wide span: every signal in it reaches the ADC: as much gain as the headroom floor allows, the floor over the ADC's own noise decides";
     } else if (in({11, 33, 35, 40, 47, 48, 52, 28, 57, 51})) {
         t.kind = ModeKind::NarrowVoice; t.metric = Metric::ChannelSnr; t.policy = Policy::Sensitivity;
         t.headroomDb = 14; t.windowDb = 4; t.marginGoalDb = 10; t.floorRiseDb = 6; t.lockSnrDb = 15;

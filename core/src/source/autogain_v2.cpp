@@ -21,6 +21,7 @@ std::string f2(const char* f, double a, double b = 0, double c = 0, double d = 0
 void AutoGainController::climbReset(double now) {
     clTrial_ = false; settled_ = false; cand_ = 0; candKind_ = 0; clStep_ = 2; rejectRun_ = 0; clMark_ = -1;
     pj_.clear(); pjMark_ = -1; base_ = Run(); tri_ = Run(); mBase_ = Run(); mTri_ = Run(); specPow_.clear(); specCnt_ = 0; specBase_.clear(); settledAt_ = -1e9; settledJ_ = 0;
+    decB_ = Run(); decT_ = Run(); settledDec_ = -1e9; refValid_ = false; lastSearchAt_ = -1e9; lastWakeAt_ = -1e9; blindRest_ = false; splitTried_ = false; splitKept_ = false; cutActive_ = false; cutFrom_ = -1e9; cutAt_ = -1e9;
     wasLocked_ = false; lockLostAt_ = -1; status_.clear(); limit_.clear(); lastDecision_.clear(); retuneWhy_.clear(); slope_ = 1;
     dwellFrom_ = now; jRecent_ = 0; jRecentN_ = 0; clDir_ = 1; statusAt_ = -1e9; rejUp_ = 0; idleCycles_ = 0; goodGain_ = -1e9;
 }
@@ -35,18 +36,57 @@ bool AutoGainController::objective(double& j) const {
         j = pj_.objective();
         return true;
     }
-    // a decoder that reports its own quality is the ground truth the user cares about (and a product inside the channel reads as signal in the spectrum)
-    if (q_.locked && (q_.merValid || q_.snrValid) && m != Metric::Sensitivity && m != Metric::Headroom) { j = 50.0 + (q_.merValid ? q_.merDb : q_.snrDb); return true; }
     switch (m) {
     case Metric::Mer: case Metric::Snr: case Metric::Ber: case Metric::Lock:
-        if (q_.locked && score(m, q_, fl_, adcLast_, tgt_, headroomTarget(), v)) { j = 50.0 + v; return true; }   // a locked decoder always beats an unlocked one
         if (fl_.valid) { j = fl_.snrDb; return true; }
-        return false;
+        return decoderValue(j);   // no spectrum: only the decoder's number
     case Metric::ChannelSnr: case Metric::Sensitivity:
-        if (score(m, q_, fl_, adcLast_, tgt_, headroomTarget(), v)) { j = v; return true; }
+        if (score(m, q_, fl_, adcLast_, tgt_, tgt_.minHeadroomDb, v)) { j = v; return true; }   // headroom is a floor in the climb, not a set-point
         return false;
     default: return false;
     }
+}
+
+// The decoder's own number while it is locked, the quality the user cares about (a product inside the channel reads as signal in the spectrum, so level alone cannot tell).
+// Kept apart from the level objective: a lock that flickers changes which of the two is valid, and a mean over both reads as a swing of tens of dB.
+bool AutoGainController::decoderValue(double& v) const {
+    if (!q_.locked) return false;
+    const Metric m = resolvedMetric(q_);
+    if (m == Metric::Sensitivity || m == Metric::Headroom) return false;
+    if (m == Metric::ChannelSnr) { if (!q_.merValid && !q_.snrValid) return false; v = q_.merValid ? q_.merDb : q_.snrDb; return true; }
+    return score(m, q_, fl_, adcLast_, tgt_, headroomTarget(), v);
+}
+
+bool AutoGainController::hasSignal() const {
+    if (q_.locked) return true;
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid) return pj_.started() && pj_.msgs() > 0;
+    return fl_.valid && fl_.snrDb >= 3.0;
+}
+
+bool AutoGainController::floorFine() const { return fl_.valid && fl_.adcMarginDb >= tgt_.marginGoalDb - 2.0; }
+
+void AutoGainController::noteCut(double now) {
+    if (!cutActive_) { cutActive_ = true; cutFrom_ = cur_.totalDb; }
+    cutAt_ = now;
+}
+
+void AutoGainController::settleHere(const AgInput& in) {
+    settled_ = true; settledAt_ = in.now; settledJ_ = base_.mean; cand_ = 0;
+    settledDec_ = decB_.n >= 3 ? decB_.mean : -1e9;
+    refValid_ = fl_.valid;
+    if (fl_.valid) { floorRef_ = fl_.floorDbfs - cur_.totalDb; oobRef_ = fl_.oobDbfs - cur_.totalDb; }
+    if (!(in.adc.clipFraction > tgt_.clipLimit) && (!cutActive_ || cur_.totalDb >= cutFrom_ - 1)) goodGain_ = cur_.totalDb;
+    if (cutActive_ && cur_.totalDb >= cutFrom_ - 1) cutActive_ = false;
+}
+
+// Input-referred (the gain subtracted): a change in the floor or in what lies outside the channel is the world's, not ours. The channel's own level is left out: a call that
+// ends or a burst that passes says nothing about the gain.
+bool AutoGainController::worldChanged(const AgInput& in, std::string& why) {
+    if (!refValid_ || !fl_.valid || in.now - lastSearchAt_ < 30.0 / std::max(0.25, set_.loopSpeed)) return false;
+    const double floorIn = fl_.floorDbfs - cur_.totalDb, oobIn = fl_.oobDbfs - cur_.totalDb;
+    if (floorIn > floorRef_ + 4.0) { why = f2("the noise floor rose %.1f dB", floorIn - floorRef_); return true; }
+    if (oobIn < oobRef_ - 6.0) { why = f2("a strong signal went away (%.1f dB less outside the channel)", oobRef_ - oobIn); return true; }
+    return false;
 }
 
 // the real gain change of a step: the calibration when there is one, else the nominal step times what this unit was seen to do
@@ -75,6 +115,8 @@ bool AutoGainController::comfortable() const {
 void AutoGainController::climbSample(const AgInput& in, double j) {
     Run& r = clTrial_ ? tri_ : base_;
     r.add(j);
+    double dv = 0;
+    if (decoderValue(dv)) (clTrial_ ? decT_ : decB_).add(dv);
     if (fl_.valid) (clTrial_ ? mTri_ : mBase_).add(fl_.adcMarginDb);
     met_.objective = j; met_.objectiveValid = true;
     if (in.spectrum && !in.spectrum->empty()) {
@@ -83,6 +125,8 @@ void AutoGainController::climbSample(const AgInput& in, double j) {
         specCnt_++;
     }
 }
+
+static bool oobLowered_(const std::string& why) { return why.rfind("a strong", 0) == 0; }
 
 static std::vector<float> meanDb(const std::vector<double>& p, int n) {
     std::vector<float> v(p.size());
@@ -120,6 +164,7 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     if (clMark_ != changedAt_) {   // a new gain: new statistics
         (clTrial_ ? tri_ : base_) = Run();
         (clTrial_ ? mTri_ : mBase_) = Run();
+        (clTrial_ ? decT_ : decB_) = Run();
         specPow_.clear(); specCnt_ = 0; clMark_ = changedAt_; dwellFrom_ = now;
     }
     if (!pulseWait) climbSample(in, j);
@@ -127,33 +172,46 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     if (q_.locked) { wasLocked_ = true; lockLostAt_ = -1; }
     else if (wasLocked_) {
         if (lockLostAt_ < 0) lockLostAt_ = now;
-        else if (now - lockLostAt_ > 10 / sp) { wasLocked_ = false; lockLostAt_ = -1; wantBracket_ = true; retuneWhy_ = "the decoder lost lock for 10 s"; settled_ = false; return false; }
+        else if (now - lockLostAt_ > 10 / sp) {
+            wasLocked_ = false; lockLostAt_ = -1;
+            if (hasSignal() && now - lastSearchAt_ >= 30 / sp) { wantBracket_ = true; lastSearchAt_ = now; retuneWhy_ = "the decoder lost lock for 10 s while the signal is there"; settled_ = false; return false; }   // a transmitter that went away: no search, nothing to find
+        }
     }
     double eff = effHeadroom(in);
     const double minHead = tgt_.minHeadroomDb;
     const double dwell = set_.dwellSec / sp;
-    // after an overload: back up fast (up to 12 dB a step, 1.1 s apart) to just under the gain that clipped, as the old loop did; a burst must not cost minutes
+    // after a cut (a clip or the headroom floor): back up fast (up to 12 dB a step, 1.1 s apart) to the gain it was cut from once the room is there again. The interferer has
+    // gone when the headroom says so, whatever cut the gain; a burst must not cost minutes. A soft ceiling only holds while the headroom does not clearly allow more
     {
-        const bool recovering = !ovTimes_.empty() && goodGain_ > -1e8 && cur_.totalDb < goodGain_ - 2 && now - ovTimes_.back() > 1.5 / sp;
+        const bool recovering = cutActive_ && cur_.totalDb < cutFrom_ - 1 && now - cutAt_ > 1.5 / sp;
         if (!clTrial_ && recovering && now - lastUp_ >= 1.1 / sp && now - lastDown_ >= 1.5 / sp) {
-            // never into the headroom floor again: the room the signal left (1 dB of headroom per dB of gain), in what this unit really does per nominal dB
-            const double room = headAvg_ - tgt_.minHeadroomDb - 1.0;
+            const double room = effHeadroom(in) - tgt_.minHeadroomDb - 1.0;
             const double sc = radio_.calibrated() ? 1.0 : (radio_.driverSplits && radio_.singleControl() ? unitScale_ : 1.0);
-            const double target = std::min({maxGain(), ceilingDb(now), goodGain_, cur_.totalDb + std::max(0.0, room) / std::max(0.5, sc)});
+            double target = std::min({maxGain(), cutFrom_, cur_.totalDb + std::max(0.0, room) / std::max(0.5, sc)});
+            if (ovTimes_.size() >= 3) target = std::min(target, ceilingDb(now));   // keeps happening (a transmitter keying up nearby): the ceiling holds
             if (cur_.totalDb < target - 0.5) {
                 const double to = std::min(nextStep(cur_.totalDb, std::min(12.0, target - cur_.totalDb), pol_), target);
-                if (to > cur_.totalDb + 0.01) {
-                    move(now, to, pol_, f2("recovering after an overload: back toward %.0f dB", goodGain_), out);
+                if (to > cur_.totalDb + 0.01 && planStages(radio_, to, pol_, set_.stageMask, cur_.db, cur_.ampOn).totalDb > cur_.totalDb + 0.01) {
+                    move(now, to, pol_, f2("recovering after a cut: back toward %.0f dB", cutFrom_), out);
                     settled_ = false; cand_ = 0;
+                    if (now >= cutAt_ + 300 / sp && cur_.totalDb >= cutFrom_ - 1) cutActive_ = false;
                     return true;
                 }
             }
+            if (now - cutAt_ > 900 / sp) cutActive_ = false;   // never came back in 15 minutes: this is the new normal
         }
+    }
+    // the stage split comes back to the mode's own once the overload that forced the linear one has passed (a split the loop chose itself stays until the next acquisition)
+    if (!splitKept_ && !clTrial_ && pol_ != tgt_.policy && now >= linearUntil_ && now - changedAt_ > 3 / sp && now - lastDown_ > 5 / sp && now >= imdAt_ + 60 / sp) {
+        const StagePlan p = planStages(radio_, cur_.totalDb, tgt_.policy, set_.stageMask, cur_.db, cur_.ampOn);
+        if (!(p == cur_)) { move(now, cur_.totalDb, tgt_.policy, std::string("stages back to the ") + policyName(tgt_.policy) + " split: the overload has passed", out); settled_ = false; cand_ = 0; return true; }
+        pol_ = tgt_.policy;
     }
     // too close to full scale: down at once, in proportion (a trial that gets there is undone, see evaluateTrial)
     if (eff < minHead && !clTrial_ && now - lastDown_ >= 0.8 / sp) {
         const double to = nextStep(cur_.totalDb, -std::min(10.0, minHead - eff + 1.0), pol_);
         if (to < cur_.totalDb - 0.01) {
+            noteCut(now);
             limit_ = "headroom";
             move(now, to, pol_, f2("headroom %.1f dB is under the %.0f dB minimum: gain down", eff, minHead), out);
             lastDecision_ = out.why; settled_ = false; cand_ = 0;
@@ -166,29 +224,44 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     if (clTrial_) return evaluateTrial(in, out);
     if (settled_) {
         const bool comf = comfortable();
-        // a settled loop watches for the objective falling away (3 dB): the world changed, search again
-        // (not for pulsed modes: the message rate follows the traffic of the hour, a fall of 3 dB says nothing about the gain)
-        if (base_.n >= 5 && base_.mean < settledJ_ - 3.0 && !(tgt_.kind == ModeKind::Pulsed && q_.pulseValid)) {
-            wantBracket_ = true; settled_ = false; retuneWhy_ = f2("the objective fell %.1f dB", settledJ_ - base_.mean);
+        std::string wc;
+        if (worldChanged(in, wc)) {
+            lastSearchAt_ = now; settled_ = false; idleCycles_ = 0;
+            ceilUntil_ = std::min(ceilUntil_, now);   // what capped the gain has gone
+            if (oobLowered_(wc)) { limit_.clear(); lastDecision_ = wc; cand_ = 0; return false; }   // room came back: the climb goes up from here
+            wantBracket_ = true; retuneWhy_ = wc;
+            return false;
+        }
+        // the decoder's own number fell away although it is still locked: the world changed, search again (level alone is no reason: a call that ends is not a problem)
+        if (settledDec_ > -1e8 && decB_.n >= 5 && decB_.mean < settledDec_ - 3.0 && !(tgt_.kind == ModeKind::Pulsed && q_.pulseValid) && now - lastSearchAt_ >= 30 / sp) {
+            wantBracket_ = true; lastSearchAt_ = now; settled_ = false; retuneWhy_ = f2("the decoder's quality fell %.1f dB", settledDec_ - decB_.mean);
             return false;
         }
         phase_ = comf ? Phase::Frozen : Phase::Tracking;
-        // comfortable: rest 30 s; a decoder barely locked (or none) keeps optimising: look again after 6 s
-        // a fruitless cycle makes the next look later: 6 s, 12 s, 24 s ... up to 120 s (30 s while the decoder is comfortable)
-        const double every = comf ? 30.0 : std::min(120.0, 6.0 * std::pow(2.0, (double)std::min(idleCycles_, 5)));   // 6, 12, 24, 48, 96, 120 s: a settled loop probes (and glitches the stream, most on a HackRF's LNA step) ever more rarely
+        // nothing to judge a gain by and the floor is where it should be: rest (no signal is not a reason to move). A signal that returns wakes the loop, at most every 10 minutes
+        const bool blind = !hasSignal();
+        if (blind) { if (floorFine()) { blindRest_ = true; phase_ = Phase::Tracking; lastDecision_ = "no signal in the channel: the gain waits for one"; return false; } }
+        else if (blindRest_) {
+            blindRest_ = false;
+            if (now - lastWakeAt_ < 600.0 / sp) { settledAt_ = now; return false; }
+            lastWakeAt_ = now; idleCycles_ = 0;
+        }
+        // a settled loop looks at its neighbours ever more rarely: 6, 12, 24 ... up to 15 minutes, 30 minutes while the decoder is comfortable. Each look is a gain step the decoder hears
+        const double every = comf ? std::min(1800.0, 120.0 * std::pow(2.0, (double)std::min(idleCycles_, 5))) : std::min(900.0, 6.0 * std::pow(2.0, (double)std::min(idleCycles_, 8)));
         if (now - settledAt_ < every / sp) {
-            if (now - dwellFrom_ > 12 / sp) { base_ = Run(); specPow_.clear(); specCnt_ = 0; dwellFrom_ = now; }   // a fresh baseline for the next probe
+            if (now - dwellFrom_ > 12 / sp) { base_ = Run(); decB_ = Run(); specPow_.clear(); specCnt_ = 0; dwellFrom_ = now; }   // a fresh baseline for the next probe
             return false;
         }
         settled_ = false; cand_ = 0;
     }
+    // nothing to judge a gain by and the floor is fine: settle here without trying anything
+    if (!hasSignal() && floorFine()) { settleHere(in); idleCycles_++; blindRest_ = true; lastDecision_ = "no signal in the channel: the gain waits for one"; return false; }
     return startTrial(in, out);
 }
 
 bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
     const double now = in.now, sp = std::max(0.25, set_.loopSpeed);
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
-    (void)strongNb;
     const Policy pol = pol_;   // a split that bought objective stays; a product or an overload caps the gain (an overload cut itself moves to the linear split)
     double eff = effHeadroom(in);
     const double minHead = tgt_.minHeadroomDb;
@@ -228,11 +301,13 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
             if (to >= cur_.totalDb - 0.01) { cand_++; continue; }
             what = f2("probe %.1f dB", stepReal(cur_.totalDb, to));
         } else {   // the other stage split at the same total (HackRF: LNA first or VGA first)
-            if (splitCount < 2 || cur_.ampOn) { cand_++; continue; }
+            if (splitCount < 2 || cur_.ampOn || splitTried_ || comfortable()) { cand_++; continue; }   // once per acquisition, never on a comfortable decoder
             tp = pol == Policy::Linearity ? Policy::Sensitivity : Policy::Linearity;
             if (imdSeen_ || now < linearUntil_) { cand_++; continue; }   // after an overload the linear split stays
             const StagePlan p = planStages(radio_, cur_.totalDb, tp, set_.stageMask, cur_.db, cur_.ampOn);
+            splitTried_ = true;
             if (p == cur_) { cand_++; continue; }
+            if (p.nfDb > cur_.nfDb + 2.0 && !strongNb) { cand_++; continue; }   // a worse noise figure and nothing strong nearby: it can only cost the signal
             what = std::string("probe split: ") + policyName(tp);
         }
         // the baseline is complete: remember it and move
@@ -241,12 +316,11 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
         candKind_ = kind;
         specPow_.clear(); specCnt_ = 0;
         move(now, to, tp, what, out);
-        clTrial_ = true; trialAt_ = changedAt_; tri_ = Run(); clMark_ = changedAt_; dwellFrom_ = now;
+        clTrial_ = true; trialAt_ = changedAt_; tri_ = Run(); decT_ = Run(); mTri_ = Run(); clMark_ = changedAt_; dwellFrom_ = now;
         return true;
     }
     // every candidate in the cycle was rejected or is not available: settled here
-    settled_ = true; settledAt_ = now; settledJ_ = base_.mean; cand_ = 0; idleCycles_++;
-    if (!(in.adc.clipFraction > tgt_.clipLimit)) goodGain_ = cur_.totalDb;
+    settleHere(in); idleCycles_++;
     const bool comf = comfortable();
     phase_ = comf ? Phase::Frozen : Phase::Tracking;
     lastDecision_ = comf ? "settled: the decoder is comfortably over its threshold" : "settled: no neighbouring gain is better";
@@ -255,11 +329,25 @@ bool AutoGainController::startTrial(const AgInput& in, AgCommand& out) {
 
 bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
     const double now = in.now;
-    const double j0 = base_.mean, j1 = tri_.mean;
-    const double neff0 = std::max(1.0, base_.n / 6.0), neff1 = std::max(1.0, tri_.n / 6.0);
+    // which number decides: the decoder's while it locks on both sides, a lost or gained lock by itself, else the level objective
+    const double shB = base_.n > 0 ? decB_.n / base_.n : 0, shT = tri_.n > 0 ? decT_.n / tri_.n : 0;
+    const bool decDomain = shB >= 0.5 && shT >= 0.5 && decB_.n >= 2 && decT_.n >= 2;
+    const bool lostLock = !decDomain && shB >= 0.5 && shT < shB - 0.3, gainedLock = !decDomain && shT >= 0.5 && shB < shT - 0.3;
+    const Run& rb = decDomain ? decB_ : base_;
+    const Run& rt = decDomain ? decT_ : tri_;
+    const double j0 = rb.mean, j1 = lostLock ? rb.mean - 20.0 : gainedLock ? rb.mean + 20.0 : rt.mean;
+    const double neff0 = std::max(1.0, rb.n / 6.0), neff1 = std::max(1.0, rt.n / 6.0);
     // a gentle slope (a few tenths of a dB per step) must still be climbed: the floor of the threshold is 40 % of the mode's, the noise term does the rest
-    const double thr = std::max(tgt_.improveDb, 1.5 * std::sqrt(base_.var() / neff0 + tri_.var() / neff1));
+    const double thr = std::max(tgt_.improveDb, 1.5 * std::sqrt(rb.var() / neff0 + rt.var() / neff1));
     const double dJ = j1 - j0;
+    // the channel's own level moved far more than the gain could have made it (a call started or ended during the look): this trial says nothing, back to the baseline
+    if (!decDomain && !lostLock && !gainedLock ? std::fabs(tri_.mean - base_.mean) > std::fabs(cur_.totalDb - basePlan_.totalDb) * 1.3 + 3.0
+                                                : ((lostLock || gainedLock) && std::fabs(tri_.mean - base_.mean) > std::fabs(cur_.totalDb - basePlan_.totalDb) * 1.3 + 6.0)) {
+        out.plan = basePlan_; out.why = "the channel changed during the look: gain put back";
+        logEvent(now, cur_.totalDb, basePlan_.totalDb, out.why);
+        cur_ = basePlan_; pol_ = basePol_; changedAt_ = now; nAvg_ = 0; changes_++; clTrial_ = false; cand_ = 0; clMark_ = -1;
+        return true;
+    }
     const double dgNom = cur_.totalDb - basePlan_.totalDb;
     // what this unit really does per nominal dB: the strongest line well over the floor rises with the gain (a product would rise faster, a
     // compressed line slower, so only the strongest is used)
@@ -324,7 +412,7 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
             const double hold = ((imd || comp) ? 180.0 : 120.0) * (1.0 + 0.5 * (rejUp_ - 1));
             ceil_ = (now < ceilUntil_) ? std::min(ceil_, basePlan_.totalDb + 0.01) : basePlan_.totalDb + 0.01;
             ceilUntil_ = std::max(ceilUntil_, now + hold / std::max(0.25, set_.loopSpeed));
-            if (imd || comp) { imdSeen_ = imdSeen_ || imd; compSeen_ = compSeen_ || comp; linearUntil_ = std::max(linearUntil_, now + 60); }
+            if (imd || comp) { imdSeen_ = imdSeen_ || imd; compSeen_ = compSeen_ || comp; imdAt_ = now; linearUntil_ = std::max(linearUntil_, now + 60); }
             limit_ = imd ? "intermodulation" : comp ? "compression" : clip ? "overload" : "headroom";
             why = f2("+%.1f dB undone: ", dg) + (imd || comp ? slopeWhy : clip ? std::string("the ADC clipped") : f2("headroom %.1f dB under the %.0f dB minimum", eff, tgt_.minHeadroomDb));
         } else why = accept ? (sensWhy ? f2("+%.1f dB kept: the noise floor was only %.1f dB over the ADC's", dg, mBase_.mean) : f2("+%.1f dB kept: objective +%.1f dB", dg, dJ)) : f2("+%.1f dB undone: objective only %+.1f dB (needs %.1f)", dg, dJ, thr);
@@ -340,13 +428,14 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         why = accept ? f2("other stage split kept: objective +%.1f dB", dJ) : f2("other stage split undone: objective %+.1f dB", dJ);
     }
     lastDecision_ = why;
+    if (getenv("AGDBG")) fprintf(stderr,"[%.1f] kind %d dec %d lost %d gained %d j0 %.2f j1 %.2f thr %.2f shB %.2f shT %.2f n %g %g snr %.1f marg %.1f %s\n",now,candKind_,decDomain,lostLock,gainedLock,j0,j1,thr,shB,shT,rb.n,rt.n,fl_.snrDb,fl_.adcMarginDb,why.c_str());
     if (accept) {
         clTrial_ = false;
-        base_ = tri_;               // what was measured is the new baseline (and the spectrum accumulating now is its own)
+        base_ = tri_; decB_ = decT_; mBase_ = mTri_;   // what was measured is the new baseline (and the spectrum accumulating now is its own)
         if (candKind_ == 1) clDir_ = 1; else if (candKind_ == 2) clDir_ = -1;
         if (candKind_ != 3) clStep_ = std::min(tgt_.maxStepDb, clStep_ * 1.5);
         cand_ = 0; settled_ = false; rejectRun_ = 0; idleCycles_ = 0;
-        pol_ = candKind_ == 3 ? pol_ : pol_;
+        if (candKind_ == 3) splitKept_ = true;
         logEvent(now, basePlan_.totalDb, cur_.totalDb, why);
         specBase_.clear();
         limit_.clear();
@@ -374,7 +463,7 @@ void AutoGainController::setStatus(const std::string& lead) {
     s += f2(", headroom %.1f dB (min %.0f)", headAvg_, tgt_.minHeadroomDb);
     if (br_ || wantBracket_) s += std::string(", searching") + (retuneWhy_.empty() ? "" : " (" + retuneWhy_ + ")");
     else if (clTrial_) s += ", trying a neighbouring gain";
-    else if (settled_) s += comfortable() ? ", settled (decoder comfortably locked)" : ", settled";
+    else if (settled_) s += blindRest_ ? ", waiting for a signal" : comfortable() ? ", settled (decoder comfortably locked)" : ", settled";
     else s += ", measuring";
     if (!limit_.empty()) s += "; limited by " + limit_;
     if (!lastDecision_.empty()) s += "; last: " + lastDecision_;
