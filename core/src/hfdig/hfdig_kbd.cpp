@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cctype>
 #include <cstring>
+#include <chrono>
+#include <future>
 #include <mutex>
 
 namespace dect2 {
@@ -107,6 +109,15 @@ struct HfdigKbd::Impl {
     std::vector<kbd::cf> fb;
     uint64_t lastSearch = 0;
     std::string lastCall;
+    // Auto (cfg.autoParams): the last audio, the running analysis, what it found
+    std::vector<float> autoHist;
+    size_t autoPos = 0, autoFill = 0;
+    uint64_t autoLastRun = 0, autoCharsAt = 0, autoCharsSeen = 0, autoHellSeen = 0;
+    bool autoLocked = false, autoHave = false;
+    int autoTones = 32, autoBw = 1000, autoVar = -1;
+    std::future<std::vector<KbdAutoHyp>> autoJob;
+    bool autoDiscard = false;
+    void autoTick(const float* x, size_t n);
     const KbdPicture* lastPic = nullptr;
     uint64_t picId = 0;
     std::string recent;               // the last characters decoded: do they read as text
@@ -117,6 +128,7 @@ struct HfdigKbd::Impl {
 
     void build() {
         KbdConfig c = cfg;
+        if (c.autoParams && autoHave) { c.tones = autoTones; c.bandwidth = autoBw; if (autoVar >= 0) c.variant = autoVar; }
         if (c.family < 0 || c.family >= kKbdFamilies) c.family = KbdOlivia;
         if (c.variant < 0 || c.variant >= kbdVariantCount(c.family)) c.variant = kbdDefaultVariant(c.family);
         switch (c.family) {
@@ -129,7 +141,7 @@ struct HfdigKbd::Impl {
         if (eng) eng->setCentre(centre);
         winN = 0; evals = 0; stable = 0; cand = 0; recent.clear(); lastPic = nullptr;
         std::fill(pow.begin(), pow.end(), 0.f);
-        cfg.variant = c.variant;
+        if (!cfg.autoParams) cfg.variant = c.variant;
         cfgNew = false;
     }
 
@@ -195,6 +207,7 @@ struct HfdigKbd::Impl {
             }
         }
         eng->feed(x, n);
+        autoTick(x, n);
         lk.lock();
         if (eng->pic && (eng->picDirty || eng->picDone)) {
             if (eng->pic.get() != lastPic) { lastPic = eng->pic.get(); picId++; }
@@ -253,12 +266,53 @@ void HfdigKbd::telemetry(HfdigKbdTelemetry& out) const {
     out = p_->t;
     out.cfg = p_->cfg;
     out.hellCols = (int)(p_->hellCols.size() / kKbdHellRows);
+    out.autoOn = p_->cfg.autoParams; out.autoLocked = p_->autoLocked; out.autoTones = p_->autoTones; out.autoBandwidth = p_->autoBw; out.autoVariant = p_->autoVar;
     out.hell.assign(p_->hellCols.begin(), p_->hellCols.end());
 }
+// The Auto rule (as RTTY's): no text for a while means the settings are wrong or the signal changed; then the audio goes through the trial decoders on another
+// thread. A good decode is left alone. The analysis job is dropped when the mode changes.
+void HfdigKbd::Impl::autoTick(const float* x, size_t n) {
+    constexpr size_t kCap = (size_t)(30 * kbd::kFs);
+    const bool on = cfg.autoParams;
+    if (!on) { autoFill = autoPos = 0; autoLocked = false; if (autoJob.valid()) autoDiscard = true; else return; }
+    if (autoHist.size() != kCap) autoHist.assign(kCap, 0.f);
+    for (size_t i = 0; i < n; i++) { autoHist[autoPos] = x[i]; if (++autoPos >= kCap) autoPos = 0; }
+    autoFill = std::min(kCap, autoFill + n);
+    if (autoJob.valid()) {
+        if (autoJob.wait_for(std::chrono::seconds(0)) != std::future_status::ready) return;
+        auto r = autoJob.get();
+        const bool drop = autoDiscard || !on;
+        autoDiscard = false;
+        if (drop || r.empty()) return;
+        const auto& h = r[0];
+        autoTones = h.tones > 0 ? h.tones : autoTones;
+        autoBw = h.bandwidth > 0 ? h.bandwidth : autoBw;
+        autoVar = h.variant;
+        autoHave = true; autoLocked = true;
+        autoCharsAt = samples; autoCharsSeen = t.chars; autoHellSeen = t.hellTotal;
+        std::lock_guard<std::mutex> lk(mu);
+        cfgNew = true;
+        return;
+    }
+    const bool hell = cfg.family == KbdHell;
+    if (t.chars != autoCharsSeen || (hell && eng && eng->locked)) { autoCharsSeen = t.chars; autoCharsAt = samples; }
+    const uint64_t quiet = samples - autoCharsAt;
+    if (autoLocked && quiet < (uint64_t)(hell ? 6 : 14) * (uint64_t)kbd::kFs) return;
+    autoLocked = false;
+    if (autoFill < (size_t)(8 * kbd::kFs) || samples - autoLastRun < (uint64_t)(6 * kbd::kFs)) return;
+    autoLastRun = samples;
+    std::vector<float> a(autoFill);
+    const size_t st = (autoPos + kCap - autoFill) % kCap;
+    for (size_t i = 0; i < autoFill; i++) a[i] = autoHist[(st + i) % kCap];
+    const int fam = cfg.family;
+    autoJob = std::async(std::launch::async, [v = std::move(a), fam]() { return kbdAutoAnalyse(v.data(), v.size(), fam, 3); });
+}
+
 void HfdigKbd::setConfig(const KbdConfig& c) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (c.family == p_->cfg.family && c.tones == p_->cfg.tones && c.bandwidth == p_->cfg.bandwidth && c.variant == p_->cfg.variant &&
-        c.centreHz == p_->cfg.centreHz && c.autoCentre == p_->cfg.autoCentre && !p_->cfgNew) return;
+        c.centreHz == p_->cfg.centreHz && c.autoCentre == p_->cfg.autoCentre && c.autoParams == p_->cfg.autoParams && !p_->cfgNew) return;
+    if (c.family != p_->cfg.family || !c.autoParams) { p_->autoHave = false; p_->autoLocked = false; p_->autoFill = p_->autoPos = 0; p_->autoLastRun = p_->samples; p_->autoDiscard = p_->autoJob.valid(); }
     p_->cfg = c;
     p_->cfgNew = true;
 }

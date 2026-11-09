@@ -41,6 +41,8 @@ public:
     bool loadResults(const std::string& blob);           // false: not this build's format, nothing changes
     void setLogCallback(std::function<void(const std::string&)> cb);
 
+    void setAuto(bool on);               // Auto: the modulation follows the signal (BPSK31 .. QPSK125, tried on the last seconds of the band). Off by default; setMode alone does not change it
+    bool autoOn() const;
     void setMode(int m);                 // kPskModes: BPSK31 (default), BPSK63, QPSK31, QPSK63; forgets the signals
     void setFocusHz(double offsetHz);    // the signal nearest this offset from the dial becomes the focus (a new one when none is near)
     void clearSignals();

@@ -62,6 +62,7 @@ void load(App& a, int fam) {
     snprintf(k, sizeof k, "kbd%d.variant", fam); c.variant = (int)plat::prefs().getI(k, kbdDefaultVariant(fam));
     snprintf(k, sizeof k, "kbd%d.centre", fam); c.centreHz = plat::prefs().getD(k, 1500);
     snprintf(k, sizeof k, "kbd%d.auto", fam); c.autoCentre = plat::prefs().getB(k, true);
+    snprintf(k, sizeof k, "kbd%d.autop", fam); c.autoParams = plat::prefs().getB(k, true);
     c.tones = std::clamp(c.tones, 2, 256);
     c.bandwidth = std::clamp(c.bandwidth, 125, 2000);
     if (c.variant < 0 || c.variant >= std::max(1, kbdVariantCount(fam))) c.variant = kbdDefaultVariant(fam);
@@ -77,6 +78,7 @@ void save(const KbdConfig& c) {
     snprintf(k, sizeof k, "kbd%d.variant", fam); plat::prefs().setI(k, c.variant);
     snprintf(k, sizeof k, "kbd%d.centre", fam); plat::prefs().setD(k, c.centreHz);
     snprintf(k, sizeof k, "kbd%d.auto", fam); plat::prefs().setB(k, c.autoCentre);
+    snprintf(k, sizeof k, "kbd%d.autop", fam); plat::prefs().setB(k, c.autoParams);
 }
 
 void bandButtons(App& a, int fam) {
@@ -287,6 +289,21 @@ void hfdigKbdTab(App& a, const dect2::HfdigTelemetry& t) {
     const bool run = a.engine.running();
     bool changed = false;
 
+    // Auto (the default): the tones and bandwidth or the variant follow the signal; the hand-set ones are under Advanced and picking one turns Auto off
+    if (ImGui::Checkbox(tr("Auto"), &c.autoParams)) changed = true;
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Finds the tones and bandwidth, or the variant, from the signal and tries them on the decoder. Follows the signal when it changes."));
+    flowNext(6 * gUi);
+    ImGui::AlignTextToFramePadding();
+    if (!c.autoParams) ImGui::TextDisabled("%s", tr("manual settings (Advanced)"));
+    else if (!run) ImGui::TextDisabled("%s", tr("Auto: starts with the receiver"));
+    else if (k.autoLocked) {
+        if (fam == KbdOlivia || fam == KbdContestia) ImGui::TextDisabled(tr("Found: %d tones, %d Hz"), k.autoTones, k.autoBandwidth);
+        else ImGui::TextDisabled(tr("Found: %s"), kbdVariantName(fam, k.autoVariant >= 0 ? k.autoVariant : c.variant));
+    }
+    else ImGui::TextDisabled("%s", tr("Auto: listening..."));
+    flowEnd();
+    if (ImGui::TreeNode(tr("Advanced##kbd"))) {
+        bool manualChange = false;
     ImGui::AlignTextToFramePadding();
     if (fam == KbdOlivia || fam == KbdContestia) {
         ImGui::TextDisabled("Tones"); ImGui::SameLine(0, 5 * gUi);
@@ -294,7 +311,7 @@ void hfdigKbdTab(App& a, const dect2::HfdigTelemetry& t) {
         snprintf(lbl, sizeof lbl, "%d", c.tones);
         ImGui::SetNextItemWidth(70 * gUi);
         if (ImGui::BeginCombo("##kbtones", lbl)) {
-            for (int v : kKbdTonesList) { snprintf(lbl, sizeof lbl, "%d", v); if (ImGui::Selectable(lbl, v == c.tones)) { c.tones = v; changed = true; } }
+            for (int v : kKbdTonesList) { snprintf(lbl, sizeof lbl, "%d", v); if (ImGui::Selectable(lbl, v == c.tones)) { c.tones = v; changed = true; manualChange = true; } }
             ImGui::EndCombo();
         }
         flowNext(12 * gUi);
@@ -303,18 +320,22 @@ void hfdigKbdTab(App& a, const dect2::HfdigTelemetry& t) {
         snprintf(lbl, sizeof lbl, "%d Hz", c.bandwidth);
         ImGui::SetNextItemWidth(92 * gUi);
         if (ImGui::BeginCombo("##kbbw", lbl)) {
-            for (int v : kKbdBwList) { snprintf(lbl, sizeof lbl, "%d Hz", v); if (ImGui::Selectable(lbl, v == c.bandwidth)) { c.bandwidth = v; changed = true; } }
+            for (int v : kKbdBwList) { snprintf(lbl, sizeof lbl, "%d Hz", v); if (ImGui::Selectable(lbl, v == c.bandwidth)) { c.bandwidth = v; changed = true; manualChange = true; } }
             ImGui::EndCombo();
         }
     } else {
         ImGui::TextDisabled("Mode"); ImGui::SameLine(0, 5 * gUi);
         ImGui::SetNextItemWidth(130 * gUi);
         if (ImGui::BeginCombo("##kbvar", kbdVariantName(fam, c.variant))) {
-            for (int v = 0; v < kbdVariantCount(fam); v++) if (ImGui::Selectable(kbdVariantName(fam, v), v == c.variant)) { c.variant = v; changed = true; }
+            for (int v = 0; v < kbdVariantCount(fam); v++) if (ImGui::Selectable(kbdVariantName(fam, v), v == c.variant)) { c.variant = v; changed = true; manualChange = true; }
             ImGui::EndCombo();
         }
     }
-    flowNext(12 * gUi);
+        flowEnd();
+        if (manualChange) c.autoParams = false;
+        ImGui::TextDisabled("%s", tr("Changing one of these turns Auto off."));
+        ImGui::TreePop();
+    }
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("Audio"); ImGui::SameLine(0, 5 * gUi);
     float centre = (float)c.centreHz;

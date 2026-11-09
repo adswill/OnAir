@@ -118,7 +118,7 @@ std::atomic<int> gModeChoice{0};
 } // namespace
 
 const char* freedvModeName(int idx) { return idx >= 0 && idx < kFreedvModes ? kModeName[idx] : ""; }
-void hfdigFreedvSetMode(int choice) { gModeChoice = choice >= 0 && choice <= kFreedvModes ? choice : 0;   // 0 also takes a saved choice of a mode no longer listed }
+void hfdigFreedvSetMode(int choice) { gModeChoice = choice >= 0 && choice <= kFreedvModes ? choice : 0; }
 int hfdigFreedvMode() { return gModeChoice; }
 bool hfdigFreedvLibrary(std::string* path, std::string* version) {
     const Api& a = api();

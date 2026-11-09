@@ -51,6 +51,8 @@ struct PskTelemetry {
     uint64_t blocksBad = 0;      // codes not in the table
     // details
     int mode = 0;                // the modulation looked for (kPskModes)
+    bool autoOn = false, autoLocked = false;   // Auto is on / it found a modulation that gives text
+    int autoMode = -1;           // what it found (kPskModes), -1 none yet
     double timeSec = 0;
     double inputRate = 0;
     double loHz = 0, hiHz = 0;   // the window: dial + loHz .. dial + hiHz (the audio passband of an upper sideband receiver)
