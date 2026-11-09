@@ -691,7 +691,7 @@ static void viewMenu(App& a) {
 // the right end of the menu bar: credit, Credits, Support, the update button and Clear all. One row of chips: the same height, border and
 // background, one gap between them, centred in the bar. Placed from the width the row had last frame (it follows the update button's label).
 static float gBarRestW = 0;
-static const char* const kDiscordInviteUrl = "https://discord.gg/Kky9c6atm";   // the one place the app holds the invite
+static const char* const kDiscordInviteUrl = "https://discord.gg/ptxkzCuzR";   // the one place the app holds the invite
 // Discord icon chip for the menu bar; true when clicked
 static bool discordButton() {
     ImGui::PushID("discord_invite");
