@@ -402,6 +402,7 @@ void playerTab(App& a) {
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("This signal carries T2-Base and T2-Lite frames. The receiver follows one of them."));
         }
         for (auto& u : rx.unsupported) { ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! %s", u.c_str()); }
+        { size_t ccN = 0; const std::string cc = a.engine.player().latestCaption(&ccN); if (!cc.empty()) ImGui::TextDisabled("CC  %s", cc.c_str()); }
     }
     // the controls below the picture take what they took in the last frame (they wrap onto more lines in a narrow tab)
     ImGuiStorage* stor = ImGui::GetStateStorage();

@@ -145,6 +145,7 @@ public:
     void setBufferMB(int mb);
     int bufferMB() const { return bufMb_; }
     void pause();
+    std::string latestCaption(size_t* count = nullptr) const;   // newest CEA-608 / 708 caption decoded from the video (empty: none so far)
     void play();                       // resume after Pause (stays behind live)
     void seekBehind(double seconds);   // play from this far behind live (0 = live)
     void goLive() { seekBehind(0); }
