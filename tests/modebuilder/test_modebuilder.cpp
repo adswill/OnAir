@@ -477,6 +477,58 @@ static void expectTrip(const char* what, const Definition& d, const GenOptions& 
     CHECKM(t.got >= t.sent - allowMiss && t.extra == 0, "%s (snr %.0f, cfo %.0f Hz, %.0f ppm): %d of %d frames, %d extra", what, g.snrDb, g.cfoHz, g.clockPpm, t.got, t.sent, t.extra);
 }
 
+static void expectFskLeadIn(const Definition& d, const GenOptions& g, double tone, bool prefix = true) {
+    uint32_t rng = 71;
+    const std::vector<uint8_t> frame = randomFrame(d, rng);
+    std::vector<cf> iq = generate(d, {frame}, g);
+    const double sps = d.sampleRate / d.symbolRate;
+    const size_t end = (size_t)std::lround(g.gapSymbols * sps);
+    const size_t start = end - (size_t)std::lround(30 * sps);
+    if (prefix) for (size_t i = start; i < end; i++) {
+        const double ph = 2 * 3.14159265358979323846 * (tone * d.deviation() + g.cfoHz) * (double)(i - start) / d.sampleRate;
+        iq[i] = cf((float)std::cos(ph), (float)std::sin(ph));
+    }
+    for (size_t step : {iq.size(), (size_t)137}) {
+        Receiver r(d);
+        r.configure(d.sampleRate);
+        for (size_t i = 0; i < iq.size(); i += step) r.feed(iq.data() + i, std::min(step, iq.size() - i));
+        r.flush();
+        const std::vector<Frame> out = r.take();
+        CHECKM(out.size() == 1 && out[0].good() && out[0].bytes == frame && r.stats().syncHits == 1,
+            "%s %s lead-in %s %.1f, cfo %.0f Hz, %zu-sample feed: %zu frames, %llu sync hits",
+            modName(d.mod), lineName(d.line), prefix ? "on" : "off", tone, g.cfoHz, step,
+            out.size(), (unsigned long long)r.stats().syncHits);
+    }
+}
+
+// A narrow acquisition block at the channel centre must not be mistaken for
+// either FSK tone. Use entirely synthetic lead-ins, plus real one-tone controls.
+static void testFskAcquisition() {
+    struct C { const char* mod; const char* line; };
+    const C cases[] = {{"FSK", "NRZ"}, {"FSK", "Manchester"}, {"GFSK", "NRZ"}, {"GFSK", "Manchester"}, {"GMSK", "Manchester"}};
+    for (const C& c : cases) {
+        Definition d = defOf(mkDef(std::string(R"({"type":")") + c.mod + R"(","symbol_rate":4800})",
+            std::string(R"(,"line_code":{"type":")") + c.line + R"("})"));
+        d.syncMaxErrors = 0;
+        GenOptions g;
+        g.snrDb = 200;   // deterministic; existing round trips exercise noise and frequency errors
+        expectFskLeadIn(d, g, 0, false);
+        expectFskLeadIn(d, g, d.mod == Mod::GFSK ? 0.2 : 0.0);
+        expectFskLeadIn(d, g, -1);
+        expectFskLeadIn(d, g, 1);
+    }
+    // An offset real tone must retain the original one-tone estimate. A guard
+    // extending to half a deviation broke these GMSK/NRZ starts at +/-0.4.
+    for (int sign : {-1, 1}) {
+        Definition d = defOf(mkDef(R"({"type":"GMSK","symbol_rate":4800})", ""));
+        d.syncMaxErrors = 0;
+        GenOptions g;
+        g.snrDb = 200;
+        g.cfoHz = sign * 0.6 * d.deviation();
+        expectFskLeadIn(d, g, -sign);
+    }
+}
+
 static void testExamplesRoundTrip() {
     for (const Example& e : examples()) {
         const Definition d = defOf(e.text);
@@ -675,6 +727,7 @@ int main(int argc, char** argv) {
     timed("fields", testFields);
     timed("examples", testExamplesRoundTrip);
     timed("modulations", testModulations);
+    timed("FSK acquisition", testFskAcquisition);
     timed("framing", testFraming);
     timed("noise", testNoise);
     if (gSweep) timed("streaming", testStreaming);

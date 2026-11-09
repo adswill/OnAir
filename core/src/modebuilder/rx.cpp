@@ -296,9 +296,15 @@ struct Receiver::Impl {
             if (fsk && M == 2) {
                 lo = std::clamp(p5, -1.6, 1.6);
                 hi = std::clamp(p95, -1.6, 1.6);
-                if (hi - lo < 0.35) {   // only one tone so far: the other is the nominal two deviations away
+                if (hi - lo < 0.35) {
                     const double mid = (hi + lo) / 2;
-                    if (mid > 0) { hi = mid; lo = mid - 2; } else { lo = mid; hi = mid + 2; }
+                    // A narrow cluster very close to zero does not identify either nominal
+                    // FSK tone (-1 and +1). Start centred until there is modulation to fit;
+                    // the one-tone fallback would put the threshold near a real tone.
+                    // Limit this guard to a quarter deviation to retain offset one-tone starts.
+                    if (std::fabs(mid) < 0.25) { lo = -1; hi = 1; }
+                    // Only one real tone so far: the other is two nominal deviations away.
+                    else if (mid > 0) { hi = mid; lo = mid - 2; } else { lo = mid; hi = mid + 2; }
                 }
             } else if (fsk) {
                 // more levels: the nominal deviation, shifted to fit the symbols of the burst start (a frequency offset)
