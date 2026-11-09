@@ -117,3 +117,31 @@ fn comm_b_identification() {
     assert_eq!(r.bds, 0x20);
     assert_eq!(&r.callsign[..r.callsign_len as usize], b"EZY6AB");
 }
+
+/// DF18 frame with control field `cf`, a valid CRC, and an ME that would read as airborne position (TC 11) under the ADS-B layout.
+fn df18_with_position_me(cf: u8) -> Vec<u8> {
+    let mut b = vec![0x90 | cf, 0x4B, 0x16, 0x9E, 0x58, 0xB9, 0x82, 0x56, 0x60, 0x5F, 0x3E, 0, 0, 0];
+    let p = crc::crc24(&b, 112);
+    b[11] = (p >> 16) as u8;
+    b[12] = (p >> 8) as u8;
+    b[13] = p as u8;
+    assert_eq!(crc::crc24(&b, 112), 0);
+    b
+}
+
+#[test]
+fn coarse_tisb_is_not_read_as_adsb() {
+    // CF 3: the ME is the coarse TIS-B layout, so nothing of it may become a position, altitude or velocity
+    let (ok, m) = msg::decode(&df18_with_position_me(3), 112);
+    assert!(ok);
+    assert_eq!((m.df, m.ca, m.icao), (18, 3, 0x4B169E));
+    assert_eq!(m.tc, -1);
+    assert!(!m.has_cpr && !m.has_alt && !m.has_vel && !m.has_move && !m.has_track);
+    // the same ME under CF 0 (ADS-B from a non-transponder device) and CF 2 (fine TIS-B) keeps the normal layout: the skip must stay this narrow
+    for cf in [0u8, 2] {
+        let (ok, m) = msg::decode(&df18_with_position_me(cf), 112);
+        assert!(ok);
+        assert_eq!(m.tc, 11, "CF {cf}");
+        assert!(m.has_cpr && m.has_alt, "CF {cf}");
+    }
+}
