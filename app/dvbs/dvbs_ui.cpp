@@ -1,6 +1,7 @@
 // DVB-S/S2 screens: lock lamps and readouts, constellation and quality plots, the receiver tab, symbol rate and standard controls,
 // and the options of the test signal.
 #include "app.h"
+#include "dect2/satmisc/feed_hunter.h"
 #include "dect2/dvbs/dvbs_s2.h"
 #include "dvbs_autoservice.h"
 #include <cfloat>
@@ -331,6 +332,33 @@ void streamsSection(App& a, const DvbsTelemetry& t) {
 // A wide capture can hold many carriers: the list shows every one found in the spectrum; "Decode" makes the receiver work on that one. The symbol file is for other tools.
 bool g_symDumpOn = false;
 
+// ---------------------------------------------------------------------------------------------- feed hunter: tries every narrow carrier in turn
+dect2::satmisc::FeedHunter g_hunter;
+bool g_huntOn = false;
+void feedHunterSection(App& a, const DvbsTelemetry& t) {
+    if (ImGui::Checkbox(tr("Feed hunter: try every narrow carrier"), &g_huntOn) && !g_huntOn) { g_hunter.reset(); a.engine.dvbs().selectCarrier(false, 0); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Contribution feeds: carriers up to 12 Msym/s, tried one by one for 20 seconds. Carriers that appear after the first 30 seconds are marked new. A carrier that never locks may be another standard or not TV at all."));
+    if (!g_huntOn) return;
+    std::vector<dect2::satmisc::FeedCarrierIn> in;
+    for (const auto& c : t.carriers) in.push_back({c.centerHz, c.rateHz, c.snrDb});
+    g_hunter.update(ImGui::GetTime(), in, a.tune.centerHz, t.tsLock, std::string());
+    if (g_hunter.hasRequest()) a.engine.dvbs().selectCarrier(true, g_hunter.requestOffsetHz());
+    if (g_hunter.feeds().empty()) { ImGui::TextDisabled("%s", tr("No narrow carrier found yet.")); return; }
+    if (ImGui::BeginTable("##feeds", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH)) {
+        ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn("Msym/s"); ImGui::TableSetupColumn(tr("Seen")); ImGui::TableSetupColumn(tr("State"));
+        ImGui::TableHeadersRow();
+        for (const auto& f : g_hunter.feeds()) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%.3f%s", f.mhz, f.isNew ? "  NEW" : "");
+            ImGui::TableNextColumn(); ImGui::Text("%.2f", f.rateHz / 1e6);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(f.present ? tr("now") : tr("gone"));
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(f.state == dect2::satmisc::FeedState::Locked ? tr("locked") : f.state == dect2::satmisc::FeedState::Trying ? tr("trying") : f.state == dect2::satmisc::FeedState::NoLock ? tr("no lock") : tr("waiting"));
+        }
+        ImGui::EndTable();
+    }
+    if (ImGui::SmallButton(tr("Try the rest again"))) g_hunter.retry();
+}
+
 void carriersSection(App& a, const DvbsTelemetry& t) {
     if (t.carriers.empty() && !g_symDumpOn && t.symbolDumpPath.empty()) return;
     ImGui::Spacing();
@@ -359,6 +387,7 @@ void carriersSection(App& a, const DvbsTelemetry& t) {
         }
         if (t.carrierPicked && ImGui::SmallButton("Back to the carrier nearest the centre")) a.engine.dvbs().selectCarrier(false, 0);
     }
+    feedHunterSection(a, t);
     bool on = g_symDumpOn;
     if (ImGui::Checkbox("Write the symbols to a file", &on)) {
         g_symDumpOn = on;
@@ -623,6 +652,11 @@ void receiver(App& a) {
 // ---------------------------------------------------------------------------------------------- tuner
 
 void tuner(App& a, bool& retune) {
+    if (ImGui::SmallButton(tr("ISS HamTV preset"))) {   // 2395 MHz, DVB-S, 2 Msym/s, FEC 1/2 (BATC wiki); listed for reference, the transmitter was reported in testing in 2025
+        a.freqMhz = 2395.0; S.srMsym = 2.0; saveState(a); retune = true;
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("ISS HamTV: 2395 MHz, DVB-S, 2.0 Msym/s, FEC 1/2. Needs an S-band antenna and pass tracking; check ARISS for whether it is on."));
+    
     (void)retune;   // the symbol rate and the standard are handed to the running receiver, no retune needed
     loadState();
     const double fs = a.engine.running() ? a.engine.sampleRate() : dvbsTuning().sampleRate;

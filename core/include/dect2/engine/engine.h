@@ -147,6 +147,7 @@
 #include "dect2/bletrk/bletrk_live.h"
 #include "dect2/satbeacon/satbeacon_live.h"
 #include "dect2/satmisc/satdetect_live.h"
+#include "dect2/navic/navic.h"
 #include "dect2/rid/rid_rx.h"
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/nr/nr_rx.h"
@@ -971,6 +972,7 @@ private:
     ModeAcReceiver rxModeAc_;
     BletrkLiveReceiver rxBt_;
     SatDetectReceiver rxSatd_;
+    NavicReceiver rxNavic_;
     SatbeaconLiveReceiver rxSb_;
     RidReceiver rxRid_;
     MeteorReceiver rxMeteor_;

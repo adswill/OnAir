@@ -28,7 +28,9 @@ bool parseFuncube(const std::vector<uint8_t>& frame, TelResult& out);
 // The text of a frame when it is a plain ASCII beacon (a long enough run of printable characters), else "".
 std::string beaconText(const std::vector<uint8_t>& info);
 // What can be said about any decoded frame: FUNcube for the AO-40 frames, the text, the CSP header. `framing` is cubesat::Framing or kFramingAo40 / kFramingText.
-bool parseTelemetry(int framing, const std::vector<uint8_t>& data, const std::vector<uint8_t>& payload, TelResult& out);
+bool parseTelemetry(int framing, const std::vector<uint8_t>& data, const std::vector<uint8_t>& payload, TelResult& out, int norad = 0);
+// Per satellite decoders, chosen by the NORAD number of the satellite the frame was matched to. GOMX-1 follows gr-satellites python/telemetry/gomx_1.py (GPL-3.0-or-later).
+bool parseGomx1(const std::vector<uint8_t>& csp, TelResult& out);
 
 constexpr int kFramingAo40 = 100, kFramingText = 101, kFramingCw = 102;
 

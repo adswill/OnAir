@@ -677,6 +677,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxModeAc_.configure(rate_);
     rxModeAc_.setLogCallback([this](const std::string& s) { log(s); });
     rxSb_.configure(rate_);
+    rxNavic_.configure(rate_);
     if (satmisc::isSatDetectStd(stdMode_.load())) { rxSatd_.setSystem(stdMode_.load()); rxSatd_.configure(rate_); }
     rxSb_.setLogCallback([this](const std::string& s) { log(s); });
     rxMs_.configure(rate_);

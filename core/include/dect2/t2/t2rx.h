@@ -140,6 +140,7 @@
 #include "dect2/bletrk/bletrk_tel.h"
 #include "dect2/satbeacon/satbeacon_tel.h"
 #include "dect2/satmisc/satdetect_tel.h"
+#include "dect2/navic/navic.h"
 #include "dect2/rid/rid_tel.h"
 #include "dect2/meteor/meteor_tel.h"
 #include "dect2/nr/nr_tel.h"
@@ -281,6 +282,7 @@ struct RxTelemetry {
     DmeTelemetry dme;         // valid when standard == 123 (DME, engine standard 123)
     DcsTelemetry goesdcs;     // valid when standard == 142 (GOES DCS, family 141)
     BletrkTelemetry bletrk;   // valid when standard == 144 (BLE tracker detector, family 143)
+    NavicTelemetry navic;     // valid when standard == 562 (NavIC)
     SatDetectTelemetry satdetect;   // valid for the satellite detector modes (active standards 551 on)
     SbTelemetry satbeacon;    // valid when standard == 145 (satellite beacon)
     HfbTelemetry hfb;         // valid when standard == 68 (HF beacons)

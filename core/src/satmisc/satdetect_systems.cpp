@@ -22,6 +22,8 @@ const std::vector<SatSystem>& satSystems() {
          "Follows every carrier in the capture and names the satellite whose predicted Doppler curve fits (near-earth orbits only). Needs elements and your location.", true},
         {554, "uhfsatcom", "UHF SATCOM skimmer", 255.000, 225, 400, 10e6, SdMethod::Channel, 1000, 8, 0, 5000, kUhfSat, 2,
          "Skims the 240 - 270 MHz military satellite downlinks for active channels (5 and 25 kHz). Energy and width only: no decoding.", false},
+        {555, "gmr1", "Thuraya GMR-1 channels", 1535.000, 1525, 1559, 10e6, SdMethod::Channel, 2000, 8, 0, 31250, nullptr, 0,
+         "Thuraya's GMR-1 downlink, 1525 - 1559 MHz. The standard is public (ETSI TS 101 376) but no decoder is implemented: active 31.25 kHz channels only.", false},
         {556, "starlink", "Starlink detector", 11325.000, 10700, 12700, 20e6, SdMethod::FrameGap, 0, 8, 750, 0, nullptr, 0,
          "Starlink's Ku downlink has no public specification. The 750 Hz frame rate is from published reverse engineering (Humphreys et al.). Detects the frame gap only; needs an LNB and a dish.", false},
         {557, "oneweb", "OneWeb detector", 11075.000, 10700, 12700, 20e6, SdMethod::RepeatSeq, 0, 8, 1000, 0, nullptr, 0,

@@ -263,7 +263,7 @@ struct SmartCubesat::Impl {
         p.snrDb = (float)t.snrDb;
         if (t.table && t.norad) { p.sat = t.sat; p.norad = t.norad; }
         else guessSatellite(p, t);
-        parseTelemetry(f.framing, f.data, f.payload, p.tel);
+        parseTelemetry(f.framing, f.data, f.payload, p.tel, p.norad);
         if (f.framing == kFramingCw) { p.tel.kind = "CW beacon"; TelField tf; tf.name = "Text"; tf.text = f.text; p.tel.fields.push_back(tf); }
         pkts.insert(pkts.begin(), p);
         if (pkts.size() > kPacketsMax) pkts.pop_back();

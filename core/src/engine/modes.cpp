@@ -329,6 +329,7 @@
 #include "dect2/satbeacon/satbeacon_live.h"
 #include "dect2/satmisc/satdetect_live.h"
 #include "dect2/satmisc/satdetect_tel.h"
+#include "dect2/navic/navic.h"
 #include "dect2/satbeacon/satbeacon_gen.h"
 #include "dect2/satbeacon/satbeacon_tel.h"
 #include "dect2/isdbs/isdbs_rx.h"
@@ -445,6 +446,7 @@ static std::vector<ModeTuning> anyFrequency(std::vector<ModeTuning> t) {
 // the satellite detector modes come from their own table (satdetect_systems.cpp)
 static std::vector<ModeTuning> withSatDetect(std::vector<ModeTuning> t) {
     for (const auto& s : satmisc::satSystems()) t.push_back(satDetectTuning(s.stdMode));
+    t.push_back(navicTuning());
     return t;
 }
 static const std::vector<ModeTuning>& table() {
@@ -696,7 +698,8 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 144: return makeModeAcSynth(cfg, sampleRate);
     case 145: return makeBletrkSynth(cfg, sampleRate);
     case 146: return makeSatbeaconSynth(cfg, sampleRate);
-    case 552: case 553: case 554: case 556: case 557: case 558: case 559: case 560: case 561: case 562: case 564: return makeSatDetectSynth(stdMode, cfg, sampleRate);
+    case 563: return makeNavicSynth(cfg, sampleRate);
+    case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 562: case 564: return makeSatDetectSynth(stdMode, cfg, sampleRate);
     case 150: return nfc::makeNfcSynth(cfg, sampleRate);   // NFC / RFID (engine standard 150)
     case 152: return makeSbasSynth(cfg, sampleRate);
     case 153: return makeAsterixSynth(cfg, sampleRate);
@@ -857,7 +860,8 @@ std::string modeSummary(const RxTelemetry& t) {
     case 153: return argosSummary(t.argos);
     case 154: return sigfoxModeSummary(t.sigfoxm);
     case 145: return sbSummary(t.satbeacon);
-    case 551: case 552: case 553: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: return sdSummary(t.satdetect);
+    case 562: return navicSummary(t.navic);
+    case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: return sdSummary(t.satdetect);
     case 149: return nfcSummary(t.nfc);   // NFC / RFID 13.56 MHz (active standard 149)
     case 155: return isdbsSummary(t.isdbs);
     case 57: return ridSummary(t.rid);
