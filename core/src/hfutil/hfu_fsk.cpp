@@ -474,7 +474,7 @@ struct FskRx::Impl {
 
     void wordsArq() {
         const size_t W = 7;
-        const size_t N = 80;
+        const size_t N = 120;
         while (lockOff < 0 && mbits.size() >= (N + 2) * W) {
             // score all alignments, polarities, cycle hypotheses
             int bo = -1, bp = 0, bc = 0, bph = 0;
@@ -501,7 +501,8 @@ struct FskRx::Impl {
             if (bo >= 0) {
                 std::map<int, int> seen;
                 for (size_t w = 0; w < N; w++) { int v = 0; for (size_t i = 0; i < W; i++) v |= (mbits[(size_t)bo + w * W + i] ^ (bp ? 1 : 0)) << i; if (bc && (int)(w % (size_t)bc) == bph) v = (~v) & 0x7F; seen[v]++; }
-                if (seen.size() < 8) bo = -1;   // a rotated idle pattern passes the parity check as well: wait for varied words
+                int top = 0; for (auto& kv : seen) top = std::max(top, kv.second);
+                if (seen.size() < 10 || top > (int)N / 2) bo = -1;   // a rotated idle pattern passes the parity check as well: wait for varied words (noise alone also varies a few)
             }
             if (bo < 0) { mbits.erase(mbits.begin(), mbits.begin() + 7); continue; }
             lockOff = bo; lockPol = bp; lockCycle = bc; lockPhase = bph;
@@ -568,7 +569,8 @@ struct FskRx::Impl {
             if (bs >= 0.80) {
                 std::map<int, int> seen;
                 for (size_t ch = 0; ch < N; ch++) seen[wordAt(ch, bo, bS, bpol) & 31]++;
-                varied = seen.size() >= 8;
+                int top = 0; for (auto& kv : seen) top = std::max(top, kv.second);
+                varied = seen.size() >= 10 && top <= (int)N * 3 / 5;
             }
             if (bs < 0.80 || !varied) { mbits.erase(mbits.begin(), mbits.begin() + 10); continue; }   // an idle-only window is ambiguous
             lockOff = 0;
