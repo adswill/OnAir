@@ -73,10 +73,11 @@ std::vector<uint8_t> pocsagBits(const std::vector<PocsagPage>& pages, int preamb
     return out;
 }
 
-void PocsagParser::reset() { hasTerm_ = false; have_ = false; damaged_ = false; gap_ = 0; bits_.clear(); raw_.clear(); ok = fixed = failed = 0; }
+void PocsagParser::reset() { hasTerm_ = false; have_ = false; damaged_ = false; gap_ = 0; bits_.clear(); bad_.clear(); raw_.clear(); ok = fixed = failed = 0; }
 
 void PocsagParser::finish(std::vector<PagerMessage>& out) {
-    gap_ = 0;                                       // a gap at the end of a page is not message text
+    const int tailGap = gap_;                       // lost words at the end of the page: not message text, but the repair wants to know
+    gap_ = 0;
     if (!have_) return;
     have_ = false;
     PagerMessage m = newMessage();
@@ -96,6 +97,19 @@ void PocsagParser::finish(std::vector<PagerMessage>& out) {
         m.looksAlpha = pocsagLooksAlpha(bits_);
         m.type = kPagerNumeric;
         pocsagApplyRead(m, readMode);
+        m.alphaTailLost = tailGap;
+        if (damaged_ && bad_.size() == bits_.size()) {
+            // the 7-bit characters with the bits a lost code word took away marked, for the text repair (pager_intel.h)
+            for (size_t c = 0; (c + 1) * 7 <= bits_.size(); c++) {
+                int v = 0, known = 0;
+                for (int k = 0; k < 7; k++) {
+                    v |= (bits_[c * 7 + (size_t)k] & 1) << k;
+                    if (!bad_[c * 7 + (size_t)k]) known |= 1 << k;
+                }
+                m.alphaRaw.push_back((char)v);
+                m.alphaKnown.push_back((char)known);
+            }
+        }
     }
     out.push_back(std::move(m));
 }
@@ -123,13 +137,13 @@ void PocsagParser::combineCopies(int64_t wall) {
         const MergedCopy mc = mergePocsagCopies(use);
         if (mc.recovered > 0) {
             // rebuild the message bits; a word that is still lost leaves a gap, the lost tail is dropped
-            bits_.clear(); fixedBits_ = 0; damaged_ = false;
+            bits_.clear(); bad_.clear(); fixedBits_ = 0; damaged_ = false;
             int gap = 0;
             for (size_t i = 1; i < mc.words.size(); i++) {
                 const PocsagWord c = pocsagClassify(mc.words[i]);
                 if (!mc.valid[i] || c.kind != PocsagWord::Data) { gap++; damaged_ = true; continue; }
-                for (; gap > 0; gap--) for (int b = 0; b < 20; b++) bits_.push_back(0);
-                for (int b = 19; b >= 0; b--) bits_.push_back((uint8_t)((c.a >> b) & 1));
+                for (; gap > 0; gap--) for (int b = 0; b < 20; b++) { bits_.push_back(0); bad_.push_back(1); }
+                for (int b = 19; b >= 0; b--) { bits_.push_back((uint8_t)((c.a >> b) & 1)); bad_.push_back(0); }
                 fixedBits_ += c.bits;
             }
             combinedNow_ = true;
@@ -170,12 +184,12 @@ void PocsagParser::word(uint32_t raw, int slot, std::vector<PagerMessage>& out) 
         ric_ = (c.a << 3) | (uint32_t)(slot >> 1);
         fn_ = (int)c.b;
         fixedBits_ = c.bits;
-        bits_.clear();
+        bits_.clear(); bad_.clear();
         raw_.assign(1, raw);
     } else if (have_) {
         raw_.push_back(raw);
-        for (; gap_ > 0; gap_--) for (int i = 0; i < 20; i++) bits_.push_back(0);     // keeps the later bits where they belong
-        for (int i = 19; i >= 0; i--) bits_.push_back((uint8_t)((c.a >> i) & 1));
+        for (; gap_ > 0; gap_--) for (int i = 0; i < 20; i++) { bits_.push_back(0); bad_.push_back(1); }     // keeps the later bits where they belong
+        for (int i = 19; i >= 0; i--) { bits_.push_back((uint8_t)((c.a >> i) & 1)); bad_.push_back(0); }
         fixedBits_ += c.bits;
     }
 }

@@ -69,6 +69,7 @@ private:
     uint32_t ric_ = 0;
     int fn_ = 0, fixedBits_ = 0;
     std::vector<uint8_t> bits_;
+    std::vector<uint8_t> bad_;                     // parallel to bits_: 1 = the bit was lost with a code word (filled with 0)
 };
 
 // ---- FLEX
