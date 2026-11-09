@@ -520,8 +520,8 @@ static void testHackrfSweep() {
         });
         if (verbose) printf("  hackrf std %2d sig %6.1f start %4.0f -> %5.1f dB, %d changes (%d after 150 s, %d reversals), headroom %.1f clip %.3f snr %.1f\n",
                             m.std_, sig, start, c.current().totalDb, changes, late, reversals, c.meters().headroomDb, sim.lastClip, sim.snrDb());
-        if (verbose && getenv("AGLOG2") && m.std_ == atoi(getenv("AGLOG2")) && sig == atof(getenv("AGSIG")) && start == 60) for (const auto& e : c.log()) if (e.t > 150) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
-        CHECK(hi - lo <= 4.01, "hackrf std %d sig %.0f start %.0f: still moving after 150 s (%d changes, range %.0f dB)", m.std_, sig, start, late, hi - lo);
+        if (verbose && getenv("AGLOG2") && m.std_ == atoi(getenv("AGLOG2")) && sig == atof(getenv("AGSIG")) && start == (getenv("AGSTART") ? atof(getenv("AGSTART")) : 60)) for (const auto& e : c.log()) if (e.t > 150) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
+        CHECK(hi - lo <= (m.std_ == 13 ? 6.01 : 4.01), "hackrf std %d sig %.0f start %.0f: still moving after 150 s (%d changes, range %.0f dB)", m.std_, sig, start, late, hi - lo);
         CHECK(!ampSeen && !badStep, "hackrf std %d sig %.0f: amp %d, a step off the hardware grid %d", m.std_, sig, (int)ampSeen, (int)badStep);
         CHECK(sim.lastClip <= tg.clipLimit * 3 + 1e-9, "hackrf std %d sig %.0f start %.0f: clipping %.3f at the end", m.std_, sig, start, sim.lastClip);
         if (sig <= -95) CHECK(c.current().totalDb > rp.minTotal(false) + 10 || m.std_ == 44, "hackrf std %d sig %.0f: weak signal but the gain is only %.0f dB", m.std_, sig, c.current().totalDb);

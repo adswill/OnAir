@@ -72,12 +72,12 @@ bool AutoGainController::floorFine() const { return fl_.valid && fl_.adcMarginDb
 void AutoGainController::noteCut(double now) {
     if (now - lastRecoverAt_ < 3.0) recWait_ = std::min(120.0, recWait_ * 3.0);   // the jump back clipped again: the next one waits longer (a keyed transmitter must not pump the gain)
     cutOobIn_ = -300;   // measured once the cut has settled: during the clip the out-of-band power is the distortion's
-    if (!cutActive_) { cutActive_ = true; cutFrom_ = cur_.totalDb; cutWasOob_ = fl_.valid && (!(fl_.oobDbfs > -199) || fl_.oobDbfs > fl_.chanDbfs + 3 + 10 * std::log10(std::max(1.0, fl_.snrDb))); }   // (a channel that fills the capture cannot tell: treated as possibly from outside)
+    if (!cutActive_) { cutActive_ = true; cutFrom_ = clTrial_ ? basePlan_.totalDb : cur_.totalDb; cutWasOob_ = fl_.valid && (!(fl_.oobDbfs > -199) || fl_.oobDbfs > fl_.chanDbfs + 3 + 10 * std::log10(std::max(1.0, fl_.snrDb))); }   // (a channel that fills the capture cannot tell: treated as possibly from outside)
     cutAt_ = now;
 }
 
 void AutoGainController::settleHere(const AgInput& in) {
-    settled_ = true; settledAt_ = in.now; settledJ_ = base_.mean; cand_ = 0;
+    settled_ = true; settledAt_ = in.now; settledJ_ = base_.mean; cand_ = 0; clStep_ = 2;
     settledDec_ = decB_.n >= 3 ? decB_.mean : -1e9;
     refValid_ = fl_.valid;
     if (fl_.valid) { floorRef_ = fl_.floorDbfs - cur_.totalDb; oobRef_ = fl_.oobDbfs - cur_.totalDb; }
@@ -107,7 +107,7 @@ double AutoGainController::stepReal(double from, double to) const {
 // 0.1 % of the samples and the 99.99 % point only measures the noise; clipping is still caught by the clipped fraction. Else the lower of the two.
 double AutoGainController::effHeadroom(const AgInput& in) const {
     const bool hold = in.adc.holdHeadroomDb < 119;
-    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && hold) return std::max(in.adc.holdHeadroomDb, pj_.loudShare() <= PulseJudge::kLoudOk * 2 ? tgt_.minHeadroomDb + 1.0 : -1e9);   // messages say more than one peak: the nearest aircraft may touch full scale while few messages are loud (the far ones still gain)
+    if (tgt_.kind == ModeKind::Pulsed && q_.pulseValid && hold) return std::min(headAvg_, std::max(in.adc.holdHeadroomDb, tgt_.minHeadroomDb + 1.0));   // (the noise itself near full scale still counts) messages say more than one peak: the nearest aircraft may touch full scale; the loud share (tooLoud) and the clip fraction take the gain down
     double eff = headAvg_;
     if (tgt_.usePeakHold && hold) eff = std::min(eff, in.adc.holdHeadroomDb);
     return eff;
@@ -262,7 +262,8 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
             lastWakeAt_ = now; idleCycles_ = 0;
         }
         // a settled loop looks at its neighbours ever more rarely: 6, 12, 24 ... up to 15 minutes, 30 minutes while the decoder is comfortable. Each look is a gain step the decoder hears
-        const double every = tgt_.lockSnrDb > 1e8 && tgt_.metric == Metric::Sensitivity && !q_.pulseValid ? std::min(1800.0, 60.0 * std::pow(3.0, (double)std::min(idleCycles_, 4))) :   // no decoder to serve (a wide span, GNSS): the floor does not change by itself
+        const double every = tgt_.kind == ModeKind::Pulsed && q_.pulseValid ? std::min(120.0, 6.0 * std::pow(2.0, (double)std::min(idleCycles_, 5))) :   // the sky changes all the time: ADS-B keeps looking at its neighbours
+                             tgt_.lockSnrDb > 1e8 && tgt_.metric == Metric::Sensitivity && !q_.pulseValid ? std::min(1800.0, 60.0 * std::pow(3.0, (double)std::min(idleCycles_, 4))) :   // no decoder to serve (a wide span, GNSS): the floor does not change by itself
                              comf && idleCycles_ >= 2 ? std::min(1800.0, 120.0 * std::pow(2.0, (double)std::min(idleCycles_, 5))) : std::min(900.0, 6.0 * std::pow(3.0, (double)std::min(idleCycles_, 6)));
         if (now - settledAt_ < every / sp) {
             if (now - dwellFrom_ > 12 / sp) { base_ = Run(); decB_ = Run(); specPow_.clear(); specCnt_ = 0; dwellFrom_ = now; }   // a fresh baseline for the next probe
@@ -450,7 +451,7 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
     if (accept) {
         clTrial_ = false;
         base_ = tri_; decB_ = decT_; mBase_ = mTri_;   // what was measured is the new baseline (and the spectrum accumulating now is its own)
-        if (candKind_ == 1) clDir_ = 1; else if (candKind_ == 2) clDir_ = -1;
+        if (candKind_ == 1) clDir_ = 1; else if (candKind_ == 2) { clDir_ = -1; cutActive_ = false; }   // lower measurably better than what recovery wants: the cut gain was right
         if (candKind_ != 3) clStep_ = std::min(tgt_.maxStepDb, clStep_ * 1.5);
         cand_ = 0; settled_ = false; rejectRun_ = 0; idleCycles_ = std::max(0, idleCycles_ - 2);   // a kept step: the back-off shortens, it does not start over
         if (candKind_ == 3) splitKept_ = true;

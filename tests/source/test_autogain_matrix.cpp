@@ -332,7 +332,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         applyScene(g.r, m, sc0);
         const double best = oracle(g.r, g.tgt);
         g.run(60);
-        const double conv = convergeAt(g.log, 0, 60, best, 1.0, clipLim);
+        const double conv = convergeAt(g.log, 0, 60, best, lim.dq, clipLim);
         if (gVerbose) { printf("  start %.0f: conv %.1f, q at 60 s %.1f (best %.1f), gain %.1f split", start, conv, g.log.back().q, best, g.r.live.totalDb); for (double x : g.r.live.db) printf(" %.0f", x); printf("\n"); if (start != mid) { for (const auto& e : g.c.log()) if (e.t < 30) printf("      %6.1f %5.1f -> %5.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str()); } }
         row.settle = std::max(row.settle, conv);
         row.acqClip = std::max(row.acqClip, clipSeconds(g.log, 0, 60, clipLim));
@@ -370,7 +370,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         const double best = oracle(g.r, g.tgt);
         const double t1 = g.now;
         g.run(150);
-        row.irRec = convergeAt(g.log, t1, t1 + 150, best, 1.0, clipLim, 8);
+        row.irRec = convergeAt(g.log, t1, t1 + 150, best, lim.dq, clipLim, 8);
         dump(g, "ir");
     }
     // 3. a retune to a much weaker channel, the app's way (a fresh start); a small VFO move inside the span; a mode switch
@@ -386,7 +386,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         g.begin();
         const double t0 = g.now;
         g.run(90);
-        row.rtS = convergeAt(g.log, t0, t0 + 90, best, 1.0, clipLim);
+        row.rtS = convergeAt(g.log, t0, t0 + 90, best, lim.dq, clipLim);
         row.rtDq = best - medianQ(g.log, t0 + 75, t0 + 90);
         if (gVerbose) { double bg = 0; oracle(g.r, g.tgt, &bg); printf("  retune: best %.1f at gain %.1f, have q %.1f gain %.1f\n", best, bg, g.log.back().q, g.r.live.totalDb); }
         dump(g, "retune");
@@ -408,7 +408,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         const double bestN = oracle(g.r, g.tgt);
         const double t1 = g.now;
         g.run(60);
-        row.modeS = convergeAt(g.log, t1, t1 + 60, bestN, 1.0, g.tgt.clipLimit);
+        row.modeS = convergeAt(g.log, t1, t1 + 60, bestN, limitsFor(nx, prof).dq, g.tgt.clipLimit);
         dump(g, "mode");
     }
     // 4. idle: nothing in the channel for 20 minutes
@@ -456,9 +456,9 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
     flag(row.irDq > lim.irDq, "irq");
     flag(row.irRec > lim.irRec, "irrec");
     flag(row.rtS > lim.settle, "retune");
-    flag(row.rtDq > lim.dq, "rtq");
+    flag(row.rtDq > lim.dq + 0.0, "rtq");
     flag(row.small > lim.small, "small");
-    flag(row.modeS > lim.settle, "modesw");
+    flag(row.modeS > limitsFor((ModeClass)((m + 1) % kModes), prof).settle, "modesw");
     flag(row.idleChg > lim.idleChg, "idle");
     flag(row.idleSpan > lim.idleSpan, "idlespan");
     if (m != OFDM) flag(row.burstChg > lim.burstChg, "bursty");   // (a continuous OFDM carrier does not come and go: its number is kept for information)

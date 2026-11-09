@@ -264,6 +264,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         if (episode && !returning) { ceil_ = cur_.totalDb - 3; preOvDb_ = cur_.totalDb; }
         if (set_.v2) noteCut(now);
         ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
+        if (set_.v2 && clTrial_) { ceil_ = basePlan_.totalDb + 0.01; ceilUntil_ = now + 300.0 / sp; }   // a look at a higher gain clipped: not worth another look for five minutes
         // the linear split costs noise figure, so only an overload from outside the channel (or products) earns it: then it stays 5 minutes (not for pulsed ADS-B: a long linear split
         // costs the far aircraft). The ADC clipped on the wanted signal itself: the gain is cut, the split stays as the mode wants it
         const bool frontOverload = !set_.v2 || (!acq && (imdSeen_ || (fl_.valid && fl_.strongestDbfs > fl_.chanDbfs + 10)));   // (a start gain that clips says nothing about the band)
