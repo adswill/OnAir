@@ -1,5 +1,6 @@
 // Trunking controller: control channel messages in, calls and follow actions out. Also the DMR Tier III grant model.
 #include "dect2/p25/trunk.h"
+#include "dect2/dmr/dmr_vendor.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -11,7 +12,7 @@ void DmrModel::setChannel(int lcn, double hz) { if (hz > 0) lcn_[lcn] = hz; else
 double DmrModel::lcnFreq(int lcn) const { auto it = lcn_.find(lcn); return it == lcn_.end() ? 0 : it->second; }
 
 bool DmrModel::onCsbk(int opcode, int fid, const uint8_t d[8], double, Grant& g) {
-    if (fid != 0) return false;   // manufacturer CSBKs (Connect Plus, Capacity Plus and the like are not public): not interpreted
+    if (fid != 0) return false;   // vendor CSBKs go through onCsbkVendor
     if (opcode != ops_.tvGrant && opcode != ops_.pvGrant && opcode != ops_.btvGrant) return false;
     g = Grant();
     g.dmr = true; g.tdma = true;
@@ -25,6 +26,28 @@ bool DmrModel::onCsbk(int opcode, int fid, const uint8_t d[8], double, Grant& g)
     g.freqHz = lcnFreq(g.channel);
     n_++;
     return true;
+}
+
+// Capacity Plus (FID 0x10) and Connect Plus (FID 0x06). LSNs and LCNs are looked up in the user's channel table as for Tier III.
+bool DmrModel::onCsbkVendor(int opcode, int fid, const uint8_t d[8], std::vector<Grant>& out) {
+    out.clear();
+    if (fid == 0x10 && opcode == 0x3E) {
+        std::vector<dmr::CapPlusGrant> gs; int rest = 0;
+        if (!capPlus_.feed(d, gs, rest)) return false;
+        for (const auto& c : gs) {
+            Grant g; g.dmr = true; g.tdma = true; g.channel = c.lsn; g.slot = (c.lsn - 1) & 1; g.group = true; g.tg = c.tg; g.freqHz = lcnFreq(c.lsn); g.explicitUpdate = true;
+            n_++; out.push_back(g);
+        }
+        return !out.empty();
+    }
+    if (fid == 0x06 && opcode == 0x03) {
+        dmr::ConPlus c;
+        if (!dmr::conPlusParse(opcode, d, c)) return false;
+        Grant g; g.dmr = true; g.tdma = true; g.channel = c.lcn; g.slot = c.slot; g.group = true; g.tg = (int)c.dst; g.src = (int)c.src; g.freqHz = lcnFreq(c.lcn);
+        n_++; out.push_back(g);
+        return true;
+    }
+    return false;
 }
 
 Controller::Controller() {}
@@ -72,6 +95,7 @@ void Controller::onDmrCsbk(int opcode, int fid, const uint8_t data[8], double no
     lastGood_ = now;
     follower.onControlSeen(now);
     if (dmr.onCsbk(opcode, fid, data, now, g)) dispatch({g}, now);
+    else { std::vector<Grant> vg; if (dmr.onCsbkVendor(opcode, fid, data, vg)) dispatch(vg, now); }
 }
 
 void Controller::tick(double now) {
