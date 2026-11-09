@@ -175,7 +175,7 @@ class ReceiverEngine(
         val force = forceTelemetry || _telemetry.value == null
         core.telemetry(force)?.let {
             _telemetry.value = it; forceTelemetry = false
-            if (io.github.adswill.onair.BuildConfig.DEBUG) android.util.Log.i("OnAirSmoke", "std=${it.standard} lock=${it.lock} snr=${it.snrDb} cards=${it.cards.size} tables=${it.tables.size} rows=${it.tables.sumOf { t -> t.rows.size }} summary=${it.summary.take(100)}")
+            if (io.github.adswill.onair.BuildConfig.DEBUG) android.util.Log.i("OnAirSmoke", "std=${it.standard} rate=${meta[1]} lock=${it.lock} snr=${it.snrDb} cards=${it.cards.size} tables=${it.tables.size} rows=${it.tables.sumOf { t -> t.rows.size }} summary=${it.summary.take(100)}")
         }
         val (total, lines) = core.log(logTotal)
         logTotal = total
