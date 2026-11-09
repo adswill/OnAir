@@ -1,5 +1,7 @@
 // Yaesu System Fusion receiver (see fusion_rx.h).
 #include "dect2/fusion/fusion_rx.h"
+#include "dect2/fusion/fusion_gps.h"
+#include <cstring>
 #include "dect2/dsp/cic3.h"
 #include "dect2/fusion/fusion_proto.h"
 #include "dect2/audio/audioout.h"
@@ -305,6 +307,7 @@ struct FusionReceiver::Impl {
         tel.dest.clear(); tel.src.clear(); tel.down.clear(); tel.up.clear();
         for (auto& r : tel.rem) r.clear();
         tel.slowText.clear();
+        tel.hasGps = false; tel.radioModel.clear(); gpsLen = 0; std::memset(gpsBuf, 0, sizeof gpsBuf);
         for (bool& h : tel.haveCsd) h = false;
         for (int i = 0; i < 13; i++) { chunk[i].clear(); chunkHave[i] = false; }
         tel.voiceSubFrames = 0; tel.voiceDecoded = 0;
@@ -317,6 +320,9 @@ struct FusionReceiver::Impl {
         report();
     }
 
+    uint8_t gpsBuf[300] = {};
+    int gpsLen = 0;
+
     void csd1(const uint8_t* p) { tel.dest = fusion::trimField(p, 10); tel.src = fusion::trimField(p + 10, 10); tel.haveCsd[0] = true; }
     void csd2(const uint8_t* p) { tel.down = fusion::trimField(p, 10); tel.up = fusion::trimField(p + 10, 10); tel.haveCsd[1] = true; }
     void csd3(const uint8_t* p) { for (int i = 0; i < 4; i++) tel.rem[i] = remText(p + 5 * i, 5); tel.haveCsd[2] = true; }
@@ -326,6 +332,12 @@ struct FusionReceiver::Impl {
         for (size_t i = 0; i < n; i++) c += (p[i] >= 32 && p[i] < 127) ? (char)p[i] : ' ';
         chunk[idx] = c;
         chunkHave[idx] = true;
+        if ((size_t)idx * n + n <= sizeof gpsBuf) {
+            std::memcpy(gpsBuf + (size_t)idx * n, p, n);
+            if ((int)(((size_t)idx + 1) * n) > gpsLen) gpsLen = (int)(((size_t)idx + 1) * n);
+            const fusion::YsfGps g = fusion::ysfGpsParse(gpsBuf, gpsLen);
+            if (g.ok) { tel.hasGps = true; tel.gpsLat = g.lat; tel.gpsLon = g.lon; tel.radioModel = g.radio; }
+        }
         std::string t;
         for (int i = 0; i < 13; i++) if (chunkHave[i]) t += chunk[i];
         while (!t.empty() && t.back() == ' ') t.pop_back();

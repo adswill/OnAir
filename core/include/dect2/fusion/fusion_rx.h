@@ -48,6 +48,7 @@ struct FusionTelemetry {
     std::string dest, src, down, up;            // the callsign fields (empty: not received yet)
     std::string rem[4];                         // supplementary fields (radio IDs), printable or hex
     std::string slowText;                       // the slow data bytes received, printable characters only
+    bool hasGps = false; double gpsLat = 0, gpsLon = 0; std::string radioModel;   // GPS block of the slow data
     bool haveCsd[3] = {false, false, false};    // CSD1 (dest, src), CSD2 (down, up), CSD3 (rem) seen
     // voice
     bool codecReady = false;
