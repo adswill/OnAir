@@ -1,0 +1,29 @@
+# Maritime smart features (3.7)
+
+Six features, all automatic, nothing to configure. Receive and analysis only. Pure logic is in core and tested with synthetic signals and impairments.
+Already existing and not duplicated: the DSC map and watchlist, AIS filters / CPA / geofences, the HFDL band hopper, the ALE stations table, the pass planner and SGP4.
+
+## Sea distress incident board (proposals 20 and 7, one model)
+`core/src/marine/marine_incident.cpp`, `marine_navtex_geo.cpp`, `marine_incident_feed.cpp`; UI `app/marine/incident_ui.cpp` (Marine > DSC, AIS > Alerts).
+A checked DSC distress alert opens one incident per MMSI in distress and joins to it: the last AIS position of that MMSI (flags a gap over 5 nm between the DSC and AIS positions), AIS-SART / MOB / EPIRB-AIS devices (MMSI 970 / 972 / 974) within 5 nm (test transmissions, nav status other than 14 or "TEST", never open or join), vessels within 20 nm with their closest approach to the scene (the existing `aisCpa`), and NAVTEX that names the MMSI or ship, holds a position within 100 nm (positions are read from "56-30N 003-15E", "5630.5N 00315.2E", "N56 30 E003 15", decimals, degree signs) or names the sea for A / D / L messages (45 named areas, coarse boxes). Distance and bearing from the receiver position, a repeat merges into one timeline line, one pinned alert per incident (automation event `dsc.incident`: opened, position, device, ack, navtex). A device heard before any DSC call is its own incident and folds into the DSC one when it arrives. With no position at all the incident still opens. Incidents close after 6 h of no news.
+Tests `test_marine_incident`: 13 position formats and refusals, 600 random scenes through real DSC symbol building and parsing (position right 600/600, gap flag right 600/600, far device kept apart 600/600), repeats, acks, damaged calls, stale AIS, devices before and after, test devices, NAVTEX before and after the call.
+
+## AIS anomaly engine (proposal 6)
+`core/src/ais/ais_anomaly.cpp`, alerts in AIS > Alerts, event `ais.anomaly`, switch and two limits under Advanced.
+Position jump (no ship could get there), identity clash (one MMSI alternating between two tracks more than 5 nm apart), aid to navigation moved (and not off-position), MMSI kind vs station class, speed impossible for the ship type (three in a row), name change (edit distance over 3), dark ship (silent for 30 min inside the part of the sea the receiver covers: a per-bearing coverage model, 10 degree sectors, 90th percentile of one sample per ship per 2 min; only for ships under way, not anchored or moored, only when the projected position is inside 60 % of the range heard there) and "reappeared". Dark detection needs the receiver position.
+Tests `test_ais_anomaly`: clean traffic (8 runs x 150 ships x 4 h, 10 to 80 % reports lost, GPS noise to 55 m, ships leaving the covered sea): 0 false alarms. Clone found after 4 reports (40 s). Spoofed single position: one jump, no clash. Message 27 positions mixed with normal ones: quiet. Dark ships: all of the ones the coverage model knew and that were inside 45 % of its range were found (7/7), 17/24 overall, mean delay 36 min, 0 false dark alerts.
+
+## ALE link quality (proposal 18)
+`core/src/ale/ale_lqa.cpp`, ALE > Link quality. Every call heard feeds station x frequency x UTC hour (half life 14 days). Rank blends the hour of the day (neighbours at half weight) with the last 30 minutes, weighted by amount of data, and the HF propagation monitor (open band x1.15, closed band x0.8). Kept in `ale-link-quality.txt`. The remote station's own LQA report (BER / SINAD / MP) is shown in the event log but not folded in: it describes the other path.
+Test `test_ale_lqa`, synthetic five-channel ionosphere, best channel by hour: 87 % right after 1 day, 96 % after 4 or more days (2 to 8 dB noise, 30 % lost); 96 % with 70 % of soundings lost; the "strongest of the last observations" baseline gets 29 %, random 20 %.
+
+## HFDL frequency learning (proposal 19)
+`core/src/hfdl/hfdl_learn.cpp`, HFDL > Ground stations, hopper. The squitter's system table version (octets 53-54) is now read. A frequency a station is heard on that the built-in table lacks is learned after two squitters. After a version change the masks index the old table, so the frequencies actually heard replace the announcements ("table changed"). A built-in frequency is dropped only when, since the change, this receiver listened to it 2 h in total, heard the station 3 times and never on it. The HFNPDU 0xD0 system table itself is still not reassembled; a learned frequency outside the eight known bands does not add a band to the hopper. Only a live radio feeds it. Kept in `hfdl-learned.txt`.
+Test `test_hfdl_learn`: after a table change the announced list is 100 % right (old reading 86 %); renumbering alone, no listening, and unchanged stations drop nothing; a week of version changes with 20 to 80 % squitters lost: 0 wrong drops.
+
+## Iridium Doppler (proposal 21)
+`core/src/iridium/iridium_doppler.cpp` (no voice files), Iridium > Sky. Ring-alert bursts sit on a known channel, so their offset is the Doppler plus the receiver error. Matched against every Iridium TLE above the horizon: names the satellite behind each header number, gives the receiver frequency error (free calibration at 1.6 GHz), a sky plot, and a ground circle for a terminal from the beam centre of the ring alert carried along with the satellite (radius 250 km; terminals themselves cannot be located, only the beam). Live radio only.
+Test `test_iridium_doppler`, 66 synthetic satellites: 100 % identification at 100 to 1000 Hz noise, receiver offsets +-8 kHz, 1 s time error, and TLEs 0.3 deg / 0.001 rev/day off; offset estimate error 18 Hz to 1.4 kHz (grows with the TLE error). Real signals not tried.
+
+## Not done
+No GUI screenshot checks were run; real recordings were not available for any of these.

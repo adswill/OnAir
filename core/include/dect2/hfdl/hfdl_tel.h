@@ -31,6 +31,7 @@ struct HfdlMessage {
     // squitter
     int frameIndex = -1;
     bool utcSync = false;
+    int systable = -1;           // the system table version the squitter names (-1 not read)
     std::vector<int> activeKhz;  // the frequencies the squitter says are in use (from the built-in station table)
     // ACARS
     bool acars = false;

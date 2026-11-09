@@ -6,6 +6,11 @@
 #include "dect2/ale/ale_proto.h"
 #include "dect2/ale/ale_rx.h"
 #include "dect2/ale/ale_tel.h"
+#include "dect2/ale/ale_lqa.h"
+#include "../hfbeacon/hfprop_ui.h"
+#include "platform/platform.h"
+#include <fstream>
+#include <sstream>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -18,7 +23,8 @@ namespace {
 struct State {
     bool wasRunning = false, loaded = false;
     bool listen = false; int pushedListen = -1; float pushedVol = -1; bool pushedMute = false;   // "Listen": off until switched on
-    int view = 0;                        // 0 events, 1 stations, 2 words
+    int view = 0;                        // 0 events, 1 stations, 2 words, 3 link quality
+    std::string lqaSel;                  // the station the link-quality view shows in detail
     int demod = dect2::HfDemodAuto;      // the front end's demodulator (HfDemod)
     char nets[128] = "";
     std::string pushedNets = "\x01";
@@ -163,10 +169,92 @@ void wordsView(App& a) {
     if (w.empty()) ImGui::TextDisabled("no words yet");
 }
 
+// ---------------------------------------------------------------- link quality (ale_lqa.h)
+
+double utcNow() { return (double)std::time(nullptr); }
+
+void lqaTick() {   // the link-quality memory is kept between runs
+    static bool loaded = false;
+    static double lastSave = 0;
+    static uint64_t saved = 0;
+    const std::string path = plat::dataDir() + "/ale-link-quality.txt";
+    dect2::AleLqa& L = dect2::AleLqa::global();
+    if (!loaded) {
+        loaded = true;
+        std::ifstream f(path, std::ios::binary);
+        std::ostringstream ss; ss << f.rdbuf();
+        L.load(ss.str());
+        lastSave = utcNow();
+        saved = L.total();
+    }
+    if (utcNow() - lastSave < 300 || L.total() == saved) return;
+    lastSave = utcNow(); saved = L.total();
+    std::ofstream f(path, std::ios::binary | std::ios::trunc);
+    f << L.save();
+}
+
+ImVec4 scoreColour(double s) { return s >= 66 ? ImVec4(0.45f, 0.85f, 0.5f, 1) : s >= 33 ? ImVec4(0.95f, 0.8f, 0.35f, 1) : ImVec4(0.8f, 0.5f, 0.45f, 1); }
+
+void lqaView(App& a) {
+    (void)a;
+    dect2::AleLqa& L = dect2::AleLqa::global();
+    const double now = utcNow();
+    const std::vector<dect2::hfp::BandNow> prop = hfprop_ui::model().now(now);
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("Every call and sounding heard is a measurement of the path from that station on that frequency at that time of day. The best channel to reach each station now is worked out from those, from what was heard in the last half hour, and from the HF propagation monitor."));
+    ImGui::PopTextWrapPos();
+    const auto best = L.best(now, &prop);
+    if (best.empty()) { ImGui::TextDisabled("%s", tr("Nothing measured yet: leave ALE running on a few channels (soundings come every half hour or so).")); return; }
+    if (ImGui::BeginTable("##alelqa", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y * 0.55f))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn(tr("Station")); ImGui::TableSetupColumn(tr("Best now (MHz)")); ImGui::TableSetupColumn(tr("Score")); ImGui::TableSetupColumn("dB"); ImGui::TableSetupColumn(tr("Heard"));
+        ImGui::TableSetupColumn(tr("Why"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        for (const auto& r : best) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            if (ImGui::Selectable(r.station.c_str(), S.lqaSel == r.station, ImGuiSelectableFlags_SpanAllColumns)) S.lqaSel = r.station;
+            ImGui::TableNextColumn(); ImGui::Text("%.3f", r.hz / 1e6);
+            ImGui::TableNextColumn(); ImGui::TextColored(scoreColour(r.score), "%.0f", r.score);
+            ImGui::TableNextColumn(); ImGui::Text("%+.0f", (double)r.snrDb);
+            ImGui::TableNextColumn(); ImGui::TextDisabled("%.0f min", std::max(0.0, (now - r.lastUtc) / 60.0));
+            ImGui::TableNextColumn(); ImGui::TextDisabled("%s", r.why.c_str());
+        }
+        ImGui::EndTable();
+    }
+    if (S.lqaSel.empty()) return;
+    ImGui::TextUnformatted(tr("All channels of"));
+    ImGui::SameLine(); ImGui::TextColored(ImVec4(1.0f, 0.82f, 0.36f, 1), "%s", S.lqaSel.c_str());
+    const auto ranks = L.rank(S.lqaSel, now, &prop);
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    for (const auto& r : ranks) {
+        char b[96];
+        snprintf(b, sizeof b, "%.3f MHz  %3.0f", r.hz / 1e6, r.score);
+        ImGui::TextColored(scoreColour(r.score), "%s", b);
+        ImGui::SameLine(150 * gUi);
+        // the 24 hour profile: one bar per UTC hour (height = SNR), the current hour outlined
+        const auto prof = L.profile(r.station, r.hz, now);
+        const ImVec2 p = ImGui::GetCursorScreenPos();
+        const float bw = 8 * gUi, h = ImGui::GetTextLineHeight();
+        for (int hr = 0; hr < 24; hr++) {
+            const float x = p.x + hr * (bw + 1);
+            if (prof[(size_t)hr].w > 0) {
+                const float q = (float)std::max(0.0, std::min(1.0, (prof[(size_t)hr].snrDb + 5.0) / 30.0));
+                dl->AddRectFilled(ImVec2(x, p.y - 2 + h * (1 - q)), ImVec2(x + bw, p.y - 2 + h), IM_COL32(110, 190, 120, 230));
+            } else dl->AddRectFilled(ImVec2(x, p.y - 4 + h), ImVec2(x + bw, p.y - 2 + h), IM_COL32(70, 70, 70, 255));
+        }
+        { const int nowH = (int)std::fmod(now / 3600.0, 24.0); const float x = p.x + nowH * (bw + 1); dl->AddRect(ImVec2(x - 1, p.y - 4), ImVec2(x + bw + 1, p.y + h), IM_COL32(255, 255, 255, 200)); }
+        ImGui::SameLine(150 * gUi + 24 * (bw + 1) + 10 * gUi);
+        ImGui::TextDisabled("%s", r.why.c_str());
+    }
+    ImGui::TextDisabled("%s", tr("Bars: mean level at each UTC hour (-5 to 25 dB); the outlined hour is now."));
+}
+
 // ---------------------------------------------------------------- hooks
 
 void tick(App& a) {
     load();
+    lqaTick();
     if (!a.engine.running()) { S.wasRunning = false; return; }
     dect2::AleReceiver& r = a.engine.ale();
     if (!S.wasRunning || S.pushedNets != S.nets) { r.setNetAddresses(netList()); S.pushedNets = S.nets; }
@@ -188,9 +276,9 @@ void tab(App& a) {
     load();
     presets(a);
     ImGui::Spacing();
-    subNav("alev", S.view, {"Events", "Stations", "Words"});
+    subNav("alev", S.view, {"Events", "Stations", "Words", "Link quality"});
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    if (S.view == 0) eventsView(a); else if (S.view == 1) stationsView(a); else wordsView(a);
+    if (S.view == 0) eventsView(a); else if (S.view == 1) stationsView(a); else if (S.view == 2) wordsView(a); else lqaView(a);
 }
 
 void list(App& a) {

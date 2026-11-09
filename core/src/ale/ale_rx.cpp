@@ -1,5 +1,6 @@
 // HF ALE receiver (see ale_rx.h).
 #include "dect2/ale/ale_rx.h"
+#include "dect2/ale/ale_lqa.h"
 #include "dect2/results/results_io.h"
 #include "dect2/ale/ale_tel.h"
 #include "dect2/ale/ale_proto.h"
@@ -261,6 +262,10 @@ struct AleReceiver::Impl {
                 }
         }
         events.push_back(e);
+        if (!e.from.empty() && e.dialHz > 0) {   // the link-quality memory (ale_lqa.h): every call heard is a measurement of the path from that station
+            AleLqaObs q; q.utc = e.utc; q.station = e.from; q.hz = e.dialHz; q.snrDb = e.snrDb; q.ber = e.ber; q.sounding = e.type == "Sounding";
+            AleLqa::global().add(q);
+        }
         if (events.size() > kAleKeep) events.erase(events.begin(), events.begin() + (events.size() - kAleKeep));
         if (!e.from.empty()) {
             auto st = std::find_if(stations.begin(), stations.end(), [&](const AleStation& s) { return s.address == e.from; });

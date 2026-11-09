@@ -90,6 +90,8 @@ struct AisTelemetry {
     uint32_t longRangeVessels = 0;       // stations that sent message 27
     std::vector<AisRxRecord> recent;     // the last 500 good messages, oldest first
     std::vector<AisAlertRecord> alerts;  // the last 50 CPA and geofence alerts (ais_alerts.h), oldest first
+    std::vector<AisAnomalyRecord> anomalies;   // the last 100 anomalies (ais_anomaly.h: jump, clash, moved aid, dark ship ...), oldest first
+    uint32_t anomalyTracked = 0, anomalySectors = 0; float anomalyRangeNm = 0;   // the engine's size, the bearing sectors its coverage model knows, the farthest range in them
     uint64_t collisionRecovered = 0;     // coast mode: messages found under a stronger burst or on a slightly different frequency (collision cancellation, ais_rx.h)
     uint32_t vesselCount = 0;            // stations in the table (the list below holds them all, up to dect2::limits::kVessels)
     std::vector<AisVessel> vessels;      // most recently heard first

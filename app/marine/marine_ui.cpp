@@ -20,6 +20,7 @@
 #include "dect2/marine/marine_wefax_stations.h"
 #include "dect2/marine/wefax_rotate.h"
 #include "wefax_gallery.h"
+#include "incident_ui.h"
 #include "../panels/picsave_ui.h"
 #include "../state/picsave.h"
 #include "dect2/engine/updater.h"
@@ -439,6 +440,7 @@ void dscView(App& a) {
             ImGui::PopStyleColor();
         }
     }
+    incidentBoardUi(a, true);   // sea distress incidents: DSC + AIS + AIS-SART + NAVTEX in one card (marine_incident.h)
     ImGui::SetNextItemWidth(180 * gUi);
     ImGui::InputTextWithHint("##dscf", tr("search calls"), S.dscFilter, sizeof S.dscFilter);
     ImGui::SameLine();

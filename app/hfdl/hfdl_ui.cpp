@@ -21,6 +21,10 @@
 #include <cstring>
 #include <ctime>
 #include "dect2/hfdl/hfdl_hop.h"
+#include "dect2/hfdl/hfdl_learn.h"
+#include "platform/platform.h"
+#include <fstream>
+#include <sstream>
 
 namespace {
 
@@ -161,12 +165,42 @@ void hopTick(App& a) {
     const dect2::HfdlTelemetry& t = a.rx.hfdl;
     dect2::HfdlBandHopper::Obs o;
     o.nowSec = now; o.band = dect2::hfdlBandOfMhz(a.freqMhz); o.goodPdus = t.blocksOk;
-    for (const auto& g : t.stations) if (g.heardDirect) o.announcedKhz.insert(o.announcedKhz.end(), g.activeKhz.begin(), g.activeKhz.end());
+    for (const auto& g : t.stations) if (g.heardDirect) {   // the learner (hfdl_learn.h) says which announcements to believe: the mask, or what was heard when the station's table changed
+        const std::vector<int> ann = dect2::HfdlFreqLearner::global().announced(g.id, g.activeKhz, (double)std::time(nullptr));
+        o.announcedKhz.insert(o.announcedKhz.end(), ann.begin(), ann.end());
+    }
     const int b = S.hopper.update(o);
     if (b >= 0) tuneFreq(a, dect2::hfdlBands()[(size_t)b].centreMhz);
 }
 
+// the frequency learner (hfdl_learn.h) keeps its state between runs; it listens only to a live radio (a recording's stations and tables are not today's)
+void learnerTick(App& a) {
+    static bool loaded = false;
+    static double lastSave = 0;
+    static uint64_t savedSquitters = 0;
+    dect2::HfdlFreqLearner& L = dect2::HfdlFreqLearner::global();
+    const std::string path = plat::dataDir() + "/hfdl-learned.txt";
+    if (!loaded) {
+        loaded = true;
+        std::ifstream f(path, std::ios::binary);
+        std::ostringstream ss; ss << f.rdbuf();
+        L.load(ss.str());
+        lastSave = (double)std::time(nullptr);
+    }
+    L.setEnabled(a.engine.running() && a.engine.sampleLoss().live);
+    const double now = (double)std::time(nullptr);
+    if (now - lastSave < 300) return;
+    lastSave = now;
+    uint64_t sq = 0;
+    for (const auto& r : L.rows()) sq += (uint64_t)r.squitters;
+    if (sq == savedSquitters) return;
+    savedSquitters = sq;
+    std::ofstream f(path, std::ios::binary | std::ios::trunc);
+    f << L.save();
+}
+
 void tick(App& a) {
+    learnerTick(a);
     feedEstimates(a.rx.hfdl);
     loadState();
     if (live(a)) feedRange(a.rx.hfdl);
@@ -470,6 +504,7 @@ void stationView(const App& a) {
     ImGui::TableSetupColumn("Station"); ImGui::TableSetupColumn("Status"); ImGui::TableSetupColumn("Squitters"); ImGui::TableSetupColumn("Heard on");
     ImGui::TableSetupColumn("Last heard"); ImGui::TableSetupColumn("Frame"); ImGui::TableSetupColumn("In use (kHz)", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
+    const std::vector<dect2::HfdlFreqLearner::Row> learnRows = dect2::HfdlFreqLearner::global().rows();
     for (const auto& s : dect2::hfdlStations()) {
         const dect2::HfdlGroundStation* g = nullptr;
         if (live(a)) for (const auto& x : t.stations) if (x.id == s.id) g = &x;
@@ -482,7 +517,18 @@ void stationView(const App& a) {
         ImGui::TableNextColumn(); if (g && g->freqHz > 0) ImGui::Text("%.0f", g->freqHz / 1e3); else ImGui::TextUnformatted("-");
         ImGui::TableNextColumn(); ImGui::TextUnformatted(g ? ago(t.nowSec, g->lastHeardSec).c_str() : "-");
         ImGui::TableNextColumn(); if (g && g->frameIndex >= 0) ImGui::Text("%d", g->frameIndex); else ImGui::TextUnformatted("-");
-        ImGui::TableNextColumn(); ImGui::TextUnformatted(g && !g->activeKhz.empty() ? khzList(g->activeKhz).c_str() : ("table: " + khzList(s.khz)).c_str());
+        ImGui::TableNextColumn();
+        {   // what the learner (hfdl_learn.h) makes of it: the announced frequencies, or the plan with what was learned and dropped
+            std::string txt;
+            const dect2::HfdlFreqLearner::Row* lr = nullptr;
+            for (const auto& r : learnRows) if (r.gsId == s.id) lr = &r;
+            if (g && !g->activeKhz.empty()) txt = khzList(dect2::HfdlFreqLearner::global().announced(s.id, g->activeKhz, (double)std::time(nullptr)));
+            else txt = "plan: " + khzList(dect2::HfdlFreqLearner::global().plan(s.id));
+            if (lr && lr->drift) txt += "   [system table v" + std::to_string(lr->version) + " changed: frequencies are the ones heard]";
+            if (lr && !lr->learned.empty()) txt += "   learned " + khzList(lr->learned);
+            if (lr && !lr->retired.empty()) txt += "   dropped " + khzList(lr->retired);
+            ImGui::TextUnformatted(txt.c_str());
+        }
     }
     ImGui::EndTable();
 }

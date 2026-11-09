@@ -5,6 +5,7 @@
 //    time, and "enter" / "exit" when a vessel crosses a geofence (circle or polygon). The receiver turns the alerts into the automation events
 //    ais.cpa and ais.geofence (docs/AIS_ALERTS.md). Everything is off until the user sets a limit or a fence.
 #pragma once
+#include "ais_anomaly.h"
 #include "ais_tel.h"
 #include <cstdint>
 #include <map>
@@ -68,6 +69,7 @@ struct AisAlertConfig {
     double cooldownSec = 600;                    // the same vessel raises the CPA alert again after this
     AisFilter filter;                            // only these stations raise alerts
     std::vector<AisGeofence> fences;             // an empty list = no geofence alerts
+    AisAnomalyConfig anomaly;                    // the consistency checks (ais_anomaly.h); on by default, they need nothing from the user (the dark-ship check needs the receiver position, ownLat / ownLon above)
 };
 struct AisAlert {
     double utc = 0;
