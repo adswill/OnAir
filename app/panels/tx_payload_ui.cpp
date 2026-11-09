@@ -89,12 +89,12 @@ void audioSourceRow(TxUi& s, bool running) {
     }
     if (s.audioSrc == 0) {
         const auto devs = listAudioInputs();
-        const char* cur = s.audioDevice[0] ? s.audioDevice : tr("Default input");
+        const char* cur = s.audioDevice.empty() ? tr("Default input") : s.audioDevice.c_str();
         ImGui::SetNextItemWidth(280 * gUi);
         if (ImGui::BeginCombo(tr("Input device"), cur)) {
             for (const auto& d : devs) {
-                const bool sel = std::string(s.audioDevice) == d.id;
-                if (ImGui::Selectable(d.name.c_str(), sel)) snprintf(s.audioDevice, sizeof s.audioDevice, "%s", d.id.c_str());
+                const bool sel = s.audioDevice == d.id;
+                if (ImGui::Selectable(d.name.c_str(), sel)) s.audioDevice = d.id;
             }
             ImGui::EndCombo();
         }
@@ -646,6 +646,35 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
         ImGui::TextDisabled("%s", tr("Empty: the demo Mode S uplink scene."));
         analogNfmBox(s, running);
         break;
+    case TxPayloadKind::LoraAprs: {
+        if (ImGui::InputText(tr("Callsign"), s.callsign, sizeof s.callsign)) saveStr("tx.callsign", s.callsign);
+        ImGui::InputTextWithHint((std::string(tr("Destination")) + "##laprsdest").c_str(), "APRS", s.dest, sizeof s.dest);
+        ImGui::InputTextWithHint((std::string(tr("Path")) + "##laprspath").c_str(), "WIDE1-1", s.path, sizeof s.path);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The digipeater path. Empty: WIDE1-1. Type - for no path."));
+        if (ImGui::InputText((std::string(tr("Comment")) + "##laprscomment").c_str(), s.text, sizeof s.text)) saveStr("tx.text", s.text);
+        ImGui::InputDouble(tr("Latitude"), &s.lat, 0, 0, "%.5f");
+        ImGui::InputDouble(tr("Longitude"), &s.lon, 0, 0, "%.5f");
+        TxRequest r;
+        r.callsign = s.callsign; r.dest = s.dest; r.path = s.path; r.text = s.text; r.lat = s.lat; r.lon = s.lon;
+        paramsApply(s, r);   // the LoRa settings of Advanced, as the transmission gets them
+        const std::string tnc2 = txLoraAprsTnc2(r);
+        const TxLoraAprsRadio lr = txLoraAprsRadio(r);
+        if (tnc2.empty()) ImGui::TextDisabled("%s", tr("No callsign: the demo LoRa APRS stations are sent (EU settings)."));
+        else ImGui::TextDisabled("%s: %s", tr("Sent"), tnc2.c_str());
+        ImGui::TextDisabled("SF%d, %.1f kHz, 4/%d, %s %d, %s 0x%02X, CRC %s", lr.sf, lr.bwHz / 1e3, lr.cr, tr("preamble"), lr.preamble, tr("sync word"), lr.syncWord,
+                            lr.crc ? tr("on") : tr("off"));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The LoRa settings are under Advanced."));
+        if (lr.mhz > 0 && std::fabs(s.freqMhz - lr.mhz) > 1e-6) {
+            std::string mhz = std::to_string(lr.mhz);   // "433.775000": four decimals, as the presets are written
+            mhz.resize(std::min(mhz.size(), mhz.find('.') + 5));
+            const std::string b = std::string(tr("Tune to")) + " " + mhz + " MHz";
+            ImGui::BeginDisabled(running);
+            if (ImGui::SmallButton(b.c_str())) { s.freqMhz = lr.mhz; s.linkRx = false; }
+            ImGui::EndDisabled();
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("The frequency of the chosen LoRa APRS preset; the transmitter is on another one."));
+        }
+        break;
+    }
     case TxPayloadKind::Mesh:
         meshTxPanel(s, running);
         analogNfmBox(s, running);

@@ -31,7 +31,7 @@ fi
   --enable-muxer=mpegts,hls,mp4 \
   --enable-parser=h264,hevc,mpegvideo,mpegaudio,aac,aac_latm,ac3,dvbsub,cavsvideo \
   --enable-decoder=h264,hevc,mpeg2video,mp2,mp2float,mp3,mp3float,ac3,eac3,aac,aac_latm,dvbsub,cavs \
-  --enable-encoder=mpeg2video,mp2,aac \
+  --enable-encoder=mpeg2video,mp2,aac,ac3 \
   --enable-bsf=h264_mp4toannexb,hevc_mp4toannexb,aac_adtstoasc,extract_extradata,null,setts,dts2pts \
   $EXTRA \
   > "$WORK/configure.log" 2>&1 || { tail -30 "$WORK/configure.log"; exit 1; }

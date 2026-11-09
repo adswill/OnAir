@@ -39,6 +39,7 @@ struct GenConfig {
     int ttl = 8;
     double seconds = 60;               // File: the length; streaming runs until stopped
     Fit fit = Fit::Letterbox;
+    bool previewOnly = false;          // the picture and the overlay in real time for preview(), nothing encoded, written or sent
     Settings enc;
     Layout overlay;
     std::shared_ptr<const std::vector<uint8_t>> font;   // TrueType for the overlay text
@@ -52,6 +53,7 @@ struct GenStats {
     double kbps = 0;                          // measured TS rate
     int lateFrames = 0;                       // live: frames the encoder was too slow for
     std::string videoEncoder, audioEncoder;   // the FFmpeg encoders actually used
+    std::string notice;                       // the video encoder had to be opened without the profile / B-frames (and why)
     std::string error;
 };
 

@@ -78,7 +78,7 @@ enum class TxPayloadKind {
     Ftx, Rtty, Keyboard, Cw, Psk, Js8, Hamdrm, Sstv, Freedv,
     Pager, Packet, Ais, AdsB, VoiceFm, VoiceAir, VoiceDigital, Qo100,
     Marine, AcarsFamily, Sonde, Same, Ale, VorIls, LoraRaw, Dect,
-    CubeSat, WeatherScene, SatScene, Flarm, Zigbee, Dji, HfBeacon, Vdes, Uplink, Mesh, Mac, Kaal, Kait, Kavb, Kapp, Kaft, Kaws
+    CubeSat, WeatherScene, SatScene, Flarm, Zigbee, Dji, HfBeacon, Vdes, Uplink, Mesh, Mac, Kaal, Kait, Kavb, Kapp, Kaft, Kaws, LoraAprs
 };
 TxPayloadKind txPayloadKind(const std::string& id);
 
@@ -198,6 +198,19 @@ bool txModeFinite(const TxModeSpec& m);
 
 // FT8 / FT4 / WSPR / JT* message built from callsign, grid, dest, text and kind. Empty when those fields are empty (the demo stations are used).
 std::string txFtxMessage(const TxRequest& r);
+
+// LoRa APRS (mode "loraaprs"): the radio settings and the packet. The settings come from r.opt: lora.preset 0 EU (433.775 MHz SF12 4/5),
+// 1 PL (434.855 MHz SF9 4/7), 2 UK (439.9125 MHz SF12 4/5), 3 915 MHz (SF12 4/5), all 125 kHz, preamble 8, sync word 0x12, CRC on, as the
+// lora-aprs / CA2RXU firmware sends; 4 own settings: lora.sf (7..12), lora.bwIdx (0 62.5, 1 125, 2 250, 3 500 kHz), lora.cr (5..8 for 4/5..4/8),
+// lora.preamble, lora.sync (0..255), lora.crc. mhz is the preset's frequency (0 for own settings: the panel's frequency is used as typed).
+struct TxLoraAprsRadio { const char* name = "EU"; double mhz = 433.775; int sf = 12; double bwHz = 125000; int cr = 5; int preamble = 8; int syncWord = 0x12; bool crc = true; };
+TxLoraAprsRadio txLoraAprsRadio(const TxRequest& r);
+// The TNC2 packet "CALL>DEST,PATH:info" (DEST default APRS, PATH default WIDE1-1; "-" or "none": no path) with the info field of APRS over AFSK:
+// a position with the comment when lat / lon are set, else a status ">text". Empty when the callsign is empty (the demo stations are sent then).
+// On the air it is preceded by the three bytes '<' 0xFF 0x01 (loraAprsFrame) and cut to fit the 255 bytes of a LoRa frame.
+std::string txLoraAprsTnc2(const TxRequest& r);
+// The frequency the panel starts from when the mode is chosen (0: the receiver's / the mode's tuning default)
+double txModeDefaultMhz(const TxModeSpec& m);
 
 // The output stage of every mode (keys out.trimDb, out.rampMs, out.swapIq of r.opt) on n samples that start at sample number firstSample of the transmission
 constexpr double kTxDefaultRampMs = 2;   // the key-up / key-down fade when out.rampMs is not set

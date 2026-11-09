@@ -84,6 +84,8 @@ done
 python3 tools/package/scrub_paths.py "$OUT"   # no build-machine paths in the shipped files
 tools/package/check_win_dlls.sh "$OUT" || { echo "error: the DLLs of $OUT do not fit together (see above)"; exit 1; }
 cp LICENSE "$OUT/LICENSE.txt"
+# the camera stub (CMake found no libavdevice): the program would list no camera, as in the releases up to now
+if strings "$OUT/OnAir.exe" | grep -q "this build has no camera / capture-card support"; then echo "error: OnAir.exe has no camera support (libavdevice missing in $P: rerun cross_deps_windows.sh)"; exit 1; fi
 tools/package/check_lgpl_bundle.sh "$OUT/OnAir.exe" || exit 1   # fails if FFmpeg inside is a GPL build
 tools/package/check_lgpl_bundle.sh "$OUT/onair-server.exe" || exit 1
 tools/package/add_license_files.sh "$OUT"   # THIRD_PARTY.md, LICENSES/, LICENSE-NOTICES-BINARIES.md (licence of every bundled DLL, source offer)
