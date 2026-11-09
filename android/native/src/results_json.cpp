@@ -1,5 +1,5 @@
-// Telemetry of the active mode as JSON for the Kotlin screens (cards + tables). Modes with a dedicated list (ADS-B, AIS, ACARS, pagers,
-// APRS) fill tables with the desktop's column names; every other mode gets the common header and its one-line summary.
+// Telemetry of the active mode as JSON for the Kotlin screens (cards + tables). Modes with a dedicated exporter fill tables with the desktop's
+// column names; every other mode gets the common header, its one-line summary and its decoded lists as text (genericResults).
 #include "results_json.h"
 #include "dect2/net/remote_api.h"
 #include "dect2/engine/modes.h"
@@ -15,6 +15,8 @@
 #include <ctime>
 #include <cstdarg>
 #include <cmath>
+#include <type_traits>
+#include <vector>
 
 namespace onair {
 using namespace dect2;
@@ -655,6 +657,27 @@ void tvCards(Out& o, const RxTelemetry& rx) {
 }
 } // namespace
 
+// ---- modes without a hand-written exporter: generated from the telemetry structs (tools/gen_results_map.py) ------------------------------
+namespace {
+template <class T> std::string cell(const T& v) {
+    if constexpr (std::is_same_v<T, std::string>) return v.size() > 400 ? v.substr(0, 400) : v;
+    else if constexpr (std::is_floating_point_v<T>) return std::isfinite(v) ? fmt("%.6g", (double)v) : std::string();
+    else if constexpr (std::is_arithmetic_v<T>) return std::to_string(v);
+    else return std::string();
+}
+// a card only when the field says something (not empty, not zero)
+template <class T> void cardIf(Out& o, const char* k, const T& v) {
+    if constexpr (std::is_same_v<T, std::string>) { if (!v.empty()) o.card(k, cell(v)); }
+    else { if (v != T{}) o.card(k, cell(v)); }
+}
+void genericResults(Out& o, const RxTelemetry& rx) {
+    switch (rx.standard) {
+#include "results_generic_map.inc"
+    default: break;
+    }
+}
+} // namespace
+
 std::string resultsJson(const RxTelemetry& rx, bool running, const dect2::DabEnsemble* dabEns) {
     Out o;
     std::string extra;
@@ -690,7 +713,7 @@ std::string resultsJson(const RxTelemetry& rx, bool running, const dect2::DabEns
     case 37: psk(o, rx.psk); break;
     case 35: cw(o, rx.cw); break;
     case 38: js8(o, rx.js8); break;
-    default: break;
+    default: genericResults(o, rx); break;
     }
     const std::string sum = modeSummary(rx);
     std::string core = rxTelemetryJson(rx, nullptr);   // {"seq":..,"standard":..,"state":..,"locked":..,"snrDb":..,"details":{..}}
