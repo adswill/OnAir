@@ -6,6 +6,7 @@
 #include "dect2/chanvoice/chv_mdc.h"
 #include "dect2/chanvoice/chv_plan.h"
 #include "dect2/common/ring.h"
+#include <memory>
 #include <vector>
 
 namespace dect2 {
@@ -37,5 +38,18 @@ struct GenScene {
 
 std::vector<cf32> makeChanVoiceScene(const GenScene& s);
 
+// The demonstration scene of a service (what the built-in test source plays, looped): the plan's default centre, a few channels with calls,
+// tones, an MDC-1200 burst or microphones, region = the plan's region index. snrDb: carrier to noise in 10 kHz.
+GenScene chanVoiceDemoScene(Service s, int region, double rate, double snrDb);
+
 } // namespace chv
 } // namespace dect2
+
+namespace dect2 {
+class ModeSynth;
+struct SynthConfig;
+}
+namespace dect2 {
+// SynthConfig: snrDb = carrier to noise in 10 kHz; modeOpt[0] = the plan's region index. Engine standards 342 .. 348 (families 340 .. 346).
+std::unique_ptr<ModeSynth> makeChanVoiceSynth(const SynthConfig& cfg, double sampleRate, chv::Service s);
+}

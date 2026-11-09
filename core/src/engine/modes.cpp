@@ -338,6 +338,7 @@
 #include "dect2/marinevhf/marinevhf_tel.h"
 #include "dect2/chanvoice/chv_rx.h"
 #include "dect2/chanvoice/chv_tel.h"
+#include "dect2/chanvoice/chv_gen.h"
 #include "dect2/p25p2/p25p2_rx.h"
 #include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/rid/rid_rx.h"
@@ -695,6 +696,7 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 152: return makeSbasSynth(cfg, sampleRate);
     case 153: return makeAsterixSynth(cfg, sampleRate);
     case 156: return makeIsdbsSynth(cfg, sampleRate);
+    case 342: case 343: case 344: case 345: case 346: case 347: case 348: return makeChanVoiceSynth(cfg, sampleRate, (chv::Service)(stdMode - 342));   // channelised voice (families 340 - 346)
     case 58: return makeRidSynth(cfg, sampleRate);
     case 61: return makeMeteorSynth(cfg, sampleRate);
     case 59: return makeNrSynth(cfg, sampleRate);

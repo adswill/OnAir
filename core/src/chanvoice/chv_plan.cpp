@@ -266,6 +266,7 @@ Span planSpan(Service s, int region) {
     if (s == Service::Cb) sp.centreMhz = region == 1 ? 26.760 : 27.185;
     if (s == Service::Ham) sp.centreMhz = region == 0 ? 145.6 : region == 1 ? 146.76 : 146.8;
     if (s == Service::HfVoice) sp.centreMhz = 11.175;
+    if (s == Service::Frs) sp.centreMhz = 462.6375;   // 1 - 7 and 15 - 22 in one capture; the 467 MHz channels 8 - 14 are 5 MHz higher
     return sp;
 }
 

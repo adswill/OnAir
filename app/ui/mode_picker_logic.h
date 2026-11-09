@@ -50,6 +50,7 @@ inline uint32_t tagsOfGroup(int g) {
 // a few modes whose tags differ from their group's, by name
 inline uint32_t tagsOfName(const std::string& n) {
     if (n == "Marine VHF") return TVoice | TMarine;
+    if (n == "HFGCS / HF voice") return TVoice | THf | TAviation;
     if (n == "Airband" || n == "Airband voice") return TVoice | TAviation;
     if (n == "VOR / ILS" || n == "NDB") return TAviation;
     if (n == "NAVTEX" || n == "DSC" || n == "Weather fax") return TMarine | THf;

@@ -1638,6 +1638,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_marinevhf_mode PRIVATE dect2core)
     target_compile_definitions(test_marinevhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME marinevhf_mode COMMAND test_marinevhf_mode)
+    add_executable(test_chanvoice_mode tests/app/test_chanvoice_mode.cpp)   # channelised voice modes (families 340 - 346): registered tunings, mode rows, family count, screen mapping, engine cases
+    target_link_libraries(test_chanvoice_mode PRIVATE dect2core)
+    target_compile_definitions(test_chanvoice_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME chanvoice_mode COMMAND test_chanvoice_mode)
     add_executable(test_p25p2_mode tests/app/test_p25p2_mode.cpp)   # P25 Phase 2 mode: registered tuning, mode row, family count, poll slot, screen mapping and panel strings
     target_link_libraries(test_p25p2_mode PRIVATE dect2core)
     target_compile_definitions(test_p25p2_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

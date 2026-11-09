@@ -1,5 +1,6 @@
 #include "dect2/chanvoice/chv_gen.h"
 #include "dect2/dsp/resampler.h"
+#include "dect2/engine/mode_synth.h"
 #include "dect2/tones/tones_gen.h"
 #include <algorithm>
 #include <cmath>
@@ -98,5 +99,67 @@ std::vector<cf32> makeChanVoiceScene(const GenScene& sc) {
     return out;
 }
 
+GenScene chanVoiceDemoScene(Service sv, int region, double rate, double snrDb) {
+    GenScene sc; sc.rate = rate;
+    const Span sp = planSpan(sv, region);
+    sc.centreMhz = sp.centreMhz;
+    sc.durSec = 6.0;
+    const double amp = 0.12;
+    sc.noiseSigma = amp * std::sqrt(rate / (2 * 10e3)) * std::pow(10.0, -snrDb / 20.0);
+    auto tx = [&](double mhz, Demod m, double start, double dur) { GenTx t; t.mhz = mhz; t.mod = m; t.amp = amp; t.startSec = start; t.durSec = dur; t.seed = (unsigned)(mhz * 1000) & 0xFFFF; return t; };
+    const auto& ch = channels(sv, region);
+    auto chan = [&](const char* label) { const Channel* c = findLabel(sv, region, label); return c ? c->mhz : sc.centreMhz; };
+    switch (sv) {
+    case Service::Cb: {
+        GenTx a = tx(chan("19"), Demod::Am, 0.3, 2.2), b = tx(chan("9"), Demod::Nfm, 1.5, 2.0), c = tx(chan("16"), Demod::Usb, 3.2, 2.4), d = tx(chan("17"), Demod::Lsb, 4.4, 1.4);
+        if (region == 2) { a.mod = Demod::Nfm; }
+        b.devScale = 0.6; sc.tx = {a, b, c, d}; break; }
+    case Service::Frs: {
+        GenTx a = tx(chan("3"), Demod::Nfm, 0.3, 2.0), b = tx(chan("17"), Demod::Nfm, 1.8, 2.0), c = tx(chan("20"), Demod::Nfm, 3.6, 1.8);
+        a.devScale = b.devScale = c.devScale = 0.5; a.ctcssHz = 88.5; b.dcsCode = 23; sc.tx = {a, b, c}; break; }
+    case Service::Pmr: {
+        GenTx a = tx(chan("5"), Demod::Nfm, 0.3, 2.0), b = tx(chan("12"), Demod::Nfm, 1.8, 2.0), c = tx(chan("2"), Demod::Nfm, 3.8, 1.8);
+        a.devScale = b.devScale = c.devScale = 0.5; a.ctcssHz = 67.0; b.dcsCode = 754; b.dcsInverted = true; sc.tx = {a, b, c}; break; }
+    case Service::Ham: {
+        const double m1 = ch.size() > 3 ? ch[3].mhz : sc.centreMhz, m2 = ch.size() > 9 ? ch[9].mhz : sc.centreMhz + 0.05, m3 = ch.size() > 6 ? ch[6].mhz : sc.centreMhz - 0.05;
+        GenTx a = tx(m1, Demod::Nfm, 0.3, 2.2), b = tx(m2, Demod::Nfm, 1.5, 2.4), c = tx(m3, Demod::Nfm, 3.6, 1.8);
+        a.devScale = b.devScale = c.devScale = 0.7; a.ctcssHz = 123.0; b.ctcssHz = 88.5; sc.tx = {a, b, c}; break; }
+    case Service::HfVoice: {
+        GenTx a = tx(chan("HFGCS 11175"), Demod::Usb, 0.3, 4.5); a.amp = 0.15; sc.tx = {a}; break; }
+    case Service::Mdc: {
+        GenTx a = tx(sc.centreMhz - 0.0375, Demod::Nfm, 0.3, 2.2), b = tx(sc.centreMhz + 0.0625, Demod::Nfm, 2.0, 2.4);
+        a.devScale = b.devScale = 0.7; a.mdc = true; a.mdcPacket.op = 0x01; a.mdcPacket.arg = 0x80; a.mdcPacket.unitId = 0x1A2B;
+        b.mdc = true; b.mdcPacket.op = 0x01; b.mdcPacket.arg = 0x00; b.mdcPacket.unitId = 0xC0DE; sc.tx = {a, b}; break; }
+    default: {   // wireless microphones
+        sc.durSec = std::min(6.0, 20e6 / rate);   // a wide span is big: the loop is shorter
+        const double dl = sc.durSec - 0.3;
+        GenTx a = tx(sc.centreMhz - 0.6, Demod::Wfm, 0.1, dl), b = tx(sc.centreMhz + 0.85, Demod::Wfm, 0.1, dl), c = tx(sc.centreMhz + 0.25, Demod::Wfm, 0.1, dl);
+        a.amp = b.amp = c.amp = 0.3;
+        a.speech = false; a.tones = {440, 880}; b.devScale = 0.7; c.speech = false; c.devScale = 0.5; sc.tx = {a, b, c}; break; }
+    }
+    return sc;
+}
+
 } // namespace chv
+
+namespace {
+class LoopSynth : public ModeSynth {
+public:
+    LoopSynth(std::vector<cf32> scene, double rate) : x_(std::move(scene)), rate_(rate) {}
+    double sampleRate() const override { return rate_; }
+    void generate(cf32* out, size_t n) override {
+        for (size_t i = 0; i < n; i++) { out[i] = x_[pos_]; if (++pos_ >= x_.size()) pos_ = 0; }
+    }
+private:
+    std::vector<cf32> x_;
+    double rate_;
+    size_t pos_ = 0;
+};
+}
+
+std::unique_ptr<ModeSynth> makeChanVoiceSynth(const SynthConfig& cfg, double sampleRate, chv::Service s) {
+    const chv::GenScene sc = chv::chanVoiceDemoScene(s, std::max(0, cfg.modeOpt[0]), sampleRate, cfg.snrDb);
+    return std::make_unique<LoopSynth>(chv::makeChanVoiceScene(sc), sampleRate);
+}
+
 } // namespace dect2

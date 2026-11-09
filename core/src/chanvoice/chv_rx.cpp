@@ -251,7 +251,6 @@ private:
         }
         if (rose) firstOpen_ = true;
         cur_ = decide(ovr);
-        if (getenv("CHV_TRACE") && key_ == atoi(getenv("CHV_TRACE")) && (blocks_ % 50 == 0 || (getenv("CHV_TRACE_EARLY") && blocks_ < 40))) fprintf(stderr, "k%d b%llu quiet %.1f thr %.1f fmOpen %d finder %d open %d cv %.2f carrier %.2f dm %d pw %.1f\n", key_, (unsigned long long)blocks_, quiet, thr, (int)fmOpen, (int)finderActive_, (int)open_, cvS_, carrierS_, (int)cur_, lvl);
         if (cur_ == Demod::Usb) side_ = 1; else if (cur_ == Demod::Lsb) side_ = -1;
         blocks_++;
         tSec_ = (double)blocks_ * kBlock / kRate;
@@ -291,7 +290,6 @@ private:
             if (key_ >= 0 && ctx_->audio && ctx_->playKey.load(std::memory_order_relaxed) == key_) ctx_->audio(key_, p, kBlock);
         }
         if (mdc_ && b.gate) {   // the flat audio: MDC data is not pre-emphasised
-            if (getenv("CHV_DUMP_RAW")) { static FILE* df = fopen(getenv("CHV_DUMP_RAW"), "wb"); if (df) { fwrite(b.raw.data(), 4, kBlock, df); fflush(df); } }
             mdc_->feed(b.raw.data(), kBlock);
         }
         if (callActive_) {
@@ -385,9 +383,8 @@ public:
                 const double m1 = sumM_ / cnt_, m2 = sumM2_ / cnt_;
                 const double cv = m1 > 1e-9 ? std::sqrt(std::max(0.0, m2 - m1 * m1)) / m1 : 1.0;
                 maxPw_ = std::max(m2, maxPw_ * 0.97);
-                const bool sig = active_ && snr_ > 8.0 && ++win_ > 2 && m2 > 0.7 * maxPw_;   // a carrier is on (the finder lags at both ends: only full-strength windows count)
+                const bool sig = active_ && snr_ > 6.0 && ++win_ > 2 && m2 > 0.7 * maxPw_;   // a carrier is on (the finder lags at both ends: only full-strength windows count)
                 if (sig) fmLike_ = cv < 0.35 && devAcc_ > 3000.0;   // a constant envelope that moves by kHz: analogue FM (an unmodulated carrier or an AM one does not)
-                if (getenv("CHV_TRACE_MIC")) fprintf(stderr, "mic %.3f cv %.3f dev %.1f mean %.0f active %d snr %.1f\n", mhz_, cv, devAcc_ / 1000.0, meanF_, (int)active_, snr_);
                 if (sig) devKhz_ = devKhz_.load() == 0 ? devAcc_ / 1000.0 : 0.7 * devKhz_.load() + 0.3 * devAcc_ / 1000.0;
                 sumM_ = sumM2_ = 0; cnt_ = 0; devAcc_ = 0;
             }
@@ -703,7 +700,17 @@ struct ChanVoiceReceiver::Impl {
         for (const Carrier& c : finder.carriers()) {
             Slot* s = nullptr;
             auto it = slots.find(c.id);
-            if (it != slots.end()) s = it->second.get(); else s = addSlot(c);
+            if (it != slots.end()) s = it->second.get();
+            else {
+                // HF voice: the speech of one sideband fills more than one finder cell; the cells above a channel that already has a carrier belong to it
+                bool part = false;
+                if (svc == Service::HfVoice && centerAbs() > 0) {
+                    const double abs = centerAbs() + c.hz;
+                    for (auto& o : slots) { const double oa = centerAbs() + o.second->hz; if (o.second->key >= 0 && o.second->key < planSize() && abs > oa - 800 && abs < oa + 3600) part = true; }
+                }
+                if (part) continue;
+                s = addSlot(c);
+            }
             if (!s) continue;
             s->hz = c.hz; s->levelDb = c.levelDb; s->snrDb = c.snrDb; s->widthHz = c.widthHz; s->active = c.active; s->ageSec = c.ageSec;
             if (!s->fixed && std::fabs(c.hz - s->ch.shiftHz()) > 0.06 * finder.cfg().stepHz) s->ch.setShift(c.hz);
@@ -954,7 +961,7 @@ ModeTuning chanVoiceTuning(chv::Service s) {
     t.carrierAtCentre = true;
     switch (s) {
     case chv::Service::Cb:      t.minMhz = 26.0; t.maxMhz = 28.0; t.defMhz = 27.185; t.bandwidthMhz = 0.5; t.sampleRate = 1000000; t.minSampleRate = 100000; t.tuneOffsetHz = 25000; break;
-    case chv::Service::Frs:     t.minMhz = 462.0; t.maxMhz = 468.0; t.defMhz = 465.0; t.sampleRate = 8000000; t.bandwidthMhz = 6.0; t.tuneOffsetHz = 12500; break;
+    case chv::Service::Frs:     t.minMhz = 462.0; t.maxMhz = 468.0; t.defMhz = 462.6375; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 12500; break;   // 1 - 22: 462.55 - 462.725 MHz in one capture; the 467 MHz channels are 5 MHz higher (tune there to hear them, or use 8 Msps)
     case chv::Service::Pmr:     t.minMhz = 446.0; t.maxMhz = 446.2; t.defMhz = 446.1; t.sampleRate = 1000000; t.bandwidthMhz = 0.5; t.minSampleRate = 250000; t.tuneOffsetHz = 25000; break;
     case chv::Service::Ham:     t.minMhz = 144.0; t.maxMhz = 450.0; t.defMhz = 145.7; t.sampleRate = 2000000; t.bandwidthMhz = 1.0; t.tuneOffsetHz = 25000; break;
     case chv::Service::HfVoice: t.minMhz = 2.8; t.maxMhz = 23.4; t.defMhz = 11.175; t.sampleRate = 250000; t.bandwidthMhz = 0.1; t.minSampleRate = 48000; t.tuneOffsetHz = 12000; break;

@@ -260,6 +260,30 @@ int main() {
         printf("CB offset / level sweep (SNR in 10 kHz 33 .. 17 dB): %d of %d heard with the tone\n", found, total);
         CHECK(found == total, "offset sweep: %d of %d", found, total);
     }
+
+    // ---- the demonstration scene of every service (what the built-in test source loops) is decoded by its own mode
+    {
+        for (int sv = 0; sv < kServiceCount; sv++) for (int rg = 0; rg < (int)regions((Service)sv).size(); rg++) {
+            if ((Service)sv == Service::Cb && rg == 2) continue;                 // the UK plan has FM only: the AM channel of the scene is FM there
+            if ((Service)sv == Service::Mic && rg == 1) continue;                // same scene as Europe
+            if ((Service)sv == Service::Ham && rg != 0 && rg != 1) continue;     // region 3 is the same code path as 2 (a longer repeater list)
+            const double rate = (Service)sv == Service::Mic ? 4e6 : (Service)sv == Service::HfVoice ? 250e3 : (Service)sv == Service::Ham || (Service)sv == Service::Frs || (Service)sv == Service::Mdc ? 2e6 : 1e6;
+            GenScene sc = chanVoiceDemoScene((Service)sv, rg, rate, 30.0);
+            const Run r = run((Service)sv, rg, sc);
+            const char* nm = serviceName((Service)sv);
+            switch ((Service)sv) {
+            case Service::Cb: for (const char* l : {"19", "9", "16", "17"}) { const ChvChannelRow* w = row(r.tel, l); CHECK(w && w->calls == 1, "demo %s region %d channel %s: calls %d", nm, rg, l, w ? w->calls : -1); } break;
+            case Service::Frs: for (const char* l : {"3", "17", "20"}) { const ChvChannelRow* w = row(r.tel, l); CHECK(w && w->calls == 1, "demo %s channel %s: calls %d", nm, l, w ? w->calls : -1); }
+                { const ChvChannelRow* w = row(r.tel, "3"); CHECK(w && std::fabs(w->lastTone.ctcssHz - 88.5) < 0.05, "demo FRS 3 tone"); } break;
+            case Service::Pmr: for (const char* l : {"5", "12", "2"}) { const ChvChannelRow* w = row(r.tel, l); CHECK(w && w->calls == 1, "demo %s channel %s: calls %d", nm, l, w ? w->calls : -1); } break;
+            case Service::Ham: { int n = 0; for (auto& rw : r.tel.rows) if (rw.calls == 1) n++; CHECK(n == 3, "demo %s region %d: %d channels with a call, wanted 3", nm, rg, n);
+                int tones = 0; for (auto& rw : r.tel.rows) if (rw.calls && rw.lastTone.ctcssIdx >= 0) tones++; CHECK(tones == 2, "demo ham region %d: %d tones read, wanted 2", rg, tones); } break;
+            case Service::HfVoice: { const ChvChannelRow* w = row(r.tel, "HFGCS 11175"); CHECK(w && w->calls == 1, "demo HF: calls %d", w ? w->calls : -1); } break;
+            case Service::Mdc: CHECK(r.tel.mdc.size() == 2, "demo MDC: %zu bursts", r.tel.mdc.size()); break;
+            default: { int fm = 0; for (auto& m : r.tel.mics) if (m.fmLike) fm++; CHECK(r.tel.mics.size() == 3 && fm == 3, "demo mic finder: %zu candidates, %d FM", r.tel.mics.size(), fm); } break;
+            }
+        }
+    }
     printf(fails ? "chv_rx: %d FAILED\n" : "chv_rx: all passed\n", fails);
     return fails ? 1 : 0;
 }
