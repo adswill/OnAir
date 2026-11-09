@@ -296,8 +296,8 @@ static void gainSpan(const std::vector<Sample>& l, double t0, double t1, double&
 struct Limits { double settle, dq, acqClip, chg, deaf, irClip, irDq, irRec, small, idleChg, idleSpan, burstChg; };
 static Limits limitsFor(ModeClass m, const RadioProfile& p) {
     Limits l;
-    l.settle = (m == PULSED ? 60 : 12) * (p.remote ? 2.0 : 1.0);
-    l.dq = 1.0; l.acqClip = 1.5; l.chg = 30; l.deaf = 12; l.irClip = 1.5; l.irDq = 2.0;
+    l.settle = (m == PULSED ? 60 : m == TDMA ? 25 : 12) * (p.remote ? 2.0 : 1.0);
+    l.dq = m == WIDE ? 3.5 : 1.0; l.acqClip = 1.5; l.chg = 30; l.deaf = 12; l.irClip = 1.5; l.irDq = m == WIDE ? 4.0 : 2.0;
     l.irRec = p.remote ? 45 : 30; l.small = 6; l.idleChg = 20; l.idleSpan = 6; l.burstChg = 30;
     return l;
 }
@@ -388,6 +388,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
         g.run(90);
         row.rtS = convergeAt(g.log, t0, t0 + 90, best, 1.0, clipLim);
         row.rtDq = best - medianQ(g.log, t0 + 75, t0 + 90);
+        if (gVerbose) { double bg = 0; oracle(g.r, g.tgt, &bg); printf("  retune: best %.1f at gain %.1f, have q %.1f gain %.1f\n", best, bg, g.log.back().q, g.r.live.totalDb); }
         dump(g, "retune");
         // the small move: the VFO steps two channels inside the span and the gain must not be searched again
         applyScene(g.r, m, sc0);

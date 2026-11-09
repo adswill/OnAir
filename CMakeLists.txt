@@ -1803,6 +1803,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_autogain_models tests/source/test_autogain_models.cpp)
   target_link_libraries(test_autogain_models PRIVATE dect2core)
   add_test(NAME autogain_models COMMAND test_autogain_models)   # 3.6: every radio model through the simulated front end, the SDRplay LNA / IF split by policy, the per-mode targets
+  add_executable(test_autogain_matrix tests/source/test_autogain_matrix.cpp)
+  target_link_libraries(test_autogain_matrix PRIVATE dect2core)
+  add_test(NAME autogain_matrix COMMAND test_autogain_matrix)   # 3.7: every mode class on every radio through acquisition, interferer, retune, mode switch, idle and bursty channels (docs/AUTOGAIN-3.7.md)
   add_executable(test_spur_notch tests/dsp/test_spur_notch.cpp)
   target_link_libraries(test_spur_notch PRIVATE dect2core)
   add_test(NAME spur_notch COMMAND test_spur_notch)   # 3.6: the adaptive spur notch: out-of-channel lines, proved in-channel lines, wide channels, every mode's channel

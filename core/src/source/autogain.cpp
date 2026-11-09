@@ -939,7 +939,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     // Auto keeps the mode's headroom (within its dead band) wherever it can: raw SNR with the ADC near full scale is not the aim
     // and does not buy gain that only costs headroom (the floor already far above the ADC's own noise: the loop would take it down again)
     const double minHead = set_.v2 ? std::max(0.5, tgt_.minHeadroomDb - 1.0) : std::max(0.5, headroomTarget() - tgt_.windowDb - 1.0);   // a dB of allowance for the short measurement
-    int b = chooseTrial(used, minHead, tgt_.marginGoalDb + 15);
+    int b = chooseTrial(used, minHead, set_.v2 ? 1e9 : tgt_.marginGoalDb + 15);   // v2: no "wasted gain" limit here: many radios' noise figure keeps falling with gain long after the floor clears the ADC's, the climb's measurement decides
     double wastedTo = -1;   // every gain tried was already "wasted": the floor sits that far above the ADC's own noise at the lowest one: go down by the excess
     if (b < 0 || used == Metric::Auto) {
         b = chooseTrial(used, minHead);
