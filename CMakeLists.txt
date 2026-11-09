@@ -203,7 +203,6 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES thread)   # Thread (family 244): core/src/thread (6LoWPAN / MLE layer; the receiver is the 802.15.4 one in core/src/zigbee), app/thread, tests/thread
   list(APPEND DECT2_MODES wxsat)   # SatDump-list weather links (families 260 - 271): core/src/wxsat, app/wxsat, tests/wxsat (docs/SATDUMP-TIER1-3.7.md)
   list(APPEND DECT2_MODES sd3)   # SatDump tier 3 links (families 290 - 299, 510): core/src/sd3, app/sd3, tests/sd3 (docs/SATDUMP-TIER3-3.8.md)
-  list(APPEND DECT2_MODES wxsat)   # SatDump-list weather links (families 260 - 268): core/src/wxsat, app/wxsat, tests/wxsat (docs/SATDUMP-TIER1-3.7.md)
   list(APPEND DECT2_MODES fy3)   # FY-3 AHRPT (family 235) and FY-3 MPT (236): core/src/fy3, app/fy3, tests/fy3 (docs/fy3.md)
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
