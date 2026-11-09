@@ -61,6 +61,9 @@ PC
 
 # --- generic radios: SoapySDR (a DLL). Its RTL-SDR and Airspy modules are not built: the native drivers of the same name always win and hide them.
 
+# A prefix built from an older librtlsdr (no V4 Lite: #340) is rebuilt: the steps below skip whatever already exists
+RTL_BLOG_ID=aed0ea1
+if [ "$(cat "$P/.rtlsdr-blog-id" 2>/dev/null)" != "$RTL_BLOG_ID" ]; then rm -f "$P/lib/librtlsdr.a" "$P/bin/librtlsdr.dll"; rm -rf rtl-build rtl-sdr-blog-1.4.0; fi
 [ -f "$P/lib/librtlsdr.a" ] || { step librtlsdr; [ -f "$SRC/rtl-sdr-blog-1.4.0.tar.gz" ] || curl -fsSL -o "$SRC/rtl-sdr-blog-1.4.0.tar.gz" https://github.com/rtlsdrblog/rtl-sdr-blog/archive/aed0ea1.tar.gz   # 1.4.0 = commit aed0ea1: V4 Lite support, HF tracking filter bypass
   [ -d rtl-sdr-blog-1.4.0 ] || { mkdir rtl-sdr-blog-1.4.0 && tar xf "$SRC/rtl-sdr-blog-1.4.0.tar.gz" -C rtl-sdr-blog-1.4.0 --strip-components=1; }
   sed -i.bak 's/^set(VERSION_INFO_PATCH_VERSION git)/set(VERSION_INFO_PATCH_VERSION 0)/' rtl-sdr-blog-1.4.0/CMakeLists.txt   # (the tarball has no git history to take the version from)
@@ -119,6 +122,7 @@ PC
 # --- librtlsdr and libairspy as DLLs of their own (libusb inside): the native drivers of OnAir load rtlsdr.dll / airspy.dll by name from the program's folder
 [ -f "$P/bin/librtlsdr.dll" ] || { step "librtlsdr.dll"
   cmake rtl-build "-DCMAKE_SHARED_LINKER_FLAGS=-L$P/lib" >/dev/null && cmake --build rtl-build -j$JOBS --target rtlsdr >/dev/null && cp rtl-build/src/librtlsdr.dll "$P/bin/"; }
+echo "$RTL_BLOG_ID" > "$P/.rtlsdr-blog-id"
 [ -f "$P/bin/libairspy.dll" ] || { step "libairspy.dll"
   cmake --build airspy-build -j$JOBS --target airspy >/dev/null; cp "$(find "$WORK" -name libairspy.dll -path '*src*' | head -1)" "$P/bin/libairspy.dll" && touch "$P/airspy-close-order.stamp"; }
 

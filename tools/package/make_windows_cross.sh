@@ -21,6 +21,8 @@ if [ -z "$ONAIR_WIN_PARTIAL" ]; then
   for f in libusb-1.0 libstdc++-6 libgcc_s_seh-1 libwinpthread-1; do [ -f "$P/redist/$f.dll" ] || missing="$missing redist/$f.dll"; done
   [ -z "$missing" ] || { echo "error: not in $P:$missing"; echo "run tools/package/cross_deps_windows.sh first (or set ONAIR_WIN_PARTIAL=1 to package without them)"; exit 1; }
 fi
+# The RTL-SDR Blog V4 Lite needs librtlsdr 1.4.0 or later (#340): never package a prefix from before it
+if [ -f "$P/bin/librtlsdr.dll" ] && ! grep -aq "Blog V4L" "$P/bin/librtlsdr.dll"; then echo "error: $P/bin/librtlsdr.dll has no RTL-SDR Blog V4 Lite support: run tools/package/cross_deps_windows.sh"; exit 1; fi
 HAMLIB_CMAKE=OFF
 for f in "$P/bin"/libhamlib*.dll "$P/bin"/hamlib.dll; do [ -f "$f" ] && HAMLIB_CMAKE=ON && break; done
 TLS_CMAKE=OFF; [ -f "$P/lib/libssl.a" ] && TLS_CMAKE=ON || echo "warning: no OpenSSL in $P: onair-server is built without TLS (ONAIR_WIN_PARTIAL)"

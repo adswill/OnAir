@@ -925,6 +925,8 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_kit_export tests/kit/test_export.cpp app/ui/kit/export.cpp app/state/results_export.cpp core/src/export/exporters.cpp)
   target_include_directories(test_kit_export PRIVATE core/include)
   add_test(NAME kit_export COMMAND test_kit_export)
+  add_executable(test_per_receiver tests/state/test_per_receiver.cpp)
+  add_test(NAME per_receiver COMMAND test_per_receiver)
   add_executable(test_rx_width tests/state/test_rx_width.cpp)
   target_link_libraries(test_rx_width PRIVATE dect2core)   # rx_width.h takes the radio limits of the core
   add_test(NAME rx_width COMMAND test_rx_width)

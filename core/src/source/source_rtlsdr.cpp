@@ -268,6 +268,10 @@ protected:
             // stable rates are 225-300 kHz and 0.9-3.2 MHz; above about 2.56 MHz most dongles drop samples
             double want = s.rateChosen && s.sampleRate > 0 ? s.sampleRate : std::min(s.sampleRate > 0 ? s.sampleRate : 2.048e6, model_ == kDxPatrol ? kDxpMaxRate : 2.56e6);   // (3.4: a chosen rate is not capped)
             if (want < 900001 && (want > 300000 || want <= 225000)) want = 900001;   // librtlsdr refuses 225 kHz and below as well
+            // The RTL-SDR Blog library's set_sample_rate retunes to the frequency it last had: on a freshly opened R820T that is 0 Hz, below its
+            // automatic direct-sampling threshold (24 MHz), so the tuner went to standby before the real tune and a PLL failure then left the
+            // dongle in direct sampling at 0 Hz (#450). Tuned first, the retune it makes is the real frequency.
+            if (s.centerHz >= kDirectBelowHz && s.centerHz <= 4.29e9) rtl().set_center_freq(dev_, (uint32_t)std::llround(s.centerHz));
             if (const int r = rtl().set_sample_rate(dev_, (uint32_t)std::lround(want)); r < 0) {
                 err = "RTL-SDR: the sample rate of " + mhz(want) + " Msps was refused (error " + std::to_string(r) + ")";
                 return false;
