@@ -67,7 +67,7 @@ static Out runScene(const RadioProfile& rp, const Scene& sc, double startDb, dou
     (void)lastChange;
     o.expl = c.explanation();
     if (getenv("AGTR") && o.bestSnr - o.snr > 2) for (const auto& t : c.trials()) printf("   trial %.0f dB head %.1f clip %.4f imd %d snr %.1f\n", t.plan.totalDb, t.headroomMin, t.clipMax, (int)t.imd, t.chanSnr());
-    if (getenv("AGLOG") && (o.changes60 > 3 || o.bestSnr - o.snr > 2 || o.convSec <= 0)) for (const auto& e : c.log()) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
+    if (getenv("AGLOG") && (getenv("AGLOGALL") || o.changes60 > 3 || o.bestSnr - o.snr > 2 || o.convSec <= 0)) for (const auto& e : c.log()) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
     return o;
 }
 

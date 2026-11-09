@@ -149,7 +149,7 @@ static void testTargets() {
     CHECK(ad.kind == ModeKind::Pulsed && ad.metric == Metric::Sensitivity && ad.policy == Policy::Sensitivity, "ADS-B: sensitivity");
     const ModeTarget dmr = modeTargetFor(11, 12.5e3, 2.4e6);
     CHECK(dmr.kind == ModeKind::NarrowVoice && dmr.metric == Metric::ChannelSnr, "DMR: SNR in the channel");
-    CHECK(modeTargetFor(44, 10e6, 10e6).metric == Metric::Headroom, "analyser: headroom");
+    CHECK(modeTargetFor(44, 10e6, 10e6).metric == Metric::Sensitivity && modeTargetFor(44, 10e6, 10e6).minHeadroomDb >= 8, "analyser: the floor over the ADC with a headroom floor");
     CHECK(modeTargetFor(7, 200e3, 2.4e6).policy == Policy::Linearity, "FM broadcast: linearity");
     CHECK(dmr.headroomDb > modeTargetFor(1, 8e6, 9.14e6).headroomDb, "narrow in a wide span keeps more headroom than TV");
 }

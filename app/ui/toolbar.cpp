@@ -240,6 +240,16 @@ static void toolbarGain(App& a, bool vertical, bool running, bool& retune) {
         ImGui::SameLine(0);
         ImGui::SetNextItemWidth(touch::on() ? -FLT_MIN : narrowW * gUi);
     };
+    // automatic first: one click sets it, and the sliders are the Advanced part while Auto is on (they stay in view when the gain is by hand)
+    if (!vertical) flowNext();
+    autogainControl(a, vertical, running);
+    static bool showManual = false;
+    if (a.agcOn) {
+        if (!vertical) ImGui::SameLine(0, 6 * gUi);
+        if (ImGui::SmallButton(showManual ? tr("Advanced: hide") : tr("Advanced"))) showManual = !showManual;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Set the gain by hand. Touching a gain turns Auto off."));
+    }
+    if (!a.agcOn || showManual) {
     if (generic) {
         // in the side panel the slider gets its own row (on the header's row it pushed AGC and Auto-tune past the panel edge)
         if (vertical) { const float w = panel::rowLabel(tr("Gain"), tr("The radio's overall gain")); ImGui::SetNextItemWidth(touch::on() ? -FLT_MIN : w); }
@@ -265,9 +275,7 @@ static void toolbarGain(App& a, bool vertical, bool running, bool& retune) {
     if (ImGui::Checkbox(tr("Amp"), &a.tune.ampOn)) retune = true, a.agcOn = false;
     if (a.tune.ampOn) { if (!vertical) flowNext(6 * gUi); agcAmpWarning(a); }   // the side panel: on its own row, wrapped   // beside a manual Amp switch that is on: the amp can be damaged by strong signals
     }
-    if (!vertical) flowNext();   // the side panel: Auto gain has its own row under the sliders
-    // Auto gain (docs/AUTOGAIN.md): Off / Auto / Optimise once / Safe start, its settings, and the live ADC meter strip under it
-    autogainControl(a, vertical, running);
+    }   // the manual sliders (Advanced)
     ImGui::EndDisabled();
     if (isHw && running) {
         if (!vertical) flowNext(10 * gUi);

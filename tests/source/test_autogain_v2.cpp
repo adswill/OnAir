@@ -64,6 +64,7 @@ static Res runScene(const Scene& sc, bool v2, double sec = 120, const GainCal* c
     });
     o.avg = nAll ? sumAll / nAll : -99;
     o.probeFrac = nAll ? (double)nProbe / nAll : 0;
+    if (getenv("AGLOG") && strstr(sc.name, getenv("AGLOG"))) for (const auto& e : c.log()) printf("     %.1f %.1f -> %.1f %s\n", e.t, e.fromDb, e.toDb, e.why.c_str());
     o.gain = c.current().totalDb;
     SimRadio fin(rp, o.gain, false);
     setup(fin, sc);

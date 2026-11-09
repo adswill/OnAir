@@ -70,6 +70,7 @@ bool AutoGainController::floorFine() const { return fl_.valid && fl_.adcMarginDb
 
 void AutoGainController::noteCut(double now) {
     if (now - lastRecoverAt_ < 3.0) recWait_ = std::min(120.0, recWait_ * 3.0);   // the jump back clipped again: the next one waits longer (a keyed transmitter must not pump the gain)
+    cutOobIn_ = -300;   // measured once the cut has settled: during the clip the out-of-band power is the distortion's
     if (!cutActive_) { cutActive_ = true; cutFrom_ = cur_.totalDb; cutWasOob_ = fl_.valid && fl_.oobDbfs > fl_.chanDbfs + 3 + 10 * std::log10(std::max(1.0, fl_.snrDb)); }
     cutAt_ = now;
 }
@@ -192,12 +193,15 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     // after a cut (a clip or the headroom floor): back up fast (up to 12 dB a step, 1.1 s apart) to the gain it was cut from once the room is there again. The interferer has
     // gone when the headroom says so, whatever cut the gain; a burst must not cost minutes. A soft ceiling only holds while the headroom does not clearly allow more
     {
+        if (cutActive_ && cutOobIn_ < -299 && !clTrial_ && now >= changedAt_ + settleTime() && now - cutAt_ >= settleTime() && fl_.valid) cutOobIn_ = fl_.oobDbfs - cur_.totalDb;
         const bool recovering = cutActive_ && !idleHold && cur_.totalDb < cutFrom_ - 1 && now - cutAt_ > recWait_ / sp;
         if (!clTrial_ && recovering && now - lastUp_ >= 1.1 / sp && now - lastDown_ >= 1.5 / sp) {
             const double room = effHeadroom(in) - tgt_.minHeadroomDb - 1.0;
             const double sc = radio_.calibrated() ? 1.0 : (radio_.driverSplits && radio_.singleControl() ? unitScale_ : 1.0);
-            double target = room < 5.0 ? cur_.totalDb : std::min({maxGain(), cutFrom_, cur_.totalDb + std::max(0.0, room) / std::max(0.5, sc)});
-            if (ovTimes_.size() >= 3) target = std::min(target, ceilingDb(now));   // keeps happening (a transmitter keying up nearby): the ceiling holds
+            const double scSafe = !unitLearned_ && !radio_.calibrated() && (radio_.stepsUncertain || radio_.driverSplits) ? std::max(sc, 2.5) : sc;   // an unmeasured step table: count on the worst
+            double target = room < 5.0 ? cur_.totalDb : std::min({maxGain(), cutFrom_, cur_.totalDb + std::max(0.0, room) / std::max(0.5, scSafe)});
+            // the soft ceiling holds unless the out-of-band signal that cut the gain has clearly gone (an IMD pair that overloads at this gain must not be climbed into again)
+            if (!(fl_.valid && cutOobIn_ > -299 && fl_.oobDbfs - cur_.totalDb < cutOobIn_ - 6.0)) target = std::min(target, ceilingDb(now));
             if (cur_.totalDb < target - 0.5) {
                 const double to = std::min(nextStep(cur_.totalDb, std::min(recWait_ > 1.6 ? 6.0 : 12.0, target - cur_.totalDb), pol_), target);
                 if (to > cur_.totalDb + 0.01 && planStages(radio_, to, pol_, set_.stageMask, cur_.db, cur_.ampOn).totalDb > cur_.totalDb + 0.01) {

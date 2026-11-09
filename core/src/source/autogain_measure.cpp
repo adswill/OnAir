@@ -330,7 +330,7 @@ ModeTarget modeTargetFor(int std_, double bwHz, double rateHz, double freqHz) {
     case ModeKind::NarrowData: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
     case ModeKind::Pulsed: t.minHeadroomDb = 3; t.improveDb = 0.5; t.comfortDb = 1e9; t.usePeakHold = true; break;   // judged on the 2 s peak-hold: pulses are < 0.1 % of the samples
     case ModeKind::Gnss: t.minHeadroomDb = 6; t.improveDb = 1.0; t.comfortDb = 1e9; break;
-    case ModeKind::WideSpan: t.minHeadroomDb = 6; t.improveDb = 1.5; t.comfortDb = 1e9; break;
+    case ModeKind::WideSpan: t.minHeadroomDb = 8; t.improveDb = 1.5; t.comfortDb = 1e9; break;
     default: t.minHeadroomDb = 5; t.improveDb = 1.0; t.comfortDb = 6; break;
     }
     applyModeRefinement(t, std_);

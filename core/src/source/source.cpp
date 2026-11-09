@@ -179,6 +179,7 @@ public:
     bool realtimeHardware() const override { return true; }
 
 private:
+    double lastLoHz_ = -1;
     bool apply(const TuneSettings& s, std::string& err, bool live = false) {
         auto chk = [&](int r, const char* what) {
             if (r == HACKRF_SUCCESS) return true;
@@ -192,7 +193,9 @@ private:
         uint32_t bw = hackrfFilterFor(s);   // as hackrf_usb.cpp
         if (!chk(hackrf_set_baseband_filter_bandwidth(dev_, bw), "set_baseband_filter")) return false;
         // the HackRF's library has no frequency correction: the clock error is taken out of the frequency asked for
-        if (!sweep_ && !chk(hackrf_set_freq(dev_, (uint64_t)std::max(ppmCorrectedHz(s.centerHz, radioPpm(s)), 0.0)), "set_freq")) return false;
+        // a gain-only retune leaves the PLLs alone: re-setting the same frequency makes the HackRF's LO relock and breaks the decoder's lock on every gain step
+        const double loHz = std::max(ppmCorrectedHz(s.centerHz, radioPpm(s)), 0.0);
+        if (!sweep_ && (!live || loHz != lastLoHz_)) { if (!chk(hackrf_set_freq(dev_, (uint64_t)loHz), "set_freq")) return false; lastLoHz_ = loHz; }
         if (!chk(hackrf_set_lna_gain(dev_, (uint32_t)s.lnaDb), "set_lna_gain")) return false;
         if (!chk(hackrf_set_vga_gain(dev_, (uint32_t)s.vgaDb), "set_vga_gain")) return false;
         if (!chk(hackrf_set_amp_enable(dev_, s.ampOn ? 1 : 0), "set_amp_enable")) return false;

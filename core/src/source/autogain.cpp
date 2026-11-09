@@ -412,7 +412,7 @@ void AutoGainController::accumulate(AgTrial& t, const AgInput& in) {
     double v = 0;
     const Metric mm = set_.metric != Metric::Auto ? set_.metric : tgt_.metric;
     // the quick search dwells 0.15 s on each gain: a decoder's number is from before the step (a DVB-T2 frame, a DMR superframe), so the search judges by the spectrum and the climb refines by the decoder
-    if (!br_ && (mm == Metric::Mer || mm == Metric::Snr || mm == Metric::Ber || mm == Metric::Lock) && score(mm, in.q, fl_, in.adc, tgt_, headroomTarget(), v) &&
+    if ((!br_ || !set_.v2) && (mm == Metric::Mer || mm == Metric::Snr || mm == Metric::Ber || mm == Metric::Lock) && score(mm, in.q, fl_, in.adc, tgt_, headroomTarget(), v) &&
         (mm == Metric::Lock || in.q.locked)) { t.metricSum += v; t.nMetric++; }
     if (in.q.locked) t.nLocked++;
     if (fl_.valid) { t.floorSum += fl_.floorDbfs; t.nFloor++; t.snrSum += fl_.snrDb; t.nSnr++; }
@@ -925,7 +925,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     // a gain that would (1 dB per dB from the last one measured) leave less than the mode's headroom is not worth a clip: the search ends below it
     if (!queue_.empty() && ti_ >= 0) {
         const AgTrial& l = trials_[(size_t)ti_];
-        const double floorHead = std::max(1.0, bracketHead() - tgt_.windowDb - 3.0);
+        const double floorHead = set_.v2 ? std::max(1.5, tgt_.minHeadroomDb - 1.0) : std::max(1.0, bracketHead() - tgt_.windowDb - 3.0);
         queue_.erase(std::remove_if(queue_.begin(), queue_.end(), [&](const std::pair<double, Policy>& q) {
             return q.second == l.pol && l.headroomMin - (q.first - l.plan.totalDb) < floorHead && q.first > l.plan.totalDb; }), queue_.end());
     }
