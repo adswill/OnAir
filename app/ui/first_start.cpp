@@ -7,6 +7,7 @@
 #include "imgui.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/engine/scanner.h"
+#include "dect2/gnss/gnss_tel.h"
 #include "dect2/prop/prop.h"
 #include <ctime>
 #include <cmath>
@@ -23,13 +24,15 @@ namespace {
 enum class Step { Idle, FmScan, DabScan, DabPlay, TvScan, TvPlay };
 struct {
     Step step = Step::Idle;
-    double t0 = 0;
+    double t0 = 0, readyAt = 0;
     int fam = -1;
     double backMhz = 0;
     std::string msg;
     bool canUndo = false;
     double msgUntil = 0;
     double dabMhz = 0;
+    bool gnssUsed = false, gnssOffered = false, gnssUndo = false, gnssOffer = false, gnssHadPos = false;
+    double gnssLat = 0, gnssLon = 0, gnssBackLat = 0, gnssBackLon = 0;
 } S;
 
 const char* tvKey(const App& a) { return a.atscMode ? "atsc" : a.isdbtMode ? "isdbt" : a.family == 7 ? "dtmb" : "dvb"; }
@@ -125,11 +128,40 @@ void firstBandPick(App& a) {
     say(note.empty() ? std::string(bands[b].name) + tr(" is open now: tuned there.") : tr(note.c_str()), true);
 }
 
-void firstStartAfterStart(App&) { S.t0 = ImGui::GetTime() + 1.5; S.fam = 0; }
+void firstStartSay(const std::string& text) { say(text, false); }
+
+void firstStartAfterStart(App&) { S.readyAt = ImGui::GetTime() + 1.5; S.fam = 0; }
+
+// E12: a held GNSS fix: an unset station position is filled in (with Undo), a far one is offered
+static void gnssPositionTick(App& a) {
+    static double heldFrom = -1;
+    const double now = ImGui::GetTime();
+    const bool ok = a.family == 12 && a.engine.running() && a.rx.gnss.fix.valid && a.rx.gnss.fix.heightM > -500 && a.rx.gnss.fix.heightM < 12000;
+    if (!ok) { heldFrom = -1; return; }
+    if (heldFrom < 0) heldFrom = now;
+    double lat = 0, lon = 0;
+    const bool set = receiverLocationSet();
+    receiverLocation(lat, lon);
+    const dect2::GnssFix& f = a.rx.gnss.fix;
+    double km = 0;
+    if (set) { const double dLat = (f.latDeg - lat) * 111.2, dLon = (f.lonDeg - lon) * 111.2 * std::cos(lat * M_PI / 180); km = std::sqrt(dLat * dLat + dLon * dLon); }
+    const ease::GnssPos act = ease::gnssPosAction(set, now - heldFrom, km);
+    if (act == ease::GnssPos::UseIt && !S.gnssUsed) {
+        S.gnssUsed = true; S.gnssBackLat = lat; S.gnssBackLon = lon; S.gnssHadPos = false;
+        setReceiverLocation(a, f.latDeg, f.lonDeg);
+        char b[120]; snprintf(b, sizeof b, tr("Station position set from this GNSS fix: %.4f, %.4f."), f.latDeg, f.lonDeg);
+        say(b, false); S.gnssUndo = true;
+    } else if (act == ease::GnssPos::Offer && !S.gnssOffered) {
+        S.gnssOffered = true;
+        char b[120]; snprintf(b, sizeof b, tr("Your GNSS fix is %.0f km from the station position."), km);
+        say(b, false); S.gnssOffer = true; S.gnssLat = f.latDeg; S.gnssLon = f.lonDeg; S.gnssBackLat = lat; S.gnssBackLon = lon; S.gnssHadPos = set;
+    }
+}
 
 void firstStartTick(App& a) {
     const double now = ImGui::GetTime();
-    if (S.fam == 0 && now >= S.t0) { S.fam = -1; if (a.engine.running()) onReady(a); }
+    gnssPositionTick(a);
+    if (S.fam == 0 && now >= S.readyAt) { S.fam = -1; if (a.engine.running()) onReady(a); }
     switch (S.step) {
         case Step::FmScan:
             if (!a.fmScan.running) {
@@ -199,6 +231,20 @@ void firstStartTick(App& a) {
 void firstStartHint(App& a) {
     if (S.msg.empty() || ImGui::GetTime() > S.msgUntil) return;
     ImGui::TextDisabled("%s", S.msg.c_str());
+    if (S.gnssOffer) {
+        ImGui::SameLine(0, 8 * gUi);
+        if (ImGui::SmallButton(tr("Use this position##gnssoffer"))) { setReceiverLocation(a, S.gnssLat, S.gnssLon); S.gnssOffer = false; say(tr("Station position updated from the GNSS fix."), false); S.gnssUndo = true; }
+        return;
+    }
+    if (S.gnssUndo) {
+        ImGui::SameLine(0, 8 * gUi);
+        if (ImGui::SmallButton(tr("Undo##gnsspos"))) {
+            if (S.gnssHadPos) setReceiverLocation(a, S.gnssBackLat, S.gnssBackLon);
+            else receiverLocationClear(a, S.gnssBackLat, S.gnssBackLon);
+            S.gnssUndo = false; S.msg.clear();
+        }
+        return;
+    }
     if (S.step != Step::Idle) {
         ImGui::SameLine(0, 8 * gUi);
         if (ImGui::SmallButton(tr("Stop##firststart"))) {

@@ -5,8 +5,15 @@
 #include "dect2/engine/mode_tuning.h"
 #include "typography.h"
 #include "imgui.h"
+#include "dect2/vor/navaid_list.h"
+#include "platform/platform.h"
+#include <atomic>
 #include <cmath>
+#include <cstring>
+#include <fstream>
 #include <map>
+#include <sstream>
+#include <thread>
 #include <string>
 #include <vector>
 
@@ -35,6 +42,79 @@ void passHint(App& a) {
     ImGui::PopID();
     if (auto it = msg.find(fam); it != msg.end() && !armed && !it->second.empty()) ImGui::TextDisabled("%s", it->second.c_str());
     if (fam == kPassFamilyIssSstv) ImGui::TextDisabled("%s", tr("The ISS sends SSTV only during announced events; check the ARISS news before you wait for a pass."));
+}
+
+// E14: near-me navaids (OurAirports navaids.csv, public domain; fetched once with a notice, cached). Community data, not for navigation.
+struct NavS {
+    bool tried = false;
+    std::atomic<int> job{0};   // 0 idle, 1 working, 2 done
+    std::atomic<bool> dlOk{false};
+    std::thread th;
+    std::vector<dect2::Navaid> db;
+    std::string err;
+};
+NavS& nav() { static NavS n; return n; }
+std::string navPath() { return plat::dataDir() + "/navaids.csv"; }
+std::string readNavFile() { std::ifstream f(navPath(), std::ios::binary); std::stringstream ss; ss << f.rdbuf(); return ss.str(); }
+
+void navLoadFile() {
+    NavS& N = nav();
+    N.db.clear();
+    const std::string text = readNavFile();
+    if (!text.empty()) dect2::navaidParseCsv(text, N.db, N.err);
+    if (!N.db.empty()) vorUseNavaidFile(navPath());
+}
+
+unsigned navKindOf(const App& a) {
+    if (a.family == 30) { const char* n = curModeName(a); return n && !std::strcmp(n, "VOR") ? dect2::NavaidVor : 0; }
+    if (a.family == 29) return dect2::NavaidNdb;
+    if (a.family == 121) return dect2::NavaidDme;
+    return 0;
+}
+
+void navHint(App& a) {
+    const unsigned kind = navKindOf(a);
+    if (!kind) return;
+    NavS& N = nav();
+    ImGui::PushID("navhint");
+    if (N.job.load() == 2) { if (N.th.joinable()) N.th.join(); N.job = 0; navLoadFile(); if (!N.dlOk.load() && N.db.empty()) N.err = tr("Could not download the station list."); }
+    if (!N.tried) {   // first opening: the cached file, or one download
+        N.tried = true;
+        plat::Prefs& p = plat::prefs();
+        if (std::ifstream(navPath()).good()) navLoadFile();
+        else if (!p.getB("navaidAutoFetched", false)) {
+            p.setB("navaidAutoFetched", true); p.flush();
+            N.job = 1;
+            const std::string path = navPath();
+            N.th = std::thread([&N, path] { N.dlOk = plat::fetchUrl("https://davidmegginson.github.io/ourairports-data/navaids.csv", path, "OnAir"); N.job = 2; });
+        }
+    }
+    if (N.job.load() == 1) { ImGui::TextDisabled("%s", tr("Getting the station list from OurAirports (public domain), once.")); ImGui::PopID(); return; }
+    if (N.db.empty()) { ImGui::TextDisabled("%s", N.err.empty() ? tr("No station list. Import navaids.csv on the Stations tab.") : N.err.c_str()); ImGui::PopID(); return; }
+    if (!receiverLocationSet()) { ImGui::TextDisabled("%s", tr("Set your location to list the nearest stations (View > Map).")); ImGui::PopID(); return; }
+    double lat, lon;
+    receiverLocation(lat, lon);
+    const auto near = dect2::navaidNearest(N.db, lat, lon, kind, 500, 8);
+    if (near.empty()) { ImGui::TextDisabled("%s", tr("No station within 500 km in the list.")); ImGui::PopID(); return; }
+    const dect2::Navaid& first = N.db[near[0].index];
+    char head[96]; snprintf(head, sizeof head, "%s: %s %.3f MHz, %.0f km", tr("Nearest"), first.ident.c_str(), first.freqMhz, near[0].km);
+    if (ImGui::TreeNode("##nav", "%s", head)) {
+        for (size_t i = 0; i < near.size(); i++) {
+            const dect2::Navaid& s = N.db[near[i].index];
+            ImGui::PushID((int)i);
+            if (ImGui::SmallButton(tr("Tune"))) tuneFreq(a, s.freqMhz);
+            ImGui::SameLine(0, 6 * gUi);
+            ImGui::TextDisabled("%s  %s  %.3f MHz  %.0f km  %.0f deg", s.ident.c_str(), s.name.c_str(), s.freqMhz, near[i].km, near[i].bearingDeg);
+            ImGui::PopID();
+        }
+        if (kind == dect2::NavaidVor && near.size() >= 2) {
+            int x = -1, y = -1;
+            if (dect2::navaidBestCrossing(near, x, y) && ImGui::SmallButton(tr("Use the best pair for a fix"))) vorSetFixPair(a, N.db[near[(size_t)x].index].freqMhz, N.db[near[(size_t)y].index].freqMhz);
+        }
+        ImGui::TextDisabled("%s", tr("Community data (OurAirports), not for navigation."));
+        ImGui::TreePop();
+    }
+    ImGui::PopID();
 }
 
 void geoHint(App& a) {
@@ -84,6 +164,7 @@ void modeHintsLine(App& a) {
     firstStartHint(a);
     passHint(a);
     geoHint(a);
+    navHint(a);
     antennaHint(a);
 }
 

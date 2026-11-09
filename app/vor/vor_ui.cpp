@@ -566,6 +566,14 @@ void synth(App& a, bool& changed) {
 
 } // namespace
 
+void vorUseNavaidFile(const std::string& path) { if (S.dbPath.empty() && S.db.empty()) { if (loadDb(path)) save(); } }
+void vorSetFixPair(App& a, double mhz1, double mhz2) {
+    S.fix[0].freqMhz = mhz1; S.fix[1].freqMhz = mhz2;
+    S.fix[0].valid = S.fix[1].valid = false; S.fix[0].ident.clear(); S.fix[1].ident.clear();
+    save();
+    if (a.engine.running()) tuneFreq(a, mhz1);
+}
+
 extern const ModeUi kVorUi;
 const ModeUi kVorUi = {
     .sideTitle = "BEACONS",

@@ -409,11 +409,13 @@ void syncAdsbReference(App& a) {
 
 void receiverLocation(double& lat, double& lon) { loadState(); lat = S.refLat; lon = S.refLon; }
 
-bool receiverLocationSet() { return plat::prefs().has("adsbLat") && plat::prefs().has("adsbLon"); }
+bool receiverLocationSet() { return plat::prefs().has("adsbLat") && plat::prefs().has("adsbLon") && !plat::prefs().getB("adsbLocCleared", false); }
 
 double receiverAltitudeM() { loadState(); return S.refAltM; }
 
-void setReceiverLocation(App& a, double lat, double lon) { loadState(); setReference(a, lat, lon); }
+void setReceiverLocation(App& a, double lat, double lon) { loadState(); plat::prefs().setB("adsbLocCleared", false); setReference(a, lat, lon); }
+// Undo of an automatic position (E12): back to the old placeholder and to "not set"
+void receiverLocationClear(App& a, double lat, double lon) { setReceiverLocation(a, lat, lon); plat::prefs().setB("adsbLocCleared", true); plat::prefs().flush(); }
 
 void receiverPositionFields(App& a) { loadState(); pollLocate(a); positionFields(a); }
 

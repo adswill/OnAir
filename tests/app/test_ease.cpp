@@ -77,6 +77,16 @@ int main() {
       check(*antennaWarn(0, 1090) != 0 && *antennaWarn(0, 100) == 0, "whip: poor above 1 GHz only (in VHF/UHF)");
       check(*antennaWarn(4, 100) != 0 && *antennaWarn(4, 7) == 0, "long wire: HF only");
       check(*antennaWarn(5, 100) != 0, "no antenna"); check(*antennaWarn(2, 150) == 0, "discone fine at VHF"); check(*antennaWarn(1, 900) == 0, "dipole fine at UHF"); }
+    // E12
+    { check(gnssPosAction(false, 5, 0) == GnssPos::None, "fix not held yet"); check(gnssPosAction(false, 20, 0) == GnssPos::UseIt, "unset: use it");
+      check(gnssPosAction(true, 20, 2) == GnssPos::None, "within 5 km: nothing"); check(gnssPosAction(true, 20, 50) == GnssPos::Offer, "far: offered");
+      check(gnssPosAction(true, 1, 500) == GnssPos::None, "offered only for a held fix"); }
+    // E15
+    { auto t = listenTypes(1500, 8); check(t[0] == "TWR", "low and near: tower");
+      auto ap = listenTypes(8000, 60); check(ap[0] == "APP", "descending or climbing: approach");
+      auto c = listenTypes(35000, 150); check(c[0] == "CTR", "high: centre");
+      auto far = listenTypes(1000, 200); check(far[0] == "CTR", "low but far from the airport: centre");
+      check(std::find(t.begin(), t.end(), "APP") != t.end(), "a fallback when the airport has no tower"); }
     if (fails == 0) std::printf("ease: all passed\n");
     return fails != 0;
 }

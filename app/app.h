@@ -751,6 +751,7 @@ std::string adsbTypeOfIcao(uint32_t icao);          // adsb_ui.cpp: the aircraft
 std::string adsbDistText(double nm);               // adsb_ui.cpp: a distance in the units chosen for ADS-B (NM or km), no unit
 const char* adsbDistUnit();                         // its unit
 double receiverAltitudeM();                         // its height above sea level, metres (0 until set)
+void receiverLocationClear(App& a, double lat, double lon);   // adsb_ui.cpp: undo an automatic position: the old value, reported as not set
 void setReceiverLocation(App& a, double lat, double lon);   // move it (saved), e.g. View > Map's "Use as my location"
 void syncAdsbReference(App& a);                              // push antenna position into the ADS-B tracker while that mode is running
 struct MapSatRef { std::string name; int norad = 0; const dect2::Sgp4* sgp = nullptr; };
@@ -930,9 +931,13 @@ bool rxWidthIsCustom(const App& a);          // a custom width or a chosen sampl
 void rxWidthReset(App& a);                   // back to the mode's own bandwidth and rate (the custom values stay saved)
 void rxWidthRestore(App& a, const RxWidthSnap& s);   // Undo of "Reset this mode"
 void nextStepLine(App& a);                   // panels/diag_ui.cpp: the "what do I do next" line of the mode on screen (app/ui/next_step_logic.h), drawn by modepanel::actionBar
+void vorUseNavaidFile(const std::string& path);    // vor_ui.cpp: the auto-downloaded navaids.csv becomes the VOR station list unless the user imported one
+void vorSetFixPair(App& a, double mhz1, double mhz2);   // vor_ui.cpp: the two stations of the fix
+bool airbandListenAt(App& a, double lat, double lon, int altFt, std::string& what);   // airband_ui.cpp: E15: the nearest airport's Tower / Approach / Centre for this aircraft
 void firstBandPick(App& a);                    // ui/first_start.cpp: a shortwave mode's first opening: pick a band that is open now
 void firstStartAfterStart(App& a);            // ui/first_start.cpp: the receiver has been asked to start
 void firstStartTick(App& a);                  // every frame
+void firstStartSay(const std::string& text);    // a note in the hint strip for about a minute and a half
 void firstStartHint(App& a);                  // its line in the hint strip
 const char* curModeName(const App& a);        // ui/mode_hints.cpp: the name of the current mode-list entry (null: none)
 std::string modeAntennaNote(const ModeDef& m);

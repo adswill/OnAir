@@ -80,7 +80,7 @@ void unitsControls();
 void displayControls();   // the "Display" popup: altitude colours, track width, drop time
 std::string typeText(const AdsbAircraft& ac);
 void aircraftTable(App& a, bool compact);
-void detail(const App& a);
+void detail(App& a);
 void statsView(App& a);
 void sourcesPanel(App& a);
 

@@ -1,6 +1,7 @@
 // The airport search of the airband panel (see airport_ui.h).
 #include "dect2/common/thread_name.h"
 #include "airband/airport_ui.h"
+#include "ui/ease_logic.h"
 #include "app.h"
 #include "memory/memory_options.h"
 #include "platform/platform.h"
@@ -250,6 +251,33 @@ bool airportLoadNearest(App& a, const std::function<void(const std::vector<dect2
         if (S.chans.empty()) continue;
         apply(S.chans, true);
         char b[160]; snprintf(b, sizeof b, tr("Loaded %s, the nearest airport (%.0f km): %zu channels."), db.all()[hit.index].name.c_str(), hit.km, S.chans.size());
+        what = b;
+        return true;
+    }
+    return false;
+}
+
+bool airportListenAt(App& a, double lat, double lon, int altFt, const std::function<void(const std::vector<dect2::AirbandChannel>&, bool)>& apply, std::string& what) {
+    const dect2::AirportDb& db = airportDb();
+    for (const auto& hit : db.nearby(lat, lon, 400, 60, true)) {
+        const dect2::Airport& ap = db.all()[hit.index];
+        if (ap.airbandCount() == 0) continue;
+        select(a, (int)hit.index, false);
+        if (S.chans.empty()) continue;
+        apply(S.chans, true);
+        std::string typeUsed; int khz = 0;
+        for (const std::string& t : ease::listenTypes(altFt, hit.km)) {
+            for (const auto& f : ap.freqs) if (f.airband() && f.type == t) { typeUsed = t; khz = f.khz; break; }
+            if (khz) break;
+        }
+        int member = -1;
+        if (khz) for (size_t k = 0; k < S.chans.size(); k++) if (std::fabs(S.chans[k].freqHz - khz * 1e3) < 5000) member = (int)k;
+        size_t best = 0;
+        for (size_t g = 0; g < S.groups.size(); g++) if (member >= 0 && std::find(S.groups[g].members.begin(), S.groups[g].members.end(), member) != S.groups[g].members.end()) { best = g; break; }
+        if (!S.groups.empty()) airportTuneCentre(a, S.groups[best].centerHz);
+        char b[200];
+        if (khz) snprintf(b, sizeof b, tr("Listening to %s %s, %.3f MHz (best guess from the aircraft's height and position)."), ap.icao.c_str(), typeUsed.c_str(), khz / 1000.0);
+        else snprintf(b, sizeof b, tr("Listening to %s: all its channels."), ap.icao.c_str());
         what = b;
         return true;
     }

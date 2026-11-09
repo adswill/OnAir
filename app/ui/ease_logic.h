@@ -227,3 +227,23 @@ inline const char* antennaWarn(int stated, double mhz) {
 }
 
 }  // namespace ease
+
+// ---- E12, E15
+namespace ease {
+
+// E12: a held GNSS fix against the station position. distKm: from the fix to the current position (ignored when none is set)
+enum class GnssPos { None, UseIt, Offer };
+inline GnssPos gnssPosAction(bool positionSet, double heldSec, double distKm) {
+    if (heldSec < 15) return GnssPos::None;
+    if (!positionSet) return GnssPos::UseIt;
+    return distKm > 5 ? GnssPos::Offer : GnssPos::None;
+}
+
+// E15: which of an airport's channels to listen to for an aircraft, by height and distance from the airport (the OurAirports frequency types, best first)
+inline std::vector<std::string> listenTypes(int altFt, double distKm) {
+    if (altFt < 3000 && distKm < 25) return {"TWR", "APP", "DEP", "CTAF", "GND"};
+    if (altFt < 12000 && distKm < 80) return {"APP", "DEP", "ARR", "TWR"};
+    return {"CTR", "CENTER", "ACC", "APP", "DEP", "TWR"};
+}
+
+}  // namespace ease
