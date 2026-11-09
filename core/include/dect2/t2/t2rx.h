@@ -100,6 +100,7 @@
 #include "dect2/lorawan/lorawan_tel.h"
 #include "dect2/lorasat/lorasat_tel.h"
 #include "dect2/pactor/pactor_tel.h"
+#include "dect2/hfutil/hfutil_tel.h"
 #include "dect2/pactorhf/pactorhf_tel.h"
 #include "dect2/esubghz/esubghz_tel.h"
 #include "dect2/roshf/roshf_tel.h"
@@ -238,6 +239,7 @@ struct RxTelemetry {
     LoraRawTelemetry loraraw; // valid when standard == 72 (LoRa raw)
     LorawanTelemetry lorawan; // valid when standard == 201 (LoRaWAN all channels, family 200, engine standard 202)
     LoraSatTelemetry lorasat; // valid when standard == 202 (LoRa satellites, family 201, engine standard 203)
+    HfUtilTelemetry hfutil;   // valid when standard is 431 .. 440 (HF utility modes, families 430 .. 439)
     PactorTelemetry pactor;   // valid when standard == 204 (PACTOR-I monitor, family 203, engine standard 205)
     RoshfTelemetry roshf;     // valid when standard == 206 (ROS (HF) detector, family 205, engine standard 207)
     SsdvTelemetry ssdv;       // valid when standard == 207 (SSDV pictures, family 206, engine standard 208)

@@ -499,10 +499,17 @@ struct FskRx::Impl {
                 }
             }
             if (bo >= 0) {
+                // an idle pattern passes the parity check at any rotation (and noise varies a few words): only lock on real traffic, varied words whose
+                // identification element says "traffic"
                 std::map<int, int> seen;
-                for (size_t w = 0; w < N; w++) { int v = 0; for (size_t i = 0; i < W; i++) v |= (mbits[(size_t)bo + w * W + i] ^ (bp ? 1 : 0)) << i; if (bc && (int)(w % (size_t)bc) == bph) v = (~v) & 0x7F; seen[v]++; }
-                int top = 0; for (auto& kv : seen) top = std::max(top, kv.second);
-                if (seen.size() < 10 || top > (int)N / 2) bo = -1;   // a rotated idle pattern passes the parity check as well: wait for varied words (noise alone also varies a few)
+                int traffic = 0;
+                for (size_t w = 0; w < N; w++) {
+                    int v = 0;
+                    for (size_t i = 0; i < W; i++) v |= (mbits[(size_t)bo + w * W + i] ^ (bp ? 1 : 0)) << i;
+                    if (bc && (int)(w % (size_t)bc) == bph) v = (~v) & 0x7F;
+                    if (!(v & 1)) { traffic++; seen[v]++; }
+                }
+                if ((int)seen.size() < 10 || traffic < (int)N / 5) bo = -1;
             }
             if (bo < 0) { mbits.erase(mbits.begin(), mbits.begin() + 7); continue; }
             lockOff = bo; lockPol = bp; lockCycle = bc; lockPhase = bph;

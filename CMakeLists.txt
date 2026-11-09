@@ -200,6 +200,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES gk2a)   # GK-2A LRIT (family 230) and HRIT (231): core/src/gk2a, app/gk2a, tests/gk2a, docs/GK2A.md
   list(APPEND DECT2_MODES shortwave)   # Shortwave: the general receiver with one-click HF decoders (family 212, docs/SHORTWAVE-MODE.md): core/src/shortwave, app/shortwave, tests/shortwave
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
+  list(APPEND DECT2_MODES hfutil)   # HF utility modes (families 430 - 439): core/src/hfutil, app/hfutil, tests/hfutil (docs/HF-UTIL-3.8.md)
   list(APPEND DECT2_MODES pactorhf)   # PACTOR-II (family 237), -III (238) and -IV (239), physical layer only: core/src/pactorhf, app/pactorhf, tests/pactorhf (docs/pactorhf.md)
   list(APPEND DECT2_MODES sensors)   # Sub-GHz sensors (family 241, docs/SENSORS-3.7.md): core/src/sensors, app/sensors, tests/sensors; decoders vendored from rtl_433 (third_party/rtl_433)
   list(APPEND DECT2_MODES bgan)   # Inmarsat BGAN forward bearers, signalling only (family 245, docs/BGAN-3.7.md): core/src/bgan, app/bgan, tests/bgan
@@ -1533,6 +1534,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_pactor_mode PRIVATE dect2core)
     target_compile_definitions(test_pactor_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME pactor_mode COMMAND test_pactor_mode)
+    add_executable(test_hfutil_mode tests/app/test_hfutil_mode.cpp)   # HF utility modes: tunings, mode rows, engine / panel wiring
+    target_link_libraries(test_hfutil_mode PRIVATE dect2core)
+    target_compile_definitions(test_hfutil_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME hfutil_mode COMMAND test_hfutil_mode)
     add_executable(test_pactorhf_mode tests/app/test_pactorhf_mode.cpp)   # PACTOR-II / -III / -IV: tunings, mode rows, engine / panel wiring, honesty strings
     target_link_libraries(test_pactorhf_mode PRIVATE dect2core)
     target_compile_definitions(test_pactorhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

@@ -136,6 +136,7 @@ extern const ModeUi kMarineVhfUi;
 extern const ModeUi kLorawanUi;
 extern const ModeUi kLoraSatUi;
 extern const ModeUi kPactorUi;
+extern const ModeUi kHfuUi[dect2::kHfuKinds];
 extern const ModeUi kPactor2Ui, kPactor3Ui, kPactor4Ui;
 extern const ModeUi kEsubghzUi;
 extern const ModeUi kRoshfUi;
@@ -248,6 +249,7 @@ const ModeUi* modeUi(int family) {
     case 155: return &kMarineVhfUi;
     case 200: return &kLorawanUi;
     case 201: return &kLoraSatUi;
+    case 430: case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: return &kHfuUi[family - 430];
     case 203: return &kPactorUi;
     case 204: return &kEsubghzUi;
     case 205: return &kRoshfUi;
