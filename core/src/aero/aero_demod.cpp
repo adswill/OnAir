@@ -238,6 +238,7 @@ uint64_t AeroFramer::uwBitErrors() const { return p_->nUwErr; }
 uint64_t AeroFramer::falseSyncs() const { return p_->nFalse; }
 
 // ======================= demodulator =======================
+static constexpr int kAcqMinBlocks = 4, kAcqMaxBlocks = 32;   // carrier search: first look after 4 averaged FFTs, last after 32
 struct AeroDemod::Impl {
     int rate;
     bool msk;
@@ -302,7 +303,7 @@ struct AeroDemod::Impl {
         acqN = 1;
         const double binWanted = msk ? 2.5 : 6.0;          // Hz
         while (acqN < 1 << 16 && fsD / acqN > binWanted) acqN <<= 1;
-        acqK = 4;
+        acqK = kAcqMinBlocks;
         acqBuf.resize(acqN);
         acqPow.assign(acqN, 0.f);
         fft = std::make_unique<Fft>(acqN);
@@ -361,7 +362,13 @@ struct AeroDemod::Impl {
             if (m > best) { best = m; bc = c; }
         }
         acqMetric = (float)(best / (2 * med));
-        if (acqMetric < 12) { startAcq(); acqMetric = (float)(best / (2 * med)); return; }
+        // the noise ratio spreads less the more blocks are averaged, so the threshold falls with them (4 blocks: 12, 32 blocks: 5.5)
+        const double thr = 2.2 + 9.8 * std::sqrt((double)kAcqMinBlocks / std::max(1, acqDone));
+        if (acqMetric < thr) {
+            // below: integrate longer (up to kAcqMaxBlocks) before giving the power up; the evaluations double in blocks
+            if (acqDone >= kAcqMaxBlocks) { startAcq(); acqMetric = (float)(best / (2 * med)); }
+            return;
+        }
         // each line to a fraction of a bin
         auto refine = [&](double x) {
             int i0 = (int)std::floor(x);
@@ -406,7 +413,7 @@ struct AeroDemod::Impl {
                 fft->forward(acqBuf.data());
                 for (int i = 0; i < acqN; i++) acqPow[i] += std::norm(acqBuf[i]);
                 acqFill = 0;
-                if (++acqDone == acqK) acqEvaluate();
+                if (++acqDone >= acqK && (acqDone & (acqDone - 1)) == 0) acqEvaluate();
             }
             return;
         }
