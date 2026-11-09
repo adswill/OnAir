@@ -8,6 +8,8 @@
 // amp in the popup ("Let auto gain switch the amp", saved per radio as before: agcamp.<radio>).
 #include "../app.h"
 #include "../ui/panel_layout.h"
+#include "../state/per_receiver.h"
+#include "../state/receivers.h"
 #include "dect2/source/autogain.h"
 #include "dect2/source/gain_cal.h"
 #include <cstdio>
@@ -19,11 +21,20 @@ namespace ag = dect2::ag;
 
 namespace {
 
-struct AgUi {
-    ag::AutoGainController c;
+// One user preference set, remembered gains and unit calibrations for the whole app; everything below it is per receiver (#450).
+struct AgShared {
     ag::AgSettings set;
     ag::GainMemory mem;
+    ag::GainCalStore cals;
     bool loaded = false;
+};
+AgShared& shared() { static AgShared s; return s; }
+
+struct AgUi {
+    ag::AutoGainController c;
+    ag::AgSettings& set = shared().set;
+    ag::GainMemory& mem = shared().mem;
+    bool& loaded = shared().loaded;
     std::string ctx;                 // radio | mode | width | rate: a new one configures the controller afresh
     double ctxFreq = -1;
     ag::RadioProfile prof;
@@ -41,13 +52,16 @@ struct AgUi {
     // the engine thread's GainMeter feed (drained once per frame; the last one is reused between 50 ms windows)
     ag::BlockStats mAdc; std::vector<float> mSpec; bool haveMeter = false;
     // per-unit gain-step calibration (docs/AUTOGAIN.md): the store per serial, the running calibrator
-    ag::GainCalStore cals;
+    ag::GainCalStore& cals = shared().cals;
     ag::GainCalibrator cal;
     bool calRun = false; TuneSettings calUndo; bool calUndoAgc = false; std::string calText;
     ag::StagePlan calStart;
     FILE* trace = nullptr; double traceAt = -1e9;
 };
-AgUi& S() { static AgUi s; return s; }
+// A second receiver used to share this state with the first: every frame each one reconfigured the controller for its own radio, so gains
+// (and retunes) alternated between the two and both ADC levels swung (#450). Keyed by receiver now.
+AgUi& forRx(int rxId) { return perReceiver<AgUi, kMaxReceivers>(rxId); }
+AgUi& S(const App& a) { return forRx(a.rxId); }
 
 const char* kModeNames[] = {"Off", "Auto", "Optimise once", "Safe start"};
 
@@ -55,7 +69,7 @@ std::string calKey(const DeviceInfo& d) { return d.serial.empty() ? d.name : d.s
 bool radioOk(const App& a) { return a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[(size_t)a.devIdx].isRadio(); }
 
 void loadSettings() {
-    AgUi& s = S();
+    AgShared& s = shared();
     if (s.loaded) return;
     s.loaded = true;
     auto& p = plat::prefs();
@@ -73,7 +87,7 @@ void loadSettings() {
     s.cals.parse(p.getS("ag.cal", ""));
 }
 void saveSettings() {
-    AgUi& s = S();
+    AgShared& s = shared();
     auto& p = plat::prefs();
     p.setD("ag.headroom", s.set.headroomDb);
     p.setD("ag.maxgain", s.set.maxGainDb);
@@ -96,7 +110,7 @@ std::string memKey(const App& a) { return ag::GainMemory::key(radioKeyOf(a.devic
 ag::AgInput input(App& a) {
     ag::AgInput in;
     in.now = ImGui::GetTime();
-    AgUi& s = S();
+    AgUi& s = S(a);
     // the engine thread's meter (every sample, the radio's own rate; works with the window hidden); the display analyser only before it has data
     ag::BlockStats mb; std::vector<float> ms;
     if (a.engine.running() && a.engine.gainMeter().take(mb, ms)) { s.mAdc = mb; if (!ms.empty()) s.mSpec = ms; s.haveMeter = true; }
@@ -118,7 +132,7 @@ ag::AgInput input(App& a) {
 
 // the controller for the radio and mode in use (afresh when either changed)
 void syncContext(App& a) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     loadSettings();
     const DeviceInfo& d = a.devices[(size_t)a.devIdx];
     const double fs = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;
@@ -140,7 +154,7 @@ void syncContext(App& a) {
 }
 
 void startMode(App& a, ag::AgMode m) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     syncContext(a);
     if (s.run == ag::AgMode::Once || s.run == ag::AgMode::Safe) {   // a one-shot in progress: stopped, back to where it started
         if (s.c.active()) { ag::applyPlan(s.prof, s.c.startPlan(), a.tune); if (a.engine.running()) { a.tune.centerHz = settingsRetuneCentreHz(a); a.engine.retune(a.tune); } }
@@ -161,14 +175,14 @@ void startMode(App& a, ag::AgMode m) {
 }
 
 void applyCmd(App& a, const ag::AgCommand& cmd) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     const bool ampBefore = a.tune.ampOn;
     ag::applyPlan(s.prof, cmd.plan, a.tune);
     if (!s.set.ampAllowed) a.tune.ampOn = ampBefore;   // never the controller's to switch without permission (belt and braces)
 }
 
-void drawHeadroomBar(float w) {
-    AgUi& s = S();
+void drawHeadroomBar(App& a, float w) {
+    AgUi& s = S(a);
     const ag::AgMeters& m = s.c.meters();
     const float h = ImGui::GetFrameHeight() * 0.62f;
     const ImVec2 p = ImGui::GetCursorScreenPos();
@@ -203,8 +217,8 @@ void drawHeadroomBar(float w) {
     }
 }
 
-void historyGraph(float w, float h) {
-    AgUi& s = S();
+void historyGraph(App& a, float w, float h) {
+    AgUi& s = S(a);
     const auto& hs = s.c.history();
     if (hs.size() < 2) { ImGui::TextDisabled("%s", tr("(no history yet)")); return; }
     std::vector<float> g, m;
@@ -226,7 +240,7 @@ void historyGraph(float w, float h) {
 }
 
 void advancedPopup(App& a) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     if (!ImGui::BeginPopup("##agadv")) return;
     bool changed = false;
     const ag::RadioProfile& r = s.prof;
@@ -328,7 +342,7 @@ void advancedPopup(App& a) {
     if (!r.notes.empty()) { ImGui::PushTextWrapPos(460 * gUi); ImGui::TextDisabled("%s", r.notes.c_str()); ImGui::PopTextWrapPos(); }
     ImGui::Separator();
     ImGui::TextDisabled("%s", tr("History (gain, quality)"));
-    historyGraph(440 * gUi, 46 * gUi);
+    historyGraph(a, 440 * gUi, 46 * gUi);
     if (ImGui::TreeNode(trw("Changes"))) {
         ImGui::BeginChild("##aglog", ImVec2(440 * gUi, 140 * gUi), true);
         const auto& lg = s.c.log();
@@ -420,7 +434,7 @@ void gear() {
 
 // ------------------------------------------------------------------------------------------------------------------------------ the API
 void autogainSetTrace(const char* path) {
-    AgUi& s = S();
+    AgUi& s = forRx(1);   // the debug trace follows the first receiver
     if (s.trace) { fclose(s.trace); s.trace = nullptr; }
     if (!path || !*path) return;
     s.trace = fopen(path, "w");
@@ -428,7 +442,7 @@ void autogainSetTrace(const char* path) {
 }
 
 bool autogainStep(App& a) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     bool forced = false;
     if (!radioOk(a) || !a.engine.running()) {
         if (s.oneShot != ag::AgMode::Off) { s.oneShot = ag::AgMode::Off; s.run = ag::AgMode::Off; s.c.stop(); }
@@ -506,7 +520,7 @@ bool autogainStep(App& a) {
 }
 
 void autogainMeterOnly(App& a) {   // Off: the meters still run
-    AgUi& s = S();
+    AgUi& s = S(a);
     if (!radioOk(a) || !a.engine.running() || s.run != ag::AgMode::Off) return;
     syncContext(a);
     ag::AgCommand cmd;
@@ -514,7 +528,7 @@ void autogainMeterOnly(App& a) {   // Off: the meters still run
 }
 
 void autogainControl(App& a, bool vertical, bool running) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     loadSettings();
     int cur = s.oneShot == ag::AgMode::Once ? 2 : s.oneShot == ag::AgMode::Safe ? 3 : a.agcOn ? 1 : 0;
     ImGui::AlignTextToFramePadding();
@@ -578,13 +592,13 @@ void autogainControl(App& a, bool vertical, bool running) {
 }
 
 void autogainMeters(App& a) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     if (!radioOk(a) || !a.engine.running()) return;
     const ag::AgMeters& m = s.c.meters();
     ImGui::AlignTextToFramePadding();
     ImGui::TextDisabled("%s", tr("ADC"));
     ImGui::SameLine(0, 4 * gUi);
-    drawHeadroomBar(110 * gUi);
+    drawHeadroomBar(a, 110 * gUi);
     if (m.valid) {
         ImGui::SameLine(0, 6 * gUi);
         ImGui::TextDisabled(tr("%.0f dB headroom"), m.headroomDb);
@@ -627,7 +641,7 @@ void autogainMeters(App& a) {
 }
 
 bool autogainStatus(App& a) {
-    AgUi& s = S();
+    AgUi& s = S(a);
     if (s.oneShot != ag::AgMode::Off && s.c.active()) {
         ImGui::TextColored(pal::heading(), tr("Auto gain: %s %.0f %% (%.1f dB) ..."), tr(s.oneShot == ag::AgMode::Once ? "optimising" : "safe start"), s.c.progress() * 100, s.c.current().totalDb);
         return true;
@@ -644,9 +658,9 @@ bool autogainRun(App& a, int how) {
     if (how == 1) a.agcOn = true;
     return true;
 }
-bool autogainBusy(const App&) { return S().oneShot != ag::AgMode::Off && S().c.active(); }
-std::string autogainResult(const App&) { return S().result; }
+bool autogainBusy(const App& a) { return S(a).oneShot != ag::AgMode::Off && S(a).c.active(); }
+std::string autogainResult(const App& a) { return S(a).result; }
 std::string autogainStatusJson(App& a) {
     (void)a;
-    return ag::autogainJson(S().c, ImGui::GetTime());
+    return ag::autogainJson(S(a).c, ImGui::GetTime());
 }

@@ -1,6 +1,7 @@
 // The native radio drivers (source_native.cpp) against fake vendor libraries: listing, streaming a known tone, retuning, changing the rate, stopping.
 // (The SDRplay fake checks the driver's calls and settings; the struct layouts themselves are checked in sdrplay_api_min.h.)
 #include "dect2/source/source.h"
+#include "dect2/engine/rate_choice.h"
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -320,6 +321,15 @@ static void radiosChecks(const char* dir, const char* ext) {
             TuneSettings t;
             t.centerHz = 7e6; t.sampleRate = 2.048e6; t.gainDb = 30; t.bandwidthMhz = 0.2;
             std::string e;
+            {   // #450: tuned above the direct-sampling threshold before the rate, so the library never retunes the fresh R820T to 0 Hz
+                const double z0 = std::max(0.0, st("rtl.rateAtZeroHz"));
+                TuneSettings v; v.centerHz = 136e6; v.sampleRate = 1e6; v.gainDb = 20; v.bandwidthMhz = 0.2;
+                std::string ve;
+                auto vs = makeSource(g);
+                const bool vok = vs->start(v, ring, ve);
+                CHECK(vok && st("rtl.freq") == 136e6 && std::max(0.0, st("rtl.rateAtZeroHz")) == z0, "136 MHz: rate set at 0 Hz %.0f times (%s)", std::max(0.0, st("rtl.rateAtZeroHz")) - z0, ve.c_str());
+                if (vok) vs->stop();
+            }
             const double calls = std::max(0.0, st("rtl.dsCalls"));
             // no frequency is refused: a generic dongle at 7 MHz is asked as it is, through the Q input (Auto), with a note that it has no HF input
             const bool g7 = src->start(t, ring, e);
@@ -936,6 +946,16 @@ static void radioSettingsChecks(const char* dir, const char* ext) {
         const bool ok = src->start(t, ring, e);
         CHECK(ok && st("pluto.xoWrites") == kNone && st("pluto.phy:voltage0.gain_control_mode=manual") == 1, "Pluto defaults: xo writes %.0f (%s)", st("pluto.xoWrites"), e.c_str());
         CHECK(st("pluto.bufSamples") == 65536, "Pluto over USB: buffer of %.0f samples", st("pluto.bufSamples"));
+        {   // #420 #367: a chosen rate below the converter's minimum starts at 2.1 Msps instead of failing, and the rate list offers it
+            set("pluto.refuseLowRate", 1);
+            TuneSettings low = t; low.centerHz = 403e6; low.sampleRate = 2e6; low.rateChosen = true;
+            std::string le;
+            CHECK(src->retune(low, le) && st("pluto.phy:voltage0.sampling_frequency") == 2.1e6 && has(le, "2.1 Msps"), "Pluto chosen 2 Msps: %s (rate %.0f)", le.c_str(), st("pluto.phy:voltage0.sampling_frequency"));
+            set("pluto.refuseLowRate", 0);
+            bool listed2 = false;
+            for (const auto& en : rateEntries(rateLimitsOf(d), 0)) if (en.askHz == 2e6) listed2 = true;
+            CHECK(listed2, "Pluto rate list does not offer 2 Msps");
+        }
         if (ok) {
             t.radio["ppm"] = "10";
             CHECK(src->retune(t, e) && st("pluto.phy.xo_correction") == 40000400 && st("pluto.phy:altvoltage0.frequency") == 522e6, "Pluto 10 ppm: xo %.0f, freq %.0f", st("pluto.phy.xo_correction"), st("pluto.phy:altvoltage0.frequency"));

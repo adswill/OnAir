@@ -112,6 +112,7 @@ std::string mhz(double hz) {
 // here) halves it. This one is a lowpass at 0.23 of the converter rate (0.46 of the output): -1 dB at 0.38, 42 dB down from 0.61. It gives DAB its
 // 2.048 Msps straight from the radio: no resampling in software, half the data over the cable. Taps are in 1/32768 (the same for RX and TX).
 constexpr long long kFirTaps[16] = {-282, -25, 891, 389, -2075, -1732, 5360, 13694, 13694, 5360, -1732, -2075, 389, 891, -25, -282};
+constexpr double kConverterMinRate = 25e6 / 12;   // the AD9361 refuses less than this (2.083 Msps) while its FIR is off
 constexpr double kFirMaxRate = 2.1e6, kFirMinRate = 2.048e6;   // the output rates the FIR is used for (the converter itself runs 2.083 Msps and up)
 bool wantsFir(double rateHz) { return rateHz >= kFirMinRate - 1 && rateHz < kFirMaxRate; }
 std::string firConfig() {
@@ -347,8 +348,14 @@ protected:
                 if (setFirRate(s.sampleRate)) want = s.sampleRate;
                 else { fprintf(stderr, "PlutoSDR: the radio did not accept the decimating FIR: running at 2.1 Msps, resampled in software\n"); fflush(stderr); }
             }
-            if (!firOn_ && !radio_->tx)
-                if (const int r = iio().channel_attr_write_longlong(rxCh_, "sampling_frequency", (long long)std::llround(want)); r != 0) { err = "PlutoSDR: the sample rate was refused: " + iio().text(r); return false; }
+            if (!firOn_ && !radio_->tx) {
+                int r = iio().channel_attr_write_longlong(rxCh_, "sampling_frequency", (long long)std::llround(want));
+                if (r != 0 && want < kConverterMinRate) {   // #420 #367: a chosen rate the converter cannot run without its FIR: run it at 2.1 Msps and let the receiver resample
+                    const int r2 = iio().channel_attr_write_longlong(rxCh_, "sampling_frequency", (long long)std::llround(2.1e6));
+                    if (r2 == 0) { addNote(err, "PlutoSDR: the converter cannot run " + mhz(want) + " Msps by itself: running at 2.1 Msps, resampled in software"); want = 2.1e6; r = 0; }
+                }
+                if (r != 0) { err = "PlutoSDR: the sample rate was refused: " + iio().text(r); return false; }
+            }
             // Tezuka: with only the first channel enabled the FPGA sends 8-bit I/Q pairs (half the bytes on the cable, twice the rate); both: 16-bit
             cs8_ = tezuka_ && radioOption(s, "iqformat", "cs16") == "cs8";
             if (const double cap = usbLinkRate(uri_, radioOption(s, "link", "auto")); cap > 0) {
@@ -674,6 +681,7 @@ DeviceInfo plutoEntry(const std::string& uri, const std::string& desc, bool prob
     // over USB 2 a Pluto keeps up with about 4 Msps (3 over its USB-gadget network address); over a real network the converter's full rate is offered
     // a mode that needs more still gets it (linkRateFor: some lost samples beat no decode, e.g. DVB-T/T2 at 64/7 Msps)
     d.maxRateHz = 61.44e6; d.minRateHz = kFirMinRate;   // 2.048 Msps through the optional RX-only FIR, otherwise at least 2.1 Msps in hardware
+    d.pickMinRateHz = 0.52e6;   // the sample-rate list goes lower (#367): a rate the converter cannot run becomes 2.1 Msps and the receiver resamples
     d.steadyRateHz = plutoLinkRate(uri);
     d.gainMinDb = 0; d.gainMaxDb = 73;
     d.minFreqHz = 70e6; d.maxFreqHz = 6e9;

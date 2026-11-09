@@ -53,10 +53,11 @@ EXPORT int rtlsdr_get_device_usb_strings(uint32_t, char* m, char* p, char* s) { 
     if (fake_state("rtl.dxp") == 1) { strcpy(m, "DXPATROL"); strcpy(p, "DXpatrol SDR"); strcpy(s, "DXP00001"); return 0; }   // rtl.dxp = a DXpatrol SDR
     strcpy(m, v4 || v3 || v4l ? "RTLSDRBlog" : "Realtek"); strcpy(p, v4 ? "Blog V4" : v3 ? "Blog V3" : v4l ? "Blog V4L" : "RTL2838UHIDIR"); strcpy(s, "00000001"); return 0;
 }
-EXPORT int rtlsdr_open(rtl_dev** d, uint32_t) { if (const int r = rtlOpenRefusal()) return r; if (getenv("FAKE_RTL_OPEN_FAIL")) return -6; *d = new rtl_dev; return 0; }   // ---- start failure: the app shows the error of a failed start
+EXPORT int rtlsdr_open(rtl_dev** d, uint32_t) { if (const int r = rtlOpenRefusal()) return r; if (getenv("FAKE_RTL_OPEN_FAIL")) return -6; rec("rtl.tunedHz", 0); *d = new rtl_dev; return 0; }   // ---- start failure: the app shows the error of a failed start
 EXPORT int rtlsdr_close(rtl_dev* d) { delete d; return 0; }
-EXPORT int rtlsdr_set_center_freq(rtl_dev*, uint32_t f) { rec("rtl.freq", f); return 0; }
-EXPORT int rtlsdr_set_sample_rate(rtl_dev*, uint32_t r) { rec("rtl.rate", r); return 0; }
+EXPORT int rtlsdr_set_center_freq(rtl_dev*, uint32_t f) { rec("rtl.freq", f); rec("rtl.tunedHz", f); return 0; }
+// the Blog library retunes to its last frequency here: 0 Hz on a fresh open would switch an R820T to direct sampling (#450)
+EXPORT int rtlsdr_set_sample_rate(rtl_dev*, uint32_t r) { rec("rtl.rate", r); if (fake_state("rtl.tunedHz") == 0) count("rtl.rateAtZeroHz"); return 0; }
 EXPORT uint32_t rtlsdr_get_sample_rate(rtl_dev*) { return (uint32_t)fake_state("rtl.rate"); }
 EXPORT int rtlsdr_set_tuner_gain_mode(rtl_dev*, int m) { rec("rtl.gainmode", m); return 0; }
 EXPORT int rtlsdr_get_tuner_gains(rtl_dev*, int* g) { static const int v[] = {0, 90, 140, 270, 370, 496}; if (g) memcpy(g, v, sizeof v); return 6; }
@@ -236,6 +237,7 @@ EXPORT int iio_channel_attr_write_longlong(const void* c, const char* a, long lo
     const auto* ch = (const iio_chan*)c;
     if (ch->name == "phy:altvoltage1" && strcmp(a, "frequency") == 0 && fake_state("pluto.failTxFrequency") == 1) return -22;
     if (strcmp(a, "sampling_frequency") == 0) {
+        if (fake_state("pluto.refuseLowRate") == 1 && v < 2083333 && fake_state("pluto.phy:voltage0.filter_fir_en") != 1) return -22;   // the AD9361 without its FIR
         count("pluto.rateWrites");
         if (iioRxBuffers > 0 && iioTxBuffers > 0) count("pluto.rateWhileDuplex");
         rec("pluto.sharedRate", (double)v);

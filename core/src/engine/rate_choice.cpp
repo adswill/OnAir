@@ -17,7 +17,7 @@ static std::string msps(double hz) {
 RateLimits rateLimitsOf(const DeviceInfo& d) {
     RateLimits L;
     if (!d.isRadio()) return L;
-    L.minHz = d.minRateHz; L.maxHz = d.maxRateHz; L.ranges = d.rateRanges;
+    L.minHz = d.pickMinRateHz > 0 ? d.pickMinRateHz : d.minRateHz; L.maxHz = d.maxRateHz; L.ranges = d.rateRanges;
     if (d.kind == DeviceInfo::HackRF) { if (L.minHz <= 0) L.minHz = 2e6; if (L.maxHz <= 0) L.maxHz = 20e6; }   // hackrf_set_sample_rate: 2 to 20 Msps
     for (auto& r : L.ranges) if (r.first > r.second) std::swap(r.first, r.second);
     std::sort(L.ranges.begin(), L.ranges.end());

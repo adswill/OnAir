@@ -143,6 +143,7 @@ struct DeviceInfo {
     std::string soapyArgs;     // device arguments, e.g. "driver=airspy,serial=..."
     std::string nativeArgs;    // what the radio's own library wants to open it (index, serial, URI, ...)
     double maxRateHz = 0;      // fastest complex sample rate the radio offers (0 = unknown)
+    double pickMinRateHz = 0;  // the lowest rate the sample-rate list offers when lower than minRateHz: the driver delivers it by running faster (0 = minRateHz)
     double minRateHz = 0;
     // The rate its link carries without losing samples when that is below maxRateHz (a PlutoSDR on its USB 2 cable: about 4 Msps of 16-bit
     // samples), 0 = whatever the radio offers. linkRateFor() (rate_choice.h) keeps a mode within it when the mode fits, else goes above it.
