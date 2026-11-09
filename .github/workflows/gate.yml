@@ -1,0 +1,27 @@
+# The quick gate on every branch that ci.yml does not cover: lint, mode numbers, web_policy classification, credits, gui_rules, i18n and
+# the Android link stand-ins, in a few minutes with no build of the receiver library (tools/gate/run.sh, docs/CI-FAST.md).
+# On main, 0.2.8 and integ-* the same script is the "Lint (seconds)" job of ci.yml, which every other job there waits for.
+name: Gate
+
+on:
+  push:
+    branches-ignore: ['main', '0.2.8', 'integ-*']
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: gate-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  gate:
+    name: Quick gate
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - name: Run the gate
+        run: tools/gate/run.sh

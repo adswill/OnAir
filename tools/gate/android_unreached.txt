@@ -1,0 +1,27 @@
+# FFmpeg / libusb calls of the core that the Android link drops (--gc-sections), so they need no stand-in in stubs_ext.c.
+# Taken from v3.7.0, whose link succeeded (android.yml). Add a name only after a real link has shown it is not reached.
+av_audio_fifo_alloc
+av_audio_fifo_free
+av_audio_fifo_read
+av_audio_fifo_size
+av_audio_fifo_write
+av_buffer_ref
+av_d2q
+av_dict_set_int
+av_hwdevice_ctx_create
+av_hwframe_transfer_data
+av_image_copy_plane
+av_log_default_callback
+av_log_format_line2
+av_log_set_callback
+av_samples_alloc_array_and_samples
+avcodec_get_supported_config
+avcodec_version
+avdevice_free_list_devices
+avdevice_list_input_sources
+avdevice_register_all
+libusb_bulk_transfer
+libusb_fill_bulk_transfer
+libusb_get_configuration
+libusb_get_port_numbers
+libusb_set_configuration
