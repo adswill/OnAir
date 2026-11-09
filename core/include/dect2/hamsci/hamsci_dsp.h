@@ -358,7 +358,11 @@ private:
 double pulsarRequiredAreaM2(double fluxJy, double bandwidthHz, double tsysK, double seconds, double dutyCycle, double snr, int npol = 2);
 // Dispersion delay between two frequencies (seconds), dm in pc cm^-3, frequencies in MHz
 double pulsarDelaySec(double dm, double loMHz, double hiMHz);
-// Test signal: pulses with dispersion in noise
+// Filter bank rows (channel powers, one row of `channels` floats per sample time, noise mean 1) with dispersed pulses: the same thing the folder gets after its
+// FFT front end, without synthesising the radio samples (the radio data rate makes minutes of IQ unusable in a test)
+std::vector<float> pulsarRenderRows(const PulsarConfig& c, double seconds, double snrPerChannelPerRow, uint32_t seed, double dutyCycle = 0.03,
+                                    double trueDm = -1, double truePeriod = -1, double noiseRel = -1);
+// Test signal: pulses with dispersion in noise (IQ; short records only)
 std::vector<std::complex<float>> pulsarRender(const PulsarConfig& c, double seconds, double snrPerPulseInBand, uint32_t seed, double dutyCycle = 0.03, double trueDm = -1, double truePeriod = -1);
 
 }  // namespace hamsci
