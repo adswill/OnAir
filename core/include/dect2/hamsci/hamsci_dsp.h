@@ -186,11 +186,12 @@ private:
     bool auto_ = true, dfcwRev_ = false;
     std::vector<float> in_;                 // audio kept for the centre search (last 40 s)
     std::vector<std::complex<float>> dec_;  // decimated stream, 100 Hz
-    std::complex<double> ph_{1, 0};
+    std::complex<double> ph_{1, 0}, osc_{1, 0}, step_{1, 0};
     double phase_ = 0; int decCnt_ = 0; std::complex<double> acc_{0, 0};
     uint64_t sampleN_ = 0;
     uint64_t decN_ = 0;
     uint64_t rowsDone_ = 0;
+    double lastSearchSec_ = -1e9, dotKnown_ = 0;
     std::vector<QrssFrame> frames_;
     std::string emitted_;
     size_t textTaken_ = 0;
