@@ -356,11 +356,80 @@ static const int kFtxNudges = (int)envOr("HFDIG_FTX_NUDGES", 5);
 static const double kFtxNudgeStep = envOr("HFDIG_FTX_NUDGESTEP", 1.0 / 48);
 static const bool kOsdNudged = envOr("HFDIG_FTX_OSDNUDGE", 0) != 0;
 static const bool kFtxApCq = envOr("HFDIG_FTX_APCQ", 1) != 0;
+static const bool kFtxXSlot = envOr("HFDIG_FTX_XSLOT", 1) != 0;       // soft bits of a repeated signal added across slots
+static const bool kFtxApQso = envOr("HFDIG_FTX_APQSO", 1) != 0;       // a-priori calls from the conversations heard on the band
+static const bool kFtxEarly = envOr("HFDIG_FTX_EARLY", 1) != 0;       // an early decode before the slot ends
+static const double kXHz = envOr("HFDIG_FTX_XHZ", 3.0), kXDt = envOr("HFDIG_FTX_XDT", 0.4);   // the same signal: frequency and DT apart at most
+static const int kXSlots = (int)envOr("HFDIG_FTX_XSLOTS", 6);          // slots the soft bits are kept for
+static const float kApQsoMinScore = (float)envOr("HFDIG_FTX_APQSOSCORE", 2.0);
+static const double kApQsoAgree = envOr("HFDIG_FTX_APAGREE", 0.0);     // least share of the unknown bits' reliability the result must agree with
+static const double kEarlyFrac = envOr("HFDIG_FTX_EARLYFRAC", 0.85);   // the early decode runs when this share of the transmission has been heard
 static const bool kNudgeDbg = envOr("HFDIG_FTX_NUDDBG", 0) != 0;
 static const bool kOsdDebug = envOr("HFDIG_FTX_OSDDBG", 0) != 0;
 static const int kOsdPairs = (int)envOr("HFDIG_FTX_OSDPAIRS", 40);
 static const float kOsdMinScore = (float)envOr("HFDIG_FTX_OSDSCORE", 2.5);
 static const double kOsdMaxDist = envOr("HFDIG_FTX_OSDDIST", 1.0), kOsdMinMargin = envOr("HFDIG_FTX_OSDMARGIN", 0.0);
+
+// ---------------------------------------------------------------- what the decoder remembers from slot to slot (worker thread only)
+// Calls in a message: tokens with digits and letters that are not a grid, a report or a closing word.
+static bool isGridTok(const std::string& t) {
+    if (t.size() != 4 && t.size() != 6) return false;
+    return t[0] >= 'A' && t[0] <= 'R' && t[1] >= 'A' && t[1] <= 'R' && t[2] >= '0' && t[2] <= '9' && t[3] >= '0' && t[3] <= '9';
+}
+static bool isCallTok(const std::string& t) {
+    if (t.size() < 3 || t.size() > 13) return false;
+    bool dig = false, let = false;
+    for (char c : t) {
+        if (c >= '0' && c <= '9') dig = true;
+        else if (c >= 'A' && c <= 'Z') let = true;
+        else if (c != '/') return false;
+    }
+    return dig && let && !isGridTok(t) && t != "RR73";
+}
+static std::vector<std::string> msgTokens(const std::string& m) {
+    std::vector<std::string> v;
+    std::string cur;
+    for (char c : m) {
+        if (c == ' ') { if (!cur.empty()) v.push_back(cur); cur.clear(); }
+        else if (c != '<' && c != '>') cur.push_back(c);
+    }
+    if (!cur.empty()) v.push_back(cur);
+    return v;
+}
+
+struct XMem {
+    struct Stored { bool mir = false; double slotUtc = 0; float hz = 0, dt = 0; std::array<float, 174> l[3]; };
+    std::deque<Stored> st;                                          // soft bits of candidates that did not decode
+    struct Pair { std::string a, b; double slotUtc = 0; };
+    std::deque<Pair> pairs;                                         // "A B ..." heard: A called B (or answered)
+    struct Caller { std::string call; double slotUtc = 0; };
+    std::deque<Caller> callers;                                     // "CQ X ..." heard
+    unsigned version = 0;
+    void clear() { st.clear(); pairs.clear(); callers.clear(); version++; }
+    void prune(double nowUtc, double period) {
+        const double keep = nowUtc - (kXSlots + 0.5) * period;
+        while (!st.empty() && st.front().slotUtc < keep) st.pop_front();
+        const double keepCalls = nowUtc - 8.5 * period;
+        while (!pairs.empty() && pairs.front().slotUtc < keepCalls) pairs.pop_front();
+        while (!callers.empty() && callers.front().slotUtc < keepCalls) callers.pop_front();
+        version++;
+    }
+    void heard(const std::string& msg, double slotUtc) {
+        const auto t = msgTokens(msg);
+        if (t.size() < 2) return;
+        if (t[0] == "CQ") {
+            for (size_t i = 1; i < t.size(); i++)
+                if (isCallTok(t[i])) {
+                    for (const auto& c : callers) if (c.call == t[i] && c.slotUtc == slotUtc) return;
+                    callers.push_back({t[i], slotUtc}); version++;
+                    break;
+                }
+        } else if (isCallTok(t[0]) && isCallTok(t[1])) {
+            for (const auto& p : pairs) if (p.a == t[0] && p.b == t[1] && p.slotUtc == slotUtc) return;
+            pairs.push_back({t[0], t[1], slotUtc}); version++;
+        }
+    }
+};
 
 Layout layoutOf(int mode) {
     Layout l;
@@ -423,6 +492,8 @@ struct Job {
     bool search = false;
     int sub = 0;
     double period = 60;
+    bool early = false;       // FT8 / FT4: only the first part of the slot is in x (zeros after earlyEnd)
+    double earlyEnd = 0;      // time of the last audio there is, against the slot start, s
 };
 
 struct Result {
@@ -433,13 +504,14 @@ struct Result {
 // ---------------------------------------------------------------- one slot of one mode
 class SlotDecoder {
 public:
-    SlotDecoder(const Job& j, CallHash& hash, std::map<uint32_t, std::string>& wsprHash, bool mirrored)
-        : j_(j), L_(layoutOf(j.mode)), hash_(hash), wsprHash_(wsprHash), mirrored_(mirrored) {}
+    SlotDecoder(const Job& j, CallHash& hash, std::map<uint32_t, std::string>& wsprHash, bool mirrored, XMem& mem)
+        : j_(j), L_(layoutOf(j.mode)), hash_(hash), wsprHash_(wsprHash), mirrored_(mirrored), mem_(mem), early_(j.early) {}
 
     std::vector<FtxDecode> run() {
         x_ = j_.x;
         std::vector<FtxDecode> out;
         std::set<std::string> seen;
+        if (j_.mode <= kFt2 && !j_.search) mem_.prune(j_.slotUtc, ftxPeriod(j_.mode));
         // the plain decoder's passes first, then (FT8 / FT4 / FT2) the same passes again with the deeper metrics (coherent symbols, OSD,
         // a-priori) on what is left: so the deep stage never changes what the plain one decodes and subtracts
         for (int stage = 0; stage < (deepOn() ? 2 : 1); stage++) {
@@ -472,6 +544,8 @@ public:
                         if (same) { subtract(tones, f0, start, mir != 0); continue; }
                         seen.insert(d.msg);
                         d.pass = pass + stage * L_.passes;
+                        d.early = early_;
+                        if (j_.mode <= kFt2 && !j_.search) mem_.heard(d.msg, j_.slotUtc);
                         out.push_back(d);
                         raw_.push_back(lastRaw_);
                         found++;
@@ -501,7 +575,7 @@ private:
             if (o.mirrored == mir && std::fabs(o.hz - hz) < 0.75 * L_.sp && std::fabs(o.dt - dt) < 1.5 * spec(j_.mode).symSec) return true;
         return false;
     }
-    bool deepOn() const { return j_.mode != kWspr && (kFtxCoherent || kFtxOsd || kFtxApCq); }
+    bool deepOn() const { return !early_ && j_.mode != kWspr && (kFtxCoherent || kFtxOsd || kFtxApCq); }
 
     // the large FFT of the whole slot, kept for cutting out the candidates
     void bigFft() {
@@ -785,14 +859,28 @@ private:
             for (int t = 0; t < L_.nt; t++) { amp[(size_t)k * L_.nt + t] = std::sqrt(std::norm(z[t])); zc_[(size_t)k * L_.nt + t] = z[t] * ph; }
             ph *= rot;
         }
+        // an early decode: the symbols that end after the audio we have are erasures (no tone correlations, no soft bits)
+        std::vector<char> gone((size_t)ns, 0);
+        int nGone = 0;
+        if (early_) {
+            const double st0 = j_.x0 + (bestT + tfrac) * L_.ndown / L_.rate, symSec = (double)L_.nsps / L_.rate;
+            for (int k = 0; k < ns; k++)
+                if (st0 + (k + 1) * symSec > j_.earlyEnd) {
+                    gone[(size_t)k] = 1;
+                    for (int t = 0; t < L_.nt; t++) { amp[(size_t)k * L_.nt + t] = 0; zc_[(size_t)k * L_.nt + t] = 0; }
+                }
+            for (int k : L_.data) nGone += gone[(size_t)k];
+            if (nGone * 2 > (int)L_.data.size()) return false;
+        }
         // noise and signal per bin from the data symbols: the strongest tone of each against the rest
         double sMax = 0, sRest = 0;
         for (int k : L_.data) {
+            if (gone[(size_t)k]) continue;
             double mx = 0, sum = 0;
             for (int t = 0; t < L_.nt; t++) { const double p = amp[(size_t)k * L_.nt + t] * amp[(size_t)k * L_.nt + t]; mx = std::max(mx, p); sum += p; }
             sMax += mx; sRest += sum - mx;
         }
-        const int nd = (int)L_.data.size();
+        const int nd = (int)L_.data.size() - nGone;
         double sigma2 = std::max(1e-30, sRest / ((double)nd * (L_.nt - 1)));
         if (j_.mode == kWspr) {   // the two tones of the other sync parity carry no signal: the noise
             double nn = 0;
@@ -838,6 +926,7 @@ private:
             d.dbm = dbm;
             std::copy(data, data + 7, lastRaw_.begin());
         } else {
+            lastHow_ = 0;
             float llr[kN];
             int bi = 0;
             const uint8_t* gray = L_.nt == 8 ? kFt8Gray : kFt4Gray;
@@ -906,6 +995,71 @@ private:
                     if (got && kOsdDebug) fprintf(stderr, "ap set %d score %.2f\n", q, c.score);
                 }
             }
+            const bool xOk = deep_ && nudge_ == 0 && !early_ && !j_.search && j_.mode <= kFt2;
+            // the same signal heard in earlier slots (a station calling CQ or repeating its report): the soft bits are added and decoded again
+            if (!got && kFtxXSlot && xOk) {
+                const double P = ftxPeriod(j_.mode);
+                std::vector<const XMem::Stored*> m;
+                for (const auto& e : mem_.st)
+                    if (e.mir == mir && e.slotUtc < j_.slotUtc - 0.5 * P && std::fabs(e.hz - d.hz) < kXHz && std::fabs(e.dt - d.dt) < kXDt) m.push_back(&e);
+                for (size_t g = 0; g <= m.size() && !got; g++) {
+                    if (g == m.size() && m.size() < 2) break;
+                    static thread_local float s3[3][kN];
+                    for (int q = 0; q < 3; q++)
+                        for (int i = 0; i < kN; i++) {
+                            float v = sets[q][i];
+                            if (g < m.size()) v += m[g]->l[q][(size_t)i];
+                            else for (const auto* e : m) v += e->l[q][(size_t)i];
+                            s3[q][i] = v;
+                        }
+                    for (int q = 0; q < 3 && !got; q++) got = ldpcDecode(s3[q], 40, cw) == 0 && checkCrc(cw);
+                    for (int q = 0; q < 3 && !got && kFtxOsd && c.score >= kOsdMinScore; q++) {
+                        OsdStats os;
+                        const bool crc = osdDecode(s3[q], kOsdPairs, cw, &os);
+                        got = crc && os.dist <= kOsdMaxDist && os.margin >= kOsdMinMargin && plausible(cw, false);
+                    }
+                    if (got) lastHow_ = 1;
+                }
+            }
+            // the calls of a conversation heard on the band taken as known: "A B ..." (both orders) or an answer to a CQ ("X ...")
+            if (!got && kFtxApQso && xOk && c.score >= kApQsoMinScore) {
+                buildAp();
+                if (kOsdDebug) fprintf(stderr, "apqso: %d hypotheses, cand %.1f Hz score %.2f\n", (int)ap_.size(), d.hz, c.score);
+                for (const auto& h : ap_) {
+                    for (int q = 0; q < 2 && !got; q++) {
+                        float a[kN];
+                        std::copy(sets[q], sets[q] + kN, a);
+                        float mx = 0;
+                        for (int i = 0; i < kN; i++) mx = std::max(mx, std::fabs(a[i]));
+                        const float mag = 1.01f * mx;
+                        auto known = [&](int i) { return i < h.lo || (i >= 74 && i < 77); };
+                        for (int i = 0; i < kN; i++) if (known(i)) { const int v = h.bits[(size_t)i] ^ (j_.mode == kFt8 ? 0 : kFt4Rvec[i]); a[i] = v ? mag : -mag; }
+                        got = ldpcDecode(a, 40, cw) == 0 && checkCrc(cw);
+                        if (!got && h.pair && kFtxOsd) { OsdStats os; got = osdDecode(a, kOsdPairs, cw, &os); }
+                        got = got && plausible(cw, false);
+                        if (got && kApQsoAgree > 0) {   // the unknown bits must also fit what was heard
+                            double ag = 0, tot = 0;
+                            for (int i = 0; i < 91; i++) if (!known(i)) { const double w = std::fabs(sets[q][i]); tot += w; if ((sets[q][i] > 0) == (cw[i] != 0)) ag += w; }
+                            got = tot <= 0 || ag / tot >= kApQsoAgree;
+                        }
+                        if (got) lastHow_ = 2;
+                    }
+                    if (got) break;
+                }
+            }
+            // what did not decode is kept for the next slots
+            if (!got && kFtxXSlot && xOk) {
+                bool dup = false;
+                for (auto& e : mem_.st)
+                    if (e.mir == mir && e.slotUtc == j_.slotUtc && std::fabs(e.hz - d.hz) < kXHz && std::fabs(e.dt - d.dt) < kXDt) dup = true;
+                if (!dup) {
+                    XMem::Stored e;
+                    e.mir = mir; e.slotUtc = j_.slotUtc; e.hz = d.hz; e.dt = d.dt;
+                    for (int q = 0; q < 3; q++) std::copy(sets[q], sets[q] + kN, e.l[q].begin());
+                    mem_.st.push_back(std::move(e));
+                    while (mem_.st.size() > 1500) mem_.st.pop_front();
+                }
+            }
             if (!got) return false;
             uint8_t b77[77];
             for (int i = 0; i < 77; i++) b77[i] = (uint8_t)(cw[i] ^ (j_.mode == kFt8 ? 0 : kFt4Rvec[i]));
@@ -913,6 +1067,7 @@ private:
             if (msg.empty()) return false;
             tones = ftxTones(j_.mode, b77);
             d.msg = msg;
+            d.how = lastHow_;
             if (kOsdDebug && viaOsd) fprintf(stderr, "osd decode \"%s\"\n", msg.c_str());
         }
         // SNR from the decoded tones
@@ -921,6 +1076,7 @@ private:
             int cs = 0, cn = 0;
             for (int k = 0; k < (int)tones.size(); k++) {
                 const int ks = k + L_.toneOff;
+                if (gone[(size_t)ks]) continue;
                 for (int t = 0; t < L_.nt; t++) {
                     const double p = amp[(size_t)ks * L_.nt + t] * amp[(size_t)ks * L_.nt + t];
                     if (t == tones[(size_t)k]) { ps += p; cs++; } else { pn += p; cn++; }
@@ -979,6 +1135,31 @@ private:
     std::vector<float> A_[2];
     std::vector<cd> zc_;   // complex tone correlations of the candidate being tried, the symbol-to-symbol phase step taken out
     struct Fit { bool valid = false; std::vector<cf32> y; int kc = 0, bestT = 0; double base = 0, dfr = 0, tfrac = 0; } fit_;
+    XMem& mem_;
+    bool early_ = false;
+    int lastHow_ = 0;
+    // a-priori hypotheses from the conversations heard: the bits of the calls taken as known (rebuilt when the memory changed)
+    struct ApHyp { std::array<uint8_t, 77> bits{}; int lo = 0, hi = 0; bool pair = false; };   // bits [0, lo) and [74, 77) known; pair: lo = 58
+    std::vector<ApHyp> ap_;
+    unsigned apVer_ = ~0u;
+    void buildAp() {
+        if (apVer_ == mem_.version) return;
+        apVer_ = mem_.version;
+        ap_.clear();
+        std::set<std::string> done;
+        auto add = [&](const std::string& c1, const std::string& c2, bool pair) {
+            const std::string key = c1 + (pair ? " " + c2 : "");
+            if (!done.insert(key).second) return;
+            ApHyp h;
+            if (!pack77(c1 + " " + (pair ? c2 + " RR73" : std::string("K1ABC FN42")), h.bits.data())) return;
+            h.pair = pair; h.lo = pair ? 58 : 29;
+            ap_.push_back(h);
+        };
+        int np = 0;
+        for (auto it = mem_.pairs.rbegin(); it != mem_.pairs.rend() && np < 6; ++it, np++) { add(it->a, it->b, true); add(it->b, it->a, true); }
+        int nc = 0;
+        for (auto it = mem_.callers.rbegin(); it != mem_.callers.rend() && nc < 6; ++it, nc++) add(it->call, "", false);
+    }
     int lastErr_ = 0;
     std::array<uint8_t, 7> lastRaw_{};
     std::vector<std::array<uint8_t, 7>> raw_;
@@ -1012,6 +1193,9 @@ struct HfdigFtx::Impl {
     std::atomic<bool> enabled[kFtxModes];
     std::atomic<bool> mirrored{true};
     std::atomic<bool> clearReq{false};
+    std::atomic<bool> early{true};        // FT8 / FT4: an early decode
+    std::atomic<bool> memClear{false};
+    XMem mem[kFtxModes];                  // worker thread only
     std::atomic<int> sub[kFtxModes];
     std::atomic<double> per[kFtxModes];   // 0: the default of the mode
     std::mutex setMu;
@@ -1029,6 +1213,7 @@ struct HfdigFtx::Impl {
     std::vector<float> buf[kStreams];
     int64_t bufBase[kStreams] = {};
     double nextSlot[kFtxModes];
+    double earlyDone[kFtxModes];          // the slot start an early decode was queued for
     std::vector<float> tmp;
     // worker
     std::mutex mu;                    // guards everything below
@@ -1049,6 +1234,7 @@ struct HfdigFtx::Impl {
         for (auto& e : per) e = 0.0;
         for (int s = 0; s < kStreams; s++) rs[s] = std::make_unique<Resampler>(kStreamL[s], kStreamM[s], kStreamCut[s]);
         for (double& v : nextSlot) v = std::numeric_limits<double>::quiet_NaN();
+        for (double& v : earlyDone) v = -1;
         th = dect2::namedThread("onair-ftx", [this] { worker(); });
     }
     ~Impl() {
@@ -1067,6 +1253,8 @@ struct HfdigFtx::Impl {
         nAudio = 0; first = true; errEma = 0;
         for (int s = 0; s < kStreams; s++) { rs[s]->reset(); buf[s].clear(); bufBase[s] = 0; }
         for (double& v : nextSlot) v = std::numeric_limits<double>::quiet_NaN();
+        for (double& v : earlyDone) v = -1;
+        memClear = true;
         std::lock_guard<std::mutex> lk(mu);
         jobs.clear();
         searchShift = std::numeric_limits<double>::quiet_NaN();
@@ -1110,6 +1298,33 @@ struct HfdigFtx::Impl {
                 const double late = search ? 0.1 : 1.0;   // start mid-slot: a transmission missing more than its first second waits for the next slot
                 while (uStart > S + (search ? a : sp(m).t0) + late) S += P;
                 nextSlot[m] = S;
+            }
+            // an early decode: the first part of the slot, once the decoder is idle (never ahead of a full decode)
+            if (!flushAll && !search && kFtxEarly && early.load() && (m == kFt8 || m == kFt4) && enabled[m].load() && !fwd.load()) {
+                const double S = nextSlot[m];
+                const Spec s = sp(m);
+                const double tE = S + s.t0 + kEarlyFrac * s.nn * s.symSec;
+                bool idle;
+                { std::lock_guard<std::mutex> lk(mu); idle = jobs.empty() && !busy; }
+                if (earlyDone[m] != S && uEnd >= tE + 0.05 && uEnd < S + b && idle) {
+                    earlyDone[m] = S;
+                    Job j;
+                    j.mode = m; j.slotUtc = S; j.dtMin = dtMin; j.dtMax = dtMax; j.sub = sub[m].load(); j.period = P;
+                    j.early = true; j.earlyEnd = tE - S;
+                    const double ja = r.outputPos(audioOfUtc(S + a));
+                    const int64_t i0 = (int64_t)std::floor(ja);
+                    const int64_t nwin = (int64_t)std::ceil((b - a) * rate);
+                    j.x0 = a + (double)(i0 - ja) / rate;
+                    j.x.assign((size_t)nwin, 0.f);
+                    const int64_t nvalid = std::min<int64_t>(nwin, (int64_t)std::floor((tE - S - j.x0) * rate));
+                    for (int64_t i = 0; i < nvalid; i++) {
+                        const int64_t k = i0 + i - bufBase[st];
+                        if (k >= 0 && k < (int64_t)buf[st].size()) j.x[(size_t)i] = buf[st][(size_t)k];
+                    }
+                    std::lock_guard<std::mutex> lk(mu);
+                    jobs.push_back(std::move(j));
+                    cv.notify_one();
+                }
             }
             for (;;) {
                 const double S = nextSlot[m];
@@ -1225,13 +1440,20 @@ struct HfdigFtx::Impl {
                 // the hash tables are only used here (and cleared under the lock): no lock needed while decoding
                 if (j.mode >= kJt65) dec = decodeOther(j);
                 else {
-                    SlotDecoder sd(j, hash, wsprHash, mirrored.load());
+                    if (memClear.exchange(false)) for (auto& mm : mem) mm.clear();
+                    SlotDecoder sd(j, hash, wsprHash, mirrored.load(), mem[j.mode]);
                     dec = sd.run();
                 }
             }
             const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
             std::unique_lock<std::mutex> lk(mu);
             const int m = j.mode;
+            if (j.early) {   // shown at once; the full decode of the slot replaces it. Not counted as a slot, not spotted
+                for (auto& d : dec) { d.dialHz = dialHz.load(); tel.decodes.push_back(d); tel.total++; tel.perMode[m]++; }
+                if (tel.decodes.size() > kFtxKeep) tel.decodes.erase(tel.decodes.begin(), tel.decodes.end() - (long)kFtxKeep);
+                clockStats();
+                continue;
+            }
             tel.slots[m]++;
             tel.lastSlotCount[m] = (int)dec.size();
             tel.lastSlotUtc[m] = j.slotUtc;
@@ -1239,12 +1461,15 @@ struct HfdigFtx::Impl {
             std::sort(dec.begin(), dec.end(), [](const FtxDecode& a, const FtxDecode& b) { return a.snrDb > b.snrDb; });
             for (auto& d : dec) {
                 d.dialHz = dialHz.load();
+                // the full decode replaces the early one of the same message
+                bool wasEarly = false;
+                for (auto it = tel.decodes.begin(); it != tel.decodes.end(); ++it)
+                    if (it->early && it->mode == m && it->slotUtc == j.slotUtc && it->msg == d.msg) { tel.decodes.erase(it); wasEarly = true; break; }
                 tel.decodes.push_back(d);
                 if (!d.call.empty() && PskReporter::get().want()) PskReporter::get().spot(ftxModeName(m), d.hz, d.snrDb, d.call, d.grid, d.dialHz > 0 ? d.dialHz : 0.0);
                 if (m == kWspr && !d.call.empty() && WsprNet::get().want())
                     WsprNet::get().spot(d.hz, d.snrDb, d.dt, d.call, d.grid, d.dbm, d.slotUtc, d.dialHz > 0 ? d.dialHz : 0.0);
-                tel.total++;
-                tel.perMode[m]++;
+                if (!wasEarly) { tel.total++; tel.perMode[m]++; }
             }
             if (tel.decodes.size() > kFtxKeep) tel.decodes.erase(tel.decodes.begin(), tel.decodes.end() - (long)kFtxKeep);
             if (j.search && !dec.empty()) {
@@ -1303,6 +1528,8 @@ void HfdigFtx::setModeOption(int m, int sub, double periodSec) {
     if (periodSec > 0) p_->per[m] = periodSec;
 }
 void HfdigFtx::setMirrored(bool on) { p_->mirrored = on; }
+void HfdigFtx::setEarlyDecode(bool on) { p_->early = on; }
+bool HfdigFtx::earlyDecode() const { return p_->early.load(); }
 bool HfdigFtx::mirrored() const { return p_->mirrored.load(); }
 void HfdigFtx::clearDecodes() {
     std::lock_guard<std::mutex> lk(p_->mu);

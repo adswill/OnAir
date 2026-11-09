@@ -16,6 +16,7 @@
 #include <cstdint>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace dect2 {
 
@@ -26,6 +27,20 @@ constexpr size_t kRttyTextMax = 8000;   // characters kept in the telemetry text
 
 // what the test transmission sends in one loop (a line feed ends it; letters, figures and the shifts between them)
 constexpr const char* kRttyTestText = "RYRYRY CQ CQ DE ONAIR TEST 0123456789 1/2 -.:? THE QUICK BROWN FOX\n";
+
+// One guess of the signal's parameters (rttyAutoAnalyse): the pair of tones, shift, speed and polarity, with how well the text came out
+struct RttyAutoHyp {
+    double lowHz = 0;                // the lower tone, Hz
+    double shiftHz = 0, baud = 0;    // from the tables
+    int shiftIdx = 0, baudIdx = 0;
+    bool reverse = false;            // the mark is the upper tone
+    float score = 0;                 // good characters minus 2.5 per framing error, over the audio analysed
+    uint32_t chars = 0, errors = 0;
+};
+// One click: finds the pair of tones (the two spectral lines, shift from the table), then runs the decoder over the audio for every speed and both
+// polarities and ranks the guesses by the text they give. audio: 8000 Hz, a few seconds to about 20 s of a signal that is on. Best first, at most
+// maxHyps; empty when nothing sends RTTY.
+std::vector<RttyAutoHyp> rttyAutoAnalyse(const float* audio, size_t n, int maxHyps = 3);
 
 class HfdigTestAudio;
 // Custom RTTY audio (8000 Hz). Empty text sends kRttyTestText. reverse: the mark is the upper tone. USB/LSB is the HF mixer, not this flag.
@@ -41,6 +56,8 @@ struct HfdigRttyTelemetry {
     double baud = 45.45, shiftHz = 170;
     bool reverse = false, unshiftOnSpace = false;
     float quality = 0;               // 0 .. 1: how clean the signal is
+    int autoState = 0;               // auto lock: 0 not asked, 1 waiting for audio, 2 done and applied, 3 nothing found
+    std::vector<RttyAutoHyp> autoHyps;   // its guesses, best first (the first one is in use)
 };
 
 // One RTTY signal found by whole-span decoding (hfdig_wide.h): its own pair of tones, speed and text
@@ -70,6 +87,7 @@ public:
     void setFixedPair(double lowToneHz);   // whole-span decoding: the pair is given (lower tone, Hz), the decoder does not search (0: it does)
     void setReverse(bool r);
     void setUnshiftOnSpace(bool u);    // a space returns the figures shift to letters
+    void autoLock();                   // one click: speed, shift and polarity from the last seconds of audio (needs about 6 s of signal), see rttyAutoAnalyse
     void clearText();
     void setText(const std::string& text, uint64_t chars);   // the receiver thread: a loaded results file (reset() keeps the text)
     int baudIndex() const;

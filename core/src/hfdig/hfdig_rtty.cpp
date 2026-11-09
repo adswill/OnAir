@@ -68,6 +68,12 @@ struct HfdigRtty::Impl {
     std::atomic<int> baudIdx{0}, shiftIdx{0};
     std::atomic<bool> reverse{false}, unshift{false}, clearReq{false};
     std::atomic<uint32_t> cfgGen{1};
+    std::atomic<bool> autoReq{false};
+    std::vector<float> hist;                 // the last kHist samples of audio, for the auto lock
+    size_t histPos = 0, histFill = 0;
+    static constexpr size_t kHist = 20 * 8000;
+    int autoState = 0;
+    std::vector<RttyAutoHyp> autoHyps;
     std::atomic<double> fixedLo{0};          // > 0: whole-span decoding found the pair (lower tone, Hz): no search of its own
     uint32_t cfgSeen = 0;
 
@@ -121,7 +127,7 @@ struct HfdigRtty::Impl {
         HfdigRttyTelemetry t;            // the text stays (clearText)
         t.text = std::move(tel.text); t.chars = tel.chars;
         tel = std::move(t);
-        pos = 0; lastCharAt = 0;
+        pos = 0; lastCharAt = 0; histPos = histFill = 0;
         std::fill(ring.begin(), ring.end(), 0.f);
         std::fill(pw.begin(), pw.end(), 0.f);
         ringPos = 0; sinceFrame = 0; frames = 0;
@@ -330,6 +336,8 @@ struct HfdigRtty::Impl {
     void fill() {
         tel.baud = baud; tel.shiftHz = shift; tel.reverse = rev; tel.unshiftOnSpace = uns;
         tel.audioSamples = pos;
+        tel.autoState = autoReq.load() ? 1 : autoState;
+        tel.autoHyps = autoHyps;
         tel.state = !locked ? 0 : (pos - lastCharAt < 3 * (uint64_t)kFs && lastCharAt > 0 ? 2 : 1);
         if (!locked) { tel.markHz = tel.spaceHz = 0; tel.quality = 0; }
         else {
@@ -350,7 +358,25 @@ void HfdigRtty::feedAudio(const float* x, size_t n) {
     const uint32_t g = m.cfgGen.load();
     if (g != m.cfgSeen) { m.cfgSeen = g; m.applyConfig(); }
     if (m.clearReq.exchange(false)) { m.tel.text.clear(); m.tel.chars = 0; m.tel.framingErrors = 0; }
+    if (m.hist.empty()) m.hist.assign(Impl::kHist, 0.f);
+    for (size_t i = 0; i < n; i++) { m.hist[m.histPos] = x[i]; if (++m.histPos >= Impl::kHist) m.histPos = 0; }
+    m.histFill = std::min(Impl::kHist, m.histFill + n);
     m.run(x, n);
+    if (m.autoReq.load() && m.histFill >= (size_t)(6 * kFs)) {   // the audio so far, oldest first
+        m.autoReq = false;
+        std::vector<float> a(m.histFill);
+        const size_t start = (m.histPos + Impl::kHist - m.histFill) % Impl::kHist;
+        for (size_t i = 0; i < m.histFill; i++) a[i] = m.hist[(start + i) % Impl::kHist];
+        m.autoHyps = rttyAutoAnalyse(a.data(), a.size(), 3);
+        if (m.autoHyps.empty()) m.autoState = 3;
+        else {
+            const RttyAutoHyp& h = m.autoHyps[0];
+            m.baudIdx = h.baudIdx; m.shiftIdx = h.shiftIdx; m.reverse = h.reverse;   // the search finds the pair itself at this shift
+            m.fixedLo = 0;
+            m.cfgGen++;
+            m.autoState = 2;
+        }
+    }
     m.fill();
 }
 
@@ -361,6 +387,7 @@ void HfdigRtty::setShiftIndex(int i) { p_->shiftIdx = std::clamp(i, 0, kRttyShif
 void HfdigRtty::setFixedPair(double lowToneHz) { p_->fixedLo = lowToneHz; }
 void HfdigRtty::setReverse(bool r) { p_->reverse = r; p_->cfgGen++; }
 void HfdigRtty::setUnshiftOnSpace(bool u) { p_->unshift = u; p_->cfgGen++; }
+void HfdigRtty::autoLock() { p_->autoState = 0; p_->autoReq = true; }
 void HfdigRtty::clearText() { p_->clearReq = true; }
 void HfdigRtty::setText(const std::string& text, uint64_t chars) { p_->tel.text = text; p_->tel.chars = chars; }
 int HfdigRtty::baudIndex() const { return p_->baudIdx.load(); }
