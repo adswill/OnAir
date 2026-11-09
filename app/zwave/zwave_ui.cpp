@@ -2,6 +2,7 @@
 // the region with what each carried; the region picker. Receive only: S0 and S2 payloads are named as encrypted and stay so.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/topo_view.h"
 #include "dect2/zwave/zwave_proto.h"
 #include "dect2/zwave/zwave_rx.h"
 #include "dect2/zwave/zwave_tel.h"
@@ -242,9 +243,10 @@ void tick(App& a) {
 }
 
 void tab(App& a) {
-    subNav("zwv", S.view, {"Frames", "Nodes", "Networks", "Channels"});
+    subNav("zwv", S.view, {"Frames", "Nodes", "Networks", "Channels", tr("Topology")});
     if (S.view == 0) framesView(a);
     else if (S.view == 1) nodesView(a);
+    else if (S.view == 4) { if (live(a)) topoView(a, "zw", a.rx.zwave.topo); else ImGui::TextDisabled("%s", notLive(a, "the topology").c_str()); }
     else if (S.view == 2) networksView(a);
     else channelsView(a);
 }

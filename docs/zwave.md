@@ -12,7 +12,7 @@ A receive-only monitor for Z-Wave home automation networks on the sub-GHz bands.
   BATTERY, WAKE_UP, ASSOCIATION, VERSION, CONFIGURATION, NOTIFICATION, DOOR_LOCK, the protocol commands), a few values (switch state, battery, temperature).
 - S0 (SECURITY) and S2 (SECURITY_2) encapsulated payloads are shown as encrypted with their length. The network key is not obtainable and nothing is decrypted.
   S0 / S2 handshake frames (nonce get / report, key exchange) are named only, no key material is shown.
-- Routed frames are marked routed; the route header is not decoded.
+- Routed frames: the route header (type, repeater list, hop index) is decoded and shown ("routed 1 > 2 > 3 > 4 (hop 1 of 3)") and drawn in the Topology view. The field layout follows the public descriptions and is checked by loopback only, not against a real capture.
 
 ## Regions
 

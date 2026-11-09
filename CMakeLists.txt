@@ -628,6 +628,7 @@ if(DECT2_BUILD_APP)
   list(APPEND APP_SOURCES app/ui/meter_ui.cpp app/platform/proc_cpu.cpp app/panels/picsave_ui.cpp)
   add_executable(test_picsave tests/app/test_picsave.cpp)   # picture save paths, names, collisions, delete with undo (app/state/picsave.h)
   add_test(NAME picsave COMMAND test_picsave)
+  list(APPEND APP_SOURCES app/ui/topo_view.cpp)   # the mesh topology picture shared by the mesh, Zigbee / Thread and Z-Wave screens
   list(APPEND APP_SOURCES app/map/contact_lines.cpp)   # contact lines on the QSO-mode maps
   file(GLOB DECT2_IPTV_UI CONFIGURE_DEPENDS app/iptv/*.cpp)   # Internet TV (family 209): its core is in core/src/tv
   list(APPEND APP_SOURCES ${DECT2_IPTV_UI})
