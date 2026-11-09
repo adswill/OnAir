@@ -72,11 +72,13 @@ New to this? docs/HOST-A-RECEIVER.md walks through it for complete beginners (Ta
 
 `web_plain_internet=1` lets plain HTTP in from every address. Do not use it except behind something else that does the encryption.
 
-## Easy setup inside OnAir (Server > Share on web)
+## Easy setup inside OnAir (Server > Share this radio)
 
 In the app open **Server > Share on web ...** and press **Share my radio**. It works with the defaults (the first radio, the whole span of the radio, all safe decoders, a public address through the OnAir relay: docs/ONAIR-WEB-RELAY.md, nothing to open on the router, no helper program) and shows the link, a QR code and a copy button. While sharing the window shows the relay's state, the processor and upload budgets, the listeners (with **Kick** and **Block 24 h**), blocked addresses (**Allow again**), invite links, and changes you make are applied by themselves after a moment (the link stays the same); a web server that stops by itself is started again (three times in ten minutes). The tabs hold the choices: the radio and range (with presets), which decoders and listening modes are offered, the limits, who may listen (anyone with the link, a password, or invite links only), how listeners reach you (relay, Cloudflare tunnel, your own address, this network only), the **Server settings** tab (port, certificate, relay address, listeners per address, processor and bandwidth caps, idle and session limits, spectrum row size and rate), the optional listing on the public directory (a preview of exactly what is sent, then **List it**: name, description, location rounded to 100 km / 10 km / 1 km ..., radio, antenna, contact), plus **Test connection**. If the relay service does not answer, the window uses the Cloudflare quick tunnel for the link when its helper is on the computer and switches to the relay when it answers. Everything is described in docs/ONAIR-WEB-SHARING.md.
 
 **Stop sharing** (or closing OnAir) ends the server, the tunnel and the listing program; the listing expires by itself after a few minutes. Files and logs are in the `webshare` folder of OnAir's data folder.
+
+In 3.7 the window is one panel: **Share this radio** starts the web server and gets a public link (OnAir relay if it answers, else a free Cloudflare tunnel; the helper is downloaded once with your OK), and shows the link and a QR code. **List on web.on-air.dev** shows exactly what will be sent and lists the radio after one confirmation. Everything else is under **Advanced**: radio and range, decoders and limits, audio quality, allowed and blocked frequencies, access (open, password, invite links), who may tune (everyone, members, a time-limited control slot, nobody), the transmit opt-in (off by default, with a warning), listing details with a coarse location from the app's own location setting, link type (automatic, relay, tunnel, own https or direct port, local network), port, TLS, per-listener limits, and share automatically when OnAir starts (with or without listing again). The tunnel and web server are restarted if they stop.
 
 ## Access and limits
 
@@ -84,6 +86,10 @@ In the app open **Server > Share on web ...** and press **Share my radio**. It w
 | --- | --- | --- |
 | `web` | 0 | 1: OnAir Web on (also `--web`) |
 | `web_port` | 8073 | its port (also `--web-port`) |
+| `web_control` | everyone | who may tune or change mode: `everyone`, `members` (password or invite), `slot` (one holder at a time, time-limited), `nobody` |
+| `web_control_slot_min` | 5 | length of a control slot |
+| `web_max_audio_rate` | 0 | highest audio rate in Hz a listener gets (0: their choice within `web_user_kbps`); the page adapts to the rate in the audio frames |
+| `web_password_hash` | | the password as `pbkdf2$iterations$salt$hash` (PBKDF2-HMAC-SHA256); used instead of `web_password`, so the plain password is on no disk |
 | `web_bind` / `web_lan` | 127.0.0.1 | the address to listen on; `web_lan=1` is `0.0.0.0` (also `--web-lan`) |
 | `web_tls_cert`, `web_tls_key` | `tls_cert`, `tls_key` | PEM files for HTTPS / WSS |
 | `web_trust_proxy` | 0 | a reverse proxy on this computer: take the address from `X-Forwarded-For` |

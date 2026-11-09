@@ -25,7 +25,7 @@ bool isForbiddenType(const std::string& t) {
 }
 
 const std::vector<std::string>& clientTypes() {
-    static const std::vector<std::string> v = {"hello", "tune", "rx", "audio", "spectrum", "subscribe", "unsubscribe", "ping", "bye"};
+    static const std::vector<std::string> v = {"hello", "tune", "rx", "audio", "spectrum", "subscribe", "unsubscribe", "ping", "bye", "control"};
     return v;
 }
 
@@ -120,6 +120,11 @@ bool parseClientMsg(const std::string& text, ClientMsg& m, std::string& code, st
         // never cut inside a UTF-8 sequence
         while (!m.name.empty() && ((unsigned char)m.name.back() & 0xC0) == 0x80) m.name.pop_back();
         if (!m.name.empty() && (unsigned char)m.name.back() >= 0xC0) m.name.pop_back();
+    } else if (type == "control") {
+        m.type = ClientMsg::Control;
+        const Json* j = v.field("take");
+        if (!j || j->kind != Json::Bool) return v.bad(err::BadMessage, "take must be true or false");
+        m.take = j->b;
     } else if (type == "tune") {
         m.type = ClientMsg::Tune;
         if (!v.num("freq_hz", 0, 1e11, m.freqHz, m.hasFreq)) return false;

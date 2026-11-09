@@ -108,11 +108,12 @@ async function heartbeat(request, env, ctx, deps) {
   if (!(await hit(env, "hb:" + ik, 60, 60, now))) return err(429, "too many requests from this address");
   const rb = await readBody(request);
   if (rb.error) return rb.error;
-  const v = validateRecord(rb.body, now);
+  const devLocal = env.ONAIR_DEV_LOCAL === "1";   // the local test stack only; absent in wrangler.jsonc
+  const v = validateRecord(rb.body, now, devLocal);
   if (!v.ok) return json({ ok: false, error: "invalid", details: v.errors.slice(0, 8) }, 400);
   const rec = v.rec;
   if (!(await verifySig(rec.pub, rb.body.sig, canonicalize(rec)))) return err(401, "signature does not verify");
-  const u = rec.action === "heartbeat" ? validateUrl(rec.url) : { host: "" };
+  const u = rec.action === "heartbeat" ? validateUrl(rec.url, devLocal) : { host: "" };
   if (await isBlocked(env, rec, u.host)) return err(403, "this server or host is blocked");
   if (!(await hit(env, "id:" + rec.id, 8, 300, now))) return err(429, "too many requests for this id");
 
@@ -143,7 +144,7 @@ async function heartbeat(request, env, ctx, deps) {
   if (urlChanged) {
     const other = await env.DB.prepare("SELECT id FROM servers WHERE url = ?1 AND id != ?2").bind(rec.url, rec.id).first();
     if (other) return err(409, "another server is listed with this url");
-    if (!u.literal && !(await deps.resolvesPublic(u.host))) return err(422, "url host does not resolve to public addresses only");
+    if (!u.literal && !u.devLocal && !(await deps.resolvesPublic(u.host))) return err(422, "url host does not resolve to public addresses only");
   }
 
   const loc = parseLoc(rec.loc);

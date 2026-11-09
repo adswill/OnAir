@@ -661,7 +661,7 @@ bool WebServer::start(const WebServerConfig& c) {
     p.invites = c.auth.invites;
     p.st = WebServerStatus();
     if (c.tlsCert.empty() != c.tlsKey.empty()) { p.st.lastError = "TLS needs both a certificate and a key"; return false; }
-    if (c.auth.mode == AuthMode::Password && c.auth.password.size() < 8) { p.st.lastError = "web_password must have 8 characters or more"; return false; }
+    if (c.auth.mode == AuthMode::Password && c.auth.password.size() < 8 && c.auth.passwordHash.empty()) { p.st.lastError = "web_password must have 8 characters or more"; return false; }
     if (!c.tlsCert.empty()) {
         std::string e;
         p.tctx = dect2::tls::makeCtx(c.tlsCert, c.tlsKey, e);

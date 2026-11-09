@@ -485,7 +485,7 @@ private:
         const Json* u = r.get("url");
         if (!ty || ty->str != "ready" || !u || u->kind != Json::Str) { code = "rejected"; msg = "the relay's answer is not ready"; return; }
         std::string pubUrl, uerr;
-        if (!dirNormalizeUrl(u->str, pubUrl, uerr)) { code = "rejected"; msg = "the relay gave an address that is not valid: " + uerr; return; }
+        if (!dirNormalizeEndpoint(u->str, pubUrl, uerr)) { code = "rejected"; msg = "the relay gave an address that is not valid: " + uerr; return; }
         const long long since = wall();
         set([&](RelayStatus& s) { s.state = "online"; s.url = pubUrl; s.code.clear(); s.message.clear(); s.advice.clear(); s.onlineSince = since; s.retryIn = 0; });
         serve(link, code, msg);

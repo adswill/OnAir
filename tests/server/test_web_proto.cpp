@@ -191,6 +191,12 @@ static void fuzz() {
 }
 
 int main() {
+    {
+        onair_web::ClientMsg cm; std::string code, why;
+        CHECK(onair_web::parseClientMsg("{\"type\":\"control\",\"take\":true}", cm, code, why) && cm.type == onair_web::ClientMsg::Control && cm.take, "control message parses");
+        CHECK(!onair_web::parseClientMsg("{\"type\":\"control\"}", cm, code, why) && code == onair_web::err::BadMessage, "control needs take");
+        CHECK(!onair_web::parseClientMsg("{\"type\":\"control\",\"take\":1}", cm, code, why), "take must be a boolean");
+    }
     testJson();
     testMessages();
     testForbidden();

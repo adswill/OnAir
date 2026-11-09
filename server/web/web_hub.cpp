@@ -518,6 +518,7 @@ void WebHub::dropSession(int id, const std::string& reason) {
     }
     logLine("web: session " + std::to_string(id) + " left (" + reason + ")");
     sessions_.erase(it);
+    if (slotHolder_.load() == id) { slotHolder_ = 0; slotUntil_ = 0; slotAnnounced_ = false; }   // the slot goes back when its holder leaves (the others learn it at the next tick)
 }
 
 void WebHub::leave(int id) { std::lock_guard<std::mutex> g(mu_); dropSession(id, "closed"); }
@@ -616,6 +617,23 @@ void WebHub::handle(int id, const ClientMsg& m) {
         return;
     }
     case ClientMsg::Bye: kick(id, "bye"); return;
+    case ClientMsg::Control: {
+        if (L.controlMode != HubLimits::CtlSlot) { enqueue(s, OutMsg{controlJson(id), false, 0}); return; }
+        const double now = wallSeconds();
+        if (m.take) {
+            const int holder = slotHolder_.load();
+            if (holder && holder != id && slotUntil_.load() > now) {
+                enqueue(s, OutMsg{controlJson(id), false, 0});
+                fail(err::Busy, "another listener has the control slot for " + std::to_string((int)(slotUntil_.load() - now) + 1) + " s");
+                return;
+            }
+            slotHolder_ = id; slotUntil_ = now + L.controlSlotMin * 60.0;
+            slotAnnounced_ = false;
+        } else if (slotHolder_.load() == id) { slotHolder_ = 0; slotUntil_ = 0; }
+        slotAnnounced_ = true;
+        controlChanged();
+        return;
+    }
     case ClientMsg::Tx: {
         if (!allowTx()) { fail(err::Forbidden, "not available to web listeners"); return; }
         if (!txHandler_) { fail(err::Forbidden, "this host has no transmitter for web listeners"); return; }
@@ -637,6 +655,10 @@ void WebHub::handle(int id, const ClientMsg& m) {
     std::lock_guard<std::mutex> g(s.m);
     s.lastAction = wallSeconds();
     if (m.type == ClientMsg::Tune) {
+        if (!canTune(s, L)) {
+            fail(err::NotAllowed, L.controlMode == HubLimits::CtlSlot ? "you need the control slot to tune: press Take control" : L.controlMode == HubLimits::CtlMembers ? "only people with the password or an invite can tune this radio" : "the owner of this radio has switched tuning off");
+            return;
+        }
         RxSettings r = s.rx;
         if (m.hasDemod) {
             bool ok;
@@ -687,8 +709,9 @@ void WebHub::handle(int id, const ClientMsg& m) {
             const double kbps = (m.codec == AudioCodec::Pcm16 ? 16.0 : 4.0) * m.rateHz / 1000.0 + 2.0;
             if (kbps > L.maxKbpsUser * 0.8) { fail(err::OutOfRange, "too much for this server's bandwidth per listener: use adpcm or a lower rate"); return; }
         }
-        if (m.rateHz != s.arate) s.dirty = true;
-        s.audioOn = m.on; s.codec = m.codec; s.arate = m.rateHz;
+        const int wantRate = L.maxAudioRate > 0 ? std::min(m.rateHz, L.maxAudioRate) : m.rateHz;
+        if (wantRate != s.arate) s.dirty = true;
+        s.audioOn = m.on; s.codec = m.codec; s.arate = wantRate;
         s.ad = AdpcmState();
         s.pend.clear();
     } else if (m.type == ClientMsg::Spectrum) {
@@ -853,6 +876,7 @@ std::string WebHub::welcomeJson(int id) {
     bool clampMode;
     { std::lock_guard<std::mutex> pg(polMu_); rv = ranges_.view(rangeClassOf(s->cls)); clampMode = ranges_.clampMode(); }
     if (rv.active()) o << ",\"ranges\":" << rangesJson(rv, clampMode);   // only when the host set ranges: older clients and open servers see no change
+    { const std::string ctl = controlJson(id); o << ",\"control\":" << ctl; }
     o << "}";
     return o.str();
 }
@@ -900,11 +924,49 @@ std::string WebHub::statsJson() const {
     return o.str();
 }
 
+bool WebHub::canTune(const Session& s, const HubLimits& L) const {
+    switch (L.controlMode) {
+        case HubLimits::CtlEveryone: return true;
+        case HubLimits::CtlMembers: return s.cls != UserClass::Public;
+        case HubLimits::CtlNobody: return false;
+        case HubLimits::CtlSlot: return slotHolder_.load() == s.id && slotUntil_.load() > wallSeconds();
+    }
+    return true;
+}
+
+std::string WebHub::controlJson(int id) const {
+    HubLimits L;
+    bool member = false;
+    { std::lock_guard<std::mutex> g(mu_); L = lim_; auto it = sessions_.find(id); if (it != sessions_.end()) member = it->second->cls != UserClass::Public; }
+    const double now = wallSeconds();
+    const bool slotLive = slotHolder_.load() != 0 && slotUntil_.load() > now;
+    const bool mine = slotLive && slotHolder_.load() == id;
+    const char* mode = L.controlMode == HubLimits::CtlMembers ? "members" : L.controlMode == HubLimits::CtlSlot ? "slot" : L.controlMode == HubLimits::CtlNobody ? "nobody" : "everyone";
+    const bool can = L.controlMode == HubLimits::CtlEveryone || (L.controlMode == HubLimits::CtlMembers && member) || (L.controlMode == HubLimits::CtlSlot && mine);
+    std::ostringstream o;
+    o << "{\"type\":\"control\",\"mode\":\"" << mode << "\",\"can_tune\":" << (can ? "true" : "false") << ",\"holder\":" << (mine ? "true" : "false") << ",\"busy\":" << (slotLive && !mine ? "true" : "false")
+      << ",\"left_s\":" << (slotLive ? (int)(slotUntil_.load() - now) : 0) << ",\"slot_min\":" << L.controlSlotMin << "}";
+    return o.str();
+}
+
+void WebHub::controlChanged() {
+    std::vector<std::shared_ptr<Session>> ss;
+    { std::lock_guard<std::mutex> g(mu_); for (auto& kv : sessions_) ss.push_back(kv.second); }
+    for (auto& sp : ss) enqueue(*sp, OutMsg{controlJson(sp->id), false, 0});
+}
+
 void WebHub::tick() {
     const double now = wallSeconds();
     std::vector<std::shared_ptr<Session>> ss;
     HubLimits L;
     { std::lock_guard<std::mutex> g(mu_); for (auto& kv : sessions_) ss.push_back(kv.second); L = lim_; }
+    if (L.controlMode == HubLimits::CtlSlot) {   // an expired or abandoned slot is free again: everyone hears about it once
+        const int holder = slotHolder_.load();
+        bool expired = holder && slotUntil_.load() <= now;
+        if (holder && !expired) { std::lock_guard<std::mutex> g(mu_); expired = sessions_.find(holder) == sessions_.end(); }
+        if (expired) { slotHolder_ = 0; slotUntil_ = 0; slotAnnounced_ = false; }
+        if (!slotAnnounced_) { slotAnnounced_ = true; controlChanged(); }
+    }
     double total = 0;
     std::shared_ptr<Session> newestPublic;
     for (auto& sp : ss) {

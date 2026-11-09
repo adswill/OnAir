@@ -70,7 +70,8 @@ struct InviteToken { std::string token, label; int maxMinutes = 0; };   // maxMi
 
 struct AuthConfig {
     AuthMode mode = AuthMode::Open;
-    std::string password;              // AuthMode::Password (8 characters or more)
+    std::string password;              // AuthMode::Password (8 characters or more); empty when passwordHash is used
+    std::string passwordHash;          // web_password_hash: the salted, stretched form, so the plain password is on no disk (hashPassword)
     std::vector<InviteToken> invites;  // valid in every mode
     std::string adminToken;            // the admin API (24 characters or more); empty: no admin API
 };
@@ -81,6 +82,9 @@ struct AuthResult { bool ok = false; UserClass cls = UserClass::Public; std::str
 AuthResult authenticate(const AuthConfig& a, const std::string& password, const std::string& invite);
 
 std::string newToken(int bytes = 16);   // random, hex
+// "pbkdf2$<iterations>$<salt hex>$<hash hex>" (PBKDF2-HMAC-SHA256); empty salt: a new random one
+std::string hashPassword(const std::string& password, const std::string& saltHex = std::string(), int iterations = 60000);
+bool passwordMatchesHash(const std::string& password, const std::string& hash);   // constant time on the final compare; a malformed hash matches nothing
 
 // Failed logins per address: after 5 failures within 60 s the address is refused for 60 s. Bounded table (oldest entries go first).
 class FailLimiter {
