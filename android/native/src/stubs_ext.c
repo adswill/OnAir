@@ -70,6 +70,7 @@ KEEP void* avformat_alloc_context(void) { return NULL; }
 KEEP long avformat_alloc_output_context2(void) { return -1; }
 KEEP long avformat_close_input(void) { return -1; }
 KEEP long avformat_find_stream_info(void) { return -1; }
+KEEP long av_guess_frame_rate(void) { return 0; }
 KEEP long avformat_free_context(void) { return -1; }
 KEEP void* avformat_new_stream(void) { return NULL; }
 KEEP long avformat_open_input(void) { return -1; }
