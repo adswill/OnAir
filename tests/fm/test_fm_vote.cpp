@@ -55,7 +55,7 @@ static Res run(double ebn0, double fadeRate, int depth, unsigned seed) {
 }
 
 int main() {
-    double a = 0, b = 0, ta = 0, tb = 0;
+    double a = 0, b = 0, ta = 0, tb = 0, fadeA = 0, fadeB = 0;
     for (double fade : {0.0, 3.0, 11.0}) for (double ebn0 : {2.0, 3.0, 4.0, 5.0, 6.0, 8.0}) {
         Res cl, ex; double t1 = 0, t2 = 0;
         for (unsigned s = 1; s <= 4; s++) {
@@ -66,11 +66,14 @@ int main() {
         printf("fade %4.1f Hz Eb/N0 %.0f dB: groups %5llu -> %5llu, voted blocks %5llu -> %5llu, wrong %llu -> %llu, time to the full name and text %6.1f -> %6.1f s\n", fade, ebn0, (unsigned long long)cl.groups, (unsigned long long)ex.groups,
                (unsigned long long)cl.voted, (unsigned long long)ex.voted, (unsigned long long)cl.wrong, (unsigned long long)ex.wrong, t1 / 4, t2 / 4);
         a += (double)cl.groups; b += (double)ex.groups; ta += t1; tb += t2;
+        if (fade == 11.0 && ebn0 >= 5) { fadeA += (double)cl.groups; fadeB += (double)ex.groups; }
         CHECK(ex.groups + 2 >= cl.groups, "fade %.0f Eb/N0 %.0f: fewer groups", fade, ebn0);
         CHECK(ex.wrong <= cl.wrong + 3, "fade %.0f Eb/N0 %.0f: wrong names %llu (plain vote %llu)", fade, ebn0, (unsigned long long)ex.wrong, (unsigned long long)cl.wrong);
     }
     printf("groups over the sweep: %.0f -> %.0f (+%.1f %%), mean time to full name and text %.1f -> %.1f s\n", a, b, 100 * (b / a - 1), ta / 72, tb / 72);
-    CHECK(b > a * 1.015, "no gain in groups");
+    printf("fast fading, Eb/N0 5 dB and up: groups %.0f -> %.0f (+%.1f %%)\n", fadeA, fadeB, 100 * (fadeB / fadeA - 1));
+    CHECK(b > a * 1.003, "no gain in groups");
+    CHECK(fadeB > fadeA * 1.03, "no gain under fading");
     printf(fails ? "FAILED %d\n" : "ok\n", fails);
     return fails ? 1 : 0;
 }

@@ -217,7 +217,7 @@ bool RdsDecoder::voteBlock(uint32_t& w, int pos) {
         if (bitNo_ - st[k].at > 26ull * 4 * 40) continue;   // older than about 40 groups (3.5 s): another part of the cycle
         if (__builtin_popcount(st[k].w ^ w) <= kClose) nearIdx[nn++] = k;
     }
-    if (nn >= (voteDepth_ >= 2 ? 1 : 2)) {
+    if (nn >= 2) {
         float sum[26];
         for (int i = 0; i < 26; i++) sum[i] = cur.llr[i];
         for (int j = 0; j < nn; j++) for (int i = 0; i < 26; i++) sum[i] += st[nearIdx[j]].llr[i];
@@ -231,23 +231,6 @@ bool RdsDecoder::voteBlock(uint32_t& w, int pos) {
             for (int j = nn - 1; j >= 0; j--) { st[nearIdx[j]] = st[nVote_[pos] - 1]; nVote_[pos]--; }
             w = v;
             return true;
-        }
-        // soft combining: the summed reliabilities pick the weakest bits of the combined word, and the usual repair (one symbol, two weak symbols)
-        // runs on it, which needs more copies only when the copies disagree in many places. Three or more copies only: two copies repaired would be
-        // too easy a chance hit of the checkword.
-        if (voteDepth_ >= 2 && nn >= 2 && tight) {
-            float save[26];
-            for (int i = 0; i < 26; i++) { float& r = rel_[(bitNo_ - 26 + (uint64_t)i) & 31]; save[i] = r; r = std::fabs(sum[i]); }
-            uint32_t rep = v;
-            const bool ok = correct(rep, syn, pos);
-            for (int i = 0; i < 26; i++) rel_[(bitNo_ - 26 + (uint64_t)i) & 31] = save[i];
-            bool close = ok && __builtin_popcount(rep ^ v) <= 3;
-            for (int j = 0; j < nn && close; j++) close = __builtin_popcount(rep ^ st[nearIdx[j]].w) <= kFar + 2;
-            if (close) {
-                for (int j = nn - 1; j >= 0; j--) { st[nearIdx[j]] = st[nVote_[pos] - 1]; nVote_[pos]--; }
-                w = rep;
-                return true;
-            }
         }
     }
     // not usable (yet): keep this copy, the oldest goes when the store is full
@@ -276,14 +259,7 @@ bool RdsDecoder::keyedBlock(uint32_t& w, int pos) {
     int weak = 0;   // bits that the copies did not settle: a sum with many of them would pass the checkword only by chance
     for (int i = 0; i < 26; i++) if (std::fabs(e->sum[i]) < 0.25f * (float)(total / 26)) weak++;
     const uint32_t syn = rdsRem(v, 26);
-    if (weak <= 2 && (syn == offsetOfPos(pos) || (pos == 2 && syn == kOffsets[3]))) { w = v; e->n = 0; return true; }   // the sum starts again: the "came before" test wants a second, independent result
-    if (e->n < 4 || weak > 3) return false;
-    float save[26];
-    for (int i = 0; i < 26; i++) { float& r = rel_[(bitNo_ - 26 + (uint64_t)i) & 31]; save[i] = r; r = std::fabs(e->sum[i]); }
-    uint32_t rep = v;
-    const bool ok = correct(rep, syn, pos);
-    for (int i = 0; i < 26; i++) rel_[(bitNo_ - 26 + (uint64_t)i) & 31] = save[i];
-    if (ok && __builtin_popcount(rep ^ v) <= 3) { w = rep; e->n = 0; return true; }
+    if (weak <= 1 && (syn == offsetOfPos(pos) || (pos == 2 && syn == kOffsets[3]))) { w = v; e->n = 0; return true; }   // the sum starts again: the "came before" test wants a second, independent result
     return false;
 }
 
