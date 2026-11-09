@@ -5,6 +5,7 @@
 #include "../panels/photo_links_ui.h"
 #include "adsb_internal.h"
 #include "adsb_acars.h"
+#include "dect2/aero/aero_adsc.h"
 
 using namespace adsbui;
 
@@ -310,6 +311,14 @@ void detail(const App& a) {
     kv("emergency", b);
     snprintf(b, sizeof b, "%u messages", ac->messages); kv("heard", b);
     snprintf(b, sizeof b, "%.0f dBFS", ac->levelDbfs); kv("level", b);
+    {   // the ADS-C contracts its operator and the ATC centres hold with it, from ACARS, VDL2, HFDL and Aero
+        const std::string reg = registrationOf(ac->icao);
+        if (!reg.empty()) for (const auto& c : dect2::AdscContractBook::get().contractsOf(reg)) {
+            static const char* const st[] = {N_("requested"), N_("acknowledged"), N_("refused"), N_("cancelled")};
+            ImGui::TextDisabled("ADS-C %s", c.ground.c_str()); kvColumn(96 * gUi);
+            ImGui::TextWrapped("%s (%s)", dect2::AdscContractBook::describe(c).c_str(), tr(st[c.state]));
+        }
+    }
     acarsLogSection(a, *ac);
     tx::voiceSection(a, ac->icao, ac->callsign, registrationOf(ac->icao));
 }

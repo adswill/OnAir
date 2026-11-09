@@ -345,6 +345,19 @@ void mapCanvas(App& a, ImVec2 size) {
     float best = 18 * gUi; uint32_t hit = 0;
     int placed = 0, predicted = 0;
     if (on) {
+        for (const auto& g : t.stations) {   // estimated stations: an open square; every station with a coverage: its reach
+            if (!g.hasPos && !g.hasEstimate) continue;
+            const double la = g.hasPos ? g.lat : g.estLat, lo = g.hasPos ? g.lon : g.estLon;
+            const ImVec2 q = adsbmap::project(la, lo);
+            if (g.coverageNm > 1) {
+                const ImVec2 e = adsbmap::project(la + g.coverageNm / 60.0, lo);
+                dl->AddCircle(q, std::fabs(q.y - e.y), IM_COL32(120, 170, 230, 70), 96);
+            }
+            if (g.hasPos) continue;
+            dl->AddRect(ImVec2(q.x - 5 * gUi, q.y - 5 * gUi), ImVec2(q.x + 5 * gUi, q.y + 5 * gUi), IM_COL32(120, 170, 230, 230));
+            const std::string s = "~GS " + hex6(g.addr);
+            dl->AddText(ImVec2(q.x + 8 * gUi, q.y - 7 * gUi), IM_COL32(200, 220, 245, 200), s.c_str());
+        }
         for (const auto& g : t.stations) {   // ground stations: squares
             if (!g.hasPos) continue;
             const ImVec2 q = adsbmap::project(g.lat, g.lon);
@@ -461,6 +474,11 @@ void mapSide(App& a) {
     if (c->hasAlt) kv("altitude", "%d ft", c->altFt);
     if (!c->posKind.empty()) kv("fix source", "%s", c->posKind.c_str());
     if (c->groundStation) kv("ground st.", "%s", hex6(c->groundStation).c_str());
+    if (c->hops.size() >= 2) {
+        std::string chain;
+        for (const auto& h : c->hops) { if (!chain.empty()) chain += " > "; chain += hex6(h.addr); }
+        kv("handoffs", "%s", chain.c_str());
+    }
     kv("frames", "%u, last %s ago on %.3f MHz", c->messages, ago(t.nowSec, c->lastHeardSec).c_str(), c->freqHz / 1e6);
     auto it = adsbSeen().find(c->icao);
     if (it != adsbSeen().end()) kv("ADS-B", "%s%s", it->second.callsign.c_str(), it->second.hasPos ? " (position known)" : "");
