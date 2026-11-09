@@ -152,6 +152,7 @@ void AutoGainController::move(double now, double total, Policy pol, const std::s
 
 // ------------------------------------------------------------------------------------------------------------------------------ measuring
 void AutoGainController::measure(const AgInput& in) {
+    nowT_ = in.now;
     const BlockStats& a = in.adc;
     met_.valid = true;
     met_.peakDbfs = 20 * std::log10(std::max(a.peak, 1e-9));
@@ -252,7 +253,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
         const bool acq = now - startedAt_ < 6.0 / sp;
         double cut = c > 0.2 ? (acq ? 40 : 30) : c > 5e-2 ? (acq ? 28 : 20) : c > 1e-2 ? 14 : c > 2e-3 ? 10 : 6;
         // v2: proportional: 6 dB first and measure again; the big cuts only when the ADC is pinned at full scale (the cut is 100 ms away from the next look)
-        if (set_.v2 && c <= 0.2) cut = c > 5e-2 ? 14 : c > 1e-2 ? 9 : 6;
+        if (set_.v2 && c <= 0.2) cut = c > 5e-2 ? 14 : c > 1e-2 ? 9 : c > 2e-3 ? 6 : 3;   // (a touch of clipping: a touch of gain)
         // one burst takes several cuts: they are one overload episode (a new one after 3 s without clipping)
         const bool episode = ovTimes_.empty() || now - ovTimes_.back() > 3;
         // a burst that returns while the gain is still climbing back (well under the gain that clipped before) says nothing new about the gain

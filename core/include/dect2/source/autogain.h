@@ -410,6 +410,7 @@ private:
     void noteCut(double now);
     double cutOobIn_ = -300;
     int specBins_ = 0;
+    double nowT_ = 0, headRiseAt_ = -1;
     bool bracketedOnce_ = false;          // the first search of this start has run: later ones wait for something to judge by
     bool cutWasOob_ = false;              // the cut came from a signal outside the channel (it can leave while the channel stays idle)
     double lastSigAt_ = -1e9, lastRecoverAt_ = -1e9, recWait_ = 1.5;   // when a signal was last seen (the gain holds through a call that ended), the back-off of re-clipping recoveries
