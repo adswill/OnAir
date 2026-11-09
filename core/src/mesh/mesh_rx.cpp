@@ -7,6 +7,7 @@
 #include "dect2/net/feeds.h"
 #include "dect2/automation/engine.h"
 #include "dect2/mesh/mesh_rx.h"
+#include "dect2/map/mesh_topology_feed.h"
 #include "dect2/results/results_io.h"
 #include "dect2/mesh/mesh_lora.h"
 #include "dect2/mesh/mesh_presets.h"
@@ -167,6 +168,9 @@ struct MeshReceiver::Impl {
     MeshTelemetry tel;
     std::map<std::string, size_t> nodeIdx, aprsIdx, lwIdx;
     std::set<std::string> msgSeen;
+    MeshTopology topo;                     // relays and links (mesh_topology.h), fed by every parsed Meshtastic / MeshCore packet
+    LoraTopoState topoSt;
+    double topoSnapAt = -1e9;
     std::vector<lora::RxFrame> frames;
     double lastGood = -1e9, lastPreamble = -1e9;
     uint64_t preamblesSeen = 0;
@@ -423,6 +427,19 @@ struct MeshReceiver::Impl {
             else if (mm.protocol == 2) mm.fromName = m.from;   // MeshCore puts the sender's name in the text
             capPush(tel.messages, std::move(mm), kMessageCap);
         }
+        if (!crcBad && (proto_ == 1 || proto_ == 2)) {
+            for (const auto& u : r.nodes) {   // names, roles and positions help to read the graph
+                if (u.nodeId.empty()) continue;
+                const int pr = u.protocol == MeshProtocol::MeshCore ? 2 : 1;
+                auto it = nodeIdx.find(std::to_string(pr) + "|" + u.nodeId);
+                if (it == nodeIdx.end()) continue;
+                const MeshNode& nd = tel.nodes[it->second];
+                topoNoteMeshNode(topo, nd.id, nd.longName.empty() ? nd.shortName : nd.longName, nd.role, nd.hasPosition, nd.lat, nd.lon, t, pr);
+            }
+            auto fit = nodeIdx.find(std::to_string(proto_) + "|" + pk.from);
+            if (fit != nodeIdx.end()) { const MeshNode& nd = tel.nodes[fit->second]; topoNoteMeshNode(topo, nd.id, nd.longName.empty() ? nd.shortName : nd.longName, nd.role, nd.hasPosition, nd.lat, nd.lon, t, proto_); }
+            topoFeedLora(topo, topoSt, row, t);
+        }
         capPush(tel.packets, std::move(row), kPacketCap);
     }
 
@@ -562,11 +579,13 @@ struct MeshReceiver::Impl {
         tel.userChannels.clear();
         for (const auto& n : proto.channelNames(MeshProtocol::Meshtastic)) tel.userChannels.push_back("Meshtastic: " + n);
         for (const auto& n : proto.channelNames(MeshProtocol::MeshCore)) tel.userChannels.push_back("MeshCore: " + n);
+        if (t - topoSnapAt >= 1.0 || topoSnapAt > t) { tel.topo = topo.snapshot(); topoSnapAt = t; }
         std::lock_guard<std::mutex> lk(mu);
         pub = tel;
     }
 
     static void moveLists(MeshTelemetry& to, MeshTelemetry& from) {
+        to.topo = std::move(from.topo); from.topo = TopoSnapshot();
         to.packets = std::move(from.packets); to.nodes = std::move(from.nodes); to.messages = std::move(from.messages);
         to.counts = std::move(from.counts); to.aprsStations = std::move(from.aprsStations); to.lorawanDevices = std::move(from.lorawanDevices);
         to.readings = std::move(from.readings);
@@ -591,8 +610,15 @@ struct MeshReceiver::Impl {
     void takeRequests() {
         std::lock_guard<std::mutex> lk(mu);
         if (!clearReq && !loadReq) return;
-        if (clearReq) { MeshTelemetry e; moveLists(tel, e); msgSeen.clear(); clearReq = false; }
-        if (loadReq) { moveLists(tel, loaded); msgSeen.clear(); loadReq = false; }
+        if (clearReq) { MeshTelemetry e; moveLists(tel, e); msgSeen.clear(); clearReq = false; topo.clear(); topoSt = LoraTopoState(); topoSnapAt = -1e9; }
+        if (loadReq) {
+            moveLists(tel, loaded); msgSeen.clear(); loadReq = false;
+            reindex();
+            topo.clear(); topoSt = LoraTopoState();   // a loaded file: the graph is rebuilt from its packets, oldest first
+            for (const MeshNode& nd : tel.nodes) topoNoteMeshNode(topo, nd.id, nd.longName.empty() ? nd.shortName : nd.longName, nd.role, nd.hasPosition, nd.lat, nd.lon, 0, nd.protocol);
+            for (const MeshPacket& p : tel.packets) topoFeedLora(topo, topoSt, p, p.timeSec);
+            tel.topo = topo.snapshot(); topoSnapAt = -1e9;
+        }
         reindex();
     }
 

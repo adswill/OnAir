@@ -27,6 +27,7 @@ struct Frame {
     bool lowpan = false;                    // a 6LoWPAN dispatch was read
     bool mesh = false, frag = false, iphc = false;
     int meshHops = -1;
+    std::string meshOrig, meshFinal;        // the mesh header's originator and final destination ("0x1234" short, or the 8 octets in hex)
     int fragSize = 0, fragTag = 0, fragOffset = -1;
     bool udp = false;
     int srcPort = -1, dstPort = -1;

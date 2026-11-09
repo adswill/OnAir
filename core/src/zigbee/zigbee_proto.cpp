@@ -230,7 +230,14 @@ bool parseNwk(Frame& f, const uint8_t* p, size_t n) {
     if (f.nwkHasDestExt) { if (n < i + 8) return false; f.nwkDestExt = le64(p + i); i += 8; }
     if (f.nwkHasSrcExt) { if (n < i + 8) return false; f.nwkSrcExt = le64(p + i); i += 8; }
     if (f.nwkMulticast) { if (n < i + 1) return false; i += 1; }
-    if (f.nwkSourceRoute) { if (n < i + 2) return false; const size_t cnt = p[i]; i += 2 + 2 * cnt; if (n < i) return false; }
+    if (f.nwkSourceRoute) {
+        if (n < i + 2) return false;
+        const size_t cnt = p[i];
+        if (n < i + 2 + 2 * cnt) return false;
+        f.nwkRelayIndex = p[i + 1];
+        for (size_t k = 0; k < cnt; k++) f.nwkRelays.push_back(le16(p + i + 2 + 2 * k));
+        i += 2 + 2 * cnt;
+    }
     f.hasNwk = true;
     if (f.nwkSecured) {   // auxiliary header: control, frame counter, source address, key sequence number; the rest is encrypted
         f.encrypted = true;
@@ -438,11 +445,16 @@ std::vector<uint8_t> buildNwk(const NwkBuild& b) {
     if (b.secured) fc |= 1 << 9;
     if (b.destExt) fc |= 1 << 11;
     if (b.srcExt) fc |= 1 << 12;
+    if (!b.relays.empty()) fc |= 1 << 10;
     put16(v, (uint16_t)fc);
     put16(v, b.dest); put16(v, b.src);
     v.push_back((uint8_t)b.radius); v.push_back((uint8_t)b.seq);
     if (b.destExt) put64(v, b.destExtAddr);
     if (b.srcExt) put64(v, b.srcExtAddr);
+    if (!b.relays.empty()) {
+        v.push_back((uint8_t)b.relays.size()); v.push_back((uint8_t)b.relayIndex);
+        for (uint16_t r : b.relays) put16(v, r);
+    }
     v.insert(v.end(), b.payload.begin(), b.payload.end());
     return v;
 }

@@ -5,6 +5,7 @@
 // sent in the clear are shown in full.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ui/topo_view.h"
 #include "dect2/zigbee/zigbee_proto.h"
 #include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/zigbee/zigbee_tel.h"
@@ -303,8 +304,8 @@ void tuner(App& a, bool& retune) {
 
 void tab(App& a) {
     S.curThread = isThread(a);
-    subNav("zbv", S.view, {"Networks", "Devices", "Frames"});
-    if (S.view == 0) networksView(a); else if (S.view == 1) devicesView(a); else framesView(a);
+    subNav("zbv", S.view, {"Networks", "Devices", "Frames", tr("Topology")});
+    if (S.view == 0) networksView(a); else if (S.view == 1) devicesView(a); else if (S.view == 3) topoView(a, isThread(a) ? "th" : "zb", zt(a).topo); else framesView(a);
 }
 
 void list(App& a) {

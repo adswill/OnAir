@@ -91,6 +91,14 @@ Frame analyse(const zigbee::Frame& zf, const uint8_t* psdu, size_t n) {
             t.meshHops = hops;
             const size_t a1 = v ? 2 : 8, a2 = f ? 2 : 8;
             if (pl < i + k + a1 + a2) break;
+            auto addr = [&](size_t at, size_t len) {
+                char ab[24];
+                if (len == 2) snprintf(ab, sizeof ab, "0x%02X%02X", p[at], p[at + 1]);
+                else { int o = 0; for (size_t q = 0; q < len; q++) o += snprintf(ab + o, sizeof ab - (size_t)o, "%02X", p[at + q]); }
+                return std::string(ab);
+            };
+            t.meshOrig = addr(i + k, a1);
+            t.meshFinal = addr(i + k + a1, a2);
             i += k + a1 + a2;
             what += "mesh, ";
             continue;
