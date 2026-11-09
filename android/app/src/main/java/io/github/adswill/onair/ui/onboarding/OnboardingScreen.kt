@@ -55,7 +55,7 @@ import io.github.adswill.onair.model.SourceKind
 import io.github.adswill.onair.ui.AppPermission
 import io.github.adswill.onair.ui.Permissions
 import io.github.adswill.onair.ui.ReceiverViewModel
-import io.github.adswill.onair.ui.modes.groupNameRes
+import io.github.adswill.onair.ui.modes.groupName
 import io.github.adswill.onair.ui.nav.DeepLink
 import io.github.adswill.onair.ui.radio.AddNetworkRadioDialog
 import io.github.adswill.onair.ui.radio.SourceRow
@@ -190,7 +190,7 @@ private fun FlowChips(selected: List<Int>, onToggle: (Int) -> Unit) {
     for (row in groups.chunked(2)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             for (g in row) Box(Modifier.weight(1f)) {
-                Chip(stringResource(groupNameRes(g)), Modifier.fillMaxWidth(), color = groupAccent(g), selected = g in selected) { onToggle(g) }
+                Chip(groupName(g), Modifier.fillMaxWidth(), color = groupAccent(g), selected = g in selected) { onToggle(g) }
             }
             if (row.size == 1) Spacer(Modifier.weight(1f))
         }

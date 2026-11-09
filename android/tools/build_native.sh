@@ -59,6 +59,8 @@ echo "NDK:           $NDK"
   -DANDROID_ABI=$ABI -DANDROID_PLATFORM=android-28 -DCMAKE_BUILD_TYPE="$BUILD_TYPE" \
   -DCMAKE_MAKE_PROGRAM="$MAKE_BIN" -DONAIR_SRC="$ONAIR_SRC" \
   -DLIBUSB_SRC="${LIBUSB_SRC:-}" -DAIRSPY_SRC="${AIRSPY_SRC:-}" -DAIRSPYHF_SRC="${AIRSPYHF_SRC:-}"
+python3 "$HERE/tools/gen_modes.py" "$ONAIR_SRC" "$HERE"          # the mode list comes from the desktop table: new modes need no Android change
+python3 "$HERE/tools/gen_results_map.py" "$ONAIR_SRC"            # and so do their results
 TARGETS=(onair)
 [ -n "${LIBUSB_SRC:-}" ] && TARGETS+=(usb1.0)
 [ -n "${LIBUSB_SRC:-}" ] && [ -n "${AIRSPY_SRC:-}" ] && TARGETS+=(airspy)

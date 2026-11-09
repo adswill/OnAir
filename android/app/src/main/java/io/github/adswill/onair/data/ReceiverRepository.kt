@@ -123,6 +123,8 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         settings, ::updateSettings,
         onRadioLost = { msg -> stopBecause(msg) },
         onRadiosChanged = { if (_settings.value.source == SourceKind.USB) refreshCaps() },
+        // a radio plugged in while the app still shows the test signal: use it, nothing else to set up
+        onRadioReady = { r -> if (!_state.value.active && _settings.value.source == SourceKind.TEST_SIGNAL) { radios.selectUsb(r); chooseSource(SourceKind.USB); AppLog.i("usb", "using ${r.label}") } },
     )
 
     init {
@@ -156,7 +158,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         }
         if (CrashLog.hasUnseen(ctx)) _state.update { it.copy(error = ctx.getString(R.string.previous_crash, CrashLog.file(ctx).absolutePath)) }
         val saved = s.modeIndex
-        val idx = if (saved in Modes.all.indices) saved else Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)
+        val idx = if (saved in Modes.all.indices && !Modes.all[saved].removed) saved else Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)
         applyMode(idx)
         radios.start()
         refreshCaps(s)
@@ -172,6 +174,9 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
 
     // ---- receive session ------------------------------------------------------------------------------------------------------
     fun toggle() { if (_state.value.active) stop() else start() }
+
+    /** Starts when nothing is running; queued behind a mode change made just before. */
+    fun startIfIdle() { if (_state.value.phase == Phase.IDLE) start() }
 
     fun start() {
         val st = _state.value

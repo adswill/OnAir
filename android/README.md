@@ -35,7 +35,7 @@ android/
                             stand-ins for libusb/libhackrf/FFmpeg entry points)
   tools/
     build_native.sh         builds and strips libonair.so for arm64-v8a
-    gen_modes.py            regenerates Modes.kt and res/values/modes.xml from the desktop mode table (app/toolbar.cpp)
+    gen_modes.py            regenerates Modes.kt and res/values/modes.xml from the desktop mode table (app/ui/mode_table.cpp; stable indices in mode_order.txt)
     check_jni.py            compares OnAirNative.kt with jni_onair.cpp
   docs/                     ARCHITECTURE.md, STYLE.md (desktop look -> Compose tokens), the 0.2.x plan and mode audit
 ```

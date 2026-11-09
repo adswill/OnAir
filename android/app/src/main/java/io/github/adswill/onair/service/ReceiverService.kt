@@ -60,13 +60,21 @@ class ReceiverService : Service() {
         }
         ensureChannel(this)
         val type = foregroundType(repo.settings.value.source, repo.radios.usbFor(repo.settings.value) != null, repo.radios.soundPermitted)
+        val note = build(repo.state.value)
         try {
-            ServiceCompat.startForeground(this, NOTIFICATION_ID, build(repo.state.value), type)
+            ServiceCompat.startForeground(this, NOTIFICATION_ID, note, type)
         } catch (e: Exception) {
-            // Android 12+ refuses a foreground start from the background; the receiver still runs while the app is visible
-            AppLog.e("service", "could not go to the foreground", e)
-            stopSelf()
-            return START_NOT_STICKY
+            // a type whose prerequisite is gone (USB permission lost, microphone denied) throws: plain media playback needs nothing more.
+            // Leaving without any startForeground() would take the app down ("did not then call Service.startForeground").
+            AppLog.w("service", "foreground type $type refused: ${e.message}")
+            try {
+                ServiceCompat.startForeground(this, NOTIFICATION_ID, note, foregroundType(SourceKind.TEST_SIGNAL, usbGranted = false, micGranted = false))
+            } catch (e2: Exception) {
+                // Android 12+ refuses a foreground start from the background; the receiver still runs while the app is visible
+                AppLog.e("service", "could not go to the foreground", e2)
+                stopSelf()
+                return START_NOT_STICKY
+            }
         }
         acquireLocks()
         if (watch == null) watch = scope.launch {

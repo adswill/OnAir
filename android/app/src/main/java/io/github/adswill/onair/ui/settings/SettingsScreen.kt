@@ -19,6 +19,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -154,6 +155,14 @@ fun SettingsContent(
         },
         SettingItem(3, stringResource(R.string.mute), "sound mute silence") {
             SwitchRow(stringResource(R.string.mute), s.muted, { vm.setSound(s.volume, it) })
+        },
+        SettingItem(3, stringResource(R.string.auto_start), "one tap start mode pick automatic") {
+            SwitchRow(stringResource(R.string.auto_start), ui.autoStart, vm::setAutoStart, help = stringResource(R.string.auto_start_help))
+        },
+        SettingItem(3, stringResource(R.string.battery_title), "battery background killed stopped doze optimisation") {
+            val ctx = LocalContext.current
+            val exempt = remember { Battery.exempt(ctx) }
+            LinkRow(OnAirIcons.Info, stringResource(if (exempt) R.string.battery_ok else R.string.battery_title)) { Battery.request(ctx) }
         },
         SettingItem(4, stringResource(R.string.reduce_motion), "motion animation accessibility") {
             SwitchRow(stringResource(R.string.reduce_motion), ui.reduceMotion, vm::setReduceMotion, help = stringResource(R.string.reduce_motion_help))

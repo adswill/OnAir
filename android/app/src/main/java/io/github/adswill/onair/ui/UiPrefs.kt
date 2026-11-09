@@ -66,6 +66,10 @@ data class UiPrefs(
     val typeLook: TypeLook = TypeLook.CURRENT,
     /** Animations off, whatever the system says. The system's "remove animations" also turns them off. */
     val reduceMotion: Boolean = false,
+    /** Picking a mode starts receiving (one tap). */
+    val autoStart: Boolean = true,
+    /** The one-time hint about Android's battery optimisation was shown. */
+    val batteryHintShown: Boolean = false,
     /** Follow the system's dark/light setting instead of Settings.dark. */
     val followSystemTheme: Boolean = false,
     val networkRadios: List<NetworkRadio> = emptyList(),
@@ -96,6 +100,8 @@ class UiPrefsStore(ctx: Context, private val scope: CoroutineScope) {
         val discovery = booleanPreferencesKey("discovery")
         val look = intPreferencesKey("typeLook")
         val motion = booleanPreferencesKey("reduceMotion")
+        val autoStart = booleanPreferencesKey("autoStart")
+        val batteryHint = booleanPreferencesKey("batteryHintShown")
         val system = booleanPreferencesKey("followSystemTheme")
         val radios = stringPreferencesKey("netRadios")
         val lessons = stringSetPreferencesKey("lessonsDone")
@@ -125,6 +131,8 @@ class UiPrefsStore(ctx: Context, private val scope: CoroutineScope) {
         discoveryOptIn = p[K.discovery] ?: false,
         typeLook = TypeLook.entries.getOrElse(p[K.look] ?: 0) { TypeLook.CURRENT },
         reduceMotion = p[K.motion] ?: false,
+        autoStart = p[K.autoStart] ?: true,
+        batteryHintShown = p[K.batteryHint] ?: false,
         followSystemTheme = p[K.system] ?: false,
         networkRadios = NetworkRadio.decodeAll(p[K.radios].orEmpty()),
         lessonsDone = p[K.lessons].orEmpty(),
@@ -150,6 +158,8 @@ class UiPrefsStore(ctx: Context, private val scope: CoroutineScope) {
                     e[K.discovery] = v.discoveryOptIn
                     e[K.look] = v.typeLook.ordinal
                     e[K.motion] = v.reduceMotion
+                    e[K.autoStart] = v.autoStart
+                    e[K.batteryHint] = v.batteryHintShown
                     e[K.system] = v.followSystemTheme
                     e[K.radios] = NetworkRadio.encodeAll(v.networkRadios)
                     e[K.lessons] = v.lessonsDone

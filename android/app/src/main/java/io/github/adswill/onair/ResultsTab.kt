@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
@@ -54,12 +55,12 @@ fun ResultsTab(vm: ReceiverViewModel, modifier: Modifier = Modifier) {
         val mapTabs = t.tables.filter { hasPositions(it) }
         var bigMap by remember { mutableStateOf(false) }
         if (mapTabs.isNotEmpty() && !land) {
-            Text(if (bigMap) "Map \u25B2 smaller" else "Map \u25BC larger", Modifier.clickable { bigMap = !bigMap }.padding(vertical = 4.dp), color = p.accent, fontFamily = Mono, fontSize = 11.sp)
+            Text(stringResource(if (bigMap) R.string.map_smaller else R.string.map_larger), Modifier.clickable { bigMap = !bigMap }.heightIn(min = LocalSpacing.current.touch).padding(vertical = 12.dp), color = p.accent, fontFamily = Mono, fontSize = 14.sp)
             PositionMap(mapTabs, sel, { sel = it }, settings.mapConsent, vm::setMapConsent, Modifier.fillMaxWidth().height(if (bigMap) 520.dp else 300.dp)); Spacer(Modifier.height(8.dp))
         }
         if (t.summary.isNotEmpty()) {
             SectionLabel(stringResource(R.string.mode_summary))
-            Text(t.summary, color = p.text, fontFamily = Mono, fontSize = 12.sp)
+            Text(t.summary, color = p.text, fontFamily = Mono, fontSize = 14.sp)
             Spacer(Modifier.height(6.dp))
         }
         if (t.cards.isNotEmpty()) {
@@ -83,10 +84,10 @@ fun ResultsTab(vm: ReceiverViewModel, modifier: Modifier = Modifier) {
 }
 
 private fun colWidth(name: String): Dp = when (name) {
-    "Message", "Text", "Info", "Comment", "Meaning", "From > To,Path" -> 220.dp
-    "Name", "Callsign", "Registration", "Position" -> 120.dp
-    "Pos", "Type" -> 110.dp
-    else -> 72.dp
+    "Message", "Text", "Info", "Comment", "Meaning", "From > To,Path" -> 260.dp
+    "Name", "Callsign", "Registration", "Position" -> 140.dp
+    "Pos", "Type" -> 125.dp
+    else -> 88.dp
 }
 
 @Composable
@@ -97,17 +98,20 @@ fun ResultTableView(tab: ResultTable, selected: String? = null, onSelect: ((Stri
             SectionLabel(tab.name)
             Label(stringResource(R.string.results_rows, tab.rows.size), Modifier.padding(start = 8.dp, top = 6.dp), size = 10)
         }
-        Column(Modifier.fillMaxWidth().background(p.field).border(1.dp, p.border).horizontalScroll(rememberScrollState())) {
-            Row(Modifier.background(p.panel).padding(vertical = 4.dp)) {
-                tab.cols.forEach { Text(it, Modifier.width(colWidth(it)).padding(horizontal = 6.dp), color = p.accent, fontFamily = Mono, fontSize = 11.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
+        // one column (a list of text lines): full width and wrapped, nothing to scroll sideways
+        val oneCol = tab.cols.size == 1
+        val cellMod: (String) -> Modifier = { n -> if (oneCol) Modifier.fillMaxWidth().padding(horizontal = 6.dp) else Modifier.width(colWidth(n)).padding(horizontal = 6.dp) }
+        Column(Modifier.fillMaxWidth().background(p.field).border(1.dp, p.border).then(if (oneCol) Modifier else Modifier.horizontalScroll(rememberScrollState()))) {
+            Row(Modifier.background(p.panel).padding(vertical = 6.dp)) {
+                tab.cols.forEach { Text(it, cellMod(it), color = p.accent, fontFamily = Mono, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1) }
             }
             tab.rows.forEachIndexed { i, row ->
                 val hit = selected != null && hasPositions(tab) && row.firstOrNull() == selected
                 Row(Modifier.background(if (hit) p.accent.copy(alpha = 0.3f) else if (i % 2 == 1) p.grid.copy(alpha = 0.05f) else p.field)
                     .then(if (onSelect != null && hasPositions(tab)) Modifier.clickable { onSelect(if (hit) null else row.firstOrNull()) } else Modifier)
-                    .padding(vertical = 3.dp)) {
+                    .padding(vertical = 5.dp)) {
                     row.forEachIndexed { c, cell ->
-                        Text(cell, Modifier.width(colWidth(tab.cols.getOrElse(c) { "" })).padding(horizontal = 6.dp), color = p.text, fontFamily = Mono, fontSize = 11.sp, maxLines = 2)
+                        Text(cell, cellMod(tab.cols.getOrElse(c) { "" }), color = p.text, fontFamily = Mono, fontSize = 13.sp, maxLines = if (oneCol) 8 else 2)
                     }
                 }
             }

@@ -270,4 +270,19 @@
     <string name="lesson_pages">%1$d pages</string>
     <string name="lesson_page_of">Page %1$d of %2$d</string>
     <string name="lesson_try">Try it</string>
+    <string name="section_advanced">Advanced</string>
+    <string name="map_smaller">Map: smaller</string>
+    <string name="map_larger">Map: larger</string>
+    <string name="auto_start">Start when I pick a mode</string>
+    <string name="auto_start_help">Picking a mode in the list starts receiving straight away.</string>
+    <string name="battery_title">Keep receiving in the background</string>
+    <string name="battery_ok">Background running is allowed</string>
+    <string name="battery_hint">Android may stop a long decode to save battery. Tap to let OnAir keep running.</string>
+    <string name="mode_note_desktop">Not available on Android: this needs the desktop program\'s own screens.</string>
+    <string name="mode_note_picture">Shows signal, lock and service information. No picture or TV sound on Android: the video decoders are not in this build.</string>
+    <string name="mode_note_sound">Shows signal and programme data. Compressed audio (DAB+, xHE-AAC, HD Radio) needs a codec that is not in this build.</string>
+    <string name="mode_note_voice">Calls and data are decoded. Voice needs a codec plug-in, which the Android app cannot load yet.</string>
+    <string name="mode_note_image">Picture data is decoded. The phone has no picture view yet, see the results for the progress.</string>
+    <string name="mode_note_auto">On Android this opens the first receiver of the family; the automatic detector is on the desktop.</string>
+    <string name="mode_note_heavy">Heavy: wideband, most phones cannot decode this in real time. It may lose lock or drop data.</string>
 </resources>

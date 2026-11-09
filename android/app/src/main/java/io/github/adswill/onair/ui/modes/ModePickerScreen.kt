@@ -47,6 +47,7 @@ import io.github.adswill.onair.LocalPalette
 import io.github.adswill.onair.LocalSpacing
 import io.github.adswill.onair.LocalTextFamily
 import io.github.adswill.onair.ModeDef
+import io.github.adswill.onair.ModeNotes
 import io.github.adswill.onair.Modes
 import io.github.adswill.onair.OnAirIconButton
 import io.github.adswill.onair.OnAirIcons
@@ -58,12 +59,12 @@ import io.github.adswill.onair.model.SourceKind
 import io.github.adswill.onair.ui.ReceiverViewModel
 import java.util.Locale
 
-/** The string resource of a mode group's name (group_0 .. group_13, generated with the mode list). */
-fun groupNameRes(g: Int): Int = when (g) {
-    0 -> R.string.group_0; 1 -> R.string.group_1; 2 -> R.string.group_2; 3 -> R.string.group_3; 4 -> R.string.group_4; 5 -> R.string.group_5
-    6 -> R.string.group_6; 7 -> R.string.group_7; 8 -> R.string.group_8; 9 -> R.string.group_9; 10 -> R.string.group_10; 11 -> R.string.group_11
-    12 -> R.string.group_12; else -> R.string.group_13
-}
+/** At this sample rate (Hz) or more a mode rarely keeps up on a phone: a warning under the mode, never a block. */
+private const val HEAVY_RATE_HZ = 6e6
+
+/** A mode group's name (generated with the mode list from the desktop's headings). */
+@Composable
+fun groupName(g: Int): String = stringArrayResource(R.array.mode_groups).getOrElse(g) { "" }
 
 /**
  * The mode picker: every mode of the desktop table, grouped like the desktop's mode tree (collapsible groups, the group colour bar),
@@ -79,7 +80,8 @@ fun ModePickerScreen(vm: ReceiverViewModel, onPicked: () -> Unit, modifier: Modi
         selected = st.modeIndex, source = s.source, favourites = ui.favourites, hidden = ui.hidden, hideUnused = ui.hideUnused,
         onlyCapable = ui.onlyCapable,
         needsWide = { m -> st.needsWideRadio(m, s.source) }, minRateMsps = { m -> (st.tuningFor(m)?.minRate ?: 0.0) / 1e6 },
-        onPick = { vm.selectMode(it); onPicked() }, onFavourite = vm::toggleFavourite, onHide = vm::setHidden,
+        heavy = { m -> (st.tuningFor(m)?.rate ?: 0.0) >= HEAVY_RATE_HZ },
+        onPick = { vm.pickMode(it); onPicked() }, onFavourite = vm::toggleFavourite, onHide = vm::setHidden,
         onHideUnused = vm::setHideUnused, onOnlyCapable = vm::setOnlyCapable, modifier = modifier,
     )
 }
@@ -87,19 +89,21 @@ fun ModePickerScreen(vm: ReceiverViewModel, onPicked: () -> Unit, modifier: Modi
 @Composable
 fun ModePickerContent(
     selected: Int, source: SourceKind, favourites: Set<Int>, hidden: Set<Int>, hideUnused: Boolean, onlyCapable: Boolean,
-    needsWide: (ModeDef) -> Boolean, minRateMsps: (ModeDef) -> Double,
+    needsWide: (ModeDef) -> Boolean, minRateMsps: (ModeDef) -> Double, heavy: (ModeDef) -> Boolean = { false },
     onPick: (Int) -> Unit, onFavourite: (Int) -> Unit, onHide: (Int, Boolean) -> Unit, onHideUnused: (Boolean) -> Unit, onOnlyCapable: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val p = LocalPalette.current
     val names = stringArrayResource(R.array.mode_names).toList()
     val blurbs = stringArrayResource(R.array.mode_subs).toList()
+    val keys = stringArrayResource(R.array.mode_keys).toList()
     var query by rememberSaveable { mutableStateOf("") }
     var manage by rememberSaveable { mutableStateOf(false) }
     var collapsed by rememberSaveable { mutableStateOf(emptyList<Int>()) }
     val filter = PickerFilter(query, favourites, hidden, hideUnused && !manage, onlyCapable, collapsed.toSet())
     // ~120 modes: cheap enough to filter on every recomposition (which happens on typing and on a mode or source change, not per frame)
-    val rows = ModeFilter.rows(Modes.all, Modes.GROUPS, names, blurbs, filter, selected) { !needsWide(it) }
+    val searchText = blurbs.mapIndexed { i, b -> b + " " + keys.getOrElse(i) { "" } }
+    val rows = ModeFilter.rows(Modes.shown, Modes.GROUPS, names, searchText, filter, selected) { !needsWide(it) }
     Column(modifier.background(p.window)) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             TextBox(query, { query = it }, Modifier.weight(1f), placeholder = stringResource(R.string.search_modes))
@@ -121,6 +125,8 @@ fun ModePickerContent(
                         row.def, names.getOrElse(row.def.index) { "" }, blurbs.getOrElse(row.def.index) { "" }, selected == row.def.index,
                         favourite = row.def.index in favourites, hidden = row.def.index in hidden, manage = manage,
                         wideNote = if (needsWide(row.def)) stringResource(R.string.needs_wide_radio, String.format(Locale.US, "%.1f", minRateMsps(row.def))) else null,
+                        modeNote = ModeNotes.text(row.def.note)?.let { stringResource(it) },
+                        heavyNote = if (heavy(row.def)) stringResource(R.string.mode_note_heavy) else null,
                         onPick = { onPick(row.def.index) }, onFavourite = { onFavourite(row.def.index) }, onHide = { onHide(row.def.index, it) },
                     )
                 }
@@ -133,7 +139,7 @@ fun ModePickerContent(
 private fun GroupRow(h: PickerRow.Header, onToggle: () -> Unit) {
     val p = LocalPalette.current
     val c = if (h.group < 0) p.warn else groupAccent(h.group)
-    val name = if (h.group < 0) stringResource(R.string.favourites) else stringResource(groupNameRes(h.group))
+    val name = if (h.group < 0) stringResource(R.string.favourites) else groupName(h.group)
     val state = stringResource(if (h.collapsed) R.string.cd_collapsed else R.string.cd_expanded)
     Row(
         Modifier.fillMaxWidth().heightIn(min = LocalSpacing.current.touch).clickable(role = Role.Button, onClick = onToggle)
@@ -149,7 +155,7 @@ private fun GroupRow(h: PickerRow.Header, onToggle: () -> Unit) {
 
 @Composable
 private fun ModeRow(
-    m: ModeDef, name: String, blurb: String, sel: Boolean, favourite: Boolean, hidden: Boolean, manage: Boolean, wideNote: String?,
+    m: ModeDef, name: String, blurb: String, sel: Boolean, favourite: Boolean, hidden: Boolean, manage: Boolean, wideNote: String?, modeNote: String?, heavyNote: String?,
     onPick: () -> Unit, onFavourite: () -> Unit, onHide: (Boolean) -> Unit,
 ) {
     val p = LocalPalette.current
@@ -160,13 +166,15 @@ private fun ModeRow(
     ) {
         Box(Modifier.width(3.dp).fillMaxHeight().background(if (sel) accent else Color.Transparent))
         Column(
-            Modifier.weight(1f).heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onPick).semantics { selected = sel }
+            Modifier.weight(1f).heightIn(min = 56.dp).clickable(enabled = m.note != ModeNotes.DESKTOP_ONLY, role = Role.Button, onClick = onPick).semantics { selected = sel }
                 .padding(start = 12.dp, top = 6.dp, bottom = 6.dp),
             verticalArrangement = Arrangement.Center,
         ) {
             Text(name, color = if (sel) accent else if (hidden) p.muted else p.text, fontFamily = LocalTextFamily.current, fontSize = TypeScale.BODY_LARGE.sp)
             if (blurb.isNotEmpty()) Text(blurb, color = p.muted, fontFamily = LocalTextFamily.current, fontSize = TypeScale.SMALL.sp)
             if (wideNote != null) Text(wideNote, color = p.warn, fontFamily = LocalTextFamily.current, fontSize = TypeScale.SMALL.sp)
+            if (heavyNote != null) Text(heavyNote, color = p.warn, fontFamily = LocalTextFamily.current, fontSize = TypeScale.SMALL.sp)
+            if (modeNote != null) Text(modeNote, color = p.muted, fontFamily = LocalTextFamily.current, fontSize = TypeScale.SMALL.sp)
         }
         if (manage) {
             val hideDesc = stringResource(R.string.cd_hide_mode, name)

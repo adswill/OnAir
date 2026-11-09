@@ -19,6 +19,8 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- Settings > Keep receiving in the background: the system's own "allow background" dialog, so a long decode is not stopped. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
     <!-- Its notification (Android 13+ asks; the receiver runs without it too). -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 

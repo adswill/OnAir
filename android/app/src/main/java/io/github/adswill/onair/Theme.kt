@@ -110,11 +110,11 @@ val Mono: FontFamily = JetBrainsMono
 
 /** The desktop's size scale (typo::kSizes): Caption, Small, Body, BodyLarge, Title, Display, Hero. */
 object TypeScale {
-    const val CAPTION = 11
-    const val SMALL = 12
-    const val BODY = 13
-    const val BODY_LARGE = 14
-    const val TITLE = 16
+    const val CAPTION = 12
+    const val SMALL = 13
+    const val BODY = 14
+    const val BODY_LARGE = 16
+    const val TITLE = 18
     const val DISPLAY = 20
     const val HERO = 32
 }
