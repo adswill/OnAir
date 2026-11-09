@@ -506,5 +506,5 @@ int main(int argc, char** argv) {
     for (const auto& kv : byFail) printf("  %-9s %d\n", kv.first.c_str(), kv.second);
     if (f) fclose(f);
     // the known remaining cells are listed in docs/AUTOGAIN-3.7.md: a regression is more failing cells than that
-    return bad > (quick ? 2 : 10) ? 1 : 0;
+    return bad > (quick ? 2 : 5) ? 1 : 0;
 }
