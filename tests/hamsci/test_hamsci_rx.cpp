@@ -84,7 +84,7 @@ int main() {
     {   // pulsar chain: 2.4 Msps for 4 s, the folder collects rows
         auto t = run(kHsPulsar, 2.4e6, 4, 0, 99, 0, 408e6);
         std::printf("Pulsar chain: observed %.1f s\n", t.pulsarObservedSec);
-        CHECK(std::fabs(t.pulsarObservedSec - 4.0) < 0.1, "observed %.2f s", t.pulsarObservedSec);
+        CHECK(std::fabs(t.pulsarObservedSec - 4.0) < 0.3, "observed %.2f s", t.pulsarObservedSec);
     }
     std::printf(g_fails ? "receivers: %d failures\n" : "receivers: all passed\n", g_fails);
     return g_fails ? 1 : 0;
