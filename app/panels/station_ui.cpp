@@ -182,7 +182,7 @@ void addAntennaPopup() {
 }  // namespace
 
 bool stationFit(const App& a, const ModeDef& m, ModeFit& out) {
-    load();
+    if (!gLoaded) sync(a);   // a saved radio counts as unplugged until it has been matched with the device list
     if (!entered() || a.devIdx < 0 || a.devIdx >= (int)a.devices.size() || !a.devices[(size_t)a.devIdx].isRadio()) return false;
     const st::Verdict v = st::assess(S, needOf(m), busyFor(a));
     out.ok = v.level == st::Level::Ready;
@@ -191,13 +191,13 @@ bool stationFit(const App& a, const ModeDef& m, ModeFit& out) {
 }
 
 std::string stationUseLine(const App& a, const ModeDef& m) {
-    load();
+    if (!gLoaded) sync(a);
     if (!entered() || a.devIdx < 0 || a.devIdx >= (int)a.devices.size() || !a.devices[(size_t)a.devIdx].isRadio()) return std::string();
     return pairName(st::assess(S, needOf(m), busyFor(a)));
 }
 
 void stationAntennaFor(const App& a, bool& known, bool& forBand) {
-    load();
+    if (!gLoaded) sync(a);
     known = !S.antennas.empty();
     forBand = false;
     if (!known) return;
@@ -251,8 +251,8 @@ void stationSurprise(App& a) {
 
 void stationWindow(App& a) {
     if (a.surpriseReq) { a.surpriseReq = false; stationSurprise(a); }
+    if (static double next = 0; ImGui::GetTime() >= next) { next = ImGui::GetTime() + 1; sync(a); }   // keeps "connected now" true for the mode list, also with the window closed
     if (!a.stationOpen) return;
-    sync(a);
     firstWindowSize(640 * gUi, 480 * gUi);
     if (!ImGui::Begin(trw("My station"), &a.stationOpen)) { ImGui::End(); return; }
     ImGui::TextWrapped("%s", tr("Enter your antennas once. Modes then use the right radio and antenna by themselves, and the mode list shows what can be received here and what is missing."));
@@ -299,7 +299,7 @@ void stationWindow(App& a) {
     if (ImGui::Button(tr("Surprise me"))) a.surpriseReq = true;
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tries a mode this station can receive, ones you have not heard yet more often."));
     ImGui::Spacing();
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         if (ImGui::Checkbox(tr("Choose the radio automatically"), &gAuto)) changed = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Selecting a mode moves to another free radio only when the selected one cannot do it. A radio that works is left alone."));
         if (receiversAll().size() > 1 && ImGui::Button(tr("Give every stopped receiver its best free radio"))) assignAll(a);

@@ -177,7 +177,7 @@ void heardWindow(App& a) {
         }
         ImGui::EndTable();
     }
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         if (ImGui::Checkbox(tr("Rare catch alerts"), &S.rareOn)) plat::prefs().setB("rareCatchAlerts", S.rareOn);
     }
     ImGui::End();

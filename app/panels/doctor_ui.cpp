@@ -298,7 +298,7 @@ void receptionDoctorWindow(App& a) {
         ImGui::Spacing();
         clipPanel(a);
     }
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         if (ImGui::Checkbox(tr("Open by itself when nothing decodes"), &S.autoOn)) plat::prefs().setB("doctorAutoOpen", S.autoOn);
     }
     ImGui::End();

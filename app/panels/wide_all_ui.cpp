@@ -112,7 +112,7 @@ void fitPlacedInCapture(App& a, PlacedState& p) {
 
 void placedPanel(App& a) {
     PlacedState& p = placedOf(a);
-    if (!ImGui::CollapsingHeader(tr("Several modes at once"), p.list.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen)) return;
+    if (!ImGui::CollapsingHeader(trw("Several modes at once"), p.list.empty() ? 0 : ImGuiTreeNodeFlags_DefaultOpen)) return;
     ImGui::TextWrapped("%s", tr("Place signals at fixed frequencies, each with its own mode: they are decoded together from this capture, and stop by themselves when you tune away."));
     const char* names[kPickN + 1];
     names[0] = tr("Identify automatically");
