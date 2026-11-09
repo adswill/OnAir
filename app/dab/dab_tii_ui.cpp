@@ -119,13 +119,18 @@ void importList(const std::string& path) {
     load(); S.fitted = false;
 }
 
+// the country of the shared channel list (the Scan tab), else the one the setup wizard stored, else none yet
+void adoptKnownCountry() {
+    if (S.country[0]) return;
+    std::string c = plat::prefs().getS("dabTiiCountry", plat::prefs().getS("scanDbCountry", ""));
+    if (c.size() != 2) c = plat::prefs().getS("locCountry", "");
+    if (c.size() == 2) { S.country[0] = c[0]; S.country[1] = c[1]; }
+}
+
 void load() {
     S.loaded = true;
     S.sites.clear();
-    if (!S.country[0]) {   // the country of the shared channel list (the Scan tab), else none yet
-        const std::string c = plat::prefs().getS("dabTiiCountry", plat::prefs().getS("scanDbCountry", ""));
-        if (c.size() == 2) { S.country[0] = c[0]; S.country[1] = c[1]; }
-    }
+    adoptKnownCountry();
     int bad = 0, shared = -1;
     if (S.country[0]) shared = readList(sharedFile(S.country), false, bad);
     S.ownFile = plat::dataDir() + "/dab-transmitters.csv";
@@ -199,6 +204,7 @@ void submitDialog() {
     if (P.lon[0] && !okLo) ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "longitude: a number between -180 and 180");
     if (zero) ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "0, 0 is not a place where a transmitter stands");
     ImGui::TextDisabled("Your browser opens GitHub with this filled in; press Submit new issue there.\nGitHub shows your user name on the issue; the data becomes public domain (CC0).");
+    adoptKnownCountry();   // the wizard may have run after the list was first loaded
     const bool noCountry = !S.country[0];
     if (noCountry) ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "No country chosen yet: pick one on the Scan tab (Shared data) first.");
     ImGui::BeginDisabled(!(okLa && okLo) || zero || noCountry);
