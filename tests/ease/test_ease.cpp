@@ -86,10 +86,22 @@ static void testFollowAndDsc() {
     CHECK(dscWorkingKhz("500.0 kHz") == 0);
 }
 
+static void testRegions() {
+    CHECK(modeNotUsedIn("ATSC", "LT"));
+    CHECK(!modeNotUsedIn("ATSC", "US"));
+    CHECK(!modeNotUsedIn("ATSC", ""));                 // no country: no tag
+    CHECK(!modeNotUsedIn("FM radio", "LT"));           // no tag on modes that are not in the table
+    CHECK(modeNotUsedIn("LBJ", "DE")); CHECK(!modeNotUsedIn("LBJ", "CN"));
+    CHECK(modeNotUsedIn("UAT", "CA")); CHECK(!modeNotUsedIn("UAT", "US"));
+    CHECK(!modeNotUsedIn("NOAA Weather Radio SAME", "CA"));
+    CHECK(!modeNotUsedIn("ISDB-T", "BR"));
+    CHECK(modeNotUsedIn("ATSC", "U"));                 // a partial code does not match "US"
+}
+
 int testNavtex();
 
 int main() {
-    testSonde(); testGeo(); testPreselect(); testFollowAndDsc();
+    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions();
     fails += testNavtex();
     if (!fails) printf("ease ok\n");
     return fails ? 1 : 0;

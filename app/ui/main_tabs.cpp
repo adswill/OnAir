@@ -5,6 +5,7 @@
 #include <unistd.h>
 #endif
 #include "app.h"
+#include "ease/ease_ui.h"
 #include "imgui_internal.h"
 #include "ui/kit/kit.h"
 #include "ui/kit/mode_panel.h"
@@ -156,7 +157,7 @@ static void mainTabsInner(App& a, bool unified) {
         gMainTabBar = ImGui::GetCurrentTabBar();
         if (!unified && tabItem(N_("Overview"), Ic::Grid)) { adsbmap::FullScope fs(&a, [&a]{ overviewTab(a); }); overviewTab(a); ImGui::EndTabItem(); }
         if (const ModeUi* mu = modeUi(a.family)) {   // a mode added after FM: its own tabs
-            if (mu->tab && tabItem(mu->tabName ? mu->tabName : "Mode", mu->tabIcon)) { adsbmap::FullScope fs(&a, [&a, mu]{ mu->tab(a); }); mu->tab(a); ImGui::EndTabItem(); }
+            if (mu->tab && tabItem(mu->tabName ? mu->tabName : "Mode", mu->tabIcon)) { adsbmap::FullScope fs(&a, [&a, mu]{ mu->tab(a); }); easeui::codecNotice(a); mu->tab(a); ImGui::EndTabItem(); }
             else if (!mu->tab && mu->stream && tabItem(N_("TV"), Ic::Tv)) { adsbmap::FullScope fs(&a, [&a]{ tvTab(a); }); tvTab(a); ImGui::EndTabItem(); }
             if (mu->receiver && tabItem(N_("Receiver"), Ic::Antenna)) { adsbmap::FullScope fs(&a, [&a]{ receiverTab(a); }); receiverTab(a); ImGui::EndTabItem(); }
             if (mu->stream && tabItem(N_("Stream"), Ic::Layers)) { adsbmap::FullScope fs(&a, [&a]{ streamTab(a); }); streamTab(a); ImGui::EndTabItem(); }

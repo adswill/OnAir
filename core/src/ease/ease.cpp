@@ -50,6 +50,24 @@ Preselect preselectAction(bool prefExists, bool positionKnown, bool running, dou
     return Preselect::Pick;
 }
 
+bool modeNotUsedIn(const std::string& name, const std::string& country) {
+    if (country.empty()) return false;
+    static const struct { const char* name; const char* usedIn; } k[] = {   // space-separated: broadcasters' published deployments, not complete lists of every small user
+        {"ATSC", "US CA MX KR DO SV HN GT BS"}, {"ATSC 3.0", "US KR JM"},
+        {"ISDB-T", "JP BR AR CL PE EC VE BO PY UY CR GT HN NI PH BW MV AO LK"}, {"ISDB-S (BS)", "JP"},
+        {"DTMB", "CN HK MO CU KH LA PK"},
+        {"HD Radio", "US CA MX PH"}, {"CDR", "CN"},
+        {"UAT", "US"}, {"NOAA Weather Radio SAME", "US CA"},
+        {"LBJ", "CN"}, {"KLW", "CN"}, {"TDCS", "CN"},
+    };
+    for (const auto& e : k) {
+        if (name != e.name) continue;
+        const std::string list = std::string(" ") + e.usedIn + " ";
+        return list.find(" " + country + " ") == std::string::npos;
+    }
+    return false;
+}
+
 int wefaxFollowPick(const std::vector<WefaxSlot>& slots, const std::string& id, long long now, int lateS) {
     for (int i = 0; i < (int)slots.size(); i++) {
         if (slots[i].startUtc + lateS < now) continue;

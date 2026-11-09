@@ -40,4 +40,21 @@ bool satPointing(App& a, double slotLon, SatPick& st) {
     return undo;
 }
 
+void codecNotice(App& a) {
+    for (const ModeDef& m : allModes()) {
+        if (!modeSelected(a, m)) continue;
+        if (!m.name || !modeCodecMissing(m)) return;
+        const std::string key = std::string("codecNoteHidden.") + m.name;
+        if (plat::prefs().getB(key.c_str(), false)) return;
+        const std::string n = m.name;
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(pal::warnAmber(), "%s", tr("The voice codec for this mode is not installed. Calls and data still decode, the sound stays off."));
+        ImGui::PopTextWrapPos();
+        const CodecHelp c = n == "NXDN" ? CodecHelp::NxdnAmbe : n.rfind("dPMR", 0) == 0 ? CodecHelp::DpmrAmbe : n == "D-STAR" ? CodecHelp::DstarAmbe : n.rfind("P25", 0) == 0 ? CodecHelp::P25Imbe : CodecHelp::DmrAmbe;
+        if (n != "TETRA") { codecHelpButton(c, tr("How to install")); ImGui::SameLine(); }
+        if (ImGui::SmallButton(tr("Hide##codecnote"))) plat::prefs().setB(key.c_str(), true);
+        return;
+    }
+}
+
 }

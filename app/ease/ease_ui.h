@@ -11,4 +11,7 @@ int preselectSat(App& a, const char* prefKey, const double* slotLon, int count, 
 // "Point the antenna south (173 deg), 27.6 deg up" for the chosen slot; with Undo right after an automatic pick. Returns true when Undo was pressed.
 bool satPointing(App& a, double slotLonDeg, SatPick& st);
 
+// A voice mode whose codec is not installed: said on the mode's own screen before the first call, with the install guide; Hide is remembered per mode.
+void codecNotice(App& a);
+
 }

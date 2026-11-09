@@ -1,5 +1,6 @@
 // The Mode Browser: a large window with every receiver mode as a button, grouped by family (docs/MODE-PICKER.md). The lists (combo, segmented
 // bar, Mode menu) stay; this is the visual way to pick. The logic (filter, layout, keys, radio fit) is in mode_picker_logic.h and is unit-tested.
+#include "dect2/ease/ease.h"
 #include "../app.h"
 #include "../i18n/i18n.h"
 #include "dect2/engine/mode_tuning.h"
@@ -97,6 +98,7 @@ void card(const App& a, const ModeDef& m, const ModeFit& fit, float conf, bool d
     add(m.needs & NWideRadio, "a radio with a wide sample rate"); add(m.needs & NPlugin, "a plugin"); add(m.needs & NCodec, "a voice codec you install");
     if (!needs.empty()) ImGui::TextColored(ImVec4(0.95f, 0.78f, 0.45f, 1), "%s: %s", tr("Needs"), needs.c_str());
     if (!fit.ok) ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.45f, 1), "%s: %s. %s", tr("Your radio"), tr(fit.reason.c_str()), tr("You can still pick it."));
+    if (m.name && dect2::ease::modeNotUsedIn(m.name, plat::prefs().getS("locCountry", ""))) ImGui::TextDisabled("%s", tr("Not used in your region, for recordings or travel"));
     if (detected) ImGui::TextColored(ImVec4(0.45f, 0.9f, 0.5f, 1), "%s (%.0f%%)", tr("Signal detected"), conf * 100);
     const std::string cr = modeCreditsLine(m.name);
     if (!cr.empty()) ImGui::TextDisabled("%s", cr.c_str() + 2);
@@ -290,7 +292,9 @@ void modePicker(App& a) {
     // the sections of the grid
     q.group = S.group;
     std::vector<int> vis = filter(items, q);
-    if (q.tab != TabRecent) std::stable_sort(vis.begin(), vis.end(), [&](int x, int y) { return items[x].groupIdx < items[y].groupIdx; });
+    const std::string homeCountry = plat::prefs().getS("locCountry", "");   // modes used only elsewhere sort last in their group, never hidden
+    auto elsewhere = [&](int x) { return kModes[x].name && dect2::ease::modeNotUsedIn(kModes[x].name, homeCountry); };
+    if (q.tab != TabRecent) std::stable_sort(vis.begin(), vis.end(), [&](int x, int y) { if (items[x].groupIdx != items[y].groupIdx) return items[x].groupIdx < items[y].groupIdx; return (int)elsewhere(x) < (int)elsewhere(y); });
     std::vector<Sec> secs;
     std::vector<float> conf((size_t)kNumModes, 0.f);
     std::vector<char> detected((size_t)kNumModes, 0);
@@ -405,6 +409,10 @@ void modePicker(App& a) {
                 dl->AddRect(ImVec2(tx + 1.5f * gUi, ly + 1 * gUi), ImVec2(tx + 6.5f * gUi, ly + 6 * gUi), lc, 2 * gUi, 0, 1.2f * gUi);
                 dl->PushClipRect(ImVec2(tx + 12 * gUi, ly), ImVec2(tx + tw, ly + 2 * ImGui::GetTextLineHeight() + 1 * gUi), true);
                 dl->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(tx + 12 * gUi, ly), ImGui::ColorConvertFloat4ToU32(dc), tr(fit.reason.c_str()), nullptr, tw - 12 * gUi);
+                dl->PopClipRect();
+            } else if (m.name && dect2::ease::modeNotUsedIn(m.name, homeCountry)) {   // what the row is for here, in place of its subtitle
+                dl->PushClipRect(ImVec2(tx, ly), ImVec2(tx + tw, ly + 2 * ImGui::GetTextLineHeight() + 1 * gUi), true);
+                dl->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(tx, ly), ImGui::ColorConvertFloat4ToU32(dc), tr("Not used in your region, for recordings or travel"), nullptr, tw);
                 dl->PopClipRect();
             } else if (m.sub && *m.sub) {   // the subtitle wraps to two lines (clipped), narrower when badges sit at the bottom right
                 const bool badges = it.hidden || (m.needs & NPlugin) || m.isNew || detected[mi] || modeCodecMissing(m);

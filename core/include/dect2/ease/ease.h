@@ -33,6 +33,9 @@ enum class Preselect {
 };
 Preselect preselectAction(bool prefExists, bool positionKnown, bool running, double freqMhz, double defMhz);
 
+// ---- Regional modes: true when this mode's signals exist only elsewhere. False for every mode without a tag and when the country (ISO code) is unknown.
+bool modeNotUsedIn(const std::string& modeName, const std::string& country);
+
 // ---- Weather fax "Follow the schedule". A chart under way is never cut off to reach the next one; a broadcast is tuned for once.
 struct WefaxSlot { std::string station; long long startUtc = 0; };
 // The first broadcast still worth tuning for (late by at most lateS seconds), optionally of one station; -1 when none.

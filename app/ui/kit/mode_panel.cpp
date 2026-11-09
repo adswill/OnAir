@@ -4,6 +4,7 @@
 #include "app.h"
 #include "i18n/i18n.h"
 #include "kit.h"
+#include "ease/ease_ui.h"
 #include "platform/platform.h"
 #include "ui/scale.h"
 #include <cstdio>
@@ -157,6 +158,7 @@ void commandView(App& a, const ModeUi& mu) {
     rxWidthChip(a);   // 3.6: the bandwidth of every mode, default or custom, in the Simple view too
     gFamily = a.family;
     gRestore.clear();
+    easeui::codecNotice(a);
     if (mu.command) mu.command(a);
     else if (mu.tab) {
         // a mode with a Map view (kit::modeNav tells): the live view and the map side by side when the window is wide
