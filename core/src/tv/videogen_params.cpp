@@ -155,6 +155,8 @@ EncoderCaps capsOf(const std::string& e) {
     else if (e == "libopenh264") { c.profile = true; }
     // Media Foundation (Windows' own H.264 encoder) gives B-frames with pts < dts, which the MPEG-TS muxer refuses
     else if (isMf(e)) { c.profile = codecOf(e) == Codec::H264; }
+    // VideoToolbox's H.264 encoder: with B-frames the MPEG-TS muxer refuses its packets too (Invalid argument)
+    else if (e == "h264_videotoolbox") { c.profile = true; }
     else if (codecOf(e) == Codec::H264) { c.profile = c.bFrames = true; }
     // hardware HEVC: no B-frames. NVIDIA before Turing (GTX 10xx) and AMD before RDNA 3 refuse them, and the encoder does not open.
     else if (codecOf(e) == Codec::Hevc) { c.bFrames = false; }

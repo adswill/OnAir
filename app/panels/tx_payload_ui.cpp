@@ -651,7 +651,7 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
         ImGui::InputTextWithHint((std::string(tr("Destination")) + "##laprsdest").c_str(), "APRS", s.dest, sizeof s.dest);
         ImGui::InputTextWithHint((std::string(tr("Path")) + "##laprspath").c_str(), "WIDE1-1", s.path, sizeof s.path);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The digipeater path. Empty: WIDE1-1. Type - for no path."));
-        if (ImGui::InputText(tr("Comment"), s.text, sizeof s.text)) saveStr("tx.text", s.text);
+        if (ImGui::InputText((std::string(tr("Comment")) + "##laprscomment").c_str(), s.text, sizeof s.text)) saveStr("tx.text", s.text);
         ImGui::InputDouble(tr("Latitude"), &s.lat, 0, 0, "%.5f");
         ImGui::InputDouble(tr("Longitude"), &s.lon, 0, 0, "%.5f");
         TxRequest r;
