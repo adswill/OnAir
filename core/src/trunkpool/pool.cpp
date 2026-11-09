@@ -186,6 +186,7 @@ CallRecord& TrunkPool::addRecord(const GrantEvent& g, const AccessDecision& d, d
     r.proto = g.proto; r.tg = g.tg; r.src = g.src; r.slot = g.slot; r.channel = g.channel; r.freqHz = g.freqHz;
     r.priority = d.priority;
     r.emergency = g.emergency; r.group = g.group;
+    r.site = g.site; r.qualityDb = g.qualityDb;
     log_.push_back(r);
     if (log_.size() > 2000) {
         size_t drop = 0;
@@ -223,6 +224,26 @@ void TrunkPool::onGrant(const GrantEvent& g, double now) {
     for (const Ended& e : ended_) if (e.tg == g.tg && std::fabs(e.freq - g.freqHz) < 1 && now - e.sec < cfg_.endedCooldownSec) return;
     for (const auto& b : block_) if (b.first == g.tg && now < b.second) return;
 
+    // the same call granted by another site: one call (see PoolConfig::dedupSites)
+    if (cfg_.dedupSites && g.site >= 0) {
+        for (CallRecord& r : log_) {
+            if (r.tg != g.tg || r.group != g.group || r.proto != g.proto || r.site < 0 || r.site == g.site || !r.followed) continue;
+            const bool live = r.state != CallState::Ended;
+            if (!live && now - r.endSec >= cfg_.endedCooldownSec) continue;
+            if (g.src >= 0 && r.src >= 0 && g.src != r.src) continue;   // another caller on the talkgroup: a different call
+            r.lastGrantSec = now;
+            bool known = false;
+            for (int s : r.altSites) known |= s == g.site;
+            if (!known) { r.altSites.push_back(g.site); r.duplicates++; st_.duplicates++; if (r.note.empty()) r.note = "also granted by site " + std::to_string(g.site); }
+            // a clearly better-heard copy in the first seconds takes the call over; otherwise the first copy stays and no radio is used for this one
+            Live* l = live ? liveById(r.id) : nullptr;
+            if (l && now - r.startSec <= cfg_.dedupSwapSec && g.qualityDb > -900 && r.qualityDb > -900 && g.qualityDb >= r.qualityDb + cfg_.dedupSwapDb) {
+                endCall(*l, "better copy at another site", now, false);
+                break;
+            }
+            return;
+        }
+    }
     // a call that is running (followed or not)
     for (CallRecord& r : log_) {
         if (r.tg != g.tg || r.group != g.group || r.state == CallState::Ended) continue;

@@ -22,6 +22,9 @@ public:
     bool ok() const { return a_.ok(); }
     // 480 samples of 8 kHz audio (60 ms) from one voice burst
     void decodeBurst(const dmr::Bits& vs216, int16_t pcm[480]);
+    // the same with the reliability (0..255) of each of the 216 bits: soft-decision frame correction and concealment (voice/vocoder_fec.h)
+    void decodeBurstSoft(const dmr::Bits& vs216, const uint8_t rel216[216], int16_t pcm[480]);
+    void fecCounts(int* frames, int* repaired, int* concealed) const { a_.fecCounts(frames, repaired, concealed); }
 private:
     NxdnAmbe a_;
 };

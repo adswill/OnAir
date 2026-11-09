@@ -37,6 +37,8 @@ struct GrantEvent {
     bool group = true, emergency = false, encrypted = false;
     int priority = 4;            // service options priority, 1 high ... 7 low
     int unplacedType = -1;       // freqHz is 0 because the channel type cannot be placed
+    int site = -1;               // the site (RFSS / site, or any number the host gives each control channel) that sent the grant; -1 not known
+    double qualityDb = -999;     // how well the host hears that site's control channel (SNR or RSSI, higher is better); -999 not known
 };
 
 // ------------------------------------------------------------------------------------------------ channel plan
@@ -190,6 +192,11 @@ struct PoolConfig {
     double ccLossSec = 5.0;          // no grant or control message for this long: controlLost() reports it
     double notFollowedLogSec = 30;   // an unfollowable call is logged again at most this often per channel
     int maxCalls = 8;
+    // The same group call granted by two sites (or heard by two control radios of overlapping systems) is one call: the second grant opens no second
+    // radio and no second log row; it is noted on the first, and if it comes from a clearly better-heard site within the first seconds the call moves there.
+    bool dedupSites = true;
+    double dedupSwapSec = 2.5;       // a copy that is this much better may take the call over only within this long of its start
+    double dedupSwapDb = 6;
     bool record = true;
     bool recordMetaOnly = false;     // write the JSON even if there is no audio (no vocoder installed)
     std::string recordDir;           // empty: no files
@@ -209,6 +216,10 @@ struct CallRecord {
     double freqHz = 0;
     bool emergency = false, group = true, encrypted = false;
     bool followed = false, missed = false;
+    int site = -1;                       // the site whose grant is being followed
+    double qualityDb = -999;
+    int duplicates = 0;                  // grants for the same call from other sites, merged into this row
+    std::vector<int> altSites;           // the other sites that granted it
     int device = -1, slice = -1;         // pool device index that decodes it; slice -1: its tuned channel
     std::string deviceName, note, endReason, audioPath;
     double audioSec = 0;
@@ -230,7 +241,7 @@ struct DeviceInfo {
 };
 
 struct PoolStats {
-    uint64_t grants = 0, calls = 0, followed = 0, missedBusy = 0, missedOutside = 0, missedNoSignal = 0, missedDenied = 0, encrypted = 0, preempted = 0, deviceLost = 0, recordings = 0;
+    uint64_t grants = 0, calls = 0, followed = 0, missedBusy = 0, missedOutside = 0, missedNoSignal = 0, missedDenied = 0, duplicates = 0, encrypted = 0, preempted = 0, deviceLost = 0, recordings = 0;
     double retuneAvgSec = 0, retuneMaxSec = 0;
     int retunes = 0;
 };

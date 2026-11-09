@@ -43,6 +43,7 @@ void Controller::dispatch(const std::vector<Grant>& gs, double now) {
         if (const TgEntry* e = g.group ? tgs.find(g.tg) : nullptr) if (e->encryptedMode()) gg.encrypted = true;
         // Phase 2 is scrambled with the site's WACN / system ID / NAC: without the system broadcast nothing would be heard, so it is not followed yet
         if (gg.tdma && !gg.dmr && d.follow && (sys.site().wacn < 0 || sys.site().sysId < 0)) { d.follow = false; d.retry = true; d.reason = "Phase 2 call: waiting for the system broadcast (WACN / system ID) to descramble it"; }
+        if (ccNow() > 0) health.onGrant(ccNow(), now);
         if (grantTap) grantTap(gg, now);
         follower.onGrant(gg, d, now, log);
     }
@@ -50,15 +51,20 @@ void Controller::dispatch(const std::vector<Grant>& gs, double now) {
 
 void Controller::onTsbk(const p25::Tsbk& t, int nac, double now) {
     good_++;
+    if (ccNow() > 0) health.onGood(ccNow(), now);
     lastGood_ = now;
     follower.onControlSeen(now, nac);
     std::vector<Grant> gs;
     pushMsg(sys.onTsbk(t, nac, now, &gs));
     if (sys.site().valid && sys.site().ccHz > 0) follower.setControlChannel(sys.site().ccHz, sys.ownControlChannels());
+    if (sys.site().valid) {   // the site book: this site and the neighbours it announces, learned over a whole drive
+        health.learnSite(sys.site().sysId, sys.site().rfss, sys.site().site, ccNow() > 0 ? ccNow() : sys.site().ccHz, now);
+        for (const SiteInfo& a : sys.adjacent()) health.learnSite(a.sysId, a.rfss, a.site, a.ccHz, now);
+    }
     dispatch(gs, now);
 }
 
-void Controller::onTsbkBad(double) { bad_++; }
+void Controller::onTsbkBad(double now) { bad_++; if (ccNow() > 0) health.onBad(ccNow(), now); }
 
 void Controller::onDmrCsbk(int opcode, int fid, const uint8_t data[8], double now) {
     Grant g;
@@ -68,7 +74,18 @@ void Controller::onDmrCsbk(int opcode, int fid, const uint8_t data[8], double no
     if (dmr.onCsbk(opcode, fid, data, now, g)) dispatch({g}, now);
 }
 
-void Controller::tick(double now) { follower.tick(now, log); }
+void Controller::tick(double now) {
+    follower.tick(now, log);
+    if (autoPark && follower.state() == FollowState::ControlHold && follower.activeSlices() == 0 && !follower.remoteActive() && ccNow() > 0) {
+        const double hz = health.advise(ccNow(), now);
+        if (hz > 0 && follower.parkAt(hz, now)) {
+            health.moved(now);
+            char b[120];
+            snprintf(b, sizeof b, "Control channel moved to %.4f MHz (better decode quality)", hz / 1e6);
+            pushMsg(b);
+        }
+    }
+}
 
 ControllerStatus Controller::status(double now) const {
     ControllerStatus s;

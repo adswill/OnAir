@@ -22,6 +22,7 @@ struct DmrCall {
     int fecErrors = 0;           // bit errors repaired plus blocks lost
     bool emergency = false, privacy = false;
     bool lateEntry = false;      // joined after the start: no voice header seen
+    bool idsRepaired = false;    // the header's Reed-Solomon check failed and a radio / group ID heard on this channel put back made it pass
     bool terminated = false;     // the end was announced by a terminator (otherwise the signal just stopped)
     std::string alias;           // talker alias
     std::string note;            // for data and control: what it was
@@ -96,6 +97,7 @@ struct DmrTelemetry {
     uint64_t rsOk = 0, rsFixed = 0, rsFail = 0;           // voice header and terminator link control
     uint64_t crcOk = 0, crcBad = 0;                       // CSBK, headers, data block CRCs
     uint64_t trellisOk = 0, trellisFail = 0;
+    uint64_t idsRepaired = 0;    // voice headers / terminators saved by the heard-ID dictionary (voice/heard_ids.h)
     uint64_t embOk = 0, embFail = 0, embLcOk = 0, embLcFail = 0;
     uint64_t calls = 0;          // calls and messages seen
     bool ambe = false;           // the AMBE+2 vocoder is available (a user-installed mbelib was found)

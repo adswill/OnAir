@@ -17,7 +17,11 @@ public:
     ~NxdnAmbe();
     bool ok() const;
     void decode(const uint8_t bits[72], int16_t pcm[160]);
-    void decodeFr(const char fr[4][24], int16_t pcm[160]);   // the four code words already de-interleaved (P25 Phase 2 has its own bit order)
+    void decodeFr(const char fr[4][24], int16_t pcm[160]);
+    // With the reliability (0..255) of each of the 72 bits: soft-decision correction and concealment of the frame before the codec (vocoder_fec.h)
+    void decodeSoft(const uint8_t bits[72], const uint8_t rel[72], int16_t pcm[160]);
+    void decodeFrSoft(const char fr[4][24], const uint8_t rel[4][24], int16_t pcm[160]);
+    void fecCounts(int* frames, int* repaired, int* concealed) const;   // the four code words already de-interleaved (P25 Phase 2 has its own bit order)
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

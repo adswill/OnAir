@@ -3,6 +3,7 @@
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dmr/dmr_lrrp.h"
 #include "dect2/dmr/dmr_nmea.h"
+#include "dect2/dmr/dmr_repair.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -247,6 +248,7 @@ void Link::onCandidate(const Cand& c) {
         if (t->cal.valid) { t->cal.off += 0.4 * (cal.off - t->cal.off); t->cal.unit += 0.4 * (cal.unit - t->cal.unit); }
         else t->cal = cal;
         t->family = fam;
+        t->lastSync = sync;
         if (syncIsDirect(sync)) t->slot = syncDirectSlot(sync);
         return;
     }
@@ -277,6 +279,7 @@ void Link::onCandidate(const Cand& c) {
     if (nt) {
         nt->lastAnchor = t0;
         nt->birthRho = ar;
+        nt->lastSync = sync;
         if (syncIsDirect(sync)) nt->slot = syncDirectSlot(sync);
     }
 }
@@ -425,6 +428,31 @@ void Link::decodeBurst(Track& t) {
     Outcome out;
     int sync = matchSync(burstCentre(burst), t.confirmed ? 5 : 3, nullptr);
     if (sync >= 0 && t.confirmed && t.family >= 0 && familyOf(sync) != t.family && sync != kSyncRc) sync = -1;
+    // echo / simulcast: with a closed eye the symbol equaliser (trained on the sync word, kept per transmission) tries to open it; used only when
+    // it measurably does (voice/sym_eq.h)
+    if (symeq::enabled()) {
+        float ref[24];
+        bool haveRef = false;
+        const int rs = sync >= 0 ? sync : (t.lastAnchor >= 0 && std::fabs(t0 - t.lastAnchor) < 1.0 ? t.lastSync : -1);
+        if (rs >= 0) {
+            int8_t s8[24];
+            syncSymbols(rs, s8);
+            for (int j = 0; j < 24; j++) ref[j] = (float)s8[j];
+            haveRef = true;
+        }
+        float y[132];
+        if (t.eq.run(z, 132, 54, haveRef ? ref : nullptr, 24, y)) {
+            eqBursts_++;
+            memcpy(z, y, sizeof(z));
+            burst.clear();
+            for (int j = 0; j < 132; j++) {
+                h[j] = (int8_t)(z[j] >= 2.f ? 3 : z[j] >= 0.f ? 1 : z[j] >= -2.f ? -1 : -3);
+                putBits(burst, symbolToDibit(h[j]), 2);
+            }
+            sync = matchSync(burstCentre(burst), t.confirmed ? 5 : 3, nullptr);
+            if (sync >= 0 && t.confirmed && t.family >= 0 && familyOf(sync) != t.family && sync != kSyncRc) sync = -1;
+        }
+    }
     int cc = t.cc;
 
     // CACH in front of the burst (base station)
@@ -485,7 +513,7 @@ void Link::decodeBurst(Track& t) {
     } else if (sync >= 0 && syncIsVoice(sync)) {
         // burst A: the voice sync; no field protects the burst, but a locked track expects it
         structure = true; payloadOk = true;
-        voiceBurst(t, 0, burst, 0, Bits(), true);
+        voiceBurst(t, 0, burst, 0, Bits(), true, z);
         if (t.slot == 0 && syncIsDirect(sync)) t.slot = syncDirectSlot(sync);
     } else {
         const EmbInfo emb = burstEmb(burst);
@@ -498,7 +526,7 @@ void Link::decodeBurst(Track& t) {
             noteFec(t, emb.errors, 16);
             int pos = t.vpos >= 0 ? (t.vpos + 1) % 6 : -1;
             if (pos < 0) pos = emb.lcss == 1 ? 1 : emb.lcss == 2 ? 4 : emb.lcss == 0 ? 5 : 2;
-            voiceBurst(t, pos, burst, emb.lcss, emb.emb32, false);
+            voiceBurst(t, pos, burst, emb.lcss, emb.emb32, false, z);
         } else if (t.confirmed) {
             // silence after the end of a transmission is not an error of the channel; a burst missing inside a call is
             tel_.unknownBursts++;
@@ -611,6 +639,7 @@ void Link::decodeBurst(Track& t) {
 
 // ---------------------------------------------------------------------------------------------------- data bursts
 
+
 Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int sync, int cc, int dt) {
     Outcome o;
     o.data = true;
@@ -638,7 +667,13 @@ Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int 
     case kDtTerminatorLc: {
         const bool term = dt == kDtTerminatorLc;
         Validator val{term ? 3 : 2};
-        const int cor = bptcAssisted(burst, z, val, info, fixedByAssist);
+        int cor = bptcAssisted(burst, z, val, info, fixedByAssist);
+        bool idsFixed = false;
+        if (cor < 0 && heard_.size() > 0) {   // the check failed: the heard IDs may complete it
+            Bits pay, raw, fx;
+            burstDataPayload(burst, pay);
+            if (bptc196Decode(pay, raw) >= 0 && lcRepairHeard(raw, term, heard_, fx)) { info = fx; cor = 0; idsFixed = true; tel_.idsRepaired++; }
+        }
         countBptc(cor);
         t.state = 1;
         if (cor < 0) { t.lastBurst += " (lost)"; break; }
@@ -648,11 +683,13 @@ Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int 
         FullLc f;
         parseFullLc(lc, f);
         o.valid = true;
+        if (!idsFixed && rs == 0 && (f.flco == kFlcoGroupVoice || f.flco == kFlcoUnitVoice)) { heard_.note(f.src); heard_.note(f.dst); }
         int kind = f.flco == kFlcoUnitVoice ? 1 : (f.dst >= 0xFFFFF0 ? 2 : 0);
         if (f.flco != kFlcoGroupVoice && f.flco != kFlcoUnitVoice) { t.lastBurst += " (other LC)"; break; }
         if (!term) {
             if (t.inCall && t.call.idsKnown && t.call.src == f.src && t.call.dst == f.dst) { /* repeated header */ }
             else startCall(t, kind, f.src, f.dst, f.svc, false, true);
+            if (idsFixed && t.inCall) t.call.idsRepaired = true;
             t.vpos = -1;
             t.sinceVoice = 0;
         } else {
@@ -909,7 +946,7 @@ void Link::finishMessage(Track& t) {
 
 // ---------------------------------------------------------------------------------------------------- voice
 
-void Link::voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync) {
+void Link::voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync, const float* z) {
     tel_.voiceBursts++;
     t.state = 1;
     t.lastVoiceSample = n_;
@@ -926,6 +963,12 @@ void Link::voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits
     if (onVoiceBurst) {
         Bits vs;
         burstVoicePayload(burst, vs);
+        // reliability of the 216 voice bits: dibits 0..53 and 78..131 of the burst (the middle 24 dibits are the sync or the embedded field)
+        for (int i = 0; i < 216; i++) {
+            const int bit = i < 108 ? i : i + 48;   // the bit position in the burst (156 follows 108)
+            const float r = z ? std::min(1.2f, bitRel(z[bit / 2], bit & 1)) : 1.f;
+            voiceRel_[i] = (uint8_t)(r / 1.2f * 255.f);
+        }
         onVoiceBurst(slotOf(t), pos, vs);
     }
     if (hadSync) { t.lcHave = 0; return; }

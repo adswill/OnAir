@@ -1166,3 +1166,6 @@ Network IQ sources now scrub NaN/infinity (SDR++, SpyServer float); rtl_tcp chun
 #411: ASM 2 is 162.000 MHz (channel 2028), corrected from 162.050. A row found by an IATA code now shows it ("HHAS Tower (ASM)"). The CSV export already exists. Open: the VDES receiver still treats ASM as AIS 1 / AIS 2 (161.975 / 162.025 MHz, GMSK), which does not match the channels above.
 ## 2026-11-09 feat37-sm-ft8 (smart FT8 / RTTY)
 FT8/FT4/FT2: cross-slot soft-bit combining (about 2 dB on repeated messages), a-priori decoding from conversations heard on the band (2-3 dB), early decode ~4-5 s before slot end; RTTY one-click auto-lock (speed/polarity 40/40, exact shift 39/40). Beacon calibration dropped (selfcal exists). Details: docs/SMART-ft8-3.7.md. Tests: test_hfdig_ftxsmart, test_hfdig_rttyauto; full suite via CI.
+
+## 2026-11-09 smart voice package (feat37-sm-voice)
+Soft AMBE frame FEC + concealment (DMR/D-STAR/NXDN), optional symbol equaliser (off: no gain through the FM front end), heard-ID header repair (D-STAR, DMR), trunk call dedup across sites, control channel health + auto park + site book, TETRA SDS/LIP parser. Details and numbers: docs/SMART-voice-3.7.md.

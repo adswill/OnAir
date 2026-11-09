@@ -4,6 +4,8 @@
 #include "dect2/dmr/dmr_fec.h"
 #include "dect2/dmr/dmr_proto.h"
 #include "dect2/dmr/dmr_tel.h"
+#include "dect2/voice/sym_eq.h"
+#include "dect2/voice/heard_ids.h"
 #include <deque>
 #include <functional>
 #include <string>
@@ -25,6 +27,9 @@ public:
     double nowSec() const { return (double)n_ / 48000.0; }
     // a voice callback for a later vocoder: slot, burst position 0..5 (A..F), 216 bits VS(215)..VS(0)
     std::function<void(int, int, const Bits&)> onVoiceBurst;
+    // inside onVoiceBurst: the reliability (0..255) of each of the 216 bits just delivered, from the soft symbols (for the soft vocoder frame FEC)
+    uint64_t equalisedBursts() const { return eqBursts_; }   // bursts the symbol equaliser opened (it only works when the eye is closed)
+    const uint8_t* voiceReliability() const { return voiceRel_; }
     // the call on this slot (1 or 2) is marked private/encrypted by its service options: its voice must not be decoded
     bool slotEncrypted(int slot) const { for (const auto& t : tr_) if (t.inCall && slotOf(t) == slot && t.call.privacy) return true; return false; }
     // the call on this slot as the voice monitor lists it (voice_monitor.h): IDs, kind, flags, colour code, bit error rate (-1 not known)
@@ -82,6 +87,8 @@ private:
         double lastAnchor = -1;                     // t0 of the last burst whose sync re-timed the track
         int hits = 0, misses = 0, tentativeOk = 0, voiceRun = 0;
         double birthRho = 0;
+        int lastSync = -1;                          // the sync pattern of the last anchor (the equaliser's training word)
+        symeq::SymEq eq;                            // simulcast / multipath equaliser of this transmission (voice/sym_eq.h)
         Cal cal;
         int cc = -1;
         int vpos = -1;                              // voice burst position of the last voice burst, -1 none
@@ -136,7 +143,10 @@ private:
         int dt = -1;
     };
     Outcome decodeData(Track& t, const Bits& burst, const float* z, int sync, int cc, int dt);
-    void voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync);
+    uint8_t voiceRel_[216] = {};
+    uint64_t eqBursts_ = 0;
+    voice::HeardIds heard_;   // radio and group IDs heard on this channel: repairs a voice header whose Reed-Solomon check failed
+    void voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync, const float* z);
     void handleCach(Track& t, const float* zc);
 
     // ---- calls and messages
