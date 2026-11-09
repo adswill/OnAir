@@ -109,7 +109,7 @@ void amSmartPanel(App& a) {
         const auto g = gId.guess(in);
         if (!g.empty()) ImGui::Text("%s: %s  (%s, %s)", tr("Probably"), g[0].station.c_str(), g[0].why.c_str(), tr("estimated"));
         if (rep) { ImGui::SameLine(); ImGui::TextDisabled("%s %.0f%%", tr("interval signal"), 100 * strength); }
-        if (ImGui::TreeNode(tr("Identify: settings"))) {
+        if (ImGui::TreeNode(trw("Identify: settings"))) {
             static char path[512]; static bool loaded = false;
             if (!loaded) { loaded = true; snprintf(path, sizeof path, "%s", plat::prefs().getS("swSchedPath", "").c_str()); }
             ImGui::PushTextWrapPos(0);
