@@ -64,6 +64,10 @@ void Receiver::reset() {
     wordFlushed_ = false;
     code_.clear();
     t_ = Telemetry();
+    tacan_.reset();
+    pulsePeak_ = 0.f;
+    tInPulse_ = false;
+    tStart_ = 0;
 }
 
 void Receiver::feed(const float* env, size_t n) {
@@ -79,6 +83,17 @@ void Receiver::feed(const float* env, size_t n) {
             inPulse_ = false;
             const double widthUs = (double)(sampleCount_ - startSample_) * 1e6 / fs_;
             if (std::fabs(widthUs - kPulseWidthUs) <= kPulseTolUs) onPulse(startSample_ / fs_);
+        }
+        // TACAN: a lower threshold than the DME pulse rule, or the bursts and replies are lost in the troughs of the 15 and 135 Hz modulation
+        {
+            const bool tAbove = peak_ > 0.0 && x > 0.3 * peak_;
+            if (!tInPulse_ && tAbove) { tInPulse_ = true; tStart_ = sampleCount_; pulsePeak_ = 0.f; }
+            if (tInPulse_ && (float)x > pulsePeak_) pulsePeak_ = (float)x;
+            if (tInPulse_ && !tAbove) {
+                tInPulse_ = false;
+                const double us = (double)(sampleCount_ - tStart_) * 1e6 / fs_;
+                if (us > 2.0 && us < 8.0) tacan_.pulse(tStart_ / fs_, pulsePeak_);
+            }
         }
         sampleCount_++;
         if (sampleCount_ >= binEnd_) {
@@ -187,6 +202,7 @@ void Receiver::updateTelemetry(double now) {
     }
     const double window = std::max(0.05, std::min(1.0, now));
     t_.pairRatePps = static_cast<double>(pairs_.size()) / window;
+    t_.tacanValid = tacan_.valid(); t_.tacanRadialDeg = tacan_.radialDeg(); t_.tacanDepth15 = tacan_.depth15(); t_.tacanDepth135 = tacan_.depth135();
     if (nx == 0 && ny == 0) t_.channel = Channel::None;
     else t_.channel = nx >= ny ? Channel::X : Channel::Y;
 }

@@ -7,6 +7,7 @@
 // Sources: ICAO Annex 10 as summarised in Rohde & Schwarz application note 1EF91 (DME/N pulse shape, 12 / 30 us spacing, 1350 pp/s ident, Morse timing) and the public
 // descriptions of the channel plan; credited in THIRD_PARTY.md.
 #pragma once
+#include "dect2/dme/tacan.h"
 #include <cstddef>
 #include <cstdint>
 #include <deque>
@@ -36,6 +37,9 @@ struct Telemetry {
     double levelDb = -200.0;           // envelope peak level, dB
     bool identKeyed = false;           // the ident tone is on now
     std::string ident;                 // decoded ident letters (a space between words), empty until one letter is out
+    bool tacanValid = false;           // TACAN reference bursts and rotation seen
+    double tacanRadialDeg = 0;
+    float tacanDepth15 = 0, tacanDepth135 = 0;
 };
 
 class Receiver {
@@ -50,6 +54,10 @@ public:
     double timeSec() const { return sampleCount_ / (fs_ > 0 ? fs_ : 1.0); }
 
 private:
+    TacanBearing tacan_;
+    float pulsePeak_ = 0.f;
+    bool tInPulse_ = false;
+    uint64_t tStart_ = 0;
     void onPulse(double startSec);
     void onPair(double startSec);
     void endKey();
