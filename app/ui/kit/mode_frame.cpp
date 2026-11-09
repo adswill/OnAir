@@ -83,7 +83,7 @@ int modeNav(const char* id, int& cur, std::initializer_list<NavItem> items) {
         if (pillButton(n.label, cur == n.view)) cur = n.view;
     }
     if (anyMore) {
-        std::string lab = std::string(tr("More")) + (curMore ? std::string(": ") + curMore->label : std::string(" v"));
+        std::string lab = curMore ? std::string(curMore->label) + " v" : std::string(tr("More")) + " v";   // a picked More item shows by its own name (#421)
         if (!first) sameLineIf(ImGui::CalcTextSize(lab.c_str()).x + 22 * gUi, 6 * gUi);
         if (pillButton(lab.c_str(), curMore != nullptr)) ImGui::OpenPopup("##more");
         if (ImGui::BeginPopup("##more")) {
