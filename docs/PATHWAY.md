@@ -1242,3 +1242,6 @@ View > Wireshark: one switch per mode, off by default. Packets go to pcapng file
 
 ## 2026-11-09 RC and mesh links (feat38-mesh-rc)
 Family 360 (std 362, slot 360, block 360-379), one list entry per protocol through sub-modes: Reticulum / RNode, ExpressLRS 900 MHz LoRa (channels only with a binding phrase the user types), MAVLink on SiK radios with the Map view, FrSky D8 / D16, FlySky AFHDS / 2A. core/src/rclink: packet layers, burst finder and FSK slicer over the whole capture, LoRa via the mesh demodulator. Simulated signals only. Skipped (no public air protocol or chip mapping): Crossfire, DSMX, Autel and other non-DJI drones; ExpressLRS 2.4 GHz FLRC and long-interleaver rates. Not built: OpenHD / wfb-ng (needs an HT PHY), NPR, IP400 (docs/MESH-RC-3.8.md).
+
+## 2026-11-09 Leftover modes (feat38-leftovers)
+Family 600 (std 602 and 603, telemetry 601 and 602, slots 600 and 601), one list entry per protocol. New 802.11n HT receiver (MCS 0-7, 20 MHz, one stream) with wfb-ng / OpenHD frame recognition, structure only. NPR-70 sync detection (network ID, symbol rate). WINMOR pilot detection (raw frame-type tones). All on simulated signals only. Not built: ExpressLRS FLRC (FEC inside the chip, not published), IP400 (depends on ST 802.15.4g packet handling), Mioty and DECT NR+ (large receivers, no signals to test against). docs/LEFTOVERS-3.8.md.
