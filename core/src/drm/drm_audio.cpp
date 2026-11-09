@@ -180,11 +180,18 @@ bool XheSuperFrameParser::parse(const uint8_t* d, int len, std::vector<XheFrame>
     if (payload < 0) { reset(); return false; }
     // directory: the last element describes the first border
     std::vector<int> border;                                       // in the coordinates of `comb` below
-    std::vector<int> rawIdx;
+    std::vector<int> rawIdx, repeats;
     for (int k = 0; k < b; k++) {
         const int off = len - 2 * (k + 1);
         const int e = (d[off] << 8) | d[off + 1];
         rawIdx.push_back(e >> 4);
+        repeats.push_back(e & 15);
+    }
+    // each element repeats the count: a damaged element must not cost the whole super frame (#332); a stream that never fills the field in keeps all of them
+    if (std::find(repeats.begin(), repeats.end(), b) != repeats.end()) {
+        std::vector<int> kept;
+        for (size_t k = 0; k < rawIdx.size(); k++) if (repeats[k] == b) kept.push_back(rawIdx[k]);
+        rawIdx.swap(kept);
     }
     // combined bytes: the frame in progress (or the last 2 bytes of the previous payload) followed by this payload
     std::vector<uint8_t> comb;
@@ -382,17 +389,25 @@ struct AudioDecoder::Impl {
         return true;
     }
 
+    // A frame was lost: resume at the next independent frame. libfdk-aac keeps running: reopening it mutes the next frames while it fades back in
+    // (#331, #332: about 1.5 frames of silence after every loss on a real recording, which turned a weak signal's scattered losses into near silence).
+    void lostFrame() {
+        if (!open || !started) return;
+        if (ctx) avcodec_flush_buffers(ctx);
+        started = false;
+    }
+
     void superFrameXhe(const uint8_t* d, int len, std::vector<float>& out) {
         std::vector<XheFrame> frames;
         if (!xhe.parse(d, len, frames)) {
             bad++;
-            if (open && started) { if (ctx) avcodec_flush_buffers(ctx); if (fdk) fdk->open(xheAscFromSdc(cfg)); started = false; }
+            lostFrame();
             if (auOut) gap(out, (size_t)(modeE ? 9600 : 19200));            // the whole super frame (the playout evens out the difference)
             return;
         }
         const uint64_t before = samples;
         for (const XheFrame& f : frames) {
-            if (!f.crcOk) { bad++; if (open && started) { if (ctx) avcodec_flush_buffers(ctx); if (fdk) fdk->open(xheAscFromSdc(cfg)); started = false; } gap(out, auOut); continue; }
+            if (!f.crcOk) { bad++; lostFrame(); gap(out, auOut); continue; }
             ok++;
             decodeAu(f.au, out);
         }

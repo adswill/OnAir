@@ -36,6 +36,7 @@ struct UsacLib {
     // The process-wide library the DRM decoder uses: loaded on first use, and again after rescan() (a file dropped in while OnAir runs).
     static UsacLib shared();
     static void rescan();
+    static void setSharedForTest(const UsacLib& l);        // tests: what shared() returns until the next rescan()
     static uint64_t generation();                    // bumped by rescan(): a decoder that opened before reopens to pick the new library up
 };
 
@@ -47,7 +48,7 @@ public:
     UsacSession(const UsacSession&) = delete;
     UsacSession& operator=(const UsacSession&) = delete;
     bool open(const std::vector<uint8_t>& asc);
-    // Interleaved PCM of one access unit; false when the decoder gave nothing. rate/channels as the decoder reports them.
+    // Interleaved PCM of one access unit; false when the decoder gave nothing. True with lastError() != 0: libfdk-aac concealed a frame it could not parse. rate/channels as the decoder reports them.
     bool decode(const std::vector<uint8_t>& au, std::vector<int16_t>& pcm, int& rate, int& channels);
     void close();
     bool isOpen() const { return h_ != nullptr; }

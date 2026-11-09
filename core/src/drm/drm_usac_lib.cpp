@@ -118,6 +118,7 @@ UsacLib UsacLib::shared() {
     return gShared;
 }
 void UsacLib::rescan() { gGen++; }
+void UsacLib::setSharedForTest(const UsacLib& l) { std::lock_guard<std::mutex> lk(gSharedMu); gShared = l; gSharedGen = gGen.load(); }
 uint64_t UsacLib::generation() { return gGen.load(); }
 
 bool UsacSession::open(const std::vector<uint8_t>& asc) {
@@ -136,13 +137,19 @@ void UsacSession::close() { if (h_ && lib_.close) lib_.close(h_); h_ = nullptr; 
 
 bool UsacSession::decode(const std::vector<uint8_t>& au, std::vector<int16_t>& pcm, int& rate, int& channels) {
     pcm.clear();
+    err_ = 0; step_ = "";
     if (!h_ || au.empty()) return false;
     uint8_t* buf[1] = {const_cast<uint8_t*>(au.data())};
     const unsigned size[1] = {(unsigned)au.size()};
     unsigned valid = (unsigned)au.size();
     if (const int e = lib_.fill(h_, buf, size, &valid); e != 0) { step_ = "aacDecoder_Fill"; err_ = e; return false; }
     std::vector<int16_t> tmp(8 * 4096);
-    if (const int e = lib_.decode(h_, tmp.data(), (int)tmp.size(), 0); e != 0) { step_ = "aacDecoder_DecodeFrame"; err_ = e; return false; }
+    // 0x4000 .. 0x4FFF are libfdk-aac's decode errors: it has concealed the frame and the output is valid (IS_OUTPUT_VALID in aacdecoder_lib.h).
+    // Throwing that output away left a 64 ms hole for every such frame (#331, #332).
+    if (const int e = lib_.decode(h_, tmp.data(), (int)tmp.size(), 0); e != 0) {
+        step_ = "aacDecoder_DecodeFrame"; err_ = e;
+        if (e < 0x4000 || e > 0x4FFF) return false;
+    }
     const int* si = lib_.info(h_);
     if (!si) { step_ = "aacDecoder_GetStreamInfo"; err_ = -1; return false; }
     rate = si[0]; channels = si[2];

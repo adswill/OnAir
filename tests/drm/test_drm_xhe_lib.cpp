@@ -21,7 +21,8 @@ static int gInfo[10] = {48000, 4, 2};
 static void* stubOpen(int tt, unsigned layers) { if (tt != 0 || layers != 1) return nullptr; gOpen++; return &gInfo; }
 static int stubConfig(void*, uint8_t** conf, const unsigned* len) { gAscLen = (int)len[0]; return (conf[0][0] & 0xF8) == 0xF8 ? 0 : 1; }   // the ASC starts with the escape audio object type
 static int stubFill(void*, uint8_t**, const unsigned* size, unsigned* valid) { gFill++; *valid = size[0]; return 0; }
-static int stubDecode(void*, int16_t* pcm, int n, unsigned) { for (int i = 0; i < n && i < 8; i++) pcm[i] = (int16_t)(i * 1000); return 0; }
+static int gDecodeRet = 0, gDecoded = 0;
+static int stubDecode(void*, int16_t* pcm, int n, unsigned) { gDecoded++; for (int i = 0; i < n && i < 8; i++) pcm[i] = (int16_t)(i * 1000); return gDecodeRet; }
 static const int* stubInfo(void*) { return gInfo; }
 static void stubClose(void*) { gClose++; }
 
@@ -41,6 +42,17 @@ static void testLoader() {
     std::vector<int16_t> pcm; int rate = 0, ch = 0;
     CHECK(s.decode({0x80, 1, 2}, pcm, rate, ch) && gFill == 1, "decode ok");
     CHECK(rate == 48000 && ch == 2 && pcm.size() == 8 && pcm[3] == 3000, "pcm %zu rate %d ch %d", pcm.size(), rate, ch);
+    // issues 331, 332: libfdk-aac's decode errors (0x4000 .. 0x4FFF) come with concealed audio that must be played; the other errors have none
+    for (int e : {0x4002, 0x4000, 0x4FFF}) {
+        gDecodeRet = e;
+        CHECK(s.decode({0x80, 1, 2}, pcm, rate, ch) && pcm.size() == 8 && s.lastError() == e, "decode error 0x%x keeps the concealed output", (unsigned)e);
+    }
+    for (int e : {0x1002, 0x2003, 0x5, 0x5000}) {
+        gDecodeRet = e;
+        CHECK(!s.decode({0x80, 1, 2}, pcm, rate, ch) && pcm.empty() && s.lastError() == e, "error 0x%x gives no audio", (unsigned)e);
+    }
+    gDecodeRet = 0;
+    CHECK(s.decode({0x80, 1, 2}, pcm, rate, ch) && s.lastError() == 0, "the next good frame clears the error");
     s.close();
     CHECK(gClose == 1 && !s.isOpen(), "closed");
     CHECK(!s.decode({0x80}, pcm, rate, ch), "no decode when closed");
@@ -131,9 +143,60 @@ static void testAscExtension() {
     }
 }
 
+static std::vector<uint8_t> crcFrame(std::vector<uint8_t> au, bool damage = false) {
+    const uint32_t c = crc16Bytes(au.data(), au.size());
+    au.push_back((uint8_t)(c >> 8)); au.push_back((uint8_t)(damage ? ~c : c));
+    return au;
+}
+// A super frame: the frames one after the other, then one directory element per border (the last element describes the first border). `count` is what each element repeats.
+static std::vector<uint8_t> superFrame(const std::vector<std::vector<uint8_t>>& frames, int count) {
+    std::vector<uint8_t> sf = {(uint8_t)(frames.size() << 4)};
+    sf.push_back((uint8_t)crc8Bytes(sf.data(), 1));
+    std::vector<int> borders; int at = 0;
+    for (const auto& f : frames) { borders.push_back(at); at += (int)f.size(); sf.insert(sf.end(), f.begin(), f.end()); }
+    for (auto b = borders.rbegin(); b != borders.rend(); ++b) { const int e = (*b << 4) | count; sf.push_back((uint8_t)(e >> 8)); sf.push_back((uint8_t)e); }
+    return sf;
+}
+
+// issue 332: one damaged directory element (its repeated count is wrong) costs only the frames it describes, not the whole super frame
+static void testDamagedDirectory() {
+    const std::vector<std::vector<uint8_t>> frames = {crcFrame({0x80, 1, 2}), crcFrame({0x80, 3, 4}), crcFrame({0x80, 5, 6})};
+    std::vector<uint8_t> sf = superFrame(frames, 3);
+    sf[sf.size() - 6] = 0xAB; sf[sf.size() - 5] = 0xC7;                          // the element of the third border: out of range, repeats 7 and not 3
+    XheSuperFrameParser p; std::vector<XheFrame> f;
+    CHECK(p.parse(sf.data(), (int)sf.size(), f), "a damaged directory element does not refuse the super frame");
+    CHECK(f.size() == 1 && f[0].crcOk && f[0].au[1] == 1, "the frame between the good borders comes out (%zu frames)", f.size());
+}
+
+// issues 331, 332: a lost frame must not reopen libfdk-aac: reopening mutes the frames after it
+static void testLossKeepsDecoderOpen() {
+    std::map<std::string, void*> m = {{"aacDecoder_Open", (void*)&stubOpen}, {"aacDecoder_ConfigRaw", (void*)&stubConfig}, {"aacDecoder_Fill", (void*)&stubFill},
+        {"aacDecoder_DecodeFrame", (void*)&stubDecode}, {"aacDecoder_GetStreamInfo", (void*)&stubInfo}, {"aacDecoder_Close", (void*)&stubClose}};
+    UsacLib::setSharedForTest(UsacLib::fromResolver([&](const char* n) -> void* { auto it = m.find(n); return it == m.end() ? nullptr : it->second; }));
+    SdcAudio a; a.coding = 3; a.mode = 0; a.rateCode = 6;
+    CfgBits c;
+    c.put(2, 2); c.put(1, 1); c.put(0, 3); c.put(5, 4); c.put(9, 4); c.put(0, 2); c.put(0, 2);   // 2:1 SBR, default header, no extension elements
+    a.config = c.b;
+    for (bool modeE : {false, true}) {
+        AudioDecoder d;
+        CHECK(d.configure(a, modeE) && d.decodable(), "the stub library opens the stream");
+        const int opens = gOpen, decoded = gDecoded;
+        const std::vector<std::vector<uint8_t>> frames = {crcFrame({0x80, 1, 2}), crcFrame({0x80, 3, 4}, true), crcFrame({0x80, 5, 6}), crcFrame({0x80, 7, 8})};
+        const std::vector<uint8_t> sf = superFrame(frames, 4);
+        std::vector<float> out; std::vector<std::pair<size_t, size_t>> gaps;
+        d.superFrame(sf.data(), (int)sf.size(), (int)sf.size(), out, &gaps);
+        CHECK(d.framesOk() == 2 && d.framesBad() == 1, "two good frames and a lost one (%llu, %llu)", (unsigned long long)d.framesOk(), (unsigned long long)d.framesBad());
+        CHECK(gDecoded - decoded == 2, "the frame after the loss is decoded (%d)", gDecoded - decoded);
+        CHECK(gOpen == opens, "a lost frame does not reopen the decoder (%d opens)", gOpen - opens);
+    }
+    UsacLib::rescan();
+}
+
 int main() {
     testAscExtension();
     testLoader();
+    testDamagedDirectory();
+    testLossKeepsDecoderOpen();
     testCodecFolder();
     testParser();
     return testSummary("drm_xhe_lib");
