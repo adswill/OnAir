@@ -146,7 +146,7 @@ std::vector<PrefItem> selectPrefs(const std::vector<PrefItem>& in, Mode mode, co
 // not known at all is treated like a confirm key. Update this table when a setting is added (the test checks that every key of the
 // table is classified and that unknown keys are never silently applied).
 static const char* const kRestoreSafe[] = {
-    "ac.adv", "acarsChans", "acarsThr", "acarsZoom", "adsbLat", "adsbLon", "adsbMap", "adsbSources", "adsbSpeedUnit", "adsbSrcAny", "adsbUnits",
+    "ac.adv", "adslZoom", "acarsChans", "acarsThr", "acarsZoom", "adsbLat", "adsbLon", "adsbMap", "adsbSources", "adsbSpeedUnit", "adsbSrcAny", "adsbUnits",
     "adsbWinds", "adsbZoom", "aeroSat", "aeroSnrSound", "aeroZoom", "airChans", "airHang", "airHold", "airNr", "airNrStr", "airOnlyActive",
     "airScan", "airSquelch", "aisZoom", "aleListen", "antWheelMm", "ardopListen", "astroCustom", "astroDeg", "astroFft", "astroInt", "astroLine",
     "astroXVel", "astroY", "atvDeint", "audioRecFmt", "audioRecGate", "audioRecKeep", "audioRecSplit", "bleHop", "bleHopSec", "bletrkMin",

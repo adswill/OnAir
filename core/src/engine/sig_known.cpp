@@ -43,6 +43,7 @@ const Known kKnown[] = {
 {"ADS-B / Mode S", "adsb", "", "Aviation", MB(ModPulse)|MB(ModAm)|MB(ModOfdm), ModPulse, {1e6, 2e6}, {2.75e6, 2.6e6}, 0, 2, 0.12, 0, SyncNone, {1089, 1091}, "PPM pulses 1 Mbit/s, 120 us messages on 1090 MHz"},
 {"Mode S uplink", "uplink", "", "Aviation", MB(ModPulse)|MB(ModBpsk)|MB(ModQam), ModPulse, {1e6}, {96e3, 6e6}, 0, 2, 0, 0, SyncNone, {1029, 1031}, "1030 MHz interrogations"},
 {"UAT", "uat", "", "Aviation", MB(ModGmsk)|MB(ModFsk2)|MB(ModPulse), ModFsk2, {1.04e6}, {1.2e6}, 0, 2, 0, 0, SyncNone, {977, 979}, "CPFSK 1.041 MBd bursts on 978 MHz"},
+{"ADS-L", "adsl", "", "Aviation", MB(ModGmsk)|MB(ModFsk2)|MB(ModOfdm)|MB(ModPulse)|MB(ModFm), ModFsk2, {100e3, 38400, 200e3}, {360e3, 60e3, 280e3}, 0, 2, 0, 0, SyncNone, {868, 869.7f}, "GFSK / GMSK bursts on 868.2, 868.4 and 869.525 MHz"},
 {"FLARM", "flarm", "", "Aviation", MB(ModGmsk)|MB(ModFsk2)|MB(ModOfdm)|MB(ModPulse)|MB(ModFm), ModFsk2, {100e3}, {360e3}, 0, 2, 0, 0, SyncNone, {868, 869}, "GFSK 100 kBd bursts on 868 MHz"},
 {"ACARS", "acars", "", "Aviation", MB(ModAm)|MB(ModPulse)|MB(ModGmsk)|MB(ModFsk2), ModAm, {2400, 4800}, {5.3e3}, 0, 2, 0, 0, SyncNone, {129, 137}, "AM-MSK 2400 bit/s, bursts"},
 {"VDL Mode 2", "vdl2", "", "Aviation", MB(ModPsk8)|MB(ModQpsk)|MB(ModQam), ModPsk8, {10500}, {12.1e3}, 0, 2, 0, 0, SyncNone, {136.6f, 137}, "D8PSK 10.5 kBd, 25 kHz, bursts"},

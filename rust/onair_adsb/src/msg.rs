@@ -426,8 +426,9 @@ pub fn decode(b: &[u8], nbits: i32) -> (bool, Msg) {
         17..=19 => {
             m.ca = get(b, 6, 3) as i32;
             m.icao = get(b, 9, 24);
-            if m.df == 18 && (m.ca == 4 || m.ca == 7) {
-                return (true, m); // TIS-B management and reserved control field: no ME decoding
+            // DO-260B 2.2.3.2.6.1 / readsb: CF 3 is coarse TIS-B (its own ME layout, not the ADS-B one), CF 4 TIS-B management, CF 7 reserved: no ME decoding
+            if m.df == 18 && (m.ca == 3 || m.ca == 4 || m.ca == 7) {
+                return (true, m);
             }
             if m.df == 19 && m.ca != 0 {
                 return (true, m); // military: only application field 0 has the extended squitter layout
