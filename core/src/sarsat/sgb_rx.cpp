@@ -156,11 +156,14 @@ bool sgbDemodBurst(const std::vector<cf32>& x, long start, double cfoHz, SgbHit&
             bits[(size_t)(2 * m)] = zi[(size_t)(25 + m)] < 0;
             bits[(size_t)(2 * m + 1)] = zq[(size_t)(25 + m)] < 0;
         }
+        const std::vector<uint8_t> received = bits;
         const int fixed = sgbCorrect(bits);
         if (fixed < 0) continue;
         Beacon b;
         if (!sgbDecode(bits, b)) continue;
         b.corrected = fixed;
+        b.rxHex = bitsToHex(received, 1, kSgbMsgBits);
+        for (int i = 0; i < kSgbMsgBits; i++) if ((bits[(size_t)i] & 1) != (received[(size_t)i] & 1)) b.fixedBits.push_back(i + 1);
         double m1 = 0, m2 = 0;
         for (int m = 0; m < 125; m++) { const double a = std::fabs(zi[(size_t)(25 + m)]), c = std::fabs(zq[(size_t)(25 + m)]); m1 += a + c; m2 += a * a + c * c; }
         m1 /= 250; m2 /= 250;

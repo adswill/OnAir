@@ -37,7 +37,9 @@ struct Beacon {
     bool homing = false;         // bit 111: a 121.5 MHz homing transmitter is fitted
     bool bch2Present = false, bch2Ok = false;
     int corrected = 0;           // bits the BCH codes repaired
-    std::string rawHex;          // all message bits (sync included) as hex
+    std::string rawHex;          // all message bits (sync included) as hex, after the BCH repair
+    std::string rxHex;           // the same bits as they were received, before the BCH repair (same as rawHex when nothing was repaired)
+    std::vector<int> fixedBits;  // the 1-based bit numbers the BCH codes repaired (the bit numbering of the specification, sync = bits 1-24)
     // second-generation beacons (C/S T.018, see sgb_proto.h): hexId then holds the 23 hex ID
     bool second = false;
     int tac = 0, serial = 0;

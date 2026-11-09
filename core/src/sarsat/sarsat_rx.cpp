@@ -128,6 +128,7 @@ bool tryDecode(const Slicer& s, const Cand& c, Beacon& out, int& matches) {
     for (int k = 0; k < kSyncBits; k++) matches += b[(size_t)k] == ref[(size_t)k];
     if (matches < 23) return false;
     Beacon o;
+    const std::vector<uint8_t> received = b;
     if (!decode(b, o)) return false;
     // BCH-1 repairs any 82-bit word within 3 bits of a codeword (4.4 % of random words), and this search tries thousands of timings/rates/polarities.
     // So a candidate that needed the full repair must at least have a perfect sync word, a country code that exists and, for a long message,
@@ -137,6 +138,8 @@ bool tryDecode(const Slicer& s, const Cand& c, Beacon& out, int& matches) {
     if (o.corrected >= 2 && o.longMsg && !o.bch2Ok) return false;
     o.selfTest = c.test;
     o.rawHex = bitsToHex(b, 1, o.longMsg ? kLongBits : kShortBits);
+    o.rxHex = bitsToHex(received, 1, o.longMsg ? kLongBits : kShortBits);
+    for (int i = 0; i < (o.longMsg ? kLongBits : kShortBits) && i < (int)b.size() && i < (int)received.size(); i++) if ((b[(size_t)i] & 1) != (received[(size_t)i] & 1)) o.fixedBits.push_back(i + 1);
     out = o;
     return true;
 }
