@@ -2,6 +2,7 @@
 #include "dect2/aero/aero_pos.h"
 #include "dect2/aero/aero_cpdlc.h"
 #include "dect2/aero/aero_adsc.h"
+#include "dect2/acars/acars_text.h"
 
 #include <cctype>
 #include <cmath>
@@ -114,6 +115,15 @@ bool aeroParseTextPosition(const std::string& label, const std::string& text, Ae
             f++;
         }
     }
+    AcarsReading r;
+    if (acarsInterpret(label, text, r) && r.hasPos && aeroSanitizePosition(r.lat, r.lon)) {
+        out = AeroPosition();
+        out.source = 2; out.kind = r.kind; out.lat = r.lat; out.lon = r.lon; out.valid = true;
+        if (r.altFt >= 0) { out.hasAlt = true; out.altFt = r.altFt; }
+        if (r.headingDeg >= 0) { out.hasTrack = true; out.trackDeg = r.headingDeg; }
+        out.flightId = r.flight;
+        return true;
+    }
     out = AeroPosition();
     return false;
 }
@@ -144,7 +154,8 @@ bool aeroPositionFromMessage(const std::string& label, const std::string& text, 
     }
     AeroCpdlcMessage cp;
     if (detail && aeroDecodeCpdlc(text, uplink, cp)) *detail = aeroDescribeCpdlc(cp);
-    return aeroParseTextPosition(label, text, out);
+    if (aeroParseTextPosition(label, text, out)) return true;
+    return false;
 }
 
 } // namespace dect2

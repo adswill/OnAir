@@ -3,6 +3,7 @@
 #include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/aero/aero_rx.h"
+#include "dect2/acars/acars_text.h"
 #include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
 #include "dect2/aero/aero_demod.h"
@@ -360,6 +361,7 @@ struct AeroReceiver::Impl {
             am.blockId = m.blockId; am.msgNo = m.msgNo; am.text = m.text.substr(0, 240); am.crcOk = m.crcOk;
             AeroPosition pos;
             if (m.crcOk) aeroPositionFromMessage(m.label, m.text, m.uplink, pos, &am.decoded);
+            if (m.crcOk && am.decoded.empty()) am.decoded = acarsInterpretLine(m.label, m.text);
             if (pos.valid && !aeroSanitizePosition(pos.lat, pos.lon)) pos.valid = false;   // out of range or no fix: not a position
             if (pos.valid) { am.hasPos = true; am.lat = pos.lat; am.lon = pos.lon; }
             const double heardOff = chanFreq(c) - offsetHz;

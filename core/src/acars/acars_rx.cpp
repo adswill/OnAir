@@ -1,6 +1,7 @@
 #include "dect2/limits.h"
 #include "dect2/session/mode_adapters.h"
 #include "dect2/acars/acars_rx.h"
+#include "dect2/acars/acars_text.h"
 #include "dect2/automation/engine.h"
 #include "dect2/net/feeds.h"
 #include "dect2/acars/acars_proto.h"
@@ -337,6 +338,7 @@ struct AcarsReceiver::Impl {
         AeroPosition pos;
         aeroPositionFromMessage(m.label, m.text, !m.downlink, pos, &m.adsc);
         if (!m.downlink) pos = AeroPosition();       // an uplink that names a position is not the aircraft's own
+        if (m.decoded.empty()) m.decoded = acarsInterpretLine(m.label, m.text);
         if (pos.valid) {
             m.hasPos = true; m.lat = pos.lat; m.lon = pos.lon;
             if (m.decoded.empty()) {
