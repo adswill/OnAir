@@ -97,6 +97,30 @@ int AutoBand::update(double now, uint64_t total) {
     return cur_;
 }
 
+int FreqHunt::update(double now, uint64_t total) {
+    if (mhz_.empty()) { finished_ = true; return 0; }
+    if (!started_) { started_ = true; since_ = now; base_ = total; return cur_; }
+    if (found_ || finished_) return cur_;
+    if (total < base_) base_ = total;
+    if (total > base_) { found_ = true; return cur_; }
+    if (now - since_ >= dwell_) {
+        if (cur_ + 1 >= (int)mhz_.size()) { finished_ = true; return cur_; }
+        cur_++; since_ = now; base_ = total;
+    }
+    return cur_;
+}
+
+bool freqRegionApplies(const std::string& r, const std::string& c) {
+    if (c.empty() || r.empty() || r == "GLOBAL" || r == c) return true;
+    if (r == "UK") return c == "GB";
+    if (r == "NA") return c == "US" || c == "CA" || c == "MX";
+    if (r == "EU") {
+        static const char* const k[] = {"AT","BE","BG","HR","CY","CZ","DK","EE","FI","FR","DE","GR","HU","IE","IT","LV","LT","LU","MT","NL","PL","PT","RO","SK","SI","ES","SE","IS","NO","CH","LI"};
+        for (const char* x : k) if (c == x) return true;
+    }
+    return false;
+}
+
 bool modeNotUsedIn(const std::string& name, const std::string& country) {
     if (country.empty()) return false;
     static const struct { const char* name; const char* usedIn; } k[] = {   // space-separated: broadcasters' published deployments, not complete lists of every small user

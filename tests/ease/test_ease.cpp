@@ -141,11 +141,29 @@ static void testAutoBand() {
     CHECK(ismBandsFor("LT")[1] == 868.3); CHECK(ismBandsFor("US")[1] == 915.0); CHECK(ismBandsFor("")[0] == 433.92);
 }
 
+static void testHunt() {
+    FreqHunt h({153.025, 466.075, 169.65}, 20);
+    CHECK(h.update(0, 100) == 0);
+    CHECK(h.update(19, 100) == 0);
+    CHECK(h.update(20, 100) == 1);
+    CHECK(h.update(30, 101) == 1); CHECK(h.found());     // a decode: stays
+    CHECK(h.update(500, 900) == 1);
+    FreqHunt n({1.0, 2.0}, 10);
+    n.update(0, 0); n.update(10, 0); n.update(20, 0);
+    CHECK(n.finished()); CHECK(!n.found());
+    FreqHunt r({1.0, 2.0}, 10);                           // a counter restart is not a decode
+    r.update(0, 50); r.update(1, 0); CHECK(!r.found());
+    FreqHunt e({}, 10); e.update(0, 0); CHECK(e.finished());
+    CHECK(freqRegionApplies("GLOBAL", "LT")); CHECK(freqRegionApplies("EU", "LT")); CHECK(freqRegionApplies("DE", "DE"));
+    CHECK(!freqRegionApplies("DE", "LT")); CHECK(freqRegionApplies("UK", "GB")); CHECK(!freqRegionApplies("NA", "LT"));
+    CHECK(freqRegionApplies("US", ""));
+}
+
 int testNavtex();
 int testRepeaters();
 
 int main() {
-    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand();
+    testSonde(); testGeo(); testPreselect(); testFollowAndDsc(); testRegions(); testAutoBand(); testHunt();
     fails += testNavtex();
     fails += testRepeaters();
     if (!fails) printf("ease ok\n");

@@ -3,6 +3,7 @@
 #pragma once
 #include <cstdint>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dect2::ease {
@@ -52,6 +53,25 @@ private:
     bool haveLast_ = false, settled_ = false, sampling_ = false;
     int cur_ = 0, sampleNext_ = 0;
 };
+
+// ---- "Find ..." over a list of known frequencies: one pass, stops where a decode arrives.
+class FreqHunt {
+public:
+    explicit FreqHunt(std::vector<double> mhz, double dwellS = 20.0) : mhz_(std::move(mhz)), dwell_(dwellS) {}
+    int update(double nowS, uint64_t decodesTotal);   // the index to be on
+    bool found() const { return found_; }
+    bool finished() const { return finished_; }      // a whole pass with nothing heard
+    double mhz(int i) const { return mhz_[(size_t)i]; }
+    int size() const { return (int)mhz_.size(); }
+private:
+    std::vector<double> mhz_;
+    double dwell_, since_ = -1;
+    uint64_t base_ = 0;
+    bool started_ = false, found_ = false, finished_ = false;
+    int cur_ = 0;
+};
+// Whether a frequency-table region (GLOBAL, EU, NA, UK, or a country code) applies to a country; true when the country is unknown.
+bool freqRegionApplies(const std::string& region, const std::string& country);
 
 // ---- Regional modes: true when this mode's signals exist only elsewhere. False for every mode without a tag and when the country (ISO code) is unknown.
 bool modeNotUsedIn(const std::string& modeName, const std::string& country);
