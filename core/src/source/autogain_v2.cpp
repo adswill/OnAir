@@ -22,6 +22,7 @@ void AutoGainController::climbReset(double now) {
     clTrial_ = false; settled_ = false; cand_ = 0; candKind_ = 0; clStep_ = 2; rejectRun_ = 0; clMark_ = -1;
     pj_.clear(); pjMark_ = -1; base_ = Run(); tri_ = Run(); mBase_ = Run(); mTri_ = Run(); specPow_.clear(); specCnt_ = 0; specBase_.clear(); settledAt_ = -1e9; settledJ_ = 0;
     decB_ = Run(); decT_ = Run(); settledDec_ = -1e9; refValid_ = false; lastSearchAt_ = -1e9; lastWakeAt_ = -1e9; blindRest_ = false; splitTried_ = false; splitKept_ = false; cutActive_ = false; cutFrom_ = -1e9; cutAt_ = -1e9;
+    bracketedOnce_ = false;
     wasLocked_ = false; lockLostAt_ = -1; status_.clear(); limit_.clear(); lastDecision_.clear(); retuneWhy_.clear(); slope_ = 1;
     lastSigAt_ = -1e9; lastRecoverAt_ = -1e9; recWait_ = 1.5;
     dwellFrom_ = now; jRecent_ = 0; jRecentN_ = 0; clDir_ = 1; statusAt_ = -1e9; rejUp_ = 0; idleCycles_ = 0; goodGain_ = -1e9;
@@ -71,7 +72,7 @@ bool AutoGainController::floorFine() const { return fl_.valid && fl_.adcMarginDb
 void AutoGainController::noteCut(double now) {
     if (now - lastRecoverAt_ < 3.0) recWait_ = std::min(120.0, recWait_ * 3.0);   // the jump back clipped again: the next one waits longer (a keyed transmitter must not pump the gain)
     cutOobIn_ = -300;   // measured once the cut has settled: during the clip the out-of-band power is the distortion's
-    if (!cutActive_) { cutActive_ = true; cutFrom_ = cur_.totalDb; cutWasOob_ = fl_.valid && fl_.oobDbfs > fl_.chanDbfs + 3 + 10 * std::log10(std::max(1.0, fl_.snrDb)); }
+    if (!cutActive_) { cutActive_ = true; cutFrom_ = cur_.totalDb; cutWasOob_ = fl_.valid && (!(fl_.oobDbfs > -199) || fl_.oobDbfs > fl_.chanDbfs + 3 + 10 * std::log10(std::max(1.0, fl_.snrDb))); }   // (a channel that fills the capture cannot tell: treated as possibly from outside)
     cutAt_ = now;
 }
 
@@ -81,7 +82,6 @@ void AutoGainController::settleHere(const AgInput& in) {
     refValid_ = fl_.valid;
     if (fl_.valid) { floorRef_ = fl_.floorDbfs - cur_.totalDb; oobRef_ = fl_.oobDbfs - cur_.totalDb; }
     headRef_ = headAvg_ + cur_.totalDb;
-    if (fl_.valid && decB_.n >= 3) chanRef_ = fl_.chanDbfs - cur_.totalDb;   // the channel's level while the decoder is locked: a lost lock with the level gone is a transmitter that stopped
     if (!(in.adc.clipFraction > tgt_.clipLimit) && (!cutActive_ || cur_.totalDb >= cutFrom_ - 1)) goodGain_ = cur_.totalDb;
     if (cutActive_ && (cur_.totalDb >= cutFrom_ - 1 || !cutWasOob_)) cutActive_ = false;   // a cut on the channel's own signal is the right gain for it: nothing to come back to
 }
@@ -180,7 +180,7 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
         if (lockLostAt_ < 0) lockLostAt_ = now;
         else if (now - lockLostAt_ > 10 / sp) {
             wasLocked_ = false; lockLostAt_ = -1;
-            const bool levelGone = fl_.valid && chanRef_ > -299 && fl_.chanDbfs - cur_.totalDb < chanRef_ - 6.0;
+            const bool levelGone = fl_.valid && (chanRef_ < -299 || fl_.chanDbfs - cur_.totalDb < chanRef_ - 6.0);   // (never seen locked here: nothing says the signal is the problem)
             if (hasSignal() && !levelGone && now - lastSearchAt_ >= 30 / sp) { wantBracket_ = true; lastSearchAt_ = now; retuneWhy_ = "the decoder lost lock for 10 s while the signal is there"; settled_ = false; return false; }   // a transmitter that went away: no search, nothing to find
         }
     }
@@ -188,6 +188,7 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
     const double minHead = tgt_.minHeadroomDb;
     const double dwell = set_.dwellSec / sp;
     if (hasSignal()) lastSigAt_ = now;
+    if (q_.locked && fl_.valid) chanRef_ = fl_.chanDbfs - cur_.totalDb;   // the channel's level while the decoder locks
     // a signal was here not long ago and is gone now: the gain waits for it (a call that ended is no reason to raise the gain to the noise; the next burst would clip). The overload guards below still act
     const bool idleHold = !hasSignal() && now - lastSigAt_ < 600.0 / sp && (!cutActive_ || (!cutWasOob_ && now - cutAt_ < 30.0 / sp));   // (a cut far below the signal's level loses the decoder too: that is not the signal going away)
     // after a cut (a clip or the headroom floor): back up fast (up to 12 dB a step, 1.1 s apart) to the gain it was cut from once the room is there again. The interferer has
@@ -261,7 +262,8 @@ bool AutoGainController::tickClimb(const AgInput& in, AgCommand& out) {
             lastWakeAt_ = now; idleCycles_ = 0;
         }
         // a settled loop looks at its neighbours ever more rarely: 6, 12, 24 ... up to 15 minutes, 30 minutes while the decoder is comfortable. Each look is a gain step the decoder hears
-        const double every = comf && idleCycles_ >= 2 ? std::min(1800.0, 120.0 * std::pow(2.0, (double)std::min(idleCycles_, 5))) : std::min(900.0, 6.0 * std::pow(3.0, (double)std::min(idleCycles_, 6)));
+        const double every = tgt_.lockSnrDb > 1e8 && tgt_.metric == Metric::Sensitivity && !q_.pulseValid ? std::min(1800.0, 60.0 * std::pow(3.0, (double)std::min(idleCycles_, 4))) :   // no decoder to serve (a wide span, GNSS): the floor does not change by itself
+                             comf && idleCycles_ >= 2 ? std::min(1800.0, 120.0 * std::pow(2.0, (double)std::min(idleCycles_, 5))) : std::min(900.0, 6.0 * std::pow(3.0, (double)std::min(idleCycles_, 6)));
         if (now - settledAt_ < every / sp) {
             if (now - dwellFrom_ > 12 / sp) { base_ = Run(); decB_ = Run(); specPow_.clear(); specCnt_ = 0; dwellFrom_ = now; }   // a fresh baseline for the next probe
             return false;
@@ -450,7 +452,7 @@ bool AutoGainController::evaluateTrial(const AgInput& in, AgCommand& out) {
         base_ = tri_; decB_ = decT_; mBase_ = mTri_;   // what was measured is the new baseline (and the spectrum accumulating now is its own)
         if (candKind_ == 1) clDir_ = 1; else if (candKind_ == 2) clDir_ = -1;
         if (candKind_ != 3) clStep_ = std::min(tgt_.maxStepDb, clStep_ * 1.5);
-        cand_ = 0; settled_ = false; rejectRun_ = 0; idleCycles_ = 0;
+        cand_ = 0; settled_ = false; rejectRun_ = 0; idleCycles_ = std::max(0, idleCycles_ - 2);   // a kept step: the back-off shortens, it does not start over
         if (candKind_ == 3) splitKept_ = true;
         logEvent(now, basePlan_.totalDb, cur_.totalDb, why);
         specBase_.clear();

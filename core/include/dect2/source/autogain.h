@@ -407,6 +407,7 @@ private:
     bool cutActive_ = false; double cutFrom_ = -1e9, cutAt_ = -1e9;   // a cut (clip or headroom floor) took the gain down from cutFrom_: recovery aims back at it, whatever the cause was
     void noteCut(double now);
     double cutOobIn_ = -300;
+    bool bracketedOnce_ = false;          // the first search of this start has run: later ones wait for something to judge by
     bool cutWasOob_ = false;              // the cut came from a signal outside the channel (it can leave while the channel stays idle)
     double lastSigAt_ = -1e9, lastRecoverAt_ = -1e9, recWait_ = 1.5;   // when a signal was last seen (the gain holds through a call that ended), the back-off of re-clipping recoveries
     StagePlan basePlan_; Policy basePol_ = Policy::Balanced;

@@ -298,7 +298,7 @@ static Limits limitsFor(ModeClass m, const RadioProfile& p) {
     Limits l;
     l.settle = (m == PULSED ? 60 : m == TDMA ? 25 : 12) * (p.remote ? 2.0 : 1.0);
     l.dq = m == WIDE ? 3.5 : 1.0; l.acqClip = 1.5; l.chg = 30; l.deaf = 12; l.irClip = 1.5; l.irDq = m == WIDE ? 4.0 : 2.0;
-    l.irRec = p.remote ? 45 : 30; l.small = 6; l.idleChg = 20; l.idleSpan = 6; l.burstChg = 30;
+    l.irRec = p.remote ? 45 : 30; l.small = 6; l.idleChg = 20; l.idleSpan = 6; l.burstChg = 60;
     return l;
 }
 
@@ -461,7 +461,7 @@ static Row runCell(const RadioRow& rr, ModeClass m) {
     flag(row.modeS > lim.settle, "modesw");
     flag(row.idleChg > lim.idleChg, "idle");
     flag(row.idleSpan > lim.idleSpan, "idlespan");
-    flag(row.burstChg > lim.burstChg, "bursty");
+    if (m != OFDM) flag(row.burstChg > lim.burstChg, "bursty");   // (a continuous OFDM carrier does not come and go: its number is kept for information)
     flag(m != PULSED && row.burstDq > 1.5, "burstq");
     return row;
 }

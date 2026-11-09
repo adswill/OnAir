@@ -283,7 +283,10 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
     }
     if (now < changedAt_ + settleTime()) { phase_ = Phase::Settling; return false; }
     if (nAvg_ < 3 || now - measuredFrom_ < 0.3 / sp) { phase_ = Phase::Settling; return false; }
-    if (wantBracket_ && set_.quickStart) { beginBracket(in); return tickBracket(in, out); }
+    if (wantBracket_ && set_.quickStart) {
+        if (set_.v2 && bracketedOnce_ && !hasSignal()) wantBracket_ = false;   // a later search with nothing to judge a gain by would only sweep an empty channel
+        else { bracketedOnce_ = true; beginBracket(in); return tickBracket(in, out); }
+    }
     wantBracket_ = false;
     if (set_.v2) { double j; if ((tgt_.kind == ModeKind::Pulsed && q_.pulseValid) || objective(j)) return tickClimb(in, out); }   // the hill climb on the measured objective; no objective (a span with no channel): the headroom loop below
     // the policy: the mode's own, or linearity after an overload / near a strong neighbour
@@ -878,7 +881,8 @@ void AutoGainController::beginBracket(const AgInput& in) {
     if (queue_.size() < 3) { queue_.clear(); return; }   // too coarse a radio to bracket: the loop does its normal work
     br_ = 1; brExtra_ = priorMode ? 4 : 0;   // a prior: the search stays within a few dB of it (the climb goes on from there)
     phase_ = Phase::Sweeping;
-    logEvent(in.now, cur_.totalDb, cur_.totalDb, fmt("quick search: %.0f gains around %.0f dB", (double)queue_.size(), star));
+    logEvent(in.now, cur_.totalDb, cur_.totalDb, fmt("quick search: %.0f gains around %.0f dB", (double)queue_.size(), star) + (retuneWhy_.empty() ? std::string() : " (" + retuneWhy_ + ")"));
+    retuneWhy_.clear();
 }
 
 bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
