@@ -6,7 +6,6 @@
 #include "dect2/smartnet/smartnet_tel.h"
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <map>
 #include <random>
 #include <vector>
@@ -185,7 +184,6 @@ static void testSystem(const char* name, SmartnetGenConfig c, Band band = Band::
     CHECK(encLogged, "%s: the encrypted call must be logged and not followed", name);
     CHECK(!r.audio.count(0x7770), "%s: no sound from the encrypted call", name);
     double s1 = toneShare(r.audio[0x1230], 1000, 48000), s2 = toneShare(r.audio[0x4560], 1500, 48000);
-    if (std::getenv("SN_DBG")) for (auto& kv : r.audio) { double e = 0; size_t nz = 0; for (float v : kv.second) { e += (double)v * v; nz += v != 0; } printf("  tg %d: %zu samples, %zu nonzero, rate %d, rms %.3f\n", kv.first, kv.second.size(), nz, r.rate[kv.first], std::sqrt(e / std::max<size_t>(1, nz))); }
     CHECK(s1 > 0.5, "%s: tone of the first call %.2f", name, s1);
     CHECK(s2 > 0.5, "%s: tone of the second call %.2f", name, s2);
     printf("%-22s: %4llu words, %llu bad, snr %.1f dB, followed %d, tones %.2f %.2f, band %s\n", name, (unsigned long long)r.t.oswOk, (unsigned long long)r.t.oswBad, (double)r.t.snrDb, followed, s1, s2, r.t.band.c_str());

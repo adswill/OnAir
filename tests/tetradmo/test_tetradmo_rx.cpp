@@ -6,7 +6,6 @@
 #include "dect2/tetradmo/tetradmo_tel.h"
 #include <cmath>
 #include <cstdio>
-#include <cstdlib>
 #include <random>
 #include <vector>
 using namespace dect2;
@@ -86,7 +85,6 @@ static void expectClear(const char* name, const TetraDmoGenConfig& c, double off
             int bad = 0;
             for (size_t k = 0; k < tx.size(); k++) bad += r.frames[i][k] != tx[k];
             if (bad <= 8) { good++; break; }
-            if (getenv("DMO_DBG") && &tx == &gen.trafficBits[i < gen.trafficBits.size() ? i : 0]) printf("  rx %zu vs tx %zu: %d bits differ\n", i, i, bad);
         }
     }
     printf("%-20s: DSB %llu, DNB %llu, traffic %zu of %d delivered, %d intact\n", name, (unsigned long long)r.t.dsb, (unsigned long long)r.t.dnb, r.frames.size(), c.trafficFrames, good);

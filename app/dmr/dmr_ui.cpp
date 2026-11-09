@@ -328,6 +328,18 @@ void callsView(App& a) {
         if (ImGui::TreeNode("Install helper")) { appcodec::codecInstallHelper("ambe2"); ImGui::TreePop(); }
     }
     if (on && !t.cachInfo.empty() && t.cachInfo != "null") ImGui::TextDisabled("CACH: %s", t.cachInfo.c_str());
+    if (on && t.xpt.seen && ImGui::TreeNode(trw("Hytera XPT"))) {   // recognised from its control blocks: no setting
+        ImGui::TextUnformatted(dect2::xptSummary(t.xpt).c_str());
+        ImGui::TextDisabled("%s", tr("Field positions from DSD-FME's findings; the maker publishes no description."));
+        for (int i = 0; i < 24; i++) {
+            const auto& l = t.xpt.lsn[i];
+            if (l.status < 0) continue;
+            ImGui::Text("LSN %2d: %s %d", i + 1, l.status == 3 ? "group" : l.status == 2 ? "private" : l.status == 0 ? "idle" : "?", l.tg);
+        }
+        for (const auto& c : t.xpt.calls) ImGui::Text("%u > %u  LCN %d", c.source, c.target, c.lcn);
+        for (const auto& a : t.xpt.adjacent) ImGui::TextDisabled("%s %d: %s %d", tr("Adjacent site"), a.site, tr("free LCN"), a.freeLcn);
+        ImGui::TreePop();
+    }
     ImGui::Spacing();
     const float rest = ImGui::GetContentRegionAvail().y;
     const float lh = ImGui::GetTextLineHeightWithSpacing();

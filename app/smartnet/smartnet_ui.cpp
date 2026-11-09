@@ -62,7 +62,7 @@ void tick(App& a) {
 }
 
 void advanced() {
-    if (!ImGui::CollapsingHeader(tr("Advanced"))) return;
+    if (!ImGui::CollapsingHeader(trw("Advanced"))) return;
     const char* names[] = {tr("Automatic (from the frequency and the control channel)"), "800 MHz domestic", "800 MHz rebanded", "800 MHz domestic splinter", "800 MHz international", "800 MHz international splinter", "900 MHz", tr("Custom (OBT, VHF / UHF)")};
     ImGui::SetNextItemWidth(320 * gUi);
     if (ImGui::Combo(tr("Band plan"), &S.band, names, IM_ARRAYSIZE(names))) S.dirty = true;
@@ -122,7 +122,7 @@ void tab(App& a) {
         }
         ImGui::EndTable();
     }
-    if (!t.talkgroups.empty() && ImGui::CollapsingHeader(tr("Talkgroups"), ImGuiTreeNodeFlags_DefaultOpen) && ImGui::BeginTable("sntg", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
+    if (!t.talkgroups.empty() && ImGui::CollapsingHeader(trw("Talkgroups"), ImGuiTreeNodeFlags_DefaultOpen) && ImGui::BeginTable("sntg", 5, ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn(tr("Talkgroup")); ImGui::TableSetupColumn(tr("Calls")); ImGui::TableSetupColumn(tr("Last unit")); ImGui::TableSetupColumn(tr("Frequency")); ImGui::TableSetupColumn(tr("Type"));
         ImGui::TableHeadersRow();
         for (const dect2::SmartnetTalkgroup& g : t.talkgroups) {
@@ -135,7 +135,7 @@ void tab(App& a) {
         }
         ImGui::EndTable();
     }
-    if ((!t.sites.empty() || !t.patches.empty()) && ImGui::CollapsingHeader(tr("Sites and patches"))) {
+    if ((!t.sites.empty() || !t.patches.empty()) && ImGui::CollapsingHeader(trw("Sites and patches"))) {
         for (const dect2::SmartnetSiteRow& s : t.sites) ImGui::Text("%s %d: %s, %s, %s", s.adjacent ? tr("Adjacent site") : tr("Site"), s.site, sn::siteBandName(s.band), sn::featuresText(s.features).c_str(), mhz(s.controlHz).c_str());
         for (const dect2::SmartnetPatch& p : t.patches) ImGui::Text("%s %d: %s %d", tr("Patch"), p.tg, tr("includes"), p.member);
     }
