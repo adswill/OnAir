@@ -14,6 +14,7 @@
 #include "dect2/engine/updater.h"
 #include "dect2/dab/dab_fig.h"
 #include "dab_txlist.h"
+#include "dect2/dab/dab_sfn.h"
 #include <algorithm>
 #include <atomic>
 #include <ctime>
@@ -422,6 +423,20 @@ void dabTransmittersTab(App& a) {
         ImGui::EndTable();
     }
 
+    {   // the network's paths and which transmitter each is: needs the antenna position and the transmitters' positions
+        const DabTelemetry& d = a.rx.dab;
+        const auto paths = dect2::dabCirPaths(d.cir);
+        if (a.rx.standard == 3 && d.state == 2 && paths.size() >= 2 && ImGui::TreeNode(trw("Transmitter delays"))) {
+            std::vector<dect2::DabSfnTx> txs;
+            for (const auto& r : rows) { dect2::DabSfnTx t; t.mainId = r.h->mainId; t.subId = r.h->subId; t.km = r.km; t.bearingDeg = r.deg; t.tiiDb = r.h->levelDb; txs.push_back(t); }
+            const auto s = dect2::dabSfnSolve(paths, txs);
+            for (const auto& p : paths) ImGui::TextDisabled("%+.1f us  %.0f dB  (%.1f km)", p.delayUs, p.levelDb, std::fabs(p.delayUs) * 0.2998);
+            if (s.outsideGuard) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.3f, 1), "%s", tr("A path arrives beyond the guard interval: it interferes. A directional antenna away from it helps."));
+            for (const auto& r : s.rows) if (r.matched) ImGui::Text("%02d/%02d  %.0f km  %.0f deg  %s %+.1f us", r.tx.mainId, r.tx.subId, r.tx.km, r.tx.bearingDeg, tr("path"), r.path.delayUs);
+            if (s.refTx >= 0) ImGui::TextDisabled("%s %.0f deg", tr("Strongest path comes from bearing"), s.rows[(size_t)s.refTx].tx.bearingDeg);
+            ImGui::TreePop();
+        }
+    }
     submitDialog();
     // ---- the list and the antenna position
     ImGui::Spacing();
