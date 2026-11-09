@@ -4,6 +4,8 @@
 // of the capture), and the following of one analog voice channel through a second FM front end.
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/audio/audioout.h"
+#include "dect2/codec/codec_registry.h"
+#include "dect2/edacs/provoice.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/dsp/fm_front.h"
 #include "dect2/edacs/edacs_msg.h"
@@ -48,6 +50,7 @@ constexpr double kLockSec = 5.0;
 constexpr double kVoiceRate = 48000.0;
 constexpr double kCallHoldSec = 4.0;       // an announced call with no repeat and no carrier on its channel ends after this
 constexpr double kActivityHoldSec = 1.5;   // a carrier-only call ends this long after the carrier went
+constexpr int kPvRing = 16384, kPvMask = kPvRing - 1;   // ProVoice block buffer: 768 bits at 8 samples
 constexpr double kChanHalfHz = 6250.0;     // half the width of a channel in the power scan
 int pop(uint64_t x) { return __builtin_popcountll(x); }
 }
@@ -96,6 +99,20 @@ struct EdacsReceiver::Impl {
     std::atomic<float> volume{1.f};
     std::atomic<bool> muted{false}, silent{false};
     std::function<void(int, const float*, size_t)> tap;
+    // ---- ProVoice on the followed channel: the same FM front as the control channel
+    FmFront pv;
+    FmBiquad pvLp;
+    EyeEnvelope pvEnv;
+    std::vector<float> pvDisc;
+    float pvRing[kPvRing] = {};
+    uint64_t pvN = 0;
+    uint32_t pvReg[kSps] = {};
+    bool pvLocked = false, pvInv = false;
+    uint64_t pvAt = 0;                        // the sample of the last sync bit of the block being read
+    int pvMiss = 0;
+    bool followDig = false;
+    std::unique_ptr<codec::SpeechCodec> pvCodec;
+    uint64_t pvBlocks = 0, pvFrames = 0, pvBad = 0;
     int pendingLid = -1;
     double pendingLidT = -1e9;
 
@@ -241,21 +258,24 @@ struct EdacsReceiver::Impl {
         if (followLcn) {
             EdacsCall* c = activeCall(followLcn);
             const bool carrier = chActive(followLcn) || t - chLastOn[(size_t)followLcn - 1] < 0.4 || (c && t - c->startSec < 1.0);   // the call is over when its carrier is
-            if (!follow || !c || !carrier) { flushAudio(); followLcn = 0; voice.reset(); }
+            if (!follow || !c || !carrier) { flushAudio(); followLcn = 0; followDig = false; voice.reset(); }
         }
         if (follow && !followLcn) {
             if (lcnFreq.empty()) tel.note = "no frequency table: enter the voice channel frequencies (LCN 1, 2, 3 ...) to follow calls";
             else if (centreHz <= 0) tel.note = "the frequency of the capture is not known (file input): the voice channels cannot be placed";
             for (int pass = 0; pass < 2 && !followLcn; pass++)   // first the calls with a carrier on the air, then the ones just announced
                 for (auto& c : tel.calls) {   // newest first
-                    if (!c.active || c.freqHz <= 0 || c.digital) continue;
+                    if (!c.active || c.freqHz <= 0) continue;
+                    if (c.digital && !codec::pluginLoaded("imbe")) { if (tel.note.empty()) tel.note = "ProVoice call: install the IMBE plug-in (onair-codec-imbe) for its sound"; continue; }
                     if (c.fromActivity && !followAct) continue;
                     if (!followGroups.empty() && std::find(followGroups.begin(), followGroups.end(), c.gid) == followGroups.end()) continue;
                     if (!inCapture(c.freqHz)) { if (tel.note.empty()) tel.note = "LCN " + std::to_string(c.lcn) + " is outside the captured span: use a wider capture"; continue; }
                     if (pass == 0 ? !chActive(c.lcn) : t - c.startSec > 1.0) continue;
                     followLcn = c.lcn;
+                    followDig = c.digital;
                     voice.reset(); vdc = 0; vlp.clear(); aud.clear();
                     voice.setOffset(c.freqHz - centreHz);
+                    if (followDig) startProvoice(c.freqHz);
                     break;
                 }
         }
@@ -263,6 +283,78 @@ struct EdacsReceiver::Impl {
         tel.follow = follow; tel.followActivity = followAct; tel.followLcn = followLcn;
         tel.audioOpen = followLcn != 0 && chActive(followLcn) && !muted.load();
     }
+
+    // ---- ProVoice: the 768 bit blocks of the followed digital channel. Sync on the 32 bit word (four variants: standard or Extended Addressing, both polarities), then one block
+    // of four IMBE 7100x4400 frames each 80 ms. The frames are corrected and rewritten as 7200x4400 code words for the user-installed plug-in.
+    void startProvoice(double hz) {
+        pv.reset(); pv.setOffset(hz - centreHz); pvEnv.clear(); pvLp.clear(); pvN = 0; for (auto& r : pvRing) r = 0; for (auto& r : pvReg) r = 0;
+        pvLocked = false; pvMiss = 0;
+        pvCodec = codec::pluginVocoder("imbe");
+    }
+    double pvSoft(uint64_t i) const { return (pvRing[i & kPvMask] + pvRing[(i - 1) & kPvMask] + pvRing[(i - 2) & kPvMask]) / 3.0; }
+    void pvDecodeBlock(uint64_t lastSync) {
+        const double thr = pvEnv.mid();
+        uint8_t bits[736];
+        for (int i = 0; i < 736; i++) {
+            const uint64_t idx = lastSync + (uint64_t)(i + 1) * kSps;
+            bits[i] = (uint8_t)((pvSoft(idx) > thr ? 0 : 1) ^ (pvInv ? 1 : 0));
+        }
+        provoice::Frame7100 fr[4];
+        uint16_t lid = 0;
+        provoice::splitBlock(bits, fr, &lid);
+        pvBlocks++;
+        for (int f = 0; f < 4; f++) {
+            uint8_t d[provoice::kInfoBits];
+            int errs = 0;
+            pvFrames++;
+            if (!provoice::decode7100(fr[f], d, &errs)) { pvBad++; continue; }
+            if (!pvCodec) continue;
+            provoice::convert7100to7200(d);
+            provoice::Frame7200 out;
+            provoice::encode7200(d, out);
+            const std::vector<int16_t> pcm = pvCodec->decode(codec::packCodeWords(&out.b[0][0], 8, 23));
+            // the plug-in gives 8 kHz; the follower plays at 48 kHz: each sample six times
+            for (int16_t v : pcm) for (int k = 0; k < 6; k++) aud.push_back(chActive(followLcn) ? (float)v / 32768.f : 0.f);
+            if (aud.size() >= 960) flushAudio();
+        }
+    }
+    void pvSample(double s) {
+        pvRing[pvN & kPvMask] = (float)s;
+        pvEnv.push(s);
+        const int ph = (int)(pvN % kSps);
+        const double thr = pvEnv.mid();
+        pvReg[ph] = (pvReg[ph] << 1) | (pvSoft(pvN) > thr ? 0u : 1u);   // a positive step is payload bit 0 (dsd_dibit.c)
+        pvN++;
+        if (pvLocked) {
+            if (pvN >= pvAt + 736 * kSps + 2) {
+                pvDecodeBlock(pvAt);
+                pvAt += (uint64_t)provoice::kBlockBits * kSps;
+                // is the next sync where it should be? a few samples each way, so clock drift is followed; otherwise hunt again
+                int best = 99; uint64_t bestAt = 0;
+                for (int d = -3; d <= 3; d++) {
+                    const uint64_t last = pvAt + (uint64_t)(int64_t)d;
+                    uint32_t v = 0;
+                    for (int i = 0; i < 32; i++) v = (v << 1) | (pvSoft(last - (uint64_t)(31 - i) * kSps) > thr ? 0u : 1u);
+                    const uint32_t tmpl = (pvInv ? ~pvTmpl : pvTmpl);
+                    const int e = __builtin_popcount(v ^ tmpl);
+                    if (e < best) { best = e; bestAt = last; }
+                }
+                if (best <= 5) { pvAt = bestAt; pvMiss = 0; }
+                else if (++pvMiss >= 3) pvLocked = false;
+            }
+            return;
+        }
+        if (pvN < 512 || pvEnv.range() < 800) return;
+        const uint32_t r = pvReg[ph];
+        for (uint32_t t : {provoice::kSyncStdValue, provoice::kSyncEaValue}) {
+            const int e0 = __builtin_popcount(r ^ t), e1 = __builtin_popcount(r ^ ~t);
+            if (e0 <= 2 || e1 <= 2) {
+                pvInv = e1 < e0; pvTmpl = t; pvAt = pvN - 1; pvLocked = true; pvMiss = 0;
+                return;
+            }
+        }
+    }
+    uint32_t pvTmpl = 0;
 
     // ---- the followed voice channel
     void voiceSamples() {
@@ -430,6 +522,8 @@ void EdacsReceiver::configure(double inputRateHz) {
     p_->post.lowpass(6000.0, kWork, 0.7071);
     p_->voiceOk = p_->rateSet && p_->voice.configure(inputRateHz, kVoiceRate, 7500.0);
     p_->vlp.lowpass(3400.0, kVoiceRate, 0.7071);
+    p_->pv.configure(inputRateHz, kWork, 9000.0);
+    p_->pvLp.lowpass(6000.0, kWork, 0.7071);
     p_->initActivity();
     p_->clearState();
 }
@@ -456,7 +550,11 @@ void EdacsReceiver::feed(const cf32* x, size_t n) {
             if (p_->blkN == N) { p_->activityBlock(); p_->blkN = 0; }
         }
     }
-    if (p_->followLcn && p_->voiceOk) {
+    if (p_->followLcn && p_->followDig && p_->pv.ready()) {
+        p_->pvDisc.clear();
+        p_->pv.feed(x, n, p_->pvDisc);
+        for (float d : p_->pvDisc) p_->pvSample(p_->pvLp.run(d));
+    } else if (p_->followLcn && p_->voiceOk) {
         p_->vdisc.clear();
         p_->voice.feed(x, n, p_->vdisc);
         p_->voiceSamples();

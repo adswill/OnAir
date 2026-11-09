@@ -7,7 +7,7 @@
 // published ones, nothing is guessed). Command word = the first message of the frame; the second message carries the rest of the fields of the commands that
 // use two words (the calling unit ID of a group call, the source of an individual call, the port of a data call).
 // ESK: some systems XOR a fixed byte into the top bits of every word (0xA0, "ESK"); it is a setting.
-// ProVoice (the manufacturer's digital voice) is not decoded: there is no codec for it in this program.
+// ProVoice (the manufacturer's digital voice) goes to the user-installed IMBE plug-in (edacs/provoice.h).
 #pragma once
 #include <cstdint>
 #include <string>

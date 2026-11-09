@@ -1,7 +1,7 @@
 // EDACS control channel receiver: FM discriminator at 76.8 kHz (8 samples per bit), dotting search, three-copy majority voting; the message layer on top (assumed
 // layout, edacs_msg.h): calls, talkgroups and site information; and, with a table of the system's voice channel frequencies and a capture wide enough to hold
 // them, a power scan of those channels and the following of one analog voice channel (FM, the sound of the call that the control channel announced, or of a
-// carrier seen on a channel). ProVoice digital voice is not decoded (no codec); nothing encrypted is handled.
+// carrier seen on a channel). ProVoice digital calls go through the user-installed IMBE plug-in (provoice.h); nothing encrypted is handled.
 #pragma once
 #include "dect2/common/ring.h"
 #include "dect2/edacs/edacs_msg.h"

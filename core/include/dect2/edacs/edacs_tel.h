@@ -1,6 +1,6 @@
 // EDACS control channel telemetry. RxTelemetry::edacs, engine standard 132, active standard 131 (family 130).
 // Control data, the call and talkgroup tables built from it (published layout: edacs_msg.h), the voice channel activity of a frequency table and the
-// following of one analog voice channel. ProVoice (digital) voice is not decoded; nothing encrypted is handled. Receive only.
+// following of one analog voice channel. ProVoice goes to the user-installed IMBE plug-in; nothing encrypted is handled. Receive only.
 #pragma once
 #include <cstdint>
 #include <cstdio>
