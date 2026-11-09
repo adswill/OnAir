@@ -311,6 +311,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 234: return pollStd(rxFy_, 234, t, seqs[192], &RxTelemetry::fygeo);   // FengYun FY-4A HRIT-II/III (slot 192)
     case 235: return pollStd(rxFy_, 235, t, seqs[193], &RxTelemetry::fygeo);   // FengYun FY-2 S-VISSR (slot 193)
     case 242: return pollStd(rxSens_, 242, t, seqs[201], &RxTelemetry::sensors);   // Sub-GHz sensors (slot 201)
+    case 246: return pollStd(rxBgan_, 246, t, seqs[205], &RxTelemetry::bgan);   // Inmarsat BGAN (slot 205)
     case 244: return pollStd(rxSfer_, 244, t, seqs[203], &RxTelemetry::sferics);   // Sferics (slot 203)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)

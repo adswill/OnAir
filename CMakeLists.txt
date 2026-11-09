@@ -201,6 +201,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES pskdsp)   # PSK demodulator and analyser (family 202, #282): core/src/pskdsp, app/pskdsp, tests/pskdsp
   list(APPEND DECT2_MODES pactorhf)   # PACTOR-II (family 237), -III (238) and -IV (239), physical layer only: core/src/pactorhf, app/pactorhf, tests/pactorhf (docs/pactorhf.md)
   list(APPEND DECT2_MODES sensors)   # Sub-GHz sensors (family 241, docs/SENSORS-3.7.md): core/src/sensors, app/sensors, tests/sensors; decoders vendored from rtl_433 (third_party/rtl_433)
+  list(APPEND DECT2_MODES bgan)   # Inmarsat BGAN forward bearers, signalling only (family 245, docs/BGAN-3.7.md): core/src/bgan, app/bgan, tests/bgan
   list(APPEND DECT2_MODES sferics)   # Sferics / lightning (family 243): core/src/sferics, app/sferics, tests/sferics
   list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
@@ -1557,6 +1558,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_sensors_mode PRIVATE dect2core)
     target_compile_definitions(test_sensors_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME sensors_mode COMMAND test_sensors_mode)
+    add_executable(test_bgan_mode tests/app/test_bgan_mode.cpp)   # BGAN: tuning, mode row, engine and panel wiring, honesty strings
+    target_link_libraries(test_bgan_mode PRIVATE dect2core)
+    target_compile_definitions(test_bgan_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME bgan_mode COMMAND test_bgan_mode)
     add_executable(test_sferics_mode tests/app/test_sferics_mode.cpp)   # Sferics: tuning, mode row, engine / panel wiring, honest doc
     target_link_libraries(test_sferics_mode PRIVATE dect2core)
     target_compile_definitions(test_sferics_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
