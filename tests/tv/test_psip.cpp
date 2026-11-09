@@ -37,9 +37,20 @@ int main() {
         CHECK(e.eventId == 42, "event id %d", e.eventId);
     }
     {   // compressed text: left blank and flagged; damaged section refused
-        const uint8_t comp[] = {1, 'e', 'n', 'g', 1, 1, 0, 2, 0x12, 0x34};
-        bool c = false; std::string t = psip::mss(comp, sizeof comp, &c);
-        CHECK(c && t.empty(), "compressed");
+        bool c = false; std::string t;
+        {   // the worked example of A/65 annex F: "The next" with table C4
+            static const char* bits = "010" "0" "0" "01" "10010100" "01101110" "010" "00010011" "01" "010";
+            std::vector<uint8_t> by; int nb = 0; uint8_t acc = 0;
+            for (const char* b = bits; *b; b++) { acc = (uint8_t)(acc << 1 | (*b == '1')); if (++nb == 8) { by.push_back(acc); nb = 0; acc = 0; } }
+            if (nb) by.push_back((uint8_t)(acc << (8 - nb)));
+            bool ok = false; std::string h = psip::psipHuffman(by.data(), (int)by.size(), 1, &ok);
+            CHECK(ok && h == "The next", "huffman example: '%s' ok %d", h.c_str(), ok);
+            std::vector<uint8_t> m = {1, 'e', 'n', 'g', 1, 1, 0, (uint8_t)by.size()}; m.insert(m.end(), by.begin(), by.end());
+            t = psip::mss(m.data(), (int)m.size(), &c); CHECK(t == "The next" && !c, "mss huffman '%s'", t.c_str());
+        }
+        const uint8_t comp[] = {1, 'e', 'n', 'g', 1, 7, 0, 2, 0x12, 0x34};
+        t = psip::mss(comp, sizeof comp, &c);
+        CHECK(c && t.empty(), "unknown compression");
         const uint8_t utf[] = {1, 'e', 'n', 'g', 1, 0, 0x3F, 4, 0x00, 'A', 0x20, 0xAC};
         t = psip::mss(utf, sizeof utf, &c); CHECK(t == "A\xE2\x82\xAC", "UTF-16 '%s'", t.c_str());
         auto bad = finish(head(0xC7, 0)); bad[bad.size() - 2] ^= 1; psip::State s; CHECK(!psip::parseMgt(bad.data(), (int)bad.size(), s), "bad CRC accepted");

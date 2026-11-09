@@ -2,6 +2,7 @@
 #include "dect2/tv/psip.h"
 #include "dect2/tv/ts_proto.h"
 #include <cstring>
+#include <sstream>
 
 namespace dect2 {
 namespace psip {
@@ -18,6 +19,46 @@ void utf8(std::string& o, uint32_t c) {
 }
 }  // namespace
 
+// A/65 Annex C: the two order-1 Huffman code sets, built once from the tables of the standard (Tables C4 and C6; (c) 1997 General Instrument, free for use with the standard)
+namespace {
+#include "psip_huff.inc"
+struct Huff {
+    std::map<int, std::map<std::string, int>> trees;
+    explicit Huff(const char* t) { std::istringstream ss(t); int p, sym; std::string code; while (ss >> p >> sym >> code) trees[p][code] = sym; }
+};
+const Huff& huffOf(int comp) { static const Huff a(kTitle), b(kDesc); return comp == 1 ? a : b; }
+}  // namespace
+
+std::string psipHuffman(const uint8_t* p, int n, int comp, bool* ok) {
+    const Huff& h = huffOf(comp);
+    std::string out; int prior = 0; size_t bit = 0; const size_t total = (size_t)n * 8;
+    auto get = [&](size_t i) { return (p[i / 8] >> (7 - (i & 7))) & 1; };
+    bool good = false;
+    for (;;) {
+        auto tr = h.trees.find(prior);
+        int sym = -1;
+        if (tr != h.trees.end()) { std::string c; while (bit < total && c.size() < 32) { c += (char)('0' + get(bit++)); auto it = tr->second.find(c); if (it != tr->second.end()) { sym = it->second; break; } } }
+        if (sym < 0) break;
+        if (sym == 0) { good = true; break; }
+        if (sym == 27) {                                       // the next character (or run of 128 .. 255) is plain
+            for (;;) {
+                if (bit + 8 > total) { sym = -1; break; }
+                int v = 0; for (int k = 0; k < 8; k++) v = v << 1 | get(bit++);
+                if (v == 0) { good = true; sym = -2; break; }
+                utf8(out, (uint32_t)v);
+                prior = v;
+                if (v < 128) break;
+            }
+            if (sym == -1 || sym == -2) break;
+            continue;
+        }
+        utf8(out, (uint32_t)sym);
+        prior = sym;
+    }
+    if (ok) *ok = good;
+    return out;
+}
+
 std::string mss(const uint8_t* p, int len, bool* compressed) {
     if (compressed) *compressed = false;
     std::string out;
@@ -29,7 +70,8 @@ std::string mss(const uint8_t* p, int len, bool* compressed) {
     for (int s = 0; s < nSeg && i + 3 <= len; s++) {
         const int comp = p[i], mode = p[i + 1], n = p[i + 2]; i += 3;
         if (i + n > len) break;
-        if (comp != 0) { if (compressed) *compressed = true; }
+        if (comp == 1 || comp == 2) { bool ok = false; std::string t = psipHuffman(p + i, n, comp, &ok); if (ok) out += t; else if (compressed) *compressed = true; }
+        else if (comp != 0) { if (compressed) *compressed = true; }
         else if (mode == 0x3F) { for (int k = 0; k + 1 < n; k += 2) utf8(out, (uint32_t)p[i + k] << 8 | p[i + k + 1]); }
         else if (mode <= 0x33) { for (int k = 0; k < n; k++) utf8(out, (uint32_t)mode << 8 | p[i + k]); }  // mode: the upper byte of the Unicode block (0 = Latin-1)
         i += n;

@@ -1,5 +1,5 @@
 // ATSC PSIP beyond the channel table (A/65): MGT, the source_id of the channels, EIT titles, ETT descriptions, the system time. Text is ATSC multiple-string text in plain
-// (compression 0) form: Latin-1 (mode 0) or UTF-16 (mode 0x3F). Huffman-compressed titles (Annex C tables) are reported as compressed and left blank.
+// (compression 0) form: Latin-1 (mode 0) or UTF-16 (mode 0x3F). Huffman coded text (compression 1 and 2, the standard's Annex C tables) is decoded.
 #pragma once
 #include <cstdint>
 #include <map>
@@ -29,6 +29,7 @@ bool parseEtt(const uint8_t* s, int len, State& st, uint32_t* etmId, std::string
 bool parseStt(const uint8_t* s, int len, State& st);
 // multiple string text (A/65 clause 6.10): the first string of the first language.  Returns the number of bytes consumed. *compressed set if Huffman coded.
 std::string mss(const uint8_t* p, int len, bool* compressed);
+std::string psipHuffman(const uint8_t* data, int bytes, int compression, bool* ok);   // compression 1 (titles) or 2 (descriptions)
 inline int64_t gpsToUtc(int64_t gps, int offset) { return gps + 315964800 - offset; }
 
 }  // namespace psip
