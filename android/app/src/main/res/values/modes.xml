@@ -223,6 +223,7 @@
         <item>MAVLink (SiK radio)</item>
         <item>FrSky RC (D8 / D16)</item>
         <item>FlySky RC (AFHDS / 2A)</item>
+        <item>wfb-ng / OpenHD</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -427,6 +428,7 @@
         <item>MAVLink telemetry on SiK / 3DR radios at 433 and 915 MHz: GFSK frequency hopping, every air speed, MAVLink v1 / v2 messages with vehicle position on the map</item>
         <item>FrSky D8 and D16 2.4 GHz RC links (CC2500 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
         <item>FlySky AFHDS and AFHDS 2A 2.4 GHz RC links (A7105 GFSK, hopping): transmitter id and channels; layouts from the DIY-Multiprotocol-TX-Module project, simulated signals only so far</item>
+        <item>wfb-ng and OpenHD digital video links: 802.11n frames injected in monitor mode, MCS 0 - 7 at 20 MHz. Link and port, FEC block numbers, frames lost; the video stays encrypted</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -631,6 +633,7 @@
         <item>Drone telemetry</item>
         <item>RC link</item>
         <item>RC link</item>
+        <item>Video link, structure only</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -835,5 +838,6 @@
         <item>mavlink sik 3dr ardupilot px4 telemetry drone</item>
         <item>frsky d8 d16 accst taranis rc</item>
         <item>flysky afhds i6 rc</item>
+        <item>wfb wfbng openhd openipc fpv video drone wifi broadcast</item>
     </string-array>
 </resources>

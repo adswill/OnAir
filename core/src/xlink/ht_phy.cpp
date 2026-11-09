@@ -210,7 +210,7 @@ struct HtRx::Impl {
     std::complex<double> C{0, 0};
     double P = 0;
     int run = 0;
-    double bestM = 0;
+    double bestM = 0, floorP = 1e30;
     std::complex<double> bestC{0, 0};
     int64_t trig = -1, skipUntil = 0;
     double cfoCoarse = 0;
@@ -227,7 +227,7 @@ struct HtRx::Impl {
 
     const cf32& at(int64_t i) const { return b[(size_t)(i - base)]; }
 
-    void reset() { b.clear(); base = n = 0; C = 0; P = 0; run = 0; bestM = 0; trig = -1; skipUntil = 0; pending = false; }
+    void reset() { b.clear(); base = n = 0; C = 0; P = 0; run = 0; bestM = 0; trig = -1; skipUntil = 0; pending = false; floorP = 1e30; }
 
     cf32 rot(int64_t i, double f, int64_t ref) const {
         const double a = -2 * kPi * f * (double)(i - ref) / kRate;
@@ -251,7 +251,8 @@ struct HtRx::Impl {
         if (m >= kW + kLag) { const cf32 u = at(m - kW - kLag), v = at(m - kW); C -= std::complex<double>(u) * std::conj(std::complex<double>(v)); }
         if (m < kW + kLag + 2 || m < skipUntil || pending || trig >= 0) { if (trig < 0) run = 0; return; }
         const double met = P > 1e-12 ? std::norm(C) / (P * P) : 0;
-        if (met > kThresh) {
+        floorP = std::min(floorP * 1.0001, P);      // the quietest recent window: a short training must stand out of it
+        if (met > kThresh && P > 2.5 * floorP) {
             if (met > bestM) { bestM = met; bestC = C; }
             if (++run >= kMinRun) { trig = m; st.triggers++; cfoCoarse = -std::arg(bestC) * kRate / (2 * kPi * kLag); }
         } else { run = 0; bestM = 0; }

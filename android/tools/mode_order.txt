@@ -200,3 +200,4 @@
 360|mavlink
 360|frsky
 360|flysky
+600|wfbng

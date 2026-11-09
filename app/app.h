@@ -155,11 +155,11 @@ using SavedChannel = plat::Channel;
 // parts of the window the tour points at
 enum WizTarget { TgNone = 0, TgSwitch, TgToolbar, TgMain, TgRight, TgConst, TgCount };
 
-constexpr int kNumFamilies = 361;   // App::family runs from 0 to kNumFamilies - 1
+constexpr int kNumFamilies = 601;   // App::family runs from 0 to kNumFamilies - 1
 constexpr int kShortwaveFamily = 212;   // Shortwave (engine standard 213): the general receiver with one-click HF decoders
 // The two modes that listen with the General receiver's screen (app/general): the General receiver and Shortwave
 inline bool isGeneralFamily(int f) { return f == 55 || f == kShortwaveFamily; }
-constexpr int kNumSubModes = 37;   // dect2::subModes(): the protocols of HF digital, mesh, pagers, marine and VOR / ILS listed as modes of their own
+constexpr int kNumSubModes = 38;   // dect2::subModes(): the protocols of HF digital, mesh, pagers, marine and VOR / ILS listed as modes of their own
 constexpr int kNumSlots = kNumFamilies + kNumSubModes;   // what keeps its own frequency and gains: each family, and each protocol entry
 
 struct App {

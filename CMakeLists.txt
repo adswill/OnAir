@@ -196,6 +196,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES esp32)   # ESP32 / nRF24 module radio over USB serial (3.7): core/src/esp32, app/esp32, tests/esp32, firmware/esp32, docs/ESP32-NRF24-DESIGN.md
+  list(APPEND DECT2_MODES xlink)   # Extra links (family 600): core/src/xlink, app/xlink, tests/xlink (docs/LEFTOVERS-3.8.md)
   list(APPEND DECT2_MODES rclink)   # RC and mesh links (family 360): core/src/rclink, app/rclink, tests/rclink (docs/MESH-RC-3.8.md)
   list(APPEND DECT2_MODES thread)   # Thread (family 244): core/src/thread (6LoWPAN / MLE layer; the receiver is the 802.15.4 one in core/src/zigbee), app/thread, tests/thread
   list(APPEND DECT2_MODES wxsat)   # SatDump-list weather links (families 260 - 271): core/src/wxsat, app/wxsat, tests/wxsat (docs/SATDUMP-TIER1-3.7.md)
