@@ -62,6 +62,7 @@
 #include "dect2/tetradmo/tetradmo_tel.h"
 #include "dect2/opensky/opensky_tel.h"
 #include "dect2/marinevhf/marinevhf_tel.h"
+#include "dect2/chanvoice/chv_tel.h"
 #include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/milhf/milhf_engine.h"
 #include "dect2/sbas/sbas_engine.h"
@@ -325,6 +326,7 @@ struct RxTelemetry {
     MptTelemetry mpt1327;       // valid when standard == 128 (MPT1327 trunking, family 127)
     FusionTelemetry fusion;     // valid when standard == 129 (Yaesu Fusion, family 128, stdMode 130)
     LtrTelemetry ltr;           // valid when standard == 130 (LTR control channel, engine standard 131)
+    ChvTelemetry chanvoice;     // valid when standard is 341 .. 347 (CB, FRS / GMRS, PMR446, ham FM, HF voice, MDC-1200, wireless mic; families 340 - 346, engine standards 342 - 348)
     MarineVhfTelemetry marinevhf;   // valid when standard == 156 (Marine VHF voice, engine standard 157)
     EdacsTelemetry edacs;       // valid when standard == 131 (EDACS control channel, engine standard 132)
     SmartnetTelemetry smartnet; // valid when standard == 321 (Motorola Type II, family 320)

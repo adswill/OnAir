@@ -227,6 +227,13 @@
         <item>TETRA DMO</item>
         <item>OpenSky identifier</item>
         <item>Bluetooth Classic</item>
+        <item>CB radio</item>
+        <item>FRS / GMRS</item>
+        <item>PMR446 analog</item>
+        <item>MDC-1200</item>
+        <item>Wireless mic finder</item>
+        <item>Ham FM repeaters</item>
+        <item>HFGCS / HF voice</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -435,6 +442,13 @@
         <item>TETRA Direct Mode (terminal to terminal, or through a DM repeater or gateway): the addresses, the calls and clear speech (with the user-installed TETRA codec); encrypted calls are listed, not decoded</item>
         <item>OpenSky (M/A-COM / Harris) identifier: measures the symbol rate, the levels, the width and the TDMA burst pattern; the air interface is not public and the traffic is encrypted, so nothing is decoded</item>
         <item>Bluetooth Classic (BR/EDR) discovery over a wide capture of the 2.4 GHz band: every packet starts with the sync word of its piconet master\'s LAP, so devices and piconets in use are listed by LAP; a discoverable device that answers an inquiry also gives its full address and class of device. The radio hops over 79 channels of 1 MHz, so a HackRF at 20 Msps hears about a quarter of the packets. Receive only: never inquires, pages or answers; payloads are not decoded</item>
+        <item>CB radio, 27 MHz: the 40-channel plan of your region (CEPT, the German 80, the UK 27/81 or the USA), AM, FM and SSB decided from the signal, every channel of the span at once, a busy-channel list and a scan</item>
+        <item>FRS and GMRS (USA, Canada) 462 and 467 MHz, 22 channels, narrow FM with the CTCSS tone or DCS code of each transmission, GMRS repeater outputs, a busy-channel list and a scan</item>
+        <item>Analog PMR446 (Europe) 446.00625 - 446.19375 MHz, 16 channels, narrow FM with the CTCSS tone or DCS code of each transmission, a busy-channel list and a scan</item>
+        <item>MDC-1200 (Motorola) unit ID bursts on analog FM: every FM carrier of the span is followed and the 1200 bit/s burst that opens or closes a transmission is decoded. FleetSync is not decoded</item>
+        <item>Finds wireless microphones and in-ear monitors: wide FM carriers in the UHF bands of your region (470 - 694 MHz, 823 - 832 MHz, 863 - 865 MHz; USA 470 - 698, 902 - 928, 944 - 952 MHz), with width, deviation and FM or not, and a click to listen</item>
+        <item>Amateur FM repeaters and simplex on 2 m and 70 cm: the repeater outputs of your IARU region with their input offsets, the CTCSS tone or DCS code heard on each, calling channels, a busy-channel list and a scan</item>
+        <item>HF voice in USB on fixed frequencies: the HFGCS primary frequencies (4724, 8992, 11175 and 15016 kHz), the MARS and Canadian Forces relays and the VOLMET weather broadcasts with their schedules; the scan retunes the radio and stays on one that is on the air</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -643,6 +657,13 @@
         <item>Direct Mode</item>
         <item>identify only</item>
         <item>IoT, 2.4 GHz</item>
+        <item>27 MHz, AM / FM / SSB</item>
+        <item>462 / 467 MHz, NFM + CTCSS / DCS</item>
+        <item>446 MHz, NFM + CTCSS / DCS</item>
+        <item>1200 bit/s burst on FM</item>
+        <item>UHF, wide FM</item>
+        <item>2 m / 70 cm, FM + CTCSS</item>
+        <item>USB, fixed HF frequencies</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -851,5 +872,12 @@
         <item>tetra dmo direct mode</item>
         <item>opensky macom harris fmp</item>
         <item>bluetooth classic br edr inquiry discoverable lap bd addr piconet 2.4 ghz 2441 hopping headset phone speaker class of device</item>
+        <item>cb citizens band 27 mhz 11 metre 11m channel 9 channel 19 truckers breaker am fm ssb usb lsb 40 channels 80 channels 27/81 walkie</item>
+        <item>frs gmrs family radio service general mobile radio 462 467 walkie talkie ctcss dcs privacy code repeater midland motorola</item>
+        <item>pmr446 pmr 446 walkie talkie licence free analog fm ctcss dcs code europe motorola cobra midland baofeng</item>
+        <item>mdc1200 mdc 1200 motorola unit id ptt id fleetsync kenwood selcall signalling radio id</item>
+        <item>wireless microphone mic radio mic sennheiser shure in ear monitor iem pmse uhf 470 694 823 863 902 theatre stage tv band finder</item>
+        <item>ham amateur repeater fm 2m 70cm 144 145 146 147 430 433 438 440 442 offset shift tone ctcss pl dcs calling 145.500 146.520 simplex</item>
+        <item>hfgcs hf global communications system skyking eam emergency action message volmet shannon gander new york raf military one aviation weather hf usb 4724 8992 11175 15016 mars</item>
     </string-array>
 </resources>

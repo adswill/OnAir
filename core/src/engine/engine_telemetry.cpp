@@ -366,6 +366,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 322: return pollStd(rxTetraDmo_, 322, t, seqs[322], &RxTelemetry::tetradmo); // TETRA Direct Mode (slot 322)
     case 323: return pollStd(rxOpenSky_, 323, t, seqs[232], &RxTelemetry::opensky);   // OpenSky identifier (slot 232)
     case 156: return pollStd(rxMarineVhf_, 156, t, seqs[142], &RxTelemetry::marinevhf);   // Marine VHF voice (slot 142)
+    case 341: case 342: case 343: case 344: case 345: case 346: case 347: return pollStd(rxChv_, a, t, seqs[218], &RxTelemetry::chanvoice);   // channelised voice (slot 218, one receiver for all seven)
     case 181: return pollStd(rxP25p2_, 181, t, seqs[181], &RxTelemetry::p25p2); // P25 Phase 2 (slot 181)
     case 381: return pollStd(rxBtc_, 381, t, seqs[380], &RxTelemetry::btc);     // Bluetooth Classic discovery (slot 380)
     default: return -1;

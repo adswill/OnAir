@@ -213,6 +213,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES sferics)   # Sferics / lightning (family 243): core/src/sferics, app/sferics, tests/sferics
   list(APPEND DECT2_MODES btc)   # Bluetooth Classic discovery (family 380, docs/IOT-3.8.md): core/src/btc, app/btc, tests/btc
   list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
+  list(APPEND DECT2_MODES chanvoice)   # channelised analog voice (families 340 - 346: CB, FRS / GMRS, PMR446, ham FM repeaters, HFGCS / HF voice, MDC-1200, wireless mic finder): core/src/chanvoice, app/chanvoice, tests/chanvoice (docs/CHANNELS-3.8.md)
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/mheg_engine.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/mheg_render.cpp core/src/tv/ts_proto_rs.cpp core/src/common/text_charset_rs.cpp core/src/tv/dvb_text.cpp core/src/tv/dvb_text_rs.cpp core/src/tv/teletext_rs.cpp core/src/tv/dvbsub_rs.cpp core/src/tv/epg.cpp core/src/tv/subtitle_export.cpp core/src/tv/recorder.cpp core/src/tv/timeshift.cpp core/src/tv/playback.cpp core/src/tv/dsmcc.cpp core/src/tv/mheg.cpp core/src/tv/rcs.cpp core/src/tv/si_tables.cpp core/src/tv/ts_data.cpp core/src/tv/hd_pair.cpp) # MPEG-TS parsing layer (C++ or the Rust crate onair_ts) and the TV recorder (guide, schedule, timeshift, playback) (C++ or the Rust crate onair_ts)
 target_sources(dect2core PRIVATE core/src/tv/iptv_parse.cpp core/src/tv/iptv_http.cpp core/src/tv/iptv_stream.cpp core/src/tv/iptv_mode.cpp)   # Internet TV (IPTV): playlists, guide, HTTP(S)/HLS/UDP reader (docs/IPTV.md)
@@ -1688,6 +1689,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_marinevhf_mode PRIVATE dect2core)
     target_compile_definitions(test_marinevhf_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME marinevhf_mode COMMAND test_marinevhf_mode)
+    add_executable(test_chanvoice_mode tests/app/test_chanvoice_mode.cpp)   # channelised voice modes (families 340 - 346): registered tunings, mode rows, family count, screen mapping, engine cases
+    target_link_libraries(test_chanvoice_mode PRIVATE dect2core)
+    target_compile_definitions(test_chanvoice_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME chanvoice_mode COMMAND test_chanvoice_mode)
     add_executable(test_p25p2_mode tests/app/test_p25p2_mode.cpp)   # P25 Phase 2 mode: registered tuning, mode row, family count, poll slot, screen mapping and panel strings
     target_link_libraries(test_p25p2_mode PRIVATE dect2core)
     target_compile_definitions(test_p25p2_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

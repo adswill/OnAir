@@ -1253,3 +1253,7 @@ Branch feat38-voice-trunk on integ-38, families 320-339. New modes: Motorola Typ
 ## 2026-11-09 (3.8 IoT, feat38-iot)
 
 KNX RF, HomeMatic BidCoS, EnOcean ERP1 and DASH7 decoders in the ISM sensors decoder, with a fast ASK path so 125 kbit/s EnOcean is received; the Bluetooth Classic discovery mode (family 380: access codes by LAP, inquiry responses with address and class of device). KNX RF checked against 11 real recordings (10 decode); everything else on simulated signals only. Lutron ClearConnect, wireless DMX, mioty and DECT NR+ skipped: reasons in docs/IOT-3.8.md. Insteon and EnOcean were already in the Sensors mode.
+
+## 2026-11-09 channelised analog voice modes (feat38-channels)
+Branch feat38-channels on integ-38: seven modes in one receiver (core/src/chanvoice, app/chanvoice), families 340 - 346: CB radio (EU / DE-CZ-HU 80 / UK 27/81 / US plans, AM / FM / USB / LSB decided from the signal), FRS / GMRS, PMR446 analog, ham FM repeaters (2 m and 70 cm, IARU regions), HFGCS / HF voice (HFGCS and VOLMET with minute schedules, single tuner scan), MDC-1200 on analog FM, wireless mic finder. Busy-channel list, CTCSS / DCS reading per channel, whole-span and HF scans, recording, region from the location setting. MDC-1200 written from the format, not from the GPL-2.0-only reference; FleetSync not done (no public spec). All validated on simulated signals only; the app was not built locally (syntax checks only). Poll slot 218, kNumFamilies 360. See docs/CHANNELS-3.8.md.
+
