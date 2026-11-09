@@ -28,6 +28,8 @@ uint16_t xbTestPixel(int ch, int x, int y) {
     return (uint16_t)v;
 }
 
+namespace xband { uint16_t xbTestPixelXb(int ch, int x, int y) { return xbTestPixel(ch, x, y); } }
+
 namespace {
 
 // A test stream of packets for an instrument
@@ -283,8 +285,62 @@ struct XbandGenerator::Impl {
         return true;
     }
 
+    // Oceansat-2: one bit a symbol through the mod 4 difference; the other bit is filled
+    int osState = 0, osFill = 0;
+    void oceansatBits() {
+        std::vector<uint8_t> f;
+        xband::ocmBuildFrame(f, src.nextLine++);
+        for (int i = 0; i < 737760; i++) {
+            const int b = f[(size_t)i >> 3] >> (7 - (i & 7)) & 1;
+            osFill = (osFill * 5 + 7) & 3;
+            const int d = b << 1 | (osFill & 1);
+            osState = (osState + d) & 3;
+            // quadrant: 0 (I+, Q+), 1 (I-, Q+), 2 (I-, Q-), 3 (I+, Q-)
+            bits.push_back((uint8_t)(osState == 0 || osState == 3)); bits.push_back((uint8_t)(osState == 0 || osState == 1));
+        }
+    }
+    // Kanopus-V: PMSS frames into 3056-byte blocks, re-randomised and interleaved over 8 sets, QPSK differential
+    int qdX = 0, qdY = 0; bool qdFirst = true; int ccdLine = 0, ccdId = 1; std::vector<uint8_t> pmss;
+    void kanopusBlock() {
+        while (pmss.size() < 3056) {
+            std::vector<uint8_t> frm(1960, 0);
+            for (int i = 0; i < 16; i += 2) { frm[(size_t)i] = 0xf5; frm[(size_t)i + 1] = 0x0a; }
+            const int line = ccdLine;
+            frm[1944] = (uint8_t)ccdId;
+            const int cnt = line << 1;
+            frm[1945] = (uint8_t)cnt; frm[1946] = (uint8_t)(cnt >> 8 & 15);
+            for (int x = 0; x < 1928; x++) frm[(size_t)16 + x] = (uint8_t)(xbTestPixel(ccdId, x, ccdPass * 495 + line) >> 4);
+            pmss.insert(pmss.end(), frm.begin(), frm.end());
+            if (++ccdLine == 495) { ccdLine = 0; if (++ccdId > 10) { ccdId = 1; ccdPass++; } }
+        }
+        static const uint8_t der[48] = {0x55,0xE2,0xA4,0x6A,0x30,0xA7,0xDA,0x16,0x24,0x86,0x39,0x07,0x0D,0x1D,0xEC,0x64,0xF0,0x3D,0xD7,0x66,0x98,0x08,0x15,0x94,0xA0,0xBA,0x5B,0x22,0x3E,0x67,0x40,0x1B,0x54,0x3A,0xB7,0x2B,0x9E,0xB0,0x4B,0xD3,0xB6,0xF3,0x8D,0xF1,0xE5,0xC4,0x27,0x36};
+        static const uint8_t sy[4] = {0b00000100, 0b10110011, 0b11100011, 0b01110101};
+        uint8_t dei[8][384] = {};
+        int y = 0;
+        for (int i = 0; i < 8; i++) for (int k = 0; k < 48; k++) for (int f : {1, 0, 3, 2, 5, 4, 7, 6}) { if (f < 2 && k == 0) continue; dei[f][i * 48 + k] = pmss[(size_t)y++]; }
+        pmss.erase(pmss.begin(), pmss.begin() + 3056);
+        for (int f = 0; f < 8; f++) for (int i = 0; i < 8; i++) for (int k = 0; k < 48; k++) dei[f][i * 48 + k] ^= der[k];
+        for (int f = 0; f < 2; f++) for (int s = 0; s < 4; s++) dei[f][s * 48] = (uint8_t)(sy[s] ^ der[0]);
+        // the receiver reads bit f of each interleaved byte; the sync bytes must arrive unscrambled: dei[f][s*48] carries sy[s] ^ der[0] and is XORed back there
+        std::vector<int> stream(24576);
+        for (int i = 0; i < 24576; i++) stream[(size_t)i] = dei[i % 8][i / 64] >> (7 - (i / 8 % 8)) & 1;
+        for (int f = 0; f < 2; f++) for (int s = 0; s < 4; s++) for (int k = 0; k < 8; k++) { stream[(size_t)(s * 384 + k) * 8 + f] = (sy[s] >> (7 - k)) & 1; }
+        for (size_t i = 0; i + 1 < stream.size(); i += 2) {
+            int xo = stream[i], yo = stream[i + 1] ^ 1, xi, yi;
+            if (qdFirst) { qdFirst = false; bits.push_back((uint8_t)qdX); bits.push_back((uint8_t)qdY); }
+            // inverse of the receiver: try both branches of the differential rule
+            xi = qdX ^ xo; yi = qdY ^ yo;
+            if ((xi ^ yi) == 1) { xi = qdX ^ yo; yi = qdY ^ xo; if ((xi ^ yi) != 1) { xi = qdX ^ xo; yi = qdY ^ yo; } }
+            qdX = xi; qdY = yi;
+            bits.push_back((uint8_t)qdX); bits.push_back((uint8_t)qdY);
+        }
+    }
+    int ccdPass = 0;
+
     void pushBits() {
         if (P == kXbDmsp) { src.dmspFrames(bits); return; }
+        if (P == kXbOceansat2) { oceansatBits(); return; }
+        if (P == kXbKanopus) { kanopusBlock(); return; }
         nextPayload();
         for (int i = 0; i < L.caduBytes * 8; i++) {
             int b = frame[(size_t)i >> 3] >> (7 - (i & 7)) & 1;

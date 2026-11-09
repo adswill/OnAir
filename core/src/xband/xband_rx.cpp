@@ -338,6 +338,8 @@ struct XbandReceiver::Impl {
         if (haveRate) { dem.configure(rate, L.symbolRate, L.mod, L.alpha); dem.setOffset(offset); }
         if (L.caduBytes > 0) def.configure(xband::kAsm, 32, L.caduBytes * 8, 3, 10, true);
         if (P == kXbDmsp) { def.configure(0b1010110011111, 13, 150, 0, 5, true); def.onFrame = [this](const uint8_t* f) { dmspFrame(f); }; }
+        if (P == kXbOceansat2) for (int k = 0; k < 2; k++) { osDef[k].configure(0b0000000111111011111000010011001101ull, 34, 737760, 2, 6, false); osDef[k].onFrame = [this](const uint8_t* f) { oceansatFrame(f); }; }
+        if (P == kXbKanopus) { kanBits.assign((size_t)kKanBits, 0); kanW = 0; kanSkip = 0; kanLocked = false; kanBad = 0; pmssFrm.clear(); pmssIn = 0; pmssSync = false; }
         frameSyms = L.caduBytes > 0 ? symsPerFrame() : 0;
         resetState();
     }
@@ -541,7 +543,85 @@ struct XbandReceiver::Impl {
         if (caduOut.is_open()) { caduOut.write((const char*)frameTmp.data(), L.caduBytes); tel.caduWritten++; }
     }
 
-    void special(float I, float) { if (P == kXbDmsp) { def.push(I > 0 ? 1 : 0); tel.frameLock = def.locked(); } }
+    // Oceansat-2: DQPSK, one bit a symbol, tried with the two rail orders
+    wxsat::Deframer osDef[2];
+    int osPrev[2] = {0, 0};
+    void oceansatFrame(const uint8_t* f) {
+        tel.blocksOk++; tel.state = 3; lastFrameT = nowSec(); tel.asmHits++;
+        std::vector<uint8_t> b(f, f + 92220);
+        std::lock_guard<std::mutex> g(store.mu);
+        inst.oceansatFrame(b.data());
+    }
+    // Kanopus-V: QPSK differential, 3072-byte outer frames, PMSS frames inside
+    static constexpr int kKanBits = 3072 * 8;
+    std::vector<uint8_t> kanBits;
+    int kanW = 0, kanSkip = 0, kanBad = 0;
+    bool kanLocked = false;
+    int qdPrevX = 0, qdPrevY = 0; bool qdHave = false;
+    std::vector<uint8_t> pmssFrm; int pmssIn = 0, pmssHist = 0; uint8_t pmssSr[16] = {}; bool pmssSync = false;
+    inline int kanBit(int idx) const { return kanBits[(size_t)((kanW + idx) % kKanBits)]; }
+    void kanPush(int b) {
+        kanBits[(size_t)kanW] = (uint8_t)b; kanW = (kanW + 1) % kKanBits;
+        if (kanSkip > 0) { kanSkip--; return; }
+        static const uint8_t sy[4] = {0b00000100, 0b10110011, 0b11100011, 0b01110101};
+        int diff = 0;
+        for (int f = 0; f < 2; f++) for (int s2 = 0; s2 < 4; s2++) { uint8_t v = 0; for (int k = 0; k < 8; k++) v = (uint8_t)(v << 1 | kanBit((s2 * 384 + k) * 8 + f)); diff += __builtin_popcount(v ^ sy[s2]); }
+        if (!kanLocked ? diff == 0 : diff < 10) {
+            kanLocked = true; kanBad = 0;
+            kanWrite();
+            kanSkip = kKanBits - 1;
+        } else if (kanLocked && ++kanBad > 10) kanLocked = false;
+    }
+    void kanWrite() {
+        static const uint8_t der[48] = {0x55,0xE2,0xA4,0x6A,0x30,0xA7,0xDA,0x16,0x24,0x86,0x39,0x07,0x0D,0x1D,0xEC,0x64,0xF0,0x3D,0xD7,0x66,0x98,0x08,0x15,0x94,0xA0,0xBA,0x5B,0x22,0x3E,0x67,0x40,0x1B,0x54,0x3A,0xB7,0x2B,0x9E,0xB0,0x4B,0xD3,0xB6,0xF3,0x8D,0xF1,0xE5,0xC4,0x27,0x36};
+        uint8_t dei[8][384] = {};
+        for (int i = 0; i < kKanBits; i++) dei[i % 8][i / 64] = (uint8_t)(dei[i % 8][i / 64] << 1 | kanBit(i));
+        for (int f = 0; f < 8; f++) for (int i = 0; i < 8; i++) for (int k = 0; k < 48; k++) dei[f][i * 48 + k] ^= der[k];
+        uint8_t fin[384 * 8 - 16];
+        int y = 0;
+        for (int i = 0; i < 8; i++) for (int k = 0; k < 48; k++) for (int f : {1, 0, 3, 2, 5, 4, 7, 6}) { if (f < 2 && k == 0) continue; if (y < (int)sizeof fin) fin[y++] = dei[f][i * 48 + k]; }
+        for (int b = 0; b < y; b++) pmssByte(fin[b]);
+    }
+    void pmssByte(uint8_t b) {
+        std::memmove(pmssSr, pmssSr + 1, 15); pmssSr[15] = b;
+        if (pmssIn > 0) {
+            pmssFrm.push_back(b);
+            if (--pmssIn == 0) {
+                tel.blocksOk++; tel.state = 3; lastFrameT = nowSec();
+                std::lock_guard<std::mutex> g(store.mu);
+                inst.kanopusFrame(pmssFrm.data());
+            }
+            return;
+        }
+        if (pmssSkip > 0) { pmssSkip--; return; }
+        static const uint8_t sw[16] = {0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a,0xf5,0x0a};
+        int e = 0;
+        for (int i = 0; i < 16; i++) e += __builtin_popcount((unsigned)(pmssSr[i] ^ sw[i]));
+        if (pmssSync ? e < 8 : e == 0) {
+            pmssIn = 1960 - 16; pmssSkip = 15;
+            pmssFrm.assign(pmssSr, pmssSr + 16);
+            if (e == 0) pmssSync = true;
+        } else pmssSync = false;
+    }
+    int pmssSkip = 0;
+
+    void special(float I, float Q) {
+        if (P == kXbDmsp) { def.push(I > 0 ? 1 : 0); tel.frameLock = def.locked(); }
+        else if (P == kXbOceansat2) {
+            const bool ia = I > 0, ib = Q > 0;
+            const int v = ia ? (ib ? 0 : 3) : (ib ? 1 : 2);   // the quadrant, as SatDump's dqpsk_demod
+            const int a[2] = {v, ((v & 1) << 1) | (v >> 1)};
+            for (int k = 0; k < 2; k++) { const int d = (a[k] - osPrev[k]) & 3; osPrev[k] = a[k]; osDef[k].push((d >> 1) & 1); }
+        } else if (P == kXbKanopus) {
+            const int xi = I >= 0 ? 1 : 0, yi = Q >= 0 ? 1 : 0;
+            if (!qdHave) { qdHave = true; qdPrevX = xi; qdPrevY = yi; return; }
+            int xo, yo;
+            if ((xi ^ yi) == 1) { xo = qdPrevY ^ yi; yo = qdPrevX ^ xi; } else { xo = qdPrevX ^ xi; yo = qdPrevY ^ yi; }
+            qdPrevX = xi; qdPrevY = yi;
+            kanPush(xo); kanPush(yo ^ 1);
+            tel.frameLock = kanLocked;
+        }
+    }
     void dmspFrame(const uint8_t* f) {
         tel.blocksOk++; tel.state = 3; lastFrameT = nowSec(); tel.asmHits++;
         std::lock_guard<std::mutex> g(store.mu);

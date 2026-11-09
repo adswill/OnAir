@@ -89,6 +89,16 @@ static void instruments() {
       pixels(rx, 0, "VEGETATION", [&](int x, int y) { return (int)xbTestPixel(0, x, y) << 4; }, 8); }
     { XbandReceiver rx(kXbMetopSg); viaCadu(rx, kXbMetopSg, 12000);
       for (int c : {0, 7, 13}) pixels(rx, c, "METimage", [&](int x, int y) { return (int)xbTestPixel(c, x, y) << 4; }, 24); }
+    { XbandGenConfig g; g.profile = kXbOceansat2; g.rate = 35e6; g.snrDb = 20; g.cfoHz = 8000; XbandGenerator gen(g); XbandReceiver rx(kXbOceansat2); rx.configure(35e6);
+      std::vector<cf32> b(1 << 16); for (int i = 0; i < 100; i++) { gen.generate(b.data(), b.size()); rx.feed(b.data(), b.size()); } rx.finish();
+      XbTelemetry t; rx.telemetry(t, 0); printf("  Oceansat-2: %llu frames, %llu lines\n", (unsigned long long)t.blocksOk, (unsigned long long)t.lines);
+      CHECK(t.lines >= 3, "oceansat lines");
+      // the first frame goes by while the demodulator settles: the rows start at signal line 1
+      pixels(rx, 2, "OCM", [&](int x, int y) { return y >= 0 ? (int)xbTestPixel(2, x, y + 1) << 4 : -1; }, 3); }
+    { XbandGenConfig g; g.profile = kXbKanopus; g.rate = 90e6; g.snrDb = 22; g.cfoHz = 5000; XbandGenerator gen(g); XbandReceiver rx(kXbKanopus); rx.configure(90e6);
+      std::vector<cf32> b(1 << 16); for (int i = 0; i < 700; i++) { gen.generate(b.data(), b.size()); rx.feed(b.data(), b.size()); } rx.finish();
+      XbTelemetry t; rx.telemetry(t, 0); printf("  Kanopus-V: %llu frames, %llu lines, state %d\n", (unsigned long long)t.blocksOk, (unsigned long long)t.lines, t.state);
+      CHECK(t.blocksOk > 50, "kanopus frames"); CHECK(t.lines > 400, "kanopus lines"); }
     // DMSP on the air: no CADU path
     { XbandGenConfig g; g.profile = kXbDmsp; g.rate = 2e6; g.snrDb = 16; g.cfoHz = 3000; XbandGenerator gen(g); XbandReceiver rx(kXbDmsp); rx.configure(2e6);
       std::vector<cf32> b(1 << 16); for (int i = 0; i < 60; i++) { gen.generate(b.data(), b.size()); rx.feed(b.data(), b.size()); } rx.finish();

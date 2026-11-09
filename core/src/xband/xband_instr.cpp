@@ -510,6 +510,92 @@ struct VegsDec {
     }
 };
 
+// ---- Oceansat-2 OCM (92220-byte frames) --------------------------------------------------------------------------------------
+#include "xband_oceansat_pn.inc"
+uint16_t xbTestPixelXb(int ch, int x, int y);
+void ocmBuildFrame(std::vector<uint8_t>& f, int line) {
+    // the OCM reader's layout, randomised as the link sends it; the sync word over the first 34 bits
+    f.assign(92220, 0);
+    size_t pos = 1889 + 964 * 15 + 2;
+    std::vector<uint16_t> lb((size_t)4072 * 10);
+    for (int x = 0; x < 4072; x++) for (int c = 0; c < 8; c++) lb[(size_t)x * 10 + c] = xbTestPixelXb(c, x, line);
+    for (int i = 0; i < 4072 * 10; i += 2) {
+        f[pos] = (uint8_t)(lb[(size_t)i] >> 4); f[pos + 1] = (uint8_t)((lb[(size_t)i] & 15) << 4 | lb[(size_t)i + 1] >> 8); f[pos + 2] = (uint8_t)lb[(size_t)i + 1];
+        pos += 3;
+    }
+    std::vector<uint8_t> mask(102350); { int o = 0, b = 0; uint8_t sh = 0; for (int r = 0; r < 400 && o < 102350; r++) for (int i = 0; i < 2047 && o < 102350; i++) { sh = (uint8_t)(sh << 1 | (kOsPn[i] - '0')); if (++b == 8) { mask[(size_t)o++] = sh; b = 0; } } }
+    for (int i = 0; i < 59; i++) f[(size_t)i] ^= (uint8_t)(0xFF - mask[(size_t)(i + 2047) - 59]);
+    for (int i = 59; i < 92220; i++) f[(size_t)i] ^= (uint8_t)(0xFF - mask[(size_t)i - 59]);
+    const uint64_t sync = 0b0000000111111011111000010011001101ull;
+    for (int i = 0; i < 34; i++) { const int b = sync >> (33 - i) & 1; if (b) f[(size_t)i >> 3] |= (uint8_t)(0x80 >> (i & 7)); else f[(size_t)i >> 3] &= (uint8_t)~(0x80 >> (i & 7)); }
+}
+struct OcmDec {
+    Store& s;
+    int plane[8]; int lines = 0;
+    std::vector<uint8_t> mask;
+    explicit OcmDec(Store& st) : s(st) {
+        for (int i = 0; i < 8; i++) plane[i] = s.add("OCM " + std::to_string(i + 1), 0, 4072);
+        mask.resize(102350); int o = 0, b = 0; uint8_t sh = 0;
+        for (int r = 0; r < 400 && o < 102350; r++) for (int i = 0; i < 2047 && o < 102350; i++) { sh = (uint8_t)(sh << 1 | (kOsPn[i] - '0')); if (++b == 8) { mask[(size_t)o++] = sh; b = 0; } }
+    }
+    void derand(uint8_t* d) const {
+        for (int i = 0; i < 59; i++) d[i] ^= (uint8_t)(0xFF - mask[(size_t)(i + 2047) - 59]);
+        for (int i = 59; i < 92220; i++) d[i] ^= (uint8_t)(0xFF - mask[(size_t)i - 59]);
+    }
+    void frame(uint8_t* d) {
+        derand(d);
+        size_t pos = 1889 + 964 * 15 + 2;
+        std::vector<uint16_t> lb((size_t)4072 * 10);
+        for (int i = 0; i < 4072 * 10; i += 2) {
+            lb[(size_t)i] = (uint16_t)(d[pos] << 4 | d[pos + 1] >> 4);
+            lb[(size_t)i + 1] = (uint16_t)((d[pos + 1] & 15) << 8 | d[pos + 2]);
+            pos += 3;
+        }
+        std::vector<uint16_t> row(4072);
+        for (int c = 0; c < 8; c++) { for (int x = 0; x < 4072; x++) row[(size_t)x] = (uint16_t)(lb[(size_t)x * 10 + c] << 4); s.plane(plane[c]).setRow(lines, row.data()); }
+        lines++;
+    }
+};
+
+// ---- Kanopus-V PMSS (1960-byte frames) ---------------------------------------------------------------------------------------
+struct KanopusDec {
+    Store& s;
+    int plane[10]; int lines = 0, global = 0; bool cnt = false; int badCnt = 0;
+    uint8_t wip[1928 * 495];
+    int wipId[16] = {};
+    uint64_t images = 0;
+    int nLines[10] = {};
+    explicit KanopusDec(Store& st) : s(st) {
+        for (int i = 0; i < 6; i++) plane[i] = s.add("PSS swath " + std::to_string(i + 1), 0.64, 1920);
+        for (int i = 0; i < 4; i++) plane[6 + i] = s.add("MSS " + std::to_string(i + 1), 0, 1920);
+        std::memset(wip, 0, sizeof wip);
+    }
+    void frame(uint8_t* f) {
+        int counter = ((f[1946] & 0xF) << 8 | f[1945]) >> 1;
+        if (!cnt) { if (counter == (global + 1) % 495) cnt = true; else global = counter; }
+        if (cnt) { const int orig = counter; counter = global + 1; global = counter; if (orig != global) badCnt++; else badCnt = 0; if (badCnt > 2) cnt = false; }
+        global %= 495;
+        if (!cnt) return;
+        counter = global;
+        if (counter >= 495) return;
+        const int id = f[1944] & 0xF;
+        std::memcpy(&wip[1928 * counter], f + 16, 1928);
+        wipId[id & 15]++;
+        if (counter == 494) {
+            int cid = 0, best = -1;
+            for (int i = 0; i < 16; i++) if (wipId[i] > best) { best = wipId[i]; cid = i; }
+            std::memset(wipId, 0, sizeof wipId);
+            std::vector<uint16_t> row(1920);
+            int p = cid >= 1 && cid <= 6 ? cid - 1 : cid >= 7 && cid <= 10 ? 6 + cid - 7 : -1;
+            if (p >= 0) {
+                for (int y = 30; y < 493; y++) { for (int x = 0; x < 1920; x++) row[(size_t)x] = (uint16_t)(wip[(size_t)y * 1928 + 4 + x] << 8); s.plane(plane[p]).setRow(nLines[p]++, row.data()); }
+                lines = *std::max_element(nLines, nLines + 10); images++;
+            }
+            std::memset(wip, 0, sizeof wip);
+        }
+    }
+};
+
 // ---- The instruments of a link ------------------------------------------------------------------------------------------------
 struct Instruments::Impl {
     int P;
@@ -524,6 +610,8 @@ struct Instruments::Impl {
     std::unique_ptr<MetimageDec> metimage;
     std::unique_ptr<DmspDec> dmsp;
     std::unique_ptr<VegsDec> vegs;
+    std::unique_ptr<OcmDec> ocm;
+    std::unique_ptr<KanopusDec> kano;
     AvhrrCal avhrrCal;
     std::string sat;
     int scid = -1;
@@ -537,6 +625,8 @@ struct Instruments::Impl {
         case kXbMetopSg: metimage = std::make_unique<MetimageDec>(s); break;
         case kXbDmsp: dmsp = std::make_unique<DmspDec>(s); break;
         case kXbProbaS: vegs = std::make_unique<VegsDec>(s); break;
+        case kXbOceansat2: ocm = std::make_unique<OcmDec>(s); break;
+        case kXbKanopus: kano = std::make_unique<KanopusDec>(s); break;
         default: break;
         }
         for (auto& d : dem) d.onPacket = [this](const Packet& p) { packet(p); };
@@ -593,6 +683,8 @@ struct Instruments::Impl {
         if (metimage) return metimage->lineCount;
         if (dmsp) return (uint64_t)dmsp->lines;
         if (vegs) return vegs->lineCount();
+        if (ocm) return (uint64_t)ocm->lines;
+        if (kano) return (uint64_t)kano->lines;
         return 0;
     }
     void finish() { if (viirs) viirs->flushAll(); if (metimage && metimage->any) { metimage->flush(); metimage->any = false; } }
@@ -608,5 +700,7 @@ int Instruments::lastScid() const { return p_->scid; }
 void Instruments::finish() { p_->finish(); }
 const AvhrrCal* Instruments::avhrrCal() const { return p_->avhrr ? &p_->avhrrCal : nullptr; }
 void Instruments::rawFrame(const uint8_t* f) { if (p_->dmsp) p_->dmsp->frame(f); }
+void Instruments::oceansatFrame(uint8_t* f) { if (p_->ocm) p_->ocm->frame(f); }
+void Instruments::kanopusFrame(uint8_t* f) { if (p_->kano) p_->kano->frame(f); }
 
 } // namespace dect2::xband
