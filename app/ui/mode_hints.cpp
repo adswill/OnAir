@@ -61,6 +61,7 @@ void geoHint(App& a) {
 }  // namespace
 
 void modeHintsLine(App& a) {
+    firstStartHint(a);
     passHint(a);
     geoHint(a);
 }

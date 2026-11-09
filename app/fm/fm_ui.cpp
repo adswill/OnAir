@@ -742,6 +742,9 @@ double fmChannelDb(const SpectrumFrame& f, double fs, double offHz) {
     return cnt ? 10 * std::log10(sum / cnt + 1e-20) : -200;
 }
 
+// First start: what the Scan button does (docs/EASE-3.8.md)
+void fmAutoScan(App& a) { App::FmScan& s = a.fmScan; fmScanBeginRange(s); s.running = true; s.phase = 0; s.idx = -1; s.t0 = 0; s.results.clear(); s.cand.clear(); s.savedFreq = a.freqMhz; }
+
 void fmScanTab(App& a) {
     fmCensusPanel(a);
     App::FmScan& s = a.fmScan;

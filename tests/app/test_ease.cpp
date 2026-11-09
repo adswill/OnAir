@@ -28,6 +28,23 @@ int main() {
     check(geoLine(geoView(54.69, 25.28, {"GK-2A", 128.2}), false).find("below your horizon") != std::string::npos, "below the horizon says so");
     check(geoLine(geoView(54.69, 25.28, {"QO-100", 25.9}), true).find("LNB skew") != std::string::npos, "Ku satellites give a skew");
     { std::vector<GeoView> vs = {geoView(54.69, 25.28, {"low", -75.2}), geoView(54.69, 25.28, {"high", 25.9})}; check(geoBest(vs) == 1, "highest wins"); check(geoBest({}) == -1, "empty"); }
+    // E5, E6, E7
+    { FirstIn i; i.realRadio = i.emptyList = i.atDefaultFreq = true; check(firstScanWanted(i), "fresh start scans");
+      FirstIn d = i; d.done = true; check(!firstScanWanted(d), "once only");
+      FirstIn u = i; u.atDefaultFreq = false; check(!firstScanWanted(u), "a chosen frequency is left alone");
+      FirstIn l = i; l.emptyList = false; check(!firstScanWanted(l), "an existing list is left alone");
+      FirstIn r = i; r.realRadio = false; check(!firstScanWanted(r), "not for files or the test signal");
+      FirstIn re = i; re.recording = true; check(!firstScanWanted(re), "not while recording");
+      FirstIn t = i; t.transmitting = true; check(!firstScanWanted(t), "not while transmitting");
+      FirstIn b2 = i; b2.busy = true; check(!firstScanWanted(b2), "not over another scan"); }
+    { std::vector<SvcPick> v = {{7, 5, false}, {9, 1, true}, {3, 2, false}, {4, 0, false}};
+      check(pickFirstService(v) == 2, "lowest LCN television service, radio skipped");
+      check(pickFirstService({{4, 0, false}, {1, 0, false}}) == 1, "no LCN: lowest id");
+      check(pickFirstService({{9, 1, true}, {4, 0, false}}) == 1, "television without number before radio");
+      check(pickFirstService({{9, 1, true}}) == 0, "radio when nothing else");
+      check(pickFirstService({}) == -1, "empty");
+      check(pickFirstService({{-1, 1, false}}) == -1, "invalid id"); }
+    check(strongestIdx({1.f, 9.f, 3.f}) == 1 && strongestIdx({}) == -1, "strongest");
     if (fails == 0) std::printf("ease: all passed\n");
     return fails != 0;
 }

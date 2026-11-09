@@ -7,6 +7,7 @@
 #include <cmath>
 #include <cstdio>
 #include <string>
+#include <utility>
 #include <vector>
 
 #ifndef N_
@@ -84,6 +85,31 @@ inline std::string geoLine(const GeoView& v, bool withSkew) {
 inline int geoBest(const std::vector<GeoView>& vs) {
     int b = -1;
     for (int i = 0; i < (int)vs.size(); i++) if (b < 0 || vs[i].elDeg > vs[b].elDeg) b = i;
+    return b;
+}
+
+}  // namespace ease
+
+// ---- E5, E6, E7: what the first Start of a mode does by itself
+namespace ease {
+
+// Happens once and is remembered; never when the user already has a list, has moved off the default frequency, is recording, or the radio is not a real one
+struct FirstIn { bool done = false, realRadio = false, emptyList = false, atDefaultFreq = false, recording = false, transmitting = false, busy = false; };
+inline bool firstScanWanted(const FirstIn& i) { return !i.done && i.realRadio && i.emptyList && i.atDefaultFreq && !i.recording && !i.transmitting && !i.busy; }
+
+// A TV service to play first: the lowest logical channel number of the television services (radio services only when there is no television), numbered ones before unnumbered; -1 when none
+struct SvcPick { int id, lcn; bool radio; };
+inline int pickFirstService(const std::vector<SvcPick>& v) {
+    int best = -1;
+    auto key = [](const SvcPick& s) { return std::pair<int, int>((s.radio ? 2 : 0) + (s.lcn > 0 ? 0 : 1), s.lcn > 0 ? s.lcn : s.id); };
+    for (int i = 0; i < (int)v.size(); i++) if (v[i].id >= 0 && (best < 0 || key(v[i]) < key(v[best]))) best = i;
+    return best;
+}
+
+// Index of the largest value, -1 when empty (the strongest station or multiplex of a scan)
+inline int strongestIdx(const std::vector<float>& snr) {
+    int b = -1;
+    for (int i = 0; i < (int)snr.size(); i++) if (b < 0 || snr[i] > snr[b]) b = i;
     return b;
 }
 

@@ -240,6 +240,22 @@ void airportTuneCentre(App& a, double centreHz) {
     savePrefs(a);
 }
 
+bool airportLoadNearest(App& a, const std::function<void(const std::vector<dect2::AirbandChannel>&, bool)>& apply, std::string& what) {
+    const dect2::AirportDb& db = airportDb();
+    double me[2];
+    if (!receiverLocationSet() || !station(me[0], me[1])) return false;
+    for (const auto& hit : db.nearby(me[0], me[1], 300, 60, true)) {
+        if (db.all()[hit.index].airbandCount() == 0) continue;
+        select(a, (int)hit.index, true);
+        if (S.chans.empty()) continue;
+        apply(S.chans, true);
+        char b[160]; snprintf(b, sizeof b, tr("Loaded %s, the nearest airport (%.0f km): %zu channels."), db.all()[hit.index].name.c_str(), hit.km, S.chans.size());
+        what = b;
+        return true;
+    }
+    return false;
+}
+
 void airportSection(App& a, const std::function<void(const std::vector<dect2::AirbandChannel>&, bool)>& apply) {
     pollDownload();
     const dect2::AirportDb& db = airportDb();

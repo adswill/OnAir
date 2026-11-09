@@ -537,6 +537,13 @@ void summary(const App& a, std::string& l1, std::string& l2) {
 
 } // namespace
 
+// First start, with a real radio and an empty list: the nearest airport (ui/first_start.cpp)
+bool airbandFirstLoad(App& a, std::string& what) {
+    load(a);
+    if (!S.chans.empty()) return false;
+    return airportLoadNearest(a, applyChannels, what);
+}
+
 extern const ModeUi kAirbandUi;
 const ModeUi kAirbandUi = {
     .sideTitle = "CHANNELS",
