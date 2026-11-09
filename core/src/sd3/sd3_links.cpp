@@ -9,7 +9,7 @@ static const Sd3ProfileInfo kProfiles[kSd3NumProfiles] = {
     {"goesgvar", "GOES GVAR", 291, 6e6, 4.5e6},
     {"goescda", "GOES CDA", 292, 1e6, 0.25e6},
     {"goesmdl", "GOES MDL", 293, 3e6, 0.5e6},
-    {"gk2auhrit", "GK-2A UHRIT", 294, 20e6, 18e6},
+    {"gk2auhrit", "GK-2A UHRIT", 294, 30e6, 28e6},
     {"gk2acdas", "GK-2A CDAS", 295, 8e6, 6.5e6},
     {"sband", "S-band CCSDS", 296, 10e6, 0.5e6},
     {"geoscan", "Geoscan", 297, 250000, 96000},

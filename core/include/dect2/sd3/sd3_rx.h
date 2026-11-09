@@ -14,7 +14,7 @@ namespace dect2 {
 
 class Sd3Receiver {
 public:
-    explicit Sd3Receiver(int profile);
+    Sd3Receiver(int profile);
     ~Sd3Receiver();
     void configure(double inputRateHz);
     void setSignalOffset(double hz);

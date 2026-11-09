@@ -3,6 +3,7 @@
 #include "dect2/sd3/sd3_proto.h"
 #include "sd3_demod.h"
 #include "dect2/dvbs/dvbs_rx.h"
+#include "dect2/dvbs/dvbs_tel.h"
 #include "dect2/hrpt/hrpt_proto.h"
 #include "dect2/meteor/meteor_proto.h"
 #include "dect2/wxsat/wxsat_proto.h"
@@ -155,6 +156,8 @@ struct Sd3Receiver::Impl {
     std::unique_ptr<GrbDecoder> grb;
     std::unique_ptr<UhritDecoder> uhrit;
     std::map<int, uint64_t> apidCount;
+    uint64_t dvbSeq = 0;
+    int dvbState = 0;
 
     // pictures
     std::map<int, std::shared_ptr<WxImage>> grbImg;
@@ -536,8 +539,14 @@ struct Sd3Receiver::Impl {
             if (lost) { searchLock = false; soft.clear(); def[0].reset(); }
             if (!searchLock && tel.state < 2 && now - lastAcq > 3 && now - statStart > 3) { dem.reacquire(); lastAcq = now; }
         } else {
-            tel.state = (now - lastGood < 3) ? 3 : 0;
-            if (grb) { tel.packets = grb->packets; tel.crcBad = grb->crcBad; }
+            int ds = 0;
+            if (dvb) {
+                DvbsTelemetry d;
+                if (dvb->telemetry(d, dvbSeq)) { dvbSeq = d.seq; tel.cfoHz = d.cfoHz; tel.snrDb = (float)d.snrDb; dvbState = d.state; tel.carrierLock = d.state >= 2 ? 1.f : 0.f; if (d.modcod >= 0) { char m[48]; snprintf(m, sizeof m, "MODCOD %d", d.modcod); tel.hint = m; } }
+                ds = dvbState;
+            }
+            tel.state = (now - lastGood < 3) ? 3 : (ds >= 1 ? 1 : 0);
+            if (grb) { tel.packets = grb->packets; tel.crcBad = grb->crcBad; if (grb->j2kBad) { char e[160]; snprintf(e, sizeof e, "%llu JPEG 2000 blocks failed: %s", (unsigned long long)grb->j2kBad, grb->lastError.c_str()); tel.hint = e; } }
             if (uhrit) { tel.packets = uhrit->packets; tel.crcBad = uhrit->crcBad; tel.blocksBad = uhrit->frameCrcBad; }
         }
         std::lock_guard<std::mutex> lk(mu);

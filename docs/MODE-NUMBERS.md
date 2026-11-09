@@ -74,6 +74,17 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Arktika-M RDAS | 266 | 268 | 267 | 226 | feat37-sd1 | 3.7; MSU-GS, X-band 30.72 Msym/s; numbers may need to move at merge |
 | Arktika-M GGAK | 267 | 269 | 268 | 227 | feat37-sd1 | 3.7; 1703 MHz PM; numbers may need to move at merge |
 | AWS L-band | 268 | 270 | 269 | 228 | feat37-sd1 | 3.7; MWR, 1707 MHz; numbers may need to move at merge |
+| GOES GRB | 290 | 292 | 291 | 290 | feat38-sat-sd3 | 3.8; DVB-S2, ABI / SUVI / GLM; numbers may need to move at merge |
+| GOES GVAR | 291 | 293 | 292 | 291 | feat38-sat-sd3 | 3.8; GOES-N, retired, recordings only; numbers may need to move at merge |
+| GOES CDA | 292 | 294 | 293 | 292 | feat38-sat-sd3 | 3.8; GOES-R 40k / 4k, GOES-N PM; numbers may need to move at merge |
+| GOES MDL | 293 | 295 | 294 | 293 | feat38-sat-sd3 | 3.8; GOES-N, frames only; numbers may need to move at merge |
+| GK-2A UHRIT | 294 | 296 | 295 | 294 | feat38-sat-sd3 | 3.8; DVB-S2 at X-band; numbers may need to move at merge |
+| GK-2A CDAS | 295 | 297 | 296 | 295 | feat38-sat-sd3 | 3.8; frames only; numbers may need to move at merge |
+| S-band CCSDS | 296 | 298 | 297 | 296 | feat38-sat-sd3 | 3.8; satellite table, 46 links; numbers may need to move at merge |
+| Geoscan | 297 | 299 | 298 | 297 | feat38-sat-sd3 | 3.8; six satellites, 66-byte frames; numbers may need to move at merge |
+| Lucky-7 | 298 | 300 | 299 | 298 | feat38-sat-sd3 | 3.8; frames; numbers may need to move at merge |
+| Spino | 299 | 301 | 300 | 299 | feat38-sat-sd3 | 3.8; frames; numbers may need to move at merge |
+| Erminaz | 510 | 512 | 511 | 510 | feat38-sat-sd3 | 3.8; CCSDS frames; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
@@ -81,6 +92,6 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 Protocol entries (a row with a subId, such as FT8 in HF digital or POCSAG in pagers) share their family on purpose; the test checks
 that each (family, subId) pair is unique instead.
 
-`kNumFamilies` = 269, `kPollSeqSlots` = 229 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
+`kNumFamilies` = 530, `kPollSeqSlots` = 530 (families 213 to 234 and poll slots 189 to 194 are kept for the other 3.6 lanes).
 
 A new mode takes the next free family above the highest one in this table and the next free poll slot, and adds its row here.

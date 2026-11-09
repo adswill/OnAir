@@ -64,7 +64,8 @@ public:
     std::function<void(int apid, const std::string& what)> onProduct;           // "ABI ..." / "SUVI ..." / "GLM ..."
     std::function<void(const std::string& name, const std::vector<uint8_t>&)> onFile;   // metadata and text to save
     std::function<void(const Packet&)> onPacket;
-    uint64_t crcBad = 0, packets = 0, payloads = 0, blocks = 0;
+    uint64_t crcBad = 0, packets = 0, payloads = 0, blocks = 0, j2kBad = 0;
+    std::string lastError;
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

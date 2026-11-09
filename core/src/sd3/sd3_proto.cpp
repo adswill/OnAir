@@ -233,7 +233,7 @@ void GrbDecoder::pushCadu(const uint8_t* c) {
             const uint32_t lx = be32(&d[14]), ly = be32(&d[18]), bh = be32(&d[22]), bw = be32(&d[26]), dqf = be32(&d[30]);
             const size_t size = std::min<size_t>(dqf, d.size() - 34);
             j2k::Image im = j2k::decode(&d[34], size);
-            if (!im.ok) return;
+            if (!im.ok) { j2kBad++; lastError = im.error; return; }
             blocks++;
             int zone = 0;
             const int ch = abiChannelOfApid(apid, zone);

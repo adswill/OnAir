@@ -316,6 +316,17 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
+    case 291: return pollStd(rxSd3_[0], 291, t, seqs[290], &RxTelemetry::sd3);
+    case 292: return pollStd(rxSd3_[1], 292, t, seqs[291], &RxTelemetry::sd3);
+    case 293: return pollStd(rxSd3_[2], 293, t, seqs[292], &RxTelemetry::sd3);
+    case 294: return pollStd(rxSd3_[3], 294, t, seqs[293], &RxTelemetry::sd3);
+    case 295: return pollStd(rxSd3_[4], 295, t, seqs[294], &RxTelemetry::sd3);
+    case 296: return pollStd(rxSd3_[5], 296, t, seqs[295], &RxTelemetry::sd3);
+    case 297: return pollStd(rxSd3_[6], 297, t, seqs[296], &RxTelemetry::sd3);
+    case 298: return pollStd(rxSd3_[7], 298, t, seqs[297], &RxTelemetry::sd3);
+    case 299: return pollStd(rxSd3_[8], 299, t, seqs[298], &RxTelemetry::sd3);
+    case 300: return pollStd(rxSd3_[9], 300, t, seqs[299], &RxTelemetry::sd3);
+    case 511: return pollStd(rxSd3_[10], 511, t, seqs[510], &RxTelemetry::sd3);
     case 261: return pollStd(rxWx_[0], 261, t, seqs[220], &RxTelemetry::wxsat);   // 0
     case 262: return pollStd(rxWx_[1], 262, t, seqs[221], &RxTelemetry::wxsat);   // 1
     case 263: return pollStd(rxWx_[2], 263, t, seqs[222], &RxTelemetry::wxsat);   // 2

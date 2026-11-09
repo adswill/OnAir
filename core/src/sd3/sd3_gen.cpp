@@ -66,7 +66,7 @@ struct Sd3Generator::Impl {
             dvbs::DvbsTxConfig t;
             t.standard = 2; t.symbolRate = rs; t.rollOff = l.rrc;
             if (P == kSd3Grb) { t.mod = dvbs::kQpsk; t.rate = 10; t.pilots = false; }   // QPSK 9/10
-            else { t.mod = dvbs::k8psk; t.rate = 7; t.pilots = true; }                  // 8PSK 3/4
+            else { t.mod = dvbs::k8psk; t.rate = 5; t.pilots = true; }                  // 8PSK 2/3 (MODCOD 13)
             t.gseField = [this](size_t bytes) { return s2Bytes(bytes); };
             tx = dvbs::makeDvbsTx(t, nullptr);
             s2Symbols();
@@ -207,7 +207,7 @@ struct Sd3Generator::Impl {
         auto meta = grbGenericPackets(0x580, seqGrb, 123456, std::vector<uint8_t>(40, 0x3C));
         pk.insert(pk.end(), meta.begin(), meta.end());
         addAosPackets(pk, 5);
-        line++;
+        line = (line + 1) % 40;
     }
 
     void uhritNext() {

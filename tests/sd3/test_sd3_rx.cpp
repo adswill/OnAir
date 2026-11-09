@@ -27,6 +27,7 @@ static Res run(int profile, int link, double rate, double seconds, double snr, d
     std::vector<cf32> buf(16384);
     const size_t total = (size_t)(rate * seconds);
     for (size_t at = 0; at < total;) { const size_t n = std::min(buf.size(), total - at); gen.generate(buf.data(), n); rx.feed(buf.data(), n); at += n; }
+    if (getenv("SD3_LOG")) printf("fed %zu samples, flushing\n", total);
     rx.flush();
     Res r;
     rx.telemetry(r.t, ~0ull);
@@ -34,11 +35,12 @@ static Res run(int profile, int link, double rate, double seconds, double snr, d
 }
 
 static void show(const char* what, const Res& r) {
-    printf("%-32s frames ok %6llu bad %5llu rs %5llu pkts %6llu files %4llu lines %5llu snr %5.1f cfo %9.1f state %d %s\n", what, (unsigned long long)r.t.blocksOk, (unsigned long long)r.t.blocksBad, (unsigned long long)r.t.rsCorrected, (unsigned long long)r.t.packets, (unsigned long long)r.t.files, (unsigned long long)r.t.lines, r.t.snrDb, r.t.cfoHz, r.t.state, r.t.lastText.c_str());
+    printf("%-32s frames ok %6llu bad %5llu rs %5llu crc %llu pkts %6llu files %4llu lines %5llu snr %5.1f cfo %9.1f state %d %s\n", what, (unsigned long long)r.t.blocksOk, (unsigned long long)r.t.blocksBad, (unsigned long long)r.t.rsCorrected, (unsigned long long)r.t.crcBad, (unsigned long long)r.t.packets, (unsigned long long)r.t.files, (unsigned long long)r.t.lines, r.t.snrDb, r.t.cfoHz, r.t.state, r.t.lastText.empty() ? r.t.hint.c_str() : r.t.lastText.c_str());
     fflush(stdout);
 }
 
 int main(int argc, char** argv) {
+    setvbuf(stdout, nullptr, _IOLBF, 0);
     const std::string only = argc > 1 ? argv[1] : "";
     auto want = [&](const char* s) { return only.empty() || only == s; };
     if (want("gvar")) {
@@ -84,13 +86,13 @@ int main(int argc, char** argv) {
         printf("S-band links decoded: %d of %d\n", ok, n);
     }
     if (want("grb")) {
-        auto r = run(kSd3Grb, 0, 20e6, 0.15, 14, 10000); show("GRB 14 dB", r);
+        auto r = run(kSd3Grb, 0, 20e6, 1.0, 14, 10000); show("GRB 14 dB", r);
         CHECK(r.t.packets >= 50, "grb packets %llu", (unsigned long long)r.t.packets);
         CHECK(!r.t.products.empty(), "grb products");
         CHECK(r.t.image && r.t.image->lines >= 3, "grb picture");
     }
     if (want("uhrit")) {
-        auto r = run(kSd3Uhrit, 0, 20e6, 0.1, 14, 10000); show("UHRIT 14 dB", r);
+        auto r = run(kSd3Uhrit, 0, 30e6, 0.4, 16, 10000); show("UHRIT 14 dB", r);
         CHECK(r.t.files >= 2, "uhrit files %llu", (unsigned long long)r.t.files);
         CHECK(r.t.lastText.find("IMG_TEST") != std::string::npos, "uhrit name %s", r.t.lastText.c_str());
     }
