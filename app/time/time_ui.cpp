@@ -341,7 +341,8 @@ void receiver(App& a) {
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0);
     if (t.dcfPhaseLocked) ImGui::TextDisabled("DCF77 phase code: locked, correlation %.2f, last bit %d", t.dcfPhaseCorr, t.dcfPhaseBit);
-    ImGui::TextDisabled("Not used: the WWVB phase code, the WWV voice announcements.");
+    if (t.wwvbPhaseLocked) ImGui::TextDisabled("WWVB phase code: minute %lld (UTC seconds)", (long long)t.wwvbPhaseUtc);
+    ImGui::TextDisabled("Not used: the WWV voice announcements.");
     ImGui::PopTextWrapPos();
 }
 
