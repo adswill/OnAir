@@ -182,7 +182,11 @@ async function stopServer(p) { p.kill('SIGTERM'); for (let i = 0; i < 60 && p.ex
       const again = await page.evaluate(() => !document.getElementById('login').hidden);
       check(again, 'browser: wrong password brings the login back');
       await page.fill('#loginPw', 'correct-horse-9'); await page.click('#loginGo');
-      await page.waitForFunction(() => document.getElementById('app') && !document.getElementById('app').hidden, null, { timeout: 15000 });
+      { // the page's CSP has no unsafe-eval, which page.waitForFunction needs: poll with page.evaluate
+        const t0 = Date.now(); let shown = false;
+        while (!shown && Date.now() - t0 < 15000) { shown = await page.evaluate(() => !!document.getElementById('app') && !document.getElementById('app').hidden); if (!shown) await sleep(150); }
+        check(shown, 'browser: the right password opens the receiver');
+      }
       const ok = await page.evaluate(() => { const n = document.getElementById('noticeOk'); if (n && n.offsetParent) n.click(); return document.getElementById('connText').textContent; });
       await sleep(2500);
       const colours = await page.evaluate(() => { const c = document.getElementById('wf'), x = c.getContext('2d'), d = x.getImageData(0, 0, Math.min(c.width, 400), Math.min(c.height, 200)).data; const s = new Set(); for (let i = 0; i < d.length; i += 388) s.add(d[i] + ',' + d[i + 1]); return s.size; });
