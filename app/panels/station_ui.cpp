@@ -193,6 +193,16 @@ std::string stationUseLine(const App& a, const ModeDef& m) {
     return pairName(st::assess(S, needOf(m), busyFor(a)));
 }
 
+void stationAntennaFor(const App& a, bool& known, bool& forBand) {
+    load();
+    known = !S.antennas.empty();
+    forBand = false;
+    if (!known) return;
+    st::ModeNeed n; n.freqHz = a.freqMhz * 1e6;
+    const st::Verdict v = st::assess(S, n, std::vector<bool>());
+    forBand = std::find(v.missing.begin(), v.missing.end(), st::Missing::AntennaBand) == v.missing.end();
+}
+
 void stationAutoPick(App& a, bool onlyIfBusy) {
     sync(a);
     if (!gAuto || S.radios.size() < 2) return;

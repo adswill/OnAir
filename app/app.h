@@ -824,6 +824,7 @@ void wideAllButton(App& a);                          // the one button of it (Si
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
 void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
+void stationAntennaFor(const App& a, bool& known, bool& forBand);   // station_ui.cpp: for the doctor's coach: is an antenna entered, and does one suit the tuned frequency
 void stationAutoPick(App& a, bool onlyIfBusy = false);   // station_ui.cpp: selecting a mode moves to a better free radio when the selected one cannot do it; Start (onlyIfBusy) moves only off a radio another receiver holds
 struct ModeFit;
 struct ModeDef;
