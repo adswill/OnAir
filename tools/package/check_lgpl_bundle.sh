@@ -7,14 +7,15 @@ set -u
 PROG=${1:?usage: check_lgpl_bundle.sh <program> [library folder ...]}; shift
 BAD='x264|x265|xvid|postproc|vidstab|rubberband|frei0r|cdio|davs2|xavs2|uavs3d|fdk-aac|fdk_aac|libsmbclient|libcaca|zimg'
 fail=0
-if strings "$PROG" | grep -E -- '--enable-(gpl|nonfree|version3)' | grep -v -e 'without --enable' -e 'Source offer' | head -3 | grep .; then
+STRINGS=$(command -v llvm-strings || command -v strings) || { echo "FAIL: no strings or llvm-strings, $PROG cannot be checked"; exit 1; }
+if "$STRINGS" "$PROG" | grep -E -- '--enable-(gpl|nonfree|version3)' | grep -v -e 'without --enable' -e 'Source offer' | head -3 | grep .; then
   echo "FAIL: $PROG contains an FFmpeg built with GPL / nonfree options"; fail=1
 fi
 links=
-case "$(file -b "$PROG")" in
-  *Mach-O*) OT=$(command -v otool || command -v llvm-otool) || { echo "FAIL: no otool or llvm-otool, $PROG cannot be checked"; exit 1; }
+case "$(head -c4 "$PROG" | od -An -tx1 | tr -d ' ')" in
+  cffaedfe|cefaedfe|cafebabe) OT=$(command -v otool || command -v llvm-otool) || { echo "FAIL: no otool or llvm-otool, $PROG cannot be checked"; exit 1; }
             links=$("$OT" -L "$PROG" | tail -n +2) ;;
-  *ELF*) links=$(readelf -d "$PROG" 2>/dev/null | grep NEEDED) ;;
+  7f454c46) if command -v readelf >/dev/null; then links=$(readelf -d "$PROG" 2>/dev/null | grep NEEDED); else links=$(llvm-readobj --needed-libs "$PROG"); fi ;;
 esac   # (a Windows .exe: only the configuration string is checked)
 for d in "$@"; do links="$links"$'\n'"$(ls "$d" 2>/dev/null)"; done
 if echo "$links" | grep -E -i "$BAD" | grep .; then echo "FAIL: a GPL-only library is linked or bundled"; fail=1; fi

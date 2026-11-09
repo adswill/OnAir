@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
 """The Depends line of a package made with the cross SDK. dpkg-shlibdeps cannot do this: it asks the build machine's package database,
 and the sysroot has none. Reads NEEDED of every ELF file in the stage, leaves out what the package carries itself, and finds each
-library's package through the shlibs file of the pinned .deb files. A library no package provides stops the build.
-  deb_depends.py <stage> <sysroot lock file> <folder with the .deb files> [extra dependency ...]"""
+library's package in the SDK's deb-shlibs.txt. A library no package provides stops the build.
+  deb_depends.py <stage> <SDK's deb-shlibs.txt> [extra dependency ...]"""
 import os, re, subprocess, sys
 
-stage, lock, cache = sys.argv[1:4]
-extra = sys.argv[4:]
+stage, shlibs = sys.argv[1:3]
+extra = sys.argv[3:]
 
 def elf_files():
     for root, _, files in os.walk(stage):
@@ -29,22 +29,11 @@ for p in elf_files():
 needed -= carried
 needed = {n for n in needed if not n.startswith("ld-linux")}   # (the loader comes with libc6)
 
-provides = {}   # soname -> (package, upstream version)
-with open(lock) as h:
+provides = {}   # soname -> (package, minimum version)
+with open(shlibs) as h:
     for line in h:
-        w = line.split()
-        if len(w) < 4 or w[0] != "deb":
-            continue
-        name, version, path = w[1], w[2], os.path.join(cache, os.path.basename(w[3]))
-        r = subprocess.run(["dpkg-deb", "-I", path, "shlibs"], capture_output=True, text=True)
-        if r.returncode != 0:
-            continue
-        for s in r.stdout.splitlines():
-            f = s.split()
-            if len(f) < 3 or f[0].endswith(":"):
-                continue
-            soname = f"{f[0]}.so.{f[1]}" if re.match(r"^\d", f[1]) else f"{f[0]}-{f[1]}.so"
-            provides[soname] = (f[2], re.sub(r"-[^-]*$", "", version.split(":")[-1]))
+        soname, package, version = line.split()
+        provides[soname] = (package, version)
 
 missing = sorted(n for n in needed if n not in provides)
 if missing:

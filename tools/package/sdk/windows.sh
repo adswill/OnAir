@@ -2,19 +2,19 @@
 # OnAir for Windows x64 from the clang SDK: <OUT>/OnAir-<v>-windows-x64.zip and -setup.exe (the name the updater looks for).
 # MAKENSIS: the makensis program, with NSISDIR set when it is not installed (default: makensis on PATH).
 . "$(dirname "$0")/common.sh"
-B=build-pkg-win
-configure_build x86_64-w64-mingw32 $B
+B=$(pkg_dir build-pkg-win)
+configure_build x86_64-w64-mingw32 "$B"
 SY=$WIN_SYSROOT
-S=$REPO/$B/OnAir-$VERSION-windows-x64
+S=$B/OnAir-$VERSION-windows-x64
 rm -rf "$S"; mkdir -p "$S"
-strip_to() { x86_64-w64-mingw32-strip -o "$S/$2" "$REPO/$B/$1"; }
+strip_to() { x86_64-w64-mingw32-strip -o "$S/$2" "$B/$1"; }
 strip_to dect2.exe OnAir.exe; strip_to dect2cli.exe onair-cli.exe; strip_to dect2scan.exe onair-scan.exe; strip_to onair-server.exe onair-server.exe
 mkdir -p "$S/web"; cp -R "$REPO/web/onair-web" "$S/web/"
 # what the programs import, recursively, and the radio libraries OnAir's native drivers load by name
 for e in "$S"/*.exe; do
   "$SDK/collect_dlls.sh" "$e" "$SY" librtlsdr.dll libairspy.dll libairspyhf.dll libbladeRF.dll libiio.dll libLimeSuite.dll 'libhamlib-*.dll' FTD3XX.dll >/dev/null
 done
-cp "$REPO/$B/libcodec2.dll" "$S/"
+cp "$B/libcodec2.dll" "$S/"
 mkdir -p "$S/lib/SoapySDR/modules0.8"; cp "$SY/lib/SoapySDR/modules0.8/libremoteSupport.dll" "$S/lib/SoapySDR/modules0.8/"
 "$SDK/collect_dlls.sh" "$S/lib/SoapySDR/modules0.8/libremoteSupport.dll" "$SY" >/dev/null || true
 rm -f "$S/lib/SoapySDR/modules0.8"/lib[!r]*.dll   # (the module finds SoapySDR and the runtime next to the program)
@@ -34,6 +34,6 @@ cp "$REPO/LICENSE" "$S/LICENSE.txt"
 "$REPO/tools/package/check_lgpl_bundle.sh" "$S/OnAir.exe"; "$REPO/tools/package/check_lgpl_bundle.sh" "$S/onair-server.exe"
 "$REPO/tools/package/add_license_files.sh" "$S"
 sed -n '/^OnAir - DVB-T2/,/^TXT$/p' "$REPO/tools/package/make_windows_cross.sh" | sed '$d' > "$S/README.txt"
-rm -f "$OUT/$(basename "$S").zip"; (cd "$(dirname "$S")" && zip -qr "$OUT/$(basename "$S").zip" "$(basename "$S")")
+rm -f "$OUT/$(basename "$S").zip"; (cd "$(dirname "$S")" && python3 -I -m zipfile -c "$OUT/$(basename "$S").zip" "$(basename "$S")")
 "${MAKENSIS:-makensis}" -V2 -DVERSION="$VERSION" -DSRC="$S" -DICON="$REPO/packaging/windows/OnAir.ico" -DOUTFILE="$OUT/$(basename "$S")-setup.exe" "$REPO/packaging/windows/onair.nsi"
 ls -la "$OUT/$(basename "$S")".zip "$OUT/$(basename "$S")-setup.exe"

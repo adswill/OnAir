@@ -5,14 +5,14 @@
 . "$(dirname "$0")/common.sh"
 ARCH=${1:?usage: dmg.sh arm64|x86_64}
 case "$ARCH" in arm64|x86_64) ;; *) echo "arm64 or x86_64" >&2; exit 2;; esac
-TRIPLE=$ARCH-apple-darwin B=build-pkg-mac-$ARCH
+TRIPLE=$ARCH-apple-darwin B=$(pkg_dir build-pkg-mac-$ARCH)
 configure_build "$TRIPLE" "$B" -DCMAKE_BUILD_WITH_INSTALL_RPATH=ON -DCMAKE_INSTALL_RPATH=@executable_path/../Frameworks
 for t in rcodesign mkfs.hfsplus fsck.hfsplus hfsplus dmg; do command -v "$t" >/dev/null || { echo "error: $t is not in the SDK (make_sdk.sh makes it)" >&2; exit 1; }; done
 SY=$SDK/sysroots/$TRIPLE
 MIN=$(sed -n 's/^deployment: *macOS \([0-9.]*\).*/\1/p' "$SY/SYSROOT-MANIFEST.txt")
-APP=$REPO/$B/OnAir.app; C=$APP/Contents
+APP=$B/OnAir.app; C=$APP/Contents
 rm -rf "$APP"; mkdir -p "$C/MacOS" "$C/Resources/web" "$C/Frameworks/SoapySDR/modules"
-cp "$REPO/$B/dect2" "$C/MacOS/OnAir"; cp "$REPO/$B/onair-server" "$C/MacOS/onair-server"
+cp "$B/dect2" "$C/MacOS/OnAir"; cp "$B/onair-server" "$C/MacOS/onair-server"
 cp -R "$REPO/web/onair-web" "$C/Resources/web/"; cp "$REPO/packaging/icons/OnAir.icns" "$C/Resources/"
 sed -e "s/\$VERSION/$VERSION/g" -e "s/\$MACOSX_DEPLOYMENT_TARGET/$MIN/g" > "$C/Info.plist" < <(sed -n '/^<?xml version/,/^<\/dict><\/plist>$/p' "$REPO/tools/package/make_dmg.sh")
 for e in "$C/MacOS/OnAir" "$C/MacOS/onair-server"; do
@@ -20,7 +20,7 @@ for e in "$C/MacOS/OnAir" "$C/MacOS/onair-server"; do
 done
 M=$SY/usr/local/lib/SoapySDR/modules0.8/libremoteSupport.so
 cp "$M" "$C/Frameworks/SoapySDR/modules/"; "$SDK/collect_dylibs.sh" "$M" "$C/Frameworks" "$SY" >/dev/null
-cp -P "$REPO/$B"/libcodec2*.dylib "$C/Frameworks/"
+cp -P "$B"/libcodec2*.dylib "$C/Frameworks/"
 cp "$REPO/third_party/sddc_fx3/SDDC_FX3.img" "$C/Resources/"   # (OnAir looks in Resources/; only code belongs in MacOS/)
 L=$C/Resources/licenses; mkdir -p "$L/codec2" "$L/hamlib" "$L/sddc_fx3" "$L/ffmpeg"
 copy_licenses "$SY/usr/local/share/licenses" "$L" $LIBS
@@ -38,14 +38,14 @@ find "$APP" -type f -exec chmod go-w {} +; find "$APP" -type d -exec chmod 755 {
 
 # no build-machine paths, then the signature: whatever changes a file comes before it
 python3 -I "$REPO/tools/package/scrub_paths.py" "$C/MacOS" "$C/Frameworks"
-SIGNLOG=$REPO/$B/rcodesign.log
+SIGNLOG=$B/rcodesign.log
 rcodesign sign "$APP" > "$SIGNLOG" 2>&1 || { tail -20 "$SIGNLOG" >&2; exit 1; }
 if grep -E 'we do not know|^(warning|error)' "$SIGNLOG"; then echo "error: rcodesign did not like this app" >&2; exit 1; fi
 python3 -I "$SDK/macho.py" bundlecheck "$APP"
 
 # the volume: a whole number of MB (dmg build drops a part block at the end, which would lose the backup header); hfsplus leaves wrong folder
 # counts behind, which fsck repairs on the plain file
-ST=$REPO/$B/dmg; HFS=$REPO/$B/volume.hfs; DMG=$OUT/OnAir-$VERSION-macos-$ARCH.dmg
+ST=$B/dmg; HFS=$B/volume.hfs; DMG=$OUT/OnAir-$VERSION-macos-$ARCH.dmg
 rm -rf "$ST" "$HFS"; mkdir -p "$ST"; cp -a "$APP" "$ST/"
 truncate -s "$(( ($(du -sm "$ST" | cut -f1) * 11 / 10 + 16) * 1024 * 1024 ))" "$HFS"
 mkfs.hfsplus -v "OnAir $VERSION" "$HFS" >/dev/null
@@ -55,7 +55,7 @@ fsck.hfsplus -fy "$HFS" >/dev/null 2>&1 || true
 fsck.hfsplus -fn "$HFS" 2>&1 | grep -q 'appears to be OK' || { echo "error: the HFS+ volume is not clean" >&2; fsck.hfsplus -fn "$HFS" >&2; exit 1; }
 rm -f "$DMG"; dmg build "$HFS" "$DMG" >/dev/null 2>&1
 # what is in the image must be what was signed: back out of the compressed image, file by file
-BACK=$REPO/$B/back.hfs; rm -f "$BACK"; dmg extract "$DMG" "$BACK" >/dev/null 2>&1
+BACK=$B/back.hfs; rm -f "$BACK"; dmg extract "$DMG" "$BACK" >/dev/null 2>&1
 cmp "$HFS" "$BACK" || { echo "error: the disk image does not give the volume back" >&2; exit 1; }
 [ "$(tail -c 512 "$DMG" | head -c 4)" = koly ] || { echo "error: no disk image trailer in $DMG" >&2; exit 1; }
 n=0
