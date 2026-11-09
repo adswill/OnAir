@@ -5,6 +5,7 @@
 #include "dect2/drm/drm_msg.h"
 #include "dect2/drm/drm_afs.h"
 #include <cstdio>
+#include <filesystem>
 using namespace drmtest;
 using namespace dect2;
 #include "../common/test_util.h"
@@ -85,7 +86,7 @@ int main() {
         DrmBookEntry o; o.id = 7; o.label = "tab\there"; o.lastHeard = 50; b.note(o);
         const auto n = b.newestFirst();
         CHECK(n.size() == 2 && n[0].label == "One" && n[0].language == "eng" && n[0].heardKhz.size() == 2 && n[0].altKhz.size() == 1, "merged");
-        const std::string p = "/tmp/onair_drm_book_test.txt";
+        const std::string p = (std::filesystem::temp_directory_path() / "onair_drm_book_test.txt").string();
         CHECK(b.save(p), "save");
         DrmStationBook c; CHECK(c.load(p), "load");
         CHECK(c.entries().size() == 2 && c.entries().at(0xE12345).bestSnr == 20 && c.entries().at(7).label == "tab here", "round trip");
