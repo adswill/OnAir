@@ -7,7 +7,7 @@
 // SynthConfig (makeIsmSynth):
 //   snrDb       carrier to noise of a 0 dB device, the noise taken in 100 kHz
 //   cfoHz       the radio's tuning error: every device moves by it
-//   modeOpt[0]  scene: 0 the 433.92 MHz scene (ismTestScene(0)), 1 the 868 MHz scene, 2 Z-Wave on 868.4 MHz
+//   modeOpt[0]  scene: 0 the 433.92 MHz scene (ismTestScene(0)), 1 the 868 MHz scene, 2 Z-Wave on 868.4 MHz, 3 KNX RF and HomeMatic on 868.3 MHz
 //   modeOpt[1]  1: a strong continuous carrier 300 kHz above the dial (30 dB over a 0 dB device)
 #pragma once
 #include "dect2/engine/mode_synth.h"
@@ -23,7 +23,7 @@ namespace dect2 {
 // The test devices' protocols (ismEncode's names)
 enum class IsmTx {
     Nexus, Tx141th, AcuriteTower, Wh1080, F007th, OregonV3, OregonV21, Schrader, Ev1527, Toyota, Renault, Ford, Efergy, CurrentCost,
-    Bresser6in1, Bresser5in1, Tx29, Wh24, MbusT, ZwaveR1, ZwaveR2, ZwaveR3, Count
+    Bresser6in1, Bresser5in1, Tx29, Wh24, MbusT, ZwaveR1, ZwaveR2, ZwaveR3, KnxRf, HomeMatic, Count
 };
 const char* ismTxName(IsmTx p);
 
