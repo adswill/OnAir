@@ -15,5 +15,9 @@ std::string convertCharset(const char* charset, const uint8_t* p, int n);
 std::string dvbText(const uint8_t* p, int n, bool gbDefault = false);
 // DTMB: every dvbText() call (service names, EPG, network name) also tries unprefixed GBK pairs, not only the callers that pass gbDefault.
 void setGbDefaultGlobal(bool on);
+// ISDB (ARIB STD-B24): unprefixed text is the 8-unit code. Automatic: text that looks like plain ASCII stays with the DVB rules (the Latin variant used in South America).
+void setAribDefaultGlobal(bool on);
+std::string aribText(const uint8_t* p, int n);
+bool looksArib(const uint8_t* p, int n);
 
 } // namespace dect2::dvbsi

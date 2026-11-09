@@ -34,6 +34,7 @@ std::string convertCharset(const char* charset, const uint8_t* p, int n) {
         } else if (!strcmp(charset, "BIG5")) cp = 950;
         else if (!strcmp(charset, "GB2312")) cp = 936;
         else if (!strcmp(charset, "EUC-KR")) cp = 949;
+        else if (!strcmp(charset, "EUC-JP")) cp = 20932;
         const int wn = MultiByteToWideChar(cp, 0, (const char*)p, n, nullptr, 0);
         if (wn <= 0) return std::string((const char*)p, n);
         w.resize((size_t)wn);
