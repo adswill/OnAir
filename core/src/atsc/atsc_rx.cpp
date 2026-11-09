@@ -2,6 +2,7 @@
 #include "dect2/atsc/atsc_rx.h"
 #include "dect2/atsc/atsc.h"
 #include "dect2/atsc/atsc_gen.h"   // rrcValue
+#include "dect2/atsc/atsc_mh.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -788,6 +789,7 @@ struct Core {
         uint64_t fields = 0, segments = 0, rsClean = 0, rsCorrected = 0, rsFailed = 0;
         double snr = 0, dataSnr = 0, segErr = 0;
         bool eqTrained = false;
+        AtscMhStatus mh;
         std::vector<float> taps, levels;
         uint64_t seq = 0;
     };
@@ -855,6 +857,7 @@ struct Core {
     }
 
     double snrAvg = 0, dataSnrAvg = 0, segErr = 0;   // worker-owned running averages
+    AtscMhDetector mh;
 
     // ---- equaliser (worker-owned state)
     // y[t] = sum_k ff[k] r[t + NF - k] + sum_j fb[j] a[t - 1 - j] + bias, with a[] the decided symbols. With B = 0 this is the plain
@@ -1176,6 +1179,7 @@ struct Core {
             if (st) { decOut.rsClean += st->rsClean; decOut.rsCorrected += st->rsCorrected; decOut.rsFailed += st->rsFailed; decOut.segments += st->segments; }
             decOut.snr = snrAvg; decOut.dataSnr = dataSnrAvg; decOut.segErr = segErr;
             decOut.eqTrained = ok;
+            decOut.mh = mh.status();
             decOut.taps = eqLast.ff;
             decOut.levels = levelsOut;
             decOut.seq++;
@@ -1271,6 +1275,7 @@ struct Core {
         if (st.segments) { const double r = (double)st.rsFailed / st.segments; segErr = segErr + 0.3 * (r - segErr); }
         if (np > 0 && cb) {
             const double secs = (double)np * 0.0000774;   // one packet per data segment: 832 symbols / 10.76 MHz
+            mh.feed(out.data(), (size_t)np);
             cb(out.data(), (size_t)np, secs);
             tsFlow = 6;
         } else if (tsFlow > 0) tsFlow--;
@@ -1335,6 +1340,7 @@ bool AtscReceiver::telemetry(AtscTelemetry& out, uint64_t lastSeq) {
     out.fields = d.fields; out.segments = d.segments; out.rsClean = d.rsClean; out.rsCorrected = d.rsCorrected; out.rsFailed = d.rsFailed;
     out.snrDb = d.snr; out.dataSnrDb = d.dataSnr; out.segErrorRate = d.segErr; out.eqTrained = d.eqTrained;
     out.eqTaps = d.taps; out.levels = d.levels;
+    out.mhPresent = d.mh.present; out.mhPid = d.mh.pid; out.mhSlotShare = d.mh.slotShare;
     out.seq = seq;
     return true;
 }

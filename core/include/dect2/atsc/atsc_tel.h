@@ -24,6 +24,10 @@ struct AtscTelemetry {
     std::vector<float> eqTaps;    // equaliser impulse response (feed-forward), cursor at `eqCursor`
     int eqCursor = 0;
     std::vector<float> levels;    // a sample of equalised data symbols (nominal -7..+7), for the eye/histogram view
+    // ATSC-M/H in the stream (presence and share of the channel only: the M/H services are not decoded)
+    bool mhPresent = false;
+    int mhPid = -1;
+    double mhSlotShare = 0;
     uint64_t seq = 0;
 };
 
