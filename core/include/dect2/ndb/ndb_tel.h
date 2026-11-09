@@ -10,6 +10,9 @@
 
 namespace dect2 {
 
+// One beacon of the census (all carriers inside the captured band)
+struct NdbCensusRow { double offsetHz = 0; float levelDb = -200, snrDb = 0, wpm = 0; int toneHz = 0; std::string ident; int64_t lastWall = 0; };
+
 struct NdbTelemetry {
     uint64_t seq = 0;
     int state = 0;                 // 0 no carrier, 1 carrier, 2 an ident has repeated
@@ -28,6 +31,7 @@ struct NdbTelemetry {
     std::string text;              // the newest decoded characters, spaces between idents
     std::string partial;           // the ident still being keyed
     std::vector<std::string> history;   // confirmed idents, oldest first
+    std::vector<NdbCensusRow> census;   // every beacon heard in the band, by frequency
 };
 
 inline std::string ndbToneName(const NdbTelemetry& t) {

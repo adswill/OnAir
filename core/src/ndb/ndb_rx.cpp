@@ -2,6 +2,7 @@
 #include "dect2/ndb/ndb_rx.h"
 #include "dect2/cw/cw_morse.h"
 #include "dect2/ndb/ndb_tel.h"
+#include "dect2/ndb/ndb_census.h"
 #include "../audio/ham_listen.h"
 #include <algorithm>
 #include <atomic>
@@ -56,6 +57,8 @@ bool lettersOnly(const std::string& w) {
 struct NdbReceiver::Impl {
     std::mutex mu;
     std::function<void(const std::string&)> log;
+    std::unique_ptr<NdbCensus> census;
+    bool censusOff = false;
     double rateSet = 0, offsetSet = 0;
     std::atomic<bool> resetReq{true};
     std::atomic<int> toneMode{0};          // 0 auto, 1 400 Hz, 2 1020 Hz, 3 keyed carrier
@@ -302,6 +305,7 @@ struct NdbReceiver::Impl {
     void publish() {
         NdbTelemetry t;
         t.seq = pub.seq + 1;
+        if (census) census->snapshot(t.census);
         const double level = 10.0 * std::log10(pwr + 1e-20);
         t.levelDb = (float)level;
         t.cfoHz = cfo;
@@ -354,8 +358,14 @@ void NdbReceiver::feed(const cf32* x, size_t n) {
         m.offset = m.offsetSet;
         m.nIn = 0;
         m.resetDemod();
+        m.census.reset();
+        m.censusOff = m.listen.silent;    // the channels of the census run silent: they must not start their own census
     }
     if (m.rate < ndbTuning().minSampleRate - 1 || n == 0) return;
+    if (!m.censusOff) {
+        if (!m.census) { m.census = std::make_unique<NdbCensus>(); m.census->configure(m.rate, m.offset); }
+        m.census->feed(x, n);
+    }
     m.aud.clear();
     for (size_t i = 0; i < n; i++) {
         m.lo *= m.loStep;
@@ -389,6 +399,7 @@ void NdbReceiver::clearResults() {
     p_->streak = 0;
     p_->repeats = 0;
     p_->okCount = 0;
+    if (p_->census) p_->census->clear();
     p_->pub.ident.clear();
     p_->pub.history.clear();
     p_->pub.text.clear();
