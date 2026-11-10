@@ -8,6 +8,16 @@
 #include "panels/journaline_view.h"
 #include "codec/speech_codec_ui.h"
 #include "dect2/drm/drm_usac_lib.h"
+#include "dect2/drm/drm_schedule.h"
+#include "ui/kit/kit.h"
+#include "dect2/common/thread_name.h"
+#include "platform/platform.h"
+#include <atomic>
+#include <filesystem>
+#include <fstream>
+#include <mutex>
+#include <sstream>
+#include <thread>
 #include <cmath>
 #include <ctime>
 #include <deque>
@@ -376,6 +386,7 @@ void presets(App& a) {
     flowEnd();
 }
 
+std::string schedOnAirNameAt(double khz);   // the broadcast schedule below
 // "Find DRM": a few seconds on each short wave band with the AM census on; every channel it calls DRM is listed for one click to decode.
 struct FindDrm { std::unique_ptr<dect2::ease::FreqHunt> h; std::vector<dect2::ease::DrmHit> hits; double lastMhz = 0, backMhz = 0, bandAt = 0; int lastIdx = -1; bool hadCensus = false; std::string note; };
 FindDrm FD;
@@ -420,13 +431,192 @@ void findDrm(App& a) {
         ImGui::PushID(id++);
         if (ImGui::SmallButton(tr("Decode"))) tuneFreq(a, h.khz / 1e3);
         ImGui::SameLine(); ImGui::TextDisabled("%.1f kHz  %.0f dB", h.khz, h.snrDb);
+        const std::string who = schedOnAirNameAt(h.khz);   // the drm.org schedule, when a copy was fetched
+        if (!who.empty()) { ImGui::SameLine(); ImGui::TextDisabled(tr("scheduled now: %s"), who.c_str()); }
         ImGui::PopID();
     }
 }
 
+// ---------------------------------------------------------------- the broadcast schedule (www.drm.org)
+// The DRM Association publishes the season's schedule on its web site with "All rights reserved", so OnAir does not ship it: the page is fetched
+// when the user asks, read (dect2/drm/drm_schedule.h), kept as a copy in the data folder for the next start and offline use, and always
+// shown with its source and date. One click tunes an entry; what is on air now comes first.
+namespace sched {
+namespace ds = dect2::drmsched;
+struct Job { std::atomic<int> state{0}; std::mutex mu; std::string msg; std::string html; };   // 0 idle, 1 running, 2 done, 3 failed
+struct St {
+    bool loaded = false;
+    ds::Schedule s;
+    std::string fileDate;             // when the copy on disk was fetched
+    std::shared_ptr<Job> job;
+    std::string msg;
+    bool nowOnly = true;
+    int region = 0;                   // 0 all, else 1 + index into kRegions
+};
+St T;
+const char* kRegions[] = {"region_1", "region_2", "region_3", "region_4", "region_5"};
+
+std::string cachePath() { return plat::dataDir() + "/drm_schedule.html"; }
+
+std::string fileDateOf(const std::string& path) {
+    std::error_code ec;
+    const auto ft = std::filesystem::last_write_time(std::filesystem::u8path(path), ec);
+    if (ec) return std::string();
+    const auto sys = std::chrono::time_point_cast<std::chrono::system_clock::duration>(ft - decltype(ft)::clock::now() + std::chrono::system_clock::now());
+    const std::time_t t = std::chrono::system_clock::to_time_t(sys);
+    std::tm tm{};
+#ifdef _WIN32
+    gmtime_s(&tm, &t);
+#else
+    gmtime_r(&t, &tm);
+#endif
+    char b[16];
+    std::strftime(b, sizeof b, "%Y-%m-%d", &tm);
+    return b;
+}
+
+void loadCache() {
+    T.loaded = true;
+    std::ifstream f(std::filesystem::u8path(cachePath()), std::ios::binary);
+    if (!f) return;
+    std::stringstream ss; ss << f.rdbuf();
+    std::string err;
+    if (ds::parsePage(ss.str(), T.s, err)) T.fileDate = fileDateOf(cachePath());
+}
+
+void startFetch() {
+    if (T.job && T.job->state.load() == 1) return;
+    auto job = std::make_shared<Job>();
+    job->state = 1;
+    T.job = job;
+    T.msg.clear();
+    std::thread th([job] {
+        const std::string tmp = plat::cacheDir() + "/drm_schedule.tmp";
+        const bool ok = plat::fetchUrl(ds::kUrl, tmp, std::string("OnAir/") + ONAIR_VERSION + " (DRM schedule)");
+        std::string html;
+        if (ok) { std::ifstream f(std::filesystem::u8path(tmp), std::ios::binary); std::stringstream ss; ss << f.rdbuf(); html = ss.str(); }
+        std::error_code ec;
+        std::filesystem::remove(std::filesystem::u8path(tmp), ec);
+        std::lock_guard<std::mutex> lk(job->mu);
+        if (!ok || html.empty()) { job->msg = "the download did not work (offline, or the site did not answer)"; job->state = 3; return; }
+        job->html = std::move(html);
+        job->state = 2;
+    });
+    th.detach();   // (the job is shared: a thread still running at exit touches only its own job)
+}
+
+void pollFetch() {
+    if (!T.job) return;
+    const int st = T.job->state.load();
+    if (st < 2) return;
+    std::lock_guard<std::mutex> lk(T.job->mu);
+    if (st == 3) T.msg = T.job->msg;
+    else {
+        ds::Schedule ns;
+        std::string err;
+        if (ds::parsePage(T.job->html, ns, err)) {
+            T.s = std::move(ns);
+            std::ofstream f(std::filesystem::u8path(cachePath()), std::ios::binary | std::ios::trunc);
+            f << T.job->html;
+            T.fileDate = fileDateOf(cachePath());
+            T.msg = tr("Schedule updated.");
+        } else T.msg = err;
+    }
+    T.job.reset();
+}
+
+// the scheduled entries on a frequency (within 2.5 kHz) that are on air now, for the Find DRM hits
+std::string onAirNameAt(double khz) {
+    if (!T.loaded) loadCache();
+    const std::time_t now = std::time(nullptr);
+    for (const auto& b : T.s.items)
+        for (double f : b.khz)
+            if (std::fabs(f - khz) <= 2.5 && ds::onAirAt(b, now) == ds::OnAir::Yes) return b.station + (b.language.empty() ? std::string() : " (" + b.language + ")");
+    return std::string();
+}
+
+void panel(App& a) {
+    if (!T.loaded) loadCache();
+    pollFetch();
+    if (!kit::collapsingSection(tr("Broadcast schedule (drm.org)"), false)) return;
+    const bool busy = T.job && T.job->state.load() == 1;
+    if (busy) ImGui::BeginDisabled(true);
+    if (ImGui::SmallButton(T.s.ok() ? tr("Update from drm.org") : tr("Get the schedule from drm.org"))) startFetch();
+    if (busy) ImGui::EndDisabled();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Downloads the current DRM broadcast schedule from the DRM Association's web site (one page, about 300 KB). A copy is kept for offline use. Nothing else is sent."));
+    ImGui::SameLine();
+    if (busy) ImGui::TextDisabled("%s", tr("Downloading..."));
+    else if (!T.msg.empty()) ImGui::TextDisabled("%s", T.msg.c_str());
+    ImGui::TextDisabled("%s", ds::kCredit);
+    if (!T.s.ok()) { ImGui::TextDisabled("%s", tr("No schedule yet: get it from drm.org (needs the internet once).")); return; }
+    ImGui::TextDisabled(tr("Season %s (%s to %s), updated %s; this copy fetched %s. All times UTC."), T.s.season.c_str(), T.s.validFrom.c_str(), T.s.validTo.c_str(),
+                        T.s.updatedAt.c_str(), T.fileDate.empty() ? "?" : T.fileDate.c_str());
+    kit::checkbox(tr("On air now"), &T.nowOnly);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Only the broadcasts scheduled for this minute (and the ones whose days are not known). Off: the whole schedule, the next start first."));
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(200 * gUi);
+    const char* cur = T.region == 0 ? tr("All regions") : tr(ds::regionName(kRegions[T.region - 1]));
+    if (ImGui::BeginCombo("##drmregion", cur)) {
+        if (ImGui::Selectable(tr("All regions"), T.region == 0)) T.region = 0;
+        for (int i = 0; i < 5; i++) if (ImGui::Selectable(tr(ds::regionName(kRegions[i])), T.region == i + 1)) T.region = i + 1;
+        ImGui::EndCombo();
+    }
+    const std::time_t now = std::time(nullptr);
+    struct Row { const ds::Broadcast* b; ds::OnAir on; int next; };
+    std::vector<Row> rows;
+    for (const auto& b : T.s.items) {
+        if (T.region && b.region != kRegions[T.region - 1]) continue;
+        const ds::OnAir on = ds::onAirAt(b, now);
+        if (T.nowOnly && on != ds::OnAir::Yes && on != ds::OnAir::Maybe) continue;
+        rows.push_back({&b, on, ds::minutesToNext(b, now)});
+    }
+    auto rank = [](const Row& r) { return r.on == ds::OnAir::Yes ? 0 : r.on == ds::OnAir::Maybe ? 1 : r.next >= 0 ? 2 : 3; };
+    std::stable_sort(rows.begin(), rows.end(), [&](const Row& x, const Row& y) { return rank(x) != rank(y) ? rank(x) < rank(y) : (rank(x) == 2 && x.next != y.next ? x.next < y.next : x.b->khz[0] < y.b->khz[0]); });
+    if (rows.empty()) { ImGui::TextDisabled("%s", T.nowOnly ? tr("Nothing scheduled on air right now in this region. Untick On air now for the whole list.") : tr("No entries.")); return; }
+    const float h = std::min(320.f * gUi, ImGui::GetTextLineHeightWithSpacing() * (float)(rows.size() + 2));
+    if (!ImGui::BeginTable("##drmsched", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingStretchProp, ImVec2(0, h))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Tune"), ImGuiTableColumnFlags_WidthFixed);
+    ImGui::TableSetupColumn(tr("UTC"));
+    ImGui::TableSetupColumn(tr("Station"));
+    ImGui::TableSetupColumn(tr("Days"));
+    ImGui::TableSetupColumn(tr("Language / target"));
+    ImGui::TableSetupColumn(tr("Status"));
+    ImGui::TableHeadersRow();
+    int id = 0;
+    for (const Row& r : rows) {
+        const ds::Broadcast& b = *r.b;
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn();
+        for (double k : b.khz) {
+            ImGui::PushID(id++);
+            char lab[32];
+            std::snprintf(lab, sizeof lab, "%.0f kHz", k);
+            if (ImGui::SmallButton(lab)) { tuneFreq(a, k / 1e3); if (!a.engine.running()) startReceiver(a); }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("Tune to %.0f kHz and decode. %s"), k, b.freqText.c_str());
+            ImGui::PopID();
+        }
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(b.timeText.empty() ? "-" : b.timeText.c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(b.station.c_str());
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s, %s kW%s%s%s", b.site.c_str(), tr(ds::regionName(b.region)), b.power.empty() ? "?" : b.power.c_str(),
+                                                       b.label.empty() ? "" : "\n", b.label.c_str(), b.note.empty() ? "" : ("\n" + b.note).c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(b.days.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%s%s%s", b.language.c_str(), b.language.empty() || b.target.empty() ? "" : " / ", b.target.c_str());
+        ImGui::TableNextColumn();
+        if (r.on == ds::OnAir::Yes) ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.45f, 1), "%s", tr("on air now"));
+        else if (r.on == ds::OnAir::Maybe) ImGui::TextColored(ImVec4(0.9f, 0.75f, 0.3f, 1), "%s", tr("maybe now (days not fixed)"));
+        else if (r.next > 0) ImGui::TextDisabled(tr("in %dh %02dm"), r.next / 60, r.next % 60);
+        else ImGui::TextDisabled("%s", b.mediumWave ? tr("times not listed") : "-");
+    }
+    ImGui::EndTable();
+}
+}  // namespace sched
+std::string schedOnAirNameAt(double khz) { return sched::onAirNameAt(khz); }
+
 void tab(App& a) {
     presets(a);
     findDrm(a);
+    sched::panel(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float gap = 8 * gUi;
     const float sw = std::min(std::max(250.f * gUi, W * 0.34f), W * 0.5f);
