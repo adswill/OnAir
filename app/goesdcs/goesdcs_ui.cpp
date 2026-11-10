@@ -133,7 +133,8 @@ void reportsView(App& a) {
     if (t.messages.empty()) {
         ImGui::PushTextWrapPos(0);
         ImGui::TextColored(pal::warnAmber(), "%s", gHr ? tr("No message yet. Tune 402.3 MHz (the HRDCP part of the Meteosat regional band, 402.2 to 402.435 MHz) with 0.25 Msps or more: platforms send in their assigned time slots, once every few minutes to once an hour.")
-                                                   : tr("No report yet. Tune the uplink band (401.7 to 402.1 MHz, centre 401.85 MHz; Meteosat and Himawari 402.0 to 402.435 MHz, centre 402.22 MHz) with 0.5 Msps or more: platforms send once every few minutes to once an hour, mostly at set times."));
+                                                   : tr("No report yet. Tune the uplink band (401.7 to 402.1 MHz, centre 401.85 MHz) with 0.5 Msps or more: platforms send once every few minutes to once an hour, mostly at set times."));
+        if (!gHr) ImGui::TextDisabled("%s", tr("Meteosat and Himawari platforms: 402.0 to 402.435 MHz, centre 402.22 MHz."));
         ImGui::PopTextWrapPos();
     }
     const float h = std::max(120.f * gUi, ImGui::GetContentRegionAvail().y * 0.5f);
@@ -264,7 +265,7 @@ void tuner(App& a, bool& retune) {
         if (ImGui::Selectable(tr("Relay downlink 1679.85 MHz"), down)) { a.freqMhz = 1679.85; retune = true; }
         ImGui::EndCombo();
     }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("GOES platforms use 401.7 - 402.1 MHz; Meteosat and Himawari platforms 402.0 - 402.435 MHz. The satellite retransmits the uplink carriers around 1679.85 MHz: one dish hears a hemisphere of platforms. Tested on simulated signals only."));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The satellite retransmits the uplink carriers around 1679.85 MHz: one dish hears a hemisphere of platforms. Tested on simulated signals only."));
     ImGui::TextDisabled("%s", tr("Channel plan"));
     const char* plans[4] = {tr("Auto (from the band)"), "GOES", "Meteosat", "Himawari"};
     int sel = S.plan + 1;
@@ -306,7 +307,7 @@ void receiver(App& a) {
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", gHr ? tr("Meteosat high rate data collection platforms: a 2 s carrier, then the message at 1200 bit/s offset QPSK with a convolutional and a Reed-Solomon code and a CRC, on a 3 kHz assignment of 402.2 to 402.435 MHz. The 8-digit hex address names the platform.")
-                                  : tr("The GOES, Meteosat and Himawari data collection systems: river gauges, weather stations, tide gauges and buoys send a short report on a 1.5 kHz channel of 401.7 to 402.435 MHz, at 100, 300 or 1200 bps. The 8-digit hex address names the platform. The receiver tries every bit rate and coding on every carrier it finds."));
+                                  : tr("The GOES and Meteosat data collection system: river gauges, weather stations, tide gauges and buoys send a short report on a 1.5 kHz channel of 401.7 to 402.1 MHz, at 100, 300 or 1200 bps. The 8-digit hex address names the platform. The receiver tries every bit rate and coding on every carrier it finds."));
     ImGui::PopTextWrapPos();
 }
 
