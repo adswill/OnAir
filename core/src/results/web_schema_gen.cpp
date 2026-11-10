@@ -15015,6 +15015,7 @@ static const WebModeRow kRows[] = {
     {144, "TV sat beacon decoder", 0, "TV sat beacon decoder: carrier level, offset and drift, with telemetry frames and a decoded view when the beacon carries data", "", 146, 145, "satbeacon"},
     {7, "DTMB", 0, "DTMB digital terrestrial television (China, Hong Kong, Macau, Cuba, Pakistan)", "", 9, 8, "dtmb"},
     {154, "ISDB-S (BS)", 0, "ISDB-S, BS satellite TV of Japan (ARIB STD-B20), clear streams only", "", 156, 155, "isdbs"},
+    {746, "DVB-SH", 0, "DVB-SH: satellite and terrestrial mobile TV (S band 2170 - 2200 MHz, also UHF and L band), OFDM form", "", 748, 747, ""},
     {40, "DVB-C", 0, "DVB-C digital cable television, needs the cable network as the input (not an antenna)", "", 42, 41, "dvbc"},
     {8, "Analog TV", 0, "Analogue television (PAL, SECAM, NTSC)", "", 10, 9, "atv"},
     {101, "FPV video (analog)", 0, "Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)", "", 103, 102, "fpv"},

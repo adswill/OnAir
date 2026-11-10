@@ -379,6 +379,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxMilhf_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxDgps_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxIsdbs_.setSignalOffset(o);
+        rxDvbsh_.setSignalOffset(o);
         rxIsdbs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxMpt_.setSignalOffset(o);
         rxMpt_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
@@ -528,6 +529,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxDvbc_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDvbc_.setLogCallback([this](const std::string& s) { log(s); });
     rxIsdbs_.configure(rate_);
+    rxDvbsh_.configure(rate_);
+    rxDvbsh_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // DVB-SH: to the TV player
     rxIsdbs_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxIsdbs_.setLogCallback([this](const std::string& s) { log(s); });
     rxOrb_.configure(rate_);

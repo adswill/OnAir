@@ -297,6 +297,7 @@ void Engine::configureReceiver(int a, double r) {
     case 562: rxNavic_.configure(r); break;
     case 731: rxTsb_.configureTsb(r, 6, 0); break;
     case 155: rxIsdbs_.configure(r); break;
+    case 747: rxDvbsh_.configure(r); break;
     case 130: rxLtr_.configure(r); break;
     case 131: rxEdacs_.configure(r); break;
     case 321: rxSmartnet_.configure(r); break;
@@ -511,6 +512,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 145: rxSb_.setSignalOffset(o); rxSb_.setCenterHz(centreHz); break;
     case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: rxSatd_.setCenterHz(centreHz); break;
     case 155: rxIsdbs_.setSignalOffset(o); rxIsdbs_.setCenterHz(centreHz); break;
+    case 747: rxDvbsh_.setSignalOffset(o); break;
     case 130: rxLtr_.setSignalOffset(o); rxLtr_.setCenterHz(centreHz); break;
     case 131: rxEdacs_.setSignalOffset(o); rxEdacs_.setCenterHz(centreHz); break;
     case 321: rxSmartnet_.setCenterHz(centreHz); rxSmartnet_.setSignalOffset(o); break;

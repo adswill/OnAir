@@ -427,6 +427,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 143: return pollStd(rxModeAc_, 143, t, seqs[120], &RxTelemetry::modeac);   // Mode A/C (slot 120)
     case 144: return pollStd(rxBt_, 144, t, seqs[121], &RxTelemetry::bletrk);   // BLE tracker detector (slot 121)
     case 155: return pollStd(rxIsdbs_, 155, t, seqs[154], &RxTelemetry::isdbs);   // ISDB-S (slot 154)
+    case 747: return pollStd(rxDvbsh_, 747, t, seqs[747], &RxTelemetry::dvbsh);   // DVB-SH (slot 747)
     case 551: return pollStd(rxSatd_, 551, t, seqs[551], &RxTelemetry::satdetect);
     case 552: return pollStd(rxSatd_, 552, t, seqs[552], &RxTelemetry::satdetect);
     case 553: return pollStd(rxSatd_, 553, t, seqs[553], &RxTelemetry::satdetect);

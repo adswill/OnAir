@@ -2737,3 +2737,19 @@ case 701: {
     { Table tb({"Offset Hz", "Channel", "Snr Db", "State", "Bps", "Bytes"}); int n = 0; for (auto it = t.carriers.rbegin(); it != t.carriers.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.offsetHz), cell(e.channel), cell(e.snrDb), cell(e.state), cell(e.bps), cell(e.bytes)}); } if (n) addTable(o, "Carriers", tb); }
     break;
 }
+case 747: {
+    const auto& t = rx.dvbsh; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Packets Ok", t.packetsOk);
+    cardIf(o, "Packets Bad", t.packetsBad);
+    cardIf(o, "Tps Frames", t.tpsFrames);
+    cardIf(o, "Bw Mhz", t.bwMhz);
+    cardIf(o, "Ti Lmax", t.tiLmax);
+    cardIf(o, "Ti Seconds", t.tiSeconds);
+    cardIf(o, "Avg Iterations", t.avgIterations);
+    cardIf(o, "Input Rate", t.inputRate);
+    break;
+}
