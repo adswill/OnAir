@@ -1,5 +1,6 @@
 // Z-Wave screens: the frame log (home ID, source > destination, command class and command), the nodes, the networks (home IDs) and the channels of
 // the region with what each carried; the region picker. Receive only: S0 and S2 payloads are named as encrypted and stay so.
+#include "dect2/zwave/homenet_health.h"
 #include "dect2/common/time_fmt.h"
 #include "app.h"
 #include "ui/topo_view.h"
@@ -236,18 +237,63 @@ void tuner(App& a, bool& retune) {
     }
 }
 
+// Home network health (3.9, docs/SMART5-iot-3.9.md): for the one home ID the user picks as theirs (dect2/zwave/homenet_health.h)
+dect2::HomeNetHealth gHealth;
+std::string gHealthHome;
+double gHealthLast = -1e18;   // the newest frame time fed
+void healthFeed(const dect2::ZwaveTelemetry& t) {
+    if (gHealthHome.empty()) gHealthHome = plat::prefs().getS("zwMyHome", "");
+    if (gHealthHome.empty()) return;
+    double newest = gHealthLast;
+    for (auto it = t.log.rbegin(); it != t.log.rend(); ++it) {   // oldest first
+        const dect2::ZwFrame& f = *it;
+        if (f.sec <= gHealthLast || f.home != gHealthHome) continue;
+        dect2::HomeNetFrame h; h.t = f.sec; h.src = f.src; h.dst = f.dst; h.seq = f.seq; h.ackReq = f.ackReq; h.isAck = f.type == "ack"; h.rssi = f.rssi;
+        gHealth.add(h);
+        newest = std::max(newest, f.sec);
+    }
+    gHealthLast = newest;
+    gHealth.tick(t.log.empty() ? gHealthLast : std::max(gHealthLast, t.log.front().sec));
+}
+void healthView(App& a) {
+    { ImGui::PushTextWrapPos(0);
+      ImGui::TextDisabled("%s", tr("Pick your own home ID: its nodes get retransmissions, missing acknowledgements, signal trend and silence. Other networks are not followed."));
+      ImGui::PopTextWrapPos(); }
+    if (live(a)) for (const auto& n : a.rx.zwave.networks) {
+        ImGui::SameLine();
+        if (ImGui::RadioButton(n.home.c_str(), gHealthHome == n.home)) { gHealthHome = n.home; plat::prefs().setS("zwMyHome", n.home); plat::prefs().flush(); gHealth = dect2::HomeNetHealth(); gHealthLast = -1e18; }
+    }
+    if (gHealthHome.empty()) { ImGui::TextDisabled("%s", tr("no home ID picked")); return; }
+    if (!ImGui::BeginTable("##zwh", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    for (const char* c : {"Node", "Frames", "Retries", "No ack", "Level", "Every", "Note"}) ImGui::TableSetupColumn(tr(c));
+    ImGui::TableHeadersRow();
+    for (const auto& [id, n] : gHealth.nodes()) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(id.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)n.frames);
+        ImGui::TableNextColumn(); ImGui::Text("%.0f %%", n.retryPct());
+        ImGui::TableNextColumn(); if (n.ackAsked) ImGui::Text("%.0f %%", n.missPct()); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (n.rssiNow > -199) ImGui::Text("%.0f (%+.0f)", n.rssiNow, n.rssiNow - n.rssiFirst); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (n.intervalSec > 0) ImGui::Text("%.0f s", n.intervalSec); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (!n.text.empty()) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.25f, 1), "%s", n.text.c_str());
+    }
+    ImGui::EndTable();
+}
+
 void tick(App& a) {
     loadState();
+    if (live(a)) healthFeed(a.rx.zwave);
     static bool applied = false;
     if (!applied) { applied = true; applyRegion(a); }
 }
 
 void tab(App& a) {
-    subNav("zwv", S.view, {"Frames", "Nodes", "Networks", "Channels", tr("Topology")});
+    subNav("zwv", S.view, {"Frames", "Nodes", "Networks", "Channels", tr("Topology"), tr("Health")});
     if (S.view == 0) framesView(a);
     else if (S.view == 1) nodesView(a);
     else if (S.view == 4) { if (live(a)) topoView(a, "zw", a.rx.zwave.topo); else ImGui::TextDisabled("%s", notLive(a, "the topology").c_str()); }
     else if (S.view == 2) networksView(a);
+    else if (S.view == 5) healthView(a);
     else channelsView(a);
 }
 

@@ -148,8 +148,12 @@ double meshRtlRate(App& a) {
 
 namespace meshui {
 
+void meshCoverageFeed(const dect2::MeshTelemetry& t, double rxLat, double rxLon, bool rxSet);   // mesh_coverage_ui.cpp (3.9)
+void meshCoverageCard();
 void tick(App& a) {
     loadState();
+    static uint64_t covSeq = 0;
+    if (live(a) && a.rx.mesh.seq != covSeq) { covSeq = a.rx.mesh.seq; double la = 0, lo = 0; receiverLocation(la, lo); meshCoverageFeed(a.rx.mesh, la, lo, receiverLocationSet()); }
     if (subMask(a) == 2) meshcoreTick(a);   // the MeshCore device: frames heard, retries, the transmitter (also while another view is open)
     dect2::MeshReceiver& r = a.engine.mesh();
     {
@@ -239,6 +243,7 @@ void tab(App& a) {
     ImGui::SameLine();
     ImGui::BeginChild("##mesh_r", ImVec2(0, H));
     nodeCard(a);
+    meshCoverageCard();
     ImGui::EndChild();
 }
 
