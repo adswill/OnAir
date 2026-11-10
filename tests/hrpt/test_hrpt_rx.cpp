@@ -80,6 +80,8 @@ int main() {
     run({"MetOp, 8 Msps, Es/N0 10 dB, -45 kHz, carrier phase 200 deg", 1, 8e6, 10, -45e3, -30, 200, 0, 0.7, false, 5});
     run({"MetOp, 8 Msps, Es/N0 12 dB, +10 kHz and a Doppler ramp of -400 Hz/s", 1, 8e6, 12, 10e3, 0, 100, -400, 0.8, false, 5});
     run({"MetOp, 8 Msps, Es/N0 2.5 dB, +30 kHz (the threshold; ~4 dB before 2026-10)", 1, 8e6, 2.5, 30e3, 10, 0, 0, 1.5, false, 5});
+    // 3.9 (fourth-power coarse carrier, loop held near it while it settles, ambiguity searched again after a slip): 2 dB at the mode's 6 Msps
+    run({"MetOp, 6 Msps, Es/N0 2 dB, -35 kHz, 50 ppm (3.9 threshold; 4 dB before)", 1, 6e6, 2.0, -35e3, 50, 30, 0, 1.5, false, 25});   // before: 21 lines, 78 bad frames
     run({"MetOp, 5 Msps, Es/N0 12 dB, +20 kHz", 1, 5e6, 12, 20e3, 0, 300, 0, 0.7, false, 5});
     run({"MetOp, 10 Msps, on the dial (the app's test signal), no noise", 1, 10e6, 99, 0, 0, 0, 0, 0.6, false, 5});
     // FY-3 AHRPT: frames only

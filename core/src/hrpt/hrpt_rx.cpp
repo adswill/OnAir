@@ -10,6 +10,7 @@
 #include <cmath>
 #include <complex>
 #include <cstring>
+#include <deque>
 #include <mutex>
 #include <vector>
 #include "dect2/common/mathconst.h"
@@ -58,6 +59,24 @@ struct Fir {   // decimating FIR on a doubled ring, real and imaginary parts apa
         y = cf32(re, im);
         return true;
     }
+    // d == 1 only: the same outputs as push() for L inputs in a row, one vectorised correlation per part (3.9: about a third of the receiver's
+    // time was this filter, one sample at a time). The ring is left as push() would leave it.
+    void block(const float* xr, const float* xi, int L, float* yr, float* yi) {
+        const size_t hn = (size_t)np - 1;
+        lr.resize(hn + (size_t)L); li.resize(hn + (size_t)L);
+        for (size_t k = 0; k < hn; k++) { lr[k] = bre[(size_t)pos + 1 + k]; li[k] = bim[(size_t)pos + 1 + k]; }
+        std::memcpy(lr.data() + hn, xr, sizeof(float) * (size_t)L);
+        std::memcpy(li.data() + hn, xi, sizeof(float) * (size_t)L);
+        convCorr(lr.data(), h.data(), yr, 1, L, np);
+        convCorr(li.data(), h.data(), yi, 1, L, np);
+        const size_t from = (size_t)L - 1;   // the newest np samples back into the ring, oldest first, at pos 0
+        for (size_t k = 0; k < (size_t)np; k++) {
+            bre[k] = bre[k + (size_t)np] = lr[from + k];
+            bim[k] = bim[k + (size_t)np] = li[from + k];
+        }
+        pos = 0; ph = 0;
+    }
+    std::vector<float> lr, li;   // linear history + block for block()
 };
 
 inline int8_t sat8(float v) { return (int8_t)std::clamp((int)std::lround(v), -127, 127); }
@@ -114,11 +133,18 @@ struct HrptReceiver::Impl {
     // coarse search
     bool coarseDone = false;
     std::vector<float> acqRe, acqIm, psd;
+    int acqRounds = 0;
+    bool fine4 = false;                  // the coarse carrier came from the fourth-power line
+    int64_t settleSyms = 0;              // symbols the carrier loop is held near the coarse carrier
+    double settleMax = 0.25;
+    std::vector<float> a4Re, a4Im, psd4;   // QPSK: the fourth power (a line at four times the offset)
     int acqFill = 0, acqBlocks = 0;
 
     // AHRPT chain
     std::vector<int8_t> pairs;           // soft pairs a, b
-    int64_t pairsSinceSearch = 0;
+    int64_t pairN = 0;                   // pairs since the search started
+    uint64_t aw[8] = {};                 // per ambiguity: hard decisions of the last pairs
+    std::deque<int64_t> ahits[8];        // per ambiguity: where the sync word was seen in the last frame
     bool searchLock = false;
     int xt = -1;
     hrpt::Viterbi vit;
@@ -128,6 +154,8 @@ struct HrptReceiver::Impl {
     int frameBits = 0, misses = 0;
     uint8_t frame[meteor::kCodedBytes];
     int64_t sinceFrame = 0;
+    bool dropSearch = false;
+    int badRun = 0;
     double lastGoodSec = -1e9, lastAsmSec = -1e9, varStartSec = 0, lockLostSec = 0;
     meteor::PacketDemux demux[64];
 
@@ -205,8 +233,9 @@ struct HrptReceiver::Impl {
         amp = 0; prevI = prevQ = 0; nSym = 0; lockAvg = 0; varAvg = 1;
         loopGains(0.02);
         kp = 0.02 * sps; ki = 2e-5 * sps;
-        coarseDone = false; acqFill = 0; acqBlocks = 0;
+        coarseDone = false; acqFill = 0; acqBlocks = 0; acqRounds = 0; fine4 = false; settleSyms = 0;
         acqRe.assign(kAcqN, 0); acqIm.assign(kAcqN, 0); psd.assign(kAcqN, 0);
+        a4Re.assign(kAcqN, 0); a4Im.assign(kAcqN, 0); psd4.assign(kAcqN, 0);
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         resetChain();
     }
@@ -217,9 +246,9 @@ struct HrptReceiver::Impl {
     }
 
     void resetChain() {
-        pairs.clear(); pairsSinceSearch = 0; searchLock = false; xt = -1;
+        resetSearch(); searchLock = false; xt = -1;
         vit.reset();
-        sr = 0; bitCount = 0; inFrame = false; frameLock = false; frameBits = 0; misses = 0; sinceFrame = 0;
+        sr = 0; bitCount = 0; inFrame = false; frameLock = false; frameBits = 0; misses = 0; sinceFrame = 0; dropSearch = false; badRun = 0;
         for (auto& d : demux) d.reset();
         prevChip = 0; chipN = 0; nsr[0] = nsr[1] = 0; noaaLock = false; nMiss = 0; nBits = 0; nAcc = 0;
         nWords.assign((size_t)hrpt::kNoaaWords, 0);
@@ -250,11 +279,26 @@ struct HrptReceiver::Impl {
     void coarseSample(cf32 y) {
         if (bpsk) y = y * y;
         acqRe[(size_t)acqFill] = y.real(); acqIm[(size_t)acqFill] = y.imag();
+        if (!bpsk) {   // through the matched filter first: the band is 2.6 times wider than the signal, and the fourth power loses SNR^4
+            cf32 z;
+            rrc.push(y, z);
+            const cf32 y2 = z * z, y4 = y2 * y2;
+            const float m2 = std::norm(z);
+            a4Re[(size_t)acqFill] = m2 > 0 ? y4.real() / m2 : 0.f; a4Im[(size_t)acqFill] = m2 > 0 ? y4.imag() / m2 : 0.f;
+        }
         if (++acqFill < kAcqN) return;
         acqFill = 0;
-        for (int i = 0; i < kAcqN; i++) { const float w = (float)(0.5 - 0.5 * std::cos(2 * kPi * i / kAcqN)); acqRe[(size_t)i] *= w; acqIm[(size_t)i] *= w; }
+        for (int i = 0; i < kAcqN; i++) {
+            const float w = (float)(0.5 - 0.5 * std::cos(2 * kPi * i / kAcqN));
+            acqRe[(size_t)i] *= w; acqIm[(size_t)i] *= w;
+            if (!bpsk) { a4Re[(size_t)i] *= w; a4Im[(size_t)i] *= w; }
+        }
         fftSplit(acqRe.data(), acqIm.data(), kAcqLog2, false);
         for (int i = 0; i < kAcqN; i++) psd[(size_t)i] += acqRe[(size_t)i] * acqRe[(size_t)i] + acqIm[(size_t)i] * acqIm[(size_t)i];
+        if (!bpsk) {
+            fftSplit(a4Re.data(), a4Im.data(), kAcqLog2, false);
+            for (int i = 0; i < kAcqN; i++) psd4[(size_t)i] += a4Re[(size_t)i] * a4Re[(size_t)i] + a4Im[(size_t)i] * a4Im[(size_t)i];
+        }
         if (++acqBlocks < kAcqBlocks) return;
         acqBlocks = 0;
         const double bin = fd / kAcqN;
@@ -298,12 +342,36 @@ struct HrptReceiver::Impl {
                 if (den < 0) frac = 0.5 * (a - d) / den;
             }
             est = (bi - maxShift + frac) * bin;
+            // 3.9: the spectrum shape fit is flat-topped (alpha 0.6) and was off by up to about 20 kHz even on a clean signal, which the narrow
+            // carrier loop then had to pull in (and at 2 dB sometimes did not). The fourth power has a line at four times the offset: a quarter
+            // bin, so a few hundred Hz after the interpolation. It is used when the line stands clear of the rest (it fades at low SNR).
+            const int m4 = std::max(1, std::min((int)(4 * kSearchHz / bin), kAcqN / 2 - 2));
+            int b4 = 0; double v4 = -1, sum4 = 0;
+            for (int k = -m4; k <= m4; k++) {
+                const double v = psd4[(size_t)((k + kAcqN) % kAcqN)];
+                sum4 += v;
+                if (v > v4) { v4 = v; b4 = k; }
+            }
+            const double mean4 = (sum4 - v4) / (2 * m4);
+            if (v4 <= 4 * mean4 && acqRounds < 3) { acqRounds++; return; }   // weak line: integrate up to four times longer (32 ms) first
+            if (v4 > 4 * mean4) {
+                const double a = psd4[(size_t)((b4 - 1 + kAcqN) % kAcqN)], b = v4, d = psd4[(size_t)((b4 + 1 + kAcqN) % kAcqN)];
+                const double den = a - 2 * b + d;
+                const double f4 = den < 0 ? 0.5 * (a - d) / den : 0;
+                est = (b4 + f4) * bin / 4;
+                fine4 = true;
+            }
+            std::fill(psd4.begin(), psd4.end(), 0.f);
         }
         std::fill(psd.begin(), psd.end(), 0.f);
         coarseHz += est;
+        acqRounds = 0;
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         coarseDone = true;
         theta = 0; omega = 0; nSym = 0; loopGains(0.02);
+        settleSyms = fine4 ? (int64_t)(rs * 0.05) : 0;
+        settleMax = 2 * kPi * 3000 / rs;
+        fine4 = false;
     }
 
     // --- symbols ---
@@ -346,7 +414,11 @@ struct HrptReceiver::Impl {
         const float eC = bpsk ? std::clamp((float)sgn(In) * Qn, -1.f, 1.f) : std::clamp((float)sgn(In) * Qn - (float)sgn(Qn) * In, -1.f, 1.f);
         theta += omega + lalpha * eC;
         omega += lbeta * eC;
-        omega = std::clamp(omega, -0.25, 0.25);
+        // while the loop settles after a fourth-power estimate (good to a few hundred Hz) it may not run off to a false lock: the wide start
+        // took omega to 0.13 rad/symbol (48 kHz) on a clean estimate in about one start in ten at 3 dB; released after 50 ms (Doppler moves by
+        // a few tens of Hz in that time)
+        const double wMax = nSym < settleSyms ? settleMax : 0.25;
+        omega = std::clamp(omega, -wMax, wMax);
         if (theta > kPi) theta -= 2 * kPi; else if (theta < -kPi) theta += 2 * kPi;
         const float eTn = std::clamp(eT / (amp * amp), -1.f, 1.f);
         tau += T + kp * eTn;
@@ -423,6 +495,10 @@ struct HrptReceiver::Impl {
 
     // ------------------------------------------------------------ AHRPT bit chain
     void afterSoft(int8_t a, int8_t b) {
+        if (dropSearch) {   // set from frameBit() (it may run inside the replay of lockAmbiguity(), which walks the pair buffer)
+            dropSearch = false;
+            if (searchLock) { searchLock = false; frameLock = false; resetSearch(); tel.rotation = -1; say("no sync word: searching the ambiguity again"); }
+        }
         if (searchLock) {
             int oa, ob;
             xform(xt, a, b, oa, ob);
@@ -430,46 +506,52 @@ struct HrptReceiver::Impl {
             return;
         }
         pairs.push_back(a); pairs.push_back(b);
-        pairsSinceSearch++;
+        const int64_t i = pairN++;
         const int64_t need = 8192 * 2 + 64;
         if ((int64_t)pairs.size() / 2 > 2 * need) pairs.erase(pairs.begin(), pairs.begin() + (std::ptrdiff_t)(pairs.size() - (size_t)need * 2));
-        if (pairsSinceSearch >= 4096 && (int64_t)pairs.size() / 2 >= 8192 + 64) { pairsSinceSearch = 0; ambiguitySearch(); }
+        ambiguityStep(a, b, i);
     }
 
-    // the encoded sync word in the hard decisions, per ambiguity; two hits a frame apart settle it, then the Viterbi decoder takes over
-    void ambiguitySearch() {
+    // The encoded sync word in the hard decisions, per ambiguity; two hits a frame apart settle it, then the Viterbi decoder takes over.
+    // 3.9: one step per pair (a shift register and the recent hits per ambiguity) instead of rescanning the whole buffer every 4096 pairs:
+    // the same hits, found at the second one instead of up to 4096 pairs later, for about a tenth of the work.
+    void ambiguityStep(int a, int b, int64_t i) {
         static const uint64_t pat = meteor::encodedAsm();
         const uint64_t mask = (1ull << 52) - 1;
-        const int np = (int)(pairs.size() / 2);
         for (int t = 0; t < 8; t++) {
-            uint64_t w = 0;
-            std::vector<int> hits;
-            for (int i = 0; i < np; i++) {
-                int oa, ob;
-                xform(t, pairs[(size_t)i * 2], pairs[(size_t)i * 2 + 1], oa, ob);
-                w = w << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
-                if (i < 31) continue;
-                if (__builtin_popcountll((w ^ pat) & mask) <= 7) hits.push_back(i);
-            }
-            int at = -1;
-            for (size_t x = 0; x < hits.size() && at < 0; x++)
-                for (size_t y = x + 1; y < hits.size(); y++) if (hits[y] - hits[x] == 8192) { at = hits[y]; break; }
-            if (at < 0) continue;
-            searchLock = true; xt = t;
-            tel.rotation = t;
-            lastAsmSec = nowSec();
-            vit.reset();
-            sr = 0; inFrame = false; frameLock = false;
-            const int from = std::max(0, at - 31 - 8192 - 40);
-            for (int i = from; i < np; i++) {
-                int oa, ob;
-                xform(xt, pairs[(size_t)i * 2], pairs[(size_t)i * 2 + 1], oa, ob);
-                vitPush(oa, ob);
-            }
-            pairs.clear();
-            say(std::string("sync word found (") + hrptVarName(var) + ", ambiguity " + std::to_string(t) + ")");
-            return;
+            int oa, ob;
+            xform(t, a, b, oa, ob);
+            aw[t] = aw[t] << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
+            if (i < 31 || __builtin_popcountll((aw[t] ^ pat) & mask) > 7) continue;
+            std::deque<int64_t>& h = ahits[t];
+            while (!h.empty() && h.front() < i - 8192) h.pop_front();
+            const bool pair = !h.empty() && h.front() == i - 8192;
+            h.push_back(i);
+            if (pair) { lockAmbiguity(t, i); return; }
         }
+    }
+
+    void resetSearch() {
+        pairs.clear(); pairN = 0;
+        for (int t = 0; t < 8; t++) { aw[t] = 0; ahits[t].clear(); }
+    }
+
+    void lockAmbiguity(int t, int64_t at) {
+        searchLock = true; xt = t; sinceFrame = 0; dropSearch = false; badRun = 0;
+        tel.rotation = t;
+        lastAsmSec = nowSec();
+        vit.reset();
+        sr = 0; inFrame = false; frameLock = false;
+        const int np = (int)(pairs.size() / 2);
+        const int64_t base = pairN - np;   // the pair index of pairs[0]
+        const int from = (int)std::max<int64_t>(0, at - 31 - 8192 - 40 - base);
+        for (int k = from; k < np; k++) {
+            int oa, ob;
+            xform(xt, pairs[(size_t)k * 2], pairs[(size_t)k * 2 + 1], oa, ob);
+            vitPush(oa, ob);
+        }
+        resetSearch();
+        say(std::string("sync word found (") + hrptVarName(var) + ", ambiguity " + std::to_string(t) + ")");
     }
 
     void vitPush(int a, int b) {
@@ -493,10 +575,13 @@ struct HrptReceiver::Impl {
         if (frameLock) {
             if (sinceFrame < 32) return;
             if (std::min(e, ei) <= 10) misses = 0; else misses++;
-            if (misses > 4) { frameLock = false; say("frame sync lost"); }
+            if (misses > 4) { frameLock = false; dropSearch = true; say("frame sync lost"); }
             else { if (std::min(e, ei) <= 10) inv = ei < e; startFrame(); tel.asmHits++; lastAsmSec = nowSec(); return; }
         }
         if (e <= 3 || ei <= 3) { inv = ei < e; startFrame(); frameLock = true; misses = 0; tel.asmHits++; lastAsmSec = nowSec(); }
+        // no sync word for three frames since the ambiguity was settled (a cycle slip of the carrier loop turns the constellation): search the
+        // ambiguity again at once instead of after 3 s of no frames (3.9: one slip lost the rest of a short pass)
+        else if (!frameLock && sinceFrame > 3 * (meteor::kCodedBytes * 8 + 32)) dropSearch = true;
     }
 
     void startFrame() { inFrame = true; frameBits = 0; std::memset(frame, 0, sizeof frame); }
@@ -504,7 +589,12 @@ struct HrptReceiver::Impl {
     void gotFrame() {
         uint8_t v[meteor::kVcduBytes];
         const int e = meteor::decodeCadu(frame, v);
-        if (e < 0) { tel.blocksBad++; return; }
+        if (e < 0) {
+            tel.blocksBad++;
+            if (++badRun >= 3) dropSearch = true;   // three in a row: a lock taken while the loops settled, or one that slipped since (as Meteor)
+            return;
+        }
+        badRun = 0;
         tel.blocksOk++; tel.rsCorrected += (uint64_t)e;
         lastGoodSec = nowSec();
         meteor::Vcdu vc;
@@ -554,7 +644,7 @@ struct HrptReceiver::Impl {
     void supervise() {
         const double now = nowSec();
         if (!bpsk && searchLock && now - std::max(lastGoodSec, lastAsmSec) > 3) {
-            searchLock = false; frameLock = false; pairs.clear(); tel.rotation = -1;
+            searchLock = false; frameLock = false; resetSearch(); tel.rotation = -1;
             say("no frames: searching again");
         }
         if (bpsk && noaaLock && now - lastGoodSec > 3 && now - lastAsmSec > 3) { noaaLock = false; nsr[0] = nsr[1] = 0; tel.rotation = -1; }
@@ -598,6 +688,38 @@ struct HrptReceiver::Impl {
         cf32 y;
         if (lpf.push(cf32((float)v.real(), (float)v.imag()), y)) decimated(y);
     }
+
+    // L samples (already finite) as L calls of input(): the mixer per sample, the front filter skipped when it is the single unit tap (dec 1),
+    // the matched filter a block at a time once the coarse carrier is known. Nothing in here re-initialises the chain (supervise() runs from
+    // report(), between blocks), so the filter outputs of a block stay valid.
+    void inputBlock(const cf32* x, int L) {
+        if (dec != 1) { for (int k = 0; k < L; k++) input(x[k]); return; }
+        auto mix = [&](cf32 in) {
+            const cd v = cd(in.real(), in.imag()) * rot;
+            rot *= step;
+            if ((nIn & 1023) == 0) rot /= std::abs(rot);
+            nIn++;
+            return cf32((float)v.real(), (float)v.imag());
+        };
+        // one at a time until the coarse carrier is known: it changes the mixer step, which the next sample must already see
+        int j = 0;
+        while (j < L && !coarseDone) coarseSample(mix(x[j++]));
+        if (j == L) return;
+        const int m = L - j;
+        br_.resize((size_t)m); bi_.resize((size_t)m); zr_.resize((size_t)m); zi_.resize((size_t)m);
+        for (int k = 0; k < m; k++) { const cf32 v = mix(x[j + k]); br_[(size_t)k] = v.real(); bi_[(size_t)k] = v.imag(); }
+        rrc.block(br_.data(), bi_.data(), m, zr_.data(), zi_.data());
+        for (int k = 0; k < m; k++) {
+            hist[(size_t)(hN & (kHist - 1))] = cf32(zr_[(size_t)k], zi_[(size_t)k]);
+            hN++;
+            if (amp <= 0) amp = 1e-9f;
+            while (tau + spsEst / 2 + 3 < (double)hN) {
+                if (tau - spsEst - 2 < (double)(hN - kHist)) { tau = (double)hN - spsEst; continue; }
+                symbol();
+            }
+        }
+    }
+    std::vector<float> br_, bi_, zr_, zi_;
 };
 
 HrptReceiver::HrptReceiver() : p_(std::make_unique<Impl>()) {}
@@ -639,11 +761,21 @@ void HrptReceiver::feed(const cf32* x, size_t n) {
         if (m.rate > 0) { m.nIn += (int64_t)n; if ((double)m.nIn >= m.nextReport) { m.nextReport += kPubSec * m.rate; m.report(); } }
         return;
     }
-    for (size_t i = 0; i < n; i++) {
-        float re = x[i].real(), im = x[i].imag();
-        if (!std::isfinite(re) || !std::isfinite(im)) re = im = 0;
-        m.power += (double)re * re + (double)im * im;
-        m.input(cf32(re, im));
+    // blocks that end where a report is due, so report() (and its supervision) runs after the same sample as it did one sample at a time
+    constexpr size_t kBlk = 4096;
+    cf32 blk[kBlk];
+    size_t i = 0;
+    while (i < n) {
+        const double due = std::ceil(m.nextReport - (double)m.nIn);
+        const size_t L = std::min({n - i, kBlk, (size_t)std::max(1.0, due)});
+        for (size_t k = 0; k < L; k++) {
+            float re = x[i + k].real(), im = x[i + k].imag();
+            if (!std::isfinite(re) || !std::isfinite(im)) re = im = 0;
+            m.power += (double)re * re + (double)im * im;
+            blk[k] = cf32(re, im);
+        }
+        m.inputBlock(blk, (int)L);
+        i += L;
         if ((double)m.nIn >= m.nextReport) { m.nextReport += kPubSec * m.rate; m.report(); }
     }
     m.nPower += (int64_t)n;
