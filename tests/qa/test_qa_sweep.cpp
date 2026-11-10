@@ -614,7 +614,7 @@ int main(int argc, char** argv) {
         }
     }
     if (list) {
-        for (auto* e : sel) printf("%-16s %-36s std %3d  %.4g Msps\n", e->id.c_str(), e->name.c_str(), e->stdMode, e->rate / 1e6);
+        for (auto* e : sel) printf("%-16s %-36s std %3d  %.4g Msps  %.4f MHz\n", e->id.c_str(), e->name.c_str(), e->stdMode, e->rate / 1e6, e->defMhz);
         printf("%zu modes\n", sel.size());
         return 0;
     }
