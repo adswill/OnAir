@@ -9,8 +9,7 @@
 #include "dect2/zigbee/zigbee_proto.h"
 #include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/zigbee/zigbee_tel.h"
-#include "dect2/zwave/homenet_health.h"
-#include <deque>
+#include "dect2/zigbee/zigbee_health.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -257,37 +256,10 @@ void hopTo(App& a, int ch) {
 // as theirs, per node: MAC retransmissions (the same sequence number again within 3 s), requested acknowledgements that never came, the level
 // trend and silence (dect2/zwave/homenet_health.h). An 802.15.4 acknowledgement carries only the sequence number, so it is matched to the
 // frame that asked for it with that number within the last second. Other networks are not followed.
-struct ZbHealth {
-    dect2::HomeNetHealth h;
-    int pan = -1;
-    double last = -1e18;
-    struct Ask { double t; std::string src, dst; int seq; };
-    std::deque<Ask> asks;
-    bool loaded = false;
-} H;
+struct ZbHealth { dect2::ZigbeeHealthFeed feed; bool loaded = false; } H;   // dect2/zigbee/zigbee_health.h
 void healthFeed(const dect2::ZigbeeTelemetry& t) {
-    if (!H.loaded) { H.loaded = true; H.pan = (int)plat::prefs().getI("zbMyPan", -1); }
-    if (H.pan < 0) return;
-    double newest = H.last;
-    for (auto it = t.log.rbegin(); it != t.log.rend(); ++it) {   // oldest first
-        const dect2::ZbFrame& f = *it;
-        if (f.sec <= H.last || !f.fcsOk) continue;
-        newest = std::max(newest, f.sec);
-        while (!H.asks.empty() && f.sec - H.asks.front().t > 1.0) H.asks.pop_front();
-        dect2::HomeNetFrame h; h.t = f.sec; h.seq = f.seq; h.rssi = f.rssi;
-        if (f.type == "Ack") {
-            bool found = false;
-            for (auto q = H.asks.rbegin(); q != H.asks.rend(); ++q) if (q->seq == f.seq) { h.isAck = true; h.src = q->dst; h.dst = q->src; found = true; break; }
-            if (!found) continue;   // an ack for another network's frame
-        } else {
-            if ((int)f.pan != H.pan || f.src.empty()) continue;
-            h.src = f.src; h.dst = f.dst; h.ackReq = f.ackReq;
-            if (f.ackReq && f.seq >= 0) H.asks.push_back({f.sec, f.src, f.dst, f.seq});
-        }
-        H.h.add(h);
-    }
-    H.last = newest;
-    H.h.tick(t.log.empty() ? H.last : std::max(H.last, t.log.front().sec));
+    if (!H.loaded) { H.loaded = true; H.feed = dect2::ZigbeeHealthFeed((int)plat::prefs().getI("zbMyPan", -1)); }
+    if (H.feed.pan() >= 0) H.feed.addLog(t.log);
 }
 void healthView(App& a) {
     { ImGui::PushTextWrapPos(0);
@@ -296,13 +268,13 @@ void healthView(App& a) {
     if (live(a)) for (const auto& p : zt(a).pans) {
         char b[24]; snprintf(b, sizeof b, "%04X", p.pan);
         ImGui::SameLine();
-        if (ImGui::RadioButton(b, H.pan == (int)p.pan)) { const int pan = p.pan; H = ZbHealth(); H.loaded = true; H.pan = pan; plat::prefs().setI("zbMyPan", pan); plat::prefs().flush(); }
+        if (ImGui::RadioButton(b, H.feed.pan() == (int)p.pan)) { H.feed = dect2::ZigbeeHealthFeed(p.pan); H.loaded = true; plat::prefs().setI("zbMyPan", p.pan); plat::prefs().flush(); }
     }
-    if (H.pan < 0) { ImGui::TextDisabled("%s", tr("no network picked")); return; }
+    if (H.feed.pan() < 0) { ImGui::TextDisabled("%s", tr("no network picked")); return; }
     if (!ImGui::BeginTable("##zbh", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     for (const char* c : {"Node", "Frames", "Retries", "No ack", "Level", "Every", "Note"}) ImGui::TableSetupColumn(tr(c));
     ImGui::TableHeadersRow();
-    for (const auto& [id, n] : H.h.nodes()) {
+    for (const auto& [id, n] : H.feed.health().nodes()) {
         ImGui::TableNextRow();
         ImGui::TableNextColumn(); ImGui::TextUnformatted(id.c_str());
         ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)n.frames);

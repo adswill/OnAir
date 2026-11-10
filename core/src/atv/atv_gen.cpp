@@ -427,6 +427,20 @@ struct AtvGenerator::Impl {
             return amp * (a * (1 - c) + d * c);
         };
         std::vector<uint8_t> bits; double start = 0, T = 1, amp = 0;
+        if (F.lines == 625 && cfg.vbiTestLine > 0 && (line == cfg.vbiTestLine || line == cfg.vbiTestLine + 313)) {   // a VITS line (smart5/vits.h)
+            static const double mhz[5] = {0.5, 1.0, 2.0, 3.0, 4.0};
+            for (int j = 0; j < count; j++) {
+                const double u = u0 + j * dtUs;
+                double v = 0;
+                if (u >= 12 && u < 22) v = 1.0;                                                     // white bar, 100 IRE
+                else if (u >= 26 && u < 61) {                                                       // five packets of 6 us with 1 us gaps
+                    const int k = (int)((u - 26) / 7), in = (u - 26) - 7 * k < 6;
+                    v = k < 5 && in ? 0.5 + 0.3 * std::sin(2 * kPi * mhz[k] * (u - 26)) : 0.5;
+                }
+                lineV[(size_t)j] += (float)v;
+            }
+            return;
+        }
         if (F.lines == 625 && cfg.vbiTeletext && ((line >= 7 && line <= 22) || (line >= 320 && line <= 335))) {
             static const char* const body = "ONAIR TELETEXT TEST ROW";
             const int k = (int)(((frame * 32 + (uint64_t)(line < 100 ? line - 7 : line - 320 + 16)) % 24));
