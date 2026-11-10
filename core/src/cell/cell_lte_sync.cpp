@@ -363,11 +363,12 @@ MibTry mibDecode(const std::vector<std::array<std::vector<float>, 3>>& llr, int 
                     for (int i = 6; i < 14; i++) s8 = (s8 << 1) | b[(size_t)i];
                     t.mib.sfn = (s8 * 4 + j0) & 1023;
                     t.mib.ports = portsOf[pi];
+                    for (int i = 14; i < 24; i++) t.mib.mibTail = (t.mib.mibTail << 1) | b[(size_t)i];
                     t.frame = f0;
                     for (size_t k = 0; k < got.size(); k++) {
                         const MibTry& o = got[k];
                         const bool apart = f0 >= used[k].second || f0 + span <= used[k].first;
-                        if (apart && o.mib.nRb == t.mib.nRb && o.mib.ports == t.mib.ports && o.mib.phichDur == t.mib.phichDur && o.mib.phichRes == t.mib.phichRes &&
+                        if (apart && o.mib.nRb == t.mib.nRb && o.mib.ports == t.mib.ports && o.mib.phichDur == t.mib.phichDur && o.mib.phichRes == t.mib.phichRes && o.mib.mibTail == t.mib.mibTail &&
                             ((o.mib.sfn - o.frame - (t.mib.sfn - t.frame)) & 1023) == 0)
                             return o;
                     }
@@ -441,8 +442,11 @@ MibTry mibCombine(const std::vector<std::array<std::vector<float>, 3>>& llr, int
                 uint32_t par = 0;
                 for (int i = 24; i < 40; i++) par = (par << 1) | b[(size_t)i];
                 if ((crc(b.data(), 24, kCrc16, 16) ^ par) != mibMask(portsOf[pi])) continue;
-                bool spare = true;
-                for (int i = 14; i < 24; i++) if (b[(size_t)i]) spare = false;
+                bool spare = true;   // bits 14 - 19 are the LTE-M fields (schedulingInfoSIB1-BR, systemInfoUnchanged-BR), 20 - 23 spare
+                for (int i = 20; i < 24; i++) if (b[(size_t)i]) spare = false;
+                int tail = 0;
+                for (int i = 14; i < 24; i++) tail = (tail << 1) | b[(size_t)i];
+                if (lteMibSib1Br(tail) > 18) spare = false;   // reserved values: not a MIB
                 if (!spare) continue;
                 int v = 0;
                 for (int i = 0; i < 3; i++) v = (v << 1) | b[(size_t)i];
@@ -460,6 +464,7 @@ MibTry mibCombine(const std::vector<std::array<std::vector<float>, 3>>& llr, int
                 out.mib.phichRes = (b[4] << 1) | b[5];
                 out.mib.sfn = (s8 * 4 + a) & 1023;
                 out.mib.ports = portsOf[pi];
+                out.mib.mibTail = tail;
                 out.frame = 0;
             }
     }
@@ -533,7 +538,7 @@ void knownParts(const Decoded& d, const LteCellCfg& c, int fr, int sf, int sfn, 
 
 LteCellCfg cfgOf(const Decoded& d, int nRbGrid) {
     LteCellCfg c;
-    c.pci = d.pci; c.extCp = d.ext; c.tdd = false; c.nRb = nRbGrid; c.ports = d.ports; c.phichDur = d.phichDur; c.phichRes = d.phichRes;
+    c.pci = d.pci; c.extCp = d.ext; c.tdd = false; c.nRb = nRbGrid; c.ports = d.ports; c.phichDur = d.phichDur; c.phichRes = d.phichRes; c.mibTail = d.mibTail;
     return c;
 }
 

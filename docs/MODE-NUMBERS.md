@@ -132,6 +132,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Saral X-band dump | 547 | 549 | 548 | 547 | feat38-sat-xband | 3.8; numbers may need to move at merge |
 | Kanopus-V | 548 | 550 | 549 | 548 | feat38-sat-xband | 3.8; numbers may need to move at merge |
 | DMSP RTD | 549 | 551 | 550 | 549 | feat38-sat-xband | 3.8; numbers may need to move at merge |
+| CDMA2000 cells | 660 | 662 | 661 | 660 | feat39-cell | 3.9; IS-95 / cdma2000 pilot + Sync Channel; synthetic signals only |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |

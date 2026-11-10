@@ -23,6 +23,7 @@ struct LteCellCfg {
     int ports = 1;               // cell-specific reference signal ports: 1, 2, 4
     int phichDur = 0;            // 0 normal, 1 extended
     int phichRes = 0;            // Ng: 0 = 1/6, 1 = 1/2, 2 = 1, 3 = 2
+    int mibTail = 0;             // MIB bits 14 - 23 as sent: schedulingInfoSIB1-BR-r13 (5 bits, LTE-M), systemInfoUnchanged-BR-r15, 4 spare
 };
 
 int lteNfft(int nRb);                         // FFT size used here: 128 for 6 RBs ... 2048 for 75 and 100 RBs
@@ -111,7 +112,13 @@ struct LteFound {                // a cell found by the synchronisation signals
     float sssScore = 0;          // SSS match (0..1)
     float sssSig = 0;            // SSS significance: the match against the spread of all the other identities
 };
-struct LteMibInfo { bool ok = false; int nRb = 0, ports = 0, phichDur = 0, phichRes = 0, sfn = 0; double frameStart = 0; };
+struct LteMibInfo { bool ok = false; int nRb = 0, ports = 0, phichDur = 0, phichRes = 0, sfn = 0; int mibTail = 0; double frameStart = 0; };
+// LTE-M (eMTC, Rel-13): the MIB's schedulingInfoSIB1-BR-r13 (TS 36.331 6.2.2) says whether the cell sends SystemInformationBlockType1-BR for
+// BL / CE devices: 0 not sent, 1 - 18 sent (TS 36.213 Table 7.1.6-1 repetitions, Table 7.1.7.2.7-1 transport block size), 19 - 31 reserved.
+inline int lteMibSib1Br(int mibTail) { return (mibTail >> 5) & 31; }
+inline bool lteMibSiUnchangedBr(int mibTail) { return ((mibTail >> 4) & 1) != 0; }
+inline int lteSib1BrReps(int v) { return v >= 1 && v <= 18 ? (v - 1) % 3 == 0 ? 4 : (v - 1) % 3 == 1 ? 8 : 16 : 0; }
+inline int lteSib1BrTbs(int v) { static const int t[6] = {208, 256, 328, 504, 712, 936}; return v >= 1 && v <= 18 ? t[(v - 1) / 3] : 0; }
 struct LteMeas { float rsrpDb = -200, rsrqDb = -99, sinrDb = -99, rssiDb = -200; };
 struct LteSiMsg { int sfn = 0, subframe = 0; Bits bits; int format = 0; };
 struct LteCellResult {
