@@ -1,5 +1,6 @@
 // DAB / DAB+ digital radio panels.
 #include "app.h"
+#include "dab/played_ui.h"
 #include "panels/journaline_view.h"
 #include "panels/enhance_ui.h"
 #include "state/results_export.h"
@@ -272,6 +273,21 @@ void dabHistory(App& a) {
     if (a.rx.standard != 3 || a.rx.seq == lastSeq) return;
     lastSeq = a.rx.seq;
     dabAnnouncementStep(a);
+    if (a.rx.dab.state == 2 && a.rx.dab.audio.sub >= 0) {   // the played list and the broadcast.* events of the playing service (dab/played_ui.h)
+        static double lastPl = 0;
+        if (ImGui::GetTime() - lastPl > 2) {
+            lastPl = ImGui::GetTime();
+            const DabEnsemble ens = a.engine.dabEnsemble();
+            for (const auto& kv : ens.services) {
+                const DabComponent* c = kv.second.playable();
+                if (!c || c->subId != a.rx.dab.audio.sub) continue;
+                std::string ar, ti;
+                for (const DabDlpTag& t : kv.second.dlPlus) { if (t.type == 4 && ar.empty()) ar = t.text; if (t.type == 1 && ti.empty()) ti = t.text; }
+                playedNote("DAB", kv.second.label, a.freqMhz, ar, ti, kv.second.dls, kv.second.pty >= 0 ? dabPtyName(1, kv.second.pty) : "", false);
+                break;
+            }
+        }
+    }
     auto push = [](std::deque<float>& dq, float v) { dq.push_back(v); if (dq.size() > 600) dq.pop_front(); };
     if (a.rx.dab.state == 2) {
         push(a.dabSnrH, (float)a.rx.dab.snrDb); push(a.dabFicH, (float)a.rx.dab.ficRecentOk);
@@ -720,6 +736,7 @@ void dabStations(App& a) {
 void dabRadioTab(App& a) {
     const DabEnsemble ens = a.engine.dabEnsemble();
     const int cur = a.engine.dabSelected();
+    if (ImGui::CollapsingHeader(tr("Played (DL Plus songs)##dabpl"))) { ImGui::BeginChild("##dabplc", ImVec2(0, 240 * gUi)); playedPanel(a, "dabpl"); ImGui::EndChild(); }
     if (ens.services.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "waiting for the ensemble information (a second or two)..." : "start the receiver on a DAB channel (5A to 13F)"); ImGui::PopTextWrapPos(); } return; }
     ImGui::AlignTextToFramePadding();
     ImGui::PushFont(a.ui, 20.f);

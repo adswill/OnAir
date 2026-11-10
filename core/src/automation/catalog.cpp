@@ -79,6 +79,13 @@ std::vector<EventInfo> build() {
         {"battery_ok", 'n', "1 good, 0 low (when sent)", "1"}, {"battery_low", 'b', "the sensor reports a low battery", "false"},
         {"wind_avg_km_h", 'n', "wind, km/h", "12.4"}, {"rain_mm", 'n', "rain counter, mm", "102.6"}, {"detect_wet", 'n', "leak sensor: 1 wet", "0"},
         {"contact_open", 'n', "door / window sensor: 1 open", "0"}, {"rssi_db", 'n', "signal level, dB", "-8.1"}}});
+    v.push_back({"broadcast.now_playing", "FM (RadioText+) or DAB (DL Plus) station tagged a new song", "FM, DAB", "FM", 93.9e6, {
+        {"source", 's', "FM or DAB", "FM"}, {"station", 's', "PS name or service label", "RADIO 1"}, {"artist", 's', "artist", "Queen"},
+        {"title", 's', "title", "Bohemian Rhapsody"}, {"pty", 's', "programme type", "Pop Music"}, {"freq_mhz", 'n', "frequency, MHz", "93.9"}}});
+    v.push_back({"broadcast.text", "FM radio text or DAB dynamic label changed, or a traffic announcement started or ended (FM TA)", "FM, DAB", "FM", 93.9e6, {
+        {"source", 's', "FM or DAB", "FM"}, {"station", 's', "PS name or service label", "RADIO 1"}, {"text", 's', "radio text / dynamic label", "Traffic: A1 closed"},
+        {"artist", 's', "artist when tagged", "Queen"}, {"title", 's', "title when tagged", "Bohemian Rhapsody"}, {"pty", 's', "programme type", "News"},
+        {"ta", 'b', "traffic announcement on air (FM)", "false"}, {"ta_start", 'b', "a traffic announcement has just started", "false"}, {"freq_mhz", 'n', "frequency, MHz", "93.9"}}});
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {

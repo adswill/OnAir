@@ -89,6 +89,15 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("Sensor battery low", "One of your named sensors reports a low battery. Once a day per sensor.",
         "sensor.reading", "named and battery_low",
         {act("notify", {{"title", "Battery low: {{name}}"}, {"body", "{{model}} {{id}}"}})}, "key", 86400));
+    v.push_back(rule("Favourite artist on the radio", "A station you listen to (FM or DAB) plays an artist you name: tells you and records 4 minutes of the sound. Change the name.",
+        "broadcast.now_playing", "artist contains 'change me'",
+        {act("notify", {{"title", "{{artist}} on {{station}}"}, {"body", "{{title}}"}}), act("record_audio", {{"seconds", "240"}})}, "station", 600));
+    v.push_back(rule("Word in the radio text", "The radio text or DAB label of the station mentions a word (traffic, a place, a name). Change the word.",
+        "broadcast.text", "text contains 'traffic'",
+        {act("notify", {{"title", "{{station}}"}, {"body", "{{text}}"}})}, "station", 300));
+    v.push_back(rule("Traffic announcement", "The FM station starts a traffic announcement (TA): tells you and records 2 minutes.",
+        "broadcast.text", "ta_start",
+        {act("notify", {{"title", "Traffic on {{station}}"}, {"body", "{{text}}"}}), act("record_audio", {{"seconds", "120"}})}, "station", 120));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));
