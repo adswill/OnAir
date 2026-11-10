@@ -183,7 +183,7 @@ target_sources(dect2core PRIVATE core/src/airports/airports.cpp)
 target_sources(dect2core PRIVATE core/src/engine/general_auto.cpp)   # General / Auto: labels, hysteresis, Decode and return-to-General (docs/GENERAL-AUTO.md)
 target_sources(dect2core PRIVATE core/src/fingerprint/rf_fingerprint.cpp)   # RF fingerprint of a transmitter (docs/RF-FINGERPRINT.md)
 target_sources(dect2core PRIVATE core/src/airports/airports.cpp core/src/common/radioid_db.cpp core/src/common/tg_dir.cpp)   # radioid_db: the DMR / NXDN radio ID name list (user-downloaded CSV)
-target_sources(dect2core PRIVATE core/src/common/seen_store.cpp)   # heard over days and years (ADS-B, AIS): docs/SEEN-STORE-3.9.md
+target_sources(dect2core PRIVATE core/src/common/seen_store.cpp core/src/common/records.cpp)   # heard over days and years (ADS-B, AIS): docs/SEEN-STORE-3.9.md
 target_sources(dect2core PRIVATE core/src/doctor/reception_doctor.cpp)   # Reception Doctor: why a mode is not decoding (docs/RECEPTION-DOCTOR.md)
 target_sources(dect2core PRIVATE core/src/station/station.cpp core/src/station/heard.cpp core/src/station/fun.cpp core/src/engine/wide_placed.cpp core/src/doctor/decode_progress.cpp)   # My station: radios, antennas, which mode can use what (docs/STATION-3.8.md)
 target_sources(dect2core PRIVATE core/src/sweep/station_health.cpp core/src/source/agc.cpp)   # station and antenna health report (docs/STATION_HEALTH.md)

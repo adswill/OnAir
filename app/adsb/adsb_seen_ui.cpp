@@ -4,6 +4,7 @@
 #include "dect2/automation/engine.h"
 #include "dect2/common/seen_store.h"
 #include "i18n/i18n.h"
+#include "adsb/records_ui.h"
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -85,7 +86,10 @@ void seenTick(App& a) {
         m = ac.messages;
         if (ac.hasPos && ac.hasRange && ac.posAgeSec < 5) {
             auto& lp = G.lastPos[ac.icao];
-            if (lp.first != ac.lat || lp.second != ac.lon) { lp = {ac.lat, ac.lon}; G.st.position(id, utc, ac.distNm * 1.852, ac.bearingDeg, band(ac)); }
+            if (lp.first != ac.lat || lp.second != ac.lon) {
+                lp = {ac.lat, ac.lon}; G.st.position(id, utc, ac.distNm * 1.852, ac.bearingDeg, band(ac));
+                if (ac.posKind == 2 && !ac.ground) recordsOffer("ADS-B", "", ac.distNm * 1.852, ac.callsign.empty() ? id : ac.callsign + " " + id, ac.hasAlt ? std::to_string(ac.altFt) + " ft" : std::string());   // global fixes only
+            }
         }
     }
     if (G.lastMsgs.size() > 20000) { G.lastMsgs.clear(); G.lastPos.clear(); }
@@ -109,6 +113,7 @@ void seenView(App& a) {
     std::vector<float> uq, pos, far;
     for (size_t i = from; i < d.size(); i++) { uq.push_back((float)d[i].unique); pos.push_back((float)d[i].positions); far.push_back((float)d[i].maxKm); }
     const float w = ImGui::GetContentRegionAvail().x * 0.62f, h = 70 * gUi;
+    recordsPanel();
     if (uq.empty()) { ImGui::TextDisabled("%s", tr("No days yet: the store fills while the receiver runs.")); return; }
     ImGui::BeginGroup();
     ImGui::PlotHistogram("##adsbsu", uq.data(), (int)uq.size(), 0, tr("unique aircraft per day"), 0, FLT_MAX, ImVec2(w, h));

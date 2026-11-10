@@ -1,5 +1,6 @@
 // APRS / Packet screens: the stations heard (table and map, the ADS-B map underneath, as for AIS), the log of raw packets, the state lamps.
 #include "app.h"
+#include "adsb/records_ui.h"
 #include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/kit.h"
@@ -385,6 +386,10 @@ void lamps(App& a) {
 void tick(App& a) {
     loadState();
     if (!a.engine.running()) return;
+    if (live(a)) {   // the records board: the farthest APRS station with a position (direct or through a digipeater alike; objects left out)
+        static double last = 0;
+        if (ImGui::GetTime() - last > 5) { last = ImGui::GetTime(); for (const auto& s : a.rx.packet.stations) if (s.hasPos && s.via.empty()) recordsOffer("APRS", "", recordsDistKm(s.lat, s.lon), s.call, ""); }   // stations, not objects
+    }
     dect2::PacketReceiver& r = a.engine.packet();
     if ((int)a.packetNarrow != S.pushedNarrow) { r.setNarrowChannel(a.packetNarrow); S.pushedNarrow = a.packetNarrow; }
     if (S.tableScale != S.pushedScale) { r.setTableScale(S.tableScale); S.pushedScale = S.tableScale; }

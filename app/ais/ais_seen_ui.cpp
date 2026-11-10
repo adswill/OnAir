@@ -5,6 +5,7 @@
 #include "dect2/ais/ais_tel.h"
 #include "dect2/common/seen_store.h"
 #include "i18n/i18n.h"
+#include "adsb/records_ui.h"
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -87,6 +88,7 @@ void aisSeenTick(App& a) {
                 double brg = 0;
                 const double km = distKm(rl, ro, v.lat, v.lon, brg);
                 G.st.position(id, utc, km, brg, v.cls == dect2::AIS_CLASS_A ? 0 : v.cls == dect2::AIS_CLASS_B ? 1 : 2);
+                if (!v.lrPosition && v.cls != dect2::AIS_CLASS_BASE) recordsOffer("AIS", "", km, v.name.empty() ? id : v.name + " " + id, v.cls == dect2::AIS_CLASS_A ? "class A" : v.cls == dect2::AIS_CLASS_B ? "class B" : "");
             }
         }
     }
@@ -107,6 +109,7 @@ void aisSeenView(App& a) {
         if (!p.empty()) { std::ofstream o(fs::path(reinterpret_cast<const char8_t*>(p.c_str())), std::ios::binary); o << dect2::seenDaysCsv(G.st); G.note = o ? tr("saved") : tr("could not write the file"); }
     }
     if (!G.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", G.note.c_str()); }
+    recordsPanel();
     const auto& d = G.st.days();
     if (d.empty()) { ImGui::TextDisabled("%s", tr("No days yet: the log fills while the receiver runs.")); return; }
     const float w = ImGui::GetContentRegionAvail().x * 0.49f, h = 64 * gUi;

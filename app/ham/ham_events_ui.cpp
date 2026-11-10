@@ -3,6 +3,7 @@
 #include "app.h"
 #include "ham/ham_events_ui.h"
 #include "ham/ham_ops_ui.h"
+#include "adsb/records_ui.h"
 #include "dect2/automation/engine.h"
 #include "dect2/cw/cw_tel.h"
 #include "dect2/ham/ham.h"
@@ -29,7 +30,7 @@ HamOps& ops() {
 }  // namespace
 
 void hamFeedFtx(App& a, const dect2::HfdigFtxTelemetry& f) {
-    if (!au::wants(au::FHam) || f.decodes.empty()) return;
+    if (f.decodes.empty()) return;
     if (a.rx.seq == gLastSeq && f.decodes.size() == gLastN) return;
     gLastSeq = a.rx.seq; gLastN = f.decodes.size();
     HamOps& o = ops();
@@ -43,7 +44,9 @@ void hamFeedFtx(App& a, const dect2::HfdigFtxTelemetry& f) {
         h.band = ham::bandNameFor(h.freqHz);
         h.country = hamCountry(d.call);
         h.utc = d.slotUtc; h.snrDb = d.snrDb; h.dt = d.dt; h.audioHz = d.hz;
-        au::emit(ham::hamDecodeEvent(h, o.worked.mark(d.call, d.grid, h.band, ham::hamModeName(d.mode), hamDxccKey(d.call))));
+        au::Event ev = ham::hamDecodeEvent(h, o.worked.mark(d.call, d.grid, h.band, ham::hamModeName(d.mode), hamDxccKey(d.call)));
+        if (ev.f.count("lat") && d.grid.size() >= 4) recordsOffer(mode.c_str(), h.band, recordsDistKm(ev.f["lat"].n, ev.f["lon"].n), d.call, d.grid + " " + std::to_string((int)d.snrDb) + " dB");
+        if (au::wants(au::FHam)) au::emit(std::move(ev));
     }
 }
 
