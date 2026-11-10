@@ -388,6 +388,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 236: return pollStd(rxFy3a_, 236, t, seqs[195], &RxTelemetry::fy3a);   // FY-3 AHRPT (slot 195)
     case 237: return pollStd(rxFy3m_, 237, t, seqs[196], &RxTelemetry::fy3m);   // FY-3 MPT (slot 196)
     case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: return pollStd(rxHfu_[a - 431], a, t, hfuSeq_[a - 431], &RxTelemetry::hfutil);   // HF utility modes
+    case kHfuHdrFamily + 1: return pollStd(rxHfm_[0], a, t, hfmSeq_[0], &RxTelemetry::hfutil);   // STANAG 4539 (family 603)
     case 238: return pollStd(rxPh2_, 238, t, seqs[197], &RxTelemetry::pactorhf);   // PACTOR-II (slot 197)
     case 239: return pollStd(rxPh3_, 239, t, seqs[198], &RxTelemetry::pactorhf);   // PACTOR-III (slot 198)
     case 240: return pollStd(rxPh4_, 240, t, seqs[199], &RxTelemetry::pactorhf);   // PACTOR-IV (slot 199)

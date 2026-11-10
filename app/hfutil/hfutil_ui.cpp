@@ -1,4 +1,4 @@
-// HF utility mode panels (families 430 .. 439): band presets, decoded text, events. Automatic by default; speed and shift under Advanced for the FSK modes,
+// HF utility mode panels (families 430 .. 439, and 603 STANAG 4539): band presets, decoded text, events. Automatic by default; speed and shift under Advanced for the FSK modes,
 // the STANAG 4285 profile for that modem (it signals no rate itself).
 #include "dect2/common/time_fmt.h"
 #include "app.h"
@@ -13,9 +13,9 @@
 namespace {
 
 struct State { float baud = 0, shift = 0; int prof = -1; };
-State S[dect2::kHfuKinds];
+State S[dect2::kHfuKindsAll];
 
-template <int K> bool live(const App& a) { return a.rx.standard == dect2::kHfuFamilyFirst + K + 1; }
+template <int K> bool live(const App& a) { return a.rx.standard == dect2::hfuFamilyOf(K) + 1; }
 
 template <int K> void presets(App& a) {
     ImGui::AlignTextToFramePadding();
@@ -44,7 +44,7 @@ template <int K> void presets(App& a) {
                 for (int i = 0; i < 10; i++) if (ImGui::Selectable(tr(prof[i]), i == v)) { S[K].prof = i - 1; a.engine.hfUtil(K).setForcedProfile(i - 1); }
                 ImGui::EndCombo();
             }
-        } else if (K >= 2) {
+        } else if (K >= 2 && K < dect2::kHfuKinds) {
             bool ch = ImGui::InputFloat(tr("Baud (0 = automatic)"), &S[K].baud, 0, 0, "%.1f");
             ch |= ImGui::InputFloat(tr("Shift Hz (0 = automatic)"), &S[K].shift, 0, 0, "%.0f");
             if (ch) a.engine.hfUtil(K).setForcedFsk(S[K].baud, S[K].shift);
@@ -58,7 +58,7 @@ template <int K> void tab(App& a) {
     if (!live<K>(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
     const dect2::HfUtilTelemetry& t = a.rx.hfutil;
     ImGui::TextUnformatted(dect2::hfUtilSummary(t).c_str());
-    if (K <= 1) ImGui::TextDisabled("%s", tr("Encrypted traffic stays as bytes; nothing is decrypted."));
+    if (K <= 1 || K == dect2::kHfuKindHdr) ImGui::TextDisabled("%s", tr("Encrypted traffic stays as bytes; nothing is decrypted."));
     ImGui::Separator();
     if (ImGui::BeginChild("##hfutext", ImVec2(0, 0), false)) {
         ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0);
@@ -84,7 +84,7 @@ template <int K> void receiver(App& a) {
     const dect2::HfUtilTelemetry& t = a.rx.hfutil;
     auto kv = [&](const char* k, const char* fmt, auto... x) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, x...); ImGui::PopFont(); };
     kv(tr("state"), "%s", dect2::hfUtilSummary(t).c_str());
-    if (K <= 1) { kv(tr("frequency error"), "%+.1f Hz", t.cfoHz); kv(tr("SNR"), "%.1f dB", t.snrDb); kv(tr("STANAG 5066 D_PDUs"), "%llu", (unsigned long long)t.pdus); }
+    if (K <= 1 || K == dect2::kHfuKindHdr) { kv(tr("frequency error"), "%+.1f Hz", t.cfoHz); kv(tr("SNR"), "%.1f dB", t.snrDb); kv(tr("STANAG 5066 D_PDUs"), "%llu", (unsigned long long)t.pdus); }
     else { kv(tr("speed"), "%.1f Bd", t.baud); kv(tr("tone centre"), "%.0f Hz", t.centreHz); kv(tr("shift"), "%.0f Hz", t.shiftHz); }
     kv(tr("good / bad"), "%llu / %llu", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     kv(tr("level"), "%.1f dBFS", t.levelDb);
@@ -102,6 +102,6 @@ template <int K> void summary(const App& a, std::string& l1, std::string& l2) {
 
 }  // namespace
 
-extern const ModeUi kHfuUi[dect2::kHfuKinds];
+extern const ModeUi kHfuUi[dect2::kHfuKindsAll];
 #define HFU_UI(K, Name) {.sideTitle = "EVENTS", .tabName = Name, .tabIcon = Ic::Radio, .tab = tab<K>, .receiver = receiver<K>, .list = list<K>, .status = status<K>, .summary = summary<K>}
-const ModeUi kHfuUi[dect2::kHfuKinds] = {HFU_UI(0, "MIL-STD-188-110"), HFU_UI(1, "STANAG 4285"), HFU_UI(2, "ARQ-E"), HFU_UI(3, "ARQ-N"), HFU_UI(4, "AUTOSPEC"), HFU_UI(5, "SPREAD"), HFU_UI(6, "G-TOR"), HFU_UI(7, "EFR"), HFU_UI(8, "Piccolo"), HFU_UI(9, "Coquelet")};
+const ModeUi kHfuUi[dect2::kHfuKindsAll] = {HFU_UI(0, "MIL-STD-188-110"), HFU_UI(1, "STANAG 4285"), HFU_UI(2, "ARQ-E"), HFU_UI(3, "ARQ-N"), HFU_UI(4, "AUTOSPEC"), HFU_UI(5, "SPREAD"), HFU_UI(6, "G-TOR"), HFU_UI(7, "EFR"), HFU_UI(8, "Piccolo"), HFU_UI(9, "Coquelet"), HFU_UI(10, "STANAG 4539")};
