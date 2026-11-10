@@ -1346,3 +1346,10 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 feat39-txfeat: DTMF keypad and DMR TX slot sync
+- DTMF keypad (0-9, *, #, A-D) in the TX panel for NFM, AM, SSB, airband and QO-100 voice, for EchoLink and IRLP node control. Tone, gap, level and twist are under Advanced; the microphone is muted while a key plays.
+- DMR subscriber TX now syncs to the repeater (TS 102 361-1 4.2, 4.5, table 5.1). The receiver reports the times of clean CACH bursts and DmrSlotClock fits the outbound frame. The first inbound burst then waits for its slot (offset or aligned timing). The call starts at once when the repeater has not been heard, and a busy AT is shown as a warning only.
+- Tests: tx_dtmf, and dmr_slot_sync (rates 1.2-10 Msps, offsets up to 2.5 kHz, 14-35 dB SNR, 5 ppm, random phase, wrong TC bits). Inbound bursts land within 0.25 ms of their slot; the receiver timing spread is under 0.01 ms.
+- Quick CI is green (tx_dtmf, dmr_tx, dmr_rx, dmr_slot_sync). Simulated signals only.
+- The radio's buffering latency to the air is a user setting, and it has not been tested against a real repeater. Details are in docs/TXFEAT-3.9.md.

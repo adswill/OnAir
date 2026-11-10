@@ -51,7 +51,12 @@ Test: `tests/dmr/test_dmr_slot_sync.cpp` (ctest `dmr_slot_sync`):
 3. Listen, fit and key up, for both logical channels with both offset and aligned timing. This runs with carrier offset (up to 2.5 kHz), noise (14 to 35 dB), a 5 ppm clock error, a random start phase and key-up 0.2 to 3 s after listening. Every inbound burst that OnAir's own receiver finds in the transmission must sit within 0.25 ms of its slot. The guard time is 1.25 ms on each side.
 4. Fit robustness: 11 % wrong TC bits, a stale fit (more than 10 s old), no observations, and a clock that goes back.
 
-Measured results are in the PATHWAY entry.
+Measured (GitHub quick runs 42880213979 and 42883708479, Linux):
+- Generator delay to symbol 0: 2.1875 ms (105 samples at 48 kHz).
+- Receiver burst-time spread: 0.006-0.009 ms at every rate. The filter delay is 2.083 ms at 48 kHz, plus 0.45 ms when the exact resampler runs; it is now removed.
+- Outbound frame fit: 82 observations in a 2 s listen, rms 0.006-0.008 ms.
+- Before the delays were corrected, every inbound burst landed 6.35 ms late. That is the sum of the three delays.
+- With the delays corrected, every burst in every case lands within the 0.25 ms limit.
 
 Limits, stated plainly:
 - The slot phase is exact on the receiver's input clock.
