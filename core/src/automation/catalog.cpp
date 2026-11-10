@@ -86,6 +86,11 @@ std::vector<EventInfo> build() {
         {"source", 's', "FM or DAB", "FM"}, {"station", 's', "PS name or service label", "RADIO 1"}, {"text", 's', "radio text / dynamic label", "Traffic: A1 closed"},
         {"artist", 's', "artist when tagged", "Queen"}, {"title", 's', "title when tagged", "Bohemian Rhapsody"}, {"pty", 's', "programme type", "News"},
         {"ta", 'b', "traffic announcement on air (FM)", "false"}, {"ta_start", 'b', "a traffic announcement has just started", "false"}, {"freq_mhz", 'n', "frequency, MHz", "93.9"}}});
+    v.push_back({"image.done", "A picture is finished (weather satellites, GOES and other geostationary, SSTV, fax, SSDV, HamDRM): no change for 20 s", "Images", "Meteor", 137.9e6, {
+        {"path", 's', "the PNG in the image gallery folder", "/home/me/OnAir/images/20261110-meteor.png"}, {"source", 's', "the mode that made it", "Meteor"},
+        {"satellite", 's', "satellite, when known", "Meteor-M2 4"}, {"detail", 's', "channels, product, pass", "channels 1 2 3, pass 09:41, max 62 deg"},
+        {"key", 's', "the receiver's name for the picture", "meteor-123"}, {"width", 'n', "pixels", "1568"}, {"height", 'n', "lines", "2200"},
+        {"picture_time", 'n', "when it was taken (Unix seconds)", "1794310637"}}});
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {

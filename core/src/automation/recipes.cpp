@@ -98,6 +98,12 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("Traffic announcement", "The FM station starts a traffic announcement (TA): tells you and records 2 minutes.",
         "broadcast.text", "ta_start",
         {act("notify", {{"title", "Traffic on {{station}}"}, {"body", "{{text}}"}}), act("record_audio", {{"seconds", "120"}})}, "station", 120));
+    v.push_back(rule("Post my Meteor pass to Discord", "When a Meteor picture is finished, posts its satellite, pass and size to your Discord channel (paste the channel's webhook address). The picture itself is not attached: the message says where it was saved.",
+        "image.done", "source contains 'meteor' or satellite contains 'meteor'",
+        {act("webhook", {{"preset", "discord"}, {"url", "https://discord.com/api/webhooks/change-this"}, {"text", "New {{satellite}} picture: {{detail}}, {{width}} x {{height}}"}})}, "key", 600));
+    v.push_back(rule("Picture finished", "Any picture finished (satellite, SSTV, fax, SSDV, HamDRM): a notification with where it was saved.",
+        "image.done", "",
+        {act("notify", {{"title", "{{source}} picture"}, {"body", "{{detail}} {{path}}"}})}, "key", 60));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));

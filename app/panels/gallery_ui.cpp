@@ -19,6 +19,8 @@
 #include <ctime>
 #include <filesystem>
 #include "picsave_ui.h"
+#include "dect2/automation/engine.h"
+#include <map>
 #include "../state/picsave.h"
 #include <fstream>
 #include <sstream>
@@ -229,6 +231,27 @@ void setPassContext(const std::string& sat, double aos, double maxElDeg, double 
     gPassCtx = PassCtx{sat, aos, maxElDeg, validUntil};
 }
 
+// image.done: a picture whose key has not changed for kDoneSec is finished (a receiver republishes a growing picture under one key)
+struct Pending { double lastWall = 0; std::string path, source, sat, detail; int w = 0, h = 0; double time = 0; };
+std::map<std::string, Pending> gPending;
+constexpr double kDoneSec = 20;
+
+void emitDone() {
+    if (gPending.empty()) return;
+    const double now = (double)std::time(nullptr);
+    for (auto it = gPending.begin(); it != gPending.end();) {
+        if (now - it->second.lastWall < kDoneSec) { ++it; continue; }
+        const Pending& p = it->second;
+        if (dect2::automation::wants(dect2::automation::FImage)) {
+            dect2::automation::Event ev("image.done");
+            ev.at(now, p.source, 0);
+            ev.str("path", p.path).str("source", p.source).str("satellite", p.sat).str("detail", p.detail).str("key", it->first).num("width", p.w).num("height", p.h).num("picture_time", p.time);
+            dect2::automation::emit(std::move(ev));
+        }
+        it = gPending.erase(it);
+    }
+}
+
 void publish(const std::string& key, const std::string& source, double unixTime, int w, int h, const uint8_t* rgba, const Meta& meta) {
     if (w <= 0 || h <= 0 || !rgba) return;
     load();
@@ -270,6 +293,9 @@ void publish(const std::string& key, const std::string& source, double unixTime,
     std::stable_sort(S.items.begin(), S.items.end(), [](const Item& a, const Item& b) { return a.time > b.time; });
     enforceCap();
     saveIndex();
+    Pending& pd = gPending[key];
+    pd.lastWall = (double)std::time(nullptr); pd.path = base + ".png"; pd.source = source; pd.sat = it.sat; pd.detail = it.detail; pd.w = w; pd.h = h; pd.time = unixTime;
+    if (gPending.size() > 200) gPending.erase(gPending.begin());
 }
 
 void publishGray(const std::string& key, const std::string& source, double t, int w, int h, const uint8_t* g, const Meta& meta) {
@@ -848,5 +874,6 @@ void windowPanel(App& a) {
 void galleryDev(int mode) { gDev = mode; }
 
 void galleryWindow(App& a) {
+    { static double last = 0; const double t = ImGui::GetTime(); if (t - last > 2) { last = t; gallery::emitDone(); } }   // image.done for finished pictures
     if (a.galleryOpen) windowPanel(a);
 }
