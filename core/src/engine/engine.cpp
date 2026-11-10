@@ -403,6 +403,7 @@ void Engine::applyReset() {
     {
         std::lock_guard<std::mutex> lk(tsMu_);
         demux_.reset();
+        mpe_.reset();
         unpack_ = BbUnpacker();
         unpack_.setSink([this](const uint8_t* in) { uint8_t merged[188]; memcpy(merged, in, 188); plpMerge_.step(merged); const uint8_t* pkt = merged; demux_.feed(pkt); if (!playerExternal_) { ttx_.feedTs(pkt); dvbsub_.feedTs(pkt); } frameBuf_.insert(frameBuf_.end(), pkt, pkt + 188); });
         tsSnap_ = TsSnapshot();
@@ -441,6 +442,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
         if (!playerExternal_) ttx_.feedTs(q);
         if (!playerExternal_) dvbsub_.feedTs(q);
     }
+    mpe_.feed(pk, n);   // DVB-H and other IP datacasting: MPE / MPE-FEC sections found by themselves
     demux_.advance(secs);
     tsSnap_ = demux_.snapshot();
     outputs_.packets(pk, n, &tsSnap_);

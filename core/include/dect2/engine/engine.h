@@ -20,6 +20,7 @@
 #include "dect2/dab/dab.h"
 #include "dect2/atsc3/atsc3_rx.h"
 #include "dect2/isdbt/isdbt_rx.h"
+#include "dect2/tv/mpe_fec.h"
 #include "dect2/fm/fm_rx.h"
 #include "dect2/fm/fm_census.h"
 #include "dect2/dab/dab_census.h"
@@ -829,6 +830,7 @@ private:
     void ingest(cf32* x, size_t n);
     TeletextDecoder ttx_;
     DvbSubDecoder dvbsub_;
+    mpe::MpeDemux mpe_;      // DVB-H: MPE / MPE-FEC IP datagrams of the stream (under tsMu_)
     int lastT2Frame_ = -1;
     std::atomic<bool> resetReq_{false};
     std::atomic<uint64_t> resets_{0};

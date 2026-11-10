@@ -224,6 +224,12 @@ void Engine::analysisLoop() {
             } else if (dvbt ? rxT_.telemetry(t, rxSeq) : rx_.telemetry(t, rxSeq)) {
                 rxSeq = t.seq;
                 if (dvbt) logDvbtEvents(t); else logRxEvents(t);
+                if (dvbt) {   // DVB-H: the TPS says whether the MPE sections carry real-time parameters; the datagram counts go with the report
+                    std::lock_guard<std::mutex> lk(tsMu_);
+                    mpe_.setRealTimeParams(t.dvbt.dvbh && (t.dvbt.timeSlicing || t.dvbt.mpeFec));
+                    const mpe::Stats& ms = mpe_.stats();
+                    t.dvbt.mpePid = ms.pid; t.dvbt.mpeDatagrams = ms.datagrams; t.dvbt.mpeRowsCorrected = ms.rowsCorrected; t.dvbt.mpeRowsFailed = ms.rowsFailed;
+                }
                 autoSelect(t, dvbt && (t.dvbt.tpsOk || t.dvbt.fecSync));
                 std::lock_guard<std::mutex> lk(rxMu_);
                 publishRx(std::move(t));
