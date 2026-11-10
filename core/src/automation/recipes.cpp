@@ -71,6 +71,9 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("Radiosonde landed near me", "A radiosonde has come down within 50 km of the receiver position: go and find it.",
         "sonde.landed", "distance_km <= 50",
         {act("notify", {{"title", "Sonde {{serial}} landed"}, {"body", "{{distance_km}} km away at {{lat}}, {{lon}}"}}), act("log", {{"file", "sondes-landed"}})}, "serial", 3600));
+    v.push_back(rule("APRS message to me", "An APRS message addressed to your callsign (set it in APRS, Messages): tells you and beeps.",
+        "aprs.message", "to_me",
+        {act("notify", {{"title", "APRS message from {{from}}"}, {"body", "{{text}}"}}), act("sound")}, "from", 30));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));

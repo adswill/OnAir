@@ -63,6 +63,10 @@ std::vector<EventInfo> build() {
         {"from", 's', "source call sign", "LY1ABC-9"}, {"to", 's', "destination", "APRS"}, {"path", 's', "digipeater path", "WIDE1-1"},
         {"info", 's', "information field", "!5441.40N/02517.00E>test"}, {"type", 's', "packet type", "position"}, {"summary", 's', "one-line reading", "position"},
         {"lat", 'n', "latitude when the packet has a position", "54.69"}, {"lon", 'n', "longitude when the packet has a position", "25.28"}}});
+    v.push_back({"aprs.message", "APRS message or bulletin heard for the first time (not the retries, acks or rejects)", "APRS", "APRS", 144.8e6, {
+        {"from", 's', "sender", "LY1ABC-9"}, {"to", 's', "addressee, or the bulletin id", "LY2XX-7"}, {"text", 's', "message text", "QSY 145.500?"},
+        {"msgno", 's', "message number, empty when none", "12"}, {"kind", 's', "message, bulletin, announcement, group bulletin, weather service", "message"},
+        {"to_me", 'b', "addressed to your callsign (APRS view, Messages)", "true"}}});
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {

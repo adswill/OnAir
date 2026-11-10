@@ -375,7 +375,7 @@ struct WideModes::Impl {
         k.setup = [this](PacketReceiver& r) { r.setWideInput(true); r.setSilent(true); r.setNarrowChannel(packetNarrow); r.setFixBits(packetFix); r.setEmphasis(packetEmph); };
         k.clear = [](PacketReceiver& r) { r.clearResults(); };
         k.clearLists = [](PacketTelemetry& t) {
-            t.frames.clear(); t.stations.clear(); t.blocksOk = t.blocksBad = 0; t.ok1200 = t.bad1200 = t.ok9600 = t.bad9600 = t.aprsFrames = 0; t.carrier = false;
+            t.frames.clear(); t.stations.clear(); t.messages.clear(); t.blocksOk = t.blocksBad = 0; t.ok1200 = t.bad1200 = t.ok9600 = t.bad9600 = t.aprsFrames = 0; t.carrier = false;
         };
         k.hasLog = [](const PacketTelemetry& t) { return !t.frames.empty() || !t.stations.empty(); };
         k.append = [](PacketTelemetry& t, const PacketTelemetry& x, double hz) {
@@ -388,12 +388,16 @@ struct WideModes::Impl {
             if (t.frames.size() > 200) t.frames.erase(t.frames.begin(), t.frames.end() - 200);
             for (PacketStation s2 : x.stations) {   // one row per callsign: the newest hearing, the frames of all
                 s2.lastHeardSec += shift; s2.carrierId = 1; s2.carrierHz = hz;
+                s2.wx.timeSec += shift; for (AprsWx& w : s2.wxHist) w.timeSec += shift;
                 auto it = std::find_if(t.stations.begin(), t.stations.end(), [&](const PacketStation& q2) { return q2.call == s2.call; });
                 if (it == t.stations.end()) t.stations.push_back(std::move(s2));
                 else { const uint32_t n2 = it->count + s2.count; if (s2.lastHeardSec > it->lastHeardSec) *it = std::move(s2); it->count = n2; }
             }
             std::stable_sort(t.stations.begin(), t.stations.end(), [](const PacketStation& a, const PacketStation& b) { return a.lastHeardSec > b.lastHeardSec; });
             if (t.stations.size() > 300) t.stations.resize(300);
+            for (AprsMessage m : x.messages) { m.timeSec += shift; m.lastSec += shift; t.messages.push_back(std::move(m)); }   // messages (aprs_board.h)
+            std::stable_sort(t.messages.begin(), t.messages.end(), [](const AprsMessage& a, const AprsMessage& b) { return a.timeSec < b.timeSec; });
+            if (t.messages.size() > 500) t.messages.erase(t.messages.begin(), t.messages.end() - 500);
         };
         k.info = [](const PacketTelemetry& t) {
             if (!t.blocksOk) return std::string();

@@ -38,6 +38,7 @@ public:
     // the input is FM-demodulated audio (a sound card on a radio's discriminator or speaker output) instead of radio IQ: the real part of
     // the samples is the audio, at any rate the mode accepts
     void setAudioInput(bool on);
+    void setMyCall(const std::string& call);             // the user's callsign: messages to it are marked "to me" (aprs.message event field to_me)
     bool audioInput() const;
     void setSignalOffset(double hz);                     // where the user's frequency sits relative to 0 Hz in the input
     bool ready() const;                                  // false when the input rate is too low for this mode

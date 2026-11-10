@@ -6,6 +6,7 @@
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "../adsb/adsb_map.h"
+#include "packet_board_ui.h"
 #include "dect2/geo/maidenhead.h"
 #include "dect2/packet/packet_tel.h"
 #include <algorithm>
@@ -29,6 +30,7 @@ struct State {
     int pushedFix = -1, pushedEmph = -1, pushedAudioIn = -1;
     bool vote = true, pushedVote = true, pushedVoteInit = false;   // multi-demodulator vote, saved as packetVote
     bool listen = false; int pushedListen = -1; float pushedVol = -1; int pushedMute = -1;
+    std::string pushedCall = "\x01";   // the callsign for "to me" (packet_board_ui.h)
 };
 State S;
 
@@ -239,11 +241,12 @@ void mapView(App& a, ImVec2 size) {
             const float r = (sel ? 8.f : 7.f) * gUi * 0.7f;
             dl->AddCircleFilled(q, r, stationColour(v));
             dl->AddCircle(q, r, sel ? IM_COL32(255, 255, 255, 255) : IM_COL32(0, 0, 0, 150), 16, sel ? 1.6f : 1.f);
-            const ImVec2 ts = ImGui::CalcTextSize(v.call.c_str());
+            const std::string label = v.hasWx && v.wx.any() ? v.call + "  " + dect2::aprsWxLabel(v.wx) : v.call;   // weather stations: temperature and wind
+            const ImVec2 ts = ImGui::CalcTextSize(label.c_str());
             const ImVec2 lp(q.x + 12 * gUi, q.y - ts.y * 0.5f - 2 * gUi);
             dl->AddRectFilled(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), IM_COL32(10, 12, 14, 210), 2.f);
             dl->AddRect(lp, ImVec2(lp.x + ts.x + 8 * gUi, lp.y + ts.y + 4 * gUi), sel ? IM_COL32(255, 255, 255, 200) : IM_COL32(60, 64, 68, 255), 2.f);
-            dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), v.call.c_str());
+            dl->AddText(ImVec2(lp.x + 4 * gUi, lp.y + 2 * gUi), IM_COL32(235, 238, 240, 255), label.c_str());
             const float d = std::hypot(q.x - click.x, q.y - click.y);
             if (clicked && d < best) { best = d; hit = &v; }
         }
@@ -253,7 +256,7 @@ void mapView(App& a, ImVec2 size) {
     if (on && !S.sel.empty()) {   // the station card: everything heard about the selected station
         for (const auto& v : t.stations) {
             if (v.call != S.sel) continue;
-            char b[8][160];
+            char b[10][160];
             int n = 0;
             snprintf(b[n++], 160, "%s%s", v.call.c_str(), v.isObject ? "  (object)" : "");
             if (v.symTable && v.symCode) snprintf(b[n++], 160, "symbol %c%c   %u frames   last heard %.0f s ago", v.symTable, v.symCode, (unsigned)v.count, std::max(0.0, t.timeSec - v.lastHeardSec));
@@ -271,7 +274,21 @@ void mapView(App& a, ImVec2 size) {
             }
             if (!v.via.empty()) snprintf(b[n++], 160, "sent by %s", v.via.c_str());
             if (v.carrierHz > 0) snprintf(b[n++], 160, "carrier %.4f MHz", v.carrierHz / 1e6);
-            if (!v.comment.empty()) snprintf(b[n++], 160, "%s", v.comment.c_str());
+            if (v.hasWx) {
+                const dect2::AprsWx& x = v.wx;
+                std::string m;
+                char vb[48];
+                if (!std::isnan(x.tempC)) { snprintf(vb, sizeof vb, "%.1f C   ", x.tempC); m += vb; }
+                if (!std::isnan(x.windKmh)) { snprintf(vb, sizeof vb, "wind %s %.0f km/h   ", dect2::aprsCompass(x.windDirDeg), x.windKmh); m += vb; }
+                if (!std::isnan(x.gustKmh)) { snprintf(vb, sizeof vb, "gust %.0f   ", x.gustKmh); m += vb; }
+                if (!m.empty()) snprintf(b[n++], 160, "%s", m.c_str());
+                m.clear();
+                if (!std::isnan(x.humidityPct)) { snprintf(vb, sizeof vb, "humidity %.0f %%   ", x.humidityPct); m += vb; }
+                if (!std::isnan(x.pressureHpa)) { snprintf(vb, sizeof vb, "%.1f hPa   ", x.pressureHpa); m += vb; }
+                if (!std::isnan(x.rain24hMm)) { snprintf(vb, sizeof vb, "rain 24 h %.1f mm", x.rain24hMm); m += vb; }
+                if (!m.empty()) snprintf(b[n++], 160, "%s", m.c_str());
+            }
+            if (!v.comment.empty() && n < 10) snprintf(b[n++], 160, "%s", v.comment.c_str());
             float w = 0;
             for (int i = 0; i < n; i++) w = std::max(w, ImGui::CalcTextSize(b[i]).x);
             const float lh = ImGui::GetTextLineHeightWithSpacing();
@@ -372,6 +389,7 @@ void tick(App& a) {
     if ((int)a.packetNarrow != S.pushedNarrow) { r.setNarrowChannel(a.packetNarrow); S.pushedNarrow = a.packetNarrow; }
     if (S.tableScale != S.pushedScale) { r.setTableScale(S.tableScale); S.pushedScale = S.tableScale; }
     if ((int)S.listen != S.pushedListen) { r.setListen(S.listen); S.pushedListen = S.listen; }
+    { const std::string c = aprsboard::myCall(a); if (c != S.pushedCall) { r.setMyCall(c); S.pushedCall = c; } }
     if (!S.pushedVoteInit || S.vote != S.pushedVote) { r.setVote(S.vote); S.pushedVote = S.vote; S.pushedVoteInit = true; }
     if (S.fixBits != S.pushedFix) { r.setFixBits(S.fixBits); S.pushedFix = S.fixBits; }
     if (S.emphasis != S.pushedEmph) { r.setEmphasis(S.emphasis); S.pushedEmph = S.emphasis; }
@@ -454,8 +472,15 @@ void tab(App& a) {
     flowNext(10 * gUi);
     controls(a);
     kit::modeHeader({24, "APRS / Packet", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("pktv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 3}, {tr("Map"), 1}, {tr("Log"), 2, true}});
+    {
+        const int unread = aprsboard::unreadToMe(a);
+        char ml[48]; snprintf(ml, sizeof ml, unread ? "%s (%d)" : "%s", tr("Messages"), unread);
+        static std::string msgLabel; msgLabel = ml;
+        kit::modeNav("pktv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 3}, {tr("Map"), 1}, {tr("Weather"), 4}, {msgLabel.c_str(), 5}, {tr("Log"), 2, true}});
+    }
     if (S.view == 2) { packetLog(a); return; }
+    if (S.view == 4) { aprsboard::weatherView(a, S.sel); return; }
+    if (S.view == 5) { aprsboard::messagesView(a); return; }
     if (S.view == 3) { kit::sessionItems(24, 3, "aprs"); return; }
     if (S.view == 1) { mapView(a, ImGui::GetContentRegionAvail()); return; }
     if (!live(a)) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver"); ImGui::PopTextWrapPos(); return; }
