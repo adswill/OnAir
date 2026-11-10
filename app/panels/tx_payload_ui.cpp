@@ -3,6 +3,7 @@
 #include "tx_state.h"
 #include "dect2/mesh/mesh_tx.h"
 #include "dect2/fm/rds_live.h"
+#include "dect2/tx/tx_dtmf.h"
 #include "platform/platform.h"
 #include "../ui/typography.h"
 #include "dect2/hfdig/hfdig_sstv.h"
@@ -81,6 +82,66 @@ void meshTxPanel(TxUi& s, bool running) {
     }
 }
 
+// DTMF keypad (tx_dtmf.h) for the analog voice modes: EchoLink / IRLP node control and repeater commands. A key goes out at once while
+// transmitting; the sequence box sends a whole string. The tone and gap lengths, level and twist are under Advanced and kept in the settings.
+void dtmfKeypadRow(bool running) {
+    auto& q = dect2::TxDtmfQueue::global();
+    static bool init = false;
+    static dect2::TxDtmfTiming t;
+    static char seq[64] = "";
+    if (!init) {
+        init = true;
+        t.toneMs = plat::prefs().getD("tx.dtmf.toneMs", 100);
+        t.gapMs = plat::prefs().getD("tx.dtmf.gapMs", 100);
+        t.levelPct = plat::prefs().getD("tx.dtmf.levelPct", 35);
+        t.twistDb = plat::prefs().getD("tx.dtmf.twistDb", 0);
+        q.setTiming(t);
+    }
+    if (!running && (q.pending() > 0 || !q.sent().empty())) q.clear();   // nothing waits for the next transmission
+    if (!ImGui::CollapsingHeader(trw("DTMF keypad (EchoLink, IRLP, repeater commands)"))) return;
+    if (!running) ImGui::TextDisabled("%s", tr("Press START TRANSMITTING first: the keys go out while you transmit."));
+    ImGui::BeginDisabled(!running);
+    static const char* rows[4] = {"123A", "456B", "789C", "*0#D"};
+    const float w = 36 * gUi;
+    for (int r = 0; r < 4; r++) {
+        for (int c = 0; c < 4; c++) {
+            if (c) ImGui::SameLine();
+            char lb[16]; snprintf(lb, sizeof lb, "%c##dtmf%d%d", rows[r][c], r, c);
+            if (ImGui::Button(lb, ImVec2(w, w))) q.push(std::string(1, rows[r][c]));
+        }
+    }
+    ImGui::SetNextItemWidth(200 * gUi);
+    const bool enter = ImGui::InputText(tr("Key sequence"), seq, sizeof seq, ImGuiInputTextFlags_EnterReturnsTrue);
+    ImGui::SameLine();
+    if ((ImGui::Button(tr("Send keys")) || enter) && seq[0]) q.push(seq);
+    ImGui::EndDisabled();
+    if (running) {
+        const std::string sent = q.sent();
+        ImGui::TextDisabled("%s %s   %s %d", tr("Sent:"), sent.empty() ? "-" : sent.c_str(), tr("Waiting:"), (int)q.pending());
+    }
+    ImGui::TextDisabled("%s", tr("EchoLink: a node number connects, # disconnects, 08 reads the status (the node's own commands apply)."));
+    if (ImGui::TreeNode(trw("Advanced: DTMF timing and level"))) {
+        auto sliderD = [](const char* lb, double* v, double lo, double hi, const char* f) { return ImGui::SliderScalar(lb, ImGuiDataType_Double, v, &lo, &hi, f); };
+        bool ch = false;
+        ImGui::SetNextItemWidth(160 * gUi);
+        ch |= sliderD(tr("Tone length (ms)"), &t.toneMs, 40, 500, "%.0f");
+        ImGui::SetNextItemWidth(160 * gUi);
+        ch |= sliderD(tr("Gap between keys (ms)"), &t.gapMs, 40, 500, "%.0f");
+        ImGui::SetNextItemWidth(160 * gUi);
+        ch |= sliderD(tr("Level of each tone (%)"), &t.levelPct, 5, 50, "%.0f");
+        ImGui::SetNextItemWidth(160 * gUi);
+        ch |= sliderD(tr("Twist: high tone above low (dB)"), &t.twistDb, -6, 6, "%.1f");
+        if (ch) {
+            q.setTiming(t);
+            plat::prefs().setD("tx.dtmf.toneMs", t.toneMs);
+            plat::prefs().setD("tx.dtmf.gapMs", t.gapMs);
+            plat::prefs().setD("tx.dtmf.levelPct", t.levelPct);
+            plat::prefs().setD("tx.dtmf.twistDb", t.twistDb);
+        }
+        ImGui::TreePop();
+    }
+}
+
 void audioSourceRow(TxUi& s, bool running) {
     const char* src[] = {tr("Microphone"), tr("WAV / MP3 file"), tr("1 kHz test tone"), tr("Silence")};
     ImGui::SetNextItemWidth(220 * gUi);
@@ -114,6 +175,8 @@ void audioSourceRow(TxUi& s, bool running) {
         const float pk = s.session.stats().audioPeak;
         ImGui::ProgressBar(pk, ImVec2(220 * gUi, 0), tr("Mic level"));
     }
+    // the keypad where the audio goes out as analog voice (NFM / AM / SSB); broadcast FM and the vocoders do not carry it
+    if (s.modeId != "fm" && (s.analogVoice || s.modeId == "airband" || s.modeId == "qo100")) dtmfKeypadRow(running);
 }
 
 // Hellschreiber: the font file for characters the built-in glyphs cannot draw (Chinese, Japanese, Korean, symbols). Under Advanced; empty = built in.
