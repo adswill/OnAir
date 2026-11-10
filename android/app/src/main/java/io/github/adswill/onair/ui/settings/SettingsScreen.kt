@@ -175,6 +175,7 @@ fun SettingsContent(
             Dropdown(consent, s.mapConsent.coerceIn(0, 2), { vm.setMapConsent(it) }, label = stringResource(R.string.map_tiles))
         },
         SettingItem(6, stringResource(R.string.run_setup), "setup wizard first run lessons help") { LinkRow(OnAirIcons.Glyph, stringResource(R.string.run_setup), onRunSetup) },
+        SettingItem(6, stringResource(R.string.update_title), "update upgrade version apk download install mirror github china check") { UpdateSettings(s) },
         SettingItem(6, stringResource(R.string.verbose_log), "verbose logging debug usb diagnostics advanced") {
             SwitchRow(stringResource(R.string.verbose_log), s.verboseLog, vm::setVerbose, help = stringResource(R.string.verbose_log_help))
         },

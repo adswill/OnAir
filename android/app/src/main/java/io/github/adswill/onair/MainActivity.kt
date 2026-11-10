@@ -45,6 +45,7 @@ class MainActivity : ComponentActivity() {
         if (savedInstanceState == null) takeLink(intent)
 
         if (savedInstanceState == null) usbAttached(intent)
+        if (savedInstanceState == null) AppGraph.updates.checkOnStart()   // in-app update check (Settings > Updates turns it off)
         setContent {
             val settings by vm.settings.collectAsStateWithLifecycle()
             val ui by vm.ui.collectAsStateWithLifecycle()
