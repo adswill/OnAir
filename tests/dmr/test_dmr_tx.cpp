@@ -99,9 +99,10 @@ int main() {
         CHECK(found, "Tier III voice request: CSBK %u -> %u not logged as control", myId, tg);
     }
 
-    // ---- slot selection: transmitting in slot 2 is heard in slot 2
+    // ---- slot selection: transmitting in slot 2 is heard in slot 2. Checked in direct mode, whose sync patterns carry the slot (DM TS1 / TS2);
+    // a lone repeater uplink has no CACH, so a receiver cannot number its slot (TS 102 361-1 4.5: the slot comes from the outbound CACH).
     {
-        DmrTxConfig t; t.myId = myId; t.dest = tg; t.callsign = "LY1ABC"; t.colourCode = 1; t.slot = 2;
+        DmrTxConfig t; t.myId = myId; t.dest = tg; t.callsign = "LY1ABC"; t.colourCode = 1; t.slot = 2; t.mobile = false;
         t.call = DmrTxCall::GroupVoice; t.voiceSeconds = 4.0;
         DmrRunResult r = runTx(t, 7, 40);
         const DmrCall* c = findVoice(r, myId, tg, 0);

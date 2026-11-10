@@ -64,7 +64,11 @@ user-imported keys.
 - SMS text (text and CRC must match);
 - LRRP position (the decoded fix must match the transmitted latitude/longitude);
 - Tier III voice service request (logged as a control message);
-- slot selection (a slot-2 transmission is heard in slot 2).
+- slot selection (a slot-2 transmission is heard in slot 2), checked in direct mode: the direct-mode sync patterns carry the slot, while a
+  lone repeater uplink has no CACH, so no receiver can number its slot (the first CI run showed the uplink logged as slot 1, as expected).
+
+CI run 42751976326 (first push): every DMR TX check passed except the slot check, which was fixed as above. The other failing tests in
+that run (sonde `timegm` on MinGW, xband, ham science, lorawan, automation) come from other branches and are not touched here.
 
 The LRRP encoder is also checked standalone against the receiver's parser for a spread of coordinates (Vilnius, Sydney, 0/0, London, the
 antimeridian) and the NoFix form — all pass locally.
