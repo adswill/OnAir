@@ -403,6 +403,7 @@ void mapView(App& a, ImVec2 size) {
     gPred.load("adsb", true, false);
     if (on && gPred.predict) gPred.feedAdsb(t.aircraft, ImGui::GetTime());
     if (on && S.jamLayer) drawJam(dl, p0, size);
+    drawHorizon(dl);   // the theoretical range outline (adsb_horizon_ui.cpp)
     if (on) {
         const bool lite = rcaps::lowPowerDraw();   // low-power drawing: no trails, paths ahead or wind arrows (gfx/render_caps.h)
         if (!lite) drawTrails(dl, t, p0, size);

@@ -99,6 +99,10 @@ void seenTick(App& a);
 void seenView(App& a);
 bool seenNewToday(uint32_t icao);   // first heard ever today
 
+// adsb_horizon_ui.cpp: the theoretical range outline
+void horizonControls();          // inside the Display pop-up
+void drawHorizon(ImDrawList* dl);
+
 // adsb_map_ui.cpp
 double bearingDeg(double lat1, double lon1, double lat2, double lon2);
 void radar(App& a, ImVec2 size);

@@ -74,6 +74,7 @@ void displayControls() {
         if (ImGui::InputInt(tr("Drop after (s)"), &sec, 10, 60)) { S.disp.dropSec = std::max(ad::kMinDropSec, ad::clampDropSec(sec)); ch = true; }
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("An aircraft that has not been heard for this long leaves the table and the map. Never keeps them until the list is cleared (the table holds at most 2000)."));
+    horizonControls();
     if (ch) {
         plat::Prefs& p = plat::prefs();
         p.setB(ad::kPrefAltColour, S.disp.altColour); p.setB(ad::kPrefLabels, S.disp.labels); p.setI(ad::kPrefLabelScale, S.disp.labelScale); p.setI(ad::kPrefLabelFields, S.disp.labelFields); p.setI(ad::kPrefTrackWidth, S.disp.trackWidth); p.setI(ad::kPrefDropSec, S.disp.dropSec);
