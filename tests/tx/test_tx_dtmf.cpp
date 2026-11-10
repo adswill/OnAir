@@ -17,7 +17,7 @@ static int fails = 0;
 
 // generate `sec` seconds of mode `id` at fs with keys queued at the start; offset the carrier by cfo and add noise for snrDb (in the whole band)
 static std::vector<cf32> run(const char* id, TxRequest r, double fs, double sec, const std::string& keys, const TxDtmfTiming& t,
-                             double cfo, double snrDb, uint32_t seed) {
+                             double cfo, double snrDb, uint32_t seed, double preSec = 0.3) {
     auto& q = TxDtmfQueue::global();
     q.clear();
     q.setTiming(t);
@@ -26,8 +26,8 @@ static std::vector<cf32> run(const char* id, TxRequest r, double fs, double sec,
     if (!m) { CHECK(false, "no mode %s", id); return {}; }
     auto g = makeTxGenerator(*m, r, fs, err);
     if (!g) { CHECK(false, "no generator for %s: %s", id, err.c_str()); return {}; }
-    // as on the air: the carrier is up for 0.3 s (the receiver's carrier and level tracking settle) before the first key is pressed
-    const size_t pre = (size_t)(0.3 * fs);
+    // as on the air: the carrier is up for preSec (the receiver's carrier and level tracking settle) before the first key is pressed
+    const size_t pre = (size_t)(preSec * fs);
     std::vector<cf32> x(pre + (size_t)(sec * fs));
     g->generate(x.data(), pre);
     q.push(keys);
@@ -136,7 +136,7 @@ int main() {
         const double fs = 1e6, off = -txModeTuneOffsetHz(*txModeById("airband"));
         TxDtmfTiming t; t.toneMs = 80; t.gapMs = 80;
         for (double snr : {30.0, 15.0}) {
-            const auto x = run("airband", r, fs, 0.3 + all16.size() * 0.16, all16, t, 300, snr, 77);
+            const auto x = run("airband", r, fs, 0.3 + all16.size() * 0.16, all16, t, 300, snr, 77, 1.0);   // the AM receiver's level tracking needs about 0.5 s
             const std::string got = decode(x, fs, off, TonesAm);
             CHECK(got == all16, "AM snr %g: %s", snr, got.c_str());
         }
