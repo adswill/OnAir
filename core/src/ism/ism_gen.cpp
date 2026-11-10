@@ -121,7 +121,8 @@ IsmTrain zwFrame(int rate, uint32_t home, uint8_t src, uint8_t dst, const std::v
 const char* ismTxName(IsmTx p) {
     static const char* const n[] = {"Nexus", "LaCrosse TX141TH-Bv2", "Acurite tower", "Fine Offset WH1080", "Ambient F007TH", "Oregon THGR810 (v3)",
                                     "Oregon THGR228N (v2.1)", "Schrader TPMS", "EV1527 remote", "Toyota TPMS", "Renault TPMS", "Ford TPMS", "Efergy e2",
-                                    "CurrentCost TX", "Bresser 6-in-1", "Bresser 5-in-1", "LaCrosse TX29-IT", "Fine Offset WH24", "Wireless M-Bus T", "Z-Wave R1", "Z-Wave R2", "Z-Wave R3", "KNX RF", "HomeMatic BidCoS", "EnOcean ERP1", "DASH7 (55.555 kbit/s)"};
+                                    "CurrentCost TX", "Bresser 6-in-1", "Bresser 5-in-1", "LaCrosse TX29-IT", "Fine Offset WH24", "Wireless M-Bus T", "Z-Wave R1", "Z-Wave R2", "Z-Wave R3", "KNX RF", "HomeMatic BidCoS", "EnOcean ERP1", "DASH7 (55.555 kbit/s)",
+                                    "X10 RF", "Insteon", "inFactory TH", "Ambient WH31E", "Nissan TPMS", "GM aftermarket TPMS", "Efergy Optical", "ESIC EMT7110", "ERT SCM+"};
     return (int)p >= 0 && (int)p < (int)IsmTx::Count ? n[(int)p] : "?";
 }
 
@@ -415,6 +416,125 @@ IsmTrain ismEncode(IsmTx p, int k) {
         const int w = 12345 + (k % 2);
         return zwFrame(3, 0x12345678, 9, 1, {0x32, 0x02, 0x01, 0x32, (uint8_t)(w >> 8), (uint8_t)w}, k);
     }
+    // ---- 3.9 (decoders in ism_dec_39.cpp)
+    case IsmTx::X10Rf: {   // x10_rf.c: 9 ms sync pulse, 4.5 ms gap, 32 bits PPM (562 us pulses, 562 / 1687 us gaps): house C, unit 5, on / off
+        const int house = 2, u = 5 - 1;
+        const int h3 = house & 1, h1 = !((house >> 2) & 1), h2 = ((house >> 1) & 1) ^ h1, h0 = h1 ^ !((house >> 3) & 1);
+        const uint8_t b0 = (uint8_t)(h0 << 7 | h1 << 6 | h2 << 5 | h3 << 4 | ((u >> 3) & 1) << 2);
+        const uint8_t b2 = (uint8_t)(((u >> 2) & 1) << 6 | ((u >> 1) & 1) << 3 | (u & 1) << 4 | ((k % 2) ? 0x20 : 0));
+        const uint8_t b[4] = {b0, (uint8_t)~b0, b2, (uint8_t)~b2};
+        Pwm w;
+        for (int r = 0; r < 3; r++) {
+            w.add(9000, 4500);
+            for (int i = 0; i < 32; i++) w.add(562.5f, ((b[i >> 3] >> (7 - (i & 7))) & 1) ? 1687.5f : 562.5f);
+            w.add(562.5f, r == 2 ? 50000 : 40000);
+        }
+        return w.t;
+    }
+    case IsmTx::Insteon: {   // insteon.c: (inverted) CE AA preamble, then per byte 2 + 10 + 16 bits: "11", index and data Manchester LSB first
+        uint8_t m[10] = {0x0F, 0x3F, 0x6B, 0x22, 0x11, 0x78, 0x2B, (uint8_t)(0x11 + 2 * (k % 2)), (uint8_t)((k % 2) ? 0x00 : 0xFF), 0};
+        uint8_t r = 0;
+        for (int i = 0; i < 9; i++) { r ^= m[i]; r ^= (uint8_t)(((r ^ (r << 1)) & 0x0F) << 4); }
+        m[9] = r;
+        Bitv v;   // as the decoder sees it after inverting
+        for (int i = 0; i < 12; i++) { v.push_back(1); v.push_back(0); }
+        putStr(v, "1100111");
+        for (int j = 0; j < 10; j++) {
+            const int idx = j == 0 ? 31 : 9 - j;
+            for (int i = 0; i < 5; i++) { const int d = (idx >> i) & 1; v.push_back(!d); v.push_back(d); }
+            for (int i = 0; i < 8; i++) { const int d = (m[j] >> i) & 1; v.push_back(!d); v.push_back(d); }
+            if (j < 9) putStr(v, "11");
+        }
+        putStr(v, "11000000");
+        return nrz(inv(v), 109.6f, true, 300);
+    }
+    case IsmTx::Infactory: {   // infactory.c: 4 x 1000 us preamble pairs, 500 / 8000 us sync, 40 bits PPM (500 us pulses, 2000 / 4000 us gaps), CRC-4
+        const int traw = (int)std::lround((70.2 + 0.1 * (k % 2)) * 10) + 900, hum = 55, ch = 2;
+        uint8_t b[5] = {0x5C, 0, (uint8_t)(traw >> 4), (uint8_t)((traw & 0x0f) << 4 | (hum / 10)), (uint8_t)((hum % 10) << 4 | ch)};
+        uint8_t m[5] = {b[0], (uint8_t)((b[1] & 0x0F) | (b[4] & 0x0F) << 4), b[2], b[3], b[4]};
+        b[1] = (uint8_t)((ismCrc4(m, 4, 0x13, 0) ^ (b[4] >> 4)) << 4 | (b[1] & 0x0F));
+        Pwm w;
+        for (int r = 0; r < 2; r++) {
+            for (int i = 0; i < 4; i++) w.add(1000, 1000);
+            w.add(500, 8000);
+            for (int i = 0; i < 40; i++) w.add(500, ((b[i >> 3] >> (7 - (i & 7))) & 1) ? 4000 : 2000);
+            w.add(500, 16000);
+        }
+        return w.t;
+    }
+    case IsmTx::Wh31e: {   // ambientweather_wh31e.c: warm-up, aa x 6, 2d d4, YY II CT TT HH XX AA (CRC-8 0x31, SUM-8); k = 0 is a payload from its notes
+        const int traw = 469 + (k % 2);
+        uint8_t b[11] = {0x30, 0xC3, (uint8_t)(0x80 | (traw >> 8)), (uint8_t)traw, 0x5C, 0, 0, 0x08, 0x35, 0x44, 0x2C};
+        b[5] = ismCrc8(b, 5, 0x31, 0x00);
+        b[6] = (uint8_t)(b[0] + b[1] + b[2] + b[3] + b[4] + b[5]);
+        Bitv v;
+        putBytes(v, {0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0x2d, 0xd4});
+        put(v, b, 88);
+        putBytes(v, {0x00});
+        IsmTrain t = nrz(v, 56, true, 112);
+        t.p.insert(t.p.begin(), IsmPulse{1336, 1996});
+        return t;
+    }
+    case IsmTx::Nissan: {   // tpms_nissan.c: f5 55 55 55 e, 37 bits Manchester (inverted): mode, id, (PSI + 3) * 4, 2 bits that make the checksum 0
+        const int praw = (int)std::lround((32 + 0.25 * (k % 2) + 3) * 4);
+        const uint32_t id = 0xABC123;
+        uint8_t d[5] = {};
+        for (int u = 0; u < 4; u++) {
+            uint64_t v = ((uint64_t)1 << 34) | ((uint64_t)id << 10) | ((uint64_t)praw << 2) | (uint64_t)u;   // 37 bits
+            for (int i = 0; i < 5; i++) d[i] = 0;
+            for (int i = 0; i < 37; i++) if ((v >> (36 - i)) & 1) d[i >> 3] |= (uint8_t)(0x80 >> (i & 7));
+            uint8_t chk = 0;
+            for (int i = 0; i < 4; i++) chk = (uint8_t)(chk + (d[i] >> 7) + (d[i] >> 5) + (d[i] >> 3) + (d[i] >> 1) + (uint8_t)(d[i] << 1));
+            chk = (uint8_t)(chk + (d[4] >> 7) + (d[4] >> 5) + (d[4] >> 3));
+            if ((~chk & 3) == 0) break;
+        }
+        Bitv v;
+        putStr(v, "111101010101010101010101010101011110");
+        for (int i = 0; i < 37; i++) { const int D = (d[i >> 3] >> (7 - (i & 7))) & 1; v.push_back(D); v.push_back(!D); }   // Manchester of ~D
+        putStr(v, "1010");
+        return nrz(v, 120, true, 250);
+    }
+    case IsmTx::GmTpms: {   // tpms_gm.c: 130 bits OOK Manchester (120 us): 48 zero bits, flags, id, kPa / 2.75, C + 60, sum; k = 0 is the frame of its notes
+        uint8_t b[17] = {0, 0, 0, 0, 0, 0, 0x4c, 0x90, 0x00, 0x78, 0x49, 0x17, 0x66, 0x00, (uint8_t)(0x53 + (k % 2)), 0, 0};
+        uint8_t s = 0;
+        for (int i = 6; i < 15; i++) s = (uint8_t)(s + b[i]);
+        b[15] = s;
+        Bitv raw;
+        put(raw, b, 130);
+        return mcZero(raw, 120);
+    }
+    case IsmTx::EfergyOptical: {   // efergy_optical.c: FSK PWM (64 us = 1, 136 us = 0) after a 500 us sync: id, interval, zeros, pulse count, period, CRC-16 XMODEM
+        uint8_t b[12] = {0x00, 0x1A, 0x2B, 0x50, 0, 0, 0, 0, (uint8_t)(12 + (k % 2)), 15, 0, 0};
+        const uint16_t c = ismCrc16(b, 10, 0x1021, 0x0000);
+        b[10] = (uint8_t)(c >> 8); b[11] = (uint8_t)c;
+        IsmTrain t; t.fsk = true;
+        t.p.push_back({500, 136});
+        for (int i = 0; i < 96; i++) { const int d = (b[i >> 3] >> (7 - (i & 7))) & 1; t.p.push_back({d ? 64.f : 136.f, d ? 136.f : 64.f}); }
+        t.p.back().gapUs = 100;
+        return t;
+    }
+    case IsmTx::Emt7110: {   // esic_emt7110.c: aaaa 2dd4, II II II II FP PP CC CC VV UE EE XX at 9.579 kbit/s, the 12 bytes sum to 0
+        const int pw = 461 + (k % 2), cur = 1234, en = 1234;
+        uint8_t b[12] = {0x12, 0x34, 0x56, 0x78, (uint8_t)(0x40 | (pw >> 8)), (uint8_t)pw, (uint8_t)(cur >> 8), (uint8_t)cur, 204, (uint8_t)(en >> 8), (uint8_t)en, 0};
+        uint8_t s = 0;
+        for (int i = 0; i < 11; i++) s = (uint8_t)(s + b[i]);
+        b[11] = (uint8_t)(0x100 - s);
+        Bitv v;
+        putBytes(v, {0xaa, 0xaa, 0x2d, 0xd4});
+        put(v, b, 96);
+        putStr(v, "0");
+        return nrz(v, 104.4f, true, 30);
+    }
+    case IsmTx::ScmPlus: {   // scmplus.c: OOK Manchester (30 us), 16 A3 1E, endpoint type, id, consumption, tamper, CRC-16 0x1021 / 0x0971
+        const uint32_t id = 68211547, cons = 6883 + (k % 2);
+        uint8_t b[16] = {0x16, 0xA3, 0x1E, 0xAB, (uint8_t)(id >> 24), (uint8_t)(id >> 16), (uint8_t)(id >> 8), (uint8_t)id,
+                         (uint8_t)(cons >> 24), (uint8_t)(cons >> 16), (uint8_t)(cons >> 8), (uint8_t)cons, 0x49, 0x00, 0, 0};
+        const uint16_t c = ismCrc16(&b[2], 12, 0x1021, 0x0971);
+        b[14] = (uint8_t)(c >> 8); b[15] = (uint8_t)c;
+        Bitv raw;
+        put(raw, b, 128);
+        return mcZero(raw, 30);
+    }
     default: return IsmTrain();
     }
 }
@@ -447,6 +567,15 @@ IsmTruth ismTruth(IsmTx p, int k) {
     case IsmTx::ZwaveR1: return {"Z-Wave-R1", "C0FFEE01:2", "Command Class", 0x25, 0.01};
     case IsmTx::ZwaveR2: return {"Z-Wave-R2", "DEADBEEF:7", "Temperature", 21.5 + 0.1 * (k % 2), 0.05};
     case IsmTx::ZwaveR3: return {"Z-Wave-R3", "12345678:9", "Power", 1234.5 + 0.1 * (k % 2), 0.05};
+    case IsmTx::X10Rf: return {"X10-RF", "5", "Command code", (k % 2) ? 0x60 : 0x40, 0.01};
+    case IsmTx::Insteon: return {"Insteon", "2B7811", "Cmd1", 0x11 + 2.0 * (k % 2), 0.01};
+    case IsmTx::Infactory: return {"inFactory-TH", "92", "Temperature", (70.2 + 0.1 * (k % 2) - 32) / 1.8, 0.05};
+    case IsmTx::Wh31e: return {"AmbientWeather-WH31E", "195", "Temperature", 6.9 + 0.1 * (k % 2), 0.05};
+    case IsmTx::Nissan: return {"Nissan", "abc123", "Pressure", 32 + 0.25 * (k % 2), 0.01};
+    case IsmTx::GmTpms: return {"GM-Aftermarket", "2018056038", "Temperature", 23.0 + (k % 2), 0.01};
+    case IsmTx::EfergyOptical: return {"Efergy-Optical", "6699", "Pulse count", 12.0 + (k % 2), 0.01};
+    case IsmTx::Emt7110: return {"ESIC-EMT7110", "12345678", "Power", 230.5 + 0.5 * (k % 2), 0.01};
+    case IsmTx::ScmPlus: return {"SCMplus", "68211547", "Consumption", 6883.0 + (k % 2), 0.01};
     default: return {"", "", "", 0, 0};
     }
 }
@@ -581,6 +710,18 @@ std::vector<IsmGenDevice> ismTestScene(int scene) {
         add(IsmTx::Dash7, -80e3, 1.3, 5);
         return v;
     }
+    if (scene == 4) {   // the 3.9 devices side by side (their real bands differ; here only the decoders matter)
+        add(IsmTx::X10Rf, -60e3, 0.2, 6);
+        add(IsmTx::Insteon, 40e3, 1.0, 6);
+        add(IsmTx::Infactory, -20e3, 1.6, 6);
+        add(IsmTx::Wh31e, 70e3, 2.6, 6);
+        add(IsmTx::Nissan, -40e3, 3.0, 6);
+        add(IsmTx::GmTpms, 10e3, 3.4, 6);
+        add(IsmTx::EfergyOptical, -80e3, 3.8, 6);
+        add(IsmTx::Emt7110, 25e3, 4.2, 6);
+        add(IsmTx::ScmPlus, -5e3, 4.6, 6);
+        return v;
+    }
     if (scene == 1) {   // dial 868.3 MHz
         add(IsmTx::Bresser6in1, 0, 0.3, 5);
         add(IsmTx::Bresser5in1, 20e3, 1.2, 5);
@@ -616,7 +757,7 @@ public:
         c.dialOffsetHz = -ismTuning().tuneOffsetHz;
         c.snrDb = s.snrDb;
         c.cfoHz = s.cfoHz;
-        c.devs = ismTestScene(s.modeOpt[0] == 3 ? 3 : s.modeOpt[0] == 2 ? 2 : s.modeOpt[0] == 1 ? 1 : 0);
+        c.devs = ismTestScene(s.modeOpt[0] >= 1 && s.modeOpt[0] <= 4 ? s.modeOpt[0] : 0);
         if (s.modeOpt[1] == 1) { c.carrierHz = 300e3; c.carrierDb = 30; }
         gen_ = std::make_unique<IsmGenerator>(c);
     }

@@ -56,6 +56,7 @@ IsmGuess ismClassify(const IsmTrain& t);
 
 // The check functions of rtl_433's bit_util.c, also used by the test signal generator
 uint8_t ismCrc8(const uint8_t* m, unsigned n, uint8_t poly, uint8_t init);
+uint8_t ismCrc4(const uint8_t* m, unsigned n, uint8_t poly, uint8_t init);   // bit_util.c crc4
 uint16_t ismCrc16(const uint8_t* m, unsigned n, uint16_t poly, uint16_t init);
 uint8_t ismLfsrDigest8(const uint8_t* m, unsigned n, uint8_t gen, uint8_t key);
 uint8_t ismLfsrDigest8Reflect(const uint8_t* m, int n, uint8_t gen, uint8_t key);

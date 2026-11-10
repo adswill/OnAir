@@ -7,7 +7,8 @@
 // SynthConfig (makeIsmSynth):
 //   snrDb       carrier to noise of a 0 dB device, the noise taken in 100 kHz
 //   cfoHz       the radio's tuning error: every device moves by it
-//   modeOpt[0]  scene: 0 the 433.92 MHz scene (ismTestScene(0)), 1 the 868 MHz scene, 2 Z-Wave on 868.4 MHz, 3 KNX RF, HomeMatic, EnOcean and DASH7 on 868.3 MHz
+//   modeOpt[0]  scene: 0 the 433.92 MHz scene (ismTestScene(0)), 1 the 868 MHz scene, 2 Z-Wave on 868.4 MHz, 3 KNX RF, HomeMatic, EnOcean and DASH7 on 868.3 MHz,
+//               4 the 3.9 devices (X10, Insteon, inFactory, WH31E, Nissan and GM TPMS, Efergy Optical, EMT7110, SCM+) side by side around the dial
 //   modeOpt[1]  1: a strong continuous carrier 300 kHz above the dial (30 dB over a 0 dB device)
 #pragma once
 #include "dect2/engine/mode_synth.h"
@@ -23,7 +24,9 @@ namespace dect2 {
 // The test devices' protocols (ismEncode's names)
 enum class IsmTx {
     Nexus, Tx141th, AcuriteTower, Wh1080, F007th, OregonV3, OregonV21, Schrader, Ev1527, Toyota, Renault, Ford, Efergy, CurrentCost,
-    Bresser6in1, Bresser5in1, Tx29, Wh24, MbusT, ZwaveR1, ZwaveR2, ZwaveR3, KnxRf, HomeMatic, EnOcean, Dash7, Count
+    Bresser6in1, Bresser5in1, Tx29, Wh24, MbusT, ZwaveR1, ZwaveR2, ZwaveR3, KnxRf, HomeMatic, EnOcean, Dash7,
+    X10Rf, Insteon, Infactory, Wh31e, Nissan, GmTpms, EfergyOptical, Emt7110, ScmPlus,   // 3.9
+    Count
 };
 const char* ismTxName(IsmTx p);
 
@@ -71,6 +74,7 @@ private:
     std::unique_ptr<Impl> p_;
 };
 
+// Scene 4: the 3.9 devices around one dial frequency (their real bands differ: 310 / 433 / 868 / 915 MHz).
 // Scene 0: 433.92 MHz, scene 1: 868 MHz (Bresser and LaCrosse on 868.3, wireless M-Bus on 868.95). The offsets are from the dial
 // frequency of the scene (433.92 / 868.3 MHz) and include the drift of cheap sensors.
 std::vector<IsmGenDevice> ismTestScene(int scene);
