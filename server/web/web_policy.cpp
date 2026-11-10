@@ -70,7 +70,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     "aero", "ale", "ant", "ardop", "astro", "atsc", "atsc3", "atv", "ble", "bletracker", "btc", "cdr", "cell", "codar", "contestia", "cquam",
     "cubesat", "cw", "dab", "datawell", "dect", "dgps", "dji", "dme", "dominoex", "drm", "dsc", "dtmb", "dvb", "dvbc", "dvbs", "eczas",
     "adsl", "cv2x", "dsrc", "eot", "ermes", "fanet", "its", "ogn", "eloran", "flarm", "fpv", "freedv", "fsq", "fst4", "ft2", "globalstar", "gnss", "goesdcs", "gsmr", "halow", "hamdrm", "hdr", "hell",
-    "hfbeacon", "hfdig", "hfdl", "ifkp", "ils", "inmc", "iono", "iridium", "isdbt", "ism", "js8", "jt4", "jt65", "jt9", "kaal", "kaft",
+    "hfbeacon", "hfdig", "hfdl", "ifkp", "ils", "inmc", "iono", "iridium", "isdbt", "isdbtsb", "ism", "js8", "jt4", "jt65", "jt9", "kaal", "kaft",
     "kait", "kapp", "kavb", "kaws", "klw", "lbj", "loraaprs", "loraraw", "lorawan", "mac", "marine", "mesh", "meshcom", "meshcore",
     "meshtastic", "mfsk", "milhf", "modeac", "mscatter", "msk144", "mt63", "multitone", "navtex", "nbiot", "ndb", "nr", "olivia",
     "orbcomm", "pager", "psk", "q65", "qo100", "rid", "rtty", "same", "sarsat", "satbeacon", "sonde", "t", "t2", "tdcs", "thor", "thread", "time",
