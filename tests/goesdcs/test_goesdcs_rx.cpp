@@ -21,7 +21,7 @@ static GoesDcsGenTx tx(int ch, int bps, bool man, double start, const std::strin
     return t;
 }
 
-static DcsTelemetry run(GoesDcsGenConfig c, double seconds, bool poison = false, GoesDcsReceiver* keep = nullptr, std::vector<std::string>* logs = nullptr) {
+static DcsTelemetry run(GoesDcsGenConfig c, double seconds, bool poison = false, GoesDcsReceiver* keep = nullptr, std::vector<std::string>* logs = nullptr, float scale = 1.f) {
     GoesDcsReceiver local;
     GoesDcsReceiver& r = keep ? *keep : local;
     r.configure(c.rate);
@@ -32,6 +32,7 @@ static DcsTelemetry run(GoesDcsGenConfig c, double seconds, bool poison = false,
     std::vector<cf32> x(32768);
     for (int64_t n = 0; n < (int64_t)(seconds * c.rate); n += (int64_t)x.size()) {
         g.generate(x.data(), x.size());
+        if (scale != 1.f) for (auto& v : x) v *= scale;
         if (poison) { x[5] = cf32(NAN, 0); x[99] = cf32(0, INFINITY); }
         r.feed(x.data(), x.size());
     }
@@ -94,6 +95,18 @@ int main() {
         const DcsTelemetry t = run(c, 5);
         const DcsMessage* m = find(t, 0x1C0DE);
         CHECK(m && m->format == 1 && m->fields.size() == 4 && m->fields[0] == "1: 337", "pseudo-binary report");
+    }
+    // input scale above the old fixed clip at 8 (float recordings, high-rate captures): the same report must decode at 1 Msps and 250 ksps
+    {
+        const double rates[] = {250000, 1e6};
+        for (double rate : rates) {
+            GoesDcsGenConfig c;
+            c.rate = rate; c.snrDb = 36;
+            c.tx = {tx(100, 300, true, 0.5, body)};
+            const DcsTelemetry t = run(c, 5.0, false, nullptr, nullptr, 200.f);
+            const DcsMessage* m = find(t, 0x1C0DE);
+            CHECK(m && m->parityErrors == 0 && m->text.find("WL 12.34 TW 18.5 BV 12.6") != std::string::npos, "scale 200 at %.0f sps: %s", rate, dcsSummary(t).c_str());
+        }
     }
     // frequency error, clock error, weaker signal, a big capture rate (decimation), bad samples
     {
