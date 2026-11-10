@@ -43,4 +43,8 @@ int correct_adsb_frame(uint8_t *to, int *rs_errors);
  */
 int correct_uplink_frame(uint8_t *from, uint8_t *to, int *rs_errors);
 
+/* OnAir additions: decoding with erasures (byte indices into the frame / the deinterleaved uplink block) */
+int correct_adsb_frame_eras(uint8_t *to, const int *eras_long, int n_long, const int *eras_short, int n_short, int *rs_errors);
+int correct_uplink_block_eras(uint8_t *block, const int *eras, int n_eras);
+
 #endif
