@@ -130,7 +130,7 @@ static void testU482c() {
         }
     }
     // stream: both polarities, noise, random lead, two frames
-    const std::vector<uint8_t> p1 = randBytes(40), p2 = randBytes(100);
+    const std::vector<uint8_t> p1 = randBytes(40), p2 = randBytes(80);
     for (bool inv : {false, true}) {
         std::vector<float> s = air({bitsOf(u482cEncode(p1, kU482cRs | kU482cScrambler)), bitsOf(u482cEncode(p2, kU482cConv | kU482cRs | kU482cScrambler))}, 0.45, inv, 1000 + rng() % 999);
         MoreConfig c;

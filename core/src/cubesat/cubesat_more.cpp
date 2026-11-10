@@ -619,9 +619,12 @@ struct SyncScan {
     size_t need = 0;
     std::vector<float> ring;
     uint64_t pos = 0, sh = 0;
-    struct Pend { uint64_t start; bool inv; };
+    struct Pend { uint64_t start; bool inv; size_t need; bool checked; };
     std::deque<Pend> pend;
     std::function<size_t(std::vector<float>&, bool inv, uint64_t start)> done;   // the bits the frame took (0: none; the syncs inside it are skipped)
+    // optional: after earlyBits, the frame's real length in bits from its header (0: not a frame, dropped at once)
+    size_t earlyBits = 0;
+    std::function<size_t(const std::vector<float>&)> early;
     uint64_t skipUntil = 0;
     uint64_t syncs = 0;
     void init(uint64_t s, int l, int e, size_t n) {
@@ -629,10 +632,16 @@ struct SyncScan {
         mask = l >= 64 ? ~0ull : ((1ull << l) - 1);
         size_t r = 1; while (r < n + 128) r <<= 1;
         ring.assign(r, 0.f);
+        early = nullptr; earlyBits = 0;
         reset();
     }
     void reset() { pos = 0; sh = 0; pend.clear(); skipUntil = 0; }
-    bool busy() const { return !pend.empty(); }
+    bool busy() const { for (const Pend& p : pend) if (p.checked || !early) return true; return false; }
+    std::vector<float> take(const Pend& p, size_t n) const {
+        std::vector<float> v(n);
+        for (size_t i = 0; i < n; i++) { const float x = ring[(size_t)((p.start + i) & (ring.size() - 1))]; v[i] = p.inv ? -x : x; }
+        return v;
+    }
     void push(float s) {
         ring[(size_t)(pos & (ring.size() - 1))] = s;
         pos++;
@@ -640,19 +649,30 @@ struct SyncScan {
         if (pos >= (uint64_t)len && pos >= skipUntil) {
             const int e = popc64((sh ^ sync) & mask);
             if (e <= maxErr || len - e <= maxErr) {
-                if (pend.size() >= 24) pend.pop_front();
-                pend.push_back({pos, e > maxErr});
+                if (pend.size() >= 4096) pend.pop_front();
+                pend.push_back({pos, e > maxErr, need, early == nullptr});
                 syncs++;
             }
         }
-        while (!pend.empty() && pos - pend.front().start >= need) {
-            const Pend p = pend.front();
-            pend.pop_front();
-            if (p.start < skipUntil) continue;
-            std::vector<float> v(need);
-            for (size_t i = 0; i < need; i++) { const float x = ring[(size_t)((p.start + i) & (ring.size() - 1))]; v[i] = p.inv ? -x : x; }
-            const size_t used = done ? done(v, p.inv, p.start) : 0;
-            if (used) skipUntil = p.start + std::min(used, need);
+        for (size_t k = 0; k < pend.size();) {
+            Pend& p = pend[k];
+            const uint64_t have = pos - p.start;
+            if (p.start < skipUntil) { pend.erase(pend.begin() + (ptrdiff_t)k); continue; }
+            if (!p.checked && have >= earlyBits) {
+                const size_t n = early(take(p, earlyBits));
+                if (!n) { pend.erase(pend.begin() + (ptrdiff_t)k); continue; }
+                p.need = std::min(n, need);
+                p.checked = true;
+            }
+            if (p.checked && have >= p.need) {
+                const Pend q = p;
+                pend.erase(pend.begin() + (ptrdiff_t)k);
+                std::vector<float> v = take(q, q.need);
+                const size_t used = done ? done(v, q.inv, q.start) : 0;
+                if (used) skipUntil = q.start + std::min(used, q.need);
+                continue;
+            }
+            k++;
         }
     }
 };
@@ -695,6 +715,16 @@ void MoreHunter::configure(const MoreConfig& c) {
     cfg_ = c;
     Impl& I = *p_;
     I.u482c.init(kSyncU482c, 32, c.syncErrU482c, (3 + 255) * 8);
+    // the length field: a frame without the Reed-Solomon code has no check at all (a random Golay word decodes half the time), so only RS
+    // coded U482C frames are taken from the stream (u482cDecode() itself takes them all)
+    I.u482c.earlyBits = 24;
+    I.u482c.early = [](const std::vector<float>& v) -> size_t {
+        uint32_t w = 0;
+        for (int i = 0; i < 24; i++) w = (w << 1) | (v[(size_t)i] > 0 ? 1u : 0u);
+        const int lf = golayDecode(w);
+        if (lf < 0 || !(lf & kU482cRs) || (lf & 0xFF) <= 32) return 0;
+        return (size_t)(3 + (lf & 0xFF)) * 8;
+    };
     I.u482c.done = [this](std::vector<float>& v, bool inv, uint64_t st) {
         std::vector<uint8_t> b = hardBytes(v), pk;
         int rs = -1, fl = 0;
@@ -706,6 +736,13 @@ void MoreHunter::configure(const MoreConfig& c) {
         return (size_t)(3 + (lf & 0xFF)) * 8;
     };
     I.ngham.init(kSyncNgham, 32, c.syncErrNgham, (3 + 255) * 8);
+    I.ngham.earlyBits = 24;
+    I.ngham.early = [](const std::vector<float>& v) -> size_t {
+        uint32_t w = 0;
+        for (int i = 0; i < 24; i++) w = (w << 1) | (v[(size_t)i] > 0 ? 1u : 0u);
+        for (int i = 0; i < 7; i++) if (__builtin_popcount(w ^ kNghTag[i]) <= 6) return (size_t)(3 + kNghCw[i]) * 8;
+        return 0;
+    };
     I.ngham.done = [this](std::vector<float>& v, bool inv, uint64_t st) {
         std::vector<uint8_t> b = hardBytes(v), pl;
         int rs = -1;
@@ -740,6 +777,37 @@ void MoreHunter::configure(const MoreConfig& c) {
     I.mob.done = mobDone(false);
     I.mobNx.init(kSyncMobitexNx, 16, c.syncErrMobitex, mobNeed);
     I.mobNx.done = mobDone(true);
+    // the control bytes (and, for plain Mobitex, the callsign CRC) right after the 16 bit sync word: most false syncs end here
+    auto mobEarly = [](int variant, bool checkCall) {
+        return [variant, checkCall](const std::vector<float>& v) -> size_t {
+            std::vector<uint8_t> b = hardBytes(v);
+            uint8_t c0, c1;
+            if (mobDecode12((b[0] << 4) | (b[2] >> 4), c0) == 2 || mobDecode12((b[1] << 4) | (b[2] & 0xF), c1) == 2) return 0;
+            if (checkCall) {
+                const uint8_t* cs = b.data() + 3;
+                bool ok = false;
+                uint8_t t[8];
+                std::memcpy(t, cs, 8);
+                auto good = [&]() { return crc16Xmodem(t, 6) == (((uint16_t)t[6] << 8) | t[7]); };
+                ok = good();
+                for (int i = 0; !ok && i < 64; i++) {
+                    t[i >> 3] ^= (uint8_t)(1 << (i & 7));
+                    if (good()) { ok = true; break; }
+                    for (int j = i + 1; j < 64; j++) { t[j >> 3] ^= (uint8_t)(1 << (j & 7)); if (good()) { ok = true; break; } t[j >> 3] ^= (uint8_t)(1 << (j & 7)); }
+                    if (ok) break;
+                    t[i >> 3] ^= (uint8_t)(1 << (i & 7));
+                }
+                if (!ok) return 0;
+            }
+            const size_t nb = variant == MobitexBeesat9 ? 32 : (size_t)(c0 & 0x1F) + 1;
+            return (mobHeader(variant == MobitexBeesat1 ? MobitexBeesat1 : MobitexDefault) + nb * kMobBlock) * 8;
+        };
+    };
+    I.mob.earlyBits = 11 * 8;
+    I.mob.early = mobEarly(MobitexDefault, true);
+    I.mobNx.earlyBits = 11 * 8;
+    // NX: the configured variant; the default one also falls back to BEESAT-1 (no callsign), so the longer header is waited for
+    I.mobNx.early = mobEarly(c.mobitexVariant == MobitexBeesat1 ? MobitexBeesat1 : c.mobitexVariant, c.mobitexVariant != MobitexDefault && c.mobitexVariant != MobitexBeesat1);
     uint64_t us = 0;
     for (int k = 0; k < 8; k++) us = (us << 8) | kUspSync[k];
     I.usp.init(us, 64, c.syncErrUsp, (size_t)kUspPlsBits + kUspMaxSymbols);

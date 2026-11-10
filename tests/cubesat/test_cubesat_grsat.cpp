@@ -67,6 +67,7 @@ static int run(const std::vector<cf32>& x, double rate, int norad, const char* n
     CubeTelemetry t;
     r.telemetry(t, 0);
     if (setup) *setup = t.trackedSetup;
+    printf("    %zu frames, %llu bad\n", t.frames.size(), (unsigned long long)t.blocksBad);
     int n = 0;
     for (const CubeFrame& f : t.frames) n += f.framing == framing && f.data == want;
     return n;
@@ -91,15 +92,19 @@ int main() {
     CHECK(l2 && grsatFraming(*l2) == CcsdsConcat && grsatConcat(*l2).frameSize == 114 && !grsatConcat(*l2).dualBasis, "LilacSat-2 4k8 FSK: CCSDS concatenated, 114 bytes, conventional basis");
 
     const double R = cubesatTuning().sampleRate;
-    {   // a USP satellite at 2400 baud (ARCCUBE-1): decoded only when the pass planner names it
+    {   // a USP satellite at 2400 baud (CYCLOPS: 1200, 2400, 4800, 9600 on one frequency): decoded only when the pass planner names it
         std::vector<uint8_t> ax = {0x82, 0xA0, 0xA4, 0xA6, 0x40, 0x40, 0x60, 0xA4, 0xA6, 0x60, 0x82, 0x86, 0x40, 0x61, 0x03, 0xF0};
         const char* txt = "USP at 2400 baud, the table sets the receiver up";
         ax.insert(ax.end(), txt, txt + strlen(txt));
         const std::vector<cf32> x = gmsk(uspEncode(ax), 2400, 600, R, -cubesatTuning().tuneOffsetHz + 1800, 24);
         std::string setup;
-        const int with = run(x, R, 57205, "ARCCUBE-1", Usp, ax, &setup), without = run(x, R, 0, "", Usp, ax, nullptr);
+        const int with = run(x, R, 53373, "CYCLOPS", Usp, ax, &setup, 436.05e6), without = run(x, R, 0, "", Usp, ax, nullptr);
         printf("  USP 2400 baud: tracked %d, untracked %d; setup \"%s\"\n", with, without, setup.c_str());
-        CHECK(with == 1 && without == 0 && setup.find("USP") != std::string::npos, "USP 2400: tracked %d untracked %d", with, without);
+        const std::vector<cf32> x48 = gmsk(uspEncode(ax), 4800, 1200, R, -cubesatTuning().tuneOffsetHz + 1800, 24);
+        const int fixed = run(x48, R, 0, "", Usp, ax, nullptr);
+        printf("  USP 4800 baud on the fixed slicer, untracked: %d\n", fixed);
+        CHECK(fixed == 1, "USP 4800 untracked: %d", fixed);
+        CHECK(with == 1 && without == 0 && setup.find("2400 baud") != std::string::npos, "USP 2400: tracked %d untracked %d", with, without);
     }
     {   // NGHam, FloripaSat-1 2k4
         const char* txt = "FloripaSat-1 NGHam beacon";

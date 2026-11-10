@@ -14,6 +14,7 @@
 #include <chrono>
 #include <cmath>
 #include <deque>
+#include <memory>
 #include <mutex>
 #include "dect2/common/bits.h"
 #include "dect2/common/str.h"
@@ -160,7 +161,8 @@ struct CubesatReceiver::Impl {
     std::vector<float> a48, fg[2];
     // 3.9: the cubesat_more.h framings on the 9600 / 4800 slicers, the GOMspace audio FSK (4800 baud on 3600 Hz), and the tracked satellite's own
     MoreHunter more[2];
-    ExtraPath afskPath, trackPath;
+    ExtraPath afskPath;
+    std::vector<std::unique_ptr<ExtraPath>> trackPaths;   // one per baud rate / audio carrier of the tracked satellite the fixed ones miss
     const GrTx* trackTx = nullptr;
     MoreConfig moreCfg;
 
@@ -218,7 +220,9 @@ struct CubesatReceiver::Impl {
         audio48.reset(); lpG[0].reset(); lpG[1].reset();
         for (auto& a : afsk) a.reset();
         for (int i = 0; i < 2; i++) { g3[i].reset(); plain[i].reset(); framer[i].reset(); framer[i].ccsdsLen = ccsdsLen; more[i].reset(); }
-        for (ExtraPath* ep : {&afskPath, &trackPath}) { ep->af.reset(); ep->lp.reset(); ep->g3.reset(); ep->plain.reset(); ep->framer.reset(); ep->more.reset(); }
+        std::vector<ExtraPath*> eps{&afskPath};
+        for (auto& tp : trackPaths) eps.push_back(tp.get());
+        for (ExtraPath* ep : eps) { ep->af.reset(); ep->lp.reset(); ep->g3.reset(); ep->plain.reset(); ep->framer.reset(); ep->more.reset(); }
         nextReport = 0;
         recent.clear(); fails.clear();
         for (auto& f : frames) f.timeSec -= t.timeSec;   // the frames stay (clearResults): the clock starts again
@@ -370,18 +374,24 @@ struct CubesatReceiver::Impl {
         moreCfg = c;
         for (auto& m : more) m.configure(c);
         afskPath.more.configure(c);
-        trackPath.on = false;
+        trackPaths.clear();
         if (!trackTx || !isReadyFs()) return;
-        const bool afsk = std::string(trackTx->modulation) == "AFSK";
-        const int fr = grsatFraming(*trackTx);
-        const int b = trackTx->baud;
-        if (afsk) {
-            if (fr == Ax25Afsk1200) return;                                 // the Bell 202 demodulators
-            if (b == 4800 && trackTx->afCarrier == 3600) return;            // the GOMspace path
-            setupPath(trackPath, b, trackTx->afCarrier, false, trackTx->sat);
-        } else if (b != 9600 && b != 4800) {
-            setupPath(trackPath, b, 0, fr == Ax25G3ruh, trackTx->sat);
-            if (trackTx->framing == GrFraming::Ax25) trackPath.g3.descramble = false;   // plain NRZI AX.25 on FSK
+        // every decodable transmitter of the satellite on this dial (SPUTNIX satellites send 1200 .. 9600 baud on one frequency)
+        for (const GrTx* t : grsatFor(trackedNorad)) {
+            if (!grsatReceiverDecodes(*t) || (dialHz > 0 && std::fabs((double)t->hz - dialHz) > 50e3)) continue;
+            const bool afsk = std::string(t->modulation) == "AFSK";
+            const int fr = grsatFraming(*t);
+            const int b = t->baud;
+            const double af = afsk ? t->afCarrier : 0;
+            if (afsk && (fr == Ax25Afsk1200 || (b == 4800 && t->afCarrier == 3600))) continue;   // the Bell 202 / GOMspace paths
+            if (!afsk && (b == 9600 || b == 4800)) continue;                                       // the fixed slicers
+            bool have = false;
+            for (auto& tp : trackPaths) have |= tp->baud == b && (tp->audio ? tp->af.fc : 0) == af;
+            if (have || trackPaths.size() >= 4) continue;
+            trackPaths.push_back(std::make_unique<ExtraPath>());
+            ExtraPath& ep = *trackPaths.back();
+            setupPath(ep, b, af, !afsk && (fr == Ax25G3ruh), t->sat);
+            if (t->framing == GrFraming::Ax25) ep.g3.descramble = false;   // plain NRZI AX.25 on FSK
         }
     }
     bool isReadyFs() const { return fs > 0; }
@@ -446,7 +456,11 @@ struct CubesatReceiver::Impl {
         t.levelDb = fe.takeLevelDb();
         t.dialMhz = dialHz / 1e6;
         t.tracked = trackedName; t.trackedNorad = trackedNorad;
-        t.trackedSetup = trackTx ? grsatDescribe(*trackTx) + (trackPath.on ? ", own demodulator" : "") : "";
+        t.trackedSetup = "";
+        if (trackTx) {
+            t.trackedSetup = grsatDescribe(*trackTx);
+            for (size_t k = 0; k < trackPaths.size(); k++) t.trackedSetup += (k ? ", " : "; own demodulators: ") + std::to_string(trackPaths[k]->baud) + " baud" + (trackPaths[k]->audio ? " AFSK" : "");
+        }
         if (t.state != lastState) {
             say(t.state == 2 ? "CubeSat: decoding frames" : t.state == 1 ? "CubeSat: a carrier, no good frame lately" : "CubeSat: no signal");
             lastState = t.state;
@@ -473,7 +487,7 @@ struct CubesatReceiver::Impl {
                 plain[i].process(fg[i].data(), fg[i].size());
             }
             runPath(afskPath, disc);
-            runPath(trackPath, disc);
+            for (auto& tp : trackPaths) runPath(*tp, disc);
         }
         fe.commit();
         while (fe.n96 >= nextReport) {
