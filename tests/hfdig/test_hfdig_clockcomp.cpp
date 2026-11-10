@@ -29,12 +29,17 @@ static HfdigFtxTelemetry run(double stationDt, double clockOffset, int slots) {
     return t;
 }
 
+static void dump(const HfdigFtxTelemetry& t) {   // every decode: slot, DT, early or full (says where a correction went when a check fails)
+    for (const auto& d : t.decodes) printf("    slot %.0f dt %+.2f%s %s\n", std::fmod(d.slotUtc, 3600.0), d.dt, d.early ? " early" : "", d.msg.c_str());
+}
+
 static int lateDecodes(const HfdigFtxTelemetry& t) { int n = 0; for (const auto& d : t.decodes) if (std::fabs(d.dt) < 0.6) n++; return n; }
 
 int main() {
     {   // stations late by 1.5 s: inside the normal search, the correction removes it
         const HfdigFtxTelemetry t = run(1.5, 0, 8);
         printf("late 1.5 s: trim %+.2f s, %d decodes, %d near 0\n", t.clockTrim, (int)t.decodes.size(), lateDecodes(t));
+        if (std::fabs(t.clockTrim + 1.5) >= 0.4) dump(t);
         CHECK(std::fabs(t.clockTrim + 1.5) < 0.4, "trim %.2f", t.clockTrim);
         CHECK(lateDecodes(t) >= 6, "decodes near DT 0 after the correction: %d", lateDecodes(t));
     }

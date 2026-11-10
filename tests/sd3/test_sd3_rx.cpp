@@ -76,7 +76,7 @@ int main(int argc, char** argv) {
             const Sd3Link& l = sd3LinkAt(kSd3Sband, i);
             const double rate = std::max(4 * l.sym, 500000.0);
             const double frameSec = l.frameBits * (l.conv ? 2.0 : 1.0) / (l.mod == kSd3Qpsk || l.mod == kSd3Oqpsk ? 2.0 : 1.0) / l.sym;
-            const double sec = std::min(2.0, 14 * frameSec) + 0.05;
+            const double sec = std::min(2.0, std::max(0.3, 14 * frameSec)) + 0.05;   // at least 0.3 s: the fast links gave the loops about 0.1 s, too little on Linux for three of them
             auto r = run(kSd3Sband, i, rate, sec, l.conv ? 10 : 15, 0.002 * l.sym);
             char b[80]; snprintf(b, sizeof b, "%s", l.name);
             show(b, r);

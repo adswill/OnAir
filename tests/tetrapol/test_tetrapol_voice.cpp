@@ -167,7 +167,8 @@ int main() {
         CHECK(l.status == codec::CodecStatus::NoticeRequired && !c, "notice first");
         l = codec::loadSpeechCodec("tetrapol", dir.string(), true, c);
         CHECK(l.status == codec::CodecStatus::Ready && c, "plug-in loads: %s", l.message.c_str());
-        const Run r = run(1, 1, 0, 3.9, std::move(c), true, (dir / "rec").string());   // one call
+        // 8.5 s as the clear-call runs above: the first call starts before the frame sync and is refused (no WAV), the second is whole
+        const Run r = run(1, 1, 0, 8.5, std::move(c), true, (dir / "rec").string());
         size_t wavs = 0;
         uintmax_t bytes = 0;
         std::vector<int16_t> head;

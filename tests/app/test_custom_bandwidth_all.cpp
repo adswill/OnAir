@@ -142,6 +142,7 @@ static TuneSettings ownTune(const ModeTuning& mt) {
 static bool nearEq(double a, double b) { return std::fabs(a - b) <= 1e-9 * std::max(1.0, std::fabs(b)); }
 
 int main(int argc, char** argv) {
+    setvbuf(stdout, nullptr, _IOLBF, 0);   // line by line: a run stopped at its time limit still shows every FAIL and where it was
     const bool csv = argc > 1 && !std::strcmp(argv[1], "--csv");
     const bool rowsOut = argc > 1 && !std::strcmp(argv[1], "--rows");   // one line per mode-table row: family, engine standard, tuning id
     const bool quick = argc > 1 && !std::strcmp(argv[1], "--quick");   // the plan checks only, no engine starts
@@ -275,6 +276,7 @@ int main(int argc, char** argv) {
         { DeviceInfo hackrf; hackrf.kind = DeviceInfo::HackRF; rxApplyRate(typed, 3.5e6, rateLimitsOf(hackrf), mt->minSampleRate); }
         struct Case { const char* what; TuneSettings t; };
         const Case cases[] = {{"default", ownTune(*mt)}, {"6 MHz wide", wide}, {"typed 3.5 Msps", typed}};
+        std::printf("engine: %s (standard %d)\n", mt->id, mt->stdMode);   // where a run stopped at its time limit was
         for (const auto& c : cases) {
             Engine e;
             e.setStandard(mt->stdMode);

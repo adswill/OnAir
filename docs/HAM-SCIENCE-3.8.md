@@ -26,4 +26,4 @@ Every mode has been checked on simulated signals only, made by `core/src/hamsci/
 
 ## What the pulsar mode needs
 
-A pulsar is thousands of times weaker than the noise in a single sample. It shows only after minutes to hours of folding, and only with roughly one square metre of effective area and a low-noise amplifier at the feed (a 1.5 to 2 m dish, or several long Yagis) for B0329+54 at 408 MHz. A whip, discone or wideband dipole will not show a pulsar. The screen computes the area needed from the radiometer equation (`hamsci::pulsarRequiredAreaM2`). This mode has not been tested on a real pulsar.
+A pulsar is thousands of times weaker than the noise in a single sample. It shows only after minutes to hours of folding, and only with roughly one square metre of effective area and a low-noise amplifier at the feed (a 1.5 to 2 m dish, or several long Yagis) for B0329+54 at 408 MHz. A whip, discone or wideband dipole will not show a pulsar. The screen computes the area needed from the radiometer equation (`hamsci::pulsarRequiredAreaM2`). This mode was not tested on a real pulsar.
