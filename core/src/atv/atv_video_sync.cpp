@@ -722,10 +722,8 @@ void AtvVideo::Impl::processLine(const LineRec& r) {
             const bool data = F.lines == 625 ? vbi.line625(level) : vbi.line525(level);
             const double xl = std::fmod((tL - vsyncT) / P, (double)F.lines / 2);
             if (!data && xl > 5.0 && xl < 10.4) ghostLine(tL);   // after the equalising pulses, before the picture
-            else if (!data && xl >= 10.4 && fieldCount % 25 == 0) {   // the insertion test signals (VITS) sit on these lines: one field a second
-                if (vitsField != fieldCount) { vitsField = fieldCount; vitsLines.clear(); vitsLineNo.clear(); }
+            else if (!data && xl >= 10.4 && xl < 21.5)   // the insertion test signals (VITS) sit on these lines, up to line 22 (line 23 carries WSS and picture)
                 vitsLine(tL, (int)std::lround(xl) + 1 + (vsyncField ? (F.lines + 1) / 2 : 0));
-            }
         }
     }
     secamLineOk = false;

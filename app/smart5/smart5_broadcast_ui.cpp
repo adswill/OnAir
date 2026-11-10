@@ -324,8 +324,8 @@ void smart5FmCard(App& a) {
     s5ui::line(sum.empty() ? 0 : 1, sum.empty() ? tr("Station watchdog: nothing wrong") : sum);
     if (t.mpx412Valid || t.mpxRunningDbr > -98) {
         char b[200];
-        snprintf(b, sizeof b, tr("Multiplex power %+.1f dBr (BS.412, 60 s)%s, peaks %.0f / %.0f kHz, above 75 kHz %.2f %%"), t.mpx412Valid ? t.mpxPowerDbr : t.mpxRunningDbr,
-                 t.mpx412Valid ? "" : tr(" so far"), t.devP99Khz, t.devP999Khz, t.over75Pct);
+        if (t.mpx412Valid) snprintf(b, sizeof b, tr("Multiplex power %+.1f dBr (BS.412, 60 s), peaks %.0f / %.0f kHz (99 / 99.9 %%), above 75 kHz %.2f %%"), t.mpxPowerDbr, t.devP99Khz, t.devP999Khz, t.over75Pct);
+        else snprintf(b, sizeof b, tr("Multiplex power %+.1f dBr so far (BS.412 needs 60 s)"), t.mpxRunningDbr);
         s5ui::line(t.mpx412Valid && t.mpxPowerDbr > 0.5f ? 1 : 0, b);
     }
     if (t.piCode && F.txNow > 0) {

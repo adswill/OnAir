@@ -7,7 +7,7 @@ Keyword alerts and repeated-page combining already exist (automation watch list,
 
 | # | Feature | State |
 |---|---------|-------|
-| 8 | Automatic and test pages: 6 steady gaps (median absolute deviation under 7 % of the median, none off by more than 25 %, at least 20 s) of near-identical text (word overlap 0.8 with digits ignored); event `insight.pager_auto`, `PagerPatterns::automatic()` for a hide filter. It stays automatic while text and pace hold (one missed page is allowed) | done (hide switch in the pager view not added) |
+| 8 | Automatic and test pages: 6 steady gaps (median absolute deviation under 7 % of the median, none off by more than 25 %, at least 20 s) of near-identical text (word overlap 0.8 with digits ignored); event `insight.pager_auto`, `PagerPatterns::automatic()` for a hide filter. It stays automatic while text and pace hold (one missed page is allowed) | done; "Hide automatic pages" switch in the pager message view (feat39-smartui) |
 | 9 | Paging burst: 5 pages of one capcode within 10 min after an hour without one (`insight.pager_burst`); silent channel: a channel with 20 pages silent for 10 of its usual gaps and at least 30 min (`insight.pager_silent`) | done |
 
 ## Measured (simulated page streams only)

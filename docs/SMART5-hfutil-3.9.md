@@ -16,6 +16,6 @@ learned the 3 slots within 2 min, every missed broadcast from day 5 on was repor
 
 ## Limits
 
-- Many HF utility decoders do not send automation events yet; those modes are not learned until they do (`Hub::onUtility` is the direct call).
+- Since feat39-smartui these send events that the schedule learns from: WEFAX (`msg.wefax`, a chart received), NAVTEX (`msg.navtex`), ALE (`msg.ale`, one schedule per station), and from the interface thread with the tuned frequency SITOR-B (`msg.sitor`, a locked stream starts), PACTOR-I (`msg.pactor`, packets after a quiet spell) and the HF utility modes 430-439 (`msg.hfutil`, each event). RTTY, the MIL-HF waveform ID, time signals and HF beacons still send none (no message boundary or no schedule worth learning).
 - Slots within about 22 min of midnight UTC are learned but not judged (the day boundary).
 - Session events carry the end time, so a long chart is learned at its end time; the schedule stays consistent.

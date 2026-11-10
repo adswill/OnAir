@@ -18,9 +18,9 @@ user marks as their own. Nothing is decrypted.
 ## Notes
 
 - **Zigbee:** the logic supports it, but the Zigbee frame list has no sequence number or ack request, so only level and
-  silence would work. The Zigbee view is not wired yet.
+  silence would work. Since feat39-smartui the Zigbee receiver keeps the MAC sequence number and the ack request of each frame, so Zigbee > Health (and Thread) has all four: retries, missing acks (matched by sequence number within 1 s), level trend and silence (`zigbee_health.h`).
 - **wM-Bus meters:** the Mine view covers rtl_433 meters (ERT SCM / IDM, energy and volume counters). The wM-Bus mode's
-  own meters are not wired into it yet. `MeterUsage` takes any register.
+  own meters have their own Mine view since feat39-smartui (wM-Bus > Mine: the current Volume or Energy register; encrypted meters need the user's key).
 - **Mesh positions:** a node's position is the last one it sent. A node that moves between position reports adds its
   SNR to its last position's cell. Only nodes heard directly (hop count 0) are counted.
 - **Not kept between sessions:** the marks are kept in the settings (`sensMine`, `zwMyHome`). Usage, pressure history

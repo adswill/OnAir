@@ -30,7 +30,7 @@ check also runs through the real generator and receiver.
 - Drone near aircraft needs live ADS-B telemetry at the same time as Remote ID. That means ADS-B as the second mode,
   which one radio cannot provide (1090 MHz and 2.4 GHz). With one radio, only the height and airport alerts work.
   Airports for that alert are large, medium or scheduled ones within 10 km.
-- DJI DroneID and ADS-L / OGN are not wired to the drone alerts and out-landings yet. The core logic takes any fix.
+- Since feat39-smartui: DJI DroneID feeds the drone alerts (DJI > Alerts) and ADS-L feeds the out-landings together with the FLARM / OGN packets heard beside it (ADS-L > Out-landings). Every alert also goes to View > Insights as `insight.outlanding` or `insight.drone_airspace`.
 - The atmosphere sounding needs Comm-B weather replies (4,4 / 5,0 / 6,0), which come only where a radar interrogates.
 - The altimetry check needs TC 19 GNSS-baro differences from at least 4 aircraft in one 4000 ft band.
 - Nothing here is kept between sessions.

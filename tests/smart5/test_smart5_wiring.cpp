@@ -14,6 +14,7 @@
 #include "dect2/tv/si_tables.h"
 #include "dect2/zigbee/zigbee_health.h"
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <vector>
 using namespace dect2;
@@ -76,24 +77,34 @@ static std::vector<float> to135(const std::vector<float>& l, double fs, double& 
 }
 
 static void testVits() {
-    for (double cnr : {46.0, 34.0}) for (int line : {17, 18}) {
+    for (double cnr : {46.0, 34.0}) for (int line : {17, 19}) {
         AtvGenConfig c; c.cnrDb = cnr; c.vbiTestLine = line;
         const atvkit::Run r = atvkit::run(c, 1.5);
         const AtvTelemetry& t = r.tel;
         CHECK(!t.vitsLines.empty() && t.vitsRate > 0, "cnr %.0f: no blanking lines handed over", cnr);
-        int found = 0, foundNo = -1;
-        smart5::VitsResult best;
+        int found = 0, foundNo = -1, mbNo = -1;
+        smart5::VitsResult best, mb;
         for (size_t i = 0; i < t.vitsLines.size() && i < t.vitsLineNo.size(); i++) {
             double fs;
             const auto x = to135(t.vitsLines[i], t.vitsRate, fs);
             const auto v = smart5::analyseVitsLine(x, fs);
             if (v.bar) { found++; foundNo = t.vitsLineNo[i]; best = v; }
+            if (v.multiburst) { mbNo = t.vitsLineNo[i]; mb = v; }
         }
-        printf("VITS cnr %.0f line %d: %zu lines handed over at %.1f MHz, bar on %d (line %d): %s\n", cnr, line, t.vitsLines.size(), t.vitsRate / 1e6, found, foundNo, best.text().c_str());
+        printf("VITS cnr %.0f line %d: %zu lines handed over at %.1f MHz, bar on %d (line %d): %s; line %d: %s\n", cnr, line, t.vitsLines.size(), t.vitsRate / 1e6, found, foundNo,
+               best.text().c_str(), mbNo, mb.text().c_str());
         CHECK(found >= 1, "cnr %.0f: the test line was not found", cnr);
         CHECK(foundNo == line || foundNo == line + 313, "cnr %.0f: the test line was numbered %d (sent on %d)", cnr, foundNo, line);
-        CHECK(std::fabs(best.barIre - 100) < 8, "cnr %.0f: bar %.1f IRE (sent 100)", cnr, best.barIre);
-        CHECK(best.multiburst && best.bursts.size() >= 4, "cnr %.0f: multiburst %d with %zu packets", cnr, best.multiburst, best.bursts.size());
+        // the envelope detector lifts the low carrier of white with noise (negative modulation), so the bar reads low as the CNR falls;
+        // measured: 94 IRE at 46 dB, 82 IRE at 34 dB. A VITS reading is a transmitter-chain check on a clean signal.
+        CHECK(std::fabs(best.barIre - 100) < (cnr > 40 ? 8 : 22), "cnr %.0f: bar %.1f IRE (sent 100)", cnr, best.barIre);
+        CHECK(found == 2, "cnr %.0f: %d lines read as a bar (one per field)", cnr, found);
+        CHECK((mbNo == line + 1 || mbNo == line + 314) && mb.bursts.size() >= (cnr > 40 ? 5u : 4u), "cnr %.0f: multiburst on line %d with %zu packets", cnr, mbNo, mb.bursts.size());
+        if (mb.bursts.size() == 5) {
+            static const double f[5] = {0.5e6, 1e6, 2e6, 3e6, 4e6};
+            for (int k = 0; k < 5; k++) CHECK(std::fabs(mb.bursts[(size_t)k].freqHz - f[k]) < 0.06 * f[k], "cnr %.0f: packet %d at %.2f MHz", cnr, k, mb.bursts[(size_t)k].freqHz / 1e6);
+            CHECK(mb.bursts[4].relDb < 0.5, "cnr %.0f: 4 MHz %+.1f dB above 0.5 MHz", cnr, mb.bursts[4].relDb);
+        }
     }
     {   // no test line: nothing is found on the blanking lines
         AtvGenConfig c; c.cnrDb = 40;

@@ -62,7 +62,7 @@ struct AtvGenConfig {
     bool vbiTeletext = false;     // 625 lines: teletext page 100 in the blanking lines
     int vbiWss = -1;              // 625 lines: wide screen signalling on line 23, the 4 aspect bits b0..b3
     std::string vbiCaptions;      // 525 lines: line 21 captions, two characters a frame
-    int vbiTestLine = 0;          // 625 lines: an insertion test line (white bar 12 - 22 us, multiburst 0.5 / 1 / 2 / 3 / 4 MHz) on this line of both fields (0: none)
+    int vbiTestLine = 0;          // 625 lines: insertion test lines on this line of both fields (a white bar, 12 - 22 us) and the next (a multiburst 0.5 - 4 MHz); 0 none
 };
 
 class AtvCard;

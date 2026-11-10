@@ -258,21 +258,36 @@ void AtvVideo::Impl::captureLine(double tL) {
 
 }
 
-// A blanking line for the VITS analyser: the whole line period from the sync's leading edge, at the input rate, in IRE (blanking 0, white 100)
+// A blanking line for the VITS analyser: the whole line period from the sync's leading edge, at the input rate, in IRE (blanking 0, white 100).
+// Each line number is averaged over 16 fields before it is handed over. The scale comes from the line's own sync pulse and blanking level (as a VITS analyser measures against the sync amplitude), so the
+// receiver's slow level tracking does not enter the measurement.
 void AtvVideo::Impl::vitsLine(double tL, int lineNo) {
-    const double g = lineGain();
-    if (g <= 0 || vitsLines.size() >= 16) return;
+    if (vitsAcc.size() >= 32 && !vitsAcc.count(lineNo)) return;
     const int n = (int)std::lround(P);
-    if (n < 16) return;
-    std::vector<float> v((size_t)n);
+    if (n < 16 || spu <= 0) return;
+    std::vector<double> raw((size_t)n);
     for (int k = 0; k < n; k++) {
         const double t = tL + k;
         const long i0 = (long)std::floor(t);
         const double fr = t - (double)i0;
-        v[(size_t)k] = (float)(100.0 * (Bline - (rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr)) / g);
+        raw[(size_t)k] = rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr;
     }
-    vitsLines.push_back(std::move(v));
-    vitsLineNo.push_back(lineNo);
+    auto mean = [&](double a, double b) {   // microseconds from the sync's leading edge
+        const int i0 = std::max(0, (int)(a * spu)), i1 = std::min(n, (int)(b * spu));
+        double s = 0; for (int i = i0; i < i1; i++) s += raw[(size_t)i];
+        return i1 > i0 ? s / (i1 - i0) : 0.0;
+    };
+    const double tip = mean(0.8, 4.0), blank = mean(8.8, 10.2);   // the sync tip, and the back porch after the colour burst
+    if (std::fabs(blank - tip) < 1e-9) return;
+    std::vector<double>& acc = vitsAcc[lineNo];
+    if (acc.size() != (size_t)n) { acc.assign((size_t)n, 0.0); vitsN[lineNo] = 0; }   // a new line length (another standard or rate): start again
+    for (int k = 0; k < n; k++) acc[(size_t)k] += 100.0 * fmt.syncLevel * (blank - raw[(size_t)k]) / (blank - tip);
+    if (++vitsN[lineNo] < 16) return;
+    std::vector<float> v((size_t)n);
+    for (int k = 0; k < n; k++) v[(size_t)k] = (float)(acc[(size_t)k] / 16);
+    vitsPub[lineNo] = std::move(v);
+    acc.assign((size_t)n, 0.0);
+    vitsN[lineNo] = 0;
 }
 
 // The ghost report: blanking lines without data, averaged (a ghost of the sync pulse shows on them, and no picture can look like one)

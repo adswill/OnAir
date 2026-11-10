@@ -7,7 +7,7 @@ View > Insights > Ham (`app/panels/insight_ui.cpp`). Test: `test_ham_insight` (t
 |---|---------|-------|-------|
 | 1 | Who hears me: stations that call or answer you, their report, locator, distance, bearing, link balance, per band; event `insight.heard_me` the first time per station and band | FT8 / FT4 / JS8 decodes of the FT8 view, your call and locator from the Ham radio mode | done |
 | 2 | Antenna pattern from decodes: SNR fitted against log10(distance), the rest averaged per 30-degree sector with its standard error and count | located decodes (locators learned from CQ and exchange messages) | done |
-| 3 | Busted-call filter: a call heard once that is one character (CW: one Morse element) from a call heard often, or that is not a valid amateur call | the call signs of the decodes | analyser done; shown only through the API (no skimmer view uses it yet) |
+| 3 | Busted-call filter: a call heard once that is one character (CW: one Morse element) from a call heard often, or that is not a valid amateur call | the call signs of the decodes | done; shown in the FT8 / FT4 / JS8 decode list as "(LIKELY?)" after the message, with the reason on hover (feat39-smartui) |
 | 4 | APRS network health: over-beaconing (fixed under 10 min, moving under 1 min, over 6 beacons), obsolete or long paths (RELAY, TRACE, WIDE, WIDEn-N with n > 2), one packet through more than 4 digipeaters within 30 s, a regular digipeater silent for 6 of its usual gaps (at least 30 min) | `aprs.packet` events | done |
 
 ## Measured (simulated decode streams only)
