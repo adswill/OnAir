@@ -50,6 +50,11 @@ int main() {
             const std::string num = line.substr(5, comma - 5);
             if (num.empty() || num.find_first_not_of("0123456789") != std::string::npos) continue;
             const int fam = std::stoi(num);
+            {   // a protocol entry (a subId after the accent colour) shares its family on purpose: test_mode_numbers checks (family, subId)
+                const size_t acc = line.rfind("ImVec4(");
+                const size_t close = acc == std::string::npos ? acc : line.find(')', acc);
+                if (close != std::string::npos && line.compare(close + 1, 3, ", \"") == 0) continue;
+            }
             rows++;
             if (fam >= 122 && ++seen[fam] > 1) { std::printf("FAIL: family %d appears twice in the mode table\n", fam); fails++; }   // the Kris group and everything after it
         }
