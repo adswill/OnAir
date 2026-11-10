@@ -14,11 +14,14 @@
 #include "dect2/winlink/wl_modem.h"
 #include "dect2/winlink/wl_station.h"
 #include <algorithm>
+#include <cctype>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
 #include <cstring>
 #include <ctime>
 #include <deque>
+#include <filesystem>
 #include <fstream>
 #include <memory>
 #include <mutex>
