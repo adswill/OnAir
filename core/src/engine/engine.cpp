@@ -655,6 +655,7 @@ void Engine::resetReceiver(int a) {
     case 501: rxHs_[6].reset(); break;
     case 502: rxHs_[7].reset(); break;
     case 503: rxHs_[8].reset(); break;
+    case 751: rxHs_[9].reset(); break;
     case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
     case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].reset(); break;
     case 291: rxSd3_[0].reset(); break;

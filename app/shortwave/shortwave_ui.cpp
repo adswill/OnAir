@@ -273,7 +273,7 @@ void advanced(App& a) {
             tip("Mark is the upper tone. Only used when baud and shift are fixed (automatic tries both polarities).");
         } else if (d == Dec::Psk) {
             ImGui::SetNextItemWidth(130 * gUi);
-            if (ImGui::Combo("##pm", &o.pskMode, "BPSK31\000BPSK63\000QPSK31\000QPSK63\000BPSK125\000BPSK250\000QPSK125\000")) ch = true;
+            if (ImGui::Combo("##pm", &o.pskMode, "BPSK31\000BPSK63\000QPSK31\000QPSK63\000BPSK125\000BPSK250\000QPSK125\0008PSK125\0008PSK250\000")) ch = true;
         }
         if (ch) r.setDecoderOpts(d, o);
         ImGui::PopID();

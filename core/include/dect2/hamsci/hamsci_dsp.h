@@ -2,7 +2,7 @@
 // grabbers QRSS / DFCW, and the three science receivers SuperSID (VLF station level and solar flare detector), riometer (cosmic noise absorption)
 // and pulsar folding. Real audio (the upper sideband audio of a receiver, dial at 0 Hz) in for the digital modes, power or complex samples in for the others.
 //
-// Third-party facts: the FSK441 / ISCAT / PI4 parameters and tables were read from the WSJT family as documented in MSHV (GPL-3.0, LZ2HV) and WSJT
+// Third-party facts: the FSK441 / ISCAT / PI4 / JT6M parameters and tables were read from the WSJT family as documented in MSHV (GPL-3.0, LZ2HV) and WSJT
 // (K1JT, GPL-3.0); the Throb tone pair tables and timing from fldigi (W1HKJ, GPL-3.0, after gmfsk by OH2BNS, ThrobX by KD8ATU). All receivers and
 // generators here are new code. Nothing in this layer has been checked against an on-air signal.
 #pragma once
@@ -50,6 +50,62 @@ private:
     double thr_ = 6.0, level_ = -120;
     int nBursts_ = 0;
     std::vector<Fsk441Burst> out_;
+};
+
+// ------------------------------------------------------------------------------------------------------------------ JT6M (6 m scatter)
+// 44 tones 21.533 Hz apart (sync 1076.66 Hz, data 1098.2 .. 2002.6 Hz), 21.533 baud; every third symbol is the sync tone, the two after it carry one
+// character each of "0123456789., /#?$A..Z" (hamsci_jt6m.cpp). The message (one trailing space, even length) repeats.
+struct Jt6mFrame {
+    double startSec = 0;       // start of the sync symbol, seconds from the start of the block
+    double sync = 0;           // sync tone energy over the noise level
+    int c[2] = {-1, -1};       // the two characters (index in the set, -1 = unclear)
+    double conf[2] = {0, 0};   // strongest tone over the second strongest
+    bool good = false;         // the sync is clear: the characters count
+};
+struct Jt6mPing {
+    double startSec = 0, durSec = 0;
+    double freqOffsetHz = 0;   // tuning error (sync tone at 1076.66 Hz plus this)
+    double snrDb = 0;          // sync tone over the noise level, dB (not a calibrated SNR)
+    int frames = 0;            // frames with a clear sync
+    std::string text;          // the characters in order, '_' where unclear
+};
+struct Jt6mBlock {
+    std::vector<Jt6mPing> pings;
+    std::vector<Jt6mFrame> frames;
+    double freqOffsetHz = 0, snrDb = 0, score = 0;
+    int goodFrames = 0;
+    int period = 0;            // message length in characters found by folding (0 = not enough frames)
+    std::string averaged;      // the folded message, one period from an unknown start ('_' where unclear)
+};
+int jt6mCharIndex(char c);                                  // -1 when the character is not in the set
+char jt6mChar(int i);
+double jt6mToneHz(int n);                                   // -1 = sync, 0 .. 42 data
+std::string jt6mMessage(const std::string& msg);            // what is sent: upper case, one trailing space, even length
+std::vector<float> jt6mGenerate(const std::string& msg, double fs, double seconds, double offsetHz = 0, double amp = 0.5, double startSec = 0,
+                                double driftHzPerSec = 0);
+bool jt6mDecodeBlock(const float* x, size_t n, double fs, Jt6mBlock& out, double tolHz = 200);
+std::vector<Jt6mPing> jt6mGroupPings(const std::vector<Jt6mFrame>& frames, double frameSec);
+class Jt6mDecoder {
+public:
+    explicit Jt6mDecoder(double fs = kAudioRate);
+    void reset();
+    void feed(const float* x, size_t n);
+    void flush();                                           // decode what is buffered (end of a file)
+    std::vector<Jt6mPing> take();
+    const Jt6mBlock& lastAveraged() const { return last_; } // the last window that gave a folded message
+    double levelDb() const { return level_; }
+    int pings() const { return nPings_; }
+private:
+    void analyse(bool flush);
+    void closePings(bool all);
+    double fs_;
+    std::vector<float> buf_;
+    uint64_t base_ = 0, total_ = 0;
+    double frameTo_ = -1, level_ = -120, offset_ = 0;
+    int nPings_ = 0;
+    std::vector<Jt6mFrame> pend_;
+    std::vector<Jt6mPing> out_;
+    Jt6mBlock last_;
 };
 
 // ------------------------------------------------------------------------------------------------------------------ ISCAT-A / ISCAT-B

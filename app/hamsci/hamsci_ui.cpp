@@ -1,4 +1,4 @@
-// Screens of the ham science modes (families 460 - 465 and 500 - 502, one receiver class, docs/HAM-SCIENCE-3.8.md): QRSS and DFCW (a spectrogram of the
+// Screens of the ham science modes (families 460 - 465, 500 - 502 and 750 JT6M, one receiver class, docs/HAM-SCIENCE-3.8.md): QRSS and DFCW (a spectrogram of the
 // keyed tone and the text), FSK441, ISCAT and PI4 (a list of decodes), Throb (running text), SuperSID (VLF station levels and the sudden changes of a solar
 // flare), the riometer (absorption against a sidereal quiet-day curve) and pulsar folding (profile, S/N, and what antenna it takes).
 // Auto is on for every mode; the manual settings sit under the decoder options and turn Auto off when changed.
@@ -86,7 +86,8 @@ void intro(int K) {
         "Throb and ThrobX: one or two tones at a time, one symbol per second or faster. Variant and tone comb are found automatically. Receive only.",
         "SuperSID: the strength of VLF navy transmitters (15 to 30 kHz) follows the ionosphere. A solar flare shows as a sudden step in a signal. It needs a VLF-capable radio and a loop or whip antenna, and the step must be checked against the GOES X-ray flux before you call it a flare.",
         "Riometer: the cosmic radio noise (about 30 MHz) shrinks when the ionosphere absorbs it during a geomagnetic or solar particle event. The receiver measures a rejected-interference noise power and compares it with a quiet-day curve per sidereal hour. The curve needs one to two days and a receiver gain that never changes.",
-        "Pulsar folding: weak periodic pulses are found by dedispersing and folding the record at the pulsar's period. This is a radio astronomy job: it needs a dish or array, a low-noise amplifier and an hour or more; the antenna line below says how big."};
+        "Pulsar folding: weak periodic pulses are found by dedispersing and folding the record at the pulsar's period. This is a radio astronomy job: it needs a dish or array, a low-noise amplifier and an hour or more; the antenna line below says how big.",
+        "JT6M: 6 m meteor and ionospheric scatter, 44-tone FSK at 21.5 baud with a sync tone every third symbol. The receiver lists the pings and folds a long signal into its repeating message. Receive only."};
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr(txt[K]));
     ImGui::PopTextWrapPos();
@@ -248,6 +249,7 @@ void tab(App& a, int K) {
     case kHsSid: sidTab(a, t, s); break;
     case kHsRiometer: rioTab(a, t); break;
     case kHsPulsar: pulsarTab(a, t, s); break;
+    case kHsJt6m: if (!t.text.empty()) kv(a, tr("averaged message"), "%s", t.text.c_str()); decodeList(a, t); break;
     default: decodeList(a, t); break;
     }
 }
@@ -260,7 +262,7 @@ void receiver(App& a, int K) {
     kv(a, tr("level"), "%.1f dBFS", (double)t.levelDb);
     kv(a, tr("input"), "%.3f Msps", t.inputRate / 1e6);
     kv(a, tr("signal time"), "%.1f s", t.timeSec);
-    if (K <= kHsThrob) kv(a, tr("decoded"), "%llu", (unsigned long long)t.blocksOk);
+    if (hamsciAudioKind(K)) kv(a, tr("decoded"), "%llu", (unsigned long long)t.blocksOk);
 }
 
 void list(App&, int) {}
@@ -403,7 +405,7 @@ void command(App& a, int K) {
 }
 
 template <int K> constexpr ModeUi makeUi() {
-    return ModeUi{.sideTitle = K <= kHsThrob ? "DECODES" : "READINGS", .tabName = K <= kHsThrob ? "Messages" : K == kHsSid ? "Stations" : K == kHsRiometer ? "Absorption" : "Pulsar", .tabIcon = Ic::Wave,
+    return ModeUi{.sideTitle = hamsciAudioKind(K) ? "DECODES" : "READINGS", .tabName = hamsciAudioKind(K) ? "Messages" : K == kHsSid ? "Stations" : K == kHsRiometer ? "Absorption" : "Pulsar", .tabIcon = Ic::Wave,
                   .tab = [](App& a) { tab(a, K); }, .receiver = [](App& a) { receiver(a, K); }, .list = [](App& a) { list(a, K); },
                   .status = [](App& a) { status(a, K); }, .summary = [](const App& a, std::string& x, std::string& y) { summary(a, x, y, K); },
                   .decoder = [](App& a, bool& rt) { decoder(a, rt, K); }, .synth = [](App& a, bool& ch) { synth(a, ch, K); },
@@ -413,4 +415,4 @@ template <int K> constexpr ModeUi makeUi() {
 }  // namespace
 
 extern const ModeUi kHamsciUi[kHamsciKinds];
-const ModeUi kHamsciUi[kHamsciKinds] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>()};
+const ModeUi kHamsciUi[kHamsciKinds] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>()};

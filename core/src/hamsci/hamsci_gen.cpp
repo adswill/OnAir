@@ -43,9 +43,18 @@ private:
         case kHsIscat: audio_ = hamsci::iscatGenerate("CQ DX K1JT FN20", std::clamp(cfg_.modeOpt[0], 0, 1), fs, 30.0, off, 0.3, 0.0); break;
         case kHsPi4: { audio_ = hamsci::pi4Generate("PI4ABC", fs, 1200 + off, 0.3, 0.0, 30.0); break; }
         case kHsThrob: audio_ = hamsci::throbGenerate("CQ CQ DE W1AW K", std::clamp(cfg_.modeOpt[0], 0, 5), fs, 1500 + off, 0.3, 4); break;
+        case kHsJt6m: {   // three pings of 0.6 to 1.6 s in 24 s of noise, then the loop repeats
+            audio_.assign((size_t)(24 * fs), 0.f);
+            const double starts[] = {3.0, 10.4, 17.7}, lens[] = {0.8, 1.6, 0.6};
+            for (int k = 0; k < 3; k++) {
+                auto b = hamsci::jt6mGenerate("K1JT W9XYZ 26", fs, lens[k], off, 0.3);
+                for (size_t i = 0; i < b.size(); i++) audio_[(size_t)(starts[k] * fs) + i] += b[i];
+            }
+            break;
+        }
         default: break;
         }
-        if (audio_.empty() && kind_ <= kHsThrob) audio_.assign((size_t)fs, 0.f);
+        if (audio_.empty() && hamsciAudioKind(kind_)) audio_.assign((size_t)fs, 0.f);
         double p = 0;
         for (float v : audio_) p += (double)v * v;
         p /= std::max<size_t>(1, audio_.size());

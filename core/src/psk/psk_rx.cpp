@@ -1,4 +1,4 @@
-// PSK31 / PSK63 multi-signal receiver (see psk_rx.h).
+// PSK31 / PSK63 multi-signal receiver (see psk_rx.h), and fldigi's 8PSK125 / 8PSK250 without FEC.
 #include "dect2/psk/psk_rx.h"
 #include "dect2/autoparam/autoparam.h"
 #include "dect2/results/results_io.h"
@@ -71,6 +71,7 @@ struct Chan {
     float fastPw = 0, dcdPw = 0;  // symbol power: quick, and slow while decoding (a signal that stops drops the DCD at once)
     psk::Viterbi vit;
     psk::VaricodeRx vrx;
+    psk::MfskVaricodeRx mrx;     // 8PSK
     std::string text;
     std::vector<PskLine> lines;
     bool lineOpen = false;
@@ -361,7 +362,7 @@ struct PskReceiver::Impl {
             if (!trial && PskReporter::get().want())
                 for (const std::string& k : now)
                     if (std::find(c.calls.begin(), c.calls.end(), k) == c.calls.end() && pskr::sendsInText(flat, k))
-                        PskReporter::get().spot(mode == 0 ? "PSK31" : mode == 1 ? "PSK63" : mode == 4 ? "PSK125" : mode == 5 ? "PSK250" : "PSK", c.f + spotShift.load(), (float)std::max(-5.0, std::min(40.0, 10 * std::log10(1.0 / std::max(1e-4f, c.errShown)))), k);
+                        PskReporter::get().spot(mode == 0 ? "PSK31" : mode == 1 ? "PSK63" : mode == 4 ? "PSK125" : mode == 5 ? "PSK250" : mode == 7 ? "8PSK125" : mode == 8 ? "8PSK250" : "PSK", c.f + spotShift.load(), (float)std::max(-5.0, std::min(40.0, 10 * std::log10(1.0 / std::max(1e-4f, c.errShown)))), k);
             c.calls = now;
         }
     }
@@ -373,10 +374,11 @@ struct PskReceiver::Impl {
         c.prevY = y;
         if (std::abs(d) < 1e-20f) return;
         const double a = std::arg(d);
-        const bool qp = pskQpsk(mode);
-        const double err = qp ? std::arg(std::pow(std::complex<double>(d), 4)) / 4 : std::arg(std::pow(std::complex<double>(d), 2)) / 2;
+        const bool qp = pskQpsk(mode), p8 = psk8psk(mode);
+        const int order = p8 ? 8 : qp ? 4 : 2;
+        const double err = std::arg(std::pow(std::complex<double>(d), order)) / order;
         // quality: 1 for clean decisions, 0 for noise (the phase error spread over its whole range)
-        const double en = err / (qp ? kPi / 4 : kPi / 2);
+        const double en = err / (kPi / order);
         c.q += 0.1f * ((float)(1 - 3 * en * en) - c.q);
         c.errVar += 0.05f * ((float)(err * err) - c.errVar);
         const float old = c.errHist[c.errPos];
@@ -394,6 +396,7 @@ struct PskReceiver::Impl {
             c.q = std::min(c.q, 0.2f);
             c.lineOpen = false;
             c.vrx.reset();
+            c.mrx.reset();
         }
         // AFC: the remaining phase step per symbol is the frequency error
         const double ferr = err * baud() / (2 * kPi);
@@ -403,7 +406,12 @@ struct PskReceiver::Impl {
             if (std::fabs(nf - c.f0) > 2 * baud()) nf = c.f0;   // pulled away: start over where it was found
             c.setFreq(nf);
         }
-        if (qp) {
+        if (p8) {
+            const int e8 = (int)std::lround(a / (kPi / 4));
+            const int sym = psk::psk8Symbol(((e8 % 8) + 8) % 8);
+            if (c.dcd)
+                for (int b = 0; b < 3; b++) { const int ch = c.mrx.bit((sym >> b) & 1); if (ch >= 0 && ch != 0) putChar(c, ch); else if (ch == -2) putChar(c, -2); }
+        } else if (qp) {
             float cq[4];
             for (int k = 0; k < 4; k++) cq[k] = (float)std::cos(a - k * kPi / 2);
             float b1[2] = {-2, -2}, b0[2] = {-2, -2};   // best correlation with bit 0 = 0/1, bit 1 = 0/1
@@ -442,7 +450,7 @@ struct PskReceiver::Impl {
             // Gardner: (previous - this) x the sample between them; > 0 when the samples come too early
             const float ge = std::real((c.lastSym - y) * std::conj(mid)) / std::max(1e-30f, c.pw);
             c.lastSym = y;
-            if (pskQpsk(mode) || kPskIsiBpsk) {
+            if (pskQpsk(mode) || psk8psk(mode) || kPskIsiBpsk) {
                 // the matched filter leaves 1/6 of each neighbour in a symbol (the PSK31 pulse is two symbols long): harmless for BPSK, where
                 // it only changes the amplitude, but it turns QPSK phases, so take it out (one symbol late)
                 c.sym2 = c.sym1; c.sym1 = y;
