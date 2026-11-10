@@ -100,15 +100,15 @@ int main() {
         const bool ok = jt6mDecodeBlock(x.data(), x.size(), fs, b);
         CHECK(ok && !b.pings.empty() && contains(b.pings[0].text, "K1JT"), "rate %.0f: '%s'", fs, ok && !b.pings.empty() ? b.pings[0].text.c_str() : "");
     }
-    // 7. two overlapping signals 400 Hz apart: the stronger one wins inside its tolerance window, the other one is outside it
+    // 7. a second JT6M signal 10 dB weaker, 150 Hz up and not in step, on top: the stronger one still folds to its message
     {
-        auto a = jt6mGenerate("AAA1 BBB2", kFs, 4.0, 0.0, 0.5);
-        auto b2 = jt6mGenerate("CCC3 DDD4", kFs, 4.0, 400.0, 0.3, 0.37);
+        auto a = jt6mGenerate("AAA1 BBB2", kFs, 6.0, 0.0, 0.5);
+        auto b2 = jt6mGenerate("CCC3 DDD4", kFs, 6.0, 150.0, 0.16, 0.37);
         for (size_t i = 0; i < a.size(); i++) a[i] += b2[i];
         addNoiseSnr(a, kFs, 10, 2500, 21, 0.125);
         Jt6mBlock b;
         const bool ok = jt6mDecodeBlock(a.data(), a.size(), kFs, b);
-        CHECK(ok && !b.pings.empty() && contains(b.pings[0].text, "BBB2"), "overlap: '%s'", ok && !b.pings.empty() ? b.pings[0].text.c_str() : "");
+        CHECK(ok && b.period == 10 && cyclicContains(b.averaged, "AAA1 BBB2"), "overlap: period %d '%s'", b.period, b.averaged.c_str());
     }
     std::printf(g_fails ? "JT6M: %d failures\n" : "JT6M: all passed\n", g_fails);
     return g_fails ? 1 : 0;

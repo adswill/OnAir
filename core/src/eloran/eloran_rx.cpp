@@ -155,11 +155,16 @@ Result Detector::analyze(const cf* x, size_t n, int hintGriUs) const {
             const double z = foldZ(p, Ftmp);
             if (z > zBest) { zBest = z; best = p; }
         }
-        // a GRI also folds at twice its period (Chayka 4970 = 9940 / 2): take the half when it folds nearly as well. A true 9940 folded at 4970
-        // puts its groups over empty halves and scores about 0.7 of its own fold
-        if (best % 2 == 0 && best / 2 >= 4000) {
-            const double zh = foldZ(best / 2, Ftmp);
-            if (zh >= 0.85 * zBest) { best /= 2; zBest = zh; }
+        // a GRI also folds at twice its period (Chayka 4970 = 9940 / 2): when the fold at the found period repeats itself half a period on,
+        // the half is the GRI (a true 9940 has its stations in one place only)
+        if (best % 2 == 0 && best / 2 >= 4000 && foldZ(best, Ftmp) > 0) {
+            const size_t L = Ftmp.size(), h = L / 2;
+            double mu = 0;
+            for (float v : Ftmp) mu += v;
+            mu /= (double)L;
+            double sxy = 0, sxx = 0;
+            for (size_t j = 0; j < L; j++) { const double u = Ftmp[j] - mu, w = Ftmp[(j + h) % L] - mu; sxy += u * w; sxx += u * u; }
+            if (sxx > 0 && sxy / sxx > 0.6) { best /= 2; zBest = foldZ(best, Ftmp); }
         }
         if (best != 0 && zBest >= kGriZMin) gri = best * 10;
     }

@@ -73,6 +73,7 @@ struct Chan {
     psk::VaricodeRx vrx;
     psk::MfskVaricodeRx mrx;     // 8PSK
     int run4 = 0;                // 8PSK: steady symbols in a row (the postamble carrier, not text)
+    int lastE = -1, runE = 0;    // 8PSK: the last phase step (eighth turns) and how often it came in a row
     std::string text;
     std::vector<PskLine> lines;
     bool lineOpen = false;
@@ -377,9 +378,7 @@ struct PskReceiver::Impl {
         if (std::abs(d) < 1e-20f) return;
         const double a = std::arg(d);
         const bool qp = pskQpsk(mode), p8 = psk8psk(mode);
-        // 8PSK: the AFC of the eighth power only pulls in +-baud / 16 and locks just as well one eighth turn per symbol off, so it acquires on
-        // the preamble's reversals with the square (as BPSK, +-baud / 4) and changes to the eighth power once the DCD is on
-        const int order = p8 ? (c.dcd ? 8 : 2) : qp ? 4 : 2;
+        const int order = p8 ? 8 : qp ? 4 : 2;
         const double err = std::arg(std::pow(std::complex<double>(d), order)) / order;
         // quality: 1 for clean decisions, 0 for noise (the phase error spread over its whole range)
         const double en = err / (kPi / order);
@@ -411,8 +410,20 @@ struct PskReceiver::Impl {
             c.setFreq(nf);
         }
         if (p8) {
-            const int e8 = (int)std::lround(a / (kPi / 4));
-            const int sym = psk::psk8Symbol(((e8 % 8) + 8) % 8);
+            const int e8 = (((int)std::lround(a / (kPi / 4)) % 8) + 8) % 8;
+            // the eighth-power AFC locks just as well one eighth turn per symbol (baud / 8) off. The preamble (half turns) and the postamble
+            // (no turn) are long runs of one step: a long run of an odd step is that false lock, and the frequency moves by the eighth turn
+            c.runE = e8 == c.lastE ? c.runE + 1 : 0;
+            c.lastE = e8;
+            if (c.runE >= 16 && (e8 & 1)) {
+                const int diff = (e8 == 1 || e8 == 5) ? 1 : -1;   // 1 -> 0, 5 -> 4: one eighth too many; 3 -> 4, 7 -> 0: one too few
+                c.setFreq(c.f + diff * baud() / 8);
+                c.f0 = c.f;
+                c.runE = 0; c.lastE = -1;
+                c.mrx.reset();
+                return;
+            }
+            const int sym = psk::psk8Symbol(e8);
             c.run4 = sym == 4 ? c.run4 + 1 : 0;
             if (c.dcd) { p8All++; if (sym & 1) p8Odd++; }
             if (c.run4 >= 4) c.mrx.reset();   // the steady carrier would read as spaces
@@ -693,7 +704,7 @@ uint64_t PskReceiver::Impl::trialMode(const std::vector<cf32>& band, int mode, f
     for (const PskSignal& s : t->tel.signals) if (s.chars > 0) text += s.text;
     const double r = autoparam::readableFraction(text.substr(text.size() / 3));
     if (r < 0.85) return 0;
-    return (uint64_t)(1000.0 * (double)(ok - 3 * bad) * r * r / pskBaud(mode));   // per baud: a too-fast decoder runs off short codes, its text per symbol is what is low
+    return (uint64_t)(1000.0 * (double)(ok - 3 * bad) * r * r / pskBaud(mode) / (psk8psk(mode) ? 3.0 : 1.0));   // 8PSK: per bit (three a symbol)   // per baud: a too-fast decoder runs off short codes, its text per symbol is what is low
 }
 std::pair<int, uint64_t> PskReceiver::Impl::trialAll(const std::vector<cf32>& band, float thr) {
     int best = -1;

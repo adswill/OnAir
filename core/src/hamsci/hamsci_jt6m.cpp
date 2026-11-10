@@ -180,6 +180,21 @@ bool jt6mDecodeBlock(const float* x, size_t n, double fs, Jt6mBlock& out, double
     if (std::getenv("HS_DEBUG")) std::fprintf(stderr, "jt6m: score %.2f ph %d sh %d fo %d\n", bestScore, bestPh, bestS, bestFo);
     if (bestScore < 4.0) return false;
     const long nsym = ((long)nh - bestPh) / 4;
+    {   // the shift within a tone either side: the window leaks a strong sync tone -6 dB into the next tone, so a short ping can score nearly the
+        // same one tone off. Over the sync symbols that clearly carry it, the true shift holds the most energy
+        std::vector<long> carry;
+        for (long s = bestFo; s < nsym; s += 3) if (ratio((size_t)(4 * s + bestPh), bestS, 0) > 5.0) carry.push_back(s);
+        if (!carry.empty()) {
+            double bestE = -1;
+            int refined = bestS;
+            for (int sh = std::max(0, bestS - 6); sh <= std::min(sMax, bestS + 6); sh++) {
+                double e = 0;
+                for (long s : carry) e += E[(size_t)(4 * s + bestPh) * (size_t)G + (size_t)sh];
+                if (e > bestE) { bestE = e; refined = sh; }
+            }
+            bestS = refined;
+        }
+    }
     // frames: sync, then the two characters
     std::vector<Jt6mFrame> fr;
     for (long s = bestFo; s + 2 < nsym; s += 3) {
