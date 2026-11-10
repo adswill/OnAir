@@ -161,7 +161,7 @@ private:
         vit_ = std::make_unique<Viterbi>(p_.k15 ? 15 : 7, p_.k15 ? kK15a : kK7a, p_.k15 ? kK15b : kK7b, p_.k15 ? 15 * 12 : 45);
         pair_[0] = pair_[1] = 0; symcounter_ = 0; shreg_ = 1; conf_ = 0; nib_ = 0;
         for (auto& v : symbuf_) v = 0;
-        locked = false; snrDb = 0; offsetHz = 0;
+        locked = false; snrDb = 0; offsetHz = 0; sig2_ = 0; amp2_ = 0; refPos_ = 0;
         tf_ = TextFilter();
     }
     void sample(float v) {
@@ -198,6 +198,7 @@ private:
         const bool burst = mx < 1.2 * (sum / M_);
         if (prevPos_ < 0 || sum < 1e-9) { prevPos_ = pos; return; }
         const double fdiff = (double)(pos - prevPos_) / paths_ / p_.ds;
+        refPos_ = prevPos_;
         prevPos_ = pos;
         int c = (int)std::floor(fdiff + 0.5);
         const bool outOfRange = std::fabs(fdiff) > 17.5 || c == 0 || c == 1 || c > 17 || c < -16;
@@ -206,8 +207,7 @@ private:
         const bool sig = ratio_ >= kLockRatio;
         if (p_.thor) {
             uint8_t s[4];
-            if (burst || outOfRange || !sig) s[0] = s[1] = s[2] = s[3] = 128;
-            else { int v = c; s[3] = (v & 1) ? 255 : 0; v >>= 1; s[2] = (v & 1) ? 255 : 0; v >>= 1; s[1] = (v & 1) ? 255 : 0; v >>= 1; s[0] = (v & 1) ? 255 : 0; }
+            thorSoft(s);
             inl_->symbols(s);
             for (int i = 0; i < 4; i++) pairs(s[i]);
         } else {
@@ -225,6 +225,25 @@ private:
             symbuf_[0] = (uint8_t)(outOfRange || c > 15 ? 0 : c);
             if (++nib_ > 4) nib_ = 4;
         }
+    }
+    // THOR soft bits (3.9 sensitivity pass D): the 16 symbol values are the tone steps of 2 .. 17 tones (modulo the 18) from the last
+    // tone; each one's magnitude is the larger of the bins at the two steps that alias to it, and the bits get their log likelihood ratios
+    // from those (fskSoftBits). The hard decision on the strongest bin, erased below a peak-to-average of 6 or 1.2 (a "burst"), lost THOR16
+    // under -6 dB in 2.5 kHz; it now copies to -11 dB.
+    void thorSoft(uint8_t* s) {
+        double a[16], e2 = 0, mx = 0;
+        const int step = paths_ * p_.ds;
+        for (int m = 0; m < M_; m++) { const double v = bank_.mag(m); e2 += v * v; mx = std::max(mx, v); }
+        for (int c = 0; c < 16; c++) {
+            double v = 0;
+            for (int d : {c + 2, c + 2 - kTones}) { const int j = refPos_ + d * step; if (j >= 0 && j < M_) v = std::max(v, bank_.mag(j)); }
+            a[c] = v;
+        }
+        const double noise = (e2 - mx * mx) / std::max(1, M_ - 1);
+        sig2_ = sig2_ > 0 ? decayAvg(sig2_, noise, 32) : noise;
+        amp2_ = decayAvg(amp2_, std::max(0.0, mx * mx - sig2_), 32);
+        static const unsigned label[16] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15};
+        fskSoftBits(a, 16, label, 4, std::sqrt(amp2_), std::max(sig2_, kSnrCap * amp2_), kSoftGain, s);
     }
     void pairs(uint8_t s) {
         pair_[0] = pair_[1];
@@ -246,6 +265,9 @@ private:
     }
 
     static constexpr double kLockRatio = 6.0;
+    static constexpr double kSoftGain = 32.0, kSnrCap = 0.1;   // as MFSK (hfdig_kbd_mfsk.cpp)
+    double sig2_ = 0, amp2_ = 0;   // noise and signal power per bin, for the soft bits
+    int refPos_ = 0;               // the bin of the previous tone
     static constexpr int kLockConf = 40;
     KbdConfig cfg_;
     IfkP p_;
