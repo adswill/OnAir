@@ -1245,3 +1245,6 @@ Family 360 (std 362, slot 360, block 360-379), one list entry per protocol throu
 
 ## 2026-11-09 Leftover modes (feat38-leftovers)
 Family 600 (std 602 and 603, telemetry 601 and 602, slots 600 and 601), one list entry per protocol. New 802.11n HT receiver (MCS 0-7, 20 MHz, one stream) with wfb-ng / OpenHD frame recognition, structure only. NPR-70 sync detection (network ID, symbol rate). WINMOR pilot detection (raw frame-type tones). All on simulated signals only. Not built: ExpressLRS FLRC (FEC inside the chip, not published), IP400 (depends on ST 802.15.4g packet handling), Mioty and DECT NR+ (large receivers, no signals to test against). docs/LEFTOVERS-3.8.md.
+
+## 2026-11-10 mioty and DECT NR+ (feat38-leftovers)
+Added to family 600 (std 603, one list entry each): mioty TS-UNB uplink receiver (pattern search over the 17 uplink TSMA patterns, Viterbi, CRCs, extension frames, MAC fields; payload stays encrypted) and the DECT NR+ physical control channel on 1.728 MHz (STF, DRS, turbo code, Type 1 / 2 control fields). Generators for both; simulated signals only. docs/LEFTOVERS-3.8.md.
