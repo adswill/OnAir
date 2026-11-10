@@ -30,7 +30,7 @@ static void run(const Cfg& c) {
     tp.plps = {cm, t1, t2a, t2b};
     T2Generator gen(tp);
     const double bw = 8, fn = nativeRateHz(bw);
-    T2Receiver rx; rx.configure(fn, bw); rx.selectPlp(c.wantPlp);
+    T2Receiver rx; rx.configure(fn, bw); rx.selectPlp(c.wantPlp); rx.setBlocking(true);   // every frame decoded: a loaded runner made the decoder drop some
     std::mutex mu; std::vector<PlpResult> res;
     rx.setPlpCallback([&](const PlpResult& r) { std::lock_guard<std::mutex> k(mu); res.push_back(r); });
     std::map<int, std::map<int, std::vector<std::vector<uint8_t>>>> sent;   // plp -> frame -> frames

@@ -470,6 +470,8 @@ public:
     // for the samples to be processed (they are, in order, by a later call). Off (the default) feed() is synchronous: file sources and
     // tests see everything processed when it returns.
     void setPipelined(bool on);
+    // A recording or a test: a PLP frame waits for the error correction instead of being dropped when it falls behind (off: live radios)
+    void setBlocking(bool on);
     bool telemetry(RxTelemetry& out, uint64_t lastSeq);
     // Called (on the receiver thread) for every decoded PLP frame, in order.
     // LDPC compute backend: 0 = CPU, 1 = GPU, 2 = auto (GPU once the CPU can't keep up)

@@ -1687,7 +1687,7 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_custom_bandwidth_all PRIVATE dect2core)
     target_compile_definitions(test_custom_bandwidth_all PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME custom_bandwidth_all COMMAND test_custom_bandwidth_all)
-    set_tests_properties(custom_bandwidth_all PROPERTIES TIMEOUT 1200)   # three engine starts for each of about 300 engine standards; the 3.8 X-band links start at up to 300 Msps
+    set_tests_properties(custom_bandwidth_all PROPERTIES TIMEOUT 1200 RUN_SERIAL TRUE)   # about 900 engine starts: with the full scope's slow tests beside it a Windows runner reached half the modes in the limit (alone: 410 s)   # three engine starts for each of about 300 engine standards; the 3.8 X-band links start at up to 300 Msps
     add_executable(test_mode_numbers tests/app/test_mode_numbers.cpp)   # every family, engine standard and poll slot is unique (docs/MODE-NUMBERS.md)
     target_link_libraries(test_mode_numbers PRIVATE dect2core)
     target_compile_definitions(test_mode_numbers PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
