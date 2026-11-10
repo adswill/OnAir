@@ -712,6 +712,7 @@ static void tsPidsView(App& a) {
                 a.bb.hem ? "high-efficiency" : "normal", a.bb.issyi, a.bb.npd, a.bb.sisMis, a.bb.isi, (unsigned long long)a.bb.resyncs, (unsigned long long)a.bb.crcErrors, (unsigned long long)a.bb.unsupported); ImGui::PopTextWrapPos(); }
     ImGui::PopFont();
     ImGui::Spacing();
+    smart5TvCard(a);   // round-5 smart checks: off air at the source, fault split, cell, interferers (app/smart5)
     if (ImGui::BeginTable("pids", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp, ImVec2(0, -1))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_WidthFixed, 70 * gUi);

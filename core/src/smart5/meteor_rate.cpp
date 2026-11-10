@@ -59,31 +59,60 @@ double MeteorRate::showerTerm(double t) const {
     return x;
 }
 
-static int hourOfDay(double t, double lon) {
-    // local mean solar hour, where the sporadic curve lives
+// local mean solar time in hours, 0 .. 24, where the sporadic curve lives
+static double solarHour(double t, double lon) {
     double h = std::fmod(t / 3600.0 + lon / 15.0, 24.0);
     if (h < 0) h += 24;
-    return (int)h % 24;
+    return h;
+}
+
+// the regressors of the hourly model: the sporadic daily curve as a mean and two harmonics (the morning maximum and its shape), then the shower term
+static void regressors(double t, double lon, double showerTerm, double x[6]) {
+    const double w = 2 * 3.14159265358979323846 * solarHour(t, lon) / 24.0;
+    x[0] = 1; x[1] = std::cos(w); x[2] = std::sin(w); x[3] = std::cos(2 * w); x[4] = std::sin(2 * w); x[5] = showerTerm;
 }
 
 void MeteorRate::refit() {
-    // alternate: the sporadic curve as the per-hour median of (count - k x shower), then k by least squares on the remainder
-    for (int it = 0; it < 6; it++) {
-        std::vector<double> byH[24];
-        for (auto& m : h_) byH[hourOfDay(m.t, lon_)].push_back(m.count - k_ * m.showerTerm);
-        for (int h = 0; h < 24; h++) {
-            if (byH[h].empty()) continue;
-            std::vector<double>& v = byH[h];
-            std::nth_element(v.begin(), v.begin() + v.size() / 2, v.end());
-            sporadic_[h] = std::max(0.0, v[v.size() / 2]);
+    // one least-squares fit over every hour not flagged as an outburst: the smooth sporadic curve and the shower sensitivity together. A curve made
+    // of per-hour medians had only 3 to 8 counts behind each hour in the first days, so its Poisson noise read as outbursts (and its result
+    // depended on the exact random draws of a test, which differ between the C++ libraries).
+    double A[6][7] = {};
+    int n = 0;
+    for (const auto& m : h_) {
+        if (m.outburst) continue;
+        double x[6];
+        regressors(m.t, lon_, m.showerTerm, x);
+        for (int r = 0; r < 6; r++) { for (int c = 0; c < 6; c++) A[r][c] += x[r] * x[c]; A[r][6] += x[r] * m.count; }
+        n++;
+    }
+    if (n < 12) return;
+    for (int r = 0; r < 6; r++) A[r][r] += 1e-6 * (A[r][r] + 1);   // a shower term that stays 0 (no shower active) leaves the system solvable
+    for (int c = 0; c < 6; c++) {   // Gauss-Jordan with partial pivoting
+        int p = c;
+        for (int r = c + 1; r < 6; r++) if (std::fabs(A[r][c]) > std::fabs(A[p][c])) p = r;
+        if (std::fabs(A[p][c]) < 1e-12) return;
+        if (p != c) for (int k = 0; k < 7; k++) std::swap(A[p][k], A[c][k]);
+        for (int r = 0; r < 6; r++) {
+            if (r == c) continue;
+            const double f = A[r][c] / A[c][c];
+            for (int k = c; k < 7; k++) A[r][k] -= f * A[c][k];
         }
-        double num = 0, den = 0;
-        for (auto& m : h_) if (!m.outburst) { num += (m.count - sporadic_[hourOfDay(m.t, lon_)]) * m.showerTerm; den += m.showerTerm * m.showerTerm; }
-        k_ = den > 0 ? std::max(0.0, num / den) : 0;
+    }
+    for (int r = 0; r < 6; r++) coef_[r] = A[r][6] / A[r][r];
+    k_ = std::max(0.0, coef_[5]);
+    for (int h = 0; h < 24; h++) {
+        const double w = 2 * 3.14159265358979323846 * (h + 0.5) / 24.0;
+        sporadic_[h] = std::max(0.0, coef_[0] + coef_[1] * std::cos(w) + coef_[2] * std::sin(w) + coef_[3] * std::cos(2 * w) + coef_[4] * std::sin(2 * w));
     }
 }
 
-double MeteorRate::expected(double t) const { return sporadic_[hourOfDay(t, lon_)] + k_ * showerTerm(t); }
+double MeteorRate::expected(double t) const {
+    double x[6];
+    regressors(t, lon_, showerTerm(t), x);
+    double spor = 0;
+    for (int r = 0; r < 5; r++) spor += coef_[r] * x[r];
+    return std::max(0.0, spor) + k_ * x[5];
+}
 
 void MeteorRate::hour(double t, int count) {
     MeteorHour m; m.t = t; m.count = count; m.showerTerm = showerTerm(t);

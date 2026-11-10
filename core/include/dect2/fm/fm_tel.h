@@ -26,6 +26,11 @@ struct FmTelemetry {
     float stereoPct = 0;        // how much of the stereo difference is in the sound: 100 full stereo, lower = blended towards mono (a weak station)
     bool squelched = false;     // the squelch (setSquelch) holds the sound muted
     float pilotPct = 0;         // pilot injection in % of 75 kHz deviation (a healthy station: 8 - 10)
+    // ITU-R BS.412 (smart5/mpx412.h): the multiplex power integrated over 60 s in dBr (0 dBr = a sine of 19 kHz peak deviation; the usual
+    // limit is +0 dBr), the window being filled, and the peak-deviation points of the same minute
+    bool mpx412Valid = false;   // a whole minute has been measured
+    float mpxPowerDbr = -99, mpxRunningDbr = -99;
+    float devP50Khz = 0, devP99Khz = 0, devP999Khz = 0, over75Pct = 0;
     FmSubcarrierStatus sub;     // RDS2 and SCA subcarriers
     bool rdsSync = false;       // RDS block synchronisation
     float rdsBlockOkPct = 0;    // share of RDS blocks with a good checkword, recent

@@ -291,6 +291,7 @@ void receiver(App& a) {
     if (t.image) kvRow(a, "picture", "%d lines of %d pixels", t.image->rows * 8, dect2::kMeteorWidth);
     kvRow(a, "input", "%.3f Msps, %.1f dBFS", t.inputRate / 1e6, t.levelDb);
     kvRow(a, "signal time", "%.1f s", t.timeSec);
+    smart5WxPassCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void panels(App& a) {

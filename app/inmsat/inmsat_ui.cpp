@@ -693,6 +693,7 @@ void receiver(App& a) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("Decoded: Aero P channels (600, 1200, 10500 bit/s) and Inmarsat-C, all carriers of the capture at once. Aero C (voice) channels: framing and decoding, sound through the codec plug-in you install. Not decoded: R and T channels (aircraft to satellite, 1626 to 1660 MHz).");
     ImGui::PopTextWrapPos();
+    smart5LbandCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void status(App& a) {

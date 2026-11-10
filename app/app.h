@@ -838,6 +838,14 @@ void insightWindow(App& a);                         // insight_ui.cpp: View > In
 void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float snr);   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
 bool wmbusIsMine(const std::string& meterKey);       // insight_ui.cpp: the wM-Bus meters the user marked as their own (leak check)
 void wmbusSetMine(const std::string& meterKey, bool mine);
+std::string insightBustedHint(const std::string& call, std::string* why);
+bool insightPagerAutomatic(const char* protocol, uint32_t address);   // insight_ui.cpp: the capcode sends automatic or test pages (the pager view's hide switch)   // insight_ui.cpp: the call a decoded one is probably a busted copy of, "" if none   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
+// app/smart5: the round-5 smart cards in the mode screens (docs/SMART5-UI-3.9.md); fed every frame by smart5Tick (from insightWindow)
+void smart5FmCard(App& a); void smart5AmCard(App& a); void smart5DabCard(App& a); void smart5DrmCard(App& a); void smart5HdCard(App& a);
+void smart5TvCard(App& a); void smart5DvbsCard(App& a); void smart5AtvCard(App& a);
+void smart5WxPassCard(App& a); void smart5GeoCard(App& a); void smart5LbandCard(App& a); void smart5CubeCard(App& a);
+void wmbusMineTick(App& a); void wmbusMineView(App& a);   // app/wmbus/wmbus_mine_ui.cpp: the user's own meters (use per hour and day)
+void smart5GnssCard(App& a); void smart5AstroCard(App& a); void smart5SidCard(App& a); void smart5MeteorCard(App& a);
 void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
 void stationAntennaFor(const App& a, bool& known, bool& forBand);   // station_ui.cpp: for the doctor's coach: is an antenna entered, and does one suit the tuned frequency

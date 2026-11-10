@@ -134,6 +134,7 @@ void receiver(App& a) {
     if (!t.satellites.empty()) ImGui::Text("%s: %s", tr("Satellites"), t.satellites.c_str());
     if (!t.network.empty()) ImGui::Text("%s: %s", tr("Network"), t.network.c_str());
     ImGui::Text("%s: %llu / %llu", tr("FEC blocks good / bad"), (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
+    smart5LbandCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void list(App&) {}

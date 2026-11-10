@@ -6,6 +6,7 @@
 #include "dect2/insight/live.h"
 #include <ctime>
 #include "dect2/airports/airports.h"
+#include "../smart5/smart5_ui.h"
 #include <deque>
 #include <unordered_map>
 #include "app.h"
@@ -56,7 +57,11 @@ void outlandFeed(const dect2::FlarmTelemetry& t) {
         dect2::TrafficFix f; f.id = ac.id; f.t = now - ac.ageSec; f.lat = ac.lat; f.lon = ac.lon; f.altM = ac.altM;
         f.speedMs = ac.speedKmh / 3.6; f.climbMs = ac.climbMs; f.reportsGround = !ac.airborne;
         dect2::OutlandingAlert al;
-        if (gOut.add(f, &al)) { gOutAlerts.push_back(al); if (gOutAlerts.size() > 50) gOutAlerts.pop_front(); }
+        if (gOut.add(f, &al)) {
+            gOutAlerts.push_back(al); if (gOutAlerts.size() > 50) gOutAlerts.pop_front();
+            char key[16]; snprintf(key, sizeof key, "%06X", (unsigned)(al.id & 0xFFFFFF));
+            s5ui::post("aviation", "outlanding", 1, key, std::string("FLARM ") + key + ": " + al.text);   // View > Insights, insight.outlanding
+        }
     }
 }
 void outlandView() {

@@ -1,5 +1,6 @@
 // HF ALE receiver (see ale_rx.h).
 #include "dect2/ale/ale_rx.h"
+#include "dect2/automation/engine.h"
 #include "dect2/ale/ale_lqa.h"
 #include "dect2/results/results_io.h"
 #include "dect2/ale/ale_tel.h"
@@ -262,6 +263,11 @@ struct AleReceiver::Impl {
                 }
         }
         events.push_back(e);
+        if (!e.from.empty() && e.dialHz > 0 && automation::wants(automation::FMsg)) {   // rules, integrations and the learned sounding schedules (insight/schedule_watch.h)
+            automation::Event ex;
+            ex.str("station", e.from).str("to", e.to).str("call_type", e.type);
+            automation::emitMessage("ale", "ALE", e.dialHz, e.from, e.type + " " + e.from + (e.to.empty() ? "" : " to " + e.to), e.snrDb, std::move(ex));
+        }
         if (!e.from.empty() && e.dialHz > 0) {   // the link-quality memory (ale_lqa.h): every call heard is a measurement of the path from that station
             AleLqaObs q; q.utc = e.utc; q.station = e.from; q.hz = e.dialHz; q.snrDb = e.snrDb; q.ber = e.ber; q.sounding = e.type == "Sounding";
             AleLqa::global().add(q);

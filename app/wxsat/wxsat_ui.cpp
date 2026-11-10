@@ -339,6 +339,7 @@ void receiver(App& a) {
             ImGui::TreePop();
         }
     }
+    smart5WxPassCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 template<int P>

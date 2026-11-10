@@ -1479,3 +1479,16 @@ STANAG 4529, CLOVER-II, PAX/PAX2 and Link 11 SLEW are skipped because no bit-lev
 Everything was tested on simulated signals only. Details are in docs/HF-MIL-3.9.md.
 ## 2026-11-11 DVB-C2 (feat39-dvbc2)
 Branch feat39-dvbc2 on integ-39, family 741 (engine standard 743). A new mode row DVB-C2 (EN 302 769): shared code in core/src/dvbc2 (reference sequences, pilots, Reed-Muller headers, L1 part 2 fields and coding on DVB-T2's L1-post code, the FEC of the PLPs on DVB-T2's and DVB-S2's LDPC tables, the data slice time interleaver and the 4K frequency interleaver), a generator (one C2 system of up to 7.61 MHz with data slices, PLPs and notches, echo, clock error, carrier offset, noise; the mode's test signal) and a receiver (guard interval timing, absolute carrier index from the preamble pilots, L1, Data Slice Types 1 and 2, 16 to 256-QAM, transport stream to the TV player). t2l1.h exposes the shortened and punctured 16K signalling block. Tests: tests/dvbc2/test_dvbc2.cpp (sequences, headers, L1, FEC, receiver round trips with offsets, clock error, echo, notch, time interleaving, unknown centre). 1024/4096-QAM, GSE and reserved tones are not done. Simulated signals only; details and the open points in docs/DVBC2-3.9.md.
+
+### 2026-11-11: round-5 smart features in the app (feat39-smartui)
+- Wired 25 of the 26 smart5a engines into their mode screens, each as a "Smart checks" card with the tables under Details. They feed from a tick that runs every frame. Findings go to View > Insights, which has new Broadcast and TV and Satellites and science tabs, and out as insight.* automation events (added to the catalog). The HD Radio blend alignment is not wired: the HD receiver has no analogue host audio.
+- New receiver data:
+  - the FM receiver measures ITU-R BS.412 multiplex power
+  - analogue TV hands over its blanking lines, averaged over 16 fields, for the VITS analyser
+  - the SI collector keeps the NIT cell_list_descriptor
+  - Zigbee frames keep their MAC sequence number and ack request
+  - the ATV generator can send test lines
+- smart5b leftovers: an FT8 busted-call hint, "Hide automatic pages" in the pager view, and msg.* events from WEFAX, ALE (per station), SITOR-B, PACTOR-I and the HF utility modes, so the overdue alerts can learn from them.
+- smart5c partials: out-landings for ADS-L with the FLARM / OGN packets heard beside them, DJI drone airspace alerts, a wM-Bus Mine view, and Zigbee / Thread home-network health.
+- Fixed smart5_science on macOS. The cause was std::poisson_distribution, which differs between libc++ and libstdc++. The meteor-rate sporadic curve is now one smooth least-squares fit. Seed sweep: 2 of 40 fail, was 7 of 40.
+- Simulated only. Details are in docs/SMART5-UI-3.9.md.

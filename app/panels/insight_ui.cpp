@@ -8,10 +8,12 @@
 #include <cctype>
 #include <fstream>
 #include <sstream>
+#include "../smart5/smart5_ui.h"
 #include <algorithm>
 #include <cstdio>
 #include <ctime>
 #include <deque>
+#include <map>
 #include <set>
 
 namespace in = dect2::insight;
@@ -470,8 +472,43 @@ void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float
     in::live().onFtx(slotUtc, in::hamBand(dialHz), msg, snr);
 }
 
+// the pager view's "Hide automatic pages": the capcode sends automatic or test pages (the hub's key is "<protocol> <address>"); cached a few seconds
+bool insightPagerAutomatic(const char* protocol, uint32_t address) {
+    static std::map<std::string, bool> cache;
+    static double at = 0;
+    if (!S.on) return false;
+    const double now = ImGui::GetTime();
+    if (now - at > 3) { cache.clear(); at = now; }
+    const std::string key = std::string(protocol) + " " + std::to_string(address);
+    auto it = cache.find(key);
+    if (it == cache.end()) {
+        bool v = false;
+        in::live().with([&](in::Hub& h) { v = h.pagerPatterns().automatic(key); });
+        it = cache.emplace(key, v).first;
+    }
+    return it->second;
+}
+
+// the FT8 / FT4 / JS8 view: "" or the call this one is probably a busted copy of (one character from a call heard often); cached a few seconds
+std::string insightBustedHint(const std::string& call, std::string* why) {
+    static std::map<std::string, std::pair<std::string, std::string>> cache;
+    static double at = 0;
+    if (!S.on || call.empty() || call[0] == '<') return {};
+    const double now = ImGui::GetTime();
+    if (now - at > 3) { cache.clear(); at = now; }
+    auto it = cache.find(call);
+    if (it == cache.end()) {
+        in::BustVerdict v;
+        in::live().with([&](in::Hub& h) { v = h.bustedCalls().check(call); });
+        it = cache.emplace(call, std::make_pair(v.likely, v.why)).first;   // only a likely call counts: FT8 messages hold non-call words too
+    }
+    if (why) *why = it->second.second;
+    return it->second.first;
+}
+
 void insightWindow(App& a) {
     tick(a);
+    smart5Tick(a);   // the round-5 engines of broadcast, TV, satellites, GNSS and science (app/smart5), whatever screen is open
     if (!a.insightOpen) return;
     firstWindowSize(760 * gUi, 460 * gUi);
     if (!ImGui::Begin(trw("Insights"), &a.insightOpen)) { ImGui::End(); return; }
@@ -485,6 +522,8 @@ void insightWindow(App& a) {
         if (ImGui::BeginTabItem(trw("Aviation"))) { in::live().with([now](in::Hub& h) { aviationTab(h, now); }); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(trw("Marine"))) { in::live().with([now](in::Hub& h) { marineTab(h, now); }); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(trw("IoT"))) { in::live().with([now](in::Hub& h) { iotTab(h, now); }); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(trw("Broadcast and TV"))) { smart5InsightBroadcast(a); smart5InsightTv(a); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(trw("Satellites and science"))) { smart5InsightSat(a); smart5InsightSci(a); ImGui::EndTabItem(); }
         ImGui::EndTabBar();
     }
     if (ImGui::CollapsingHeader(trw("Advanced"))) {

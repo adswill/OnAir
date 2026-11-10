@@ -961,6 +961,7 @@ void receiver(App& a) {
     ImGui::TextDisabled("DRM+ (mode E, 100 kHz) needs a radio rate of at least 100 ksps. Below 30 MHz a HackRF needs an upconverter or a long antenna.");
     ImGui::PopTextWrapPos();
     ImGui::EndChild();
+    smart5DrmCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 // ---------------------------------------------------------------- the test signal
