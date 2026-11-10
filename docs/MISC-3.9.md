@@ -29,6 +29,10 @@ Every result here comes from simulated signals only. No recording of a real on-a
   - 8, 11.025, 24 and 48 kHz audio
   - two overlapping signals
 - `tests/hamsci/test_hamsci_rx.cpp` runs JT6M through the engine front end at 600 ksps.
+- Measured (CI, simulated signals):
+  - Over 10 seeds with 3 s of signal, the call signs decoded every time from +10 down to -6 dB (SNR in 2500 Hz), and 4 of 10 at -10 dB.
+  - A 28 s continuous signal at -6 dB folds to its full 18-character message.
+  - The tuning error is read within a few Hz.
 - Simulated only.
 
 ### 8PSK125 and 8PSK250 (PSK mode, modulation 7 and 8)
@@ -39,7 +43,13 @@ Every result here comes from simulated signals only. No recording of a real on-a
   - IZ8BLY MFSK varicode.
   - Preamble: reversals and a NUL. Postamble: three NULs and a steady carrier.
 - Read from fldigi `src/psk/psk.cxx` (GPL-3). The code is new: `core/src/psk/psk_varicode.cpp`, the 8PSK branch in `psk_rx.cpp`, `psk_gen.cpp` and `ham_kbd.cpp`.
-- Both appear in the PSK modulation list, Auto included. They also appear in the shortwave route options and the keyboard transmit renderer.
+- Both are in the PSK modulation list, the shortwave route options and the keyboard transmit renderer.
+- They are chosen by hand and **not by Auto**. A BPSK or QPSK signal read as 8PSK also gives text, and 8PSK needs about 8 dB more SNR. Auto therefore stays with BPSK and QPSK; fldigi users pick 8PSK by hand or by RSID.
+- Acquisition happens on the preamble. The eighth-power AFC can lock one eighth turn per symbol (baud / 8) off. A long run of one odd phase step (the preamble or postamble in a false lock) moves the frequency by that amount. Without a preamble (joining mid-transmission), the receiver still decodes once it is on the right frequency, but it has no check against that false lock.
+- Differential 8PSK makes about 3 % symbol errors at 18 dB in its bandwidth, so the round trips run at 27 - 28 dB.
+- Measured on simulated signals:
+  - 2 of 2 seeds decoded the call sign at 30, 26, 22 and 18 dB.
+  - With drift, a clock error and a 45 Hz tuning error, the first characters after the preamble can still come out wrong while the loops settle. The rest of the message is right.
 - `tests/psk/test_psk_8psk.cpp` covers:
   - the phase map and the varicode round trip
   - tuning errors of +-60 Hz, drift of 3 Hz/min and clock errors of 40 ppm
@@ -55,7 +65,9 @@ Every result here comes from simulated signals only. No recording of a real on-a
 - **PSK63, PSK125, PSK250, QPSK31, QPSK63:** already modulations of the PSK mode (BPSK31/63/125/250, QPSK31/63/125).
 - **EDACS control channel:** the EDACS trunking mode (family 130).
 - **ETCS Eurobalise up-link (SUBSET-036):** the EBICab / Eurobalise mode (family 207, `core/src/ebicab`) already decodes SUBSET-036 telegrams.
-- **Chayka:** it sends the same 100 kHz pulse groups as Loran-C, so the eLoran / Loran-C mode's blind GRI search already finds it. This branch adds the Chayka GRIs 4970, 5960, 5970 and 8000 to the chain table and the sweep test (commit "feat(eloran): name the Chayka chains").
+- **Chayka:** it sends the same 100 kHz pulse groups as Loran-C, so the eLoran / Loran-C mode's blind GRI search finds it. This branch:
+  - adds the Chayka GRIs 4970, 5960, 5970 and 8000 to the chain table and the sweep test.
+  - fixes the GRI search for 4970: 4970 is exactly half of 9940, and the search took 9940. When the fold at the found period repeats itself half a period on, the half is now taken. A true 9940 still reads as 9940 in the sweep.
 
 ## Skipped, and why
 

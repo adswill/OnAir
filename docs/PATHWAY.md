@@ -1346,3 +1346,15 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-11 feat39-misc: JT6M, 8PSK125/250, Chayka
+Branch feat39-misc on integ-39, details in docs/MISC-3.9.md.
+- New: JT6M (family 750, ham science kind 9: pings, tuning error, folded message) and fldigi 8PSK125 / 8PSK250 without FEC (PSK modulations 7 and 8, chosen by hand, not in Auto).
+- The Chayka GRIs are now named in eLoran, and the 4970 / 9940 half-period mix-up is fixed.
+- Already in OnAir: G3RUH 9600 packet, PSK63/125/250 and QPSK31/63, the EDACS control channel, Eurobalise SUBSET-036.
+- Skipped:
+  - GE-Star: no public spec.
+  - FreeDV 2020/2020B: the shipped codec2 has no LPCNet, and no native modem was written.
+  - TETRA TEDS: a separate QAM air interface, not started.
+  - 8PSK500/1000 and the 8PSK FEC variants.
+- Tests: the quick CI on GitHub (run 42893881567) passed 13 of 13. Simulated signals only.
