@@ -136,6 +136,50 @@ int main() {
             CHECK(off < 60, "no energy at another tone: %.0f Hz", off);
         }
     }
+    // #373: "Send analog NFM" sends NFM whatever TxRequest::kind holds (FT8's message type, the 1 the airband panel leaves there); the general
+    // receiver sends the audio with its test signal's modulation pick (synth.modeOpt[0]: 0 NFM, 2 AM, 3 USB, 4 LSB), not with kind
+    {
+        // FM: a constant envelope and the 1 kHz sidebands alike on both sides; USB: the tone only above the dial; AM: the envelope moves
+        auto look = [&](const std::vector<cf32>& y, double off, double& envSpread, double& upDb, double& downDb) {
+            double lo = 1e9, hi = 0;
+            for (size_t i = 60000; i < y.size(); i++) { const double e = std::abs(y[i]); lo = std::min(lo, e); hi = std::max(hi, e); }
+            envSpread = hi > 0 ? (hi - lo) / hi : 1;
+            upDb = db(powerAt(y, -off + 1000, fs, 60000));
+            downDb = db(powerAt(y, -off - 1000, fs, 60000));
+        };
+        for (const char* id : {"nxdn", "dpmr", "tetra", "general"}) {
+            const TxModeSpec* m = txModeById(id);
+            CHECK(m != nullptr, "mode %s", id);
+            if (!m) continue;
+            const double off = txModeTuneOffsetHz(*m);
+            for (int kind : {0, 1, 2, 3}) {
+                TxRequest v; v.modeId = id; v.analogVoice = true; v.kind = kind; v.toneHz = 1000; v.audioSrc = 2; v.deviationHz = 2500;
+                v.opt["audio.hpHz"] = 0; v.opt["audio.lpHz"] = 0;
+                auto y = make(id, v, fs, n);
+                CHECK(!y.empty(), "%s analog fall-back generator", id);
+                if (y.empty()) continue;
+                double spread, up, down;
+                look(y, off, spread, up, down);
+                CHECK(spread < 0.02, "%s kind %d: the fall-back is FM (constant envelope), the envelope moves by %.1f %%", id, kind, spread * 100);
+                CHECK(std::fabs(up - down) < 1.0 && up > -30, "%s kind %d: FM sidebands at +-1 kHz %.1f / %.1f dB", id, kind, up, down);
+            }
+        }
+        const double goff = txModeTuneOffsetHz(*txModeById("general"));
+        for (int pick : {0, 2, 3, 4}) {
+            TxRequest v; v.modeId = "general"; v.analogVoice = true; v.kind = pick == 0 ? 2 : 0; v.toneHz = 1000; v.audioSrc = 2; v.deviationHz = 2500;
+            v.opt["audio.hpHz"] = 0; v.opt["audio.lpHz"] = 0;
+            v.synth.modeOpt[0] = pick;
+            auto y = make("general", v, fs, n);
+            CHECK(!y.empty(), "general pick %d", pick);
+            if (y.empty()) continue;
+            double spread, up, down;
+            look(y, goff, spread, up, down);
+            if (pick == 0) CHECK(spread < 0.02 && std::fabs(up - down) < 1.0, "general NFM pick: FM (envelope %.1f %%, %.1f / %.1f dB)", spread * 100, up, down);
+            if (pick == 2) CHECK(spread > 0.3 && std::fabs(up - down) < 1.0, "general AM pick: AM (envelope %.1f %%, %.1f / %.1f dB)", spread * 100, up, down);
+            if (pick == 3) CHECK(up > down + 30, "general USB pick: the tone above the dial (%.1f / %.1f dB)", up, down);
+            if (pick == 4) CHECK(down > up + 30, "general LSB pick: the tone below the dial (%.1f / %.1f dB)", up, down);
+        }
+    }
     printf(fails ? "%d failure(s)\n" : "all passed\n", fails);
     return fails ? 1 : 0;
 }

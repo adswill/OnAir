@@ -84,7 +84,7 @@ bool Engine::placeSecondary(std::string& why) {
     DeviceInfo::Kind k;
     { std::lock_guard<std::mutex> lk(tuneMu_); k = lastDev_.kind; }
     const bool file = k == DeviceInfo::File;
-    const double toff = file || k == DeviceInfo::Audio || !mt ? 0.0 : mt->tuneOffsetHz;
+    const double toff = file || k == DeviceInfo::Audio || k == DeviceInfo::Hamlib || !mt ? 0.0 : mt->tuneOffsetHz;
     const double vc = hz + toff;
     secShift_ = vc - centre;
     placeReceiver(activeStdFor(sm), -toff, file ? 0.0 : vc, file ? 0.0 : hz, hz);

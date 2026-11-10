@@ -516,7 +516,7 @@ void Engine::placeReceiverAsPrimary(int a) {
     DeviceInfo::Kind k;
     { std::lock_guard<std::mutex> lk(tuneMu_); t = lastTune_; k = lastDev_.kind; }
     const bool file = k == DeviceInfo::File;
-    const bool noOff = file || k == DeviceInfo::Audio;
+    const bool noOff = file || k == DeviceInfo::Audio || k == DeviceInfo::Hamlib;
     const ModeTuning* mt = modeTuning(stdMode_.load());
     placeReceiver(a, mt && !noOff ? -mt->tuneOffsetHz : 0.0, file ? 0.0 : radioTune(t).centerHz, file ? 0.0 : t.centerHz, t.centerHz);
 }

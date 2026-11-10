@@ -535,7 +535,7 @@ void toolbar(App& a) { toolbarParts(a, TbAll, false); }
 static double dialMhzFromAbs(const App& a, double absMhz) {
     const ModeTuning* mt = a.family >= 6 ? modeTuning(a.family + 2) : nullptr;
     const bool file = !a.devices.empty() && a.devIdx >= 0 && a.devIdx < (int)a.devices.size() &&
-                      (a.devices[a.devIdx].kind == DeviceInfo::File || a.devices[a.devIdx].isAudio());
+                      (a.devices[a.devIdx].kind == DeviceInfo::File || a.devices[a.devIdx].tunesAtDial());
     return dect2::dialMhzFromClick(absMhz, mt && !file ? mt->tuneOffsetHz : 0.0);   // the axis is the real RF: the clicked signal is the dial (#219)
 }
 
@@ -640,7 +640,7 @@ void secondModeControl(App& a, bool vertical) {
     if (pick >= 0) {   // the same check the engine makes, with what the radio runs at (or will)
         const bool run = a.engine.running();
         const ModeTuning* pt = modeTuning(engineStd(a));
-        const double centre = run ? a.engine.captureCentreHz() : a.tune.centerHz + (pt && a.devices[a.devIdx].kind != DeviceInfo::File ? pt->tuneOffsetHz : 0);
+        const double centre = run ? a.engine.captureCentreHz() : a.tune.centerHz + (pt && a.devices[a.devIdx].kind != DeviceInfo::File && !a.devices[a.devIdx].tunesAtDial() ? pt->tuneOffsetHz : 0);
         const double rate = run ? a.engine.sampleRate() : a.tune.sampleRate;
         const std::string why = Engine::secondaryCheck(engineStd(a), kModes[pick].family + 2, centre, rate, mhz * 1e6);
         if (!why.empty()) ImGui::TextColored(ImVec4(0.95f, 0.72f, 0.3f, 1), "%s", why.c_str());

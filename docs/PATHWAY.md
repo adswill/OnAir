@@ -1341,3 +1341,5 @@ New tests cover:
 - end-to-end decoding at the clicked audio frequency, with offsets and noise
 
 Syntax-checked locally (on battery). The tests run in CI. Simulated signals only. Details are in docs/HELL-3.8.md.
+## 2026-11-10 feat38-bugs: open GitHub bugs
+Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode selector and each other, so Touch, New interface, Server and the language did nothing on small windows), #358 (Hamlib rigs were tuned dial + the mode's tuneOffsetHz, 20 kHz high for FT8; the shipped macOS Info.plist had no microphone, camera or location texts, so macOS never asked; sound card ids are device UIDs now) and #373 (the analog fall-back took its modulation from an unrelated field; the general receiver ignored its Modulation pick). Regression tests: top_row, hamlib_dial, macos_plist, tx_params. Syntax-checked locally only (battery rule), tests in CI. #319 not reproduced; the linked log is from another session. What to ask the reporters is in docs/BUGS-3.8.md.
