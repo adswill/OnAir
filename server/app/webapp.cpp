@@ -147,6 +147,7 @@ std::string WebApp::statusJson() {
     const dect2::webschema::WebModeRow* rows = dect2::webschema::webModeRows(n);
     const dect2::webschema::WebModeRow* row = nullptr;
     for (int i = 0; i < n && !row; i++) if (rows[i].engineStd == family && rows[i].sub[0] && id == rows[i].sub) row = &rows[i];
+    for (int i = 0; i < n && !row; i++) if (rows[i].sub[0] && id == rows[i].sub) row = &rows[i];   // a sub-mode the server lists under another number
     for (int i = 0; i < n && !row; i++) if (rows[i].engineStd == family && !rows[i].sub[0]) row = &rows[i];
     s += ",\"row\":";
     if (row) s += "{\"family\":" + std::to_string(row->family) + ",\"name\":" + jsonStr(row->name) + ",\"sub\":" + jsonStr(row->sub) + ",\"group\":" + std::to_string(row->group) + ",\"standard\":" + std::to_string(row->standard) + "}";
@@ -222,7 +223,12 @@ bool WebApp::control(const std::string& what, const std::map<std::string, JsonVa
         const dect2::webschema::WebModeRow* rows = dect2::webschema::webModeRows(n);
         for (int i = 0; i < n; i++) {
             if (rows[i].family != (int)fam || sub != rows[i].sub) continue;
-            if (!host_.setMode(rows[i].engineStd, rows[i].sub, e)) { status = 400; json = "{\"error\":" + jsonStr(e) + "}"; }
+            if (host_.setMode(rows[i].engineStd, rows[i].sub, e)) return true;
+            // a row whose protocol the server lists under another number (NPR-70: row 600, the server's "npr" sub-mode): by its id, else the family alone
+            const onair_server::ModeEntry* m = rows[i].sub[0] ? host_.findMode(rows[i].sub) : nullptr;
+            if (m && host_.setMode(m->family, m->sub, e)) return true;
+            if (rows[i].sub[0] && host_.setMode(rows[i].engineStd, "", e)) return true;
+            status = 400; json = "{\"error\":" + jsonStr(e) + "}";
             return true;
         }
         status = 404; json = "{\"error\":\"no such mode\"}";
