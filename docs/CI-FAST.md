@@ -26,6 +26,7 @@ The C++ tests stay the reference. They are in the smoke set of `tools/ci_select.
 - Test timeouts are as before the shards: 600 s, 1500 s only for the full list.
 - ccache per OS and shard, restored from the newest older run (any shard of that OS when the shard has none), saved also when a run fails, in `ci.yml`, `ci-full.yml`, `release.yml` and `android.yml`.
 - The required checks "Linux x86_64", "macOS arm64", "Windows x64 (MinGW-w64)" are gather jobs that pass when their shards pass.
+- 3.9: shards balanced by measured time (`tools/ci_times.tsv`), shared files followed through the includes, shorter default runs of the slowest tests with `ONAIR_TEST_LONG=1` for the whole sweeps, and the cache policy: see `docs/CI-SPEED-3.9.md`.
 - Locally: `tools/fast_check.sh [--scope wide|smoke|full] [--base REF]` does the same with `nice` and -j2.
 
 ## Release: `tools/release/release.sh <x.y.z> [--publish]`

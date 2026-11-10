@@ -1346,3 +1346,16 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 CI speed (feat39-cispeed)
+Measured ci.yml on integ-38: in a warm run, 381 runner-min and 55 min of wall time. Tests take 80 % of that, and the slowest 35 tests are a third of the test time. The hashed shards were uneven. The Actions cache was over its 10 GB, and main had no ccache, so every new branch built cold.
+
+Changes:
+- 46 slow tests are shorter by default. ONAIR_TEST_LONG=1 (tests/common/test_long.h) runs the full sweeps on tags and in the nightly Full CI.
+- Shards are balanced by measured time (tools/ci_times.tsv, tools/ci_times.py) and ctest gets cost data.
+- macOS has 3 shards.
+- ccache is saved only by main and integ-*. A nightly warm-up saves to main's cache for every branch.
+- The apt .debs are cached, the disk is freed in the background, and Windows links with lld.
+- Shared files are followed through the include graph (tools/test_ci_select.py runs in the gate).
+
+Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
