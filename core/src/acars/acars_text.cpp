@@ -987,11 +987,6 @@ static bool interpretOne(const std::string& label, const std::string& text, Acar
         ok = w.pos(dirOf(t[27]) * (atof(t.substr(28, 2).c_str()) + atof(t.substr(30, 4).c_str()) / 60), dirOf(t[34]) * (atof(t.substr(35, 3).c_str()) + atof(t.substr(38, 4).c_str()) / 60));
         if (ok && digits(t.substr(45, 3))) w.f("Ground speed", t.substr(45, 3) + " kn");
     }
-    else if (l == "QQ" && t.size() >= 12 && airport(t.substr(0, 4)) && airport(t.substr(4, 4)) && digits(t.substr(8, 4))) {
-        w.kind("OOOI: wheels off", ACARS_READ_OOOI);
-        w.dep(t.substr(0, 4)); w.arr(t.substr(4, 4)); w.time("Off", t.substr(8, 4));
-        ok = true;
-    }
     else if (l == "1J" || l == "2J" || l == "2A" || l == "4J") ok = arinc702(t, w);
     if (!ok) { o = AcarsReading(); return false; }
     return true;
