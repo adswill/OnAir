@@ -11,6 +11,15 @@ on:
       targets:
         description: "extra CMake targets to build (optional)"
         default: ""
+      cmake_args:
+        description: "extra configure flags, e.g. -DDECT2_SANITIZE=ON (optional; no ccache reuse then)"
+        default: ""
+      env:
+        description: "space-separated NAME=value pairs set for the tests, e.g. ONAIR_TEST_LONG=1 (optional)"
+        default: ""
+      timeout:
+        description: "ctest --timeout in seconds for tests without their own"
+        default: "900"
       os:
         description: "linux or macos"
         type: choice
@@ -49,9 +58,10 @@ jobs:
             ccache-${{ inputs.os }}-quick-
             ccache-${{ inputs.os }}-
       - name: Configure
+        env: { EXTRA_CMAKE: "${{ inputs.cmake_args }}" }
         run: |
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD $EXTRA_CMAKE
       - name: Build
         env: { TESTS: "${{ inputs.tests }}", EXTRA: "${{ inputs.targets }}" }
         run: |
@@ -65,7 +75,8 @@ jobs:
         uses: actions/cache/save@v6
         with: { path: .ccache, key: "ccache-${{ inputs.os }}-quick-${{ github.sha }}" }
       - name: Test
-        env: { TESTS: "${{ inputs.tests }}" }
+        env: { TESTS: "${{ inputs.tests }}", TEST_ENV: "${{ inputs.env }}", TEST_TIMEOUT: "${{ inputs.timeout }}" }
         run: |
+          for kv in $TEST_ENV; do export "$kv"; done
           R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
-          ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900
+          ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout "$TEST_TIMEOUT"
