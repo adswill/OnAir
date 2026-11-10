@@ -621,7 +621,7 @@ struct SyncScan {
     uint64_t pos = 0, sh = 0;
     struct Pend { uint64_t start; bool inv; };
     std::deque<Pend> pend;
-    std::function<bool(std::vector<float>&, bool inv, uint64_t start)> done;     // true: a frame (the syncs inside it are skipped)
+    std::function<size_t(std::vector<float>&, bool inv, uint64_t start)> done;   // the bits the frame took (0: none; the syncs inside it are skipped)
     uint64_t skipUntil = 0;
     uint64_t syncs = 0;
     void init(uint64_t s, int l, int e, size_t n) {
@@ -651,7 +651,8 @@ struct SyncScan {
             if (p.start < skipUntil) continue;
             std::vector<float> v(need);
             for (size_t i = 0; i < need; i++) { const float x = ring[(size_t)((p.start + i) & (ring.size() - 1))]; v[i] = p.inv ? -x : x; }
-            if (done && done(v, p.inv, p.start)) skipUntil = p.start + need;
+            const size_t used = done ? done(v, p.inv, p.start) : 0;
+            if (used) skipUntil = p.start + std::min(used, need);
         }
     }
 };
@@ -697,21 +698,25 @@ void MoreHunter::configure(const MoreConfig& c) {
     I.u482c.done = [this](std::vector<float>& v, bool inv, uint64_t st) {
         std::vector<uint8_t> b = hardBytes(v), pk;
         int rs = -1, fl = 0;
-        if (!u482cDecode(b.data(), b.size(), pk, rs, fl)) { failed++; return false; }
+        if (!u482cDecode(b.data(), b.size(), pk, rs, fl)) { failed++; return (size_t)0; }
         MoreFrame f; f.framing = U482c; f.name = "U482C"; f.data = pk; f.rsErrors = rs; f.inverted = inv; f.bitPos = st;
         f.how = std::string("Golay") + ((fl & kU482cConv) ? " + Viterbi" : "") + ((fl & kU482cRs) ? " + Reed-Solomon" : "");
         p_->emit(f);
-        return true;
+        const int lf = golayDecode(((uint32_t)b[0] << 16) | ((uint32_t)b[1] << 8) | b[2]);
+        return (size_t)(3 + (lf & 0xFF)) * 8;
     };
     I.ngham.init(kSyncNgham, 32, c.syncErrNgham, (3 + 255) * 8);
     I.ngham.done = [this](std::vector<float>& v, bool inv, uint64_t st) {
         std::vector<uint8_t> b = hardBytes(v), pl;
         int rs = -1;
-        if (!nghamDecode(b.data(), b.size(), pl, rs)) { failed++; return false; }
+        if (!nghamDecode(b.data(), b.size(), pl, rs)) { failed++; return (size_t)0; }
         MoreFrame f; f.framing = Ngham; f.name = "NGHam"; f.data = pl; f.rsErrors = rs; f.inverted = inv; f.bitPos = st;
         f.how = rs > 0 ? "Reed-Solomon + CRC-16" : "CRC-16";
         p_->emit(f);
-        return true;
+        const uint32_t tag = ((uint32_t)b[0] << 16) | ((uint32_t)b[1] << 8) | b[2];
+        int best = 0, bd = 99;
+        for (int i = 0; i < 7; i++) { const int d = __builtin_popcount(tag ^ kNghTag[i]); if (d < bd) { bd = d; best = i; } }
+        return (size_t)(3 + kNghCw[best]) * 8;
     };
     auto mobDone = [this](bool nx) {
         return [this, nx](std::vector<float>& v, bool inv, uint64_t st) {
@@ -720,14 +725,14 @@ void MoreHunter::configure(const MoreConfig& c) {
             int variant = nx ? cfg_.mobitexVariant : MobitexDefault;
             bool ok = mobitexDecode(b.data(), b.size(), variant, mf);
             if (!ok && nx && variant == MobitexDefault) { variant = MobitexBeesat1; ok = mobitexDecode(b.data(), b.size(), variant, mf); }
-            if (!ok) { failed++; return false; }
+            if (!ok) { failed++; return (size_t)0; }
             MoreFrame f; f.framing = Mobitex; f.inverted = inv; f.bitPos = st; f.data = mf.reframed; f.callsign = mf.callsign;
             f.name = variant == MobitexBeesat1 ? "BEESAT-1" : variant == MobitexBeesat9 ? "BEESAT-9" : nx ? "Mobitex-NX" : "Mobitex";
             int okb = 0; for (bool k : mf.blockOk) okb += k;
             f.how = "FEC + CRC-16 (" + std::to_string(okb) + " of " + std::to_string(mf.blockOk.size()) + " blocks)";
             f.rsErrors = -1;
             p_->emit(f);
-            return true;
+            return (mobHeader(variant) + mf.blocks.size() * kMobBlock) * 8;
         };
     };
     const size_t mobNeed = mobitexMaxBytes(c.mobitexVariant == MobitexBeesat1 ? MobitexDefault : c.mobitexVariant) * 8;
@@ -741,11 +746,11 @@ void MoreHunter::configure(const MoreConfig& c) {
     I.usp.done = [this](std::vector<float>& v, bool inv, uint64_t st) {
         std::vector<uint8_t> ax;
         int rs = -1, dl = 0;
-        if (!uspDecode(v.data(), v.size(), ax, rs, &dl)) { failed++; return false; }
+        if (!uspDecode(v.data(), v.size(), ax, rs, &dl)) { failed++; return (size_t)0; }
         MoreFrame f; f.framing = Usp; f.name = "USP"; f.data = ax; f.rsErrors = rs; f.inverted = inv; f.bitPos = st;
         f.how = "Viterbi + Reed-Solomon (" + std::to_string(dl) + " byte block)";
         p_->emit(f);
-        return true;
+        return (size_t)(64 + (dl + 32) * 16);
     };
     for (int k = 0; k < 2; k++) {
         I.vit[k].setKind(c.concatParams.conv);
@@ -753,11 +758,11 @@ void MoreHunter::configure(const MoreConfig& c) {
         I.concatAsm[k].done = [this](std::vector<float>& v, bool inv, uint64_t st) {
             std::vector<uint8_t> b = hardBytes(v), fr;
             int rs = -1;
-            if (!ccsdsConcatDecode(b.data(), cfg_.concatParams, fr, rs)) { failed++; return false; }
+            if (!ccsdsConcatDecode(b.data(), cfg_.concatParams, fr, rs)) { failed++; return (size_t)0; }
             MoreFrame f; f.framing = CcsdsConcat; f.name = "CCSDS concatenated"; f.data = fr; f.rsErrors = rs; f.inverted = inv; f.bitPos = st * 2;
             f.how = "Viterbi + Reed-Solomon";
             p_->emit(f);
-            return true;
+            return v.size();
         };
     }
     reset();
