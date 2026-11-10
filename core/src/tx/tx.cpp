@@ -2,6 +2,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/tx/tx.h"
 #include "dect2/tx/tx_shape.h"
+#include "dect2/tx/tx_control.h"
 #include "dect2/common/timecompat.h"
 #include "dect2/atsc/atsc_gen.h"
 #include "dect2/engine/device_claims.h"
@@ -1117,17 +1118,24 @@ void txOutputStage(const TxRequest& r, cf32* x, size_t n, uint64_t firstSample, 
     const float trim = (float)std::pow(10.0, r.o("out.trimDb", 0) / 20.0);
     const uint64_t ramp = (uint64_t)std::max(0.0, r.o("out.rampMs", kTxDefaultRampMs) * 1e-3 * rateHz);
     const bool swapIq = r.o("out.swapIq", 0) > 0.5;
-    if (trim == 1.f && (!ramp || firstSample >= ramp) && !swapIq) return;
-    for (size_t i = 0; i < n; i++) {
-        float g = trim;
-        if (firstSample + i < ramp) g *= 0.5f - 0.5f * (float)std::cos(math::kPi * (double)(firstSample + i) / (double)ramp);
-        const cf32 v = x[i] * g;
-        x[i] = swapIq ? cf32(v.imag(), v.real()) : v;
+    if (!(trim == 1.f && (!ramp || firstSample >= ramp) && !swapIq)) {
+        for (size_t i = 0; i < n; i++) {
+            float g = trim;
+            if (firstSample + i < ramp) g *= 0.5f - 0.5f * (float)std::cos(math::kPi * (double)(firstSample + i) / (double)ramp);
+            const cf32 v = x[i] * g;
+            x[i] = swapIq ? cf32(v.imag(), v.real()) : v;
+        }
     }
+    // the IQ correction of the radio (its calibration or the Advanced values): last, so it corrects the radio's own mixer whatever the signal and the trim are
+    txIqCorrect(x, n, r.o("out.iqGainDb", 0), r.o("out.iqPhaseDeg", 0), r.o("out.dcI", 0), r.o("out.dcQ", 0));
 }
 
 void TxSession::generatorLoop() {
-    const uint64_t limit = req_.loop ? ~0ull : (uint64_t)(std::max(0.1, req_.onceSeconds) * rate_);
+    uint64_t limit = req_.loop ? ~0ull : (uint64_t)(std::max(0.1, req_.onceSeconds) * rate_);
+    if (const double tot = txTimeoutSec(req_); tot > 0) {   // the operator's timeout timer (tx_control.h): ends any transmission, with the key-down fade
+        const uint64_t totN = (uint64_t)std::max<double>(1.0, tot * rate_);
+        if (totN < limit) { limit = totN; note("timeout timer: the transmission ends after " + std::to_string((int)std::lround(tot)) + " s"); }
+    }
     uint64_t made = 0;
     try {
         while (!stop_ && !senderDone_ && made < limit) {
@@ -1140,7 +1148,7 @@ void TxSession::generatorLoop() {
             blk.resize(n);
             gen_->generate(blk.data(), n);
             txOutputStage(req_, blk.data(), n, made, rate_);
-            if (!req_.loop) {   // one pass: the same raised-cosine fade at the end, so that the key-down does not click either
+            if (limit != ~0ull) {   // one pass or the timeout: the same raised-cosine fade at the end, so that the key-down does not click either
                 const uint64_t fade = (uint64_t)(std::max(0.0, req_.o("out.rampMs", kTxDefaultRampMs)) * 1e-3 * rate_);
                 for (size_t i = 0; i < n; i++) {
                     const uint64_t left = limit - (made + i);   // samples still to come, this one included (>= 1)

@@ -119,6 +119,10 @@ double txModeTuneOffsetHz(const TxModeSpec& m);
 
 // The analog FM voice's CTCSS tone: fm.ctcssIdx 1 .. 50 is the standard tone of that number (67.0 .. 254.1 Hz), 0 or beyond is none.
 double txCtcssToneHz(int idx);
+// The analog FM voice's DCS code: fm.dcsIdx 1 .. txDcsCodes().size() is that code of the usual list (023 .. 754, written as decimal digits: 23),
+// 0 none; fm.dcsCode sets a code directly, fm.dcsInv sends it inverted, fm.dcsPct its level (12 % of the deviation). DCS replaces CTCSS.
+const std::vector<int>& txDcsCodes();
+int txDcsCode(int idx);
 
 class TxGenerator {
 public:

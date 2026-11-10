@@ -78,6 +78,9 @@ public:
     }
     double getGain(const int, const size_t) const override { return gain_; }
     SoapySDR::Range getGainRange(const int, const size_t) const override { return SoapySDR::Range(0, 60, 1); }
+    // a named transmit stage (TOTAL, 0 to 60 dB; any other name is taken too): ONAIR_TEST_TXGAIN_<name> says what OnAir passed on
+    void setGain(const int dir, const size_t, const std::string& name, const double g) override { if (dir == SOAPY_SDR_TX) note("TXGAIN_" + name, std::to_string(g)); }
+    SoapySDR::Range getGainRange(const int, const size_t, const std::string& name) const override { return name == "TOTAL" ? SoapySDR::Range(0, 60, 1) : SoapySDR::Range(); }
     void setFrequency(const int dir, const size_t ch, const double f, const SoapySDR::Kwargs&) override {
         if (dir == SOAPY_SDR_TX) {   // ONAIR_TEST_TX_MAXFREQ: a radio that cannot tune above that and says so, as a driver does
             if (const char* m = getenv("ONAIR_TEST_TX_MAXFREQ"); m && f > atof(m)) throw std::runtime_error("setFrequency(" + std::to_string(f) + ") out of range: the synthesiser stops at " + m);

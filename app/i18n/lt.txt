@@ -77,7 +77,6 @@ QO-100 path	QO-100 kelias
 Radio ID	Radijo ID
 Radio text (RT)	Radijo tekstas (RT)
 RDS PI	RDS PI
-Receiver-style options (demo signal)	Imtuvo stiliaus parinktys (demonstracinis signalas)
 Report	Ataskaita
 Reverse (mark is the upper tone)	Atvirkštinis (mark yra viršutinis tonas)
 RFPI	RFPI
@@ -2808,7 +2807,6 @@ Presets	Išankstiniai nustatymai
 Preview	Peržiūra
 Programme type	Programos tipas
 Push to talk (hold the button)	Paspausk ir kalbėk (laikykite mygtuką nuspaustą)
-Puts every setting below back to its default.	Grąžina visus žemiau esančius nustatymus į numatytąsias vertes.
 RDS	RDS
 RDS level	RDS lygis
 RF level	RF lygis

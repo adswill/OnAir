@@ -77,7 +77,6 @@ QO-100 path	QO-100 路径
 Radio ID	无线电 ID
 Radio text (RT)	无线电文本 (RT)
 RDS PI	RDS PI
-Receiver-style options (demo signal)	接收机式选项（演示信号）
 Report	报告
 Reverse (mark is the upper tone)	反转（标记音为高音）
 RFPI	RFPI
@@ -2808,7 +2807,6 @@ Presets	预设
 Preview	预览
 Programme type	节目类型
 Push to talk (hold the button)	按键通话（按住按钮）
-Puts every setting below back to its default.	将下方所有设置恢复为默认值。
 RDS	RDS
 RDS level	RDS 电平
 RF level	射频电平

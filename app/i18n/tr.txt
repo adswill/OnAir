@@ -78,7 +78,6 @@ QO-100 path	QO-100 yolu
 Radio ID	Telsiz kimliği
 Radio text (RT)	Telsiz metni (RT)
 RDS PI	RDS PI
-Receiver-style options (demo signal)	Alıcı tarzı seçenekler (demo sinyal)
 Report	Rapor
 Reverse (mark is the upper tone)	Ters (işaret üst ton)
 RFPI	RFPI
@@ -2807,7 +2806,6 @@ Presets	Ön ayarlar
 Preview	Önizleme
 Programme type	Program türü
 Push to talk (hold the button)	Bas-konuş (düğmeyi basılı tutun)
-Puts every setting below back to its default.	Aşağıdaki her ayarı varsayılanına döndürür.
 RDS	RDS
 RDS level	RDS seviyesi
 RF level	RF seviyesi

@@ -80,6 +80,7 @@ void levelRow(TxUi& s, const DeviceInfo* radio) {
     if (radio) {
         if (!radio->txGainNote.empty()) ImGui::TextDisabled("%s", tr(radio->txGainNote.c_str()));
         if (radio->kind == DeviceInfo::HackRF) ImGui::Checkbox(tr("+14 dB amplifier"), &s.ampOn);
+        powerReadout(s, radio);   // the predicted output power from this radio's measured table (tx_control_ui.cpp)
         // the output choice: a radio with one output has no choice; txChannels 0 means not known until it has been opened
         int nOut = radio->txChannels;
         if (nOut <= 0) nOut = radio->board == "uhd" ? 4 : 2;
@@ -209,6 +210,7 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out."));
 
+    scheduleStatus(s);   // a planned start: when, and Cancel
     destinationPanel(s, *mode, running);
     iqStreamPanel(s, running);
     radioRow(a, s, radio, running);
@@ -233,17 +235,6 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
     ImGui::Spacing();
     ImGui::BeginDisabled(running);
     payloadPanel(s, *mode, running);
-    if (const ModeUi* mu = modeUi(familyOf(*mode)); mu && mu->synth && !isVoiceId(mode->id ? mode->id : "") && !isFtxId(mode->id ? mode->id : "") && std::string(mode->id) != "rtty" && std::string(mode->id) != "atv") {
-        if (ImGui::TreeNode(trw("Receiver-style options (demo signal)"))) {
-            const SynthConfig saved = a.tune.synth;
-            a.tune.synth = s.synth;
-            bool changed = false;
-            mu->synth(a, changed);
-            s.synth = a.tune.synth;
-            a.tune.synth = saved;
-            ImGui::TreePop();
-        }
-    }
     ImGui::EndDisabled();
 
     ImGui::Spacing();
@@ -252,7 +243,31 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
     s.advOpen = ImGui::CollapsingHeader(trw("Advanced"));
     ImGui::PopStyleColor();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them."));
-    if (s.advOpen) advancedPanel(s, *mode, running);
+    if (!s.advOpen) return;
+    advancedPanel(s, *mode, running);
+    // the mode's own modulation settings: the same fields as the receiver's built-in test signal (FFT size, guard, constellation, code rate, ...)
+    if (const ModeUi* mu = modeUi(familyOf(*mode)); mu && mu->synth && !isVoiceId(mode->id ? mode->id : "") && !isFtxId(mode->id ? mode->id : "") && std::string(mode->id) != "rtty" && std::string(mode->id) != "atv") {
+        ImGui::BeginDisabled(running);
+        if (ImGui::TreeNode(trw("Modulation of this mode (the generator's own settings)"))) {
+            const SynthConfig saved = a.tune.synth;
+            a.tune.synth = s.synth;
+            bool changed = false;
+            mu->synth(a, changed);
+            s.synth = a.tune.synth;
+            a.tune.synth = saved;
+            ImGui::TreePop();
+        }
+        ImGui::EndDisabled();
+    }
+    auto section = [](const char* name) { ImGui::Spacing(); ImGui::TextDisabled("%s", name); ImGui::Separator(); };
+    if (s.destKind != 1) { section(tr("Radio")); radioControlPanel(s, radio, running); }
+    section(tr("Schedule"));
+    schedulePanel(s, running);
+    if (s.destKind != 1) {
+        ImGui::Spacing();
+        if (ImGui::TreeNode(trw("Calibration of this radio"))) { calibrationPanel(a, s, radio, running); ImGui::TreePop(); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("This radio's frequency correction, I/Q balance, carrier leak and measured output power. Saved per radio and applied to every transmission on it."));
+    }
 }
 
 } // namespace txui

@@ -6,6 +6,7 @@
 //
 // Why our own: the sample stream is the part of the receiver where lost data is most expensive, and this lets the reader run at the highest
 // priority, use large transfers, and write converted samples straight into the receiver's ring buffer, with one conversion and no other copy.
+#include "dect2/tx/tx_control.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/source/source.h"
 #include "dect2/common/platform.h"
@@ -507,50 +508,50 @@ private:
         return found;
     }
 
-    // Sample rate, filter, frequency, gains for transmitting. The frequency goes to the radio as asked: when its firmware refuses it (the stall comes
-    // back as LIBUSB_ERROR_PIPE) that is what the message says.
-    bool apply(const TxTune& t, std::string& err) {
-        {
-            const double f = t.sampleRate;
-            uint32_t div = 1, hz = (uint32_t)std::llround(f);
-            for (uint32_t i = 1; i < 32; i++) {
-                const double v = f * i;
-                if (std::fabs(v - std::round(v)) < 1e-6) { div = i; hz = (uint32_t)std::llround(v); break; }
-            }
-            uint8_t d[8]; le32(d, hz); le32(d + 4, div);
-            const int r = dev_.out(kSampleRateSet, 0, 0, d, sizeof d);
-            if (r < 0) { err = "the HackRF refused the sample rate " + std::to_string(f / 1e6) + " Msps (" + libusb_error_name(r) + ")"; return false; }
+    // Sample rate, filter, frequency, gains for transmitting, as hackrfTxPlan (tx_control.h) works them out. The frequency goes to the radio as asked:
+    // when its firmware refuses it (the stall comes back as LIBUSB_ERROR_PIPE) that is what the message says.
+    struct Ops : TxHwOps {
+        Handle& dev; const TxTune& t;
+        Ops(Handle& d, const TxTune& tt) : dev(d), t(tt) {}
+        bool setRate(const TxHwPlan& p, std::string& err) override {
+            uint8_t d[8]; le32(d, p.rateNum); le32(d + 4, p.rateDiv);
+            const int r = dev.out(kSampleRateSet, 0, 0, d, sizeof d);
+            if (r < 0) { err = "the HackRF refused the sample rate " + std::to_string(p.rateHz / 1e6) + " Msps (" + libusb_error_name(r) + ")"; return false; }
+            return true;
         }
-        {
-            const uint32_t bw = t.bandwidthHz > 0 ? (uint32_t)t.bandwidthHz : hackrfAutoFilterHz(t.sampleRate, 0);
-            const int r = dev_.out(kBasebandFilterSet, (uint16_t)(bw & 0xffff), (uint16_t)(bw >> 16));
+        bool setFilter(double hz, std::string& err) override {
+            const uint32_t bw = (uint32_t)hz;
+            const int r = dev.out(kBasebandFilterSet, (uint16_t)(bw & 0xffff), (uint16_t)(bw >> 16));
             if (r < 0) { err = std::string("the HackRF refused the filter width (") + libusb_error_name(r) + ")"; return false; }
+            return true;
         }
-        {
-            TuneSettings ts; ts.radio = t.radio;
-            const double want = std::max(ppmCorrectedHz(txRadioHz(t), radioPpm(ts)), 0.0);
-            if (want / 1e6 >= 4294967295.0) { err = "the HackRF's tuning request holds at most 4.29e9 MHz: " + std::to_string(want) + " Hz does not fit it"; return false; }
-            const uint64_t f = (uint64_t)want;
+        bool setFrequency(double hz, std::string& err) override {
+            const uint64_t f = (uint64_t)hz;
             uint8_t d[8]; le32(d, (uint32_t)(f / 1000000)); le32(d + 4, (uint32_t)(f % 1000000));
-            const int r = dev_.out(kSetFreq, 0, 0, d, sizeof d);
+            const int r = dev.out(kSetFreq, 0, 0, d, sizeof d);
             if (r < 0) {
                 char b[200];
                 snprintf(b, sizeof b, "the HackRF refused the frequency %.6g MHz (%s): its firmware tunes only what the radio's synthesiser can make", txRadioHz(t) / 1e6, r == LIBUSB_ERROR_PIPE ? "the radio answered with an error" : libusb_error_name(r));
                 err = b;
                 return false;
             }
+            return true;
         }
-        {
-            const uint16_t g = (uint16_t)std::min(47, std::max(0, (int)std::lround(t.gainDb)));
+        bool setGain(const std::string&, double db, std::string& err) override {
             uint8_t ok = 0;
-            const int r = dev_.in(kSetTxvgaGain, 0, g, &ok, 1);
+            const int r = dev.in(kSetTxvgaGain, 0, (uint16_t)db, &ok, 1);
             if (r < 0 || !ok) { err = "the HackRF refused the TX gain"; return false; }
+            return true;
         }
-        {
-            const int r = dev_.out(kAmpEnable, t.ampOn ? 1 : 0, 0);
+        bool setAmp(bool on, std::string& err) override {
+            const int r = dev.out(kAmpEnable, on ? 1 : 0, 0);
             if (r < 0) { err = "the HackRF refused the amplifier setting"; return false; }
+            return true;
         }
-        return true;
+    };
+    bool apply(const TxTune& t, std::string& err) {
+        Ops ops(dev_, t);
+        return txHwApply(hackrfTxPlan(t), ops, true, err);
     }
 
     void shut() {

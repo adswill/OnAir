@@ -81,9 +81,9 @@ void shortcuts(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxM
     gSpaceClaimFrame = ImGui::GetFrameCount();   // Space is the transmitter's here, not the receiver's
     if (io.WantTextInput || ImGui::IsPopupOpen("##txnotice") || ImGui::IsPopupOpen("##freqtype")) return;
     const bool running = s.session.running();
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) && (running || s.pendingStart)) stopTx(a, s, "(Esc)");
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) && (running || s.pendingStart || s.schedArmed)) stopTx(a, s, "(Esc)");
     else if (ImGui::IsKeyPressed(ImGuiKey_Space, false) && !s.pttHold) {
-        if (running) stopTx(a, s, "(Space)");
+        if (running || s.schedArmed) stopTx(a, s, "(Space)");
         else if (canStart(a, s, radio, conflict, mode)) s.pendingStart = true;
     }
 }
@@ -106,7 +106,13 @@ void body(App& a, bool inWindow) {
     const Ctx c = frameCtx(a, s);
     const bool running = s.session.running();
     // Start was pressed last frame: the state showed "Preparing", now the radio is opened (it can take a moment)
-    if (s.pendingStart && !running) { s.pendingStart = false; if (c.mode && canStart(a, s, c.radio, c.conflict, c.mode)) startTx(a, s, c.radio, c.mode, false); }
+    if (s.pendingStart && !running) {
+        s.pendingStart = false;
+        if (c.mode && canStart(a, s, c.radio, c.conflict, c.mode)) {
+            if (scheduleConfigured(s)) scheduleArm(s);   // a start time or a repeat: the schedule starts it (txTick); the press is the operator's decision
+            else startTx(a, s, c.radio, c.mode, false);
+        }
+    }
     if (s.pendingCarrier && !running) { s.pendingCarrier = false; if (c.mode && canStart(a, s, c.radio, c.conflict, c.mode)) startTx(a, s, c.radio, c.mode, true); }
     if (s.devAutoStart && c.mode && !running) { s.devAutoStart = false; s.dryRun = true; s.pendingStart = true; }   // dev flag --txdry (no RF)
     shortcuts(a, s, c.radio, c.conflict, c.mode);
@@ -196,8 +202,8 @@ void drawStatusHeader(App& a, TxUi& s, const DeviceInfo* radio, int conflict, co
         if (down && !s.pttDown && !running) s.pendingStart = true;
         if (!down && s.pttDown) stopTx(a, s, "(push to talk released)");
         s.pttDown = down;
-    } else if (bigButton(running || s.pendingStart ? tr("STOP") : tr("START TRANSMITTING"), running || s.pendingStart, can || running || s.pendingStart, w)) {
-        if (running || s.pendingStart) stopTx(a, s, "by the user");
+    } else if (bigButton(running || s.pendingStart || s.schedArmed ? tr("STOP") : tr("START TRANSMITTING"), running || s.pendingStart || s.schedArmed, can || running || s.pendingStart || s.schedArmed, w)) {
+        if (running || s.pendingStart || s.schedArmed) stopTx(a, s, "by the user");
         else s.pendingStart = true;
     }
     if (!running && !can && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
@@ -231,8 +237,8 @@ void txTopBar(App& a, ImVec2 disp) {
         const float W = ImGui::GetContentRegionAvail().x;
         const bool can = canStart(a, s, c.radio, c.conflict, c.mode);
         ImGui::BeginDisabled(!can && !running && !s.pendingStart);
-        if (runButton(running || s.pendingStart, 40 * gUi, running || s.pendingStart ? tr("Stop transmitting") : tr("Start transmitting")) && !(s.pttHold)) {
-            if (running || s.pendingStart) stopTx(a, s, "by the user"); else s.pendingStart = true;
+        if (runButton(running || s.pendingStart || s.schedArmed, 40 * gUi, running || s.pendingStart || s.schedArmed ? tr("Stop transmitting") : tr("Start transmitting")) && !(s.pttHold)) {
+            if (running || s.pendingStart || s.schedArmed) stopTx(a, s, "by the user"); else s.pendingStart = true;
         }
         ImGui::EndDisabled();
         ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y));

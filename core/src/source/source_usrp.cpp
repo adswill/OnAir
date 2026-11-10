@@ -1,4 +1,5 @@
 // Native driver for the USRP: the radio's own library is loaded at run time when it is installed. See native_common.h.
+#include "dect2/tx/tx_control.h"
 #include "native_common.h"
 #include <map>
 
@@ -464,23 +465,21 @@ public:
         if (size_t n = 0; uhd().get_tx_num_channels && uhd().get_tx_num_channels(dev_, &n) == 0 && ch >= n) {
             err = "USRP: this radio has " + std::to_string(n) + " transmit output(s), output " + std::to_string(ch + 1) + " was picked"; shut(); return false;
         }
-        const double rate = std::max(t.sampleRate > 0 ? t.sampleRate : 1e6, 0.2e6);
+        const double rate = usrpTxPlan(t, 0, {}).rateHz;
         if (uhd().set_tx_rate(dev_, rate, ch) != 0) { err = "USRP: the sample rate " + mhz(rate) + " Msps was refused: " + uhd().text(dev_); shut(); return false; }
         rate_ = rate;
         uhd().get_tx_rate(dev_, ch, &rate_);
-        if (uhd().set_tx_bandwidth) uhd().set_tx_bandwidth(dev_, std::max(0.2e6, t.bandwidthHz > 0 ? t.bandwidthHz : rate_ * 0.95), ch);
-        if (uhd().set_tx_antenna(dev_, "TX/RX", ch) != 0) { err = "USRP: the transmit connector TX/RX was refused: " + uhd().text(dev_); shut(); return false; }
-        TuneSettings ts; ts.radio = t.radio;
-        char noArgs[1] = {0};
-        UhdApi::tune_request_t req{std::max(ppmCorrectedHz(txRadioHz(t), radioPpm(ts)), 0.0), UhdApi::kPolicyAuto, 0, UhdApi::kPolicyAuto, 0, noArgs};
-        UhdApi::tune_result_t res{};
-        if (uhd().set_tx_freq(dev_, &req, ch, &res) != 0) { err = "USRP: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency: " + uhd().text(dev_); shut(); return false; }
-        double gmin = 0, gmax = 89.75;
+        gmin_ = 0; gmax_ = 89.75;
         if (UhdApi::range_t_* rg = nullptr; uhd().get_tx_gain_range && uhd().meta_range_make(&rg) == 0 && rg) {
-            if (uhd().get_tx_gain_range(dev_, "", ch, rg) == 0) { uhd().meta_range_start(rg, &gmin); uhd().meta_range_stop(rg, &gmax); }
+            if (uhd().get_tx_gain_range(dev_, "", ch, rg) == 0) { uhd().meta_range_start(rg, &gmin_); uhd().meta_range_stop(rg, &gmax_); }
             uhd().meta_range_free(&rg);
         }
-        if (uhd().set_tx_gain(dev_, std::min(std::max(t.gainDb, gmin), gmax), ch, "") != 0) { err = "USRP: the transmit gain was refused: " + uhd().text(dev_); shut(); return false; }
+        ch_ = ch;
+        // filter, connector, frequency and gain as usrpTxPlan (tx_control.h) works them out
+        const TxHwPlan plan = usrpTxPlan(t, rate_, {gmin_, gmax_});
+        if (uhd().set_tx_bandwidth) uhd().set_tx_bandwidth(dev_, plan.filterHz, ch);
+        if (uhd().set_tx_antenna(dev_, plan.antenna.c_str(), ch) != 0) { err = "USRP: the transmit connector TX/RX was refused: " + uhd().text(dev_); shut(); return false; }
+        if (!tuneAndGain(plan, t, err)) { shut(); return false; }
         size_t chan = ch;
         char cpu[] = "fc32", otw[] = "sc16", none[] = "";
         UhdApi::stream_args_t sa{cpu, otw, none, &chan, 1};
@@ -490,6 +489,14 @@ public:
         maxN_ = m > 0 ? m : 8192;
         open_ = true; sob_ = true;
         return true;
+    }
+    // frequency, gain and filter while sending
+    bool retune(const TxTune& t, std::string& err) override {
+        if (!open_) { err = "USRP: the transmitter is not open"; return false; }
+        if ((size_t)std::max(0, t.channel) != ch_) { err = "USRP: the transmit output cannot change while sending"; return false; }
+        const TxHwPlan plan = usrpTxPlan(t, rate_, {gmin_, gmax_});
+        if (uhd().set_tx_bandwidth) uhd().set_tx_bandwidth(dev_, plan.filterHz, ch_);
+        return tuneAndGain(plan, t, err);
     }
     bool write(const cf32* x, size_t n, std::string& err) override {
         if (!open_) { err = "USRP: the transmitter is not open"; return false; }
@@ -528,6 +535,16 @@ public:
     double sampleRate() const override { return rate_; }
     std::string name() const override { return "USRP"; }
 private:
+    bool tuneAndGain(const TxHwPlan& plan, const TxTune& t, std::string& err) {
+        char noArgs[1] = {0};
+        UhdApi::tune_request_t req{plan.loHz, UhdApi::kPolicyAuto, 0, UhdApi::kPolicyAuto, 0, noArgs};
+        UhdApi::tune_result_t res{};
+        if (uhd().set_tx_freq(dev_, &req, ch_, &res) != 0) { err = "USRP: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency: " + uhd().text(dev_); return false; }
+        if (uhd().set_tx_gain(dev_, plan.gains.empty() ? gmin_ : plan.gains[0].second, ch_, "") != 0) { err = "USRP: the transmit gain was refused: " + uhd().text(dev_); return false; }
+        return true;
+    }
+    double gmin_ = 0, gmax_ = 89.75;
+    size_t ch_ = 0;
     void shut() {
         if (st_) uhd().tx_streamer_free(&st_);
         st_ = nullptr;
