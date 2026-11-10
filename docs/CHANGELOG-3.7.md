@@ -69,7 +69,7 @@
 
 ## Contributors
 
-Code and fixes in this release from **peterdewitte** (Peter De Witte), **bellx2** (Ryu Tanabe), **DME-3** (Dimitri Garbi) and **BI8SYN**, with thanks to everyone who reported the issues named above. The DecSAT-derived work from earlier releases keeps its credit to **Arclamp**. The full list is in CONTRIBUTORS.md, which is generated from tools/contributors.tsv.
+Code and fixes in this release from **peterdewitte** (Peter De Witte), **bellx2** (Ryu Tanabe), **DME-3** (Dimitri Garbi) and **BI8SYN**, with thanks to everyone who reported the issues named above. The full list is in CONTRIBUTORS.md, which is generated from tools/contributors.tsv.
 
 ## Known limits
 

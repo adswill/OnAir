@@ -187,7 +187,7 @@ def main():
         c.append('- **@%s** (%s): %d commit%s since %s.' % (h, n, k, '' if k == 1 else 's', a.since))
     if prs:
         c.append('- Pull requests merged since %s: %s.' % (a.since, '; '.join(sorted({re.sub(r"^Merge pull request ", "", p) for p in prs}))))
-    c.append('- Earlier credits stay in the README: **@ffishman** (mesh clock fix, PR #217, and an offered PR for one engine-wide clock, issue #218), **@frank-1225** (Chinese railway decoders, PR #231), **Arclamp** (DVB-S / DecSAT code, GPL-3.0-or-later; DecSAT-derived work in a commit carries a Co-Authored-By line).')
+    c.append('- Earlier credits stay in the README: **@ffishman** (mesh clock fix, PR #217, and an offered PR for one engine-wide clock, issue #218) and **@frank-1225** (Chinese railway decoders, PR #231).')
     c.append('- Everyone who sent an issue, a recording or a Discord message: the reporter of each fixed issue is named in the table above. Third-party code and credits are in THIRD_PARTY.md and in Help > About.')
     c.append('- Work in this release was written with Claude (Anthropic) as co-author; the commits say so.')
     text = text.replace('{{CONTRIBUTORS}}', '\n'.join(c))

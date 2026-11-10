@@ -292,7 +292,7 @@ KAAL is the own digital voice mode designed for OnAir (not a standard). In 3.0 i
 - **@drfruct** (Dmitry Obedkov): 9 commits since v0.2.9.
 - **@xeonliu** (liu): 2 commits since v0.2.9.
 - Pull requests merged since v0.2.9: #259 from drfruct/tetra-voice-one-stream; #260 from drfruct/tetra-voice-follow; #263 from drfruct/tetra-voice-calls; #272 from drfruct/tetra-carrier-floor; #276 from xeonliu/fix/dtmb-gbk-service-names.
-- Earlier credits stay in the README: **@ffishman** (mesh clock fix, PR #217, and an offered PR for one engine-wide clock, issue #218), **@frank-1225** (Chinese railway decoders, PR #231), **Arclamp** (DVB-S / DecSAT code, GPL-3.0-or-later; DecSAT-derived work in a commit carries a Co-Authored-By line).
+- Earlier credits stay in the README: **@ffishman** (mesh clock fix, PR #217, and an offered PR for one engine-wide clock, issue #218) and **@frank-1225** (Chinese railway decoders, PR #231).
 - Everyone who sent an issue, a recording or a Discord message: the reporter of each fixed issue is named in the table above. Third-party code and credits are in THIRD_PARTY.md and in Help > About.
 - Work in this release was written with Claude (Anthropic) as co-author; the commits say so.
 
