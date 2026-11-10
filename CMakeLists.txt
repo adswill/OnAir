@@ -1178,7 +1178,7 @@ if(DECT2_BUILD_TESTS)
       add_test(NAME qa_sweep_g COMMAND test_qa_sweep --shard 6/8)
       add_test(NAME qa_sweep_a COMMAND test_qa_sweep --shard 7/8)
       add_test(NAME qa_sweep_c COMMAND test_qa_sweep --shard 8/8)
-      set_tests_properties(qa_sweep_d qa_sweep_f qa_sweep_b qa_sweep_i qa_sweep_e qa_sweep_g qa_sweep_a qa_sweep_c PROPERTIES LABELS "qa" TIMEOUT 3600)
+      set_tests_properties(qa_sweep_d qa_sweep_f qa_sweep_b qa_sweep_i qa_sweep_e qa_sweep_g qa_sweep_a qa_sweep_c PROPERTIES LABELS "qa;slow" TIMEOUT 5400)   # 20-60 min per shard on a CI runner: full scope only
     endif()
     # the DVB family's cost per receiver stage (not a test: minutes per run; docs/PERFORMANCE-DVB.md)
     add_executable(bench_dvb tests/bench/bench_dvb.cpp)
