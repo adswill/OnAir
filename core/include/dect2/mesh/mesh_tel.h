@@ -65,6 +65,7 @@ struct MeshPacket {
     std::string flags;           // "ADR, ACK", ...
     std::string mac;             // FOpts MAC command names, comma separated
     uint32_t mic = 0;
+    int jumpsFixed = 0;          // sample jumps undone to get the CRC right (0: none; the radio dropped samples inside the frame)
 };
 
 // A LoRaWAN end device: by DevAddr (data frames) or, until it has one, by the DevEUI of its join requests

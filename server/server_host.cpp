@@ -8,6 +8,7 @@
 #include "dect2/audio/hf_demod.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/engine/rate_choice.h"
+#include "dect2/mesh/mesh_rx.h"
 #include "dect2/net/netradio.h"
 #include "dect2/results/rx_json.h"
 #include "dect2/source/agc.h"
@@ -168,6 +169,9 @@ TuneSettings ServerHost::buildTune(const DeviceInfo& d) const {
     dect2::setWideSpanCapHz(captureBwMhz_ > 0 ? 1e12 : 0);   // a custom bandwidth lifts the default cap on whole-span decoding
     if (d.isRadio() || d.kind == DeviceInfo::Synthetic) rxApplyWidth(t, captureBwMhz_, mt ? mt->minSampleRate : 0);   // the custom capture bandwidth (same call as the app)
     if (d.isRadio() && rateHz_ > 0) t.sampleRate = rateHz_;
+    else if (d.isRadio() && mt && mt->stdMode == 22 && captureBwMhz_ <= 0) {   // Mesh on an RTL-SDR: 1.024 Msps for the 250 kHz channel, as in the window (#386)
+        if (const double r = meshRtlRateHz(d.board, 250e3); r > 0) { t.sampleRate = r; t.basebandFilterHz = 0.45 * r; }
+    }
     if (d.isGeneric()) {
         t.sampleRate = linkRateFor(d, t, t.sampleRate, minSampleRateFor(m.family, t.bandwidthMhz));
         t.gainDb = std::max(d.gainMinDb, std::min(d.gainMaxDb > d.gainMinDb ? d.gainMaxDb : 200.0, gainDb_));
@@ -384,9 +388,11 @@ std::string ServerHost::statusJson() {
     snprintf(b, sizeof b, ",\"frequencyHz\":%.0f,\"sampleRateHz\":%.0f,\"gainDb\":%s,\"gainMinDb\":%s,\"gainMaxDb\":%s,\"droppedSamples\":%llu,\"loadPct\":%.0f}",
              freqHz_, run ? e_.radioRate() : (rateHz_ > 0 ? rateHz_ : 0.0), jsonNum(gainDb_).c_str(), jsonNum(d && d->isGeneric() ? d->gainMinDb : 0).c_str(),
              jsonNum(d ? (d->isGeneric() ? d->gainMaxDb : d->kind == DeviceInfo::HackRF ? (cfg_.flag("amp", false) ? 116 : 102) : 0) : 0).c_str(), (unsigned long long)e_.droppedSamples(), (double)e_.sampleLoss().loadPct);
+    std::string meshJ;   // Mesh (LoRa): frames saved by undoing sample jumps since the program started (RxFrame::jumpsFixed)
+    if (m.family == 22) meshJ = ",\"meshJumpFrames\":" + std::to_string((unsigned long long)e_.mesh().framesWithJumpsFixed());
     return std::string("{\"running\":") + (run ? "true" : "false") + ",\"wanted\":" + (wantRun_ ? "true" : "false") + ",\"deviceIndex\":" + std::to_string(devIdx_) + ",\"device\":\"" +
            jsonEscape(d ? d->name : "") + "\",\"deviceKind\":\"" + (d ? kindName(d->kind) : "unknown") + "\",\"family\":" + std::to_string(m.family) + ",\"mode\":\"" + jsonEscape(m.name) +
-           "\",\"modeId\":\"" + jsonEscape(m.id) + "\",\"sub\":" + (m.sub.empty() ? "null" : "\"" + jsonEscape(m.sub) + "\"") + ",\"demod\":\"" + demodName(demod_) + "\",\"error\":\"" + jsonEscape(err_) + "\"" + b;
+           "\",\"modeId\":\"" + jsonEscape(m.id) + "\",\"sub\":" + (m.sub.empty() ? "null" : "\"" + jsonEscape(m.sub) + "\"") + ",\"demod\":\"" + demodName(demod_) + "\",\"error\":\"" + jsonEscape(err_) + "\"" + meshJ + b;
 }
 
 std::string ServerHost::devicesJson() {

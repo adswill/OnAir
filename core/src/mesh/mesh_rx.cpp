@@ -172,6 +172,7 @@ struct MeshReceiver::Impl {
     MeshTopology topo;                     // relays and links (mesh_topology.h), fed by every parsed Meshtastic / MeshCore packet
     LoraTopoState topoSt;
     double topoSnapAt = -1e9;
+    std::atomic<uint64_t> jumpFrames{0};   // frames recovered by undoing sample jumps (framesWithJumpsFixed)
     std::vector<lora::RxFrame> frames;
     double lastGood = -1e9, lastPreamble = -1e9;
     uint64_t preamblesSeen = 0;
@@ -205,7 +206,7 @@ struct MeshReceiver::Impl {
             d.protocol = e.protocol; d.preset = e.preset; d.freqHz = e.freqHz; d.offsetHz = e.freqHz - tu;
             d.sf = e.p.sf; d.bwHz = e.p.bwHz; d.cr = e.p.cr; d.syncWord = e.p.syncWord; d.preamble = e.p.preamble; d.ldro = e.p.ldro;
             const double inOff = d.offsetHz + off;        // where it sits in the input
-            d.inBand = std::fabs(inOff) + 0.5 * e.p.bwHz + 25e3 < 0.45 * rt && rt >= 2.2 * e.p.bwHz;
+            d.inBand = meshChannelFits(rt, inOff, e.p.bwHz);
             if (!d.inBand && e.protocol == 5) continue;   // the US plan has 264 settings: only the ones in the capture are listed
             tel.decoders.push_back(d);
             if (!d.inBand) continue;
@@ -313,6 +314,8 @@ struct MeshReceiver::Impl {
         row.sf = di.sf; row.cr = f.hdr.cr; row.bwHz = di.bwHz;
         row.levelDb = (float)f.levelDb; row.snrDb = (float)f.snrDb;
         row.size = (int)f.payload.size(); row.crcOk = f.crcOk;
+        row.jumpsFixed = f.jumpsFixed;
+        if (f.jumpsFixed > 0) jumpFrames.fetch_add(1, std::memory_order_relaxed);
         const bool crcBad = f.hdr.crc && !f.crcOk;
         if (crcBad) count(di.protocol, "CRC error");
         MeshRadioInfo ri;
@@ -727,6 +730,7 @@ void MeshReceiver::feed(const cf32* x, size_t n) {
     }
 }
 
+uint64_t MeshReceiver::framesWithJumpsFixed() const { return p_->jumpFrames.load(std::memory_order_relaxed); }
 bool MeshReceiver::telemetry(MeshTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->pub.seq <= lastSeq) return false;
