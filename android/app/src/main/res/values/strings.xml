@@ -81,7 +81,7 @@
     <string name="update_src_github">GitHub only</string>
     <string name="update_src_mirror">Mirror only</string>
     <string name="update_mirror_fallback">Use the mirror when GitHub cannot be reached</string>
-    <string name="update_mirror_fallback_help">The mirror sees that you check for updates. The package is still checked against the SHA-256 in the release and must be signed with this app's certificate.</string>
+    <string name="update_mirror_fallback_help">The mirror sees that you check for updates. The package is still checked against the SHA-256 in the release and must be signed with this app\'s certificate.</string>
     <string name="update_mirror_address">Mirror address</string>
     <string name="update_check_now">Check now</string>
     <string name="update_checking">Checking for updates…</string>
@@ -95,7 +95,7 @@
     <string name="update_ready">Version %1$s is downloaded and checked (SHA-256 and signature).</string>
     <string name="update_install">Install</string>
     <string name="update_install_permission">Allow OnAir to install packages in the screen that opens, then come back and tap Install.</string>
-    <string name="update_installing">Waiting for Android's install screen…</string>
+    <string name="update_installing">Waiting for Android\'s install screen…</string>
     <string name="update_failed">Update failed: %1$s</string>
     <string name="update_via_mirror">via the mirror</string>
     <string name="verbose_log">Verbose logging</string>
