@@ -749,6 +749,10 @@ static void tsTablesView(App& a, int view) {
     ImGui::PushFont(a.mono, 0);
     auto none = [&](const char* what) { ImGui::TextDisabled("%s", what); };
     if (view == 1) {   // networks and transponders
+        if (si && !si->networks.empty()) {
+            const SiOrbitGuess g = siGuessOrbit(*si, {});
+            if (g.valid) ImGui::TextColored(pal::accent(), "%s %.1f %c  (%d %s)", tr("Satellite by its own network table:"), std::fabs(g.orbitDeg), g.orbitDeg >= 0 ? 'E' : 'W', g.transponders, tr("transponders"));
+        }
         if (!si || si->networks.empty()) none("no network information table received yet");
         else for (const auto& n : si->networks) {
             ImGui::TextColored(pal::accent(), "network 0x%04X \"%s\"%s  %zu transport streams", n.id, n.name.c_str(), n.actual ? "  (this network)" : "", n.transponders.size());

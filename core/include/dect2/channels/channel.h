@@ -31,6 +31,7 @@ struct MultipathReport {
 };
 
 const char* multipathName(MultipathLevel l);
+std::string echoAdvice(const EchoInfo& e, double guardUs);   // what this echo means, in km of path and in what to do about it
 
 class MultipathDetector {
 public:

@@ -40,6 +40,7 @@ struct SsdvImage {
     uint64_t rev = 0;          // grows with every packet added
     std::shared_ptr<const std::vector<uint8_t>> jpeg;   // the picture so far (gaps are grey); empty before the first packet
     std::string savedPath;     // where the receiver wrote it (empty: not saved)
+    std::vector<std::pair<int, int>> gaps;   // MCU ranges lost packets may have left grey (Assembler::gapMcus)
 };
 
 struct SsdvTelemetry {

@@ -366,6 +366,8 @@ fn decode_extended(b: &[u8], m: &mut Msg) {
                 m.has_squawk = true;
                 m.squawk = decode_id13(id);
             }
+        } else if m.st == 2 && b.len() >= 11 {
+            m.commb = commb::acas_ra(&b[4..11]);   // the extended squitter form of the advisory
         }
     } else if tc == 29 {
         m.st = get(b, 38, 2) as i32;
@@ -468,6 +470,10 @@ pub fn decode(b: &[u8], nbits: i32) -> (bool, Msg) {
             if let Some(a) = decode_ac13(get(b, 20, 13)) {
                 m.has_alt = true;
                 m.alt_ft = a;
+            }
+            // DF16 carries the ACAS coordination in MV: VDS 0x30 is the resolution advisory
+            if m.df == 16 && b.len() >= 11 && b[4] == 0x30 {
+                m.commb = commb::acas_ra(&b[4..11]);
             }
         }
         4 | 5 | 20 | 21 => {

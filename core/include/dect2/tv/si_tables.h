@@ -27,6 +27,12 @@ struct SiTransponder {
     std::vector<int> services;    // from the service list descriptor of the transport stream loop
 };
 
+// Which satellite the NIT says this is: the orbital position most of its satellite transponders give. Compared with the carriers found (frequency MHz of each transponder as it
+// is at L-band plus the LNB, so give the Ku frequencies): the share of the found carriers the NIT lists says how sure it is, and a poor match with a good number of carriers says the
+// dish looks at another satellite than the NIT's, or the LNB is off.
+struct SiOrbitGuess { bool valid = false; double orbitDeg = 0; int transponders = 0; int matched = 0, carriers = 0; };
+SiOrbitGuess siGuessOrbit(const struct SiSnapshot& s, const std::vector<double>& foundMhz, double tolMhz = 5.0);
+
 struct SiNetwork {
     int id = 0;
     std::string name;

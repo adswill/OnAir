@@ -1,4 +1,5 @@
 // Positions from Aero ACARS messages (formats and sources in aero_pos.h).
+#include <ctime>
 #include "dect2/aero/aero_pos.h"
 #include "dect2/aero/aero_cpdlc.h"
 #include "dect2/aero/aero_adsc.h"
@@ -133,6 +134,7 @@ bool aeroPositionFromMessage(const std::string& label, const std::string& text, 
     if (detail) detail->clear();
     AeroAdscMessage a;
     if (aeroDecodeAdsc(text, uplink, a)) {
+        AdscContractBook::get().note(a, (int64_t)std::time(nullptr));
         if (detail) *detail = aeroDescribeAdsc(a);
         if (!a.crcOk || !a.hasPos) return false;
         out.valid = true;

@@ -30,6 +30,7 @@ case 11: {
     cardIf(o, "Sdc Qam", t.sdcQam);
     cardIf(o, "Prot A", t.protA);
     { Table tb({"Short Id", "Label", "Language Name", "Country", "Programme Name", "Codec Text", "App Name", "App Mode"}); int n = 0; for (auto it = t.services.rbegin(); it != t.services.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.shortId), cell(e.label), cell(e.languageName), cell(e.country), cell(e.programmeName), cell(e.codecText), cell(e.appName), cell(e.appMode)}); } if (n) addTable(o, "Services", tb); }
+    { Table tb({"Khz", "Kind", "Short Id Mask", "Region Id", "Schedule Id", "Short Id", "Other Id", "Dab Channel"}); int n = 0; for (auto it = t.altFreqs.rbegin(); it != t.altFreqs.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.khz), cell(e.kind), cell(e.shortIdMask), cell(e.regionId), cell(e.scheduleId), cell(e.shortId), cell(e.otherId), cell(e.dabChannel)}); } if (n) addTable(o, "Alt Freqs", tb); }
     break;
 }
 case 13: {

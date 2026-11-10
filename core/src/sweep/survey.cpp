@@ -79,6 +79,48 @@ float Survey::meanFloorDb() const {
     return (float)(a / (double)floor_.size());
 }
 
+std::vector<RecurringSignal> Survey::recurring(int minStarts, double maxJitter) const {
+    std::vector<RecurringSignal> out;
+    const size_t R = rows();
+    if (R < (size_t)minStarts * 2 || !bins_) return out;
+    const std::vector<float> occ = occupancy();
+    // adjacent bins that were ever on and not always on, one signal per run; the row is "on" when any bin of the run is above the threshold
+    const uint8_t on = (uint8_t)std::min(255.0, cfg_.thresholdDb * 2.0);
+    for (size_t b = 0; b < bins_;) {
+        if (occ[b] <= 0 || occ[b] > 0.9f) { b++; continue; }
+        size_t e = b;
+        while (e + 1 < bins_ && occ[e + 1] > 0 && occ[e + 1] <= 0.9f) e++;
+        std::vector<double> st;
+        bool was = false;
+        float occSum = 0;
+        for (size_t r = 0; r < R; r++) {
+            bool now = false;
+            for (size_t i = b; i <= e && !now; i++) now = cells_[r * bins_ + i] >= on;
+            if (now && !was) st.push_back(times_[r]);
+            if (now) occSum++;
+            was = now;
+        }
+        if ((int)st.size() >= minStarts) {
+            std::vector<double> d;
+            for (size_t i = 1; i < st.size(); i++) d.push_back(st[i] - st[i - 1]);
+            std::vector<double> sorted = d; std::sort(sorted.begin(), sorted.end());
+            const double med = sorted[sorted.size() / 2];
+            double dev = 0; for (double x : d) dev += std::fabs(x - med);
+            dev /= d.size();
+            if (med > 0 && dev <= maxJitter * med + 0.51 * (R > 1 ? (times_[R - 1] - times_[0]) / (R - 1) : 0)) {
+                RecurringSignal q;
+                q.freqHz = freqOf((b + e) / 2); q.periodSec = med; q.starts = (int)st.size(); q.jitter = (float)(dev / med); q.occupancy = occSum / R;
+                q.nextSec = st.back() + med;
+                while (q.nextSec < times_.back()) q.nextSec += med;
+                out.push_back(q);
+            }
+        }
+        b = e + 1;
+    }
+    std::sort(out.begin(), out.end(), [](const RecurringSignal& a, const RecurringSignal& b) { return a.starts > b.starts; });
+    return out;
+}
+
 std::vector<PersistentSignal> Survey::persistent(double minOcc, int bridge) const {
     std::vector<PersistentSignal> out;
     const auto occ = occupancy(), mean = meanLevel(), mx = maxLevel();

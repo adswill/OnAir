@@ -2,6 +2,7 @@
 // The pipeline in process() follows rtl_433's push_sdr_flow() (src/r_flow.c, GPL-2.0-or-later, (C) Benjamin Larsson, Tommy Vestermark,
 // Christian W. Zuckschwerdt and others) so that its own test recordings give the same pulse packages here.
 #include "dect2/sensors/sensors_rx.h"
+#include "dect2/sensors/sensors_health.h"
 #include "dect2/sensors/sensors_tel.h"
 #include "sensors_analyze.h"
 #include "dect2/common/mathconst.h"
@@ -321,6 +322,7 @@ struct SensorsReceiver::Impl {
             if (nf.key == "battery" && !nf.numeric) dev->batteryOk = (nf.text == "OK" || nf.text == "ok") ? 1 : (nf.text == "LOW" || nf.text == "Low" || nf.text == "low") ? 0 : dev->batteryOk;
         }
         dev->kind = kindOf(dev->latest, dev->model);
+        sensorHealthMessage(dev->health, *dev, dev->lastSeen);
         recent.insert(recent.begin(), js);
         if (recent.size() > kSensorsRecentMax) recent.pop_back();
         lastSnr = curPd ? curPd->snr_db : lastSnr;
@@ -439,6 +441,7 @@ struct SensorsReceiver::Impl {
     void prune(int64_t now) {
         if (removeAfter <= 0) return;
         std::lock_guard<std::mutex> lk(setMu);
+        for (auto& d : devices) sensorHealthTick(d.health, now);
         for (size_t i = devices.size(); i-- > 0;)
             if (now - devices[i].lastSeen > removeAfter && !pinned.count(devices[i].key)) devices.erase(devices.begin() + (long)i);
     }

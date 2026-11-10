@@ -61,6 +61,53 @@ int Assembler::missing() const {
     return last + 1 - (int)std::count_if(pk_.begin(), pk_.end(), [&](const auto& kv) { return kv.first <= last; });
 }
 
+std::vector<std::pair<int, int>> Assembler::gapMcus() const {
+    std::vector<std::pair<int, int>> v;
+    if (pk_.empty() || mcuCount_ <= 0) return v;
+    auto mcu = [](const std::array<uint8_t, kPktSize>& p) { return ((int)p[13] << 8) | p[14]; };   // the first MCU that starts in the packet; 0xFFFF: none
+    int prevId = -1, lastMcu = 0;
+    for (const auto& kv : pk_) {
+        const int m = mcu(kv.second);
+        if (kv.first != prevId + 1 && m != 0xFFFF && m > lastMcu) v.push_back({lastMcu, m - 1});
+        if (m != 0xFFFF) lastMcu = m;
+        prevId = kv.first;
+    }
+    if (eoiId_ < 0 || prevId != eoiId_) { if (lastMcu < mcuCount_ - 1) v.push_back({lastMcu, mcuCount_ - 1}); }
+    return v;
+}
+
+int fillGaps(Rgb& im, const std::vector<std::pair<int, int>>& gaps, int mcu) {
+    if (im.w <= 0 || im.h <= 0 || mcu <= 0) return 0;
+    const int cols = im.w / mcu, rows = im.h / mcu;
+    std::vector<char> hole((size_t)rows * cols, 0);
+    int n = 0;
+    auto at = [&](int x, int y) { return &im.rgb[((size_t)y * im.w + x) * 3]; };
+    for (const auto& g : gaps) for (int m = g.first; m <= g.second && m < rows * cols; m++) {
+        if (m < 0) continue;
+        const int cx = m % cols, cy = m / cols;
+        // only what the decoder really left empty: flat (a damaged neighbour keeps its detail)
+        double sum = 0, sq = 0; int c = 0;
+        for (int y = cy * mcu; y < (cy + 1) * mcu; y++) for (int x = cx * mcu; x < (cx + 1) * mcu; x++) { const uint8_t* p = at(x, y); const double v = 0.3 * p[0] + 0.6 * p[1] + 0.1 * p[2]; sum += v; sq += v * v; c++; }
+        const double var = sq / c - (sum / c) * (sum / c);
+        if (var < 9.0) { hole[(size_t)cy * cols + cx] = 1; n++; }
+    }
+    for (int cx = 0; cx < cols; cx++) for (int cy = 0; cy < rows; cy++) {
+        if (!hole[(size_t)cy * cols + cx]) continue;
+        int top = cy; while (top >= 0 && hole[(size_t)top * cols + cx]) top--;
+        int bot = cy; while (bot < rows && hole[(size_t)bot * cols + cx]) bot++;
+        for (int x = cx * mcu; x < (cx + 1) * mcu; x++) for (int y = cy * mcu; y < (cy + 1) * mcu; y++) {
+            const int y0 = top >= 0 ? (top + 1) * mcu - 1 : -1, y1 = bot < rows ? bot * mcu : -1;
+            uint8_t* p = at(x, y);
+            for (int k = 0; k < 3; k++) {
+                if (y0 >= 0 && y1 >= 0) { const double f = (double)(y - y0) / (y1 - y0); p[k] = (uint8_t)std::lround(at(x, y0)[k] * (1 - f) + at(x, y1)[k] * f); }
+                else if (y0 >= 0) p[k] = at(x, y0)[k];
+                else if (y1 >= 0) p[k] = at(x, y1)[k];
+            }
+        }
+    }
+    return n;
+}
+
 std::vector<uint8_t> Assembler::jpeg() const {
     if (pk_.empty()) return {};
     ssdv_t s;

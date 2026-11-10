@@ -77,6 +77,7 @@ void showPicture(App& a, const dect2::SsdvImage& im) {
     if (im.jpeg && (S.texKey != key || S.texRev != im.rev)) {
         dect2::ssdv::Rgb rgb;
         if (dect2::ssdv::decodeJpeg(im.jpeg->data(), im.jpeg->size(), rgb) && rgb.w > 0 && gGfx) {
+            if (!im.gaps.empty()) dect2::ssdv::fillGaps(rgb, im.gaps);
             if (!S.tex || S.texW != rgb.w || S.texH != rgb.h) { delete S.tex; S.tex = gGfx->createImage(rgb.w, rgb.h, 0xFF000000u); S.texW = rgb.w; S.texH = rgb.h; }
             std::vector<uint32_t> px((size_t)rgb.w * rgb.h);
             for (size_t i = 0; i < px.size(); i++) px[i] = 0xFF000000u | ((uint32_t)rgb.rgb[i * 3 + 2] << 16) | ((uint32_t)rgb.rgb[i * 3 + 1] << 8) | rgb.rgb[i * 3];

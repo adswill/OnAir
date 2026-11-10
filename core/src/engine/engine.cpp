@@ -477,6 +477,11 @@ void Engine::feedReceiver(int a, const cf32* x, size_t n) {
         if (!fmCensusReady_ || c != fmCensusC_ || r != fmCensusR_) { fmCensusC_ = c; fmCensusR_ = r; fmCensusReady_ = fmCensus_.configure(r, c); }
         if (fmCensusReady_) fmCensus_.feed(x, n);
     }
+    if (dabCensusOn_.load(std::memory_order_relaxed) && a == 3) {  // the DAB census: every ensemble in the capture, beside the listened one
+        const double c = captureCentreHz(), r = rate_.load();
+        if (!dabCensusReady_ || c != dabCensusC_ || r != dabCensusR_) { dabCensusC_ = c; dabCensusR_ = r; dabCensusReady_ = dabCensus_.configure(r, c); }
+        if (dabCensusReady_) dabCensus_.feed(x, n);
+    }
     if (amCensusOn_.load(std::memory_order_relaxed)) {             // the AM census: every carrier of the capture, analysis only
         const double c = captureCentreHz(), r = rate_.load();
         if (!amCensusReady_ || c != amCensusC_ || r != amCensusR_) { amCensusC_ = c; amCensusR_ = r; amCensusReady_ = amCensus_.configure(r, c); }

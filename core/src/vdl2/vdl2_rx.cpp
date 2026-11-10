@@ -535,6 +535,10 @@ struct Vdl2Receiver::Impl {
             c.freqHz = m.freqHz; c.lastHeardSec = m.timeSec; c.lastWall = m.wallTime;
             if (srcAir) { c.levelDb = m.levelDb; c.onGround = m.onGround; if (m.dstType == 4 || m.dstType == 5) c.groundStation = m.dst; }
             else if (m.srcType == 4 || m.srcType == 5) c.groundStation = m.src;
+            if (c.groundStation && (c.hops.empty() || c.hops.back().addr != c.groundStation)) {
+                c.hops.push_back({c.groundStation, m.timeSec});
+                if (c.hops.size() > 5) c.hops.erase(c.hops.begin());
+            }
             if (!m.reg.empty()) c.reg = m.reg;
             if (!m.flight.empty() && srcAir) c.flight = m.flight;
             if (m.hasKin && srcAir) {
@@ -584,6 +588,10 @@ struct Vdl2Receiver::Impl {
                 if (m.hasPos && m.posKind == "XID ground station location") { g.hasPos = true; g.lat = m.lat; g.lon = m.lon; }
                 const size_t at = m.detail.find("airport coverage ");
                 if (at != std::string::npos) g.airports = m.detail.substr(at + 17, m.detail.find('\n', at) - at - 17);
+            }
+            if (srcAir && !tel.aircraft.empty() && tel.aircraft.front().icao == m.src) {   // a downlink from a located aircraft: it is within reach of this station
+                const Vdl2Aircraft& c = tel.aircraft.front();
+                if (c.hasPos && m.timeSec - c.posTime <= 300.0) vdl2StationLearn(g, c.lat, c.lon, c.onGround);
             }
             tel.stations.insert(tel.stations.begin(), std::move(g));
             while (tel.stations.size() > limits::kGroundStations) tel.stations.pop_back();

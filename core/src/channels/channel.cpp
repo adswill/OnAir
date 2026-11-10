@@ -109,6 +109,22 @@ void MultipathDetector::update(const RxTelemetry& rx) {
     }
 }
 
+std::string echoAdvice(const EchoInfo& e, double guardUs) {
+    char b[240];
+    const double km = std::fabs(e.delayUs) * 0.2998;
+    if (e.delayUs < 0) {
+        snprintf(b, sizeof b, "a second transmitter or path arrives %.1f us (%.1f km) before the strongest one: pre-echo%s; turning the antenna towards it, or away from it, makes one path clearly stronger", -e.delayUs, km,
+                 e.insideGuard ? ", inside the guard interval" : " beyond the guard interval");
+    } else if (!e.insideGuard) {
+        snprintf(b, sizeof b, "the echo is %.1f km of extra path, beyond the %.0f us guard interval: it cannot be equalised, reduce it with a directional antenna or a position shadowed from that direction", km, guardUs);
+    } else if (guardUs > 0 && e.delayUs > 0.8 * guardUs) {
+        snprintf(b, sizeof b, "the echo is %.1f km of extra path, close to the end of the %.0f us guard interval: a small change can push it outside", km, guardUs);
+    } else {
+        snprintf(b, sizeof b, "the echo is %.1f km of extra path, inside the guard interval: the receiver equalises it", km);
+    }
+    return b;
+}
+
 void MultipathDetector::finish() {
     rep_.framesSeen = (int)hist_.size();
     double mean = 0, var = 0;
@@ -132,6 +148,7 @@ void MultipathDetector::finish() {
         snprintf(b, sizeof b, "echo %.0f dB below the main path, %+.2f us away%s", -e.levelDb, e.delayUs, e.insideGuard ? "" : " (outside the guard interval: inter-symbol interference)");
         rep_.reasons.push_back(b);
         if (rep_.echoes.size() > 1) { snprintf(b, sizeof b, "%zu echoes above -22 dB in total", rep_.echoes.size()); rep_.reasons.push_back(b); }
+        rep_.reasons.push_back(echoAdvice(e, rep_.guardUs));
     }
     if (notchPts_ > 0) {
         snprintf(b, sizeof b, "frequency-selective fading: %d dip%s, deepest %.0f dB below the median", rep_.notches, rep_.notches == 1 ? "" : "s", rep_.notchDepthDb);

@@ -1,6 +1,7 @@
 // VDL Mode 2 receiver telemetry, shared by the receiver and the UI.
 // The first members of Vdl2Telemetry are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
@@ -103,6 +104,8 @@ struct Vdl2Aircraft {
     int vsFpm = 0;
     double kinTime = 0;          // signal time of the last kinematics update
     std::vector<Vdl2TrackPoint> track;   // oldest first, at most 24
+    struct StationHop { uint32_t addr = 0; double timeSec = 0; };
+    std::vector<StationHop> hops;        // the ground stations it talked to, oldest first, at most 5 (its handoff chain)
 };
 
 // Last known fix at posTime, optionally advanced to nowSec using ADS-C earth ref or speed from the last track segment.
@@ -151,7 +154,33 @@ struct Vdl2GroundStation {
     bool hasPos = false;         // from its GSIF / XID ground station location parameter
     double lat = 0, lon = 0;
     std::string airports;        // from the XID airport coverage parameter
+    // learned from the aircraft that talk to it, when they have a position (no GSIF location heard, or for the coverage)
+    bool hasEstimate = false;    // an estimate from the aircraft positions; a taxiing aircraft counts for 25 airborne ones
+    double estLat = 0, estLon = 0;
+    int estFixes = 0;            // positions behind the estimate
+    double sumW = 0, sumX = 0, sumY = 0, sumZ = 0;
+    float coverageNm = 0;        // farthest aircraft with a position that talked to it, from its location or estimate
+    uint32_t aircraftHeard = 0;  // frames with a located aircraft
 };
+
+// One aircraft position heard talking to this station: the estimate on the sphere and the coverage radius
+inline void vdl2StationLearn(Vdl2GroundStation& g, double lat, double lon, bool onGround) {
+    using dect2::math::kPi;
+    const double r = kPi / 180.0, w = onGround ? 25.0 : 1.0;
+    g.sumW += w;
+    g.sumX += w * std::cos(lat * r) * std::cos(lon * r);
+    g.sumY += w * std::cos(lat * r) * std::sin(lon * r);
+    g.sumZ += w * std::sin(lat * r);
+    g.estFixes++;
+    g.aircraftHeard++;
+    if (g.estFixes >= 3) {
+        const double h = std::hypot(g.sumX, g.sumY);
+        g.estLat = std::atan2(g.sumZ, h) / r;
+        g.estLon = std::atan2(g.sumY, g.sumX) / r;
+        g.hasEstimate = true;
+    }
+    if (g.hasPos || g.hasEstimate) g.coverageNm = std::max(g.coverageNm, (float)vdl2DistNm(g.hasPos ? g.lat : g.estLat, g.hasPos ? g.lon : g.estLon, lat, lon));
+}
 
 struct Vdl2ChannelInfo {
     double freqHz = 0;

@@ -184,6 +184,40 @@ fn b(v: bool) -> i32 {
 /// Infers the register of the 7 bytes `mb` (message bits 33 - 88). `alt_ft`: the altitude of the reply (DF20) or [`NO_ALTITUDE`]: the weather
 /// registers 4,4 and 4,5 are only taken with it, their temperature and pressure must fit the altitude (the static pressure is what the altimeter
 /// reads, so it is that of the pressure altitude). Fewer than 7 bytes give nothing.
+/// An ACAS resolution advisory in the BDS 3,0 layout, from where the format is known: the MV field of DF16 (VDS 0x30) or the ME field of a
+/// TC 28 subtype 2 squitter (bytes 2 - 7 have the same layout). The same sanity checks as for Comm-B inference.
+pub fn acas_ra(mb: &[u8]) -> CommB {
+    let mut out = CommB::new();
+    if mb.len() < 7 {
+        return out;
+    }
+    let g = |from: usize, n: usize| -> u32 {
+        let mut v = 0u32;
+        for i in from..from + n {
+            let (byte, bit) = ((i - 1) / 8, 7 - (i - 1) % 8);
+            v = (v << 1) | ((mb[byte] >> bit) & 1) as u32;
+        }
+        v
+    };
+    let tti = g(29, 2);
+    if tti == 3 || (tti == 1 && (g(55, 2) != 0 || g(31, 24) == 0)) || (tti == 0 && g(31, 26) != 0) {
+        return out;
+    }
+    if g(9, 14) == 0 && g(27, 1) == 0 {
+        return out;
+    }
+    out.bds = 0x30;
+    out.ara = g(9, 14);
+    out.rac = g(23, 4);
+    out.ra_terminated = g(27, 1) != 0;
+    out.multiple_threats = g(28, 1) != 0;
+    out.tti = tti as i32;
+    if tti == 1 {
+        out.threat_icao = g(31, 24);
+    }
+    out
+}
+
 pub fn infer(mb: &[u8], alt_ft: i32) -> CommB {
     let mut out = CommB::new();
     if mb.len() < 7 {

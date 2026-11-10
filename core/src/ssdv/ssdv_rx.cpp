@@ -329,7 +329,7 @@ struct SsdvReceiver::Impl {
             SsdvImage s;
             s.call = im.call; s.imageId = im.imageId; s.width = im.as.width(); s.height = im.as.height(); s.quality = im.as.quality();
             s.packets = (int)im.as.packets(); s.lastPacket = im.as.lastPacketId(); s.missing = im.as.missing(); s.complete = im.as.complete();
-            s.firstUtc = im.firstUtc; s.lastUtc = im.lastUtc; s.rev = im.rev; s.jpeg = im.jpeg; s.savedPath = im.savedPath;
+            s.firstUtc = im.firstUtc; s.lastUtc = im.lastUtc; s.rev = im.rev; s.jpeg = im.jpeg; s.savedPath = im.savedPath; s.gaps = im.as.gapMcus();
             o.images.push_back(std::move(s));
         }
         if (o.state != lastState) {

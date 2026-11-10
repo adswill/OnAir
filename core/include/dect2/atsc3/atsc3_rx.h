@@ -21,6 +21,7 @@ struct Atsc3Telemetry {
     long alpPackets = 0, udp = 0, llsTables = 0, routeObjects = 0;
     double secSinceFrame = 1e9;          // seconds (of wall clock) since the last decoded frame
     std::vector<atsc3::SltService> services;
+    std::vector<atsc3::AeatAlert> alerts;     // advanced emergency alerts in force
     int selected = -1;
     bool serviceReady = false;
     atsc3::FrameInfo frame;

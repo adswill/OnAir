@@ -26,6 +26,8 @@ inline int symToDibit(int s) { return s == 3 ? 1 : s == 1 ? 0 : s == -1 ? 2 : 3;
 
 // NID: NAC (12 bits) and DUID (4 bits), BCH(63,16,23) plus a parity bit. bits[0] is sent first.
 void nidEncode(int nac, int duid, uint8_t bits[64]);
+// With the site's NAC known only the frame types remain: the nearest of those code words, up to 16 bit errors and clearly nearer than the runner-up (the BCH code alone stops at 11)
+bool nidDecodeKnownNac(const uint8_t bits[64], int nac, int& duid, int* errs = nullptr);
 bool nidDecode(const uint8_t bits[64], int& nac, int& duid, int* errs = nullptr);   // corrects up to 11 bit errors (accepts at most 10)
 
 // Reed-Solomon over GF(64) (x^6 + x + 1), shortened from (63, ...): sym[0] is the first hexbit sent, data first, then n - k parity

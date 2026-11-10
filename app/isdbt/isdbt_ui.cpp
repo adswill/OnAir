@@ -106,6 +106,7 @@ void isdbtReceiverTab(App& a) {
     }
     row("carrier offset", "%+.1f Hz", t.cfoHz);
     row("sample clock", "%+.1f ppm corrected", t.sroPpm);
+    if (t.isdbt.tmccOk && t.isdbt.emergency) ImGui::TextColored(ImVec4(1.f, 0.55f, 0.3f, 1), "%s", tr("Emergency warning: the broadcaster has set the alert start flag (TMCC)"));
     if (t.isdbt.tmccOk) {
         row("signal to noise", "%.1f dB (pilots)", t.dataSnrDb);
         row("TMCC", "%s%s, parameter switching %s, emergency alert flag %s", t.isdbt.partial ? "one-segment partial reception layer present" : "no partial reception layer",

@@ -82,6 +82,7 @@ struct P25Telemetry {
     int nac = -1;
     bool control = false;        // a control channel (TSBKs) is heard
     uint64_t frames = 0, nidBad = 0, hdu = 0, ldu1 = 0, ldu2 = 0, tdu = 0, tdulc = 0, pdu = 0;
+    uint64_t nidKnownNac = 0;    // frame headers only readable because the site's NAC is known
     uint64_t tsbkOk = 0, tsbkBad = 0, lcOk = 0, lcBad = 0, esOk = 0, esBad = 0, hduOk = 0, hduBad = 0;
     uint64_t voiceFrames = 0, voiceDecoded = 0, lateEntries = 0;
     float berPct = 0;            // NID bit errors before the BCH

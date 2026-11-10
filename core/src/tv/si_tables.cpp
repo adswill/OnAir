@@ -1,3 +1,5 @@
+#include <map>
+#include <cmath>
 // DVB service information beyond the multiplex being received (see si_tables.h).
 #include "dect2/tv/si_tables.h"
 #include "dect2/tv/ts.h"
@@ -284,6 +286,19 @@ SiSnapshot SiCollector::snapshot() const {
     for (const auto& c : ca_) o.ca.push_back(c.second);
     o.totUtc = totUtc_; o.sections = sections_;
     return o;
+}
+
+SiOrbitGuess siGuessOrbit(const SiSnapshot& s, const std::vector<double>& found, double tol) {
+    SiOrbitGuess g;
+    std::map<int, int> votes;
+    std::vector<const SiTransponder*> sat;
+    for (const auto& n : s.networks) for (const auto& t : n.transponders) if (t.kind == 1) { votes[(int)std::lround(t.orbitDeg * 10)]++; sat.push_back(&t); }
+    if (sat.empty()) return g;
+    int best = 0, at = 0;
+    for (const auto& kv : votes) if (kv.second > best) { best = kv.second; at = kv.first; }
+    g.valid = true; g.orbitDeg = at / 10.0; g.transponders = best; g.carriers = (int)found.size();
+    for (double f : found) for (const auto* t : sat) if (std::fabs(t->freqMhz - f) <= tol && (int)std::lround(t->orbitDeg * 10) == at) { g.matched++; break; }
+    return g;
 }
 
 } // namespace dect2

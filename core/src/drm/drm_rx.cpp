@@ -1454,6 +1454,7 @@ struct DrmReceiver::Impl {
             t.year = y; t.month = m; t.day = d; t.hour = sd.time.hour; t.minute = sd.time.minute;
             t.hasLocalOffset = sd.time.hasOffset; t.localOffsetHalfHours = sd.time.offsetHalfHours;
         }
+        { DrmAfs af = be.afs(); af.applySchedule(t.timeValid ? t.year : 0, t.month, t.day, t.hour, t.minute); t.altFreqs = af.altFreqs(); }
         t.facOk = be.facOk; t.facBad = be.facBad; t.sdcOk = be.sdcOk; t.sdcBad = be.sdcBad; t.mscFramesOk = be.mscOk; t.mscFramesBad = be.mscBad;
         t.blocksOk = audioOk; t.blocksBad = audioBad;
         t.textMessage = textMsg;

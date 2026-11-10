@@ -2,6 +2,8 @@
 // and the decoder list. Receive only. The decoders are rtl_433's (docs/SENSORS-3.7.md says which ones are supported and how far they were tested).
 #include "app.h"
 #include "ease/ease_ui.h"
+#include "dect2/sensors/sensors_re.h"
+#include <sstream>
 #include "i18n/i18n.h"
 #include "dect2/common/time_fmt.h"
 #include "dect2/sensors/sensors_rx.h"
@@ -242,6 +244,11 @@ void sensorsView(App& a) {
         if (d.batteryOk == 0) ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.3f, 1), "%s", tr("low")); else ImGui::TextUnformatted(batText(d).c_str());
         ImGui::TableNextColumn(); ImGui::TextDisabled("%.0f", d.rssiDb);
         ImGui::TableNextColumn(); ImGui::TextDisabled("%s  x%llu", ago(now, d.lastSeen).c_str(), (unsigned long long)d.count);
+        {
+            const auto& h = d.health;
+            const char* w = h.silent ? N_("silent") : h.collision ? N_("two sensors, one id?") : h.outlier ? N_("odd reading") : h.batteryFalling ? N_("battery falling") : nullptr;
+            if (w) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.65f, 0.3f, 1), "%s", tr(w)); if (ImGui::IsItemHovered() && !h.detail.empty()) ImGui::SetTooltip("%s", h.detail.c_str()); }
+        }
     }
     ImGui::EndTable();
     if (t.devices.empty()) ImGui::TextDisabled("%s", t.packages ? tr("No sensor decoded yet. A pulse signal was heard: see Unknown signals.") : tr("No sensors yet. Sensors send every 30 to 180 seconds; wait a few minutes."));
@@ -399,6 +406,27 @@ void unknownView(App& a) {
     ImGui::SameLine();
     if (ImGui::Button(tr("Copy##sensspec"))) ImGui::SetClipboardText(S.specBuf);
     if (!S.specNote.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", S.specNote.c_str()); ImGui::PopTextWrapPos(); }
+    {   // work out the signal from several packets of the same length: checksum, and which bits hold what the sensor's own display shows
+        static char readings[256] = "";
+        std::vector<std::vector<uint8_t>> pk;
+        const auto mine = dect2::sensors::reParseHexRows(u.hex);
+        if (!mine.empty()) for (const auto& o : un) {
+            const auto rw = dect2::sensors::reParseHexRows(o.hex);
+            if (!rw.empty() && rw[0].size() == mine[0].size()) pk.push_back(rw[0]);
+        }
+        if (pk.size() >= 3 && ImGui::TreeNode(trw("Work out this sensor"))) {
+            ImGui::TextDisabled("%zu %s", pk.size(), tr("packets of this length"));
+            const auto c = dect2::sensors::reFindChecksum(pk);
+            if (c.found) ImGui::Text("%s: %s, %d %s", tr("Checksum"), c.name.c_str(), c.width, tr("bits")); else ImGui::TextDisabled("%s", tr("No checksum found"));
+            ImGui::SetNextItemWidth(-1);
+            ImGui::InputTextWithHint("##sensread", tr("what the sensor showed, one number per packet, newest first, comma separated"), readings, sizeof readings);
+            std::vector<double> v; { std::stringstream ss(readings); std::string t; while (std::getline(ss, t, ',')) if (!t.empty()) v.push_back(std::atof(t.c_str())); }
+            const auto f = v.size() >= 4 ? dect2::sensors::reFindFields(pk, v) : dect2::sensors::reFindRamps(pk);
+            for (const auto& x : f) { ImGui::TextUnformatted(x.text.c_str()); if (!x.flexGet.empty()) { ImGui::SameLine(); ImGui::PushID(x.bitOffset * 100 + x.bits); if (ImGui::SmallButton(tr("Add to flex"))) { std::string sp = S.specBuf; sp += "," + x.flexGet; std::snprintf(S.specBuf, sizeof S.specBuf, "%s", sp.c_str()); } ImGui::PopID(); } }
+            if (f.empty()) ImGui::TextDisabled("%s", v.size() >= 4 ? tr("No bits fit those readings.") : tr("Type at least four readings, or let the value change slowly (warm the sensor in your hand)."));
+            ImGui::TreePop();
+        }
+    }
     if (u.flexSpec.empty()) ImGui::TextDisabled("%s", tr("No bit pattern was found to suggest a decoder from; widths above can still help."));
     ImGui::EndChild();
 }

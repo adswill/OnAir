@@ -1,4 +1,5 @@
 // DRM back end: FAC, SDC and MSC decoding from equalised cells.
+#include <atomic>
 #include "dect2/drm/drm_dec.h"
 #include <algorithm>
 #include <cmath>
@@ -18,7 +19,7 @@ void DrmBackend::reset() {
     mode_ = -1; occ_ = -1; layout_.reset();
     wRefFac_ = wRefSdc_ = wRefMux_ = 0; pendFacValid_ = false; pendPos_ = -1; announced_ = 0;
     facValid_ = false; sdcSeen_ = false; hierarchical_ = false;
-    fac_ = FacInfo(); sdc_ = SdcInfo();
+    fac_ = FacInfo(); sdc_ = SdcInfo(); afs_.clear(); sdcPrevZ_.clear(); sdcPrevW_.clear(); sdcPrevN_ = 0;
     for (int i = 0; i < 4; i++) facSeen_[i] = false;
     pos_ = -1;
     facCode_.reset(); sdcCode_.reset(); mscCode_.reset();
@@ -160,6 +161,8 @@ void DrmBackend::buildMscCode() {
     }
 }
 
+std::atomic<bool> gDrmSdcCombine{true};   // tests compare with and without
+
 void DrmBackend::decodeSdc() {
     if (!layout_ || !facValid_) return;
     const int mode = fac_.sdcMode;
@@ -186,7 +189,36 @@ void DrmBackend::decodeSdc() {
     sdcConst.assign(sdcZ_.begin(), sdcZ_.begin() + (ptrdiff_t)std::min<size_t>(sdcZ_.size(), 1024));
     const int F = sdcDataBytes(mode_, occ_, mode);
     int afs = 0;
-    if (F < 4 || !sdcCheckBits(u.data(), F, afs)) { sdcBad++; return; }
+    bool sdcGood = F >= 4 && sdcCheckBits(u.data(), F, afs);
+    if (!sdcGood && F >= 4 && sdcPrevZ_.size() == sdcZ_.size() && gDrmSdcCombine.load(std::memory_order_relaxed)) {
+        // The SDC usually repeats unchanged: the cells of the failed block added to those of the earlier blocks (weighted). A block whose content changed fails its CRC and nothing is lost;
+        // only a block that passes the CRC is used.
+        const size_t N = sdcZ_.size();
+        std::vector<cf32> z(N); std::vector<float> w(N);
+        for (size_t i = 0; i < N; i++) {
+            const float wa = sdcW_[i], wb = sdcPrevW_[i], ws = wa + wb;
+            z[i] = ws > 0 ? (sdcZ_[i] * wa + sdcPrevZ_[i] * wb) / ws : sdcZ_[i];
+            w[i] = ws;
+        }
+        sdcCode_->decode(z.data(), w.data(), u.data(), 2);
+        for (size_t i = 0; i < u.size(); i++) u[i] ^= pr[i];
+        sdcGood = sdcCheckBits(u.data(), F, afs);
+        if (sdcGood) sdcCombined++;
+    }
+    if (!sdcGood) {
+        // keep the running sum of the failed blocks, at most about four frames' worth (weights are capped by resetting after a success)
+        if (sdcPrevZ_.size() != sdcZ_.size() || sdcPrevN_ >= 3) { sdcPrevZ_ = sdcZ_; sdcPrevW_ = sdcW_; sdcPrevN_ = 1; }
+        else {
+            for (size_t i = 0; i < sdcZ_.size(); i++) {
+                const float wa = sdcW_[i], wb = sdcPrevW_[i], ws = wa + wb;
+                if (ws > 0) sdcPrevZ_[i] = (sdcZ_[i] * wa + sdcPrevZ_[i] * wb) / ws;
+                sdcPrevW_[i] = ws;
+            }
+            sdcPrevN_++;
+        }
+        sdcBad++; return;
+    }
+    sdcPrevZ_ = sdcZ_; sdcPrevW_ = sdcW_; sdcPrevN_ = 1;
     sdcOk++;
     learnWeight(wRefSdc_, sdcMeanW);
     std::vector<uint8_t> field((size_t)F, 0);
@@ -195,6 +227,7 @@ void DrmBackend::decodeSdc() {
     sdcSeen_ = true;
     sdc_.afsIndex = afs;
     sdcParse(field.data(), F, sdc_);
+    afs_.feed(field.data(), F);
     if (first && log) {
         char b[200];
         snprintf(b, sizeof b, "DRM: SDC read: %d data entities", sdc_.entities);

@@ -21,6 +21,16 @@ struct PersistentSignal {
     float meanDb = 0, maxDb = 0; // level above the floor while present
 };
 
+// A signal that comes and goes at regular times (an hourly bulletin, a beacon, a satellite's fixed schedule)
+struct RecurringSignal {
+    double freqHz = 0;
+    double periodSec = 0;        // the median time between its starts
+    double nextSec = 0;          // the predicted next start (wall clock, seconds since 1970)
+    int starts = 0;              // how many times it started during the survey
+    float jitter = 0;            // the spread of the intervals as a share of the period
+    float occupancy = 0;
+};
+
 struct QuietSlot {
     double startHz = 0, widthHz = 0;
     float occupancy = 0;         // mean occupancy over the slot
@@ -63,6 +73,8 @@ public:
     std::vector<PersistentSignal> persistent(double minOccupancy = 0.5, int bridgeBins = 1) const;
     // The n emptiest slots of the given width (no overlap): lowest mean occupancy, then lowest strongest-ever level.
     std::vector<QuietSlot> quiet(double widthHz, int n = 5) const;
+    // Signals on for a part of the time at a regular interval: at least minStarts starts, intervals within maxJitter of their median (they are found per run of adjacent bins). Most starts first.
+    std::vector<RecurringSignal> recurring(int minStarts = 4, double maxJitter = 0.15) const;
 
     // RGBA picture, time down (oldest at the top), frequency across; width x height pixels
     std::vector<uint8_t> heatmap(int width, int height, double fullScaleDb = 30) const;

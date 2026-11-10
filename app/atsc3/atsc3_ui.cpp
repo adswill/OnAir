@@ -115,6 +115,19 @@ void atsc3ReceiverTab(App& a) {
     row("link layer", "%ld ALP packets, %ld UDP datagrams, %ld service list tables, %ld ROUTE objects", t.alpPackets, t.udp, t.llsTables, t.routeObjects);
     row("decoder load", "%.0f%% of real time%s", 100 * t.load, t.droppedBlocks ? "  (samples were dropped)" : "");
     ImGui::Spacing();
+    if (!t.alerts.empty()) {
+        ImGui::Separator();
+        ImGui::TextColored(ImVec4(1.f, 0.55f, 0.3f, 1), "%s", tr("Emergency alerts"));
+        for (const auto& al : t.alerts) {
+            ImGui::PushTextWrapPos(0);
+            ImGui::Text("%s%s%s", al.eventDesc.empty() ? al.eventCode.c_str() : al.eventDesc.c_str(), al.priority.empty() ? "" : ", priority ", al.priority.c_str());
+            if (!al.text.empty()) ImGui::TextUnformatted(al.text.c_str());
+            if (!al.location.empty()) ImGui::TextDisabled("%s: %s", tr("area"), al.location.c_str());
+            if (!al.effective.empty() || !al.expires.empty()) ImGui::TextDisabled("%s - %s", al.effective.c_str(), al.expires.c_str());
+            if (!al.issuer.empty()) ImGui::TextDisabled("%s: %s", tr("issued by"), al.issuer.c_str());
+            ImGui::PopTextWrapPos();
+        }
+    }
     ImGui::Separator();
     ImGui::Text("Services");
     if (t.services.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("waiting for the service list (sent about once a second)"); ImGui::PopTextWrapPos(); } return; }

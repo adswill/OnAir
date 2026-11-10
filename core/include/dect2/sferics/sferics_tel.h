@@ -37,6 +37,8 @@ struct SfericsTelemetry {
     double lastAgoSec = -1;         // seconds since the last strike, -1 none yet
     std::vector<int> perMinute;     // kSfericsMinutes bins, oldest first, the last one is the running minute
     std::vector<SfericsStrike> recent;   // newest first
+    int stormPhase = 0;             // StormPhase (sferics_storm.h)
+    float stormDbChange = 0;        // median strike strength, the last 5 minutes against the 5 before
     double timeSec = 0;
     double inputRate = 0;
     double centerHz = 0;

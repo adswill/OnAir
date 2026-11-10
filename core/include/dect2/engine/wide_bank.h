@@ -104,6 +104,7 @@ struct WideOps {
     std::function<bool(const Tel&)> hasLog;                  // optional: false = this telemetry has no list entries, a carrier that goes is not kept in the log
     std::function<int(const Tel&)> rowState;                 // optional: the table's state (0 searching, 1 partly locked, 2 locked) when the telemetry's own state is not that scale
     std::function<bool(const Tel&)> voice;                   // optional: a voice call is on this carrier now (the sound goes to a call before a carrier that is only locked)
+    bool pinToPrior = false;                                 // the mixer stays on the nearest known channel of the carrier (DRM: on the reference frequency, not the centroid of a one-sided spectrum)
     std::function<void(Rx&, double absHz)> bind;             // optional: a receiver was made for a carrier at this absolute frequency (the span's centre set by setCenterHz plus the carrier's offset; the offset alone while no centre is known)
 };
 
@@ -250,7 +251,8 @@ public:
             if (!s) s = add(c);
             if (s) {
                 s->car = c;
-                if (std::fabs(c.hz - s->ch.shiftHz()) > follow) { s->ch.setShift(c.hz); s->recCh.setShift(c.hz); }
+                const double hz = mixHz(c);
+                if (std::fabs(hz - s->ch.shiftHz()) > follow) { s->ch.setShift(hz); s->recCh.setShift(hz); }
             }
         }
         const auto t0 = std::chrono::steady_clock::now();
@@ -383,6 +385,12 @@ private:
         for (double f : priorsAbs_) rel.push_back(f - center_);
         finder_.setPriors(rel, priorOnly_);
     }
+    double mixHz(const Carrier& c) const {
+        if (!ops_.pinToPrior) return c.hz;
+        double best = c.hz, d = 1e18;
+        for (double f : priorsAbs_) { const double r = f - center_, e = std::fabs(r - c.hz); if (e < d) { d = e; best = r; } }
+        return d <= cfg_.stepHz ? best : c.hz;
+    }
     Slot* find(int id) { for (auto& s : live_) if (s->car.id == id) return s.get(); return nullptr; }
     Slot* add(const Carrier& c) {
         auto s = std::make_unique<Slot>();
@@ -391,7 +399,7 @@ private:
         s->rx->configure(ops_.outRate);
         if (ops_.setup) ops_.setup(*s->rx);
         if (ops_.bind) ops_.bind(*s->rx, center_ + c.hz);
-        if (!s->ch.configure(spanRate_, ops_.outRate, c.hz, ops_.occupiedHz)) return nullptr;
+        if (!s->ch.configure(spanRate_, ops_.outRate, mixHz(c), ops_.occupiedHz)) return nullptr;
         if (ops_.audio) ops_.audio(*s->rx, !muted_ && c.id == effSel());
         if (!hist_.empty()) {   // the start of the transmission that made the finder notice the carrier
             const size_t k = std::min(hist_.size(), histCap());
@@ -414,6 +422,7 @@ private:
         }
     }
     double hzOf(const Slot& s) const {   // the finder's frequency, refined by what the decoder measured on the carrier
+        if (ops_.pinToPrior) return s.ch.shiftHz();
         const double c = ops_.freqCorrection ? ops_.freqCorrection(s.tel) : 0.0;
         const double hz = s.car.hz + (std::fabs(c) < 0.3 * cfg_.stepHz ? c : 0.0);
         return cfg_.snapReported ? snapToRaster(hz, cfg_.gridOriginHz, cfg_.stepHz) : hz;

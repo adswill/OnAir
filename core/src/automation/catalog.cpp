@@ -63,6 +63,8 @@ std::vector<EventInfo> build() {
         {"from", 's', "source call sign", "LY1ABC-9"}, {"to", 's', "destination", "APRS"}, {"path", 's', "digipeater path", "WIDE1-1"},
         {"info", 's', "information field", "!5441.40N/02517.00E>test"}, {"type", 's', "packet type", "position"}, {"summary", 's', "one-line reading", "position"},
         {"lat", 'n', "latitude when the packet has a position", "54.69"}, {"lon", 'n', "longitude when the packet has a position", "25.28"}}});
+    v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
+        {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {
         {"serial", 's', "serial number", "V1234567"}, {"type", 's', "RS41, DFM, M10 ...", "RS41"}, {"lat", 'n', "latitude", "54.5"}, {"lon", 'n', "longitude", "25.0"},
         {"alt_m", 'n', "altitude in metres", "12000"}, {"vspeed_ms", 'n', "climb rate m/s (negative: falling)", "5"}, {"hspeed_ms", 'n', "ground speed m/s", "20"},

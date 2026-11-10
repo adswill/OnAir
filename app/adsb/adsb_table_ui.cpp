@@ -5,6 +5,7 @@
 #include "../panels/photo_links_ui.h"
 #include "adsb_internal.h"
 #include "adsb_acars.h"
+#include "dect2/aero/aero_adsc.h"
 
 using namespace adsbui;
 
@@ -310,10 +311,39 @@ void detail(App& a) {
         snprintf(b, sizeof b, " (%.0f s ago)", ac->raAgeSec); ra += b;
         ImGui::TextDisabled("ACAS RA"); kvColumn(96 * gUi); ImGui::TextColored(kWarn, "%s", ra.c_str());
     } else kv("ACAS RA", "-");
+    if (ac->trust >= 0) {
+        snprintf(b, sizeof b, "%d / 100", ac->trust);
+        ImGui::TextDisabled("%s", tr("trust")); kvColumn(96 * gUi);
+        if (ac->trust < 80) {
+            ImGui::TextColored(kWarn, "%s", b);
+            static const char* const why[] = {N_("much louder than aircraft at that range"), N_("much weaker than aircraft at that range"), N_("claimed position is beyond the radio horizon"),
+                                              N_("position jumps"), N_("claimed speed does not match the positions"), N_("registration callsign does not match the address"), N_("same callsign on another address far away")};
+            for (int i = 0; i < 7; i++) if (ac->trustFlags & (1u << i)) ImGui::TextWrapped("- %s", tr(why[i]));
+        }
+        else ImGui::TextUnformatted(b);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Checks what this aircraft claims against what the receiver can measure. A low score is a hint, not proof: a shaded antenna, ducting or a faulty transponder look similar."));
+    }
+    for (const auto& e : t.raEvents) {   // the conflict timeline of this aircraft: as the one manoeuvring or as the threat
+        if (e.icao != ac->icao && e.threat != ac->icao) continue;
+        std::string line = (e.icao == ac->icao ? std::string(tr("advisory")) : std::string(tr("threat to ")) + (e.callsign.empty() ? icaoText(e.icao) : e.callsign));
+        snprintf(b, sizeof b, " %.0f s ago, %.0f s long, %d updates", t.timeSec - e.lastSec, e.lastSec - e.startSec, e.updates); line += b;
+        if (e.icao == ac->icao && e.threat) line += ", " + (e.threatCallsign.empty() ? icaoText(e.threat) : e.threatCallsign);
+        if (e.hasSeparation) { line += ", " + uDist(e.separationNm, 1) + " " + au::distUnit(S.units); }
+        if (e.hasAlt && e.hasThreatAlt) { line += ", " + uAlt(std::abs(e.altFt - e.threatAltFt)) + " " + au::altUnit(S.units); }
+        ImGui::TextDisabled("%s", tr("conflict")); kvColumn(96 * gUi); ImGui::TextWrapped("%s", line.c_str());
+    }
     if (ac->emergency) snprintf(b, sizeof b, "state %d", ac->emergency); else snprintf(b, sizeof b, "none");
     kv("emergency", b);
     snprintf(b, sizeof b, "%u messages", ac->messages); kv("heard", b);
     snprintf(b, sizeof b, "%.0f dBFS", ac->levelDbfs); kv("level", b);
+    {   // the ADS-C contracts its operator and the ATC centres hold with it, from ACARS, VDL2, HFDL and Aero
+        const std::string reg = registrationOf(ac->icao);
+        if (!reg.empty()) for (const auto& c : dect2::AdscContractBook::get().contractsOf(reg)) {
+            static const char* const st[] = {N_("requested"), N_("acknowledged"), N_("refused"), N_("cancelled")};
+            ImGui::TextDisabled("ADS-C %s", c.ground.c_str()); kvColumn(96 * gUi);
+            ImGui::TextWrapped("%s (%s)", dect2::AdscContractBook::describe(c).c_str(), tr(st[c.state]));
+        }
+    }
     acarsLogSection(a, *ac);
     tx::voiceSection(a, ac->icao, ac->callsign, registrationOf(ac->icao));
 }

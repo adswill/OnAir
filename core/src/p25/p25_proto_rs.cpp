@@ -44,6 +44,19 @@ bool nidDecode(const uint8_t bits[64], int& nac, int& duid, int* errs) {
     return ok;
 }
 
+bool nidDecodeKnownNac(const uint8_t bits[64], int nac, int& duid, int* errs) {
+    int best = 99, second = 99, at = -1;
+    for (int d = 0; d < 16; d++) {
+        if (frameLen(d) <= 0) continue;
+        uint8_t w[64]; nidEncode(nac, d, w);
+        int e = 0; for (int i = 0; i < 64; i++) e += w[i] != bits[i];
+        if (e < best) { second = best; best = e; at = d; } else if (e < second) second = e;
+    }
+    if (at < 0 || best > 16 || second - best < 8) return false;
+    duid = at; if (errs) *errs = best;
+    return true;
+}
+
 void rsEncode(uint8_t* sym, int n, int k) { onair_p25_rs_encode(sym, n, k); }
 bool rsDecode(uint8_t* sym, int n, int k, int* errs) {
     int32_t e = 0;

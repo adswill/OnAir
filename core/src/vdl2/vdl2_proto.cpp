@@ -116,6 +116,7 @@ void analyseAcarsText(Vdl2Message& m, const std::string& label, const std::strin
     const bool uplink = !m.fromAir;
     AeroAdscMessage adsc;
     if (aeroDecodeAdsc(text, uplink, adsc)) {
+        AdscContractBook::get().note(adsc, m.wallTime);
         const std::string adscText = aeroDescribeAdsc(adsc);
         if (!adscText.empty()) {
             addLine(m.detail, "ADS-C (FANS-1/A):");

@@ -45,6 +45,7 @@ public:
     // Entry below the link layer: an IP packet.
     void pushIp(const uint8_t* packet, size_t size);
 
+    std::vector<AeatAlert> alerts() const { std::lock_guard<std::mutex> lk(mu_); return alerts_; }   // the advanced emergency alerts in force (the last AEAT)
     std::vector<SltService> services() const;                 // from the low level signaling received so far
     bool selectService(int serviceId);                        // false until the service is known; may be called before, it is remembered
     int selectedService() const { return selected_; }
@@ -74,6 +75,7 @@ private:
     mutable std::mutex mu_;
     std::map<int, AlpReassembler> reasm_;
     IpReceiver ip_;
+    std::vector<AeatAlert> alerts_;
     std::map<int, LlsTable> lls_;                  // by LLS_group_id (SLT only)
     std::vector<SltService> services_;
     int selected_ = -1;
