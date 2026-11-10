@@ -11,6 +11,8 @@ dect2::MeshCoverage gCov(1.0);
 std::unordered_map<std::string, uint32_t> gFed;
 }
 
+namespace meshui {   // declared in mesh_ui.cpp inside this namespace
+
 void meshCoverageFeed(const dect2::MeshTelemetry& t, double rxLat, double rxLon, bool rxSet) {
     if (rxSet) gCov.setReceiver(rxLat, rxLon);
     const int sf = t.packets.empty() ? 11 : t.packets.front().sf;
@@ -43,3 +45,5 @@ void meshCoverageCard() {
     }
     ImGui::EndTable();
 }
+
+} // namespace meshui
