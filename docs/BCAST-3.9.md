@@ -27,6 +27,15 @@ ARIB STD-B29 / ITU-R BS.1114 System F: the narrow-band ISDB of one or three segm
   - the one-seg service of ISDB-T
   - a noise sweep for QPSK 1/2
   - the engine's own test signal through the receiver
+- Known limit: three-segment signals with DQPSK segments are unreliable. Both layers lose 10-25 % of their packets, even at 20-30 dB
+  and with a steady lock and TMCC. That holds whether every segment is DQPSK or only the centre one is. One-segment DQPSK and
+  every coherent combination decode cleanly. The test prints the loss for these cases but does not fail on it. The cause is not
+  found yet; the next suspect is the common-phase tracking, where the DQPSK segments' TMCC carriers outnumber the other pilots.
+- Fixed on the way:
+  - The impulse-response display wrote past its buffer (the full ISDB-T carrier range in the small FFT); this was the double free
+    CI showed.
+  - Mode 1 with guard 1/32 or 1/16 did not lock: one segment's guard is then 8 or 16 samples. The guard search now sums the
+    prefix correlation coherently over up to 32 symbols.
 - Simulated only: no recording of an ISDB-TSB broadcast was available.
 
 ## DVB-H (DVB-T extension, no new mode-list entry)
