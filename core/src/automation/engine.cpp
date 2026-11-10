@@ -60,6 +60,7 @@ int familyOf(const std::string& type) {
     const std::string f = type.substr(0, d);
     static const char* const names[kFamilies] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "gnss", "lora", "ble", "rid", "dsc", "signal", "receiver", "satellite", "time", "plugin", "voice", "session", "msg"};
     for (int i = 0; i < kFamilies; i++) if (f == names[i]) return i;
+    if (f == "sferics") return FSignal;   // "sferics.storm" is sent under the signal family (sferics_rx.cpp)
     return -1;
 }
 

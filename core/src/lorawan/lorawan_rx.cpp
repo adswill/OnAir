@@ -165,7 +165,7 @@ struct LorawanReceiver::Impl {
         if (cfg.downlinks && cfg.plan == 0) {
             const double off = 869.525e6 - dialHz + offset;
             lorabank::Channel c; c.offsetHz = off; c.bwHz = 125e3; c.syncs = {0x34}; c.sfs = {9}; c.normalIq = true; c.invertedIq = false; c.preamble = 10; c.implicitLen = 17;
-            if (lorabank::Bank::fits(rate, c)) {
+            if (used < (size_t)cfg.maxChannels && lorabank::Bank::fits(rate, c)) {   // the beacon counts against the channel limit
                 bc.push_back(c);
                 LwChannelInfo ci; ci.freqHz = 869.525e6; ci.bwHz = 125e3; ci.sfMin = 9; ci.sfMax = 9; ci.downlinkOnly = true; ci.inBand = true;
                 tel.channels.push_back(ci);

@@ -27,12 +27,12 @@ int main() {
         const dect2::ModeTuning mt = dect2::hamsciTuning(k);
         CHECK(mt.stdMode == fam + 2 && dect2::modeTuning(fam + 2) && dect2::modeTuningById(dect2::hamsciId(k)) && dect2::modeTuningById(dect2::hamsciId(k))->stdMode == fam + 2, "tuning table kind %d", k);
         CHECK(has(table, "{" + std::to_string(fam) + ", \""), "mode row %d", fam);
-        CHECK(has(tel, "case " + std::to_string(fam + 1) + ": return pollStd(rxHs_[" + std::to_string(k) + "], " + std::to_string(fam + 1) + ", t, seqs[" + std::to_string(300 + k) + "]"), "telemetry case %d", fam + 1);
+        CHECK(has(tel, "case " + std::to_string(fam + 1) + ": return pollStd(rxHs_[" + std::to_string(k) + "], " + std::to_string(fam + 1) + ", t, seqs[" + std::to_string(fam + 1) + "]"), "telemetry case %d", fam + 1);
         CHECK(has(modes, "case " + std::to_string(fam + 2) + ": return makeHamsciSynth(cfg, sampleRate, " + std::to_string(k) + ")"), "synth case %d", fam + 2);
         CHECK(has(modes, "case " + std::to_string(fam + 1) + ":"), "summary case %d", fam + 1);
         CHECK(has(place, "case " + std::to_string(fam + 1) + ": rxHs_[" + std::to_string(k) + "].configure(r)"), "configure case %d", fam + 1);
         CHECK(has(eng, "case " + std::to_string(fam + 1) + ": rxHs_[" + std::to_string(k) + "].reset()"), "reset case %d", fam + 1);
-        CHECK(has(nums, "| " + std::to_string(fam) + " | " + std::to_string(fam + 2) + " | " + std::to_string(fam + 1) + " | " + std::to_string(300 + k) + " |"), "number table row %d", fam);
+        CHECK(has(nums, "| " + std::to_string(fam) + " | " + std::to_string(fam + 2) + " | " + std::to_string(fam + 1) + " | " + std::to_string(fam + 1) + " |"), "number table row %d", fam);
         CHECK(dect2::hamsciKindOfFamily(fam) == k && dect2::hamsciKindOfStd(fam + 2) == k && dect2::hamsciKindOfActive(fam + 1) == k, "kind lookup %d", k);
     }
     CHECK(has(modeui, "case 460: case 461: case 462: case 463: case 464: case 465: return &kHamsciUi[family - 460];") && has(modeui, "case 500: case 501: case 502: return &kHamsciUi[6 + family - 500];"), "panel hook");

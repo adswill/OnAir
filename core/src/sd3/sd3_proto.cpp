@@ -519,10 +519,13 @@ void gvarVisPixels(const uint8_t* f, uint16_t* px) {
     for (int i = 0; i < kGvarVisWidth; i++) px[i] = w[(size_t)i + 1];
 }
 
+// the 10-bit words after the three headers: as many as the block holds (16 documentation words, then four channels of up to 6565 words each)
+static constexpr int kGvarDataWords = (kGvarBytes - (8 + 30 * 3)) / 5 * 4;
+
 void gvarIrPixels(const uint8_t* f, int words, uint16_t* a0, uint16_t* a1, uint16_t* b0, uint16_t* b1) {
     static thread_local std::vector<uint16_t> w;
-    w.resize(5252 * 4 + 8);
-    unpackWords(f + 8 + 30 * 3, 5252 * 4, w.data());
+    w.resize(kGvarDataWords + 8);
+    unpackWords(f + 8 + 30 * 3, kGvarDataWords, w.data());
     for (int i = 0; i < kGvarIrWidth; i++) {
         a0[i] = w[(size_t)(16 + words * 0 + i)];
         a1[i] = w[(size_t)(16 + words * 1 + i)];
@@ -545,7 +548,7 @@ void gvarBuildFrame(int blockId, int counter, const std::function<uint16_t(int, 
     doc[5] = (uint16_t)(counter >> 10); doc[6] = (uint16_t)(counter & 0x3FF);
     doc[11] = (uint16_t)(kWords >> 10); doc[12] = (uint16_t)(kWords & 0x3FF);
     if (blockId == 1 || blockId == 2) {
-        std::vector<uint16_t> w(5252 * 4 + 8, 0);
+        std::vector<uint16_t> w(kGvarDataWords + 8, 0);   // four channels of kWords: 16 + 4 * 6530 words (it was 5252 * 4, too short: a write past the end)
         std::copy(doc, doc + 16, w.begin());
         const int c0 = (blockId - 1) * 2;                  // the two channels of this block
         for (int i = 0; i < kGvarIrWidth; i++) {
@@ -554,7 +557,7 @@ void gvarBuildFrame(int blockId, int counter, const std::function<uint16_t(int, 
             w[(size_t)(16 + kWords * 2 + i)] = pixel(c0 + 1, counter * 2, i);
             if (i < 5206 - 60) w[(size_t)(16 + kWords * 3 + i)] = pixel(c0 + 1, counter * 2 + 1, i);
         }
-        packWords(w.data(), 5252 * 4, f + 8 + 30 * 3);
+        packWords(w.data(), kGvarDataWords, f + 8 + 30 * 3);
     } else if (blockId >= 3 && blockId <= 10) {
         packWords(doc, 16, f + 8 + 30 * 3);
         std::vector<uint16_t> w(kGvarVisWidth + 16, 0);

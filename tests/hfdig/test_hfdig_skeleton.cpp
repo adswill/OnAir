@@ -21,7 +21,7 @@ int main() {
     {   // the protocols listed as modes of their own: unique ids, a shared receiver that exists, a frequency inside its range
         int n = 0;
         const SubMode* sm = subModes(n);
-        CHECK(n == 38, "%d protocol entries", n);
+        CHECK(n == 43, "%d protocol entries", n);
         for (int i = 0; i < n; i++) {
             const ModeTuning* t = modeTuning(sm[i].stdMode);
             CHECK(t && sm[i].defMhz >= t->minMhz && sm[i].defMhz <= t->maxMhz, "%s: receiver or frequency", sm[i].id);
