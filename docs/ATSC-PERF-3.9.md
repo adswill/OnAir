@@ -96,3 +96,8 @@ Validated on simulated signals only (the app's generators). No real ATSC capture
 
   That is about 2.2 times the loaded M2 Pro. The next step is the per-stage line the test now prints there. The ATSC 1.0 decision-feedback loop and the stats are plain loops, which the baseline x86 build vectorises only with SSE2 (no AVX2 dispatch yet).
 - **atsc3_engine on Linux x86 is unresolved.** It failed once in that CI run: 4 frames, 0 failed, 0 baseband packets, and the test ran into its 30 s limit. It passed on Windows x64 and macOS in the same run, and the other ATSC 3.0 chain tests passed on the same Linux runner: stream, receiver, frame, synth_rx and synth_basic. So the cause looks like that runner's environment, but it is not established.
+
+## CI
+
+- **Run 42914702868:** atsc_cpu passed on Linux x86_64, Windows x64 and macOS arm64, and atsc3_engine passed on all three, including Linux x86_64. Two tests failed, neither ATSC code: tsout_net (a paced-arrival timing check on macOS) and kaws_synth (a 499 s timeout on Windows).
+- **x86 stage figures:** the CI logs keep no output of tests that pass, so the per-stage line from x86 has to be read with `ctest -R atsc_cpu -V` on such a machine.
