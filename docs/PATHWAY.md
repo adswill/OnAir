@@ -1346,3 +1346,6 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 CIS HF data modes (feat39-cis)
+Branch feat39-cis on integ-39, families 620 - 626. Decoders: CIS-36-50 / CIS-50-50 (BEE), with the start word, the key and the 3:4 characters shown as hex and nothing decrypted, and CIS-14 (the 14-bit frames shown raw). Physical layer: CIS-12 / MS5 (pilot, PSK order, phase steps). Identification only: CIS-36 MFSK, the CIS OFDM HDR modem (CIS-45 / 60 / 93), CIS-128 and CIS-3000. Each mode has a generator, an engine test signal and one test binary with offsets, noise, clock error and cross checks. CIS-81 was skipped because no speed or frame format is published. Simulated only. Details are in docs/CIS-HF-3.9.md.
