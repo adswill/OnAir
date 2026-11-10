@@ -239,6 +239,7 @@ void receiver(App& a) {
     const dect2::CubeTelemetry& t = a.rx.cube;
     kvRow(a, "state", "%s", dect2::cubesatSummary(t).c_str());
     if (!t.tracked.empty()) kvRow(a, "pass planner", "following %s (#%d), Doppler corrected about once a second", t.tracked.c_str(), t.trackedNorad);
+    if (!t.trackedSetup.empty()) kvRow(a, "set up for it", "%s", t.trackedSetup.c_str());
     kvRow(a, "frames", "%llu good, %llu failed their checks, %llu put right by Reed-Solomon", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, (unsigned long long)t.rsFixed);
     kvRow(a, "by framing", "AFSK %llu, G3RUH %llu, AX100 Mode 5 %llu, Mode 6 %llu, CCSDS %llu", (unsigned long long)t.perFraming[0], (unsigned long long)t.perFraming[1],
           (unsigned long long)t.perFraming[2], (unsigned long long)t.perFraming[3], (unsigned long long)t.perFraming[4]);
