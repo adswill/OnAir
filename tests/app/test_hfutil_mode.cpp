@@ -25,6 +25,8 @@ int main() {
     }
     const std::string tbl = readFile("app/ui/mode_table.cpp");
     CHECK(has(tbl, "{603, \"STANAG 4539\""), "STANAG 4539 mode row");
+    CHECK(has(tbl, "{604, \"3G-ALE\""), "3G-ALE mode row");
+    CHECK(dect2::hfUtilTuning(dect2::kHfuKindAle3g).stdMode == 606 && dect2::modeTuning(606) != nullptr, "3G-ALE registered");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case dect2::kHfuHdrFamily: return &kHfuUi[dect2::kHfuKindHdr];"), "STANAG 4539 panel hook");
     CHECK(has(readFile("core/src/engine/engine_telemetry.cpp"), "rxHfm_[0]"), "STANAG 4539 telemetry poll");
     for (const char* row : {"{430, \"MIL-STD-188-110 serial\"", "{431, \"STANAG 4285\"", "{432, \"ARQ-E\"", "{433, \"ARQ-N\"", "{434, \"AUTOSPEC\"", "{435, \"SPREAD\"", "{436, \"G-TOR\"", "{437, \"EFR teleswitch\"", "{438, \"Piccolo Mk VI\"", "{439, \"Coquelet-8\""})
