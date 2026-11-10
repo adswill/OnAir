@@ -66,36 +66,14 @@ bool decodePoint(const uint8_t*& p, const uint8_t* end, DmrLocation& out, bool w
 
 } // namespace
 
-bool dmrIpv4HeaderOk(const uint8_t* data, size_t size) {
-    if (size < 20 || (data[0] >> 4) != 4) return false;
-    const size_t ihl = (size_t)(data[0] & 0x0F) * 4;
-    if (ihl < 20 || ihl > size) return false;
-    uint32_t sum = 0;
-    for (size_t i = 0; i + 1 < ihl; i += 2) sum += be16(data + i);
-    while (sum >> 16) sum = (sum & 0xFFFF) + (sum >> 16);
-    return sum == 0xFFFF;
-}
-
-bool parseDmrLrrp(const uint8_t* data, size_t size, DmrLocation& out) {
-    out = DmrLocation();
-    if (size < 28) return false;                    // IPv4 (20 bytes) + UDP (8 bytes)
-    if ((data[0] >> 4) != 4) return false;          // IPv4
-    const size_t ihl = (size_t)(data[0] & 0x0F) * 4;
-    if (ihl < 20 || ihl + 8 > size) return false;
-    if (data[9] != 17) return false;                // UDP
-    const size_t total = be16(data + 2);
-    if (total < ihl + 8 || total > size) return false;
-    const size_t udpLen = be16(data + ihl + 4);
-    if (udpLen < 8 || ihl + udpLen > total) return false;
-    const uint8_t* body = data + ihl + 8;
-    const uint8_t* end = body + (udpLen - 8);
-    // LRRP document: id, length, then the tokens within that length
+// The LRRP document at `body`: id, length, then the tokens within that length. strict: the tokens must fill the document exactly, every one known.
+static bool parseDoc(const uint8_t* body, const uint8_t* end, DmrLocation& out, bool strict) {
     uint32_t doc = 0, docLen = 0;
     const uint8_t* p = body;
     if (!uintvar(p, end, doc)) return false;
     if (!uintvar(p, end, docLen)) return false;
     const uint8_t* docEnd = p + docLen;
-    if (docEnd > end) docEnd = end;
+    if (docEnd > end) { if (strict) return false; docEnd = end; }
     bool hasResult = false;
     while (p < docEnd) {
         uint32_t tok = 0;
@@ -123,11 +101,55 @@ bool parseDmrLrrp(const uint8_t* data, size_t size, DmrLocation& out) {
             if (!uintvar(p, docEnd, code)) break;
             out.resultCode = (int)code;
             hasResult = true;
+        } else if (tok == 0x34) {     // info-time: 40 bits, year 14, month 4, day 5, hour 5, minute 6, second 6 (UTC)
+            if (p + 5 > docEnd) break;
+            p += 5;
         } else {
+            if (strict) return false;
             break;                    // an unknown token: keep what we already read
         }
     }
+    if (strict && p != docEnd) return false;
     return out.hasFix || hasResult;   // a fix or a NoFix status; anything else is not an LRRP report
+}
+
+bool dmrIpv4HeaderOk(const uint8_t* data, size_t size) {
+    if (size < 20 || (data[0] >> 4) != 4) return false;
+    const size_t ihl = (size_t)(data[0] & 0x0F) * 4;
+    if (ihl < 20 || ihl > size) return false;
+    uint32_t sum = 0;
+    for (size_t i = 0; i + 1 < ihl; i += 2) sum += be16(data + i);
+    while (sum >> 16) sum = (sum & 0xFFFF) + (sum >> 16);
+    return sum == 0xFFFF;
+}
+
+bool parseDmrLrrp(const uint8_t* data, size_t size, DmrLocation& out) {
+    out = DmrLocation();
+    if (size < 28) return false;                    // IPv4 (20 bytes) + UDP (8 bytes)
+    if ((data[0] >> 4) != 4) return false;          // IPv4
+    const size_t ihl = (size_t)(data[0] & 0x0F) * 4;
+    if (ihl < 20 || ihl + 8 > size) return false;
+    if (data[9] != 17) return false;                // UDP
+    const size_t total = be16(data + 2);
+    if (total < ihl + 8 || total > size) return false;
+    const size_t udpLen = be16(data + ihl + 4);
+    if (udpLen < 8 || ihl + udpLen > total) return false;
+    const uint8_t* body = data + ihl + 8;
+    return parseDoc(body, body + (udpLen - 8), out, false);
+}
+
+bool parseDmrLrrpCompressed(const uint8_t* data, size_t size, DmrLocation& out) {
+    out = DmrLocation();
+    // the document starts after a compressed IP/UDP header of a few octets: it is taken only where its length ends exactly at the end of
+    // the data and every token in it is known, so that a chance match in other data is not taken for a position
+    for (size_t off = 0; off <= 8 && off + 4 <= size; off++) {
+        const uint8_t* p = data + off;
+        if (p[0] & 0x80u || p[1] & 0x80u) continue;          // one-byte document id and length
+        if (off + 2 + (size_t)p[1] != size) continue;
+        DmrLocation loc;
+        if (parseDoc(p, data + size, loc, true)) { out = loc; return true; }
+    }
+    return false;
 }
 
 } // namespace dect2

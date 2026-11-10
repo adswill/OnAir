@@ -76,6 +76,7 @@ private:
         double startSec = 0;
         bool confirmed = false;
         bool crcAllOk = true;
+        std::vector<uint8_t> prop;                  // a proprietary header after the first one (#335): its ten octets, counted as a block
     };
 
     struct Track {

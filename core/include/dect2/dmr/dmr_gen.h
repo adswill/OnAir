@@ -39,6 +39,7 @@ struct DmrGenConfig {
     int traffic = 0;             // 0 normal, 1 quiet, 2 busy
     uint32_t seed = 1;
     bool textMessages = true, talkerAlias = true;
+    bool motoLrrp = false;       // the text messages are a Motorola LRRP position behind a compressed IP/UDP header instead (#335: a real report)
     int hangBursts = 6;          // base station: terminators repeated after a voice call (hang time)
     bool headerSync = true;      // false: the voice headers carry embedded signalling in the centre instead of a sync pattern
     bool xptSite = false;        // base station: Hytera XPT site status blocks (dmr_xpt.h) are sent now and then, and one XPT call set-up per voice call

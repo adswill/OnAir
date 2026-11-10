@@ -248,7 +248,39 @@ private:
         markEnds(first, ti, 3, dst);
     }
 
+    // #335: a real Motorola report, octet for octet from the reporter's log (radio 204 to 1, 2026-11-02): an unconfirmed data header (SAP 9,
+    // proprietary packet data, 4 blocks, 7 pad octets), a proprietary header (MFID 16, the compressed IP/UDP header and the first octets of the
+    // LRRP document) and three rate 1/2 blocks with the packet CRC as received.
+    void pushMotoLrrp() {
+        static const uint8_t prop[10] = {0x1F, 0x10, 0x02, 0x01, 0x11, 0x71, 0xCC, 0x0D, 0x1A, 0x22};
+        static const uint8_t blocks[36] = {0x04, 0x00, 0x00, 0x00, 0x01, 0x34, 0x1F, 0xAA, 0xC4, 0xB2, 0x02, 0x51, 0x40, 0x75, 0x48, 0xBA, 0x06, 0x51,
+                                           0xD2, 0x60, 0x01, 0x5B, 0x6C, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xA0, 0xB3, 0x94, 0x93};
+        const uint32_t src = 204, dst = 1;
+        DataHeader h;
+        h.dpf = kDpfUnconfirmed; h.sap = 9; h.group = false; h.dst = dst; h.src = src; h.blocks = 4; h.pad = 7;
+        uint8_t hb[10];
+        packDataHeader(h, hb);
+        Bits info;
+        crcBlockInfo(hb, kMaskDataHeader, info);
+        const size_t first = q_.size();
+        q_.push_back(bptcBurst(kDtDataHeader, info));
+        Bits pinfo;
+        crcBlockInfo(prop, kMaskDataHeader, pinfo);
+        q_.push_back(bptcBurst(kDtDataHeader, pinfo));
+        for (int b = 0; b < 3; b++) {
+            Bits pay;
+            dataBlockEncode(kDtRate12, blocks + 12 * b, 12, false, 0, pay);
+            q_.push_back(dataBurst(kDtRate12, pay));
+        }
+        const int ti = newTruth(3, src, dst);
+        truth_[(size_t)ti].dataRate = kDtRate12;
+        for (size_t i = first; i < q_.size(); i++) { q_[i].act = 10; q_[i].actDst = dst; }
+        q_[first].first = true; q_[first].truth = ti;
+        q_.back().last = true; q_.back().truth = ti;
+    }
+
     void pushText() {
+        if (c_.motoLrrp) { pushMotoLrrp(); return; }
         const uint32_t src = kUsers[(size_t)rng_.range(8)];
         uint32_t dst;
         do dst = kUsers[(size_t)rng_.range(8)]; while (dst == src);
