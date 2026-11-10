@@ -23,6 +23,7 @@
 #include <dlfcn.h>
 #endif
 #include "../main_internal.h"
+#include "top_row.h"
 #include "dect2/codec/codec_guard.h"
 
 bool gIdentifyDev = false;   // --identify
@@ -113,43 +114,72 @@ static void classicTx(App& a, ImVec2 disp) {
     ImGui::End();
 }
 
+void clearAllButtonAt(App& a, bool sameLine);   // update_ui.cpp: Clear all, without its own SameLine
+
 // the classic top rows: the toolbar, source options, the mode selector and the right-aligned buttons
 static void classicTopBar(App& a, ImVec2 disp) {
+    (void)disp;
     const ImVec2 tb0 = ImGui::GetCursorScreenPos();
     toolbar(a);
         if (sourceOptionsOpen(a)) sourceOptions(a);
     a.tgMin[TgToolbar] = ImVec2(tb0.x - 4, tb0.y - 3); a.tgMax[TgToolbar] = ImVec2(tb0.x + ImGui::GetContentRegionAvail().x + 4, ImGui::GetCursorScreenPos().y);
     const ImVec2 sw0 = ImGui::GetCursorScreenPos();
+    // the right-hand buttons: laid out by toprow::layout (ui/top_row.h) from the widths they had last frame, never on top of the mode
+    // selector or of each other (a button drawn over another gets no clicks: #139, #424)
+    enum { BRadio, BSupport, BUpdate, BClear, BLang, BServer, BNewUi, BTouch, BTour, BCount };
+    static float sW[BCount] = {};   // each button's width as drawn last frame
+    static float sRowW = 0;         // all of them with their spacing: the mode selector keeps that much room
+    const float sp = ImGui::GetStyle().ItemSpacing.x;
+    ImGui::BeginGroup();
     modePickerButton(a);   // the Mode Browser (mode_picker.cpp)
     ImGui::SameLine(0, 6 * gUi);
-    standardSwitch(a);
-    if (a.devices[a.devIdx].isRadio()) { ImGui::SameLine(disp.x - 64 - 410 * gUi); radioSettingsUi(a, false); }   // the top bar is full
-    ImGui::SameLine(disp.x - 64 - 370 * gUi);
-    supportButton();
-    ImGui::SameLine(disp.x - 64 - 290 * gUi);
-    updateButton(a);
-    clearAllButton(a);
-    {   // the language, the new interface and the tour, right-aligned (their width changes with the language)
-        int nl = 0;
-        const i18n::Language* L = i18n::languages(nl);
-        const char* langName = L[0].name;
-        for (int i = 0; i < nl; i++) if (!strcmp(i18n::current(), L[i].code)) langName = L[i].name;
-        const float pad = ImGui::GetStyle().FramePadding.x * 2, sp = ImGui::GetStyle().ItemSpacing.x;
-        const float w = ImGui::CalcTextSize(langName).x + ImGui::CalcTextSize(tr("Server")).x + ImGui::CalcTextSize(tr("New interface")).x + ImGui::CalcTextSize(tr("Tour")).x + 4 * pad + 3 * sp;
-        ImGui::SameLine(std::max(ImGui::GetCursorPosX(), disp.x - 12 * gUi - w));
+    standardSwitch(a, sRowW + 12 * gUi);
+    ImGui::EndGroup();
+    const float winX = ImGui::GetWindowPos().x - ImGui::GetScrollX();
+    const float leftEnd = ImGui::GetItemRectMax().x - winX;
+    const float lineStart = ImGui::GetCursorPosX();                       // the cursor is at the start of the next line
+    const float right = lineStart + ImGui::GetContentRegionAvail().x;
+    const bool radio = a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[a.devIdx].isRadio();
+    int nl = 0;
+    const i18n::Language* L = i18n::languages(nl);
+    const char* langName = L[0].name;
+    for (int i = 0; i < nl; i++) if (!strcmp(i18n::current(), L[i].code)) langName = L[i].name;
+    auto est = [&](const char* t) { return ImGui::CalcTextSize(t, nullptr, true).x + ImGui::GetStyle().FramePadding.x * 2; };
+    const float guess[BCount] = {est(tr("Radio settings*")), est(tr("Support")), est("v" ONAIR_VERSION), est(tr("Clear all##clearall")), est(langName),
+                                 est(tr("Server")), est(tr("New interface")), est(tr("Touch")), est(tr("Tour"))};
+    std::vector<int> ids;
+    std::vector<float> w;
+    for (int k = 0; k < BCount; k++) { if (k == BRadio && !radio) continue; ids.push_back(k); w.push_back(sW[k] > 0 ? sW[k] : guess[k]); }
+    const std::vector<toprow::Place> pl = toprow::layout(w, leftEnd, lineStart, right, sp, 12 * gUi);
+    float rowW = 0;
+    for (size_t i = 0; i < ids.size(); i++) {
+        if (pl[i].newLine) ImGui::SetCursorPosX(pl[i].x); else ImGui::SameLine(pl[i].x);
+        ImGui::BeginGroup();
+        switch (ids[i]) {
+        case BRadio: radioSettingsUi(a, false); break;
+        case BSupport: supportButton(); break;
+        case BUpdate: updateButton(a); break;
+        case BClear: clearAllButtonAt(a, false); break;
+        case BLang: languageButton(a); break;
+        case BServer: mapSendButton(a); break;
+        case BNewUi:
+            if (ImGui::SmallButton(tr("New interface"))) { a.newUi = true; savePrefs(a); }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new interface. You can switch back at any time."));
+            break;
+        case BTouch:
+            if (ImGui::SmallButton(tr("Touch"))) { a.touchUi = true; savePrefs(a); }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Switch to the touch interface (big buttons, on-screen keypad). You can switch back at any time."));
+            break;
+        case BTour:
+            if (ImGui::SmallButton(tr("Tour"))) tourStart(a);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Take the guided tour"));
+            break;
+        }
+        ImGui::EndGroup();
+        sW[ids[i]] = ImGui::GetItemRectSize().x;
+        rowW += sW[ids[i]] + (i ? sp : 0);
     }
-    languageButton(a);
-    ImGui::SameLine();
-    mapSendButton(a);
-    ImGui::SameLine();
-    if (ImGui::SmallButton(tr("New interface"))) { a.newUi = true; savePrefs(a); }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new interface. You can switch back at any time."));
-    ImGui::SameLine();
-    if (ImGui::SmallButton(tr("Touch"))) { a.touchUi = true; savePrefs(a); }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Switch to the touch interface (big buttons, on-screen keypad). You can switch back at any time."));
-    ImGui::SameLine();
-    if (ImGui::SmallButton(tr("Tour"))) tourStart(a);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Take the guided tour"));
+    sRowW = rowW;
     a.tgMin[TgSwitch] = ImVec2(sw0.x - 2, sw0.y - 2); a.tgMax[TgSwitch] = ImVec2(sw0.x + gSwitchWidth + 20, ImGui::GetCursorScreenPos().y);
 }
 
