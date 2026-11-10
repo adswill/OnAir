@@ -94,22 +94,22 @@ void navHint(App& a) {
     if (!receiverLocationSet()) { ImGui::TextDisabled("%s", tr("Set your location to list the nearest stations (View > Map).")); ImGui::PopID(); return; }
     double lat, lon;
     receiverLocation(lat, lon);
-    const auto near = dect2::navaidNearest(N.db, lat, lon, kind, 500, 8);
-    if (near.empty()) { ImGui::TextDisabled("%s", tr("No station within 500 km in the list.")); ImGui::PopID(); return; }
-    const dect2::Navaid& first = N.db[near[0].index];
-    char head[96]; snprintf(head, sizeof head, "%s: %s %.3f MHz, %.0f km", tr("Nearest"), first.ident.c_str(), first.freqMhz, near[0].km);
+    const auto nearList = dect2::navaidNearest(N.db, lat, lon, kind, 500, 8);
+    if (nearList.empty()) { ImGui::TextDisabled("%s", tr("No station within 500 km in the list.")); ImGui::PopID(); return; }
+    const dect2::Navaid& first = N.db[nearList[0].index];
+    char head[96]; snprintf(head, sizeof head, "%s: %s %.3f MHz, %.0f km", tr("Nearest"), first.ident.c_str(), first.freqMhz, nearList[0].km);
     if (ImGui::TreeNode("##nav", "%s", head)) {
-        for (size_t i = 0; i < near.size(); i++) {
-            const dect2::Navaid& s = N.db[near[i].index];
+        for (size_t i = 0; i < nearList.size(); i++) {
+            const dect2::Navaid& s = N.db[nearList[i].index];
             ImGui::PushID((int)i);
             if (ImGui::SmallButton(tr("Tune"))) tuneFreq(a, s.freqMhz);
             ImGui::SameLine(0, 6 * gUi);
-            ImGui::TextDisabled("%s  %s  %.3f MHz  %.0f km  %.0f deg", s.ident.c_str(), s.name.c_str(), s.freqMhz, near[i].km, near[i].bearingDeg);
+            ImGui::TextDisabled("%s  %s  %.3f MHz  %.0f km  %.0f deg", s.ident.c_str(), s.name.c_str(), s.freqMhz, nearList[i].km, nearList[i].bearingDeg);
             ImGui::PopID();
         }
-        if (kind == dect2::NavaidVor && near.size() >= 2) {
+        if (kind == dect2::NavaidVor && nearList.size() >= 2) {
             int x = -1, y = -1;
-            if (dect2::navaidBestCrossing(near, x, y) && ImGui::SmallButton(tr("Use the best pair for a fix"))) vorSetFixPair(a, N.db[near[(size_t)x].index].freqMhz, N.db[near[(size_t)y].index].freqMhz);
+            if (dect2::navaidBestCrossing(nearList, x, y) && ImGui::SmallButton(tr("Use the best pair for a fix"))) vorSetFixPair(a, N.db[nearList[(size_t)x].index].freqMhz, N.db[nearList[(size_t)y].index].freqMhz);
         }
         ImGui::TextDisabled("%s", tr("Community data (OurAirports), not for navigation."));
         ImGui::TreePop();

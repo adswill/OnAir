@@ -1,5 +1,6 @@
 // Packet layers of the RC and mesh links: known answers (values from the upstream sources), self-consistency, damage.
 #include "dect2/rclink/rc_proto.h"
+#include <cmath>
 #include <cstring>
 #include <cstdio>
 using namespace dect2;
