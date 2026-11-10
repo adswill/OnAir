@@ -1,9 +1,11 @@
 // Decode help: the stage ladder, the automatic opening, the failed-signal clip and the antenna and gain coach.
 #include "dect2/doctor/decode_progress.h"
 #include <cstdio>
+#include <chrono>
 #include <cmath>
 #include <filesystem>
 #include <fstream>
+#include <string>
 using namespace dect2::doctor;
 static int fails = 0;
 #define CHECK(c) do { if (!(c)) { printf("FAIL line %d: %s\n", __LINE__, #c); fails++; } } while (0)
@@ -62,7 +64,8 @@ static void testAutoOpen() {
 
 static void testClip() {
     namespace fs = std::filesystem;
-    const fs::path dir = fs::temp_directory_path() / "onair_clip_test";
+    // a folder of this run only (tests run in parallel); removed with an error code so a file still held open cannot throw
+    const fs::path dir = fs::temp_directory_path() / ("onair_clip_test_" + std::to_string((unsigned long long)std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(dir);
     const std::string base = (dir / "c1").string();
     std::vector<cf32> x(1000);
@@ -72,8 +75,8 @@ static void testClip() {
     CHECK(writeClip(base, x.data(), x.size(), info, &err));
     CHECK(fs::file_size(base + ".sigmf-data") == 2000);
     CHECK(clipBytes(1000) == 2000); CHECK(clipBytes(kMaxClipSamples * 3) == kMaxClipSamples * 2);
-    std::ifstream d(base + ".sigmf-data", std::ios::binary);
-    std::vector<char> buf(2000); d.read(buf.data(), 2000);
+    std::vector<char> buf(2000);
+    { std::ifstream d(base + ".sigmf-data", std::ios::binary); d.read(buf.data(), 2000); }   // closed before the folder is removed (Windows)
     int peak = 0; for (char c : buf) peak = std::max(peak, std::abs((int)c));
     CHECK(peak >= 100);   // uses the 8 bits
     const std::string meta = clipMeta(info);
@@ -84,7 +87,8 @@ static void testClip() {
     // nothing about where or who
     CHECK(meta.find("geolocation") == std::string::npos); CHECK(meta.find("recorder") == std::string::npos); CHECK(meta.find("author") == std::string::npos);
     CHECK(!writeClip((dir / "no_such_folder" / "x").string(), x.data(), 10, info, &err));
-    fs::remove_all(dir);
+    std::error_code ec;
+    fs::remove_all(dir, ec);
 }
 
 static bool has(const Coaching& c, Advice a) { for (Advice x : c.advice) if (x == a) return true; return false; }

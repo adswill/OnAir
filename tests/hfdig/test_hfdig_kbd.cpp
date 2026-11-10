@@ -471,26 +471,27 @@ int main() {
     {   // #225: a click on the signal (fldigi): inside the sideband the dial stays and the audio frequency is the click; outside it the dial moves so
         // the signal lands on the audio frequency in use
         const double D = 14063000;
-        auto near = [](double a, double b) { return std::fabs(a - b) < 1e-6; };
+        auto closeTo = [](double a, double b) { return std::fabs(a - b) < 1e-6; };
         SidebandClick r = sidebandClick(D + 1500, D, false, 1500);
-        CHECK(r.keepDial && near(r.dialHz, D) && near(r.audioHz, 1500), "USB click at dial + 1500");
+        CHECK(r.keepDial && closeTo(r.dialHz, D) && closeTo(r.audioHz, 1500), "USB click at dial + 1500");
         r = sidebandClick(D + 2345, D, false, 1500);
-        CHECK(r.keepDial && near(r.audioHz, 2345), "USB click at dial + 2345: audio %.1f", r.audioHz);
+        CHECK(r.keepDial && closeTo(r.audioHz, 2345), "USB click at dial + 2345: audio %.1f", r.audioHz);
         r = sidebandClick(D - 900, D, true, 1500);
-        CHECK(r.keepDial && near(r.audioHz, 900), "LSB click at dial - 900: audio %.1f", r.audioHz);
+        CHECK(r.keepDial && closeTo(r.audioHz, 900), "LSB click at dial - 900: audio %.1f", r.audioHz);
         r = sidebandClick(D - 900, D, false, 1500);
-        CHECK(!r.keepDial && near(r.dialHz, D - 2400) && near(r.audioHz, 1500), "USB click below the dial: the dial goes 1500 Hz under it");
+        CHECK(!r.keepDial && closeTo(r.dialHz, D - 2400) && closeTo(r.audioHz, 1500), "USB click below the dial: the dial goes 1500 Hz under it");
         r = sidebandClick(D + 12000, D, true, 1200);
-        CHECK(!r.keepDial && near(r.dialHz, D + 13200), "LSB click outside: the dial goes 1200 Hz above it");
+        CHECK(!r.keepDial && closeTo(r.dialHz, D + 13200), "LSB click outside: the dial goes 1200 Hz above it");
         r = sidebandClick(D + 100, D, false, 1500);
-        CHECK(!r.keepDial && near(r.dialHz, D - 1400), "a click 100 Hz above the dial (below the passband) moves the dial");
+        CHECK(!r.keepDial && closeTo(r.dialHz, D - 1400), "a click 100 Hz above the dial (below the passband) moves the dial");
 
         // end to end: Hell signals on air, received in USB or LSB on a fixed dial; the audio frequency comes from the click on the signal
         struct Case { int variant; bool lsb; double txDialOff, audio; double snr; };
         const Case cases[] = {{0, false, 0, 1500, 20}, {0, false, 337, 1500, 15}, {0, true, 0, 1500, 20}, {0, true, -420, 1700, 15},
                               {0, false, 6000, 1500, 20}, {1, false, -123, 1500, 20}, {3, false, 210, 1500, 25}, {5, false, -95, 1500, 20}};
         for (const Case& cs : cases) {
-            const double rate = 96000, rxDial = -hfdigTuning().tuneOffsetHz;
+            // the receiver runs only from hfdigTuning().minSampleRate (250 ksps); below it HfdigReceiver stays idle and decodes nothing
+            const double rate = hfdigTuning().minSampleRate, rxDial = -hfdigTuning().tuneOffsetHz;
             const double sig = cs.txDialOff + (cs.lsb ? -cs.audio : cs.audio);   // where the signal sits, from the receiver's dial
             const SidebandClick ck = sidebandClick(rxDial + sig, rxDial, cs.lsb, 1500);
             KbdTxConfig c; c.cfg.family = KbdHell; c.cfg.variant = cs.variant; c.cfg.centreHz = cs.audio; c.text = "LY0AIR 73 ";

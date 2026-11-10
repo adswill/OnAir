@@ -1,6 +1,7 @@
 // COSPAS-SARSAT 406 MHz screens: the beacon messages that were decoded (15 hex ID, type, country, protocol, identification, position, 121.5 MHz homing flag,
 // the two BCH checks), a map of the ones that carry a position, and the raw bits. Receive only: a real beacon means somebody may be in danger.
 #include "dect2/common/time_fmt.h"
+#include "dect2/common/timecompat.h"
 #include "app.h"
 #include "state/results_export.h"
 #include "../adsb/adsb_map.h"
@@ -93,10 +94,7 @@ void helpButton() {
     }
 }
 
-std::string isoUtc(int64_t wall) {
-    const time_t t = (time_t)wall; struct tm g; gmtime_r(&t, &g);
-    char b[32]; strftime(b, sizeof b, "%Y-%m-%dT%H:%M:%SZ", &g); return b;
-}
+std::string isoUtc(int64_t wall) { return dect2::utcIsoText(wall); }
 
 std::string checkText(const sarsat::Beacon& b) {
     if (b.second) return tr("BCH(250,202) good");
