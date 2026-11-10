@@ -132,7 +132,8 @@ Reed-Solomon: the code's limit). 20 ppm (2758 Hz) after: 3 dB 6/6, 2 dB 1/6. Loc
 * EDACS 12 dB and Fusion 8 dB: discriminator receivers; a two-tone (or four-tone) matched-filter detector would be the next step.
 * GNSS acquisition at 35.8 dB-Hz: longer coherent and non-coherent integration would gain a few dB at more CPU.
 * The sens39d harness gets nothing from the threaded TETRA receiver in its clean-signal check (sens_sweep itself does); not looked into.
-* `test_dvbs_narrow` fails six cases against the prebuilt integ-39 library on the Mac with and without the DVB-S change; left to CI.
+* `dvbs_narrow` fails its two weak Auto cases (25 ksym/s at 4 dB, +310 kHz; 33 ksym/s at 3 dB, -480 kHz) on integ-39 itself, the same
+  five checks with and without this branch (quick.yml runs 42912418099 on integ-39 and 42911286304 here): not from this branch.
 
 ## Tests
 
@@ -142,4 +143,6 @@ hfdig_kbd, hfdig_mfsk, autoparam_kbd, ham_kbd, ale_rx, ale_wide, hfutil_fsk, hfu
 noise-only checks in every bench give no output. meteor_engine does not run in that link set-up (it fails the same way without the
 changes). GitHub quick.yml (Linux, run 42909490424): sens39d, meteor_rx, meteor_proto, meteor_engine, hfdig_kbdsens39, hfdig_kbd,
 hfdig_mfsk, hfutil_sens39, hfutil_fsk, hfutil_engine, ale_rx, ale_wide, ale_engine, hfdig_sens39d, marine_fax_sens39, autoparam_kbd,
-ham_kbd: 17 of 17 passed.
+ham_kbd: 17 of 17 passed. Run 42911286304 (Linux, after the DVB-S change): dvbs_rx, dvbs_rx2, dvbs_rx3, dvbs_s1, dvbs_impair, dvbs_engine,
+dvbs_fastpath, dvbs_vlsnr, dvbs_autoservice passed; dvbs_narrow fails as on integ-39 (above). DominoEX's squelch change came after
+the first run and was checked locally only (hfdig_kbdsens39, hfdig_kbd, ham_kbd, autoparam_kbd).
