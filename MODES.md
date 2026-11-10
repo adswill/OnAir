@@ -193,6 +193,8 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MAVLink (SiK radio)** - MAVLink over SiK telemetry radios (ArduPilot, PX4). Receive only. A wider capture covers more hop channels
 - **FrSky RC (D8 / D16)** - FrSky ACCST D8 / D16: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
 - **FlySky RC (AFHDS / 2A)** - FlySky AFHDS / AFHDS 2A: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
+- **Futaba RC (S-FHSS)** - Futaba S-FHSS: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
+- **Spektrum RC (DSM2 / DSMX)** - Spektrum DSM2 / DSMX: 2.4 GHz RC link monitor, receive only. 8 Msps or more around 2.44 GHz
 - **wfb-ng / OpenHD** - wfb-ng / OpenHD: open digital video links for drones (Wi-Fi radios in monitor mode). Receive only. 20 Msps. Video stays encrypted, structure only
 - **New Packet Radio (NPR-70)** - New Packet Radio (NPR-70): 4GFSK IP modems on 70 cm. Tune the channel centre, 4 Msps. Sync words and network ID only
 - **WINMOR** - WINMOR: Winlink HF sound card modem, retired in 2020. Tune the dial frequency (upper sideband), any sample rate. Pilot detection only

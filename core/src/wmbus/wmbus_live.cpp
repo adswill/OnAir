@@ -210,7 +210,13 @@ struct WmbusLiveReceiver::Impl {
             okN++; c.frames++;
             lg.mfr = f.mfr; lg.id = f.id; lg.type = f.typeName; lg.encrypted = f.encrypted;
             std::string s;
-            if (f.encrypted) { s = "encrypted payload"; encN++; }
+            if (f.wize) {
+                char w[160];
+                snprintf(w, sizeof w, "Wize v%d net %d app %d msg %d, time stamp %d, %s", f.wizeVers, f.wizeNetwId, f.wizeApp, f.wizeCpt, f.wizeTStamp,
+                         f.wizeKeySel ? "L7 encrypted" : "L7 in clear");
+                s = w;
+                if (f.encrypted) encN++;
+            } else if (f.encrypted) { s = "encrypted payload"; encN++; }
             else {
                 for (size_t i = 0; i < f.records.size() && i < 4; i++) { if (i) s += "; "; s += f.records[i].quantity + " " + f.records[i].value; }
                 if (f.records.empty()) s = f.payload.empty() ? "no data" : (f.hasManufacturerData ? "manufacturer data" : f.ciName);
@@ -277,7 +283,11 @@ struct WmbusLiveReceiver::Impl {
             if (ch.seen < 48) return;
             const PhySpec& sp = phySpec(ch.tc ? Phy::T1 : ch.phy);
             const uint64_t w = ch.sh & 0xFFFF;
-            const int e = pop64(w ^ sp.sync), ei = pop64((~w & 0xFFFF) ^ sp.sync);
+            int e = pop64(w ^ sp.sync), ei = pop64((~w & 0xFFFF) ^ sp.sync);
+            bool nB = false;   // mode N format B (Wize): its own sync word
+            if (!ch.tc && (ch.phy == Phy::N1 || ch.phy == Phy::N24) && e > 1 && ei > 1) {
+                e = pop64(w ^ kSyncNFormatB); ei = pop64((~w & 0xFFFF) ^ kSyncNFormatB); nB = true;
+            }
             if (e > 1 && ei > 1) return;
             const bool inv = ei < e;
             uint64_t pre = (ch.sh >> 16) & 0xFFFFFFFFull;
@@ -290,7 +300,7 @@ struct WmbusLiveReceiver::Impl {
             syncN++;
             ch.formatB = false; ch.decided = !ch.tc; ch.coding = ch.tc ? Coding::Nrz : sp.coding;
             if (!ch.tc) ch.coding = sp.coding;
-            if (ch.phy == Phy::N1) ch.coding = Coding::Nrz;
+            if (ch.phy == Phy::N1 || ch.phy == Phy::N24) { ch.coding = Coding::Nrz; ch.formatB = nB; }
             ch.pend.clear(); ch.bytes.clear(); ch.need = 0; ch.chipIdx = 0; ch.symAcc = 0; ch.nib = -1; ch.manPrev = -1; ch.soft.clear();
             ch.rssi = toDb(c.pFast);
             ch.cfoHz = c.dc * c.def.fsOut / (2 * kPi);

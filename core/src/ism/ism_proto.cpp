@@ -146,6 +146,16 @@ const std::vector<Proto>& protos() {
         {{"DASH7 (9.6 kbit/s)", "Sub-IoT phy.c / dll.c", "Sensor", true}, FskPcm, {104, 104, 8000, 0, 0, 0}, [](Bits& b, Out& o) { decDash7(b, o, true); }, 40},
         {{"EnOcean ERP1 (868.3 MHz ASK, 125 kbit/s)", "enocean_erp1.c", "Sensor", false}, OokPcm, {8, 8, 800, 0, 0, 0}, decEnOcean},
         {{"HomeMatic BidCoS (868.3 MHz, 10 kbit/s)", "culfw rf_asksin.c / FHEM HMConfig.pm", "Sensor", true}, FskPcm, {100, 100, 4000, 0, 0, 0}, decHomeMatic, 30},
+        // 3.9 (ism_dec_39.cpp)
+        {{"X10 RF remotes and sensors", "x10_rf.c", "Remote", false}, OokPpm, {562, 1687, 6000, 2200, 0, 0}, decX10Rf},
+        {{"inFactory / nor-tec / DAY / Tchibo thermo-hygro", "infactory.c", "Weather", false}, OokPpm, {2000, 4000, 5000, 0, 500, 750}, decInfactory},
+        {{"GM aftermarket TPMS", "tpms_gm.c", "TPMS", false}, OokMcZero, {120, 0, 15600, 0, 0, 0}, decGmTpms},
+        {{"Itron ERT SCM+ (utility meter)", "scmplus.c", "Meter", false}, OokMcZero, {30, 0, 64, 0, 0, 0}, decScmPlus},
+        {{"Insteon RF (915 MHz)", "insteon.c", "Sensor", true}, FskPcm, {110, 110, 1000, 500, 0, 15}, decInsteon},
+        {{"Ambient Weather / Ecowitt WH31E, WH31B", "ambientweather_wh31e.c", "Weather", true}, FskPcm, {56, 56, 1500, 1800, 0, 0}, decWh31e},
+        {{"Nissan TPMS", "tpms_nissan.c", "TPMS", true}, FskPcm, {120, 120, 250, 0, 0, 0}, decNissan},
+        {{"Efergy Optical", "efergy_optical.c", "Energy", true}, FskPwm, {64, 136, 400, 0, 500, 0}, decEfergyOptical},
+        {{"ESIC EMT7110 power meter", "esic_emt7110.c", "Energy", true}, FskPcm, {104, 104, 10000, 0, 0, 0}, decEmt7110},
     };
     return p;
 }

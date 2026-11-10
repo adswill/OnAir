@@ -32,6 +32,7 @@ public:
     void generate(cf32* out, size_t n);
     // the frame bytes (with CRCs) of simulated meter `meter` (0..6) at transmission count `count`; phy returns its mode
     static std::vector<uint8_t> meterFrame(int meter, uint32_t count, wmbus::Phy& phy, bool encrypted = true);
+    static bool meterIsWize(int meter);   // a Wize meter: format B, CI 0x20, no data records
     static int meterCount();
 private:
     struct Impl;
