@@ -315,6 +315,7 @@
         <item>WINMOR</item>
         <item>mioty</item>
         <item>DECT NR+</item>
+        <item>ISDB-TSB</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -611,6 +612,7 @@
         <item>WINMOR HF frames: the 1500 Hz pilot with tuning error and the raw frame-type tones. The specification does not define the 4FSK symbol mapping, the Reed-Solomon generator or the callsign packing, so frames are detected, not read. Simulated signals only so far</item>
         <item>mioty (ETSI TS 103 357 TS-UNB) uplinks: the 24 hopped radio-bursts found and decoded, every uplink TSMA pattern, extension frames. MAC fields shown (address, counter, flags); the payload is encrypted with the network key and stays encrypted. Simulated signals only so far</item>
         <item>DECT NR+ (DECT-2020 NR) packets on a 1.728 MHz channel: the physical control field of each packet (network ID, transmitter and receiver IDs, length, MCS, HARQ). Data channel not decoded. Simulated signals only so far</item>
+        <item>ISDB-TSB (ARIB STD-B29) narrow-band digital sound and data broadcasting: one or three segments, detected from the TMCC; the one-segment receiver also takes the one-seg service of an ISDB-T channel. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -907,6 +909,7 @@
         <item>HF data, pilot only</item>
         <item>LPWAN, header only</item>
         <item>Mesh radio, header only</item>
+        <item>Narrow-band ISDB, Japan</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1203,5 +1206,6 @@
         <item>winmor winlink kn6kb hf pilot</item>
         <item>mioty ts-unb lpwan telegram splitting 868 iot sensor</item>
         <item>dect nr+ dect-2020 nr nrplus mesh 1.9 ghz ts 103 636</item>
+        <item>isdb tsb isdb-tsb sb arib std-b29 one segment three segment 1seg oneseg narrow band digital radio japan v-low</item>
     </string-array>
 </resources>

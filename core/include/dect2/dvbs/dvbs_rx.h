@@ -58,7 +58,9 @@ ModeTuning dvbsTuning();
 
 // The highest symbol rate the receiver accepts at an input rate: about 1.3 samples per symbol times (1 + roll-off) of bandwidth
 double dvbsMaxSymbolRate(double inputRateHz, double rollOff = 0.35);
-// The lowest symbol rate that the spectrum analysis can measure at an input rate (below it a manual symbol rate is needed)
+// The lowest symbol rate that the spectrum analysis can measure at an input rate (below it a manual symbol rate is needed): 10 ksym/s up to about 13 Msps
 double dvbsMinAutoSymbolRate(double inputRateHz);
+// The lowest symbol rate the receiver takes (manual or found): 10 ksym/s, for reduced bandwidth DATV
+double dvbsMinSymbolRate();
 
 } // namespace dect2

@@ -1,0 +1,71 @@
+# Quick check for one worker branch: ONE job that builds only the named tests (plus optional targets) and runs them.
+# Far cheaper than ci.yml (one runner instead of ~13), so many branches can check at once.
+#   gh workflow run quick.yml -R adswill/OnAir --ref <branch> -f tests="wide_placed drm_engine" [-f targets="dect2cli"] [-f os=macos]
+name: Quick
+on:
+  workflow_dispatch:
+    inputs:
+      tests:
+        description: "space-separated ctest names; each builds target test_<name>"
+        required: true
+      targets:
+        description: "extra CMake targets to build (optional)"
+        default: ""
+      os:
+        description: "linux or macos"
+        type: choice
+        options: [linux, macos]
+        default: linux
+concurrency:
+  group: quick-${{ github.ref }}-${{ inputs.os }}
+  cancel-in-progress: true
+jobs:
+  quick:
+    name: Quick ${{ inputs.os }}
+    runs-on: ${{ inputs.os == 'macos' && 'macos-15' || 'ubuntu-24.04' }}
+    timeout-minutes: 90
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "true"
+      CCACHE_SLOPPINESS: "time_macros,pch_defines,include_file_mtime,include_file_ctime"
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install dependencies (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          tools/release/retry.sh sudo apt-get update
+          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 build-essential cmake pkg-config ccache lld ninja-build libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
+      - name: Install dependencies (macOS)
+        if: runner.os == 'macOS'
+        run: tools/release/retry.sh brew install cmake ninja pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
+      - name: Restore ccache (shared with the CI shards)
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-${{ inputs.os }}-quick-${{ github.sha }}
+          restore-keys: |
+            ccache-${{ inputs.os }}-quick-
+            ccache-${{ inputs.os }}-
+      - name: Configure
+        run: |
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+      - name: Build
+        env: { TESTS: "${{ inputs.tests }}", EXTRA: "${{ inputs.targets }}" }
+        run: |
+          T=""; for t in $TESTS; do T="$T test_$t"; done
+          ALL=$(ninja -C build -t targets all | cut -d: -f1)
+          SEL=""; for t in $T $EXTRA; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t" || echo "note: no target $t (the test may live in a bundle; building by test name is skipped)"; done
+          [ -n "$SEL" ] || { echo "nothing to build"; exit 1; }
+          cmake --build build -j 4 --target $SEL
+      - name: Save ccache
+        if: always()
+        uses: actions/cache/save@v6
+        with: { path: .ccache, key: "ccache-${{ inputs.os }}-quick-${{ github.sha }}" }
+      - name: Test
+        env: { TESTS: "${{ inputs.tests }}" }
+        run: |
+          R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
+          ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900

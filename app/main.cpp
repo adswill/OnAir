@@ -271,6 +271,7 @@ static void shutdownApp(App& app, gfx::Backend* gfxBackend, GLFWwindow* window) 
     delete gDiscord;   // clears the status and joins its thread
     iptvShutdown();    // an Internet TV stream stops reading before the player and the engine go away
     txShutdown();      // the transmitter goes quiet before anything else is closed
+    echolinkShutdown();   // the EchoLink connection says BYE and logs out
     pluginShutdown();  // plugin threads and helper processes end, the crash marker goes
     receiversShutdown(app);
     tvRecShutdown(app);   // the recordings that run are finished and closed before the receiver stops
@@ -385,7 +386,7 @@ int main(int argc, char** argv) {
     parseDevFlags(app, argc, argv, o);
     loadFonts(app, io);   // preferences, the OS language and --lang have now selected the effective UI language
     std::string fontLanguage = i18n::current();
-    if (!o.shotPath && argc <= 1 && touch::autoTouch(gWorkAreaW, gWorkAreaH, plat::prefs().has("touchUi") || plat::prefs().has("touchAutoSeen"))) {   // #139: a small screen starts in the touch interface (View > Touch interface turns it off)
+    if (!o.shotPath && argc <= 1 && touch::autoTouch(gWorkAreaW, gWorkAreaH, touch::touchChosen(app.touchUi, plat::prefs().has("touchAutoSeen")))) {   // #139: a small screen starts in the touch interface (View > Touch interface turns it off)
         app.touchUi = true; plat::prefs().setB("touchAutoSeen", true); savePrefs(app);
     }
     double last = glfwGetTime();

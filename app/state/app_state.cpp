@@ -54,7 +54,7 @@ static void scanRaster(App& a, int f) {
 
 // the per-family flags and a frequency that suits the mode (the settings and setFamily both use it)
 void setFamilyFlags(App& a, int f) {
-    a.family = f; a.atscMode = f == 1 || f == 3 || f == 4; a.atsc3Mode = f == 3; a.isdbtMode = f == 4; a.dabMode = f == 2; a.fmMode = f == 5;
+    a.family = f; a.atscMode = f == 1 || f == 3 || f == 4; a.atsc3Mode = f == 3; a.isdbtMode = f == 4 || f == 730; a.dabMode = f == 2; a.fmMode = f == 5;
     if (f >= 6) {   // a mode added after FM: its tuning table says what is a sensible frequency
         const ModeTuning* mt = modeTuning(f + 2);
         if (mt && !(a.freqMhz >= mt->minMhz && a.freqMhz <= mt->maxMhz)) a.freqMhz = mt->defMhz;

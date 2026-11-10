@@ -2,15 +2,16 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**294 modes.**
+**295 modes.**
 
-## TV (14)
+## TV (15)
 
 - **DVB** - DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)
 - **TV (auto)** - TV, automatic: the standard and its parameters are measured from the signal
 - **ATSC** - ATSC 1.0, 8-VSB (US, Canada, Mexico, South Korea)
 - **ATSC 3.0** - ATSC 3.0, NextGen TV
 - **ISDB-T** - ISDB-T (Japan, Brazil, South America)
+- **ISDB-TSB** - ISDB-TSB: Japanese narrow-band broadcasting of one or three ISDB-T segments (430 kHz or 1.3 MHz). Tune the centre of the band, 2 Msps
 - **DVB-S/S2** - DVB-S / S2 / S2X satellite television, needs a dish and an LNB
 - **Internet TV (IPTV)** - Internet TV: playlists and stream addresses (HLS, MPEG-TS, UDP, RTP), no radio needed
 - **TV sat beacon decoder** - TV sat beacon decoder: carrier level, offset and drift, with telemetry frames and a decoded view when the beacon carries data

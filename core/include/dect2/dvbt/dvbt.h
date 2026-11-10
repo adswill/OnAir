@@ -1,4 +1,5 @@
-// DVB-T (EN 300 744): parameters, pilot/TPS tables, TPS coding and the channel-coding chain.
+// DVB-T (EN 300 744): parameters, pilot/TPS tables, TPS coding and the channel-coding chain. With annex F (DVB-H): the 4K mode, the in-depth
+// inner interleaver of the 2K and 4K modes and the DVB-H signalling bits of the TPS.
 // The transmit-side stages exist for the signal generator and for tests against the GNU Radio reference; the receive-side
 // stages (demapper, de-interleavers, Viterbi, Reed-Solomon, de-randomiser) are what the receiver uses.
 #pragma once
@@ -12,7 +13,7 @@ namespace dvbt {
 
 using cf32 = std::complex<float>;
 
-enum Mode { k2K = 0, k8K = 1 };
+enum Mode { k2K = 0, k8K = 1, k4K = 2 };   // the TPS transmission mode field s38 s39 (4K: annex F, DVB-H only)
 enum Guard { kGi32 = 0, kGi16 = 1, kGi8 = 2, kGi4 = 3 };
 enum Mod { kQpsk = 0, k16Qam = 1, k64Qam = 2 };
 enum Rate { kR12 = 0, kR23 = 1, kR34 = 2, kR56 = 3, kR78 = 4 };
@@ -26,13 +27,23 @@ struct Params {
     int crLp = kR23;
     int cellId = 0;
     bool cellIdLength = false; // TPS length indicator 0x1F (cell id present) instead of 0x17
-    bool operator==(const Params& o) const { return mode == o.mode && guard == o.guard && mod == o.mod && hier == o.hier && crHp == o.crHp && crLp == o.crLp; }
+    // DVB-H (annex F): the in-depth inner interleaver (2K and 4K only; TPS s27) and the service indication bits s48 (time slicing) and s49
+    // (MPE-FEC) with the length indicator 0x21. dvbh: the TPS carries the DVB-H signalling (the generator sends it, the receiver reports it).
+    bool indepth = false;
+    bool dvbh = false, timeSlicing = false, mpeFec = false;
+    bool operator==(const Params& o) const { return mode == o.mode && guard == o.guard && mod == o.mod && hier == o.hier && crHp == o.crHp && crLp == o.crLp && indepth == o.indepth; }
 };
 
 // ---- geometry
-inline int fftN(int mode) { return mode == k8K ? 8192 : 2048; }
-inline int carriersK(int mode) { return mode == k8K ? 6817 : 1705; }           // Kmax - Kmin + 1
-inline int dataCarriers(int mode) { return mode == k8K ? 6048 : 1512; }
+inline int fftN(int mode) { return mode == k8K ? 8192 : mode == k4K ? 4096 : 2048; }
+inline int carriersK(int mode) { return mode == k8K ? 6817 : mode == k4K ? 3409 : 1705; }           // Kmax - Kmin + 1
+inline int dataCarriers(int mode) { return mode == k8K ? 6048 : mode == k4K ? 3024 : 1512; }
+// The symbol interleaver's block: the in-depth interleaver works on 6048 cells (four 2K or two 4K symbols) with the 8K permutation;
+// the native one on the cells of one symbol
+inline int interleaverSymbols(const Params& p) { return p.indepth && p.mode != k8K ? (p.mode == k4K ? 2 : 4) : 1; }
+inline int interleaverCells(const Params& p) { return dataCarriers(p.mode) * interleaverSymbols(p); }
+// Is the block that starts at symbol symIdx of frame frameIdx (0..3) an odd one (the permutation's odd direction)? Native: odd symbols.
+inline bool interleaverOdd(const Params& p, int frameIdx, int symIdx) { const int b = interleaverSymbols(p); return (((frameIdx & 3) * 68 + symIdx) / b) & 1; }
 inline int guardSamples(int mode, int guard) { return fftN(mode) >> (5 - guard); } // N/32, N/16, N/8, N/4
 inline int symbolsPerFrame() { return 68; }
 // Useful (MPEG transport stream) bit rate of a configuration, for an OFDM sampling rate fs (Hz)
@@ -93,7 +104,7 @@ private:
 };
 // bit interleaver (126-word blocks) and symbol interleaver permutation, non-hierarchical
 void bitInterleave(const std::vector<uint8_t>& codedBits, int mod, std::vector<uint8_t>& words); // words hold v bits (MSB first)
-const std::vector<int>& symbolPermutation(int mode);                                              // H(q), q = 0..dataCarriers-1
+const std::vector<int>& symbolPermutation(int mode);                                              // H(q), q = 0..dataCarriers-1 (4K: table F.1)
 void mapSymbol(const std::vector<uint8_t>& words, int mod, int hier, std::vector<cf32>& cells);
 
 // ---- receive chain
@@ -101,6 +112,8 @@ void mapSymbol(const std::vector<uint8_t>& words, int mod, int hier, std::vector
 void demap(const cf32* cells, const float* n0, int count, int mod, int hier, float* llr);
 // Undo the symbol interleaver on cells (and on their noise values)
 void symbolDeinterleave(int mode, int symIdx, const cf32* in, const float* n0in, cf32* out, float* n0out);
+// The same for a whole interleaver block of p (in-depth: 6048 cells of two or four symbols, the 8K permutation)
+void blockDeinterleave(const Params& p, bool odd, const cf32* in, const float* n0in, cf32* out, float* n0out);
 // Undo the bit interleaver on LLRs of one symbol (1512 / 6048 words of v LLRs each): llr in = demapper order
 void bitDeinterleave(const float* llrIn, int mod, int words, float* llrOut);
 // Hierarchical modes (4.3.4.1): the HP stream (2 bits a word) goes through branches I0, I1, the LP stream (v - 2 bits a word) through I2..Iv-1

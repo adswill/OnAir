@@ -48,6 +48,7 @@ private:
     std::vector<uint8_t> codedLpQ_;
     void codeGroup(PacketSource& src, ConvInterleaver& ci, InnerEncoder& enc, std::vector<uint8_t>& q);
     std::deque<uint8_t> wordsQ_;
+    std::vector<cf32> block_;          // the in-depth interleaver's block of two or four symbols (annex F)
     std::vector<float> tpsVal_;
     std::vector<cf32> carriers_;
     ::dect2::Fft* fft_ = nullptr;

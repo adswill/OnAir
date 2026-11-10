@@ -39,7 +39,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     ring_.clear();
     ring_.resetDropped();
     radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0;
-    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
+    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
     holdDelivery(1000);   // a radio often stutters while its stream starts
     std::string err;
     if (int holder = 0; !claimDevice(dev, receiverId_, &holder)) { log("this radio is in use by " + deviceHolderText(holder)); return false; }
@@ -170,6 +170,8 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxD_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // DMB video, on the receiver thread
     rxI_.configure(rate_, tune.isdbtBwMhz);
     rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
+    rxTsb_.configureTsb(rate_, tune.isdbtBwMhz == 7 || tune.isdbtBwMhz == 8 ? tune.isdbtBwMhz : 6, 0);
+    rxTsb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxFm_.configure(rate_);
     rxFm_.setStationFinder(lastDev_.kind == DeviceInfo::File || lastDev_.kind == DeviceInfo::Synthetic);   // a live radio stays on the frequency tuned: a weak station is not traded for a strong neighbour
     if (stdMode_.load() == 7 && !rxFm_.ready()) log("FM needs a sample rate of at least 500 ksps");
@@ -847,7 +849,7 @@ void Engine::announceAndRun(const DeviceInfo& dev, const TuneSettings& tune) {
         snprintf(b, sizeof b, "radio centre %.3f MHz%s  LNA %d dB  VGA %d dB  amp %s", tune.centerHz / 1e6, hwNote(tune).c_str(), tune.lnaDb, tune.vgaDb, tune.ampOn ? "on" : "off");
         log(b);
     }
-    tSpec_ = tRx_ = 0; nSamp_ = 0;
+    tSpec_ = tRx_ = tRxCpu_ = 0; nSamp_ = 0;
     stopReq_ = false;
     startEpoch_++;
     running_ = true;

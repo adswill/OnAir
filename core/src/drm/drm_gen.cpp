@@ -544,6 +544,9 @@ DrmTxConfig drmTxConfigFromSynth(const SynthConfig& sc) {
         tc.mscQam = sc.modeOpt[2] == 1 ? 16 : 64;
         tc.protB = sc.modeOpt[3] == 0 ? (tc.mscQam == 16 ? 0 : 1) : sc.modeOpt[3] - 1;
     }
+    // 16-QAM in modes A to D has protection levels 0 and 1 only (Table 61): a higher pick takes the most robust one there is
+    const int levels = mscProtLevels(tc.mode, tc.mscQam == 64 ? 6 : tc.mscQam == 16 ? 4 : 2);
+    if (levels > 0) tc.protB = std::max(0, std::min(levels - 1, tc.protB));
     tc.longInterleave = sc.modeOpt[4] == 0;
     tc.textMessage = sc.modeOpt[7] == 0;
     return tc;
@@ -563,7 +566,12 @@ public:
     DrmSynth(const SynthConfig& sc, double rate) : DrmSynth(drmTxConfigFromSynth(sc), sc, rate) {}
     DrmSynth(DrmTxConfig tc, const SynthConfig& sc, double rate) : sc_(sc), rate_(rate), rng_(4242) {
         tx_ = std::make_unique<DrmTransmitter>(tc, drmAudioFromSynth(sc, tc));
-        if (!tx_->ok()) { tc.occupancy = 3; tc.mode = kModeB; tx_ = std::make_unique<DrmTransmitter>(tc, nullptr); }
+        if (!tx_->ok()) {   // a combination with no room for the audio: the usual signal (mode B, 10 kHz, 64-QAM, protection 1) instead
+            const std::string label = tc.label, text = tc.text;
+            tc = DrmTxConfig{};
+            tc.mode = kModeB; tc.occupancy = 3; tc.mscQam = 64; tc.protB = 1; tc.label = label; tc.text = text;
+            tx_ = std::make_unique<DrmTransmitter>(tc, nullptr);
+        }
         centre_ = tx_->centreOffsetHz();
         br_ = tx_->sampleRate();                 // 48 kHz, mode E 192 kHz
         // the channels of Annex B.1 are short wave channels (48 kHz): not for DRM+
@@ -628,6 +636,7 @@ private:
     void refill() {
         std::vector<cf32> s;
         tx_->superFrame(s);
+        if (s.empty()) s.assign(9600, cf32(0, 0));   // no transmitter: silence, so that generate() always moves on (it froze the app before)
         // centre the occupied carriers on 0 Hz
         {
             // by a rotating phasor (renormalised every 1024 samples) instead of a sine and cosine for every sample
