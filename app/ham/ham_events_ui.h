@@ -5,6 +5,7 @@ struct App;
 namespace dect2 { struct HfdigFtxTelemetry; struct CwTelemetry; struct HfdigKbdTelemetry; }
 void hamFeedFtx(App& a, const dect2::HfdigFtxTelemetry& f);
 void hamFeedCw(App& a, const dect2::CwTelemetry& t);
+void hamBandOpenPanel();   // the band by UTC hour matrix of your own spots (7 or 30 days)
 void hamFeedKbd(App& a, const dect2::HfdigKbdTelemetry& k, const char* mode);   // RTTY, PSK and the other keyboard modes: the last callsign
 // a callsign as the logbook sees it on this frequency and mode: the country tag ("Germany, CQ 14, ITU 28") and how new it is
 // (3 new DXCC, 2 new on the band, 1 not worked, 0 worked before); false when the call is empty

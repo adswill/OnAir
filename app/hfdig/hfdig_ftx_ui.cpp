@@ -3,6 +3,7 @@
 // map, by their locators) and the WSPR spots.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ham/ham_events_ui.h"
 #include "../adsb/adsb_map.h"
 #include "ui/kit/kit.h"
 #include "ui/kit/export.h"
@@ -370,6 +371,7 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
     const int only = hfdigMultiBandActive() ? -1 : (sm ? sm->sel : -1);   // the monitor lists every mode of every band in one list
     if (only >= 0) S.filter = only + 1;
     { void hfdigHopPanel(App& a, int mode); if (!hfdigMultiBandActive()) hfdigHopPanel(a, only >= 0 && only <= 3 ? only : -1); }   // band hopping (hfdig_hop_ui.cpp)
+    hamBandOpenPanel();   // when is the band open (ham/ham_events_ui.h)
     for (int m = 0; m < kFtxModes && only < 0; m++) {
         bool on = dec.enabled(m);
         ImGui::PushStyleColor(ImGuiCol_CheckMark, modeColour(m));
