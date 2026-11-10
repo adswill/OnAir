@@ -331,6 +331,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 361: return pollStd(rxRc_, 361, t, seqs[360], &RxTelemetry::rclink);   // RC and mesh links (slot 360)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 481: return pollStd(rxUmts_, 481, t, seqs[440], &RxTelemetry::umts);   // UMTS cells (slot 440)
+    case 641: return pollStd(rxVdl3_, 641, t, seqs[640], &RxTelemetry::vdl3);   // VDL Mode 3 (slot 640)
     case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
     case 291: return pollStd(rxSd3_[0], 291, t, seqs[290], &RxTelemetry::sd3);
