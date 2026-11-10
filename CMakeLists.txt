@@ -2208,12 +2208,8 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_isdbt_impair tests/isdbt/test_isdbt_impair.cpp)
   target_link_libraries(test_isdbt_impair PRIVATE dect2core)
   add_test(NAME isdbt_impair COMMAND test_isdbt_impair)
-  add_executable(test_isdbtsb tests/isdbt/test_isdbtsb.cpp core/src/isdbt/isdbt.cpp core/src/isdbt/isdbt_gen.cpp core/src/isdbt/isdbt_demod.cpp core/src/isdbt/isdbt_rx.cpp core/src/isdbt/isdbt_tables_data.cpp)   # TEMP-ASAN
+  add_executable(test_isdbtsb tests/isdbt/test_isdbtsb.cpp)
   target_link_libraries(test_isdbtsb PRIVATE dect2core)
-  if(NOT MSVC)
-    target_compile_options(test_isdbtsb PRIVATE -fsanitize=address -fno-omit-frame-pointer -g)   # TEMP-ASAN
-    target_link_options(test_isdbtsb PRIVATE -fsanitize=address)   # TEMP-ASAN
-  endif()
   add_test(NAME isdbtsb COMMAND test_isdbtsb)
 
   add_executable(test_atsc3_bootstrap tests/atsc3/test_atsc3_bootstrap.cpp)
