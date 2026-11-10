@@ -224,6 +224,18 @@ void bandView(App& a) {
     }
 }
 
+void tuner(App& a, bool& retune) {
+    ImGui::TextDisabled("%s", tr("Band"));
+    ImGui::SetNextItemWidth(std::min(230 * gUi, ImGui::GetContentRegionAvail().x));
+    const bool down = std::fabs(a.freqMhz - 1679.85) < 0.5;
+    if (ImGui::BeginCombo("##goesband", down ? tr("Relay downlink 1679.85 MHz") : tr("Uplink 401.85 MHz"))) {
+        if (ImGui::Selectable(tr("Uplink 401.85 MHz"), !down)) { a.freqMhz = 401.85; retune = true; }
+        if (ImGui::Selectable(tr("Relay downlink 1679.85 MHz"), down)) { a.freqMhz = 1679.85; retune = true; }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The satellite retransmits the uplink carriers around 1679.85 MHz: one dish hears a hemisphere of platforms. Tested on simulated signals only."));
+}
+
 void tab(App& a) {
     subNav("dcs", S.view, {tr("Reports"), tr("Platforms"), tr("Band")});
     if (S.view == 0) reportsView(a);
@@ -305,6 +317,7 @@ const ModeUi kGoesDcsUi = {
     .list = list,
     .status = status,
     .summary = summary,
+    .tuner = tuner,
     .synth = synth,
     .tick = tick,
 };

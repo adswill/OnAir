@@ -176,6 +176,23 @@ pub fn decode_port(d: &Data, c: &Ctx) -> Decoded {
             out.message = Some(m);
         }
         3 => position(d, &from_id, &mut out),
+        8 => waypoint(d, &mut out),
+        10 | 11 | 32 | 66 => {
+            // plain text ports: detection sensor, alert, reply, range test
+            let label: &str = match d.portnum {
+                10 => "sensor: ",
+                11 => "ALERT: ",
+                32 => "reply: ",
+                _ => "range test: ",
+            };
+            out.detail.write(|w| {
+                w.str(label);
+                clip(w, d.payload, 120);
+            });
+        }
+        34 => paxcount(d, &mut out),
+        65 => store_forward(d, &mut out),
+        73 => map_report(d, &mut out),
         4 => nodeinfo(d, &from_id, &mut out),
         67 => telemetry(d, &mut out),
         5 => {
@@ -220,6 +237,7 @@ fn position(d: &Data, from_id: &S64, out: &mut Decoded) {
     let (mut lat, mut lon, mut alt, mut alt_hae) = (0i32, 0i32, 0i32, 0i32);
     let (mut t, mut ts, mut prec) = (0u32, 0u32, 0u32);
     let mut sats = -1i32;
+    let (mut gs, mut track, mut hdop) = (None::<u64>, None::<u64>, None::<u64>);
     while let Some(f) = r.next() {
         match (f.num, f.wire) {
             (1, 5) => {
@@ -240,6 +258,9 @@ fn position(d: &Data, from_id: &S64, out: &mut Decoded) {
                 alt_hae = f.as_sint32();
                 has_hae = true;
             }
+            (15, 0) => gs = Some(f.value),
+            (16, 0) => track = Some(f.value),
+            (12, 0) => hdop = Some(f.value),
             (19, 0) => sats = f.value as i32,
             (23, 0) => prec = f.value as u32,
             _ => {}
@@ -267,6 +288,19 @@ fn position(d: &Data, from_id: &S64, out: &mut Decoded) {
             w.str(", ");
             w.idec(u.alt_m as i32 as i64);
             w.str(" m");
+            if let Some(v) = gs {
+                w.str(", ");
+                w.udec(v);
+                w.str(" m/s");
+            }
+            if let Some(v) = track {
+                w.str(", track ");
+                w.fixed(format_f, 1, v as f64 * 1e-5);   // mesh.proto: 1e-5 degrees
+            }
+            if let Some(v) = hdop {
+                w.str(", HDOP ");
+                w.fixed(format_f, 2, v as f64 / 100.0);
+            }
             if prec != 0 && prec < 32 {
                 w.str(", ");
                 w.udec(prec as u64);
@@ -343,6 +377,167 @@ fn metrics(m: &Field, local: bool, u: &mut Node) {
 }
 
 /// TELEMETRY_APP (telemetry.proto Telemetry): device metrics (2), environment metrics (3) or local stats (6); the last one present gives the detail line.
+/// PAXCOUNTER_APP (paxcount.proto): people counted by Wi-Fi and BLE devices seen.
+fn paxcount(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let (mut wifi, mut ble, mut up) = (0u64, 0u64, 0u64);
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 0) => wifi = f.value,
+            (2, 0) => ble = f.value,
+            (3, 0) => up = f.value,
+            _ => {}
+        }
+    }
+    out.detail.write(|w| {
+        w.str("paxcounter: wifi ");
+        w.udec(wifi);
+        w.str(", ble ");
+        w.udec(ble);
+        w.str(", uptime ");
+        w.udec(up);
+        w.str(" s");
+    });
+}
+
+/// STORE_FORWARD_APP (storeforward.proto): the request/response code and, for a router, its heartbeat or history size.
+fn store_forward(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let mut rr = 0u64;
+    let (mut period, mut secondary, mut hist) = (None::<u64>, 0u64, None::<u64>);
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 0) => rr = f.value,
+            (3, 2) => {
+                let mut m = Reader::new(f.data);
+                while let Some(g) = m.next() {
+                    if g.num == 1 && g.wire == 0 {
+                        hist = Some(g.value);
+                    }
+                }
+            }
+            (4, 2) => {
+                let mut m = Reader::new(f.data);
+                while let Some(g) = m.next() {
+                    match (g.num, g.wire) {
+                        (1, 0) => period = Some(g.value),
+                        (2, 0) => secondary = g.value,
+                        _ => {}
+                    }
+                }
+            }
+            _ => {}
+        }
+    }
+    let name = match rr {
+        1 => "router error",
+        2 => "router heartbeat",
+        3 => "router ping",
+        4 => "router pong",
+        5 => "router busy",
+        6 => "router history",
+        7 => "router stats",
+        8 => "text direct",
+        9 => "text broadcast",
+        64 => "client error",
+        65 => "client history request",
+        66 => "client stats request",
+        67 => "client ping",
+        68 => "client pong",
+        106 => "client abort",
+        _ => "unset",
+    };
+    out.detail.write(|w| {
+        w.str("store and forward: ");
+        w.str(name);
+        if let Some(p) = period {
+            w.str(", every ");
+            w.udec(p);
+            w.str(" s");
+            if secondary != 0 {
+                w.str(", secondary");
+            }
+        }
+        if let Some(h) = hist {
+            w.str(", ");
+            w.udec(h);
+            w.str(" messages");
+        }
+    });
+}
+
+/// MAP_REPORT_APP (mqtt.proto `MapReport`): name, firmware, position, nodes online.
+fn map_report(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let (mut name, mut fw): (&[u8], &[u8]) = (&[], &[]);
+    let (mut lat, mut lon, mut nodes) = (None::<i32>, None::<i32>, None::<u64>);
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 2) => name = f.data,
+            (5, 2) => fw = f.data,
+            (9, 5) => lat = Some(f.as_i32()),
+            (10, 5) => lon = Some(f.as_i32()),
+            (13, 0) => nodes = Some(f.value),
+            _ => {}
+        }
+    }
+    out.detail.write(|w| {
+        w.str("map report: ");
+        clip(w, name, 40);
+        if !fw.is_empty() {
+            w.str(", fw ");
+            clip(w, fw, 24);
+        }
+        if let (Some(a), Some(b)) = (lat, lon) {
+            w.str(", ");
+            w.fixed(format_f, 5, f64::from(a) * 1e-7);
+            w.str(" ");
+            w.fixed(format_f, 5, f64::from(b) * 1e-7);
+        }
+        if let Some(n) = nodes {
+            w.str(", ");
+            w.udec(n);
+            w.str(" nodes");
+        }
+    });
+}
+
+/// WAYPOINT_APP (mesh.proto `Waypoint`): a named map pin.
+fn waypoint(d: &Data, out: &mut Decoded) {
+    let mut r = Reader::new(d.payload);
+    let (mut lat, mut lon, mut id) = (None::<i32>, None::<i32>, 0u64);
+    let mut name: &[u8] = &[];
+    let mut desc: &[u8] = &[];
+    while let Some(f) = r.next() {
+        match (f.num, f.wire) {
+            (1, 0) => id = f.value,
+            (2, 5) => lat = Some(f.as_i32()),
+            (3, 5) => lon = Some(f.as_i32()),
+            (6, 2) => name = f.data,
+            (7, 2) => desc = f.data,
+            _ => {}
+        }
+    }
+    out.detail.write(|w| {
+        w.str("waypoint ");
+        w.udec(id);
+        if !name.is_empty() {
+            w.str(" ");
+            clean_text(w, name);
+        }
+        if !desc.is_empty() {
+            w.str(": ");
+            clean_text(w, desc);
+        }
+        if let (Some(a), Some(b)) = (lat, lon) {
+            w.str(" at ");
+            w.fixed(format_f, 5, f64::from(a) * 1e-7);
+            w.str(" ");
+            w.fixed(format_f, 5, f64::from(b) * 1e-7);
+        }
+    });
+}
+
 fn telemetry(d: &Data, out: &mut Decoded) {
     let mut r = Reader::new(d.payload);
     let mut u = Node::default();
@@ -370,6 +565,66 @@ fn telemetry(d: &Data, out: &mut Decoded) {
                 w.str(" %, air tx ");
                 w.fixed(format_f, 1, u.air_util_tx_pct);
                 w.str(" %");
+            });
+        } else if f.num == 4 && f.wire == 2 {
+            // air quality (telemetry.proto, AirQualityMetrics)
+            let mut mr = Reader::new(f.data);
+            let (mut pm25, mut pm10, mut co2) = (None, None, None);
+            while let Some(g) = mr.next() {
+                match (g.num, g.wire) {
+                    (2, 0) => pm25 = Some(g.value),
+                    (3, 0) => pm10 = Some(g.value),
+                    (13, 0) => co2 = Some(g.value),
+                    _ => {}
+                }
+            }
+            det.write(|w| {
+                w.str("air quality");
+                if let Some(v) = pm25 {
+                    w.str(", PM2.5 ");
+                    w.udec(v);
+                }
+                if let Some(v) = pm10 {
+                    w.str(", PM10 ");
+                    w.udec(v);
+                }
+                if let Some(v) = co2 {
+                    w.str(", CO2 ");
+                    w.udec(v);
+                    w.str(" ppm");
+                }
+            });
+        } else if f.num == 5 && f.wire == 2 {
+            // power channels (PowerMetrics): voltage and current as fixed32 floats
+            let mut mr = Reader::new(f.data);
+            let mut v = [None::<f32>; 3];
+            let mut i = [None::<f32>; 3];
+            while let Some(g) = mr.next() {
+                if g.wire == 5 && (1..=6).contains(&g.num) {
+                    let idx = ((g.num - 1) / 2) as usize;
+                    if (g.num - 1) % 2 == 0 {
+                        v[idx] = Some(g.as_f32());
+                    } else {
+                        i[idx] = Some(g.as_f32());
+                    }
+                }
+            }
+            det.write(|w| {
+                w.str("power");
+                for k in 0..3 {
+                    if let Some(vv) = v[k] {
+                        w.str(", ch");
+                        w.udec((k + 1) as u64);
+                        w.str(" ");
+                        w.fixed(format_f, 2, f64::from(vv));
+                        w.str(" V");
+                        if let Some(ii) = i[k] {
+                            w.str(" ");
+                            w.fixed(format_f, 1, f64::from(ii));
+                            w.str(" mA");
+                        }
+                    }
+                }
             });
         } else if f.num == 3 && f.wire == 2 {
             let mut mr = Reader::new(f.data);

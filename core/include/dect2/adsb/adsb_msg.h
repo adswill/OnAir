@@ -138,6 +138,10 @@ struct Msg {
     int tsNacp = -1; bool autopilot = false, vnav = false, altHold = false, approach = false, lnav = false, tsModeValid = false;
     // TC 31 operational status
     int adsbVersion = -1; int nacp = -1; int nicSuppA = -1; int sil = -1; int gva = -1; int nicBaro = -1;
+    // TC 19 / 31: velocity quality, capability, operational mode (-1 unknown); surface aircraft length/width code
+    int nacv = -1, capAcas = -1, cap1090In = -1, capUatIn = -1, raActive = -1, identOn = -1, atcSvc = -1, lengthCode = -1;
+    // TC 28 subtype 2: ACAS RA broadcast (BDS 3,0 layout)
+    bool hasRaBcast = false, raTerm = false, raMte = false; unsigned raAra = 0, raRac = 0, raThreat = 0; int raTti = 0;
     // DF20 / 21 Comm-B
     CommB commb;
 };

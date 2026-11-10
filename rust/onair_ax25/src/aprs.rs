@@ -186,6 +186,79 @@ fn comment_extras<'a>(o: &mut Info, comment: &'a [u8]) -> &'a [u8] {
     c
 }
 
+/// PHG / RNG data extension at the start of the comment (APRS101 ch. 7) and !DAO! precision anywhere in it (WB4APR datum note): the text of the extension
+/// goes in front of the comment that remains; the DAO adds its digits to `lat` and `lon`.
+fn comment_data_ext(o: &mut Info, comment: &[u8], arena: &mut Arena) -> Span {
+    let mut before: &[u8] = comment;
+    let mut after: &[u8] = &[];
+    if let Some(p) = comment.windows(5).position(|w| w[0] == b'!' && w[4] == b'!' && w[1].is_ascii_alphabetic() && w[2..4].iter().all(|b| b.is_ascii_graphic() || *b == b' ')) {
+        let (d, a, b) = (comment[p + 1], comment[p + 2], comment[p + 3]);
+        if o.has_pos {
+            let (da, db) = if d.is_ascii_uppercase() {
+                (dao_upper(a), dao_upper(b))
+            } else {
+                (dao_lower(a), dao_lower(b))
+            };
+            o.lat += if o.lat < 0.0 { -da } else { da };
+            o.lon += if o.lon < 0.0 { -db } else { db };
+        }
+        before = &comment[..p];
+        after = &comment[p + 5..];
+    }
+    let start = arena.mark();
+    let mut head: &[u8] = before;
+    if head.len() >= 7 && head[0..3] == *b"PHG" && all_digits(head, 3, 4) {
+        let p = u32::from(head[3] - b'0');
+        let h = 10u32 << u32::from(head[4] - b'0');
+        let g = head[5] - b'0';
+        let d = head[6] - b'0';
+        arena.put(b"PHG ");
+        arena.fixed(0, f64::from(p * p));
+        arena.put(b" W, ");
+        arena.fixed(0, f64::from(h));
+        arena.put(b" ft HAAT, ");
+        arena.fixed(0, f64::from(g));
+        arena.put(b" dB, ");
+        if d == 0 {
+            arena.put(b"omni");
+        } else {
+            arena.put(b"directional to ");
+            arena.fixed(0, f64::from(d.min(8)) * 45.0);
+        }
+        head = &head[7..];
+        if !head.is_empty() || !after.is_empty() {
+            arena.put(b", ");
+        }
+    } else if head.len() >= 7 && head[0..3] == *b"RNG" && all_digits(head, 3, 4) {
+        arena.put(b"range ");
+        arena.fixed(0, f64::from(atoi_simple(&head[3..7])));
+        arena.put(b" mi");
+        head = &head[7..];
+        if !head.is_empty() || !after.is_empty() {
+            arena.put(b", ");
+        }
+    }
+    arena.put(head);
+    arena.put(after);
+    arena.since(start)
+}
+
+fn dao_upper(c: u8) -> f64 {
+    if c.is_ascii_digit() {
+        f64::from(c - b'0') * 0.001 / 60.0
+    } else {
+        0.0
+    }
+}
+
+fn dao_lower(c: u8) -> f64 {
+    if (33..=123).contains(&c) {
+        f64::from(c - 33) * 1.1 * 0.0001 / 60.0
+    } else {
+        0.0
+    }
+}
+
 /// ` [sym]` text of a position: "25.2000N 55.3000E [/>] 12 kn 270 deg 100 m".
 fn put_pos_text(a: &mut Arena, o: &Info) {
     put_lat(a, o.lat);
@@ -233,7 +306,7 @@ pub fn put_lon(a: &mut Arena, v: f64) {
 /// Stores the comment (after the position), takes course / speed / altitude out of it and, for the weather symbol `_`, the weather values.
 fn finish_position(o: &mut Info, rest: &[u8], arena: &mut Arena) {
     let c = comment_extras(o, rest);
-    o.comment = arena.push(c);
+    o.comment = comment_data_ext(o, c, arena);
     if o.sym_code == b'_' {
         let mut w = Weather::default();
         if parse_weather(c, &mut w) {
@@ -497,6 +570,27 @@ mod tests {
     fn s(b: &[u8], sp: Span) -> &str {
         core::str::from_utf8(&b[sp.off as usize..(sp.off + sp.len) as usize]).unwrap()
     }
+    #[test]
+    fn phg_rng_dao() {
+        let (ok, o, b) = run(b"APRS", b"!4903.50N/07201.75W#PHG5132Weather igate");
+        assert!(ok);
+        assert_eq!(s(&b, o.comment), "PHG 25 W, 20 ft HAAT, 3 dB, directional to 90, Weather igate");
+        let (_, o, b) = run(b"APRS", b"!4903.50N/07201.75W#RNG0050 digi");
+        assert_eq!(s(&b, o.comment), "range 50 mi,  digi");
+        // DAO, human readable: 1 thousandth of a minute of latitude, 8 of longitude; north positive, west negative
+        let (_, base, _) = run(b"APRS", b"!4903.50N/07201.75W-hello");
+        let (_, o, b) = run(b"APRS", b"!4903.50N/07201.75W-hello!W18!");
+        assert!((o.lat - base.lat - 0.001 / 60.0).abs() < 1e-9);
+        assert!((o.lon - base.lon + 0.008 / 60.0).abs() < 1e-9);
+        assert_eq!(s(&b, o.comment), "hello");
+        // DAO, base 91: value of 'A' (32) x 1.1 hundredths of a thousandth
+        let (_, o, _) = run(b"APRS", b"!4903.50N/07201.75W-x!wAA!");
+        assert!((o.lat - base.lat - f64::from(32u8) * 1.1 * 0.0001 / 60.0).abs() < 1e-9);
+        // a datum note only, spaces in place of digits, changes nothing
+        let (_, o, _) = run(b"APRS", b"!4903.50N/07201.75W-!W  !");
+        assert!((o.lat - base.lat).abs() < 1e-12);
+    }
+
     #[test]
     fn position_and_message() {
         let (ok, o, b) = run(b"APRS", b"!4903.50N/07201.75W-Test 001234");

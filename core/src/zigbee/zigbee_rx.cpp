@@ -4,6 +4,7 @@
 #include "dect2/results/results_io.h"
 #include "dect2/zigbee/zigbee_tel.h"
 #include "dect2/zigbee/zigbee_proto.h"
+#include "dect2/voicekeys/voice_keys.h"
 #include "zigbee_bpsk.h"
 #include "dect2/thread/thread_proto.h"
 #include "dect2/map/mesh_topology_feed.h"
@@ -469,6 +470,11 @@ struct ZigbeeReceiver::Impl {
             th = dect2::thread::analyse(f, psdu.data(), psdu.size());
             f.hasNwk = f.hasAps = f.zbBeacon = false;
             if (!th.info.empty()) f.info = th.info;
+        }
+        if (f.nwkSecured && f.encrypted) {
+            voicekeys::CallKeyInfo ki; ki.protocol = voicekeys::Protocol::Zigbee;
+            for (const auto& k : voicekeys::KeyStore::instance().candidates(ki))
+                if (k.key.size() == 16) { std::vector<uint8_t> plain; if (decryptNwk(psdu.data(), psdu.size(), f, k.key.data(), plain)) break; }
         }
         const int ch = hintChannel();
         tel.blocksOk++;

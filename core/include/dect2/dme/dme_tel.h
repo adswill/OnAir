@@ -28,6 +28,9 @@ struct DmeTelemetry {
     float levelDb = -200;          // envelope peak level, dB
     bool identKeyed = false;       // the ident tone is on now
     std::string ident;             // decoded ident letters, a space between words
+    bool tacanValid = false;       // TACAN: the bursts and the 15 Hz modulation are there
+    double tacanRadialDeg = 0;     // the beacon radial this receiver sits on (simulated test only, see tacan.h)
+    float tacanDepth15 = 0, tacanDepth135 = 0;
 };
 
 inline const char* dmeChannelName(int channel) {

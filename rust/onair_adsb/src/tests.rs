@@ -145,3 +145,67 @@ fn coarse_tisb_is_not_read_as_adsb() {
         assert!(m.has_cpr && m.has_alt, "CF {cf}");
     }
 }
+
+#[test]
+fn op_status_and_ra_broadcast() {
+    // DF17 TC31 subtype 0, version 2: set ACAS (ME 11), 1090 In (ME 12), UAT In (ME 19), RA active (ME 27), ident (ME 28), ATC (ME 29)
+    let mut b = [0u8; 14];
+    b[0] = 0x8d;
+    let set = |b: &mut [u8; 14], bit: usize, n: usize, v: u32| {
+        for i in 0..n {
+            let p = bit + i - 1;
+            if (v >> (n - 1 - i)) & 1 != 0 {
+                b[p / 8] |= 0x80 >> (p % 8);
+            }
+        }
+    };
+    set(&mut b, 33, 5, 31);
+    set(&mut b, 38, 3, 0);
+    set(&mut b, 43, 1, 1);
+    set(&mut b, 44, 1, 1);
+    set(&mut b, 51, 1, 1);
+    set(&mut b, 59, 3, 0b111);
+    set(&mut b, 73, 3, 2);
+    let (ok, m) = msg::decode(&b, 112);
+    assert!(ok);
+    assert_eq!((m.cap_acas, m.cap_1090in, m.cap_uatin, m.ra_active, m.ident_on, m.atc_svc), (1, 1, 1, 1, 1, 1));
+    // version 1: the ACAS bit is inverted
+    let mut c = [0u8; 14];
+    c[0] = 0x8d;
+    set(&mut c, 33, 5, 31);
+    set(&mut c, 73, 3, 1);
+    set(&mut c, 43, 1, 1);
+    let (_, m) = msg::decode(&c, 112);
+    assert_eq!(m.cap_acas, 0);
+    // surface, version 2
+    let mut d = [0u8; 14];
+    d[0] = 0x8d;
+    set(&mut d, 33, 5, 31);
+    set(&mut d, 38, 3, 1);
+    set(&mut d, 73, 3, 2);
+    set(&mut d, 49, 3, 5);
+    set(&mut d, 53, 4, 11);
+    let (_, m) = msg::decode(&d, 112);
+    assert_eq!((m.nacv, m.length_code), (5, 11));
+    // RA broadcast, threat identity
+    let mut e = [0u8; 14];
+    e[0] = 0x8d;
+    set(&mut e, 33, 5, 28);
+    set(&mut e, 38, 3, 2);
+    set(&mut e, 41, 14, 0x1234);
+    set(&mut e, 55, 4, 9);
+    set(&mut e, 59, 1, 1);
+    set(&mut e, 61, 2, 1);
+    set(&mut e, 63, 24, 0x4840D6);
+    let (_, m) = msg::decode(&e, 112);
+    assert!(m.has_ra_bcast);
+    assert_eq!((m.ra_ara, m.ra_rac, m.ra_term, m.ra_tti, m.ra_threat), (0x1234, 9, true, 1, 0x4840D6));
+    // TC 19 NACv
+    let mut f = [0u8; 14];
+    f[0] = 0x8d;
+    set(&mut f, 33, 5, 19);
+    set(&mut f, 38, 3, 1);
+    set(&mut f, 43, 3, 3);
+    let (_, m) = msg::decode(&f, 112);
+    assert_eq!(m.nacv, 3);
+}

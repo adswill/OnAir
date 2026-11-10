@@ -512,12 +512,12 @@ void synth(App& a, bool& changed) {
     SynthConfig& sc = a.tune.synth;
     ImGui::TextDisabled("simulated sondes");
     // type mask: 0 means RS41, DFM and M10
-    static const char* names[6] = {"RS41", "DFM", "M10", "M20", "RS92", "LMS6"};
+    static const char* names[10] = {"RS41", "DFM", "M10", "M20", "RS92", "LMS6", "iMet", "iMet-54", "MRZ", "iMS-100"};
     int mask = (int)sc.modeOpt[0];
     if (mask == 0) mask = 7;
-    for (int i = 0; i < 6; i++) {
+    for (int i = 0; i < 10; i++) {
         flowNext();
-        const int bit = i < 5 ? (1 << i) : 32;
+        const int bit = 1 << i;
         bool on = (mask & bit) != 0;
         char id[16]; snprintf(id, sizeof id, "%s##sdm%d", names[i], i);
         if (ImGui::Checkbox(id, &on)) {

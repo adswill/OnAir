@@ -19,7 +19,7 @@
 namespace dect2 {
 namespace voicekeys {
 
-enum class Protocol : uint8_t { Any = 0, Dmr, P25, Nxdn, Dpmr };
+enum class Protocol : uint8_t { Any = 0, Dmr, P25, Nxdn, Dpmr, Zigbee, ZWave, WiSun, WMBus, LoRaWAN };
 const char* protocolName(Protocol p);
 bool protocolFromName(const std::string& s, Protocol& p);
 

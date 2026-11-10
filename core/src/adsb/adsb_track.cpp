@@ -453,6 +453,14 @@ void AdsbTracker::applyMsg(Rec& r, const AdsbFrame& f) {
     if (m.hasBaro) { a.hasBaroSet = true; a.baroSetMb = (float)m.baroMb; }
     if (m.adsbVersion >= 0) a.adsbVersion = m.adsbVersion;
     if (m.nacp >= 0) a.nacp = m.nacp;
+    if (m.nacv >= 0) a.nacv = m.nacv;
+    if (m.capAcas >= 0) a.capAcas = m.capAcas;
+    if (m.cap1090In >= 0) a.cap1090In = m.cap1090In;
+    if (m.capUatIn >= 0) a.capUatIn = m.capUatIn;
+    if (m.raActive >= 0) a.raActive = m.raActive;
+    if (m.identOn >= 0) a.identOn = m.identOn;
+    if (m.atcSvc >= 0) a.atcSvc = m.atcSvc;
+    if (m.lengthCode >= 0) a.lengthCode = m.lengthCode;
     if (m.sil >= 0) a.sil = m.sil;
     if (m.hasCpr && !m.surface) {   // containment from the type code (DO-260B table, supplement bits ignored)
         static const int8_t nicOfTc[] = {-1, -1, -1, -1, -1, -1, -1, -1, -1, 11, 10, 9, 7, 8, 5, 4, 3, 2, 0};   // TC 9 - 18
@@ -529,6 +537,10 @@ void AdsbTracker::applyMsg(Rec& r, const AdsbFrame& f) {
     if (c.bds == 0x30) {
         r.tRa = now;
         a.hasRa = true; a.raAra = c.ara; a.raRac = c.rac; a.raTerminated = c.raTerminated; a.raThreat = c.tti == 1 ? c.threatIcao : 0;
+    }
+    if (m.hasRaBcast) {                            // TC 28 subtype 2: the same fields as BDS 3,0, seen without a Comm-B
+        r.tRa = now;
+        a.hasRa = true; a.raAra = m.raAra; a.raRac = m.raRac; a.raTerminated = m.raTerm; a.raThreat = m.raTti == 1 ? m.raThreat : 0;
     }
     if (c.bds == 0x10) { a.subnetVersion = c.subnetVersion; a.acasRa = c.acasOperating; }
     if (c.bds == 0x17) a.gicbMask = c.gicbMask;

@@ -54,6 +54,7 @@ void telegramsView(App& a) {
         ImGui::TableNextColumn();
         ImGui::PushTextWrapPos(0);
         ImGui::TextDisabled("%s%s%s", t.inverted ? "inverted  " : "", t.header.qUpdown ? "up-link  " : "down-link  ", t.hex.substr(0, 40).c_str());
+        for (const auto& pk : t.packets) ImGui::Text("%d: %s", pk.nid, pk.text.c_str());
         ImGui::PopTextWrapPos();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", t.hex.c_str());
     }

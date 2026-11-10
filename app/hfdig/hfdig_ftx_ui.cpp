@@ -10,6 +10,7 @@
 #include "dect2/hfdig/hfdig_ftx.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
+#include "dect2/hfdig/hfdig_balloon.h"
 #include "dect2/map/contact_graph.h"
 #include "../map/contact_lines.h"
 #include <algorithm>
@@ -131,6 +132,7 @@ void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
         ImGui::TableNextColumn();
         if (d.cq && d.mode != 3) ImGui::TextColored(pal::okGreen(), "%s", d.msg.c_str());
         else ImGui::TextUnformatted(d.msg.c_str());
+        if (wsprOnly) { const dect2::WsprBalloon bl = dect2::wsprBalloonDecode(d.call, d.grid, d.dbm); if (bl.ok) { ImGui::SameLine(); ImGui::TextDisabled("%s", dect2::wsprBalloonText(bl).c_str()); } }
         if (d.mirrored) { ImGui::SameLine(); ImGui::TextDisabled("(upside down)"); }
         if (d.early) { ImGui::SameLine(); ImGui::TextDisabled("(early)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Decoded before the slot ended; the full decode replaces it."); }
         if (d.how == 1) { ImGui::SameLine(); ImGui::TextDisabled("(combined)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("Decoded by adding this signal's soft bits from earlier slots (the same message repeated)."); }

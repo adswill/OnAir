@@ -88,6 +88,27 @@ void tab(App& a) {
         }
         ImGui::EndTabItem();
     }
+    if (typo::beginTabItem(tr("Radar"))) {
+        // FIS-B NEXRAD: the bins with an echo, plotted on latitude and longitude
+        const auto& c = t.nexrad;
+        if (c.empty()) ImGui::TextDisabled("%s", tr("No weather radar blocks received yet (FIS-B products 63 and 64, US ground stations)."));
+        else {
+            float laMin = 90, laMax = -90, loMin = 360, loMax = -360;
+            for (const auto& k : c) { laMin = std::min(laMin, k.lat - k.dLat); laMax = std::max(laMax, k.lat); loMin = std::min(loMin, k.lon); loMax = std::max(loMax, k.lon + k.dLon); }
+            const float w = ImGui::GetContentRegionAvail().x, h = std::max(160.f, ImGui::GetContentRegionAvail().y - 24.f);
+            ImVec2 p = ImGui::GetCursorScreenPos();
+            ImDrawList* dl = ImGui::GetWindowDrawList();
+            const float sx = w / std::max(0.01f, loMax - loMin), sy = h / std::max(0.01f, laMax - laMin);
+            static const ImU32 lev[8] = {0, 0xFF1F7F1F, 0xFF20C030, 0xFF20E0E0, 0xFF2090FF, 0xFF2040FF, 0xFF4020C0, 0xFFD040D0};
+            for (const auto& k : c) {
+                const float x0 = p.x + (k.lon - loMin) * sx, y0 = p.y + (laMax - k.lat) * sy;
+                dl->AddRectFilled(ImVec2(x0, y0), ImVec2(x0 + std::max(1.f, k.dLon * sx), y0 + std::max(1.f, k.dLat * sy)), lev[k.value & 7]);
+            }
+            ImGui::Dummy(ImVec2(w, h));
+            ImGui::TextDisabled("%s: %.2f to %.2f, %s: %.2f to %.2f (%s)", tr("latitude"), laMin, laMax, tr("longitude"), loMin > 180 ? loMin - 360 : loMin, loMax > 180 ? loMax - 360 : loMax, tr("levels 2 to 7, last 15 minutes"));
+        }
+        ImGui::EndTabItem();
+    }
     if (typo::beginTabItem("Log")) {
         for (auto it = t.framesLog.rbegin(); it != t.framesLog.rend(); ++it) {
             ImGui::TextDisabled("%.1f  %s", it->timeSec, it->kind.c_str());

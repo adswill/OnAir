@@ -53,6 +53,8 @@ struct CellTower {
     std::vector<CellNeigh> intra;           // SIB4 intra-frequency neighbours
     std::vector<CellInterFreq> inter;       // SIB5 other frequencies
     std::vector<int> sibsSeen;              // SIB numbers decoded (1 = SIB1)
+    std::string hnbName;                    // SIB9
+    bool hasTime = false; int64_t utcSec = 0; int dst = -1, leapSeconds = -128, localOffsetQh = -64;   // SIB16
     // measurements (dBFS: relative to the radio's full scale, not calibrated)
     float rsrpDb = -200, rsrqDb = -99, sinrDb = -99, pssDb = 0;
     double cfoHz = 0, clockPpm = 0;
@@ -61,6 +63,9 @@ struct CellTower {
     uint64_t seen = 0;            // blocks in which it was found
     uint64_t siMsgs = 0;          // system information messages decoded
 };
+
+// A public warning read from SIB10/11/12: the same message from several cells is one entry
+struct CellWarning { int64_t wallTime = 0; double sec = 0; int pci = -1, cells = 1, sib = 12; std::string plmn, category, text, lang; uint32_t messageId = 0, serial = 0; bool etws = false; };
 
 struct CellEvent { int64_t wallTime = 0; double sec = 0; std::string text; };
 struct CellCarrierSeen { double freqHz = 0; double widthHz = 0; float levelDb = 0; };   // an LTE-like block in the spectrum
@@ -84,9 +89,11 @@ struct CellTelemetry {
     std::vector<CellCarrierSeen> carriers;   // in the last block
     std::vector<CellTower> cells;            // most recently seen first
     std::vector<CellEvent> events;           // newest first, at most kCellLogMax
+    std::vector<CellWarning> warnings;       // public warnings, newest first, at most kCellWarnMax
 };
 
 constexpr size_t kCellLogMax = 300;
+constexpr size_t kCellWarnMax = 64;
 constexpr size_t kCellMax = 400;
 
 inline std::string cellSummary(const CellTelemetry& t) {

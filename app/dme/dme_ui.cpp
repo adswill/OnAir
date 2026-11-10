@@ -41,6 +41,10 @@ void tab(App& a) {
     row("level", b);
     snprintf(b, sizeof b, "%s", t.identKeyed ? "keyed" : "not keyed");
     row("ident", b);
+    if (t.tacanValid) {
+        snprintf(b, sizeof b, "%.1f deg (15 Hz %.0f %%, 135 Hz %.0f %%)", t.tacanRadialDeg, t.tacanDepth15 * 100.0, t.tacanDepth135 * 100.0);
+        row(tr("TACAN radial"), b);
+    }
 }
 
 void summary(const App& a, std::string& l1, std::string& l2) {

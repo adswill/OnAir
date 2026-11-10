@@ -9,7 +9,7 @@ namespace keyswin {
 using namespace dect2::voicekeys;
 
 const std::vector<Protocol>& protocolChoices() {
-    static const std::vector<Protocol> v = {Protocol::Any, Protocol::P25, Protocol::Nxdn, Protocol::Dmr, Protocol::Dpmr};
+    static const std::vector<Protocol> v = {Protocol::Any, Protocol::P25, Protocol::Nxdn, Protocol::Dmr, Protocol::Dpmr, Protocol::Zigbee, Protocol::ZWave, Protocol::WiSun, Protocol::WMBus, Protocol::LoRaWAN};
     return v;
 }
 const std::vector<Algorithm>& algorithmChoices() {

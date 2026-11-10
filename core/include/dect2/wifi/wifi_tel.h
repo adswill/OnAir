@@ -1,6 +1,7 @@
 // Wi-Fi network monitor telemetry, shared by the receiver and the UI.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
+#include "dect2/wifi/wifi_clients.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -86,6 +87,9 @@ struct WifiTelemetry {
     uint64_t dupFrames = 0;            // frames heard on the secondary 20 MHz of a wider channel (non-HT duplicates), not counted twice
     uint64_t filsFrames = 0;
     std::vector<WifiAp> aps;           // most recently heard first
+    std::vector<WifiClientInfo> clients;   // stations, tagged by a salted hash, most recently heard last
+    std::vector<WifiFloodAlarm> floodAlarms;
+    uint64_t deauthFrames = 0, handshakeFrames = 0;   // EAPOL-Key frames: a count, never captured
     std::vector<WifiFrameLog> log;     // beacons and probe responses, newest first
 };
 

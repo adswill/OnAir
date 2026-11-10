@@ -39,12 +39,18 @@ public:
     // hard symbols (0/1) at symbolRate(); the decoder handles Manchester coding, both polarities and frame sync itself
     virtual void push(const uint8_t* sym, size_t n, double timeSec, std::vector<SondeFix>& out) = 0;
     virtual void reset() = 0;
+    virtual bool midpointSlicer() const { return false; }   // the short preamble does not settle the mean: slice between the extremes
+    virtual bool isAfsk() const { return false; }           // symbols come from 1200 / 2200 Hz tones in the FM audio (iMet-1 / iMet-4)
 };
 
 std::unique_ptr<SondeBitDecoder> makeDfmDecoder();
 std::unique_ptr<SondeBitDecoder> makeM10Decoder();
 std::unique_ptr<SondeBitDecoder> makeM20Decoder();
 std::unique_ptr<SondeBitDecoder> makeLms6Decoder();
+std::unique_ptr<SondeBitDecoder> makeImetDecoder();     // iMet-1 / iMet-4
+std::unique_ptr<SondeBitDecoder> makeImet54Decoder();
+std::unique_ptr<SondeBitDecoder> makeMrzDecoder();
+std::unique_ptr<SondeBitDecoder> makeMeiseiDecoder();   // iMS-100
 
 // What the test signal wants a sonde to send
 struct SondeTruth {
@@ -89,6 +95,15 @@ bool m10ParseFrame(const uint8_t* f, size_t n, SondeFix& out);
 bool m20ParseFrame(const uint8_t* f, size_t n, SondeFix& out);
 bool lms6ParseFrame(const uint8_t* f, size_t n, SondeFix& out);
 uint16_t sondeLms6Crc16(const uint8_t* msg, size_t len);
+bool mrzParseFrame(const uint8_t* f, size_t n, SondeFix& out);
+bool imet54ParseFrame(const uint8_t* f, size_t n, SondeFix& out);
+std::vector<uint8_t> imetBits(const SondeTruth& t);                            // UART bits, for tests that bypass the AFSK
+std::vector<uint8_t> imetSymbols(const SondeTruth& t);                         // AFSK sub-symbols, 26400 a second (22 per bit)
+std::vector<uint8_t> mrzFrameBytes(const SondeTruth& t, int sub, bool latLon);
+std::vector<uint8_t> mrzSymbols(const SondeTruth& t, int sub, bool latLon);
+std::vector<uint8_t> imet54FrameBytes(const SondeTruth& t, int serial);
+std::vector<uint8_t> imet54Symbols(const SondeTruth& t, int serial);
+std::vector<uint8_t> meiseiSymbols(const SondeTruth& t, int cnt, int serial);
 uint16_t sondeM10Checksum(const uint8_t* msg, size_t len);
 // Hamming(8,4) of the DFM frames: codeword = d0 d1 d2 d3 p0 p1 p2 p3 (d0 first on air), nibble bit 3 = d0.
 uint8_t sondeHamming84Encode(uint8_t nibble);

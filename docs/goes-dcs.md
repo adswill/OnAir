@@ -13,6 +13,10 @@ On the air, in this order: an unmodulated carrier, a bit preamble of alternating
 +-60 degrees; the bits are NRZ-L or Manchester coded. The data is **ASCII** text or **pseudo-binary B** (six bits per character, 0x40 added), in which three
 characters make an 18-bit sensor value.
 
+## The relay downlink
+
+The satellite retransmits the uplink carriers: the 401.85 MHz pilot appears at 1679.85 MHz on the GOES-R downlink (NOAA frequency plan). The Band selector tunes either the uplink or this relay. The same decoder runs on both; this assumes a bent-pipe relay that keeps the uplink modulation. A signal wiki and an old frequency plan label the downlink 8PSK, so this has not been confirmed on air. Simulated only.
+
 ## How it works
 
 - The capture is brought to about 800 kHz (fourth-order CIC) and an averaged spectrum is made every 80 ms. A line that stands more than the **threshold**

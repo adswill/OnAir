@@ -296,6 +296,14 @@ void detail(App& a) {
     kv("wind", b);
     if (ac->hasSat) snprintf(b, sizeof b, "%+.0f C %s", ac->satC, ac->satDerived ? "derived" : "reported"); else snprintf(b, sizeof b, "-");
     kv("SAT", b);
+    {   // operational status (TC 31) and velocity quality (TC 19)
+        std::string o;
+        auto flag = [&](const char* n, int v) { if (v >= 0) o += std::string(o.empty() ? "" : ", ") + n + (v ? " yes" : " no"); };
+        flag(tr("ACAS"), ac->capAcas); flag(tr("1090 In"), ac->cap1090In); flag(tr("UAT In"), ac->capUatIn); flag(tr("RA active"), ac->raActive); flag(tr("IDENT"), ac->identOn); flag(tr("ATC services"), ac->atcSvc);
+        if (ac->nacv >= 0) o += std::string(o.empty() ? "" : ", ") + "NACv " + std::to_string(ac->nacv);
+        if (ac->lengthCode >= 0) o += std::string(o.empty() ? "" : ", ") + tr("length/width code") + " " + std::to_string(ac->lengthCode);
+        if (!o.empty()) ImGui::TextDisabled("%s: %s", tr("Status"), o.c_str());
+    }
     if (ac->hasRa) {
         std::string ra = dect2::adsb::raText(ac->raAra, ac->raRac, ac->raTerminated);
         if (ac->raThreat) { snprintf(b, sizeof b, ", threat %06X", (unsigned)ac->raThreat); ra += b; }

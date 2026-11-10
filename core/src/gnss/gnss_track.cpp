@@ -339,6 +339,7 @@ void GnssTracker::trySubframe() {
     framesSinceSync_++;
     ev.towStart = towStart;
     ev.startEpoch = startEpoch;
+    if (timeValid_) { const double t = towAtEpoch0_ + (double)evenAt_ * spec.epochS; ev.osnmaPage = (int)std::floor(std::fmod(t, 30.0) / 2.0); }
     events_.push_back(ev);
 }
 
@@ -492,6 +493,8 @@ void GnssTracker::inavPart(int64_t p) {
         if (++badInRow_ >= 6) { frameSync_ = false; }
         return;
     }
+    std::memcpy(ev.sar, bits + 58, 22);             // odd part: 2 + 16 + reserved 40 (OSNMA), then SAR
+    { int b8 = 0; for (int i = 0; i < 8; i++) b8 = b8 << 1 | bits[18 + i]; ev.nma8 = (uint8_t)b8; }
     badInRow_ = 0;
     framesOk_++;
     frameSync_ = true;

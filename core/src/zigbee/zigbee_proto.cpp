@@ -1,5 +1,7 @@
 // IEEE 802.15.4 / Zigbee frame layers (see zigbee_proto.h).
 #include "dect2/zigbee/zigbee_proto.h"
+#include "dect2/voicekeys/net_crypto.h"
+#include <cstring>
 #include <cstdio>
 #include <cstring>
 #include "dect2/common/crc.h"
@@ -241,6 +243,7 @@ bool parseNwk(Frame& f, const uint8_t* p, size_t n) {
     f.hasNwk = true;
     if (f.nwkSecured) {   // auxiliary header: control, frame counter, source address, key sequence number; the rest is encrypted
         f.encrypted = true;
+        f.nwkAuxAt = (int)i;
         return true;
     }
     if (f.nwkType == 0) parseAps(f, p + i, n - i);
@@ -262,6 +265,37 @@ void parseBeaconPayload(Frame& f, const uint8_t* p, size_t n) {
 }
 
 } // namespace
+
+// Zigbee NWK security (ZigBee spec section 4.3, CCM* level 5). The on-air security level bits are zero; nonce and AAD use level 5.
+bool decryptNwk(const uint8_t* d, size_t total, Frame& f, const uint8_t key[16], std::vector<uint8_t>& plain) {
+    if (f.nwkAuxAt < 0 || f.payloadAt + f.payloadLen > total) return false;
+    const uint8_t* nwk = d + f.payloadAt;
+    const size_t nLen = f.payloadLen, a = (size_t)f.nwkAuxAt;
+    if (nLen < a + 5) return false;
+    const uint8_t sc = (uint8_t)((nwk[a] & ~7) | 5);
+    const int keyId = (nwk[a] >> 3) & 3;
+    const bool extNonce = (nwk[a] >> 5) & 1;
+    size_t i = a + 1 + 4;
+    if (!extNonce || nLen < i + 8) return false;
+    uint8_t nonce[13];
+    std::memcpy(nonce, nwk + i, 8);
+    i += 8;
+    if (keyId == 1) { if (nLen < i + 1) return false; i++; }
+    if (nLen < i + 4) return false;
+    std::memcpy(nonce + 8, nwk + a + 1, 4);
+    nonce[12] = sc;
+    std::vector<uint8_t> aad(nwk, nwk + i);
+    aad[a] = sc;
+    if (!voicekeys::ccmStarDecrypt(key, nonce, aad.data(), aad.size(), nwk + i, nLen - i - 4, 4, plain)) return false;
+    f.decrypted = true;
+    f.encrypted = false;
+    if (f.nwkType == 0) parseAps(f, plain.data(), plain.size());
+    char b[160];
+    if (f.hasAps) snprintf(b, sizeof b, "NWK decrypted, APS %s cluster 0x%04X, %zu bytes", profileName(f.apsProfile), (unsigned)f.apsCluster, plain.size());
+    else snprintf(b, sizeof b, "NWK decrypted, %zu bytes", plain.size());
+    f.info = b;
+    return true;
+}
 
 Frame parse(const uint8_t* d, size_t total) {
     Frame f;

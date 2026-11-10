@@ -73,6 +73,21 @@ void GnssReceiver::Impl::handleInav(GnssTracker& t, const GnssSubframeEvent& ev,
     const int type = inavParseWord(ev.word, g, &tow);
     if (tow >= 0) s.towLast = tow;
     s.lastSfId = type; s.lastSfTime = signalNow;
+    {   // SAR return link messages, joined with Cospas-Sarsat: the 22 bit SAR field of every odd page
+        GalRlm rlm;
+        if (rlmAsm[t.prn].push(ev.sar, rlm)) {
+            char b[160];
+            snprintf(b, sizeof b, "Galileo SAR return link from %s: beacon %s, %s, parity %s", satName(GnssGalileo, t.prn).c_str(), rlm.hex,
+                     rlm.ack ? "acknowledgement" : rlm.test ? "test" : (rlm.longRlm ? "long RLM" : "short RLM"), rlm.parityOk ? "ok" : "BAD");
+            logf(b);
+        }
+    }
+    if (ev.osnmaPage == 0 && ev.nma8 != lastNma) {
+        lastNma = ev.nma8;
+        char b[140];
+        snprintf(b, sizeof b, "OSNMA header: service %s, chain %d, %s (from %s; signatures not checked)", osnmaStatusName(ev.nma8 >> 6), (ev.nma8 >> 4) & 3, osnmaChainStatusName((ev.nma8 >> 1) & 7), satName(GnssGalileo, t.prn).c_str());
+        logf(b);
+    }
     if (type == 10 && g.ggtoValid) {
         if (!ggtoValid) {
             char b[100];

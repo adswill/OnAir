@@ -280,6 +280,7 @@ void picturePanel(App& a, HfdigKbd& dec, const HfdigKbdTelemetry& k, float heigh
 }
 
 void hfdigKbdTab(App& a, const dect2::HfdigTelemetry& t) {
+    if (!t.rsidMode.empty() && t.rsidAgeSec < 120.f) ImGui::TextDisabled("%s: %s, %.0f Hz", tr("RSID heard"), t.rsidMode.c_str(), t.rsidAudioHz);
     const SubMode* sm = curSub(a);
     const int fam = sm && sm->decoders == 32 ? std::clamp(sm->sel, 0, kKbdFamilies - 1) : KbdOlivia;
     load(a, fam);

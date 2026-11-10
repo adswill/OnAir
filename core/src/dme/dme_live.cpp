@@ -63,6 +63,7 @@ void DmeLiveReceiver::publish() {
     }
     snap_.levelDb = static_cast<float>(t.levelDb);
     snap_.identKeyed = t.identKeyed;
+    snap_.tacanValid = t.tacanValid; snap_.tacanRadialDeg = t.tacanRadialDeg; snap_.tacanDepth15 = t.tacanDepth15; snap_.tacanDepth135 = t.tacanDepth135;
     snap_.ident = t.ident;
     snap_.dataValid = t.pairRatePps > 0.0;
     uint64_t letters = 0;

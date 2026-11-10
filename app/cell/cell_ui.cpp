@@ -6,6 +6,7 @@
 #include <set>
 #include "app.h"
 #include "state/results_export.h"
+#include "i18n/i18n.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/cell/cell_ocid.h"
 #include "dect2/cell/cell_rx.h"
@@ -337,12 +338,19 @@ void detail(App& a) {
         }
         ImGui::Text("SIB1: %s(%s) TAC %u, cell id %u (eNB %u, sector %d)%s", pl.c_str(), dect2::lteCountry(c.mcc), c.tac, c.cellId, c.enb, c.sector, c.barred ? ", barred" : "");
     }
-    {   // SIB types 10, 11 and 12 in the scheduling list: the cell can broadcast warnings (ETWS / CMAS); their content is not decoded
+    {   // SIB types 10, 11 and 12 in the scheduling list: the cell can broadcast warnings (ETWS / CMAS); the messages appear under Public warnings
         bool etws = false, cmas = false;
         for (const auto& s : c.sched) for (int b : s.sibs) { if (b == 10 || b == 11) etws = true; if (b == 12) cmas = true; }
         if (etws || cmas) ImGui::TextDisabled("%s%s%s", etws ? "scheduled: SIB10/11 (ETWS earthquake and tsunami warning)" : "", etws && cmas ? "; " : "", cmas ? "SIB12 (CMAS / public warning)" : "");
     }
     if (c.hasSib2) ImGui::Text("SIB2: reference signal %d dBm, p-b %d, UL %s", c.refSignalPowerDbm, c.pb, c.ulEarfcn >= 0 ? std::to_string(c.ulEarfcn).c_str() : "default spacing");
+    if (!c.hnbName.empty()) ImGui::Text("SIB9: home eNB name %s", c.hnbName.c_str());
+    if (c.hasTime) {
+        char tb[40] = "";
+        time_t tu = (time_t)c.utcSec;
+        if (const struct tm* g = gmtime(&tu)) strftime(tb, sizeof tb, "%Y-%m-%d %H:%M:%S", g);
+        ImGui::Text("SIB16: network time %s UTC%s%s", tb, c.localOffsetQh > -64 ? ", local offset " : "", c.localOffsetQh > -64 ? (std::to_string(c.localOffsetQh * 15) + " min").c_str() : "");
+    }
     if (c.hasSib3) ImGui::Text("SIB3: priority %d, hysteresis %d dB", c.prio, c.qHystDb);
 }
 
@@ -490,6 +498,23 @@ void logView(App& a) {
     if (a.rx.cell.events.empty()) ImGui::TextDisabled("nothing yet");
 }
 
+// ETWS / CMAS / EU-Alert messages the cells around are broadcasting (SIB10, SIB11, SIB12): shown as a phone would show the text
+void warnView(App& a) {
+    const auto& t = a.rx.cell;
+    ImGui::PushTextWrapPos(0);
+    if (t.warnings.empty()) { ImGui::TextDisabled("%s", tr("No public warning received. Cells broadcast these only while an alert or a test is active.")); ImGui::PopTextWrapPos(); return; }
+    for (const auto& w : t.warnings) {
+        char when[32] = "";
+        time_t tt = (time_t)w.wallTime;
+        if (const struct tm* lt = localtime(&tt)) strftime(when, sizeof when, "%H:%M:%S", lt);
+        ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.2f, 1.0f), "%s  %s (id %u)", when, w.category.empty() ? tr("unlisted identifier") : w.category.c_str(), w.messageId);
+        ImGui::TextDisabled("SIB%d, PCI %d, %s, serial 0x%04X, %d cell%s%s%s", w.sib, w.pci, w.plmn.empty() ? "?" : w.plmn.c_str(), w.serial, w.cells, w.cells == 1 ? "" : "s", w.lang.empty() ? "" : ", ", w.lang.c_str());
+        ImGui::TextUnformatted(w.text.empty() ? "-" : w.text.c_str());
+        ImGui::Separator();
+    }
+    ImGui::PopTextWrapPos();
+}
+
 void tick(App& a) {
     if (live(a)) {   // ask the database about every identified cell (cached and queued ones are not asked again)
         dect2::OcidLookup& L = ocid();
@@ -516,7 +541,7 @@ void tab(App& a) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("Receive only: the public information every LTE cell broadcasts to all phones (operator, band, cell identity). Nothing addressed to a phone is decoded.");
     ImGui::PopTextWrapPos();
-    subNav("cellv", S.view, {"Cells", "Sites", "Neighbours", "Operators", "Map", "Log"});
+    subNav("cellv", S.view, {"Cells", "Sites", "Neighbours", "Operators", "Map", "Log", "Warnings"});
     if (S.view == 4) { mapView(a); return; }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to find the cells around you"); return; }
     if (S.view == 0) {
@@ -527,6 +552,7 @@ void tab(App& a) {
     } else if (S.view == 1) sitesView(a);
     else if (S.view == 2) neighView(a);
     else if (S.view == 3) opView(a);
+    else if (S.view == 6) warnView(a);
     else logView(a);
 }
 

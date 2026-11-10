@@ -161,6 +161,7 @@ void Bank::configure(double inputRate, const std::vector<Channel>& chans) {
                 for (size_t si = 1; si < c.syncs.size(); si++) p.moreSync.push_back((uint8_t)c.syncs[si]);
                 p.ldro = lora::autoLdro(sf, c.bwHz);
                 p.cfoTrack = c.cfoTrack; p.carrierHz = c.carrierHz;
+                if (c.implicitLen > 0) { p.implicitHdr = true; p.implicitLen = c.implicitLen; p.cr = 5; p.crc = false; }
                 d.dm = std::make_unique<lora::Demod>(p, ch->outRate, 1, inv ? ch->csInv : ch->cs);
                 d.dm->reset(0);
                 ch->decs.push_back(std::move(d));

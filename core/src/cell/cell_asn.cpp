@@ -389,6 +389,109 @@ void sib5(Coder& c, LteSib5& s) {
     c.tail(e);
 }
 
+// UPER length determinant of an unconstrained OCTET STRING (lengths under 16384, as in system information)
+size_t octetLen(BitReader& r) {
+    size_t len = r.u(8);
+    if (len & 0x80) {
+        if (len & 0x40) { r.fail(); return 0; }
+        len = ((len & 0x3f) << 8) | r.u(8);
+    }
+    return len;
+}
+void putOctetLen(BitWriter& w, size_t n) {
+    if (n < 128) w.u((uint32_t)n, 8); else w.u((uint32_t)(0x8000 | n), 16);
+}
+void readOctets(BitReader& r, std::vector<uint8_t>& out, size_t n) {
+    out.clear();
+    for (size_t i = 0; i < n && r.ok(); i++) out.push_back((uint8_t)r.u(8));
+}
+
+void sib9Read(BitReader& r, std::string& name) {
+    const bool ext = r.bit();
+    if (r.bit()) {                         // hnb-Name OCTET STRING (SIZE (1..48))
+        const int n = r.range(1, 48);
+        for (int i = 0; i < n && r.ok(); i++) name.push_back((char)r.u(8));
+    }
+    if (ext) r.skipExtensions();
+}
+
+void sib10Read(BitReader& r, LteWarnSeg& w) {
+    const bool ext = r.bit();
+    const bool hasDummy = r.bit();
+    w.sib = 10;
+    w.messageId = r.u(16); w.serial = r.u(16); w.warningType = r.u(16);
+    if (hasDummy) r.skip(400);             // the former warningSecurityInfo
+    if (ext) r.skipExtensions();
+}
+
+// SIB11's lateNonCriticalExtension follows the extension marker; SIB12's sits in the root (36.331)
+void sib11or12Read(BitReader& r, LteWarnSeg& w, int sib) {
+    const bool ext = r.bit();
+    const bool hasDcs = r.bit();
+    const bool hasLate = sib == 12 ? r.bit() : false;
+    w.sib = sib;
+    w.messageId = r.u(16); w.serial = r.u(16);
+    w.last = r.bit();
+    w.segment = (int)r.u(6);
+    const size_t n = octetLen(r);
+    readOctets(r, w.data, n);
+    if (hasDcs) w.dcs = (int)r.u(8);
+    if (hasLate) r.skip(octetLen(r) * 8);
+    if (ext) r.skipExtensions();
+}
+
+void sib16Read(BitReader& r, LteSib16& s) {
+    const bool ext = r.bit();
+    const bool hasTime = r.bit();
+    const bool hasLate = r.bit();
+    if (hasTime) {
+        const bool hasDst = r.bit(), hasLeap = r.bit(), hasOff = r.bit();
+        s.hasTime = true;
+        const uint64_t hi = r.u(7);
+        s.timeUtc = (hi << 32) | r.u(32);
+        if (hasDst) s.dst = (int)r.u(2);
+        if (hasLeap) s.leapSeconds = r.range(-127, 128);
+        if (hasOff) s.localOffsetQh = r.range(-63, 64);
+    }
+    if (hasLate) r.skip(octetLen(r) * 8);
+    if (ext) r.skipExtensions();
+}
+
+void sib10Write(BitWriter& w, const LteWarnSeg& s) {
+    w.bit(0); w.bit(0);
+    w.u(s.messageId, 16); w.u(s.serial, 16); w.u(s.warningType, 16);
+}
+
+void sib11or12Write(BitWriter& w, const LteWarnSeg& s) {
+    w.bit(0);
+    w.bit(s.dcs >= 0);
+    if (s.sib == 12) w.bit(0);
+    w.u(s.messageId, 16); w.u(s.serial, 16);
+    w.bit(s.last); w.u((uint32_t)s.segment, 6);
+    putOctetLen(w, s.data.size());
+    for (uint8_t b : s.data) w.u(b, 8);
+    if (s.dcs >= 0) w.u((uint32_t)s.dcs, 8);
+}
+
+void sib16Write(BitWriter& w, const LteSib16& s) {
+    w.bit(0); w.bit(s.hasTime); w.bit(0);
+    if (!s.hasTime) return;
+    w.bit(s.dst >= 0); w.bit(s.leapSeconds > -128); w.bit(s.localOffsetQh > -64);
+    w.u((uint32_t)(s.timeUtc >> 32), 7); w.u((uint32_t)s.timeUtc, 32);
+    if (s.dst >= 0) w.u((uint32_t)s.dst, 2);
+    if (s.leapSeconds > -128) w.range(s.leapSeconds, -127, 128);
+    if (s.localOffsetQh > -64) w.range(s.localOffsetQh, -63, 64);
+}
+
+// a CHOICE alternative after the extension marker: normally small index, then the value as an open type (whole octets)
+void putOpenAlt(BitWriter& w, int index, BitWriter& inner) {
+    inner.padOctet();
+    w.bit(1);
+    w.bit(0); w.u((uint32_t)index, 6);
+    putOctetLen(w, inner.bits().size() / 8);
+    for (int b : inner.bits()) w.bit(b != 0);
+}
+
 } // namespace
 
 bool lteParseBcch(const Bits& msg, LteBcch& out) {
@@ -405,14 +508,38 @@ bool lteParseBcch(const Bits& msg, LteBcch& out) {
     const bool nce = r.bit(); (void)nce;
     const int n = r.range(1, 32);
     for (int k = 0; k < n && r.ok(); k++) {
-        if (r.bit()) { out.sibsSeen.push_back(12); break; }   // a later SIB (open type): stop here
+        if (r.bit()) {                     // after the marker: sib12-v920, sib13-v920, sib14, sib15, sib16-v1130, ... each an open type
+            if (r.bit()) { r.fail(); break; }
+            const int idx = (int)r.u(6);
+            const size_t len = octetLen(r);
+            if (!r.ok()) break;
+            const size_t start = r.pos();
+            static const int kExt[] = {12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 24, 25, 26};
+            const int sib = idx < (int)(sizeof kExt / sizeof kExt[0]) ? kExt[idx] : 99;
+            out.sibsSeen.push_back(sib);
+            BitReader in(msg, start);
+            if (sib == 12) {
+                LteWarnSeg w;
+                sib11or12Read(in, w, 12);
+                if (in.ok() && in.pos() <= start + len * 8) out.warn.push_back(std::move(w));
+            } else if (sib == 16) {
+                LteSib16 t;
+                sib16Read(in, t);
+                if (in.ok() && in.pos() <= start + len * 8) { out.sib16 = t; out.has16 = true; }
+            }
+            r.skip(len * 8);
+            continue;
+        }
         const int t = (int)r.u(4) + 2;     // 0 = SIB2 .. 9 = SIB11
         out.sibsSeen.push_back(t);
         if (t == 2) { sib2(c, out.sib2); out.has2 = r.ok(); }
         else if (t == 3) { sib3(c, out.sib3); out.has3 = r.ok(); }
         else if (t == 4) { sib4(c, out.sib4); out.has4 = r.ok(); }
         else if (t == 5) { sib5(c, out.sib5); out.has5 = r.ok(); }
-        else break;                        // SIB6 and up are not read (the rest of the message cannot be found without them)
+        else if (t == 9) { sib9Read(r, out.hnbName); out.has9 = r.ok(); }
+        else if (t == 10) { LteWarnSeg w; sib10Read(r, w); if (r.ok()) out.warn.push_back(std::move(w)); }
+        else if (t == 11) { LteWarnSeg w; sib11or12Read(r, w, 11); if (r.ok()) out.warn.push_back(std::move(w)); }
+        else break;                        // SIB6 to SIB8 are not read (the rest of the message cannot be found without them)
     }
     return !out.sibsSeen.empty();
 }
@@ -437,6 +564,27 @@ Bits lteEncodeSi(const LteSib2* s2, const LteSib3* s3, const LteSib4* s4, const 
     if (s3) { w.bit(0); w.u(1, 4); LteSib3 t = *s3; sib3(c, t); }
     if (s4) { w.bit(0); w.u(2, 4); LteSib4 t = *s4; sib4(c, t); }
     if (s5) { w.bit(0); w.u(3, 4); LteSib5 t = *s5; sib5(c, t); }
+    w.padOctet();
+    return w.bits();
+}
+
+Bits lteEncodeSiWarn(const std::vector<LteWarnSeg>& warn, const LteSib16* s16, const std::string& hnb) {
+    BitWriter w;
+    w.bit(0); w.bit(0); w.bit(0); w.bit(0);
+    const int n = (int)warn.size() + (s16 ? 1 : 0) + (hnb.empty() ? 0 : 1);
+    w.range(std::max(1, n), 1, 32);
+    if (!hnb.empty()) {
+        w.bit(0); w.u(7, 4);
+        w.bit(0); w.bit(1);
+        w.range((int)hnb.size(), 1, 48);
+        for (char ch : hnb) w.u((uint8_t)ch, 8);
+    }
+    for (const auto& s : warn) {
+        if (s.sib == 12) { BitWriter in; sib11or12Write(in, s); putOpenAlt(w, 0, in); }
+        else if (s.sib == 10) { w.bit(0); w.u(8, 4); sib10Write(w, s); }
+        else { w.bit(0); w.u(9, 4); sib11or12Write(w, s); }
+    }
+    if (s16) { BitWriter in; sib16Write(in, *s16); putOpenAlt(w, 4, in); }
     w.padOctet();
     return w.bits();
 }

@@ -7,6 +7,8 @@
 #include "dect2/cell/cell_dsp.h"
 #include "dect2/cell/cell_lte.h"
 #include "dect2/cell/cell_tel.h"
+#include "dect2/cell/cell_pws.h"
+#include <map>
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -202,6 +204,7 @@ struct CellReceiver::Impl {
     uint64_t jobGen = 0;
     // results (under mu)
     CellTelemetry tel, pub;
+    std::map<uint32_t, cell::PwsAssembler> pws;   // per PCI (under mu)
 
     Impl() { th = dect2::namedThread("onair-cell", [this] { run(); }); }
     ~Impl() {
@@ -330,7 +333,7 @@ struct CellReceiver::Impl {
         }
         std::lock_guard<std::mutex> lk(mu);
         if (gen.load() != g) return;
-        if (clearReq.exchange(false)) { tel.cells.clear(); tel.events.clear(); tel.blocksOk = tel.blocksBad = 0; }
+        if (clearReq.exchange(false)) { tel.cells.clear(); tel.events.clear(); tel.warnings.clear(); pws.clear(); tel.blocksOk = tel.blocksBad = 0; }
         tel.blocks++;
         tel.carriers = car;
         for (auto& cc : tel.carriers) cc.freqHz += center;
@@ -423,6 +426,28 @@ struct CellReceiver::Impl {
                 continue;
             }
             for (int n : bc.sibsSeen) seenSib(n);
+            if (bc.has9) t->hnbName = bc.hnbName;
+            if (bc.has16 && bc.sib16.hasTime) {
+                t->hasTime = true;
+                t->utcSec = (int64_t)(bc.sib16.timeUtc / 100) - 2208988800LL;   // 10 ms units since 1900-01-01
+                t->dst = bc.sib16.dst; t->leapSeconds = bc.sib16.leapSeconds; t->localOffsetQh = bc.sib16.localOffsetQh;
+            }
+            for (const auto& w : bc.warn) {
+                cell::PwsMessage pm;
+                if (!pws[(uint32_t)t->pci].add(w, pm)) continue;
+                const int64_t wall = wallNow();
+                bool merged = false;
+                for (auto& old : tel.warnings) if (old.messageId == pm.messageId && old.serial == pm.serial && old.sib == pm.sib) { old.cells++; merged = true; break; }
+                if (merged) continue;
+                CellWarning cw;
+                cw.wallTime = wall; cw.sec = sec; cw.pci = t->pci; cw.sib = pm.sib; cw.messageId = pm.messageId; cw.serial = pm.serial; cw.etws = pm.etws;
+                cw.plmn = t->plmns.empty() ? "" : t->plmns[0];
+                cw.category = pm.category; cw.text = pm.text; cw.lang = pm.lang;
+                tel.warnings.insert(tel.warnings.begin(), cw);
+                if (tel.warnings.size() > kCellWarnMax) tel.warnings.resize(kCellWarnMax);
+                snprintf(b, sizeof b, "WARNING SIB%d %s (id %u): %.150s", pm.sib, pm.category.empty() ? "unlisted id" : pm.category.c_str(), pm.messageId, pm.text.c_str());
+                event(b, sec);
+            }
             if (bc.has2) {
                 const cell::LteSib2& s = bc.sib2;
                 t->hasSib2 = true;
@@ -474,7 +499,7 @@ void CellReceiver::setCenterHz(double hz) {
 }
 bool CellReceiver::ready() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->rateSet >= cellTuning().minSampleRate - 1; }
 void CellReceiver::reset() { p_->gen++; }
-void CellReceiver::clearCells() { p_->clearReq = true; std::lock_guard<std::mutex> lk(p_->mu); p_->tel.cells.clear(); p_->tel.events.clear(); p_->tel.blocksOk = p_->tel.blocksBad = 0; p_->clearReq = false; p_->publish(); }
+void CellReceiver::clearCells() { p_->clearReq = true; std::lock_guard<std::mutex> lk(p_->mu); p_->tel.cells.clear(); p_->tel.events.clear(); p_->tel.warnings.clear(); p_->pws.clear(); p_->tel.blocksOk = p_->tel.blocksBad = 0; p_->clearReq = false; p_->publish(); }
 void CellReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 
 bool CellReceiver::busy() const { std::lock_guard<std::mutex> lk(p_->mu); return !p_->idle.load() || p_->jobReady; }

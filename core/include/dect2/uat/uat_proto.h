@@ -1,5 +1,7 @@
 // UAT message decode: ADS-B reports, FIS-B text, TIS-B relay (C decode from dump978).
 #pragma once
+#include "dect2/uat/uat_nexrad.h"
+#include "dect2/uat/uat_twgo.h"
 #include "uat_tel.h"
 #include "uat_demod.h"
 #include <string>
@@ -11,6 +13,8 @@ struct UatDecoded {
     Kind kind = Kind::Unknown;
     UatAircraft ac;
     UatFisbProduct fisb;
+    std::vector<UatOverlay> overlays;     // graphic overlay records in this uplink
+    std::vector<UatNexradBlock> nexrad;   // NEXRAD blocks in this uplink
     std::string summary;
     std::string hex;
 };
