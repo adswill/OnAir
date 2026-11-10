@@ -45,6 +45,8 @@ struct VorTelemetry {
     int marker = 0;              // marker beacon: 0 none, 1 outer (400 Hz), 2 middle (1300 Hz), 3 inner (3000 Hz)
     bool markerOn = false;       // its tone is keyed now
     float markerDepth = 0;
+    int markerKeying = 0;        // the keying heard: 0 not yet, 1 dashes (outer pattern), 2 dot-dash (middle), 3 dots (inner)
+    bool markerKeyingOk = false; // the keying is the one of the tone (marker 1 / 2 / 3 keyed as 1 / 2 / 3)
     // identification (1020 Hz Morse)
     std::string ident;           // the last identification decoded twice the same (empty: none yet)
     std::string identLast;       // the last word decoded (maybe not confirmed)
@@ -89,7 +91,8 @@ inline std::string vorSummary(const VorTelemetry& t) {
         else snprintf(b, sizeof b, "VOR%s radial %05.1f, to %05.1f", id.c_str(), t.radialDeg, vorToBearing(t.radialDeg));
     } else if (t.function == NavFunction::Marker) {
         static const char* nm[] = {"no marker", "outer marker", "middle marker", "inner marker"};
-        snprintf(b, sizeof b, "%s", nm[t.marker & 3]);
+        static const char* kk[] = {"", ", dashes", ", dot-dash", ", dots"};
+        snprintf(b, sizeof b, "%s%s%s", nm[t.marker & 3], kk[t.markerKeying & 3], t.markerKeying && !t.markerKeyingOk ? " (keying does not match the tone)" : "");
     } else {
         if (!t.ilsValid) snprintf(b, sizeof b, "%s%s: carrier, no 90 / 150 Hz", navFunctionName(t.function), id.c_str());
         else snprintf(b, sizeof b, "%s%s DDM %+.3f", navFunctionName(t.function), id.c_str(), t.ddm);

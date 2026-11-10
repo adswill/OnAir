@@ -283,7 +283,7 @@ void hfdlReadAcars(const uint8_t* p, size_t n, HfdlMessage& m) {
         m.hasPos = true; m.lat = pos.lat; m.lon = pos.lon; m.hasAlt = pos.hasAlt; m.altFt = pos.altFt; m.posKind = pos.kind;
         if (!pos.flightId.empty() && m.flight.empty()) m.flight = pos.flightId;
     }
-    if (!adsc.empty()) { addLine(m.detail, "ADS-C (FANS-1/A):"); m.detail += adsc; if (m.detail.back() != '\n') m.detail += '\n'; }
+    if (!adsc.empty()) { addLine(m.detail, adsc.rfind("FANS-1/A CPDLC", 0) == 0 ? "CPDLC (FANS-1/A):" : "ADS-C (FANS-1/A):"); m.detail += adsc; if (m.detail.back() != '\n') m.detail += '\n'; }
     if (m.hasPos) addLine(m.detail, "  position %.4f %.4f%s (%s)", m.lat, m.lon, m.hasAlt ? (" " + std::to_string(m.altFt) + " ft").c_str() : "", m.posKind.c_str());
 }
 

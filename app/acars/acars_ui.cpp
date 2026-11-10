@@ -178,7 +178,7 @@ void detailPane(const App& a, const dect2::AcarsMessage* m) {
     if (m->hasPos) kv("position", "%.4f %.4f", m->lat, m->lon);
     if (!m->adsc.empty()) {
         ImGui::Spacing();
-        ImGui::TextDisabled("Decoded ADS-C");
+        ImGui::TextDisabled("%s", m->adsc.rfind("FANS-1/A CPDLC", 0) == 0 ? "Decoded CPDLC (FANS-1/A)" : "Decoded ADS-C (FANS-1/A)");
         ImGui::PushFont(a.mono, 0);
         ImGui::TextUnformatted(m->adsc.c_str());
         ImGui::PopFont();

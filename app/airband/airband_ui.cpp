@@ -5,6 +5,7 @@
 #include "ui/ui_common.h"
 #include "gfx/plot.h"
 #include "dect2/airband/airband_gen.h"
+#include "dect2/airband/airband_mil.h"
 #include "airband/airport_ui.h"
 #include "dect2/airband/airband_store.h"
 #include "dect2/airband/airband_tel.h"
@@ -125,17 +126,19 @@ void controls(App& a) {
     flowEnd();
 }
 
+void applyChannels(const std::vector<dect2::AirbandChannel>& ch, bool replace);   // below
+
 void addRow(App& a) {
     ImGui::SetNextItemWidth(90 * gUi);
     const bool enter = ImGui::InputTextWithHint("##airadd", "118.005", S.addName, sizeof S.addName, ImGuiInputTextFlags_EnterReturnsTrue);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Channel name as dialled (118.025 is a 25 kHz channel; 118.030 / .035 / .040 are the 8.33 kHz channels of that block),\nor a frequency in MHz on the 8.33 kHz raster (118.0083).");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Channel name as dialled (118.025 is a 25 kHz channel; 118.030 / .035 / .040 are the 8.33 kHz channels of that block),\nor a frequency in MHz on the 8.33 kHz raster (118.0083).\nMilitary UHF air band: 225.000 - 399.975 MHz on the 25 kHz raster (243.000).");
     flowNext(6 * gUi);
     ImGui::SetNextItemWidth(110 * gUi);
     ImGui::InputTextWithHint("##airlab", "Tower", S.addLabel, sizeof S.addLabel);
     flowNext(6 * gUi);
     if (ImGui::Button("Add") || enter) {
         double f; bool n833;
-        if (!dect2::airbandParse(S.addName, f, n833)) S.addErr = "not a channel: 118.000 - 136.990 on the 25 or 8.33 kHz raster";
+        if (!dect2::airbandParse(S.addName, f, n833)) S.addErr = tr("not a channel: 118.000 - 136.990 on the 25 or 8.33 kHz raster, or 225.000 - 399.975 (military UHF) on the 25 kHz raster");
         else {
             bool dup = false;
             for (const auto& c : S.chans) dup |= std::fabs(c.freqHz - f) < 1 && c.is833 == n833;
@@ -153,6 +156,12 @@ void addRow(App& a) {
     flowNext(12 * gUi);
     if (ImGui::Button("Test channels")) { S.chans = dect2::airbandChannelsFor(dect2::airbandTestLayout(), a.freqMhz * 1e6); S.editing = -1; save(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("The channels of the built-in test signal around the frequency tuned now.");
+    flowNext(6 * gUi);
+    if (ImGui::Button(tr("Military UHF##airmil"))) {
+        applyChannels(dect2::airbandMilUhfChannels(), false);
+        if (!dect2::airbandIsMilUhf(a.freqMhz * 1e6)) tuneDialTo(a, 243.000e6);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds the published common channels of the military UHF air band (225 - 400 MHz AM, 25 kHz): 243.000 guard (priority)\nand 282.800 NATO on-scene SAR, and tunes to 243.000. Other channels are assigned per base: add them by hand,\nfrom On the air, or find them with the fast scan profile \"Military UHF air 225-400\"."));
     flowEnd();
     if (!S.addErr.empty()) ImGui::TextColored(pal::warnAmber(), "%s", S.addErr.c_str());
 }

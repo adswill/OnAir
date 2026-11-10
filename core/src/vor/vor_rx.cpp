@@ -166,6 +166,10 @@ struct VorReceiver::Impl {
     int mkN = 0, mkLen = 0;
     float mkDepth[3] = {}, mkHold[3] = {};
     double mkHoldT = 0;
+    // marker keying (Annex 10 3.1.7.4: outer dashes 2/s, middle dot-dash, inner dots 6/s): the keyed lengths of each tone, in 25 ms blocks
+    bool mkOn[3] = {};
+    int mkRun[3] = {};
+    std::deque<int> mkOnLen[3];
     // ident
     std::deque<float> idMag;       // last 10 s at fs3
     float idThr = 0, idP90 = 0, idP10 = 0;
@@ -228,6 +232,7 @@ struct VorReceiver::Impl {
         for (auto& v : mkAcc) v = 0;
         mkN = 0; for (int i = 0; i < 3; i++) mkDepth[i] = mkHold[i] = 0;
         mkHoldT = 0;
+        for (int i = 0; i < 3; i++) { mkOn[i] = false; mkRun[i] = 0; mkOnLen[i].clear(); }
         idMag.clear(); idThr = idP90 = idP10 = 0; idPresent = false; key = false; keyRun = 0; pending = carry = 0; sinceStats = 0; idS1 = idS2 = 0;
         marks.clear(); letterMarks.clear(); word.clear(); lastWord.clear(); confirmed.clear(); unit = 0.15;
         audPh = 0; audPrev = 0;
@@ -310,6 +315,13 @@ struct VorReceiver::Impl {
                     mkDepth[k] = (float)(2 * std::abs(mkAcc[k]) / mkN / std::max(carrier, 1e-9));
                     mkHold[k] = std::max(mkHold[k] * 0.97f, mkDepth[k]);
                     mkAcc[k] = 0;
+                    // keying: on above 0.35 of the carrier, off below 0.2 (a block that holds an edge counts as on when more than about a third keyed)
+                    const bool on = mkOn[k] ? mkDepth[k] > 0.2f : mkDepth[k] > 0.35f;
+                    if (on != mkOn[k]) {
+                        if (mkOn[k]) { mkOnLen[k].push_back(mkRun[k]); if (mkOnLen[k].size() > 8) mkOnLen[k].pop_front(); }
+                        mkOn[k] = on; mkRun[k] = 0;
+                    }
+                    if (mkRun[k] < 1000) mkRun[k]++;
                 }
                 mkN = 0;
             }
@@ -436,6 +448,16 @@ struct VorReceiver::Impl {
         }
         return q;
     }
+    // the keying of tone k from its last keyed lengths: dashes (0.375 s), dots (0.083 s) or both; 0 until four keyed lengths were seen
+    void markerKeying(int k) {
+        tel.markerKeying = 0; tel.markerKeyingOk = false;
+        if (k < 0 || mkOnLen[k].size() < 4) return;
+        int dots = 0, dashes = 0;
+        for (int b : mkOnLen[k]) { const double sec = b * 0.025; if (sec < 0.18) dots++; else if (sec > 0.25 && sec < 0.6) dashes++; }
+        if (dots + dashes < (int)mkOnLen[k].size() - 1) return;   // lengths that are neither: not keyed as a marker
+        tel.markerKeying = dashes && dots ? 2 : dashes ? 1 : 3;
+        tel.markerKeyingOk = tel.markerKeying == k + 1;
+    }
     void measure() {
         const NavFunction fn = func();
         tel.function = fn;
@@ -472,6 +494,7 @@ struct VorReceiver::Impl {
             tel.marker = best + 1;
             tel.markerOn = best >= 0 && mkDepth[best] > 0.3f;
             tel.markerDepth = best >= 0 ? mkHold[best] : 0;
+            markerKeying(best);
             valid = best >= 0;
             tel.vorValid = tel.ilsValid = false;
         } else {
@@ -497,6 +520,7 @@ struct VorReceiver::Impl {
             int best = -1;
             for (int k = 0; k < 3; k++) if (mkHold[k] > 0.3f && (best < 0 || mkHold[k] > mkHold[best])) best = k;
             tel.marker = best + 1; tel.markerOn = best >= 0 && mkDepth[best] > 0.3f; tel.markerDepth = best >= 0 ? mkHold[best] : 0;
+            markerKeying(best);
         }
         if (valid) tel.blocksOk++; else tel.blocksBad++;
         tel.dataValid = valid;
