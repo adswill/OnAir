@@ -146,6 +146,7 @@ double clickTuneMhz(const App& a, double mhz, bool snap) {
     return snap ? std::round(c / grid) * grid : c;
 }
 
+bool hfdigKbdSpectrumClick(App& a, double& absMhz);   // hfdig_kbd_ui.cpp
 static double gXLo = 0, gXHi = 0;   // the frequency view the spectrum and the waterfall share
 static void clickToTune(App& a, int plotId) {
     if (generalAutoHovered()) return;   // the mouse is on a General / Auto label
@@ -156,9 +157,14 @@ static void clickToTune(App& a, int plotId) {
     if (bandEdgeDrag(a, plotId)) return;
     if (!plt::IsPlotHovered() || a.fmScan.running) return;
     if (a.identifyTool || ImGui::GetIO().KeyShift) return;   // the Identify tool and Shift+drag select a signal instead of tuning (identifyPlotInput)
-    const double mhz = clickTuneMhz(a, plt::GetPlotMousePos().x);
+    double mhz = clickTuneMhz(a, plt::GetPlotMousePos().x);
     if (std::isnan(mhz)) return;
     const ImVec2 d = ImGui::GetMouseDragDelta(0, 0);
+    if (ImGui::IsMouseReleased(0) && std::fabs(d.x) < 4 && std::fabs(d.y) < 4) {   // the keyboard modes: a click on a signal is its audio frequency (#225)
+        double sig = plt::GetPlotMousePos().x;   // not snapped: the audio frequency is to the hertz
+        if (hfdigKbdSpectrumClick(a, sig)) return;
+        if (sig != plt::GetPlotMousePos().x) mhz = clickTuneMhz(a, sig, false);   // outside the sideband: the dial that puts the signal on the audio frequency
+    }
     // target style: a click acts unless it is on the radio centre already (the marker may be off-centre; comparing with it ignored such clicks)
     const bool acts = tunedrag::targetClickActs(mhz, a.freqMhz, radioCenterMhz(a), a.centreTuning && a.tuningMode != 1 && !a.fmMode);
     if (ImGui::IsMouseReleased(0) && std::fabs(d.x) < 4 && std::fabs(d.y) < 4 && acts) {

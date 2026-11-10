@@ -9,11 +9,13 @@
 #include "dect2/hfdig/hfdig_kbd.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdig/hfdig_tel.h"
+#include "dect2/engine/click_tune.h"
 #include "dect2/engine/modes.h"
 #include "dect2/source/source.h"
 #include "../../core/src/hfdig/hfdig_kbd_tables.h"
 #include "../../core/src/hfdig/hfdig_kbd_dsp.h"
 #include <chrono>
+#include <complex>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -105,6 +107,57 @@ static int refFile() {
     dec->telemetry(t);
     printf("decoded %llu chars: [%s]\n", (unsigned long long)t.chars, t.text.c_str());
     return 0;
+}
+
+// Hell: how well the newest received columns match the font pixels of `text` sent twice (the best over all shifts); 0 with fewer than 30 columns
+static double hellMatch(const std::string& text, const HfdigKbdTelemetry& t) {
+    std::vector<std::vector<int>> ideal;
+    auto nullCol = [&] { ideal.push_back(std::vector<int>(14, 0)); };
+    for (int rep = 0; rep < 2; rep++)
+        for (size_t ti = 0; ti < text.size(); ti++) {
+            int ch = (uint8_t)text[ti];
+            if (ch >= 0xC0) { const int c2 = (uint8_t)text[++ti] & 63; ch = ((ch & 31) << 6) | c2; }
+            nullCol();
+            if (ch == ' ') { nullCol(); nullCol(); nullCol(); }
+            else {
+                unsigned short g[14];
+                kbd::hellGlyph(ch, g);
+                int ord = 0; for (int i = 0; i < 14; i++) ord |= g[i];
+                for (int col = 0; col < 16; col++) {
+                    std::vector<int> cl(14, 0); int any = 0;
+                    for (int r = 0; r < 14; r++) if (g[r] & (1 << (15 - col))) { cl[r] = 1; any = 1; }
+                    if (!any && (ord & ((1 << (15 - col)) - 1)) == 0) break;
+                    ideal.push_back(cl);
+                }
+            }
+            nullCol();
+        }
+    double best = 0;
+    const int N = std::min(t.hellCols, 60);
+    if (N < 30) return 0;
+    for (size_t sh = 0; sh + N <= ideal.size(); sh++) {
+        int ok = 0;
+        for (int ci = 0; ci < N; ci++) for (int r = 0; r < 14; r++) ok += (t.hell[(size_t)(t.hellCols - N + ci) * 14 + r] > 127) == ideal[sh + ci][r];
+        best = std::max(best, (double)ok / (N * 14));
+    }
+    return best;
+}
+
+// Averaged power spectrum (Hann window, blocks of n, no overlap) at the frequencies f0 + k * df, k = 0 .. count-1, of real or complex samples
+template <class T>
+static std::vector<double> spectrumAt(const std::vector<T>& x, double fs, int n, double f0, double df, int count) {
+    std::vector<double> p((size_t)count, 0.0), w((size_t)n);
+    for (int i = 0; i < n; i++) w[(size_t)i] = 0.5 - 0.5 * std::cos(2 * 3.141592653589793 * i / n);
+    for (int k = 0; k < count; k++) {
+        const double f = f0 + k * df;
+        const std::complex<double> rot = std::polar(1.0, -2 * 3.141592653589793 * f / fs);
+        for (size_t b = 0; b + (size_t)n <= x.size(); b += (size_t)n) {
+            std::complex<double> acc = 0, e = 1;
+            for (int i = 0; i < n; i++) { acc += std::complex<double>(x[b + (size_t)i]) * w[(size_t)i] * e; e *= rot; }
+            p[(size_t)k] += std::norm(acc);
+        }
+    }
+    return p;
 }
 
 int main() {
@@ -263,41 +316,7 @@ int main() {
             }
             HfdigKbdTelemetry t;
             dec->telemetry(t);
-            // the ideal columns of the text, repeated; the best match over the shifts of the last columns
-            std::vector<std::vector<int>> ideal;
-            auto nullCol = [&] { ideal.push_back(std::vector<int>(14, 0)); };
-            for (int rep = 0; rep < 2; rep++)
-                for (size_t ti = 0; ti < c.text.size(); ti++) {
-                    int ch = (uint8_t)c.text[ti];
-                    if (ch >= 0xC0) { const int c2 = (uint8_t)c.text[++ti] & 63; ch = ((ch & 31) << 6) | c2; }
-                    nullCol();
-                    if (ch == ' ') { nullCol(); nullCol(); nullCol(); }
-                    else {
-                        unsigned short g[14];
-                        kbd::hellGlyph(ch, g);
-                        int ord = 0; for (int i = 0; i < 14; i++) ord |= g[i];
-                        for (int col = 0; col < 16; col++) {
-                            std::vector<int> cl(14, 0); int any = 0;
-                            for (int r = 0; r < 14; r++) if (g[r] & (1 << (15 - col))) { cl[r] = 1; any = 1; }
-                            if (!any && (ord & ((1 << (15 - col)) - 1)) == 0) break;
-                            ideal.push_back(cl);
-                        }
-                    }
-                    nullCol();
-                }
-            double bestMatch = 0;
-            const int N = std::min(t.hellCols, 60);
-            if (N >= 30) {
-                for (size_t sh = 0; sh + N <= ideal.size(); sh++) {
-                    int ok = 0, inkOk = 0, ink = 0;
-                    for (int ci = 0; ci < N; ci++) for (int r = 0; r < 14; r++) {
-                        const int got = t.hell[(size_t)(t.hellCols - N + ci) * 14 + r] > 127, want = ideal[sh + ci][r];
-                        ok += got == want; ink += want; inkOk += want && got;
-                    }
-                    bestMatch = std::max(bestMatch, (double)ok / (N * 14));
-                    (void)inkOk; (void)ink;
-                }
-            }
+            const double bestMatch = hellMatch(c.text, t);
             printf("%s: %d columns, best match %.3f, level %.1f dB\n", kbdVariantName(KbdHell, v), t.hellCols, bestMatch, t.snr);
             CHECK(bestMatch > (uni ? 0.9 : 0.92), "%s: picture matches the font only %.3f", kbdVariantName(KbdHell, v), bestMatch);
         }
@@ -385,6 +404,117 @@ int main() {
         CHECK(!kbd::hellGlyph(0x4E2D, g), "a character the font does not have stays '?'");
         kbd::hellLoadUserFont("", err);
         CHECK(!kbd::hellGlyph(0x142, g), "font cleared: back to '?'");
+    }
+
+    {   // #225: the transmitted spectrum. On / off keying (Feld, Slow, HellX5, HellX9) peaks at the requested audio frequency with the same power
+        // below and above it; FSK Hell keeps its energy between the two tones around it. Audio from the modulator itself (8 kHz).
+        const double fs = 8000, df = 15.625;   // 512-point blocks: the centres below are whole bins
+        for (int v = 0; v < 7; v++)
+            for (double centre : {1000.0, 1500.0, 2000.0}) {
+                const bool fsk = v == 2 || v == 5 || v == 6, wide = v == 3 || v == 4;
+                if (wide && centre != 2000) continue;   // HellX5 / X9 are 2.5 / 4.4 kHz wide: away from 2 kHz their sidebands fold at 0 Hz and 4 kHz
+                KbdTxConfig c; c.cfg.family = KbdHell; c.cfg.variant = v; c.cfg.centreHz = centre; c.leadSec = 0;
+                auto gen = makeKbdTx(c);
+                const double colRate = v == 1 ? 2.1875 : v == 2 ? 35 : v == 3 ? 87.5 : v == 4 ? 157.5 : 17.5;
+                std::vector<float> a((size_t)(fs * std::min(40.0, 300 / colRate)));
+                gen->generate(a.data(), a.size());
+                const int K = wide ? 32 : fsk ? 24 : 40;   // bins each side
+                const auto p = spectrumAt(a, fs, 512, centre - K * df, df, 2 * K + 1);
+                int pk = 0;
+                for (int k = 0; k <= 2 * K; k++) if (p[(size_t)k] > p[(size_t)pk]) pk = k;
+                double lo = 0, hi = 0, tot = 0, mom = 0;
+                for (int d = 1; d <= K; d++) { lo += p[(size_t)(K - d)]; hi += p[(size_t)(K + d)]; }
+                for (int k = 0; k <= 2 * K; k++) { tot += p[(size_t)k]; mom += p[(size_t)k] * (k - K) * df; }
+                const double asym = 10 * std::log10(hi / lo), centroid = centre + mom / tot;
+                printf("Hell spectrum %-12s at %4.0f Hz: peak %+.1f Hz, upper / lower %+.2f dB, centroid %.1f Hz\n", kbdVariantName(KbdHell, v), centre, (pk - K) * df, asym, centroid);
+                if (!fsk) {
+                    CHECK(pk == K, "%s at %.0f Hz: the peak is %.1f Hz off", kbdVariantName(KbdHell, v), centre, (pk - K) * df);
+                    CHECK(std::fabs(asym) < (wide ? 1.5 : 0.5), "%s at %.0f Hz: sidebands differ by %.2f dB", kbdVariantName(KbdHell, v), centre, asym);
+                } else {
+                    const double shift = v == 2 ? 300 : v == 5 ? 122.5 : 55;
+                    CHECK(std::fabs(centroid - centre) < shift / 2, "%s at %.0f Hz: energy centred %.1f Hz off", kbdVariantName(KbdHell, v), centre, centroid - centre);
+                }
+                if (v == 0 && centre == 1500) {   // no key clicks: the power more than 600 Hz from the tone, against all of it
+                    const auto q = spectrumAt(a, fs, 512, 0, df, 257);   // 0 .. 4 kHz
+                    double all = 0, out = 0;
+                    for (int k = 0; k < 257; k++) { all += q[(size_t)k]; if (std::fabs(k * df - centre) > 600) out += q[(size_t)k]; }
+                    const double frac = out / all;
+                    printf("Feld Hell: %.1f dB of the power more than 600 Hz from the tone\n", 10 * std::log10(std::max(1e-9, frac)));
+                    CHECK(frac < 1e-3, "Feld Hell key clicks: %.2g of the power more than 600 Hz from the tone", frac);
+                }
+            }
+    }
+    {   // #225: the same through the transmitter's sideband modulator (TX payload path) on the upper and the lower sideband, 48 kHz IQ: the tone is
+        // 1500 Hz above (USB) or below (LSB) the dial, its sidebands are symmetric, and the other sideband is suppressed
+        for (int lsb = 0; lsb < 2; lsb++) {
+            KbdTxConfig c; c.cfg.family = KbdHell; c.cfg.variant = 0; c.cfg.centreHz = 1500; c.leadSec = 0;
+            SynthConfig sc; sc.snrDb = 99; sc.cfoHz = 0;
+            auto syn = makeHfdigSynthFromAudio(makeKbdTx(c), sc, 48000, lsb == 1);
+            std::vector<cf32> iq(48000 * 12);
+            syn->generate(iq.data(), iq.size());
+            std::vector<std::complex<double>> z(iq.begin() + 4800, iq.end());
+            const double dial = -hfdigTuning().tuneOffsetHz, tone = dial + (lsb ? -1500 : 1500), mirror = dial + (lsb ? 1500 : -1500), df = 15.625;
+            const int K = 40;
+            const auto p = spectrumAt(z, 48000, 3072, tone - K * df, df, 2 * K + 1);
+            int pk = 0;
+            for (int k = 0; k <= 2 * K; k++) if (p[(size_t)k] > p[(size_t)pk]) pk = k;
+            double lo = 0, hi = 0;
+            for (int d = 1; d <= K; d++) { lo += p[(size_t)(K - d)]; hi += p[(size_t)(K + d)]; }
+            const auto m = spectrumAt(z, 48000, 3072, mirror, df, 1);
+            const double asym = 10 * std::log10(hi / lo), rej = 10 * std::log10(m[0] / p[(size_t)K]);
+            printf("Hell IQ %s: peak %+.1f Hz from dial%+.0f, upper / lower %+.2f dB, other sideband %.1f dB\n", lsb ? "LSB" : "USB", (pk - K) * df, lsb ? -1500.0 : 1500.0, asym, rej);
+            CHECK(pk == K, "IQ %s: the peak is %.1f Hz off the tone", lsb ? "LSB" : "USB", (pk - K) * df);
+            CHECK(std::fabs(asym) < 0.5, "IQ %s: sidebands differ by %.2f dB", lsb ? "LSB" : "USB", asym);
+            CHECK(rej < -40, "IQ %s: the other sideband only %.1f dB down", lsb ? "LSB" : "USB", rej);
+        }
+    }
+    {   // #225: a click on the signal (fldigi): inside the sideband the dial stays and the audio frequency is the click; outside it the dial moves so
+        // the signal lands on the audio frequency in use
+        const double D = 14063000;
+        auto near = [](double a, double b) { return std::fabs(a - b) < 1e-6; };
+        SidebandClick r = sidebandClick(D + 1500, D, false, 1500);
+        CHECK(r.keepDial && near(r.dialHz, D) && near(r.audioHz, 1500), "USB click at dial + 1500");
+        r = sidebandClick(D + 2345, D, false, 1500);
+        CHECK(r.keepDial && near(r.audioHz, 2345), "USB click at dial + 2345: audio %.1f", r.audioHz);
+        r = sidebandClick(D - 900, D, true, 1500);
+        CHECK(r.keepDial && near(r.audioHz, 900), "LSB click at dial - 900: audio %.1f", r.audioHz);
+        r = sidebandClick(D - 900, D, false, 1500);
+        CHECK(!r.keepDial && near(r.dialHz, D - 2400) && near(r.audioHz, 1500), "USB click below the dial: the dial goes 1500 Hz under it");
+        r = sidebandClick(D + 12000, D, true, 1200);
+        CHECK(!r.keepDial && near(r.dialHz, D + 13200), "LSB click outside: the dial goes 1200 Hz above it");
+        r = sidebandClick(D + 100, D, false, 1500);
+        CHECK(!r.keepDial && near(r.dialHz, D - 1400), "a click 100 Hz above the dial (below the passband) moves the dial");
+
+        // end to end: Hell signals on air, received in USB or LSB on a fixed dial; the audio frequency comes from the click on the signal
+        struct Case { int variant; bool lsb; double txDialOff, audio; double snr; };
+        const Case cases[] = {{0, false, 0, 1500, 20}, {0, false, 337, 1500, 15}, {0, true, 0, 1500, 20}, {0, true, -420, 1700, 15},
+                              {0, false, 6000, 1500, 20}, {1, false, -123, 1500, 20}, {3, false, 210, 1500, 25}, {5, false, -95, 1500, 20}};
+        for (const Case& cs : cases) {
+            const double rate = 96000, rxDial = -hfdigTuning().tuneOffsetHz;
+            const double sig = cs.txDialOff + (cs.lsb ? -cs.audio : cs.audio);   // where the signal sits, from the receiver's dial
+            const SidebandClick ck = sidebandClick(rxDial + sig, rxDial, cs.lsb, 1500);
+            KbdTxConfig c; c.cfg.family = KbdHell; c.cfg.variant = cs.variant; c.cfg.centreHz = cs.audio; c.text = "LY0AIR 73 ";
+            SynthConfig sc; sc.snrDb = cs.snr; sc.cfoHz = cs.txDialOff;
+            auto syn = makeHfdigSynthFromAudio(makeKbdTx(c), sc, rate, cs.lsb);
+            HfdigReceiver rx;
+            rx.setSilent(true);
+            rx.setDecoders(32);
+            rx.setDemod(cs.lsb ? HfDemodLsb : HfDemodUsb);
+            rx.configure(rate);
+            rx.setSignalOffset(ck.dialHz);   // the dial after the click (moved only for a click outside the sideband)
+            KbdConfig k; k.family = KbdHell; k.variant = cs.variant; k.centreHz = ck.audioHz; k.autoCentre = false;
+            rx.kbd().setConfig(k);
+            const double colRate = cs.variant == 1 ? 2.1875 : cs.variant == 3 ? 87.5 : 17.5;
+            std::vector<cf32> buf(9600);
+            for (int blk = 0; blk < (int)(std::min(300.0, 130 / colRate + 20) * rate / buf.size()); blk++) { syn->generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); }
+            HfdigTelemetry t;
+            rx.telemetry(t, 0);
+            const double m = hellMatch(c.text, t.kbd);
+            printf("Hell click: %s %s, signal %+.0f Hz from the dial: %s, audio %.0f Hz, %d columns, match %.3f\n", kbdVariantName(KbdHell, cs.variant), cs.lsb ? "LSB" : "USB",
+                   sig, ck.keepDial ? "dial kept" : "dial moved", ck.audioHz, t.kbd.hellCols, m);
+            CHECK(ck.keepDial == (std::fabs(sig) >= 300 && std::fabs(sig) <= 3500 && (sig > 0) != cs.lsb), "click on %+.0f Hz: keepDial %d", sig, (int)ck.keepDial);
+            CHECK(m > 0.9, "Hell click %s %s at %+.0f Hz: picture matches only %.3f", kbdVariantName(KbdHell, cs.variant), cs.lsb ? "LSB" : "USB", sig, m);
+        }
     }
     printf(fails ? "FAILED %d\n" : "ok\n", fails);
     return fails ? 1 : 0;
