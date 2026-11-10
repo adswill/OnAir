@@ -213,6 +213,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES pactorhf)   # PACTOR-II (family 237), -III (238) and -IV (239), physical layer only: core/src/pactorhf, app/pactorhf, tests/pactorhf (docs/pactorhf.md)
   list(APPEND DECT2_MODES sensors)   # Sub-GHz sensors (family 241, docs/SENSORS-3.7.md): core/src/sensors, app/sensors, tests/sensors; decoders vendored from rtl_433 (third_party/rtl_433)
   list(APPEND DECT2_MODES bgan)   # Inmarsat BGAN forward bearers, signalling only (family 245, docs/BGAN-3.7.md): core/src/bgan, app/bgan, tests/bgan
+  list(APPEND DECT2_MODES hamsci)   # ham science (families 460 - 465 and 500 - 502, docs/HAM-SCIENCE-3.8.md): QRSS, DFCW, FSK441, ISCAT, PI4, Throb, SuperSID, riometer, pulsar: core/src/hamsci, app/hamsci, tests/hamsci
   list(APPEND DECT2_MODES sferics)   # Sferics / lightning (family 243): core/src/sferics, app/sferics, tests/sferics
   list(APPEND DECT2_MODES btc)   # Bluetooth Classic discovery (family 380, docs/IOT-3.8.md): core/src/btc, app/btc, tests/btc
   list(APPEND DECT2_MODES fygeo)   # FengYun geostationary: FY-4A / FY-4B LRIT, FY-4A HRIT (DVB-S2) and FY-2 S-VISSR (families 232 - 235, docs/FENGYUN-GEO.md): core/src/fygeo, app/fygeo, tests/fygeo
@@ -1616,6 +1617,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_bgan_mode PRIVATE dect2core)
     target_compile_definitions(test_bgan_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME bgan_mode COMMAND test_bgan_mode)
+    add_executable(test_hamsci_mode tests/app/test_hamsci_mode.cpp)   # Ham science: tuning, mode rows, engine / panel wiring, honest doc
+    target_link_libraries(test_hamsci_mode PRIVATE dect2core)
+    target_compile_definitions(test_hamsci_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME hamsci_mode COMMAND test_hamsci_mode)
     add_executable(test_sferics_mode tests/app/test_sferics_mode.cpp)   # Sferics: tuning, mode row, engine / panel wiring, honest doc
     target_link_libraries(test_sferics_mode PRIVATE dect2core)
     target_compile_definitions(test_sferics_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

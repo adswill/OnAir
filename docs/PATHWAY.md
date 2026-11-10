@@ -1274,3 +1274,6 @@ Branch feat38-issues on integ-38. Built #464 #449 #438 #455 #421 #427 #443 #453 
 
 ## 2026-11-09 3.8 HF utility modes (feat38-hf-util)
 Ten receive-only decoders, families 430 - 439: MIL-STD-188-110 serial, STANAG 4285 (both with STANAG 5066 D_PDU framing), ARQ-E, ARQ-N, AUTOSPEC, SPREAD 11/21/51, G-TOR, EFR teleswitch (DCF49/DCF39), Piccolo Mk VI, Coquelet-8, in core/src/hfutil and app/hfutil, with a generator for each. Validated on simulated signals only, tests/hfutil and docs/HF-UTIL-3.8.md. NAVDAT, 3G ALE, Link-11, CLOVER and Mazielka skipped for lack of a public specification (reasons in the doc).
+
+## 2026-11-09 3.8 ham science modes (feat38-ham-science)
+Nine receive-only modes (families 460 - 465 and 500 - 502): QRSS and DFCW grabbers, FSK441, ISCAT, PI4, Throb / ThrobX, SuperSID, riometer, pulsar folding, one receiver class (`core/src/hamsci`), one screens file, Auto on by default. Opera and SIM31 not built (no public description), WINMOR not started (spec exists). Signal-layer tests for every mode pass on simulated signals (sweeps in docs/HAM-SCIENCE-3.8.md); engine and screens were only syntax-checked (no full build allowed overnight), so the app build and `ctest` are still to be run by the integrator. Simulated signals only; SuperSID stations and pulsar table values are from memory.

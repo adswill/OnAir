@@ -129,6 +129,15 @@ atis	--mode atis	Overview|ATIS|Receiver|History
 selcal	--mode selcal	Overview|SELCAL|Receiver|History
 sensors	--mode sensors	Overview|Sensors|Receiver|History
 sferics	--mode sferics	Overview|Sferics|Receiver|History
+qrss	--mode qrss	Overview|Messages|Receiver|History
+dfcw	--mode dfcw	Overview|Messages|Receiver|History
+fsk441	--mode fsk441	Overview|Messages|Receiver|History
+iscat	--mode iscat	Overview|Messages|Receiver|History
+pi4	--mode pi4	Overview|Messages|Receiver|History
+throb	--mode throb	Overview|Messages|Receiver|History
+supersid	--mode supersid	Overview|Stations|Receiver|History
+riometer	--mode riometer	Overview|Absorption|Receiver|History
+pulsar	--mode pulsar	Overview|Pulsar|Receiver|History
 gk2alrit	--mode gk2alrit	Overview|Products|Receiver|History
 gk2ahrit	--mode gk2ahrit	Overview|Products|Receiver|History
 noaaapt	--mode noaaapt	Overview|Picture|Receiver|History

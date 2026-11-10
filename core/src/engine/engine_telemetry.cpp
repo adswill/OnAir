@@ -341,6 +341,15 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 299: return pollStd(rxSd3_[8], 299, t, seqs[298], &RxTelemetry::sd3);
     case 300: return pollStd(rxSd3_[9], 300, t, seqs[299], &RxTelemetry::sd3);
     case 511: return pollStd(rxSd3_[10], 511, t, seqs[510], &RxTelemetry::sd3);
+    case 461: return pollStd(rxHs_[0], 461, t, seqs[461], &RxTelemetry::hamsci);   // QRSS (slot 461)
+    case 462: return pollStd(rxHs_[1], 462, t, seqs[462], &RxTelemetry::hamsci);   // DFCW (slot 462)
+    case 463: return pollStd(rxHs_[2], 463, t, seqs[463], &RxTelemetry::hamsci);   // FSK441 (slot 463)
+    case 464: return pollStd(rxHs_[3], 464, t, seqs[464], &RxTelemetry::hamsci);   // ISCAT (slot 464)
+    case 465: return pollStd(rxHs_[4], 465, t, seqs[465], &RxTelemetry::hamsci);   // PI4 (slot 465)
+    case 466: return pollStd(rxHs_[5], 466, t, seqs[466], &RxTelemetry::hamsci);   // Throb (slot 466)
+    case 501: return pollStd(rxHs_[6], 501, t, seqs[501], &RxTelemetry::hamsci);   // SuperSID (slot 501)
+    case 502: return pollStd(rxHs_[7], 502, t, seqs[502], &RxTelemetry::hamsci);   // riometer (slot 502)
+    case 503: return pollStd(rxHs_[8], 503, t, seqs[503], &RxTelemetry::hamsci);   // pulsar (slot 503)
     case 261: return pollStd(rxWx_[0], 261, t, seqs[220], &RxTelemetry::wxsat);   // 0
     case 262: return pollStd(rxWx_[1], 262, t, seqs[221], &RxTelemetry::wxsat);   // 1
     case 263: return pollStd(rxWx_[2], 263, t, seqs[222], &RxTelemetry::wxsat);   // 2

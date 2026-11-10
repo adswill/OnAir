@@ -267,6 +267,15 @@
         <item>EFR teleswitch</item>
         <item>Piccolo Mk VI</item>
         <item>Coquelet-8</item>
+        <item>QRSS grabber</item>
+        <item>DFCW grabber</item>
+        <item>FSK441</item>
+        <item>ISCAT</item>
+        <item>PI4</item>
+        <item>Throb</item>
+        <item>SuperSID (VLF)</item>
+        <item>Riometer</item>
+        <item>Pulsar folding</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -515,6 +524,15 @@
         <item>EFR radio teleswitching, receive only: DCF49 (129.1 kHz) and DCF39 (139 kHz), 200 Bd FSK, DIN 19244 frames with message number, addresses and checksum. Semagyr and Versacom content stays as hex. Tested on simulated signals.</item>
         <item>Piccolo Mk VI (II) 6-tone MFSK, receive only: ITA2 by tone pairs at 20 Hz spacing, 50 ms tones. Tested on simulated signals.</item>
         <item>Coquelet-8 MFSK, receive only: ITA2 by tone pairs (8 tones, 26.67 Hz spacing), 37.5, 50 or 75 ms tones found automatically. Tested on simulated signals.</item>
+        <item>QRSS slow Morse (dots of 1 to 120 s): a spectrogram of the narrow window around the keyed tone and the text read from it. The tone and the element length are found automatically; both can be set under Advanced</item>
+        <item>DFCW dual-frequency slow Morse: all elements are the same length, dots on one frequency and dashes on a second one, with a gap between letters. Spectrogram of the keyed tone and the decoded text</item>
+        <item>FSK441 meteor scatter (4 tones at 882 / 1323 / 1764 / 2205 Hz, 441 baud, three tones per character): finds the short pings above the noise, the tuning error and the dit timing, and prints what is in them</item>
+        <item>ISCAT-A and ISCAT-B (WSJT, 42 tones, 24-symbol frames with Costas sync and length symbols) for scatter and aircraft scatter: variant, tuning error and message are found automatically</item>
+        <item>PI4 (PA0NHC, 4-FSK, 146 symbols of 186 ms, a rate 1/2 K = 32 code, 8 characters): the microwave beacon mode of the 10 GHz and 24 GHz bands; sync, frequency and message are found automatically. A converter brings the band to the radio</item>
+        <item>Throb and ThrobX (one or two tones at a time out of 9 or 11, symbols of 1, 0.5 or 0.25 s): the tone comb, the variant and the timing are found automatically and the text is printed as it comes</item>
+        <item>SuperSID: the strength of the VLF navy transmitters (NAA, NLK, NPM, NWC, DHO38, GQD, HWU, ICV ...) from a VLF-capable radio, one value per 5 s, and a mark when a station jumps within ten minutes: the signature of a solar flare in the lower ionosphere</item>
+        <item>Riometer: cosmic radio noise near 30 MHz measured with interference rejected, compared with a quiet-day curve per sidereal hour, so that ionospheric absorption (a geomagnetic or particle event) shows in dB. Needs a fixed-gain receiver, an antenna looking up and one to two days to build the curve</item>
+        <item>Pulsar detection: a filter bank, incoherent dedispersion and folding at the period of a chosen pulsar (B0329+54, B0950+08, B1133+16, Crab, Vela ...), with the S/N, a profile and a plain statement of the antenna it needs: about a square metre of effective area with a low-noise amplifier, not a whip</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -763,6 +781,15 @@
         <item>LF telegrams, FSK</item>
         <item>HF MFSK</item>
         <item>HF MFSK</item>
+        <item>Slow CW, 10.140 MHz</item>
+        <item>Slow CW, 137.5 kHz</item>
+        <item>Meteor scatter, 144.140 MHz</item>
+        <item>Scatter, 144.140 MHz</item>
+        <item>Microwave beacons, 10 GHz</item>
+        <item>Keyboard chat, 14.075 MHz</item>
+        <item>VLF stations, 15 - 30 kHz</item>
+        <item>Cosmic noise, 30 MHz</item>
+        <item>Pulsars, 408 MHz</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1011,5 +1038,14 @@
         <item>efr dcf49 dcf39 teleswitch ripple control semagyr versacom 200 baud lf fsk din 19244 europe</item>
         <item>piccolo mk6 mk vi mfsk hf utility</item>
         <item>coquelet 8 coq-8 mfsk hf utility</item>
+        <item>qrss slow cw morse grabber spectrogram low power lf 136 10140 30m amateur</item>
+        <item>dfcw dual frequency cw slow morse grabber spectrogram lf 136 137 amateur</item>
+        <item>fsk441 meteor scatter wsjt ping 144 50 6m 2m amateur</item>
+        <item>iscat wsjt scatter aircraft 42 tone costas amateur</item>
+        <item>pi4 pa0nhc microwave beacon 10 ghz 24 ghz 4fsk jt4 wspr amateur</item>
+        <item>throb throbx fldigi two tone keyboard hf amateur digital</item>
+        <item>supersid sid vlf solar flare sudden ionospheric disturbance naa nlk npm nwc dho38 gqd hwu icv ionosphere stanford</item>
+        <item>riometer cosmic noise absorption ionosphere aurora geomagnetic storm sidereal quiet day curve 30 mhz</item>
+        <item>pulsar folding dedispersion radio astronomy b0329 crab vela dm period profile dish 408 mhz 1420</item>
     </string-array>
 </resources>

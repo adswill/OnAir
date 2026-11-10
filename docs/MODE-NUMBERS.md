@@ -102,6 +102,15 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Lucky-7 | 298 | 300 | 299 | 298 | feat38-sat-sd3 | 3.8; frames; numbers may need to move at merge |
 | Spino | 299 | 301 | 300 | 299 | feat38-sat-sd3 | 3.8; frames; numbers may need to move at merge |
 | Erminaz | 510 | 512 | 511 | 510 | feat38-sat-sd3 | 3.8; CCSDS frames; numbers may need to move at merge |
+| QRSS grabber | 460 | 462 | 461 | 461 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| DFCW grabber | 461 | 463 | 462 | 462 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| FSK441 | 462 | 464 | 463 | 463 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| ISCAT | 463 | 465 | 464 | 464 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| PI4 | 464 | 466 | 465 | 465 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| Throb / ThrobX | 465 | 467 | 466 | 466 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| SuperSID (VLF) | 500 | 502 | 501 | 501 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| Riometer | 501 | 503 | 502 | 502 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| Pulsar folding | 502 | 504 | 503 | 503 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
