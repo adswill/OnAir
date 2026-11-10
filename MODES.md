@@ -18,6 +18,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **DTMB** - DTMB digital terrestrial television (China, Hong Kong, Macau, Cuba, Pakistan)
 - **ISDB-S (BS)** - ISDB-S, BS satellite TV of Japan (ARIB STD-B20), clear streams only
 - **DVB-C** - DVB-C digital cable television, needs the cable network as the input (not an antenna)
+- **DVB-C2** - DVB-C2 second generation digital cable television (EN 302 769, OFDM), needs the cable network as the input; simulated signals only so far
 - **Analog TV** - Analogue television (PAL, SECAM, NTSC)
 - **FPV video (analog)** - Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)
 - **MAC** - MAC/packet satellite TV: picture, 4:3 / 16:9, channel name, digital sound, EuroCrypt detected
