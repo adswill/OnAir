@@ -268,6 +268,7 @@ static void iqChecks() {
             bestDc = std::min(bestDc, (double)std::abs(one[0]));
         }
         const double img1 = 20 * std::log10(best), dc1 = 20 * std::log10(bestDc / bin(raw, ft, fs));
+        printf("IQ: image %.1f -> %.1f dBc, carrier leak %.1f -> %.1f dBc\n", img0, img1, dc0, dc1);
         CHECK(img0 > -40 && img1 < -50, "image %0.1f dBc corrected to %0.1f dBc (gain %.2f dB, phase %.1f deg)", img0, img1, bg, bp);
         CHECK(dc0 > -40 && dc1 < -50, "carrier leak %0.1f dBc corrected to %0.1f dBc", dc0, dc1);
     }
