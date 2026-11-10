@@ -1,7 +1,7 @@
 // A Hamlib rig is tuned to the dial frequency, whatever the mode (#358). The rig's own receiver gives the audio, so there is no DC spike to
 // keep a narrow channel off; 3.7 still added the mode's tuneOffsetHz and FT8 on 7.074 MHz put an IC-7300 on 7.094. Runs the whole engine on
-// Hamlib's dummy rig (model 1) with a silent sound card, for HF digital (FT8), PSK31, CW, the general receiver and every other mode with a
-// tuning offset (start and retune), and checks the frequency the rig was given, the capture centre and the dial the app shows.
+// Hamlib's dummy rig (model 1) with a silent sound card, for every HF mode with the 20 kHz offset (FT8, PSK31, MT63, JS8, ALE, marine ...)
+// and the general receiver (start and retune), and checks the frequency the rig was given, the capture centre and the dial the app shows.
 #include "dect2/engine/engine.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/source/hamlib_rig.h"
@@ -30,8 +30,8 @@ int main() {
     const DeviceInfo dev = hamlibRigDevices({r})[0];   // no audio device named: the rig's audio is "silence"
     CHECK(dev.kind == DeviceInfo::Hamlib, "dummy rig entry");
     std::vector<int> modes;
-    for (int m = 1; m < 1000; m++) if (const ModeTuning* mt = modeTuning(m)) if (mt->tuneOffsetHz != 0 && mt->stdMode == m) modes.push_back(m);
-    CHECK(modes.size() >= 10, "modes with a tuning offset: %zu", modes.size());
+    for (int m = 1; m < 1000; m++) if (const ModeTuning* mt = modeTuning(m)) if (mt->stdMode == m && (mt->tuneOffsetHz == 20000 || m == 57)) modes.push_back(m);   // the HF modes a rig runs (20 kHz offset) and the general receiver; scanning and Doppler modes retune on their own
+    CHECK(modes.size() >= 8, "HF modes with a tuning offset: %zu", modes.size());
     int checked = 0;
     for (int m : modes) {
         const ModeTuning* mt = modeTuning(m);
