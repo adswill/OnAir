@@ -46,7 +46,7 @@ struct GoesDcsGenerator::Impl {
             u.chipRate = t.bps * (t.manchester ? 2 : 1) * (1.0 + t.ppm * 1e-6);
             u.carrierSec = t.carrierSec;
             u.lengthSec = t.carrierSec + (double)u.chips.size() / u.chipRate;
-            u.offsetHz = offsetHz(t.channel) + t.extraHz;
+            u.offsetHz = (t.freqHz > 0 ? t.freqHz - c.centreHz : offsetHz(t.channel)) + t.extraHz;
             b.push_back(std::move(u));
         }
         for (int ch : c.carrierChannels) { carrierOff.push_back(offsetHz(ch)); carrierPh.push_back(0); }

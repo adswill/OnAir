@@ -24,7 +24,8 @@ struct DcsMessage {
     bool manchester = true;
     double freqHz = 0;                  // absolute when the radio centre is known, else relative to the centre
     bool freqAbsolute = false;
-    int channel = 0;                    // satellite channel number (1.5 kHz grid from 401.70175 MHz), 0 unknown
+    int channel = 0;                    // satellite channel number in the plan below, 0 unknown
+    int plan = 0;                       // the channel plan: 0 GOES, 1 Meteosat, 2 Himawari (dcs::Plan)
     float snrDb = 0;                    // carrier over the noise in one ~100 Hz bin
     int flags = -1;                     // the 8-bit flag word of the 300 / 1200 bps format, -1 when the format has none
     int format = 0;                     // 0 ASCII, 1 pseudo-binary B, 2 other
@@ -65,6 +66,7 @@ struct DcsTelemetry {
     // details
     double timeSec = 0, inputRate = 0, workRate = 0, binHz = 0, centreHz = 0;
     float noiseDb = -200;
+    int plan = 0;                       // the channel plan in use: 0 GOES, 1 Meteosat, 2 Himawari
     uint64_t carriersSeen = 0;
     std::vector<DcsMessage> messages;   // newest first
     std::vector<DcsPlatform> platforms; // by last time, newest first

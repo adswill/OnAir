@@ -116,6 +116,7 @@ struct GoesDcsReceiver::Impl {
     std::function<void(const std::string&)> log;
     double rateSet = 0, fw = 0;
     std::atomic<double> centreReq{0}, thrReq{11};
+    std::atomic<int> planReq{-1};   // -1 Auto (from the centre), else dcs::Plan
     std::atomic<bool> resetReq{false}, clearReq{false}, logReq{false};
     std::atomic<int64_t> startReq{0};
     std::string logPath, logPathReq;
@@ -152,6 +153,8 @@ struct GoesDcsReceiver::Impl {
     double bestCfo = 0;
     bool dirty = true;
     DcsTelemetry pub;
+
+    dcs::Plan plan() const { const int p = planReq.load(); return p < 0 ? dcs::planForCentre(centreReq.load()) : (dcs::Plan)p; }
 
     static int64_t nowUtc() { return (int64_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
 
@@ -300,7 +303,8 @@ struct GoesDcsReceiver::Impl {
         const double cen = centreReq.load();
         m.freqAbsolute = cen > 0;
         m.freqHz = cen > 0 ? cen + rel : rel;
-        m.channel = cen > 0 ? dcs::channelOf(cen + rel) : 0;
+        m.channel = cen > 0 ? dcs::channelOf(cen + rel, plan()) : 0;
+        m.plan = (int)plan();
         m.snrDb = s.snr;
         std::vector<uint8_t> rest(s.bits.begin() + std::min<size_t>(31, s.bits.size()), s.bits.end());
         const bool ok = dcs::parseBody(rest, s.bps >= 300, m);
@@ -553,6 +557,7 @@ struct GoesDcsReceiver::Impl {
         pub.blocksOk = okN; pub.blocksBad = badN;
         pub.timeSec = timeSec; pub.inputRate = rateSet; pub.workRate = fw; pub.binHz = binHz; pub.centreHz = centreReq.load();
         pub.noiseDb = noiseDb;
+        pub.plan = (int)plan();
         pub.carriersSeen = carriersSeen;
         pub.messages = msgs;
         pub.platforms = plats;
@@ -562,7 +567,7 @@ struct GoesDcsReceiver::Impl {
             DcsCarrier c;
             c.offsetHz = s.freq + s.integ * s.rs / (2 * math::kPi);
             const double cen = centreReq.load();
-            c.channel = cen > 0 ? dcs::channelOf(cen + c.offsetHz) : 0;
+            c.channel = cen > 0 ? dcs::channelOf(cen + c.offsetHz, plan()) : 0;
             c.snrDb = s.snr;
             c.state = s.state == 2 ? 2 : (s.ns > 0.5 * s.rs ? 1 : 0);
             c.bps = s.state == 2 ? s.bps : 0;
@@ -588,6 +593,7 @@ void GoesDcsReceiver::configure(double inputRateHz) {
 }
 void GoesDcsReceiver::setSignalOffset(double) {}
 void GoesDcsReceiver::setCenterHz(double hz) { p_->centreReq = hz; }
+void GoesDcsReceiver::setPlan(int plan) { p_->planReq = plan < 0 || plan > 2 ? -1 : plan; }
 bool GoesDcsReceiver::ready() const {
     std::lock_guard<std::mutex> lk(p_->mu);
     return p_->rateSet >= goesdcsTuning().minSampleRate - 1;
