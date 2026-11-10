@@ -1055,6 +1055,8 @@ void pluginFrame(App& a);          // plugin/plugin_app.cpp, every frame: discov
 void pluginShutdown();             // at exit: stops the plugins and removes the crash marker
 void pluginManagerWindow(App& a);  // View > Plugins
 void automationWindow(App& a);   // automation_ui.cpp: the Automations window (View > Automations) and, every frame, the engine's actions that touch the receiver
+namespace dect2::automation { struct Rule; }
+bool automationAddRule(const dect2::automation::Rule& r, std::string& err);   // automation_ui.cpp: adds a rule made elsewhere (Sensors, Alert) as it is, saved and active
 extern std::string gAutomationShotPath;   // automation_sink.cpp: a screenshot of the program's own window is saved here after the next frame (then cleared)
 void wiresharkWindow(App& a);      // app/wirecap/wireshark_ui.cpp: one switch per mode, packets to Wireshark
 void loadWiresharkPrefs(App& a);

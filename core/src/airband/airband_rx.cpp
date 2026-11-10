@@ -1,6 +1,7 @@
 // Airband receiver (see airband_rx.h): every listed channel of the sample band mixed down, filtered, AM-demodulated and squelched on its
 // own; the tuning error measured from all of them together; the open channels mixed (or scanned) to the sound card.
 #include "dect2/airband/airband_rx.h"
+#include "dect2/airband/airband_clips.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "dect2/results/results_io.h"
 #include "dect2/airband/airband_tel.h"
@@ -219,6 +220,7 @@ struct AirbandReceiver::Impl {
     NeuralNr nr{(int)kAirbandAudioRate};   // neural noise remover on the 8 kHz mix (RNNoise); off by default
     std::atomic<bool> muted{false}, silent{false};
     std::function<void(int, const float*, size_t)> chanTapSet, chanTap;
+    std::shared_ptr<AirbandClipWriter> clips;   // under mu (set), read on the audio thread through a copy
     std::function<void(const float*, size_t)> mixTapSet, mixTap;
     // receiver thread
     AirbandTelemetry tel;
@@ -630,6 +632,8 @@ struct AirbandReceiver::Impl {
             }
         }
         std::vector<float> one(n);
+        std::shared_ptr<AirbandClipWriter> clipW;
+        { std::lock_guard<std::mutex> lk(mu); clipW = clips; }
         for (size_t i = 0; i < ch.size(); i++) {
             Chan& c = ch[i];
             if (!c.inBand) continue;
@@ -648,6 +652,7 @@ struct AirbandReceiver::Impl {
                 if (plays) mix[j] += v * duck;
             }
             if (chanTap) chanTap((int)i, one.data(), n);
+            if (clipW) clipW->feed((int)i, one.data(), n);
             const int64_t drop = upto - c.audBase;
             for (int64_t d = 0; d < drop && !c.aud.empty(); d++) c.aud.pop_front();
             c.audBase = upto;
@@ -813,6 +818,7 @@ void AirbandReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1
 void AirbandReceiver::setMuted(bool m) { p_->muted = m; }
 void AirbandReceiver::setNoiseRemover(bool on, float strength) { p_->nr.setStrength(strength); p_->nr.setEnabled(on); }
 void AirbandReceiver::setSilent(bool s) { p_->silent = s; }
+void AirbandReceiver::setClipWriter(std::shared_ptr<AirbandClipWriter> w) { std::lock_guard<std::mutex> lk(p_->mu); p_->clips = std::move(w); }
 void AirbandReceiver::setChannelTap(std::function<void(int, const float*, size_t)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->chanTapSet = std::move(cb); p_->tapsReq = true; }
 void AirbandReceiver::setMixTap(std::function<void(const float*, size_t)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->mixTapSet = std::move(cb); p_->tapsReq = true; }
 

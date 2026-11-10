@@ -11,6 +11,8 @@
 #include <ctime>
 #include <fstream>
 #include "dect2/common/u8file.h"
+bool meshWatchIs(const std::string& id);   // mesh_watch_ui.cpp
+void meshWatchToggle(const std::string& id);
 
 using namespace meshui;
 
@@ -102,7 +104,12 @@ void nodeTable(const App& a, bool compact) {
                 ImGui::TableNextColumn(); ImGui::Text("%.1f", n->lastSnrDb);
             } else {
                 if (ImGui::Selectable(protoTag(n->protocol), sel, ImGuiSelectableFlags_SpanAllColumns)) S.sel = nodeKey(*n);
-                ImGui::TableNextColumn(); ImGui::TextColored(protoColour(n->protocol), "%s", n->longName.empty() ? "(no name yet)" : n->longName.c_str());
+                if (ImGui::BeginPopupContextItem("##mwctx")) {   // node watch (mesh_watch_ui.cpp)
+                    bool w = meshWatchIs(n->id);
+                    if (ImGui::MenuItem(tr("Watch this node"), nullptr, w)) meshWatchToggle(n->id);
+                    ImGui::EndPopup();
+                }
+                ImGui::TableNextColumn(); ImGui::TextColored(protoColour(n->protocol), "%s%s", meshWatchIs(n->id) ? "* " : "", n->longName.empty() ? "(no name yet)" : n->longName.c_str());
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(n->shortName.c_str());
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(n->id.c_str());
                 ImGui::TableNextColumn(); ImGui::TextUnformatted(n->hwModel.c_str());

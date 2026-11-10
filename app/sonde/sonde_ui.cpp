@@ -1,6 +1,9 @@
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
 #include "dect2/sonde/sonde_profile.h"
+#include <fstream>
+#include <filesystem>
+#include "dect2/sonde/sonde_flight.h"
 #include "app.h"
 #include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
@@ -14,6 +17,9 @@
 #include <ctime>
 #include <algorithm>
 #include <cmath>
+void sondeSitesTick(App& a, bool live);   // sonde_sites_ui.cpp
+void sondeSitesView(App& a);
+void sondeSitesDraw(ImDrawList* dl);
 
 namespace {
 
@@ -105,6 +111,7 @@ void soundingView(App& a) {
 bool descending(const SondeInfo& s) { return s.hasVel && s.vSpeed < -1.0 && s.maxAltM > s.altM + 200; }
 
 void tick(App& a) {
+    sondeSitesTick(a, live(a));
     loadState();
     if (a.engine.running()) {
         dect2::SondeReceiver& r = a.engine.sonde();
@@ -148,6 +155,7 @@ void mapView(App& a, ImVec2 size) {
     const bool clicked = adsbmap::clickedAt(click);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
+    sondeSitesDraw(dl);   // launch sites and their landings (sonde_sites_ui.cpp)
     const SondeInfo* sel = on ? selected(t) : nullptr;
     const SondeInfo* hit = nullptr;
     float hitD = 18.f * gUi;
@@ -326,6 +334,22 @@ void detailCard(const App& a) {
             if (ImGui::SmallButton("copy landing position")) { snprintf(b, sizeof b, "%.5f, %.5f", ld.lat, ld.lon); ImGui::SetClipboardText(b); }
         }
     }
+    if (sp && (s.trackIncluded || s.hasPos)) {   // the flight as a track: ascent and descent lines, launch, burst, landing (dect2/sonde/sonde_flight.h)
+        static std::string tnote;
+        const dect2::SondeFlight fl = dect2::sondeFlight(s, s.hasVel && s.vSpeed < -1.0 ? landing(s) : dect2::SondeLanding());
+        auto put = [&](const char* ext, const std::string& body) {
+            const std::string p = saveFileDialog((s.serial + ext).c_str());
+            if (p.empty()) return;
+            std::ofstream o(std::filesystem::path(reinterpret_cast<const char8_t*>(p.c_str())), std::ios::binary);
+            o << body;
+            tnote = o ? std::string("saved ") + p : std::string("could not write ") + p;
+        };
+        if (ImGui::SmallButton("track KML...")) put(".kml", dect2::xport::toKml(fl.points, fl.tracks, s.serial));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The flight for Google Earth or OsmAnd: the ascent and the descent as lines with altitude, the launch, the burst and the landing (or the predicted landing).");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("GPX...")) put(".gpx", dect2::xport::toGpx(fl.points, fl.tracks, s.serial));
+        if (!tnote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tnote.c_str()); }
+    }
     if (sp && s.hasTime) { time_t tt = (time_t)s.unixTime; struct tm g;
 #ifdef _WIN32
         gmtime_s(&g, &tt);
@@ -383,11 +407,12 @@ void carrierStrip(const App& a, ImVec2 size) {
 
 void tab(App& a) {
     kit::modeHeader({13, "Radiosondes", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}, {tr("Sounding"), 3, true}});
+    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}, {tr("Sounding"), 3, true}, {tr("Sites"), 4, true}});
     if (S.viewMode == 2) { kit::sessionItems(13, 3, "sonde"); return; }
     if (S.viewMode == 3) { soundingView(a); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.viewMode == 1) { sondeTable(a, false); return; }
+    if (S.viewMode == 4) { sondeSitesView(a); return; }
     const float cw = std::min(300.f * gUi, W * 0.32f);
     ImGui::BeginChild("##sonde_l", ImVec2(W - cw - 8 * gUi, H));
     mapView(a, ImGui::GetContentRegionAvail());

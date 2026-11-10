@@ -1449,3 +1449,17 @@ Built the eight items left between smart5b and smart5c, on the smart5b insight h
 - Marine: AIS ducting detector (learned normal range, ships beyond 1.5x); NAVTEX warnings in force per station (cancellations, self-expiry, in-force lists, assumed lifetimes).
 - IoT: mesh census (nodes, roles, hops, airtime, busiest hours); LoRaWAN health (joins, frame-counter loss, SF mix); leak check for the user's own wM-Bus water meter (night flow, continuous flow).
 ADS-B, AIS and NAVTEX come through the automation events; the rest through the Insights feeds. 21 new insight.* catalog rows. Simulated only. Details in docs/SMART5-field-3.9.md.
+
+## 2026-11-11 Round 4 per-mode features (feat39-r4)
+Branch feat39-r4 on integ-39: 31 of the 40 round-4 items (list and docs in docs/R4-PER-MODE-3.9.md):
+- APRS weather and messages
+- sensor names, Home Assistant devices, alerts, PWS upload and long history
+- ADS-B filter, overhead log, history and first-ever airframes, horizon rings, airport board, plane-alert-db
+- AIS history and arrivals board
+- ham.decode alerts with country colours and band-open matrix, FT8 / WSPR band hopping
+- airband clips, FM / DAB played list and alerts, image.done, Meteor pass reports, geostationary GIF loops
+- Meshtastic links, node watch and a LoRaWAN forwarder, SatNOGS forwarding
+- sonde KML / GPX and launch sites, records board, daily digest
+
+New automation families: sensor, ham, broadcast, image. Skipped as asked: 21, 22, 29, 34. #40 already existed (the UDP NMEA GNSS feed). Tests: one per item, run locally where they need no Rust or SDR libraries, and on the quick CI workflow. Simulated data only.
+

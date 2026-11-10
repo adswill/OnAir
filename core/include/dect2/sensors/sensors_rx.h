@@ -13,6 +13,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <functional>
+#include <map>
 #include <memory>
 #include <string>
 #include <vector>
@@ -42,6 +43,8 @@ public:
     void setRemoveAfterSec(int s);
     // sensors (SensorDevice::key) that never expire, whatever "Remove after" says
     void setPinned(const std::vector<std::string>& keys);
+    // the user's sensor names by SensorDevice::key ("Garden"): they go into the sensor.reading event (sensors_names.h)
+    void setNames(const std::map<std::string, std::string>& byKey);
     // flex-style custom decoders, rtl_433 flex syntax ("n=name,m=OOK_PWM,s=300,l=600,r=2000,bits>=20"); returns how many were accepted
     int setCustomDecoders(const std::vector<std::string>& specs);
     // "" when the spec is valid, else why not

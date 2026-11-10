@@ -3,6 +3,7 @@
 // lists what happened (ACTIVITY, on the right) and draws the spectrum and waterfall of the 8 kHz audio at the bottom, to tune the tones by eye.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "ham/ham_events_ui.h"
 #include "../hfbeacon/hfprop_ui.h"
 #include "../hfbeacon/iono_obs_ui.h"
 #include "gfx/gfx.h"
@@ -22,6 +23,7 @@ void hfdigRttyTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigSstvTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigFreedvTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t);
+void hfdigHopTick(App& a);   // hfdig_hop_ui.cpp: band hopping
 void hfdigHamdrmTab(App& a, const dect2::HfdigTelemetry& t);
 void hfdigKbdTab(App& a, const dect2::HfdigTelemetry& t);
 
@@ -174,6 +176,9 @@ void tick(App& a) {
     if (run) a.engine.hfdig().setDemod(dect2::hfDemodResolve(S.demod, a.freqMhz));   // Auto follows the dial
     if (run && a.rx.standard == 26) {
         hfprop_ui::feedFtx(a, a.rx.hfdig.ftx);
+        hamFeedFtx(a, a.rx.hfdig.ftx);   // ham.decode (ham/ham_events_ui.h)
+        hfdigHopTick(a);
+        hamFeedKbd(a, a.rx.hfdig.kbd, dect2::kbdFamilyName(a.rx.hfdig.kbd.cfg.family));
         ionoobs_ui::feedFtx(a, a.rx.hfdig.ftx);
         if (!S.tapSet) {   // the 8 kHz audio for the spectrum, handed over from the receiver thread
             S.tapSet = true;

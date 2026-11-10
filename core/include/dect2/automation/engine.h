@@ -47,7 +47,7 @@ struct FireReport {
 
 struct RuleStats { int matched = 0, fired = 0, suppressed = 0, errors = 0; double lastFired = 0; std::string lastError; };
 
-enum Family { FAdsb, FAcars, FVdl2, FHfdl, FPager, FAis, FAprs, FSonde, FGnss, FLora, FBle, FRid, FDsc, FSignal, FReceiver, FSatellite, FTime, FPlugin, FVoice, FSession, FMsg, kFamilies };   // FVoice: "voice.<type>" call events of the digital voice modes, FMsg: "msg.<kind>" text messages of modes without a family of their own (Inmarsat-C, Aero, NAVTEX ...; see automation::emitMessage), FSession: "session.<kind>" end-of-session summaries (core/include/dect2/session); FPlugin: "plugin.<type>" events that plugins emit (core/include/dect2/plugin)
+enum Family { FAdsb, FAcars, FVdl2, FHfdl, FPager, FAis, FAprs, FSonde, FGnss, FLora, FBle, FRid, FDsc, FSignal, FReceiver, FSatellite, FTime, FPlugin, FVoice, FSession, FMsg, FSensor, FHam, FBroadcast, FImage, kFamilies };   // FSensor: "sensor.<type>" Sub-GHz sensor readings, FHam: "ham.<type>" HF digital and CW decodes, FBroadcast: "broadcast.<type>" FM RDS / DAB text, FImage: "image.<type>" finished pictures; FVoice: "voice.<type>" call events of the digital voice modes, FMsg: "msg.<kind>" text messages of modes without a family of their own (Inmarsat-C, Aero, NAVTEX ...; see automation::emitMessage), FSession: "session.<kind>" end-of-session summaries (core/include/dect2/session); FPlugin: "plugin.<type>" events that plugins emit (core/include/dect2/plugin)
 static_assert(kFamilies <= 64, "the family masks are 64 bits wide (FamilyMask)");
 // A set of families as a bit mask (bit = Family). 64 bits: more than 32 families are possible, so never write 1u << family.
 using FamilyMask = uint64_t;

@@ -11,6 +11,8 @@
 #include "dect2/adsb/adsb_reg.h"
 #include "dect2/adsb/adsb_jam.h"
 #include "dect2/adsb/adsb_display.h"
+#include "dect2/adsb/adsb_filter.h"
+#include "dect2/watchlist/plane_alert.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -51,6 +53,8 @@ struct State {
     std::string pushedSrc; bool pushedAny = false, srcPushed = false;
     dect2::AdsbRegDb db;
     std::string dbMsg;
+    dect2::AdsbFilter filter;                   // the filter and search bar (prefs adsbFilter): what the table, the side list and the map show
+    bool filterLoaded = false;
 };
 
 inline const ImVec4 kDim(0.62f, 0.65f, 0.68f, 1), kGood(0.40f, 0.85f, 0.50f, 1), kWarn(0.95f, 0.60f, 0.25f, 1);
@@ -85,6 +89,29 @@ void statsView(App& a);
 void atmosFeed(const AdsbTelemetry& t, double now);   // adsb_atmos_ui.cpp (3.9): sounding and altimetry check
 void atmosView(App& a);
 void sourcesPanel(App& a);
+bool shown(const AdsbAircraft& ac);   // passes the filter bar
+void filterBar(App& a);               // search box, Filter pop-up, "n of m shown"
+
+// adsb_overhead_ui.cpp: the overhead log (planefence)
+void overheadTick(App& a);
+void overheadBanner(App& a);
+void overheadView(App& a);
+
+// adsb_seen_ui.cpp: airframes over days and years
+void seenTick(App& a);
+void seenView(App& a);
+bool seenNewToday(uint32_t icao);   // first heard ever today
+
+// adsb_horizon_ui.cpp: the theoretical range outline
+void horizonControls();          // inside the Display pop-up
+void drawHorizon(ImDrawList* dl);
+
+// adsb_airport_ui.cpp: arrivals and departures
+void airportTick(App& a);
+void airportView(App& a);
+
+// adsb_planealert_ui.cpp: the imported plane-alert-db entry of an aircraft (nullptr: none)
+const dect2::watchlist::PlaneAlertEntry* planeAlertFor(uint32_t icao);
 
 // adsb_map_ui.cpp
 double bearingDeg(double lat1, double lon1, double lat2, double lon2);
