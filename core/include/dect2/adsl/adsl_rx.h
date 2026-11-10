@@ -22,6 +22,7 @@ class AdslReceiver {
 public:
     AdslReceiver();
     ~AdslReceiver();
+    static inline bool toneDetect = true;   // 3.9: M-band chips by the energy at +-50 kHz instead of the FM discriminator (switch for comparisons)
     void configure(double inputRateHz);
     void setSignalOffset(double hz);
     void setCenterHz(double hz);                           // what the capture is tuned to; 0: unknown (868.875 MHz, or 868.3 MHz below 1.6 Msps)

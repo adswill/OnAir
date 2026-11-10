@@ -30,6 +30,10 @@ constexpr double kDefaultCentreWide = 868.875e6, kDefaultCentreNarrow = 868.3e6;
 constexpr double kWideRate = 1.6e6;        // from this sample rate the unknown centre is taken as the wide one
 constexpr int kDcChips = 32;
 
+// e^{j pi n / 8}, n = 0 .. 15: +50 kHz at 800 ksps
+const cf32 kLo16[16] = {{1.f, 0.f}, {0.9238795f, 0.3826834f}, {0.7071068f, 0.7071068f}, {0.3826834f, 0.9238795f}, {0.f, 1.f}, {-0.3826834f, 0.9238795f},
+                        {-0.7071068f, 0.7071068f}, {-0.9238795f, 0.3826834f}, {-1.f, 0.f}, {-0.9238795f, -0.3826834f}, {-0.7071068f, -0.7071068f},
+                        {-0.3826834f, -0.9238795f}, {0.f, -1.f}, {0.3826834f, -0.9238795f}, {0.7071068f, -0.7071068f}, {0.9238795f, -0.3826834f}};
 struct BandCfg { double passHz, stopHz; int sps; bool manchester; uint32_t sync; };
 constexpr BandCfg kCfg[kNumBands] = {
     {85e3, 140e3, 8, true, kSyncMBand},
@@ -54,6 +58,7 @@ struct Chan {
     cf32 prev = cf32(1.f, 0.f);
     int64_t n = 0;
     float dring[kMaxSps] = {};
+    cf32 t1[kMaxSps] = {}, t0[kMaxSps] = {};   // M-band tone detector: samples turned by -+50 kHz
     float S = 0;
     std::vector<float> soft;               // sps * kRing
     std::vector<float> pw;
@@ -73,6 +78,7 @@ struct Chan {
         lp.reset(); if (!rsPass) rs.reset();
         phase = 0; prev = cf32(1.f, 0.f); n = 0;
         for (float& f : dring) f = 0;
+        for (int j = 0; j < kMaxSps; j++) t1[j] = t0[j] = cf32(0.f, 0.f);
         S = 0;
         std::fill(soft.begin(), soft.end(), 0.f);
         std::fill(pw.begin(), pw.end(), 0.f);
@@ -331,8 +337,18 @@ struct AdslReceiver::Impl {
             if (p == sps - 1) c.pw[(size_t)(k & (kRing - 1))] = c.pwAcc;
             c.blkSum += pwr;
             if (++c.blkN >= blockLen) blockEnd(c);
-            c.S += d - c.dring[p];
-            c.dring[p] = d;
+            if (c.cfg.manchester && sps == 8 && AdslReceiver::toneDetect) {
+                // M-band chips (3.9, as FLARM): the energy at +50 kHz minus that at -50 kHz over one chip, the noncoherent detector of the h = 1 GFSK
+                const int ph16 = (int)(c.n & 15);
+                c.t1[p] = s * kLo16[(16 - ph16) & 15];
+                c.t0[p] = s * kLo16[ph16];
+                cf32 b1(0.f, 0.f), b0(0.f, 0.f);
+                for (int j = 0; j < 8; j++) { b1 += c.t1[j]; b0 += c.t0[j]; }
+                c.S = std::norm(b1) - std::norm(b0);
+            } else {
+                c.S += d - c.dring[p];
+                c.dring[p] = d;
+            }
             c.at(p, k) = c.S;
             uint32_t* rg; float dc = 0;
             if (c.cfg.manchester) {
