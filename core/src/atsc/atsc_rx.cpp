@@ -31,10 +31,61 @@ namespace dect2 {
 namespace atsc {
 
 // stage A filter for outputs k0..k1, safe to split across threads
+// Shared-window layout of the taps (PfbPad): every phase's row holds kPfbShift zeros, the 2J taps, then zeros up to its length L, so that output u
+// of a group of four whose window starts s_u samples after the group's first (0 <= s_u <= kPfbShift) reads W taps from offset kPfbShift - s_u.
+constexpr int kPfbShift = 3;
+struct PfbPad { const float* t = nullptr; int L = 0, W = 0; size_t avail = 0; };
 DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float* re, const float* im, int64_t base,
-                                 double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm) {
+                                 double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm, PfbPad pad) {
     const int T = 2 * J;
     size_t k = k0;
+#if defined(__GNUC__) && !defined(DECT2_NO_SIMD)
+    // Four outputs that share one window of input samples: the four start within a few samples of each other (the output step is half an input
+    // sample at 8-10 Msps), so with the taps of each placed at its offset in a zero-padded row (pad) the data are loaded once for all four, and
+    // each tap vector feeds two multiply-adds: half the loads of one window per output (that loop is load-bound: three loads per two multiply-adds)
+    // for 8 % more multiply-adds (W = 2J + 3 rounded up to 8). Two partial sums per row and output: sixteen independent chains.
+    if (pad.t) {
+        typedef float v4 __attribute__((vector_size(16)));
+        auto ld = [](const float* p) { v4 v; std::memcpy(&v, p, 16); return v; };
+        const int W = pad.W, L = pad.L;
+        for (; k + 4 <= k1; k += 4) {
+            int64_t i0[4]; int phi[4];
+            for (int u = 0; u < 4; u++) {
+                const double pos = pos0 + (double)(k + (size_t)u) * step;
+                i0[u] = (int64_t)std::floor(pos);
+                phi[u] = (int)((pos - (double)i0[u]) * NPH + 0.5);
+                if (phi[u] >= NPH) { phi[u] = 0; i0[u]++; }
+            }
+            const int64_t b = i0[0] - base - J + 1;
+            bool fits = b >= 0 && (size_t)(b + W) <= pad.avail;
+            const float* tp[4];
+            for (int u = 0; u < 4; u++) {
+                const int64_t sh = i0[u] - i0[0];
+                fits = fits && sh >= 0 && sh <= kPfbShift;
+                tp[u] = pad.t + (size_t)phi[u] * L + (kPfbShift - (int)std::min<int64_t>(std::max<int64_t>(sh, 0), kPfbShift));
+            }
+            if (!fits) break;   // the rest (the last few outputs of the block) the usual way
+            const float* pr = re + b;
+            const float* pi_ = im + b;
+            v4 ar[4] = {}, ai[4] = {}, br[4] = {}, bi[4] = {};
+            for (int j = 0; j < W; j += 8) {
+                const v4 r0 = ld(pr + j), i0v = ld(pi_ + j), r1 = ld(pr + j + 4), i1v = ld(pi_ + j + 4);
+                for (int u = 0; u < 4; u++) {
+                    const v4 t0 = ld(tp[u] + j), t1 = ld(tp[u] + j + 4);
+                    ar[u] += r0 * t0; ai[u] += i0v * t0;
+                    br[u] += r1 * t1; bi[u] += i1v * t1;
+                }
+            }
+            for (int u = 0; u < 4; u++) {
+                const v4 sr = ar[u] + br[u], si = ai[u] + bi[u];
+                outRe[k + (size_t)u] = (sr[0] + sr[1]) + (sr[2] + sr[3]);
+                outIm[k + (size_t)u] = (si[0] + si[1]) + (si[2] + si[3]);
+            }
+        }
+    }
+#else
+    (void)pad;
+#endif
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
     // Four outputs per pass: sixteen independent chains, and the horizontal sums of the four outputs are folded together with pairwise adds
     // (one vector of four results per row) instead of a reduction per output. The sums are in a different order than in the loop below, a few ulp.
@@ -156,7 +207,7 @@ DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float
         outRe[k] = sr; outIm[k] = si;
     }
 }
-DECT2_AVX2_DISPATCH(void, pfbBlock, (const float* taps, int J, int NPH, const float* re, const float* im, int64_t base, double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm), (taps, J, NPH, re, im, base, pos0, step, k0, k1, outRe, outIm))
+DECT2_AVX2_DISPATCH(void, pfbBlock, (const float* taps, int J, int NPH, const float* re, const float* im, int64_t base, double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm, PfbPad pad), (taps, J, NPH, re, im, base, pos0, step, k0, k1, outRe, outIm, pad))
 
 namespace {
 using dect2::math::kPi;
@@ -212,6 +263,8 @@ struct Core {
     int J = 24;
     int NPH = 128;
     std::vector<float> taps;
+    std::vector<float> tapsPad;      // the same in the shared-window layout (PfbPad), empty where the output step is too long for it
+    int padL = 0, padW = 0;
     std::vector<float> inRe, inIm;   // input samples, split
     std::vector<float> pfRe, pfIm;
     bool splitA = std::thread::hardware_concurrency() >= 2;
@@ -284,6 +337,15 @@ struct Core {
                 const double win = std::cos(0.5 * kPi * (x) / (J + 0.5));
                 taps[(size_t)p * 2 * J + (j + J - 1)] = (float)(Rb / fin * rrcValue(x / fin) * (getenv("ATSC_NOWIN") ? 1.0 : win * win));
             }
+        }
+        // four outputs span 3 steps plus the rounding of the phase: within kPfbShift input samples while the step is under 2/3 (radios up to 14 Msps)
+        tapsPad.clear();
+        if (3.0 * step + 1.0 <= (double)kPfbShift) {
+            padW = (2 * J + kPfbShift + 7) & ~7;
+            padL = (kPfbShift + padW + 3) & ~3;
+            tapsPad.assign((size_t)NPH * padL, 0.f);
+            for (int p = 0; p < NPH; p++)
+                for (int j = 0; j < 2 * J; j++) tapsPad[(size_t)p * padL + kPfbShift + j] = taps[(size_t)p * 2 * J + j];
         }
         interp.assign((size_t)kInterpPh * 2 * kInterpJ, 0.f);
         for (int p = 0; p < kInterpPh; p++) {
@@ -471,7 +533,10 @@ struct Core {
         const size_t nOut = room > 0 ? (size_t)std::ceil(room / step) : 0;
         pfRe.resize(nOut);
         pfIm.resize(nOut);
-        auto filter = [&](size_t k0, size_t k1) { DECT2_STAGE("atsc.filter"); pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data()); };
+        PfbPad pad;
+        static const bool noPad = getenv("ATSC_NOPAD") != nullptr;   // test: the one-window-per-output filter
+        if (!tapsPad.empty() && !noPad) { pad.t = tapsPad.data(); pad.L = padL; pad.W = padW; pad.avail = inRe.size(); }
+        auto filter = [&](size_t k0, size_t k1) { DECT2_STAGE("atsc.filter"); pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data(), pad); };
         if (splitA && nOut >= 4096) {   // split across two threads
             std::thread helper([&] { dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); filter(nOut / 2, nOut); });
             filter(0, nOut / 2);

@@ -20,6 +20,8 @@
 #include <memory>
 #include <mutex>
 #include "dect2/common/window.h"
+#include <cstdlib>
+#include <cstring>
 
 namespace dect2 {
 namespace atsc3 {
@@ -32,9 +34,16 @@ cf32 expj(double ph) { return cf32((float)std::cos(ph), (float)std::sin(ph)); }
 
 namespace {
 struct Bank {
-    int half = 16, taps = 32, phases = 2048, stride = 32;   // stride: taps rounded up to a multiple of four, the extra coefficients are zero
+    // 512 phases: the nearest one is within 1/1024 of a sample, an error of about -65 dB over a 6 MHz channel (-70 dB on a 0.9 MHz tone at
+    // 10 Msps), far under the receiver's own (about -33 dB at the decoder on a real capture). 2048 phases (a 400 kB bank, a random row of it for
+    // every output) cost a third more time in cache misses for nothing measurable: same transport stream.
+    int half = 16, taps = 32, phases = 512, stride = 32;   // stride: taps rounded up to a multiple of four, the extra coefficients are zero
     double fc = 0.5;
     std::vector<float> h;   // (phases + 1) x taps
+    // the same rows in the shared-window layout: shift zeros, the taps, zeros up to padL; four outputs whose windows start within `shift` samples of
+    // the first one's read padW samples of one window, output u from offset shift - s_u of its row (empty: not used)
+    int shift = 0, padW = 0, padL = 0;
+    std::vector<float> hp;
 };
 
 double besselI0(double x) { return dect2::window::besselI0(x, 30, 0.0); }
@@ -59,6 +68,15 @@ Bank makeBank(double ratio) {
             sum += t[k];
         }
         for (int k = 0; k < b.taps; k++) b.h[(size_t)p * b.stride + k] = (float)(t[k] / sum);
+    }
+    // four outputs span three steps of 1 / ratio input samples (the nearest phase may be the row after the last, never the next sample)
+    b.shift = (int)std::ceil(3.0 / ratio) + 1;
+    if (b.shift <= 16) {
+        b.padW = (b.taps + b.shift + 7) & ~7;
+        b.padL = (b.shift + b.padW + 3) & ~3;
+        b.hp.assign((size_t)(b.phases + 1) * b.padL, 0.f);
+        for (int p = 0; p <= b.phases; p++)
+            for (int k = 0; k < b.taps; k++) b.hp[(size_t)p * b.padL + b.shift + k] = b.h[(size_t)p * b.stride + k];
     }
     return b;
 }
@@ -147,7 +165,7 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
     const long count = (long)std::floor(((double)n - 1 - startOffset) / step) + 1;
     if (count <= 0) return;
     // split input with zero padding on both sides, so that the inner loop has no bounds checks
-    const long pad = b.stride + 2;
+    const long pad = b.stride + 2 + b.shift + 8;   // room for the shared windows' longer reads too
     std::vector<float> re((size_t)n + 2 * pad, 0.f), im((size_t)n + 2 * pad, 0.f);
     if (rotHz != 0.0) rotate(nullptr, in, n, rotHz, inRate, rotStart, &re[(size_t)pad], &im[(size_t)pad]);
     else for (size_t i = 0; i < n; i++) { re[i + pad] = in[i].real(); im[i + pad] = in[i].imag(); }
@@ -157,7 +175,7 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
     auto locate = [&](long k, const float*& h, const float*& r, const float*& m) {
         const double pos = startOffset + (double)k * step;
         const long i = (long)std::floor(pos);
-        const int p0 = (int)std::lround((pos - (double)i) * b.phases);   // nearest phase of the fine bank: a timing error below 1/4000 of a sample
+        const int p0 = (int)std::lround((pos - (double)i) * b.phases);   // nearest phase of the bank: a timing error below 1/1000 of a sample
         h = &b.h[(size_t)p0 * taps];
         const long base = i - (b.half - 1) + pad;
         r = &re[(size_t)base];
@@ -166,6 +184,48 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
     auto part = [&](long k0, long k1) {
         DECT2_STAGE("a3.resample");
         long k = k0;
+#if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+        // Four outputs from one shared window of input samples (each output's taps at its offset in a zero-padded row): the data are loaded once
+        // for all four and each tap vector feeds two multiply-adds, where one window per output loads three vectors for two (the loop below is
+        // load-bound). Two partial sums per row and output: sixteen independent chains. (x86 keeps its AVX2 path, eight lanes wide.)
+        static const bool noPad = getenv("ATSC3_NOPAD") != nullptr;   // test: one window per output
+        if (!b.hp.empty() && !noPad) {
+            typedef float v4 __attribute__((vector_size(16)));
+            auto ld = [](const float* q) { v4 v; std::memcpy(&v, q, 16); return v; };
+            const int W = b.padW, L = b.padL, S = b.shift;
+            for (; k + 4 <= k1; k += 4) {
+                long i[4]; int p0[4];
+                for (int u = 0; u < 4; u++) {
+                    const double pos = startOffset + (double)(k + u) * step;
+                    i[u] = (long)std::floor(pos);
+                    p0[u] = (int)std::lround((pos - (double)i[u]) * b.phases);
+                }
+                const float* hq[4];
+                bool fits = true;
+                for (int u = 0; u < 4; u++) {
+                    const long sh = i[u] - i[0];
+                    fits = fits && sh >= 0 && sh <= S;
+                    hq[u] = &b.hp[(size_t)p0[u] * L + (size_t)(S - std::min<long>(std::max<long>(sh, 0), S))];
+                }
+                if (!fits) break;
+                const float* r = &re[(size_t)(i[0] - (b.half - 1) + pad)];
+                const float* m = &im[(size_t)(i[0] - (b.half - 1) + pad)];
+                v4 ar[4] = {}, ai[4] = {}, br[4] = {}, bi[4] = {};
+                for (int t = 0; t < W; t += 8) {
+                    const v4 r0 = ld(r + t), m0 = ld(m + t), r1 = ld(r + t + 4), m1 = ld(m + t + 4);
+                    for (int u = 0; u < 4; u++) {
+                        const v4 h0 = ld(hq[u] + t), h1 = ld(hq[u] + t + 4);
+                        ar[u] += r0 * h0; ai[u] += m0 * h0;
+                        br[u] += r1 * h1; bi[u] += m1 * h1;
+                    }
+                }
+                for (int u = 0; u < 4; u++) {
+                    const v4 sr = ar[u] + br[u], si = ai[u] + bi[u];
+                    out[(size_t)(k + u)] = cf32((sr[0] + sr[1]) + (sr[2] + sr[3]), (si[0] + si[1]) + (si[2] + si[3]));
+                }
+            }
+        }
+#endif
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
         // Four outputs at once: each keeps the four partial sums of the scalar loop below (lane j adds taps j, j + 4, ... in order, lanes joined
         // (0 + 1) + (2 + 3)); the four independent chains hide the latency of one output's chain of dependent additions. Fused multiply-adds
