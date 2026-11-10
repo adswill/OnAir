@@ -411,7 +411,11 @@ private:
                 int y = 1900 + g->tm_year; y = y - y % 10 + yd;
                 struct tm t = {};
                 t.tm_year = y - 1900; t.tm_mon = mo - 1; t.tm_mday = d; t.tm_hour = hh_; t.tm_min = mm_; t.tm_sec = ms_ / 1000;
+#ifdef _WIN32
+                o.unixTime = (double)_mkgmtime(&t) + (ms_ % 1000) / 1000.0;
+#else
                 o.unixTime = (double)timegm(&t) + (ms_ % 1000) / 1000.0;
+#endif
                 o.hasTime = true;
             }
             out.push_back(o);
