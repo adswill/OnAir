@@ -3,7 +3,9 @@
 // src/mfsk/interleave.cxx, src/filters/sfft.cxx) and written again here.
 #pragma once
 #include "hfdig_kbd_int.h"
+#include <algorithm>
 #include <climits>
+#include <cmath>
 #include <cstring>
 #include "dect2/common/bits.h"
 
@@ -199,6 +201,38 @@ private:
 };
 
 inline double decayAvg(double avg, double input, double weight) { return avg - avg / weight + input / weight; }
+
+// ln I0(x) (modified Bessel function), Abramowitz and Stegun 9.8.1 / 9.8.2
+inline double lnBesselI0(double x) {
+    x = std::fabs(x);
+    if (x < 3.75) {
+        const double t = (x / 3.75) * (x / 3.75);
+        return std::log(1 + t * (3.5156229 + t * (3.0899424 + t * (1.2067492 + t * (0.2659732 + t * (0.0360768 + t * 0.0045813))))));
+    }
+    const double t = 3.75 / x;
+    const double p = 0.39894228 + t * (0.01328592 + t * (0.00225319 + t * (-0.00157565 + t * (0.00916281 + t * (-0.02057706 + t * (0.02635537 + t * (-0.01647633 + t * 0.00392377)))))));
+    return x - 0.5 * std::log(x) + std::log(p);
+}
+
+// Soft bits of one noncoherent M-FSK symbol (3.9 sensitivity pass D): m[i] the DFT magnitude of tone i, label[i] its bits (MSB first,
+// nbits of them), amp the signal's tone magnitude and sig2 the noise power per tone (E|X|^2). Each bit gets the log likelihood ratio
+// ln sum I0(2 amp m / sig2) over the tones carrying a 1 against those carrying a 0 (Rician against Rayleigh), times gain, around 128
+// (255 = a sure 1). fldigi's metric adds the plain magnitudes of all tones, which lets the noise of the 15 empty tones of a 16-FSK symbol
+// into every bit (with it MFSK16 needed -9 dB in 2.5 kHz for 90 % of the copies; with this, -15 dB; docs/SENSITIVITY-3.9-D.md).
+inline void fskSoftBits(const double* m, int n, const unsigned* label, int nbits, double amp, double sig2, double gain, uint8_t* out) {
+    double l[64];
+    n = std::min(n, 64);
+    const double a = 2 * amp / std::max(sig2, 1e-30);
+    for (int i = 0; i < n; i++) l[i] = lnBesselI0(a * m[i]);
+    for (int k = 0; k < nbits; k++) {
+        double m1 = -1e300, m0 = -1e300;
+        for (int i = 0; i < n; i++) { double& t = (label[i] >> (nbits - 1 - k) & 1) ? m1 : m0; t = std::max(t, l[i]); }
+        double s1 = 0, s0 = 0;
+        for (int i = 0; i < n; i++) { if (label[i] >> (nbits - 1 - k) & 1) s1 += std::exp(l[i] - m1); else s0 += std::exp(l[i] - m0); }
+        const double llr = (m1 + std::log(s1)) - (m0 + std::log(s0));
+        out[k] = (uint8_t)std::clamp(128.0 + gain * llr, 0.0, 255.0);
+    }
+}
 
 } // namespace kbd
 } // namespace dect2

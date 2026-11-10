@@ -5,6 +5,7 @@
 #include "dect2/meteor/meteor_proto.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <cmath>
 #include <complex>
@@ -24,6 +25,11 @@ constexpr double kPubSec = 0.25;
 constexpr double kHandOver = 0.003;     // rad/symbol (~34 Hz): the Costas frequency state moves into the front-end mixer
 constexpr int kHist = 4096;             // decimated samples kept (power of two)
 constexpr int kAcqLog2 = 10, kAcqN = 1 << kAcqLog2, kAcqBlocks = 48;
+constexpr double kLineHold = 300, kLineHoldSec = 1;   // Hz, s: until frames decode (at most 1 s), the carrier stays this close to the line estimate
+constexpr int kAsmErr = 10;          // hard errors allowed in each of the two sync words of the ambiguity search (of 52)
+constexpr double kLineBn = 0.002, kLineKp = 0.25;   // loops after the line acquisition: carrier Bn T, timing gains as after 0.5 s
+constexpr double kNarrowBn = 0.002, kNarrowKp = 0.25; // and once frames decode (other acquisitions)
+constexpr int kLineLog2 = 15, kLineN = 1 << kLineLog2;   // OQPSK line acquisition: about 0.1 s
 
 double rrcTap(double t, double a) {     // t in symbols, unit energy-ish
     if (std::fabs(t) < 1e-9) return 1 - a + 4 * a / kPi;
@@ -216,7 +222,7 @@ struct MeteorReceiver::Impl {
         amp = 0; prevI = prevQ = 0; nSym = 0; lockAvg = 0; varAvg = 1; m2Avg = 1; m4Avg = 2;
         loopGains(0.02);
         kp = 0.02 * sps; ki = 2e-5 * sps;
-        coarseDone = false; acqFill = 0; acqBlocks = 0;
+        coarseDone = false; acqFill = 0; acqBlocks = 0; lnFill = 0; lnTries = 0; holdSym = 0; lineHold = false; narrowed = false;
         acqRe.assign(kAcqN, 0); acqIm.assign(kAcqN, 0); psd.assign(kAcqN, 0);
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         resetChain();
@@ -305,12 +311,97 @@ struct MeteorReceiver::Impl {
         return xm * cm + x0 * c0 + x1 * c1 + x2 * c2;
     }
 
+    // --- OQPSK: carrier, symbol clock and timing together from the squared matched-filter output ---
+    // For OQPSK (I and Q half a symbol apart) the mean of z^2 is e^{2j(2 pi df t + phi)} * 4 g1 cos(2 pi (t - t0) / T): two lines, at 2 df +
+    // and - the symbol rate, standing well over the noise down to 0 dB Es/N0. Their mean gives the carrier, their spacing the symbol clock and
+    // the phase of one against the other the symbol timing t0 (modulo T/2: the I / Q pairing, which the ambiguity search settles). The
+    // feedback loops then start narrow, on frequency and on time; the timing detector is not phase independent, so it is held for 50 ms
+    // while the carrier loop pulls in (it used to walk to its +-0.5 % limit first, and the lock took 1 to 6 s at 4 dB). The shape fit
+    // (coarseSample) stays for QPSK and as the fallback when no lines stand out (two blocks).
+    std::vector<float> lnRe, lnIm;
+    std::vector<cf32> lnZ;
+    int lnFill = 0, lnTries = 0;
+    int64_t lnStart = 0, holdSym = 0;
+    double lineHz = 0;      // the carrier the lines gave; for a while the loop stays within kLineHold of it (no false lock)
+    bool lineHold = false;
+    bool narrowed = false;
+    void lineSample(cf32 z) {
+        if (lnZ.empty()) { lnZ.resize(kLineN); lnRe.resize(kLineN); lnIm.resize(kLineN); }
+        if (lnFill == 0) lnStart = hN - 1;
+        lnZ[(size_t)lnFill] = z;
+        if (++lnFill < kLineN) return;
+        lnFill = 0;
+        for (int i = 0; i < kLineN; i++) {
+            const cf32 q = lnZ[(size_t)i] * lnZ[(size_t)i];
+            const float w = (float)(0.5 - 0.5 * std::cos(2 * kPi * i / kLineN));
+            lnRe[(size_t)i] = q.real() * w; lnIm[(size_t)i] = q.imag() * w;
+        }
+        fftSplit(lnRe.data(), lnIm.data(), kLineLog2, false);
+        const double bin = fd / kLineN;
+        auto P = [&](int k) { const size_t j = (size_t)((k % kLineN + kLineN) % kLineN); return (double)lnRe[j] * lnRe[j] + (double)lnIm[j] * lnIm[j]; };
+        const int s0 = (int)std::lround(rs / bin), J = std::max(1, (int)std::ceil(2e-3 * rs / bin));   // the clock within +-0.2 %
+        const int maxC = (int)std::min(2 * 15000.0 / bin, (fd / 2 - rs - 2 * J * bin) / bin - s0);
+        double best = -1, mean = 0; int bp = 0, bm = 0;
+        for (int k = -maxC - s0 - J; k <= maxC + s0 + J; k++) mean += P(k);
+        mean /= (double)(2 * (maxC + s0 + J) + 1);
+        for (int c = -maxC; c <= maxC; c++) {
+            double pp = -1, pm = -1; int kp_ = 0, km_ = 0;
+            for (int j = -J; j <= J; j++) {
+                const double a = P(c + s0 + j), b = P(c - s0 - j);
+                if (a > pp) { pp = a; kp_ = c + s0 + j; }
+                if (b > pm) { pm = b; km_ = c - s0 - j; }
+            }
+            if (pp + pm > best) { best = pp + pm; bp = kp_; bm = km_; }
+        }
+        const bool found = mean > 0 && P(bp) > 12 * mean && P(bm) > 12 * mean;
+        if (!found) { if (++lnTries >= 2) { acqFill = 0; acqBlocks = 0; std::fill(psd.begin(), psd.end(), 0.f); } return; }
+        auto refine = [&](int k) {
+            const double a = std::sqrt(P(k - 1)), b = std::sqrt(P(k)), d = std::sqrt(P(k + 1)), den = a - 2 * b + d;
+            return (double)k + (den < 0 ? 0.5 * (a - d) / den : 0.0);
+        };
+        const double fp = refine(bp) * bin, fm = refine(bm) * bin;
+        const double df = (fp + fm) / 4, rsEst = (fp - fm) / 2;
+        // the line phases, exactly at the two frequencies, without the window
+        cd ap(0, 0), am(0, 0);
+        {
+            const cd sp = std::polar(1.0, -2 * kPi * fp / fd), sm = std::polar(1.0, -2 * kPi * fm / fd);
+            cd rp(1, 0), rm(1, 0);
+            for (int i = 0; i < kLineN; i++) {
+                const cf32 q = lnZ[(size_t)i] * lnZ[(size_t)i];
+                const cd qd(q.real(), q.imag());
+                ap += qd * rp; am += qd * rm;
+                rp *= sp; rm *= sm;
+                if ((i & 1023) == 1023) { rp /= std::abs(rp); rm /= std::abs(rm); }
+            }
+        }
+        const double T = std::clamp(fd / rsEst, sps * 0.995, sps * 1.005);
+        double t0 = -std::arg(ap * std::conj(am)) / (4 * kPi) * T;   // modulo T/2, from lnStart
+        coarseHz += df;
+        step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
+        spsEst = T;
+        // the next timing instant of that grid (the samples in the filters when the mixer moved make a transient of a few symbols)
+        const double now = (double)hN + 4;
+        double t = (double)lnStart + t0;
+        t += std::ceil((now - t) / (T / 2)) * (T / 2);
+        tau = t;
+        prevI = prevQ = 0;
+        coarseDone = true;
+        // carrier and clock known to a few Hz and ppm: both loops start narrow (wide ones slipped by half a symbol and a quarter turn
+        // together, again and again, below 3 dB before the sync word was ever found)
+        theta = 0; omega = 0; nSym = 0; loopGains(kLineBn);
+        kp = 0.02 * sps * kLineKp; ki = 2e-5 * sps * kLineKp * kLineKp;
+        narrowed = true;
+        holdSym = (int64_t)(0.05 * rs);
+        lineHz = coarseHz; lineHold = true;
+    }
+
     void decimated(cf32 y) {
-        if (!coarseDone) { coarseSample(y); return; }
+        if (!coarseDone && (!oqpsk || lnTries >= 2)) { coarseSample(y); return; }
         cf32 z;
         rrc.push(y, z);
         hist[(size_t)(hN & (kHist - 1))] = z;
         hN++;
+        if (!coarseDone) { lineSample(z); return; }
         if (amp <= 0) amp = 1e-9f;
         while (tau + spsEst / 2 + 3 < (double)hN) {
             if (tau - spsEst - 2 < (double)(hN - kHist)) { tau = (double)hN - spsEst; continue; }
@@ -348,18 +439,21 @@ struct MeteorReceiver::Impl {
         // omega * ~6 symbols, a few hundredths of a radian, which the loop absorbs).
         if (std::fabs(omega) > kHandOver) {
             coarseHz += omega * rs / (2 * kPi);
+            if (lineHold && nSym > (int64_t)(rs * kLineHoldSec)) lineHold = false;   // Doppler moves the carrier by more than that later
+            if (lineHold) coarseHz = std::clamp(coarseHz, lineHz - kLineHold, lineHz + kLineHold);
             step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
             omega = 0;
         }
         if (theta > kPi) theta -= 2 * kPi; else if (theta < -kPi) theta += 2 * kPi;
         const float eTn = std::clamp(eT / (amp * amp), -1.f, 1.f);
-        tau += T + kp * eTn;
-        spsEst += ki * eTn;
+        if (holdSym > 0) holdSym--;
+        else { tau += kp * eTn; spsEst += ki * eTn; }
+        tau += T;
         spsEst = std::clamp(spsEst, sps * 0.995, sps * 1.005);
         nSym++;
         // after 0.5 s: carrier loop 0.004 (was 0.008) and the symbol clock 4x slower (its noise walked the clock by ~100 ppm at
         // 3-6 dB and slipped symbols). QPSK 72k now decodes at 2-2.5 dB Es/N0 (was 4), OQPSK 72k at 3.5 dB (was 5).
-        if (nSym == (int64_t)(rs * 0.5)) { loopGains(0.004); kp *= 0.25; ki *= 0.0625; }
+        if (nSym == (int64_t)(rs * 0.5) && !narrowed) { loopGains(0.004); kp *= 0.25; ki *= 0.0625; }
         // lock and spread
         const float r2 = In * In + Qn * Qn;
         if (r2 > 1e-6f) {
@@ -450,7 +544,11 @@ struct MeteorReceiver::Impl {
         const int64_t L = (int64_t)mkRing.size();
         const int64_t start = mkN - L;   // even
         std::vector<uint8_t> hb((size_t)L);
-        int bestScore = -1, bestT = 0, bestOff = 0, bestP = 0;
+        // The marker's I bits alternate, so the half-symbol-late pairing, mirrored, matches it too with at most one error (its last I
+        // bit is a data bit) and the data then deinterleaves to garbage for good (the deinterleaver spans 17 s). The pick is therefore
+        // by weight: 2 for a marker without error, 1 with one error; the true pairing gets about 1.7 per period at 2 dB Es/N0, the
+        // alias about 1.25. Found by the line acquisition, which lands on either pairing (the old timing loop mostly settled on the right one).
+        int bestScore = -1, bestW = -1, bestT = 0, bestOff = 0, bestP = 0;
         for (int pr = 0; pr < 2; pr++)       // pairing: (I, Q) or, half a symbol late, (Q, next I)
             for (int t = 0; t < 8; t++) {
                 for (int64_t i = 0; i + 2 < L; i += 2) {
@@ -459,13 +557,14 @@ struct MeteorReceiver::Impl {
                     hb[(size_t)i] = oa > 0; hb[(size_t)i + 1] = ob > 0;
                 }
                 for (int off = 0; off < meteor::kMarkerStride; off += 2) {
-                    int score = 0;
+                    int score = 0, wt = 0;
                     for (int64_t q = off; q + 8 <= L - 2; q += meteor::kMarkerStride) {
                         int e = 0;
                         for (int k = 0; k < 8; k++) e += hb[(size_t)(q + k)] != ((meteor::kMarker >> (7 - k) & 1) != 0);
                         score += e <= 1;
+                        wt += std::max(0, 2 - e);
                     }
-                    if (score > bestScore) { bestScore = score; bestT = t; bestOff = off; bestP = pr; }
+                    if (wt > bestW) { bestW = wt; bestScore = score; bestT = t; bestOff = off; bestP = pr; }
                 }
             }
         const int periods = (int)((L - 2) / meteor::kMarkerStride);
@@ -499,13 +598,23 @@ struct MeteorReceiver::Impl {
         const uint64_t mask = (1ull << 52) - 1;
         const int np = (int)(pairs.size() / 2);
 
+        // Every pairing and transform is scored and the best pair of sync words a frame apart wins (each with at most kAsmErr of 52 hard
+        // errors). The first one under 8 errors used to be taken: at 3 dB the true words have 5 to 12 errors in this (difference) domain,
+        // so a frame in two was missed and the lock took 1 to 3 s; and a looser limit taken first-come let the half-symbol pairing, which
+        // is a few errors off the true word, win on a clean signal.
         std::vector<int8_t> P((size_t)np * 2), D((size_t)np * 2);
-        for (int sl = 0; sl < (oqpsk && !inter ? 2 : 1); sl++) {
+        std::vector<int8_t> eAt((size_t)np);
+        auto pairing = [&](int sl) {
             const int n = np - sl;
             for (int i = 0; i < n; i++) {
                 P[(size_t)i * 2] = sl ? pairs[(size_t)i * 2 + 1] : pairs[(size_t)i * 2];
                 P[(size_t)i * 2 + 1] = sl ? pairs[(size_t)i * 2 + 2] : pairs[(size_t)i * 2 + 1];
             }
+            return n;
+        };
+        int bestScore = 1 << 30, bestSl = -1, bestT = 0, bestAt = -1;
+        for (int sl = 0; sl < (oqpsk && !inter ? 2 : 1); sl++) {
+            const int n = pairing(sl);
             for (int i = 0; i < n; i++) {
                 if (!diff) { D[(size_t)i * 2] = P[(size_t)i * 2]; D[(size_t)i * 2 + 1] = P[(size_t)i * 2 + 1]; continue; }
                 const int pa = i ? P[(size_t)i * 2 - 2] : 0, pb = i ? P[(size_t)i * 2 - 1] : 0;
@@ -514,49 +623,50 @@ struct MeteorReceiver::Impl {
             }
             for (int t = 0; t < 8; t++) {
                 uint64_t w = 0;
-                std::vector<int> hits;
                 for (int i = 0; i < n; i++) {
                     int oa, ob;
                     xform(t, D[(size_t)i * 2], D[(size_t)i * 2 + 1], oa, ob);
                     w = w << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
-                    if (i < 31) continue;
+                    if (i < 31) { eAt[(size_t)i] = 99; continue; }
                     const int e = __builtin_popcountll((w ^ pat) & mask);
-                    if (e <= 7) hits.push_back(i);
-
+                    eAt[(size_t)i] = (int8_t)std::min(e, 99);
+                    if (e > kAsmErr || i < 8192 + 31) continue;
+                    const int e0 = eAt[(size_t)(i - 8192)];
+                    if (e0 > kAsmErr) continue;
+                    // ties: the later pair of the same hypothesis; between hypotheses the first one (normal pairing first)
+                    const int score = e + e0;
+                    if (score < bestScore || (score == bestScore && sl == bestSl && t == bestT)) { bestScore = score; bestSl = sl; bestT = t; bestAt = i; }
                 }
-                // two hits a frame apart confirm it
-                int at = -1;
-                for (size_t x = 0; x < hits.size() && at < 0; x++)
-                    for (size_t y = x + 1; y < hits.size(); y++) if (hits[y] - hits[x] == 8192) { at = hits[y]; break; }
-                if (at < 0) continue;
-                if (sl && diff && varAvg > 0.16f) {
-                    // N2-x found half a symbol late (pairs Q, next I) on a weak signal (under ~8 dB): there it would be decoded in the
-                    // difference domain, ~2 dB worse. Move the symbol clock on by half a symbol and the carrier by a quarter turn (the same
-                    // signal in the normal state) and search again (a fraction of a second). A strong signal keeps the quick lock.
-                    tau += spsEst / 2; theta += kPi / 2; if (theta > kPi) theta -= 2 * kPi;
-                    pairs.clear(); pairsSinceSearch = 0;
-                    say("half a symbol late: symbol clock moved");
-                    return;
-                }
-                searchLock = true; xt = t; slip = sl;
-                // The raw-pair transform guessed from the difference domain gives garbage frames when the symbol clock settled half a symbol
-                // late (OQPSK, slip 1; found with static offsets too, about one acquisition in three): decode in the difference domain then.
-                rawT = diff && !sl ? rawTransform(t) : -1;
-                nrzm = {};
-                tel.rotation = xt + 8 * slip;
-                lastAsmSec = nowSec();
-                badRun = 0;
-                vit.reset();
-                sr = 0; inFrame = false; frameLock = false;
-                const int from = std::max(1, at - 31 - 8192 - 40);
-                diffPrevA = P[(size_t)from * 2 - 2]; diffPrevB = P[(size_t)from * 2 - 1];
-                for (int i = from; i < n; i++) lockedPair(P[(size_t)i * 2], P[(size_t)i * 2 + 1]);
-                heldB = pairs[pairs.size() - 1];
-                pairs.clear();
-                say(std::string("sync word found (") + meteorModName(mod) + ", ambiguity " + std::to_string(tel.rotation) + ")");
-                return;
             }
         }
+        if (bestSl < 0) return;
+        const int sl = bestSl, t = bestT, at = bestAt;
+        if (sl && diff && varAvg > 0.16f) {
+            // N2-x found half a symbol late (pairs Q, next I) on a weak signal (under ~8 dB): there it would be decoded in the
+            // difference domain, ~2 dB worse. Move the symbol clock on by half a symbol and the carrier by a quarter turn (the same
+            // signal in the normal state) and search again (a fraction of a second). A strong signal keeps the quick lock.
+            tau += spsEst / 2; theta += kPi / 2; if (theta > kPi) theta -= 2 * kPi;
+            pairs.clear(); pairsSinceSearch = 0;
+            say("half a symbol late: symbol clock moved");
+            return;
+        }
+        const int n = pairing(sl);
+        searchLock = true; xt = t; slip = sl;
+        // The raw-pair transform guessed from the difference domain gives garbage frames when the symbol clock settled half a symbol
+        // late (OQPSK, slip 1; found with static offsets too, about one acquisition in three): decode in the difference domain then.
+        rawT = diff && !sl ? rawTransform(t) : -1;
+        nrzm = {};
+        tel.rotation = xt + 8 * slip;
+        lastAsmSec = nowSec();
+        badRun = 0;
+        vit.reset();
+        sr = 0; inFrame = false; frameLock = false;
+        const int from = std::max(1, at - 31 - 8192 - 40);
+        diffPrevA = P[(size_t)from * 2 - 2]; diffPrevB = P[(size_t)from * 2 - 1];
+        for (int i = from; i < n; i++) lockedPair(P[(size_t)i * 2], P[(size_t)i * 2 + 1]);
+        heldB = pairs[pairs.size() - 1];
+        pairs.clear();
+        say(std::string("sync word found (") + meteorModName(mod) + ", ambiguity " + std::to_string(tel.rotation) + ")");
     }
     int slip = 0;
     int8_t heldB = 0;
@@ -604,6 +714,10 @@ struct MeteorReceiver::Impl {
             return;
         }
         badRun = 0;
+        lineHold = false;
+        // decoding: both loops narrower (at 3 dB the OQPSK timing and carrier loops slipped together by half a symbol and a quarter turn,
+        // a few times in 8 s, each slip costing 1 to 3 s of frames)
+        if (!narrowed && nSym > (int64_t)(rs * 0.5)) { narrowed = true; loopGains(kNarrowBn); kp *= kNarrowKp; ki *= kNarrowKp * kNarrowKp; }
         tel.blocksOk++; tel.rsCorrected += (uint64_t)e;
         lastGoodSec = nowSec();
         meteor::Vcdu vc;
