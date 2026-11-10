@@ -13,7 +13,7 @@ noise bandwidth, listed in `tools/sens/sens_modes.h`.
 - `ONAIR_TEST_LONG=1`: the full sweep. It finds the 90 % threshold in 1 dB steps with 10 trials, the carrier offset and clock error still
   decoded at threshold + 3 dB, the lock time, CPU per second of signal and false decodes on noise.
 - `ONAIR_SENS_CALIBRATE=1` (the table below): 1 dB steps with 5 trials and an 80 % criterion. "CPU" is the CPU seconds per second of signal,
-  one receiver, at threshold + 10 dB. "Before" is integ-39 (branch feat39-sensC-base: the same test, receivers unchanged), "after" is this branch.
+  one receiver, at threshold + 10 dB. "Before" is the same test built on integ-39 with its receivers unchanged, "after" is this branch.
 
 New harness entries: UAT, FLARM, ADS-L, Remote ID, DJI DroneID, VDES, LoRa (raw), Wireless M-Bus.
 
