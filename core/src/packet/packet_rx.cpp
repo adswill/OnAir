@@ -53,6 +53,7 @@ struct Rec { PacketStation s; };
 struct PacketReceiver::Impl {
     std::mutex procMu, telMu;
     std::function<void(const std::string&)> log;
+    std::function<void(const ax25::Frame&, int)> frameTap;   // setFrameTap (set under procMu)
 
     double fs = 0;
     std::atomic<int> capScale{1};          // setTableScale(): frame and station caps times this
@@ -301,6 +302,7 @@ struct PacketReceiver::Impl {
         ax25::Frame f;
         if (!ax25::parseFrame(dat.data(), dat.size(), f)) { t.blocksBad++; if (baud == 1200) t.bad1200++; else t.bad9600++; return; }
         if (wire::on(wire::Aprs)) wire::Hub::get().publish(wire::Aprs, dat);
+        if (frameTap) frameTap(f, baud);
         t.blocksOk++;
         if (baud == 1200) { t.ok1200++; t.last1200Sec = tnow; } else { t.ok9600++; t.last9600Sec = tnow; }
         aprs::Info a;
@@ -544,6 +546,11 @@ void PacketReceiver::setVolume(float v) { p_->listen.volume = std::max(0.f, std:
 void PacketReceiver::setMuted(bool m) { p_->listen.muted = m; }
 void PacketReceiver::setSilent(bool s) { p_->listen.silent = s; }
 void PacketReceiver::setListenTap(std::function<void(const float* x, size_t n)> cb) { p_->listen.setTap(std::move(cb)); }
+void PacketReceiver::setFrameTap(std::function<void(const ax25::Frame& f, int baud)> cb) {
+    std::lock_guard<std::mutex> lk(p_->procMu);
+    p_->frameTap = std::move(cb);
+}
+
 void PacketReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     p_->log = std::move(cb);

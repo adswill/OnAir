@@ -32,5 +32,7 @@ std::unique_ptr<ModeSynth> makePacketSynthFrame(const SynthConfig& cfg, double s
 
 // A short burst of frames with interFrameGapSec between them (0 = back-to-back on the air, no idle).
 std::unique_ptr<ModeSynth> makePacketSynthBurst(const SynthConfig& cfg, double sampleRate, const std::vector<PacketGenFrame>& frames, double interFrameGapSec);
+// Length of one pass of that burst in seconds (the 0.6 s of quiet in front included): a one-shot transmission sends this much and stops.
+double packetSynthBurstSec(const std::vector<PacketGenFrame>& frames, double interFrameGapSec);
 
 } // namespace dect2

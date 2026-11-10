@@ -27,6 +27,16 @@ namespace dect2 {
 
 struct ArdopTelemetry;   // ardop_tel.h
 
+// One frame read by the receiver (setFrameTap): the Winlink ARDOP link reads its frames here
+struct ArdopFrameEvent {
+    int code = 0;
+    int sid = -1;
+    bool bodyOk = false;            // the body passed its check (frames without a body: false)
+    std::string from, to;
+    std::vector<uint8_t> payload;   // data frames: the bytes that passed the CRC
+    double timeSec = 0;
+};
+
 class ArdopReceiver {
 public:
     ArdopReceiver();
@@ -40,6 +50,7 @@ public:
     bool telemetry(ArdopTelemetry& out, uint64_t lastSeq);
     void clearResults();                 // frames, stations and text
     void setLogCallback(std::function<void(const std::string&)> cb);
+    void setFrameTap(std::function<void(const ArdopFrameEvent&)> cb);   // every frame with a good header; called from the receiver thread
     void flush();                        // tests: report what is pending (the end of a recording)
     // "Listen" (off by default): the upper sideband, 200 .. 3800 Hz above the dial, on the sound card
     void setListen(bool on);
