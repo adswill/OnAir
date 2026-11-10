@@ -192,7 +192,7 @@ struct DvbtReceiver::Impl {
         struct Cand { double score; int mode, gi; int64_t pos; cd corr; };
         Cand best{0, -1, -1, 0, cd(0, 0)};
         const int64_t b0 = base;
-        for (int m = 0; m < 2; m++) {
+        for (int m = 0; m < 3; m++) {   // 2K, 8K and the 4K mode of DVB-H
             const int n = fftN(m);
             // 6 symbols of the longest guard plus the correlation lag
             const int64_t avail = (int64_t)buf.size();
@@ -784,6 +784,9 @@ struct DvbtReceiver::Impl {
                 frameStartAbs = tpsBase + p;
                 frameIdx = fi;
                 frameRefAbs = frameStartAbs; frameRefIdx = fi;
+                // the frame of the symbols the error correction gets from now on (the in-depth interleaver of the 2K mode needs it); fecPush
+                // counts the frames on from here
+                pushFrame = (int)((fi + (absSym - frameStartAbs) / 68) & 3); lastPushSym = (int)((absSym - frameStartAbs) % 68) - 1;
                 tpsOk = true;
                 secSinceTps = 0;
                 tpsFailures = 0;
@@ -858,12 +861,15 @@ struct DvbtReceiver::Impl {
         fecPush(eq.data(), n0.data(), symIdx);
     }
     // one symbol into the error correction (or into the hold after a resync), and the packets that come out to the callback
+    int pushFrame = 0, lastPushSym = -1;   // the frame (0..3) of the symbols going into the error correction, counted at each wrap of symIdx
     void fecPush(const cf32* eq, const float* n0, int symIdx) {
         const int Nd = dataCarriers(mode);
         if (holding) { held.push_back({std::vector<cf32>(eq, eq + Nd), std::vector<float>(n0, n0 + Nd), symIdx}); return; }
+        if (symIdx < lastPushSym) pushFrame = (pushFrame + 1) & 3;
+        lastPushSym = symIdx;
         FecJob j = takeJob();
         j.eq.assign(eq, eq + Nd); j.n0.assign(n0, n0 + Nd);
-        j.symIdx = symIdx; j.prm = fecPrm; j.lp = lpReq.load(); j.secs = (double)(N + G) / fn; j.seq = fecSeqOut++;
+        j.symIdx = symIdx; j.frame = pushFrame; j.prm = fecPrm; j.lp = lpReq.load(); j.secs = (double)(N + G) / fn; j.seq = fecSeqOut++;
         fecPipe->push(std::move(j));
     }
     void flushHeld(int extra) {
@@ -1219,7 +1225,7 @@ struct DvbtReceiver::Impl {
     // ring waits for) only resamples, synchronises and equalises: in 8K 64-QAM 2/3 the decoder is more than half of the work. A queue that
     // overflows (the decoder is too slow for this machine) drops the oldest symbols; the decoder then starts afresh at the next one (it finds
     // the packet sync again within a block) and the drops are counted (fecDrops, logged with DECT2_DEBUG).
-    struct FecJob { std::vector<cf32> eq; std::vector<float> n0; int symIdx = 0; Params prm; bool lp = false; double secs = 0; uint64_t seq = 0; };
+    struct FecJob { std::vector<cf32> eq; std::vector<float> n0; int symIdx = 0, frame = 0; Params prm; bool lp = false; double secs = 0; uint64_t seq = 0; };
     Params fecPrm;                   // what the decoder is configured with: applied in order with the symbols (producer)
     uint64_t fecSeqOut = 0;          // producer: sequence number of the next symbol
     uint64_t fecSeqIn = 0;           // decoder: the one it expects
@@ -1247,7 +1253,7 @@ struct DvbtReceiver::Impl {
         fec.configure(j.prm);
         if (j.lp != fec.lowPriority()) fec.setLowPriority(j.lp);
         fec.setComputeMode(computeMode.load(std::memory_order_relaxed));
-        fec.pushSymbol(j.eq.data(), j.n0.data(), j.symIdx);
+        fec.pushSymbol(j.eq.data(), j.n0.data(), j.symIdx, j.frame);
         streamSecs += j.secs;
         fec.takePackets(pktBuf);
         if (!pktBuf.empty()) {
@@ -1311,7 +1317,8 @@ struct DvbtReceiver::Impl {
         t.secSinceP1 = secSinceTps;
         t.l1preOk = tpsOk; t.l1postOk = tpsOk;
         t.dvbt.tpsOk = tpsOk; t.dvbt.mode = mode; t.dvbt.guard = gi;
-        if (tpsOk) { t.dvbt.mod = prm.mod; t.dvbt.hier = prm.hier; t.dvbt.crHp = prm.crHp; t.dvbt.crLp = prm.crLp; t.dvbt.cellId = prm.cellId; t.dvbt.frameIdx = frameIdx; }
+        if (tpsOk) { t.dvbt.mod = prm.mod; t.dvbt.hier = prm.hier; t.dvbt.crHp = prm.crHp; t.dvbt.crLp = prm.crLp; t.dvbt.cellId = prm.cellId; t.dvbt.frameIdx = frameIdx;
+                     t.dvbt.indepth = prm.indepth; t.dvbt.dvbh = prm.dvbh; t.dvbt.timeSlicing = prm.timeSlicing; t.dvbt.mpeFec = prm.mpeFec; }
         FecStats fs;
         { std::lock_guard<std::mutex> lk(fecMu); fs = fecSnap; }
         t.dvbt.fecSync = fs.syncLocked; t.dvbt.packets = fs.packets; t.dvbt.rsClean = fs.rsClean; t.dvbt.rsCorrected = fs.rsCorrected; t.dvbt.rsFailed = fs.rsFailed;
