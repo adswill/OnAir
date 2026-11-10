@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <random>
 #include <string>
 #include <vector>
@@ -36,7 +37,7 @@ bool gTrace = false;
 std::vector<hfu::Link11Msg> run(const std::vector<cf32>& x, size_t chunk = 4096) {
     std::vector<hfu::Link11Msg> out;
     hfu::Link11Rx rx;
-    if (gTrace) rx.setEventSink([](const std::string& s) { printf("  event: %s\n", s.c_str()); });
+    if (gTrace || getenv("L11_TRACE")) rx.setEventSink([](const std::string& s) { printf("  event: %s\n", s.c_str()); });
     rx.setMessageSink([&](const hfu::Link11Msg& m) { out.push_back(m); });
     for (size_t i = 0; i < x.size(); i += chunk) rx.push(x.data() + i, std::min(chunk, x.size() - i));
     return out;

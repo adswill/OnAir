@@ -135,7 +135,7 @@ struct Link11Rx::Impl {
             return;
         }
         // state 1: the preamble goes on until the data tones start
-        if (em > 0.4 * ed) { startFrames(pos); return; }
+        if (em > 0.25 * ed) { startFrames(pos); return; }   // the data tones are about half the Doppler tone's power each; it also gains their leakage
         if (ed < 4 * floor) { state = 0; preHops = 0; }   // the tones went away without data
         else if (preHops < 1000) {
             const cf d = dft(kL11Doppler, pos, kFastW);
@@ -146,19 +146,21 @@ struct Link11Rx::Impl {
     }
 
     // alignment and rate: the windows that fit inside the frames keep all the tone energy
+    // a frame keeps each tone's phase: the first and the last 1/110 s of a frame (orthogonal windows) agree when the rate and the alignment
+    // are right, and turn by the data when a frame boundary falls between them
     double score(int64_t b, bool f) const {
-        const int F = f ? kFastF : kSlowF, W = f ? kFastW : kSlowW;
-        double s = 0;
-        int n = 0;
+        const int F = f ? kFastF : kSlowF;
+        double num = 0, den = 0;
         for (int i = 0; i < 8; i++) {
-            const int64_t ws = b + (int64_t)i * F + (F - W) / 2;
-            if (ws + W >= nX) break;
-            double e = 0;
-            for (int k = 0; k < kTones; k++) e += std::norm(dft(l11DataTone(k) + dop, ws, W));
-            s += e / ((double)W * W);
-            n++;
+            const int64_t w1 = b + (int64_t)i * F + 4, w2 = b + (int64_t)(i + 1) * F - kFastW - 4;
+            if (w2 + kFastW >= nX) break;
+            for (int k = 0; k < kTones; k++) {
+                const cf x1 = dft(l11DataTone(k) + dop, w1, kFastW), x2 = dft(l11DataTone(k) + dop, w2, kFastW);
+                num += (x1 * std::conj(x2)).real();
+                den += std::abs(x1) * std::abs(x2);
+            }
         }
-        return n ? s / n : 0;
+        return den > 0 ? num / den : 0;
     }
 
     void startFrames(int64_t t) {
@@ -169,10 +171,10 @@ struct Link11Rx::Impl {
         for (bool f : {true, false}) for (int64_t b = t - 40; b <= t + kFastW + 40; b += 4) {
             const double s = score(b, f);
             bestOf[f ? 0 : 1] = std::max(bestOf[f ? 0 : 1], s);
-            if (s > best * 1.02 || best < 0) { best = s; bb = b; bf = f; }
+            if (s > best) { best = s; bb = b; bf = f; }
         }
         char ev[120];
-        snprintf(ev, sizeof ev, "data tones start (frame fit: fast %.3g, slow %.3g)", bestOf[0], bestOf[1]);
+        snprintf(ev, sizeof ev, "data tones start (phase hold: fast %.2f, slow %.2f)", bestOf[0], bestOf[1]);
         event(ev);
         fast = bf; b0 = bb; frame = 0;
         prevX.assign(kTones + 1, cf(0, 0));
