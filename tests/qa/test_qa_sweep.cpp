@@ -25,6 +25,7 @@
 #include "dect2/engine/mode_registry.h"
 #include "dect2/engine/mode_synth.h"
 #include "dect2/engine/mode_tuning.h"
+#include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/source/source.h"
 #include "dect2/tx/tx.h"
 #include <algorithm>
@@ -146,6 +147,10 @@ uint64_t goodOf(const RxTelemetry& r) {
     case 1: return r.dvbt.rsClean + r.dvbt.rsCorrected;
     case 5: { uint64_t s = 0; for (auto& l : r.isdbt.layer) s += l.rsClean + l.rsCorrected; return s; }
     case 6: return r.fm.rdsGroups;
+    case 26: {   // HF digital: each decoder keeps its own count (keyboard modes and RTTY: characters, Hellschreiber: columns; FT8 & co: decodes; SSTV: picture rows; FreeDV: speech frames with sync)
+        const auto& h = r.hfdig;
+        return std::max<uint64_t>({r.blocksOk, h.kbd.chars, h.rtty.chars, (uint64_t)h.ftx.decodes.size(), (uint64_t)std::max(0, h.sstv.lines), h.freedv.speechFrames, (uint64_t)std::max(0, h.kbd.hellCols)});
+    }
     default: return r.blocksOk;
     }
 }
@@ -584,6 +589,7 @@ int main(int argc, char** argv) {
         else if (a == "--out") outPrefix = next();
         else if (a == "--shard") { const std::string s = next(); sscanf(s.c_str(), "%d/%d", &shardK, &shardN); }
         else if (a == "--gen") { stage = a; stId = next(); stRate = atof(next().c_str()); stSecs = atof(next().c_str()); snrDb = atof(next().c_str()); stFile = next(); }
+        else if (a == "--gentx") { stage = a; stId = next(); stSecs = atof(next().c_str()); stFile = next(); }
         else if (a == "--run") { stage = a; stId = next(); stRate = atof(next().c_str()); stSecs = atof(next().c_str()); stFile = next(); stCond = next(); }
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
@@ -592,6 +598,7 @@ int main(int argc, char** argv) {
     if (!stage.empty()) {
         const Entry* en = find(stId);
         if (!en) return 2;
+        if (stage == "--gentx") { printf("TXRATE %.4f\n", writeTx(*en, stSecs, stFile)); fflush(stdout); _exit(0); }
         return stage == "--gen" ? genChild(*en, stRate, stSecs, snrDb, stFile) : runChild(*en, stRate, stSecs, stFile, stCond == "clean");
     }
     std::vector<const Entry*> sel;
@@ -678,11 +685,20 @@ int main(int argc, char** argv) {
             if ((r.c[0].good > 0 && !few) || r.byRes || r.c[0].locked || r.c[0].verdict != "-") done = true;
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
-        if (r.txRate > 0) {   // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline
+        // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline; when it decodes nothing in a short run,
+        // once more with 32 s (a keyboard mode's preamble and text take longer than a test signal's first frames)
+        for (int txTry = 0; txTry < 2 && r.txRate > 0; txTry++) {
+            const double s = txTry == 0 ? (r.secs > 0 ? r.secs : secs) : std::min(32.0, maxSamples / r.txRate);
+            if (txTry == 1) {
+                if (r.tx.verdict != "FAIL" || s <= (r.secs > 0 ? r.secs : secs) + 0.5) break;
+                char ss0[64]; snprintf(ss0, sizeof ss0, "%.3f", s);
+                spawn({self, "--gentx", e->id, ss0, tmpDir}, 600, 900);
+            }
             char rs[64], ss[64];
-            snprintf(rs, sizeof rs, "%.4f", r.txRate); snprintf(ss, sizeof ss, "%.3f", r.secs > 0 ? r.secs : secs);
-            const double s = r.secs > 0 ? r.secs : secs;
+            snprintf(rs, sizeof rs, "%.4f", r.txRate); snprintf(ss, sizeof ss, "%.3f", s);
+            unsetenv("QA_PACE");
             const ChildResult zr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/txzero.ci16", "zero"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
+            if (r.paced) setenv("QA_PACE", "1", 1);
             const size_t zp = zr.out.rfind('{');
             const uint64_t z = zp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(zp), "res");
             const ChildResult cr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/tx.ci16", "tx"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
