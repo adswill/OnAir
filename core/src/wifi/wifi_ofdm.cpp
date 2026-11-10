@@ -86,7 +86,10 @@ int viterbiDecode(const float* soft, int n, uint8_t* out) {
     uint8_t oa[64][2], ob[64][2];
     for (int s = 0; s < 64; s++) for (int b = 0; b < 2; b++) { const unsigned reg = (unsigned)b | ((unsigned)s << 1); oa[s][b] = (uint8_t)__builtin_parity(reg & 0x6D); ob[s][b] = (uint8_t)__builtin_parity(reg & 0x4F); }
     for (int i = 0; i < n; i++) {
-        const float a = soft[2 * i], bb = soft[2 * i + 1];
+        // a NaN soft bit (0 / 0 from a channel estimate of zero) made every branch lose, every metric -1e30 and the int cast below UB
+        // (UBSan, fuzz_engine_modes): a NaN or infinite bit counts as an erasure, and a huge finite one is held to 1e9 so the sums stay finite
+        auto clean = [](float v) { return std::isfinite(v) ? std::max(-1e9f, std::min(1e9f, v)) : 0.f; };
+        const float a = clean(soft[2 * i]), bb = clean(soft[2 * i + 1]);
         uint64_t d = 0;
         for (int ns = 0; ns < 64; ns++) {
             const int b = ns & 1;
@@ -108,7 +111,7 @@ int viterbiDecode(const float* soft, int n, uint8_t* out) {
         out[i] = (uint8_t)(s & 1);
         s = (s >> 1) | (int)(dec[(size_t)i] >> s & 1) << 5;
     }
-    return (int)m[0];
+    return m[0] > -2e9f && m[0] < 2e9f ? (int)m[0] : (m[0] > 0 ? 2000000000 : -2000000000);
 }
 
 // Scrambler / descrambler x^7 + x^4 + 1 (clause 17.3.5.5): state bit 0 is x1, bit 6 is x7; the output is x7 xor x4.
