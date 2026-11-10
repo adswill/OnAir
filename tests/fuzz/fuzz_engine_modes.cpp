@@ -392,7 +392,8 @@ std::string tail(const std::string& path, size_t maxLines) {
     size_t shown = 0;
     for (size_t i = firstErr; i < lines.size() && shown < maxLines; i++) {
         const std::string& x = lines[i];
-        if (x.find("    #") != std::string::npos && x.find("onair/") == std::string::npos && x.find("/core/") == std::string::npos && x.find("/tests/") == std::string::npos) continue;
+        if (x.find("    #") != std::string::npos && x.find("dect2::") == std::string::npos && x.find(".cpp:") == std::string::npos) continue;   // our frames only
+        if (x.find("Shadow bytes") != std::string::npos) break;
         out += "      " + x + "\n";
         shown++;
     }
