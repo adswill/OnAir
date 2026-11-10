@@ -1406,3 +1406,21 @@ Branch feat39-misc on integ-39, details in docs/MISC-3.9.md.
 - Tests: the quick CI on GitHub (run 42893881567) passed 13 of 13. Simulated signals only.
 ## 2026-11-10 Aviation package (feat39-avia)
 Branch feat39-avia on integ-39. Military UHF air band (225-400 MHz AM) in Airband: 25 kHz raster, Military UHF button (243.000 guard, 282.800 SAR), band watch and a fast scan profile. New mode VDL Mode 3 (family 640): Annex 10 burst formats (S1/S1*/S2/S2*, Golay, RS (72,62)); system data and headers raw, because Doc 9805 is not public; voice not decoded. FANS-1/A ADS-C and CPDLC already decoded from ACARS, VDL2 and HFDL: labels fixed and end-to-end tests added. TACAN impairment tests. ILS marker keying (dashes, dot-dash, dots). Tests: vdl3_all, airband_uhf, vor_marker, dme_tacan_impair, acars_fans, hfdl_fans, all on simulated signals only. Details are in docs/AVIA-3.9.md.
+## 2026-11-11 Sensitivity 3.9 C: aviation, marine, IoT, drones (feat39-sensC)
+New test: sens39c (tests/sens/test_sens39c.cpp). It runs a short guard by default, the full sweep with `ONAIR_TEST_LONG=1` and the table with
+`ONAIR_SENS_CALIBRATE=1`. Eight more modes are in the sens harness.
+
+UAT fixes:
+- The demodulator assumed 2 input samples per bit at any rate, so a real 1.041667 Mbit/s signal never synced. It now resamples to 2.083333 Msps.
+- The phase is computed in floating point instead of an 8-bit table.
+- The SNR is now measured; it read about 0 dB.
+- The test signal was made the same wrong way; it is now real CPFSK h = 0.6 and sends a valid codeword.
+- A 3-tap low-pass and RS erasures were added: UAT decodes down to 8 dB in 1.2 MHz.
+
+FLARM: tone-energy chips and Chase decoding, 8 -> 4 dB.
+ADS-L M-band: tone-energy chips, 6 -> 3 dB.
+FLARM, ADS-L and Z-Wave: fastAtan2 instead of libm in the discriminators (CI CPU: FLARM -26 %, ADS-L -23 %).
+wM-Bus: two attempts gave no gain and were dropped.
+Not done: ADS-B overlap subtraction, Remote ID CPU, RS41 soft RS.
+
+Simulated signals only. Details are in docs/SENSITIVITY-3.9-C.md.

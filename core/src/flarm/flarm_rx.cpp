@@ -6,6 +6,7 @@
 #include "dect2/flarm/flarm_rx.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/dsp/fast_phase.h"
 #include "dect2/flarm/flarm_proto.h"
 #include "dect2/flarm/flarm_tel.h"
 #include "dect2/geo/maidenhead.h"
@@ -33,6 +34,10 @@ constexpr int kDataChips = flarm::kFrameBytes * 16;      // 416
 constexpr double kChanOffsetHz = 100000.0;
 constexpr size_t kBlock = 16000;           // 20 ms noise blocks
 constexpr size_t kNoiseBlocks = 250;
+// e^{j 2 pi 50 kHz n / 800 kHz} = e^{j pi n / 8}, n = 0 .. 15
+const cf32 kLo[16] = {{1.f, 0.f}, {0.9238795f, 0.3826834f}, {0.7071068f, 0.7071068f}, {0.3826834f, 0.9238795f}, {0.f, 1.f}, {-0.3826834f, 0.9238795f},
+                      {-0.7071068f, 0.7071068f}, {-0.9238795f, 0.3826834f}, {-1.f, 0.f}, {-0.9238795f, -0.3826834f}, {-0.7071068f, -0.7071068f},
+                      {-0.3826834f, -0.9238795f}, {0.f, -1.f}, {0.3826834f, -0.9238795f}, {0.7071068f, -0.7071068f}, {0.9238795f, -0.3826834f}};
 
 int popcount32(uint32_t v) { return dect2::bits::popcount(v); }
 
@@ -48,6 +53,8 @@ struct Chan {
     cf32 prev = cf32(1.f, 0.f);
     int64_t n = 0;
     float dring[kSps] = {};
+    cf32 t1[kSps] = {}, t0[kSps] = {};   // samples turned by -+50 kHz (tone detector)
+    cf32 b1 = cf32(0.f, 0.f), b0 = cf32(0.f, 0.f);
     float S = 0;
     float soft[kSps][kRing] = {};
     uint32_t reg[kSps][2] = {};
@@ -65,6 +72,8 @@ struct Chan {
         lp.reset(); if (!rsPass) rs.reset();
         phase = 0; prev = cf32(1.f, 0.f); n = 0;
         for (float& f : dring) f = 0;
+        for (int j = 0; j < kSps; j++) t1[j] = t0[j] = cf32(0.f, 0.f);
+        b1 = b0 = cf32(0.f, 0.f);
         S = 0;
         for (auto& r : soft) for (float& f : r) f = 0;
         for (auto& r : reg) r[0] = r[1] = 0;
@@ -269,6 +278,32 @@ struct FlarmReceiver::Impl {
             for (int i = 0; i < flarm::kFrameBytes; i++) f[i] = pass ? (uint8_t)~raw[i] : raw[i];
             ok = flarm::checkCrc(f);
         }
+        // Chase decoding (3.9): the 6 bits with the smallest chip difference are the likely errors; the 63 ways of flipping them are tried in the
+        // order of their summed margins, the first that the CRC accepts is taken. The V6 parity and the two-packet agreement of onFrame still
+        // stand behind it, so a wrong pick (about 2 in 1000 for a noise sync) does not make an aircraft.
+        if (!ok && FlarmReceiver::chaseOn) {
+            constexpr int L = 6;
+            int wi[L]; float wr[L];
+            for (int j = 0; j < L; j++) { wi[j] = -1; wr[j] = 1e30f; }
+            for (int i = 0; i < kDataChips / 2; i++) {
+                const float r = std::fabs(c.soft[cd.p][(cd.k0 + 2 + 2 * i) & (kRing - 1)] - c.soft[cd.p][(cd.k0 + 1 + 2 * i) & (kRing - 1)]);
+                if (r >= wr[L - 1]) continue;
+                int j = L - 1;
+                while (j > 0 && wr[j - 1] > r) { wr[j] = wr[j - 1]; wi[j] = wi[j - 1]; j--; }
+                wr[j] = r; wi[j] = i;
+            }
+            int order[(1 << L) - 1]; float cost[1 << L];
+            for (int m = 1; m < (1 << L); m++) { float sc = 0; for (int j = 0; j < L; j++) if (m >> j & 1) sc += wr[j]; cost[m] = sc; order[m - 1] = m; }
+            std::sort(order, order + (1 << L) - 1, [&](int x, int y) { return cost[x] < cost[y]; });
+            for (int q = 0; q < (1 << L) - 1 && !ok; q++) {
+                const int m = order[q];
+                for (int pass = 0; pass < 2 && !ok; pass++) {
+                    for (int i = 0; i < flarm::kFrameBytes; i++) f[i] = pass ? (uint8_t)~raw[i] : raw[i];
+                    for (int j = 0; j < L; j++) if ((m >> j & 1) && wi[j] >= 0) f[wi[j] >> 3] ^= (uint8_t)(0x80 >> (wi[j] & 7));
+                    ok = flarm::checkCrc(f);
+                }
+            }
+        }
         // level over the packet: chip powers of the sync and data, over the noise floor
         double pwr = 0;
         const int64_t kEnd = cd.k0 + kDataChips;
@@ -304,7 +339,8 @@ struct FlarmReceiver::Impl {
         if (!c.rsPass) { c.ys.clear(); c.rs.process(c.decb.data(), c.decb.size(), c.ys); y = &c.ys; }
         const float kd = (float)(kWorkRate / (2 * kPi) / 50000.0);
         for (const cf32& s : *y) {
-            const float d = std::arg(s * std::conj(c.prev)) * kd;
+            const cf32 q = s * std::conj(c.prev);
+            const float d = FlarmReceiver::toneDetect ? 0.f : fastAtan2(q.imag(), q.real()) * kd;   // (std::arg: the libm call was most of the cost)
             c.prev = s;
             const int p = (int)(c.n & 7);
             const int64_t k = c.n >> 3;
@@ -314,9 +350,23 @@ struct FlarmReceiver::Impl {
             if (p == 7) c.pw[k & (kRing - 1)] = c.pwAcc;
             c.blkSum += pwr;
             if (++c.blkN >= kBlock) blockEnd(c);
-            // chip value: the sum of the last 8 discriminator samples
-            c.S += d - c.dring[p];
-            c.dring[p] = d;
+            if (FlarmReceiver::toneDetect) {
+                // chip value (3.9): the energy at +50 kHz minus the energy at -50 kHz over the last 8 samples (one chip), the noncoherent
+                // detector of orthogonal FSK (h = 1); below about 12 dB the discriminator's clicks cost about 1 dB more
+                const int ph16 = (int)(c.n & 15);
+                const cf32 n1 = s * kLo[(16 - ph16) & 15], n0 = s * kLo[ph16];
+                c.b1 += n1 - c.t1[p]; c.b0 += n0 - c.t0[p];              // running sums over the last chip
+                c.t1[p] = n1; c.t0[p] = n0;
+                if ((c.n & 1023) == 0) {                                  // rounding: the sums again from scratch now and then
+                    c.b1 = c.b0 = cf32(0.f, 0.f);
+                    for (int j = 0; j < kSps; j++) { c.b1 += c.t1[j]; c.b0 += c.t0[j]; }
+                }
+                c.S = std::norm(c.b1) - std::norm(c.b0);
+            } else {
+                // chip value: the sum of the last 8 discriminator samples
+                c.S += d - c.dring[p];
+                c.dring[p] = d;
+            }
             c.soft[p][k & (kRing - 1)] = c.S;
             // the pair that ends at this chip
             const float prevChip = c.soft[p][(k - 1) & (kRing - 1)];

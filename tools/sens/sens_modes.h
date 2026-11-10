@@ -52,6 +52,17 @@
 #include "dect2/sigfox/sigfox_tel.h"
 #include "dect2/ble/ble_rx.h"
 #include "dect2/ble/ble_tel.h"
+#include "dect2/uat/uat_rx.h"
+#include "dect2/uat/uat_tel.h"
+#include "dect2/flarm/flarm_rx.h"
+#include "dect2/adsl/adsl_rx.h"
+#include "dect2/rid/rid_rx.h"
+#include "dect2/dji/dji_rx.h"
+#include "dect2/vdes/vdes_rx.h"
+#include "dect2/vdes/vdes_tel.h"
+#include "dect2/loraraw/loraraw_rx.h"
+#include "dect2/loraraw/loraraw_tel.h"
+#include "dect2/wmbus/wmbus_live.h"
 #include "dect2/inmc/inmc_rx.h"
 #include "dect2/inmc/inmc_tel.h"
 #include "dect2/hfdl/hfdl_gen.h"
@@ -511,6 +522,15 @@ inline std::vector<Mode> allModes() {
         SATDATA_TAG(TSigfox, SigfoxReceiver, SigfoxModeTelemetry)
         SATDATA_TAG(TBle, BleReceiver, BleTelemetry)
         SATDATA_TAG(TInmc, InmcReceiver, InmcTelemetry)
+        // 3.9 (docs/SENSITIVITY-3.9-C.md): aviation, marine, IoT and drone receivers with a built-in test signal
+        SATDATA_TAG(TUat, UatReceiver, UatTelemetry)
+        SATDATA_TAG(TFlarm, FlarmReceiver, FlarmTelemetry)
+        SATDATA_TAG(TAdsl, AdslReceiver, AdslTelemetry)
+        SATDATA_TAG(TRid, RidReceiver, RidTelemetry)
+        SATDATA_TAG(TDji, DjiReceiver, DjiTelemetry)
+        SATDATA_TAG(TVdes, VdesReceiver, VdesTelemetry)
+        SATDATA_TAG(TLoraRaw, LoraRawReceiver, LoraRawTelemetry)
+        SATDATA_TAG(TWmbus, WmbusLiveReceiver, WmbusTelemetry)
         #undef SATDATA_TAG
         addGen(TGlobalstar(), {"globalstar", "Globalstar", 64, 4.0, 1.23e6, 25});
         addGen(TOrbcomm(), {"orbcomm", "Orbcomm", 46, 6.0, 10e3, 25});
@@ -523,6 +543,14 @@ inline std::vector<Mode> allModes() {
         addGen(TSigfox(), {"sigfox", "Sigfox", 155, 6.0, 600, 25});
         addGen(TBle(), {"ble", "Bluetooth LE", 53, 4.0, 1e6, 25});
         addGen(TInmc(), {"inmc", "Inmarsat-C", 19, 40.0, 1.2e3, 25});
+        addGen(TUat(), {"uat", "UAT 978", 85, 4.0, 1.2e6, 25});
+        addGen(TFlarm(), {"flarm", "FLARM", 68, 6.0, 200e3, 25});
+        addGen(TAdsl(), {"adsl", "ADS-L", 302, 6.0, 200e3, 25});
+        addGen(TRid(), {"rid", "Drone Remote ID (BLE)", 58, 4.0, 1e6, 25});
+        addGen(TDji(), {"dji", "DJI DroneID", 70, 4.0, 10e6, 25});
+        addGen(TVdes(), {"vdes", "VDES", 65, 6.0, 25e3, 25});
+        addGen(TLoraRaw(), {"loraraw", "LoRa (raw)", 73, 8.0, 125e3, 15});
+        addGen(TWmbus(), {"wmbus", "Wireless M-Bus", 88, 6.0, 100e3, 25});
     }
     {   // DVB-C 64-QAM 6.952 Msym/s: Reed-Solomon packets (SNR = Es/N0)
         Mode m = base("dvbc", "DVB-C 64-QAM", "cable-tv", 42, 10e6, 1.5, 6.952e6, 474);
