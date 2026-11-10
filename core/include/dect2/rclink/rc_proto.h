@@ -7,6 +7,7 @@
 //   receiver shows structure only (the SYNC frames carry the link id, rate and hop index in clear); RC channels are unpacked only with the phrase the user typed.
 //   MAVLink: v1 / v2 framing and CRC_EXTRA (mavlink.io); SiK: Firmware/radio/radio_443x.c, packet.c, golay.c, tdm.c.
 //   FrSky and FlySky: reverse-engineered by the DIY-Multiprotocol-TX-Module project (FrSkyD_cc2500.ino, FrSkyX_cc2500.ino, FlySky_a7105.ino, AFHDS2A_a7105.ino).
+//   Futaba S-FHSS and Spektrum DSM2 / DSMX (3.9): the same project, Futaba_cc2500.ino (SFHSS_*), DSM_cyrf6936.ino and DSM.ino. See docs/RCLINK-3.9.md.
 #pragma once
 #include <array>
 #include <cstddef>
@@ -17,7 +18,7 @@
 namespace dect2 {
 namespace rclink {
 
-enum Proto { Reticulum = 1, Elrs = 2, Sik = 4, Frsky = 8, Flysky = 16 };
+enum Proto { Reticulum = 1, Elrs = 2, Sik = 4, Frsky = 8, Flysky = 16, Sfhss = 32, Dsm = 64 };
 const char* protoName(int p);
 
 // one decoded frame, protocol independent, as the tables show it
@@ -102,6 +103,31 @@ std::vector<uint8_t> frskyXBuild(uint16_t txId, uint8_t hopIdx, const std::vecto
 Decoded flyskyParse(const uint8_t* p, size_t n);            // 21 bytes (AFHDS) or 38 bytes (AFHDS 2A); no CRC on the air: a strict format check
 std::vector<uint8_t> flyskyBuild(uint32_t txId, const uint16_t ch[8]);
 std::vector<uint8_t> afhds2aBuild(uint32_t txId, uint32_t rxId, const uint16_t ch[14]);
+
+// ---- Futaba S-FHSS (CC2500 2-FSK 128 kbit/s, sync D3 91, 13 byte packets) ----
+// p = the 13 packet bytes and the two CRC bytes. Multiprotocol sets the CC2500's CC2400_EN bit (PKTCTRL0 0x0C), so the CRC is the CC2400 one; both
+// candidate CRCs are tried and the one that matched is reported (see the doc). The frame must also pass a strict format check.
+Decoded sfhssParse(const uint8_t* p, size_t n);
+// ch: four 12 bit values (1020 .. 2020, 1520 the middle), rfCh 0..29, fhssCode 0..27, command bits (bit 0 second packet, bit 2 failsafe, bit 3 CH5-8)
+std::vector<uint8_t> sfhssBuild(uint16_t txId, int rfCh, int fhssCode, int command, const uint16_t ch[4]);
+uint16_t sfhssCrc(const uint8_t* p, size_t n);   // the CRC the generator appends (CRC-16 CCITT, init 0xFFFF)
+int sfhssNextChannel(int ch, int fhssCode);       // SFHSS_calc_next_chan
+
+// ---- Spektrum DSM2 / DSMX (CYRF6936 64 chip 8DR DSSS at 1 Mchip/s; rc_dsm.cpp) ----
+struct DsmCodes { uint64_t sop = 0, data0 = 0, data1 = 0; };      // bit j = chip j (sent first)
+DsmCodes dsmCodes(int row, int sopCol);                           // pn row 0..4, SOP column 0..7
+uint64_t dsmSymbol(const DsmCodes& k, uint8_t v);                 // the 64 chips of one byte
+int dsmDespread(const DsmCodes& k, uint64_t chips, int* errors);  // the byte whose symbol is closest, and its chip errors
+uint16_t dsmCrc(const uint8_t* p, size_t n, uint16_t seed);       // CRC-16 0x8005 (the generator's choice: the real one is unpublished, never checked)
+int dsmSopColumn(const uint8_t id[4]);                            // (id0 + id1 + id2 + 2) & 7
+int dsmPnRow(int rfChannel, bool dsmx);
+std::vector<int> dsmxChannels(const uint8_t id[4]);               // the 23 hop channels of a DSMX transmitter (2400 + n MHz)
+// the 16 byte data packet; idx[i] < 0: an unused word (FFFF); bits 11 or 10
+std::vector<uint8_t> dsmDataPacket(const uint8_t id[4], bool dsmx, bool upper, int bits, const int idx[7], const uint16_t val[7]);
+// the chips of a whole packet: preamble 33 33 04, SOP code and its complement, length, packet, CRC
+std::vector<uint8_t> dsmChips(const DsmCodes& k, const std::vector<uint8_t>& packet, uint16_t crcSeed);
+// p = the 16 despread data bytes; rfChannel and row (-1: unknown) tell DSM2 from DSMX
+Decoded dsmParse(const uint8_t* p, size_t n, int rfChannel, int row);
 
 } // namespace rclink
 } // namespace dect2

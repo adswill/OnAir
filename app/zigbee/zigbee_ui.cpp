@@ -9,6 +9,7 @@
 #include "dect2/zigbee/zigbee_proto.h"
 #include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/zigbee/zigbee_tel.h"
+#include "dect2/zigbee/zigbee_health.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -251,10 +252,46 @@ void hopTo(App& a, int ch) {
     a.engine.retune(a.tune);   // no reset: the tables stay
 }
 
+// Home network health (3.9, docs/SMART5-iot-3.9.md item 14, wired for Zigbee / Thread in docs/SMART5-UI-3.9.md): for the one PAN the user picks
+// as theirs, per node: MAC retransmissions (the same sequence number again within 3 s), requested acknowledgements that never came, the level
+// trend and silence (dect2/zwave/homenet_health.h). An 802.15.4 acknowledgement carries only the sequence number, so it is matched to the
+// frame that asked for it with that number within the last second. Other networks are not followed.
+struct ZbHealth { dect2::ZigbeeHealthFeed feed; bool loaded = false; } H;   // dect2/zigbee/zigbee_health.h
+void healthFeed(const dect2::ZigbeeTelemetry& t) {
+    if (!H.loaded) { H.loaded = true; H.feed = dect2::ZigbeeHealthFeed((int)plat::prefs().getI("zbMyPan", -1)); }
+    if (H.feed.pan() >= 0) H.feed.addLog(t.log);
+}
+void healthView(App& a) {
+    { ImGui::PushTextWrapPos(0);
+      ImGui::TextDisabled("%s", tr("Pick your own network (PAN): its nodes get retransmissions, missing acknowledgements, signal trend and silence. Other networks are not followed. Encrypted networks work too: only the MAC header is used."));
+      ImGui::PopTextWrapPos(); }
+    if (live(a)) for (const auto& p : zt(a).pans) {
+        char b[24]; snprintf(b, sizeof b, "%04X", p.pan);
+        ImGui::SameLine();
+        if (ImGui::RadioButton(b, H.feed.pan() == (int)p.pan)) { H.feed = dect2::ZigbeeHealthFeed(p.pan); H.loaded = true; plat::prefs().setI("zbMyPan", p.pan); plat::prefs().flush(); }
+    }
+    if (H.feed.pan() < 0) { ImGui::TextDisabled("%s", tr("no network picked")); return; }
+    if (!ImGui::BeginTable("##zbh", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    for (const char* c : {"Node", "Frames", "Retries", "No ack", "Level", "Every", "Note"}) ImGui::TableSetupColumn(tr(c));
+    ImGui::TableHeadersRow();
+    for (const auto& [id, n] : H.feed.health().nodes()) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(id.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)n.frames);
+        ImGui::TableNextColumn(); ImGui::Text("%.0f %%", n.retryPct());
+        ImGui::TableNextColumn(); if (n.ackAsked) ImGui::Text("%.0f %%", n.missPct()); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (n.rssiNow > -199) ImGui::Text("%.0f (%+.0f)", n.rssiNow, n.rssiNow - n.rssiFirst); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (n.intervalSec > 0) ImGui::Text("%.0f s", n.intervalSec); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (!n.text.empty()) ImGui::TextColored(pal::warnAmber(), "%s", n.text.c_str());
+    }
+    ImGui::EndTable();
+}
+
 // ---------------------------------------------------------------- hooks
 
 void tick(App& a) {
     loadState();
+    if (live(a)) healthFeed(zt(a));
     if (!a.engine.running() || !S.scan || a.devices[a.devIdx].kind == DeviceInfo::File) { S.lastHop = ImGui::GetTime(); return; }
     if (ImGui::GetTime() - S.lastHop < S.dwellSec) return;
     S.lastHop = ImGui::GetTime();
@@ -304,8 +341,8 @@ void tuner(App& a, bool& retune) {
 
 void tab(App& a) {
     S.curThread = isThread(a);
-    subNav("zbv", S.view, {"Networks", "Devices", "Frames", tr("Topology")});
-    if (S.view == 0) networksView(a); else if (S.view == 1) devicesView(a); else if (S.view == 3) topoView(a, isThread(a) ? "th" : "zb", zt(a).topo); else framesView(a);
+    subNav("zbv", S.view, {"Networks", "Devices", "Frames", tr("Topology"), tr("Health")});
+    if (S.view == 0) networksView(a); else if (S.view == 1) devicesView(a); else if (S.view == 3) topoView(a, isThread(a) ? "th" : "zb", zt(a).topo); else if (S.view == 4) healthView(a); else framesView(a);
 }
 
 void list(App& a) {

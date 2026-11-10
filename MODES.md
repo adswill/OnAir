@@ -2,20 +2,23 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**294 modes.**
+**315 modes.**
 
-## TV (14)
+## TV (17)
 
 - **DVB** - DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)
 - **TV (auto)** - TV, automatic: the standard and its parameters are measured from the signal
 - **ATSC** - ATSC 1.0, 8-VSB (US, Canada, Mexico, South Korea)
 - **ATSC 3.0** - ATSC 3.0, NextGen TV
 - **ISDB-T** - ISDB-T (Japan, Brazil, South America)
+- **ISDB-TSB** - ISDB-TSB: Japanese narrow-band broadcasting of one or three ISDB-T segments (430 kHz or 1.3 MHz). Tune the centre of the band, 2 Msps
 - **DVB-S/S2** - DVB-S / S2 / S2X satellite television, needs a dish and an LNB
 - **Internet TV (IPTV)** - Internet TV: playlists and stream addresses (HLS, MPEG-TS, UDP, RTP), no radio needed
 - **TV sat beacon decoder** - TV sat beacon decoder: carrier level, offset and drift, with telemetry frames and a decoded view when the beacon carries data
 - **DTMB** - DTMB digital terrestrial television (China, Hong Kong, Macau, Cuba, Pakistan)
 - **ISDB-S (BS)** - ISDB-S, BS satellite TV of Japan (ARIB STD-B20), clear streams only
+- **DVB-SH** - DVB-SH: satellite and terrestrial mobile TV (S band 2170 - 2200 MHz, also UHF and L band), OFDM form
+- **DVB-C2** - DVB-C2 second generation digital cable television (OFDM), needs the cable network as the input (not an antenna)
 - **DVB-C** - DVB-C digital cable television, needs the cable network as the input (not an antenna)
 - **Analog TV** - Analogue television (PAL, SECAM, NTSC)
 - **FPV video (analog)** - Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)
@@ -31,7 +34,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AM stereo (C-QUAM)** - AM stereo: C-QUAM on medium wave, stereo found by its 25 Hz pilot
 - **CDR** - CDR: China's digital radio in the FM band
 
-## Aviation (25)
+## Aviation (26)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -39,6 +42,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ACARS** - ACARS: short messages between aircraft and the ground
 - **VDL2** - VDL Mode 2: ACARS and ATN messages between aircraft and ground stations, positions on a map
 - **VDL4** - VDL Mode 4: synchronization and DLS bursts, CPR positions when decoded in the clear
+- **VDL3** - VDL Mode 3: management, voice and data bursts on a 25 kHz VHF channel, receive only
 - **HFDL** - HFDL: ACARS, squitters and positions of aircraft over oceans and remote areas, on HF
 - **Airband** - Airband: tower, ground and ATIS voice on several channels at once
 - **VOR** - VOR: your bearing from a navigation beacon, its Morse identification and voice
@@ -70,7 +74,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (47)
+## Satellite & Navigation (48)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -101,6 +105,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
 - **Globalstar** - Globalstar: channel activity and Doppler (content is not decoded)
 - **GOES DCS** - GOES DCS: river gauges, weather stations and buoys reporting through the GOES and Meteosat satellites
+- **Meteosat HRDCP** - Meteosat HRDCP: high rate weather and hydrology platforms reporting through Meteosat
 - **Zombie satellites** - Zombie satellite carriers: found and checked against their orbits
 - **What satellite is this?** - Names an unknown satellite carrier from its Doppler curve (mystery satellite hunter)
 - **UHF SATCOM skimmer** - Active channels on UHF military satellites (detection only)
@@ -143,7 +148,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **OpenSky identifier** - OpenSky: identification only, the channel is measured and nothing is decoded
 - **EDACS trunking** - EDACS trunking: control channel frames, calls and analog voice following of a trunked system
 
-## Cellular & Rail (8)
+## Cellular & Rail (10)
 
 - **End of train (AAR EOT/HOT)** - End of train: US freight train telemetry
 - **Cell towers** - Cell towers: the public broadcast information of LTE cells
@@ -152,6 +157,8 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **GSM-R** - GSM-R: the public broadcast information of railway GSM cells
 - **LBJ** - LBJ: railway train warning broadcasts (821 MHz)
 - **UMTS cells** - UMTS: 3G cells by primary scrambling code
+- **CDMA2000 cells** - CDMA2000: base stations by pilot PN, SID / NID and system time from the Sync Channel
+- **TD-SCDMA cells** - TD-SCDMA: cells by SYNC-DL code and cell parameter
 - **EBICab / Eurobalise (needs a user test)** - Balise up-link: Eurobalise telegrams (SUBSET-036); EBICab bursts listed only (needs a user test)
 
 ## Pagers (4)
@@ -161,7 +168,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (36)
+## IoT & Sensors (38)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -192,6 +199,8 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MAVLink (SiK radio)** - MAVLink over SiK telemetry radios (ArduPilot, PX4). Receive only. A wider capture covers more hop channels
 - **FrSky RC (D8 / D16)** - FrSky ACCST D8 / D16: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
 - **FlySky RC (AFHDS / 2A)** - FlySky AFHDS / AFHDS 2A: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
+- **Futaba RC (S-FHSS)** - Futaba S-FHSS: 2.4 GHz RC link monitor, receive only. Needs a 2.4 GHz SDR
+- **Spektrum RC (DSM2 / DSMX)** - Spektrum DSM2 / DSMX: 2.4 GHz RC link monitor, receive only. 8 Msps or more around 2.44 GHz
 - **wfb-ng / OpenHD** - wfb-ng / OpenHD: open digital video links for drones (Wi-Fi radios in monitor mode). Receive only. 20 Msps. Video stays encrypted, structure only
 - **New Packet Radio (NPR-70)** - New Packet Radio (NPR-70): 4GFSK IP modems on 70 cm. Tune the channel centre, 4 Msps. Sync words and network ID only
 - **WINMOR** - WINMOR: Winlink HF sound card modem, retired in 2020. Tune the dial frequency (upper sideband), any sample rate. Pilot detection only
@@ -253,11 +262,12 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
 
-## Amateur - Digital (34)
+## Amateur - Digital (35)
 
 - **QRSS grabber** - QRSS: very slow Morse read from a spectrogram, receive only
 - **DFCW grabber** - DFCW: slow Morse with a frequency for dots and one for dashes, receive only
 - **FSK441** - FSK441: meteor scatter pings, 441 baud 4-FSK, receive only
+- **JT6M** - JT6M: 6 m meteor and ionospheric scatter, 44-tone FSK, receive only
 - **ISCAT** - ISCAT: 42-tone scatter mode, A and B found automatically, receive only
 - **PI4** - PI4: microwave beacon mode, 27 s frames with an 8 character message, receive only
 - **Throb** - Throb: two-tone keyboard mode, six variants found automatically, receive only
@@ -275,7 +285,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MT63** - MT63: robust keyboard chat on 64 carriers
 - **FSQ** - FSQ: directed keyboard chat on 33 tones
 - **IFKP** - IFKP: keyboard chat on 33 tones, three speeds
-- **SITOR** - SITOR-B: the text of a CCIR 476 FEC teletype broadcast, found automatically
+- **SITOR** - SITOR: the text of CCIR 476 FEC broadcasts (SITOR-B) and ARQ links (SITOR-A / AMTOR), found automatically
 - **ARDOP** - ARDOP: Winlink HF modem frames, monitor only
 - **JS8Call** - JS8Call: weak-signal messages, heartbeats and relays
 - **RTTY** - RTTY: radio teletype text
@@ -301,13 +311,17 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MeshCom** - MeshCom: amateur LoRa mesh messages and positions on 433 MHz
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 
-## HF Utility (21)
+## HF Utility (32)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
 - **PACTOR-IV** - PACTOR-IV: HF 1800 baud single carrier, detection and constellation estimate (physical layer only; no text)
 - **MIL-STD-188-110 serial** - MIL-STD-188-110: serial tone HF data modem with STANAG 5066 framing (simulated signals only)
 - **STANAG 4285** - STANAG 4285: NATO HF data modem with STANAG 5066 framing (simulated signals only)
+- **STANAG 4539** - STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)
+- **3G-ALE** - 3G-ALE: third-generation HF link setup calls and handshakes, BW0 bursts (simulated signals only)
+- **Link 11 CLEW** - Link 11 CLEW: message detector and frame structure, no data (simulated signals only)
+- **STANAG 4481 FSK** - STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)
 - **ARQ-E** - ARQ-E: HF duplex ARQ teleprinter (simulated signals only)
 - **ARQ-N** - ARQ-N: HF duplex ARQ teleprinter (simulated signals only)
 - **AUTOSPEC** - AUTOSPEC: HF FEC teleprinter (simulated signals only)
@@ -324,6 +338,13 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **HF beacons** - HF beacons: what is open from here, band by band
 - **PACTOR-I (experimental)** - PACTOR-I: HF ARQ and FEC packets of both stations, monitor only (experimental)
 - **HFGCS / HF voice** - HFGCS / HF voice: USB on the HFGCS and VOLMET frequencies, VOLMET minute schedules, a scan that steps through them (receive only)
+- **CIS-36-50 / 50-50 (BEE)** - CIS-36-50 / CIS-50-50 (BEE): message framing of the Russian Navy FSK system, characters as hex (receive only, simulated only)
+- **CIS-14** - CIS-14: 96 Bd FSK, 14-bit frames shown raw (receive only, simulated only)
+- **CIS-12 (MS5)** - CIS-12 (MS5): 12-carrier PSK modem, pilot and phase steps (physical layer only, simulated only)
+- **CIS-36 (MFSK)** - CIS-36 MFSK: identification only (simulated only)
+- **CIS OFDM HDR** - CIS OFDM HDR (CIS-45 / 60 / 93): identification only (simulated only)
+- **CIS-128** - CIS-128: identification only (simulated only)
+- **CIS-3000** - CIS-3000: identification only (simulated only)
 
 ## General & Tools (4)
 

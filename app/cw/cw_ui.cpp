@@ -2,6 +2,7 @@
 // of every signal (frequency, speed, SNR, text) and the focused signal's text in big letters, with the callsigns highlighted; the
 // sidetone switch for the focused signal (off until switched on).
 #include "app.h"
+#include "ham/ham_events_ui.h"
 #include "gfx/gfx.h"
 #include "dect2/cw/cw_morse.h"
 #include "dect2/cw/cw_rx.h"
@@ -163,9 +164,9 @@ void waterfall(App& a, float h) {
 
 void signalTable(App& a, float h) {
     const dect2::CwTelemetry& t = a.rx.cw;
-    if (!ImGui::BeginTable("##cwsig", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, h))) return;
+    if (!ImGui::BeginTable("##cwsig", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, h))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
-    ImGui::TableSetupColumn("kHz"); ImGui::TableSetupColumn("WPM"); ImGui::TableSetupColumn("SNR"); ImGui::TableSetupColumn("Text", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("kHz"); ImGui::TableSetupColumn("WPM"); ImGui::TableSetupColumn("SNR"); ImGui::TableSetupColumn(tr("Call and country")); ImGui::TableSetupColumn("Text", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     for (const auto& s : t.signals) {
         ImGui::TableNextRow();
@@ -177,6 +178,8 @@ void signalTable(App& a, float h) {
         ImGui::TableNextColumn();
         if (s.locked) ImGui::Text("%.0f%s", s.wpm, s.farnsworth ? " F" : ""); else ImGui::TextDisabled("-");
         ImGui::TableNextColumn(); ImGui::Text("%.0f dB", s.snrDb);
+        ImGui::TableNextColumn();
+        if (!s.calls.empty()) hamCallText(s.calls.back(), a.freqMhz * 1e6 + s.offsetHz, "CW"); else ImGui::TextDisabled("-");   // colour: new DXCC, new on band, not worked, worked (ham/ham_events_ui.h)
         ImGui::TableNextColumn();
         const std::string tail = s.text.size() > 90 ? s.text.substr(s.text.size() - 90) : s.text;
         const float maxX = ImGui::GetCursorScreenPos().x + std::max(40.f, ImGui::GetContentRegionAvail().x);
@@ -199,7 +202,7 @@ void focusView(App& a) {
     if (f->locked) ImGui::Text("%.0f WPM%s", f->wpm, f->farnsworth ? " (Farnsworth spacing)" : ""); else ImGui::TextDisabled("measuring the speed");
     ImGui::SameLine(0, 14 * gUi);
     ImGui::Text("SNR %.0f dB", f->snrDb);
-    for (const auto& c : f->calls) { ImGui::SameLine(0, 10 * gUi); ImGui::TextColored(kCallCol, "%s", c.c_str()); }
+    for (const auto& c : f->calls) { ImGui::SameLine(0, 10 * gUi); hamCallText(c, a.freqMhz * 1e6 + f->offsetHz, "CW"); }
     ImGui::PopFont();
     if (ImGui::BeginChild("##cwbig", ImVec2(0, 0), ImGuiChildFlags_Borders)) {
         ImGui::PushFont(a.mono, ImGui::GetFontSize() * 1.6f);
@@ -215,7 +218,7 @@ void focusView(App& a) {
 void tick(App& a) {
     load();
     if (!a.engine.running()) { S.wasRunning = false; return; }
-    if (live(a)) follow(a.rx.cw);
+    if (live(a)) { follow(a.rx.cw); hamFeedCw(a, a.rx.cw); }   // ham.decode (ham/ham_events_ui.h)
     dect2::CwReceiver& r = a.engine.cw();
     if (!S.wasRunning || a.volume != S.pushedVol || a.muted != S.pushedMute) {   // the sound controls are shared with the other modes
         r.setVolume(a.volume); r.setMuted(a.muted);

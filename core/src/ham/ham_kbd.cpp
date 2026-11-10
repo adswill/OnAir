@@ -156,13 +156,17 @@ std::vector<float> renderPsk(const KbdPreset& p, const std::string& text, double
     const auto d = psk::varicodeBits(t);
     bits.insert(bits.end(), d.begin(), d.end());
     bits.insert(bits.end(), (size_t)std::max(qpsk ? 48 : 16, idle / 2), 0);   // postamble (QPSK: longer than the receiver's 40 symbol Viterbi traceback)
-    std::vector<int> turns;                                     // quarter turns per symbol
-    if (qpsk) {
+    std::vector<int> turns;                                     // eighth turns per symbol
+    if (psk8psk(p.pskMode)) {
+        std::string u;
+        for (char c : text) u += c;                             // 8PSK: the MFSK varicode has all 256 codes
+        turns = psk::psk8Steps(u, idle, std::max(16, idle / 2));
+    } else if (qpsk) {
         psk::ConvEncoder enc;
         for (int k = 0; k < 8; k++) bits.push_back(0);          // flush the code
-        for (uint8_t b : bits) turns.push_back(psk::qpskTurns(enc.encode(b)));
+        for (uint8_t b : bits) turns.push_back(2 * psk::qpskTurns(enc.encode(b)));
     } else {
-        for (uint8_t b : bits) turns.push_back(b ? 0 : 2);
+        for (uint8_t b : bits) turns.push_back(b ? 0 : 4);
     }
     const double N = kKbdRate / baud;
     std::vector<float> a;
@@ -171,7 +175,7 @@ std::vector<float> renderPsk(const KbdPreset& p, const std::string& text, double
     const double w = 2 * kPi * hz / kKbdRate;
     double ph = 0, tEnd = 0;
     for (int tq : turns) {
-        const std::complex<double> cur = prev * std::polar(1.0, tq * kPi / 2);
+        const std::complex<double> cur = prev * std::polar(1.0, tq * kPi / 4);
         const size_t s0 = a.size();
         tEnd += N;
         const size_t n = (size_t)std::llround(tEnd) - s0;

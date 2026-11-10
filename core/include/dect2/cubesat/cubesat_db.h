@@ -27,7 +27,7 @@ struct TxRow { int norad; const char* name; long long hz; int mod, hint, baud; c
 
 const char* modName(int mod);
 const char* hintName(int hint);
-// Whether a decoder for the entry exists (USP, TUBiX10, DOKA framings are listed, tracked, but not decoded)
+// Whether a decoder for the entry exists (TUBiX10 and DOKA framings are listed, tracked, but not decoded; USP is decoded since 3.9)
 bool decodable(const TxEntry& t);
 
 const std::vector<TxEntry>& txTable();                       // the built-in snapshot

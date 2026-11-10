@@ -643,6 +643,7 @@ void receiver(App& a) {
     ImGui::Spacing();
     signalRows(a);
     ImGui::EndChild();
+    smart5HdCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 // ---------------------------------------------------------------- the list on the right

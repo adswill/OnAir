@@ -18,7 +18,21 @@ int main() {
         CHECK(t.stdMode == dect2::kHfuFamilyFirst + k + 2, "engine standard of kind %d", k);
         CHECK(dect2::modeTuning(t.stdMode) != nullptr, "registered %d", t.stdMode);
     }
+    {   // 3.9: STANAG 4539 in family 603
+        const dect2::ModeTuning t = dect2::hfUtilTuning(dect2::kHfuKindHdr);
+        CHECK(t.stdMode == dect2::kHfuHdrFamily + 2 && dect2::hfuFamilyOf(dect2::kHfuKindHdr) == 603, "STANAG 4539 engine standard %d", t.stdMode);
+        CHECK(dect2::modeTuning(t.stdMode) != nullptr, "STANAG 4539 registered");
+    }
     const std::string tbl = readFile("app/ui/mode_table.cpp");
+    CHECK(has(tbl, "{603, \"STANAG 4539\""), "STANAG 4539 mode row");
+    CHECK(has(tbl, "{604, \"3G-ALE\""), "3G-ALE mode row");
+    CHECK(has(tbl, "{605, \"Link 11 CLEW\""), "Link 11 mode row");
+    CHECK(has(tbl, "{606, \"STANAG 4481 FSK\""), "STANAG 4481 mode row");
+    CHECK(dect2::hfUtilTuning(dect2::kHfuKind4481).stdMode == 608 && dect2::modeTuning(608) != nullptr, "STANAG 4481 registered");
+    CHECK(dect2::hfUtilTuning(dect2::kHfuKindLink11).stdMode == 607 && dect2::modeTuning(607) != nullptr, "Link 11 registered");
+    CHECK(dect2::hfUtilTuning(dect2::kHfuKindAle3g).stdMode == 606 && dect2::modeTuning(606) != nullptr, "3G-ALE registered");
+    CHECK(has(readFile("app/panels/modeui.cpp"), "case dect2::kHfuHdrFamily: return &kHfuUi[dect2::kHfuKindHdr];"), "STANAG 4539 panel hook");
+    CHECK(has(readFile("core/src/engine/engine_telemetry.cpp"), "rxHfm_[a - kHfuExtraActiveFirst]"), "STANAG 4539 telemetry poll");
     for (const char* row : {"{430, \"MIL-STD-188-110 serial\"", "{431, \"STANAG 4285\"", "{432, \"ARQ-E\"", "{433, \"ARQ-N\"", "{434, \"AUTOSPEC\"", "{435, \"SPREAD\"", "{436, \"G-TOR\"", "{437, \"EFR teleswitch\"", "{438, \"Piccolo Mk VI\"", "{439, \"Coquelet-8\""})
         CHECK(has(tbl, row), "mode row %s", row);
     const std::string mu = readFile("app/panels/modeui.cpp");

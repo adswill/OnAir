@@ -1,5 +1,6 @@
 // FM broadcast radio panels: tuning, status line, station panel with RDS, diagnostic plots and the band scanner.
 #include "app.h"
+#include "dab/played_ui.h"
 #include "../ui/typography.h"
 #include "state/results_export.h"
 #include <chrono>
@@ -203,6 +204,12 @@ void fmHistory(App& a) {
     auto push = [](std::deque<float>& dq, float v) { dq.push_back(v); if (dq.size() > 600) dq.pop_front(); };
     const FmTelemetry& fm = a.rx.fm;
     if (fm.carrier) { push(a.fmSnrH, fm.snrDb); push(a.fmPilotH, fm.pilotPct); push(a.fmRdsH, fm.rdsBlockOkPct); }
+    if (fm.carrier && fm.rdsSync) {   // the played list and the broadcast.* events (dab/played_ui.h)
+        std::string artist, title;
+        for (const auto& t : fm.rds.rtPlus) { if (t.type == 4 || (t.type == 9 && artist.empty())) artist = t.text; if (t.type == 1) title = t.text; }
+        const std::string ps = fmTrim(fm.psName);
+        if (!ps.empty()) playedNote("FM", ps, a.freqMhz, artist, title, fm.radioTextComplete ? fm.radioText : std::string(), fm.ptyText, fm.trafficAlert);
+    }
 }
 
 // ------------------------------------------------------------------ plots under the tabs
@@ -480,6 +487,7 @@ void fmRadioPanel(App& a) {
         ImGui::EndTable();
     }
     ImGui::Spacing();
+    if (live) smart5FmCard(a);   // round-5 smart checks: watchdog, BS.412 power, transmitter fingerprint (app/smart5)
     if (live && fm.rdsSync && (!fm.rds.afMhz.empty() || fm.rds.language >= 0 || !fm.rds.ptyn.empty() || fm.rds.clockUtc || fm.rds.ecc >= 0 || !fm.rds.eon.empty() || !fm.rds.oda.empty())) {
         // the rest of RDS: what the station sends beyond the name and the text
         if (typo::collapsingHeader(trw("RDS details"), 0)) {
@@ -634,6 +642,7 @@ void fmRadioTab(App& a) {
     ImGui::TextUnformatted(ps.c_str());
     if (live && !fm.ptyText.empty() && fm.ptyText != "None") { ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("%s", fm.ptyText.c_str()); }
     if (live && !fm.radioText.empty()) ImGui::TextDisabled("%s", fm.radioText.c_str());
+    if (ImGui::CollapsingHeader(trw("Played (RadioText+ songs)##fmpl"))) { ImGui::BeginChild("##fmplc", ImVec2(0, 240 * gUi)); playedPanel(a, "fmpl"); ImGui::EndChild(); }
     ImGui::Spacing();
     {   // tuning dial and steps
         float f = (float)a.freqMhz;

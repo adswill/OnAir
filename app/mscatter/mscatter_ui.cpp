@@ -325,6 +325,7 @@ void receiver(App& a) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("The beacon is a fixed transmitter far beyond the horizon: it is heard only when a meteor trail reflects it, as a short echo a few Hz to a few hundred Hz away from the line. Echoes closer than 18 Hz to the line are masked."));
     ImGui::PopTextWrapPos();
+    smart5MeteorCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void status(App& a) {

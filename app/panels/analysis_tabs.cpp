@@ -191,19 +191,26 @@ void signallingTab(App& a) {
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
         if (!rx.dvbt.tpsOk) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("TPS (transmission parameter signalling) has not been decoded yet"); ImGui::PopTextWrapPos(); } return; }
-        static const char* modes[] = {"2K", "8K"}; static const char* hier[] = {"non-hierarchical", "hierarchical, alpha = 1", "hierarchical, alpha = 2", "hierarchical, alpha = 4"};
+        static const char* modes[] = {"2K", "8K", "4K (DVB-H)", "?"}; static const char* hier[] = {"non-hierarchical", "hierarchical, alpha = 1", "hierarchical, alpha = 2", "hierarchical, alpha = 4"};
         dvbt::Params q; q.mode = rx.dvbt.mode; q.guard = rx.dvbt.guard; q.mod = rx.dvbt.mod; q.hier = rx.dvbt.hier; q.crHp = rx.dvbt.crHp; q.crLp = rx.dvbt.crLp;
         { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "DVB-T transmission parameters (TPS, EN 300 744)"); ImGui::PopTextWrapPos(); }
         if (ImGui::BeginTable("tps", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 200 * gUi);
             auto row = [&](const char* k, const char* fmt, auto... args) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn(); char b[160]; snprintf(b, sizeof b, fmt, args...); ImGui::TextUnformatted(b); };
-            row("FFT mode", "%s (%d carriers, %d data carriers per symbol)", modes[rx.dvbt.mode & 1], dvbt::carriersK(rx.dvbt.mode), dvbt::dataCarriers(rx.dvbt.mode));
+            row("FFT mode", "%s (%d carriers, %d data carriers per symbol)", modes[rx.dvbt.mode & 3], dvbt::carriersK(rx.dvbt.mode), dvbt::dataCarriers(rx.dvbt.mode));
             row("Guard interval", "%s of the useful symbol (%d samples)", dvbt::guardName(rx.dvbt.guard), dvbt::guardSamples(rx.dvbt.mode, rx.dvbt.guard));
             row("Constellation", "%s", dvbt::modName(rx.dvbt.mod));
             row("Hierarchy", "%s", hier[rx.dvbt.hier & 3]);
             row("Code rate (high priority)", "%s", dvbt::rateName(rx.dvbt.crHp));
             row("Code rate (low priority)", "%s", dvbt::rateName(rx.dvbt.crLp));
             row("Cell identifier", "%d", rx.dvbt.cellId);
+            if (rx.dvbt.mode != dvbt::k8K) row("Inner interleaver", "%s", rx.dvbt.indepth ? "in-depth (DVB-H)" : "native");
+            if (rx.dvbt.dvbh) {
+                row("DVB-H", "%s, %s", rx.dvbt.timeSlicing ? "time slicing" : "no time slicing", rx.dvbt.mpeFec ? "MPE-FEC" : "no MPE-FEC");
+                if (rx.dvbt.mpePid >= 0)
+                    row("IP datagrams (MPE)", "%llu on PID %d, MPE-FEC rows corrected %llu, failed %llu", (unsigned long long)rx.dvbt.mpeDatagrams, rx.dvbt.mpePid,
+                        (unsigned long long)rx.dvbt.mpeRowsCorrected, (unsigned long long)rx.dvbt.mpeRowsFailed);
+            }
             row("Frame in superframe", "%d of 4   (symbol %d of 68)", rx.dvbt.frameIdx + 1, rx.dvbt.symbolIdx + 1);
             row("Net bit rate", "%.2f Mbit/s", dvbt::netBitrate(q, rx.nativeRate) / 1e6);
             row("TPS block age", "%.2f s", rx.dvbt.secSinceTps);
@@ -705,6 +712,7 @@ static void tsPidsView(App& a) {
                 a.bb.hem ? "high-efficiency" : "normal", a.bb.issyi, a.bb.npd, a.bb.sisMis, a.bb.isi, (unsigned long long)a.bb.resyncs, (unsigned long long)a.bb.crcErrors, (unsigned long long)a.bb.unsupported); ImGui::PopTextWrapPos(); }
     ImGui::PopFont();
     ImGui::Spacing();
+    smart5TvCard(a);   // round-5 smart checks: off air at the source, fault split, cell, interferers (app/smart5)
     if (ImGui::BeginTable("pids", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp, ImVec2(0, -1))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_WidthFixed, 70 * gUi);

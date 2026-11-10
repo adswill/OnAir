@@ -1,4 +1,4 @@
-// The ham science receivers through the engine's front end on their own test signals (hamsci_gen.h): the audio modes at 600 ksps, SuperSID at 48 ksps (a flare
+// The ham science receivers through the engine's front end on their own test signals (hamsci_gen.h): the audio modes (JT6M too) at 600 ksps, SuperSID at 48 ksps (a flare
 // 17 minutes in), the riometer power trace, the pulsar chain at 2.4 Msps for a few seconds. Simulated only.
 #include "dect2/hamsci/hamsci_gen.h"
 #include "dect2/hamsci/hamsci_rx.h"
@@ -39,6 +39,12 @@ int main() {
         auto t = run(kHsFsk441, R, 26, 0, 25);
         std::printf("FSK441: %zu lines, first '%s'\n", t.lines.size(), t.lines.empty() ? "" : t.lines.back().text.c_str());
         CHECK(!t.lines.empty() && t.lines.front().text.find("K1JT") != std::string::npos, "FSK441 through the receiver");
+    }
+    {   // JT6M: three pings in 24 s, 40 Hz tuning error
+        auto t = run(kHsJt6m, R, 25, 0, 15, 40.0);
+        std::printf("JT6M: %zu lines, first '%s', found '%s'\n", t.lines.size(), t.lines.empty() ? "" : t.lines.back().text.c_str(), t.found.c_str());
+        CHECK(t.lines.size() >= 2 && t.lines.back().text.find("W9XYZ") != std::string::npos, "JT6M through the receiver");
+        CHECK(!t.lines.empty() && std::fabs(t.lines.front().freqHz - 40.0) < 12, "JT6M tuning error %.1f", t.lines.empty() ? 0.0 : t.lines.front().freqHz);
     }
     {
         auto t = run(kHsIscat, R, 34, 0, 20, 25.0);

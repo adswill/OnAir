@@ -20,6 +20,7 @@
 #include "dect2/dab/dab.h"
 #include "dect2/atsc3/atsc3_rx.h"
 #include "dect2/isdbt/isdbt_rx.h"
+#include "dect2/tv/mpe_fec.h"
 #include "dect2/fm/fm_rx.h"
 #include "dect2/fm/fm_census.h"
 #include "dect2/dab/dab_census.h"
@@ -70,6 +71,7 @@
 #include "dect2/mac/mac_rx.h"
 #include "dect2/gsmr/gsmr_rx.h"
 #include "dect2/dvbc/dvbc_rx.h"
+#include "dect2/dvbc2/dvbc2_rx.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
 #include "dect2/uplink/uplink_rx.h"
 #include "dect2/ale/ale_rx.h"
@@ -119,6 +121,7 @@
 #include "dect2/inmsat/inmsat_rx.h"
 #include "dect2/rclink/rc_rx.h"
 #include "dect2/xlink/xlink_rx.h"
+#include "dect2/cishf/cishf_rx.h"
 #include "dect2/nrf24/nrf24_rx.h"
 #include "dect2/sensors/sensors_rx.h"
 #include "dect2/bgan/bgan_rx.h"
@@ -126,6 +129,9 @@
 #include "dect2/atis/atis_rx.h"
 #include "dect2/selcal/selcal_rx.h"
 #include "dect2/umts/umts_rx.h"
+#include "dect2/cdma/cdma_rx.h"
+#include "dect2/tdscdma/tdscdma_rx.h"
+#include "dect2/vdl3/vdl3_rx.h"
 #include "dect2/tv/tr101290.h"
 #include "dect2/t2/t2mi_in.h"
 #include "dect2/t2/t2plp_merge.h"
@@ -155,6 +161,7 @@
 #include "dect2/ardop/ardop_rx.h"
 #include "dect2/ardop/ardop_rx.h"
 #include "dect2/goesdcs/goesdcs_live.h"
+#include "dect2/goesdcs/hrdcp_live.h"
 #include "dect2/bletrk/bletrk_live.h"
 #include "dect2/satbeacon/satbeacon_live.h"
 #include "dect2/satmisc/satdetect_live.h"
@@ -174,6 +181,7 @@
 #include "dect2/nfc/nfc_engine.h"
 #include "dect2/mpt1327/mpt1327_engine.h"
 #include "dect2/isdbs/isdbs_rx.h"
+#include "dect2/dvbsh/dvbsh_engine.h"
 #include "dect2/fusion/fusion_rx.h"
 #include "dect2/ltr/ltr_rx.h"
 #include "dect2/edacs/edacs_rx.h"
@@ -246,6 +254,7 @@ struct SampleLoss {
     uint64_t radioEvents = 0, cpuEvents = 0;
     double sinceRadioSec = -1, sinceCpuSec = -1;   // seconds since the last loss of each kind, -1 = none yet
     float loadPct = 0;                 // the receiver's share of real time on the sample thread over the last seconds (100 = just keeping up)
+    float cpuPct = 0;                  // the same with the sample thread's CPU time instead of the wall clock: a machine busy with other programs does not raise it
     float deliveredPct = -1;           // samples the radio handed over, percent of the rate it is set to, over the last seconds. -1 = not measured yet
     bool rateLow = false;              // a live radio under about 97% of that rate (the radio or driver, not the receiver's CPU load)
     bool network = false;              // the radio is reached over a network link (rtl_tcp, SpyServer, ...), not USB
@@ -333,6 +342,7 @@ public:
     // A file name for a recording of what the radio is tuned to right now (see recordingFileName())
     std::string recordingName(FileFormat fmt) const;
     uint64_t droppedSamples() const { return ring_.dropped(); }   // the OnAir side only, in samples (see sampleLoss())
+    double backlogSec() const { const double r = srcRate_; return r > 0 ? (double)ring_.available() / r : 0; }   // samples waiting in the input ring, in seconds of signal
     SampleLoss sampleLoss() const;
     std::string loadProfile() const;   // seconds the analysis thread spent on the spectrum and on the receiver, and the signal it has processed (diagnostics)
 
@@ -563,7 +573,7 @@ public:
     SsdvReceiver& ssdv() { return rxSsdv_; }   // SSDV: speed, save folder, clear the pictures (telemetry through latestRx)
     Fy3Receiver& fy3Ahrpt() { return rxFy3a_; }   // FY-3 AHRPT: satellite preset, symbol rate, roll-off, new pictures (telemetry through latestRx)
     Fy3Receiver& fy3Mpt() { return rxFy3m_; }     // FY-3 MPT: the same
-    HfUtilReceiver& hfUtil(int kind) { return rxHfu_[kind]; }   // HF utility modes (families 430 .. 439)
+    HfUtilReceiver& hfUtil(int kind) { return kind >= kHfuKinds ? rxHfm_[kind - kHfuKinds] : rxHfu_[kind]; }   // HF utility modes (families 430 .. 439, 603, 604)
     PactorHfReceiver& pactorHf(int variant) { return variant == 3 ? rxPh3_ : variant == 4 ? rxPh4_ : rxPh2_; }   // PACTOR-II / -III / -IV: clear the results (telemetry through latestRx)
     std::vector<Tr290Check> tr290Checks() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.checks(); }
     double tr290JitterMs() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.pcrJitterMs(); }
@@ -573,6 +583,9 @@ public:
     void setT2miPlp(int plp) { t2miUse_ = plp; }   // -1: back to the outer stream
     int t2miPlp() const { return t2miUse_.load(); }
     UmtsReceiver& umts() { return rxUmts_; }   // UMTS cells (family 480)
+    CdmaReceiver& cdma() { return rxCdma_; }   // CDMA2000 cells (family 660)
+    TdscdmaReceiver& tdscdma() { return rxTds_; }   // TD-SCDMA cells (family 661)
+    Vdl3Receiver& vdl3() { return rxVdl3_; }   // VDL Mode 3 (family 640)
     SelcalReceiver& selcal() { return rxSelcal_; }   // SELCAL: call log, aircraft table, Listen volume / mute (telemetry through latestRx)
     AtisReceiver& atis() { return rxAtis_; }   // ATIS (inland waterways): clear the lists, Listen volume / mute (telemetry through latestRx)
     ShortwaveReceiver& shortwave() { return rxSw_; }   // Shortwave: the general receiver and the one-click decoders (telemetry through latestRx)
@@ -580,6 +593,7 @@ public:
     BganReceiver& bgan() { return rxBgan_; }   // Inmarsat BGAN (telemetry through latestRx)
     SfericsReceiver& sferics() { return rxSfer_; }   // Sferics (lightning): threshold, mains filter, clear counts (telemetry through latestRx)
     XlinkReceiver& xlink() { return rxXlink_; }   // Extra links (family 600)
+    CisHfReceiver& cisHf(int kind) { return rxCis_[kind >= 0 && kind < 7 ? kind : 0]; }   // CIS HF modes (families 620 - 626): Advanced settings, clear
     RcLinkReceiver& rclink() { return rxRc_; }   // RC and mesh links (family 360): lists, phrase, plan (telemetry through latestRx)
     Nrf24Receiver& nrf24() { return rxNrf_; }   // nRF24L01: clear the lists (telemetry through latestRx)
     InmsatReceiver& inmsat() { return rxInmsat_; }   // Inmarsat all carriers: budget, focus, voice mixer (telemetry through latestRx)
@@ -592,6 +606,7 @@ public:
     EczasLiveReceiver& eczas() { return rxEcz_; }   // e-Czas (225 kHz, Poland): audio input, receiver position, clear the log (telemetry through latestRx)
     FpvReceiver& fpv() { return rxFpv_; }   // FPV video: picture controls, sound, clear the channel levels (telemetry through latestRx)
     ZwaveReceiver& zwave() { return rxZw_; }   // Z-Wave: region, clear the tables (telemetry through latestRx)
+    HrdcpReceiver& hrdcp() { return rxHrdcp_; }   // Meteosat HRDCP (family 700): CSV log file, carrier threshold, clear the lists
     GoesDcsReceiver& goesdcs() { return rxGd_; }   // GOES DCS: CSV log file, carrier threshold, clear the lists (telemetry through latestRx)
     ModeAcReceiver& modeac() { return rxModeAc_; }   // Mode A/C replies: reference position, code confirmation and expiry, clear (telemetry through latestRx)
     BletrkLiveReceiver& bletrk() { return rxBt_; }   // BLE tracker detector: alert time, near level, own trackers, clear (telemetry through latestRx)
@@ -632,6 +647,7 @@ public:
     ElLoranReceiver& eloran() { return rxEloran_; }   // eLoran / Loran-C: GRI, stations, arrival times (telemetry through latestRx)
     NfcReceiver& nfc() { return rxNfc_; }   // NFC / RFID 13.56 MHz: frame log, tag table, NDEF (telemetry through latestRx)
     IsdbsReceiver& isdbs() { return rxIsdbs_; }   // ISDB-S (BS satellite TV): stream selection (telemetry through latestRx; the packets go to the TV player like DVB-S)
+    DvbshEngineReceiver& dvbsh() { return rxDvbsh_; }   // DVB-SH: channel width and HP / LP stream (telemetry through latestRx; the packets go to the TV player)
     MptReceiver& mpt1327() { return rxMpt_; }   // MPT1327 trunking control channel: messages and channel table (telemetry through latestRx)
     FusionReceiver& fusion() { return rxFusion_; }   // Yaesu Fusion: callsigns and slow data, the speech codec plug-in (telemetry through latestRx)
     LtrReceiver& ltr() { return rxLtr_; }   // LTR control channel (telemetry through latestRx)
@@ -658,6 +674,7 @@ public:
     NrReceiver& nr() { return rxNr_; }         // 5G NR cells: clear the cell table (telemetry through latestRx)
     WifiReceiver& wifi() { return rxWifi_; }   // Wi-Fi networks: clear the network table (telemetry through latestRx)
     Qo100Receiver& qo100() { return rxQo100_; }   // QO-100: LNB oscillator, SSB dial and listening (telemetry through latestRx)
+    Dvbc2Receiver& dvbc2() { return rxC2_; }   // DVB-C2 (active standard 742): data slice and PLP choice
     DvbcReceiver& dvbc() { return rxDvbc_; }   // DVB-C: symbol rate, QAM, annex (the interface reads telemetry through latestRx)
     PskReceiver& psk() { return rxPsk_; }   // PSK31: the receiver's own controls and results (the interface reads telemetry through latestRx)
     DstarReceiver& dstar() { return rxDstar_; }   // D-STAR: the receiver's own controls and results (the interface reads telemetry through latestRx)
@@ -829,6 +846,7 @@ private:
     void ingest(cf32* x, size_t n);
     TeletextDecoder ttx_;
     DvbSubDecoder dvbsub_;
+    mpe::MpeDemux mpe_;      // DVB-H: MPE / MPE-FEC IP datagrams of the stream (under tsMu_)
     int lastT2Frame_ = -1;
     std::atomic<bool> resetReq_{false};
     std::atomic<uint64_t> resets_{0};
@@ -844,7 +862,7 @@ private:
     }
     void applyReset();
     std::vector<uint8_t> frameBuf_;
-    double tSpec_ = 0, tRx_ = 0;
+    double tSpec_ = 0, tRx_ = 0, tRxCpu_ = 0;   // analysis thread: wall and CPU seconds in the receiver
     double nSamp_ = 0;
     uint64_t logP1Count_ = 0;
     int logS1_ = -1, logS2_ = -1, logGi_ = -2, logState_ = -1, logFrameSyms_ = 0;
@@ -880,6 +898,7 @@ private:
     DabReceiver rxD_;
     Atsc3Rx rxA3_;
     IsdbtReceiver rxI_;
+    IsdbtReceiver rxTsb_;   // ISDB-TSB (active standard 731): the narrow-band one- and three-segment receiver
     FmReceiver rxFm_;
     FmCensus fmCensus_;
     DabCensus dabCensus_; std::atomic<bool> dabCensusOn_{false}; bool dabCensusReady_ = false; double dabCensusC_ = 0, dabCensusR_ = 0;
@@ -954,6 +973,7 @@ private:
     AstroReceiver rxAstro_;
     bool specanSweep_ = false;   // the HackRF sweeps by itself (spectrum analyser)
     DvbcReceiver rxDvbc_;
+    Dvbc2Receiver rxC2_;   // DVB-C2 (active standard 742, family 741)
     OrbcommReceiver rxOrb_;
     UplinkReceiver rxUplink_;
     TetraReceiver rxTetra_;
@@ -1009,12 +1029,15 @@ private:
     PactorReceiver rxPac_;
     HfUtilReceiver rxHfu_[kHfuKinds] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint64_t hfuSeq_[kHfuKinds] = {};
+    HfUtilReceiver rxHfm_[kHfuKindsAll - kHfuKinds] = {kHfuKindHdr, kHfuKindAle3g, kHfuKindLink11, kHfuKind4481};   // 3.9 HF utility kinds (families 603 STANAG 4539, 604 3G-ALE, 605 Link 11, 606 STANAG 4481)
+    uint64_t hfmSeq_[kHfuKindsAll - kHfuKinds] = {};
     EsubghzReceiver rxEsg_;
     RoshfReceiver rxRoshf_;
     SsdvReceiver rxSsdv_;
     EbicabReceiver rxEbi_;
     InmsatReceiver rxInmsat_;
     XlinkReceiver rxXlink_;   // Extra links
+    CisHfReceiver rxCis_[7]{0, 1, 2, 3, 4, 5, 6};   // CIS HF modes, families 620 - 626 (engine standards 621 - 627)
     RcLinkReceiver rxRc_;   // RC and mesh links
     Nrf24Receiver rxNrf_;
     SensorsReceiver rxSens_;
@@ -1023,12 +1046,16 @@ private:
     AtisReceiver rxAtis_;
     SelcalReceiver rxSelcal_;
     UmtsReceiver rxUmts_;
+    CdmaReceiver rxCdma_;
+    TdscdmaReceiver rxTds_;
+    Vdl3Receiver rxVdl3_;
     Fy3Receiver rxFy3a_{0}, rxFy3m_{1};
     PactorHfReceiver rxPh2_{2}, rxPh3_{3}, rxPh4_{4};   // PACTOR-II (family 237), -III (238), -IV (239)
     ShortwaveReceiver rxSw_;
     PskdReceiver rxPskd_;
     MscatterLiveReceiver rxMs_;
     GoesDcsReceiver rxGd_;
+    HrdcpReceiver rxHrdcp_;   // Meteosat HRDCP
     ModeAcReceiver rxModeAc_;
     BletrkLiveReceiver rxBt_;
     SatDetectReceiver rxSatd_;
@@ -1051,6 +1078,7 @@ private:
     NfcReceiver rxNfc_;
     MptReceiver rxMpt_;
     IsdbsReceiver rxIsdbs_;
+    DvbshEngineReceiver rxDvbsh_;   // DVB-SH (active standard 747)
     FusionReceiver rxFusion_;
     LtrReceiver rxLtr_;
     EdacsReceiver rxEdacs_;
@@ -1070,7 +1098,7 @@ private:
     HrptReceiver rxHrpt_;
     Sd3Receiver rxSd3_[kSd3NumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};   // families 290 - 299, 510
     WxsatReceiver rxWx_[kWxNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}};   // the SatDump-list weather links, families 260 - 271 (slots 220 - 231)
-    HamsciReceiver rxHs_[kHamsciKinds]{{0},{1},{2},{3},{4},{5},{6},{7},{8}};   // QRSS, DFCW, FSK441, ISCAT, PI4, Throb, SuperSID, riometer, pulsar: families 460 - 465, 500 - 502 (slots 461 - 466, 501 - 503)
+    HamsciReceiver rxHs_[kHamsciKinds]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}};   // QRSS, DFCW, FSK441, ISCAT, PI4, Throb, SuperSID, riometer, pulsar: families 460 - 465, 500 - 502 (slots 461 - 466, 501 - 503)
     XbandReceiver rxXb_[kXbNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19}};   // the X-band links, families 530 - 549 (slots 530 - 549)
     FlarmReceiver rxFlarm_;
     AdslReceiver rxAdsl_;
@@ -1188,10 +1216,10 @@ private:
     std::atomic<double> radioMissing_{0};
     std::atomic<uint64_t> radioMissEvents_{0}, cpuDropEvents_{0}, ringDroppedSeen_{0};
     std::atomic<int64_t> lastRadioMissNs_{0}, lastCpuDropNs_{0}, lastRadioLogNs_{0};
-    std::atomic<float> loadPct_{0};
+    std::atomic<float> loadPct_{0}, cpuPct_{0};
     std::atomic<float> deliveredPct_{-1};   // checkDelivery(): samples the library offered over wall time, percent of srcRate_; -1 until a window completes
     std::atomic<bool> live_{false};   // the source is a live radio (sampleLoss() is read by the interface without touching src_)
-    double loadT_ = 0, loadRx_ = 0, loadSamp_ = 0;   // analysis thread: where the last load measurement started
+    double loadT_ = 0, loadRx_ = 0, loadSamp_ = 0, loadRxCpu_ = 0;   // analysis thread: where the last load measurement started
     int64_t rateT0_ = 0;       // analysis thread: start of the delivered-rate window (steady ns); 0 = not started
     uint64_t rateOff0_ = 0;    // offered-sample count at rateT0_
     std::string reconnectErr_;

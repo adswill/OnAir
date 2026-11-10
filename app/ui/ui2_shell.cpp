@@ -278,6 +278,7 @@ void sidebar(App& a) {
         tool("Passive radar", a.passiveRadarOpen, N_("Aircraft from the echoes of a broadcast transmitter, with two coherent channels"));
         tool("Images", a.galleryOpen, "The pictures the receivers have decoded");
         tool("Data feeds...", a.feedsOpen, "Send decoded data to other programs and services");
+        tool("EchoLink...", a.echolinkOpen, N_("Talk to EchoLink stations, links, repeaters and conferences over the Internet"));
         tool("Wireshark...", a.wiresharkOpen, N_("Packets of a mode in Wireshark: capture interface, pcapng files and GSMTAP"));
         tool("LAN swarm...", a.swarmOpen, "See and cooperate with other OnAir programs on this network (opt-in)");
         tool("Messages...", a.msgdbOpen, N_("Every decoded message in one searchable database, with filters and export"));
@@ -303,6 +304,7 @@ void sidebar(App& a) {
         tool("Antenna rotator...", a.rotatorOpen, "Connect a GS-232-compatible rotator (serial or TCP), set azimuth and elevation");
         tool("Sweep scanner", a.sweepOpen, N_("Fast wideband sweep with a noise-floor measurement, signal log and waterfall"));
         tool("Search everything heard", a.heardOpen, N_("One box for a call sign, ICAO address, MMSI or frequency, across the history of every mode"));
+        tool("Insights", a.insightOpen, N_("What your decodes show: who hears you, antenna pattern, APRS health, talkgroup busy hours, trunk load, automatic pages, overdue broadcasts"));
         tool("My station", a.stationOpen, N_("Your radios and antennas, entered once: modes pick the right ones and the mode list shows what can be received"));
         tool("Reception doctor", a.doctorOpen, N_("Why is nothing decoding? Checks overload, level, offset, bandwidth, interferers, drops and the mode from the live signal, with one-click fixes"));
         tool("RF fingerprint", a.rfFpOpen, N_("Recognise an individual transmitter by its RF fingerprint (carrier offset, key-up transient, pilot, spurs), also when it sends only a carrier. Logs every transmission."));
@@ -645,6 +647,7 @@ static void viewMenu(App& a) {
         ImGui::MenuItem(tr("Passive radar"), nullptr, &a.passiveRadarOpen);
         ImGui::MenuItem(tr("Images"), nullptr, &a.galleryOpen);
         ImGui::MenuItem(tr("Data feeds..."), nullptr, &a.feedsOpen);
+        ImGui::MenuItem(tr("EchoLink..."), nullptr, &a.echolinkOpen);
         ImGui::MenuItem(tr("Wireshark..."), nullptr, &a.wiresharkOpen);
         ImGui::MenuItem(tr("LAN swarm..."), nullptr, &a.swarmOpen);
         ImGui::MenuItem(tr("Messages..."), nullptr, &a.msgdbOpen);
@@ -674,6 +677,7 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Sweep scanner"), nullptr, &a.sweepOpen)) {}
         if (ImGui::MenuItem(tr("Station health"), nullptr, &a.stationHealthOpen)) {}
         if (ImGui::MenuItem(tr("Search everything heard"), nullptr, &a.heardOpen)) {}
+        if (ImGui::MenuItem(tr("Insights"), nullptr, &a.insightOpen)) {}
         if (ImGui::MenuItem(tr("My station"), nullptr, &a.stationOpen)) {}
         if (ImGui::MenuItem(tr("Reception doctor"), nullptr, &a.doctorOpen)) {}
         if (ImGui::MenuItem(tr("RF fingerprint"), nullptr, &a.rfFpOpen)) {}

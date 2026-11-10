@@ -17,7 +17,8 @@ namespace dect2 {
 struct DcsTruth { double startSec; int channel; uint32_t address21; int bps; bool manchester; std::string text; bool pseudo; };
 
 struct GoesDcsGenTx {
-    int channel = 100;
+    int channel = 100;                  // on the GOES grid
+    double freqHz = 0;                  // > 0: this absolute carrier frequency instead (Meteosat, Himawari channels)
     uint32_t address21 = 0x12345;
     int bps = 300;
     bool manchester = true;

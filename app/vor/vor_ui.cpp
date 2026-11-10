@@ -4,6 +4,7 @@
 // the station list, imported from an OurAirports or OpenAIP CSV.
 // ILS: a course deviation indicator with the localizer and glide slope needles, the marker lamps, the paired frequencies and a hop
 // between localizer and glide slope.
+#include "dect2/vor/navaid_check.h"
 #include "app.h"
 #include "dect2/results/results_io.h"
 #include "../adsb/adsb_map.h"
@@ -425,7 +426,8 @@ void approachView(App& a) {
             if (t.ilsValid) kv("needle", "%s %.0f %% of full scale", t.function == dect2::NavFunction::Glideslope ? (t.ddm > 0 ? "fly down" : "fly up") : (t.ddm > 0 ? "fly right" : "fly left"), std::min(100.0, std::fabs(t.ddm) / fs * 100));
         }
         static const char* mk[4] = {"none", "outer (400 Hz)", "middle (1300 Hz)", "inner (3000 Hz)"};
-        kv("marker", "%s", mk[t.marker & 3]);
+        static const char* mkKey[4] = {"", ", keyed dashes", ", keyed dot-dash", ", keyed dots"};
+        kv("marker", "%s%s%s", mk[t.marker & 3], mkKey[t.markerKeying & 3], t.markerKeying && !t.markerKeyingOk ? " (not the pattern of this tone)" : "");
         kv("C/N (25 kHz)", "%.1f dB", t.snrDb);
         identLine(a, t);
     }
@@ -433,6 +435,32 @@ void approachView(App& a) {
 }
 
 // ---------------------------------------------------------------- hooks
+
+// Signal check (3.9, docs/SMART5-avia-3.9.md): the measured depths and frequencies against the ICAO Annex 10 limits (dect2/vor/navaid_check.h)
+dect2::NavaidChecker gNavCheck;
+void navCheckView(App& a) {
+    { ImGui::PushTextWrapPos(0);
+      ImGui::TextDisabled("%s", tr("The beacon's modulation as this receiver measures it, averaged over 20 s, against the ICAO Annex 10 limits. A receiver is not a flight check: "
+                                   "filters, AGC and reflections move the figures a little, so a value just outside a limit is shown as marginal. The limits are quoted from memory of Annex 10 Vol I."));
+      ImGui::PopTextWrapPos(); }
+    if (!live(a)) { ImGui::TextDisabled("%s", tr("start the receiver")); return; }
+    const dect2::NavaidCheck r = gNavCheck.result();
+    ImGui::Text("%s: %s", dect2::navFunctionName(r.function), r.summary.c_str());
+    if (r.items.empty() || !ImGui::BeginTable("##navck", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) return;
+    ImGui::TableSetupColumn(tr("Figure")); ImGui::TableSetupColumn(tr("Measured")); ImGui::TableSetupColumn(tr("Limits")); ImGui::TableSetupColumn(tr("Verdict"));
+    ImGui::TableHeadersRow();
+    for (const auto& it : r.items) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(it.name.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%.1f %s", it.value, it.unit.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%.1f - %.1f", it.lo, it.hi);
+        ImGui::TableNextColumn();
+        if (it.verdict == 0) ImGui::TextColored(ImVec4(0.40f, 0.85f, 0.50f, 1), "%s", tr("within"));
+        else if (it.verdict == 1) ImGui::TextColored(ImVec4(0.95f, 0.70f, 0.30f, 1), "%s", tr("marginal"));
+        else ImGui::TextColored(ImVec4(0.90f, 0.35f, 0.30f, 1), "%s", tr("out"));
+    }
+    ImGui::EndTable();
+}
 
 void tick(App& a) {
     load();
@@ -449,6 +477,7 @@ void tick(App& a) {
         S.radHist.push_back(v);
         if (S.radHist.size() > 480) S.radHist.pop_front();
     }
+    if (t.seq != S.histSeq) gNavCheck.add(t);   // the Annex 10 signal check (3.9)
     S.histSeq = t.seq;
     if (t.function == dect2::NavFunction::Localizer) { S.lastLoc = t; S.haveLoc = true; }
     if (t.function == dect2::NavFunction::Glideslope) { S.lastGs = t; S.haveGs = true; }
@@ -480,11 +509,11 @@ void tick(App& a) {
 void tab(App& a) {
     load();
     if (isIls(a)) {
-        subNav("ilsv", S.viewIls, {"Approach", "Stations"});
-        if (S.viewIls == 0) approachView(a); else stationsView(a);
+        subNav("ilsv", S.viewIls, {"Approach", "Stations", "Signal check"});
+        if (S.viewIls == 0) approachView(a); else if (S.viewIls == 2) navCheckView(a); else stationsView(a);
     } else {
-        subNav("vorv", S.viewVor, {"Radial", "Fix", "Stations"});
-        if (S.viewVor == 0) radialView(a); else if (S.viewVor == 1) fixView(a); else stationsView(a);
+        subNav("vorv", S.viewVor, {"Radial", "Fix", "Stations", "Signal check"});
+        if (S.viewVor == 0) radialView(a); else if (S.viewVor == 1) fixView(a); else if (S.viewVor == 3) navCheckView(a); else stationsView(a);
     }
 }
 

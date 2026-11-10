@@ -44,8 +44,10 @@ PskGenSignal sig(double hz, int mode, double snr) {
 int main() {
     const auto t0 = std::chrono::steady_clock::now();
     // 1. every modulation, offset, drift and clock error
-    int ok = 0;
+    int ok = 0, tried = 0;
     for (int m = 0; m < kPskModes; m++) {
+        if (psk8psk(m)) continue;   // 8PSK is not in Auto (chosen by hand)
+        tried++;
         PskGenSignal s = sig(1000 + 150.0 * m, m, 20);
         s.driftHzPerMin = 3;
         s.clockPpm = 15;
@@ -54,8 +56,8 @@ int main() {
         printf("  %-8s offset, drift, clock: auto %s, locked %d, %llu chars\n", pskModeName(m), t.autoMode >= 0 ? pskModeName(t.autoMode) : "none", (int)t.autoLocked, (unsigned long long)t.blocksOk);
         ok += hit;
     }
-    printf("PSK31 family, every modulation (20 dB in its bandwidth, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, kPskModes);
-    CHECK(ok >= kPskModes - 1, "%d of %d", ok, kPskModes);
+    printf("PSK31 family, every modulation (20 dB in its bandwidth, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, tried);
+    CHECK(ok >= tried - 1, "%d of %d", ok, tried);
     // by default the noise sweep runs only at 12 dB (the lowest checked point), noise alone 3 times and the unchecked two-signal case is left out;
     // the long run (ONAIR_TEST_LONG=1) does every SNR, 8 noise runs and the two signals
     const bool L = testLong();

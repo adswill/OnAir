@@ -213,6 +213,16 @@ void decSolightTe44(Bits& B, Out& out);
 void decHoneywell(Bits& B, Out& out);
 void decKerui(Bits& B, Out& out);
 void decSpringfield(Bits& B, Out& out);
+// 3.9 (ism_dec_39.cpp)
+void decX10Rf(Bits& B, Out& out);
+void decInsteon(Bits& B, Out& out);
+void decInfactory(Bits& B, Out& out);
+void decWh31e(Bits& B, Out& out);
+void decNissan(Bits& B, Out& out);
+void decGmTpms(Bits& B, Out& out);
+void decEfergyOptical(Bits& B, Out& out);
+void decEmt7110(Bits& B, Out& out);
+void decScmPlus(Bits& B, Out& out);
 
 } // namespace ism_detail
 using namespace ism_detail;

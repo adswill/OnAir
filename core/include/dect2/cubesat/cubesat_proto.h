@@ -17,7 +17,7 @@
 namespace dect2 {
 namespace cubesat {
 
-enum Framing { Ax25Afsk1200 = 0, Ax25G3ruh, Ax100Mode5, Ax100Mode6, CcsdsRs, kNumFramings };
+enum Framing { Ax25Afsk1200 = 0, Ax25G3ruh, Ax100Mode5, Ax100Mode6, CcsdsRs, U482c, CcsdsConcat, Usp, Ngham, Mobitex, kNumFramings };   // the last five: cubesat_more.h (3.9)
 const char* framingName(int f);        // "AX.25 AFSK 1200", ...
 const char* framingShort(int f);       // "AFSK", "G3RUH", "AX100 M5", "AX100 M6", "CCSDS"
 

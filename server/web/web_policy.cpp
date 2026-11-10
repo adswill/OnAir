@@ -68,9 +68,9 @@ const std::set<std::string>& pagerKinds() {
 const std::set<std::string>& restrictedKnownKinds() {
     static const std::set<std::string> s = {
     "aero", "ale", "ant", "ardop", "astro", "atsc", "atsc3", "atv", "ble", "bletracker", "btc", "cdr", "cell", "codar", "contestia", "cquam",
-    "cubesat", "cw", "dab", "datawell", "dect", "dgps", "dji", "dme", "dominoex", "drm", "dsc", "dtmb", "dvb", "dvbc", "dvbs", "eczas",
-    "adsl", "cv2x", "dsrc", "eot", "ermes", "fanet", "its", "ogn", "eloran", "flarm", "fpv", "freedv", "fsq", "fst4", "ft2", "globalstar", "gnss", "goesdcs", "gsmr", "halow", "hamdrm", "hdr", "hell",
-    "hfbeacon", "hfdig", "hfdl", "ifkp", "ils", "inmc", "iono", "iridium", "isdbt", "ism", "js8", "jt4", "jt65", "jt9", "kaal", "kaft",
+    "cubesat", "cw", "dab", "datawell", "dect", "dgps", "dji", "dme", "dominoex", "drm", "dsc", "dtmb", "dvb", "dvbc", "dvbc2", "dvbs", "eczas",
+    "adsl", "cv2x", "dsrc", "eot", "ermes", "fanet", "its", "ogn", "eloran", "flarm", "fpv", "freedv", "fsq", "fst4", "ft2", "globalstar", "gnss", "goesdcs", "hrdcp", "gsmr", "halow", "hamdrm", "hdr", "hell",
+    "hfbeacon", "hfdig", "hfdl", "ifkp", "ils", "inmc", "iono", "iridium", "isdbt", "isdbtsb", "dvbsh", "ism", "js8", "jt4", "jt65", "jt9", "kaal", "kaft",
     "kait", "kapp", "kavb", "kaws", "klw", "lbj", "loraaprs", "loraraw", "lorawan", "mac", "marine", "mesh", "meshcom", "meshcore",
     "meshtastic", "mfsk", "milhf", "modeac", "mscatter", "msk144", "mt63", "multitone", "navtex", "nbiot", "ndb", "nr", "olivia",
     "orbcomm", "pager", "psk", "q65", "qo100", "rid", "rtty", "same", "sarsat", "satbeacon", "sonde", "t", "t2", "tdcs", "thor", "thread", "time",
@@ -82,12 +82,13 @@ const std::set<std::string>& restrictedKnownKinds() {
     // 3.2 modes: blocked likewise
     "mioty", "dectnrp",   // merged in integ-38
     "xlink", "wfbng", "npr", "winmor",   // merged in integ-38
-    "rclink", "reticulum", "elrs", "mavlink", "frsky", "flysky", "roshf", "ssdv", "ebicab", "esubghz", "inmsat", "bgan", "nrf24", "sensors", "sferics",
+    "rclink", "reticulum", "elrs", "mavlink", "frsky", "flysky", "sfhss", "spektrum", "roshf", "ssdv", "ebicab", "esubghz", "inmsat", "bgan", "nrf24", "sensors", "sferics",
     // 3.8 ham science modes: blocked likewise
     "qrss", "dfcw", "fsk441", "iscat", "pi4", "throb", "supersid", "riometer", "pulsar",
     "xlinknb",
     // 3.4 modes: blocked likewise
-    "umts",   // merged in integ-38
+    "umts", "cdma2000", "tdscdma",   // merged in integ-38
+    "vdl3",   // 3.9
     "iptv", "atis", "selcal", "gk2alrit", "gk2ahrit", "opensky",   // (esubghz was never classified: web_safety failed on integ-32)
     // 3.5 modes: blocked likewise (shortwave is a broadcast receiver like "general", but the web allow-list is the owner's call)
     "shortwave",

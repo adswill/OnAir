@@ -11,6 +11,7 @@
 #include <cmath>
 #include <cstring>
 #include <deque>
+#include <map>
 #include <numeric>
 
 namespace dect2 {
@@ -159,6 +160,11 @@ struct AtvVideo::Impl {
     std::vector<float> kern;
     // ---- scope
     std::vector<float> lineWave, vbiWave, ghostAcc;
+    // blanking lines after the equalising pulses without data, for the VITS analyser (smart5/vits.h): each line number averaged over 16 fields
+    // (a test line repeats every frame; the noise averages down by 12 dB), IRE at the input rate
+    std::map<int, std::vector<double>> vitsAcc;
+    std::map<int, int> vitsN;
+    std::map<int, std::vector<float>> vitsPub;
     int ghostN = 0;
     AtvGhost ghost;
     AtvVbi vbi;
@@ -578,6 +584,7 @@ struct AtvVideo::Impl {
     // ------------------------------------------------------------------------------ scope
     void captureLine(double tL);
     void ghostLine(double tL);
+    void vitsLine(double tL, int lineNo);
 
     void captureVbi();
 
@@ -612,6 +619,8 @@ struct AtvVideo::Impl {
         if (cnVar > 0 && carrierAmp > 0) i.carrierToNoiseDb = (float)std::min(70.0, std::max(-10.0, 10 * std::log10(carrierAmp * carrierAmp * noiseScale / cnVar)));
         i.lines_ = lineCount; i.fields = fieldCount; i.frames = frameSeq; i.fieldsOk = fieldsOk; i.fieldsBad = fieldsBad;
         i.fieldNo = curField < 0 ? 0 : curField;
+        for (const auto& kv : vitsPub) { i.vitsLineNo.push_back(kv.first); i.vitsLines.push_back(kv.second); }
+        i.vitsRate = fv;
         i.lineWave = lineWave; i.vbiWave = vbiWave; i.ghost = ghost; i.vbi = vbi.status(); i.ttx = vbi.teletext();
         return i;
     }

@@ -169,6 +169,7 @@ SampleLoss Engine::sampleLoss() const {
     if (lastRadioMissNs_.load()) l.sinceRadioSec = (double)(now - lastRadioMissNs_.load()) * 1e-9;
     if (lastCpuDropNs_.load()) l.sinceCpuSec = (double)(now - lastCpuDropNs_.load()) * 1e-9;
     l.loadPct = loadPct_.load();
+    l.cpuPct = cpuPct_.load();
     l.deliveredPct = deliveredPct_.load();
     l.rateLow = l.live && l.deliveredPct >= 0.f && l.deliveredPct < 97.f;   // under about 97% of the rate the radio was set to
     return l;

@@ -47,6 +47,7 @@ const Known kKnown[] = {
 {"FLARM", "flarm", "", "Aviation", MB(ModGmsk)|MB(ModFsk2)|MB(ModOfdm)|MB(ModPulse)|MB(ModFm), ModFsk2, {100e3}, {360e3}, 0, 2, 0, 0, SyncNone, {868, 869}, "GFSK 100 kBd bursts on 868 MHz"},
 {"ACARS", "acars", "", "Aviation", MB(ModAm)|MB(ModPulse)|MB(ModGmsk)|MB(ModFsk2), ModAm, {2400, 4800}, {5.3e3}, 0, 2, 0, 0, SyncNone, {129, 137}, "AM-MSK 2400 bit/s, bursts"},
 {"VDL Mode 2", "vdl2", "", "Aviation", MB(ModPsk8)|MB(ModQpsk)|MB(ModQam), ModPsk8, {10500}, {12.1e3}, 0, 2, 0, 0, SyncNone, {136.6f, 137}, "D8PSK 10.5 kBd, 25 kHz, bursts"},
+{"VDL Mode 3", "vdl3", "", "Aviation", MB(ModPsk8)|MB(ModQpsk)|MB(ModQam), ModPsk8, {10500}, {12.1e3}, 0, 2, 0, 0, SyncNone, {118, 137}, "D8PSK 10.5 kBd, 25 kHz, TDMA bursts"},
 {"VDL Mode 4", "vdl4", "", "Aviation", MB(ModGmsk)|MB(ModFsk2)|MB(ModOfdm)|MB(ModPulse), ModGmsk, {19200}, {18.8e3}, 0, 2, 0, 0, SyncNone, {118, 137}, "GFSK 19.2 kBd, STDMA slots"},
 {"HFDL", "hfdl", "", "Aviation", MB(ModBpsk)|MB(ModQpsk)|MB(ModPsk8), ModBpsk, {1800}, {2.13e3}, 0, 0, 0, 0, SyncNone, {2.8f, 22}, "PSK 1800 Bd, 2.4 kHz SSB channel"},
 {"SSB voice", "general", "", "Analog voice", MB(ModPulse)|MB(ModAm)|MB(ModQam)|MB(ModFm)|MB(ModCarrier)|MB(ModUnknown)|MB(ModBpsk)|MB(ModFsk2)|MB(ModGmsk), ModAm, {}, {2.4e3}, 0, 0, 0, 0, SyncSsb, {1.8f, 30, 50, 54, 144, 148, 420, 450}, "single sideband speech: 2 to 3 kHz of one sideband, no carrier, syllabic envelope; the General receiver in USB / LSB"},

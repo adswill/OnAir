@@ -42,6 +42,7 @@ struct State {
     bool pocsag = true, flex = true;
     bool both = false;                   // decode POCSAG and FLEX together on this channel, from either mode entry (saved as pagerBoth)
     bool decodedOnly = false;            // hide tone-only and empty pages from the table, Copy and the list (saved as pagerDecodedOnly)
+    bool hideAuto = false;               // hide the pages of capcodes the insight analyser found automatic or test pages (pagerHideAuto; insight/pager_patterns.h)
     bool baud512 = true, baud1200 = true, baud2400 = true;
     int pushedBaud = -1;
     int pushedNarrow = -1;
@@ -98,6 +99,7 @@ void loadRead() {
     S.readMode = m >= 0 && m < dect2::kPocsagReadModes ? (int)m : dect2::kPocsagReadAuto;
     { const long cs = d.getI("pagerCharset", 0); S.charset = cs >= 0 && cs < dect2::kPagerCharsets ? (int)cs : 0; }
     S.decodedOnly = d.getI("pagerDecodedOnly", 0) != 0;
+    S.hideAuto = d.getI("pagerHideAuto", 0) != 0;
     S.combine = d.getI("pagerCombine", 1) != 0;
     S.smartRepair = d.getI("pagerSmartRepair", 1) != 0;
     S.smartInsight = d.getI("pagerSmartInsight", 1) != 0;
@@ -201,6 +203,7 @@ bool passes(const dect2::PagerMessage& m) {   // m: resolved
 bool shows(const dect2::PagerMessage& m, size_t* hidden = nullptr) {
     if (!passes(m)) return false;
     if (S.decodedOnly && !dect2::pagerIsDecoded(m)) { if (hidden) (*hidden)++; return false; }
+    if (S.hideAuto && !m.selcall && insightPagerAutomatic(m.flex ? "FLEX" : "POCSAG", m.address)) { if (hidden) (*hidden)++; return false; }
     return true;
 }
 
@@ -264,6 +267,9 @@ void messageView(App& a) {
     flowNext(12 * gUi);
     if (ImGui::Checkbox(tr("Decoded only"), &S.decodedOnly)) { plat::prefs().setI("pagerDecodedOnly", S.decodedOnly ? 1 : 0); savePrefs(a); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hides tone-only pages and pages whose text could not be decoded."));
+    flowNext(12 * gUi);
+    if (ImGui::Checkbox(tr("Hide automatic pages"), &S.hideAuto)) { plat::prefs().setI("pagerHideAuto", S.hideAuto ? 1 : 0); savePrefs(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hides the capcodes that send the same text at a steady pace (test and keep-alive pages), as found in View > Insights > Pagers."));
     flowNext(12 * gUi);
     if (ImGui::Checkbox(tr("Combine repeats"), &S.combine)) { plat::prefs().setI("pagerCombine", S.combine ? 1 : 0); savePrefs(a); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Networks send a page more than once. When a copy has code words the error correction cannot repair, the same words from an earlier copy of the same page are used, so the message comes out complete. Pages made this way are marked."));

@@ -74,6 +74,10 @@ std::string eventJson(const automation::Event& ev);
 // Home Assistant discovery: the sensors, each with its config topic, its state topic and the retained config payload.
 struct HaSensor { std::string key, name, family, icon, configTopic, stateTopic, configJson; };
 std::vector<HaSensor> haSensors(const MqttSettings& m);
+// Home Assistant, one device per Sub-GHz sensor: for a sensor.reading event, one entity per known value (temperature, humidity, wind, rain, battery ...)
+// with its device class and unit; all of a sensor's entities read one retained state topic, <haBase>/sensor/<key> (the event JSON).
+std::vector<HaSensor> haSensorEntities(const MqttSettings& m, const automation::Event& ev);
+std::string haSensorStateTopic(const MqttSettings& m, const automation::Event& ev);
 // Text form of the settings (JSON) for the file in the data folder.
 std::string toJson(const Settings& s);
 bool fromJson(const std::string& text, Settings& s, std::string& err);

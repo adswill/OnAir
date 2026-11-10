@@ -18,6 +18,11 @@ const char* framingName(int f) {
     case Ax100Mode5: return "AX100 Mode 5 (ASM + Golay)";
     case Ax100Mode6: return "AX100 Mode 6 (HDLC + RS)";
     case CcsdsRs: return "CCSDS RS (255,223)";
+    case U482c: return "GOMspace U482C";
+    case CcsdsConcat: return "CCSDS concatenated (Viterbi + RS)";
+    case Usp: return "USP (SPUTNIX)";
+    case Ngham: return "NGHam";
+    case Mobitex: return "Mobitex / BEESAT";
     default: return "?";
     }
 }
@@ -28,6 +33,11 @@ const char* framingShort(int f) {
     case Ax100Mode5: return "AX100 M5";
     case Ax100Mode6: return "AX100 M6";
     case CcsdsRs: return "CCSDS";
+    case U482c: return "U482C";
+    case CcsdsConcat: return "CCSDS conc";
+    case Usp: return "USP";
+    case Ngham: return "NGHam";
+    case Mobitex: return "Mobitex";
     default: return "?";
     }
 }

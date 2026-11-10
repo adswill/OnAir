@@ -6,6 +6,7 @@
 #include "dect2/common/mathconst.h"
 #include "dect2/cubesat/cubesat_ao40.h"
 #include "dect2/cubesat/cubesat_db.h"
+#include "dect2/cubesat/cubesat_more.h"
 #include "dect2/cubesat/cubesat_telem.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/fftutil.h"
@@ -179,6 +180,28 @@ void asmFrame(bool cc, std::vector<uint8_t>& body, int flags, bool golayFailed, 
     if (sink) sink(f);
 }
 
+// the cubesat_more.h framings (U482C, CCSDS concatenated, USP, NGHam, Mobitex) as chain frames
+void moreFrame(const MoreFrame& m, int mod, int baud, int64_t pos, uint64_t& valid, const std::function<void(ChainFrame&)>& sink) {
+    valid++;
+    if (!sink) return;
+    ChainFrame f;
+    f.framing = m.framing; f.framingName = m.name; f.mod = mod; f.baud = baud; f.rsErrors = m.rsErrors; f.how = m.how; f.pos = pos;
+    f.data = m.data; f.payload = m.data;
+    if (m.framing == Usp) {
+        ax25::Frame a;
+        if (ax25::parseFrame(m.data.data(), m.data.size(), a)) {
+            f.from = a.from.str(); f.to = a.to.str(); f.path = a.pathStr(); f.type = a.typeName(); f.pid = a.pid;
+            f.payload.assign(a.info.begin(), a.info.end());
+        }
+    } else if (m.framing == U482c) {
+        f.hasCsp = parseCsp(m.data, f.csp);
+        if (m.data.size() > 4) f.payload.assign(m.data.begin() + 4, m.data.end());
+    } else if (m.framing == Mobitex) {
+        f.from = m.callsign;
+    }
+    sink(f);
+}
+
 float clampf(float v, float lo, float hi) { return v < lo ? lo : v > hi ? hi : v; }
 
 // FM discriminator (Hz) of the channel stream
@@ -211,7 +234,8 @@ public:
         outG3_.sink = outPl_.sink = &sink;
         g3_.hdlc.setCallback([this](const std::vector<uint8_t>& d, bool ok) { outG3_.onHdlc(d, ok, g3_.pos, "AX.25 G3RUH", Ax25G3ruh); });
         plainH_.hdlc.setCallback([this](const std::vector<uint8_t>& d, bool ok) { outPl_.onHdlc(d, ok, plainH_.pos, "AX.25 NRZI", Ax25G3ruh); });
-        plainA_.bitSink = [this](int b) { asm_.bit(b); text_.bit(b); plainA_.locked = asm_.inFrame(); };
+        plainA_.bitSink = [this](int b) { asm_.bit(b); text_.bit(b); more_.push(b ? 1.f : -1.f); plainA_.locked = asm_.inFrame() || more_.busy(); };
+        more_.onFrame = [this](const MoreFrame& m) { moreFrame(m, ModFsk, baud_, plainA_.pos, moreOk_, sink); };
         asm_.done = [this](bool cc, std::vector<uint8_t>& body, int flags, bool gf) { asmFrame(cc, body, flags, gf, ModFsk, baud_, plainA_.pos, asmHeard_, m5_, cc_, sink); };
         text_.found = [this](const std::string& t) {
             texts_++;
@@ -224,7 +248,7 @@ public:
     int mod() const override { return ModFsk; }
     int baud() const override { return baud_; }
     void reset() override {
-        disc_.reset(); lp_.reset(); g3_.reset(); plainH_.reset(); plainA_.reset(); asm_.reset(); text_.reset();
+        disc_.reset(); lp_.reset(); g3_.reset(); plainH_.reset(); plainA_.reset(); asm_.reset(); text_.reset(); more_.reset();
     }
     void process(const cf32* y, size_t n) override {
         disc_.run(y, n, d_);
@@ -243,6 +267,7 @@ public:
         out.push_back({b + "AX100 Mode 5", ModFsk, baud_, asmHeard_, m5_});
         out.push_back({b + "CCSDS RS", ModFsk, baud_, 0, cc_});
         out.push_back({b + "ASCII text", ModFsk, baud_, 0, texts_});
+        out.push_back({b + "U482C / CCSDS conc. / USP / NGHam / Mobitex", ModFsk, baud_, more_.failed, moreOk_});
     }
 private:
     int baud_;
@@ -253,7 +278,8 @@ private:
     HdlcOut outG3_, outPl_;
     AsmHunter asm_;
     TextHunter text_;
-    uint64_t asmHeard_ = 0, m5_ = 0, cc_ = 0, texts_ = 0;
+    MoreHunter more_;
+    uint64_t asmHeard_ = 0, m5_ = 0, cc_ = 0, texts_ = 0, moreOk_ = 0;
 };
 
 // ======================================================= AFSK 1200
@@ -327,6 +353,12 @@ public:
             sink(f);
         };
         ao40_.reset();
+        more_.onFrame = [this](const MoreFrame& m) { moreFrame(m, ModBpsk, baud_, pos_, moreOk_, sink); };
+        {   // BPSK CCSDS concatenated is usually NRZ-M precoded (LilacSat-2, BY70-1, ASRTU-1): a second hunter for that, conventional basis
+            MoreConfig c; c.u482c = c.ngham = c.mobitex = c.usp = false; c.concatParams.differential = true; c.concatParams.dualBasis = false;
+            moreDiff_.configure(c);
+            moreDiff_.onFrame = more_.onFrame;
+        }
         next_ = sps_ * 2;
     }
     int mod() const override { return ModBpsk; }
@@ -334,7 +366,7 @@ public:
     double snrDb() const override { return locked_ ? lockQ_ : 0; }
     void reset() override {
         lp_.reset(); sq_.clear(); afc_ = 0; haveAfc_ = false; ph_ = 0; freq_ = 0; agc_ = 0.f; hist_.clear(); base_ = 0; next_ = sps_ * 2; sps_ = spsNom_;
-        prevS_ = 0; prevLev_ = 0; scr_ = 0; hdlcN_.reset(); hdlcG_.reset(); asm_.reset(); text_.reset(); ao40_.reset(); locked_ = false;
+        prevS_ = 0; prevLev_ = 0; scr_ = 0; hdlcN_.reset(); hdlcG_.reset(); asm_.reset(); text_.reset(); ao40_.reset(); more_.reset(); moreDiff_.reset(); locked_ = false;
     }
     void process(const cf32* y, size_t n) override {
         dec_.clear();
@@ -351,6 +383,7 @@ public:
         out.push_back({b + "CCSDS RS", ModBpsk, baud_, 0, cc_});
         out.push_back({b + "AO-40 FEC", ModBpsk, baud_, ao40_.failed, ao40Ok_});
         out.push_back({b + "ASCII text", ModBpsk, baud_, 0, texts_});
+        out.push_back({b + "U482C / CCSDS conc. / USP / NGHam / Mobitex", ModBpsk, baud_, more_.failed + moreDiff_.failed, moreOk_});
     }
 private:
     int kAfc = 4096;
@@ -428,6 +461,8 @@ private:
         asm_.bit(db);
         text_.bit(db);
         ao40_.push(s * prevSoft_);
+        more_.push(s);
+        moreDiff_.push(s);
         prevSoft_ = s;
     }
 
@@ -453,7 +488,8 @@ private:
     AsmHunter asm_;
     TextHunter text_;
     Ao40Hunter ao40_;
-    uint64_t asmHeard_ = 0, m5_ = 0, cc_ = 0, texts_ = 0, ao40Ok_ = 0;
+    MoreHunter more_, moreDiff_;
+    uint64_t asmHeard_ = 0, m5_ = 0, cc_ = 0, texts_ = 0, ao40Ok_ = 0, moreOk_ = 0;
 };
 
 // ======================================================= CW

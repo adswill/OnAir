@@ -45,6 +45,10 @@ public:
     void setAudioTap(std::function<void(const float* left, const float* right, size_t n)> cb);   // tests: the 48 kHz sound, called from feed() (8 kHz AMBE+2 speech interpolated to 48 kHz; left == right)
     // The voice bursts as they arrive: slot (1 or 2), position in the superframe (0 = A ... 5 = F), the 216 vocoder bits VS(215)..VS(0) packed into 27 octets.
     void setVoiceCallback(std::function<void(int slot, int pos, const uint8_t* bits27)> cb);
+    // Burst timing (dmr_slot_sync.h), called from feed(): the input time (seconds from the first input sample, the receiver's filter delay
+    // removed) of a burst centre, its family (0 base station, 1 mobile, 2 direct), slot (1 / 2 from a clean CACH, else 0) and CACH access type
+    // (1 busy, 0 idle, -1 none). Every base-station burst also goes to DmrSlotClock::global() on the steady clock, for the transmitter.
+    void setBurstTimingCallback(std::function<void(double inputSec, int family, int slot, int at)> cb);
 
 private:
     struct Impl;

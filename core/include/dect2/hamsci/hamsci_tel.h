@@ -1,4 +1,4 @@
-// Ham science modes: telemetry shared by the receiver and the screens (one structure for all nine modes, `kind` says which fields count).
+// Ham science modes: telemetry shared by the receiver and the screens (one structure for all ten modes, `kind` says which fields count).
 // Receive only; nothing is transmitted.
 #pragma once
 #include "dect2/hamsci/hamsci_dsp.h"
@@ -8,13 +8,14 @@
 
 namespace dect2 {
 
-// kinds (HamsciReceiver(kind)): family numbers 460 .. 465 and 500 .. 502, engine standard = family + 2, poll slot 300 + kind
-enum HamsciKind { kHsQrss = 0, kHsDfcw, kHsFsk441, kHsIscat, kHsPi4, kHsThrob, kHsSid, kHsRiometer, kHsPulsar, kHamsciKinds };
-inline int hamsciFamily(int kind) { return kind < 6 ? 460 + kind : 500 + (kind - 6); }
-inline int hamsciKindOfFamily(int fam) { return fam >= 460 && fam <= 465 ? fam - 460 : fam >= 500 && fam <= 502 ? 6 + (fam - 500) : -1; }
+// kinds (HamsciReceiver(kind)): family numbers 460 .. 465, 500 .. 502 and 750 (JT6M, 3.9), engine standard = family + 2, poll slot 300 + kind
+enum HamsciKind { kHsQrss = 0, kHsDfcw, kHsFsk441, kHsIscat, kHsPi4, kHsThrob, kHsSid, kHsRiometer, kHsPulsar, kHsJt6m, kHamsciKinds };
+inline int hamsciFamily(int kind) { return kind < 6 ? 460 + kind : kind < 9 ? 500 + (kind - 6) : 750 + (kind - 9); }
+inline int hamsciKindOfFamily(int fam) { return fam >= 460 && fam <= 465 ? fam - 460 : fam >= 500 && fam <= 502 ? 6 + (fam - 500) : fam == 750 ? 9 : -1; }
 inline int hamsciStd(int kind) { return hamsciFamily(kind) + 2; }
 inline int hamsciKindOfStd(int std) { return hamsciKindOfFamily(std - 2); }
 inline int hamsciKindOfActive(int a) { return hamsciKindOfFamily(a - 1); }   // the active standard the engine reports is the family + 1
+constexpr bool hamsciAudioKind(int kind) { return kind <= kHsThrob || kind == kHsJt6m; }   // the digital modes: audio in, a list of decodes out
 
 struct HamsciLine {
     double timeSec = 0;        // signal time of the decode

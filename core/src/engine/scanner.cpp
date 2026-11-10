@@ -405,7 +405,7 @@ void Scanner::run() {
         } else if (tlock) {
             r.standard = "DVB-T";
             char b[160];
-            snprintf(b, sizeof b, "DVB-T %s GI %s", t.fftN == 8192 ? "8K" : "2K", dvbt::guardName(t.giIdx));
+            snprintf(b, sizeof b, "DVB-T %s GI %s", t.fftN == 8192 ? "8K" : t.fftN == 4096 ? "4K" : "2K", dvbt::guardName(t.giIdx));
             r.mode = b;
             snprintf(b, sizeof b, "%s %s%s", dvbt::modName(t.dvbt.mod), dvbt::rateName(t.dvbt.crHp), t.dvbt.hier ? " (hierarchical)" : "");
             r.plpInfo = b;

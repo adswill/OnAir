@@ -832,6 +832,7 @@ void receiver(App& a) {
         }
         ImGui::EndTable();
     }
+    smart5GnssCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void panels(App& a) {

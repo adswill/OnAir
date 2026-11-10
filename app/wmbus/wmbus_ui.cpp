@@ -76,6 +76,11 @@ void metersView(App& a) {
         kvRow(a, tr("type"), "%s, version %u", d.type.c_str(), (unsigned)d.version);
         kvRow(a, tr("level"), "%.1f dBFS, %s, %llu frames", d.rssiDb, dect2::wmbus::phyName((dect2::wmbus::Phy)d.phy), (unsigned long long)d.count);
         if (!d.status.empty()) kvRow(a, tr("status"), "%s", d.status.c_str());
+        {   // the leak check (docs/SMART5-field-3.9.md) follows only the meters the user marks as their own
+            bool mine = wmbusIsMine(key(d));
+            if (ImGui::Checkbox(tr("My water meter: check for leaks"), &mine)) wmbusSetMine(key(d), mine);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Night flow and continuous flow from this meter's volume register; the findings appear in View > Insights. Only meters you mark are followed."));
+        }
         if (d.encrypted) { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::warnAmber(), "%s", tr("The payload of this meter is encrypted (AES). It is listed but never decoded.")); ImGui::PopTextWrapPos(); }
         for (const auto& r : d.records) {
             kvRow(a, r.quantity.c_str(), "%s%s%s", r.value.c_str(), r.note.empty() ? "" : "   ", r.note.c_str());
@@ -155,9 +160,10 @@ void signalView(App& a) {
 }
 
 void tab(App& a) {
-    subNav("wmb", S.view, {tr("Meters"), tr("Frames"), tr("Signal")});
+    subNav("wmb", S.view, {tr("Meters"), tr("Frames"), tr("Signal"), tr("Mine")});
     if (S.view == 0) metersView(a);
     else if (S.view == 1) framesView(a);
+    else if (S.view == 3) wmbusMineView(a);
     else signalView(a);
 }
 

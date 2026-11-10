@@ -128,13 +128,17 @@ struct AirbandBandWatch::Impl {
         for (auto& kv : map) kv.second.activeNow = false;
         for (const auto& p : pk) {
             const double f = center + p.off - shift;
-            const double k = std::round((f - 118e6) / kStep833);
-            const double fs = 118e6 + k * kStep833;
-            if (std::fabs(f - fs) > kSnapHz || fs < 117.9e6 || fs > 137.1e6) continue;
+            // VHF: the 8.33 kHz raster from 118 MHz; military UHF (225 - 400 MHz): the 25 kHz raster only
+            const bool uhf = f > 224.9e6 && f < 400.1e6;
+            const double step = uhf ? 25000.0 : kStep833, base = uhf ? 225e6 : 118e6;
+            const double k = std::round((f - base) / step);
+            const double fs = base + k * step;
+            if (std::fabs(f - fs) > kSnapHz) continue;
+            if (uhf ? (fs < 225e6 - 1 || fs > 399.975e6 + 1) : (fs < 117.9e6 || fs > 137.1e6)) continue;
             bool listedAlready = false;
             for (double l : listed) if (std::fabs(l - fs) < 1200) listedAlready = true;
             if (listedAlready) continue;
-            const long key = (long)k;
+            const long key = std::lround(fs / 100);   // 100 Hz units: unique on both rasters
             const bool isNew = map.find(key) == map.end();
             AirbandSeen& s = map[key];
             s.freqHz = fs;

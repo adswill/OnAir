@@ -7,6 +7,11 @@
 #include "dect2/dji/dji_gen.h"
 #include "dect2/dji/dji_rx.h"
 #include "dect2/dji/dji_tel.h"
+#include "dect2/rid/rid_alerts.h"
+#include "dect2/airports/airports.h"
+#include "../smart5/smart5_ui.h"
+#include <deque>
+#include <unordered_map>
 #include <algorithm>
 #include <cfloat>
 #include <cmath>
@@ -281,8 +286,54 @@ void burstsView(App& a) {
 
 // ---------------------------------------------------------------- hooks
 
+// Airspace alerts for the drones DJI DroneID reports (docs/SMART5-avia-3.9.md item 6, the Remote ID logic of rid_alerts.h): above 120 m, within
+// 5 km of an airport, near a manned aircraft that ADS-B hears at the same time (ADS-B as the second mode). The drone is reported, not its pilot.
+dect2::DroneAirspaceWatch gDjiWatch;
+std::deque<dect2::DroneAlert> gDjiAlerts;
+std::unordered_map<std::string, double> gDjiFed;
+void alertsFeed(App& a) {
+    if (!live(a)) return;
+    if (!gDjiWatch.nearestAirport) gDjiWatch.nearestAirport = [](double lat, double lon, std::string& code, double& km) {
+        for (const auto& h : dect2::AirportDb::builtin().nearby(lat, lon, 10, 20, false)) {
+            const auto& ap = dect2::AirportDb::builtin().all()[h.index];
+            if (ap.kind == 'L' || ap.kind == 'M' || ap.scheduled) { code = ap.icao; km = h.km; return true; }
+        }
+        return false;
+    };
+    const double now = ImGui::GetTime();
+    const dect2::AdsbTelemetry* ad = a.second.rx.standard == 12 ? &a.second.rx.adsb : nullptr;
+    if (ad) for (const auto& ac : ad->aircraft) {
+        if (!ac.hasPos || !ac.hasAlt || ac.posAgeSec > 5) continue;
+        dect2::MannedFix m; m.icao = ac.icao; m.callsign = ac.callsign; m.t = now - ac.posAgeSec; m.lat = ac.lat; m.lon = ac.lon;
+        m.altM = (ac.hasGeoAlt ? ac.geoAltFt : ac.altFt) * 0.3048;
+        gDjiWatch.aircraft(m);
+    }
+    std::vector<dect2::DroneAlert> out;
+    for (const auto& d : a.rx.dji.drones) {
+        if (d.last.latRaw == 0 && d.last.lonRaw == 0) continue;   // no GPS fix in the packet
+        const std::string id = d.serial.empty() ? "DJI track " + std::to_string(d.trackId) : d.serial;
+        double& fed = gDjiFed[id];
+        if (d.lastSec == fed) continue;
+        fed = d.lastSec;
+        dect2::DroneFix f; f.id = id; f.t = now; f.lat = d.last.lat(); f.lon = d.last.lon(); f.heightM = d.last.heightM(); f.altM = d.last.altitudeM();
+        gDjiWatch.drone(f, out);
+    }
+    for (auto& x : out) {
+        gDjiAlerts.push_back(x); if (gDjiAlerts.size() > 50) gDjiAlerts.pop_front();
+        s5ui::post("aviation", "drone_airspace", 1, x.text, "DJI " + x.text);   // View > Insights, insight.drone_airspace
+    }
+}
+void alertsView() {
+    { ImGui::PushTextWrapPos(0);
+      ImGui::TextDisabled("%s", tr("Drones above 120 m, within 5 km of an airport, or near a manned aircraft heard on ADS-B at the same time (needs ADS-B running as the second mode). Each drone and reason once per 10 minutes."));
+      ImGui::PopTextWrapPos(); }
+    if (gDjiAlerts.empty()) { ImGui::TextDisabled("%s", tr("none")); return; }
+    for (auto it = gDjiAlerts.rbegin(); it != gDjiAlerts.rend(); ++it) ImGui::TextColored(pal::warnAmber(), "%s", it->text.c_str());
+}
+
 void tick(App& a) {
     loadState();
+    alertsFeed(a);
     if (S.pushed) return;
     S.pushed = true;
     a.engine.dji().setDecodeDroneId(S.decode);
@@ -290,8 +341,8 @@ void tick(App& a) {
 
 void tab(App& a) {
     loadState();
-    subNav("djv", S.view, {"Signals", "DroneID", "Bursts"});
-    if (S.view == 0) signalsView(a); else if (S.view == 1) droneIdView(a); else burstsView(a);
+    subNav("djv", S.view, {"Signals", "DroneID", "Bursts", gDjiAlerts.empty() ? tr("Alerts") : (std::string(tr("Alerts")) + " (" + std::to_string(gDjiAlerts.size()) + ")").c_str()});
+    if (S.view == 0) signalsView(a); else if (S.view == 1) droneIdView(a); else if (S.view == 3) alertsView(); else burstsView(a);
 }
 
 void list(App& a) {

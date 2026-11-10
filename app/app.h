@@ -197,6 +197,7 @@ struct App {
     bool surpriseReq = false;           // Surprise me (the command palette, My station): handled once per request by stationWindow
     bool stationOpen = false;           // My station window (View > My station; app/panels/station_ui.cpp)
     bool heardOpen = false;             // Search everything heard (View > Search everything; app/panels/heard_ui.cpp)
+    bool insightOpen = false;           // Insights (View > Insights; app/panels/insight_ui.cpp): who hears me, talkgroup activity, trunk load, automatic pages, overdue broadcasts
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
     bool sweepOpen = false;             // the sweep scanner window (View > Sweep scanner)
@@ -372,6 +373,7 @@ struct App {
     std::string mapServer;                        // empty: https://map.on-air.dev (a local worker URL for developers)
     bool wiresharkOpen = false;   // View > Wireshark (app/wirecap/wireshark_ui.cpp)
     bool feedsOpen = false;   // View > Data feeds: the window (feeds_ui.cpp)
+    bool echolinkOpen = false;   // Tools > EchoLink: the window (app/echolink/echolink_ui.cpp)
     bool swarmOpen = false;   // View > LAN swarm: the window (swarm_ui.cpp)
     bool integrationsOpen = false;   // View > Integrations: MQTT, webhook and JSON-lines output of decoded events (app/integrations)
     bool ssbConvOpen = false;      // View > Conversations: SSB voice found on the span, organised into conversations (ssbconv_ui.cpp)
@@ -832,6 +834,18 @@ void passesDownloadTles();                          // passes_ui.cpp: fetch the 
 bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
 void wideAllButton(App& a);                          // the one button of it (Simple views and the window)
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
+void insightWindow(App& a);                         // insight_ui.cpp: View > Insights, and the analysers' tick (called every frame)
+void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float snr);   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
+bool wmbusIsMine(const std::string& meterKey);       // insight_ui.cpp: the wM-Bus meters the user marked as their own (leak check)
+void wmbusSetMine(const std::string& meterKey, bool mine);
+std::string insightBustedHint(const std::string& call, std::string* why);
+bool insightPagerAutomatic(const char* protocol, uint32_t address);   // insight_ui.cpp: the capcode sends automatic or test pages (the pager view's hide switch)   // insight_ui.cpp: the call a decoded one is probably a busted copy of, "" if none   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
+// app/smart5: the round-5 smart cards in the mode screens (docs/SMART5-UI-3.9.md); fed every frame by smart5Tick (from insightWindow)
+void smart5FmCard(App& a); void smart5AmCard(App& a); void smart5DabCard(App& a); void smart5DrmCard(App& a); void smart5HdCard(App& a);
+void smart5TvCard(App& a); void smart5DvbsCard(App& a); void smart5AtvCard(App& a);
+void smart5WxPassCard(App& a); void smart5GeoCard(App& a); void smart5LbandCard(App& a); void smart5CubeCard(App& a);
+void wmbusMineTick(App& a); void wmbusMineView(App& a);   // app/wmbus/wmbus_mine_ui.cpp: the user's own meters (use per hour and day)
+void smart5GnssCard(App& a); void smart5AstroCard(App& a); void smart5SidCard(App& a); void smart5MeteorCard(App& a);
 void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
 void stationAntennaFor(const App& a, bool& known, bool& forBand);   // station_ui.cpp: for the doctor's coach: is an antenna entered, and does one suit the tuned frequency
@@ -1049,10 +1063,14 @@ void pluginFrame(App& a);          // plugin/plugin_app.cpp, every frame: discov
 void pluginShutdown();             // at exit: stops the plugins and removes the crash marker
 void pluginManagerWindow(App& a);  // View > Plugins
 void automationWindow(App& a);   // automation_ui.cpp: the Automations window (View > Automations) and, every frame, the engine's actions that touch the receiver
+namespace dect2::automation { struct Rule; }
+bool automationAddRule(const dect2::automation::Rule& r, std::string& err);   // automation_ui.cpp: adds a rule made elsewhere (Sensors, Alert) as it is, saved and active
 extern std::string gAutomationShotPath;   // automation_sink.cpp: a screenshot of the program's own window is saved here after the next frame (then cleared)
 void wiresharkWindow(App& a);      // app/wirecap/wireshark_ui.cpp: one switch per mode, packets to Wireshark
 void loadWiresharkPrefs(App& a);
 void saveWiresharkPrefs(const App& a);
+void echolinkWindow(App& a);       // app/echolink/echolink_ui.cpp: the EchoLink client window
+void echolinkShutdown();           // its connection ends (BYE, log-out) and its sound cards close
 void feedsWindow(App& a);          // feeds_ui.cpp: the "Data feeds" window (View > Data feeds)
 void swarmWindow(App& a);          // swarm_ui.cpp: the "LAN swarm" window (View > LAN swarm)
 void rotatorWindow(App& a);        // rotator_ui.cpp: GS-232 rotator connect / status

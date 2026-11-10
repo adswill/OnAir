@@ -427,6 +427,23 @@ struct AtvGenerator::Impl {
             return amp * (a * (1 - c) + d * c);
         };
         std::vector<uint8_t> bits; double start = 0, T = 1, amp = 0;
+        if (F.lines == 625 && cfg.vbiTestLine > 0) {   // insertion test lines (smart5/vits.h): a white bar on the line, a multiburst on the next
+            const int L = line > 313 ? line - 313 : line;
+            if (L == cfg.vbiTestLine) {
+                for (int j = 0; j < count; j++) { const double u = u0 + j * dtUs; if (u >= 12 && u < 22) lineV[(size_t)j] += 1.0f; }   // 100 IRE
+                return;
+            }
+            if (L == cfg.vbiTestLine + 1) {   // 50 IRE pedestal 12 - 62 us, packets of 6.5 us at 0.5, 1, 2, 3 and 4 MHz, 30 IRE
+                static const double mhz[5] = {0.5, 1.0, 2.0, 3.0, 4.0};
+                for (int j = 0; j < count; j++) {
+                    const double u = u0 + j * dtUs;
+                    double v = u >= 12 && u < 62 ? 0.5 : 0;
+                    for (int k = 0; k < 5; k++) { const double a = 14 + k * 9.5; if (u >= a && u < a + 6.5) v = 0.5 + 0.3 * std::sin(2 * kPi * mhz[k] * (u - a)); }
+                    lineV[(size_t)j] += (float)v;
+                }
+                return;
+            }
+        }
         if (F.lines == 625 && cfg.vbiTeletext && ((line >= 7 && line <= 22) || (line >= 320 && line <= 335))) {
             static const char* const body = "ONAIR TELETEXT TEST ROW";
             const int k = (int)(((frame * 32 + (uint64_t)(line < 100 ? line - 7 : line - 320 + 16)) % 24));

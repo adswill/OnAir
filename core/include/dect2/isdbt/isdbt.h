@@ -43,6 +43,10 @@ struct Params {
     Layer layer[3];               // A, B, C: consecutive segment numbers, ascending
     bool bitDelayTwoSymbols = false;   // transmitter model only: the bit interleaving delay adjustment makes the whole delay two OFDM symbols (the default makes it a whole frame, as the recorded transmitters do); the receiver follows either
     int bwMhz = 6;                // channel width 6, 7 or 8 MHz: scales only the rates and durations (not compared, not signalled)
+    // ISDB-TSB (ARIB STD-B29, ITU-R BS.1114 System F): 1 or 3 segments in a narrow band; 0 for the 13-segment ISDB-T signal. The narrow signal
+    // is laid out as the centre segment(s) of an ISDB-T band (segment 0 at the centre, 1 below it and 2 above it), sampled at 1/8 (one segment)
+    // or 1/4 (three segments) of the ISDB-T rate. Segment numbers, pilots, TMCC and AC carriers are those of the ISDB-T segments at those places.
+    int tsb = 0;
     int totalSegments() const { return layer[0].segments + layer[1].segments + layer[2].segments; }
     bool operator==(const Params& o) const { return mode == o.mode && guard == o.guard && partial == o.partial && layer[0] == o.layer[0] && layer[1] == o.layer[1] && layer[2] == o.layer[2]; }
     bool valid(std::string* why = nullptr) const;
@@ -50,6 +54,13 @@ struct Params {
 
 // ---- geometry
 inline int fftN(int mode) { return 2048 << (mode - 1); }
+// ISDB-TSB: the FFT is smaller than the ISDB-T one by this factor (one segment 1/8, three segments 1/4); 1 for ISDB-T
+inline int tsbDecimation(int tsb) { return tsb == 1 ? 8 : tsb == 3 ? 4 : 1; }
+// frequency positions (see kSegmentAtPosition) inside the band: ISDB-T 0..12, one segment 6, three segments 5..7
+inline int firstPosition(int tsb) { return tsb == 1 ? 6 : tsb == 3 ? 5 : 0; }
+inline int lastPosition(int tsb) { return tsb == 1 ? 6 : tsb == 3 ? 7 : 12; }
+// Hz occupied by the carriers of a band of `tsb` segments (0: 13) in a bwMhz-raster channel; a segment is a fourteenth of the raster width
+inline double occupiedHz(int tsb, int bwMhz) { const double seg = (bwMhz == 7 || bwMhz == 8 ? bwMhz : 6) * 1e6 / 14.0; return seg * (tsb ? tsb : 13) + seg / 108.0; }
 inline int carriersPerSegment(int mode) { return 108 << (mode - 1); }
 inline int dataPerSegment(int mode) { return 96 << (mode - 1); }
 inline int totalCarriers(int mode) { return kSegments * carriersPerSegment(mode) + 1; }
@@ -57,6 +68,8 @@ inline int centerCarrier(int mode) { return (totalCarriers(mode) - 1) / 2; }
 inline int guardSamples(int mode, int guard) { return fftN(mode) >> (5 - guard); }
 inline int symbolSamples(int mode, int guard) { return fftN(mode) + guardSamples(mode, guard); }
 inline double frameSeconds(int mode, int guard, int bwMhz = 6) { return (double)symbolSamples(mode, guard) * kSymbolsPerFrame / sampleRateFor(bwMhz); }
+// the carrier above the band (always a pilot): ISDB-T the last of totalCarriers, ISDB-TSB the first carrier above its top segment
+inline int edgeCarrier(int mode, int tsb) { return tsb ? (lastPosition(tsb) + 1) * carriersPerSegment(mode) : totalCarriers(mode) - 1; }
 inline int bitsPerCell(int mod) { return mod == k64Qam ? 6 : mod == k16Qam ? 4 : 2; }
 int interleavingLength(int mode, int ti);                      // I of the time interleaver
 // Delay of the time interleaver and the delay adjustment before it (Table 3-12) add up to a whole number of frames; in symbols
@@ -94,6 +107,8 @@ const std::vector<uint8_t>& prbsW(int mode, int seg);
 inline float pilotValue(uint8_t w) { return w ? -kPilotAmp : kPilotAmp; }
 // the carrier added at the top of the band: always modulated the same way
 inline float lastCarrierValue(int mode) { return mode == 1 ? -kPilotAmp : kPilotAmp; }
+// the pilot above the band of a TSB signal: the pilot sequence carried on into the next segment place (ISDB-T: lastCarrierValue)
+float edgeCarrierValue(int mode, int tsb);
 
 // ---- TMCC
 struct LayerInfo { int mod = 7, rate = 7, ti = 7, segments = 15; };   // the raw 3+3+3+4 bit fields; all ones: layer not used
@@ -123,7 +138,9 @@ std::vector<int> tmccCarrierList(int mode, int pos, bool diffSegment);
 LayerInfo toLayerInfo(const Layer& l);
 bool fromLayerInfo(const LayerInfo& li, Layer& l);
 Tmcc tmccFromParams(const Params& p);
-// Takes the layer parameters (not mode and guard) out of a TMCC word; false if they cannot be valid
+// Takes the layer parameters (not mode and guard) out of a TMCC word; false if they cannot be valid.
+// With p.tsb set (a narrow receiver): a word of the same number of segments is taken as it is; a one-segment receiver also takes the
+// partial-reception layer A out of a three-segment ISDB-TSB word or a 13-segment ISDB-T word (the one-segment service), the other layers dropped.
 bool paramsFromTmcc(const Tmcc& t, Params& p);
 
 // ---- constellations

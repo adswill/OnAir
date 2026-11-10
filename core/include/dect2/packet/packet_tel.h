@@ -1,6 +1,7 @@
 // APRS / Packet receiver telemetry, shared by the receiver and the UI.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
+#include "aprs_board.h"
 #include "packet_path.h"
 #include <cstdint>
 #include <cstdio>
@@ -39,6 +40,9 @@ struct PacketStation {
     std::string via;             // the station that sent the object
     int carrierId = 0;           // whole-span decoding: the carrier it was last heard on
     double carrierHz = 0;
+    bool hasWx = false;          // a weather station (aprs_board.h): the last values, merged over the reports, and the last 24 h
+    AprsWx wx;
+    std::vector<AprsWx> wxHist;
 };
 
 struct PacketTelemetry {
@@ -69,6 +73,8 @@ struct PacketTelemetry {
     // results (the newest frame last; the stations newest first)
     std::vector<PacketFrameInfo> frames;
     std::vector<PacketStation> stations;
+    std::vector<AprsMessage> messages;      // messages, bulletins and weather service bulletins, oldest first (aprs_board.h)
+    std::string myCall;                     // setMyCall(): the user's callsign, for "to me"
 };
 
 inline std::string packetSummary(const PacketTelemetry& t) {

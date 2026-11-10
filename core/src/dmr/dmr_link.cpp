@@ -455,12 +455,14 @@ void Link::decodeBurst(Track& t) {
         }
     }
     int cc = t.cc;
+    // a mobile / direct-mode burst with its sync: reported for the timing of inbound bursts (the slot sync tests measure OnAir's own uplink)
+    if (sync >= 0 && t.family > 0 && onBurstTiming) onBurstTiming((t0 + 655.0) / 48000.0, t.family, 0, -1);
 
     // CACH in front of the burst (base station)
     if (t.family == 0 && (sync < 0 || syncIsBs(sync))) {
         float zc[12];
         for (int i = 0; i < 12; i++) zc[i] = (float)((interp(t0 - 120.0 + 10.0 * i) - c.off) / c.unit);
-        handleCach(t, zc);
+        handleCach(t, zc, t0);
     }
 
     bool structure = false, payloadOk = false;
@@ -1104,7 +1106,7 @@ void Link::addMessage(const DmrMessage& m) {
 
 // ---------------------------------------------------------------------------------------------------- CACH
 
-void Link::handleCach(Track& t, const float* zc) {
+void Link::handleCach(Track& t, const float* zc, double t0) {
     Bits bits;
     for (int i = 0; i < 12; i++) {
         const int hd = zc[i] >= 2.f ? 3 : zc[i] >= 0.f ? 1 : zc[i] >= -2.f ? -1 : -3;
@@ -1121,6 +1123,8 @@ void Link::handleCach(Track& t, const float* zc) {
         if (t.slot == 0) t.slot = tc + 1;
         if (t.tcVote[0] + t.tcVote[1] >= 2 && t.tcVote[0] != t.tcVote[1]) t.slot = t.tcVote[1] > t.tcVote[0] ? 2 : 1;
     }
+    // the centre of the burst after this CACH is 65.5 symbols (655 samples at 48 kHz) after its symbol 0
+    if (t.family == 0 && tactErr == 0 && onBurstTiming) onBurstTiming((t0 + 655.0) / 48000.0, 0, tc + 1, at);
     Bits p;
     putBits(p, pay, 17);
     if (lcss == 1) { shortLcPiece_[0] = p; shortLcHave_ = 1; }

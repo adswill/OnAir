@@ -6,6 +6,7 @@
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "app.h"
+#include "ais/ais_seen_ui.h"
 #include "state/results_export.h"
 #include "../adsb/adsb_map.h"
 #include "map/rangeplot_ui.h"
@@ -619,7 +620,7 @@ void nmeaView(App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({14, "AIS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("aisv", S.view, {{tr("Live"), 1}, {tr("Tracks"), 6}, {tr("Map"), 0}, {tr("Log"), 2, true}, {tr("NMEA"), 3, true}, {tr("Range"), 4, true}, {tr("Satellite"), 5, true}, {tr("Alerts"), 7, true}, {tr("Reports"), 8, true}});
+    kit::modeNav("aisv", S.view, {{tr("Live"), 1}, {tr("Tracks"), 6}, {tr("Map"), 0}, {tr("Log"), 2, true}, {tr("NMEA"), 3, true}, {tr("Range"), 4, true}, {tr("Satellite"), 5, true}, {tr("Alerts"), 7, true}, {tr("Reports"), 8, true}, {tr("History"), 9, true}, {tr("Arrivals"), 10, true}});
     const bool on = live(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.view == 2) {
@@ -633,6 +634,8 @@ void tab(App& a) {
     if (S.view == 6) { kit::sessionItems(14, 3, "ais"); return; }
     if (S.view == 7) { aisAlertsPanel(a); return; }
     if (S.view == 8) { reportsView(a); return; }
+    if (S.view == 9) { aisSeenView(a); return; }
+    if (S.view == 10) { aisArrivalsView(a); return; }
     const float cw = std::min(320.f * gUi, W * 0.34f);
     ImGui::BeginChild("##ais_l", ImVec2(W - cw - 8 * gUi, H));
     if (S.view == 0) {
@@ -680,6 +683,7 @@ void receiver(App& a) {
 void tick(App& a) {
     aisSatTick(a);
     aisAlertsTick(a);
+    aisSeenTick(a);
     if (!live(a) || a.rx.seq == S.rangeSeq) return;
     S.rangeSeq = a.rx.seq;
     double lat, lon;

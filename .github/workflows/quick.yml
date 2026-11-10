@@ -69,3 +69,6 @@ jobs:
         run: |
           R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
           ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900
+      - name: Figures printed by passing tests (load tools)
+        if: always()
+        run: grep -h -B3 -A10 'CPU %' build/Testing/Temporary/LastTest.log 2>/dev/null || true

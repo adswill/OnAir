@@ -62,6 +62,8 @@ bool Params::valid(std::string* why) const {
         n += l.segments;
     }
     if (n < 1 || n > kSegments) return fail("the layers must use between 1 and 13 segments");
+    if (tsb != 0 && tsb != 1 && tsb != 3) return fail("ISDB-TSB has one or three segments");
+    if (tsb && n != tsb) return fail("the layers must fill the ISDB-TSB band");
     // layers must be consecutive: no unused layer between used ones
     if ((!layer[0].used() && (layer[1].used() || layer[2].used())) || (!layer[1].used() && layer[2].used())) return fail("unused layer before a used one");
     if (partial && layer[0].segments != 1) return fail("partial reception needs layer A with one segment");
@@ -331,6 +333,7 @@ bool fromLayerInfo(const LayerInfo& li, Layer& l) {
 
 Tmcc tmccFromParams(const Params& p) {
     Tmcc t;
+    t.sysId = p.tsb ? 1 : 0;
     t.partial = p.partial;
     for (int i = 0; i < 3; i++) t.cur[i] = toLayerInfo(p.layer[i]);
     return t;
@@ -340,9 +343,19 @@ bool paramsFromTmcc(const Tmcc& t, Params& p) {
     Params q = p;
     for (int i = 0; i < 3; i++) if (!fromLayerInfo(t.cur[i], q.layer[i])) return false;
     q.partial = t.partial;
+    if (q.tsb && q.totalSegments() != q.tsb) {
+        // a narrow receiver inside a wider signal: only the one-segment layer at the centre can be taken out on its own
+        if (q.tsb != 1 || !q.partial || q.layer[0].segments != 1) return false;
+        q.layer[1] = Layer(); q.layer[2] = Layer();
+    }
     if (!q.valid()) return false;
     p = q;
     return true;
+}
+
+float edgeCarrierValue(int mode, int tsb) {
+    if (!tsb) return lastCarrierValue(mode);
+    return pilotValue(prbsW(mode, kSegmentAtPosition[lastPosition(tsb) + 1])[0]);
 }
 
 // ---------------------------------------------------------------- constellations

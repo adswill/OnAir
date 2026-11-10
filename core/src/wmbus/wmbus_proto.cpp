@@ -16,6 +16,7 @@ const char* phyName(Phy p) {
     case Phy::C1B: return "C1 (B)";
     case Phy::R2: return "R2";
     case Phy::N1: return "N1";
+    case Phy::N24: return "N 2.4k";
     default: return "?";
     }
 }
@@ -318,6 +319,23 @@ bool parseFrame(const uint8_t* b, size_t n, bool formatB, Frame& f) {
     size_t p = 11;
     int ci = f.ci;
     const size_t sz = f.data.size();
+    if (ci == 0x20) {   // Wize LAN v1.x: L6Ctrl (Vers 3, reserved 1, KeySel 4), L6NetwId, L6Cpt (2), L6App, L7Ciph, L6HashKenc (4), L6TStamp (2), L6HashKmac (2)
+        f.ciName = "Wize";
+        if (sz < p + 13) { f.error = "Wize frame too short"; return false; }
+        f.wize = true;
+        f.wizeVers = f.data[p] >> 5; f.wizeKeySel = f.data[p] & 15;
+        f.wizeNetwId = f.data[p + 1];
+        f.wizeCpt = f.data[p + 2] << 8 | f.data[p + 3];
+        f.wizeApp = f.data[p + 4];
+        const size_t t = sz - 8;
+        f.wizeL7.assign(f.data.begin() + (long)p + 5, f.data.begin() + (long)t);
+        f.wizeHashKenc = (uint32_t)f.data[t] << 24 | (uint32_t)f.data[t + 1] << 16 | (uint32_t)f.data[t + 2] << 8 | f.data[t + 3];
+        f.wizeTStamp = f.data[t + 4] << 8 | f.data[t + 5];
+        f.wizeHashKmac = (uint16_t)(f.data[t + 6] << 8 | f.data[t + 7]);
+        f.encrypted = f.wizeKeySel != 0;
+        f.payload = f.wizeL7;
+        return ok;
+    }
     if (ci == 0x8C) { if (p + 3 > sz) return ok; p += 2; ci = f.data[p++]; }
     else if (ci == 0x8D) {
         if (p + 9 > sz) return ok;
@@ -359,8 +377,9 @@ const PhySpec& phySpec(Phy p) {
         {Phy::C1B, 100000, 50000, Coding::Nrz, 0x543D},
         {Phy::R2, 4800, 6000, Coding::Manchester, 0x7696},
         {Phy::N1, 4800, 2400, Coding::Nrz, 0xF68D},
+        {Phy::N24, 2400, 2400, Coding::Nrz, 0xF68D},   // Wize Regional Parameters v1.2: WM2400 GFSK +-2.4 kHz (format B sync F672 also accepted)
     };
-    return t[(int)p < 6 ? (int)p : 0];
+    return t[(int)p < 7 ? (int)p : 0];
 }
 
 bool decryptFrame(Frame& f, const uint8_t key[16]) {
@@ -389,11 +408,12 @@ bool decryptFrame(Frame& f, const uint8_t key[16]) {
     return true;
 }
 
-std::vector<uint8_t> encodeChips(Phy p, const std::vector<uint8_t>& air, int pre) {
+std::vector<uint8_t> encodeChips(Phy p, const std::vector<uint8_t>& air, int pre, uint16_t sync) {
     const PhySpec& sp = phySpec(p);
+    if (!sync) sync = sp.sync;
     std::vector<uint8_t> c;
     for (int i = 0; i < pre; i++) { c.push_back(0); c.push_back(1); }
-    for (int i = 15; i >= 0; i--) c.push_back((sp.sync >> i) & 1);
+    for (int i = 15; i >= 0; i--) c.push_back((sync >> i) & 1);
     auto nrz = [&](unsigned v, int bits) { for (int i = bits - 1; i >= 0; i--) c.push_back((v >> i) & 1); };
     if (p == Phy::C1A) nrz(0x54CD, 16);   // mode C sends 0x54 then the frame-format byte
     if (p == Phy::C1B) nrz(0x543D, 16);
@@ -410,7 +430,7 @@ std::vector<ChannelDef> channelPlan(double centre, double rate) {
     std::vector<ChannelDef> all;
     auto lab = [](double f) { char b[40]; snprintf(b, sizeof b, "%.4f MHz", f / 1e6); return std::string(b); };
     if (centre > 0 && centre < 300e6) {
-        for (int i = 0; i < 6; i++) { const double f = 169.40625e6 + 12.5e3 * i; all.push_back({f, false, 48000, 5500, {Phy::N1}, lab(f)}); }
+        for (int i = 0; i < 6; i++) { const double f = 169.40625e6 + 12.5e3 * i; all.push_back({f, false, 48000, 5500, {Phy::N1, Phy::N24}, lab(f)}); }
     } else {
         all.push_back({868.300e6, true, 400000, 140000, {Phy::S1}, lab(868.3e6)});
         all.push_back({868.950e6, true, 400000, 140000, {Phy::T1, Phy::C1A}, lab(868.95e6)});
@@ -423,6 +443,17 @@ std::vector<ChannelDef> channelPlan(double centre, double rate) {
         if (std::fabs(c.freqHz - centre) + half <= 0.46 * rate) out.push_back(c);
     }
     return out;
+}
+
+std::vector<uint8_t> wizeBody(uint16_t mfr, const uint8_t id4[4], uint8_t version, uint8_t type, uint8_t C, int keySel, int netwId, int cpt, int app,
+                              const std::vector<uint8_t>& l7, uint32_t hashKenc, int tstamp, uint16_t hashKmac) {
+    std::vector<uint8_t> b = {C, (uint8_t)mfr, (uint8_t)(mfr >> 8), id4[0], id4[1], id4[2], id4[3], version, type, 0x20,
+                              (uint8_t)(1 << 5 | (keySel & 15)), (uint8_t)netwId, (uint8_t)(cpt >> 8), (uint8_t)cpt, (uint8_t)app};
+    b.insert(b.end(), l7.begin(), l7.end());
+    for (int s = 24; s >= 0; s -= 8) b.push_back((uint8_t)(hashKenc >> s));
+    b.push_back((uint8_t)(tstamp >> 8)); b.push_back((uint8_t)tstamp);
+    b.push_back((uint8_t)(hashKmac >> 8)); b.push_back((uint8_t)hashKmac);
+    return b;
 }
 
 } // namespace dect2::wmbus

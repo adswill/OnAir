@@ -40,13 +40,14 @@ static const int kCp8k[177] = {
 static const int kTps2k[17] = {34, 50, 209, 346, 413, 569, 595, 688, 790, 901, 1073, 1219, 1262, 1286, 1469, 1594, 1687};
 static const int kTps8k[68] = {34, 50, 209, 346, 413, 569, 595, 688, 790, 901, 1073, 1219, 1262, 1286, 1469, 1594, 1687, 1738, 1754, 1913, 2050, 2117, 2273, 2299, 2392, 2494, 2605, 2777, 2923, 2966, 2990, 3173, 3298, 3391, 3442, 3458, 3617, 3754, 3821, 3977, 4003, 4096, 4198, 4309, 4481, 4627, 4670, 4694, 4877, 5002, 5095, 5146, 5162, 5321, 5458, 5525, 5681, 5707, 5800, 5902, 6013, 6185, 6331, 6374, 6398, 6581, 6706, 6799};
 
+// 4K (annex F, tables F.4 and F.5): the 89 continual pilots and the 34 TPS carriers are the 8K ones below Kmax = 3408
 const std::vector<int>& continualPilots(int mode) {
-    static const std::vector<int> a(kCp2k, kCp2k + 45), b(kCp8k, kCp8k + 177);
-    return mode == k8K ? b : a;
+    static const std::vector<int> a(kCp2k, kCp2k + 45), b(kCp8k, kCp8k + 177), c(kCp8k, kCp8k + 89);
+    return mode == k8K ? b : mode == k4K ? c : a;
 }
 const std::vector<int>& tpsCarriers(int mode) {
-    static const std::vector<int> a(kTps2k, kTps2k + 17), b(kTps8k, kTps8k + 68);
-    return mode == k8K ? b : a;
+    static const std::vector<int> a(kTps2k, kTps2k + 17), b(kTps8k, kTps8k + 68), c(kTps8k, kTps8k + 34);
+    return mode == k8K ? b : mode == k4K ? c : a;
 }
 const std::vector<uint8_t>& prbsW() {
     static std::vector<uint8_t> w;
@@ -88,16 +89,19 @@ std::array<uint8_t, 68> tpsBits(const Params& p, int frameIdx) {
     std::array<uint8_t, 68> s{};
     s[0] = prbsW()[0];
     putBits(s, 1, 16, (frameIdx & 1) ? 0xCA11 : 0x35EE);
-    putBits(s, 17, 22, p.cellIdLength ? 0x1F : 0x17);
+    putBits(s, 17, 22, p.dvbh ? 0x21 : p.cellIdLength ? 0x1F : 0x17);
     putBits(s, 23, 24, frameIdx & 3);
     putBits(s, 25, 26, p.mod);
-    putBits(s, 27, 29, p.hier);
+    putBits(s, 27, 27, p.indepth && p.mode != k8K ? 1 : 0);   // annex F: the in-depth interleaver flag
+    putBits(s, 28, 29, p.hier);
     putBits(s, 30, 32, p.crHp);
     putBits(s, 33, 35, p.crLp);
     putBits(s, 36, 37, p.guard);
     putBits(s, 38, 39, p.mode);
     putBits(s, 40, 47, (frameIdx & 1) ? (p.cellId & 0xFF) : ((p.cellId >> 8) & 0xFF));
-    putBits(s, 48, 53, 0);
+    putBits(s, 48, 48, p.dvbh && p.timeSlicing ? 1 : 0);   // annex F table F.10
+    putBits(s, 49, 49, p.dvbh && p.mpeFec ? 1 : 0);
+    putBits(s, 50, 53, 0);
     tpsBch(s);
     return s;
 }
@@ -134,19 +138,23 @@ bool tpsDecode(const uint8_t bits[68], Params& p, int& frameIdx, bool& odd, int 
     // The length indicator is 0x17, or 0x1F with the cell id (and the DVB-H bits); it says nothing the receiver needs, and the BCH code has
     // already vouched for the block, so another value is taken as it comes
     const int len = get(17, 22);
-    p.cellIdLength = len == 0x1F;
+    p.cellIdLength = len == 0x1F || len == 0x21;
+    p.dvbh = len == 0x21;   // annex F: 33 TPS bits in use, the DVB-H signalling
     frameIdx = get(23, 24);
     if (odd != ((frameIdx & 1) != 0)) return false;
     p.mod = get(25, 26);
-    p.hier = get(27, 29);
+    p.indepth = get(27, 27) != 0;
+    p.hier = get(28, 29);
     p.crHp = get(30, 32);
     p.crLp = get(33, 35);
     p.guard = get(36, 37);
     p.mode = get(38, 39);
+    p.timeSlicing = p.dvbh && get(48, 48);
+    p.mpeFec = p.dvbh && get(49, 49);
     // Without hierarchy there is no LP stream, and its code rate field may hold anything (some transmitters leave it at a reserved value):
     // read it as the HP rate, or one strange field would hide a multiplex that decodes perfectly well
     if (p.hier == 0 && p.crLp > 4) p.crLp = p.crHp;
-    if (p.mod > 2 || p.hier > 3 || p.crHp > 4 || p.crLp > 4 || p.mode > 1) return false;
+    if (p.mod > 2 || p.hier > 3 || p.crHp > 4 || p.crLp > 4 || p.mode > 2 || (p.indepth && p.mode == k8K)) return false;
     return true;
 }
 
@@ -310,14 +318,15 @@ void bitInterleave(const std::vector<uint8_t>& coded, int mod, std::vector<uint8
 }
 
 const std::vector<int>& symbolPermutation(int mode) {
-    static std::vector<int> h[2];
-    static std::once_flag once[2];
+    static std::vector<int> h[3];
+    static std::once_flag once[3];
     std::call_once(once[mode], [mode] {
         static const int perm2k[10] = {4, 3, 9, 6, 2, 8, 1, 5, 7, 0};
+        static const int perm4k[11] = {6, 3, 0, 9, 4, 2, 1, 8, 5, 10, 7};   // table F.1: R' bit k goes to R bit perm4k[k]
         static const int perm8k[12] = {7, 1, 4, 2, 9, 6, 8, 10, 0, 3, 11, 5};
         const int Mmax = fftN(mode), Nmax = dataCarriers(mode);
-        const int Nr = mode == k8K ? 13 : 11;
-        const int* bp = mode == k8K ? perm8k : perm2k;
+        const int Nr = mode == k8K ? 13 : mode == k4K ? 12 : 11;
+        const int* bp = mode == k8K ? perm8k : mode == k4K ? perm4k : perm2k;
         std::vector<int>& H = h[mode];
         H.assign(Mmax, 0);
         unsigned reg = 1; // state for i >= 2 (state_2 = 1)
@@ -327,7 +336,7 @@ const std::vector<int>& symbolPermutation(int mode) {
             unsigned r = 0;
             if (i >= 2) {
                 if (i > 2) {
-                    const unsigned nb = mode == k8K ? ((reg ^ (reg >> 1) ^ (reg >> 4) ^ (reg >> 6)) & 1) : ((reg ^ (reg >> 3)) & 1);
+                    const unsigned nb = mode == k8K ? ((reg ^ (reg >> 1) ^ (reg >> 4) ^ (reg >> 6)) & 1) : mode == k4K ? ((reg ^ (reg >> 2)) & 1) : ((reg ^ (reg >> 3)) & 1);
                     reg = ((reg >> 1) | (nb << (Nr - 2))) & mask;
                 }
                 r = reg;
@@ -535,6 +544,11 @@ void symbolDeinterleave(int mode, int symIdx, const cf32* in, const float* n0in,
     const int N = dataCarriers(mode);
     if (symIdx % 2) { for (int q = 0; q < N; q++) { out[H[q]] = in[q]; n0out[H[q]] = n0in[q]; } }
     else { for (int q = 0; q < N; q++) { out[q] = in[H[q]]; n0out[q] = n0in[H[q]]; } }
+}
+
+void blockDeinterleave(const Params& p, bool odd, const cf32* in, const float* n0in, cf32* out, float* n0out) {
+    if (interleaverSymbols(p) == 1) { symbolDeinterleave(p.mode, odd ? 1 : 0, in, n0in, out, n0out); return; }
+    symbolDeinterleave(k8K, odd ? 1 : 0, in, n0in, out, n0out);   // in-depth: 6048 cells, the native 8K permutation (F.3.1.1.2.3)
 }
 
 void bitDeinterleave(const float* in, int mod, int words, float* out) {

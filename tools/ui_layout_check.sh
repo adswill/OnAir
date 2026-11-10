@@ -128,12 +128,15 @@ inmsat	--mode inmsat	Overview|Inmarsat|Receiver|History
 nrf24	--mode nrf24	Overview|nRF24|Receiver|History
 atis	--mode atis	Overview|ATIS|Receiver|History
 umts	--mode umts	Cells|Receiver|History
+cdma2000	--mode cdma2000	Cells|Receiver|History
+tdscdma	--mode tdscdma	Cells|Receiver|History
 selcal	--mode selcal	Overview|SELCAL|Receiver|History
 sensors	--mode sensors	Overview|Sensors|Receiver|History
 sferics	--mode sferics	Overview|Sferics|Receiver|History
 qrss	--mode qrss	Overview|Messages|Receiver|History
 dfcw	--mode dfcw	Overview|Messages|Receiver|History
 fsk441	--mode fsk441	Overview|Messages|Receiver|History
+jt6m	--mode jt6m	Overview|Messages|Receiver|History
 iscat	--mode iscat	Overview|Messages|Receiver|History
 pi4	--mode pi4	Overview|Messages|Receiver|History
 throb	--mode throb	Overview|Messages|Receiver|History
@@ -173,6 +176,7 @@ cquam	--mode cquam	Overview|C-QUAM|Receiver|History
 ardop	--mode ardop	Overview|ARDOP|Receiver|History
 mscatter	--mode mscatter	Overview|Meteors|Receiver|History
 goesdcs	--mode goesdcs	Overview|Platforms|Receiver|History
+hrdcp	--mode hrdcp	Overview|Platforms|Receiver|History
 modeac	--mode modeac	Overview|Replies|Receiver|History
 sbas	--mode sbas	Overview|SBAS|Receiver|History
 asterix	--mode asterix	Overview|Surveillance|Receiver|History

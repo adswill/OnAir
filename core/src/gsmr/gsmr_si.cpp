@@ -95,6 +95,26 @@ Frame23 encodeSi4(const Si3& s) {
 }
 
 Frame23 encodeSi2ter() { return base(18, kSi2ter); }
+Frame23 encodePagingKind(int type) {   // L2 pseudo length, RR, the type, page mode 0, then zeros / fill: no identities
+    Frame23 f; f.fill(0x2B);
+    f[0] = (uint8_t)((2 << 2) | 1); f[1] = 0x06; f[2] = (uint8_t)type;
+    for (int i = 3; i < 8; i++) f[(size_t)i] = 0;
+    return f;
+}
+CcchKind ccchKind(const uint8_t* m) {   // 44.018 9.1.18 - 9.1.24 (message types 10.4)
+    bool fill = true; for (int i = 0; i < 23; i++) if (m[i] != 0x2B) { fill = false; break; }
+    if (fill) return CcchKind::Idle;
+    if ((m[0] & 3) != 1 || (m[1] & 0x0F) != 0x06) return CcchKind::Other;
+    switch (m[2]) {
+    case 0x21: return CcchKind::Paging1;
+    case 0x22: return CcchKind::Paging2;
+    case 0x24: return CcchKind::Paging3;
+    case 0x3F: return CcchKind::ImmAssign;
+    case 0x39: return CcchKind::ImmAssignExt;
+    case 0x3A: return CcchKind::ImmAssignReject;
+    default: return CcchKind::Other;
+    }
+}
 
 namespace {
 
@@ -236,7 +256,8 @@ bool parseBcch(const uint8_t* m, Bcch& o) {
     switch (o.type) {
     case kSi1: list(3); rach(19); o.ok = true; break;
     case kSi2: list(3); o.nccPermitted = m[19]; rach(20); o.ok = true; break;
-    case kSi2bis: case kSi2ter: o.ok = true; break;
+    case kSi2bis: list(3); rach(19); o.ok = true; break;   // the neighbour cell description of SI2bis has the SI2 format (44.018 9.1.33)
+    case kSi2ter: o.ok = true; break;
     case kSi2quater: case kSi13: o.ok = true; break;
     case kSi3:
         if (!getLai(m + 5, o.si3.lai)) return false;

@@ -241,6 +241,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     stationHealthWindow(a);
     stationWindow(a);
     heardWindow(a);
+    insightWindow(a);
     receptionDoctorWindow(a);
     rfFingerprintWindow(a);
     wideAllWindow(a);
@@ -269,6 +270,7 @@ static void floatingWindows(App& a, ImVec2 disp) {
     a.engine.setWideDecode(a.wideDecode && modeSupportsWideHf(a.family));
     a.engine.setMultiChannel(a.mtvOn && wholeSpanTvOffered(a), a.mtvMax, a.mtvGrid);
     feedsWindow(a);
+    if (a.rxId == 1) echolinkWindow(a);   // one EchoLink client for the program
     wiresharkWindow(a);
     swarmWindow(a);
     automationWindow(a);

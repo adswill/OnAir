@@ -30,6 +30,10 @@ public:
     // inside onVoiceBurst: the reliability (0..255) of each of the 216 bits just delivered, from the soft symbols (for the soft vocoder frame FEC)
     uint64_t equalisedBursts() const { return eqBursts_; }   // bursts the symbol equaliser opened (it only works when the eye is closed)
     const uint8_t* voiceReliability() const { return voiceRel_; }
+    // Burst timing for the transmitter's slot sync (dmr_slot_sync.h): the centre (seconds of nowSec()) of a burst, its family (0 base station,
+    // 1 mobile, 2 direct), its slot (1 or 2 from a clean CACH TC, 0 not known) and the CACH access type (1 busy, 0 idle, -1 none). Base-station
+    // bursts are reported only behind a CACH whose TACT decoded without a correction.
+    std::function<void(double centreSec, int family, int slot, int at)> onBurstTiming;
     // the call on this slot (1 or 2) is marked private/encrypted by its service options: its voice must not be decoded
     bool slotEncrypted(int slot) const { for (const auto& t : tr_) if (t.inCall && slotOf(t) == slot && t.call.privacy) return true; return false; }
     // the call on this slot as the voice monitor lists it (voice_monitor.h): IDs, kind, flags, colour code, bit error rate (-1 not known)
@@ -148,7 +152,7 @@ private:
     uint64_t eqBursts_ = 0;
     voice::HeardIds heard_;   // radio and group IDs heard on this channel: repairs a voice header whose Reed-Solomon check failed
     void voiceBurst(Track& t, int pos, const Bits& burst, int lcss, const Bits& emb32, bool hadSync, const float* z);
-    void handleCach(Track& t, const float* zc);
+    void handleCach(Track& t, const float* zc, double t0);
 
     // ---- calls and messages
     void startCall(Track& t, int kind, uint32_t src, uint32_t dst, uint8_t svc, bool late, bool idsKnown);

@@ -64,13 +64,41 @@ bool addressDecode(uint32_t w, uint32_t& corrected, int& nerr) {
     return true;
 }
 
-std::string addressHex(uint32_t w) { char b[16]; snprintf(b, sizeof b, "%08X", w); return b; }
+// The operators write the 31 bits left-aligned in 32 (b1 as the top bit, a 0 after b31): EUMETSAT's reference platform is "162096C4"
+std::string addressHex(uint32_t w) { char b[16]; snprintf(b, sizeof b, "%08X", (unsigned)((w & 0x7FFFFFFFu) << 1)); return b; }
 
 double channelHz(int ch) { return kChannel1Hz + (ch - 1) * kChannelStepHz; }
 int channelOf(double f) {
     const int ch = (int)std::lround((f - kChannel1Hz) / kChannelStepHz) + 1;
     return (ch >= 1 && ch <= 267) ? ch : 0;
 }
+
+double channelHz(int ch, Plan plan) {
+    switch (plan) {
+    case Plan::Goes: return ch >= 1 && ch <= 267 ? channelHz(ch) : 0.0;
+    case Plan::Meteosat:
+        if (ch >= 1 && ch <= 267) return 402034000.0 + 1500.0 * ch;
+        if (ch >= 268 && ch <= 289) return 402002500.0 + 1500.0 * (ch - 268);
+        return 0.0;
+    case Plan::Himawari: return 0.0;
+    }
+    return 0.0;
+}
+int channelOf(double f, Plan plan) {
+    switch (plan) {
+    case Plan::Goes: return channelOf(f);
+    case Plan::Meteosat: {
+        const int ch = (int)std::lround((f - 402034000.0) / 1500.0);
+        if (ch >= 1 && ch <= 267) return ch;
+        const int lo = (int)std::lround((f - 402002500.0) / 1500.0) + 268;
+        return (lo >= 268 && lo <= 289) ? lo : 0;
+    }
+    case Plan::Himawari: return 0;
+    }
+    return 0;
+}
+const char* planName(Plan plan) { return plan == Plan::Meteosat ? "Meteosat" : plan == Plan::Himawari ? "Himawari" : "GOES"; }
+Plan planForCentre(double c) { return c > 0 && c < 402.0e6 ? Plan::Goes : (c > 0 ? Plan::Meteosat : Plan::Goes); }
 
 uint8_t withParity(uint8_t c7) {
     c7 &= 0x7F;

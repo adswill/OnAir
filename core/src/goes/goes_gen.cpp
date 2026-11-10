@@ -247,7 +247,7 @@ struct GoesGenerator::Impl {
             const int j0 = (int)d0;
             const float f = (float)(d0 - j0);
             const float* sp = &sym[(size_t)(k0 - kSpan + 1 - symBase)];
-            const float* sq = c.qpsk ? &symQ[(size_t)(k0 - kSpan + 1 - symBase)] : nullptr;
+            const float* sq = c.qpsk && !c.oqpsk ? &symQ[(size_t)(k0 - kSpan + 1 - symBase)] : nullptr;
             float acc = 0, accQ = 0;
             for (int t = 0, j = j0; t < 2 * kSpan; t++, j -= kOver)
                 if (j >= 0 && j + 1 < (int)table.size()) {
@@ -255,6 +255,16 @@ struct GoesGenerator::Impl {
                     acc += sp[t] * pv;
                     if (sq) accQ += sq[t] * pv;
                 }
+            if (c.qpsk && c.oqpsk) {   // offset QPSK: the Q rail half a symbol later
+                const double uq = u - 0.5;
+                const int64_t kq = (int64_t)std::floor(uq);
+                const double dq = (uq - (double)(kq - kSpan + 1) + kSpan) * kOver;
+                const int jq0 = (int)dq;
+                const float fq = (float)(dq - jq0);
+                const float* qq = &symQ[(size_t)(kq - kSpan + 1 - symBase)];
+                for (int t = 0, j = jq0; t < 2 * kSpan; t++, j -= kOver)
+                    if (j >= 0 && j + 1 < (int)table.size()) accQ += qq[t] * (table[(size_t)j] + fq * (table[(size_t)j + 1] - table[(size_t)j]));
+            }
             const double ph = phase0 + w * (double)n;
             const double cs = std::cos(ph), sn = std::sin(ph);
             // carrier: (acc + j accQ) * e^{j ph}

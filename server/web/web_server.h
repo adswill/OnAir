@@ -18,8 +18,38 @@
 
 namespace onair_web {
 
+// ---- an application mounted under /app (OnAir Web 3.9, server/app/webapp.h): the server does the sockets, TLS, the relay's address rewriting,
+// the connection limits and the WebSocket framing; the application sees requests and text frames. Nothing here runs unless `app` is set.
+struct AppRequest {
+    std::string method, path, query, body, peer;
+    bool loopback = false, tls = false, viaProxy = false;   // viaProxy: the relay or a reverse proxy (peer is what it reported; never a LAN peer)
+    std::map<std::string, std::string> headers;             // lower-case names
+    std::string header(const std::string& k) const { auto it = headers.find(k); return it == headers.end() ? std::string() : it->second; }
+};
+struct AppReply { int status = 404; std::string body, type = "application/json", headers; bool head = false; };   // headers: extra "Name: value\r\n" lines
+class AppWs {
+public:
+    virtual ~AppWs() = default;
+    virtual const AppRequest& request() const = 0;
+    virtual bool sendText(const std::string& s) = 0;
+    virtual bool sendBinary(const std::string& s) = 0;
+    // Waits up to ms for a client text frame: 1 with the payload, 0 when none arrived, -1 when the connection is closing (ping, pong,
+    // keepalive and close frames are handled here)
+    virtual int recv(std::string& payload, int ms) = 0;
+    virtual void close(int code, const std::string& why) = 0;
+};
+class AppHandler {
+public:
+    virtual ~AppHandler() = default;
+    virtual bool handle(const AppRequest& r, AppReply& out) = 0;   // false: not one of the application's paths (404)
+    virtual bool isWebSocketPath(const std::string& path) const = 0;
+    virtual void webSocket(AppWs& ws) = 0;                         // runs on the connection's thread until it returns
+};
+
 struct WebServerConfig {
     bool on = false;
+    AppHandler* app = nullptr;        // the application under /app (OnAir Web 3.9); nullptr: none
+    bool appHome = true;              // "/" redirects to /app/ while an application is mounted (the old listener page stays at /index.html)
     int port = 8073;                  // 0: any free port (tests)
     std::string bind = "127.0.0.1";   // "0.0.0.0": every interface
     std::string tlsCert, tlsKey;      // PEM files (a build with OpenSSL); both or neither

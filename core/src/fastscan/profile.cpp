@@ -111,6 +111,7 @@ std::vector<ScanProfile> builtinProfiles() {
         v.push_back(p);
     };
     add("Airband 118-137", "118-137", 8.33, 25, 10, "", "121.5");
+    add("Military UHF air 225-400", "225-400", 25, 25, 10, "", "243.0, 282.8");   // AM, 25 kHz channels; 243.0 guard, 282.8 NATO on-scene SAR
     add("Marine VHF", "156-162.025", 12.5, 25, 10);
     add("VHF/UHF amateur + PMR", "144-146, 430-440, 446-446.2", 12.5, 12.5, 10);
     add("Public safety VHF", "150-174", 12.5, 12.5, 10, "", "");

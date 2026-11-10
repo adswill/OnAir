@@ -123,7 +123,7 @@
   {"name":"VOR / ILS","service":"air","start_hz":108000000,"end_hz":117950000,"step_hz":50000,"first_centre_hz":108000000,"modes":["VOR","ILS"],"note":"108-117.95 MHz, 50 kHz grid"}]},
 "air-mil":{"source":"ITU Radio Regulations 5.111-5.115 and national tables: 225-400 MHz military aeronautical UHF (AM, 25 kHz); 138-144 MHz military VHF piece (AM)",
  "bands":[
-  {"name":"Military UHF air band","service":"air","start_hz":225000000,"end_hz":399975000,"step_hz":25000,"first_centre_hz":225000000,"modes":["General receiver"],"note":"225-400 MHz AM, 25 kHz channels; 243.000 MHz is the military guard channel"},
+  {"name":"Military UHF air band","service":"air","start_hz":225000000,"end_hz":399975000,"step_hz":25000,"first_centre_hz":225000000,"modes":["Airband","General receiver"],"note":"225-400 MHz AM, 25 kHz channels; 243.000 MHz is the military guard channel, 282.800 MHz NATO on-scene SAR"},
   {"name":"Military VHF air band","service":"air","start_hz":138000000,"end_hz":143975000,"step_hz":25000,"first_centre_hz":138000000,"modes":["General receiver"],"note":"138-144 MHz AM, 25 kHz channels"}]},
 "air-833":{"source":"ICAO Annex 10 Vol V / EU Regulation 1079/2012 (8.33 kHz channel spacing in Europe)",
  "bands":[

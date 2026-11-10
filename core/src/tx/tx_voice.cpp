@@ -1,5 +1,6 @@
 // Analog voice for TX: NFM, AM, USB/LSB of a microphone, a file, a 1 kHz tone or silence. Broadcast FM (stereo + RDS) lives in fm_gen.cpp.
 #include "dect2/tx/tx.h"
+#include "dect2/tx/tx_dtmf.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/audio/audio_control.h"
 #include "dect2/tones/tones_proto.h"
@@ -71,7 +72,7 @@ inline float cubic(const float* v, float t) {
 class AnalogVoice : public ModeSynth {
 public:
     AnalogVoice(double rate, double offHz, int kind, const TxRequest& r)
-        : rate_(rate), off_(offHz), kind_(kind), pull_(r.pullAudio) {
+        : rate_(rate), off_(offHz), kind_(kind), pull_(r.pullAudio), dtmf_(kFs, r.o("dtmf.off", 0) > 0.5 ? nullptr : &TxDtmfQueue::global()) {
         tone_ = r.toneHz > 0 ? r.toneHz : 1000;
         tone2_ = r.o("audio.tone2Hz", 0);
         toneAmp_ = (float)(r.o("audio.toneLevelPct", 50) / 100.0);
@@ -177,6 +178,10 @@ private:
             const float g = over > 0 ? -over * (1.f - 1.f / compRatio_) : 0.f;
             x *= std::pow(10.f, g / 20.f) * compMake_;
         }
+        // DTMF keys from the panel's keypad (tx_dtmf.h): the microphone is muted while a key and its gap play, the tone goes through the
+        // same pre-emphasis as the voice so the receiver's de-emphasis leaves the two tones at the level set
+        const bool dtmfOn = dtmf_.wants();
+        if (dtmfOn) x = dtmf_.next();
         if (kind_ == 1 && pull_ && pre_ > 0) {   // pre-emphasis of FM voice
             const float k = (float)(pre_ * 1e-6 * kFs);
             const float p = x + k * (x - preX_);
@@ -185,7 +190,7 @@ private:
         }
         x = std::max(-1.f, std::min(1.f, x));
         if (voxOn_) {
-            if (ax >= voxThr_) hang_ = voxHang_; else if (hang_ > 0) hang_--;
+            if (ax >= voxThr_ || dtmfOn) hang_ = voxHang_; else if (hang_ > 0) hang_--;
             const float target = hang_ > 0 ? 1.f : 0.f;
             gate_ += (target - gate_) * 0.04f;
             x *= gate_;
@@ -216,6 +221,7 @@ private:
     float toneAmp_ = 0.5f, preX_ = 0, env_ = 0, compThr_ = -18, compRatio_ = 4, compMake_ = 1, compRel_ = 0, compAtt_ = 0, voxThr_ = 0.018f, gate_ = 1;
     float amDepth_ = 0.85f, amLevel_ = 0.55f, ssbLevel_ = 0.4f, ssbCar_ = 0, fmLevel_ = 0.4f;
     Biquad hp_, lp1_, lp2_;
+    TxDtmfSequencer dtmf_;
     float bA_[4], bI_[4], bQ_[4];
     std::vector<float> hil_, hist2_;
     size_t hpos_ = 0;

@@ -16,7 +16,7 @@ const PanelFlag kPanels[] = {
     {"gallery", &App::galleryOpen}, {"direction-finder", &App::dfOpen}, {"interference", &App::rfiOpen},
     {"passive-radar", &App::passiveRadarOpen}, {"passes", &App::passesOpen}, {"station-health", &App::stationHealthOpen}, {"reception-doctor", &App::doctorOpen}, {"rf-fingerprint", &App::rfFpOpen}, {"everything-in-view", &App::wideAllOpen}, {"multi-radio-trunking", &App::trunkPoolOpen},
     {"sweep", &App::sweepOpen}, {"scanner", &App::scannerOpen}, {"scanview", &App::scanViewOpen}, {"memory", &App::memoryOpen}, {"packs", &App::packsOpen}, {"datasets", &App::datasetsOpen},
-    {"frequencies", &App::freqOpen}, {"map", &App::mapOpen}, {"propagation", &App::propOpen}, {"rotator", &App::rotatorOpen}, {"feeds", &App::feedsOpen},
+    {"frequencies", &App::freqOpen}, {"map", &App::mapOpen}, {"propagation", &App::propOpen}, {"rotator", &App::rotatorOpen}, {"feeds", &App::feedsOpen}, {"echolink", &App::echolinkOpen},
     {"conversations", &App::ssbConvOpen}, {"watchlist", &App::watchlistOpen}, {"integrations", &App::integrationsOpen}, {"messages", &App::msgdbOpen}, {"protocol-lab", &App::protolabOpen}, {"mode-builder", &App::modeBuilderOpen}, {"signal-lab", &App::signallabOpen},
     {"automation", &App::automationOpen},
     {"antenna-designer", &App::antdOpen},

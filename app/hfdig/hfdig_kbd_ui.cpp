@@ -4,6 +4,7 @@
 #include "../panels/picsave_ui.h"
 #include "../state/picsave.h"
 #include "app.h"
+#include "ham/ham_events_ui.h"
 #include "gfx/gfx.h"
 #include "panels/gallery.h"
 #include "platform/platform.h"
@@ -405,7 +406,7 @@ void hfdigKbdTab(App& a, const dect2::HfdigTelemetry& t) {
         if (!k.callsign.empty()) {
             flowNext(12 * gUi);
             ImGui::TextDisabled("Callsign"); ImGui::SameLine(0, 5 * gUi);
-            ImGui::PushFont(a.mono, 0); ImGui::TextColored(pal::okGreen(), "%s", k.callsign.c_str()); ImGui::PopFont();
+            ImGui::PushFont(a.mono, 0); hamCallText(k.callsign, a.freqMhz * 1e6, kbdFamilyName(fam)); ImGui::PopFont();   // country, worked-before colour (ham/ham_events_ui.h)
         }
     }
     flowEnd();

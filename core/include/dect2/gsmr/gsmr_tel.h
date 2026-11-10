@@ -3,6 +3,7 @@
 // operator code), its access parameters and the channel lists of System Information 1 to 4.
 // The first members of GsmrTelemetry are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once
+#include "dect2/gsmr/gsmr_si.h"
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -36,6 +37,8 @@ struct GsmrCell {
     bool hasSi1 = false, hasSi2 = false;
     std::vector<int> cellAlloc;   // ARFCNs of the cell allocation (SI1)
     std::vector<int> neigh;       // ARFCNs of the BCCH neighbours (SI2)
+    std::vector<int> neighBis;    // more neighbours from SI2bis (the other band of a dual band network)
+    gsmr::CcchCount ccch;         // common control channel blocks by message kind (the cell's paging and access load; no contents kept)
     int nccPermitted = 0;         // bit mask (SI2)
     std::vector<int> typesSeen;   // RR message types decoded (0x19 SI1, 0x1A SI2, 0x1B SI3, 0x1C SI4, others)
     // measurements (dBFS: relative to the radio's full scale, not calibrated)
