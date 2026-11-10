@@ -1346,3 +1346,6 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 Aviation package (feat39-avia)
+Branch feat39-avia on integ-39. Military UHF air band (225-400 MHz AM) in Airband: 25 kHz raster, Military UHF button (243.000 guard, 282.800 SAR), band watch and a fast scan profile. New mode VDL Mode 3 (family 640): Annex 10 burst formats (S1/S1*/S2/S2*, Golay, RS (72,62)); system data and headers raw, because Doc 9805 is not public; voice not decoded. FANS-1/A ADS-C and CPDLC already decoded from ACARS, VDL2 and HFDL: labels fixed and end-to-end tests added. TACAN impairment tests. ILS marker keying (dashes, dot-dash, dots). Tests: vdl3_all, airband_uhf, vor_marker, dme_tacan_impair, acars_fans, hfdl_fans, all on simulated signals only. Details are in docs/AVIA-3.9.md.
