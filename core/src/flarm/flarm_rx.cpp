@@ -54,7 +54,7 @@ struct Chan {
     int64_t n = 0;
     float dring[kSps] = {};
     cf32 t1[kSps] = {}, t0[kSps] = {};   // samples turned by -+50 kHz (tone detector)
-    float toneScale = 1.f;
+    cf32 b1 = cf32(0.f, 0.f), b0 = cf32(0.f, 0.f);
     float S = 0;
     float soft[kSps][kRing] = {};
     uint32_t reg[kSps][2] = {};
@@ -73,6 +73,7 @@ struct Chan {
         phase = 0; prev = cf32(1.f, 0.f); n = 0;
         for (float& f : dring) f = 0;
         for (int j = 0; j < kSps; j++) t1[j] = t0[j] = cf32(0.f, 0.f);
+        b1 = b0 = cf32(0.f, 0.f);
         S = 0;
         for (auto& r : soft) for (float& f : r) f = 0;
         for (auto& r : reg) r[0] = r[1] = 0;
@@ -339,7 +340,7 @@ struct FlarmReceiver::Impl {
         const float kd = (float)(kWorkRate / (2 * kPi) / 50000.0);
         for (const cf32& s : *y) {
             const cf32 q = s * std::conj(c.prev);
-            const float d = fastAtan2(q.imag(), q.real()) * kd;   // (std::arg: the libm call was most of the cost)
+            const float d = FlarmReceiver::toneDetect ? 0.f : fastAtan2(q.imag(), q.real()) * kd;   // (std::arg: the libm call was most of the cost)
             c.prev = s;
             const int p = (int)(c.n & 7);
             const int64_t k = c.n >> 3;
@@ -353,11 +354,14 @@ struct FlarmReceiver::Impl {
                 // chip value (3.9): the energy at +50 kHz minus the energy at -50 kHz over the last 8 samples (one chip), the noncoherent
                 // detector of orthogonal FSK (h = 1); below about 12 dB the discriminator's clicks cost about 1 dB more
                 const int ph16 = (int)(c.n & 15);
-                c.t1[p] = s * kLo[(16 - ph16) & 15];
-                c.t0[p] = s * kLo[ph16];
-                cf32 b1(0.f, 0.f), b0(0.f, 0.f);
-                for (int j = 0; j < kSps; j++) { b1 += c.t1[j]; b0 += c.t0[j]; }
-                c.S = (std::norm(b1) - std::norm(b0)) * c.toneScale;
+                const cf32 n1 = s * kLo[(16 - ph16) & 15], n0 = s * kLo[ph16];
+                c.b1 += n1 - c.t1[p]; c.b0 += n0 - c.t0[p];              // running sums over the last chip
+                c.t1[p] = n1; c.t0[p] = n0;
+                if ((c.n & 1023) == 0) {                                  // rounding: the sums again from scratch now and then
+                    c.b1 = c.b0 = cf32(0.f, 0.f);
+                    for (int j = 0; j < kSps; j++) { c.b1 += c.t1[j]; c.b0 += c.t0[j]; }
+                }
+                c.S = std::norm(c.b1) - std::norm(c.b0);
             } else {
                 // chip value: the sum of the last 8 discriminator samples
                 c.S += d - c.dring[p];

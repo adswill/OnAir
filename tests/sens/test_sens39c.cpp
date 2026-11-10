@@ -75,7 +75,7 @@ bool prepare(const Mode& m, Prep& P) {
 // the guard of the short run: the SNR (dB in the mode's noise bandwidth, see sens_modes.h) where 3.9 decodes reliably, threshold + 2 dB
 struct Guard { const char* id; double snrDb; };
 const Guard kGuards[] = {   // from the 3.9 calibration (CI runner): threshold + 2 dB
-    {"adsb1", 4}, {"acars1", 6}, {"zigbee", 4}, {"zwave", 12}, {"ble", 10}, {"uat", 10}, {"flarm", 9}, {"adsl", 8}, {"sonde", 13},
+    {"adsb1", 4}, {"acars1", 6}, {"zigbee", 4}, {"zwave", 12}, {"ble", 10}, {"uat", 10}, {"flarm", 6}, {"adsl", 5}, {"sonde", 13},
 };
 
 } // namespace
