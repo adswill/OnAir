@@ -328,7 +328,13 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 244: return pollStd(rxSfer_, 244, t, seqs[203], &RxTelemetry::sferics);   // Sferics (slot 203)
     case 602: return pollStd(rxXlink_, 602, t, seqs[601], &RxTelemetry::xlink);   // Extra links, narrow-band members
     case 601: return pollStd(rxXlink_, 601, t, seqs[600], &RxTelemetry::xlink);   // Extra links (slot 600)
-    case 621: case 622: case 623: case 624: case 625: case 626: case 627: return pollStd(rxCis_[a - 621], a, t, seqs[a], &RxTelemetry::cishf);   // CIS HF modes (slots 621 - 627)
+    case 621: return pollStd(rxCis_[0], a, t, seqs[621], &RxTelemetry::cishf);   // CIS HF modes (slots 621 - 627)
+    case 622: return pollStd(rxCis_[1], a, t, seqs[622], &RxTelemetry::cishf);
+    case 623: return pollStd(rxCis_[2], a, t, seqs[623], &RxTelemetry::cishf);
+    case 624: return pollStd(rxCis_[3], a, t, seqs[624], &RxTelemetry::cishf);
+    case 625: return pollStd(rxCis_[4], a, t, seqs[625], &RxTelemetry::cishf);
+    case 626: return pollStd(rxCis_[5], a, t, seqs[626], &RxTelemetry::cishf);
+    case 627: return pollStd(rxCis_[6], a, t, seqs[627], &RxTelemetry::cishf);
     case 361: return pollStd(rxRc_, 361, t, seqs[360], &RxTelemetry::rclink);   // RC and mesh links (slot 360)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 481: return pollStd(rxUmts_, 481, t, seqs[440], &RxTelemetry::umts);   // UMTS cells (slot 440)
