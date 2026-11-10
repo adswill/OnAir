@@ -164,6 +164,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--packs") app.packsOpen = true;   // dev: open View > Data packs
         if (std::string(argv[i]) == "--map") app.mapOpen = true;   // dev: open View > Map
         if (std::string(argv[i]) == "--memory-selftest") o.memSelfTest = true;
+        if (std::string(argv[i]) == "--drag-selftest") o.dragSelfTest = true;
         if (std::string(argv[i]) == "--memdev" && i + 1 < argc) memoryDev(atoi(argv[++i]));   // dev: 1 the Store current dialog, 2 the quick list as a window
         if (std::string(argv[i]) == "--memory") app.memoryOpen = true;   // dev: open View > Memory
         if (std::string(argv[i]) == "--memtab") app.memoryTab = true;    // dev: the Memory tab of the main screen

@@ -4,6 +4,7 @@
 #include "tune_drag.h"
 #include "drag_tune.h"
 #include "../ui/touch.h"
+#include "../memory/memory_options.h"
 #include "file_vfo.h"
 #include "spec_axis.h"
 #include "spec_paint.h"
@@ -153,7 +154,8 @@ static double gXLo = 0, gXHi = 0;   // the frequency view the spectrum and the w
 
 // ---- drag to tune (drag_tune.h): a left press tunes there and the held drag keeps tuning, snapped; Shift or Ctrl: fine steps
 static struct { int plot = -1; bool moved = false, centreDefer = false, touch = false; double lastMhz = NAN, pressMhz = NAN; ImVec2 p0; } gDT;
-static int gDTMenu = -1;   // a touch long press let go without moving on this plot: its menu opens (the spectrum's)
+static int gDTMenu = -1;
+static struct { ImVec2 mn, sz; int frame = -100; } gSpecRect;   // where the spectrum plot was drawn (--drag-selftest)   // a touch long press let go without moving on this plot: its menu opens (the spectrum's)
 bool specDragTunes(const App& a) { return a.specDrag == dragtune::Tune; }
 // the mode's own channel step in Hz (FM, DMR, the user's snap), 0 when the mode has none (the drag then follows the zoom)
 static double modeChannelStepHz(const App& a) {
@@ -1705,6 +1707,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         }
         channelBand(a, true);
         plotMin = plt::GetPlotPos(); plotSize = plt::GetPlotSize();
+        gSpecRect.mn = plotMin; gSpecRect.sz = plotSize; gSpecRect.frame = ImGui::GetFrameCount();   // for --drag-selftest
         if (!rangeEdited) {
             const plt::Rect lim = plt::GetPlotLimits();
             if (std::fabs(lim.Y.Min - a.yMin) > 0.01 || std::fabs(lim.Y.Max - a.yMax) > 0.01) {
@@ -2263,3 +2266,96 @@ void constClusterPlot(App& a, ImVec2 sz) {
     }
 }
 
+
+// ---- --drag-selftest (tests/app/run_drag_tune_gui.cmake): mouse gestures injected into a hidden run, the tuned frequency and the view checked.
+// No radio runs: a click or a drag tunes through spectrumTune() -> tuneFreq() (the radio stays stopped), a pan moves the shared view.
+int dragTuneSelfTest(App& a) {
+    struct G { int button; float fx0, fy0, fx1, fy1; bool shiftAfterPress; };
+    static int phase = 0, t = 0, fails = 0, gi = 0;
+    static double lo0 = 0, hi0 = 0, f0 = 0, fPress = 0;
+    ImGuiIO& io = ImGui::GetIO();
+    auto check = [&](bool ok, const char* what) { printf("%s: %s\n", ok ? "ok" : "FAIL", what); if (!ok) fails++; };
+    auto span = [] { return gXHi - gXLo; };
+    t++;
+    if (phase == 0) {   // a pager receiver at 150 MHz, drag to tune on, the plain click style; the view zoomed to a quarter of the band
+        const ModeDef* pager = nullptr;
+        for (const auto& m : allModes()) if (m.family == 23) { pager = &m; break; }
+        if (!pager) { printf("FAIL: the pager mode is not in this build\n"); return 1; }
+        dect2::Memory m; m.name = pager->name; m.freqHz = 150000000; m.mode = memoryModeKey(*pager); m.family = pager->family; m.subId = pager->subId ? pager->subId : "";
+        std::string note;
+        memoryRecallApp(a, m, true, note);
+        a.specDrag = dragtune::Tune; a.centreTuning = false; a.tuningMode = 0; a.identifyTool = false; a.vfoArm = false;
+        phase = 1; t = 0;
+        return -1;
+    }
+    const bool drawn = gSpecRect.frame >= ImGui::GetFrameCount() - 2 && gSpecRect.sz.x > 100 && gSpecRect.sz.y > 60;
+    if (phase == 1) {
+        if (drawn && gXHi > gXLo && t > 20) {
+            const double c = (gXLo + gXHi) / 2, s = span() / 4;
+            gXLo = c - s / 2; gXHi = c + s / 2;
+            phase = 2; t = 0; gi = 0;
+        } else if (t > 600) { printf("SKIP: the spectrum is not on screen in this layout\n"); return 0; }
+        return -1;
+    }
+    if (!drawn) { printf("FAIL: the spectrum left the screen\n"); return fails + 1; }
+    const plt::Look L = plotLook(a, true);
+    const bool below = L.on && L.strip;
+    const float scaleFy = below ? 1.f + plt::LookStripHeight(L) * 0.5f / gSpecRect.sz.y : 1.f - 4.f / gSpecRect.sz.y;   // on the frequency scale
+    static const G gs[] = {
+        {0, 0.25f, 0.5f, 0.75f, 0.5f, false},   // 0 Tune: the press tunes, the drag keeps tuning, the view stays
+        {0, 0.5f, -1, 0.3f, -1, false},         // 1 Tune: a drag on the frequency scale pans (fy -1: the scale), the frequency stays
+        {1, 0.6f, 0.5f, 0.4f, 0.5f, false},     // 2 Tune: a right drag pans
+        {2, 0.4f, 0.5f, 0.6f, 0.5f, false},     // 3 Tune: a middle drag pans
+        {0, 0.3f, 0.5f, 0.57f, 0.5f, true},     // 4 Tune: Shift during the drag: fine steps
+        {0, 0.6f, 0.5f, 0.4f, 0.5f, false},     // 5 Pan (old OnAir): a left drag pans
+        {0, 0.3f, 0.5f, 0.3f, 0.5f, false},     // 6 Pan: a click tunes on release
+    };
+    constexpr int nG = (int)(sizeof gs / sizeof gs[0]);
+    if (gi >= nG) {
+        a.specDrag = dragtune::Tune;
+        printf("drag selftest: %d failed\n", fails);
+        return fails;
+    }
+    const G& g = gs[gi];
+    if (gi == 5 && t == 1) a.specDrag = dragtune::Pan;
+    auto px = [&](float fx) { return gSpecRect.mn.x + fx * gSpecRect.sz.x; };
+    auto py = [&](float fy) { return gSpecRect.mn.y + (fy < 0 ? scaleFy : fy) * gSpecRect.sz.y; };
+    const int moveFrames = 12;
+    if (t == 1) { lo0 = gXLo; hi0 = gXHi; f0 = a.freqMhz; io.AddMousePosEvent(px(g.fx0), py(g.fy0)); return -1; }
+    if (t == 2) { io.AddMouseButtonEvent(g.button, true); return -1; }
+    if (t == 5) fPress = a.freqMhz;
+    if (t >= 4 && t < 4 + moveFrames) {
+        if (g.shiftAfterPress && t == 4) io.AddKeyEvent(ImGuiMod_Shift, true);
+        const float k = (float)(t - 3) / moveFrames;
+        io.AddMousePosEvent(px(g.fx0 + (g.fx1 - g.fx0) * k), py(g.fy0 + (g.fy1 - g.fy0) * k));
+        return -1;
+    }
+    if (t == 4 + moveFrames + 2) { io.AddMouseButtonEvent(g.button, false); if (g.shiftAfterPress) io.AddKeyEvent(ImGuiMod_Shift, false); return -1; }
+    if (t < 4 + moveFrames + 6) return -1;
+    // the gesture is over: check it
+    const double s0 = hi0 - lo0, hzPerPx = s0 * 1e6 / gSpecRect.sz.x;
+    const double coarse = dragtune::dragStepHz(0, 1000, hzPerPx, false) / 1e6, fine = dragtune::dragStepHz(0, 1000, hzPerPx, true) / 1e6;
+    const double want0 = lo0 + g.fx0 * s0, want1 = lo0 + g.fx1 * s0;
+    const bool viewStill = std::fabs(gXLo - lo0) < s0 * 1e-6 && std::fabs(gXHi - hi0) < s0 * 1e-6;
+    const bool viewPanned = std::fabs((gXLo - lo0) - (g.fx0 - g.fx1) * s0) < s0 * 0.03;   // dragged left by a fifth: the view went up by a fifth
+    char b[200];
+    switch (gi) {
+        case 0:
+            snprintf(b, sizeof b, "tune: the press tuned to the pointer (%.5f, want %.5f)", fPress, want0); check(std::fabs(fPress - want0) <= std::max(0.001, 2 * hzPerPx / 1e6), b);
+            snprintf(b, sizeof b, "tune: the drag kept tuning (%.5f, want %.5f, step %.4g kHz)", a.freqMhz, want1, coarse * 1e3); check(std::fabs(a.freqMhz - want1) <= coarse, b);
+            check(viewStill, "tune: the view did not pan");
+            break;
+        case 1: check(std::fabs(a.freqMhz - f0) < 1e-9, "scale: the frequency stayed"); check(viewPanned, "scale: the drag on the scale panned"); break;
+        case 2: check(std::fabs(a.freqMhz - f0) < 1e-9, "right drag: the frequency stayed"); check(viewPanned, "right drag panned"); break;
+        case 3: check(std::fabs(a.freqMhz - f0) < 1e-9, "middle drag: the frequency stayed"); check(viewPanned, "middle drag panned"); break;
+        case 4:
+            snprintf(b, sizeof b, "fine: Shift gave fine steps (%.6f, want %.6f, fine %.4g kHz, coarse %.4g kHz)", a.freqMhz, want1, fine * 1e3, coarse * 1e3);
+            check(fine < coarse && std::fabs(a.freqMhz - want1) <= fine + 2 * hzPerPx / 1e6, b);
+            check(viewStill, "fine: the view did not pan");
+            break;
+        case 5: check(std::fabs(a.freqMhz - f0) < 1e-9, "pan setting: the frequency stayed"); check(viewPanned, "pan setting: a left drag panned"); break;
+        case 6: snprintf(b, sizeof b, "pan setting: a click tuned (%.5f, want %.5f)", a.freqMhz, want0); check(std::fabs(a.freqMhz - want0) <= std::max(0.001, 2 * hzPerPx / 1e6), b); break;
+    }
+    gi++; t = 0;
+    return -1;
+}

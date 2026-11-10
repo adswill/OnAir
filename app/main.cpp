@@ -183,6 +183,7 @@ static void devAutomation(App& app, DevOpts& o) {
             }
         }
     }
+    if (o.dragSelfTest) { const int r = dragTuneSelfTest(app); if (r >= 0) { fflush(stdout); std::exit(r); } }   // drag to tune (tests/app/run_drag_tune_gui.cmake)
     if (o.memSelfTest && ++o.memFrame == 3) { fflush(stdout); std::exit(memorySelfTest(app)); }   // the Memory recall check (tests/app/run_memory_recall.cmake)
     if (o.autostart) {
         o.autostart = false;

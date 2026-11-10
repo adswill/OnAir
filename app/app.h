@@ -804,6 +804,7 @@ struct ModeDef;
 bool freqdbPickMhz(const ModeDef& m, float width, double& mhz);   // freqdb_ui.cpp: the transmitter's band presets of one mode-list row; true when one is picked
 void freqdbKnownCombo(App& a, float width);         // freqdb_ui.cpp: the Tuner panel's "Known frequencies" drop-down for the mode on screen
 void memoryTabItem(App& a);                        // memory_ui.cpp: the "Memory" tab when View > Memory as a tab is on (inside the main tab bar)
+int dragTuneSelfTest(App& a);                     // plots.cpp: --drag-selftest, mouse drags injected on the spectrum of a hidden run (-1 while running, else failures)
 int memorySelfTest(App& a);                        // memory_selftest.cpp: --memory-selftest, the recall checked on a hidden run (exit code = failures)
 void memoryDev(int what);                          // memory_ui.cpp: --memdev (screenshots)
 void memoryQuickBar(App& a);                       // memory_lists_ui.cpp: the starred memories of the switched-on lists as one row of buttons (every mode)
