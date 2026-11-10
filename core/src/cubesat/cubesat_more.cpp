@@ -811,6 +811,13 @@ void MoreHunter::configure(const MoreConfig& c) {
     uint64_t us = 0;
     for (int k = 0; k < 8; k++) us = (us << 8) | kUspSync[k];
     I.usp.init(us, 64, c.syncErrUsp, (size_t)kUspPlsBits + kUspMaxSymbols);
+    I.usp.earlyBits = kUspPlsBits;      // the PLS code says how long the block is (48 or 223 data bytes)
+    I.usp.early = [](const std::vector<float>& v) -> size_t {
+        float corr[2] = {0, 0};
+        for (int cc = 0; cc < 2; cc++)
+            for (int k = 0; k < 64; k++) corr[cc] += v[(size_t)k] * (((kUspPls[cc] >> (63 - k)) & 1u) ? 1.f : -1.f);
+        return (size_t)kUspPlsBits + ((corr[1] > corr[0] ? 223 : 48) + 32) * 16;
+    };
     I.usp.done = [this](std::vector<float>& v, bool inv, uint64_t st) {
         std::vector<uint8_t> ax;
         int rs = -1, dl = 0;

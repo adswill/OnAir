@@ -227,7 +227,7 @@ std::vector<cf32> smartSynth(const SmartSynth& s, std::vector<SynthSent>* sent) 
             else { ss.data.assign(223, 0x33); std::copy(p.begin(), p.end(), ss.data.begin()); sym = ccsdsConcatEncode(ss.data, ConcatParams()); }
             levels = msbBits(std::vector<uint8_t>(48, 0x55));
             levels.insert(levels.end(), sym.begin(), sym.end());
-            for (int i = 0; i < 64; i++) levels.push_back((uint8_t)(i & 1));
+            for (int i = 0; i < 256; i++) levels.push_back((uint8_t)(i & 1));   // the Viterbi decoder decides about 160 bits late
             break;
         }
         case kFramingText: {
