@@ -2,6 +2,8 @@
 //   sync slicer (levels found from the signal) -> line phase-locked loop -> field sync (broad pulses) -> line and row assignment
 //   -> clamp and gain from the sync pulses -> luminance and colour decoding (PAL with delay-line averaging, NTSC) -> pictures
 #pragma once
+#include "dect2/atv/atv_ghost.h"
+#include "dect2/atv/atv_vbi.h"
 #include "dect2/atv/atv_std.h"
 #include "dect2/atv/atv_tel.h"
 #include <cstdint>
@@ -62,6 +64,9 @@ public:
         int fieldNo = 0;
         bool state1 = false, state2 = false;
         std::vector<float> lineWave, vbiWave;
+        AtvGhost ghost;
+        AtvVbiStatus vbi;
+        std::shared_ptr<TeletextDecoder> ttx;
     };
     Info info() const;
     // for tests and the tool: the standard the decoder settled on

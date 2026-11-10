@@ -701,6 +701,20 @@ void AtvVideo::Impl::processLine(const LineRec& r) {
         if (x < 0) x += half;
         inVbi = x < 10.5 || x > half - 5.0;
     }
+    if (inVbi && r.hadPulse && gainValid && haveVsync && (F.lines == 625 || F.lines == 525)) {   // teletext, WSS, captions
+        const double g = lineGain();
+        if (g > 0) {
+            const auto level = [&](double us) -> float {
+                const double t = tL + us * spu;
+                const long i0 = (long)std::floor(t);
+                const double fr = t - (double)i0;
+                return (float)((Bline - (rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr)) / g);
+            };
+            const bool data = F.lines == 625 ? vbi.line625(level) : vbi.line525(level);
+            const double xl = std::fmod((tL - vsyncT) / P, (double)F.lines / 2);
+            if (!data && xl > 5.0 && xl < 10.4) ghostLine(tL);   // after the equalising pulses, before the picture
+        }
+    }
     secamLineOk = false;
     if ((F.lines == 625 || F.lines == 525) && wantColour && r.hadPulse && gainValid && haveVsync && (colourKind < 0 || colourKind == kAtvSecam)) secamLine(tL, havePicture);
     if (wantColour && r.hadPulse && gainValid && !inVbi && (F.lines == 625 || F.lines == 525)) burstAndColour(tL, havePicture);

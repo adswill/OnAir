@@ -59,6 +59,9 @@ struct AtvGenConfig {
     double level = 0.4;           // peak carrier amplitude (the complex samples then have an rms of about 0.2)
     double startSec = 0;          // time shown by the clock at the start
     uint64_t seed = 1;
+    bool vbiTeletext = false;     // 625 lines: teletext page 100 in the blanking lines
+    int vbiWss = -1;              // 625 lines: wide screen signalling on line 23, the 4 aspect bits b0..b3
+    std::string vbiCaptions;      // 525 lines: line 21 captions, two characters a frame
 };
 
 class AtvCard;

@@ -524,6 +524,30 @@ struct SimSource : sweep::SweepSource {
     }
 };
 
+// A new hit is named from a moment's capture on its hop: an unmodulated-looking FSK burst here; the point is that the scan parks, labels and moves on
+static void testIdentifyNew() {
+    const RadioProfile& rtl = radioProfile("rtlsdr");
+    FastScanConfig c;
+    c.plan.bands = {{102e6, 106e6}};
+    c.identifyNew = true; c.threads = 1;
+    FastScanner fs; std::string err;
+    if (!fs.configure(c, rtl, err)) { CHECK(false); return; }
+    SimSource src(fs.plan().rateHz);
+    RunHooks hk; hk.maxPasses = 40;
+    std::atomic<bool> cancel{false};
+    CHECK(fs.run(src, &cancel, hk, err));
+    const auto l = fs.labels();
+    printf("labels: %zu\n", l.size());
+    for (const auto& q : l) printf("  %.3f MHz: %s (%s)\n", q.freqHz / 1e6, q.name.c_str(), q.headline.c_str());
+    CHECK(!l.empty());
+    bool carrier = false; for (const auto& q : l) if (std::fabs(q.freqHz - 103.3e6) < 10e3) carrier = true;
+    CHECK(carrier);
+    std::vector<double> f; for (const auto& q : l) f.push_back(q.freqHz);
+    std::sort(f.begin(), f.end());
+    int dup = 0; for (size_t i = 1; i < f.size(); i++) if (f[i] - f[i - 1] < 1000) dup++;
+    CHECK(dup == 0);
+}
+
 static void testScanLoop() {
     const RadioProfile& rtl = radioProfile("rtlsdr");
     FastScanConfig c;
@@ -878,6 +902,7 @@ int main() {
     testRecordOne();
     testRecord100();
     testGuardAndFiles();
+    testIdentifyNew();
     testScanLoop();
     testScanRecord();
     testScanSpeed();

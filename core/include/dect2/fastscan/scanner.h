@@ -28,6 +28,7 @@ struct FastScanConfig {
     double maxholdFallDbPerSec = 2;  // the max-hold trace falls at this rate (0: holds for ever)
     int threads = 0;                 // 0: the shared pool, 1: none (the result is the same)
     QualifyParams qualify;           // channel confirmation / spur / image rules
+    bool identifyNew = false;        // a new hit: stay on its hop for a moment and name the signal (sig_ident.h)
 };
 
 struct SpectrumView {
@@ -49,6 +50,9 @@ struct ScanStats {
     int activeHits = 0;
     bool parked = false;             // staying on one hop to record
 };
+
+// What the identifier said about a hit (stays with the frequency)
+struct HitLabel { double freqHz = 0; std::string name, headline, modeId; int verdict = 0; float score = 0; };
 
 struct RunHooks {
     RecorderBank* rec = nullptr;                          // record hits from the capture (the scan parks on the hop while any is recording)
@@ -93,6 +97,7 @@ public:
     std::vector<Hit> hitsSnapshot() const;
     void setFilters(std::vector<FreqRange> excluded, std::vector<double> locked, std::vector<double> priority);
     void removeHit(uint64_t id);
+    std::vector<HitLabel> labels() const;    // thread-safe
     SpectrumView snapshot() const;           // copy of the pseudo-spectrum
     ScanStats stats() const;
     // The channel list of fast scan v2: hits with sweeps seen, class, and the spur / image / DC flags. reliableOnly hides unconfirmed and false ones.
@@ -120,6 +125,7 @@ private:
     Qualifier qual_;
     int sweep_ = 0;
     std::atomic<int> park_{-1};
+    std::vector<HitLabel> labels_;   // under m_
 };
 
 }  // namespace fastscan

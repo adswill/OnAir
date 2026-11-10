@@ -50,6 +50,8 @@ struct St {
     // view
     SpectrumView view;
     std::vector<Hit> hits;
+    std::vector<HitLabel> labels;
+    bool identifyNew = false;
     std::vector<ChannelInfo> chans;         // the same hits with confirmation, class and spur / image flags
     std::unordered_map<uint64_t, size_t> chanOf;
     AutoScan applied;                       // step / dwell / threshold the automatic mode chose for this scan
@@ -226,6 +228,7 @@ void startScan(App& a) {
         if (hi - lo > 150e6) { S.prof.stepKhz = S.applied.stepKhz; S.prof.dwellMs = S.applied.dwellMs; S.prof.thresholdDb = std::max(S.prof.thresholdDb, S.applied.thresholdDb); }
     }
     FastScanConfig cfg = toConfig(S.prof);
+    cfg.identifyNew = S.identifyNew;
     if (cfg.plan.bands.empty()) { S.msg = tr("No band: type ranges in MHz, for example 118-137."); return; }
     for (const FreqRange& r : parseRanges(S.prioText)) cfg.plan.priority.push_back(r);
     if (S.persistFloor) cfg.floorFile = floorPath(cfg);
@@ -282,6 +285,7 @@ void pull() {
     S.view = S.sc->snapshot();
     S.hits = S.sc->hitsSnapshot();
     S.chans = S.sc->channels(false);
+    S.labels = S.sc->labels();
     S.chanOf.clear();
     for (size_t i = 0; i < S.chans.size(); i++) S.chanOf[S.chans[i].hit.id] = i;
     if (S.view.seq != S.histSeq && S.view.bins() > 0) {
@@ -374,6 +378,8 @@ void controls(App& a) {
     ch |= ImGui::Checkbox(tr("automatic step and dwell"), &S.autoParams);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Wide spans (over 150 MHz) get wider bins and a short dwell that suit the radio; narrow bands keep the values under Advanced."));
     ImGui::SameLine(); ch |= ImGui::Checkbox(tr("confirmed channels only"), &S.reliableOnly);
+    ImGui::SameLine(); ch |= ImGui::Checkbox(tr("name new signals"), &S.identifyNew);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Stay on a new signal for about half a second and say what it probably is. The scan is slower while it does."));
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hides signals seen in one sweep only, steady spurs and images of strong signals. Untick to see every raw hit."));
     const bool adv = ImGui::TreeNode(trw("Advanced (step, dwell, threshold, floor, recording)"));
     if (adv) {
@@ -551,7 +557,10 @@ void body(App& a) {
             ImGui::TableNextColumn();
             if (ci) {
                 const char* flag = ci->spur ? tr(" (spur)") : ci->image ? tr(" (image)") : ci->dc ? tr(" (DC)") : !ci->confirmed ? tr(" (unconfirmed)") : "";
-                ImGui::Text("%s%s", ci->hint.c_str(), flag);
+                const dect2::fastscan::HitLabel* lab = nullptr;
+                for (const auto& q : S.labels) if (std::fabs(q.freqHz - h.freqHz) < std::max(5000.0, 0.5 * h.bwHz)) lab = &q;
+                ImGui::Text("%s%s", lab && !lab->name.empty() ? lab->name.c_str() : ci->hint.c_str(), flag);
+                if (lab && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", lab->headline.c_str());
             }
             ImGui::TableNextColumn();
             if (ci) ImGui::Text(tr("%d sweeps, %.0f%%"), ci->sweeps, ci->presence * 100.0);

@@ -1,4 +1,5 @@
 #include "dect2/fastscan/scanner.h"
+#include "dect2/engine/sig_ident.h"
 #include "dect2/common/threadpool.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
@@ -69,6 +70,7 @@ void FastScanner::setFilters(std::vector<FreqRange> ex, std::vector<double> lk, 
     std::lock_guard<std::mutex> g(m_);
     tracker_.setExcluded(std::move(ex)); tracker_.setLocked(std::move(lk)); tracker_.setPriority(std::move(pr));
 }
+std::vector<HitLabel> FastScanner::labels() const { std::lock_guard<std::mutex> g(m_); return labels_; }
 void FastScanner::removeHit(uint64_t id) { std::lock_guard<std::mutex> g(m_); tracker_.remove(id); }
 
 std::vector<ChannelInfo> FastScanner::channels(bool reliableOnly) const { std::lock_guard<std::mutex> g(m_); return qual_.channels(tracker_.hits(), reliableOnly); }
@@ -168,6 +170,8 @@ bool FastScanner::run(sweep::SweepSource& src, const std::atomic<bool>* cancel, 
     bool done = false, failed = false;
     std::string werr;
     park_ = -1;
+    int idHop = -1; double idHz = 0, idBw = 0, idSince = 0;
+    std::vector<cf32> idBuf;
     double parkSince = 0;
     int parkedCenterHop = -1;
 
@@ -184,8 +188,40 @@ bool FastScanner::run(sweep::SweepSource& src, const std::atomic<bool>* cancel, 
             Job& j = pool[id];
             ev.clear();
             processHop(j.hop, j.buf.data(), j.buf.size(), j.t, ev);
+            // naming a new signal: the scan stays on its hop for a moment, the capture goes to the identifier
+            bool identifying = false;
+            if (cfg_.identifyNew) {
+                if (idHop < 0 && park_.load() < 0) {
+                    for (const HitEvent& e : ev) {
+                        if (e.kind != HitEvent::Start) continue;
+                        bool known = false;
+                        { std::lock_guard<std::mutex> g(m_); for (const auto& q : labels_) if (std::fabs(q.freqHz - e.hit.freqHz) < std::max(5000.0, 0.5 * e.hit.bwHz)) known = true; }
+                        if (known) continue;
+                        idHop = j.hop; idHz = e.hit.freqHz; idBw = e.hit.bwHz; idSince = j.t; idBuf.clear();
+                        park_ = j.hop;
+                        break;
+                    }
+                }
+                if (idHop == j.hop) {
+                    idBuf.insert(idBuf.end(), j.buf.begin(), j.buf.end());
+                    const size_t want = (size_t)(std::min(sigid::captureSeconds(plan_.rateHz), 0.6) * plan_.rateHz);
+                    if (idBuf.size() >= want) {
+                        const Hop& hp = plan_.hops[j.hop];
+                        sigid::Options o; o.rfHz = hp.centerHz;
+                        const double off = idHz - hp.centerHz, half = std::max(6000.0, 0.7 * idBw);
+                        o.loHz = off - half; o.hiHz = off + half;
+                        const sigid::Result r = sigid::identify(idBuf.data(), idBuf.size(), plan_.rateHz, o);
+                        HitLabel l; l.freqHz = idHz; l.verdict = r.verdict; l.headline = r.headline;
+                        if (r.verdict != sigid::VerdictUnknown && !r.cands.empty()) { l.name = r.cands[0].name; l.modeId = r.cands[0].modeId; l.score = (float)r.cands[0].score; }
+                        { std::lock_guard<std::mutex> g(m_); labels_.push_back(std::move(l)); if (labels_.size() > 2000) labels_.erase(labels_.begin()); }
+                        idHop = -1; idBuf.clear(); idBuf.shrink_to_fit();
+                        park_ = -1;
+                    } else if (j.t - idSince > 3.0) { idHop = -1; idBuf.clear(); park_ = -1; }
+                }
+                identifying = idHop >= 0;
+            }
             RecorderBank* rec = hk.rec;
-            if (rec) {
+            if (rec && !identifying) {
                 const Hop& h = plan_.hops[j.hop];
                 // the same capture feeds the recorders while the radio stays on this hop
                 for (const HitEvent& e : ev) {

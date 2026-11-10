@@ -67,7 +67,7 @@ void Engine::syncMultiTv() {
     mtvKeyOn_ = on; mtvKeyStd_ = sm; mtvKeyMax_ = mx; mtvKeyGrid_ = grid; mtvKeyRate_ = rate; mtvKeyBw_ = bw;
     std::string note;
     bool want = on;
-    if (on && !multiChannelSupported(sm)) { want = false; note = "Whole span works with DVB-T2, DVB-T or DVB-S/S2 selected (not automatic detection)"; }
+    if (on && !multiChannelSupported(sm)) { want = false; note = "Whole span works with a TV standard selected (not automatic detection)"; }
     else if (on && sm == 8 && !wholeSpanFits(sm, rate, bw, grid)) { want = false; note = "the capture is too narrow for Whole span: DVB-S/S2 needs at least 3 Msps"; }
     else if (on && sm != 8 && slotsInSpan(rate, bw, grid) < 2) {
         want = false;
@@ -78,7 +78,7 @@ void Engine::syncMultiTv() {
     { std::lock_guard<std::mutex> lk(mtvNoteMu_); mtvNote_ = note; }
     if (!want) {
         if (!wasActive) return;
-        mtvActive_ = false; mtvSat_ = false;
+        mtvActive_ = false; mtvSat_ = false; mtvOther_ = -1;
         { std::shared_ptr<MultiTv> m; { std::lock_guard<std::mutex> lk(mtvMu_); m.swap(mtv_); } }
         player_.select(-1);
         resetReceiver(activeStd_.load());
@@ -89,6 +89,7 @@ void Engine::syncMultiTv() {
     MultiTvOptions o;
     o.dvbt = sm == 2;
     o.sat = sm == 8;
+    o.otherStd = (sm == 3 || sm == 5 || sm == 6 || sm == 9 || sm == 42) ? sm - 1 : -1;
     if (o.sat) o.minRsHz = std::max(1e6, dvbsMinAutoSymbolRate(rate));
     o.spanRate = rate;
     o.widthMhz = bw;
@@ -111,6 +112,7 @@ void Engine::syncMultiTv() {
     }
     old.reset();
     mtvSat_ = o.sat;
+    mtvOther_ = o.otherStd;
     mtvActive_ = true;
     char b[200];
     if (o.sat) snprintf(b, sizeof b, "whole span: DVB-S/S2 transponders, up to %d decoded at once from a %.2f Msps capture", o.maxChannels, rate / 1e6);

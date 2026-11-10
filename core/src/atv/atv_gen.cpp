@@ -5,6 +5,7 @@
 //   -> interpolation to the output rate (position stepped in double precision, so a clock error is just a different step)
 //   + FM sound carrier made at the output rate, ghost, noise.
 #include "dect2/atv/atv_gen.h"
+#include "dect2/atv/atv_vbi.h"
 #include "dect2/atv/atv_card.h"
 #include "dect2/atv/atv_nbtv.h"
 #include "dect2/atv/atv_sound2.h"
@@ -415,6 +416,33 @@ struct AtvGenerator::Impl {
         T.built = true;
     }
 
+    // Teletext, WSS and line 21 captions in the blanking lines of the test signal: the level (white 1) of the pattern at time u in the line
+    void vbiData(int line, uint64_t frame, int count, float u0, float dtUs) {
+        const AtvFormat& F = fmt;
+        const auto bitsAt = [&](const std::vector<uint8_t>& b, double u, double start, double T, double amp) {
+            const double x = (u - start) / T - 0.5;
+            if (x < -1 || x >= (double)b.size()) return 0.0;
+            const int i = (int)std::floor(x); const double f = x - i, c = 0.5 - 0.5 * std::cos(kPi * f);
+            const double a = i >= 0 && i < (int)b.size() ? b[(size_t)i] : 0, d = i + 1 < (int)b.size() ? b[(size_t)(i + 1)] : 0;
+            return amp * (a * (1 - c) + d * c);
+        };
+        std::vector<uint8_t> bits; double start = 0, T = 1, amp = 0;
+        if (F.lines == 625 && cfg.vbiTeletext && ((line >= 7 && line <= 22) || (line >= 320 && line <= 335))) {
+            static const char* const body = "ONAIR TELETEXT TEST ROW";
+            const int k = (int)(((frame * 32 + (uint64_t)(line < 100 ? line - 7 : line - 320 + 16)) % 24));
+            bits = k == 0 ? atvTtxPacketBits(1, 0, 0x00, "ONAIR TEST PAGE") : atvTtxPacketBits(1, k, 0, std::string(body) + " " + std::to_string(k));
+            T = 1.0 / 6.9375; start = 12.0 - 12.5 * T; amp = 0.66;
+        } else if (F.lines == 625 && cfg.vbiWss >= 0 && line == 23) {
+            bits = atvWssElements(cfg.vbiWss); T = 0.2; start = 11.0; amp = 0.714;
+        } else if (F.lines == 525 && !cfg.vbiCaptions.empty() && line == 21) {
+            const size_t i = (size_t)frame * 2 % cfg.vbiCaptions.size();
+            const uint8_t c1 = (uint8_t)cfg.vbiCaptions[i], c2 = i + 1 < cfg.vbiCaptions.size() ? (uint8_t)cfg.vbiCaptions[i + 1] : (uint8_t)' ';
+            bits = atvCcBits(c1, c2); T = 1.0 / 0.5034965; start = 27.4; amp = 0.5;
+            for (int j = 0; j < count; j++) { const float u = u0 + j * dtUs; if (u > 10.5f && u < 10.5 + 7 * T) lineV[(size_t)j] += (float)(0.25 - 0.25 * std::cos(2 * kPi * (u - 10.5) / T)); }
+        } else return;
+        for (int j = 0; j < count; j++) { const float u = u0 + j * dtUs; lineV[(size_t)j] += (float)bitsAt(bits, u, start, T, amp); }
+    }
+
     // ---- one line of composite video, appended as carrier amplitude to a[]
     void renderLine() {
         const AtvFormat& F = fmt;
@@ -568,6 +596,7 @@ struct AtvGenerator::Impl {
             }
         }
         if (F.secam && type[0] == 1) secamChroma(line, li, fld, k, nStart, count, u0, dtUs);
+        vbiData(line, frame, count, u0, dtUs);
         if (tap) tap(lineV.data(), (size_t)count);
         // composite -> carrier amplitude
         const float m = (float)((100.0 - F.whitePct) / 100.0), sL = (float)F.syncLevel, comp = (float)cfg.syncCompression;

@@ -2415,6 +2415,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_multitv tests/engine/test_multitv.cpp)   # several adjacent TV channels from one wide capture (core)
   target_link_libraries(test_multitv PRIVATE dect2core)
   add_test(NAME multitv COMMAND test_multitv)
+  add_executable(test_multitv_others tests/engine/test_multitv_others.cpp)   # Whole span for ATSC, ISDB-T, DTMB, DVB-C
+  target_link_libraries(test_multitv_others PRIVATE dect2core)
+  add_test(NAME multitv_others COMMAND test_multitv_others)
 
   add_executable(test_multitv_sat tests/engine/test_multitv_sat.cpp)   # whole-span DVB-S/S2: two transponders from one wide capture through MultiTv
   target_link_libraries(test_multitv_sat PRIVATE dect2core)

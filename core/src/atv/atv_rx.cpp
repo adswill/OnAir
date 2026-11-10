@@ -649,7 +649,7 @@ struct AtvReceiver::Impl {
         t.lineCount = vi.lines_; t.fieldCount = vi.fields; t.frameCount = vi.frames; t.fieldNo = vi.fieldNo;
         t.syncDepthPct = vi.syncTip; t.whitePeak = vi.whitePeak; t.burstLevel = vi.burstLevel; t.syncCompressionPct = vi.syncCompressionPct; t.chromaPhaseErrDeg = vi.chromaErrDeg;
         t.blocksOk = vi.fieldsOk; t.blocksBad = vi.fieldsBad;
-        t.lineWave = vi.lineWave; t.vbiWave = vi.vbiWave;
+        t.lineWave = vi.lineWave; t.vbiWave = vi.vbiWave; t.ttxPackets = vi.vbi.ttxPackets; t.ttx = vi.ttx; t.wssText = vi.vbi.wssText; t.captions = vi.vbi.captions; t.ghostFound = vi.ghost.found; t.ghostDelayUs = vi.ghost.delayUs; t.ghostDb = vi.ghost.levelDb;
         t.soundSystem = soundSys;
         t.soundPresent = sound.present(); t.soundDevKhz = sound.devKhz(); t.soundLevelDb = sound.levelDb();
         if (haveCarrier) {

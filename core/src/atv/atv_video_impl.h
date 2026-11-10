@@ -1,6 +1,8 @@
 // The analog TV picture decoder's private state (Impl), shared by atv_video.cpp and the atv_video_*.cpp files that hold its bigger
 // member functions (line sync, colour, picture output). Not part of the API.
 #pragma once
+#include "dect2/atv/atv_ghost.h"
+#include "dect2/atv/atv_vbi.h"
 #include "atv_video.h"
 #include "atv_dsp.h"
 #include "atv_secam.h"
@@ -156,7 +158,10 @@ struct AtvVideo::Impl {
     // ---- interpolation
     std::vector<float> kern;
     // ---- scope
-    std::vector<float> lineWave, vbiWave;
+    std::vector<float> lineWave, vbiWave, ghostAcc;
+    int ghostN = 0;
+    AtvGhost ghost;
+    AtvVbi vbi;
     int scopeSkip = 0;
     // ---- statistics
     double lineHzMeas = 0;
@@ -572,6 +577,7 @@ struct AtvVideo::Impl {
 
     // ------------------------------------------------------------------------------ scope
     void captureLine(double tL);
+    void ghostLine(double tL);
 
     void captureVbi();
 
@@ -606,7 +612,7 @@ struct AtvVideo::Impl {
         if (cnVar > 0 && carrierAmp > 0) i.carrierToNoiseDb = (float)std::min(70.0, std::max(-10.0, 10 * std::log10(carrierAmp * carrierAmp * noiseScale / cnVar)));
         i.lines_ = lineCount; i.fields = fieldCount; i.frames = frameSeq; i.fieldsOk = fieldsOk; i.fieldsBad = fieldsBad;
         i.fieldNo = curField < 0 ? 0 : curField;
-        i.lineWave = lineWave; i.vbiWave = vbiWave;
+        i.lineWave = lineWave; i.vbiWave = vbiWave; i.ghost = ghost; i.vbi = vbi.status(); i.ttx = vbi.teletext();
         return i;
     }
 };
