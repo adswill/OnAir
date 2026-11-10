@@ -21,22 +21,24 @@ struct Row {
     bool shortRun;        // in the default run
 };
 
+// Measured on the Mac with ONAIR_TEST_LONG=1 (6 trials a point, 1 dB steps under the last 4 dB step); the default run checks the short
+// rows 2 dB above them. TETRA is measured with sens_sweep itself (this program's clean-signal check gets nothing from the threaded
+// TETRA receiver; not looked into).
 const Row kRows[] = {
     {"meteor", 2, 3, true},      // 3.9: 5 / 8 -> 2 / 3 dB (line acquisition, narrow loops, best-scoring sync search)
-    {"tetra", 99, 99, false},
-    {"tetrapol", 99, 99, false},
-    {"fusion39", 99, 99, false},
-    {"orbcomm", 99, 99, false},
-    {"inmc", 99, 99, false},
-    {"pocsag", 99, 99, false},
-    {"flex", 99, 99, false},
-    {"cw", 99, 99, false},
-    {"dvbs1", 99, 99, false},
-    {"ale", 99, 99, false},
-    {"apt", 99, 99, false},
-    {"edacs", 99, 99, false},
-    {"smartnet", 99, 99, false},
-    {"mpt1327", 99, 99, false},
+    {"ale", -6, -6, true},       // 3.9: the 20 ppm case decoded nothing before (spectral offset search)
+    {"tetrapol", 9, 10, false},
+    {"fusion39", 8, 8, false},
+    {"orbcomm", 7, 7, false},
+    {"inmc", 0, 0, false},
+    {"pocsag", -1, 1, false},
+    {"flex", 5, 4, false},
+    {"cw", 4, 4, false},
+    {"dvbs1", 4, 4, false},
+    {"apt", -8, -8, false},      // the lowest point of the sweep: "still decoding"
+    {"edacs", 12, 12, false},
+    {"smartnet", 4, 7, false},
+    {"mpt1327", 9, 11, false},
 };
 
 double cpuSeconds() {

@@ -14,7 +14,7 @@
 #include <cstdlib>
 #include <string>
 #include <vector>
-#include <sys/resource.h>
+#include <ctime>
 using namespace dect2;
 #include "../common/test_util.h"
 
@@ -27,11 +27,7 @@ struct Rng {
     double g() { return std::sqrt(-2 * std::log(u())) * std::cos(6.283185307179586 * u()); }
 };
 
-double cpuSeconds() {
-    rusage u{};
-    getrusage(RUSAGE_SELF, &u);
-    return (double)u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec + (double)u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
-}
+double cpuSeconds() { return (double)std::clock() / CLOCKS_PER_SEC; }   // process CPU time (wall time on Windows)
 
 struct Case {
     const char* name;

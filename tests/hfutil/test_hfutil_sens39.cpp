@@ -11,18 +11,14 @@
 #include <random>
 #include <string>
 #include <vector>
-#include <sys/resource.h>
+#include <ctime>
 using namespace dect2;
 using namespace dect2::hfu;
 #include "../common/test_util.h"
 
 namespace {
 
-double cpuSeconds() {
-    rusage u{};
-    getrusage(RUSAGE_SELF, &u);
-    return (double)u.ru_utime.tv_sec + 1e-6 * u.ru_utime.tv_usec + (double)u.ru_stime.tv_sec + 1e-6 * u.ru_stime.tv_usec;
-}
+double cpuSeconds() { return (double)std::clock() / CLOCKS_PER_SEC; }   // process CPU time (wall time on Windows)
 
 struct Case { const char* name; FskGenCfg g; std::string msg; double thr; };
 

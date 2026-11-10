@@ -1151,6 +1151,13 @@ if(DECT2_BUILD_TESTS)
   add_test(NAME sens_full COMMAND sens_sweep --full --trials 8 --out ${CMAKE_BINARY_DIR}/sens-out)
   set_tests_properties(sens_quick PROPERTIES LABELS "sens-quick;slow" TIMEOUT 1800)
   set_tests_properties(sens_full PROPERTIES LABELS "sens-full;slow" TIMEOUT 36000)
+  if(NOT WIN32)   # 3.9 pass D thresholds (docs/SENSITIVITY-3.9-D.md): Meteor by default, the other registry modes with ONAIR_TEST_LONG=1
+    add_executable(test_sens39d tests/sens/test_sens39d.cpp)
+    target_include_directories(test_sens39d PRIVATE tools/sens)
+    target_link_libraries(test_sens39d PRIVATE dect2core)
+    add_test(NAME sens39d COMMAND test_sens39d)
+    set_tests_properties(sens39d PROPERTIES TIMEOUT 1500)
+  endif()
   if(NOT WIN32)   # the benchmark uses fork/waitpid/getrusage (POSIX only)
     add_executable(bench_dab tests/bench/bench_dab.cpp)   # DabReceiver cost and output hash
     target_link_libraries(bench_dab PRIVATE dect2core)
