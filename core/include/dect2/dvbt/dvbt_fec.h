@@ -24,8 +24,9 @@ public:
     // Hierarchical modes: decode the low-priority stream instead of the high-priority one (resets the decoder when it changes)
     void setLowPriority(bool lp) { if (lp != lp_) { lp_ = lp; reset(); } }
     bool lowPriority() const { return lp_; }
-    // One OFDM symbol's data carriers in carrier order (1512 / 6048), with the noise variance of each; symIdx 0..67
-    void pushSymbol(const cf32* cells, const float* n0, int symIdx);
+    // One OFDM symbol's data carriers in carrier order (1512 / 3024 / 6048), with the noise variance of each; symIdx 0..67, frameIdx 0..3
+    // (the in-depth interleaver of the 2K mode needs the frame: its blocks of four symbols alternate across the frames)
+    void pushSymbol(const cf32* cells, const float* n0, int symIdx, int frameIdx = 0);
     // Appends the 188-byte packets decoded so far (transport_error_indicator set on packets RS could not repair)
     void takePackets(std::vector<uint8_t>& out);
     const FecStats& stats() const { return st_; }
@@ -41,6 +42,9 @@ private:
     bool lp_ = false;
     FecStats st_;
     std::vector<float> llrQueue_;          // coded-bit LLRs not yet decoded
+    std::vector<cf32> blkCells_;           // in-depth interleaver: the symbols of the block so far
+    std::vector<float> blkN0_;
+    bool blkOdd_ = false;
     std::vector<int8_t> carry_;            // soft values of the last steps (history for the next window)
     std::vector<uint8_t> bits_;            // decoded info bits not yet grouped into bytes
     size_t bitsDropped_ = 0;

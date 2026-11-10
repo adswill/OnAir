@@ -170,6 +170,8 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxD_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // DMB video, on the receiver thread
     rxI_.configure(rate_, tune.isdbtBwMhz);
     rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
+    rxTsb_.configureTsb(rate_, tune.isdbtBwMhz == 7 || tune.isdbtBwMhz == 8 ? tune.isdbtBwMhz : 6, 0);
+    rxTsb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxFm_.configure(rate_);
     rxFm_.setStationFinder(lastDev_.kind == DeviceInfo::File || lastDev_.kind == DeviceInfo::Synthetic);   // a live radio stays on the frequency tuned: a weak station is not traded for a strong neighbour
     if (stdMode_.load() == 7 && !rxFm_.ready()) log("FM needs a sample rate of at least 500 ksps");
