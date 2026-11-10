@@ -155,6 +155,7 @@
 #include "dect2/ardop/ardop_rx.h"
 #include "dect2/ardop/ardop_rx.h"
 #include "dect2/goesdcs/goesdcs_live.h"
+#include "dect2/goesdcs/hrdcp_live.h"
 #include "dect2/bletrk/bletrk_live.h"
 #include "dect2/satbeacon/satbeacon_live.h"
 #include "dect2/satmisc/satdetect_live.h"
@@ -592,6 +593,7 @@ public:
     EczasLiveReceiver& eczas() { return rxEcz_; }   // e-Czas (225 kHz, Poland): audio input, receiver position, clear the log (telemetry through latestRx)
     FpvReceiver& fpv() { return rxFpv_; }   // FPV video: picture controls, sound, clear the channel levels (telemetry through latestRx)
     ZwaveReceiver& zwave() { return rxZw_; }   // Z-Wave: region, clear the tables (telemetry through latestRx)
+    HrdcpReceiver& hrdcp() { return rxHrdcp_; }   // Meteosat HRDCP (family 700): CSV log file, carrier threshold, clear the lists
     GoesDcsReceiver& goesdcs() { return rxGd_; }   // GOES DCS: CSV log file, carrier threshold, clear the lists (telemetry through latestRx)
     ModeAcReceiver& modeac() { return rxModeAc_; }   // Mode A/C replies: reference position, code confirmation and expiry, clear (telemetry through latestRx)
     BletrkLiveReceiver& bletrk() { return rxBt_; }   // BLE tracker detector: alert time, near level, own trackers, clear (telemetry through latestRx)
@@ -1029,6 +1031,7 @@ private:
     PskdReceiver rxPskd_;
     MscatterLiveReceiver rxMs_;
     GoesDcsReceiver rxGd_;
+    HrdcpReceiver rxHrdcp_;   // Meteosat HRDCP
     ModeAcReceiver rxModeAc_;
     BletrkLiveReceiver rxBt_;
     SatDetectReceiver rxSatd_;

@@ -325,6 +325,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxMs_.setSignalOffset(o);
         rxGd_.setSignalOffset(o);
         rxGd_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // for the channel numbers and the CSV
+        rxHrdcp_.setSignalOffset(o);
+        rxHrdcp_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxModeAc_.setSignalOffset(o);
         rxBt_.setSignalOffset(o);
         rxMs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // for the CSV and the screen
@@ -730,6 +732,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMs_.setLogCallback([this](const std::string& s) { log(s); });
     rxGd_.configure(rate_);
     rxGd_.setLogCallback([this](const std::string& s) { log(s); });
+    rxHrdcp_.configure(rate_);
+    rxHrdcp_.setLogCallback([this](const std::string& s) { log(s); });
     rxBt_.setLogCallback([this](const std::string& s) { log(s); });
     rxEcz_.setLogCallback([this](const std::string& s) { log(s); });
     rxEcz_.setClockMode(dev.kind == DeviceInfo::File ? 0 : 1);   // a file has no clock to compare; a radio and the test signal run on the computer's

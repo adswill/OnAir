@@ -305,6 +305,7 @@ struct RxTelemetry {
     SitorTelemetry sitor;     // valid when standard == 120 (SITOR, engine standard 121)
     DmeTelemetry dme;         // valid when standard == 123 (DME, engine standard 123)
     DcsTelemetry goesdcs;     // valid when standard == 142 (GOES DCS, family 141)
+    DcsTelemetry hrdcp;       // valid when standard == 701 (Meteosat HRDCP, family 700)
     BletrkTelemetry bletrk;   // valid when standard == 144 (BLE tracker detector, family 143)
     NavicTelemetry navic;     // valid when standard == 562 (NavIC)
     SatDetectTelemetry satdetect;   // valid for the satellite detector modes (active standards 551 on)

@@ -34,6 +34,13 @@ struct DcsMessage {
     std::string text;                   // the characters (ASCII) or the 6-bit values as characters (pseudo-binary), control characters shown as spaces
     std::vector<std::string> fields;    // the sensor data: "label value" for ASCII, "n: value" for pseudo-binary groups
     std::vector<uint8_t> raw;           // the bytes (parity bit removed)
+    // Meteosat HRDCP reports (hrdcp_live.h) only
+    int sequence = -1;                  // the 16-bit sequence counter, -1 for a standard-rate report
+    int hrType = -1;                    // 0 self-timed, 1 alert
+    int health = -1;                    // the 10 health bits
+    int compression = 0;                // 0 none, 1 gzip
+    bool crcOk = false;
+    int frames = 0, framesBad = 0, rsCorrected = 0;
 };
 
 struct DcsPlatform {
@@ -82,6 +89,13 @@ inline std::string dcsSummary(const DcsTelemetry& t) {
     char b[160];
     if (t.blocksOk == 0 && t.carriers.empty()) return "GOES DCS: no platform heard";
     snprintf(b, sizeof b, "GOES DCS: %llu reports from %zu platforms", (unsigned long long)t.blocksOk, t.platforms.size());
+    return b;
+}
+
+inline std::string hrdcpSummary(const DcsTelemetry& t) {
+    char b[160];
+    if (t.blocksOk == 0 && t.carriers.empty()) return "Meteosat HRDCP: no platform heard";
+    snprintf(b, sizeof b, "Meteosat HRDCP: %llu messages from %zu platforms", (unsigned long long)t.blocksOk, t.platforms.size());
     return b;
 }
 

@@ -412,6 +412,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 108: return pollStd(rxCq_, 108, t, seqs[104], &RxTelemetry::cquam);
     case 105: return pollStd(rxMs_, 105, t, seqs[101], &RxTelemetry::mscatter);
     case 142: return pollStd(rxGd_, 142, t, seqs[119], &RxTelemetry::goesdcs);
+    case 701: return pollStd(rxHrdcp_, 701, t, seqs[700], &RxTelemetry::hrdcp);   // Meteosat HRDCP (slot 700)
     case 143: return pollStd(rxModeAc_, 143, t, seqs[120], &RxTelemetry::modeac);   // Mode A/C (slot 120)
     case 144: return pollStd(rxBt_, 144, t, seqs[121], &RxTelemetry::bletrk);   // BLE tracker detector (slot 121)
     case 155: return pollStd(rxIsdbs_, 155, t, seqs[154], &RxTelemetry::isdbs);   // ISDB-S (slot 154)

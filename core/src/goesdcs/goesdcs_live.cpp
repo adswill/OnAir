@@ -6,6 +6,7 @@
 #include "dect2/goesdcs/goesdcs_live.h"
 #include "dect2/goesdcs/goesdcs_proto.h"
 #include "dect2/goesdcs/goesdcs_tel.h"
+#include "dcs_cic.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
@@ -25,35 +26,6 @@ constexpr double kSlotRate = 9600;
 constexpr int kMaxSlots = 8;
 constexpr int kPhases = 8;
 
-// Fourth-order CIC decimator on integers (wrap-around arithmetic), complex.
-struct Cic4 {
-    int D = 1, cnt = 0;
-    uint64_t in[4][2] = {}, cb[4][2] = {};
-    double norm = 1;
-    void configure(int d) {
-        D = std::max(1, d); cnt = 0;
-        for (auto& a : in) a[0] = a[1] = 0;
-        for (auto& a : cb) a[0] = a[1] = 0;
-        norm = 1.0 / (16777216.0 * std::pow((double)D, 4));
-    }
-    static int64_t q(float v) {
-        v = std::max(-8.f, std::min(8.f, v));
-        return (int64_t)std::lrintf(v * 16777216.f);
-    }
-    bool push(cf32 x, cf32& out) {
-        uint64_t s0 = (uint64_t)q(x.real()), s1 = (uint64_t)q(x.imag());
-        for (int k = 0; k < 4; k++) { in[k][0] += s0; in[k][1] += s1; s0 = in[k][0]; s1 = in[k][1]; }
-        if (++cnt < D) return false;
-        cnt = 0;
-        for (int k = 0; k < 4; k++) {
-            const uint64_t t0 = s0 - cb[k][0], t1 = s1 - cb[k][1];
-            cb[k][0] = s0; cb[k][1] = s1; s0 = t0; s1 = t1;
-        }
-        out = cf32((float)((double)(int64_t)s0 * norm), (float)((double)(int64_t)s1 * norm));
-        return true;
-    }
-};
-
 struct Hyp { int bps; bool man; };
 const Hyp kHyps[] = {{100, true}, {300, true}, {1200, true}, {1200, false}, {300, false}};
 constexpr int kNumHyp = 5;
@@ -72,7 +44,7 @@ struct Slot {
     double freq = 0;                  // nominal offset from the centre, Hz
     cf32 ph{1, 0}, rot{1, 0};
     int renorm = 0;
-    Cic4 cic;
+    dcsdsp::Cic4 cic;
     double rs = kSlotRate;
     // carrier loop
     double theta = 0, integ = 0;
@@ -121,7 +93,7 @@ struct GoesDcsReceiver::Impl {
     std::atomic<int64_t> startReq{0};
     std::string logPath, logPathReq;
     // front
-    Cic4 front;
+    dcsdsp::Cic4 front;
     int D = 1;
     std::vector<cf32> fbuf;
     // scanner
