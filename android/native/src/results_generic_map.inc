@@ -2677,6 +2677,23 @@ case 627: {
     { Table tb({"Utc", "Time Sec", "Text"}); int n = 0; for (auto it = t.events.rbegin(); it != t.events.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.timeSec), cell(e.text)}); } if (n) addTable(o, "Events", tb); }
     break;
 }
+case 641: {
+    const auto& t = rx.vdl3; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Center Hz", t.centerHz);
+    cardIf(o, "Now Sec", t.nowSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Noise Db", t.noiseDb);
+    cardIf(o, "Syncs", t.syncs);
+    cardIf(o, "M Uplink", t.mUplink);
+    cardIf(o, "M Uplink3 T", t.mUplink3T);
+    { Table tb({"Serial", "Time Sec", "Kind Name", "Sync", "Info", "Data Hex", "Data Text", "Summary"}); int n = 0; for (auto it = t.bursts.rbegin(); it != t.bursts.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.timeSec), cell(e.kindName), cell(e.sync), cell(e.info), cell(e.dataHex), cell(e.dataText), cell(e.summary)}); } if (n) addTable(o, "Bursts", tb); }
+    break;
+}
 case 661: {
     const auto& t = rx.cdma; (void)t;
     cardIf(o, "Center Hz", t.centerHz);

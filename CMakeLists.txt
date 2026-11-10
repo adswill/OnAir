@@ -202,6 +202,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES esp32)   # ESP32 / nRF24 module radio over USB serial (3.7): core/src/esp32, app/esp32, tests/esp32, firmware/esp32, docs/ESP32-NRF24-DESIGN.md
   list(APPEND DECT2_MODES cishf)   # CIS HF modes (families 620 - 626, docs/CIS-HF-3.9.md): core/src/cishf, app/cishf, tests/cishf
   list(APPEND DECT2_MODES cdma tdscdma)   # CDMA2000 / IS-95 cells (family 660), TD-SCDMA cells (661), docs/CELL-3.9.md: core/src/<mode>, app/<mode>, tests/<mode>
+  list(APPEND DECT2_MODES vdl3)   # VDL Mode 3 (family 640, docs/AVIA-3.9.md): core/src/vdl3, app/vdl3, tests/vdl3
   list(APPEND DECT2_MODES xlink)   # Extra links (family 600): core/src/xlink, app/xlink, tests/xlink (docs/LEFTOVERS-3.8.md)
   list(APPEND DECT2_MODES rclink)   # RC and mesh links (family 360): core/src/rclink, app/rclink, tests/rclink (docs/MESH-RC-3.8.md)
   list(APPEND DECT2_MODES thread)   # Thread (family 244): core/src/thread (6LoWPAN / MLE layer; the receiver is the 802.15.4 one in core/src/zigbee), app/thread, tests/thread

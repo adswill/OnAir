@@ -426,7 +426,8 @@ void approachView(App& a) {
             if (t.ilsValid) kv("needle", "%s %.0f %% of full scale", t.function == dect2::NavFunction::Glideslope ? (t.ddm > 0 ? "fly down" : "fly up") : (t.ddm > 0 ? "fly right" : "fly left"), std::min(100.0, std::fabs(t.ddm) / fs * 100));
         }
         static const char* mk[4] = {"none", "outer (400 Hz)", "middle (1300 Hz)", "inner (3000 Hz)"};
-        kv("marker", "%s", mk[t.marker & 3]);
+        static const char* mkKey[4] = {"", ", keyed dashes", ", keyed dot-dash", ", keyed dots"};
+        kv("marker", "%s%s%s", mk[t.marker & 3], mkKey[t.markerKeying & 3], t.markerKeying && !t.markerKeyingOk ? " (not the pattern of this tone)" : "");
         kv("C/N (25 kHz)", "%.1f dB", t.snrDb);
         identLine(a, t);
     }

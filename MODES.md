@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**307 modes.**
+**308 modes.**
 
 ## TV (15)
 
@@ -32,7 +32,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AM stereo (C-QUAM)** - AM stereo: C-QUAM on medium wave, stereo found by its 25 Hz pilot
 - **CDR** - CDR: China's digital radio in the FM band
 
-## Aviation (25)
+## Aviation (26)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -40,6 +40,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ACARS** - ACARS: short messages between aircraft and the ground
 - **VDL2** - VDL Mode 2: ACARS and ATN messages between aircraft and ground stations, positions on a map
 - **VDL4** - VDL Mode 4: synchronization and DLS bursts, CPR positions when decoded in the clear
+- **VDL3** - VDL Mode 3: management, voice and data bursts on a 25 kHz VHF channel, receive only
 - **HFDL** - HFDL: ACARS, squitters and positions of aircraft over oceans and remote areas, on HF
 - **Airband** - Airband: tower, ground and ATIS voice on several channels at once
 - **VOR** - VOR: your bearing from a navigation beacon, its Morse identification and voice

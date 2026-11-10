@@ -193,6 +193,11 @@ bool airbandParse(const std::string& text, double& freqHz, bool& is833) {
         if (std::fabs(f - k * kAirband833) > 50) return false;
         f = k * kAirband833; n833 = true;
     }
+    if (f > 224e6) {   // military UHF air band: 225.000 - 399.975 MHz, 25 kHz channels only (no 8.33 kHz raster there)
+        if (n833 || f < 225e6 - 1 || f > 399.975e6 + 1) return false;
+        freqHz = std::round(f / 25000.0) * 25000.0; is833 = false;
+        return true;
+    }
     if (f < 118e6 - 1 || f > 136.991667e6 + 1 || (!n833 && f > 136.975e6 + 1)) return false;
     freqHz = f; is833 = n833;
     return true;
@@ -834,7 +839,7 @@ std::vector<AirbandGroup> airbandPlanGroups(const std::vector<double>& f, double
 ModeTuning airbandTuning() {
     ModeTuning t;
     t.stdMode = 28; t.id = "airband"; t.name = "Airband";
-    t.minMhz = 108; t.maxMhz = 140; t.defMhz = 118.700;
+    t.minMhz = 108; t.maxMhz = 400; t.defMhz = 118.700;   // VHF 118 - 137 MHz and the military UHF air band 225 - 400 MHz
     t.sampleRate = 2000000;
     t.basebandHz = 1750000;
     t.bandwidthMhz = 1.6;                    // the band the channels are taken from

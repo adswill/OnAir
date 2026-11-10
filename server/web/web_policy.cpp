@@ -88,6 +88,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     "xlinknb",
     // 3.4 modes: blocked likewise
     "umts", "cdma2000", "tdscdma",   // merged in integ-38
+    "vdl3",   // 3.9
     "iptv", "atis", "selcal", "gk2alrit", "gk2ahrit", "opensky",   // (esubghz was never classified: web_safety failed on integ-32)
     // 3.5 modes: blocked likewise (shortwave is a broadcast receiver like "general", but the web allow-list is the owner's call)
     "shortwave",

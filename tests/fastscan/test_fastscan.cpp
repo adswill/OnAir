@@ -327,6 +327,7 @@ static void testPlan() {
     CHECK(nearTo(ch2[0].centerHz, 100e6, 1) && ch2[0].snrDb > 40 && ch2[0].bins == 3);   // bins 0..2 round to channel 0 (12.5 kHz either side)
     CHECK(ch2[0].meanDb > ch2[1].meanDb + 15);
     CHECK(guessMode(121.5e6, 25e3) == "am" && guessMode(145.5e6, 12.5e3) == "fm");
+    CHECK(guessMode(243.0e6, 25e3) == "am" && guessMode(282.8e6, 25e3) == "am" && guessMode(410e6, 12.5e3) == "fm");   // military UHF air band
 }
 
 // ---------------------------------------------------------------- filterbank and recorders
