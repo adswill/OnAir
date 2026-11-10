@@ -16,6 +16,7 @@ struct DevOpts {
     double fileVfoMhz = 0;     // dev: --vfo MHz, a recording: put the tune box there once the receiver runs (what a click or drag on the spectrum does)
     int shotFrame = 0;
     bool memSelfTest = false; int memFrame = 0;   // dev: --memory-selftest: apply memories to this receiver, check, exit
+    bool dragSelfTest = false;   // dev: --drag-selftest: injected mouse drags on the spectrum (drag to tune, pan), checked, exit (plots.cpp)
 };
 
 extern std::string gCrashNote;   // main.cpp: set when the last run crashed or the startup guard acted: shown once in a small window

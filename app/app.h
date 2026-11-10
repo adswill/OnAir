@@ -457,6 +457,7 @@ struct App {
     spipe::FloorTracker specFloor;      // that floor (the same estimate as the waterfall's)
     float specZoom = 0.f;   // 0..1 frequency zoom for the vertical slider (0 = full bandwidth, 1 = ~1 kHz span)
     int tuningMode = 0;                 // 0 retune the radio LO on spectrum click, 1 decode offset only (sticky LO)
+    int specDrag = 0;                   // Drag on spectrum (gfx/drag_tune.h): 0 tune like SDR++ (the default), 1 pan (the old OnAir)
     bool dragMovesTuned = false;        // dragging past the band: true = the tuned frequency travels with the radio centre
     bool centreTuning = false;          // spectrum click: true = centre the radio on the click (target button), false = normal (marker inside the band)
     int fileEdgeCode = 0;               // IQ file: 0 fine, 1 the passband touches the edge of the recording, 2 the tune box was held back at the edge, 3 the bandwidth is wider than the recording
@@ -803,6 +804,7 @@ struct ModeDef;
 bool freqdbPickMhz(const ModeDef& m, float width, double& mhz);   // freqdb_ui.cpp: the transmitter's band presets of one mode-list row; true when one is picked
 void freqdbKnownCombo(App& a, float width);         // freqdb_ui.cpp: the Tuner panel's "Known frequencies" drop-down for the mode on screen
 void memoryTabItem(App& a);                        // memory_ui.cpp: the "Memory" tab when View > Memory as a tab is on (inside the main tab bar)
+int dragTuneSelfTest(App& a);                     // plots.cpp: --drag-selftest, mouse drags injected on the spectrum of a hidden run (-1 while running, else failures)
 int memorySelfTest(App& a);                        // memory_selftest.cpp: --memory-selftest, the recall checked on a hidden run (exit code = failures)
 void memoryDev(int what);                          // memory_ui.cpp: --memdev (screenshots)
 void memoryQuickBar(App& a);                       // memory_lists_ui.cpp: the starred memories of the switched-on lists as one row of buttons (every mode)
@@ -1249,6 +1251,7 @@ void toolbarParts(App& a, int mask, bool vertical);   // pieces of the top bar, 
 void receiverGlance(App& a, float w, float h);       // analysis_tabs.cpp: a few key/value lines about the receiver
 void tuneFreq(App& a, double mhz);                     // set the frequency now (resets the FM receiver)
 void tuneDecode(App& a, double absMhz);                // sticky LO: decode absMhz without moving the radio centre
+bool specDragTunes(const App& a);                    // plots.cpp: Settings > Radio > Drag on spectrum is Tune (gfx/drag_tune.h)
 void spectrumTune(App& a, double absMhz);              // spectrum / waterfall click (respects tuningMode)
 void uplinkNoteAdsb(const dect2::AdsbTelemetry& t);   // uplink_ui.cpp: callsigns heard by the ADS-B mode in this session
 double meshRtlRate(App& a);                     // mesh_ui.cpp: 1.024 Msps on an RTL-SDR for a channel of up to 500 kHz, else 0 (#386)

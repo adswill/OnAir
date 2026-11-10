@@ -821,6 +821,8 @@ if(DECT2_BUILD_APP)
   add_test(NAME plot_util COMMAND test_plot_util)
   add_executable(test_tune_drag tests/app/test_tune_drag.cpp)
   add_test(NAME tune_drag COMMAND test_tune_drag)
+  add_executable(test_drag_tune tests/app/test_drag_tune.cpp)   # drag to tune like SDR++: plot/scale hit testing, press actions, snap steps, VFO grab (app/gfx/drag_tune.h)
+  add_test(NAME drag_tune COMMAND test_drag_tune)
   add_executable(test_file_vfo tests/app/test_file_vfo.cpp)   # tuning inside an IQ recording: offset mapping, clamp, edge note, centre from the name, DC notch
   target_include_directories(test_file_vfo PRIVATE core/include)
   add_test(NAME file_vfo COMMAND test_file_vfo)
@@ -1526,6 +1528,8 @@ if(DECT2_BUILD_TESTS)
     if(APPLE OR (WIN32 AND DECT2_WINDOW_TESTS))   # a hidden window run of the program itself (a renamed copy, its own data and settings folders): applies memories to a receiver and checks its state
       add_test(NAME memory_recall_app COMMAND ${CMAKE_COMMAND} -DBIN=$<TARGET_FILE:dect2> -DDIR=${CMAKE_BINARY_DIR}/memory_recall_test -P ${ONAIR_ROOT}/tests/app/run_memory_recall.cmake)
       set_tests_properties(memory_recall_app PROPERTIES TIMEOUT 120)
+      add_test(NAME drag_tune_app COMMAND ${CMAKE_COMMAND} -DBIN=$<TARGET_FILE:dect2> -DDIR=${CMAKE_BINARY_DIR}/drag_tune_test -P ${ONAIR_ROOT}/tests/app/run_drag_tune_gui.cmake)   # drag to tune: injected drags on a hidden run
+      set_tests_properties(drag_tune_app PROPERTIES TIMEOUT 120)
     endif()
     add_executable(test_theme tests/app/test_theme.cpp)   # the Light / High contrast text contrast (app/ui/contrast.h, app/ui/theme.h)
     target_include_directories(test_theme PRIVATE app)

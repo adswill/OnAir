@@ -31,6 +31,10 @@ void frame();
 // Once per frame at the end: remembers whether the press landed on a widget (a swipe only counts on the background).
 void endFrame();
 const GestureFrame& gesture();
+// Drag to tune (gfx/drag_tune.h): a plot claims its rectangle each frame; a long press inside it is then held for tuning (longPressHeld)
+// instead of becoming a right click, and the plot opens its own menu when the finger lets go without moving.
+void claimLongPress(ImVec2 mn, ImVec2 mx);
+bool longPressHeld();
 bool pressedOnItem();            // the current press started on a widget (slider, plot, button): not a scroll or swipe
 // A backend with real multi-touch calls this for each finger (id, position, down) before frame(); without it one pointer is used.
 void feedPointer(int id, float x, float y, bool down);
