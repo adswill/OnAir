@@ -25,6 +25,22 @@ RequestExecutionLevel admin
 !insertmacro MUI_UNPAGE_INSTFILES
 !insertmacro MUI_LANGUAGE "English"
 
+; The user-installed DLL names (only ever installed by the user, never shipped): copied from FROM to TO. A pattern that matches nothing is skipped.
+!macro OnAirKeepDlls FROM TO
+  CopyFiles /SILENT "${FROM}\*faad*.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\*fdk-aac*.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\*fobos_sdr*.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\sdrplay_api*.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\libmbe.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\libmbe-*.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\mbe.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\mbe-neo.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\mbelib.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\onair-codec-*.dll" "${TO}"
+  CopyFiles /SILENT "${FROM}\*onair_dra*.dll" "${TO}"
+  ClearErrors
+!macroend
+
 Function .onInit
   ${IfNot} ${RunningX64}
     MessageBox MB_OK|MB_ICONSTOP "OnAir needs 64-bit Windows 10 or 11."
@@ -59,10 +75,18 @@ Section "OnAir"
   SetShellVarContext all   ; the program is installed for all users: so are its shortcuts
   SetOutPath "$INSTDIR"
   ; an update over an older OnAir: its libraries go first, so that none of a former version stays (an old SoapySDR module next to new libraries, ...)
-  IfFileExists "$INSTDIR\OnAir.exe" 0 +4
+  ; The DLLs a user puts next to OnAir.exe himself are never in the package (faad2 for DAB+ / HD Radio, fdk-aac, RigExpert's fobos_sdr, the
+  ; SDRplay API, libmbe, the codec plug-ins, the DRA add-on): they are set aside and put back, so an update does not remove them (#472).
+  IfFileExists "$INSTDIR\OnAir.exe" 0 onair_fresh
+    InitPluginsDir
+    CreateDirectory "$PLUGINSDIR\keep"
+    !insertmacro OnAirKeepDlls "$INSTDIR" "$PLUGINSDIR\keep"
     Delete "$INSTDIR\*.dll"
     RMDir /r "$INSTDIR\lib"
     RMDir /r "$INSTDIR\licenses"
+    CopyFiles /SILENT "$PLUGINSDIR\keep\*.dll" "$INSTDIR"
+    ClearErrors
+  onair_fresh:
   File /r "${SRC}${SEP}*.*"
   WriteRegStr HKLM "Software\OnAir" "Install_Dir" "$INSTDIR"
   WriteRegStr HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\OnAir" "DisplayName" "OnAir"
