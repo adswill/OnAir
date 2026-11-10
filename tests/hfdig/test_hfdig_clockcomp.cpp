@@ -21,6 +21,7 @@ static HfdigFtxTelemetry run(double stationDt, double clockOffset, int slots) {
         const size_t n = std::min<size_t>(4000, a.size() - i);
         rx->feedAudio(&a[i], n);
         fed += n;
+        rx->waitIdle();   // as in real time: a slot is decoded before the next audio comes, so a correction is applied while the signal runs
     }
     rx->waitIdle();
     HfdigFtxTelemetry t;
