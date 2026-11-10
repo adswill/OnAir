@@ -3852,3 +3852,5 @@ stopped - showing saved results	已停止 - 显示已保存的结果
 subpage %d/%d	子页 %d/%d
 type a page number	输入页码
 udp	udp
+Join the Discord to get access to built codecs	加入 Discord 获取已编译好的编解码器
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	在浏览器中打开 OnAir 的 Discord。OnAir 本身从不下载或包含编解码器。

@@ -6,6 +6,7 @@
 #include "dect2/common/png.h"
 #include <map>
 #include "app.h"
+#include "codec/speech_codec_ui.h"
 #include "dect2/hdr/hdr_l2.h"
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/hdr/hdr_tel.h"
@@ -258,7 +259,7 @@ void hdcNote(const App& a) {
     ImGui::SameLine();
     if (!live(a)) ImGui::TextDisabled("%s", tr("HD Radio sound needs the HDC codec, which you install yourself (click ?)"));
     else if (!t.hdcProblem.empty()) ImGui::TextColored(kWarn, tr("HDC sound codec cannot be used: %s"), t.hdcProblem.c_str());
-    else if (!t.hdcFound) ImGui::TextColored(kWarn, "%s", tr("HDC sound codec not installed (no sound; click ? for the steps)"));
+    else if (!t.hdcFound) { ImGui::TextColored(kWarn, "%s", tr("HDC sound codec not installed (no sound; click ? for the steps)")); ImGui::SameLine(); appcodec::discordCodecButton(true); }
     else if (t.hdcPlaying) ImGui::TextColored(kGood, tr("sound: HD%d (HDC)"), t.soundProgram + 1);
     else ImGui::TextDisabled(tr("sound: HD%d, waiting for audio"), t.soundProgram + 1);
     ImGui::PopTextWrapPos();

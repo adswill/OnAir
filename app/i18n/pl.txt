@@ -3788,3 +3788,5 @@ Custom remove-after time (minutes)	Własny czas usuwania (minuty)
 Used by every Remove after row set to Custom.	Używane przez każdy wiersz Usuń po ustawiony na Własny.
 Default	Domyślnie
 Custom	Własny
+Join the Discord to get access to built codecs	Dołącz do Discorda, aby uzyskać dostęp do gotowych kodeków
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Otwiera Discord OnAir w przeglądarce. Sam OnAir nigdy nie pobiera ani nie zawiera kodeka.

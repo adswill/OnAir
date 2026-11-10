@@ -1,6 +1,7 @@
 // CDR screens: the Radio tab (the picked service and the signal), the station list (every service tagged DRA+: the sound is not decoded),
 // status lamps (Signal, Sync, SIC, SDC, Data), the analysis plots (SIC / SDC / MSD cells, channel, SNR), the Receiver tab and the test signal.
 #include "app.h"
+#include "codec/speech_codec_ui.h"
 #include "dect2/cdr/cdr_defs.h"
 #include "dect2/cdr/cdr_mux.h"
 #include "dect2/cdr/cdr_tel.h"
@@ -57,6 +58,7 @@ void draNotice(const dect2::CdrTelemetry& t, bool compact) {
         ImGui::TextColored(kWarn, tr("The DRA+ decoder add-on cannot be used: %s. How to install:"), t.draProblem.c_str());
     ImGui::PopTextWrapPos();
     codecHelpButton(CodecHelp::Dra, tr("How to install"));
+    ImGui::SameLine(); appcodec::discordCodecButton(true);
     if (!compact) { ImGui::SameLine(); ImGui::TextDisabled("%s", tr("The services, signal information and data work without it.")); }
 }
 

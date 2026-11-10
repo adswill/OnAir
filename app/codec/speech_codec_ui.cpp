@@ -82,6 +82,19 @@ void setExtraFolder(const std::string& dir) {
     lastAt.clear();
 }
 
+const char* discordInviteUrl() { return "https://discord.gg/ptxkzCuzR"; }
+
+const char* discordCodecLabel() { return tr("Join the Discord to get access to built codecs"); }
+
+bool discordCodecButton(bool small) {
+    ImGui::PushID("codec_discord");
+    const bool clicked = small ? ImGui::SmallButton(discordCodecLabel()) : ImGui::Button(discordCodecLabel());
+    ImGui::PopID();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec."));
+    if (clicked) dect2::openUrl(discordInviteUrl());
+    return clicked;
+}
+
 bool openCodecFolderButtons() {
     const auto dirs = codecSearchFolders();
     if (ImGui::Button("Open codecs folder")) openFolder(codecsFolder());
@@ -99,6 +112,13 @@ bool openCodecFolderButtons() {
         if (ImGui::Button("Open extra folder")) openFolder(d.path);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", d.path.c_str());
         break;
+    }
+    {   // the Discord button: after the folder buttons on the same line when it fits, else on the next line
+        const ImGuiStyle& st = ImGui::GetStyle();
+        const float w = ImGui::CalcTextSize(discordCodecLabel()).x + st.FramePadding.x * 2;
+        const float right = ImGui::GetCursorScreenPos().x + ImGui::GetContentRegionAvail().x;   // the line's right edge (the cursor is at its start)
+        if (ImGui::GetItemRectMax().x + st.ItemSpacing.x + w <= right) ImGui::SameLine();
+        discordCodecButton();
     }
     return true;
 }
@@ -182,6 +202,7 @@ void voiceCodecLine(const char* id, const char* name, const std::string& libPath
         ImGui::PushTextWrapPos(0);
         ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.3f, 1), "Voice codec missing: %s. Install the plug-in (see ?). Calls are still found and logged.", name);
         ImGui::PopTextWrapPos();
+        discordCodecButton(true);
     }
     codecNoticePrompt(id);
 }

@@ -318,6 +318,7 @@ void codecHelpButton(CodecHelp c, const char* label) {
             if (ImGui::Button("Look again")) dect2::avsPlusLibrary(true);
             ImGui::SameLine();
             if (ImGui::Button("Full instructions")) dect2::openUrl(kDocUrl);
+            appcodec::discordCodecButton();
             ImGui::PopTextWrapPos();
             ImGui::EndPopup();
             ImGui::PopID();
@@ -410,6 +411,7 @@ void codecHelpButton(CodecHelp c, const char* label) {
         }
         if (ImGui::Button("Full instructions")) dect2::openUrl(kDocUrl);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", kDocUrl);
+        if (!t.loadable) appcodec::discordCodecButton();   // the loadable topics got it with the folder buttons above
         ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
