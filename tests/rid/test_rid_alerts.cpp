@@ -34,7 +34,7 @@ int main() {
         for (int t = 0; t < 60; t++) {
             MannedFix m; m.icao = 0x4B1234; m.callsign = "BTI4LK"; m.t = 2100 + t; m.lat = aLat + 3000.0 / 111320; m.lon = aLon - 0.05 + t * 0.0017; m.altM = 350;
             w.aircraft(m);
-            MannedFix far = m; far.icao = 0x111111; far.callsign = ""; far.lat += 2500.0 / 111320; w.aircraft(far);
+            MannedFix farV = m; farV.icao = 0x111111; farV.callsign = ""; farV.lat += 2500.0 / 111320; w.aircraft(farV);
             MannedFix hi = m; hi.icao = 0x222222; hi.altM = 1500; w.aircraft(hi);
             DroneFix d; d.id = "FIN87astrdge12k8"; d.t = 2100 + t; d.lat = aLat + 3000.0 / 111320 + 600.0 / 111320 + noiseM * g(r) / 111320; d.lon = aLon; d.heightM = 60; d.altM = 200;
             w.drone(d, out);

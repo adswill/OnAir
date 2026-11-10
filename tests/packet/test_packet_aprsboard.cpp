@@ -16,7 +16,7 @@ using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL %s:%d: ", __FILE__, __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
 
-static bool near(double a, double b, double tol) { return std::fabs(a - b) <= tol; }
+static bool nearV(double a, double b, double tol) { return std::fabs(a - b) <= tol; }
 
 static aprs::Info msg(const std::string& to, const std::string& text, const std::string& no = "", bool ack = false, bool rej = false) {
     aprs::Info a;
@@ -85,8 +85,8 @@ static void weather() {
     aprs::Weather w;
     w.windDirDeg = 220; w.windMph = 4; w.gustMph = 5; w.tempF = 98; w.rain1hIn = 0.10; w.rain24hIn = 1; w.rainMidnightIn = 0.5; w.humidityPct = 45; w.pressureMbar = 1009.8;
     const AprsWx x = aprsWxFromReport(w, 100);
-    CHECK(near(x.tempC, 36.67, 0.01) && near(x.windKmh, 6.437, 0.01) && near(x.gustKmh, 8.047, 0.01) && near(x.rain1hMm, 2.54, 0.001) && near(x.rain24hMm, 25.4, 0.001) &&
-          near(x.rainMidnightMm, 12.7, 0.001) && near(x.humidityPct, 45, 0) && near(x.pressureHpa, 1009.8, 0.01) && near(x.windDirDeg, 220, 0), "units");
+    CHECK(nearV(x.tempC, 36.67, 0.01) && nearV(x.windKmh, 6.437, 0.01) && nearV(x.gustKmh, 8.047, 0.01) && nearV(x.rain1hMm, 2.54, 0.001) && nearV(x.rain24hMm, 25.4, 0.001) &&
+          nearV(x.rainMidnightMm, 12.7, 0.001) && nearV(x.humidityPct, 45, 0) && nearV(x.pressureHpa, 1009.8, 0.01) && nearV(x.windDirDeg, 220, 0), "units");
     CHECK(aprsWxLabel(x) == "36.7 \xC2\xB0""C  SW 6 km/h", "label '%s'", aprsWxLabel(x).c_str());
     aprs::Weather bad; bad.tempF = 400; bad.humidityPct = 140; bad.pressureMbar = 20;
     CHECK(!aprsWxFromReport(bad, 0).any(), "impossible values dropped");
@@ -96,7 +96,7 @@ static void weather() {
     aprsWxAdd(last, hist, x);
     aprs::Weather w2; w2.windMph = 10;
     aprsWxAdd(last, hist, aprsWxFromReport(w2, 1000));
-    CHECK(near(last.tempC, 36.67, 0.01) && near(last.windKmh, 16.09, 0.01), "merged");
+    CHECK(nearV(last.tempC, 36.67, 0.01) && nearV(last.windKmh, 16.09, 0.01), "merged");
     CHECK(hist.size() == 2 && std::isnan(hist[1].tempC), "history %zu", hist.size());
     aprsWxAdd(last, hist, aprsWxFromReport(w2, 1000 + 3 * 3600));
     CHECK(std::isnan(last.tempC), "old values expire after 2 h");
@@ -153,8 +153,8 @@ static void roundTrip() {
             for (const auto& q : t.messages) if (q.from == "A61TST" && q.to == "A61QQ-9") m = &q;
             printf("SNR %.0f dB, %-34s weather %s, %zu messages, message %s\n", snr, name, wx && wx->hasWx ? aprsWxLabel(wx->wx).c_str() : "none", t.messages.size(),
                    !m ? "missing" : m->acked ? "acked" : "not acked");
-            CHECK(wx && wx->hasWx && near(wx->wx.tempC, 36.67, 0.05) && near(wx->wx.windDirDeg, 220, 0) && near(wx->wx.windKmh, 6.44, 0.05) &&
-                  near(wx->wx.gustKmh, 8.05, 0.05) && near(wx->wx.humidityPct, 45, 0) && near(wx->wx.pressureHpa, 1009.8, 0.05) && wx->wxHist.size() == 1,
+            CHECK(wx && wx->hasWx && nearV(wx->wx.tempC, 36.67, 0.05) && nearV(wx->wx.windDirDeg, 220, 0) && nearV(wx->wx.windKmh, 6.44, 0.05) &&
+                  nearV(wx->wx.gustKmh, 8.05, 0.05) && nearV(wx->wx.humidityPct, 45, 0) && nearV(wx->wx.pressureHpa, 1009.8, 0.05) && wx->wxHist.size() == 1,
                   "%s: weather station", name);
             CHECK(m && m->text == "Hello from the desert" && m->msgNo == "42" && m->acked && m->toMe && m->kind == AprsMsgKind::Message, "%s: message", name);
             CHECK(t.myCall == "A61QQ", "myCall published");

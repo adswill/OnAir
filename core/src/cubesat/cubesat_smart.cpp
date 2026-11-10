@@ -343,14 +343,14 @@ struct SmartCubesat::Impl {
         for (size_t i = 0; i < sc.size(); i++) {
             if (claimed[i]) continue;
             // inside an existing track's channel?
-            Track* near = nullptr;
-            for (auto& t : tracks) if (std::fabs(t->freqHz - absHz(sc[i])) < std::max(2500.0, 0.6 * std::max(t->widthHz, sc[i].widthHz)) && !(t->table && !t->chanOn)) near = t.get();
-            if (near) {
+            Track* nearV = nullptr;
+            for (auto& t : tracks) if (std::fabs(t->freqHz - absHz(sc[i])) < std::max(2500.0, 0.6 * std::max(t->widthHz, sc[i].widthHz)) && !(t->table && !t->chanOn)) nearV = t.get();
+            if (nearV) {
                 claimed[i] = true;
-                if (!near->table) {
-                    near->lastSeen = sampleT; near->snrDb = sc[i].snrDb; near->widthHz = sc[i].widthHz; near->scanId = sc[i].id;
-                    near->freqHz += 0.35 * (absHz(sc[i]) - near->freqHz);
-                } else { near->lastSeen = sampleT; }
+                if (!nearV->table) {
+                    nearV->lastSeen = sampleT; nearV->snrDb = sc[i].snrDb; nearV->widthHz = sc[i].widthHz; nearV->scanId = sc[i].id;
+                    nearV->freqHz += 0.35 * (absHz(sc[i]) - nearV->freqHz);
+                } else { nearV->lastSeen = sampleT; }
                 continue;
             }
             if (!cfg.blind || sc[i].hits < 4 || sc[i].snrDb < cfg.minSnrDb) continue;
