@@ -577,6 +577,22 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
             ImGui::InputInt(tr("Colour code"), &s.colorCode);
             if (id == "dmr") ImGui::InputInt(tr("Timeslot"), &s.slot);
         }
+        if (id == "dmr") {   // real DMR subscriber transmit (dmr_tx.h): pick what to send
+            const char* kinds[] = {tr("Group voice call"), tr("Private voice call"), tr("All call"), tr("SMS text message"), tr("LRRP / GPS position"),
+                                   tr("Kerchunk (open repeater)"), tr("Tier III registration"), tr("Tier III voice request")};
+            if (s.kind < 0 || s.kind > 7) s.kind = 0;
+            ImGui::SetNextItemWidth(260 * gUi);
+            if (ImGui::BeginCombo(tr("What to send"), kinds[s.kind])) {
+                for (int k = 0; k < 8; k++) if (ImGui::Selectable(kinds[k], s.kind == k)) s.kind = k;
+                ImGui::EndCombo();
+            }
+            if (s.kind == 3) ImGui::InputText(tr("Message text"), s.text, sizeof s.text);
+            if (s.kind == 4) {
+                ImGui::InputDouble(tr("Latitude"), &s.lat, 0, 0, "%.6f");
+                ImGui::InputDouble(tr("Longitude"), &s.lon, 0, 0, "%.6f");
+            }
+            ImGui::TextWrapped("%s", tr("Transmitting on DMR needs a licence (amateur, or the system operator's permission). Your DMR ID and callsign go on the air. Voice bits are a test pattern; OnAir cannot encode AMBE+2 speech (decode-only codec). Not tested on air against a real repeater."));
+        }
         if (!txCanEncodeVoice(mode)) ImGui::Checkbox(tr("Send analog NFM of the audio instead of the digital test pattern"), &s.analogVoice);
         audioSourceRow(s, running);
         break;

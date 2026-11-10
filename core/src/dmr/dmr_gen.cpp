@@ -1,6 +1,7 @@
 // DMR test signal (see dmr_gen.h): the content of a base station or a handset as 4FSK symbols, the pulse shaping and the frequency modulator.
 #include "dect2/dmr/dmr_gen.h"
 #include "dect2/dmr/dmr_xpt.h"
+#include "dect2/dmr/dmr_lrrp.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include <algorithm>
 #include <cmath>
@@ -107,6 +108,157 @@ public:
         activity_ = b.act;
         actDst_ = b.actDst;
         return b;
+    }
+
+    // ---- real subscriber transmit (dmr_tx.h): queue exactly one MS-sourced transmission from the user's identity and payload
+    void queueTx(const DmrGenConfig& c) {
+        switch (c.txCallType) {
+        case 0: case 1: case 2: txVoice(c, c.txCallType); break;
+        case 3: txSms(c); break;
+        case 4: txLrrp(c); break;
+        case 5: txVoice(c, 0, true); break;                 // kerchunk: one short superframe of a group call
+        case 6: txServiceRequest(c, 0x1E); break;           // Tier III registration service (service_kind 1110)
+        case 7: txServiceRequest(c, c.txDst == 0xFFFFFF ? 0x02 : (c.talkgroups ? 0x03 : 0x03)); break;   // Tier III voice service request
+        default: txVoice(c, 0); break;
+        }
+    }
+
+    void txVoice(const DmrGenConfig& c, int kind, bool kerchunk = false) {
+        const uint32_t src = c.txSrc, dst = c.txDst;
+        FullLc lc;
+        lc.flco = kind == 1 ? kFlcoUnitVoice : kFlcoGroupVoice;
+        lc.svc = (kind == 2 ? 0x08 : 0x00) | (c.encrypted ? 0x40 : 0x00);
+        lc.src = src; lc.dst = dst;
+        uint8_t raw[9];
+        packFullLc(lc, raw);
+        int nSuper = kerchunk ? 1 : std::max(1, c.txVoiceSuper);
+        const int ti = newTruth(kind, src, dst);
+        DmrTruth& tr = truth_[(size_t)ti];
+        FullLc ta[4];
+        int taPieces = 0;
+        if (!c.txAlias.empty() && !kerchunk) {
+            std::string alias = c.txAlias;
+            taPieces = talkerAliasPdus(alias, 1, ta);       // ISO 8859-1 talker alias
+            tr.alias = alias;
+            nSuper = std::max(nSuper, 2 * taPieces);
+        }
+        const size_t first = q_.size();
+        Bits info;
+        lcBurstInfo(raw, false, info);
+        q_.push_back(bptcBurst(kDtVoiceLcHeader, info));
+        Bits frag[4], taFrag[4][4];
+        embLcEncode(raw, frag);
+        for (int p = 0; p < taPieces; p++) { uint8_t r2[9]; memcpy(r2, ta[p].raw, 9); embLcEncode(r2, taFrag[p]); }
+        Bits zero32(32, 0);
+        for (int sf = 0; sf < nSuper; sf++) {
+            const Bits* fr = frag;
+            if (taPieces && sf % 2 == 1 && sf / 2 < taPieces) fr = taFrag[sf / 2];
+            Bits vs(216);
+            for (int burst = 0; burst < 6; burst++) {
+                for (auto& x : vs) x = (uint8_t)(rng_.next() & 1);     // no AMBE encoder (decode-only mbelib): a test pattern in the voice bits
+                Burst b;
+                if (burst == 0) b.bits = makeVoiceBurst(vs, sync(true), c_.cc, 0, 0, Bits());
+                else if (burst < 5) b.bits = makeVoiceBurst(vs, -1, c_.cc, 0, burst == 1 ? 1 : burst == 4 ? 2 : 3, fr[burst - 1]);
+                else b.bits = makeVoiceBurst(vs, -1, c_.cc, 0, 0, zero32);
+                q_.push_back(b);
+                tr.voiceBursts++;
+            }
+        }
+        lcBurstInfo(raw, true, info);
+        q_.push_back(bptcBurst(kDtTerminatorLc, info));
+        markEnds(first, ti, kind == 1 ? 9 : 8, dst);
+    }
+
+    // one data message (SMS short-data-defined, or a raw IP packet for LRRP): preamble CSBK, data header, rate 1/2 blocks, message CRC
+    void txPacket(const DmrGenConfig& c, const std::vector<uint8_t>& data, int dpf, int sap, int dd, bool shortDefined, const std::string& truthText) {
+        const uint32_t src = c.txSrc, dst = c.txDst;
+        const int dt = kDtRate12, bs = dataBlockBytes(dt, false);
+        const int nBlocks = ((int)data.size() + 4 + bs - 1) / bs;
+        const int area = nBlocks * bs - 4;
+        const int pad = area - (int)data.size();
+        std::vector<uint8_t> msg = data;
+        msg.resize((size_t)area, 0);
+        const uint32_t crc = crc32Msg(msg.data(), msg.size());
+        for (int i = 0; i < 4; i++) msg.push_back((uint8_t)(crc >> (8 * i)));
+        pushCsbk(0x3D, src, dst, nBlocks + 1);              // preamble: data to follow
+        const size_t afterPre = q_.size();
+        DataHeader h;
+        h.dpf = dpf; h.sap = sap; h.group = c.txCallType == 0; h.dst = dst; h.src = src; h.blocks = nBlocks;
+        if (shortDefined) { h.dd = dd; h.fmf = true; h.pad = pad * 8; } else { h.pad = pad; }
+        uint8_t hb[10];
+        packDataHeader(h, hb);
+        Bits info;
+        crcBlockInfo(hb, kMaskDataHeader, info);
+        q_.push_back(bptcBurst(kDtDataHeader, info));
+        for (int b = 0; b < nBlocks; b++) {
+            Bits pay;
+            dataBlockEncode(dt, msg.data() + (size_t)b * (size_t)bs, (size_t)bs, false, 0, pay);
+            q_.push_back(dataBurst(dt, pay));
+        }
+        const int ti = newTruth(3, src, dst);
+        truth_[(size_t)ti].text = truthText;
+        truth_[(size_t)ti].dataRate = dt;
+        for (size_t i = afterPre; i < q_.size(); i++) { q_[i].act = 10; q_[i].actDst = dst; }
+        q_[afterPre].first = true; q_[afterPre].truth = ti;
+        q_.back().last = true; q_.back().truth = ti;
+    }
+
+    void txSms(const DmrGenConfig& c) {
+        std::string text = c.txText;
+        // choose the coding: ISO 8859-1 when every character is Latin-1, otherwise UTF-16LE (the text is UTF-8 on input)
+        bool latin1 = true;
+        for (size_t i = 0; i < text.size();) {
+            const unsigned char ch = (unsigned char)text[i];
+            if (ch < 0x80) { i++; continue; }
+            if (ch >= 0xC0 && ch <= 0xC3 && i + 1 < text.size()) { i += 2; continue; }   // U+0080..U+00FF
+            latin1 = false; break;
+        }
+        const int dd = latin1 ? kDdIso8859_1 : kDdUtf16Le;
+        std::vector<uint8_t> data;
+        if (dd == kDdUtf16Le) {
+            size_t i = 0;
+            while (i < text.size()) {
+                const unsigned char ch = (unsigned char)text[i];
+                uint32_t cp = ch; size_t len = 1;
+                if (ch >= 0xE0) { cp = ch & 0x0F; len = 3; } else if (ch >= 0xC0) { cp = ch & 0x1F; len = 2; }
+                for (size_t k = 1; k < len && i + k < text.size(); k++) cp = (cp << 6) | ((unsigned char)text[i + k] & 0x3F);
+                i += len;
+                data.push_back((uint8_t)cp); data.push_back((uint8_t)(cp >> 8));
+            }
+        } else {
+            size_t i = 0;
+            while (i < text.size()) {
+                const unsigned char ch = (unsigned char)text[i];
+                if (ch >= 0xC0 && i + 1 < text.size()) { data.push_back((uint8_t)(((ch & 0x1F) << 6) | ((unsigned char)text[i + 1] & 0x3F))); i += 2; }
+                else { data.push_back(ch); i++; }
+            }
+        }
+        txPacket(c, data, kDpfShortDefined, 10, dd, true, text);
+    }
+
+    void txLrrp(const DmrGenConfig& c) {
+        const std::vector<uint8_t> pkt = c.txLrrpNoFix ? dmrLrrpEncodeNoFix(1) : dmrLrrpEncode(c.txLat, c.txLon, 5.0, false, 0, false, 0, 1);
+        char b[64];
+        if (c.txLrrpNoFix) snprintf(b, sizeof b, "no fix"); else snprintf(b, sizeof b, "%.5f, %.5f", c.txLat, c.txLon);
+        // truth text is informative only; the receiver reports the decoded position, not this string (scored separately in the test)
+        txPacket(c, pkt, kDpfUnconfirmed, 9, 0, false, b);
+    }
+
+    // Tier III subscriber control-channel CSBK: a C_RAND (CSBKO 01 1111, MFID 0) random-access service request (TS 102 361-4 7.1.1.2.1)
+    void txServiceRequest(const DmrGenConfig& c, int serviceKind) {
+        Csbk cs;
+        cs.lb = true; cs.pf = false; cs.opcode = 0x1F; cs.fid = 0;
+        cs.data[0] = 0x00;                        // Service_Options (7) + Proxy Flag (1)
+        cs.data[1] = (uint8_t)((serviceKind & 0x0F) << 4);   // Service_Kind (4) + Service (4)
+        putBe24(cs.data + 2, c.txDst);            // target address (TSCC / talkgroup / destination)
+        putBe24(cs.data + 5, c.txSrc);            // source address: the requesting MS
+        Bits info;
+        csbkInfo(cs, info);
+        const size_t first = q_.size();
+        q_.push_back(bptcBurst(kDtCsbk, info));
+        const int ti = newTruth(4, c.txSrc, c.txDst);
+        truth_[(size_t)ti].csbkOpcode = 0x1F;
+        markEnds(first, ti, 3, c.txDst);
     }
 
 private:
@@ -434,6 +586,7 @@ struct DmrSignal::Impl {
     // direct mode
     int directSlot = 0, gapSlots = 0;
     bool carrierOn = true;
+    bool txDone_ = false;     // real transmit: the one transmission has all been queued into the symbol stream
     // symbol stream waiting to be shaped
     std::deque<std::pair<float, uint8_t>> symQ;
     // 48 kHz samples
@@ -449,7 +602,12 @@ struct DmrSignal::Impl {
     explicit Impl(const DmrGenConfig& cfg)
         : c(cfg), rng(cfg.seed * 7919ULL + 17), noiseRng(cfg.seed * 104729ULL + 5), s1(c, 1, 0, cfg.seed * 31ULL + 1, truth), s2(c, 2, 0, cfg.seed * 31ULL + 2, truth) {
         truth.reserve(1 << 16);
-        if (c.direct) {
+        if (c.txEnable) {
+            // real subscriber transmit: MS sync patterns (talking to a repeater) or direct-mode patterns, one transmission in txSlot
+            SlotScript& sc = c.txSlot == 2 ? s2 : s1;
+            sc.setFamily(c.txMobile ? 1 : (c.txSlot == 2 ? 3 : 2));
+            sc.queueTx(c);
+        } else if (c.direct) {
             if (c.mobile) { s1.setFamily(1); s2.setFamily(1); }
             else { s1.setFamily(2); s2.setFamily(3); }
         }
@@ -492,6 +650,24 @@ struct DmrSignal::Impl {
     }
 
     void fillSymbols() {
+        if (c.txEnable) {
+            // one transmission in txSlot (inbound burst + guard time), silence elsewhere and after it; the carrier is off between bursts
+            const int slotIdx = (int)(slotCounter & 1);
+            SlotScript* sc = c.txSlot == 2 ? &s2 : &s1;
+            if (slotIdx == (c.txSlot == 2 ? 1 : 0) && sc->pending()) {
+                Burst b = sc->pop(now());
+                std::vector<int8_t> sy;
+                bitsToSymbols(b.bits, sy);
+                for (int8_t s : sy) symQ.push_back({(float)s, 1});
+                for (int i = 0; i < kCachSymbols; i++) symQ.push_back({0.f, 0});   // guard time (no CACH on an inbound channel)
+                if (!sc->pending()) txDone_ = true;
+            } else {
+                for (int i = 0; i < kSlotSymbols; i++) symQ.push_back({0.f, 0});
+            }
+            slotCounter++;
+            symbols += kSlotSymbols;
+            return;
+        }
         if (!c.direct) {
             const int slotIdx = (int)(slotCounter & 1);
             SlotScript& sc = slotIdx == 0 ? s1 : s2;
@@ -637,6 +813,7 @@ namespace {
 class DmrSynth : public ModeSynth {
 public:
     DmrSynth(const SynthConfig& cfg, double rate) : rate_(rate), sig_(dmrGenConfigFrom(cfg, rate)) {}
+    explicit DmrSynth(const DmrGenConfig& cfg) : rate_(cfg.rate), sig_(cfg) {}
     double sampleRate() const override { return rate_; }
     void generate(cf32* out, size_t n) override { sig_.generate(out, n); }
 private:
@@ -648,6 +825,11 @@ private:
 std::unique_ptr<ModeSynth> makeDmrSynth(const SynthConfig& cfg, double sampleRate) {
     if (sampleRate < 1e6 || sampleRate > 20.5e6) return nullptr;
     return std::make_unique<DmrSynth>(cfg, sampleRate);
+}
+
+std::unique_ptr<ModeSynth> makeDmrSynthFromConfig(const DmrGenConfig& cfg) {
+    if (cfg.rate < 1e6 || cfg.rate > 20.5e6) return nullptr;
+    return std::make_unique<DmrSynth>(cfg);
 }
 
 } // namespace dect2

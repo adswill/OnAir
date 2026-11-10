@@ -16,6 +16,7 @@
 #include "dect2/dect/dect_gen.h"
 #include "dect2/dect/dect_rx.h"
 #include "dect2/dmr/dmr_gen.h"
+#include "dect2/dmr/dmr_tx.h"
 #include "dect2/dpmr/dpmr_gen.h"
 #include "dect2/dpmr/dpmr_rx.h"
 #include "dect2/dstar/dstar_gen.h"
@@ -646,12 +647,30 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
 
     if (m.stdMode == 11) {   // DMR
         if (r.analogVoice) return makeTxVoiceSynth(m, r, rate);
+        // Real subscriber transmit (dmr_tx.h): built from the operator's own DMR ID and the payload when an identity or message is given.
+        const uint32_t destId = (uint32_t)(r.dest.empty() ? 0 : strtoul(r.dest.c_str(), nullptr, 10));
+        const bool haveId = r.address != 0 || destId != 0 || r.talkgroup != 0 || !r.text.empty() || r.lat != 0 || r.lon != 0 || r.kind != 0;
+        if (haveId) {
+            DmrTxConfig t;
+            t.rate = rate;
+            t.myId = r.address;
+            t.callsign = r.callsign;
+            t.colourCode = r.colorCode ? r.colorCode : 1;
+            t.slot = r.slot;
+            t.mobile = true;                 // a repeater uplink by default
+            t.call = (DmrTxCall)std::max(0, std::min(7, r.kind));
+            t.text = r.text;
+            t.lat = r.lat; t.lon = r.lon;
+            // destination: a talkgroup for group voice / SMS / LRRP, a radio ID for private and Tier III
+            const bool toUnit = t.call == DmrTxCall::PrivateVoice || t.call == DmrTxCall::Tier3Register || t.call == DmrTxCall::Tier3VoiceRequest;
+            t.dest = toUnit ? (destId ? destId : (uint32_t)r.talkgroup) : ((uint32_t)r.talkgroup ? (uint32_t)r.talkgroup : destId);
+            return makeDmrTxSynth(t);
+        }
+        // nothing entered: the demo base-station test signal
         SynthConfig s2 = s;
         if (r.colorCode) s2.modeOpt[0] = r.colorCode;
-        if (r.talkgroup) s2.modeOpt[1] = 1;
         if (r.slot == 2) s2.modeOpt[2] = 1;
-        if (r.colorCode || r.talkgroup || r.address || r.slot != 1) return makeDmrSynth(s2, rate);
-        return nullptr;
+        return makeDmrSynth(s2, rate);
     }
 
     if (m.stdMode == 10) {   // analog TV: test card / bars with ident; mic or file on the FM/AM sound carrier
