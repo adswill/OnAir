@@ -59,6 +59,11 @@ std::vector<EventInfo> build() {
     v.push_back({"ais.anomaly", "AIS anomaly (spoofed or cloned identity, moved aid, dark ship ...)", "AIS", "AIS", 162.0e6, {
         {"mmsi", 'n', "MMSI number", "219012345"}, {"name", 's', "ship name", "NORDIC STAR"}, {"kind", 's', "jump, clash, aton_moved, aton_off_position, mmsi_class, speed_type, name_change, dark, reappeared", "clash"},
         {"severity", 'n', "0 information, 1 warning, 2 alarm", "2"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"}, {"text", 's', "one-line reading", "MMSI 219012345 reports from two places 60 nm apart"}}});
+    v.push_back({"ais.behaviour", "AIS vessel behaviour (rendezvous, loitering, status against motion, draught or destination change, dragging anchor)", "AIS", "AIS", 162.0e6, {
+        {"mmsi", 'n', "MMSI number", "219012345"}, {"other", 'n', "the other vessel (rendezvous), else 0", "0"}, {"name", 's', "ship name", "NORDIC STAR"},
+        {"kind", 's', "rendezvous, loiter, status_moving, status_stopped, draught, destination, anchor_drag", "anchor_drag"}, {"severity", 'n', "0 information, 1 warning, 2 alarm", "2"},
+        {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"}, {"value", 'n', "metres from the anchor, minutes, draught change in m ...", "140"},
+        {"text", 's', "one-line reading", "NORDIC STAR dragging anchor: 140 m from its anchor position"}}});
     v.push_back({"aprs.packet", "AX.25 / APRS packet", "APRS", "APRS", 144.8e6, {
         {"from", 's', "source call sign", "LY1ABC-9"}, {"to", 's', "destination", "APRS"}, {"path", 's', "digipeater path", "WIDE1-1"},
         {"info", 's', "information field", "!5441.40N/02517.00E>test"}, {"type", 's', "packet type", "position"}, {"summary", 's', "one-line reading", "position"},
