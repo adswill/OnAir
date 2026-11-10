@@ -2,6 +2,7 @@
 #include "dect2/tx/tx.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/audio/audio_control.h"
+#include "dect2/general/general_rx.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdint>
@@ -230,6 +231,21 @@ std::unique_ptr<ModeSynth> makeTxVoiceSynth(const TxModeSpec& m, const TxRequest
     }
     // the radio is told the dial frequency plus the mode's tuning offset (tx.cpp, #351), so the signal sits that far below the radio's centre (#374)
     const double dialOff = -txModeTuneOffsetHz(m);
+    // "Send analog NFM of the microphone or a file" (#373): NFM. r.kind is not a modulation in the modes that offer the box (FT8's message type,
+    // and the airband panel leaves 1 there), so it made the fall-back AM or USB. The general receiver sends it with the modulation its test
+    // signal is set to (its "Modulation" pick). Airband and QO-100 keep theirs: there r.kind is the modulation.
+    if (r.analogVoice && m.stdMode != 28 && m.stdMode != 55) {
+        int k = 1;
+        TxRequest rr = r;
+        if (m.stdMode == 57) switch (r.synth.modeOpt[0]) {
+            case GenAm: k = 2; break;
+            case GenUsb: k = 3; break;
+            case GenLsb: k = 4; break;
+            case GenWfm: if (rr.deviationHz <= 0) rr.deviationHz = 75000; break;
+            default: break;
+        }
+        return std::make_unique<AnalogVoice>(rate, dialOff, k, rr);
+    }
     if (r.analogVoice || r.kind == 1 || r.kind == 2 || r.kind == 3) {
         const int k = r.kind == 2 ? 3 : r.kind == 3 ? 4 : r.kind == 1 ? 2 : 1;
         return std::make_unique<AnalogVoice>(rate, dialOff, k, r);

@@ -154,7 +154,9 @@ void fileRow(TxUi& s, const char* label, const char* btnId) {
 }
 
 void analogNfmBox(TxUi& s, bool running) {
-    ImGui::Checkbox(tr("Send analog NFM of the microphone or a file instead of the test scene"), &s.analogVoice);
+    if (s.modeId == "general")   // the general receiver sends the audio with the modulation its test signal is set to (#373)
+        ImGui::Checkbox(tr("Send the microphone or a file with the modulation above, instead of the test signal"), &s.analogVoice);
+    else ImGui::Checkbox(tr("Send analog NFM of the microphone or a file instead of the test scene"), &s.analogVoice);
     if (s.analogVoice) audioSourceRow(s, running);
 }
 
