@@ -1346,3 +1346,6 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 feat39-iotrc: IoT and RC links
+ISM sensors: X10 RF, Insteon and seven more rtl_433 families (inFactory, WH31E, Nissan and GM TPMS, Efergy Optical, EMT7110, SCM+). Wireless M-Bus: Wize frames (CI 0x20 L6 layer), mode N format B sync and 2.4 kbit/s. RC links: Futaba S-FHSS and Spektrum DSM2 / DSMX as new mode entries (sub-modes of family 360). Skipped for lack of a public description: NB-Fi, Weightless-P, FASST, AFHDS 3. DSM CRC not checked (unpublished); S-FHSS CRC variant uncertain. Simulated signals only. Details: docs/IOTRC-3.9.md.
