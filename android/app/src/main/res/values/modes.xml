@@ -371,7 +371,7 @@
         <item>LTE cells around you: operator, band, EARFCN, PCI, eNB and sector, TAC, neighbours (receive only, public broadcast)</item>
         <item>5G NR cells around you from their SS/PBCH blocks on the sync raster (GSCN) of n1, n3, n7, n8, n20, n28, n38, n40, n41, n77, n78: PCI, SSB index / beam, SS-RSRP / RSRQ / SINR, MIB (SFN, subcarrier spacing, k_SSB, CORESET#0, barred) (receive only, public broadcast)</item>
         <item>LTE NB-IoT cells around you (180 kHz carriers, in-band, guard band or standalone) from their NPSS / NSSS, NPBCH (MIB-NB) and SIB1-NB: PCI, operating mode, antenna ports, SFN, operator (MCC / MNC), tracking area, cell identity, band, level; band scan over the 100 kHz raster. Receive only: the public broadcast only, nothing addressed to a device is decoded</item>
-        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 900 / DCS 1800 bands: cell identity, location area, operator, channel lists (receive only, public broadcast)</item>
+        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 850 / 900, DCS 1800 and PCS 1900 bands: cell identity, location area, operator, channel lists, GPRS and 3G / 4G neighbour indications, and the paging / access load of the common control channel (message kinds only). Receive only, public broadcast</item>
         <item>LBJ (Chinese railway train proximity warning) on about 821.2375 MHz: FM voice channel with 1200 bit/s FSK data for train number, kilometre marker, locomotive ID, direction and speed (receive only)</item>
         <item>POCSAG paging messages (512, 1200 and 2400 bd) on a 25 kHz channel</item>
         <item>FLEX paging messages (1600, 3200 and 6400 bit/s) on a 25 kHz channel</item>

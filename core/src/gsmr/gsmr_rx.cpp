@@ -24,12 +24,32 @@ double gsmrArfcnToHz(int n) {
     if (n >= 0 && n <= 124) return (935.0 + 0.2 * n) * 1e6;
     if (n >= 955 && n <= 1023) return (935.0 + 0.2 * (n - 1024)) * 1e6;
     if (n >= 512 && n <= 885) return (1805.2 + 0.2 * (n - 512)) * 1e6;   // DCS 1800
+    if (n >= 128 && n <= 251) return (869.2 + 0.2 * (n - 128)) * 1e6;    // GSM 850
     return 0;
+}
+
+double gsmrRasterHz(double hz) {   // 3GPP TS 45.005 2: the channel the frequency is on, in its own band
+    const int n = gsmrHzToArfcn(hz);
+    if (n < 0) return 0;
+    if (hz >= 1930.1e6 && hz <= 1989.9e6) return (1930.2 + 0.2 * (n - 512)) * 1e6;   // PCS 1900
+    return gsmrArfcnToHz(n);
+}
+
+const char* gsmrBandName(double hz) {
+    const double m = hz / 1e6;
+    if (m >= 869.1 && m <= 893.9) return "GSM 850";
+    if (m >= 921.1 && m <= 924.9) return "GSM-R";
+    if (m >= 925.1 && m <= 959.9) return "GSM 900";
+    if (m >= 1805.1 && m <= 1879.9) return "DCS 1800";
+    if (m >= 1930.1 && m <= 1989.9) return "PCS 1900";
+    return "";
 }
 
 int gsmrHzToArfcn(double hz) {
     const double m = hz / 1e6;
     if (m >= 1805.1 && m <= 1879.9) return 512 + (int)std::lround((m - 1805.2) / 0.2);   // DCS 1800
+    if (m >= 1930.1 && m <= 1989.9) return 512 + (int)std::lround((m - 1930.2) / 0.2);   // PCS 1900 (the same numbers as DCS 1800: the band tells them apart)
+    if (m >= 869.1 && m <= 893.9) return 128 + (int)std::lround((m - 869.2) / 0.2);      // GSM 850
     if (m < 921.1 || m > 959.9) return -1;
     const long k = std::lround((m - 935.0) / 0.2);
     if (k >= 0) return (int)k;
@@ -64,7 +84,7 @@ const char* gsmrCountry(int mcc) {
 ModeTuning gsmrTuning() {
     ModeTuning t;
     t.stdMode = 41; t.id = "gsmr"; t.name = "GSM-R";
-    t.minMhz = 860; t.maxMhz = 1880; t.defMhz = 922.8;
+    t.minMhz = 860; t.maxMhz = 1990; t.defMhz = 922.8;
     t.sampleRate = 5000000;      // the whole railway band (921 - 925 MHz) in one capture
     t.basebandHz = 5000000;
     t.bandwidthMhz = 4.8;
@@ -88,6 +108,7 @@ struct Decoded {
     float snrDb = -99;
     int bad = 0;
     std::vector<gsmr::Bcch> msgs;
+    gsmr::CcchCount ccch;   // the CCCH blocks of the capture by message kind (no contents are kept)
 };
 
 } // namespace
@@ -242,7 +263,10 @@ struct GsmrReceiver::Impl {
         const long fnFirst = (long)d.fn - (long)std::floor(schPos / kFrameSamples) - 1;   // a frame that starts before the capture
         const long fnLast = (long)d.fn + (long)std::floor(((double)s.size() - schPos) / kFrameSamples) + 1;
         for (long f0 = fnFirst; f0 <= fnLast; f0++) {
-            if (((f0 % 51) + 51) % 51 != 2) continue;
+            const int t51 = (int)(((f0 % 51) + 51) % 51);
+            // BCCH at 2 - 5; CCCH blocks at 6, 12, 16, 22, 26, 32, 36, 42, 46 (TS 45.002 7 Table 3, non-combined; combined uses 6, 12, 16 only)
+            const bool ccchBlk = t51 == 6 || t51 == 12 || t51 == 16 || t51 == 22 || t51 == 26 || t51 == 32 || t51 == 36 || t51 == 42 || t51 == 46;
+            if (t51 != 2 && !ccchBlk) continue;
             const double first = schPos + (double)(f0 - (long)d.fn) * kFrameSamples;
             if (first < -200 || first + 3.0 * kFrameSamples + 700 > (double)s.size()) continue;
             if (gen.load() != g) return d;
@@ -264,6 +288,10 @@ struct GsmrReceiver::Impl {
             float l456[456];
             xcchDeinterleave(dat, l456);
             uint8_t m[23];
+            if (ccchBlk) {   // only the message kind is counted; the contents (paging identities) are neither read nor kept
+                if (xcchDecode(l456, m)) d.ccch.add(ccchKind(m)); else if (all) d.ccch.bad++;
+                continue;
+            }
             if (xcchDecode(l456, m)) {
                 if (wire::on(wire::GsmR)) wire::Hub::get().publish(wire::GsmR, wire::makeGsmtap(wire::gsmtap::kTypeUm, wire::gsmtap::kChanBcch, m, sizeof m));
                 Bcch bc;
@@ -313,7 +341,7 @@ struct GsmrReceiver::Impl {
     void merge(const Carrier& cr, const Decoded& d, double center, double sec) {
         const double actual = (center > 0 ? center : 0.0) + d.cfoHz;
         const int arfcn = center > 0 ? gsmrHzToArfcn(actual) : -1;
-        const double nominal = arfcn >= 0 ? gsmrArfcnToHz(arfcn) : actual;
+        const double nominal = arfcn >= 0 ? gsmrRasterHz(actual) : actual;
         GsmrCell* t = nullptr;
         for (auto& c : tel.cells) if (c.arfcn == arfcn && c.bsic == d.bsic && (arfcn >= 0 || std::fabs(c.freqHz - nominal) < 60e3)) { t = &c; break; }
         const bool isNew = !t;
@@ -334,6 +362,7 @@ struct GsmrReceiver::Impl {
             event(b, sec);
         }
         t->siBad += (uint64_t)d.bad;
+        t->ccch.merge(d.ccch);
         tel.blocksBad += (uint64_t)d.bad;
         for (const auto& m : d.msgs) {
             tel.blocksOk++;
@@ -368,6 +397,7 @@ struct GsmrReceiver::Impl {
             }
             if (m.type == gsmr::kSi1 && !m.listUnparsed) { t->hasSi1 = true; t->cellAlloc = m.arfcns; }
             if (m.type == gsmr::kSi2 && !m.listUnparsed) { t->hasSi2 = true; t->neigh = m.arfcns; t->nccPermitted = m.nccPermitted; }
+            if (m.type == gsmr::kSi2bis && !m.listUnparsed && m.hasList) t->neighBis = m.arfcns;
         }
     }
 };
