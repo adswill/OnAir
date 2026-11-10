@@ -11,7 +11,7 @@
 // (text and slot decoders: RTTY, FT8, NAVTEX ...) is measured by what it saves (Engine::saveResults) beyond what it saves for silence (a
 // sixth file, the baseline). A mode that only measures or locks (spectrum tools, audio) passes on its lock flag (dataValid). After the clean
 // run the same engine is retuned away and back, stopped, started again on the file and stopped again, each step under a watchdog.
-// Lengths: 3 s, then 32 s, then 32 s played at the radio's speed (decoders on their own threads skip slots when a file runs faster than real
+// Lengths: 3 s, 8 s (also when the clean run had fewer than 8 blocks), 32 s, then 32 s played at the radio's speed (decoders on their own threads skip slots when a file runs faster than real
 // time); ONAIR_TEST_LONG=1 or --long: 8, 32, 120 s, then 32 s at real time.
 // CPU: CPU seconds (all threads) the receiver used per second of signal in the clean run, steady state, as bench_modes measures it.
 //
@@ -622,7 +622,7 @@ int main(int argc, char** argv) {
         // (32 s holds two 15 s FT8 slots and a NAVTEX message; the long run reaches the 2 min WSPR slot). The engine reads the file as fast as
         // it can; the last try plays it at the radio's speed, for the decoders that work on their own threads and skip what they cannot keep
         // up with (FT8 / WSPR slots: in the app a file plays at its own speed)
-        std::vector<double> lens = longRun ? std::vector<double>{secs, secs * 4, 120, 32} : std::vector<double>{secs, 32, 32};
+        std::vector<double> lens = longRun ? std::vector<double>{secs, secs * 4, 120, 32} : std::vector<double>{secs, 8, 32, 32};
         double actual = e->rate;
         bool done = false;
         for (size_t li = 0; li < lens.size(); li++) {
@@ -671,7 +671,9 @@ int main(int argc, char** argv) {
                 cc.good = (uint64_t)jnum(j, "good"); cc.bad = (uint64_t)jnum(j, "bad"); cc.locked = jnum(j, "locked") > 0; cc.first = jnum(j, "first", -1); cc.proc = jnum(j, "processed"); cc.res = (uint64_t)jnum(j, "res");
                 if (c == 0) { r.cost = jnum(j, "cost"); r.life = jstrv(j, "life"); }
             }
-            if (r.c[0].good > 0 || r.byRes || r.c[0].locked || r.c[0].verdict != "-") done = true;
+            // a clean run with only a few blocks is too short to judge the other conditions by: the next length (unless this was the last)
+            const bool few = !r.byRes && r.c[0].good > 0 && r.c[0].good < 8 && li + 2 < lens.size();
+            if ((r.c[0].good > 0 && !few) || r.byRes || r.c[0].locked || r.c[0].verdict != "-") done = true;
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
         if (r.txRate > 0) {   // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline
