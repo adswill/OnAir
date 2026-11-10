@@ -27,8 +27,9 @@ static std::vector<FlarmTx> train(double u0, int n, uint32_t id, double cfo) {
     return v;
 }
 
-static FlarmTelemetry decode(const std::vector<cf32>& x, double rate, double u0, bool chase) {
+static FlarmTelemetry decode(const std::vector<cf32>& x, double rate, double u0, bool chase, bool tone = true) {
     FlarmReceiver::chaseOn = chase;
+    FlarmReceiver::toneDetect = tone;
     FlarmReceiver r;
     r.configure(rate); r.setUnixTime(u0); r.setReference(kRefLat, kRefLon);
     FlarmTelemetry last; uint64_t seq = 0;
@@ -38,6 +39,7 @@ static FlarmTelemetry decode(const std::vector<cf32>& x, double rate, double u0,
         if (r.telemetry(t, seq)) { seq = t.seq; last = std::move(t); }
     }
     FlarmReceiver::chaseOn = true;
+    FlarmReceiver::toneDetect = true;
     return last;
 }
 
@@ -47,11 +49,13 @@ int main() {
     const int N = full ? 60 : 30;
     uint64_t hard = 0, soft = 0;
     for (double rate : full ? std::vector<double>{1e6, 2.4e6} : std::vector<double>{1e6}) {
-        for (double snr : full ? std::vector<double>{12, 10, 9, 8, 7, 6, 5} : std::vector<double>{8, 7}) {
+        for (double snr : full ? std::vector<double>{10, 8, 6, 5, 4, 3, 2} : std::vector<double>{6, 5}) {
             for (unsigned seed = 1; seed <= (full ? 3u : 1u); seed++) {
                 const auto x = flarmScene(rate, 0.12 * N + 0.3, train(u0, N, 0xDD1234, 3000), snr, 0, seed);
-                const FlarmTelemetry h = decode(x, rate, u0, false), s = decode(x, rate, u0, true);
-                printf("  %.1f Msps %4.1f dB seed %u: hard %3llu  chase %3llu of %d\n", rate / 1e6, snr, seed, (unsigned long long)h.blocksOk, (unsigned long long)s.blocksOk, N);
+                // 3.8: discriminator chips, hard decisions; 3.9: tone-energy chips and Chase decoding
+                const FlarmTelemetry h = decode(x, rate, u0, false, false), d = decode(x, rate, u0, true, false), s = decode(x, rate, u0, true, true);
+                printf("  %.1f Msps %4.1f dB seed %u: discriminator hard %3llu, + Chase %3llu, tone chips + Chase %3llu of %d\n", rate / 1e6, snr, seed,
+                       (unsigned long long)h.blocksOk, (unsigned long long)d.blocksOk, (unsigned long long)s.blocksOk, N);
                 CHECK(s.aircraftCount <= 1, "a made-up aircraft appeared (%u)", s.aircraftCount);
                 hard += h.blocksOk; soft += s.blocksOk;
             }

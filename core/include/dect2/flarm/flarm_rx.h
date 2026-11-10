@@ -22,7 +22,8 @@ class FlarmReceiver {
 public:
     FlarmReceiver();
     ~FlarmReceiver();
-    static inline bool chaseOn = true;   // Chase decoding of CRC-failed packets (3.9; switch for comparisons)
+    static inline bool chaseOn = true;
+    static inline bool toneDetect = true;   // 3.9: chips by the energy at +-50 kHz instead of the FM discriminator (switch for comparisons)   // Chase decoding of CRC-failed packets (3.9; switch for comparisons)
     void configure(double inputRateHz);
     void setSignalOffset(double hz);
     void setReference(double latDeg, double lonDeg);       // the receiver's position: needed to complete the positions, and for distance / bearing

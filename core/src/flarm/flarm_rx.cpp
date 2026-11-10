@@ -34,6 +34,10 @@ constexpr int kDataChips = flarm::kFrameBytes * 16;      // 416
 constexpr double kChanOffsetHz = 100000.0;
 constexpr size_t kBlock = 16000;           // 20 ms noise blocks
 constexpr size_t kNoiseBlocks = 250;
+// e^{j 2 pi 50 kHz n / 800 kHz} = e^{j pi n / 8}, n = 0 .. 15
+const cf32 kLo[16] = {{1.f, 0.f}, {0.9238795f, 0.3826834f}, {0.7071068f, 0.7071068f}, {0.3826834f, 0.9238795f}, {0.f, 1.f}, {-0.3826834f, 0.9238795f},
+                      {-0.7071068f, 0.7071068f}, {-0.9238795f, 0.3826834f}, {-1.f, 0.f}, {-0.9238795f, -0.3826834f}, {-0.7071068f, -0.7071068f},
+                      {-0.3826834f, -0.9238795f}, {0.f, -1.f}, {0.3826834f, -0.9238795f}, {0.7071068f, -0.7071068f}, {0.9238795f, -0.3826834f}};
 
 int popcount32(uint32_t v) { return dect2::bits::popcount(v); }
 
@@ -49,6 +53,8 @@ struct Chan {
     cf32 prev = cf32(1.f, 0.f);
     int64_t n = 0;
     float dring[kSps] = {};
+    cf32 t1[kSps] = {}, t0[kSps] = {};   // samples turned by -+50 kHz (tone detector)
+    float toneScale = 1.f;
     float S = 0;
     float soft[kSps][kRing] = {};
     uint32_t reg[kSps][2] = {};
@@ -66,6 +72,7 @@ struct Chan {
         lp.reset(); if (!rsPass) rs.reset();
         phase = 0; prev = cf32(1.f, 0.f); n = 0;
         for (float& f : dring) f = 0;
+        for (int j = 0; j < kSps; j++) t1[j] = t0[j] = cf32(0.f, 0.f);
         S = 0;
         for (auto& r : soft) for (float& f : r) f = 0;
         for (auto& r : reg) r[0] = r[1] = 0;
@@ -342,9 +349,20 @@ struct FlarmReceiver::Impl {
             if (p == 7) c.pw[k & (kRing - 1)] = c.pwAcc;
             c.blkSum += pwr;
             if (++c.blkN >= kBlock) blockEnd(c);
-            // chip value: the sum of the last 8 discriminator samples
-            c.S += d - c.dring[p];
-            c.dring[p] = d;
+            if (FlarmReceiver::toneDetect) {
+                // chip value (3.9): the energy at +50 kHz minus the energy at -50 kHz over the last 8 samples (one chip), the noncoherent
+                // detector of orthogonal FSK (h = 1); below about 12 dB the discriminator's clicks cost about 1 dB more
+                const int ph16 = (int)(c.n & 15);
+                c.t1[p] = s * kLo[(16 - ph16) & 15];
+                c.t0[p] = s * kLo[ph16];
+                cf32 b1(0.f, 0.f), b0(0.f, 0.f);
+                for (int j = 0; j < kSps; j++) { b1 += c.t1[j]; b0 += c.t0[j]; }
+                c.S = (std::norm(b1) - std::norm(b0)) * c.toneScale;
+            } else {
+                // chip value: the sum of the last 8 discriminator samples
+                c.S += d - c.dring[p];
+                c.dring[p] = d;
+            }
             c.soft[p][k & (kRing - 1)] = c.S;
             // the pair that ends at this chip
             const float prevChip = c.soft[p][(k - 1) & (kRing - 1)];
