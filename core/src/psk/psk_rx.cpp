@@ -704,12 +704,15 @@ uint64_t PskReceiver::Impl::trialMode(const std::vector<cf32>& band, int mode, f
     for (const PskSignal& s : t->tel.signals) if (s.chars > 0) text += s.text;
     const double r = autoparam::readableFraction(text.substr(text.size() / 3));
     if (r < 0.85) return 0;
-    return (uint64_t)(1000.0 * (double)(ok - 3 * bad) * r * r / pskBaud(mode) / (psk8psk(mode) ? 3.0 : 1.0));   // 8PSK: per bit (three a symbol)   // per baud: a too-fast decoder runs off short codes, its text per symbol is what is low
+    return (uint64_t)(1000.0 * (double)(ok - 3 * bad) * r * r / pskBaud(mode));   // per baud: a too-fast decoder runs off short codes, its text per symbol is what is low
 }
 std::pair<int, uint64_t> PskReceiver::Impl::trialAll(const std::vector<cf32>& band, float thr) {
     int best = -1;
     uint64_t bestS = 0;
     for (int m = 0; m < kPskModes; m++) {
+        // 8PSK is chosen by hand (fldigi users pick it or send an RSID): a BPSK or QPSK signal read at 8PSK gives text as well, and 8PSK needs
+        // about 8 dB more than the others, so Auto keeps to BPSK and QPSK
+        if (psk8psk(m)) continue;
         const uint64_t s = trialMode(band, m, thr);
         if (s > bestS) { bestS = s; best = m; }
     }
