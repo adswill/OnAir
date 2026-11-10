@@ -768,6 +768,8 @@ if(DECT2_BUILD_APP)
   list(APPEND APP_SOURCES app/platform/power.cpp app/ui/perf_overlay.cpp)   # battery, occlusion, App Nap; View > Performance overlay
   add_executable(test_frame_pace tests/app/test_frame_pace.cpp)   # the redraw policy of the frame loop (app/ui/frame_pace.h)
   add_test(NAME frame_pace COMMAND test_frame_pace)
+  add_executable(test_top_row tests/app/test_top_row.cpp)   # the classic top bar's right-hand buttons never overlap (app/ui/top_row.h, #139 #424)
+  add_test(NAME top_row COMMAND test_top_row)
   add_executable(test_gl_level tests/app/test_gl_level.cpp)   # OpenGL 3.2 -> 3.1 -> 3.0 fallback table (#283)
   add_test(NAME gl_level COMMAND test_gl_level)
   add_executable(test_tex_shrink tests/app/test_tex_shrink.cpp)   # pictures over the GPU's texture limit (4096 on a Raspberry Pi, #284)

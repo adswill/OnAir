@@ -1143,7 +1143,7 @@ void sourceOptions(App& a);
 bool sourceOptionsOpen(const App& a);   // synthetic, a file not playing, or a sound card
 void statusBar(App& a);
 void gainControl(App& a);
-void standardSwitch(App& a);
+void standardSwitch(App& a, float reserve = 0);   // reserve: the width the caller keeps free right of it (0: 150 px)
 extern float gSwitchWidth;
 // The receiver modes (mode_table.cpp). Adding a mode is one row there.
 // subId: one protocol of a shared receiver (dect2::subModes()), a mode of its own with its own settings, decoder and views
