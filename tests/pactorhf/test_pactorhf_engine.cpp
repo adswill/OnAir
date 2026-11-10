@@ -6,6 +6,7 @@
 #include <thread>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static void one(int variant) {
     const ModeTuning mt = pactorHfTuning(variant);
@@ -29,8 +30,15 @@ static void one(int variant) {
     int reports = 0, wrong = 0;
     const auto t0 = std::chrono::steady_clock::now();
     const double limit = variant == 4 ? 22.0 : 30.0;
+    // the default run stops as soon as every check below already holds (the time limit stays); the long run plays the whole limit as before
+    auto passed = [&] {
+        const PactorHfTelemetry& q = rx.pactorhf;
+        return reports > 10 && wrong == 0 && rx.rateOk && q.variant == variant && (variant != 2 || q.nCarriers == 2) &&
+               (variant != 3 || (q.nCarriers == 14 && q.level == 4)) && (variant != 4 || q.constellation == 4) && e.droppedSamples() == 0;
+    };
     while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < limit) {
         if (e.latestRx(rx, seq)) { seq = rx.seq; reports++; if (rx.standard != std_ - 1) wrong++; }
+        if (!testLong() && passed()) break;
         std::this_thread::sleep_for(std::chrono::milliseconds(20));
     }
     const PactorHfTelemetry& p = rx.pactorhf;

@@ -7,6 +7,7 @@
 #include <random>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static std::vector<cf32> capture(double secs, double snr, double cfo, unsigned seed, std::vector<std::pair<double, dabgen::TxConfig>> tx) {
     const double rate = 8192000, centre = 226500000;
@@ -38,7 +39,9 @@ int main() {
     CHECK(dabBandIII().size() == 41, "plan size %zu", dabBandIII().size());
     const double rate = 8192000, centre = 226500000;
     {   DabCensus c; CHECK(!c.configure(2048000, centre), "too narrow"); CHECK(!c.configure(8192000, 100e6), "no channel"); }
+    // the default run: each SNR and each offset once (20 dB centred, 12 dB with the offset); ONAIR_TEST_LONG=1 every pair
     for (double snr : {20.0, 12.0}) for (double cfo : {0.0, 1800.0}) {
+        if (!testLong() && (snr == 12.0) != (cfo != 0.0)) continue;
         auto x = capture(10, snr, cfo, 3, {{223936000, ens("Alpha", 0xC1, {{0x4001, "News"}, {0x4002, "Pop"}}, 1)},
                                            {225648000, ens("Beta", 0xC2, {{0x4001, "News"}, {0x4003, "Jazz"}}, 2)},  // adjacent, one service shared
                                            {229072000, ens("Gamma", 0xC3, {{0x4004, "Rock"}}, 3)}});

@@ -8,6 +8,7 @@
 //
 // Usage: test_autogain_matrix [--csv file] [--only radio] [--mode class] [--verbose]. Exit status 1 when a cell is outside its limit.
 #include "autogain_sim.h"
+#include "../common/test_long.h"
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -489,6 +490,12 @@ int main(int argc, char** argv) {
         if (quick && strcmp(rr.id, "hackrf") && strcmp(rr.id, "rtl-r820t") && strcmp(rr.id, "sdrplay")) continue;   // the three gain models CI runs (ctest: one per kind of gain chain)
         for (int m = 0; m < kModes; m++) {
             if (modeArg && strcmp(modeArg, kModeName[m])) continue;
+            // the default ctest run (--quick): five of the fifteen cells, every mode class once and every gain chain, with both known failing cells
+            // (HackRF FM and wide) so the allowance of two still means "no new failure"; ONAIR_TEST_LONG=1 all fifteen
+            if (quick && !testLong() && !only && !modeArg) {
+                static const char* const pick[kModes] = {"rtl-r820t", "hackrf", "sdrplay", "rtl-r820t", "hackrf"};   // ofdm, fm, tdma, pulsed, wide
+                if (strcmp(rr.id, pick[m])) continue;
+            }
             const Row r = runCell(rr, (ModeClass)m);
             cells++;
             if (!r.fails.empty()) bad++;

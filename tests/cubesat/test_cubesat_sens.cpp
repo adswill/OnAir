@@ -11,6 +11,7 @@
 using namespace dect2;
 using namespace dect2::cubesat;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 struct Case { const char* name; int mod, baud, framing; bool scramble; };
 
@@ -51,7 +52,8 @@ int main() {
     for (const Case& c : cases) {
         double floorDb = 99;
         int fails = 0;
-        for (double snr = 30; snr >= -2 && fails < 2; snr -= 2) {
+        // by default 6 dB steps (a coarse floor; the 30 dB point the check needs is always run); the long run (ONAIR_TEST_LONG=1) steps by 2 dB for the table
+        for (double snr = 30; snr >= -2 && fails < 2; snr -= testLongPick(6.0, 2.0)) {
             int good = 0;
             for (int t = 0; t < 3; t++) if (decoded(c, snr, 11 + (uint64_t)t) >= (c.mod == ModCw ? 2 : 3)) good++;
             if (good >= 2) { floorDb = snr; fails = 0; } else fails++;

@@ -2,6 +2,7 @@
 // spectrum inversion (the other sideband), level steps, clock error, chunking. Both variants (MF/HF 100 bd, VHF ch 70). Prints a table of
 // every case that does not decode and fails when any case on the must-pass list fails.
 #include "../data/marine/rf_util.h"
+#include "../common/test_long.h"
 #include <functional>
 #include <random>
 using namespace mt;
@@ -57,19 +58,23 @@ static void row(bool vhf, const char* what, Imp m, bool must, int want = 1) {
 
 int main() {
     setvbuf(stdout, nullptr, _IOLBF, 0);
+    // the default run: the ends of each sweep (offsets, noise, rates up to 4 Msps, the largest clock error, the two lowest clip levels) and every single
+    // case, chunks of 1 for 2 s; ONAIR_TEST_LONG=1 every point, 12.5 and 20 Msps too
+    const bool L = testLong();
+    using V = std::vector<double>;
     for (int v = 0; v < 2; v++) {
         const bool vhf = v == 1; char n[96]; const double span = vhf ? 12 : 100;
         Imp base; base.secs = vhf ? 12 : 24;
         row(vhf, "baseline", base, true);
-        for (double f : vhf ? std::vector<double>{-4000, -3000, -1500, 1500, 3000, 4000} : std::vector<double>{-400, -250, -100, 100, 250, 400}) { Imp m = base; m.cfo = f; snprintf(n, sizeof n, "cfo %+.0f Hz", f); row(vhf, n, m, std::fabs(f) <= (vhf ? 3000 : 250)); }
+        for (double f : vhf ? (L ? V{-4000, -3000, -1500, 1500, 3000, 4000} : V{-4000, -3000, 3000, 4000}) : (L ? V{-400, -250, -100, 100, 250, 400} : V{-400, -250, 250, 400})) { Imp m = base; m.cfo = f; snprintf(n, sizeof n, "cfo %+.0f Hz", f); row(vhf, n, m, std::fabs(f) <= (vhf ? 3000 : 250)); }
         for (double f : vhf ? std::vector<double>{-2500, 2500} : std::vector<double>{-200, 200}) { Imp m = base; m.mist = f; snprintf(n, sizeof n, "mistuned %+.0f Hz", f); row(vhf, n, m, true); }
         for (double f : vhf ? std::vector<double>{-3000, 3000} : std::vector<double>{-300, 300}) { Imp m = base; m.offErr = f; snprintf(n, sizeof n, "off-centre %+.0f Hz", f); row(vhf, n, m, std::fabs(f) <= (vhf ? 3000 : 300)); }
-        for (double s : vhf ? std::vector<double>{16, 12, 10} : std::vector<double>{10, 6, 3}) { Imp m = base; m.snr = s; snprintf(n, sizeof n, "snr %.0f dB", s); row(vhf, n, m, s >= (vhf ? 14 : 3)); }
+        for (double s : vhf ? (L ? V{16, 12, 10} : V{16, 10}) : (L ? V{10, 6, 3} : V{10, 3})) { Imp m = base; m.snr = s; snprintf(n, sizeof n, "snr %.0f dB", s); row(vhf, n, m, s >= (vhf ? 14 : 3)); }
         { Imp m = base; m.fade = 1; m.secs = base.secs * 2; row(vhf, "two-path fading", m, true); }
         { Imp m = base; m.fade = 1; m.secs = base.secs * 2; m.snr = vhf ? 18 : 12; row(vhf, "two-path fading, lower snr", m, false); }
-        for (double r : {250000.0, 300000.0, 1024000.0, 1920000.0, 2048000.0, 2400000.0, 3200000.0, 4000000.0, 5000000.0, 12500000.0, 20000000.0}) { Imp m = base; m.rate = r; m.secs = base.secs * (r > 3e6 ? 0.6 : 1); snprintf(n, sizeof n, "rate %.0f", r); row(vhf, n, m, r >= 240000); }
-        for (double f : {20.0, 50.0}) for (int sg : {1, -1}) { Imp m = base; m.sro = f * sg; snprintf(n, sizeof n, "clock %+.0f ppm", f * sg); row(vhf, n, m, true); }
-        for (float c : {0.15f, 0.08f, 0.04f, 0.02f}) { Imp m = base; m.clip = c; snprintf(n, sizeof n, "clipped at %.2f", c); row(vhf, n, m, c >= 0.04f); }
+        for (double r : L ? V{250000.0, 300000.0, 1024000.0, 1920000.0, 2048000.0, 2400000.0, 3200000.0, 4000000.0, 5000000.0, 12500000.0, 20000000.0} : V{250000.0, 300000.0, 1024000.0, 4000000.0}) { Imp m = base; m.rate = r; m.secs = base.secs * (r > 3e6 ? 0.6 : 1); snprintf(n, sizeof n, "rate %.0f", r); row(vhf, n, m, r >= 240000); }
+        for (double f : L ? V{20.0, 50.0} : V{50.0}) for (int sg : {1, -1}) { Imp m = base; m.sro = f * sg; snprintf(n, sizeof n, "clock %+.0f ppm", f * sg); row(vhf, n, m, true); }
+        for (float c : L ? std::vector<float>{0.15f, 0.08f, 0.04f, 0.02f} : std::vector<float>{0.04f, 0.02f}) { Imp m = base; m.clip = c; snprintf(n, sizeof n, "clipped at %.2f", c); row(vhf, n, m, c >= 0.04f); }
         { Imp m = base; m.invert = true; row(vhf, "spectrum inverted", m, true); }
         { Imp m = base; m.invert = true; m.cfo = vhf ? 1500 : 100; row(vhf, "inverted + offset", m, true); }
         { Imp m = base; m.quant8 = true; m.gain = 0.02f; row(vhf, "8 bit, weak (0.02 rms)", m, true); }
@@ -78,7 +83,7 @@ int main() {
         { Imp m = base; m.stepAt = base.secs * 0.4; m.stepDb = 25; m.secs = base.secs * 1.5; row(vhf, "level step +25 dB", m, true); }
         { Imp m = base; m.stepAt = base.secs * 0.4; m.stepDb = -25; m.secs = base.secs * 1.5; row(vhf, "level step -25 dB", m, true); }
         { Imp m = base; m.burstAt = 1.0; m.burstDb = 20; m.secs = base.secs * 1.5; row(vhf, "100 ms noise burst +20 dB", m, true); }
-        { Imp m = base; m.chunk = 1; m.secs = vhf ? 4 : 6; row(vhf, "chunks of 1 (short)", m, false, 0); }
+        { Imp m = base; m.chunk = 1; m.secs = L ? (vhf ? 4 : 6) : 2; row(vhf, "chunks of 1 (short)", m, false, 0); }
         { Imp m = base; m.cfo = vhf ? 2000 : 150; m.rate = 2.4e6; m.sro = 30; m.fade = 1; m.snr = vhf ? 20 : 15; m.secs = base.secs * 2; row(vhf, "everything at once", m, false); }
         (void)span;
     }

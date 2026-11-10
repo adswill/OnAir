@@ -3,6 +3,7 @@
 // never cut; a clean capture comes out bit for bit. Then every mode of the registry with its own channel width, rate and tune offset (the engine's rule).
 #include "dect2/dsp/spur_notch.h"
 #include "dect2/engine/mode_tuning.h"
+#include "../common/test_long.h"
 #include <cmath>
 #include <cstdio>
 #include <random>
@@ -143,6 +144,7 @@ static void basic() {
 // every mode with its channel, rate and tune offset, as the engine feeds the notch
 static void everyMode() {
     std::set<std::tuple<double, double, double>> seen;
+    std::set<std::tuple<double, bool, double, bool, int>> classes;
     int modes = 0, runs = 0, cut = 0, wide = 0;
     for (int std_ = 0; std_ < 1200; std_++) {
         const ModeTuning* mt = modeTuning(std_);
@@ -153,7 +155,6 @@ static void everyMode() {
         const double off = mt->tuneOffsetHz;
         if (bw > r / 3) bw = r;
         if (!seen.insert({r, bw, off}).second) continue;
-        runs++;
         const double chOff = off != 0 ? -off : 0.0;
         SpurNotch sn; sn.configure(r);
         const double half = bw / 2 + 3 * sn.binHz();
@@ -163,6 +164,9 @@ static void everyMode() {
             const double h = f * r;
             if (std::fabs(h - chOff) > half + 0.02 * r && (off == 0 || std::fabs(h - off) > half + 0.02 * r) && std::fabs(h) > 0.05 * r) { spur = h; break; }
         }
+        // by default one set-up per class (rate, wide or not, spur place, tune offset or not, channel width within a factor 4); the long run every distinct set-up
+        if (!testLong() && !classes.insert({r, bw >= r, spur, off != 0, (int)std::floor(std::log2(std::max(bw, 1.0)) / 2)}).second) continue;
+        runs++;
         Gen g(r);
         const double wantedHz = bw < r ? chOff + 0.1 * bw : 0.0;
         g.tones = {{wantedHz, 0.02}};

@@ -12,6 +12,7 @@
 #include <set>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static const double kRate = 32e6, kCentre = 12e6;
 
@@ -21,10 +22,14 @@ static int run(int mode, double snrDb, uint32_t seed) {
     for (const auto& s : hfdlStations()) for (int k : s.khz) dials.insert(k * 1e3);
     const std::vector<double> list(dials.begin(), dials.end());
     const double chs[3] = {list.front(), list[list.size() / 2], list.back()};
+    // by default every third dial of the table (and the three with a burst) is the channel list, still a crowded list over the whole span;
+    // the long run gives both receivers the whole table
+    std::vector<double> use;
+    for (size_t i = 0; i < list.size(); i++) if (testLong() || i % 3 == 0 || list[i] == chs[1] || i + 1 == list.size()) use.push_back(list[i]);
     const int m1 = 1;
     const std::vector<uint8_t> pdu = hfdlMpduDown(1, 23, {hfdlUnnumbered(hfdlAcarsHfnpdu("N1UA", "H1", '2', "WIDE CAPTURE TEST", true))});
     HfdlReceiver rx;
-    rx.configure(kRate); rx.setCenterHz(kCentre); rx.setChannels(list); rx.setChanneliser(mode);
+    rx.configure(kRate); rx.setCenterHz(kCentre); rx.setChannels(use); rx.setChanneliser(mode);
     std::vector<HfdlWave> waves;
     for (int i = 0; i < 3; i++) {
         HfdlWave w = hfdlMakeWave(m1, pdu, {}, seed + (uint32_t)i);
@@ -58,6 +63,7 @@ int main() {
     }
     // weakest: the edge of what m1 1 decodes; one frame of difference is allowed
     for (uint32_t seed : {31u, 32u}) {
+        if (seed == 32u && !testLong()) continue;   // one noise seed by default, both in the long run
         const double snr = 3.0;
         const int a = run(0, snr, seed), b = run(1, snr, seed);
         printf("  %.0f dB, noise seed %u: per-channel path %d frames, channeliser %d frames\n", snr, seed, a, b);

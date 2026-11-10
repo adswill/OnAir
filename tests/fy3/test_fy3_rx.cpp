@@ -10,10 +10,12 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <cstring>
 #include <random>
 using namespace dect2;
 #include "../common/cpu_time.h"
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 struct Case {
     const char* name; int product; double rate, rs, snr, cfo, ppm, phase, drift, seconds;
@@ -87,7 +89,14 @@ int main() {
         {"AHRPT 10M",                 0, 10e6,   2.8e6,  12,  -30000, 0,   0,    0,     1.5, false, false, 1, 0, 0.5, 6},
         {"AHRPT 20M",                 0, 20e6,   2.6e6,  12,  25000,  0,   0,    0,     1.5, false, false, 2, 0, 0.5, 6},
     };
+    // the default run: the hardest offset and ramp, the measured 2.8 Msym/s rate, conjugate and swapped rails, the lowest and the highest sample rate;
+    // ONAIR_TEST_LONG=1 every case
+    const auto inQuick = [](const char* n) {
+        for (const char* q : {"AHRPT FY-3C 8M -45k ramp", "AHRPT FY-3A 2.8M auto", "AHRPT conj+swap", "AHRPT 4M 2.8", "AHRPT 20M"}) if (!strcmp(n, q)) return true;
+        return false;
+    };
     for (const Case& k : cases) {
+        if (!testLong() && !inQuick(k.name)) continue;
         const Fy3Telemetry t = run(k);
         if (k.sat <= 2 && t.state == 3) checkVirr(k, t);
     }

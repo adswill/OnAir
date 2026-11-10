@@ -16,6 +16,7 @@
 using namespace dect2;
 using namespace multitvtest;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static bool has(const std::vector<RateEntry>& v, double hz) { for (auto& e : v) if (std::fabs(e.getHz - hz) < 1) return true; return false; }
 static bool hasName(const std::vector<MultiService>& v, const char* name, int sign) {
@@ -46,14 +47,17 @@ static void testSlotsAndRates() {
     CHECK(rateEntries(rateLimitsOf(unknown), 0).size() == 17, "an unknown radio keeps the 17-step ladder");
 }
 
+// the default run: a quarter second of the capture through each channeliser, 2.5 s into MultiTv (the sibling tests list services from 2-3 s), a
+// second of load figures; ONAIR_TEST_LONG=1 a whole second, 4 s and 2 s
 static void testFilterCost() {
+    const size_t span = testLongPick<size_t>(61440000 / 4, 61440000);
     for (double off : {0.0, -24e6, 24e6}) {
         ChannelFilter g;
         g.configure(61.44e6, off, 10e6);
         std::vector<cf32> in(1 << 20, cf32(0.1f, 0.05f)), o;
         const auto t0 = std::chrono::steady_clock::now();
         size_t done = 0;
-        while (done < 61440000) { o.clear(); g.process(in.data(), in.size(), o); done += in.size(); }
+        while (done < span) { o.clear(); g.process(in.data(), in.size(), o); done += in.size(); }
         const double s = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() * 61.44e6 / (double)done;
         printf("  channeliser at %+.0f MHz: %.2f s of one core per second of a 61.44 Msps capture\n", off / 1e6, s);
         cpuCal("multitv_wide", "channeliser at " + std::to_string((long long)std::lround(off / 1e6)) + " MHz", s, "cores", '<', 0.9 * ciSlack());
@@ -92,7 +96,8 @@ static void testMultiTv() {
     printf("four DVB-T2 channels in a 61.44 Msps capture\n");
     const auto t0 = std::chrono::steady_clock::now();
     std::vector<cf32> blk;
-    const size_t total = (size_t)(rate * 4.0), step = 1 << 18;
+    const double secs = testLongPick(2.5, 4.0);
+    const size_t total = (size_t)(rate * secs), step = 1 << 18;
     RxTelemetry t;
     for (size_t done = 0; done < total; done += step) { cap.pull(step, blk); mt.feed(blk.data(), blk.size()); mt.poll(t); }
     mt.wait();
@@ -112,7 +117,7 @@ static void testMultiTv() {
                r.aboveDb, r.state, r.services, r.cpuPct, (unsigned long long)r.dropped);
         CHECK(r.dropped == 0, "slot %d dropped samples in blocking mode", r.slot);
     }
-    printf("  wall %.1f s for 4 s of signal\n", wall);
+    printf("  wall %.1f s for %.1f s of signal\n", wall, secs);
     CHECK(rows.size() >= 6, "the 61.44 Msps span lists %zu slots", rows.size());
     CHECK(occupied == 4 && running == 4, "%d occupied, %d running (the empty slots must get no receiver)", occupied, running);
     CHECK(locked == 4, "%d channels locked", locked);
@@ -161,7 +166,7 @@ static void testEngine() {
         if (e.multiChannelActive() && hasName(v, "Lime A", -1) && hasName(v, "Lime B", +1) && hasName(v, "Lime C", +1)) { all = true; break; }
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
-    std::this_thread::sleep_for(std::chrono::seconds(2));   // the load figures need about a second of signal
+    std::this_thread::sleep_for(std::chrono::milliseconds(testLongPick(1000, 2000)));   // the load figures need about a second of signal (printed only)
     printf("  active %d, wall %.1f s, note '%s'\n", (int)e.multiChannelActive(), std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count(), e.multiChannelNote().c_str());
     for (const auto& r : e.tvChannels())
         printf("  slot %+d (%+5.1f MHz): %s%s state %d, %d services, receiver thread %.0f %%, dropped %llu\n", r.slot, r.offsetHz / 1e6, r.occupied ? "occupied" : "empty", r.running ? ", running" : "",

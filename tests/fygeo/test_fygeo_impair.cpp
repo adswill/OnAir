@@ -13,6 +13,7 @@
 #include "dect2/common/mathconst.h"
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 struct Faults {
     double driftHzPerSec = 0;      // carrier drift (a ramp added on top of the generator's offset)
@@ -75,27 +76,30 @@ int main() {
     setvbuf(stdout, nullptr, _IONBF, 0);
     const bool quick = getenv("FY_QUICK") != nullptr;
     // ---- S-VISSR: every case must give frames, with a low bit error ratio, at a high enough Es/N0
-    struct Sv { const char* what; double rate, snr, cfo, sro, offset; Faults f; double secs; };
+    struct Sv { const char* what; double rate, snr, cfo, sro, offset; Faults f; double secs; bool fast = false; };   // fast: in the default run
     std::vector<Sv> sv = {
         {"off centre by 150 kHz", 2.4e6, 12, 150e3, 0, 0, {}, 8},
-        {"off centre by -400 kHz, 5 Msps", 5e6, 12, -400e3, 0, 0, {}, 8},
+        {"off centre by -400 kHz, 5 Msps", 5e6, 12, -400e3, 0, 0, {}, 8, true},
         {"20 ppm radio at 1.69 GHz (34 kHz) and 20 ppm clock", 2.4e6, 12, 34e3, 20, 0, {}, 8},
         {"carrier drift 300 Hz/s", 2.4e6, 12, 5e3, 0, 0, {300, 0, 0, 0, 0}, 10},
         {"DC spike 30 % of the rms", 2.4e6, 12, 60e3, 0, 0, {0, 0.3, 0, 0}, 8},
         {"I/Q imbalance 1.5 dB and 8 degrees", 2.4e6, 12, 0, 0, 0, {0, 0, 1.5, 8, 0}, 8},
         {"phase noise 200 Hz linewidth", 2.4e6, 12, 0, 0, 0, {0, 0, 0, 0, 0}, 8},
         {"slow fading 6 dB deep", 2.4e6, 14, 0, 0, 0, {0, 0, 0, 0, 0.5}, 10},
-        {"everything at once", 3.2e6, 14, 40e3, 30, 0, {120, 0.1, 1.0, 5, 0.3}, 10},
+        {"everything at once", 3.2e6, 14, 40e3, 30, 0, {120, 0.1, 1.0, 5, 0.3}, 10, true},
         {"1.5 Msps", 1.5e6, 12, 0, 0, 0, {}, 8},
-        {"1.0 Msps (1.5 samples a symbol)", 1.0e6, 12, 0, 0, 0, {}, 8},
-        {"0.8 Msps is below the 1.4 samples a symbol the receiver needs", 0.8e6, 12, 0, 0, 0, {}, 3},
+        {"1.0 Msps (1.5 samples a symbol)", 1.0e6, 12, 0, 0, 0, {}, 8, true},
+        {"0.8 Msps is below the 1.4 samples a symbol the receiver needs", 0.8e6, 12, 0, 0, 0, {}, 3, true},
         {"3 Msps (4.545 samples a symbol)", 3e6, 12, 0, 0, 0, {}, 8},
-        {"10 Msps", 10e6, 12, 20e3, 0, 0, {}, 8},
+        {"10 Msps", 10e6, 12, 20e3, 0, 0, {}, 8, true},
         {"20 Msps", 20e6, 12, 20e3, 0, 0, {}, 8},
     };
     sv[6].f.pnLinewidthHz = 200;
+    // the default run: the far offset, all faults at once, the lowest rates, one rate of 10 Msps and each FY-4 link (24 s each: the pictures need it);
+    // ONAIR_TEST_LONG=1 every case, 20 Msps too
     for (const Sv& c : sv) {
         if (quick && c.rate > 5e6) continue;
+        if (!testLong() && !c.fast) continue;
         SynthConfig cfg; cfg.snrDb = c.snr; cfg.cfoHz = c.cfo; cfg.sroPpm = c.sro;
         FygeoTelemetry t = run(kFy2Svissr, cfg, c.rate, c.secs, c.f, c.offset);
         const bool below = c.rate < 1.4 * 660e3 - 1;
@@ -106,24 +110,25 @@ int main() {
         if (c.f.driftHzPerSec == 0 && c.f.fadeDepth == 0 && c.f.pnLinewidthHz == 0) CHECK(std::fabs(t.cfoHz - c.cfo) < 600, "%s: carrier %.0f Hz, want %.0f", c.what, t.cfoHz, c.cfo);
     }
     // ---- FY-4: the DVB-S2 receiver finds the carrier anywhere in the capture
-    struct F4 { const char* what; int link; double rate, snr, cfo, sro; Faults f; double secs; };
+    struct F4 { const char* what; int link; double rate, snr, cfo, sro; Faults f; double secs; bool fast = false; };
     std::vector<F4> f4 = {
         {"LRIT-A off centre by 200 kHz", kFy4aLrit, 2e6, 10, 200e3, 0, {}, 24},
         {"LRIT-A 20 ppm clock, 25 kHz offset", kFy4aLrit, 2e6, 10, 25e3, 20, {}, 24},
-        {"LRIT-A DC spike and I/Q imbalance", kFy4aLrit, 2e6, 10, 0, 0, {0, 0.3, 1.0, 6, 0}, 24},
+        {"LRIT-A DC spike and I/Q imbalance", kFy4aLrit, 2e6, 10, 0, 0, {0, 0.3, 1.0, 6, 0}, 24, true},
         {"LRIT-A drift 100 Hz/s", kFy4aLrit, 2e6, 10, 3e3, 0, {100, 0, 0, 0, 0}, 24},
         {"LRIT-A phase noise 15 Hz linewidth", kFy4aLrit, 2e6, 10, 0, 0, {0, 0, 0, 0, 0}, 24},
         {"LRIT-A 1 Msps", kFy4aLrit, 1e6, 10, 0, 0, {}, 24},
-        {"LRIT-A 0.5 Msps", kFy4aLrit, 0.5e6, 10, 0, 0, {}, 24},
+        {"LRIT-A 0.5 Msps", kFy4aLrit, 0.5e6, 10, 0, 0, {}, 24, true},
         {"LRIT-A 10 Msps", kFy4aLrit, 10e6, 10, 100e3, 0, {}, 24},
         {"LRIT-A 20 Msps", kFy4aLrit, 20e6, 10, -2e6, 0, {}, 24},
-        {"LRIT-B 3.2 Msps", kFy4bLrit, 3.2e6, 14, 50e3, 0, {}, 14},
-        {"HRIT 4 Msps off centre by 500 kHz", kFy4aHrit, 4e6, 14, 500e3, 0, {}, 8},
-        {"HRIT 10 Msps", kFy4aHrit, 10e6, 14, 0, 10, {}, 8},
+        {"LRIT-B 3.2 Msps", kFy4bLrit, 3.2e6, 14, 50e3, 0, {}, 14, true},
+        {"HRIT 4 Msps off centre by 500 kHz", kFy4aHrit, 4e6, 14, 500e3, 0, {}, 8, true},
+        {"HRIT 10 Msps", kFy4aHrit, 10e6, 14, 0, 10, {}, 8, true},
     };
     f4[4].f.pnLinewidthHz = 15;
     for (const F4& c : f4) {
         if (quick && c.rate > 5e6) continue;
+        if (!testLong() && !c.fast) continue;
         SynthConfig cfg; cfg.snrDb = c.snr; cfg.cfoHz = c.cfo; cfg.sroPpm = c.sro;
         FygeoTelemetry t = run(c.link, cfg, c.rate, c.secs, c.f);
         printf("  FY-4 %-44s %3llu frames (%llu bad), %4llu CADUs, pictures %s, carrier %+.1f kHz\n", c.what, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad,

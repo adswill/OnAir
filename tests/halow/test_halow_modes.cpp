@@ -7,6 +7,7 @@
 #include <random>
 using namespace sweep;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static HalowTelemetry runSchedule(double rate, double secs, int widthMask = 31) {
     HalowGenConfig c;
@@ -26,6 +27,9 @@ static HalowTelemetry runSchedule(double rate, double secs, int widthMask = 31) 
 static const HlNet* findNet(const HalowTelemetry& t, const char* ssid) { for (const auto& n : t.nets) if (n.ssid == ssid) return &n; return nullptr; }
 
 int main() {
+    // quick run: every width, rate class, PPDU kind, tilt sign, dial side and rate step still runs once, the full cross products only with
+    // ONAIR_TEST_LONG=1 (the sensitivity ratios, the schedules, the mixture and noise run in full either way)
+    const bool L = testLong();
     {   // sensitivity: MCS 0 at 8 dB and the highest MCS at 32 dB in the channel's own band, every width
         for (int w = 0; w < kNumWidths; w++) for (int mcs : {0, w == W2 ? 8 : 9}) {
             HalowGenFrame f;
@@ -65,7 +69,9 @@ int main() {
     }
     {   // the radio rates a wide channel can come at (the minimum, the recommended one, a higher one), MCS 9, and the signal off the centre of the capture
         struct R { int w; double rate; double dial; };
-        for (const R& k : {R{W8, 8e6, 0}, R{W8, 10e6, 0}, R{W8, 12.5e6, 0}, R{W8, 16e6, 0}, R{W8, 20e6, -5e6}, R{W16, 16e6, 0}, R{W16, 20e6, 0}, R{W16, 25e6, 0}, R{W16, 20e6, 1.5e6}, R{W4, 5e6, 0}, R{W4, 8e6, -2e6}, R{W2, 2e6, 0}, R{W2, 2.4e6, 0}, R{W1, 2.4e6, 0}, R{W1, 10e6, 3e6}}) {
+        const std::vector<R> all = {R{W8, 8e6, 0}, R{W8, 10e6, 0}, R{W8, 12.5e6, 0}, R{W8, 16e6, 0}, R{W8, 20e6, -5e6}, R{W16, 16e6, 0}, R{W16, 20e6, 0}, R{W16, 25e6, 0}, R{W16, 20e6, 1.5e6}, R{W4, 5e6, 0}, R{W4, 8e6, -2e6}, R{W2, 2e6, 0}, R{W2, 2.4e6, 0}, R{W1, 2.4e6, 0}, R{W1, 10e6, 3e6}};
+        const std::vector<R> quick = {R{W8, 8e6, 0}, R{W8, 20e6, -5e6}, R{W16, 16e6, 0}, R{W16, 25e6, 0}, R{W16, 20e6, 1.5e6}, R{W4, 8e6, -2e6}, R{W2, 2e6, 0}, R{W1, 10e6, 3e6}};
+        for (const R& k : L ? all : quick) {
             HalowGenFrame f;
             f.psdu = payloadFrame(60); f.width = k.w; f.mcs = k.w == W2 ? 4 : 9; if (k.w == W1 || k.w == W2) f.mcs = 4;
             Impair im = sets()[0];
@@ -77,7 +83,9 @@ int main() {
     {   // PPDUs that are reported from the SIG field only, at every width
         for (int w = 0; w < kNumWidths; w++) {
             struct K { const char* name; int nss; bool stbc, ldpc, agg, ndp; };
+            int ki = -1;
             for (const K& k : {K{"2 streams", 2, false, false, false, false}, K{"STBC", 1, true, false, false, false}, K{"LDPC", 1, false, true, false, false}, K{"A-MPDU", 1, false, false, true, false}, K{"NDP", 1, false, false, false, true}}) {
+                if (!L && ++ki != w) continue;   // quick: kind i at width i, so every kind and every width runs once
                 HalowGenFrame f;
                 f.psdu = payloadFrame(40); f.width = w; f.mcs = 2; f.nss = k.nss; f.stbc = k.stbc; f.ldpc = k.ldpc; f.agg = k.agg; f.ndp = k.ndp;
                 if (w == W1 && k.nss == 2 && !k.stbc) f.mcs = 1;
@@ -91,6 +99,7 @@ int main() {
     }
     {   // a beamformed long-preamble frame: the data goes through a channel the SIG field does not see; the D-LTF carries it
         for (int w : {W2, W4, W8, W16}) for (double tilt : {0.05, -0.12}) {
+            if (!L && (tilt > 0) != (w == W2 || w == W8)) continue;   // quick: each width once, both tilts
             HalowGenFrame f;
             f.psdu = payloadFrame(60); f.width = w; f.mcs = w == W2 ? 4 : 6; f.pre = PreLong; f.beamformed = true; f.beamTilt = tilt;
             const Result r = run(f, sets()[0], recommendedRateHz(w), 10);
@@ -99,6 +108,7 @@ int main() {
     }
     {   // a combination the standard does not allow (2 MHz MCS 9 with one stream; MCS 10 above 1 MHz) is not a SIG field
         for (auto [w, mcs] : {std::pair<int, int>{W2, 9}, {W4, 10}, {W8, 10}, {W16, 10}}) {
+            if (!L && (w == W8 || w == W16)) continue;   // quick: each rule once
             HalowGenFrame f;
             f.psdu = payloadFrame(30); f.width = w; f.mcs = mcs;
             const Result r = run(f, sets()[0], recommendedRateHz(w), 10);
@@ -107,6 +117,7 @@ int main() {
     }
     {   // the longest PSDU (511 bytes) at the slowest and fastest MCS of the widths that keep it short enough to test quickly
         for (auto [w, mcs] : {std::pair<int, int>{W2, 0}, {W4, 0}, {W8, 0}, {W16, 0}, {W16, 9}, {W4, 9}}) {
+            if (!L && ((w == W4 && mcs == 0) || (w == W16 && mcs == 0) || (w == W4 && mcs == 9))) continue;   // quick: the slowest MCS at 2 and 8 MHz, the fastest at 16
             HalowGenFrame f;
             f.psdu = payloadFrame(483); f.width = w; f.mcs = mcs;
             CHECK(f.psdu.size() == 511, "psdu size");
@@ -164,7 +175,7 @@ int main() {
         CHECK(t.blocksOk == 0 && t.nets.empty() && t.sigOk == 0 && t.preambles < 10, "noise / tone: %llu frames, %llu SIG, %llu detections", (unsigned long long)t.blocksOk, (unsigned long long)t.sigOk, (unsigned long long)t.preambles);
     }
     {   // 1 MHz beacons off the centre of a 4 Msps capture (the primary channel of a wider BSS): found by the sub-channel scan without the dial being set
-        for (double dial : {-1.5e6, -0.5e6, 0.5e6, 1.5e6, -2.5e6, 2.5e6, -3.5e6, 3.5e6}) {
+        for (double dial : L ? std::vector<double>{-1.5e6, -0.5e6, 0.5e6, 1.5e6, -2.5e6, 2.5e6, -3.5e6, 3.5e6} : std::vector<double>{-1.5e6, 0.5e6, 2.5e6, -3.5e6}) {
             const double rate = std::abs(dial) > 3e6 ? 10e6 : std::abs(dial) > 2e6 ? 8e6 : std::abs(dial) > 1e6 ? 6e6 : 4e6;
             BssSpec b;
             const uint8_t mac[6] = {0x0C, 0xBF, 0x74, 1, 2, 3};   // a Morse Micro OUI
@@ -187,7 +198,10 @@ int main() {
     }
     {   // 2 MHz beacons off the centre (a 2 MHz primary of a wider BSS), vendor element and the primary channel frequency of the S1G Operation element
         struct T { double dial, rate; } tt[] = {{-0.5e6, 4e6}, {0.5e6, 4e6}, {-1.0e6, 6e6}, {1.0e6, 6e6}, {-1.5e6, 8e6}, {1.5e6, 8e6}, {-3.0e6, 10e6}, {3.0e6, 10e6}};
+        int ti = -1;
         for (const T& e : tt) {
+            ++ti;
+            if (!L && ti % 2 != (ti / 2) % 2) continue;   // quick: one side at each rate, alternating
             BssSpec b;
             const uint8_t mac[6] = {0x02, 0x11, 0x22, 1, 2, 3};
             memcpy(b.bssid, mac, 6); b.ssid = "Wide2"; b.security = Wpa3Sae; b.opWidthMhz = 4; b.primaryWidthMhz = 2;

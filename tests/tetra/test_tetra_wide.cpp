@@ -12,6 +12,7 @@
 #include <thread>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 struct Result { TetraTelemetry t; double decodeSec = 0; };
 
@@ -73,10 +74,15 @@ int main() {
             last = w.offHz;
         }
     }
+    // the quick run: 8 carriers at 5 and 10 Msps (each of the 8 levels and tuning errors, across the band) and 4 at 20 Msps, the 10 Msps scene doubling as
+    // the full search band below, and 0.6 s through the channelisers; ONAIR_TEST_LONG=1: 8 / 16 / 24 carriers, 16 for the search band, 1.2 s
     struct Case { double rate; int cells; };
-    const Case cases[] = {{5e6, 8}, {10e6, 16}, {20e6, 24}};
+    const bool L = testLong();
+    const Case cases[] = {{5e6, 8}, {10e6, L ? 16 : 8}, {20e6, L ? 24 : 4}};
+    Result wide10;
     for (const auto& k : cases) {
         const Result r = run(k.rate, k.cells, 30);
+        if (k.rate == 10e6) wide10 = r;
         const int ok = checkAll(r.t, k.rate, k.cells, "wide");
         char what[64]; snprintf(what, sizeof what, "%.0f Msps", k.rate / 1e6);
         CHECK(r.t.carriers.size() >= (size_t)k.cells, "%s: %zu carriers seen in the spectrum, want %d", what, r.t.carriers.size(), k.cells);
@@ -88,7 +94,7 @@ int main() {
         const double rate = 10e6;
         SynthConfig sc; sc.mode = 48; sc.snrDb = 40; sc.modeOpt[0] = 2; sc.modeOpt[1] = 16;
         auto syn = makeTetraSynth(sc, rate);
-        std::vector<cf32> x((size_t)(rate * 1.2));
+        std::vector<cf32> x((size_t)(rate * testLongPick(0.6, 1.2)));
         syn->generate(x.data(), x.size());
         std::vector<double> offs;
         for (int i = 0; i < 16; i++) { const TetraWideCell w = tetraWideCell(i, 16, rate); offs.push_back(w.offHz + w.errHz); }
@@ -110,13 +116,14 @@ int main() {
             if (pa > 0 && pb > 0 && std::fabs(10 * std::log10(pa / pb)) < 1.0) agree++;
         }
         CHECK(agree == 16, "the two paths agree in power for %d of 16 carriers", agree);
-        printf("  16 carriers cut out of 1.2 s at 10 Msps: shared FFT %.2f s, one by one %.2f s (%.1fx)\n", tMany, tOne, tOne / std::max(1e-9, tMany));
+        printf("  16 carriers cut out of %.1f s at 10 Msps: shared FFT %.2f s, one by one %.2f s (%.1fx)\n", (double)x.size() / rate, tMany, tOne, tOne / std::max(1e-9, tMany));
         CHECK(tMany < tOne, "the shared channeliser is not faster (%.2f s vs %.2f s)", tMany, tOne);
     }
     // a lower search fraction leaves the outer carriers out; nothing is refused
     {
-        const Result narrow = run(10e6, 16, 30, 0.30);
-        const Result full = run(10e6, 16, 30, 0.72);
+        const int n = L ? 16 : 8;   // 8 carriers: 4 of them inside the 30 % band (at +-0.44 and +-1.32 MHz, the edge at +-1.5 MHz)
+        const Result narrow = run(10e6, n, 30, 0.30);
+        const Result full = L ? run(10e6, n, 30, 0.72) : wide10;   // (0.72 is the default search band: the 10 Msps scene above)
         CHECK(narrow.t.cells.size() < full.t.cells.size() && narrow.t.cells.size() >= 3, "search band 30 %% finds %zu cells, 72 %% finds %zu", narrow.t.cells.size(), full.t.cells.size());
     }
     // the default 2 Msps capture behaves as before: the same carriers found by the per-carrier path

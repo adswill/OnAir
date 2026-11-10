@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdio>
 #include <vector>
+#include "../common/test_long.h"
 
 using namespace dect2;
 using namespace dect2::dtmb;
@@ -61,6 +62,17 @@ static void runCase(const Case& c) {
 }
 
 int main() {
+    if (!testLong()) {
+        // the default run: each header, mapping, code rate, interleaver mode and width once, spread over the headers; ONAIR_TEST_LONG=1 the selection below
+        const Case quick[] = {
+            {Header::Pn420, Mapping::Qam4, Rate::R08, false, 8.0},   {Header::Pn595, Mapping::Qam16, Rate::R04, false, 8.0}, {Header::Pn945, Mapping::Qam64, Rate::R08, false, 8.0},
+            {Header::Pn420, Mapping::Qam32, Rate::R08, false, 8.0},  {Header::Pn595, Mapping::Qam4Nr, Rate::R08, false, 8.0}, {Header::Pn945, Mapping::Qam16, Rate::R06, false, 8.0},
+            {Header::Pn945, Mapping::Qam4, Rate::R08, true, 8.0},    {Header::Pn420, Mapping::Qam16, Rate::R08, false, 6.0}, {Header::Pn595, Mapping::Qam16, Rate::R08, true, 6.0},
+        };
+        for (const Case& c : quick) runCase(c);
+        printf(failures ? "%d FAILED\n" : "all passed\n", failures);
+        return failures ? 1 : 0;
+    }
     const Header hs[] = {Header::Pn420, Header::Pn595, Header::Pn945};
     const Mapping ms[] = {Mapping::Qam4, Mapping::Qam16, Mapping::Qam64, Mapping::Qam32, Mapping::Qam4Nr};
     const Rate rs[] = {Rate::R04, Rate::R06, Rate::R08};

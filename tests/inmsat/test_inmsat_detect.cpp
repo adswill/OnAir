@@ -12,6 +12,7 @@ using namespace dect2;
 using namespace dect2::inmsat;
 using namespace inmsat_test;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static std::vector<DetectedCarrier> run(double rate, std::vector<CarrierSpec> cars, double secs, size_t chunk, double dc = 0, uint64_t seed = 7) {
     WideSynth syn(rate, cars, dc, seed);
@@ -28,6 +29,9 @@ static std::vector<DetectedCarrier> run(double rate, std::vector<CarrierSpec> ca
 }
 
 int main() {
+    // the detector searches once a second and confirms in two: by default the noise, chunk and 20 Msps runs are shorter and the weak
+    // 10500 bit/s case runs at its two ends (12 dB on frequency, 4 dB with the offset); the long run (ONAIR_TEST_LONG=1) does everything at full length
+    const bool L = testLong();
     // 1. six carriers over 10 Msps: narrow with Doppler, medium, wide, an adjacent pair, one fading
     {
         const double rate = 10e6;
@@ -55,16 +59,16 @@ int main() {
     }
     // 2. noise only, 16 s: nothing confirmed. DC spike alone: nothing.
     {
-        const auto r = run(10e6, {}, 16, 65536, 0.0);
+        const auto r = run(10e6, {}, L ? 16 : 6, 65536, 0.0);
         CHECK(r.empty(), "noise only: %zu carriers", r.size());
-        const auto r2 = run(10e6, {}, 8, 65536, 0.5);
+        const auto r2 = run(10e6, {}, L ? 8 : 4, 65536, 0.5);
         CHECK(r2.empty(), "DC spike: %zu carriers", r2.size());
     }
     // 3. the result does not depend on how the stream is cut
     {
         std::vector<CarrierSpec> cars = {{-1.0e6, 300, 20, 0, 0}, {1.5e6, 2500, 20, 0, 0}};
-        const auto a = run(10e6, cars, 8, 4096);
-        const auto b = run(10e6, cars, 8, 262144);
+        const auto a = run(10e6, cars, L ? 8 : 4, 4096);
+        const auto b = run(10e6, cars, L ? 8 : 4, 262144);
         CHECK(a.size() == 2 && b.size() == 2, "chunks %zu %zu", a.size(), b.size());
         if (a.size() == 2 && b.size() == 2) for (int i = 0; i < 2; i++) CHECK(std::fabs(a[(size_t)i].offsetHz - b[(size_t)i].offsetHz) < 300, "chunk dependence %.0f %.0f", a[(size_t)i].offsetHz, b[(size_t)i].offsetHz);
     }
@@ -72,7 +76,7 @@ int main() {
     {
         const auto r = run(2.4e6, {{-0.6e6, 300, 20, 0, 0}, {0.4e6, 3000, 18, 0, 0}}, 8, 65536);
         CHECK(r.size() == 2, "2.4 Msps: %zu carriers", r.size());
-        const auto r2 = run(20e6, {{-7.0e6, 300, 22, 0, 0}, {3.3e6, 3000, 20, 0, 0}, {8.0e6, 700, 20, 0, 0}}, 6, 131072);
+        const auto r2 = run(20e6, {{-7.0e6, 300, 22, 0, 0}, {3.3e6, 3000, 20, 0, 0}, {8.0e6, 700, 20, 0, 0}}, L ? 6 : 4, 131072);
         CHECK(r2.size() == 3, "20 Msps: %zu carriers", r2.size());
         for (const auto& c : r2) printf("  20 Msps: %+10.1f Hz width %5.0f snr %.1f\n", c.offsetHz, c.widthHz, c.snrDb);
     }
@@ -111,6 +115,7 @@ int main() {
         const double rate = 4e6;
         for (double ebn0 : {12.0, 7.0, 4.0}) {
             for (double cfo : {0.0, 4300.0}) {
+                if (!L && !((ebn0 == 12.0 && cfo == 0.0) || (ebn0 == 4.0 && cfo != 0.0))) continue;
                 SynthConfig sc;
                 sc.mode = 20;
                 sc.modeOpt[0] = 4;
@@ -138,7 +143,7 @@ int main() {
         det.configure(cfg);
         WideSynth nz(rate, {}, 0, 3);
         std::vector<cf32> buf(65536);
-        for (double done = 0; done < 30 * rate; done += (double)buf.size()) { nz.generate(buf.data(), buf.size()); det.feed(buf.data(), buf.size()); }
+        for (double done = 0; done < (L ? 30 : 12) * rate; done += (double)buf.size()) { nz.generate(buf.data(), buf.size()); det.feed(buf.data(), buf.size()); }
         int n = 0;
         for (const auto& c : det.carriers()) n += c.confirmed;
         CHECK(n == 0, "noise only: %d ghost carriers", n);

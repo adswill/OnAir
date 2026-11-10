@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstring>
 #include <cstdlib>
+#include "../common/test_long.h"
 using namespace dect2;
 static int fails = 0;
 
@@ -92,10 +93,16 @@ int main(int argc, char** argv) {
         {"6 dB SNR", 6, 0, 0, false, false, 0.8},
     };
     printf("%-30s %6s %8s %8s %9s %9s %9s\n", "case", "calls", "decoded", "voice%", "frames%", "first ms", "max ms");
-    for (const Case& c : cases) {
+    // the quick run: 2 seeds, and the middle points left out (12 dB SNR, the neighbour at +0 / +10 dB, cfo +3 kHz); ONAIR_TEST_LONG=1: every case, 6 seeds
+    const bool quick[] = {true, true, false, true, false, false, false, true, true, true, true, true};
+    static_assert(sizeof quick / sizeof quick[0] == sizeof cases / sizeof cases[0], "one entry per case");
+    const uint32_t seeds = testLongPick(2u, 6u);
+    for (size_t ci = 0; ci < sizeof cases / sizeof cases[0]; ci++) {
+        const Case& c = cases[ci];
         if (argc > 2 && !strstr(c.name, argv[2])) continue;
+        if (!testLong() && !quick[ci]) continue;
         Agg a;
-        for (uint32_t seed = 1; seed <= 6; seed++) runOne(c, seed, a);
+        for (uint32_t seed = 1; seed <= seeds; seed++) runOne(c, seed, a);
         const double share = a.calls ? (double)a.decoded / a.calls : 0;
         printf("%-30s %6d %7.0f%% %7.0f%% %8.0f%% %9.0f %9.0f\n", c.name, a.calls, 100 * share, a.calls ? 100.0 * a.anyVoice / a.calls : 0.0, a.calls ? 100 * a.ratioSum / a.calls : 0.0,
                a.firstN ? 1000 * a.firstSum / a.firstN : -1.0, 1000 * a.firstMax);

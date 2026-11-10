@@ -14,6 +14,7 @@
 #include <random>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 
@@ -181,6 +182,8 @@ int main() {
         {"4 Msps, carriers at +-1.7 MHz", 4.0e6, +1.7e6 + 2200, -1.7e6 - 1800},
     };
     for (const Sc& sc : scs) {
+        // quick run: the 4 Msps case already has both carriers near the span edges and off the raster; ONAIR_TEST_LONG=1 adds the 2.4 Msps edge case
+        if (!testLong() && &sc == &scs[0]) continue;
         Rig r(sc.fs, 440.0e6);
         SynthConfig cd; cd.snrDb = 28; SynthConfig cp; cp.snrDb = 28;
         r.addSynth(makeDmrSynth(cd, sc.fs), sc.dmrOff, 0.6f, baseOf(makeDmrSynth(cd, sc.fs), sc.fs));

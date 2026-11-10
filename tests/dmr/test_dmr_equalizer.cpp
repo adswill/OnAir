@@ -3,15 +3,18 @@
 #include "dect2/dmr/dmr_eval.h"
 #include "dect2/voice/sym_eq.h"
 #include "../common/impair.h"
+#include "../common/test_long.h"
 #include <cstdio>
 using namespace dect2;
 
 int main() {
     int fails = 0, offSum = 0, onSum = 0, sent = 0;
     printf("direct delay(half-sym) echo(dB)   voice bursts off/on   embedded ok off/on   BER off/on\n");
+    // the quick run: the shortest and longest echo at the weakest and strongest level, both modes (8 scenarios); ONAIR_TEST_LONG=1: the whole 32
     for (int direct = 0; direct < 2; direct++)
         for (int dly : {250, 500, 1000, 1500})   // samples at 2.4 Msps: 0.5, 1, 2, 3 symbols
             for (double db : {-6.0, -3.0, 0.0, 3.0}) {
+                if (!testLong() && ((dly != 250 && dly != 1500) || (db != -6.0 && db != 3.0))) continue;
                 DmrScenario s;
                 s.cfg.snrDb = 25; s.cfg.direct = direct; s.secs = 12;
                 s.mod = [dly, db](cf32* x, size_t n, size_t, double) {

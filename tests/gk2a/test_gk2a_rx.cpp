@@ -10,6 +10,7 @@
 #include <thread>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 struct Imp {
     float dc = 0;            // the radio's DC spike (added to I, 0.3 x to Q)
@@ -84,7 +85,9 @@ static void runCase(const char* name, int link, double rate, double snr, double 
 int main() {
     runCase("LRIT 2.4 Msps, Es/N0 6 dB, +20 kHz, +25 ppm", 0, 2.4e6, 6, 20e3, 25, 12, 1);
     runCase("LRIT 1.0 Msps, Es/N0 3 dB, -9 kHz", 0, 1.0e6, 3, -9e3, -10, 12, 2);
-    runCase("LRIT 20 Msps, Es/N0 5 dB, +60 kHz", 0, 20e6, 5, 60e3, 0, 12, 3);
+    // the wide LRIT capture at 10 Msps by default (20 Msps still runs in the HRIT cases below), at 20 Msps in the long run
+    if (testLong()) runCase("LRIT 20 Msps, Es/N0 5 dB, +60 kHz", 0, 20e6, 5, 60e3, 0, 12, 3);
+    else runCase("LRIT 10 Msps, Es/N0 5 dB, +60 kHz", 0, 10e6, 5, 60e3, 0, 12, 3);
     runCase("LRIT 2.4 Msps, Es/N0 5 dB, encrypted visible channel with the key", 0, 2.4e6, 5, 5e3, 0, 12, 4, true);
     runCase("LRIT 2.4 Msps, Es/N0 6 dB, +25 kHz, a strong DC spike", 0, 2.4e6, 6, 25e3, 0, 12, 9, false, Imp{0.15f, 1, 0, 0});
     runCase("LRIT 2.4 Msps, Es/N0 6 dB, IQ imbalance 1.5 dB and 8 degrees", 0, 2.4e6, 6, -30e3, 0, 12, 10, false, Imp{0, 1.19, 8, 0});

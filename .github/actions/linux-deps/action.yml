@@ -1,0 +1,39 @@
+# The apt packages of the Linux CI builds. The .deb files are kept in the Actions cache (one entry per package set and month), so a slow
+# Ubuntu mirror no longer costs minutes: run 42834606833 fetched 72 MB at 115 kB/s, 10.5 min. apt still checks the index and downloads only
+# what changed since the cache was made. docs/CI-SPEED-3.9.md
+name: Linux build dependencies
+description: apt-get install of the CI build packages with the .deb files cached
+inputs:
+  extra:
+    description: more packages (space separated)
+    default: ""
+  set-name:
+    description: short name of this package set, part of the cache key
+    default: build
+runs:
+  using: composite
+  steps:
+    - id: month
+      shell: bash
+      run: echo "m=$(date +%Y%m)" >> "$GITHUB_OUTPUT"
+    - id: debs
+      uses: actions/cache/restore@v6
+      with:
+        path: ~/debs
+        key: debs-${{ runner.os }}-${{ runner.arch }}-${{ inputs.set-name }}-${{ hashFiles('.github/actions/linux-deps/action.yml') }}-${{ steps.month.outputs.m }}
+    - shell: bash
+      env: { EXTRA: "${{ inputs.extra }}" }
+      run: |
+        sudo mkdir -p ~/debs/partial
+        tools/release/retry.sh sudo apt-get update
+        tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 -o Dir::Cache::Archives="$HOME/debs" \
+          build-essential cmake pkg-config ccache lld ninja-build libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev \
+          libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev $EXTRA
+        sudo rm -rf ~/debs/partial ~/debs/lock
+        sudo chmod -R a+rX ~/debs
+        du -sh ~/debs
+    - if: steps.debs.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v6
+      with:
+        path: ~/debs
+        key: debs-${{ runner.os }}-${{ runner.arch }}-${{ inputs.set-name }}-${{ hashFiles('.github/actions/linux-deps/action.yml') }}-${{ steps.month.outputs.m }}

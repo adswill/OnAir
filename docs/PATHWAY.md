@@ -1522,3 +1522,16 @@ Fixed 10 bugs, each with a regression test:
 - iono/tetrapol NaN casts
 
 The first pass failed 19 of 296 modes. After the fixes, a second pass with another seed failed 0 of 296. No leaks were found. Synthetic inputs only. Details are in docs/FUZZ-3.9.md.
+## 2026-11-10 CI speed (feat39-cispeed)
+Measured ci.yml on integ-38: in a warm run, 381 runner-min and 55 min of wall time. Tests take 80 % of that, and the slowest 35 tests are a third of the test time. The hashed shards were uneven. The Actions cache was over its 10 GB, and main had no ccache, so every new branch built cold.
+
+Changes:
+- 65 slow tests are shorter by default. ONAIR_TEST_LONG=1 (tests/common/test_long.h) runs the full sweeps on tags and in the nightly Full CI.
+- Shards are balanced by measured time (tools/ci_times.tsv, tools/ci_times.py) and ctest gets cost data.
+- macOS has 3 shards.
+- ccache is saved only by main and integ-*. A nightly warm-up saves to main's cache for every branch.
+- The apt .debs are cached and the disk is freed in the background. Windows lld was tried and dropped.
+- Shared files are followed through the include graph (tools/test_ci_select.py runs in the gate).
+
+Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
+Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.

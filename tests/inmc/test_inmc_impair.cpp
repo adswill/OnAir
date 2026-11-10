@@ -2,6 +2,7 @@
 // every chunk size, 8-bit samples, DC offset, a gap, a reset in the middle of the stream. Eb/N0 8 dB unless a case says otherwise.
 #include "dect2/inmc/inmc_testutil.h"
 #include "../common/impair.h"
+#include "../common/test_long.h"
 #include "dect2/engine/test_parallel.h"
 #include <algorithm>
 #include <functional>
@@ -32,8 +33,13 @@ int main() {
     std::vector<std::function<void(CaseOut&)>> jobs;
     std::vector<double> cost;       // signal seconds times sample rate, to start the biggest first
     auto add = [&](double secs, double rate, std::function<void(CaseOut&)> f) { cost.push_back(secs * rate); jobs.push_back(std::move(f)); };
+    // quick run: one case per impairment class (mirror-image offsets, the second drift and clock sign, the single flip, plain 8 bit and the
+    // 250 ksps big-chunk case are dropped; -77 kHz still runs in the combined case); ONAIR_TEST_LONG=1 runs the whole list
+    const bool L = testLong();
     // carrier offset: +-10 ppm of 1537 MHz is 15.4 kHz; the search covers +-20 kHz
-    for (double cfo : {0.0, 15400.0, -15400.0, 19000.0, -19000.0, 30000.0, 77000.0, -77000.0})   // 50 ppm of 1537 MHz is 77 kHz
+    const std::vector<double> cfos = L ? std::vector<double>{0.0, 15400.0, -15400.0, 19000.0, -19000.0, 30000.0, 77000.0, -77000.0}
+                                       : std::vector<double>{0.0, 15400.0, -19000.0, 77000.0};
+    for (double cfo : cfos)   // 50 ppm of 1537 MHz is 77 kHz
         add(40, 2e6, [cfo](CaseOut& out) {
             InmcRunOpts o = base(std::fabs(cfo) > 20000 ? 50 : 40);   // beyond the channel's own search the band search moves it there first
             o.gen.cfoHz = cfo;
@@ -58,13 +64,13 @@ int main() {
         CHECK(std::fabs(r.t.driftHzS - 20) < 6, "drift read %+.1f Hz/s", r.t.driftHzS);
         CHECK(std::fabs(r.t.cfoHz - (5000 + 20 * 55)) < 80, "carrier at the end %+.0f Hz, expected about %.0f", r.t.cfoHz, 5000 + 20 * 55.0);
     });
-    add(55, 2e6, [](CaseOut& out) {
+    if (L) add(55, 2e6, [](CaseOut& out) {
         InmcRunOpts o = base(55);
         o.gen.cfoHz = 5000; o.gen.driftHzS = -20;
         run(out, "drift -20 Hz/s", o, 4);
     });
     // sample clock error
-    for (double ppm : {50.0, -50.0})
+    for (double ppm : L ? std::vector<double>{50.0, -50.0} : std::vector<double>{-50.0})
         add(45, 2e6, [ppm](CaseOut& out) {
             InmcRunOpts o = base(45);
             o.gen.sroPpm = ppm; o.gen.cfoHz = 2000;
@@ -74,7 +80,7 @@ int main() {
         });
     // chunk sizes (1 and 7 at the minimum rate of 250 ksps, where a million calls are cheap)
     for (size_t chunk : {(size_t)1, (size_t)7, (size_t)65536})
-        add(30, 250000 * (chunk < 100 ? 8 : 1), [chunk](CaseOut& out) {
+        if (L || chunk < 100) add(30, 250000 * (chunk < 100 ? 8 : 1), [chunk](CaseOut& out) {
             InmcRunOpts o = base(30);
             o.gen.rate = 250000;
             o.chunk = chunk;
@@ -88,7 +94,7 @@ int main() {
         run(out, "chunk 65536 at 2 Msps", o, 3);
     });
     // 8 bit samples, DC offset, gap, reset
-    add(40, 2e6, [](CaseOut& out) {
+    if (L) add(40, 2e6, [](CaseOut& out) {
         InmcRunOpts o = base();
         o.quantize8 = true;
         run(out, "8-bit samples", o, 3);
@@ -111,7 +117,7 @@ int main() {
         CHECK(r.t.state == 2, "state after reset %d", r.t.state);
     });
     // polarity flips inside a frame: the carrier loop has two stable points 180 degrees apart and a slip moves it to the other one
-    add(60, 2e6, [](CaseOut& out) {
+    if (L) add(60, 2e6, [](CaseOut& out) {
         InmcRunOpts o = base(60);
         o.flipAt = 21.0;
         const InmcRunResult r = run(out, "polarity flip at 21 s", o, 5);

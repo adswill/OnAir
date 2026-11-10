@@ -4,6 +4,7 @@
 // HFDIG_FTX_EARLY=0 in the environment), see the document. With "--sweep" the program prints the counts only.
 #include "hfdig_ftx_testutil.h"
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 #include <cstring>
 #include <cstdlib>
 using namespace ftxtest;
@@ -38,12 +39,15 @@ int main(int argc, char** argv) {
     const bool sweep = argc > 1 && !strcmp(argv[1], "--sweep");
     const char* only = argc > 2 ? argv[2] : "";
     auto want = [&](const char* t) { return !*only || !strcmp(only, t); };
+    // by default only the SNR points the checks use and a shorter noise run; --sweep and the long run (ONAIR_TEST_LONG=1) do every point
+    const bool quick = !sweep && !testLong();
     // 1. a station repeating its message every slot, near the threshold: slots decoded of 8
     if (want("xslot")) {
         const std::string msg = "W9XYZ K1ABC RR73";   // not a CQ: the CQ a-priori does not help it
         int total[8] = {};
         const double snrs[] = {-20, -21, -22, -23, -24};
         for (int si = 0; si < 5; si++) {
+            if (quick && (si < 2 || si > 3)) continue;   // -22 and -23 dB
             int ok = 0, how[3] = {}, runs = 0, falseN = 0;
             for (uint64_t seed = 1; seed <= 3; seed++) {
                 std::vector<std::vector<Tx>> tx(8, std::vector<Tx>{{msg, 1100 + 37.0 * (double)seed, snrs[si], 0.15 * (double)seed - 0.2}});
@@ -62,6 +66,7 @@ int main(int argc, char** argv) {
     if (want("apqso")) {
         const double snrs[] = {-20, -21, -22, -23};
         for (int si = 0; si < 4; si++) {
+            if (quick && (si < 1 || si > 2)) continue;   // -21 and -22 dB
             int ok = 0, how[3] = {}, runs = 0, other = 0;
             for (uint64_t seed = 1; seed <= 4; seed++) {
                 const std::string weak = "K1ABC W9XYZ R-" + std::string(seed % 2 ? "12" : "09");
@@ -84,8 +89,9 @@ int main(int argc, char** argv) {
     // 3. noise only after a conversation was heard: nothing may be decoded from it
     if (want("noise")) {
         int bad = 0;
-        for (uint64_t seed = 1; seed <= 2; seed++) {
-            std::vector<std::vector<Tx>> tx(44);
+        const int nSlots = quick ? 16 : 44;
+        for (uint64_t seed = 1; seed <= (quick ? 1u : 2u); seed++) {
+            std::vector<std::vector<Tx>> tx((size_t)nSlots);
             tx[0] = {{"CQ W9XYZ EN37", 1500, -6, 0.1}, {"CQ DL1ABC JO62", 800, -6, 0.0}};
             tx[1] = {{"W9XYZ K1ABC FN42", 1900, -6, 0.0}, {"DL1ABC G4XYZ IO91", 2300, -6, 0.2}};
             tx[2] = {{"K1ABC W9XYZ -10", 1500, -6, 0.1}};
@@ -96,7 +102,7 @@ int main(int argc, char** argv) {
                 if (!known) { bad++; printf("  noise: false decode \"%s\" %.1f Hz (how %d)\n", x.msg.c_str(), x.hz, x.how); }
             }
         }
-        printf("noise: %d false decodes in 88 slots\n", bad);
+        printf("noise: %d false decodes in %d slots\n", bad, (quick ? 1 : 2) * nSlots);
         CHECK(bad == 0, "noise: %d false decodes", bad);
     }
     // 4. the early decode: the audio up to 11.3 s into the slot is enough for a strong station; the full decode then replaces it
