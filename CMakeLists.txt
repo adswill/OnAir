@@ -821,6 +821,8 @@ if(DECT2_BUILD_APP)
   add_test(NAME plot_util COMMAND test_plot_util)
   add_executable(test_tune_drag tests/app/test_tune_drag.cpp)
   add_test(NAME tune_drag COMMAND test_tune_drag)
+  add_executable(test_drag_tune tests/app/test_drag_tune.cpp)   # drag to tune like SDR++: plot/scale hit testing, press actions, snap steps, VFO grab (app/gfx/drag_tune.h)
+  add_test(NAME drag_tune COMMAND test_drag_tune)
   add_executable(test_file_vfo tests/app/test_file_vfo.cpp)   # tuning inside an IQ recording: offset mapping, clamp, edge note, centre from the name, DC notch
   target_include_directories(test_file_vfo PRIVATE core/include)
   add_test(NAME file_vfo COMMAND test_file_vfo)

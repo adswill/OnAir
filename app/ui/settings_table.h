@@ -73,6 +73,7 @@ inline const std::vector<Info>& table() {
         // ---- Radio
         {"tuningMode", kRadio, N_("Spectrum click"), N_("Retune the radio or only move the decode offset (sticky LO)."), "tune lo", K::Choice, 0, 0, 0, "Retune the radio|Move the decode offset only"},
         {"centreTuning", kRadio, N_("Click centres the radio"), N_("A click on the spectrum puts the radio centre there."), "", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},
+        {"specDrag", kRadio, N_("Drag on spectrum"), N_("Tune: press on the spectrum or waterfall to tune there and drag to keep tuning, Shift or Ctrl for fine steps; drag the frequency scale, right- or middle-drag, or the wheel over the scale to pan. Pan: a drag moves the view and a click tunes (the old OnAir)."), "drag tune pan sdr++ vfo mouse", K::Choice, 0, 0, 0, "Tune (like SDR++)|Pan (old OnAir)"},
         {"dragMovesTuned", kRadio, N_("Dragging the band moves the tuned frequency"), N_("When you drag the view past the edge of the band, the tuned frequency moves with the radio. Off: only the radio centre moves."), "pan", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},
         {"specSnapHz", kRadio, N_("Click snaps to a multiple of (Hz)"), N_("0 uses the mode's own step."), "step snap", K::Int, 0, 0, 1000000, nullptr, nullptr, "", true},
         {"bwAuto", kRadio, N_("Measure the channel width by itself"), N_("The engine measures the width and switches (DVB)."), "bandwidth auto", K::Bool, 1},

@@ -79,6 +79,7 @@ struct Look {
 };
 void SetNextPlotLook(const Look& l);
 void SetNextZoomMarker(double x, float snapPx);   // the next plot: a wheel zoom with the pointer within snapPx of x keeps x still (the tuner marker)
+void SetNextDragTune(bool on, float scalePx);   // the next plot: drag to tune (drag_tune.h): a left drag on the body does not pan (the caller tunes); a left drag on the frequency scale (scalePx tall at the bottom, or the look's strip) pans x, a right or middle drag pans, the wheel over the scale pans x
 void SetNextWheelAxes(int mask);   // the next plot: the wheel zooms these axes (bit 0 x, bit 1 y; 0: it does not zoom). Not called: the built-in rule (Ctrl x, Shift y, else both)
 float LookStripHeight(const Look& l);     // the strip's height for these fonts
 
@@ -121,6 +122,8 @@ void PopColormap();
 Point GetPlotMousePos();
 bool IsPlotHovered();
 bool IsPlotHeld();         // the left button is down on the plot
+bool IsPlotPanning();      // a drag is panning this plot (any button)
+bool PressOnScale();       // drag to tune: the left press began on the frequency scale (it pans: the caller must not tune)
 double PanOverflowX();     // this frame's drag past the x constraint, in axis units (0 when the drag stayed inside)
 Rect GetPlotLimits();
 ImVec2 GetPlotPos();    // the plot area (inside the axes) on the screen

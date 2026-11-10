@@ -4,6 +4,8 @@
 #include "gfx/plot.h"
 #include "dect2/engine/vfo.h"
 #include "i18n/i18n.h"
+#include "gfx/drag_tune.h"
+#include "ui/touch.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -12,6 +14,7 @@ using dect2::VfoMode;
 
 namespace {
 int gDrag = -1;   // row whose centre is held
+bool gGrabTune = false; double gGrabOff = 0;   // drag to tune: grabbed anywhere in its band, by this offset from its centre (MHz)
 const ImVec4 kCols[6] = {{0.95f, 0.75f, 0.25f, 1}, {0.35f, 0.80f, 0.95f, 1}, {0.55f, 0.90f, 0.40f, 1}, {0.95f, 0.45f, 0.70f, 1}, {0.75f, 0.60f, 0.95f, 1}, {0.95f, 0.55f, 0.30f, 1}};
 ImVec4 colFor(const VfoRow& r, float a) { ImVec4 c = kCols[(size_t)(r.id % 6)]; c.w = a; return c; }
 std::vector<dect2::VfoConfig> gPushed;
@@ -88,7 +91,15 @@ bool vfoPlotMouse(App& a, int plotId) {
     if (gDrag >= 0) {   // a centre is held
         ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
         for (VfoRow& r : a.vfoRows) if (r.id == gDrag) {
-            if (ImGui::IsMouseDown(0)) { r.freqMhz = std::round(plt::GetPlotMousePos().x * 1e4) / 1e4; ImGui::SetTooltip("channel %d: %.4f MHz", r.id, r.freqMhz); }
+            if (ImGui::IsMouseDown(0)) {
+                if (gGrabTune) {   // drag to tune: the point it was grabbed by stays under the pointer, snapped to the zoom (Shift / Ctrl: fine)
+                    const plt::Rect lim = plt::GetPlotLimits();
+                    const double hzPerPx = (lim.X.Max - lim.X.Min) * 1e6 / std::max(1.f, plt::GetPlotSize().x);
+                    const ImGuiIO& io = ImGui::GetIO();
+                    r.freqMhz = dragtune::vfoDragCentre(plt::GetPlotMousePos().x, gGrabOff, dragtune::dragStepHz(0, 100, hzPerPx, io.KeyShift || io.KeyCtrl));
+                } else r.freqMhz = std::round(plt::GetPlotMousePos().x * 1e4) / 1e4;
+                ImGui::SetTooltip("channel %d: %.4f MHz", r.id, r.freqMhz);
+            }
             else { gDrag = -1; savePrefs(a); }
             return true;
         }
@@ -109,13 +120,22 @@ bool vfoPlotMouse(App& a, int plotId) {
     const ImVec2 pp = plt::GetPlotPos(), ps = plt::GetPlotSize();
     const double span = std::max(1e-9, lim.X.Max - lim.X.Min);
     const float mx = ImGui::GetIO().MousePos.x;
-    for (const VfoRow& r : a.vfoRows) {
+    // drag to tune (Settings > Radio > Drag on spectrum): a press anywhere in a channel's band grabs that channel, as SDR++ grabs a VFO
+    const bool grabBand = specDragTunes(a) && !touch::on();
+    int grab = -1;
+    if (grabBand) {
+        std::vector<double> c, h;
+        for (const VfoRow& r : a.vfoRows) { c.push_back(r.freqMhz); h.push_back(vfoHalfWidthMhz(r)); }
+        grab = dragtune::grabVfo(c.data(), h.data(), (int)c.size(), plt::GetPlotMousePos().x, span / std::max(1.f, ps.x), 6 * gUi);
+    }
+    for (size_t i = 0; i < a.vfoRows.size(); i++) {
+        const VfoRow& r = a.vfoRows[i];
         const float px = pp.x + (float)((r.freqMhz - lim.X.Min) / span * ps.x);
-        if (std::fabs(mx - px) < 6 * gUi) {
+        if (grabBand ? grab == (int)i && !plt::PressOnScale() : std::fabs(mx - px) < 6 * gUi) {
             ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
             ImGui::SetTooltip("%d %s  %.4f MHz  (%s)", r.id, dect2::vfoModeName((VfoMode)r.mode), r.freqMhz, tr("drag to move, double click to open the list"));
             if (ImGui::IsMouseDoubleClicked(0)) a.vfoPanel = true;
-            else if (ImGui::IsMouseClicked(0)) gDrag = r.id;
+            else if (ImGui::IsMouseClicked(0)) { gDrag = r.id; gGrabTune = grabBand; gGrabOff = plt::GetPlotMousePos().x - r.freqMhz; }
             return true;
         }
     }

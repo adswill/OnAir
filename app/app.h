@@ -457,6 +457,7 @@ struct App {
     spipe::FloorTracker specFloor;      // that floor (the same estimate as the waterfall's)
     float specZoom = 0.f;   // 0..1 frequency zoom for the vertical slider (0 = full bandwidth, 1 = ~1 kHz span)
     int tuningMode = 0;                 // 0 retune the radio LO on spectrum click, 1 decode offset only (sticky LO)
+    int specDrag = 0;                   // Drag on spectrum (gfx/drag_tune.h): 0 tune like SDR++ (the default), 1 pan (the old OnAir)
     bool dragMovesTuned = false;        // dragging past the band: true = the tuned frequency travels with the radio centre
     bool centreTuning = false;          // spectrum click: true = centre the radio on the click (target button), false = normal (marker inside the band)
     int fileEdgeCode = 0;               // IQ file: 0 fine, 1 the passband touches the edge of the recording, 2 the tune box was held back at the edge, 3 the bandwidth is wider than the recording
@@ -1249,6 +1250,7 @@ void toolbarParts(App& a, int mask, bool vertical);   // pieces of the top bar, 
 void receiverGlance(App& a, float w, float h);       // analysis_tabs.cpp: a few key/value lines about the receiver
 void tuneFreq(App& a, double mhz);                     // set the frequency now (resets the FM receiver)
 void tuneDecode(App& a, double absMhz);                // sticky LO: decode absMhz without moving the radio centre
+bool specDragTunes(const App& a);                    // plots.cpp: Settings > Radio > Drag on spectrum is Tune (gfx/drag_tune.h)
 void spectrumTune(App& a, double absMhz);              // spectrum / waterfall click (respects tuningMode)
 void uplinkNoteAdsb(const dect2::AdsbTelemetry& t);   // uplink_ui.cpp: callsigns heard by the ADS-B mode in this session
 double meshRtlRate(App& a);                     // mesh_ui.cpp: 1.024 Msps on an RTL-SDR for a channel of up to 500 kHz, else 0 (#386)

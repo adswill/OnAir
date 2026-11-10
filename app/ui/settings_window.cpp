@@ -53,7 +53,7 @@ const std::map<std::string, Bind>& binds() {
         NB("specAutoDb", a.specAutoDb); NB("specPerHz", a.specPerHz); NB("specDbm", a.specDbm); NB("specFill", a.specFill);
         NB("specGrid", a.specGrid); NB("specPeaks", a.specPeaks); NB("specReadout", a.specReadout); NB("specLine", a.specLine);
         NB("specAvgSec", a.specAvgSec); NB("holdDecay", a.holdDecay);
-        NB("tuningMode", a.tuningMode); NB("centreTuning", a.centreTuning); NB("dragMovesTuned", a.dragMovesTuned);
+        NB("tuningMode", a.tuningMode); NB("centreTuning", a.centreTuning); NB("dragMovesTuned", a.dragMovesTuned); NB("specDrag", a.specDrag);
         NB("specSnapHz", a.specSnapHz); NB("bwAuto", a.bwAuto); NB("gpuGlobal", a.gpuGlobal);
         NB("popTop", a.popTop); NB("subsOn", a.subsOn);
         m["recFormat"] = Bind{[](App& a) -> double { return a.recFormat; }, [](App& a, double v) { a.recFormat = (int)v; plat::prefs().setI("recFormat", (long)v); }, nullptr, nullptr};

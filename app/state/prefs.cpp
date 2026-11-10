@@ -133,7 +133,7 @@ const std::vector<PrefKey>& keyTable() {
         num("specSnapHz", AT(a.specSnapHz), 0, 0, 1000000, true), flagB("wfLowPass", AT(a.wfLowPass), false, false, true),
         real("wfFloorBelow", AT(a.wf.autoBelow), 0, 40), real("wfFloorSpan", AT(a.wf.autoSpan), 20, 120),
         num("tuningMode", AT(a.tuningMode), 0, 0, 1, true),
-        flagB("centreTuning", AT(a.centreTuning), false, false, true), flagB("dragMovesTuned", AT(a.dragMovesTuned), false, false, true),
+        flagB("centreTuning", AT(a.centreTuning), false, false, true), flagB("dragMovesTuned", AT(a.dragMovesTuned), false, false, true), num("specDrag", AT(a.specDrag), 0, 0, 1, true),
         flagI("fmMono", AT(a.fmMono), false),
         numFix("fmDeemph", AT(a.fmDeemph), 50, fixDeemph),
         numFix("fmBass", AT(a.fmBass), 0, fixTone), numFix("fmTreble", AT(a.fmTreble), 0, fixTone),

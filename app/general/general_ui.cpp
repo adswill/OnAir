@@ -11,6 +11,8 @@
 #include "dect2/ham/ham_voice.h"
 #include "dect2/geo/maidenhead.h"
 #include "state/freq_model.h"
+#include "gfx/drag_tune.h"
+#include "ui/touch.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -823,8 +825,30 @@ void generalChannelBand(const App& a, bool fill) {
 
 bool generalDragging(int plotId) { return S.drag >= 0 && S.dragPlot == plotId; }
 
+// Drag to tune (Settings > Radio > Drag on spectrum, gfx/drag_tune.h): the press puts the channel there, the held drag keeps moving it
+static struct { int plot = -1; bool moved = false; double last = NAN, press = NAN; ImVec2 p0; } gGDT;
+
 void generalPlotMouse(App& a, int plotId) {
     load();
+    if (gGDT.plot == plotId) {
+        ImGuiIO& io = ImGui::GetIO();
+        if (!ImGui::IsMouseDown(0)) {   // let go: the target style centres the radio on a press that did not move (#301)
+            if (!gGDT.moved && a.centreTuning && !std::isnan(gGDT.press)) setListen(a, gGDT.press, true);
+            gGDT.plot = -1;
+            return;
+        }
+        if (!gGDT.moved && dragtune::moved(io.MousePos.x - gGDT.p0.x, io.MousePos.y - gGDT.p0.y)) gGDT.moved = true;
+        ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        if (!gGDT.moved) return;
+        const plt::Rect lim = plt::GetPlotLimits();
+        const double hzPerPx = (lim.X.Max - lim.X.Min) * 1e6 / std::max(1.f, plt::GetPlotSize().x);
+        const double step = dragtune::dragStepHz(stepHz(), stepHz(), hzPerPx, io.KeyShift || io.KeyCtrl);
+        const double x = std::min(lim.X.Max, std::max(lim.X.Min, plt::GetPlotMousePos().x));
+        const double to = dragtune::snapHz(x * 1e6, step);
+        if (dragtune::changed(gGDT.last, to)) { setListen(a, to, false); gGDT.last = to; }
+        ImGui::SetTooltip("%.4f MHz", to / 1e6);
+        return;
+    }
     const bool hov = plt::IsPlotHovered();
     if (!hov && !(S.drag >= 0 && S.dragPlot == plotId) && S.exDrag < 0) return;
     const plt::Rect lim = plt::GetPlotLimits();
@@ -880,6 +904,14 @@ void generalPlotMouse(App& a, int plotId) {
     }
     if (ImGui::IsMouseClicked(0)) S.dragged = false;
     const double to = snap(mhz * 1e6);
+    if (specDragTunes(a) && !touch::on()) {   // drag to tune: the press tunes (the target style waits for the release), a drag goes on tuning
+        if (ImGui::IsMouseClicked(0) && !plt::PressOnScale() && !ImGui::GetIO().KeyShift && !a.identifyTool) {
+            gGDT.plot = plotId; gGDT.moved = false; gGDT.p0 = ImGui::GetIO().MousePos; gGDT.press = to; gGDT.last = to;
+            if (!a.centreTuning) setListen(a, to, false);
+            return;
+        }
+        if (ImGui::IsMouseReleased(0)) return;   // a release here is the end of a pan of the scale, not a click
+    }
     const ImVec2 dd = ImGui::GetMouseDragDelta(0, 0);
     if (ImGui::IsMouseReleased(0) && !S.dragged && std::fabs(dd.x) < 4 && std::fabs(dd.y) < 4) { setListen(a, to, a.centreTuning); return; }
     if (std::fabs(to - listenHz(a)) > 0.5) {

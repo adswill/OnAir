@@ -6,6 +6,7 @@
 #include "spec_look.h"
 #include "../ui/touch.h"
 #include "tune_drag.h"
+#include "drag_tune.h"
 #include "imgui_internal.h"
 #include <algorithm>
 #include <chrono>
@@ -45,6 +46,8 @@ struct State {
     double fit[2][2] = {{0, 1}, {0, 1}};
     double tgt[2][2] = {{0, 1}, {0, 1}}, last[2][2] = {{0, 1}, {0, 1}};   // an eased wheel zoom: where the limits are heading, and where this plot left them
     bool hasTgt[2] = {false, false};
+    int panBtn = -1;      // drag to tune (SetNextDragTune): the button whose drag pans this plot, -1 none
+    bool panX = false;    // that pan began on the frequency scale: x only
 };
 std::unordered_map<ImGuiID, State> gStates;
 
@@ -75,10 +78,13 @@ struct Ctx {
     double zoomMarker = std::numeric_limits<double>::quiet_NaN(); float zoomMarkerPx = 0;   // the tuner marker the wheel zoom keeps still when the pointer is near it
     int wheelAxes = -1;      // SetNextWheelAxes (-1: the usual rule)
     bool lookStrip = false;  // the x labels are on the look's strip
+    bool dragTune = false;   // SetNextDragTune: a left drag on the body is the caller's (it tunes); the scale, right and middle pan
+    float scalePx = 0;       // the frequency scale strip at the bottom of the plot (0: none)
 };
 Look gNextLook;
 int gNextWheel = -1;
 double gNextMarker = std::numeric_limits<double>::quiet_NaN(); float gNextMarkerPx = 0;   // SetNextZoomMarker
+bool gNextDragTune = false; float gNextScalePx = 0;   // SetNextDragTune
 Ctx C;
 Subplots S;
 Style gStyle;
@@ -274,14 +280,38 @@ void finishSetup() {
             if (C.st->hasTgt[a] && (std::fabs(C.st->lim[a][0] - C.st->last[a][0]) > 1e-12 || std::fabs(C.st->lim[a][1] - C.st->last[a][1]) > 1e-12)) C.st->hasTgt[a] = false;
         gPanOverflowX = 0;
         double intendedLo = 0; bool draggedX = false;
-        if (held && !(C.flags & Flags_NoDrag) && (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)) {
+        // drag to tune (drag_tune.h): which button pans is decided at its press; a left press on the body belongs to the caller (it tunes)
+        bool onScale = false;
+        if (C.dragTune) {
+            const float spx = C.lookStrip ? LookStripHeight(C.look) : C.scalePx;
+            const bool stripHov = C.lookStrip && ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) && !ImGui::IsAnyItemHovered();
+            const dragtune::Area ar = hov || stripHov ? dragtune::hitArea(io.MousePos.x, io.MousePos.y, C.plot.Min.x, C.plot.Min.y, C.plot.Max.x, C.plot.Max.y, spx, C.lookStrip)
+                                                      : dragtune::Area::Outside;
+            onScale = ar == dragtune::Area::Scale;
+            if (C.st->panBtn >= 0 && !ImGui::IsMouseDown(C.st->panBtn)) C.st->panBtn = -1;
+            if (C.st->panBtn < 0)
+                for (int b = 0; b < 3; b++) if (ImGui::IsMouseClicked(b)) {
+                    const dragtune::Press p = dragtune::pressAction(dragtune::Tune, b, ar, touch::on(), false);
+                    if (p == dragtune::Press::PanX || p == dragtune::Press::PanXY) { C.st->panBtn = b; C.st->panX = p == dragtune::Press::PanX; }
+                    break;
+                }
+            if (touch::on() && C.st->panBtn == 0 && !C.st->panX && touch::longPressHeld()) C.st->panBtn = -1;   // a long press: the finger tunes now
+            if (onScale && C.st->panBtn < 0 && !ImGui::IsMouseDown(0)) ImGui::SetMouseCursor(ImGuiMouseCursor_ResizeEW);
+        }
+        const bool panning = C.dragTune ? C.st->panBtn >= 0 : held;
+        if (panning && !(C.flags & Flags_NoDrag) && (io.MouseDelta.x != 0 || io.MouseDelta.y != 0)) {
+            if (C.dragTune) ImGui::SetMouseCursor(C.st->panX ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeAll);
             if (movable[0] && C.ax[0].scale == Scale_Linear) { const double d = -io.MouseDelta.x / C.plot.GetWidth() * (C.hi[0] - C.lo[0]); C.st->lim[0][0] += d; C.st->lim[0][1] += d; intendedLo = C.st->lim[0][0]; draggedX = true; }
-            if (movable[1] && C.ax[1].scale == Scale_Linear) { const double d = io.MouseDelta.y / C.plot.GetHeight() * (C.hi[1] - C.lo[1]); C.st->lim[1][0] += d; C.st->lim[1][1] += d; }
+            if (movable[1] && C.ax[1].scale == Scale_Linear && !(C.dragTune && C.st->panX)) { const double d = io.MouseDelta.y / C.plot.GetHeight() * (C.hi[1] - C.lo[1]); C.st->lim[1][0] += d; C.st->lim[1][1] += d; }
         }
         // wheel: both axes; Ctrl = frequency (x) only; Shift = amplitude (y) only (macOS turns Shift+wheel into a sideways wheel)
         const float wheel = io.MouseWheel != 0 ? io.MouseWheel : (io.KeyShift ? io.MouseWheelH : 0.f);
         const bool zx = C.wheelAxes >= 0 ? (C.wheelAxes & 1) != 0 : (!io.KeyShift || io.KeyCtrl), zy = C.wheelAxes >= 0 ? (C.wheelAxes & 2) != 0 : (!io.KeyCtrl || io.KeyShift);
-        if (hov && wheel != 0 && (zx || zy) && !((C.flags & Flags_NoDrag) && C.wheelAxes < 0)) {
+        if (C.dragTune && onScale && wheel != 0 && movable[0] && C.ax[0].scale == Scale_Linear) {   // the wheel over the frequency scale pans (SDR++)
+            ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY); ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelX);
+            const double d = dragtune::scaleWheelPan(C.st->lim[0][1] - C.st->lim[0][0], wheel);
+            C.st->lim[0][0] += d; C.st->lim[0][1] += d; C.st->hasTgt[0] = false;
+        } else if (hov && wheel != 0 && (zx || zy) && !((C.flags & Flags_NoDrag) && C.wheelAxes < 0)) {
             ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelY); ImGui::SetItemKeyOwner(ImGuiKey_MouseWheelX);
             const double f = std::pow(0.9, wheel);
             const double mx = (io.MousePos.x - C.plot.Min.x) / C.plot.GetWidth(), my = 1.0 - (io.MousePos.y - C.plot.Min.y) / C.plot.GetHeight();
@@ -425,19 +455,21 @@ Style& GetStyle() { return gStyle; }
 void SetNextPlotLook(const Look& l) { gNextLook = l; }
 void SetNextWheelAxes(int mask) { gNextWheel = mask; }
 void SetNextZoomMarker(double x, float snapPx) { gNextMarker = x; gNextMarkerPx = snapPx; }
+void SetNextDragTune(bool on, float scalePx) { gNextDragTune = on; gNextScalePx = scalePx; }
 float LookStripHeight(const Look& l) {
     const float fs = l.fontSize > 0 ? l.fontSize : ImGui::GetFontSize();
     return std::ceil(fs * 1.75f);
 }
 
 bool BeginPlot(const char* id, ImVec2 size, int flags) {
-    if (C.active) { gNextLook.on = false; gNextWheel = -1; gNextMarker = std::numeric_limits<double>::quiet_NaN(); return false; }
+    if (C.active) { gNextLook.on = false; gNextWheel = -1; gNextMarker = std::numeric_limits<double>::quiet_NaN(); gNextDragTune = false; return false; }
     ImGuiWindow* w = ImGui::GetCurrentWindow();
-    if (w->SkipItems) { gNextLook.on = false; gNextWheel = -1; gNextMarker = std::numeric_limits<double>::quiet_NaN(); return false; }
+    if (w->SkipItems) { gNextLook.on = false; gNextWheel = -1; gNextMarker = std::numeric_limits<double>::quiet_NaN(); gNextDragTune = false; return false; }
     C = Ctx();
     C.look = gNextLook; gNextLook.on = false;
     C.wheelAxes = gNextWheel; gNextWheel = -1;
     C.zoomMarker = gNextMarker; C.zoomMarkerPx = gNextMarkerPx; gNextMarker = std::numeric_limits<double>::quiet_NaN();
+    C.dragTune = gNextDragTune; C.scalePx = gNextScalePx; gNextDragTune = false; gNextScalePx = 0;
     C.id = ImGui::GetID(id);
     C.flags = flags;
     C.dl = ImGui::GetWindowDrawList();
@@ -687,6 +719,8 @@ Point GetPlotMousePos() {
 bool IsPlotHovered() { return C.active && C.hovered; }
 double PanOverflowX() { return gPanOverflowX; }
 bool IsPlotHeld() { return C.active && C.held; }
+bool IsPlotPanning() { return C.active && (C.dragTune ? C.st->panBtn >= 0 : C.held && ImGui::IsMouseDragging(0, 4)); }
+bool PressOnScale() { return C.active && C.dragTune && C.st->panBtn == 0 && C.st->panX; }
 ImVec2 GetPlotPos() { if (C.active) finishSetup(); return C.plot.Min; }
 ImVec2 GetPlotSize() { if (C.active) finishSetup(); return C.plot.GetSize(); }
 Rect GetPlotLimits() {
