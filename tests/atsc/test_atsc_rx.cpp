@@ -85,6 +85,19 @@ int main(int argc, char** argv) {
     cases.push_back({"post echo -3 dB at 5 us, SNR 28", mk(28, 0, 0, {{5.0, -3, 200}}), 8e6, 90, 0.9});
     cases.push_back({"post echo -1.5 dB at 8 us, SNR 30", mk(30, 0, 0, {{8.0, -1.5, 70}}), 8e6, 90, 0.9});
     cases.push_back({"three echoes, CFO 10 kHz, SRO 30 ppm, SNR 25", mk(25, 10000, 30, {{0.8, -9, 10}, {3.0, -12, 130}, {-1.0, -14, 250}}), 8e6, 90, 0.9});
+    // ATSC_RX_SEEDS=n (with ATSC_RX_CASE=<part of a name>): those cases with n noise seeds, the flagged packets summed, then exit. A comparison of
+    // two builds on one seed only moves with any change of rounding (which marginal packets fail); over many it shows a real difference.
+    if (const char* ns = getenv("ATSC_RX_SEEDS")) {
+        const int n = std::max(1, atoi(ns));
+        const char* want = getenv("ATSC_RX_CASE");
+        for (auto& cs : cases) {
+            if (want && !strstr(cs.name, want)) continue;
+            size_t pk = 0, good = 0, flagged = 0, wrong = 0;
+            for (int sd = 1; sd <= n; sd++) { Result r = run(cs.cc, cs.rate, 1.6, (unsigned)sd, false); pk += r.packets; good += r.good; flagged += r.errFlag; wrong += r.wrong; }
+            printf("%-52s %d seeds: packets %zu good %zu flagged %zu wrong %zu (%.2f%% good)\n", cs.name, n, pk, good, flagged, wrong, pk ? 100.0 * good / pk : 0.0);
+        }
+        return 0;
+    }
     int shown = 0;
     for (auto& cs : cases) {
         if (verbose && argc > 2 && std::string(argv[2]) != std::to_string(shown)) { shown++; continue; }

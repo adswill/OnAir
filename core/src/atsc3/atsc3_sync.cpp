@@ -114,7 +114,7 @@ void rotate(cf32* xio, const cf32* x, size_t n, double f, double rate, double st
         const double a = std::fmod(w * (start + (double)i0), 2.0 * M_PI);
         const float cr = (float)std::cos(a), ci = (float)std::sin(a);
         const size_t e = std::min<size_t>(kB, n - i0);
-        const float* __restrict xp = reinterpret_cast<const float*>(x + i0);
+        const float* xp = reinterpret_cast<const float*>(x + i0);
         if (re) {
             float* __restrict orr = re + i0;
             float* __restrict oi = im + i0;
@@ -123,7 +123,7 @@ void rotate(cf32* xio, const cf32* x, size_t n, double f, double rate, double st
                 orr[k] = xr * pr - xi * pi; oi[k] = xr * pi + xi * pr;
             }
         } else {
-            float* __restrict o = reinterpret_cast<float*>(xio + i0);
+            float* o = reinterpret_cast<float*>(xio + i0);   // may be x itself: no restrict here
             for (size_t k = 0; k < e; k++) {
                 const float pr = cr * tr[k] - ci * ti[k], pi = cr * ti[k] + ci * tr[k], xr = xp[2 * k], xi = xp[2 * k + 1];
                 o[2 * k] = xr * pr - xi * pi; o[2 * k + 1] = xr * pi + xi * pr;

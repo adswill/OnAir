@@ -2,7 +2,7 @@
 // from the app's own test signals (the synthetic source), fed as fast as the receivers take them. The figure is CPU seconds of the whole process
 // (all threads) per second of signal: together the two must stay under one core on a developer machine (twice that on the shared CI runners, see
 // ci_slack.h). The same runs check that nothing was lost to the speed: ATSC 1.0 delivers nearly every packet (one per data segment) with the
-// sync byte and no error flag, and ATSC 3.0 run beside it delivers as many packets as it does alone.
+// sync byte and no error flag once the equaliser has settled, and ATSC 3.0 run beside it delivers as many packets as it does alone.
 // docs/ATSC-PERF-3.9.md has the per-stage figures (tests/bench/bench_dvb --case atsc,atsc-10m,atsc3).
 #include "../common/cpu_report.h"
 #include "../common/cpu_time.h"
@@ -83,7 +83,7 @@ static bool generate(int stdMode, double rate, double secs, std::vector<cf32>& o
     return true;
 }
 
-struct Counts { std::atomic<uint64_t> packets{0}, bad{0}; };
+struct Counts { std::atomic<uint64_t> packets{0}, bad{0}, firstBad{0}, lastBad{0}; };   // the bad ones' places: 1-based packet numbers
 
 // feeds `sig` in radio-sized blocks; returns when the receiver has taken everything (both receivers block instead of dropping)
 static void feedAtsc1(const std::vector<cf32>& sig, double rate, Counts& c) {
@@ -91,7 +91,10 @@ static void feedAtsc1(const std::vector<cf32>& sig, double rate, Counts& c) {
     rx.configure(rate);
     rx.setBlocking(true);
     rx.setPacketCallback([&](const uint8_t* p, size_t n, double) {
-        for (size_t i = 0; i < n; i++) { const uint8_t* q = p + i * 188; if (q[0] != 0x47 || (q[1] & 0x80)) c.bad++; }
+        for (size_t i = 0; i < n; i++) {
+            const uint8_t* q = p + i * 188;
+            if (q[0] != 0x47 || (q[1] & 0x80)) { c.bad++; const uint64_t at = c.packets + i + 1; if (!c.firstBad) c.firstBad = at; c.lastBad = at; }
+        }
         c.packets += n;
     });
     const size_t B = 1 << 16;
@@ -151,15 +154,22 @@ int main(int argc, char** argv) {
         t1.join(); t3.join();
     });
     printf("ATSC 1.0 8 Msps: %.3f CPU s per s, %llu packets (%llu bad)\n", u8, (unsigned long long)c8.packets.load(), (unsigned long long)c8.bad.load());
-    printf("ATSC 1.0 10 Msps: %.3f CPU s per s, %llu packets (%llu bad)\n", u10, (unsigned long long)c10.packets.load(), (unsigned long long)c10.bad.load());
+    printf("ATSC 1.0 10 Msps: %.3f CPU s per s, %llu packets (%llu bad, packets %llu to %llu)\n", u10, (unsigned long long)c10.packets.load(), (unsigned long long)c10.bad.load(), (unsigned long long)c10.firstBad.load(), (unsigned long long)c10.lastBad.load());
     printf("ATSC 3.0 10 Msps: %.3f CPU s per s, %llu packets\n", u3, (unsigned long long)c3.packets.load());
     printf("both (ATSC 1.0 8 Msps + ATSC 3.0 10 Msps): %.3f CPU s per s, %llu + %llu packets\n", ub, (unsigned long long)c1t.packets.load(), (unsigned long long)c3t.packets.load());
 
-    // quality: no packet lost or damaged to the speed
+    // quality: no packet lost or damaged to the speed. The first fields after the lock may come out with packets flagged (the equaliser converging:
+    // delivered with the error flag rather than not at all); after the first eight fields none may.
     const double want = 0.9 * perSec * secs;
-    CHECK((double)c8.packets >= want && c8.bad == 0, "ATSC 1.0 at 8 Msps: %llu packets (%llu bad), want at least %.0f and none bad", (unsigned long long)c8.packets.load(), (unsigned long long)c8.bad.load(), want);
-    CHECK((double)c10.packets >= want && c10.bad == 0, "ATSC 1.0 at 10 Msps: %llu packets (%llu bad), want at least %.0f and none bad", (unsigned long long)c10.packets.load(), (unsigned long long)c10.bad.load(), want);
-    CHECK((double)c1t.packets >= want && c1t.bad == 0, "ATSC 1.0 beside ATSC 3.0: %llu packets (%llu bad), want at least %.0f and none bad", (unsigned long long)c1t.packets.load(), (unsigned long long)c1t.bad.load(), want);
+    const uint64_t settle = 8 * 312;
+    auto atsc1Ok = [&](const Counts& c, const char* what) {
+        const double good = (double)(c.packets - c.bad);
+        CHECK(good >= want && c.lastBad <= settle, "%s: %llu packets, %llu bad (the last at packet %llu), want at least %.0f good and none bad after packet %llu", what,
+              (unsigned long long)c.packets.load(), (unsigned long long)c.bad.load(), (unsigned long long)c.lastBad.load(), want, (unsigned long long)settle);
+    };
+    atsc1Ok(c8, "ATSC 1.0 at 8 Msps");
+    atsc1Ok(c10, "ATSC 1.0 at 10 Msps");
+    atsc1Ok(c1t, "ATSC 1.0 beside ATSC 3.0");
     CHECK(c3.packets > 0 && (double)c3t.packets >= 0.9 * (double)c3.packets, "ATSC 3.0 beside ATSC 1.0: %llu packets, alone %llu", (unsigned long long)c3t.packets.load(), (unsigned long long)c3.packets.load());
 
     // the budget: under one core for both together; each alone well under it
