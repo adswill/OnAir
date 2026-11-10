@@ -22,7 +22,7 @@ struct Key { int proto; std::string name, secret; };
 
 struct State {
     bool loaded = false;
-    int view = 0;                                // 0 nodes, 1 map, 2 chat, 3 packets, 4 settings, 5 APRS stations, 6 LoRaWAN devices, 7 LoRaWAN frames
+    int view = 0;                                // 0 nodes, 1 map, 2 chat, 3 packets, 4 settings, 5 APRS stations, 6 LoRaWAN devices, 7 LoRaWAN frames, 11 MeshCore device
     bool rawView = false;                        // packets: the raw payload instead of the detail line
     adsbmap::View map;
     bool mapFit = true;                          // centre on the nodes until the user drags the map
@@ -119,6 +119,10 @@ void lorawanFrames(const App& a);
 void mapView(App& a, ImVec2 size);
 void nodeCard(const App& a);
 void chatView(const App& a);
+
+// meshcore_ui.cpp: the MeshCore device (send and receive as a MeshCore companion node)
+void meshcoreTick(App& a);
+void meshcoreView(App& a);
 
 // mesh_settings_ui.cpp
 void pushKeys(App& a);

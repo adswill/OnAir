@@ -3,6 +3,7 @@
 #include "dect2/mesh/meshcore_node.h"
 #include "dect2/mesh/mesh_lora.h"
 #include "dect2/mesh/mesh_proto.h"
+#include "dect2/mesh/mesh_rx.h"
 #include "dect2/loraraw/loraraw_gen.h"
 #include <algorithm>
 #include <cmath>
@@ -58,7 +59,7 @@ std::unique_ptr<TxGenerator> makeMeshCoreTxGenerator(const TxRequest& r, double 
     radio.bwHz = std::max(1000.0, r.o("meshcore.bwHz", 62500));
     radio.cr = std::clamp((int)std::lround(r.o("meshcore.cr", 8)), 5, 8);
     radio.preamble = std::clamp((int)std::lround(r.o("meshcore.preamble", radio.sf <= 8 ? 32 : 16)), 6, 65535);
-    const double ifHz = r.o("meshcore.ifHz", 0);
+    const double ifHz = r.o("meshcore.ifHz", -meshTuning().tuneOffsetHz);   // default: where the Transmit window expects a mode-22 signal
     const double gap = std::max(0.0, r.o("meshcore.gapSec", 0.05));
     if (rate <= 0) { err = "no sample rate"; return nullptr; }
     if (std::fabs(ifHz) + radio.bwHz * 0.6 > 0.5 * rate) { err = "the MeshCore frame does not fit in the sample rate at this offset"; return nullptr; }

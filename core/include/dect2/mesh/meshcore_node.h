@@ -233,6 +233,9 @@ public:
     // the next frame whose time has come (lowest priority number, then the earliest); false: none due
     bool popDue(double now, Outgoing& out);
     double nextDue() const;              // monotonic time of the next queued frame (-1: none)
+    // forget the answers (ACKs, paths, repeats) that have waited since before `before`: while transmit is off they would go out late.
+    // The user's own messages and adverts stay. Returns how many were dropped.
+    size_t dropStale(double before);
     size_t queued() const { return out_.size(); }
     // tell the node a frame went out (airtime for the duty meter)
     void noteSent(const Outgoing& o, double now);

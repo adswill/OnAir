@@ -487,6 +487,15 @@ double Node::nextDue() const {
     return t;
 }
 
+size_t Node::dropStale(double before) {
+    const size_t n0 = out_.size();
+    out_.erase(std::remove_if(out_.begin(), out_.end(), [&](const Outgoing& o) {
+        const bool own = o.what.rfind("message", 0) == 0 || o.what.rfind("channel", 0) == 0 || o.what.rfind("advert", 0) == 0;
+        return !own && o.due < before;
+    }), out_.end());
+    return n0 - out_.size();
+}
+
 void Node::noteSent(const Outgoing& o, double now) {
     duty_.add(now, airtimeSec(cfg_.radio, o.bytes.size()));
     for (auto& t : pend_) if (t.sentAt < 0 && o.what.find("#" + std::to_string(t.id) + " ") != std::string::npos) {

@@ -427,8 +427,7 @@ static void txRow() {
     CHECK(m && txModeForList(20, "meshcore") == m && txPayloadKind("meshcore") == TxPayloadKind::Keyboard && txModeFinite(*m), "row, list entry, kind, finite");
     if (!m) return;
     TxRequest r;
-    r.text = "typed in the Transmit window";
-    r.opt["meshcore.ifHz"] = -meshTuning().tuneOffsetHz;
+    r.text = "typed in the Transmit window";   // no meshcore.ifHz: the default placement of the Transmit window
     std::string err;
     auto g = makeTxGenerator(*m, r, 1e6, err);
     CHECK(g != nullptr, "generator: %s", err.c_str());
