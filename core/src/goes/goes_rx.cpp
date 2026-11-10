@@ -609,7 +609,9 @@ struct GoesReceiver::Impl {
             pos += std::max(0.5 * spsEst, std::min(2.0 * spsEst, step));
             symbol(a);
         }
-        const int drop = (int)std::floor(pos - spsEst - 4);
+        if (!(pos >= 0 && pos < 1e12)) pos = (double)y.size();   // never a NaN or a wild index into the cast below (UB) or into y
+        const double dropD = std::floor(pos - spsEst - 4);
+        const int drop = dropD > 0 && dropD < 2e9 ? (int)dropD : 0;
         if (drop > 0 && drop <= (int)y.size()) { y.erase(y.begin(), y.begin() + drop); pos -= drop; }
     }
 
