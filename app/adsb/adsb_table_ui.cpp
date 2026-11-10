@@ -4,6 +4,7 @@
 #include "transcribe/transcribe_app.h"
 #include "../panels/photo_links_ui.h"
 #include "adsb_internal.h"
+#include "dect2/watchlist/plane_alert.h"
 #include "adsb_acars.h"
 #include "dect2/aero/aero_adsc.h"
 
@@ -215,6 +216,10 @@ void aircraftTable(App& a, bool compact) {
         if (ImGui::Selectable(id, S.sel == ac.icao, ImGuiSelectableFlags_SpanAllColumns)) S.sel = ac.icao;
         if (ImGui::BeginPopupContextItem()) { photolinks::aircraftMenuItems(ac.icao, registrationOf(ac.icao), ac.callsign); ImGui::EndPopup(); }
         ImGui::TableNextColumn(); ImGui::TextUnformatted(ac.callsign.empty() ? "-" : ac.callsign.c_str());
+        if (const auto* pa = planeAlertFor(ac.icao)) {   // plane-alert-db category (adsb_planealert_ui.cpp)
+            ImGui::SameLine(0, 4 * gUi); ImGui::TextColored(kWarn, "%s", pa->category.empty() ? "PA" : pa->category.c_str());
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("plane-alert-db: %s\n%s %s\n%s", pa->operatorName.c_str(), pa->registration.c_str(), pa->type.c_str(), pa->tagText().c_str());
+        }
         if (seenNewToday(ac.icao)) {   // never heard before today (adsb_seen_ui.cpp)
             ImGui::SameLine(0, 4 * gUi); ImGui::TextColored(kGood, "new");
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("First heard ever today (ADS-B, History)"));

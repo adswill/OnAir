@@ -12,6 +12,7 @@
 #include "dect2/adsb/adsb_jam.h"
 #include "dect2/adsb/adsb_display.h"
 #include "dect2/adsb/adsb_filter.h"
+#include "dect2/watchlist/plane_alert.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -106,6 +107,9 @@ void drawHorizon(ImDrawList* dl);
 // adsb_airport_ui.cpp: arrivals and departures
 void airportTick(App& a);
 void airportView(App& a);
+
+// adsb_planealert_ui.cpp: the imported plane-alert-db entry of an aircraft (nullptr: none)
+const dect2::watchlist::PlaneAlertEntry* planeAlertFor(uint32_t icao);
 
 // adsb_map_ui.cpp
 double bearingDeg(double lat1, double lon1, double lat2, double lon2);

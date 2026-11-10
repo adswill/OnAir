@@ -1,6 +1,9 @@
 // The Watchlists window (View > Watchlists): lists of aircraft, ships, APRS call signs, frequencies and words, and how to be told when one is heard
 // (desktop notification, sound, ntfy, Telegram bot, webhook), with a rate limit and quiet hours. The matching is in core/src/watchlist; this file is
 // the window, the saved file and the sink that shows the alerts and sends the web requests. Tokens are written to the file only, never to a log.
+#include <algorithm>
+#include <set>
+#include "dect2/watchlist/plane_alert.h"
 #include "dect2/common/time_fmt.h"
 #include "dect2/common/thread_name.h"
 #include "../app.h"
@@ -220,6 +223,27 @@ void listsTab() {
         ImGui::PopID();
     }
     ImGui::Separator();
+    if (ImGui::Button(tr("Import plane-alert-db..."), ImVec2(-1, 0))) {   // one list per category (dect2/watchlist/plane_alert.h)
+        const std::string p = openFileDialog();
+        if (!p.empty()) {
+            std::ifstream f(fs::path(reinterpret_cast<const char8_t*>(p.c_str())), std::ios::binary);
+            std::stringstream ss; ss << f.rdbuf();
+            std::vector<wl::PlaneAlertEntry> v;
+            std::string err;
+            if (!wl::parsePlaneAlert(ss.str(), v, err)) S.note = err;
+            else {
+                std::set<std::string> on;
+                for (const wl::List& l : S.lists) if (wl::isPlaneAlertList(l) && l.enabled) on.insert(l.name);
+                S.lists.erase(std::remove_if(S.lists.begin(), S.lists.end(), [](const wl::List& l) { return wl::isPlaneAlertList(l); }), S.lists.end());
+                for (wl::List l : wl::planeAlertLists(v)) { l.enabled = on.count(l.name) != 0; S.lists.push_back(l); }
+                std::ofstream c(fs::path(reinterpret_cast<const char8_t*>((plat::dataDir() + "/plane-alert-db.csv").c_str())), std::ios::binary);
+                c << ss.str();   // the ADS-B table shows the categories from this copy
+                S.note = std::to_string(v.size()) + " aircraft imported; switch on the categories you want alerts for";
+                S.dirty = true;
+            }
+        }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("plane-alert-db.csv (github.com/sdr-enthusiasts/plane-alert-db): one list per category (military, government, police, historic ...), all off at first. Importing again replaces them and keeps the ones you switched on."));
     ImGui::SetNextItemWidth(-1);
     if (ImGui::BeginCombo("##addkind", tr("New list..."))) {
         for (int k = 0; k < 5; k++) {

@@ -465,7 +465,7 @@ if(WIN32)
   target_link_libraries(dect2core PUBLIC advapi32)
 endif()
 # watchlists and alerts: matching decoded events against the user's lists, push requests, rate limit, quiet hours
-add_library(dect2_watchlist STATIC core/src/watchlist/watchlist.cpp)
+add_library(dect2_watchlist STATIC core/src/watchlist/watchlist.cpp core/src/watchlist/plane_alert.cpp)
 target_include_directories(dect2_watchlist PUBLIC core/include)
 target_link_libraries(dect2_watchlist PUBLIC dect2_automation Threads::Threads)
 target_link_libraries(dect2core PUBLIC dect2_watchlist)
