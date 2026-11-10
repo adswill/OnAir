@@ -270,7 +270,9 @@ struct IsdbtReceiver::Impl {
             const int n = isdbt::fftN(m) / dec();
             const int64_t avail = (int64_t)buf.size();
             if (avail < (int64_t)(6.0 * (n + n / 4) + n + n / 4)) continue;
-            const int64_t B = std::min<int64_t>(avail, (int64_t)(8 * (n + n / 4) + n));
+            // ISDB-TSB: the guard intervals are an eighth or a quarter as long (mode 1, 1/32: 8 samples), so the correlation is averaged over
+            // up to 32 symbols instead of 8
+            const int64_t B = std::min<int64_t>(avail, (int64_t)((tsb ? 32 : 8) * (n + n / 4) + n));
             const int64_t Dn = B - n;
             std::vector<cd> cum((size_t)Dn + 1);
             std::vector<double> en((size_t)Dn + 1);

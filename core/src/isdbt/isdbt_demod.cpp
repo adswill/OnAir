@@ -203,6 +203,13 @@ struct LayerDecoder {
 struct Demod::Impl {
     Params p;
     int mode = 3, cps = 0, dps = 0, K = 0, N = 0, kEdge = 0, posEdge = kSegments - 1;
+    // the carrier just above a run of synchronous segments that is a known pilot: the pilot above the band, or (ISDB-TSB, where a run can be a
+    // single segment) the continual pilot that starts a differential segment; 0 when there is none
+    int runTopPilot(int p1) const {
+        if (p1 == posEdge) return kEdge;
+        if (p.tsb && p1 + 1 < kSegments) { const int s = kSegmentAtPosition[p1 + 1]; if (seg[s].layer >= 0 && seg[s].diff) return (p1 + 1) * cps; }
+        return 0;
+    }
     SegmentInfo seg[kSegments];
     LayerDecoder layer[3];
     double tau0 = 0;
@@ -361,7 +368,7 @@ struct Demod::Impl {
                 int q = pos;
                 while (q + 1 < kSegments && seg[kSegmentAtPosition[q + 1]].layer >= 0 && !seg[kSegmentAtPosition[q + 1]].diff) q++;
                 Run r; r.p0 = pos; r.p1 = q;
-                const int carriers = (q - pos + 1) * cps + (q == posEdge ? 1 : 0);
+                const int carriers = (q - pos + 1) * cps + (runTopPilot(q) ? 1 : 0);
                 r.grid.assign((size_t)(carriers + 2) / 3, cf32(0, 0));
                 r.gv.assign(r.grid.size(), 0);
                 runs.push_back(std::move(r));
@@ -490,7 +497,8 @@ struct Demod::Impl {
         double noiseAcc = 0; long noiseCnt = 0;
         for (auto& r : runs) {
             const int k0 = r.p0 * cps;
-            const int carriers = (r.p1 - r.p0 + 1) * cps + (r.p1 == posEdge ? 1 : 0);
+            const int top = runTopPilot(r.p1);
+            const int carriers = (r.p1 - r.p0 + 1) * cps + (top ? 1 : 0);
             for (int pos = r.p0; pos <= r.p1; pos++) {
                 const int s = kSegmentAtPosition[pos];
                 const auto& w = prbsW(mode, s);
@@ -503,7 +511,7 @@ struct Demod::Impl {
                     r.grid[g] = nvv; r.gv[g] = 1;
                 }
             }
-            if (r.p1 == posEdge) r.grid[(size_t)(carriers - 1) / 3] = Y[kEdge] / edgeCarrierValue(mode, p.tsb);
+            if (top) r.grid[(size_t)(carriers - 1) / 3] = Y[top] / cpPilot(top);
             if (r.filled < 4) r.filled++;
             if (r.filled < 4) continue;
             // the delay of the channel (the phase slope of the pilot grid), so that the interpolator sees a nearly flat grid and the ends of the run are
