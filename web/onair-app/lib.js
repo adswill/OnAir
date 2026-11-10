@@ -122,9 +122,11 @@
       const w = { kind, name: d.n, label: d.l || d.n, unit: d.u || "", value: v, tier };
       if (kind === "table") {
         if (!Array.isArray(v) || !v.length) { if (advanced) widgets.push({ kind: "text", name: d.n, label: d.l || d.n, value: "none yet", tier: "a" }); continue; }
-        w.cols = tableColumns(v);
+        w.cols = tableColumns(v, d.f);
         if (d.map) w.map = d.map;
       }
+      if (kind === "obj" && Array.isArray(d.f)) w.f = d.f;
+      if (kind === "text" && typeof v === "string" && v.startsWith("data:image/")) w.kind = "image";
       if (kind === "list" && (!Array.isArray(v) || !v.length)) continue;
       if (kind === "lines" && (!Array.isArray(v) || !v.length)) continue;
       if (kind === "const" && (!Array.isArray(v) || v.length < 4)) continue;
@@ -137,17 +139,21 @@
   function commonLabel(n) {
     return { snrDb: "Signal-to-noise", locked: "Locked", state: "State", cfoHz: "Carrier offset", blocksOk: "Blocks OK", blocksBad: "Blocks bad" }[n] || n;
   }
-  // the columns of a table: the primitive fields of its rows (first row's keys, plus any later row adds), at most 24
-  function tableColumns(rows) {
+  // the columns of a table: the primitive fields of its rows (first row's keys, plus any later row adds), at most 24; the rows' schema
+  // (when the server sent one) gives the labels and units
+  function tableColumns(rows, rowSchema) {
     const cols = [];
     const seen = {};
+    const labels = {};
+    if (Array.isArray(rowSchema)) for (const d of rowSchema) if (d && d.n) labels[d.n] = d;
     for (const r of rows.slice(0, 20)) {
       if (!r || typeof r !== "object") continue;
       for (const k in r) {
         const v = r[k];
         if (seen[k] || v === null || typeof v === "object") continue;
         seen[k] = true;
-        cols.push({ name: k, label: humanize(k), num: typeof v === "number" });
+        const d = labels[k];
+        cols.push({ name: k, label: d && d.l && d.l.length <= 24 ? d.l + (d.u ? " (" + d.u + ")" : "") : humanize(k) + (d && d.u ? " (" + d.u + ")" : ""), num: typeof v === "number" });
         if (cols.length >= 24) return cols;
       }
     }

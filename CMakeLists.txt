@@ -2045,6 +2045,9 @@ if(DECT2_BUILD_TESTS)
   if(ONAIR_NODE)
     add_test(NAME web_client COMMAND ${ONAIR_NODE} ${CMAKE_SOURCE_DIR}/tests/web/run.js)
     add_test(NAME web_app_client COMMAND ${ONAIR_NODE} ${CMAKE_SOURCE_DIR}/tests/web/app.test.js)   # OnAir Web 3.9 page: frames, search, the panel model, the audio ring
+    # a headless Chromium (Playwright, pinned in the script) drives the real page against onair-server: opt-in with ONAIR_PLAYWRIGHT=1, else skipped
+    add_test(NAME web_app_smoke COMMAND ${ONAIR_NODE} ${CMAKE_SOURCE_DIR}/tests/web/app_smoke.mjs $<TARGET_FILE:onair-server> WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+    set_tests_properties(web_app_smoke PROPERTIES TIMEOUT 180 SKIP_RETURN_CODE 77 RUN_SERIAL TRUE)
   endif()
   # OnAir Web 3.9 (docs/WEB-3.9.md): the panel schema of every mode, and the app's server side (access, HTTP, WebSocket, every mode selectable)
   add_executable(test_web_schema tests/web/test_web_schema.cpp)

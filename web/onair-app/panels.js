@@ -94,6 +94,7 @@
       case "const": this.drawConst(n.v, v); break;
       case "image": { if (n.last !== v) { n.last = v; n.v.src = v; } break; }
       case "obj": {
+        if (w.f) { n.sub.render(L.buildPanel(w.f, v, null, true), "empty"); break; }
         const ws = [];
         for (const k in v) {
           const x = v[k];

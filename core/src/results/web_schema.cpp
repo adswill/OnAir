@@ -40,6 +40,7 @@ void vstr(std::string& s, const std::string& v, size_t maxBytes) {
         if (ok && len == 3) { const unsigned char c1 = (unsigned char)v[i + 1]; if ((c == 0xE0 && c1 < 0xA0) || (c == 0xED && c1 >= 0xA0)) ok = false; }
         if (ok && len == 4) { const unsigned char c1 = (unsigned char)v[i + 1]; if ((c == 0xF0 && c1 < 0x90) || (c == 0xF4 && c1 >= 0x90)) ok = false; }
         if (!ok) { s += '?'; i++; out++; continue; }
+        if (out + len > maxBytes) break;
         if (len == 1) {
             switch (c) {
             case '"': s += "\\\""; break;

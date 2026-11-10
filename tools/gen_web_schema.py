@@ -48,6 +48,7 @@ class Struct:
         self.members = []
         self.enums = set()   # nested enum names (unqualified)
         self.access = "public"   # the access of the members being read (a class starts private)
+        self.bases = []          # base classes: their public members come first
 
 
 def split_top(s, sep):
@@ -89,7 +90,7 @@ def scan_header(rel, text, structs, enums):
             if ch == "{":
                 # what opens here?
                 head = (stmt + " " + code[:i]).strip() if pending is None else pending
-                m = re.search(r"(?:^|[\s;}])(struct|class)\s+(?:alignas\(\d+\)\s+)?(\w+)\s*(?::\s*[^{]*)?$", head)
+                m = re.search(r"(?:^|[\s;}])(struct|class)\s+(?:alignas\(\d+\)\s+)?(\w+)\s*(?::\s*([^{]*))?$", head)
                 me = re.search(r"(?:^|[\s;}])enum\s+(?:class\s+|struct\s+)?(\w+)\s*(?::\s*\w+)?\s*$", head)
                 mn = re.search(r"(?:^|[\s;}])namespace\s+([\w:]+)\s*$", head)
                 if mn:
@@ -106,6 +107,8 @@ def scan_header(rel, text, structs, enums):
                 elif m and not re.search(r"\b(struct|class)\s+\w+\s*;", head) and not head.rstrip().endswith("="):
                     q = qualify(ns, m.group(2))
                     structs[q] = Struct(q, rel, ln)
+                    if m.group(3):
+                        structs[q].bases = [re.sub(r"^(public|private|protected|virtual)\s+", "", b.strip()).strip() for b in split_top(m.group(3), ",")]
                     if m.group(1) == "class":
                         structs[q].access = "private"
                     ns.append(("struct", q))
@@ -422,7 +425,13 @@ class Emitter:
         st = self.structs[q]
         fields, lines = [], []
         body = []
-        for mem in st.members:
+        members = []
+        for b in st.bases:
+            bq = lookup(b, q, self.structs)
+            if bq:
+                members += self.all_members(bq, 0)
+        members += st.members
+        for mem in members:
             t = resolve(mem.type, q, self.structs, self.enums)
             if mem.dims:
                 dims = re.findall(r"\[([^\]]*)\]", mem.dims)
@@ -447,6 +456,16 @@ class Emitter:
         self.funcs[q] = "static void ev_%s(std::string& s, const %s& v) {\n    detail::J o(s);\n%s\n    o.end();\n}\n" % (
             cname(q), q, "\n".join(body))
         self.schemas[q] = fields
+
+    def all_members(self, q, depth):
+        st = self.structs[q]
+        out = []
+        if depth < 4:
+            for b in st.bases:
+                bq = lookup(b, q, self.structs)
+                if bq:
+                    out += self.all_members(bq, depth + 1)
+        return out + st.members
 
     def value_code(self, expr, t, here, depth):
         k = t.kind
@@ -520,6 +539,8 @@ class Emitter:
             f["k"] = "num"; f["l"] += " (I/Q)"
         elif k == "struct":
             f["k"] = "obj"; f["s"] = t.q
+            if t.q in self.schemas:
+                f["f"] = self.schemas[t.q]
         elif k == "ptr":
             inner = self.field_schema(mem, t.elem, here)
             inner["l"] = f["l"]
@@ -535,6 +556,8 @@ class Emitter:
             elif e.kind == "struct":
                 f["k"] = "table"; f["s"] = e.q
                 cols = self.schemas.get(e.q, [])
+                if e.q in self.schemas:
+                    f["f"] = self.schemas[e.q]
                 lat = [c["n"] for c in cols if LAT.match(c["n"])]
                 lon = [c["n"] for c in cols if LON.match(c["n"])]
                 if lat and lon:
@@ -588,9 +611,11 @@ def main():
         im = is_image(structs[q])
         if im:
             images[q] = im
+            em.schemas[q].append({"n": "image", "k": "image", "l": "Picture"})
     # the mode rows
     groups, rows = mode_rows()
     tv_std = {0: 0, 1: 2, 2: 3, 3: 4, 4: 5, 5: 6}   # family -> telemetry standard of the TV / broadcast families (the common block + rx_json details)
+    tv_engine = {0: 0, 1: 3, 2: 4, 3: 5, 4: 6, 5: 7}   # family -> the headless server's mode number (ServerHost::buildModes: 0 dvb, 3 atsc, 4 dab, 5 atsc3, 6 isdbt, 7 fm)
     covered, uncovered = 0, []
     for r in rows:
         if r["family"] >= 6:
@@ -598,7 +623,7 @@ def main():
             r["engine"] = r["family"] + 2
         else:
             r["std"] = tv_std.get(r["family"], -1)
-            r["engine"] = r["family"]
+            r["engine"] = tv_engine.get(r["family"], r["family"])
         r["member"] = per_std[r["std"]][0] if r["std"] in per_std else ""
         if r["member"] or r["family"] < 6:
             covered += 1
@@ -624,9 +649,7 @@ def main():
         o.append(code)
     # schemas as JSON text per struct
     for q, fields in em.schemas.items():
-        fl = list(fields)
-        if q in images:
-            fl.append({"n": "image", "k": "image", "l": "Picture"})
+        fl = fields
         o.append('static const char kSchema_%s[] = R"JSON(%s)JSON";' % (cname(q), json.dumps(fl, separators=(",", ":"))))
     o.append("struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };")
     for sd, (mem, q) in per_std.items():

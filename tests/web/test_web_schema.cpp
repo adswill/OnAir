@@ -70,9 +70,18 @@ struct JsonCheck {
 static bool validJson(const std::string& s, std::string* why = nullptr) { JsonCheck c(s); const bool ok = c.all(); if (why) *why = c.err; return ok; }
 
 static std::string jsonKeys(const std::string& arr, std::set<std::string>& names) {
-    // the "n" values of a schema array
-    size_t p = 0;
-    while ((p = arr.find("\"n\":\"", p)) != std::string::npos) { p += 5; const size_t e = arr.find('"', p); names.insert(arr.substr(p, e - p)); p = e; }
+    // the "n" values of the top-level objects of a schema array (nested "f" schemas of rows and blocks are deeper)
+    int depth = 0;
+    bool inStr = false;
+    for (size_t i = 0; i < arr.size(); i++) {
+        const char c = arr[i];
+        if (inStr) { if (c == '\\') i++; else if (c == '"') inStr = false; continue; }
+        if (c == '"') {
+            if (depth == 2 && arr.compare(i, 5, "\"n\":\"") == 0) { const size_t e = arr.find('"', i + 5); names.insert(arr.substr(i + 5, e - i - 5)); i = e; continue; }
+            inStr = true;
+        } else if (c == '[' || c == '{') depth++;
+        else if (c == ']' || c == '}') depth--;
+    }
     return "";
 }
 
@@ -137,7 +146,7 @@ int main() {
         else noSchema.insert(r.name);
     }
     // the TV standards carry the common block + details (no own block); the rest without a block are known and listed in docs/WEB-SCHEMA-3.9.md
-    static const char* const kKnownNoBlock[] = {"DVB", "TV (auto)", "ATSC", "ATSC 3.0", "ISDB-T", "DAB", "FM broadcast", "Internet TV (IPTV)", "ASTERIX", "Mode Builder", "Plugins"};
+    static const char* const kKnownNoBlock[] = {"DVB", "TV (auto)", "ATSC", "ATSC 3.0", "ISDB-T", "DAB / DAB+", "FM", "Internet TV (IPTV)", "ASTERIX", "Mode Builder", "Plugins"};
     for (const std::string& name : noSchema) {
         bool known = false;
         for (const char* k : kKnownNoBlock) if (name == k) known = true;
@@ -239,7 +248,8 @@ int main() {
     }
     {   // a mode with tables, positions and a map hint: ADS-B (standard 12)
         const char* sch = schemaJson(12);
-        CHECK(sch && std::string(sch).find("\"n\":\"aircraft\",\"k\":\"table\"") != std::string::npos, "ADS-B schema has the aircraft table");
+        CHECK(sch && std::string(sch).find("\"n\":\"aircraft\",\"l\":\"Most recently heard first\",\"k\":\"table\",\"s\":\"dect2::AdsbAircraft\"") != std::string::npos, "ADS-B schema has the aircraft table with its label");
+        CHECK(sch && std::string(sch).find("\"f\":[{\"n\":\"icao\"") != std::string::npos, "the table carries its columns' schema");
         CHECK(sch && std::string(sch).find("\"map\":{\"lat\":\"lat\",\"lon\":\"lon\"") != std::string::npos, "the aircraft table has a map hint: %.300s", sch ? strstr(sch, "aircraft") : "");
         CHECK(sch && std::string(sch).find("\"u\":\"dB\"") != std::string::npos, "units are parsed from names");
         RxTelemetry t;
@@ -252,12 +262,12 @@ int main() {
         CHECK(validJson(out, &why), "ADS-B panel JSON: %s", why.c_str());
         CHECK(out.find("\"aircraft\":[{") != std::string::npos && out.find("\"lat\":54.7") != std::string::npos, "the aircraft rows are exported");
         // the row cap
-        t.adsb.aircraft.resize(500);
+        t.adsb.aircraft.resize(300);
         out.clear();
-        panelJson(t, out);
+        panelJson(t, out, 4 << 20);   // 300 rows of this struct are over the default 256 KB cap: the cap is checked below
         size_t cnt = 0, p = 0;
         while ((p = out.find("\"icao\":", p)) != std::string::npos) { cnt++; p += 7; }
-        CHECK(cnt == 200, "tables are capped at 200 rows (%zu)", cnt);
+        CHECK(cnt == 200, "tables are capped at 200 rows (%zu, %zu bytes)", cnt, out.size());
         CHECK(validJson(out), "capped table is valid JSON");
         // the size cap
         out.clear();
@@ -270,7 +280,9 @@ int main() {
         CHECK(anyConst, "at least one mode exports a constellation");
         bool anyImage = false, anyLines = false;
         for (int sd : stds) { const std::string s = schemaJson(sd); if (s.find("\"k\":\"image\"") != std::string::npos) anyImage = true; if (s.find("\"k\":\"lines\"") != std::string::npos) anyLines = true; }
-        CHECK(anyImage, "at least one mode exports a picture");
+        CHECK(anyImage, "at least one mode exports a picture (in a nested block's schema)");
+        // FSQ inherits its block: the base's fields are exported
+        CHECK(schemaJson(114) && std::string(schemaJson(114)).size() > 50, "FSQ (standard 114) has the fields of its base struct");
         CHECK(anyLines, "at least one mode exports text lines");
     }
     printf("web_schema: %s (%d failures)\n", fails ? "FAIL" : "ok", fails);
