@@ -104,7 +104,7 @@ static std::string trimStr(const std::string& s) {
 }
 static const char* reason(int c) {
     switch (c) {
-    case 101: return "Switching Protocols"; case 200: return "OK"; case 204: return "No Content"; case 400: return "Bad Request";
+    case 101: return "Switching Protocols"; case 200: return "OK"; case 204: return "No Content"; case 302: return "Found"; case 304: return "Not Modified"; case 400: return "Bad Request";
     case 401: return "Unauthorized"; case 403: return "Forbidden"; case 404: return "Not Found"; case 405: return "Method Not Allowed";
     case 408: return "Request Timeout"; case 413: return "Payload Too Large"; case 415: return "Unsupported Media Type"; case 426: return "Upgrade Required";
     case 429: return "Too Many Requests"; case 431: return "Request Header Fields Too Large"; case 503: return "Service Unavailable";
@@ -380,6 +380,73 @@ struct WebServer::Impl {
         if (id) hub.leave(id);
     }
 
+    // ---- the application under /app (AppHandler): HTTP, and a WebSocket whose frames are pumped to the handler
+    static AppRequest appRequest(const Req& r, bool tls) {
+        AppRequest a;
+        a.method = r.method; a.path = r.path; a.query = r.query; a.body = r.body; a.peer = r.peer;
+        a.loopback = r.loopbackPeer; a.tls = tls; a.viaProxy = r.viaProxy; a.headers = r.h;
+        return a;
+    }
+    void appHttp(const Io& io, const Req& r) {
+        AppReply out;
+        const AppRequest a = appRequest(r, io.t != nullptr);
+        if (!cfg.app->handle(a, out)) { replyErr(io, 404, "not found"); return; }
+        reply(io, out.status, out.body, out.type.c_str(), out.headers, out.head || r.method == "HEAD");
+    }
+    struct AppWsImpl : AppWs {
+        const Impl& srv;
+        const Io& io;
+        AppRequest req;
+        std::string in;
+        double lastRx, lastPing;
+        bool closing = false;
+        AppWsImpl(const Impl& s, const Io& i, AppRequest r) : srv(s), io(i), req(std::move(r)), lastRx(wallSeconds()), lastPing(wallSeconds()) {}
+        const AppRequest& request() const override { return req; }
+        bool sendText(const std::string& s) override { return !closing && io.sendAll(wsServerFrame(1, s)); }
+        bool sendBinary(const std::string& s) override { return !closing && io.sendAll(wsServerFrame(2, s)); }
+        void close(int code, const std::string& why) override { if (!closing) { io.sendAll(wsCloseFrame(code, why)); closing = true; } }
+        int recv(std::string& payload, int ms) override {
+            if (closing || srv.quit) return -1;
+            const double now = wallSeconds();
+            if (now - lastRx > srv.cfg.keepaliveSec) { close(1001, "keepalive timeout"); return -1; }
+            if (now - lastPing > srv.cfg.pingSec) { lastPing = now; if (!io.sendAll(wsServerFrame(9, "k"))) { closing = true; return -1; } }
+            // a frame already buffered?
+            for (;;) {
+                WsIn f = wsParse(in, 16384);
+                if (f.kind == 1) { close(f.closeCode, "protocol error"); return -1; }
+                if (f.kind == 0) break;
+                in.erase(0, f.used);
+                lastRx = wallSeconds();
+                if (f.op == 8) { io.sendAll(wsCloseFrame(1000, "")); closing = true; return -1; }
+                if (f.op == 9) { io.sendAll(wsServerFrame(10, f.payload)); continue; }
+                if (f.op == 10) continue;
+                if (f.op == 2) { close(1003, "binary messages are not accepted"); return -1; }
+                payload = std::move(f.payload);
+                return 1;
+            }
+            if (!io.readable(ms)) return 0;
+            char b[4096];
+            const long long k = io.recv(b, sizeof b);
+            if (k <= 0) { closing = true; return -1; }
+            in.append(b, (size_t)k);
+            if (in.size() > 2 * 16384 + 64) { close(1009, "too much data"); return -1; }
+            return recv(payload, 0);
+        }
+    };
+    void appWebSocket(const Io& io, const Req& r) {
+        auto up = r.h.find("upgrade");
+        auto key = r.h.find("sec-websocket-key");
+        auto ver = r.h.find("sec-websocket-version");
+        if (r.method != "GET" || up == r.h.end() || lowerStr(up->second) != "websocket" || key == r.h.end() || key->second.size() != 24) { replyErr(io, 426, "a WebSocket upgrade is needed"); return; }
+        if (ver == r.h.end() || ver->second != "13") { reply(io, 426, "{\"error\":\"WebSocket version 13 only\"}", "application/json", "Sec-WebSocket-Version: 13\r\n"); return; }
+        if (!originOk(r, io.t != nullptr)) { replyErr(io, 403, "this page's origin is not allowed"); return; }
+        const std::string resp = "HTTP/1.1 101 Switching Protocols\r\nUpgrade: websocket\r\nConnection: Upgrade\r\nSec-WebSocket-Accept: " + wsAccept(key->second) + "\r\n\r\n";
+        if (!io.sendAll(resp)) return;
+        AppWsImpl ws(*this, io, appRequest(r, io.t != nullptr));
+        cfg.app->webSocket(ws);
+        if (!ws.closing) ws.close(1000, "bye");
+    }
+
     // ---- admin API
     void admin(const Io& io, const Req& r) {
         if (!r.loopbackPeer && !cfg.adminLan) { replyErr(io, 403, "the admin API answers on this computer only (admin_lan=1 to change)"); return; }
@@ -593,6 +660,11 @@ struct WebServer::Impl {
             }
             const bool behindTls = io.t || (cfg.trustProxy && peer.compare(0, 4, "127.") == 0);
             if (!behindTls && !cfg.plainInternet && !privateAddress(r.peer)) replyErr(io, 403, "this server needs HTTPS for listeners from the internet");
+            else if (cfg.app && (r.path == "/app" || r.path.compare(0, 5, "/app/") == 0)) {
+                if (cfg.app->isWebSocketPath(r.path)) appWebSocket(io, r);
+                else appHttp(io, r);
+            }
+            else if (cfg.app && cfg.appHome && r.path == "/") reply(io, 302, "", "text/plain", "Location: /app/\r\n");
             else if (r.path == "/web/v1/ws") webSocket(io, r);
             else if (r.path == "/web/v1/info") {
                 if (r.method != "GET") replyErr(io, 405, "GET only");

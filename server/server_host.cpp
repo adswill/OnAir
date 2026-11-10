@@ -11,6 +11,7 @@
 #include "dect2/mesh/mesh_rx.h"
 #include "dect2/net/netradio.h"
 #include "dect2/results/rx_json.h"
+#include "dect2/results/web_schema.h"
 #include "dect2/source/agc.h"
 #include "dect2/source/gain.h"
 #include "dect2/source/iq_file.h"
@@ -18,6 +19,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <ctime>
+#include <filesystem>
 #include <cstring>
 
 using namespace dect2;
@@ -71,7 +74,7 @@ void ServerHost::buildModes() {
     static const B b[] = {{0, "dvb", "DVB-T / T2 (automatic)", 522}, {1, "t2", "DVB-T2", 522}, {2, "t", "DVB-T", 522}, {3, "atsc", "ATSC", 575}, {4, "dab", "DAB / DAB+", 225.648},
                           {5, "atsc3", "ATSC 3.0", 575}, {6, "isdbt", "ISDB-T", 527}, {7, "fm", "FM broadcast", 100}};
     for (const B& x : b) modes_.push_back({x.f, x.id, x.name, "", x.mhz});
-    for (int s = 8; s < 200; s++) {
+    for (int s = 8; s < 1000; s++) {   // every ModeTuning row (the families of the mode table + 2; 3.9 blocks reach 899)
         const ModeTuning* mt = modeTuning(s);
         if (mt && *mt->id) modes_.push_back({s, mt->id, mt->name, "", mt->defMhz});
     }
@@ -427,13 +430,30 @@ std::string ServerHost::telemetryJson(uint64_t& seq) {
     return telJson_;
 }
 
+std::string ServerHost::panelJson(uint64_t& seq) {
+    std::lock_guard<std::mutex> lk(snapMu_);
+    if (rxSnapSeq_ == 0) { seq = 0; return "null"; }
+    if (panelSeq_ != rxSnapSeq_ || panelJson_.empty()) {
+        dect2::webschema::panelJson(rxSnap_, panelJson_);
+        panelSeq_ = rxSnapSeq_;
+    }
+    seq = panelSeq_;
+    return panelJson_;
+}
+
+void ServerHost::captureInfo(double& centreHz, double& rateHz) {
+    std::lock_guard<std::mutex> lk(snapMu_);
+    centreHz = specCentreHz_;
+    rateHz = specRateHz_;
+}
+
 void ServerHost::snapLoop() {
     uint64_t rxSeq = 0, spSeq = 0;
     while (!quit_) {
         std::this_thread::sleep_for(std::chrono::milliseconds(40));
         if (!e_.running()) {
             std::lock_guard<std::mutex> lk(snapMu_);
-            if (telJson_.find("\"running\":true") != std::string::npos) { telJson_ = "{\"running\":false,\"available\":false}"; telSeq_++; }
+            if (telJson_.find("\"running\":true") != std::string::npos) { telJson_ = "{\"running\":false,\"available\":false}"; telSeq_++; rxSnapSeq_ = 0; panelJson_.clear(); }
             spec_.dbfs.clear();
             continue;
         }
@@ -448,6 +468,8 @@ void ServerHost::snapLoop() {
             quality_.update(t);
             telJson_ = std::string("{\"running\":true,\"available\":true,") + rxTelemetryJson(t, &quality_.report()).substr(1);
             telSeq_++;
+            rxSnap_ = std::move(t);
+            rxSnapSeq_ = rxSeq;
         }
     }
 }
@@ -520,7 +542,7 @@ int ServerHost::audioOpen(int rateHz) {
     int id;
     {
         std::lock_guard<std::mutex> lk(aMu_);
-        if (listeners_.size() >= 4) return -1;
+        if (listeners_.size() >= 32) return -1;   // the web app shares one monitor; a listener is only a copy of its audio
         id = nextListener_++;
         Listener l;
         l.rate = r; l.step = 48000 / r;
@@ -576,6 +598,50 @@ int ServerHost::handleExtra(const std::string& method, const std::string& path, 
         return 200;
     }
     return 0;
+}
+
+static std::string defaultRecDir() {
+#ifdef _WIN32
+    const char* h = getenv("USERPROFILE");
+#else
+    const char* h = getenv("HOME");
+#endif
+    return (std::filesystem::path(h ? h : ".") / "OnAir-recordings").string();
+}
+
+bool ServerHost::recordStart(const std::string& kind, std::string& err) {
+    if (kind != "iq") { err = "the server records IQ only (kind iq); audio is recorded by the browser"; return false; }
+    std::lock_guard<std::mutex> lk(mu_);
+    if (!e_.running()) { err = "the receiver is not running"; return false; }
+    if (!recPath_.empty()) { err = "a recording is running: " + recPath_; return false; }
+    const std::string dir = cfg_.get("rec_dir", defaultRecDir());
+    std::error_code ec;
+    std::filesystem::create_directories(dir, ec);
+    const std::time_t now = std::time(nullptr);
+    char stamp[32];
+    std::strftime(stamp, sizeof stamp, "%Y%m%d-%H%M%S", std::localtime(&now));
+    char name[256];
+    snprintf(name, sizeof name, "onair-%s-%.4fMHz-%s_%.3fmsps.cf32", modes_[(size_t)modeIdx_].id.c_str(), freqHz_ / 1e6, stamp, e_.radioRate() / 1e6);
+    const std::string path = (std::filesystem::path(dir) / name).string();
+    if (!e_.startRecording(path, FileFormat::CF32, err)) return false;
+    recPath_ = path;
+    recStart_ = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
+    return true;
+}
+
+bool ServerHost::recordStop(std::string& err) {
+    std::lock_guard<std::mutex> lk(mu_);
+    if (recPath_.empty()) { err = "no recording is running"; return false; }
+    e_.stopRecording();
+    recPath_.clear();
+    return true;
+}
+
+std::string ServerHost::recordingJson() {
+    std::lock_guard<std::mutex> lk(mu_);
+    if (recPath_.empty()) return "{\"recording\":false}";
+    const double secs = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count() - recStart_;
+    return "{\"recording\":true,\"path\":\"" + jsonEscape(recPath_) + "\",\"seconds\":" + jsonNum(secs) + "}";
 }
 
 } // namespace onair_server

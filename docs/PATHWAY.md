@@ -1427,3 +1427,16 @@ Simulated signals only. Details are in docs/SENSITIVITY-3.9-C.md.
 ## 2026-11-11 Meteosat HRDCP, DCS channel plans, GOES LRIT, Elektro links (feat39-sat)
 Branch feat39-sat on integ-39. New mode Meteosat HRDCP (family 700, standard 701/702), written from EUMETSAT TD 16: receiver, generator and tests; it shares the DCS screens. GOES DCS gained the Meteosat (TD 16 table 11) and Himawari channel plans, a 402.22 MHz preset, and addresses shown left-aligned as the operators write them. GOES HRIT gained the GOES-N/O/P LRIT link (293.883 ksym/s). Elektro got tests for every link. Fixed along the way: the Elektro OQPSK rail split, and false syncs and frequency pull in GOES DCS from a platform on the next channel. INSAT was skipped because no public burst format exists. Simulated only. Details in docs/SAT-DCS-XRIT-3.9.md.
 
+
+## 2026-11-11 OnAir Web 3.9: the whole receiver in a browser (feat39-web)
+Branch feat39-web on integ-39. The owner's words: the web page "still sucks", six decoders, confusing settings; make it OnAir in a browser,
+remote, with optional public access. Done: a generated panel schema for every mode (tools/gen_web_schema.py reads the 171 telemetry structs,
+engine_telemetry.cpp and the mode table and writes core/src/results/web_schema_gen.cpp: 247 standards, 290 of 295 rows have a live panel, the
+7 TV families show the common block and details, IPTV / ASTERIX / ISDB-TSB have no telemetry block); a new app on the web server (server/app:
+owner / visitor roles, PBKDF2 passwords, HttpOnly SameSite cookies, CSRF header, fail and rate limits, public mode with a tune toggle and a
+visitor cap, private modes hidden from visitors, TX owner-only, works through the relay since it sits on the relayed port); a new page
+web/onair-app (spectrum / waterfall drag-to-tune, mode picker with search, generic renderers: tiles, tables with a map, pictures,
+constellations, logs; audio through a worklet; settings page in plain words; phone tabs). Tests: web_schema (every mode), webapp (access,
+HTTP, WebSocket, every mode selectable, settings, recording), web_app_client (node), web_app_smoke (Playwright, opt-in). CPU measured on the
+CI runner: 45.5 % for the receiver, +0.25 % per viewer at 355 kbit/s each. Validated on the test signal and 127.0.0.1 only; no real radio or
+real internet trial. docs/WEB-3.9.md and docs/WEB-SCHEMA-3.9.md.

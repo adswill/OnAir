@@ -3,6 +3,7 @@
 // No cloud and no relay: the browser connects straight to this program. Access from other computers needs a token; TLS is optional.
 #include "dect2/common/platform.h"
 #include "dect2/engine/crash_report.h"
+#include "app/webapp.h"
 #include "dect2/mcp/mcp.h"
 #include "dect2/net/remote_api.h"
 #include "dect2/net/share.h"
@@ -58,6 +59,7 @@ static void usage() {
            "  onair-server [--config FILE] [options]\n\n"
            "  --config FILE      settings file (default %s)\n"
            "  --port N           web / API port (default 8765)\n"
+           "  --app-password PW  set the password of the browser app (OnAir Web 3.9; stored hashed), then continue\n"
            "  --lan              accept other computers (needs a token; made and printed when there is none)\n"
            "  --token TEXT       use this access token (16 characters or more) for this run\n"
            "  --new-token        make a new token, save it in the settings file and print it\n"
@@ -111,11 +113,19 @@ int main(int argc, char** argv) {
     bool mcpStdio = false, mcpHttp = cfg.flag("mcp_http", false), mcpLan = cfg.flag("mcp_lan", false), mcpTx = cfg.flag("mcp_tx", false);
     int mcpPort = (int)cfg.num("mcp_port", 8766);
     std::string mcpToken = cfg.get("mcp_token");
+    bool appPassword = false;   // --app-password: the settings file gets the hash
     for (int i = 1; i < argc; i++) {
         const std::string a = argv[i];
         auto next = [&]() { return i + 1 < argc ? std::string(argv[++i]) : std::string(); };
         if (a == "--config") next();
         else if (a == "--port") api.port = atoi(next().c_str());
+        else if (a == "--app-password") {
+            const std::string pw = next();
+            std::string why;
+            if (!onair_app::Sessions::passwordAcceptable(pw, why)) { fprintf(stderr, "--app-password: %s\n", why.c_str()); return 2; }
+            cfg.set("app_password_hash", onair_web::hashPassword(pw));
+            appPassword = true;
+        }
         else if (a == "--lan") api.lan = true;
         else if (a == "--token") api.token = next();
         else if (a == "--new-token") newToken = true;
@@ -143,7 +153,7 @@ int main(int argc, char** argv) {
     if (api.port < 1 || api.port > 65535) { fprintf(stderr, "the port must be 1 to 65535\n"); return 2; }
     if (api.tlsCert.empty() != api.tlsKey.empty()) { fprintf(stderr, "TLS needs both tls_cert and tls_key\n"); return 2; }
 
-    bool saveCfg = !haveFile;   // a first run leaves a file to edit
+    bool saveCfg = !haveFile || appPassword;   // a first run leaves a file to edit; --app-password stores the hash
     if (newToken || (api.lan && api.token.size() < 16)) {
         api.token = dect2::remoteApiNewToken();
         cfg.set("token", api.token);
@@ -277,6 +287,26 @@ int main(int argc, char** argv) {
         else printf("onair-server: MCP over HTTP on %s://%s:%d/mcp (%s%s; transmit tools %s). Setup: docs/MCP.md\n", mcpApi.status().tls ? "https" : "http", mcpLan ? "<this computer>" : "127.0.0.1",
                     mcpApi.config().port, mcpLan ? "whole network" : "this computer only", mcpToken.size() >= 16 ? ", token required" : ", no token", mcpTx ? "ON" : "off");
     }
+    // OnAir Web 3.9: the whole receiver in a browser at /app (app=0 turns it off). It lives on the web server, so app on means web on.
+    std::unique_ptr<onair_app::WebApp> app;
+    if (cfg.flag("app", true)) {
+        webCfg.on = true;
+        onair_app::AppOptions ao;
+        ao.root = cfg.get("app_root");
+        if (ao.root.empty()) {
+            std::error_code ec;
+            const std::filesystem::path exe = std::filesystem::absolute(argv[0], ec).parent_path();
+            for (const auto& p : {exe / "web" / "onair-app", exe / ".." / "share" / "onair" / "web" / "onair-app", exe / ".." / "web" / "onair-app", exe / ".." / "Resources" / "web" / "onair-app",
+                                  exe / ".." / ".." / "web" / "onair-app"})
+                if (std::filesystem::is_regular_file(p / "index.html", ec)) { ao.root = p.string(); break; }
+        }
+        ao.name = webCfg.name;
+        ao.version = ONAIR_SERVER_VERSION;
+        ao.tlsAvailable = !webCfg.server.tlsCert.empty();
+        app.reset(new onair_app::WebApp(host, cfg, ao));
+        webCfg.server.app = app.get();
+        webCfg.server.appHome = cfg.flag("app_home", true);
+    }
     std::unique_ptr<onair_web::WebHub> hub;
     std::unique_ptr<onair_web::WebServer> web;
     std::unique_ptr<onair_web::DirectoryHeartbeat> directory;   // OnAir Web directory (off unless web_directory=1 and confirmed)
@@ -292,6 +322,10 @@ int main(int argc, char** argv) {
         hub.reset(new onair_web::WebHub);
         hub->setLimits(webCfg.limits);
         hub->policy().load(cfg);
+        if (app) {   // visitors (public access) see a mode's results only when the hub's policy allows that kind (voice and pager modes need the legal notice)
+            onair_web::WebHub* h = hub.get();
+            app->setPublicModeAllowed([h](const std::string& id) { std::lock_guard<std::mutex> g(h->policyMutex()); return h->policy().decoderAllowed(id); });
+        }
         { std::vector<std::string> rw; hub->ranges().load(cfg, &rw); webCfg.warnings.insert(webCfg.warnings.end(), rw.begin(), rw.end()); }
         hub->setLogIp(webCfg.logIp);
         hub->setServerInfo(webCfg.name, webCfg.location, webCfg.antenna);
@@ -316,6 +350,13 @@ int main(int argc, char** argv) {
             const auto st = web->status();
             printf("onair-server: OnAir Web on %s://%s:%d/ (%s access, at most %d listeners)\n", st.tls ? "https" : "http", webCfg.server.bind.c_str(), st.port,
                    onair_web::authModeName(webCfg.server.auth.mode), webCfg.limits.maxUsers);
+            if (app) {
+                const onair_app::AccessConfig ac = app->sessions().config();
+                printf("onair-server: the browser app is at %s://%s:%d/app/ (%s; %s%s)\n", st.tls ? "https" : "http", webCfg.server.bind == "0.0.0.0" ? "<this computer>" : webCfg.server.bind.c_str(), st.port,
+                       ac.passwordHash.empty() ? "no password yet: set one from this computer or the LAN, or start with --app-password" : "password set",
+                       ac.publicView ? "public: anyone may watch" : "private", ac.publicTune ? ", visitors may tune" : "");
+                if (ac.passwordHash.empty() && webCfg.relay.on) fprintf(stderr, "onair-server: the relay is on but the browser app has no password: nobody from the internet can log in until one is set\n");
+            }
             if (webCfg.relay.on) {
                 webCfg.relay.localPort = st.port;
                 webCfg.relay.version = ONAIR_SERVER_VERSION;
@@ -348,6 +389,7 @@ int main(int argc, char** argv) {
     while (!gQuit) {
         host.supervise(path);
         if (hub) hub->tick();   // OnAir Web: time limits, idle listeners, CPU and bandwidth budgets
+        if (app) app->tick(onair_web::wallSeconds());   // login sessions expire
         for (int i = 0; i < 10 && !gQuit; i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
     printf("onair-server: stopping\n");
