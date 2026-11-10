@@ -80,9 +80,11 @@ const std::set<std::string>& restrictedKnownKinds() {
     // 3.1 modes: blocked likewise
     "pactor", "pskd",
     // 3.2 modes: blocked likewise
+    "xlink", "wfbng", "npr", "winmor",   // merged in integ-38
     "rclink", "reticulum", "elrs", "mavlink", "frsky", "flysky", "roshf", "ssdv", "ebicab", "esubghz", "inmsat", "bgan", "nrf24", "sensors", "sferics",
     // 3.8 ham science modes: blocked likewise
     "qrss", "dfcw", "fsk441", "iscat", "pi4", "throb", "supersid", "riometer", "pulsar",
+    "xlinknb",
     // 3.4 modes: blocked likewise
     "umts",   // merged in integ-38
     "iptv", "atis", "selcal", "gk2alrit", "gk2ahrit", "opensky",   // (esubghz was never classified: web_safety failed on integ-32)

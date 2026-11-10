@@ -310,6 +310,9 @@
         <item>Saral X-band dump</item>
         <item>Kanopus-V</item>
         <item>DMSP RTD</item>
+        <item>wfb-ng / OpenHD</item>
+        <item>New Packet Radio (NPR-70)</item>
+        <item>WINMOR</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -601,6 +604,9 @@
         <item>Saral X-band dump: QPSK 16 Msym/s, K=7 r=1/2, CADU frames. Needs a tracking X-band dish, a down-converter and 20 Msps. A recording is the usual way to use it.</item>
         <item>Kanopus-V X-band link: QPSK 61.44 Msym/s, differential, the PSS panchromatic swaths and MSS bands. Tested on simulated signals only. Needs a tracking X-band dish, a down-converter and 72 Msps or more. A recording is the usual way to use it.</item>
         <item>DMSP real-time data on 2252.5 MHz: BPSK 1.024 Msym/s, the OLS visible and infrared swath. Needs a tracking S-band dish and 2 Msps; works live. A recording is the usual way to use it.</item>
+        <item>wfb-ng and OpenHD digital video links: 802.11n frames injected in monitor mode, MCS 0 - 7 at 20 MHz. Link and port, FEC block numbers, frames lost; the video stays encrypted</item>
+        <item>New Packet Radio on 70 cm (F4HDK NPR-70 modems): sync words, network ID and symbol rate of each frame. Frame content is not read, it is whitened by the radio chip. Simulated signals only so far</item>
+        <item>WINMOR HF frames: the 1500 Hz pilot with tuning error and the raw frame-type tones. The specification does not define the 4FSK symbol mapping, the Reed-Solomon generator or the callsign packing, so frames are detected, not read. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -892,6 +898,9 @@
         <item>Saral X-band dump</item>
         <item>Kanopus-V</item>
         <item>DMSP RTD</item>
+        <item>Video link, structure only</item>
+        <item>Packet radio, sync only</item>
+        <item>HF data, pilot only</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1183,5 +1192,8 @@
         <item>xband direct broadcast satellite cadu recording saral x-band dump</item>
         <item>xband direct broadcast satellite cadu recording kanopus-v</item>
         <item>xband direct broadcast satellite cadu recording dmsp rtd</item>
+        <item>wfb wfbng openhd openipc fpv video drone wifi broadcast</item>
+        <item>npr new packet radio f4hdk nfpr 70cm ip si4463</item>
+        <item>winmor winlink kn6kb hf pilot</item>
     </string-array>
 </resources>

@@ -230,6 +230,7 @@
 #include "dect2/inmsat/inmsat_gen.h"
 #include "dect2/inmsat/inmsat_tel.h"
 #include "dect2/rclink/rc_rx.h"
+#include "dect2/xlink/xlink_rx.h"
 #include "dect2/nrf24/nrf24_rx.h"
 #include "dect2/shortwave/shortwave_rx.h"
 #include "dect2/shortwave/shortwave_gen.h"
@@ -533,6 +534,9 @@ static const SubMode kSubModes[] = {
     {"mavlink",    "MAVLink (SiK)", 362, 4, 0, 433.92, {0, 0, 0}},
     {"frsky",      "FrSky",      362, 8,  0, 2440.0,  {0, 0, 0}},
     {"flysky",     "FlySky",     362, 16, 0, 2440.0,  {0, 0, 0}},
+    {"wfbng",      "wfb-ng / OpenHD", 602, 1, 0, 5805.0, {0, 0, 0}},
+    {"npr",        "New Packet Radio", 603, 4, 0, 437.0, {0, 0, 0}},
+    {"winmor",     "WINMOR",     603, 8, 0, 7.1,    {0, 0, 0}},   // dial frequency, upper sideband
     {"pocsag",     "POCSAG",     25, 1, 0,  466.075, {1, 0, 0}},
     {"flex",       "FLEX",       25, 2, 0,  929.6625, {2, 0, 0}},
     {"navtex",     "NAVTEX",     17, 0, 1,  0.518,   {1, 0, 0}},
@@ -891,6 +895,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 208: return ebicabSummary(t.ebicab);
     case 209: return inmsatSummary(t.inmsat);
     case 361: return rcSummary(t.rclink);
+    case 601: case 602: return xlinkSummary(t.xlink);
     case 211: return nrf24Summary(t.nrf24);
     case 212: return atisSummary(t.atis);
     case 241: return selcalSummary(t.selcal);

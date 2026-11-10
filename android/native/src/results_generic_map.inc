@@ -2525,3 +2525,35 @@ case 563: {
     { Table tb({"Rate Hz", "Measured Hz", "Level Db", "Name"}); int n = 0; for (auto it = t.frames.rbegin(); it != t.frames.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.rateHz), cell(e.measuredHz), cell(e.levelDb), cell(e.name)}); } if (n) addTable(o, "Frames", tb); }
     break;
 }
+case 601: {
+    const auto& t = rx.xlink; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Protocols", t.protocols);
+    cardIf(o, "Phy Frames", t.phyFrames);
+    cardIf(o, "Phy Unsupported", t.phyUnsupported);
+    { Table tb({"Utc", "Time Sec", "Proto", "Id", "Type", "Detail", "Hex", "Freq Hz"}); int n = 0; for (auto it = t.frames.rbegin(); it != t.frames.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.timeSec), cell(e.proto), cell(e.id), cell(e.type), cell(e.detail), cell(e.hex), cell(e.freqHz)}); } if (n) addTable(o, "Frames", tb); }
+    { Table tb({"Proto", "Id", "Last Type", "Last Detail", "Count", "Lost", "First Seen", "Last Seen"}); int n = 0; for (auto it = t.links.rbegin(); it != t.links.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.proto), cell(e.id), cell(e.lastType), cell(e.lastDetail), cell(e.count), cell(e.lost), cell(e.firstSeen), cell(e.lastSeen)}); } if (n) addTable(o, "Links", tb); }
+    break;
+}
+case 602: {
+    const auto& t = rx.xlink; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Protocols", t.protocols);
+    cardIf(o, "Phy Frames", t.phyFrames);
+    cardIf(o, "Phy Unsupported", t.phyUnsupported);
+    { Table tb({"Utc", "Time Sec", "Proto", "Id", "Type", "Detail", "Hex", "Freq Hz"}); int n = 0; for (auto it = t.frames.rbegin(); it != t.frames.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.timeSec), cell(e.proto), cell(e.id), cell(e.type), cell(e.detail), cell(e.hex), cell(e.freqHz)}); } if (n) addTable(o, "Frames", tb); }
+    { Table tb({"Proto", "Id", "Last Type", "Last Detail", "Count", "Lost", "First Seen", "Last Seen"}); int n = 0; for (auto it = t.links.rbegin(); it != t.links.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.proto), cell(e.id), cell(e.lastType), cell(e.lastDetail), cell(e.count), cell(e.lost), cell(e.firstSeen), cell(e.lastSeen)}); } if (n) addTable(o, "Links", tb); }
+    break;
+}
