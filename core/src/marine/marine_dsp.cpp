@@ -39,6 +39,10 @@ void Front::configure(double inputRate) {
     r1_ = fs_ / dec_;
     step_ = r1_ / kBaseRate;
     cicScale_ = 1.0 / (std::pow((double)dec_, 4.0) * 1048576.0);
+    // Input limit of the fixed-point CIC: the largest value whose filter output still fits in int64 (gain dec^4, 2^20 per unit, half the
+    // range kept free). It was 8, which clipped float recordings with a larger scale and wide captures whose noise alone is several units
+    // (the noise of a 2 MHz capture is 26 times the power in the 300 Hz NAVTEX channel): about 3 dB of NAVTEX sensitivity was lost there.
+    clip_ = (float)std::min(4096.0, 4.0e18 / (std::pow((double)dec_, 4.0) * 1048576.0));
     const double fc = 9000.0 / r1_;
     table_.assign((size_t)(kPhases + 1) * kTaps, 0.f);
     for (int ph = 0; ph <= kPhases; ph++) {
@@ -80,8 +84,8 @@ void Front::process(const cf32* x, size_t n, std::vector<cf32>& out) {
         float zr = xr * rr - xi * ri, zi = xr * ri + xi * rr;
         const float nr = rr * sr - ri * si; ri = rr * si + ri * sr; rr = nr;
         if (++rotCount_ >= 1024) { rotCount_ = 0; const float g = 1.f / std::sqrt(rr * rr + ri * ri); rr *= g; ri *= g; }
-        zr = std::max(-8.f, std::min(8.f, zr)); zi = std::max(-8.f, std::min(8.f, zi));
-        uint64_t a = (uint64_t)(int64_t)std::lrintf(zr * SC), b = (uint64_t)(int64_t)std::lrintf(zi * SC);
+        zr = std::max(-clip_, std::min(clip_, zr)); zi = std::max(-clip_, std::min(clip_, zi));
+        uint64_t a = (uint64_t)(int64_t)std::llrintf(zr * SC), b = (uint64_t)(int64_t)std::llrintf(zi * SC);   // llrint: long is 32 bits on Windows
         integ_[0][0] += a; integ_[0][1] += integ_[0][0]; integ_[0][2] += integ_[0][1]; integ_[0][3] += integ_[0][2];
         integ_[1][0] += b; integ_[1][1] += integ_[1][0]; integ_[1][2] += integ_[1][1]; integ_[1][3] += integ_[1][2];
         if (++cnt_ >= dec_) {

@@ -205,11 +205,13 @@ int NavtexDecoder::phaseScore(int ph, int* validRun) const {
 }
 
 bool NavtexDecoder::phaseGood(int ph) const {
-    if (validRun_[ph] < 16) return false;
-    int ctrl = 0, match = 0;
+    int ctrl = 0, match = 0, nvalid = 0;
     auto at = [&](int back, uint8_t& code, bool& v) { const int i = (hpos_[ph] - 1 - back) & 31; code = hcode_[ph][i]; v = hvalid_[ph][i]; };
-    for (int j = 0; j < 16; j++) { uint8_t c; bool v; at(j, c, v); if (v && (c == kAlpha || c == kBeta || c == kRep)) ctrl++; }
-    if (ctrl >= 12) return true;
+    for (int j = 0; j < 16; j++) { uint8_t c; bool v; at(j, c, v); if (v) nvalid++; if (v && (c == kAlpha || c == kBeta || c == kRep)) ctrl++; }
+    // the phasing signals (alpha, beta, repeat) on 12 of the last 16 places lock even when noise damaged two words: a run of 16 good words
+    // is rare below about 5 dB, and the lock then came after the ZCZC of the message
+    if (hpos_[ph] >= 16 && nvalid >= 14 && ctrl >= 12) return true;
+    if (validRun_[ph] < 16) return false;
     for (int j = 0; j < 20; j++) {
         uint8_t a, b; bool va, vb; at(j, a, va); at(j + 5, b, vb);
         if (va && vb && a == b && !isControl(a)) match++;
@@ -248,34 +250,25 @@ void NavtexDecoder::onChar(const Slot& s) {
 }
 
 bool NavtexDecoder::combine(const Slot& a, const Slot& b, uint8_t& code) const {
-    if (a.valid && b.valid) {
-        if (a.code == b.code) { code = a.code; return true; }
-        float ca = 0, cb = 0;
-        for (int i = 0; i < 7; i++) { ca += a.conf[i]; cb += b.conf[i]; }
-        code = ca >= cb ? a.code : b.code;
-        return true;
-    }
-    if (a.valid) { code = a.code; return true; }
-    if (b.valid) { code = b.code; return true; }
-    // neither copy has four marks: add the soft values of both and fix the least sure bit when one flip is enough
+    if (a.valid && b.valid && a.code == b.code) { code = a.code; return true; }
+    // Soft decision over both copies (time diversity): the code word with four marks that best matches the sum of the soft values of the
+    // DX and RX bits. A copy with four marks can still be wrong (two bits swapped); the other copy's soft values then overrule it.
     float llr[7];
-    unsigned c = 0;
+    float tot = 0;
     for (int i = 0; i < 7; i++) {
         llr[i] = (a.bit[i] ? 1.f : -1.f) * a.conf[i] + (b.bit[i] ? 1.f : -1.f) * b.conf[i];
-        c |= (llr[i] > 0 ? 1u : 0u) << i;
+        tot += std::fabs(llr[i]);
     }
-    const int n = popcount7(c);
-    if (n != 3 && n != 5) return false;
-    int best = -1; float bc = 1e9f;
-    for (int i = 0; i < 7; i++) {
-        const unsigned bitv = (c >> i) & 1;
-        if (n == 3 && bitv == 0 && std::fabs(llr[i]) < bc) { bc = std::fabs(llr[i]); best = i; }
-        if (n == 5 && bitv == 1 && std::fabs(llr[i]) < bc) { bc = std::fabs(llr[i]); best = i; }
+    if (tot <= 0) return false;
+    static const std::vector<uint8_t> valid = [] { std::vector<uint8_t> v; for (unsigned c = 0; c < 128; c++) if (popcount7(c) == 4) v.push_back((uint8_t)c); return v; }();
+    float best = -1e9f; uint8_t bc = 0;
+    for (uint8_t c : valid) {
+        float m = 0;
+        for (int i = 0; i < 7; i++) m += ((c >> i) & 1) ? llr[i] : -llr[i];
+        if (m > best) { best = m; bc = c; }
     }
-    if (best < 0) return false;
-    c ^= 1u << best;
-    code = (uint8_t)c;
-    return popcount7(c) == 4;
+    code = bc;
+    return true;
 }
 
 void NavtexDecoder::process(bool force) {
