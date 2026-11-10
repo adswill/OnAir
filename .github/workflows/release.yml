@@ -273,7 +273,7 @@ jobs:
           CCACHE_COMPRESS: "true"
         run: |
           cmake -S . -B build -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON -DDECT2_HAVE_HAMLIB=ON -DDECT2_WITH_TLS=ON -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_SKIP_INSTALL_ALL_DEPENDENCY=ON -DDECT2_FFMPEG_PREFIX="$HOME/ffmpeg" -DDECT2_RADIO_LIB_DIR="$GITHUB_WORKSPACE/build/radiolibs" -DONAIR_VERSION="${{ needs.version.outputs.ver }}"
-          cmake --build build -j 4 --target dect2 dect2cli dect2scan onair-server
+          cmake --build build -j 4 --target dect2 dect2cli dect2scan onair-server onair-extcap
           ccache -s
       - name: Save ccache
         if: always()

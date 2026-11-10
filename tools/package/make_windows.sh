@@ -12,7 +12,7 @@ BUILD=build-windows
 OUT=$BUILD/OnAir-$VERSION-windows-x64
 PREFIX=${MSYSTEM_PREFIX:-/ucrt64}
 cmake -S . -B $BUILD -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=ON
-cmake --build $BUILD -j"$(nproc)" --target dect2 dect2cli dect2scan
+cmake --build $BUILD -j"$(nproc)" --target dect2 dect2cli dect2scan onair-extcap
 
 rm -rf "$OUT" && mkdir -p "$OUT"
 strip -o "$OUT/OnAir.exe" $BUILD/dect2.exe
