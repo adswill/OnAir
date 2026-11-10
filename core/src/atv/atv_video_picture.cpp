@@ -258,6 +258,23 @@ void AtvVideo::Impl::captureLine(double tL) {
 
 }
 
+// A blanking line for the VITS analyser: the whole line period from the sync's leading edge, at the input rate, in IRE (blanking 0, white 100)
+void AtvVideo::Impl::vitsLine(double tL, int lineNo) {
+    const double g = lineGain();
+    if (g <= 0 || vitsLines.size() >= 16) return;
+    const int n = (int)std::lround(P);
+    if (n < 16) return;
+    std::vector<float> v((size_t)n);
+    for (int k = 0; k < n; k++) {
+        const double t = tL + k;
+        const long i0 = (long)std::floor(t);
+        const double fr = t - (double)i0;
+        v[(size_t)k] = (float)(100.0 * (Bline - (rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr)) / g);
+    }
+    vitsLines.push_back(std::move(v));
+    vitsLineNo.push_back(lineNo);
+}
+
 // The ghost report: blanking lines without data, averaged (a ghost of the sync pulse shows on them, and no picture can look like one)
 void AtvVideo::Impl::ghostLine(double tL) {
     const double g = lineGain();

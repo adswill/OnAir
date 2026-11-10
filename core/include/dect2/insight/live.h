@@ -32,6 +32,8 @@ public:
         std::lock_guard<std::mutex> lk(mu_);
         hub_.onFtx(t, band, msg, snr);
     }
+    // a finding from the interface thread's own analysers (app/smart5): goes out with the next tick, also when the decode analysers are off
+    void post(const Insight& i) { std::lock_guard<std::mutex> lk(mu_); hub_.post(i); }
     // the interface thread, about once a minute: the findings, also sent on as automation events
     std::vector<Insight> tick(double now, const std::vector<double>& tunedHz) {
         std::vector<Insight> v;

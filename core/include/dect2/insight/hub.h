@@ -113,6 +113,9 @@ public:
         sched_.tick(now, tunedHz, pending_);
     }
 
+    // a finding from an analyser outside the hub (the smart5 broadcast, TV, satellite and science cards): shown and sent with the others
+    void post(const Insight& i) { pending_.push_back(i); }
+
     // findings since the last call; also kept in recent()
     std::vector<Insight> take() {
         std::vector<Insight> v;

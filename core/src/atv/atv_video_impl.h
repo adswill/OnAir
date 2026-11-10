@@ -159,6 +159,9 @@ struct AtvVideo::Impl {
     std::vector<float> kern;
     // ---- scope
     std::vector<float> lineWave, vbiWave, ghostAcc;
+    std::vector<std::vector<float>> vitsLines;   // blanking lines after the equalising pulses without data, IRE at the input rate (smart5/vits.h)
+    std::vector<int> vitsLineNo;
+    uint64_t vitsField = ~0ull;                  // the field whose lines are being taken (one field in 25)
     int ghostN = 0;
     AtvGhost ghost;
     AtvVbi vbi;
@@ -578,6 +581,7 @@ struct AtvVideo::Impl {
     // ------------------------------------------------------------------------------ scope
     void captureLine(double tL);
     void ghostLine(double tL);
+    void vitsLine(double tL, int lineNo);
 
     void captureVbi();
 
@@ -612,6 +616,7 @@ struct AtvVideo::Impl {
         if (cnVar > 0 && carrierAmp > 0) i.carrierToNoiseDb = (float)std::min(70.0, std::max(-10.0, 10 * std::log10(carrierAmp * carrierAmp * noiseScale / cnVar)));
         i.lines_ = lineCount; i.fields = fieldCount; i.frames = frameSeq; i.fieldsOk = fieldsOk; i.fieldsBad = fieldsBad;
         i.fieldNo = curField < 0 ? 0 : curField;
+        i.vitsLines = vitsLines; i.vitsLineNo = vitsLineNo; i.vitsRate = fv;
         i.lineWave = lineWave; i.vbiWave = vbiWave; i.ghost = ghost; i.vbi = vbi.status(); i.ttx = vbi.teletext();
         return i;
     }

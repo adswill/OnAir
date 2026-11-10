@@ -124,6 +124,8 @@ static void parseTransportDescriptors(const uint8_t* d, int len, SiTransponder& 
             if (n >= o + 4) { const uint32_t f = (uint32_t)p[o] << 24 | (uint32_t)p[o + 1] << 16 | (uint32_t)p[o + 2] << 8 | p[o + 3]; t.freqMhz = f * 10.0 / 1e6; }
         } else if (tag == 0x7F && n >= 2 && p[0] == 0x17) {   // extension: S2X satellite delivery system (named, not read in detail)
             t.kind = 5; t.s2 = true;
+        } else if (tag == 0x6C && n > 0) {     // cell list: kept raw, read by smart5::parseCellList (the transmitter from the cell ID)
+            t.cellList.insert(t.cellList.end(), p, p + n);
         } else if (tag == 0x41) {              // service list
             for (int k = 0; k + 3 <= n; k += 3) t.services.push_back(p[k] << 8 | p[k + 1]);
         }

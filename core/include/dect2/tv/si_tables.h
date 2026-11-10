@@ -25,6 +25,7 @@ struct SiTransponder {
     double orbitDeg = 0;          // satellite: degrees east (negative: west)
     double bandwidthMhz = 0;      // terrestrial
     std::vector<int> services;    // from the service list descriptor of the transport stream loop
+    std::vector<uint8_t> cellList;   // payloads of the cell_list_descriptors (0x6C, EN 300 468 6.2.7), concatenated as sent: the transmitter cells (smart5/cell_tx.h)
 };
 
 // Which satellite the NIT says this is: the orbital position most of its satellite transponders give. Compared with the carriers found (frequency MHz of each transponder as it
