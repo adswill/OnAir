@@ -261,6 +261,9 @@
 #include "dect2/wxsat/wxsat_tel.h"
 #include "dect2/hamsci/hamsci_rx.h"
 #include "dect2/hamsci/hamsci_gen.h"
+#include "dect2/xband/xband_rx.h"
+#include "dect2/xband/xband_gen.h"
+#include "dect2/xband/xband_tel.h"
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/fy3/fy3_gen.h"
 #include "dect2/fy3/fy3_tel.h"
@@ -708,6 +711,26 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 502: return makeHamsciSynth(cfg, sampleRate, 6);
     case 503: return makeHamsciSynth(cfg, sampleRate, 7);
     case 504: return makeHamsciSynth(cfg, sampleRate, 8);
+    case 532: return makeXbandSynth(cfg, sampleRate, 0);
+    case 533: return makeXbandSynth(cfg, sampleRate, 1);
+    case 534: return makeXbandSynth(cfg, sampleRate, 2);
+    case 535: return makeXbandSynth(cfg, sampleRate, 3);
+    case 536: return makeXbandSynth(cfg, sampleRate, 4);
+    case 537: return makeXbandSynth(cfg, sampleRate, 5);
+    case 538: return makeXbandSynth(cfg, sampleRate, 6);
+    case 539: return makeXbandSynth(cfg, sampleRate, 7);
+    case 540: return makeXbandSynth(cfg, sampleRate, 8);
+    case 541: return makeXbandSynth(cfg, sampleRate, 9);
+    case 542: return makeXbandSynth(cfg, sampleRate, 10);
+    case 543: return makeXbandSynth(cfg, sampleRate, 11);
+    case 544: return makeXbandSynth(cfg, sampleRate, 12);
+    case 545: return makeXbandSynth(cfg, sampleRate, 13);
+    case 546: return makeXbandSynth(cfg, sampleRate, 14);
+    case 547: return makeXbandSynth(cfg, sampleRate, 15);
+    case 548: return makeXbandSynth(cfg, sampleRate, 16);
+    case 549: return makeXbandSynth(cfg, sampleRate, 17);
+    case 550: return makeXbandSynth(cfg, sampleRate, 18);
+    case 551: return makeXbandSynth(cfg, sampleRate, 19);
     case 262: return makeWxsatSynth(cfg, sampleRate, 0);
     case 263: return makeWxsatSynth(cfg, sampleRate, 1);
     case 264: return makeWxsatSynth(cfg, sampleRate, 2);
@@ -875,6 +898,9 @@ std::string modeSummary(const RxTelemetry& t) {
     case 242: return sensorsSummary(t.sensors);
     case 246: return bganSummary(t.bgan);
     case 244: return sfericsSummary(t.sferics);
+    case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
+    case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550:
+        return xbandSummary(t.xband);
     case 261:
     case 262:
     case 263:

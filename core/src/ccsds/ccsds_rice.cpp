@@ -142,7 +142,7 @@ size_t riceDecode(const uint8_t* in, size_t n, const RiceParams& p, uint16_t* ou
         }
         done += take;
         if (br.bad || got < want) break;
-        br.align();
+        if (p.byteAlignRsi) br.align();
     }
     return done;
 }
@@ -222,8 +222,9 @@ std::vector<uint8_t> riceEncode(const uint16_t* in, size_t samples, const RicePa
                 if (k) for (int i = i0; i < J; i++) bw.put(o[i] & ((1u << k) - 1), k);
             }
         }
-        bw.align();
+        if (p.byteAlignRsi) bw.align();
     }
+    bw.align();
     return bw.out;
 }
 

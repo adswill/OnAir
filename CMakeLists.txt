@@ -205,6 +205,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES sd3)   # SatDump tier 3 links (families 290 - 299, 510): core/src/sd3, app/sd3, tests/sd3 (docs/SATDUMP-TIER3-3.8.md)
   list(APPEND DECT2_MODES navic)   # NavIC L5 message (family 561): core/src/navic, app/navic, tests/navic
   list(APPEND DECT2_MODES satmisc)   # 3.8: satellite carriers and identification (docs/SAT-MISC-3.8.md): core/src/satmisc, app/satmisc, tests/satmisc
+  list(APPEND DECT2_MODES xband)   # X-band and L-band direct broadcast links (families 530 - 549): core/src/xband, app/xband, tests/xband (docs/SAT-XBAND-3.8.md)
   list(APPEND DECT2_MODES fy3)   # FY-3 AHRPT (family 235) and FY-3 MPT (236): core/src/fy3, app/fy3, tests/fy3 (docs/fy3.md)
   list(APPEND DECT2_MODES esubghz)   # Flipper Zero Sub-GHz chat, receive and send (family 204): core/src/esubghz, app/esubghz, tests/esubghz
   list(APPEND DECT2_MODES inmsat)   # Inmarsat all-carriers mode (3.3, docs/INMARSAT-REVAMP.md): core/src/inmsat, tests/inmsat
@@ -1639,6 +1640,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_atis_mode PRIVATE dect2core)
     target_compile_definitions(test_atis_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     add_test(NAME atis_mode COMMAND test_atis_mode)
+    add_executable(test_xband_mode tests/app/test_xband_mode.cpp)   # xband links: tuning, numbers, wiring
+    target_link_libraries(test_xband_mode PRIVATE dect2core)
+    target_compile_definitions(test_xband_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
+    add_test(NAME xband_mode COMMAND test_xband_mode)
     add_executable(test_wxsat_mode tests/app/test_wxsat_mode.cpp)   # wxsat links: tuning, numbers, wiring
     target_link_libraries(test_wxsat_mode PRIVATE dect2core)
     target_compile_definitions(test_wxsat_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

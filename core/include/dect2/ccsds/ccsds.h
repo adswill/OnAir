@@ -18,6 +18,7 @@ struct RiceParams {
     int blockSize = 16;          // J: 8, 16, 32 or 64 samples a block
     int rsiBlocks = 128;         // blocks between reference samples (an SZIP scan line)
     bool preprocess = true;      // the unit-delay predictor and mapping (SZIP's NN option)
+    bool byteAlignRsi = true;    // every reference sample interval starts on a byte boundary (SZIP); false: the plain CCSDS 121 bit stream (libaec without AEC_PAD_RSI, VIIRS)
 };
 // SZIP option bits as the HRIT Rice compression header carries them
 enum { kSzAllowK13 = 1, kSzChip = 2, kSzEc = 4, kSzLsb = 8, kSzMsb = 16, kSzNn = 32, kSzRaw = 128 };

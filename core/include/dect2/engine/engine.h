@@ -191,6 +191,7 @@
 #include "dect2/wxsat/wxsat_rx.h"
 #include "dect2/sd3/sd3_rx.h"
 #include "dect2/hamsci/hamsci_rx.h"
+#include "dect2/xband/xband_rx.h"
 #include "dect2/tv/bbunpack.h"
 #include "multitv.h"
 #include "dect2/tv/ts.h"
@@ -610,6 +611,7 @@ public:
     RidReceiver& rid() { return rxRid_; }   // Drone Remote ID: clear the drone table (telemetry through latestRx)
     Sd3Receiver& sd3(int p) { return rxSd3_[p]; }      // SatDump tier 3 links (sd3_tel.h), telemetry through latestRx
     HamsciReceiver& hamsci(int kind) { return rxHs_[kind]; }   // ham science modes by kind (hamsci_tel.h): Auto, options, clear (telemetry through latestRx)
+    XbandReceiver& xband(int p) { return rxXb_[p]; }   // direct broadcast links by profile (xband_tel.h)
     WxsatReceiver& wxsat(int p) { return rxWx_[p]; }   // weather links by profile (wxsat_tel.h), telemetry through latestRx
     HrptReceiver& hrpt() { return rxHrpt_; }   // HRPT / AHRPT: variant, new picture (telemetry through latestRx)
     GoesReceiver& goes() { return rxGoes_; }   // GOES HRIT: clear the products (telemetry through latestRx)
@@ -1054,6 +1056,7 @@ private:
     Sd3Receiver rxSd3_[kSd3NumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};   // families 290 - 299, 510
     WxsatReceiver rxWx_[kWxNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}};   // the SatDump-list weather links, families 260 - 271 (slots 220 - 231)
     HamsciReceiver rxHs_[kHamsciKinds]{{0},{1},{2},{3},{4},{5},{6},{7},{8}};   // QRSS, DFCW, FSK441, ISCAT, PI4, Throb, SuperSID, riometer, pulsar: families 460 - 465, 500 - 502 (slots 461 - 466, 501 - 503)
+    XbandReceiver rxXb_[kXbNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19}};   // the X-band links, families 530 - 549 (slots 530 - 549)
     FlarmReceiver rxFlarm_;
     AdslReceiver rxAdsl_;
     AvRoadReceiver rxAvRoad_;

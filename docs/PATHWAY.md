@@ -1290,3 +1290,7 @@ View > Passes reworked from a walkthrough as a user and a read of the code (14 p
 ## 2026-11-09: satellite modes and identification (feat38-sat-misc)
 
 Added identification of a satellite from its Doppler curve, GRAVES satellite echoes in meteor scatter, NavIC L5 decoding, a feed hunter on DVB-S, the ISS HamTV preset, GOMX-1 telemetry, and detection modes for Zombie satellites, UHF SATCOM, Thuraya GMR-1, Starlink, OneWeb, TDRS, Tiangong/Shenzhou, Tsikada/Parus, Gonets, Tiantong and the ISS downlinks. INSAT and ABS-S skipped (no public specification found); GMR-1 stays at detection; Android sky pointer not done. Simulated signals only: details in docs/SAT-MISC-3.8.md.
+
+## 2026-11-09: X-band and L-band direct broadcast (feat38-sat-xband)
+
+Families 530 - 549: JPSS HRD (two links), EOS DB (Aqua/Aura, Terra), MetOp X-band dump, MetOp-SG DDB, Landsat 8/9, Proba S and X, GCOM-W1/C1, STEREO, Oceansat-2/3, Saral, Kanopus-V, DMSP RTD in one receiver with a shared CADU layer, plus "Decode recording" (cadu, WAV, SigMF, raw IQ at CPU speed). FY-3 D/E/F stay in the FY-3 AHRPT entry, checked at X-band rates. Instrument decoders pixel-tested on generated signals: VIIRS, MODIS, AVHRR, AMSR2, TIRS, VEGETATION, METimage, OCM, OLS, Kanopus. Products: natural colour, weather loop GIF, calibrated AVHRR cloud-top, SST and fire; uncalibrated dust, fog, airmass for VIIRS/MODIS. Simulated only: no public recording found. Not done: LDPC and turbo from IQ (Landsat X, STEREO), ICER/BPE images, Proba CHRIS/SWAP/HRC, MODIS/VIIRS calibration. docs/SAT-XBAND-3.8.md.
