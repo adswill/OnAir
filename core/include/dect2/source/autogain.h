@@ -77,6 +77,8 @@ struct RadioProfile {
     bool remote = false;          // a radio over the network (rtl_tcp, SpyServer): each change takes a round trip, settle longer
     double settleSec = 0.25;      // how long a gain change takes to reach the samples (USB buffers, the tuner's own settling)
     double postIip3Dbm = 10;      // IIP3 of what follows the front stages (mixer, filter, ADC driver), at their output: front gain costs linearity
+    bool levelCompensated = false;   // AirspyHF+: the output level does not follow the gain (the firmware's own gain distribution): the level-driven
+                                     // steps are skipped, the gain stays at the top of what is allowed unless it clips or the quality guard undoes a step
     std::string ampNote, notes;
 
     int stageIndex(const std::string& id) const;

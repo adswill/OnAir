@@ -273,7 +273,7 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
             return true;
         }
         if (set_.v2) noteCut(now);
-        ceilUntil_ = now + (ovTimes_.size() >= 3 ? 90 : 20) / sp;
+        ceilUntil_ = now + (radio_.levelCompensated ? 300 : ovTimes_.size() >= 3 ? 90 : 20) / sp;   // (HF+: the level cannot warn before the next clip)
         // the linear split costs noise figure, so only an overload from outside the channel (or products) earns it: then it stays 5 minutes (not for pulsed ADS-B: a long linear split
         // costs the far aircraft). The ADC clipped on the wanted signal itself: the gain is cut, the split stays as the mode wants it
         const bool frontOverload = !set_.v2 || (!acq && (imdSeen_ || (fl_.valid && fl_.strongestDbfs > fl_.chanDbfs + 10)));   // (a start gain that clips says nothing about the band)
@@ -335,6 +335,28 @@ bool AutoGainController::tickAuto(const AgInput& in, AgCommand& out) {
     // recovery after a burst: far under the gain that was cut, with nothing clipping for 1.5 s, the climb is fast (up to 12 dB per step)
     const bool recovering = !ovTimes_.empty() && cur_.totalDb < preOvDb_ - 4 && now - ovTimes_.back() > 1.5 / sp && now - ovTimes_.front() < 60;
     const bool canUp = recovering ? (now - lastUp_ >= 1.1 / sp && now - lastDown_ >= 1.5 / sp) : (now - lastUp_ >= 2.5 / sp && now - lastDown_ >= 2.0 / sp);
+    // a radio that keeps its own level (AirspyHF+): the headroom does not follow the gain, so it cannot ask for more or less. The top of
+    // what is allowed (the least attenuation: the best noise figure); clipping (above) and the quality guard bring it down
+    if (radio_.levelCompensated) {
+        const double ceiling = std::min(maxGain(), ceilingDb(now));
+        if (cur_.totalDb > maxGain() + 0.01 && canDown) {
+            const StagePlan p = planStages(radio_, maxGain(), pol, set_.stageMask, cur_.db, cur_.ampOn);
+            if (p.totalDb < cur_.totalDb - 0.01) { move(now, p.totalDb, pol, fmt("above the allowed maximum (%.0f dB): gain down", maxGain()), out); return true; }
+        }
+        if (canUp && cur_.totalDb < ceiling - 0.01) {
+            double snapTo = cur_.totalDb;
+            for (double g : totalSteps(radio_, pol, set_.stageMask, cur_.ampOn)) if (g <= ceiling + 0.01 && g > snapTo + 0.01) snapTo = g;
+            if (snapTo > cur_.totalDb + 0.01) {
+                double v = 0;
+                const Metric gm = resolvedMetric(q_);
+                if ((gm == Metric::Mer || gm == Metric::Snr || gm == Metric::Ber) && score(gm, q_, fl_, in.adc, tgt_, tgtH, v)) { guard_ = true; guardFrom_ = cur_.totalDb; guardMetric_ = v; guardM_ = gm; }
+                move(now, snapTo, pol, "this radio sets its own level: least attenuation for the best noise figure", out);
+                return true;
+            }
+        }
+        phase_ = lockedGood ? Phase::Frozen : Phase::Tracking;
+        return false;
+    }
     // too hot
     if (e < -win && canDown) {
         const double to = nextStep(cur_.totalDb, -std::min(-e + win * 0.5, 10.0), pol);
@@ -873,11 +895,12 @@ void AutoGainController::beginBracket(const AgInput& in) {
     cutActive_ = false;   // the search finds the right gain itself: an acquisition's cut from a start gain is not a gain to come back to
     trials_.clear(); queue_.clear(); ti_ = -1; refined_ = false;
     const double tgtH = bracketHead();
-    const double star = havePrior_ ? prior_.totalDb + 3.0 : cur_.totalDb + (headAvg_ - tgtH);
+    double star = havePrior_ ? prior_.totalDb + 3.0 : cur_.totalDb + (headAvg_ - tgtH);
     const bool strongNb = fl_.valid && fl_.strongestDbfs > -25 && fl_.strongestDbfs > fl_.chanDbfs + 20;
     const Policy pol = (in.now < linearUntil_ || (strongNb && !set_.v2) || (imdSeen_ && !set_.v2)) ? Policy::Linearity : (set_.v2 ? pol_ : tgt_.policy);
     const double hi = std::min(maxGain(), ceilingDb(in.now)), lo = minGain();
     double last = -1e9;
+    if (radio_.levelCompensated && !havePrior_) star = hi - 3.0;   // AirspyHF+: the headroom does not follow the gain: the search starts at the top
     const double top = std::clamp(star + 3.0, lo, std::max(lo, hi));   // when the estimate is beyond the range the window slides down to its end
     // a remembered gain is a prior: five gains within +/-6 dB of it (the world may have changed); else the wide search around the headroom estimate
     const bool priorMode = havePrior_;
@@ -940,7 +963,7 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     if (!queue_.empty() && ti_ >= 0) {
         const AgTrial& l = trials_[(size_t)ti_];
         const double floorHead = set_.v2 ? std::max(1.5, minHead_() - 1.0) : std::max(1.0, bracketHead() - tgt_.windowDb - 3.0);
-        queue_.erase(std::remove_if(queue_.begin(), queue_.end(), [&](const std::pair<double, Policy>& q) {
+        if (!radio_.levelCompensated) queue_.erase(std::remove_if(queue_.begin(), queue_.end(), [&](const std::pair<double, Policy>& q) {
             return q.second == l.pol && l.headroomMin - (q.first - l.plan.totalDb) < floorHead && q.first > l.plan.totalDb; }), queue_.end());
     }
     if (!queue_.empty()) {
@@ -987,6 +1010,9 @@ bool AutoGainController::tickBracket(const AgInput& in, AgCommand& out) {
     double unsafeAbove = 1e9;   // the lowest gain above the best that overloaded: the loop does not climb into it for a while
     for (const auto& t : trials_) if (t.done && (t.clipMax > clipLimitNow() || t.imd || t.headroomMin < 0.5) && t.plan.totalDb > best.plan.totalDb + 0.01) unsafeAbove = std::min(unsafeAbove, t.plan.totalDb);
     if (unsafeAbove < 1e8) { ceil_ = unsafeAbove - 1; ceilUntil_ = now + 60 / std::max(0.25, set_.loopSpeed); }
+    // a level-compensated radio (AirspyHF+): the search measured the quality at each gain; the loop after it keeps to what it found
+    // (it would only climb on level alone, which this radio cannot show) until the next search (a retune, a restart)
+    if (radio_.levelCompensated) { ceil_ = best.plan.totalDb + 0.01; ceilUntil_ = 1e300; }
     const std::string why = fmt("quick search: %.0f dB gave the best ", best.plan.totalDb) + metricName(used);
     if (wastedTo > -1 && !set_.v2) {
         const double to = std::max(minGain(), wastedTo);

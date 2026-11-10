@@ -1,6 +1,7 @@
 // The MCP tools. Each one is a thin layer over the remote-control host (RemoteApiHost) and the engine's signal identifier; no tool touches the
 // file system, a shell, keys, credentials or settings, and the transmit tools exist only when Options::allowTx is on.
 #include "dect2/bandplan/bandplan.h"
+#include "dect2/source/gain.h"
 #include "dect2/fm/rds_live.h"
 #include "dect2/channels/freq_db.h"
 #include "dect2/codec/codec_paths.h"
@@ -423,7 +424,7 @@ Json diagnose(ToolCtx& c, const Json& st, const Json& tel, const SpecInfo& sp) {
         const float floor = s[s.size() / 2], top = s.back();
         if (top - floor < 6) add("There is no signal standing out of the noise in the capture window (strongest peak only " + std::to_string((int)(top - floor)) + " dB over the floor): wrong frequency, an antenna problem, or the gain is too low.");
         else if (sp.rms > -12) add("The input level is very high (" + std::to_string((int)sp.rms) + " dBFS): lower the gain to avoid overload.");
-        else if (sp.rms < -70) add("The input level is very low (" + std::to_string((int)sp.rms) + " dBFS): raise the gain.");
+        else if (sp.rms < -70 && !adcLevelCompensated()) add("The input level is very low (" + std::to_string((int)sp.rms) + " dBFS): raise the gain.");
     } else add("No spectrum yet: the radio is not delivering samples.");
     if (tel.isObj()) {
         const Json* q = tel.get("quality");

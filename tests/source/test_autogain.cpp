@@ -211,7 +211,9 @@ static void testAutoConverge() {
                 if (start == mid) { if (sc == 0) weakG = g; else strongG = g; }
             }
         }
-        CHECK(weakG > strongG + 6, "%s: weak signal gets more gain (%.1f) than a strong one (%.1f)", id, weakG, strongG);
+        // a level-compensated radio (AirspyHF+): the gain is the least attenuation that does not clip, so a strong signal only gets less when it clips
+        if (rp.levelCompensated) CHECK(weakG >= strongG, "%s: weak signal gets at least the gain (%.1f) of a strong one (%.1f)", id, weakG, strongG);
+        else CHECK(weakG > strongG + 6, "%s: weak signal gets more gain (%.1f) than a strong one (%.1f)", id, weakG, strongG);
     }
 }
 

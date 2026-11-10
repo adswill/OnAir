@@ -1674,6 +1674,25 @@ int main(int argc, char** argv) {
                     t.gainDb = 40;
                     CHECK(src->retune(t, e), "retune failed: %s", e.c_str());
                     CHECK(st("airspyhf.att") == 1 && st("airspyhf.lna") == 0, "gain 40: att %.0f lna %.0f (1 and 0 expected)", st("airspyhf.att"), st("airspyhf.lna"));
+                    // (Discord, 3.8: "the gain slider does nothing") every slider position reaches the attenuator, live, in 6 dB steps, more gain =
+                    // less attenuation, the preamp only in the top step; the radio's AGC stays off so the attenuator is the slider's
+                    {
+                        auto fakeSet = (void (*)(const char*, double))dlsym(h, "fake_set");
+                        int prevAtt = 99, wrong = 0;
+                        for (int g = 0; g <= 48; g++) {
+                            t.gainDb = g;
+                            if (fakeSet) fakeSet("airspyhf.att", -1);   // each position must send its own call
+                            if (!src->retune(t, e)) { wrong++; continue; }
+                            const int want = (int)std::lround((48.0 - g) / 6.0);
+                            const int att = (int)st("airspyhf.att"), lna = (int)st("airspyhf.lna");
+                            if (att != want || att > prevAtt || lna != (g > 42 ? 1 : 0) || st("airspyhf.agc") != 0) {
+                                wrong++;
+                                printf("  gain %d: att %d (want %d) lna %d agc %.0f\n", g, att, want, lna, st("airspyhf.agc"));
+                            }
+                            prevAtt = att;
+                        }
+                        CHECK(wrong == 0, "HF+ gain sweep 0..48: %d positions did not reach the attenuator as expected", wrong);
+                    }
                     t.gainDb = 0; t.centerHz = 1e6;
                     CHECK(src->retune(t, e), "retune failed: %s", e.c_str());
                     CHECK(st("airspyhf.att") == 8 && st("airspyhf.lna") == 0 && st("airspyhf.freq") == 1e6, "gain 0: att %.0f lna %.0f freq %.0f", st("airspyhf.att"), st("airspyhf.lna"), st("airspyhf.freq"));

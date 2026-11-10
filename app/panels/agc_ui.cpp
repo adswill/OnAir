@@ -17,6 +17,7 @@ const char* reasonText(AgcReason r) {
     case AgcReason::Blocker: return N_("strong neighbour: front gain limited");
     case AgcReason::Locked: return N_("decoder locked: gain frozen");
     case AgcReason::LimitHit: return N_("at the end of the gain range");
+    case AgcReason::TopGain: return N_("least attenuation: this radio sets its own level");
     default: return N_("holding the level");
     }
 }
