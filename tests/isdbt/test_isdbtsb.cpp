@@ -198,6 +198,7 @@ static Params three(int mode, int guard, int modA, int rateA, int modB, int rate
 }
 
 int main() {
+    setenv("ISDBT_DEBUG", "1", 1); setenv("TSB_CASE", "6", 1);   // TEMP-DIAG
     testGeometry();
     testjobs::Jobs jobs;
     int caseNo = 0;
