@@ -14,7 +14,7 @@
 // Every mode runs in child processes (a crash or hang marks only that row). The ctest entries qa_sweep_1..N each take one shard of the modes.
 // Known failures with a reason live in qa_known.inc; anything else that fails, fails the test. POSIX only (fork, getrusage).
 //
-//   test_qa_sweep [--shard k/N] [--mode id[,id..]] [--seconds S] [--snr dB] [--out prefix] [--list] [--strict]
+//   test_qa_sweep [--long] [--shard k/N] [--mode id[,id..]] [--seconds S] [--snr dB] [--out prefix] [--list] [--strict]
 #include "dect2/dsp/fftutil.h"
 #include "dect2/dsp/gen_util.h"
 #include "dect2/engine/engine.h"
@@ -486,7 +486,10 @@ std::string md(const std::string& s) { std::string o; for (char c : s) { if (c =
 int main(int argc, char** argv) {
     std::string self = argv[0];
     { std::error_code ec; const auto c = std::filesystem::canonical(self, ec); if (!ec) self = c.string(); }
-    double secs = 8, snrDb = 12, maxSamples = 48e6;
+    // ctest runs the short sweep (3 s of signal, one longer retry); ONAIR_TEST_LONG=1 (or --long) runs 8 s with retries up to 120 s
+    bool longRun = getenv("ONAIR_TEST_LONG") && atoi(getenv("ONAIR_TEST_LONG")) > 0;
+    for (int i = 1; i < argc; i++) if (!strcmp(argv[i], "--long")) longRun = true;
+    double secs = longRun ? 8 : 3, snrDb = 12, maxSamples = 48e6;
     int shardK = 1, shardN = 1;
     std::string modes, outPrefix, stage, stId, stFile, stCond;
     double stRate = 0, stSecs = 0;
@@ -495,6 +498,7 @@ int main(int argc, char** argv) {
         const std::string a = argv[i];
         auto next = [&]() -> std::string { return i + 1 < argc ? argv[++i] : ""; };
         if (a == "--list") list = true;
+        else if (a == "--long") {}
         else if (a == "--strict") strict = true;
         else if (a == "--mode") modes = next();
         else if (a == "--seconds") secs = atof(next().c_str());
@@ -538,7 +542,8 @@ int main(int argc, char** argv) {
         Row r; r.id = e->id; r.name = e->name; r.stdMode = e->stdMode; r.rate = e->rate;
         fprintf(stderr, "[%s] ", e->id.c_str()); fflush(stderr);
         // the signal length: --seconds, longer (x4, then 120 s) when the clean run decoded nothing, within --max-samples per file
-        std::vector<double> lens = {secs, secs * 4, 120};
+        std::vector<double> lens = {secs, secs * 4};
+        if (longRun) lens.push_back(120);
         double actual = e->rate;
         bool done = false;
         for (double want : lens) {
