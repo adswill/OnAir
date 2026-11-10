@@ -82,6 +82,8 @@ std::string typeText(const AdsbAircraft& ac);
 void aircraftTable(App& a, bool compact);
 void detail(App& a);
 void statsView(App& a);
+void atmosFeed(const AdsbTelemetry& t, double now);   // adsb_atmos_ui.cpp (3.9): sounding and altimetry check
+void atmosView(App& a);
 void sourcesPanel(App& a);
 
 // adsb_map_ui.cpp

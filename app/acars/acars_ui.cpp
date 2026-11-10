@@ -1,4 +1,5 @@
 // ACARS screens: the message list with a detail pane, the aircraft table and the channel bars.
+#include "acars_wx_ui.h"
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
@@ -114,6 +115,7 @@ void feedEstimates(const dect2::AcarsTelemetry& t) {
 void tick(App& a) {
     loadState();
     feedEstimates(a.rx.acars);
+    for (auto it = a.rx.acars.messages.rbegin(); it != a.rx.acars.messages.rend(); ++it) acarsWxFeed(0, it->serial, it->text, it->wallTime);   // airport weather (3.9)
     if (!a.engine.running()) { S.wasRunning = false; S.pushedCenter = 0; S.pushedThr = -1; S.pushedChans[0] = '\x01'; S.pushedChans[1] = 0; return; }
     dect2::AcarsReceiver& r = a.engine.acars();
     if (S.pushedCenter != a.freqMhz) { r.setCenterHz(a.freqMhz * 1e6); S.pushedCenter = a.freqMhz; }
@@ -541,8 +543,9 @@ void channelView(const App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({16, "ACARS", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("acarsv", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 4}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Channels"), 3, true}});
+    kit::modeNav("acarsv", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 4}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Channels"), 3, true}, {tr("Weather"), 7, true}});
     if (S.viewMode == 4) { kit::sessionItems(16, 3, "acars"); return; }
+    if (S.viewMode == 7) { acarsWxView(); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);
     else if (S.viewMode == 2) aircraftView(a);

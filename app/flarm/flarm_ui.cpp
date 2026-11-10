@@ -2,6 +2,10 @@
 // the live map through the shared slippy map of ADS-B (adsb_map.h), the receiver position, and the privacy note.
 // Receive only, as the Open Glider Network does. Positions are what the aircraft broadcast openly; aircraft that set the no-track or stealth
 // flag are only counted ("privacy-flagged"), never listed, drawn, saved or sent anywhere.
+#include "dect2/flarm/flarm_outland.h"
+#include "dect2/airports/airports.h"
+#include <deque>
+#include <unordered_map>
 #include "app.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/flarm/flarm_proto.h"
@@ -31,6 +35,35 @@ struct State {
 State S;
 
 bool live(const App& a) { return a.rx.standard == 67; }
+
+// Out-landing alert (3.9, docs/SMART5-avia-3.9.md): an aircraft that flew and now stands still away from every airfield in the airport table
+dect2::OutlandingWatch gOut;
+std::deque<dect2::OutlandingAlert> gOutAlerts;
+std::unordered_map<uint32_t, uint32_t> gOutPackets;   // the packet count last fed, per aircraft (the telemetry repeats a packet until a new one comes)
+void outlandFeed(const dect2::FlarmTelemetry& t) {
+    if (!gOut.nearestAirfieldKm) gOut.nearestAirfieldKm = [](double lat, double lon) {
+        const auto h = dect2::AirportDb::builtin().nearby(lat, lon, 30, 1, false);
+        return h.empty() ? -1.0 : h[0].km;
+    };
+    const double now = ImGui::GetTime();
+    for (const auto& ac : t.aircraft) {
+        if (!ac.hasPos) continue;
+        uint32_t& last = gOutPackets[ac.id];
+        if (ac.packets == last) continue;
+        last = ac.packets;
+        dect2::TrafficFix f; f.id = ac.id; f.t = now - ac.ageSec; f.lat = ac.lat; f.lon = ac.lon; f.altM = ac.altM;
+        f.speedMs = ac.speedKmh / 3.6; f.climbMs = ac.climbMs; f.reportsGround = !ac.airborne;
+        dect2::OutlandingAlert al;
+        if (gOut.add(f, &al)) { gOutAlerts.push_back(al); if (gOutAlerts.size() > 50) gOutAlerts.pop_front(); }
+    }
+}
+void outlandView() {
+    { ImGui::PushTextWrapPos(0);
+      ImGui::TextDisabled("%s", tr("An aircraft that was flying and now stands still on the ground more than 3 km from any airfield in the airport table: a possible out-landing (a retrieve, or a crew that may need help). Each landing is listed once."));
+      ImGui::PopTextWrapPos(); }
+    if (gOutAlerts.empty()) { ImGui::TextDisabled("%s", tr("none")); return; }
+    for (auto it = gOutAlerts.rbegin(); it != gOutAlerts.rend(); ++it) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.25f, 1), "%06X: %s", (unsigned)(it->id & 0xFFFFFF), it->text.c_str());
+}
 
 void loadState() {
     if (S.loaded) return;
@@ -170,7 +203,7 @@ void mapView(App& a, const dect2::FlarmTelemetry& t) {
 
 void tab(App& a) {
     loadState();
-    subNav("flv", S.view, {"Map", "Table"});
+    subNav("flv", S.view, {"Map", "Table", "Out-landings"});
     ImGui::SameLine(0, 12 * gUi);
     positionControls(a);
     if (S.view == 0) { ImGui::SameLine(0, 12 * gUi); adsbmap::tileControls("never the position itself"); }
@@ -179,7 +212,7 @@ void tab(App& a) {
     if (!S.haveRef) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.25f, 1), "Set the receiver position: without it the packets give no positions.");
     if (t.aircraft.empty() && !t.newProtocol)
         ImGui::TextDisabled("%s", t.state >= 1 ? "energy on 868.2 / 868.4 MHz, no decodable packet yet" : "listening on 868.2 and 868.4 MHz (tune 868.3 MHz, at least 1 Msps)");
-    if (S.view == 0) mapView(a, t); else tableView(a, t);
+    if (S.view == 0) mapView(a, t); else if (S.view == 2) outlandView(); else tableView(a, t);
 }
 
 void list(App& a) {
@@ -255,6 +288,7 @@ void tick(App& a) {
         S.pushedLat = S.lat; S.pushedLon = S.lon;
         if (S.haveRef) a.engine.flarm().setReference(S.lat, S.lon); else a.engine.flarm().clearReference();
     }
+    if (live(a)) outlandFeed(a.rx.flarm);
 }
 
 } // namespace
