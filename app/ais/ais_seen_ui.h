@@ -3,3 +3,4 @@
 struct App;
 void aisSeenTick(App& a);
 void aisSeenView(App& a);
+void aisArrivalsView(App& a);   // ais_arrivals_ui.cpp: the arrivals board of one port
