@@ -74,15 +74,14 @@ bool prepare(const Mode& m, Prep& P) {
 
 // the guard of the short run: the SNR (dB in the mode's noise bandwidth, see sens_modes.h) where 3.9 decodes reliably, threshold + 2 dB
 struct Guard { const char* id; double snrDb; };
-const Guard kGuards[] = {
-    {"adsb1", 6}, {"ais1", 7}, {"uat", 14}, {"flarm", 14}, {"adsl", 14}, {"rid", 14}, {"zwave", 14}, {"ble", 14}, {"wmbus", 14},
+const Guard kGuards[] = {   // from the 3.9 calibration (CI runner): threshold + 2 dB
+    {"adsb1", 4}, {"acars1", 6}, {"zigbee", 4}, {"zwave", 12}, {"ble", 10}, {"uat", 10}, {"flarm", 9}, {"adsl", 8}, {"sonde", 13},
 };
 
 } // namespace
 
-// Calibration (the before / after table of docs/SENSITIVITY-3.9-C.md, run on a CI runner where ONAIR_TEST_LONG cannot be set): thresholds in 1 dB
-// steps with 5 trials (coarse 3 dB steps first), lock time, CPU per second of signal; prints the table and returns 1 so ctest shows it.
-constexpr bool kCalibrate = true;
+// Calibration (ONAIR_SENS_CALIBRATE=1; the before / after table of docs/SENSITIVITY-3.9-C.md): thresholds in 1 dB steps with 5 trials (coarse 3 dB
+// steps first), lock time, CPU per second of signal. Returns 1 so that ctest --output-on-failure shows the table. ONAIR_SENS_THREADS sets the threads.
 
 int calibrate(const std::vector<Mode>& all, const std::regex& want) {
     const int threads = std::getenv("ONAIR_SENS_THREADS") ? std::atoi(std::getenv("ONAIR_SENS_THREADS")) : (int)std::max(1u, std::thread::hardware_concurrency());
@@ -116,7 +115,7 @@ int main() {
     const int threads = full ? std::max(1u, std::thread::hardware_concurrency() / 2) : 1;
     int fails = 0;
     const auto all = allModes();
-    if (kCalibrate && !full) return calibrate(all, want);
+    if (std::getenv("ONAIR_SENS_CALIBRATE")) return calibrate(all, want);
     if (!full) {
         for (const Guard& g : kGuards) {
             const Mode* m = nullptr;

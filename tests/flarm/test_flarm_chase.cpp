@@ -42,8 +42,7 @@ static FlarmTelemetry decode(const std::vector<cf32>& x, double rate, double u0,
 }
 
 int main() {
-    constexpr bool kCalibrate = true;   // WIP: print the whole curve and fail so the CI log shows it
-    const bool full = kCalibrate || std::getenv("ONAIR_TEST_LONG") != nullptr;
+    const bool full = std::getenv("ONAIR_TEST_LONG") != nullptr;
     const double u0 = 1800000000.0 - std::fmod(1800000000.0, 64.0) + 20.0;
     const int N = full ? 60 : 30;
     uint64_t hard = 0, soft = 0;
@@ -64,6 +63,5 @@ int main() {
         const FlarmTelemetry t = decode(x, 1e6, u0, true);
         CHECK(t.blocksOk == 0 && t.aircraftCount == 0, "noise gave %llu packets", (unsigned long long)t.blocksOk);
     }
-    if (kCalibrate) { printf("CALIBRATION run\n"); return 1; }
     return testSummary("flarm chase");
 }

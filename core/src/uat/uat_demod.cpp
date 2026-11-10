@@ -5,7 +5,8 @@
 //   - the phase in floating point (fastAtan2) instead of an 8-bit table of I and Q: a weak signal from a 12 or 16-bit radio no longer drowns
 //     in the rounding to 256 levels
 //   - soft decisions: every byte keeps the margin of its weakest bit; a frame whose Reed-Solomon check fails is decoded again with its least
-//     reliable bytes as erasures (2 to 6 of a downlink frame, 4 to 10 per uplink block)
+//     reliable bytes as erasures (2 to 4 of a long downlink frame, 2 of a basic one, 4 to 10 per uplink block)
+//   - a 3-tap binomial low-pass before the phase (about 1.5 dB: the noise outside the main lobe no longer reaches the slicer)
 //   - the level of a frame from its own samples and the noise floor from the quietest blocks (the reported SNR was about 0 dB before)
 #include "dect2/uat/uat_demod.h"
 #include "dect2/dsp/fast_phase.h"
@@ -92,9 +93,9 @@ int UatDemod::demodDownlink(const uint16_t* phi, uint8_t* to, int* rs) {
     int ft = correct_adsb_frame(to, rs);
     if (ft < 1 && soft_) {
         int eL[8], eS[8];
-        for (int f = 2; f <= 6 && ft < 1; f += 2) {
+        for (int f = 2; f <= 4 && ft < 1; f += 2) {   // at most 4 of 14 (long) and 2 of 12 (short) roots spent: noise then passes about once in 1e6 syncs
             std::memcpy(to, keep, sizeof keep);
-            const int nl = weakest(rel, UAT_LONG_FRAME_BYTES, f, eL), ns = weakest(rel, UAT_SHORT_FRAME_BYTES, std::min(f, 4), eS);
+            const int nl = weakest(rel, UAT_LONG_FRAME_BYTES, f, eL), ns = weakest(rel, UAT_SHORT_FRAME_BYTES, 2, eS);
             ft = correct_adsb_frame_eras(to, eL, nl, eS, ns, rs);
             if (ft >= 1) erasureFixes_++;
         }
@@ -169,7 +170,12 @@ void UatDemod::pushPhi(const cf32* x, size_t n) {
     phi_.resize(base + n);
     pw_.resize(base + n);
     for (size_t i = 0; i < n; i++) {
-        const float a = fastAtan2(x[i].imag(), x[i].real());
+        // low-pass before the phase (binomial taps at the work rate: the noise beyond the signal's main lobe is left out)
+        for (int k = 4; k > 0; k--) pf_[k] = pf_[k - 1];
+        pf_[0] = x[i];
+        const cf32 y = pre_ == 0 ? pf_[0] : pre_ == 1 ? 0.25f * pf_[0] + 0.5f * pf_[1] + 0.25f * pf_[2]
+                                                     : 0.0625f * (pf_[0] + pf_[4]) + 0.25f * (pf_[1] + pf_[3]) + 0.375f * pf_[2];
+        const float a = fastAtan2(y.imag(), y.real());
         phi_[base + i] = (uint16_t)(int32_t)std::lrintf(a * 10430.378f);   // 32768 / pi: a full turn is 65536
         const float p = std::norm(x[i]);
         pw_[base + i] = p;

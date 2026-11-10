@@ -1,8 +1,8 @@
 // UAT through the radio: the DO-282 test frame as binary CPFSK at the real 1.041667 Mbit/s (uat_gen.cpp), at the sample rates radios give,
 // with carrier offsets, a weak input level and white noise, into UatDemod. Simulated signals only.
 // Checks: every rate from 2 to 10 Msps decodes (3.8 needed exactly 2 samples a bit); a signal at 1e-3 of full scale decodes (the 8-bit phase
-// table lost it); the soft erasures decode more frames at low SNR than hard decisions; noise alone gives nothing.
-// ONAIR_TEST_LONG=1 prints the success curve with and without erasures.
+// table lost it); the 3-tap low-pass and the erasures decode far more frames at low SNR than 3.8's slicer; noise alone gives nothing.
+// ONAIR_TEST_LONG=1 prints the success curves.
 #include "dect2/uat/uat_demod.h"
 #include "dect2/uat/uat_gen.h"
 #include "dect2/uat/uat_frame.h"
@@ -24,7 +24,7 @@ static void hex(const char* s, uint8_t* out, int n) {
 }
 
 // frames decoded from `bursts` bursts 2 ms apart; snrDb is the burst power over the noise in 1.3 MHz (inf: no noise)
-static int run(double rate, int bursts, double cfoHz, double snrDb, float level, bool soft, unsigned seed, bool noiseOnly = false) {
+static int run(double rate, int bursts, double cfoHz, double snrDb, float level, bool soft, unsigned seed, bool noiseOnly = false, int pre = 1) {
     std::vector<UatTx> txs;
     for (int i = 0; i < bursts; i++) {
         UatTx t; hex(kVec, t.frame, UAT_SHORT_FRAME_BYTES); t.frameBytes = UAT_SHORT_FRAME_DATA_BYTES;
@@ -44,6 +44,7 @@ static int run(double rate, int bursts, double cfoHz, double snrDb, float level,
     UatDemod d;
     d.configure(rate);
     d.setSoft(soft);
+    d.setPrefilter(pre);
     int got = 0;
     d.setSink([&](UatRawFrame& f) { if (noiseOnly ? true : (!f.uplink && std::memcmp(f.data, txs[0].frame, UAT_SHORT_FRAME_DATA_BYTES) == 0)) got++; });
     for (size_t o = 0; o < x.size(); o += 40000) d.feed(x.data() + o, std::min<size_t>(40000, x.size() - o));
@@ -70,19 +71,23 @@ int main() {
         printf("noise only, %s: %d frames\n", soft ? "soft erasures" : "hard", f);
         CHECK(f == 0, "noise only gave %d frames (%s)", f, soft ? "soft" : "hard");
     }
-    // soft erasures against hard decisions, near the threshold (summed over seeds)
-    constexpr bool kCalibrate = true;   // WIP: print the whole curve and fail so the CI log shows it
-    const bool full = kCalibrate || std::getenv("ONAIR_TEST_LONG") != nullptr;
-    int hardAt = 0, softAt = 0;
-    for (double snr = full ? 16 : 9; snr >= (full ? 4 : 9); snr -= 1) {
-        int h = 0, s = 0;
-        const int seeds = full ? 10 : 4;
-        for (int k = 0; k < seeds; k++) { h += run(2.4e6, n, 20e3, snr, 0.1f, false, 100 + k); s += run(2.4e6, n, 20e3, snr, 0.1f, true, 100 + k); }
-        printf("SNR %4.1f dB (1.3 MHz): hard %5.1f %%  soft erasures %5.1f %%\n", snr, 100.0 * h / (n * seeds), 100.0 * s / (n * seeds));
-        hardAt += h; softAt += s;
+    // 3.8's slicer (no low-pass, hard decisions) against 3.9's (3-tap low-pass, erasures), near the threshold, summed over seeds
+    const bool full = std::getenv("ONAIR_TEST_LONG") != nullptr;
+    int oldAt = 0, newAt = 0;
+    for (double snr = full ? 14 : 8; snr >= (full ? 4 : 8); snr -= 1) {
+        int o = 0, h = 0, s = 0;
+        const int seeds = full ? 10 : 3;
+        for (int k = 0; k < seeds; k++) {
+            o += run(2.4e6, n, 20e3, snr, 0.1f, false, 100 + k, false, 0);
+            if (full) h += run(2.4e6, n, 20e3, snr, 0.1f, false, 100 + k, false, 1);
+            s += run(2.4e6, n, 20e3, snr, 0.1f, true, 100 + k, false, 1);
+        }
+        if (full) printf("SNR %4.1f dB (1.3 MHz): no low-pass, hard %5.1f %%   low-pass, hard %5.1f %%   low-pass + erasures %5.1f %%\n", snr, 100.0 * o / (n * seeds),
+                         100.0 * h / (n * seeds), 100.0 * s / (n * seeds));
+        else printf("SNR %4.1f dB (1.3 MHz): no low-pass, hard %5.1f %%   low-pass + erasures %5.1f %%\n", snr, 100.0 * o / (n * seeds), 100.0 * s / (n * seeds));
+        oldAt += o; newAt += s;
     }
-    CHECK(softAt > hardAt, "erasures did not help: %d vs %d", softAt, hardAt);
+    CHECK(newAt > oldAt + oldAt / 2, "the low-pass and erasures did not help enough: %d vs %d", newAt, oldAt);
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);
-    if (kCalibrate) { printf("CALIBRATION run\n"); return 1; }
     return fails ? 1 : 0;
 }

@@ -28,7 +28,8 @@ public:
     float noiseDbfs() const { return noiseDbfs_; }
     uint64_t candidates() const { return candidates_; }
     uint64_t erasureFixes() const { return erasureFixes_; }   // frames that only decoded with erasures
-    void setSoft(bool on) { soft_ = on; }                     // test knob: the erasure retries (default on)
+    void setSoft(bool on) { soft_ = on; }
+    void setPrefilter(int k) { pre_ = k; }                     // test knob: 0 none, 1 three taps, 2 five taps                     // test knob: the erasure retries (default on)
     static constexpr double kBitRate = 1041666.6666667;       // DO-282B
     static constexpr double kWorkRate = 2 * kBitRate;
 
@@ -43,6 +44,8 @@ private:
 
     double rate_ = 0;
     bool pass_ = true, soft_ = true;
+    int pre_ = 1;
+    cf32 pf_[5] = {};
     ExactResampler rs_;
     std::vector<cf32> tmp_;
     uint64_t samples_ = 0, workBase_ = 0;          // input samples fed; work-rate samples dropped from the front of phi_
