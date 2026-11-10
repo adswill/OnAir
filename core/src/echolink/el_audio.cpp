@@ -7,8 +7,9 @@ namespace dect2 {
 namespace echolink {
 
 namespace {
-constexpr int kTaps = 121;
-// Blackman-windowed sinc low-pass for 48 kHz: pass 3.4 kHz, about -70 dB from 4.6 kHz on (8 kHz output aliases above 4 kHz)
+constexpr int kTaps = 241;   // 6 x 40 + 1
+constexpr int kUpHist = (kTaps + 5) / 6;
+// Blackman-windowed sinc low-pass for 48 kHz centred at 4 kHz: flat to about 3.4 kHz, below -70 dB from about 4.6 kHz (the 8 kHz side aliases above 4 kHz)
 std::vector<float> lowpass48k() {
     std::vector<float> h(kTaps);
     const double fc = 4000.0 / 48000.0;
@@ -45,17 +46,18 @@ void Down6::process(const float* in, int n, std::vector<int16_t>& out) {
     }
 }
 
-Up6::Up6() : h_(lowpass48k()), hist_(2 * kTaps, 0.f) {}
+Up6::Up6() : h_(lowpass48k()), hist_(2 * kUpHist, 0.f) {}
 void Up6::reset() { std::fill(hist_.begin(), hist_.end(), 0.f); pos_ = 0; }
+// polyphase: of the zero-stuffed input only every 6th sample is non-zero, so output phase ph uses taps ph, ph + 6, ph + 12 ...
 void Up6::process(const int16_t* in, int n, std::vector<float>& out) {
     for (int i = 0; i < n; i++) {
+        const float v = 6.0f * in[i] / 32768.0f;
+        pos_ = (pos_ + kUpHist - 1) % kUpHist;
+        hist_[pos_] = hist_[pos_ + kUpHist] = v;   // hist_[pos_ + k] = x[n - k]
+        const float* x = &hist_[pos_];
         for (int ph = 0; ph < 6; ph++) {
-            const float v = ph == 0 ? 6.0f * in[i] / 32768.0f : 0.f;
-            hist_[pos_] = hist_[pos_ + kTaps] = v;
-            pos_ = (pos_ + 1) % kTaps;
             float acc = 0;
-            const float* x = &hist_[pos_];
-            for (int k = 0; k < kTaps; k++) acc += h_[k] * x[k];
+            for (int k = 0; ph + 6 * k < kTaps; k++) acc += h_[ph + 6 * k] * x[k];
             out.push_back(acc);
         }
     }
