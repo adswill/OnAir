@@ -250,7 +250,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxBle_.setSignalOffset(o);
         rxBtc_.setSignalOffset(o);
         rxBtc_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which 1 MHz channels the capture covers
-        rxBle_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the advertising channel tried first
+        rxBle_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : (fileCentreHz_.load() >= 2.38e9 && fileCentreHz_.load() <= 2.5e9 ? fileCentreHz_.load() : 0.0));   // the advertising channel tried first (a recording: its centre in the 2.4 GHz band)
         rxQo100_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the IF: where the beacons and transponders lie
         rxTime_.setSignalOffset(o);
         rxCube_.setSignalOffset(o);
@@ -399,7 +399,10 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxGeneral_.setSignalOffset(o);
         for (auto& g : extraGeneral_) g.setSignalOffset(o);
         rxRid_.setSignalOffset(o);
-        rxRid_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which BLE and Wi-Fi channels lie in the band
+        // which BLE and Wi-Fi channels lie in the band; a recording: its centre (the frequency entered for it) when that is in the 2.4 GHz band,
+        // since the BLE whitening and the channel offsets follow from it (with no centre the receiver assumed a channel on the centre)
+        const double fc = fileCentreHz_.load(), fc24 = fc >= 2.38e9 && fc <= 2.5e9 ? fc : 0.0;
+        rxRid_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fc24);
         rxMeteor_.setSignalOffset(o);
         rxNr_.setSignalOffset(o);
         rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the sync raster points searched
