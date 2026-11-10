@@ -9,6 +9,7 @@
 #include "dect2/smart5/sun.h"
 #include "dect2/smart5/vlf_terminator.h"
 #include <cmath>
+#include <cstdlib>
 #include <random>
 #include <vector>
 #include "../common/test_util.h"
@@ -149,8 +150,18 @@ static void testTerminator() {
     CHECK(f1 > 0.99 && f2 > 0.05 && f2 < 0.95, "sunlit %.2f %.2f", f1, f2);
 }
 
+// Poisson counts by inversion from the raw mt19937 output: std::poisson_distribution is implementation-defined (libc++ on macOS and libstdc++
+// on Linux draw different counts from the same engine), which made the outburst check pass on one and fail on the other.
+static int poisson(std::mt19937& rng, double mean) {
+    const double u = (rng() + 0.5) / 4294967296.0;
+    double p = std::exp(-mean), c = p;
+    int k = 0;
+    while (u > c && k < 10000) { k++; p *= mean / k; c += p; }
+    return k;
+}
+
 static void testMeteor() {
-    std::mt19937 rng(14);
+    std::mt19937 rng(getenv("ONAIR_METEOR_SEED") ? (unsigned)atoi(getenv("ONAIR_METEOR_SEED")) : 14u);   // other seeds for a sweep by hand
     const double lat = 54.687, lon = 25.280;
     // Polaris check of the RA/dec conversion: its elevation is about the latitude
     double az, el; radecAzEl(1765670400, 37.95, 89.264, lat, lon, az, el);
@@ -169,8 +180,7 @@ static void testMeteor() {
         double mean = spor + kTrue * sh;
         const bool inject = h == 24 * 8 + 20;   // an outburst on the last evening
         if (inject) mean *= 3;
-        std::poisson_distribution<int> P(mean);
-        mr.hour(t, P(rng));
+        mr.hour(t, poisson(rng, mean));
         if (mr.ready() && mr.hours().back().outburst) { if (inject) flagged = true; else falseAlarms++; }
     }
     CHECK(flagged && falseAlarms <= 1, "outburst %d false %d", flagged, falseAlarms);
