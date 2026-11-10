@@ -257,7 +257,7 @@ std::vector<Found> search(const cf32* x, size_t n, const SearchOpts& o, double* 
             phs[(size_t)k] = std::arg(sdv[(size_t)k] * std::conj(h1[(size_t)k][(size_t)par])) * 180 / kPi;
         }
         int bestOff = -1, bestCnt = 0, s1 = 0, s2 = 0, bestDelta = 999;
-        for (int delta = -80; delta <= 80; delta += 5)
+        for (int delta = -175; delta <= 180; delta += 5)
             for (int off = 0; off < 4; off++) {
                 int cnt = 0, c1 = 0, c2 = 0;
                 for (int k0 = (4 - off) % 4; k0 + 4 <= subs; k0 += 4) {
@@ -273,6 +273,8 @@ std::vector<Found> search(const cf32* x, size_t n, const SearchOpts& o, double* 
                 if (cnt > bestCnt || (cnt == bestCnt && cnt > 0 && std::abs(delta) < std::abs(bestDelta))) { bestCnt = cnt; bestOff = off; s1 = c1; s2 = c2; bestDelta = delta; }
             }
         f.quadS1 = s1; f.quadS2 = s2;
+        // the common angle is the carrier error times the time from the midamble window's centre to the SYNC-DL's centre
+        if (bestCnt > 0) f.cfoHz += bestDelta / 360.0 / (((kSyncDlChip + 32) - (kMidChip + 16 + 64)) / kChipRate);
         const int pairLo = 4 * cd0.code + (bp & 2);
         if (bestOff >= 0 && f.midScore > 1.3f) {
             const int k0 = (4 - bestOff) % 4;                 // a sub-frame 0 of an even SFN frame
