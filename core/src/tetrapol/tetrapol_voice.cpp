@@ -53,6 +53,10 @@ Verdict CallGate::onVoice(double now, bool& started) {
             verdict_ = keyRefClear(pendingKey_) ? Verdict::Clear : Verdict::Encrypted;
         pendingKey_ = -2;
     }
+    if (chanKey_ >= 0) {   // encrypted wins; clear only fills in an unknown state
+        if (!keyRefClear(chanKey_)) verdict_ = Verdict::Encrypted;
+        else if (verdict_ == Verdict::Unknown) verdict_ = Verdict::Clear;
+    }
     last_ = now;
     return verdict_;
 }

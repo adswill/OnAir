@@ -109,7 +109,10 @@ struct TetrapolReceiver::Impl {
     uint64_t telSeq = 0;       // report number: only ever counts up, also over reset() (the engine ignores a report numbered below the last one it took)
     double lastVoiceSec = -1e9;
 
-    tp::BlockAssembler asmMain, asmVch;
+    tp::BlockAssembler asmMain, asmVch, asmBch, asmPch, asmRch;
+    int sfn = -1;              // frame number in the control channel's 200-frame superframe (from the D_SYSTEM_INFO of the BCH), -1 unknown
+    int muxType = 0;           // cell_config mux type: 1 adds a PCH in frames 48, 49
+    bool sawVoice = false;     // a voice frame since the frame sync: a traffic channel
     tp::CallGate gate;
     tp::WavWriter wav;
     int callCount = 0;
@@ -150,12 +153,48 @@ struct TetrapolReceiver::Impl {
     }
 
     // ---- signalling
+    enum Chan { kSdch, kBch, kPch, kRch, kVch };
+    static const char* chanName(Chan ch, bool tch) {
+        switch (ch) {
+        case kBch: return "BCH";
+        case kPch: return "PCH";
+        case kRch: return "RCH";
+        case kVch: return "VCH";
+        default: return tch ? "SCH" : "SDCH";
+        }
+    }
+
+    void addMsg(Chan ch, const std::string& text) {
+        if (text.empty()) return;
+        const std::string cn = chanName(ch, tel.channelKind == 2);
+        for (size_t i = 0; i < tel.msgs.size(); i++) {
+            if (tel.msgs[i].text != text || tel.msgs[i].channel != cn) continue;
+            TetrapolMsg m = tel.msgs[i];
+            m.count++;
+            m.lastWall = (int64_t)std::time(nullptr);
+            m.lastSec = tel.timeSec;
+            tel.msgs.erase(tel.msgs.begin() + (std::ptrdiff_t)i);
+            tel.msgs.insert(tel.msgs.begin(), m);
+            return;
+        }
+        if (tel.msgs.size() >= kTetrapolMsgsMax) tel.msgs.pop_back();
+        TetrapolMsg m;
+        m.lastWall = (int64_t)std::time(nullptr);
+        m.lastSec = tel.timeSec;
+        m.channel = cn;
+        m.text = text;
+        m.count = 1;
+        tel.msgs.insert(tel.msgs.begin(), m);
+        if (log) log("TETRAPOL " + cn + ": " + text);
+    }
+
     void onSysinfo(const tp::SysInfo& s) {
         TetrapolCell& c = cell();
         const bool fresh = !c.hasSysinfo || c.country != s.country || c.systemId != s.systemId || c.cellId != s.bsId || c.locArea != s.locArea;
         c.hasSysinfo = true;
         if (!s.disconnected) {
             c.country = s.country; c.systemId = s.systemId; c.locArea = s.locArea; c.cellId = s.bsId; c.rswId = s.rswId;
+            muxType = s.muxType();
         } else {
             c.channelId = s.channelId;
         }
@@ -171,40 +210,84 @@ struct TetrapolReceiver::Impl {
         }
     }
 
-    void onActivation(const tp::CallSignal& s) {
+    void onActivation(const tp::CallSignal& s, int coverage) {
         const int v = tp::keyRefClear(s.keyRef) ? 1 : 2;
-        // only a clear call keeps its numbers; an encrypted one is a count on the screen
         TetrapolActivation* a = nullptr;
         for (auto& e : tel.activations)
-            if (e.verdict == v && (v == 2 || (e.groupId == s.groupId && e.channelId == s.channelId))) { a = &e; break; }
+            if (e.groupId == s.groupId && e.channelId == s.channelId && e.dScramble == s.dScramble) { a = &e; break; }
         if (!a) {
             if (tel.activations.size() >= kTetrapolCallsMax) tel.activations.pop_back();
             tel.activations.insert(tel.activations.begin(), TetrapolActivation());
             a = &tel.activations.front();
-            a->verdict = v;
-            if (v == 1) { a->groupId = s.groupId; a->channelId = s.channelId; }
-            event(v == 1 ? "group call announced (clear)" : "group call announced (encrypted, never decoded)");
+            a->groupId = s.groupId; a->channelId = s.channelId; a->dScramble = s.dScramble;
+            char line[160];
+            snprintf(line, sizeof line, "group %d call on channel %d (D scramble %d): %s", s.groupId, s.channelId, s.dScramble,
+                     v == 1 ? "clear" : "encrypted, never decoded");
+            event(line);
         }
+        a->verdict = v;
+        a->keyRef = s.keyRef;
+        a->coverage = coverage;
         a->heard++;
         a->lastWall = (int64_t)std::time(nullptr);
         a->lastSec = tel.timeSec;
     }
 
-    void onBlock(const std::vector<uint8_t>& bytes) {
-        tel.dataBlocks++;
-        tp::Hdlc h;
-        if (!tp::parseHdlc(bytes, h)) return;
-        std::vector<uint8_t> t;
-        if (!tp::tsduOf(h, t)) return;
+    void onTsdu(const std::vector<uint8_t>& t, Chan ch) {
         tel.tsdus++;
+        addMsg(ch, tp::describeTsdu(t.data(), (int)t.size()));
         tp::SysInfo si;
-        if (tp::parseSysInfo(t.data(), (int)t.size(), si)) { onSysinfo(si); return; }
+        if (tp::parseSysInfo(t.data(), (int)t.size(), si)) {
+            onSysinfo(si);
+            return;
+        }
+        if (!t.empty() && t[0] == 0x94) {
+            std::vector<tp::Neighbour> v;
+            if (tp::parseNeighbours(t.data(), (int)t.size(), v)) {
+                tel.neighbours.clear();
+                for (const auto& n : v) tel.neighbours.push_back({n.channelId, n.bnNb, n.bsId, n.rswId, n.param});
+            }
+            return;
+        }
         tp::CallSignal cs;
         if (!tp::parseCallSignal(t.data(), (int)t.size(), cs)) return;
-        if (cs.kind == tp::CallSignal::GroupActivation) { onActivation(cs); return; }
+        if (cs.kind == tp::CallSignal::GroupActivation) { onActivation(cs, t.size() > 3 ? t[3] : -1); return; }
         gate.onSignal(cs, tel.timeSec);
         if (cs.kind != tp::CallSignal::CallEnd && gate.active() && !tel.calls.empty() && tel.calls.front().active)
             tel.calls.front().verdict = (int)gate.verdict();
+    }
+
+    void onBlock(const std::vector<uint8_t>& bytes, Chan ch) {
+        tel.dataBlocks++;
+        if (ch == kPch) { addMsg(ch, tp::describePch(bytes)); return; }
+        if (ch == kRch) { std::string t; if (tp::describeRch(bytes, t)) addMsg(ch, t); return; }
+        tp::Hdlc h;
+        if (!tp::parseHdlc(bytes, h)) {
+            if (tp::isStuffing(bytes)) tel.stuffing++;
+            return;
+        }
+        if (h.cmd == tp::kCmdUiVch) { addMsg(kVch, tp::describeVch(h.info.data(), (int)h.info.size())); return; }
+        if (h.cmd == tp::kCmdUiCd) {
+            std::string who;
+            addMsg(kVch, tp::describeCd(h.info.data(), (int)h.info.size(), &who));
+            if (!who.empty()) {
+                if (who != tel.talker) event("talking party " + who);
+                tel.talker = who;
+                if (!tel.calls.empty() && tel.calls.front().active) tel.calls.front().talker = who;
+            }
+            return;
+        }
+        std::vector<uint8_t> t;
+        if (!tp::tsduOf(h, t)) return;
+        // the frame number of a control channel: the D_SYSTEM_INFO of the BCH ends in frame 3 or 103 (PAS 0001-3-3 5.1.3)
+        tp::SysInfo si;
+        if ((ch == kBch || ch == kSdch) && tp::parseSysInfo(t.data(), (int)t.size(), si) && !si.disconnected) {
+            const size_t nf = bytes.size() / 8;
+            const int at = 100 * si.bch + (int)(nf >= 3 ? nf : nf - 1);
+            if (nf == 3 && sfn != at) sfn = at;
+            tel.channelKind = 1;
+        }
+        onTsdu(t, ch == kBch ? kBch : ch);
     }
 
     // ---- voice
@@ -225,6 +308,12 @@ struct TetrapolReceiver::Impl {
         tel.voiceFrames++;
         lastVoiceSec = tel.timeSec;
         bool started = false;
+        // a call announced on a control channel heard earlier (D_GROUP_ACTIVATION with this downlink scrambling constant) tells the
+        // encryption state of the call on this traffic channel: encrypted always counts, clear only when announced in the last 30 s
+        const TetrapolActivation* ann = nullptr;
+        for (const auto& a : tel.activations) if (a.dScramble == scr && scr > 0) { ann = &a; break; }
+        const bool usable = ann && ann->keyRef >= 0 && (ann->verdict != 1 || tel.timeSec - ann->lastSec <= 30);
+        gate.setChannelKey(usable ? ann->keyRef : -1);
         const tp::Verdict verdict = gate.onVoice(tel.timeSec, started);
         if (started) {
             if (!tel.calls.empty() && tel.calls.front().active) endCall();
@@ -234,8 +323,12 @@ struct TetrapolReceiver::Impl {
             c.startWall = (int64_t)std::time(nullptr);
             c.startSec = tel.timeSec;
             c.active = true;
+            c.groupId = ann ? ann->groupId : -1;
+            tel.talker.clear();
             callCount++;
-            event(std::string("call started: ") + tp::verdictText(verdict));
+            char line[96] = "";
+            if (ann) snprintf(line, sizeof line, " (group %d)", ann->groupId);
+            event(std::string("call started: ") + tp::verdictText(verdict) + line);
         }
         TetrapolCall& c = tel.calls.front();
         c.verdict = (int)verdict;
@@ -272,7 +365,33 @@ struct TetrapolReceiver::Impl {
     }
 
     // ---- frames
+    // Where a data frame goes (PAS 0001-3-3 5.1.3): on a control channel whose superframe position is known, frames 0..3 / 100..103 are the
+    // BCH, 98, 99 (and 48, 49 with mux type 1) the PCH, 14, 39, 64, 89 the RCH and the rest the SDCH; on a traffic channel asb[0] = 1 is the
+    // VCH (LSDUs) and asb[0] = 0 the SCH. Until either is known every frame goes to one assembler (that is how the BCH is found).
+    Chan route(const tp::Frame* f) const {
+        if (sfn >= 0) {
+            const int m = sfn % 100;
+            if (m <= 3) return kBch;
+            if (m == 98 || m == 99 || (muxType == 1 && (m == 48 || m == 49))) return kPch;
+            if (m % 25 == 14) return kRch;
+            return kSdch;
+        }
+        if (sawVoice && f && f->data.asb[0]) return kVch;
+        return kSdch;
+    }
+    tp::BlockAssembler& assembler(Chan ch) {
+        switch (ch) {
+        case kBch: return asmBch;
+        case kPch: return asmPch;
+        case kRch: return asmRch;
+        case kVch: return asmVch;
+        default: return asmMain;
+        }
+    }
+
     void dispatch(const tp::Frame& f, const uint8_t* bits152) {
+        if (sfn >= 0) sfn = (sfn + 1) % 200;
+        tel.superframePos = sfn;
         if (frameGood(f)) {
             lostRun = 0;
             tel.blocksOk++;
@@ -287,19 +406,22 @@ struct TetrapolReceiver::Impl {
             c.cfoHz = tel.cfoHz;
             c.lastWall = (int64_t)std::time(nullptr);
             c.lastSec = tel.timeSec;
-            if (f.type == tp::kVoice) { onVoice(f.voice, false); return; }
+            if (f.type == tp::kVoice) {
+                if (!sawVoice) { sawVoice = true; if (sfn < 0) tel.channelKind = 2; }
+                onVoice(f.voice, false);
+                return;
+            }
             tel.dataFrames++;
-            const bool traffic = tel.timeSec - lastVoiceSec < 10.0;
+            const Chan ch = route(&f);
             std::vector<uint8_t> bytes;
-            tp::BlockAssembler& as = traffic && f.data.asb[0] ? asmVch : asmMain;
-            if (as.push(f.data, true, bytes)) onBlock(bytes);
+            if (assembler(ch).push(f.data, true, bytes)) onBlock(bytes, ch);
             return;
         }
         tel.blocksBad++;
         lostRun++;
         if (!tel.cells.empty()) tel.cells.front().framesBad++;
         tp::DataFrame none;
-        asmMain.push(none, false, bytes_);
+        assembler(route(nullptr)).push(none, false, bytes_);
         if (gate.active()) {
             // a damaged frame inside a call: handed on as a damaged voice frame (the codec conceals it)
             tp::Frame v;
@@ -386,6 +508,8 @@ struct TetrapolReceiver::Impl {
             scr = -1;
             tel.scramble = -1;
             lostRun = 0;
+            sfn = -1;
+            sawVoice = false;
             memset(stat, 0, sizeof stat);
         }
     }
@@ -399,6 +523,9 @@ struct TetrapolReceiver::Impl {
         pending.clear();
         asmMain.reset();
         asmVch.reset();
+        asmBch.reset(); asmPch.reset(); asmRch.reset();
+        sfn = -1;
+        sawVoice = false;
         memset(stat, 0, sizeof stat);
     }
 
@@ -572,6 +699,10 @@ struct TetrapolReceiver::Impl {
         pending.clear();
         asmMain.reset();
         asmVch.reset();
+        asmBch.reset(); asmPch.reset(); asmRch.reset();
+        sfn = -1;
+        muxType = 0;
+        sawVoice = false;
         memset(stat, 0, sizeof stat);
         lostRun = misses = candFrames = 0;
         if (gate.active()) endCall();
@@ -656,6 +787,9 @@ void TetrapolReceiver::reset() {
     p_->tel = TetrapolTelemetry();
     p_->tel.cells = std::move(keep.cells);
     p_->tel.events = std::move(keep.events);
+    // the group calls a control channel announced stay: they tell the group and encryption state of a traffic channel tuned to next
+    p_->tel.activations = std::move(keep.activations);
+    for (auto& a : p_->tel.activations) a.lastSec -= keep.timeSec;   // the receiver's clock starts again from 0
     p_->tel.inputRate = p_->fs;
     p_->tel.centerHz = p_->centreHz;
     p_->tel.spacingHz = p_->spacing;
@@ -670,6 +804,8 @@ void TetrapolReceiver::clearCells() {
     p_->tel.events.clear();
     p_->tel.carriers.clear();
     p_->tel.activations.clear();
+    p_->tel.msgs.clear();
+    p_->tel.neighbours.clear();
     if (!p_->gate.active()) p_->tel.calls.clear();
     p_->tel.seq = ++p_->telSeq;
 }
