@@ -12,6 +12,7 @@
 #include "dect2/cell/cell_rx.h"
 #include "dect2/cell/cell_filter.h"
 #include "dect2/cell/cell_tel.h"
+#include "dect2/cell/cell_lte.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -329,6 +330,11 @@ void detail(App& a) {
     ImGui::Text("PCI %d, %s, %d RB, %d port%s, %s CP, PHICH %s Ng %d, SFN %d", c.pci, c.tdd ? "TDD" : "FDD", c.nRb, c.ports, c.ports == 1 ? "" : "s", c.extCp ? "extended" : "normal",
                 c.phichDur ? "extended" : "normal", c.phichRes, c.sfn);
     ImGui::Text("RSRP %.1f dBFS, RSRQ %.1f dB, SINR %.1f dB, offset %+.0f Hz", c.rsrpDb, c.rsrqDb, c.sinrDb, c.cfoHz);
+    if (c.hasMib && dect2::cell::lteMibSib1Br(c.mibTail) > 0) {   // LTE-M (eMTC): the MIB schedules SIB1-BR for BL / CE devices
+        const int v = dect2::cell::lteMibSib1Br(c.mibTail);
+        ImGui::Text(tr("LTE-M: SIB1-BR sent (schedulingInfoSIB1-BR %d: %d repetitions, %d bit transport block)%s"), v, dect2::cell::lteSib1BrReps(v), dect2::cell::lteSib1BrTbs(v),
+                    dect2::cell::lteMibSiUnchangedBr(c.mibTail) ? tr(", system information unchanged") : "");
+    }
     if (c.hasSib1) {
         std::string pl;
         for (size_t k = 0; k < c.plmns.size(); k++) {   // every PLMN the cell broadcasts, with the operator name where the table has it

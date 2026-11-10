@@ -25,6 +25,7 @@ struct GsmrCellCfg {
     uint32_t fn0 = 0;                   // the frame number at the start of the signal
     int phase = 0;                      // samples (at 8 per symbol) into the first frame
     float amp = 0.25f;
+    bool ccchLoad = true;               // some paging and assignment messages (without identities) on the CCCH
 };
 
 constexpr double kGsmrTestCentreHz = 922.8e6;

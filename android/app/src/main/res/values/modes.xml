@@ -325,6 +325,8 @@
         <item>CIS OFDM HDR</item>
         <item>CIS-128</item>
         <item>CIS-3000</item>
+        <item>CDMA2000 cells</item>
+        <item>TD-SCDMA cells</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -379,7 +381,7 @@
         <item>LTE cells around you: operator, band, EARFCN, PCI, eNB and sector, TAC, neighbours (receive only, public broadcast)</item>
         <item>5G NR cells around you from their SS/PBCH blocks on the sync raster (GSCN) of n1, n3, n7, n8, n20, n28, n38, n40, n41, n77, n78: PCI, SSB index / beam, SS-RSRP / RSRQ / SINR, MIB (SFN, subcarrier spacing, k_SSB, CORESET#0, barred) (receive only, public broadcast)</item>
         <item>LTE NB-IoT cells around you (180 kHz carriers, in-band, guard band or standalone) from their NPSS / NSSS, NPBCH (MIB-NB) and SIB1-NB: PCI, operating mode, antenna ports, SFN, operator (MCC / MNC), tracking area, cell identity, band, level; band scan over the 100 kHz raster. Receive only: the public broadcast only, nothing addressed to a device is decoded</item>
-        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 900 / DCS 1800 bands: cell identity, location area, operator, channel lists (receive only, public broadcast)</item>
+        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 850 / 900, DCS 1800 and PCS 1900 bands: cell identity, location area, operator, channel lists, GPRS and 3G / 4G neighbour indications, and the paging / access load of the common control channel (message kinds only). Receive only, public broadcast</item>
         <item>LBJ (Chinese railway train proximity warning) on about 821.2375 MHz: FM voice channel with 1200 bit/s FSK data for train number, kilometre marker, locomotive ID, direction and speed (receive only)</item>
         <item>POCSAG paging messages (512, 1200 and 2400 bd) on a 25 kHz channel</item>
         <item>FLEX paging messages (1600, 3200 and 6400 bit/s) on a 25 kHz channel</item>
@@ -631,6 +633,8 @@
         <item>CIS OFDM HDR modem (CIS-45, CIS-60, CIS-93), identification only: the OFDM symbol (useful part, guard, rate), the carrier count and the PSK order are measured and the variant named. No frame format is published. Simulated signals only so far</item>
         <item>CIS-128, identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz, from the carrier spacing, the symbol rate and the guard. The 6 kHz form is not covered. No frame format is published. Simulated signals only so far</item>
         <item>CIS-3000, identification only: a single carrier 8-PSK at 3000 Bd, from its symbol-rate line and the constellation order. No frame format is published. Simulated signals only so far</item>
+        <item>cdma2000 / IS-95 base stations in a 1.25 MHz channel: every pilot by PN offset (Ec/Io, level, carrier offset) and its Sync Channel Message: system and network identity (SID, NID), pilot PN, protocol revision, system time, leap seconds, local time offset, paging channel rate and frequency. Receive only, public broadcast</item>
+        <item>TD-SCDMA (3G TDD, 1.28 Mcps) cells in a 1.6 MHz channel: the downlink pilot\'s SYNC-DL code (code group), the cell parameter (scrambling code and midamble) from time slot 0, the frame parity and P-CCPCH position from the SYNC-DL phases, level and carrier offset. Receive only; the broadcast channel is not decoded</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -937,6 +941,8 @@
         <item>Identification only, HF</item>
         <item>Identification only, HF</item>
         <item>Identification only, HF</item>
+        <item>Cells, CDMA2000</item>
+        <item>Cells, TD-SCDMA</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1243,5 +1249,7 @@
         <item>cis-45 cis45 cis-60 cis60 cis-93 cis93 cis ofdm hdr modem russian ofdm hf identification sigidwiki</item>
         <item>cis-128 cis128 russian ofdm 128 tone hf identification sigidwiki</item>
         <item>cis-3000 cis3000 russian single carrier 8psk 3000 baud hf identification sigidwiki</item>
+        <item>cdma cdma2000 is-95 is95 1x 2g 3g pilot pn sync channel sid nid base station band class 0 800 pcs 1900 verizon sprint</item>
+        <item>td-scdma tdscdma 3g tdd china mobile 1.28 mcps dwpts sync-dl midamble cell parameter code group band a f 2010 1880</item>
     </string-array>
 </resources>

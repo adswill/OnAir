@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**304 modes.**
+**306 modes.**
 
 ## TV (15)
 
@@ -144,7 +144,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **OpenSky identifier** - OpenSky: identification only, the channel is measured and nothing is decoded
 - **EDACS trunking** - EDACS trunking: control channel frames, calls and analog voice following of a trunked system
 
-## Cellular & Rail (8)
+## Cellular & Rail (10)
 
 - **End of train (AAR EOT/HOT)** - End of train: US freight train telemetry
 - **Cell towers** - Cell towers: the public broadcast information of LTE cells
@@ -153,6 +153,8 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **GSM-R** - GSM-R: the public broadcast information of railway GSM cells
 - **LBJ** - LBJ: railway train warning broadcasts (821 MHz)
 - **UMTS cells** - UMTS: 3G cells by primary scrambling code
+- **CDMA2000 cells** - CDMA2000: base stations by pilot PN, SID / NID and system time from the Sync Channel
+- **TD-SCDMA cells** - TD-SCDMA: cells by SYNC-DL code and cell parameter
 - **EBICab / Eurobalise (needs a user test)** - Balise up-link: Eurobalise telegrams (SUBSET-036); EBICab bursts listed only (needs a user test)
 
 ## Pagers (4)

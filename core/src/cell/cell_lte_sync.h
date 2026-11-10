@@ -35,6 +35,7 @@ struct DciFound { LteDciSi d; Bits payload; int cce = 0, L = 4; Bits coded; };
 struct Decoded {
     int pci = 0; bool ext = false;
     int nRb = 6, ports = 1, phichDur = 0, phichRes = 0;
+    int mibTail = 0;       // MIB bits 14 - 23 (LTE-M scheduling of SIB1-BR)
     double fs0 = 0;        // first frame start in the block, sync samples
     double startIn = 0;    // the same, input samples
     double cfo = 0;

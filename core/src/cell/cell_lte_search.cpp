@@ -376,14 +376,14 @@ struct LteSearch {
         const int sfnAt0 = (mt.mib.sfn - mt.frame + 1024 * 4) & 1023;   // SFN of the first whole frame in the block
         R.mib.sfn = sfnAt0;
         Decoded D;
-        D.pci = pci; D.ext = ext; D.nRb = mt.mib.nRb; D.ports = mt.mib.ports; D.phichDur = mt.mib.phichDur; D.phichRes = mt.mib.phichRes;
+        D.pci = pci; D.ext = ext; D.nRb = mt.mib.nRb; D.ports = mt.mib.ports; D.phichDur = mt.mib.phichDur; D.phichRes = mt.mib.phichRes; D.mibTail = mt.mib.mibTail;
         D.fs0 = fs0; D.startIn = R.found.frameStart; D.cfo = tr.cfo; D.sfnAt0 = sfnAt0;
         // system information: needs the whole carrier inside the block
         const int nRb = mt.mib.nRb;
         const double halfBw = nRb * 90e3 + 30e3;
         if (o.wantSi && !R.found.tdd && std::fabs(offsetHz) + halfBw < fs / 2) {
             LteCellCfg c;
-            c.pci = pci; c.extCp = ext; c.tdd = false; c.nRb = nRb; c.ports = mt.mib.ports; c.phichDur = mt.mib.phichDur; c.phichRes = mt.mib.phichRes;
+            c.pci = pci; c.extCp = ext; c.tdd = false; c.nRb = nRb; c.ports = mt.mib.ports; c.phichDur = mt.mib.phichDur; c.phichRes = mt.mib.phichRes; c.mibTail = mt.mib.mibTail;
             std::vector<std::pair<const Decoded*, int>> under;
             sameTiming(fs0, tr.cfo, ext, pci, under);
             const LteDciSi* hint = nullptr;
@@ -509,16 +509,16 @@ struct LteSearch {
             for (int ports : order) {
                 LteCellResult R = p.R;
                 LteCellCfg c;
-                c.pci = R.found.pci; c.extCp = R.found.extCp; c.tdd = false; c.nRb = d.nRb; c.ports = ports; c.phichDur = d.phichDur; c.phichRes = d.phichRes;
+                c.pci = R.found.pci; c.extCp = R.found.extCp; c.tdd = false; c.nRb = d.nRb; c.ports = ports; c.phichDur = d.phichDur; c.phichRes = d.phichRes; c.mibTail = d.mibTail;
                 Decoded D2;
                 siStage(R, c, R.found.frameStart, cfo, p.tr.slope / kHalf, sfnAt0, 2, under, d.haveSib1 ? &d.sib1 : nullptr, &D2);
                 if (dbg) fprintf(stderr, "[cell]   PCI %d borrows the MIB of PCI %d, %d ports: %zu SI\n", c.pci, d.pci, ports, R.si.size());
                 if (R.si.empty()) continue;
                 R.found.cfoHz = cfo;
-                R.mib.ok = true; R.mib.nRb = d.nRb; R.mib.ports = ports; R.mib.phichDur = d.phichDur; R.mib.phichRes = d.phichRes;
+                R.mib.ok = true; R.mib.nRb = d.nRb; R.mib.ports = ports; R.mib.phichDur = d.phichDur; R.mib.phichRes = d.phichRes; R.mib.mibTail = d.mibTail;
                 R.mib.sfn = sfnAt0; R.mib.frameStart = R.found.frameStart;
                 p.done = true;
-                D2.pci = c.pci; D2.ext = c.extCp; D2.nRb = c.nRb; D2.ports = ports; D2.phichDur = c.phichDur; D2.phichRes = c.phichRes;
+                D2.pci = c.pci; D2.ext = c.extCp; D2.nRb = c.nRb; D2.ports = ports; D2.phichDur = c.phichDur; D2.phichRes = c.phichRes; D2.mibTail = c.mibTail;
                 D2.fs0 = p.fs0; D2.startIn = R.found.frameStart; D2.cfo = cfo; D2.sfnAt0 = sfnAt0; D2.slope = p.tr.slope;
                 if (p.outIdx >= 0) { D2.outIdx = p.outIdx; out[(size_t)p.outIdx] = std::move(R); }
                 else if ((int)out.size() < o.maxCells + 4) { D2.outIdx = (int)out.size(); out.push_back(std::move(R)); }

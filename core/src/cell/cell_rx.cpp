@@ -8,6 +8,7 @@
 #include "dect2/cell/cell_lte.h"
 #include "dect2/cell/cell_tel.h"
 #include "dect2/cell/cell_pws.h"
+#include <cstring>
 #include <map>
 #include <algorithm>
 #include <atomic>
@@ -373,7 +374,7 @@ struct CellReceiver::Impl {
             if (ear >= 0) { const LteBandChoice bc = lteBandFor(nominal, 0); t->band = bc.band; t->bandConfirmed = false; t->bandsAlso = bc.also; }
         }
         t->tdd = r.found.tdd; t->extCp = r.found.extCp;
-        if (r.mib.ok) { t->hasMib = true; t->nRb = r.mib.nRb; t->ports = r.mib.ports; t->phichDur = r.mib.phichDur; t->phichRes = r.mib.phichRes; t->sfn = r.mib.sfn; }
+        if (r.mib.ok) { t->hasMib = true; t->nRb = r.mib.nRb; t->ports = r.mib.ports; t->phichDur = r.mib.phichDur; t->phichRes = r.mib.phichRes; t->sfn = r.mib.sfn; t->mibTail = r.mib.mibTail; }
         t->rsrpDb = r.meas.rsrpDb; t->rsrqDb = r.meas.rsrqDb; t->sinrDb = r.meas.sinrDb; t->pssDb = r.found.pssDb;
         t->cfoHz = actual - (center > 0 ? nominal : cd.off);
         t->clockPpm = r.found.clockPpm;
@@ -385,6 +386,7 @@ struct CellReceiver::Impl {
                 else snprintf(b, sizeof b, "PCI %d at %+.1f kHz, synchronisation signals only", t->pci, nominal / 1e3);
             } else if (center > 0) snprintf(b, sizeof b, "PCI %d at %.1f MHz (EARFCN %d), %.0f MHz, %d port%s", t->pci, nominal / 1e6, ear, t->nRb * 0.2, t->ports, t->ports == 1 ? "" : "s");
             else snprintf(b, sizeof b, "PCI %d at %+.1f kHz, %.0f MHz, %d port%s", t->pci, nominal / 1e3, t->nRb * 0.2, t->ports, t->ports == 1 ? "" : "s");
+            if (r.mib.ok && cell::lteMibSib1Br(t->mibTail) > 0) { const size_t l = strlen(b); snprintf(b + l, sizeof b - l, ", LTE-M (SIB1-BR %d)", cell::lteMibSib1Br(t->mibTail)); }
             event(b, sec);
         }
         tel.blocksBad += (uint64_t)r.tbFail;
