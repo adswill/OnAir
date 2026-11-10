@@ -2,6 +2,8 @@
 #include "dect2/geo/maidenhead.h"
 #include <algorithm>
 #include <cctype>
+#include <cstdio>
+#include <cstring>
 #include <cstdlib>
 #include <map>
 
@@ -123,4 +125,107 @@ std::vector<RepeaterNear> nearestRepeaters(const std::vector<Repeater>& list, co
     return out;
 }
 
+} // namespace dect2::ease
+
+// ---- Open Repeater (openrepeater.org) answers ----------------------------------------------------------------------------------
+#include <cmath>
+#include <cstdlib>
+#include <map>
+#include <memory>
+namespace dect2::ease {
+namespace {
+struct JV { enum K { Null, Num, Str, Bool, Arr, Obj } k = Null; double n = 0; std::string s; std::vector<JV> a; std::map<std::string, JV> o; };
+struct JP {
+    const std::string& t; size_t i = 0; bool bad = false;
+    explicit JP(const std::string& x) : t(x) {}
+    void ws() { while (i < t.size() && isspace((unsigned char)t[i])) i++; }
+    bool lit(const char* w) { const size_t n = strlen(w); if (t.compare(i, n, w) == 0) { i += n; return true; } return false; }
+    std::string str() {
+        std::string r; i++;
+        while (i < t.size() && t[i] != '"') {
+            char c = t[i++];
+            if (c == '\\' && i < t.size()) {
+                c = t[i++];
+                if (c == 'n') r += '\n'; else if (c == 't') r += '\t'; else if (c == 'r') r += '\r';
+                else if (c == 'u' && i + 4 <= t.size()) { unsigned v = (unsigned)strtoul(t.substr(i, 4).c_str(), nullptr, 16); i += 4;
+                    if (v < 0x80) r += (char)v; else if (v < 0x800) { r += (char)(0xC0 | (v >> 6)); r += (char)(0x80 | (v & 63)); } else { r += (char)(0xE0 | (v >> 12)); r += (char)(0x80 | ((v >> 6) & 63)); r += (char)(0x80 | (v & 63)); } }
+                else r += c;
+            } else r += c;
+        }
+        if (i >= t.size()) bad = true; else i++;
+        return r;
+    }
+    JV val(int d) {
+        JV v; ws();
+        if (bad || i >= t.size() || d > 24) { bad = true; return v; }
+        const char c = t[i];
+        if (c == '{') {
+            v.k = JV::Obj; i++; ws();
+            if (i < t.size() && t[i] == '}') { i++; return v; }
+            while (!bad) {
+                ws(); if (i >= t.size() || t[i] != '"') { bad = true; break; }
+                const std::string key = str(); ws();
+                if (i >= t.size() || t[i++] != ':') { bad = true; break; }
+                v.o[key] = val(d + 1); ws();
+                if (i >= t.size()) { bad = true; break; }
+                const char e = t[i++]; if (e == '}') break; if (e != ',') bad = true;
+            }
+        } else if (c == '[') {
+            v.k = JV::Arr; i++; ws();
+            if (i < t.size() && t[i] == ']') { i++; return v; }
+            while (!bad) {
+                v.a.push_back(val(d + 1)); ws();
+                if (i >= t.size()) { bad = true; break; }
+                const char e = t[i++]; if (e == ']') break; if (e != ',') bad = true;
+            }
+        } else if (c == '"') { v.k = JV::Str; v.s = str(); }
+        else if (lit("true")) { v.k = JV::Bool; v.n = 1; }
+        else if (lit("false")) { v.k = JV::Bool; }
+        else if (lit("null")) {}
+        else { char* e = nullptr; v.n = strtod(t.c_str() + i, &e); if (e == t.c_str() + i) bad = true; else { v.k = JV::Num; i = (size_t)(e - t.c_str()); } }
+        return v;
+    }
+};
+bool numOf(const JV* v, double& out) {
+    if (!v) return false;
+    if (v->k == JV::Num) { out = v->n; return std::isfinite(out); }
+    if (v->k == JV::Str && !v->s.empty()) { char* e = nullptr; out = strtod(v->s.c_str(), &e); return e != v->s.c_str() && std::isfinite(out); }
+    return false;
+}
+const JV* field(const JV& o, const char* a, const char* b = nullptr) {
+    auto it = o.o.find(a); if (it != o.o.end()) return &it->second;
+    if (b) { it = o.o.find(b); if (it != o.o.end()) return &it->second; }
+    return nullptr;
+}
+std::string textOf(const JV* v) { return v && v->k == JV::Str ? v->s : std::string(); }
+} // namespace
+
+std::string openRepeaterSearchUrl(double lat, double lon, double radiusKm, int page, int limit) {
+    char b[200];
+    snprintf(b, sizeof b, "https://www.openrepeater.org/api/v1/search?lat=%.4f&lng=%.4f&radius=%.0f&page=%d&limit=%d", lat, lon, radiusKm, page < 1 ? 1 : page, limit < 1 ? 1 : limit);
+    return b;
+}
+
+std::vector<Repeater> parseOpenRepeaterJson(const std::string& text, int& skipped, std::string& err) {
+    skipped = 0; err.clear();
+    JP p(text); const JV root = p.val(0); p.ws();
+    if (p.bad || p.i != text.size()) { err = "the answer is not JSON"; return {}; }
+    const JV* arr = nullptr;
+    if (root.k == JV::Arr) arr = &root;
+    else if (root.k == JV::Obj) {
+        for (const char* k : {"data", "repeaters", "results", "items"}) { auto it = root.o.find(k); if (it != root.o.end() && it->second.k == JV::Arr) { arr = &it->second; break; } }
+        if (!arr) { const JV* m = field(root, "error", "message"); err = m && m->k == JV::Str ? m->s : "the answer has no list of repeaters"; return {}; }
+    } else { err = "the answer has no list of repeaters"; return {}; }
+    std::vector<Repeater> out;
+    for (const JV& e : arr->a) {
+        Repeater r; double f = 0, la = 0, lo = 0;
+        if (e.k != JV::Obj || !numOf(field(e, "frequency", "freq"), f) || !numOf(field(e, "lat", "latitude"), la) || !numOf(field(e, "lng", "lon"), lo)) { skipped++; continue; }
+        if (f > 1e6) f /= 1e6; else if (f > 1e4) f /= 1e3;   // Hz or kHz to MHz
+        if (f < 0.1 || f > 100000 || std::fabs(la) > 90 || std::fabs(lo) > 180 || (la == 0 && lo == 0)) { skipped++; continue; }
+        r.mhz = f; r.lat = la; r.lon = lo;
+        r.call = textOf(field(e, "callsign", "call")); r.where = textOf(field(e, "city", "location")); r.mode = textOf(field(e, "mode"));
+        out.push_back(std::move(r));
+    }
+    return out;
+}
 } // namespace dect2::ease
