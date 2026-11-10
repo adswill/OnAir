@@ -203,29 +203,29 @@ void clampScalar(uint8_t a[32]) { a[0] &= 248; a[31] &= 127; a[31] |= 64; }
 
 } // namespace
 
-void ed25519PublicKey(const uint8_t seed[32], uint8_t pub[32]) {
+void ed25519ExpandSeed(const uint8_t seed[32], uint8_t prv[64]) {
+    sha512(seed, 32, prv);
+    clampScalar(prv);
+}
+
+void ed25519PublicFromPrivate(const uint8_t prv[64], uint8_t pub[32]) {
     const Consts& k = consts();
-    uint8_t h[64];
-    sha512(seed, 32, h);
-    clampScalar(h);
     Point p;
-    pmul(p, k.base, h, k);
+    pmul(p, k.base, prv, k);                                    // the scalar as stored (orlp ed25519_derive_pub: no clamping here)
     pencode(pub, p);
 }
 
-void ed25519Sign(const uint8_t seed[32], const uint8_t* msg, size_t n, uint8_t sig[64]) {
-    const Consts& k = consts();
-    uint8_t h[64], pub[32];
-    sha512(seed, 32, h);
-    uint8_t a[32];
-    std::memcpy(a, h, 32);
-    clampScalar(a);
-    Point pa;
-    pmul(pa, k.base, a, k);
-    pencode(pub, pa);
+void ed25519PublicKey(const uint8_t seed[32], uint8_t pub[32]) {
+    uint8_t h[64];
+    ed25519ExpandSeed(seed, h);
+    ed25519PublicFromPrivate(h, pub);
+}
 
+void ed25519SignPrivate(const uint8_t prv[64], const uint8_t pub[32], const uint8_t* msg, size_t n, uint8_t sig[64]) {
+    const Consts& k = consts();
+    const uint8_t* a = prv;
     std::vector<uint8_t> buf(32 + n);
-    std::memcpy(buf.data(), h + 32, 32);
+    std::memcpy(buf.data(), prv + 32, 32);
     if (n) std::memcpy(buf.data() + 32, msg, n);
     uint8_t rh[64], r[32];
     sha512(buf.data(), buf.size(), rh);
@@ -250,6 +250,67 @@ void ed25519Sign(const uint8_t seed[32], const uint8_t* msg, size_t n, uint8_t s
     uint32_t carry = 0;
     for (int i = 0; i < 64; i++) { const uint32_t v = acc[i] + carry; prod[i] = (uint8_t)v; carry = v >> 8; }
     reduceL(prod, sig + 32);
+}
+
+void ed25519Sign(const uint8_t seed[32], const uint8_t* msg, size_t n, uint8_t sig[64]) {
+    uint8_t prv[64], pub[32];
+    ed25519ExpandSeed(seed, prv);
+    ed25519PublicFromPrivate(prv, pub);
+    ed25519SignPrivate(prv, pub, msg, n, sig);
+}
+
+namespace {
+// constant-time swap of two field elements when bit is 1
+void fswap(Fe a, Fe b, int64_t bit) {
+    const int64_t m = -bit;
+    for (int i = 0; i < 16; i++) { const int64_t t = m & (a[i] ^ b[i]); a[i] ^= t; b[i] ^= t; }
+}
+} // namespace
+
+void ed25519KeyExchange(uint8_t shared[32], const uint8_t otherPub[32], const uint8_t prv[64]) {
+    // orlp/ed25519 key_exchange.c: the Edwards y of the other key to the Montgomery u = (1 + y) / (1 - y), then the X25519 ladder with the
+    // clamped first half of the private key. The ladder has no branch on the key bits.
+    uint8_t e[32];
+    std::memcpy(e, prv, 32);
+    e[0] &= 248; e[31] &= 63; e[31] |= 64;
+    Fe x1, x2, z2, x3, z3, t0, t1, one, c121666;
+    funpack(x1, otherPub);
+    fset(one, 1);
+    fadd(t0, x1, one);
+    fsub(t1, one, x1);
+    finv(t1, t1);
+    fmul(x1, t0, t1);
+    fset(x2, 1); fset(z2, 0); fcopy(x3, x1); fset(z3, 1);
+    fset(c121666, 0); c121666[0] = 0xDB42; c121666[1] = 1;     // 121666
+    int64_t swap = 0;
+    for (int pos = 254; pos >= 0; --pos) {
+        const int64_t b = (e[pos / 8] >> (pos & 7)) & 1;
+        swap ^= b;
+        fswap(x2, x3, swap); fswap(z2, z3, swap);
+        swap = b;
+        fsub(t0, x3, z3);
+        fsub(t1, x2, z2);
+        fadd(x2, x2, z2);
+        fadd(z2, x3, z3);
+        fmul(z3, t0, x2);
+        fmul(z2, z2, t1);
+        fsq(t0, t1);
+        fsq(t1, x2);
+        fadd(x3, z3, z2);
+        fsub(z2, z3, z2);
+        fmul(x2, t1, t0);
+        fsub(t1, t1, t0);
+        fsq(z2, z2);
+        fmul(z3, t1, c121666);
+        fsq(x3, x3);
+        fadd(t0, t0, z3);
+        fmul(z3, x1, z2);
+        fmul(z2, t1, t0);
+    }
+    fswap(x2, x3, swap); fswap(z2, z3, swap);
+    finv(z2, z2);
+    fmul(x2, x2, z2);
+    fpack(shared, x2);
 }
 
 bool ed25519Verify(const uint8_t sig[64], const uint8_t* msg, size_t n, const uint8_t pub[32]) {

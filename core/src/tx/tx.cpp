@@ -26,6 +26,7 @@
 #include "dect2/kavb/kavb_txgen.h"
 #include "dect2/kaws/kaws_txgen.h"
 #include "dect2/esubghz/esubghz_gen.h"
+#include "dect2/mesh/meshcore_tx.h"
 #include "dect2/kaft/kaft_txgen.h"
 #include "dect2/nfc/nfc_tx.h"
 #include "dect2/engine/mode_tuning.h"
@@ -97,6 +98,9 @@ std::vector<TxModeSpec> makeTxTable() {
         mk("aero", "Inmarsat Aero", 20, "makeAeroSynth", kOpt, kUnv),
         mk("iridium", "Iridium", 21, "makeIridiumSynth", kOpt, kUnv),
         mk("mesh", "Mesh (LoRa)", 22, "makeMeshSynth", kOpt, kUnv),
+        mk("meshcore", "MeshCore", 22, "makeMeshCoreTxGenerator (meshcore_tx.h: LoRa frames of MeshCore packets from the node, meshcore_node.h; each sent once, then it ends)",
+           "the MeshCore screen sends adverts, direct and channel messages, ACKs and repeats; typed text here: a Public channel message", "tests/mesh/test_mesh_meshcore_node.cpp (frames from the firmware code, loop-back through the receiver)",
+           0, 1e6, false, 250e3),
         mk("loraaprs", "LoRa APRS", 22, "LoRa APRS frames: '<' 0xFF 0x01 + a TNC2 packet (tx_payload.cpp); no callsign: the 70 cm test scene's stations",
            "preset EU / PL / UK / 915 MHz or own SF, bandwidth, coding rate, preamble, sync word, CRC (txLoraAprsRadio)", "tests/tx/test_tx_loraaprs.cpp"),
         mk("hdr", "HD Radio", 23, "makeHdrSynth", kOpt, kUnv),
@@ -310,6 +314,7 @@ TxPayloadKind txPayloadKind(const std::string& id) {
     if (id == "kaft") return TxPayloadKind::Kaft;
     if (id == "kaws") return TxPayloadKind::Kaws;
     if (id == "esubghz") return TxPayloadKind::Keyboard;   // one chat line of text
+    if (id == "meshcore") return TxPayloadKind::Keyboard;  // one Public channel line; the MeshCore screen sends the rest
     if (id == "vdl4" || id == "uat" || id == "wisun" || id == "zwave") return TxPayloadKind::SatScene;   // demo-traffic generators, no custom message
     return TxPayloadKind::SatScene;   // never a generic callsign dump; unknown ids are treated as a test scene
 }
@@ -340,7 +345,7 @@ std::string txVocoderNote(const TxModeSpec& m) {
     return {};
 }
 
-bool txModeFinite(const TxModeSpec& m) { return m.id && (std::string(m.id) == "kapp" || std::string(m.id) == "kaft" || std::string(m.id) == "kavb" || std::string(m.id) == "kaws" || std::string(m.id) == "esubghz"); }
+bool txModeFinite(const TxModeSpec& m) { return m.id && (std::string(m.id) == "kapp" || std::string(m.id) == "kaft" || std::string(m.id) == "kavb" || std::string(m.id) == "kaws" || std::string(m.id) == "esubghz" || std::string(m.id) == "meshcore"); }
 
 bool txModeNeedsAudio(const TxModeSpec& m, const TxRequest& r) {
     if (r.carrierTune) return false;
@@ -645,6 +650,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     if (m.stdMode == 127) return makeKaftTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAFT: its own file transmitter at the radio's rate
     if (m.stdMode == 124) return makeKaalTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAAL: its own transmitter chain at the radio's rate
     if (m.stdMode == 135) return makeKawsTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAWS: HF chat / beacon bursts as upper-sideband IQ at the radio's rate
+    if (m.id && std::string(m.id) == "meshcore") return makeMeshCoreTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // MeshCore: the node's frames once, then it ends
     if (m.stdMode == 206) return makeEsubghzTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // Flipper Zero Sub-GHz chat: one message, then it ends
     if (m.stdMode == 133) return makeKaitTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAIT: a picture burst at the radio's rate
     if (m.stdMode == 150) return makeNfcReaderTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // NFC active reader: 100% ASK Miller on a continuous 13.56 MHz carrier (Phase 2, gated)

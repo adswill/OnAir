@@ -138,6 +138,7 @@ struct MeshReceiver::Impl {
     std::atomic<bool> dirty{true};
     std::atomic<bool> resetReq{false};
     std::function<void(const std::string&)> log;
+    std::function<void(int, const std::vector<uint8_t>&, float, double)> frameCb;   // the MeshCore device (setFrameCallback)
     MeshTelemetry pub;                     // the published report
     MeshProto proto;                       // locks internally
     // the decoded lists (packets, nodes, messages, stations, devices) stay through resets: Clear and a loaded file reach the feed
@@ -327,6 +328,11 @@ struct MeshReceiver::Impl {
             if (r.ok) { proto_ = q; break; }
         }
         row.protocol = proto_;
+        if (f.crcOk && (proto_ == 2 || std::find(d.protos.begin(), d.protos.end(), 2) != d.protos.end())) {   // the MeshCore device takes every good frame of a MeshCore decoder
+            std::function<void(int, const std::vector<uint8_t>&, float, double)> cb;
+            { std::lock_guard<std::mutex> lk(mu); cb = frameCb; }
+            if (cb) cb(proto_, f.payload, (float)f.snrDb, row.freqHz);
+        }
         if (Feeds::get().wantLora()) {
             const char* kind = proto_ == 1 ? "meshtastic" : proto_ == 2 ? "meshcore" : proto_ == 3 ? "loraaprs" : proto_ == 4 ? "meshcom" : "lorawan";
             std::string extra;
@@ -735,6 +741,7 @@ bool MeshReceiver::telemetry(MeshTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 void MeshReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
+void MeshReceiver::setFrameCallback(std::function<void(int, const std::vector<uint8_t>&, float, double)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->frameCb = std::move(cb); }
 void MeshReceiver::setTunedHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->tunedHz = hz; p_->dirty = true; }
 void MeshReceiver::setRegion(int r) { std::lock_guard<std::mutex> lk(p_->mu); p_->region = r >= 1 && r <= 3 ? r : 0; p_->dirty = true; }
 void MeshReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(20, scale)); }
