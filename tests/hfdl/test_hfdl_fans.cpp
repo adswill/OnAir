@@ -13,7 +13,8 @@ using namespace dect2;
 #include "../common/test_util.h"
 
 static const double kRate = 250e3, kDial = 8.942e6, kCentre = 8.98e6;
-static const std::string kCpdlc = "/SOUCAYA.AT1.HL8251243F880C3D903BB412903604FE326C2479F4A64F7F62528B1A9CF8382738186AC28B16668E013DF464D8A7F0";
+// a downlink text starts with the message number and the flight id (ARINC 618), then the application
+static const std::string kCpdlc = "M01AKE0907/SOUCAYA.AT1.HL8251243F880C3D903BB412903604FE326C2479F4A64F7F62528B1A9CF8382738186AC28B16668E013DF464D8A7F0";
 
 // the detail of the one good ACARS message on the dial, "" when there is none
 static std::string one(const std::string& label, const std::string& text, double cfo, double snrDb, uint32_t seed) {
@@ -47,7 +48,7 @@ int main() {
     std::vector<uint8_t> g = aeroAdscBasicGroup(51.47, -12.25, 37000, 1234.5, 6);
     const auto fid = aeroAdscFlightIdGroup("KAL907");
     g.insert(g.end(), fid.begin(), fid.end());
-    const std::string adsc = aeroBuildAdscText("SOUCAYA", "HL8251", g);
+    const std::string adsc = "M02AKE0907" + aeroBuildAdscText("SOUCAYA", "HL8251", g);
     std::string bad = kCpdlc;
     bad[40] = bad[40] == 'A' ? 'B' : 'A';
     struct Case { double cfo, snr; uint32_t seed; };

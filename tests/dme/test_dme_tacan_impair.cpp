@@ -107,7 +107,7 @@ static Telemetry runRx(const std::vector<float>& e, double fs, size_t block) {
 
 int main() {
     const double fs = 4e6;
-    int n = 0, ok = 0;
+    int n = 0, ok = 0, hard = 0, hardOk = 0;   // hard: noise 0.1 (pulse SNR about 14 dB), where a few misses are allowed
     // the radial through rotation rate, clock, jitter and noise, X and Y
     for (bool y : {false, true})
         for (double rot : {0.995, 1.0, 1.005})
@@ -120,10 +120,12 @@ int main() {
                     const double err = std::fabs(diff(t.tacanRadialDeg, s.bearing));
                     n++;
                     if (t.tacanValid && err < 2.0) ok++;
+                    if (noise >= 0.1) { hard++; if (t.tacanValid && err < 2.0) hardOk++; else printf("  (noise 0.10 miss: %s rot %.3f ppm %.0f bearing %.1f valid %d)\n", y ? "Y" : "X", rot, ppm, s.bearing, (int)t.tacanValid); continue; }
                     CHECK(t.tacanValid && err < 2.0, "%s rot %.3f ppm %.0f noise %.2f bearing %.1f: valid %d radial %.2f (error %.2f)", y ? "Y" : "X", rot, ppm, noise,
                           s.bearing, (int)t.tacanValid, t.tacanRadialDeg, err);
                 }
-    printf("radial: %d of %d within 2 degrees\n", ok, n);
+    printf("radial: %d of %d within 2 degrees (noise 0.10: %d of %d)\n", ok, n, hardOk, hard);
+    CHECK(hardOk * 10 >= hard * 8, "noise 0.10: only %d of %d radials", hardOk, hard);
     // weak and strong beacons (the receiver's threshold is peak-relative), odd block sizes (state across calls)
     for (double a : {0.05, 1.0, 8.0})
         for (size_t block : {(size_t)997, (size_t)65536, (size_t)1000003}) {

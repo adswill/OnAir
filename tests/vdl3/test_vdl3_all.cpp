@@ -149,21 +149,32 @@ static RunRes runRx(double rate, double cfo, double snr, double drift, double sr
     o.seed = 7;
     o.adjacent = adjacent;
     Vdl3Traffic tr(o);
-    std::map<std::string, int> want;   // kind | info -> count
+    // strong bursts must decode; weak ones may, and a weak one decoded right is not "other"
+    std::map<std::string, int> want, weak;   // kind | info -> count
+    std::map<std::string, double> sentAt;
     for (;;) {
         const Vdl3TxBurst b = tr.next();
         if (b.t > secs - 0.04) break;
         if (b.chanHz != 0) continue;   // the adjacent station is not ours
-        if (snr + b.levelDb < minEsN0) continue;
-        want[std::string(vdl3KindName(b.kind)) + "|" + vdl3InfoHex(b.info12)]++;
+        const std::string key = std::string(vdl3KindName(b.kind)) + "|" + vdl3InfoHex(b.info12);
+        sentAt[key] = b.t;
+        if (snr + b.levelDb < minEsN0) { weak[key]++; continue; }
+        want[key]++;
         res.expect++;
     }
+    int shown = 0;
     for (const auto& m : t.bursts) {
         if (!m.golayOk) { res.bad++; continue; }
-        auto it = want.find(m.kindName + "|" + m.info);
-        if (it != want.end() && it->second > 0) { it->second--; res.got++; }
-        else res.falseKinds++;
+        const std::string key = m.kindName + "|" + m.info;
+        auto it = want.find(key);
+        if (it != want.end() && it->second > 0) { it->second--; res.got++; continue; }
+        auto w = weak.find(key);
+        if (w != weak.end() && w->second > 0) { w->second--; continue; }
+        res.falseKinds++;
+        if (shown++ < 4) printf("    other: t %.4f %s %s %d symbols, info %s, EVM %.0f %%, SNR %.0f, RS %d\n", m.timeSec, m.kindName.c_str(), m.sync.c_str(), m.symbols, m.info.c_str(), m.evmPct, m.snrDb, (int)m.rsOk);
     }
+    shown = 0;
+    for (const auto& [k, n] : want) if (n > 0 && shown++ < 4) printf("    missing: %s at %.4f s\n", k.c_str(), sentAt[k]);
     return res;
 }
 
