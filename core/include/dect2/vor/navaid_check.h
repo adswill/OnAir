@@ -40,7 +40,7 @@ public:
     double marginPct = 2;        // percentage points (or percent of the nominal for frequencies) of tolerance for the measurement
     void add(const VorTelemetry& t) {
         if (!t.dataValid) return;
-        if (t.function != fn_) { q_.clear(); fn_ = t.function; }
+        if (t.function != fn_ || t.dialHz != dial_) { q_.clear(); fn_ = t.function; dial_ = t.dialHz; }   // another beacon starts over
         if (!q_.empty() && t.timeSec <= q_.back().t) { if (t.timeSec < q_.back().t - 1) q_.clear(); else return; }
         S s; s.t = t.timeSec; s.am30 = t.am30; s.sub = t.sub9960; s.dev = t.fmDevHz; s.subHz = t.subcarrierHz; s.t30 = t.tone30Hz;
         s.m90 = t.m90; s.m150 = t.m150; s.ddm = t.ddm; s.ident = t.identDepth; s.identKey = t.identKey; s.marker = t.markerDepth; s.markerOn = t.markerOn;
@@ -89,6 +89,7 @@ private:
     struct S { double t = 0; float am30 = 0, sub = 0, dev = 0, subHz = 0, t30 = 0, ident = 0, marker = 0; bool identKey = false, markerOn = false; double m90 = 0, m150 = 0, ddm = 0; };
     std::deque<S> q_;
     NavFunction fn_ = NavFunction::None;
+    double dial_ = 0;
 };
 
 } // namespace dect2
