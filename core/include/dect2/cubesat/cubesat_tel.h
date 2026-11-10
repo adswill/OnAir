@@ -50,6 +50,7 @@ struct CubeTelemetry {
     double dialMhz = 0;                 // 0: unknown (a file)
     std::string tracked;                // the satellite the pass planner follows ("" none)
     int trackedNorad = 0;
+    std::string trackedSetup;           // what the gr-satellites table set up for the tracked satellite ("USP, FSK 9600 baud, ...", "" none)
     std::vector<CubeFrame> frames;      // newest first
 };
 

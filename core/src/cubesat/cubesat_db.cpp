@@ -35,7 +35,7 @@ const char* modName(int m) {
 const char* hintName(int h) {
     switch (h) { case HintAx25: return "AX.25"; case HintAx100M5: return "AX100 Mode 5"; case HintG3ruh: return "AX.25 G3RUH"; case HintUsp: return "USP"; case HintTubix: return "TUBiX10"; case HintDoka: return "DOKA"; default: return "auto"; }
 }
-bool decodable(const TxEntry& t) { return t.hint != HintUsp && t.hint != HintTubix && t.hint != HintDoka; }
+bool decodable(const TxEntry& t) { return t.hint != HintTubix && t.hint != HintDoka; }   // USP: cubesat_more.h (3.9)
 
 const std::vector<TxEntry>& txTable() { return builtin(); }
 

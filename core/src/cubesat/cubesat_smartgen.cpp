@@ -2,6 +2,7 @@
 #include "dect2/cubesat/cubesat_smartgen.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/cubesat/cubesat_ao40.h"
+#include "dect2/cubesat/cubesat_more.h"
 #include "dect2/cubesat/cubesat_db.h"
 #include "dect2/cubesat/cubesat_telem.h"
 #include "dect2/packet/packet_ax25.h"
@@ -197,6 +198,36 @@ std::vector<cf32> smartSynth(const SmartSynth& s, std::vector<SynthSent>* sent) 
             air.insert(air.end(), f.begin(), f.end());
             air.insert(air.end(), 4, 0x55);
             levels = msbBits(air);
+            break;
+        }
+        // 3.9 framings (cubesat_more.h)
+        case U482c: case Ngham: case Mobitex: {
+            std::vector<uint8_t> f;
+            const std::string p = std::string(s.framing == U482c ? "U482C" : s.framing == Ngham ? "NGHam" : "Mobitex") + " frame " + std::to_string(fi) + " " + s.callsign;
+            if (s.framing == U482c) { ss.data = csp(p); f = u482cEncode(ss.data, kU482cRs | kU482cScrambler | (fi % 2 ? kU482cConv : 0)); }
+            else if (s.framing == Ngham) { ss.data.assign(p.begin(), p.end()); f = nghamEncode(ss.data); }
+            else {
+                MobitexFrame mf;
+                mf.control[0] = 0x20; mf.callsign = "DP0TST";
+                for (int b = 0; b < 3; b++) { std::vector<uint8_t> d(p.begin(), p.end()); d.resize(18, (uint8_t)b); mf.blocks.push_back(d); }
+                f = mobitexEncode(mf, true, MobitexDefault);
+                MobitexFrame chk;
+                if (mobitexDecode(f.data() + 2, f.size() - 2, MobitexDefault, chk)) ss.data = chk.reframed;
+            }
+            air.assign(48, 0x55);
+            air.insert(air.end(), f.begin(), f.end());
+            air.insert(air.end(), 4, 0x55);
+            levels = msbBits(air);
+            break;
+        }
+        case CcsdsConcat: case Usp: {
+            std::vector<uint8_t> sym;
+            const std::string p = std::string(s.framing == Usp ? "USP" : "CCSDS concatenated") + " frame " + std::to_string(fi) + " " + s.callsign;
+            if (s.framing == Usp) { std::vector<uint8_t> ax = ax25bytes(">" + p); ax.resize(ax.size() - 2); ss.data = ax; sym = uspEncode(ax); }
+            else { ss.data.assign(223, 0x33); std::copy(p.begin(), p.end(), ss.data.begin()); sym = ccsdsConcatEncode(ss.data, ConcatParams()); }
+            levels = msbBits(std::vector<uint8_t>(48, 0x55));
+            levels.insert(levels.end(), sym.begin(), sym.end());
+            for (int i = 0; i < 256; i++) levels.push_back((uint8_t)(i & 1));   // the Viterbi decoder decides about 160 bits late
             break;
         }
         case kFramingText: {
