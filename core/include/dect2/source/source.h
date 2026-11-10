@@ -172,6 +172,9 @@ struct DeviceInfo {
     bool isRadio() const { return kind == HackRF || kind == Soapy || kind == Native || kind == Hamlib || kind == Group; }
     bool isGeneric() const { return kind == Soapy || kind == Native || kind == Group; }   // one overall gain, a sample-rate range reported by the radio
     bool isAudio() const { return kind == Audio; }
+    // a sound card, or a rig (Hamlib) whose own receiver gives the audio: the samples are at the dial, there is no DC spike to tune away from,
+    // so a mode's tuneOffsetHz must not move the rig (#358: FT8 on an IC-7300 came out 20 kHz high)
+    bool tunesAtDial() const { return kind == Audio || kind == Hamlib; }
     bool network = false;                  // reached over a network link, not USB (set where the name does not say "(network)": a Pluto found by mDNS)
     bool isNetwork() const { return network || name.find(" (network") != std::string::npos; }   // rtl_tcp, SpyServer, KiwiSDR, a Pluto by IP, ...
 };

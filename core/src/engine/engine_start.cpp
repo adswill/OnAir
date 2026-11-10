@@ -35,7 +35,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     std::lock_guard<std::recursive_mutex> ctl(engineControlMutex());
     stop();
     cpuAccounts();   // the receiver's CPU accounts (its number may have changed since the last start)
-    noTuneOffset_ = dev.kind == DeviceInfo::Audio;   // a sound card has no radio to tune off the DC spike: the signal is where the IF centre puts it (0 Hz)
+    noTuneOffset_ = dev.tunesAtDial();   // a sound card or a Hamlib rig's audio has no DC spike to tune off: the signal is where the IF centre puts it (0 Hz)
     ring_.clear();
     ring_.resetDropped();
     radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0;
@@ -198,7 +198,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
 void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tune) {
     {   // a narrow channel sits tuneOffsetHz away from the radio's centre (a file holds the channel as recorded: no offset)
         const ModeTuning* mto = modeTuning(stdMode_.load());
-        const double o = mto && dev.kind != DeviceInfo::File && dev.kind != DeviceInfo::Audio ? -mto->tuneOffsetHz : 0.0;
+        const double o = mto && dev.kind != DeviceInfo::File && !dev.tunesAtDial() ? -mto->tuneOffsetHz : 0.0;
         for (int wm : WideModes::modes()) wide_.configure(wm, rate_, o);
         // offset tuning: the radio sits offHz_ below, the samples are mixed back to the channel centre (offMix_), so the span centre is the channel's
         { const double wc_ = dev.kind != DeviceInfo::File ? radioTune(tune).centerHz + offHz_.load() : fileCentreHz_.load(); wide_.setCenterHz(wc_); wideAllCentre_.store(wc_); }   // the logs of a whole-span decoder keep their rows' frequencies over a retune

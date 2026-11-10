@@ -38,6 +38,10 @@ cat > "$APP/Contents/Info.plist" <<PLIST
   <key>CFBundleVersion</key><string>$VERSION</string>
   <key>LSMinimumSystemVersion</key><string>$MACOSX_DEPLOYMENT_TARGET</string>
   <key>NSHighResolutionCapable</key><true/>
+  <key>NSMicrophoneUsageDescription</key><string>OnAir listens to a sound card input or a radio's USB audio (for example an IC-7300's USB Audio CODEC) when you pick it as the source, and to the microphone for transmit.</string>
+  <key>NSCameraUsageDescription</key><string>OnAir uses a camera only when you pick it as the picture source for analog or digital TV transmit.</string>
+  <key>NSLocationUsageDescription</key><string>OnAir uses the position of this computer as the antenna position on the ADS-B map.</string>
+  <key>NSLocationWhenInUseUsageDescription</key><string>OnAir uses the position of this computer as the antenna position on the ADS-B map.</string>
   <key>LSApplicationCategoryType</key><string>public.app-category.utilities</string>
 </dict></plist>
 PLIST
