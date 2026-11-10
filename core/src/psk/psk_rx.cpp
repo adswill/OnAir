@@ -32,6 +32,8 @@ constexpr double kWideSpanMaxPsk = 100000;       // whole span: a receiver per 3
 static const bool kPskIsiBpsk = !std::getenv("PSK_NOISI");   // measuring only (the PSK_NO* switches)
 static const bool kPskReplay = !std::getenv("PSK_NOREPLAY");
 static const bool kPskSquelch = !std::getenv("PSK_NOSQL");
+static const bool kPskCoherent = !std::getenv("PSK_NOCOH");
+static const float kRefA = std::getenv("PSK_REFA") ? (float)std::atof(std::getenv("PSK_REFA")) : 0.25f;
 constexpr double kReplaySec = 1.5;
 static const float kSqlA = std::getenv("PSK_SQLA") ? (float)std::atof(std::getenv("PSK_SQLA")) : 0.4f;
 static const float kSqlT = std::getenv("PSK_SQLT") ? (float)std::atof(std::getenv("PSK_SQLT")) : 0.2f;
@@ -62,6 +64,8 @@ struct Chan {
     float pw = 0, gacc = 0;
     std::complex<float> prevY{0, 0};
     bool havePrev = false;
+    std::complex<float> ref{0, 0};   // BPSK: carrier phase reference from the last decisions (coherent decision, differential decoding)
+    int prevSign = 1;
     float q = 0.2f;              // phase decision quality: 1 clean, 0 noise
     float errVar = 1;            // mean square phase error: the SNR (Es/N0 = 1 / variance for differential detection)
     float errShown = 1;          // errVar of a second ago while text came out: what is shown (the noise after a signal ends would read ~1 dB)
@@ -415,7 +419,17 @@ struct PskReceiver::Impl {
             const int bit = c.vit.decode(b0[1] - b0[0], b1[1] - b1[0]);
             if (bit >= 0 && c.dcd) { const int ch = c.vrx.bit(bit); if (ch != -1) putChar(c, ch); }
         } else {
-            const int bit = d.real() > 0 ? 1 : 0;
+            int bit = d.real() > 0 ? 1 : 0;
+            if (kPskCoherent) {
+                // Decision against a phase reference averaged over the last symbols (each turned to phase 0 by its own decision) instead of
+                // against the previous symbol alone: the reference carries less noise, about 1 dB better than plain differential detection.
+                // A reversal is still the change of the decision, so a phase slip of the reference costs one bit.
+                if (std::norm(c.ref) <= 0) c.ref = y;
+                const int sg = std::real(y * std::conj(c.ref)) >= 0 ? 1 : -1;
+                bit = sg == c.prevSign ? 1 : 0;
+                c.prevSign = sg;
+                c.ref = (1.f - kRefA) * c.ref + kRefA * (y * (float)sg);
+            }
             if (c.dcd) { const int ch = c.vrx.bit(bit); if (ch != -1) putChar(c, ch); }
         }
         if (c.lineOpen && sigSec() - c.lastActive > 5) c.lineOpen = false;
