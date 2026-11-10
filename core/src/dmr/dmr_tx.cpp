@@ -8,7 +8,7 @@ namespace dect2 {
 
 namespace {
 // measured with tests/dmr/test_dmr_slot_sync.cpp: the generator's first sample to symbol 0 of its first burst
-constexpr double kDmrGenDelaySec = 0.0;
+constexpr double kDmrGenDelaySec = 105.0 / 48000.0;   // 2.1875 ms
 } // namespace
 
 DmrGenConfig dmrTxGenConfig(const DmrTxConfig& t) {

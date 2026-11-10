@@ -26,16 +26,19 @@ static std::vector<cf32> run(const char* id, TxRequest r, double fs, double sec,
     if (!m) { CHECK(false, "no mode %s", id); return {}; }
     auto g = makeTxGenerator(*m, r, fs, err);
     if (!g) { CHECK(false, "no generator for %s: %s", id, err.c_str()); return {}; }
+    // as on the air: the carrier is up for 0.3 s (the receiver's carrier and level tracking settle) before the first key is pressed
+    const size_t pre = (size_t)(0.3 * fs);
+    std::vector<cf32> x(pre + (size_t)(sec * fs));
+    g->generate(x.data(), pre);
     q.push(keys);
-    std::vector<cf32> x((size_t)(sec * fs));
-    for (size_t i = 0; i < x.size(); i += 65536) g->generate(x.data() + i, std::min<size_t>(65536, x.size() - i));
+    for (size_t i = pre; i < x.size(); i += 65536) g->generate(x.data() + i, std::min<size_t>(65536, x.size() - i));
     double p = 0;
     for (const auto& v : x) p += std::norm(v);
     p /= (double)x.size();
     std::mt19937 rng(seed);
     std::normal_distribution<float> nd(0.f, (float)std::sqrt(p / std::pow(10.0, snrDb / 10.0) / 2));
     for (size_t i = 0; i < x.size(); i++) {
-        x[i] *= std::polar(1.f, (float)(2 * M_PI * cfo * (double)i / fs));
+        x[i] *= cf32(std::polar(1.0, std::fmod(2 * M_PI * cfo * (double)i / fs, 2 * M_PI)));
         if (snrDb < 90) x[i] += cf32(nd(rng), nd(rng));
     }
     return x;
@@ -103,7 +106,9 @@ int main() {
                     TxDtmfTiming t; t.toneMs = ms; t.gapMs = ms; t.twistDb = (n % 3) - 1.0;
                     const double sec = 0.3 + all16.size() * 2 * ms * 1e-3;
                     const auto x = run("dmr", r, fs, sec, all16, t, cfo, snr, 10 + n);
-                    const std::string got = decode(x, fs, off, TonesFm);
+                    // the receiver is tuned to the signal within 150 Hz (the tone decoder has no wide carrier search of its own)
+                    const double tuneErr = cfo > 0 ? 150.0 : cfo < 0 ? -150.0 : 0.0;
+                    const std::string got = decode(x, fs, off + cfo - tuneErr, TonesFm);
                     n++;
                     if (got == all16) ok++; else CHECK(false, "NFM cfo %g snr %g tone %g ms twist %g: %s", cfo, snr, ms, t.twistDb, got.c_str());
                 }
@@ -122,7 +127,7 @@ int main() {
             }
             return std::abs(s) / (double)(b - a);
         };
-        const double in = tone1k(0.06), after = tone1k(0.6);
+        const double in = tone1k(0.36), after = tone1k(0.9);
         CHECK(after > 20 * in, "mic muted during the key: 1 kHz %.2e in the key, %.2e after", in, after);
     }
     // ---- airband AM and QO-100 USB: the same keys through the other analog modulations

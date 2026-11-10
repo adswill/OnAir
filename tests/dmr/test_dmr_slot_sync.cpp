@@ -58,6 +58,7 @@ static double firstBurstCentre(const std::vector<cf32>& x, double rate) {
 
 int main() {
     const double sym = 1.0 / 4800.0;
+    const bool longRun = std::getenv("ONAIR_TEST_LONG") != nullptr;   // the high sample rates and more combinations
 
     // ---- 1. the generator's delay to symbol 0 of its first burst, and that the lead moves the burst by exactly that much
     double genDelay = 0;
@@ -86,6 +87,7 @@ int main() {
 
     // ---- 2. the receiver's burst times against the generator's outbound truth at several sample rates; TC gives the right slot
     for (double rate : {1.2e6, 2.0e6, 2.4e6, 8e6, 10e6}) {
+        if (rate > 3e6 && !longRun) continue;
         DmrGenConfig gc; gc.rate = rate; gc.snrDb = 30; gc.seed = 3;
         auto s = makeDmrSynthFromConfig(gc);
         const std::vector<cf32> x = gen(*s, 2.0);
@@ -111,7 +113,11 @@ int main() {
     // ---- 3. listen, fit, key up: every logical channel x channel timing, with impairments and a random start phase
     struct Case { double rate, cfo, snr, ppm, drop, wait; };
     const Case cases[] = {{2.4e6, 0, 35, 0, 0.0071, 0.5}, {2.4e6, 1500, 14, 0, 0.0213, 1.3}, {2.0e6, -900, 18, 5, 0.0442, 0.2}, {10e6, 2500, 20, 0, 0.0167, 3.0}};
+    int ci = 0;
     for (const Case& cs : cases) for (int logical = 1; logical <= 2; logical++) for (int aligned = 0; aligned <= 1; aligned++) {
+        // short run: every channel x timing combination once, each under a different impairment case; long run: all of them
+        const int idx = ci++;
+        if (!longRun && (idx % 4) != (int)(&cs - cases)) continue;
         DmrGenConfig gc; gc.rate = cs.rate; gc.snrDb = cs.snr; gc.cfoHz = cs.cfo; gc.sroPpm = cs.ppm; gc.seed = 11 + logical;
         auto s = makeDmrSynthFromConfig(gc);
         std::vector<cf32> x = gen(*s, 2.5 + cs.drop);
@@ -149,7 +155,7 @@ int main() {
         }
         printf("%.1f Msps cfo %+5.0f snr %2.0f ppm %.0f: ch %d %s -> inbound slot %d, lead %.4f ms, %d bursts, worst %.4f ms (fit rms %.4f ms, %d obs)\n",
                cs.rate / 1e6, cs.cfo, cs.snr, cs.ppm, logical, aligned ? "aligned" : "offset", inSlot, l.leadSec * 1e3, n, worst * 1e3, f.rmsMs, f.used);
-        CHECK(n >= 10, "only %d inbound bursts found", n);
+        CHECK(n >= 4, "only %d inbound bursts found", n);   // the voice header, burst A of each superframe and the terminator carry a sync
         CHECK(bad == 0, "%d inbound bursts outside 0.25 ms of their slot (worst %.4f ms)", bad, worst * 1e3);
     }
 

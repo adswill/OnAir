@@ -101,8 +101,10 @@ struct StreamFir {
 } // namespace
 
 // the group delay of the receiver chain at 48 kHz (resampler, channel filter, matched filter) from a burst on the input to its centre on the link
-// clock, measured with tests/dmr/test_dmr_slot_sync.cpp against the generator (the decimation stages are added in configure())
-constexpr double kRxDelay48Sec = 0.0;
+// clock, measured with tests/dmr/test_dmr_slot_sync.cpp against the generator (the decimation stages are added in configure()); the exact
+// resampler, when the decimated rate is not 48 kHz, adds kRxDelayRsSec (measured at 2, 8 and 10 Msps)
+constexpr double kRxDelay48Sec = 2.0829e-3;
+constexpr double kRxDelayRsSec = 0.4505e-3;
 
 struct DmrReceiver::Impl {
     double inRate = 0;
@@ -290,7 +292,7 @@ struct DmrReceiver::Impl {
         rsPass = std::fabs(fi - kWorkRate) < 0.01;
         if (!rsPass && !rs.configure(fi, kWorkRate)) return;
         // linear-phase filters: half their length each; the 48 kHz part (channel filter, matched filter) is in kRxDelay48
-        rxDelay = kRxDelay48Sec;
+        rxDelay = kRxDelay48Sec + (rsPass ? 0.0 : kRxDelayRsSec);
         {
             double rr = fs;
             for (const auto& st : stages) { rxDelay += 0.5 * (double)(st.taps() - 1) / rr; rr /= st.decim(); }
