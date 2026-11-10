@@ -104,6 +104,18 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("Picture finished", "Any picture finished (satellite, SSTV, fax, SSDV, HamDRM): a notification with where it was saved.",
         "image.done", "",
         {act("notify", {{"title", "{{source}} picture"}, {"body", "{{detail}} {{path}}"}})}, "key", 60));
+    v.push_back(rule("New DXCC heard", "JTAlert-style: a station of an entity not in your logbook is heard (FT8, FT4, WSPR, CW ...). Tells you and beeps.",
+        "ham.decode", "new_dxcc and country != ''",
+        {act("notify", {{"title", "New one: {{country}}"}, {"body", "{{call}} {{grid}} on {{band}} {{mode}}, {{snr_db}} dB: {{text}}"}}), act("sound")}, "country", 1800));
+    v.push_back(rule("New on this band", "A station of an entity you have not worked on this band calls CQ.",
+        "ham.decode", "cq and new_dxcc_band and not new_dxcc and country != ''",
+        {act("notify", {{"title", "New on {{band}}: {{country}}"}, {"body", "{{call}} {{grid}} {{mode}} {{snr_db}} dB"}})}, "country", 1800));
+    v.push_back(rule("New grid", "A locator not in your logbook (VHF and FT8 grid chasing).",
+        "ham.decode", "new_grid and grid != ''",
+        {act("notify", {{"title", "New grid {{grid}}"}, {"body", "{{call}} on {{band}} {{mode}}"}})}, "grid", 1800));
+    v.push_back(rule("Wanted callsign heard", "A callsign you are looking for is on the air. Put your calls in the list.",
+        "ham.decode", "call in ['CHANGE1', 'CHANGE2']",
+        {act("notify", {{"title", "{{call}} on {{band}}"}, {"body", "{{mode}} {{snr_db}} dB: {{text}}"}}), act("sound")}, "call", 900));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));

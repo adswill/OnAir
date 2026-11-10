@@ -91,6 +91,13 @@ std::vector<EventInfo> build() {
         {"satellite", 's', "satellite, when known", "Meteor-M2 4"}, {"detail", 's', "channels, product, pass", "channels 1 2 3, pass 09:41, max 62 deg"},
         {"key", 's', "the receiver's name for the picture", "meteor-123"}, {"width", 'n', "pixels", "1568"}, {"height", 'n', "lines", "2200"},
         {"picture_time", 'n', "when it was taken (Unix seconds)", "1794310637"}}});
+    v.push_back({"ham.decode", "A station heard on FT8, FT4, FT2, WSPR, the other WSJT modes or in the CW skimmer, with the logbook's marks (once per decode)", "HF digital, CW", "FT8", 14.074e6, {
+        {"call", 's', "the calling station", "LY2XX"}, {"from", 's', "the same, for the message history", "LY2XX"}, {"grid", 's', "its locator, when sent", "KO24"},
+        {"text", 's', "the message", "CQ LY2XX KO24"}, {"mode", 's', "FT8, FT4, WSPR, CW ...", "FT8"}, {"band", 's', "ADIF band", "20m"},
+        {"country", 's', "DXCC entity", "Lithuania"}, {"snr_db", 'n', "SNR, dB", "-12"}, {"dt", 'n', "time offset, s", "0.2"}, {"audio_hz", 'n', "audio frequency", "1200"},
+        {"dial_mhz", 'n', "dial frequency", "14.074"}, {"cq", 'b', "a CQ call", "true"}, {"dbm", 'n', "WSPR power, dBm", "37"}, {"lat", 'n', "from the locator", "54.5"}, {"lon", 'n', "from the locator", "25"},
+        {"new_dxcc", 'b', "an entity not in the logbook", "false"}, {"new_dxcc_band", 'b', "an entity not worked on this band", "false"}, {"new_grid", 'b', "a grid not in the logbook", "false"},
+        {"new_grid_band", 'b', "a grid not worked on this band", "false"}, {"worked", 'b', "the call is in the logbook", "false"}, {"worked_band", 'b', "worked on this band and mode", "false"}}});
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {
