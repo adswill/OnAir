@@ -422,6 +422,8 @@ void settingsView(App& a) {
     ImGui::Spacing();
     channelLink(a);
     ImGui::Spacing();
+    { void meshWatchSettings(); meshWatchSettings(); }   // node watch (mesh_watch_ui.cpp)
+    ImGui::Spacing();
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Keys are kept in this computer's settings, never sent anywhere."); ImGui::PopTextWrapPos(); }
 }
 

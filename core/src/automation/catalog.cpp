@@ -100,6 +100,14 @@ std::vector<EventInfo> build() {
         {"new_grid_band", 'b', "a grid not worked on this band", "false"}, {"worked", 'b', "the call is in the logbook", "false"}, {"worked_band", 'b', "worked on this band and mode", "false"}}});
     v.push_back({"session.digest", "The daily digest at the time set (Settings: digestMinute, 21:00 by default): a line from each mode that heard something today", "All", "", 0, {
         {"day", 's', "local date", "2026-11-10"}, {"text", 's', "the digest", "312 aircraft (4 new ever), farthest 412 km; 2 new DXCC (Bouvet, Tonga)"}, {"empty", 'b', "nothing was heard", "false"}}});
+    v.push_back({"lora.node_silent", "A watched mesh node has not been heard for the set hours, or is heard again (back)", "Mesh", "Mesh", 869.525e6, {
+        {"id", 's', "node id", "!1a2b3c4d"}, {"name", 's', "long name", "Hill router"}, {"hours", 'n', "hours silent (0 when back)", "6.5"}, {"back", 'b', "heard again after the alert", "false"},
+        {"lat", 'n', "last position", "54.9"}, {"lon", 'n', "last position", "23.9"}}});
+    v.push_back({"lora.node_battery", "A watched mesh node reports a battery below the set level", "Mesh", "Mesh", 869.525e6, {
+        {"id", 's', "node id", "!1a2b3c4d"}, {"name", 's', "long name", "Hill router"}, {"battery_pct", 'n', "battery, %", "18"}, {"voltage", 'n', "volts", "3.45"}}});
+    v.push_back({"lora.node_new", "A mesh node heard for the first time this session within the set distance", "Mesh", "Mesh", 869.525e6, {
+        {"id", 's', "node id", "!1a2b3c4d"}, {"name", 's', "long name", "Kaunas 1"}, {"distance_km", 'n', "from the receiver", "4.2"}, {"hw", 's', "hardware", "HELTEC_V3"},
+        {"lat", 'n', "position", "54.9"}, {"lon", 'n', "position", "23.9"}}});
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {

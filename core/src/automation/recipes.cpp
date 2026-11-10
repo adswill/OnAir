@@ -119,6 +119,15 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("Daily digest", "Once a day (21:00 by default) a notification with what every mode heard: aircraft, ships, new DXCC, Meteor passes. Change the action to ntfy or Telegram to get it on the phone.",
         "session.digest", "not empty",
         {act("notify", {{"title", "OnAir today"}, {"body", "{{text}}"}})}, "day", 3600));
+    v.push_back(rule("Mesh node silent", "A node you watch (Mesh, Nodes, Watch) has not been heard for the set hours (6 by default).",
+        "lora.node_silent", "not back",
+        {act("notify", {{"title", "{{name}} silent"}, {"body", "Not heard for {{hours}} h"}})}, "id", 3600));
+    v.push_back(rule("Mesh node battery low", "A node you watch reports a battery below the set level (20 % by default).",
+        "lora.node_battery", "",
+        {act("notify", {{"title", "{{name}} battery {{battery_pct}} %"}, {"body", "{{voltage}} V"}})}, "id", 3600));
+    v.push_back(rule("New mesh node near me", "A mesh node heard for the first time within the set distance of the receiver.",
+        "lora.node_new", "",
+        {act("notify", {{"title", "New node {{name}}"}, {"body", "{{distance_km}} km away, {{hw}}"}})}, "id", 3600));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));

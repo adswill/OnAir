@@ -151,6 +151,7 @@ namespace meshui {
 
 void tick(App& a) {
     loadState();
+    { void meshWatchTick(App& a, bool live); meshWatchTick(a, live(a)); }   // node watch (mesh_watch_ui.cpp)
     if (live(a)) {   // the records board: the farthest mesh node with a position
         static double last = 0;
         if (ImGui::GetTime() - last > 5) { last = ImGui::GetTime(); for (const auto& n : a.rx.mesh.nodes) if (n.hasPosition) recordsOffer("Mesh", "", recordsDistKm(n.lat, n.lon), n.longName.empty() ? n.id : n.longName + " " + n.id, n.hwModel); }
