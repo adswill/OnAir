@@ -70,6 +70,7 @@ private:
     uint8_t prevBlock_[3] = {};
     uint8_t callA_[3] = {}; bool callAValid_ = false;
     bool figs_ = false;
+    bool expectTurn_ = false;        // the change-over was acknowledged: the other station starts next
     std::string tail_;               // last decoded characters (for the "+?" change-over)
     ArqStats st_;
     std::string text_, selcall_;

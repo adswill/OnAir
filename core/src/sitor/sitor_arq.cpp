@@ -51,6 +51,7 @@ void ArqMonitor::unlock() {
     csPrev_ = csPrev2_ = 0;
     prevValid_ = false;
     callAValid_ = false;
+    expectTurn_ = false;
 }
 
 void ArqMonitor::pushBit(float soft) {
@@ -88,20 +89,33 @@ void ArqMonitor::pushBit(float soft) {
     }
     // a new sending station (change of direction): another phase starts to carry blocks while the locked one has gone quiet
     const int dph = std::abs(ph - phase_);
-    if (v && missRun_ >= 2 && std::min(dph, kCycleBits - dph) > 2 && (hist_[ph] & 0x3) == 0x3) {
+    // after the change-over was acknowledged the new sending station's first block is enough; otherwise two in a row while the old one is quiet
+    const bool turn = expectTurn_ ? (hist_[ph] & 0x1) == 0x1 : (missRun_ >= 2 && (hist_[ph] & 0x3) == 0x3);
+    if (v && turn && std::min(dph, kCycleBits - dph) > 2) {
         st_.changes++;
         event("SITOR-A: the other station is sending now");
+        figs_ = false;   // the new sending station's shift is its own
+        expectTurn_ = false;
         phase_ = ph;
         missRun_ = 0;
         csOff_ = -1;
         std::fill(std::begin(csHist_), std::end(csHist_), 0.f);
         csPrev_ = csPrev2_ = 0;
         prevValid_ = false;
+        // its block of the cycle before, if that one was readable
+        uint8_t pw[3];
+        const uint64_t be = e - static_cast<uint64_t>(kCycleBits);
+        if ((hist_[ph] & 0x2) && blockAt(be, pw)) { onBlock(pw, be); havePending_ = false; scanCs(be); }
         onBlock(w, e);
         nextEnd_ = e + kCycleBits;
         return;
     }
     if (e != nextEnd_ + 1) return;
+    if (expectTurn_) {   // the old sending station now sends control signals only: what looks like a block in its slot is not one
+        nextEnd_ += kCycleBits;
+        if (++missRun_ >= 24) unlock();
+        return;
+    }
     // the expected block, or one bit either side (clock wander)
     uint8_t c[3];
     uint64_t got = 0;
@@ -139,7 +153,7 @@ void ArqMonitor::scanCs(uint64_t end) {
     csOff_ = (best >= 0 && bv >= 2.0f && bv >= 1.4f * second) ? best : -1;
     int cs = 0;
     if (csOff_ >= 0) {
-        for (int d : {0, -1, 1}) {
+        for (int d : {0}) {   // only where the control signal has been found: a neighbouring position can read as a false one
             const int o = csOff_ + d;
             if (o < 0 || o > 17) continue;
             uint8_t w;
@@ -177,9 +191,11 @@ void ArqMonitor::onBlock(const uint8_t w[3], uint64_t endBit) {
     }
     callAValid_ = false;
     // a new block or the repeat of the last one: the ISS sends the next block only when the control signal changed
+    // a repeat is the same three characters again; the control signals say whether it was asked for (a misread one must not drop a new block)
+    const bool same = prevValid_ && std::equal(w, w + 3, prevBlock_);
     bool repeat;
-    if (csPrev_ && csPrev2_ && csPrev_ != 3 && csPrev2_ != 3) repeat = csPrev_ == csPrev2_;
-    else repeat = prevValid_ && std::equal(w, w + 3, prevBlock_);
+    if (csPrev_ && csPrev2_ && csPrev_ != 3 && csPrev2_ != 3) repeat = csPrev_ == csPrev2_ && same;
+    else repeat = same;
     std::copy(w, w + 3, prevBlock_);
     prevValid_ = true;
     if (repeat) { st_.repeats++; return; }
@@ -189,7 +205,7 @@ void ArqMonitor::onBlock(const uint8_t w[3], uint64_t endBit) {
 
 void ArqMonitor::emit(const uint8_t w[3]) {
     if (w[0] == kArqAlpha && w[1] == kArqAlpha && w[2] == kArqAlpha) { event("SITOR-A: end of communication"); return; }
-    if (w[0] == kArqBeta && w[1] == kArqAlpha && w[2] == kArqBeta) { event("SITOR-A: change-over acknowledged"); return; }
+    if (w[0] == kArqBeta && w[1] == kArqAlpha && w[2] == kArqBeta) { event("SITOR-A: change-over acknowledged"); expectTurn_ = true; return; }
     std::string out;
     for (int i = 0; i < 3; i++) {
         const uint8_t x = w[i];
@@ -245,6 +261,8 @@ std::vector<cf32> genSitorArq(const ArqGenCfg& c, const std::string& text) {
         cycle(call1, {kCs1});     // two identical control signals: the caller becomes the ISS (3.1.4.5)
     }
     // sending: blocks numbered 1, 2, 1, ...; the IRS asks for "the other" block after a good one, the same after a mutilated one
+    // when B sends, A's answer to a block goes at the start of the next cycle (A keys first in every cycle)
+    std::vector<uint8_t> answerB = {kCs1};
     auto send = [&](const std::vector<uint8_t>& words, bool aSends, bool firstCs1) {
         int want = 1;          // the block number asked for
         int nBlocks = 0;
@@ -255,7 +273,7 @@ std::vector<cf32> genSitorArq(const ArqGenCfg& c, const std::string& text) {
             const bool mutilate = c.repeatEvery > 0 && nBlocks % c.repeatEvery == 0;
             const int next = mutilate ? want : (want == 1 ? 2 : 1);
             const std::vector<uint8_t> cs = {next == 1 ? kCs1 : kCs2};
-            if (aSends) cycle(blk, cs); else cycle(cs, blk);
+            if (aSends) cycle(blk, cs); else { cycle(answerB, blk); answerB = cs; }
             if (!mutilate) { i += 3; want = next; }
         }
     };
@@ -266,7 +284,7 @@ std::vector<cf32> genSitorArq(const ArqGenCfg& c, const std::string& text) {
         cycle({kArqBeta, kArqAlpha, kArqBeta}, {});              // the ISS acknowledges
         cycle({kCs1}, {kArqRq, kArqRq, kArqRq});                 // B is the ISS now: a block of three RQ (slave)
         send(arqWords(c.text2), false, true);
-        if (c.endOfComm) cycle({kCs1}, {kArqAlpha, kArqAlpha, kArqAlpha});
+        if (c.endOfComm) cycle(answerB, {kArqAlpha, kArqAlpha, kArqAlpha});
     } else if (c.endOfComm) {
         cycle({kArqAlpha, kArqAlpha, kArqAlpha}, {kCs1});
     }
