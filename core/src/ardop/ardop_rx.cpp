@@ -71,6 +71,8 @@ struct ArdopReceiver::Impl {
     enum St { Search, Dip, HeaderWait, BodyWait };
     std::mutex mu;
     std::function<void(const std::string&)> log;
+    std::function<void(const ArdopFrameEvent&)> frameTap;   // setFrameTap
+    std::vector<uint8_t> curPayload;                         // the payload of the frame being finished, for the tap
     double rate = 0, offsetHz = 0;
     ArdopTelemetry pub;
     std::atomic<bool> resetReq{true}, offsetReq{false}, clearReq{false};
@@ -390,6 +392,7 @@ struct ArdopReceiver::Impl {
             cur.leaderMs = p.leaderMs; cur.snrDb = p.snrDb;
             if (p.quality >= 0) cur.quality = p.quality;
             if (!p.payload.empty()) { cur.text = printable(p.payload); cur.hex = hexOf(p.payload); }
+            curPayload = p.payload;
             if (def.kind == ardop::KData) {
                 dataOk++;
                 text += cur.text;
@@ -420,6 +423,13 @@ struct ArdopReceiver::Impl {
             if (stations.size() > kArdopStationsMax) stations.pop_back();
         };
         if (cur.bodyOk) upd(cur.from, cur.locator, cur.to);
+        if (frameTap && cur.headerOk) {
+            ArdopFrameEvent ev;
+            ev.code = cur.code; ev.sid = cur.sid; ev.bodyOk = cur.bodyOk; ev.from = cur.from; ev.to = cur.to; ev.timeSec = cur.timeSec;
+            ev.payload = curPayload;
+            frameTap(ev);
+        }
+        curPayload.clear();
         frames.insert(frames.begin(), cur);
         if (frames.size() > kArdopFramesMax) frames.pop_back();
         char b[160];
@@ -491,6 +501,7 @@ bool ArdopReceiver::telemetry(ArdopTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 void ArdopReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
+void ArdopReceiver::setFrameTap(std::function<void(const ArdopFrameEvent&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->frameTap = std::move(cb); }
 void ArdopReceiver::clearResults() {
     p_->clearReq = true;
     std::lock_guard<std::mutex> lk(p_->mu);

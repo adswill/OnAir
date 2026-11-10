@@ -4,6 +4,7 @@
 #pragma once
 #include "dect2/engine/mode_tuning.h"
 #include "packet_tel.h"
+#include "packet_ax25.h"
 #include "dect2/common/ring.h"
 #include <cstddef>
 #include <cstdint>
@@ -49,6 +50,8 @@ public:
     std::string saveResults() const;                     // for the results file (results_io.h)
     bool loadResults(const std::string& blob);           // false: not this build's format, nothing changes
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
+    // every frame with a good FCS, as parsed (the Winlink AX.25 link reads its connected-mode frames here); called from the receiver thread
+    void setFrameTap(std::function<void(const ax25::Frame& f, int baud)> cb);
     // "Listen": the FM-demodulated audio (the AFSK tones, 1200 / 2200 Hz) at 8 kHz on the sound card; off by default
     void setListen(bool on);
     bool listening() const;
