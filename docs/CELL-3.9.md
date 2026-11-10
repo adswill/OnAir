@@ -83,6 +83,14 @@ the public PHS networks have mostly closed (China, Japan, Taiwan), so there is l
 figures (the scramble register taps, the CRC output, the bit order inside the 6-bit first octet) also could not be checked
 without a recording. The mapping of the 8-octet broadcasting messages onto the 62-bit I field across slots needs a careful read first.
 
+## Test runs (GitHub quick workflow, Linux)
+
+- run 42880196752: cell_ltem, cell_phy, cell_rx passed
+- run 42883312326: cdma_phy, gsmr_bands, gsmr_rx, gsmr_phy, gsmr_engine, mode_numbers passed (tdscdma_cell fixed afterwards)
+- run 42886358196: gsmr_bands (shortened) passed
+- run 42886958846: tdscdma_cell passed. A weaker cell's SYNC-DL is measured after the stronger cells' SYNC-DL is subtracted, and
+  the carrier error left between the midamble and the SYNC-DL is searched as one common phase.
+
 ## Mode numbers
 
 CDMA2000 cells: family 660, engine standard 662, poll slot 660. TD-SCDMA cells: family 661, engine standard 663, poll slot 661
