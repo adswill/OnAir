@@ -1346,3 +1346,22 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-11 Fuzzing every mode (feat39-fuzz)
+Built an ASan and UBSan configuration of the core. Added two fuzzers:
+- `fuzz_engine_modes` runs every mode through the engine. It feeds malformed IQ, then runs retunes, a sample-rate change, mode switches, start/stop cycles and a leak check.
+- `fuzz_parsers` covers PSIP, captions, ATSC 3.0 ALP/IP/ROUTE/LLS, inflate, XML, RDS and BB frames.
+
+Fixed 10 bugs, each with a regression test:
+- ROUTE offset overflow and unbounded allocation
+- DVB-T2 P2 gather overflow
+- uninitialised FTX auto results
+- DVB-S symbol-timer output overflow (DVB-S/S2, ISDB-S, Himawari, FY-4, GOES GRB)
+- float samples of 2^20 and more now silenced at the input
+- GOES/GGAK/FY-GEO timing-loop hang and out-of-bounds read
+- SSDV sign-bit shift
+- KAAL resampler read past the end
+- Wi-Fi Viterbi NaN
+- iono/tetrapol NaN casts
+
+The first pass failed 19 of 296 modes. After the fixes, a second pass with another seed failed 0 of 296. No leaks were found. Synthetic inputs only. Details are in docs/FUZZ-3.9.md.
