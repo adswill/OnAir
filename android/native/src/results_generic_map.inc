@@ -157,6 +157,7 @@ case 30: {
     cardIf(o, "Text", t.text);
     cardIf(o, "Partial", t.partial);
     { Table tb({"Item"}); int n = 0; for (auto it = t.history.rbegin(); it != t.history.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "History", tb); }
+    { Table tb({"Offset Hz", "Level Db", "Snr Db", "Wpm", "Tone Hz", "Ident", "Last Wall"}); int n = 0; for (auto it = t.census.rbegin(); it != t.census.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.offsetHz), cell(e.levelDb), cell(e.snrDb), cell(e.wpm), cell(e.toneHz), cell(e.ident), cell(e.lastWall)}); } if (n) addTable(o, "Census", tb); }
     break;
 }
 case 31: {
@@ -209,8 +210,9 @@ case 33: {
     cardIf(o, "Retunes", t.retunes);
     cardIf(o, "Last Block Center Hz", t.lastBlockCenterHz);
     { Table tb({"Freq Hz", "Width Hz", "Level Db"}); int n = 0; for (auto it = t.carriers.rbegin(); it != t.carriers.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.freqHz), cell(e.widthHz), cell(e.levelDb)}); } if (n) addTable(o, "Carriers", tb); }
-    { Table tb({"Freq Hz", "Earfcn", "Band", "Pci", "N Rb", "Ports", "Phich Dur", "Op"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.freqHz), cell(e.earfcn), cell(e.band), cell(e.pci), cell(e.nRb), cell(e.ports), cell(e.phichDur), cell(e.op)}); } if (n) addTable(o, "Cells", tb); }
+    { Table tb({"Freq Hz", "Earfcn", "Band", "Pci", "N Rb", "Ports", "Op", "Hnb Name"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.freqHz), cell(e.earfcn), cell(e.band), cell(e.pci), cell(e.nRb), cell(e.ports), cell(e.op), cell(e.hnbName)}); } if (n) addTable(o, "Cells", tb); }
     { Table tb({"Wall Time", "Sec", "Text"}); int n = 0; for (auto it = t.events.rbegin(); it != t.events.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.sec), cell(e.text)}); } if (n) addTable(o, "Events", tb); }
+    { Table tb({"Wall Time", "Sec", "Pci", "Cells", "Plmn", "Category", "Text", "Lang"}); int n = 0; for (auto it = t.warnings.rbegin(); it != t.warnings.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.sec), cell(e.pci), cell(e.cells), cell(e.plmn), cell(e.category), cell(e.text), cell(e.lang)}); } if (n) addTable(o, "Warnings", tb); }
     break;
 }
 case 40: {
@@ -396,6 +398,8 @@ case 55: {
     cardIf(o, "Headers Bad", t.headersBad);
     cardIf(o, "Other Rate", t.otherRate);
     { Table tb({"Bssid", "Ssid", "Vendor", "Ciphers", "Rates", "Standard", "Caps", "Akms"}); int n = 0; for (auto it = t.aps.rbegin(); it != t.aps.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.bssid), cell(e.ssid), cell(e.vendor), cell(e.ciphers), cell(e.rates), cell(e.standard), cell(e.caps), cell(e.akms)}); } if (n) addTable(o, "Aps", tb); }
+    { Table tb({"Tag", "With Ap", "Probe Frames", "Data Frames", "Last Wall"}); int n = 0; for (auto it = t.clients.rbegin(); it != t.clients.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.tag), cell(e.withAp), cell(e.probeFrames), cell(e.dataFrames), cell(e.lastWall)}); } if (n) addTable(o, "Clients", tb); }
+    { Table tb({"Wall Time", "Bssid", "Frames"}); int n = 0; for (auto it = t.floodAlarms.rbegin(); it != t.floodAlarms.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.bssid), cell(e.frames)}); } if (n) addTable(o, "Flood Alarms", tb); }
     { Table tb({"Wall Time", "Sec", "Channel", "Band", "Type", "Subtype", "Bssid", "Info"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.sec), cell(e.channel), cell(e.band), cell(e.type), cell(e.subtype), cell(e.bssid), cell(e.info)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -845,6 +849,7 @@ case 84: {
     cardIf(o, "Tisb Count", t.tisbCount);
     { Table tb({"Icao", "Callsign", "Squawk", "Alt Ft", "Geo Alt Ft", "Lat", "Lon", "Speed Kt"}); int n = 0; for (auto it = t.aircraft.rbegin(); it != t.aircraft.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.icao), cell(e.callsign), cell(e.squawk), cell(e.altFt), cell(e.geoAltFt), cell(e.lat), cell(e.lon), cell(e.speedKt)}); } if (n) addTable(o, "Aircraft", tb); }
     { Table tb({"Product Id", "Title", "Text", "Time Sec"}); int n = 0; for (auto it = t.fisb.rbegin(); it != t.fisb.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.productId), cell(e.title), cell(e.text), cell(e.timeSec)}); } if (n) addTable(o, "Fisb", tb); }
+    { Table tb({"Lat", "Lon", "D Lat", "D Lon", "Value"}); int n = 0; for (auto it = t.nexrad.rbegin(); it != t.nexrad.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.lat), cell(e.lon), cell(e.dLat), cell(e.dLon), cell(e.value)}); } if (n) addTable(o, "Nexrad", tb); }
     { Table tb({"Hex", "Kind", "Address", "Time Sec", "Level Dbfs", "Summary"}); int n = 0; for (auto it = t.framesLog.rbegin(); it != t.framesLog.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.hex), cell(e.kind), cell(e.address), cell(e.timeSec), cell(e.levelDbfs), cell(e.summary)}); } if (n) addTable(o, "Frames Log", tb); }
     break;
 }
