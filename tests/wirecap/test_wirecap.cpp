@@ -186,6 +186,7 @@ int main(int argc, char** argv) {
     h.publish(Zigbee, Bytes{1, 2, 3});
     CHECK(h.stats(Zigbee).packets == 0 && fs::is_empty(gDir), "wrote while off");
 
+    std::printf("-- %s\n", "Wi-Fi: radiotap"); std::fflush(stdout);
     // Wi-Fi: radiotap fields where the alignment rules put them, the frame untouched (a protected data frame: stays as it is)
     {
         Bytes mac = {0x08, 0x41, 0, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 1, 2, 3, 4, 5, 6, 0x10, 0x20, 0xDE, 0xAD, 0xBE, 0xEF};
@@ -289,6 +290,7 @@ int main(int argc, char** argv) {
         CHECK(r.size() == 19 && rd32(&r[0]) == 1700000000u && rd32(&r[4]) == 123456u && rd32(&r[8]) == 3 && rd32(&r[12]) == 3, "pcap record");
     }
 
+    std::printf("-- %s\n", "real decoders"); std::fflush(stdout);
     // real decoders: a generator's frames through the receiver and into a file
     {
         ZigbeeGenConfig c; c.loop = false; c.snrDb = 30; c.cfoHz = 12000;
@@ -358,6 +360,7 @@ int main(int argc, char** argv) {
         std::printf("Z-Wave: %zu frames in the file, all as sent (%zu scheduled)\n", p.packets.size(), c.frames.size());
     }
 
+    std::printf("-- %s\n", "the extcap program"); std::fflush(stdout);
     // the extcap program
 #ifndef _WIN32
     if (argc > 1) {
@@ -390,18 +393,21 @@ int main(int argc, char** argv) {
         }
         const std::string fifo = gDir + "/fifo";
         CHECK(mkfifo(fifo.c_str(), 0600) == 0, "mkfifo");
+        const std::string portText = std::to_string(port);   // (nothing is allocated between fork and exec)
+        std::printf("live capture through %s on port %d\n", ex.c_str(), port); std::fflush(stdout);
         const pid_t kid = fork();
-        if (kid == 0) { execl(ex.c_str(), ex.c_str(), "--capture", "--extcap-interface", "onair_zigbee", "--fifo", fifo.c_str(), "--port", std::to_string(port).c_str(), (char*)nullptr); _exit(127); }
-        const int rfd = open(fifo.c_str(), O_RDONLY);
+        if (kid == 0) { execl(ex.c_str(), ex.c_str(), "--capture", "--extcap-interface", "onair_zigbee", "--fifo", fifo.c_str(), "--port", portText.c_str(), (char*)nullptr); _exit(127); }
+        const int rfd = open(fifo.c_str(), O_RDONLY | O_NONBLOCK);   // never blocks: reads give 0 until the program opens its end
         CHECK(rfd >= 0, "open fifo");
         Bytes got;
         uint8_t tmp[4096];
         const Bytes pkt = {0x03, 0x08, 0x01, 0xFF, 0xFF, 0xFF, 0xFF, 0x07, 0x11, 0x22};
         bool sent = false;
-        for (int i = 0; i < 400 && got.size() < 24 + 3 * (16 + pkt.size()); i++) {
+        const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(15);
+        while (std::chrono::steady_clock::now() < until && got.size() < 24 + 3 * (16 + pkt.size())) {
             if (h.stats(Zigbee).clients > 0 && !sent) { for (int k = 0; k < 3; k++) h.publish(Zigbee, pkt); sent = true; }
             fd_set s; FD_ZERO(&s); FD_SET(rfd, &s); timeval t{0, 20000};
-            if (select(rfd + 1, &s, nullptr, nullptr, &t) > 0) { const ssize_t n = read(rfd, tmp, sizeof tmp); if (n <= 0) break; got.insert(got.end(), tmp, tmp + n); }
+            if (select(rfd + 1, &s, nullptr, nullptr, &t) > 0) { const ssize_t n = read(rfd, tmp, sizeof tmp); if (n > 0) got.insert(got.end(), tmp, tmp + n); else std::this_thread::sleep_for(std::chrono::milliseconds(20)); }
         }
         CHECK(sent, "extcap never attached");
         CHECK(got.size() == 24 + 3 * (16 + pkt.size()), "live capture: %zu bytes", got.size());
@@ -415,12 +421,17 @@ int main(int argc, char** argv) {
         CHECK(h.boundPort() == 0, "port still open with every switch off");
         kill(kid, SIGTERM);
         close(rfd);
-        int st = 0; waitpid(kid, &st, 0);
+        int st = 0;
+        bool exited = false;
+        for (int i = 0; i < 100 && !exited; i++) { exited = waitpid(kid, &st, WNOHANG) == kid; if (!exited) std::this_thread::sleep_for(std::chrono::milliseconds(50)); }
+        CHECK(exited, "the extcap program did not stop on SIGTERM");
+        if (!exited) { kill(kid, SIGKILL); waitpid(kid, &st, 0); }
     }
 #else
     (void)argc; (void)argv;
 #endif
 
+    std::printf("-- %s\n", "the one-click install"); std::fflush(stdout);
     // the one-click install into an empty home folder
     {
         const fs::path fake = fs::path(gDir) / "fake-extcap";
