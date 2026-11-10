@@ -275,7 +275,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MT63** - MT63: robust keyboard chat on 64 carriers
 - **FSQ** - FSQ: directed keyboard chat on 33 tones
 - **IFKP** - IFKP: keyboard chat on 33 tones, three speeds
-- **SITOR** - SITOR-B: the text of a CCIR 476 FEC teletype broadcast, found automatically
+- **SITOR** - SITOR: the text of CCIR 476 FEC broadcasts (SITOR-B) and ARQ links (SITOR-A / AMTOR), found automatically
 - **ARDOP** - ARDOP: Winlink HF modem frames, monitor only
 - **JS8Call** - JS8Call: weak-signal messages, heartbeats and relays
 - **RTTY** - RTTY: radio teletype text
