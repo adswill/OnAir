@@ -712,6 +712,8 @@ I'm a bit embarrassed to ask this, but here goes. OnAir is free and always will 
 
 OnAir is released under the **GNU General Public License v3.0 or later**, see [LICENSE](LICENSE).
 
+With one additional term under GPL section 7(b): works that use OnAir code must keep the line "Based on OnAir by Kristijonas Adomaitis - https://on-air.dev" in their About or licence screen. See [ADDITIONAL-TERMS.md](ADDITIONAL-TERMS.md).
+
 ### Logo
 
 OnAir name and logo © 2026 Kristijonas Adomaitis. All rights reserved; the logo is not covered by the GPL licence of the source code. Designed by Cipta Karsa Studio as work for hire, all rights assigned to the owner (see [assets/branding](assets/branding/README.md)).
