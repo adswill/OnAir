@@ -6,6 +6,11 @@
 
 namespace dect2 {
 
+namespace {
+// measured with tests/dmr/test_dmr_slot_sync.cpp: the generator's first sample to symbol 0 of its first burst
+constexpr double kDmrGenDelaySec = 0.0;
+} // namespace
+
 DmrGenConfig dmrTxGenConfig(const DmrTxConfig& t) {
     DmrGenConfig c;
     c.rate = t.rate;
@@ -16,6 +21,7 @@ DmrGenConfig dmrTxGenConfig(const DmrTxConfig& t) {
     c.txSlot = (t.slot == 2) ? 2 : 1;
     c.txMobile = t.mobile;
     c.txVoiceSuper = std::max(1, (int)std::lround(t.voiceSeconds / 0.36));
+    c.txLeadSec = std::max(0.0, t.leadSec);
     switch (t.call) {
     case DmrTxCall::GroupVoice:        c.txCallType = 0; c.txDst = t.dest; break;
     case DmrTxCall::PrivateVoice:      c.txCallType = 1; c.txDst = t.dest; break;
@@ -37,6 +43,23 @@ DmrGenConfig dmrTxGenConfig(const DmrTxConfig& t) {
 
 std::unique_ptr<ModeSynth> makeDmrTxSynth(const DmrTxConfig& t) {
     return makeDmrSynthFromConfig(dmrTxGenConfig(t));
+}
+
+double dmrTxGenDelaySec() { return kDmrGenDelaySec; }
+
+DmrTxLead dmrTxApplySlotSync(DmrTxConfig& t, int logicalChannel, bool aligned, double txStartSec) {
+    return dmrTxApplySlotSync(t, logicalChannel, aligned, txStartSec, DmrSlotClock::global().fit());
+}
+
+DmrTxLead dmrTxApplySlotSync(DmrTxConfig& t, int logicalChannel, bool aligned, double txStartSec, const DmrSlotClock::Fit& f) {
+    DmrTxLead l = dmrTxLeadFor(f, logicalChannel, aligned, txStartSec, kDmrGenDelaySec);
+    if (l.ok) {
+        // the generator puts a slot 2 transmission 30 ms after its first slot: take that off the lead (a frame later when it would go negative)
+        double lead = l.leadSec - (t.slot == 2 ? kDmrSlotSec : 0.0);
+        if (lead < 0) lead += kDmrFrameSec;
+        t.leadSec = l.leadSec = lead;
+    }
+    return l;
 }
 
 std::string dmrTxSummary(const DmrTxConfig& t) {

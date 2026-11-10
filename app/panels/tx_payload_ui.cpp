@@ -4,6 +4,7 @@
 #include "dect2/mesh/mesh_tx.h"
 #include "dect2/fm/rds_live.h"
 #include "dect2/tx/tx_dtmf.h"
+#include "dect2/dmr/dmr_slot_sync.h"
 #include "platform/platform.h"
 #include "../ui/typography.h"
 #include "dect2/hfdig/hfdig_sstv.h"
@@ -138,6 +139,38 @@ void dtmfKeypadRow(bool running) {
             plat::prefs().setD("tx.dtmf.levelPct", t.levelPct);
             plat::prefs().setD("tx.dtmf.twistDb", t.twistDb);
         }
+        ImGui::TreePop();
+    }
+}
+
+// DMR slot sync (dmr_slot_sync.h, TS 102 361-1 4.4.1): listen to the repeater's output in the DMR receiver first, then the first burst waits for
+// the inbound slot of the chosen timeslot. One checkbox on top; the channel timing and the radio's latency under Advanced.
+void dmrSlotSyncRow(TxUi& s) {
+    if (!s.dmrSyncLoaded) {
+        s.dmrSyncLoaded = true;
+        s.dmrSlotSync = plat::prefs().getD("tx.dmr.slotSync", 1) > 0.5;
+        s.dmrAligned = plat::prefs().getD("tx.dmr.aligned", 0) > 0.5;
+        s.dmrLatencyMs = plat::prefs().getD("tx.dmr.latencyMs", 0);
+    }
+    if (ImGui::Checkbox(tr("Sync to the repeater's time slots (listen first)"), &s.dmrSlotSync)) plat::prefs().setD("tx.dmr.slotSync", s.dmrSlotSync ? 1 : 0);
+    if (s.dmrSlotSync) {
+        const dect2::DmrSlotClock::Fit f = dect2::DmrSlotClock::global().fit();
+        const double age = dect2::dmrSteadySec() - f.lastSec;
+        const int in = dect2::DmrSlotClock::inboundSlot(s.slot == 2 ? 2 : 1, s.dmrAligned);
+        if (f.ok && age < 10) {
+            const int busy = f.busy[in - 1];
+            ImGui::TextDisabled(tr("Repeater timing heard %.1f s ago (%d bursts, %.2f ms): transmits in inbound slot %d%s"), age, f.used, f.rmsMs, in,
+                                busy == 1 ? tr(", which the repeater reports busy") : "");
+        } else {
+            ImGui::TextDisabled("%s", tr("Repeater not heard in the last 10 s: open the DMR receiver on the repeater's output first, or the call starts at once (wakes the repeater)."));
+        }
+    }
+    if (ImGui::TreeNode(trw("Advanced: DMR slot timing"))) {
+        if (ImGui::Checkbox(tr("Aligned channel timing (the repeater pairs inbound slot 2 with outbound slot 1)"), &s.dmrAligned)) plat::prefs().setD("tx.dmr.aligned", s.dmrAligned ? 1 : 0);
+        ImGui::SetNextItemWidth(160 * gUi);
+        double lo = -100, hi = 200;
+        if (ImGui::SliderScalar(tr("Radio latency to the air (ms)"), ImGuiDataType_Double, &s.dmrLatencyMs, &lo, &hi, "%.2f")) plat::prefs().setD("tx.dmr.latencyMs", s.dmrLatencyMs);
+        ImGui::TextDisabled("%s", tr("The receive and transmit buffering of the radio, from the moment OnAir hands over the samples to the air. Adjust until the repeater takes the call."));
         ImGui::TreePop();
     }
 }
@@ -673,6 +706,7 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
                 ImGui::InputDouble(tr("Longitude"), &s.lon, 0, 0, "%.6f");
             }
             ImGui::TextWrapped("%s", tr("Transmitting on DMR needs a licence (amateur, or the system operator's permission). Your DMR ID and callsign go on the air. Voice bits are a test pattern; OnAir cannot encode AMBE+2 speech (decode-only codec). Not tested on air against a real repeater."));
+            dmrSlotSyncRow(s);
         }
         if (!txCanEncodeVoice(mode)) ImGui::Checkbox(tr("Send analog NFM of the audio instead of the digital test pattern"), &s.analogVoice);
         audioSourceRow(s, running);

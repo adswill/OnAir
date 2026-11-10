@@ -666,6 +666,10 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
             // destination: a talkgroup for group voice / SMS / LRRP, a radio ID for private and Tier III
             const bool toUnit = t.call == DmrTxCall::PrivateVoice || t.call == DmrTxCall::Tier3Register || t.call == DmrTxCall::Tier3VoiceRequest;
             t.dest = toUnit ? (destId ? destId : (uint32_t)r.talkgroup) : ((uint32_t)r.talkgroup ? (uint32_t)r.talkgroup : destId);
+            // slot sync (dmr_slot_sync.h): when the DMR receiver heard the repeater's output in the last 10 s, the first burst waits for the inbound
+            // slot; otherwise the transmission starts at once (BS activation). dmr.latencyMs: the radio's delay from here to the air, set by the user.
+            if (r.o("dmr.slotSync", 1) > 0.5 && t.mobile)
+                dmrTxApplySlotSync(t, t.slot == 2 ? 2 : 1, r.o("dmr.aligned", 0) > 0.5, dmrSteadySec() + r.o("dmr.latencyMs", 0) / 1000.0);
             return makeDmrTxSynth(t);
         }
         // nothing entered: the demo base-station test signal
