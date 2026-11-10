@@ -372,8 +372,8 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
   assumed a channel on the centre and every packet failed its CRC (0 good, about 600 bad in 3 s of the test signal and of the
   transmitter's signal). They now get the recording's centre (the frequency entered for it) when it lies in the 2.4 GHz band. Remote ID
   now passes all six conditions (2963 packets in 3 s).
-- **DAB generator** (`core/src/dab/dab_gen.cpp`) and **DMR protocol bridge** (`core/src/dmr/dmr_proto_rs.cpp`): `memcpy` from an empty
-  vector's null `data()`. This is undefined behaviour, and UBSan stops on it in `test_iq_modes` under `DECT2_SANITIZE`.
+- **DAB generator** (`core/src/dab/dab_gen.cpp`), **DMR and DRM protocol bridges** (`core/src/dmr/dmr_proto_rs.cpp`,
+  `core/src/drm/drm_proto_rs.cpp`): `memcpy` from an empty vector's null `data()`. This is undefined behaviour, and UBSan stops on it in `test_iq_modes` under `DECT2_SANITIZE`.
 - **`bench_modes`** shifted an offset-tuned mode's test signal by -offset instead of +offset. The signal of the generator sits at -offset,
   as a live radio sees it, so the narrow receivers measured CPU on a signal they never found. The sweep had the same bug and the same fix.
 - Build: `DECT2_SANITIZE_RECOVER=ON` (with `DECT2_SANITIZE`) reports every undefined-behaviour site of a run instead of stopping at the first.
@@ -489,8 +489,10 @@ These failures are not explained by the condition. They are in `qa_known.inc` as
 ## Not done
 
 - The iq_modes crash on Windows and Linux (3.8 full CI run 42841590406: heap corruption `0xc0000374`, `malloc(): invalid size`). It
-  happens in the engine-spectrum stage, where six Engines run at once, after all the receiver runs. ASan / UBSan runs of `iq_modes` on CI
-  found two undefined-behaviour sites first (DAB generator, DMR bridge, both fixed). The ASan run that should reach the crash was still
-  running when this was written (quick.yml run 42921904976 with `DECT2_SANITIZE=ON -DDECT2_SANITIZE_RECOVER=ON`).
+  happens in the engine-spectrum stage, where six Engines run at once, after all the receiver runs. Under AddressSanitizer
+  (`DECT2_SANITIZE=ON -DDECT2_SANITIZE_RECOVER=ON`, quick.yml run 42921904976) the whole test ran to the end (2320 s) with no memory
+  error. It reported only three more memcpy-from-null sites (DAB generator, DMR bridge, DRM bridge: all fixed) and an ATSC spectrum check
+  (ATSC belongs to another worker). With no overflow or use-after-free found, the corruption is most likely a data race between those
+  six Engines. The next step is a ThreadSanitizer run of `iq_modes` (`DECT2_SANITIZE_THREAD=ON`).
 - The 40 `open` failures above.
 - The CPU optimisations (see above).
