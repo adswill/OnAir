@@ -8,6 +8,11 @@
 #include "dect2/common/time_fmt.h"
 #include "dect2/sensors/sensors_rx.h"
 #include "dect2/sensors/sensors_names.h"
+#include "dect2/sensors/pws_upload.h"
+#include <atomic>
+#include <memory>
+#include <mutex>
+#include <thread>
 #include "dect2/sensors/sensors_tel.h"
 #include <algorithm>
 #include <cmath>
@@ -562,14 +567,112 @@ void decodersView(App& a) {
     ImGui::EndChild();
 }
 
+// ----- weather upload (Weather Underground, CWOP): off by default, the user's id and key -----
+struct Pws {
+    bool loaded = false, wu = false, cwop = false;
+    std::string key1, key2;                 // the sensors that make the station
+    char wuId[32] = {}, wuKey[64] = {}, cwCall[16] = {}, cwPass[12] = {};
+    int minutes = 5;
+    double last = 0;
+    struct Status { std::mutex mu; std::string text; };
+    std::shared_ptr<Status> status = std::make_shared<Status>();
+    std::shared_ptr<std::atomic<bool>> busy = std::make_shared<std::atomic<bool>>(false);
+};
+Pws P;
+void pwsLoad() {
+    if (P.loaded) return;
+    P.loaded = true;
+    plat::Prefs& d = plat::prefs();
+    P.wu = d.getB("pwsWu", false); P.cwop = d.getB("pwsCwop", false);
+    P.key1 = d.getS("pwsKey1", ""); P.key2 = d.getS("pwsKey2", "");
+    std::snprintf(P.wuId, sizeof P.wuId, "%s", d.getS("pwsWuId", "").c_str()); std::snprintf(P.wuKey, sizeof P.wuKey, "%s", d.getS("pwsWuKey", "").c_str());
+    std::snprintf(P.cwCall, sizeof P.cwCall, "%s", d.getS("pwsCwCall", "").c_str()); std::snprintf(P.cwPass, sizeof P.cwPass, "%s", d.getS("pwsCwPass", "").c_str());
+    P.minutes = std::max(5, (int)d.getI("pwsMinutes", 5));
+}
+void pwsSave() {
+    plat::Prefs& d = plat::prefs();
+    d.setB("pwsWu", P.wu); d.setB("pwsCwop", P.cwop); d.setS("pwsKey1", P.key1); d.setS("pwsKey2", P.key2);
+    d.setS("pwsWuId", P.wuId); d.setS("pwsWuKey", P.wuKey); d.setS("pwsCwCall", P.cwCall); d.setS("pwsCwPass", P.cwPass); d.setI("pwsMinutes", P.minutes);
+}
+int tzOffNow() { const time_t t = time(nullptr); struct tm l = *localtime(&t), g = *gmtime(&t); l.tm_isdst = 0; g.tm_isdst = 0; return (int)difftime(mktime(&l), mktime(&g)); }
+
+void pwsTick(App& a) {
+    pwsLoad();
+    if ((!P.wu && !P.cwop) || !live(a) || P.busy->load()) return;
+    const double now = (double)time(nullptr);
+    if (now - P.last < P.minutes * 60.0) return;
+    dect2::PwsReading r;
+    bool have = false;
+    for (const auto& d : a.rx.sensors.devices) {
+        if (d.key != P.key1 && d.key != P.key2) continue;
+        if (now - (double)d.lastSeen > 15 * 60) continue;   // a silent sensor sends nothing old
+        r = have ? dect2::pwsMerge(r, dect2::pwsFromSensor(d, (int64_t)now, tzOffNow())) : dect2::pwsFromSensor(d, (int64_t)now, tzOffNow());
+        have = true;
+    }
+    if (!have || !r.any()) return;
+    P.last = now;
+    const std::string wuUrl = P.wu && P.wuId[0] && P.wuKey[0] ? dect2::pwsWundergroundUrl(P.wuId, P.wuKey, r, (int64_t)now) : "";
+    std::string cw;
+    double la = 0, lo = 0;
+    if (P.cwop && P.cwCall[0] && receiverLocationSet()) { receiverLocation(la, lo); cw = dect2::pwsCwopPacket(P.cwCall, la, lo, r, (int64_t)now); }
+    const std::string call = P.cwCall, pass = P.cwPass, tmp = plat::dataDir() + "/pws-reply.txt";
+    auto st = P.status; auto busy = P.busy;
+    busy->store(true);
+    std::thread([wuUrl, cw, call, pass, tmp, st, busy] {
+        std::string out;
+        if (!wuUrl.empty()) {
+            const bool ok = plat::fetchUrl(wuUrl, tmp, std::string("OnAir/") + ONAIR_VERSION);
+            std::ifstream f(tmp); std::string reply; std::getline(f, reply);
+            out += ok && reply.find("success") != std::string::npos ? "Weather Underground: sent" : "Weather Underground: not accepted (" + reply.substr(0, 60) + ")";
+            std::remove(tmp.c_str());
+        }
+        if (!cw.empty()) { std::string err; const bool ok = dect2::pwsCwopSend(call, pass, cw, err); out += (out.empty() ? "" : "; ") + std::string(ok ? "CWOP: sent" : "CWOP: " + err); }
+        { std::lock_guard<std::mutex> lk(st->mu); st->text = out; }
+        busy->store(false);
+    }).detach();
+}
+
+void uploadView(App& a) {
+    pwsLoad();
+    const dect2::SensorsTelemetry& t = a.rx.sensors;
+    ImGui::TextWrapped("%s", tr("Send one weather station's values to Weather Underground and CWOP every few minutes. Off until you switch it on; your station id, key and callsign. Windy and AWEKAS are not supported."));
+    bool ch = false;
+    auto pick = [&](const char* id, std::string& key) {
+        std::string cur = key.empty() ? std::string(tr("(none)")) : key;
+        for (const auto& d : t.devices) if (d.key == key) cur = dect2::sensorLabel(d, S.names);
+        ImGui::SetNextItemWidth(260 * gUi);
+        if (ImGui::BeginCombo(id, cur.c_str())) {
+            if (ImGui::Selectable(tr("(none)"), key.empty())) { key.clear(); ch = true; }
+            for (const auto& d : t.devices) if (d.kind == "weather" || !d.history.empty()) if (ImGui::Selectable((dect2::sensorLabel(d, S.names) + "##pws" + d.key).c_str(), d.key == key)) { key = d.key; ch = true; }
+            ImGui::EndCombo();
+        }
+    };
+    ImGui::AlignTextToFramePadding(); ImGui::TextUnformatted(tr("Station sensor")); ImGui::SameLine(); pick("##pws1", P.key1);
+    ImGui::SameLine(); ImGui::TextUnformatted(tr("and")); ImGui::SameLine(); pick("##pws2", P.key2);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A second sensor fills what the first does not send (for example a rain gauge next to a thermometer)."));
+    ImGui::SetNextItemWidth(90 * gUi);
+    if (ImGui::InputInt(tr("minutes between uploads##pws"), &P.minutes)) { P.minutes = std::max(5, std::min(60, P.minutes)); ch = true; }
+    ImGui::Separator();
+    ch |= ImGui::Checkbox("Weather Underground##pwswu", &P.wu);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(120 * gUi); ch |= ImGui::InputTextWithHint("##pwswuid", tr("station ID"), P.wuId, sizeof P.wuId);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ch |= ImGui::InputTextWithHint("##pwswukey", tr("station key"), P.wuKey, sizeof P.wuKey, ImGuiInputTextFlags_Password);
+    ch |= ImGui::Checkbox("CWOP##pwscw", &P.cwop);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(120 * gUi); ch |= ImGui::InputTextWithHint("##pwscwc", tr("CW1234 or callsign"), P.cwCall, sizeof P.cwCall);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi); ch |= ImGui::InputTextWithHint("##pwscwp", tr("passcode"), P.cwPass, sizeof P.cwPass, ImGuiInputTextFlags_Password);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("CW stations need none (-1). A licensed amateur uses the APRS-IS passcode of the callsign. The position is the receiver position."));
+    if (P.cwop && !receiverLocationSet()) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.25f, 1), "%s", tr("CWOP needs the receiver position (Tuner, Locate)."));
+    if (ch) pwsSave();
+    { std::string t2; { std::lock_guard<std::mutex> lk(P.status->mu); t2 = P.status->text; } if (!t2.empty()) ImGui::TextDisabled("%s", t2.c_str()); }
+}
+
 void tab(App& a) {
     load(a);
     easeui::autoBandControl(a, "sensAutoBand", a.rx.sensors.blocksOk);
     banner(a);
     ImGui::Spacing();
-    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders"});
-    if (!live(a) && S.view != 3) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
-    if (S.view == 0) sensorsView(a); else if (S.view == 1) messagesView(a); else if (S.view == 2) unknownView(a); else decodersView(a);
+    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders", tr("Upload")});
+    if (!live(a) && S.view != 3 && S.view != 4) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
+    if (S.view == 0) sensorsView(a); else if (S.view == 1) messagesView(a); else if (S.view == 2) unknownView(a); else if (S.view == 3) decodersView(a); else uploadView(a);
 }
 
 void list(App& a) {
@@ -636,5 +739,5 @@ const ModeUi kSensorsUi = {
     .list = list,
     .status = status,
     .summary = summary,
-    .tick = nullptr,
+    .tick = [](App& a) { load(a); pwsTick(a); },   // the weather upload runs whatever view is open
 };
