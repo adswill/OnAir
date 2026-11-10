@@ -310,4 +310,19 @@
     <string name="mode_note_image">Picture data is decoded. The phone has no picture view yet, see the results for the progress.</string>
     <string name="mode_note_auto">On Android this opens the first receiver of the family; the automatic detector is on the desktop.</string>
     <string name="mode_note_heavy">Heavy: wideband, most phones cannot decode this in real time. It may lose lock or drop data.</string>
+    <string name="iq_menu">More</string>
+    <string name="iq_record">Record IQ</string>
+    <string name="iq_stop">Stop recording</string>
+    <string name="iq_share">Share recording</string>
+    <string name="iq_save_downloads">Save to Downloads</string>
+    <string name="iq_saved">Saved to Downloads/OnAir</string>
+    <string name="iq_save_failed">Could not save to Downloads</string>
+    <string name="iq_cap_title">Size limit</string>
+    <string name="iq_cap_option">Limit %1$s</string>
+    <string name="iq_recording_status">Recording IQ  %1$s  %2$s of %3$s</string>
+    <string name="iq_near_cap">Recording is close to its size limit</string>
+    <string name="iq_cap_reached">The recording stopped at its size limit</string>
+    <string name="iq_not_started">Could not start the recording: %1$s</string>
+    <string name="iq_needs_running">Start the receiver first</string>
+    <string name="iq_privacy">Saved on this phone only. Nothing is uploaded; you choose where to share it.</string>
 </resources>

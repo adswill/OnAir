@@ -18,6 +18,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Slider
@@ -28,6 +29,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -132,10 +134,74 @@ fun ReceiverHeader(vm: ReceiverViewModel, compact: Boolean, onModeClick: () -> U
     // only the lock state and SNR of the telemetry matter here: a derived value, so a new report with the same lock does not recompose
     val lock by remember { derivedStateOf { t?.lock } }
     val snr by remember { derivedStateOf { t?.snrDb?.let { Math.round(it * 10) / 10.0 } } }
-    HeaderContent(
-        st = st, modeName = names.getOrElse(st.modeIndex) { "" }, lock = lock, snrDb = snr, meters = meters, stepHz = ui.stepHz,
-        compact = compact, onTune = vm::tune, onStepHz = vm::setStepHz, onModeClick = onModeClick, onToggle = onToggle,
-    )
+    Column {
+        HeaderContent(
+            st = st, modeName = names.getOrElse(st.modeIndex) { "" }, lock = lock, snrDb = snr, meters = meters, stepHz = ui.stepHz,
+            compact = compact, onTune = vm::tune, onStepHz = vm::setStepHz, onModeClick = onModeClick, onToggle = onToggle,
+        )
+        RecordIqBar(vm)
+    }
+}
+
+/**
+ * The overflow menu of the receiver (the header is the same in every mode): Record IQ / Stop recording, Share recording, Save to
+ * Downloads, the size limit; and while recording a line with the time and the size against the limit. Recording only starts when
+ * the user asks; the file stays on the phone (the app's own folder) until the user shares it.
+ */
+@Composable
+fun RecordIqBar(vm: ReceiverViewModel) {
+    val p = LocalPalette.current
+    val ctx = androidx.compose.ui.platform.LocalContext.current
+    val st by vm.state.collectAsStateWithLifecycle()
+    val rec by vm.rec.collectAsStateWithLifecycle()
+    var open by remember { mutableStateOf(false) }
+    var capMb by remember { mutableStateOf(vm.recordingCapMb()) }
+    var toast by remember { mutableStateOf("") }
+    val last = if (open) vm.lastRecording() else null
+    Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+        val msg = when {
+            rec.active -> stringResource(R.string.iq_recording_status, io.github.adswill.onair.data.IqRecording.clock(rec.seconds),
+                io.github.adswill.onair.data.IqRecording.size(rec.bytes), io.github.adswill.onair.data.IqRecording.size(capMb * 1048576L))
+            toast.isNotEmpty() -> toast
+            rec.error.isNotEmpty() -> rec.error
+            else -> ""
+        }
+        Text(
+            if (rec.active && rec.nearCap) msg + "  -  " + stringResource(R.string.iq_near_cap) else msg,
+            color = if (rec.active) (if (rec.nearCap) p.warn else p.bad) else p.muted, fontFamily = Mono, fontSize = TypeScale.SMALL.sp,
+            modifier = Modifier.weight(1f).semantics { if (rec.active) stateDescription = msg },
+        )
+        Box {
+            OnAirIconButton(if (rec.active) OnAirIcons.Record else OnAirIcons.More, stringResource(if (rec.active) R.string.iq_stop else R.string.iq_menu), framed = false,
+                tint = if (rec.active) p.bad else p.text) {
+                if (rec.active) vm.stopRecording() else { toast = ""; capMb = vm.recordingCapMb(); open = true }
+            }
+            androidx.compose.material3.DropdownMenu(open, { open = false }) {
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(R.string.iq_record)) }, enabled = st.running,
+                    onClick = { open = false; vm.startRecording() },
+                )
+                if (!st.running) Text(stringResource(R.string.iq_needs_running), color = p.muted, fontSize = TypeScale.SMALL.sp, modifier = Modifier.padding(horizontal = 16.dp))
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(R.string.iq_share)) }, enabled = last != null,
+                    onClick = { open = false; last?.let { ctx.startActivity(io.github.adswill.onair.data.IqFiles.shareIntent(ctx, it)) } },
+                )
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(R.string.iq_save_downloads)) }, enabled = last != null,
+                    onClick = {
+                        open = false
+                        toast = ctx.getString(if (last != null && io.github.adswill.onair.data.IqFiles.saveToDownloads(ctx, last)) R.string.iq_saved else R.string.iq_save_failed)
+                    },
+                )
+                val next = io.github.adswill.onair.data.IqRecording.capChoicesMb.let { c -> c[(c.indexOf(capMb) + 1) % c.size] }
+                androidx.compose.material3.DropdownMenuItem(
+                    text = { Text(stringResource(R.string.iq_cap_title) + ": " + io.github.adswill.onair.data.IqRecording.size(capMb * 1048576L)) },
+                    onClick = { vm.setRecordingCapMb(next); capMb = next },
+                )
+                Text(stringResource(R.string.iq_privacy), color = p.muted, fontSize = TypeScale.CAPTION.sp, modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp).widthIn(max = 260.dp))
+            }
+        }
+    }
 }
 
 @Composable

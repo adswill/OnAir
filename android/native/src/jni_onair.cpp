@@ -384,4 +384,27 @@ FN(void, nativeGeneral)(JNIEnv*, jobject, jint demod, jdouble widthHz, jboolean 
 }
 FN(void, nativeFmDeemphasis)(JNIEnv*, jobject, jdouble us) { gB->eng.fm().setDeemphasis(us); }
 
+// IQ recording of the radio's raw samples (the core's IqRecorder: CS8 + SigMF meta). Returns "ok\t<path>" or "err\t<reason>".
+// Nothing is recorded unless the app asks; no network use. hasGeo only when the user allowed the location.
+FN(jstring, nativeRecStart)(JNIEnv* e, jobject, jstring dir, jstring hw, jboolean hasGeo, jdouble lat, jdouble lon, jlong maxBytes) {
+    Bridge& b = *gB;
+    std::lock_guard<std::mutex> lk(b.mu);
+    b.eng.setRecordSigmf(true);
+    b.eng.setRecordExtra(jstr(e, hw), hasGeo, lat, lon);
+    b.eng.setRecordMaxBytes(maxBytes > 0 ? (uint64_t)maxBytes : 0);
+    std::string d = jstr(e, dir);
+    if (!d.empty() && d.back() != '/') d += '/';
+    const std::string path = d + b.eng.recordingName(FileFormat::CS8);
+    std::string err;
+    if (!b.eng.startRecording(path, FileFormat::CS8, err)) return mk(e, "err\t" + err);
+    return mk(e, "ok\t" + path);
+}
+// "active\tseconds\tbytes\tdropped\tcapReached\terror\tpath"
+FN(jstring, nativeRecStats)(JNIEnv* e, jobject) {
+    const RecordingStats r = gB->eng.recordingStats();
+    return mk(e, std::string(r.active ? "1" : "0") + "\t" + std::to_string(r.seconds) + "\t" + std::to_string(r.bytes) + "\t" +
+                     std::to_string(r.droppedSamples) + "\t" + (gB->eng.recordingCapReached() ? "1" : "0") + "\t" + r.error + "\t" + r.path);
+}
+FN(void, nativeRecStop)(JNIEnv*, jobject) { gB->eng.stopRecording(); }
+
 FN(jstring, nativeVersion)(JNIEnv* e, jobject) { return mk(e, ONAIR_VERSION); }

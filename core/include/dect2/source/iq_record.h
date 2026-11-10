@@ -45,6 +45,8 @@ struct SigmfInfo {
 };
 const char* sigmfDatatype(FileFormat fmt);   // "ci8_le", "cu8", "cf32_le"
 std::string sigmfMetaJson(const SigmfInfo& i);
+// Adds core:hw and core:geolocation to the global object of a SigMF meta text (a "" hw / hasGeo false leaves them out)
+std::string sigmfAddExtra(const std::string& json, const std::string& hw, bool hasGeo, double lat, double lon);
 std::string sigmfUtcNow();
 
 class IqRecorder {
@@ -53,6 +55,11 @@ public:
     // SigMF metadata (<name>.sigmf-meta next to the recording, and <name>.sigmf-data as a hard link to the same data so that IQEngine pairs them) for the next start()
     // description: the sidecar's description (the mode id the recording was made in, read back by the recording library)
     void setSigmf(bool on, double centerHz = 0, std::string description = "") { sigmf_ = on; centerHz_ = centerHz; sigmfDesc_ = std::move(description); }
+    // Optional extra SigMF fields for the next start(): core:hw (the radio) and core:geolocation (only when the user allows it; hasGeo)
+    void setSigmfExtra(std::string hw, bool hasGeo = false, double lat = 0, double lon = 0) { sigmfHw_ = std::move(hw); sigmfGeo_ = hasGeo; geoLat_ = lat; geoLon_ = lon; }
+    // A recording stops by itself at this size (default kMaxBytes); applies to the next start()
+    void setMaxBytes(uint64_t b) { maxBytes_ = b ? b : kMaxBytes; }
+    bool capReached() const { return capHit_.load(std::memory_order_relaxed); }
     // Opens the file (creating its folder) and starts the writer thread. CS8, CI16 (16-bit) and CF32 can be recorded.
     // A path ending .tmp / .blue / .prm is written as an X-Midas BLUE file (bluefile.h: complex int8 / float32, rate and centre in the header
     // and keywords); no SigMF files are made for it.
@@ -84,7 +91,11 @@ private:
     void* blue_ = nullptr;   // blue::Writer* when the recording is a BLUE file
     bool sigmf_ = false;
     double centerHz_ = 0;
-    std::string sigmfPath_, sigmfWhen_, sigmfDesc_;
+    std::string sigmfPath_, sigmfWhen_, sigmfDesc_, sigmfHw_;
+    bool sigmfGeo_ = false;
+    double geoLat_ = 0, geoLon_ = 0;
+    uint64_t maxBytes_ = kMaxBytes;
+    std::atomic<bool> capHit_{false};
     void writeSigmf(bool final);
 };
 

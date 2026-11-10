@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- FileProvider (authority ${applicationId}.files): only cache/share/ is exposed; CrashLog.shareIntent copies the logs there first. -->
+<!-- FileProvider (authority ${applicationId}.files): cache/share/ and the IQ recordings folder (iq/) are exposed; CrashLog.shareIntent copies the logs there first. -->
 <paths>
     <cache-path name="share" path="share/" />
+    <external-files-path name="iq" path="iq/" />
+    <files-path name="iq_internal" path="iq/" />
 </paths>
