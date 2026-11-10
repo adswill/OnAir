@@ -203,7 +203,7 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     if (!src || !src->start(t, ring, err)) { fprintf(stderr, "synthetic source: %s\n", err.c_str()); return 3; }
     const double r = src->sampleRate();
     const uint64_t total = (uint64_t)(r * secs);
-    const double dph = en.offsetHz != 0 && en.kind == 0 ? -2 * M_PI * en.offsetHz / r : 0;   // as the engine mixes out the tune offset of a live radio
+    const double dph = en.offsetHz != 0 && en.kind == 0 ? 2 * M_PI * en.offsetHz / r : 0;   // as the engine mixes out the tune offset of a live radio (the test signal sits at -offset)
     double ph = 0;
     std::vector<cf32> all;   // the first stretch, kept to measure the signal before anything is written
     const uint64_t warmN = std::min<uint64_t>(total, std::max<uint64_t>((uint64_t)(r * 1.0), 1u << 18));
@@ -542,8 +542,8 @@ int main(int argc, char** argv) {
         Row r; r.id = e->id; r.name = e->name; r.stdMode = e->stdMode; r.rate = e->rate;
         fprintf(stderr, "[%s] ", e->id.c_str()); fflush(stderr);
         // the signal length: --seconds, longer (x4, then 120 s) when the clean run decoded nothing, within --max-samples per file
-        std::vector<double> lens = {secs, secs * 4};
-        if (longRun) lens.push_back(120);
+        // (16 s holds a 15 s FT8 slot; the long run reaches the 2 min WSPR slot)
+        std::vector<double> lens = longRun ? std::vector<double>{secs, secs * 4, 120} : std::vector<double>{secs, 16};
         double actual = e->rate;
         bool done = false;
         for (double want : lens) {

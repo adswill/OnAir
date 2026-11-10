@@ -201,7 +201,7 @@ int genChild(const Entry& en, double rate, double secs, const std::string& path)
     std::vector<int8_t> out(buf.size() * 2);
     uint64_t done = 0;
     double ph = 0;
-    const double dph = en.offsetHz != 0 && en.kind == 0 ? -2 * M_PI * en.offsetHz / r : 0;   // as the engine mixes out the tune offset of a live radio
+    const double dph = en.offsetHz != 0 && en.kind == 0 ? 2 * M_PI * en.offsetHz / r : 0;   // as the engine mixes out the tune offset of a live radio (the test signal sits at -offset)
     auto lastProgress = Clock::now();
     while (done < total) {
         const size_t n = ring.read(buf.data(), (size_t)std::min<uint64_t>(buf.size(), total - done));
