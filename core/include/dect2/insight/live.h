@@ -21,7 +21,8 @@ public:
         on_ = on;
         namespace au = dect2::automation;
         if (on) au::global().setAnalyser([this](const au::Event& e) { std::lock_guard<std::mutex> lk(mu_); hub_.onEvent(e); },
-                                         au::familyBit(au::FAprs) | au::familyBit(au::FPager) | au::familyBit(au::FSession) | au::familyBit(au::FMsg));
+                                         au::familyBit(au::FAprs) | au::familyBit(au::FPager) | au::familyBit(au::FSession) | au::familyBit(au::FMsg) |
+                                             au::familyBit(au::FAdsb) | au::familyBit(au::FAis));   // ADS-B and AIS: field.h
         else au::global().setAnalyser(nullptr, 0);
     }
     bool enabled() const { return on_; }

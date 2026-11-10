@@ -5,6 +5,7 @@
 #pragma once
 #include "dect2/automation/event.h"
 #include "dect2/insight/aprs_health.h"
+#include "dect2/insight/field.h"
 #include "dect2/insight/ham_heard.h"
 #include "dect2/insight/insight.h"
 #include "dect2/insight/pager_patterns.h"
@@ -38,13 +39,15 @@ class Hub {
 public:
     explicit Hub(int tzOffsetSec = 0) : heat_(tzOffsetSec) {}
     void setStation(const std::string& call, const std::string& grid) { hears_.setStation(call, grid); }
-    void setTzOffset(int sec) { heat_.setTzOffset(sec); }
+    void setTzOffset(int sec) { heat_.setTzOffset(sec); field_.setTzOffset(sec); }
 
     // an automation event from any decoder; the ones it does not know are ignored
     void onEvent(const automation::Event& e) {
         auto s = [&](const char* k) { auto it = e.f.find(k); return it == e.f.end() ? std::string() : it->second.text(); };
         auto n = [&](const char* k, double d) { auto it = e.f.find(k); return it == e.f.end() || it->second.t != automation::Value::Num ? d : it->second.n; };
         auto b = [&](const char* k) { auto it = e.f.find(k); return it != e.f.end() && it->second.truthy(); };
+        if (e.type == "adsb.aircraft" || e.type == "ais.vessel") { field_.onEvent(e, pending_); return; }   // field.h: manoeuvres, ducting
+        if (e.type == "msg.navtex") field_.onEvent(e, pending_);   // field.h: warnings in force (and the schedule below)
         if (e.type == "aprs.packet") {
             const bool pos = e.f.count("lat") && e.f.count("lon") && e.f.at("lat").t == automation::Value::Num;
             aprs_.add(e.time, s("from"), s("path"), s("info"), pos, n("lat", 0), n("lon", 0), pending_);
@@ -111,6 +114,7 @@ public:
         pager_.tick(now, pending_);
         for (auto& kv : trunk_) kv.second.tick(now, kv.first, pending_);
         sched_.tick(now, tunedHz, pending_);
+        field_.tick(now, pending_);
     }
 
     // findings since the last call; also kept in recent()
@@ -132,6 +136,8 @@ public:
     const std::map<std::string, TrunkLoad>& trunks() const { return trunk_; }
     TalkgroupChanges& talkgroupChanges() { return changes_; }
     ScheduleWatch& schedule() { return sched_; }
+    Field& field() { return field_; }
+    std::vector<Insight>& pending() { return pending_; }   // the interface's feeds add their findings here (Field's feeds take it)
 
 private:
     static std::string slotOf(const std::string& key) {
@@ -147,6 +153,7 @@ private:
     std::map<std::string, TrunkLoad> trunk_;
     TalkgroupChanges changes_;
     ScheduleWatch sched_;
+    Field field_;
     std::vector<Insight> pending_;
     std::deque<Insight> recent_;
 };
