@@ -30,14 +30,17 @@ struct Cic4 {
     int D = 1, cnt = 0;
     uint64_t in[4][2] = {}, cb[4][2] = {};
     double norm = 1;
+    float lim = 8.f;   // input limit: the largest value whose filter output still fits in int64
     void configure(int d) {
         D = std::max(1, d); cnt = 0;
         for (auto& a : in) a[0] = a[1] = 0;
         for (auto& a : cb) a[0] = a[1] = 0;
         norm = 1.0 / (16777216.0 * std::pow((double)D, 4));
+        // Gain D^4 at 2^24 per unit, half the int64 range kept free. It was a fixed 8, which clipped float recordings with a larger scale.
+        lim = (float)std::min(4096.0, 4.0e18 / (std::pow((double)D, 4.0) * 16777216.0));
     }
-    static int64_t q(float v) {
-        v = std::max(-8.f, std::min(8.f, v));
+    int64_t q(float v) const {
+        v = std::max(-lim, std::min(lim, v));
         return (int64_t)std::lrintf(v * 16777216.f);
     }
     bool push(cf32 x, cf32& out) {
