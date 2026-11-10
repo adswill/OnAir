@@ -227,8 +227,8 @@ public:
         int best = 0;
         for (const auto& kv : counts_) {
             if (kv.second < often || kv.first == c) continue;
-            const bool near = editDistance(kv.first, c) == 1 || (cw && oneMorseElement(kv.first, c));
-            if (near && kv.second > best) { best = kv.second; v.likely = kv.first; }
+            const bool isNear = editDistance(kv.first, c) == 1 || (cw && oneMorseElement(kv.first, c));
+            if (isNear && kv.second > best) { best = kv.second; v.likely = kv.first; }
         }
         if (!v.likely.empty()) {
             v.busted = true;
