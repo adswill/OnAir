@@ -69,7 +69,7 @@ struct Vdl3Receiver::Impl {
     int blkN = 0;
     std::vector<double> blkMeans;
     std::vector<Pend> pend;
-    std::vector<int64_t> syncs;               // recent training ends (absolute), for the S2* length
+    std::vector<std::pair<int64_t, double>> syncs;   // recent training ends (absolute) and their correlation, for the S2* length
     uint64_t nIn = 0, serial = 0, seq = 0;
     double lastGood = -1e9;
     Vdl3Telemetry tel;
@@ -146,7 +146,8 @@ struct Vdl3Receiver::Impl {
         int L = lmax;
         if (sy == Vdl3Sync::S2Star) {
             int64_t nextStart = INT64_MAX;
-            for (int64_t q : syncs) if (q > p.syncEnd + kSps * 4) nextStart = std::min(nextStart, q - kSps * (kVdl3SyncSyms - 1));
+            // only clear training sequences limit the length: a find of 0.8 - 0.9 inside the payload is the payload's own data
+            for (const auto& [q, qm] : syncs) if (qm >= 0.9 && q > p.syncEnd + kSps * 4) nextStart = std::min(nextStart, q - kSps * (kVdl3SyncSyms - 1));
             L = 0;
             for (int c : {128, 40, 32, 16}) {
                 if (p.syncEnd + (int64_t)kSps * c > nextStart) continue;
@@ -189,12 +190,12 @@ struct Vdl3Receiver::Impl {
         m.snrDb = (float)(10 * std::log10(std::max(eTr / std::max(floor, 1e-15) - 1, 1e-3)) + 10 * std::log10(kNoiseBwRatio));
         m.cfoHz = (float)(fs * kVdl3SymbolRate);
         m.evmPct = (float)(100 * evm);
-        const bool good = dec.golayOk && (dec.kind != Vdl3Kind::VdData || dec.rsOk);
+        const bool good = dec.golayOk && evm < 0.25 && (dec.kind != Vdl3Kind::VdData || dec.rsOk);   // above 0.25 the Golay words may be miscorrected
         char b[200];
         if (dec.kind == Vdl3Kind::VdData) snprintf(b, sizeof b, "header %s, data %s", m.info.c_str(), m.dataText.empty() ? "(binary)" : ("\"" + m.dataText + "\"").c_str());
         else if (dec.kind == Vdl3Kind::VdVoice) snprintf(b, sizeof b, "header %s, vocoder frames (not decoded)", m.info.c_str());
         else snprintf(b, sizeof b, "%s %s", dec.kind == Vdl3Kind::Handoff ? "handoff" : "system data", m.info.c_str());
-        m.summary = std::string(b) + (dec.golayOk ? "" : " (Golay failed)");
+        m.summary = std::string(b) + (dec.golayOk ? (evm < 0.25 ? "" : " (weak)") : " (Golay failed)");
         if (good) {
             tel.blocksOk++;
             switch (dec.kind) {
@@ -253,8 +254,8 @@ struct Vdl3Receiver::Impl {
                         pend.push_back({bestIdx, mu, bestD, bestFam, bestM});
                         tel.syncs++;
                     }
-                    if (syncs.empty() || bestIdx - syncs.back() >= kSps * 8) syncs.push_back(bestIdx);
-                    else syncs.back() = pend.back().syncEnd;
+                    if (syncs.empty() || bestIdx - syncs.back().first >= kSps * 8) syncs.push_back({bestIdx, bestM});
+                    else if (bestM > syncs.back().second) syncs.back() = {bestIdx, bestM};
                 }
             } else if (m > kSyncThr && floor > 0) {
                 double E = 0;
@@ -277,7 +278,7 @@ struct Vdl3Receiver::Impl {
                 z.erase(z.begin(), z.begin() + keep);
                 zBase += keep;
             }
-            syncs.erase(std::remove_if(syncs.begin(), syncs.end(), [&](int64_t q) { return q < zBase; }), syncs.end());
+            syncs.erase(std::remove_if(syncs.begin(), syncs.end(), [&](const std::pair<int64_t, double>& q) { return q.first < zBase; }), syncs.end());
         }
     }
 
