@@ -70,7 +70,7 @@ std::vector<EventInfo> build() {
         {"lat", 'n', "latitude when the packet has a position", "54.69"}, {"lon", 'n', "longitude when the packet has a position", "25.28"}}});
     {   // the smart insights (core/include/dect2/insight, docs/SMART5-*-3.9.md); sent under the signal family
         auto insightFields = [] {
-            return std::vector<FieldInfo>{{"area", 's', "ham, voice, pager or hfutil", "voice"}, {"key", 's', "what it is about: call sign, talkgroup, capcode, channel", "DMR TG 91"},
+            return std::vector<FieldInfo>{{"area", 's', "ham, voice, pager, hfutil, aviation, marine or iot", "voice"}, {"key", 's', "what it is about: call sign, talkgroup, capcode, channel", "DMR TG 91"},
                                           {"text", 's', "the finding", "DMR TG 91 busier than usual"}, {"severity", 'n', "0 information, 1 warning, 2 alarm", "0"}};
         };
         v.push_back({"insight.heard_me", "A station hears you (FT8, FT4, JS8), first time per band", "Insights", "FT8", 14.074e6, insightFields()});
@@ -85,6 +85,27 @@ std::vector<EventInfo> build() {
         v.push_back({"insight.pager_burst", "Paging burst from a quiet capcode", "Insights", "POCSAG", 152.0e6, insightFields()});
         v.push_back({"insight.pager_silent", "Pager channel gone silent", "Insights", "POCSAG", 152.0e6, insightFields()});
         v.push_back({"insight.overdue", "HF utility broadcast overdue", "Insights", "WEFAX", 10.1008e6, insightFields()});
+        v.push_back({"insight.adsb_emergency", "Aircraft emergency squawk or emergency status", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_descent", "Aircraft descending unusually fast", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_climb", "Aircraft climbing unusually fast", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_turn", "Aircraft turning sharply", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_go_around", "Aircraft go-around (approach turned into a climb)", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_touch_and_go", "Aircraft touch-and-go", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.thermal", "Strong thermal found from circling gliders (FLARM, OGN)", "Insights", "FLARM", 868.3e6, insightFields()});
+        v.push_back({"insight.hfdl_station_up", "HFDL ground station heard again after hours of silence", "Insights", "HFDL", 8.927e6, insightFields()});
+        v.push_back({"insight.ais_ducting", "AIS ships heard far beyond the normal range (tropospheric ducting)", "Insights", "AIS", 162e6, insightFields()});
+        v.push_back({"insight.ais_ducting_end", "AIS ducting over", "Insights", "AIS", 162e6, insightFields()});
+        v.push_back({"insight.navtex_in_force", "New NAVTEX warning in force", "Insights", "NAVTEX", 518e3, insightFields()});
+        v.push_back({"insight.navtex_cancelled", "NAVTEX warning cancelled", "Insights", "NAVTEX", 518e3, insightFields()});
+        v.push_back({"insight.navtex_expired", "NAVTEX warning expired", "Insights", "NAVTEX", 518e3, insightFields()});
+        v.push_back({"insight.mesh_busy", "Mesh LoRa channel busy (airtime)", "Insights", "LoRa", 869.525e6, insightFields()});
+        v.push_back({"insight.mesh_router", "New mesh router or repeater heard", "Insights", "LoRa", 869.525e6, insightFields()});
+        v.push_back({"insight.lorawan_join_storm", "LoRaWAN device keeps trying to join", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.lorawan_no_accepts", "LoRaWAN join requests without any join accept", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.lorawan_loss", "LoRaWAN device losing many uplinks (frame-counter gaps)", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.lorawan_sf_shift", "LoRaWAN devices falling back to SF11 / SF12", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.leak_night", "Water used at night on your own meter", "Insights", "Wireless M-Bus", 868.95e6, insightFields()});
+        v.push_back({"insight.leak_continuous", "Water flowing without a pause on your own meter", "Insights", "Wireless M-Bus", 868.95e6, insightFields()});
     }
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});

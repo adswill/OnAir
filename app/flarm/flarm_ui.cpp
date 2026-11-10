@@ -3,6 +3,8 @@
 // Receive only, as the Open Glider Network does. Positions are what the aircraft broadcast openly; aircraft that set the no-track or stealth
 // flag are only counted ("privacy-flagged"), never listed, drawn, saved or sent anywhere.
 #include "dect2/flarm/flarm_outland.h"
+#include "dect2/insight/live.h"
+#include <ctime>
 #include "dect2/airports/airports.h"
 #include <deque>
 #include <unordered_map>
@@ -170,6 +172,17 @@ void mapView(App& a, const dect2::FlarmTelemetry& t) {
         dl->AddCircleFilled(q, 5 * gUi, IM_COL32(240, 240, 240, 255));
         dl->AddCircle(q, 8 * gUi, IM_COL32(20, 20, 20, 255), 0, 1.5f);
     }
+    // thermals (docs/SMART5-field-3.9.md): circles from circling, climbing gliders of the last 30 minutes, stronger = more opaque
+    dect2::insight::live().with([&](dect2::insight::Hub& hub) {
+        for (const auto& th : hub.field().thermals().active((double)time(nullptr), 1800)) {
+            const ImVec2 q = adsbmap::project(th.lat, th.lon);
+            const int al = (int)std::clamp(70.0 + th.climbMs * 50, 70.0, 230.0);
+            dl->AddCircleFilled(q, 9 * gUi, IM_COL32(255, 150, 40, al / 2));
+            dl->AddCircle(q, 9 * gUi, IM_COL32(255, 150, 40, al), 0, 1.5f);
+            char b[48]; snprintf(b, sizeof b, "%.1f m/s", th.climbMs);
+            dl->AddText(ImVec2(q.x + 10 * gUi, q.y + 2 * gUi), IM_COL32(255, 200, 120, 230), b);
+        }
+    });
     ImVec2 click;
     const bool clicked = adsbmap::clickedAt(click);
     float bestD = 14 * gUi;
