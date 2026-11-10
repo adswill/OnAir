@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <mutex>
 
 namespace dect2 {
@@ -514,7 +516,7 @@ struct AtvReceiver::Impl {
         if (nv) video.process(front.v(), front.i(), front.q(), nv);
         // the detector: synchronous once the carrier loop is locked (and the user did not ask for the envelope)
         const bool want = detMode.load() == 0 && video.wantSyncDetector();
-        if (want != syncOn) { syncOn = want; front.setSyncDetector(want); video.syncDetectorChanged(want); }
+        if (want != syncOn) { if (getenv("ATVDBG")) fprintf(stderr, "ATVDBG t=%.3f sync->%d lineLocked=%d fieldLocked=%d\n", nIn / fs, (int)want, (int)video.lineLocked(), (int)video.fieldLocked()); syncOn = want; front.setSyncDetector(want); video.syncDetectorChanged(want); }
         // sound: AM with the positive-modulation systems
         {
             const bool am = isAmSpacing(carrier.spacingMhz) || (video.lineLocked() && video.positive());

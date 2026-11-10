@@ -70,7 +70,7 @@ std::vector<EventInfo> build() {
         {"lat", 'n', "latitude when the packet has a position", "54.69"}, {"lon", 'n', "longitude when the packet has a position", "25.28"}}});
     {   // the smart insights (core/include/dect2/insight, docs/SMART5-*-3.9.md); sent under the signal family
         auto insightFields = [] {
-            return std::vector<FieldInfo>{{"area", 's', "ham, voice, pager or hfutil", "voice"}, {"key", 's', "what it is about: call sign, talkgroup, capcode, channel", "DMR TG 91"},
+            return std::vector<FieldInfo>{{"area", 's', "ham, voice, pager, hfutil, broadcast, tv, satellite, gnss or science", "voice"}, {"key", 's', "what it is about: call sign, talkgroup, capcode, channel", "DMR TG 91"},
                                           {"text", 's', "the finding", "DMR TG 91 busier than usual"}, {"severity", 'n', "0 information, 1 warning, 2 alarm", "0"}};
         };
         v.push_back({"insight.heard_me", "A station hears you (FT8, FT4, JS8), first time per band", "Insights", "FT8", 14.074e6, insightFields()});
@@ -85,6 +85,34 @@ std::vector<EventInfo> build() {
         v.push_back({"insight.pager_burst", "Paging burst from a quiet capcode", "Insights", "POCSAG", 152.0e6, insightFields()});
         v.push_back({"insight.pager_silent", "Pager channel gone silent", "Insights", "POCSAG", 152.0e6, insightFields()});
         v.push_back({"insight.overdue", "HF utility broadcast overdue", "Insights", "WEFAX", 10.1008e6, insightFields()});
+        // round 5 broadcast, TV, satellites, GNSS and science (app/smart5, docs/SMART5-UI-3.9.md)
+        v.push_back({"insight.fm_dead_air", "FM station: dead air (carrier on, no programme)", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_pilot", "FM station: stereo pilot lost", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_rds_stuck", "FM station: RDS radio text frozen", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_clock", "FM station: RDS clock wrong", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_over_deviation", "FM station: over-deviation", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_mpx_power", "FM station: multiplex power above the BS.412 limit", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_other_tx", "FM: another transmitter of the same network", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.am_health", "AM station: over-modulation, carrier shift or dead air", "Insights", "AM", 1.0e6, insightFields()});
+        v.push_back({"insight.am_carriers", "AM channel: several carriers (split channel, het)", "Insights", "AM", 1.0e6, insightFields()});
+        v.push_back({"insight.dab_change", "DAB ensemble reconfigured", "Insights", "DAB", 223.936e6, insightFields()});
+        v.push_back({"insight.service_fault", "One service fails while the multiplex is clean (the station's feed)", "Insights", "DAB", 223.936e6, insightFields()});
+        v.push_back({"insight.hd_sideband", "HD Radio sidebands unequal", "Insights", "HD Radio", 98.0e6, insightFields()});
+        v.push_back({"insight.service_off_air", "TV service off air at the source", "Insights", "DVB-T", 506.0e6, insightFields()});
+        v.push_back({"insight.ofdm_interferer", "Interferer inside an OFDM channel", "Insights", "DVB-T", 506.0e6, insightFields()});
+        v.push_back({"insight.cell_changed", "DVB-T/T2 transmitter cell changed", "Insights", "DVB-T", 506.0e6, insightFields()});
+        v.push_back({"insight.sat_fade", "Satellite TV fade", "Insights", "DVB-S", 11.0e9, insightFields()});
+        v.push_back({"insight.vits_found", "Analogue TV test lines found", "Insights", "Analog TV", 55.25e6, insightFields()});
+        v.push_back({"insight.product_overdue", "Geostationary weather product overdue", "Insights", "GOES", 1694.1e6, insightFields()});
+        v.push_back({"insight.sun_outage", "Sun outage in progress", "Insights", "GOES", 1694.1e6, insightFields()});
+        v.push_back({"insight.carrier_outage", "L-band carrier outage", "Insights", "Inmarsat", 1545.0e6, insightFields()});
+        v.push_back({"insight.beacon_missed", "CubeSat beacon missed while the satellite is up", "Insights", "CubeSat", 437.0e6, insightFields()});
+        v.push_back({"insight.radio_clock", "Radio crystal error measured from GNSS", "Insights", "GNSS", 1575.42e6, insightFields()});
+        v.push_back({"insight.scintillation", "GNSS ionospheric scintillation", "Insights", "GNSS", 1575.42e6, insightFields()});
+        v.push_back({"insight.multipath", "GNSS multipath near the antenna", "Insights", "GNSS", 1575.42e6, insightFields()});
+        v.push_back({"insight.drift_scan", "Sun drift-scan result", "Insights", "Radio astronomy", 1420.4e6, insightFields()});
+        v.push_back({"insight.vlf_terminator", "Sunrise or sunset on a VLF path", "Insights", "SuperSID", 24.0e3, insightFields()});
+        v.push_back({"insight.meteor_outburst", "Meteor rate above the expected", "Insights", "Meteor scatter", 143.05e6, insightFields()});
     }
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});

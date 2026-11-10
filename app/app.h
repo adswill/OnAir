@@ -835,7 +835,9 @@ bool wideAllWorthIt(const App& a);                   // the capture is wide enou
 void wideAllButton(App& a);                          // the one button of it (Simple views and the window)
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
 void insightWindow(App& a);                         // insight_ui.cpp: View > Insights, and the analysers' tick (called every frame)
-void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float snr);   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
+void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float snr);
+std::string insightBustedHint(const std::string& call, std::string* why);
+bool insightPagerAutomatic(const char* protocol, uint32_t address);   // insight_ui.cpp: the capcode sends automatic or test pages (the pager view's hide switch)   // insight_ui.cpp: the call a decoded one is probably a busted copy of, "" if none   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
 // app/smart5: the round-5 smart cards in the mode screens (docs/SMART5-UI-3.9.md); fed every frame by smart5Tick (from insightWindow)
 void smart5FmCard(App& a); void smart5AmCard(App& a); void smart5DabCard(App& a); void smart5DrmCard(App& a); void smart5HdCard(App& a);
 void smart5TvCard(App& a); void smart5DvbsCard(App& a); void smart5AtvCard(App& a);

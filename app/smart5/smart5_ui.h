@@ -31,6 +31,7 @@ void smart5BroadcastTick(App& a);
 void smart5TvTick(App& a);
 void smart5SatTick(App& a);
 void smart5SciTick(App& a);
+void smart5HfUtilTick(App& a);         // HF utility decodes as msg.* automation events (smart5_hfutil_ui.cpp)
 void smart5InsightBroadcast(App& a);   // the Insights window's "Broadcast and TV" tab
 void smart5InsightTv(App& a);
 void smart5InsightSat(App& a);         // the "Satellites and science" tab

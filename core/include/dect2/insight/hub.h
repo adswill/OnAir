@@ -68,7 +68,9 @@ public:
             }
         } else if ((e.type.rfind("session.", 0) == 0 || e.type.rfind("msg.", 0) == 0) && e.freqHz >= 1e5 && e.freqHz < 30e6 && !isVoiceMode(e.mode)) {
             // an HF / MF utility decode (a chart, a bulletin, a sounding): its schedule per mode and frequency
-            sched_.decoded(e.time, e.mode.empty() ? e.type : e.mode, e.freqHz);
+            // keyed by mode and frequency, and by the station when the event names one (ALE: each station's soundings have their own schedule)
+            const std::string st = s("station");
+            sched_.decoded(e.time, (e.mode.empty() ? e.type : e.mode) + (st.empty() ? "" : " " + st), e.freqHz);
         }
     }
 

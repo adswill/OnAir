@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <ctime>
 #include <deque>
+#include <map>
 #include <set>
 
 namespace in = dect2::insight;
@@ -189,6 +190,40 @@ void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float
         while (!S.ftxSeen.empty() && S.ftxSeen.begin()->first < S.lastFtx - 600) S.ftxSeen.erase(S.ftxSeen.begin());
     }
     in::live().onFtx(slotUtc, in::hamBand(dialHz), msg, snr);
+}
+
+// the pager view's "Hide automatic pages": the capcode sends automatic or test pages (the hub's key is "<protocol> <address>"); cached a few seconds
+bool insightPagerAutomatic(const char* protocol, uint32_t address) {
+    static std::map<std::string, bool> cache;
+    static double at = 0;
+    if (!S.on) return false;
+    const double now = ImGui::GetTime();
+    if (now - at > 3) { cache.clear(); at = now; }
+    const std::string key = std::string(protocol) + " " + std::to_string(address);
+    auto it = cache.find(key);
+    if (it == cache.end()) {
+        bool v = false;
+        in::live().with([&](in::Hub& h) { v = h.pagerPatterns().automatic(key); });
+        it = cache.emplace(key, v).first;
+    }
+    return it->second;
+}
+
+// the FT8 / FT4 / JS8 view: "" or the call this one is probably a busted copy of (one character from a call heard often); cached a few seconds
+std::string insightBustedHint(const std::string& call, std::string* why) {
+    static std::map<std::string, std::pair<std::string, std::string>> cache;
+    static double at = 0;
+    if (!S.on || call.empty() || call[0] == '<') return {};
+    const double now = ImGui::GetTime();
+    if (now - at > 3) { cache.clear(); at = now; }
+    auto it = cache.find(call);
+    if (it == cache.end()) {
+        in::BustVerdict v;
+        in::live().with([&](in::Hub& h) { v = h.bustedCalls().check(call); });
+        it = cache.emplace(call, std::make_pair(v.likely, v.why)).first;   // only a likely call counts: FT8 messages hold non-call words too
+    }
+    if (why) *why = it->second.second;
+    return it->second.first;
 }
 
 void insightWindow(App& a) {

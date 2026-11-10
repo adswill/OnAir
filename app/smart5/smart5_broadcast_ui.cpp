@@ -13,6 +13,7 @@
 #include "dect2/smart5/fm_watchdog.h"
 #include "dect2/smart5/hd_sideband.h"
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <complex>
 #include <cstdio>
@@ -48,7 +49,9 @@ void fmTick(App& a) {
         if (e.cleared) continue;
         char key[48];
         snprintf(key, sizeof key, "%04X %.1f", (unsigned)e.pi, a.freqMhz);
-        s5ui::post("broadcast", ("fm_" + e.kind).c_str(), 1, key, e.text);
+        std::string kind = "fm_";   // "dead air" -> fm_dead_air, "over-deviation" -> fm_over_deviation
+        for (char c : e.kind) kind += std::isalnum((unsigned char)c) ? (char)std::tolower((unsigned char)c) : '_';
+        s5ui::post("broadcast", kind.c_str(), 1, key, e.text);
     }
     if (t.piCode && t.carrier && t.snrDb > 25) {
         s5::FmPrintSample s;

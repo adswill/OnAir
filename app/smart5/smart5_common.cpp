@@ -84,4 +84,5 @@ void smart5Tick(App& a) {
     smart5TvTick(a);
     smart5SatTick(a);
     smart5SciTick(a);
+    smart5HfUtilTick(a);
 }
