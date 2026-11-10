@@ -52,6 +52,18 @@ std::vector<const char*> ctcssChoices() {
     return ptrs;
 }
 
+// Off, then the usual DCS codes (txDcsCodes); the choice index n > 0 is the n-th code (read in tx_voice.cpp as fm.dcsIdx)
+std::vector<const char*> dcsChoices() {
+    static std::vector<std::string> names;
+    static std::vector<const char*> ptrs;
+    if (ptrs.empty()) {
+        names.push_back("Off");
+        for (int c : txDcsCodes()) { char b[16]; snprintf(b, sizeof b, "D%03d", c); names.push_back(b); }
+        for (const auto& n : names) ptrs.push_back(n.c_str());
+    }
+    return ptrs;
+}
+
 void add(std::vector<P>& v, std::initializer_list<P> l) { v.insert(v.end(), l.begin(), l.end()); }
 
 // the audio chain every analog voice shares: the test tone, the filters, the speech compressor and the VOX
@@ -77,6 +89,7 @@ void outputCommon(std::vector<P>& v) {
     add(v, {
         F("out.trimDb", Sec::Output, N_("Output trim"), N_("Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above."), 0, -40, 6, "%.1f dB"),
         B("out.swapIq", Sec::Output, N_("Mirror the spectrum"), N_("Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts."), false),
+        F("tx.totSec", Sec::Timing, N_("Timeout timer"), N_("Ends the transmission by itself after this many seconds, with the key-down fade, even when Repeat until stopped is on (0 = off). Your own limit: OnAir sets none."), 0, 0, 3600, "%.0f s"),
         F("out.rampMs", Sec::Timing, N_("Key-up fade-in"), N_("The signal fades in over this time after Start, so the key-up does not click."), kTxDefaultRampMs, 0, 500, "%.0f ms"),   // also the fade at Stop and at the end of one pass
     });
 }
@@ -133,6 +146,10 @@ std::vector<P> build(const TxModeSpec& m, bool analog, int variant) {
             F("fm.deviation", Sec::Modulation, N_("Deviation"), N_("How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel."), 5000, 500, 25000, "%.0f Hz", nullptr, Bind::Deviation),
             F("fm.preemphUs", Sec::Modulation, N_("Pre-emphasis"), N_("Boosts the high notes before sending (0 = off)."), 50, 0, 150, "%.0f µs"),
             C("fm.ctcssIdx", Sec::Modulation, N_("CTCSS tone"), N_("A sub-audible tone that opens a receiver's squelch. Pick one of the standard tones (67.0 to 254.1 Hz); Off sends none. Its level is the usual 12 percent of the deviation."), 0, ctcssChoices()),
+            C("fm.dcsIdx", Sec::Modulation, N_("DCS code"), N_("Digital-coded squelch: a 23-bit code word sent below the voice at 134.4 bit/s that opens a receiver set to the same code. It replaces the CTCSS tone when both are set."), 0, dcsChoices()),
+            B("fm.dcsInv", Sec::Modulation, N_("DCS inverted"), N_("Sends the code with the opposite polarity (the codes written with I instead of N)."), false, "fm.dcsIdx>0"),
+            F("fm.dcsPct", Sec::Modulation, N_("DCS level"), N_("The code's deviation as a share of the full deviation."), 12, 2, 30, "%.0f %%", "fm.dcsIdx>0"),
+            F("fm.ctcssPct", Sec::Modulation, N_("CTCSS level"), N_("The tone's deviation as a share of the full deviation (12 percent is the usual 600 Hz at 5 kHz)."), 12, 2, 30, "%.0f %%", "fm.ctcssIdx>0"),
             F("fm.level", Sec::Output, N_("RF level"), N_("The size of the signal as a share of full scale."), 0.4, 0.05, 1.0, "%.2f"),
         });
         voiceAudio(v, 300, 3000);
@@ -376,8 +393,8 @@ void advancedPanel(TxUi& s, const TxModeSpec& mode, bool running) {
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        if (ImGui::Button(tr("Reset to default"))) { defaults(s); s.presetName[0] = 0; changed = true; }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Puts every setting below back to its default."));
+        if (ImGui::Button(tr("Reset to default"))) { defaults(s); resetControl(s); s.presetName[0] = 0; changed = true; }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("One click: every setting below back to its default (the filter and the gain stages to automatic, no schedule). The radio's calibration is kept."));
         ImGui::SetNextItemWidth(std::max(120.f * gUi, ImGui::GetContentRegionAvail().x - 190 * gUi));
         ImGui::InputTextWithHint("##txpname", tr("Name for a new preset"), s.presetNew, sizeof s.presetNew);
         ImGui::SameLine();

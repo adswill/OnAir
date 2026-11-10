@@ -5,6 +5,7 @@
 #include "../app.h"
 #include "dect2/tx/tx.h"
 #include "dect2/tx/tx_iqfile.h"
+#include "dect2/tx/tx_control.h"
 #include <memory>
 #include <atomic>
 #include <future>
@@ -88,6 +89,17 @@ struct TxUi {
     bool linkRx = false;                     // the transmit frequency follows the receiver's
     bool pttHold = false;                    // voice: transmit only while the PTT button is held
     bool pttDown = false;
+    // full control (docs/TX-CONTROL-3.8.md): the radio's analogue filter (0 = automatic), the typed gain stages of a SoapySDR radio, the schedule
+    double filterKhz = 0;
+    char stageGains[128] = {};
+    char schedAt[12] = {};                   // "HH:MM[:SS]" UTC of the first start; empty: when Start is pressed
+    double schedEverySec = 0;                // then again every so many seconds (0: once)
+    int schedCount = 0;                      // in all (0: until cancelled)
+    bool schedArmed = false, schedRunning = false;   // Start was pressed with a schedule; the running session was started by it
+    double schedNext = -1, schedLast = 0;    // UTC seconds
+    int schedDone = 0;
+    double targetDbm = 10;                   // "Set the level for" (from the radio's power table)
+    bool radioLoaded = false;                // filter / stages / schedule read from the settings
     // the destination of the signal: 0 a radio, 1 an IQ file (no radio is opened or claimed, no radio-only notice applies)
     int destKind = 0;
     char ifPath[512] = {};                   // the folder (or a file name without extension) the IQ file goes to
@@ -180,6 +192,20 @@ enum class Note { Info, Warn, Error };
 void banner(Note kind, const char* text);              // an inline message box (no popup)
 void stepSignal(App& a, TxUi& s, bool running, float listH);                                                         // tx_step_signal.cpp: the signal list
 void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode, bool running);   // tx_step_settings.cpp: Basic + Advanced
+// full control (tx_control_ui.cpp, docs/TX-CONTROL-3.8.md)
+TxCalibration calibrationFor(const std::string& radioKey);                          // this radio's TX calibration (empty when none was saved)
+void saveCalibration(const std::string& radioKey, const TxCalibration& c);
+void controlApply(const TxUi& s, TxRequest& r);                                       // filter, gain stages, calibration of the chosen radio into a request
+void loadControlPrefs(TxUi& s);                                                       // filter, stages, schedule from the settings (once)
+void resetControl(TxUi& s);                                                           // the radio and timing choices back to automatic (not the calibration)
+void radioControlPanel(TxUi& s, const DeviceInfo* radio, bool running);              // Advanced > Radio: filter, gain stages
+void schedulePanel(TxUi& s, bool running);                                            // Advanced > Timing: start at, repeat every, times
+void calibrationPanel(App& a, TxUi& s, const DeviceInfo* radio, bool running);      // Advanced > Calibration of this radio
+void powerReadout(TxUi& s, const DeviceInfo* radio);                                  // the predicted output power and "Set the level for"
+bool scheduleConfigured(const TxUi& s);
+void scheduleArm(TxUi& s);                                                            // Start was pressed with a schedule: the first start is planned
+void scheduleStatus(TxUi& s);                                                         // the "Scheduled: next start ..." line with Cancel
+void scheduleTick(App& a, TxUi& s);                                                   // every frame: starts a planned transmission, plans the next
 TxIqStreamConfig txIqStreamFromPrefs();   // tx_step_settings.cpp: the "Send the IQ over TCP" setting (tx_iqstream.h)
 void stepSend(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode, bool running);       // tx_step_send.cpp + tx_preview.cpp: the preview
 void drawStatusHeader(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode);              // tx_panel.cpp: state word and the big button
