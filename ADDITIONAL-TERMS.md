@@ -11,8 +11,6 @@ If you convey OnAir, or a work based on OnAir or containing any part of its code
 
    > Based on OnAir by Kristijonas Adomaitis - https://on-air.dev
 
-3. If the program has a web page, documentation or a store listing that names its licence or third-party components, name OnAir there with the same line.
-
 Under section 7, a later recipient may not remove these terms from the parts they apply to. They don't restrict use, running, modification or commercial distribution in any other way.
 
 ## What these terms don't cover
