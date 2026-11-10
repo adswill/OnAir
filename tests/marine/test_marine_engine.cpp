@@ -32,7 +32,7 @@ static void session(const char* name, int service, double centerHz, double secs,
     t.bandwidthMhz = 0.01;
     t.sampleRate = 2e6;
     t.synth.mode = 17;
-    t.synth.pace = 20.0;      // nothing here is timed
+    t.synth.pace = std::min(20.0, secs / 1.5);   // fast, but at least 1.5 s of wall clock: the engine reports about 4 times a second of wall time, and 4 are checked
     t.synth.snrDb = 25;
     t.synth.modeOpt[0] = service;
     t.synth.modeOpt[2] = msg;

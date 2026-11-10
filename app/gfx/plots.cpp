@@ -1,5 +1,6 @@
 // spectrum, waterfall, histogram and constellation plots
 #include "../app.h"
+#include "imgui_internal.h"   // the drag selftest prints the hovered window and active id on a failure
 #include "plot_util.h"
 #include "tune_drag.h"
 #include "drag_tune.h"
@@ -2355,6 +2356,7 @@ int dragTuneSelfTest(App& a) {
     const bool viewStill = std::fabs(gXLo - lo0) < s0 * 1e-6 && std::fabs(gXHi - hi0) < s0 * 1e-6;
     const bool viewPanned = std::fabs((gXLo - lo0) - (g.fx0 - g.fx1) * s0) < s0 * 0.03;   // dragged left by a fifth: the view went up by a fifth
     char b[200];
+    const int failsBefore = fails;
     switch (gi) {
         case 0:
             snprintf(b, sizeof b, "tune: the press tuned to the pointer (%.5f, want %.5f)", fPress, want0); check(std::fabs(fPress - want0) <= std::max(0.001, 2 * hzPerPx / 1e6), b);
@@ -2371,6 +2373,13 @@ int dragTuneSelfTest(App& a) {
             break;
         case 5: check(std::fabs(a.freqMhz - f0) < 1e-9, "pan setting: the frequency stayed"); check(viewPanned, "pan setting: a left drag panned"); break;
         case 6: snprintf(b, sizeof b, "pan setting: a click tuned (%.5f, want %.5f)", a.freqMhz, want0); check(std::fabs(a.freqMhz - want0) <= std::max(0.001, 2 * hzPerPx / 1e6), b); break;
+    }
+    if (fails != failsBefore) {   // what the input looked like, for a failure seen only on a CI runner
+        const ImGuiContext& gc = *ImGui::GetCurrentContext();
+        printf("  state: down %d%d%d, popup %d, hovered window '%s', active id %u, view %.6f..%.6f (was %.6f..%.6f), mouse %.0f,%.0f, spectrum %.0f,%.0f %.0fx%.0f\n",
+               io.MouseDown[0], io.MouseDown[1], io.MouseDown[2], ImGui::IsPopupOpen("", ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel),
+               gc.HoveredWindow ? gc.HoveredWindow->Name : "-", (unsigned)gc.ActiveId, gXLo, gXHi, lo0, hi0, io.MousePos.x, io.MousePos.y,
+               gSpecRect.mn.x, gSpecRect.mn.y, gSpecRect.sz.x, gSpecRect.sz.y);
     }
     gi++; t = 0;
     return -1;

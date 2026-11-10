@@ -13,6 +13,7 @@
 #include "dect2/common/stable_random.h"
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/cpu_time.h"
 
 int main() {
     const double rate = 1e6, center = 136.85e6, f = 136.975e6;
@@ -40,12 +41,15 @@ int main() {
     std::vector<cf32> buf(chunk);
     const auto t0 = std::chrono::steady_clock::now();
     double rendering = 0;
+    double feedCpu = 0;   // the receiver's own CPU time (this thread): the wall clock of a loaded runner is not what is checked
     for (size_t at = 0; at < (size_t)(secs * rate); at += chunk) {
         for (auto& v : buf) v = cf32{nz(rng), nz(rng)};
         const auto r0 = std::chrono::steady_clock::now();
         for (const auto& w : waves) if (w.start + 0.2 * rate > (double)at && w.start < (double)(at + chunk)) vdl2Render(w, buf.data(), (int64_t)at, chunk, rate);
         rendering += std::chrono::duration<double>(std::chrono::steady_clock::now() - r0).count();
+        const double c0 = threadCpuSecs();
         for (size_t o = 0; o < chunk; o += 16384) rx.feed(buf.data() + o, std::min<size_t>(16384, chunk - o));
+        feedCpu += threadCpuSecs() - c0;
     }
     const double total = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
     Vdl2Telemetry t;
@@ -58,7 +62,7 @@ int main() {
     CHECK(air.size() >= 270, "aircraft kept: %zu of %d (the old wall was 200)", air.size(), nAir);
     CHECK(gs.size() >= 80, "ground stations kept: %zu of %d (the old wall was 64)", gs.size(), nGs);
     CHECK(t.aircraft.size() == air.size(), "no duplicates in the aircraft list");
-    CHECK(total - rendering < secs * 0.9, "processing %.1f s for %.1f s of signal", total - rendering, secs);
+    CHECK(feedCpu < secs * 0.9, "processing %.1f s of CPU for %.1f s of signal (%.1f s wall without rendering)", feedCpu, secs, total - rendering);
     // the cost of one table update with a full table, measured without a signal: 10000 aircraft are bounded by the age and the safety cap
     // "remove after" (Settings > Decoding): with a 20 s limit, 30 s of quiet on the receiver's own sample clock empties both tables
     limits::setStale(limits::Family::Vdl2, 20);

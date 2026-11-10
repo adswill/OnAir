@@ -42,19 +42,20 @@ static void run(const Cfg& c) {
         double pw = 0; for (auto& v : f) pw += std::norm(v); pw /= f.size();
         const float sg = (float)std::sqrt(pw / std::pow(10.0, c.snr / 10) / 2);
         for (auto& v : f) v += cf32{nd(rng), nd(rng)} * sg;
-        size_t before; { std::lock_guard<std::mutex> k(mu); before = res.size(); }
+        auto wanted = [&] { std::lock_guard<std::mutex> k(mu); size_t n = 0; for (auto& r : res) n += r.plpId == c.wantPlp; return n; };   // the common PLP's frames come out too
+        const size_t before = wanted();
         for (size_t o = 0; o < f.size(); o += 1 << 16) rx.feed(f.data() + o, std::min<size_t>(1 << 16, f.size() - o));
         std::this_thread::sleep_for(std::chrono::milliseconds(40));
         // once frames come out, wait for the next one before feeding more: the PLP decoder drops a frame when its queue backs up, which a fixed
         // pace caused on a loaded CI runner (a live radio's backlog is not what this test is about)
-        for (int w = 0; before > 0 && w < 300; w++) { { std::lock_guard<std::mutex> k(mu); if (res.size() > before) break; } std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
+        for (int w = 0; before > 0 && w < 300 && wanted() <= before; w++) std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     RxTelemetry t; uint64_t q = 0; size_t seen = 0;
-    for (int i = 0, still = 0; i < 800 && still < 150; i++) { rx.telemetry(t, q); std::this_thread::sleep_for(std::chrono::milliseconds(10)); size_t n; { std::lock_guard<std::mutex> k(mu); n = res.size(); } still = n == seen ? still + 1 : 0; seen = n; }
+    for (int i = 0, still = 0; i < 1500 && still < 300; i++) { rx.telemetry(t, q); std::this_thread::sleep_for(std::chrono::milliseconds(10)); size_t n; { std::lock_guard<std::mutex> k(mu); n = res.size(); } still = n == seen ? still + 1 : 0; seen = n; }
     std::map<int, int> same, bad, frames;
     for (auto& r : res) { auto& m = sent[r.plpId]; auto it = m.find(r.t2Frame); if (it == m.end()) continue; frames[r.plpId]++;
         for (size_t k = 0; k < r.frames.size() && k < it->second.size(); k++) { if (r.frames[k].bits.empty()) continue; (r.frames[k].bits == it->second[k] ? same : bad)[r.plpId]++; } }
-    printf("%-22s want %d:", c.name, c.wantPlp); for (auto& kv : frames) printf("  PLP %d: %d frames %d same %d bad", kv.first, kv.second, same[kv.first], bad[kv.first]); printf("  unsupported %zu\n", t.unsupported.size());
+    printf("%-22s want %d:", c.name, c.wantPlp); for (auto& kv : frames) printf("  PLP %d: %d frames %d same %d bad", kv.first, kv.second, same[kv.first], bad[kv.first]); printf("  unsupported %zu, decoder dropped %llu\n", t.unsupported.size(), (unsigned long long)t.plpFramesDropped);
     CHECK(frames[c.wantPlp] >= 4 && same[c.wantPlp] >= 8 && bad[c.wantPlp] == 0, "%s: selected PLP %d frames %d same %d bad %d", c.name, c.wantPlp, frames[c.wantPlp], same[c.wantPlp], bad[c.wantPlp]);
     if (c.expectCommon >= 0) CHECK(frames[c.expectCommon] >= 4 && same[c.expectCommon] >= 4 && bad[c.expectCommon] == 0, "%s: common PLP frames %d", c.name, frames[c.expectCommon]);
     else CHECK(frames.count(0) == 0, "%s: common PLP of another group decoded", c.name);
