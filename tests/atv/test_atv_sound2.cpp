@@ -4,6 +4,7 @@
 #include "dect2/atv/atv_rx.h"
 #include "dect2/atv/atv_sound2.h"
 #include "../common/jobs.h"
+#include "../common/test_long.h"
 #include <random>
 #include <atomic>
 #include <cmath>
@@ -39,7 +40,7 @@ static void noise(std::vector<cf32>& x, double sigma, uint64_t seed) {
 }
 
 // ---- NICAM alone
-struct NicamCase { const char* name; double rate, cfo, snrDb; bool wide; int mode; int chan; };
+struct NicamCase { const char* name; double rate, cfo, snrDb; bool wide; int mode; int chan; bool quick = false; };
 static void nicamCase(const NicamCase& k) {
     NicamTxConfig tc; tc.rate = k.rate; tc.wide = k.wide; tc.mode = k.mode; tc.level = 0.04;
     NicamTx tx(tc);
@@ -77,7 +78,7 @@ static void nicamCase(const NicamCase& k) {
 }
 
 // ---- A2 alone
-struct A2Case { const char* name; double rate, cfo, snrDb; int mode; };
+struct A2Case { const char* name; double rate, cfo, snrDb; int mode; bool quick = false; };
 static void a2Case(const A2Case& k) {
     A2TxConfig tc; tc.rate = k.rate; tc.mode = k.mode; tc.withFirst = true; tc.level1 = 0.05; tc.level2 = 0.05;
     A2Tx tx(tc);
@@ -133,43 +134,46 @@ int main() {
     const NicamCase nc[] = {
         {"stereo 10 Msps clean", 10e6, 0, 200, false, 0, 0},
         {"stereo 10 Msps +3 kHz", 10e6, 3e3, 200, false, 0, 0},
-        {"stereo 10 Msps -8 kHz", 10e6, -8e3, 200, false, 0, 0},
+        {"stereo 10 Msps -8 kHz", 10e6, -8e3, 200, false, 0, 0, true},
         {"stereo 10 Msps C/N 25 dB", 10e6, 0, 25, false, 0, 0},
-        {"stereo 10 Msps C/N 17 dB", 10e6, 1e3, 17, false, 0, 0},
-        {"stereo 8 Msps", 8e6, 0, 200, false, 0, 0},
+        {"stereo 10 Msps C/N 17 dB", 10e6, 1e3, 17, false, 0, 0, true},
+        {"stereo 8 Msps", 8e6, 0, 200, false, 0, 0, true},
         {"stereo 16 Msps", 16e6, 1e3, 200, false, 0, 0},
-        {"stereo 20 Msps", 20e6, 0, 200, false, 0, 0},
+        {"stereo 20 Msps", 20e6, 0, 200, false, 0, 0, true},
         {"stereo 12.5 Msps", 12.5e6, -2e3, 40, false, 0, 0},
-        {"system I (100% roll-off) 10 Msps", 10e6, 0, 200, true, 0, 0},
-        {"dual channel 1", 10e6, 0, 200, false, 1, 0},
-        {"dual channel 2", 10e6, 500, 200, false, 1, 1},
+        {"system I (100% roll-off) 10 Msps", 10e6, 0, 200, true, 0, 0, true},
+        {"dual channel 1", 10e6, 0, 200, false, 1, 0, true},
+        {"dual channel 2", 10e6, 500, 200, false, 1, 1, true},
     };
-    for (const auto& k : nc) nicamCase(k);
+    // the default run: the offset, noise and rate ends, each mode and channel of NICAM and A2, and each second-sound mode once in a whole TV signal
+    // (the hardest offset and noise of each); ONAIR_TEST_LONG=1 every case, the other TV systems too
+    for (const auto& k : nc) if (testLong() || k.quick) nicamCase(k);
     const A2Case ac[] = {
         {"stereo 10 Msps", 10e6, 0, 200, 1},
-        {"stereo 10 Msps +2 kHz", 10e6, 2e3, 200, 1},
-        {"stereo 16 Msps", 16e6, 0, 200, 1},
-        {"stereo 10 Msps C/N 30 dB", 10e6, 0, 30, 1},
-        {"dual 10 Msps", 10e6, 0, 200, 2},
-        {"mono (pilot, no tone) 10 Msps", 10e6, 0, 200, 0},
+        {"stereo 10 Msps +2 kHz", 10e6, 2e3, 200, 1, true},
+        {"stereo 16 Msps", 16e6, 0, 200, 1, true},
+        {"stereo 10 Msps C/N 30 dB", 10e6, 0, 30, 1, true},
+        {"dual 10 Msps", 10e6, 0, 200, 2, true},
+        {"mono (pilot, no tone) 10 Msps", 10e6, 0, 200, 0, true},
     };
-    for (const auto& k : ac) a2Case(k);
+    for (const auto& k : ac) if (testLong() || k.quick) a2Case(k);
 
     // ---- the whole receiver: a PAL B/G signal with A2 and with NICAM
-    struct Full { const char* name; int sys, sound2; const char* want; bool stereo; double cfo; double cnr; };
+    struct Full { const char* name; int sys, sound2; const char* want; bool stereo; double cfo; double cnr; bool quick = false; };
     const Full fl[] = {
         {"PAL B/G with A2 stereo", kAtvG, 1, "A2 stereo", true, 0, 40},
-        {"PAL B/G with A2 stereo, carrier +40 kHz", kAtvG, 1, "A2 stereo", true, 40e3, 40},
-        {"PAL B/G with A2 dual", kAtvG, 2, "A2 dual, sound A", false, 0, 40},
-        {"PAL B/G with A2 mono pilot", kAtvG, 3, "FM mono (A2 pilot)", false, 0, 40},
+        {"PAL B/G with A2 stereo, carrier +40 kHz", kAtvG, 1, "A2 stereo", true, 40e3, 40, true},
+        {"PAL B/G with A2 dual", kAtvG, 2, "A2 dual, sound A", false, 0, 40, true},
+        {"PAL B/G with A2 mono pilot", kAtvG, 3, "FM mono (A2 pilot)", false, 0, 40, true},
         {"PAL B/G with NICAM stereo", kAtvG, 4, "NICAM stereo", true, 0, 40},
-        {"PAL B/G with NICAM stereo, +30 kHz, C/N 35 dB", kAtvG, 4, "NICAM stereo", true, 30e3, 35},
+        {"PAL B/G with NICAM stereo, +30 kHz, C/N 35 dB", kAtvG, 4, "NICAM stereo", true, 30e3, 35, true},
         {"PAL D/K with NICAM stereo", kAtvDK, 4, "NICAM stereo", true, 0, 40},
         {"PAL I with NICAM stereo", kAtvI, 4, "NICAM stereo", true, 0, 40},
-        {"PAL B/G with NICAM dual", kAtvG, 5, "NICAM dual mono, channel 1", false, 0, 40},
+        {"PAL B/G with NICAM dual", kAtvG, 5, "NICAM dual mono, channel 1", false, 0, 40, true},
         {"PAL D/K with A2 stereo", kAtvDK, 1, "A2 stereo", true, 0, 40},
     };
     for (const auto& f : fl) {
+        if (!testLong() && !f.quick) continue;
         AtvGenConfig g; g.sys = f.sys; g.colour = kAtvPal; g.cnrDb = f.cnr; g.rate = 10e6; g.sound = 4; g.sound2 = f.sound2; g.cfoHz = f.cfo;
         AtvGenerator gen(g);
         AtvReceiver rx;

@@ -10,6 +10,7 @@
 using namespace dect2;
 using namespace dect2::inmsat;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 struct Impair {
@@ -88,10 +89,15 @@ int runInmc(double rate, double secs) {
 }
 
 int main() {
-    for (double rate : {2.5e6, 6e6, 10e6}) CHECK(runInmc(rate, 60), "Inmarsat-C at %.2f Msps", rate / 1e6);
+    // by default Inmarsat-C at the lowest and highest rate for 30 s, and every Aero rate once (clean or impaired, 10 Msps both) for 20 s;
+    // the long run (ONAIR_TEST_LONG=1) does every rate both ways, 60 s and 40 s
+    const bool L = testLong();
+    for (double rate : {2.5e6, 6e6, 10e6}) if (L || rate != 6e6) CHECK(runInmc(rate, L ? 60 : 30), "Inmarsat-C at %.2f Msps", rate / 1e6);
+    const double secs = L ? 40 : 20;
     for (double rate : {2.4e6, 2.5e6, 3e6, 6e6, 10e6}) {
-        CHECK(run(rate, 40, 0, -200, 0), "clean at %.2f Msps", rate / 1e6);
-        CHECK(run(rate, 40, 0.3, -40, 1500), "DC spike, image and offset at %.2f Msps", rate / 1e6);
+        const bool clean = L || rate == 2.4e6 || rate == 3e6 || rate == 10e6, impaired = L || rate == 2.5e6 || rate == 6e6 || rate == 10e6;
+        if (clean) CHECK(run(rate, secs, 0, -200, 0), "clean at %.2f Msps", rate / 1e6);
+        if (impaired) CHECK(run(rate, secs, 0.3, -40, 1500), "DC spike, image and offset at %.2f Msps", rate / 1e6);
     }
     return testSummary("inmsat_rates");
 }

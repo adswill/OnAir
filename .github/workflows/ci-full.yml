@@ -5,7 +5,7 @@ name: Full CI
 on:
   workflow_dispatch:
   schedule:
-    - cron: "17 2 * * *"   # nightly: only the slow tier (ctest -L slow)
+    - cron: "17 2 * * *"   # nightly: the slow tier (ctest -L slow), the long form of the shortened tests, and the ccache warm-up
 
 # a newer run on the same ref cancels the older one (not the nightly schedule)
 concurrency:
@@ -19,8 +19,54 @@ env:
   CCACHE_MAXSIZE: 1G
   CCACHE_COMPRESS: "true"
   CCACHE_COMPRESSLEVEL: "6"
+  # the whole sweeps of the tests that run a shorter form in ci.yml (tests/common/test_long.h, docs/CI-SPEED-3.9.md)
+  ONAIR_TEST_LONG: "1"
 
 jobs:
+  # ccache for every branch: a cache saved by a scheduled run belongs to main, which every branch can restore (a branch cannot read another
+  # branch's). It builds the newest integration branch with ci.yml's exact flags, so the shards and quick.yml of a new branch start warm.
+  warm:
+    if: github.event_name == 'schedule'
+    name: ccache warm-up (${{ matrix.plat }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 180
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { plat: linux, os: ubuntu-24.04 }
+    env: { CCACHE_MAXSIZE: 2G }
+    steps:
+      - uses: actions/checkout@v7
+      - name: The newest integration branch
+        id: br
+        run: |
+          B=$(git ls-remote --heads origin 'integ-*' | sed 's#.*refs/heads/##' | sort -V | tail -1)
+          echo "ref=${B:-main}" >> "$GITHUB_OUTPUT"; echo "warming from ${B:-main}"
+      - uses: actions/checkout@v7
+        with: { ref: "${{ steps.br.outputs.ref }}", fetch-depth: 1 }
+      - name: Free disk space (in the background)
+        run: nohup sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost > /dev/null 2>&1 &
+      - uses: ./.github/actions/linux-deps
+      - name: Restore ccache
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.plat }}-warm-${{ github.run_id }}
+          restore-keys: ccache-${{ matrix.plat }}-warm-
+      - name: Build every test with the flags of ci.yml
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld
+          python3 tools/ci_select.py --build-dir build --scope full --out sel
+          ccache -z
+          cmake --build build -j 4 --target $(cat sel/targets.txt)
+          ccache -s
+      - uses: actions/cache/save@v6
+        if: always()
+        with:
+          path: .ccache
+          key: ccache-${{ matrix.plat }}-warm-${{ github.run_id }}
+
   build-test:
     name: ${{ matrix.name }}
     runs-on: ${{ matrix.os }}
@@ -53,7 +99,7 @@ jobs:
             ccache-full-${{ strategy.job-index }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
             ccache-full-${{ strategy.job-index }}-
       - name: Configure
-        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ${{ matrix.extra }}
+        run: cmake -S . -B build -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=OFF -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache ${{ matrix.extra }}
       - name: Build
         run: cmake --build build -j 4
       - name: ccache statistics
@@ -67,6 +113,11 @@ jobs:
           key: ccache-full-${{ strategy.job-index }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - name: Test
         run: ctest --test-dir build -j 4 ${{ github.event_name == 'schedule' && '-L slow' || '' }} --output-on-failure --timeout 1500
+      - name: Test the long form of the shortened tests (nightly; a manual run has them in the step above)
+        if: (success() || failure()) && github.event_name == 'schedule'
+        run: |
+          python3 tools/ci_select.py --build-dir build --scope long --out sel-long
+          ctest --test-dir build -j 4 -R "$(cat sel-long/fast.regex)|$(cat sel-long/timing.regex)" --output-on-failure --timeout 3000
 
   windows:
     name: Windows x64 (MinGW-w64)
@@ -91,7 +142,7 @@ jobs:
             ccache-full-windows-
       - name: Configure and build (app, tools, tests)
         run: |
-          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j 4
       - name: ccache statistics
         if: always()
@@ -104,6 +155,11 @@ jobs:
           key: ccache-full-windows-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       - name: Test
         run: ctest --test-dir build -j 4 ${{ github.event_name == 'schedule' && '-L slow' || '' }} --output-on-failure --timeout 1500
+      - name: Test the long form of the shortened tests (nightly)
+        if: (success() || failure()) && github.event_name == 'schedule'
+        run: |
+          python tools/ci_select.py --build-dir build --scope long --out sel-long
+          ctest --test-dir build -j 4 -R "$(cat sel-long/fast.regex)|$(cat sel-long/timing.regex)" --output-on-failure --timeout 3000
 
   app:
     name: GUI (${{ matrix.name }})

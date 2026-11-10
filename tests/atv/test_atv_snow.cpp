@@ -1,6 +1,7 @@
 // Analogue TV: the untuned picture (snow) for hunting weak signals (#239), and a channel tuned at its vision carrier (carrier at the centre of the input).
 #include "dect2/atv/atv_testkit.h"
 #include "../common/jobs.h"
+#include "../common/test_long.h"
 #include <atomic>
 #include <cmath>
 #include <cstdio>
@@ -90,15 +91,17 @@ int main() {
     }
 
     // ---- the vision carrier at the centre (the user tuned the vision frequency, not the channel centre)
-    const struct { const char* name; double rate; int sys; int col; bool mirror; } vc[] = {
-        {"B/G 16 Msps", 16e6, kAtvG, kAtvPal, false},
-        {"B/G 20 Msps", 20e6, kAtvG, kAtvPal, false},
-        {"B/G 20 Msps mirrored", 20e6, kAtvG, kAtvPal, true},
-        {"I 20 Msps", 20e6, kAtvI, kAtvPal, false},
-        {"M 16 Msps", 16e6, kAtvM, kAtvNtsc, false},
-        {"B/G 10 Msps", 10e6, kAtvG, kAtvPal, false},
+    // the default run: the mirrored top rate, NTSC and the lowest rate; ONAIR_TEST_LONG=1 every case
+    const struct { const char* name; double rate; int sys; int col; bool mirror; bool quick; } vc[] = {
+        {"B/G 16 Msps", 16e6, kAtvG, kAtvPal, false, false},
+        {"B/G 20 Msps", 20e6, kAtvG, kAtvPal, false, false},
+        {"B/G 20 Msps mirrored", 20e6, kAtvG, kAtvPal, true, true},
+        {"I 20 Msps", 20e6, kAtvI, kAtvPal, false, false},
+        {"M 16 Msps", 16e6, kAtvM, kAtvNtsc, false, true},
+        {"B/G 10 Msps", 10e6, kAtvG, kAtvPal, false, true},
     };
     for (const auto& v : vc) {
+        if (!testLong() && !v.quick) continue;
         AtvGenConfig c; c.sys = v.sys; c.colour = v.col; c.cnrDb = 40; c.rate = v.rate; c.sound = 4;
         AtvFormat f; atvMakeFormat(v.sys, v.col, f);
         c.cfoHz = -atvVisionOffsetHz(f);                  // the vision carrier at 0 Hz

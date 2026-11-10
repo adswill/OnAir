@@ -1,7 +1,7 @@
 // DTMB receiver over a long run with the faults of a real radio coming and going (#319: the app hung after prolonged DTMB reception): radio overflows,
 // impulse noise, dropouts of zeros and of missing samples, level steps, a carrier wave. Checks that no feed() call takes long (a stuck loop), that
 // the receiver locks again after every fault, that the memory does not grow (the maximum resident size of the second half against the first)
-// and that the receiver can be torn down while a fault is in progress. Argument: seconds of signal (default 40; 600 for a soak).
+// and that the receiver can be torn down while a fault is in progress. Argument: seconds of signal (default 12, 40 with ONAIR_TEST_LONG=1; 600 for a soak).
 #include "dect2/dtmb/dtmb_gen.h"
 #include "dect2/dtmb/dtmb_rx.h"
 #include "dect2/common/stable_random.h"
@@ -11,6 +11,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <random>
+#include "../common/test_long.h"
 #ifndef _WIN32
 #include <sys/resource.h>
 #endif
@@ -36,7 +37,8 @@ static double rssMb() {
 static double now() { return std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count(); }
 
 int main(int argc, char** argv) {
-    const double seconds = argc > 1 ? atof(argv[1]) : 40.0;
+    // the default run: 12 s (two report windows, a level step at 7 s); ONAIR_TEST_LONG=1 the 40 s run
+    const double seconds = argc > 1 ? atof(argv[1]) : testLongPick(12.0, 40.0);
     SignalConfig sc;
     sc.rate = 10e6; sc.snrDb = 28;
     sc.tx.header = Header::Pn945; sc.tx.profile.map = Mapping::Qam16; sc.tx.profile.rate = Rate::R06;

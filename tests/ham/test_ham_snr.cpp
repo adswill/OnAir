@@ -5,6 +5,7 @@
 // whole curve (more points, more slots). Nothing is transmitted.
 #include "../hfdig/hfdig_wsjt_testutil.h"
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 #include <cmath>
 #include <cstdlib>
 #include <cstring>
@@ -78,7 +79,10 @@ int main(int argc, char** argv) {
         const double c = std::isnan(r.ref) ? r.bound - 1 : r.ref;
         std::vector<double> pts;
         if (full) for (double x = c - 4; x <= c + 6.01; x += 1) pts.push_back(x);
-        else pts = {r.bound - 3, r.bound, r.bound + 3};
+        // the quick run decodes at the bound only (the point 3 dB below is printed, not checked; 3 dB above is checked with the clock error and drift,
+        // the harder case); ONAIR_TEST_LONG=1: all three points
+        else if (testLong()) pts = {r.bound - 3, r.bound, r.bound + 3};
+        else pts = {r.bound};
         const int slots = full ? 4 : 1;
         std::vector<double> fr;
         std::string line;
@@ -93,10 +97,10 @@ int main(int argc, char** argv) {
         char refs[16]; if (std::isnan(r.ref)) snprintf(refs, sizeof refs, "-"); else snprintf(refs, sizeof refs, "%.1f", r.ref);
         printf("%-10s %8s %8.1f %8.1f  %s\n", r.name, refs, fifty, r.bound, line.c_str());
         // regression bound: at the bound at least half decode, and 3 dB above it nearly all
-        const size_t ib = full ? 0 : 1;
+        const size_t ib = full || !testLong() ? 0 : 1;
         if (!full) {
             CHECK(fr[ib] >= 0.5, "%s: only %.0f %% decoded at %.1f dB (the bound)", r.name, 100 * fr[ib], r.bound);
-            CHECK(fr[2] >= 0.8, "%s: only %.0f %% decoded at %.1f dB", r.name, 100 * fr[2], r.bound + 3);
+            if (testLong()) CHECK(fr[2] >= 0.8, "%s: only %.0f %% decoded at %.1f dB", r.name, 100 * fr[2], r.bound + 3);
             // the same 3 dB above the bound with a clock error and a drift
             const double imp = rate(r, r.bound + 3, 1, 23, true);
             printf("%-10s with 15 ppm and drift at %+.1f dB: %.2f\n", r.name, r.bound + 3, imp);

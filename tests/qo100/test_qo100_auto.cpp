@@ -26,6 +26,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 
@@ -238,7 +239,9 @@ void testCalls() {
 } // namespace
 
 int main(int argc, char** argv) {
-    const bool quick = argc > 1 && std::string(argv[1]) == "--quick";
+    // the default run: 50 s of the full passband (the --quick length) and 20 s for each guard; ONAIR_TEST_LONG=1 105 s and 40 s; --quick skips the guards
+    const bool argQuick = argc > 1 && std::string(argv[1]) == "--quick";
+    const bool quick = argQuick || !testLong();
     testCalls();
 
     const double secs = quick ? 50 : 105;
@@ -336,27 +339,28 @@ int main(int argc, char** argv) {
         CHECK(f != nullptr, "recording file written");
         if (f) { fseek(f, 0, SEEK_END); const long sz = ftell(f); fclose(f); CHECK(sz > 8000 * 2 * 10, "recording is %ld bytes", sz); }
     }
-    if (quick) return testSummary("qo100_auto");
+    if (argQuick) return testSummary("qo100_auto");
+    const double gSecs = testLongPick(20.0, 40.0);
 
     // ---- 2. the guards
     {
-        Scene sc = makeScene(40, true);
-        auto r = runScene(sc, 40, [&](Qo100Receiver& rx) { rx.setAutoDecoders(kQoDecFt8 | kQoDecFt4 | kQoDecCw | kQoDecPsk); rx.setAutoMaxSlots(10); rx.setAutoCpuLimit(0.0005f); });
+        Scene sc = makeScene(gSecs, true);
+        auto r = runScene(sc, gSecs, [&](Qo100Receiver& rx) { rx.setAutoDecoders(kQoDecFt8 | kQoDecFt4 | kQoDecCw | kQoDecPsk); rx.setAutoMaxSlots(10); rx.setAutoCpuLimit(0.0005f); });
         const auto& a = r.last.autoDec;
         printf("2. cpu guard: %d dropped, %zu slots left\n", a.dropped, a.slots.size());
         CHECK(a.dropped >= 1, "the CPU limit drops channels (%d)", a.dropped);
         CHECK(a.slots.size() <= 1, "no channel survives a tiny limit (%zu)", a.slots.size());
     }
     {
-        Scene sc = makeScene(40, true);
-        auto r = runScene(sc, 40, [&](Qo100Receiver& rx) { rx.setAutoDecoders(kQoDecFt8 | kQoDecFt4 | kQoDecCw | kQoDecPsk); rx.setAutoMaxSlots(1); rx.setAutoCpuLimit(8); });
+        Scene sc = makeScene(gSecs, true);
+        auto r = runScene(sc, gSecs, [&](Qo100Receiver& rx) { rx.setAutoDecoders(kQoDecFt8 | kQoDecFt4 | kQoDecCw | kQoDecPsk); rx.setAutoMaxSlots(1); rx.setAutoCpuLimit(8); });
         const auto& a = r.last.autoDec;
         printf("   slot limit: %zu slots\n", a.slots.size());
         CHECK(a.slots.size() <= 1, "the channel limit holds (%zu)", a.slots.size());
     }
     {
-        Scene sc = makeScene(40, true);
-        auto r = runScene(sc, 40, [&](Qo100Receiver& rx) { rx.setAutoDecoders(0); });
+        Scene sc = makeScene(gSecs, true);
+        auto r = runScene(sc, gSecs, [&](Qo100Receiver& rx) { rx.setAutoDecoders(0); });
         const auto& a = r.last.autoDec;
         CHECK(a.slots.empty() && a.decodes.empty() && a.texts.empty(), "nothing ticked, nothing decoded");
         CHECK(a.tracks.size() >= 4, "the signals are still listed (%zu)", a.tracks.size());

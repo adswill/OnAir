@@ -13,6 +13,7 @@
 using namespace dect2;
 using namespace dect2::lora;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static const double kFs = 2e6;
 
@@ -122,7 +123,9 @@ int main() {
     // ---- sensitivity: the survey (spectral gate + dechirp banks, told nothing) against the Signal Lab search told the channel
     printf("sensitivity: SF7 125 kHz in 2 MHz, frames decoded of 4 (survey / lab told the offset)\n  snr_dB  survey  lab\n");
     double lastSurveyOk = 99, lastLabOk = 99;
-    for (double snr : {10.0, 4.0, 0.0, -3.0, -6.0}) {
+    // the default run: the SNR the checks name (4 dB for SF7, -12 dB for SF12) and four noise captures; ONAIR_TEST_LONG=1 the whole ladders and eight captures
+    const bool L = testLong();
+    for (double snr : L ? std::vector<double>{10.0, 4.0, 0.0, -3.0, -6.0} : std::vector<double>{4.0}) {
         int sOk = 0, lOk = 0; const int trials = 3;
         for (int t = 0; t < trials; t++) {
             const std::vector<Sig> sigs = {{7, 125e3, 5, 0x12, 0.3e6, snr, 0, 4, 0.1}};
@@ -144,7 +147,7 @@ int main() {
     // ---- long frames at low SNR: SF12 125 kHz (frames of about 1 s) through the 100 ms detection scale
     printf("sensitivity: SF12 125 kHz, frames decoded of 4 (survey / lab told the offset)\n  snr_dB  survey  lab\n");
     double lowSurvey12 = 99, lowLab12 = 99;
-    for (double snr : {-8.0, -12.0, -15.0, -18.0}) {
+    for (double snr : L ? std::vector<double>{-8.0, -12.0, -15.0, -18.0} : std::vector<double>{-12.0}) {
         int sOk = 0, lOk = 0; const int trials = 2;
         for (int tr = 0; tr < trials; tr++) {
             const std::vector<Sig> sigs = {{12, 125e3, 5, 0x12, -0.4e6, snr, 0, 2, 0.1}};
@@ -166,14 +169,15 @@ int main() {
     // ---- false alarms: noise alone, and noise with strong carriers, over several seeds
     {
         int falseEntries = 0, falseChannels = 0;
-        for (unsigned s = 0; s < 8; s++) {
+        const unsigned seeds = L ? 8 : 4;
+        for (unsigned s = 0; s < seeds; s++) {
             const std::vector<cf32> x = capture({}, 3.0, sigma2, 100 + s, s % 2 == 1);
             SurveyOptions o5; o5.centerHz = 868.5e6;
             const SurveyResult r = loraSurvey(x.data(), x.size(), kFs, o5);
             falseEntries += (int)r.entries.size(); falseChannels += (int)r.channels.size();
             for (const SurveyEntry& e : r.entries) printf("  false entry seed %u: offset %.0f SF%d %.0f sync %02X frames %d crc %d pre %d decoded %d\n", s, e.offsetHz, e.sf, e.bwHz, e.syncWord, e.frames, e.crcOk, e.preambles, e.decoded);
         }
-        printf("false alarms over 8 noise captures (4 with carriers): %d channels, %d entries\n", falseChannels, falseEntries);
+        printf("false alarms over %u noise captures (%u with carriers): %d channels, %d entries\n", seeds, seeds / 2, falseChannels, falseEntries);
         CHECK(falseEntries == 0, "no LoRa entries on noise (%d)", falseEntries);
     }
     return testSummary("loraraw_survey");

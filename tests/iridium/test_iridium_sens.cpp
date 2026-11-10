@@ -4,12 +4,14 @@
 using namespace dect2;
 using namespace dect2::iridiumtest;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 int main(int argc, char** argv) {
     const bool report = argc > 1;
     for (double thr : {13.0, 10.0, 8.0}) {
         printf("threshold %.0f dB\n", thr);
-        for (double snr = 12; snr >= 0; snr -= 2) {
+        // by default each threshold at the ends of the Es/N0 range (12 and 0 dB); the long run (ONAIR_TEST_LONG=1) and the report mode step by 2 dB
+        for (double snr = 12; snr >= 0; snr -= (report || testLong()) ? 2 : 12) {
             SceneOpts so; so.rate = 4e6; so.secs = 3.2; so.perSec = 125; so.esn0Db = snr; so.seed = 700 + (uint32_t)snr;
             RunOpts ro;
             const auto bursts = makeScene(so, ro.noiseSigma);

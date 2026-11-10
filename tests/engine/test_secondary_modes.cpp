@@ -15,6 +15,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static std::string writeCapture(int sm, double rate, double secs) {
     SynthConfig cfg;
@@ -89,18 +90,34 @@ int main() {
         double rate = mt->sampleRate;
         if (!Engine::secondaryCheck(29, sm, 100e6, rate, 100e6).empty()) rate *= 2;
         printf("%s (mode %d), %.2f Msps, allowed as second: %s\n", mt->name, sm, rate / 1e6, Engine::secondaryAllowed(sm) ? "yes" : "no");
+        // by default a refused mode's alone run (nothing is checked on it) is left out, and an allowed mode runs as the second first, alone only
+        // when that fails (a signal that decodes as the second also decodes); the long run (ONAIR_TEST_LONG=1) always runs alone first, as before
+        const bool allowed = Engine::secondaryAllowed(sm);
+        if (!testLong() && !allowed) continue;
         const std::string path = writeCapture(sm, rate, 8.0);
         if (path.empty()) { CHECK(false, "no test signal for mode %d", sm); continue; }
         int rep = 0, wrong = 0;
         std::string sum;
-        const bool alone = run(path, sm, rate, false, 40, rep, wrong, sum);
-        printf("  alone:  %s (%d reports) %s\n", alone ? "decodes" : "no result", rep, sum.c_str());
-        if (Engine::secondaryAllowed(sm)) {
+        if (testLong()) {
+            const bool alone = run(path, sm, rate, false, 40, rep, wrong, sum);
+            printf("  alone:  %s (%d reports) %s\n", alone ? "decodes" : "no result", rep, sum.c_str());
+            if (allowed) {
+                const bool second = run(path, sm, rate, true, 60, rep, wrong, sum);
+                printf("  second: %s (%d reports, %d of the wrong standard) %s\n", second ? "decodes" : "no result", rep, wrong, sum.c_str());
+                CHECK(alone, "allowed as second but its own signal does not decode alone");
+                CHECK(second, "mode %d decodes alone but not as the second mode", sm);
+                CHECK(wrong == 0, "%d reports of the wrong standard", wrong);
+            }
+        } else {
             const bool second = run(path, sm, rate, true, 60, rep, wrong, sum);
             printf("  second: %s (%d reports, %d of the wrong standard) %s\n", second ? "decodes" : "no result", rep, wrong, sum.c_str());
-            CHECK(alone, "allowed as second but its own signal does not decode alone");
-            CHECK(second, "mode %d decodes alone but not as the second mode", sm);
             CHECK(wrong == 0, "%d reports of the wrong standard", wrong);
+            if (!second) {
+                const bool alone = run(path, sm, rate, false, 40, rep, wrong, sum);
+                printf("  alone:  %s (%d reports) %s\n", alone ? "decodes" : "no result", rep, sum.c_str());
+                CHECK(alone, "allowed as second but its own signal does not decode alone");
+                CHECK(second, "mode %d decodes alone but not as the second mode", sm);
+            }
         }
         std::error_code ec;
         std::filesystem::remove(path, ec);

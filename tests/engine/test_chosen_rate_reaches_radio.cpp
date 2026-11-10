@@ -14,6 +14,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 struct Seen { std::mutex mu; std::vector<double> starts, retunes; };
@@ -55,11 +56,17 @@ int main() {
     // P25, DMR, ADS-B, FM, TETRA, pagers, ISM, airband, NXDN, HFDL, DVB-T (0), ATSC-like (6 MHz at 8 Msps)
     const int kStd[] = {52, 10, 13, 6, 48, 25, 29, 27, 39, 36, 0, 14};
     const double kRates[] = {2e6, 4e6, 5e6, 8e6, 10e6, 16e6, 20e6};
+    // by default each mode gets two of the seven rates, shifted from mode to mode so every rate is run with and without offset tuning;
+    // the long run (ONAIR_TEST_LONG=1) does every mode at every rate
     for (int autoOffset = 0; autoOffset < 2; autoOffset++)
-    for (int std : kStd) {
+    for (int si = 0; si < (int)(sizeof kStd / sizeof *kStd); si++) {
+        const int std = kStd[si];
         const ModeTuning* mt = std == 0 ? nullptr : modeTuning(std);
         ModeTuning dvb; if (!mt) { dvb.stdMode = 0; dvb.id = "dvb"; dvb.defMhz = 522; dvb.bandwidthMhz = 8; dvb.sampleRate = 10e6; mt = &dvb; }
-        for (double hz : kRates) {
+        for (int ri = 0; ri < 7; ri++) {
+            const int d = ((ri - si) % 7 + 7) % 7;
+            if (!testLong() && d != 0 && d != 3) continue;
+            const double hz = kRates[ri];
             { std::lock_guard<std::mutex> lk(gSeen.mu); gSeen.starts.clear(); gSeen.retunes.clear(); }
             Engine e;
             e.setAutoOffset(autoOffset);

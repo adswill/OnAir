@@ -26,7 +26,7 @@ workflow_yaml() {
         [ -z "${CI:-}" ] && { echo "note: no PyYAML here, workflows not parsed"; return 0; }
         echo "PyYAML is missing"; return 1
     fi
-    python3 -c "import sys,yaml;[yaml.safe_load(open(f)) for f in sys.argv[1:]]" .github/workflows/*.yml
+    python3 -c "import sys,yaml;[yaml.safe_load(open(f)) for f in sys.argv[1:]]" .github/workflows/*.yml .github/actions/*/action.yml
 }
 python_syntax() { python3 -m py_compile tools/*.py tools/gate/*.py android/tools/*.py; }
 credits() {
@@ -43,6 +43,7 @@ step "shell syntax" shell_syntax
 step "workflow YAML" workflow_yaml
 step "python syntax" python_syntax
 step "FFI widths" python3 tools/check_ffi_widths.py
+step "CI test selection (tools/ci_select.py)" python3 tools/test_ci_select.py
 step "mode numbers (source)" python3 tools/gate/gate_check.py modes
 step "MODES.md is current" python3 tools/gen_modes_list.py --check
 step "web_policy classification (source)" python3 tools/gate/gate_check.py web_policy
