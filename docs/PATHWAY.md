@@ -1306,3 +1306,5 @@ Branch feat38-iss2 on integ-38. Fixed #440 (the Inmarsat panel never registered 
 
 ## 2026-11-10 Discord button on codec install screens (feat38-codecbtn)
 Shared helper `appcodec::discordCodecButton` ("Join the Discord to get access to built codecs", opens the invite). Added to the folder-button row used by all codec install screens, the voice codec missing line, ? help footers, Ease/CDR/HDR notices; docs/CODECS.md note; translations in 14 catalogs. Android has no codec install screen: skipped. Syntax-checked only. See docs/CODECBTN-3.8.md.
+## 2026-11-10 mioty and DECT NR+ (feat38-leftovers)
+Added to family 600 (std 603, one list entry each): mioty TS-UNB uplink receiver (pattern search over the 17 uplink TSMA patterns, Viterbi, CRCs, extension frames, MAC fields; payload stays encrypted) and the DECT NR+ physical control channel on 1.728 MHz (STF, DRS, turbo code, Type 1 / 2 control fields). Generators for both; simulated signals only. docs/LEFTOVERS-3.8.md.

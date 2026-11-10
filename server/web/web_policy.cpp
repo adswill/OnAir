@@ -80,6 +80,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     // 3.1 modes: blocked likewise
     "pactor", "pskd",
     // 3.2 modes: blocked likewise
+    "mioty", "dectnrp",   // merged in integ-38
     "xlink", "wfbng", "npr", "winmor",   // merged in integ-38
     "rclink", "reticulum", "elrs", "mavlink", "frsky", "flysky", "roshf", "ssdv", "ebicab", "esubghz", "inmsat", "bgan", "nrf24", "sensors", "sferics",
     // 3.8 ham science modes: blocked likewise

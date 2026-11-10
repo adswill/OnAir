@@ -5,6 +5,8 @@
 #include "dect2/xlink/ht_phy.h"
 #include "dect2/xlink/npr.h"
 #include "dect2/xlink/winmor.h"
+#include "dect2/xlink/mioty.h"
+#include "dect2/xlink/nrplus.h"
 #include <chrono>
 #include <cmath>
 #include <map>
@@ -73,6 +75,14 @@ struct XlinkReceiver::Impl {
     RationalResampler wrs;
     bool wrsOn = false, wrsActive = false;
     xlink::winmor::PilotFinder winmor;
+    RationalResampler mrs;
+    bool mrsOn = false, mActive = false;
+    xlink::mioty::Receiver mioty;
+    RationalResampler nrs;
+    bool nrsOn = false, nActive = false;
+    xlink::nrplus::Receiver nrp;
+    std::vector<cf32> nout;
+    std::vector<cf32> mout;
     std::vector<cf32> wout;
     double phase = 0, dphi = 0;
     std::vector<cf32> buf, out;
@@ -120,10 +130,49 @@ struct XlinkReceiver::Impl {
         wrsActive = true;
     }
 
+    void buildMioty() {
+        mActive = false;
+        if (!(protocols & xlink::Mioty)) return;
+        mrsOn = std::fabs(fs - xlink::mioty::kRate) > 1;
+        double err = 0;
+        if (mrsOn && !mrs.configure(fs, xlink::mioty::kRate, &err, 110e3)) return;
+        mioty.reset();
+        mioty.setCallback([this](const xlink::mioty::Frame& f) {
+            char id[48], typ[24];
+            const bool full = !f.mpdu.empty() && (f.mpdu[0] >> 5 & 1);
+            std::string a;
+            for (size_t k = 1; k < f.mpdu.size() && k < (full ? 9u : 3u); k++) { char b[4]; snprintf(b, sizeof b, "%02X", f.mpdu[k]); a += b; }
+            snprintf(id, sizeof id, "%s %s", full ? "EUI-64" : "short", a.c_str());
+            snprintf(typ, sizeof typ, "uplink %s", xlink::mioty::patternName(f.pattern));
+            const std::string det = xlink::mioty::describeMpdu(f.mpdu);
+            addFrame(xlink::Mioty, id, typ, det, hexOf(f.mpdu.data(), f.mpdu.size(), 32), f.freqHz + 12 * xlink::mioty::kCarrierStep, (float)f.snrDb);
+        });
+        mActive = true;
+    }
+
+    void buildNrPlus() {
+        nActive = false;
+        if (!(protocols & xlink::NrPlus)) return;
+        if (fs < xlink::nrplus::kRate - 1) { if (log) log("DECT NR+: a 1.728 MHz channel needs a sample rate of at least 1.728 Msps"); return; }
+        nrsOn = std::fabs(fs - xlink::nrplus::kRate) > 1;
+        double err = 0;
+        if (nrsOn && !nrs.configure(fs, xlink::nrplus::kRate, &err, 1.6e6)) return;
+        nrp.reset();
+        nrp.setCallback([this](const xlink::nrplus::Header& h) {
+            char id[48], typ[32];
+            snprintf(id, sizeof id, "network %02X, RD %04X", (unsigned)h.networkId, (unsigned)h.txId);
+            snprintf(typ, sizeof typ, "control field type %d", h.type);
+            addFrame(xlink::NrPlus, id, typ, xlink::nrplus::describe(h), "", h.cfoHz, h.snrDb);
+        });
+        nActive = true;
+    }
+
     void rebuild() {
         dirty = false;
+        buildNrPlus();
         buildNpr();
         buildWinmor();
+        buildMioty();
         canHt = false;
         resample = false;
         phase = 0;
@@ -258,6 +307,16 @@ void XlinkReceiver::feed(const cf32* x, size_t n) {
         for (size_t i = 0; i < m; i++) { c.phase[i] = (float)std::arg(y[i] * std::conj(c.prev)); c.prev = y[i]; }
         c.f->feed(c.phase.data(), m);
     }
+    if (s.nActive) {
+        const cf32* y = in; size_t m = n;
+        if (s.nrsOn) { s.nout.clear(); s.nrs.process(in, n, s.nout); y = s.nout.data(); m = s.nout.size(); }
+        s.nrp.feed(y, m);
+    }
+    if (s.mActive) {
+        const cf32* y = in; size_t m = n;
+        if (s.mrsOn) { s.mout.clear(); s.mrs.process(in, n, s.mout); y = s.mout.data(); m = s.mout.size(); }
+        s.mioty.feed(y, m);
+    }
     if (s.wrsActive) {
         const cf32* y = in; size_t m = n;
         if (s.wrsOn) { s.wout.clear(); s.wrs.process(in, n, s.wout); y = s.wout.data(); m = s.wout.size(); }
@@ -276,7 +335,7 @@ void XlinkReceiver::feed(const cf32* x, size_t n) {
     s.tel.seq = ++s.seq;
 }
 
-void XlinkReceiver::flush() {}
+void XlinkReceiver::flush() { p_->mioty.flush(); }
 
 bool XlinkReceiver::telemetry(XlinkTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> g(p_->m);

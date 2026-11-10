@@ -313,6 +313,8 @@
         <item>wfb-ng / OpenHD</item>
         <item>New Packet Radio (NPR-70)</item>
         <item>WINMOR</item>
+        <item>mioty</item>
+        <item>DECT NR+</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -607,6 +609,8 @@
         <item>wfb-ng and OpenHD digital video links: 802.11n frames injected in monitor mode, MCS 0 - 7 at 20 MHz. Link and port, FEC block numbers, frames lost; the video stays encrypted</item>
         <item>New Packet Radio on 70 cm (F4HDK NPR-70 modems): sync words, network ID and symbol rate of each frame. Frame content is not read, it is whitened by the radio chip. Simulated signals only so far</item>
         <item>WINMOR HF frames: the 1500 Hz pilot with tuning error and the raw frame-type tones. The specification does not define the 4FSK symbol mapping, the Reed-Solomon generator or the callsign packing, so frames are detected, not read. Simulated signals only so far</item>
+        <item>mioty (ETSI TS 103 357 TS-UNB) uplinks: the 24 hopped radio-bursts found and decoded, every uplink TSMA pattern, extension frames. MAC fields shown (address, counter, flags); the payload is encrypted with the network key and stays encrypted. Simulated signals only so far</item>
+        <item>DECT NR+ (DECT-2020 NR) packets on a 1.728 MHz channel: the physical control field of each packet (network ID, transmitter and receiver IDs, length, MCS, HARQ). Data channel not decoded. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -901,6 +905,8 @@
         <item>Video link, structure only</item>
         <item>Packet radio, sync only</item>
         <item>HF data, pilot only</item>
+        <item>LPWAN, header only</item>
+        <item>Mesh radio, header only</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1195,5 +1201,7 @@
         <item>wfb wfbng openhd openipc fpv video drone wifi broadcast</item>
         <item>npr new packet radio f4hdk nfpr 70cm ip si4463</item>
         <item>winmor winlink kn6kb hf pilot</item>
+        <item>mioty ts-unb lpwan telegram splitting 868 iot sensor</item>
+        <item>dect nr+ dect-2020 nr nrplus mesh 1.9 ghz ts 103 636</item>
     </string-array>
 </resources>
