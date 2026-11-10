@@ -1535,3 +1535,10 @@ Changes:
 
 Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
 Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.
+## 2026-11-11 Fixes round 2 (feat39-fixes2)
+- specx_idmatrix (Linux, Windows): the test seeded its cases from std::hash, which libc++ and libstdc++ compute differently. `stable_string_hash` gives libc++'s value everywhere. Passed on Linux. New test `common_stablehash`.
+- dvbs_narrow: Auto now measures a narrow carrier's cyclic line over about a second of decimated input. Two impaired cases (25 ksym/s at 4 dB, 33 ksym/s at 3 dB) decode now.
+- iq_modes crash: the DVB-T2 P2 cell gather wrote past its buffer when an L1-pre signalled an impossible L1-post size (found with ASan). It is now bounded. New test `t2_p2gather`. Two memcpy-from-null cases fixed on the way (DAB generator, DMR bridge).
+- Pagers on HF: new test `pager_hackrf` runs a fake HackRF at 6.1625 MHz on Auto 2 Msps, with Whole span off and on. It decodes, so the engine does not reproduce the -200 dBFS report. Still open: the real driver and app settings need the owner's log.
+
+Simulated signals only. Details are in docs/FIXES2-3.9.md.

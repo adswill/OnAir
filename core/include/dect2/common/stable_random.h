@@ -8,10 +8,66 @@
 // platform's (logf / log differ in the last bit between libms, which does not matter for noise).
 #pragma once
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <limits>
 
 namespace dect2 {
+
+// std::hash<std::string> as libc++ computes it on a 64-bit target (CityHash64 for up to 64 bytes, the same constants and steps). libstdc++ (Linux,
+// MinGW) hashes strings with another function, so a test that seeds its random numbers from std::hash of a name draws other numbers there than
+// on macOS (test_specx_idmatrix did, and failed on Linux and Windows with figures tuned on macOS). This one gives libc++'s value everywhere.
+// Strings longer than 64 bytes get a 64-bit FNV-1a (not libc++'s value; no caller hashes names that long).
+inline uint64_t stable_string_hash(const char* s, size_t len) {
+    const uint64_t k0 = 0xc3a5c85c97cb3127ULL, k1 = 0xb492b66fbe98f273ULL, k2 = 0x9ae16a3b2f90404fULL, k3 = 0xc949d7c7509e6557ULL;
+    auto ld64 = [](const char* p) { uint64_t v = 0; for (int i = 7; i >= 0; i--) v = v << 8 | (unsigned char)p[i]; return v; };
+    auto ld32 = [](const char* p) { uint32_t v = 0; for (int i = 3; i >= 0; i--) v = v << 8 | (unsigned char)p[i]; return v; };
+    auto rot = [](uint64_t v, int sh) { return sh == 0 ? v : (v >> sh) | (v << (64 - sh)); };
+    auto mix = [](uint64_t v) { return v ^ (v >> 47); };
+    auto h16 = [](uint64_t u, uint64_t v) {
+        const uint64_t mul = 0x9ddfea08eb382d69ULL;
+        uint64_t a = (u ^ v) * mul; a ^= a >> 47;
+        uint64_t b = (v ^ a) * mul; b ^= b >> 47;
+        return b * mul;
+    };
+    const uint64_t n = len;
+    if (len <= 16) {
+        if (len > 8) {
+            const uint64_t a = ld64(s), b = ld64(s + len - 8);
+            const int sh = (int)(len & 63);
+            return h16(a, ((b + n) >> sh) | ((b + n) << (64 - sh))) ^ b;
+        }
+        if (len >= 4) return h16(n + (uint32_t)(ld32(s) << 3), ld32(s + len - 4));   // libc++ shifts in 32 bits (its default ABI)
+        if (len > 0) {
+            const uint32_t y = (uint32_t)(unsigned char)s[0] + ((uint32_t)(unsigned char)s[len >> 1] << 8);
+            const uint32_t z = (uint32_t)len + ((uint32_t)(unsigned char)s[len - 1] << 2);
+            return mix(y * k2 ^ z * k3) * k2;
+        }
+        return k2;
+    }
+    if (len <= 32) {
+        const uint64_t a = ld64(s) * k1, b = ld64(s + 8), c = ld64(s + len - 8) * k2, d = ld64(s + len - 16) * k0;
+        return h16(rot(a - b, 43) + rot(c, 30) + d, a + rot(b ^ k3, 20) - c + n);
+    }
+    if (len <= 64) {
+        uint64_t z = ld64(s + 24);
+        uint64_t a = ld64(s) + (n + ld64(s + len - 16)) * k0;
+        uint64_t b = rot(a + z, 52), c = rot(a, 37);
+        a += ld64(s + 8); c += rot(a, 7); a += ld64(s + 16);
+        const uint64_t vf = a + z, vs = b + rot(a, 31) + c;
+        a = ld64(s + 16) + ld64(s + len - 32);
+        z += ld64(s + len - 8);
+        b = rot(a + z, 52); c = rot(a, 37);
+        a += ld64(s + len - 24); c += rot(a, 7); a += ld64(s + len - 16);
+        const uint64_t wf = a + z, ws = b + rot(a, 31) + c;
+        const uint64_t r = mix((vf + ws) * k2 + (wf + vs) * k0);
+        return mix(r * k0 + vs) * k2;
+    }
+    uint64_t h = 1469598103934665603ULL;
+    for (size_t i = 0; i < len; i++) { h ^= (unsigned char)s[i]; h *= 1099511628211ULL; }
+    return h;
+}
+
 namespace stable_random_detail {
 // libc++ generate_canonical<Real, digits>(engine): `k` draws of the engine, scaled to [0, 1)
 template <class Real, class Engine> Real canonical(Engine& g) {

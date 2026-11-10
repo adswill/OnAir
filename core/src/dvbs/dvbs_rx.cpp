@@ -71,7 +71,8 @@ double snapRollOff(double a) {
 // spectral regrowth widen the -3 dB width far more than they narrow it); returns 0 when no clear line stands out (small
 // roll-offs give a weak one).
 constexpr int kCyclicN = 1 << 18;
-double cyclicRate(const std::vector<cf32>& x, double fs, double centre, double rs0) {
+constexpr size_t kRawKeep = (size_t)1 << 21;   // input kept while searching: a narrow carrier is measured on a second of it (cyclicRateNarrow)
+double cyclicRate(const std::vector<cf32>& x, double fs, double centre, double rs0, int kCyclicN = dect2::kCyclicN, float minRatio = 12.f) {
     if (x.size() < (size_t)kCyclicN) return 0;
     std::vector<cf32> v(x.end() - kCyclicN, x.end());
     Fft fft(kCyclicN);
@@ -105,11 +106,39 @@ double cyclicRate(const std::vector<cf32>& x, double fs, double centre, double r
     std::vector<float> sorted = mag;
     std::nth_element(sorted.begin(), sorted.begin() + (std::ptrdiff_t)(sorted.size() / 2), sorted.end());
     const float median = sorted[sorted.size() / 2];
-    if (!(mag[(size_t)(best - k0)] > 12.f * median) || best <= k0 || best >= k1) return 0;
+    if (!(mag[(size_t)(best - k0)] > minRatio * median) || best <= k0 || best >= k1) return 0;
     // parabolic interpolation of the peak
     const double a = mag[(size_t)(best - k0 - 1)], b = mag[(size_t)(best - k0)], c = mag[(size_t)(best - k0 + 1)];
     const double d = 0.5 * (a - c) / std::min(-1e-30, a - 2 * b + c);
     return (best + std::max(-0.5, std::min(0.5, d))) * fs / kCyclicN;
+}
+
+
+// A narrow carrier (25 ksym/s at 2 Msps) has only some 3000 symbols in the kCyclicN samples of cyclicRate: at a few dB of Es/N0 and a roll-off of
+// 0.20 its line does not stand out, and the spectrum's width, which the noise widens by 5 % there, was used instead (the hunt never locked). The
+// carrier is moved to 0 Hz and averaged down to about 5.4 samples per symbol first, so the line is measured over all the input kept (kRawKeep:
+// about a second at 2 Msps, eight times the symbols). A boxcar is enough: the folded noise has the density an ideal filter leaves, and
+// cyclicRate cuts the band to the carrier itself.
+double cyclicRateNarrow(const std::vector<cf32>& x, double fs, double centre, double rs0) {
+    const int D = (int)std::floor(fs / (4.0 * 1.35 * rs0));
+    if (D < 2) return cyclicRate(x, fs, centre, rs0);
+    std::vector<cf32> y(x.size() / (size_t)D);
+    const double w = -2 * M_PI * centre / fs;
+    std::complex<double> ph(1, 0);
+    const std::complex<double> st(std::cos(w), std::sin(w));
+    for (size_t j = 0; j < y.size(); j++) {
+        std::complex<double> acc(0, 0);
+        for (int k = 0; k < D; k++) { const cf32 v = x[j * (size_t)D + (size_t)k]; acc += std::complex<double>(v.real(), v.imag()) * ph; ph *= st; }
+        y[j] = cf32((float)acc.real(), (float)acc.imag());
+        if ((j & 255) == 255) ph /= std::abs(ph);
+    }
+    int n = 1;
+    while ((size_t)n * 2 <= y.size()) n *= 2;
+    if ((size_t)n * (size_t)D <= (size_t)kCyclicN) return cyclicRate(x, fs, centre, rs0);   // no more symbols than the plain measurement has
+    // the line is looked for only where the spectrum's width puts it, and the carrier is confirmed already (z-score >= 8): a ratio of 8 to the
+    // median of the bins there (noise-only bins exceed it with a probability far below one in 10^9) is safe, and the line of a 25 ksym/s carrier at
+    // 4 dB Es/N0 and roll-off 0.20 reaches 10 to 12
+    return cyclicRate(y, fs / D, 0.0, rs0, n, 8.f);
 }
 
 } // namespace
@@ -347,8 +376,11 @@ struct DvbsReceiver::Impl {
         if (!(r.valid && r.zscore >= 8.f && r.fitRms < 2.5f)) return false;
         double rs = manual > 0 ? manual : r.rateHz;
         if (manual <= 0) {
-            const double rc = cyclicRate(raw, fs, r.centerHz, rs);
-            if (rc > 0) rs = rc;
+            const double rc = cyclicRateNarrow(raw, fs, r.centerHz, rs);
+            if (rc > 0) {
+                if (std::fabs(rc / rs - 1) > 0.01) logf("symbol rate %.4f Msym/s from the spectrum's width, %.4f from its cyclic line", rs / 1e6, rc / 1e6);
+                rs = rc;
+            }
         }
         if ((manual <= 0 && rs < dvbsMinAutoSymbolRate(fs)) || rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) return false;
         specRes = r;
@@ -947,7 +979,7 @@ void DvbsReceiver::feed(const cf32* x, size_t n) {
     if (I.mode == Impl::kSearch) {
         I.nspec.push(x, n);
         I.raw.insert(I.raw.end(), x, x + n);
-        if (I.raw.size() > (size_t)kCyclicN) I.raw.erase(I.raw.begin(), I.raw.end() - kCyclicN);
+        if (I.raw.size() > kRawKeep + kRawKeep / 4) I.raw.erase(I.raw.begin(), I.raw.end() - (std::ptrdiff_t)kRawKeep);   // trimmed now and then, not at every block
         I.doSearch();
         if (I.mode != Impl::kSearch) std::vector<cf32>().swap(I.raw);
     }

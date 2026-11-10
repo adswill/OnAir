@@ -860,7 +860,10 @@ int main(int argc, char** argv) {
             }
         });
     }
-    for (Mode* m : run) {
+    // IQ_MODES_SPECTRUM_ONLY=1: only the engine-spectrum part (for a sanitizer run, which would take hours over the receiver runs)
+    const bool specOnly = getenv("IQ_MODES_SPECTRUM_ONLY") != nullptr;
+    const std::vector<Mode*> none;
+    for (Mode* m : specOnly ? none : run) {
         {
             std::unique_lock<std::mutex> lk(mu);
             cv.wait(lk, [&] { return live < 3; });
@@ -902,7 +905,7 @@ int main(int argc, char** argv) {
     // ---- the table and the checks
     printf("\nmeasure per mode: good frames / blocks / messages (DVB-T2, DTMB, ATSC 3.0: %% of them good; FM: audio S/N dB) / SNR, MER or C/N0 dB (/ sound S/N dB)\n");
     printf("%-26s %-6s| %-38s| %-38s| %-38s| %-38s| %-26s| residual DC, image dB: in -> out; IQ measured\n", "mode", "keeps", "0 Hz: off  DC  DC+IQ", "5 Hz", "50 Hz", "500 Hz", "impaired: off  on");
-    for (Mode* mp : run) {
+    for (Mode* mp : specOnly ? none : run) {
         Mode& m = *mp;
         const bool keepDc = keepDcFor(m.stdMode), keepIq = keepIqFor(m.stdMode);
         std::string line;
@@ -947,6 +950,11 @@ int main(int argc, char** argv) {
     const double t1 = wallNow();
     std::vector<Mode*> spec;
     for (Mode* m : run) if (m->radio) spec.push_back(m);
+    if (const char* ix = getenv("IQ_MODES_INDEX")) {   // one mode of the spectrum part alone (by its place in that list), for finding a crash
+        const size_t k = (size_t)atoi(ix);
+        spec = k < spec.size() ? std::vector<Mode*>{spec[k]} : std::vector<Mode*>{};
+        if (!spec.empty()) printf("spectrum part: %s only\n", spec[0]->name.c_str());
+    }
     std::vector<SpecResult> sr(spec.size());
     {
         std::atomic<size_t> next{0};
