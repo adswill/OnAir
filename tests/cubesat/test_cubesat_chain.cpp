@@ -77,6 +77,12 @@ int main() {
     add("FSK 9600 AX100 Mode 6", mk(ModFsk, 9600, Ax100Mode6, 40), 4, ModFsk, 9600);
     add("FSK 9600 CCSDS RS", mk(ModFsk, 9600, CcsdsRs, 40), 4, ModFsk, 9600);
     add("FSK 1200 ASCII text", mk(ModFsk, 1200, kFramingText, 40), 3, ModFsk, 1200);
+    // 3.9 framings
+    add("FSK 9600 U482C (RS, conv on every other)", mk(ModFsk, 9600, U482c, 40, 500), 4, ModFsk, 9600);
+    add("FSK 9600 CCSDS concatenated, offset -700", mk(ModFsk, 9600, CcsdsConcat, 40, -700), 4, ModFsk, 9600);
+    add("FSK 2400 USP, 200 ppm", mk(ModFsk, 2400, Usp, 40, 0, 0, 0, 200), 4, ModFsk, 2400);
+    add("FSK 4800 NGHam, Doppler ramp", mk(ModFsk, 4800, Ngham, 40, 400, 300, -40), 4, ModFsk, 4800);
+    add("FSK 4800 Mobitex-NX, 22 dB", mk(ModFsk, 4800, Mobitex, 30), 3, ModFsk, 4800);
     // AFSK
     add("AFSK 1200 AX.25", [] { SmartSynth s = mk(ModAfsk, 1200, Ax25Afsk1200, 40); s.scramble = false; return s; }(), 4, ModAfsk, 0);
     add("AFSK 1200 AX.25, offset +1500, 200 ppm", [] { SmartSynth s = mk(ModAfsk, 1200, Ax25Afsk1200, 40, 1500, 0, 0, 200); s.scramble = false; return s; }(), 4, ModAfsk, 0);
@@ -84,6 +90,7 @@ int main() {
     add("BPSK 1200 AX.25 NRZI", [] { SmartSynth s = mk(ModBpsk, 1200, Ax25G3ruh, 40); s.scramble = false; return s; }(), 4, ModBpsk, 1200);
     add("BPSK 1200 AX.25, offset +700", [] { SmartSynth s = mk(ModBpsk, 1200, Ax25G3ruh, 40, 700); s.scramble = false; return s; }(), 4, ModBpsk, 1200);
     add("BPSK 9600 G3RUH AX.25", mk(ModBpsk, 9600, Ax25G3ruh, 40), 4, ModBpsk, 9600);
+    add("BPSK 9600 CCSDS concatenated", mk(ModBpsk, 9600, CcsdsConcat, 40, 300), 4, ModBpsk, 9600);
     add("BPSK 1200 AO-40 FEC (FUNcube)", mk(ModBpsk, 1200, kFramingAo40, 40), 4, ModBpsk, 1200);
     add("BPSK 1200 AO-40 FEC, offset -600, 150 ppm", mk(ModBpsk, 1200, kFramingAo40, 40, -600, 0, 0, 150), 4, ModBpsk, 1200);
     add("BPSK 1200 AO-40 FEC, Doppler ramp", mk(ModBpsk, 1200, kFramingAo40, 40, 300, 500, -60), 4, ModBpsk, 1200);

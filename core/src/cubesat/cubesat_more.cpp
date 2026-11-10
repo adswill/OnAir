@@ -698,7 +698,7 @@ struct MoreHunter::Impl {
 
     void emit(MoreFrame& f) {
         // the two Viterbi alignments (or both polarities) find the same frame: report it once
-        if (f.data == lastData && f.bitPos < lastPos + 20000 && f.bitPos + 20000 > lastPos) return;
+        if (f.data == lastData && f.bitPos < lastPos + 600 && f.bitPos + 600 > lastPos) return;
         lastData = f.data; lastPos = f.bitPos;
         self->frames++;
         if (self->onFrame) self->onFrame(f);
