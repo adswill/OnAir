@@ -2,6 +2,7 @@
 // OnAir Web end to end on this computer only: relay (relay/relay.js), directory (the real Worker under `wrangler dev --local`), onair-server with the test signal, guests over WebSocket
 // and, when ONAIR_E2E_PLAYWRIGHT points at a playwright-core module, a real headless (muted) Chrome. No request leaves 127.0.0.1 / *.localhost.
 //   node tests/web/webonair_e2e.js build/onair-server
+//   ONAIR_E2E_RELAY=worker node tests/web/webonair_e2e.js build/onair-server     (the Cloudflare relay Worker under wrangler dev instead)
 // Exit 77: wrangler is not installed (cd web/onair-directory && npm install), the test is skipped.
 'use strict';
 const { spawn, spawnSync } = require('child_process'), fs = require('fs'), net = require('net'), os = require('os'), path = require('path'), crypto = require('crypto');
@@ -11,6 +12,10 @@ const WR = path.join(ROOT, 'web', 'onair-directory', 'node_modules', '.bin', 'wr
 if (!fs.existsSync(WR)) { console.log('SKIP: wrangler not installed in web/onair-directory (npm install)'); process.exit(77); }
 if (!fs.existsSync(SERVER)) { console.log('SKIP: ' + SERVER + ' is not built'); process.exit(77); }
 const { createRelay } = require(path.join(ROOT, 'relay', 'relay.js'));
+// ONAIR_E2E_RELAY=worker: the relay is the Cloudflare Worker (web/relay-worker) under `wrangler dev --local` instead of relay/relay.js
+const WORKER = process.env.ONAIR_E2E_RELAY === 'worker';
+const RWDIR = path.join(ROOT, 'web', 'relay-worker'), RWR = path.join(RWDIR, 'node_modules', '.bin', 'wrangler');
+if (WORKER && !fs.existsSync(RWR)) { console.log('SKIP: wrangler not installed in web/relay-worker (npm install)'); process.exit(77); }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const freePort = () => new Promise((res) => { const s = net.createServer(); s.listen(0, '127.0.0.1', () => { const p = s.address().port; s.close(() => res(p)); }); });
@@ -75,7 +80,22 @@ async function stopServer(p) { p.kill('SIGTERM'); for (let i = 0; i < 60 && p.ex
 (async () => {
   const ports = { relay: await freePort(), web: await freePort(), api: await freePort(), dir: await freePort() };
   const relayOpt = { domain: 'relay.localhost', mainHost: '127.0.0.1', scheme: 'http', publicPort: '' + ports.relay };
-  let relay = createRelay(relayOpt); await relay.listen(ports.relay, '127.0.0.1');
+  const startRelay = async () => {
+    if (!WORKER) { const r = createRelay(relayOpt); await r.listen(ports.relay, '127.0.0.1'); return r; }
+    // the Worker's own config without routes (with a route, wrangler dev replaces the Host header), state kept across restarts
+    const cfg = path.join(RWDIR, '.wrangler-test.jsonc');
+    fs.writeFileSync(cfg, fs.readFileSync(path.join(RWDIR, 'wrangler.jsonc'), 'utf8').replace(/ {2}"routes": \[[\s\S]*?\],\n/, ''));
+    const lg = fs.openSync(T + '/relay-worker.log', 'a');
+    const p = spawn(RWR, ['dev', '-c', cfg, '--local', '--persist-to', T + '/rw', '--port', '' + ports.relay, '--ip', '127.0.0.1', '--show-interactive-dev-session=false',
+      '--var', 'RELAY_DEV_LOCAL:1', '--var', 'RELAY_MAIN_HOST:127.0.0.1', '--var', 'RELAY_LABEL_SUFFIX:.relay.localhost', '--var', 'RELAY_SCHEME:http',
+      '--var', 'RELAY_PUBLIC_PORT:' + ports.relay, '--var', 'HOST_ATTEMPTS_PER_MIN:30'],
+    { cwd: RWDIR, env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' }, stdio: ['ignore', lg, lg], detached: true });
+    let ok = false;
+    for (let i = 0; i < 240 && !ok; i++) { await sleep(250); try { ok = (await fetch(`http://127.0.0.1:${ports.relay}/relay/v1/status`)).ok; } catch { /* not yet */ } }
+    check(ok, 'wrangler dev serves the relay Worker');
+    return { close: () => { try { process.kill(-p.pid, 'SIGTERM'); } catch { try { p.kill('SIGTERM'); } catch { /* gone */ } } try { fs.unlinkSync(cfg); } catch { /* gone */ } } };
+  };
+  let relay = await startRelay();
   // ---- the directory: the real Worker, local D1
   const persist = T + '/wr';
   const dirEnv = { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' };
@@ -136,7 +156,8 @@ async function stopServer(p) { p.kill('SIGTERM'); for (let i = 0; i < 60 && p.ex
     check(!!g1.welcome, 'guest connected before the drop');
     relay.close(); await sleep(800);
     check(g1.w.closeCode !== null, 'the guest is cut off when the relay goes away');
-    relay = createRelay(relayOpt); await relay.listen(ports.relay, '127.0.0.1');
+    if (WORKER) await sleep(1500);   // the old wrangler gives the port back
+    relay = await startRelay();
     s = await waitOnline(70000);
     check(s.state === 'online' && s.url === url, 'the server reconnects to the relay by itself, same address');
     const g2 = await guest(ports.relay, host, { name: 'after drop' });

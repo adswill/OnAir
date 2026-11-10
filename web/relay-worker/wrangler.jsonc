@@ -1,0 +1,29 @@
+{
+  // OnAir relay on Cloudflare (docs/CF-RELAY-3.8.md). Not deployed by any script in this repo: the owner follows that doc.
+  "name": "onair-relay",
+  "main": "src/index.js",
+  "compatibility_date": "2026-05-03",
+  "durable_objects": {
+    "bindings": [
+      { "name": "ROOM", "class_name": "Room" },
+      { "name": "REGISTRY", "class_name": "Registry" }
+    ]
+  },
+  // SQLite-backed classes: the only kind the Workers Free plan can use
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Room", "Registry"] }],
+  "vars": {
+    "RELAY_MAIN_HOST": "relay.on-air.dev",
+    "RELAY_LABEL_SUFFIX": "-r.on-air.dev",
+    "MAX_HOSTS": "2000",
+    "MAX_CONNS_PER_HOST": "64",
+    "MAX_CONNS_PER_IP": "24",
+    "MAX_BPS": "8388608",
+    "HOST_ATTEMPTS_PER_MIN": "6"
+  },
+  "routes": [
+    { "pattern": "relay.on-air.dev", "custom_domain": true },
+    { "pattern": "*-r.on-air.dev/*", "zone_name": "on-air.dev" }
+  ],
+  "observability": { "enabled": true }
+  // ADMIN_TOKEN (24+ characters) is a secret: `wrangler secret put ADMIN_TOKEN`. Permanent bans: vars BAN_IDS / BAN_IPS (comma separated).
+}

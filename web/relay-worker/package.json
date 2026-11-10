@@ -1,0 +1,8 @@
+{
+  "name": "onair-relay-worker",
+  "private": true,
+  "type": "module",
+  "description": "OnAir relay on Cloudflare Workers + Durable Objects (docs/CF-RELAY-3.8.md)",
+  "scripts": { "dev": "wrangler dev", "test": "node --test test/" },
+  "devDependencies": { "wrangler": "^4.86.0" }
+}
