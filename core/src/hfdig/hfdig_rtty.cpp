@@ -411,9 +411,13 @@ void HfdigRtty::Impl::autoTick() {
         if (hyps.empty()) { autoState = 3; return; }
         autoHyps = std::move(hyps);
         const RttyAutoHyp& h = autoHyps[0];
-        baudIdx = h.baudIdx; shiftIdx = h.shiftIdx; reverse = h.reverse;
-        fixedLo = 0;
-        cfgGen++;
+        // the settings the decoder already runs with: nothing is rebuilt, so the character being received is not lost (and when the
+        // answer arrives, which depends on the analysis thread, does not change the text)
+        if (baudIdx != h.baudIdx || shiftIdx != h.shiftIdx || reverse != h.reverse) {
+            baudIdx = h.baudIdx; shiftIdx = h.shiftIdx; reverse = h.reverse;
+            fixedLo = 0;
+            cfgGen++;
+        }
         autoState = 2;
         autoLocked = true;
         autoCharsSeen = tel.chars; autoErrsSeen = tel.framingErrors;
