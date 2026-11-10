@@ -45,7 +45,7 @@ int main() {
     // 1. every modulation, offset, drift and clock error
     int ok = 0;
     for (int m = 0; m < kPskModes; m++) {
-        PskGenSignal s = sig(1000 + 150.0 * m, m, 20);
+        PskGenSignal s = sig(1000 + 150.0 * m, m, psk8psk(m) ? 28 : 20);   // differential 8PSK needs about 8 dB more for the same symbol errors
         s.driftHzPerMin = 3;
         s.clockPpm = 15;
         const auto t = runLive({s}, 26, m % 2 ? 80 : -80, (uint32_t)(11 + m), true);
@@ -53,7 +53,7 @@ int main() {
         printf("  %-8s offset, drift, clock: auto %s, locked %d, %llu chars\n", pskModeName(m), t.autoMode >= 0 ? pskModeName(t.autoMode) : "none", (int)t.autoLocked, (unsigned long long)t.blocksOk);
         ok += hit;
     }
-    printf("PSK31 family, every modulation (20 dB in its bandwidth, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, kPskModes);
+    printf("PSK31 family, every modulation (20 dB in its bandwidth, 8PSK 28 dB, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, kPskModes);
     CHECK(ok >= kPskModes - 1, "%d of %d", ok, kPskModes);
     // 2. noise sweep on BPSK31 and BPSK63
     for (double snr : {20.0, 12.0, 8.0, 5.0}) {

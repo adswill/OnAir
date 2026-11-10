@@ -68,7 +68,8 @@ int main() {
     const std::string m1 = "CQ CQ DE LY2ABC LY2ABC KO24 PSE K\n";
     // 2. tuning errors, drift, clock error
     struct Case { int mode; double hz, cfo, drift, ppm, snr; } cases[] = {
-        {7, 1000, 0, 0, 0, 18}, {7, 1500, 60, 0, 0, 18}, {7, 800, -45, 3, 40, 18}, {8, 1200, 0, 0, 0, 20}, {8, 2000, 35, 2, 30, 20}};
+        {7, 1000, 0, 0, 0, 27}, {7, 1500, 60, 0, 0, 27}, {7, 800, -45, 3, 40, 27}, {8, 1200, 0, 0, 0, 28}, {8, 2000, 35, 2, 30, 28}};
+    // differential 8PSK makes about 3 % symbol errors at 18 dB in its bandwidth (2 Q(sqrt(2 Es/N0) sin(pi / 16))): the round trips run at 27 - 28 dB
     for (const auto& c : cases) {
         auto s = sig(c.hz, m1, c.snr, c.mode);
         s.driftHzPerMin = c.drift; s.clockPpm = c.ppm;
@@ -80,7 +81,7 @@ int main() {
     // 3. noise sweep (SNR in the baud-rate bandwidth), 8PSK125: the lowest SNR that still gives the call sign
     {
         const bool lng = std::getenv("ONAIR_TEST_LONG") != nullptr;
-        const double snrs[] = {20, 17, 14, 11};
+        const double snrs[] = {30, 26, 22, 18};
         int okAt[4] = {};
         const int seeds = lng ? 6 : 2;
         for (int i = 0; i < 4; i++)
@@ -95,13 +96,13 @@ int main() {
     }
     // 4. two signals at once, 8PSK250 and 8PSK125 cannot share a mode setting: two 8PSK250 signals 900 Hz apart
     {
-        const PskTelemetry t = run({sig(1000, "FIRST DE SP3XYZ SP3XYZ K\n", 20, 8), sig(1900, "SECOND DE OH1ABC OH1ABC K\n", 18, 8)}, 5, 8);
+        const PskTelemetry t = run({sig(1000, "FIRST DE SP3XYZ SP3XYZ K\n", 28, 8), sig(1900, "SECOND DE OH1ABC OH1ABC K\n", 27, 8)}, 5, 8);
         CHECK(textNear(t, 1000).find("SP3XYZ") != std::string::npos && textNear(t, 1900).find("OH1ABC") != std::string::npos, "two signals: \"%s\" \"%s\"",
               textNear(t, 1000).c_str(), textNear(t, 1900).c_str());
     }
     // 5. a BPSK31 signal set to 8PSK125 gives no readable call sign; noise alone gives no text
     {
-        const PskTelemetry t = run({sig(1100, m1, 20, 0)}, 8, 7);
+        const PskTelemetry t = run({sig(1100, m1, 28, 0)}, 8, 7);
         CHECK(textNear(t, 1100).find("LY2ABC") == std::string::npos, "BPSK31 read as 8PSK125 \"%s\"", textNear(t, 1100).c_str());
         const PskTelemetry n = run({}, 8, 7);
         size_t chars = 0;
