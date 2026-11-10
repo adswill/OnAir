@@ -139,7 +139,7 @@ void stepSend(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxMo
     const float leftW = std::max(200.f * gUi, ImGui::GetContentRegionAvail().x - 130 * gUi - 8 * gUi);
     ImGui::BeginGroup();
     ImGui::PushItemWidth(leftW);
-    ImGui::BeginChild("##txmeters", ImVec2(leftW, 130 * gUi), false, ImGuiWindowFlags_NoScrollbar);
+    ImGui::BeginChild("##txmeters", ImVec2(leftW, 152 * gUi), false, ImGuiWindowFlags_NoScrollbar);
     meter(tr("Peak"), s.meterPeak, hot);
     meter(tr("RMS"), s.meterRms, false);
     ImGui::AlignTextToFramePadding();
@@ -161,6 +161,13 @@ void stepSend(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxMo
     ImGui::TextDisabled("%s", tr("Occupied bandwidth"));
     ImGui::SameLine(140 * gUi);
     if (obw > 0) ImGui::Text("~%s", hzText(obw).c_str()); else ImGui::TextDisabled("-");
+    // the output power: the radio's measured table (a full-scale carrier at this level) moved by the signal's own RMS and peak
+    if (const double fs = radio && s.destKind != 1 ? txCalPowerDbm(calibrationFor(s.radioKey), s.gainDb, s.ampOn) : NAN; std::isfinite(fs) && s.meterRms > 1e-6f) {
+        ImGui::TextDisabled("%s", tr("Output power"));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Predicted from this radio's power table (Advanced > Calibration of this radio): average and peak envelope power of what is being sent. A prediction, not a measurement."));
+        ImGui::SameLine(140 * gUi);
+        ImGui::Text(tr("~%.1f dBm average, %.1f dBm peak"), fs + 20 * std::log10(s.meterRms), fs + 20 * std::log10(std::max(s.meterPeak, 1e-6f)));
+    }
     ImGui::EndChild();
     ImGui::PopItemWidth();
     ImGui::EndGroup();

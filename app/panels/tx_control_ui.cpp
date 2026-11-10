@@ -238,8 +238,8 @@ void calibrationPanel(App& a, TxUi& s, const DeviceInfo* radio, bool running) {
 
     // the power table
     ImGui::Spacing();
-    ImGui::TextUnformatted(tr("Output power at the gain settings (measured)"));
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Write down what a power meter (or a calibrated receiver) reads at a few gain settings. OnAir then shows the predicted output power and can set the level for a power you type. It never limits the power."));
+    ImGui::TextUnformatted(tr("Output power at the gain settings (measured with Carrier tune)"));
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Send Carrier tune (a full-scale carrier) into a power meter or a calibrated receiver and write down what it reads at a few gain settings. OnAir then shows the predicted output power of every signal (moved by its own level) and can set the level for a power you type. It never limits the power."));
     int del = -1;
     for (size_t i = 0; i < c.power.size(); i++) {
         ImGui::PushID((int)i);
@@ -277,8 +277,8 @@ void powerReadout(TxUi& s, const DeviceInfo* radio) {
     if (!std::isfinite(p)) return;
     char b[160];
     const double mw = std::pow(10.0, p / 10.0);
-    if (mw >= 1000) snprintf(b, sizeof b, tr("about %.1f dBm (%.2f W) out, from this radio's power table"), p, mw / 1000);
-    else snprintf(b, sizeof b, tr("about %.1f dBm (%.3g mW) out, from this radio's power table"), p, mw);
+    if (mw >= 1000) snprintf(b, sizeof b, tr("a full-scale carrier at this level: about %.1f dBm (%.2f W), from this radio's power table"), p, mw / 1000);
+    else snprintf(b, sizeof b, tr("a full-scale carrier at this level: about %.1f dBm (%.3g mW), from this radio's power table"), p, mw);
     ImGui::TextDisabled("%s", b);
     ImGui::SetNextItemWidth(110 * gUi);
     if (ImGui::InputDouble("##txtarget", &s.targetDbm, 0, 0, "%.1f dBm")) plat::basePrefs().setD("tx.targetDbm", s.targetDbm);
