@@ -1,18 +1,20 @@
-// TETRAPOL physical frames (PAS 0001-2 clause 6): the 160-bit / 20 ms frame of the GMSK 8 kbit/s channel, voice (6.1) and data (6.2).
-// Written from the published air-interface description; the open tetrapol-kit project (GPL-2, not included, see THIRD_PARTY.md) was read
-// as a cross-check of the clause 6 tables. Receive only: nothing here decrypts anything.
+// TETRAPOL physical frames, written from PAS 0001-2 v3.0.0 (TETRAPOL Forum, public): the 160-bit / 20 ms frame of the GMSK BT 0.25,
+// 8 kbit/s channel (7.1, 7.2), voice frames (6.1) and data frames (6.2). Every table and constant below is from that text (section cited
+// at each). Receive only: nothing here decrypts anything.
 //
 // One frame on air (transmission order):
-//   8 header bits (0x46 sent LSB first: 0 1 1 0 0 0 1 0) + 152 data bits, then the whole stream is differentially encoded e[k] = x[k] ^ x[k-1].
-// The 152 data bits of a frame, from the information bits (6.1.2 / 6.2.2 ... 6.1.5 / 6.2.5):
-//   protected part:  26 bits -> 52 bits, circular rate-1/2 code  c[2i] = u[i]^u[i-1]^u[i-2], c[2i+1] = u[i]^u[i-2]  (indices mod 26)
-//   second part:     data frame: 50 bits -> 100 bits, the same circular code on its own 50 bits;  voice frame: 100 bits, not coded
-//   interleave (out[T[j]] = in[j]; data / voice tables, VHF / UHF), UHF only: differential precoding, then the 127-bit scrambling
-//   sequence (x^7 + x^6 + 1 form, s[k] = s[k-1] ^ s[k-7], seven ones first) from offset SCR (0 = not scrambled).
+//   f0..f7 = 0 1 1 0 0 0 1 0 (6.1.5.2 / 6.2.5.2; 0x46 sent LSB first), then f8+k = e'k + S(SCR, k) for the 152 coded bits; the modulator
+//   codes the whole stream differentially, Mk = mk + mk-1 (7.2), and the downlink is spectrally inverted (7.3).
+// The 152 coded bits (6.1.1 .. 6.1.5, 6.2.1 .. 6.2.5):
+//   protected part:  26 bits -> 52 bits, cyclic rate-1/2 code C2j = b"j + b"j-1 + b"j-2, C2j+1 = b"j + b"j-2 (6.1.2 / 6.2.2), b"-2 = b"24,
+//                    b"-1 = b"25
+//   second part:     data frame: 48 bits + 2 zero tail bits -> 100 bits, the same code started from zero (6.2.1, 6.2.2: b"-2 = b"-1 =
+//                    b"48 = b"49 = 0, which is the cyclic code on those 50 bits); voice frame: 100 bits, not coded
+//   interleaving e_K(j) = c_j (VHF formula 6.1.3.1 / 6.2.3.1, UHF tables 6.1.4.1 / 6.2.4.1), UHF only: differential precoding with
+//   PRE_COD (6.1.4.2 / 6.2.4.2), then the 127-bit scrambling sequence s(k) = s(k-1) + s(k-7), s(0..6) = 1, from offset SCR (6.1.5.1).
 // Information bits:
-//   voice frame: d=0, voice1[20], asb[2], crc3[3]  | voice2[100]              (CRC-3 x^3+x+1 over the first 23 bits, sent inverted)
-//   data frame:  d=1, data[66], asb[2], crc5[5], zero[2]                     (CRC-5 x^5+x^2+1 over the first 69 bits)
-// The 120 speech-codec bits of a voice frame are voice1[0..19] then voice2[0..99] (PAS 0001-7 numbering 0..119).
+//   voice frame: d=0, v0..v19, ASB X, ASB Y, CRC-3 (I + D + D^3, the three bits complemented) | v20..v119 not coded   (6.1, 6.1.1)
+//   data frame:  d=1, FN0, FN1, 64 data bits, ASB X, ASB Y, CRC-5 (I + D^2 + D^5), 2 zero bits                        (6.2, 6.2.1)
 #pragma once
 #include <cstdint>
 

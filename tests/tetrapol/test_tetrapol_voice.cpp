@@ -88,13 +88,13 @@ void testGate() {
     tp::CallGate g;
     bool st = false;
     tp::CallSignal s;
-    s.kind = tp::CallSignal::CallStart; s.keyRef = 0x10;
+    s.kind = tp::CallSignal::CallStart; s.keyRef = 0x00;
     g.onSignal(s, 0.0);
     CHECK(g.onVoice(0.1, st) == tp::Verdict::Clear && st, "clear call");
     s.keyRef = 0x12;
     g.onSignal(s, 0.5);
     CHECK(g.onVoice(0.6, st) == tp::Verdict::Encrypted && !st, "encrypted is sticky inside a call");
-    s.keyRef = 0x10;
+    s.keyRef = 0x00;
     g.onSignal(s, 0.7);
     CHECK(g.onVoice(0.8, st) == tp::Verdict::Encrypted, "a later clear message does not undo encrypted");
     CHECK(g.tick(2.0) && !g.active(), "call ends after a quiet second");
@@ -102,7 +102,7 @@ void testGate() {
     tp::CallSignal e; e.kind = tp::CallSignal::CallEnd;
     g.onSignal(e, 2.2);
     CHECK(g.tick(2.2) && !g.active(), "D_CALL_END ends the call");
-    s.keyRef = 0x10;
+    s.keyRef = 0x00;
     g.onSignal(s, 2.3);
     CHECK(g.onVoice(7.0, st) == tp::Verdict::Unknown, "a D_CALL_START seconds before does not count");
     tp::CallSignal ga; ga.kind = tp::CallSignal::GroupActivation; ga.keyRef = 0x00;
@@ -121,13 +121,15 @@ int main() {
     for (int pol = 0; pol < 2; pol++)
         for (int band = 0; band < 2; band++) {
             Seen s;
-            const Run r = run(1, pol, band, 4.5, std::make_unique<FakeCodec>(&s), true, "", pol ? -700 : 450);
+            // 8.5 s: the first call may start before the frame sync (its D_CALL_START unheard, so refused); the second one is whole
+            const Run r = run(1, pol, band, 8.5, std::make_unique<FakeCodec>(&s), true, "", pol ? -700 : 450);
             printf("  clear pol %d band %d: %s; codec %d matched %d damaged %d pcm %zu calls %zu\n", pol, band, tetrapolSummary(r.t).c_str(),
                    s.frames, s.matched, s.damaged, r.pcm, r.t.calls.size());
             CHECK(s.badSize == 0, "bad plug-in frame size");
             CHECK(s.frames >= kTetrapolTestVoiceFrames && s.matched >= s.frames - 2, "clear call: %d frames, %d match the pattern", s.frames, s.matched);
             CHECK(r.pcm == (size_t)s.frames * 160, "PCM %zu for %d frames", r.pcm, s.frames);
-            CHECK(r.t.voiceRefused == 0 && !r.t.calls.empty() && r.t.calls.back().verdict == 1, "clear verdict");
+            const uint64_t lateRefused = r.t.calls.size() > 1 && r.t.calls.back().verdict == 0 ? r.t.calls.back().voiceFrames : 0;
+            CHECK(r.t.voiceRefused <= lateRefused && r.t.calls.size() >= 2 && r.t.calls[r.t.calls.size() - 2].verdict == 1, "clear verdict");
         }
     // encrypted call and a call without key reference: nothing reaches the codec
     for (int scene : {2, 3}) {

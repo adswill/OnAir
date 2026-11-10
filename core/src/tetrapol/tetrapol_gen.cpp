@@ -50,7 +50,8 @@ struct Builder {
     }
 };
 
-// a fill frame (PAS 0001-3-3 7.4.1.9): address 0.7.0x000, UI, one 40-bit phase of the stuffing sequence
+// a fill frame (PAS 0001-3-3 7.4.1.9): "no ST" address 0.7.0x000, UI with P = 0, then 5 octets of the 31-bit sequence x0..x3 = 0,
+// x4 = 1, xn = xn-3 + xn-5; these 5 octets are one phase as heard on the issue #408 recording
 std::vector<uint8_t> stuffing() { return {0x70, 0x00, 0x03, 0x48, 0x57, 0x63, 0xe6, 0x90}; }
 
 // TP_ADDRESS of the talking party (UI_CD): RFSI 290-2-84-509

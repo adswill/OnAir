@@ -142,9 +142,12 @@ static void testLink() {
     const std::vector<uint8_t> ga = tp::buildGroupActivation(1234, 40, 5, 0x13);
     CHECK(tp::parseCallSignal(ga.data(), (int)ga.size(), cs) && cs.kind == tp::CallSignal::GroupActivation && cs.groupId == 1234 &&
           cs.channelId == 40 && cs.keyRef == 0x13 && !tp::keyRefClear(cs.keyRef), "group activation");
-    const std::vector<uint8_t> st = tp::buildCallStart(0x10);
+    const std::vector<uint8_t> st = tp::buildCallStart(0x00);
     CHECK(tp::parseCallSignal(st.data(), (int)st.size(), cs) && cs.kind == tp::CallSignal::CallStart && tp::keyRefClear(cs.keyRef), "call start clear");
     const std::vector<uint8_t> st2 = tp::buildCallStart(-1);
+    // PAS 0001-3-2 5.3.41: only key type 0 (RNK) or 15 (ESC) with key index 0 is a clear call; type 5 index 0 is the default OAK
+    CHECK(tp::keyRefClear(0x00) && tp::keyRefClear(0xf0) && !tp::keyRefClear(0x50) && !tp::keyRefClear(0x10) && !tp::keyRefClear(0x4e) &&
+          !tp::keyRefClear(0xfe), "key reference table");
     CHECK(tp::parseCallSignal(st2.data(), (int)st2.size(), cs) && cs.keyRef == -1 && !tp::keyRefClear(cs.keyRef), "call start without key reference");
 }
 
@@ -195,7 +198,7 @@ static bool controlChannelOk(const TetrapolTelemetry& t) {
     for (const auto& n : t.neighbours) nb |= n.channelId == kTetrapolTestNeighbourCh && n.bnNb == 2 && n.bsId == 19 && n.rswId == 3;
     const bool ok = t.channelKind == 1 && t.superframePos >= 0 && hasMsg(t, "BCH", "D_SYSTEM_INFO") && hasMsg(t, "PCH", paged) &&
                     hasMsg(t, "RCH", ack) && hasMsg(t, "SDCH", "D_NEIGHBOURING_CELL: 2 adjacent cells") && t.neighbours.size() == 2 && nb &&
-                    hasMsg(t, "SDCH", "D_GROUP_ACTIVATION: group 1234") && t.stuffing > 0;
+                    hasMsg(t, "SDCH", "group 1234 coverage") && t.stuffing > 0;
     if (!ok) {
         printf("    kind %d sfn %d stuffing %llu neighbours %zu\n", t.channelKind, t.superframePos, (unsigned long long)t.stuffing, t.neighbours.size());
         for (const auto& m : t.msgs) printf("    %s x%llu %s\n", m.channel.c_str(), (unsigned long long)m.count, m.text.c_str());
@@ -267,8 +270,8 @@ static void testRetune() {
     }
 }
 
-// Frames heard on a real TETRAPOL network (issue #408 recording, UHF, control channel and a traffic channel; infrastructure messages only)
-// and the D_SYSTEM_INFO test frame published with tetrapol-kit (its test_bit_utils.c): FCS, message parsing and the text shown.
+// Frames heard on a real TETRAPOL network (issue #408 recording, UHF, control channel and a traffic channel; infrastructure messages only):
+// FCS, message parsing (PAS 0001-3-2 layouts) and the text shown.
 static std::vector<uint8_t> hexBytes(const char* h) {
     std::vector<uint8_t> v;
     for (const char* p = h; *p;) {
@@ -296,7 +299,7 @@ static void testRealFrames() {
         {"7f ff 03 00 11 90 10 62 03 36 00 1d 2b 02 90 41 00 63 fc 00 11 3f 04 67",
          "D_SYSTEM_INFO: country 3 system 54 LA 0 BN 29 cell 43/0 cell BN 0x290, mux type 0, U scramble 65"},
         {"7f ff 03 35 09 55 11 37 c8 0a f1 4b 6a 4e 2c 9e",
-         "D_GROUP_ACTIVATION: group 311 coverage 0xc8 channel 2801 U scramble 75 D scramble 106 key ref 0x4e (encrypted"},
+         "D_GROUP_ACTIVATION: open channel (automatic with tone) group 311 coverage 0xc8 channel 2801 U scramble 75 D scramble 106 key ref 0x4e (encrypted"},
         {"7f ff 03 00 2f 94 08 00 0a b9 83 0a fb 83 0a fd 83 0b 0b 83 0b 02 83 0b 2a 83 0b 07 83 0a fc 83 02 10 16 00 17 00 00 00 1c 00 29 00 02 00 2d 00 2c 00 04 00 00 00 98 e4",
          "D_NEIGHBOURING_CELL: 8 adjacent cells: ch 2745 BN 0 cell 22/0; ch 2811 BN 0 cell 23/0;"},
         {"7f ff 03 00 31 92 46 80 4b 4c 00 10 ff ca 00 10 ff 76 00 10 05 6f 00 10 04 64 00 00 ff f1 00 10 ff c8 00 00 ff 68 00 10 04 81 00 10 ff fc 00 10 ff 7b 00 10 04 00 27 f2",
@@ -304,8 +307,7 @@ static void testRealFrames() {
         {"7f ff 03 05 58 12 89 c8", "D_GROUP_IDLE: cause 18"},
         {"7f ff c3 00 00 00 49 e4", "D_CHANNEL_FREE"},
         {"7f ff c3 01 00 00 95 be", "D_FORCED_LISTENING"},
-        {"7f ff 03 00 05 97 1a ef 31 32 00 00 00 00 b0 f7", "codop 0x97 (not in the public PAS): 1a ef 31 32"},
-        {"7f ff 03 00 11 90 03 60 02 16 00 0a 00 01 01 47 00 83 f5 00 04 df a8 26", "D_SYSTEM_INFO: country 2 system 22 LA 0 BN 10 cell 0/0"},
+        {"7f ff 03 00 05 97 1a ef 31 32 00 00 00 00 b0 f7", "D_DDCH_DESCRIPTION: 1a ef 31 32"},
     };
     for (const Case& c : cases) {
         const std::string got = blockText(hexBytes(c.hex));
@@ -354,7 +356,7 @@ static void testTraffic() {
             bool talker = false;   // the first call may start before the frame sync; a later one must carry its talking party
             for (const auto& c : t.calls) talker |= c.talker == kTetrapolTestTalker;
             const bool ok = t.channelKind == 2 && talker && hasMsg(t, "VCH", "D_START_SPEECH") && hasMsg(t, "VCH", "D_CHANNEL_FREE") &&
-                            hasMsg(t, "SCH", "D_CALL_START key ref 0x10 (clear)") && hasMsg(t, "SCH", "D_CALL_END") && t.calls.front().verdict == 1 &&
+                            hasMsg(t, "SCH", "D_CALL_START key ref 0x00 (clear)") && hasMsg(t, "SCH", "D_CALL_END") && t.calls.front().verdict == 1 &&
                             t.stuffing > 0;
             if (!ok) for (const auto& m : t.msgs) printf("    %s x%llu %s\n", m.channel.c_str(), (unsigned long long)m.count, m.text.c_str());
             CHECK(ok, "traffic channel pol %d band %d: kind %d talker %d calls %zu", pol, band, t.channelKind, talker, t.calls.size());

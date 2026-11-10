@@ -11,13 +11,13 @@ namespace {
 constexpr int kPart1 = 26;   // protected information bits common to both frame types (d + 25)
 constexpr int kPart2 = 50;   // second protected part of a data frame
 
-// PAS 0001-2 6.1.3.1 / 6.2.3.1 (VHF, voice and data alike): k = 19 * p[j % 8] + (3 * (j / 8)) % 19
+// PAS 0001-2 6.1.3.1 / 6.2.3.1 (VHF, voice and data alike): k = 19 * p[j % 8] + (3 * (j / 8)) % 19, p the 3-bit reversal given there
 int vhfIndex(int j) {
     static const int p[8] = {0, 4, 2, 6, 1, 5, 3, 7};
     return 19 * p[j % 8] + (3 * (j / 8)) % 19;
 }
 
-// PAS 0001-2 6.1.4.1: UHF voice frame interleaving
+// PAS 0001-2 6.1.4.1: UHF voice frame interleaving, the K vector of the text (checked entry by entry against PAS 0001-2 v3.0.0)
 const uint8_t kUhfVoice[kDataBits] = {
     1, 77, 38, 114, 20, 96, 59, 135,   3, 79, 41, 117, 23, 99, 62, 138,   5, 81, 44, 120, 26, 102, 65, 141,
     8, 84, 47, 123, 29, 105, 68, 144,  11, 87, 50, 126, 32, 108, 71, 147, 14, 90, 53, 129, 35, 111, 74, 150,
@@ -27,7 +27,7 @@ const uint8_t kUhfVoice[kDataBits] = {
     9, 85, 45, 118, 27, 103, 63, 136,  15, 83, 46, 125, 25, 101, 64, 143, 7, 86, 49, 128, 31, 107, 69, 142,
     21, 94, 54, 127, 33, 109, 72, 145,
 };
-// PAS 0001-2 6.2.4.1: UHF data frame interleaving
+// PAS 0001-2 6.2.4.1: UHF data frame interleaving, the K vector of the text (checked entry by entry against PAS 0001-2 v3.0.0)
 const uint8_t kUhfData[kDataBits] = {
     1, 77, 38, 114, 20, 96, 59, 135,   3, 79, 41, 117, 23, 99, 62, 138,   5, 81, 44, 120, 26, 102, 65, 141,
     8, 84, 47, 123, 29, 105, 68, 144,  11, 87, 50, 126, 32, 108, 71, 147, 14, 90, 53, 129, 35, 111, 74, 150,
@@ -38,13 +38,15 @@ const uint8_t kUhfData[kDataBits] = {
     18, 92, 54, 131, 36, 110, 72, 149,
 };
 
-// PAS 0001-2 6.1.4.2 / 6.2.4.2 (UHF): bit j is precoded with bit j - 2 at these positions, with bit j - 1 elsewhere
+// PAS 0001-2 6.1.4.2 / 6.2.4.2 (UHF): bit j is precoded with bit j - 2 at the 47 PRE_COD positions (7, 10 .. 76, 83, 86 .. 149), with
+// bit j - 1 elsewhere; e'0 = e0 + f7 and f7 = 0
 int precodeLag(int j) {
     if (j >= 7 && j <= 76 && (j - 7) % 3 == 0) return 2;
     if (j >= 83 && j <= 149 && (j - 83) % 3 == 0) return 2;
     return 1;
 }
 
+// PAS 0001-2 6.1.5.1 / 6.2.5.1: s(k) = 1 for k = 0..6, s(k) = s(k-1) + s(k-7); S(SCR, k) = s(k + SCR), S(0, k) = 0
 const uint8_t* scrambleTable() {
     static uint8_t s[127];
     static bool done = false;
@@ -56,7 +58,7 @@ const uint8_t* scrambleTable() {
     return s;
 }
 
-// The circular rate-1/2 code of the protected parts (PAS 0001-2 6.1.2 / 6.2.2)
+// The cyclic rate-1/2 code of the protected parts (PAS 0001-2 6.1.2 / 6.2.2)
 void convEncode(const uint8_t* u, int n, uint8_t* c) {
     for (int i = 0; i < n; i++) {
         const uint8_t a = u[i], b = u[(i - 1 + n) % n], d = u[(i - 2 + n) % n];
@@ -140,6 +142,7 @@ int interleaveIndex(int j, int band, int type) {
     return type == kVoice ? kUhfVoice[j] : kUhfData[j];
 }
 
+// PAS 0001-2 6.2.1: (d0 D^73 + ... + d73) a multiple of I + D^2 + D^5
 void crc5(const uint8_t* b, int n, uint8_t r[5]) {
     memset(r, 0, 5);
     for (int i = 0; i < n; i++) {
@@ -148,6 +151,7 @@ void crc5(const uint8_t* b, int n, uint8_t r[5]) {
     }
 }
 
+// PAS 0001-2 6.1.1: (b'0 D^25 + ... + b'25) a multiple of I + D + D^3, then the three CRC bits complemented
 void crc3(const uint8_t* b, int n, uint8_t r[3]) {
     memset(r, 0, 3);
     for (int i = 0; i < n; i++) {

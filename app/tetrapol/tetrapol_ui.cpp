@@ -56,7 +56,7 @@ const char* kHelp =
     "Traffic channel: the call, the talking party (TP_ADDRESS) and the voice channel state. Many networks send the encryption state only on "
     "the control channel: listen to the control channel first and the traffic channel's call gets its group and encryption state from there.\n\n"
     "Polarity, band coding (VHF / UHF) and the scrambling constant are found automatically; Advanced sets them by hand.\n\n"
-    "Voice: most TETRAPOL networks encrypt their calls. A call is played only when its signalling says it is a clear call (key index 0). "
+    "Voice: most TETRAPOL networks encrypt their calls. A call is played only when its signalling says it is a clear call (key type 0 or 15 with key index 0, PAS 0001-3-2 5.3.41). "
     "Encrypted calls and calls whose state is not known are never decoded: no key is used, guessed or stored. OnAir does not include the TETRAPOL speech codec (RP-CELP, patented). To hear clear calls you install a codec "
     "plug-in yourself (onair-codec-tetrapol, see the Install helper and docs/CODECS.md); without it calls are found and counted, silently.\n\n"
     "Record calls writes one WAV per clear call into the recordings folder (the file name holds the date and time only). The call, message "
@@ -176,7 +176,7 @@ void frameLine(const dect2::TetrapolTelemetry& t) {
                         t.scramble >= 0 ? std::to_string(t.scramble).c_str() : "-", (unsigned long long)t.blocksOk,
                         (unsigned long long)t.blocksBad, t.snrDb, t.cfoHz);
     // automatic by default; set by hand only under Advanced
-    if (ImGui::TreeNode(tr("Advanced##tpoladv"))) {
+    if (ImGui::TreeNode(trw("Advanced##tpoladv"))) {
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(tr("Polarity"));
         ImGui::SameLine();

@@ -1,13 +1,16 @@
-// TETRAPOL data link and the few signalling messages OnAir reads (PAS 0001-3-2 / 0001-3-3), on top of the data frames of tetrapol_codec.h.
-//   data block:  1 frame (frame number 00), 2 frames (01, 11) or a multi-frame block (01, 10, 11 ..., 10, then a parity frame 01) carrying
-//                64 bits per frame (data[2..65]), packed into bytes LSB first in the order the bits are sent
-//   HDLC frame:  address (z 1, y 3, x 12 bits), command byte, information, FCS-16 (x^16 + x^12 + x^5 + 1, first 16 bits inverted)
-//   TPDU:        UI (ext, seg, prio, tsap; a length byte when longer than one frame) or a connection-oriented DT with its length byte
-//   TSDU:        D_SYSTEM_INFO (0x90), and for the voice gate the messages that carry a key reference: D_GROUP_ACTIVATION (0x55),
-//                D_CALL_CONNECT (0x34), D_CALL_START (0x3e); a call ends with D_CALL_END (0xe2), D_GROUP_END (0x57), D_RELEASE (0x0c),
-//                D_BACK_CCH (0x0b) or D_GROUP_IDLE (0x58).
-// Key reference (PAS 0001-3-2): key type in the high nibble, key index in the low nibble; key index 0 is a clear call. Nothing else about
-// keys is read: an encrypted call is never decoded and no key is ever used.
+// TETRAPOL data link and signalling, written from the public PAS 0001-3-3 v2.0.6 (transport and link), 0001-3-2 v2.3.9 (messages) and
+// 0001-3-4 v1.3.0 (circuit mode LSDUs), on top of the data frames of tetrapol_codec.h:
+//   data block:  FN 00 single block, 01 11 bi-block, 01 10 11 ... 11 10 then a closing 01 block that is the XOR of the others (3-3 6.2);
+//                64 bits per block, packed into bytes LSB first in the order the bits are sent
+//   control channel superframe of 200 blocks: BCH 0..3 and 100..103, PCH 98, 99, 198, 199 (and 48, 49, 148, 149 with MUX_TYPE 1),
+//                RCH 14 + 25 i, SDCH the rest (3-3 5.1.3); traffic channel: ASB bit X marks the VCH blocks (3-3 5.2, 6.1.1 table 1)
+//   HDLC frame:  address Z 1, Y 3, X 12 bits (3-3 7.4.1.4), command octet (7.5.4, table 9), information, FCS-16 x^16 + x^12 + x^5 + 1,
+//                one's complement, the first 16 bits inverted (7.4.1.1); fill frames 7.4.1.9, RCH 7.4.2, PCH 7.4.3
+//   TPDU:        DU without segmentation (EXT, SEG, PRIO, ID_TSAP; a length octet when the information field is longer than 3 octets,
+//                3-3 9.5.1) or a connection-oriented DT / DTE (8.3.1)
+//   TSDU:        CODOP values 3-2 4.5, layouts 3-2 clause 4.4, information elements 3-2 clause 5.3
+// KEY_REFERENCE (3-2 5.3.41): a clear call is key type 0 or 15 with key index 0. Nothing else about keys is read: an encrypted call is never
+// decoded and no key is ever used.
 #pragma once
 #include "dect2/tetrapol/tetrapol_codec.h"
 #include <cstdint>
@@ -82,7 +85,8 @@ struct CallSignal {
     int groupId = -1, channelId = -1, keyRef = -1, dScramble = -1;
 };
 bool parseCallSignal(const uint8_t* t, int len, CallSignal& c);
-inline bool keyRefClear(int keyRef) { return keyRef >= 0 && (keyRef & 0x0f) == 0; }
+// PAS 0001-3-2 5.3.41: a clear call is key type 0 (RNK) or 15 (ESC) with key index 0; every other value is a key
+inline bool keyRefClear(int keyRef) { return keyRef == 0x00 || keyRef == 0xf0; }
 std::vector<uint8_t> buildGroupActivation(int groupId, int channelId, int dScramble, int keyRef);
 std::vector<uint8_t> buildCallStart(int keyRef);   // keyRef < 0: no key reference element
 std::vector<uint8_t> buildCallEnd();

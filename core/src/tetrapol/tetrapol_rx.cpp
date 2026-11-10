@@ -40,7 +40,7 @@ constexpr int kVoiceMaxErr = 6;           // coded bits in error allowed in the 
 constexpr int kDataMaxErr = 20;          // ... in the 152 coded bits of a data frame
 constexpr int kCandidateFrames = 12;     // frames a sync candidate has to lock a scrambling constant in (by its CRCs)
 constexpr int kLostFrames = 25;          // frames in a row that fail every check: the scrambling constant is looked for again
-constexpr int kPendingMax = 24;          // frames kept while the scrambling constant is looked for, decoded once it is known
+constexpr int kPendingMax = 50;          // frames kept while the scrambling constant is looked for, decoded once it is known
 
 // Searching the scrambling constant (256 hypotheses a frame) needs the strict limits; once it is locked the soft decoder's frames are
 // trusted up to the wider ones (the CRC, the zero bits and for data the HDLC FCS still check them)

@@ -183,13 +183,12 @@ bool tsduOf(const Hdlc& h, std::vector<uint8_t>& tsdu) {
         return !tsdu.empty();
     }
     if ((h.cmd & 1) == 0) {
-        // information frame: connection-oriented TPDU, unsegmented with data
+        // information frame: a connection-oriented TPDU (PAS 0001-3-3 8.3.1: EXT, SEG, D, TPDU code 5 bits; PAR_FIELD / DEST_REF octet;
+        // the length octet when SEG = 0). Only DT (11011) and DTE (11100) are read: the CR / CC / FCR layouts are in figures not checked here.
         const bool hasData = (d[0] >> 5) & 1;
         const int code = d[0] & 0x1f;
-        if (ext || seg || !hasData || n < 3) return false;
-        int off = 2;
-        if ((code & 0x18) == 0) off += 2;   // CR: two reference bytes first
-        if (off >= n) return false;
+        if (ext || seg || !hasData || n < 3 || (code != 0x1b && code != 0x1c)) return false;
+        const int off = 2;
         const int len = d[off];
         if (len < 1 || len > n - off - 1) return false;
         tsdu.assign(d + off + 1, d + off + 1 + len);
@@ -216,6 +215,8 @@ int uiBlockBytes(size_t len) {
 bool parseSysInfo(const uint8_t* t, int len, SysInfo& s) {
     s = SysInfo();
     if (len < 9 || t[0] != kDSystemInfo) return false;
+    // D_SYSTEM_INFO, PAS 0001-3-2 4.4.76 figures 78 / 79; CELL_STATE (5.3.23): MODE in bits 8..6, BCH in bit 5 (checked on a real
+    // control channel: 0x00 in frames 0..3, 0x10 in frames 100..103)
     const int mode = (t[1] >> 5) & 7;
     s.mode = mode;
     s.bch = (t[1] >> 4) & 1;
@@ -230,19 +231,19 @@ bool parseSysInfo(const uint8_t* t, int len, SysInfo& s) {
         s.systemId = t[4];
         s.locArea = t[5];
         s.bnId = t[6];
-        const int type = field(t + 7, 0, 2);
+        const int type = field(t + 7, 0, 2);   // CELL_ID 5.3.21 (12 bits), then CELL_BN 12 bits
         if (type == 0) { s.bsId = field(t + 7, 2, 6); s.rswId = field(t + 7, 8, 4); }
-        else if (type == 1) { s.bsId = field(t + 7, 8, 4); s.rswId = field(t + 7, 2, 6); }
+        else if (type == 1) { s.rswId = field(t + 7, 2, 6); s.bsId = field(t + 7, 8, 4); }
         s.uScramble = t[10];
         return true;
     }
     if (mode > 4) return false;
     s.disconnected = true;
     {
-        // cell id, second form (PAS 0001-3-2 5.3.21 as the disconnected D_SYSTEM_INFO carries it)
-        const int type = field(t + 1, 8, 2);
-        if (type == 0) { s.bsId = field(t + 1, 10, 6); s.rswId = field(t + 1, 4, 4); }
-        else if (type == 1) { s.bsId = field(t + 1, 4, 4); s.rswId = field(t + 1, 10, 6); }
+        // BSC-disconnected form (PAS 0001-3-2 4.4.76 figure 79): CELL_STATE in the high quartet of octet 2, CELL_ID (5.3.21) in the next 12 bits
+        const int type = field(t + 1, 4, 2);
+        if (type == 0) { s.bsId = field(t + 1, 6, 6); s.rswId = field(t + 1, 12, 4); }
+        else if (type == 1) { s.rswId = field(t + 1, 6, 6); s.bsId = field(t + 1, 12, 4); }
     }
     s.bnId = t[3];
     s.uScramble = t[4];
@@ -335,29 +336,33 @@ std::vector<uint8_t> buildCallEnd() { return {kDCallEnd, 0}; }
 
 // ---- messages as text
 
+// PAS 0001-3-2 v2.3.9 clause 4.5 (CODOP values of the downlink TSDUs)
 const char* codopName(int c) {
     switch (c) {
-    case 0x08: return "D_REJECT"; case 0x09: return "D_REFUSAL"; case 0x0b: return "D_BACK_CCH"; case 0x0c: return "D_RELEASE";
-    case 0x0f: return "D_HOOK_ON_INVITATION"; case 0x10: return "D_RETURN"; case 0x12: return "D_CALL_WAITING";
-    case 0x13: return "D_AUTHENTICATION"; case 0x16: return "D_AUTHORISATION"; case 0x18: return "D_CHANNEL_INIT";
-    case 0x21: return "D_REGISTRATION_NAK"; case 0x22: return "D_REGISTRATION_ACK"; case 0x23: return "D_FORCED_REGISTRATION";
-    case 0x25: return "D_LOCATION_ACTIVITY_ACK"; case 0x31: return "D_CALL_ALERT"; case 0x32: return "D_CALL_SETUP";
-    case 0x34: return "D_CALL_CONNECT"; case 0x35: return "D_CALL_SWITCH"; case 0x39: return "D_TRANSFER_NAK"; case 0x3e: return "D_CALL_START";
+    case 0x08: return "D_REJECT"; case 0x09: return "D_REFUSAL"; case 0x0a: return "D_END";
+    case 0x0b: return "D_BACK_CCH"; case 0x0c: return "D_RELEASE"; case 0x0f: return "D_HOOK_ON_INVITATION";
+    case 0x10: return "D_RETURN"; case 0x12: return "D_CALL_WAITING"; case 0x13: return "D_AUTHENTICATION";
+    case 0x16: return "D_AUTHORISATION"; case 0x18: return "D_CHANNEL_INIT"; case 0x21: return "D_REGISTRATION_NAK";
+    case 0x22: return "D_REGISTRATION_ACK"; case 0x23: return "D_FORCED_REGISTRATION"; case 0x25: return "D_LOCATION_ACTIVITY_ACK";
+    case 0x31: return "D_CALL_ALERT"; case 0x32: return "D_CALL_SETUP"; case 0x34: return "D_CALL_CONNECT";
+    case 0x35: return "D_CALL_SWITCH"; case 0x39: return "D_TRANSFER_NAK"; case 0x3e: return "D_CALL_START";
     case 0x42: return "D_FUNCTIONAL_SHORT_DATA"; case 0x45: return "D_DATA_MSG_DOWN"; case 0x46: return "D_EXPLICIT_SHORT_DATA";
-    case 0x48: return "D_DATA_END"; case 0x49: return "D_DATAGRAM_NOTIFY"; case 0x4a: return "D_DATAGRAM"; case 0x4b: return "D_BROADCAST";
-    case 0x4c: return "D_DATA_SERV"; case 0x4e: return "D_DATA_DOWN_STATUS"; case 0x53: return "D_EMERGENCY_NOTIFICATION";
-    case 0x55: return "D_GROUP_ACTIVATION"; case 0x56: return "D_ECH_ACTIVATION"; case 0x57: return "D_GROUP_END"; case 0x58: return "D_GROUP_IDLE";
-    case 0x59: return "D_GROUP_REJECT"; case 0x5a: return "D_ECH_REJECT"; case 0x5b: return "D_GROUP_PAGING";
-    case 0x5c: return "D_BROADCAST_NOTIFICATION"; case 0x5d: return "D_CRISIS_NOTIFICATION"; case 0x5f: return "D_EMERGENCY_ACK";
-    case 0x60: return "D_CONNECT_DCH"; case 0x62: return "D_CONNECT_CCH"; case 0x63: return "D_DATA_AUTHENTICATION";
-    case 0x64: return "D_DATA_REQUEST"; case 0x65: return "D_DCH_OPEN"; case 0x67: return "D_EXTENDED_STATUS"; case 0x68: return "D_CCH_OPEN";
-    case 0x69: return "D_BROADCAST_WAITING"; case 0x70: return "D_ACCESS_DISABLED"; case 0x71: return "D_TRAFFIC_ENABLED";
-    case 0x72: return "D_TRAFFIC_DISABLED"; case 0x76: return "D_DEVIATION_ON"; case 0x77: return "D_ABILITY_MNGT"; case 0x78: return "D_SERVICE_DISABLED";
+    case 0x48: return "D_DATA_END"; case 0x49: return "D_DATAGRAM_NOTIFY"; case 0x4a: return "D_DATAGRAM";
+    case 0x4b: return "D_BROADCAST"; case 0x4c: return "D_DATA_SERV"; case 0x4e: return "D_DATA_DOWN_STATUS";
+    case 0x53: return "D_EMERGENCY_NOTIFICATION"; case 0x55: return "D_GROUP_ACTIVATION"; case 0x56: return "D_ECH_ACTIVATION";
+    case 0x57: return "D_GROUP_END"; case 0x58: return "D_GROUP_IDLE"; case 0x59: return "D_GROUP_REJECT";
+    case 0x5a: return "D_ECH_REJECT"; case 0x5b: return "D_GROUP_PAGING"; case 0x5c: return "D_BROADCAST_NOTIFICATION";
+    case 0x5f: return "D_EMERGENCY_ACK"; case 0x60: return "D_CONNECT_DCH"; case 0x62: return "D_CONNECT_CCH";
+    case 0x63: return "D_DATA_AUTHENTICATION"; case 0x64: return "D_DATA_REQUEST"; case 0x65: return "D_DCH_OPEN";
+    case 0x67: return "D_EXTENDED_STATUS"; case 0x68: return "D_CCH_OPEN"; case 0x69: return "D_BROADCAST_WAITING";
+    case 0x70: return "D_ACCESS_DISABLED"; case 0x71: return "D_TRAFFIC_ENABLED"; case 0x72: return "D_TRAFFIC_DISABLED";
+    case 0x76: return "D_DEVIATION_ON"; case 0x77: return "D_ABILITY_MNGT"; case 0x78: return "D_SERVICE_DISABLED";
     case 0x80: return "D_EMERGENCY_NAK"; case 0x82: return "D_GROUP_OVERLOAD_ID"; case 0x83: return "D_ECH_OVERLOAD_ID";
-    case 0x84: return "D_PRIORITY_GRP_WAITING"; case 0x85: return "D_PRIORITY_GRP_ACTIVATION"; case 0x86: return "D_OC_ACTIVATION";
-    case 0x87: return "D_OC_REJECT"; case 0x88: return "D_OC_PAGING"; case 0x90: return "D_SYSTEM_INFO"; case 0x92: return "D_GROUP_LIST";
+    case 0x84: return "D_PRIORITY_GRP_WAITING"; case 0x86: return "D_OC_ACTIVATION"; case 0x87: return "D_OC_REJECT";
+    case 0x88: return "D_OC_PAGING"; case 0x90: return "D_SYSTEM_INFO"; case 0x92: return "D_GROUP_LIST";
     case 0x93: return "D_GROUP_COMPOSITION"; case 0x94: return "D_NEIGHBOURING_CELL"; case 0x95: return "D_ECCH_DESCRIPTION";
-    case 0x96: return "D_ADDITIONAL_PARTICIPANTS"; case 0xc5: return "D_INFORMATION_DELIVERY"; case 0xe0: return "D_CALL_ACTIVATION";
+    case 0x96: return "D_ADDITIONAL_PARTICIPANTS"; case 0x97: return "D_DDCH_DESCRIPTION"; case 0x98: return "D_TKG_PRIO_LIST";
+    case 0x99: return "D_GROUP_MASTER"; case 0xc5: return "D_INFORMATION_DELIVERY"; case 0xe0: return "D_CALL_ACTIVATION";
     case 0xe1: return "D_CALL_COMPOSITION"; case 0xe2: return "D_CALL_END"; case 0xe3: return "D_CALL_OVERLOAD_ID";
     default: return nullptr;
     }
@@ -376,24 +381,28 @@ std::string hexOf(const uint8_t* p, int n) {
     for (int i = 0; i < n; i++) { snprintf(b, sizeof b, i ? " %02x" : "%02x", p[i]); o += b; }
     return o;
 }
+// KEY_REFERENCE (PAS 0001-3-2 5.3.41): key type in bits 5..8, key index in bits 1..4
 std::string keyText(int k) {
     if (k < 0) return "";
     char b[64];
-    if ((k & 15) == 0) snprintf(b, sizeof b, "key ref 0x%02x (clear)", k);
+    if (keyRefClear(k)) snprintf(b, sizeof b, "key ref 0x%02x (clear)", k);
     else snprintf(b, sizeof b, "key ref 0x%02x (encrypted, key type %d index %d)", k, k >> 4, k & 15);
     return b;
 }
-std::string cellIdText(const uint8_t* d) {
-    const int type = field(d, 0, 2);
+// CELL_ID (PAS 0001-3-2 5.3.21): FORMAT 2 bits; 00: BS_ID 6 bits then RSW_ID 4 bits, 01: RSW_ID 6 bits then BS_ID 4 bits
+std::string cellIdText(const uint8_t* d, int bitOff = 0) {
+    const int type = field(d, bitOff, 2);
     char b[32];
-    if (type == 0) snprintf(b, sizeof b, "%d/%d", field(d, 2, 6), field(d, 8, 4));
-    else if (type == 1) snprintf(b, sizeof b, "%d/%d", field(d, 8, 4), field(d, 2, 6));
+    if (type == 0) snprintf(b, sizeof b, "%d/%d", field(d, bitOff + 2, 6), field(d, bitOff + 8, 4));
+    else if (type == 1) snprintf(b, sizeof b, "%d/%d", field(d, bitOff + 8, 4), field(d, bitOff + 2, 6));
     else snprintf(b, sizeof b, "?");
     return b;   // BS id / RSW id
 }
-const char* hookText(int am) {
-    static const char* const hook[4] = {"", "hook-on ", "hook-off ", "hook 3 "};
-    return hook[(am >> 6) & 3];
+// ACTIVATION_MODE (PAS 0001-3-2 5.3.3): the high quartet of its octet, TYPE 2 bits then HOOK 2 bits
+std::string modeText(int octet) {
+    static const char* const type[4] = {"open channel", "internal group", "broadcast", "external group"};
+    static const char* const hook[4] = {"automatic", "automatic with tone", "ring", "hook 3"};
+    return std::string(type[(octet >> 6) & 3]) + " (" + hook[(octet >> 4) & 3] + ") ";
 }
 } // namespace
 
@@ -486,17 +495,18 @@ std::string describeTsdu(const uint8_t* t, int len, int* keyRef) {
         }
         return o;
     }
-    case 0x55: case 0x5b: case 0x85: {   // group activation, group paging, priority group activation
+    case 0x55: case 0x5b: {   // D_GROUP_ACTIVATION (4.4.44, figure 46), D_GROUP_PAGING (4.4.51)
         if (len < 5) break;
-        add(": %sgroup %d coverage 0x%02x", hookText(t[1]), field(t + 1, 4, 12), t[3]);
+        add(": %sgroup %d coverage 0x%02x", modeText(t[1]).c_str(), field(t + 1, 4, 12), t[3]);
         if (c != 0x5b && len >= 9) {
             add(" channel %d U scramble %d D scramble %d", field(t + 4, 4, 12), t[6], t[7]);
             key(t[8]);
+            // IEI TTI = 0x05 (5.3), TV 2+1 octets
             if (len >= 12 && t[9] == 0x05) o += " TTI " + rtiText(field(t + 10, 0, 1), field(t + 10, 1, 3), field(t + 10, 4, 12));
         } else if (c == 0x5b) key(t[4]);
         return o;
     }
-    case 0x92: {   // D_GROUP_LIST
+    case 0x92: {   // D_GROUP_LIST (4.4.48, figure 50; REFERENCE_LIST 5.3.56, TYPE_NB 5.3.89: 01 talk group, 10 emergency, 11 open channel)
         if (len < 2) break;
         add(": revision %d", t[1] >> 5);
         if ((t[1] >> 5) == 0 || len < 3) return o;
@@ -518,11 +528,11 @@ std::string describeTsdu(const uint8_t* t, int len, int* keyRef) {
         if (!em.empty()) o += ", emergency cells" + em;
         return o;
     }
-    case 0x93:
+    case 0x93:   // D_GROUP_COMPOSITION: GROUP_ID 12 bits, OG_NB 4 bits
         if (len < 3) break;
         add(": group %d, %d member groups", field(t + 1, 0, 12), t[2] & 15);
         return o;
-    case 0x3e: {   // D_CALL_START
+    case 0x3e: {   // D_CALL_START: KEY_REFERENCE as TV (IEI 0x83); KEY_OF_CALL (IEI 0x03) is skipped, never read
         int i = 1;
         while (i < len) {
             const int iei = t[i++];
@@ -532,28 +542,22 @@ std::string describeTsdu(const uint8_t* t, int len, int* keyRef) {
         }
         return o;
     }
-    case 0x34:
+    case 0x34:   // D_CALL_CONNECT: CALL_TYPE, CHANNEL_ID 12 bits, U / D_CH_SCRAMBLING, KEY_REFERENCE, VALID_RT
         if (len < 7) break;
         add(": call type 0x%02x channel %d U scramble %d D scramble %d", t[1], field(t + 2, 4, 12), t[4], t[5]);
         key(t[6]);
         return o;
-    case 0x60:
+    case 0x60:   // D_CONNECT_DCH: DCH_LOW_LAYER, CHANNEL_ID 12 bits, U / D_CH_SCRAMBLING
         if (len < 6) break;
         add(": channel %d U scramble %d D scramble %d", field(t + 2, 4, 12), t[4], t[5]);
         return o;
-    case 0x32: case 0x31: case 0x53: case 0x23: {   // call setup / alert / emergency notification / forced registration: calling address
+    case 0x31:   // D_CALL_ALERT (4.4.11): the code only
+        return o;
+    case 0x32: case 0x53: case 0x23: {   // D_CALL_SETUP (CALLING_ADR, 4.4.12), D_EMERGENCY_NOTIFICATION (CALLING_ADR, CELL_ID), D_FORCED_REGISTRATION
         if (len < 2) return o;
         int used = 0;
         o += ": from " + addressText(t + 1, len - 1, used);
-        return o;
-    }
-    case 0x5d: {
-        if (len < 10) break;
-        int used = 0;
-        o += ": from " + addressText(t + 1, len - 1, used);
-        add(" organisation %d coverage 0x%02x", t[6], t[7]);
-        const int n = std::min(5, t[9] >> 4);
-        for (int k = 0; k < n && 9 + (4 + 12 * (k + 1) + 7) / 8 <= len; k++) add(" group %d", field(t + 9, 4 + 12 * k, 12));
+        if (c == 0x53 && 1 + used + 2 <= len) o += " cell " + cellIdText(t + 1 + used);
         return o;
     }
     case 0x96: {
@@ -562,19 +566,18 @@ std::string describeTsdu(const uint8_t* t, int len, int* keyRef) {
         for (int i = 2; i + 5 <= len; i += 5) { int used = 0; o += " " + addressText(t + i, len - i, used); }
         return o;
     }
-    case 0x59:
-        if (len < 6) break;
-        add(": %sgroup %d coverage 0x%02x cause %d", hookText(t[1]), field(t + 1, 4, 12), t[3], t[5]);
-        return o;
-    case 0x83:
-        if (len < 6) break;
-        add(": %sgroup %d cell %s organisation %d", hookText(t[1]), field(t + 1, 4, 12), cellIdText(t + 3).c_str(), t[5]);
-        return o;
-    case 0x49: case 0x4a:   // datagram notify / datagram
+    case 0x59:   // D_GROUP_REJECT: ACTIVATION_MODE, GROUP_ID, COVERAGE_ID, CAUSE
         if (len < 5) break;
-        add(": priority %d message ref %d", t[1] & 15, t[2] | (t[3] << 8));
+        add(": %sgroup %d coverage 0x%02x cause %d", modeText(t[1]).c_str(), field(t + 1, 4, 12), t[3], t[4]);
+        return o;
+    case 0x83:   // D_ECH_OVERLOAD_ID: ACTIVATION_MODE, GROUP_ID, CELL_ID, ORGANISATION
+        if (len < 6) break;
+        add(": %sgroup %d cell %s organisation %d", modeText(t[1]).c_str(), field(t + 1, 4, 12), cellIdText(t + 3).c_str(), t[5]);
+        return o;
+    case 0x49: case 0x4a:   // D_DATAGRAM_NOTIFY / D_DATAGRAM: CALL_PRIORITY 4 bits, MESSAGE_REFERENCE 2 octets, KEY_REFERENCE
+        if (len < 5) break;
+        add(": priority %d message ref %d", (t[1] >> 4) & 15, (t[2] << 8) | t[3]);
         key(t[4]);
-        if (c == 0x49 && len >= 7) add(" port %d", t[5] | (t[6] << 8));
         if (c == 0x4a) {
             if ((t[4] & 15) == 0) o += ", data " + hexOf(t + 5, len - 5);
             else add(", %d data bytes (encrypted, not shown)", len - 5);
@@ -586,23 +589,22 @@ std::string describeTsdu(const uint8_t* t, int len, int* keyRef) {
     case 0x0c: case 0x08: case 0x09: case 0x10: case 0x0f: case 0x58: case 0x48:
         if (len >= 2) add(": cause %d", t[1]);
         return o;
-    case 0x22:
-        if (len < 14) break;
+    case 0x22:   // D_REGISTRATION_ACK: COMPLETE_REG, RT_MIN_ACTIVITY, RT_STATUS, HOST_ADR (5 octets), ...
+        if (len < 9) break;
         {
             int used = 0;
             o += ": " + addressText(t + 4, len - 4, used);
-            add(" group %d", field(t + 12, 0, 12));
         }
         return o;
-    case 0x21:
-        if (len < 10) break;
+    case 0x21:   // D_REGISTRATION_NAK: CAUSE, HOST_ADR, BN_ID, CELL_ID
+        if (len < 7) break;
         {
             int used = 0;
             add(": cause %d ", t[1]);
             o += addressText(t + 2, len - 2, used);
         }
         return o;
-    case 0x13: case 0x16: case 0x63: case 0x64:
+    case 0x13: case 0x16: case 0x63: case 0x64:   // D_AUTHENTICATION, D_AUTHORISATION (TV), D_DATA_AUTHENTICATION, D_DATA_REQUEST
         if (len >= 2) key(c == 0x16 ? (t[1] == kIeiKeyReference && len > 2 ? t[2] : -1) : t[1]);
         return o;
     default:
