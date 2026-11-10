@@ -32,7 +32,7 @@ When the pass planner starts the CubeSat mode for a satellite (`setTracked`), th
 dial (the first decodable one when the dial is unknown) and:
 
 - sets the CCSDS concatenated parameters (frame size, interleave, basis, code, NRZ-M) and the Mobitex variant;
-- starts an extra demodulator at the satellite's baud rate (or AFSK carrier) when the fixed 9600 / 4800 FSK and 1200 AFSK ones do not cover
+- starts an extra demodulator for each of the satellite's baud rates on that dial (up to four) (or AFSK carrier) when the fixed 9600 / 4800 FSK and 1200 AFSK ones do not cover
   it (1200, 2400, 19200 baud FSK; USP alone has 60 transmitters at 1200 / 2400);
 - shows what it set up (`CubeTelemetry::trackedSetup`, the log line "CubeSat: set up for ...").
 
@@ -43,14 +43,17 @@ formats in the table (about 40 satellite-specific ones) are named but not decode
 
 | Test | What | Result |
 |---|---|---|
-| `test_cubesat_more` | conv code vs the AO-40 decoder; RS 16/32; U482C all 8 flag combinations, errors; CCSDS concatenated 7 parameter sets x 2 polarities; USP: gr-satellites' qa vectors (long and short frame) and round trips; NGHam all 7 sizes, with and without RS, byte errors; Mobitex: gr-satellites' real BEESAT-9 packet, all variants, 1/5/32 blocks, bit errors; hunter streams with noise, lead, both polarities, back to back frames; noise alone | see the branch's last commit |
-| `test_cubesat_grsat` | table sanity; GOMX-1, FUNcube, BEESAT-9, LilacSat-2 rows; USP at 2400 baud and NGHam (FloripaSat-1) at 2400 decoded only when tracked, with offset and noise | see the branch's last commit |
-| `test_cubesat_rx`, `test_cubesat_engine` | the generator now sends the five new framings; each framing alone and all together with Doppler and noise | see the branch's last commit |
+| `test_cubesat_more` | conv code vs the AO-40 decoder; RS 16/32; U482C all 8 flag combinations, errors; CCSDS concatenated 7 parameter sets x 2 polarities; USP: gr-satellites' qa vectors (long and short frame) and round trips; NGHam all 7 sizes, with and without RS, byte errors; Mobitex: gr-satellites' real BEESAT-9 packet, all variants, 1/5/32 blocks, bit errors; hunter streams with noise, lead, both polarities, back to back frames; noise alone | passes (quick CI run 42887953041, Linux) |
+| `test_cubesat_grsat` | table sanity; GOMX-1, FUNcube, BEESAT-9, LilacSat-2 rows; USP at 2400 baud and NGHam (FloripaSat-1) at 2400 decoded only when tracked, with offset and noise | passes (quick CI run 42887953041, Linux) |
+| `test_cubesat_rx`, `test_cubesat_engine`, `test_cubesat_chain`, `test_cubesat_smart` | the generators send the five new framings; each alone and all together with Doppler (up to 11 kHz), noise, 200 ppm clock error, Doppler ramps; BPSK 9600 CCSDS concatenated in the Smart chain; noise alone gives no frame | passes (quick CI run 42887953041, Linux) |
 
 Real recordings: the USP and Mobitex decoders are checked against gr-satellites' qa vectors (USP: coded frames from gr-satellites'
 test; Mobitex: soft symbols of a real BEESAT-9 packet). U482C, CCSDS concatenated and NGHam are validated on simulated signals only.
 
 ## Not done
+
+- U482C frames without the Reed-Solomon flag have no check at all (a random Golay word decodes about half the time), so the stream
+  hunters take only RS-coded U482C frames; `u482cDecode()` itself decodes every flag combination.
 
 - U482C on the GOMspace radios' 1200 baud AFSK (HUMSAT-D, 1500 Hz carrier) works only when tracked (the extra path); not tested.
 - BPSK and DBPSK transmitters (USP / CCSDS concatenated BPSK, AO-40) are not demodulated by the FM CubeSat receiver; the Smart CubeSat
