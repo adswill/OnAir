@@ -1,5 +1,8 @@
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
+#include <fstream>
+#include <filesystem>
+#include "dect2/sonde/sonde_flight.h"
 #include "app.h"
 #include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
@@ -287,6 +290,22 @@ void detailCard(const App& a) {
             }
             if (ImGui::SmallButton("copy landing position")) { snprintf(b, sizeof b, "%.5f, %.5f", ld.lat, ld.lon); ImGui::SetClipboardText(b); }
         }
+    }
+    if (sp && (s.trackIncluded || s.hasPos)) {   // the flight as a track: ascent and descent lines, launch, burst, landing (dect2/sonde/sonde_flight.h)
+        static std::string tnote;
+        const dect2::SondeFlight fl = dect2::sondeFlight(s, s.hasVel && s.vSpeed < -1.0 ? landing(s) : dect2::SondeLanding());
+        auto put = [&](const char* ext, const std::string& body) {
+            const std::string p = saveFileDialog((s.serial + ext).c_str());
+            if (p.empty()) return;
+            std::ofstream o(std::filesystem::path(reinterpret_cast<const char8_t*>(p.c_str())), std::ios::binary);
+            o << body;
+            tnote = o ? std::string("saved ") + p : std::string("could not write ") + p;
+        };
+        if (ImGui::SmallButton("track KML...")) put(".kml", dect2::xport::toKml(fl.points, fl.tracks, s.serial));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The flight for Google Earth or OsmAnd: the ascent and the descent as lines with altitude, the launch, the burst and the landing (or the predicted landing).");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("GPX...")) put(".gpx", dect2::xport::toGpx(fl.points, fl.tracks, s.serial));
+        if (!tnote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tnote.c_str()); }
     }
     if (sp && s.hasTime) { time_t tt = (time_t)s.unixTime; struct tm g;
 #ifdef _WIN32
