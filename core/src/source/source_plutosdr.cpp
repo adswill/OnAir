@@ -1,4 +1,5 @@
 // Native driver for the PlutoSDR: the radio's own library is loaded at run time when it is installed. See native_common.h.
+#include "dect2/tx/tx_control.h"
 #include "dect2/engine/rate_choice.h"
 #include "native_common.h"
 #include <cerrno>
@@ -578,28 +579,17 @@ public:
             double got = 0;
             if (iio().channel_attr_read && iio().channel_attr_read(txCh_, "sampling_frequency", v, sizeof v - 1) > 0 && sscanf(v, "%lf", &got) == 1 && got > 0) rate_ = got;
         }
-        iio().channel_attr_write_longlong(txCh_, "rf_bandwidth", (long long)std::llround(std::min(56e6, std::max(0.2e6, t.bandwidthHz > 0 ? t.bandwidthHz : rate_ * 0.95))));
         // the transmit gain is an attenuation, shown as a gain from -89.75 dB (the least) to 0 dB; the radio's own range is read when it says
-        double gmin = -89.75, gmax = 0;
+        gmin_ = -89.75; gmax_ = 0;
         {
             char v[96] = {0};
-            if (iio().channel_attr_read && iio().channel_attr_read(txCh_, "hardwaregain_available", v, sizeof v - 1) > 0) rangeIn(v, gmin, gmax);
+            if (iio().channel_attr_read && iio().channel_attr_read(txCh_, "hardwaregain_available", v, sizeof v - 1) > 0) rangeIn(v, gmin_, gmax_);
         }
-        // the frequency: asked for as given; the driver decides (the PLL refuses what it cannot make)
-        TuneSettings ts; ts.radio = t.radio;
-        const double want = std::max(ppmCorrectedHz(txRadioHz(t), radioPpm(ts)) * (1.0 + radio_->xoPpm * 1e-6), 0.0);
-        if (const int r = iio().channel_attr_write_longlong(lo_, "frequency", (long long)std::llround(want)); r != 0) {
-            err = "PlutoSDR: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency (" + iio().text(r) + "): the AD9361's synthesiser tunes 70 to 6000 MHz with the AD9364 setting, 325 to 3800 MHz on the stock firmware";
-            shut();
-            return false;
-        }
-        iio().channel_attr_write_longlong(lo_, "powerdown", 0);
-        const double g = std::min(gmax, std::max(gmin, t.gainDb));
-        {
-            char s[32];
-            snprintf(s, sizeof s, "%.2f", g);
-            if (iio().channel_attr_write(txCh_, "hardwaregain", s) < 0) { err = "PlutoSDR: the transmit gain " + std::string(s) + " dB was refused"; shut(); return false; }
-        }
+        // filter, frequency and gain as plutoTxPlan (tx_control.h) works them out; the frequency is asked for as given, the PLL refuses what it cannot make
+        const TxHwPlan plan = plutoTxPlan(t, rate_, {gmin_, gmax_}, radio_->xoPpm);
+        if (!plan.err.empty()) { err = plan.err; shut(); return false; }
+        iio().channel_attr_write_longlong(txCh_, "rf_bandwidth", (long long)plan.filterHz);
+        if (!tuneAndGain(plan, t, err)) { shut(); return false; }
         iio().channel_enable(i_);
         iio().channel_enable(q_);
         if (iio().device_set_kernel_buffers_count) iio().device_set_kernel_buffers_count(dev_, 4);
@@ -608,6 +598,16 @@ public:
         fill_ = 0;
         radio_->txRate = rate_;
         return true;
+    }
+
+    // frequency, gain and filter while sending (the rate stays: it is shared with the receiver in full duplex)
+    bool retune(const TxTune& t, std::string& err) override {
+        std::lock_guard<std::recursive_mutex> lk(gPlutoMu);
+        if (!buf_ || !radio_) { err = "the PlutoSDR is not open for transmitting"; return false; }
+        const TxHwPlan plan = plutoTxPlan(t, rate_, {gmin_, gmax_}, radio_->xoPpm);
+        if (!plan.err.empty()) { err = plan.err; return false; }
+        iio().channel_attr_write_longlong(txCh_, "rf_bandwidth", (long long)plan.filterHz);
+        return tuneAndGain(plan, t, err);
     }
 
     bool write(const cf32* x, size_t n, std::string& err) override {
@@ -629,6 +629,18 @@ public:
     std::string name() const override { return "PlutoSDR"; }
 
 private:
+    bool tuneAndGain(const TxHwPlan& plan, const TxTune& t, std::string& err) {
+        if (const int r = iio().channel_attr_write_longlong(lo_, "frequency", (long long)plan.loHz); r != 0) {
+            err = "PlutoSDR: the driver refused " + mhz(txRadioHz(t)) + " MHz as a transmit frequency (" + iio().text(r) + "): the AD9361's synthesiser tunes 70 to 6000 MHz with the AD9364 setting, 325 to 3800 MHz on the stock firmware";
+            return false;
+        }
+        iio().channel_attr_write_longlong(lo_, "powerdown", 0);
+        char s[32];
+        snprintf(s, sizeof s, "%.2f", plan.gains.empty() ? gmin_ : plan.gains[0].second);
+        if (iio().channel_attr_write(txCh_, "hardwaregain", s) < 0) { err = "PlutoSDR: the transmit gain " + std::string(s) + " dB was refused"; return false; }
+        return true;
+    }
+    double gmin_ = -89.75, gmax_ = 0;
     static constexpr size_t kBlock = 1 << 15;
     static int16_t q16(float v) { const float r = std::nearbyint(v * 16384.f); return (int16_t)(r > 32767.f ? 32767 : r < -32768.f ? -32768 : r); }
     bool push(std::string& err) {
