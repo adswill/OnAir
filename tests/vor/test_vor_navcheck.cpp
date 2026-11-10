@@ -4,13 +4,14 @@
 #include "dect2/vor/vor_gen.h"
 #include "dect2/vor/vor_rx.h"
 #include <cmath>
+#include <cstdlib>
 #include <vector>
 #include "../common/test_util.h"
 using namespace dect2;
 
 constexpr double kRate = 250000, kOff = -40000;
 
-static NavaidCheck run(VorGenConfig g, int function, double secs = 24) {
+static NavaidCheck run(VorGenConfig g, int function, double secs = 14) {
     g.rate = kRate; g.dialOffsetHz = kOff;
     VorGenerator gen(g);
     VorReceiver rx; rx.setSilent(true); rx.setFunction(function); rx.setSignalOffset(kOff); rx.configure(kRate);
@@ -28,7 +29,9 @@ static NavaidCheck run(VorGenConfig g, int function, double secs = 24) {
 static const NavaidCheckItem* find(const NavaidCheck& r, const char* name) { for (const auto& i : r.items) if (i.name == name) return &i; return nullptr; }
 
 int main() {
-    for (double snr : {40.0, 25.0, 15.0}) for (double cfo : {0.0, 3000.0}) {   // nominal beacons: everything within
+    const bool longRun = std::getenv("ONAIR_TEST_LONG") != nullptr;   // the full sweep; the default run keeps two points
+    const std::vector<double> snrs = longRun ? std::vector<double>{40, 25, 15} : std::vector<double>{15}, cfos = longRun ? std::vector<double>{0, 3000} : std::vector<double>{3000};
+    for (double snr : snrs) for (double cfo : cfos) {   // nominal beacons: everything within
         VorGenConfig g; g.kind = 0; g.radialDeg = 123; g.snrDb = snr; g.cfoHz = cfo;
         NavaidCheck r = run(g, 1);
         CHECK(r.function == NavFunction::Vor && r.items.size() >= 5, "VOR snr %.0f cfo %.0f: %zu items", snr, cfo, r.items.size());

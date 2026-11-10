@@ -1346,3 +1346,11 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 Smart features round 5: aviation, marine, IoT (feat39-smart5c)
+Built 14 items from scratchpad/smart37-backup/r5-avia-marine-iot.md.
+- Aviation: ADS-B atmosphere sounding and altimetry cross-check (ADS-B > Atmosphere); airport weather from ACARS/VDL2/HFDL text (Weather view); FLARM out-landing alert; VOR/ILS signal check against the Annex 10 limits (from memory); drone airspace alerts.
+- Radiosondes: ascent sounding, and a landing prediction before burst.
+- Marine: AIS behaviour flags and anchor watch (new automation event ais.behaviour).
+- IoT: mesh coverage cells; meters and tyres marked as the user's own (Sub-GHz > Mine); Z-Wave home network health.
+Simulated only. Details in docs/SMART5-avia-3.9.md, docs/SMART5-marine-3.9.md and docs/SMART5-iot-3.9.md.
