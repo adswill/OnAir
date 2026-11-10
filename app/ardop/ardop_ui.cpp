@@ -3,6 +3,7 @@
 // stations named in connect requests, IDs and pings, and the text of the data frames that passed their CRC. Monitor only.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "winlink/winlink_ui.h"
 #include "gfx/gfx.h"
 #include "i18n/i18n.h"
 #include "dect2/ardop/ardop_rx.h"
@@ -159,6 +160,7 @@ void textView(App& a) {
 
 void tick(App& a) {
     load();
+    winlinkTick(a);   // Winlink email (app/winlink): its session runs while the screen is open
     if (!a.engine.running()) { S.wasRunning = false; return; }
     dect2::ArdopReceiver& r = a.engine.ardop();
     if (!S.wasRunning || (int)S.listen != S.pushedListen) { r.setListen(S.listen); S.pushedListen = S.listen; }
@@ -179,7 +181,8 @@ void tab(App& a) {
     load();
     presets(a);
     ImGui::Spacing();
-    subNav("ardv", S.view, {"Frames", "Stations", "Text"});
+    subNav("ardv", S.view, {"Frames", "Stations", "Text", "Winlink"});
+    if (S.view == 3) { winlinkPanel(a, 1); return; }
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
     if (S.view == 0) framesView(a); else if (S.view == 1) stationsView(a); else textView(a);
 }

@@ -1,5 +1,6 @@
 // APRS / Packet screens: the stations heard (table and map, the ADS-B map underneath, as for AIS), the log of raw packets, the state lamps.
 #include "app.h"
+#include "winlink/winlink_ui.h"
 #include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/kit.h"
@@ -367,6 +368,7 @@ void lamps(App& a) {
 
 void tick(App& a) {
     loadState();
+    winlinkTick(a);   // Winlink email (app/winlink): its session runs while the screen is open
     if (!a.engine.running()) return;
     dect2::PacketReceiver& r = a.engine.packet();
     if ((int)a.packetNarrow != S.pushedNarrow) { r.setNarrowChannel(a.packetNarrow); S.pushedNarrow = a.packetNarrow; }
@@ -454,7 +456,8 @@ void tab(App& a) {
     flowNext(10 * gUi);
     controls(a);
     kit::modeHeader({24, "APRS / Packet", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("pktv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 3}, {tr("Map"), 1}, {tr("Log"), 2, true}});
+    kit::modeNav("pktv", S.view, {{tr("Live"), 0}, {tr("Tracks"), 3}, {tr("Map"), 1}, {tr("Log"), 2, true}, {tr("Winlink"), 4}});
+    if (S.view == 4) { winlinkPanel(a, 0); return; }
     if (S.view == 2) { packetLog(a); return; }
     if (S.view == 3) { kit::sessionItems(24, 3, "aprs"); return; }
     if (S.view == 1) { mapView(a, ImGui::GetContentRegionAvail()); return; }
