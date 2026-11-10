@@ -20,7 +20,10 @@
 #include <filesystem>
 #include "picsave_ui.h"
 #include "dect2/automation/engine.h"
+#include "dect2/image/gif_loop.h"
+#include <atomic>
 #include <map>
+#include <thread>
 #include "../state/picsave.h"
 #include <fstream>
 #include <sstream>
@@ -293,6 +296,22 @@ void publish(const std::string& key, const std::string& source, double unixTime,
     std::stable_sort(S.items.begin(), S.items.end(), [](const Item& a, const Item& b) { return a.time > b.time; });
     enforceCap();
     saveIndex();
+    // geostationary full disks: the loop of the last 24 pictures of this product, rebuilt in the background (dect2/image/gif_loop.h)
+    if ((source.find("GOES") != std::string::npos || source.find("Elektro") != std::string::npos || source.find("GK-2A") != std::string::npos || source.find("FY-4") != std::string::npos) &&
+        !it.detail.empty() && plat::prefs().getB("galleryGeoLoop", true)) {
+        static std::atomic<bool> busy{false};
+        const std::string pk = dect2::img::loopProductKey(it.detail);
+        std::vector<std::pair<double, std::string>> fr;
+        for (const Item& x : S.items) if (x.source == source && x.w == w && x.h == h && dect2::img::loopProductKey(x.detail) == pk) fr.push_back({x.time, S.dir + "/" + x.id + ".png"});
+        std::sort(fr.begin(), fr.end());
+        if (fr.size() > 24) fr.erase(fr.begin(), fr.end() - 24);
+        if (fr.size() >= 3 && !busy.exchange(true)) {
+            std::vector<std::string> paths;
+            for (auto& f : fr) paths.push_back(f.second);
+            const std::string out = S.dir + "/loops/" + fsafe(source) + "-" + fsafe(pk) + ".gif";
+            std::thread([paths, out] { std::string err; dect2::img::gifLoopFromPngs(paths, out, 1000, 25, err); busy.store(false); }).detach();
+        }
+    }
     Pending& pd = gPending[key];
     pd.lastWall = (double)std::time(nullptr); pd.path = base + ".png"; pd.source = source; pd.sat = it.sat; pd.detail = it.detail; pd.w = w; pd.h = h; pd.time = unixTime;
     if (gPending.size() > 200) gPending.erase(gPending.begin());
