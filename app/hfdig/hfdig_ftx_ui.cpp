@@ -65,6 +65,8 @@ bool shown(const dect2::FtxDecode& d) {
 }
 
 void decodeTable(App& a, const dect2::HfdigFtxTelemetry& f, bool wsprOnly) {
+    if (!wsprOnly)   // who hears me and the antenna pattern (View > Insights); the hub keeps only what is new
+        for (const dect2::FtxDecode& d : f.decodes) if (d.mode != 3) insightFeedFtx(d.slotUtc, d.dialHz, d.msg, d.snrDb);
     {   // the decodes as a file: Save results (CSV / JSON ...), Copy CSV, and the text log with Auto-save (a new file each day) (#432)
         static std::string note;
         resexp::Table x; x.cols = {"time_utc_s", "mode", "snr_db", "dt_s", "audio_hz", "dial_hz", "call", "grid", "dbm", "message"};
