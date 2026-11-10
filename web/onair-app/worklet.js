@@ -35,7 +35,7 @@
       this.inRate = 16000; this.queue = []; this.queued = 0; this.pos = 0; this.primed = false; this.last = 0;
       this.underruns = 0; this.drops = 0; this.gain = 1;
     }
-    get seconds() { return this.queued / this.inRate; }
+    get seconds() { return (this.queued - this.pos) / this.inRate; }
     push(samples, rate) {
       if (rate && rate !== this.inRate) { this.flush(); this.inRate = rate; }
       if (!samples || !samples.length) return;
