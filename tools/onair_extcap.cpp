@@ -11,6 +11,9 @@
 #include <cstring>
 #include <string>
 #include <thread>
+#ifndef _WIN32
+#include <sys/select.h>
+#endif
 #include <vector>
 #ifndef ONAIR_VERSION_TEXT
 #define ONAIR_VERSION_TEXT "3.8"
@@ -94,6 +97,11 @@ int capture(const ChanInfo& ci, const std::string& fifo, int port, int waitSec) 
         }
         everConnected = true;
         while (!g_stop) {
+            fd_set rd; FD_ZERO(&rd); FD_SET(s, &rd);
+            timeval tv{0, 250000};   // wake up to see a stop request: a signal does not interrupt a blocking recv (restarted)
+            const int sel = select((int)s + 1, &rd, nullptr, nullptr, &tv);
+            if (sel == 0) continue;
+            if (sel < 0) { if (g_stop) break; continue; }
             const long long r = sockRecv(s, buf.data(), buf.size());
             if (r <= 0) break;                           // OnAir stopped or the switch went off: wait for it to come back
             if (!pipe.write(buf.data(), (size_t)r)) { sockClose(s); return 0; }   // Wireshark closed the capture
