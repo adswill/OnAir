@@ -519,17 +519,26 @@ void p2Distribute(const std::vector<cf32>& stream, int nP2, int cP2, int nPre, i
         for (int idx = (nPre + nPost) / nP2; idx < cP2; idx++) sym[n][idx] = at(rd++);
 }
 
+// nPost comes from a decoded L1-pre (L1_POST_SIZE). A pre that passes its CRC under the wrong carrier-mode hypothesis, or a damaged one, can
+// signal more L1-post cells than the P2 symbols hold: the cells were then written past the end of the stream (heap corruption in iq_modes on
+// Linux and Windows, ASan: heap-buffer-overflow in p2Gather). Every write and read is bounded; such a frame just fails its L1-post decode.
 void p2Gather(const std::vector<std::vector<cf32>>& sym, int nP2, int cP2, int nPre, int nPost, std::vector<cf32>& stream) {
-    stream.assign((size_t)nP2 * cP2, cf32(0, 0));
-    if (nP2 == 1) { for (int i = 0; i < cP2; i++) stream[i] = sym[0][i]; return; }
+    const int total = std::max(0, nP2) * std::max(0, cP2);
+    stream.assign((size_t)total, cf32(0, 0));
+    if (total == 0 || (int)sym.size() < nP2) return;
+    auto cell = [&](int n, int idx) { return idx >= 0 && idx < (int)sym[(size_t)n].size() ? sym[(size_t)n][(size_t)idx] : cf32(0, 0); };
+    auto put = [&](int at, cf32 v) { if (at >= 0 && at < total) stream[(size_t)at] = v; };
+    if (nP2 == 1) { for (int i = 0; i < cP2; i++) stream[(size_t)i] = cell(0, i); return; }
+    nPre = std::max(0, std::min(nPre, total));
+    nPost = std::max(0, std::min(nPost, total - nPre));
     for (int n = 0; n < nP2; n++) {
         int idx = 0;
-        for (int j = 0; j < nPre / nP2; j++) stream[n + j * nP2] = sym[n][idx++];
-        for (int j = 0; j < nPost / nP2; j++) stream[nPre + n + j * nP2] = sym[n][idx++];
+        for (int j = 0; j < nPre / nP2; j++) put(n + j * nP2, cell(n, idx++));
+        for (int j = 0; j < nPost / nP2; j++) put(nPre + n + j * nP2, cell(n, idx++));
     }
     int rd = nPre + nPost;
     for (int n = 0; n < nP2; n++)
-        for (int idx = (nPre + nPost) / nP2; idx < cP2; idx++) stream[rd++] = sym[n][idx];
+        for (int idx = (nPre + nPost) / nP2; idx < cP2; idx++) put(rd++, cell(n, idx));
 }
 
 } // namespace dect2
