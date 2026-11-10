@@ -31,7 +31,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AM stereo (C-QUAM)** - AM stereo: C-QUAM on medium wave, stereo found by its 25 Hz pilot
 - **CDR** - CDR: China's digital radio in the FM band
 
-## Aviation (24)
+## Aviation (25)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -45,6 +45,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ILS** - ILS: left / right of the runway centreline and above / below the glide path
 - **NDB** - NDB: the Morse identification of a long-wave navigation beacon
 - **Drone Remote ID** - Drone Remote ID: drones and their operators, from the identification every drone must broadcast
+- **SELCAL (aircraft tone call)** - SELCAL: which aircraft is being called on the channel
 - **UAT** - UAT 978 MHz: ADS-B, FIS-B weather and TIS-B relay
 - **FANET** - FANET: paragliders and gliders over LoRa
 - **OGN tracker** - OGN tracker: gliders broadcasting on 868 MHz
@@ -58,7 +59,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **eLoran / Loran-C** - eLoran / Loran-C: 100 kHz hyperbolic navigation pulses, GRI and station arrival times
 - **ASTERIX** - ASTERIX: radar and ADS-B surveillance data from UDP or a file
 
-## Maritime (9)
+## Maritime (8)
 
 - **AIS** - AIS: ship positions and identities
 - **VDES** - VDES: ASM frames decoded, VDE-TER bursts logged and classified
@@ -66,7 +67,6 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **DSC** - DSC: digital selective calling between ships and coast stations
 - **Weather fax** - Weather fax: HF radiofax charts for ships
 - **Marine VHF** - Marine VHF: channel picker, scan, 16 watch, whole-span activity list, recording; regional plans (ITU, Europe, Baltic, USA, Canada)
-- **SELCAL (aircraft tone call)** - SELCAL: which aircraft is being called on the channel
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 

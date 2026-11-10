@@ -133,7 +133,7 @@ object Modes {
         ModeDef(115, 142, 2, 0xFFFF94C7, null, 23, 0),
         ModeDef(116, 82, 2, 0xFFFFC2DB, null, 26, 0),
         ModeDef(117, 155, 3, 0xFFFF6BC7, null, 38, 0),
-        ModeDef(118, 240, 3, 0xFFFF9EC2, null, 39, 0),
+        ModeDef(118, 240, 2, 0xFFFF9EC2, null, 39, 0),
         ModeDef(119, 211, 3, 0xFFFF73D1, null, 40, 0),
         ModeDef(120, 120, 4, 0xFFFF75A8, null, 42, 0),
         ModeDef(121, 230, 4, 0xFFFF80B2, null, 49, 5),
