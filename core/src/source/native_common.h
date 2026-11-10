@@ -188,6 +188,10 @@ inline std::vector<std::string> libNames(const char* stem, std::initializer_list
             if (cut != std::string::npos) { dir.resize(cut + 1); for (const char* w : winNames) v.push_back(dir + w); }
         }
     }
+    // The OnAir codecs folders next (user data folder, extra folder, ONAIR_CODEC_DIR, codecs next to the program): a radio's DLL the user adds (fobos_sdr.dll,
+    // rtlsdr.dll ...) can go there too and survives an update (#472). The copies in the program's folder above still win.
+    for (const auto& cd : dect2::codec::systemCodecDirs())
+        for (const char* w : winNames) v.push_back(dect2::codec::joinPath(cd.path, w));
     if (const char* pf = getenv("ProgramFiles")) {
         for (const char* sub : {"\\PothosSDR\\bin\\", "\\UHD\\bin\\", "\\LimeSuite\\bin\\"}) {
             const std::string dir = std::string(pf) + sub;
@@ -210,6 +214,7 @@ inline std::vector<std::string> libNames(const char* stem, std::initializer_list
             if (sl != std::string::npos) dirs.push_back(d.substr(0, sl) + "/../Frameworks/");
         }
     }
+    for (const auto& cd : dect2::codec::systemCodecDirs()) dirs.push_back(dect2::codec::joinPath(cd.path, ""));   // the OnAir codecs folders (#472)
     for (const char* dir : {"", "/opt/homebrew/lib/", "/usr/local/lib/", "/opt/local/lib/"}) dirs.push_back(dir);
     for (const auto& dir : dirs) {
         for (const char* ver : soVersions) v.push_back(dir + std::string("lib") + stem + ver + ".dylib");
@@ -218,6 +223,13 @@ inline std::vector<std::string> libNames(const char* stem, std::initializer_list
     for (auto& p : versionedLibs(stem, dirs)) if (std::find(v.begin(), v.end(), p) == v.end()) v.push_back(p);
 #else
     (void)winNames;
+    // the OnAir codecs folders first (a library the user put there, #472), then the system's own places
+    std::vector<std::string> userDirs;
+    for (const auto& cd : dect2::codec::systemCodecDirs()) userDirs.push_back(dect2::codec::joinPath(cd.path, ""));
+    for (const auto& dir : userDirs) {
+        for (const char* ver : soVersions) v.push_back(dir + "lib" + stem + ".so" + ver);
+        v.push_back(dir + "lib" + stem + ".so");
+    }
     for (const char* ver : soVersions) v.push_back(std::string("lib") + stem + ".so" + ver);
     v.push_back(std::string("lib") + stem + ".so");
     // the multiarch folder of this build (Debian/Ubuntu); other distributions use lib64
@@ -235,6 +247,7 @@ inline std::vector<std::string> libNames(const char* stem, std::initializer_list
 #elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
     dirs.push_back("/usr/lib/powerpc64le-linux-gnu/");
 #endif
+    for (const auto& d : userDirs) dirs.insert(dirs.begin(), d);
     for (auto& p : versionedLibs(stem, dirs)) v.push_back(p);
 #endif
     return v;

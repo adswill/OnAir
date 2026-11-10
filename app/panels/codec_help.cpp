@@ -283,6 +283,7 @@ void codecHelpButton(CodecHelp c, const char* label) {
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30);
         ImGui::TextUnformatted(t.title);
         ImGui::Separator();
+        if (ImGui::SmallButton("All optional libraries: which, where, official sources")) dect2::openUrl("https://github.com/adswill/OnAir/blob/main/docs/OPTIONAL-LIBRARIES.md");
         // a codec that crashed or hung this run (codec_guard.h): said first; Look again tries it once more
         if (const std::string gm = dect2::codec::guardAllMessages(); !gm.empty()) { ImGui::TextColored(pal::warnAmber(), "%s", gm.c_str()); ImGui::Separator(); }
         appcodec::codecArchLines(true);   // OnAir's processor, Rosetta notice, which architecture to build for

@@ -15,6 +15,8 @@ Every mode that needs a codec has a small **?** button. It shows whether the lib
 looks for, the exact folders it searches, an **Open codecs folder** button (it makes the folder if it is missing) and **Look again**
 (searches again, no restart).
 
+> **All the optional libraries in one list** (LAME MP3, libfaad2, libfdk-aac, mbelib, radio drivers such as `fobos_sdr.dll`, ...), the folder for each on Windows, macOS and Linux and where to get each one: [OPTIONAL-LIBRARIES.md](OPTIONAL-LIBRARIES.md).
+
 ## Quick start: install the voice codecs (Codec Setup)
 
 1. Open **Help > Voice codecs**. The **Codec setup** section at the top lists every voice codec plug-in with its status: *working*, *installed*, *wrong processor* or *missing*, the exact file OnAir looks for and the folder it was found in. **Open codecs folder** opens (and creates) the folder, **Rescan all** looks again without a restart, **Copy build command** copies the command below, and the section shows the steps for your own operating system first.

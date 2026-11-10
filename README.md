@@ -119,7 +119,7 @@ OnAir 3.0 followed 0.2.9. Later releases (3.1 to 3.6) have their own lists in `d
 - **Better weak-signal decoding** (measured on generated signals only): FT8/FT4/FT2, PSK, RTTY, DAB, DRM, RDS, DVB-S2, DVB-T/T2, satellite weather, GNSS, ADS-B, AIS, pagers and digital voice.
 - **Lighter and faster**: less CPU, lower idle power, a faster FFT and a quicker DVB-T.
 - **Easier to use**: a labelled status strip, one signal indicator for every mode, an Audio pop-up, auto gain, first-run setup with lessons, presets, a merged Scanner, Scheduler, Backup and restore.
-- **Voice**: one voice monitor, keys you supply yourself, codecs you install yourself (see [docs/CODECS.md](docs/CODECS.md)); nothing patented is shipped.
+- **Voice**: one voice monitor, keys you supply yourself, codecs you install yourself (see [docs/CODECS.md](docs/CODECS.md)); nothing patented is shipped. Every optional library and codec you can add (MP3, AAC, voice codecs, radio drivers), the folder for it on each OS and its official source: [docs/OPTIONAL-LIBRARIES.md](docs/OPTIONAL-LIBRARIES.md).
 - **Network**: a complete Remote API, OnAir Web (listen from a browser), a LAN swarm.
 - **Raspberry Pi**: CM5 waterfall and OpenGL 3.1 fixes.
 
