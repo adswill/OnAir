@@ -20,7 +20,7 @@ const char* note(int kind) {
                       "and the phase steps of every carrier. No frame format is published.");
     case 3: return N_("CIS-36 (MFSK-36): identification only, from the tone count, the 40 Hz spacing and the 10 / 20 / 40 Bd tone rate.");
     case 4: return N_("CIS OFDM HDR modem (CIS-45, CIS-60, CIS-93): identification only, from the OFDM symbol, the carriers and the PSK order.");
-    case 5: return N_("CIS-128: identification only: about 128 OFDM carriers at about 21 Bd (or the 6 kHz form).");
+    case 5: return N_("CIS-128: identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz (the 6 kHz form is not covered).");
     default: return N_("CIS-3000: identification only: a single 8-PSK carrier at 3000 Bd.");
     }
 }

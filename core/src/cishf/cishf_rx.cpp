@@ -199,7 +199,7 @@ ModeTuning cisHfTuning(int kind) {
     t.minMhz = 1.5; t.maxMhz = 30; t.defMhz = 8.0;   // a starting point; the stations move between 3 and 20 MHz
     t.sampleRate = 2000000;
     t.basebandHz = 1750000;
-    t.bandwidthMhz = kind == 5 ? 0.007 : 0.004;
+    t.bandwidthMhz = 0.004;
     t.minSampleRate = 250000;
     t.tuneOffsetHz = 20000;
     return t;
@@ -231,13 +231,14 @@ public:
         case cishf::Cis14: {
             std::vector<uint16_t> f;
             for (int i = 0; i < 600; i++) f.push_back(cishf::cis14Frame(2, i % 32, (i * 7) % 32, i & 3));
+            o.invert = true;   // 1 = the higher tone, as the decoder shows it
             x = cishf::genCis14(o, f);
             break;
         }
         case cishf::Cis12: o.variant = opt == 1 ? 1 : 0; o.symbols = 1200; x = cishf::genCis12(o, nullptr); break;
         case cishf::Cis36: o.trafficBaud = opt == 1 ? 10 : opt == 2 ? 40 : 20; o.symbols = (int)(o.trafficBaud * 30); x = cishf::genCis36(o); break;
         case cishf::Hdr: o.variant = std::clamp(opt, 0, 3); o.symbols = 1200; x = cishf::genOfdm(cishf::Hdr, o); break;
-        case cishf::C128: o.variant = opt == 1 ? 1 : 0; o.symbols = 600; x = cishf::genOfdm(cishf::C128, o); break;
+        case cishf::C128: o.variant = 0; o.symbols = 600; x = cishf::genOfdm(cishf::C128, o); break;
         default: o.symbols = 3000 * 20; x = cishf::genCis3000(o); break;
         }
         sig_ = cishf::impair(x, s.cfoHz, s.snrDb > 0 ? s.snrDb : 30, s.sroPpm, 7);

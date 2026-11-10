@@ -38,7 +38,7 @@ private:
 
 ModeTuning cisHfTuning(int kind);
 // The test signal of a kind (engine standard 622 + kind): looped, at the radio rate, the dial 20 kHz below the centre (tuneOffsetHz).
-// modeOpt[0]: the variant of cishf::GenOpts (CIS-12 PSK order, OFDM HDR variant, CIS-128 width); BEE: 1 = 100 Bd traffic (CIS-50-50).
+// modeOpt[0]: the variant of cishf::GenOpts (CIS-12 PSK order, OFDM HDR variant, CIS-36 rate); BEE: 1 = 100 Bd traffic (CIS-50-50).
 std::unique_ptr<ModeSynth> makeCisHfSynth(int kind, const SynthConfig& cfg, double sampleRate);
 
 } // namespace dect2

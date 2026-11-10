@@ -220,6 +220,7 @@ private:
             if (candN_ >= 3) { centre_ = c; shift_ = s; candN_ = 0; }
         } else {
             centre_ += 0.1 * (c - centre_);   // slow drift
+            shift_ += 0.1 * (s - shift_);
         }
     }
     Psd psd_;
@@ -460,8 +461,8 @@ public:
         s.cfoHz = cfo_;
         s.snrDb = snr_;
         if (!pilot_) { s.mode = "searching for the 3300 Hz pilot"; return s; }
-        s.state = locked_ && dataOn_ ? 2 : 1;
         const int q = mom_.order();
+        s.state = locked_ && dataOn_ && q ? 2 : 1;
         if (!locked_) s.mode = fmt("pilot at %.1f Hz, the carriers are off (standby)", 3300 + cfo_);
         else if (!dataOn_) s.mode = fmt2("pilot at %.1f Hz, %.0f carriers: no symbols yet", 3300 + cfo_, active_);
         else s.mode = std::string("12 x 120 Bd D") + pskName(q) + fmt(", pilot offset %+.1f Hz", cfo_);
@@ -489,8 +490,12 @@ private:
         for (int k = 0; k < 12; k++) if (psd_.band(700 + 200 * k + cfo_ - 50, 700 + 200 * k + cfo_ + 50) > 40 * nz * (100 / psd_.binHz())) act++;
         active_ = act;
         snr_ = snrDbOf(psd_, 600 + cfo_, 3000 + cfo_);
+        // a comb: the power midway between the carriers is well below the carriers' (an OFDM modem with a 3300 Hz pilot is flat there)
+        double on = 0, mid = 0;
+        for (int k = 0; k < 12; k++) { on += psd_.band(700 + 200 * k + cfo_ - 20, 700 + 200 * k + cfo_ + 20); if (k < 11) mid += psd_.band(800 + 200 * k + cfo_ - 20, 800 + 200 * k + cfo_ + 20); }
+        const bool comb = mid * 12 < 0.3 * on * 11;
         const bool was = locked_;
-        locked_ = act >= 6;
+        locked_ = act >= 6 && comb;
         if (locked_ && !was) { event(fmt2("12 carriers found, pilot at %.1f Hz (offset %+.1f Hz)", 3300 + cfo_, cfo_)); next_ = -1; }
         if (!locked_ && was) event("carriers gone");
     }
@@ -499,8 +504,7 @@ private:
         const double f = 700 + 200 * k + cfo_;
         const double w = -2 * kPi * f / kRate;
         const int64_t a = s + kWoff;
-        const double ph0 = -2 * kPi * std::fmod(f * (double)a / kRate, 1.0);
-        std::complex<double> r(std::cos(ph0), std::sin(ph0));
+        std::complex<double> r(1, 0);   // phase 0 at the window start: a changing cfo_ estimate does not move the phase of a whole stream
         const std::complex<double> st(std::cos(w), std::sin(w));
         std::complex<double> acc(0, 0);
         const cf32* p = buf_.data() + (a - (int64_t)base_);
@@ -543,7 +547,8 @@ private:
                 char line[20];
                 int unsureHere = 0;
                 for (int k = 0; k < 12; k++) {
-                    const std::complex<double> d = z[k] * std::conj(prev_[k]);
+                    const double rot = -2 * kPi * (700 + 200 * k + cfo_) * kT / kRate;   // the carrier's own turn over one symbol
+                    const std::complex<double> d = z[k] * std::conj(prev_[k]) * std::complex<double>(std::cos(rot), std::sin(rot));
                     mom_.add(d);
                     int v = 0;
                     if (q) {
@@ -776,7 +781,6 @@ private:
         // PSK order: a DFT of the useful part of each symbol at the carriers, the change from symbol to symbol, per carrier
         const double frac = std::fmod(-std::arg(Rc[bl]) / (2 * kPi) + 10, 1.0);
         const int tuI = (int)std::lround(m.tu);
-        const double tg = m.ts - m.tu;
         const double st0 = bestPh + G / 2.0;   // the fold peaks with its window inside the guard: start the DFT in the middle of the guard
         std::vector<double> fk;
         for (int k = (int)std::ceil(f0 / m.spacing - frac) ; (k + frac) * m.spacing <= f1; k++) fk.push_back((k + frac) * m.spacing);
@@ -847,7 +851,21 @@ private:
 // ---------------------------------------------------------------- CIS-3000 identification
 class Cis3000Decoder : public Decoder {
 public:
-    Cis3000Decoder() : fft_(kN) { reset(); }
+    Cis3000Decoder() : fft_(kN), fftS_(kNs) {
+        // root-raised-cosine, roll-off 0.15 (not published; the matched filter only has to be close), 4 samples a symbol at 3000 Bd
+        const double al = 0.15; const int nt = 8 * 4 + 1;
+        double e = 0;
+        for (int i = 0; i < nt; i++) {
+            const double t = (double)(i - nt / 2) / 4;
+            double v;
+            if (std::fabs(t) < 1e-9) v = 1 - al + 4 * al / kPi;
+            else if (std::fabs(std::fabs(4 * al * t) - 1) < 1e-9) v = al / std::sqrt(2.0) * ((1 + 2 / kPi) * std::sin(kPi / (4 * al)) + (1 - 2 / kPi) * std::cos(kPi / (4 * al)));
+            else v = (std::sin(kPi * t * (1 - al)) + 4 * al * t * std::cos(kPi * t * (1 + al))) / (kPi * t * (1 - 16 * al * al * t * t));
+            rrc_.push_back((float)v); e += v * v;
+        }
+        for (auto& v : rrc_) v = (float)(v / std::sqrt(e));
+        reset();
+    }
     void reset() override { buf_.clear(); st_ = Status(); psd_.reset(); for (auto& a : acc_) a.assign(kN, 0.0); blocks_ = 0; reported_ = false; }
     void push(const cf32* x, size_t n) override {
         psd_.push(x, n);
@@ -856,7 +874,7 @@ public:
     }
     Status status() const override { return st_; }
 private:
-    static constexpr int kBlock = 12000, kN = 16384;
+    static constexpr int kBlock = 12000, kN = 16384, kNs = 4096;
     void block() {
         Status s;
         double f0, f1;
@@ -867,8 +885,8 @@ private:
         std::vector<cf32> y(kBlock);
         const double w = -2 * kPi * fc / kRate;
         for (int i = 0; i < kBlock; i++) y[i] = buf_[i] * cf32((float)std::cos(w * i), (float)std::sin(w * i));
-        // 0: |y|^2 (symbol rate line), 1..3: y^2, y^4, y^8 of the unit-amplitude samples (carrier lines)
-        for (int q = 0; q < 4; q++) {
+        // 0: |y|^2 (symbol rate line) of the raw samples
+        for (int q = 0; q < 1; q++) {
             std::vector<cf32> v(kN, cf32(0, 0));
             double mean = 0;
             if (q == 0) { for (int i = 0; i < kBlock; i++) mean += std::norm(y[i]); mean /= kBlock; }
@@ -891,9 +909,39 @@ private:
         };
         double fb, f2, f4, f8;
         const double rb = line(0, 500, 5000, fb);
-        const double r2 = line(1, -5900, 5900, f2), r4 = line(2, -5900, 5900, f4), r8 = line(3, -5900, 5900, f8);
-        const double thr = 16;
-        const int order = r2 > thr ? 2 : r4 > thr ? 4 : r8 > thr ? 8 : 0;
+        // carrier lines of the matched-filtered symbols: u^2, u^4, u^8 of the unit-amplitude samples at the symbol rate, the best of the 4 sample phases
+        double r2 = 0, r4 = 0, r8 = 0;
+        f2 = f4 = f8 = 0;
+        {
+            const int nt = (int)rrc_.size();
+            std::vector<cf32> mf(kBlock, cf32(0, 0));
+            for (int i = nt; i < kBlock; i++) { cf32 a(0, 0); for (int j = 0; j < nt; j++) a += y[i - j] * rrc_[j]; mf[i] = a; }
+            for (int ph = 0; ph < 4; ph++)
+                for (int q = 1; q <= 3; q++) {
+                    std::vector<cf32> v(kNs, cf32(0, 0));
+                    int m = 0;
+                    for (int i = nt + ph; i < kBlock && m < kNs; i += 4, m++) {
+                        const float a = std::abs(mf[i]);
+                        cf32 u = a > 0 ? mf[i] / a : cf32(0, 0), w = u * u;
+                        if (q >= 2) w *= w;
+                        if (q >= 3) w *= w;
+                        v[m] = w;
+                    }
+                    fftS_.forward(v.data());
+                    std::vector<double> pw(kNs);
+                    int bb = 0;
+                    for (int b = 0; b < kNs; b++) { pw[b] = std::norm(v[b]); if (pw[b] > pw[bb]) bb = b; }
+                    const double pk = pw[bb];
+                    std::nth_element(pw.begin(), pw.begin() + kNs / 2, pw.end());
+                    const double rr = 10 * std::log10(pk / std::max(1e-30, pw[kNs / 2]));
+                    const double fl = (bb < kNs / 2 ? bb : bb - kNs) * 3000.0 / kNs;
+                    if (q == 1 && rr > r2) { r2 = rr; f2 = fl; }
+                    if (q == 2 && rr > r4) { r4 = rr; f4 = fl; }
+                    if (q == 3 && rr > r8) { r8 = rr; f8 = fl; }
+                }
+        }
+        const double thr = 16, thrL = 20;   // the carrier lines: the best of 4 phases is taken, so a higher bar than one spectrum
+        const int order = r2 > thrL ? 2 : r4 > thrL ? 4 : r8 > thrL ? 8 : 0;
         const double fine = order == 2 ? f2 / 2 : order == 4 ? f4 / 4 : order == 8 ? f8 / 8 : 0;
         const bool rateOk = rb > thr;
         s.state = 1;
@@ -910,7 +958,8 @@ private:
         if (blocks_ >= 8) { for (auto& a : acc_) for (auto& v : a) v *= 0.5; blocks_ = 4; }
         st_ = s;
     }
-    Fft fft_;
+    Fft fft_, fftS_;
+    std::vector<float> rrc_;
     Psd psd_;
     std::vector<cf32> buf_;
     std::vector<double> acc_[4];

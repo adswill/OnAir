@@ -14,8 +14,8 @@ decoders, so every mode needs a test with a real recording.
 | 622 | CIS-12 (MS5, AT-3004D, AT-3104D, FIRE, T-230) | Physical layer: the 3300 Hz pilot and its offset, the 12 carriers 700 - 2900 Hz (200 Hz apart) at 120 Bd, the symbol clock, the PSK order (DBPSK or DQPSK, from the phase-step moments) and the raw phase step of every carrier for every symbol. |
 | 623 | CIS-36 (MFSK-36 duplex ARQ) | Identification only: tone count, 40 Hz spacing, the 10 / 20 / 40 Bd tone rate and the three tone groups. |
 | 624 | CIS OFDM HDR modem (CIS-45, CIS-60, CIS-93) | Identification only: the OFDM symbol (useful part and guard from the cyclic-prefix correlation, so the rate too), the carrier count, the spacing and the PSK order. The variant is named from these. |
-| 625 | CIS-128 | Identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz, or the 6 kHz form at about 42 Bd. |
-| 626 | CIS-3000 | Identification only: one 8-PSK carrier at 3000 Bd, from the symbol-rate line and the y^2 / y^4 / y^8 lines. |
+| 625 | CIS-128 | Identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz. The 6 kHz form is not covered, because the decoders read 6 kHz of upper sideband. |
+| 626 | CIS-3000 | Identification only: one 8-PSK carrier at 3000 Bd, from the symbol-rate line and the u^2 / u^4 / u^8 carrier lines of the matched-filtered symbols. The matched filter assumes a root-raised-cosine pulse with a roll-off of 0.15, which is not published. |
 
 Under Advanced, the two FSK modes take a fixed speed and shift (0 = automatic). Automatic is the default.
 
@@ -30,7 +30,7 @@ Under Advanced, the two FSK modes take a fixed speed and shift (0 = automatic). 
 
 - BEE: the start word itself. Only its weight (21 ones in 44 bits) is known, and that weight is what the decoder checks. The generator uses
   a fixed word with 21 ones.
-- CIS-14: the parity rule and the meaning of the state bits. These are shown and not checked.
+- CIS-14: the parity rule, the meaning of the state bits and the tone polarity. These are shown in the order sent (1 = the higher tone) and not checked.
 - CIS-12: the pulse shape and any frame format. The generator uses rectangular symbols. The decoder stops at the phase steps.
 - CIS-128: the carrier spacing and the guard. The generator uses 24 Hz and 1/21 s.
 - CIS-36, OFDM HDR, CIS-3000: no frame format is published. These modes identify the signal and read nothing else.
@@ -49,12 +49,12 @@ Under Advanced, the two FSK modes take a fixed speed and shift (0 = automatic). 
 ## Tests (`tests/cishf/test_cishf_dsp.cpp`, one binary)
 
 - BEE at 50 and 100 Bd traffic, both polarities, carrier offsets of -60 / 0 / +85 Hz, SNR 30 and 12 dB in 3 kHz, a 40 ppm clock error, and two
-  messages where the second has no start sequence: the characters must match (99 % at 30 dB, 95 % at 12 dB). A forced 150 Bd / 500 Hz case.
+  messages where the second has no start sequence: the characters must match (99 % at 30 dB, 95 % at 12 dB). The default run keeps the hardest case of each sweep; `ONAIR_TEST_LONG=1` runs them all. A forced 150 Bd / 500 Hz case.
   Noise alone must not start a message.
 - CIS-14 at offsets of -40 / 0 / +120 Hz, SNR 30 and 14 dB, 30 ppm: the frame is found and 400 random frames are read field by field.
 - CIS-12 with DQPSK and DBPSK, offsets of -25 / 0 / +40 Hz, SNR 30 and 15 dB, 20 ppm: the pilot offset to 1.5 Hz, the PSK order, and the phase
   steps against the transmitted ones (step error under 1 % at 30 dB and under 5 % at 15 dB).
-- CIS-36 at 10 / 20 / 40 Bd, the four OFDM HDR variants, both CIS-128 forms and CIS-3000 (with offsets, noise and clock error) are identified,
+- CIS-36 at 10 / 20 / 40 Bd, the four OFDM HDR variants, the 3 kHz CIS-128 and CIS-3000 (with offsets, noise and clock error) are identified,
   with the right rate and order. A cross check runs every identifier on every other CIS signal, and none of them may claim it.
 - The whole receiver: the engine's test signal at 250 kHz, with the dial 20 kHz below the centre, through the front end, for BEE, CIS-12 and
   CIS-3000.

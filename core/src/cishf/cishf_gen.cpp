@@ -44,7 +44,7 @@ std::vector<cf32> genBee(const GenOpts& o, const std::vector<BeeMsg>& msgs) {
     for (int i = 0; i < (int)(0.6 * o.trafficBaud); i++) b.push_back((uint8_t)(i & 1));   // bit sync at the traffic rate
     for (const BeeMsg& m : msgs) {
         if (m.withStart) {
-            uint64_t s = m.sync ? m.sync : 0xA5C3B1E4D27ull & ((1ull << 44) - 1);
+            uint64_t s = m.sync ? m.sync : 0xA5C3B1E4D21ull & ((1ull << 44) - 1);
             for (int i = 43; i >= 0; i--) b.push_back((uint8_t)((s >> i) & 1));
             for (int r = 0; r < 2; r++) for (int c : m.key) push7(b, c);
         }

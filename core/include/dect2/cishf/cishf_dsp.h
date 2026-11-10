@@ -9,7 +9,7 @@
 //            pilot, the carriers, the symbol clock, the PSK order and the raw phase steps of every carrier (no frame format is published).
 //   Cis36    CIS-36 (MFSK-36 duplex ARQ): identification only: tone count, 40 Hz spacing, 10 / 20 / 40 Bd, the three tone groups.
 //   Hdr      CIS OFDM HDR modem (CIS-45, CIS-60, CIS-93): identification only, from the OFDM symbol (useful part, guard, rate), carrier count and PSK order.
-//   C128     CIS-128: identification only: about 128 OFDM carriers at about 21 Bd (or the 6 kHz form at about 42 Bd).
+//   C128     CIS-128: identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz (the 6 kHz form does not fit the 12 kHz stream).
 //   C3000    CIS-3000: identification only: single carrier 8-PSK at 3000 Bd.
 // Input: complex baseband at kRate (12 kHz), the audio frequency f of the upper sideband at +f Hz.
 #pragma once
