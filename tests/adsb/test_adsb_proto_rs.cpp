@@ -297,5 +297,6 @@ int main() {
     printf("  Comm-B inference results:");
     for (auto& kv : found) printf(" %02x:%ld", kv.first, kv.second);
     printf("\n");
-    return golden::checkDual("adsb_proto_rs", dig, 0xccbaa93e37f1e80dull, 0x486a022706e9ea78ull, !it);
+    // re-recorded 2026-11-10: DF18 control field 3 (coarse TIS-B) is no longer read as an ADS-B ME, the operational status capability and NACv, and the RA broadcast (TC 28 subtype 2) fill fields that were empty (was 0xccbaa93e37f1e80d, 0x486a022706e9ea78)
+    return golden::checkDual("adsb_proto_rs", dig, 0x8b2ea87a44285088ull, 0x8c063a53f2b340dcull, !it);
 }
