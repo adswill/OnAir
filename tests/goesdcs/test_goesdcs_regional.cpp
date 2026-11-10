@@ -97,6 +97,8 @@ int main() {
         c.rate = 250000; c.centreHz = 402.30e6; c.snrDb = 36;
         c.tx = {txAt(dcs::channelHz(200, Plan::Meteosat), 100, 0.5, "AAAA 1111\r\n", 0x0A1B2), txAt(dcs::channelHz(202, Plan::Meteosat), 100, 2.0, "BBBB 2222\r\n", 0x03FFF)};
         const DcsTelemetry t = run(c, 14.0, 1);
+        for (const auto& m : t.messages) printf("  adjacent: %s ch %d %d bps eot %d perr %d '%s'\n", dcs::addressHex(m.address).c_str(), m.channel, m.bps, (int)m.eot, m.parityErrors, m.text.c_str());
+        printf("  adjacent: %llu ok %llu bad, %llu carriers seen\n", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, (unsigned long long)t.carriersSeen);
         CHECK(find(t, 0x0A1B2) && find(t, 0x03FFF), "channels 200 and 202 at once: %llu reports", (unsigned long long)t.blocksOk);
     }
     // ---- frequency error to the 1.5 ppm limit (600 Hz at 402 MHz) and clock errors
