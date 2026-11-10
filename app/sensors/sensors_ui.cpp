@@ -19,6 +19,9 @@
 #include <string>
 #include <vector>
 
+void sensorsMineTick(const dect2::SensorsTelemetry& t);   // sensors_mine_ui.cpp (3.9): my meters and tyres
+void sensorsMineView(const dect2::SensorsTelemetry& t);
+
 namespace {
 
 struct State {
@@ -474,12 +477,15 @@ void decodersView(App& a) {
     ImGui::EndChild();
 }
 
+void tick(App& a) { if (live(a)) sensorsMineTick(a.rx.sensors); }
+
 void tab(App& a) {
     load(a);
     easeui::autoBandControl(a, "sensAutoBand", a.rx.sensors.blocksOk);
     banner(a);
     ImGui::Spacing();
-    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders"});
+    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders", "Mine"});
+    if (S.view == 4) { sensorsMineView(a.rx.sensors); return; }
     if (!live(a) && S.view != 3) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
     if (S.view == 0) sensorsView(a); else if (S.view == 1) messagesView(a); else if (S.view == 2) unknownView(a); else decodersView(a);
 }
@@ -548,5 +554,5 @@ const ModeUi kSensorsUi = {
     .list = list,
     .status = status,
     .summary = summary,
-    .tick = nullptr,
+    .tick = tick,
 };
