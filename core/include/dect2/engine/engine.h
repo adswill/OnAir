@@ -1009,7 +1009,7 @@ private:
     PactorReceiver rxPac_;
     HfUtilReceiver rxHfu_[kHfuKinds] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint64_t hfuSeq_[kHfuKinds] = {};
-    HfUtilReceiver rxHfm_[kHfuKindsAll - kHfuKinds] = {kHfuKindHdr, kHfuKindAle3g};   // 3.9 HF utility kinds (families 603 STANAG 4539, 604 3G-ALE)
+    HfUtilReceiver rxHfm_[kHfuKindsAll - kHfuKinds] = {kHfuKindHdr, kHfuKindAle3g, kHfuKindLink11};   // 3.9 HF utility kinds (families 603 STANAG 4539, 604 3G-ALE, 605 Link 11)
     uint64_t hfmSeq_[kHfuKindsAll - kHfuKinds] = {};
     EsubghzReceiver rxEsg_;
     RoshfReceiver rxRoshf_;

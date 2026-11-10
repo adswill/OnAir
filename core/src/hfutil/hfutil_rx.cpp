@@ -3,6 +3,7 @@
 #include "dect2/hfutil/hfu_serial.h"
 #include "dect2/hfutil/hfu_hdr.h"
 #include "dect2/hfutil/hfu_ale3g.h"
+#include "dect2/hfutil/hfu_link11.h"
 #include "dect2/hfutil/hfu_fsk.h"
 #include "dect2/marine/marine_dsp.h"
 #include <algorithm>
@@ -30,6 +31,8 @@ struct HfUtilReceiver::Impl {
     std::unique_ptr<hfu::FskRx> fsk;
     std::unique_ptr<hfu::HighRateRx> hdr;
     std::unique_ptr<hfu::Ale3gRx> ale3g;
+    std::unique_ptr<hfu::Link11Rx> l11;
+    double l11Dop = 0;
     HfUtilTelemetry tel;
     uint64_t seq = 0;
     std::function<void(const std::string&)> log;
@@ -100,6 +103,26 @@ struct HfUtilReceiver::Impl {
                 std::lock_guard<std::mutex> l(mu);
                 tel.pdus++;
             });
+        } else if (kind == kHfuKindLink11) {
+            l11 = std::make_unique<hfu::Link11Rx>();
+            l11->setEventSink([this](const std::string& s) { if (s.rfind("message", 0) != 0) addEvent(s); });
+            l11->setMessageSink([this](const hfu::Link11Msg& m) {
+                char t[220];
+                snprintf(t, sizeof t, "Link 11 message: %s frames, %d data frames, %.2f s, Doppler tone %+.1f Hz, phase changes at %.0f deg", m.fast ? "fast (13.33 ms)" : "slow (22 ms)", m.frames, m.durationSec, m.dopplerHz, m.offsetDeg);
+                addEvent(t);
+                std::string s = t;
+                s += "\n";
+                // the first frames' raw phase changes (quarter turns, tones from 935 Hz up to 2915 Hz)
+                for (size_t i = 0; i < m.phases.size() && i < 8; i++) {
+                    s += "  ";
+                    for (uint8_t q : m.phases[i]) s += (char)('0' + q);
+                    s += "\n";
+                }
+                if (m.phases.size() > 8) s += "  ...\n";
+                addText(s);
+                std::lock_guard<std::mutex> l(mu);
+                l11Dop = m.dopplerHz;
+            });
         } else if (kind == kHfuKindAle3g) {
             ale3g = std::make_unique<hfu::Ale3gRx>();
             ale3g->setPduSink([this](const hfu::Ale3gPdu& p) {
@@ -121,6 +144,7 @@ struct HfUtilReceiver::Impl {
         if (fsk) fsk->reset();
         if (hdr) hdr->reset();
         if (ale3g) ale3g->reset();
+        if (l11) l11->reset();
         curByte = 0; curBits = 0;
         std::lock_guard<std::mutex> l(mu);
         tel = HfUtilTelemetry();
@@ -154,6 +178,7 @@ void HfUtilReceiver::feed(const cf32* x, size_t n) {
     if (p_->fsk) p_->fsk->push(p_->base.data(), p_->base.size());
     if (p_->hdr) p_->hdr->push(p_->base.data(), p_->base.size());
     if (p_->ale3g) p_->ale3g->push(p_->base.data(), p_->base.size());
+    if (p_->l11) p_->l11->push(p_->base.data(), p_->base.size());
     double e = 0;
     for (const auto& v : p_->base) e += std::norm(v);
     std::lock_guard<std::mutex> l(p_->mu);
@@ -166,6 +191,12 @@ void HfUtilReceiver::feed(const cf32* x, size_t n) {
         const auto s = p_->hdr->status();
         p_->tel.state = s.state; p_->tel.cfoHz = s.cfoHz; p_->tel.snrDb = (float)s.snrDb; p_->tel.mode = s.state >= 2 || s.messages ? s.mode : "";
         p_->tel.blocksOk = s.blocks; p_->tel.dataValid = s.state >= 2;
+    } else if (p_->l11) {
+        const auto& r = *p_->l11;
+        p_->tel.state = r.state() ? 2 : (r.messages() ? 1 : 0); p_->tel.cfoHz = p_->l11Dop;
+        char m[80]; snprintf(m, sizeof m, "%s, %llu messages", r.state() == 2 ? "frames" : r.state() == 1 ? "preamble" : "waiting", (unsigned long long)r.messages());
+        p_->tel.mode = r.messages() || r.state() ? m : "";
+        p_->tel.blocksOk = r.messages(); p_->tel.dataValid = r.messages() > 0;
     } else if (p_->ale3g) {
         const auto& r = *p_->ale3g;
         p_->tel.state = r.bursts() ? 2 : 0; p_->tel.cfoHz = r.lastCfoHz(); p_->tel.snrDb = (float)r.lastSnrDb();
@@ -196,8 +227,8 @@ void HfUtilReceiver::setForcedProfile(int p) { if (p_->serial) p_->serial->force
 void HfUtilReceiver::setForcedFsk(double baud, double shiftHz) { if (p_->fsk) { p_->fsk->setBaud(baud); p_->fsk->setShift(shiftHz); } }
 
 ModeTuning hfUtilTuning(int kind) {
-    static const char* ids[kHfuKindsAll] = {"milstd110", "stanag4285", "arqe", "arqn", "autospec", "spreadhf", "gtor", "efr", "piccolo", "coquelet", "stanag4539", "ale3g"};
-    static const double def[kHfuKindsAll] = {7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 14.0, 0.1276, 7.0, 7.0, 7.0, 7.0};
+    static const char* ids[kHfuKindsAll] = {"milstd110", "stanag4285", "arqe", "arqn", "autospec", "spreadhf", "gtor", "efr", "piccolo", "coquelet", "stanag4539", "ale3g", "link11"};
+    static const double def[kHfuKindsAll] = {7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 14.0, 0.1276, 7.0, 7.0, 7.0, 7.0, 7.0};
     kind = std::clamp(kind, 0, kHfuKindsAll - 1);
     ModeTuning t;
     t.stdMode = hfuFamilyOf(kind) + 2;
@@ -226,7 +257,13 @@ public:
     HfuSynth(int kind, const SynthConfig& s, double rate) : kind_(kind), rate_(rate), cfo_(s.cfoHz), snr_(s.snrDb), rng_(1234) {
         std::vector<cf32> x;
         const std::string msg = "ONAIR HF UTILITY TEST SIGNAL 12345 THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG";
-        if (kind == kHfuKindAle3g) {
+        if (kind == kHfuKindLink11) {
+            std::vector<std::array<uint8_t, 15>> fr(60);
+            std::mt19937 g(11);
+            for (auto& f : fr) for (auto& q : f) q = (uint8_t)(g() & 3);
+            hfu::Link11GenCfg c;
+            for (int m = 0; m < 2; m++) { const auto b = hfu::genLink11(c, fr); x.insert(x.end(), b.begin(), b.end()); }
+        } else if (kind == kHfuKindAle3g) {
             // a call, the handshake and its answer, with gaps
             for (uint32_t pdu : {hfu::ale3gCall(5, 2, 17, 3), hfu::ale3gHandshake(hfu::ale3gLinkId((17 << 5) | 3, (5 << 5) | 3), 2, 12), hfu::ale3gNotification(0, 5, 3)}) {
                 const auto b = hfu::genBw0(pdu, 0.2, 0.2);

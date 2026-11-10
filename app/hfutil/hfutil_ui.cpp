@@ -1,4 +1,4 @@
-// HF utility mode panels (families 430 .. 439, 603 STANAG 4539 and 604 3G-ALE): band presets, decoded text, events. Automatic by default; speed and shift under Advanced for the FSK modes,
+// HF utility mode panels (families 430 .. 439, 603 STANAG 4539, 604 3G-ALE, 605 Link 11): band presets, decoded text, events. Automatic by default; speed and shift under Advanced for the FSK modes,
 // the STANAG 4285 profile for that modem (it signals no rate itself).
 #include "dect2/common/time_fmt.h"
 #include "app.h"
@@ -59,6 +59,7 @@ template <int K> void tab(App& a) {
     const dect2::HfUtilTelemetry& t = a.rx.hfutil;
     ImGui::TextUnformatted(dect2::hfUtilSummary(t).c_str());
     if (K <= 1 || K == dect2::kHfuKindHdr) ImGui::TextDisabled("%s", tr("Encrypted traffic stays as bytes; nothing is decrypted."));
+    if (K == dect2::kHfuKindLink11) ImGui::TextDisabled("%s", tr("Frame structure only: the bit mapping and codes of Link 11 are not public."));
     ImGui::Separator();
     if (ImGui::BeginChild("##hfutext", ImVec2(0, 0), false)) {
         ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0);
@@ -84,7 +85,8 @@ template <int K> void receiver(App& a) {
     const dect2::HfUtilTelemetry& t = a.rx.hfutil;
     auto kv = [&](const char* k, const char* fmt, auto... x) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text(fmt, x...); ImGui::PopFont(); };
     kv(tr("state"), "%s", dect2::hfUtilSummary(t).c_str());
-    if (K == dect2::kHfuKindAle3g) { kv(tr("frequency error"), "%+.1f Hz", t.cfoHz); kv(tr("SNR"), "%.1f dB", t.snrDb); kv(tr("3G-ALE PDUs"), "%llu", (unsigned long long)t.pdus); }
+    if (K == dect2::kHfuKindLink11) { kv(tr("Doppler tone offset"), "%+.1f Hz", t.cfoHz); kv(tr("messages"), "%llu", (unsigned long long)t.blocksOk); }
+    else if (K == dect2::kHfuKindAle3g) { kv(tr("frequency error"), "%+.1f Hz", t.cfoHz); kv(tr("SNR"), "%.1f dB", t.snrDb); kv(tr("3G-ALE PDUs"), "%llu", (unsigned long long)t.pdus); }
     else if (K <= 1 || K == dect2::kHfuKindHdr) { kv(tr("frequency error"), "%+.1f Hz", t.cfoHz); kv(tr("SNR"), "%.1f dB", t.snrDb); kv(tr("STANAG 5066 D_PDUs"), "%llu", (unsigned long long)t.pdus); }
     else { kv(tr("speed"), "%.1f Bd", t.baud); kv(tr("tone centre"), "%.0f Hz", t.centreHz); kv(tr("shift"), "%.0f Hz", t.shiftHz); }
     kv(tr("good / bad"), "%llu / %llu", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
@@ -105,4 +107,4 @@ template <int K> void summary(const App& a, std::string& l1, std::string& l2) {
 
 extern const ModeUi kHfuUi[dect2::kHfuKindsAll];
 #define HFU_UI(K, Name) {.sideTitle = "EVENTS", .tabName = Name, .tabIcon = Ic::Radio, .tab = tab<K>, .receiver = receiver<K>, .list = list<K>, .status = status<K>, .summary = summary<K>}
-const ModeUi kHfuUi[dect2::kHfuKindsAll] = {HFU_UI(0, "MIL-STD-188-110"), HFU_UI(1, "STANAG 4285"), HFU_UI(2, "ARQ-E"), HFU_UI(3, "ARQ-N"), HFU_UI(4, "AUTOSPEC"), HFU_UI(5, "SPREAD"), HFU_UI(6, "G-TOR"), HFU_UI(7, "EFR"), HFU_UI(8, "Piccolo"), HFU_UI(9, "Coquelet"), HFU_UI(10, "STANAG 4539"), HFU_UI(11, "3G-ALE")};
+const ModeUi kHfuUi[dect2::kHfuKindsAll] = {HFU_UI(0, "MIL-STD-188-110"), HFU_UI(1, "STANAG 4285"), HFU_UI(2, "ARQ-E"), HFU_UI(3, "ARQ-N"), HFU_UI(4, "AUTOSPEC"), HFU_UI(5, "SPREAD"), HFU_UI(6, "G-TOR"), HFU_UI(7, "EFR"), HFU_UI(8, "Piccolo"), HFU_UI(9, "Coquelet"), HFU_UI(10, "STANAG 4539"), HFU_UI(11, "3G-ALE"), HFU_UI(12, "Link 11")};
