@@ -439,7 +439,9 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
             if (!r.text.empty()) k.text = r.text;
             if (r.toneHz > 100) k.cfg.centreHz = r.toneHz;
             auto audio = makeKbdTx(k);
-            return makeHfdigSynthFromAudio(std::move(audio), s, rate, r.variant == 1);
+            // upper sideband: the keyboard payload has no sideband choice, and r.variant is another payload's field (the RTTY sideband, the PSK
+            // variant, the SSTV mode), which put the signal on the lower sideband, below the dial, whenever it was 1 (#225)
+            return makeHfdigSynthFromAudio(std::move(audio), s, rate, false);
         }
         if (which == 2) {   // FreeDV
             SynthConfig sc = s;

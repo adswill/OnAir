@@ -122,8 +122,6 @@ class HellMod : public Modulator {
 public:
     HellMod(const KbdConfig& c, double centre) : p_(params(std::clamp(c.variant, 0, 6))), centre_(centre) {
         pixRate_ = 14 * p_.colRate;
-        for (int i = 0; i < 32; i++) on_[i] = 0.5 * (1.0 - std::cos(kPi * i / 33));
-        for (int i = 0; i < 32; i++) off_[31 - i] = on_[i];
         for (int i = 0; i < 3; i++) { pendChar('.'); }
     }
     void next(std::vector<float>& out, TextSrc& src) override {
@@ -157,29 +155,33 @@ private:
         }
         nullColumn();
     }
+    // One pixel of audio. On / off keying: a real envelope on one tone, so the spectrum is symmetric about the tone (the requested audio frequency).
+    // The edges of an inked run are raised cosines of up to 4 ms inside its first and last pixel; they used to be a ramp from the start of the last
+    // pixel, which fell to 0 and then jumped back to full level for its last sample (a key click on every falling edge, #225), and a single inked
+    // pixel was cut off hard.
     void sendPixel(int cur, int next, std::vector<float>& out) {
-        const double fs = kFs;
+        const double fs = kFs, step = pixRate_ / fs;
         double tone = centre_;
         if (p_.fsk) tone += (cur ? -1 : 1) * p_.shift / 2.0;
-        int n = 0;
-        for (;;) {
-            double amp;
-            if (p_.fsk) amp = 1.0;
-            else if (p_.colRate > 50) amp = cur;
-            else if (prev_ == 0 && cur == 1) amp = n < 32 ? on_[n] : 1.0;
-            else if (cur == 1 && next == 0) amp = n < 32 ? off_[n] : 1.0;
-            else amp = cur;
+        int len = 0;   // the samples of this pixel (the pixel clock is fractional)
+        for (double c = cnt_; ; ) { len++; c += step; if (c >= 1.0) break; }
+        const bool shaped = !p_.fsk && p_.colRate <= 50 && cur == 1;
+        const int ramp = std::min(32, len);
+        for (int n = 0; n < len; n++) {
+            double amp = p_.fsk ? 1.0 : cur;
+            if (shaped) {
+                if (prev_ == 0 && n < ramp) amp = std::min(amp, 0.5 * (1.0 - std::cos(kPi * (n + 1) / (ramp + 1))));
+                if (next == 0 && len - 1 - n < ramp) amp = std::min(amp, 0.5 * (1.0 - std::cos(kPi * (len - n) / (ramp + 1))));
+            }
             out.push_back((float)(amp * std::sin(ph_)));
             ph_ += 2 * kPi * tone / fs;
             if (ph_ > 2 * kPi) ph_ -= 2 * kPi;
-            n++;
-            cnt_ += pixRate_ / fs;
-            if (cnt_ >= 1.0) { cnt_ -= 1.0; break; }
         }
+        cnt_ += len * step - 1.0;
         prev_ = cur;
     }
     HellP p_;
-    double centre_, pixRate_, ph_ = 0, cnt_ = 0, on_[32], off_[32];
+    double centre_, pixRate_, ph_ = 0, cnt_ = 0;
     int prev_ = 0;
     std::vector<int> pix_;
 };

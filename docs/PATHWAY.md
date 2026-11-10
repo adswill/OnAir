@@ -1326,3 +1326,18 @@ Branch feat38-iss3 on integ-38; details and honest gaps in docs/ISSUES3-3.8.md. 
 Branch feat38-cfrelay on integ-38. The relay runs on Cloudflare: a Worker plus SQLite Durable Objects (Free plan compatible), one Room per host link with the Hibernation API and a Registry for addresses, list and bans, speaking relay protocol v1. No app change (the default relay URL already points at relay.on-air.dev); addresses become https://<label>-r.on-air.dev/ (first level, covered by Universal SSL; path-based links would break the web app's absolute paths). 16 tests under wrangler dev plus the existing end-to-end test with the real onair-server (ONAIR_E2E_RELAY=worker, 32 checks: two guests, reconnect, wrong password). Not deployed. Deploy steps and costs (1 / 10 / 100 radios) in docs/CF-RELAY-3.8.md.
 ## 2026-11-10 Android IQ recording (feat38-android-iq)
 Issue #463: Record IQ in the Android receiver menu (every mode). Reuses the core IqRecorder (CS8 + SigMF); added hw/geolocation fields and a per-recording size cap, JNI calls, app-folder storage, share sheet and Save to Downloads, foreground-service keeps it running with the screen off. Verified only by GitHub CI (no local build per the battery rule); location in metadata not wired on Android. See docs/ANDROID-IQ-3.8.md.
+## 2026-11-10 Hellschreiber fixes for #225 (feat38-hell)
+Fixed for the keyboard modes:
+- A spectrum or waterfall click on a signal inside the sideband now keeps the dial and sets the decoder's audio frequency, as in fldigi. A click outside the sideband moves the dial so the signal lands on the audio frequency in use.
+- Find signal no longer jumps off a locked Hell signal.
+- The keyboard TX payload always transmits on the upper sideband. It used to take another payload's variant field as LSB.
+- The Feld/Slow Hell keying no longer clicks on falling edges.
+- Dual line draws both copies at the same time.
+
+New tests cover:
+- the spectrum peak and sideband symmetry of every variant, at audio and IQ, USB and LSB
+- key clicks
+- click mapping
+- end-to-end decoding at the clicked audio frequency, with offsets and noise
+
+Syntax-checked locally (on battery). The tests run in CI. Simulated signals only. Details are in docs/HELL-3.8.md.

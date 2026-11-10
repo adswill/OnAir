@@ -191,6 +191,7 @@ struct HfdigKbd::Impl {
         if (cfgNew || !eng) build();
         if (clearReq) { t.text.clear(); t.chars = 0; t.callsign.clear(); hellCols.clear(); t.hellTotal = 0; clearReq = false; }
         const bool autoC = cfg.autoCentre;
+        const bool hellFam = cfg.family == KbdHell;   // Hell has no text to judge: its lock alone holds the frequency (the search jumped off a locked signal)
         lk.unlock();
         samples += n;
         size_t i = 0;
@@ -203,7 +204,7 @@ struct HfdigKbd::Impl {
                 for (int k = 0; k < 4096; k++) fb[k] = kbd::cf((float)(win[k] * (0.5 - 0.5 * std::cos(2 * kbd::kPi * k / 4096))), 0);
                 fft.run(fb.data());
                 for (int k = 0; k < 2048; k++) pow[k] += (std::norm(fb[k]) - pow[k]) * 0.15f;
-                if (autoC && !eng->busy && !(eng->locked && plausible()) && ++evals >= 2) { evals = 0; search(samples); }
+                if (autoC && !eng->busy && !(eng->locked && (hellFam || plausible())) && ++evals >= 2) { evals = 0; search(samples); }
             }
         }
         eng->feed(x, n);
