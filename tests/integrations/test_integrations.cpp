@@ -359,6 +359,57 @@ void testHaOnBroker() {
     CHECK(b.connects.size() == 1 && b.connects[0].willTopic == "onair/status" && b.connects[0].willPayload == "offline" && b.connects[0].willRetain, "HA last will");
 }
 
+au::Event sensorEv(const std::string& name, double tempC, double batOk) {
+    au::Event e("sensor.reading");
+    e.at(1792232100.0, "Sensors", 433.92e6);
+    e.str("key", "Nexus-TH|106|1").str("model", "Nexus-TH").str("id", "106").str("channel", "1").str("kind", "weather");
+    e.str("name", name).flag("named", true).num("temperature_C", tempC).num("humidity", 47).num("battery_ok", batOk).num("rssi_db", -8).str("button", "none");
+    return e;
+}
+
+// Home Assistant, one device per sensor (round 4 #3): configs per value, once per connection and again after a rename, one retained state topic
+void testHaSensorsOnBroker() {
+    MqttSettings m;
+    const std::vector<HaSensor> ents = haSensorEntities(m, sensorEv("Freezer", -14.5, 1));
+    CHECK(ents.size() == 4, "4 entities (temperature, humidity, battery, signal), text values none: %zu", ents.size());
+    bool temp = false, bat = false;
+    for (const HaSensor& e : ents) {
+        if (e.configTopic == "homeassistant/sensor/onair_sensor_nexus_th_106_1_temperature_c/config") {
+            js::Value v; std::string err;
+            temp = js::parse(e.configJson, v, err) && v.str("device_class") == "temperature" && v.str("unit_of_measurement") == "\xC2\xB0" "C" && v.str("state_class") == "measurement" &&
+                   v.str("value_template") == "{{ value_json.fields.temperature_C }}" && v.str("state_topic") == "onair/sensor/nexus_th_106_1" && v.get("device") && v.get("device")->str("name") == "Freezer";
+        }
+        if (e.configTopic == "homeassistant/binary_sensor/onair_sensor_nexus_th_106_1_battery_ok/config")
+            bat = e.configJson.find("\"device_class\":\"battery\"") != std::string::npos && e.configJson.find("'OFF' if") != std::string::npos;
+    }
+    CHECK(temp, "temperature entity: class, unit, template, state topic, device name");
+    CHECK(bat, "battery entity is a binary sensor (on = low)");
+    CHECK(haSensorEntities(m, adsb("A", "B")).empty(), "no sensor entities for other events");
+
+    FakeBroker b;
+    b.start();
+    Hub h;
+    h.start();
+    Settings s = mqttSettings(b.port);
+    s.mqtt.haDiscovery = true;
+    h.setSettings(s);
+    h.submit(sensorEv("Freezer", -14.5, 1));
+    h.submit(sensorEv("Freezer", -13.0, 1));
+    h.flush(3000);
+    h.submit(sensorEv("Chest freezer", -12.0, 0));
+    h.flush(3000);
+    b.waitFor(1 + haSensors(s.mqtt).size() + 4 + 3 * 2 + 4, 3000);
+    std::lock_guard<std::mutex> lk(b.mu);
+    int cfgTemp = 0, states = 0;
+    bool renamed = false, lastLow = false;
+    for (const mq::Publish& p : b.got) {
+        if (p.topic == "homeassistant/sensor/onair_sensor_nexus_th_106_1_temperature_c/config" && p.retain) { cfgTemp++; if (p.payload.find("Chest freezer") != std::string::npos) renamed = true; }
+        if (p.topic == "onair/sensor/nexus_th_106_1" && p.retain) { states++; lastLow = p.payload.find("\"battery_ok\":0") != std::string::npos; }
+    }
+    CHECK(cfgTemp == 2 && renamed, "temperature config sent once, again after the rename (%d)", cfgTemp);
+    CHECK(states == 3 && lastLow, "one retained state per reading (%d), the last with the low battery", states);
+}
+
 void testSinks() {
     const std::string path = "test_integrations_out.jsonl";
     std::remove(path.c_str());
@@ -543,6 +594,7 @@ int main() {
     testHa();
     testBroker();
     testHaOnBroker();
+    testHaSensorsOnBroker();
     testSinks();
     testTlsRefused();
     testEngineHook();

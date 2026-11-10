@@ -7,6 +7,7 @@
 #include "i18n/i18n.h"
 #include "dect2/common/time_fmt.h"
 #include "dect2/sensors/sensors_rx.h"
+#include "dect2/sensors/sensors_names.h"
 #include "dect2/sensors/sensors_tel.h"
 #include <algorithm>
 #include <cmath>
@@ -37,6 +38,15 @@ struct State {
     std::string note;
     std::string graphKey;               // which value of the selected sensor the graph shows ("" or kBothKey: the two main values together)
     std::set<std::string> pinned;       // sensors that never expire (saved as sensorsPinned)
+    dect2::SensorNames names;           // the user's names (saved as sensorsNames)
+    std::set<std::string> hintsNo;      // move hints answered "No" this session (by the new key)
+    std::string nameKey;                // the Name popup is for this sensor
+    char nameBuf[64] = {};
+    std::string alertKey, alertField, alertNote;   // the Alert popup
+    int alertAbove = 1;
+    double alertValue = 0;
+    double lastTouch = 0;
+    bool openName = false, openAlert = false;   // open the popup on the next frame (asked from inside the table)
 };
 State S;
 
@@ -73,6 +83,8 @@ void load(App& a) {
         while (std::getline(ps, k, '\n')) if (!k.empty()) S.pinned.insert(k);
         a.engine.sensors().setPinned(std::vector<std::string>(S.pinned.begin(), S.pinned.end()));
     }
+    S.names.parse(plat::prefs().getS("sensorsNames", ""));
+    a.engine.sensors().setNames(S.names.plain());
     std::stringstream ss(plat::prefs().getS("sensorsFlex", ""));
     std::string l;
     while (std::getline(ss, l, '\n')) if (!l.empty()) S.custom.push_back(l);
@@ -85,6 +97,11 @@ void load(App& a) {
 void saveCustom(App& a) {
     plat::prefs().setS("sensorsFlex", join(S.custom, '\n'));
     a.engine.sensors().setCustomDecoders(S.custom);
+}
+
+void saveNames(App& a) {
+    plat::prefs().setS("sensorsNames", S.names.serialize());
+    a.engine.sensors().setNames(S.names.plain());
 }
 
 void saveDiff() {
@@ -198,6 +215,71 @@ void sensorsView(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("One line per value: topic and payload, topics as rtl_433's MQTT output (rtl_433/devices/<model>/<channel>/<id>/<value>), ready for mosquitto_pub."));
     if (!S.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", S.note.c_str()); }
 
+    // a named sensor went quiet and one of the same model and channel appeared just after: a battery change gives most sensors a new id
+    {
+        const int64_t nowH = (int64_t)std::time(nullptr);
+        if (ImGui::GetTime() - S.lastTouch > 5) { S.lastTouch = ImGui::GetTime(); if (S.names.touch(t)) plat::prefs().setS("sensorsNames", S.names.serialize()); }
+        for (const auto& h : S.names.hints(t, nowH)) {
+            if (S.hintsNo.count(h.toKey)) continue;
+            std::string m, id, ch, m2, id2, ch2;
+            dect2::SensorNames::splitKey(h.fromKey, m, id, ch); dect2::SensorNames::splitKey(h.toKey, m2, id2, ch2);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.3f, 1), tr("\"%s\" (%s %s) went quiet and %s %s appeared on the same channel. New battery?"), h.name.c_str(), m.c_str(), id.c_str(), m2.c_str(), id2.c_str());
+            ImGui::SameLine();
+            if (ImGui::SmallButton((std::string(tr("Move the name")) + "##mv" + h.toKey).c_str())) { S.names.move(h.fromKey, h.toKey, nowH); saveNames(a); }
+            ImGui::SameLine();
+            if (ImGui::SmallButton((std::string(tr("No")) + "##mvno" + h.toKey).c_str())) S.hintsNo.insert(h.toKey);
+            break;   // one at a time
+        }
+    }
+    if (S.openName) { ImGui::OpenPopup("##sensname"); S.openName = false; }
+    if (ImGui::BeginPopup("##sensname")) {
+        ImGui::TextUnformatted(tr("Name this sensor"));
+        ImGui::TextDisabled("%s", S.nameKey.c_str());
+        ImGui::SetNextItemWidth(220 * gUi);
+        if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+        const bool enter = ImGui::InputText("##sensnm", S.nameBuf, sizeof S.nameBuf, ImGuiInputTextFlags_EnterReturnsTrue);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Shown in the table, the graph, the automations and Home Assistant. Empty removes the name."));
+        if (ImGui::Button(tr("Save##sensnm")) || enter) { S.names.set(S.nameKey, S.nameBuf, (int64_t)std::time(nullptr)); saveNames(a); ImGui::CloseCurrentPopup(); }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Cancel##sensnm"))) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+    // Alert: a threshold rule for one sensor (sensors_names.h sensorAlertRule), shown and edited in Automations afterwards
+    if (S.openAlert) { ImGui::OpenPopup("##sensalert"); S.openAlert = false; }
+    if (ImGui::BeginPopup("##sensalert")) {
+        const dect2::SensorDevice* ad = nullptr;
+        for (const auto& d : t.devices) if (d.key == S.alertKey) ad = &d;
+        if (!ad) { ImGui::TextDisabled("%s", tr("The sensor left the list.")); }
+        else {
+            const std::string label = dect2::sensorLabel(*ad, S.names);
+            ImGui::Text(tr("Alert for %s"), label.c_str());
+            std::vector<const dect2::SensorField*> nums;
+            for (const auto& f : ad->latest) if (f.numeric && f.key != "id" && f.key != "channel" && f.key != "subtype" && f.key != "mic") nums.push_back(&f);
+            if (nums.empty()) ImGui::TextDisabled("%s", tr("This sensor sends no values to compare."));
+            else {
+                if (S.alertField.empty()) { S.alertField = nums.front()->key; S.alertValue = nums.front()->num; }
+                ImGui::SetNextItemWidth(170 * gUi);
+                if (ImGui::BeginCombo("##sensalf", S.alertField.c_str())) {
+                    for (const auto* f : nums) if (ImGui::Selectable(f->key.c_str(), f->key == S.alertField)) { S.alertField = f->key; S.alertValue = f->num; }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::RadioButton(tr("above"), &S.alertAbove, 1); ImGui::SameLine(); ImGui::RadioButton(tr("below"), &S.alertAbove, 0); ImGui::SameLine();
+                ImGui::SetNextItemWidth(90 * gUi);
+                ImGui::InputDouble("##sensalv", &S.alertValue, 0, 0, "%.2f");
+                ImGui::TextDisabled("%s", tr("A notification and a sound, at most every 30 minutes while it holds. Edit or switch it off in View > Automations."));
+                if (ImGui::Button(tr("Add the alert##sensal"))) {
+                    std::string err;
+                    if (automationAddRule(dect2::sensorAlertRule(ad->key, label, S.alertField, S.alertAbove != 0, S.alertValue), err)) { S.note = tr("Alert added (View > Automations)."); ImGui::CloseCurrentPopup(); }
+                    else S.alertNote = err;
+                }
+                if (!S.alertNote.empty()) ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.4f, 1), "%s", S.alertNote.c_str());
+            }
+        }
+        ImGui::EndPopup();
+    }
+
     const float graphH = 170 * gUi;   // the lower box: the history of the selected row
     if (!ImGui::BeginTable("##sensl", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable,
                            ImVec2(0, std::max(60.f * gUi, ImGui::GetContentRegionAvail().y - graphH - 6 * gUi)))) return;
@@ -228,10 +310,16 @@ void sensorsView(App& a) {
         }
         ImGui::TableNextColumn();
         const bool sel = d.key == S.selKey;
-        if (ImGui::Selectable((d.model + "##" + d.key).c_str(), sel, ImGuiSelectableFlags_SpanAllColumns)) { S.selKey = sel ? "" : d.key; S.graphKey.clear(); }
+        const std::string nm = S.names.get(d.key);
+        if (ImGui::Selectable(((nm.empty() ? d.model : nm) + "##" + d.key).c_str(), sel, ImGuiSelectableFlags_SpanAllColumns)) { S.selKey = sel ? "" : d.key; S.graphKey.clear(); }
         if (ImGui::IsItemHovered()) {
             const std::string o = otherText(d);
-            ImGui::SetTooltip("%s: %s  (%llu)\n%s", d.kind.c_str(), d.model.c_str(), (unsigned long long)d.count, o.c_str());
+            ImGui::SetTooltip("%s: %s  (%llu)\n%s\n%s", d.kind.c_str(), d.model.c_str(), (unsigned long long)d.count, o.c_str(), tr("Right-click: name this sensor, or an alert"));
+        }
+        if (ImGui::BeginPopupContextItem(("##sensctx" + d.key).c_str())) {
+            if (ImGui::MenuItem(tr("Name..."))) { S.nameKey = d.key; std::snprintf(S.nameBuf, sizeof S.nameBuf, "%s", nm.c_str()); S.openName = true; }
+            if (ImGui::MenuItem(tr("Alert..."))) { S.alertKey = d.key; S.alertField.clear(); S.alertNote.clear(); S.openAlert = true; }
+            ImGui::EndPopup();
         }
         ImGui::TableNextColumn(); ImGui::TextUnformatted(d.id.c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(d.channel.c_str());
@@ -270,7 +358,7 @@ void sensorsView(App& a) {
     const bool canBoth = s2 != nullptr;
     if (S.graphKey.empty() || (S.graphKey == kBothKey && !canBoth) || (S.graphKey != kBothKey && !find(S.graphKey.c_str()))) S.graphKey = canBoth ? kBothKey : s1->key;
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted(sd->model.c_str()); ImGui::SameLine();
+    ImGui::TextUnformatted(dect2::sensorLabel(*sd, S.names).c_str()); ImGui::SameLine();
     ImGui::SetNextItemWidth(200 * gUi);
     const std::string cur = S.graphKey == kBothKey ? std::string(tr("Both values")) : S.graphKey;
     if (ImGui::BeginCombo("##sensg", cur.c_str())) {
@@ -492,7 +580,7 @@ void list(App& a) {
     ImGui::TableSetupColumn(tr("Sensor")); ImGui::TableSetupColumn(tr("Value"), ImGuiTableColumnFlags_WidthStretch);
     for (const auto& d : dv) {
         ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::TextUnformatted((d.model + (d.id.empty() ? "" : " " + d.id)).c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::sensorLabel(d, S.names).c_str());
         ImGui::TableNextColumn();
         std::string v = tempText(d);
         const std::string h = humText(d), p = presText(d);

@@ -58,7 +58,7 @@ std::string describe(const std::string& kind, const std::map<std::string, std::s
 int familyOf(const std::string& type) {
     const size_t d = type.find('.');
     const std::string f = type.substr(0, d);
-    static const char* const names[kFamilies] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "gnss", "lora", "ble", "rid", "dsc", "signal", "receiver", "satellite", "time", "plugin", "voice", "session", "msg"};
+    static const char* const names[kFamilies] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "gnss", "lora", "ble", "rid", "dsc", "signal", "receiver", "satellite", "time", "plugin", "voice", "session", "msg", "sensor", "ham", "broadcast", "image"};
     for (int i = 0; i < kFamilies; i++) if (f == names[i]) return i;
     if (f == "sferics") return FSignal;   // "sferics.storm" is sent under the signal family (sferics_rx.cpp)
     return -1;

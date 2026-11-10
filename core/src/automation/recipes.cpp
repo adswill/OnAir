@@ -74,6 +74,21 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("APRS message to me", "An APRS message addressed to your callsign (set it in APRS, Messages): tells you and beeps.",
         "aprs.message", "to_me",
         {act("notify", {{"title", "APRS message from {{from}}"}, {"body", "{{text}}"}}), act("sound")}, "from", 30));
+    v.push_back(rule("Freezer too warm", "A sensor you named with \"freezer\" in the name reads above -12 °C. Name your sensors in Sensors (click the name).",
+        "sensor.reading", "named and name contains 'freezer' and temperature_C > -12",
+        {act("notify", {{"title", "{{name}} is at {{temperature_C}} °C"}, {"body", "Above -12 °C"}}), act("sound")}, "key", 1800));
+    v.push_back(rule("Frost", "One of your named sensors reads below 0 °C.",
+        "sensor.reading", "named and temperature_C < 0",
+        {act("notify", {{"title", "Frost: {{name}} {{temperature_C}} °C"}, {"body", "Below 0 °C"}})}, "key", 6 * 3600));
+    v.push_back(rule("Water leak", "One of your named leak sensors reports water.",
+        "sensor.reading", "named and (detect_wet == 1 or water == 1 or leak == 1)",
+        {act("notify", {{"title", "Water: {{name}}"}, {"body", "The leak sensor is wet"}}), act("sound")}, "key", 300));
+    v.push_back(rule("Door or window opened", "One of your named door or window sensors reports open.",
+        "sensor.reading", "named and (contact_open == 1 or opened == 1)",
+        {act("notify", {{"title", "Open: {{name}}"}, {"body", "{{model}} {{id}}"}})}, "key", 60));
+    v.push_back(rule("Sensor battery low", "One of your named sensors reports a low battery. Once a day per sensor.",
+        "sensor.reading", "named and battery_low",
+        {act("notify", {{"title", "Battery low: {{name}}"}, {"body", "{{model}} {{id}}"}})}, "key", 86400));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));
