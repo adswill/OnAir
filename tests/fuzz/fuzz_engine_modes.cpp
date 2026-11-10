@@ -250,7 +250,28 @@ std::vector<Seg> inputs(const std::vector<cf32>& valid, size_t L, std::mt19937& 
 
 // ------------------------------------------------------------------ child: one mode
 
-#define STAGE(name) do { printf("    stage: %s\n", name); fflush(stdout); } while (0)
+std::atomic<int64_t> gBeat{0};   // the child's main loop is alive (steady-clock ms); a poll that blocks behind a hung receiver stops it
+int64_t nowMs() { return std::chrono::duration_cast<std::chrono::milliseconds>(Clock::now().time_since_epoch()).count(); }
+#define STAGE(name) do { gBeat = nowMs(); printf("    stage: %s\n", name); fflush(stdout); } while (0)
+
+// a thread that never touches the engine: when the main loop has not moved for 60 s it prints HANG with the stacks (macOS sample) and exits
+void startWatchdog(const std::string& id) {
+    gBeat = nowMs();
+    std::thread([id] {
+        for (;;) {
+            std::this_thread::sleep_for(std::chrono::seconds(1));
+            if (nowMs() - gBeat.load() < 60000) continue;
+            printf("    HANG in %s: the engine did not return for 60 s\n", id.c_str());
+            fflush(stdout);
+#ifdef __APPLE__
+            const std::string cmd = "/usr/bin/sample " + std::to_string(getpid()) + " 1 2>/dev/null | grep -E 'dect2::' | head -40";
+            if (system(cmd.c_str()) != 0) {}
+#endif
+            fflush(stdout);
+            _exit(4);
+        }
+    }).detach();
+}
 
 size_t heapInUse() {
 #ifdef ONAIR_ASAN
@@ -270,6 +291,7 @@ bool playThrough(Engine& e, const Entry& en, double rate, size_t total, const ch
     double lastSig = -1;
     for (;;) {
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        gBeat = nowMs();
         if (e.latestRx(rx, seq)) { seq = rx.seq; (void)modeSummary(rx); }
         const uint64_t sent = gFeed.sent.load();
         double rxs = 0, sig = 0;
@@ -290,6 +312,7 @@ int child(const Entry& en, const std::vector<Entry>& partners, uint32_t seed, bo
     const double rate = en.rate;
     const size_t L = (size_t)std::min(rate * (lng ? 0.2 : 0.03), (double)(lng ? 1 << 20 : 1 << 16));
     const size_t nValid = (size_t)std::min(rate * (lng ? 2.0 : 0.25), (double)(lng ? 1 << 23 : 1 << 20));
+    startWatchdog(en.id);
     STAGE("test signal");
     const std::vector<cf32> valid = testSignal(en, rate, nValid);
     printf("    %zu samples of test signal at %.0f Hz\n", valid.size(), rate);
@@ -330,7 +353,7 @@ int child(const Entry& en, const std::vector<Entry>& partners, uint32_t seed, bo
     auto runFor = [&](int ms) {
         RxTelemetry rx; uint64_t seq = 0;
         const auto t1 = Clock::now() + std::chrono::milliseconds(ms);
-        while (Clock::now() < t1) { if (e.latestRx(rx, seq)) { seq = rx.seq; (void)modeSummary(rx); } std::this_thread::sleep_for(std::chrono::milliseconds(5)); }
+        while (Clock::now() < t1) { gBeat = nowMs(); if (e.latestRx(rx, seq)) { seq = rx.seq; (void)modeSummary(rx); } std::this_thread::sleep_for(std::chrono::milliseconds(5)); }
     };
     STAGE("retune");
     if (!e.start(dev, t, fo)) return 3;

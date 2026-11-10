@@ -652,9 +652,12 @@ struct FygeoReceiver::Impl {
             const cf32 a = yk * g, m = ym * g;
             const float e = ((yprev - a) * std::conj(m)).real();
             yprev = a;
-            spsEst += tBeta * e;
+            if (std::isfinite(e)) spsEst += tBeta * e;
             spsEst = std::max(sps * 0.995, std::min(sps * 1.005, spsEst));
-            pos += spsEst + tAlpha * e * sps;
+            // a burst after silence (the AGC still tiny) or a damaged sample gives a wild error: the step stays between half a symbol and
+            // two, so the loop always moves forward (a negative step hung it) and never jumps past the buffer (fuzz_engine_modes)
+            const double step = spsEst + tAlpha * (std::isfinite(e) ? e : 0.f) * sps;
+            pos += std::max(0.5 * spsEst, std::min(2.0 * spsEst, step));
             svSymbol(a);
         }
         const int drop = (int)std::floor(pos - spsEst - 4);

@@ -328,9 +328,12 @@ struct GgakReceiver::Impl {
             const float p = std::norm(a);
             agc += 0.01f * (1.f - agc * agc * p);
             agc = std::max(0.1f, std::min(agc, 20.f));
-            spsEst += tBeta * err;
+            if (std::isfinite(err)) spsEst += tBeta * err;
             spsEst = std::max(sps * 0.995, std::min(sps * 1.005, spsEst));
-            pos += spsEst + tAlpha * err * sps;
+            // a burst after silence (the AGC still tiny) or a damaged sample gives a wild error: the step stays between half a symbol and
+            // two, so the loop always moves forward (a negative step hung it) and never jumps past the buffer (fuzz_engine_modes)
+            const double step = spsEst + tAlpha * (std::isfinite(err) ? err : 0.f) * sps;
+            pos += std::max(0.5 * spsEst, std::min(2.0 * spsEst, step));
             symbol(a * agc);
         }
         const int drop = (int)std::floor(pos - spsEst - 4);
