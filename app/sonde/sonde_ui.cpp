@@ -16,6 +16,9 @@
 #include <ctime>
 #include <algorithm>
 #include <cmath>
+void sondeSitesTick(App& a, bool live);   // sonde_sites_ui.cpp
+void sondeSitesView(App& a);
+void sondeSitesDraw(ImDrawList* dl);
 
 namespace {
 
@@ -70,6 +73,7 @@ const SondeInfo* selected(const SondeTelemetry& t) {
 bool descending(const SondeInfo& s) { return s.hasVel && s.vSpeed < -1.0 && s.maxAltM > s.altM + 200; }
 
 void tick(App& a) {
+    sondeSitesTick(a, live(a));
     loadState();
     if (a.engine.running()) {
         dect2::SondeReceiver& r = a.engine.sonde();
@@ -113,6 +117,7 @@ void mapView(App& a, ImVec2 size) {
     const bool clicked = adsbmap::clickedAt(click);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
+    sondeSitesDraw(dl);   // launch sites and their landings (sonde_sites_ui.cpp)
     const SondeInfo* sel = on ? selected(t) : nullptr;
     const SondeInfo* hit = nullptr;
     float hitD = 18.f * gUi;
@@ -364,10 +369,11 @@ void carrierStrip(const App& a, ImVec2 size) {
 
 void tab(App& a) {
     kit::modeHeader({13, "Radiosondes", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}});
+    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}, {tr("Sites"), 3, true}});
     if (S.viewMode == 2) { kit::sessionItems(13, 3, "sonde"); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.viewMode == 1) { sondeTable(a, false); return; }
+    if (S.viewMode == 3) { sondeSitesView(a); return; }
     const float cw = std::min(300.f * gUi, W * 0.32f);
     ImGui::BeginChild("##sonde_l", ImVec2(W - cw - 8 * gUi, H));
     mapView(a, ImGui::GetContentRegionAvail());
