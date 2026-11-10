@@ -4,7 +4,8 @@
 // + 2 dB must decode (at least two of three), the same at the carrier error of a 20 ppm radio, and two noise-only trials must give nothing.
 // It also prints the CPU seconds the receiver used per second of signal on the clean test signal (all threads; getrusage).
 // ONAIR_TEST_LONG=1: the full sweep (sens_sweep's own search, 6 trials a point, 1 dB steps) for AWGN, 20 ppm carrier and a 50 ppm clock, and
-// every threshold must be no worse than the recorded one + 1 dB. ONAIR_SENS39A_MODE=<id> limits either run to one mode.
+// every threshold must be no worse than the recorded one + 1 dB. ONAIR_SENS39A_MODE=<id> limits either run to one mode;
+// ONAIR_SENS39A_SNR=<dB> [ONAIR_SENS39A_SCEN=<scenario>] prints the six trials of one point instead (diagnosis).
 // The trials and the impairments are those of tools/sens/sens_sweep.cpp (included here), so the figures are the ones in the doc.
 #define SENS_SWEEP_NO_MAIN
 #include "sens_sweep.cpp"
@@ -28,7 +29,7 @@ const Row kRows[] = {
     {"cdr", -4, -4, false},
     {"drm16", 9, 9, false},
     {"meteor", 0, 0, true},
-    {"hrpt", 3, 3, true},
+    {"hrpt", 2, 2, true},
     {"fy3ahrpt", 2, 2, true},
     {"goes", 0, 0, true},
     {"gk2alrit", 0, 0, true},
@@ -95,7 +96,8 @@ int main() {
         ran++;
         printf("== %s: clean %.0f units/trial (needs %.0f), lock %.2f s, CPU %.3f s per signal second\n", row.id, r0.goodMean, need, r0.lockMed, cpuPerSec);
         if (const char* dbg = getenv("ONAIR_SENS39A_SNR")) {   // diagnosis: every trial of one point (awgn) with its unit counts
-            const Scenario* sc = findScenario(scs, "awgn");
+            const Scenario* sc = findScenario(scs, getenv("ONAIR_SENS39A_SCEN") ? getenv("ONAIR_SENS39A_SCEN") : "awgn");
+            if (!sc) { printf("no such scenario\n"); return 2; }
             const double snr = atof(dbg);
             fflush(stdout);
             const uint64_t key = mix64(hashStr(m.id) ^ mix64(hashStr(sc->name)) ^ mix64((uint64_t)llround(snr * 10) + 1000) ^ cfg.seed);

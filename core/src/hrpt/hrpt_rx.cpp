@@ -133,6 +133,11 @@ struct HrptReceiver::Impl {
     // coarse search
     bool coarseDone = false;
     std::vector<float> acqRe, acqIm, psd;
+    int acqRounds = 0;
+    bool fine4 = false;                  // the coarse carrier came from the fourth-power line
+    int64_t settleSyms = 0;              // symbols the carrier loop is held near the coarse carrier
+    double settleMax = 0.25;
+    std::vector<float> a4Re, a4Im, psd4;   // QPSK: the fourth power (a line at four times the offset)
     int acqFill = 0, acqBlocks = 0;
 
     // AHRPT chain
@@ -228,8 +233,9 @@ struct HrptReceiver::Impl {
         amp = 0; prevI = prevQ = 0; nSym = 0; lockAvg = 0; varAvg = 1;
         loopGains(0.02);
         kp = 0.02 * sps; ki = 2e-5 * sps;
-        coarseDone = false; acqFill = 0; acqBlocks = 0;
+        coarseDone = false; acqFill = 0; acqBlocks = 0; acqRounds = 0; fine4 = false; settleSyms = 0;
         acqRe.assign(kAcqN, 0); acqIm.assign(kAcqN, 0); psd.assign(kAcqN, 0);
+        a4Re.assign(kAcqN, 0); a4Im.assign(kAcqN, 0); psd4.assign(kAcqN, 0);
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         resetChain();
     }
@@ -273,11 +279,26 @@ struct HrptReceiver::Impl {
     void coarseSample(cf32 y) {
         if (bpsk) y = y * y;
         acqRe[(size_t)acqFill] = y.real(); acqIm[(size_t)acqFill] = y.imag();
+        if (!bpsk) {   // through the matched filter first: the band is 2.6 times wider than the signal, and the fourth power loses SNR^4
+            cf32 z;
+            rrc.push(y, z);
+            const cf32 y2 = z * z, y4 = y2 * y2;
+            const float m2 = std::norm(z);
+            a4Re[(size_t)acqFill] = m2 > 0 ? y4.real() / m2 : 0.f; a4Im[(size_t)acqFill] = m2 > 0 ? y4.imag() / m2 : 0.f;
+        }
         if (++acqFill < kAcqN) return;
         acqFill = 0;
-        for (int i = 0; i < kAcqN; i++) { const float w = (float)(0.5 - 0.5 * std::cos(2 * kPi * i / kAcqN)); acqRe[(size_t)i] *= w; acqIm[(size_t)i] *= w; }
+        for (int i = 0; i < kAcqN; i++) {
+            const float w = (float)(0.5 - 0.5 * std::cos(2 * kPi * i / kAcqN));
+            acqRe[(size_t)i] *= w; acqIm[(size_t)i] *= w;
+            if (!bpsk) { a4Re[(size_t)i] *= w; a4Im[(size_t)i] *= w; }
+        }
         fftSplit(acqRe.data(), acqIm.data(), kAcqLog2, false);
         for (int i = 0; i < kAcqN; i++) psd[(size_t)i] += acqRe[(size_t)i] * acqRe[(size_t)i] + acqIm[(size_t)i] * acqIm[(size_t)i];
+        if (!bpsk) {
+            fftSplit(a4Re.data(), a4Im.data(), kAcqLog2, false);
+            for (int i = 0; i < kAcqN; i++) psd4[(size_t)i] += a4Re[(size_t)i] * a4Re[(size_t)i] + a4Im[(size_t)i] * a4Im[(size_t)i];
+        }
         if (++acqBlocks < kAcqBlocks) return;
         acqBlocks = 0;
         const double bin = fd / kAcqN;
@@ -321,12 +342,36 @@ struct HrptReceiver::Impl {
                 if (den < 0) frac = 0.5 * (a - d) / den;
             }
             est = (bi - maxShift + frac) * bin;
+            // 3.9: the spectrum shape fit is flat-topped (alpha 0.6) and was off by up to about 20 kHz even on a clean signal, which the narrow
+            // carrier loop then had to pull in (and at 2 dB sometimes did not). The fourth power has a line at four times the offset: a quarter
+            // bin, so a few hundred Hz after the interpolation. It is used when the line stands clear of the rest (it fades at low SNR).
+            const int m4 = std::max(1, std::min((int)(4 * kSearchHz / bin), kAcqN / 2 - 2));
+            int b4 = 0; double v4 = -1, sum4 = 0;
+            for (int k = -m4; k <= m4; k++) {
+                const double v = psd4[(size_t)((k + kAcqN) % kAcqN)];
+                sum4 += v;
+                if (v > v4) { v4 = v; b4 = k; }
+            }
+            const double mean4 = (sum4 - v4) / (2 * m4);
+            if (v4 <= 4 * mean4 && acqRounds < 3) { acqRounds++; return; }   // weak line: integrate up to four times longer (32 ms) first
+            if (v4 > 4 * mean4) {
+                const double a = psd4[(size_t)((b4 - 1 + kAcqN) % kAcqN)], b = v4, d = psd4[(size_t)((b4 + 1 + kAcqN) % kAcqN)];
+                const double den = a - 2 * b + d;
+                const double f4 = den < 0 ? 0.5 * (a - d) / den : 0;
+                est = (b4 + f4) * bin / 4;
+                fine4 = true;
+            }
+            std::fill(psd4.begin(), psd4.end(), 0.f);
         }
         std::fill(psd.begin(), psd.end(), 0.f);
         coarseHz += est;
+        acqRounds = 0;
         step = std::polar(1.0, -2 * kPi * (offset + coarseHz) / rate);
         coarseDone = true;
         theta = 0; omega = 0; nSym = 0; loopGains(0.02);
+        settleSyms = fine4 ? (int64_t)(rs * 0.05) : 0;
+        settleMax = 2 * kPi * 3000 / rs;
+        fine4 = false;
     }
 
     // --- symbols ---
@@ -369,7 +414,11 @@ struct HrptReceiver::Impl {
         const float eC = bpsk ? std::clamp((float)sgn(In) * Qn, -1.f, 1.f) : std::clamp((float)sgn(In) * Qn - (float)sgn(Qn) * In, -1.f, 1.f);
         theta += omega + lalpha * eC;
         omega += lbeta * eC;
-        omega = std::clamp(omega, -0.25, 0.25);
+        // while the loop settles after a fourth-power estimate (good to a few hundred Hz) it may not run off to a false lock: the wide start
+        // took omega to 0.13 rad/symbol (48 kHz) on a clean estimate in about one start in ten at 3 dB; released after 50 ms (Doppler moves by
+        // a few tens of Hz in that time)
+        const double wMax = nSym < settleSyms ? settleMax : 0.25;
+        omega = std::clamp(omega, -wMax, wMax);
         if (theta > kPi) theta -= 2 * kPi; else if (theta < -kPi) theta += 2 * kPi;
         const float eTn = std::clamp(eT / (amp * amp), -1.f, 1.f);
         tau += T + kp * eTn;
