@@ -504,6 +504,7 @@ static const SubMode kSubModes[] = {
     {"wfbng",      "wfb-ng / OpenHD", 602, 1, 0, 5805.0, {0, 0, 0}},
     {"npr",        "New Packet Radio", 603, 4, 0, 437.0, {0, 0, 0}},
     {"winmor",     "WINMOR",     603, 8, 0, 7.1,    {0, 0, 0}},   // dial frequency, upper sideband
+    {"mioty",      "mioty",      603, 16, 0, 868.18, {0, 0, 0}},   // EU0 / EU1 channel A
     {"pocsag",     "POCSAG",     25, 1, 0,  466.075, {1, 0, 0}},
     {"flex",       "FLEX",       25, 2, 0,  929.6625, {2, 0, 0}},
     {"navtex",     "NAVTEX",     17, 0, 1,  0.518,   {1, 0, 0}},
