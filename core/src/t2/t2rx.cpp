@@ -302,6 +302,8 @@ void T2Receiver::markGap(size_t skippedSamples) {
     I.gapReset(skippedSamples);
 }
 
+void T2Receiver::setBlocking(bool on) { p_->plpDec.setBlocking(on); }
+
 void T2Receiver::setPipelined(bool on) {
     Impl& I = *p_;
     if (on == I.pipelined) return;

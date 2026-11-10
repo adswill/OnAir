@@ -235,6 +235,7 @@ PlpDecoder::PlpDecoder(int threads) {
 PlpDecoder::~PlpDecoder() {
     stop_ = true;
     cv_.notify_all();
+    idle_.notify_all();   // a blocking submit() waits on it
     if (th_.joinable()) th_.join();
 }
 
@@ -242,6 +243,7 @@ bool PlpDecoder::submit(PlpJob&& job) {
     std::unique_lock<std::mutex> lk(mu_);
     static const bool bench = getenv("DECT2_NOPACE") != nullptr;   // benchmarks never drop a frame: wait for the decoder instead
     if (bench) idle_.wait(lk, [&] { return jobs_.empty() && !busy_; });
+    else if (blocking_) idle_.wait(lk, [&] { return jobs_.size() < 6 || stop_; });
     if (jobs_.size() >= 6) { dropped_++; return false; }   // a slow stretch is absorbed by the queue; only a real backlog drops a frame
     backlog_ = (int)jobs_.size() + 1;
     jobs_.push_back(std::move(job));

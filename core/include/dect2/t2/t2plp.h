@@ -64,6 +64,8 @@ public:
     bool poll(PlpResult& out); // oldest finished result
     int pending() const;
     uint64_t dropped() const { return dropped_; }
+    // A recording or a test: submit() waits for room in the queue instead of dropping the frame (a live radio cannot wait: off by default)
+    void setBlocking(bool b) { blocking_ = b; }
     static PlpResult decodeNow(const PlpJob& job, int threads, bool useGpu = false, const std::atomic<int>* backlog = nullptr);
     // 0 = CPU, 1 = GPU, 2 = auto
     // Auto means: the GPU whenever there is one (decoding on the CPU only keeps up on easy signals, and a frame that is late is a hole in the picture).
@@ -84,6 +86,7 @@ private:
     std::deque<PlpJob> jobs_;
     std::deque<PlpResult> results_;
     std::atomic<bool> stop_{false};
+    std::atomic<bool> blocking_{false};
     std::atomic<uint64_t> dropped_{0};
     std::atomic<int> backlog_{0};   // jobs waiting behind the one being decoded
     bool busy_ = false;
