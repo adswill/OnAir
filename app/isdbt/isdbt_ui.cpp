@@ -11,7 +11,7 @@ void setIsdbtBandwidth(App& a, int mhz) {
     if (a.engine.running()) startReceiver(a);   // the receiver takes the width (and the radio its rate) when it starts
 }
 
-static bool telemI(App& a) { return a.engine.running() && a.rx.standard == 5; }
+static bool telemI(App& a) { return a.engine.running() && (a.rx.standard == 5 || a.rx.standard == 731); }   // ISDB-T, ISDB-TSB
 
 static isdbt::Params paramsOf(const RxTelemetry& t) {
     isdbt::Params p;

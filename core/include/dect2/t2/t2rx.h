@@ -364,6 +364,9 @@ struct RxTelemetry {
         int symbolIdx = 0;
         uint64_t fecDropped = 0;   // symbols the error correction thread was too slow for (pipelined receiver: dropped, the decoder restarted)
         bool viterbiOnGpu = false; // the Viterbi runs on the GPU (GpuViterbi), not on the CPU
+        bool indepth = false, dvbh = false, timeSlicing = false, mpeFec = false;   // DVB-H (EN 300 744 annex F): in-depth interleaver, TPS service bits
+        int mpePid = -1;           // DVB-H data link (EN 301 192): the last MPE stream heard (-1 none), its datagrams and MPE-FEC rows
+        uint64_t mpeDatagrams = 0, mpeRowsCorrected = 0, mpeRowsFailed = 0;
     } dvbt;
     struct Isdbt {               // ISDB-T only: the TMCC parameters and the statistics of the three layers
         bool tmccOk = false;

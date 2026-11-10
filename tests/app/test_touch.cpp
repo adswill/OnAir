@@ -190,6 +190,10 @@ static void autoStart() {
     CHECK(!autoTouch(1920, 1080, false) && !autoTouch(1366, 768, false) && !autoTouch(1280, 680, false), "laptops do not");
     CHECK(!autoTouch(800, 480, true), "a saved choice is kept");
     CHECK(!autoTouch(0, 0, false), "unknown screen size");
+    // #139: an install from before 3.7 has "touchUi" = false saved by every save; that is not a choice, so the small screen still starts in touch once
+    CHECK(autoTouch(640, 480, touchChosen(false, false)), "an upgrade on a 640 x 480 screen starts in touch once");
+    CHECK(!autoTouch(640, 480, touchChosen(false, true)), "after the automatic start, turning it off is kept");
+    CHECK(touchChosen(true, false), "touch already on");
 }
 
 int main() {

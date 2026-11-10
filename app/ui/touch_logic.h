@@ -193,6 +193,9 @@ inline bool isDrag(float dx, float dy, float slop = 10.f) { return std::hypot(dx
 
 // First start on a small screen (a handheld, a 7 inch Raspberry Pi panel, a cyberdeck, #139): the touch interface is the better start than a
 // desktop layout squeezed into 800 x 480. Only when the user never chose (no saved touch setting) and the usable screen is small.
+// Whether the user already chose: the automatic start was offered once (touchAutoSeen), or the touch interface is on. The saved "touchUi" key alone
+// is not a choice: every save writes it (false by default), so an install from before 3.7 never got the automatic start (#139).
+inline bool touchChosen(bool savedTouchOn, bool autoSeen) { return savedTouchOn || autoSeen; }
 inline bool autoTouch(int workW, int workH, bool chosenBefore) {
     if (chosenBefore || workW <= 0 || workH <= 0) return false;
     return workW <= 1100 || workH <= 560;   // 800 x 480, 1024 x 600, 720 x 720: yes; a 1280 x 720 laptop: no

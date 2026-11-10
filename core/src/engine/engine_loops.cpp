@@ -101,11 +101,11 @@ void Engine::analysisLoop() {
         if (const uint64_t d = ring_.dropped(); d != ringDroppedSeen_.load()) { ringDroppedSeen_ = d; cpuDropEvents_++; lastCpuDropNs_ = steadyNs(); }
         {   // the receiver's load: its time on this thread against the signal time it handled, over about two seconds
             const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
-            if (loadT_ == 0 || nSamp_ < loadSamp_) { loadT_ = now; loadRx_ = tRx_; loadSamp_ = nSamp_; }
+            if (loadT_ == 0 || nSamp_ < loadSamp_) { loadT_ = now; loadRx_ = tRx_; loadRxCpu_ = tRxCpu_; loadSamp_ = nSamp_; }
             else if (now - loadT_ >= 2.0) {
                 const double sig = (nSamp_ - loadSamp_) / std::max(1.0, rate_.load());
-                if (sig > 0.05) loadPct_ = (float)(100.0 * (tRx_ - loadRx_) / sig);
-                loadT_ = now; loadRx_ = tRx_; loadSamp_ = nSamp_;
+                if (sig > 0.05) { loadPct_ = (float)(100.0 * (tRx_ - loadRx_) / sig); cpuPct_ = (float)(100.0 * (tRxCpu_ - loadRxCpu_) / sig); }
+                loadT_ = now; loadRx_ = tRx_; loadRxCpu_ = tRxCpu_; loadSamp_ = nSamp_;
             }
         }
         {
@@ -224,6 +224,12 @@ void Engine::analysisLoop() {
             } else if (dvbt ? rxT_.telemetry(t, rxSeq) : rx_.telemetry(t, rxSeq)) {
                 rxSeq = t.seq;
                 if (dvbt) logDvbtEvents(t); else logRxEvents(t);
+                if (dvbt) {   // DVB-H: the TPS says whether the MPE sections carry real-time parameters; the datagram counts go with the report
+                    std::lock_guard<std::mutex> lk(tsMu_);
+                    mpe_.setRealTimeParams(t.dvbt.dvbh && (t.dvbt.timeSlicing || t.dvbt.mpeFec));
+                    const mpe::Stats& ms = mpe_.stats();
+                    t.dvbt.mpePid = ms.pid; t.dvbt.mpeDatagrams = ms.datagrams; t.dvbt.mpeRowsCorrected = ms.rowsCorrected; t.dvbt.mpeRowsFailed = ms.rowsFailed;
+                }
                 autoSelect(t, dvbt && (t.dvbt.tpsOk || t.dvbt.fecSync));
                 std::lock_guard<std::mutex> lk(rxMu_);
                 publishRx(std::move(t));

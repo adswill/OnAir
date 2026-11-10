@@ -128,15 +128,21 @@ void Generator::refill() {
 }
 
 void Generator::nextSymbol(std::vector<cf32>& out) {
-    const int Nd = dataCarriers(p_.mode);
-    while ((int)wordsQ_.size() < Nd) refill();
-    std::vector<uint8_t> words(wordsQ_.begin(), wordsQ_.begin() + Nd);
-    wordsQ_.erase(wordsQ_.begin(), wordsQ_.begin() + Nd);
+    const int Nd = dataCarriers(p_.mode), B = interleaverSymbols(p_);
     std::vector<cf32> cells, inter(Nd);
-    mapSymbol(words, p_.mod, p_.hier, cells);
-    const auto& H = symbolPermutation(p_.mode);
-    if (sym_ % 2) for (int q = 0; q < Nd; q++) inter[q] = cells[H[q]];
-    else for (int q = 0; q < Nd; q++) inter[H[q]] = cells[q];
+    if (B == 1 || sym_ % B == 0) {
+        // one interleaver block: a symbol's cells, or (in-depth) 6048 cells for the next B symbols with the 8K permutation
+        const int Nb = Nd * B;
+        while ((int)wordsQ_.size() < Nb) refill();
+        std::vector<uint8_t> words(wordsQ_.begin(), wordsQ_.begin() + Nb);
+        wordsQ_.erase(wordsQ_.begin(), wordsQ_.begin() + Nb);
+        mapSymbol(words, p_.mod, p_.hier, cells);
+        const auto& H = symbolPermutation(B == 1 ? p_.mode : (int)k8K);
+        block_.assign((size_t)Nb, cf32(0, 0));
+        if (interleaverOdd(p_, frame_, sym_)) for (int q = 0; q < Nb; q++) block_[q] = cells[H[q]];
+        else for (int q = 0; q < Nb; q++) block_[H[q]] = cells[q];
+    }
+    std::copy(block_.begin() + (long)(sym_ % B) * Nd, block_.begin() + (long)(sym_ % B + 1) * Nd, inter.begin());
 
     std::vector<uint8_t> roles;
     carrierRoles(p_.mode, sym_, roles);

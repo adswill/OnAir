@@ -2,6 +2,7 @@
 // and the receiver starts again once the scan is over. The very first scan must measure and lock the channel that carries a DVB-T2 signal,
 // as the second one does, and list only that channel: not the empty one, nor the one with a signal of another kind (ATSC).
 #include "dect2/engine/scanner.h"
+#include "../common/ci_slack.h"
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -25,7 +26,7 @@ int main() {
         ScanConfig cfg;
         cfg.startMHz = 474; cfg.stopMHz = 490; cfg.stepMHz = 8; cfg.bwMhz = 8;
         cfg.identifyServices = false;
-        cfg.lockTimeoutSec = 15;   // a busy machine running the tests in parallel needs longer than a radio does
+        cfg.lockTimeoutSec = 15 * ciSlack();   // a busy machine running the tests in parallel needs longer than a radio does
         cfg.testTune = [](double f, TuneSettings& t) {
             t.synth.snrDb = 30;
             t.sampleRate = 64e6 / 7;   // the DVB-T2 test signal's own rate (8 MHz): the silence and the ATSC signal run at it too, as one radio would

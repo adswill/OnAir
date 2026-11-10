@@ -202,7 +202,7 @@ struct LayerDecoder {
 
 struct Demod::Impl {
     Params p;
-    int mode = 3, cps = 0, dps = 0, K = 0, N = 0;
+    int mode = 3, cps = 0, dps = 0, K = 0, N = 0, kEdge = 0, posEdge = kSegments - 1;
     SegmentInfo seg[kSegments];
     LayerDecoder layer[3];
     double tau0 = 0;
@@ -325,7 +325,8 @@ struct Demod::Impl {
         drain();   // the worker is idle from here on
         mergeInto(carryOut);   // what the receiver would already have taken before the layers start again
         p = pp; mode = p.mode;
-        cps = carriersPerSegment(mode); dps = dataPerSegment(mode); K = totalCarriers(mode); N = fftN(mode);
+        cps = carriersPerSegment(mode); dps = dataPerSegment(mode); K = totalCarriers(mode); N = fftN(mode) / tsbDecimation(p.tsb);
+        kEdge = edgeCarrier(mode, p.tsb); posEdge = lastPosition(p.tsb);
         carrierErase.reset(K);
         segmentLayout(p, seg);
         for (int i = 0; i < 3; i++) {
@@ -350,7 +351,7 @@ struct Demod::Impl {
             const int s = kSegmentAtPosition[pos];
             if (seg[s].layer >= 0 && seg[s].diff) cpK.push_back(pos * cps);
         }
-        cpK.push_back(K - 1);
+        cpK.push_back(kEdge);
         cpRef.assign(cpK.size(), cf32(1, 0));
         // runs of adjacent synchronous segments in frequency order
         runs.clear();
@@ -360,7 +361,7 @@ struct Demod::Impl {
                 int q = pos;
                 while (q + 1 < kSegments && seg[kSegmentAtPosition[q + 1]].layer >= 0 && !seg[kSegmentAtPosition[q + 1]].diff) q++;
                 Run r; r.p0 = pos; r.p1 = q;
-                const int carriers = (q - pos + 1) * cps + (q == kSegments - 1 ? 1 : 0);
+                const int carriers = (q - pos + 1) * cps + (q == posEdge ? 1 : 0);
                 r.grid.assign((size_t)(carriers + 2) / 3, cf32(0, 0));
                 r.gv.assign(r.grid.size(), 0);
                 runs.push_back(std::move(r));
@@ -384,7 +385,7 @@ struct Demod::Impl {
 
     // pilot values of the carriers with constant pilots
     cf32 cpPilot(int k) const {
-        if (k == K - 1) return cf32(lastCarrierValue(mode), 0);
+        if (k == kEdge) return cf32(edgeCarrierValue(mode, p.tsb), 0);
         const int pos = k / cps;
         return cf32(pilotValue(prbsW(mode, kSegmentAtPosition[pos])[0]), 0);
     }
@@ -433,7 +434,7 @@ struct Demod::Impl {
         if (cpRefValid && runs.empty()) for (size_t j = 0; j < cpK.size(); j++) {
             // a continual pilot that belongs to a differential segment (or the last carrier)
             const int k = cpK[j];
-            if (k == K - 1 || (seg[kSegmentAtPosition[k / cps]].diff)) collect(k, Yraw[k] / cpPilot(k), cpRef[j]);
+            if (k == kEdge || (seg[kSegmentAtPosition[k / cps]].diff)) collect(k, Yraw[k] / cpPilot(k), cpRef[j]);
         }
         if (!pts.empty()) {
             std::complex<double> sum(0, 0);
@@ -489,7 +490,7 @@ struct Demod::Impl {
         double noiseAcc = 0; long noiseCnt = 0;
         for (auto& r : runs) {
             const int k0 = r.p0 * cps;
-            const int carriers = (r.p1 - r.p0 + 1) * cps + (r.p1 == kSegments - 1 ? 1 : 0);
+            const int carriers = (r.p1 - r.p0 + 1) * cps + (r.p1 == posEdge ? 1 : 0);
             for (int pos = r.p0; pos <= r.p1; pos++) {
                 const int s = kSegmentAtPosition[pos];
                 const auto& w = prbsW(mode, s);
@@ -502,7 +503,7 @@ struct Demod::Impl {
                     r.grid[g] = nvv; r.gv[g] = 1;
                 }
             }
-            if (r.p1 == kSegments - 1) r.grid[(size_t)(carriers - 1) / 3] = Y[K - 1] / lastCarrierValue(mode);
+            if (r.p1 == posEdge) r.grid[(size_t)(carriers - 1) / 3] = Y[kEdge] / edgeCarrierValue(mode, p.tsb);
             if (r.filled < 4) r.filled++;
             if (r.filled < 4) continue;
             // the delay of the channel (the phase slope of the pilot grid), so that the interpolator sees a nearly flat grid and the ends of the run are
@@ -549,7 +550,7 @@ struct Demod::Impl {
         }
         if (runs.empty() && sigma2 > 0) {   // without scattered pilots: the signal power of all carriers against the noise from the continual pilots
             double pw = 0; long n = 0;
-            for (int k = 0; k < K; k += 5) { pw += std::norm(Y[k]); n++; }
+            for (int k = firstPosition(p.tsb) * cps; k <= kEdge; k += 5) { pw += std::norm(Y[k]); n++; }
             if (n) snr = 10 * std::log10(std::max(1e-9, (pw / (double)n - sigma2) / sigma2));
         }
         if (noiseCnt > 0) {
