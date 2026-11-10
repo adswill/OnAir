@@ -283,7 +283,13 @@ int main(int argc, char** argv) {
             CHECK(ok, "%s, %s: the engine did not start (%s)", mt->id, c.what, e.startError().c_str());
             if (!ok) continue;
             engines++;
+            const auto tStart = std::chrono::steady_clock::now();
             const bool ran = enginetest::waitFor(20.0, [&] { return enginetest::signalSecs(e) > 0.0; });
+            {   // a slow start is printed, so a run near its time limit says which mode costs the time
+                const double secs = std::chrono::duration<double>(std::chrono::steady_clock::now() - tStart).count();
+                if (secs > 3.0) std::printf("slow start: %s, %s: %.1f s to the first signal\n", mt->id, c.what, secs);
+                std::fflush(stdout);
+            }
             // (the test signal of DVB-T2 / DVB-T / ATSC is made at its native rate whatever the radio is asked: those four only need to run)
             const bool fixedSynth = mt->stdMode <= 3;
             CHECK(fixedSynth || std::fabs(e.sampleRate() - c.t.sampleRate) < 1.0 || std::fabs(e.sampleRate() - c.t.sampleRate) < c.t.sampleRate * 1e-3,
