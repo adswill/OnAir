@@ -332,6 +332,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 481: return pollStd(rxUmts_, 481, t, seqs[440], &RxTelemetry::umts);   // UMTS cells (slot 440)
     case 661: return pollStd(rxCdma_, 661, t, seqs[660], &RxTelemetry::cdma);   // CDMA2000 cells (slot 660)
+    case 662: return pollStd(rxTds_, 662, t, seqs[661], &RxTelemetry::tdscdma);   // TD-SCDMA cells (slot 661)
     case 241: return pollStd(rxSelcal_, 241, t, seqs[200], &RxTelemetry::selcal);   // SELCAL (slot 200)
     case 212: return pollStd(rxAtis_, 212, t, seqs[187], &RxTelemetry::atis);   // ATIS inland waterways (slot 187)
     case 291: return pollStd(rxSd3_[0], 291, t, seqs[290], &RxTelemetry::sd3);

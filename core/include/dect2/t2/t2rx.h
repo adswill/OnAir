@@ -124,6 +124,7 @@
 #include "dect2/selcal/selcal_tel.h"
 #include "dect2/umts/umts_rx.h"
 #include "dect2/cdma/cdma_rx.h"
+#include "dect2/tdscdma/tdscdma_rx.h"
 #include "dect2/fy3/fy3_tel.h"
 #include "dect2/wxsat/wxsat_tel.h"
 #include "dect2/sd3/sd3_tel.h"
@@ -271,6 +272,7 @@ struct RxTelemetry {
     PactorHfTelemetry pactorhf;   // valid when standard == 238, 239 or 240 (PACTOR-II / -III / -IV, families 237 .. 239, engine standards 239 .. 241)
     UmtsTelemetry umts;   // valid when standard == 481 (UMTS cells, family 480, engine standard 482)
     CdmaTelemetry cdma;   // valid when standard == 661 (CDMA2000 cells, family 660, engine standard 662)
+    TdscdmaTelemetry tdscdma;   // valid when standard == 662 (TD-SCDMA cells, family 661, engine standard 663)
     SelcalTelemetry selcal;   // valid when standard == 241 (SELCAL, family 240, engine standard 242)
     AtisTelemetry atis;       // valid when standard == 212 (ATIS inland waterways, family 211, engine standard 213)
     ShortwaveTelemetry shortwave;   // valid when standard == 213 (Shortwave, family 212, engine standard 214)

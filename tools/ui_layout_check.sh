@@ -129,6 +129,7 @@ nrf24	--mode nrf24	Overview|nRF24|Receiver|History
 atis	--mode atis	Overview|ATIS|Receiver|History
 umts	--mode umts	Cells|Receiver|History
 cdma2000	--mode cdma2000	Cells|Receiver|History
+tdscdma	--mode tdscdma	Cells|Receiver|History
 selcal	--mode selcal	Overview|SELCAL|Receiver|History
 sensors	--mode sensors	Overview|Sensors|Receiver|History
 sferics	--mode sferics	Overview|Sferics|Receiver|History

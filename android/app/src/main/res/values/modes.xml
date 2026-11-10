@@ -315,6 +315,8 @@
         <item>WINMOR</item>
         <item>mioty</item>
         <item>DECT NR+</item>
+        <item>CDMA2000 cells</item>
+        <item>TD-SCDMA cells</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -611,6 +613,8 @@
         <item>WINMOR HF frames: the 1500 Hz pilot with tuning error and the raw frame-type tones. The specification does not define the 4FSK symbol mapping, the Reed-Solomon generator or the callsign packing, so frames are detected, not read. Simulated signals only so far</item>
         <item>mioty (ETSI TS 103 357 TS-UNB) uplinks: the 24 hopped radio-bursts found and decoded, every uplink TSMA pattern, extension frames. MAC fields shown (address, counter, flags); the payload is encrypted with the network key and stays encrypted. Simulated signals only so far</item>
         <item>DECT NR+ (DECT-2020 NR) packets on a 1.728 MHz channel: the physical control field of each packet (network ID, transmitter and receiver IDs, length, MCS, HARQ). Data channel not decoded. Simulated signals only so far</item>
+        <item>cdma2000 / IS-95 base stations in a 1.25 MHz channel: every pilot by PN offset (Ec/Io, level, carrier offset) and its Sync Channel Message: system and network identity (SID, NID), pilot PN, protocol revision, system time, leap seconds, local time offset, paging channel rate and frequency. Receive only, public broadcast</item>
+        <item>TD-SCDMA (3G TDD, 1.28 Mcps) cells in a 1.6 MHz channel: the downlink pilot\'s SYNC-DL code (code group), the cell parameter (scrambling code and midamble) from time slot 0, the frame parity and P-CCPCH position from the SYNC-DL phases, level and carrier offset. Receive only; the broadcast channel is not decoded</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -907,6 +911,8 @@
         <item>HF data, pilot only</item>
         <item>LPWAN, header only</item>
         <item>Mesh radio, header only</item>
+        <item>Cells, CDMA2000</item>
+        <item>Cells, TD-SCDMA</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1203,5 +1209,7 @@
         <item>winmor winlink kn6kb hf pilot</item>
         <item>mioty ts-unb lpwan telegram splitting 868 iot sensor</item>
         <item>dect nr+ dect-2020 nr nrplus mesh 1.9 ghz ts 103 636</item>
+        <item>cdma cdma2000 is-95 is95 1x 2g 3g pilot pn sync channel sid nid base station band class 0 800 pcs 1900 verizon sprint</item>
+        <item>td-scdma tdscdma 3g tdd china mobile 1.28 mcps dwpts sync-dl midamble cell parameter code group band a f 2010 1880</item>
     </string-array>
 </resources>

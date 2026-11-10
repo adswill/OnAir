@@ -2558,3 +2558,27 @@ case 602: {
     { Table tb({"Proto", "Id", "Last Type", "Last Detail", "Count", "Lost", "First Seen", "Last Seen"}); int n = 0; for (auto it = t.links.rbegin(); it != t.links.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.proto), cell(e.id), cell(e.lastType), cell(e.lastDetail), cell(e.count), cell(e.lost), cell(e.firstSeen), cell(e.lastSeen)}); } if (n) addTable(o, "Links", tb); }
     break;
 }
+case 661: {
+    const auto& t = rx.cdma; (void)t;
+    cardIf(o, "Center Hz", t.centerHz);
+    cardIf(o, "Band Class", t.bandClass);
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Scans", t.scans);
+    cardIf(o, "Last Scan Ms", t.lastScanMs);
+    { Table tb({"Pilot Pn", "Rel Offset", "Ec Io Db", "Pilot Dbfs", "Cfo Hz", "Clock Ppm", "Blocks", "Msgs"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.pilotPn), cell(e.relOffset), cell(e.ecIoDb), cell(e.pilotDbfs), cell(e.cfoHz), cell(e.clockPpm), cell(e.blocks), cell(e.msgs)}); } if (n) addTable(o, "Cells", tb); }
+    break;
+}
+case 662: {
+    const auto& t = rx.tdscdma; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Scans", t.scans);
+    cardIf(o, "Last Scan Ms", t.lastScanMs);
+    { Table tb({"Sync Dl", "Cell Param", "Level Dbfs", "Snr Db", "Cfo Hz", "Mid Score", "Blocks", "Quad S1"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.syncDl), cell(e.cellParam), cell(e.levelDbfs), cell(e.snrDb), cell(e.cfoHz), cell(e.midScore), cell(e.blocks), cell(e.quadS1)}); } if (n) addTable(o, "Cells", tb); }
+    break;
+}
