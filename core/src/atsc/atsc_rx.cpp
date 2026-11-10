@@ -393,14 +393,31 @@ struct Core {
             tracking = true;   // the frequency is known to a fraction of a kHz: start with the narrow loop
         }
     }
-    void mixIn(std::vector<cf32>& in) {
+    // (x conjugated when sgn is -1) * exp(j w n) into the split rows: the phase is exact at the start of every block of 1024 samples, and inside a
+    // block comes from a table of exp(j w k) (kept while the frequency stays), so the loop has no chain of products and vectorises
+    std::vector<float> mixTr, mixTi;
+    double mixTabHz = 0;
+    void mixSplit(const float* __restrict x, size_t n, float sgn, float* __restrict pr, float* __restrict pi) {
+        constexpr size_t kB = 1024;
         const double w = -2.0 * kPi * shiftHz / fin;
-        for (size_t i0 = 0; i0 < in.size(); i0 += 1024) {
-            const size_t e = std::min(in.size(), i0 + 1024);
-            cf32 c = expj(std::fmod(w * (double)mixN, 2.0 * kPi));
-            const cf32 r = expj(w);
-            for (size_t i = i0; i < e; i++) { in[i] *= c; c *= r; }
-            mixN += e - i0;
+        if (mixTr.size() != kB || mixTabHz != shiftHz) {
+            mixTr.resize(kB); mixTi.resize(kB); mixTabHz = shiftHz;
+            for (size_t k = 0; k < kB; k++) { mixTr[k] = (float)std::cos(w * (double)k); mixTi[k] = (float)std::sin(w * (double)k); }
+        }
+        const float* __restrict tr = mixTr.data();
+        const float* __restrict ti = mixTi.data();
+        for (size_t i0 = 0; i0 < n; i0 += kB) {
+            const size_t e = std::min(n - i0, kB);
+            const cf32 c = expj(std::fmod(w * (double)mixN, 2.0 * kPi));
+            const float cr = c.real(), ci = c.imag();
+            const float* __restrict xp = x + 2 * i0;
+            float* __restrict orr = pr + i0;
+            float* __restrict oi = pi + i0;
+            for (size_t k = 0; k < e; k++) {
+                const float rr = cr * tr[k] - ci * ti[k], ri = cr * ti[k] + ci * tr[k], a = xp[2 * k], b = sgn * xp[2 * k + 1];
+                orr[k] = a * rr - b * ri; oi[k] = a * ri + b * rr;
+            }
+            mixN += e;
         }
     }
 
@@ -436,17 +453,19 @@ struct Core {
         if (fieldLock || pilotLock) noLockSamples = 0;
         else if ((noLockSamples += in.size()) > (uint64_t)(0.5 * fin)) { noLockSamples = 0; acqDone = false; }   // look again on the next block
         DECT2_STAGE_VAR(stMix, "atsc.mix");
-        if (mirrorIq) for (auto& v : in) v = std::conj(v);
-        if (shiftHz != 0) mixIn(in);
-        stMix.stop();
-        const double tA = now();
-        DECT2_STAGE_VAR(stFilt, "atsc.filter");
-        {   // split into the two rows: one resize, then plain stores (a push_back per sample re-checks the capacity twice for every sample)
+        {   // split into the two rows: one resize, then plain stores (a push_back per sample re-checks the capacity twice for every sample), with the
+            // mirror (conjugate) and the mixer to the channel centre in the same pass
             const size_t at = inRe.size();
             inRe.resize(at + in.size()); inIm.resize(at + in.size());
             float* __restrict pr = inRe.data() + at; float* __restrict pi = inIm.data() + at;
-            for (size_t i = 0; i < in.size(); i++) { pr[i] = in[i].real(); pi[i] = in[i].imag(); }
+            const float* __restrict x = reinterpret_cast<const float*>(in.data());
+            const float sgn = mirrorIq ? -1.f : 1.f;
+            if (shiftHz != 0) mixSplit(x, in.size(), sgn, pr, pi);
+            else for (size_t i = 0; i < in.size(); i++) { pr[i] = x[2 * i]; pi[i] = sgn * x[2 * i + 1]; }
         }
+        stMix.stop();
+        const double tA = now();
+        DECT2_STAGE_VAR(stFilt, "atsc.filter");
         std::vector<float> dchunk;
         const double room = (double)(inBase + inRe.size()) - J - 2 - pos;
         const size_t nOut = room > 0 ? (size_t)std::ceil(room / step) : 0;
@@ -1071,24 +1090,32 @@ struct Core {
         lv.assign((size_t)kFieldSyms, 0.f);
         hv.assign((size_t)kFieldSyms + B, 0.f);
         if (hist && B) for (int j = 0; j < B; j++) hv[(size_t)j] = hist[j];
+        DECT2_STAGE_VAR(stFf, "atsc.eq.ff");
         std::vector<float> xr((size_t)kFieldSyms + L - 1), wr(L), ffo((size_t)kFieldSyms);
         for (int k = 0; k < L; k++) wr[k] = tp.ff[L - 1 - k];
         const int64_t first = v.f0 + kNFf - (L - 1);
         for (size_t k = 0; k < xr.size(); k++) xr[k] = v.at(first + (int64_t)k);
         convCorr(xr.data(), wr.data(), ffo.data(), 1, kFieldSyms, L);
+        stFf.stop();
+        DECT2_STAGE("atsc.eq.dfe");
         // The feedback part in transposed form: every decision is added, weighted by the feedback taps, to the accumulators of the next B
-        // outputs (independent vector updates), so that the chain from one decision to the next is short.
-        std::vector<float> fbAcc;
+        // outputs (independent vector updates), so that the chain from one decision to the next is short. Four decisions per pass over the
+        // accumulators: inside the group each output gets the terms of the decisions before it in the group directly, and the pass then adds
+        // all four through the taps shifted by 3, 2, 1 and 0 (fbs), a quarter of the stores to the accumulators (the limit of the one-decision
+        // pass: 32 vector stores per symbol).
+        constexpr int kG = 4;
+        static_assert(kFieldSyms % kG == 0, "whole groups");
+        std::vector<float> fbAcc, fbs;
         if (B) {
-            fbAcc.assign((size_t)kFieldSyms + B, 0.f);
+            fbAcc.assign((size_t)kFieldSyms + B + kG, 0.f);
             if (hist) for (int j = 0; j < B; j++)   // decisions before the field start: decision j (oldest first) reaches output i = j + B - 1 - m ... via tap fb[m]
                 for (int m = 0; m < B; m++) { const int i = j + 1 + m - B; if (i >= 0 && i < B) fbAcc[(size_t)i] += tp.fb[m] * hist[j]; }
+            fbs.assign((size_t)kG * B, 0.f);   // row k: fb[m + k] (zero past the end)
+            for (int k = 0; k < kG; k++) for (int m = 0; m + k < B; m++) fbs[(size_t)k * B + m] = tp.fb[(size_t)(m + k)];
         }
         const float* fbt = tp.fb.data();
         double mse = 0; int nm = 0;
-        for (int i = 0; i < kFieldSyms; i++) {
-            float y = ffo[(size_t)i] + tp.bias;
-            if (B) y += fbAcc[(size_t)i];
+        auto decide = [&](int i, float y) {
             float dec;
             if (i < 728) dec = fsLv[i];
             else if (i % kSegSyms < 4) dec = syncLv[i % kSegSyms];
@@ -1096,8 +1123,25 @@ struct Core {
             if (i >= std::max(B, 8) && i < 728) { const double e = y - fsLv[i]; mse += e * e; nm++; }
             lv[(size_t)i] = y;
             hv[(size_t)B + i] = dec;
-            if (B && dec != 0.f) { float* a = &fbAcc[(size_t)i + 1]; for (int m = 0; m < B; m++) a[m] += dec * fbt[m]; }
-        }
+            return dec;
+        };
+        if (!B) for (int i = 0; i < kFieldSyms; i++) decide(i, ffo[(size_t)i] + tp.bias);
+        else
+            for (int i = 0; i < kFieldSyms; i += kG) {
+                const float* c = &fbAcc[(size_t)i];
+                const float b0 = ffo[(size_t)i] + tp.bias, b1 = ffo[(size_t)i + 1] + tp.bias, b2 = ffo[(size_t)i + 2] + tp.bias, b3 = ffo[(size_t)i + 3] + tp.bias;
+                const float d0 = decide(i, b0 + c[0]);
+                const float d1 = decide(i + 1, b1 + c[1] + d0 * fbt[0]);
+                const float d2 = decide(i + 2, b2 + c[2] + d0 * fbt[1] + d1 * fbt[0]);
+                const float d3 = decide(i + 3, b3 + c[3] + d0 * fbt[2] + d1 * fbt[1] + d2 * fbt[0]);
+                // outputs i + 4 + m: decision i + j reaches them through tap m + 3 - j
+                float* __restrict a = &fbAcc[(size_t)i + kG];
+                const float* __restrict f0 = &fbs[0];
+                const float* __restrict f1 = &fbs[(size_t)B];
+                const float* __restrict f2 = &fbs[(size_t)2 * B];
+                const float* __restrict f3 = &fbs[(size_t)3 * B];
+                for (int m = 0; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
+            }
         mse /= std::max(1, nm);
         return 10.0 * std::log10(25.0 / std::max(mse, 1e-6));
     }
@@ -1254,14 +1298,22 @@ struct Core {
         stRetry.stop();
         DECT2_STAGE("atsc.stats");
         if (dbg) fprintf(stderr, "[atsc] field start %lld parity %d: snr %.1f data %.1f  RS clean %d corr %d fail %d np %d%s%s\n", (long long)(f0 / kSegSyms), job.parity, snr, dataSnrAvg, st.rsClean, st.rsCorrected, st.rsFailed, np, usePrev ? "  (DFE, trained with the previous field)" : "", secondTry ? "  (second try with the other equaliser)" : "");
+        // One pass over the data symbols for both figures below: the sums of l*l, l*t and t*t (l the equalised level, t the level of the decoded
+        // path); with the gain G applied, the distance is sum (G l - t)^2 = G^2 sum l*l - 2 G sum l*t + sum t*t.
+        double sll = 0, slt = 0, stt = 0; int cnt = 0;
+        if (st.segments > 0)
+            for (int sg = 1; sg < kFieldSegs; sg++) {
+                const float* l = &lv[(size_t)sg * kSegSyms];
+                const uint8_t* ps = &psym[(size_t)sg * kSegSyms];
+                float a[4] = {}, b[4] = {}, c[4] = {};   // a segment in float (four partial sums of 207 terms), the field in double
+                static_assert((kSegSyms - 4) % 4 == 0, "whole groups of four");
+                for (int i = 4; i < kSegSyms; i += 4)
+                    for (int j = 0; j < 4; j++) { const float t = levelOf(ps[i + j]), x = l[i + j]; a[j] += x * x; b[j] += x * t; c[j] += t * t; }
+                sll += (a[0] + a[1]) + (a[2] + a[3]); slt += (b[0] + b[1]) + (b[2] + b[3]); stt += (c[0] + c[1]) + (c[2] + c[3]); cnt += kSegSyms - 4;
+            }
         // The gain of the equalised levels against the decoded symbols (decision directed): the next field is corrected by it.
         if (st.segments > 0 && st.rsFailed * 2 <= st.segments) {
-            double sxy = 0, sxx = 0;
-            for (int i = kSegSyms; i < kFieldSyms; i++) {
-                if (i % kSegSyms < 4) continue;
-                const double t = levelOf(psym[(size_t)i]);
-                sxy += (double)lv[(size_t)i] * gainCorr * t; sxx += t * t;
-            }
+            const double sxy = slt * gainCorr, sxx = stt;
             if (sxx > 0 && sxy > 0) {
                 const double g = sxy / sxx;   // 1 when the levels sit where the decoder expects them
                 gainCorr = std::max(0.95, std::min(1.15, gainCorr / std::pow(g, 0.7)));
@@ -1270,19 +1322,11 @@ struct Core {
         // The noise on the equalised symbols, measured against the symbols of the decoded trellis path: unlike the distance to the nearest of the
         // eight levels (which cannot exceed one level step and so reads too good on a noisy signal) this stays honest down to low SNR.
         double pathMse = 1e9;   // mean square distance of the equalised symbols to the decoded path: the noise power while the path is right
-        if (st.segments > 0) {
-            double dd = 0; int cnt = 0;
-            for (int i = kSegSyms; i < kFieldSyms; i++) {
-                if (i % kSegSyms < 4) continue;
-                const double e = lv[(size_t)i] * gainCorr - levelOf(psym[(size_t)i]);
-                dd += e * e; cnt++;
-            }
-            if (cnt > 0) {
-                pathMse = dd / cnt;
-                if (st.rsFailed * 4 <= st.segments) {
-                    const double dsnr = 10.0 * std::log10(21.0 / std::max(pathMse, 1e-6));
-                    dataSnrAvg = dataSnrAvg == 0 ? dsnr : dataSnrAvg + 0.3 * (dsnr - dataSnrAvg);
-                }
+        if (st.segments > 0 && cnt > 0) {
+            pathMse = std::max(0.0, (gainCorr * gainCorr * sll - 2.0 * gainCorr * slt + stt) / cnt);
+            if (st.rsFailed * 4 <= st.segments) {
+                const double dsnr = 10.0 * std::log10(21.0 / std::max(pathMse, 1e-6));
+                dataSnrAvg = dataSnrAvg == 0 ? dsnr : dataSnrAvg + 0.3 * (dsnr - dataSnrAvg);
             }
         }
         if (levelTap) levelTap(lv);

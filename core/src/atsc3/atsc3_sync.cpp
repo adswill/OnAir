@@ -83,7 +83,48 @@ DECT2_AVX2_TARGET static void dot4Avx2(const float* const* h, const float* const
 }
 #endif
 
+namespace {
+// x[i] * exp(j w (i + start)), w = -2 pi f / rate, written split (re, im) or back in place (re == nullptr). The phase is exact (double) at the start
+// of every block of 256 samples and inside a block comes from a table of exp(j w k): no chain of products, so the loop vectorises; the error is a few
+// 1e-7 rad (the former running product in double, converted to float per sample, was no better than float either).
+void rotate(cf32* xio, const cf32* x, size_t n, double f, double rate, double start, float* re, float* im) {
+    constexpr int kB = 256;
+    const double w = -2.0 * M_PI * f / rate;
+    float tr[kB], ti[kB];
+    for (int k = 0; k < kB; k++) { tr[k] = (float)std::cos(w * k); ti[k] = (float)std::sin(w * k); }
+    for (size_t i0 = 0; i0 < n; i0 += kB) {
+        const double a = std::fmod(w * (start + (double)i0), 2.0 * M_PI);
+        const float cr = (float)std::cos(a), ci = (float)std::sin(a);
+        const size_t e = std::min<size_t>(kB, n - i0);
+        const float* __restrict xp = reinterpret_cast<const float*>(x + i0);
+        if (re) {
+            float* __restrict orr = re + i0;
+            float* __restrict oi = im + i0;
+            for (size_t k = 0; k < e; k++) {
+                const float pr = cr * tr[k] - ci * ti[k], pi = cr * ti[k] + ci * tr[k], xr = xp[2 * k], xi = xp[2 * k + 1];
+                orr[k] = xr * pr - xi * pi; oi[k] = xr * pi + xi * pr;
+            }
+        } else {
+            float* __restrict o = reinterpret_cast<float*>(xio + i0);
+            for (size_t k = 0; k < e; k++) {
+                const float pr = cr * tr[k] - ci * ti[k], pi = cr * ti[k] + ci * tr[k], xr = xp[2 * k], xi = xp[2 * k + 1];
+                o[2 * k] = xr * pr - xi * pi; o[2 * k + 1] = xr * pi + xi * pr;
+            }
+        }
+    }
+}
+void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset, double rotHz, double rotStart);
+}
+
 void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset) {
+    resampleImpl(in, n, inRate, outRate, out, startOffset, 0.0, 0.0);
+}
+void resampleExactRot(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double rotHz, double rotStart, double startOffset) {
+    resampleImpl(in, n, inRate, outRate, out, startOffset, rotHz, rotStart);
+}
+
+namespace {
+void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset, double rotHz, double rotStart) {
     DECT2_STAGE("a3.resample");
     out.clear();
     if (n == 0) return;
@@ -108,7 +149,8 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
     // split input with zero padding on both sides, so that the inner loop has no bounds checks
     const long pad = b.stride + 2;
     std::vector<float> re((size_t)n + 2 * pad, 0.f), im((size_t)n + 2 * pad, 0.f);
-    for (size_t i = 0; i < n; i++) { re[i + pad] = in[i].real(); im[i + pad] = in[i].imag(); }
+    if (rotHz != 0.0) rotate(nullptr, in, n, rotHz, inRate, rotStart, &re[(size_t)pad], &im[(size_t)pad]);
+    else for (size_t i = 0; i < n; i++) { re[i + pad] = in[i].real(); im[i + pad] = in[i].imag(); }
     out.resize((size_t)count);
     const int taps = b.stride;
     // where output k reads: the input rows from base and the tap row of its nearest phase
@@ -125,9 +167,9 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
         DECT2_STAGE("a3.resample");
         long k = k0;
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
-        // Four outputs at once: each keeps the four partial sums of the scalar loop below (lane j adds taps j, j + 4, ... in order, multiply then
-        // add, lanes joined (0 + 1) + (2 + 3)), so every output is bit-identical; the four independent chains hide the add latency that one
-        // output's chain of 24 dependent additions has (the compiler's own vectorisation of that loop added the lanes one by one).
+        // Four outputs at once: each keeps the four partial sums of the scalar loop below (lane j adds taps j, j + 4, ... in order, lanes joined
+        // (0 + 1) + (2 + 3)); the four independent chains hide the latency of one output's chain of dependent additions. Fused multiply-adds
+        // (as the AVX2 path): half the instructions, and a few ulp from the scalar loop, which rounds the product first.
         for (; k + 4 <= k1; k += 4) {
             const float *h[4], *r[4], *m[4];
             float32x4_t ar[4], ai[4];
@@ -135,8 +177,8 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
             for (int t = 0; t < taps; t += 4)
                 for (int u = 0; u < 4; u++) {
                     const float32x4_t hv = vld1q_f32(h[u] + t);
-                    ar[u] = vaddq_f32(ar[u], vmulq_f32(vld1q_f32(r[u] + t), hv));
-                    ai[u] = vaddq_f32(ai[u], vmulq_f32(vld1q_f32(m[u] + t), hv));
+                    ar[u] = vfmaq_f32(ar[u], vld1q_f32(r[u] + t), hv);
+                    ai[u] = vfmaq_f32(ai[u], vld1q_f32(m[u] + t), hv);
                 }
             for (int u = 0; u < 4; u++) {
                 const float32x4_t s = vpaddq_f32(ar[u], ai[u]);   // (re0+re1) (re2+re3) (im0+im1) (im2+im3)
@@ -172,16 +214,11 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
     for (auto& t : th) t.join();
 }
 
+} // namespace
+
 void derotate(cf32* x, size_t n, double f, double rate, double start) {
     DECT2_STAGE("a3.derotate");
-    // advance the phase in steps (a long cos/sin per sample would be slow); renormalise now and then
-    const double w = -2.0 * M_PI * f / rate;
-    std::complex<double> ph = std::polar(1.0, w * start), step = std::polar(1.0, w);
-    for (size_t i = 0; i < n; i++) {
-        x[i] *= cf32((float)ph.real(), (float)ph.imag());
-        ph *= step;
-        if ((i & 1023) == 1023) ph /= std::abs(ph);
-    }
+    if (n) rotate(x, x, n, f, rate, start, nullptr, nullptr);
 }
 
 double estimateCfoGuard(const cf32* x, size_t n, int fft, int guard, int symbols, double rate) {
@@ -423,10 +460,8 @@ bool Atsc3Sync::search() {
     double pre = haveHint_ ? cfo_ : coarse_;
     BootstrapFind bf;
     for (int attempt = 0; attempt < 2; attempt++) {
-        std::vector<cf32> work(seg);
-        derotate(work.data(), work.size(), pre, rate, (double)from);
         std::vector<cf32> y;
-        resampleExact(work.data(), work.size(), rate, kBootstrapRate, y);
+        resampleExactRot(seg.data(), seg.size(), rate, kBootstrapRate, y, pre, (double)from);
         if (attempt == 0) st_.searches++;
         bf = haveHint_ ? findBootstrap(y.data(), y.size(), 2500.0, 0.0, bs_.minorVersion) : findBootstrap(y.data(), y.size(), 20000.0);
         if (bf.found && bf.det.valid) break;
@@ -524,10 +559,8 @@ bool Atsc3Sync::cutFrame() {
     if (frameSamples_ == 0) {
         const long headSamples = (long)std::ceil((double)(pp.fftSize + pp.guard) * 6 * rate / frameRate) + 64;   // up to six Preamble symbols
         if (availEnd < frameStart_ + headSamples) return false;
-        std::vector<cf32> head(raw_.begin() + (frameStart_ - rawStart_), raw_.begin() + (frameStart_ - rawStart_) + headSamples);
-        derotate(head.data(), head.size(), cfo_, rate, (double)frameStart_);
-        std::vector<cf32> y;
-        resampleExact(head.data(), head.size(), rate, frameRate, y);
+        std::vector<cf32> y;   // carrier offset removed at the radio's rate, in the resampler's input pass (no copy of the samples)
+        resampleExactRot(raw_.data() + (frameStart_ - rawStart_), (size_t)headSamples, rate, frameRate, y, cfo_, (double)frameStart_);
         if (y.size() > (size_t)(pp.fftSize + pp.guard)) {
             double res = estimateCfoGuard(y.data(), y.size(), pp.fftSize, pp.guard, 1, frameRate);
             if (std::fabs(res) < 0.4 * frameRate / pp.fftSize) { cfo_ += res; st_.cfoHz = cfo_; }
@@ -549,10 +582,8 @@ bool Atsc3Sync::cutFrame() {
     }
     if (availEnd < frameStart_ + frameSamples_ + 16) return false;
     // 2. the whole frame: carrier offset removed at the radio's rate, then the rate converted to the frame's
-    std::vector<cf32> seg(raw_.begin() + (frameStart_ - rawStart_), raw_.begin() + (frameStart_ - rawStart_) + frameSamples_ + 16);
-    derotate(seg.data(), seg.size(), cfo_, rate, (double)frameStart_);
     std::vector<cf32> y;
-    resampleExact(seg.data(), seg.size(), rate, frameRate, y);
+    resampleExactRot(raw_.data() + (frameStart_ - rawStart_), (size_t)(frameSamples_ + 16), rate, frameRate, y, cfo_, (double)frameStart_);
     if (pool_) {
         pool_->submit(std::move(y), bs_);
         st_.frames++;
