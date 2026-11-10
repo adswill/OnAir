@@ -342,7 +342,7 @@ struct GoesDcsReceiver::Impl {
             }
             return;
         }
-        if (t.nb < 31) return;
+        if (t.nb < 63) return;
         // candidates are taken only while the first one is young: a later match is a false one
         for (int hh = 0; hh < kNumHyp; hh++)
             for (int kk = 0; kk < kPhases; kk++)
@@ -356,10 +356,12 @@ struct GoesDcsReceiver::Impl {
         const int pol = dInv < d ? 1 : 0;
         if (pol) d = dInv;
         if (d > 1) return;
-        const uint32_t pre = (uint32_t)((t.hist >> 15) & 0xFFFF);
-        const uint32_t alt = (pre ^ (pre >> 1)) & 0x7FFF;   // 1 where neighbours differ
-        const int trans = __builtin_popcount(alt);
-        if (d + (15 - trans) > 1) return;
+        // the 48 preamble bits before it must alternate: a 16-bit check let the 300 / 1200 bps hypotheses lock falsely on a 100 bps platform
+        // whose neighbour 1.5 or 3 kHz away beats in the slot (and a wrong address passes the 2-error BCH correction about half the time)
+        const uint64_t pre = (t.hist >> 15) & 0xFFFFFFFFFFFFull;
+        const uint64_t alt = (pre ^ (pre >> 1)) & 0x7FFFFFFFFFFFull;   // 1 where neighbours differ (47 pairs)
+        const int trans = __builtin_popcountll(alt);
+        if (d > 1 || d + (47 - trans) > 2) return;
         if (s.pending == 0) s.syncTimeSec = timeSec;
         t.cand = true; t.pol = pol; t.ne = -1; t.bits.clear();
         s.pending++;
