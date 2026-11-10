@@ -32,8 +32,22 @@ static void testPure() {
     CHECK(!placedInCapture(a, 125e6, 0), "no rate: nothing is inside");
 }
 
+static void testMidClick() {
+    CHECK(placedIsTap(0, 0) && placedIsTap(3, -3) && !placedIsTap(4, 0) && !placedIsTap(0, 9), "a middle press that moved is a drag, not a click");
+    std::vector<Placed> v;
+    v.push_back(placedAtClick(125000040, 12500, WsKind::Pager));
+    v.push_back(placedAtClick(126500000, 1, WsKind::Unknown));
+    CHECK(v[0].absHz == 125000000 && v[1].widthHz == 1000, "click is rounded to 100 Hz, width at least 1 kHz");
+    CHECK(placedNearest(v, 125003000, 500) == 0, "inside its own width");
+    CHECK(placedNearest(v, 126501000, 100) == -1 && placedNearest(v, 126501000, 1100) == 1, "pixel tolerance");
+    CHECK(placedNearest(v, 130e6, 1000) == -1 && placedNearest({}, 1e6, 1000) == -1, "nothing near");
+    v.push_back(placedAtClick(125002000, 1000, WsKind::Am));
+    CHECK(placedNearest(v, 125001900, 100) == 2, "closest one wins");
+}
+
 int main() {
     testPure();
+    testMidClick();
     const double offDmr = -603000, offPag = -996000, offAm = +212300;
     struct Src { std::unique_ptr<ModeSynth> s; float gain; double shiftHz; std::complex<double> ph{1, 0}; };
     std::vector<Src> src;

@@ -25,6 +25,7 @@ static void identifyPlotInput(App& a, int plotId) {
     const bool hov = plt::IsPlotHovered();
     const bool select = a.identifyTool || io.KeyShift;
     double rlo = 0, rhi = 0;
+    widePlacedPlot(a, plotId);   // the placed decoders' markers, and the middle-click popup
     if (plotId == 0 && a.engine.wideAll()) {   // Everything in view: each signal found, as a band (green decoding, amber identifying, grey off / paused)
         const double rc = radioCenterMhz(a);
         for (const dect2::WsEntry& e : a.engine.wideAllSession().entries()) {

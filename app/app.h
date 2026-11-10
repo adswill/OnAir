@@ -826,6 +826,7 @@ std::string tvRecJobsJson();                        // tvrec_ui.cpp, for the rem
 void generalRecallHz(App& a, double hz);          // general_ui.cpp: a memory's frequency: the dial on hz, the channel marker back on the dial              // general_ui.cpp: the general receiver's listening frequency (the dial plus its offset)
 void trunkPoolWindow(App& a);                        // trunkpool_ui.cpp: control radio + voice radios, call log, access list, channel plan (docs/TRUNKING.md)
 void trunkPoolTick(App& a);                          // every frame, window shut or not: feeds grants, drives the pool
+void widePlacedPlot(App& a, int plotId);             // wide_all_ui.cpp: middle-click on the spectrum / waterfall adds or removes a placed decoder; draws their markers (inside a plot)
 void wideAllWindow(App& a);                          // wide_all_ui.cpp: every signal of the capture found, identified and decoded at once (wide_session.h)
 void passesDownloadTles();                          // passes_ui.cpp: fetch the TLE sets (CelesTrak) in the background
 bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
