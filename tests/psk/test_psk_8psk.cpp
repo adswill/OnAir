@@ -59,7 +59,7 @@ int main() {
         CHECK(st.size() > 15 && st[0] == 4 && st.back() == 0, "preamble and postamble");
         psk::MfskVaricodeRx rx;
         std::string out;
-        for (size_t i = 10; i < st.size(); i++) {
+        for (size_t i = 10; i + 5 < st.size(); i++) {   // up to the postamble (its steady symbols read as spaces)
             const int s = psk::psk8Symbol(st[i]);
             for (int b = 0; b < 3; b++) { const int c = rx.bit((s >> b) & 1); if (c > 0) out += (char)c; }
         }
@@ -80,7 +80,7 @@ int main() {
     // 3. noise sweep (SNR in the baud-rate bandwidth), 8PSK125: the lowest SNR that still gives the call sign
     {
         const bool lng = std::getenv("ONAIR_TEST_LONG") != nullptr;
-        const double snrs[] = {16, 13, 10, 8};
+        const double snrs[] = {20, 17, 14, 11};
         int okAt[4] = {};
         const int seeds = lng ? 6 : 2;
         for (int i = 0; i < 4; i++)

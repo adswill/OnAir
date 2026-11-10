@@ -170,7 +170,9 @@ bool jt6mDecodeBlock(const float* x, size_t n, double fs, Jt6mBlock& out, double
                         const double rd = ratio((size_t)(4 * (s + 1) + ph), sh, 0);
                         if (rd > 0.5 * r) continue;
                     }
-                    sc += std::min(d, 4.0);
+                    // clipped so a short ping counts as much as a long weak signal; the small unclipped part breaks the tie between the true shift and
+                    // the next tone, whose window leakage (-6 dB) still clips on a strong signal
+                    sc += std::min(d, 4.0) + 0.02 * d;
                 }
                 if (sc > bestScore) { bestScore = sc; bestPh = ph; bestS = sh; bestFo = fo; }
             }
@@ -219,7 +221,7 @@ bool jt6mDecodeBlock(const float* x, size_t n, double fs, Jt6mBlock& out, double
                     for (int q = 0; q < 2; q++) {
                         const int pos = (int)((2 * (long)fi + q) % P);
                         const size_t h = (size_t)(4 * (s + 1 + q) + bestPh);
-                        for (int k = 1; k < kTones; k++) fold[(size_t)pos * kData + (size_t)(k - 1)] += ratio(h, bestS, k);
+                        for (int k = 1; k < kTones; k++) fold[(size_t)pos * kData + (size_t)(k - 1)] += std::max(0.0, ratio(h, bestS, k) - 1.0);   // the noise level taken out
                         cnt[(size_t)pos]++;
                     }
                 }

@@ -72,6 +72,7 @@ struct Chan {
     psk::Viterbi vit;
     psk::VaricodeRx vrx;
     psk::MfskVaricodeRx mrx;     // 8PSK
+    int run4 = 0;                // 8PSK: steady symbols in a row (the postamble carrier, not text)
     std::string text;
     std::vector<PskLine> lines;
     bool lineOpen = false;
@@ -95,6 +96,7 @@ struct PskReceiver::Impl {
     // Auto (setAuto): the last seconds of the 24 kHz band go through a trial decoder of each modulation on another thread, the one with the most good text is kept
     std::atomic<bool> autoOn{false}, autoKick{false};
     bool trial = false;                       // a trial decoder: nothing is reported to the outside world
+    uint64_t p8Odd = 0, p8All = 0;            // 8PSK decisions on an odd eighth turn, and all (Auto: BPSK and QPSK never use the odd ones)
     std::vector<cf32> autoRing;
     size_t autoPos = 0, autoFill = 0;
     uint64_t autoSamples = 0, autoLastRun = 0, autoCharsSeen = 0, autoGoodAt = 0;
@@ -375,7 +377,9 @@ struct PskReceiver::Impl {
         if (std::abs(d) < 1e-20f) return;
         const double a = std::arg(d);
         const bool qp = pskQpsk(mode), p8 = psk8psk(mode);
-        const int order = p8 ? 8 : qp ? 4 : 2;
+        // 8PSK: the AFC of the eighth power only pulls in +-baud / 16 and locks just as well one eighth turn per symbol off, so it acquires on
+        // the preamble's reversals with the square (as BPSK, +-baud / 4) and changes to the eighth power once the DCD is on
+        const int order = p8 ? (c.dcd ? 8 : 2) : qp ? 4 : 2;
         const double err = std::arg(std::pow(std::complex<double>(d), order)) / order;
         // quality: 1 for clean decisions, 0 for noise (the phase error spread over its whole range)
         const double en = err / (kPi / order);
@@ -409,7 +413,10 @@ struct PskReceiver::Impl {
         if (p8) {
             const int e8 = (int)std::lround(a / (kPi / 4));
             const int sym = psk::psk8Symbol(((e8 % 8) + 8) % 8);
-            if (c.dcd)
+            c.run4 = sym == 4 ? c.run4 + 1 : 0;
+            if (c.dcd) { p8All++; if (sym & 1) p8Odd++; }
+            if (c.run4 >= 4) c.mrx.reset();   // the steady carrier would read as spaces
+            else if (c.dcd)
                 for (int b = 0; b < 3; b++) { const int ch = c.mrx.bit((sym >> b) & 1); if (ch >= 0 && ch != 0) putChar(c, ch); else if (ch == -2) putChar(c, -2); }
         } else if (qp) {
             float cq[4];
@@ -679,6 +686,8 @@ uint64_t PskReceiver::Impl::trialMode(const std::vector<cf32>& band, int mode, f
     t->report();
     ok = t->tel.blocksOk; bad = t->tel.blocksBad;
     if (!(ok >= 16 && ok >= 4 * bad)) return 0;
+    // a BPSK or QPSK signal read as 8PSK gives text too (its steps are 8PSK symbols), but never an odd eighth turn
+    if (psk8psk(mode) && (t->p8All < 64 || t->p8Odd * 5 < t->p8All)) return 0;
     // a too-fast modulation still produces characters from a slower signal (the short codes of noise); only text that reads counts
     std::string text;
     for (const PskSignal& s : t->tel.signals) if (s.chars > 0) text += s.text;
