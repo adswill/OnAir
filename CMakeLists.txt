@@ -2502,6 +2502,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(fuzz_parsers tests/fuzz/fuzz_parsers.cpp)
   target_link_libraries(fuzz_parsers PRIVATE dect2core)
   add_test(NAME fuzz_parsers COMMAND fuzz_parsers)
+  add_executable(test_sample_guard tests/fuzz/test_sample_guard.cpp)   # the engine's input guard against NaN, infinity and huge float samples
+  target_include_directories(test_sample_guard PRIVATE core/include)
+  add_test(NAME sample_guard COMMAND test_sample_guard)
 
   # AIS frame layer (Rust, the generator side in C++): golden-vector test, standalone like the fuzz run below
   add_executable(test_ais_proto_rs tests/ais/test_ais_proto_rs.cpp core/src/ais/ais_proto.cpp core/src/ais/ais_proto_rs.cpp)
