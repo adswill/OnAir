@@ -264,8 +264,8 @@ std::vector<Found> search(const cf32* x, size_t n, const SearchOpts& o, double* 
                     int m1 = 0, m2 = 0;
                     for (int j = 0; j < 4; j++) {
                         const double ph = phs[(size_t)(k0 + j)] - delta;
-                        auto near = [&](int deg) { double dd = std::fabs(std::remainder(ph - deg, 360.0)); return dd < 40; };
-                        m1 += near(kS1[j]); m2 += near(kS2[j]);
+                        auto nearV = [&](int deg) { double dd = std::fabs(std::remainder(ph - deg, 360.0)); return dd < 40; };
+                        m1 += nearV(kS1[j]); m2 += nearV(kS2[j]);
                     }
                     // S1 and S2 differ in every position: 3 of 4 phases are enough to tell them apart
                     if (m1 >= 3 && m2 <= 1) { cnt++; c1++; } else if (m2 >= 3 && m1 <= 1) { cnt++; c2++; }

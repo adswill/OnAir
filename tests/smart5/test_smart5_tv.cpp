@@ -131,8 +131,8 @@ static void testCellTx() {
     b.name(0x0303, "Vilnius TV tower");
     CellTxBook c; c.load(b.save());
     CHECK(c.lookup(0x0303).name == "Vilnius TV tower" && !c.text(0x0303).empty(), "book");
-    auto far = b.lookup(0x0202);
-    CHECK(far.distKm > 15000, "antipode-ish %.0f", far.distKm);
+    auto farV = b.lookup(0x0202);
+    CHECK(farV.distKm > 15000, "antipode-ish %.0f", farV.distKm);
 }
 
 // one-pole low-pass, for the impaired path

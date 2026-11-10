@@ -34,7 +34,7 @@ public:
     const std::vector<AirportMovement>& all() const { return done_; }   // oldest first
     static std::string runwayOf(double trackDeg);   // "09", "27", "36"
 private:
-    struct T { int64_t lastUtc = 0; bool low = false, descending = false, wasGround = false, landed = false, departed = false, near = false; double track = -1; int alt = 0; bool hasAlt = false; std::string cs; };
+    struct T { int64_t lastUtc = 0; bool low = false, descending = false, wasGround = false, landed = false, departed = false, nearField = false; double track = -1; int alt = 0; bool hasAlt = false; std::string cs; };
     std::vector<AirportMovement> step(const std::vector<AdsbAircraft>& v, const AirportBoardConfig& c, int64_t utc, std::map<uint32_t, std::pair<std::string, std::string>>& info);
     std::map<uint32_t, T> t_;
     std::vector<AirportMovement> done_;

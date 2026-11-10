@@ -37,7 +37,7 @@ std::vector<AirportMovement> AirportBoard::step(const std::vector<AdsbAircraft>&
     };
     for (const AdsbAircraft& ac : v) {
         if (!ac.hasPos || ac.ageSec > 20) continue;
-        const bool near = km(c.lat, c.lon, ac.lat, ac.lon) <= c.radiusKm;
+        const bool nearField = km(c.lat, c.lon, ac.lat, ac.lon) <= c.radiusKm;
         auto it = t_.find(ac.icao);
         const bool isNew = it == t_.end();
         T& t = t_[ac.icao];
@@ -46,7 +46,7 @@ std::vector<AirportMovement> AirportBoard::step(const std::vector<AdsbAircraft>&
         const bool low = ac.ground || (ac.hasAlt && ac.altFt - c.elevFt < c.lowFt);
         const bool desc = ac.hasVrate ? ac.vrateFpm < -200 : (t.hasAlt && ac.hasAlt && ac.altFt < t.alt);
         const bool climb = ac.hasVrate ? ac.vrateFpm > 300 : (t.hasAlt && ac.hasAlt && ac.altFt > t.alt);
-        if (near) {
+        if (nearField) {
             // landing: came down low near the field (seen descending) and now reports the ground
             if (ac.ground && t.descending && !t.landed) { add(true, ac.icao, t); t.landed = true; t.descending = false; }
             // take-off: was on the ground near the field (or first seen there low), now airborne, low and climbing
@@ -54,16 +54,16 @@ std::vector<AirportMovement> AirportBoard::step(const std::vector<AdsbAircraft>&
             if (low && desc && !ac.ground && !t.departed) t.descending = true;
             if (ac.ground) t.wasGround = true;
         }
-        t.low = low; t.near = near;
+        t.low = low; t.nearField = nearField;
         if (ac.hasAlt) { t.alt = ac.altFt; t.hasAlt = true; }
         t.lastUtc = utc;
-        if (!near && !low) { t.descending = false; t.landed = false; t.departed = false; t.wasGround = false; }   // away again: a new movement may follow later
+        if (!nearField && !low) { t.descending = false; t.landed = false; t.departed = false; t.wasGround = false; }   // away again: a new movement may follow later
     }
     // lost low near the field while coming down: landed (many transponders stop being heard below the radio horizon before they report the ground)
     for (auto it = t_.begin(); it != t_.end();) {
         T& t = it->second;
         if (utc - t.lastUtc >= 60) {
-            if (!t.landed && t.near && t.low && t.descending) add(true, it->first, t);
+            if (!t.landed && t.nearField && t.low && t.descending) add(true, it->first, t);
             it = t_.erase(it);
         } else ++it;
     }

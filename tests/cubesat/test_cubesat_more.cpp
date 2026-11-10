@@ -9,6 +9,7 @@
 #include "dect2/cubesat/cubesat_proto.h"
 #include <cmath>
 #include <cstdio>
+#include <algorithm>
 #include <cstring>
 #include <fstream>
 #include <random>

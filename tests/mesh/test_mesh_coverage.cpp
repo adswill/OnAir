@@ -20,16 +20,16 @@ int main() {
         }
         CHECK(taken > 1500, "taken %d", taken);
         auto cells = cov.cells();
-        int near = 0, nearOk = 0, far = 0; double nearM = 0, farM = 0;
+        int nearV = 0, nearOk = 0, farV = 0; double nearM = 0, farM = 0;
         for (const auto& c : cells) {
             CHECK(c.km >= 0 && c.km < 16, "cell distance %.1f", c.km);
             if (c.count < 2) continue;
             const double expect = 18 - 30 * std::log10(std::max(0.5, c.km));
-            if (c.km < 4) { near++; nearM += c.marginDb; nearOk += std::fabs(c.medianSnr - expect) < 3 + fadeDb; }
-            else if (c.km > 9) { far++; farM += c.marginDb; }
+            if (c.km < 4) { nearV++; nearM += c.marginDb; nearOk += std::fabs(c.medianSnr - expect) < 3 + fadeDb; }
+            else if (c.km > 9) { farV++; farM += c.marginDb; }
         }
-        CHECK(near > 20 && nearOk >= near * 0.9, "fade %.0f: near cells %d/%d follow the path loss", fadeDb, nearOk, near);
-        CHECK(far > 20 && farM / far < nearM / std::max(1, near) - 10, "far cells %d: margin %.1f dB against %.1f near", far, farM / std::max(1, far), nearM / std::max(1, near));
+        CHECK(nearV > 20 && nearOk >= nearV * 0.9, "fade %.0f: near cells %d/%d follow the path loss", fadeDb, nearOk, nearV);
+        CHECK(farV > 20 && farM / farV < nearM / std::max(1, nearV) - 10, "far cells %d: margin %.1f dB against %.1f near", farV, farM / std::max(1, farV), nearM / std::max(1, nearV));
         CoverageCell fc; CHECK(cov.farthest(fc, 2) && fc.km > 11, "farthest %.1f km", fc.km);
     }
     {   // what is not taken: relayed, no position, 0/0, beyond 400 km; the same place twice is one cell

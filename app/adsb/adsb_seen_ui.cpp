@@ -117,15 +117,15 @@ void seenView(App& a) {
     if (!G.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", G.note.c_str()); }
     const auto& d = G.st.days();
     const size_t from = d.size() > (size_t)G.chart ? d.size() - (size_t)G.chart : 0;
-    std::vector<float> uq, pos, far;
-    for (size_t i = from; i < d.size(); i++) { uq.push_back((float)d[i].unique); pos.push_back((float)d[i].positions); far.push_back((float)d[i].maxKm); }
+    std::vector<float> uq, pos, farV;
+    for (size_t i = from; i < d.size(); i++) { uq.push_back((float)d[i].unique); pos.push_back((float)d[i].positions); farV.push_back((float)d[i].maxKm); }
     const float w = ImGui::GetContentRegionAvail().x * 0.62f, h = 70 * gUi;
     recordsPanel();
     if (uq.empty()) { ImGui::TextDisabled("%s", tr("No days yet: the store fills while the receiver runs.")); return; }
     ImGui::BeginGroup();
     ImGui::PlotHistogram("##adsbsu", uq.data(), (int)uq.size(), 0, tr("unique aircraft per day"), 0, FLT_MAX, ImVec2(w, h));
     ImGui::PlotHistogram("##adsbsp", pos.data(), (int)pos.size(), 0, tr("positions per day"), 0, FLT_MAX, ImVec2(w, h));
-    ImGui::PlotHistogram("##adsbsf", far.data(), (int)far.size(), 0, tr("farthest per day, km"), 0, FLT_MAX, ImVec2(w, h));
+    ImGui::PlotHistogram("##adsbsf", farV.data(), (int)farV.size(), 0, tr("farthest per day, km"), 0, FLT_MAX, ImVec2(w, h));
     ImGui::TextDisabled("%s .. %s", d[from].day.c_str(), d.back().day.c_str());
     ImGui::EndGroup();
     ImGui::SameLine();

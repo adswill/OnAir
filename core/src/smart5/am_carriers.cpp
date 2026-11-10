@@ -62,9 +62,9 @@ void AmCarrierAnalyser::analyse(double now) {
     // a Hann main lobe spans +/- 2 bins: drop side peaks of a strong carrier closer than 3 bins
     std::vector<AmCarrier> keep;
     for (auto& c : found) {
-        bool near = false;
-        for (auto& k : keep) if (std::fabs(k.offsetHz - c.offsetHz) < 3 * binHz_) near = true;
-        if (!near) keep.push_back(c);
+        bool nearV = false;
+        for (auto& k : keep) if (std::fabs(k.offsetHz - c.offsetHz) < 3 * binHz_) nearV = true;
+        if (!nearV) keep.push_back(c);
     }
     if (keep.size() > 16) keep.resize(16);
     // history: match to the previous carriers within 1 Hz

@@ -32,9 +32,9 @@ int main() {
             }
             if (tunedHere && u(r) < 0.7) {   // a stray decode (a test chart, a repeat), away from the broadcasts
                 const int m = anyMin(r);
-                bool near = false;
-                for (int k = 0; k < 3; k++) near |= std::abs(m - slots[k]) < 15;
-                if (!near) decodes.push_back(m);
+                bool nearV = false;
+                for (int k = 0; k < 3; k++) nearV |= std::abs(m - slots[k]) < 15;
+                if (!nearV) decodes.push_back(m);
             }
             for (int m = 0; m < 1440; m++) {
                 const double t = kDay0 + d * 86400.0 + m * 60;

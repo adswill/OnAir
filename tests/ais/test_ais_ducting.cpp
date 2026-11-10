@@ -22,12 +22,12 @@ int main() {
         std::vector<AisDuctEvent> ev;
         const double t0 = 1767225600;
         struct Ship { uint32_t mmsi; double km, brg; };
-        std::vector<Ship> near;
-        for (int i = 0; i < 60; i++) near.push_back({(uint32_t)(277000000 + i), 5 + 35 * u(r), 180 + 180 * u(r)});   // west of the coast
+        std::vector<Ship> nearV;
+        for (int i = 0; i < 60; i++) nearV.push_back({(uint32_t)(277000000 + i), 5 + 35 * u(r), 180 + 180 * u(r)});   // west of the coast
         const double ductFrom = t0 + 30 * 3600, ductTo = ductFrom + 2 * 3600;
         int eventsBefore = 0;
         for (double t = t0; t < t0 + 48 * 3600; t += 60) {
-            for (auto& s : near) {
+            for (auto& s : nearV) {
                 s.km = std::clamp(s.km + (u(r) - 0.5) * 0.4, 3.0, 40.0);
                 double la, lo; at(s.km, s.brg, la, lo);
                 d.add(t + u(r) * 50, s.mmsi, la, lo, u(r) < 0.7 ? "A" : "B", 161.975e6, ev);
