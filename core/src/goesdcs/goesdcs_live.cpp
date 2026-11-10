@@ -287,7 +287,12 @@ struct GoesDcsReceiver::Impl {
         const int chars = (int)m.raw.size();
         const bool good = ok && (m.eot || chars >= 4) && m.parityErrors * 4 <= chars + 1;
         s.state = 0; s.lockHyp = -1; s.bits.clear(); s.addrDone = false; s.bornSec = timeSec;
-        if (!good) { badN++; dirty = true; return; }
+        if (!good) {
+            badN++; dirty = true;
+            if (log) { char b[200]; snprintf(b, sizeof b, "GOES DCS: report dropped at %+.0f Hz, %d bps %s, %s, %d characters, %d parity errors%s", rel, s.bps, s.man ? "Manchester" : "NRZ",
+                                       dcs::addressHex(m.address).c_str(), chars, m.parityErrors, m.eot ? "" : ", no end code"); log(b); }
+            return;
+        }
         nextId++;
         m.eot = m.eot || ended;
         okN++;
