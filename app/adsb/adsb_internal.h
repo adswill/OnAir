@@ -89,6 +89,11 @@ void sourcesPanel(App& a);
 bool shown(const AdsbAircraft& ac);   // passes the filter bar
 void filterBar(App& a);               // search box, Filter pop-up, "n of m shown"
 
+// adsb_overhead_ui.cpp: the overhead log (planefence)
+void overheadTick(App& a);
+void overheadBanner(App& a);
+void overheadView(App& a);
+
 // adsb_map_ui.cpp
 double bearingDeg(double lat1, double lon1, double lat2, double lon2);
 void radar(App& a, ImVec2 size);
