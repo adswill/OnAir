@@ -395,7 +395,7 @@ struct Processor::Impl {
                     break;
                 }
             }
-            if (taken || f < 0 || f > kBandHz) continue;
+            if (taken || !(f >= 0 && f <= kBandHz)) continue;   // (written so a NaN frequency is skipped too: it reached the int64 cast below, UBSan)
             hits++;
             for (int i = 0; i < kNumRates; i++) {
                 const double tz = tmid - f / kRates[i];
