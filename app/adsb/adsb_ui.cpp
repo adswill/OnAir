@@ -141,6 +141,7 @@ void tick(App& a) {
     S.wasRunning = run;
     overheadTick(a);
     seenTick(a);
+    airportTick(a);
     if (live(a) && a.rx.seq != S.lastSeq) vdl2NoteAdsb(a.rx.adsb);
     if (live(a) && a.rx.seq != S.lastSeq) {
         S.lastSeq = a.rx.seq;
@@ -161,7 +162,7 @@ void tick(App& a) {
 
 void tab(App& a) {
     kit::modeHeader({11, "ADS-B", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("adsbv", S.viewMode, {{tr("Live"), 1}, {tr("Tracks"), 5}, {tr("Map"), 0}, {tr("Radar"), 2, true}, {tr("Range"), 3, true}, {tr("Range stats"), 4, true}, {tr("Overhead"), 6, true}, {tr("History"), 7, true}});
+    kit::modeNav("adsbv", S.viewMode, {{tr("Live"), 1}, {tr("Tracks"), 5}, {tr("Map"), 0}, {tr("Radar"), 2, true}, {tr("Range"), 3, true}, {tr("Range stats"), 4, true}, {tr("Overhead"), 6, true}, {tr("History"), 7, true}, {tr("Airport"), 8, true}});
     if (S.viewMode == 0 || S.viewMode == 1 || S.viewMode == 2) { filterBar(a); overheadBanner(a); }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float dw = std::min(250.f * gUi, W * 0.26f);
@@ -178,6 +179,7 @@ void tab(App& a) {
     else if (S.viewMode == 5) kit::sessionItems(11, 3, "adsb");
     else if (S.viewMode == 6) overheadView(a);
     else if (S.viewMode == 7) seenView(a);
+    else if (S.viewMode == 8) airportView(a);
     else statsView(a);
     ImGui::EndChild();
     if (pane) {

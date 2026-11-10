@@ -103,6 +103,10 @@ bool seenNewToday(uint32_t icao);   // first heard ever today
 void horizonControls();          // inside the Display pop-up
 void drawHorizon(ImDrawList* dl);
 
+// adsb_airport_ui.cpp: arrivals and departures
+void airportTick(App& a);
+void airportView(App& a);
+
 // adsb_map_ui.cpp
 double bearingDeg(double lat1, double lon1, double lat2, double lon2);
 void radar(App& a, ImVec2 size);
