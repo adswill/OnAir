@@ -103,6 +103,7 @@ void run(double hz, bool wide, bool autoOffset) {
     double centre, rate;
     { std::lock_guard<std::mutex> lk(gMu); centre = gAskedCentre; rate = gAskedRate; }
     const auto want = pagerTestMessages(0, kPocsag512 + 1);
+    CHECK(!want.empty(), "no POCSAG 512 test messages");
     RxTelemetry rx; uint64_t seq = 0;
     auto found = [&] {
         int n = 0;
