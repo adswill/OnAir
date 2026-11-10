@@ -4,12 +4,14 @@
 #include "dect2/cishf/cishf_rx.h"
 #include "dect2/cishf/cishf_tel.h"
 #include <cmath>
+#include <cstdlib>
 #include <cstdio>
 #include <random>
 #include <sstream>
 #include <string>
 #include <vector>
 using namespace dect2::cishf;
+using dect2::cf32;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
 
@@ -49,6 +51,8 @@ static std::vector<int> randomChars(std::mt19937& g, int n) {
 
 int main() {
     std::mt19937 g(7);
+    const bool L = std::getenv("ONAIR_TEST_LONG") != nullptr;   // the full sweeps; the default run keeps the hardest case of each
+    using V = std::vector<double>;
     // ---- frame facts
     {
         int n = 0;
@@ -62,8 +66,8 @@ int main() {
     // ---- BEE: all traffic rates, both polarities, offsets, noise, clock error; two messages (the second without a start sequence)
     for (double traffic : {50.0, 100.0})
         for (bool inv : {false, true})
-            for (double cfo : {-60.0, 0.0, 85.0})
-                for (double snr : {30.0, 12.0}) {
+            for (double cfo : L ? V{-60.0, 0.0, 85.0} : V{inv ? -60.0 : 85.0})
+                for (double snr : L ? V{30.0, 12.0} : V{12.0}) {
                     GenOpts o; o.trafficBaud = traffic; o.idleBaud = traffic == 100 ? 50 : 36; o.shiftHz = traffic == 100 ? 250 : 200; o.invert = inv;
                     o.centreHz = 1700;
                     BeeMsg a; a.key = randomChars(g, 10); a.chars = randomChars(g, 60);
@@ -100,8 +104,8 @@ int main() {
     }
 
     // ---- CIS-14: frame period found and every field read, offsets, noise, clock error
-    for (double cfo : {-40.0, 0.0, 120.0})
-        for (double snr : {30.0, 14.0}) {
+    for (double cfo : L ? V{-40.0, 0.0, 120.0} : V{120.0})
+        for (double snr : L ? V{30.0, 14.0} : V{14.0}) {
             GenOpts o; o.shiftHz = 200; o.centreHz = 1500;
             std::vector<uint16_t> fr;
             std::vector<std::string> want;
@@ -128,8 +132,8 @@ int main() {
 
     // ---- CIS-12: pilot offset, PSK order and the phase steps of every carrier
     for (int variant : {0, 1})
-        for (double cfo : {-25.0, 0.0, 40.0})
-            for (double snr : {30.0, 15.0}) {
+        for (double cfo : L ? V{-25.0, 0.0, 40.0} : V{variant ? -25.0 : 40.0})
+            for (double snr : L ? V{30.0, 15.0} : V{15.0}) {
                 GenOpts o; o.variant = variant; o.symbols = 500;
                 std::vector<std::vector<uint8_t>> steps;
                 auto x = impair(genCis12(o, &steps), cfo, snr, 20, (uint32_t)g());
@@ -154,7 +158,7 @@ int main() {
 
     // ---- CIS-36 (MFSK) identification at its three rates
     for (double baud : {10.0, 20.0, 40.0})
-        for (double cfo : {0.0, 70.0}) {
+        for (double cfo : L ? V{0.0, 70.0} : V{70.0}) {
             GenOpts o; o.trafficBaud = baud; o.symbols = (int)(baud * 40);
             auto x = impair(genCis36(o), cfo, 15, 20, (uint32_t)g());
             Run r = run(Cis36, x);
@@ -165,8 +169,8 @@ int main() {
     // ---- OFDM HDR variants, CIS-128 and CIS-3000 identification
     static const char* hdrName[] = {"CIS-45", "CIS-45", "CIS-60", "CIS-93"};
     for (int v = 0; v < 4; v++)
-        for (double cfo : {0.0, 30.0}) {
-            GenOpts o; o.variant = v; o.symbols = 400;
+        for (double cfo : L ? V{0.0, 30.0} : V{30.0}) {
+            GenOpts o; o.variant = v; o.symbols = L ? 400 : 200;
             Run r = run(Hdr, impair(genOfdm(Hdr, o), cfo, 18, 10, (uint32_t)g()));
             CHECK(param(r.st, "identified").find(hdrName[v]) != std::string::npos, "HDR variant %d cfo %.0f: %s", v, cfo, r.st.mode.c_str());
         }
@@ -211,7 +215,7 @@ int main() {
         rx.setSignalOffset(-dect2::cisHfTuning(kind).tuneOffsetHz);
         CHECK(rx.ready(), "receiver %d not ready at 250 kHz", kind);
         std::vector<cf32> buf(25000);
-        for (int i = 0; i < 10 * 24; i++) { syn->generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); }   // 24 s
+        for (int i = 0; i < 10 * (kind == Bee ? 16 : 8); i++) { syn->generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); }   // 16 s (BEE) / 8 s
         dect2::CisHfTelemetry t;
         CHECK(rx.telemetry(t, 0), "no telemetry");
         if (kind == Bee) CHECK(t.state >= 1 && t.text.find("[start") != std::string::npos && t.blocksOk >= 100, "receiver BEE: state %d, %llu characters, %s", t.state, (unsigned long long)t.blocksOk, t.mode.c_str());
