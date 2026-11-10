@@ -11,6 +11,7 @@ const char* protoName(int proto) {
     case Npr: return "NPR-70";
     case Winmor: return "WINMOR";
     case Mioty: return "mioty";
+    case NrPlus: return "DECT NR+";
     default: return "?";
     }
 }

@@ -6,6 +6,7 @@
 #include "dect2/xlink/npr.h"
 #include "dect2/xlink/winmor.h"
 #include "dect2/xlink/mioty.h"
+#include "dect2/xlink/nrplus.h"
 #include <chrono>
 #include <cmath>
 #include <map>
@@ -77,6 +78,10 @@ struct XlinkReceiver::Impl {
     RationalResampler mrs;
     bool mrsOn = false, mActive = false;
     xlink::mioty::Receiver mioty;
+    RationalResampler nrs;
+    bool nrsOn = false, nActive = false;
+    xlink::nrplus::Receiver nrp;
+    std::vector<cf32> nout;
     std::vector<cf32> mout;
     std::vector<cf32> wout;
     double phase = 0, dphi = 0;
@@ -145,8 +150,26 @@ struct XlinkReceiver::Impl {
         mActive = true;
     }
 
+    void buildNrPlus() {
+        nActive = false;
+        if (!(protocols & xlink::NrPlus)) return;
+        if (fs < xlink::nrplus::kRate - 1) { if (log) log("DECT NR+: a 1.728 MHz channel needs a sample rate of at least 1.728 Msps"); return; }
+        nrsOn = std::fabs(fs - xlink::nrplus::kRate) > 1;
+        double err = 0;
+        if (nrsOn && !nrs.configure(fs, xlink::nrplus::kRate, &err, 1.6e6)) return;
+        nrp.reset();
+        nrp.setCallback([this](const xlink::nrplus::Header& h) {
+            char id[48], typ[32];
+            snprintf(id, sizeof id, "network %02X, RD %04X", (unsigned)h.networkId, (unsigned)h.txId);
+            snprintf(typ, sizeof typ, "control field type %d", h.type);
+            addFrame(xlink::NrPlus, id, typ, xlink::nrplus::describe(h), "", h.cfoHz, h.snrDb);
+        });
+        nActive = true;
+    }
+
     void rebuild() {
         dirty = false;
+        buildNrPlus();
         buildNpr();
         buildWinmor();
         buildMioty();
@@ -283,6 +306,11 @@ void XlinkReceiver::feed(const cf32* x, size_t n) {
         c.phase.resize(m);
         for (size_t i = 0; i < m; i++) { c.phase[i] = (float)std::arg(y[i] * std::conj(c.prev)); c.prev = y[i]; }
         c.f->feed(c.phase.data(), m);
+    }
+    if (s.nActive) {
+        const cf32* y = in; size_t m = n;
+        if (s.nrsOn) { s.nout.clear(); s.nrs.process(in, n, s.nout); y = s.nout.data(); m = s.nout.size(); }
+        s.nrp.feed(y, m);
     }
     if (s.mActive) {
         const cf32* y = in; size_t m = n;

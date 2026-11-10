@@ -171,5 +171,6 @@ inline constexpr CreditEntry kCredits[] = {
     {"NPR-70 modem firmware", "F4HDK and contributors", "GPL-3.0", "core/src/xlink/npr.cpp (Si4463 radio settings, sync word and network ID table)", "settings read from the firmware; no code taken", "https://hackaday.io/project/164092-npr-new-packet-radio", "Compatible."},
     {"WINMOR protocol specification", "Rick Muething KN6KB", "Public domain", "core/src/xlink/winmor.cpp (pilot format, carrier and symbol rates)", "specification read, re-implemented", "https://winlink.org", "Compatible."},
     {"ETSI TS 103 357 (TS-UNB, mioty)", "ETSI", "ETSI specification, free to read", "core/src/xlink/mioty.cpp (TSMA pattern tables, interleaver, coding, PHY and MAC layouts)", "specification read, re-implemented", "https://www.etsi.org/deliver/etsi_ts/103300_103399/103357/", "Compatible."},
+    {"ETSI TS 103 636-3 / -4 (DECT-2020 NR)", "ETSI", "ETSI specification, free to read", "core/src/xlink/nrplus.cpp (STF, DRS and PCC mapping, turbo code, rate matching, scrambling, physical layer control field)", "specification read, re-implemented", "https://www.etsi.org/deliver/etsi_ts/103600_103699/", "Compatible."},
 };
 inline constexpr int kCreditCount = (int)(sizeof kCredits / sizeof kCredits[0]);

@@ -204,3 +204,4 @@
 600|npr
 600|winmor
 600|mioty
+600|dectnrp
