@@ -261,7 +261,8 @@ std::vector<Found> search(const cf32* x, size_t n, const SearchOpts& o, double* 
                     auto near = [&](int deg) { double dd = std::fabs(std::remainder(ph - deg, 360.0)); return dd < 45; };
                     m1 += near(kS1[j]); m2 += near(kS2[j]);
                 }
-                if (m1 == 4) { cnt++; c1++; } else if (m2 == 4) { cnt++; c2++; }
+                // S1 and S2 differ in every position: 3 of 4 phases are enough to tell them apart
+                if (m1 >= 3 && m2 <= 1) { cnt++; c1++; } else if (m2 >= 3 && m1 <= 1) { cnt++; c2++; }
             }
             if (cnt > bestCnt) { bestCnt = cnt; bestOff = off; s1 = c1; s2 = c2; }
         }
@@ -276,7 +277,17 @@ std::vector<Found> search(const cf32* x, size_t n, const SearchOpts& o, double* 
             const int firstFrameSub = ba ? 1 : 0;
             f.evenFirst = (((k0 - firstFrameSub) / 2) % 2 == 0) ? 1 : 0;
         } else if (f.midScore > 1.3f) f.cellParam = pairLo;   // the pair is known, not which one is the initial
+        // a code that only correlates with another cell's signal: no midamble of its group and no SYNC-DL above the guard
+        if (!(f.midScore >= 1.5f || f.snrDb > 3)) continue;
         out.push_back(f);
+        // take this cell's SYNC-DL out, so that a weaker cell's SYNC-DL (cross-correlation up to -10 dB) is measured cleanly
+        for (int k = 0; k < subs; k++) {
+            const int t = t0 + k * SF + 2 * kSyncDlChip;
+            for (int i = 0; i < 64; i++) {
+                const double tt = t + 2.0 * i;
+                y[(size_t)(t + 2 * i)] -= cf32(sdv[(size_t)k] * cd(s[(size_t)i]) * std::polar(1.0, w * tt));
+            }
+        }
     }
     if (ms) *ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - tc).count();
     return out;

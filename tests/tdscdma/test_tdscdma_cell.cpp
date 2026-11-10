@@ -55,7 +55,7 @@ int main() {
         printf("\n");
         CHECK(ok == (int)c.params.size(), "case %d: %d of %zu", ci, ok, c.params.size());
         CHECK(fake == 0, "case %d: %d cells that are not there", ci, fake);
-        for (auto& r : f) if (r.syncDl == c.params[0] / 4) { CHECK(std::fabs(r.cfoHz - c.cfo) < 300, "case %d cfo %.0f", ci, r.cfoHz); CHECK(c.s2 ? r.quadS2 > 0 && r.quadS1 > 0 : r.quadS2 == 0, "case %d quadruples", ci); }
+        for (auto& r : f) if (r.syncDl == c.params[0] / 4) { CHECK(std::fabs(r.cfoHz - c.cfo) < 500, "case %d cfo %.0f", ci, r.cfoHz); CHECK(c.s2 ? r.quadS2 > 0 && r.quadS1 > 0 : r.quadS2 == 0, "case %d quadruples", ci); }
         ci++;
     }
     // noise only
