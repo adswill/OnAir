@@ -33,7 +33,9 @@ constexpr uint8_t kPtGsm = 0x03;
 constexpr uint8_t kPtSpeex = 0x96;          // used by some peers; refused here (OnAir sends and asks for GSM only)
 constexpr int kKeepAliveMs = 10000;
 constexpr int kConnectTimeoutMs = 50000;    // no SDES from the peer for this long: the connection is gone
-constexpr int kConnectRetries = 5;          // SDES sent while connecting (one per keep-alive period) before giving up
+constexpr int kConnectRetries = 5;
+constexpr size_t kMaxLocation = 27;         // the directory shows at most 27 characters of the location
+constexpr int kRegistrationRefreshMs = 5 * 60 * 1000;   // the log-in is repeated this often while online          // SDES sent while connecting (one per keep-alive period) before giving up
 
 // ---- RTCP (control port) ----
 // SDES: what a station sends to connect and to keep the connection. priv: optional PRIV item ("" = none).
@@ -61,7 +63,7 @@ bool parseChatPacket(const uint8_t* p, size_t n, std::string& text);            
 
 // ---- directory (TCP) ----
 enum class DirStatus { Online, Busy, Offline };
-// hhmm: the local time "HH:MM" shown next to the station; location: the text shown in the list (CR / LF removed)
+// hhmm: the local time "HH:MM" shown next to the station; location: the text shown in the list (CR / LF removed, cut to kMaxLocation)
 std::string loginCommand(const std::string& call, const std::string& password, DirStatus st, const std::string& hhmm, const std::string& location);
 // The same with the password replaced by "****", for logs and diagnostics
 std::string loginCommandRedacted(const std::string& call, DirStatus st, const std::string& hhmm, const std::string& location);

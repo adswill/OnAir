@@ -198,7 +198,9 @@ std::string statusPart(DirStatus st, const std::string& hhmm) {
 } // namespace
 
 std::string loginCommand(const std::string& call, const std::string& password, DirStatus st, const std::string& hhmm, const std::string& location) {
-    return "l" + upperCall(call) + "\xAC\xAC" + noCrLf(password) + "\r" + statusPart(st, hhmm) + "\r" + noCrLf(location) + "\r";
+    std::string loc = noCrLf(location);
+    if (loc.size() > kMaxLocation) loc.resize(kMaxLocation);
+    return "l" + upperCall(call) + "\xAC\xAC" + noCrLf(password) + "\r" + statusPart(st, hhmm) + "\r" + loc + "\r";
 }
 
 std::string loginCommandRedacted(const std::string& call, DirStatus st, const std::string& hhmm, const std::string& location) {
