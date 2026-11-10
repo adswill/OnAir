@@ -652,8 +652,10 @@ int main(int argc, char** argv) {
             { const size_t tp = g.out.find("TXRATE "); r.txRate = tp == std::string::npos ? 0 : atof(g.out.c_str() + tp + 7); }
             if (psig <= 0) r.note = "generator sends silence";
             snprintf(rs, sizeof rs, "%.4f", actual);
-            {   // silence first: what the receiver saves with nothing to decode
+            {   // silence first: what the receiver saves with nothing to decode (read as fast as it goes, also on the real-time try)
+                unsetenv("QA_PACE");
                 const ChildResult zr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/zero.ci16", "zero"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
+                if (paced) setenv("QA_PACE", "1", 1);
                 const size_t jp = zr.out.rfind('{');
                 r.resZero = jp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(jp), "res");
             }
