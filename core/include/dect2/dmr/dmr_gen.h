@@ -52,6 +52,22 @@ struct DmrGenConfig {
     double iqImbalanceDb = 0;
     int superMin = 0, superSpan = 0;   // direct mode: length of a voice call in superframes of 360 ms, superMin + 0..superSpan-1 (0: the default 2..5, or 2..7 when busy)
     double rms = 0.22;           // total power of signal plus noise, as an rms of the complex samples
+
+    // ---- real subscriber transmit (dmr_tx.h). When txEnable is set the generator plays exactly ONE MS-sourced transmission built from the user's
+    // own identity and payload in time slot txSlot, then the carrier goes off (a real push-to-talk). Nothing random is added; truth() still describes
+    // what was sent so the receiver round-trip can be scored. These override the base-station / direct-mode scripts above.
+    bool txEnable = false;
+    int txCallType = 0;          // 0 group voice, 1 private voice, 2 all-call voice, 3 SMS text, 4 LRRP position, 5 carrier kerchunk, 6 Tier III registration, 7 Tier III voice service request
+    uint32_t txSrc = 0;          // the user's own DMR ID (the source of every burst)
+    uint32_t txDst = 0;          // talkgroup (group / all call) or destination radio ID (private, SMS, LRRP, Tier III)
+    int txSlot = 1;              // 1 or 2
+    bool txMobile = true;        // MS-sourced sync patterns (talking to a repeater); false: direct-mode patterns
+    std::string txAlias;         // talker alias sent in the embedded signalling of a voice call (from the callsign); empty: none
+    std::string txText;          // SMS text (txCallType 3)
+    int txTextDd = 0;            // SMS character coding: 0 = auto (ISO 8859-1 if it fits, else UTF-16LE)
+    double txLat = 0, txLon = 0; // LRRP position (txCallType 4)
+    bool txLrrpNoFix = false;    // LRRP: send a NoFix status instead of a position
+    int txVoiceSuper = 10;       // voice: number of 360 ms superframes (10 = 3.6 s); kerchunk uses 1
 };
 
 // What the generator has put on the air (for tests)
@@ -85,5 +101,6 @@ private:
 
 DmrGenConfig dmrGenConfigFrom(const SynthConfig& cfg, double sampleRate);
 std::unique_ptr<ModeSynth> makeDmrSynth(const SynthConfig& cfg, double sampleRate);   // nullptr only for a rate below 1 Msps or above 20 Msps
+std::unique_ptr<ModeSynth> makeDmrSynthFromConfig(const DmrGenConfig& cfg);           // same generator from a prepared config (the transmit path, dmr_tx.h)
 
 } // namespace dect2

@@ -13,6 +13,7 @@
 //       0x37 result       uintvar code (16 = no fix): the radio heard nothing / no position
 //   37-byte packets carry the NoFix form (doc 0x0D + request-id + result 16), 51-byte packets a fix.
 #include "dect2/dmr/dmr_lrrp.h"
+#include <cmath>
 
 namespace dect2 {
 namespace {
@@ -136,6 +137,84 @@ bool parseDmrLrrp(const uint8_t* data, size_t size, DmrLocation& out) {
     if (udpLen < 8 || ihl + udpLen > total) return false;
     const uint8_t* body = data + ihl + 8;
     return parseDoc(body, body + (udpLen - 8), out, false);
+}
+
+// ---- encoder (dmr_lrrp.h): the inverse of the parser above, byte for byte
+namespace {
+void putUintvar(std::vector<uint8_t>& v, uint32_t x) {
+    uint8_t tmp[5];
+    int n = 0;
+    tmp[n++] = (uint8_t)(x & 0x7F);
+    while ((x >>= 7)) tmp[n++] = (uint8_t)((x & 0x7F) | 0x80);
+    for (int i = n - 1; i >= 0; i--) v.push_back(tmp[i]);   // most significant group first, continuation bit on all but the last
+}
+void putUfloatvar(std::vector<uint8_t>& v, double x) {
+    if (x < 0) x = 0;
+    const uint32_t integer = (uint32_t)x;
+    const uint32_t fraction = (uint32_t)((x - (double)integer) * 128.0 + 0.5);   // one fraction octet: scale 128
+    putUintvar(v, integer);
+    putUintvar(v, fraction & 0x7F);
+}
+void putBe32(std::vector<uint8_t>& v, uint32_t x) { v.push_back((uint8_t)(x >> 24)); v.push_back((uint8_t)(x >> 16)); v.push_back((uint8_t)(x >> 8)); v.push_back((uint8_t)x); }
+
+std::vector<uint8_t> wrapIpUdp(const std::vector<uint8_t>& doc) {
+    std::vector<uint8_t> pkt;
+    const size_t total = 20 + 8 + doc.size();
+    // IPv4 header
+    pkt.push_back(0x45); pkt.push_back(0x00);
+    pkt.push_back((uint8_t)(total >> 8)); pkt.push_back((uint8_t)total);
+    pkt.push_back(0x00); pkt.push_back(0x00);     // id
+    pkt.push_back(0x00); pkt.push_back(0x00);     // flags / fragment
+    pkt.push_back(0x40);                          // TTL 64
+    pkt.push_back(17);                            // protocol UDP
+    pkt.push_back(0x00); pkt.push_back(0x00);     // header checksum (filled below)
+    pkt.push_back(10); pkt.push_back(0); pkt.push_back(0); pkt.push_back(1);   // src 10.0.0.1
+    pkt.push_back(10); pkt.push_back(0); pkt.push_back(0); pkt.push_back(2);   // dst 10.0.0.2
+    uint32_t sum = 0;
+    for (size_t i = 0; i < 20; i += 2) sum += (uint32_t)((pkt[i] << 8) | pkt[i + 1]);
+    while (sum >> 16) sum = (sum & 0xFFFF) + (sum >> 16);
+    const uint16_t hc = (uint16_t)(~sum);
+    pkt[10] = (uint8_t)(hc >> 8); pkt[11] = (uint8_t)hc;
+    // UDP header (checksum 0: optional for IPv4)
+    const size_t udpLen = 8 + doc.size();
+    pkt.push_back(0x0F); pkt.push_back(0xA1);     // src port 4001
+    pkt.push_back(0x0F); pkt.push_back(0xA1);     // dst port 4001
+    pkt.push_back((uint8_t)(udpLen >> 8)); pkt.push_back((uint8_t)udpLen);
+    pkt.push_back(0x00); pkt.push_back(0x00);     // checksum
+    pkt.insert(pkt.end(), doc.begin(), doc.end());
+    return pkt;
+}
+} // namespace
+
+std::vector<uint8_t> dmrLrrpEncode(double lat, double lon, double radiusM, bool hasSpeed, double speedMs, bool hasHeading, double headingDeg, uint16_t requestId) {
+    std::vector<uint8_t> tok;
+    tok.push_back(0x22); putUintvar(tok, 2); tok.push_back((uint8_t)(requestId >> 8)); tok.push_back((uint8_t)requestId);   // request-id, two octets
+    tok.push_back(0x51);                                                           // circle-2d: lat, lon, radius
+    const double latN = lat > 90 ? 90 : lat < -90 ? -90 : lat;
+    double lonN = lon;
+    while (lonN >= 180.0) lonN -= 360.0;
+    while (lonN < -180.0) lonN += 360.0;
+    putBe32(tok, (uint32_t)(int32_t)std::llround(latN * 2147483648.0 / 90.0));
+    putBe32(tok, (uint32_t)std::llround((lonN < 0 ? lonN + 360.0 : lonN) * 4294967296.0 / 360.0));
+    putUfloatvar(tok, radiusM);
+    if (hasSpeed) { tok.push_back(0x6C); putUfloatvar(tok, speedMs); }
+    if (hasHeading) { tok.push_back(0x56); tok.push_back((uint8_t)std::lround(headingDeg / 2.0) & 0xFF); }
+    std::vector<uint8_t> doc;
+    putUintvar(doc, 0x0D);                 // Triggered-Location-Report
+    putUintvar(doc, (uint32_t)tok.size());
+    doc.insert(doc.end(), tok.begin(), tok.end());
+    return wrapIpUdp(doc);
+}
+
+std::vector<uint8_t> dmrLrrpEncodeNoFix(uint16_t requestId) {
+    std::vector<uint8_t> tok;
+    tok.push_back(0x22); putUintvar(tok, 2); tok.push_back((uint8_t)(requestId >> 8)); tok.push_back((uint8_t)requestId);
+    tok.push_back(0x37); putUintvar(tok, 16);     // result: no fix
+    std::vector<uint8_t> doc;
+    putUintvar(doc, 0x0D);
+    putUintvar(doc, (uint32_t)tok.size());
+    doc.insert(doc.end(), tok.begin(), tok.end());
+    return wrapIpUdp(doc);
 }
 
 bool parseDmrLrrpCompressed(const uint8_t* data, size_t size, DmrLocation& out) {
