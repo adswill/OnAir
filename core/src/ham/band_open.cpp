@@ -8,11 +8,6 @@
 
 namespace dect2::ham {
 
-int bandOrder(const std::string& b) {
-    static const char* const o[] = {"2190m", "630m", "160m", "80m", "60m", "40m", "30m", "20m", "17m", "15m", "12m", "10m", "6m", "4m", "2m", "70cm", "23cm"};
-    for (int i = 0; i < (int)(sizeof o / sizeof *o); i++) if (b == o[i]) return i;
-    return 100;
-}
 
 void BandOpenStore::add(const std::string& band, int64_t utc, double km) {
     if (band.empty()) return;

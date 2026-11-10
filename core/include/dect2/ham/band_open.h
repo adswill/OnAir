@@ -1,6 +1,7 @@
 // "When is the band open": from the user's own FT8 / WSPR / ... spots, per band and UTC hour of day over the last 7 to 30 days: how many days had
 // spots in that hour, how many spots, and the farthest. Kept on disk (one record per day, band and hour). docs/BAND-OPEN-3.9.md.
 #pragma once
+#include "dect2/ham/ham_log.h"   // bandOrder
 #include <cstdint>
 #include <map>
 #include <string>
@@ -28,7 +29,5 @@ private:
     bool dirty_ = false;
 };
 
-// the usual order of the ham bands for display ("160m" first); unknown names last
-int bandOrder(const std::string& band);
 
 }  // namespace dect2::ham

@@ -16,7 +16,7 @@ int main() {
     CHECK(m7.count("20m") && m7["20m"][12].days == 7 && m7["20m"][12].spots == 35 && m7["20m"][3].days == 0 && m7["20m"][17].maxKm == 500 + 1700 + 9, "20 m, 7 days: %d days at 12 UTC", m7["20m"][12].days);
     CHECK(m30["20m"][12].days == 10 && m30["20m"][12].spots == 50, "30 days hold all 10");
     CHECK(m7.count("40m") && m7["40m"][23].days == 3 && m30["40m"][0].days == 4 && m30["40m"][12].days == 0, "40 m at night: %d / %d", m7["40m"][23].days, m30["40m"][0].days);
-    CHECK(bandOrder("160m") < bandOrder("20m") && bandOrder("20m") < bandOrder("6m") && bandOrder("x") == 100, "band order");
+    CHECK(bandOrder("160m") < bandOrder("20m") && bandOrder("20m") < bandOrder("6m") && bandOrder("x") > bandOrder("6m"), "band order (ham_log.h)");
     BandOpenStore r; r.parse(s.serialize() + "bad\n1\tx\t99\t1\t1\n");
     CHECK(r.matrix(now, 30)["20m"][12].spots == 50 && r.matrix(now, 30)["40m"][23].days == 4, "round trip");
     r.add("20m", now + 40 * 86400, 100);
