@@ -21,8 +21,9 @@ std::vector<Interferer> locateInterferers(const std::vector<float>& snr, double 
     const int n = (int)snr.size();
     if (n < 16 || df <= 0) return out;
     std::vector<float> s(snr);
-    std::nth_element(s.begin(), s.begin() + n / 2, s.end());
-    const double med = s[n / 2];
+    // the reference: the 75th percentile, so a block covering half the channel does not drag it down
+    std::nth_element(s.begin(), s.begin() + n * 3 / 4, s.end());
+    const double med = s[n * 3 / 4];
     const double thr = med - p.dropDb;
     int k = 0;
     while (k < n) {

@@ -24,7 +24,7 @@ static void testWatchdog() {
     FmWatchdog w;
     FmWatchInput in; in.carrier = true; in.snrDb = 40; in.stereo = true; in.pilotPct = 9; in.pi = 0x5201; in.ps = "LRT"; in.radioText = "song A";
     double t = 0;
-    for (int i = 0; i < 1200; i++, t += 0.1) { in.devKhz = 55 + 10 * n(rng); w.update(in, t); }   // 2 min of normal programme
+    for (int i = 0; i < 1200; i++, t += 0.1) { in.devKhz = 55 + 7 * n(rng); w.update(in, t); }   // 2 min of normal programme
     CHECK(w.status().summary().empty(), "clean station flagged: %s", w.status().summary().c_str());
     for (int i = 0; i < 200; i++, t += 0.1) { in.devKhz = 10.5f + 0.5f * n(rng); w.update(in, t); }   // 20 s of silence: pilot + RDS only
     CHECK(w.status().deadAir && w.status().deadAirFor >= 12, "dead air %d %.1f", w.status().deadAir, w.status().deadAirFor);

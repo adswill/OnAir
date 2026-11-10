@@ -161,7 +161,16 @@ VitsResult analyseVitsLine(const std::vector<float>& x, double fs) {
                 i = j + 1;
             }
         }
-        if (steps.size() >= 5) {
+        // a staircase climbs (or falls) step by step; packets on one pedestal (multiburst) do not
+        bool stair = steps.size() >= 5;
+        int dir = 0;
+        for (size_t k = 1; stair && k < steps.size(); k++) {
+            const double d = ms[(steps[k].a + steps[k].b) / 2] - ms[(steps[k - 1].a + steps[k - 1].b) / 2];
+            const int sd = d >= 5 ? 1 : d <= -5 ? -1 : 0;
+            if (sd == 0 || (dir != 0 && sd != dir)) stair = false;
+            dir = sd;
+        }
+        if (stair) {
             // subcarrier frequency from the zero crossings of the first step
             const Seg& s0 = steps[0];
             int zc = 0; int first = -1, last = -1;
