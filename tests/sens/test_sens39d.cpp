@@ -22,14 +22,21 @@ struct Row {
 };
 
 const Row kRows[] = {
-    {"meteor", 5, 8, true},
+    {"meteor", 2, 3, true},      // 3.9: 5 / 8 -> 2 / 3 dB (line acquisition, narrow loops, best-scoring sync search)
     {"tetra", 99, 99, false},
     {"tetrapol", 99, 99, false},
-    {"fusion", 99, 99, false},
+    {"fusion39", 99, 99, false},
     {"orbcomm", 99, 99, false},
     {"inmc", 99, 99, false},
-    {"pager", 99, 99, false},
+    {"pocsag", 99, 99, false},
+    {"flex", 99, 99, false},
     {"cw", 99, 99, false},
+    {"dvbs1", 99, 99, false},
+    {"ale", 99, 99, false},
+    {"apt", 99, 99, false},
+    {"edacs", 99, 99, false},
+    {"smartnet", 99, 99, false},
+    {"mpt1327", 99, 99, false},
 };
 
 double cpuSeconds() {
