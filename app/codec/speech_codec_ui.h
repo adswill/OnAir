@@ -19,7 +19,13 @@ std::vector<dect2::codec::CodecDir> codecSearchFolders();
 std::vector<std::string> codecSearchPaths();
 // Saves the extra folder (empty clears it) and makes every loader look again.
 void setExtraFolder(const std::string& dir);
-// "Open codecs folder" (user folder) plus "Open folder next to OnAir" and "Open extra folder" when those exist, on the current line.
+// The Discord invite, held here once (the menu bar chip uses it too), and the button every codec install screen shows: "Join the Discord to get
+// access to built codecs", which opens the invite in the browser. The text goes through tr(). The app itself never downloads or bundles a codec:
+// this only opens a web page. `small` draws a SmallButton (for notices); true when clicked (the link is already opened).
+const char* discordInviteUrl();
+const char* discordCodecLabel();
+bool discordCodecButton(bool small = false);
+// "Open codecs folder" (user folder) plus "Open folder next to OnAir" and "Open extra folder" when those exist, then the Discord codecs button (same line when it fits).
 bool openCodecFolderButtons();
 // Lists the searched folders for plug-in `codec`, marks where the file is, and warns when it is in more than one.
 void codecFoldersList(const std::string& codec);

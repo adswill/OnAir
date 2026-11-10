@@ -152,7 +152,13 @@ std::vector<std::string> limeLibraryHints() {
     const char* how = "install LimeSuite (sudo apt install limesuite, or your distribution's package) and OnAir's udev rules";
 #endif
     if (!loaded) return {std::string("A LimeSDR Mini is plugged in but the LimeSuite library is not installed: ") + how + ", then restart OnAir"};
-    return {"A LimeSDR Mini is plugged in but LimeSuite (" + path + ") lists no radio: " + how + "; if that is done, run \"LimeUtil --update\" to match the board's firmware to the library"};
+#if defined(_WIN32)
+    // #169: a Mini V1 was listed with FTDI's FT60x driver 1.3 (2023) and not with 1.4 (2025)
+    const char* older = "; if the newest FTDI driver is installed and it still lists nothing, try FTDI's previous driver version (1.3), which a Mini V1 user found to work";
+#else
+    const char* older = "";
+#endif
+    return {"A LimeSDR Mini is plugged in but LimeSuite (" + path + ") lists no radio: " + how + "; if that is done, run \"LimeUtil --update\" to match the board's firmware to the library" + older};
 }
 
 } // namespace dect2

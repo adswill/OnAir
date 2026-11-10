@@ -544,3 +544,5 @@ Remove after: Inmarsat
 How long after it was last heard an entry stays in the list and on the map. Default is the rule of the mode; Never keeps everything.
 Custom remove-after time (minutes)
 Used by every Remove after row set to Custom.
+Join the Discord to get access to built codecs
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.

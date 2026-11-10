@@ -3767,3 +3767,5 @@ with a password
 working
 working out the passes ...
 wrong processor
+Join the Discord to get access to built codecs
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.

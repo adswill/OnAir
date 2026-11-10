@@ -3817,3 +3817,5 @@ with a password	parolalı
 working	çalışıyor
 working out the passes ...	geçişler hesaplanıyor ...
 wrong processor	yanlış işlemci
+Join the Discord to get access to built codecs	Hazır derlenmiş codec'lere erişmek için Discord'a katılın
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	OnAir Discord'unu tarayıcınızda açar. OnAir'in kendisi hiçbir codec indirmez veya içermez.

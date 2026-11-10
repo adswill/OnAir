@@ -3787,3 +3787,5 @@ Custom remove-after time (minutes)	Eigen verwijdertijd (minuten)
 Used by every Remove after row set to Custom.	Gebruikt door elke rij Verwijderen na die op Eigen staat.
 Default	Standaard
 Custom	Eigen
+Join the Discord to get access to built codecs	Word lid van de Discord voor toegang tot kant-en-klare codecs
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Opent de OnAir-Discord in je browser. OnAir zelf downloadt of bevat nooit een codec.

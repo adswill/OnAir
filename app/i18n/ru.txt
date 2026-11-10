@@ -3772,3 +3772,5 @@ Custom remove-after time (minutes)	Своё время удаления (мин�
 Used by every Remove after row set to Custom.	Используется каждой строкой «Удалять через» со значением «Своё».
 Default	По умолчанию
 Custom	Своё
+Join the Discord to get access to built codecs	Присоединяйтесь к Discord, чтобы получить готовые кодеки
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Открывает Discord OnAir в браузере. Сам OnAir никогда не скачивает и не содержит кодеков.

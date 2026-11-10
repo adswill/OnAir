@@ -126,8 +126,9 @@ for id in $LIST; do
   OUT="$WORK/onair-codec-$id.$EXT"
   UPPER="$(echo "$id" | tr '[:lower:]' '[:upper:]')"
   echo "Building plug-in $id ..."
+  # MBE_STATIC: the static mbelib-neo is linked in, so on Windows (MSYS2) its header must not mark the functions dllimport (#468)
   # shellcheck disable=SC2086
-  if cc $SHARED -fPIC -O2 -DCODEC_"$UPPER" -I"$WORK/src/include" -I"$GENINC" "$WRAPPER" "$LIB" -lm -o "$OUT" 2>"$WORK/cc-$id.log"; then
+  if cc $SHARED -fPIC -O2 -DMBE_STATIC=1 -DCODEC_"$UPPER" -I"$WORK/src/include" -I"$GENINC" "$WRAPPER" "$LIB" -lm -o "$OUT" 2>"$WORK/cc-$id.log"; then
     cp "$OUT" "$OUTDIR/" && DONE="$DONE $id"
   else
     tail -n 20 "$WORK/cc-$id.log"; echo "  plug-in $id failed (see above)"

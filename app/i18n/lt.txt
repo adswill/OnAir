@@ -3802,3 +3802,5 @@ Custom remove-after time (minutes)	Pasirinktinis pašalinimo laikas (minutėmis)
 Used by every Remove after row set to Custom.	Naudoja kiekviena eilutė Pašalinti po, nustatyta į Pasirinktinį.
 Default	Numatytasis
 Custom	Pasirinktinis
+Join the Discord to get access to built codecs	Prisijunkite prie Discord, kad gautumėte paruoštus kodekus
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Naršyklėje atidaro „OnAir“ Discord. Pati „OnAir“ niekada neatsisiunčia ir neįtraukia kodeko.

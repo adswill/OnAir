@@ -582,3 +582,5 @@ stopped - showing saved results
 subpage %d/%d
 type a page number
 udp
+Join the Discord to get access to built codecs
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.

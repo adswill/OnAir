@@ -3782,3 +3782,5 @@ Custom remove-after time (minutes)	カスタム削除時間(分)
 Used by every Remove after row set to Custom.	「カスタム」にした削除時間の行すべてで使います。
 Default	既定
 Custom	カスタム
+Join the Discord to get access to built codecs	Discord に参加してビルド済みコーデックを入手する
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	ブラウザで OnAir の Discord を開きます。OnAir 自身がコーデックをダウンロードしたり同梱したりすることはありません。

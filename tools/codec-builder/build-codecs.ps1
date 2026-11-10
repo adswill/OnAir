@@ -107,7 +107,8 @@ $done = @()
 foreach ($id in $ids) {
     $out = Join-Path $Work "onair-codec-$id.dll"
     Write-Host "Building plug-in $id ..."
-    & gcc -shared -O2 ("-DCODEC_" + $id.ToUpper()) ("-I" + (Join-Path $Src 'include')) ("-I" + $GenInc) $Wrapper $lib.FullName -lm -o $out
+    # MBE_STATIC: the plug-in links mbelib-neo's static library, so its header must not mark the functions dllimport (#468: undefined __imp_mbe_*)
+    & gcc -shared -O2 -DMBE_STATIC=1 ("-DCODEC_" + $id.ToUpper()) ("-I" + (Join-Path $Src 'include')) ("-I" + $GenInc) $Wrapper $lib.FullName -lm -o $out
     if ($LASTEXITCODE -eq 0) {
         Copy-Item $out $OutDir -Force
         $done += $id

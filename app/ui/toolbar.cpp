@@ -480,6 +480,7 @@ void toolbarParts(App& a, int mask, bool vertical) {
 
     const DeviceInfo& curDev = a.devices[a.devIdx];
     setAdcBits(adcBitsFor(curDev, a.engine.running() ? a.engine.sampleRate() : a.tune.sampleRate));
+    setAdcLevelCompensated(curDev.board == "airspyhf");   // the HF+ firmware scales its output itself: its dBFS level does not follow the slider
 
     if (mask & TbFreq) toolbarFreq(a, vertical, retune);
     const ModeUi* mu = modeUi(a.family);

@@ -793,6 +793,13 @@ Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int 
             o.valid = true;
             endVoiceByData();
             Assembler& m = t.msg;
+            if (hd.dpf == kDpfProprietary && m.active && m.got == 0 && m.prop.empty()) {   // #335: the second header of a packet (Motorola's
+                m.prop.assign(d, d + 10);                // compressed IP/UDP header): one of the blocks to follow, the packet goes on
+                m.got++;
+                t.lastBurst = std::string("Data header: ") + dpfName(hd.dpf);
+                if (m.got >= m.hdr.blocks) finishMessage(t);
+                break;
+            }
             m = Assembler();
             m.hdr = hd;
             m.startSec = now;
@@ -846,7 +853,7 @@ Link::Outcome Link::decodeData(Track& t, const Bits& burst, const float* z, int 
         if (!okBlock) break;
         Assembler& m = t.msg;
         if (!m.active) { o.valid = true; break; }        // a block without its header: counted, nothing to attach it to
-        if (m.got == 0) m.dt = dt;
+        if (m.dt == 0) m.dt = dt;   // the first data block (a proprietary header before it is counted in got, #335)
         if (dt != m.dt) { m.active = false; break; }
         DataBlock blk;
         dataBlockParse(dt, oct, m.confirmed, blk);
@@ -915,21 +922,29 @@ void Link::finishMessage(Track& t) {
         break;
     }
     }
+    DmrLocation loc;
+    bool haveLoc = false, nmea = false;
     if (crcOk || (m.crcAllOk && total >= 32 && dmrIpv4HeaderOk(data.data(), data.size()))) {   // a wrong packet CRC but a right IPv4 header checksum (#335)
         dmr::IpService svc;
         if (dmr::ipService(data.data(), data.size(), svc)) {
             if (svc.port == 4005) { msg.format = "ARS: radio on the system"; msg.text = svc.text.empty() ? "registration" : svc.text; }
             else if (svc.port == 4007) { msg.format = svc.ack ? "Text message acknowledgment" : "Text message (TMS)"; msg.text = svc.text; }
         }
-        DmrLocation loc;
         bool have = parseDmrLrrp(data.data(), data.size(), loc);
-        bool nmea = false;
         if (!have) {   // a plain-text NMEA sentence (e.g. $GNRMC) carried in a short-data / UDT message
             nmea = parseDmrNmea(msg.text.data(), msg.text.size(), loc) ||
                    parseDmrNmea((const char*)data.data(), data.size(), loc);
             have = nmea;
         }
-        if (have) {
+        if (have) haveLoc = true;
+    }
+    if (!haveLoc && m.prop.size() == 10 && m.crcAllOk) {   // #335: a position behind a compressed header; the document's own length is the check
+        std::vector<uint8_t> v(m.prop.begin() + 2, m.prop.end());
+        v.insert(v.end(), data.begin(), data.end());
+        haveLoc = parseDmrLrrpCompressed(v.data(), v.size(), loc);
+    }
+    if (haveLoc) {
+        {
             loc.sec = now; loc.slot = slotOf(t); loc.src = m.hdr.src; loc.dst = m.hdr.dst;
             loc.unixSec = (double)std::time(nullptr);
             if (tel_.locations.size() >= 512) tel_.locations.erase(tel_.locations.begin());

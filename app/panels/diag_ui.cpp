@@ -1,6 +1,7 @@
 // Radio problems where the user looks: the listing error, a failed start, a frequency the radio cannot tune and the USB hints, all under the
 // radio picker, plus a "Copy diagnostics" button that puts what a bug report needs on the clipboard.
 #include "dect2/common/u8file.h"
+#include "dect2/source/gain.h"
 #include "dect2/audio/audio_rec.h"
 #include "dect2/audio/audio_monitor.h"
 #include "dect2/audio/audioout.h"
@@ -599,6 +600,7 @@ void nextStepLine(App& a) {
     in.hasRadio = !a.devices.empty();
     in.radioHasGain = a.devIdx >= 0 && a.devIdx < (int)a.devices.size() && a.devices[a.devIdx].isRadio();
     in.autoGain = a.agcOn;
+    in.levelCompensated = adcLevelCompensated();
     in.runSec = run ? now - startedAt : 0;
     const SampleLoss sl = a.engine.sampleLoss();
     in.radioLoss = sl.live && sl.rateLow;
