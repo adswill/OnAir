@@ -50,5 +50,21 @@ private:
 int qpskTurns(int sym);
 int qpskSymbol(int turns);
 
+// 8PSK125 / 8PSK250 without FEC (fldigi, W1HKJ et al., GPL-3, src/psk/psk.cxx): 3 bits a symbol, least significant first, the IZ8BLY MFSK varicode
+// (src/mfsk/mfskvaricode.cxx, kept in hfdig_kbd_tables). The on-air phase step of a symbol in eighth turns counter-clockwise, and back.
+int psk8Eighths(int sym);
+int psk8Symbol(int eighths);
+// The phase steps of one sending: `preamble` reversals (fldigi's symbol 0), a <NUL>, the text, three <NUL>, `postamble` steady symbols (symbol 4)
+std::vector<int> psk8Steps(const std::string& text, int preamble, int postamble);
+// MFSK varicode, bit by bit: a character (0 .. 255) when the next one starts, -1 none yet, -2 a code not in the table
+class MfskVaricodeRx {
+public:
+    int bit(int b);
+    void reset() { sh_ = 0; n_ = 0; }
+private:
+    uint32_t sh_ = 0;
+    int n_ = 0;
+};
+
 } // namespace psk
 } // namespace dect2

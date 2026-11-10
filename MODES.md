@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**306 modes.**
+**307 modes.**
 
 ## TV (15)
 
@@ -258,11 +258,12 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
 
-## Amateur - Digital (34)
+## Amateur - Digital (35)
 
 - **QRSS grabber** - QRSS: very slow Morse read from a spectrogram, receive only
 - **DFCW grabber** - DFCW: slow Morse with a frequency for dots and one for dashes, receive only
 - **FSK441** - FSK441: meteor scatter pings, 441 baud 4-FSK, receive only
+- **JT6M** - JT6M: 6 m meteor and ionospheric scatter, 44-tone FSK, receive only
 - **ISCAT** - ISCAT: 42-tone scatter mode, A and B found automatically, receive only
 - **PI4** - PI4: microwave beacon mode, 27 s frames with an 8 character message, receive only
 - **Throb** - Throb: two-tone keyboard mode, six variants found automatically, receive only

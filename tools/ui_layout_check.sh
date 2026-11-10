@@ -136,6 +136,7 @@ sferics	--mode sferics	Overview|Sferics|Receiver|History
 qrss	--mode qrss	Overview|Messages|Receiver|History
 dfcw	--mode dfcw	Overview|Messages|Receiver|History
 fsk441	--mode fsk441	Overview|Messages|Receiver|History
+jt6m	--mode jt6m	Overview|Messages|Receiver|History
 iscat	--mode iscat	Overview|Messages|Receiver|History
 pi4	--mode pi4	Overview|Messages|Receiver|History
 throb	--mode throb	Overview|Messages|Receiver|History

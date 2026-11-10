@@ -1393,3 +1393,14 @@ Built 14 items from scratchpad/smart37-backup/r5-avia-marine-iot.md.
 - Marine: AIS behaviour flags and anchor watch (new automation event ais.behaviour).
 - IoT: mesh coverage cells; meters and tyres marked as the user's own (Sub-GHz > Mine); Z-Wave home network health.
 Simulated only. Details in docs/SMART5-avia-3.9.md, docs/SMART5-marine-3.9.md and docs/SMART5-iot-3.9.md.
+## 2026-11-11 feat39-misc: JT6M, 8PSK125/250, Chayka
+Branch feat39-misc on integ-39, details in docs/MISC-3.9.md.
+- New: JT6M (family 750, ham science kind 9: pings, tuning error, folded message) and fldigi 8PSK125 / 8PSK250 without FEC (PSK modulations 7 and 8, chosen by hand, not in Auto).
+- The Chayka GRIs are now named in eLoran, and the 4970 / 9940 half-period mix-up is fixed.
+- Already in OnAir: G3RUH 9600 packet, PSK63/125/250 and QPSK31/63, the EDACS control channel, Eurobalise SUBSET-036.
+- Skipped:
+  - GE-Star: no public spec.
+  - FreeDV 2020/2020B: the shipped codec2 has no LPCNet, and no native modem was written.
+  - TETRA TEDS: a separate QAM air interface, not started.
+  - 8PSK500/1000 and the 8PSK FEC variants.
+- Tests: the quick CI on GitHub (run 42893881567) passed 13 of 13. Simulated signals only.

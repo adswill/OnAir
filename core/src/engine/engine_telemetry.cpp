@@ -362,6 +362,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 501: return pollStd(rxHs_[6], 501, t, seqs[501], &RxTelemetry::hamsci);   // SuperSID (slot 501)
     case 502: return pollStd(rxHs_[7], 502, t, seqs[502], &RxTelemetry::hamsci);   // riometer (slot 502)
     case 503: return pollStd(rxHs_[8], 503, t, seqs[503], &RxTelemetry::hamsci);   // pulsar (slot 503)
+    case 751: return pollStd(rxHs_[9], 751, t, seqs[751], &RxTelemetry::hamsci);   // JT6M (slot 751)
     case 531: return pollStd(rxXb_[0], 531, t, seqs[530], &RxTelemetry::xband);
     case 532: return pollStd(rxXb_[1], 532, t, seqs[531], &RxTelemetry::xband);
     case 533: return pollStd(rxXb_[2], 533, t, seqs[532], &RxTelemetry::xband);

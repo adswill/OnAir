@@ -43,8 +43,10 @@ PskGenSignal sig(double hz, int mode, double snr) {
 int main() {
     const auto t0 = std::chrono::steady_clock::now();
     // 1. every modulation, offset, drift and clock error
-    int ok = 0;
+    int ok = 0, tried = 0;
     for (int m = 0; m < kPskModes; m++) {
+        if (psk8psk(m)) continue;   // 8PSK is not in Auto (chosen by hand)
+        tried++;
         PskGenSignal s = sig(1000 + 150.0 * m, m, 20);
         s.driftHzPerMin = 3;
         s.clockPpm = 15;
@@ -53,8 +55,8 @@ int main() {
         printf("  %-8s offset, drift, clock: auto %s, locked %d, %llu chars\n", pskModeName(m), t.autoMode >= 0 ? pskModeName(t.autoMode) : "none", (int)t.autoLocked, (unsigned long long)t.blocksOk);
         ok += hit;
     }
-    printf("PSK31 family, every modulation (20 dB in its bandwidth, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, kPskModes);
-    CHECK(ok >= kPskModes - 1, "%d of %d", ok, kPskModes);
+    printf("PSK31 family, every modulation (20 dB in its bandwidth, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, tried);
+    CHECK(ok >= tried - 1, "%d of %d", ok, tried);
     // 2. noise sweep on BPSK31 and BPSK63
     for (double snr : {20.0, 12.0, 8.0, 5.0}) {
         int g = 0, tot = 0;

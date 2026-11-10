@@ -1,5 +1,7 @@
 // PSK31 / PSK63 varicode, convolutional code and Viterbi decoder (see psk_varicode.h).
 #include "dect2/psk/psk_varicode.h"
+#include "../hfdig/hfdig_kbd_tables.h"
+#include <algorithm>
 #include <map>
 #include "dect2/common/bits.h"
 
@@ -113,6 +115,51 @@ int Viterbi::decode(float s0, float s1) {
 
 int qpskTurns(int sym) { return (2 - sym) & 3; }
 int qpskSymbol(int turns) { return (2 - turns) & 3; }
+
+// ---- 8PSK125 / 8PSK250 without FEC (fldigi src/psk/psk.cxx): fldigi's symbol k steps its baseband phase by 180 + 45 k degrees; its modulator
+// sends I cos + Q sin, so on the air (upper sideband) the step is the opposite: 4 - k eighth turns
+int psk8Eighths(int sym) { return (4 - sym) & 7; }
+int psk8Symbol(int eighths) { return (4 - eighths) & 7; }
+
+std::vector<int> psk8Steps(const std::string& text, int preamble, int postamble) {
+    std::vector<int> st((size_t)std::max(0, preamble), psk8Eighths(0));   // symbol 0 again and again: the two-tone preamble
+    std::vector<uint8_t> bits;
+    auto put = [&](int c) { for (const char* q = kbd::kMfskVaricode[c & 255]; *q; q++) bits.push_back((uint8_t)(*q - '0')); };
+    put(0);                                    // a <NUL> to start, as fldigi does
+    for (unsigned char c : text) put(c);
+    for (int i = 0; i < 3; i++) put(0);        // the flush: three <NUL>
+    while (bits.size() % 3) bits.push_back(0);
+    for (size_t i = 0; i < bits.size(); i += 3) st.push_back(psk8Eighths(bits[i] | bits[i + 1] << 1 | bits[i + 2] << 2));   // least significant bit first
+    st.insert(st.end(), (size_t)std::max(0, postamble), psk8Eighths(4));   // symbol 4: the unmodulated carrier
+    return st;
+}
+
+namespace {
+const std::map<uint32_t, int>& mfskTable() {
+    static const std::map<uint32_t, int> t = [] {
+        std::map<uint32_t, int> m;
+        for (int c = 0; c < 256; c++) {
+            uint32_t v = 0;
+            for (const char* q = kbd::kMfskVaricode[c]; *q; q++) v = (v << 1) | (uint32_t)(*q - '0');
+            m[v] = c;
+        }
+        return m;
+    }();
+    return t;
+}
+}  // namespace
+
+// every MFSK code starts with a one and ends with "00", and has no "00" inside: a one after two zeros starts the next character
+int MfskVaricodeRx::bit(int b) {
+    sh_ = (sh_ << 1) | (uint32_t)(b & 1);
+    if (++n_ > 24) { sh_ &= 1; n_ = 1; return -2; }   // too long for any code: noise
+    if ((sh_ & 7) != 1 || n_ < 4) return -1;
+    const uint32_t code = sh_ >> 1;
+    sh_ = 1; n_ = 1;
+    const auto& t = mfskTable();
+    const auto it = t.find(code);
+    return it == t.end() ? -2 : it->second;
+}
 
 } // namespace psk
 } // namespace dect2

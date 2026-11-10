@@ -238,6 +238,7 @@ void Engine::configureReceiver(int a, double r) {
     case 501: rxHs_[6].configure(r); break;
     case 502: rxHs_[7].configure(r); break;
     case 503: rxHs_[8].configure(r); break;
+    case 751: rxHs_[9].configure(r); break;
     case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
     case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].configure(r); break;
     case 261: rxWx_[0].configure(r); break;
@@ -458,6 +459,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 501: rxHs_[6].setSignalOffset(o); rxHs_[6].setCenterHz(centreHz); break;
     case 502: rxHs_[7].setSignalOffset(o); rxHs_[7].setCenterHz(centreHz); break;
     case 503: rxHs_[8].setSignalOffset(o); rxHs_[8].setCenterHz(centreHz); break;
+    case 751: rxHs_[9].setSignalOffset(o); rxHs_[9].setCenterHz(centreHz); break;
     case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
     case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].setSignalOffset(o); break;
     case 261: rxWx_[0].setSignalOffset(o); break;
