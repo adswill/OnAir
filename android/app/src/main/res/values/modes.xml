@@ -257,6 +257,16 @@
         <item>Lucky-7</item>
         <item>Spino</item>
         <item>Erminaz</item>
+        <item>MIL-STD-188-110 serial</item>
+        <item>STANAG 4285</item>
+        <item>ARQ-E</item>
+        <item>ARQ-N</item>
+        <item>AUTOSPEC</item>
+        <item>SPREAD</item>
+        <item>G-TOR</item>
+        <item>EFR teleswitch</item>
+        <item>Piccolo Mk VI</item>
+        <item>Coquelet-8</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -495,6 +505,16 @@
         <item>Lucky-7 cubesat on 437.525 MHz: 4800 bit/s FSK, 35-byte frames with telemetry and picture chunks</item>
         <item>AMSAT-F Spino cubesat on 435.2 MHz: 2400 bit/s FSK, variable-length frames with CRC</item>
         <item>ERMINAZ cubesat on 435.775 MHz: 9600 bit/s FSK, CCSDS frames with Reed-Solomon</item>
+        <item>MIL-STD-188-110A/C fixed-frequency serial tone modem, receive only: 2400 Bd 8-PSK on 1800 Hz, 75 to 4800 bit/s. The preamble gives speed and interleaver, then probes, deinterleaver and Viterbi decoding, with STANAG 5066 D_PDU framing when present. Tested on simulated signals.</item>
+        <item>STANAG 4285 HF modem, receive only: 2400 Bd frames of 256 symbols, 75 to 3600 bit/s. Coded speeds found automatically from the code and its start pattern; uncoded speeds chosen under Advanced. STANAG 5066 D_PDU framing is read. Tested on simulated signals.</item>
+        <item>ARQ-E (ARQ-1000 Duplex), receive only: 7-unit ITA2-P characters with inverted characters every 4 or 8; speed, shift, alignment and cycle found automatically. Control characters are counted, not named. Tested on simulated signals.</item>
+        <item>ARQ-N, receive only: as ARQ-E without inverted characters. Tested on simulated signals.</item>
+        <item>AUTOSPEC Mk 1, receive only: 10-bit Bauer code on ITA2, single errors corrected. Tested on simulated signals.</item>
+        <item>SPREAD 11 / 21 / 51, receive only: the Bauer code spread over 11, 21 or 51 bits; the depth is found automatically. The bit layout follows the published description of the spreading. Tested on simulated signals.</item>
+        <item>G-TOR monitor, receive only: 100, 200, 300 Bd frames with Golay coding and CRC, data and Golay forms both read. ASCII frames show text; Huffman frames stay as hex. Tested on simulated signals.</item>
+        <item>EFR radio teleswitching, receive only: DCF49 (129.1 kHz) and DCF39 (139 kHz), 200 Bd FSK, DIN 19244 frames with message number, addresses and checksum. Semagyr and Versacom content stays as hex. Tested on simulated signals.</item>
+        <item>Piccolo Mk VI (II) 6-tone MFSK, receive only: ITA2 by tone pairs at 20 Hz spacing, 50 ms tones. Tested on simulated signals.</item>
+        <item>Coquelet-8 MFSK, receive only: ITA2 by tone pairs (8 tones, 26.67 Hz spacing), 37.5, 50 or 75 ms tones found automatically. Tested on simulated signals.</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -733,6 +753,16 @@
         <item>Lucky-7 cubesat</item>
         <item>Spino cubesat</item>
         <item>Erminaz cubesat</item>
+        <item>HF data modem, 8-PSK</item>
+        <item>HF data modem, PSK</item>
+        <item>HF ARQ, FSK</item>
+        <item>HF ARQ, FSK</item>
+        <item>HF FEC, FSK</item>
+        <item>HF FEC, FSK</item>
+        <item>HF ARQ, FSK</item>
+        <item>LF telegrams, FSK</item>
+        <item>HF MFSK</item>
+        <item>HF MFSK</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -971,5 +1001,15 @@
         <item>lucky-7 lucky7 cubesat 437.525 4800 fsk si4462</item>
         <item>spino amsat-f cubesat 435.2 2400 fsk</item>
         <item>erminaz cubesat 435.775 9600 fsk ccsds</item>
+        <item>mil-std-188-110 milstd 110a 110b 110c serial tone hf modem military stanag 5066 8psk 2400 baud utility</item>
+        <item>stanag 4285 nato hf modem 2400 baud psk 5066 data utility</item>
+        <item>arq-e arqe arq-1000 duplex siemens ita2 fsk hf utility</item>
+        <item>arq-n arqn arq-1000 duplex ita2 fsk hf utility</item>
+        <item>autospec bauer fsk hf fec ita2 utility</item>
+        <item>spread 11 21 51 autospec bauer fsk hf fec utility</item>
+        <item>g-tor gtor golay kantronics hf arq amateur fsk</item>
+        <item>efr dcf49 dcf39 teleswitch ripple control semagyr versacom 200 baud lf fsk din 19244 europe</item>
+        <item>piccolo mk6 mk vi mfsk hf utility</item>
+        <item>coquelet 8 coq-8 mfsk hf utility</item>
     </string-array>
 </resources>

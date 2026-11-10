@@ -1271,3 +1271,6 @@ Added GOES GRB, GVAR, CDA, MDL, GK-2A UHRIT and CDAS, a generic S-band CCSDS mod
 
 ## 2026-11-09 feat38-issues: owner-approved GitHub feature requests
 Branch feat38-issues on integ-38. Built #464 #449 #438 #455 #421 #427 #443 #453 #375 (TV texts) #431 #432 #436 #368 #466 and the R8600 firmware check (#357/#430); details, checks and what was skipped (#397 download, #233 native stage gains, #242 multi-viewport, #165 already done) in docs/ISSUES-3.8.md. Checks were syntax-only for GUI code, unit tests for the DRM filter, SARSAT frames, RDS EON and the R8600 records; no full build was run.
+
+## 2026-11-09 3.8 HF utility modes (feat38-hf-util)
+Ten receive-only decoders, families 430 - 439: MIL-STD-188-110 serial, STANAG 4285 (both with STANAG 5066 D_PDU framing), ARQ-E, ARQ-N, AUTOSPEC, SPREAD 11/21/51, G-TOR, EFR teleswitch (DCF49/DCF39), Piccolo Mk VI, Coquelet-8, in core/src/hfutil and app/hfutil, with a generator for each. Validated on simulated signals only, tests/hfutil and docs/HF-UTIL-3.8.md. NAVDAT, 3G ALE, Link-11, CLOVER and Mazielka skipped for lack of a public specification (reasons in the doc).

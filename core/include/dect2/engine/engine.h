@@ -110,6 +110,7 @@
 #include "dect2/lorawan/lorawan_rx.h"
 #include "dect2/lorasat/lorasat_rx.h"
 #include "dect2/pactor/pactor_rx.h"
+#include "dect2/hfutil/hfutil_rx.h"
 #include "dect2/esubghz/esubghz_rx.h"
 #include "dect2/roshf/roshf_rx.h"
 #include "dect2/ssdv/ssdv_rx.h"
@@ -544,6 +545,7 @@ public:
     SsdvReceiver& ssdv() { return rxSsdv_; }   // SSDV: speed, save folder, clear the pictures (telemetry through latestRx)
     Fy3Receiver& fy3Ahrpt() { return rxFy3a_; }   // FY-3 AHRPT: satellite preset, symbol rate, roll-off, new pictures (telemetry through latestRx)
     Fy3Receiver& fy3Mpt() { return rxFy3m_; }     // FY-3 MPT: the same
+    HfUtilReceiver& hfUtil(int kind) { return rxHfu_[kind]; }   // HF utility modes (families 430 .. 439)
     PactorHfReceiver& pactorHf(int variant) { return variant == 3 ? rxPh3_ : variant == 4 ? rxPh4_ : rxPh2_; }   // PACTOR-II / -III / -IV: clear the results (telemetry through latestRx)
     SelcalReceiver& selcal() { return rxSelcal_; }   // SELCAL: call log, aircraft table, Listen volume / mute (telemetry through latestRx)
     AtisReceiver& atis() { return rxAtis_; }   // ATIS (inland waterways): clear the lists, Listen volume / mute (telemetry through latestRx)
@@ -968,6 +970,8 @@ private:
     CquamReceiver rxCq_;
     ArdopReceiver rxArd_;
     PactorReceiver rxPac_;
+    HfUtilReceiver rxHfu_[kHfuKinds] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+    uint64_t hfuSeq_[kHfuKinds] = {};
     EsubghzReceiver rxEsg_;
     RoshfReceiver rxRoshf_;
     SsdvReceiver rxSsdv_;
