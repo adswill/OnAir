@@ -118,8 +118,7 @@ void Ax25Link::connect(double now) {
 void Ax25Link::listen() { setState(LinkState::Listening); }
 
 void Ax25Link::write(const uint8_t* d, size_t n) {
-    txq_.insert(txq_.end(), d, d + n);
-    if (st_ == LinkState::Connected) pump(now_);
+    txq_.insert(txq_.end(), d, d + n);   // sent from tick() or after the next frame, so that several writes share I frames
 }
 
 void Ax25Link::disconnect(double now) {
@@ -205,7 +204,8 @@ void Ax25Link::onFrame(const ax25::Frame& f, double now) {
         const uint8_t type = c & 0x0F;
         if (type == kRej) { vs_ = va_; retries++; }
         if (command && pf) sendS(kRr, false, true);
-        else if (!command && pf && nbuf_ > 0) { vs_ = va_; retries++; }   // the answer to our poll: send again what is not acknowledged
+        if (!command && pf) tries_ = 0;   // the other side answered our poll: it is there (AX.25 2.2: RC = 0 on F = 1)
+        if (!command && pf && nbuf_ > 0) { vs_ = va_; retries++; }   // the answer to our poll: send again what is not acknowledged
         if (type == kRnr) t1At_ = now + c_.t1Sec;   // the other side is busy: wait
         pump(now);
         return;
@@ -213,6 +213,10 @@ void Ax25Link::onFrame(const ax25::Frame& f, double now) {
     const uint8_t u = c & 0xEF;
     if (u == kSabm) {
         if (!sameAddr(f.from, peer_)) return;
+        // a new SABM while connected (our UA was lost): the link starts again, and what was not acknowledged is sent again
+        std::vector<uint8_t> back;
+        for (int i = 0; i < nbuf_; i++) { const auto& w = win_[(va_ + i) & 7]; back.insert(back.end(), w.begin(), w.end()); }
+        txq_.insert(txq_.begin(), back.begin(), back.end());
         vs_ = vr_ = va_ = nbuf_ = 0;
         for (auto& w : win_) w.clear();
         sendU(kUa | (pf ? kPf : 0), false);
@@ -282,6 +286,7 @@ void Ax25Link::pump(double now) {
 
 void Ax25Link::tick(double now) {
     now_ = now;
+    if (st_ == LinkState::Connected && (!txq_.empty() || discWanted_)) pump(now);
     if (t1At_ < 0 || now < t1At_) return;
     if (++tries_ > c_.n2) {
         t1At_ = -1;
