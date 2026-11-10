@@ -259,6 +259,8 @@ struct P25Receiver::Impl {
         }
     }
 
+    int knownNac = -1, lastNac = -1, knownCount = 0;   // the site's NAC once three frames in a row agreed on it
+
     bool nid(Pending& f) {
         uint8_t b[64];
         int k = 0;
@@ -269,7 +271,14 @@ struct P25Receiver::Impl {
             k++;
         }
         int nac = 0, duid = 0, e = 0;
-        const bool ok = p25::nidDecode(b, nac, duid, &e) && p25::frameLen(duid) > 0;
+        bool ok = p25::nidDecode(b, nac, duid, &e) && p25::frameLen(duid) > 0;
+        if (ok && knownNac >= 0 && nac != knownNac) { knownCount = 0; knownNac = -1; }   // another system on this frequency: the prior goes
+        if (ok) {
+            if (nac == lastNac) { if (++knownCount >= 3) knownNac = nac; } else knownCount = 1;
+            lastNac = nac;
+        } else if (knownNac >= 0 && p25::nidDecodeKnownNac(b, knownNac, duid, &e)) {
+            ok = true; nac = knownNac; tel.nidKnownNac++;
+        }
         if (!ok) { tel.nidBad++; tel.frames++; return false; }
         f.nac = nac; f.duid = duid; f.nidErr = e;
         return true;
