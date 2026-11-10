@@ -61,6 +61,8 @@ struct ZbFrame {
     bool encrypted = false;
     float rssi = -200;
     std::string info;
+    int seq = -1;                      // the MAC sequence number (DSN / BSN), -1 when the frame has none
+    bool ackReq = false;               // the sender asks for an acknowledgement (a retry reuses the sequence number)
 };
 
 struct ZigbeeTelemetry {

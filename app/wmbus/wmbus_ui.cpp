@@ -155,9 +155,10 @@ void signalView(App& a) {
 }
 
 void tab(App& a) {
-    subNav("wmb", S.view, {tr("Meters"), tr("Frames"), tr("Signal")});
+    subNav("wmb", S.view, {tr("Meters"), tr("Frames"), tr("Signal"), tr("Mine")});
     if (S.view == 0) metersView(a);
     else if (S.view == 1) framesView(a);
+    else if (S.view == 3) wmbusMineView(a);
     else signalView(a);
 }
 

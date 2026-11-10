@@ -9,6 +9,8 @@
 #include "dect2/zigbee/zigbee_proto.h"
 #include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/zigbee/zigbee_tel.h"
+#include "dect2/zwave/homenet_health.h"
+#include <deque>
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -251,10 +253,73 @@ void hopTo(App& a, int ch) {
     a.engine.retune(a.tune);   // no reset: the tables stay
 }
 
+// Home network health (3.9, docs/SMART5-iot-3.9.md item 14, wired for Zigbee / Thread in docs/SMART5-UI-3.9.md): for the one PAN the user picks
+// as theirs, per node: MAC retransmissions (the same sequence number again within 3 s), requested acknowledgements that never came, the level
+// trend and silence (dect2/zwave/homenet_health.h). An 802.15.4 acknowledgement carries only the sequence number, so it is matched to the
+// frame that asked for it with that number within the last second. Other networks are not followed.
+struct ZbHealth {
+    dect2::HomeNetHealth h;
+    int pan = -1;
+    double last = -1e18;
+    struct Ask { double t; std::string src, dst; int seq; };
+    std::deque<Ask> asks;
+    bool loaded = false;
+} H;
+void healthFeed(const dect2::ZigbeeTelemetry& t) {
+    if (!H.loaded) { H.loaded = true; H.pan = (int)plat::prefs().getI("zbMyPan", -1); }
+    if (H.pan < 0) return;
+    double newest = H.last;
+    for (auto it = t.log.rbegin(); it != t.log.rend(); ++it) {   // oldest first
+        const dect2::ZbFrame& f = *it;
+        if (f.sec <= H.last || !f.fcsOk) continue;
+        newest = std::max(newest, f.sec);
+        while (!H.asks.empty() && f.sec - H.asks.front().t > 1.0) H.asks.pop_front();
+        dect2::HomeNetFrame h; h.t = f.sec; h.seq = f.seq; h.rssi = f.rssi;
+        if (f.type == "Ack") {
+            bool found = false;
+            for (auto q = H.asks.rbegin(); q != H.asks.rend(); ++q) if (q->seq == f.seq) { h.isAck = true; h.src = q->dst; h.dst = q->src; found = true; break; }
+            if (!found) continue;   // an ack for another network's frame
+        } else {
+            if ((int)f.pan != H.pan || f.src.empty()) continue;
+            h.src = f.src; h.dst = f.dst; h.ackReq = f.ackReq;
+            if (f.ackReq && f.seq >= 0) H.asks.push_back({f.sec, f.src, f.dst, f.seq});
+        }
+        H.h.add(h);
+    }
+    H.last = newest;
+    H.h.tick(t.log.empty() ? H.last : std::max(H.last, t.log.front().sec));
+}
+void healthView(App& a) {
+    { ImGui::PushTextWrapPos(0);
+      ImGui::TextDisabled("%s", tr("Pick your own network (PAN): its nodes get retransmissions, missing acknowledgements, signal trend and silence. Other networks are not followed. Encrypted networks work too: only the MAC header is used."));
+      ImGui::PopTextWrapPos(); }
+    if (live(a)) for (const auto& p : zt(a).pans) {
+        char b[24]; snprintf(b, sizeof b, "%04X", p.pan);
+        ImGui::SameLine();
+        if (ImGui::RadioButton(b, H.pan == (int)p.pan)) { const int pan = p.pan; H = ZbHealth(); H.loaded = true; H.pan = pan; plat::prefs().setI("zbMyPan", pan); plat::prefs().flush(); }
+    }
+    if (H.pan < 0) { ImGui::TextDisabled("%s", tr("no network picked")); return; }
+    if (!ImGui::BeginTable("##zbh", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    for (const char* c : {"Node", "Frames", "Retries", "No ack", "Level", "Every", "Note"}) ImGui::TableSetupColumn(tr(c));
+    ImGui::TableHeadersRow();
+    for (const auto& [id, n] : H.h.nodes()) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(id.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)n.frames);
+        ImGui::TableNextColumn(); ImGui::Text("%.0f %%", n.retryPct());
+        ImGui::TableNextColumn(); if (n.ackAsked) ImGui::Text("%.0f %%", n.missPct()); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (n.rssiNow > -199) ImGui::Text("%.0f (%+.0f)", n.rssiNow, n.rssiNow - n.rssiFirst); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (n.intervalSec > 0) ImGui::Text("%.0f s", n.intervalSec); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (!n.text.empty()) ImGui::TextColored(pal::warnAmber(), "%s", n.text.c_str());
+    }
+    ImGui::EndTable();
+}
+
 // ---------------------------------------------------------------- hooks
 
 void tick(App& a) {
     loadState();
+    if (live(a)) healthFeed(zt(a));
     if (!a.engine.running() || !S.scan || a.devices[a.devIdx].kind == DeviceInfo::File) { S.lastHop = ImGui::GetTime(); return; }
     if (ImGui::GetTime() - S.lastHop < S.dwellSec) return;
     S.lastHop = ImGui::GetTime();
@@ -304,8 +369,8 @@ void tuner(App& a, bool& retune) {
 
 void tab(App& a) {
     S.curThread = isThread(a);
-    subNav("zbv", S.view, {"Networks", "Devices", "Frames", tr("Topology")});
-    if (S.view == 0) networksView(a); else if (S.view == 1) devicesView(a); else if (S.view == 3) topoView(a, isThread(a) ? "th" : "zb", zt(a).topo); else framesView(a);
+    subNav("zbv", S.view, {"Networks", "Devices", "Frames", tr("Topology"), tr("Health")});
+    if (S.view == 0) networksView(a); else if (S.view == 1) devicesView(a); else if (S.view == 3) topoView(a, isThread(a) ? "th" : "zb", zt(a).topo); else if (S.view == 4) healthView(a); else framesView(a);
 }
 
 void list(App& a) {

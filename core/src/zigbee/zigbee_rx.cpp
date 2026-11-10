@@ -494,6 +494,7 @@ struct ZigbeeReceiver::Impl {
         ZbFrame lf;
         lf.wallTime = wall; lf.sec = sec; lf.channel = ch; lf.type = frameTypeName(f.type); lf.src = srcText(f); lf.dst = dstText(f);
         lf.pan = hasPan ? pan : 0; lf.len = (int)psdu.size(); lf.fcsOk = true; lf.encrypted = f.encrypted; lf.rssi = rssi; lf.info = f.info;
+        lf.seq = f.seq; lf.ackReq = f.ackReq;
         tel.log.insert(tel.log.begin(), std::move(lf));
         if (tel.log.size() > kZbLogMax) tel.log.pop_back();
         if (hasPan) {

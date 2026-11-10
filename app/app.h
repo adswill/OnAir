@@ -842,6 +842,7 @@ bool insightPagerAutomatic(const char* protocol, uint32_t address);   // insight
 void smart5FmCard(App& a); void smart5AmCard(App& a); void smart5DabCard(App& a); void smart5DrmCard(App& a); void smart5HdCard(App& a);
 void smart5TvCard(App& a); void smart5DvbsCard(App& a); void smart5AtvCard(App& a);
 void smart5WxPassCard(App& a); void smart5GeoCard(App& a); void smart5LbandCard(App& a); void smart5CubeCard(App& a);
+void wmbusMineTick(App& a); void wmbusMineView(App& a);   // app/wmbus/wmbus_mine_ui.cpp: the user's own meters (use per hour and day)
 void smart5GnssCard(App& a); void smart5AstroCard(App& a); void smart5SidCard(App& a); void smart5MeteorCard(App& a);
 void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
