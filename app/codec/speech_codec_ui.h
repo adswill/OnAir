@@ -61,6 +61,9 @@ void voiceCodecLine(const char* id, const char* name, const std::string& libPath
 // never shipped) or unsupported, and whether it is loaded or missing, with the install helper for each plug-in.
 void voiceCodecsWindow(App& a);
 
+// Every optional library OnAir loads at run time (codecs, radio drivers, plug-ins) with found / missing, the folder and the official source (docs/OPTIONAL-LIBRARIES.md).
+void optionalLibrariesSection();
+
 // The setup wizard's codec screen (wizard.cpp): one status line per voice codec plug-in, Open codecs folder, "Look again" (searches again, no restart),
 // Copy build command and the install steps for this computer. Texts go through tr(). OnAir never ships or downloads a patented codec.
 void wizardCodecPanel();

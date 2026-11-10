@@ -9,6 +9,7 @@
 #include "settings_table.h"
 #include "setup_logic.h"
 #include "kit/mode_panel.h"
+#include "../codec/speech_codec_ui.h"
 #include "ui2_internal.h"
 #include "dect2/common/u8file.h"
 #include "dect2/engine/updater.h"
@@ -192,6 +193,7 @@ void customRow(App& a, const Info& i) {
         if (!chosenRecordingsDir().empty() && recdir::normalise(chosenRecordingsDir()) != cur) ImGui::TextColored(ImVec4(1.f, 0.75f, 0.3f, 1), "%s", tr("That folder cannot be written: the default is used."));
         ImGui::PopID();
     }
+    else if (k == "optLibs") appcodec::optionalLibrariesSection();
     else if (k == "ffmpegLibs") {
         static char buf[1024]; static bool init = false;
         if (!init) { init = true; snprintf(buf, sizeof buf, "%s", plat::prefs().getS("ffmpegDir", "").c_str()); }
