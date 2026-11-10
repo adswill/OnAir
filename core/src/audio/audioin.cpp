@@ -1,7 +1,6 @@
 // Audio capture: a ring for the microphone, a looped file (WAV / MP3 through FFmpeg), a tone, or silence.
 #include "audioin_impl.h"
 #include <algorithm>
-#include <climits>
 #include <cmath>
 #include <cstring>
 #include <vector>
@@ -139,7 +138,7 @@ struct AudioFileStream {
     }
     // Back to the start for the next loop.
     bool rewind() {
-        if (av_seek_frame(fmt, si, 0, AVSEEK_FLAG_BACKWARD) < 0 && avformat_seek_file(fmt, -1, INT64_MIN, 0, 0, 0) < 0) return false;
+        if (av_seek_frame(fmt, si, 0, AVSEEK_FLAG_BACKWARD) < 0 && av_seek_frame(fmt, -1, 0, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_BYTE) < 0) return false;
         avcodec_flush_buffers(ctx);
         return true;
     }
