@@ -195,6 +195,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES adsl)   # ADS-L (family 300, docs/ADSL-3.8.md): core/src/adsl, app/adsl, tests/adsl
   list(APPEND DECT2_MODES autoparam)   # the shared Auto detectors (docs/AUTO-PARAMS-3.8.md)
   list(APPEND DECT2_MODES ease)   # first-use helpers across modes (3.8): core/src/ease, app/ease, tests/ease
+  list(APPEND DECT2_MODES echolink)   # EchoLink client, GSM 06.10 codec, RF bridge rules (3.9, docs/ECHOLINK-3.9.md): core/src/echolink, app/echolink, tests/echolink
   list(APPEND DECT2_MODES smartnet tetradmo opensky)   # Motorola Type II (320), TETRA Direct Mode (321), OpenSky identifier (322): docs/VOICE-TRUNK-3.8.md
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal umts)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>

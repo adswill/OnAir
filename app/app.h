@@ -372,6 +372,7 @@ struct App {
     std::string mapServer;                        // empty: https://map.on-air.dev (a local worker URL for developers)
     bool wiresharkOpen = false;   // View > Wireshark (app/wirecap/wireshark_ui.cpp)
     bool feedsOpen = false;   // View > Data feeds: the window (feeds_ui.cpp)
+    bool echolinkOpen = false;   // Tools > EchoLink: the window (app/echolink/echolink_ui.cpp)
     bool swarmOpen = false;   // View > LAN swarm: the window (swarm_ui.cpp)
     bool integrationsOpen = false;   // View > Integrations: MQTT, webhook and JSON-lines output of decoded events (app/integrations)
     bool ssbConvOpen = false;      // View > Conversations: SSB voice found on the span, organised into conversations (ssbconv_ui.cpp)
@@ -1053,6 +1054,8 @@ extern std::string gAutomationShotPath;   // automation_sink.cpp: a screenshot o
 void wiresharkWindow(App& a);      // app/wirecap/wireshark_ui.cpp: one switch per mode, packets to Wireshark
 void loadWiresharkPrefs(App& a);
 void saveWiresharkPrefs(const App& a);
+void echolinkWindow(App& a);       // app/echolink/echolink_ui.cpp: the EchoLink client window
+void echolinkShutdown();           // its connection ends (BYE, log-out) and its sound cards close
 void feedsWindow(App& a);          // feeds_ui.cpp: the "Data feeds" window (View > Data feeds)
 void swarmWindow(App& a);          // swarm_ui.cpp: the "LAN swarm" window (View > LAN swarm)
 void rotatorWindow(App& a);        // rotator_ui.cpp: GS-232 rotator connect / status

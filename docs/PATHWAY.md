@@ -1358,3 +1358,5 @@ Branch feat39-fixes, based on integ-39.
 - Tests: hdr_engine, gain_opt_engine, sonde_engine, iridium_app, scan_handover, gnss_glonass (now in two halves) and inmc_slow_rates are made robust against busy runners.
 
 Simulated signals only. Details are in docs/FIXES-3.9.md.
+## 2026-11-10 EchoLink client (feat39-echolink)
+Tools > EchoLink...: log in with the callsign and password from settings, then list, search and connect to stations, links, repeaters and conferences. It covers GSM 06.10 audio both ways (hold-to-talk, latched talk or VOX), chat and the station info text. An optional "Link to RF channel" bridge (sound-card radio, VOX or Hamlib keying) is off by default and needs a licensing note acknowledged first. The GSM 06.10 codec is new (core/src/echolink); its decoder is bit-exact against FFmpeg's. The protocol follows SvxLink (GPL-2.0-or-later), credited in THIRD_PARTY.md and in the in-app Credits. The password is a credential settings key and is never logged. Tests run against a mock directory and a second client on 127.0.0.1 only; the real EchoLink servers were never contacted. Details are in docs/ECHOLINK-3.9.md.
