@@ -80,3 +80,33 @@ No public source gives the burst format: preamble, sync, address, framing or cod
 Results: see the end of this file.
 
 ## Results
+
+GitHub quick runs on Linux, simulated signals only:
+
+- **HRDCP** (run 42896189142, `goesdcs_hrdcp` passed):
+  - A one-frame and a two-frame message 3 kHz apart: both decoded.
+  - +-125 Hz with +-1 Hz/s drift, +-50 ppm and 2 degrees rms phase noise at Eb/N0 8 dB: decoded, no Reed-Solomon corrections needed.
+  - Eb/N0 6.5 dB: decoded.
+  - Repeats with the sequence counter wrapping from 65535: both heard.
+  - A standard-rate platform 6 kHz away: not reported as HRDCP.
+- **Standard-rate Meteosat and Himawari** (`goesdcs_regional` passed):
+  - All 289 Meteosat channel numbers round-trip.
+  - Regional, international and adjacent channels decode.
+  - +-600 Hz with 60 to 100 ppm decodes.
+  - Himawari 300 bps decodes.
+  - 100 bps decodes down to 24 dB C/N in 100 Hz.
+- **GOES LRIT and Elektro** (run 42885677516, `goes_lrit_links` passed):
+  - GOES LRIT at 1 Msps, Es/N0 6 dB, +9 kHz, +40 ppm: 95 frames, every file byte-exact.
+  - Every Elektro link decodes every file. That includes 1.15 Msym/s OQPSK, after the receiver fix below.
+  - A receiver set to the wrong rate decodes nothing.
+- `goes_rx`, `goesdcs_rx`, `goesdcs_engine`, `goesdcs_proto`, `gk2a_rx`, `i18n` and `mode_numbers` still pass.
+
+The long sweeps (ONAIR_TEST_LONG=1) were not run.
+
+## Fixes to existing code found by these tests
+
+- **Elektro HRIT 1.15 Msym/s OQPSK** (`core/src/goes/goes_rx.cpp`). The I rail was delayed before the matched filter, which is before carrier recovery, so any residual phase mixed the rails: 127 of 235 frames failed on the test signal. Q is now sampled half a symbol after I in the timing loop, each rail turned back by its own carrier phase, with Gardner on both rails.
+- **GOES DCS with a platform on the next channel** (`core/src/goesdcs/goesdcs_live.cpp`):
+  - The carrier frequency estimate was pulled by the neighbour. It now runs on a 16-sample average.
+  - The 1200 bps hypotheses locked falsely on 100 bps reports. 48 preamble bits must now alternate before the sync word, where 16 were checked before.
+  - A dropped report is now logged with the reason.

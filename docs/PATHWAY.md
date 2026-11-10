@@ -1346,3 +1346,7 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-11 Meteosat HRDCP, DCS channel plans, GOES LRIT, Elektro links (feat39-sat)
+Branch feat39-sat on integ-39. New mode Meteosat HRDCP (family 700, standard 701/702), written from EUMETSAT TD 16: receiver, generator and tests; it shares the DCS screens. GOES DCS gained the Meteosat (TD 16 table 11) and Himawari channel plans, a 402.22 MHz preset, and addresses shown left-aligned as the operators write them. GOES HRIT gained the GOES-N/O/P LRIT link (293.883 ksym/s). Elektro got tests for every link. Fixed along the way: the Elektro OQPSK rail split, and false syncs and frequency pull in GOES DCS from a platform on the next channel. INSAT was skipped because no public burst format exists. Simulated only. Details in docs/SAT-DCS-XRIT-3.9.md.
+
