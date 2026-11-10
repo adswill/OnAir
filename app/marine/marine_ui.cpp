@@ -204,14 +204,14 @@ void navStationList(const App& a) {
     }
     double la, lo;
     receiverLocation(la, lo);
-    const auto near = dect2::ease::navtexNearest(la, lo, navKhz(a), (int64_t)time(nullptr));
-    if (near.empty()) { ImGui::TextDisabled("%s", tr("No station on this frequency in the list.")); return; }
-    const auto* soon = &near[0];
-    for (const auto& n : near) if (n.secsToNext < soon->secsToNext) soon = &n;
+    const auto nearSt = dect2::ease::navtexNearest(la, lo, navKhz(a), (int64_t)time(nullptr));
+    if (nearSt.empty()) { ImGui::TextDisabled("%s", tr("No station on this frequency in the list.")); return; }
+    const auto* soon = &nearSt[0];
+    for (const auto& n : nearSt) if (n.secsToNext < soon->secsToNext) soon = &n;
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled(tr("Next from your nearest stations: %s (%c), %s."), soon->st->name, soon->st->letter, navSlotIn(soon->secsToNext).c_str());
     ImGui::PopTextWrapPos();
-    for (const auto& n : near) {
+    for (const auto& n : nearSt) {
         ImGui::TextDisabled("%c  %s, %.0f km, %s", n.st->letter, n.st->name, n.km, navSlotIn(n.secsToNext).c_str());
     }
     ImGui::PushTextWrapPos(0);

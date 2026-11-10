@@ -229,13 +229,13 @@ void repeaterPicker(App& a, const char* mode) {
         ImGui::TextDisabled("%s", tr("Set your position (View > Map) to see the ones near you."));
     } else {
         double la, lo; receiverLocation(la, lo);
-        const auto near = dect2::ease::nearestRepeaters(gRep.rows, mode, la, lo);
-        if (near.empty()) ImGui::TextDisabled("%s", tr("None within 300 km in this list."));
+        const auto nearRep = dect2::ease::nearestRepeaters(gRep.rows, mode, la, lo);
+        if (nearRep.empty()) ImGui::TextDisabled("%s", tr("None within 300 km in this list."));
         else if (ImGui::BeginTable("##rept", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY, ImVec2(420 * gUi, 260 * gUi))) {
             ImGui::TableSetupColumn(tr("Call")); ImGui::TableSetupColumn(tr("Place")); ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn("km"); ImGui::TableSetupColumn("CC");
             ImGui::TableHeadersRow();
             int id = 0;
-            for (const auto& n : near) {
+            for (const auto& n : nearRep) {
                 ImGui::TableNextRow(); ImGui::TableNextColumn();
                 ImGui::PushID(id++);
                 if (ImGui::Selectable((n.r->call.empty() ? "-" : n.r->call.c_str()), false, ImGuiSelectableFlags_SpanAllColumns)) { tuneFreq(a, n.r->mhz); ImGui::CloseCurrentPopup(); }

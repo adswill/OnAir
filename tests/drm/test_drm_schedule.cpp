@@ -49,7 +49,12 @@ static const Broadcast* find(const Schedule& s, const char* name) {
 int main() {
     // the reference time: 2026-11-10 00:00 UTC is a Tuesday
     {
-        std::tm t{}; std::time_t z = at(10, 0, 0); gmtime_r(&z, &t);
+        std::tm t{}; std::time_t z = at(10, 0, 0);
+#ifdef _WIN32
+        gmtime_s(&t, &z);
+#else
+        gmtime_r(&z, &t);
+#endif
         CHECK(t.tm_wday == 2 && t.tm_mday == 10 && t.tm_mon == 10, "reference date: wday %d mday %d mon %d", t.tm_wday, t.tm_mday, t.tm_mon);
     }
     Schedule s;

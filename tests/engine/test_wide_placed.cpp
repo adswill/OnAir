@@ -53,7 +53,7 @@ int main() {
     std::vector<Placed> placed;
     Placed pg; pg.absHz = kCentre + offPag; pg.widthHz = 12500; pg.kind = WsKind::Pager; placed.push_back(pg);
     Placed am; am.absHz = kCentre + offAm; am.widthHz = 8000; am.kind = WsKind::Am; placed.push_back(am);
-    Placed far; far.absHz = kCentre + 5e6; far.widthHz = 12500; far.kind = WsKind::Nfm; placed.push_back(far);   // not in this capture
+    Placed outside; outside.absHz = kCentre + 5e6; outside.widthHz = 12500; outside.kind = WsKind::Nfm; placed.push_back(outside);   // not in this capture ("far" is a macro on Windows)
     PlacedSync sync;
     sync.apply(ws, placed, kCentre, kFs);
     CHECK(sync.ids().size() == 2, "two of the three placed signals are in the capture (%zu)", sync.ids().size());
