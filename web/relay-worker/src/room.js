@@ -204,7 +204,8 @@ export class Room extends DurableObject {
         const nullBody = isHead || r.status === 204 || r.status === 304 || r.status < 200;
         const h = new Headers(); for (const [k, v] of r.headers) h.append(k, v);
         if (nullBody || (r.length === 0 && !r.chunked)) { room.drop(this, true); return new Response(null, { status: r.status === 101 || r.status < 200 ? 502 : r.status, headers: h }); }
-        const ts = new TransformStream(); this.writer = ts.writable.getWriter();
+        const ts = !r.chunked && r.length > 0 && typeof FixedLengthStream === 'function' ? new FixedLengthStream(r.length) : new TransformStream();   // keeps Content-Length
+        this.writer = ts.writable.getWriter();
         if (r.chunked) this.chunk = new ChunkedDecoder(); else this.left = r.length;
         const first = concat(r.rest, this.pend); this.pend = new Uint8Array(0);
         if (first.length) this.body(first);

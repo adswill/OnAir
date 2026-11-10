@@ -177,14 +177,14 @@ class Browser {
 
 let wr, PORT, web, T;
 const startRelay = async () => {
-  const log = fs.openSync(T + '/wr.log', 'a');
+  const log = fs.openSync(process.env.RELAY_TEST_LOG || T + '/wr.log', 'a');
   // the same config without routes: with a route, wrangler dev replaces the Host header with the route's name
   fs.writeFileSync(CFG, fs.readFileSync(path.join(DIR, 'wrangler.jsonc'), 'utf8').replace(/ {2}"routes": \[[\s\S]*?\],\n/, ''));
   wr = spawn(WR, ['dev', '-c', CFG, '--local', '--persist-to', T + '/state', '--port', '' + PORT, '--ip', '127.0.0.1', '--show-interactive-dev-session=false',
     '--var', 'RELAY_DEV_LOCAL:1', '--var', 'RELAY_MAIN_HOST:127.0.0.1', '--var', 'RELAY_LABEL_SUFFIX:' + SUFFIX, '--var', 'RELAY_SCHEME:http',
     '--var', 'RELAY_PUBLIC_PORT:' + PORT, '--var', 'HOST_ATTEMPTS_PER_MIN:40', '--var', 'ADMIN_TOKEN:' + ADMIN, '--var', 'MAX_BPS:2000000'],
   { cwd: DIR, env: { ...process.env, CI: '1', WRANGLER_SEND_METRICS: 'false' }, stdio: ['ignore', log, log], detached: true });
-  for (let i = 0; i < 240; i++) { await wait(250); try { const r = await fetch(`http://127.0.0.1:${PORT}/relay/v1/status`); if (r.ok) return true; } catch { /* not yet */ } }
+  for (let i = 0; i < 240; i++) { await wait(250); try { const r = await fetch(`http://127.0.0.1:${PORT}/relay/v1/status`, { signal: AbortSignal.timeout(3000) }); if (r.ok) return true; } catch { /* not yet */ } }
   return false;
 };
 const stopRelay = async () => { try { process.kill(-wr.pid, 'SIGTERM'); } catch { /* gone */ } for (let i = 0; i < 50 && wr.exitCode === null && wr.signalCode === null; i++) await wait(100); };
@@ -195,7 +195,7 @@ test.describe('relay Worker under wrangler dev', { skip, concurrency: false }, (
     T = fs.mkdtempSync(path.join(os.tmpdir(), 'onair-cfrelay-')); PORT = await freePort(); web = await webServer();
     assert.ok(await startRelay(), 'wrangler dev serves the relay');
   });
-  test.after(async () => { await stopRelay(); web.close(); try { fs.unlinkSync(CFG); } catch { /* gone */ } if (process.env.KEEP_LOG) fs.copyFileSync(T + '/wr.log', process.env.KEEP_LOG); fs.rmSync(T, { recursive: true, force: true }); });
+  test.after(async () => { await stopRelay(); web.close(); try { fs.unlinkSync(CFG); } catch { /* gone */ } fs.rmSync(T, { recursive: true, force: true }); });
 
   test('status, offline page, unknown host', async () => {
     assert.match((await rawHttp(PORT, '127.0.0.1', `GET /relay/v1/status HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n`)).body.toString(), /\{"v":1,"ok":true\}/);
@@ -235,7 +235,7 @@ test.describe('relay Worker under wrangler dev', { skip, concurrency: false }, (
     assert.strictEqual(a.bins, 40); assert.strictEqual(b.bins, 40);
     assert.ok(!a.q.some((m) => m.who === 'b') && !b.q.some((m) => m.who === 'a'), 'each listener gets only its own stream');
     assert.ok((web.pongs || 0) >= 2, 'the host\'s WebSocket pings are answered');
-    const list = await (await fetch(`http://127.0.0.1:${PORT}/api/v1/servers`)).json();
+    const list = await (await fetch(`http://127.0.0.1:${PORT}/api/v1/servers`, { signal: AbortSignal.timeout(10000) })).json();
     const me = list.servers.find((s) => s.name === 'Two listeners'); assert.ok(me); assert.strictEqual(me.listeners, 2);
     // host's web server closes one listener with a code
     a.send('bye'); for (let i = 0; i < 40 && a.closeCode === null; i++) await wait(50);
@@ -270,7 +270,7 @@ test.describe('relay Worker under wrangler dev', { skip, concurrency: false }, (
     assert.strictEqual((await fakeHost(PORT, web.address().port, keypair(), { tamper: true })).error.code, 'protocol');
     assert.strictEqual((await fakeHost(PORT, web.address().port, keypair(), { ts: 600 })).error.code, 'clock');
     const kp = keypair(), h = await fakeHost(PORT, web.address().port, kp), id = NodeRelay.idFromPub(kp.pub);
-    const ban = (tok, what) => fetch(`http://127.0.0.1:${PORT}/relay/v1/admin/${what || 'ban'}`, { method: 'POST', headers: { authorization: 'Bearer ' + tok }, body: JSON.stringify({ id }) });
+    const ban = (tok, what) => fetch(`http://127.0.0.1:${PORT}/relay/v1/admin/${what || 'ban'}`, { method: 'POST', headers: { authorization: 'Bearer ' + tok }, body: JSON.stringify({ id }), signal: AbortSignal.timeout(10000) });
     assert.strictEqual((await ban('b'.repeat(32))).status, 403);
     assert.strictEqual((await ban(ADMIN)).status, 200);
     for (let i = 0; i < 60 && !h.closed; i++) await wait(50);

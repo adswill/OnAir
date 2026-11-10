@@ -62,7 +62,7 @@ What the client does with a virtual connection: it connects a TCP socket to the 
 6. **Stay blind where it can**: it never stores the bytes it carries and never lists servers (the public directory, docs/ONAIR-DIRECTORY.md, is a separate opt-in service; `web.on-air.dev` can run on the same Worker infrastructure).
 7. Optional but wanted: `GET https://relay.on-air.dev/relay/v1/status` returns `{"v":1,"ok":true}` for the window's connection test.
 
-A Cloudflare Worker with a Durable Object per server id (the host's WebSocket is held by the object, browsers' requests arrive at the Worker, which forwards them to the object and gets the frames back) fits this design; so does any small server in Go, Rust or Node. The client does not care.
+A Cloudflare Worker with Durable Objects is built in `web/relay-worker/` (docs/CF-RELAY-3.8.md; not deployed). A Cloudflare Worker with a Durable Object per server id (the host's WebSocket is held by the object, browsers' requests arrive at the Worker, which forwards them to the object and gets the frames back) fits this design; so does any small server in Go, Rust or Node. The client does not care.
 
 ## What the window does (Server > Share on web)
 

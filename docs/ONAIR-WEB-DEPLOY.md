@@ -55,6 +55,8 @@ npx wrangler deploy        # routes: map.on-air.dev custom domain (wrangler.json
 
 ## 5. Deploy the relay (relay.on-air.dev, *.relay.on-air.dev)
 
+Alternative without a VPS: the Cloudflare Worker in `web/relay-worker/` (same protocol, addresses `https://<label>-r.on-air.dev/`, no wildcard certificate needed). Deploy steps and costs: docs/CF-RELAY-3.8.md.
+
 Needs a small Linux VPS (1 vCPU, 512 MB is plenty to start) with a public IPv4, Node 20+, and the domain on Cloudflare. Not deployed by any script. Run `cd relay && npm test` first.
 
 1. DNS (Cloudflare): `A relay` -> the VPS address, `A *.relay` -> the same address. Orange cloud (proxied) is fine for both and gives TLS for free; the wildcard `*.relay.on-air.dev` is NOT covered by the free universal certificate (it covers only one label), so either buy Advanced Certificate Manager for `*.relay.on-air.dev`, or use grey cloud (DNS only) and let Caddy issue the wildcard (step 3).
