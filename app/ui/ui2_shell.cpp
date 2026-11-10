@@ -304,6 +304,7 @@ void sidebar(App& a) {
         tool("Antenna rotator...", a.rotatorOpen, "Connect a GS-232-compatible rotator (serial or TCP), set azimuth and elevation");
         tool("Sweep scanner", a.sweepOpen, N_("Fast wideband sweep with a noise-floor measurement, signal log and waterfall"));
         tool("Search everything heard", a.heardOpen, N_("One box for a call sign, ICAO address, MMSI or frequency, across the history of every mode"));
+        tool("Insights", a.insightOpen, N_("What your decodes show: who hears you, antenna pattern, APRS health, talkgroup busy hours, trunk load, automatic pages, overdue broadcasts"));
         tool("My station", a.stationOpen, N_("Your radios and antennas, entered once: modes pick the right ones and the mode list shows what can be received"));
         tool("Reception doctor", a.doctorOpen, N_("Why is nothing decoding? Checks overload, level, offset, bandwidth, interferers, drops and the mode from the live signal, with one-click fixes"));
         tool("RF fingerprint", a.rfFpOpen, N_("Recognise an individual transmitter by its RF fingerprint (carrier offset, key-up transient, pilot, spurs), also when it sends only a carrier. Logs every transmission."));
@@ -676,6 +677,7 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Sweep scanner"), nullptr, &a.sweepOpen)) {}
         if (ImGui::MenuItem(tr("Station health"), nullptr, &a.stationHealthOpen)) {}
         if (ImGui::MenuItem(tr("Search everything heard"), nullptr, &a.heardOpen)) {}
+        if (ImGui::MenuItem(tr("Insights"), nullptr, &a.insightOpen)) {}
         if (ImGui::MenuItem(tr("My station"), nullptr, &a.stationOpen)) {}
         if (ImGui::MenuItem(tr("Reception doctor"), nullptr, &a.doctorOpen)) {}
         if (ImGui::MenuItem(tr("RF fingerprint"), nullptr, &a.rfFpOpen)) {}

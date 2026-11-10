@@ -78,7 +78,7 @@ public:
     std::string scriptError(const std::string& id) const;
 
     // true when some enabled rule or script wants events of this family (a lock-free read for the decoders)
-    bool wants(int family) const { return family >= 0 && family < kFamilies && ((mask_.load(std::memory_order_relaxed) | tapMask_.load(std::memory_order_relaxed) | observeMask_.load(std::memory_order_relaxed) | watchMask_.load(std::memory_order_relaxed) | streamMask_.load(std::memory_order_relaxed) | publishMask_.load(std::memory_order_relaxed)) >> family & 1); }
+    bool wants(int family) const { return family >= 0 && family < kFamilies && ((mask_.load(std::memory_order_relaxed) | tapMask_.load(std::memory_order_relaxed) | observeMask_.load(std::memory_order_relaxed) | watchMask_.load(std::memory_order_relaxed) | streamMask_.load(std::memory_order_relaxed) | publishMask_.load(std::memory_order_relaxed) | analyseMask_.load(std::memory_order_relaxed)) >> family & 1); }
     // A tap sees every submitted event of the given families (bit = familyBit(Family)), on the decoder's thread, whether or not a rule wants it. It must not block
     // (the message database only queues). Pass an empty function to remove it.
     void setTap(std::function<void(const Event&)> f, FamilyMask familyMask);
@@ -91,6 +91,8 @@ public:
     void setStreamer(std::function<void(const Event&)> f, FamilyMask familyMask);
     // A publisher is a fifth such hook (the Integrations: MQTT and the JSON-lines/webhook sink); same rules as a tap. An empty function removes it.
     void setPublisher(std::function<void(const Event&)> f, FamilyMask familyMask);
+    // An analyser is a sixth such hook (the smart insights, core/include/dect2/insight/live.h); same rules as a tap. An empty function removes it.
+    void setAnalyser(std::function<void(const Event&)> f, FamilyMask familyMask);
     void submit(Event&& ev);                             // queue; never blocks
     uint64_t dropped() const { return dropped_.load(); }
 
@@ -119,6 +121,9 @@ private:
     std::atomic<FamilyMask> publishMask_{0};
     std::mutex publishMu_;
     std::function<void(const Event&)> publish_;
+    std::atomic<FamilyMask> analyseMask_{0};
+    std::mutex analyseMu_;
+    std::function<void(const Event&)> analyse_;
     std::mutex streamMu_;
     std::function<void(const Event&)> stream_;
     std::mutex watchMu_;
