@@ -43,7 +43,14 @@ The rtl_433 device sources are GPL-2.0-or-later, which is GPL-3 compatible. They
   - all 19 symbols despread within 14 chip errors
   - the length byte is 16
   - the channel words pass a strict format check (distinct channel indexes, FFFF for unused words, bit 15 only in the first word)
-- In the test, 2000 random 16-byte packets were tried against the format check.
+- In the test, 2000 random 16-byte packets were run through the format check, and 2 passed it.
+- The DSSS spectrum is lumpy, so the burst finder often reports pieces of one packet. Each piece queues a search window of one packet length either side. Pieces inside a packet that has already been decoded are dropped. A decode whose residual carrier is over 600 kHz is refused, because it was heard through the filter's skirt.
+- Searching all 40 SOP codes costs about 60 M operations per window. That is fine for files and tests, but a live 2.4 GHz capture full of DSM traffic will load the CPU.
+- Measured on simulated signals, at offsets of -2.5 to +2.5 MHz, +-100 ppm and noise sigma 0.01 to 0.08 at amplitude 0.4:
+  - With sigma up to 0.03 every packet was decoded.
+  - With sigma 0.05 and above, one packet in three may be missed.
+  - No frame was ever wrong.
+- Wize, measured on the 169 MHz plan: at -1.5 kHz the 4.8 kbit/s meter decodes about a third as often as when clean (6 against 22 frames), and no frame is wrong.
 - Not done:
   - Bind packets (64-chip SDR without SOP). Their chip polarity is unverified.
   - DSMR and DSM2 SFC.
