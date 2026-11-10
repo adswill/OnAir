@@ -62,3 +62,7 @@ produce (telemetry structs, per-carrier figures, lock logs), so it runs on its o
 | 24 | Radio astronomy | Sun drift-scan pointing calibration | Leave the dish fixed ahead of the Sun; the drift of the power is fitted with a Gaussian: beamwidth, pointing error in azimuth and elevation, and sun-to-cold-sky ratio. |
 | 25 | SuperSID | Sunrise and sunset marks per path | The times the day-night terminator crosses the VLF path's transmitter, midpoint and receiver, so the diurnal steps are not taken for flares. |
 | 26 | Meteor scatter | Hourly rate against the shower calendar | Hourly counts against the expected rate of the active shower, with the radiant's elevation, so a real outburst stands out. |
+
+## Status (2026-11-10)
+
+All 26 items are built in core/src/smart5. Tests: smart5_broadcast (1-10), smart5_tv (11-15), smart5_sat (16-20), smart5_science (21-26). All four passed on GitHub quick.yml run 42881695526 (Linux). Every test uses simulated signals only. Wiring into the mode screens is left to the integrator. Area docs: docs/SMART5-{broadcast,tv,sat,gnss,science}-3.9.md.
