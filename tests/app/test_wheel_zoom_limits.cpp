@@ -19,6 +19,7 @@
 namespace touch {
 bool on() { return false; }
 const GestureFrame& gesture() { static GestureFrame g; return g; }
+bool longPressHeld() { return false; }   // drag to tune (gfx/drag_tune.h): no touch here
 }
 
 static int fails = 0;
