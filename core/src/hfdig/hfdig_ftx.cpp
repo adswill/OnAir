@@ -1404,7 +1404,7 @@ struct HfdigFtx::Impl {
             anchorK = 0;
             if (!std::isnan(st)) { timeMode = 1; anchorUtc = st; }
             else if (search) { timeMode = 2; anchorUtc = 0; }
-            else { timeMode = 0; anchorUtc = clockNow() + clockTrim; }
+            else { timeMode = 0; anchorUtc = clockNow() + clockTrim - (double)n / kHfdigAudioRate; }   // the clock is the time of the last sample of this block
         }
         // a slot search that found the slots: the clock moves by the DT measured
         {

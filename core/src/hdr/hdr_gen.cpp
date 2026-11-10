@@ -220,7 +220,9 @@ class HdrSynth : public ModeSynth {
 public:
     HdrSynth(const SynthConfig& cfg, double rate)
         : rate_(rate), am_(cfg.modeOpt[0] == 1 || cfg.modeOpt[0] == 3), ma3_(cfg.modeOpt[0] == 3), mp3_(cfg.modeOpt[0] == 2), cfoHz_(cfg.cfoHz), c_(mp3_) {
-        rs_.configure(kRateFm, rate);
+        // ExactResampler goes up at most 4 times: above about 3 Msps a second stage (without it the samples passed through unchanged at the
+        // wrong rate, every frequency 5 times too far from the centre at 4 Msps)
+        if (!rs_.configure(kRateFm, rate)) { const double mid = std::sqrt(kRateFm * rate); rs_.configure(kRateFm, mid); rs2_.configure(mid, rate); two_ = true; }
         pxi_.reset(kP3LenMp3);
         if (!am_) {
             ampA_ = 0.25f;
@@ -296,7 +298,8 @@ private:
             }
             blk_ = (blk_ + 1) % 8;
         }
-        rs_.process(base_.data(), base_.size(), pend_);
+        if (two_) { mid_.clear(); rs_.process(base_.data(), base_.size(), mid_); rs2_.process(mid_.data(), mid_.size(), pend_); }
+        else rs_.process(base_.data(), base_.size(), pend_);
     }
 
     void fmFrame() {
@@ -434,7 +437,9 @@ private:
     int blk_ = 0;
     std::vector<cf32> base_, pend_;
     size_t pos_ = 0;
-    ExactResampler rs_;
+    ExactResampler rs_, rs2_;
+    bool two_ = false;
+    std::vector<cf32> mid_;
     double ph_ = 0, aph_ = 0, tone_ = 0;
     genutil::NoiseSource noise_{23};
 };

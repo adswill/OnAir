@@ -12,6 +12,7 @@
 #include <string>
 #include <thread>
 #ifndef _WIN32
+#include <signal.h>
 #include <sys/select.h>
 #endif
 #include <vector>
@@ -62,7 +63,15 @@ int connectToApp(int port, const char* id, uint32_t linktype, sock_t& out) {
     if (sockSend(s, hello.data(), hello.size()) != (long long)hello.size()) { sockClose(s); return -1; }
     std::string line;
     char c;
+    // the answer comes at once from OnAir; anything else on the port (a listener that never answers) must not hold a stop request: wait in
+    // short steps, at most 3 s
+    const auto until = std::chrono::steady_clock::now() + std::chrono::seconds(3);
     while (line.size() < 32) {
+        fd_set rd; FD_ZERO(&rd); FD_SET(s, &rd);
+        timeval tv{0, 250000};
+        const int sel = select((int)s + 1, &rd, nullptr, nullptr, &tv);
+        if (g_stop || std::chrono::steady_clock::now() > until) { sockClose(s); return -1; }
+        if (sel <= 0) continue;
         const long long r = sockRecv(s, &c, 1);
         if (r <= 0) { sockClose(s); return -1; }
         if (c == '\n') break;
@@ -151,10 +160,19 @@ int main(int argc, char** argv) {
     }
     if (wantCapture) {
         if (fifo.empty()) { fprintf(stderr, "onair-extcap: --fifo is missing\n"); return 1; }
+#ifndef _WIN32
+        // no SA_RESTART: a stop request interrupts a blocking connect or recv (Linux restarts them under std::signal, and a connect to a port
+        // whose listener stopped accepting can wait for minutes)
+        struct sigaction sa{};
+        sa.sa_handler = onSignal;
+        sigemptyset(&sa.sa_mask);
+        sa.sa_flags = 0;
+        sigaction(SIGINT, &sa, nullptr);
+        sigaction(SIGTERM, &sa, nullptr);
+        std::signal(SIGPIPE, SIG_IGN);
+#else
         std::signal(SIGINT, onSignal);
         std::signal(SIGTERM, onSignal);
-#ifndef _WIN32
-        std::signal(SIGPIPE, SIG_IGN);
 #endif
         return capture(*ci, fifo, port, waitSec);
     }

@@ -26,7 +26,8 @@ inline AtvGhost atvFindGhost(const std::vector<float>& avg, double leadUs, doubl
     if (main <= 0.05f) return g;
     float best = 0; double at = 0;
     for (double t = 0.8; t <= 40.0; t += 1.0 / ptsPerUs) {
-        if (std::fabs(t - syncUs) < 0.9 || t < 1.0 || std::fabs(t - 32.0) < 2.5) continue;   // and not a half-line pulse                 // its falling edge would sit on the main rising edge
+        if (std::fabs(t - syncUs) < 0.9 || t < 1.0) continue;   // its falling edge would sit on the main rising edge
+        // (no gap at half a line: the averaged lines are normal ones, and a narrow equalising pulse has no partner edge a sync width later)
         const float e1 = -edge(t), e2 = edge(t + syncUs);
         if (e1 * e2 <= 0) continue;                                            // both edges of one pulse, the same sign
         const float a = std::min(std::fabs(e1), std::fabs(e2));

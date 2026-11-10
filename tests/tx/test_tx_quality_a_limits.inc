@@ -56,7 +56,7 @@ const Limit kLimits[] = {
     {"halow", 1.47, 0.0544, kNone, kNone, -20, true},
     {"hamdrm", 0.95, 0, -74, 40, -20, true},
     {"hdr", 0.95, 0, -22, 18, -19, true},
-    {"hell", 0.95, 0, -78, 19, -20, true},
+    {"hell", 0.95, 0, -43, 19, -20, true},   // #225: the click-free keying narrowed the 99 % band from ~1.8 kHz to ~0.45 kHz, so the spur window now starts inside the SSB passband (keying sidebands ~-47 dB) instead of past the filter (-80)
     {"hfbeacon", 0.95, 0, -36, 25, -20, false},
     {"hfdl", 0.95, 0, -52, 50, -20, true},
     {"hrpt", 0.95, 0, kNone, kNone, -20, true},

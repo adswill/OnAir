@@ -461,9 +461,13 @@ struct Sd3Receiver::Impl {
             def[1].push(!q); def[1].push(i);
             def[2].push(q); def[2].push(i);
             def[3].push(!i); def[3].push(q);
-            for (int k = 0; k < 4; k++) if (def[k].locked()) { defUse = k; for (int j = 0; j < 4; j++) if (j != k) def[j].reset(); break; }
+            // a candidate is chosen once it has seen three sync words a frame apart: one sync word within the tolerance turns up in random bits
+            // (the wrong phases, or the loops still settling), and a candidate chosen on it never found the frames again (until now every frame
+            // of MATS, CHEOPS and Sentinel 6 was lost that way). Until then all four deframers hand on their frames.
+            for (int k = 0; k < 4; k++) if (def[k].locked() && def[k].hits >= 3) { defUse = k; for (int j = 0; j < 4; j++) if (j != k) def[j].reset(); break; }
             return;
         }
+        if (!def[defUse].locked()) { defUse = -1; for (auto& d : def) d.reset(); qpskSimple(i, q); return; }   // lost (a phase slip): search all four again
         switch (defUse) {
         case 0: def[0].push(i); def[0].push(q); break;
         case 1: def[1].push(!q); def[1].push(i); break;

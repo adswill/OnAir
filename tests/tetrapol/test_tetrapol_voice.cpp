@@ -169,22 +169,29 @@ int main() {
         CHECK(l.status == codec::CodecStatus::Ready && c, "plug-in loads: %s", l.message.c_str());
         // 8.5 s as the clear-call runs above: the first call starts before the frame sync and is refused (no WAV), the second is whole
         const Run r = run(1, 1, 0, 8.5, std::move(c), true, (dir / "rec").string());
-        size_t wavs = 0;
+        // 8.5 s hold the refused first call, the whole second call and the start of the third (cut by the end of the run, a short WAV of its own):
+        // exactly one WAV holds a whole call, and the tone is in it
+        const uintmax_t whole = 44 + 2 * 160 * (uintmax_t)(kTetrapolTestVoiceFrames - 10);
+        size_t wavs = 0, wholeWavs = 0;
         uintmax_t bytes = 0;
         std::vector<int16_t> head;
         for (const auto& e : fs::directory_iterator(dir / "rec", ec)) {
             if (e.path().extension() != ".wav") continue;
             wavs++;
-            bytes = e.file_size(ec);
+            const uintmax_t sz = e.file_size(ec);
+            if (sz < whole) continue;
+            wholeWavs++;
+            bytes = sz;
             FILE* f = fopen(e.path().string().c_str(), "rb");
             if (f) {
                 uint8_t h[44 + 32];
+                head.clear();
                 if (fread(h, 1, sizeof h, f) == sizeof h) for (int i = 0; i < 16; i++) head.push_back((int16_t)(h[44 + 2 * i] | (h[45 + 2 * i] << 8)));
                 fclose(f);
             }
         }
-        printf("  tone plug-in: %zu wav, %ju bytes, decoded %llu\n", wavs, bytes, (unsigned long long)r.t.voiceDecoded);
-        CHECK(wavs == 1 && bytes >= 44 + 2 * 160 * (uintmax_t)(kTetrapolTestVoiceFrames - 10), "one WAV of the call (%zu files, %ju bytes)", wavs, bytes);
+        printf("  tone plug-in: %zu wav, %zu whole, %ju bytes, decoded %llu\n", wavs, wholeWavs, bytes, (unsigned long long)r.t.voiceDecoded);
+        CHECK(wholeWavs == 1 && wavs <= 2, "one WAV of the whole call (%zu files, %zu whole)", wavs, wholeWavs);
         CHECK(head.size() == 16 && head[2] == 8000 && head[6] == -8000, "the tone is in the WAV");
         for (const auto& e : fs::directory_iterator(dir / "rec", ec)) CHECK(e.path().filename().string().find("1234") == std::string::npos, "an id in a file name");
         fs::remove_all(dir, ec);

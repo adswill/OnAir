@@ -23,7 +23,11 @@ int main() {
     }
     CHECK(!atvFindGhost(line(0, 0), 2.0, 8, 4.7).found, "no ghost, a picture edge is not one");
     for (double d : {1.5, 3.0, 9.0}) {
-        AtvGenConfig c; c.echoDb = 12; c.echoDelayUs = d; c.echoPhaseDeg = 0; c.cnrDb = 40;
+        // the generator adds the echo at complex baseband, where the vision carrier sits at atvVisionOffsetHz (-2.75 MHz for G): the delay alone
+        // turns the echo's carrier phase by 360 f tau (90 deg at 3 us, 270 at 9 us, a quadrature ghost the video cannot show). Cancel that turn so
+        // the ghost is in phase with the vision carrier at every delay, which is what the -12 dB check measures.
+        AtvFormat gp; atvMakeFormat(kAtvG, kAtvPal, gp);
+        AtvGenConfig c; c.echoDb = 12; c.echoDelayUs = d; c.echoPhaseDeg = 360.0 * atvVisionOffsetHz(gp) * d * 1e-6; c.cnrDb = 40;
         const Run r = run(c, 2.0);
         printf("ghost %.1f us -12 dB: found %d, %.2f us, %.1f dB\n", d, r.tel.ghostFound, r.tel.ghostDelayUs, r.tel.ghostDb);
         CHECK(r.tel.ghostFound && std::fabs(r.tel.ghostDelayUs - d) < 0.6 && std::fabs(r.tel.ghostDb + 12) < 4, "through the receiver %.1f", d);

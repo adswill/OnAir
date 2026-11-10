@@ -27,7 +27,7 @@ struct CaptureVoice::Slice {
     std::deque<float> queue;
     int rate = 48000;
     double sum = 0;
-    int count = 0, hang = 0;
+    int count = 0, hang = 0, noisy = 0;   // noisy: consecutive 10 ms blocks of channel noise
     bool hearing = false;
     std::unique_ptr<P25Receiver> p25;
 };
@@ -54,7 +54,7 @@ bool CaptureVoice::openSlice(const TuneRequest& r, int* slice) {
         if (x.open) continue;
         x.open = true; x.hz = r.freqHz; x.digital = r.proto == Proto::P25p1;
         x.fm.reset(); x.fm.setOffset(r.freqHz - centre_); x.lp.clear(); x.nlp.clear();
-        x.dc = 0; x.sum = 0; x.count = 0; x.hang = 0; x.hearing = false; x.queue.clear();
+        x.dc = 0; x.sum = 0; x.count = 0; x.hang = 0; x.noisy = 0; x.hearing = false; x.queue.clear();
         if (x.digital) {
             x.rate = 8000;
             x.p25 = std::make_unique<P25Receiver>();
@@ -112,13 +112,16 @@ void CaptureVoice::feed(const cf32* x, size_t n) {
             if (++v.count == kNoiseBlock) {
                 const double rms = std::sqrt(v.sum / kNoiseBlock);
                 v.sum = 0; v.count = 0;
-                if (rms < kNoiseRmsHz) { v.hang = kHangBlocks; v.hearing = true; }
-                else if (v.hang > 0 && --v.hang == 0) v.hearing = false;
+                if (rms < kNoiseRmsHz) { v.hang = kHangBlocks; v.hearing = true; v.noisy = 0; }
+                else { v.noisy++; if (v.hang > 0 && --v.hang == 0) v.hearing = false; }
             }
             if (!v.digital) {
                 const double a = (double)d / 5000.0;
                 v.dc += 0.03 * (a - v.dc);                  // about 240 Hz: takes the subaudible signalling out of the speech
-                v.block.push_back(v.hearing ? (float)(0.9 * v.lp.run(a - v.dc)) : 0.f);
+                // the hang keeps the call active (the pool) over a short fade, but the sound mutes after 20 ms of noise: else every call
+                // ended in 300 ms of full-scale noise once the carrier dropped (the squelch tail)
+                const float o = (float)(0.9 * v.lp.run(a - v.dc));
+                v.block.push_back(v.hearing && v.noisy < 2 ? o : 0.f);
             }
         }
         if (v.digital) { if (v.p25) v.p25->feed(x, n); }

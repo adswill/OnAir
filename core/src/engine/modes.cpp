@@ -17,6 +17,8 @@
 #include "dect2/adsb/adsb_rx.h"
 #include "dect2/adsb/adsb_gen.h"
 #include "dect2/atsc3/atsc3_synth.h"
+#include "dect2/atsc/atsc_gen.h"
+#include "dect2/dvbt/dvbt_gen.h"
 #include "dect2/dab/dab_gen.h"
 #include "dect2/gnss/gnss_rx.h"
 #include "dect2/gnss/gnss_gen.h"
@@ -415,6 +417,26 @@ private:
     std::unique_ptr<FmGenerator> gen_;
 };
 
+// ATSC 1.0 (8-VSB): the test transport stream at the rate asked for (from the receiver's 6.5 Msps up to 2 samples a symbol, 21.5 Msps)
+class AtscSynth : public ModeSynth {
+public:
+    AtscSynth(const SynthConfig& c, double rate) : rate_(rate) {
+        atsc::ChannelConfig cc; cc.snrDb = c.snrDb; cc.cfoHz = c.cfoHz;
+        gen_ = std::make_unique<atsc::Generator>(dvbt::testTsSource(), cc, rate);
+    }
+    double sampleRate() const override { return rate_; }
+    void generate(cf32* out, size_t n) override {
+        tmp_.clear();
+        gen_->generate(n, tmp_);
+        const float g = 0.22f / 6.7f;   // the 8-VSB signal has an rms of about 6.7 units (as the transmitter's AtscGen)
+        for (size_t i = 0; i < n; i++) out[i] = tmp_[i] * g;
+    }
+private:
+    double rate_;
+    std::unique_ptr<atsc::Generator> gen_;
+    std::vector<cf32> tmp_;
+};
+
 class IsdbtSynth : public ModeSynth {
 public:
     IsdbtSynth(const SynthConfig& c, double rate) : rate_(rate), cfo_(c.cfoHz), sigma_((float)std::sqrt(std::pow(10.0, -c.snrDb / 10.0) / 2.0)), noise_(7) {
@@ -602,6 +624,7 @@ double minSampleRateFor(int stdMode, double bandwidthMhz) {
 std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, double sampleRate) {
     switch (stdMode) {
     case 4: return makeDabSynth(cfg, sampleRate);
+    case 3: if (sampleRate < 6.5e6 || sampleRate > 2 * atsc::kSymbolRate) return nullptr; return std::make_unique<AtscSynth>(cfg, sampleRate);
     case 5: return makeAtsc3Synth(cfg, sampleRate);
     case 6: return std::make_unique<IsdbtSynth>(cfg, sampleRate);
     case 7: return std::make_unique<FmSynth>(cfg, sampleRate);

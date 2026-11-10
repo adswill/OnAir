@@ -440,6 +440,11 @@ struct AtvGenerator::Impl {
             bits = atvCcBits(c1, c2); T = 1.0 / 0.5034965; start = 27.4; amp = 0.5;
             for (int j = 0; j < count; j++) { const float u = u0 + j * dtUs; if (u > 10.5f && u < 10.5 + 7 * T) lineV[(size_t)j] += (float)(0.25 - 0.25 * std::cos(2 * kPi * (u - 10.5) / T)); }
         } else return;
+        if (F.lines == 625 && line == 23) {   // WSS: the first half of line 23 is blanked for it (EN 300 294), the picture would sit under the bits
+            const double end = start + (bits.size() + 1) * T;
+            for (int j = 0; j < count; j++) { const float u = u0 + j * dtUs; if (u >= start - T && u < end) lineV[(size_t)j] = (float)bitsAt(bits, u, start, T, amp); }
+            return;
+        }
         for (int j = 0; j < count; j++) { const float u = u0 + j * dtUs; lineV[(size_t)j] += (float)bitsAt(bits, u, start, T, amp); }
     }
 
