@@ -35,7 +35,10 @@ CPU = CPU seconds per second of signal on the clean signal, receiver alone (all 
 | G-TOR 100 Bd, 3 kHz | 6 -> **-2 dB** | 0.004 both | same |
 | DVB-S QPSK 2/3 1 Msym/s, Es/N0 | 4 / 4 / 4 dB, unchanged | **0.29 -> 0.13** | DVB-S tried before the S2 header hunt (5) |
 
-Per point, Meteor AWGN before (sensA's receiver): 5 dB 6/6, 4 dB 1/2; after: 3 dB 6/6, 2 dB 6/6, 1 dB 0/6 (sync found, frames fail
+Columns: registry modes AWGN / 20 ppm carrier / 50 ppm clock; keyboard modes AWGN / a tuning error inside the decoder's margin (MFSK16
+6 Hz, THOR16 and DominoEX 30 Hz) / a 100 ppm clock.
+
+Per point, Meteor AWGN before (the integ-39 receiver): 5 dB 6/6, 4 dB 1/2; after: 3 dB 6/6, 2 dB 6/6, 1 dB 0/6 (sync found, frames fail
 Reed-Solomon: the code's limit). 20 ppm (2758 Hz) after: 3 dB 6/6, 2 dB 1/6. Lock at the threshold + 3 dB: 0.5 s.
 
 1. **Meteor LRPT** (`core/src/meteor/meteor_rx.cpp`). SensA found the cause: the OQPSK timing detector is not phase independent, so the
