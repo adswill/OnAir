@@ -3,6 +3,7 @@
 // decodes). Before the coherent metrics, OSD and the CQ a-priori pass: FT8 -21 dB 4 %, FT4 -16 dB 4 %, the crowded slot 83 of 100.
 #include "hfdig_wsjt_testutil.h"
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 using namespace dect2;
 
 static std::string callOf(int i) {
@@ -59,7 +60,9 @@ int main() {
     }
     for (int mode : {ftx::kFt8, ftx::kFt4, ftx::kFt2}) {   // noise alone
         int wrong = 0;
-        for (int t = 0; t < (mode == ftx::kFt8 ? 12 : 24); t++) {
+        // quick run: a third of the noise slots (each must give no decode); ONAIR_TEST_LONG=1 runs all of them
+        const int slots = (mode == ftx::kFt8 ? 12 : 24) / testLongPick(3, 1);
+        for (int t = 0; t < slots; t++) {
             wsjttest::Imp imp;
             for (const auto& x : wsjttest::decode(wsjttest::audio(mode, {}, 1, imp, 777 + 7919 * t), mode, imp)) { wrong++; printf("  noise: \"%s\"\n", x.msg.c_str()); }
         }

@@ -10,6 +10,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 
@@ -69,21 +70,24 @@ void want(const char* what, const Sc& s) {
 
 }  // namespace
 
+// the impairment cases at one rate: 250 ksps by default (each rate is still run once below), 2 Msps in the long run as before
+Sc imp() { Sc s; s.rate = testLongPick(250e3, 2e6); return s; }
+
 int main() {
     want("2 Msps", Sc());
     { Sc s; s.rate = 250e3; want("250 ksps", s); }
     { Sc s; s.rate = 8e6; want("8 Msps", s); }
-    for (size_t c : {size_t(7), size_t(4096)}) { Sc s; s.chunk = c; s.secs = 20; char n[40]; snprintf(n, sizeof n, "chunks of %zu", c); want(n, s); }
-    for (double f : {-45.0, 45.0, 150.0, -300.0}) { Sc s; s.cfo = f; char n[40]; snprintf(n, sizeof n, "carrier offset %+.0f Hz", f); want(n, s); }
-    { Sc s; s.invert = true; want("tones swapped", s); }
-    { Sc s; s.snr = 15; want("15 dB", s); }
-    { Sc s; s.quant8 = true; s.snr = 20; want("8 bit samples", s); }
-    { Sc s; s.dc = 0.05f; s.quant8 = true; want("DC offset, 8 bit", s); }
-    { Sc s; s.gapAt = 8; s.gapMs = 20; s.secs = 40; want("20 ms gap", s); }
-    { Sc s; s.reset = true; s.secs = 40; want("reset mid stream", s); }
-    { Sc s; s.text = "ZCZC EA02\r\nPOSITION 54 DEG 30.5 N 010 DEG 12.0 E SPEED 12.5 KTS. CALL BUOY 7.\r\nNNNN\r\n"; const SitorTelemetry t = run(s);
+    for (size_t c : {size_t(7), size_t(4096)}) { Sc s = imp(); s.chunk = c; s.secs = 20; char n[40]; snprintf(n, sizeof n, "chunks of %zu", c); want(n, s); }
+    for (double f : {-45.0, 45.0, 150.0, -300.0}) { Sc s = imp(); s.cfo = f; char n[40]; snprintf(n, sizeof n, "carrier offset %+.0f Hz", f); want(n, s); }
+    { Sc s = imp(); s.invert = true; want("tones swapped", s); }
+    { Sc s = imp(); s.snr = 15; want("15 dB", s); }
+    { Sc s = imp(); s.quant8 = true; s.snr = 20; want("8 bit samples", s); }
+    { Sc s = imp(); s.dc = 0.05f; s.quant8 = true; want("DC offset, 8 bit", s); }
+    { Sc s = imp(); s.gapAt = 8; s.gapMs = 20; s.secs = 40; want("20 ms gap", s); }
+    { Sc s = imp(); s.reset = true; s.secs = 40; want("reset mid stream", s); }
+    { Sc s = imp(); s.text = "ZCZC EA02\r\nPOSITION 54 DEG 30.5 N 010 DEG 12.0 E SPEED 12.5 KTS. CALL BUOY 7.\r\nNNNN\r\n"; const SitorTelemetry t = run(s);
       CHECK(hasRun(t.text, "POSITION 54 DEG 30.5 N 010 DEG 12.0 E"), "figures and punctuation: \"%.100s\"", t.text.c_str()); }
     // silence and noise only: no lock, no text
-    { Sc s; s.text = " "; s.snr = -10; const SitorTelemetry t = run(s); CHECK(t.state != 2 || t.text.find("GALE") == std::string::npos, "noise locked"); }
+    { Sc s = imp(); s.text = " "; s.snr = -10; const SitorTelemetry t = run(s); CHECK(t.state != 2 || t.text.find("GALE") == std::string::npos, "noise locked"); }
     return testSummary("sitor_live");
 }

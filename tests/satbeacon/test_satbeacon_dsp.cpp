@@ -9,6 +9,7 @@
 #include <string>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static std::string hexBytes(const std::vector<uint8_t>& v, size_t n = 0) {
     std::string s;
@@ -141,7 +142,9 @@ int main() {
         SatbeaconGenConfig c; c.rate = k.rate; c.snrDb = k.snr; c.carrierHz = k.cfo; c.bitRate = k.bitRate; c.subcarrierHz = k.sub; c.clockPpm = k.ppm; c.biphase = k.biphase; c.reference = false;
         SatbeaconGenerator g(c);
         sb::Beacon b; b.configure(k.rate);
-        run(b, g, k.rate, k.secs);
+        // the 4800 bit/s cases at 30 dB lock in well under 15 s (the default chain gets 60 of about 90 frames in 40 s): 25 s by default, the long run as listed
+        const double secs = (!testLong() && k.bitRate == 4800 && k.snr >= 30) ? 25 : k.secs;
+        run(b, g, k.rate, secs);
         SbTelemetry t; b.fill(t);
         printf("  %s: state %d cfo %.1f baud %.2f coding %d L %d sync %s frames %llu/%llu\n", k.name, t.state, t.cfoHz, t.baud, t.coding, t.frameBits, t.syncName.c_str(), (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
         CHECK(t.state == 3, "%s: state %d", k.name, t.state);

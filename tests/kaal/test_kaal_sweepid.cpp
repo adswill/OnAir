@@ -10,6 +10,7 @@
 using namespace dect2;
 using namespace dect2::kaal;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static double corr(int a, int b) {
     const auto& A = sweepVariantTemplate(a);
@@ -89,6 +90,9 @@ int main() {
         for (const auto& v : sweepVariantTemplate(2)) e2 += std::norm(v);
         CHECK(std::fabs(e0 / e2 - 1) < 0.01, "energy up %.0f fast1 %.0f", e0, e2);
     }
+    // quick run: the report-only SNRs are skipped, the scanner cases cut to the strong-with-offset, 0 dB and -20 dB ones, fewer noise and no-ID
+    // signals (each must give no ID; the 9-of-10 ratio at -20 dB keeps its 10 seeds); ONAIR_TEST_LONG=1 runs everything
+    const bool L = testLong();
     // a 40 s signal with the ID LY2ABC/P at 16 kbit/s
     const std::vector<int16_t> pcm = kaalrx::testPcm(16000 * 40);
     const std::vector<uint8_t> bits = kaalrx::frameBits(pcm, 16);
@@ -113,7 +117,7 @@ int main() {
     {   // the scanner, sweep only
         struct Case { double snr, cfo; };
         const Case cases[] = {{60, 0}, {60, 150}, {0, 0}, {-10, 100}, {-18, 0}, {-18, 100}, {-20, 0}, {-20, 100}, {-20, -100}};
-        for (double snr : {-22.0, -24.0, -26.0}) {   // where it gives out (reported, not checked)
+        for (double snr : L ? std::vector<double>{-22.0, -24.0, -26.0} : std::vector<double>{}) {   // where it gives out (reported, not checked)
             std::string call;
             float gate = 0;
             uint64_t scans = 0;
@@ -121,6 +125,7 @@ int main() {
             printf("scanner %+.0f dB, cfo +100 Hz (36 s window): %s '%s' (gate %.1f dB)\n", snr, got ? "ID" : "no ID", call.c_str(), (double)gate);
         }
         for (const Case& c : cases) {
+            if (!L && !((c.snr == 60 && c.cfo != 0) || c.snr == 0 || c.snr == -20)) continue;
             const auto t0 = std::chrono::steady_clock::now();
             const auto sig = kaalrx::channelSnr(tx, pw, c.snr, c.cfo, 21);
             std::string call;
@@ -134,7 +139,7 @@ int main() {
         }
     }
     {   // success rate at the edge: 10 seeds, random start inside the stream (so the cycle phase differs)
-        for (double snr : {-20.0, -22.0}) {
+        for (double snr : L ? std::vector<double>{-20.0, -22.0} : std::vector<double>{-20.0}) {   // -22 dB is only reported
             int okN = 0;
             for (int t = 0; t < 10; t++) {
                 std::string call;
@@ -152,7 +157,7 @@ int main() {
     {   // no ID where none is sent
         int falseIds = 0;
         float maxGate = -100;
-        for (int t = 0; t < 12; t++) {
+        for (int t = 0; t < (L ? 12 : 4); t++) {
             std::string call;
             float gate = 0;
             uint64_t scans = 0;
@@ -163,7 +168,7 @@ int main() {
         printf("noise only: %d false IDs, max gate %.1f dB\n", falseIds, (double)maxGate);
         CHECK(falseIds == 0, "%d false IDs from noise", falseIds);
         float maxGateV = -100;
-        for (double snr : {10.0, 0.0, -10.0, -20.0}) {
+        for (double snr : L ? std::vector<double>{10.0, 0.0, -10.0, -20.0} : std::vector<double>{10.0, -20.0}) {
             std::string call;
             float gate = 0;
             uint64_t scans = 0;
@@ -172,7 +177,7 @@ int main() {
             maxGateV = std::max(maxGateV, gate);
             printf("plain sweeps at %+.0f dB: gate %.1f dB\n", snr, (double)gate);
         }
-        for (double snr : {20.0, 5.0, 0.0}) {   // voice data and no sweep at all
+        for (double snr : L ? std::vector<double>{20.0, 5.0, 0.0} : std::vector<double>{20.0, 0.0}) {   // voice data and no sweep at all
             std::string call;
             float gate = 0;
             uint64_t scans = 0;
