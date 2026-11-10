@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**310 modes.**
+**314 modes.**
 
 ## TV (16)
 
@@ -284,7 +284,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MT63** - MT63: robust keyboard chat on 64 carriers
 - **FSQ** - FSQ: directed keyboard chat on 33 tones
 - **IFKP** - IFKP: keyboard chat on 33 tones, three speeds
-- **SITOR** - SITOR-B: the text of a CCIR 476 FEC teletype broadcast, found automatically
+- **SITOR** - SITOR: the text of CCIR 476 FEC broadcasts (SITOR-B) and ARQ links (SITOR-A / AMTOR), found automatically
 - **ARDOP** - ARDOP: Winlink HF modem frames, monitor only
 - **JS8Call** - JS8Call: weak-signal messages, heartbeats and relays
 - **RTTY** - RTTY: radio teletype text
@@ -310,13 +310,17 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MeshCom** - MeshCom: amateur LoRa mesh messages and positions on 433 MHz
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 
-## HF Utility (28)
+## HF Utility (32)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
 - **PACTOR-IV** - PACTOR-IV: HF 1800 baud single carrier, detection and constellation estimate (physical layer only; no text)
 - **MIL-STD-188-110 serial** - MIL-STD-188-110: serial tone HF data modem with STANAG 5066 framing (simulated signals only)
 - **STANAG 4285** - STANAG 4285: NATO HF data modem with STANAG 5066 framing (simulated signals only)
+- **STANAG 4539** - STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)
+- **3G-ALE** - 3G-ALE: third-generation HF link setup calls and handshakes, BW0 bursts (simulated signals only)
+- **Link 11 CLEW** - Link 11 CLEW: message detector and frame structure, no data (simulated signals only)
+- **STANAG 4481 FSK** - STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)
 - **ARQ-E** - ARQ-E: HF duplex ARQ teleprinter (simulated signals only)
 - **ARQ-N** - ARQ-N: HF duplex ARQ teleprinter (simulated signals only)
 - **AUTOSPEC** - AUTOSPEC: HF FEC teleprinter (simulated signals only)

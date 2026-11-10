@@ -1041,6 +1041,10 @@ case 120: {
     cardIf(o, "Baud", t.baud);
     cardIf(o, "Chars", t.chars);
     cardIf(o, "Text", t.text);
+    cardIf(o, "Arq Blocks", t.arqBlocks);
+    cardIf(o, "Arq New", t.arqNew);
+    cardIf(o, "Arq Repeats", t.arqRepeats);
+    cardIf(o, "Arq Bad", t.arqBad);
     break;
 }
 case 121: {

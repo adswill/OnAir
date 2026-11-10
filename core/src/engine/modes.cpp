@@ -511,6 +511,10 @@ static std::vector<ModeTuning> withSatDetect(std::vector<ModeTuning> t) {
     for (const auto& s : satmisc::satSystems()) t.push_back(satDetectTuning(s.stdMode));
     t.push_back(navicTuning());
     for (int k = 0; k < kCisHfKinds; k++) { ModeTuning m = cisHfTuning(k); m.minMhz = 0.001; m.maxMhz = kMaxTuneMhz; t.push_back(m); }   // CIS HF modes (families 620 - 626), any frequency
+    t.push_back(hfUtilTuning(kHfuKindHdr));   // STANAG 4539 / 110C high rate (family 603)
+    t.push_back(hfUtilTuning(kHfuKindAle3g));   // 3G-ALE (family 604)
+    t.push_back(hfUtilTuning(kHfuKindLink11));   // Link 11 CLEW (family 605)
+    t.push_back(hfUtilTuning(kHfuKind4481));   // STANAG 4481 FSK (family 606)
     return t;
 }
 static const std::vector<ModeTuning>& table() {
@@ -720,6 +724,10 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 203: return makeLoraSatSynth(cfg, sampleRate);
     case 205: return makePactorSynth(cfg, sampleRate);
     case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: case 441: return makeHfUtilSynth(stdMode - 432, cfg, sampleRate);
+    case kHfuHdrFamily + 2: return makeHfUtilSynth(kHfuKindHdr, cfg, sampleRate);
+    case kHfuAle3gFamily + 2: return makeHfUtilSynth(kHfuKindAle3g, cfg, sampleRate);
+    case kHfuLink11Family + 2: return makeHfUtilSynth(kHfuKindLink11, cfg, sampleRate);
+    case kHfu4481Family + 2: return makeHfUtilSynth(kHfuKind4481, cfg, sampleRate);
     case 239: return makePactorHfSynth(2, cfg, sampleRate);
     case 240: return makePactorHfSynth(3, cfg, sampleRate);
     case 241: return makePactorHfSynth(4, cfg, sampleRate);
@@ -986,6 +994,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 236: return fy3Summary(t.fy3a);
     case 237: return fy3Summary(t.fy3m);
     case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: return hfUtilSummary(t.hfutil);
+    case kHfuHdrFamily + 1: case kHfuAle3gFamily + 1: case kHfuLink11Family + 1: case kHfu4481Family + 1: return hfUtilSummary(t.hfutil);
     case 238: case 239: case 240: return pactorHfSummary(t.pactorhf);
     case 213: return shortwaveSummary(t.shortwave);
     case 231: case 232: return gk2aSummary(t.gk2a);

@@ -1465,3 +1465,15 @@ New automation families: sensor, ham, broadcast, image. Skipped as asked: 21, 22
 
 ## 2026-11-11 DVB-SH, OFDM form SH-A (feat39-dvbsh)
 Branch feat39-dvbsh on integ-39, family block 746-749. DVB-SH (ETSI EN 302 583) is a new mode (family 746, engine standard 748). It has a receiver and a generator for SH-A, in core/src/dvbsh. The common coding is all here: the CRC-16 and EHEADER, the EScrambler, the 3GPP2 turbo code with all twelve puncturing patterns and their tails, the bit-wise interleaver with rate adaptation, and the 48-branch time interleaver with every TPS profile, long early/late ones included. The OFDM side has 1K/2K/4K/8K, QPSK and 16-QAM including hierarchical, and the TPS with the DVB-SH fields. The engine finds the channel width automatically, and the transport stream goes to the TV player. Tests: dvbsh_fec (turbo BER against the BPSK capacity limit, within about 1 dB at every rate), dvbsh_chain (offsets, clock, noise, echo, blockage under the long interleaver, hierarchical HP/LP) and dvbsh_engine. SH-B (TDM) and the low-latency annex are not done. Simulated signals only. Details are in docs/DVBSH-3.9.md.
+## 2026-11-11 HF military and utility modes (feat39-hfmil)
+Branch feat39-hfmil on integ-39 adds four HF utility kinds in families 603 to 606:
+- STANAG 4539 / MIL-STD-188-110C Appendix C high rate (3200 to 12800 bit/s, all interleavers, joining at the reinserted preamble, EOM, STANAG 5066)
+- 3G-ALE BW0 (MIL-STD-188-141B Appendix C) with LE_Call, LE_Handshake, LE_Notification and LE_Broadcast in words
+- Link 11 CLEW, frame structure only: rate, Doppler, frame count and raw phase changes, since the bit layout is not public
+- STANAG 4481 FSK, single channel or 16 channels, with ITA2 text or the speed of a synchronous channel
+
+SITOR now also monitors SITOR-A / AMTOR ARQ links (family 119, no new entry). The selective call is read, repeats are dropped and changes of direction are followed.
+
+STANAG 4529, CLOVER-II, PAX/PAX2 and Link 11 SLEW are skipped because no bit-level public description exists.
+
+Everything was tested on simulated signals only. Details are in docs/HF-MIL-3.9.md.

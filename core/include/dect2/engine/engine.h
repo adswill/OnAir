@@ -572,7 +572,7 @@ public:
     SsdvReceiver& ssdv() { return rxSsdv_; }   // SSDV: speed, save folder, clear the pictures (telemetry through latestRx)
     Fy3Receiver& fy3Ahrpt() { return rxFy3a_; }   // FY-3 AHRPT: satellite preset, symbol rate, roll-off, new pictures (telemetry through latestRx)
     Fy3Receiver& fy3Mpt() { return rxFy3m_; }     // FY-3 MPT: the same
-    HfUtilReceiver& hfUtil(int kind) { return rxHfu_[kind]; }   // HF utility modes (families 430 .. 439)
+    HfUtilReceiver& hfUtil(int kind) { return kind >= kHfuKinds ? rxHfm_[kind - kHfuKinds] : rxHfu_[kind]; }   // HF utility modes (families 430 .. 439, 603, 604)
     PactorHfReceiver& pactorHf(int variant) { return variant == 3 ? rxPh3_ : variant == 4 ? rxPh4_ : rxPh2_; }   // PACTOR-II / -III / -IV: clear the results (telemetry through latestRx)
     std::vector<Tr290Check> tr290Checks() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.checks(); }
     double tr290JitterMs() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.pcrJitterMs(); }
@@ -1026,6 +1026,8 @@ private:
     PactorReceiver rxPac_;
     HfUtilReceiver rxHfu_[kHfuKinds] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
     uint64_t hfuSeq_[kHfuKinds] = {};
+    HfUtilReceiver rxHfm_[kHfuKindsAll - kHfuKinds] = {kHfuKindHdr, kHfuKindAle3g, kHfuKindLink11, kHfuKind4481};   // 3.9 HF utility kinds (families 603 STANAG 4539, 604 3G-ALE, 605 Link 11, 606 STANAG 4481)
+    uint64_t hfmSeq_[kHfuKindsAll - kHfuKinds] = {};
     EsubghzReceiver rxEsg_;
     RoshfReceiver rxRoshf_;
     SsdvReceiver rxSsdv_;
