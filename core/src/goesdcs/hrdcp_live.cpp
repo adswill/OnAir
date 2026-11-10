@@ -241,16 +241,20 @@ struct HrdcpReceiver::Impl {
     }
 
     // the carrier frequency from the first 0.45 s of the slot (the 2 s carrier)
+    // on a 16-sample average (first null 600 Hz), so a platform on the next 3 kHz assignment does not pull it; the line is within a bin of 0 Hz
     void estimateCarrier(Slot& s) {
         const size_t a = (size_t)(0.02 * s.rs), b = (size_t)(0.45 * s.rs);
-        std::complex<double> r1(0, 0);
-        for (size_t n = a; n + 1 < b; n++) r1 += std::complex<double>(s.z[n + 1] * std::conj(s.z[n]));
-        const double f1 = std::arg(r1) * s.rs / (2 * math::kPi);
-        const int lag = 32;
-        std::complex<double> rl(0, 0);
-        for (size_t n = a; n + lag < b; n++) rl += std::complex<double>(s.z[n + lag] * std::conj(s.z[n]));
-        rl *= std::polar(1.0, -2 * math::kPi * f1 * lag / s.rs);
-        s.f0 = f1 + std::arg(rl) * s.rs / (2 * math::kPi * lag);
+        std::vector<std::complex<double>> w;
+        std::complex<double> acc(0, 0);
+        for (size_t n = a; n < b; n++) { acc += std::complex<double>(s.z[n]); if (n >= a + 16) acc -= std::complex<double>(s.z[n - 16]); if (n >= a + 15) w.push_back(acc); }
+        auto lagEst = [&](int lag, double f) {
+            std::complex<double> r(0, 0);
+            for (size_t n = 0; n + (size_t)lag < w.size(); n++) r += w[n + (size_t)lag] * std::conj(w[n]);
+            r *= std::polar(1.0, -2 * math::kPi * f * lag / s.rs);
+            return f + std::arg(r) * s.rs / (2 * math::kPi * lag);
+        };
+        const double f1 = lagEst(16, 0.0);        // +-300 Hz
+        s.f0 = lagEst(128, f1);                   // +-37 Hz around it
         s.haveF = true;
         s.drot = std::polar(1.f, (float)(-2 * math::kPi * s.f0 / s.rs));
         s.dph = cf32(1, 0);

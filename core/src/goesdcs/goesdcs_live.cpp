@@ -52,6 +52,10 @@ struct Slot {
     int acqLeft = 0;
     cf32 acqSum{0, 0}, prev{0, 0};
     bool havePrev = false;
+    // the frequency estimate runs on a 16-sample average (first null 600 Hz): a platform on the next channel (1.5 or 3 kHz away) is in the slot's
+    // 9.6 kHz band and would pull a plain sample-to-sample estimate
+    cf32 box[16] = {}, boxSum{0, 0}, wHist[16] = {};
+    int boxN = 0;
     float ref = 0;
     int lostRun = 0;
     // data
@@ -425,10 +429,17 @@ struct GoesDcsReceiver::Impl {
     void baseband(Slot& s, cf32 z) {
         // carrier loop
         if (s.acqLeft > 0) {
-            if (s.havePrev) s.acqSum += z * std::conj(s.prev);
+            {
+                const int k = s.boxN & 15;
+                s.boxSum += z - s.box[k]; s.box[k] = z;
+                const cf32 w = s.boxSum;
+                if (s.boxN >= 32) s.acqSum += w * std::conj(s.wHist[k]);   // lag 16
+                s.wHist[k] = w;
+                s.boxN++;
+            }
             s.prev = z; s.havePrev = true;
             if (--s.acqLeft == 0) {
-                s.integ = std::arg(s.acqSum);
+                s.integ = std::arg(s.acqSum) / 16.0;
                 s.theta = std::arg(z);
                 s.mavg = cf32(std::abs(z), 0);
             }
