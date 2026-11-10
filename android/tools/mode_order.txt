@@ -293,3 +293,5 @@
 600|mioty
 600|dectnrp
 730|
+360|sfhss
+360|spektrum

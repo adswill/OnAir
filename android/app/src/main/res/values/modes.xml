@@ -316,6 +316,8 @@
         <item>mioty</item>
         <item>DECT NR+</item>
         <item>ISDB-TSB</item>
+        <item>Futaba RC (S-FHSS)</item>
+        <item>Spektrum RC (DSM2 / DSMX)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -463,7 +465,7 @@
         <item>BLE tracker detector (2402 / 2426 / 2480 MHz): recognises Apple Find My accessories such as AirTag, Tile, Chipolo, Samsung SmartTag and Google Find My Device tags from their advertisements, shows how long and how close each stays and warns about one that follows you (receive only; identifiers are kept for a short window and never saved)</item>
         <item>Thread (the IPv6 mesh of Matter smart homes) on the 2.4 GHz 802.15.4 channels 11 - 26 (O-QPSK, 250 kbit/s): networks from their beacons (network name, extended PAN ID, version), devices from their 802.15.4 addresses, 6LoWPAN headers (mesh, fragments, IPHC, UDP ports, MLE and CoAP) where a frame is sent in the clear, a live frame log; channel scan. Receive only. Almost all Thread traffic is AES-CCM encrypted at the link layer: those frames show the 802.15.4 header, the frame counter and key index and are marked encrypted; their content (IPv6, MLE, CoAP) is not readable without the network key, and OnAir does not decrypt or recover keys. Needs a fast radio (4 Msps or more), not an RTL-SDR</item>
         <item>Wi-SUN FAN smart utility networks (smart meters, street lights) (IEEE 802.15.4g FSK at 50, 100 and 150 kbit/s) with the band plans of every Wi-SUN region from 470 MHz to 2.4 GHz: a whole band at once (the nodes hop over every channel, all of 915 - 928 MHz at 16 Msps), networks with their name and border router, nodes with vendor, role, routing cost and schedules, links with the levels acks report, a frame log and a hop chart. Receive only: nothing is sent or joined; PAN configurations and data are encrypted and stay so. Needs 16 Msps or more for the whole band (a few channels from 2 Msps)</item>
-        <item>Wireless M-Bus (EN 13757-4) utility meters: S1 on 868.3 MHz, T1 and C1 on 868.95 MHz, R2 on 868.03 - 868.15 MHz and N1 on 169.4 MHz (2-FSK / GFSK, Manchester, 3-out-of-6 and NRZ chips, frame formats A and B with their block CRCs): manufacturer, meter ID, version and device type (water, heat, gas, electricity, heat cost allocator), and for unencrypted frames the readings (volume, energy, power, temperatures, dates). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Wireless M-Bus (EN 13757-4) utility meters: S1 on 868.3 MHz, T1 and C1 on 868.95 MHz, R2 on 868.03 - 868.15 MHz and N1 on 169.4 MHz, with Wize frames (169 MHz, 2.4 / 4.8 kbit/s, format B, CI 0x20: network, application, counter and time stamp; the L7 data stays encrypted) (2-FSK / GFSK, Manchester, 3-out-of-6 and NRZ chips, frame formats A and B with their block CRCs): manufacturer, meter ID, version and device type (water, heat, gas, electricity, heat cost allocator), and for unencrypted frames the readings (volume, energy, power, temperatures, dates). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
         <item>NFC / RFID at 13.56 MHz, receive only: ISO/IEC 14443 Type A (REQA/WUPA, ATQA, anticollision, SELECT, SAK, UID sizes, CRC_A, HLTA, RATS/ATS, APDU framing as hex, NDEF text/URI from Type 2 READ answers), Type B (REQB/ATQB on the BPSK subcarrier) and ISO/IEC 15693 (1-of-4 / 1-of-256 pulse position, inventory, UID, system info) as far as the public specs allow. Reader frames are 100%% ASK Miller; tag answers load-modulate the 847.5 kHz (14443) or 423.75 kHz (15693) subcarrier. Needs an HF-capable receiver (RTL-SDR V4 direct HF, HackRF, Airspy HF+, RX888) at a few Msps so the +-847.5 kHz sidebands fit. Nothing is cloned, no encrypted content is decoded, no keys are attacked. Pet microchips are 134.2 kHz FDX-B, a different band (see docs/NFC.md)</item>
         <item>Z-Wave home automation (ITU-T G.9959 FSK: R1 9.6 kbit/s Manchester, R2 40 kbit/s, R3 100 kbit/s) on the sub-GHz channels of Europe, USA, Australia / New Zealand, Hong Kong, India, Russia, China, Israel, Japan and Korea: networks by home ID, nodes, command classes and commands, a frame log. Receive only: S0 and S2 encrypted payloads are shown as encrypted and never decoded. Europe fits in 2 Msps centred on 869.13 MHz</item>
         <item>Sigfox uplinks, receive only: ultra-narrowband D-BPSK at 100 bit/s (RC1 868.130 MHz, RC3, RC5, RC6) or 600 bit/s (RC2 902.200 MHz, RC4) anywhere in the 200 kHz macro channel. Each frame\'s type, device ID, message counter, payload in hex (or the single bit), the downlink request flag and the authentication code (shown, never checked: it needs the device key), the CRC checked, and the three repetitions (ranks 1 - 3, each with its own convolution code) merged into one message with their frequencies and level. Frame layout from the public Sigfox radio specification. Nothing is decrypted</item>
@@ -613,6 +615,8 @@
         <item>mioty (ETSI TS 103 357 TS-UNB) uplinks: the 24 hopped radio-bursts found and decoded, every uplink TSMA pattern, extension frames. MAC fields shown (address, counter, flags); the payload is encrypted with the network key and stays encrypted. Simulated signals only so far</item>
         <item>DECT NR+ (DECT-2020 NR) packets on a 1.728 MHz channel: the physical control field of each packet (network ID, transmitter and receiver IDs, length, MCS, HARQ). Data channel not decoded. Simulated signals only so far</item>
         <item>ISDB-TSB (ARIB STD-B29) narrow-band digital sound and data broadcasting: one or three segments, detected from the TMCC; the one-segment receiver also takes the one-seg service of an ISDB-T channel. Simulated signals only so far</item>
+        <item>Futaba S-FHSS 2.4 GHz RC links (CC2500 2-FSK 128 kbit/s, 30 hop channels): transmitter id, hop code and the four channel values of each packet; layout from the DIY-Multiprotocol-TX-Module project, simulated signals only so far. FASST is not decodable (no public description)</item>
+        <item>Spektrum DSM2 and DSMX 2.4 GHz RC links (CYRF6936 DSSS, 1 Mchip/s): every pn code tried, transmitter id bytes and channel values; DSMX told from DSM2 by the hop channel when the radio\'s frequency is known. The CRC is not checked (not published). Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -910,6 +914,8 @@
         <item>LPWAN, header only</item>
         <item>Mesh radio, header only</item>
         <item>Narrow-band ISDB, Japan</item>
+        <item>RC link</item>
+        <item>RC link</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1207,5 +1213,7 @@
         <item>mioty ts-unb lpwan telegram splitting 868 iot sensor</item>
         <item>dect nr+ dect-2020 nr nrplus mesh 1.9 ghz ts 103 636</item>
         <item>isdb tsb isdb-tsb sb arib std-b29 one segment three segment 1seg oneseg narrow band digital radio japan v-low</item>
+        <item>futaba sfhss s-fhss rc</item>
+        <item>spektrum dsm dsm2 dsmx rc</item>
     </string-array>
 </resources>
