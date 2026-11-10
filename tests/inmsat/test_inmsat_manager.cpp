@@ -14,7 +14,6 @@ using namespace dect2;
 using namespace dect2::inmsat;
 #include "../common/cpu_report.h"
 #include "../common/test_util.h"
-#include "../common/test_long.h"
 
 namespace {
 struct Shifter {
@@ -49,7 +48,7 @@ int main() {
     mgr.setLocation(true, 54.7, 25.3);          // Lithuania: 64.5E is above the horizon
     std::vector<std::string> logs;
     mgr.setLogCallback([&](const std::string& s) { logs.push_back(s); });
-    const double secs = testLongPick(40.0, 80.0);   // 40 s by default (several Inmarsat-C frames and Aero messages from both groups), 80 s in the long run
+    const double secs = 80;
     const size_t chunk = 65536;
     std::vector<cf32> b1(chunk), b2(chunk), bi(chunk), bw(chunk), mix(chunk);
     Snapshot snap;

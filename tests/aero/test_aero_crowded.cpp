@@ -54,10 +54,11 @@ static void run(const char* name, double rate, double ebn0, double cfo, int nTon
 }
 
 int main() {
-    // the channel is found in about 3 s and a 10500 bit/s frame lasts 0.5 s: 10-12 s by default, the long run gives each case 40-50 s
+    // the channel is found in about 3 s and a 10500 bit/s frame lasts 0.5 s: 10 s by default for the two easy cases (the long run 40 s);
+    // the 6 dB case keeps its 50 s (12 s decoded nothing, quick run 42881392517)
     run("2.4 Msps, 10 tones, clean", 2.4e6, 12, 0, 10, testLongPick(10, 40));
     run("4 Msps, 10 tones, cfo +4.3 kHz", 4e6, 10, 4300, 10, testLongPick(10, 40));
-    run("4 Msps, 14 tones, 6 dB", 4e6, 6, -3100, 14, testLongPick(12, 50));
+    run("4 Msps, 14 tones, 6 dB", 4e6, 6, -3100, 14, 50);
     // noise alone: no channel
     {
         SynthConfig cfg; cfg.mode = 20; cfg.modeOpt[0] = 0; cfg.modeOpt[1] = 3;

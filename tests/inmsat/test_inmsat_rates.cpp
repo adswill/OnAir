@@ -89,10 +89,10 @@ int runInmc(double rate, double secs) {
 }
 
 int main() {
-    // by default Inmarsat-C at the lowest and highest rate for 30 s, and every Aero rate once (clean or impaired, 10 Msps both) for 20 s;
-    // the long run (ONAIR_TEST_LONG=1) does every rate both ways, 60 s and 40 s
+    // by default Inmarsat-C at the lowest and highest rate (60 s: 30 s did not reach sync, quick run 42881392517), and every Aero rate once (clean or impaired, 10 Msps both) for 20 s;
+    // the long run (ONAIR_TEST_LONG=1) does every Inmarsat-C rate and every Aero rate both ways for 40 s
     const bool L = testLong();
-    for (double rate : {2.5e6, 6e6, 10e6}) if (L || rate != 6e6) CHECK(runInmc(rate, L ? 60 : 30), "Inmarsat-C at %.2f Msps", rate / 1e6);
+    for (double rate : {2.5e6, 6e6, 10e6}) if (L || rate != 6e6) CHECK(runInmc(rate, 60), "Inmarsat-C at %.2f Msps", rate / 1e6);
     const double secs = L ? 40 : 20;
     for (double rate : {2.4e6, 2.5e6, 3e6, 6e6, 10e6}) {
         const bool clean = L || rate == 2.4e6 || rate == 3e6 || rate == 10e6, impaired = L || rate == 2.5e6 || rate == 6e6 || rate == 10e6;

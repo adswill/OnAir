@@ -45,10 +45,10 @@ int main(int argc, char** argv) {
     };
     int fails = 0;
     printf("%-26s %6s %8s %8s %12s %6s\n", "NXDN short calls", "calls", "decoded", "frames%", "lost/call", "extra");
-    // the quick run: one seed, and of the offsets only the largest each way (the clock error, noise, late entry and neighbour cases all stay); ONAIR_TEST_LONG=1: all, 3 seeds
+    // the quick run: of the offsets only the largest each way (the clock error, noise, late entry and neighbour cases all stay); ONAIR_TEST_LONG=1: all
     const bool quick[] = {true, false, false, true, true, true, false, false, false, true, true, false, true, true, true};
     static_assert(sizeof quick / sizeof quick[0] == sizeof faults / sizeof faults[0], "one entry per fault");
-    const uint32_t seeds = testLongPick(1u, 3u);
+    const uint32_t seeds = 3;   // 3 seeds also in the quick run: with 1 seed the 0.95 cases had too few calls (quick run 42881392517)
     for (size_t fi = 0; fi < sizeof faults / sizeof faults[0]; fi++) {
         const auto& f = faults[fi];
         if (argc > 2 && !strstr(f.name, argv[2])) continue;
