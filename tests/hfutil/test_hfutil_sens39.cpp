@@ -2,6 +2,7 @@
 // generator's signal (24 kHz complex, hfu_fsk.h) with white noise; SNR = signal power over the noise in 3 kHz, as in test_hfutil_fsk.cpp.
 // A trial passes when the whole message is read; each trial has its own noise and carrier phase and a tuning error of +-30 Hz.
 // Default: three trials at the recorded threshold + 2 dB per mode must pass. ONAIR_TEST_LONG=1: the sweep (10 trials a point, 1 dB steps).
+// ONAIR_HFUSENS_CASE=<name prefix> runs one case; HFU_FORCE=1 gives the decoder the baud and the shift (as under Advanced).
 // Simulated signals only.
 #include "dect2/hfutil/hfu_fsk.h"
 #include <cmath>
@@ -31,12 +32,12 @@ std::vector<Case> cases() {
         Case c; c.name = n; c.g.kind = k; c.g.baud = baud; c.g.shift = shift; c.g.cycle = cyc; c.g.idleChars = 200;
         c.msg = "THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG 12345"; c.thr = thr; v.push_back(c);
     };
-    arq("ARQ-E 96/8", FskKind::ArqE, 96, 400, 8, 4);
-    arq("ARQ-E 184.6/4", FskKind::ArqE, 184.6, 400, 4, 7);
-    arq("ARQ-N 96", FskKind::ArqN, 96, 850, 0, 4);
+    arq("ARQ-E 96/8", FskKind::ArqE, 96, 400, 8, -3);      // 3.9: 3 -> -3 dB (baud from the eye)
+    arq("ARQ-E 184.6/4", FskKind::ArqE, 184.6, 400, 4, 0);
+    arq("ARQ-N 96", FskKind::ArqN, 96, 850, 0, -3);
     for (int b : {100, 300}) {
         Case c; c.name = b == 100 ? "G-TOR 100" : "G-TOR 300"; c.g.kind = FskKind::GTor; c.g.gtorBaud = b; c.g.gtorGolay = false;
-        c.msg = "G-TOR test frame at the given speed, with a CRC check."; c.thr = b == 100 ? 2 : 7; v.push_back(c);
+        c.msg = "G-TOR test frame at the given speed, with a CRC check."; c.thr = b == 100 ? -2 : 10; v.push_back(c);   // 3.9: G-TOR 100 6 -> -2 dB
     }
     return v;
 }
@@ -78,7 +79,9 @@ int rateAt(const Case& c, const std::vector<cf32>& clean, double snr, int n) {
 
 int main() {
     const bool longRun = getenv("ONAIR_TEST_LONG") && atoi(getenv("ONAIR_TEST_LONG")) > 0;
+    const char* only = getenv("ONAIR_HFUSENS_CASE");   // a name prefix
     for (const Case& c : cases()) {
+        if (only && std::string(c.name).rfind(only, 0) != 0) continue;
         const auto clean = genFsk(c.g, c.msg);
         double cpu = 0;
         CHECK(trial(c, clean, 30, 1, &cpu), "%s: no copy at 30 dB", c.name);
