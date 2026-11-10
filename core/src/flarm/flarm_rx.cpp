@@ -6,6 +6,7 @@
 #include "dect2/flarm/flarm_rx.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/dsp/fast_phase.h"
 #include "dect2/flarm/flarm_proto.h"
 #include "dect2/flarm/flarm_tel.h"
 #include "dect2/geo/maidenhead.h"
@@ -269,6 +270,32 @@ struct FlarmReceiver::Impl {
             for (int i = 0; i < flarm::kFrameBytes; i++) f[i] = pass ? (uint8_t)~raw[i] : raw[i];
             ok = flarm::checkCrc(f);
         }
+        // Chase decoding (3.9): the 6 bits with the smallest chip difference are the likely errors; the 63 ways of flipping them are tried in the
+        // order of their summed margins, the first that the CRC accepts is taken. The V6 parity and the two-packet agreement of onFrame still
+        // stand behind it, so a wrong pick (about 2 in 1000 for a noise sync) does not make an aircraft.
+        if (!ok && FlarmReceiver::chaseOn) {
+            constexpr int L = 6;
+            int wi[L]; float wr[L];
+            for (int j = 0; j < L; j++) { wi[j] = -1; wr[j] = 1e30f; }
+            for (int i = 0; i < kDataChips / 2; i++) {
+                const float r = std::fabs(c.soft[cd.p][(cd.k0 + 2 + 2 * i) & (kRing - 1)] - c.soft[cd.p][(cd.k0 + 1 + 2 * i) & (kRing - 1)]);
+                if (r >= wr[L - 1]) continue;
+                int j = L - 1;
+                while (j > 0 && wr[j - 1] > r) { wr[j] = wr[j - 1]; wi[j] = wi[j - 1]; j--; }
+                wr[j] = r; wi[j] = i;
+            }
+            int order[(1 << L) - 1]; float cost[1 << L];
+            for (int m = 1; m < (1 << L); m++) { float sc = 0; for (int j = 0; j < L; j++) if (m >> j & 1) sc += wr[j]; cost[m] = sc; order[m - 1] = m; }
+            std::sort(order, order + (1 << L) - 1, [&](int x, int y) { return cost[x] < cost[y]; });
+            for (int q = 0; q < (1 << L) - 1 && !ok; q++) {
+                const int m = order[q];
+                for (int pass = 0; pass < 2 && !ok; pass++) {
+                    for (int i = 0; i < flarm::kFrameBytes; i++) f[i] = pass ? (uint8_t)~raw[i] : raw[i];
+                    for (int j = 0; j < L; j++) if ((m >> j & 1) && wi[j] >= 0) f[wi[j] >> 3] ^= (uint8_t)(0x80 >> (wi[j] & 7));
+                    ok = flarm::checkCrc(f);
+                }
+            }
+        }
         // level over the packet: chip powers of the sync and data, over the noise floor
         double pwr = 0;
         const int64_t kEnd = cd.k0 + kDataChips;
@@ -304,7 +331,8 @@ struct FlarmReceiver::Impl {
         if (!c.rsPass) { c.ys.clear(); c.rs.process(c.decb.data(), c.decb.size(), c.ys); y = &c.ys; }
         const float kd = (float)(kWorkRate / (2 * kPi) / 50000.0);
         for (const cf32& s : *y) {
-            const float d = std::arg(s * std::conj(c.prev)) * kd;
+            const cf32 q = s * std::conj(c.prev);
+            const float d = fastAtan2(q.imag(), q.real()) * kd;   // (std::arg: the libm call was most of the cost)
             c.prev = s;
             const int p = (int)(c.n & 7);
             const int64_t k = c.n >> 3;
