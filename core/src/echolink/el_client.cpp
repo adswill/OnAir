@@ -67,7 +67,8 @@ void Session::disconnect() {
 }
 
 void Session::onCtrl(const std::string& ip, int srcPort, const uint8_t* p, size_t n, int64_t nowMs) {
-    const bool fromPeer = state_ != QsoState::Idle && ip == peerIp_;
+    // the peer: its address, and while connected also its control port (two stations can share one public address)
+    const bool fromPeer = state_ != QsoState::Idle && ip == peerIp_ && (state_ == QsoState::Connecting || srcPort == peerCtrl_);
     if (isRtcpBye(p, n)) {
         if (fromPeer) toIdle((peerCall_.empty() ? peerIp_ : peerCall_) + " disconnected");
         return;
@@ -98,9 +99,11 @@ void Session::onCtrl(const std::string& ip, int srcPort, const uint8_t* p, size_
 }
 
 void Session::onAudio(const std::string& ip, int srcPort, const uint8_t* p, size_t n, int64_t nowMs) {
-    if (state_ != QsoState::Connected || ip != peerIp_) return;
-    peerAudio_ = srcPort;
-    switch (classifyAudioPort(p, n)) {
+    if (state_ == QsoState::Idle || ip != peerIp_) return;
+    const AudioPortKind kind = classifyAudioPort(p, n);
+    if (state_ != QsoState::Connected && kind == AudioPortKind::Audio) return;   // info may arrive before the SDES answer; audio may not
+    if (state_ == QsoState::Connected) peerAudio_ = srcPort;
+    switch (kind) {
     case AudioPortKind::Audio: {
         uint16_t seq; uint8_t pt; const uint8_t* fr; int nf;
         if (!parseAudioPacket(p, n, seq, pt, fr, nf)) return;

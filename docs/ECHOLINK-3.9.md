@@ -33,7 +33,7 @@ Replies go to the port the peer actually sent from, so a peer behind NAT is reac
 
 `core/src/echolink/gsm610.cpp` is written from the ETSI EN 300 961 (GSM 06.10) algorithm, in 16-bit fixed point. GSM full rate needs no patent licence.
 
-- **Decoder.** Bit-exact against FFmpeg 8.0's GSM decoder on 50 frames of encoded speech and on 60 frames of random parameters, which reach the saturation paths. `tests/echolink/gsm_vectors.inc` holds those frames and FFmpeg's output hashes.
+- **Decoder.** Bit-exact against FFmpeg 8.0's GSM decoder on 50 frames of encoded speech (with a clipped burst) and on 60 frames of encoded noise and stepped tones. `tests/echolink/gsm_vectors.inc` holds those frames and FFmpeg's output hashes. Random parameter frames were tried and are not a usable reference: they overflow the filters, and there the standard saturates while FFmpeg wraps around. A lag outside 40 to 120 also differs: FFmpeg clamps it, while section 5.3.2 repeats the last lag. OnAir follows the standard in both cases. The saturation paths are covered by the overload test.
 - **Encoder.** The official ETSI test sequences were not available, so the encoder is not proven bit-exact. It is checked by SNR on a speech-like signal:
   - about 9 dB at normal levels
   - at least 6 dB from -40 dBFS to near full scale, with DC offsets of +1500 and -2500
