@@ -369,17 +369,19 @@ struct HighRateRx::Impl {
         if (scan < y0 + kSps) scan = y0 + kSps;
         while (scan + span < nY) {
             cf c(0, 0);
-            float nrm = 0;
+            float nrm = 0, q[4] = {0, 0, 0, 0};
             const int64_t base = scan - y0;
             for (size_t i = 0; i < tk.size(); i++) {
                 const int64_t a = base + (int64_t)tk[i] * kSps;
                 const cf p = y[(size_t)a] * std::conj(y[(size_t)(a - kSps)]);
                 c += p * te[i];
                 nrm += std::abs(p);
+                q[std::min(3, tk[i] / 26)] += std::abs(p);
             }
-            const double m = nrm > 0 ? std::abs(c) / nrm : 0;
+            const float qmax = std::max(std::max(q[0], q[1]), std::max(q[2], q[3])), qmin = std::min(std::min(q[0], q[1]), std::min(q[2], q[3]));
+            const double m = nrm > 0 && qmax < 2 * qmin ? std::abs(c) / nrm : 0;   // uneven quarters: the start or end of a signal, not the block
             if (m > 0.5 && m > candM) { candM = m; candT = scan; candC = c; }
-            if (candT >= 0 && scan > candT + 40 * kSps) {   // the true peak is the highest within 40 symbols (the mini-probes give side peaks)
+            if (candT >= 0 && scan > candT + 110 * kSps) {   // the highest within a block length: partly overlapping windows already pass the threshold
                 const int64_t t = candT;
                 const cf cc = candC;
                 candM = 0; candT = -1;

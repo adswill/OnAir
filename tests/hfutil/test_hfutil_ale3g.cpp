@@ -102,12 +102,17 @@ int main() {
         printf("%-20s %d/4 PDUs\n", c.name, ok);
         CHECK(ok == 4, "%s: %d of 4", c.name, ok);
     }
-    // weak: -4 dB in 3 kHz, most bursts still read (BW0 is spread 64 times)
-    {
+    // weak: -4 and -8 dB in 3 kHz (BW0 is spread 64 times)
+    for (double weak : {-4.0, -8.0}) {
         int ok = 0, n = 0;
-        for (unsigned s = 1; s <= 8; s++) { const uint32_t p = pdus[s % 4]; ok += got(run(burst(p, {20, 0, 0, -4}, s * 77)), p); n++; }
-        printf("SNR -4 dB: %d/%d PDUs\n", ok, n);
-        CHECK(ok >= 6, "SNR -4 dB: %d of %d", ok, n);
+        for (unsigned s = 1; s <= 8; s++) {
+            const uint32_t p = pdus[s % 4];
+            const auto v = run(burst(p, {20, 0, 0, weak}, s * 77));
+            ok += got(v, p); n++;
+            for (auto& q : v) if (!q.crcOk) printf("  %.0f dB burst: CRC bad, preamble SNR %.1f dB, %+.1f Hz\n", weak, q.snrDb, q.cfoHz);
+        }
+        printf("SNR %.0f dB: %d/%d PDUs\n", weak, ok, n);
+        CHECK(ok >= (weak > -5 ? 8 : 5), "SNR %.0f dB: %d of %d", weak, ok, n);
     }
     // a call, the handshake and the answer back to back, fed in odd chunks
     {

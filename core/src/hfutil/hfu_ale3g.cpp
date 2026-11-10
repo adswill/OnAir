@@ -222,15 +222,19 @@ struct Ale3gRx::Impl {
     double nco = 0;
     std::vector<cf> y;
     int64_t y0 = 0, nY = 0, scan = 0;
-    std::vector<cf> te;                // the preamble's differential products, conjugated
-    double candM = 0; int64_t candT = -1; cf candC;
+    static constexpr int kHyp = 5, kSeg = 48, kStride = 5;
+    std::vector<cf> rh[kHyp];           // the preamble, conjugated and turned by each frequency hypothesis (-80 .. +80 Hz)
+    double candM = 0; int64_t candT = -1; cf candC; int candH = 2;
     uint64_t nBursts = 0, nGood = 0;
     double cfoLast = 0, snrLast = 0;
     std::function<void(const Ale3gPdu&)> cb;
 
     Impl() {
         hist.assign(h.size(), cf(0, 0));
-        for (int k = 1; k < kNPre; k++) te.push_back(std::conj(psk8(kPre[k]) * std::conj(psk8(kPre[k - 1]))));
+        for (int hI = 0; hI < kHyp; hI++) {
+            const double f = -80.0 + 40.0 * hI;
+            for (int k = 0; k < kNPre; k++) { const double a = -2 * kPi * f * k / kBaud; rh[hI].push_back(std::conj(psk8(kPre[k])) * cf((float)std::cos(a), (float)std::sin(a))); }
+        }
     }
 
     cf at(double pos, double cfo) const {
@@ -263,37 +267,51 @@ struct Ale3gRx::Impl {
             nY++;
         }
         const int64_t need = (int64_t)(kNPre + kNData) * kSps + 8;   // a whole burst after the preamble start
+        const int64_t span = (int64_t)kNPre * kSps + 2;
         if (scan < y0 + kSps) scan = y0 + kSps;
-        while (scan + need < nY) {
-            cf c(0, 0);
-            float nrm = 0;
+        while (scan + span < nY) {
+            // coherent over segments of 48 symbols, for five frequency hypotheses 40 Hz apart; the segments add in power
             const int64_t base = scan - y0;
-            for (int k = 1; k < kNPre; k++) {
-                const int64_t a = base + (int64_t)k * kSps;
-                const cf p = y[(size_t)a] * std::conj(y[(size_t)(a - kSps)]);
-                c += p * te[(size_t)k - 1];
-                nrm += std::abs(p);
+            float q[4] = {0, 0, 0, 0}, en = 0;
+            for (int k = 0; k < kNPre; k++) { const float e = std::norm(y[(size_t)(base + (int64_t)k * kSps)]); en += e; q[std::min(3, k / 96)] += e; }
+            double m = 0;
+            cf slope(0, 0);
+            int hBest = 2;
+            const float qmax = std::max(std::max(q[0], q[1]), std::max(q[2], q[3])), qmin = std::min(std::min(q[0], q[1]), std::min(q[2], q[3]));
+            if (en > 0 && qmax < 2 * qmin) {   // the preamble has a constant envelope: uneven quarters are the start or end of a signal
+                for (int hI = 0; hI < kHyp; hI++) {
+                    double e = 0;
+                    cf prev(0, 0), sl(0, 0);
+                    for (int j = 0; j < kNPre / kSeg; j++) {
+                        cf sj(0, 0);
+                        for (int k = j * kSeg; k < (j + 1) * kSeg; k++) sj += y[(size_t)(base + (int64_t)k * kSps)] * rh[hI][(size_t)k];
+                        e += std::norm(sj);
+                        if (j) sl += sj * std::conj(prev);
+                        prev = sj;
+                    }
+                    const double mh = e / ((double)kSeg * en);
+                    if (mh > m) { m = mh; slope = sl; hBest = hI; }
+                }
             }
-            const double m = nrm > 0 ? std::abs(c) / nrm : 0;
-            if (m > 0.35 && m > candM) { candM = m; candT = scan; candC = c; }
-            if (candT >= 0 && scan > candT + 100 * kSps) {   // the highest peak within 100 symbols (the preamble has side peaks)
+            if (m > 0.12 && m > candM) { candM = m; candT = scan; candC = slope; candH = hBest; }
+            if (candT >= 0 && scan > candT + kNPre * kSps) {   // the highest peak within a preamble length: a partly overlapping window already passes the threshold (the preamble has side peaks)
                 const int64_t t = candT;
-                const double f0 = std::arg(candC) * kBaud / (2 * kPi);
+                if (t + need >= nY) break;   // the burst's data is still to come
+                const double f0 = -80.0 + 40.0 * candH + std::arg(candC) * kBaud / (2 * kPi * kSeg);
                 candM = 0; candT = -1;
-                burst(t, f0);
-                scan = t + (int64_t)(kNPre + kNData) * kSps;
+                // past a good burst; after a bad one (noise, or a side peak), on from just after it
+                scan = burst(t, f0) ? t + (int64_t)(kNPre + kNData) * kSps : t + kStride;
                 continue;
             }
-            scan++;
+            scan += kStride;
         }
         const int64_t keepFrom = std::min<int64_t>(nY - 40000, scan - 2000);
         if (keepFrom > y0 + 40000) { y.erase(y.begin(), y.begin() + (long)(keepFrom - y0)); y0 = keepFrom; }
     }
 
-    void burst(int64_t t, double f0) {
-        nBursts++;
+    bool burst(int64_t t, double f0) {
         double bestT = (double)t, bestE = -1;
-        for (double dt = -1.0; dt <= 1.0001; dt += 0.1) {
+        for (double dt = -3.0; dt <= 3.0001; dt += 0.25) {
             const double e = std::abs(fit((double)t + dt, f0, 0, kNPre));
             if (e > bestE) { bestE = e; bestT = (double)t + dt; }
         }
@@ -336,8 +354,12 @@ struct Ale3gRx::Impl {
         }
         Ale3gPdu p = ale3gParse(bw0Decode(soft));
         p.snrDb = snrLast; p.cfoHz = cfoLast;
+        // a weak preamble match with a bad CRC is taken as noise and not reported
+        if ((!p.crcOk && snrLast < 3) || snrLast < -10) return false;
+        nBursts++;
         if (p.crcOk) nGood++;
         if (cb) cb(p);
+        return p.crcOk;
     }
 };
 

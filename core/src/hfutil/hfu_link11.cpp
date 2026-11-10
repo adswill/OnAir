@@ -15,7 +15,7 @@ constexpr int kFastF = 320, kSlowF = 528;          // 13.33 ms and 22 ms at 24 k
 constexpr int kFastW = 218, kSlowW = 436;          // 1/110 s and 2/110 s: the tones (110 Hz apart) are orthogonal over these
 constexpr int kHop = 40;
 constexpr int kTones = 15;
-const double kNoiseHz[4] = {990.0, 1430.0, 1870.0, 2640.0};   // between the tones, for the noise floor
+const double kNoiseHz[4] = {1430.0, 1650.0, 1870.0, 2090.0};   // between the data tones and far from the Doppler and sync tones: the noise floor
 }  // namespace
 
 std::vector<cf32> genLink11(const Link11GenCfg& c, const std::vector<std::array<uint8_t, 15>>& frames) {
@@ -48,7 +48,7 @@ std::vector<cf32> genLink11(const Link11GenCfg& c, const std::vector<std::array<
 struct Link11Rx::Impl {
     std::vector<cf> x;
     int64_t x0 = 0, nX = 0, pos = 0;   // pos: the next hop's window start (absolute)
-    int state = 0, preHops = 0;
+    int state = 0, preHops = 0, syncSeen = 0;
     double dopSum = 0; int dopN = 0; double dop = 0;
     cf lastDop; bool haveLastDop = false;
     int64_t preStart = 0;
@@ -117,14 +117,16 @@ struct Link11Rx::Impl {
         energies(pos, kFastW, state == 1 ? dop : 0, ed, es, em, en);
         const double floor = std::max(en, 1e-12);
         if (state == 0) {
-            const bool pre = ed > 8 * floor && es > 8 * floor && em < 0.2 * std::min(ed, es);
+            // the Doppler tone alone decides each hop: a window across a turn-over of the sync tone can hold almost none of it
+            const bool pre = ed > 8 * floor && em < 0.2 * ed;
             if (pre) {
-                if (preHops == 0) { preStart = pos; dopSum = 0; dopN = 0; haveLastDop = false; }
+                if (preHops == 0) { preStart = pos; dopSum = 0; dopN = 0; haveLastDop = false; syncSeen = 0; }
                 preHops++;
+                if (es > 8 * floor && em < 0.2 * es) syncSeen++;
                 const cf d = dft(kL11Doppler, pos, kFastW);
                 if (haveLastDop) { dopSum += std::arg(d * std::conj(lastDop)); dopN++; }
                 lastDop = d; haveLastDop = true;
-                if (preHops >= 12) {   // 20 ms of the two tones alone
+                if (preHops >= 12 && syncSeen >= 3) {   // 20 ms of the Doppler tone alone, the sync tone with it
                     dop = dopN ? dopSum / dopN * kFs / (2 * kPi * kHop) : 0;
                     state = 1;
                     event("preamble (Doppler and sync tones)");
