@@ -473,7 +473,7 @@ struct Transmitter::Impl {
         }
         for (int i = 0; i < 12; i++) {
             std::memset(out[i], 0, 32);
-            std::memcpy(out[i], fib[i].data(), fib[i].size());
+            if (!fib[i].empty()) std::memcpy(out[i], fib[i].data(), fib[i].size());   // (an empty FIB: data() may be null)
             if (fib[i].size() < 30) out[i][fib[i].size()] = 0xFF;
             const uint16_t c = crc16(out[i], 30);
             out[i][30] = (uint8_t)(c >> 8); out[i][31] = (uint8_t)c;
