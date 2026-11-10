@@ -193,7 +193,7 @@ void midClickPopup(App& a) {
     if (M.open) { ImGui::SetNextWindowPos(M.pos); ImGui::OpenPopup("##wideMid"); M.open = false; }
     if (!ImGui::BeginPopup("##wideMid")) return;
     PlacedState& p = placedOf(a);
-    const int near = placedNearest(p.list, M.absHz, M.tolHz);
+    const int nearIx = placedNearest(p.list, M.absHz, M.tolHz);
     ImGui::Text("%.4f MHz", M.absHz / 1e6);
     ImGui::Separator();
     const char* names[kPickN + 1];
@@ -210,12 +210,12 @@ void midClickPopup(App& a) {
         if (!a.engine.wideAll()) a.engine.setWideAll(true);   // the sync follows the list from the next frame
         ImGui::CloseCurrentPopup();
     }
-    if (near >= 0) {
+    if (nearIx >= 0) {
         ImGui::Separator();
-        const Placed& q = p.list[(size_t)near];
+        const Placed& q = p.list[(size_t)nearIx];
         char b[96];
         snprintf(b, sizeof b, "%s %.4f MHz (%s)##wideMidRm", tr("Remove"), q.absHz / 1e6, q.kind == WsKind::Unknown ? tr("Automatic") : wsKindName(q.kind));
-        if (ImGui::Button(b)) { p.list.erase(p.list.begin() + near); savePlaced(a, p); ImGui::CloseCurrentPopup(); }
+        if (ImGui::Button(b)) { p.list.erase(p.list.begin() + nearIx); savePlaced(a, p); ImGui::CloseCurrentPopup(); }
     }
     ImGui::EndPopup();
 }

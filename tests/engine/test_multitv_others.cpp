@@ -12,7 +12,7 @@ struct Case { const char* name; int stdMode, recv; double widthMhz; double secs;
 int main() {
     const Case cases[] = {{"DVB-C", 42, 41, 8, 3}, {"DTMB", 9, 8, 8, 5}, {"ISDB-T", 6, 5, 6, 5}, {"ATSC", 3, 2, 6, 4}};
     for (const Case& c : cases) {
-        const double width = c.widthMhz * 1e6, rate = c.stdMode == 3 ? 2.0 * width + 1.0e6 : 2.5 * width;   // the ATSC generator stops at 13 Msps
+        const double width = c.widthMhz * 1e6, rate = 2.5 * width;   // two channels inside the usable +-0.46 of the span (the ATSC generator goes to 2 x 10.76 Msps)
         SynthConfig sc; sc.snrDb = 32;
         auto a = makeModeSynth(c.stdMode, sc, rate);
         auto b = makeModeSynth(c.stdMode, sc, rate);

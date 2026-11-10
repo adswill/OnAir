@@ -271,6 +271,7 @@ int main(int argc, char** argv) {
         }
         // 5. it reaches the engine: the receiver runs at the rate the plan gave, and is processing signal
         if (quick) continue;
+        if (const char* only = std::getenv("ONAIR_TEST_MODES")) { const std::string l = std::string(",") + only + ","; if (l.find(std::string(",") + mt->id + ",") == std::string::npos) continue; }   // debugging: the engine starts of these modes only
         TuneSettings wide = ownTune(*mt), typed = ownTune(*mt);
         rxApplyWidth(wide, 6.0, mt->minSampleRate);
         { DeviceInfo hackrf; hackrf.kind = DeviceInfo::HackRF; rxApplyRate(typed, 3.5e6, rateLimitsOf(hackrf), mt->minSampleRate); }

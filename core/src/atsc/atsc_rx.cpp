@@ -341,7 +341,9 @@ struct Core {
         int best = -1;
         bool bestMirror = false;
         std::vector<double> nb;
-        for (int mirror = 0; mirror < 2; mirror++) {
+        // the mirrored spectrum only when the spectrum as it is has no pilot: a neighbouring channel's pilot just above the band edge (two
+        // channels side by side in one wide capture) looks like a mirrored channel's pilot at the lower edge
+        for (int mirror = 0; mirror < 2 && best < 0; mirror++) {
         const std::vector<double>& Q = mirror ? Pm : P;
         for (int i = 0; i < N; i++) cum[(size_t)i + 1] = cum[(size_t)i] + Q[(size_t)i];
         auto idx = [&](double f) { return (int)std::lround(f / bin) + N / 2; };

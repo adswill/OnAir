@@ -300,6 +300,7 @@ struct WideModes::Impl {
         // HD Radio: one receiver per hybrid FM station whose sideband pair the finder saw, the 400 kHz of the station at the FM receiver's rate
         auto hd = baseOps<HdrReceiver, HdrTelemetry>(kHdrFmMinRate);
         hd.occupiedHz = 440000; hd.preRollSec = 0; hd.pinToPrior = true;
+        hd.rowState = [](const HdrTelemetry& t) { return t.state >= 2 ? 2 : t.state; };   // 3 (locked, program data recent) is still locked on the table's scale
         hd.clearLists = [](HdrTelemetry&) {};
         hd.hasLog = [](const HdrTelemetry&) { return false; };
         hd.append = [](HdrTelemetry&, const HdrTelemetry&, double) {};

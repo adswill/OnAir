@@ -40,8 +40,14 @@ using sock_t = int;
 constexpr sock_t kBadSock = -1;
 inline void netInit() {}
 inline int sockClose(sock_t s) { return ::close(s); }
-inline long long sockSend(sock_t s, const void* d, size_t n) { return send(s, d, n, 0); }
-inline long long sockSendTo(sock_t s, const void* d, size_t n, const sockaddr_in& to) { return sendto(s, d, n, 0, (const sockaddr*)&to, sizeof to); }
+// A peer that closed its end must give EPIPE, not SIGPIPE: a test or library user that does not ignore the signal would be killed by it
+#ifdef MSG_NOSIGNAL
+constexpr int kSendFlags = MSG_NOSIGNAL;
+#else
+constexpr int kSendFlags = 0;
+#endif
+inline long long sockSend(sock_t s, const void* d, size_t n) { return send(s, d, n, kSendFlags); }
+inline long long sockSendTo(sock_t s, const void* d, size_t n, const sockaddr_in& to) { return sendto(s, d, n, kSendFlags, (const sockaddr*)&to, sizeof to); }
 inline long long sockRecv(sock_t s, void* d, size_t n) { return recv(s, d, n, 0); }
 inline long long sockPeekClosed(sock_t s) { char c; return recv(s, &c, 1, MSG_DONTWAIT); }
 inline void sockShutdown(sock_t s) { shutdown(s, SHUT_RDWR); }

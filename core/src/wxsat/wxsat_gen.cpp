@@ -271,6 +271,7 @@ struct WxsatGenerator::Impl {
     void generate(cf32* out, size_t n) {
         if (P == kWxArktikaGgak) { ggak->generate(out, n); return; }
         if (dvb) { dvb->generate(out, n); return; }
+        if (P == kWxHimawariCast || P == kWxGeoNetCast) { std::fill(out, out + n, cf32(0, 0)); return; }   // no DVB-S2 chain at this rate: silence (nextFrame() has no bits for these)
         if (P == kWxApt) { genApt(out, n); return; }
         genPsk(out, n);
     }

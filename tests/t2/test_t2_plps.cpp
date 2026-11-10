@@ -42,8 +42,12 @@ static void run(const Cfg& c) {
         double pw = 0; for (auto& v : f) pw += std::norm(v); pw /= f.size();
         const float sg = (float)std::sqrt(pw / std::pow(10.0, c.snr / 10) / 2);
         for (auto& v : f) v += cf32{nd(rng), nd(rng)} * sg;
+        size_t before; { std::lock_guard<std::mutex> k(mu); before = res.size(); }
         for (size_t o = 0; o < f.size(); o += 1 << 16) rx.feed(f.data() + o, std::min<size_t>(1 << 16, f.size() - o));
         std::this_thread::sleep_for(std::chrono::milliseconds(40));
+        // once frames come out, wait for the next one before feeding more: the PLP decoder drops a frame when its queue backs up, which a fixed
+        // pace caused on a loaded CI runner (a live radio's backlog is not what this test is about)
+        for (int w = 0; before > 0 && w < 300; w++) { { std::lock_guard<std::mutex> k(mu); if (res.size() > before) break; } std::this_thread::sleep_for(std::chrono::milliseconds(10)); }
     }
     RxTelemetry t; uint64_t q = 0; size_t seen = 0;
     for (int i = 0, still = 0; i < 800 && still < 150; i++) { rx.telemetry(t, q); std::this_thread::sleep_for(std::chrono::milliseconds(10)); size_t n; { std::lock_guard<std::mutex> k(mu); n = res.size(); } still = n == seen ? still + 1 : 0; seen = n; }

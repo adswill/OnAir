@@ -130,6 +130,12 @@ static std::string formValue(const std::string& body, const std::string& key) {
 }
 
 // ASCOM Alpaca telescope: just enough of the REST API. Logs "METHOD /endpoint body".
+// The Rate= value of a logged MoveAxis request; NaN when the request is not there
+static double rateOf(const std::string& m) {
+    const size_t k = m.find("Rate=");
+    return k == std::string::npos ? std::nan("") : std::atof(m.c_str() + k + 5);
+}
+
 static void serveAlpaca(Fake* f, sock_t c) {
     std::string req;
     while (!f->quit) {
@@ -315,23 +321,24 @@ int main() {
         CHECK(waitFor([&] { return r.status().connected && r.status().azValid; }), "rotator over Alpaca connects: %s", r.status().lastError.c_str());
         CHECK(r.supportsRates(), "Alpaca MoveAxis seen");
         r.trackAzEl(110, 20, 0.3, 0.0);   // mount is at az 100, el 20: 10 degrees to go, target moving at 0.3 deg/s
-        CHECK(waitFor([&] { return f.count("PUT moveaxis Axis=0&Rate=") > 0; }), "rate loop issues MoveAxis");
+        // both axes: the worker sends Axis=0 and Axis=1 one after the other, so on a slow runner the second may not be there yet
+        CHECK(waitFor([&] { return f.count("PUT moveaxis Axis=0&Rate=") > 0 && f.count("PUT moveaxis Axis=1&Rate=") > 0; }), "rate loop issues MoveAxis");
         const std::string m = f.last("PUT moveaxis Axis=0");
-        const double rate = std::atof(m.substr(m.find("Rate=") + 5).c_str());
+        const double rate = rateOf(m);
         CHECK(rate > 5.5 && rate <= 6.0001, "rate clamped to the mount limit, got %.3f", rate);
         const std::string m1 = f.last("PUT moveaxis Axis=1");
-        CHECK(std::fabs(std::atof(m1.substr(m1.find("Rate=") + 5).c_str())) < 1e-6, "no elevation motion needed");
+        CHECK(std::fabs(rateOf(m1)) < 1e-6, "no elevation motion needed");
         // refresh it while on target: speed settles to the target's own
         { std::lock_guard<std::mutex> lk(f.mu); f.az = 110; }
         r.trackAzEl(110, 20, 0.3, 0.0);
         sleepMs(700);
         const std::string m2 = f.last("PUT moveaxis Axis=0");
-        const double rate2 = std::atof(m2.substr(m2.find("Rate=") + 5).c_str());
+        const double rate2 = rateOf(m2);
         CHECK(std::fabs(rate2 - 0.3) < 0.01, "on target: feed-forward only, got %.3f", rate2);
         // stop refreshing: after 3 s the axes are zeroed
         const bool zeroed = waitFor([&] {
             const std::string z = f.last("PUT moveaxis Axis=0");
-            return std::fabs(std::atof(z.substr(z.find("Rate=") + 5).c_str())) < 1e-9;
+            return std::fabs(rateOf(z)) < 1e-9;
         }, 6000);
         CHECK(zeroed, "watchdog zeroes the axes when the target goes stale");
         // goto after tracking

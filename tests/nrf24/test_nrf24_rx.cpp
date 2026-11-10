@@ -9,6 +9,7 @@
 #include <ctime>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/cpu_time.h"
 
 static Nrf24Telemetry run(Nrf24GenConfig c, double sec, bool mirror = false, bool dc = false) {
     Nrf24Receiver rx;
@@ -108,9 +109,9 @@ int main() {
         Nrf24Receiver rx;
         rx.configure(c.rate);
         rx.setSignalOffset(c.dialOffsetHz);
-        const std::clock_t t0 = std::clock();   // CPU time of this thread: a busy machine does not change it
+        const double t0 = threadCpuSecs();   // CPU time of this thread: a busy machine does not change it (std::clock() is the wall clock on Windows)
         for (size_t o = 0; o < sig.size(); o += 1 << 14) rx.feed(sig.data() + o, std::min<size_t>(1 << 14, sig.size() - o));
-        const double took = (double)(std::clock() - t0) / CLOCKS_PER_SEC;
+        const double took = threadCpuSecs() - t0;
         printf("  receiver cost: %.2f s for 0.5 s of signal at 10 Msps (%.0f%% of one core)\n", took, 100 * took / 0.5);
         CHECK(took < 0.5 * 0.7, "the receiver needs %.0f%% of real time at 10 Msps", 100 * took / 0.5);   // measured about 20%% of a core on an idle Apple M-series; the margin is for a loaded CI machine
     }
