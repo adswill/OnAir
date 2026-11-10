@@ -178,6 +178,48 @@ void cpuLine(const WsStatus& st, bool on) {
 bool wideAllWorthIt(const App& a) { return a.engine.wideAll() || a.engine.sampleRate() >= 1.0e6; }
 
 // The one button: starts and stops decoding everything in the capture. Used by the Simple views and the window.
+// Middle-click on the spectrum or the waterfall (a press that did not move; a middle drag stays a pan): a popup at the cursor adds a decoder at that frequency,
+// or removes the placed one that is there. Drawn by wideAllWindow every frame, so it works with the list window closed.
+struct MidClick {
+    int plot = -1;               // plot of a press under way
+    ImVec2 p0, pos;
+    bool open = false;           // the popup is to open next frame
+    double absHz = 0, tolHz = 0, widthHz = 12500;
+    int kind = 0;                // 0: automatic, else kPick[kind - 1]
+};
+MidClick M;
+
+void midClickPopup(App& a) {
+    if (M.open) { ImGui::SetNextWindowPos(M.pos); ImGui::OpenPopup("##wideMid"); M.open = false; }
+    if (!ImGui::BeginPopup("##wideMid")) return;
+    PlacedState& p = placedOf(a);
+    const int near = placedNearest(p.list, M.absHz, M.tolHz);
+    ImGui::Text("%.4f MHz", M.absHz / 1e6);
+    ImGui::Separator();
+    const char* names[kPickN + 1];
+    names[0] = tr("Automatic");
+    for (int i = 0; i < kPickN; i++) names[i + 1] = wsKindName(kPick[i]);
+    ImGui::SetNextItemWidth(170 * gUi);
+    ImGui::Combo(tr("Mode##wideMid"), &M.kind, names, kPickN + 1);
+    float kHz = (float)(M.widthHz / 1e3);
+    ImGui::SetNextItemWidth(170 * gUi);
+    if (ImGui::InputFloat(tr("Width kHz##wideMid"), &kHz, 0, 0, "%.1f") && kHz > 0) M.widthHz = kHz * 1e3;
+    if (ImGui::Button(tr("Add decoder here"))) {
+        p.list.push_back(placedAtClick(M.absHz, M.widthHz, M.kind ? kPick[M.kind - 1] : WsKind::Unknown));
+        savePlaced(a, p);
+        if (!a.engine.wideAll()) a.engine.setWideAll(true);   // the sync follows the list from the next frame
+        ImGui::CloseCurrentPopup();
+    }
+    if (near >= 0) {
+        ImGui::Separator();
+        const Placed& q = p.list[(size_t)near];
+        char b[96];
+        snprintf(b, sizeof b, "%s %.4f MHz (%s)##wideMidRm", tr("Remove"), q.absHz / 1e6, q.kind == WsKind::Unknown ? tr("Automatic") : wsKindName(q.kind));
+        if (ImGui::Button(b)) { p.list.erase(p.list.begin() + near); savePlaced(a, p); ImGui::CloseCurrentPopup(); }
+    }
+    ImGui::EndPopup();
+}
+
 void wideAllButton(App& a) {
     const bool on = a.engine.wideAll();
     ImGui::PushID("##wideall_one");
@@ -196,6 +238,7 @@ void wideAllButton(App& a) {
 
 void wideAllWindow(App& a) {
     placedTick(a);
+    midClickPopup(a);
     if (!a.wideAllOpen) return;
     firstWindowSize(900 * gUi, 520 * gUi);
     if (!ImGui::Begin(trw("Everything in view"), &a.wideAllOpen)) { ImGui::End(); return; }
@@ -306,4 +349,42 @@ void wideAllWindow(App& a) {
         ImGui::EndTable();
     }
     ImGui::End();
+}
+
+// Called inside the spectrum and waterfall plots: a marker for each placed signal (a thin line with its mode; dimmed when it is outside the capture),
+// and the middle-click that opens the popup.
+void widePlacedPlot(App& a, int plotId) {
+    PlacedState& p = placedOf(a);
+    const plt::Rect lim = plt::GetPlotLimits();
+    const double centre = radioCenterMhz(a) * 1e6, rate = a.engine.sampleRate();
+    for (size_t i = 0; i < p.list.size(); i++) {
+        const Placed& q = p.list[i];
+        const double x = q.absHz / 1e6;
+        if (x < lim.X.Min || x > lim.X.Max) continue;
+        const bool in = placedInCapture(q, centre, rate);
+        const double xs[1] = {x};
+        plt::Spec ls; ls.LineColor = ImVec4(0.35f, 0.8f, 1.f, in ? 0.9f : 0.35f); ls.LineWeight = 1.f;
+        char id[32]; snprintf(id, sizeof id, "##placed%d_%zu", plotId, i);
+        plt::PlotInfLines(id, xs, 1, ls);
+        if (plotId == 0) {
+            const char* nm = q.kind == WsKind::Unknown ? tr("Automatic") : wsKindName(q.kind);
+            plt::PlotText(nm, x, lim.Y.Max, ImVec2(3 * gUi, (bandPlanStripHeight() + 16 * gUi)));
+        }
+    }
+    const ImGuiIO& io = ImGui::GetIO();
+    if (M.plot < 0) {
+        if (plt::IsPlotHovered() && ImGui::IsMouseClicked(ImGuiMouseButton_Middle)) { M.plot = plotId; M.p0 = io.MousePos; }
+        return;
+    }
+    if (M.plot != plotId) return;
+    if (ImGui::IsMouseDown(ImGuiMouseButton_Middle)) return;
+    M.plot = -1;
+    if (!ImGui::IsMouseReleased(ImGuiMouseButton_Middle) || !placedIsTap(io.MousePos.x - M.p0.x, io.MousePos.y - M.p0.y)) return;
+    if (!plt::IsPlotHovered()) return;
+    const double mhz = plt::GetPlotMousePos().x;
+    const double hzPerPx = (lim.X.Max - lim.X.Min) * 1e6 / std::max(1.f, plt::GetPlotSize().x);
+    M.absHz = std::round(mhz * 1e6 / 100.0) * 100.0;
+    M.tolHz = 6 * gUi * hzPerPx;
+    M.pos = io.MousePos;
+    M.open = true;
 }

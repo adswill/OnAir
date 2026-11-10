@@ -57,4 +57,25 @@ void PlacedSync::clear(WideSession& ws) {
     forget();
 }
 
+bool placedIsTap(double dxPx, double dyPx, double slopPx) { return std::fabs(dxPx) < slopPx && std::fabs(dyPx) < slopPx; }
+
+int placedNearest(const std::vector<Placed>& v, double absHz, double tolHz) {
+    int best = -1;
+    double bd = 0;
+    for (size_t i = 0; i < v.size(); i++) {
+        const double d = std::fabs(v[i].absHz - absHz);
+        if (d > std::max(tolHz, v[i].widthHz * 0.5)) continue;
+        if (best < 0 || d < bd) { best = (int)i; bd = d; }
+    }
+    return best;
+}
+
+Placed placedAtClick(double absHz, double widthHz, WsKind kind) {
+    Placed p;
+    p.absHz = std::round(absHz / 100.0) * 100.0;
+    p.widthHz = std::max(1000.0, widthHz);
+    p.kind = kind;
+    return p;
+}
+
 } // namespace dect2
