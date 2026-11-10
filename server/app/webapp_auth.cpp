@@ -46,7 +46,10 @@ Who Sessions::identify(const std::string& cookieHeader, const std::string& peer,
             }
         }
     }
-    const bool lan = !viaProxy && (loopback || (cfg_.lanIsOwner && onair_web::privateAddress(peer)));
+    // viaProxy: the relay (or a trusted reverse proxy) put the visitor's address into peer and cleared loopback. A connection that is still
+    // from 127.0.0.1 was not rewritten (the relay always rewrites), so it is a program on this computer: the owner. A forwarded private
+    // address is never trusted as the LAN.
+    const bool lan = loopback || (!viaProxy && cfg_.lanIsOwner && onair_web::privateAddress(peer));
     if (lan) { w.role = Role::Owner; w.implicit = true; w.csrf = "lan"; return w; }
     if (cfg_.publicView) { w.role = Role::Viewer; w.csrf = "public"; return w; }
     w.why = cfg_.passwordHash.empty() ? "setup" : "login";

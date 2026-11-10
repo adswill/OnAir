@@ -145,6 +145,8 @@ int main() {
         CHECK(w.role == Role::Owner && w.implicit, "a LAN address is an implicit owner (app_lan=1)");
         w = ss.identify("", "192.168.1.20", false, true, t);
         CHECK(w.role == Role::None && w.why == "login", "a private address behind the relay / proxy is NOT trusted");
+        w = ss.identify("", "127.0.0.1", true, true, t);
+        CHECK(w.role == Role::Owner && w.implicit, "with the relay on, a connection still from 127.0.0.1 (not rewritten) is this computer: the owner");
         w = ss.identify("", "203.0.113.5", false, false, t);
         CHECK(w.role == Role::None && w.why == "login", "an internet address needs a login");
         a.lanIsOwner = false;

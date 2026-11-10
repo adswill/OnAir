@@ -68,8 +68,9 @@ How it is built (server/app/webapp_auth.cpp, checked by tests/server/test_webapp
   a second with a burst of 100 per address; the web server's own connection limits apply. A password set only from this computer or the LAN:
   nobody from the internet can create the first password.
 * **The relay and proxies**: connections through the relay arrive from 127.0.0.1 with the visitor's address in `X-Forwarded-For`; the server
-  trusts that header only from loopback and only when the relay or `web_trust_proxy` is on, and such a connection is never an owner by
-  address, whatever address it reports.
+  trusts that header only from loopback and only when the relay or `web_trust_proxy` is on, and a connection whose address was rewritten
+  is never an owner by address, whatever address it reports (a loopback connection without the header was not rewritten: the relay
+  always adds it, so that is a program on this computer).
 * **No secrets in the page**: the page has no token, key or password built in; it learns the CSRF token after the server has identified the
   session. The static files are served with `Content-Security-Policy: default-src 'self'` (no inline scripts, nothing from other hosts),
   `X-Frame-Options: DENY`, `nosniff`, no referrer. The page loads no map tiles, fonts or scripts from the internet.
