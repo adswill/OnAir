@@ -42,5 +42,8 @@ object OnAirNative {
     external fun nativeGeneral(demod: Int, widthHz: Double, sqOn: Boolean, sqAuto: Boolean, sqDb: Float)
     external fun nativeFmDeemphasis(us: Double)
     external fun nativeSetVerbose(on: Boolean)
+    external fun nativeRecStart(dir: String, hw: String, hasGeo: Boolean, lat: Double, lon: Double, maxBytes: Long): String
+    external fun nativeRecStats(): String
+    external fun nativeRecStop()
     external fun nativeVersion(): String
 }

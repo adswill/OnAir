@@ -54,6 +54,29 @@ int main() {
     CHECK(r2.start((dir / "plain.cs8").string(), FileFormat::CS8, 2e6, err), "start plain");
     r2.stop();
     CHECK(!fs::exists(dir / "plain.sigmf-meta"), "no meta when off");
+    {   // radio name + location in the meta, and the size cap
+        IqRecorder r3;
+        r3.setSigmf(true, 100e6, "fm");
+        r3.setSigmfExtra("OnAir \"Android\" test signal", true, 54.6872, 25.2797);
+        r3.setMaxBytes(4000);
+        CHECK(r3.start((dir / "extra.cs8").string(), FileFormat::CS8, 2e6, err), "start extra");
+        std::vector<cf32> y(1500, cf32(0.1f, 0.1f));   // 3000 bytes each
+        r3.push(y.data(), y.size());
+        CHECK(!r3.capReached(), "below the cap");
+        r3.push(y.data(), y.size());
+        r3.push(y.data(), y.size());   // after the cap: not queued
+        CHECK(r3.capReached(), "cap reached");
+        r3.stop();
+        CHECK(fs::file_size(dir / "extra.cs8") == 6000, "stopped at the cap block");
+        std::stringstream s3;
+        { std::ifstream f(dir / "extra.sigmf-meta"); s3 << f.rdbuf(); }
+        CHECK(has(s3.str(), "\"core:hw\":\"OnAir \\\"Android\\\" test signal\"") && has(s3.str(), "\"core:geolocation\":{\"type\":\"Point\",\"coordinates\":[25.279700,54.687200]}"), "hw and geolocation");
+        int d3 = 0; bool ok3 = true;
+        for (char c : s3.str()) { if (c == '{' || c == '[') d3++; if (c == '}' || c == ']') d3--; if (d3 < 0) ok3 = false; }
+        CHECK(ok3 && d3 == 0, "balanced after extra");
+        CHECK(sigmfAddExtra("{\"global\":{}}", "x", false, 0, 0) == "{\"global\":{\"core:hw\":\"x\"}}", "empty global");
+        CHECK(sigmfAddExtra("{\"a\":1}", "x", true, 1, 2) == "{\"a\":1}", "no global leaves it alone");
+    }
     {   // legacy ri8 / ri16 aliases and core:dataset (OnAir writes the .cs8 name, not .sigmf-data)
         const fs::path d2 = dir / "legacy";
         fs::create_directories(d2);

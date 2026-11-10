@@ -326,6 +326,10 @@ public:
     std::string timeMachineName() const;
     void setRecordSigmf(bool on) { recSigmf_ = on; }   // SigMF metadata beside the recordings (default on)
     RecordingStats recordingStats() const { return rec_.stats(); }
+    // Extra SigMF fields and a size cap for the next recording (the Android app: radio name, location only if the user allows it, cap in bytes)
+    void setRecordExtra(const std::string& hw, bool hasGeo, double lat, double lon) { rec_.setSigmfExtra(hw, hasGeo, lat, lon); }
+    void setRecordMaxBytes(uint64_t b) { rec_.setMaxBytes(b); }
+    bool recordingCapReached() const { return rec_.capReached(); }
     // A file name for a recording of what the radio is tuned to right now (see recordingFileName())
     std::string recordingName(FileFormat fmt) const;
     uint64_t droppedSamples() const { return ring_.dropped(); }   // the OnAir side only, in samples (see sampleLoss())

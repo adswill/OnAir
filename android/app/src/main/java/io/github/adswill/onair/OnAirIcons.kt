@@ -54,6 +54,10 @@ object OnAirIcons {
     val Modes = icon("modes", "M4 6H8", "M11 6H20", "M4 12H8", "M11 12H20", "M4 18H8", "M11 18H20")
     /** Radio: an antenna on a box. */
     val Radio = icon("radio", "M4 11H20V19H4Z", "M8 11L16 4", "M8 15H8.01", "M12 15H17")
+    /** More: three dots (overflow menu). */
+    val More = icon("more", "M12 5H12.01", "M12 12H12.01", "M12 19H12.01")
+    /** Record: a filled-looking ring with a dot. */
+    val Record = icon("record", "M12 12m-8 0a8 8 0 1 0 16 0a8 8 0 1 0 -16 0", "M12 12H12.01")
     val Settings = icon(
         "settings", "M12 12m-3 0a3 3 0 1 0 6 0a3 3 0 1 0 -6 0",
         "M12 3V5.5", "M12 18.5V21", "M3 12H5.5", "M18.5 12H21", "M5.6 5.6L7.4 7.4", "M16.6 16.6L18.4 18.4", "M5.6 18.4L7.4 16.6", "M16.6 7.4L18.4 5.6",

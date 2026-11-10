@@ -55,5 +55,25 @@ class OnAirCore internal constructor() {
     fun general(demod: Demod, widthHz: Double, squelch: Boolean, squelchAuto: Boolean, squelchDb: Float) =
         OnAirNative.nativeGeneral(demod.ordinal, widthHz, squelch, squelchAuto, squelchDb)
     fun fmDeemphasis(us: Double) = OnAirNative.nativeFmDeemphasis(us)
+
+    /** Starts an IQ recording into [dir]; Result with the file path, or the reason. Only on explicit user action. */
+    fun recStart(dir: String, hw: String, hasGeo: Boolean, lat: Double, lon: Double, maxBytes: Long): Result<String> {
+        val r = OnAirNative.nativeRecStart(dir, hw, hasGeo, lat, lon, maxBytes).split('\t', limit = 2)
+        return if (r[0] == "ok") Result.success(r.getOrElse(1) { "" }) else Result.failure(IllegalStateException(r.getOrElse(1) { "recording failed" }))
+    }
+    fun recStats(): RecStats = RecStats.parse(OnAirNative.nativeRecStats())
+    fun recStop() = OnAirNative.nativeRecStop()
     fun version(): String = OnAirNative.nativeVersion()
+}
+
+/** The IQ recorder's state: seconds and bytes so far; [capReached] when it stopped at the size cap. */
+data class RecStats(val active: Boolean, val seconds: Double, val bytes: Long, val dropped: Long, val capReached: Boolean, val error: String, val path: String) {
+    companion object {
+        val idle = RecStats(false, 0.0, 0L, 0L, false, "", "")
+        fun parse(s: String): RecStats {
+            val p = s.split('\t')
+            if (p.size < 7) return idle
+            return RecStats(p[0] == "1", p[1].toDoubleOrNull() ?: 0.0, p[2].toLongOrNull() ?: 0L, p[3].toLongOrNull() ?: 0L, p[4] == "1", p[5], p[6])
+        }
+    }
 }

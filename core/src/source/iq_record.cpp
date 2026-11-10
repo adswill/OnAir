@@ -70,6 +70,30 @@ std::string sigmfMetaJson(const SigmfInfo& i) {   // the text: core/src/files/fi
     return filesp::sigmfRecorderMeta(sigmfDatatype(i.fmt), i.rateHz, i.centerHz, i.datetimeUtc, i.dataFile, i.sampleCount, i.description);
 }
 
+std::string sigmfAddExtra(const std::string& json, const std::string& hw, bool hasGeo, double lat, double lon) {
+    if (hw.empty() && !hasGeo) return json;
+    const size_t g = json.find("\"global\"");
+    const size_t b = g == std::string::npos ? g : json.find('{', g);
+    if (b == std::string::npos) return json;
+    std::string add;
+    if (!hw.empty()) {
+        std::string e;
+        for (char ch : hw) { if (ch == '"' || ch == '\\') e += '\\'; if ((unsigned char)ch >= 0x20) e += ch; }
+        add += "\"core:hw\":\"" + e + "\"";
+    }
+    if (hasGeo) {
+        char buf[96];
+        snprintf(buf, sizeof buf, "\"core:geolocation\":{\"type\":\"Point\",\"coordinates\":[%.6f,%.6f]}", lon, lat);
+        if (!add.empty()) add += ",";
+        add += buf;
+    }
+    // a following member needs a comma; an empty object does not
+    size_t k = b + 1;
+    while (k < json.size() && isspace((unsigned char)json[k])) k++;
+    const bool empty = k < json.size() && json[k] == '}';
+    return json.substr(0, b + 1) + add + (empty ? "" : ",") + json.substr(b + 1);
+}
+
 void IqRecorder::writeSigmf(bool final) {
     if (sigmfPath_.empty()) return;
     SigmfInfo i;
@@ -80,7 +104,7 @@ void IqRecorder::writeSigmf(bool final) {
     FILE* f = nullptr;
     try { f = fopen(dect2::u8file(sigmfPath_).string().c_str(), "wb"); } catch (...) {}
     if (!f) return;
-    const std::string j = sigmfMetaJson(i);
+    const std::string j = sigmfAddExtra(sigmfMetaJson(i), sigmfHw_, sigmfGeo_, geoLat_, geoLon_);
     fwrite(j.data(), 1, j.size(), f);
     fclose(f);
 }
@@ -121,6 +145,7 @@ bool IqRecorder::start(const std::string& path, FileFormat fmt, double rateHz, s
         samples_ = bytes_ = dropped_ = 0;
         error_.clear();
     }
+    capHit_ = false;
     sigmfPath_.clear();
     if (sigmf_) {
         try {
@@ -159,7 +184,7 @@ void IqRecorder::push(const cf32* x, size_t n) {
         bytes_ += blk.size();
         samples_ += n;
         q_.push_back(std::move(blk));
-        if (bytes_ >= kMaxBytes) active_ = false;   // safety cap reached: the writer finishes what is queued
+        if (bytes_ >= maxBytes_) { capHit_ = true; active_ = false; }   // safety cap reached: the writer finishes what is queued
     }
     cv_.notify_one();
 }
