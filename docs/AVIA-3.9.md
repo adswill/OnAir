@@ -59,6 +59,23 @@ VDL Mode 3 is the TDMA voice and data link of ICAO Annex 10. It was trialled in 
 - An adjacent-channel station at the same level.
 - Noise alone, which must give no bursts, and unusable sample rates.
 
+**Measured in CI (Linux, quick run):**
+
+| Condition | Result |
+|---|---|
+| Es/N0 30 dB, -1500 Hz, 2.4 Msps | 66 of 66 bursts |
+| Es/N0 30 dB, -1500 Hz, 250 kHz | 64 of 66 (one handoff check and the V/D burst after it were lost; cause not found) |
+| Es/N0 21 dB | 44 of 44 at 250 kHz, 43 of 44 at 2.4 Msps |
+| Drift + SRO + offset | 54 of 54 |
+| Adjacent channel station | 52 of 52 |
+| Es/N0 18 dB | 40 of 44 |
+| Es/N0 15 dB | 10 of 44 |
+| Noise only | 0 syncs |
+
+- No wrong bursts were passed in any of these runs.
+- Below about 20 dB, data bursts whose Reed-Solomon word fails are shown as voice, as described above. The receiver has no matched filter (it uses a +-13.5 kHz low-pass), which costs about 3 to 4 dB.
+- CPU: about 0.06 to 0.1 s per second of signal.
+
 ## 3. FANS-1/A ADS-C and CPDLC from ACARS, VDL2 and HFDL
 
 This already existed. `core/src/aero/aero_adsc.cpp` decodes ADS-C, and `aero_cpdlc.cpp` decodes CPDLC using the vendored libacars asn1 tables (MIT, credited in THIRD_PARTY.md). VDL2, the ACARS mode and HFDL all call them.
@@ -77,6 +94,15 @@ This already existed: the DME mode has decoded the TACAN bearing (15 / 135 Hz, X
 - Weak and strong beacons.
 - Odd block sizes.
 - The Morse ident keyed during the bursts.
+
+Receiver fixes this needed (`core/src/dme/dme_rx.cpp`, `tacan.cpp`):
+- The ident run now survives the reference bursts. Pairs between grid points are ignored once a run has started, and one or two missing grid points still count.
+- One or two main bursts lost to noise no longer restart the bearing count.
+- A group stays whole when noise hides one pair (65 us gap).
+
+Results in CI: 35 of 36 radials within 2 degrees, of which 11 of 12 at the hardest noise (0.10, required 80 %). The ident is read during the bursts without noise.
+
+Known limit: with envelope noise of 0.05, the ident run still breaks between the bursts, and the letters are not read. The test reports this but does not require it.
 
 ## 5. ILS marker beacons
 

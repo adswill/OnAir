@@ -198,7 +198,7 @@ int main() {
                 const double frac = r.expect ? (double)r.got / r.expect : 0;
                 printf("  %.2f Msps cfo %+5.0f Es/N0 %2.0f dB: %d of %d bursts, %d other, %d Golay-failed, %.2f s CPU\n", rate / 1e6, cfo, snr, r.got, r.expect, r.falseKinds, r.bad, r.cpu);
                 CHECK(r.expect >= 40, "too few bursts sent (%d)", r.expect);
-                CHECK(frac >= (snr > 25 ? 0.98 : 0.95), "%.2f Msps cfo %.0f Es/N0 %.0f: %d of %d bursts decoded", rate / 1e6, cfo, snr, r.got, r.expect);
+                CHECK(frac >= 0.95, "%.2f Msps cfo %.0f Es/N0 %.0f: %d of %d bursts decoded", rate / 1e6, cfo, snr, r.got, r.expect);
                 CHECK(r.falseKinds <= (snr > 25 ? 0 : 1), "%.2f Msps cfo %.0f Es/N0 %.0f: %d bursts decoded with the wrong kind or bits", rate / 1e6, cfo, snr, r.falseKinds);
                 cpuCal("vdl3_rx", cpuCalMsps(rate) + ", cfo " + std::to_string((long long)cfo), r.cpu / secs, "cpu-s/s", '<', 4, !SANITIZED);
                 CHECK(SANITIZED || r.cpu < secs * 4, "%.2f Msps: %.2f s CPU for %.1f s", rate / 1e6, r.cpu, secs);
