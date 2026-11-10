@@ -1,6 +1,8 @@
 // See xband_proto.h. Link parameters from SatDump's pipelines (GPL-3.0, Copyright Aang23 and contributors); code written for OnAir.
 #include "dect2/xband/xband_proto.h"
 #include <algorithm>
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
 
 namespace dect2 {

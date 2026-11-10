@@ -10,6 +10,8 @@
 #include <algorithm>
 #include <atomic>
 #include <chrono>
+#include <cctype>
+#include <cstdlib>
 #include <cmath>
 #include <complex>
 #include <cstdio>

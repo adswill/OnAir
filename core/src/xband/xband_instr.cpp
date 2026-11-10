@@ -7,6 +7,8 @@
 #include "dect2/hrpt/hrpt_proto.h"
 #include "dect2/hrpt/hrpt_tel.h"
 #include <algorithm>
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <map>
 #include <unordered_map>
