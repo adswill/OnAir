@@ -90,6 +90,16 @@ int main(int argc, char** argv) {
     CHECK(tx->sampleRate() == 4e6 && st("pluto.contextOpens") == opens && st("pluto.rateWrites") == rates, "TX adopts RX rate and context");
     CHECK(st("pluto.phy:altvoltage1.frequency") == t.centerHz, "TX does not apply RX's shared ppm twice");
     send(); receive(ring);
+    {   // TX retune while sending (plutoTxPlan, docs/TX-CONTROL-3.8.md): the LO, the attenuation and the filter; the shared rate is not touched
+        TxTune t2 = t; t2.centerHz = 146e6; t2.gainDb = -20; t2.bandwidthHz = 1e6;
+        const double rw = st("pluto.rateWrites");
+        CHECK(tx->retune(t2, err), "TX retunes while sending: " << err);
+        CHECK(st("pluto.phy:altvoltage1.frequency") == 146e6 && st("pluto.rateWrites") == rw, "TX retune moves the LO, not the shared rate");
+        CHECK(st("pluto.phy:voltage0.hardwaregain=-20.00") == 1, "TX retune sets the attenuation");
+        CHECK(st("pluto.phy:voltage0.rf_bandwidth") == 1e6, "TX retune sets the filter");
+        CHECK(tx->retune(t, err) && st("pluto.phy:altvoltage1.frequency") == t.centerHz, "TX retunes back: " << err);
+        send(); receive(ring);
+    }
     // Live retune can change LO/gain/ppm without moving the shared reference clock.
     r.centerHz += 1e6; r.gainDb = 25; r.radio["ppm"] = "20";
     const double xoWrites = st("pluto.xoWrites");

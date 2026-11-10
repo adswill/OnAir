@@ -778,6 +778,8 @@ static void soapyChecks(const std::string& moduleDir) {
     TxRequest r;
     r.modeId = "adsb"; r.synth = syn; r.loop = false; r.onceSeconds = 3;
     r.tune.centerHz = 1090e6; r.tune.gainDb = 100;   // above this radio's 60 dB scale
+    r.tune.radio["txgain.TOTAL"] = "75";   // a typed gain stage (Advanced): clamped to that stage's own range
+    r.tune.radio["txgain.PAD"] = "7";      // a stage the radio does not list: asked anyway, with a note
     CHECK(s.start(makeTxSink(radio), r, {}, err), "Soapy TX start: %s", err.c_str());
     CHECK(waitUntil(60, [&] { return !s.running(); }), "Soapy TX pass finished");
     const auto st = s.stats();
@@ -785,6 +787,8 @@ static void soapyChecks(const std::string& moduleDir) {
     CHECK(getenv("ONAIR_TEST_TXFREQ") && atof(getenv("ONAIR_TEST_TXFREQ")) == 1090e6, "TX frequency %s", getenv("ONAIR_TEST_TXFREQ") ? getenv("ONAIR_TEST_TXFREQ") : "-");
     CHECK(getenv("ONAIR_TEST_TXCH") && std::string(getenv("ONAIR_TEST_TXCH")) == "0", "a one-output radio transmits on TX1: %s", getenv("ONAIR_TEST_TXCH") ? getenv("ONAIR_TEST_TXCH") : "-");
     CHECK(getenv("ONAIR_TEST_TXGAIN") && std::fabs(atof(getenv("ONAIR_TEST_TXGAIN")) - 60) < 1e-9, "the gain is clamped to the radio's own scale only: %s", getenv("ONAIR_TEST_TXGAIN") ? getenv("ONAIR_TEST_TXGAIN") : "-");
+    CHECK(getenv("ONAIR_TEST_TXGAIN_TOTAL") && std::fabs(atof(getenv("ONAIR_TEST_TXGAIN_TOTAL")) - 60) < 1e-9, "the typed stage is clamped to its own range: %s", getenv("ONAIR_TEST_TXGAIN_TOTAL") ? getenv("ONAIR_TEST_TXGAIN_TOTAL") : "-");
+    CHECK(getenv("ONAIR_TEST_TXGAIN_PAD") && std::fabs(atof(getenv("ONAIR_TEST_TXGAIN_PAD")) - 7) < 1e-9, "an unlisted stage is asked as typed: %s", getenv("ONAIR_TEST_TXGAIN_PAD") ? getenv("ONAIR_TEST_TXGAIN_PAD") : "-");
     CHECK(getenv("ONAIR_TEST_TXACTIVE") && std::string(getenv("ONAIR_TEST_TXACTIVE")) == "0", "the TX stream is deactivated at the end");
     CHECK(std::fabs(st.rateHz - 64e6 / 7) < 1, "this radio only runs 64/7 Msps; the generator followed: %.0f", st.rateHz);
     // what writeStream received decodes
