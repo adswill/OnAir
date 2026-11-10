@@ -295,3 +295,10 @@
 730|
 360|sfhss
 360|spektrum
+620|cisbee
+621|cis14
+622|cis12
+623|cis36
+624|cishdr
+625|cis128
+626|cis3000

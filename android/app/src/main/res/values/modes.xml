@@ -318,6 +318,13 @@
         <item>ISDB-TSB</item>
         <item>Futaba RC (S-FHSS)</item>
         <item>Spektrum RC (DSM2 / DSMX)</item>
+        <item>CIS-36-50 / 50-50 (BEE)</item>
+        <item>CIS-14</item>
+        <item>CIS-12 (MS5)</item>
+        <item>CIS-36 (MFSK)</item>
+        <item>CIS OFDM HDR</item>
+        <item>CIS-128</item>
+        <item>CIS-3000</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -617,6 +624,13 @@
         <item>ISDB-TSB (ARIB STD-B29) narrow-band digital sound and data broadcasting: one or three segments, detected from the TMCC; the one-segment receiver also takes the one-seg service of an ISDB-T channel. Simulated signals only so far</item>
         <item>Futaba S-FHSS 2.4 GHz RC links (CC2500 2-FSK 128 kbit/s, 30 hop channels): transmitter id, hop code and the four channel values of each packet; layout from the DIY-Multiprotocol-TX-Module project, simulated signals only so far. FASST is not decodable (no public description)</item>
         <item>Spektrum DSM2 and DSMX 2.4 GHz RC links (CYRF6936 DSSS, 1 Mchip/s): every pn code tried, transmitter id bytes and channel values; DSMX told from DSM2 by the hop channel when the radio\'s frequency is known. The CRC is not checked (not published). Simulated signals only so far</item>
+        <item>Russian Navy BEE (T-600) 2-FSK, receive only: idle reversals at 36 or 50 Bd and traffic at 50 or 100 Bd (75 and 150 Bd too), shift and polarity found automatically. The 44-bit start word, the 70-bit session key sent twice, the 7-bit 3:4 characters and the end-of-message are read and shown as hex. The traffic is encrypted: nothing is decrypted. Simulated signals only so far</item>
+        <item>CIS-14 (AMOR, AMOR96) 2-FSK at 96 Bd, receive only: the 14-bit frame is found from its period and every frame\'s fields are shown raw (2 state bits, two 5-bit code words, 2 parity bits). The parity rule and the state codes are not published, so they are shown, not checked. Simulated signals only so far</item>
+        <item>CIS-12 (MS5, AT-3004D, AT-3104D, FIRE, T-230), receive only, physical layer: the 3300 Hz pilot and its offset, the 12 carriers 700 - 2900 Hz at 120 Bd, the PSK order (DBPSK / DQPSK) and the raw phase steps of every carrier. No frame format is published, so nothing further is read. Simulated signals only so far</item>
+        <item>CIS-36 MFSK duplex ARQ, identification only: the tone count, the 40 Hz spacing, the 10 / 20 / 40 Bd tone rate and the tone groups are measured and the signal named. No frame format is published. Simulated signals only so far</item>
+        <item>CIS OFDM HDR modem (CIS-45, CIS-60, CIS-93), identification only: the OFDM symbol (useful part, guard, rate), the carrier count and the PSK order are measured and the variant named. No frame format is published. Simulated signals only so far</item>
+        <item>CIS-128, identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz, from the carrier spacing, the symbol rate and the guard. The 6 kHz form is not covered. No frame format is published. Simulated signals only so far</item>
+        <item>CIS-3000, identification only: a single carrier 8-PSK at 3000 Bd, from its symbol-rate line and the constellation order. No frame format is published. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -916,6 +930,13 @@
         <item>Narrow-band ISDB, Japan</item>
         <item>RC link</item>
         <item>RC link</item>
+        <item>HF FSK, 36 / 50 Bd</item>
+        <item>HF FSK, 96 Bd</item>
+        <item>HF 12-tone PSK</item>
+        <item>Identification only, HF</item>
+        <item>Identification only, HF</item>
+        <item>Identification only, HF</item>
+        <item>Identification only, HF</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1215,5 +1236,12 @@
         <item>isdb tsb isdb-tsb sb arib std-b29 one segment three segment 1seg oneseg narrow band digital radio japan v-low</item>
         <item>futaba sfhss s-fhss rc</item>
         <item>spektrum dsm dsm2 dsmx rc</item>
+        <item>cis-36-50 cis-50-50 cis36 cis50 bee bee-36 bee36 t600 t-600 russian navy fsk hf sigidwiki</item>
+        <item>cis-14 cis14 amor amor96 russian fsk 96 baud hf sigidwiki</item>
+        <item>cis-12 cis12 ms5 ms-5 at-3004d at3004d at-3104d fire t-230 russian 12 tone psk 3300 pilot hf sigidwiki</item>
+        <item>cis-36 cis36 mfsk-36 mfsk36 russian mfsk arq hf identification sigidwiki</item>
+        <item>cis-45 cis45 cis-60 cis60 cis-93 cis93 cis ofdm hdr modem russian ofdm hf identification sigidwiki</item>
+        <item>cis-128 cis128 russian ofdm 128 tone hf identification sigidwiki</item>
+        <item>cis-3000 cis3000 russian single carrier 8psk 3000 baud hf identification sigidwiki</item>
     </string-array>
 </resources>

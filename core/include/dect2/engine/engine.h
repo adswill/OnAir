@@ -120,6 +120,7 @@
 #include "dect2/inmsat/inmsat_rx.h"
 #include "dect2/rclink/rc_rx.h"
 #include "dect2/xlink/xlink_rx.h"
+#include "dect2/cishf/cishf_rx.h"
 #include "dect2/nrf24/nrf24_rx.h"
 #include "dect2/sensors/sensors_rx.h"
 #include "dect2/bgan/bgan_rx.h"
@@ -583,6 +584,7 @@ public:
     BganReceiver& bgan() { return rxBgan_; }   // Inmarsat BGAN (telemetry through latestRx)
     SfericsReceiver& sferics() { return rxSfer_; }   // Sferics (lightning): threshold, mains filter, clear counts (telemetry through latestRx)
     XlinkReceiver& xlink() { return rxXlink_; }   // Extra links (family 600)
+    CisHfReceiver& cisHf(int kind) { return rxCis_[kind >= 0 && kind < 7 ? kind : 0]; }   // CIS HF modes (families 620 - 626): Advanced settings, clear
     RcLinkReceiver& rclink() { return rxRc_; }   // RC and mesh links (family 360): lists, phrase, plan (telemetry through latestRx)
     Nrf24Receiver& nrf24() { return rxNrf_; }   // nRF24L01: clear the lists (telemetry through latestRx)
     InmsatReceiver& inmsat() { return rxInmsat_; }   // Inmarsat all carriers: budget, focus, voice mixer (telemetry through latestRx)
@@ -1020,6 +1022,7 @@ private:
     EbicabReceiver rxEbi_;
     InmsatReceiver rxInmsat_;
     XlinkReceiver rxXlink_;   // Extra links
+    CisHfReceiver rxCis_[7]{0, 1, 2, 3, 4, 5, 6};   // CIS HF modes, families 620 - 626 (engine standards 621 - 627)
     RcLinkReceiver rxRc_;   // RC and mesh links
     Nrf24Receiver rxNrf_;
     SensorsReceiver rxSens_;

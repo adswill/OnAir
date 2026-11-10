@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**297 modes.**
+**304 modes.**
 
 ## TV (15)
 
@@ -304,7 +304,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MeshCom** - MeshCom: amateur LoRa mesh messages and positions on 433 MHz
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 
-## HF Utility (21)
+## HF Utility (28)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -327,6 +327,13 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **HF beacons** - HF beacons: what is open from here, band by band
 - **PACTOR-I (experimental)** - PACTOR-I: HF ARQ and FEC packets of both stations, monitor only (experimental)
 - **HFGCS / HF voice** - HFGCS / HF voice: USB on the HFGCS and VOLMET frequencies, VOLMET minute schedules, a scan that steps through them (receive only)
+- **CIS-36-50 / 50-50 (BEE)** - CIS-36-50 / CIS-50-50 (BEE): message framing of the Russian Navy FSK system, characters as hex (receive only, simulated only)
+- **CIS-14** - CIS-14: 96 Bd FSK, 14-bit frames shown raw (receive only, simulated only)
+- **CIS-12 (MS5)** - CIS-12 (MS5): 12-carrier PSK modem, pilot and phase steps (physical layer only, simulated only)
+- **CIS-36 (MFSK)** - CIS-36 MFSK: identification only (simulated only)
+- **CIS OFDM HDR** - CIS OFDM HDR (CIS-45 / 60 / 93): identification only (simulated only)
+- **CIS-128** - CIS-128: identification only (simulated only)
+- **CIS-3000** - CIS-3000: identification only (simulated only)
 
 ## General & Tools (4)
 
