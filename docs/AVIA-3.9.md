@@ -109,3 +109,10 @@ Known limit: with envelope noise of 0.05, the ident run still breaks between the
 These already existed: the VOR / ILS mode detects the 75 MHz marker tones (400, 1300 and 3000 Hz).
 - New: it reads the keying as well (Annex 10 Vol I 3.1.7.4): outer dashes, middle dot-dash, inner dots. It reports when the keying does not match the tone.
 - Test `vor_marker` covers carrier offset, noise, clock error and 8-bit clipping. A localizer signal or noise alone must not produce a marker.
+
+## Test runs
+
+All results come from GitHub quick runs on Linux. The local build gate was busy, so nothing was run on the Mac.
+- Run 42889789856: vdl3_all, acars_fans, hfdl_fans, dme_tacan_impair, dme, dme_tacan, airband_uhf and vor_marker all passed.
+- Run 42893378372: mode_numbers, custom_bandwidth_all and secondary_modes passed.
+- In the same run, iq_modes aborted with "malloc(): invalid size" while the Inmarsat-C case was printing. That was before it reached VDL Mode 3, which is last in the mode list. This branch changes no Inmarsat code; whether the failure also happens on integ-39 has not been checked.
