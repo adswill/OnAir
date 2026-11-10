@@ -54,12 +54,12 @@ void tab(App& a) {
     if (ImGui::Button(tr("Clear"))) a.engine.cisHf(kind).clearResults();
     ImGui::SeparatorText(tr("Events"));
     for (const auto& e : t.events) ImGui::Text("%7.1f s  %s", e.timeSec, e.text.c_str());
-    if (kind <= 1 && ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (kind <= 1 && ImGui::CollapsingHeader(trw("Advanced"))) {
         static float baud[2] = {0, 0}, shift[2] = {0, 0};
         bool ch = false;
-        ImGui::SetNextItemWidth(140);
+        ImGui::SetNextItemWidth(140 * gUi);
         ch |= ImGui::InputFloat(tr("Speed (Bd, 0 = automatic)"), &baud[kind], 0, 0, "%.1f");
-        ImGui::SetNextItemWidth(140);
+        ImGui::SetNextItemWidth(140 * gUi);
         ch |= ImGui::InputFloat(tr("Shift (Hz, 0 = automatic)"), &shift[kind], 0, 0, "%.0f");
         if (ch) a.engine.cisHf(kind).setForced(baud[kind], shift[kind]);
     }

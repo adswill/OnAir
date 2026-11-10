@@ -147,7 +147,7 @@ void tuner(App& a, bool& retune) {
     ImGui::TextDisabled("%s", tr("Channel width"));
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Automatic tries 5, 8, 7, 6 and 1.7 MHz until OFDM symbols are found."));
     sameLineIf(90 * gUi, 5 * gUi);
-    if (ImGui::CollapsingHeader(tr("Advanced"))) combo("##dvbshbw", 120, S.width, widths);
+    if (ImGui::CollapsingHeader(trw("Advanced"))) combo("##dvbshbw", 120, S.width, widths);
     else if (S.width != 0) { ImGui::SameLine(); ImGui::TextDisabled("%s", widths[S.width]); }
     flowNext(8 * gUi);
     ImGui::Checkbox(tr("Low-priority stream"), &S.lp);

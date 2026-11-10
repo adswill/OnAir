@@ -736,7 +736,7 @@ void dabStations(App& a) {
 void dabRadioTab(App& a) {
     const DabEnsemble ens = a.engine.dabEnsemble();
     const int cur = a.engine.dabSelected();
-    if (ImGui::CollapsingHeader(tr("Played (DL Plus songs)##dabpl"))) { ImGui::BeginChild("##dabplc", ImVec2(0, 240 * gUi)); playedPanel(a, "dabpl"); ImGui::EndChild(); }
+    if (ImGui::CollapsingHeader(trw("Played (DL Plus songs)##dabpl"))) { ImGui::BeginChild("##dabplc", ImVec2(0, 240 * gUi)); playedPanel(a, "dabpl"); ImGui::EndChild(); }
     if (ens.services.empty()) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled(a.engine.running() ? "waiting for the ensemble information (a second or two)..." : "start the receiver on a DAB channel (5A to 13F)"); ImGui::PopTextWrapPos(); } return; }
     ImGui::AlignTextToFramePadding();
     ImGui::PushFont(a.ui, 20.f);

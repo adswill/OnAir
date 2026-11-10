@@ -54,7 +54,7 @@ void recordsOffer(const char* cat, const std::string& band, double km, const std
 
 void recordsPanel() {
     load();
-    if (!ImGui::CollapsingHeader(tr("Records board (personal best distances)##recb"))) return;
+    if (!ImGui::CollapsingHeader(trw("Records board (personal best distances)##recb"))) return;
     if (!B.note.empty()) ImGui::TextColored(ImVec4(0.45f, 0.85f, 0.5f, 1), "%s", B.note.c_str());
     if (!receiverLocationSet()) ImGui::TextDisabled("%s", tr("Set the receiver position (Tuner, Locate): records are distances from it."));
     const auto v = B.b.all();

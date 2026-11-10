@@ -103,7 +103,7 @@ void hamFeedFtx(App& a, const dect2::HfdigFtxTelemetry& f) {
 void hamBandOpenPanel() {
     boLoad();
     { const double now = (double)time(nullptr); if (gBo.st.dirty() && now - gBo.lastSave > 600) { gBo.lastSave = now; boSave(); } }
-    if (!ImGui::CollapsingHeader(tr("When is the band open##bandopen"))) return;
+    if (!ImGui::CollapsingHeader(trw("When is the band open##bandopen"))) return;
     ImGui::RadioButton(tr("7 days##bo"), &gBo.days, 7); ImGui::SameLine(); ImGui::RadioButton(tr("30 days##bo"), &gBo.days, 30);
     ImGui::SameLine(); ImGui::TextDisabled("%s", tr("your own spots by band and UTC hour: the number is the days with spots in that hour; the tooltip has the spots and the farthest"));
     const auto m = gBo.st.matrix((int64_t)time(nullptr), gBo.days);

@@ -90,7 +90,7 @@ void meteorPassPanel(App& a) {
     (void)a;
     load();
     if (!M.last.empty()) ImGui::TextDisabled("%s", M.last.c_str());
-    if (!ImGui::CollapsingHeader(tr("Pass reports##metpass"))) return;
+    if (!ImGui::CollapsingHeader(trw("Pass reports##metpass"))) return;
     if (M.hist.empty()) { ImGui::TextDisabled("%s", tr("No passes yet. A pass is written when frames stop for a minute.")); return; }
     if (!ImGui::BeginTable("##metpt", 8, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, 200 * gUi))) return;
     ImGui::TableSetupScrollFreeze(0, 1);

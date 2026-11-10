@@ -57,7 +57,7 @@ void hfdigHopPanel(App& a, int mode) {
     load();
     (void)a;
     if (mode >= 0 && mode <= 3 && mode != H.mode) { H.mode = mode; save(); }
-    if (!ImGui::CollapsingHeader(tr("Band hopping##hfhop"))) return;
+    if (!ImGui::CollapsingHeader(trw("Band hopping##hfhop"))) return;
     if (ImGui::Checkbox(tr("Hop bands every 2 minutes"), &H.on)) { save(); H.lastSlot = 0; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For one narrow radio: at the start of each 2-minute slot the dial moves to the next band switched on for this UTC hour. The radio follows when it is under OnAir's control."));
     ImGui::SameLine();

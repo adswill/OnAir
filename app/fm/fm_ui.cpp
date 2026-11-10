@@ -641,7 +641,7 @@ void fmRadioTab(App& a) {
     ImGui::TextUnformatted(ps.c_str());
     if (live && !fm.ptyText.empty() && fm.ptyText != "None") { ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("%s", fm.ptyText.c_str()); }
     if (live && !fm.radioText.empty()) ImGui::TextDisabled("%s", fm.radioText.c_str());
-    if (ImGui::CollapsingHeader(tr("Played (RadioText+ songs)##fmpl"))) { ImGui::BeginChild("##fmplc", ImVec2(0, 240 * gUi)); playedPanel(a, "fmpl"); ImGui::EndChild(); }
+    if (ImGui::CollapsingHeader(trw("Played (RadioText+ songs)##fmpl"))) { ImGui::BeginChild("##fmplc", ImVec2(0, 240 * gUi)); playedPanel(a, "fmpl"); ImGui::EndChild(); }
     ImGui::Spacing();
     {   // tuning dial and steps
         float f = (float)a.freqMhz;
