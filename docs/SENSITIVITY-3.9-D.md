@@ -28,6 +28,7 @@ CPU = CPU seconds per second of signal on the clean signal, receiver alone (all 
 | Meteor LRPT OQPSK 72k, Es/N0 (1 Msps) | 5 / 8 / 5 -> **2 / 3 / 2 dB** (theory about 2.5) | 0.031 -> 0.030 | joint acquisition (1) |
 | MFSK16, 2500 Hz | -9 / -9 / -8 -> **-15 / -15 / -14 dB** | 0.0008 both | likelihood-ratio soft bits (2) |
 | THOR16, 2500 Hz | -5 / -5 / -4 -> **-11 / -10 / -10 dB** | 0.0004 both | soft bits instead of a gated hard decision (2) |
+| DominoEX 11, 2500 Hz | -7 / -7 / -6 -> **-12 / -12 / -10 dB** | 0.0004 both | squelch at a peak ratio of 4 (2) |
 | ALE 2G, 3 kHz | -6 / nothing decoded / -6 -> **-6 / -6 / -6 dB** (offset 282 Hz) | 0.015 both | tuning error from the spectrum (3) |
 | ARQ-E 96 Bd cycle 8, 3 kHz | 3 -> **-2 dB** | 0.001 both | baud from the eye (4) |
 | ARQ-N 96 Bd, 3 kHz | -1 -> **-3 dB** | 0.001 both | same |
@@ -61,7 +62,9 @@ Reed-Solomon: the code's limit). 20 ppm (2758 Hz) after: 3 dB 6/6, 2 dB 1/6. Loc
    into the 8-bit Viterbi inputs. MFSK used fldigi's metric (the magnitudes of all 16 tones summed onto each bit); THOR took a hard
    decision on the strongest bin and erased the symbol below a peak-to-average of 6 or 1.2. The Viterbi lock metric and its levels are
    unchanged. A gain of 16 lost the MFSK32 picture behind the signal finder (test_hfdig_mfsk), 32 passes everything.
-   Not changed: Olivia and Contestia (already soft, at -15 / -14 / -12 dB), DominoEX (no FEC, -7 dB).
+   DominoEX has no FEC: its characters were held back until the peak bin stood 6 times over the average of the others; noise alone gives
+   2.5 to 2.8, and at 4 six minutes of noise (DominoEX 5, 11, 22, with and without the signal finder) still give no character.
+   Not changed: Olivia and Contestia (already soft, at -15 / -14 / -12 dB).
 3. **ALE** (`core/src/ale/ale_rx.cpp`). While no word is in sync, the averaged audio spectrum (1024 points) is searched up to 400 Hz off
    for the eight tone bands against the bands just outside them; a clear error, seen twice, with no word for 2.5 s, moves the tone
    filters, and the AFC after each word may follow to 400 Hz (was 150). The 125 Hz tone filters found nothing beyond about 100 Hz before.
@@ -83,7 +86,6 @@ Reed-Solomon: the code's limit). 20 ppm (2758 Hz) after: 3 dB 6/6, 2 dB 1/6. Loc
 | Olivia 8/250 | -15 / -15 (+10 Hz) / -14 (100 ppm) dB | 2500 Hz | 0.0005 | soft already |
 | Olivia 32/1000 | -14 / -13 (+20 Hz) / -12 dB | 2500 Hz | 0.0007 | |
 | Contestia 16/500 | -12 / -13 (+25 Hz) / -12 dB | 2500 Hz | 0.0004 | |
-| DominoEX 11 | -7 / -7 (+30 Hz) / -6 dB | 2500 Hz | 0.0004 | no FEC |
 | SSTV Robot 36 | 14 dB | 3 kHz | 0.0004 | the 20-level picture criterion; 13 dB: 0 of 8 (the error grows smoothly with the noise) |
 | SSTV Martin M1 | 7 dB | 3 kHz | 0.0004 | |
 | HamDRM mode B (16-QAM) | 11 dB | 3 kHz | 0.0023 | |
@@ -115,12 +117,15 @@ Reed-Solomon: the code's limit). 20 ppm (2758 Hz) after: 3 dB 6/6, 2 dB 1/6. Loc
   1.2 kHz deviation is not checked against real control channels.
 * **THOR lock**: the lock metric relative to the input confidence (instead of the fixed 127) bought nothing at 0.5 and gave characters
   from noise at 0.25.
+* **TETRA**: decision-feedback differential detection (each symbol against a reference averaging the previous ones, turned by their
+  decided steps) gave 10 dB against 9 dB for plain differential detection at reference weights 0.5 and 0.7; reverted.
 * **CW**: the chain tunables (envelope smoothing, weak-signal smoothing, open ratio) changed nothing in the skimmer path the registry
   uses; sensB's estimate stands (about 8 dB over a perfect-clock decoder), and a real gain needs new timing work.
 
 ## Leads
 
-* TETRA 9 dB in 25 kHz is about 10.4 dB Es/N0 for pi/4-DQPSK at 18 ksym/s with its coding: probably 2 to 3 dB to find.
+* TETRA 9 dB in 25 kHz is about 10.4 dB Es/N0 for pi/4-DQPSK at 18 ksym/s with its coding: probably 2 to 3 dB to find, not in the
+  differential detector (above).
 * EDACS 12 dB and Fusion 8 dB: discriminator receivers; a two-tone (or four-tone) matched-filter detector would be the next step.
 * GNSS acquisition at 35.8 dB-Hz: longer coherent and non-coherent integration would gain a few dB at more CPU.
 * The sens39d harness gets nothing from the threaded TETRA receiver in its clean-signal check (sens_sweep itself does); not looked into.
@@ -132,4 +137,6 @@ Reed-Solomon: the code's limit). 20 ppm (2758 Hz) after: 3 dB 6/6, 2 dB 1/6. Loc
 `marine_fax_sens39` (each 1 to 2 s by default). Run against the prebuilt integ-39 core with the changed files: meteor_rx, meteor_proto,
 hfdig_kbd, hfdig_mfsk, autoparam_kbd, ham_kbd, ale_rx, ale_wide, hfutil_fsk, hfutil_engine, dvbs_rx, dvbs_s1, dvbs_rx2, dvbs_impair pass;
 noise-only checks in every bench give no output. meteor_engine does not run in that link set-up (it fails the same way without the
-changes); the engine tests are left to CI.
+changes). GitHub quick.yml (Linux, run 42909490424): sens39d, meteor_rx, meteor_proto, meteor_engine, hfdig_kbdsens39, hfdig_kbd,
+hfdig_mfsk, hfutil_sens39, hfutil_fsk, hfutil_engine, ale_rx, ale_wide, ale_engine, hfdig_sens39d, marine_fax_sens39, autoparam_kbd,
+ham_kbd: 17 of 17 passed.

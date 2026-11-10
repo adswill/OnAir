@@ -264,7 +264,9 @@ private:
         }
     }
 
-    static constexpr double kLockRatio = 6.0;
+    // the squelch: peak over the average of the other bins (noise alone: 2.5 to 2.8; 3.9 sensitivity pass D: 6 held DominoEX 11 at -7 dB in
+    // 2.5 kHz, 4 lets it copy to -12 dB, and 6 minutes of noise still give no character)
+    static constexpr double kLockRatio = 4.0;
     static constexpr double kSoftGain = 32.0, kSnrCap = 0.1;   // as MFSK (hfdig_kbd_mfsk.cpp)
     double sig2_ = 0, amp2_ = 0;   // noise and signal power per bin, for the soft bits
     int refPos_ = 0;               // the bin of the previous tone

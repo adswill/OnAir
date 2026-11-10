@@ -43,7 +43,7 @@ const Case kCases[] = {
     {"Contestia 16/500", KbdContestia, -1, 16, 500, 30, 25, -12},
     {"MFSK16", KbdMfsk, 3, 0, 0, 40, 6, -15},     // 3.9: -9 -> -15 dB (likelihood-ratio soft bits)
     {"THOR16", KbdThor, 4, 0, 0, 40, 30, -11},    // 3.9: about -5 -> -11 dB (soft bits instead of a gated hard decision)
-    {"DominoEX11", KbdDominoex, 3, 0, 0, 40, 30, -7},
+    {"DominoEX11", KbdDominoex, 3, 0, 0, 40, 30, -12},  // 3.9: -7 -> -12 dB (squelch at a peak ratio of 4, was 6)
 };
 
 const char* kKey = "TEST 73";
