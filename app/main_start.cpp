@@ -123,7 +123,9 @@ void startApp(App& app, int argc, char** argv) {
 void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
     for (int i = 1; i < argc; i++) {
         if (std::string(argv[i]) == "--autostart") o.autostart = true;
-        if (std::string(argv[i]) == "--no-first-run") {
+        // --drag-selftest too: its injected gestures run past frame 90, where a fresh profile opens the first-start question (the public map,
+        // a modal that takes every click), so it implies --no-first-run
+        if (std::string(argv[i]) == "--no-first-run" || std::string(argv[i]) == "--drag-selftest") {
 #ifdef _WIN32
             _putenv_s("DECT2_SKIP_FIRSTRUN", "1");
 #else
