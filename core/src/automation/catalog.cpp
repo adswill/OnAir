@@ -26,6 +26,10 @@ std::vector<FieldInfo> adsbFields() {
 std::vector<EventInfo> build() {
     std::vector<EventInfo> v;
     v.push_back({"adsb.new", "Aircraft heard for the first time", kAc, "ADS-B", 1090e6, adsbFields()});
+    v.push_back({"adsb.first_ever", "Aircraft heard for the first time ever (ADS-B, History; not on the store's first day)", "ADS-B", "ADS-B", 1090e6, {
+        {"hex", 's', "ICAO address", "4840D6"}, {"callsign", 's', "callsign", "KLM1023"}, {"registration", 's', "registration (database)", "PH-BXA"},
+        {"type", 's', "type (database)", "B738"}, {"operator", 's', "operator (database)", "KLM"}, {"alt_ft", 'n', "altitude, ft", "36000"},
+        {"distance_km", 'n', "distance from the receiver", "41.2"}, {"unique_ever", 'n', "airframes heard ever", "18234"}}});
     v.push_back({"adsb.aircraft", "Aircraft update (new squawk, or every 2 s per aircraft)", kAc, "ADS-B", 1090e6, adsbFields()});
     v.push_back({"acars.message", "ACARS message", "ACARS", "ACARS", 131.725e6, {
         {"tail", 's', "registration or address", "A6-EDA"}, {"flight", 's', "flight id of a downlink", "EK0201"}, {"label", 's', "two-character label", "H1"},

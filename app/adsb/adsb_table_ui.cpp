@@ -214,6 +214,10 @@ void aircraftTable(App& a, bool compact) {
         if (ImGui::Selectable(id, S.sel == ac.icao, ImGuiSelectableFlags_SpanAllColumns)) S.sel = ac.icao;
         if (ImGui::BeginPopupContextItem()) { photolinks::aircraftMenuItems(ac.icao, registrationOf(ac.icao), ac.callsign); ImGui::EndPopup(); }
         ImGui::TableNextColumn(); ImGui::TextUnformatted(ac.callsign.empty() ? "-" : ac.callsign.c_str());
+        if (seenNewToday(ac.icao)) {   // never heard before today (adsb_seen_ui.cpp)
+            ImGui::SameLine(0, 4 * gUi); ImGui::TextColored(kGood, "new");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("First heard ever today (ADS-B, History)"));
+        }
         if (const int nm = acarslog::count(ac.icao)) {   // ACARS messages from this aircraft: a mark after the callsign
             ImGui::SameLine(0, 4 * gUi); ImGui::TextColored(kWarn, "*");
             if (ImGui::IsItemHovered()) ImGui::SetTooltip(tr("%d ACARS messages"), nm);
