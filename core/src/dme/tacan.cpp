@@ -8,7 +8,7 @@ namespace dect2::dme {
 
 namespace {
 constexpr double kPeriod = 1.0 / 15.0;
-constexpr double kGapUs = 40.0;             // pulses of a burst are at most 30 us apart
+constexpr double kGapUs = 65.0;             // pulses of a burst are at most 30 us apart; 65 us keeps a group whole when noise hides one pair
 constexpr int kMinBurst = 9;                 // pulses: random replies come as isolated pairs
 constexpr double kMainUs = 300.0;            // a burst longer than this is the main group (X 12 pairs, Y 13 pulses at 30 us); the auxiliary group is shorter
 constexpr size_t kCycles = 30;               // 2 s of rotation
@@ -30,7 +30,9 @@ void TacanBearing::endCluster() {
             if (lastMain_ >= 0) {
                 const double dt = t0 - lastMain_;
                 if (dt < 0.9 * kPeriod) { cluster_.clear(); return; }    // a shorter burst lengthened by a neighbouring reply: not the main group
-                if (std::fabs(dt - kPeriod) < 0.01 * kPeriod) { good_++; nMain_++; cycles_.push_back(cur_); if (cycles_.size() > kCycles) cycles_.pop_front(); solve(); }
+                // one or two main bursts lost to noise (a missed pulse splits the group) do not restart the count
+                const double k = std::round(dt / kPeriod);
+                if (k >= 1 && k <= 3 && std::fabs(dt - k * kPeriod) < 0.01 * k * kPeriod) { good_++; nMain_++; cycles_.push_back(cur_); if (cycles_.size() > kCycles) cycles_.pop_front(); solve(); }
                 else { good_ = 0; cycles_.clear(); }
             } else nMain_++;
             cur_ = Cycle();

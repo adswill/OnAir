@@ -130,10 +130,16 @@ void Receiver::onPulse(double startSec) {
 void Receiver::onPair(double startSec) {
     const double period = 1.0 / kIdentRatePps;
     if (havePair_) {
+        // lastPairSec_ is the last pair on the ident's grid. On a TACAN beacon the reference bursts (700 us at 135 Hz) take the place of
+        // ident pairs and put their own pairs in between: once a run has three regular intervals, a pair between grid points is ignored
+        // and one missing grid point (two periods, held to 10 us) still counts.
         const double dt = startSec - lastPairSec_;
-        if (std::fabs(dt - period) <= kIdentTolUs * 1e-6) {
+        const bool one = std::fabs(dt - period) <= kIdentTolUs * 1e-6;
+        const bool two = regular_ >= 3 && std::fabs(dt - 2 * period) <= 10e-6;
+        if (regular_ >= 3 && !one && !two && dt < 2.5 * period) return;   // a burst pair inside the run
+        if (one || two) {
             regular_++;
-            intervalSum_ += dt;
+            intervalSum_ += two ? dt / 2 : dt;
             if (regular_ >= kKeyRun) {
                 if (!keyed_) {
                     // a new key-down: close the letter that the gap before it ended, then start counting

@@ -18,13 +18,15 @@ constexpr int kSps = 8;                       // samples per symbol after the fi
 constexpr int kDump = 16;                     // integrate and dump to 16 samples per symbol (168 kHz), then the FIR and every 2nd sample
 constexpr int kTaps = 63;
 constexpr double kCutHz = 13500;
-constexpr double kSyncThr = 0.6;              // normalised differential correlation over the 15 phase changes
+constexpr double kSyncThr = 0.8;              // normalised differential correlation over the 15 phase changes (random D8PSK symbols
+                                              // pass 0.6 several hundred times a second; 0.8 a few times, and those are masked by the burst around them)
 constexpr int kWin = 12;                      // samples after the first crossing in which the peak is looked for
 constexpr int kMaxPayload = 200;
-constexpr double kEvmMax = 0.22;              // rms phase error of the decisions, in symbol steps (pi/4): above this the burst is noise
+constexpr double kEvmMax = 0.3;               // rms phase error of the decisions, in symbol steps (pi/4): above this the burst is noise
+constexpr int kFloorBlock = 128, kFloorBlocks = 200;   // noise floor: the quietest 128-sample block of the last 0.3 s
 constexpr double kNoiseBwRatio = 27000.0 / kVdl3SymbolRate;   // the filter's noise bandwidth over the symbol rate (SNR as Es/N0)
 
-struct Pend { int64_t syncEnd = 0; double mu = 0; cd D; int fam = 0; };
+struct Pend { int64_t syncEnd = 0; double mu = 0; cd D; int fam = 0; double m = 0; };
 
 std::vector<double> firTaps() {
     std::vector<double> h(kTaps);
@@ -62,7 +64,10 @@ struct Vdl3Receiver::Impl {
     int64_t bestIdx = 0;
     cd bestD;
     int bestFam = 0;
-    int64_t holdUntil = -1;
+    int64_t busyUntil = -1;                   // the end of the last good burst: training sequences found inside it are its own data
+    double blkSum = 0;
+    int blkN = 0;
+    std::vector<double> blkMeans;
     std::vector<Pend> pend;
     std::vector<int64_t> syncs;               // recent training ends (absolute), for the S2* length
     uint64_t nIn = 0, serial = 0, seq = 0;
@@ -164,6 +169,7 @@ struct Vdl3Receiver::Impl {
         vdl3Scramble(bits);
         Vdl3Decoded dec;
         if (!vdl3DecodePayload(sy, L, bits, dec)) return;
+        if (dec.golayOk) busyUntil = p.syncEnd + (int64_t)kSps * (L + 4);
         Vdl3Burst m;
         m.serial = ++serial;
         m.timeSec = (double)p.syncEnd / (kSps * kVdl3SymbolRate);
@@ -219,7 +225,13 @@ struct Vdl3Receiver::Impl {
     void onZ(cd v) {
         z.push_back(v);
         const double pw = std::norm(v);
-        floor = floor > 0 ? (pw < floor ? 0.995 * floor + 0.005 * pw : 0.99998 * floor + 0.00002 * pw) : pw;
+        blkSum += pw;
+        if (++blkN >= kFloorBlock) {
+            blkMeans.push_back(blkSum / blkN);
+            if (blkMeans.size() > (size_t)kFloorBlocks) blkMeans.erase(blkMeans.begin());
+            floor = *std::min_element(blkMeans.begin(), blkMeans.end());
+            blkSum = 0; blkN = 0;
+        }
         const int64_t r = (int64_t)z.size() - 1, a = zBase + r;
         if (r >= kSps * (kVdl3SyncSyms - 1)) {
             cd D0, D1;
@@ -234,26 +246,29 @@ struct Vdl3Receiver::Impl {
                     const double mm = corr(br - 1, bestFam, t), mp = corr(br + 1, bestFam, t);
                     const double den = mm - 2 * bestM + mp;
                     const double mu = std::fabs(den) > 1e-12 ? std::clamp(0.5 * (mm - mp) / den, -0.5, 0.5) : 0.0;
-                    pend.push_back({bestIdx, mu, bestD, bestFam});
-                    syncs.push_back(bestIdx);
-                    tel.syncs++;
-                    holdUntil = bestIdx + kSps * kVdl3SyncSyms;
+                    // two finds within 8 symbols are one training sequence: keep the better
+                    if (!pend.empty() && bestIdx - pend.back().syncEnd < kSps * 8) {
+                        if (bestM > pend.back().m) pend.back() = {bestIdx, mu, bestD, bestFam, bestM};
+                    } else {
+                        pend.push_back({bestIdx, mu, bestD, bestFam, bestM});
+                        tel.syncs++;
+                    }
+                    if (syncs.empty() || bestIdx - syncs.back() >= kSps * 8) syncs.push_back(bestIdx);
+                    else syncs.back() = pend.back().syncEnd;
                 }
-            } else if (a > holdUntil && m > kSyncThr) {
+            } else if (m > kSyncThr && floor > 0) {
                 double E = 0;
                 for (int q = 0; q < kVdl3SyncSyms; q++) E += std::norm(z[(size_t)(r - kSps * q)]);
-                if (E / kVdl3SyncSyms > 3 * floor) {   // squelch: noise alone must not start a burst
+                if (E / kVdl3SyncSyms > 4 * floor) {   // squelch: noise alone must not start a burst
                     winLeft = kWin; bestM = m; bestIdx = a; bestD = fam ? D1 : D0; bestFam = fam;
                 }
             }
         }
-        for (size_t i = 0; i < pend.size();) {
-            const bool vd = pend[i].fam == 1 && pend[i].D.real() >= 0;
-            const int lmax = vd ? kMaxPayload : pend[i].fam == 1 ? 128 : 16;
-            if (a >= pend[i].syncEnd + (int64_t)kSps * (lmax + 10) + 2) {
-                decode(pend[i]);
-                pend.erase(pend.begin() + (long)i);
-            } else i++;
+        // in the order found, all with the lookahead of the longest burst, so a good burst masks the finds inside it
+        while (!pend.empty() && a >= pend.front().syncEnd + (int64_t)kSps * (kMaxPayload + 10) + 2 && (pend.size() > 1 || winLeft == 0)) {
+            const Pend p = pend.front();
+            pend.erase(pend.begin());
+            if (p.syncEnd > busyUntil) decode(p);
         }
         if (z.size() > 65536) {
             int64_t keep = (int64_t)z.size() - kSps * 40;
@@ -302,8 +317,11 @@ void Vdl3Receiver::reset() {
     p_->pend.clear();
     p_->syncs.clear();
     p_->winLeft = 0;
-    p_->holdUntil = -1;
+    p_->busyUntil = -1;
     p_->floor = 0;
+    p_->blkSum = 0;
+    p_->blkN = 0;
+    p_->blkMeans.clear();
     p_->rebuild = true;
     p_->tel.state = 0;
 }
