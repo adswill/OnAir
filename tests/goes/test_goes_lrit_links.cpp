@@ -40,10 +40,19 @@ static Res runGoes(double rate, double symRate, double rxSymRate, double snr, do
     return r;
 }
 
-static Res runElektro(int link, double rate, double snr, double cfo, double ppm, double seconds) {
+// synth: the app's Elektro test signal (makeElektroSynth, which sends the files once and then fill frames); otherwise the files in a loop
+static Res runElektro(int link, double rate, double snr, double cfo, double ppm, double seconds, bool synth = false) {
     SynthConfig sc;
     sc.snrDb = snr; sc.cfoHz = cfo; sc.sroPpm = ppm; sc.modeOpt[0] = link;
-    auto syn = makeElektroSynth(sc, rate);
+    std::unique_ptr<ModeSynth> syn;
+    std::unique_ptr<GoesGenerator> gen;
+    if (synth) syn = makeElektroSynth(sc, rate);
+    else {
+        GoesGenConfig g;
+        g.rate = rate; g.symbolRate = elektroSymbolRate(link); g.snrDb = snr; g.cfoHz = cfo; g.sroPpm = ppm; g.fillFrames = 4; g.seed = 9;
+        g.qpsk = g.oqpsk = link == 6;
+        gen = std::make_unique<GoesGenerator>(g);
+    }
     ElektroReceiver rx;
     rx.setLink(link);
     rx.configure(rate);
@@ -54,7 +63,7 @@ static Res runElektro(int link, double rate, double snr, double cfo, double ppm,
     uint64_t seq = 0;
     ElektroTelemetry et;
     for (double done = 0; done < seconds * rate; done += (double)buf.size()) {
-        syn->generate(buf.data(), buf.size());
+        if (syn) syn->generate(buf.data(), buf.size()); else gen->generate(buf.data(), buf.size());
         rx.feed(buf.data(), buf.size());
         if (rx.telemetry(et, seq)) { seq = et.hrit.seq; }
     }
@@ -101,6 +110,10 @@ int main() {
         const Res r = runElektro(e.link, e.rate, e.snr, e.cfo, e.ppm, e.secs);
         expectAll(e.name, r);
         CHECK(std::fabs(r.t.symbolRate - elektroSymbolRate(e.link)) < 0.002 * elektroSymbolRate(e.link), "%s: symbol rate %.0f", e.name, r.t.symbolRate);
+    }
+    {   // the app's test signal follows the link: it locks and decodes frames at the link's rate
+        const Res r = runElektro(5, 1.0e6, 10, 0, 0, 2.0, true);
+        CHECK(r.t.state == 3 && r.t.blocksOk > 20 && std::fabs(r.t.symbolRate - 294000) < 600, "Elektro test signal on the 294 ksym/s link: state %d, %llu frames", r.t.state, (unsigned long long)r.t.blocksOk);
     }
     // ---- noise sweep on the GOES LRIT link: the lowest Es/N0 that still brings every file
     if (longRun) {
