@@ -144,6 +144,24 @@ int main() {
     printf("  video: %zu objects, audio: %zu objects\n", got["v1"].size(), got["a1"].size());
     CHECK(vOk, "video objects in order");
     CHECK(aOk, "audio objects in order");
+    // corrupt offsets from the air (fuzz_parsers): a start offset near 4 GB once wrapped the 32-bit end and the copy wrote before the
+    // buffer; any large offset or EXT_TOL made the receiver allocate gigabytes. Such packets are dropped, and the open objects stay bounded.
+    {
+        RouteReceiver rx;
+        std::vector<RouteObject> done;
+        LctPacket p; p.tsi = 9; p.toi = 1; p.payload = blob(512);
+        p.startOffset = 0xFFFFFF00u; rx.push(p, done);
+        CHECK(rx.openBytes() == 0 && done.empty(), "wrapping offset dropped");
+        p.startOffset = 3000000000u; rx.push(p, done);
+        CHECK(rx.openBytes() == 0, "offset beyond the largest object dropped");
+        p.startOffset = 0; p.transferLength = 1ll << 40; rx.push(p, done);
+        CHECK(rx.openBytes() == 0, "EXT_TOL beyond the largest object dropped");
+        p.transferLength = -1;
+        for (uint32_t k = 0; k < 8; k++) { p.toi = 100 + k; p.startOffset = RouteReceiver::kMaxObjectBytes - 4096; p.payload = blob(4096); rx.push(p, done); }
+        CHECK(rx.openBytes() <= RouteReceiver::kMaxOpenBytes, "open objects bounded");
+        p.toi = 7; p.startOffset = 0; p.payload = blob(100); p.closeObject = true; rx.push(p, done);
+        CHECK(!done.empty() && done.back().toi == 7 && done.back().data.size() == 100, "a normal object still completes after the flood");
+    }
     printf(fails ? "atsc3 route: FAILED\n" : "atsc3 route: ok\n");
     return fails ? 1 : 0;
 }

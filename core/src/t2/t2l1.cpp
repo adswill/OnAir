@@ -527,34 +527,43 @@ L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, in
 }
 
 // ------------------------------------------------------------------ P2 distribution
+// (nPre and nPost come from a decoded L1-pre, so they are not trusted: a post size that is not a multiple of nP2, or more cells than the
+// P2 symbols hold, used to write past the end of `stream` (heap overflow found by fuzz_engine_modes). Every index is checked; a valid
+// signal gives the same cells as before.)
 void p2Distribute(const std::vector<cf32>& stream, int nP2, int cP2, int nPre, int nPost, std::vector<std::vector<cf32>>& sym) {
+    if (nP2 < 1 || cP2 < 0) { sym.clear(); return; }
     sym.assign(nP2, std::vector<cf32>(cP2, cf32(0, 0)));
     if (nP2 == 1) {
         for (int i = 0; i < cP2 && i < (int)stream.size(); i++) sym[0][i] = stream[i];
         return;
     }
-    auto at = [&](int j) { return j < (int)stream.size() ? stream[j] : cf32(0, 0); };
+    nPre = std::max(nPre, 0); nPost = std::max(nPost, 0);
+    auto at = [&](long j) { return j >= 0 && j < (long)stream.size() ? stream[(size_t)j] : cf32(0, 0); };
     for (int n = 0; n < nP2; n++) {
         int idx = 0;
-        for (int j = 0; j < nPre / nP2; j++) sym[n][idx++] = at(n + j * nP2);
-        for (int j = 0; j < nPost / nP2; j++) sym[n][idx++] = at(nPre + n + j * nP2);
+        for (int j = 0; j < nPre / nP2 && idx < cP2; j++) sym[n][idx++] = at(n + (long)j * nP2);
+        for (int j = 0; j < nPost / nP2 && idx < cP2; j++) sym[n][idx++] = at(nPre + n + (long)j * nP2);
     }
-    int rd = nPre + nPost;
+    long rd = (long)nPre + nPost;
     for (int n = 0; n < nP2; n++)
-        for (int idx = (nPre + nPost) / nP2; idx < cP2; idx++) sym[n][idx] = at(rd++);
+        for (int idx = (nPre / nP2 + nPost / nP2); idx < cP2; idx++) sym[n][idx] = at(rd++);
 }
 
 void p2Gather(const std::vector<std::vector<cf32>>& sym, int nP2, int cP2, int nPre, int nPost, std::vector<cf32>& stream) {
+    if (nP2 < 1 || cP2 < 0 || (int)sym.size() < nP2) { stream.clear(); return; }
     stream.assign((size_t)nP2 * cP2, cf32(0, 0));
-    if (nP2 == 1) { for (int i = 0; i < cP2; i++) stream[i] = sym[0][i]; return; }
+    const long total = (long)stream.size();
+    auto cell = [&](int n, int idx) { return idx < (int)sym[n].size() ? sym[n][idx] : cf32(0, 0); };
+    if (nP2 == 1) { for (int i = 0; i < cP2; i++) stream[i] = cell(0, i); return; }
+    nPre = std::max(nPre, 0); nPost = std::max(nPost, 0);
     for (int n = 0; n < nP2; n++) {
         int idx = 0;
-        for (int j = 0; j < nPre / nP2; j++) stream[n + j * nP2] = sym[n][idx++];
-        for (int j = 0; j < nPost / nP2; j++) stream[nPre + n + j * nP2] = sym[n][idx++];
+        for (int j = 0; j < nPre / nP2 && idx < cP2; j++) { const long k = n + (long)j * nP2; if (k < total) stream[k] = cell(n, idx); idx++; }
+        for (int j = 0; j < nPost / nP2 && idx < cP2; j++) { const long k = nPre + n + (long)j * nP2; if (k < total) stream[k] = cell(n, idx); idx++; }
     }
-    int rd = nPre + nPost;
+    long rd = (long)nPre + nPost;
     for (int n = 0; n < nP2; n++)
-        for (int idx = (nPre + nPost) / nP2; idx < cP2; idx++) stream[rd++] = sym[n][idx];
+        for (int idx = (nPre / nP2 + nPost / nP2); idx < cP2 && rd < total; idx++) stream[rd++] = cell(n, idx);
 }
 
 } // namespace dect2

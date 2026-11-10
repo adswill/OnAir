@@ -1202,9 +1202,9 @@ struct HfdigFtx::Impl {
     struct AutoChild { std::unique_ptr<HfdigFtx> d; int mode, sub; double period; uint64_t seen; };
     std::vector<AutoChild> autoKids;
     uint32_t autoBuilt = 0;
-    int autoSubFound[kFtxModes];
-    double autoPerFound[kFtxModes];
-    bool autoFound[kFtxModes];
+    int autoSubFound[kFtxModes] = {};
+    double autoPerFound[kFtxModes] = {};
+    bool autoFound[kFtxModes] = {};   // (read by telemetry() before the first auto search: uninitialised bools are UB, found by fuzz_engine_modes)
     int64_t autoScanAt = 0;
     void autoBuild(HfdigFtx& self, uint32_t mask);
     void autoScan();

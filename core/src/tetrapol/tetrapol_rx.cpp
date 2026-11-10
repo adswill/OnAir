@@ -620,7 +620,8 @@ struct TetrapolReceiver::Impl {
             if (tsym < kSps / 2 + 3) { tsym += kSps; continue; }
             const float s = soft(tsym), se = soft(tsym - 2), sl = soft(tsym + 2);
             const float ae = std::fabs(se), al = std::fabs(sl);
-            const float err = (al - ae) / (ae + al + 1e-9f);
+            float err = (al - ae) / (ae + al + 1e-9f);
+            if (!std::isfinite(err)) err = 0;   // a NaN here reached the cast of tsym below (UBSan, fuzz_engine_modes)
             raw.push_back(s < 0.f ? 1 : 0);
             rawRel.push_back(std::fabs(s));
             const float a = std::fabs(s);

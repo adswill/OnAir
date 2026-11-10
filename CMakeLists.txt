@@ -2556,6 +2556,18 @@ if(DECT2_BUILD_TESTS)
   add_executable(fuzz_rx tests/bench/fuzz_rx.cpp)
   target_link_libraries(fuzz_rx PRIVATE dect2core)
   add_test(NAME fuzz_rx COMMAND fuzz_rx)
+  # every mode through the engine under malformed input, IQ and lifecycle (tests/fuzz/fuzz_engine_modes.cpp; a child process per mode), and the
+  # C++ byte parsers without a fuzz_<mode>_proto of their own; both meant for DECT2_SANITIZE=ON (the engine run takes long: label slow)
+  add_executable(fuzz_engine_modes tests/fuzz/fuzz_engine_modes.cpp)
+  target_link_libraries(fuzz_engine_modes PRIVATE dect2core)
+  add_test(NAME fuzz_engine_modes COMMAND fuzz_engine_modes)
+  set_tests_properties(fuzz_engine_modes PROPERTIES LABELS slow TIMEOUT 7200 ENVIRONMENT "DECT2_MUTE=1;DECT2_NOPACE=1")
+  add_executable(fuzz_parsers tests/fuzz/fuzz_parsers.cpp)
+  target_link_libraries(fuzz_parsers PRIVATE dect2core)
+  add_test(NAME fuzz_parsers COMMAND fuzz_parsers)
+  add_executable(test_sample_guard tests/fuzz/test_sample_guard.cpp)   # the engine's input guard against NaN, infinity and huge float samples
+  target_include_directories(test_sample_guard PRIVATE core/include)
+  add_test(NAME sample_guard COMMAND test_sample_guard)
 
   # AIS frame layer (Rust, the generator side in C++): golden-vector test, standalone like the fuzz run below
   add_executable(test_ais_proto_rs tests/ais/test_ais_proto_rs.cpp core/src/ais/ais_proto.cpp core/src/ais/ais_proto_rs.cpp)
