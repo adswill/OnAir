@@ -8,6 +8,7 @@
 #include "videogen_params.h"
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <string>
 #include <vector>
@@ -18,7 +19,7 @@ namespace dect2::vgen {
 // T2Generator carries in its real PLP), drawn at the output resolution (drawTestCard); text goes on it with the overlay
 enum class Source { Camera, Picture, VideoFile, Generator };
 enum class AudioSource { Silence, Tone, FromFile, Microphone, AudioFile };   // AudioFile: your own sound file (or folder), see audioPath
-enum class Output { File, Udp, Rtp };
+enum class Output { File, Udp, Rtp, Transmitter };   // Transmitter: the transport stream waits in a queue for the transmitter (generatorSpec(instanceId))
 enum class Fit { Stretch, Letterbox, Crop };
 
 struct GenConfig {
@@ -33,6 +34,8 @@ struct GenConfig {
     std::string micId;                 // empty = the default input
     double toneHz = 1000;
     Output output = Output::File;
+    int instanceId = 1;                // 1..kMaxInstances: which generator this is (several run at once); names its queue for the transmitter
+    std::string ffmpegArgs;            // free-text encoder options ("-preset slow -tune zerolatency -x264-params keyint=50"): see parseEncoderArgs; empty = none
     std::string tsPath;                // File
     std::string host = "127.0.0.1";    // Udp / Rtp: where to send (unicast or multicast)
     int port = 5000;
@@ -81,6 +84,29 @@ std::string vlcOpenUrl(Output o, const std::string& host, int port);
 bool isMulticast(const std::string& host);
 // The length of a video file in seconds, 0 when FFmpeg cannot tell
 double mediaSeconds(const std::string& path);
+
+// ---- several generators, and the transmitter ----
+// Each running generator (instanceId 1..kMaxInstances) with Output::Transmitter queues its transport stream; the transmitter takes it as the
+// "video file" generatorSpec(id) = "generator:N" (digital TV standards: generatorTsSource; analog TV: the picture, through setGeneratorFrameSink).
+constexpr int kMaxInstances = 8;
+std::string generatorSpec(int id);
+bool parseGeneratorSpec(const std::string& s, int& id);             // "generator:3" -> 3
+bool generatorTsSource(int id, std::function<void(uint8_t*)>& out);   // fills one 188 byte packet: the next queued one, else a null packet
+size_t generatorQueued(int id);                                      // packets waiting
+void generatorPush(int id, const uint8_t* packets, size_t n);        // (the generator) n whole packets; the oldest go when the queue is full
+void generatorClear(int id);
+using FrameSink = std::function<void(int w, int h, const uint8_t* rgb24)>;
+void setGeneratorFrameSink(int id, FrameSink s);                     // the picture of every frame, RGB 8 bit packed; an empty function removes it
+bool generatorHasFrameSink(int id);
+void generatorPublishFrame(int id, int w, int h, const uint8_t* rgb24);
+
+// ---- free-text FFmpeg arguments ----
+// Split into an argument list (quotes group, nothing is expanded or run: there is no shell anywhere).
+std::vector<std::string> splitArgs(const std::string& text, std::string& err);
+struct ArgOpt { std::string key, value; };
+// "-key value" pairs for the video encoder (-b:v is b). False with err for a stray word, a missing value, a stream specifier, an option that
+// would change the input, output, container, codec, filters or hardware set-up, or a value that names a file or pipe.
+bool parseEncoderArgs(const std::string& text, std::vector<ArgOpt>& out, std::string& err);
 
 class VideoGenerator {
 public:

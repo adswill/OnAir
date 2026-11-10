@@ -24,7 +24,7 @@ Rules kept: an automatic action runs at most once and is remembered, only while 
 
 ## Data sources and what is not verified
 
-- **Repeater lists:** nothing is bundled or fetched. RepeaterBook's terms need written permission for bulk use and redistribution. Open Repeater advertises CC0 but its terms forbid commercial redistribution without permission. RadioID's terms could not be read. So the user imports their own CSV. A one-click download needs the owner to pick a source and clear its terms.
+- **Repeater lists:** nothing is bundled. Since the ISSUES3 work "Repeaters near me" can also download from Open Repeater on request (user's own API key; see docs/ISSUES3-3.8.md for the terms) next to the CSV import. RepeaterBook's terms need written permission for bulk use and redistribution, and RadioID's terms could not be read, so neither is used.
 - **NAVTEX table:** from the Wikipedia "List of Navtex stations", which flags its own missing citations. Oostende and Piombino on 490 kHz are left out because no position is listed. The Cullercoats 490 kHz longitude is corrected to west.
 - **E22 country lists** are from general knowledge of who uses each standard, not from a checked register. A missing country only shows the tag; the mode stays usable.
 - **Sonde times** are a rule of thumb; sites differ.

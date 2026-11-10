@@ -3,6 +3,7 @@
 //   dect2cli --list-devices   (index, driver, name, serial and antenna of every radio found, then exit)
 //   dect2cli --device <index|serial|name part> [--antenna A|B|...] ...   (a radio other than the first: "--device 171007A210 --antenna A", "--device \"RSP2 antenna A\"", "--device 1"; --hackrf stays as it was)
 //   dect2cli --file path.cs8 --rate Msps [--format cs8|cu8|cf32] [--bw MHz] [--secs N]
+//   dect2cli ... --rate Msps   (a live radio too: the radio runs at that rate instead of the mode's own; capped at the radio's maximum)
 //   dect2cli ... --net-radio rtltcp,192.168.2.197,1234   (a radio on the network instead of the first one plugged in)
 //   dect2cli ... --record out.cs8|out.cf32|folder|auto --secs N   (any radio or --synthetic, not --file: saves the radio's raw samples at its own
 //     rate while receiving, for N seconds, and prints the size; a folder or "auto" (the current folder) gets a name like
@@ -17,6 +18,7 @@
 #include "dect2/ais/ais_proto.h"
 #include "dect2/wifi/wifi_proto.h"
 #include "dect2/engine/rate_choice.h"
+#include "dect2/mesh/mesh_rx.h"
 #include "dect2/ble/ble_proto.h"
 #include "dect2/engine/engine.h"
 #include "dect2/flarm/flarm_proto.h"
@@ -204,10 +206,17 @@ int main(int argc, char** argv) {
             // DVB-T/T2 is natively 64/7 Msps per 8 MHz: a PlutoSDR can run exactly that, which saves the receiver its resampler; on its USB
             // cable above the 4 Msps the cable carries when the channel needs it (linkRateFor), with the note why
             if (dev.kind == DeviceInfo::Native && dev.board == "pluto" && standard <= 2 && tune.bandwidthMhz >= 5) tune.sampleRate = dvbNativeRate(tune.bandwidthMhz);
-            tune.sampleRate = linkRateFor(dev, tune, tune.sampleRate, minSampleRateFor(standard, tune.bandwidthMhz));
+            if (rateSet) tune.sampleRate = dev.maxRateHz > 0 ? std::min(file.sampleRate, dev.maxRateHz) : file.sampleRate;   // --rate: the user's rate wins over the mode's choice
+            else {
+                if (const double r = standard == 22 ? meshRtlRateHz(dev.board, 250e3) : 0; r > 0) { tune.sampleRate = r; tune.basebandFilterHz = 0.45 * r; }   // Mesh on an RTL-SDR (#386)
+                tune.sampleRate = linkRateFor(dev, tune, tune.sampleRate, minSampleRateFor(standard, tune.bandwidthMhz));
+            }
             if (const std::string n = linkNote(dev, tune, tune.sampleRate); !n.empty()) printf("note: %s\n", n.c_str());
             if (tune.gainDb == 30) tune.gainDb = std::max(dev.gainMinDb, dev.gainMaxDb * 0.6);   // a sensible start; --gain overrides
             printf("radio: up to %.2f Msps, gain %.0f..%.0f dB, using %.2f Msps / %.0f dB\n", dev.maxRateHz / 1e6, dev.gainMinDb, dev.gainMaxDb, tune.sampleRate / 1e6, tune.gainDb);
+        } else if (rateSet) {   // a HackRF: --rate sets its rate too
+            tune.sampleRate = dev.maxRateHz > 0 ? std::min(file.sampleRate, dev.maxRateHz) : file.sampleRate;
+            printf("radio: using %.2f Msps (--rate)\n", tune.sampleRate / 1e6);
         }
     }
     (void)haveDev;

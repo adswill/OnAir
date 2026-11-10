@@ -7,6 +7,7 @@ extern "C" {
 #include <libswscale/swscale.h>
 }
 #include "dect2/atv/atv_std.h"
+#include "dect2/tv/videogen.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -132,7 +133,15 @@ bool VideoIn::start(Kind k, const std::string& pathOrDevice, std::string& err) {
     p_->seq = 0;
     p_->w = p_->h = 0;
     p_->rgb.clear();
+    p_->genId = 0;
     if (k == File) {
+        if (int gid = 0; vgen::parseGeneratorSpec(pathOrDevice, gid)) {   // the Digital video generator of that number, while it sends to the transmitter
+            p_->genId = gid;
+            Impl* impl = p_.get();
+            vgen::setGeneratorFrameSink(gid, [impl](int w, int h, const uint8_t* rgb) { impl->setRgb(w, h, rgb); });
+            running_ = true;
+            return true;
+        }
         if (pathOrDevice.empty()) { err = "choose a video file"; return false; }
         if (!openFileLoop(p_.get(), pathOrDevice, err)) return false;
         running_ = true;
@@ -149,6 +158,7 @@ bool VideoIn::start(Kind k, const std::string& pathOrDevice, std::string& err) {
 
 void VideoIn::stop() {
     p_->stop = true;
+    if (p_->genId > 0) { vgen::setGeneratorFrameSink(p_->genId, {}); p_->genId = 0; }
     videoInCameraStop(p_.get());
     if (p_->fileTh.joinable()) p_->fileTh.join();
     running_ = false;
@@ -156,7 +166,7 @@ void VideoIn::stop() {
 }
 
 void VideoIn::setClock(double seconds, int waitMs) {
-    if (kind_ != File || !(seconds >= 0)) return;
+    if (kind_ != File || !(seconds >= 0) || p_->genId > 0) return;
     p_->clock = seconds;
     std::unique_lock<std::mutex> lk(p_->mu);
     p_->cv.notify_all();

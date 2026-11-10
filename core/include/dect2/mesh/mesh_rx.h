@@ -7,6 +7,7 @@
 #include "mesh_tel.h"
 #include "mesh_proto.h"
 #include "dect2/common/ring.h"
+#include <cmath>
 #include <functional>
 #include <memory>
 #include <string>
@@ -27,6 +28,7 @@ public:
     bool telemetry(MeshTelemetry& out, uint64_t lastSeq);
     // The packet list, nodes, messages, APRS stations and LoRaWAN devices stay through reset(), configure() and retunes: only clearResults() empties them
     void clearResults();
+    uint64_t framesWithJumpsFixed() const;               // frames since the start of the program whose CRC came right only after undoing sample jumps (any thread)
     std::string saveResults() const;                     // for the results file (results_io.h)
     bool loadResults(const std::string& blob);           // false: not this build's format, nothing changes
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
@@ -56,5 +58,18 @@ private:
 };
 
 ModeTuning meshTuning();
+
+// Does a channel of bwHz, inOffHz from 0 Hz in the input, get a demodulator at this input rate? (The receiver's own rule.)
+inline bool meshChannelFits(double rateHz, double inOffHz, double bwHz) {
+    return std::fabs(inOffHz) + 0.5 * bwHz + 25e3 < 0.45 * rateHz && rateHz >= 2.2 * bwHz;
+}
+// An RTL-SDR (USB or rtl_tcp) drops samples at 2.048 Msps, which breaks frames of a long LoRa symbol (issue #386); a channel that fits
+// in 1.024 Msps loses none there. Returns that rate when the board is an RTL-SDR and the channel, placed where the mode's tune offset
+// puts it, fits (250 kHz and narrower do, 500 kHz does not); 0 = the usual rate. Other radios keep the mode's 2 Msps.
+inline double meshRtlRateHz(const std::string& board, double bwHz) {
+    constexpr double kRate = 1.024e6;
+    if (board != "rtlsdr" && board != "rtltcp") return 0;
+    return bwHz > 0 && meshChannelFits(kRate, -meshTuning().tuneOffsetHz, bwHz) ? kRate : 0;
+}
 
 } // namespace dect2

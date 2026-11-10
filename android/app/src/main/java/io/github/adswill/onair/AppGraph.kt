@@ -12,6 +12,7 @@ object AppGraph {
     lateinit var app: Application
         private set
     val settings: SettingsStore by lazy { SettingsStore(app) }
+    val updates: io.github.adswill.onair.update.UpdateManager by lazy { io.github.adswill.onair.update.UpdateManager(app, settings) }
     val repository: ReceiverRepository by lazy { ReceiverRepository(app, settings) }
 
     fun init(application: Application) { app = application }

@@ -4,6 +4,10 @@
 #include "dect2/inmsat/inmsat_satid.h"
 #include "i18n/i18n.h"
 #include "dect2/ease/repeaters.h"
+#include "dect2/engine/updater.h"
+#include <atomic>
+#include <thread>
+#include <mutex>
 #include "dect2/audio/audioout.h"
 #include "dect2/ease/nit.h"
 #include "platform/platform.h"
@@ -85,9 +89,83 @@ bool autoBandControl(App& a, const char* prefKey, uint64_t decoded) {
 
 namespace {
 namespace fs = std::filesystem;
-struct RepList { bool loaded = false; std::vector<dect2::ease::Repeater> rows; std::string msg; };
+struct RepList { bool loaded = false; std::vector<dect2::ease::Repeater> rows; std::string msg; bool fromOr = false; };
 RepList gRep;
 std::string repPath() { return plat::dataDir() + "/repeaters/list.csv"; }
+std::string orCachePath() { return plat::dataDir() + "/repeaters/openrepeater.json"; }   // the downloaded copy (CC0 data from openrepeater.org)
+std::string orKeyPath() { return plat::dataDir() + "/repeaters/openrepeater.key"; }      // the user's own API key
+std::string readAll(const std::string& path) {
+    std::ifstream in(fs::u8path(path), std::ios::binary);
+    std::stringstream ss; ss << in.rdbuf();
+    return ss.str();
+}
+bool writeAll(const std::string& path, const std::string& data) {
+    std::error_code ec; fs::create_directories(fs::u8path(path).parent_path(), ec);
+    std::ofstream o(fs::u8path(path), std::ios::binary | std::ios::trunc);
+    o << data; return (bool)o;
+}
+// Open Repeater download on request: the user's own API key, 30 requests a day per key, so one request per click (up to 3 pages) and a cache
+struct OrJob { std::atomic<bool> busy{false}; std::mutex mu; std::string result, err; bool done = false; std::thread th; };
+OrJob gOr;
+char gKey[96] = {};
+bool gKeyLoaded = false;
+std::string cachedStamp() {
+    std::error_code ec; const auto t = fs::last_write_time(fs::u8path(orCachePath()), ec);
+    if (ec) return "";
+    const auto sc = std::chrono::time_point_cast<std::chrono::system_clock::duration>(t - fs::file_time_type::clock::now() + std::chrono::system_clock::now());
+    const std::time_t tt = std::chrono::system_clock::to_time_t(sc);
+    char b[32]; std::strftime(b, sizeof b, "%Y-%m-%d", std::localtime(&tt));
+    return b;
+}
+void orStart(double lat, double lon, std::string key) {
+    if (gOr.busy.exchange(true)) return;
+    if (gOr.th.joinable()) gOr.th.join();
+    { std::lock_guard<std::mutex> lk(gOr.mu); gOr.done = false; gOr.err.clear(); gOr.result.clear(); }
+    gOr.th = std::thread([lat, lon, key] {
+        std::string all = "[", err;
+        const int limit = 100; int total = 0;
+        std::atomic<bool> never{false};
+        for (int page = 1; page <= 3; page++) {
+            std::string body;
+            const int rc = dect2::curlRun({"-sS", "-L", "--max-time", "30", "--max-filesize", "4000000", "--max-redirs", "3", "--proto", "=https", "--proto-redir", "=https",
+                                           "-H", "X-API-Key: " + key, "-H", "Accept: application/json", "-w", "\n%{http_code}",
+                                           dect2::ease::openRepeaterSearchUrl(lat, lon, 300, page, limit)}, &body, never);
+            const size_t nl = body.rfind('\n');
+            const std::string code = nl == std::string::npos ? "" : body.substr(nl + 1);
+            if (nl != std::string::npos) body.resize(nl);
+            if (rc != 0) { err = "could not reach openrepeater.org"; break; }
+            if (code == "429") { err = "Open Repeater's daily limit for this key (30 requests) is used up; try again after midnight UTC"; break; }
+            if (code == "401" || code == "403") { err = "Open Repeater did not accept the API key"; break; }
+            int skipped = 0; std::string perr;
+            const auto rows = dect2::ease::parseOpenRepeaterJson(body, skipped, perr);
+            if (!perr.empty()) { err = "Open Repeater: " + perr; break; }
+            // keep the rows as a plain array of the fields the list uses
+            for (const auto& r : rows) {
+                char b[64]; snprintf(b, sizeof b, "{\"frequency\":%.6f,\"lat\":%.5f,\"lng\":%.5f,", r.mhz, r.lat, r.lon);
+                auto esc = [](const std::string& x) { std::string o; for (char c : x) { if (c == '"' || c == '\\') { o += '\\'; o += c; } else if ((unsigned char)c >= 32) o += c; } return o; };
+                if (total++) all += ",";
+                all += std::string(b) + "\"callsign\":\"" + esc(r.call) + "\",\"city\":\"" + esc(r.where) + "\",\"mode\":\"" + esc(r.mode) + "\"}";
+            }
+            if ((int)rows.size() + skipped < limit) break;
+        }
+        all += "]";
+        std::lock_guard<std::mutex> lk(gOr.mu);
+        if (err.empty() && total == 0) err = "Open Repeater listed no repeaters within 300 km";
+        gOr.err = err; gOr.result = err.empty() ? all : std::string(); gOr.done = true;
+        gOr.busy = false;
+    });
+}
+bool orRead() {
+    const std::string t = readAll(orCachePath());
+    if (t.empty()) return false;
+    int skipped = 0; std::string err;
+    auto v = dect2::ease::parseOpenRepeaterJson(t, skipped, err);
+    if (!err.empty() || v.empty()) return false;
+    gRep.rows = std::move(v); gRep.fromOr = true;
+    char b[128]; snprintf(b, sizeof b, tr("%d repeaters from Open Repeater, downloaded %s"), (int)gRep.rows.size(), cachedStamp().c_str());
+    gRep.msg = b;
+    return true;
+}
 bool repRead(const std::string& path) {
     std::ifstream in(fs::u8path(path), std::ios::binary);
     if (!in) return false;
@@ -95,7 +173,7 @@ bool repRead(const std::string& path) {
     int skipped = 0; std::string err;
     auto v = dect2::ease::parseRepeaterCsv(ss.str(), skipped, err);
     if (!err.empty()) { gRep.msg = err; return false; }
-    gRep.rows = std::move(v);
+    gRep.rows = std::move(v); gRep.fromOr = false;
     char b[96]; snprintf(b, sizeof b, tr("%d repeaters, %d rows skipped"), (int)gRep.rows.size(), skipped);
     gRep.msg = b;
     return true;
@@ -103,7 +181,21 @@ bool repRead(const std::string& path) {
 }
 
 void repeaterPicker(App& a, const char* mode) {
-    if (!gRep.loaded) { gRep.loaded = true; std::error_code ec; if (fs::exists(fs::u8path(repPath()), ec)) repRead(repPath()); }
+    if (!gRep.loaded) {   // the cached download or the imported CSV, whichever is newer
+        gRep.loaded = true; std::error_code ec;
+        const bool hasCsv = fs::exists(fs::u8path(repPath()), ec), hasOr = fs::exists(fs::u8path(orCachePath()), ec);
+        const bool orNewer = hasOr && (!hasCsv || fs::last_write_time(fs::u8path(orCachePath()), ec) > fs::last_write_time(fs::u8path(repPath()), ec));
+        if (orNewer) { if (!orRead() && hasCsv) repRead(repPath()); } else if (hasCsv) repRead(repPath());
+    }
+    if (!gKeyLoaded) { gKeyLoaded = true; std::string k = readAll(orKeyPath()); while (!k.empty() && isspace((unsigned char)k.back())) k.pop_back(); snprintf(gKey, sizeof gKey, "%s", k.c_str()); }
+    {   // a finished download: keep the copy and use it
+        std::lock_guard<std::mutex> lk(gOr.mu);
+        if (gOr.done) {
+            gOr.done = false;
+            if (!gOr.err.empty()) gRep.msg = gOr.err;
+            else if (writeAll(orCachePath(), gOr.result)) orRead();
+        }
+    }
     const std::string pid = std::string("##rep") + mode;
     if (ImGui::SmallButton(tr("Repeaters near me"))) ImGui::OpenPopup(pid.c_str());
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Lists the repeaters closest to your position from a list you import. Clicking one tunes to it."));
@@ -116,10 +208,22 @@ void repeaterPicker(App& a, const char* mode) {
             fs::copy_file(fs::u8path(p), fs::u8path(repPath()), fs::copy_options::overwrite_existing, ec);
         }
     }
-    if (!gRep.msg.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", gRep.msg.c_str()); }
+    ImGui::SameLine();
+    {
+        double la = 0, lo = 0; const bool have = receiverLocationSet(); if (have) receiverLocation(la, lo);
+        const bool busy = gOr.busy.load();
+        ImGui::BeginDisabled(busy || !have || !gKey[0]);
+        if (ImGui::SmallButton(busy ? tr("Downloading...") : tr("Download from Open Repeater"))) { orStart(la, lo, gKey); }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Downloads the repeaters within 300 km of your position from openrepeater.org (CC0 data) with your own API key (free account, 30 requests a day), and keeps a copy on this computer. Needs your position (View > Map) and the key below."));
+        ImGui::SetNextItemWidth(260 * gUi);
+        if (ImGui::InputTextWithHint("##orkey", tr("Open Repeater API key"), gKey, sizeof gKey, ImGuiInputTextFlags_Password)) writeAll(orKeyPath(), gKey);
+        ImGui::TextDisabled("%s", tr("Repeater data: Open Repeater (openrepeater.org), CC0. Your key and the list stay on this computer; nothing is bundled."));
+    }
+    if (!gRep.msg.empty()) ImGui::TextDisabled("%s", gRep.msg.c_str());
     if (gRep.rows.empty()) {
         ImGui::PushTextWrapPos(380 * gUi);
-        ImGui::TextDisabled("%s", tr("OnAir ships no repeater list. Export one as CSV from a repeater directory you use (columns for the output frequency and the position), and import it here. It stays on this computer."));
+        ImGui::TextDisabled("%s", tr("OnAir ships no repeater list. Download one from Open Repeater with your own free API key, or export a CSV from a repeater directory you use (columns for the output frequency and the position) and import it here. It stays on this computer."));
         ImGui::PopTextWrapPos();
     } else if (!receiverLocationSet()) {
         ImGui::TextDisabled("%s", tr("Set your position (View > Map) to see the ones near you."));

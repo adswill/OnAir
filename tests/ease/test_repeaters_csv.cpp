@@ -37,5 +37,21 @@ int testRepeaters() {
     auto c = parseRepeaterCsv("freq,lat,lon,cc\n438.1,54,25,99\n", skipped, err);
     CHECK(c.size() == 1); CHECK(c[0].colourCode == -1);
     CHECK(c[0].mode.empty()); CHECK(repeaterMatchesMode(c[0], "DMR"));
+
+    // Open Repeater answers: {"data":[...]}, a bare array, strings or numbers, MHz / kHz / Hz, bad rows, an error answer
+    auto o = parseOpenRepeaterJson("{\"data\":[{\"callsign\":\"LY1AA\",\"frequency\":\"438.200\",\"city\":\"Vilnius \\u0161\",\"lat\":54.69,\"lng\":25.28,\"mode\":\"DMR\"},"
+                                   "{\"callsign\":\"B\",\"frequency\":145650,\"lat\":\"54.9\",\"lng\":\"23.9\",\"mode\":\"D-STAR\"},"
+                                   "{\"callsign\":\"C\",\"frequency\":439100000,\"lat\":56.95,\"lng\":24.11},"
+                                   "{\"callsign\":\"D\",\"frequency\":438.1,\"lat\":null,\"lng\":1},{\"callsign\":\"E\",\"frequency\":438.1,\"lat\":0,\"lng\":0},{\"callsign\":\"F\"},7],\"page\":1}", skipped, err);
+    CHECK(err.empty()); CHECK(o.size() == 3); CHECK(skipped == 4);
+    CHECK(o[0].call == "LY1AA" && o[0].mhz == 438.2 && o[0].mode == "DMR" && o[0].where.size() > 7);
+    CHECK(o[1].mhz > 145.64 && o[1].mhz < 145.66 && o[1].lat == 54.9); CHECK(o[2].mhz > 439.09 && o[2].mhz < 439.11);
+    CHECK(nearestRepeaters(o, "DMR", 54.7, 25.3).size() == 2);   // the DMR one and the one with no mode text
+    CHECK(parseOpenRepeaterJson("[{\"frequency\":433.5,\"lat\":1,\"lng\":2}]", skipped, err).size() == 1);
+    CHECK(parseOpenRepeaterJson("{\"error\":\"daily limit reached\"}", skipped, err).empty() && err == "daily limit reached");
+    CHECK(parseOpenRepeaterJson("<html>", skipped, err).empty() && !err.empty());
+    CHECK(parseOpenRepeaterJson("{\"data\":[", skipped, err).empty() && !err.empty());
+    CHECK(parseOpenRepeaterJson("{\"data\":[]}", skipped, err).empty() && err.empty());
+    CHECK(openRepeaterSearchUrl(54.6872, 25.2797, 300, 0, 100) == "https://www.openrepeater.org/api/v1/search?lat=54.6872&lng=25.2797&radius=300&page=1&limit=100");
     return fails;
 }

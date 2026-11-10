@@ -190,7 +190,7 @@ void packetTable(const App& a) {
         static std::string note;
         resexp::Table x;
         x.cols = {"time", "frequency_hz", "mode", "type", "from", "to", "channel", "bytes", "decrypted", "hop_limit", "hop_start", "snr_db", "level_dbfs", "sf", "bw_hz",
-                  "detail", "raw", "packet_id", "relay_node", "next_hop", "via_mqtt", "cfo_hz"};
+                  "detail", "raw", "packet_id", "relay_node", "next_hop", "via_mqtt", "cfo_hz", "jumps_fixed"};
         const double now = dect2::timesrc::wallNow();
         for (const dect2::MeshPacket& p : t.packets) {
             const double ep = meshEpochOf(t, p.unixTime, p.timeSec, now);
@@ -204,18 +204,18 @@ void packetTable(const App& a) {
             x.add({meshTime(ep), resexp::num(p.freqHz, 0), protoName(p.protocol), p.crcOk ? p.type : "CRC error", p.from, p.to, p.channel, std::to_string(p.size),
                    p.decrypted ? "yes" : "no", p.hopLimit >= 0 ? std::to_string(p.hopLimit) : "", p.hopStart >= 0 ? std::to_string(p.hopStart) : "",
                    resexp::num(p.snrDb, 1), resexp::num(p.levelDb, 1), std::to_string(p.sf), resexp::num(p.bwHz, 0), p.detail.empty() ? p.note : p.detail, p.raw,
-                   pid, rel, nxt, mt ? (p.viaMqtt ? "yes" : "no") : "", resexp::num(p.cfoHz, 0)}, ep);
+                   pid, rel, nxt, mt ? (p.viaMqtt ? "yes" : "no") : "", resexp::num(p.cfoHz, 0), std::to_string(p.jumpsFixed)}, ep);
         }
         resexp::saveButton(x, "mesh-packets", note, "svmp");
         if (!note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", note.c_str()); }
     }
     ImGui::Checkbox("raw payload", &S.rawView);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Show the frame's bytes as text (other bytes as \\xNN) in the last column, for LoRa APRS, MeshCom\nand frames that did not parse. Hover a row's last column to see it either way.");
-    if (!ImGui::BeginTable("##mp", 11, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    if (!ImGui::BeginTable("##mp", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
     ImGui::TableSetupScrollFreeze(0, 1);
     ImGui::TableSetupColumn("Time"); ImGui::TableSetupColumn("Net"); ImGui::TableSetupColumn("Type"); ImGui::TableSetupColumn("From"); ImGui::TableSetupColumn("To");
     ImGui::TableSetupColumn("Bytes"); ImGui::TableSetupColumn("Content"); ImGui::TableSetupColumn("Hops"); ImGui::TableSetupColumn("SNR dB");
-    ImGui::TableSetupColumn("SF / BW"); ImGui::TableSetupColumn("Detail", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn("SF / BW"); ImGui::TableSetupColumn("Jumps"); ImGui::TableSetupColumn("Detail", ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     if (on) {
         for (size_t i = t.packets.size(); i-- > 0;) {
@@ -239,6 +239,9 @@ void packetTable(const App& a) {
             else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); ImGui::Text("%.1f", p.snrDb);
             ImGui::TableNextColumn(); ImGui::Text("%d / %.1f", p.sf, p.bwHz / 1e3);
+            ImGui::TableNextColumn();
+            if (p.jumpsFixed > 0) ImGui::TextColored(pal::warnAmber(), "%d", p.jumpsFixed); else ImGui::TextDisabled("0");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Sample jumps undone to get the CRC right: the radio dropped samples inside this frame. 0 = none."));
             ImGui::TableNextColumn();
             if (S.rawView && !p.raw.empty()) { ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(p.raw.c_str()); ImGui::PopFont(); }
             else ImGui::TextUnformatted(p.detail.c_str());

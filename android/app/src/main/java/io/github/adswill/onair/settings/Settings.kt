@@ -68,6 +68,14 @@ data class Settings(
     val netDiscovery: Boolean = false,
     /** Verbose logging (3.5): USB transfer counts, bytes/s, stall restarts, frame times into the log. Off unless the user turns it on. */
     val verboseLog: Boolean = false,
+    /** In-app update (3.8, issue #183): check GitHub's latest release at start. On by default; it sends one HTTPS request to api.github.com. */
+    val updateCheck: Boolean = true,
+    /** Where to ask: 0 automatic (GitHub), 1 GitHub only, 2 the mirror only (the desktop's setting of the same name). */
+    val updateSource: Int = 0,
+    /** Automatic: also try the mirror when GitHub cannot be reached. Off until the user turns it on. */
+    val updateMirrorOn: Boolean = false,
+    /** The mirror's address ({url} is replaced by the GitHub address). Only contacted when the user chose the mirror. */
+    val updateMirror: String = "https://mirror.on-air.dev/{url}",
 ) {
     fun freqFor(modeIndex: Int, def: Double): Double = freqMhz[modeIndex]?.takeIf { it > 0 } ?: def
     fun radioFor(kind: Int): RadioOptions = radio[SourceKind.of(kind)] ?: RadioOptions("")
@@ -118,6 +126,10 @@ class SettingsStore(ctx: Context) {
         val netSelected = intPreferencesKey("netSelected")
         val netDiscovery = booleanPreferencesKey("netDiscovery")
         val verboseLog = booleanPreferencesKey("verboseLog")
+        val updateCheck = booleanPreferencesKey("updateCheck")
+        val updateSource = intPreferencesKey("updateSource")
+        val updateMirrorOn = booleanPreferencesKey("updateMirrorOn")
+        val updateMirror = stringPreferencesKey("updateMirror")
         fun freq(mode: Int) = stringPreferencesKey("f.$mode")
         fun radio(kind: SourceKind) = stringPreferencesKey("radio.${kind.code}")
     }
@@ -168,6 +180,10 @@ class SettingsStore(ctx: Context) {
             netSelected = p[K.netSelected] ?: d.netSelected,
             netDiscovery = p[K.netDiscovery] ?: d.netDiscovery,
             verboseLog = p[K.verboseLog] ?: d.verboseLog,
+            updateCheck = p[K.updateCheck] ?: d.updateCheck,
+            updateSource = p[K.updateSource] ?: d.updateSource,
+            updateMirrorOn = p[K.updateMirrorOn] ?: d.updateMirrorOn,
+            updateMirror = p[K.updateMirror] ?: d.updateMirror,
         )
     }
 
@@ -213,6 +229,10 @@ class SettingsStore(ctx: Context) {
         put(K.netSelected, s.netSelected, old.netSelected)
         put(K.netDiscovery, s.netDiscovery, old.netDiscovery)
         put(K.verboseLog, s.verboseLog, old.verboseLog)
+        put(K.updateCheck, s.updateCheck, old.updateCheck)
+        put(K.updateSource, s.updateSource, old.updateSource)
+        put(K.updateMirrorOn, s.updateMirrorOn, old.updateMirrorOn)
+        put(K.updateMirror, s.updateMirror, old.updateMirror)
         p[K.schema] = SCHEMA
         for ((m, f) in s.freqMhz) if (old.freqMhz[m] != f) p[K.freq(m)] = f.toString()
         for ((k, r) in s.radio) if (old.radio[k] != r) p[K.radio(k)] = r.encoded

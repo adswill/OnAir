@@ -16,6 +16,7 @@ KEEP long av_channel_layout_default(void) { return -1; }
 KEEP long av_channel_layout_uninit(void) { return -1; }
 KEEP long av_dict_free(void) { return -1; }
 KEEP void* av_dict_get(void) { return NULL; }
+KEEP void* av_dict_iterate(void) { return NULL; }
 KEEP long av_dict_set(void) { return -1; }
 KEEP long av_find_best_stream(void) { return -1; }
 KEEP void* av_find_input_format(void) { return NULL; }
