@@ -59,7 +59,7 @@ bool card(const char* id) {
 
 bool details(const char* id) {
     ImGui::PushID(id);
-    const bool open = ImGui::TreeNodeEx(tr("Details"), ImGuiTreeNodeFlags_None);
+    const bool open = ImGui::TreeNodeEx(trw("Details"), ImGuiTreeNodeFlags_None);
     ImGui::PopID();
     return open;
 }
