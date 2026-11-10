@@ -44,8 +44,13 @@ public:
     // with the close object flag) have arrived. A sender that signals neither (some encoders do not) ends an object by starting the next one: an
     // object whose bytes are contiguous from 0 and form whole MP4 boxes is complete when a newer object of the same TSI begins.
     void push(const LctPacket& p, std::vector<RouteObject>& done);
-    void clear() { open_.clear(); }
+    void clear() { open_.clear(); openBytes_ = 0; }
     size_t openObjects() const { return open_.size(); }
+    size_t openBytes() const { return openBytes_; }
+    // The largest object taken (ATSC 3.0 media segments and signalling are a few MB): a packet whose offset or EXT_TOL lies beyond it is
+    // dropped, so one corrupt packet cannot make the receiver allocate gigabytes. kMaxOpenBytes bounds all the unfinished objects together.
+    static constexpr uint32_t kMaxObjectBytes = 64u << 20;
+    static constexpr size_t kMaxOpenBytes = 128u << 20;
 private:
     struct Open {
         std::vector<uint8_t> data;
@@ -58,6 +63,7 @@ private:
     };
     std::map<std::pair<uint32_t, uint32_t>, Open> open_;
     long counter_ = 0;
+    size_t openBytes_ = 0;   // sum of open_[].data.size()
 };
 
 // ---- MIME packages (unsigned package mode: multipart/related)
