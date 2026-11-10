@@ -200,6 +200,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES smartnet tetradmo opensky)   # Motorola Type II (320), TETRA Direct Mode (321), OpenSky identifier (322): docs/VOICE-TRUNK-3.8.md
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES dvbsh)   # DVB-SH OFDM (SH-A) receiver and generator (family 746, docs/DVBSH-3.9.md): core/src/dvbsh, tests/dvbsh
+  list(APPEND DECT2_MODES dvbc2)   # DVB-C2 (family 741, docs/DVBC2-3.9.md): core/src/dvbc2, tests/dvbc2
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal umts)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES esp32)   # ESP32 / nRF24 module radio over USB serial (3.7): core/src/esp32, app/esp32, tests/esp32, firmware/esp32, docs/ESP32-NRF24-DESIGN.md
   list(APPEND DECT2_MODES cishf)   # CIS HF modes (families 620 - 626, docs/CIS-HF-3.9.md): core/src/cishf, app/cishf, tests/cishf
@@ -2260,6 +2261,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_isdbtsb tests/isdbt/test_isdbtsb.cpp)
   target_link_libraries(test_isdbtsb PRIVATE dect2core)
   add_test(NAME isdbtsb COMMAND test_isdbtsb)
+  add_executable(test_dvbc2 tests/dvbc2/test_dvbc2.cpp)   # DVB-C2: sequences, Reed-Muller headers, L1 part 2, FEC blocks, receiver against the generator with offsets, clock error, noise, echo
+  target_link_libraries(test_dvbc2 PRIVATE dect2core)
+  add_test(NAME dvbc2 COMMAND test_dvbc2)
 
   add_executable(test_atsc3_bootstrap tests/atsc3/test_atsc3_bootstrap.cpp)
   target_link_libraries(test_atsc3_bootstrap PRIVATE dect2core)

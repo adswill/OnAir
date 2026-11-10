@@ -335,6 +335,7 @@
         <item>3G-ALE</item>
         <item>Link 11 CLEW</item>
         <item>STANAG 4481 FSK</item>
+        <item>DVB-C2</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -651,6 +652,7 @@
         <item>3G-ALE (MIL-STD-188-141B Appendix C, the link setup of STANAG 4538), receive only: BW0 bursts of 8-PSK at 2400 Bd on 1800 Hz, found from their preamble at any time; Walsh symbols, deinterleaver and tail-biting Viterbi decoding, the CRC of each PDU, then LE_Call, LE_Handshake, LE_Notification and LE_Broadcast in words. BW1 to BW4 (traffic management and data link) are not decoded. Tested on simulated signals.</item>
         <item>Link 11 CLEW (the conventional 16-tone HF waveform), receive only, frame structure only: each message is found from its 605 Hz Doppler and 2915 Hz sync tones, then the frame rate (13.33 or 22 ms), the Doppler offset, the number of frames and the raw phase changes of the 15 data tones. The bit mapping, error code and addresses are not public, so no data is shown. Link 11 SLEW is not covered. Tested on simulated signals.</item>
         <item>STANAG 4481 naval HF broadcast, FSK part, receive only: single-channel RATT with a +-425 Hz shift, or up to 16 sub-carriers at 255 + 170 n Hz shifted +-42.5 Hz, found automatically. Each channel\'s speed is measured; plain ITA2 text is shown, encrypted (synchronous) channels only by speed and bit count. The PSK part of STANAG 4481 is STANAG 4285, its own mode. Tested on simulated signals.</item>
+        <item>DVB-C2 cable TV (EN 302 769): 4K OFDM, guard interval 1/64 or 1/128, the L1 signalling, Data Slice Types 1 and 2, 16 to 256-QAM with 16K and 64K LDPC; needs a cable feed. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -967,6 +969,7 @@
         <item>HF ALE, 8-PSK</item>
         <item>HF tactical data link, tones</item>
         <item>HF broadcast, FSK</item>
+        <item>Cable, OFDM</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1283,5 +1286,6 @@
         <item>3g-ale 3g ale third generation stanag 4538 mil-std-188-141b appendix c bw0 hf link establishment le_call handshake</item>
         <item>link 11 link-11 clew tadil a mil-std-188-203 16 tone 605 2915 doppler hf tactical data link frame</item>
         <item>stanag 4481 naval broadcast fsk ratt vft multichannel 16 channel 850 85 hz shift ita2 75 baud</item>
+        <item>dvbc2 dvb-c2 c2 cable ofdm en 302 769 catv tv second generation</item>
     </string-array>
 </resources>

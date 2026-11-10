@@ -9,6 +9,7 @@
 #include "dect2/dab/dab_tel.h"
 #include "dect2/fm/fm_tel.h"
 #include "dect2/dvbs/dvbs_tel.h"
+#include "dect2/dvbc2/dvbc2_rx.h"
 #include "dect2/dtmb/dtmb_tel.h"
 #include "dect2/atv/atv_tel.h"
 #include "dect2/dmr/dmr_tel.h"
@@ -239,6 +240,7 @@ struct RxTelemetry {
     SpecanTelemetry specan;   // valid when standard == 43 (spectrum analyser)
     OrbcommTelemetry orbcomm;   // valid when standard == 45
     DvbcTelemetry dvbc;    // valid when standard == 41
+    Dvbc2Telemetry dvbc2;  // valid when standard == 742 (DVB-C2, family 741)
     UplinkTelemetry uplink;   // valid when standard == 44 (Mode S uplink)
     AleTelemetry ale;         // valid when standard == 50 (HF ALE)
     P25Telemetry p25;         // valid when standard == 51 (P25 Phase 1)

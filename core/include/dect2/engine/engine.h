@@ -71,6 +71,7 @@
 #include "dect2/mac/mac_rx.h"
 #include "dect2/gsmr/gsmr_rx.h"
 #include "dect2/dvbc/dvbc_rx.h"
+#include "dect2/dvbc2/dvbc2_rx.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
 #include "dect2/uplink/uplink_rx.h"
 #include "dect2/ale/ale_rx.h"
@@ -673,6 +674,7 @@ public:
     NrReceiver& nr() { return rxNr_; }         // 5G NR cells: clear the cell table (telemetry through latestRx)
     WifiReceiver& wifi() { return rxWifi_; }   // Wi-Fi networks: clear the network table (telemetry through latestRx)
     Qo100Receiver& qo100() { return rxQo100_; }   // QO-100: LNB oscillator, SSB dial and listening (telemetry through latestRx)
+    Dvbc2Receiver& dvbc2() { return rxC2_; }   // DVB-C2 (active standard 742): data slice and PLP choice
     DvbcReceiver& dvbc() { return rxDvbc_; }   // DVB-C: symbol rate, QAM, annex (the interface reads telemetry through latestRx)
     PskReceiver& psk() { return rxPsk_; }   // PSK31: the receiver's own controls and results (the interface reads telemetry through latestRx)
     DstarReceiver& dstar() { return rxDstar_; }   // D-STAR: the receiver's own controls and results (the interface reads telemetry through latestRx)
@@ -971,6 +973,7 @@ private:
     AstroReceiver rxAstro_;
     bool specanSweep_ = false;   // the HackRF sweeps by itself (spectrum analyser)
     DvbcReceiver rxDvbc_;
+    Dvbc2Receiver rxC2_;   // DVB-C2 (active standard 742, family 741)
     OrbcommReceiver rxOrb_;
     UplinkReceiver rxUplink_;
     TetraReceiver rxTetra_;

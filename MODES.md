@@ -2,9 +2,9 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**314 modes.**
+**315 modes.**
 
-## TV (16)
+## TV (17)
 
 - **DVB** - DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)
 - **TV (auto)** - TV, automatic: the standard and its parameters are measured from the signal
@@ -18,6 +18,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **DTMB** - DTMB digital terrestrial television (China, Hong Kong, Macau, Cuba, Pakistan)
 - **ISDB-S (BS)** - ISDB-S, BS satellite TV of Japan (ARIB STD-B20), clear streams only
 - **DVB-SH** - DVB-SH: satellite and terrestrial mobile TV (S band 2170 - 2200 MHz, also UHF and L band), OFDM form
+- **DVB-C2** - DVB-C2 second generation digital cable television (OFDM), needs the cable network as the input (not an antenna)
 - **DVB-C** - DVB-C digital cable television, needs the cable network as the input (not an antenna)
 - **Analog TV** - Analogue television (PAL, SECAM, NTSC)
 - **FPV video (analog)** - Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)

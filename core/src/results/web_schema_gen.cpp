@@ -52,6 +52,8 @@
 #include "dect2/dtmb/dtmb_tel.h"
 #include "dect2/dvbc/docsis_down.h"
 #include "dect2/dvbc/dvbc_tel.h"
+#include "dect2/dvbc2/dvbc2.h"
+#include "dect2/dvbc2/dvbc2_rx.h"
 #include "dect2/dvbs/dvbs_tel.h"
 #include "dect2/ebicab/ebicab_proto.h"
 #include "dect2/ebicab/ebicab_tel.h"
@@ -845,6 +847,12 @@ static void ev_dect2__CdmaCellRow(std::string& s, const dect2::CdmaCellRow& v);
 static void ev_dect2__CdmaTelemetry(std::string& s, const dect2::CdmaTelemetry& v);
 static void ev_dect2__TdscdmaCellRow(std::string& s, const dect2::TdscdmaCellRow& v);
 static void ev_dect2__TdscdmaTelemetry(std::string& s, const dect2::TdscdmaTelemetry& v);
+static void ev_dect2__dvbc2__L1Plp(std::string& s, const dect2::dvbc2::L1Plp& v);
+static void ev_dect2__dvbc2__L1DataSlice(std::string& s, const dect2::dvbc2::L1DataSlice& v);
+static void ev_dect2__dvbc2__L1Notch(std::string& s, const dect2::dvbc2::L1Notch& v);
+static void ev_dect2__dvbc2__L1Part2(std::string& s, const dect2::dvbc2::L1Part2& v);
+static void ev_dect2__Dvbc2PlpRow(std::string& s, const dect2::Dvbc2PlpRow& v);
+static void ev_dect2__Dvbc2Telemetry(std::string& s, const dect2::Dvbc2Telemetry& v);
 static void ev_dect2__DvbsIpFlow(std::string& s, const dect2::DvbsIpFlow& v) {
     detail::J o(s);
     o.key("src"); detail::vstr(s, v.src, 4096);
@@ -13857,6 +13865,114 @@ static void ev_dect2__TdscdmaTelemetry(std::string& s, const dect2::TdscdmaTelem
     o.end();
 }
 
+static void ev_dect2__dvbc2__L1Plp(std::string& s, const dect2::dvbc2::L1Plp& v) {
+    detail::J o(s);
+    o.key("id"); detail::vnum(s, (double)(v.id));
+    o.key("bundled"); detail::vnum(s, (double)(v.bundled));
+    o.key("type"); detail::vnum(s, (double)(v.type));
+    o.key("payloadType"); detail::vnum(s, (double)(v.payloadType));
+    o.key("groupId"); detail::vnum(s, (double)(v.groupId));
+    o.key("start"); detail::vnum(s, (double)(v.start));
+    o.key("fecType"); detail::vnum(s, (double)(v.fecType));
+    o.key("mod"); detail::vnum(s, (double)(v.mod));
+    o.key("cod"); detail::vnum(s, (double)(v.cod));
+    o.key("psiSiReprocessing"); detail::vnum(s, (double)(v.psiSiReprocessing));
+    o.key("tsId"); detail::vnum(s, (double)(v.tsId));
+    o.key("onId"); detail::vnum(s, (double)(v.onId));
+    o.key("reserved1"); detail::vnum(s, (double)(v.reserved1));
+    o.end();
+}
+
+static void ev_dect2__dvbc2__L1DataSlice(std::string& s, const dect2::dvbc2::L1DataSlice& v) {
+    detail::J o(s);
+    o.key("id"); detail::vnum(s, (double)(v.id));
+    o.key("tunePos"); detail::vnum(s, (double)(v.tunePos));
+    o.key("offsetLeft"); detail::vnum(s, (double)(v.offsetLeft));
+    o.key("offsetRight"); detail::vnum(s, (double)(v.offsetRight));
+    o.key("tiDepth"); detail::vnum(s, (double)(v.tiDepth));
+    o.key("type"); detail::vnum(s, (double)(v.type));
+    o.key("fecHeaderType"); detail::vnum(s, (double)(v.fecHeaderType));
+    o.key("constConf"); detail::vnum(s, (double)(v.constConf));
+    o.key("leftNotch"); detail::vnum(s, (double)(v.leftNotch));
+    o.key("plps"); { detail::Arr a(s); const size_t n = (v.plps).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__dvbc2__L1Plp(s, (v.plps)[i]); } a.end(); }
+    o.key("reserved2"); detail::vnum(s, (double)(v.reserved2));
+    o.end();
+}
+
+static void ev_dect2__dvbc2__L1Notch(std::string& s, const dect2::dvbc2::L1Notch& v) {
+    detail::J o(s);
+    o.key("start"); detail::vnum(s, (double)(v.start));
+    o.key("width"); detail::vnum(s, (double)(v.width));
+    o.key("reserved3"); detail::vnum(s, (double)(v.reserved3));
+    o.end();
+}
+
+static void ev_dect2__dvbc2__L1Part2(std::string& s, const dect2::dvbc2::L1Part2& v) {
+    detail::J o(s);
+    o.key("networkId"); detail::vnum(s, (double)(v.networkId));
+    o.key("systemId"); detail::vnum(s, (double)(v.systemId));
+    o.key("startFrequency"); detail::vi64(s, (long long)(v.startFrequency));
+    o.key("bandwidth"); detail::vnum(s, (double)(v.bandwidth));
+    o.key("guardInterval"); detail::vnum(s, (double)(v.guardInterval));
+    o.key("frameLength"); detail::vnum(s, (double)(v.frameLength));
+    o.key("changeCounter"); detail::vnum(s, (double)(v.changeCounter));
+    o.key("slices"); { detail::Arr a(s); const size_t n = (v.slices).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__dvbc2__L1DataSlice(s, (v.slices)[i]); } a.end(); }
+    o.key("notches"); { detail::Arr a(s); const size_t n = (v.notches).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__dvbc2__L1Notch(s, (v.notches)[i]); } a.end(); }
+    o.key("reservedTone"); detail::vnum(s, (double)(v.reservedTone));
+    o.key("ews"); detail::vnum(s, (double)(v.ews));
+    o.key("version"); detail::vnum(s, (double)(v.version));
+    o.key("reserved4"); detail::vnum(s, (double)(v.reserved4));
+    o.key("crcOk"); detail::vbool(s, v.crcOk);
+    o.end();
+}
+
+static void ev_dect2__Dvbc2PlpRow(std::string& s, const dect2::Dvbc2PlpRow& v) {
+    detail::J o(s);
+    o.key("sliceId"); detail::vnum(s, (double)(v.sliceId));
+    o.key("plpId"); detail::vnum(s, (double)(v.plpId));
+    o.key("fecType"); detail::vnum(s, (double)(v.fecType));
+    o.key("mod"); detail::vnum(s, (double)(v.mod));
+    o.key("cod"); detail::vnum(s, (double)(v.cod));
+    o.key("type"); detail::vnum(s, (double)(v.type));
+    o.key("payloadType"); detail::vnum(s, (double)(v.payloadType));
+    o.key("bitrate"); detail::vnum(s, (double)(v.bitrate));
+    o.end();
+}
+
+static void ev_dect2__Dvbc2Telemetry(std::string& s, const dect2::Dvbc2Telemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("guardInterval"); detail::vnum(s, (double)(v.guardInterval));
+    o.key("clockPpm"); detail::vnum(s, (double)(v.clockPpm));
+    o.key("windowCarrier"); detail::vi64(s, (long long)(v.windowCarrier));
+    o.key("l1Ok"); detail::vbool(s, v.l1Ok);
+    o.key("frames"); detail::vu64(s, (unsigned long long)(v.frames));
+    o.key("l1Good"); detail::vu64(s, (unsigned long long)(v.l1Good));
+    o.key("l1Bad"); detail::vu64(s, (unsigned long long)(v.l1Bad));
+    o.key("syncLosses"); detail::vu64(s, (unsigned long long)(v.syncLosses));
+    o.key("l1"); ev_dect2__dvbc2__L1Part2(s, v.l1);
+    o.key("plps"); { detail::Arr a(s); const size_t n = (v.plps).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__Dvbc2PlpRow(s, (v.plps)[i]); } a.end(); }
+    o.key("selectedSlice"); detail::vnum(s, (double)(v.selectedSlice));
+    o.key("selectedPlp"); detail::vnum(s, (double)(v.selectedPlp));
+    o.key("merDb"); detail::vnum(s, (double)(v.merDb));
+    o.key("preBer"); detail::vnum(s, (double)(v.preBer));
+    o.key("packets"); detail::vu64(s, (unsigned long long)(v.packets));
+    o.key("netMbps"); detail::vnum(s, (double)(v.netMbps));
+    o.key("headerMetric"); detail::vnum(s, (double)(v.headerMetric));
+    o.key("stage"); detail::vstr(s, v.stage, 4096);
+    o.key("cells"); detail::vconst(s, (const float*)(v.cells).data(), (size_t)(v.cells).size(), 512);
+    o.key("psdDb"); { detail::Arr a(s); const size_t n = (v.psdDb).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)((v.psdDb)[i])); } a.end(); }
+    o.key("psdSpanHz"); detail::vnum(s, (double)(v.psdSpanHz));
+    o.key("dropped"); detail::vu64(s, (unsigned long long)(v.dropped));
+    o.end();
+}
+
 static const char kSchema_dect2__DvbsIpFlow[] = R"JSON([{"n":"src","l":"Src","k":"text"},{"n":"dst","l":"Dst","k":"text"},{"n":"protocol","l":"Protocol","k":"text"},{"n":"sport","l":"Sport","k":"num"},{"n":"dport","l":"Dport","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"encrypted","l":"The headers are good but the UDP checksums fail: the payload was changed in transit","k":"bool"}])JSON";
 static const char kSchema_dect2__DvbsIpLabel[] = R"JSON([{"n":"label","l":"Label","k":"text"},{"n":"pdus","l":"Pdus","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"ip","l":"Ip","k":"num"},{"n":"addrs","l":"Addrs","k":"lines"},{"n":"modcods","l":"\"QPSK 5/6 41 %, 16APSK 3/4 59 %\": where the bytes went","k":"text"}])JSON";
 static const char kSchema_dect2__DvbsMediaFlow[] = R"JSON([{"n":"dst","l":"Dst","k":"text"},{"n":"src","l":"Src","k":"text"},{"n":"kind","l":"Kind","k":"text"},{"n":"codec","l":"Codec","k":"text"},{"n":"port","l":"Port","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"lost","l":"Lost","k":"num"},{"n":"kbps","l":"Kbps","k":"num"},{"n":"services","l":"MPEG-TS flows: the programmes found in them","k":"lines"},{"n":"scrambled","l":"Transport packets of the flow are scrambled: only labelled","k":"bool"}])JSON";
@@ -14492,6 +14608,12 @@ static const char kSchema_dect2__CdmaCellRow[] = R"JSON([{"n":"pilotPn","l":"Fro
 static const char kSchema_dect2__CdmaTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 waiting for samples, 1 searching","k":"num"},{"n":"centerHz","l":"The radio's centre frequency","u":"Hz","k":"num"},{"n":"bandClass","l":"From the centre frequency: 0","u":"MHz","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"scans","l":"Scans","k":"num"},{"n":"lastScanMs","l":"Last Scan ms","u":"ms","k":"num"},{"n":"cells","l":"Strongest first","k":"table","s":"dect2::CdmaCellRow","f":[{"n":"pilotPn","l":"From the Sync Channel Message","k":"num"},{"n":"relOffset","l":"PN offset relative to the strongest pilot of the last block","k":"num"},{"n":"hasMsg","l":"Has Msg","k":"bool"},{"n":"msg","l":"Msg","k":"obj","s":"dect2::cdma::SyncMsg","f":[{"n":"pRev","l":"P Rev","k":"num"},{"n":"minPRev","l":"Min PRev","k":"num"},{"n":"sid","l":"Sid","k":"num"},{"n":"nid","l":"Nid","k":"num"},{"n":"pilotPn","l":"Pilot Pn","k":"num"},{"n":"lcState","l":"42 bits","k":"num"},{"n":"sysTime","l":"36 bits, 80 ms units since the start of System Time","u":"ms","k":"num"},{"n":"lpSec","l":"Leap seconds since the start of System Time","u":"s","k":"num"},{"n":"ltmOff","l":"Local time offset, two's complement, 30 minute units","k":"num"},{"n":"daylt","l":"Daylt","k":"bool"},{"n":"prat","l":"Paging channel rate: 0 9600 bps, 1 4800 bps","k":"num"},{"n":"cdmaFreq","l":"Cdma Freq","k":"num"},{"n":"extCdmaFreq","l":"Ext Cdma Freq","k":"num"}]},{"n":"ecIoDb","l":"Ec Io dB","u":"dB","k":"num"},{"n":"pilotDbfs","l":"Pilot dBFS","u":"dBFS","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"clockPpm","l":"Clock Ppm","u":"ppm","k":"num"},{"n":"blocks","l":"Blocks","k":"num"},{"n":"msgs","l":"Msgs","k":"num"},{"n":"crcFails","l":"CRC Fails","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"}]}])JSON";
 static const char kSchema_dect2__TdscdmaCellRow[] = R"JSON([{"n":"syncDl","l":"Sync Dl","k":"num"},{"n":"cellParam","l":"Cell Param","k":"num"},{"n":"paramSure","l":"The initial parameter, not only its pair","k":"bool"},{"n":"levelDbfs","l":"Level dBFS","u":"dBFS","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"midScore","l":"Mid Score","k":"num"},{"n":"blocks","l":"Blocks","k":"num"},{"n":"quadS1","l":"Quad S1","k":"num"},{"n":"quadS2","l":"Quad S2","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"}])JSON";
 static const char kSchema_dect2__TdscdmaTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"State","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"scans","l":"Scans","k":"num"},{"n":"lastScanMs","l":"Last Scan ms","u":"ms","k":"num"},{"n":"cells","l":"Strongest first","k":"table","s":"dect2::TdscdmaCellRow","f":[{"n":"syncDl","l":"Sync Dl","k":"num"},{"n":"cellParam","l":"Cell Param","k":"num"},{"n":"paramSure","l":"The initial parameter, not only its pair","k":"bool"},{"n":"levelDbfs","l":"Level dBFS","u":"dBFS","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"midScore","l":"Mid Score","k":"num"},{"n":"blocks","l":"Blocks","k":"num"},{"n":"quadS1","l":"Quad S1","k":"num"},{"n":"quadS2","l":"Quad S2","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"}]}])JSON";
+static const char kSchema_dect2__dvbc2__L1Plp[] = R"JSON([{"n":"id","l":"ID","k":"num"},{"n":"bundled","l":"Bundled","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"groupId","l":"Group ID","k":"num"},{"n":"start","l":"PLP_START","k":"num"},{"n":"fecType","l":"Data Slice Type 1 only","k":"num"},{"n":"mod","l":"Data Slice Type 1 only","k":"num"},{"n":"cod","l":"Data Slice Type 1 only","k":"num"},{"n":"psiSiReprocessing","l":"Psi Si Reprocessing","k":"num"},{"n":"tsId","l":"Ts ID","k":"num"},{"n":"onId","l":"On ID","k":"num"},{"n":"reserved1","l":"Reserved1","k":"num"}])JSON";
+static const char kSchema_dect2__dvbc2__L1DataSlice[] = R"JSON([{"n":"id","l":"ID","k":"num"},{"n":"tunePos","l":"DSLICE_TUNE_POS, in multiples of D_X from START_FREQUENCY","k":"num"},{"n":"offsetLeft","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"offsetRight","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"tiDepth","l":"0 none, 1 four symbols, 2 eight, 3 sixteen","k":"num"},{"n":"type","l":"0 Type 1, 1 Type 2","k":"num"},{"n":"fecHeaderType","l":"Type 2: 0 robust","k":"num"},{"n":"constConf","l":"Const Conf","k":"num"},{"n":"leftNotch","l":"Left Notch","k":"num"},{"n":"plps","l":"Plps","k":"table","s":"dect2::dvbc2::L1Plp","f":[{"n":"id","l":"ID","k":"num"},{"n":"bundled","l":"Bundled","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"groupId","l":"Group ID","k":"num"},{"n":"start","l":"PLP_START","k":"num"},{"n":"fecType","l":"Data Slice Type 1 only","k":"num"},{"n":"mod","l":"Data Slice Type 1 only","k":"num"},{"n":"cod","l":"Data Slice Type 1 only","k":"num"},{"n":"psiSiReprocessing","l":"Psi Si Reprocessing","k":"num"},{"n":"tsId","l":"Ts ID","k":"num"},{"n":"onId","l":"On ID","k":"num"},{"n":"reserved1","l":"Reserved1","k":"num"}]},{"n":"reserved2","l":"Reserved2","k":"num"}])JSON";
+static const char kSchema_dect2__dvbc2__L1Notch[] = R"JSON([{"n":"start","l":"Start","k":"num"},{"n":"width","l":"Width","k":"num"},{"n":"reserved3","l":"Reserved3","k":"num"}])JSON";
+static const char kSchema_dect2__dvbc2__L1Part2[] = R"JSON([{"n":"networkId","l":"Network ID","k":"num"},{"n":"systemId","l":"System ID","k":"num"},{"n":"startFrequency","l":"24 bits, absolute carrier index of K_min","k":"num"},{"n":"bandwidth","l":"C2_BANDWIDTH: the system spans bandwidth * D_X + 1 carriers","k":"num"},{"n":"guardInterval","l":"0 = 1/128, 1 = 1/64","k":"num"},{"n":"frameLength","l":"Frame Length","k":"num"},{"n":"changeCounter","l":"Change Counter","k":"num"},{"n":"slices","l":"Slices","k":"table","s":"dect2::dvbc2::L1DataSlice","f":[{"n":"id","l":"ID","k":"num"},{"n":"tunePos","l":"DSLICE_TUNE_POS, in multiples of D_X from START_FREQUENCY","k":"num"},{"n":"offsetLeft","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"offsetRight","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"tiDepth","l":"0 none, 1 four symbols, 2 eight, 3 sixteen","k":"num"},{"n":"type","l":"0 Type 1, 1 Type 2","k":"num"},{"n":"fecHeaderType","l":"Type 2: 0 robust","k":"num"},{"n":"constConf","l":"Const Conf","k":"num"},{"n":"leftNotch","l":"Left Notch","k":"num"},{"n":"plps","l":"Plps","k":"table","s":"dect2::dvbc2::L1Plp","f":[{"n":"id","l":"ID","k":"num"},{"n":"bundled","l":"Bundled","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"groupId","l":"Group ID","k":"num"},{"n":"start","l":"PLP_START","k":"num"},{"n":"fecType","l":"Data Slice Type 1 only","k":"num"},{"n":"mod","l":"Data Slice Type 1 only","k":"num"},{"n":"cod","l":"Data Slice Type 1 only","k":"num"},{"n":"psiSiReprocessing","l":"Psi Si Reprocessing","k":"num"},{"n":"tsId","l":"Ts ID","k":"num"},{"n":"onId","l":"On ID","k":"num"},{"n":"reserved1","l":"Reserved1","k":"num"}]},{"n":"reserved2","l":"Reserved2","k":"num"}]},{"n":"notches","l":"Notches","k":"table","s":"dect2::dvbc2::L1Notch","f":[{"n":"start","l":"Start","k":"num"},{"n":"width","l":"Width","k":"num"},{"n":"reserved3","l":"Reserved3","k":"num"}]},{"n":"reservedTone","l":"Reserved Tone","k":"num"},{"n":"ews","l":"Ews","k":"num"},{"n":"version","l":"Version","k":"num"},{"n":"reserved4","l":"Reserved4","k":"num"},{"n":"crcOk","l":"CRC OK","k":"bool"}])JSON";
+static const char kSchema_dect2__Dvbc2PlpRow[] = R"JSON([{"n":"sliceId","l":"Slice ID","k":"num"},{"n":"plpId","l":"Plp ID","k":"num"},{"n":"fecType","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"mod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"cod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"bitrate","l":"Measured bit/s of its transport stream","u":"bit/s","k":"num"}])JSON";
+static const char kSchema_dect2__Dvbc2Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 searching, 1 symbol timing, 2 preamble found, 3 L1 decoded, 4 decoding data","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"Es/N0 from the pilots of the data symbols","u":"dB","k":"num"},{"n":"dataValid","l":"Packets came out recently","k":"bool"},{"n":"blocksOk","l":"FEC blocks","k":"num"},{"n":"blocksBad","l":"FEC blocks","k":"num"},{"n":"guardInterval","l":"0 = 1/128, 1 = 1/64, -1 unknown","k":"num"},{"n":"clockPpm","l":"Sample clock error being corrected","u":"ppm","k":"num"},{"n":"windowCarrier","l":"Absolute carrier index of the centre of the input","k":"num"},{"n":"l1Ok","l":"L1 OK","k":"bool"},{"n":"frames","l":"Frames","k":"num"},{"n":"l1Good","l":"L1 Good","k":"num"},{"n":"l1Bad","l":"L1 Bad","k":"num"},{"n":"syncLosses","l":"Sync Losses","k":"num"},{"n":"l1","l":"The last one decoded","k":"obj","s":"dect2::dvbc2::L1Part2","f":[{"n":"networkId","l":"Network ID","k":"num"},{"n":"systemId","l":"System ID","k":"num"},{"n":"startFrequency","l":"24 bits, absolute carrier index of K_min","k":"num"},{"n":"bandwidth","l":"C2_BANDWIDTH: the system spans bandwidth * D_X + 1 carriers","k":"num"},{"n":"guardInterval","l":"0 = 1/128, 1 = 1/64","k":"num"},{"n":"frameLength","l":"Frame Length","k":"num"},{"n":"changeCounter","l":"Change Counter","k":"num"},{"n":"slices","l":"Slices","k":"table","s":"dect2::dvbc2::L1DataSlice","f":[{"n":"id","l":"ID","k":"num"},{"n":"tunePos","l":"DSLICE_TUNE_POS, in multiples of D_X from START_FREQUENCY","k":"num"},{"n":"offsetLeft","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"offsetRight","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"tiDepth","l":"0 none, 1 four symbols, 2 eight, 3 sixteen","k":"num"},{"n":"type","l":"0 Type 1, 1 Type 2","k":"num"},{"n":"fecHeaderType","l":"Type 2: 0 robust","k":"num"},{"n":"constConf","l":"Const Conf","k":"num"},{"n":"leftNotch","l":"Left Notch","k":"num"},{"n":"plps","l":"Plps","k":"table","s":"dect2::dvbc2::L1Plp","f":[{"n":"id","l":"ID","k":"num"},{"n":"bundled","l":"Bundled","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"groupId","l":"Group ID","k":"num"},{"n":"start","l":"PLP_START","k":"num"},{"n":"fecType","l":"Data Slice Type 1 only","k":"num"},{"n":"mod","l":"Data Slice Type 1 only","k":"num"},{"n":"cod","l":"Data Slice Type 1 only","k":"num"},{"n":"psiSiReprocessing","l":"Psi Si Reprocessing","k":"num"},{"n":"tsId","l":"Ts ID","k":"num"},{"n":"onId","l":"On ID","k":"num"},{"n":"reserved1","l":"Reserved1","k":"num"}]},{"n":"reserved2","l":"Reserved2","k":"num"}]},{"n":"notches","l":"Notches","k":"table","s":"dect2::dvbc2::L1Notch","f":[{"n":"start","l":"Start","k":"num"},{"n":"width","l":"Width","k":"num"},{"n":"reserved3","l":"Reserved3","k":"num"}]},{"n":"reservedTone","l":"Reserved Tone","k":"num"},{"n":"ews","l":"Ews","k":"num"},{"n":"version","l":"Version","k":"num"},{"n":"reserved4","l":"Reserved4","k":"num"},{"n":"crcOk","l":"CRC OK","k":"bool"}]},{"n":"plps","l":"Plps","k":"table","s":"dect2::Dvbc2PlpRow","f":[{"n":"sliceId","l":"Slice ID","k":"num"},{"n":"plpId","l":"Plp ID","k":"num"},{"n":"fecType","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"mod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"cod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"bitrate","l":"Measured bit/s of its transport stream","u":"bit/s","k":"num"}]},{"n":"selectedSlice","l":"Ids being decoded","k":"num"},{"n":"selectedPlp","l":"Ids being decoded","k":"num"},{"n":"merDb","l":"Of the decoded data cells","u":"dB","k":"num"},{"n":"preBer","l":"Pre Ber","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"netMbps","l":"Net Mbps","k":"num"},{"n":"headerMetric","l":"Type 2: the last FECFrame header's agreement","k":"num"},{"n":"stage","l":"Stage","k":"text"},{"n":"cells","l":"Recent equalised data cells, at most 2048","k":"const"},{"n":"psdDb","l":"Spectrum of the input, fft shifted over the input rate","u":"dB","k":"list"},{"n":"psdSpanHz","l":"Psd Span Hz","u":"Hz","k":"num"},{"n":"dropped","l":"Input samples lost because the decoder fell behind","k":"num"}])JSON";
 struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };
 static bool put_7(const RxTelemetry& rx, std::string& s) { ev_dect2__DvbsTelemetry(s, rx.dvbs); return true; }
 static bool put_8(const RxTelemetry& rx, std::string& s) { ev_dect2__DtmbTelemetry(s, rx.dtmb); return true; }
@@ -14751,6 +14873,7 @@ static bool put_641(const RxTelemetry& rx, std::string& s) { ev_dect2__Vdl3Telem
 static bool put_661(const RxTelemetry& rx, std::string& s) { ev_dect2__CdmaTelemetry(s, rx.cdma); return true; }
 static bool put_662(const RxTelemetry& rx, std::string& s) { ev_dect2__TdscdmaTelemetry(s, rx.tdscdma); return true; }
 static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTelemetry(s, rx.hrdcp); return true; }
+static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
@@ -15011,6 +15134,7 @@ static const StdEntry kStd[] = {
     {661, "cdma", "dect2::CdmaTelemetry", kSchema_dect2__CdmaTelemetry, put_661},
     {662, "tdscdma", "dect2::TdscdmaTelemetry", kSchema_dect2__TdscdmaTelemetry, put_662},
     {701, "hrdcp", "dect2::DcsTelemetry", kSchema_dect2__DcsTelemetry, put_701},
+    {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
@@ -15027,6 +15151,7 @@ static const WebModeRow kRows[] = {
     {7, "DTMB", 0, "DTMB digital terrestrial television (China, Hong Kong, Macau, Cuba, Pakistan)", "", 9, 8, "dtmb"},
     {154, "ISDB-S (BS)", 0, "ISDB-S, BS satellite TV of Japan (ARIB STD-B20), clear streams only", "", 156, 155, "isdbs"},
     {746, "DVB-SH", 0, "DVB-SH: satellite and terrestrial mobile TV (S band 2170 - 2200 MHz, also UHF and L band), OFDM form", "", 748, 747, ""},
+    {741, "DVB-C2", 0, "DVB-C2 second generation digital cable television (OFDM), needs the cable network as the input (not an antenna)", "", 743, 742, "dvbc2"},
     {40, "DVB-C", 0, "DVB-C digital cable television, needs the cable network as the input (not an antenna)", "", 42, 41, "dvbc"},
     {8, "Analog TV", 0, "Analogue television (PAL, SECAM, NTSC)", "", 10, 9, "atv"},
     {101, "FPV video (analog)", 0, "Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)", "", 103, 102, "fpv"},

@@ -2741,6 +2741,23 @@ case 701: {
     { Table tb({"Offset Hz", "Channel", "Snr Db", "State", "Bps", "Bytes"}); int n = 0; for (auto it = t.carriers.rbegin(); it != t.carriers.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.offsetHz), cell(e.channel), cell(e.snrDb), cell(e.state), cell(e.bps), cell(e.bytes)}); } if (n) addTable(o, "Carriers", tb); }
     break;
 }
+case 742: {
+    const auto& t = rx.dvbc2; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Guard Interval", t.guardInterval);
+    cardIf(o, "Clock Ppm", t.clockPpm);
+    cardIf(o, "Window Carrier", t.windowCarrier);
+    cardIf(o, "Frames", t.frames);
+    cardIf(o, "L1 Good", t.l1Good);
+    cardIf(o, "L1 Bad", t.l1Bad);
+    cardIf(o, "Sync Losses", t.syncLosses);
+    cardIf(o, "Selected Slice", t.selectedSlice);
+    { Table tb({"Slice Id", "Plp Id", "Fec Type", "Mod", "Cod", "Type", "Payload Type", "Bitrate"}); int n = 0; for (auto it = t.plps.rbegin(); it != t.plps.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sliceId), cell(e.plpId), cell(e.fecType), cell(e.mod), cell(e.cod), cell(e.type), cell(e.payloadType), cell(e.bitrate)}); } if (n) addTable(o, "Plps", tb); }
+    break;
+}
 case 747: {
     const auto& t = rx.dvbsh; (void)t;
     cardIf(o, "Cfo Hz", t.cfoHz);

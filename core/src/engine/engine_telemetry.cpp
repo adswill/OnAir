@@ -245,6 +245,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 48: return pollStd(rxMac_, 48, t, seqs[42], &RxTelemetry::mac);
     case 46: return pollStd(rxDpmr_, 46, t, seqs[40], &RxTelemetry::dpmr);
     case 41: return pollStd(rxDvbc_, 41, t, seqs[35], &RxTelemetry::dvbc);
+    case 742: return pollStd(rxC2_, 742, t, seqs[742], &RxTelemetry::dvbc2);   // DVB-C2 (family 741)
     case 45: return pollStd(rxOrb_, 45, t, seqs[39], &RxTelemetry::orbcomm);
     case 47: return pollStd(rxTetra_, 47, t, seqs[41], &RxTelemetry::tetra);
     case 44: return pollStd(rxUplink_, 44, t, seqs[38], &RxTelemetry::uplink);
