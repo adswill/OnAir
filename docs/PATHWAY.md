@@ -1346,3 +1346,16 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-11 HF military and utility modes (feat39-hfmil)
+Branch feat39-hfmil on integ-39 adds four HF utility kinds in families 603 to 606:
+- STANAG 4539 / MIL-STD-188-110C Appendix C high rate (3200 to 12800 bit/s, all interleavers, joining at the reinserted preamble, EOM, STANAG 5066)
+- 3G-ALE BW0 (MIL-STD-188-141B Appendix C) with LE_Call, LE_Handshake, LE_Notification and LE_Broadcast in words
+- Link 11 CLEW, frame structure only: rate, Doppler, frame count and raw phase changes, since the bit layout is not public
+- STANAG 4481 FSK, single channel or 16 channels, with ITA2 text or the speed of a synchronous channel
+
+SITOR now also monitors SITOR-A / AMTOR ARQ links (family 119, no new entry). The selective call is read, repeats are dropped and changes of direction are followed.
+
+STANAG 4529, CLOVER-II, PAX/PAX2 and Link 11 SLEW are skipped because no bit-level public description exists.
+
+Everything was tested on simulated signals only. Details are in docs/HF-MIL-3.9.md.
