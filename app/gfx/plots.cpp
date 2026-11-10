@@ -2103,7 +2103,7 @@ void spectrumWaterfall(App& a, float& frac, bool drag) {
     // The plot under the mouse goes first: its pan or zoom is on the shared axis before the other one draws, so both show the same range in
     // the same frame (#270: the spectrum ran a frame behind a waterfall drag or wheel). The order is kept while a button is held.
     static bool wfFirst = false;
-    if (!ImGui::IsMouseDown(0) && !ImGui::IsMouseDown(1)) {
+    if (!ImGui::IsMouseDown(0) && !ImGui::IsMouseDown(1) && !ImGui::IsMouseDown(2)) {   // (a middle drag pans too: drag_tune.h)
         const ImVec2 mp = ImGui::GetIO().MousePos;
         wfFirst = mp.y >= y && mp.y < p.y + h && mp.x >= p.x && mp.x < p.x + w;
     }
