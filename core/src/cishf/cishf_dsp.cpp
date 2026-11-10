@@ -197,14 +197,20 @@ private:
     void search() {
         const double nz = psd_.noise();
         float p1, p2;
-        const double f1 = psd_.peak(150, 5500, p1);
+        double f1 = psd_.peak(150, 5500, p1);
         if (p1 < 12 * nz) { lostCount_++; if (lostCount_ > 6) locked_ = false; return; }
         double f2;
         if (forcedShift_ > 0) {
-            const float a = psd_.at(f1 + forcedShift_), b = psd_.at(f1 - forcedShift_);
-            float pw;
-            f2 = a > b ? psd_.peak(f1 + forcedShift_ - 8, f1 + forcedShift_ + 8, pw) : psd_.peak(f1 - forcedShift_ - 8, f1 - forcedShift_ + 8, pw);
-            p2 = pw;
+            // the shift is known: the pair of tones that holds the most power (the strongest line alone can be a side line of the keying)
+            const double h = forcedShift_ / 2;
+            double bestC = f1, bestE = -1;
+            for (double c = std::max(150.0 + h, f1 - forcedShift_ - 60); c <= std::min(5500.0 - h, f1 + forcedShift_ + 60); c += psd_.binHz()) {
+                const double e = psd_.band(c - h - 30, c - h + 30) + psd_.band(c + h - 30, c + h + 30);
+                if (e > bestE) { bestE = e; bestC = c; }
+            }
+            f1 = bestC - h; f2 = bestC + h;
+            p1 = psd_.at(f1); p2 = psd_.at(f2);
+            if (p1 < p2) std::swap(p1, p2);
         } else {
             f2 = psd_.peak(std::max(100.0, f1 - 1100), std::min(5800.0, f1 + 1100), p2, f1 - 55, f1 + 55);
         }
@@ -239,11 +245,11 @@ public:
     uint64_t good = 0, bad = 0, messages = 0;
     int state = 0;   // 0 hunt, 1 message, 2 after the end of a message
     int pol = 0;
-    void reset() { win_.clear(); state = 0; nb_ = 0; cur_ = 0; }
+    void reset() { win_.clear(); state = 0; nb_ = 0; cur_ = 0; candScore_ = -1; candLag_ = 0; }
     void bit(int b) {
         win_.push_back((uint8_t)b);
-        if (win_.size() > 184) win_.pop_front();
-        if (state == 0) { if (win_.size() == 184) hunt(); return; }
+        if (win_.size() > kWin) win_.pop_front();
+        if (state == 0) { if (win_.size() == kWin) hunt(); return; }
         cur_ = (cur_ << 1) | ((b ^ pol) & 1);
         if (++nb_ < 7) return;
         const int c = cur_ & 0x7F;
@@ -251,37 +257,52 @@ public:
         if (state == 1) inMessage(c); else afterEom(c);
     }
 private:
-    void hunt() {
-        for (int p = 0; p < 2; p++) {
-            int w = 0;
-            for (int i = 0; i < 44; i++) w += win_[i] ^ p;
-            if (w < 20 || w > 22) continue;
-            int diff = 0;
-            for (int i = 0; i < 70; i++) diff += win_[44 + i] != win_[114 + i];
-            if (diff > 2) continue;
-            int valid = 0;
-            int key[10];
-            for (int k = 0; k < 10; k++) {
-                int a = 0, b = 0;
-                for (int j = 0; j < 7; j++) { a = (a << 1) | (win_[44 + 7 * k + j] ^ p); b = (b << 1) | (win_[114 + 7 * k + j] ^ p); }
-                key[k] = beeValidChar(a) ? a : b;
-                valid += beeValidChar(key[k]);
-            }
-            if (valid < 8) continue;
-            pol = p;
-            uint64_t s = 0;
-            for (int i = 0; i < 44; i++) s = (s << 1) | (uint64_t)(win_[i] ^ p);
-            std::string k;
-            char t[32];
-            for (int i = 0; i < 10; i++) { snprintf(t, sizeof t, beeValidChar(key[i]) ? "%02X " : "[%02X] ", key[i]); k += t; }
-            if (!k.empty()) k.pop_back();
-            char e[200];
-            snprintf(e, sizeof e, "message start at %.0f Bd: start word %011llX, session key %s", baud, (unsigned long long)s, k.c_str());
-            if (onEvent) onEvent(e);
-            if (onText) onText(std::string("\n[start, key ") + k + "] ");
-            startMessage();
-            return;
+    // The start sequence in the window that ends `lag` bits before the newest: score < 0 when it does not pass
+    static constexpr size_t kSeq = 184, kWin = kSeq + 4;
+    int score(size_t lag, int p, int* keyOut, uint64_t* syncOut) const {
+        const size_t o = kWin - kSeq - lag;
+        int w = 0;
+        for (int i = 0; i < 44; i++) w += win_[o + i] ^ p;
+        if (w < 20 || w > 22) return -1;
+        int diff = 0;
+        for (int i = 0; i < 70; i++) diff += win_[o + 44 + i] != win_[o + 114 + i];
+        if (diff > 2) return -1;
+        int valid = 0, both = 0;
+        for (int k = 0; k < 10; k++) {
+            int x = 0, y = 0;
+            for (int j = 0; j < 7; j++) { x = (x << 1) | (win_[o + 44 + 7 * k + j] ^ p); y = (y << 1) | (win_[o + 114 + 7 * k + j] ^ p); }
+            const bool vx = beeValidChar(x), vy = beeValidChar(y);
+            valid += vx || vy; both += vx + vy;
+            if (keyOut) keyOut[k] = vx ? x : y;
         }
+        if (valid < 8) return -1;
+        if (syncOut) { uint64_t sw = 0; for (int i = 0; i < 44; i++) sw = (sw << 1) | (uint64_t)(win_[o + i] ^ p); *syncOut = sw; }
+        return 4 * both - 3 * diff - std::abs(w - 21);
+    }
+    // A passing start is held for up to 3 more bits: a window one or two bits off can pass too (the key repeats), the best one is taken
+    void hunt() {
+        if (candScore_ >= 0) candLag_++;   // a bit arrived after the held window
+        for (int p = 0; p < 2; p++) {
+            const int sc = score(0, p, nullptr, nullptr);
+            if (sc > candScore_) { candScore_ = sc; candLag_ = 0; candPol_ = p; }
+        }
+        if (candScore_ < 0 || candLag_ < 3) return;
+        // commit: candLag_ bits of the message have arrived after the chosen window
+        const int lag = candLag_, p = candPol_;
+        candScore_ = -1; candLag_ = 0;
+        int key[10]; uint64_t sw = 0;
+        score((size_t)lag, p, key, &sw);
+        pol = p;
+        std::string k;
+        char t[32];
+        for (int i = 0; i < 10; i++) { snprintf(t, sizeof t, beeValidChar(key[i]) ? "%02X " : "[%02X] ", key[i]); k += t; }
+        if (!k.empty()) k.pop_back();
+        char e[200];
+        snprintf(e, sizeof e, "message start at %.0f Bd: start word %011llX, session key %s", baud, (unsigned long long)sw, k.c_str());
+        if (onEvent) onEvent(e);
+        if (onText) onText(std::string("\n[start, key ") + k + "] ");
+        startMessage();
+        for (size_t i = kWin - (size_t)lag; i < kWin; i++) { cur_ = (cur_ << 1) | ((win_[i] ^ pol) & 1); nb_++; }
     }
     void startMessage() { state = 1; nb_ = 0; cur_ = 0; chars_ = 0; errs_ = 0; invRun_ = 0; eomRun_ = 0; messages++; }
     void endMessage(const char* why) {
@@ -317,6 +338,7 @@ private:
     }
     std::deque<uint8_t> win_;
     int nb_ = 0, cur_ = 0, chars_ = 0, errs_ = 0, invRun_ = 0, eomRun_ = 0;
+    int candScore_ = -1, candLag_ = 0, candPol_ = 0;
 };
 
 class BeeDecoder : public Decoder {
@@ -447,13 +469,13 @@ class Cis12Decoder : public Decoder {
 public:
     Cis12Decoder() { psd_.setAlpha(0.2f); reset(); }
     void reset() override {
-        psd_.reset(); buf_.clear(); base_ = 0; locked_ = false; pilot_ = false; cfo_ = 0; active_ = 0; next_ = -1; symbols_ = 0; unsure_ = 0;
+        psd_.reset(); buf_.clear(); base_ = 0; locked_ = false; pilot_ = false; cfo_ = 0; active_ = 0; next_ = -1; symbols_ = 0; unsure_ = 0; offCount_ = 0;
         mom_ = Moments(); havePrev_ = false; snr_ = 0; lineCount_ = 0; dataOn_ = false; quiet_ = 0;
     }
     void push(const cf32* x, size_t n) override {
         buf_.insert(buf_.end(), x, x + n);
         if (psd_.push(x, n) && psd_.frames() >= 4) search();
-        if (!locked_) { trim(kT * 4); return; }
+        if (!locked_) { trim(kT * 150); return; }   // 1.25 s kept: the symbols before the lock are read too
         process();
     }
     Status status() const override {
@@ -495,8 +517,9 @@ private:
         for (int k = 0; k < 12; k++) { on += psd_.band(700 + 200 * k + cfo_ - 20, 700 + 200 * k + cfo_ + 20); if (k < 11) mid += psd_.band(800 + 200 * k + cfo_ - 20, 800 + 200 * k + cfo_ + 20); }
         const bool comb = mid * 12 < 0.3 * on * 11;
         const bool was = locked_;
-        locked_ = act >= 6 && comb;
-        if (locked_ && !was) { event(fmt2("12 carriers found, pilot at %.1f Hz (offset %+.1f Hz)", 3300 + cfo_, cfo_)); next_ = -1; }
+        // a few failed looks in a row before the carriers count as gone: one noisy spectrum does not restart the symbol clock
+        if (act >= 6 && comb) { locked_ = true; offCount_ = 0; } else if (!locked_ || ++offCount_ >= 6) locked_ = false;
+        if (locked_ && !was) { event(fmt2("12 carriers found, pilot at %.1f Hz (offset %+.1f Hz)", 3300 + cfo_, cfo_)); if (next_ < (int64_t)base_) next_ = -1; }
         if (!locked_ && was) event("carriers gone");
     }
     std::complex<double> integ(int k, int64_t s) const {
@@ -516,22 +539,31 @@ private:
         // timing every 24 symbols: the integration window that does not straddle a phase change has the most energy
         if (next_ < 0 || ++sinceTiming_ >= 24) {
             sinceTiming_ = 0;
-            const int64_t s0 = next_ < 0 ? (int64_t)base_ + kT : next_ - kT / 2;
-            if (s0 + 24 * kT + kT + kWoff + kW > end) { if (next_ < 0) return; }
+            // first time: the newest 25 symbols (the carriers are on there: the lock just found them), then back to the start of the buffer
+            const int64_t s0 = next_ < 0 ? end - 25 * kT - kT - kWoff - kW : next_ - kT / 2;
+            if (s0 < (int64_t)base_ || s0 + 24 * kT + kT + kWoff + kW > end) { if (next_ < 0) return; }
             else {
-                double best = -1; int bd = 0;
+                // the energy is flat while the window sits inside a symbol and dips where it straddles a phase change: take the middle of the
+                // widest high stretch (a circular moving sum over +-20 samples), not the single highest point
+                double ev[kT / 2];
                 for (int d = 0; d < kT; d += 2) {
                     double e = 0;
-                    for (int m = 0; m < 24; m++) for (int k = 0; k < 12; k += 2) e += std::norm(integ(k, s0 + d + m * kT));
-                    if (e > best) { best = e; bd = d; }
+                    for (int m = 0; m < 24; m++) for (int k = 0; k < 12; k++) e += std::norm(integ(k, s0 + d + m * kT));
+                    ev[d / 2] = e;
+                }
+                double best = -1; int bd = 0;
+                for (int c = 0; c < kT / 2; c++) {
+                    double sc = 0;
+                    for (int j = -10; j <= 10; j++) sc += ev[(c + j + kT / 2) % (kT / 2)];
+                    if (sc > best) { best = sc; bd = 2 * c; }
                 }
                 const int64_t cand = s0 + bd;
-                if (next_ < 0) next_ = cand;
+                if (next_ < 0) next_ = cand - kT * ((cand - (int64_t)base_ - kT / 2) / kT);
                 else {
                     int64_t diff = (cand - next_) % kT;
                     if (diff > kT / 2) diff -= kT;
                     if (diff < -kT / 2) diff += kT;
-                    next_ += diff / 2;   // half the step: noise does not throw the clock about
+                    next_ += std::clamp<int64_t>(diff / 2, -5, 5);   // small steps: noise does not throw the clock about
                 }
             }
         }
@@ -581,7 +613,7 @@ private:
     bool locked_ = false, pilot_ = false, havePrev_ = false, dataOn_ = false;
     double cfo_ = 0, active_ = 0, snr_ = 0;
     int64_t next_ = -1;
-    int sinceTiming_ = 0, miss_ = 0, lineCount_ = 0, quiet_ = 0;
+    int sinceTiming_ = 0, miss_ = 0, lineCount_ = 0, quiet_ = 0, offCount_ = 0;
     uint64_t symbols_ = 0, unsure_ = 0;
     Moments mom_;
     std::complex<double> prev_[12];
@@ -717,7 +749,7 @@ private:
         const double snr = snrDbOf(psd_, f0, f1);
         // useful symbol length from the guard's correlation: R(L) = |sum x[n] x*[n + L]|
         const int lmin = 150, lmax = 800;
-        const int N = kBlock - lmax;
+        const int N = kBlock - lmax - 2;   // b[] reaches N - 1 + lmax + 1
         double e = 0;
         for (int i = 0; i < N; i++) e += std::norm(buf_[i]);
         std::vector<double> R(lmax + 2, 0);

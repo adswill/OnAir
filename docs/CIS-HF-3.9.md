@@ -17,7 +17,10 @@ decoders, so every mode needs a test with a real recording.
 | 625 | CIS-128 | Identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz. The 6 kHz form is not covered, because the decoders read 6 kHz of upper sideband. |
 | 626 | CIS-3000 | Identification only: one 8-PSK carrier at 3000 Bd, from the symbol-rate line and the u^2 / u^4 / u^8 carrier lines of the matched-filtered symbols. The matched filter assumes a root-raised-cosine pulse with a roll-off of 0.15, which is not published. |
 
-Under Advanced, the two FSK modes take a fixed speed and shift (0 = automatic). Automatic is the default.
+Under Advanced, the two FSK modes take a fixed speed and shift (0 = automatic). Automatic is the default. In automatic mode the shift
+is read from the spectrum. At non-integer modulation indices (100 Bd with 250 Hz, 150 Bd with 500 Hz) the spectral peaks sit inside the
+tones, so the displayed shift can read up to 20 % low. Decoding still works there. A forced shift finds the centre from the pair of tones
+that holds the most power.
 
 ## Sources
 
@@ -56,6 +59,10 @@ Under Advanced, the two FSK modes take a fixed speed and shift (0 = automatic). 
   steps against the transmitted ones (step error under 1 % at 30 dB and under 5 % at 15 dB).
 - CIS-36 at 10 / 20 / 40 Bd, the four OFDM HDR variants, the 3 kHz CIS-128 and CIS-3000 (with offsets, noise and clock error) are identified,
   with the right rate and order. A cross check runs every identifier on every other CIS signal, and none of them may claim it.
+- BEE alignment: a window one or two bits off can also pass the start check, because the key repeats. The decoder holds a passing start
+  for three more bits and keeps the best-scoring alignment.
+- CIS-12: the symbol clock sits in the middle of the widest high stretch of the window energy, it moves in small steps, and the lock
+  survives single noisy spectra. Symbols received before the lock (1.25 s) are read too.
 - The whole receiver: the engine's test signal at 250 kHz, with the dial 20 kHz below the centre, through the front end, for BEE, CIS-12 and
   CIS-3000.
 

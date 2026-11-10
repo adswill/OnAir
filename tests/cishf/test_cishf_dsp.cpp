@@ -80,8 +80,8 @@ int main() {
                     int ok = 0;
                     for (size_t i = 0; i < want.size() && i < got.size(); i++) ok += got[i] == want[i];
                     const double frac = (double)ok / want.size();
-                    CHECK(frac >= (snr > 20 ? 0.99 : 0.95), "BEE %.0f Bd inv %d cfo %.0f snr %.0f: %d of %zu characters (got %zu)", traffic, inv, cfo, snr, ok, want.size(), got.size());
-                    CHECK(r.st.state >= 1 && std::fabs(std::stod(param(r.st, "shift").empty() ? "0" : param(r.st, "shift")) - o.shiftHz) < 0.1 * o.shiftHz + 5,
+                    CHECK(frac >= (snr > 20 ? 0.99 : 0.95), "BEE %.0f Bd inv %d cfo %.0f snr %.0f: %d of %zu characters (got %zu)\n%.400s", traffic, inv, cfo, snr, ok, want.size(), got.size(), r.text.c_str());
+                    CHECK(r.st.state >= 1 && std::fabs(std::stod(param(r.st, "shift").empty() ? "0" : param(r.st, "shift")) - o.shiftHz) < 0.2 * o.shiftHz + 5,   // read from the spectrum: at 100 Bd / 250 Hz (index 2.5) the peaks sit inside the tones
                           "BEE %.0f Bd shift %s want %.0f", traffic, param(r.st, "shift").c_str(), o.shiftHz);
                 }
     // BEE forced (Advanced): 150 Bd traffic with a 500 Hz shift
@@ -113,7 +113,8 @@ int main() {
             for (int i = 0; i < 400; i++) {
                 const int a = (int)(g() % 32), b = (int)(g() % 32), p = (int)(g() % 4);
                 fr.push_back(cis14Frame(2, a, b, p));
-                char t[32]; snprintf(t, sizeof t, "01 %02X %02X %d%d", a, b, p & 1, p >> 1);   // state and parity bits in the order sent want.push_back(t);
+                char t[32]; snprintf(t, sizeof t, "01 %02X %02X %d%d", a, b, p & 1, p >> 1);   // state and parity bits in the order sent
+                want.push_back(t);
             }
             auto x = impair(genCis14(o, fr), cfo, snr, 30, (uint32_t)g());
             Run r = run(Cis14, x);
