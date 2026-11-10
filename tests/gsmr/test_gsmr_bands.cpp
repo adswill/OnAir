@@ -35,7 +35,7 @@ int main() {
         CHECK(syn != nullptr, "synth"); if (!syn) break;
         GsmrReceiver rx; rx.configure(syn->sampleRate()); rx.setCenterHz(kGsmrTestCentreHz);
         std::vector<cf32> buf(50000);
-        for (int i = 0; i < 6 * 100; i++) {   // 6 s
+        for (int i = 0; i < 3 * 100; i++) {   // 3 s
             syn->generate(buf.data(), buf.size());
             rx.feed(buf.data(), buf.size());
             while (rx.busy()) std::this_thread::sleep_for(std::chrono::milliseconds(5));

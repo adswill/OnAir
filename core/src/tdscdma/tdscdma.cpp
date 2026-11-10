@@ -248,24 +248,30 @@ std::vector<Found> search(const cf32* x, size_t n, const SearchOpts& o, double* 
         for (int a = 0; a < 2; a++) { double sum = 0; for (int k = 0; k < subs; k++) { const int fr = (k + a) / 2; const int par = (fr & 1) ? (bp ^ 3) : (bp ^ 2); sum += score[(size_t)k][(size_t)par]; } other = std::max(other, sum); }
         f.midScore = other > 0 ? (float)(bestH / other) : 0.f;
         // ---- the SYNC-DL phase quadruples: where they start is an even SFN, sub-frame 0
-        int bestOff = -1, bestCnt = 0, s1 = 0, s2 = 0;
-        for (int off = 0; off < 4; off++) {
-            int cnt = 0, c1 = 0, c2 = 0;
-            for (int k0 = (4 - off) % 4; k0 + 4 <= subs; k0 += 4) {
-                int m1 = 0, m2 = 0;
-                for (int j = 0; j < 4; j++) {
-                    const int k = k0 + j;
-                    const int fr = (k + ba) / 2;
-                    const int par = (fr & 1) ? (bp ^ 1) : bp;
-                    const double ph = std::arg(sdv[(size_t)k] * std::conj(h1[(size_t)k][(size_t)par])) * 180 / kPi;
-                    auto near = [&](int deg) { double dd = std::fabs(std::remainder(ph - deg, 360.0)); return dd < 45; };
-                    m1 += near(kS1[j]); m2 += near(kS2[j]);
-                }
-                // S1 and S2 differ in every position: 3 of 4 phases are enough to tell them apart
-                if (m1 >= 3 && m2 <= 1) { cnt++; c1++; } else if (m2 >= 3 && m1 <= 1) { cnt++; c2++; }
-            }
-            if (cnt > bestCnt) { bestCnt = cnt; bestOff = off; s1 = c1; s2 = c2; }
+        // The phase of each sub-frame against m(1); a carrier offset error turns them all by the same angle (the SYNC-DL comes about
+        // 0.4 ms after the midamble), so that common angle is searched too, the smallest one that explains the most quadruples.
+        std::vector<double> phs((size_t)subs);
+        for (int k = 0; k < subs; k++) {
+            const int fr = (k + ba) / 2;
+            const int par = (fr & 1) ? (bp ^ 1) : bp;
+            phs[(size_t)k] = std::arg(sdv[(size_t)k] * std::conj(h1[(size_t)k][(size_t)par])) * 180 / kPi;
         }
+        int bestOff = -1, bestCnt = 0, s1 = 0, s2 = 0, bestDelta = 999;
+        for (int delta = -80; delta <= 80; delta += 5)
+            for (int off = 0; off < 4; off++) {
+                int cnt = 0, c1 = 0, c2 = 0;
+                for (int k0 = (4 - off) % 4; k0 + 4 <= subs; k0 += 4) {
+                    int m1 = 0, m2 = 0;
+                    for (int j = 0; j < 4; j++) {
+                        const double ph = phs[(size_t)(k0 + j)] - delta;
+                        auto near = [&](int deg) { double dd = std::fabs(std::remainder(ph - deg, 360.0)); return dd < 40; };
+                        m1 += near(kS1[j]); m2 += near(kS2[j]);
+                    }
+                    // S1 and S2 differ in every position: 3 of 4 phases are enough to tell them apart
+                    if (m1 >= 3 && m2 <= 1) { cnt++; c1++; } else if (m2 >= 3 && m1 <= 1) { cnt++; c2++; }
+                }
+                if (cnt > bestCnt || (cnt == bestCnt && cnt > 0 && std::abs(delta) < std::abs(bestDelta))) { bestCnt = cnt; bestOff = off; s1 = c1; s2 = c2; bestDelta = delta; }
+            }
         f.quadS1 = s1; f.quadS2 = s2;
         const int pairLo = 4 * cd0.code + (bp & 2);
         if (bestOff >= 0 && f.midScore > 1.3f) {
@@ -278,7 +284,7 @@ std::vector<Found> search(const cf32* x, size_t n, const SearchOpts& o, double* 
             f.evenFirst = (((k0 - firstFrameSub) / 2) % 2 == 0) ? 1 : 0;
         } else if (f.midScore > 1.3f) f.cellParam = pairLo;   // the pair is known, not which one is the initial
         // a code that only correlates with another cell's signal: no midamble of its group and no SYNC-DL above the guard
-        if (!(f.midScore >= 1.5f || f.snrDb > 3)) continue;
+        if (!((f.midScore >= 1.5f && f.snrDb > -3) || f.snrDb > 3)) continue;
         out.push_back(f);
         // take this cell's SYNC-DL out, so that a weaker cell's SYNC-DL (cross-correlation up to -10 dB) is measured cleanly
         for (int k = 0; k < subs; k++) {
