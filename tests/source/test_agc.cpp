@@ -148,7 +148,8 @@ static void testNoHunting() {
         SmartAgc a = make(m, agcProfileFor(0, 8e6, 10e6, 16), 0, 18);
         drive(a, fe, 0, 40, false, noHook);
         const Run r = drive(a, fe, 40, 300, false, noHook);
-        CHECK(r.changes <= 1, "HF+ signal %.0f: %d changes in 300 s", sig, r.changes);
+        // (level-compensated since 3.8: the least attenuation that does not clip; a gain that clipped is tried again after 5 minutes: one probe and its cut)
+        CHECK(r.changes <= 2, "HF+ signal %.0f: %d changes in 300 s", sig, r.changes);
     }
     // an RTL-SDR (unequal table steps)
     DeviceInfo rt; rt.kind = DeviceInfo::Native; rt.board = "rtlsdr"; rt.gainMaxDb = 49.6;
@@ -342,6 +343,58 @@ static void testSweepAmp() {
     CHECK(freeHasAmp, "the legacy sweep still tries the amp");
 }
 
+// AirspyHF+ (Discord report, 3.8): the firmware keeps the output level itself (the preamp is compensated, the attenuator is the gain
+// distribution), so the dBFS level hardly follows the slider. Simulated here by moving the scene against the gain: what reaches the ADC
+// stays at `outDb` whatever the gain; the noise figure still improves with less attenuation (the simulator's LNA term).
+static void testLevelCompensated() {
+    DeviceInfo hf; hf.kind = DeviceInfo::Native; hf.board = "airspyhf"; hf.gainMinDb = 0; hf.gainMaxDb = 48;
+    const GainModel m = gainModelFor(hf, 16);
+    CHECK(m.levelCompensated, "HF+ model is level-compensated");
+    CHECK(!hackrf().levelCompensated && !generic("airspy", 0, 21).levelCompensated, "other radios are not");
+    for (double outDb : {-95.0, -80.0, -65.0, -50.0, -35.0, -20.0}) {
+        for (int start : {0, 18, 30, 42, 48}) {
+            for (bool allow : {false, true}) {
+                FrontEnd fe; fe.model = m; fe.bits = 16; fe.jitterDb = 0.8; fe.noiseDb = -100; fe.setTotal(start);
+                const auto hook = [&](double) { fe.sigDb = outDb - fe.gain(); fe.noiseDb = outDb - 20 - fe.gain(); };
+                SmartAgc a = make(m, agcProfileFor(27, 3e3, 768e3, 16), 0, start, false, allow);
+                int downs = 0, last = start;
+                for (double t = 0; t < 60; t += 0.05) {
+                    hook(t);
+                    AgcCommand c;
+                    if (a.update(t, fe.measure(), AgcQuality{}, c)) { if (c.totalDb < last) downs++; last = c.totalDb; fe.setTotal(c.totalDb, c.ampOn, c.lnaCap); }
+                }
+                const int want = allow ? 48 : 42;
+                // start 48 without permission: the preamp range is left once (down to 42), never further
+                CHECK(fe.gain() == want, "HF+ out %.0f dBFS start %d allow %d: ended at %d (want %d)", outDb, start, allow, fe.gain(), want);
+                CHECK(downs <= (start > want ? 1 : 0), "HF+ out %.0f dBFS start %d allow %d: %d steps down on a level the gain does not move", outDb, start, allow, downs);
+            }
+        }
+    }
+    // a clipping front end above 30 dB (strong broadcast nearby): it comes down and stays at or below 30 without hunting
+    {
+        FrontEnd fe; fe.model = m; fe.bits = 16; fe.jitterDb = 0.5; fe.setTotal(18);
+        SmartAgc a = make(m, agcProfileFor(27, 3e3, 768e3, 16), 0, 18);
+        int changes = 0, top = 0;
+        for (double t = 0; t < 240; t += 0.05) {
+            const double outDb = fe.gain() > 30 ? 0.0 : -40.0;   // over 30 dB the ADC is driven into clipping
+            fe.sigDb = outDb - fe.gain(); fe.noiseDb = outDb - 20 - fe.gain();
+            AgcCommand c;
+            if (a.update(t, fe.measure(), AgcQuality{}, c)) { changes++; fe.setTotal(c.totalDb, c.ampOn, c.lnaCap); }
+            if (t > 120) top = std::max(top, fe.gain());
+        }
+        CHECK(top <= 30 && fe.gain() >= 24, "HF+ clipping above 30 dB: held at %d (max %d after 120 s)", fe.gain(), top);
+        CHECK(changes <= 12, "HF+ clipping above 30 dB: %d changes in 240 s", changes);
+    }
+    // the ADC status: a quiet HF+ level is not "low"; clipping and silence still are what they are
+    setAdcBits(16);
+    setAdcLevelCompensated(true);
+    CHECK(classifyAdc(-75, 0.01, 0) == AdcStatus::Good && classifyAdc(-48, 0.02, 0) == AdcStatus::Good, "compensated: a low level is good");
+    CHECK(classifyAdc(-30, 1.0, 0.01) == AdcStatus::Overload && classifyAdc(-8, 0.9, 0) == AdcStatus::High && classifyAdc(-130, 0, 0) == AdcStatus::NoSignal, "compensated: overload/high/silence");
+    setAdcLevelCompensated(false);
+    CHECK(classifyAdc(-48, 0.02, 0) == AdcStatus::Low && classifyAdc(-75, 0.01, 0) == AdcStatus::NoSignal, "uncompensated 16-bit: unchanged");
+    setAdcBits(8);
+}
+
 int main() {
     testModels();
     testProfiles();
@@ -356,6 +409,7 @@ int main() {
     testRetune();
     testQualityRevert();
     testSweepAmp();
+    testLevelCompensated();
     if (fails) { printf("%d FAILED\n", fails); return 1; }
     printf("auto-gain: all passed\n");
     return 0;

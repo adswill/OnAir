@@ -746,6 +746,31 @@ void nameEditor(App& s) {
     if (!s.mapName.empty()) ImGui::TextDisabled(tr("Sending as: %s"), s.mapName.c_str());
 }
 
+// The way to the name editor, second in the Server menu (3.8, Discord: on a Raspberry Pi the old submenu near the end of a tall menu was out
+// of reach on a small screen, and a submenu needs hover on a touch screen). A plain item that opens a window of its own in the middle of the
+// screen; it is there whether or not sending is on, so a name can be chosen first. Nothing is sent from it.
+bool gAskName = false;
+void nameItem(App& s, bool menu) {
+    std::string label = s.mapName.empty() ? std::string(tr("Your name on the map: anonymous")) : std::string(tr("Your name on the map:")) + " " + s.mapName;
+    label += "...##mapnameitem";
+    const bool hit = menu ? ImGui::MenuItem(label.c_str()) : ImGui::Selectable(label.c_str());
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Optional and public: a name shown on the icons you were the last to hear. Empty = anonymous."));
+    if (hit) gAskName = true;
+}
+void namePopup(App& a) {
+    App& s = rootApp(a);
+    if (gAskName) { ImGui::OpenPopup("##mapnamewin"); gAskName = false; }
+    if (const ImGuiViewport* vp = ImGui::GetMainViewport()) {
+        ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + vp->WorkSize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        ImGui::SetNextWindowSizeConstraints(ImVec2(std::min(300 * gUi, vp->WorkSize.x), 0), ImVec2(vp->WorkSize.x, vp->WorkSize.y));   // never larger than the screen
+    }
+    if (!ImGui::BeginPopupModal("##mapnamewin", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) return;
+    nameEditor(s);
+    ImGui::Dummy(ImVec2(0, 4 * gUi));
+    if (ImGui::Button(tr("Close"))) ImGui::CloseCurrentPopup();
+    ImGui::EndPopup();
+}
+
 // "Also share interesting ACARS messages": free text and crew / operations / company / maintenance messages from the aircraft on the map.
 // They are public radio, but the text may name people, so phone numbers and e-mail addresses are removed before upload and this is its own choice.
 void msgsToggle(App& s, bool menu) {
@@ -971,6 +996,7 @@ void mapPopups(App& a) {
     roomsPopups(rootApp(a));
     startupQuestion(a);
     consentPopup(a);
+    namePopup(a);
     hamConsentPopup(a);
     connectingPopup();
     retryPopup();
@@ -998,12 +1024,12 @@ void sendToggle(App& a, bool menu) {
 void mapSendServerMenu(App& a) {
     if (!ImGui::BeginMenu(tr("Server"))) { mapPopups(a); webshare::drawPopups(a); return; }   // the Share on web window stays up after the menu closes
     sendToggle(a, true);
+    nameItem(rootApp(a), true);
     if (rootApp(a).mapSend) msgsToggle(rootApp(a), true);
     if (rootApp(a).mapSend) voiceToggle(rootApp(a), true);
     if (rootApp(a).mapSend) jamToggle(rootApp(a), true);
     if (rootApp(a).mapSend) hamToggle(rootApp(a), true);
     if (rootApp(a).mapSend && rootApp(a).mapHam) hamPrecisionToggle(rootApp(a), true);
-    if (rootApp(a).mapSend && ImGui::BeginMenu(tr("Your name on the map"))) { nameEditor(rootApp(a)); ImGui::EndMenu(); }
     ImGui::Separator();
     roomsMenu(rootApp(a), true);
     ImGui::TextDisabled("%s", tr("The map is at map.on-air.dev"));
@@ -1019,12 +1045,12 @@ void mapSendButton(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Send decoded positions to the public map"));
     if (ImGui::BeginPopup("##serverpop")) {
         sendToggle(a, false);
+        nameItem(rootApp(a), false);
         if (rootApp(a).mapSend) msgsToggle(rootApp(a), false);
         if (rootApp(a).mapSend) voiceToggle(rootApp(a), false);
         if (rootApp(a).mapSend) jamToggle(rootApp(a), false);
         if (rootApp(a).mapSend) hamToggle(rootApp(a), false);
         if (rootApp(a).mapSend && rootApp(a).mapHam) hamPrecisionToggle(rootApp(a), false);
-        if (rootApp(a).mapSend && ImGui::BeginMenu(tr("Your name on the map"))) { nameEditor(rootApp(a)); ImGui::EndMenu(); }
         ImGui::Separator();
         roomsMenu(rootApp(a), false);
         ImGui::TextDisabled("%s", tr("The map is at map.on-air.dev"));

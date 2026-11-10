@@ -1,5 +1,6 @@
 // Decode help: see decode_progress.h.
 #include "dect2/doctor/decode_progress.h"
+#include "dect2/source/gain.h"
 #include "dect2/common/u8file.h"
 #include <algorithm>
 #include <cmath>
@@ -105,7 +106,7 @@ Coaching coach(const Report& rep, const Context& c, bool antennaKnown, bool ante
         out.advice.push_back(Advice::GainDown);
         out.gainDeltaDb = m.clipPct > 2 ? 12 : 6;
         gainSaid = true;
-    } else if (m.rmsDbfs < -45 && headroom > 3) {
+    } else if (m.rmsDbfs < -45 && headroom > 3 && !adcLevelCompensated()) {   // (AirspyHF+: the level does not follow the gain)
         out.advice.push_back(Advice::GainUp);
         out.gainDeltaDb = std::min(headroom, 10.0);
         gainSaid = true;

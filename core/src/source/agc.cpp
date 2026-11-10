@@ -37,6 +37,7 @@ GainModel gainModelFor(const DeviceInfo& d, int adcBits) {
         m.stepDb = 6;
         m.minDb = 0; m.maxDb = 48;
         m.ampSwitch = true; m.ampDb = 6; m.ampIsTopOfScale = true; m.ampSettingKey = "preamp";
+        m.levelCompensated = true;
     }
     return m;
 }
@@ -175,6 +176,7 @@ const char* agcReasonName(AgcReason r) {
     case AgcReason::Reverted: return "worse quality: undone";
     case AgcReason::Recovering: return "recovering after a burst";
     case AgcReason::LimitHit: return "at the limit";
+    case AgcReason::TopGain: return "least attenuation (the radio sets its own level)";
     default: return "";
     }
 }
@@ -197,6 +199,7 @@ void SmartAgc::begin(double now, int currentTotalDb, bool ampOn) {
     amp_ = ampOn;
     lnaCap_ = prof_.lnaCap;
     cur_ = model_.snap(currentTotalDb, effMin(), std::max(effMin(), effMax()));
+    snapPending_ = cur_ != currentTotalDb;
     last_ = now;
     changedAt_ = now - 10;
     moveAt_ = -1e9;
@@ -316,6 +319,24 @@ bool SmartAgc::update(double now, const AgcMeasure& m, const AgcQuality& q, AgcC
                 return true;
             }
         }
+    }
+
+    // ---- 4a. a radio that keeps its own output level (AirspyHF+): the level says nothing about the gain. The least attenuation the
+    // radio allows (the best noise figure), down only when the peak nears full scale (clipping is handled above, with its ceiling)
+    if (model_.levelCompensated) {
+        hi0 = effMax();
+        int lim = std::max(effMin(), hi0);
+        if (now - lastOverload_ < 300) lim = std::min(lim, std::max(effMin(), (int)ceil_));   // a gain that clipped stays out of reach for 5 minutes
+        if (snapPending_) { snapPending_ = false; apply(now, cur_, AgcReason::LimitHit, out); moveAt_ = now; return true; }   // begin() moved it into the allowed range
+        if (cur_ < lim && now - moveAt_ >= (acquiring ? 0.5 : 2.5)) {
+            const int t = model_.nextToward(cur_, lim - cur_, effMin(), lim);
+            if (t != cur_) {
+                pending_ = snrValid_; pendingAt_ = now; upFrom_ = cur_; snrBefore_ = snrValid_ ? snr_ : 0;
+                apply(now, t, AgcReason::TopGain, out); dir_ = 1; moveAt_ = now; return true;
+            }
+        }
+        reason_ = cur_ >= lim ? AgcReason::TopGain : AgcReason::Settling;
+        return false;
     }
 
     // ---- 4. what the level and the neighbours ask for

@@ -20,6 +20,7 @@ struct In {
     bool running = false;
     bool hasRadio = true;        // a radio (or file / demo signal) is chosen
     bool radioHasGain = false;   // the radio has a gain to set
+    bool levelCompensated = false;   // the radio's output level does not follow its gain (AirspyHF+): a low level is no reason to raise it
     bool autoGain = false;       // automatic gain is already on
     double runSec = 0;           // seconds since the receiver started
     bool lockKnown = false;      // the mode reports lock / signal quality
@@ -75,7 +76,7 @@ inline Out advise(const In& in) {
         }
         o.state = State::Good; o.text = N_("Receiving well."); return o;
     }
-    if (in.rmsDbfs < kLowDbfs && in.radioHasGain && !in.autoGain && in.runSec >= kSearchSec) {
+    if (in.rmsDbfs < kLowDbfs && in.radioHasGain && !in.levelCompensated && !in.autoGain && in.runSec >= kSearchSec) {
         o.state = State::TooLow;
         o.text = N_("Very little reaches the radio. Raise the gain, or let Auto gain find it, and check the antenna.");
         o.fix = Fix::AutoGain; o.fixLabel = N_("Auto gain");

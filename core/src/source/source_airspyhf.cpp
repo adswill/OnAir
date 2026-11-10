@@ -232,8 +232,9 @@ protected:
             if (agc != "off" && api.set_hf_agc_threshold) api.set_hf_agc_threshold(dev_, agc == "high" ? 1 : 0);
             agc_ = agc;
         }
-        // the gain slider (0..48 dB, more is louder) -> attenuation in 6 dB steps; the preamp (+6 dB) in the top 6 dB of the slider, or always
-        // on / off (TuneSettings "preamp")
+        // the gain slider (0..48 dB) -> attenuation in 6 dB steps; the preamp (+6 dB) in the top 6 dB of the slider, or always on / off
+        // (TuneSettings "preamp"). The firmware compensates the preamp in its gain chain (hfplus changelog R1.1) and treats the attenuator as the HF gain
+        // distribution (R1.3) under its own digital gain, so the output level need not follow the slider: it moves the gain distribution (noise figure against overload), see setAdcLevelCompensated()
         const double g = std::min(std::max(s.gainDb, 0.0), kGainMaxDb);
         att_ = (int)std::lround((kGainMaxDb - g) / kAttStepDb);
         api.set_hf_att(dev_, (uint8_t)att_);
@@ -402,7 +403,11 @@ void listAirspyHf(std::vector<DeviceInfo>& out) {
                                     {"auto", "off", "on"}, {"Auto (with the gain)", "Off", "On"}, "auto"),
                       choiceSetting("agc", "Radio AGC",
                                     "The HF+'s own fast AGC in front of the converter, for strong or fading HF signals. Off: the gain slider (and OnAir's AGC)\n"
-                                    "set the attenuator (the default). Low / High: the AGC's threshold; the slider then has little effect.",
+                                    "set the attenuator (the default). Low / High: the AGC's threshold; the attenuator is then the radio's and the slider has no effect\n"
+                                    "(Airspy's own default is On, high threshold).\n"
+                                    "The firmware compensates the preamp and treats the attenuator as its gain distribution: the level in dBFS need not move with the slider,\n"
+                                    "which trades noise figure (top: least attenuation) for overload margin. A low dBFS level is normal for this radio. On older\n"
+                                    "firmware the attenuator acts only below 31 MHz.",
                                     {"off", "low", "high"}, {"Off", "On, low threshold", "On, high threshold"}, "off")};
         gHfKnown[sn[i]] = d;
         out.push_back(d);

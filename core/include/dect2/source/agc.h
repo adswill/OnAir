@@ -31,6 +31,9 @@ struct GainModel {
     int ampDb = 0;
     bool ampIsTopOfScale = false; // true: the amp belongs to the top ampDb of the overall scale (AirspyHF+), false: it is a stage of its own (HackRF)
     std::string ampSettingKey;    // AirspyHF+: "preamp" (the radio setting the amp is behind)
+    // AirspyHF+: the output level does not follow the gain (the firmware compensates the preamp and sets its own gain distribution). The level
+    // cannot say "more gain"; the loop keeps the least attenuation the radio allows and backs off only on clipping (see setAdcLevelCompensated)
+    bool levelCompensated = false;
 
     // the gains reachable without the amp / the highest total with the amp fixed as `ampOn` and the LNA limited to lnaCap
     int maxTotal(bool ampOn, bool ampAllowed, int lnaCap) const;
@@ -86,7 +89,8 @@ struct AgcQuality {
 };
 
 // ------------------------------------------------------------------------------------------------------------------------------ control loop
-enum class AgcReason { None, Settling, Hold, Overload, TooHot, TooLow, Margin, Wasted, Blocker, Locked, Reverted, Recovering, LimitHit };
+enum class AgcReason { None, Settling, Hold, Overload, TooHot, TooLow, Margin, Wasted, Blocker, Locked, Reverted, Recovering, LimitHit,
+                       TopGain };   // TopGain: a level-compensated radio (AirspyHF+) kept at the least attenuation allowed
 const char* agcReasonName(AgcReason r);
 
 struct AgcCommand {
@@ -128,6 +132,7 @@ private:
     AgcProfile prof_;
     bool begun_ = false, ampAllowed_ = false, amp_ = false;
     int cur_ = 0, lnaCap_ = 40, steadyDb_ = -1;
+    bool snapPending_ = false;   // begin() snapped the radio's gain into the allowed range; not yet sent (level-compensated radios)
     double last_ = 0, changedAt_ = -1e9, moveAt_ = -1e9, acquireUntil_ = 0;
     double rms_ = -120, peak_ = 0, clip_ = 0, oob_ = -200, margin_ = 0, snr_ = 0;
     bool haveFloor_ = false, snrValid_ = false, init_ = false;

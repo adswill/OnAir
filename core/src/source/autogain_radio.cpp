@@ -189,11 +189,13 @@ std::vector<RadioProfile> buildProfiles() {
     }
     {
         RadioProfile r;
-        r.id = "airspyhf"; r.name = "Airspy HF+"; r.adcBits = 16; r.hasAmp = true; r.driverSplits = true; r.settleSec = 0.25;
+        r.id = "airspyhf"; r.name = "Airspy HF+"; r.adcBits = 16; r.hasAmp = true; r.driverSplits = true; r.settleSec = 0.25; r.levelCompensated = true;
         r.stages.push_back(stage("overall", "Gain", StageKind::Overall, range(0, 48, 6), 6, 6, 10, true,
                                  "Attenuator 0-48 dB in 6 dB steps as one gain; the top 6 dB switch the preamp on (only with your permission)."));
         r.ampNote = "The preamp is part of the top 6 dB of the slider; the auto modes stay at 42 dB unless you allow the amp.";
-        r.notes = "Very high dynamic range: gain is rarely the limit; keep the preamp off near strong broadcast stations.";
+        r.notes = "Very high dynamic range: gain is rarely the limit; keep the preamp off near strong broadcast stations. The firmware compensates the\n"
+                  "preamp and treats the attenuator as its gain distribution, so the level in dBFS need not move with the slider: the slider trades noise figure for\n"
+                  "overload margin. Auto gain keeps the least attenuation and backs off only on clipping.";
         v.push_back(r);
     }
     {
