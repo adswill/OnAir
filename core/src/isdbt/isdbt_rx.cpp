@@ -1,4 +1,5 @@
 #include "dect2/isdbt/isdbt_rx.h"
+#include "dect2/engine/mode_tuning.h"
 #include "dect2/isdbt/isdbt_resample.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/isdbt/isdbt.h"
@@ -755,6 +756,16 @@ bool IsdbtReceiver::telemetry(RxTelemetry& out, uint64_t lastSeq) {
     if (I.tel.seq <= lastSeq) return false;
     out = I.tel;
     return true;
+}
+
+ModeTuning isdbtsbTuning() {
+    ModeTuning t;
+    t.stdMode = 732; t.id = "isdbtsb"; t.name = "ISDB-TSB";
+    t.minMhz = 90; t.maxMhz = 770; t.defMhz = 100.0;
+    t.sampleRate = 2.048e6;        // three segments of a 6 MHz raster are 1.29 MHz wide; one segment 0.43 MHz
+    t.minSampleRate = 0.5e6;       // one segment
+    t.bandwidthMhz = 1.3;
+    return t;
 }
 
 } // namespace dect2

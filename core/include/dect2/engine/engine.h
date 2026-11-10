@@ -880,6 +880,7 @@ private:
     DabReceiver rxD_;
     Atsc3Rx rxA3_;
     IsdbtReceiver rxI_;
+    IsdbtReceiver rxTsb_;   // ISDB-TSB (active standard 731): the narrow-band one- and three-segment receiver
     FmReceiver rxFm_;
     FmCensus fmCensus_;
     DabCensus dabCensus_; std::atomic<bool> dabCensusOn_{false}; bool dabCensusReady_ = false; double dabCensusC_ = 0, dabCensusR_ = 0;

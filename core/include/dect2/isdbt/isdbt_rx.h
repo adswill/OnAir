@@ -35,4 +35,8 @@ private:
     std::unique_ptr<Impl> p_;
 };
 
+// The tuning of the ISDB-TSB mode (engine standard 732, mode-list family 730): a narrow capture of one or three segments
+struct ModeTuning;
+ModeTuning isdbtsbTuning();
+
 } // namespace dect2

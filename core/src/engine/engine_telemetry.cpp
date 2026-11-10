@@ -428,6 +428,12 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 561: return pollStd(rxSatd_, 561, t, seqs[561], &RxTelemetry::satdetect);
     case 563: return pollStd(rxSatd_, 563, t, seqs[563], &RxTelemetry::satdetect);
     case 562: return pollStd(rxNavic_, 562, t, seqs[562], &RxTelemetry::navic);
+    case 731: {   // ISDB-TSB: the ISDB-T receiver fills the common telemetry itself
+        if (!rxTsb_.telemetry(t, seqs[731])) return 0;
+        seqs[731] = t.seq;
+        logIsdbtEvents(t);
+        return 1;
+    }
     case 145: return pollStd(rxSb_, 145, t, seqs[140], &RxTelemetry::satbeacon);   // TV sat beacon decoder (slot 140)
     case 130: return pollStd(rxLtr_, 130, t, seqs[126], &RxTelemetry::ltr);     // LTR control channel (slot 126)
     case 131: return pollStd(rxEdacs_, 131, t, seqs[127], &RxTelemetry::edacs); // EDACS control channel (slot 127)

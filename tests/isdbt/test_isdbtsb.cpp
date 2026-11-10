@@ -8,11 +8,15 @@
 //   4. three segments on automatic: the receiver starts with one segment, reads the TMCC and changes over to all three (both layers)
 //   5. the one-segment service of a 13-segment ISDB-T signal through the narrow receiver (the partial-reception layer only)
 //   6. a noise sweep for QPSK 1/2: where the packets stop being clean (reported, and a loose bound checked)
+//   7. the mode's own test signal (makeModeSynth 732, the engine standard) through the receiver the engine runs for it, and its tuning
 // All signals are simulated: no recording of an ISDB-TSB broadcast was available.
 #include "dect2/isdbt/isdbt.h"
 #include "dect2/isdbt/isdbt_gen.h"
 #include "dect2/isdbt/isdbt_resample.h"
 #include "dect2/isdbt/isdbt_rx.h"
+#include "dect2/engine/mode_synth.h"
+#include "dect2/engine/mode_tuning.h"
+#include "dect2/source/source.h"
 #include "../common/jobs.h"
 #include <atomic>
 #include <cmath>
@@ -215,7 +219,7 @@ int main() {
     add([] {
         Params p = one(3, kGi16, k64Qam, kR34, 1); p.bwMhz = 8;
         Channel ch; ch.inRate = 1.5e6; ch.cfoHz = 2500; ch.snrDb = 30; ch.ppm = 5;
-        expectFlow("1 seg mode 3 64QAM 3/4, 8 MHz raster (571 kHz segment), automatic raster", run(p, ch, 6.0, 0), p, 150);
+        expectFlow("1 seg mode 3 64QAM 3/4, 8 MHz raster (571 kHz segment)", run(p, ch, 6.0, 0), p, 150);
     });
     // 4. three segments, hierarchical, automatic
     add([] {
@@ -271,6 +275,25 @@ int main() {
         RxTelemetry t; rx.telemetry(t, 0);
         jprintf("  one-seg of ISDB-T through the narrow receiver: tmcc %d, %d seg, good %ld, other layers %ld, bad %ld\n", (int)t.isdbt.tmccOk, rx.tsbSegments(), good, other, bad);
         check(t.isdbt.tmccOk && good > 100 && other == 0 && bad * 50 <= good, "one-seg of ISDB-T", "partial-reception layer decoded");
+    });
+    // 7. the engine's test signal and tuning
+    add([] {
+        const ModeTuning* mt = modeTuning(732);
+        check(mt && std::string(mt->id) == "isdbtsb" && mt->minSampleRate <= 1.0e6 && mt->sampleRate >= 1.5e6, "engine", "ISDB-TSB tuning (standard 732)");
+        SynthConfig cfg; cfg.cfoHz = 1700; cfg.snrDb = 25;
+        const double rate = 2.048e6;
+        auto syn = makeModeSynth(732, cfg, rate);
+        check(syn != nullptr, "engine", "makeModeSynth(732)");
+        if (!syn) return;
+        IsdbtReceiver rx; rx.configureTsb(rate, 6, 0);
+        long ok = 0, bad = 0;
+        rx.setPacketCallback([&](const uint8_t* pk, size_t n, double) { for (size_t i = 0; i < n; i++) { if (pk[i * 188] == 0x47 && !(pk[i * 188 + 1] & 0x80)) ok++; else bad++; } });
+        std::vector<cf32> buf(16384);
+        for (double t = 0; t < 7.0; t += buf.size() / rate) { syn->generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); }
+        RxTelemetry tel; rx.telemetry(tel, 0);
+        jprintf("  engine test signal: tmcc %d, %d seg, standard %d, packets %ld, errored %ld\n", (int)tel.isdbt.tmccOk, rx.tsbSegments(), tel.standard, ok, bad);
+        check(tel.isdbt.tmccOk && rx.tsbSegments() == 3 && tel.standard == 731, "engine", "test signal locked, three segments, active standard 731");
+        check(ok > 300 && bad * 50 <= ok, "engine", "test programme flowing");
     });
     // 3. all modes x guard intervals (QPSK 1/2), all modulations x rates (mode 3, 1/8)
     for (int mode = 1; mode <= 3; mode++)
