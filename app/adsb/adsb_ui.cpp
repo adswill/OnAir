@@ -160,6 +160,7 @@ void tick(App& a) {
 void tab(App& a) {
     kit::modeHeader({11, "ADS-B", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
     kit::modeNav("adsbv", S.viewMode, {{tr("Live"), 1}, {tr("Tracks"), 5}, {tr("Map"), 0}, {tr("Radar"), 2, true}, {tr("Range"), 3, true}, {tr("Range stats"), 4, true}});
+    if (S.viewMode == 0 || S.viewMode == 1 || S.viewMode == 2) filterBar(a);
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float dw = std::min(250.f * gUi, W * 0.26f);
     // the readout beside the map and radar; beside the table only once an aircraft is picked (its ACARS messages are in it)
@@ -186,6 +187,7 @@ void tab(App& a) {
 // Simple view: the aircraft table and the map side by side; the readout of a picked aircraft as a third pane
 void command(App& a) {
     kit::modeHeader({11, "ADS-B", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
+    filterBar(a);
     const bool picked = S.sel != 0xFFFFFFFFu;
     if (picked)
         modepanel::panes({{"##adsbcmdt", tr("Aircraft"), [&a] { aircraftTable(a, false); }, 1.3f, 240.f},

@@ -73,6 +73,7 @@ void radar(App& a, ImVec2 size) {
         const double k = std::cos(S.refLat * M_PI / 180.0);
         auto pt = [&](double lat, double lon) { return ImVec2(c.x + (float)((lon - S.refLon) * k * 60.0 / scale * R), c.y - (float)((lat - S.refLat) * 60.0 / scale * R)); };
         for (const auto& ac : t.aircraft) {
+            if (!shown(ac)) continue;   // the filter bar
             if (!ac.hasPos) continue;
             const bool sel = ac.icao == S.sel;
             const ImU32 col = ac.emergency ? ImGui::ColorConvertFloat4ToU32(pal::badRed()) : sel ? IM_COL32(255, 255, 255, 255) : ImGui::ColorConvertFloat4ToU32(pal::accent());
@@ -126,6 +127,7 @@ bool positionLooksWrong(const AdsbTelemetry& t, double& lat, double& lon, double
     std::vector<double> las, los;
     nearestNm = 1e9;
     for (const auto& ac : t.aircraft) {
+        if (!shown(ac)) continue;   // the filter bar
         if (!ac.hasPos) continue;
         las.push_back(ac.lat); los.push_back(ac.lon);
         const double p1 = S.refLat * M_PI / 180, p2 = ac.lat * M_PI / 180, dl = (ac.lon - S.refLon) * M_PI / 180;
@@ -145,6 +147,7 @@ static void drawTrails(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVec2
     const trails::Rect clip{p0.x, p0.y, p0.x + size.x, p0.y + size.y};
     static std::vector<trails::Pt> pts;   // the projected track, reused (UI thread only)
     for (const auto& ac : t.aircraft) {   // trails first, so the icons sit on top
+        if (!shown(ac)) continue;   // the filter bar
         if (!ac.hasPos || ac.track.size() < 2) continue;
         const ImU32 trail = adsbmap::acColour(adsbmap::AcSrc::Adsb, ac.posAgeSec, 0.55f);
         const bool stale = ac.posAgeSec > adsbmap::acStaleSec(adsbmap::AcSrc::Adsb);
@@ -166,6 +169,7 @@ static void drawTrails(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVec2
             dl->AddLine(ImVec2(pts.back().x, pts.back().y), now, alt ? altColour(ac, 0.55f) : trail, w);
     }
     for (const auto& ac : t.aircraft) {   // a couple of minutes ahead at the last speed, like the path on the flight-tracking sites
+        if (!shown(ac)) continue;   // the filter bar
         if (!ac.hasPos || !ac.hasHeading || !ac.hasSpeed || ac.speedKt < 30 || ac.ground) continue;
         double la = 0, lo = 0;
         adsbmap::aheadNm(ac.lat, ac.lon, ac.headingDeg, ac.speedKt * (2.0 / 60.0), la, lo);
@@ -196,6 +200,7 @@ static void drawJam(ImDrawList* dl, ImVec2 p0, ImVec2 size) {
 // winds aloft: an arrow downwind from each aircraft, 1 px per kt, a tick per 50 kt
 static void drawWinds(ImDrawList* dl, const AdsbTelemetry& t) {
     for (const auto& ac : t.aircraft) {   // winds aloft: an arrow downwind from the aircraft, 1 px per kt, a tick per 50 kt
+        if (!shown(ac)) continue;   // the filter bar
         if (!ac.hasPos || ac.ground || !(ac.hasWindDer || ac.hasWindRep)) continue;
         const float kt = ac.hasWindDer ? ac.windDerKt : ac.windRepKt, from = ac.hasWindDer ? ac.windDerDir : ac.windRepDir;
         const ImVec2 q = adsbmap::project(ac.lat, ac.lon);
@@ -220,6 +225,7 @@ static void drawAircraft(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVe
     const double nowT = ImGui::GetTime();
     const bool lite = rcaps::lowPowerDraw();   // low-power drawing: a triangle per aircraft, the label box only for the selected one
     for (const auto& ac : t.aircraft) {        // who triggered an ACAS advisory: a line from the aircraft to its threat
+        if (!shown(ac)) continue;   // the filter bar
         if (!ac.hasPos || !ac.hasRa || !ac.raThreat) continue;
         for (const auto& th : t.aircraft) if (th.icao == ac.icao ? false : (th.icao == ac.raThreat && th.hasPos)) {
             dl->AddLine(adsbmap::project(ac.lat, ac.lon), adsbmap::project(th.lat, th.lon), IM_COL32(235, 70, 70, 220), 2.f * gUi);
@@ -227,6 +233,7 @@ static void drawAircraft(ImDrawList* dl, const AdsbTelemetry& t, ImVec2 p0, ImVe
         }
     }
     for (const auto& ac : t.aircraft) {
+        if (!shown(ac)) continue;   // the filter bar
         if (!ac.hasPos) continue;
         dect2::track::PosEstimate pe;
         const bool est = gPred.get(dect2::track::keyFromIcao(ac.icao), nowT, pe, ac.posAgeSec) && pe.valid;
