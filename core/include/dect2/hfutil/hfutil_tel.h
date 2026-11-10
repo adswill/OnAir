@@ -1,4 +1,4 @@
-// HF utility receivers (families 430 .. 439) telemetry, shared by the receiver and the panel. Keep the first members (copied into RxTelemetry).
+// HF utility receivers (families 430 .. 439, and 603) telemetry, shared by the receiver and the panel. Keep the first members (copied into RxTelemetry).
 #pragma once
 #include <cstdint>
 #include <cstdio>
@@ -8,9 +8,14 @@
 namespace dect2 {
 
 constexpr int kHfuFamilyFirst = 430, kHfuKinds = 10;
+// 3.9 kinds after the first ten, in their own family numbers (docs/HF-MIL-3.9.md): 10 = MIL-STD-188-110C Appendix C / STANAG 4539 (family 603)
+constexpr int kHfuKindHdr = 10, kHfuKindsAll = 11;
+constexpr int kHfuHdrFamily = 603;
+inline int hfuFamilyOf(int k) { return k < kHfuKinds ? kHfuFamilyFirst + k : kHfuHdrFamily + (k - kHfuKinds); }
 inline const char* hfuName(int k) {
-    static const char* n[kHfuKinds] = {"MIL-STD-188-110 serial", "STANAG 4285", "ARQ-E", "ARQ-N", "AUTOSPEC", "SPREAD", "G-TOR", "EFR teleswitch", "Piccolo Mk VI", "Coquelet-8"};
-    return k >= 0 && k < kHfuKinds ? n[k] : "HF utility";
+    static const char* n[kHfuKindsAll] = {"MIL-STD-188-110 serial", "STANAG 4285", "ARQ-E", "ARQ-N", "AUTOSPEC", "SPREAD", "G-TOR", "EFR teleswitch", "Piccolo Mk VI", "Coquelet-8",
+                                          "STANAG 4539 / 110C high rate"};
+    return k >= 0 && k < kHfuKindsAll ? n[k] : "HF utility";
 }
 
 struct HfUtilEvent {

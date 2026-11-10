@@ -1,6 +1,7 @@
 // HF utility receiver: channel to 24 kHz (marine::Front), then the decoder of this mode. See hfutil_rx.h.
 #include "dect2/hfutil/hfutil_rx.h"
 #include "dect2/hfutil/hfu_serial.h"
+#include "dect2/hfutil/hfu_hdr.h"
 #include "dect2/hfutil/hfu_fsk.h"
 #include "dect2/marine/marine_dsp.h"
 #include <algorithm>
@@ -26,6 +27,7 @@ struct HfUtilReceiver::Impl {
     std::vector<cf32> base;
     std::unique_ptr<hfu::SerialRx> serial;
     std::unique_ptr<hfu::FskRx> fsk;
+    std::unique_ptr<hfu::HighRateRx> hdr;
     HfUtilTelemetry tel;
     uint64_t seq = 0;
     std::function<void(const std::string&)> log;
@@ -80,6 +82,22 @@ struct HfUtilReceiver::Impl {
                 std::lock_guard<std::mutex> l(mu);
                 tel.pdus++;
             });
+        } else if (kind == kHfuKindHdr) {
+            hdr = std::make_unique<hfu::HighRateRx>();
+            hdr->setEventSink([this](const hfu::SerialEvent& e) { addEvent(e.text); });
+            hdr->setByteSink([this](uint8_t c) {
+                char t[6];
+                if ((c >= 0x20 && c < 0x7F) || c == '\n' || c == '\r') snprintf(t, sizeof t, "%c", c);
+                else snprintf(t, sizeof t, "[%02X]", c);
+                addText(t);
+            });
+            hdr->setD5066Sink([this](const hfu::D5066& d) {
+                char t[200];
+                snprintf(t, sizeof t, "STANAG 5066 %s  %s -> %s  %d bytes%s", d.typeName.c_str(), d.src.c_str(), d.dst.c_str(), d.payload, d.payload ? (d.dataCrcOk ? ", CRC ok" : ", CRC bad") : "");
+                addEvent(t);
+                std::lock_guard<std::mutex> l(mu);
+                tel.pdus++;
+            });
         } else {
             static const hfu::FskKind kk[] = {hfu::FskKind::ArqE, hfu::FskKind::ArqN, hfu::FskKind::Autospec, hfu::FskKind::Spread, hfu::FskKind::GTor, hfu::FskKind::Efr, hfu::FskKind::Piccolo6, hfu::FskKind::Coquelet8};
             fsk = std::make_unique<hfu::FskRx>(kk[kind - 2]);
@@ -91,6 +109,7 @@ struct HfUtilReceiver::Impl {
     void resetDec() {
         if (serial) serial->reset();
         if (fsk) fsk->reset();
+        if (hdr) hdr->reset();
         curByte = 0; curBits = 0;
         std::lock_guard<std::mutex> l(mu);
         tel = HfUtilTelemetry();
@@ -122,6 +141,7 @@ void HfUtilReceiver::feed(const cf32* x, size_t n) {
     if (p_->base.empty()) return;
     if (p_->serial) p_->serial->push(p_->base.data(), p_->base.size());
     if (p_->fsk) p_->fsk->push(p_->base.data(), p_->base.size());
+    if (p_->hdr) p_->hdr->push(p_->base.data(), p_->base.size());
     double e = 0;
     for (const auto& v : p_->base) e += std::norm(v);
     std::lock_guard<std::mutex> l(p_->mu);
@@ -129,6 +149,10 @@ void HfUtilReceiver::feed(const cf32* x, size_t n) {
     if (p_->serial) {
         const auto s = p_->serial->status();
         p_->tel.state = s.state; p_->tel.cfoHz = s.cfoHz; p_->tel.snrDb = (float)s.snrDb; p_->tel.mode = s.mode;
+        p_->tel.blocksOk = s.blocks; p_->tel.dataValid = s.state >= 2;
+    } else if (p_->hdr) {
+        const auto s = p_->hdr->status();
+        p_->tel.state = s.state; p_->tel.cfoHz = s.cfoHz; p_->tel.snrDb = (float)s.snrDb; p_->tel.mode = s.state >= 2 || s.messages ? s.mode : "";
         p_->tel.blocksOk = s.blocks; p_->tel.dataValid = s.state >= 2;
     } else if (p_->fsk) {
         const auto s = p_->fsk->status();
@@ -154,10 +178,11 @@ void HfUtilReceiver::setForcedProfile(int p) { if (p_->serial) p_->serial->force
 void HfUtilReceiver::setForcedFsk(double baud, double shiftHz) { if (p_->fsk) { p_->fsk->setBaud(baud); p_->fsk->setShift(shiftHz); } }
 
 ModeTuning hfUtilTuning(int kind) {
-    static const char* ids[kHfuKinds] = {"milstd110", "stanag4285", "arqe", "arqn", "autospec", "spreadhf", "gtor", "efr", "piccolo", "coquelet"};
-    static const double def[kHfuKinds] = {7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 14.0, 0.1276, 7.0, 7.0};
+    static const char* ids[kHfuKindsAll] = {"milstd110", "stanag4285", "arqe", "arqn", "autospec", "spreadhf", "gtor", "efr", "piccolo", "coquelet", "stanag4539"};
+    static const double def[kHfuKindsAll] = {7.0, 7.0, 7.0, 7.0, 7.0, 7.0, 14.0, 0.1276, 7.0, 7.0, 7.0};
+    kind = std::clamp(kind, 0, kHfuKindsAll - 1);
     ModeTuning t;
-    t.stdMode = kHfuFamilyFirst + kind + 2;
+    t.stdMode = hfuFamilyOf(kind) + 2;
     t.id = ids[kind];
     t.name = hfuName(kind);
     t.minMhz = 0.1; t.maxMhz = 30; t.defMhz = def[kind];
@@ -183,7 +208,11 @@ public:
     HfuSynth(int kind, const SynthConfig& s, double rate) : kind_(kind), rate_(rate), cfo_(s.cfoHz), snr_(s.snrDb), rng_(1234) {
         std::vector<cf32> x;
         const std::string msg = "ONAIR HF UTILITY TEST SIGNAL 12345 THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG";
-        if (kind <= 1) {
+        if (kind == kHfuKindHdr) {
+            hfu::HdrGenCfg c;
+            c.bps = 4800; c.frames = 3;
+            x = hfu::genHighRate(c, hfu::hdrBytesToBits(msg));
+        } else if (kind <= 1) {
             hfu::SerialGenCfg c;
             c.std = kind == 0 ? hfu::SerialStd::Mil110 : hfu::SerialStd::Stanag4285;
             c.bps = 600;
@@ -237,7 +266,7 @@ private:
 }  // namespace
 
 std::unique_ptr<ModeSynth> makeHfUtilSynth(int kind, const SynthConfig& cfg, double sampleRate) {
-    if (sampleRate <= 0 || kind < 0 || kind >= kHfuKinds) return nullptr;
+    if (sampleRate <= 0 || kind < 0 || kind >= kHfuKindsAll) return nullptr;
     return std::make_unique<HfuSynth>(kind, cfg, sampleRate);
 }
 
