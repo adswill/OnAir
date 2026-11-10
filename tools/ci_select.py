@@ -177,7 +177,7 @@ def main():
             fp = e["file"] if os.path.isabs(e["file"]) else os.path.join(e.get("directory", bd), e["file"])
             tgt_src.setdefault(m.group(1), set()).add(os.path.relpath(fp, src).replace(os.sep, "/"))
     cm = open(os.path.join(src, "CMakeLists.txt")).read()
-    cmd = dict(re.findall(r"add_test\(\s*NAME\s+(\S+)\s+COMMAND\s+(\w+)", cm))
+    cmd = dict(re.findall(r"add_test\(\s*NAME\s+(\S+)\s+COMMAND\s+([\w-]+)", cm))
     for n, tg in re.findall(r"add_test\(\s*NAME\s+(\S+)\s+COMMAND[^\n]*?TARGET_FILE:(\w+)", cm):
         cmd.setdefault(n, tg)
     test_tgt, test_area = {}, {}
