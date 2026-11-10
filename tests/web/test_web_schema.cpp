@@ -146,7 +146,7 @@ int main() {
         else noSchema.insert(r.name);
     }
     // the TV standards carry the common block + details (no own block); the rest without a block are known and listed in docs/WEB-SCHEMA-3.9.md
-    static const char* const kKnownNoBlock[] = {"DVB", "TV (auto)", "ATSC", "ATSC 3.0", "ISDB-T", "DAB / DAB+", "FM", "Internet TV (IPTV)", "ASTERIX", "Mode Builder", "Plugins"};
+    static const char* const kKnownNoBlock[] = {"DVB", "TV (auto)", "ATSC", "ATSC 3.0", "ISDB-T", "DAB / DAB+", "FM", "Internet TV (IPTV)", "ASTERIX", "ISDB-TSB", "Mode Builder", "Plugins"};
     for (const std::string& name : noSchema) {
         bool known = false;
         for (const char* k : kKnownNoBlock) if (name == k) known = true;

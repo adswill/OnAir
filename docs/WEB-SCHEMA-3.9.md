@@ -121,8 +121,8 @@ with a 200-row table stays smooth on a phone.
 
 ### Rows without a panel block
 
-290 of the 294 rows have a schema. The four without: Internet TV (IPTV: its state is not in RxTelemetry), ASTERIX (reports through the
-sessions API, not telemetry), Mode Builder and Plugins (not receivers). The seven TV / broadcast families show the common block and `details`.
+290 of the 295 rows have a schema. The five without: Internet TV (IPTV: its state is not in RxTelemetry), ASTERIX (reports through the
+sessions API, not telemetry), ISDB-TSB (new in 3.9, no telemetry block yet), Mode Builder and Plugins (not receivers). The seven TV / broadcast families show the common block and `details`.
 tests/web/test_web_schema.cpp fails when a new row joins this list, so a new mode without telemetry is a decision, not an accident.
 
 ## Tests

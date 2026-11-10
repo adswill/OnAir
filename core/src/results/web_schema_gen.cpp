@@ -14724,6 +14724,7 @@ static const WebModeRow kRows[] = {
     {1, "ATSC", 0, "ATSC 1.0, 8-VSB (US, Canada, Mexico, South Korea)", "", 3, 2, ""},
     {3, "ATSC 3.0", 0, "ATSC 3.0, NextGen TV", "", 5, 4, ""},
     {4, "ISDB-T", 0, "ISDB-T (Japan, Brazil, South America)", "", 6, 5, ""},
+    {730, "ISDB-TSB", 0, "ISDB-TSB: Japanese narrow-band broadcasting of one or three ISDB-T segments (430 kHz or 1.3 MHz). Tune the centre of the band, 2 Msps", "", 732, 731, ""},
     {6, "DVB-S/S2", 0, "DVB-S / S2 / S2X satellite television, needs a dish and an LNB", "", 8, 7, "dvbs"},
     {209, "Internet TV (IPTV)", 0, "Internet TV: playlists and stream addresses (HLS, MPEG-TS, UDP, RTP), no radio needed", "", 211, 210, ""},
     {144, "TV sat beacon decoder", 0, "TV sat beacon decoder: carrier level, offset and drift, with telemetry frames and a decoded view when the beacon carries data", "", 146, 145, "satbeacon"},

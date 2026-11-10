@@ -1,6 +1,6 @@
 # OnAir Web 3.9: the whole receiver in a browser
 
-OnAir Web is OnAir itself, used from a browser: every mode of the mode list (290 of the 294 rows have a live panel, the rest are explained
+OnAir Web is OnAir itself, used from a browser: every mode of the mode list (290 of the 295 rows have a live panel, the rest are explained
 below), the spectrum and waterfall with drag-to-tune, the mode picker with search, the radio controls, recording, audio, and a settings page
 in plain words. It runs on the headless server (`onair-server`, docs/headless-server.md) and is reachable on your own network, from
 anywhere with a login, or publicly if you choose, through the relay or a forwarded port. docs/WEB-SCHEMA-3.9.md is the developer side.
@@ -32,13 +32,13 @@ schema says what each field is, so one set of components shows all modes: figure
 button when rows carry positions, drawn on a grid with no internet tiles), pictures (SSTV, fax, weather satellites, KAWS), constellations,
 text logs and sparklines. Simple shows the signal block and the first ten figures of the mode; Advanced shows everything.
 
-Coverage per mode row of the mode table (app/ui/mode_table.cpp, 294 rows):
+Coverage per mode row of the mode table (app/ui/mode_table.cpp, 295 rows):
 
 | rows | what the panel shows |
 |---|---|
 | 283 | the mode's own block, generated from its telemetry struct (tests/web/test_web_schema.cpp checks each one) |
 | 7 TV / broadcast families (DVB, TV auto, ATSC, ATSC 3.0, ISDB-T, DAB, FM) | the common signal block and the standard's hand-written details (lock, FEC, MER, services ...) |
-| Internet TV (IPTV), ASTERIX | the common block only: their state is not in the telemetry report (IPTV plays a stream; ASTERIX reports through the sessions API) |
+| Internet TV (IPTV), ASTERIX, ISDB-TSB | the common block only: their state is not in the telemetry report (IPTV plays a stream; ASTERIX reports through the sessions API; ISDB-TSB is new in 3.9 and has no telemetry block yet) |
 | Mode Builder, Plugins | not receivers; a plugin mode shows the common block |
 
 Every one of the 290 receiver rows can be selected through the page; tests/server/test_webapp.cpp selects each and checks the server
