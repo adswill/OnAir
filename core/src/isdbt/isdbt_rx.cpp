@@ -291,12 +291,16 @@ struct IsdbtReceiver::Impl {
                 std::vector<double> F((size_t)P, 0.0);
                 std::vector<cd> Fc((size_t)P, cd(0, 0));
                 std::vector<int> cnt((size_t)P, 0);
+                std::vector<double> Fe((size_t)P, 0.0);
                 for (int64_t d = 0; d < D; d++) {
                     const cd c = cum[(size_t)(d + G_)] - cum[(size_t)d];
                     const double e = en[(size_t)(d + G_)] - en[(size_t)d];
                     const double r = e > 1e-12 ? std::abs(c) / e : 0.0;
-                    F[(size_t)(d % P)] += r; Fc[(size_t)(d % P)] += c; cnt[(size_t)(d % P)]++;
+                    F[(size_t)(d % P)] += r; Fc[(size_t)(d % P)] += c; Fe[(size_t)(d % P)] += e; cnt[(size_t)(d % P)]++;
                 }
+                // ISDB-TSB: with guards of 8 or 16 samples the magnitude of one window's correlation is mostly noise (it never averages away);
+                // the complex sum over the symbols does, as the carrier offset turns every symbol's prefix the same way
+                if (tsb) for (int i = 0; i < P; i++) F[(size_t)i] = Fe[(size_t)i] > 1e-12 ? std::abs(Fc[(size_t)i]) / Fe[(size_t)i] * cnt[(size_t)i] : 0.0;
                 double mx = 0, mean = 0; int arg = 0;
                 for (int i = 0; i < P; i++) { if (cnt[(size_t)i]) F[(size_t)i] /= cnt[(size_t)i]; mean += F[(size_t)i]; if (F[(size_t)i] > mx) { mx = F[(size_t)i]; arg = i; } }
                 mean /= P;

@@ -122,7 +122,7 @@ static bool samePacket(const uint8_t* q) {
     return std::memcmp(q, ref, 188) == 0;
 }
 
-struct Result { bool tmcc = false; int segs = 0; long good[3] = {0, 0, 0}, bad = 0; double cfo = 0; Params prm; int mode = 0; };
+struct Result { bool tmcc = false; int segs = 0; long good[3] = {0, 0, 0}, bad = 0; double cfo = 0; Params prm; int mode = 0; RxTelemetry::Isdbt is; double snr = 0; };
 
 static Result run(const Params& p, const Channel& ch, double seconds, int rxSegments, unsigned seed = 7) {
     Generator gen(p, countingSource(1));
@@ -166,13 +166,15 @@ static Result run(const Params& p, const Channel& ch, double seconds, int rxSegm
     }
     RxTelemetry tel;
     rx.telemetry(tel, 0);
-    r.tmcc = tel.isdbt.tmccOk; r.segs = rx.tsbSegments(); r.cfo = tel.cfoHz; r.mode = tel.isdbt.mode;
+    r.tmcc = tel.isdbt.tmccOk; r.segs = rx.tsbSegments(); r.cfo = tel.cfoHz; r.mode = tel.isdbt.mode; r.is = tel.isdbt; r.snr = tel.dataSnrDb;
     for (int i = 0; i < 3; i++) { r.prm.layer[i].segments = tel.isdbt.layer[i].segments; r.prm.layer[i].mod = tel.isdbt.layer[i].mod; r.prm.layer[i].rate = tel.isdbt.layer[i].rate; }
     return r;
 }
 
 static void expectFlow(const char* name, const Result& r, const Params& p, long minGood, bool allLayers = true) {
-    jprintf("  %s: tmcc %d, %d seg, mode %d, CFO %.0f Hz, good %ld/%ld/%ld, bad %ld\n", name, (int)r.tmcc, r.segs, r.mode, r.cfo, r.good[0], r.good[1], r.good[2], r.bad);
+    jprintf("  %s: tmcc %d, %d seg, mode %d, CFO %.0f Hz, SNR %.1f dB, good %ld/%ld/%ld, bad %ld; RS A %llu/%llu/%llu B %llu/%llu/%llu (clean/corrected/failed)\n", name, (int)r.tmcc, r.segs, r.mode, r.cfo, r.snr,
+            r.good[0], r.good[1], r.good[2], r.bad, (unsigned long long)r.is.layer[0].rsClean, (unsigned long long)r.is.layer[0].rsCorrected, (unsigned long long)r.is.layer[0].rsFailed,
+            (unsigned long long)r.is.layer[1].rsClean, (unsigned long long)r.is.layer[1].rsCorrected, (unsigned long long)r.is.layer[1].rsFailed);
     check(r.tmcc, name, "TMCC decoded");
     check(r.mode == p.mode, name, "mode");
     for (int i = 0; i < 3; i++) {
