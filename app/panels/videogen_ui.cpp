@@ -36,7 +36,7 @@ const int kSampleRates[] = {32000, 44100, 48000};
 const char* const kSourceNames[] = {N_("Camera"), N_("Still picture"), N_("Video file"), N_("Test generator")};
 const char* const kPatternNames[] = {N_("Test card"), N_("Colour bars"), N_("Grey ramp")};
 const char* const kAudioNames[] = {N_("Silence"), N_("Test tone (1 kHz)"), N_("Sound of the video file"), N_("Microphone"), N_("Your own sound file / folder")};
-const char* const kOutputNames[] = {N_("MPEG-TS file (.ts)"), N_("UDP stream"), N_("RTP stream")};
+const char* const kOutputNames[] = {N_("MPEG-TS file (.ts)"), N_("UDP stream"), N_("RTP stream"), N_("Transmitter (OnAir TX)")};
 const char* const kFitNames[] = {N_("Stretch"), N_("Letterbox"), N_("Crop")};
 const char* const kContentNames[] = {N_("Video only"), N_("Video + audio"), N_("Video + multiple audio tracks")};
 const char* const kRcNames[] = {N_("CBR"), N_("Constrained VBR"), N_("VBR / CRF")};
@@ -65,6 +65,8 @@ const RowHelp kRowHelp[] = {
     {N_("Sound"), N_("What the audio tracks carry. The test tone (1 kHz at -20 dBFS) is handy to check a receiver's sound. The sound of the video file is only there with a video file as input. Silence still makes a valid audio track.")},
     {N_("Microphone"), N_("The sound input to use. It is opened only when you press Start.")},
     {N_("Send to"), N_("MPEG-TS file (.ts): a transport stream file; give it to the transmitter as its \"MPEG-TS / video file\", it is sent as it is. UDP or RTP stream: sent over the network in real time, to watch in VLC or feed another program. RTP adds a small header with a sequence number, so a player can see lost packets.")},
+    {N_("FFmpeg arguments"), N_("Extra options for the video encoder, written like on the ffmpeg command line: -preset slow -tune zerolatency -x264-params keyint=50. They are passed to the encoder as a list of options, never through a shell, and they win over the settings above. Options that would change the input, output, container, codec, filters or hardware set-up (-i, -f, -c, -vf, -map, -hwaccel ...) are refused. An option the encoder does not know is reported under the picture after starting. Audio options are not taken.")},
+    {N_("Name for the transmitter"), N_("The transmitter reads this generator's stream by this name. Several generators can run at once (the tabs at the top); each has its own name: generator:1, generator:2 ...")},
     {N_("File"), N_("Where the .ts file is written. An existing file is replaced.")},
     {N_("Address"), N_("The PC that receives the stream (unicast, e.g. 192.168.1.20) or a multicast group (239.0.0.0 to 239.255.255.255) that any PC on the network can join. Port 5000 unless you change it. 127.0.0.1 is this PC.")},
     {N_("TTL"), N_("Multicast only: how many routers the stream may cross. 1 keeps it on this network.")},
@@ -102,6 +104,7 @@ const char* const kToolHelp = N_("Encodes a camera, a still picture or a video f
 struct DropItem { int kind; int param; };   // the drag-and-drop payload "VGBLOCK"
 
 struct State {
+    int idx = 0;             // which generator this is (0 = the first; the transmitter names it generator:idx+1)
     bool init = false;
     GenConfig cfg;
     bool lengthEdited = false;
@@ -135,13 +138,18 @@ struct State {
     double startedAt = 0;
 };
 
+// Several generators can run at once (each its own settings, stream and queue for the transmitter); the window shows one at a time.
+std::vector<std::unique_ptr<State>> gInst;
+int gCur = 0;
 State& S() {
-    static State s;
-    return s;
+    if (gInst.empty()) gInst.push_back(std::make_unique<State>());
+    gCur = std::clamp(gCur, 0, (int)gInst.size() - 1);
+    return *gInst[(size_t)gCur];
 }
 
-std::string cfgPath() { return plat::dataDir() + "/videogen.txt"; }
-std::string layoutPath() { return plat::dataDir() + "/videogen_overlay.txt"; }
+std::string instSuffix(int i) { return i == 0 ? std::string() : "_" + std::to_string(i + 1); }
+std::string cfgPath(int i) { return plat::dataDir() + "/videogen" + instSuffix(i) + ".txt"; }
+std::string layoutPath(int i) { return plat::dataDir() + "/videogen_overlay" + instSuffix(i) + ".txt"; }
 
 std::string readText(const std::string& p) {
     std::string t;
@@ -171,6 +179,9 @@ std::string saveCfg(const GenConfig& c, bool advanced) {
     snprintf(b, sizeof b, "%.3f", c.seconds);
     o += std::string("g.secs=") + b + "\n" + "g.fit=" + std::to_string((int)c.fit) + "\n";
     o += "g.adv=" + std::to_string(advanced ? 1 : 0) + "\n";
+    std::string fa = c.ffmpegArgs;
+    for (char& ch : fa) if (ch == '\n' || ch == '\r') ch = ' ';
+    o += "g.ffargs=" + fa + "\n";
     return o;
 }
 
@@ -195,7 +206,7 @@ void loadCfg(const std::string& text, GenConfig& c, bool& advanced) {
         else if (k == "loop") c.loop = i != 0;
         else if (k == "slide") c.slideSeconds = std::clamp(atof(v.c_str()), 0.5, 3600.0);
         else if (k == "mic") c.micId = v;
-        else if (k == "out") c.output = (Output)std::clamp(i, 0, 2);
+        else if (k == "out") c.output = (Output)std::clamp(i, 0, 3);
         else if (k == "ts" && !v.empty()) c.tsPath = v;
         else if (k == "host" && !v.empty()) c.host = v;
         else if (k == "port") c.port = std::clamp(i, 1, 65535);
@@ -203,6 +214,7 @@ void loadCfg(const std::string& text, GenConfig& c, bool& advanced) {
         else if (k == "secs") c.seconds = std::clamp(atof(v.c_str()), 1.0, 86400.0);
         else if (k == "fit") c.fit = (Fit)std::clamp(i, 0, 2);
         else if (k == "adv") advanced = i != 0;
+        else if (k == "ffargs") c.ffmpegArgs = v.substr(0, 600);
     }
 }
 
@@ -285,12 +297,13 @@ void startProbe(State& s) {
 void loadOnce(State& s) {
     if (s.init) return;
     s.init = true;
-    s.cfg.tsPath = plat::dataDir() + "/onair_video.ts";
-    s.cfg.port = 5000;
+    s.cfg.instanceId = s.idx + 1;
+    s.cfg.tsPath = plat::dataDir() + "/onair_video" + instSuffix(s.idx) + ".ts";
+    s.cfg.port = 5000 + s.idx;
     s.cfg.output = Output::Udp;   // a new user streams (to this PC, 127.0.0.1:5000); a saved choice replaces it
-    const std::string c = readText(cfgPath());
+    const std::string c = readText(cfgPath(s.idx));
     if (!c.empty()) { loadCfg(c, s.cfg, s.advanced); s.lengthEdited = true; }
-    const std::string l = readText(layoutPath());
+    const std::string l = readText(layoutPath(s.idx));
     if (!l.empty()) s.cfg.overlay = loadLayout(l);
     s.savedCfg = saveCfg(s.cfg, s.advanced);
     s.savedLayout = saveLayout(s.cfg.overlay);
@@ -304,8 +317,8 @@ void saveSoon(State& s) {
     if (now - s.lastSave < 1.0) return;
     s.lastSave = now;
     const std::string c = saveCfg(s.cfg, s.advanced), l = saveLayout(s.cfg.overlay);
-    if (c != s.savedCfg) { writeText(cfgPath(), c); s.savedCfg = c; }
-    if (l != s.savedLayout) { writeText(layoutPath(), l); s.savedLayout = l; }
+    if (c != s.savedCfg) { writeText(cfgPath(s.idx), c); s.savedCfg = c; }
+    if (l != s.savedLayout) { writeText(layoutPath(s.idx), l); s.savedLayout = l; }
 }
 
 // a stream or a file is being made (not a preview)
@@ -474,7 +487,7 @@ void outputSection(State& s, float col, float w) {
     ImGui::SeparatorText(tr("Output"));
     rowLabel(N_("Send to"), col);
     int out = (int)c.output;
-    if (combo("##vgout", out, kOutputNames, 3, w)) c.output = (Output)out;
+    if (combo("##vgout", out, kOutputNames, 4, w)) c.output = (Output)out;
     if (c.output == Output::File) {
         rowLabel(N_("File"), col);
         inputText("##vgts", c.tsPath, w - 90 * gUi);
@@ -483,6 +496,13 @@ void outputSection(State& s, float col, float w) {
             const std::string p = plat::saveFileDialog("onair_video.ts");
             if (!p.empty()) c.tsPath = p;
         }
+    } else if (c.output == Output::Transmitter) {
+        rowLabel(N_("Name for the transmitter"), col);
+        const std::string spec = generatorSpec(c.instanceId);
+        ImGui::TextUnformatted(spec.c_str());
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Copy##vgspec"))) ImGui::SetClipboardText(spec.c_str());
+        ImGui::TextDisabled("%s", tr("In Transmit, choose \"Video generator\" as the video source (or type this name as the video file). Start streaming here first: until then the transmitter sends null packets."));
     } else {
         rowLabel(N_("Address"), col);
         inputText("##vghost", c.host, w * 0.6f);
@@ -679,6 +699,13 @@ void encodingSection(State& s, float col, float w) {
     ImGui::EndDisabled();
     if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
         ImGui::SetTooltip("%s", caps.zeroLatency ? tr("Less encoder buffering for live use, at some cost in compression (no B-frames)") : tr("x264 and x265 only"));
+    rowLabel(N_("FFmpeg arguments"), col);
+    inputText("##vgffargs", s.cfg.ffmpegArgs, w);
+    {
+        std::vector<ArgOpt> opts; std::string aerr;
+        if (!parseEncoderArgs(s.cfg.ffmpegArgs, opts, aerr)) ImGui::TextColored(ImVec4(0.95f, 0.45f, 0.35f, 1), "%s", aerr.c_str());
+        else if (!opts.empty()) ImGui::TextDisabled("%d %s", (int)opts.size(), tr("encoder option(s) will be passed"));
+    }
 
     const bool audio = e.content != TsContent::VideoOnly;
     ImGui::SeparatorText(tr("Audio"));
@@ -1172,7 +1199,13 @@ void controlBar(State& s) {
     } else ImGui::NewLine();
 
     // where to watch the stream: the address set here, with a copy button and the VLC hint
-    if (c.output != Output::File) {
+    if (c.output == Output::Transmitter) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(running ? tr("Queued for the transmitter as") : tr("Will be queued for the transmitter as"));
+        ImGui::SameLine();
+        ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_PlotHistogram), "%s", generatorSpec(c.instanceId).c_str());
+        if (running) { ImGui::SameLine(); ImGui::TextDisabled("(%zu %s)", generatorQueued(c.instanceId), tr("packets waiting")); }
+    } else if (c.output != Output::File) {
         const std::string url = streamUrl(c.output, c.host, c.port);
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(running ? tr("Streaming to") : tr("Will stream to"));
@@ -1199,7 +1232,7 @@ void videoGenWindow(App& a) {
     State& s = S();
     if (!a.videoGenOpen) {
         gWantDrops = false;
-        if (s.init && s.gen.running()) s.gen.stop();   // closing the window stops the stream or the file (it is closed properly)
+        for (auto& g : gInst) if (g->init && g->gen.running()) g->gen.stop();   // closing the window stops every stream and file (they are closed properly)
         return;
     }
     loadOnce(s);
@@ -1218,6 +1251,18 @@ void videoGenWindow(App& a) {
     }
     firstWindowSize(1180 * gUi, 820 * gUi);
     if (!ImGui::Begin(trw("Digital video generator"), &a.videoGenOpen)) { ImGui::End(); return; }
+    {   // the generators: one tab each, "+" adds another (up to kMaxInstances), each runs on its own
+        for (int i = 0; i < (int)gInst.size(); i++) {
+            char lb[48]; snprintf(lb, sizeof lb, "%s %d%s##vginst%d", tr("Generator"), i + 1, gInst[(size_t)i]->gen.running() && !gInst[(size_t)i]->previewing ? " *" : "", i);
+            if (ImGui::RadioButton(lb, gCur == i)) gCur = i;
+            ImGui::SameLine();
+        }
+        ImGui::BeginDisabled((int)gInst.size() >= kMaxInstances);
+        if (ImGui::SmallButton(tr("+ add generator##vgadd"))) { gInst.push_back(std::make_unique<State>()); gInst.back()->idx = (int)gInst.size() - 1; gCur = (int)gInst.size() - 1; }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Another generator with its own source, settings and stream, running at the same time (for several programmes). * = sending."));
+        if (gCur != s.idx) { ImGui::End(); return; }   // the choice changed this frame: the next frame draws the other one
+    }
     controlBar(s);
     ImGui::Separator();
     if (ImGui::BeginTabBar("##vgtabs")) {

@@ -7,6 +7,7 @@
 #include "../ui/typography.h"
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/hfdig/hfdig_kbd.h"
+#include "dect2/tv/videogen.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -153,6 +154,19 @@ void fileRow(TxUi& s, const char* label, const char* btnId) {
     if (ImGui::Button(btnId)) browseFile(s, btnId);
 }
 
+// Tools > Digital video generator, as the video source: its running stream (Output: Transmitter) is read by the name generator:N
+void generatorPick(TxUi& s) {
+    ImGui::TextDisabled("%s", tr("Video generator:"));
+    for (int i = 1; i <= 4; i++) {
+        ImGui::SameLine();
+        const std::string spec = dect2::vgen::generatorSpec(i);
+        const bool on = spec == s.file;
+        char lb[40]; snprintf(lb, sizeof lb, "%d%s##tvgen%d", i, dect2::vgen::generatorQueued(i) > 0 ? " *" : "", i);
+        if (ImGui::SmallButton(lb)) snprintf(s.file, sizeof s.file, "%s", on ? "" : spec.c_str());
+    }
+    { ImGui::SameLine(); ImGui::TextDisabled("(?)"); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Uses the stream of a generator of Tools > Digital video generator whose output is \"Transmitter\" (* = it is sending now). Start it there; click again to clear.")); }
+}
+
 void analogNfmBox(TxUi& s, bool running) {
     ImGui::Checkbox(tr("Send analog NFM of the microphone or a file instead of the test scene"), &s.analogVoice);
     if (s.analogVoice) audioSourceRow(s, running);
@@ -211,6 +225,7 @@ void tvFilePanel(TxUi& s, const TxModeSpec& mode, bool running) {
     (void)running;
     const std::string id = mode.id ? mode.id : "";
     fileRow(s, tr("MPEG-TS / video file"), tr("Browse…##ts"));
+    generatorPick(s);
     ImGui::TextDisabled("%s", tr("Your .ts / .m2ts is sent as-is (service names come from that file). Other video is remuxed when FFmpeg can. Empty: OnAir encodes a test card with the names below."));
     muxIdentity(s);
     if (!s.fileNote.empty()) ImGui::TextWrapped("%s", s.fileNote.c_str());
@@ -322,6 +337,7 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
                 ImGui::InputText(tr("Video file"), s.file, sizeof s.file);
                 ImGui::SameLine();
                 if (ImGui::Button(tr("Browse…##atvvid"))) { const std::string p = openFileDialog(); if (!p.empty()) snprintf(s.file, sizeof s.file, "%s", p.c_str()); }
+                generatorPick(s);
             } else if (s.videoSrc == 2) {
                 const auto cams = listVideoInputs();
                 const char* cur = tr("Default camera");
