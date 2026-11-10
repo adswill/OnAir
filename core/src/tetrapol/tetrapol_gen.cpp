@@ -24,14 +24,21 @@ struct Builder {
     int scr, band;
     std::vector<uint8_t> x;   // frames before the transmission differential
     void frame(const uint8_t* b) { x.insert(x.end(), b, b + tp::kFrameBits); }
+    static std::vector<std::vector<uint8_t>> frames(const std::vector<uint8_t>& block, int scr, int band, int asb0) {
+        std::vector<std::vector<uint8_t>> out;
+        for (const tp::DataFrame& f : tp::blockFrames(block, scr, asb0)) {
+            std::vector<uint8_t> b(tp::kFrameBits);
+            tp::encodeDataFrame(f, band, b.data());
+            out.push_back(b);
+        }
+        return out;
+    }
+    void raw(const std::vector<uint8_t>& block, int asb0 = 0) {
+        for (const auto& f : frames(block, scr, band, asb0)) frame(f.data());
+    }
     void block(const std::vector<uint8_t>& tsdu, int asb0 = 0) {
         const int nb = tp::uiBlockBytes(tsdu.size());
-        const std::vector<uint8_t> hd = tp::buildHdlc(0, 7, 0xfff, tp::kCmdUi, tp::uiInfo(tsdu, nb), nb);
-        for (const tp::DataFrame& f : tp::blockFrames(hd, scr, asb0)) {
-            uint8_t b[tp::kFrameBits];
-            tp::encodeDataFrame(f, band, b);
-            frame(b);
-        }
+        raw(tp::buildHdlc(0, 7, 0xfff, tp::kCmdUi, tp::uiInfo(tsdu, nb), nb), asb0);
     }
     void voice(uint32_t n) {
         tp::VoiceFrame v;
@@ -43,25 +50,85 @@ struct Builder {
     }
 };
 
-std::vector<uint8_t> cycleBits(int scene, int scr, int band) {
-    Builder b{scr, band, {}};
-    const std::vector<uint8_t> idle{0x00, 0x00};   // a message OnAir does not read
-    if (scene == 0) {
-        tp::SysInfo si;
-        si.country = kTetrapolTestCountry; si.systemId = kTetrapolTestSystem; si.locArea = kTetrapolTestLa; si.bnId = kTetrapolTestBn;
-        si.bsId = kTetrapolTestCell; si.rswId = kTetrapolTestRsw; si.uScramble = scr;
-        b.block(tp::buildSysInfo(si));
-        b.block(tp::buildGroupActivation(kTetrapolTestGroup, kTetrapolTestChannel, scr, kTetrapolTestKeyClear));
-        b.block(tp::buildGroupActivation(kTetrapolTestGroup + 1, kTetrapolTestChannel + 1, scr, kTetrapolTestKeyCiph));
-        b.block(idle);
-        b.block(idle);
-        return b.x;
+// a fill frame (PAS 0001-3-3 7.4.1.9): "no ST" address 0.7.0x000, UI with P = 0, then 5 octets of the 31-bit sequence x0..x3 = 0,
+// x4 = 1, xn = xn-3 + xn-5; these 5 octets are one phase as heard on the issue #408 recording
+std::vector<uint8_t> stuffing() { return {0x70, 0x00, 0x03, 0x48, 0x57, 0x63, 0xe6, 0x90}; }
+
+// TP_ADDRESS of the talking party (UI_CD): RFSI 290-2-84-509
+std::vector<uint8_t> tpAddress() {
+    const std::vector<uint8_t> info{0x01, 0xa0, 0x12, 0x90, 0x28, 0x45, 0x09, 0xff, 0xff, 0xff, 0xff};
+    return tp::buildHdlc(0, 7, 0xfff, tp::kCmdUiCd, info, 16);
+}
+std::vector<uint8_t> vch(int codop) { return tp::buildHdlc(0, 7, 0xfff, tp::kCmdUiVch, {(uint8_t)codop, 0, 1}, 8); }
+
+std::vector<uint8_t> neighbours() {
+    // two adjacent cells (BN nibble, channel 12 bits, adjacent parameters) then the cell id list
+    return {0x94, 0x02, 0x00, (uint8_t)(0x20 | (kTetrapolTestNeighbourCh >> 8)), (uint8_t)(kTetrapolTestNeighbourCh & 255), 0x83,
+            0x20, 41, 0x83, 0x02, 0x04, 19, 0x30, 20, 0x30};
+}
+
+std::vector<uint8_t> controlSuperframe(int scr, int band) {
+    using Frames = std::vector<std::vector<uint8_t>>;
+    std::vector<std::vector<uint8_t>> sf(200);
+    tp::SysInfo si;
+    si.country = kTetrapolTestCountry; si.systemId = kTetrapolTestSystem; si.locArea = kTetrapolTestLa; si.bnId = kTetrapolTestBn;
+    si.bsId = kTetrapolTestCell; si.rswId = kTetrapolTestRsw; si.uScramble = scr;
+    auto ui = [](const std::vector<uint8_t>& t) { const int nb = tp::uiBlockBytes(t.size()); return tp::buildHdlc(0, 7, 0xfff, tp::kCmdUi, tp::uiInfo(t, nb), nb); };
+    for (int half = 0; half < 2; half++) {
+        si.bch = half;
+        const Frames bch = Builder::frames(ui(tp::buildSysInfo(si)), scr, band, 0);
+        for (size_t k = 0; k < bch.size(); k++) sf[(size_t)(100 * half) + k] = bch[k];
+        std::vector<uint8_t> pch(16, 0);
+        pch[0] = 0x28;
+        const int x = kTetrapolTestGroup;
+        pch[8] = (uint8_t)(x >> 8); pch[9] = (uint8_t)(x & 255);   // 0.0.<group>
+        for (int i = 1; i < 4; i++) { pch[(size_t)(8 + 2 * i)] = 0x70; pch[(size_t)(9 + 2 * i)] = 0x00; }
+        const Frames pf = Builder::frames(pch, scr, band, 0);
+        sf[(size_t)(100 * half + 98)] = pf[0];
+        sf[(size_t)(100 * half + 99)] = pf[1];
     }
+    for (int f = 14; f < 200; f += 25) {
+        std::vector<uint8_t> r{(uint8_t)(0x10 | (kTetrapolTestRchX >> 8)), (uint8_t)(kTetrapolTestRchX & 255), 0x70, 0x00, 0xc0, 0x00};
+        tp::appendFcs(r);
+        sf[(size_t)f] = Builder::frames(r, scr, band, 0)[0];
+    }
+    // SDCH: whole blocks only where they fit between the BCH, PCH and RCH frames
+    std::vector<Frames> q;
+    for (int rep = 0; rep < 3; rep++) {
+        q.push_back(Builder::frames(ui(tp::buildGroupActivation(kTetrapolTestGroup, kTetrapolTestChannel, scr, kTetrapolTestKeyClear)), scr, band, 0));
+        q.push_back(Builder::frames(ui(tp::buildGroupActivation(kTetrapolTestGroup + 1, kTetrapolTestChannel + 1, scr + 1, kTetrapolTestKeyCiph)), scr, band, 0));
+        q.push_back(Builder::frames(ui(neighbours()), scr, band, 0));
+    }
+    const Frames fill = Builder::frames(stuffing(), scr, band, 0);
+    size_t qi = 0;
+    for (size_t f = 0; f < 200;) {
+        if (!sf[f].empty()) { f++; continue; }
+        size_t room = 0;
+        while (f + room < 200 && sf[f + room].empty()) room++;
+        if (qi < q.size() && q[qi].size() <= room) {
+            for (size_t k = 0; k < q[qi].size(); k++) sf[f + k] = q[qi][k];
+            f += q[qi].size();
+            qi++;
+        } else {
+            sf[f++] = fill[0];
+        }
+    }
+    std::vector<uint8_t> x;
+    for (const auto& fr : sf) x.insert(x.end(), fr.begin(), fr.end());
+    return x;
+}
+
+std::vector<uint8_t> cycleBits(int scene, int scr, int band) {
+    if (scene == 0) return controlSuperframe(scr, band);
+    Builder b{scr, band, {}};
     const int key = scene == 1 ? kTetrapolTestKeyClear : scene == 2 ? kTetrapolTestKeyCiph : -1;
     for (int i = 0; i < 3; i++) b.block(tp::buildCallStart(key));
+    b.raw(tpAddress(), 1);
+    b.raw(vch(3), 1);   // D_START_SPEECH
     for (int i = 0; i < kTetrapolTestVoiceFrames; i++) b.voice((uint32_t)i);
     for (int i = 0; i < 2; i++) b.block(tp::buildCallEnd());
-    while (b.x.size() < (size_t)tp::kFrameBits * 200) b.block(idle);
+    b.raw(vch(0), 1);   // D_CHANNEL_FREE
+    while (b.x.size() < (size_t)tp::kFrameBits * 200) b.raw(stuffing());
     return b.x;
 }
 

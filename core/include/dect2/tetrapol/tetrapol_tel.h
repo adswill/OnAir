@@ -1,6 +1,6 @@
 // TETRAPOL receiver telemetry (PAS 0001-2 / 0001-3-2), shared by the receiver and the UI.
-// The cells (D_SYSTEM_INFO) and the event log are saved with the results. The call table (calls, activations) is for the screen only: it is
-// never saved, exported or logged, and it holds group and channel numbers only for clear calls.
+// The cells (D_SYSTEM_INFO) and the event log are saved with the results. The call table, the message list and the neighbour list are for the
+// screen only. Signalling is shown as it is sent in the clear (groups, channels, addresses); encrypted voice is never decoded.
 #pragma once
 #include <cstdint>
 #include <cstdio>
@@ -39,16 +39,33 @@ struct TetrapolCall {
     bool active = false;
     uint64_t voiceFrames = 0, decoded = 0, damaged = 0;
     std::string wavPath;       // the recording of this call (clear calls with recording on)
+    std::string talker;        // the talking party (UI_CD TP_ADDRESS / TP_ALIAS on the traffic channel), empty when not sent
+    int groupId = -1;          // from the control channel's D_GROUP_ACTIVATION with this channel's scrambling constant, -1 unknown
 };
 
-// A group call announced on a control channel (D_GROUP_ACTIVATION, screen only). group / channel stay -1 unless the call is clear.
+// A group call announced on a control channel (D_GROUP_ACTIVATION, screen only). Signalling is in the clear even for an encrypted call.
 struct TetrapolActivation {
     int64_t lastWall = 0;
     double lastSec = 0;
     int verdict = 0;
     int groupId = -1, channelId = -1;
+    int dScramble = -1;        // the traffic channel's downlink scrambling constant
+    int keyRef = -1;
+    int coverage = -1;
     uint64_t heard = 0;
 };
+
+// A signalling message heard (screen only): repeats of the same text are counted on one row.
+struct TetrapolMsg {
+    int64_t lastWall = 0;
+    double lastSec = 0;
+    std::string channel;       // BCH, SDCH, PCH, RCH (control channel), SCH, VCH (traffic channel)
+    std::string text;
+    uint64_t count = 0;
+};
+
+// An adjacent cell from D_NEIGHBOURING_CELL (screen only)
+struct TetrapolNeighbourRow { int channelId = -1, bnNb = -1, bsId = -1, rswId = -1, param = -1; };
 
 struct TetrapolTelemetry {
     uint64_t seq = 0;
@@ -81,6 +98,12 @@ struct TetrapolTelemetry {
     std::vector<TetrapolEvent> events;
     std::vector<TetrapolCall> calls;
     std::vector<TetrapolActivation> activations;
+    std::vector<TetrapolMsg> msgs;
+    std::vector<TetrapolNeighbourRow> neighbours;
+    int channelKind = 0;       // 0 not known yet, 1 control channel (D_SYSTEM_INFO / superframe), 2 traffic channel (voice frames)
+    int superframePos = -1;    // frame number in the 200-frame superframe of a control channel, -1 unknown
+    uint64_t stuffing = 0;     // fill frames (PAS 0001-3-3 7.4.1.9)
+    std::string talker;        // the talking party on this traffic channel now
 };
 
 // Frequency of traffic channel `channel` on a network whose control channel is channel `ccChannel` at ccHz: TETRAPOL channels sit on the
@@ -94,6 +117,7 @@ inline double tetrapolChannelHz(double ccHz, int ccChannel, int channel, int spa
 constexpr size_t kTetrapolLogMax = 300;
 constexpr size_t kTetrapolMax = 200;
 constexpr size_t kTetrapolCallsMax = 50;
+constexpr size_t kTetrapolMsgsMax = 200;
 
 inline std::string tetrapolSummary(const TetrapolTelemetry& t) {
     if (t.state == 0) return "waiting for samples";
@@ -105,6 +129,12 @@ inline std::string tetrapolSummary(const TetrapolTelemetry& t) {
                  (unsigned long long)t.voicePassed, t.callVerdict == 1 ? "clear call" : t.callVerdict == 2 ? "encrypted call" : t.callVerdict == 0 ? "call, encryption unknown" : "no call now");
         return b;
     }
+    if (t.channelKind == 1) {
+        snprintf(b, sizeof b, "control channel: %zu cell%s with system info, %zu group call%s announced, %zu message types", named, named == 1 ? "" : "s",
+                 t.activations.size(), t.activations.size() == 1 ? "" : "s", t.msgs.size());
+        return b;
+    }
+    if (t.synced && t.stuffing > 0 && t.tsdus == 0) return "idle carrier: fill frames only";
     snprintf(b, sizeof b, "%zu TETRAPOL carrier%s, %zu with system info%s", t.cells.size(), t.cells.size() == 1 ? "" : "s", named,
              t.synced ? "" : " (no frame sync)");
     return b;

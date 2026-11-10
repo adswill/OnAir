@@ -38,6 +38,9 @@ public:
     void onSignal(const CallSignal& s, double now);
     // a voice frame; returns the verdict for it. started is set when this frame began a new call.
     Verdict onVoice(double now, bool& started);
+    // the key reference a control channel announced for this traffic channel (D_GROUP_ACTIVATION), -1 none: used when the call's own
+    // signalling on this channel carries none
+    void setChannelKey(int keyRef) { chanKey_ = keyRef; }
     // ends the call when it has been quiet (call from the frame clock); returns true when a call just ended
     bool tick(double now);
     bool active() const { return active_; }
@@ -50,6 +53,7 @@ private:
     int pendingKey_ = -2;          // -2 none, -1 a message without key reference, else the key reference
     double pendingAt_ = -1e9;
     bool ended_ = false;
+    int chanKey_ = -1;
 };
 
 // One WAV file (16-bit mono PCM) per clear call. The header is rewritten when the file is closed.

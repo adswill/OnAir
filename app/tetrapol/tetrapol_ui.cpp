@@ -1,8 +1,10 @@
-// TETRAPOL screens: the cells (D_SYSTEM_INFO), the calls on the traffic channel being received and the group calls a control channel
-// announces, the frame layer (polarity, band coding, scramble) and the voice strip. Receive only. Voice: clear calls only, through the user's
-// own codec plug-in (onair-codec-tetrapol, docs/CODECS.md); encrypted calls and calls of unknown encryption state are never decoded.
-// The call table is for this screen only: it is never saved, exported or logged, and it shows group and channel numbers only for clear calls.
+// TETRAPOL screens: the cells (D_SYSTEM_INFO), the calls on the traffic channel being received (group, talking party), the group calls a
+// control channel announces, the neighbour cells, every signalling message heard, the frame layer (polarity, band coding, scramble; automatic,
+// set by hand under Advanced) and the voice strip. Receive only. Voice: clear calls only, through the user's own codec plug-in
+// (onair-codec-tetrapol, docs/CODECS.md); encrypted calls and calls of unknown encryption state are never decoded.
+// The call, message and neighbour tables are for this screen only: they are never saved or exported.
 #include "app.h"
+#include "i18n/i18n.h"
 #include "codec/speech_codec_ui.h"
 #include "platform/platform.h"
 #include "dect2/audio/audioout.h"
@@ -46,17 +48,19 @@ constexpr int kOutRate = 48000;
 
 const char* kHelp =
     "TETRAPOL (PAS 0001-2 / 0001-3), receive only.\n\n"
-    "This mode is not TETRA. It reads the GMSK 8 kbit/s frames of a TETRAPOL carrier (10 / 12.5 kHz channels). On a control channel it shows "
-    "D_SYSTEM_INFO (country, system, BN, cell, location area, scramble) and counts the group calls announced, with their group and channel "
-    "numbers only when the call is clear. On a traffic channel it follows the call.\n\n"
-    "Polarity: the uplink is sent with the opposite polarity to the downlink, and receivers differ too. Automatic tries both and keeps the "
-    "one whose frames pass their CRC; Normal / Inverted force one. The VHF / UHF frame coding and the scrambling constant are found the same way.\n\n"
-    "Voice: most TETRAPOL networks encrypt their calls. A call is played only when its own signalling, heard in the clear on this channel, "
-    "says it is a clear call (key index 0). Encrypted calls and calls whose state is not known (joined late) are never decoded: no key is "
-    "used, guessed or stored. OnAir does not include the TETRAPOL speech codec (RP-CELP, patented). To hear clear calls you install a codec "
+    "This mode is not TETRA. It reads the GMSK 8 kbit/s frames of a TETRAPOL carrier (10 / 12.5 kHz channels) and shows the signalling that "
+    "is sent in the clear.\n\n"
+    "Control channel: D_SYSTEM_INFO (country, system, BN, cell, location area), the neighbour cells, the group calls announced (group, "
+    "channel, scrambling constant, encryption state), paging (PCH), random access acknowledgements (RCH) and every other message, in the "
+    "Messages table. Codes the public PAS does not describe are shown as bytes.\n\n"
+    "Traffic channel: the call, the talking party (TP_ADDRESS) and the voice channel state. Many networks send the encryption state only on "
+    "the control channel: listen to the control channel first and the traffic channel's call gets its group and encryption state from there.\n\n"
+    "Polarity, band coding (VHF / UHF) and the scrambling constant are found automatically; Advanced sets them by hand.\n\n"
+    "Voice: most TETRAPOL networks encrypt their calls. A call is played only when its signalling says it is a clear call (key type 0 or 15 with key index 0, PAS 0001-3-2 5.3.41). "
+    "Encrypted calls and calls whose state is not known are never decoded: no key is used, guessed or stored. OnAir does not include the TETRAPOL speech codec (RP-CELP, patented). To hear clear calls you install a codec "
     "plug-in yourself (onair-codec-tetrapol, see the Install helper and docs/CODECS.md); without it calls are found and counted, silently.\n\n"
-    "Record calls writes one WAV per clear call into the recordings folder (the file name holds the date and time only). The call table is "
-    "never saved or exported.\n\n"
+    "Record calls writes one WAV per clear call into the recordings folder (the file name holds the date and time only). The call, message "
+    "and neighbour tables are never saved or exported.\n\n"
     "Listening to radio services is regulated in many countries: follow the rules where you live.";
 
 bool live(const App& a) { return a.rx.standard == 80; }
@@ -72,7 +76,7 @@ std::string ago(int64_t t) {
 }
 
 const char* verdictShort(int v) {
-    return v == 1 ? "clear" : v == 2 ? "encrypted (not decoded)" : "unknown (not decoded)";
+    return v == 1 ? tr("clear") : v == 2 ? tr("encrypted (not decoded)") : tr("unknown (not decoded)");
 }
 
 void helpButton() {
@@ -80,7 +84,7 @@ void helpButton() {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("What this mode reads");
     if (ImGui::BeginPopup("##tpolhelppop")) {
         ImGui::PushTextWrapPos(ImGui::GetFontSize() * 32);
-        ImGui::TextUnformatted(kHelp);
+        ImGui::TextUnformatted(tr(kHelp));
         ImGui::PopTextWrapPos();
         ImGui::EndPopup();
     }
@@ -162,24 +166,32 @@ void voiceStrip(App& a) {
 }
 
 void frameLine(const dect2::TetrapolTelemetry& t) {
-    ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted("Polarity");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
-    const char* pol[3] = {"automatic", "normal", "inverted"};
-    ImGui::Combo("##tpolpol", &S.polarity, pol, 3);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("TETRAPOL uplinks are sent with the opposite polarity to downlinks. Automatic tries both.");
-    ImGui::SameLine();
-    ImGui::TextUnformatted("Band coding");
-    ImGui::SameLine();
-    ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
-    const char* bd[3] = {"automatic", "VHF", "UHF"};
-    ImGui::Combo("##tpolband", &S.band, bd, 3);
-    ImGui::TextDisabled("%s; polarity %s%s, %s coding, scramble %s, frames ok %llu / bad %llu, SNR %.1f dB, offset %+.0f Hz",
-                        t.synced ? "frame sync" : "looking for frames", t.polarity == 1 ? "normal" : t.polarity == 2 ? "inverted" : "-",
+    char kind[80] = "";
+    if (t.channelKind == 1) snprintf(kind, sizeof kind, "%s, frame %d of the superframe; ", tr("control channel"), t.superframePos);
+    else if (t.channelKind == 2) snprintf(kind, sizeof kind, "%s; ", tr("traffic channel"));
+    else if (t.synced && t.stuffing > 0 && t.tsdus == 0) snprintf(kind, sizeof kind, "%s; ", tr("idle carrier (fill frames only)"));
+    ImGui::TextDisabled("%s%s; polarity %s%s, %s coding, scramble %s, frames ok %llu / bad %llu, SNR %.1f dB, offset %+.0f Hz", kind,
+                        t.synced ? tr("frame sync") : tr("looking for frames"), t.polarity == 1 ? "normal" : t.polarity == 2 ? "inverted" : "-",
                         t.polarityAuto ? " (found)" : " (set)", t.band == 1 ? "VHF" : t.band == 2 ? "UHF" : "-",
                         t.scramble >= 0 ? std::to_string(t.scramble).c_str() : "-", (unsigned long long)t.blocksOk,
                         (unsigned long long)t.blocksBad, t.snrDb, t.cfoHz);
+    // automatic by default; set by hand only under Advanced
+    if (ImGui::TreeNode(trw("Advanced##tpoladv"))) {
+        ImGui::AlignTextToFramePadding();
+        ImGui::TextUnformatted(tr("Polarity"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
+        const char* pol[3] = {tr("automatic"), tr("normal"), tr("inverted")};
+        ImGui::Combo("##tpolpol", &S.polarity, pol, 3);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("TETRAPOL uplinks are sent with the opposite polarity to downlinks. Automatic tries both."));
+        ImGui::SameLine();
+        ImGui::TextUnformatted(tr("Band coding"));
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 7);
+        const char* bd[3] = {tr("automatic"), "VHF", "UHF"};
+        ImGui::Combo("##tpolband", &S.band, bd, 3);
+        ImGui::TreePop();
+    }
 }
 
 void tab(App& a) {
@@ -193,10 +205,10 @@ void tab(App& a) {
     frameLine(t);
     voiceStrip(a);
     const float h = ImGui::GetContentRegionAvail().y;
-    if (ImGui::BeginTable("##tpolcells", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.3f))) {
-        ImGui::TableSetupColumn("Country"); ImGui::TableSetupColumn("System"); ImGui::TableSetupColumn("Cell");
-        ImGui::TableSetupColumn("LA"); ImGui::TableSetupColumn("BN"); ImGui::TableSetupColumn("Ch"); ImGui::TableSetupColumn("Scramble");   // #408: the control channel number is back
-        ImGui::TableSetupColumn("SNR"); ImGui::TableSetupColumn("Last");
+    if (ImGui::BeginTable("##tpolcells", 9, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.16f))) {
+        ImGui::TableSetupColumn(tr("Country")); ImGui::TableSetupColumn(tr("System")); ImGui::TableSetupColumn(tr("Cell"));
+        ImGui::TableSetupColumn("LA"); ImGui::TableSetupColumn("BN"); ImGui::TableSetupColumn("Ch"); ImGui::TableSetupColumn(tr("Scramble"));   // #408: the control channel number is back
+        ImGui::TableSetupColumn("SNR"); ImGui::TableSetupColumn(tr("Last"));
         ImGui::TableHeadersRow();
         auto num = [](int v) { if (v >= 0) ImGui::Text("%d", v); else ImGui::TextUnformatted("-"); };
         for (size_t i = 0; i < t.cells.size(); i++) {
@@ -215,15 +227,19 @@ void tab(App& a) {
         }
         ImGui::EndTable();
     }
-    ImGui::TextDisabled("Calls on this channel (screen only, never saved)");
-    if (ImGui::BeginTable("##tpolcalls", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.22f))) {
-        ImGui::TableSetupColumn("Started"); ImGui::TableSetupColumn("Length"); ImGui::TableSetupColumn("Encryption");
-        ImGui::TableSetupColumn("Voice frames"); ImGui::TableSetupColumn("Decoded"); ImGui::TableSetupColumn("Recording", ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TextDisabled("%s", tr("Calls on this channel (screen only, never saved)"));
+    if (!t.talker.empty()) { ImGui::SameLine(); ImGui::Text("%s %s", tr("talking party"), t.talker.c_str()); }
+    if (ImGui::BeginTable("##tpolcalls", 8, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.18f))) {
+        ImGui::TableSetupColumn(tr("Started")); ImGui::TableSetupColumn(tr("Length")); ImGui::TableSetupColumn(tr("Group"));
+        ImGui::TableSetupColumn(tr("Talking party")); ImGui::TableSetupColumn(tr("Encryption"));
+        ImGui::TableSetupColumn(tr("Voice frames")); ImGui::TableSetupColumn(tr("Decoded")); ImGui::TableSetupColumn(tr("Recording"), ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
         for (const auto& c : t.calls) {
             ImGui::TableNextRow();
-            ImGui::TableNextColumn(); ImGui::Text("%s%s", ago(c.startWall).c_str(), c.active ? " (on air)" : "");
+            ImGui::TableNextColumn(); ImGui::Text("%s%s", ago(c.startWall).c_str(), c.active ? tr(" (on air)") : "");
             ImGui::TableNextColumn(); ImGui::Text("%.1f s", c.lastSec - c.startSec);
+            ImGui::TableNextColumn(); if (c.groupId >= 0) ImGui::Text("%d", c.groupId); else ImGui::TextUnformatted("-");
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(c.talker.empty() ? "-" : c.talker.c_str());
             ImGui::TableNextColumn(); ImGui::TextUnformatted(verdictShort(c.verdict));
             ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)c.voiceFrames);
             ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)c.decoded);
@@ -231,22 +247,55 @@ void tab(App& a) {
         }
         ImGui::EndTable();
     }
-    ImGui::TextDisabled("Group calls announced on a control channel (numbers shown for clear calls only)");
-    if (ImGui::BeginTable("##tpolact", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.18f))) {
-        ImGui::TableSetupColumn("Group"); ImGui::TableSetupColumn("Channel"); ImGui::TableSetupColumn("Encryption");
-        ImGui::TableSetupColumn("Heard"); ImGui::TableSetupColumn("Last");
+    ImGui::TextDisabled("%s", tr("Group calls announced on a control channel (D_GROUP_ACTIVATION)"));
+    if (ImGui::BeginTable("##tpolact", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.14f))) {
+        ImGui::TableSetupColumn(tr("Group")); ImGui::TableSetupColumn(tr("Channel")); ImGui::TableSetupColumn(tr("D scramble"));
+        ImGui::TableSetupColumn(tr("Encryption")); ImGui::TableSetupColumn(tr("Heard")); ImGui::TableSetupColumn(tr("Last"));
         ImGui::TableHeadersRow();
         for (const auto& c : t.activations) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); if (c.groupId >= 0) ImGui::Text("%d", c.groupId); else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); if (c.channelId >= 0) ImGui::Text("%d", c.channelId); else ImGui::TextUnformatted("-");
+            ImGui::TableNextColumn(); if (c.dScramble >= 0) ImGui::Text("%d", c.dScramble); else ImGui::TextUnformatted("-");
             ImGui::TableNextColumn(); ImGui::TextUnformatted(verdictShort(c.verdict));
             ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)c.heard);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(ago(c.lastWall).c_str());
         }
         ImGui::EndTable();
     }
-    ImGui::TextDisabled("Log");
+    if (!t.neighbours.empty()) {
+        ImGui::TextDisabled("%s", tr("Neighbour cells (D_NEIGHBOURING_CELL)"));
+        if (ImGui::BeginTable("##tpolnb", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.12f))) {
+            ImGui::TableSetupColumn(tr("Channel")); ImGui::TableSetupColumn("BN"); ImGui::TableSetupColumn(tr("Cell"));
+            ImGui::TableSetupColumn(tr("Parameters"));
+            ImGui::TableHeadersRow();
+            for (const auto& n : t.neighbours) {
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn(); ImGui::Text("%d", n.channelId);
+                ImGui::TableNextColumn(); ImGui::Text("%d", n.bnNb);
+                ImGui::TableNextColumn(); if (n.bsId >= 0) ImGui::Text("%d / RSW %d", n.bsId, n.rswId); else ImGui::TextUnformatted("-");
+                ImGui::TableNextColumn(); ImGui::Text("0x%02x", n.param);
+            }
+            ImGui::EndTable();
+        }
+    }
+    ImGui::TextDisabled("%s", tr("Messages (repeats counted on one row; screen only)"));
+    if (ImGui::BeginTable("##tpolmsg", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, h * 0.22f))) {
+        ImGui::TableSetupColumn(tr("Channel"), ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 3.5f);
+        ImGui::TableSetupColumn(tr("Message"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn(tr("Count"), ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 3.5f);
+        ImGui::TableSetupColumn(tr("Last"), ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 4.f);
+        ImGui::TableHeadersRow();
+        for (const auto& m : t.msgs) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(m.channel.c_str());
+            ImGui::TableNextColumn(); ImGui::TextWrapped("%s", m.text.c_str());
+            ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)m.count);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(ago(m.lastWall).c_str());
+        }
+        ImGui::EndTable();
+    }
+    ImGui::TextDisabled("%s", tr("Log"));
     for (const auto& e : t.events) {
         ImGui::TextUnformatted(e.text.c_str());
         if (&e - t.events.data() > 12) break;

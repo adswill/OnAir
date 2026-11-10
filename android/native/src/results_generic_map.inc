@@ -793,7 +793,7 @@ case 80: {
     { Table tb({"Freq Hz", "Level Db"}); int n = 0; for (auto it = t.carriers.rbegin(); it != t.carriers.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.freqHz), cell(e.levelDb)}); } if (n) addTable(o, "Carriers", tb); }
     { Table tb({"Freq Hz", "Cfo Hz", "Scramble", "Country", "System Id", "Bn Id", "Cell Id", "Rsw Id"}); int n = 0; for (auto it = t.cells.rbegin(); it != t.cells.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.freqHz), cell(e.cfoHz), cell(e.scramble), cell(e.country), cell(e.systemId), cell(e.bnId), cell(e.cellId), cell(e.rswId)}); } if (n) addTable(o, "Cells", tb); }
     { Table tb({"Wall Time", "Sec", "Text"}); int n = 0; for (auto it = t.events.rbegin(); it != t.events.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.sec), cell(e.text)}); } if (n) addTable(o, "Events", tb); }
-    { Table tb({"Start Wall", "Start Sec", "Last Sec", "Verdict", "Voice Frames", "Decoded", "Damaged", "Wav Path"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.startWall), cell(e.startSec), cell(e.lastSec), cell(e.verdict), cell(e.voiceFrames), cell(e.decoded), cell(e.damaged), cell(e.wavPath)}); } if (n) addTable(o, "Calls", tb); }
+    { Table tb({"Start Wall", "Start Sec", "Last Sec", "Verdict", "Voice Frames", "Decoded", "Wav Path", "Talker"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.startWall), cell(e.startSec), cell(e.lastSec), cell(e.verdict), cell(e.voiceFrames), cell(e.decoded), cell(e.wavPath), cell(e.talker)}); } if (n) addTable(o, "Calls", tb); }
     break;
 }
 case 81: {

@@ -1,5 +1,6 @@
 // TETRAPOL physical frames, PAS 0001-2 clause 6 (tetrapol_codec.h): voice and data frames of the 8 kbit/s GMSK channel.
 #include "dect2/tetrapol/tetrapol_codec.h"
+#include <algorithm>
 #include <cstring>
 
 namespace dect2 {
@@ -10,13 +11,13 @@ namespace {
 constexpr int kPart1 = 26;   // protected information bits common to both frame types (d + 25)
 constexpr int kPart2 = 50;   // second protected part of a data frame
 
-// PAS 0001-2 6.1.3.1 / 6.2.3.1 (VHF, voice and data alike): k = 19 * p[j % 8] + (3 * (j / 8)) % 19
+// PAS 0001-2 6.1.3.1 / 6.2.3.1 (VHF, voice and data alike): k = 19 * p[j % 8] + (3 * (j / 8)) % 19, p the 3-bit reversal given there
 int vhfIndex(int j) {
     static const int p[8] = {0, 4, 2, 6, 1, 5, 3, 7};
     return 19 * p[j % 8] + (3 * (j / 8)) % 19;
 }
 
-// PAS 0001-2 6.1.4.1: UHF voice frame interleaving
+// PAS 0001-2 6.1.4.1: UHF voice frame interleaving, the K vector of the text (checked entry by entry against PAS 0001-2 v3.0.0)
 const uint8_t kUhfVoice[kDataBits] = {
     1, 77, 38, 114, 20, 96, 59, 135,   3, 79, 41, 117, 23, 99, 62, 138,   5, 81, 44, 120, 26, 102, 65, 141,
     8, 84, 47, 123, 29, 105, 68, 144,  11, 87, 50, 126, 32, 108, 71, 147, 14, 90, 53, 129, 35, 111, 74, 150,
@@ -26,7 +27,7 @@ const uint8_t kUhfVoice[kDataBits] = {
     9, 85, 45, 118, 27, 103, 63, 136,  15, 83, 46, 125, 25, 101, 64, 143, 7, 86, 49, 128, 31, 107, 69, 142,
     21, 94, 54, 127, 33, 109, 72, 145,
 };
-// PAS 0001-2 6.2.4.1: UHF data frame interleaving
+// PAS 0001-2 6.2.4.1: UHF data frame interleaving, the K vector of the text (checked entry by entry against PAS 0001-2 v3.0.0)
 const uint8_t kUhfData[kDataBits] = {
     1, 77, 38, 114, 20, 96, 59, 135,   3, 79, 41, 117, 23, 99, 62, 138,   5, 81, 44, 120, 26, 102, 65, 141,
     8, 84, 47, 123, 29, 105, 68, 144,  11, 87, 50, 126, 32, 108, 71, 147, 14, 90, 53, 129, 35, 111, 74, 150,
@@ -37,13 +38,15 @@ const uint8_t kUhfData[kDataBits] = {
     18, 92, 54, 131, 36, 110, 72, 149,
 };
 
-// PAS 0001-2 6.1.4.2 / 6.2.4.2 (UHF): bit j is precoded with bit j - 2 at these positions, with bit j - 1 elsewhere
+// PAS 0001-2 6.1.4.2 / 6.2.4.2 (UHF): bit j is precoded with bit j - 2 at the 47 PRE_COD positions (7, 10 .. 76, 83, 86 .. 149), with
+// bit j - 1 elsewhere; e'0 = e0 + f7 and f7 = 0
 int precodeLag(int j) {
     if (j >= 7 && j <= 76 && (j - 7) % 3 == 0) return 2;
     if (j >= 83 && j <= 149 && (j - 83) % 3 == 0) return 2;
     return 1;
 }
 
+// PAS 0001-2 6.1.5.1 / 6.2.5.1: s(k) = 1 for k = 0..6, s(k) = s(k-1) + s(k-7); S(SCR, k) = s(k + SCR), S(0, k) = 0
 const uint8_t* scrambleTable() {
     static uint8_t s[127];
     static bool done = false;
@@ -55,7 +58,7 @@ const uint8_t* scrambleTable() {
     return s;
 }
 
-// The circular rate-1/2 code of the protected parts (PAS 0001-2 6.1.2 / 6.2.2)
+// The cyclic rate-1/2 code of the protected parts (PAS 0001-2 6.1.2 / 6.2.2)
 void convEncode(const uint8_t* u, int n, uint8_t* c) {
     for (int i = 0; i < n; i++) {
         const uint8_t a = u[i], b = u[(i - 1 + n) % n], d = u[(i - 2 + n) % n];
@@ -64,30 +67,33 @@ void convEncode(const uint8_t* u, int n, uint8_t* c) {
     }
 }
 
-// Tail-biting Viterbi (4 states, every start state tried; the path must end where it started). Returns the coded bits in error.
-int convDecode(const uint8_t* c, int n, uint8_t* u) {
-    int bestErr = 1 << 30;
+// Tail-biting Viterbi (4 states, every start state tried; the path must end where it started). w: the weight of each coded bit (null: all 1,
+// hard decisions). Returns the coded bits in error of the best path (hard count).
+int convDecode(const uint8_t* c, int n, uint8_t* u, const float* w = nullptr) {
+    float bestCost = 1e30f;
     uint8_t path[64][4];
     uint8_t best[64];
+    constexpr float kInf = 1e29f;
     for (int s0 = 0; s0 < 4; s0++) {   // state = (u[i-1] << 1) | u[i-2]
-        int met[4];
-        for (int s = 0; s < 4; s++) met[s] = s == s0 ? 0 : (1 << 20);
+        float met[4];
+        for (int s = 0; s < 4; s++) met[s] = s == s0 ? 0.f : kInf;
         for (int i = 0; i < n; i++) {
-            int nm[4] = {1 << 21, 1 << 21, 1 << 21, 1 << 21};
+            float nm[4] = {2 * kInf, 2 * kInf, 2 * kInf, 2 * kInf};
+            const float w0 = w ? w[2 * i] : 1.f, w1 = w ? w[2 * i + 1] : 1.f;
             for (int s = 0; s < 4; s++) {
-                if (met[s] >= (1 << 20)) continue;
+                if (met[s] >= kInf) continue;
                 const int p1 = (s >> 1) & 1, p2 = s & 1;
                 for (int b = 0; b < 2; b++) {
                     const int o0 = b ^ p1 ^ p2, o1 = b ^ p2;
-                    const int m = met[s] + (o0 != c[2 * i]) + (o1 != c[2 * i + 1]);
+                    const float m = met[s] + (o0 != c[2 * i] ? w0 : 0.f) + (o1 != c[2 * i + 1] ? w1 : 0.f);
                     const int ns = (b << 1) | p1;
                     if (m < nm[ns]) { nm[ns] = m; path[i][ns] = (uint8_t)s; }
                 }
             }
             for (int s = 0; s < 4; s++) met[s] = nm[s];
         }
-        if (met[s0] >= bestErr) continue;
-        bestErr = met[s0];
+        if (met[s0] >= bestCost) continue;
+        bestCost = met[s0];
         int s = s0;
         for (int i = n - 1; i >= 0; i--) {
             best[i] = (uint8_t)((s >> 1) & 1);
@@ -95,7 +101,14 @@ int convDecode(const uint8_t* c, int n, uint8_t* u) {
         }
     }
     memcpy(u, best, (size_t)n);
-    return bestErr;
+    // hard disagreements of the decoded path
+    int err = 0;
+    for (int i = 0; i < n; i++) {
+        const uint8_t a = u[i], b = u[(i - 1 + n) % n], d = u[(i - 2 + n) % n];
+        err += (uint8_t)(a ^ b ^ d) != c[2 * i];
+        err += (uint8_t)(a ^ d) != c[2 * i + 1];
+    }
+    return err;
 }
 
 void scramble(uint8_t* x, int scr) {
@@ -129,6 +142,7 @@ int interleaveIndex(int j, int band, int type) {
     return type == kVoice ? kUhfVoice[j] : kUhfData[j];
 }
 
+// PAS 0001-2 6.2.1: (d0 D^73 + ... + d73) a multiple of I + D^2 + D^5
 void crc5(const uint8_t* b, int n, uint8_t r[5]) {
     memset(r, 0, 5);
     for (int i = 0; i < n; i++) {
@@ -137,6 +151,7 @@ void crc5(const uint8_t* b, int n, uint8_t r[5]) {
     }
 }
 
+// PAS 0001-2 6.1.1: (b'0 D^25 + ... + b'25) a multiple of I + D + D^3, then the three CRC bits complemented
 void crc3(const uint8_t* b, int n, uint8_t r[3]) {
     memset(r, 0, 3);
     for (int i = 0; i < n; i++) {
@@ -172,21 +187,37 @@ void encodeVoiceFrame(const VoiceFrame& in, int band, uint8_t bits160[kFrameBits
     finishFrame(coded, band, kVoice, in.scramble, bits160);
 }
 
-bool decodeFrame(const uint8_t bits152[kDataBits], int band, int scr, Frame& out, int forceType) {
+bool decodeFrame(const uint8_t bits152[kDataBits], int band, int scr, Frame& out, int forceType, const float* rel152) {
     out = Frame();
     uint8_t x[kDataBits];
     memcpy(x, bits152, (size_t)kDataBits);
     scramble(x, scr);
     if (band == kUhf) unprecode(x);
+    // reliability of each bit after the differential and the UHF precoding are undone: on UHF the two cancel (bit j is received bit j,
+    // or j and j - 1 where the precoding used j - 2), on VHF bit j depends on every received bit up to j
+    float rel[kDataBits];
+    if (rel152) {
+        float mean = 0;
+        for (int j = 0; j < kDataBits; j++) mean += rel152[j];
+        mean = mean / kDataBits + 1e-9f;
+        float run = 1e30f;
+        for (int j = 0; j < kDataBits; j++) {
+            const float a = std::min(rel152[j] / mean, 2.f);   // outliers capped
+            if (band == kUhf) rel[j] = precodeLag(j) == 2 && j > 0 ? std::min(a, std::min(rel152[j - 1] / mean, 2.f)) : a;
+            else { run = std::min(run, a); rel[j] = run; }
+        }
+    }
     // the first 52 positions are interleaved alike in both frame types (the two tables agree there)
     uint8_t c[kDataBits];
-    for (int j = 0; j < 2 * kPart1; j++) c[j] = x[interleaveIndex(j, band, kData)];
+    float w[kDataBits];
+    for (int j = 0; j < kDataBits; j++) w[j] = 1.f;
+    for (int j = 0; j < 2 * kPart1; j++) { const int k = interleaveIndex(j, band, kData); c[j] = x[k]; if (rel152) w[j] = rel[k]; }
     uint8_t u[kPart1 + kPart2] = {};
-    const int e1 = convDecode(c, kPart1, u);
+    const int e1 = convDecode(c, kPart1, u, rel152 ? w : nullptr);
     const int type = forceType >= 0 ? forceType : u[0];
     if (u[0] != type) return false;
     out.type = type;
-    for (int j = 2 * kPart1; j < kDataBits; j++) c[j] = x[interleaveIndex(j, band, type)];
+    for (int j = 2 * kPart1; j < kDataBits; j++) { const int k = interleaveIndex(j, band, type); c[j] = x[k]; if (rel152) w[j] = rel[k]; }
     if (type == kVoice) {
         VoiceFrame& v = out.voice;
         v.scramble = scr;
@@ -202,7 +233,7 @@ bool decodeFrame(const uint8_t bits152[kDataBits], int band, int scr, Frame& out
         out.metric = e1;
         return out.ok;
     }
-    const int e2 = convDecode(c + 2 * kPart1, kPart2, u + kPart1);
+    const int e2 = convDecode(c + 2 * kPart1, kPart2, u + kPart1, rel152 ? w + 2 * kPart1 : nullptr);
     DataFrame& d = out.data;
     d.scramble = scr;
     d.metric = e1 + e2;
