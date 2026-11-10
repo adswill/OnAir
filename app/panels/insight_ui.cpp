@@ -172,7 +172,7 @@ void hfTab(in::Hub& h) {
     if (v.empty()) ImGui::TextDisabled("%s", tr("None yet: a slot is learned after decodes at the same time on three days."));
     for (const auto& l : v) {
         std::string t;
-        for (int m : l.minutes) { char b[8]; snprintf(b, sizeof b, "%s%02d:%02d", t.empty() ? "" : " ", m / 60, m % 60); t += b; }
+        for (int m : l.minutes) { char b[24]; snprintf(b, sizeof b, "%s%02d:%02d", t.empty() ? "" : " ", m / 60, m % 60); t += b; }
         ImGui::BulletText("%s %.1f kHz: %s", l.station.c_str(), l.freqHz / 1e3, t.c_str());
     }
 }

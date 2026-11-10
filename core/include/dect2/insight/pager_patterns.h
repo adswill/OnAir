@@ -42,7 +42,8 @@ public:
     struct Limits {
         int autoGaps = 6;               // steady gaps needed
         double autoSimilar = 0.8;       // word overlap of the pages (digits ignored)
-        double autoJitter = 0.1;        // median absolute deviation of the gaps / the median gap
+        double autoJitter = 0.07;       // median absolute deviation of the gaps / the median gap
+        double autoMaxDev = 0.25;       // and no gap further than this share from the median
         double autoMinSec = 20;         // faster than this is one page repeated, not a schedule
         int burstPages = 5;             // this many pages ...
         double burstWindowSec = 600;    // ... within this ...
@@ -174,7 +175,7 @@ private:
         if (med < L.autoMinSec) return false;
         std::vector<double> dev;
         for (double x : g) dev.push_back(std::fabs(x - med));
-        if (median(dev) > L.autoJitter * med) return false;
+        if (median(dev) > L.autoJitter * med || *std::max_element(dev.begin(), dev.end()) > L.autoMaxDev * med) return false;
         interval = med;
         return true;
     }
