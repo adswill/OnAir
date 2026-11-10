@@ -9,6 +9,9 @@
 #include "dect2/sensors/sensors_rx.h"
 #include "dect2/sensors/sensors_names.h"
 #include "dect2/sensors/pws_upload.h"
+#include "dect2/sensors/sensors_archive.h"
+#include <filesystem>
+#include <map>
 #include <atomic>
 #include <memory>
 #include <mutex>
@@ -665,14 +668,86 @@ void uploadView(App& a) {
     { std::string t2; { std::lock_guard<std::mutex> lk(P.status->mu); t2 = P.status->text; } if (!t2.empty()) ImGui::TextDisabled("%s", t2.c_str()); }
 }
 
+// ----- long history: daily min / max / mean and rain per day, kept between sessions -----
+struct Arch { bool loaded = false; dect2::SensorArchive ar; std::map<std::string, int64_t> fed; double lastSave = 0; std::string sel; };
+Arch AR;
+std::filesystem::path archFile() { return std::filesystem::path(reinterpret_cast<const char8_t*>((plat::dataDir() + "/stats").c_str())) / "sensors-days.txt"; }
+void archSave() {
+    std::error_code ec;
+    std::filesystem::create_directories(archFile().parent_path(), ec);
+    std::ofstream o(archFile(), std::ios::binary | std::ios::trunc);
+    o << AR.ar.serialize();
+    AR.ar.clearDirty();
+}
+void archTick(App& a) {
+    if (!AR.loaded) {
+        AR.loaded = true;
+        AR.ar.setTzOffset(tzOffNow());
+        std::ifstream f(archFile(), std::ios::binary);
+        std::stringstream ss; ss << f.rdbuf();
+        AR.ar.parse(ss.str());
+    }
+    if (live(a)) for (const auto& d : a.rx.sensors.devices) {
+        int64_t& last = AR.fed[d.key];
+        if (d.lastSeen == last) continue;
+        last = d.lastSeen;
+        std::vector<std::pair<std::string, double>> v;
+        for (const auto& f : d.latest) if (f.numeric) v.push_back({f.key, f.num});
+        AR.ar.add(d.key, d.lastSeen, v);
+    }
+    const double now = (double)time(nullptr);
+    if (AR.ar.dirty() && (now - AR.lastSave > 600 || !live(a))) { AR.lastSave = now; archSave(); }   // every 10 minutes, and when the receiver stops
+}
+void historyView(App& a) {
+    const auto keys = AR.ar.keys();
+    if (keys.empty()) { ImGui::TextDisabled("%s", tr("No history yet: every reading is added per day and kept between sessions.")); return; }
+    if (AR.sel.empty() || !AR.ar.days(AR.sel)) AR.sel = !S.selKey.empty() && AR.ar.days(S.selKey) ? S.selKey : keys.front();
+    auto label = [&](const std::string& k) { for (const auto& d : a.rx.sensors.devices) if (d.key == k) return dect2::sensorLabel(d, S.names); const std::string n = S.names.get(k); return n.empty() ? k : n; };
+    ImGui::SetNextItemWidth(280 * gUi);
+    if (ImGui::BeginCombo("##senshist", label(AR.sel).c_str())) {
+        for (const auto& k : keys) if (ImGui::Selectable((label(k) + "##sh" + k).c_str(), k == AR.sel)) AR.sel = k;
+        ImGui::EndCombo();
+    }
+    const auto& days = *AR.ar.days(AR.sel);
+    const std::string today = days.back().day;
+    ImGui::SameLine();
+    ImGui::TextDisabled(tr("rain this month %.1f mm, this year %.1f mm"), AR.ar.rainTotal(AR.sel, today.substr(0, 7)), AR.ar.rainTotal(AR.sel, today.substr(0, 4)));
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Save now##senshist"))) archSave();
+    // the columns: the values this sensor has, temperature and humidity first
+    std::vector<std::string> cols;
+    for (const char* k : {"temperature_C", "humidity", "pressure_hPa", "wind_avg_km_h", "wind_max_km_h"}) for (const auto& d : days) if (d.values.count(k)) { cols.push_back(k); break; }
+    for (const auto& d : days) for (const auto& kv : d.values) if (std::find(cols.begin(), cols.end(), kv.first) == cols.end() && cols.size() < 6) cols.push_back(kv.first);
+    bool rain = false;
+    for (const auto& d : days) rain |= d.hasRain;
+    const int nc = 1 + (int)cols.size() + (rain ? 1 : 0);
+    if (!ImGui::BeginTable("##senshistt", nc, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Day"));
+    for (const auto& c : cols) ImGui::TableSetupColumn((c + " min / max").c_str());
+    if (rain) ImGui::TableSetupColumn(tr("Rain mm"));
+    ImGui::TableHeadersRow();
+    for (auto it = days.rbegin(); it != days.rend(); ++it) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(it->day.c_str());
+        for (const auto& c : cols) {
+            ImGui::TableNextColumn();
+            auto v = it->values.find(c);
+            if (v == it->values.end()) ImGui::TextDisabled("-"); else ImGui::Text("%.1f / %.1f", v->second.min, v->second.max);
+        }
+        if (rain) { ImGui::TableNextColumn(); if (it->hasRain) ImGui::Text("%.1f", it->rainMm); else ImGui::TextDisabled("-"); }
+    }
+    ImGui::EndTable();
+}
+
 void tab(App& a) {
     load(a);
     easeui::autoBandControl(a, "sensAutoBand", a.rx.sensors.blocksOk);
     banner(a);
     ImGui::Spacing();
-    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders", tr("Upload")});
-    if (!live(a) && S.view != 3 && S.view != 4) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
-    if (S.view == 0) sensorsView(a); else if (S.view == 1) messagesView(a); else if (S.view == 2) unknownView(a); else if (S.view == 3) decodersView(a); else uploadView(a);
+    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders", tr("Upload"), tr("History")});
+    if (!live(a) && S.view != 3 && S.view != 4 && S.view != 5) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
+    if (S.view == 0) sensorsView(a); else if (S.view == 1) messagesView(a); else if (S.view == 2) unknownView(a); else if (S.view == 3) decodersView(a); else if (S.view == 4) uploadView(a); else historyView(a);
 }
 
 void list(App& a) {
@@ -739,5 +814,5 @@ const ModeUi kSensorsUi = {
     .list = list,
     .status = status,
     .summary = summary,
-    .tick = [](App& a) { load(a); pwsTick(a); },   // the weather upload runs whatever view is open
+    .tick = [](App& a) { load(a); pwsTick(a); archTick(a); },   // the weather upload and the long history run whatever view is open
 };
