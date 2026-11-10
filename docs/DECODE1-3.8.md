@@ -18,7 +18,7 @@ New interpreter `core/src/ais/ais_apps.cpp`, records in the telemetry (`AisTelem
 `core/src/acars/acars_text.cpp` reads plain-text formats by label and preamble (positions, OOOI, ETA, fuel, faults, winds, ARINC 702 slash reports, loadsheet-free subsets of labels 10, 12, 13-18, 15, 16, 1L, 1M, 20, 21, 22, 24, 2P, 30, 44, 4A, 4N, 4T, 58, 5Z, 80, 83, 8E, B6, :;, H1, H2, HX, QQ, SQ). The reading appears in the existing tables of ACARS, VDL2, HFDL, Aero and Iridium, positions reach their maps.
 
 - libacars: MIT; the vendored subset (FANS-1/A CPDLC) has no label parsers, so it was not the source here. MIAM and OHMA remain out (need zlib and more of libacars).
-- acars-decoder-typescript (MIT) was used as a format reference; its code was not copied. Its test suite's example messages are test vectors: 88 of 94 read as it expects. The six misses are airline-specific PRF/LDI/PRG/FPN expectations.
+- acars-decoder-typescript (MIT) was used as a format reference; its code was not copied. Its test suite's example messages are test vectors: 87 of 94 read as it expects. The seven misses are airline-specific PRF/LDI/PRG/FPN expectations and one QQ form left to the existing Q-label reader.
 - Left out: SWA compressed and label H1 A02 / 37 / 40 / LDR variants, MIAM, OHMA.
 
 ## P25 Phase 1
