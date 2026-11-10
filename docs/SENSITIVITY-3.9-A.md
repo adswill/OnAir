@@ -27,6 +27,11 @@ The measurement is kept as a test: `tests/sens/test_sens39a.cpp` (ctest `sens39a
 Already at theory from earlier passes (docs/SENSITIVITY-3.6.md, -3.7.md) and not touched: DVB-T, DVB-T2, DTMB, ISDB-T, DAB, DRM, FM audio,
 DVB-S2, DVB-C, ATV, CDR, FM RDS (about 1 dB over its estimate). ATSC is feat39-atscperf's. The top-10 CPU modes are feat39-qa's.
 
+Linux runner, before any change (sens-quick.yml run 42877952408: quick tier, 4 trials, 2 dB steps, AWGN / 20 ppm carrier): fm-rds 16 / 16,
+drm16 10 / 10, drmE 4 / 2, iridium 13 / 13, am and am-sync 28 / 28, hdr-fm 16 / 18, hdr-am 38 / no 90 % point at the top SNR, cdr -3 / -3,
+meteor 4 / 4, hrpt 4 / 4, fy3ahrpt 2 / 2, goes 0 / 0, gk2alrit 0 / 0, gk2ahrit 2 / 2. HD Radio AM (38 dB in 30 kHz, and no 90 % point with a 20 ppm
+carrier error) is the largest open lead in this group; not analysed in this pass.
+
 ## What changed (core/src/hrpt/hrpt_rx.cpp)
 
 1. Coarse carrier. The raised-cosine fit to the averaged spectrum is flat-topped at alpha 0.6 and was off by up to about 20 kHz even on a
@@ -65,4 +70,4 @@ with 25 to 35 % less receiver CPU.
 
 GNSS (an earlier weak-signal change was reverted on main), DVB-S (S1), Inmarsat, Orbcomm, CubeSat, APT and HD Radio have no figures in this
 pass: the Mac was loaded the whole time and each of them needs its own harness entry or a longer sweep. The GitHub sweep run 42877952408
-(sens-quick, Linux) of the unmeasured modes was still running at hand-over.
+(above) gave the Linux figures; the after-figures for HRPT are Mac only.

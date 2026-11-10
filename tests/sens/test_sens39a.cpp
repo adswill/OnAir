@@ -33,7 +33,8 @@ const Row kRows[] = {
     {"goes", -1, -1, true},
     {"gk2alrit", -1, -1, true},
     {"gk2ahrit", 2, 2, true},
-    {"iridium", 11, 12, false},    // about 4 CPU seconds per signal second in this harness: long run only
+    {"iridium", 13, 13, false},    // Linux 13 / 13 (Mac 11 / 12); about 4 CPU seconds per signal second here: long run only
+    {"hdr-fm", 16, 18, false},     // Linux quick tier (2 dB steps)
 };
 
 double cpuSeconds() {
