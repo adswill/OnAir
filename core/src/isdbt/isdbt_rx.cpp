@@ -270,7 +270,9 @@ struct IsdbtReceiver::Impl {
             const int n = isdbt::fftN(m) / dec();
             const int64_t avail = (int64_t)buf.size();
             if (avail < (int64_t)(6.0 * (n + n / 4) + n + n / 4)) continue;
-            const int64_t B = std::min<int64_t>(avail, (int64_t)(8 * (n + n / 4) + n));
+            // ISDB-TSB: the guard intervals are an eighth or a quarter as long (mode 1, 1/32: 8 samples), so the correlation is averaged over
+            // up to 32 symbols instead of 8
+            const int64_t B = std::min<int64_t>(avail, (int64_t)((tsb ? 32 : 8) * (n + n / 4) + n));
             const int64_t Dn = B - n;
             std::vector<cd> cum((size_t)Dn + 1);
             std::vector<double> en((size_t)Dn + 1);
@@ -289,12 +291,16 @@ struct IsdbtReceiver::Impl {
                 std::vector<double> F((size_t)P, 0.0);
                 std::vector<cd> Fc((size_t)P, cd(0, 0));
                 std::vector<int> cnt((size_t)P, 0);
+                std::vector<double> Fe((size_t)P, 0.0);
                 for (int64_t d = 0; d < D; d++) {
                     const cd c = cum[(size_t)(d + G_)] - cum[(size_t)d];
                     const double e = en[(size_t)(d + G_)] - en[(size_t)d];
                     const double r = e > 1e-12 ? std::abs(c) / e : 0.0;
-                    F[(size_t)(d % P)] += r; Fc[(size_t)(d % P)] += c; cnt[(size_t)(d % P)]++;
+                    F[(size_t)(d % P)] += r; Fc[(size_t)(d % P)] += c; Fe[(size_t)(d % P)] += e; cnt[(size_t)(d % P)]++;
                 }
+                // ISDB-TSB: with guards of 8 or 16 samples the magnitude of one window's correlation is mostly noise (it never averages away);
+                // the complex sum over the symbols does, as the carrier offset turns every symbol's prefix the same way
+                if (tsb) for (int i = 0; i < P; i++) F[(size_t)i] = Fe[(size_t)i] > 1e-12 ? std::abs(Fc[(size_t)i]) / Fe[(size_t)i] * cnt[(size_t)i] : 0.0;
                 double mx = 0, mean = 0; int arg = 0;
                 for (int i = 0; i < P; i++) { if (cnt[(size_t)i]) F[(size_t)i] /= cnt[(size_t)i]; mean += F[(size_t)i]; if (F[(size_t)i] > mx) { mx = F[(size_t)i]; arg = i; } }
                 mean /= P;
@@ -654,7 +660,14 @@ struct IsdbtReceiver::Impl {
             bool any = false;
             for (int k = 0; k < K; k += dec) { const float m = std::abs(Hf[(size_t)k]); any |= m > 0; t.chMagDb.push_back(20.f * std::log10(std::max(1e-6f, m))); t.chPhase.push_back(std::arg(Hf[(size_t)k])); }
             t.chValid = any; t.chDecim = dec; t.chCarriers = K;
-            if (any) { t.irTauMin = -N / 16; impulseResponse(Hf, N, t.irTauMin, G + std::max(8, G / 4), back + G / 8, t.irDb); }
+            if (any) {
+                t.irTauMin = -N / 16;
+                if (tsb) {   // the narrow band only (its centre is the ISDB-T centre carrier): the whole carrier range does not fit the smaller FFT
+                    const int k0 = firstPosition(tsb) * carriersPerSegment(mode), k1 = edgeCarrier(mode, tsb);
+                    const std::vector<cf32> Hn(Hf.begin() + k0, Hf.begin() + k1 + 1);
+                    impulseResponse(Hn, N, t.irTauMin, G + std::max(8, G / 4), back + G / 8, t.irDb);
+                } else impulseResponse(Hf, N, t.irTauMin, G + std::max(8, G / 4), back + G / 8, t.irDb);
+            }
             const std::vector<cf32>& Yc = demod.corrected();
             t.rawCells.clear();
             if ((int)Yc.size() == K) {
