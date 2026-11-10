@@ -169,6 +169,10 @@ Everything the page does is HTTP under `/app/v1/` (JSON, POST bodies are flat ob
 
 ## Tests and CI
 
+CI (quick.yml on ubuntu-24.04): `web_schema`, `web_app_client` and `web_app_load` passed in run 42891394337; `webapp` passed in run
+42900206265 (111 s: the access layer, the server over HTTP and WebSocket, every mode row selected). The full `ci.yml` run is the
+integrator's.
+
 * `web_schema` (C++): every mode row's schema, every standard's export as valid JSON, the writers.
 * `webapp` (C++): the access layer; the real server over HTTP and WebSocket from 127.0.0.1 and through a trusted proxy header as an
   internet visitor: login, cookies, CSRF, origins, rate and fail limits, public mode, the visitor cap, private modes, every mode row
