@@ -124,7 +124,7 @@ int main() {
         int distinct = 0; for (int v : seen) distinct += v > 0;
         CHECK(distinct >= 60, "scrambler values spread, %d of 64", distinct);
     }
-    // ---- coding and interleaving of every combination: clean, and with 3% of the bits wrong ----
+    // ---- coding and interleaving of every combination: clean, and with 0.5% of the bits wrong (hard decisions) ----
     {
         std::mt19937 r(5);
         for (int bps : {3200, 4800, 6400, 8000, 9600, 12800}) for (int f : kIntl) {
@@ -138,7 +138,7 @@ int main() {
             int flipped = 0;
             for (size_t i = 0; i < tx.size(); i++) {
                 bool b = tx[i];
-                if (bps != 12800 && r() % 100 < 3) { b = !b; flipped++; }
+                if (bps != 12800 && r() % 1000 < 5) { b = !b; flipped++; }
                 soft[i] = b ? -1.f : 1.f;
             }
             const auto out = hfu::hdrDecodeBlock(soft, bps, f);

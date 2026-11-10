@@ -75,6 +75,12 @@ void ArqMonitor::pushBit(float soft) {
             csPrev_ = csPrev2_ = 0;
             prevValid_ = false;
             event("SITOR-A: link found (blocks every 450 ms)");
+            // the three blocks that made the lock are read too (the call blocks, or the first text), with their control signals
+            for (int j = 3; j >= 1; j--) {
+                const uint64_t be = e - static_cast<uint64_t>(j * kCycleBits);
+                uint8_t pw[3];
+                if (blockAt(be, pw)) { onBlock(pw, be); havePending_ = false; scanCs(be); }
+            }
             onBlock(w, e);
             nextEnd_ = e + kCycleBits;
         }

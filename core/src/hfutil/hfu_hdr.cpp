@@ -288,7 +288,8 @@ struct HighRateRx::Impl {
     // acquisition template: the differential products of the 103 block
     std::vector<int> tk;             // positions k (the product y[k] conj(y[k - 1]))
     std::vector<cf> te;              // the expected product, conjugated
-    int64_t scan = 0;
+    int64_t scan = 0, lockScan = 0;
+    uint64_t goodProbes = 0;
     double candM = 0; int64_t candT = -1; cf candC;
     // lock
     int state = 0;
@@ -378,11 +379,12 @@ struct HighRateRx::Impl {
             }
             const double m = nrm > 0 ? std::abs(c) / nrm : 0;
             if (m > 0.5 && m > candM) { candM = m; candT = scan; candC = c; }
-            if (candT >= 0 && scan > candT + 2 * kSps) {
+            if (candT >= 0 && scan > candT + 40 * kSps) {   // the true peak is the highest within 40 symbols (the mini-probes give side peaks)
                 const int64_t t = candT;
                 const cf cc = candC;
                 candM = 0; candT = -1;
                 scan = t + kSps;
+                lockScan = t + kSps;
                 if (lockAt(t, std::arg(cc) * kBaud / (2 * kPi))) return true;
                 continue;
             }
@@ -428,7 +430,7 @@ struct HighRateRx::Impl {
         float e = 0;
         for (int k = 0; k < 184; k++) { const cf v = symAt(k - 184); s += v * std::conj(psk8(kSync184[k])); e += std::abs(v); }
         const bool start = e > 0 && std::abs(s) / e > 0.5;
-        bps = r; frames = fr; frame = 1; superN = 0; badProbes = 0;
+        bps = r; frames = fr; frame = 1; superN = 0; badProbes = 0; goodProbes = 0;
         hPrev = hh; hPrevPos = posOf(kBlock - 16);
         soft.clear();
         curByte = 0; curBits = 0; eomWin = 0; pendingBits.clear();
@@ -464,7 +466,7 @@ struct HighRateRx::Impl {
         noise = std::max(ns, 1e-9); sig = sp;
         snr = 10 * std::log10(sp / std::max(ns, 1e-12));
         (void)pw;
-        return true;
+        return snr > 0;   // a side peak or noise does not fit the known symbols
     }
 
     cf probeGain(int64_t m0, int sign, double& energy) const {
@@ -528,7 +530,13 @@ struct HighRateRx::Impl {
         // quality: the probe fits, or it is noise (or a probe of the wrong sign: lost track)
         const double fit = std::norm(hN) * kProbe / std::max(e0, 1e-12);
         badProbes = fit < 0.25 ? badProbes + 1 : 0;
-        if (badProbes >= 3) { unlock("signal lost", posOf(mData)); return true; }
+        if (fit >= 0.25) goodProbes++;
+        if (badProbes >= 3) {
+            // a lock that never saw a good probe was a false one: look again from just after it
+            if (goodProbes == 0) { st.messages--; unlock("false start dropped", (double)lockScan); }
+            else unlock("signal lost", posOf(mData));
+            return true;
+        }
         // frequency: the phase change since the last probe
         const double dist = (posOf(mProbe + 15) - hPrevPos) / kFs;
         if (dist > 0 && std::abs(hPrev) > 0) {
