@@ -209,7 +209,7 @@ struct Stanag4481Rx::Impl {
         c.e = 0.995 * c.e + 0.005 * (em + es);
         c.dd = 0.995 * c.dd + 0.005 * std::fabs(em - es) / (em + es + 1e-20);
         // on: well over the noise between the sub-carriers, or (a full band leaves no clean gap) one of the strong channels and keyed
-        const bool on = (c.e > 12 * floor && c.e > 0.1 * maxE) || (c.e > 0.25 * maxE && c.dd > 0.5);
+        const bool on = (c.e > 12 * floor && c.e > 0.3 * maxE) || (c.e > 0.3 * maxE && c.dd > 0.5);   // 0.3: a neighbour's leakage is about -15 dB
         if (on != c.info.active) {
             c.info.active = on;
             char b[100];
@@ -268,8 +268,9 @@ struct Stanag4481Rx::Impl {
             if (n % 6000 == 0) {   // every 0.25 s
                 int act = 0;
                 for (auto& c : multi) act += c.info.active;
-                if (act < 2) searchSingle();
-                const int m = act >= 2 ? 2 : (singleOn && single.info.active ? 1 : (act == 1 ? 2 : 0));
+                // a single-channel signal leaks into one or two sub-carrier filters next to its tones; three or more sub-carriers is multi-channel
+                if (act < 3) searchSingle();
+                const int m = act >= 3 ? 2 : (singleOn && single.info.active ? 1 : (act >= 1 ? 2 : 0));
                 if (m != mode) { mode = m; event(m == 2 ? "multi-channel FSK (+-42.5 Hz sub-carriers)" : m == 1 ? "single-channel FSK (+-425 Hz)" : "no FSK broadcast"); }
                 if (hist.size() > 4800) hist.erase(hist.begin(), hist.end() - 2400);
             }

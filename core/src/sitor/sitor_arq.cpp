@@ -239,8 +239,7 @@ std::vector<cf32> genSitorArq(const ArqGenCfg& c, const std::string& text) {
     if (c.call && c.selcall.size() >= 4) {
         const std::vector<uint8_t> call1 = {code(c.selcall[0]), kArqRq, code(c.selcall[1])};
         const std::vector<uint8_t> call2 = {code(c.selcall[2]), code(c.selcall[3]), kArqRq};
-        cycle(call1, {});
-        cycle(call2, {});
+        for (int k = 1; k < std::max(1, c.callPairs); k++) { cycle(call1, {}); cycle(call2, {}); }
         cycle(call1, {});
         cycle(call2, {kCs1});
         cycle(call1, {kCs1});     // two identical control signals: the caller becomes the ISS (3.1.4.5)

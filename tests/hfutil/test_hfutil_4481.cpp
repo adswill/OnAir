@@ -33,6 +33,8 @@ Out run(const std::vector<cf32>& x) {
     rx.setTextSink([&](int ch, const std::string& s) { if (ch >= 0 && ch <= 16) o.text[ch] += s; });
     for (size_t i = 0; i < x.size(); i += 4096) rx.push(x.data() + i, std::min<size_t>(4096, x.size() - i));
     o.st = rx.status();
+    for (auto& c : o.st.channels) printf("  ch %d: %.1f/%.1f Hz %s %.2f Bd, %llu bits, %llu chars, %llu errors, %.1f dB\n", c.n, c.markHz, c.spaceHz, c.startStop ? "start-stop" : "sync", c.baud,
+                                        (unsigned long long)c.bits, (unsigned long long)c.chars, (unsigned long long)c.framingErrors, c.snrDb);
     return o;
 }
 const hfu::S4481Channel* chan(const Out& o, int n) { for (auto& c : o.st.channels) if (c.n == n) return &c; return nullptr; }

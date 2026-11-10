@@ -524,7 +524,7 @@ struct HighRateRx::Impl {
             t0 = t0s - 2; const cf he = probeGain(mProbe, sg, ee);
             t0 = t0s;
             const double a = std::abs(hl), b = std::abs(he), c = std::abs(hN);
-            if (c > 0) t0 += std::clamp(0.25 * (a - b) / c, -0.3, 0.3);
+            if (c > 0) t0 += std::clamp(3.5 * (a - b) / c, -1.0, 1.0);   // (a - b) / c is about 0.13 per sample of timing error (raised cosine at 0.2 T)
             hN = probeGain(mProbe, sg, e0);
         }
         // quality: the probe fits, or it is noise (or a probe of the wrong sign: lost track)

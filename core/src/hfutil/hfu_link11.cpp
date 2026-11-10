@@ -161,13 +161,17 @@ struct Link11Rx::Impl {
 
     void startFrames(int64_t t) {
         // the window [t, t + W) was the first to hold the data tones: their onset is in it
-        double best = -1;
+        double best = -1, bestOf[2] = {-1, -1};
         int64_t bb = t;
         bool bf = true;
         for (bool f : {true, false}) for (int64_t b = t - 40; b <= t + kFastW + 40; b += 4) {
             const double s = score(b, f);
+            bestOf[f ? 0 : 1] = std::max(bestOf[f ? 0 : 1], s);
             if (s > best * 1.02 || best < 0) { best = s; bb = b; bf = f; }
         }
+        char ev[120];
+        snprintf(ev, sizeof ev, "data tones start (frame fit: fast %.3g, slow %.3g)", bestOf[0], bestOf[1]);
+        event(ev);
         fast = bf; b0 = bb; frame = 0;
         prevX.assign(kTones + 1, cf(0, 0));
         dph.clear();

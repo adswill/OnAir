@@ -276,7 +276,7 @@ struct Ale3gRx::Impl {
             }
             const double m = nrm > 0 ? std::abs(c) / nrm : 0;
             if (m > 0.35 && m > candM) { candM = m; candT = scan; candC = c; }
-            if (candT >= 0 && scan > candT + 2 * kSps) {
+            if (candT >= 0 && scan > candT + 100 * kSps) {   // the highest peak within 100 symbols (the preamble has side peaks)
                 const int64_t t = candT;
                 const double f0 = std::arg(candC) * kBaud / (2 * kPi);
                 candM = 0; candT = -1;

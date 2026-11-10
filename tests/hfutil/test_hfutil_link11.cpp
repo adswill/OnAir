@@ -32,9 +32,11 @@ void noise3k(std::vector<cf32>& x, double snrDb, double p, unsigned seed) {
     for (auto& v : x) v += cf32(g(rng), g(rng));
 }
 
+bool gTrace = false;
 std::vector<hfu::Link11Msg> run(const std::vector<cf32>& x, size_t chunk = 4096) {
     std::vector<hfu::Link11Msg> out;
     hfu::Link11Rx rx;
+    if (gTrace) rx.setEventSink([](const std::string& s) { printf("  event: %s\n", s.c_str()); });
     rx.setMessageSink([&](const hfu::Link11Msg& m) { out.push_back(m); });
     for (size_t i = 0; i < x.size(); i += chunk) rx.push(x.data() + i, std::min(chunk, x.size() - i));
     return out;
@@ -79,7 +81,9 @@ void one(const char* name, const Case& c, double needFrac = 1.0) {
 
 int main() {
     CHECK(hfu::l11DataTone(0) == 935 && hfu::l11DataTone(13) == 2365 && hfu::l11DataTone(14) == 2915, "tones");
+    gTrace = true;
     for (bool fast : {true, false}) for (double off : {45.0, 0.0}) { Case c; c.fast = fast; c.off = off; one("clean", c); }
+    gTrace = false;
     { Case c; c.cfo = 40; c.snr = 25; one("Doppler +40 Hz", c); }
     { Case c; c.fast = false; c.cfo = -55; c.snr = 25; one("Doppler -55 Hz", c); }
     { Case c; c.snr = 15; one("SNR 15 dB", c); }

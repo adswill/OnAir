@@ -87,6 +87,7 @@ struct ArqGenCfg {
     double driftHzPerSec = 0;    // slow drift of both transmitters
     int repeatEvery = 5;         // the IRS asks for a repeat after every n-th block (0: never)
     bool call = true;            // start with the two call blocks and the IRS answer
+    int callPairs = 4;           // the caller repeats the pair of call blocks until the called station answers (3.1.4.4)
     std::string selcall = "QCXT";
     bool changeOver = false;     // end the first text with "+?" and let the other station send `text2`
     std::string text2;
