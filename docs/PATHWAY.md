@@ -1271,3 +1271,6 @@ Added GOES GRB, GVAR, CDA, MDL, GK-2A UHRIT and CDAS, a generic S-band CCSDS mod
 
 ## 2026-11-09 feat38-issues: owner-approved GitHub feature requests
 Branch feat38-issues on integ-38. Built #464 #449 #438 #455 #421 #427 #443 #453 #375 (TV texts) #431 #432 #436 #368 #466 and the R8600 firmware check (#357/#430); details, checks and what was skipped (#397 download, #233 native stage gains, #242 multi-viewport, #165 already done) in docs/ISSUES-3.8.md. Checks were syntax-only for GUI code, unit tests for the DRM filter, SARSAT frames, RDS EON and the R8600 records; no full build was run.
+
+## 2026-11-10 feat38-discord: Discord reports
+Branch feat38-discord on integ-38. Airspy HF+ gain: the radio is marked level-compensated (no "raise the gain" from its dBFS level; both auto gain loops keep the least attenuation and back off on clipping). Name on the map: second item of every Server menu, opens a centred window. DRM: broadcast schedule from drm.org fetched on request, cached, credited, one click to tune; Find DRM names the scheduled station. ATSC 3.0 recordings: gofile unreachable (connection reset), nothing downloaded. Details in docs/DISCORD-3.8.md.
