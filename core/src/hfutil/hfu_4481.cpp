@@ -38,7 +38,8 @@ struct Tone {
     size_t pos = 0;
     cd sum;
     int k = 0;
-    void set(double hz) { f = hz; st = cd(std::cos(-2 * kPi * hz / kFs), std::sin(-2 * kPi * hz / kFs)); rot = cd(1, 0); ring.assign(kAvg, cd(0, 0)); pos = 0; sum = cd(0, 0); k = 0; }
+    double inv2 = 1.0 / ((double)kAvg * kAvg);
+    void set(double hz, int len = kAvg) { f = hz; st = cd(std::cos(-2 * kPi * hz / kFs), std::sin(-2 * kPi * hz / kFs)); rot = cd(1, 0); ring.assign((size_t)len, cd(0, 0)); pos = 0; sum = cd(0, 0); k = 0; inv2 = 1.0 / ((double)len * len); }
     double step(std::complex<float> x) {
         const cd z = cd(x.real(), x.imag()) * rot;
         rot *= st;
@@ -46,7 +47,7 @@ struct Tone {
         sum += z - ring[pos];
         ring[pos] = z;
         pos = (pos + 1) % ring.size();
-        return std::norm(sum);
+        return std::norm(sum) * inv2;   // the mean amplitude squared: a tone's level whatever the length, noise falls with the length
     }
 };
 
@@ -92,16 +93,18 @@ struct Async {
 struct Chan {
     S4481Channel info;
     Tone m, s;
-    double e = 0, dd = 0;                // smoothed energy and |mark - space| contrast
+    double e = 0, dd = 0, fill = 0;      // smoothed energy, |mark - space| contrast, and how often a tone is on
     Async as[4];
     int lastBit = 1;
     int64_t lastEdge = -1;
     double runErr[4] = {0, 0, 0, 0};
     double runN = 0;
-    int best = -1;
+    int locked = -1;                      // the start-stop speed in use (-1: none yet)
+    std::string pend[4];                  // what each speed read before one was locked
     void init(int n, double fm, double fs) {
         info = S4481Channel(); info.n = n; info.markHz = fm; info.spaceHz = fs;
-        m.set(fm); s.set(fs); e = 0; dd = 0; lastBit = 1; lastEdge = -1; runN = 0; best = -1;
+        m.set(fm); s.set(fs); e = 0; dd = 0; fill = 0; lastBit = 1; lastEdge = -1; runN = 0; locked = -1;
+        for (auto& q : pend) q.clear();
         for (int k = 0; k < 4; k++) { as[k].init(kBauds[k]); runErr[k] = 0; }
     }
 };
@@ -150,8 +153,10 @@ struct Stanag4481Rx::Impl {
     Chan multi[16];
     Chan single;
     bool singleOn = false;
-    Tone ref[16];                          // between the sub-carriers: the noise floor
+    Tone ref[16];                          // between the sub-carriers: the noise floor (a full band leaks into these)
     double refE[16] = {};
+    Tone out[4];                           // below and above the sub-carrier band: the noise floor when all 16 are on
+    double outE[4] = {};
     std::vector<cf32> hist;                // the last 0.1 s, for the single-channel search
     int64_t n = 0, nd = 0;
     int mode = 0;
@@ -159,7 +164,9 @@ struct Stanag4481Rx::Impl {
     std::function<void(const std::string&)> evCb;
 
     Impl() {
-        for (int i = 0; i < 16; i++) { multi[i].init(i + 1, s4481ChannelHz(i + 1) - 42.5, s4481ChannelHz(i + 1) + 42.5); ref[i].set(s4481ChannelHz(i + 1) + 85); }
+        for (int i = 0; i < 16; i++) { multi[i].init(i + 1, s4481ChannelHz(i + 1) - 42.5, s4481ChannelHz(i + 1) + 42.5); ref[i].set(s4481ChannelHz(i + 1) + 85, 4 * kAvg); }   // 40 ms: a sub-carrier tone 42.5 Hz away leaks in at about -15 dB
+        const double oh[4] = {150, 220, 3120, 3200};
+        for (int i = 0; i < 4; i++) out[i].set(oh[i], 4 * kAvg);
     }
     void event(const std::string& s) { if (evCb) evCb(s); }
 
@@ -167,7 +174,9 @@ struct Stanag4481Rx::Impl {
         double v[16];
         for (int i = 0; i < 16; i++) v[i] = refE[i];
         std::nth_element(v, v + 8, v + 16);
-        return std::max(v[8], 1e-15);
+        double o[4] = {outE[0], outE[1], outE[2], outE[3]};
+        std::sort(o, o + 4);
+        return std::max(std::min(v[8], 0.5 * (o[1] + o[2])), 1e-15);
     }
 
     // the single channel: the strongest pair of lines 850 Hz apart (Goertzel on the last 0.1 s, 10 Hz steps)
@@ -188,14 +197,14 @@ struct Stanag4481Rx::Impl {
         double bv = 0;
         for (size_t i = 0; i + 85 < p.size(); i++) {
             const double lo = p[i], hi = p[i + 85];
-            const double v = std::min(lo, hi);
-            if (v > 30 * med && v > bv) { bv = v; bi = (int)i; }
+            if (std::min(lo, hi) > 30 * med && lo + hi > bv) { bv = lo + hi; bi = (int)i; }
         }
         if (bi < 0) return;
         // refine each line to 1 Hz with a parabola
-        auto refine = [&](int i) { if (i <= 0 || i + 1 >= (int)p.size()) return 300.0 + 10 * i; const double y0 = p[(size_t)i - 1], y1 = p[(size_t)i], y2 = p[(size_t)i + 1]; const double d = y0 - 2 * y1 + y2; return 300.0 + 10 * (i + (d != 0 ? 0.5 * (y0 - y2) / d : 0)); };
+        // the keyed line is broad: its centre of power within +-60 Hz
+        auto refine = [&](int i) { double w = 0, sw = 0; for (int j = std::max(0, i - 6); j <= std::min((int)p.size() - 1, i + 6); j++) { const double q = std::max(0.0, p[(size_t)j] - 3 * med); w += q; sw += q * (300.0 + 10 * j); } return w > 0 ? sw / w : 300.0 + 10 * i; };
         const double fm = refine(bi), fs = refine(bi + 85);
-        if (!singleOn || std::fabs(fm - single.info.markHz) > 6) {
+        if (!singleOn || std::fabs(fm - single.info.markHz) > (single.info.active ? 100 : 40)) {   // while it is on, only another signal moves it   // the keying widens the lines: small moves of the estimate are not a new signal
             single.init(0, fm, fs);
             singleOn = true;
             char b[120]; snprintf(b, sizeof b, "single channel: mark %.0f Hz, space %.0f Hz (shift %.0f Hz)", fm, fs, fs - fm);
@@ -208,18 +217,22 @@ struct Stanag4481Rx::Impl {
         if (!decide) return;
         c.e = 0.995 * c.e + 0.005 * (em + es);
         c.dd = 0.995 * c.dd + 0.005 * std::fabs(em - es) / (em + es + 1e-20);
+        c.fill = 0.995 * c.fill + 0.005 * ((em + es) > 0.3 * c.e ? 1.0 : 0.0);   // FSK keeps one tone on; a neighbour's leakage comes and goes
         // on: well over the noise between the sub-carriers, or (a full band leaves no clean gap) one of the strong channels and keyed
-        const bool on = (c.e > 12 * floor && c.e > 0.3 * maxE) || (c.e > 0.3 * maxE && c.dd > 0.5);   // 0.3: a neighbour's leakage is about -15 dB
+        const bool on = c.e > 40 * floor && c.e > 0.3 * maxE && (c.info.n == 0 || c.fill > 0.7);   // the single channel comes from the pair search   // 0.3: a neighbour's leakage is about -15 dB
         if (on != c.info.active) {
             c.info.active = on;
-            char b[100];
-            if (c.info.n) snprintf(b, sizeof b, "channel %d (%.0f Hz) %s", c.info.n, s4481ChannelHz(c.info.n), on ? "on" : "off");
-            else snprintf(b, sizeof b, "single channel %s", on ? "on" : "off");
-            event(b);
+            if (!(c.info.n && mode == 1)) {   // in single-channel mode the sub-carrier filters next to its tones only see leakage
+                char b[100];
+                if (c.info.n) snprintf(b, sizeof b, "channel %d (%.0f Hz) %s", c.info.n, s4481ChannelHz(c.info.n), on ? "on" : "off");
+                else snprintf(b, sizeof b, "single channel %s", on ? "on" : "off");
+                event(b);
+            }
         }
         c.info.snrDb = 10 * std::log10(c.e / floor + 1e-12);
         if (!on) return;
-        const int b = em > es ? 1 : 0;
+        // a little hysteresis: no glitches at the edges (they would spoil the speed measured from the run lengths)
+        const int b = std::fabs(em - es) < 0.2 * (em + es) ? c.lastBit : (em > es ? 1 : 0);
         c.info.bits++;
         // speed from the edges: the run lengths fit whole bits of the right speed
         if (b != c.lastBit) {
@@ -231,16 +244,26 @@ struct Stanag4481Rx::Impl {
             c.lastEdge = nd;
         }
         c.lastBit = b;
+        // every speed is read at once; the first one whose characters keep framing is locked, and what it read so far is shown
         std::string out;
-        int bestK = 0;
-        double bestS = -1e9;
-        for (int k = 0; k < 4; k++) { const double s = c.as[k].good - 2 * c.as[k].bad; if (s > bestS) { bestS = s; bestK = k; } }
         for (int k = 0; k < 4; k++) {
             const int ch = c.as[k].push(nd, b);
-            if (k == bestK && ch > 0 && c.info.startStop) out.push_back((char)ch);
+            if (ch > 0) {
+                if (c.locked == k) out.push_back((char)ch);
+                else { c.pend[k].push_back((char)ch); if (c.pend[k].size() > 200) c.pend[k].erase(0, c.pend[k].size() - 200); }
+            }
         }
-        c.info.startStop = c.as[bestK].good >= 5 && c.as[bestK].bad < 0.25 * c.as[bestK].good;
-        if (c.info.startStop) { c.info.baud = kBauds[bestK]; c.info.chars = c.as[bestK].chars; c.info.framingErrors = c.as[bestK].errors; }
+        if (c.locked < 0) {
+            // the speed that frames best, clearly (45.45 and 50 Bd are close enough to frame each other now and then)
+            int bk = -1;
+            double bs = -1e9;
+            for (int k = 0; k < 4; k++) { const double sc = c.as[k].good - 3 * c.as[k].bad; if (sc > bs) { bs = sc; bk = k; } }
+            if (bk >= 0 && c.as[bk].good >= 10 && c.as[bk].bad < 0.35 * c.as[bk].good) { c.locked = bk; out = c.pend[bk] + out; c.pend[bk].clear(); }
+        } else if (c.as[c.locked].bad > c.as[c.locked].good) {
+            c.locked = -1;
+        }
+        c.info.startStop = c.locked >= 0;
+        if (c.info.startStop) { const int k = c.locked; c.info.baud = kBauds[k]; c.info.chars = c.as[k].chars; c.info.framingErrors = c.as[k].errors; }
         else if (c.runN > 20) {
             int k = 0;
             for (int i = 1; i < 4; i++) if (c.runErr[i] < c.runErr[k]) k = i;
@@ -249,7 +272,7 @@ struct Stanag4481Rx::Impl {
         if (!out.empty()) {
             c.info.text += out;
             if (c.info.text.size() > 400) c.info.text.erase(0, c.info.text.size() - 400);
-            if (textCb) textCb(c.info.n, out);
+            if (textCb && ((c.info.n && mode != 1) || (!c.info.n && mode != 2))) textCb(c.info.n, out);   // leakage next to the other kind stays quiet
         }
     }
 
@@ -257,6 +280,7 @@ struct Stanag4481Rx::Impl {
         for (size_t i = 0; i < len; i++) {
             const bool decide = (n % kDec) == 0;
             for (int k = 0; k < 16; k++) { const double e = ref[k].step(x[i]); if (decide) refE[k] = 0.995 * refE[k] + 0.005 * e; }
+            for (int k = 0; k < 4; k++) { const double e = out[k].step(x[i]); if (decide) outE[k] = 0.995 * outE[k] + 0.005 * e; }
             const double floor = noiseFloor();
             double mx = 1e-20;
             for (auto& c : multi) mx = std::max(mx, c.e);

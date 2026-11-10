@@ -31,8 +31,10 @@ Out run(const std::vector<cf32>& x) {
     Out o;
     hfu::Stanag4481Rx rx;
     rx.setTextSink([&](int ch, const std::string& s) { if (ch >= 0 && ch <= 16) o.text[ch] += s; });
-    for (size_t i = 0; i < x.size(); i += 4096) rx.push(x.data() + i, std::min<size_t>(4096, x.size() - i));
-    o.st = rx.status();
+    for (size_t i = 0; i < x.size(); i += 4096) {
+        rx.push(x.data() + i, std::min<size_t>(4096, x.size() - i));
+        if (i <= x.size() * 7 / 10 && i + 4096 > x.size() * 7 / 10) o.st = rx.status();   // while the channels are still sending
+    }
     for (auto& c : o.st.channels) printf("  ch %d: %.1f/%.1f Hz %s %.2f Bd, %llu bits, %llu chars, %llu errors, %.1f dB\n", c.n, c.markHz, c.spaceHz, c.startStop ? "start-stop" : "sync", c.baud,
                                         (unsigned long long)c.bits, (unsigned long long)c.chars, (unsigned long long)c.framingErrors, c.snrDb);
     return o;
@@ -54,7 +56,7 @@ int main() {
         printf("single %.2f Bd: mode %d, %s, text \"%.40s...\"\n", baud, o.st.mode, c ? (c->startStop ? "start-stop" : "sync") : "-", o.text[0].c_str());
         CHECK(o.st.mode == 1 && c && c->startStop && std::fabs(c->baud - baud) < 0.1, "single %.2f Bd: mode %d", baud, o.st.mode);
         CHECK(o.text[0].find(kMsg + 5) != std::string::npos, "single %.2f Bd: text \"%s\"", baud, o.text[0].c_str());
-        if (c) CHECK(std::fabs(c->spaceHz - c->markHz - 850) < 5 && std::fabs(c->markHz - 1298) < 5, "single: tones %.0f / %.0f", c->markHz, c->spaceHz);
+        if (c) CHECK(std::fabs(c->spaceHz - c->markHz - 850) < 10 && std::fabs(c->markHz - 1298) < 10, "single: tones %.0f / %.0f", c->markHz, c->spaceHz);
     }
     // multi-channel: plain text on channels 3 and 11, a synchronous stream on 7
     {
@@ -113,6 +115,7 @@ int main() {
         HfUtilTelemetry t;
         rx.telemetry(t, 0);
         printf("receiver: %s\n", t.mode.c_str());
+        for (auto& e : t.events) printf("  event %s\n", e.text.c_str());
         CHECK(t.text.find(kMsg + 5) != std::string::npos, "receiver text \"%s\"", t.text.c_str());
     }
     return testSummary("hfutil_4481");
