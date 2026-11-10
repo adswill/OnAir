@@ -14,8 +14,9 @@ View > Insights > Ham (`app/panels/insight_ui.cpp`). Test: `test_ham_insight` (t
 
 - Antenna pattern: 3000 decodes from random places, a 7 dB cosine pattern toward 75 degrees, 3 dB station power spread and 4 dB fading;
   best sector right and every sector within 2 dB in at least 19 of 20 runs. A flat antenna shows no sector above 1.5 dB.
-- Busted calls: 200 known calls heard 5 times each, one suffix letter changed: at least 198/200 flagged and 190/200 with the right call;
-  at most 20/200 new valid calls flagged by chance (a real call one letter from a known one). CW: DL1XEE flagged as DL1XI (one element).
+- Busted calls: 200 known calls (2-3 letter suffixes) heard 5 times each, one suffix letter changed: at least 198/200 flagged and 180/200
+  with the right call (a wrong guess when two known calls are both one character away); at most 30/200 new valid calls flagged by chance.
+  With 1-3 letter suffixes the first CI run measured 200/200 flagged, 184 right and 33/200 false: the check is a hint, not a verdict. CW: DL1XEE flagged as DL1XI (one element).
 - Who hears me: Vilnius KO24 to QF56 in the 14000-16500 km range, link balance and per-band rows checked.
 - APRS: over-beaconing at 2 min fixed / 30 s moving, none at 30 min fixed / 2 min moving or with only 4 beacons; flood said once; silent
   digipeater said once after 6 gaps.

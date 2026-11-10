@@ -20,7 +20,8 @@ count as airtime and as a verdict; nothing is decrypted.
   unusual Wednesday morning, save/load gives the same map and prediction.
 - Erlang B: B(10, 5) = 0.018385; offered-from-carried inverts exactly for 1-20 channels.
 - Trunk, 8 channels, blocked-calls-lost simulation with Poisson arrivals and 20 s mean holding time, 24 h each at 1, 3, 5, 7 and 9 Erlangs:
-  offered traffic estimated within 12 %, blocking within 0.03 of the measured share, no alert at 1-3 Erlangs, an alert in at least 20 of 24 hours
+  offered traffic estimated within 12 % (CI: 1.01, 2.95, 5.02, 7.04, 9.02 Erlangs), blocking within 0.03 of the measured share (CI: 0.071 against 0.072
+  at 5 Erlangs, 0.290 against 0.291 at 9), no alert at 1-3 Erlangs, an alert in at least 20 of 24 hours
   at 7 and 9 Erlangs, each hour reported once.
 - Changes: one alert per real change, none for flip-flopping, one emergency alarm per cluster.
 
