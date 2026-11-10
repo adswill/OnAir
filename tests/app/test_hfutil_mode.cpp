@@ -27,6 +27,8 @@ int main() {
     CHECK(has(tbl, "{603, \"STANAG 4539\""), "STANAG 4539 mode row");
     CHECK(has(tbl, "{604, \"3G-ALE\""), "3G-ALE mode row");
     CHECK(has(tbl, "{605, \"Link 11 CLEW\""), "Link 11 mode row");
+    CHECK(has(tbl, "{606, \"STANAG 4481 FSK\""), "STANAG 4481 mode row");
+    CHECK(dect2::hfUtilTuning(dect2::kHfuKind4481).stdMode == 608 && dect2::modeTuning(608) != nullptr, "STANAG 4481 registered");
     CHECK(dect2::hfUtilTuning(dect2::kHfuKindLink11).stdMode == 607 && dect2::modeTuning(607) != nullptr, "Link 11 registered");
     CHECK(dect2::hfUtilTuning(dect2::kHfuKindAle3g).stdMode == 606 && dect2::modeTuning(606) != nullptr, "3G-ALE registered");
     CHECK(has(readFile("app/panels/modeui.cpp"), "case dect2::kHfuHdrFamily: return &kHfuUi[dect2::kHfuKindHdr];"), "STANAG 4539 panel hook");

@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**297 modes.**
+**298 modes.**
 
 ## TV (14)
 
@@ -301,7 +301,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MeshCom** - MeshCom: amateur LoRa mesh messages and positions on 433 MHz
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 
-## HF Utility (24)
+## HF Utility (25)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -311,6 +311,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **STANAG 4539** - STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)
 - **3G-ALE** - 3G-ALE: third-generation HF link setup calls and handshakes, BW0 bursts (simulated signals only)
 - **Link 11 CLEW** - Link 11 CLEW: message detector and frame structure, no data (simulated signals only)
+- **STANAG 4481 FSK** - STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)
 - **ARQ-E** - ARQ-E: HF duplex ARQ teleprinter (simulated signals only)
 - **ARQ-N** - ARQ-N: HF duplex ARQ teleprinter (simulated signals only)
 - **AUTOSPEC** - AUTOSPEC: HF FEC teleprinter (simulated signals only)

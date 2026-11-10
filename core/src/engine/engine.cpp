@@ -683,7 +683,7 @@ void Engine::resetReceiver(int a) {
     case 272: rxWx_[11].reset(); break;
     case 237: rxFy3m_.reset(); break;
     case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: rxHfu_[a - 431].reset(); break;
-    case kHfuHdrFamily + 1: case kHfuAle3gFamily + 1: case kHfuLink11Family + 1: rxHfm_[a - kHfuExtraActiveFirst].reset(); break;
+    case kHfuHdrFamily + 1: case kHfuAle3gFamily + 1: case kHfuLink11Family + 1: case kHfu4481Family + 1: rxHfm_[a - kHfuExtraActiveFirst].reset(); break;
     case 238: rxPh2_.reset(); break;
     case 239: rxPh3_.reset(); break;
     case 240: rxPh4_.reset(); break;

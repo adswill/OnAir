@@ -277,6 +277,7 @@ const ModeUi* modeUi(int family) {
     case dect2::kHfuHdrFamily: return &kHfuUi[dect2::kHfuKindHdr];
     case dect2::kHfuAle3gFamily: return &kHfuUi[dect2::kHfuKindAle3g];
     case dect2::kHfuLink11Family: return &kHfuUi[dect2::kHfuKindLink11];
+    case dect2::kHfu4481Family: return &kHfuUi[dect2::kHfuKind4481];
     case 203: return &kPactorUi;
     case 204: return &kEsubghzUi;
     case 205: return &kRoshfUi;
