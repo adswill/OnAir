@@ -278,6 +278,7 @@ void sidebar(App& a) {
         tool("Passive radar", a.passiveRadarOpen, N_("Aircraft from the echoes of a broadcast transmitter, with two coherent channels"));
         tool("Images", a.galleryOpen, "The pictures the receivers have decoded");
         tool("Data feeds...", a.feedsOpen, "Send decoded data to other programs and services");
+        tool("EchoLink...", a.echolinkOpen, N_("Talk to EchoLink stations, links, repeaters and conferences over the Internet"));
         tool("Wireshark...", a.wiresharkOpen, N_("Packets of a mode in Wireshark: capture interface, pcapng files and GSMTAP"));
         tool("LAN swarm...", a.swarmOpen, "See and cooperate with other OnAir programs on this network (opt-in)");
         tool("Messages...", a.msgdbOpen, N_("Every decoded message in one searchable database, with filters and export"));
@@ -645,6 +646,7 @@ static void viewMenu(App& a) {
         ImGui::MenuItem(tr("Passive radar"), nullptr, &a.passiveRadarOpen);
         ImGui::MenuItem(tr("Images"), nullptr, &a.galleryOpen);
         ImGui::MenuItem(tr("Data feeds..."), nullptr, &a.feedsOpen);
+        ImGui::MenuItem(tr("EchoLink..."), nullptr, &a.echolinkOpen);
         ImGui::MenuItem(tr("Wireshark..."), nullptr, &a.wiresharkOpen);
         ImGui::MenuItem(tr("LAN swarm..."), nullptr, &a.swarmOpen);
         ImGui::MenuItem(tr("Messages..."), nullptr, &a.msgdbOpen);
