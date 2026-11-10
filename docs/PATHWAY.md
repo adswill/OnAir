@@ -1373,3 +1373,10 @@ Built 14 items from scratchpad/smart37-backup/r5-avia-marine-iot.md.
 - Marine: AIS behaviour flags and anchor watch (new automation event ais.behaviour).
 - IoT: mesh coverage cells; meters and tyres marked as the user's own (Sub-GHz > Mine); Z-Wave home network health.
 Simulated only. Details in docs/SMART5-avia-3.9.md, docs/SMART5-marine-3.9.md and docs/SMART5-iot-3.9.md.
+
+## 2026-11-11 Smart features round 5: field insights (feat39-smart5d)
+Built the eight items left between smart5b and smart5c, on the smart5b insight hub (merged smart5b and smart5c in first).
+- Aviation: ADS-B manoeuvre alerts (emergency squawk, steep descent and climb, sharp turn, go-around, touch-and-go); glider thermals from FLARM / OGN circling (Insights > Aviation and circles on the FLARM map); HFDL propagation map (share of squitters per station, frequency and UTC hour, best frequency now, station-up openings).
+- Marine: AIS ducting detector (learned normal range, ships beyond 1.5x); NAVTEX warnings in force per station (cancellations, self-expiry, in-force lists, assumed lifetimes).
+- IoT: mesh census (nodes, roles, hops, airtime, busiest hours); LoRaWAN health (joins, frame-counter loss, SF mix); leak check for the user's own wM-Bus water meter (night flow, continuous flow).
+ADS-B, AIS and NAVTEX come through the automation events; the rest through the Insights feeds. 21 new insight.* catalog rows. Simulated only. Details in docs/SMART5-field-3.9.md.
