@@ -80,6 +80,35 @@ const Guard kGuards[] = {
 
 } // namespace
 
+// Calibration (the before / after table of docs/SENSITIVITY-3.9-C.md, run on a CI runner where ONAIR_TEST_LONG cannot be set): thresholds in 1 dB
+// steps with 5 trials (coarse 3 dB steps first), lock time, CPU per second of signal; prints the table and returns 1 so ctest shows it.
+constexpr bool kCalibrate = true;
+
+int calibrate(const std::vector<Mode>& all, const std::regex& want) {
+    const int threads = std::max(1u, std::thread::hardware_concurrency());
+    printf("CALIBRATION %-8s %7s %8s %9s %9s\n", "mode", "thr dB", "lock s", "cpu x rt", "false");
+    for (const auto& m0 : all) {
+        if (!std::regex_search(m0.id, want)) continue;
+        Mode m = m0; m.secs = std::min(m.secs, 4.0);
+        Prep P;
+        if (!prepare(m, P)) { printf("CALIBRATION %-8s no valid output on the clean test signal\n", m.id.c_str()); continue; }
+        double hi = NAN;
+        for (double s = m.snrHi; s >= m.snrHi - 42; s -= 3) { if (rate(m, P, s, 0, 0, 5, threads) >= 0.8) hi = s; else break; }
+        double thr = NAN;
+        if (!std::isnan(hi)) { thr = hi; for (double s = hi - 1; s > hi - 3; s -= 1) { if (rate(m, P, s, 0, 0, 5, threads) >= 0.8) thr = s; else break; } }
+        double lock = -1;
+        if (!std::isnan(thr)) rate(m, P, thr + 3, 0, 0, 5, threads, &lock);
+        const std::clock_t c0 = std::clock();
+        trial(m, P, std::isnan(thr) ? m.snrHi : thr + 10, 0, 0, false, 5);
+        const double cpu = (double)(std::clock() - c0) / CLOCKS_PER_SEC;
+        int falses = 0;
+        for (int i = 0; i < 2; i++) falses += trial(m, P, 10, 0, 0, true, 1000 + i).good > 0;
+        printf("CALIBRATION %-8s %7.0f %8.2f %9.3f %9d\n", m.id.c_str(), thr, lock, cpu / m.secs, falses);
+        fflush(stdout);
+    }
+    return 1;
+}
+
 int main() {
     const bool full = std::getenv("ONAIR_TEST_LONG") != nullptr;
     const char* sel = std::getenv("ONAIR_SENS_MODES");
@@ -87,6 +116,7 @@ int main() {
     const int threads = full ? std::max(1u, std::thread::hardware_concurrency() / 2) : 1;
     int fails = 0;
     const auto all = allModes();
+    if (kCalibrate && !full) return calibrate(all, want);
     if (!full) {
         for (const Guard& g : kGuards) {
             const Mode* m = nullptr;

@@ -67,7 +67,8 @@ int main() {
     }
     CHECK(run(2.4e6, 50, 0, -10, 0.1f, true, 3, true) == 0, "noise only gave frames");
     // soft erasures against hard decisions, near the threshold (summed over seeds)
-    const bool full = std::getenv("ONAIR_TEST_LONG") != nullptr;
+    constexpr bool kCalibrate = true;   // WIP: print the whole curve and fail so the CI log shows it
+    const bool full = kCalibrate || std::getenv("ONAIR_TEST_LONG") != nullptr;
     int hardAt = 0, softAt = 0;
     for (double snr = full ? 16 : 9; snr >= (full ? 4 : 9); snr -= 1) {
         int h = 0, s = 0;
@@ -78,5 +79,6 @@ int main() {
     }
     CHECK(softAt > hardAt, "erasures did not help: %d vs %d", softAt, hardAt);
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);
+    if (kCalibrate) { printf("CALIBRATION run\n"); return 1; }
     return fails ? 1 : 0;
 }
