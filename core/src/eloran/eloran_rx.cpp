@@ -34,9 +34,9 @@ const char* phasePattern(bool master, char code) {
 
 const char* chainName(int griUs) {
     static const struct { int gri; const char* name; } kChains[] = {
-        {5543, "Calcutta"}, {5930, "Canadian East Coast"}, {5980, "Russian-American"}, {5990, "Canadian West Coast"}, {6042, "Bombay"}, {6731, "Lessay"},
+        {4970, "North-Western Russia Chayka"}, {5543, "Calcutta"}, {5930, "Canadian East Coast"}, {5960, "Northern Russia Chayka (closed)"}, {5970, "South Ural Chayka"}, {5980, "Russian-American (Chayka and Loran-C)"}, {5990, "Canadian West Coast"}, {6042, "Bombay"}, {6731, "Lessay"},
         {6780, "China South Sea"}, {7001, "Bo"}, {7030, "Saudi Arabia South"}, {7270, "Newfoundland East Coast"}, {7430, "China North Sea"}, {7499, "Sylt"},
-        {7950, "Eastern Russia Chayka"}, {7960, "Gulf of Alaska"}, {7980, "Southeast U.S."}, {7990, "Mediterranean Sea"}, {8290, "North Central U.S."},
+        {7950, "Eastern Russia Chayka"}, {7960, "Gulf of Alaska"}, {7980, "Southeast U.S."}, {7990, "Mediterranean Sea"}, {8000, "Western Russia Chayka"}, {8290, "North Central U.S."},
         {8390, "China East Sea"}, {8830, "Saudi Arabia North"}, {8930, "North West Pacific"}, {8970, "Great Lakes"}, {9007, "Eidi (Faroe Islands)"},
         {9610, "South Central U.S."}, {9930, "East Asia"}, {9940, "U.S. West Coast"}, {9960, "Northeast U.S."}, {9990, "North Pacific"},
     };
