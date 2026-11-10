@@ -83,6 +83,7 @@ enum class TxPayloadKind {
 TxPayloadKind txPayloadKind(const std::string& id);
 
 // Open a video / MPEG-TS path for a TV generator. On success `outTs` is a looping 188-byte packet source (raw .ts, or remuxed via libavformat).
+// "generator:N": the live stream of Digital video generator N (tv/videogen.h), null packets while it is not sending to the transmitter.
 // Empty path: false, note says demo. A file that is not TS and cannot be remuxed: false with an error in note (the caller keeps the demo).
 bool txOpenMpegTs(const std::string& path, std::function<void(uint8_t*)>& outTs, std::string& note);
 

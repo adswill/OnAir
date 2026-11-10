@@ -241,9 +241,18 @@ struct Sink {
     std::vector<uint8_t> part;   // bytes of an unfinished 188-byte packet
     uint64_t bytes = 0;
     bool failed = false;
+    int hubId = 0;               // Output::Transmitter: the queue of this generator (videogen_hub.cpp)
     void write(const uint8_t* d, int n) {
         bytes += (uint64_t)n;
         if (file && fwrite(d, 1, (size_t)n, file) != (size_t)n) failed = true;
+        if (hubId > 0) {
+            part.insert(part.end(), d, d + n);
+            const size_t whole = part.size() / 188;
+            if (whole) {
+                generatorPush(hubId, part.data(), whole);
+                part.erase(part.begin(), part.begin() + (std::ptrdiff_t)(whole * 188));
+            }
+        }
         if (net) {
             part.insert(part.end(), d, d + n);
             const size_t whole = part.size() / 188;
@@ -319,12 +328,12 @@ bool isMulticast(const std::string& host) {
 }
 
 std::string streamUrl(Output o, const std::string& host, int port) {
-    if (o == Output::File) return std::string();
+    if (o == Output::File || o == Output::Transmitter) return std::string();
     return std::string(o == Output::Rtp ? "rtp://" : "udp://") + host + ":" + std::to_string(port);
 }
 
 std::string vlcOpenUrl(Output o, const std::string& host, int port) {
-    if (o == Output::File) return std::string();
+    if (o == Output::File || o == Output::Transmitter) return std::string();
     return std::string(o == Output::Rtp ? "rtp://@" : "udp://@") + (isMulticast(host) ? host : std::string()) + ":" + std::to_string(port);
 }
 
@@ -405,6 +414,8 @@ void VideoGenerator::Impl::run(GenConfig c) {
     const int64_t totalFrames = c.output == Output::File && !c.previewOnly ? std::max<int64_t>(1, (int64_t)std::llround(c.seconds * fps)) : INT64_MAX;
     const Budget bud = estimate(s);
 
+    std::vector<ArgOpt> userOpts;
+    { std::string aerr; parseEncoderArgs(c.ffmpegArgs, userOpts, aerr); }   // already checked in start()
     // encoders
     const std::string venc = pickVideoEncoder(s.videoEncoder, videoEncoders());
     const int tracks = c.previewOnly ? 0 : audioTrackCount(s);   // a preview has no sound (and opens no microphone)
@@ -466,6 +477,9 @@ void VideoGenerator::Impl::run(GenConfig c) {
     if (!c.previewOnly && c.output == Output::File) {
         sink.file = u8fopen(c.tsPath, "wb");
         if (!sink.file) { fail("cannot write " + c.tsPath + ": " + strerror(errno)); return; }
+    } else if (!c.previewOnly && c.output == Output::Transmitter) {
+        sink.hubId = c.instanceId;
+        generatorClear(c.instanceId);
     } else if (!c.previewOnly) {
         OutputConfig oc;
         oc.udp = true; oc.host = c.host; oc.port = c.port; oc.ttl = c.ttl; oc.rtp = c.output == Output::Rtp;
@@ -513,7 +527,14 @@ void VideoGenerator::Impl::run(GenConfig c) {
                 ok = false;
                 break;
             }
+            for (const ArgOpt& a : userOpts) av_dict_set(&o, a.key.c_str(), a.value.c_str(), 0);   // the user's own encoder options win
             const int r = avcodec_open2(vx, vc, &o);
+            if (r >= 0 && o) {   // options the encoder did not know are left in the dictionary: say so
+                std::string bad;
+                for (const AVDictionaryEntry* e = nullptr; (e = av_dict_iterate(o, e));) bad += (bad.empty() ? "-" : " -") + std::string(e->key);
+                std::lock_guard<std::mutex> lk(mu);
+                st.notice = (st.notice.empty() ? "" : st.notice + "; ") + venc + " did not use " + bad;
+            }
             av_dict_free(&o);
             if (r >= 0) {
                 if (!full) { std::lock_guard<std::mutex> lk(mu); st.notice = venc + " refused the profile, B-frames or its rate-control mode (" + firstErr + "): opened without them"; }
@@ -636,6 +657,8 @@ void VideoGenerator::Impl::run(GenConfig c) {
             return false;
         };
         SwsContext* prevSws = nullptr;
+        SwsContext* frameSws = nullptr;
+        std::vector<uint8_t> frameRgb;
         auto lastPreview = std::chrono::steady_clock::now() - std::chrono::seconds(1);
         const auto t0 = std::chrono::steady_clock::now();
         int late = 0;
@@ -757,6 +780,19 @@ void VideoGenerator::Impl::run(GenConfig c) {
             if (sink.net) net.burstDone(1.0 / fps);
             if (muxErr) { fail("the MPEG-TS muxer refused a packet of " + venc + ": " + averr(muxErr)); break; }
             if (sink.failed) { fail(c.output == Output::File ? "cannot write " + c.tsPath : "cannot send the stream"); break; }
+            if (c.instanceId > 0 && generatorHasFrameSink(c.instanceId)) {   // the analog transmitter takes the picture itself
+                const int fw = std::min(W, 720) & ~1, fh = std::max(2, (int)std::lround((double)fw * H / W) & ~1);
+                frameSws = sws_getCachedContext(frameSws, W, H, AV_PIX_FMT_YUV420P, fw, fh, AV_PIX_FMT_RGB24, SWS_BILINEAR, nullptr, nullptr, nullptr);
+                if (frameSws) {
+                    frameRgb.resize((size_t)fw * fh * 3);
+                    const uint8_t* sp[3] = {out.y.data(), out.u.data(), out.v.data()};
+                    const int ss[3] = {W, W / 2, W / 2};
+                    uint8_t* d[1] = {frameRgb.data()};
+                    const int ds[1] = {fw * 3};
+                    sws_scale(frameSws, sp, ss, 0, H, d, ds);
+                    generatorPublishFrame(c.instanceId, fw, fh, frameRgb.data());
+                }
+            }
             // the preview for the window, about 8 times a second
             const auto now = std::chrono::steady_clock::now();
             if (now - lastPreview > std::chrono::milliseconds(120)) {
@@ -785,6 +821,7 @@ void VideoGenerator::Impl::run(GenConfig c) {
             }
         }
         sws_freeContext(prevSws);
+        sws_freeContext(frameSws);
         // flush the encoders and close the stream
         if (const int r = encode(vx, vs, nullptr); r < 0) fail("the video encoder " + venc + " did not finish: " + averr(r));
         for (int k = 0; k < tracks; k++) if (ax[(size_t)k]) encode(ax[(size_t)k], as[(size_t)k], nullptr);
@@ -824,7 +861,9 @@ bool VideoGenerator::start(const GenConfig& c, std::string& err) {
     if (c.source != Source::Generator && c.source != Source::Camera && listMedia(c.path, c.source == Source::Picture ? MediaKind::Picture : MediaKind::Video).empty()) { err = "there is nothing to play in " + c.path; return false; }
     if (c.audio == AudioSource::AudioFile && !c.previewOnly && listMedia(c.audioPath, MediaKind::Audio).empty()) { err = "choose a sound file (or a folder of them)"; return false; }
     if (c.source == Source::Generator && (c.pattern < 0 || c.pattern > 2)) { err = "the test pattern must be 0 to 2"; return false; }
-    if (c.output != Output::File && !c.previewOnly && (c.port <= 0 || c.port > 65535)) { err = "the port must be 1 to 65535"; return false; }
+    if (c.output == Output::Transmitter && !c.previewOnly && (c.instanceId < 1 || c.instanceId > kMaxInstances)) { err = "the generator number must be 1 to " + std::to_string(kMaxInstances); return false; }
+    { std::vector<ArgOpt> uo; std::string aerr; if (!parseEncoderArgs(c.ffmpegArgs, uo, aerr)) { err = "FFmpeg arguments: " + aerr; return false; } }
+    if ((c.output == Output::Udp || c.output == Output::Rtp) && !c.previewOnly && (c.port <= 0 || c.port > 65535)) { err = "the port must be 1 to 65535"; return false; }
     if (c.enc.width < 16 || c.enc.height < 16) { err = "the picture is too small"; return false; }
     {
         std::lock_guard<std::mutex> lk(p_->mu);

@@ -29,6 +29,7 @@ struct VideoIn::Impl {
         const double c = clock.load();
         return c >= 0 ? c : std::chrono::duration<double>(std::chrono::steady_clock::now() - wallStart).count();
     }
+    int genId = 0;                     // > 0: the picture comes from Digital video generator genId (tv/videogen.h): no clock, no file thread
     void setRgb(int nw, int nh, const uint8_t* packed);
 };
 

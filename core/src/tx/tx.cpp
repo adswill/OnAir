@@ -6,6 +6,7 @@
 #include "dect2/atsc/atsc_gen.h"
 #include "dect2/engine/device_claims.h"
 #include "dect2/tv/demo_ts.h"
+#include "dect2/tv/videogen.h"
 #include "dect2/dtmb/dtmb_gen.h"
 #include "dect2/dvbc/dvbc_rx.h"
 #include "dect2/dvbs/dvbs_gen.h"
@@ -575,6 +576,11 @@ static bool remuxToMpegTs(const std::string& in, const std::string& out, std::st
 bool txOpenMpegTs(const std::string& path, std::function<void(uint8_t*)>& outTs, std::string& note) {
     outTs = {};
     if (path.empty()) { note = "empty: the built-in demo programme"; return false; }
+    if (int gid = 0; vgen::parseGeneratorSpec(path, gid)) {   // a running Digital video generator (Output: Transmitter): its stream, live
+        if (!vgen::generatorTsSource(gid, outTs)) { note = "no such video generator"; return false; }
+        note = "video generator " + std::to_string(gid) + " (live; null packets while it is not running)";
+        return true;
+    }
     int stride = 188, syncOff = 0;
     if (looksLikeMpegTs(path, stride, syncOff)) {
         outTs = loopingTsFile(path, stride, syncOff);

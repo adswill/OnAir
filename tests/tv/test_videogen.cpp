@@ -8,8 +8,11 @@
 //  7. UDP and RTP streaming to a local port: whole TS datagrams, RTP header with payload type 33
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
 #include "dect2/tv/videogen.h"
+#include "dect2/tx/tx.h"
 #include <algorithm>
+#include <atomic>
 #include <chrono>
+#include <functional>
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
@@ -1045,6 +1048,84 @@ static void testPreviewOnly(const fs::path& dir) {
     std::printf("preview only: %d pictures, %llu frames in 3 s, no file\n", pictures, (unsigned long long)st.frames);
 }
 
+// Free-text FFmpeg arguments, several generators at once, and the transmitter's way to the stream (issue #458)
+static void testArgs() {
+    std::string err;
+    auto a = splitArgs("-preset slow  -x264-params \"keyint=50:bframes=2\" 'a b' c\\ d", err);
+    CHECK(err.empty() && a.size() == 6 && a[3] == "keyint=50:bframes=2" && a[4] == "a b" && a[5] == "c d", "split: %zu items (%s)", a.size(), err.c_str());
+    CHECK(splitArgs("-a \"open", err).empty() && !err.empty(), "an open quote is refused");
+    auto sh = splitArgs("-x $(rm -rf ~) ; `id` | cat > f", err);   // nothing is a shell metacharacter: these are plain words
+    CHECK(err.empty() && sh.size() == 10 && sh[1] == "$(rm" && sh[4] == ";", "no shell: words stay words (%zu)", sh.size());
+    std::vector<ArgOpt> o;
+    CHECK(parseEncoderArgs("-preset slow -b:v 800k --tune zerolatency", o, err) && o.size() == 3 && o[1].key == "b" && o[2].key == "tune", "good options: %s", err.c_str());
+    CHECK(parseEncoderArgs("", o, err) && o.empty(), "empty is fine");
+    for (const char* bad : {"slow", "-preset", "-i x.mp4", "-f flv", "-c:v libx265", "-y out.ts", "-vf scale=1:1", "-filter_complex x", "-map 0", "-hwaccel cuda", "-b:a 64k", "-foo=bar 1", "-x pipe:1",
+                            "-x file:/etc/passwd", "-x/y 1", "-t 5", "-s 640x480", "-metadata a=b", "-preset \"unterminated"}) {
+        CHECK(!parseEncoderArgs(bad, o, err) && !err.empty(), "\"%s\" is refused", bad);
+    }
+    int id = 0;
+    CHECK(parseGeneratorSpec("generator:3", id) && id == 3 && generatorSpec(5) == "generator:5", "generator spec");
+    for (const char* bad : {"generator:", "generator:0", "generator:9", "generator:x", "generator:1x", "Generator:1", "gen:1", "generator:100"}) CHECK(!parseGeneratorSpec(bad, id), "\"%s\" is not a generator", bad);
+}
+
+static void testInstancesAndTransmitter(const fs::path& dir, const fs::path& pic) {
+    // two generators at once, each to its own queue; the transmitter's source reads them
+    GenConfig a = pictureConfig(pic), b = pictureConfig(pic);
+    a.output = b.output = Output::Transmitter;
+    a.instanceId = 1; b.instanceId = 2;
+    a.enc.videoEncoder = b.enc.videoEncoder = "mpeg2video";
+    a.enc.serviceId = 0x111; b.enc.serviceId = 0x222;
+    a.enc.serviceName = "Gen A"; b.enc.serviceName = "Gen B";
+    a.ffmpegArgs = "-qmin 4 -nosuchoption 7";
+    std::atomic<int> frames{0}; std::atomic<int> fw{0}, fh{0};
+    setGeneratorFrameSink(2, [&](int w, int h, const uint8_t* rgb) { if (rgb && w > 0 && h > 0) { frames++; fw = w; fh = h; } });
+    VideoGenerator ga, gb;
+    std::string err;
+    CHECK(ga.start(a, err), "start 1: %s", err.c_str());
+    CHECK(gb.start(b, err), "start 2: %s", err.c_str());
+    std::function<void(uint8_t*)> s1, s2;
+    std::string note;
+#ifndef VG_NO_TX
+    CHECK(dect2::txOpenMpegTs(generatorSpec(1), s1, note) && s1, "the transmitter opens generator:1 (%s)", note.c_str());
+    std::function<void(uint8_t*)> none; std::string note2;
+    CHECK(!dect2::txOpenMpegTs("generator:42", none, note2) && !none, "an unknown generator is not a source");
+#else
+    CHECK(generatorTsSource(1, s1) && s1, "source 1");
+#endif
+    CHECK(generatorTsSource(2, s2), "source 2");
+    std::vector<uint8_t> d1, d2;
+    const auto t0 = std::chrono::steady_clock::now();
+    while (std::chrono::steady_clock::now() - t0 < std::chrono::seconds(4)) {   // the transmitter takes packets as they come
+        uint8_t pk[188];
+        while (generatorQueued(1) > 0) { s1(pk); d1.insert(d1.end(), pk, pk + 188); }
+        while (generatorQueued(2) > 0) { s2(pk); d2.insert(d2.end(), pk, pk + 188); }
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    ga.stop(); gb.stop();
+    setGeneratorFrameSink(2, {});
+    auto nameOfBytes = [&](const std::vector<uint8_t>& d) { const fs::path f = dir / "q.ts"; { std::ofstream o(f, std::ios::binary); o.write((const char*)d.data(), (std::streamsize)d.size()); } return serviceNameOf(f); };
+    const TsInfo t1 = parseTs(d1), t2 = parseTs(d2);
+    CHECK(t1.sync && t1.packets > 100 && t2.sync && t2.packets > 100, "both streams are whole packets (%zu, %zu)", t1.packets, t2.packets);
+    CHECK(t1.program == 0x111 && t2.program == 0x222, "each queue holds its own stream: programs 0x%x / 0x%x", t1.program, t2.program);
+    CHECK(nameOfBytes(d1) == "Gen A" && nameOfBytes(d2) == "Gen B", "service names stay apart");
+    CHECK(frames > 10 && fw >= 352 && fh >= 280, "analog path: %d pictures of %dx%d", frames.load(), fw.load(), fh.load());
+    const GenStats sa = ga.stats();
+    CHECK(sa.error.empty() && sa.notice.find("nosuchoption") != std::string::npos && sa.notice.find("qmin") == std::string::npos, "unknown encoder option reported, known one not: '%s' (%s)", sa.notice.c_str(), sa.error.c_str());
+    // an empty queue gives null packets, so the transmitter keeps its rate
+    uint8_t pk[188];
+    generatorClear(1);
+    s1(pk);
+    CHECK(pk[0] == 0x47 && (((pk[1] & 0x1F) << 8) | pk[2]) == 0x1FFF, "null packet when nothing is queued");
+    // refused configs
+    GenConfig bad = pictureConfig(pic);
+    bad.output = Output::Transmitter; bad.instanceId = 99;
+    VideoGenerator gx;
+    CHECK(!gx.start(bad, err) && !err.empty(), "generator number out of range is refused");
+    bad.instanceId = 1; bad.ffmpegArgs = "-i evil.mp4";
+    CHECK(!gx.start(bad, err) && err.find("FFmpeg arguments") != std::string::npos, "bad arguments are refused at start: %s", err.c_str());
+    CHECK(streamUrl(Output::Transmitter, "h", 1).empty() && vlcOpenUrl(Output::Transmitter, "h", 1).empty(), "no network address for the transmitter output");
+}
+
 int main() {
     const fs::path dir = fs::temp_directory_path() / ("onair_videogen_" + std::to_string((long long)std::chrono::steady_clock::now().time_since_epoch().count()));
     fs::create_directories(dir);
@@ -1064,6 +1145,8 @@ int main() {
     testFailures(dir, pic);
     testStopAndOverlayChanges(dir, pic);
     testPreviewOnly(dir);
+    testArgs();
+    testInstancesAndTransmitter(dir, pic);
 #ifndef _WIN32
     testStream(pic, false);
     testStream(pic, true);
