@@ -4,6 +4,7 @@
 // reported (its broadcast ID and position); the operator position in the broadcast is not used. Pure logic, no clock.
 #pragma once
 #include <cmath>
+#include <cstdint>
 #include <cstdio>
 #include <functional>
 #include <map>
