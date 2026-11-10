@@ -48,7 +48,7 @@ int main() {
     const int N = full ? 60 : 30;
     uint64_t hard = 0, soft = 0;
     for (double rate : full ? std::vector<double>{1e6, 2.4e6} : std::vector<double>{1e6}) {
-        for (double snr : full ? std::vector<double>{16, 14, 13, 12, 11, 10, 9, 8} : std::vector<double>{12, 11}) {
+        for (double snr : full ? std::vector<double>{12, 10, 9, 8, 7, 6, 5} : std::vector<double>{8, 7}) {
             for (unsigned seed = 1; seed <= (full ? 3u : 1u); seed++) {
                 const auto x = flarmScene(rate, 0.12 * N + 0.3, train(u0, N, 0xDD1234, 3000), snr, 0, seed);
                 const FlarmTelemetry h = decode(x, rate, u0, false), s = decode(x, rate, u0, true);

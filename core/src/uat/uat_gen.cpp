@@ -122,7 +122,9 @@ struct UatSynth : ModeSynth {
         gap = false;
         buf.clear();
         sched.clear();
-        static const char* kVec = "FF8196782DD44238C1453855F89980C7524F5970940ED83AD89CE7A9BEF8761BBCD9FCC817D82E2D1ACF90CA78DA3C49";
+        // the DO-282 basic frame of dump978's fec_tests after its 6 byte errors were corrected (3.9: the synth sent the vector with the errors, so a
+        // receiver was at its correction limit before any noise)
+        static const char* kVec = "007E6987D2D74238C1453855F89980C7524F5970940ED83AD89CE7A9BEF8";
         const int nAc = cfg.modeOpt[0] > 0 ? cfg.modeOpt[0] : 4;
         for (int a = 0; a < nAc; a++) {
             UatTx tx;

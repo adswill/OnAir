@@ -85,11 +85,11 @@ const Guard kGuards[] = {
 constexpr bool kCalibrate = true;
 
 int calibrate(const std::vector<Mode>& all, const std::regex& want) {
-    const int threads = std::max(1u, std::thread::hardware_concurrency());
+    const int threads = std::getenv("ONAIR_SENS_THREADS") ? std::atoi(std::getenv("ONAIR_SENS_THREADS")) : (int)std::max(1u, std::thread::hardware_concurrency());
     printf("CALIBRATION %-8s %7s %8s %9s %9s\n", "mode", "thr dB", "lock s", "cpu x rt", "false");
     for (const auto& m0 : all) {
         if (!std::regex_search(m0.id, want)) continue;
-        Mode m = m0; m.secs = std::min(m.secs, 4.0);
+        Mode m = m0; m.secs = std::min(m.secs, m.id == "ais1" ? 24.0 : 4.0);   // one ship: a message every few seconds
         Prep P;
         if (!prepare(m, P)) { printf("CALIBRATION %-8s no valid output on the clean test signal\n", m.id.c_str()); continue; }
         double hi = NAN;

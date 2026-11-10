@@ -16,7 +16,7 @@ using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: "); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
 
-static const char* kVec = "FF8196782DD44238C1453855F89980C7524F5970940ED83AD89CE7A9BEF8761BBCD9FCC817D82E2D1ACF90CA78DA3C49";
+static const char* kVec = "007E6987D2D74238C1453855F89980C7524F5970940ED83AD89CE7A9BEF8";   // a valid basic frame (dump978 fec_tests, corrected)
 
 static void hex(const char* s, uint8_t* out, int n) {
     auto nib = [](char c) { return c <= '9' ? c - '0' : c - 'A' + 10; };
@@ -45,7 +45,7 @@ static int run(double rate, int bursts, double cfoHz, double snrDb, float level,
     d.configure(rate);
     d.setSoft(soft);
     int got = 0;
-    d.setSink([&](UatRawFrame& f) { if (!f.uplink && std::memcmp(f.data, txs[0].frame, UAT_SHORT_FRAME_DATA_BYTES) == 0) got++; });
+    d.setSink([&](UatRawFrame& f) { if (noiseOnly ? true : (!f.uplink && std::memcmp(f.data, txs[0].frame, UAT_SHORT_FRAME_DATA_BYTES) == 0)) got++; });
     for (size_t o = 0; o < x.size(); o += 40000) d.feed(x.data() + o, std::min<size_t>(40000, x.size() - o));
     std::vector<cf32> z((size_t)(rate * 0.01));
     d.feed(z.data(), z.size());
@@ -65,7 +65,11 @@ int main() {
         const int got = run(2e6, n, 10e3, 20, 1e-3f, true, 2);
         CHECK(got >= n - 1, "weak input level 1e-3: %d of %d", got, n);
     }
-    CHECK(run(2.4e6, 50, 0, -10, 0.1f, true, 3, true) == 0, "noise only gave frames");
+    for (bool soft : {false, true}) {   // noise only, 2 x 0.2 s: any frame at all is a false decode
+        const int f = run(2.4e6, 100, 0, -10, 0.1f, soft, 3, true) + run(2.083333e6, 100, 0, -10, 0.1f, soft, 4, true);
+        printf("noise only, %s: %d frames\n", soft ? "soft erasures" : "hard", f);
+        CHECK(f == 0, "noise only gave %d frames (%s)", f, soft ? "soft" : "hard");
+    }
     // soft erasures against hard decisions, near the threshold (summed over seeds)
     constexpr bool kCalibrate = true;   // WIP: print the whole curve and fail so the CI log shows it
     const bool full = kCalibrate || std::getenv("ONAIR_TEST_LONG") != nullptr;
