@@ -785,6 +785,9 @@ private:
     BbUnpacker commonUnpack_; std::vector<uint8_t> commonFrame_; T2PlpMerge plpMerge_;   // the common PLP of the selected group
     TsDemux demux_;
     TsSnapshot tsSnap_;
+    // declared before the receivers: their worker threads call onTsPackets until they are joined in the receivers' destructors
+    Tr290Monitor tr290_; double tr290T_ = 0;
+    T2miIngest t2miIn_; std::vector<uint8_t> t2miInner_; std::atomic<int> t2miUse_{-1};   // -1 off, else the PLP of the T2-MI stream shown instead of the outer stream
     OutputManager outputs_;
     std::function<void(const uint8_t*, size_t, const TsSnapshot*, double secs)> tap_;
     std::function<void(const uint8_t*, size_t, const TsSnapshot*, double secs)> rtap_;
@@ -1020,8 +1023,6 @@ private:
     AtisReceiver rxAtis_;
     SelcalReceiver rxSelcal_;
     UmtsReceiver rxUmts_;
-    Tr290Monitor tr290_; double tr290T_ = 0;
-    T2miIngest t2miIn_; std::vector<uint8_t> t2miInner_; std::atomic<int> t2miUse_{-1};   // -1 off, else the PLP of the T2-MI stream shown instead of the outer stream
     Fy3Receiver rxFy3a_{0}, rxFy3m_{1};
     PactorHfReceiver rxPh2_{2}, rxPh3_{3}, rxPh4_{4};   // PACTOR-II (family 237), -III (238), -IV (239)
     ShortwaveReceiver rxSw_;
