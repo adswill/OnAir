@@ -654,7 +654,14 @@ struct IsdbtReceiver::Impl {
             bool any = false;
             for (int k = 0; k < K; k += dec) { const float m = std::abs(Hf[(size_t)k]); any |= m > 0; t.chMagDb.push_back(20.f * std::log10(std::max(1e-6f, m))); t.chPhase.push_back(std::arg(Hf[(size_t)k])); }
             t.chValid = any; t.chDecim = dec; t.chCarriers = K;
-            if (any) { t.irTauMin = -N / 16; impulseResponse(Hf, N, t.irTauMin, G + std::max(8, G / 4), back + G / 8, t.irDb); }
+            if (any) {
+                t.irTauMin = -N / 16;
+                if (tsb) {   // the narrow band only (its centre is the ISDB-T centre carrier): the whole carrier range does not fit the smaller FFT
+                    const int k0 = firstPosition(tsb) * carriersPerSegment(mode), k1 = edgeCarrier(mode, tsb);
+                    const std::vector<cf32> Hn(Hf.begin() + k0, Hf.begin() + k1 + 1);
+                    impulseResponse(Hn, N, t.irTauMin, G + std::max(8, G / 4), back + G / 8, t.irDb);
+                } else impulseResponse(Hf, N, t.irTauMin, G + std::max(8, G / 4), back + G / 8, t.irDb);
+            }
             const std::vector<cf32>& Yc = demod.corrected();
             t.rawCells.clear();
             if ((int)Yc.size() == K) {
