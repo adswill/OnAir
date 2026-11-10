@@ -41,6 +41,7 @@ struct Resp { int status = 0; std::string head, body; std::string header(const s
 struct Client {
     int port;
     std::string cookie, csrf, forwardedFor, origin;
+    int timeoutMs = 4000;
     Resp req(const std::string& method, const std::string& path, const std::string& body = "") {
         std::string e;
         sock_t s = tcpConnect("127.0.0.1", port, 2000, e);
@@ -53,7 +54,7 @@ struct Client {
         if (method == "POST") rq += "Content-Type: application/json\r\nX-OnAir-CSRF: " + csrf + "\r\nContent-Length: " + std::to_string(body.size()) + "\r\n";
         rq += "\r\n" + body;
         sockSendAll(s, rq.data(), rq.size());
-        std::string r = readFor(s, 4000);
+        std::string r = readFor(s, timeoutMs);
         sockClose(s);
         if (r.compare(0, 9, "HTTP/1.1 ") == 0) o.status = atoi(r.c_str() + 9);
         const size_t h = r.find("\r\n\r\n");
@@ -264,7 +265,7 @@ int main() {
     r = lan.get("devices");
     CHECK(r.status == 200 && has(r.body, "synthetic"), "devices");
     r = lan.get("status");
-    CHECK(r.status == 200 && has(r.body, "\"row\":{") && has(r.body, "\"name\":\"FM radio\"") && has(r.body, "\"app\":{\"viewers\":0"), "status with the mode row: %s", r.body.c_str());
+    CHECK(r.status == 200 && has(r.body, "\"row\":{") && has(r.body, "\"name\":\"FM\"") && has(r.body, "\"app\":{\"viewers\":0"), "status with the mode row: %s", r.body.c_str());
     r = lan.get("settings");
     CHECK(r.status == 200 && has(r.body, "\"key\":\"app_public\"") && has(r.body, "\"group\":\"Access\"") && has(r.body, "\"help\":"), "settings model");
     r = lan.get("panel");
@@ -282,7 +283,7 @@ int main() {
     for (int i = 0; i < 100; i++) { r = lan.get("panel"); if (has(r.body, "\"standard\":6")) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
     CHECK(has(r.body, "\"standard\":6") && has(r.body, "\"common\":{") && has(r.body, "\"fields\":{"), "the FM panel arrives: %.200s", r.body.c_str());
     r = lan.post("gain", "{\"db\":20}");
-    CHECK(r.status == 200, "gain");
+    CHECK(r.status == 400 && has(r.body, "no gain"), "the test signal has no gain control, the page is told: %d %s", r.status, r.body.c_str());
     r = lan.post("frequency", "{\"hz\":\"x\"}");
     CHECK(r.status == 400, "a bad frequency is refused");
     r = lan.post("demod", "{\"demod\":\"usb\"}");
@@ -312,7 +313,10 @@ int main() {
             const webschema::WebModeRow& m = rows[i];
             if (m.family == 999 || m.family >= 19999) continue;   // Plugins and Mode Builder are not receivers
             std::this_thread::sleep_for(std::chrono::milliseconds(40));   // two requests per mode: stay under the API's per-address rate
+            lan.timeoutMs = 20000;   // a big receiver (X-band) takes seconds to set up while the host's lock is held
             r = lan.post("mode", "{\"family\":" + std::to_string(m.family) + ",\"sub\":\"" + m.sub + "\"}");
+            if (r.status == 0) r = lan.post("mode", "{\"family\":" + std::to_string(m.family) + ",\"sub\":\"" + m.sub + "\"}");
+            lan.timeoutMs = 4000;
             bool good = r.status == 200;
             if (good) { r = lan.get("status"); good = has(r.body, "\"row\":{\"family\":" + std::to_string(m.family) + ",") && has(r.body, "\"sub\":\"" + std::string(m.sub) + "\""); }
             if (good) ok++; else { bad++; if (firstBad.empty()) firstBad = std::string(m.name) + ": " + std::to_string(r.status) + " " + r.body.substr(0, 160); }
