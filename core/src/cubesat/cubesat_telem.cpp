@@ -3,6 +3,7 @@
 #include "dect2/cubesat/cubesat_proto.h"
 #include <cmath>
 #include <cstdio>
+#include <string>
 
 namespace dect2 {
 namespace cubesat {
@@ -220,9 +221,44 @@ std::string beaconText(const std::vector<uint8_t>& d) {
     return alnum * 10 >= bestN * 6 ? t : std::string();
 }
 
-bool parseTelemetry(int framing, const std::vector<uint8_t>& data, const std::vector<uint8_t>& payload, TelResult& out) {
+// GOMX-1 beacon A after its CSP header and time: layout from gr-satellites python/telemetry/gomx_1.py (Daniel Estevez EA4GPZ, GPL-3.0-or-later)
+bool parseGomx1(const std::vector<uint8_t>& d, TelResult& out) {
+    if (d.size() < 9 + 18 + 22 + 63 + 40 + 9 + 55) return false;   // CSP, time and flags, then OBC, COM, EPS, GATOSS, Hub, ADCS
+    BitReader b{d};
+    out.kind = "GOMX-1 beacon A";
+    out.satellite = "GOMX 1";
+    Out o{out, "Beacon"};
+    b.pos = 32;   // past the CSP header
+    o.raw("Time", b.u(32), "s");
+    o.raw("Flags", b.u(8));
+    const auto s16 = [](uint32_t v) { return (int)(int16_t)(uint16_t)v; };
+    o.group = "OBC";
+    o.raw("Boot count", b.u(16));
+    for (int i = 0; i < 2; i++) o.num("Temperature " + std::to_string(i + 1), s16(b.u(16)) / 4.0, "degC", "%.2f");
+    for (int i = 0; i < 6; i++) o.num("Panel temperature " + std::to_string(i + 1), s16(b.u(16)) / 4.0, "degC", "%.2f");
+    o.group = "COM";
+    o.raw("Bytes corrected", b.u(16)); o.raw("RX packets", b.u(16)); o.raw("RX errors", b.u(16)); o.raw("TX packets", b.u(16));
+    for (int i = 0; i < 2; i++) o.num("Temperature " + std::to_string(i + 1), (double)s16(b.u(16)), "degC", "%.0f");
+    o.num("RSSI", (double)s16(b.u(16)), "dBm", "%.0f");
+    o.num("RF error", (double)s16(b.u(16)), "Hz", "%.0f");
+    o.num("Battery", b.u(16) / 100.0, "V", "%.2f");
+    o.num("TX current", (double)b.u(16), "mA", "%.0f");
+    o.raw("Boot count", b.u(16));
+    o.group = "EPS";
+    for (int i = 0; i < 3; i++) o.num("Boost voltage " + std::to_string(i + 1), b.u(16) / 1000.0, "V", "%.3f");
+    o.num("Battery voltage", b.u(16) / 1000.0, "V", "%.3f");
+    for (int i = 0; i < 6; i++) o.num("Output current " + std::to_string(i + 1), (double)b.u(16), "mA", "%.0f");
+    for (int i = 0; i < 3; i++) o.num("Input current " + std::to_string(i + 1), (double)b.u(16), "mA", "%.0f");
+    o.num("Boost current", (double)b.u(16), "mA", "%.0f");
+    o.num("Battery current", (double)b.u(16), "mA", "%.0f");
+    for (int i = 0; i < 6; i++) o.num("Temperature " + std::to_string(i + 1), (double)s16(b.u(16)), "degC", "%.0f");
+    return b.ok();
+}
+
+bool parseTelemetry(int framing, const std::vector<uint8_t>& data, const std::vector<uint8_t>& payload, TelResult& out, int norad) {
     out = TelResult();
     if (framing == kFramingAo40 && parseFuncube(data, out)) return true;
+    if (norad == 39430 && parseGomx1(payload.empty() ? data : payload, out)) return true;
     const std::string t = beaconText(payload.empty() ? data : payload);
     if (!t.empty()) {
         out.kind = "text beacon";

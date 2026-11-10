@@ -105,6 +105,8 @@ extern const ModeUi kMscatterUi;
 extern const ModeUi kArdopUi;
 extern const ModeUi kGoesDcsUi;
 extern const ModeUi kBletrkUi;
+extern const ModeUi kSatDetectUi;
+extern const ModeUi kNavicUi;
 extern const ModeUi kSatbeaconUi;
 extern const ModeUi kRidUi;
 extern const ModeUi kMeteorUi;
@@ -329,6 +331,8 @@ const ModeUi* modeUi(int family) {
     case 140: return &kArdopUi;
     case 141: return &kGoesDcsUi;
     case 143: return &kBletrkUi;
+    case 550: case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 562: return &kSatDetectUi;
+    case 561: return &kNavicUi;
     case 144: return &kSatbeaconUi;
     case 56: return &kRidUi;
     case 59: return &kMeteorUi;

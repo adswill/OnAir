@@ -1,5 +1,7 @@
 // Meteor scatter detector for the engine (see mscatter_live.h).
 #include "dect2/mscatter/mscatter_live.h"
+#include "dect2/satmisc/line_tracker.h"
+#include "dect2/satmisc/sat_id.h"
 #include "dect2/mscatter/mscatter_dsp.h"
 #include "dect2/mscatter/mscatter_tel.h"
 #include <algorithm>
@@ -34,9 +36,55 @@ struct MscatterLiveReceiver::Impl {
 
     static int64_t nowUtc() { return (int64_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
 
+    // GRAVES satellite echoes: lines that last, away from the beacon line, matched against elements in the bistatic geometry
+    satmisc::LineTracker echoes;
+    std::mutex satMu;
+    std::vector<Tle> satTles;
+    Observer satRx;
+    std::atomic<double> beaconMhz{143.05};
+    std::vector<MsSatEcho> satEchoes;
+    uint64_t echoTotal = 0, echoMatched = 0;
+    uint32_t nextEcho = 1;
+
+    void takeEchoes() {
+        for (satmisc::LineTrack& tr : echoes.takeFinished()) {
+            // a satellite's Doppler sweeps; a long overdense meteor stays put
+            const double sweep = std::fabs(tr.pts.back().hz - tr.pts.front().hz);
+            if (sweep < 15.0 || sweep / std::max(0.1, tr.durationSec()) < 2.0) continue;
+            MsSatEcho e;
+            e.id = nextEcho++;
+            e.wallTime = baseUtc + (int64_t)std::floor(tr.startSec);
+            e.durationSec = (float)tr.durationSec(); e.peakSnrDb = tr.peakSnrDb;
+            const double bh = det.beaconHz();
+            e.startHz = (float)(tr.pts.front().hz - bh); e.endHz = (float)(tr.pts.back().hz - bh);
+            std::vector<DopplerSample> v;
+            for (const auto& q : tr.pts) v.push_back({(double)baseUtc + q.t, q.hz - bh, 0});
+            std::vector<Tle> tles;
+            Observer rx;
+            { std::lock_guard<std::mutex> k(satMu); tles = satTles; rx = satRx; }
+            bool matched = false;
+            if (!tles.empty()) {
+                satmisc::SatIdOptions o;
+                o.refHz = beaconMhz.load() * 1e6; o.bistatic = true; o.tx = Observer{47.348, 5.515, 0.2}; o.fitOffset = false; o.goodRmsHz = 25; o.refine = 0;
+                const satmisc::SatIdResult r = satmisc::identifySatellite(tles, rx, v, o);
+                if (r.ok) { e.name = r.ranked[0].tle.name; e.norad = r.ranked[0].tle.norad; e.rmsHz = (float)r.ranked[0].rmsHz; e.ambiguous = r.ambiguous; matched = true; }
+            }
+            std::lock_guard<std::mutex> lk(mu);
+            echoTotal++; if (matched) echoMatched++;
+            satEchoes.insert(satEchoes.begin(), std::move(e));
+            if (satEchoes.size() > kMsSatEchoMax) satEchoes.pop_back();
+            dirty = true;
+        }
+    }
+
     void resetState() {
         front.configure(rateSet > 0 ? rateSet : 2e6);
         det.configure(front.workRate());
+        {   // about 3 Hz resolution and a new spectrum every 0.17 s: a satellite moves up to about 100 Hz a second at 143 MHz
+            satmisc::LineTrackerConfig ec;
+            ec.rate = front.workRate(); ec.fftLog2 = 12; ec.thresholdDb = 13; ec.minDurSec = 1.5; ec.minPoints = 8; ec.gapSec = 1.0; ec.maxSlopeHzS = 160; ec.excludeHz = 40;
+            echoes.configure(ec);
+        }
         det.setThresholdDb(thrReq);
         const int64_t s = startReq.load();
         baseUtc = s ? s : nowUtc();
@@ -88,6 +136,8 @@ struct MscatterLiveReceiver::Impl {
         pub.thresholdDb = (float)det.thresholdDb();
         pub.active = det.active(); pub.activeSnrDb = (float)det.activeSnr();
         pub.pings = pings;
+        pub.satEchoes = satEchoes; pub.satEchoTotal = echoTotal; pub.satEchoMatched = echoMatched;
+        { std::lock_guard<std::mutex> k(satMu); pub.satCatalog = (int)satTles.size(); }
         counts.fill(now, pub);
         int last = 0;
         for (const auto& p : pings) { if (p.wallTime > now - 3600) last++; else break; }
@@ -128,6 +178,12 @@ bool MscatterLiveReceiver::telemetry(MsTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 
+void MscatterLiveReceiver::setSatelliteMatch(const std::vector<Tle>& tles, double latDeg, double lonDeg, double altKm) {
+    std::lock_guard<std::mutex> k(p_->satMu);
+    p_->satTles = tles; p_->satRx = Observer{latDeg, lonDeg, altKm};
+}
+void MscatterLiveReceiver::setBeaconMhz(double mhz) { p_->beaconMhz = mhz; }
+
 void MscatterLiveReceiver::feed(const cf32* x, size_t n) {
     Impl& m = *p_;
     if (m.logReq.exchange(false)) { std::lock_guard<std::mutex> lk(m.mu); m.logPath = m.logPathReq; m.dirty = true; }
@@ -139,6 +195,7 @@ void MscatterLiveReceiver::feed(const cf32* x, size_t n) {
     if (m.clearReq.exchange(false)) {
         std::lock_guard<std::mutex> lk(m.mu);
         m.pings.clear(); m.counts.clear(); m.okN = 0; m.nextId = 1;
+        m.satEchoes.clear(); m.echoTotal = 0; m.echoMatched = 0;
         m.dirty = true;
     }
     if (n == 0 || m.rateSet < mscatterTuning().minSampleRate - 1) return;
@@ -155,6 +212,9 @@ void MscatterLiveReceiver::feed(const cf32* x, size_t n) {
     m.nIn += n;
     const size_t k = m.front.process(src, n, m.work.data());
     m.det.push(m.work.data(), k);
+    m.echoes.setExcludeCentre(m.det.beaconHz());
+    m.echoes.push(m.work.data(), k);
+    m.takeEchoes();
     std::vector<ms::RawPing> got = m.det.take();
     std::lock_guard<std::mutex> lk(m.mu);
     for (const auto& r : got) m.addPing(r);

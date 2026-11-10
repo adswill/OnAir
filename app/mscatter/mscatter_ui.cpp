@@ -13,6 +13,8 @@
 #include <string>
 #include <vector>
 
+namespace satui { void elementsTick(std::vector<dect2::Tle>& out, uint64_t& seenVersion); }   // satmisc/satdetect_ui.cpp
+
 namespace {
 
 struct State {
@@ -22,6 +24,8 @@ struct State {
     int pushedThr = -1;
     bool logOn = true;
     int pushedLog = -1;
+    std::vector<dect2::Tle> tles;
+    uint64_t seen = 0, pushed = 0;
 };
 State S;
 
@@ -67,7 +71,16 @@ void pushSettings(App& a) {
     if (want != S.pushedLog) { a.engine.mscatter().setLogFile(S.logOn ? logFile() : std::string()); S.pushedLog = want; }
 }
 
-void tick(App& a) { pushSettings(a); }
+void tick(App& a) {
+    pushSettings(a);
+    satui::elementsTick(S.tles, S.seen);
+    if (S.seen != S.pushed && a.engine.running()) {
+        double lat, lon;
+        receiverLocation(lat, lon);
+        a.engine.mscatter().setSatelliteMatch(S.tles, lat, lon, receiverAltitudeM() / 1000);
+        S.pushed = S.seen;
+    }
+}
 
 ImU32 heat(float v) {   // 0..1: dark, blue, cyan, yellow, white
     const float r = std::min(1.f, std::max(0.f, (v - 0.5f) * 2.f)), g = std::min(1.f, std::max(0.f, v * 1.6f - 0.3f)), b = std::min(1.f, 0.25f + v * 1.4f) * (v > 0.75f ? 1.f - (v - 0.75f) * 2.f : 1.f);
@@ -248,11 +261,44 @@ void echoView(App& a) {
     }
 }
 
+void satView(App& a) {
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("start the receiver")); return; }
+    const dect2::MsTelemetry& t = a.rx.mscatter;
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextDisabled("%s", tr("Satellites seen in the GRAVES radar's reflection: lines that last longer than a meteor and sweep in Doppler, named from the bistatic Doppler curve of every satellite with known elements (Dijon to your location)."));
+    ImGui::PopTextWrapPos();
+    ImGui::Text("%llu %s, %llu %s", (unsigned long long)t.satEchoTotal, tr("echoes"), (unsigned long long)t.satEchoMatched, tr("named"));
+    if (t.satCatalog == 0) ImGui::TextColored(pal::warnAmber(), "%s", tr("No orbital elements yet: open View > Passes once to download them."));
+    if (!ImGui::BeginTable("##msats", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_ScrollY)) return;
+    ImGui::TableSetupColumn(tr("UTC")); ImGui::TableSetupColumn(tr("Seconds")); ImGui::TableSetupColumn(tr("Doppler Hz")); ImGui::TableSetupColumn(tr("SNR")); ImGui::TableSetupColumn(tr("Satellite"));
+    ImGui::TableHeadersRow();
+    for (const auto& e : t.satEchoes) {
+        ImGui::TableNextRow();
+        char tb[32] = ""; time_t tt = (time_t)e.wallTime; struct tm tmv; 
+#ifdef _WIN32
+        gmtime_s(&tmv, &tt);
+#else
+        gmtime_r(&tt, &tmv);
+#endif
+        strftime(tb, sizeof tb, "%H:%M:%S", &tmv);
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(tb);
+        ImGui::TableNextColumn(); ImGui::Text("%.1f", e.durationSec);
+        ImGui::TableNextColumn(); ImGui::Text("%+.0f > %+.0f", e.startHz, e.endHz);
+        ImGui::TableNextColumn(); ImGui::Text("%.0f", e.peakSnrDb);
+        ImGui::TableNextColumn();
+        if (e.name.empty()) ImGui::TextDisabled("%s", tr("unknown"));
+        else if (e.ambiguous) ImGui::Text("%s (%s)", e.name.c_str(), tr("or a neighbour"));
+        else ImGui::Text("%s  (%.0f Hz)", e.name.c_str(), e.rmsHz);
+    }
+    ImGui::EndTable();
+}
+
 void tab(App& a) {
-    subNav("msc", S.view, {tr("Pings"), tr("Rates"), tr("Echoes")});
+    subNav("msc", S.view, {tr("Pings"), tr("Rates"), tr("Echoes"), tr("Satellites")});
     if (S.view == 0) pingsView(a);
     else if (S.view == 1) ratesView(a);
-    else echoView(a);
+    else if (S.view == 2) echoView(a);
+    else satView(a);
 }
 
 void list(App& a) {

@@ -392,7 +392,7 @@ void tick(App& a) {
 // issue #214: the satellites repeat the 406.0 - 406.1 MHz band on their L-band downlink (each one at its own place in 1544 - 1545 MHz)
 void tuner(App& a, bool& retune) {
     struct P { const char* label; double mhz; };
-    static const P kP[] = {{"406.028 MHz (beacons)", sarsat::kDefaultMhz}, {"1544.500 MHz (satellite downlink)", 1544.5}};
+    static const P kP[] = {{"406.028 MHz (beacons)", sarsat::kDefaultMhz}, {"1544.500 MHz (MEOSAR relay, satellite downlink)", 1544.5}};
     ImGui::TextDisabled("%s", tr("Frequency"));
     sameLineIf(90 * gUi, 5 * gUi);
     char cur[32]; snprintf(cur, sizeof cur, "%.3f MHz", a.freqMhz);

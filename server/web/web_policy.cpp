@@ -76,7 +76,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     "orbcomm", "pager", "psk", "q65", "qo100", "rid", "rtty", "same", "sarsat", "satbeacon", "sonde", "t", "t2", "tdcs", "thor", "thread", "time",
     "tones", "uplink", "vdes", "vdl4", "vor", "vorils", "wifi", "wisun", "wmbus", "zigbee", "zwave",
     // 3.0 modes: blocked until the owner approves them for web listeners
-    "argos", "asterix", "horus", "isdbs", "lorasat", "lorawanwide", "nfc", "sbas", "sigfox",
+    "argos", "asterix", "horus", "navic", "isdbs", "lorasat", "lorawanwide", "nfc", "sbas", "sigfox",
     // 3.1 modes: blocked likewise
     "pactor", "pskd",
     // 3.2 modes: blocked likewise

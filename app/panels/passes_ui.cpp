@@ -49,6 +49,10 @@ constexpr int kSpecx = 41, kAprs = 24, kOrbcomm = 44, kMeteor = 59, kCubesat = 6
 
 struct Source { const char* file; const char* url; };
 const Source kSources[] = {
+    {"active.txt", "https://celestrak.org/NORAD/elements/gp.php?GROUP=active&FORMAT=tle"},   // What satellite is this? and GRAVES echoes: every active satellite
+    {"zombie-ao7.txt", "https://celestrak.org/NORAD/elements/gp.php?CATNR=7530&FORMAT=tle"},
+    {"zombie-transit5b5.txt", "https://celestrak.org/NORAD/elements/gp.php?CATNR=965&FORMAT=tle"},
+    {"zombie-les1.txt", "https://celestrak.org/NORAD/elements/gp.php?CATNR=1002&FORMAT=tle"},
     {"weather.txt", "https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle"},
     {"stations.txt", "https://celestrak.org/NORAD/elements/gp.php?GROUP=stations&FORMAT=tle"},
     {"orbcomm.txt", "https://celestrak.org/NORAD/elements/gp.php?GROUP=orbcomm&FORMAT=tle"},
@@ -95,6 +99,12 @@ const Known kKnown[] = {
     {"ISS APRS", 25544, 145.825, "APRS", kAprs, Iss, 0, false},
     {"ISS voice", 25544, 145.800, "FM voice", kSpecx, Iss, 0, false},
     {"ISS SSTV", 25544, 145.800, "SSTV events", kIssSstv, Iss, 0, false},   // only during announced events: never the default link (SatLink::eventOnly)
+    {"ISS repeater", 25544, 437.800, "FM voice", kSpecx, Iss, 0, false},
+    {"ISS (every downlink)", 25544, 145.8125, "all downlinks", 562, Iss, 0, false},
+    {"AO-7", 7530, 145.970, "zombie carrier", 550, Amateur, 0, false},
+    {"Transit 5B-5", 965, 136.650, "zombie carrier", 550, Amateur, 0, false},
+    {"LES-1", 1002, 237.000, "zombie carrier", 550, Amateur, 0, false},
+    {"Tiangong", 48274, 2224.075, "carrier", 557, Iss, 0, false},
 };
 
 struct Cube { std::string name; int norad = 0; double mhz = 0; bool aprs = false; };
