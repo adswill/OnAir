@@ -261,6 +261,7 @@ void receiver(App& a, int K) {
     kv(a, tr("input"), "%.3f Msps", t.inputRate / 1e6);
     kv(a, tr("signal time"), "%.1f s", t.timeSec);
     if (K <= kHsThrob) kv(a, tr("decoded"), "%llu", (unsigned long long)t.blocksOk);
+    smart5SidCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void list(App&, int) {}

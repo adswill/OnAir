@@ -455,6 +455,7 @@ void receiver(App& a) {
         ImGui::EndTable();
     }
     ImGui::EndChild();
+    smart5AtvCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 // Put the next control on the same line if it fits (the toolbar), else on the next one (the sidebar).

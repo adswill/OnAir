@@ -3,6 +3,7 @@
 // and every finding also goes on as an automation event "insight.<kind>". Offline; per talkgroup or system, never per radio.
 #include "../app.h"
 #include "dect2/insight/live.h"
+#include "../smart5/smart5_ui.h"
 #include <algorithm>
 #include <cstdio>
 #include <ctime>
@@ -192,6 +193,7 @@ void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float
 
 void insightWindow(App& a) {
     tick(a);
+    smart5Tick(a);   // the round-5 engines of broadcast, TV, satellites, GNSS and science (app/smart5), whatever screen is open
     if (!a.insightOpen) return;
     firstWindowSize(760 * gUi, 460 * gUi);
     if (!ImGui::Begin(trw("Insights"), &a.insightOpen)) { ImGui::End(); return; }
@@ -202,6 +204,8 @@ void insightWindow(App& a) {
         if (ImGui::BeginTabItem(tr("Voice"))) { in::live().with([now](in::Hub& h) { voiceTab(h, now); }); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(tr("Pagers"))) { in::live().with([](in::Hub& h) { pagerTab(h); }); ImGui::EndTabItem(); }
         if (ImGui::BeginTabItem(tr("HF utility"))) { in::live().with([](in::Hub& h) { hfTab(h); }); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(tr("Broadcast and TV"))) { smart5InsightBroadcast(a); smart5InsightTv(a); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(tr("Satellites and science"))) { smart5InsightSat(a); smart5InsightSci(a); ImGui::EndTabItem(); }
         ImGui::EndTabBar();
     }
     if (ImGui::CollapsingHeader(trw("Advanced"))) {

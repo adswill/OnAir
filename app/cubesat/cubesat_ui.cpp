@@ -246,6 +246,7 @@ void receiver(App& a) {
     kvRow(a, "signal", "%s, SNR %.1f dB, offset %+.2f kHz", t.carrier ? "carrier" : "no carrier", t.snrDb, t.cfoHz / 1e3);
     kvRow(a, "input", "%.3f Msps, %.1f dBFS", t.inputRate / 1e6, t.levelDb);
     kvRow(a, "signal time", "%.1f s", t.timeSec);
+    smart5CubeCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void decoder(App& a, bool&) {

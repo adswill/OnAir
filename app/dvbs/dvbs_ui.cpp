@@ -644,6 +644,7 @@ void receiver(App& a) {
     cidSection(a, t);
     streamsSection(a, t);
     ipSection(a, t);
+    smart5DvbsCard(a);   // round-5 smart checks: rain fade and margin log (app/smart5)
     ImGui::Spacing();
     ImGui::TextColored(pal::accent(), "NOTES");
     ImGui::PushTextWrapPos(0);

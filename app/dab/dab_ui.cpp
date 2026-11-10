@@ -756,6 +756,7 @@ void dabRadioTab(App& a) {
         }
     }
     ImGui::Spacing();
+    smart5DabCard(a);   // round-5 smart checks: ensemble change log, fault or reception (app/smart5)
     if (ImGui::BeginTable("dabtbl", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 34 * gUi);
         ImGui::TableSetupColumn("Station");

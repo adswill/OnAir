@@ -836,6 +836,11 @@ void wideAllButton(App& a);                          // the one button of it (Si
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
 void insightWindow(App& a);                         // insight_ui.cpp: View > Insights, and the analysers' tick (called every frame)
 void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float snr);   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
+// app/smart5: the round-5 smart cards in the mode screens (docs/SMART5-UI-3.9.md); fed every frame by smart5Tick (from insightWindow)
+void smart5FmCard(App& a); void smart5AmCard(App& a); void smart5DabCard(App& a); void smart5DrmCard(App& a); void smart5HdCard(App& a);
+void smart5TvCard(App& a); void smart5DvbsCard(App& a); void smart5AtvCard(App& a);
+void smart5WxPassCard(App& a); void smart5GeoCard(App& a); void smart5LbandCard(App& a); void smart5CubeCard(App& a);
+void smart5GnssCard(App& a); void smart5AstroCard(App& a); void smart5SidCard(App& a); void smart5MeteorCard(App& a);
 void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
 void stationAntennaFor(const App& a, bool& known, bool& forBand);   // station_ui.cpp: for the doctor's coach: is an antenna entered, and does one suit the tuned frequency
