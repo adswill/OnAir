@@ -246,6 +246,7 @@ struct SampleLoss {
     uint64_t radioEvents = 0, cpuEvents = 0;
     double sinceRadioSec = -1, sinceCpuSec = -1;   // seconds since the last loss of each kind, -1 = none yet
     float loadPct = 0;                 // the receiver's share of real time on the sample thread over the last seconds (100 = just keeping up)
+    float cpuPct = 0;                  // the same with the sample thread's CPU time instead of the wall clock: a machine busy with other programs does not raise it
     float deliveredPct = -1;           // samples the radio handed over, percent of the rate it is set to, over the last seconds. -1 = not measured yet
     bool rateLow = false;              // a live radio under about 97% of that rate (the radio or driver, not the receiver's CPU load)
     bool network = false;              // the radio is reached over a network link (rtl_tcp, SpyServer, ...), not USB
@@ -333,6 +334,7 @@ public:
     // A file name for a recording of what the radio is tuned to right now (see recordingFileName())
     std::string recordingName(FileFormat fmt) const;
     uint64_t droppedSamples() const { return ring_.dropped(); }   // the OnAir side only, in samples (see sampleLoss())
+    double backlogSec() const { const double r = srcRate_; return r > 0 ? (double)ring_.available() / r : 0; }   // samples waiting in the input ring, in seconds of signal
     SampleLoss sampleLoss() const;
     std::string loadProfile() const;   // seconds the analysis thread spent on the spectrum and on the receiver, and the signal it has processed (diagnostics)
 
@@ -844,7 +846,7 @@ private:
     }
     void applyReset();
     std::vector<uint8_t> frameBuf_;
-    double tSpec_ = 0, tRx_ = 0;
+    double tSpec_ = 0, tRx_ = 0, tRxCpu_ = 0;   // analysis thread: wall and CPU seconds in the receiver
     double nSamp_ = 0;
     uint64_t logP1Count_ = 0;
     int logS1_ = -1, logS2_ = -1, logGi_ = -2, logState_ = -1, logFrameSyms_ = 0;
@@ -1188,10 +1190,10 @@ private:
     std::atomic<double> radioMissing_{0};
     std::atomic<uint64_t> radioMissEvents_{0}, cpuDropEvents_{0}, ringDroppedSeen_{0};
     std::atomic<int64_t> lastRadioMissNs_{0}, lastCpuDropNs_{0}, lastRadioLogNs_{0};
-    std::atomic<float> loadPct_{0};
+    std::atomic<float> loadPct_{0}, cpuPct_{0};
     std::atomic<float> deliveredPct_{-1};   // checkDelivery(): samples the library offered over wall time, percent of srcRate_; -1 until a window completes
     std::atomic<bool> live_{false};   // the source is a live radio (sampleLoss() is read by the interface without touching src_)
-    double loadT_ = 0, loadRx_ = 0, loadSamp_ = 0;   // analysis thread: where the last load measurement started
+    double loadT_ = 0, loadRx_ = 0, loadSamp_ = 0, loadRxCpu_ = 0;   // analysis thread: where the last load measurement started
     int64_t rateT0_ = 0;       // analysis thread: start of the delivered-rate window (steady ns); 0 = not started
     uint64_t rateOff0_ = 0;    // offered-sample count at rateT0_
     std::string reconnectErr_;

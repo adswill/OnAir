@@ -77,6 +77,7 @@ void Engine::ingest(cf32* x, size_t n) {
         }
     } else if (nbWas_) { nbWas_ = false; nbPct_ = 0.f; nb_.reset(); }   // switched off: the next start learns the level again
     const auto a0 = std::chrono::steady_clock::now();
+    const uint64_t c0 = cpu::threadNs();
     lastSamples_ = a0;   // the radio is alive, whether or not the resampler gives a sample out of this block
     if (offResample_) { offBuf_.clear(); offRs_.process(x, n, offBuf_); x = offBuf_.data(); n = offBuf_.size(); }
     if (!n) return;
@@ -115,6 +116,7 @@ void Engine::ingest(cf32* x, size_t n) {
         feedRx(x, n);
     }
     tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
+    tRxCpu_ += (double)(cpu::threadNs() - c0) * 1e-9;
     nSamp_ += n;
 }
 

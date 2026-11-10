@@ -39,7 +39,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     ring_.clear();
     ring_.resetDropped();
     radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0;
-    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
+    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
     holdDelivery(1000);   // a radio often stutters while its stream starts
     std::string err;
     if (int holder = 0; !claimDevice(dev, receiverId_, &holder)) { log("this radio is in use by " + deviceHolderText(holder)); return false; }
@@ -847,7 +847,7 @@ void Engine::announceAndRun(const DeviceInfo& dev, const TuneSettings& tune) {
         snprintf(b, sizeof b, "radio centre %.3f MHz%s  LNA %d dB  VGA %d dB  amp %s", tune.centerHz / 1e6, hwNote(tune).c_str(), tune.lnaDb, tune.vgaDb, tune.ampOn ? "on" : "off");
         log(b);
     }
-    tSpec_ = tRx_ = 0; nSamp_ = 0;
+    tSpec_ = tRx_ = tRxCpu_ = 0; nSamp_ = 0;
     stopReq_ = false;
     startEpoch_++;
     running_ = true;
