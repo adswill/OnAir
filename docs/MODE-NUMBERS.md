@@ -111,6 +111,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | SuperSID (VLF) | 500 | 502 | 501 | 501 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
 | Riometer | 501 | 503 | 502 | 502 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
 | Pulsar folding | 502 | 504 | 503 | 503 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
+| UMTS cells | 480 | 482 | 481 | 440 | feat38-broadcast | 3.8; 3G cell search by primary scrambling code (no BCH); synthetic signals only; numbers may need to move at merge |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |

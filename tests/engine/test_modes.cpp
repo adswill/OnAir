@@ -1,4 +1,4 @@
-// T2-Lite and MISO signalling: the receiver must lock on a T2-Lite SISO signal, and flag a MISO signal as unsupported.
+// T2-Lite and MISO signalling: the receiver must lock on a T2-Lite SISO signal, and and on a T2-Base MISO signal.
 #include "dect2/engine/engine.h"
 #include <chrono>
 #include <cstdio>
@@ -41,7 +41,7 @@ int main() {
     RxTelemetry miso = run(1, 7);
     printf("T2-Base MISO: L1-pre ok %d, s1 %d, unsupported %zu\n", miso.l1preOk, miso.l1pre.s1, miso.unsupported.size());
     for (auto& u : miso.unsupported) printf("   ! %s\n", u.c_str());
-    CHECK(miso.l1preOk ? !miso.unsupported.empty() : true, "MISO must be flagged when L1-pre decodes");
+    CHECK(miso.l1preOk && miso.unsupported.empty(), "MISO should lock with nothing flagged");
     printf(fails ? "mode tests FAILED\n" : "mode tests passed\n");
     return fails ? 1 : 0;
 }

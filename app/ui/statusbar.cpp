@@ -91,6 +91,7 @@ static void statusState(App& a, bool run, const RxTelemetry& rx) {
         ro(N_("Channel"), "6 MHz");
         snprintf(b, sizeof b, "%d", rx.atsc.fieldParity); ro("Field", b);
         ro("Pilot", tr(rx.atsc.pilot ? "locked" : "-"));
+        if (rx.atsc.mhPresent) { snprintf(b, sizeof b, "%s, %.0f%% %s", tr("present"), rx.atsc.mhSlotShare * 100, tr("of slots")); ro("ATSC-M/H", b); }
     } else if (run && rx.standard == 1 && rx.state >= 1) {
         ro("Mode", "DVB-T");
         ro("FFT", rx.fftN == 8192 ? "8K" : "2K");

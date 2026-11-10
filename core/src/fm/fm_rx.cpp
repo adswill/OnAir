@@ -10,6 +10,7 @@
 #include "dect2/fm/fm_rbds.h"
 #include "dect2/fm/fm_rds.h"
 #include "dect2/fm/fm_tone.h"
+#include "dect2/fm/fm_subcarrier.h"
 #include "dect2/fm/fm_neighbour.h"
 #include "dect2/dsp/resampler.h"
 #include <algorithm>
@@ -335,6 +336,8 @@ struct FmReceiver::Impl {
 
     // RDS
     DecimFir<cf32> rdsLp;
+    FmSubcarriers subs;                          // RDS2 and SCA subcarriers above 60 kHz (not in the census: analysis only)
+    std::vector<float> scaQ;
     RationalResampler rdsRs;
     bool rdsRsOk = false;
     std::vector<cf32> rIn, r1, r19;
@@ -407,6 +410,7 @@ struct FmReceiver::Impl {
         const int dr = std::max(1, (int)std::lround(fm / 25000.0));
         rdsLp.design(designLowpass(3200, 10000, fm), dr);
         rdsRsOk = rdsRs.configure(fm / dr, 19000);
+        subs.configure(fm);
         ready = true;
         reset();
         if (!silent && !audio) { audio = std::make_unique<AudioOut>(); audio->start(kAudioRate); audio->setStartThreshold(kAudioRate / 5); applyAudio(); }
@@ -430,7 +434,7 @@ struct FmReceiver::Impl {
 
     void reset() {
         for (auto& c : chan) c.reset();
-        mpxDecim.reset(); mpxDecimR.reset(); audioCma = true; split = false; lpM.reset(); lpD.reset(); rdsLp.reset(); tone.reset();
+        mpxDecim.reset(); mpxDecimR.reset(); audioCma = true; split = false; lpM.reset(); lpD.reset(); rdsLp.reset(); subs.reset(); scaQ.clear(); tone.reset();
         if (audioRsOk) audioRs.reset();
         if (rdsRsOk) rdsRs.reset();
         prev = prevRaw = cf32(1, 0); dcCh = cf32(0, 0); cmaReset(); mpReset(); cmaUse = true; mpRipple = 0; std::memset(mpHist, 0, sizeof mpHist); mpAvg = 0; mpHp = 0;
@@ -641,6 +645,7 @@ struct FmReceiver::Impl {
         if (pilotLock && (unlockT >= 0.2 || 2 * pI < 0.012)) pilotLock = false;
 
         if (analysis) { runRds(n); return; }
+        subs.feed(sIn.data(), n);
         mOut.clear(); dOut.clear();
         lpM.process(sIn.data(), n, mOut);
         lpD.process(dIn.data(), n, dOut);
@@ -663,6 +668,12 @@ struct FmReceiver::Impl {
             audioRs.process(lr.data(), na, lr48);
             outL.resize(lr48.size()); outR.resize(lr48.size()); inter.resize(lr48.size() * 2);
             for (size_t i = 0; i < lr48.size(); i++) { outL[i] = lr48[i].real(); outR[i] = lr48[i].imag(); }
+            if (subs.scaListen() >= 0) {   // an SCA channel instead of the programme, the moment some has been demodulated
+                subs.takeScaAudio(scaQ);
+                const size_t k = std::min(scaQ.size(), lr48.size());
+                for (size_t i = 0; i < k; i++) outL[i] = outR[i] = 0.5f * scaQ[i];
+                scaQ.erase(scaQ.begin(), scaQ.begin() + (ptrdiff_t)k);
+            }
             {   // the tone control: off by default, so the audio is not touched unless the user sets it
                 const int tb = toneBass.load(), tt = toneTreble.load();
                 const bool tw = toneWarm.load();
@@ -795,6 +806,7 @@ struct FmReceiver::Impl {
         t.stereo = analysis ? pilotLock : (pilotLock || stereoMode.load() == 2) && stereoBlend > 0.5f * std::max(snrBlend, 0.1f) && !forceMono.load(std::memory_order_relaxed);
         t.stereoPct = t.stereo ? 100 * stereoBlend : 0.f;
         t.pilotPct = pilotLock ? (float)(200 * pI) : 0.f;
+        t.sub = subs.status();
         t.rdsSync = rds.synced;
         t.rdsBlockOkPct = rds.okPct;
         t.rdsGroups = rds.groups;
@@ -878,6 +890,7 @@ double FmReceiver::channelWidth() const { return 2 * p_->chanWant.load(); }
 void FmReceiver::setSilent(bool s) { p_->silent = s; }
 void FmReceiver::setRdsCorrection(int level) { p_->rds.setCorrection(level >= 1, level >= 2); }
 void FmReceiver::setRdsGroupTap(std::function<void(const uint16_t blocks[4], const uint8_t err[4])> cb) { p_->rds.setGroupTap(std::move(cb)); }
+void FmReceiver::setScaListen(int ch) { p_->subs.setScaListen(ch); }
 void FmReceiver::setAudioTap(std::function<void(const float*, const float*, size_t)> cb) { p_->tap = std::move(cb); }
 
 } // namespace dect2

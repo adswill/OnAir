@@ -1,5 +1,6 @@
 // DRM receiver telemetry, shared by the receiver and the UI.
 #pragma once
+#include "dect2/drm/drm_msg.h"
 #include "dect2/common/ring.h"
 #include <cstdint>
 #include <cstdio>
@@ -36,6 +37,7 @@ struct DrmService {
 };
 
 struct DrmTelemetry {
+    drm::SdcExtra sdcExtra;           // schedules, regions, announcements, alternative frequencies, CA, packet FEC (SDC types 2, 3, 4, 6, 7, 14)
     // ---- the part every mode has: the engine copies it into RxTelemetry; keep these members and what they mean
     uint64_t seq = 0;            // grows with every report and never restarts (not even after reset())
     int state = 0;               // 0 searching, 1 partly locked (synchronised, the FAC is read), 2 locked and decoding (SDC and MSC)

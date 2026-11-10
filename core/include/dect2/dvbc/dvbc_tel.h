@@ -1,5 +1,6 @@
 // What the DVB-C receiver reports (RxTelemetry::dvbc, standard 41).
 #pragma once
+#include "docsis_down.h"
 #include "dect2/common/ring.h"
 #include <cstdint>
 #include <cstdio>
@@ -18,6 +19,8 @@ struct DvbcTelemetry {
     uint64_t blocksOk = 0, blocksBad = 0;   // Reed-Solomon packets
 
     // ---- DVB-C
+    bool annexB = false;         // J.83 annex B (clear QAM)
+    DocsisStatus docsis;         // DOCSIS management, when this carrier is a cable modem downstream
     int qam = -1;                // 0..4: 16, 32, 64, 128, 256-QAM, -1 not known yet
     bool qamManual = false;
     double symbolRate = 0;       // Hz, in use (timing loop included)

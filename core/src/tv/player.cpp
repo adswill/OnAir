@@ -1,3 +1,4 @@
+#include "dect2/tv/cc_decode.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/tv/player.h"
 #include "dect2/tv/hw_guard.h"
@@ -103,6 +104,7 @@ struct Player::Impl {
     int wantTrack = 0;
     std::atomic<int> trackChange{-1};
     std::shared_ptr<Subtitle> sub;
+    std::mutex ccMu; CaptionDecoder cc;      // CEA-608 / 708 captions from the video's user data
     std::mutex submu;
     std::atomic<bool> lossFlag{false};   // set when the demuxer has read past a transport-stream loss on the video PID
 
@@ -263,6 +265,13 @@ void Player::setBufferMB(int mb) {
     if (shifted_) goLiveLocked();
     ring_.setCapacityPackets((size_t)mb * 1024 * 1024 / 188);
     pcrIdx_.clear(); cursor_ = 0;
+}
+
+std::string Player::latestCaption(size_t* count) const {
+    Impl& I = *p_;
+    std::lock_guard<std::mutex> lk(I.ccMu);
+    if (count) *count = I.cc.cues().size();
+    return I.cc.cues().empty() ? std::string() : I.cc.cues().back().text;
 }
 
 void Player::pause() {
@@ -700,6 +709,7 @@ void Player::threadMain() {
                 }
             }
             lastVPts = vf->pts; haveVPts = true;
+            if (AVFrameSideData* cc = av_frame_get_side_data(f, AV_FRAME_DATA_A53_CC)) { std::lock_guard<std::mutex> lk(I.ccMu); I.cc.feed(cc->data, (int)(cc->size / 3), vf->pts); }
             // DVB subtitle overlay: only frames that carry a subtitle are converted to RGBA on the CPU
             std::shared_ptr<Subtitle> sb;
             if (subsOn_) { std::lock_guard<std::mutex> lk(I.submu); sb = I.sub; }

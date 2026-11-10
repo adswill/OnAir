@@ -22,9 +22,12 @@ struct Register { Register() { onair_dvbsi_set_convert(convertCb); } } registerC
 
 static std::atomic<bool> gGbDefault{false};
 void setGbDefaultGlobal(bool on) { gGbDefault.store(on); }
+static std::atomic<bool> gArib{false};
+void setAribDefaultGlobal(bool on) { gArib.store(on); }
 
 std::string dvbText(const uint8_t* p, int n, bool gbDefault) {
     if (n <= 0) return {};
+    if (gArib.load() && looksArib(p, n)) return aribText(p, n);
     std::vector<uint8_t> b((size_t)n * 4 + 16);
     const size_t len = onair_dvbsi_dvb_text(p, (size_t)n, gbDefault || gGbDefault.load(), b.data(), b.size());
     return len > b.size() ? std::string() : std::string((const char*)b.data(), len);

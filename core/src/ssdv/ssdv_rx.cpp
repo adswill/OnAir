@@ -1,5 +1,6 @@
 // SSDV receiver, see ssdv_rx.h
 #include "dect2/ssdv/ssdv_rx.h"
+#include "dect2/ssdv/wenet_tel.h"
 #include "dect2/ssdv/ssdv_proto.h"
 #include "dect2/ssdv/ssdv_tel.h"
 #include "dect2/ssdv/wenet.h"
@@ -97,6 +98,7 @@ struct SsdvReceiver::Impl {
     wenet::Demod wn;
     uint64_t wenetOther = 0, wenetIdle = 0;
     bool lastWenet = false;
+    WenetGps lastGps; WenetOrient lastOrient; std::vector<WenetText> wenetTexts;
     std::string saveDir;
     // results
     std::deque<SsdvPacketLog> packets;
@@ -180,6 +182,9 @@ struct SsdvReceiver::Impl {
         }
         lastGoodSec = now(); lastBaud = h.baud; lastAsync = false; lastWenet = true;
         if (type == 0x56) wenetIdle++; else wenetOther++;
+        if (type == 0x01) { WenetGps g; if (wenetParseGps(h.pkt.data(), wenet::kPayloadBytes, g)) lastGps = g; }
+        else if (type == 0x02) { WenetOrient o; if (wenetParseOrient(h.pkt.data(), wenet::kPayloadBytes, o)) lastOrient = o; }
+        else if (type == 0x00) { WenetText m; if (wenetParseText(h.pkt.data(), wenet::kPayloadBytes, m)) { wenetTexts.push_back(m); if (wenetTexts.size() > 50) wenetTexts.erase(wenetTexts.begin()); } }
     }
 
     void applyMask() {
@@ -318,7 +323,7 @@ struct SsdvReceiver::Impl {
         o.dataValid = t - lastGoodSec < 30.0;
         o.state = o.dataValid ? 2 : (fe.carrierRecent(5) ? 1 : 0);
         o.cfoHz = fe.cfoHz(); o.snrDb = (float)fe.snrEma; o.levelDb = fe.takeLevelDb();
-        o.blocksOk = ok + wenetOther + wenetIdle; o.blocksBad = bad; o.baud = lastBaud; o.async = lastAsync; o.wenet = lastWenet; o.wenetOther = wenetOther; o.wenetIdle = wenetIdle; o.fixedBaud = fixedBaud; o.corrected = corrected; o.imagesDone = done;
+        o.blocksOk = ok + wenetOther + wenetIdle; o.blocksBad = bad; o.baud = lastBaud; o.async = lastAsync; o.wenetGps = lastGps; o.wenetOrient = lastOrient; o.wenetTexts = wenetTexts; o.wenet = lastWenet; o.wenetOther = wenetOther; o.wenetIdle = wenetIdle; o.fixedBaud = fixedBaud; o.corrected = corrected; o.imagesDone = done;
         o.packets.assign(packets.begin(), packets.end());
         for (auto& im : images) {
             SsdvImage s;

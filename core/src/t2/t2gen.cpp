@@ -67,6 +67,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
     nP2_ = m->nP2;
     PilotConfig pc;
     pc.fftCode = m->code; pc.ext = p.ext && m->kExt; pc.pp = p.pp; pc.tr = p.tr; pc.giIdx = p.giIdx;
+    pc.miso = p.s1 == 1 || p.s1 == 4;
     pm_.reset(new PilotMap(pc));
     for (int pp = 0; !pm_->valid() && pp < 8; pp++) { pc.pp = pp; pm_.reset(new PilotMap(pc)); }
     p_.pp = pc.pp;
@@ -109,6 +110,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
     post_.dyn.resize(1);
     post_.dyn[0].numBlocks = 100;
     pre_.lite = (p.s1 == 3 || p.s1 == 4) ? 1 : 0;
+    if (p.mixed) { post_.fefType = 0; post_.fefLength = p.fefLength & 0x3FFFFF; post_.fefInterval = p.fefInterval; post_.fefLengthMsb = (p.fefLength >> 22) & 3; }
     if (p.payload) {
         L1PlpConf& c = post_.plps[0];
         c.mod = p.plpMod; c.cod = p.plpCod; c.rotation = p.plpRot ? 1 : 0; c.fecType = p.plpShort ? 0 : 1; c.timeIlLength = p.plpTi;
@@ -117,7 +119,7 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
         // how many FEC blocks fit: the P2 cells left after L1, plus the data cells of every data symbol
         post_.frameIdx = 0;
         L1Pre pre = pre_;
-        const int nPost = (int)encodeL1Post(pre, post_, nP2_, false).size();
+        const int nPost = (int)encodeL1Post(pre, post_, nP2_, p_.mixed).size();
         const int nPre = (int)encodeL1Pre(pre).size();
         long cap = (long)nP2_ * pm_->p2DataCells() - nPre - nPost;
         std::vector<uint8_t> types;
@@ -129,6 +131,42 @@ T2Generator::T2Generator(const TxParams& p) : i_(new Impl), p_(p) {
         c.numBlocksMax = plpBlocks_;
         post_.dyn[0].numBlocks = plpBlocks_;
         post_.dyn[0].start = 0;
+        addrCap_ = cap;
+    }
+    if (p.payload && !p.plps.empty()) {
+        // several PLPs: the signalling first (its size depends on the number of PLPs), then the addresses
+        post_.numPlp = (int)p.plps.size();
+        post_.plps.assign(p.plps.size(), L1PlpConf());
+        post_.dyn.assign(p.plps.size(), L1PlpDyn());
+        post_.subSlices = p.subSlices;
+        for (size_t i = 0; i < p.plps.size(); i++) {
+            const TxPlp& q = p.plps[i]; L1PlpConf& c = post_.plps[i];
+            c.id = q.id; c.type = q.type; c.groupId = q.group; c.mod = q.mod; c.cod = q.cod; c.rotation = q.rot ? 1 : 0; c.fecType = q.shortFrame ? 0 : 1; c.timeIlLength = q.ti; c.plpMode = 1; c.numBlocksMax = q.blocks;
+            post_.dyn[i].id = q.id; post_.dyn[i].numBlocks = q.blocks;
+        }
+        L1Pre pre = pre_;
+        const int nPost = (int)encodeL1Post(pre, post_, nP2_, p_.mixed).size();
+        const int nPre = (int)encodeL1Pre(pre).size();
+        long cap = (long)nP2_ * pm_->p2DataCells() - nPre - nPost;
+        std::vector<uint8_t> types;
+        for (int s = nP2_; s < symbols_; s++) { pm_->symbolTypes(s, symbols_, types); for (int k = 0; k < k_; k++) cap += types[k] == kCellData; }
+        addrCap_ = cap;
+        long a = 0, d2 = 0;
+        for (size_t i = 0; i < p.plps.size(); i++) {
+            PlpFec f; f.shortFrame = p.plps[i].shortFrame; f.rate = p.plps[i].cod; f.mod = p.plps[i].mod; f.rotation = p.plps[i].rot;
+            const long n = (long)p.plps[i].blocks * fecDims(f).cellsPerBlock;
+            if (p.plps[i].type != 2) { post_.dyn[i].start = (int)a; a += n; } else d2 += n;
+        }
+        post_.type2Start = (int)a;
+        // the type 2 region fills what is left, in equal sub-slices (8.3.6.3.3): one sub-slice of each type 2 PLP after the other
+        const long nSub = std::max(1, p.subSlices);
+        post_.subSliceInterval = (int)(d2 / nSub);
+        long off = a;
+        for (size_t i = 0; i < p.plps.size(); i++) if (p.plps[i].type == 2) {
+            PlpFec f; f.shortFrame = p.plps[i].shortFrame; f.rate = p.plps[i].cod; f.mod = p.plps[i].mod; f.rotation = p.plps[i].rot;
+            post_.dyn[i].start = (int)off;
+            off += (long)p.plps[i].blocks * fecDims(f).cellsPerBlock / nSub;
+        }
     }
 }
 
@@ -156,7 +194,7 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
     // ---- P2 payload: L1-pre, L1-post, then filler, distributed over the P2 symbols and frequency interleaved
     post_.frameIdx = (int)(frameNo_ % (uint64_t)pre_.numFrames);   // clause 7.2.3.1: FRAME_IDX < NUM_T2_FRAMES
     L1Pre pre = pre_;
-    auto postCells = encodeL1Post(pre, post_, nP2_, false);
+    auto postCells = encodeL1Post(pre, post_, nP2_, p_.mixed);
     auto preCells = encodeL1Pre(pre);
     const int cP2 = pm_->p2DataCells();
     std::vector<cf32> stream;
@@ -165,16 +203,16 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
     // PLP payload cells (only with p_.payload): they follow L1 in the P2 symbols and carry on through the data symbols
     std::vector<cf32> plp;
     size_t plpUsed = 0;
-    if (p_.payload && plpBlocks_ > 0) {
-        PlpFec f; f.shortFrame = p_.plpShort; f.rate = p_.plpCod; f.mod = p_.plpMod; f.rotation = p_.plpRot;
+    // one PLP to cells: baseband frames, BCH, LDPC, bit and cell interleaving
+    auto makeCells = [&](const PlpFec& f, int blocks, int ti, const std::function<void(uint8_t*)>& src, std::vector<std::vector<uint8_t>>& bb, std::vector<cf32>& outCells) {
         const FecDims d = fecDims(f);
         const LdpcCode& ldpc = ldpcFor(f);
         const BchCode& bch = bchFor(f);
         const auto& map = bitInterleaverMap(f);
         const uint8_t* rnd = bbRandomiser();
-        lastBb_.assign(plpBlocks_, {});
+        bb.assign(blocks, {});
         std::vector<cf32> cells;
-        for (int b = 0; b < plpBlocks_; b++) {
+        for (int b = 0; b < blocks; b++) {
             // a transport stream of 188-byte packets in normal mode: each unit is the CRC-8 of the previous packet, then 187 bytes
             const int npk = (d.kBch - 80) / 1504;
             std::vector<uint8_t> bits(d.kBch, 0);
@@ -184,7 +222,7 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
             uint8_t prevCrc = 0;
             for (int k = 0; k < npk; k++) {
                 uint8_t pay[187];
-                if (p_.tsSource) { uint8_t pk[188]; p_.tsSource(pk); memcpy(pay, pk + 1, 187); }
+                if (src) { uint8_t pk[188]; src(pk); memcpy(pay, pk + 1, 187); }
                 else for (int j = 0; j < 187; j++) pay[j] = (uint8_t)(I.rng() >> 11);
                 size_t o = 80 + (size_t)k * 1504;
                 auto putByte = [&](size_t at, uint8_t v) { for (int q = 0; q < 8; q++) bits[at + q] = (v >> (7 - q)) & 1; };
@@ -195,7 +233,7 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
                 for (int j = 0; j < 187; j++) for (int q = 7; q >= 0; q--) { unsigned fb = ((crc >> 7) & 1) ^ ((pay[j] >> q) & 1); crc = (crc << 1) & 0xff; if (fb) crc ^= 0xD5; }
                 prevCrc = (uint8_t)crc;
             }
-            lastBb_[b] = bits;
+            bb[b] = bits;
             for (int i = 0; i < d.kBch; i++) bits[i] ^= rnd[i];
             bch.encode(bits, d.kBch);
             ldpc.encode(bits);
@@ -205,7 +243,27 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
             qamMapBlock(f, lab, cl);
             cells.insert(cells.end(), cl.begin(), cl.end());
         }
-        cellInterleave(f, plpBlocks_, p_.plpTi, cells, plp);
+        cellInterleave(f, blocks, ti, cells, outCells);
+    };
+    if (p_.payload && !p_.plps.empty()) {
+        // every PLP at its addresses (8.3.6.3); addresses no PLP takes keep random dummy cells
+        plp.assign((size_t)addrCap_, cf32(0, 0));
+        std::vector<uint8_t> used((size_t)addrCap_, 0);
+        for (size_t i = 0; i < p_.plps.size(); i++) {
+            const TxPlp& q = p_.plps[i];
+            PlpFec f; f.shortFrame = q.shortFrame; f.rate = q.cod; f.mod = q.mod; f.rotation = q.rot;
+            std::vector<cf32> cl;
+            makeCells(f, q.blocks, q.ti, q.tsSource, lastBbPlp_[q.id], cl);
+            const long start = post_.dyn[i].start;
+            if (q.type == 2) {
+                const size_t nSub = (size_t)std::max(1, p_.subSlices), per = cl.size() / nSub;
+                for (size_t j = 0; j < nSub; j++) for (size_t k = 0; k < per; k++) { const size_t at = (size_t)start + j * (size_t)post_.subSliceInterval + k; if (at < plp.size()) { plp[at] = cl[j * per + k]; used[at] = 1; } }
+            } else for (size_t k = 0; k < cl.size() && (size_t)start + k < plp.size(); k++) { plp[(size_t)start + k] = cl[k]; used[(size_t)start + k] = 1; }
+        }
+        for (size_t k = 0; k < plp.size(); k++) if (!used[k]) { const uint32_t r = I.rng(); plp[k] = cf32((r & 1) ? dect2::math::k1OverSqrt2f : -dect2::math::k1OverSqrt2f, (r & 2) ? dect2::math::k1OverSqrt2f : -dect2::math::k1OverSqrt2f); }
+    } else if (p_.payload && plpBlocks_ > 0) {
+        PlpFec f; f.shortFrame = p_.plpShort; f.rate = p_.plpCod; f.mod = p_.plpMod; f.rotation = p_.plpRot;
+        makeCells(f, plpBlocks_, p_.plpTi, p_.tsSource, lastBb_, plp);
     }
     while ((int)stream.size() < nP2_ * cP2) {
         if (plpUsed < plp.size()) { stream.push_back(plp[plpUsed++]); continue; }
@@ -222,6 +280,11 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
         p2sym[l] = out;
     }
     frameNo_++;
+    const bool miso = p_.s1 == 1 || p_.s1 == 4;
+    if (miso) { tx2_.resize(frameLength()); memcpy(tx2_.data(), out.data(), sizeof(cf32) * (size_t)kP1Len); }
+    cf32* o2 = tx2_.data() + (miso ? kP1Len : 0);
+    std::vector<float> re2, im2;
+    const int dxP = pm_->dx();
     for (int s = 0; s < symbols_; s++) {
         pm_->symbolTypes(s, symbols_, types);
         int p2idx = 0, dIdx = 0;
@@ -240,25 +303,49 @@ void T2Generator::nextFrame(std::vector<cf32>& out) {
         }
         std::fill(I.re.begin(), I.re.end(), 0.f);
         std::fill(I.im.begin(), I.im.end(), 0.f);
+        if (miso) { re2.assign(I.re.size(), 0.f); im2.assign(I.im.size(), 0.f); }
+        // the data cells in carrier order, for the Alamouti pairs of group 2 (9.1)
+        std::vector<cf32> carrierData;
         for (int k = 0; k < k_; k++) {
             int f = k - (k_ - 1) / 2;
             size_t bin = (size_t)((f + n_) % n_);
             switch (types[k]) {
             case kCellData: {
-                if (s < nP2_) {
-                    cf32 v = p2sym[s][p2idx++];
-                    I.re[bin] = v.real();
-                    I.im[bin] = v.imag();
-                } else {
-                    const cf32 v = logical[Hd[dIdx++]];
-                    I.re[bin] = v.real();
-                    I.im[bin] = v.imag();
-                }
+                const cf32 v = s < nP2_ ? p2sym[s][p2idx++] : logical[Hd[dIdx++]];
+                I.re[bin] = v.real();
+                I.im[bin] = v.imag();
+                if (miso) carrierData.push_back(v);
             } break;
             case kCellP2Papr:
             case kCellTrPapr: break;
-            default: I.re[bin] = pm_->pilot(s, k, types[k]).real(); break;
+            default: {
+                const float pv = pm_->pilot(s, k, types[k]).real();
+                I.re[bin] = pv;
+                if (miso) {
+                    // 9.2.8: the pilots of group 2
+                    bool inv = false;
+                    if (types[k] == kCellP2Pilot) inv = (k % 6) == 3;
+                    else if (k == 0 || k == k_ - 1) inv = (s & 1) != 0;
+                    else if (k % dxP == 0) inv = ((k / dxP) & 1) != 0;   // scattered, frame closing, and continual pilots on scattered-pilot-bearing carriers
+                    re2[bin] = inv ? -pv : pv;
+                }
+            } break;
             }
+        }
+        if (miso) {
+            size_t p = 0;
+            for (int k = 0; k < k_; k++) {
+                if (types[k] != kCellData) continue;
+                int f = k - (k_ - 1) / 2; size_t bin = (size_t)((f + n_) % n_);
+                const cf32 v = p & 1 ? std::conj(carrierData[p - 1]) : (p + 1 < carrierData.size() ? -std::conj(carrierData[p + 1]) : cf32(0, 0));
+                re2[bin] = v.real(); im2[bin] = v.imag();
+                p++;
+            }
+            std::vector<float> xr = re2, xi = im2;
+            inverseFft(I.log2N, xr, xi);
+            for (int i = 0; i < g_; i++) o2[i] = cf32(xr[n_ - g_ + i], xi[n_ - g_ + i]) * norm;
+            for (int i = 0; i < n_; i++) o2[g_ + i] = cf32(xr[i], xi[i]) * norm;
+            o2 += n_ + g_;
         }
         inverseFft(I.log2N, I.re, I.im);
         for (int i = 0; i < g_; i++) o[i] = cf32(I.re[n_ - g_ + i], I.im[n_ - g_ + i]) * norm;

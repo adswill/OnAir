@@ -126,6 +126,7 @@ ebicab	--mode ebicab	Overview|Balise|Receiver|History
 inmsat	--mode inmsat	Overview|Inmarsat|Receiver|History
 nrf24	--mode nrf24	Overview|nRF24|Receiver|History
 atis	--mode atis	Overview|ATIS|Receiver|History
+umts	--mode umts	Cells|Receiver|History
 selcal	--mode selcal	Overview|SELCAL|Receiver|History
 sensors	--mode sensors	Overview|Sensors|Receiver|History
 sferics	--mode sferics	Overview|Sferics|Receiver|History

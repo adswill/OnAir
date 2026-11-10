@@ -11,7 +11,8 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
     if (!pmp->valid()) return false;
     const PilotMap& pm = *pmp;
     const int K = pm.carriers(), off = (kMax - K) / 2;
-    const int S = fftCode == 5 ? 6 : 3;
+    const bool miso = misoNow();
+    const int S = fftCode == 5 && !miso ? 6 : 3;
     const int M = (K - 1) / S + 1;
     std::vector<cf32> hg(M, cf32(0, 0));
     std::vector<int> cnt(M, 0);
@@ -40,9 +41,10 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
         else if (b < M) hg[n] = hg[b];
     }
     const int back = std::min(G / 4, 32);
-    std::vector<cf32> H;
-    interp.run(hg, S, K, N, (double)back + G / 2.0, H);
-    {
+    std::vector<cf32> H, H2m;
+    if (miso) misoChannels(hg, S, K, H, H2m);   // (the sum of the two paths and the difference are on alternate pilots: H is group 1, H2m group 2)
+    else interp.run(hg, S, K, N, (double)back + G / 2.0, H);
+    if (!miso) {
         // second pass: narrow the delay passband to where the channel actually has energy
         int tMin, tMax;
         int lim = std::min(N / 2 - 1, G * 3 / 2);
@@ -88,6 +90,13 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
         pm.symbolTypes(l, nP2 + 2, types);
         std::vector<cf32> rx;
         rx.reserve(cP2);
+        std::vector<cf32> misoG;
+        if (miso) {
+            std::vector<int> dk; for (int kk = 0; kk < K; kk++) if (types[kk] == kCellData) dk.push_back(kk);
+            rx.resize(dk.size()); misoG.resize(dk.size());
+            for (size_t p = 0; p + 1 < dk.size(); p += 2) alamouti(p2cells[l][off + dk[p]], p2cells[l][off + dk[p + 1]], H[dk[p]], H2m[dk[p]], rx[p], rx[p + 1], misoG[p]);
+            for (size_t p = 0; p + 1 < dk.size(); p += 2) misoG[p + 1] = misoG[p];
+        } else
         for (int kk = 0; kk < K; kk++)
             if (types[kk] == kCellData) rx.push_back(p2cells[l][off + kk] / H[kk]);
         std::vector<int> Hi;
@@ -97,7 +106,7 @@ bool T2Receiver::Impl::p2Hypothesis(bool ext, bool final) {
         {
             int jj = 0;
             for (int kk = 0; kk < K; kk++)
-                if (types[kk] == kCellData && jj < cP2) { gsym[l][Hi[jj]] = cf32(std::norm(H[kk]), 0); jj++; }
+                if (types[kk] == kCellData && jj < cP2) { gsym[l][Hi[jj]] = miso ? misoG[(size_t)jj] : cf32(std::norm(H[kk]), 0); jj++; }
         }
         for (int j = 0; j < cP2 && j < (int)rx.size(); j++) sym[l][Hi[j]] = rx[j];
         eqAll.insert(eqAll.end(), rx.begin(), rx.end());

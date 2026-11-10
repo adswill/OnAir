@@ -393,6 +393,23 @@ void fmRadioPanel(App& a) {
             else snprintf(rds, sizeof rds, "%.0f %% blocks ok", fm.rdsBlockOkPct);
         }
         row(Ic::Wave, "RDS", "%s", rds);
+        if (live) {
+            std::string subTxt;
+            for (auto& c : fm.sub.rds2) if (c.synced) { char b[64]; snprintf(b, sizeof b, "%sRDS2 %.2f kHz (%.0f %%)", subTxt.empty() ? "" : ", ", c.carrierHz / 1e3, c.okPct); subTxt += b; }
+            static int scaSel = -1;
+            for (int i = 0; i < 2; i++) if (fm.sub.sca[i].present) { char b[64]; snprintf(b, sizeof b, "%sSCA %.0f kHz", subTxt.empty() ? "" : ", ", fm.sub.sca[i].carrierHz / 1e3); subTxt += b; }
+            if (!subTxt.empty()) row(Ic::Wave, tr("Subcarriers"), "%s", subTxt.c_str());
+            if (fm.sub.sca[0].present || fm.sub.sca[1].present || scaSel >= 0) {
+                row(Ic::Speaker, tr("Listen to"), "%s", "");
+                ImGui::SameLine();
+                static const char* scaNames[] = {N_("the programme"), "SCA 67 kHz", "SCA 92 kHz"};
+                ImGui::SetNextItemWidth(140 * gUi);
+                if (ImGui::BeginCombo("##fmsca", scaSel < 0 ? tr(scaNames[0]) : scaNames[scaSel + 1])) {
+                    for (int i = -1; i < 2; i++) if (ImGui::Selectable(i < 0 ? tr(scaNames[0]) : scaNames[i + 1], scaSel == i)) { scaSel = i; a.engine.fm().setScaListen(i); }
+                    ImGui::EndCombo();
+                }
+            }
+        }
         if (live && fm.equaliser) row(Ic::Wave, tr("Multipath"), "%s", tr("echo found, equaliser on"));
         row(Ic::Warning, "Traffic", "%s", !live ? "-" : fm.trafficAlert ? "ANNOUNCEMENT" : fm.trafficProgram ? "station (TP)" : "no");
         ImGui::TableNextRow(); ImGui::TableNextColumn(); iconInline(Ic::Wave, iconDim(), 0.9f); ImGui::SameLine(0, 5 * gUi); ImGui::TextDisabled("%s", tr("RDS standard")); ImGui::TableNextColumn();

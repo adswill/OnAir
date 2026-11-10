@@ -56,7 +56,7 @@ PilotMap::PilotMap(const PilotConfig& c) : cfg_(c) {
     }
     // P2 symbol: every 3rd carrier is a pilot (every 6th for 32K SISO), edge carriers in extended mode, and reserved carriers
     p2Types_.assign(cps_, kCellData);
-    int step = (c.fftCode == 5) ? 6 : 3;
+    int step = (c.fftCode == 5 && !c.miso) ? 6 : 3;
     for (int i = 0; i < cps_; i += step) p2Types_[i] = kCellP2Pilot;
     if (c.ext)
         for (int i = 0; i < kExt_; i++) { p2Types_[i] = kCellP2Pilot; p2Types_[i + (cps_ - kExt_)] = kCellP2Pilot; }
@@ -72,6 +72,7 @@ PilotMap::PilotMap(const PilotConfig& c) : cfg_(c) {
         int gi = c.giIdx;
         if ((gi == 4 && c.pp == 6) || (gi == 0 && c.pp == 3) || ((gi == 1 || gi == 6) && c.pp == 1)) hasFc_ = false;
     }
+    if (c.miso) hasFc_ = c.pp != 7;
     fcTypes_.assign(cps_, kCellData);
     for (int i = 0; i < cps_; i++) if (i % dx_ == 0) fcTypes_[i] = kCellScattered;
     if (c.fftCode == 3 && (c.pp == 3 || c.pp == 4)) fcTypes_[cps_ - 2] = kCellScattered;

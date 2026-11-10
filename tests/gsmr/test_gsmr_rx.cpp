@@ -44,7 +44,7 @@ int main() {
     const ModeTuning mt = gsmrTuning();
     CHECK(mt.stdMode == 41 && modeTuningById("gsmr") && modeTuningById("gsmr")->stdMode == 41, "tuning table");
     CHECK(gsmrHzToArfcn(922.2e6) == 960 && std::fabs(gsmrArfcnToHz(960) - 922.2e6) < 1 && gsmrHzToArfcn(935.0e6) == 0 && gsmrHzToArfcn(957.4e6) == 112 &&
-          gsmrHzToArfcn(925.2e6) == 975 && gsmrHzToArfcn(1.8e9) == -1, "ARFCN raster");
+          gsmrHzToArfcn(925.2e6) == 975 && gsmrHzToArfcn(1.8e9) == -1 && gsmrHzToArfcn(1805.2e6) == 512 && gsmrHzToArfcn(1879.8e6) == 885 && gsmrArfcnToHz(600) == 1822.8e6, "ARFCN raster");
     CHECK(gsmrIsRailway(955) && gsmrIsRailway(973) && !gsmrIsRailway(974) && !gsmrIsRailway(50), "railway band");
     // scene 0: two cells at 5 Msps, 20 dB, 8 kHz tuning error
     {

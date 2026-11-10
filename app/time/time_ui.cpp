@@ -340,7 +340,9 @@ void receiver(App& a) {
     kvRow(a, "signal time", "%.1f s", t.timeSec);
     ImGui::Spacing();
     ImGui::PushTextWrapPos(0);
-    ImGui::TextDisabled("Not used: the DCF77 and WWVB phase codes, the WWV voice announcements.");
+    if (t.dcfPhaseLocked) ImGui::TextDisabled("DCF77 phase code: locked, correlation %.2f, last bit %d", t.dcfPhaseCorr, t.dcfPhaseBit);
+    if (t.wwvbPhaseLocked) ImGui::TextDisabled("WWVB phase code: minute %lld (UTC seconds)", (long long)t.wwvbPhaseUtc);
+    ImGui::TextDisabled("Not used: the WWV voice announcements.");
     ImGui::PopTextWrapPos();
 }
 

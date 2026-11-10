@@ -1,5 +1,6 @@
 // MPEG transport-stream analysis: PSI/SI parsing (PAT, PMT, SDT, NIT, EIT now/next, TDT), per-PID statistics.
 #pragma once
+#include "dect2/tv/psip.h"
 #include "dect2/tv/ca_state.h"
 #include "dect2/tv/dsmcc.h"
 #include "dect2/tv/si_tables.h"
@@ -106,6 +107,9 @@ private:
     void parsePmt(int pid, const uint8_t* s, int len);
     void parseSdt(const uint8_t* s, int len);
     void parseNit(const uint8_t* s, int len);
+    void psipEit(const uint8_t* s, int len);
+    void psipEtt(const uint8_t* s, int len);
+    psip::State psip_;
     void parseTvct(const uint8_t* s, int len);   // ATSC PSIP terrestrial/cable virtual channel table: names and channel numbers
     void parseEit(const uint8_t* s, int len);
     void parseTdt(const uint8_t* s, int len);

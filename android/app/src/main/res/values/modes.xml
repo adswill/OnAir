@@ -276,6 +276,7 @@
         <item>SuperSID (VLF)</item>
         <item>Riometer</item>
         <item>Pulsar folding</item>
+        <item>UMTS cells</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -330,7 +331,7 @@
         <item>LTE cells around you: operator, band, EARFCN, PCI, eNB and sector, TAC, neighbours (receive only, public broadcast)</item>
         <item>5G NR cells around you from their SS/PBCH blocks on the sync raster (GSCN) of n1, n3, n7, n8, n20, n28, n38, n40, n41, n77, n78: PCI, SSB index / beam, SS-RSRP / RSRQ / SINR, MIB (SFN, subcarrier spacing, k_SSB, CORESET#0, barred) (receive only, public broadcast)</item>
         <item>LTE NB-IoT cells around you (180 kHz carriers, in-band, guard band or standalone) from their NPSS / NSSS, NPBCH (MIB-NB) and SIB1-NB: PCI, operating mode, antenna ports, SFN, operator (MCC / MNC), tracking area, cell identity, band, level; band scan over the 100 kHz raster. Receive only: the public broadcast only, nothing addressed to a device is decoded</item>
-        <item>Railway GSM base stations (GSM-R, 921 - 925 MHz): cell identity, location area, operator, channel lists (receive only, public broadcast)</item>
+        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 900 / DCS 1800 bands: cell identity, location area, operator, channel lists (receive only, public broadcast)</item>
         <item>LBJ (Chinese railway train proximity warning) on about 821.2375 MHz: FM voice channel with 1200 bit/s FSK data for train number, kilometre marker, locomotive ID, direction and speed (receive only)</item>
         <item>POCSAG paging messages (512, 1200 and 2400 bd) on a 25 kHz channel</item>
         <item>FLEX paging messages (1600, 3200 and 6400 bit/s) on a 25 kHz channel</item>
@@ -533,6 +534,7 @@
         <item>SuperSID: the strength of the VLF navy transmitters (NAA, NLK, NPM, NWC, DHO38, GQD, HWU, ICV ...) from a VLF-capable radio, one value per 5 s, and a mark when a station jumps within ten minutes: the signature of a solar flare in the lower ionosphere</item>
         <item>Riometer: cosmic radio noise near 30 MHz measured with interference rejected, compared with a quiet-day curve per sidereal hour, so that ionospheric absorption (a geomagnetic or particle event) shows in dB. Needs a fixed-gain receiver, an antenna looking up and one to two days to build the curve</item>
         <item>Pulsar detection: a filter bank, incoherent dedispersion and folding at the period of a chosen pulsar (B0329+54, B0950+08, B1133+16, Crab, Vela ...), with the S/N, a profile and a plain statement of the antenna it needs: about a square metre of effective area with a low-noise amplifier, not a whip</item>
+        <item>UMTS (3G) cells in a 5 MHz channel, from the synchronisation channels and the pilot: primary scrambling code, code group, Ec/Io, level and carrier offset. Receive only; the broadcast channel (operator and cell identity) is not decoded</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -790,6 +792,7 @@
         <item>VLF stations, 15 - 30 kHz</item>
         <item>Cosmic noise, 30 MHz</item>
         <item>Pulsars, 408 MHz</item>
+        <item>Cells, 3G</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -844,7 +847,7 @@
         <item>cell tower lte 4g enb earfcn pci operator</item>
         <item>5g nr new radio gnb cell tower ssb pss sss pbch mib gscn pci beam n78 n77 n28 n20 3.5 ghz sa nsa</item>
         <item>nb-iot nbiot narrowband iot lte-m cellular iot npss nsss npbch mib-nb sib1-nb pci operator tac band 20 8 3 800 900 1800 mhz 4g</item>
-        <item>gsm-r gsmr gsm railway train rail bcch arfcn bsic lac etcs</item>
+        <item>gsm-r gsmr gsm 900 1800 dcs cell census railway train rail bcch arfcn bsic lac etcs</item>
         <item>lbj chinese railway train warning 821 821.2375 cr-lbj locomotive km marker kilometre 列车接近预警</item>
         <item>pocsag pager paging</item>
         <item>flex pager paging</item>
@@ -1047,5 +1050,6 @@
         <item>supersid sid vlf solar flare sudden ionospheric disturbance naa nlk npm nwc dho38 gqd hwu icv ionosphere stanford</item>
         <item>riometer cosmic noise absorption ionosphere aurora geomagnetic storm sidereal quiet day curve 30 mhz</item>
         <item>pulsar folding dedispersion radio astronomy b0329 crab vela dm period profile dish 408 mhz 1420</item>
+        <item>umts wcdma 3g cell psc primary scrambling code cpich sch nodeb utran ec/io band 1 2100 900</item>
     </string-array>
 </resources>

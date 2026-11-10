@@ -123,6 +123,10 @@
 #include "dect2/sferics/sferics_rx.h"
 #include "dect2/atis/atis_rx.h"
 #include "dect2/selcal/selcal_rx.h"
+#include "dect2/umts/umts_rx.h"
+#include "dect2/tv/tr101290.h"
+#include "dect2/t2/t2mi_in.h"
+#include "dect2/t2/t2plp_merge.h"
 #include "dect2/fy3/fy3_rx.h"
 #include "dect2/pactorhf/pactorhf_rx.h"
 #include "dect2/shortwave/shortwave_rx.h"
@@ -279,6 +283,7 @@ public:
     bool gpuAllowed(int domain) const { return domain >= 0 && domain < gpupol::kDomains && gpu_.allowed[domain].load(); }
     int computeMode() const { return computeMode_; }
     void selectPlp(int id) { rx_.selectPlp(id); }
+    void selectT2Layer(int layer) { rx_.selectLayer(layer); }   // 0 = automatic, 1 = T2-Base, 2 = T2-Lite (mixed signals)
     // Which standard to decode: 0 = automatic (alternates between DVB-T2 and DVB-T until one locks), 1 = DVB-T2, 2 = DVB-T, 3 = ATSC, 4 = DAB, 5 = ATSC 3.0, 6 = ISDB-T, 7 = FM,
     // 8 = DVB-S/S2, 9 = DTMB, 10 = analog TV, 11 = DMR, 12 = DRM, 13 = ADS-B, 14 = GNSS,
     // 15 = radiosonde, 16 = AIS, 17 = marine, 18 = ACARS, 19 = Inmarsat-C, 20 = Inmarsat Aero, 21 = Iridium, 22 = mesh,
@@ -548,6 +553,14 @@ public:
     Fy3Receiver& fy3Mpt() { return rxFy3m_; }     // FY-3 MPT: the same
     HfUtilReceiver& hfUtil(int kind) { return rxHfu_[kind]; }   // HF utility modes (families 430 .. 439)
     PactorHfReceiver& pactorHf(int variant) { return variant == 3 ? rxPh3_ : variant == 4 ? rxPh4_ : rxPh2_; }   // PACTOR-II / -III / -IV: clear the results (telemetry through latestRx)
+    std::vector<Tr290Check> tr290Checks() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.checks(); }
+    double tr290JitterMs() { std::lock_guard<std::mutex> k(tsMu_); return tr290_.pcrJitterMs(); }
+    bool t2miFound() { std::lock_guard<std::mutex> k(tsMu_); return t2miIn_.found(); }
+    int t2miPid() { std::lock_guard<std::mutex> k(tsMu_); return t2miIn_.pid(); }
+    std::vector<int> t2miPlps() { std::lock_guard<std::mutex> k(tsMu_); return t2miIn_.plps(); }
+    void setT2miPlp(int plp) { t2miUse_ = plp; }   // -1: back to the outer stream
+    int t2miPlp() const { return t2miUse_.load(); }
+    UmtsReceiver& umts() { return rxUmts_; }   // UMTS cells (family 480)
     SelcalReceiver& selcal() { return rxSelcal_; }   // SELCAL: call log, aircraft table, Listen volume / mute (telemetry through latestRx)
     AtisReceiver& atis() { return rxAtis_; }   // ATIS (inland waterways): clear the lists, Listen volume / mute (telemetry through latestRx)
     ShortwaveReceiver& shortwave() { return rxSw_; }   // Shortwave: the general receiver and the one-click decoders (telemetry through latestRx)
@@ -752,6 +765,7 @@ private:
     void onMultiPackets(const uint8_t* pk, size_t n, double secs, const TsSnapshot& snap);
     std::mutex tsMu_;
     BbUnpacker unpack_;
+    BbUnpacker commonUnpack_; std::vector<uint8_t> commonFrame_; T2PlpMerge plpMerge_;   // the common PLP of the selected group
     TsDemux demux_;
     TsSnapshot tsSnap_;
     OutputManager outputs_;
@@ -986,6 +1000,9 @@ private:
     SfericsReceiver rxSfer_;
     AtisReceiver rxAtis_;
     SelcalReceiver rxSelcal_;
+    UmtsReceiver rxUmts_;
+    Tr290Monitor tr290_; double tr290T_ = 0;
+    T2miIngest t2miIn_; std::vector<uint8_t> t2miInner_; std::atomic<int> t2miUse_{-1};   // -1 off, else the PLP of the T2-MI stream shown instead of the outer stream
     Fy3Receiver rxFy3a_{0}, rxFy3m_{1};
     PactorHfReceiver rxPh2_{2}, rxPh3_{3}, rxPh4_{4};   // PACTOR-II (family 237), -III (238), -IV (239)
     ShortwaveReceiver rxSw_;

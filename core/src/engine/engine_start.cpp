@@ -651,6 +651,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSelcal_.setAudioInput(dev.kind == DeviceInfo::Audio);
     rxSelcal_.configure(rate_);
     rxSelcal_.setLogCallback([this](const std::string& s) { log(s); });
+    rxUmts_.configure(rate_);
+    rxUmts_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
     for (auto& w : rxWx_) { w.setBlocking(!src_->realtimeHardware()); w.configure(rate_); w.setLogCallback([this](const std::string& s) { log(s); }); }
@@ -786,7 +788,7 @@ void Engine::checkRateAndResetState(const DeviceInfo& dev, const TuneSettings& t
         unpack_ = BbUnpacker();
         tsSnap_ = TsSnapshot();
         lastT2Frame_ = -1;
-        unpack_.setSink([this](const uint8_t* pkt) { demux_.feed(pkt); if (!playerExternal_) { ttx_.feedTs(pkt); dvbsub_.feedTs(pkt); } frameBuf_.insert(frameBuf_.end(), pkt, pkt + 188); });
+        unpack_.setSink([this](const uint8_t* in) { uint8_t merged[188]; memcpy(merged, in, 188); plpMerge_.step(merged); const uint8_t* pkt = merged; demux_.feed(pkt); if (!playerExternal_) { ttx_.feedTs(pkt); dvbsub_.feedTs(pkt); } frameBuf_.insert(frameBuf_.end(), pkt, pkt + 188); });
     }
     rx_.setPlpCallback([this](const PlpResult& r) { if (plpDump_) plpDump_(r); { std::lock_guard<std::mutex> lk(t2ExportMu_); if (t2Export_) t2Export_->onPlp(r); } onPlp(r); });
     {   // DVB-T2 / DVB-T, ATSC and DAB at a rate their receiver cannot use (the telemetry test that stood here never fired: the receiver

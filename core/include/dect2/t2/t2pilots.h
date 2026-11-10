@@ -1,5 +1,5 @@
 // DVB-T2 pilot structure: which carrier of which OFDM symbol is a pilot / reserved / data, and the pilot values.
-// (ETSI EN 302 755 clause 9.) SISO only for now (MISO needs TX2 inversion and extra P2 pilots).
+// (ETSI EN 302 755 clause 9.) MISO: PilotConfig::miso, the group 2 pilots are made in the generator and read in the receiver.
 #pragma once
 #include "dect2/common/ring.h"
 #include "t2.h"
@@ -29,6 +29,7 @@ struct PilotConfig {
     int pp = 0;        // 0..7 = PP1..PP8
     bool tr = false;   // tone-reservation PAPR in data/FC symbols
     int giIdx = 2;     // needed only to decide whether a frame-closing symbol exists
+    bool miso = false; // MISO: P2 pilots on every 3rd carrier, frame closing symbols except with PP8
 };
 
 class PilotMap {

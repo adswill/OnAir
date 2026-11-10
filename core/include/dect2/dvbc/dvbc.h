@@ -108,6 +108,8 @@ struct SignalConfig {
     double echoDeg = 60;             // ... with this phase
     double level = 0.2;
     uint32_t seed = 1;
+    // Annex B test signal: the transmitter takes finished symbols from here (j83b.h) instead of making annex A frames
+    std::function<void(std::vector<cf32>&)> symbols;
     std::function<void(uint8_t*)> ts;   // packet source; null: the demo programme
 };
 

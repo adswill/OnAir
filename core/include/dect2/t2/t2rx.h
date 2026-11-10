@@ -121,6 +121,7 @@
 #include "dect2/sferics/sferics_tel.h"
 #include "dect2/atis/atis_tel.h"
 #include "dect2/selcal/selcal_tel.h"
+#include "dect2/umts/umts_rx.h"
 #include "dect2/fy3/fy3_tel.h"
 #include "dect2/wxsat/wxsat_tel.h"
 #include "dect2/sd3/sd3_tel.h"
@@ -262,6 +263,7 @@ struct RxTelemetry {
     Fy3Telemetry fy3a;        // valid when standard == 236 (FY-3 AHRPT, family 235, engine standard 237)
     Fy3Telemetry fy3m;        // valid when standard == 237 (FY-3 MPT, family 236, engine standard 238)
     PactorHfTelemetry pactorhf;   // valid when standard == 238, 239 or 240 (PACTOR-II / -III / -IV, families 237 .. 239, engine standards 239 .. 241)
+    UmtsTelemetry umts;   // valid when standard == 481 (UMTS cells, family 480, engine standard 482)
     SelcalTelemetry selcal;   // valid when standard == 241 (SELCAL, family 240, engine standard 242)
     AtisTelemetry atis;       // valid when standard == 212 (ATIS inland waterways, family 211, engine standard 213)
     ShortwaveTelemetry shortwave;   // valid when standard == 213 (Shortwave, family 212, engine standard 214)
@@ -438,6 +440,8 @@ struct RxTelemetry {
     struct PlpInfo { int id = 0, type = 0, payloadType = 0, mod = 0, cod = 0, rotation = 0, fecType = 0, tiType = 0, tiLength = 0, blocks = 0; bool supported = true; };
     std::vector<PlpInfo> plpList;          // every PLP signalled in L1-post
     int plpSelectedId = -1;                // PLP being decoded
+    int t2Layer = 0;                       // layer being followed: 1 T2-Base, 2 T2-Lite
+    uint64_t t2OtherLayerP1 = 0;           // P1 symbols of the other layer seen (a mixed signal carries both)
     std::vector<std::string> unsupported;  // reasons why (part of) this multiplex cannot be decoded, e.g. "MISO transmission"
     std::vector<std::vector<uint8_t>> blockMap; // per decoded frame (oldest first, last 90): 1 = FEC block decoded, 0 = failed
 };
@@ -464,6 +468,7 @@ public:
     void setComputeMode(int m);
     // Which PLP to decode: its PLP_ID, or -1 for automatic (the first data PLP).
     void selectPlp(int id);
+    void selectLayer(int layer);   // 0 = automatic (the first layer seen), 1 = T2-Base, 2 = T2-Lite
     void setPlpCallback(std::function<void(const PlpResult&)> cb);
 
 private:
