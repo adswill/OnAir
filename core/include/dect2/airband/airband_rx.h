@@ -96,6 +96,8 @@ public:
     void setMuted(bool m);
     void setSilent(bool s);                              // decode but do not open the sound device (tests, command line)
     void setChannelTap(std::function<void(int chan, const float* x, size_t n)> cb);   // tests: each channel's 8 kHz audio after the squelch
+    // one WAV per transmission and the 30 s replay (airband_clips.h): fed with the same audio as the channel tap; nullptr: none
+    void setClipWriter(std::shared_ptr<class AirbandClipWriter> w);
     void setMixTap(std::function<void(const float* x, size_t n)> cb);                 // tests: the 8 kHz mix that goes to the sound card
 
 private:

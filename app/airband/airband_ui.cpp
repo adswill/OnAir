@@ -8,6 +8,10 @@
 #include "airband/airport_ui.h"
 #include "dect2/airband/airband_store.h"
 #include "dect2/airband/airband_tel.h"
+#include "dect2/airband/airband_clips.h"
+#include "state/recdir.h"
+#include "voice/voice_clips_ui.h"
+#include <memory>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -37,6 +41,10 @@ struct State {
     char editLabel[32] = "";
     bool wasRunning = false;
     float pushedVol = -1; bool pushedMute = false;
+    bool rec = false;                    // one WAV per transmission (prefs airRecEach)
+    std::shared_ptr<dect2::AirbandClipWriter> clips;
+    std::vector<dect2::voice::Clip> fresh;   // this run's clips with their channel label
+    std::string recNote;
 };
 State S;
 
@@ -75,6 +83,24 @@ void load(const App& a) {
     S.hold = d.getB("airHold", false); S.onlyActive = d.getB("airOnlyActive", false);
     S.squelch = (float)d.getD("airSquelch", 6); S.hang = (float)d.getD("airHang", 0.5); S.scan = d.getB("airScan", false);
     S.nrOn = d.getB("airNr", false); S.nrStr = (float)std::clamp(d.getD("airNrStr", 80), 0.0, 100.0);
+    S.rec = d.getB("airRecEach", false);
+}
+
+std::string clipFolder() { return recordingsDir() + "/airband"; }
+
+void clipChannels() {
+    std::vector<dect2::AirbandClipChannel> v;
+    for (const auto& c : S.chans) v.push_back({c.freqHz, c.label.empty() ? dect2::airbandName(c.freqHz, c.is833) : c.label});
+    if (S.clips) S.clips->setChannels(v);
+}
+
+void recordingsView(App& a) {
+    if (ImGui::Checkbox(tr("Save each transmission"), &S.rec)) { plat::prefs().setB("airRecEach", S.rec); if (S.clips) S.clips->setEnabled(S.rec); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Every squelch opening of every channel becomes a short WAV named with the channel, the frequency and the UTC time. How many are kept, and for how many days, is set in the list below."));
+    ImGui::SameLine();
+    ImGui::TextDisabled("%s", clipFolder().c_str());
+    if (!S.recNote.empty()) ImGui::TextDisabled("%s", S.recNote.c_str());
+    voiceclips::panel(a, "airband", "airclips", clipFolder(), "airband-", S.fresh);
 }
 
 const dect2::AirbandChannelState* stateOf(const App& a, size_t i) {
@@ -309,6 +335,20 @@ void channelView(App& a) {
                 save();
             }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", only ? tr("Back to hearing every open channel.") : tr("Hear only this channel (solo), whatever else is on the air."));
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("30 s##rpl")) && S.clips) {
+                std::string err;
+                const std::string path = S.clips->saveReplay((int)i, err);
+                if (path.empty()) S.recNote = err;
+                else {
+                    dect2::voice::Clip k; k.path = path; k.mode = "airband"; k.wallStart = (int64_t)time(nullptr); k.label = tr("last 30 s of ") + (c.label.empty() ? dect2::airbandName(c.freqHz, c.is833) : c.label);
+                    int rate = 0; dect2::voice::wavInfo(path, rate, k.seconds);
+                    S.fresh.insert(S.fresh.begin(), k);
+                    S.recNote = tr("Saved: play it in Recordings.");
+                    S.view = 4;
+                }
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Replay: the last 30 s of transmissions on this channel (the gaps left out), saved as a clip in Recordings."));
         }
         ImGui::TableNextColumn(); if (ImGui::Checkbox("##m", &c.muted)) save();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("Mute: listened to and logged, not played.");
@@ -460,26 +500,30 @@ void tick(App& a) {
     }
     S.lastKind = kind;
     const bool run = a.engine.running() && a.rx.standard == 27;
-    if (!a.engine.running()) { S.wasRunning = false; return; }
+    if (!a.engine.running()) { if (S.wasRunning && S.clips) S.clips->flush(); S.wasRunning = false; return; }
     dect2::AirbandReceiver& r = a.engine.airband();
     r.setNoiseRemover(S.nrOn, S.nrStr / 100.f);
     if (!S.wasRunning || S.dirty) {
         r.setChannels(S.chans); r.setSquelchDb(S.squelch); r.setHangSec(S.hang); r.setScan(S.scan); r.setScanHold(S.hold);
+        clipChannels();
         S.dirty = false;
     }
     if (!S.wasRunning || a.volume != S.pushedVol || a.muted != S.pushedMute) {   // the sound controls are shared with the other modes
         r.setVolume(a.volume); r.setMuted(a.muted);
         S.pushedVol = a.volume; S.pushedMute = a.muted;
     }
+    if (!S.clips) { S.clips = std::make_shared<dect2::AirbandClipWriter>(clipFolder()); S.clips->setEnabled(S.rec); clipChannels(); }
+    if (!S.wasRunning) { clipChannels(); r.setClipWriter(S.clips); }
+    for (auto& c : S.clips->takeFinished()) { S.fresh.insert(S.fresh.begin(), c); if (S.fresh.size() > 300) S.fresh.pop_back(); }
     S.wasRunning = true;
     (void)run;
 }
 
 void tab(App& a) {
     load(a);
-    subNav("airv", S.view, {"Channels", tr("On the air"), "Activity", "Spectrum"});
+    subNav("airv", S.view, {"Channels", tr("On the air"), "Activity", "Spectrum", tr("Recordings")});
     tx::captions(a);
-    if (S.view == 0) channelView(a); else if (S.view == 1) seenView(a); else if (S.view == 2) activityView(a); else spectrumView(a);
+    if (S.view == 0) channelView(a); else if (S.view == 1) seenView(a); else if (S.view == 2) activityView(a); else if (S.view == 3) spectrumView(a); else recordingsView(a);
 }
 
 void list(App& a) {
