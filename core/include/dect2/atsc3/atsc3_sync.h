@@ -27,6 +27,9 @@ BootstrapFind findBootstrap(const cf32* x, size_t n, double maxCfoHz = 20000.0, 
 // (in input samples, may be fractional). Edges are treated as zeros. Windowed sinc with interpolated phases; used where a rational
 // approximation would give a sample rate error of tens of ppm.
 void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset = 0.0);
+// The same with the carrier offset removed first, as derotate(x, n, rotHz, inRate, rotStart) on a copy would, in the one pass that splits the
+// input for the filter (no copy of the block, no second pass over it).
+void resampleExactRot(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double rotHz, double rotStart, double startOffset = 0.0);
 
 // Removes a carrier offset: y[i] = x[i] * exp(-j 2 pi f (i + startIndex) / rate).
 void derotate(cf32* x, size_t n, double f, double rate, double startIndex = 0);

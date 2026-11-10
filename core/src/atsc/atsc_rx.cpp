@@ -18,6 +18,7 @@
 #include "dect2/common/platform.h"
 #include "dect2/dsp/simd.h"
 #include "dect2/common/mathconst.h"
+#include "dect2/common/stage_prof.h"
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
 #include <arm_neon.h>
 #include <cstdint>
@@ -30,10 +31,61 @@ namespace dect2 {
 namespace atsc {
 
 // stage A filter for outputs k0..k1, safe to split across threads
+// Shared-window layout of the taps (PfbPad): every phase's row holds kPfbShift zeros, the 2J taps, then zeros up to its length L, so that output u
+// of a group of four whose window starts s_u samples after the group's first (0 <= s_u <= kPfbShift) reads W taps from offset kPfbShift - s_u.
+constexpr int kPfbShift = 3;
+struct PfbPad { const float* t = nullptr; int L = 0, W = 0; size_t avail = 0; };
 DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float* re, const float* im, int64_t base,
-                                 double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm) {
+                                 double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm, PfbPad pad) {
     const int T = 2 * J;
     size_t k = k0;
+#if defined(__GNUC__) && !defined(DECT2_NO_SIMD)
+    // Four outputs that share one window of input samples: the four start within a few samples of each other (the output step is half an input
+    // sample at 8-10 Msps), so with the taps of each placed at its offset in a zero-padded row (pad) the data are loaded once for all four, and
+    // each tap vector feeds two multiply-adds: half the loads of one window per output (that loop is load-bound: three loads per two multiply-adds)
+    // for 8 % more multiply-adds (W = 2J + 3 rounded up to 8). Two partial sums per row and output: sixteen independent chains.
+    if (pad.t) {
+        typedef float v4 __attribute__((vector_size(16)));
+        auto ld = [](const float* p) { v4 v; std::memcpy(&v, p, 16); return v; };
+        const int W = pad.W, L = pad.L;
+        for (; k + 4 <= k1; k += 4) {
+            int64_t i0[4]; int phi[4];
+            for (int u = 0; u < 4; u++) {
+                const double pos = pos0 + (double)(k + (size_t)u) * step;
+                i0[u] = (int64_t)std::floor(pos);
+                phi[u] = (int)((pos - (double)i0[u]) * NPH + 0.5);
+                if (phi[u] >= NPH) { phi[u] = 0; i0[u]++; }
+            }
+            const int64_t b = i0[0] - base - J + 1;
+            bool fits = b >= 0 && (size_t)(b + W) <= pad.avail;
+            const float* tp[4];
+            for (int u = 0; u < 4; u++) {
+                const int64_t sh = i0[u] - i0[0];
+                fits = fits && sh >= 0 && sh <= kPfbShift;
+                tp[u] = pad.t + (size_t)phi[u] * L + (kPfbShift - (int)std::min<int64_t>(std::max<int64_t>(sh, 0), kPfbShift));
+            }
+            if (!fits) break;   // the rest (the last few outputs of the block) the usual way
+            const float* pr = re + b;
+            const float* pi_ = im + b;
+            v4 ar[4] = {}, ai[4] = {}, br[4] = {}, bi[4] = {};
+            for (int j = 0; j < W; j += 8) {
+                const v4 r0 = ld(pr + j), i0v = ld(pi_ + j), r1 = ld(pr + j + 4), i1v = ld(pi_ + j + 4);
+                for (int u = 0; u < 4; u++) {
+                    const v4 t0 = ld(tp[u] + j), t1 = ld(tp[u] + j + 4);
+                    ar[u] += r0 * t0; ai[u] += i0v * t0;
+                    br[u] += r1 * t1; bi[u] += i1v * t1;
+                }
+            }
+            for (int u = 0; u < 4; u++) {
+                const v4 sr = ar[u] + br[u], si = ai[u] + bi[u];
+                outRe[k + (size_t)u] = (sr[0] + sr[1]) + (sr[2] + sr[3]);
+                outIm[k + (size_t)u] = (si[0] + si[1]) + (si[2] + si[3]);
+            }
+        }
+    }
+#else
+    (void)pad;
+#endif
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
     // Four outputs per pass: sixteen independent chains, and the horizontal sums of the four outputs are folded together with pairwise adds
     // (one vector of four results per row) instead of a reduction per output. The sums are in a different order than in the loop below, a few ulp.
@@ -155,7 +207,7 @@ DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float
         outRe[k] = sr; outIm[k] = si;
     }
 }
-DECT2_AVX2_DISPATCH(void, pfbBlock, (const float* taps, int J, int NPH, const float* re, const float* im, int64_t base, double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm), (taps, J, NPH, re, im, base, pos0, step, k0, k1, outRe, outIm))
+DECT2_AVX2_DISPATCH(void, pfbBlock, (const float* taps, int J, int NPH, const float* re, const float* im, int64_t base, double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm, PfbPad pad), (taps, J, NPH, re, im, base, pos0, step, k0, k1, outRe, outIm, pad))
 
 namespace {
 using dect2::math::kPi;
@@ -211,6 +263,8 @@ struct Core {
     int J = 24;
     int NPH = 128;
     std::vector<float> taps;
+    std::vector<float> tapsPad;      // the same in the shared-window layout (PfbPad), empty where the output step is too long for it
+    int padL = 0, padW = 0;
     std::vector<float> inRe, inIm;   // input samples, split
     std::vector<float> pfRe, pfIm;
     bool splitA = std::thread::hardware_concurrency() >= 2;
@@ -283,6 +337,15 @@ struct Core {
                 const double win = std::cos(0.5 * kPi * (x) / (J + 0.5));
                 taps[(size_t)p * 2 * J + (j + J - 1)] = (float)(Rb / fin * rrcValue(x / fin) * (getenv("ATSC_NOWIN") ? 1.0 : win * win));
             }
+        }
+        // four outputs span 3 steps plus the rounding of the phase: within kPfbShift input samples while the step is under 2/3 (radios up to 14 Msps)
+        tapsPad.clear();
+        if (3.0 * step + 1.0 <= (double)kPfbShift) {
+            padW = (2 * J + kPfbShift + 7) & ~7;
+            padL = (kPfbShift + padW + 3) & ~3;
+            tapsPad.assign((size_t)NPH * padL, 0.f);
+            for (int p = 0; p < NPH; p++)
+                for (int j = 0; j < 2 * J; j++) tapsPad[(size_t)p * padL + kPfbShift + j] = taps[(size_t)p * 2 * J + j];
         }
         interp.assign((size_t)kInterpPh * 2 * kInterpJ, 0.f);
         for (int p = 0; p < kInterpPh; p++) {
@@ -392,14 +455,31 @@ struct Core {
             tracking = true;   // the frequency is known to a fraction of a kHz: start with the narrow loop
         }
     }
-    void mixIn(std::vector<cf32>& in) {
+    // (x conjugated when sgn is -1) * exp(j w n) into the split rows: the phase is exact at the start of every block of 1024 samples, and inside a
+    // block comes from a table of exp(j w k) (kept while the frequency stays), so the loop has no chain of products and vectorises
+    std::vector<float> mixTr, mixTi;
+    double mixTabHz = 0;
+    void mixSplit(const float* __restrict x, size_t n, float sgn, float* __restrict pr, float* __restrict pi) {
+        constexpr size_t kB = 1024;
         const double w = -2.0 * kPi * shiftHz / fin;
-        for (size_t i0 = 0; i0 < in.size(); i0 += 1024) {
-            const size_t e = std::min(in.size(), i0 + 1024);
-            cf32 c = expj(std::fmod(w * (double)mixN, 2.0 * kPi));
-            const cf32 r = expj(w);
-            for (size_t i = i0; i < e; i++) { in[i] *= c; c *= r; }
-            mixN += e - i0;
+        if (mixTr.size() != kB || mixTabHz != shiftHz) {
+            mixTr.resize(kB); mixTi.resize(kB); mixTabHz = shiftHz;
+            for (size_t k = 0; k < kB; k++) { mixTr[k] = (float)std::cos(w * (double)k); mixTi[k] = (float)std::sin(w * (double)k); }
+        }
+        const float* __restrict tr = mixTr.data();
+        const float* __restrict ti = mixTi.data();
+        for (size_t i0 = 0; i0 < n; i0 += kB) {
+            const size_t e = std::min(n - i0, kB);
+            const cf32 c = expj(std::fmod(w * (double)mixN, 2.0 * kPi));
+            const float cr = c.real(), ci = c.imag();
+            const float* __restrict xp = x + 2 * i0;
+            float* __restrict orr = pr + i0;
+            float* __restrict oi = pi + i0;
+            for (size_t k = 0; k < e; k++) {
+                const float rr = cr * tr[k] - ci * ti[k], ri = cr * ti[k] + ci * tr[k], a = xp[2 * k], b = sgn * xp[2 * k + 1];
+                orr[k] = a * rr - b * ri; oi[k] = a * ri + b * rr;
+            }
+            mixN += e;
         }
     }
 
@@ -434,27 +514,37 @@ struct Core {
         }
         if (fieldLock || pilotLock) noLockSamples = 0;
         else if ((noLockSamples += in.size()) > (uint64_t)(0.5 * fin)) { noLockSamples = 0; acqDone = false; }   // look again on the next block
-        if (mirrorIq) for (auto& v : in) v = std::conj(v);
-        if (shiftHz != 0) mixIn(in);
-        const double tA = now();
-        {   // split into the two rows: one resize, then plain stores (a push_back per sample re-checks the capacity twice for every sample)
+        DECT2_STAGE_VAR(stMix, "atsc.mix");
+        {   // split into the two rows: one resize, then plain stores (a push_back per sample re-checks the capacity twice for every sample), with the
+            // mirror (conjugate) and the mixer to the channel centre in the same pass
             const size_t at = inRe.size();
             inRe.resize(at + in.size()); inIm.resize(at + in.size());
             float* __restrict pr = inRe.data() + at; float* __restrict pi = inIm.data() + at;
-            for (size_t i = 0; i < in.size(); i++) { pr[i] = in[i].real(); pi[i] = in[i].imag(); }
+            const float* __restrict x = reinterpret_cast<const float*>(in.data());
+            const float sgn = mirrorIq ? -1.f : 1.f;
+            if (shiftHz != 0) mixSplit(x, in.size(), sgn, pr, pi);
+            else for (size_t i = 0; i < in.size(); i++) { pr[i] = x[2 * i]; pi[i] = sgn * x[2 * i + 1]; }
         }
+        stMix.stop();
+        const double tA = now();
+        DECT2_STAGE_VAR(stFilt, "atsc.filter");
         std::vector<float> dchunk;
         const double room = (double)(inBase + inRe.size()) - J - 2 - pos;
         const size_t nOut = room > 0 ? (size_t)std::ceil(room / step) : 0;
         pfRe.resize(nOut);
         pfIm.resize(nOut);
-        auto filter = [&](size_t k0, size_t k1) { pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data()); };
+        PfbPad pad;
+        static const bool noPad = getenv("ATSC_NOPAD") != nullptr;   // test: the one-window-per-output filter
+        if (!tapsPad.empty() && !noPad) { pad.t = tapsPad.data(); pad.L = padL; pad.W = padW; pad.avail = inRe.size(); }
+        auto filter = [&](size_t k0, size_t k1) { DECT2_STAGE("atsc.filter"); pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data(), pad); };
         if (splitA && nOut >= 4096) {   // split across two threads
             std::thread helper([&] { dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); filter(nOut / 2, nOut); });
             filter(0, nOut / 2);
             helper.join();
         } else filter(0, nOut);
         pos += (double)nOut * step;
+        stFilt.stop();
+        DECT2_STAGE_VAR(stPll, "atsc.pll");
         dchunk.resize(nOut);
         // The pilot loop works in blocks of kPllN samples: its bandwidth (a few kHz, up to 30 kHz while acquiring) is far below the
         // block rate (1.3 MHz), so the phase detector runs once per block with its gains scaled by kPllN / 4 (the loop was written for a
@@ -549,7 +639,9 @@ struct Core {
             inBase += drop;
         }
         tPfb += now() - tA;
+        stPll.stop();
         if (dchunk.empty()) return;
+        DECT2_STAGE_VAR(stAgc, "atsc.agc");
         // DC (pilot) and gain
         if (!dcInit) {
             double m = 0, p = 0;
@@ -582,6 +674,8 @@ struct Core {
             pilotLock = tracking && goodRun > 20000;
         }
         d.insert(d.end(), dchunk.begin(), dchunk.end());
+        stAgc.stop();
+        DECT2_STAGE("atsc.symclock");
         const double tB = now();
         stageC();
         tCd += now() - tB;
@@ -731,6 +825,7 @@ struct Core {
     }
 
     void checkFieldSync() {
+        DECT2_STAGE("atsc.fieldsync");
         const size_t n = raw.size();
         const float* last = &raw[n - kSegSyms];
         const int64_t thisSeg = (int64_t)segAbs - 1;   // the segment that just completed
@@ -842,6 +937,7 @@ struct Core {
     }
     void decodeField(int64_t startSeg, int fieldParity) {
         if (dbg) fprintf(stderr, "[atsc] queue field at segment %lld (segAbs %llu)\n", (long long)startSeg, (unsigned long long)segAbs);
+        DECT2_STAGE("atsc.fieldcopy");
         Job j;
         j.f0 = startSeg * kSegSyms;
         j.parity = fieldParity;
@@ -1059,24 +1155,32 @@ struct Core {
         lv.assign((size_t)kFieldSyms, 0.f);
         hv.assign((size_t)kFieldSyms + B, 0.f);
         if (hist && B) for (int j = 0; j < B; j++) hv[(size_t)j] = hist[j];
+        DECT2_STAGE_VAR(stFf, "atsc.eq.ff");
         std::vector<float> xr((size_t)kFieldSyms + L - 1), wr(L), ffo((size_t)kFieldSyms);
         for (int k = 0; k < L; k++) wr[k] = tp.ff[L - 1 - k];
         const int64_t first = v.f0 + kNFf - (L - 1);
         for (size_t k = 0; k < xr.size(); k++) xr[k] = v.at(first + (int64_t)k);
         convCorr(xr.data(), wr.data(), ffo.data(), 1, kFieldSyms, L);
+        stFf.stop();
+        DECT2_STAGE("atsc.eq.dfe");
         // The feedback part in transposed form: every decision is added, weighted by the feedback taps, to the accumulators of the next B
-        // outputs (independent vector updates), so that the chain from one decision to the next is short.
-        std::vector<float> fbAcc;
+        // outputs (independent vector updates), so that the chain from one decision to the next is short. Four decisions per pass over the
+        // accumulators: inside the group each output gets the terms of the decisions before it in the group directly, and the pass then adds
+        // all four through the taps shifted by 3, 2, 1 and 0 (fbs), a quarter of the stores to the accumulators (the limit of the one-decision
+        // pass: 32 vector stores per symbol).
+        constexpr int kG = 4;
+        static_assert(kFieldSyms % kG == 0, "whole groups");
+        std::vector<float> fbAcc, fbs;
         if (B) {
-            fbAcc.assign((size_t)kFieldSyms + B, 0.f);
+            fbAcc.assign((size_t)kFieldSyms + B + kG, 0.f);
             if (hist) for (int j = 0; j < B; j++)   // decisions before the field start: decision j (oldest first) reaches output i = j + B - 1 - m ... via tap fb[m]
                 for (int m = 0; m < B; m++) { const int i = j + 1 + m - B; if (i >= 0 && i < B) fbAcc[(size_t)i] += tp.fb[m] * hist[j]; }
+            fbs.assign((size_t)kG * B, 0.f);   // row k: fb[m + k] (zero past the end)
+            for (int k = 0; k < kG; k++) for (int m = 0; m + k < B; m++) fbs[(size_t)k * B + m] = tp.fb[(size_t)(m + k)];
         }
         const float* fbt = tp.fb.data();
         double mse = 0; int nm = 0;
-        for (int i = 0; i < kFieldSyms; i++) {
-            float y = ffo[(size_t)i] + tp.bias;
-            if (B) y += fbAcc[(size_t)i];
+        auto decide = [&](int i, float y) {
             float dec;
             if (i < 728) dec = fsLv[i];
             else if (i % kSegSyms < 4) dec = syncLv[i % kSegSyms];
@@ -1084,8 +1188,25 @@ struct Core {
             if (i >= std::max(B, 8) && i < 728) { const double e = y - fsLv[i]; mse += e * e; nm++; }
             lv[(size_t)i] = y;
             hv[(size_t)B + i] = dec;
-            if (B && dec != 0.f) { float* a = &fbAcc[(size_t)i + 1]; for (int m = 0; m < B; m++) a[m] += dec * fbt[m]; }
-        }
+            return dec;
+        };
+        if (!B) for (int i = 0; i < kFieldSyms; i++) decide(i, ffo[(size_t)i] + tp.bias);
+        else
+            for (int i = 0; i < kFieldSyms; i += kG) {
+                const float* c = &fbAcc[(size_t)i];
+                const float b0 = ffo[(size_t)i] + tp.bias, b1 = ffo[(size_t)i + 1] + tp.bias, b2 = ffo[(size_t)i + 2] + tp.bias, b3 = ffo[(size_t)i + 3] + tp.bias;
+                const float d0 = decide(i, b0 + c[0]);
+                const float d1 = decide(i + 1, b1 + c[1] + d0 * fbt[0]);
+                const float d2 = decide(i + 2, b2 + c[2] + d0 * fbt[1] + d1 * fbt[0]);
+                const float d3 = decide(i + 3, b3 + c[3] + d0 * fbt[2] + d1 * fbt[1] + d2 * fbt[0]);
+                // outputs i + 4 + m: decision i + j reaches them through tap m + 3 - j
+                float* __restrict a = &fbAcc[(size_t)i + kG];
+                const float* __restrict f0 = &fbs[0];
+                const float* __restrict f1 = &fbs[(size_t)B];
+                const float* __restrict f2 = &fbs[(size_t)2 * B];
+                const float* __restrict f3 = &fbs[(size_t)3 * B];
+                for (int m = 0; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
+            }
         mse /= std::max(1, nm);
         return 10.0 * std::log10(25.0 / std::max(mse, 1e-6));
     }
@@ -1109,6 +1230,7 @@ struct Core {
         fieldSyncSymbols(job.parity == 2, prev12, fsSym);
         float fsLv[kSegSyms];
         for (int i = 0; i < kSegSyms; i++) fsLv[i] = levelOf(fsSym[i]);
+        DECT2_STAGE_VAR(stFit, "atsc.eq.fit");
         if (preD > 0 && cancelPre(view, fsLv, preD, uPre)) view.s = &uPre;
         const double tM0 = now();
         static const bool noDfe = getenv("ATSC_NODFE") != nullptr;   // test: the plain equaliser only
@@ -1127,6 +1249,8 @@ struct Core {
             if (!trained) trained = trainFF(view, fsLv, tp);
         } else trained = trainFF(view, fsLv, tp);
         tLs += now() - tM0;
+        stFit.stop();
+        DECT2_STAGE_VAR(stEq, "atsc.eq.filter");
         const double tM1 = now();
         if (trained) snr = equalize(view, fsLv, tp, (usePrev && tp.B) ? &prevLv[(size_t)(kFieldSyms - tp.B)] : nullptr, lv, hv);
         if (!trained || snr < 9.0) {   // the plain equaliser does not fit: try the decision feedback one on the sync symbols alone (strong echoes)
@@ -1196,7 +1320,9 @@ struct Core {
         }
         eqLast = tp;
         tEq += now() - tM1;
+        stEq.stop();
         const double tM2 = now();
+        DECT2_STAGE_VAR(stRetry, "atsc.decode.other");   // the copies and the second try; the trellis and RS inside count as their own stages
         FieldDecoder backup = dec;      // for the second try below
         FieldStats st;
         std::vector<uint8_t> out((size_t)kDataSegs * kTsBytes), psym((size_t)kFieldSyms, 0);
@@ -1234,15 +1360,25 @@ struct Core {
             }
         }
         tVit += now() - tM2;
+        stRetry.stop();
+        DECT2_STAGE("atsc.stats");
         if (dbg) fprintf(stderr, "[atsc] field start %lld parity %d: snr %.1f data %.1f  RS clean %d corr %d fail %d np %d%s%s\n", (long long)(f0 / kSegSyms), job.parity, snr, dataSnrAvg, st.rsClean, st.rsCorrected, st.rsFailed, np, usePrev ? "  (DFE, trained with the previous field)" : "", secondTry ? "  (second try with the other equaliser)" : "");
+        // One pass over the data symbols for both figures below: the sums of l*l, l*t and t*t (l the equalised level, t the level of the decoded
+        // path); with the gain G applied, the distance is sum (G l - t)^2 = G^2 sum l*l - 2 G sum l*t + sum t*t.
+        double sll = 0, slt = 0, stt = 0; int cnt = 0;
+        if (st.segments > 0)
+            for (int sg = 1; sg < kFieldSegs; sg++) {
+                const float* l = &lv[(size_t)sg * kSegSyms];
+                const uint8_t* ps = &psym[(size_t)sg * kSegSyms];
+                float a[4] = {}, b[4] = {}, c[4] = {};   // a segment in float (four partial sums of 207 terms), the field in double
+                static_assert((kSegSyms - 4) % 4 == 0, "whole groups of four");
+                for (int i = 4; i < kSegSyms; i += 4)
+                    for (int j = 0; j < 4; j++) { const float t = levelOf(ps[i + j]), x = l[i + j]; a[j] += x * x; b[j] += x * t; c[j] += t * t; }
+                sll += (a[0] + a[1]) + (a[2] + a[3]); slt += (b[0] + b[1]) + (b[2] + b[3]); stt += (c[0] + c[1]) + (c[2] + c[3]); cnt += kSegSyms - 4;
+            }
         // The gain of the equalised levels against the decoded symbols (decision directed): the next field is corrected by it.
         if (st.segments > 0 && st.rsFailed * 2 <= st.segments) {
-            double sxy = 0, sxx = 0;
-            for (int i = kSegSyms; i < kFieldSyms; i++) {
-                if (i % kSegSyms < 4) continue;
-                const double t = levelOf(psym[(size_t)i]);
-                sxy += (double)lv[(size_t)i] * gainCorr * t; sxx += t * t;
-            }
+            const double sxy = slt * gainCorr, sxx = stt;
             if (sxx > 0 && sxy > 0) {
                 const double g = sxy / sxx;   // 1 when the levels sit where the decoder expects them
                 gainCorr = std::max(0.95, std::min(1.15, gainCorr / std::pow(g, 0.7)));
@@ -1251,19 +1387,11 @@ struct Core {
         // The noise on the equalised symbols, measured against the symbols of the decoded trellis path: unlike the distance to the nearest of the
         // eight levels (which cannot exceed one level step and so reads too good on a noisy signal) this stays honest down to low SNR.
         double pathMse = 1e9;   // mean square distance of the equalised symbols to the decoded path: the noise power while the path is right
-        if (st.segments > 0) {
-            double dd = 0; int cnt = 0;
-            for (int i = kSegSyms; i < kFieldSyms; i++) {
-                if (i % kSegSyms < 4) continue;
-                const double e = lv[(size_t)i] * gainCorr - levelOf(psym[(size_t)i]);
-                dd += e * e; cnt++;
-            }
-            if (cnt > 0) {
-                pathMse = dd / cnt;
-                if (st.rsFailed * 4 <= st.segments) {
-                    const double dsnr = 10.0 * std::log10(21.0 / std::max(pathMse, 1e-6));
-                    dataSnrAvg = dataSnrAvg == 0 ? dsnr : dataSnrAvg + 0.3 * (dsnr - dataSnrAvg);
-                }
+        if (st.segments > 0 && cnt > 0) {
+            pathMse = std::max(0.0, (gainCorr * gainCorr * sll - 2.0 * gainCorr * slt + stt) / cnt);
+            if (st.rsFailed * 4 <= st.segments) {
+                const double dsnr = 10.0 * std::log10(21.0 / std::max(pathMse, 1e-6));
+                dataSnrAvg = dataSnrAvg == 0 ? dsnr : dataSnrAvg + 0.3 * (dsnr - dataSnrAvg);
             }
         }
         if (levelTap) levelTap(lv);
@@ -1326,6 +1454,7 @@ void AtscReceiver::setLevelTap(std::function<void(const std::vector<float>&)> f)
 void AtscReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->c.cb = std::move(cb); }
 void AtscReceiver::feed(const cf32* x, size_t n) {
     if (!p_->c.ok || !n) return;
+    DECT2_STAGE("atsc.input");
     std::vector<cf32> v(x, x + n);
     for (auto& s : v) if (!std::isfinite(s.real()) || !std::isfinite(s.imag())) s = cf32(0, 0);   // one bad sample would poison every loop for good
     p_->c.processInput(v, n);

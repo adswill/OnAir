@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/atsc3/atsc3_bootstrap.h"
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>

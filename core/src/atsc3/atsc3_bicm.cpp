@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/atsc3/atsc3_bicm.h"
 #include "atsc3_data_tables.h"
 #include "atsc3_ldpc.h"
@@ -239,6 +240,7 @@ std::vector<cf32> Bicm::encode(const std::vector<uint8_t>& payload) const {
 }
 
 void Bicm::llrs(const cf32* cells, float noiseVar, std::vector<float>& llr) const {
+    DECT2_STAGE("a3.demap");
     const int eta = cfg_.bitsPerCell, nc = this->cells(), M = 1 << eta;
     const float nv = std::max(noiseVar, 1e-5f);
     llr.assign((size_t)cfg_.nInner, 0.f);
@@ -288,6 +290,7 @@ void Bicm::llrs(const cf32* cells, float noiseVar, std::vector<float>& llr) cons
 }
 
 bool Bicm::finish(const std::vector<uint8_t>& hard, std::vector<uint8_t>& payload) const {
+    DECT2_STAGE("a3.bch");
     std::vector<uint8_t> bits(hard.begin(), hard.begin() + kLdpc_);
     if (cfg_.outer == 0) {
         const BchCode bch(cfg_.nInner == 16200, 12);
@@ -317,6 +320,7 @@ bool Bicm::decode(const cf32* cells, float noiseVar, std::vector<uint8_t>& paylo
 // layered 8-bit offset min-sum and the plain float fallback this gains 0.2 to 0.4 dB (16200 rate 8/15 at 1.4 dB on an ideal channel: 1 failed word
 // of 30 instead of 29) and runs far faster than the general float decoder.
 bool Bicm::decodeLlr(const std::vector<float>& llr, std::vector<uint8_t>& hard, int* iters) const {
+    DECT2_STAGE("a3.ldpc");
     if (const dect2::LdpcCode* qc = qcCode(cfg_.nInner, cfg_.rate15)) {
         const float a = qcAlpha(cfg_.nInner, cfg_.rate15);
         int it = 0;
@@ -378,7 +382,7 @@ void Bicm::decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, st
     const Ldpc& code = ldpcCode(cfg_.nInner, cfg_.rate15);
     // the values are the limited LLRs rounded to integers (+-20): with the 8-bit range filled to +-31 the decoder failed on 1.5% of the blocks, which
     // the float decoder then had to take over
-    code.decodeBatch(ptr, 20, hard, good);
+    { DECT2_STAGE("a3.ldpc"); code.decodeBatch(ptr, 20, hard, good); }
     // A block the 8-bit decoder gave up on may still decode with the float one (60 iterations). When most blocks of the batch fail it is a damaged
     // frame (a gap in the samples): the float decoder would spend about 150 ms on each and keep the whole receiver waiting for many seconds.
     int failed = 0;

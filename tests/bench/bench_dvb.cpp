@@ -86,6 +86,9 @@ std::vector<Case> cases() {
     v.push_back({"dvbc", "DVB-C 256-QAM, 6.952 MBd, radio at 10 Msps", stdOf("dvbc"), 10e6, 8, [](TuneSettings& t) { t.synth.modeOpt[0] = 4; }});
     v.push_back({"atsc", "ATSC 1.0 8-VSB, radio at 8 Msps", 3, 8e6, 6, [](TuneSettings& t) { t.synth.atsc = true; }});
     v.push_back({"atsc3", "ATSC 3.0 (the test signal), radio at 10 Msps", 5, 10e6, 6, [](TuneSettings&) {}});
+    v.push_back({"atsc-10m", "ATSC 1.0 8-VSB, radio at 10 Msps", 3, 10e6, 6, [](TuneSettings& t) { t.synth.atsc = true; }});
+    // a full-rate broadcast: 256QAM 10/15 with 64800 bit code words (about 24 Mbit/s in 6 MHz), every FEC block decoded
+    v.push_back({"atsc3-256qam", "ATSC 3.0 256QAM 10/15 64K, radio at 10 Msps", 5, 10e6, 6, [](TuneSettings& t) { t.synth.modeOpt[0] = 3; t.synth.modeOpt[1] = 9; }});
     v.push_back({"isdbt", "ISDB-T 6 MHz (the test signal), radio at 8 Msps", 6, 8e6, 6, [](TuneSettings& t) { t.isdbtBwMhz = 6; t.synth.isdbtBwMhz = 6; }});
     v.push_back({"dtmb", "DTMB 8 MHz (the test signal), radio at 10 Msps", stdOf("dtmb"), 10e6, 8, [](TuneSettings&) {}});
     return v;
