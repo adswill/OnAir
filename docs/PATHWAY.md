@@ -1364,3 +1364,15 @@ Tools > EchoLink...: log in with the callsign and password from settings, then l
 Branch feat39-smart5a on integ-39. 26 automatic engines in core/src/smart5 (list in docs/SMART5-LIST-3.9.md): FM watchdog, BS.412 multiplex power, FM transmitter fingerprint, AM split-carrier analyser, AM modulation health, ensemble change log, fault-or-reception split, HD blend alignment and sideband level, DRM best hour; TS service off-air, OFDM interferer locator, DVB-S/S2 fade and margin log, transmitter from cell ID, VITS analyser; learned horizon, sun outage, product cadence, L-band carrier log, CubeSat beacon learner; GNSS clock ppm, S4, multipath; Sun drift scan, VLF terminator marks, meteor rate against showers. Four test binaries (tests/smart5). Simulated signals only. Docs: docs/SMART5-{broadcast,tv,sat,gnss,science}-3.9.md. Wiring into the screens is left to the integrator.
 ## 2026-11-10 broadcast package (feat39-bcast)
 Branch feat39-bcast on integ-39, family block 730-749. ISDB-TSB is a new mode (family 730, engine standard 732): the one- and three-segment ARIB STD-B29 signal on the ISDB-T generator and receiver, automatic segment count, and the one-seg service of ISDB-T through the narrow receiver. DVB-H is added to DVB-T, with no new entry: the 4K mode, the in-depth interleaver, the TPS bits, and an MPE / MPE-FEC demultiplexer (EN 301 192, RS(255,191) erasure decoding) fed by the engine. T-DMB was already in the DAB mode. DVB-C2, DVB-SH and CMMB were not done; the reasons are in docs/BCAST-3.9.md. Tests: isdbtsb, dvbh and mpe_fec. Run on GitHub (quick.yml) because the local build gate was saturated. Simulated signals only.
+
+## 2026-11-11 Sensitivity pass D (feat39-sensD)
+Branch feat39-sensD on integ-39. Thresholds, offset and clock tolerance and CPU for the decoders the first passes did not measure (docs/SENSITIVITY-3.9-D.md).
+- Meteor LRPT OQPSK: carrier, symbol clock and timing from the lines of the squared signal, narrow loops from the start, a best-scoring sync search; 90 % point 5 / 8 dB -> 2 / 3 dB Es/N0 (AWGN / 20 ppm). StripRows places the first row of a pass that starts mid-row correctly.
+- MFSK and THOR: likelihood-ratio soft bits; MFSK16 -9 -> -15 dB, THOR16 -5 -> -11 dB in 2.5 kHz.
+- ALE: the tuning error is found from the spectrum before sync; a 20 ppm radio (282 Hz) decoded nothing before, now -6 dB in 3 kHz.
+- ARQ-E, ARQ-N, G-TOR: the baud from the eye; ARQ-E 96/8 3 -> -2 dB, ARQ-N -1 -> -3 dB, G-TOR 100 6 -> -2 dB.
+- DVB-S: tried before the DVB-S2 header hunt; acquisition CPU of a DVB-S signal 0.29 -> 0.13 s per second.
+- Measured only: Olivia, Contestia, DominoEX, SSTV, HamDRM, weather fax, Fusion (new test signal in the harness), TETRA, TETRAPOL, EDACS, SmartNet, MPT 1327, POCSAG, FLEX, Inmarsat-C and Aero, Orbcomm, APT, GNSS, CW. FreeDV not measured (libcodec2 modem).
+- New tests: sens39d, hfdig_kbdsens39, hfutil_sens39, hfdig_sens39d, marine_fax_sens39.
+
+Simulated signals only.
