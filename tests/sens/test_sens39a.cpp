@@ -28,7 +28,7 @@ const Row kRows[] = {
     {"cdr", -4, -4, false},
     {"drm16", 9, 9, false},
     {"meteor", 0, 0, true},
-    {"hrpt", 0, 0, true},
+    {"hrpt", 3, 3, true},
     {"fy3ahrpt", 2, 2, true},
     {"goes", 0, 0, true},
     {"gk2alrit", 0, 0, true},
@@ -94,6 +94,18 @@ int main() {
         const auto scs = scenariosFor(m);
         ran++;
         printf("== %s: clean %.0f units/trial (needs %.0f), lock %.2f s, CPU %.3f s per signal second\n", row.id, r0.goodMean, need, r0.lockMed, cpuPerSec);
+        if (const char* dbg = getenv("ONAIR_SENS39A_SNR")) {   // diagnosis: every trial of one point (awgn) with its unit counts
+            const Scenario* sc = findScenario(scs, "awgn");
+            const double snr = atof(dbg);
+            fflush(stdout);
+            const uint64_t key = mix64(hashStr(m.id) ^ mix64(hashStr(sc->name)) ^ mix64((uint64_t)llround(snr * 10) + 1000) ^ cfg.seed);
+            for (int i = 0; i < 6; i++) {
+                const Trial t = runTrial(m, P, *sc, snr, mix64(key + (uint64_t)i), need);
+                printf("   trial %d at %g dB: good %.0f bad %.0f lock %.2f s %s\n", i, snr, t.good, t.bad, t.lockS, t.ok ? "ok" : "fail");
+                fflush(stdout);
+            }
+            continue;
+        }
         if (!longRun) {
             for (const char* sn : {"awgn", "cfo20ppm"}) {
                 const Scenario* sc = findScenario(scs, sn);
@@ -119,6 +131,9 @@ int main() {
             const bool ok = r.hasThreshold && r.threshold <= lim + 1e-9;
             printf("   %-9s threshold %s dB (limit %.0f), lock %.2f s %s\n", sn, r.hasThreshold ? jnum(r.threshold).c_str() : "-", lim, r.lockMed, ok ? "ok" : "FAIL");
             if (!ok) fails++;
+            printf("     ");
+            for (const auto& p : r.pts) printf(" %g:%d/%d", p.snr, p.ok, p.n);
+            printf("\n");
         }
     }
     printf("%d modes, %d failures\n", ran, fails);

@@ -149,6 +149,8 @@ struct HrptReceiver::Impl {
     int frameBits = 0, misses = 0;
     uint8_t frame[meteor::kCodedBytes];
     int64_t sinceFrame = 0;
+    bool dropSearch = false;
+    int badRun = 0;
     double lastGoodSec = -1e9, lastAsmSec = -1e9, varStartSec = 0, lockLostSec = 0;
     meteor::PacketDemux demux[64];
 
@@ -240,7 +242,7 @@ struct HrptReceiver::Impl {
     void resetChain() {
         resetSearch(); searchLock = false; xt = -1;
         vit.reset();
-        sr = 0; bitCount = 0; inFrame = false; frameLock = false; frameBits = 0; misses = 0; sinceFrame = 0;
+        sr = 0; bitCount = 0; inFrame = false; frameLock = false; frameBits = 0; misses = 0; sinceFrame = 0; dropSearch = false; badRun = 0;
         for (auto& d : demux) d.reset();
         prevChip = 0; chipN = 0; nsr[0] = nsr[1] = 0; noaaLock = false; nMiss = 0; nBits = 0; nAcc = 0;
         nWords.assign((size_t)hrpt::kNoaaWords, 0);
@@ -444,6 +446,10 @@ struct HrptReceiver::Impl {
 
     // ------------------------------------------------------------ AHRPT bit chain
     void afterSoft(int8_t a, int8_t b) {
+        if (dropSearch) {   // set from frameBit() (it may run inside the replay of lockAmbiguity(), which walks the pair buffer)
+            dropSearch = false;
+            if (searchLock) { searchLock = false; frameLock = false; resetSearch(); tel.rotation = -1; say("no sync word: searching the ambiguity again"); }
+        }
         if (searchLock) {
             int oa, ob;
             xform(xt, a, b, oa, ob);
@@ -482,7 +488,7 @@ struct HrptReceiver::Impl {
     }
 
     void lockAmbiguity(int t, int64_t at) {
-        searchLock = true; xt = t;
+        searchLock = true; xt = t; sinceFrame = 0; dropSearch = false; badRun = 0;
         tel.rotation = t;
         lastAsmSec = nowSec();
         vit.reset();
@@ -520,10 +526,13 @@ struct HrptReceiver::Impl {
         if (frameLock) {
             if (sinceFrame < 32) return;
             if (std::min(e, ei) <= 10) misses = 0; else misses++;
-            if (misses > 4) { frameLock = false; say("frame sync lost"); }
+            if (misses > 4) { frameLock = false; dropSearch = true; say("frame sync lost"); }
             else { if (std::min(e, ei) <= 10) inv = ei < e; startFrame(); tel.asmHits++; lastAsmSec = nowSec(); return; }
         }
         if (e <= 3 || ei <= 3) { inv = ei < e; startFrame(); frameLock = true; misses = 0; tel.asmHits++; lastAsmSec = nowSec(); }
+        // no sync word for three frames since the ambiguity was settled (a cycle slip of the carrier loop turns the constellation): search the
+        // ambiguity again at once instead of after 3 s of no frames (3.9: one slip lost the rest of a short pass)
+        else if (!frameLock && sinceFrame > 3 * (meteor::kCodedBytes * 8 + 32)) dropSearch = true;
     }
 
     void startFrame() { inFrame = true; frameBits = 0; std::memset(frame, 0, sizeof frame); }
@@ -531,7 +540,12 @@ struct HrptReceiver::Impl {
     void gotFrame() {
         uint8_t v[meteor::kVcduBytes];
         const int e = meteor::decodeCadu(frame, v);
-        if (e < 0) { tel.blocksBad++; return; }
+        if (e < 0) {
+            tel.blocksBad++;
+            if (++badRun >= 3) dropSearch = true;   // three in a row: a lock taken while the loops settled, or one that slipped since (as Meteor)
+            return;
+        }
+        badRun = 0;
         tel.blocksOk++; tel.rsCorrected += (uint64_t)e;
         lastGoodSec = nowSec();
         meteor::Vcdu vc;
@@ -631,19 +645,21 @@ struct HrptReceiver::Impl {
     // report(), between blocks), so the filter outputs of a block stay valid.
     void inputBlock(const cf32* x, int L) {
         if (dec != 1) { for (int k = 0; k < L; k++) input(x[k]); return; }
-        br_.resize((size_t)L); bi_.resize((size_t)L); zr_.resize((size_t)L); zi_.resize((size_t)L);
-        for (int k = 0; k < L; k++) {
-            const cd v = cd(x[k].real(), x[k].imag()) * rot;
+        auto mix = [&](cf32 in) {
+            const cd v = cd(in.real(), in.imag()) * rot;
             rot *= step;
             if ((nIn & 1023) == 0) rot /= std::abs(rot);
             nIn++;
-            br_[(size_t)k] = (float)v.real(); bi_[(size_t)k] = (float)v.imag();
-        }
+            return cf32((float)v.real(), (float)v.imag());
+        };
+        // one at a time until the coarse carrier is known: it changes the mixer step, which the next sample must already see
         int j = 0;
-        while (j < L && !coarseDone) { coarseSample(cf32(br_[(size_t)j], bi_[(size_t)j])); j++; }
+        while (j < L && !coarseDone) coarseSample(mix(x[j++]));
         if (j == L) return;
         const int m = L - j;
-        rrc.block(&br_[(size_t)j], &bi_[(size_t)j], m, zr_.data(), zi_.data());
+        br_.resize((size_t)m); bi_.resize((size_t)m); zr_.resize((size_t)m); zi_.resize((size_t)m);
+        for (int k = 0; k < m; k++) { const cf32 v = mix(x[j + k]); br_[(size_t)k] = v.real(); bi_[(size_t)k] = v.imag(); }
+        rrc.block(br_.data(), bi_.data(), m, zr_.data(), zi_.data());
         for (int k = 0; k < m; k++) {
             hist[(size_t)(hN & (kHist - 1))] = cf32(zr_[(size_t)k], zi_[(size_t)k]);
             hN++;
