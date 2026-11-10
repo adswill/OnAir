@@ -950,6 +950,11 @@ int main(int argc, char** argv) {
     const double t1 = wallNow();
     std::vector<Mode*> spec;
     for (Mode* m : run) if (m->radio) spec.push_back(m);
+    if (const char* ix = getenv("IQ_MODES_INDEX")) {   // one mode of the spectrum part alone (by its place in that list), for finding a crash
+        const size_t k = (size_t)atoi(ix);
+        spec = k < spec.size() ? std::vector<Mode*>{spec[k]} : std::vector<Mode*>{};
+        if (!spec.empty()) printf("spectrum part: %s only\n", spec[0]->name.c_str());
+    }
     std::vector<SpecResult> sr(spec.size());
     {
         std::atomic<size_t> next{0};

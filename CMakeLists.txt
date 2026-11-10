@@ -1930,6 +1930,10 @@ if(DECT2_BUILD_TESTS)
   # the ISDB-T layer decoders run on a worker thread and publish a little after the symbol that fed them: the packet counts this test
   # compares must not depend on timing, so its ISDB-T receivers decode inline (the isdbt tests cover the threaded path)
   set_property(TEST iq_modes APPEND PROPERTY ENVIRONMENT "DECT2_ISDBT_THREADS=0")
+  foreach(i RANGE 0 23)   # TEMPORARY (feat39-fixes2): the engine-spectrum part one mode at a time, to find the iq_modes heap corruption
+    add_test(NAME iq_modes_spec_${i} COMMAND test_iq_modes)
+    set_property(TEST iq_modes_spec_${i} PROPERTY ENVIRONMENT "DECT2_ISDBT_THREADS=0;IQ_MODES_SPECTRUM_ONLY=1;IQ_MODES_INDEX=${i}")
+  endforeach()
   add_executable(test_adc_bits tests/source/test_adc_bits.cpp)
   target_link_libraries(test_adc_bits PRIVATE dect2core)
   add_test(NAME adc_bits COMMAND test_adc_bits)
