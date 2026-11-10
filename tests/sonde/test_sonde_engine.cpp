@@ -2,6 +2,7 @@
 // SynthConfig::mode = 15) at the mode's sample rate, the receiver runs on its own thread, telemetry comes through latestRx. 20 s; a retune
 // in the middle must reset the receiver without the sequence number going back; no samples may be dropped.
 #include "dect2/engine/engine.h"
+#include "dect2/engine/engine_testkit.h"
 #include "dect2/engine/modes.h"
 #include "dect2/sonde/sonde_bits.h"
 #include <chrono>
@@ -42,8 +43,10 @@ int main() {
     uint64_t seq = 0, lastSeq = 0;
     bool seqOk = true, retuned = false, decoded = false;
     size_t maxBytes = 0;
+    // 20 s of signal, counted by the engine (a busy runner processes it slower than real time; the synthetic source waits, nothing is lost),
+    // with a wall-clock guard
     const auto t0 = std::chrono::steady_clock::now();
-    while (std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 20.0) {
+    while (enginetest::signalSecs(e) < 20.0 && std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count() < 120.0) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         if (e.latestRx(t, seq)) {
             seq = t.seq;
@@ -59,8 +62,7 @@ int main() {
         }
         SondeTelemetry direct;
         e.sonde().telemetry(direct, 0);
-        const double el = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
-        if (!retuned && el > 7.0) { CHECK(e.retuneReset(tune), "retune"); retuned = true; }
+        if (!retuned && enginetest::signalSecs(e) > 7.0) { CHECK(e.retuneReset(tune), "retune"); retuned = true; }
     }
     e.latestRx(t, 0);
     const uint64_t dropped = e.droppedSamples();

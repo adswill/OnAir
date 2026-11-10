@@ -1346,3 +1346,21 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 feat39-fixes: DRM freeze, narrow DVB-S2, HF pagers, TETRAPOL filter, touch start, slow-runner tests
+Branch feat39-fixes, based on integ-39.
+- DRM: the test signal no longer hangs at 16-QAM with protection 2 or 3 (`drm_gencombo`).
+- DVB-S2: symbol rates down to 10 ksym/s. Auto works from 10 ksym/s (`dvbs_narrow`, 32 ksym/s at roll-off 0.20).
+- TETRAPOL: the channel filter is in the Baseband filter row (#408, `tetrapol_filter`).
+- Touch: small screens start in touch after an upgrade too (#139).
+- New regression test `pager_hf`: pagers and packet on HF through the engine, Whole span off and on.
+- Engine: CPU-time receiver load (`SampleLoss::cpuPct`) and `backlogSec()`.
+- Tests: hdr_engine, gain_opt_engine, sonde_engine, iridium_app, scan_handover, gnss_glonass (now in two halves) and inmc_slow_rates are made robust against busy runners.
+
+Simulated signals only. Details are in docs/FIXES-3.9.md.
+## 2026-11-10 EchoLink client (feat39-echolink)
+Tools > EchoLink...: log in with the callsign and password from settings, then list, search and connect to stations, links, repeaters and conferences. It covers GSM 06.10 audio both ways (hold-to-talk, latched talk or VOX), chat and the station info text. An optional "Link to RF channel" bridge (sound-card radio, VOX or Hamlib keying) is off by default and needs a licensing note acknowledged first. The GSM 06.10 codec is new (core/src/echolink); its decoder is bit-exact against FFmpeg's. The protocol follows SvxLink (GPL-2.0-or-later), credited in THIRD_PARTY.md and in the in-app Credits. The password is a credential settings key and is never logged. Tests run against a mock directory and a second client on 127.0.0.1 only; the real EchoLink servers were never contacted. Details are in docs/ECHOLINK-3.9.md.
+## 2026-11-10 Smart features round 5: broadcast, TV, satellites, GNSS, science (feat39-smart5a)
+Branch feat39-smart5a on integ-39. 26 automatic engines in core/src/smart5 (list in docs/SMART5-LIST-3.9.md): FM watchdog, BS.412 multiplex power, FM transmitter fingerprint, AM split-carrier analyser, AM modulation health, ensemble change log, fault-or-reception split, HD blend alignment and sideband level, DRM best hour; TS service off-air, OFDM interferer locator, DVB-S/S2 fade and margin log, transmitter from cell ID, VITS analyser; learned horizon, sun outage, product cadence, L-band carrier log, CubeSat beacon learner; GNSS clock ppm, S4, multipath; Sun drift scan, VLF terminator marks, meteor rate against showers. Four test binaries (tests/smart5). Simulated signals only. Docs: docs/SMART5-{broadcast,tv,sat,gnss,science}-3.9.md. Wiring into the screens is left to the integrator.
+## 2026-11-10 broadcast package (feat39-bcast)
+Branch feat39-bcast on integ-39, family block 730-749. ISDB-TSB is a new mode (family 730, engine standard 732): the one- and three-segment ARIB STD-B29 signal on the ISDB-T generator and receiver, automatic segment count, and the one-seg service of ISDB-T through the narrow receiver. DVB-H is added to DVB-T, with no new entry: the 4K mode, the in-depth interleaver, the TPS bits, and an MPE / MPE-FEC demultiplexer (EN 301 192, RS(255,191) erasure decoding) fed by the engine. T-DMB was already in the DAB mode. DVB-C2, DVB-SH and CMMB were not done; the reasons are in docs/BCAST-3.9.md. Tests: isdbtsb, dvbh and mpe_fec. Run on GitHub (quick.yml) because the local build gate was saturated. Simulated signals only.

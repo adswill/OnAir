@@ -24,14 +24,25 @@ void FecDecoder::configure(const Params& p) {
 
 void FecDecoder::reset() {
     st_ = FecStats();
-    llrQueue_.clear(); carry_.clear(); bits_.clear(); bytes_.clear(); after_.clear(); out_.clear();
+    llrQueue_.clear(); blkCells_.clear(); blkN0_.clear(); carry_.clear(); bits_.clear(); bytes_.clear(); after_.clear(); out_.clear();
     bitsDropped_ = 0; bitOffset_ = -1; syncBytePos_ = -1;
     deint_ = ConvInterleaver(true);
     groupIdx_ = 0; haveGroup_ = false; warm_ = 0; blocksSinceSync_ = 0; syncMisses_ = 0; syncSearches_ = 0;
 }
 
-void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
-    const int N = dataCarriers(p_.mode), v = bitsPerCell(p_.mod);
+void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx, int frameIdx) {
+    const int Ns = dataCarriers(p_.mode), v = bitsPerCell(p_.mod), B = interleaverSymbols(p_);
+    // the in-depth interleaver (annex F): collect the two or four symbols of a 6048-cell block, then de-interleave the block as a whole
+    bool odd = (symIdx & 1) != 0;
+    if (B > 1) {
+        if (symIdx % B == 0) { blkCells_.clear(); blkN0_.clear(); blkOdd_ = interleaverOdd(p_, frameIdx, symIdx); }
+        else if (blkCells_.empty()) return;   // started inside a block: from the next one on
+        blkCells_.insert(blkCells_.end(), cells, cells + Ns);
+        blkN0_.insert(blkN0_.end(), n0, n0 + Ns);
+        if ((int)blkCells_.size() < Ns * B) return;
+        cells = blkCells_.data(); n0 = blkN0_.data(); odd = blkOdd_;
+    }
+    const int N = Ns * B;
     // Hierarchical modulation: the high-priority stream is the first two bits of every cell (y0, y1: the quadrant), bit-interleaved by
     // branches I0 and I1 exactly like QPSK, and coded at the HP rate. The LP stream is the other v - 2 bits (branches I2..), at the LP rate.
     const int m = p_.hier ? (lp_ ? v - 2 : 2) : v;
@@ -39,7 +50,7 @@ void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
     static thread_local std::vector<cf32> c2;
     static thread_local std::vector<float> n2, llr;
     c2.resize(N); n2.resize(N); llr.resize((size_t)N * m);
-    symbolDeinterleave(p_.mode, symIdx, cells, n0, c2.data(), n2.data());
+    blockDeinterleave(p_, odd, cells, n0, c2.data(), n2.data());
     // the bit de-interleaver writes straight onto the end of the queue (no copy of the symbol's values through a second buffer)
     const size_t q0 = llrQueue_.size();
     llrQueue_.resize(q0 + (size_t)N * m);
@@ -57,10 +68,11 @@ void FecDecoder::pushSymbol(const cf32* cells, const float* n0, int symIdx) {
         demap(c2.data(), n2.data(), N, p_.mod, p_.hier, llr.data());
         bitDeinterleave(llr.data(), p_.mod, N, dst);
     }
-    st_.symbols++;
+    st_.symbols += (uint64_t)B;
+    if (B > 1) { blkCells_.clear(); blkN0_.clear(); }
     dm.stop();
     // decode in blocks of 16 symbols (the carry gives the trellis its history)
-    if (llrQueue_.size() >= (size_t)N * m * 16) process(false);
+    if (llrQueue_.size() >= (size_t)Ns * m * 16) process(false);
 }
 
 void FecDecoder::process(bool) {

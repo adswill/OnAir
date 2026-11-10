@@ -180,7 +180,7 @@ struct Generator::Plan {
     int firstSeg[3] = {0, 0, 0};
 };
 
-Generator::Generator(const Params& p, PacketSource src, unsigned) : p_(p), N_(fftN(p.mode)), G_(guardSamples(p.mode, p.guard)), K_(totalCarriers(p.mode)), src_(std::move(src)) {
+Generator::Generator(const Params& p, PacketSource src, unsigned) : p_(p), N_(fftN(p.mode) / tsbDecimation(p.tsb)), G_(guardSamples(p.mode, p.guard) / tsbDecimation(p.tsb)), K_(totalCarriers(p.mode)), src_(std::move(src)) {
     if (!src_) src_ = countingSource();
     segmentLayout(p_, seg_);
     for (int i = 0; i < 3; i++) tx_.emplace_back(p_.layer[i].used() ? new LayerTx(p.mode, p_.layer[i], p.bitDelayTwoSymbols) : nullptr);
@@ -274,7 +274,7 @@ void Generator::produceFrame(std::vector<cf32>* out) {
     tmccFrameBits(tmccInfo, evenFrame, false, tmccSync);
     std::vector<cf32> X((size_t)N_);
     if (out) out->resize((size_t)frameSamples());
-    const float scale = 1.f / std::sqrt((float)K_ * 1.04f);
+    const float scale = 1.f / std::sqrt((float)(edgeCarrier(mode, p_.tsb) - firstPosition(p_.tsb) * cps + 1) * 1.04f);
     for (int sym = 0; sym < kSymbolsPerFrame; sym++) {
         // 2. combine the layers into data segments and interleave in time
         for (int s = 0; s < kSegments; s++) {
@@ -321,10 +321,11 @@ void Generator::produceFrame(std::vector<cf32>* out) {
                 c0[cc.idx] = cf32(c ? -kPilotAmp : kPilotAmp, 0);
             }
         }
-        car[K_ - 1] = cf32(lastCarrierValue(mode), 0);
-        // 5. IFFT with the guard interval
+        const int kEdge = edgeCarrier(mode, p_.tsb);
+        car[kEdge] = cf32(edgeCarrierValue(mode, p_.tsb), 0);
+        // 5. IFFT with the guard interval (ISDB-TSB: the narrow band only, at its own rate)
         std::fill(X.begin(), X.end(), cf32(0, 0));
-        for (int k = 0; k < K_; k++) X[(size_t)P.kmap[(size_t)k]] = car[k];
+        for (int k = firstPosition(p_.tsb) * cps; k <= kEdge; k++) X[(size_t)P.kmap[(size_t)k]] = car[k];
         fft_->inverse(X.data());
         if (out) {
             cf32* o = out->data() + (size_t)sym * (size_t)(N_ + G_);

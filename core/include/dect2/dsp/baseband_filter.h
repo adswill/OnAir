@@ -173,7 +173,7 @@ inline const std::vector<Preset>& presets() {
     return p;
 }
 
-// ---- the per-mode settings (key = the mode's short name: "airband", "acars", "vdl2", "ais", "pager", "packet", "hfdig", "cw", "general") ----
+// ---- the per-mode settings (key = the mode's short name: "airband", "acars", "vdl2", "ais", "pager", "packet", "hfdig", "cw", "general", "tetrapol") ----
 // The app fills the registry from the preferences and when the user changes a filter; a mode reads it where it designs its channel filter
 // (at start / configure), so a change applies the next time the mode starts. Nothing set: the mode's own filter.
 struct Registry { std::mutex mu; std::map<std::string, BasebandFilterCfg> m; };
@@ -205,6 +205,7 @@ inline const char* keyForFamily(int family) {
         case 25: case 36: return "hfdig";
         case 34: return "cw";
         case 55: return "general";
+        case 80: return "tetrapol";
         default: return "";
     }
 }
