@@ -70,7 +70,6 @@ QO-100 path	Ścieżka QO-100
 Radio ID	ID radia
 Radio text (RT)	Radiotekst (RT)
 RDS PI	RDS PI
-Receiver-style options (demo signal)	Opcje w stylu odbiornika (sygnał demo)
 Report	Raport
 Reverse (mark is the upper tone)	Odwrócone (mark to górny ton)
 RFPI	RFPI
@@ -2808,7 +2807,6 @@ Presets	Ustawienia zapisane
 Preview	Podgląd
 Programme type	Typ programu
 Push to talk (hold the button)	Push to talk (przytrzymaj przycisk)
-Puts every setting below back to its default.	Przywraca wszystkie poniższe ustawienia do wartości domyślnych.
 RDS	RDS
 RDS level	Poziom RDS
 RF level	Poziom RF

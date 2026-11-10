@@ -70,7 +70,6 @@ QO-100 path	QO-100 経路
 Radio ID	無線 ID
 Radio text (RT)	ラジオテキスト (RT)
 RDS PI	RDS PI
-Receiver-style options (demo signal)	受信機スタイルのオプション (デモ信号)
 Report	レポート
 Reverse (mark is the upper tone)	反転 (マークが上側のトーン)
 RFPI	RFPI
@@ -2808,7 +2807,6 @@ Presets	プリセット
 Preview	プレビュー
 Programme type	番組タイプ
 Push to talk (hold the button)	プッシュトゥトーク（ボタンを押している間）
-Puts every setting below back to its default.	下のすべての設定を既定値に戻します。
 RDS	RDS
 RDS level	RDS レベル
 RF level	RF レベル

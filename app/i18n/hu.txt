@@ -77,7 +77,6 @@ QO-100 path	QO-100 útvonal
 Radio ID	Rádióazonosító
 Radio text (RT)	Rádiószöveg (RT)
 RDS PI	RDS PI
-Receiver-style options (demo signal)	Vevő-stílusú opciók (demó jel)
 Report	Jelentés
 Reverse (mark is the upper tone)	Fordított (a mark a felső hang)
 RFPI	RFPI
@@ -2794,7 +2793,6 @@ Presets	Előbeállítások
 Preview	Előnézet
 Programme type	Műsortípus
 Push to talk (hold the button)	Nyomd a beszéléshez (tartsd lenyomva a gombot)
-Puts every setting below back to its default.	Minden lenti beállítást visszaállít az alapértékre.
 RDS	RDS
 RDS level	RDS szint
 RF level	RF szint
