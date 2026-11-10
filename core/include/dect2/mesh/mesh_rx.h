@@ -10,6 +10,7 @@
 #include <functional>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace dect2 {
 
@@ -29,6 +30,9 @@ public:
     std::string saveResults() const;                     // for the results file (results_io.h)
     bool loadResults(const std::string& blob);           // false: not this build's format, nothing changes
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
+    // Every frame with a good CRC from a decoder that takes MeshCore (protocol: the packet layer that read it, 2 = MeshCore), as it came off
+    // the air, for the MeshCore device (meshcore_node.h). Called from the receiver thread: the callback must not block.
+    void setFrameCallback(std::function<void(int protocol, const std::vector<uint8_t>& payload, float snrDb, double freqHz)> cb);
 
     // settings (any thread; they take effect at the next feed())
     void setTunedHz(double hz);                          // the user's frequency (default: meshTuning().defMhz); places the channels

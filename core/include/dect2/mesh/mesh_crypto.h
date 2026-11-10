@@ -1,7 +1,7 @@
 // Crypto for the Meshtastic and MeshCore packet layers, written for this project: AES-128/256 (ECB, CTR), SHA-256,
 // HMAC-SHA256, SHA-512 and Ed25519 (MeshCore adverts are signed). Checked against FIPS 197, SP 800-38A, RFC 3686,
-// FIPS 180-4, RFC 4231 and RFC 8032 vectors in tests/mesh/test_mesh_crypto_kat.cpp. Not hardened against timing attacks:
-// it only handles public channel keys and test keys.
+// FIPS 180-4, RFC 4231 and RFC 8032 vectors in tests/mesh/test_mesh_crypto_kat.cpp. Not hardened against timing attacks except the
+// key exchange ladder; the MeshCore node (meshcore_node.h) signs adverts with the user's own key on the user's own computer.
 #pragma once
 #include <cstddef>
 #include <cstdint>
@@ -50,6 +50,14 @@ void sha512(const uint8_t* p, size_t n, uint8_t out[64]);
 void ed25519PublicKey(const uint8_t seed[32], uint8_t pub[32]);
 void ed25519Sign(const uint8_t seed[32], const uint8_t* msg, size_t n, uint8_t sig[64]);
 bool ed25519Verify(const uint8_t sig[64], const uint8_t* msg, size_t n, const uint8_t pub[32]);
+// The 64 byte private key of orlp/ed25519 (MeshCore's LocalIdentity): SHA-512 of the seed, first half clamped. The public key is the
+// first half times the base point (taken as stored, as ed25519_derive_pub does); signing hashes the second half with the message.
+void ed25519ExpandSeed(const uint8_t seed[32], uint8_t prv[64]);
+void ed25519PublicFromPrivate(const uint8_t prv[64], uint8_t pub[32]);
+void ed25519SignPrivate(const uint8_t prv[64], const uint8_t pub[32], const uint8_t* msg, size_t n, uint8_t sig[64]);
+// orlp ed25519_key_exchange (MeshCore's shared secret of two identities): the other Ed25519 public key turned into its Montgomery form,
+// then X25519 with the private key's first half. The ladder does not branch on the key; the signing above is variable-time.
+void ed25519KeyExchange(uint8_t shared[32], const uint8_t otherPub[32], const uint8_t prv[64]);
 
 // text helpers
 bool base64Decode(const std::string& s, std::vector<uint8_t>& out);   // standard alphabet, padding optional, spaces ignored
