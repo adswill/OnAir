@@ -3,6 +3,7 @@
 // than on macOS and failed there (frequency known top-1 at 10 dB 40.6 %, digital voice top-1 at 20 dB 72.2 %). The expected values below were
 // taken from libc++'s std::hash on macOS arm64; on macOS the test also compares against std::hash directly on random strings of 0 to 64 bytes.
 #include "dect2/common/stable_random.h"
+#include <cmath>
 #include <cstdio>
 #include <random>
 #include <string>
@@ -34,7 +35,7 @@ int main() {
         const std::string s(d.l);
         std::mt19937 g(0x9E3779B9u * (uint32_t)(dect2::stable_string_hash(s.data(), s.size()) + 17));
         const double v = dect2::normal_distribution<double>(0, 1)(g);
-        CHECK(v == d.v, "%s: first draw %.17g, macOS gives %.17g", d.l, v, d.v);
+        CHECK(std::fabs(v - d.v) < 1e-12, "%s: first draw %.17g, macOS gives %.17g", d.l, v, d.v);   // the same draw; log / sqrt of the libm may differ in the last bit
     }
 #if defined(_LIBCPP_VERSION) && SIZE_MAX == UINT64_MAX
     std::mt19937 g(1);
