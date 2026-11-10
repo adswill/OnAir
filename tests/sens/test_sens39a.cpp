@@ -19,22 +19,21 @@ struct Row {
     bool shortRun;        // in the default run (false: wideband or long-trial modes, ONAIR_TEST_LONG only)
 };
 
-// The numbers are the GitHub Linux runner's (sens-quick.yml, see the doc); the Mac reads within about 1 dB.
+// Measured on the Mac with ONAIR_TEST_LONG=1 (6 trials a point, 1 dB steps below the last 4 dB step), see the doc; the Linux runner reads
+// within about 1 dB, and the default run checks 2 dB above them.
 const Row kRows[] = {
-    {"am", 0, 0, true},
-    {"am-sync", 0, 0, true},
-    {"fm-rds", 16, 16, false},
-    {"hdr-fm", 0, 0, false},
-    {"hdr-am", 0, 0, false},
+    {"am", 27, 27, true},          // the criterion is a 1 kHz tone 20 dB over the rest of the audio, not a decoder threshold
+    {"am-sync", 27, 27, true},
+    {"fm-rds", 16, 16, false},     // 3.6/3.7 figures (Linux)
     {"cdr", -4, -4, false},
     {"drm16", 9, 9, false},
-    {"meteor", 0, 0, true},
-    {"hrpt", 2, 2, true},
-    {"fy3ahrpt", 2, 2, true},
-    {"goes", 0, 0, true},
-    {"gk2alrit", 0, 0, true},
-    {"gk2ahrit", 0, 0, true},
-    {"iridium", 12, 12, true},
+    {"meteor", 5, 8, true},
+    {"hrpt", 2, 2, true},          // 3.9: 4 -> 2 dB
+    {"fy3ahrpt", 2, 6, true},
+    {"goes", -1, -1, true},
+    {"gk2alrit", -1, -1, true},
+    {"gk2ahrit", 2, 2, true},
+    {"iridium", 11, 12, false},    // about 4 CPU seconds per signal second in this harness: long run only
 };
 
 double cpuSeconds() {

@@ -1346,3 +1346,6 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 feat39-sensA: sensitivity pass A (broadcast, TV, satellites)
+Branch feat39-sensA on integ-39. MetOp AHRPT: fourth-power coarse carrier, loop held near it while it settles, ambiguity searched again after a slip, block matched filter and incremental sync search: threshold 4 -> 2 dB Es/N0 (AWGN, 20 ppm carrier, 50 ppm clock), receiver CPU about 20 to 30 % lower. New test sens39a keeps the thresholds of Meteor, HRPT, FY-3, GOES, GK-2A, AM, Iridium (long sweep with ONAIR_TEST_LONG=1); hrpt_rx has a 2 dB regression case. Meteor LRPT gap (2.5 to 3 dB) analysed, attempt reverted; Iridium CPU lead noted. Simulated signals only. Details in docs/SENSITIVITY-3.9-A.md.
