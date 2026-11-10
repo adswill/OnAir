@@ -129,6 +129,12 @@ inline std::string tetrapolSummary(const TetrapolTelemetry& t) {
                  (unsigned long long)t.voicePassed, t.callVerdict == 1 ? "clear call" : t.callVerdict == 2 ? "encrypted call" : t.callVerdict == 0 ? "call, encryption unknown" : "no call now");
         return b;
     }
+    if (t.channelKind == 1) {
+        snprintf(b, sizeof b, "control channel: %zu cell%s with system info, %zu group call%s announced, %zu message types", named, named == 1 ? "" : "s",
+                 t.activations.size(), t.activations.size() == 1 ? "" : "s", t.msgs.size());
+        return b;
+    }
+    if (t.synced && t.stuffing > 0 && t.tsdus == 0) return "idle carrier: fill frames only";
     snprintf(b, sizeof b, "%zu TETRAPOL carrier%s, %zu with system info%s", t.cells.size(), t.cells.size() == 1 ? "" : "s", named,
              t.synced ? "" : " (no frame sync)");
     return b;

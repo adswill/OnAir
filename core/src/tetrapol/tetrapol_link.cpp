@@ -126,6 +126,16 @@ bool fcsOk(const uint8_t* bytes, int nbytes) {
     return fcsRun(bytes, nbytes * 8, 0) == 0xffffu;
 }
 
+void appendFcs(std::vector<uint8_t>& b) {
+    const int n = (int)b.size();
+    b.push_back(0); b.push_back(0);
+    const uint32_t f = fcsRun(b.data(), n * 8, 16) ^ 0xffffu;
+    for (int i = 0; i < 16; i++) {
+        const int pos = n * 8 + i;
+        if ((f >> (15 - i)) & 1) b[(size_t)(pos / 8)] |= (uint8_t)(1u << (pos % 8));
+    }
+}
+
 bool parseHdlc(const std::vector<uint8_t>& b, Hdlc& h) {
     h = Hdlc();
     if (b.size() < 5) return false;

@@ -61,7 +61,9 @@ void encodeVoiceFrame(const VoiceFrame& in, int band, uint8_t bits160[kFrameBits
 
 // Decoder of the 152 data bits of one frame, after the transmission differential has been undone (frameBits152 below).
 // forceType: -1 the d bit decides, kVoice / kData only that type.
-bool decodeFrame(const uint8_t bits152[kDataBits], int band, int scr, Frame& out, int forceType = -1);
+// rel152 (optional): the reliability (|soft value|) of each of the 152 received bits before the transmission differential is undone; the
+// circular code is then decoded with soft decisions (about 2 dB better than hard ones). metric stays the count of hard bit disagreements.
+bool decodeFrame(const uint8_t bits152[kDataBits], int band, int scr, Frame& out, int forceType = -1, const float* rel152 = nullptr);
 
 // The transmission differential over a stream (e[k] = x[k] ^ prev, prev = x[k]); returns the last x (the carry into the next frame).
 uint8_t diffEncode(uint8_t* bits, int n, uint8_t prev);

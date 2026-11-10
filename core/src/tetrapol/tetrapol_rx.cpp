@@ -36,14 +36,18 @@ constexpr double kBaud = 8000.0;
 constexpr int kSps = 8;
 constexpr double kWork = kBaud * kSps;   // 64 kHz
 constexpr int kFirTaps = 31;
-constexpr int kVoiceMaxErr = 3;          // coded bits in error allowed in the 52 protected bits of a voice frame
-constexpr int kDataMaxErr = 10;          // ... in the 152 coded bits of a data frame
+constexpr int kVoiceMaxErr = 6;           // coded bits in error allowed in the 52 protected bits of a voice frame
+constexpr int kDataMaxErr = 20;          // ... in the 152 coded bits of a data frame
 constexpr int kCandidateFrames = 12;     // frames a sync candidate has to lock a scrambling constant in (by its CRCs)
 constexpr int kLostFrames = 25;          // frames in a row that fail every check: the scrambling constant is looked for again
 constexpr int kPendingMax = 24;          // frames kept while the scrambling constant is looked for, decoded once it is known
 
-bool frameGood(const tp::Frame& f) {
+// Searching the scrambling constant (256 hypotheses a frame) needs the strict limits; once it is locked the soft decoder's frames are
+// trusted up to the wider ones (the CRC, the zero bits and for data the HDLC FCS still check them)
+constexpr int kVoiceMaxErrSearch = 3, kDataMaxErrSearch = 10;
+bool frameGood(const tp::Frame& f, bool search = false) {
     if (!f.ok) return false;
+    if (search) return f.type == tp::kVoice ? f.metric <= kVoiceMaxErrSearch : f.metric <= kDataMaxErrSearch;
     return f.type == tp::kVoice ? f.metric <= kVoiceMaxErr : f.metric <= kDataMaxErr;
 }
 
@@ -105,6 +109,8 @@ struct TetrapolReceiver::Impl {
     int band = 0, scr = -1;    // locked coding
     int stat[2][128] = {};
     std::deque<std::vector<uint8_t>> pending;   // 152-bit frames before the scrambling constant is known
+    std::deque<std::vector<float>> pendingRel;  // ... and the reliability of their bits
+    std::vector<float> rawRel;                  // |soft value| of each bit in raw
     uint64_t frameNo = 0;
     uint64_t telSeq = 0;       // report number: only ever counts up, also over reset() (the engine ignores a report numbered below the last one it took)
     double lastVoiceSec = -1e9;
@@ -113,6 +119,7 @@ struct TetrapolReceiver::Impl {
     int sfn = -1;              // frame number in the control channel's 200-frame superframe (from the D_SYSTEM_INFO of the BCH), -1 unknown
     int muxType = 0;           // cell_config mux type: 1 adds a PCH in frames 48, 49
     bool sawVoice = false;     // a voice frame since the frame sync: a traffic channel
+    double talkerSec = -1e9;   // when the talking party was last sent
     tp::CallGate gate;
     tp::WavWriter wav;
     int callCount = 0;
@@ -273,6 +280,7 @@ struct TetrapolReceiver::Impl {
             if (!who.empty()) {
                 if (who != tel.talker) event("talking party " + who);
                 tel.talker = who;
+                talkerSec = tel.timeSec;
                 if (!tel.calls.empty() && tel.calls.front().active) tel.calls.front().talker = who;
             }
             return;
@@ -281,13 +289,14 @@ struct TetrapolReceiver::Impl {
         if (!tp::tsduOf(h, t)) return;
         // the frame number of a control channel: the D_SYSTEM_INFO of the BCH ends in frame 3 or 103 (PAS 0001-3-3 5.1.3)
         tp::SysInfo si;
-        if ((ch == kBch || ch == kSdch) && tp::parseSysInfo(t.data(), (int)t.size(), si) && !si.disconnected) {
-            const size_t nf = bytes.size() / 8;
-            const int at = 100 * si.bch + (int)(nf >= 3 ? nf : nf - 1);
-            if (nf == 3 && sfn != at) sfn = at;
+        if ((ch == kBch || sfn < 0) && bytes.size() == 24 && tp::parseSysInfo(t.data(), (int)t.size(), si) && !si.disconnected) {
+            sfn = 100 * si.bch + 3;   // three data frames and the parity frame: frames 0..3 or 100..103
+            tel.superframePos = sfn;
             tel.channelKind = 1;
+            onTsdu(t, kBch);
+            return;
         }
-        onTsdu(t, ch == kBch ? kBch : ch);
+        onTsdu(t, ch);
     }
 
     // ---- voice
@@ -324,7 +333,9 @@ struct TetrapolReceiver::Impl {
             c.startSec = tel.timeSec;
             c.active = true;
             c.groupId = ann ? ann->groupId : -1;
-            tel.talker.clear();
+            // a TP_ADDRESS sent just before the voice (the speech set-up) belongs to this call
+            if (tel.timeSec - talkerSec <= 2.0) c.talker = tel.talker;
+            else tel.talker.clear();
             callCount++;
             char line[96] = "";
             if (ann) snprintf(line, sizeof line, " (group %d)", ann->groupId);
@@ -437,15 +448,15 @@ struct TetrapolReceiver::Impl {
     }
 
     // tries every scrambling constant and band on one frame; returns true when one passed
-    bool detect(const uint8_t* bits152) {
+    bool detect(const uint8_t* bits152, const float* rel) {
         bool any = false;
         for (int b = 0; b < 2; b++) {
             const int bd = b == 0 ? tp::kUhf : tp::kVhf;
             if (bandMode && bandMode != bd) continue;
             for (int s = 0; s < 128; s++) {
                 tp::Frame f;
-                tp::decodeFrame(bits152, bd, s, f);
-                if (frameGood(f)) { stat[b][s] += 2; any = true; }
+                tp::decodeFrame(bits152, bd, s, f, -1, rel);
+                if (frameGood(f, true)) { stat[b][s] += 2; any = true; }
                 else if (stat[b][s] > 0) stat[b][s]--;
             }
         }
@@ -470,14 +481,15 @@ struct TetrapolReceiver::Impl {
         return any;
     }
 
-    void onFrame(const uint8_t* raw160) {
+    void onFrame(const uint8_t* raw160, const float* rel160) {
+        const float* rel = rel160 + tp::kHdrBits;
         frameNo++;
         uint8_t bits[tp::kDataBits];
         tp::frameBits152(raw160, invert, bits);
         if (sync == 1) {
             // a sync candidate: kept only when one of its frames passes a CRC (that also confirms the polarity)
             candFrames++;
-            detect(bits);
+            detect(bits, rel);
             if (scr >= 0) {
                 sync = 2;
                 tel.synced = true;
@@ -487,21 +499,23 @@ struct TetrapolReceiver::Impl {
                 return;
             }
         } else if (scr < 0) {
-            detect(bits);
+            detect(bits, rel);
         }
         if (scr < 0) {
             pending.emplace_back(bits, bits + tp::kDataBits);
-            if (pending.size() > (size_t)kPendingMax) pending.pop_front();
+            pendingRel.emplace_back(rel, rel + tp::kDataBits);
+            if (pending.size() > (size_t)kPendingMax) { pending.pop_front(); pendingRel.pop_front(); }
             return;
         }
         while (!pending.empty()) {   // the frames heard before the constant was known, in order
             tp::Frame f;
-            tp::decodeFrame(pending.front().data(), band, scr, f);
+            tp::decodeFrame(pending.front().data(), band, scr, f, -1, pendingRel.front().data());
             dispatch(f, pending.front().data());
             pending.pop_front();
+            pendingRel.pop_front();
         }
         tp::Frame f;
-        tp::decodeFrame(bits, band, scr, f);
+        tp::decodeFrame(bits, band, scr, f, -1, rel);
         dispatch(f, bits);
         if (lostRun >= kLostFrames) {
             // the constant changed (a new call on a traffic channel) or the carrier is gone: look again
@@ -521,6 +535,7 @@ struct TetrapolReceiver::Impl {
         scr = -1;
         tel.scramble = -1;
         pending.clear();
+        pendingRel.clear();
         asmMain.reset();
         asmVch.reset();
         asmBch.reset(); asmPch.reset(); asmRch.reset();
@@ -571,7 +586,7 @@ struct TetrapolReceiver::Impl {
             } else if (misses > 0) {
                 misses--;
             }
-            onFrame(&raw[frameAt]);
+            onFrame(&raw[frameAt], &rawRel[frameAt]);
             if (sync == 0) continue;
             frameAt += F;
         }
@@ -579,6 +594,7 @@ struct TetrapolReceiver::Impl {
         const size_t keep = sync == 0 ? scan : (frameAt > 4 ? frameAt - 4 : 0);
         if (keep > 4096) {
             raw.erase(raw.begin(), raw.begin() + (std::ptrdiff_t)keep);
+            rawRel.erase(rawRel.begin(), rawRel.begin() + (std::ptrdiff_t)keep);
             if (sync == 0) scan -= keep; else frameAt -= keep;
             if (sync == 0) frameAt = 0;
         }
@@ -598,6 +614,7 @@ struct TetrapolReceiver::Impl {
             const float ae = std::fabs(se), al = std::fabs(sl);
             const float err = (al - ae) / (ae + al + 1e-9f);
             raw.push_back(s < 0.f ? 1 : 0);
+            rawRel.push_back(std::fabs(s));
             const float a = std::fabs(s);
             softAbs += 0.002f * (a - softAbs);
             softVar += 0.002f * ((a - softAbs) * (a - softAbs) - softVar);
@@ -691,12 +708,14 @@ struct TetrapolReceiver::Impl {
         tsym = kSps;
         softAbs = softVar = 0;
         raw.clear();
+        rawRel.clear();
         scan = 0;
         sync = 0;
         frameAt = 0;
         scr = -1;
         band = 0;
         pending.clear();
+        pendingRel.clear();
         asmMain.reset();
         asmVch.reset();
         asmBch.reset(); asmPch.reset(); asmRch.reset();

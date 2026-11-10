@@ -44,6 +44,8 @@ struct Hdlc {
 };
 bool parseHdlc(const std::vector<uint8_t>& block, Hdlc& h);
 bool fcsOk(const uint8_t* bytes, int nbytes);
+// Appends the FCS-16 of b (test signals: RCH blocks)
+void appendFcs(std::vector<uint8_t>& b);
 // An HDLC frame of exactly nbytes (a multiple of 8) with the FCS at the end; info is padded with zeros.
 std::vector<uint8_t> buildHdlc(int z, int y, int x, uint8_t cmd, const std::vector<uint8_t>& info, int nbytes);
 
