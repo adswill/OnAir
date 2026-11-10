@@ -85,6 +85,22 @@ int main() {
         DmrLocation loc;
         CHECK(!parseDmrLrrp(d.data(), d.size(), loc), "short buffer parsed");
     }
+    // #335: a Motorola report behind a compressed IP/UDP header (reporter's DSD log, 2026-11-02, radio 204). The proprietary header's octets
+    // after DPF/SAP and MFID (02 01 11 71 CC 0D 1A 22), then the three rate 1/2 blocks less the CRC and the 7 pad octets.
+    // DSD gave 45.32213 8.88696 0.3 km/h.
+    {
+        std::vector<uint8_t> d = hex("02011171CC0D1A22" "04000000" "01341FAAC4B20251" "407548BA0651D260015B6C0009");
+        DmrLocation loc;
+        CHECK(parseDmrLrrpCompressed(d.data(), d.size(), loc), "compressed: not parsed");
+        CHECK(loc.hasFix && near(loc.lat, 45.32213, 1e-4) && near(loc.lon, 8.88696, 1e-4), "compressed: %.5f %.5f", loc.lat, loc.lon);
+        CHECK(loc.hasSpeed && near(loc.speedMs * 3.6, 0.25, 0.05), "compressed: speed %.2f km/h", loc.speedMs * 3.6);
+        std::vector<uint8_t> cut(d.begin(), d.end() - 1);   // a document that does not end where the data ends
+        CHECK(!parseDmrLrrpCompressed(cut.data(), cut.size(), loc), "compressed: a short packet parsed");
+        std::vector<uint8_t> z(33, 0x00);
+        CHECK(!parseDmrLrrpCompressed(z.data(), z.size(), loc), "compressed: zeros parsed");
+        std::vector<uint8_t> junk = d; junk[30] = 0x7E;   // the speed token (6C) made unknown: not taken
+        CHECK(!parseDmrLrrpCompressed(junk.data(), junk.size(), loc), "compressed: unknown token parsed");
+    }
     if (fails) { printf("%d lrrp checks failed\n", fails); return 1; }
     printf("lrrp ok\n");
     return 0;

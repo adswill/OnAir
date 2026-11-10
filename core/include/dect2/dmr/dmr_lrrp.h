@@ -13,6 +13,11 @@ namespace dect2 {
 // everything else (short data, voice, other IP traffic). Never reads past `size`.
 bool parseDmrLrrp(const uint8_t* data, size_t size, DmrLocation& out);
 
+// An LRRP document behind a compressed IP/UDP header (#335: Motorola radios send the position in a packet whose proprietary header carries the
+// compressed header and the first octets of the document, SAP 9 "proprietary packet data"). `data` is the proprietary header's octets after the
+// DPF/SAP and MFID octets, followed by the packet's data. The document must end exactly at the end of `data` and hold only known tokens.
+bool parseDmrLrrpCompressed(const uint8_t* data, size_t size, DmrLocation& out);
+
 // True when `data` starts with an IPv4 header whose own 16-bit checksum is right. A message whose DMR packet CRC failed is still taken as a position
 // report when this holds (#335: the IP checksum is an independent check of the same bytes, so a wrong packet CRC alone is not a reason to drop it).
 bool dmrIpv4HeaderOk(const uint8_t* data, size_t size);

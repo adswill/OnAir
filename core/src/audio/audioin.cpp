@@ -71,59 +71,100 @@ bool loadPcmWav(const std::string& path, std::vector<float>& stereo, int wantRat
     return o >= 2;
 }
 
-bool loadFfmpeg(const std::string& path, std::vector<float>& stereo, int wantRate) {
+} // namespace
+
+// An audio file opened with FFmpeg and decoded a packet at a time into interleaved stereo float at the session rate. A short file is
+// decoded whole into memory; a longer one (more than kMemorySeconds) stays open and is decoded while it is sent, so it plays to its end
+// and then loops like a short one (#471: a file longer than 10 minutes used to restart at the 10 minute mark).
+struct AudioFileStream {
     AVFormatContext* fmt = nullptr;
-    if (avformat_open_input(&fmt, path.c_str(), nullptr, nullptr) < 0) return false;
-    if (avformat_find_stream_info(fmt, nullptr) < 0) { avformat_close_input(&fmt); return false; }
-    int si = av_find_best_stream(fmt, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
-    if (si < 0) { avformat_close_input(&fmt); return false; }
-    AVStream* st = fmt->streams[si];
-    const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
-    AVCodecContext* ctx = codec ? avcodec_alloc_context3(codec) : nullptr;
-    if (!ctx || avcodec_parameters_to_context(ctx, st->codecpar) < 0 || avcodec_open2(ctx, codec, nullptr) < 0) {
-        if (ctx) avcodec_free_context(&ctx);
-        avformat_close_input(&fmt);
-        return false;
-    }
-    AVChannelLayout outL;
-    av_channel_layout_default(&outL, 2);
+    AVCodecContext* ctx = nullptr;
     SwrContext* swr = nullptr;
-    swr_alloc_set_opts2(&swr, &outL, AV_SAMPLE_FMT_FLT, wantRate, &ctx->ch_layout, ctx->sample_fmt, ctx->sample_rate, 0, nullptr);
-    if (!swr || swr_init(swr) < 0) {
+    AVPacket* pk = nullptr;
+    AVFrame* fr = nullptr;
+    AVChannelLayout outL{};
+    int si = -1, wantRate = 48000;
+    double seconds = 0;   // from the container, 0 when it does not say
+
+    ~AudioFileStream() {
+        if (fr) av_frame_free(&fr);
+        if (pk) av_packet_free(&pk);
         if (swr) swr_free(&swr);
-        avcodec_free_context(&ctx);
-        avformat_close_input(&fmt);
+        if (ctx) avcodec_free_context(&ctx);
+        if (fmt) avformat_close_input(&fmt);
         av_channel_layout_uninit(&outL);
-        return false;
     }
-    AVPacket* pk = av_packet_alloc();
-    AVFrame* fr = av_frame_alloc();
-    stereo.clear();
-    auto append = [&](AVFrame* f) {
+    bool open(const std::string& path, int rate) {
+        wantRate = rate;
+        if (avformat_open_input(&fmt, path.c_str(), nullptr, nullptr) < 0) { fmt = nullptr; return false; }
+        if (avformat_find_stream_info(fmt, nullptr) < 0) return false;
+        si = av_find_best_stream(fmt, AVMEDIA_TYPE_AUDIO, -1, -1, nullptr, 0);
+        if (si < 0) return false;
+        AVStream* st = fmt->streams[si];
+        const AVCodec* codec = avcodec_find_decoder(st->codecpar->codec_id);
+        ctx = codec ? avcodec_alloc_context3(codec) : nullptr;
+        if (!ctx || avcodec_parameters_to_context(ctx, st->codecpar) < 0 || avcodec_open2(ctx, codec, nullptr) < 0) return false;
+        av_channel_layout_default(&outL, 2);
+        swr_alloc_set_opts2(&swr, &outL, AV_SAMPLE_FMT_FLT, wantRate, &ctx->ch_layout, ctx->sample_fmt, ctx->sample_rate, 0, nullptr);
+        if (!swr || swr_init(swr) < 0) return false;
+        pk = av_packet_alloc();
+        fr = av_frame_alloc();
+        if (!pk || !fr) return false;
+        if (st->duration > 0 && st->time_base.den > 0) seconds = (double)st->duration * av_q2d(st->time_base);
+        else if (fmt->duration > 0) seconds = (double)fmt->duration / AV_TIME_BASE;
+        return true;
+    }
+    void append(AVFrame* f, std::vector<float>& stereo) {
         uint8_t* out[1] = {nullptr};
         const int maxOut = (int)((int64_t)f->nb_samples * wantRate / std::max(1, ctx->sample_rate) + 256);
-        std::vector<float> buf((size_t)maxOut * 2);
-        out[0] = (uint8_t*)buf.data();
+        const size_t at = stereo.size();
+        stereo.resize(at + (size_t)maxOut * 2);
+        out[0] = (uint8_t*)(stereo.data() + at);
         const int got = swr_convert(swr, out, maxOut, (const uint8_t**)f->extended_data, f->nb_samples);
-        if (got > 0) stereo.insert(stereo.end(), buf.begin(), buf.begin() + got * 2);
-    };
-    while (av_read_frame(fmt, pk) >= 0) {
-        if (pk->stream_index != si) { av_packet_unref(pk); continue; }
-        if (avcodec_send_packet(ctx, pk) == 0) {
-            while (avcodec_receive_frame(ctx, fr) == 0) append(fr);
-        }
-        av_packet_unref(pk);
-        if (stereo.size() > (size_t)wantRate * 2 * 600) break;   // cap 10 minutes
+        stereo.resize(at + (size_t)std::max(0, got) * 2);
     }
-    avcodec_send_packet(ctx, nullptr);
-    while (avcodec_receive_frame(ctx, fr) == 0) append(fr);
-    av_frame_free(&fr);
-    av_packet_free(&pk);
-    swr_free(&swr);
-    avcodec_free_context(&ctx);
-    avformat_close_input(&fmt);
-    av_channel_layout_uninit(&outL);
-    return stereo.size() >= 2;
+    // Decodes the next packet of the audio stream, appending to `stereo`. false at the end of the file (the decoder is drained then).
+    bool decodeSome(std::vector<float>& stereo) {
+        while (av_read_frame(fmt, pk) >= 0) {
+            if (pk->stream_index != si) { av_packet_unref(pk); continue; }
+            if (avcodec_send_packet(ctx, pk) == 0)
+                while (avcodec_receive_frame(ctx, fr) == 0) append(fr, stereo);
+            av_packet_unref(pk);
+            return true;
+        }
+        avcodec_send_packet(ctx, nullptr);
+        while (avcodec_receive_frame(ctx, fr) == 0) append(fr, stereo);
+        return false;
+    }
+    // Back to the start for the next loop.
+    bool rewind() {
+        if (av_seek_frame(fmt, si, 0, AVSEEK_FLAG_BACKWARD) < 0 && av_seek_frame(fmt, -1, 0, AVSEEK_FLAG_BACKWARD | AVSEEK_FLAG_BYTE) < 0) return false;
+        avcodec_flush_buffers(ctx);
+        return true;
+    }
+};
+
+namespace {
+
+constexpr double kMemorySeconds = 600;   // a file up to this long is decoded whole into memory (48 kHz stereo float: 230 MB at most)
+
+// Opens the file: a short one is decoded into `stereo` (and `stream` is left empty), a long one is returned in `stream`, ready to play.
+bool loadFfmpeg(const std::string& path, std::vector<float>& stereo, int wantRate, std::shared_ptr<AudioFileStream>& stream) {
+    stream.reset();
+    stereo.clear();
+    auto d = std::make_shared<AudioFileStream>();
+    if (!d->open(path, wantRate)) return false;
+    const size_t cap = (size_t)(wantRate * 2 * kMemorySeconds);
+    if (d->seconds <= kMemorySeconds) {   // short, or the container does not say: decode until the end or the limit
+        while (d->decodeSome(stereo))
+            if (stereo.size() > cap) break;
+        if (stereo.size() <= cap) return stereo.size() >= 2;
+        stereo.clear();
+        stereo.shrink_to_fit();
+        if (!d->rewind()) return false;
+    }
+    stream = std::move(d);
+    return true;
 }
 
 void measure(std::atomic<float>& peak, const float* s, int n, float gain) {
@@ -191,6 +232,9 @@ bool AudioIn::start(Kind k, int sampleRate, const std::string& pathOrDevice, dou
     p_->tph = 0;
     p_->file.clear();
     p_->filePos = 0;
+    p_->stream.reset();
+    p_->streamBuf.clear();
+    p_->streamPos = 0;
     p_->w = 0;
     p_->r = 0;
     p_->peak = 0;
@@ -204,7 +248,7 @@ bool AudioIn::start(Kind k, int sampleRate, const std::string& pathOrDevice, dou
         return true;
     }
     if (k == File) {
-        if (!loadFfmpeg(pathOrDevice, p_->file, rate_) && !loadPcmWav(pathOrDevice, p_->file, rate_)) {
+        if (!loadFfmpeg(pathOrDevice, p_->file, rate_, p_->stream) && !loadPcmWav(pathOrDevice, p_->file, rate_)) {
             err = "could not open the audio file (WAV or MP3)";
             kind_ = None;
             return false;
@@ -226,13 +270,20 @@ void AudioIn::stop() {
     running_ = false;
     kind_ = None;
     p_->file.clear();
+    p_->stream.reset();
+    p_->streamBuf.clear();
+    p_->streamPos = 0;
 }
 
 void AudioIn::setMuted(bool m) { p_->muted.store(m); }
 void AudioIn::setGain(float g) { p_->gain.store(g); }
 float AudioIn::peak() const { return p_->peak.load(); }
 uint64_t AudioIn::overruns() const { return p_->overrun.load(); }
-double AudioIn::fileSeconds() const { return kind_ == File && rate_ > 0 ? (double)(p_->file.size() / 2) / (double)rate_ : 0.0; }
+double AudioIn::fileSeconds() const {
+    if (kind_ != File || rate_ <= 0) return 0.0;
+    if (p_->stream) return p_->stream->seconds;
+    return (double)(p_->file.size() / 2) / (double)rate_;
+}
 
 int AudioIn::readAvailable(float* stereo, int n) {
     if (n <= 0) return 0;
@@ -254,6 +305,30 @@ int AudioIn::read(float* stereo, int n) {
     if (n <= 0) return 0;
     const float g = p_->gain.load();
     const bool mute = p_->muted.load();
+    if (kind_ == File && p_->stream) {   // a long file, decoded as it goes; at its end it starts again
+        AudioFileStream& d = *p_->stream;
+        std::vector<float>& b = p_->streamBuf;
+        int i = 0, emptyLoops = 0;
+        while (i < n) {
+            if (p_->streamPos + 1 >= b.size()) {
+                b.clear();
+                p_->streamPos = 0;
+                if (!d.decodeSome(b) && b.empty()) {   // the end: loop (a file that gives nothing twice in a row is sent as silence)
+                    if (++emptyLoops > 1 || !d.rewind()) break;
+                    continue;
+                }
+                if (b.size() < 2) continue;
+                emptyLoops = 0;
+            }
+            stereo[2 * i] = mute ? 0 : b[p_->streamPos] * g;
+            stereo[2 * i + 1] = mute ? 0 : b[p_->streamPos + 1] * g;
+            p_->streamPos += 2;
+            i++;
+        }
+        for (; i < n; i++) stereo[2 * i] = stereo[2 * i + 1] = 0;
+        measure(p_->peak, stereo, n, 1.f);
+        return n;
+    }
     if (kind_ == File && p_->file.size() >= 2) {   // (a file of one value would divide by zero below)
         for (int i = 0; i < n; i++) {
             const size_t k = p_->filePos % (p_->file.size() / 2);
