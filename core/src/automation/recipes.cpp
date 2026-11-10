@@ -116,6 +116,9 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("Wanted callsign heard", "A callsign you are looking for is on the air. Put your calls in the list.",
         "ham.decode", "call in ['CHANGE1', 'CHANGE2']",
         {act("notify", {{"title", "{{call}} on {{band}}"}, {"body", "{{mode}} {{snr_db}} dB: {{text}}"}}), act("sound")}, "call", 900));
+    v.push_back(rule("Daily digest", "Once a day (21:00 by default) a notification with what every mode heard: aircraft, ships, new DXCC, Meteor passes. Change the action to ntfy or Telegram to get it on the phone.",
+        "session.digest", "not empty",
+        {act("notify", {{"title", "OnAir today"}, {"body", "{{text}}"}})}, "day", 3600));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));

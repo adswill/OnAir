@@ -4,6 +4,8 @@
 #include "ham/ham_events_ui.h"
 #include "ham/ham_ops_ui.h"
 #include "adsb/records_ui.h"
+#include "adsb/digest_ui.h"
+#include <set>
 #include "dect2/automation/engine.h"
 #include "dect2/cw/cw_tel.h"
 #include "dect2/ham/ham.h"
@@ -20,6 +22,26 @@ ham::HamDecodeOnce gOnce;
 ham::HamCallOnce gCw;
 uint64_t gLastSeq = 0;
 size_t gLastN = 0;
+
+std::set<std::string> gNewDxccToday;   // countries heard today that were new (the digest)
+std::string gNewDay;
+void noteNew(const au::Event& ev) {
+    static bool reg = false;
+    if (!reg) {
+        reg = true;
+        digestRegister("3ham", [] {
+            if (gNewDxccToday.empty()) return std::string();
+            std::string s = std::to_string(gNewDxccToday.size()) + " new DXCC (";
+            int n = 0;
+            for (const auto& c : gNewDxccToday) { if (n++ == 3) { s += ", ..."; break; } s += (n > 1 ? ", " : "") + c; }
+            return s + ")";
+        });
+    }
+    const time_t t = time(nullptr); struct tm l = *localtime(&t); char d[16]; std::strftime(d, sizeof d, "%Y-%m-%d", &l);
+    if (gNewDay != d) { gNewDay = d; gNewDxccToday.clear(); }
+    auto it = ev.f.find("new_dxcc"), c = ev.f.find("country");
+    if (it != ev.f.end() && it->second.b && c != ev.f.end() && !c->second.s.empty()) gNewDxccToday.insert(c->second.s);
+}
 
 HamOps& ops() {
     hamOpsLoad();
@@ -46,6 +68,7 @@ void hamFeedFtx(App& a, const dect2::HfdigFtxTelemetry& f) {
         h.utc = d.slotUtc; h.snrDb = d.snrDb; h.dt = d.dt; h.audioHz = d.hz;
         au::Event ev = ham::hamDecodeEvent(h, o.worked.mark(d.call, d.grid, h.band, ham::hamModeName(d.mode), hamDxccKey(d.call)));
         if (ev.f.count("lat") && d.grid.size() >= 4) recordsOffer(mode.c_str(), h.band, recordsDistKm(ev.f["lat"].n, ev.f["lon"].n), d.call, d.grid + " " + std::to_string((int)d.snrDb) + " dB");
+        noteNew(ev);
         if (au::wants(au::FHam)) au::emit(std::move(ev));
     }
 }

@@ -811,6 +811,7 @@ void automationWindow(App& a) {
         eng.setTzOffset(tzOffset());
     }
     if (S.dirty) applyEngine();
+    { void digestTick(); digestTick(); }   // the daily digest (adsb/digest_ui.cpp)
     automationapp::uiTick(a);
     automationapp::drawBanner();
     if (a.automationOpen) windowPanel(a);

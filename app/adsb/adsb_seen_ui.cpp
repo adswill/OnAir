@@ -5,6 +5,7 @@
 #include "dect2/common/seen_store.h"
 #include "i18n/i18n.h"
 #include "adsb/records_ui.h"
+#include "adsb/digest_ui.h"
 #include <cfloat>
 #include <cmath>
 #include <cstdio>
@@ -48,6 +49,12 @@ void save() {
 void load() {
     if (G.loaded) return;
     G.loaded = true;
+    digestRegister("1adsb", [] {
+        const dect2::SeenDay* t = G.st.today((int64_t)time(nullptr));
+        if (!t || !t->unique) return std::string();
+        char b[120]; std::snprintf(b, sizeof b, "%u aircraft (%u new ever), farthest %.0f km", t->unique, t->fresh, t->maxKm);
+        return std::string(b);
+    });
     G.st.setTzOffset(tzOff());
     std::ifstream f(file(), std::ios::binary);
     std::stringstream ss; ss << f.rdbuf();

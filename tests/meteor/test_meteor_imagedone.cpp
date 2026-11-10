@@ -1,4 +1,4 @@
-// image.done recipes (round 4 #13): "Post my Meteor pass to Discord" builds the Discord message from the event, only for Meteor pictures, once
+// image.done recipes (round 4 #13) and the daily digest recipe (#25): "Post my Meteor pass to Discord" builds the Discord message from the event, only for Meteor pictures, once
 // per picture; "Picture finished" for any source; the event is in the catalog and the image family.
 #include "dect2/automation/engine.h"
 #include "dect2/automation/json_mini.h"
@@ -58,6 +58,17 @@ int main() {
         eng.process(pic("SSTV", "", "sstv-1"));
         eng.process(pic("Fax", "", "fax-1"));
         CHECK(sink.calls.size() == 2 && sink.calls[0].first == "notify" && sink.calls[0].second["body"].find("/x/images/sstv-1.png") != std::string::npos, "notify with the path");
+    }
+    {   // the daily digest recipe (round 4 #25): sent when there is something, once per day
+        au::Engine eng; Sink sink; double now = 1'800'000'000;
+        eng.setSink(&sink); eng.setClock([&] { return now; }); eng.setMaxActionsPerMinute(0);
+        eng.setRules({recipe("Daily digest")});
+        au::Event e("session.digest"); e.at(now, "", 0); e.str("day", "2027-01-15").str("text", "312 aircraft (4 new ever), farthest 412 km; 41 Meteor lines lost").flag("empty", false);
+        au::Event z("session.digest"); z.at(now, "", 0); z.str("day", "2027-01-16").str("text", "nothing heard today").flag("empty", true);
+        eng.process(z);
+        eng.process(e);
+        eng.process(e);
+        CHECK(sink.calls.size() == 1 && sink.calls[0].second["body"] == "312 aircraft (4 new ever), farthest 412 km; 41 Meteor lines lost" && au::familyOf("session.digest") == au::FSession, "digest once, not when empty");
     }
     return testSummary("meteor_imagedone");
 }

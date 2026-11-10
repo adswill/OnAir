@@ -98,6 +98,8 @@ std::vector<EventInfo> build() {
         {"dial_mhz", 'n', "dial frequency", "14.074"}, {"cq", 'b', "a CQ call", "true"}, {"dbm", 'n', "WSPR power, dBm", "37"}, {"lat", 'n', "from the locator", "54.5"}, {"lon", 'n', "from the locator", "25"},
         {"new_dxcc", 'b', "an entity not in the logbook", "false"}, {"new_dxcc_band", 'b', "an entity not worked on this band", "false"}, {"new_grid", 'b', "a grid not in the logbook", "false"},
         {"new_grid_band", 'b', "a grid not worked on this band", "false"}, {"worked", 'b', "the call is in the logbook", "false"}, {"worked_band", 'b', "worked on this band and mode", "false"}}});
+    v.push_back({"session.digest", "The daily digest at the time set (Settings: digestMinute, 21:00 by default): a line from each mode that heard something today", "All", "", 0, {
+        {"day", 's', "local date", "2026-11-10"}, {"text", 's', "the digest", "312 aircraft (4 new ever), farthest 412 km; 2 new DXCC (Bouvet, Tonga)"}, {"empty", 'b', "nothing was heard", "false"}}});
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {

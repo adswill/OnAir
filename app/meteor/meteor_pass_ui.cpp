@@ -6,6 +6,7 @@
 #include "dect2/meteor/meteor_tel.h"
 #include "dect2/meteor/pass_report.h"
 #include "i18n/i18n.h"
+#include "adsb/digest_ui.h"
 #include <cstdio>
 #include <ctime>
 #include <filesystem>
@@ -23,6 +24,14 @@ fs::path file() { return fs::path(reinterpret_cast<const char8_t*>((plat::dataDi
 void load() {
     if (M.loaded) return;
     M.loaded = true;
+    digestRegister("4meteor", [] {
+        const time_t t = time(nullptr); struct tm l = *localtime(&t); l.tm_hour = l.tm_min = l.tm_sec = 0; const int64_t mid = (int64_t)mktime(&l);
+        int n = 0, lines = 0, gaps = 0;
+        for (const auto& p : M.hist) if (p.startUtc >= mid) { n++; lines += p.lines; gaps += p.gapLines; }
+        if (!n) return std::string();
+        char b[96]; std::snprintf(b, sizeof b, "%d Meteor passes, %d lines, %d lost", n, lines, gaps);
+        return std::string(b);
+    });
     std::ifstream f(file(), std::ios::binary);
     std::stringstream ss; ss << f.rdbuf();
     M.hist = dect2::passFromCsv(ss.str());
