@@ -6,6 +6,7 @@
 #include "dect2/goesdcs/goesdcs_live.h"
 #include "dect2/goesdcs/goesdcs_proto.h"
 #include "dect2/goesdcs/goesdcs_tel.h"
+#include "dcs_cic.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
@@ -25,38 +26,6 @@ constexpr double kSlotRate = 9600;
 constexpr int kMaxSlots = 8;
 constexpr int kPhases = 8;
 
-// Fourth-order CIC decimator on integers (wrap-around arithmetic), complex.
-struct Cic4 {
-    int D = 1, cnt = 0;
-    uint64_t in[4][2] = {}, cb[4][2] = {};
-    double norm = 1;
-    float lim = 8.f;   // input limit: the largest value whose filter output still fits in int64
-    void configure(int d) {
-        D = std::max(1, d); cnt = 0;
-        for (auto& a : in) a[0] = a[1] = 0;
-        for (auto& a : cb) a[0] = a[1] = 0;
-        norm = 1.0 / (16777216.0 * std::pow((double)D, 4));
-        // Gain D^4 at 2^24 per unit, half the int64 range kept free. It was a fixed 8, which clipped float recordings with a larger scale.
-        lim = (float)std::min(4096.0, 4.0e18 / (std::pow((double)D, 4.0) * 16777216.0));
-    }
-    int64_t q(float v) const {
-        v = std::max(-lim, std::min(lim, v));
-        return (int64_t)std::lrintf(v * 16777216.f);
-    }
-    bool push(cf32 x, cf32& out) {
-        uint64_t s0 = (uint64_t)q(x.real()), s1 = (uint64_t)q(x.imag());
-        for (int k = 0; k < 4; k++) { in[k][0] += s0; in[k][1] += s1; s0 = in[k][0]; s1 = in[k][1]; }
-        if (++cnt < D) return false;
-        cnt = 0;
-        for (int k = 0; k < 4; k++) {
-            const uint64_t t0 = s0 - cb[k][0], t1 = s1 - cb[k][1];
-            cb[k][0] = s0; cb[k][1] = s1; s0 = t0; s1 = t1;
-        }
-        out = cf32((float)((double)(int64_t)s0 * norm), (float)((double)(int64_t)s1 * norm));
-        return true;
-    }
-};
-
 struct Hyp { int bps; bool man; };
 const Hyp kHyps[] = {{100, true}, {300, true}, {1200, true}, {1200, false}, {300, false}};
 constexpr int kNumHyp = 5;
@@ -75,7 +44,7 @@ struct Slot {
     double freq = 0;                  // nominal offset from the centre, Hz
     cf32 ph{1, 0}, rot{1, 0};
     int renorm = 0;
-    Cic4 cic;
+    dcsdsp::Cic4 cic;
     double rs = kSlotRate;
     // carrier loop
     double theta = 0, integ = 0;
@@ -83,6 +52,10 @@ struct Slot {
     int acqLeft = 0;
     cf32 acqSum{0, 0}, prev{0, 0};
     bool havePrev = false;
+    // the frequency estimate runs on a 16-sample average (first null 600 Hz): a platform on the next channel (1.5 or 3 kHz away) is in the slot's
+    // 9.6 kHz band and would pull a plain sample-to-sample estimate
+    cf32 box[16] = {}, boxSum{0, 0}, wHist[16] = {};
+    int boxN = 0;
     float ref = 0;
     int lostRun = 0;
     // data
@@ -119,11 +92,12 @@ struct GoesDcsReceiver::Impl {
     std::function<void(const std::string&)> log;
     double rateSet = 0, fw = 0;
     std::atomic<double> centreReq{0}, thrReq{11};
+    std::atomic<int> planReq{-1};   // -1 Auto (from the centre), else dcs::Plan
     std::atomic<bool> resetReq{false}, clearReq{false}, logReq{false};
     std::atomic<int64_t> startReq{0};
     std::string logPath, logPathReq;
     // front
-    Cic4 front;
+    dcsdsp::Cic4 front;
     int D = 1;
     std::vector<cf32> fbuf;
     // scanner
@@ -155,6 +129,8 @@ struct GoesDcsReceiver::Impl {
     double bestCfo = 0;
     bool dirty = true;
     DcsTelemetry pub;
+
+    dcs::Plan plan() const { const int p = planReq.load(); return p < 0 ? dcs::planForCentre(centreReq.load()) : (dcs::Plan)p; }
 
     static int64_t nowUtc() { return (int64_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
 
@@ -303,14 +279,20 @@ struct GoesDcsReceiver::Impl {
         const double cen = centreReq.load();
         m.freqAbsolute = cen > 0;
         m.freqHz = cen > 0 ? cen + rel : rel;
-        m.channel = cen > 0 ? dcs::channelOf(cen + rel) : 0;
+        m.channel = cen > 0 ? dcs::channelOf(cen + rel, plan()) : 0;
+        m.plan = (int)plan();
         m.snrDb = s.snr;
         std::vector<uint8_t> rest(s.bits.begin() + std::min<size_t>(31, s.bits.size()), s.bits.end());
         const bool ok = dcs::parseBody(rest, s.bps >= 300, m);
         const int chars = (int)m.raw.size();
         const bool good = ok && (m.eot || chars >= 4) && m.parityErrors * 4 <= chars + 1;
         s.state = 0; s.lockHyp = -1; s.bits.clear(); s.addrDone = false; s.bornSec = timeSec;
-        if (!good) { badN++; dirty = true; return; }
+        if (!good) {
+            badN++; dirty = true;
+            if (log) { char b[200]; snprintf(b, sizeof b, "GOES DCS: report dropped at %+.0f Hz, %d bps %s, %s, %d characters, %d parity errors%s", rel, s.bps, s.man ? "Manchester" : "NRZ",
+                                       dcs::addressHex(m.address).c_str(), chars, m.parityErrors, m.eot ? "" : ", no end code"); log(b); }
+            return;
+        }
         nextId++;
         m.eot = m.eot || ended;
         okN++;
@@ -360,7 +342,7 @@ struct GoesDcsReceiver::Impl {
             }
             return;
         }
-        if (t.nb < 31) return;
+        if (t.nb < 63) return;
         // candidates are taken only while the first one is young: a later match is a false one
         for (int hh = 0; hh < kNumHyp; hh++)
             for (int kk = 0; kk < kPhases; kk++)
@@ -374,10 +356,12 @@ struct GoesDcsReceiver::Impl {
         const int pol = dInv < d ? 1 : 0;
         if (pol) d = dInv;
         if (d > 1) return;
-        const uint32_t pre = (uint32_t)((t.hist >> 15) & 0xFFFF);
-        const uint32_t alt = (pre ^ (pre >> 1)) & 0x7FFF;   // 1 where neighbours differ
-        const int trans = __builtin_popcount(alt);
-        if (d + (15 - trans) > 1) return;
+        // the 48 preamble bits before it must alternate: a 16-bit check let the 300 / 1200 bps hypotheses lock falsely on a 100 bps platform
+        // whose neighbour 1.5 or 3 kHz away beats in the slot (and a wrong address passes the 2-error BCH correction about half the time)
+        const uint64_t pre = (t.hist >> 15) & 0xFFFFFFFFFFFFull;
+        const uint64_t alt = (pre ^ (pre >> 1)) & 0x7FFFFFFFFFFFull;   // 1 where neighbours differ (47 pairs)
+        const int trans = __builtin_popcountll(alt);
+        if (d > 1 || d + (47 - trans) > 2) return;
         if (s.pending == 0) s.syncTimeSec = timeSec;
         t.cand = true; t.pol = pol; t.ne = -1; t.bits.clear();
         s.pending++;
@@ -452,10 +436,17 @@ struct GoesDcsReceiver::Impl {
     void baseband(Slot& s, cf32 z) {
         // carrier loop
         if (s.acqLeft > 0) {
-            if (s.havePrev) s.acqSum += z * std::conj(s.prev);
+            {
+                const int k = s.boxN & 15;
+                s.boxSum += z - s.box[k]; s.box[k] = z;
+                const cf32 w = s.boxSum;
+                if (s.boxN >= 32) s.acqSum += w * std::conj(s.wHist[k]);   // lag 16
+                s.wHist[k] = w;
+                s.boxN++;
+            }
             s.prev = z; s.havePrev = true;
             if (--s.acqLeft == 0) {
-                s.integ = std::arg(s.acqSum);
+                s.integ = std::arg(s.acqSum) / 16.0;
                 s.theta = std::arg(z);
                 s.mavg = cf32(std::abs(z), 0);
             }
@@ -556,6 +547,7 @@ struct GoesDcsReceiver::Impl {
         pub.blocksOk = okN; pub.blocksBad = badN;
         pub.timeSec = timeSec; pub.inputRate = rateSet; pub.workRate = fw; pub.binHz = binHz; pub.centreHz = centreReq.load();
         pub.noiseDb = noiseDb;
+        pub.plan = (int)plan();
         pub.carriersSeen = carriersSeen;
         pub.messages = msgs;
         pub.platforms = plats;
@@ -565,7 +557,7 @@ struct GoesDcsReceiver::Impl {
             DcsCarrier c;
             c.offsetHz = s.freq + s.integ * s.rs / (2 * math::kPi);
             const double cen = centreReq.load();
-            c.channel = cen > 0 ? dcs::channelOf(cen + c.offsetHz) : 0;
+            c.channel = cen > 0 ? dcs::channelOf(cen + c.offsetHz, plan()) : 0;
             c.snrDb = s.snr;
             c.state = s.state == 2 ? 2 : (s.ns > 0.5 * s.rs ? 1 : 0);
             c.bps = s.state == 2 ? s.bps : 0;
@@ -591,6 +583,7 @@ void GoesDcsReceiver::configure(double inputRateHz) {
 }
 void GoesDcsReceiver::setSignalOffset(double) {}
 void GoesDcsReceiver::setCenterHz(double hz) { p_->centreReq = hz; }
+void GoesDcsReceiver::setPlan(int plan) { p_->planReq = plan < 0 || plan > 2 ? -1 : plan; }
 bool GoesDcsReceiver::ready() const {
     std::lock_guard<std::mutex> lk(p_->mu);
     return p_->rateSet >= goesdcsTuning().minSampleRate - 1;

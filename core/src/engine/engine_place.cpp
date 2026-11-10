@@ -284,6 +284,7 @@ void Engine::configureReceiver(int a, double r) {
     case 108: rxCq_.configure(r); break;
     case 105: rxMs_.configure(r); break;
     case 142: rxGd_.configure(r); break;
+    case 701: rxHrdcp_.configure(r); break;
     case 143: rxModeAc_.configure(r); break;
     case 144: rxBt_.configure(r); break;
     case 146: rxMilhf_.configure(r); break;
@@ -500,6 +501,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 108: rxCq_.setSignalOffset(o); break;
     case 105: rxMs_.setSignalOffset(o); rxMs_.setCenterHz(centreHz); break;
     case 142: rxGd_.setSignalOffset(o); rxGd_.setCenterHz(centreHz); break;
+    case 701: rxHrdcp_.setSignalOffset(o); rxHrdcp_.setCenterHz(centreHz); break;
     case 143: rxModeAc_.setSignalOffset(o); break;
     case 144: rxBt_.setSignalOffset(o); rxBt_.setCenterHz(centreHz); break;
     case 146: rxMilhf_.setSignalOffset(o); rxMilhf_.setCenterHz(centreHz); break;

@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**308 modes.**
+**309 modes.**
 
 ## TV (15)
 
@@ -72,7 +72,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (47)
+## Satellite & Navigation (48)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -103,6 +103,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
 - **Globalstar** - Globalstar: channel activity and Doppler (content is not decoded)
 - **GOES DCS** - GOES DCS: river gauges, weather stations and buoys reporting through the GOES and Meteosat satellites
+- **Meteosat HRDCP** - Meteosat HRDCP: high rate weather and hydrology platforms reporting through Meteosat
 - **Zombie satellites** - Zombie satellite carriers: found and checked against their orbits
 - **What satellite is this?** - Names an unknown satellite carrier from its Doppler curve (mystery satellite hunter)
 - **UHF SATCOM skimmer** - Active channels on UHF military satellites (detection only)

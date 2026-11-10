@@ -1424,3 +1424,6 @@ wM-Bus: two attempts gave no gain and were dropped.
 Not done: ADS-B overlap subtraction, Remote ID CPU, RS41 soft RS.
 
 Simulated signals only. Details are in docs/SENSITIVITY-3.9-C.md.
+## 2026-11-11 Meteosat HRDCP, DCS channel plans, GOES LRIT, Elektro links (feat39-sat)
+Branch feat39-sat on integ-39. New mode Meteosat HRDCP (family 700, standard 701/702), written from EUMETSAT TD 16: receiver, generator and tests; it shares the DCS screens. GOES DCS gained the Meteosat (TD 16 table 11) and Himawari channel plans, a 402.22 MHz preset, and addresses shown left-aligned as the operators write them. GOES HRIT gained the GOES-N/O/P LRIT link (293.883 ksym/s). Elektro got tests for every link. Fixed along the way: the Elektro OQPSK rail split, and false syncs and frequency pull in GOES DCS from a platform on the next channel. INSAT was skipped because no public burst format exists. Simulated only. Details in docs/SAT-DCS-XRIT-3.9.md.
+

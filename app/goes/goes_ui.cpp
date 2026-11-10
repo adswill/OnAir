@@ -42,6 +42,7 @@ struct State {
     bool autoSave = true;
     bool saveCadu = false;                // write the good frames to <data folder>/goes/frames.cadu
     int filter = 0;
+    int link = 0, appliedLink = -1;       // 0 GOES-R HRIT 927 ksym/s, 1 GOES-N / O / P LRIT 293.883 ksym/s
     bool follow = true;                   // show the newest image as it comes
     uint64_t selId = 0;
     // the texture of the shown product
@@ -61,6 +62,7 @@ void loadState() {
     S.autoSave = plat::prefs().getB("goesAutoSave", true);
     S.filter = std::clamp((int)plat::prefs().getI("goesFilter", 0), 0, 2);
     S.saveCadu = plat::prefs().getB("goesSaveCadu", false);
+    S.link = std::clamp((int)plat::prefs().getI("goesLink", 0), 0, 1);
 }
 
 // good frames as 1024 byte CADUs (sync word, then the derandomised 1020 bytes), the file other decoders write too: compare or feed it back
@@ -425,8 +427,13 @@ void galleryPublish(const GoesTelemetry& t) {
     }
 }
 
+// The GOES-N / O / P LRIT broadcast (1691.0 MHz) uses the same CCSDS frames and LRIT files as the GOES-R HRIT, at 293.883 ksym/s
+double linkSymbolRate(int link) { return link == 1 ? 293883.0 : 927000.0; }
+double linkMhz(int link) { return link == 1 ? 1691.0 : 1694.1; }
+
 void tick(App& a) {
     loadState();
+    if (S.appliedLink != S.link) { a.engine.goes().setSymbolRate(linkSymbolRate(S.link)); S.appliedLink = S.link; }
     if (live(a)) autoSave(a.rx.goes);
     if (live(a)) galleryPublish(a.rx.goes);
 }
@@ -434,9 +441,21 @@ void tick(App& a) {
 void tuner(App& a, bool& retune) {
     ImGui::TextDisabled("Frequency");
     sameLineIf(90 * gUi, 5 * gUi);
-    if (ImGui::Button("1694.1 MHz")) { tuneFreq(a, 1694.1); retune = true; }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("GOES-16 / 18 / 19 HRIT and EMWIN (BPSK 927 ksym/s). Point a dish (about 1 m, or a grid antenna) at the\n"
-                                                  "satellite with an LNA and a 1.7 GHz filter at the feed; the signal is far below the noise of a plain antenna.");
+    loadState();
+    if (ImGui::Button(S.link == 1 ? "1691.0 MHz" : "1694.1 MHz")) { tuneFreq(a, linkMhz(S.link)); retune = true; }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", S.link == 1 ? tr("GOES-N / O / P LRIT (BPSK 293.883 ksym/s): the older series, now retired or stored; recordings and spare satellites.")
+                                                                   : tr("GOES-16 / 18 / 19 HRIT and EMWIN (BPSK 927 ksym/s). Point a dish (about 1 m, or a grid antenna) at the satellite with an LNA and a 1.7 GHz filter at the feed; the signal is far below the noise of a plain antenna."));
+    flowEnd();
+    ImGui::TextDisabled("%s", tr("Link"));
+    sameLineIf(90 * gUi, 5 * gUi);
+    const char* links[2] = {tr("GOES-R HRIT, 927 ksym/s"), tr("GOES-N/O/P LRIT, 293.883 ksym/s")};
+    ImGui::SetNextItemWidth(230 * gUi);
+    if (ImGui::Combo("##goeslink", &S.link, links, 2)) {
+        plat::prefs().setI("goesLink", S.link); plat::prefs().flush();
+        a.engine.goes().setSymbolRate(linkSymbolRate(S.link)); S.appliedLink = S.link;
+        tuneFreq(a, linkMhz(S.link)); retune = true;
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Both links carry the same CCSDS frames and LRIT files; only the symbol rate and the frequency differ."));
     flowEnd();
 }
 

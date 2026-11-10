@@ -48,6 +48,7 @@ struct GoesGenConfig {
     bool dualBasis = true;      // Reed-Solomon symbols in the CCSDS dual basis (the receiver finds out which)
     uint32_t seed = 1;
     bool qpsk = false;          // QPSK (GK-2A HRIT): G1 on I and G2 on Q, symbolRate is the QPSK symbol rate
+    bool oqpsk = false;         // with qpsk: offset QPSK, the Q rail half a symbol later (Elektro-L HRIT 1.15 Msym/s)
     std::vector<GoesTestFile> files;   // empty: goesTestFiles()
     int vcduCounterStart = 0;
 };

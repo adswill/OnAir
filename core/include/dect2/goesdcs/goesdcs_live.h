@@ -27,6 +27,7 @@ public:
     void configure(double inputRateHz);
     void setSignalOffset(double hz);            // not used: the whole captured band is searched
     void setCenterHz(double hz);                // the radio's centre (0 unknown: no channel numbers)
+    void setPlan(int plan);                     // channel numbers: -1 Auto (from the centre), 0 GOES, 1 Meteosat, 2 Himawari (dcs::Plan)
     bool ready() const;
     void reset();                               // the filters and the carriers; the lists stay
     void clearResults();                        // empties the report list and the platform table

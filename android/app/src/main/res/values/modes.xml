@@ -329,6 +329,7 @@
         <item>TD-SCDMA cells</item>
         <item>JT6M</item>
         <item>VDL3</item>
+        <item>Meteosat HRDCP</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -639,6 +640,7 @@
         <item>TD-SCDMA (3G TDD, 1.28 Mcps) cells in a 1.6 MHz channel: the downlink pilot\'s SYNC-DL code (code group), the cell parameter (scrambling code and midamble) from time slot 0, the frame parity and P-CCPCH position from the SYNC-DL phases, level and carrier offset. Receive only; the broadcast channel is not decoded</item>
         <item>JT6M 6 m scatter (44 tones 21.5 Hz apart from 1076.66 Hz, 21.5 baud, a sync tone every third symbol): finds the pings, the tuning error and the frame timing, lists the characters of each ping and folds a long signal into its repeating message</item>
         <item>VDL Mode 3: TDMA D8PSK voice and data link on 118 to 137 MHz (ICAO Annex 10; trialled, never deployed; synthetic + spec; receive only). Burst kinds, Golay and Reed-Solomon checked, data octets; the system data and headers as raw values (ICAO Doc 9805 is not public), voice not decoded</item>
+        <item>Meteosat high rate data collection platforms (HRDCP, EUMETSAT TD 16) on the 402.2 - 402.435 MHz regional band: a 2 s carrier, then the message at 1200 bit/s offset QPSK with a convolutional code (r = 1/2, K = 7), the CCSDS randomiser, Reed-Solomon (255,223) frames and a CRC-32. Every carrier in the capture is followed; the BCH-protected platform address, the channel, the sequence counter, alert or self-timed, the health bits and the platform data (ASCII, pseudo-binary or binary) are shown, with a table of the platforms heard and a CSV log. Needs a radio that covers 402.2 - 402.435 MHz (0.25 Msps or more) and a UHF antenna</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -949,6 +951,7 @@
         <item>Cells, TD-SCDMA</item>
         <item>6 m scatter, 50.230 MHz</item>
         <item>TDMA link, 25 kHz</item>
+        <item>Platform messages, 402.3 MHz</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1259,5 +1262,6 @@
         <item>td-scdma tdscdma 3g tdd china mobile 1.28 mcps dwpts sync-dl midamble cell parameter code group band a f 2010 1880</item>
         <item>jt6m wsjt 6m 50 meteor scatter ionoscatter ping amateur</item>
         <item>vdl vdl3 vdl mode 3 tdma d8psk nexcom voice data link golay reed-solomon airband experimental</item>
+        <item>hrdcp meteosat eumetsat dcp data collection platform high rate 1200 oqpsk 402.3 402.2 regional msg mtg river gauge weather station buoy hydrology sensor telemetry hex address bch crc reed solomon</item>
     </string-array>
 </resources>

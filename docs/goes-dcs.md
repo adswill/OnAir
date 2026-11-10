@@ -13,6 +13,10 @@ On the air, in this order: an unmodulated carrier, a bit preamble of alternating
 +-60 degrees; the bits are NRZ-L or Manchester coded. The data is **ASCII** text or **pseudo-binary B** (six bits per character, 0x40 added), in which three
 characters make an 18-bit sensor value.
 
+## Meteosat and Himawari
+
+The same platform format (the CGMS international DCP standard) is used by Meteosat (EUMETSAT standard-rate DCPs, 100 bps, 402.0 - 402.435 MHz) and Himawari (JMA, 100 and 300 bps, 402.0685 - 402.4 MHz). The **Channel plan** setting picks how channels are numbered: Auto (GOES below 402.0 MHz, Meteosat from there up), GOES, Meteosat (EUMETSAT TD 16 table 11) or Himawari (frequency only: JMA publishes no channel numbers). The Band selector has a **Meteosat / Himawari 402.22 MHz** preset. Addresses are shown as the operators write them, the 31 bits left-aligned in 32 (the EUMETSAT reference platform is 162096C4). The high rate Meteosat platforms (HRDCP) are their own mode, **Meteosat HRDCP** (docs/SAT-DCS-XRIT-3.9.md). Simulated only.
+
 ## The relay downlink
 
 The satellite retransmits the uplink carriers: the 401.85 MHz pilot appears at 1679.85 MHz on the GOES-R downlink (NOAA frequency plan). The Band selector tunes either the uplink or this relay. The same decoder runs on both; this assumes a bent-pipe relay that keeps the uplink modulation. A signal wiki and an old frequency plan label the downlink 8PSK, so this has not been confirmed on air. Simulated only.
