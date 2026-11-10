@@ -1,6 +1,7 @@
 // Winlink link frames as IQ on the packet and ARDOP generators, and the "winlink" transmit generator. See wl_modem.h.
 #include "dect2/winlink/wl_modem.h"
 #include "dect2/ardop/ardop_gen.h"
+#include "dect2/ardop/ardop_proto.h"
 #include "dect2/ardop/ardop_rx.h"
 #include "dect2/engine/mode_synth.h"
 #include "dect2/packet/packet_gen.h"
@@ -128,7 +129,20 @@ std::unique_ptr<TxGenerator> makeWinlinkTxGenerator(const TxRequest& r, double r
     int modem = 0;
     std::vector<ax25::Frame> ax;
     std::vector<ArdopLinkFrame> ar;
-    if (!parseWinlinkTxPayload(r.payload, modem, ax, ar)) { err = "Winlink: nothing to send (the Winlink screen fills this transmission)"; return nullptr; }
+    if (r.payload.empty()) {   // the Transmit window without the Winlink screen: one test frame, so the mode can be checked on a dummy load
+        if (r.modeId == "winlinkardop") {
+            ArdopLinkFrame f;
+            f.code = 0x30; f.sid = 0xFF;
+            f.body = ardop::makeIdFrame("NOCALL", "");
+            ar.push_back(f);
+            modem = kModemArdop;
+        } else {
+            ax25::Frame f;
+            f.from.call = "NOCALL"; f.to.call = "WLTEST"; f.control = 0x03; f.pid = 0xF0; f.info = "Winlink test frame";
+            ax.push_back(f);
+            modem = kModemPacket1200;
+        }
+    } else if (!parseWinlinkTxPayload(r.payload, modem, ax, ar)) { err = "Winlink: the transmission is not readable"; return nullptr; }
     const double rate = rateHz > 0 ? rateHz : 2e6;
     std::vector<cf32> s = modem == kModemArdop ? renderArdopBurst(ar, rate) : renderAx25Burst(ax, modem == kModemPacket9600 ? 9600 : 1200, rate);
     if (s.empty()) { err = "Winlink: this sample rate is too low for the modem"; return nullptr; }

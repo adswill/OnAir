@@ -29,6 +29,7 @@
 #include "dect2/kaws/kaws_txgen.h"
 #include "dect2/esubghz/esubghz_gen.h"
 #include "dect2/mesh/meshcore_tx.h"
+#include "dect2/winlink/wl_modem.h"
 #include "dect2/kaft/kaft_txgen.h"
 #include "dect2/nfc/nfc_tx.h"
 #include "dect2/engine/mode_tuning.h"
@@ -210,6 +211,8 @@ std::vector<TxModeSpec> makeTxTable() {
         mk("kaft", "KAFT", 127, "makeKaftTxGenerator (kaft::buildBurst: OPEN, data frames of LDPC blocks with CRC-32, FINISH; one-way and repeated)", "callsign, file, width 200 kHz / 500 kHz / 1 MHz, profile 0 to 9, passes", kUnv, 0, 2.4e6, false, 250000),
         mk("kaws", "KAWS", 135, "makeKawsTxGenerator (kaws::buildBurst: HF weak-signal chat and beacon bursts of LDPC blocks in UTC slots, as upper-sideband audio IQ, sent one-way and repeated)", "callsign, grid, recipient, message text, kind chat / short beacon / full beacon, profile 0 to 5, passes", kUnv, 0, 12000, false, 12000),
         mk("esubghz", "Flipper Zero Sub-GHz chat", 206, "makeEsubghzTxGenerator (CC1101 GFSK 9.99 kbaud, packets of 60 octets; the line is sent once)", "the text of one plain chat line; encrypted lines are sent from the mode's Chat screen", "tests/esubghz/test_esubghz_rx.cpp (generator into the receiver)", 0, 2e6, false, 200e3),
+        mk("winlinkpkt", "Winlink over packet (AX.25)", 26, "makeWinlinkTxGenerator (wl_modem.h: the AX.25 frames of the Winlink screen's session at 1200 or 9600 baud, once, then it ends)", "none here: the Winlink screen fills it (empty: one test frame)", "tests/winlink/test_winlink_modem.cpp (whole session through the generator and the receiver)"),
+        mk("winlinkardop", "Winlink over ARDOP", 142, "makeWinlinkTxGenerator (wl_modem.h: the ARDOP frames of the Winlink screen's session, once, then it ends)", "none here: the Winlink screen fills it (empty: one test frame)", "tests/winlink/test_winlink_modem.cpp (whole session through the generator and the receiver)"),
     };
 }
 }
@@ -347,7 +350,7 @@ std::string txVocoderNote(const TxModeSpec& m) {
     return {};
 }
 
-bool txModeFinite(const TxModeSpec& m) { return m.id && (std::string(m.id) == "kapp" || std::string(m.id) == "kaft" || std::string(m.id) == "kavb" || std::string(m.id) == "kaws" || std::string(m.id) == "esubghz" || std::string(m.id) == "meshcore"); }
+bool txModeFinite(const TxModeSpec& m) { return m.id && (std::string(m.id) == "kapp" || std::string(m.id) == "kaft" || std::string(m.id) == "kavb" || std::string(m.id) == "kaws" || std::string(m.id) == "esubghz" || std::string(m.id) == "meshcore" || std::string(m.id) == "winlinkpkt" || std::string(m.id) == "winlinkardop"); }
 
 bool txModeNeedsAudio(const TxModeSpec& m, const TxRequest& r) {
     if (r.carrierTune) return false;
@@ -657,6 +660,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     if (m.stdMode == 127) return makeKaftTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAFT: its own file transmitter at the radio's rate
     if (m.stdMode == 124) return makeKaalTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAAL: its own transmitter chain at the radio's rate
     if (m.stdMode == 135) return makeKawsTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAWS: HF chat / beacon bursts as upper-sideband IQ at the radio's rate
+    if (m.id && (std::string(m.id) == "winlinkpkt" || std::string(m.id) == "winlinkardop")) return winlink::makeWinlinkTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // Winlink: one burst of link frames, then it ends
     if (m.id && std::string(m.id) == "meshcore") return makeMeshCoreTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // MeshCore: the node's frames once, then it ends
     if (m.stdMode == 206) return makeEsubghzTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // Flipper Zero Sub-GHz chat: one message, then it ends
     if (m.stdMode == 133) return makeKaitTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAIT: a picture burst at the radio's rate
