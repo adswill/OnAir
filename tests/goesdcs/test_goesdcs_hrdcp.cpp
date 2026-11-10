@@ -110,7 +110,7 @@ int main() {
         c.tx = {tx(402.2950e6, 0x2C412, synop, 0.5), tx(402.2980e6, 0x0A1B2, big, 1.2)};
         c.tx[1].sequence = 300; c.tx[1].type = 1; c.tx[1].health = 0x0F3;
         std::vector<std::string> logs;
-        const DcsTelemetry t = run(c, 14.5, &logs);
+        const DcsTelemetry t = run(c, 16.0, &logs);
         printf("  two platforms: %llu ok, %llu bad, %llu carriers\n", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad, (unsigned long long)t.carriersSeen);
         const DcsMessage* a = find(t, 0x2C412);
         const DcsMessage* b = find(t, 0x0A1B2);

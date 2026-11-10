@@ -291,7 +291,10 @@ struct HrdcpReceiver::Impl {
             const double rho = m / (mag + 1e-20);
             if (rho > best) { best = rho; bi = i; std::copy(cc, cc + kChunks, bc); }
         }
-        if (bi < 0 || best < 0.5) return false;
+        if (bi < 0 || best < 0.5) {
+            if (log && s.tries >= 2) { char b[120]; snprintf(b, sizeof b, "HRDCP: no preamble on the carrier at %+.0f Hz (best match %.2f)", s.freq + s.f0, best); log(b); }
+            return false;
+        }
         // phase and frequency from the pieces
         double ph[kChunks], xs[kChunks];
         double sumMag = 0;
@@ -344,7 +347,10 @@ struct HrdcpReceiver::Impl {
             if (!s.hdrDone && s.vit.out().size() >= (size_t)hrdcp::kFrameCoded * 8) {
                 hrdcp::Decoded d;
                 hrdcp::decodeMessage(packBits(s.vit.out(), hrdcp::kFrameCoded), d);
-                if (!d.headerOk) { fail(s, true); return; }
+                if (!d.headerOk) {
+                    if (log) { char b[140]; snprintf(b, sizeof b, "HRDCP: header not decoded at %+.0f Hz (%d frames bad, evm %.2f)", s.freq + s.f0, d.framesBad, s.evm); log(b); }
+                    fail(s, true); return;
+                }
                 s.hdrDone = true;
                 s.needFrames = hrdcp::framesFor((size_t)hrdcp::kHeaderBytes + d.hdr.length + hrdcp::kCrcBytes);
                 dirty = true;
@@ -368,8 +374,7 @@ struct HrdcpReceiver::Impl {
     }
 
     void finish(Slot& s, const hrdcp::Decoded& d) {
-        s.state = 2;
-        ignore.push_back({s.freq, timeSec + 1.5});
+        s.state = 2;   // no ignore entry: the message's own carrier is long gone, and the next message on this channel must be heard
         dirty = true;
         if (!d.headerOk || !d.complete || !d.crcOk) { badN++; if (log) log(hrdcp::describe(d)); return; }
         DcsMessage m;

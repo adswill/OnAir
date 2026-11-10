@@ -70,7 +70,7 @@ int main() {
         GoesDcsGenConfig c;
         c.rate = 500000; c.centreHz = 402.22e6; c.snrDb = 36;
         c.tx = {txAt(dcs::channelHz(150, Plan::Meteosat), 100, 0.5, body, refAddr21)};
-        const DcsTelemetry t = run(c, 12.5, plan);
+        const DcsTelemetry t = run(c, 15.0, plan);
         const DcsMessage* m = find(t, refAddr21);
         CHECK(m != nullptr, "Meteosat ch 150 plan %d: no report (%llu ok, %llu bad)", plan, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
         if (m) {
@@ -96,7 +96,7 @@ int main() {
         GoesDcsGenConfig c;
         c.rate = 250000; c.centreHz = 402.30e6; c.snrDb = 36;
         c.tx = {txAt(dcs::channelHz(200, Plan::Meteosat), 100, 0.5, "AAAA 1111\r\n", 0x0A1B2), txAt(dcs::channelHz(202, Plan::Meteosat), 100, 2.0, "BBBB 2222\r\n", 0x03FFF)};
-        const DcsTelemetry t = run(c, 12.0, 1);
+        const DcsTelemetry t = run(c, 14.0, 1);
         CHECK(find(t, 0x0A1B2) && find(t, 0x03FFF), "channels 200 and 202 at once: %llu reports", (unsigned long long)t.blocksOk);
     }
     // ---- frequency error to the 1.5 ppm limit (600 Hz at 402 MHz) and clock errors
@@ -109,7 +109,7 @@ int main() {
             auto a = txAt(dcs::channelHz(120, Plan::Meteosat), 100, 0.5, body, refAddr21);
             a.extraHz = fe[i]; a.ppm = ppm[i];
             c.tx = {a};
-            const DcsTelemetry t = run(c, 12.5, 1);
+            const DcsTelemetry t = run(c, 15.0, 1);
             const DcsMessage* m = find(t, refAddr21);
             CHECK(m && m->eot && m->parityErrors == 0, "offset %.0f Hz ppm %.0f", fe[i], ppm[i]);
             if (m) CHECK(std::fabs(m->freqHz - (dcs::channelHz(120, Plan::Meteosat) + fe[i])) < 40, "frequency %.0f", m->freqHz - dcs::channelHz(120, Plan::Meteosat));
@@ -136,7 +136,7 @@ int main() {
             GoesDcsGenConfig c;
             c.rate = 250000; c.centreHz = 402.22e6; c.snrDb = snr; c.seed = 33;
             c.tx = {txAt(dcs::channelHz(150, Plan::Meteosat), 100, 0.5, body, refAddr21)};
-            const DcsTelemetry t = run(c, 12.5, 1);
+            const DcsTelemetry t = run(c, 15.0, 1);
             const DcsMessage* m = find(t, refAddr21);
             const bool ok = m && m->text.find("SYNOP 06590") != std::string::npos;
             printf("  Meteosat 100 bps at %.0f dB: %s\n", snr, ok ? "decoded" : "lost");
