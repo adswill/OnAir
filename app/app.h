@@ -836,6 +836,8 @@ void wideAllButton(App& a);                          // the one button of it (Si
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
 void insightWindow(App& a);                         // insight_ui.cpp: View > Insights, and the analysers' tick (called every frame)
 void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float snr);   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
+bool wmbusIsMine(const std::string& meterKey);       // insight_ui.cpp: the wM-Bus meters the user marked as their own (leak check)
+void wmbusSetMine(const std::string& meterKey, bool mine);
 void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
 void stationAntennaFor(const App& a, bool& known, bool& forBand);   // station_ui.cpp: for the doctor's coach: is an antenna entered, and does one suit the tuned frequency
