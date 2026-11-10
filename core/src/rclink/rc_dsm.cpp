@@ -173,11 +173,11 @@ Decoded dsmParse(const uint8_t* p, size_t n, int rfChannel, int row) {
             const uint16_t x = i == 0 ? (uint16_t)(w[i] & 0x7FFF) : w[i];
             if (x & 0x8000) { ok = false; break; }
             const int ix = x >> b;
-            if (ix >= (b == 11 ? 16 : 32) || (seen >> ix & 1)) ok = false;
+            if (ix > 12 || (seen >> ix & 1)) ok = false;   // at most 12 channels and the X-Plus slot
             seen |= 1u << ix;
             u++;
         }
-        if (ok && u >= 2) { bits = b; used = u; break; }
+        if (ok && u >= 3) { bits = b; used = u; break; }
     }
     if (!bits) return d;
     d.ok = true;

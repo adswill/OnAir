@@ -32,6 +32,7 @@ const Meter kMeters[] = {
 }
 
 int WmbusGenerator::meterCount() { return (int)(sizeof kMeters / sizeof kMeters[0]); }
+bool WmbusGenerator::meterIsWize(int mi) { return kMeters[mi % meterCount()].wize; }
 
 std::vector<uint8_t> WmbusGenerator::meterFrame(int mi, uint32_t n, Phy& phy, bool encrypted) {
     const Meter& m = kMeters[mi % meterCount()];
