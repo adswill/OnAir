@@ -556,6 +556,8 @@ static const SubMode kSubModes[] = {
     {"mavlink",    "MAVLink (SiK)", 362, 4, 0, 433.92, {0, 0, 0}},
     {"frsky",      "FrSky",      362, 8,  0, 2440.0,  {0, 0, 0}},
     {"flysky",     "FlySky",     362, 16, 0, 2440.0,  {0, 0, 0}},
+    {"sfhss",      "Futaba S-FHSS", 362, 32, 0, 2440.0, {0, 0, 0}},
+    {"spektrum",   "Spektrum DSM", 362, 64, 0, 2440.0, {0, 0, 0}},
     {"wfbng",      "wfb-ng / OpenHD", 602, 1, 0, 5805.0, {0, 0, 0}},
     {"npr",        "New Packet Radio", 603, 4, 0, 437.0, {0, 0, 0}},
     {"winmor",     "WINMOR",     603, 8, 0, 7.1,    {0, 0, 0}},   // dial frequency, upper sideband

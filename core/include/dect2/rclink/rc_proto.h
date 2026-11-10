@@ -113,5 +113,21 @@ std::vector<uint8_t> sfhssBuild(uint16_t txId, int rfCh, int fhssCode, int comma
 uint16_t sfhssCrc(const uint8_t* p, size_t n);   // the CRC the generator appends (CRC-16 CCITT, init 0xFFFF)
 int sfhssNextChannel(int ch, int fhssCode);       // SFHSS_calc_next_chan
 
+// ---- Spektrum DSM2 / DSMX (CYRF6936 64 chip 8DR DSSS at 1 Mchip/s; rc_dsm.cpp) ----
+struct DsmCodes { uint64_t sop = 0, data0 = 0, data1 = 0; };      // bit j = chip j (sent first)
+DsmCodes dsmCodes(int row, int sopCol);                           // pn row 0..4, SOP column 0..7
+uint64_t dsmSymbol(const DsmCodes& k, uint8_t v);                 // the 64 chips of one byte
+int dsmDespread(const DsmCodes& k, uint64_t chips, int* errors);  // the byte whose symbol is closest, and its chip errors
+uint16_t dsmCrc(const uint8_t* p, size_t n, uint16_t seed);       // CRC-16 0x8005 (the generator's choice: the real one is unpublished, never checked)
+int dsmSopColumn(const uint8_t id[4]);                            // (id0 + id1 + id2 + 2) & 7
+int dsmPnRow(int rfChannel, bool dsmx);
+std::vector<int> dsmxChannels(const uint8_t id[4]);               // the 23 hop channels of a DSMX transmitter (2400 + n MHz)
+// the 16 byte data packet; idx[i] < 0: an unused word (FFFF); bits 11 or 10
+std::vector<uint8_t> dsmDataPacket(const uint8_t id[4], bool dsmx, bool upper, int bits, const int idx[7], const uint16_t val[7]);
+// the chips of a whole packet: preamble 33 33 04, SOP code and its complement, length, packet, CRC
+std::vector<uint8_t> dsmChips(const DsmCodes& k, const std::vector<uint8_t>& packet, uint16_t crcSeed);
+// p = the 16 despread data bytes; rfChannel and row (-1: unknown) tell DSM2 from DSMX
+Decoded dsmParse(const uint8_t* p, size_t n, int rfChannel, int row);
+
 } // namespace rclink
 } // namespace dect2

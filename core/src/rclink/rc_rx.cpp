@@ -205,8 +205,52 @@ struct RcLinkReceiver::Impl {
         }
     }
 
+    // Spektrum DSM2 / DSMX: 1 Mchip/s, 64 chip 8DR symbols. The SOP code (and so the pn row and SOP column) is not known in advance: all 40 are tried.
+    bool dsmBurst(const Burst& b) {
+        double actual = 0;
+        const std::vector<float> disc = discriminate(finder, b, 1.1e6, 8e6, &actual);
+        if (actual < 3.5e6 || disc.empty()) return false;
+        const double sps = actual / 1e6;
+        SyncHit best;
+        int bestRow = -1, bestCol = -1;
+        for (int row = 0; row < 5; row++)
+            for (int col = 0; col < 8; col++) {
+                const DsmCodes k = dsmCodes(row, col);
+                std::vector<uint8_t> pat;
+                for (int j = 0; j < 64; j++) pat.push_back((uint8_t)((k.sop >> j) & 1));
+                for (int j = 0; j < 64; j++) pat.push_back((uint8_t)(!((k.sop >> j) & 1)));
+                const SyncHit h = findSync(disc, sps, pat, 16, false);
+                if (h.found && (!best.found || h.errors < best.errors)) { best = h; bestRow = row; bestCol = col; }
+            }
+        if (!best.found) return false;
+        const DsmCodes k = dsmCodes(bestRow, bestCol);
+        const std::vector<uint8_t> chips = sliceBytes(disc, sps, best, 19 * 8, false);
+        if (chips.size() < 19 * 8) return false;
+        uint8_t v[19];
+        for (int s = 0; s < 19; s++) {
+            uint64_t c = 0;
+            for (int i = 0; i < 8; i++) c |= (uint64_t)chips[(size_t)(8 * s + i)] << (8 * i);
+            int e = 0;
+            const int x = dsmDespread(k, c, &e);
+            if (x < 0 || e > 14) return false;
+            v[s] = (uint8_t)x;
+        }
+        if (v[0] != 16) return false;
+        const double f = (centre > 0 ? centre : 0.0) + b.freqHz;
+        int rf = -1;
+        if (centre > 0) { const long n = std::lround((f - 2400e6) / 1e6); if (n >= 0 && n < 80 && std::fabs(f - 2400e6 - n * 1e6) < 300e3) rf = (int)n; }
+        Decoded x = dsmParse(v + 1, 16, rf, bestRow);
+        if (!x.ok) return false;
+        char t[60];
+        std::snprintf(t, sizeof t, ", pn row %d, SOP column %d", bestRow, bestCol);
+        x.detail += t;
+        addFrame(x, f, b.snrDb, v + 1, 16);
+        return true;
+    }
+
     void onBurst(const Burst& b) {
         { std::lock_guard<std::mutex> g(m); tel.bursts++; if (tel.state == 0) tel.state = 1; }
+        if ((protocols & Dsm) && fs >= 4e6 && b.bwHz < 3.5e6 && dsmBurst(b)) return;
         bool done = false;
         for (const FskDef& d : defs) {
             if (done) break;
