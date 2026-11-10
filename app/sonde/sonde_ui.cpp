@@ -1,5 +1,6 @@
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
+#include "dect2/sonde/sonde_profile.h"
 #include "app.h"
 #include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
@@ -63,6 +64,43 @@ const SondeInfo* selected(const SondeTelemetry& t) {
     for (const auto& s : t.sondes) if (s.serial == S.sel) return &s;
     return t.sondes.empty() ? nullptr : &t.sondes.front();
 }
+
+// Sounding view (3.9, docs/SMART5-avia-3.9.md): the ascent cut into 500 m layers (wind from the drift, temperature, lapse rate), the
+// tropopause, freezing level and burst, and while still climbing a landing point from the measured winds and an assumed burst height.
+void soundingView(App& a) {
+    const SondeInfo* s = selected(a.rx.sonde);
+    if (!s) { ImGui::TextDisabled("%s", tr("no sonde yet")); return; }
+    if (!s->trackIncluded || s->track.size() < 4) { ImGui::TextDisabled("%s", tr("waiting for the track")); return; }
+    const dect2::SondeSounding snd = dect2::sondeSounding(s->track);
+    ImGui::Text("%s %s", s->type.c_str(), s->serial.c_str());
+    if (snd.ascentMs > 0) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.1f m/s", tr("climb"), snd.ascentMs); }
+    if (snd.hasTropo) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.0f m (%.0f C)", tr("tropopause"), snd.tropoM, snd.tropoTempC); }
+    if (snd.hasFreezing) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.0f m", tr("freezing level"), snd.freezingM); }
+    if (snd.burst) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.0f m", tr("burst"), snd.burstM); }
+    if (!snd.burst) {
+        static float burstKm = (float)plat::prefs().getD("sondeBurstKm", 30.0);
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::SliderFloat(tr("assumed burst (km)"), &burstKm, 15, 40, "%.1f")) { plat::prefs().setD("sondeBurstKm", burstKm); plat::prefs().flush(); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The burst height is not measured before it happens: 30 km suits a 600-800 g balloon. The landing point below moves with it."));
+        const dect2::SondeEarlyLanding e = dect2::predictSondeLandingAscent(s->track, s->lat, s->lon, s->altM, burstKm * 1000.0);
+        if (e.ok) ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.30f, 1), "%s %.4f %.4f: %s", tr("early landing estimate"), e.lat, e.lon, e.text.c_str());
+    }
+    if (!ImGui::BeginTable("##sndg", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Layer (m)")); ImGui::TableSetupColumn(tr("Wind")); ImGui::TableSetupColumn(tr("Temp C")); ImGui::TableSetupColumn(tr("Lapse K/km")); ImGui::TableSetupColumn(tr("Points"));
+    ImGui::TableHeadersRow();
+    for (size_t i = snd.layers.size(); i-- > 0;) {
+        const auto& L = snd.layers[i];
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("%.0f", L.baseM);
+        ImGui::TableNextColumn(); if (L.hasWind) ImGui::Text("%03.0f / %.1f m/s", L.windFromDeg, L.windMs); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (L.hasTemp) ImGui::Text("%.1f", L.tempC); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (L.hasLapse) ImGui::Text("%.1f", L.lapseKkm); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); ImGui::Text("%d", L.points);
+    }
+    ImGui::EndTable();
+}
+
 
 bool descending(const SondeInfo& s) { return s.hasVel && s.vSpeed < -1.0 && s.maxAltM > s.altM + 200; }
 
@@ -345,8 +383,9 @@ void carrierStrip(const App& a, ImVec2 size) {
 
 void tab(App& a) {
     kit::modeHeader({13, "Radiosondes", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}});
+    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}, {tr("Sounding"), 3, true}});
     if (S.viewMode == 2) { kit::sessionItems(13, 3, "sonde"); return; }
+    if (S.viewMode == 3) { soundingView(a); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.viewMode == 1) { sondeTable(a, false); return; }
     const float cw = std::min(300.f * gUi, W * 0.32f);

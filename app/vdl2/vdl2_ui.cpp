@@ -1,5 +1,6 @@
 // VDL Mode 2 screens: the message log with a filter and a detail pane, a map of the positions the messages carry, the aircraft and
 // ground stations, and the channel list with its activity.
+#include "acars/acars_wx_ui.h"
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
@@ -154,6 +155,7 @@ bool positionNow(const dect2::Vdl2Aircraft& c, double now, double& lat, double& 
 }
 
 void tick(App& a) {
+    for (auto it = a.rx.vdl2.messages.rbegin(); it != a.rx.vdl2.messages.rend(); ++it) acarsWxFeed(1, it->serial, it->acarsText, it->wallTime);   // airport weather (3.9)
     loadState();
     gLog.feed(a.rx.vdl2);
     feedEstimates(a.rx.vdl2);
@@ -622,7 +624,8 @@ void channelView(const App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({27, "VDL2", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("vdl2v", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 5}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Ground stations"), 3, true}, {tr("Channels"), 4, true}});
+    kit::modeNav("vdl2v", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 5}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Ground stations"), 3, true}, {tr("Channels"), 4, true}, {tr("Weather"), 9, true}});
+    if (S.viewMode == 9) { acarsWxView(); return; }
     if (S.viewMode == 5) { kit::sessionItems(27, 3, "vdl2"); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);
