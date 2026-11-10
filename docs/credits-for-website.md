@@ -51,7 +51,7 @@ The full notices and the open licence points are in [THIRD_PARTY.md](https://git
 | gr-lora_sdr | Joachim Tapparel (EPFL) and contributors | GPL-3.0 | core/src/mesh (LoRa physical layer) | facts and tables read, re-implemented |
 | LoRa_APRS_iGate | Ricardo Guzman (richonguzman) | GPL-3.0 | core/src/mesh/mesh_proto_aprs.cpp (LoRa APRS framing) | read, re-implemented |
 | Meshtastic | Meshtastic contributors | GPL-3.0 | core/src/mesh (packet and channel formats) | protocol read, re-implemented |
-| MeshCore | MeshCore contributors | MIT | core/src/mesh (MeshCore packets) | protocol read, re-implemented |
+| MeshCore | MeshCore contributors | MIT | core/src/mesh (MeshCore packets; the MeshCore node and transmitter: routing, ACKs, path return, repeater, the orlp ed25519 key exchange it uses) | protocol read, re-implemented |
 | MeshCom firmware | icssw-org | MIT | core/src/mesh (MeshCom over LoRa APRS) | protocol read, re-implemented |
 | acarsdec | Thierry Leconte F4FXL | GNU Library GPL 2 (msk.c header) | core/src/acars (format knowledge: block layout, label meanings) | format knowledge from the ARINC specs and acarsdec's documentation; no code used |
 | mdc-encode-decode (MDC-1200 format) | Matthew Kaufman | GPL-2.0 (version 2 only: not compatible with GPL-3) | core/src/chanvoice/chv_mdc.cpp (the MDC-1200 burst: sync, interleave, parity, CRC) | format read only, no code used; encoder and decoder written independently |
