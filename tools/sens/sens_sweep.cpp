@@ -245,6 +245,7 @@ ScenResult sweep(const Mode& m, const Prepared& P, const Scenario& sc, double ne
 
 } // namespace
 
+#ifndef SENS_SWEEP_NO_MAIN   // tests include this file for runTrial / sweep (tests/sens/test_sens39a.cpp)
 int main(int argc, char** argv) {
 #ifdef _WIN32
     _putenv_s("DECT2_NOPACE", "1");
@@ -373,3 +374,4 @@ int main(int argc, char** argv) {
     }
     return 0;
 }
+#endif

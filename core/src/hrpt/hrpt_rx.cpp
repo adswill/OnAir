@@ -10,6 +10,7 @@
 #include <cmath>
 #include <complex>
 #include <cstring>
+#include <deque>
 #include <mutex>
 #include <vector>
 #include "dect2/common/mathconst.h"
@@ -58,6 +59,24 @@ struct Fir {   // decimating FIR on a doubled ring, real and imaginary parts apa
         y = cf32(re, im);
         return true;
     }
+    // d == 1 only: the same outputs as push() for L inputs in a row, one vectorised correlation per part (3.9: about a third of the receiver's
+    // time was this filter, one sample at a time). The ring is left as push() would leave it.
+    void block(const float* xr, const float* xi, int L, float* yr, float* yi) {
+        const size_t hn = (size_t)np - 1;
+        lr.resize(hn + (size_t)L); li.resize(hn + (size_t)L);
+        for (size_t k = 0; k < hn; k++) { lr[k] = bre[(size_t)pos + 1 + k]; li[k] = bim[(size_t)pos + 1 + k]; }
+        std::memcpy(lr.data() + hn, xr, sizeof(float) * (size_t)L);
+        std::memcpy(li.data() + hn, xi, sizeof(float) * (size_t)L);
+        convCorr(lr.data(), h.data(), yr, 1, L, np);
+        convCorr(li.data(), h.data(), yi, 1, L, np);
+        const size_t from = (size_t)L - 1;   // the newest np samples back into the ring, oldest first, at pos 0
+        for (size_t k = 0; k < (size_t)np; k++) {
+            bre[k] = bre[k + (size_t)np] = lr[from + k];
+            bim[k] = bim[k + (size_t)np] = li[from + k];
+        }
+        pos = 0; ph = 0;
+    }
+    std::vector<float> lr, li;   // linear history + block for block()
 };
 
 inline int8_t sat8(float v) { return (int8_t)std::clamp((int)std::lround(v), -127, 127); }
@@ -118,7 +137,9 @@ struct HrptReceiver::Impl {
 
     // AHRPT chain
     std::vector<int8_t> pairs;           // soft pairs a, b
-    int64_t pairsSinceSearch = 0;
+    int64_t pairN = 0;                   // pairs since the search started
+    uint64_t aw[8] = {};                 // per ambiguity: hard decisions of the last pairs
+    std::deque<int64_t> ahits[8];        // per ambiguity: where the sync word was seen in the last frame
     bool searchLock = false;
     int xt = -1;
     hrpt::Viterbi vit;
@@ -217,7 +238,7 @@ struct HrptReceiver::Impl {
     }
 
     void resetChain() {
-        pairs.clear(); pairsSinceSearch = 0; searchLock = false; xt = -1;
+        resetSearch(); searchLock = false; xt = -1;
         vit.reset();
         sr = 0; bitCount = 0; inFrame = false; frameLock = false; frameBits = 0; misses = 0; sinceFrame = 0;
         for (auto& d : demux) d.reset();
@@ -430,46 +451,52 @@ struct HrptReceiver::Impl {
             return;
         }
         pairs.push_back(a); pairs.push_back(b);
-        pairsSinceSearch++;
+        const int64_t i = pairN++;
         const int64_t need = 8192 * 2 + 64;
         if ((int64_t)pairs.size() / 2 > 2 * need) pairs.erase(pairs.begin(), pairs.begin() + (std::ptrdiff_t)(pairs.size() - (size_t)need * 2));
-        if (pairsSinceSearch >= 4096 && (int64_t)pairs.size() / 2 >= 8192 + 64) { pairsSinceSearch = 0; ambiguitySearch(); }
+        ambiguityStep(a, b, i);
     }
 
-    // the encoded sync word in the hard decisions, per ambiguity; two hits a frame apart settle it, then the Viterbi decoder takes over
-    void ambiguitySearch() {
+    // The encoded sync word in the hard decisions, per ambiguity; two hits a frame apart settle it, then the Viterbi decoder takes over.
+    // 3.9: one step per pair (a shift register and the recent hits per ambiguity) instead of rescanning the whole buffer every 4096 pairs:
+    // the same hits, found at the second one instead of up to 4096 pairs later, for about a tenth of the work.
+    void ambiguityStep(int a, int b, int64_t i) {
         static const uint64_t pat = meteor::encodedAsm();
         const uint64_t mask = (1ull << 52) - 1;
-        const int np = (int)(pairs.size() / 2);
         for (int t = 0; t < 8; t++) {
-            uint64_t w = 0;
-            std::vector<int> hits;
-            for (int i = 0; i < np; i++) {
-                int oa, ob;
-                xform(t, pairs[(size_t)i * 2], pairs[(size_t)i * 2 + 1], oa, ob);
-                w = w << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
-                if (i < 31) continue;
-                if (__builtin_popcountll((w ^ pat) & mask) <= 7) hits.push_back(i);
-            }
-            int at = -1;
-            for (size_t x = 0; x < hits.size() && at < 0; x++)
-                for (size_t y = x + 1; y < hits.size(); y++) if (hits[y] - hits[x] == 8192) { at = hits[y]; break; }
-            if (at < 0) continue;
-            searchLock = true; xt = t;
-            tel.rotation = t;
-            lastAsmSec = nowSec();
-            vit.reset();
-            sr = 0; inFrame = false; frameLock = false;
-            const int from = std::max(0, at - 31 - 8192 - 40);
-            for (int i = from; i < np; i++) {
-                int oa, ob;
-                xform(xt, pairs[(size_t)i * 2], pairs[(size_t)i * 2 + 1], oa, ob);
-                vitPush(oa, ob);
-            }
-            pairs.clear();
-            say(std::string("sync word found (") + hrptVarName(var) + ", ambiguity " + std::to_string(t) + ")");
-            return;
+            int oa, ob;
+            xform(t, a, b, oa, ob);
+            aw[t] = aw[t] << 2 | (uint64_t)(oa > 0) << 1 | (uint64_t)(ob > 0);
+            if (i < 31 || __builtin_popcountll((aw[t] ^ pat) & mask) > 7) continue;
+            std::deque<int64_t>& h = ahits[t];
+            while (!h.empty() && h.front() < i - 8192) h.pop_front();
+            const bool pair = !h.empty() && h.front() == i - 8192;
+            h.push_back(i);
+            if (pair) { lockAmbiguity(t, i); return; }
         }
+    }
+
+    void resetSearch() {
+        pairs.clear(); pairN = 0;
+        for (int t = 0; t < 8; t++) { aw[t] = 0; ahits[t].clear(); }
+    }
+
+    void lockAmbiguity(int t, int64_t at) {
+        searchLock = true; xt = t;
+        tel.rotation = t;
+        lastAsmSec = nowSec();
+        vit.reset();
+        sr = 0; inFrame = false; frameLock = false;
+        const int np = (int)(pairs.size() / 2);
+        const int64_t base = pairN - np;   // the pair index of pairs[0]
+        const int from = (int)std::max<int64_t>(0, at - 31 - 8192 - 40 - base);
+        for (int k = from; k < np; k++) {
+            int oa, ob;
+            xform(xt, pairs[(size_t)k * 2], pairs[(size_t)k * 2 + 1], oa, ob);
+            vitPush(oa, ob);
+        }
+        resetSearch();
+        say(std::string("sync word found (") + hrptVarName(var) + ", ambiguity " + std::to_string(t) + ")");
     }
 
     void vitPush(int a, int b) {
@@ -554,7 +581,7 @@ struct HrptReceiver::Impl {
     void supervise() {
         const double now = nowSec();
         if (!bpsk && searchLock && now - std::max(lastGoodSec, lastAsmSec) > 3) {
-            searchLock = false; frameLock = false; pairs.clear(); tel.rotation = -1;
+            searchLock = false; frameLock = false; resetSearch(); tel.rotation = -1;
             say("no frames: searching again");
         }
         if (bpsk && noaaLock && now - lastGoodSec > 3 && now - lastAsmSec > 3) { noaaLock = false; nsr[0] = nsr[1] = 0; tel.rotation = -1; }
@@ -598,6 +625,36 @@ struct HrptReceiver::Impl {
         cf32 y;
         if (lpf.push(cf32((float)v.real(), (float)v.imag()), y)) decimated(y);
     }
+
+    // L samples (already finite) as L calls of input(): the mixer per sample, the front filter skipped when it is the single unit tap (dec 1),
+    // the matched filter a block at a time once the coarse carrier is known. Nothing in here re-initialises the chain (supervise() runs from
+    // report(), between blocks), so the filter outputs of a block stay valid.
+    void inputBlock(const cf32* x, int L) {
+        if (dec != 1) { for (int k = 0; k < L; k++) input(x[k]); return; }
+        br_.resize((size_t)L); bi_.resize((size_t)L); zr_.resize((size_t)L); zi_.resize((size_t)L);
+        for (int k = 0; k < L; k++) {
+            const cd v = cd(x[k].real(), x[k].imag()) * rot;
+            rot *= step;
+            if ((nIn & 1023) == 0) rot /= std::abs(rot);
+            nIn++;
+            br_[(size_t)k] = (float)v.real(); bi_[(size_t)k] = (float)v.imag();
+        }
+        int j = 0;
+        while (j < L && !coarseDone) { coarseSample(cf32(br_[(size_t)j], bi_[(size_t)j])); j++; }
+        if (j == L) return;
+        const int m = L - j;
+        rrc.block(&br_[(size_t)j], &bi_[(size_t)j], m, zr_.data(), zi_.data());
+        for (int k = 0; k < m; k++) {
+            hist[(size_t)(hN & (kHist - 1))] = cf32(zr_[(size_t)k], zi_[(size_t)k]);
+            hN++;
+            if (amp <= 0) amp = 1e-9f;
+            while (tau + spsEst / 2 + 3 < (double)hN) {
+                if (tau - spsEst - 2 < (double)(hN - kHist)) { tau = (double)hN - spsEst; continue; }
+                symbol();
+            }
+        }
+    }
+    std::vector<float> br_, bi_, zr_, zi_;
 };
 
 HrptReceiver::HrptReceiver() : p_(std::make_unique<Impl>()) {}
@@ -639,11 +696,21 @@ void HrptReceiver::feed(const cf32* x, size_t n) {
         if (m.rate > 0) { m.nIn += (int64_t)n; if ((double)m.nIn >= m.nextReport) { m.nextReport += kPubSec * m.rate; m.report(); } }
         return;
     }
-    for (size_t i = 0; i < n; i++) {
-        float re = x[i].real(), im = x[i].imag();
-        if (!std::isfinite(re) || !std::isfinite(im)) re = im = 0;
-        m.power += (double)re * re + (double)im * im;
-        m.input(cf32(re, im));
+    // blocks that end where a report is due, so report() (and its supervision) runs after the same sample as it did one sample at a time
+    constexpr size_t kBlk = 4096;
+    cf32 blk[kBlk];
+    size_t i = 0;
+    while (i < n) {
+        const double due = std::ceil(m.nextReport - (double)m.nIn);
+        const size_t L = std::min({n - i, kBlk, (size_t)std::max(1.0, due)});
+        for (size_t k = 0; k < L; k++) {
+            float re = x[i + k].real(), im = x[i + k].imag();
+            if (!std::isfinite(re) || !std::isfinite(im)) re = im = 0;
+            m.power += (double)re * re + (double)im * im;
+            blk[k] = cf32(re, im);
+        }
+        m.inputBlock(blk, (int)L);
+        i += L;
         if ((double)m.nIn >= m.nextReport) { m.nextReport += kPubSec * m.rate; m.report(); }
     }
     m.nPower += (int64_t)n;

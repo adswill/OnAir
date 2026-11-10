@@ -1144,6 +1144,13 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(sens_sweep PRIVATE dect2core)
   add_executable(sens_gk2a_gap tools/sens/sens_gk2a_gap.cpp)   # GK-2A: receiver against an ideal one (docs/GK2A.md)
   target_link_libraries(sens_gk2a_gap PRIVATE dect2core)
+  if(NOT WIN32)   # 3.9 pass A thresholds (docs/SENSITIVITY-3.9-A.md): short by default, full sweep with ONAIR_TEST_LONG=1
+    add_executable(test_sens39a tests/sens/test_sens39a.cpp)
+    target_include_directories(test_sens39a PRIVATE tools/sens)
+    target_link_libraries(test_sens39a PRIVATE dect2core)
+    add_test(NAME sens39a COMMAND test_sens39a)
+    set_tests_properties(sens39a PROPERTIES TIMEOUT 1500)
+  endif()
   # run by the build workers (ctest -R sens_quick / sens_full, or -L sens-quick / sens-full); results land in <build>/sens-out/*.json
   add_test(NAME sens_quick COMMAND sens_sweep --quick --mode "dvbt$|dab|fm" --out ${CMAKE_BINARY_DIR}/sens-out)
   add_test(NAME sens_full COMMAND sens_sweep --full --trials 8 --out ${CMAKE_BINARY_DIR}/sens-out)
