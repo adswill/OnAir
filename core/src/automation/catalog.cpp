@@ -63,6 +63,24 @@ std::vector<EventInfo> build() {
         {"from", 's', "source call sign", "LY1ABC-9"}, {"to", 's', "destination", "APRS"}, {"path", 's', "digipeater path", "WIDE1-1"},
         {"info", 's', "information field", "!5441.40N/02517.00E>test"}, {"type", 's', "packet type", "position"}, {"summary", 's', "one-line reading", "position"},
         {"lat", 'n', "latitude when the packet has a position", "54.69"}, {"lon", 'n', "longitude when the packet has a position", "25.28"}}});
+    {   // the smart insights (core/include/dect2/insight, docs/SMART5-*-3.9.md); sent under the signal family
+        auto insightFields = [] {
+            return std::vector<FieldInfo>{{"area", 's', "ham, voice, pager or hfutil", "voice"}, {"key", 's', "what it is about: call sign, talkgroup, capcode, channel", "DMR TG 91"},
+                                          {"text", 's', "the finding", "DMR TG 91 busier than usual"}, {"severity", 'n', "0 information, 1 warning, 2 alarm", "0"}};
+        };
+        v.push_back({"insight.heard_me", "A station hears you (FT8, FT4, JS8), first time per band", "Insights", "FT8", 14.074e6, insightFields()});
+        v.push_back({"insight.aprs_overbeacon", "APRS station beacons too often", "Insights", "APRS", 144.8e6, insightFields()});
+        v.push_back({"insight.aprs_flood", "APRS packet flooded through many digipeaters", "Insights", "APRS", 144.8e6, insightFields()});
+        v.push_back({"insight.aprs_digi_silent", "Regular APRS digipeater gone silent", "Insights", "APRS", 144.8e6, insightFields()});
+        v.push_back({"insight.voice_busy", "Talkgroup busier than usual this hour", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.trunk_load", "Trunked system near capacity (Erlang B)", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.tg_encrypted", "Talkgroup went encrypted", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.tg_emergency", "Several emergency calls on one talkgroup", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.pager_auto", "Capcode sends automatic pages", "Insights", "POCSAG", 152.0e6, insightFields()});
+        v.push_back({"insight.pager_burst", "Paging burst from a quiet capcode", "Insights", "POCSAG", 152.0e6, insightFields()});
+        v.push_back({"insight.pager_silent", "Pager channel gone silent", "Insights", "POCSAG", 152.0e6, insightFields()});
+        v.push_back({"insight.overdue", "HF utility broadcast overdue", "Insights", "WEFAX", 10.1008e6, insightFields()});
+    }
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {

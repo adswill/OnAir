@@ -61,6 +61,7 @@ int familyOf(const std::string& type) {
     static const char* const names[kFamilies] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "gnss", "lora", "ble", "rid", "dsc", "signal", "receiver", "satellite", "time", "plugin", "voice", "session", "msg"};
     for (int i = 0; i < kFamilies; i++) if (f == names[i]) return i;
     if (f == "sferics") return FSignal;   // "sferics.storm" is sent under the signal family (sferics_rx.cpp)
+    if (f == "insight") return FSignal;   // "insight.<kind>": the smart insights (core/include/dect2/insight/live.h)
     return -1;
 }
 
@@ -395,8 +396,19 @@ void Engine::setPublisher(std::function<void(const Event&)> f, FamilyMask family
     publishMask_.store(publish_ ? familyMask : 0);
 }
 
+void Engine::setAnalyser(std::function<void(const Event&)> f, FamilyMask familyMask) {
+    std::lock_guard<std::mutex> lk(analyseMu_);
+    analyse_ = std::move(f);
+    analyseMask_.store(analyse_ ? familyMask : 0);
+}
+
 void Engine::submit(Event&& ev) {
     const int fam = familyOf(ev.type);
+    if (fam >= 0 && (analyseMask_.load(std::memory_order_relaxed) >> fam & 1)) {
+        std::function<void(const Event&)> t;
+        { std::lock_guard<std::mutex> lk(analyseMu_); t = analyse_; }
+        if (t) t(ev);
+    }
     if (fam >= 0 && (tapMask_.load(std::memory_order_relaxed) >> fam & 1)) {
         std::function<void(const Event&)> t;
         { std::lock_guard<std::mutex> lk(tapMu_); t = tap_; }

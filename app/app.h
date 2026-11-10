@@ -197,6 +197,7 @@ struct App {
     bool surpriseReq = false;           // Surprise me (the command palette, My station): handled once per request by stationWindow
     bool stationOpen = false;           // My station window (View > My station; app/panels/station_ui.cpp)
     bool heardOpen = false;             // Search everything heard (View > Search everything; app/panels/heard_ui.cpp)
+    bool insightOpen = false;           // Insights (View > Insights; app/panels/insight_ui.cpp): who hears me, talkgroup activity, trunk load, automatic pages, overdue broadcasts
     bool doctorOpen = false;            // the Reception Doctor window (View > Reception doctor; app/panels/doctor_ui.cpp)
     bool stationHealthOpen = false;     // the station health report window (View > Station health; app/panels/station_health_ui.cpp)
     bool sweepOpen = false;             // the sweep scanner window (View > Sweep scanner)
@@ -833,6 +834,8 @@ void passesDownloadTles();                          // passes_ui.cpp: fetch the 
 bool wideAllWorthIt(const App& a);                   // the capture is wide enough to hold several signals (or it is on already)
 void wideAllButton(App& a);                          // the one button of it (Simple views and the window)
 void rfFingerprintWindow(App& a);                   // rffp_ui.cpp: RF fingerprint of a transmitter, carrier-only log (a.rfFpOpen; docs/RF-FINGERPRINT.md)
+void insightWindow(App& a);                         // insight_ui.cpp: View > Insights, and the analysers' tick (called every frame)
+void insightFeedFtx(double slotUtc, double dialHz, const std::string& msg, float snr);   // insight_ui.cpp: an FT8 / FT4 / JS8 decode for who hears me and the antenna pattern
 void heardWindow(App& a);                           // heard_ui.cpp: one box for a call sign, ICAO, MMSI or frequency over every mode's history
 void stationWindow(App& a);                         // station_ui.cpp: My station, radios and antennas entered once (a.stationOpen; docs/STATION-3.8.md)
 void stationAntennaFor(const App& a, bool& known, bool& forBand);   // station_ui.cpp: for the doctor's coach: is an antenna entered, and does one suit the tuned frequency
