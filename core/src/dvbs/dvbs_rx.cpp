@@ -27,7 +27,19 @@ namespace dect2 {
 using namespace dvbs;
 
 double dvbsMaxSymbolRate(double fs, double rollOff) { return fs / (1.3 * (1.0 + rollOff)); }
-double dvbsMinAutoSymbolRate(double fs) { return std::max(60e3, fs * 40.0 / 4096.0 * 2.5); }   // about 40 spectrum bins across the carrier
+namespace {
+// The search spectrum (4096 bins) measures carriers of about 100 bins and more. Narrower ones (reduced bandwidth DATV, 25 to 333 ksym/s) are measured
+// in a second, finer spectrum of up to 131072 bins that the search keeps beside it, so that they have about 100 bins too, down to 10 ksym/s.
+constexpr double kMinSymbolRate = 10e3;
+double wideMinSymbolRate(double fs) { return std::max(60e3, fs * 40.0 / 4096.0 * 2.5); }   // about 40 spectrum bins across the carrier
+int narrowFftSize(double fs) {
+    int n = 4096;
+    while (n < 131072 && fs * 100.0 / n > kMinSymbolRate) n *= 2;
+    return n;
+}
+} // namespace
+double dvbsMinAutoSymbolRate(double fs) { return std::max(kMinSymbolRate, fs * 100.0 / narrowFftSize(fs)); }
+double dvbsMinSymbolRate() { return kMinSymbolRate; }
 
 ModeTuning dvbsTuning() {
     ModeTuning t;
@@ -164,6 +176,7 @@ struct DvbsReceiver::Impl {
     std::atomic<uint64_t> inputCount{0};
     uint64_t reportAt = 0;
     SpectrumEstimator spec;
+    SpectrumEstimator nspec;                  // the finer spectrum of the search, for narrow carriers (configure(): narrowFftSize)
     SpectrumResult specRes;
     std::vector<float> psdDb;
     int searchTries = 0;
@@ -232,6 +245,7 @@ struct DvbsReceiver::Impl {
         mode = kSearch;
         inputCount = 0; reportAt = 0;
         spec.reset();
+        nspec.reset();
         specRes = SpectrumResult();
         searchTries = 0;
         sym.clear(); y.clear();
@@ -314,12 +328,32 @@ struct DvbsReceiver::Impl {
                 rs = rc;
             }
         }
-        if (!carrier || rs < dvbsMinAutoSymbolRate(fs) * (manual > 0 ? 0.0 : 1.0) || rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) {
+        if (!carrier || rs < wideMinSymbolRate(fs) * (manual > 0 ? 0.0 : 1.0) || rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) {
+            if ((!carrier || manual <= 0 || manual < wideMinSymbolRate(fs)) && searchNarrow()) return;
             spec.reset();
             searchTries++;
             return;
         }
         startFront(specRes, rs);
+    }
+
+    // a carrier too narrow for the search spectrum (or too weak in it): the finer spectrum, once it has enough segments
+    bool searchNarrow() {
+        if (nspec.segments() < 48) return false;
+        nspec.setPick(pickOn.load(), pickHz.load());
+        const SpectrumResult r = nspec.analyse();
+        nspec.reset();
+        const double manual = manualRs.load();
+        if (!(r.valid && r.zscore >= 8.f && r.fitRms < 2.5f)) return false;
+        double rs = manual > 0 ? manual : r.rateHz;
+        if (manual <= 0) {
+            const double rc = cyclicRate(raw, fs, r.centerHz, rs);
+            if (rc > 0) rs = rc;
+        }
+        if ((manual <= 0 && rs < dvbsMinAutoSymbolRate(fs)) || rs > dvbsMaxSymbolRate(fs, 0.35) * 1.02) return false;
+        specRes = r;
+        startFront(r, rs);
+        return true;
     }
 
     void startFront(const SpectrumResult& r, double rs) {
@@ -804,6 +838,9 @@ void DvbsReceiver::configure(double inputRateHz) {
     p_->fs = inputRateHz;
     p_->spec.configure(inputRateHz, 4096);
     p_->spec.setStride((size_t)std::max(4096.0, inputRateHz * 0.004));
+    const int nn = narrowFftSize(inputRateHz);
+    p_->nspec.configure(inputRateHz, nn);
+    p_->nspec.setStride(2 * (size_t)nn);   // every other block: half the CPU of the search, 48 segments in about 1.3 s at 10 Msps and 1.6 s at 2 Msps
     p_->resetState();
 }
 bool DvbsReceiver::ready() const { return p_->fs >= dvbsTuning().minSampleRate - 1; }
@@ -905,6 +942,7 @@ void DvbsReceiver::feed(const cf32* x, size_t n) {
     I.inputCount += n;
     I.spec.push(x, n);
     if (I.mode == Impl::kSearch) {
+        I.nspec.push(x, n);
         I.raw.insert(I.raw.end(), x, x + n);
         if (I.raw.size() > (size_t)kCyclicN) I.raw.erase(I.raw.begin(), I.raw.end() - kCyclicN);
         I.doSearch();

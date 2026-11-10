@@ -2,6 +2,7 @@
 // undo/cancel, the spectrum SNR estimate, the telemetry SNR picker; and, with the argument "engine", a sweep against the engine's generated DVB-T2 signal
 // whose level follows the gain and clips like an 8-bit ADC (slow: about 40 s, registered as gain_opt_engine).
 #include "dect2/engine/engine.h"
+#include "dect2/engine/engine_testkit.h"
 #include "dect2/source/gain_opt.h"
 #include "dect2/source/gain.h"
 #include "dect2/source/source.h"
@@ -227,17 +228,27 @@ static void testEngine() {
     SpectrumFrame sf; uint64_t seq = 0;
     RxTelemetry rx; uint64_t rseq = 0;
     const double t0 = nowS();
+    // The optimiser's clock stops while the samples made before the last gain change are still being analysed: a busy runner leaves up to
+    // the input ring (about 1.8 s at this rate) waiting, and a wall clock would credit them to the new gain. (A live radio's ring is cut back
+    // to the newest samples when the receiver falls behind, Engine::catchUp; the synthetic source waits for the receiver instead.)
+    double paused = 0, lastWall = 0, drainTo = -1;
     while (o.active() && nowS() - t0 < 150) {
+        const double wall = nowS() - t0;
+        if (drainTo >= 0 && enginetest::signalSecs(e) >= drainTo) drainTo = -1;
+        if (drainTo >= 0) { paused += wall - lastWall; lastWall = wall; std::this_thread::sleep_for(std::chrono::milliseconds(15)); continue; }
+        lastWall = wall;
+        const double tSig = wall - paused;
         if (e.latestSpectrum(sf, seq)) seq = sf.seq;
         if (e.latestRx(rx, rseq)) rseq = rx.seq;
         GainOptimiser::Sample s;
         double snr = 0;
         s.snrValid = rxSnrDb(rx, snr); s.snrDb = snr;
         s.clip = sf.stats.clipFraction; s.rms = sf.stats.rmsDbfs; s.peak = sf.stats.peak;
-        if (o.update(nowS() - t0, s, cur)) {
+        if (o.update(tSig, s, cur)) {
             const GainSetting g = gainForTotal(cur);
             t.lnaDb = g.lna; t.vgaDb = g.vga; t.ampOn = g.amp;
             e.retune(t);
+            drainTo = enginetest::signalSecs(e) + e.backlogSec();
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }

@@ -385,7 +385,7 @@ int main(int argc, char** argv) {
     parseDevFlags(app, argc, argv, o);
     loadFonts(app, io);   // preferences, the OS language and --lang have now selected the effective UI language
     std::string fontLanguage = i18n::current();
-    if (!o.shotPath && argc <= 1 && touch::autoTouch(gWorkAreaW, gWorkAreaH, plat::prefs().has("touchUi") || plat::prefs().has("touchAutoSeen"))) {   // #139: a small screen starts in the touch interface (View > Touch interface turns it off)
+    if (!o.shotPath && argc <= 1 && touch::autoTouch(gWorkAreaW, gWorkAreaH, touch::touchChosen(app.touchUi, plat::prefs().has("touchAutoSeen")))) {   // #139: a small screen starts in the touch interface (View > Touch interface turns it off)
         app.touchUi = true; plat::prefs().setB("touchAutoSeen", true); savePrefs(app);
     }
     double last = glfwGetTime();

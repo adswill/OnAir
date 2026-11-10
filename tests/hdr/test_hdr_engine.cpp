@@ -37,7 +37,7 @@ static void run(int am, double cfo, double maxSec, double rate = 0) {
     int reports = 0, wrong = 0;
     bool back = false;
     double doneAt = -1;
-    float load = 0;
+    float load = 0, cpuLoad = 0;   // the wall-clock load (shown) and the CPU-time load (checked: other programs on a shared runner do not raise it)
     std::vector<uint8_t> img;
     const auto t0 = std::chrono::steady_clock::now();
     for (;;) {
@@ -53,15 +53,15 @@ static void run(int am, double cfo, double maxSec, double rate = 0) {
             for (const auto& p : h.programs) if (p.psdCount) psd++;
             if (doneAt < 0 && !h.callSign.empty() && !h.message.empty() && !h.slogan.empty() && psd == 2 && e.hdr().lotBytes(tc.artPort, tc.artLot, img)) doneAt = el;
         }
-        if (el > 3) load = std::max(load, e.sampleLoss().loadPct);
-        if (doneAt > 0 && el > doneAt + 1.0) break;
+        if (el > 3) { const SampleLoss sl = e.sampleLoss(); load = std::max(load, sl.loadPct); cpuLoad = std::max(cpuLoad, sl.cpuPct); }
+        if (doneAt > 0 && el > doneAt + 1.0 && el > 3 && cpuLoad > 0) break;   // the load is measured over 2 s windows: wait for one
         if (el > maxSec) break;
     }
     e.stop();
     const HdrTelemetry& h = rx.hdr;
-    printf("%s through the engine: %s after %.1f s, %d reports, %s, MER %.1f dB, CFO %+.1f Hz, P1 %llu ok %llu bad, call sign %s, %zu programs, receiver load %.1f%% of real time\n",
+    printf("%s through the engine: %s after %.1f s, %d reports, %s, MER %.1f dB, CFO %+.1f Hz, P1 %llu ok %llu bad, call sign %s, %zu programs, receiver load %.1f%% of real time (CPU %.1f%%)\n",
            am == 3 ? "AM MA3" : am ? "AM" : "FM", doneAt > 0 ? "everything decoded" : "INCOMPLETE", doneAt, reports, hdrSummary(h).c_str(), h.snrDb, h.cfoHz,
-           (unsigned long long)h.blocksOk, (unsigned long long)h.blocksBad, h.callSign.c_str(), h.programs.size(), load);
+           (unsigned long long)h.blocksOk, (unsigned long long)h.blocksBad, h.callSign.c_str(), h.programs.size(), load, cpuLoad);
     CHECK(doneAt > 0, "not everything decoded within %.0f s", maxSec);
     CHECK(wrong == 0 && !back, "%d reports with another standard, sequence back %d", wrong, (int)back);
     CHECK(rx.rateOk && rx.standard == 22 && rx.state == 3 && rx.dataValid, "rate ok %d, standard %d, state %d, data %d", (int)rx.rateOk, rx.standard, rx.state, (int)rx.dataValid);
@@ -71,7 +71,7 @@ static void run(int am, double cfo, double maxSec, double rate = 0) {
     CHECK(std::fabs(rx.cfoHz - cfo) < 10, "CFO %.1f Hz", rx.cfoHz);
     CHECK(h.blocksBad == 0, "%llu bad P1 frames", (unsigned long long)h.blocksBad);
     CHECK(e.droppedSamples() == 0, "%llu samples dropped", (unsigned long long)e.droppedSamples());
-    CHECK(load > 0 && load < 60, "receiver load %.1f%%", load);
+    CHECK(cpuLoad > 0 && cpuLoad < 60, "receiver CPU load %.1f%% (wall clock %.1f%%)", cpuLoad, load);
 }
 
 int main() {

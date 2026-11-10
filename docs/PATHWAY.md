@@ -1346,3 +1346,15 @@ Branch feat38-bugs on integ-38. Fixed #139/#424 (top bar buttons sat on the mode
 
 ## 2026-11-10 Optional libraries documented (feat38-userlibs)
 Issue #472: docs/OPTIONAL-LIBRARIES.md lists every optional library and codec with folders per OS, file names, official sources and a malware warning; linked from CODECS.md, README and the codec ? help. Radio-driver libraries (fobos_sdr, rtlsdr, airspy, bladeRF, LimeSuite, libiio, UHD ...) are now also searched in the OnAir codecs folders. Settings > Advanced and Help > Voice codecs show found or missing per library. Only syntax-checked locally; details in docs/USERLIBS-3.8.md.
+
+## 2026-11-10 feat39-fixes: DRM freeze, narrow DVB-S2, HF pagers, TETRAPOL filter, touch start, slow-runner tests
+Branch feat39-fixes, based on integ-39.
+- DRM: the test signal no longer hangs at 16-QAM with protection 2 or 3 (`drm_gencombo`).
+- DVB-S2: symbol rates down to 10 ksym/s. Auto works from 10 ksym/s (`dvbs_narrow`, 32 ksym/s at roll-off 0.20).
+- TETRAPOL: the channel filter is in the Baseband filter row (#408, `tetrapol_filter`).
+- Touch: small screens start in touch after an upgrade too (#139).
+- New regression test `pager_hf`: pagers and packet on HF through the engine, Whole span off and on.
+- Engine: CPU-time receiver load (`SampleLoss::cpuPct`) and `backlogSec()`.
+- Tests: hdr_engine, gain_opt_engine, sonde_engine, iridium_app, scan_handover, gnss_glonass (now in two halves) and inmc_slow_rates are made robust against busy runners.
+
+Simulated signals only. Details are in docs/FIXES-3.9.md.
