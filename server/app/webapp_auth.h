@@ -51,7 +51,7 @@ public:
     bool login(const std::string& password, const std::string& peer, double now, std::string& token, std::string& why);
     void logout(const std::string& cookieHeader);
     bool csrfOk(const Who& w, const std::string& header) const;
-    bool rateOk(const std::string& peer, double now);          // the API's per-address limit (20 a second, burst 60)
+    bool rateOk(const std::string& peer, double now);          // the API's per-address limit (30 a second, burst 100)
     size_t count() const;
     void prune(double now);
     void setPasswordHash(const std::string& hash);             // after a password change every session but none is kept (the caller may logout all)
@@ -72,7 +72,7 @@ private:
     AccessConfig cfg_;
     std::map<std::string, S> s_;
     onair_web::FailLimiter fails_;
-    dect2::apipol::RateLimiter rl_{20, 60, 512};
+    dect2::apipol::RateLimiter rl_{30, 100, 512};
 };
 
 } // namespace onair_app

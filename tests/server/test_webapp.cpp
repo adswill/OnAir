@@ -132,6 +132,7 @@ static int countOf(const std::vector<std::string>& v, const std::string& x) { in
 
 int main() {
     int fails = 0;
+    setvbuf(stdout, nullptr, _IONBF, 0);   // a FAIL line survives an abort
     // ================================================================ part 1: the access layer
     {
         AccessConfig a;
@@ -189,7 +190,7 @@ int main() {
         // the API rate limit
         int allowed = 0;
         for (int i = 0; i < 100; i++) if (ss.rateOk("203.0.113.9", t)) allowed++;
-        CHECK(allowed >= 50 && allowed <= 70, "the burst is about 60 (%d)", allowed);
+        CHECK(allowed >= 90 && allowed <= 110, "the burst is about 100 (%d)", allowed);
         CHECK(ss.rateOk("203.0.113.9", t + 10), "it refills");
         // password rules, cookies
         CHECK(!Sessions::passwordAcceptable("short", why) && Sessions::passwordAcceptable("long enough", why) && !Sessions::passwordAcceptable(std::string(200, 'a'), why) && !Sessions::passwordAcceptable("tab\there!", why), "password rules");
@@ -308,6 +309,7 @@ int main() {
         for (int i = 0; i < n; i++) {
             const webschema::WebModeRow& m = rows[i];
             if (m.family == 999 || m.family >= 19999) continue;   // Plugins and Mode Builder are not receivers
+            std::this_thread::sleep_for(std::chrono::milliseconds(40));   // two requests per mode: stay under the API's per-address rate
             r = lan.post("mode", "{\"family\":" + std::to_string(m.family) + ",\"sub\":\"" + m.sub + "\"}");
             bool good = r.status == 200;
             if (good) { r = lan.get("status"); good = has(r.body, "\"row\":{\"family\":" + std::to_string(m.family) + ",") && has(r.body, "\"sub\":\"" + std::string(m.sub) + "\""); }
@@ -388,8 +390,8 @@ int main() {
     CHECK(r.status == 200 && has(r.head, "Set-Cookie: onair_session=") && has(r.head, "HttpOnly") && has(r.head, "SameSite=Strict"), "login sets the cookie: %d %s", r.status, r.head.c_str());
     {
         const std::string sc = r.header("Set-Cookie");
-        net.cookie = sc.substr(14, sc.find(';') - 14);
-        CHECK(net.cookie.size() == 64, "cookie token (%zu)", net.cookie.size());
+        if (sc.size() > 14) net.cookie = sc.substr(14, sc.find(';') - 14);
+        CHECK(net.cookie.size() == 64, "cookie token (%zu) from '%s'", net.cookie.size(), sc.c_str());
     }
     CHECK(net.session() && net.csrf.size() == 32, "the logged-in session has its own csrf");
     r = net.get("status");

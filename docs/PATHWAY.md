@@ -1364,3 +1364,16 @@ Tools > EchoLink...: log in with the callsign and password from settings, then l
 Branch feat39-smart5a on integ-39. 26 automatic engines in core/src/smart5 (list in docs/SMART5-LIST-3.9.md): FM watchdog, BS.412 multiplex power, FM transmitter fingerprint, AM split-carrier analyser, AM modulation health, ensemble change log, fault-or-reception split, HD blend alignment and sideband level, DRM best hour; TS service off-air, OFDM interferer locator, DVB-S/S2 fade and margin log, transmitter from cell ID, VITS analyser; learned horizon, sun outage, product cadence, L-band carrier log, CubeSat beacon learner; GNSS clock ppm, S4, multipath; Sun drift scan, VLF terminator marks, meteor rate against showers. Four test binaries (tests/smart5). Simulated signals only. Docs: docs/SMART5-{broadcast,tv,sat,gnss,science}-3.9.md. Wiring into the screens is left to the integrator.
 ## 2026-11-10 broadcast package (feat39-bcast)
 Branch feat39-bcast on integ-39, family block 730-749. ISDB-TSB is a new mode (family 730, engine standard 732): the one- and three-segment ARIB STD-B29 signal on the ISDB-T generator and receiver, automatic segment count, and the one-seg service of ISDB-T through the narrow receiver. DVB-H is added to DVB-T, with no new entry: the 4K mode, the in-depth interleaver, the TPS bits, and an MPE / MPE-FEC demultiplexer (EN 301 192, RS(255,191) erasure decoding) fed by the engine. T-DMB was already in the DAB mode. DVB-C2, DVB-SH and CMMB were not done; the reasons are in docs/BCAST-3.9.md. Tests: isdbtsb, dvbh and mpe_fec. Run on GitHub (quick.yml) because the local build gate was saturated. Simulated signals only.
+
+## 2026-11-11 OnAir Web 3.9: the whole receiver in a browser (feat39-web)
+Branch feat39-web on integ-39. The owner's words: the web page "still sucks", six decoders, confusing settings; make it OnAir in a browser,
+remote, with optional public access. Done: a generated panel schema for every mode (tools/gen_web_schema.py reads the 171 telemetry structs,
+engine_telemetry.cpp and the mode table and writes core/src/results/web_schema_gen.cpp: 247 standards, 290 of 295 rows have a live panel, the
+7 TV families show the common block and details, IPTV / ASTERIX / ISDB-TSB have no telemetry block); a new app on the web server (server/app:
+owner / visitor roles, PBKDF2 passwords, HttpOnly SameSite cookies, CSRF header, fail and rate limits, public mode with a tune toggle and a
+visitor cap, private modes hidden from visitors, TX owner-only, works through the relay since it sits on the relayed port); a new page
+web/onair-app (spectrum / waterfall drag-to-tune, mode picker with search, generic renderers: tiles, tables with a map, pictures,
+constellations, logs; audio through a worklet; settings page in plain words; phone tabs). Tests: web_schema (every mode), webapp (access,
+HTTP, WebSocket, every mode selectable, settings, recording), web_app_client (node), web_app_smoke (Playwright, opt-in). CPU measured on the
+CI runner: 45.5 % for the receiver, +0.25 % per viewer at 355 kbit/s each. Validated on the test signal and 127.0.0.1 only; no real radio or
+real internet trial. docs/WEB-3.9.md and docs/WEB-SCHEMA-3.9.md.

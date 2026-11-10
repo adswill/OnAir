@@ -64,8 +64,8 @@ How it is built (server/app/webapp_auth.cpp, checked by tests/server/test_webapp
 * **CSRF**: every POST must carry the session's CSRF token in the `X-OnAir-CSRF` header (GET /app/v1/session gives it; `lan` for an owner
   by address, `public` for a visitor); the WebSocket takes it as `?csrf=`. A page of another origin cannot set the header or know the token,
   and the `Origin` header, when a browser sends one, must be this server. The web server already refuses WebSockets from other origins.
-* **Rate limits**: five failed logins from one address block it for a minute (and a failed login waits 300 ms); the API allows 20 requests
-  a second with a burst of 60 per address; the web server's own connection limits apply. A password set only from this computer or the LAN:
+* **Rate limits**: five failed logins from one address block it for a minute (and a failed login waits 300 ms); the API allows 30 requests
+  a second with a burst of 100 per address; the web server's own connection limits apply. A password set only from this computer or the LAN:
   nobody from the internet can create the first password.
 * **The relay and proxies**: connections through the relay arrive from 127.0.0.1 with the visitor's address in `X-Forwarded-For`; the server
   trusts that header only from loopback and only when the relay or `web_trust_proxy` is on, and such a connection is never an owner by
@@ -134,9 +134,17 @@ the waterfall tunes exactly like the mouse. The spectrum keeps a light payload (
 
 Measured with `onair-app-load` (tools/onair_app_load.cpp): the real server on the built-in test signal (FM, 2.4 Msps) with N fake viewers
 in the same process, each receiving status, the panel twice a second, 1024-bin spectrum rows at 10 a second and 16 kHz audio, 10 s per step
-on the development Mac (Apple Silicon). CPU is the whole process, the receiver included, in % of one core:
+on a GitHub Actions runner (the Mac could not link against a current library during the overnight rules). CPU is the whole process, the receiver included, in % of one core:
 
-CPU_TABLE_PLACEHOLDER
+| viewers | process CPU (% of one core) | per viewer | kbit/s each | frames/s each |
+|---|---|---|---|---|
+| 0 (the receiver alone) | 45.5 | | | |
+| 1 | 46.6 | 1.1 | 355 | 33 |
+| 5 | 46.4 | 0.2 | 354 | 33 |
+| 20 | 50.1 | 0.23 | 352 | 32 |
+
+(GitHub's `ubuntu-24.04` runner, quick CI run 42891394337; the run-to-run noise is about 1 %, so the first viewer's 1.1 % includes the
+thread and socket of the fake viewer itself.)
 
 The spectrum is decimated once per viewer from the shared FFT, audio is one shared demodulator copied per viewer, and the panel JSON is
 built once per telemetry report and shared, so a viewer costs a few percent of a core and about 300 kbit/s with audio (about 50 kbit/s
