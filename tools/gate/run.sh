@@ -44,6 +44,7 @@ step "workflow YAML" workflow_yaml
 step "python syntax" python_syntax
 step "FFI widths" python3 tools/check_ffi_widths.py
 step "mode numbers (source)" python3 tools/gate/gate_check.py modes
+step "MODES.md is current" python3 tools/gen_modes_list.py --check
 step "web_policy classification (source)" python3 tools/gate/gate_check.py web_policy
 step "Android native link (stand-ins)" python3 tools/gate/gate_check.py android
 step "credits generator" credits
