@@ -422,7 +422,10 @@ list(APPEND ONAIR_WEB_SOURCES server/web/web_decoders.cpp)   # the receivers as 
 add_library(onair_web STATIC ${ONAIR_WEB_SOURCES})
 target_include_directories(onair_web PUBLIC server)
 target_link_libraries(onair_web PUBLIC dect2core)
-add_executable(onair-server server/main.cpp server/server_config.cpp server/server_host.cpp)
+# OnAir Web 3.9: the whole receiver in a browser (server/app, web/onair-app, docs/WEB-3.9.md); linked into onair-server only, the desktop app is untouched
+set(ONAIR_WEBAPP_SOURCES server/app/webapp.cpp server/app/webapp_auth.cpp)
+add_executable(onair-server server/main.cpp server/server_config.cpp server/server_host.cpp ${ONAIR_WEBAPP_SOURCES})
+target_include_directories(onair-server PRIVATE server/app)
 target_link_libraries(onair-server PRIVATE onair_web dect2core)
 # onair-web-load: many fake listeners on synthetic IQ, CPU per listener (the figures in docs/ONAIR-WEB.md)
 add_executable(onair-web-load tools/onair_web_load.cpp server/server_config.cpp)

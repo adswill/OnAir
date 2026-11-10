@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="dark light">
+<title>OnAir</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand"><span class="dot" id="dot"></span><span id="srvname">OnAir</span><span id="state" class="muted">connecting</span></div>
+  <div class="freq" id="freqbox" title="Click to type a frequency">
+    <span id="freq">---.------</span><span class="unit">MHz</span>
+  </div>
+  <div class="bar">
+    <button id="modebtn" class="pill" title="Choose a mode (M)"><span id="modename">Mode</span></button>
+    <button id="startbtn" class="p" title="Start or stop the receiver (S)">Start</button>
+    <button id="listenbtn" title="Hear the receiver's audio (L)">Listen</button>
+    <input id="vol" type="range" min="0" max="100" value="80" title="Volume" aria-label="Volume">
+    <button id="recbtn" title="Record the raw IQ samples on the server (owner)">Record</button>
+    <button id="settingsbtn" title="Settings (owner)">Settings</button>
+    <button id="loginbtn" title="Log in as the owner">Log in</button>
+  </div>
+</header>
+
+<nav id="tabs" class="tabs"><button data-tab="spectrum" class="on">Spectrum</button><button data-tab="panel">Decoder</button><button data-tab="controls">Radio</button></nav>
+
+<main id="main">
+  <section id="spectrumSec" class="tab on">
+    <div class="spec-wrap">
+      <canvas id="spec" width="1024" height="160"></canvas>
+      <canvas id="wf" width="1024" height="260"></canvas>
+      <div id="tuneline"></div>
+      <div class="spec-tools">
+        <label>Rows/s <select id="fps"><option>2</option><option>5</option><option selected>10</option><option>20</option></select></label>
+        <label>Bins <select id="bins"><option>256</option><option>512</option><option selected>1024</option><option>2048</option></select></label>
+        <label><input type="checkbox" id="specon" checked> Spectrum</label>
+        <span id="specinfo" class="muted"></span>
+      </div>
+    </div>
+    <div id="quick" class="quick"></div>
+  </section>
+
+  <section id="panelSec" class="tab">
+    <div class="panel-head">
+      <h2 id="panelTitle">Decoder</h2>
+      <span id="panelState" class="muted"></span>
+      <label class="tier"><input type="checkbox" id="advanced"> Advanced</label>
+    </div>
+    <div id="panel" class="panel"></div>
+  </section>
+
+  <section id="controlsSec" class="tab">
+    <div class="card">
+      <h3>Radio</h3>
+      <div class="row">
+        <label>Radio<select id="dev"></select></label>
+        <label>Gain (dB)<input id="gain" type="number" step="1"></label>
+        <label><input type="checkbox" id="autogain"> Automatic gain</label>
+      </div>
+      <div class="row">
+        <label>Listen as<select id="demod"><option value="auto">Automatic</option><option value="nfm">Narrow FM</option><option value="am">AM</option><option value="usb">USB</option><option value="lsb">LSB</option></select></label>
+        <label>Audio rate<select id="arate"><option>8000</option><option>12000</option><option selected>16000</option><option>24000</option><option>48000</option></select></label>
+        <label><input type="checkbox" id="autostart"> Start with the server</label>
+      </div>
+      <details id="advRadio"><summary>Advanced</summary>
+        <div class="row">
+          <label>Sample rate (Msps, 0 = automatic)<input id="rate" type="number" step="any" min="0"></label>
+          <label>Capture bandwidth (MHz, 0 = the mode's own)<input id="bw" type="number" step="any" min="0"></label>
+          <label>Panel updates/s<select id="panelrate"><option>1</option><option selected>2</option><option>4</option></select></label>
+        </div>
+      </details>
+      <div id="ctlerr" class="err"></div>
+    </div>
+    <div class="card" id="recCard">
+      <h3>Recording</h3>
+      <p class="muted">The server records the raw IQ samples of the capture as a .cf32 file in its recordings folder. Audio you hear can be saved from the browser with the button below.</p>
+      <div class="row"><button id="recbtn2">Record IQ on the server</button><button id="audiorec">Save audio in the browser</button><span id="recinfo" class="muted"></span></div>
+    </div>
+    <div class="card" id="aboutCard">
+      <h3>About this server</h3>
+      <div id="about" class="muted"></div>
+    </div>
+  </section>
+</main>
+
+<div id="modal" class="modal" hidden>
+  <div class="box" role="dialog" aria-modal="true">
+    <div class="box-head"><h2 id="modalTitle"></h2><button id="modalClose" class="x" aria-label="Close">&times;</button></div>
+    <div id="modalBody" class="box-body"></div>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="lib.js"></script>
+<script src="spectrum.js"></script>
+<script src="panels.js"></script>
+<script src="audio.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

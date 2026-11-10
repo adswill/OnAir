@@ -43,6 +43,8 @@ public:
     std::string devicesJson() override;
     std::string modesJson() override;
     std::string telemetryJson(uint64_t& seq) override;
+    std::string panelJson(uint64_t& seq);   // the mode's web panel (dect2::webschema::panelJson), built once per new telemetry report; "null" when not running
+    void captureInfo(double& centreHz, double& rateHz);   // what the spectrum frames describe
     std::string spectrumJson(int maxBins, uint64_t& seq) override;
     bool start(int deviceIndex, std::string& err) override;
     bool stop(std::string& err) override;
@@ -57,6 +59,9 @@ public:
     bool audioRead(int id, std::string& pcm) override;
     void audioClose(int id) override;
     int handleExtra(const std::string& method, const std::string& path, const std::map<std::string, dect2::JsonVal>& body, std::string& json) override;
+    bool recordStart(const std::string& kind, std::string& err) override;   // "iq": a .cf32 file in rec_dir (default: ~/OnAir-recordings); audio is not recorded here
+    bool recordStop(std::string& err) override;
+    std::string recordingJson() override;
 
     // Resolves a mode id or number text ("fm", "dvbs", "ft8", "7") to a mode entry; nullptr when it is none.
     const ModeEntry* findMode(const std::string& idOrNumber) const;
@@ -85,6 +90,11 @@ private:
     std::mutex snapMu_;
     std::string telJson_ = "{\"running\":false,\"available\":false}";
     uint64_t telSeq_ = 0;
+    std::string recPath_;                   // the IQ recording running now (under mu_), empty: none
+    double recStart_ = 0;
+    dect2::RxTelemetry rxSnap_;             // the latest report, for the web panel (built on demand under snapMu_)
+    uint64_t rxSnapSeq_ = 0, panelSeq_ = 0;
+    std::string panelJson_;
     dect2::SpectrumFrame spec_;
     double specCentreHz_ = 0, specRateHz_ = 0;
     std::thread snapTh_;
