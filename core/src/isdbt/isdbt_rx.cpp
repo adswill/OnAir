@@ -30,6 +30,14 @@ struct IsdbtReceiver::Impl {
     int bwSet = 6;                              // the channel width asked for: 6, 7, 8, or 0 automatic
     std::atomic<int> bw{6};                     // the width in use (automatic: the current guess)
     double fs = kSampleRate;                    // the IFFT rate of that width
+    // ISDB-TSB (configureTsb): the segments of the narrow band, 1 or 3 (0: the 13-segment ISDB-T receiver). tsbAuto: starts with one segment
+    // (which also takes the partial-reception segment of a three-segment or a 13-segment signal) and moves to three when the TMCC says so.
+    int tsb = 0;
+    bool tsbAuto = false;
+    int wantTsb = 0;          // the TMCC of a one-segment search says three segments: change over after the search
+    bool tried3 = false;
+    int dec() const { return tsbDecimation(tsb); }
+    double occupied(int w) const { return tsb ? occupiedHz(tsb, w) : 5.572e6 * w / 6.0; }
     TrackingResampler resampler;
     bool decimate = false, rateOk = true;
     std::vector<cf32> rsOut, buf;
@@ -105,6 +113,7 @@ struct IsdbtReceiver::Impl {
         fft.reset(); agreeCount = 0; agreeMode = agreeGi = -1; absSym = 0; symbols = 0;
         spec.clear(); specBase = 0; huntFails = 0; sinceHunt = 0; tmccOk = false; tmccSeg = -1; prevTmcc.clear(); tmccSoft.clear(); tmccFailures = 0; secSinceTmcc = 0;
         streamSecs = 0; packetsOut = 0; detect = 0; sroPpm = 0;
+        wantTsb = 0; tried3 = false;
         buf.clear(); base = 0; resampler.reset();
         mixCand = {{0.0, false}, {0.0, true}}; candIdx = 0; mirror = false; setMix(0); estDone = false; estBuf.clear(); estPow.clear(); estBlocks = 0; estTries = 0; searchedSince = 0;
     }
@@ -124,6 +133,7 @@ struct IsdbtReceiver::Impl {
         if (getenv("ISDBT_DEBUG")) fprintf(stderr, "[isdbt] channel guess %zu: %.1f kHz%s\n", candIdx, mixHz / 1e3, mirror ? ", mirrored" : "");
     }
     void nextCandidate() {
+        if (tsbAuto && tsb == 3 && (mixCand.size() <= 1 || (candIdx + 1) % mixCand.size() == 0)) { setTsb(1); return; }
         // automatic width: once every guess of the channel's place failed with this width, the next width (6 -> 8 -> 7 -> 6)
         if (bwSet == 0 && (mixCand.size() <= 1 || (candIdx + 1) % mixCand.size() == 0)) {
             int w = bw;
@@ -134,10 +144,15 @@ struct IsdbtReceiver::Impl {
         }
         if (mixCand.size() > 1) takeCandidate(candIdx + 1); else searchedSince = 0;
     }
+    void setTsb(int t) {
+        tsb = t; setWidth(bw);
+        state = 0; agreeCount = 0; detect = 0; tmccOk = false; symStart = 0; searchedSince = 0; estDone = false; estPow.clear(); estBlocks = 0; estTries = 0;
+        if (getenv("ISDBT_DEBUG")) fprintf(stderr, "[isdbt] ISDB-TSB: %d segment(s)\n", t);
+    }
     // the IFFT rate follows the channel width; everything already resampled for the old one is dropped
-    bool widthFits(int w) const { return inRate >= 6.0e6 * w / 6.0 * 0.95; }   // a rate the channel fits in: about 6 Msps per 6 MHz
+    bool widthFits(int w) const { return tsb ? inRate >= occupiedHz(tsb, w) * 1.05 : inRate >= 6.0e6 * w / 6.0 * 0.95; }   // a rate the channel fits in: about 6 Msps per 6 MHz
     bool setWidth(int w) {
-        bw = w; fs = sampleRateFor(w);
+        bw = w; fs = sampleRateFor(w) / dec();
         rateOk = widthFits(w) && resampler.configure(inRate, fs, false);   // never a plain pass-through: the clock tracking works through the resampler's step
         decimate = rateOk && !resampler.passthrough();
         buf.clear(); base = 0; resampler.reset(); spec.clear();
@@ -174,12 +189,12 @@ struct IsdbtReceiver::Impl {
             // channel its edges land on the neighbour instead of the gap between the channels
             auto box = [&](int W, int& at) { double bs = -1; at = -1; for (int a = 0; a + W <= F; a++) { const double v = cum[(size_t)(a + W)] - cum[(size_t)a]; if (v > bs) { bs = v; at = a; } } return bs / std::max(1, W); };
             auto clear = [&](int a0, int a1, double inside) { a0 = std::max(0, a0); a1 = std::min(F, a1); return a1 - a0 < 2 || (cum[(size_t)a1] - cum[(size_t)a0]) / (a1 - a0) < 0.25 * inside; };
-            const int W6 = (int)std::lround(5.572e6 / inRate * F);
+            const int W6 = (int)std::lround(occupied(6) / inRate * F);
             int at6 = -1;
             const double m6 = W6 >= 16 && W6 <= F - 2 ? box(W6, at6) : 0;
             int pick = 6;
             for (int w : {7, 8}) {
-                const int Ww = (int)std::lround(5.572e6 * w / 6.0 / inRate * F);
+                const int Ww = (int)std::lround(occupied(w) / inRate * F);
                 if (m6 <= 0 || Ww > F - 2 || !widthFits(w)) continue;
                 int a = -1;
                 const double m = box(Ww, a);
@@ -191,7 +206,7 @@ struct IsdbtReceiver::Impl {
                 setWidth(pick); state = 0; agreeCount = 0; detect = 0; symStart = 0; searchedSince = 0;
             }
         }
-        const int W = (int)std::lround(5.572e6 * bw / 6.0 / inRate * F);
+        const int W = (int)std::lround(occupied(bw) / inRate * F);
         if (W < 16 || W > F - 2) return;
         int best = -1; double bs = -1;
         for (int a = 0; a + W <= F; a++) { const double v = cum[(size_t)(a + W)] - cum[(size_t)a]; if (v > bs) { bs = v; best = a; } }
@@ -251,7 +266,7 @@ struct IsdbtReceiver::Impl {
         Cand best{0, -1, -1, 0, cd(0, 0)};
         const int64_t b0 = base;
         for (int m = 1; m <= 3; m++) {
-            const int n = isdbt::fftN(m);
+            const int n = isdbt::fftN(m) / dec();
             const int64_t avail = (int64_t)buf.size();
             if (avail < (int64_t)(6.0 * (n + n / 4) + n + n / 4)) continue;
             const int64_t B = std::min<int64_t>(avail, (int64_t)(8 * (n + n / 4) + n));
@@ -267,7 +282,7 @@ struct IsdbtReceiver::Impl {
                 cum[(size_t)i + 1] = acc; en[(size_t)i + 1] = ea;
             }
             for (int g = 0; g < 4; g++) {
-                const int G_ = isdbt::guardSamples(m, g), P = n + G_;
+                const int G_ = isdbt::guardSamples(m, g) / dec(), P = n + G_;
                 const int64_t D = Dn - G_;
                 if (D < (int64_t)P * 3) continue;
                 std::vector<double> F((size_t)P, 0.0);
@@ -296,7 +311,7 @@ struct IsdbtReceiver::Impl {
         detect = std::max(detect.load(), 1);
         if (best.m == agreeMode && best.g == agreeGi) agreeCount++; else { agreeMode = best.m; agreeGi = best.g; agreeCount = 1; }
         if (agreeCount < 2) return false;
-        mode = best.m; gi = best.g; N = isdbt::fftN(mode); G = isdbt::guardSamples(mode, gi); K = totalCarriers(mode); kc = centerCarrier(mode);
+        mode = best.m; gi = best.g; N = isdbt::fftN(mode) / dec(); G = isdbt::guardSamples(mode, gi) / dec(); K = totalCarriers(mode); kc = centerCarrier(mode);
         const int P = N + G;
         int64_t s = best.pos;
         while (s < base + (int64_t)buf.size() - (int64_t)(6 * P)) s += P;
@@ -426,6 +441,7 @@ struct IsdbtReceiver::Impl {
         if ((int)spec.size() >= 2 * kSymbolsPerFrame + 16 && sinceHunt >= 100) {
             sinceHunt = 0;
             if (hunt()) { state = 2; spec.clear(); spec.shrink_to_fit(); }
+            else if (wantTsb) { const int w = wantTsb; wantTsb = 0; tried3 = true; spec.clear(); setTsb(w); return; }
             else {
                 if (++huntFails >= 8) { state = 0; detect = 1; agreeCount = 0; spec.clear(); nextCandidate(); return; }
                 const size_t drop = 100;
@@ -444,7 +460,7 @@ struct IsdbtReceiver::Impl {
             // a shift of s carriers turns every carrier by 2 pi s G / N between symbols: take it out of the products
             const double th = 2.0 * M_PI * (double)s * (double)G / (double)N;
             const cf32 unturn((float)std::cos(th), (float)-std::sin(th));
-            for (int pos = 0; pos < kSegments; pos++) {
+            for (int pos = firstPosition(tsb); pos <= lastPosition(tsb) && !wantTsb; pos++) {
                 for (int type = 0; type < 2; type++) {
                     const bool diff = type == 0;
                     const auto ks = tmccCarriers(mode, pos, diff);
@@ -514,8 +530,13 @@ struct IsdbtReceiver::Impl {
             if (!tmccCorrect(w, rel)) continue;
             Tmcc t;
             tmccUnpack(w, t);
-            Params q; q.mode = mode; q.guard = gi; q.bwMhz = bw;
+            Params q; q.mode = mode; q.guard = gi; q.bwMhz = bw; q.tsb = tsb;
             if (!paramsFromTmcc(t, q)) continue;
+            if (tsbAuto && tsb == 1 && !tried3 && t.sysId == 1 && inRate >= occupiedHz(3, bw) * 1.05) {
+                int total = 0;
+                for (int i = 0; i < 3; i++) if (t.cur[i].segments >= 1 && t.cur[i].segments <= 13) total += t.cur[i].segments;
+                if (total == 3) { wantTsb = 3; return false; }   // a three-segment band: all of it, not only the centre
+            }
             // every segment carries the same TMCC data: with the right shift the others agree as well (a wrong shift can land one carrier on a
             // TMCC carrier of another segment and look right on its own)
             uint8_t info[kTmccInfoBits];
@@ -539,6 +560,10 @@ struct IsdbtReceiver::Impl {
     // ------------------------------------------------------------------ locked
     void processLocked() {
         Y.resize((size_t)K);
+        if (tsb) {   // the narrow band only: the FFT bins of the other carrier numbers belong to other carriers
+            std::fill(Y.begin(), Y.end(), cf32(0, 0));
+            for (int k = firstPosition(tsb) * carriersPerSegment(mode); k <= edgeCarrier(mode, tsb); k++) Y[(size_t)k] = fbuf[(size_t)((((k - kc) % N) + N) % N)];
+        } else
         for (int k = 0; k < K; k++) Y[(size_t)k] = fbuf[(size_t)((((k - kc) % N) + N) % N)];
         const int symIdx = (int)((absSym - frameStartAbs) % kSymbolsPerFrame);
         secSinceTmcc += (double)(N + G) / fs;
@@ -584,7 +609,7 @@ struct IsdbtReceiver::Impl {
             }
             if (tmccCorrect(w, rel)) {
                 Tmcc t; tmccUnpack(w, t);
-                Params q; q.mode = mode; q.guard = gi; q.bwMhz = bw;
+                Params q; q.mode = mode; q.guard = gi; q.bwMhz = bw; q.tsb = tsb;
                 if (paramsFromTmcc(t, q)) {
                     ok = true;
                     tmcc = t;
@@ -603,7 +628,7 @@ struct IsdbtReceiver::Impl {
     // ------------------------------------------------------------------ telemetry
     void publish() {
         RxTelemetry t;
-        t.standard = 5;
+        t.standard = tsb ? 731 : 5;   // ISDB-TSB: family 730 (engine standard 732)
         t.rateOk = rateOk;
         t.decimating = decimate;
         t.inputRate = inRate; t.nativeRate = fs; t.isdbt.bwMhz = bw;
@@ -667,12 +692,28 @@ IsdbtReceiver::~IsdbtReceiver() = default;
 void IsdbtReceiver::configure(double inputRateHz, int bwMhz) {
     Impl& I = *p_;
     I.reset();
+    I.tsb = 0; I.tsbAuto = false;
     I.inRate = inputRateHz;
     I.bwSet = bwMhz == 6 || bwMhz == 7 || bwMhz == 8 ? bwMhz : 0;
     I.setWidth(I.bwSet ? I.bwSet : 6);
 }
 
-void IsdbtReceiver::reset() { Impl& I = *p_; configure(I.inRate, I.bwSet); }
+void IsdbtReceiver::configureTsb(double inputRateHz, int bwMhz, int segments) {
+    Impl& I = *p_;
+    I.reset();
+    I.inRate = inputRateHz;
+    I.tsbAuto = segments != 1 && segments != 3;
+    I.tsb = I.tsbAuto ? 1 : segments;
+    I.bwSet = bwMhz == 6 || bwMhz == 7 || bwMhz == 8 ? bwMhz : 0;
+    I.setWidth(I.bwSet ? I.bwSet : 6);
+}
+
+int IsdbtReceiver::tsbSegments() const { return p_->tsb; }
+
+void IsdbtReceiver::reset() {
+    Impl& I = *p_;
+    if (I.tsb || I.tsbAuto) configureTsb(I.inRate, I.bwSet, I.tsbAuto ? 0 : I.tsb); else configure(I.inRate, I.bwSet);
+}
 int IsdbtReceiver::channelWidth() const { return p_->bw.load(); }
 void IsdbtReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->cb = std::move(cb); }
 int IsdbtReceiver::detectLevel() const { return p_->detect.load(); }
@@ -686,7 +727,7 @@ void IsdbtReceiver::feed(const cf32* x, size_t n) {
     if (!I.tmccOk) { I.searchedSince += (int64_t)n; if (I.searchedSince > (int64_t)(3.0 * I.inRate)) I.nextCandidate(); }
     for (int guard = 0; guard < 100000; guard++) {
         if (I.state == 0) {
-            const size_t need = (size_t)(6.0 * (8192 + 2048) + 8192 + 2048);
+            const size_t need = (size_t)(6.0 * (8192 + 2048) + 8192 + 2048) / (size_t)I.dec();
             if (I.buf.size() < need) break;
             if (!I.acquire()) {
                 const size_t drop = I.buf.size() - need / 2;

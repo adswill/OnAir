@@ -15,6 +15,11 @@ public:
     // bwMhz: the channel width, 6, 7 or 8 MHz (the IFFT rate scales with it); 0 = automatic: measured in the spectrum, and the widths are
     // tried in turn while nothing locks
     void configure(double inputRateHz, int bwMhz = 6);
+    // ISDB-TSB (ARIB STD-B29, ITU-R BS.1114 System F): the narrow-band receiver of one or three segments (0 = automatic: one segment first,
+    // three when the TMCC says so). The one-segment receiver also takes the partial-reception segment out of a three-segment or a 13-segment
+    // (ISDB-T one-seg) signal. bwMhz is the channel raster the segment width comes from (6, 7, 8; 0 automatic).
+    void configureTsb(double inputRateHz, int bwMhz, int segments = 0);
+    int tsbSegments() const;    // 0 for ISDB-T
     int channelWidth() const;   // the width the receiver works with now (automatic: its current guess)
     void reset();
     void feed(const cf32* x, size_t n);
