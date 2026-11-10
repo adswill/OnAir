@@ -15,6 +15,8 @@ const char* protoName(int p) {
     case Sik: return "MAVLink / SiK";
     case Frsky: return "FrSky";
     case Flysky: return "FlySky";
+    case Sfhss: return "Futaba S-FHSS";
+    case Dsm: return "Spektrum DSM";
     }
     return "?";
 }
@@ -714,6 +716,69 @@ std::vector<uint8_t> afhds2aBuild(uint32_t txId, uint32_t rxId, const uint16_t c
     p[5] = (uint8_t)(rxId >> 24); p[6] = (uint8_t)(rxId >> 16); p[7] = (uint8_t)(rxId >> 8); p[8] = (uint8_t)rxId;
     for (int i = 0; i < 14; i++) { p[9 + 2 * i] = (uint8_t)ch[i]; p[10 + 2 * i] = (uint8_t)((ch[i] >> 8) & 15); }
     return p;
+}
+
+// ---------------------------------------------------------------- Futaba S-FHSS (Futaba_cc2500.ino, SFHSS_send_packet)
+
+uint16_t sfhssCrc(const uint8_t* p, size_t n) {
+    uint16_t c = 0xFFFF;
+    for (size_t i = 0; i < n; i++) {
+        c ^= (uint16_t)p[i] << 8;
+        for (int k = 0; k < 8; k++) c = (c & 0x8000) ? (uint16_t)((c << 1) ^ 0x1021) : (uint16_t)(c << 1);
+    }
+    return c;
+}
+
+int sfhssNextChannel(int ch, int code) {
+    ch += code + 2;
+    if (ch > 29) {
+        if (ch < 31) ch += code + 2;
+        ch -= 31;
+    }
+    return ch;
+}
+
+std::vector<uint8_t> sfhssBuild(uint16_t txId, int rfCh, int code, int command, const uint16_t ch[4]) {
+    std::vector<uint8_t> p(13, 0);
+    p[0] = 0x81;
+    p[1] = (uint8_t)(txId >> 8); p[2] = (uint8_t)txId;
+    p[5] = (uint8_t)((rfCh << 3) | ((ch[0] >> 9) & 0x07));
+    p[6] = (uint8_t)(ch[0] >> 1);
+    p[7] = (uint8_t)((ch[0] << 7) | ((ch[1] >> 5) & 0x7F));
+    p[8] = (uint8_t)((ch[1] << 3) | ((ch[2] >> 9) & 0x07));
+    p[9] = (uint8_t)(ch[2] >> 1);
+    p[10] = (uint8_t)((ch[2] << 7) | ((ch[3] >> 5) & 0x7F));
+    p[11] = (uint8_t)((ch[3] << 3) | ((code >> 2) & 0x07));
+    p[12] = (uint8_t)((code << 6) | (command & 0x3F));
+    const uint16_t c = sfhssCrc(p.data(), 13);
+    p.push_back((uint8_t)(c >> 8));
+    p.push_back((uint8_t)c);
+    return p;
+}
+
+Decoded sfhssParse(const uint8_t* p, size_t n) {
+    Decoded d;
+    d.proto = Sfhss;
+    if (n < 15 || (p[0] != 0x80 && p[0] != 0x81 && p[0] != 0x82)) return d;
+    const uint16_t got = (uint16_t)(p[13] << 8 | p[14]);
+    const char* crc = sfhssCrc(p, 13) == got ? "CRC-16 CCITT" : cc2500Crc(p, 13) == got ? "CC2500 CRC" : nullptr;
+    if (!crc) return d;
+    const int rfCh = p[5] >> 3, code = ((p[11] & 7) << 2) | (p[12] >> 6), cmd = p[12] & 0x3F;
+    if (rfCh > 29 || code > 27) return d;
+    const uint16_t c[4] = {(uint16_t)(((p[5] & 7) << 9) | (p[6] << 1) | (p[7] >> 7)), (uint16_t)(((p[7] & 0x7F) << 5) | (p[8] >> 3)),
+                           (uint16_t)(((p[8] & 7) << 9) | (p[9] << 1) | (p[10] >> 7)), (uint16_t)(((p[10] & 0x7F) << 5) | (p[11] >> 3))};
+    const bool failsafe = cmd & 0x04;
+    if (!failsafe)
+        for (uint16_t v : c) if (v < 900 || v > 2150) return d;
+    d.ok = true;
+    char t[160];
+    std::snprintf(t, sizeof t, "%02X%02X", p[1], p[2]);
+    d.id = t;
+    d.type = failsafe ? "S-FHSS failsafe" : "S-FHSS channels";
+    const int base = (cmd & 0x08) ? 5 : 1;
+    std::snprintf(t, sizeof t, "CH%d-%d: %u %u %u %u, hop channel %d, hop code %d, packet %d, %s", base, base + 3, c[0], c[1], c[2], c[3], rfCh, code, (cmd & 1) + 1, crc);
+    d.detail = t;
+    return d;
 }
 
 } // namespace rclink

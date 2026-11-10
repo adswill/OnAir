@@ -567,7 +567,7 @@ IsmTruth ismTruth(IsmTx p, int k) {
     case IsmTx::ZwaveR1: return {"Z-Wave-R1", "C0FFEE01:2", "Command Class", 0x25, 0.01};
     case IsmTx::ZwaveR2: return {"Z-Wave-R2", "DEADBEEF:7", "Temperature", 21.5 + 0.1 * (k % 2), 0.05};
     case IsmTx::ZwaveR3: return {"Z-Wave-R3", "12345678:9", "Power", 1234.5 + 0.1 * (k % 2), 0.05};
-    case IsmTx::X10Rf: return {"X10-RF", "5", "Command code", (k % 2) ? 0x60 : 0x40, 0.01};
+    case IsmTx::X10Rf: return {"X10-RF", "5", "Command code", (k % 2) ? 96.0 : 64.0, 0.01};
     case IsmTx::Insteon: return {"Insteon", "2B7811", "Cmd1", 0x11 + 2.0 * (k % 2), 0.01};
     case IsmTx::Infactory: return {"inFactory-TH", "92", "Temperature", (70.2 + 0.1 * (k % 2) - 32) / 1.8, 0.05};
     case IsmTx::Wh31e: return {"AmbientWeather-WH31E", "195", "Temperature", 6.9 + 0.1 * (k % 2), 0.05};

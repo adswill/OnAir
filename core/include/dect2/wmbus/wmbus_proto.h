@@ -12,7 +12,7 @@ namespace dect2::wmbus {
 
 // Physical modes the receiver and the test signal know. Rates and sync words are those of the standard as the author remembers them; N and R2 are not yet
 // checked against a real signal.
-enum class Phy { S1 = 0, T1, C1A, C1B, R2, N1, Count };
+enum class Phy { S1 = 0, T1, C1A, C1B, R2, N1, N24, Count };   // N24: mode N at 2.4 kbit/s (Wize WM2400)
 const char* phyName(Phy p);
 
 uint16_t crc16(const uint8_t* d, size_t n);                  // EN 13757-4: poly 0x3D65, init 0, final xor 0xFFFF
@@ -53,11 +53,21 @@ struct Frame {
     std::vector<Record> records;
     bool hasManufacturerData = false;
     std::string error;
+    // Wize (CI 0x20, Wize Alliance LAN protocol v1.x PRES-EXCHANGE layer): structure only, L7 stays encrypted unless the key selector is 0
+    bool wize = false;
+    int wizeVers = 0, wizeKeySel = 0, wizeNetwId = 0, wizeCpt = 0, wizeApp = 0, wizeTStamp = 0;
+    uint32_t wizeHashKenc = 0;
+    uint16_t wizeHashKmac = 0;
+    std::vector<uint8_t> wizeL7;     // L7Ciph (clear text only when wizeKeySel == 0)
     std::string hex() const;
 };
 
 // Check the CRCs and strip them; fills the link layer fields and, for an unencrypted payload, the records. n is what was received (>= airLength).
 bool parseFrame(const uint8_t* b, size_t n, bool formatB, Frame& f);
+// Wize: the L C M A CI = 0x20 frame of a PRES-EXCHANGE message (without L, as buildFrame takes it)
+std::vector<uint8_t> wizeBody(uint16_t mfr, const uint8_t id4[4], uint8_t version, uint8_t type, uint8_t C, int keySel, int netwId, int cpt, int app,
+                              const std::vector<uint8_t>& l7, uint32_t hashKenc, int tstamp, uint16_t hashKmac);
+inline constexpr uint16_t kSyncNFormatB = 0xF672;   // mode N format B sync word (format A: 0xF68D)
 
 // With an AES key the user imported: decrypts TPL security mode 5 (AES-CBC, IV = M, A, 8 x ACC; the first plaintext bytes are 2F 2F) and reads the records. True when it decrypted.
 bool decryptFrame(Frame& f, const uint8_t key[16]);
@@ -76,7 +86,7 @@ enum class Coding { Manchester, ThreeOfSix, Nrz };
 struct PhySpec { Phy phy; double chipRate; double devHz; Coding coding; uint16_t sync; };
 const PhySpec& phySpec(Phy p);
 // the chips on air (1 = upper frequency) for the bytes of a frame: preamble, sync word, [C-mode format marker], coded bytes
-std::vector<uint8_t> encodeChips(Phy p, const std::vector<uint8_t>& air, int preamblePairs = 16);
+std::vector<uint8_t> encodeChips(Phy p, const std::vector<uint8_t>& air, int preamblePairs = 16, uint16_t sync = 0);   // sync 0: the mode's own
 
 struct ChannelDef {
     double freqHz;

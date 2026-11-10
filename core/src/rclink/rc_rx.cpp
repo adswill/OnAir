@@ -148,6 +148,11 @@ struct RcLinkReceiver::Impl {
                 defs.push_back(d);
             }
         }
+        if ((protocols & Sfhss) && 128143.0 * 2.5 <= fs) {   // Futaba S-FHSS: CC2500 2-FSK 128 kbit/s, 38 kHz deviation, 4 preamble bytes, sync D3 91, 13 + 2 bytes
+            FskDef d; d.proto = Sfhss; d.rate = 128143; d.kind = 4; d.maxBytes = 15; d.maxErrors = 1;
+            d.pattern = bitsOfBytes({0xAA, 0xAA, 0xD3, 0x91});
+            defs.push_back(d);
+        }
         if (protocols & Reticulum) {
             std::vector<double> bws = {125000, 250000, 62500};
             std::vector<int> sfs = {7, 8, 9, 10, 11};
@@ -247,6 +252,7 @@ struct RcLinkReceiver::Impl {
         Decoded x;
         if (d.kind == 1) x = frskyD8Parse(bytes.data(), bytes.size());
         else if (d.kind == 2) x = frskyXParse(bytes.data(), bytes.size());
+        else if (d.kind == 4) x = sfhssParse(bytes.data(), bytes.size());
         else x = flyskyParse(bytes.data(), bytes.size());
         if (!x.ok) return false;
         addFrame(x, f, b.snrDb, bytes.data(), std::min<size_t>(bytes.size(), d.kind == 1 ? 20 : bytes.size()));

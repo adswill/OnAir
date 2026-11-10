@@ -17,7 +17,7 @@ void bcd(std::vector<uint8_t>& o, uint64_t v, int bytes) {
 }
 void le(std::vector<uint8_t>& o, uint64_t v, int bytes) { for (int i = 0; i < bytes; i++) { o.push_back((uint8_t)v); v >>= 8; } }
 
-struct Meter { const char* mfr; uint32_t id; uint8_t ver, type; Phy phy; bool enc; };
+struct Meter { const char* mfr; uint32_t id; uint8_t ver, type; Phy phy; bool enc; bool wize = false; };
 const Meter kMeters[] = {
     {"KAM", 12345678, 0x1B, 0x07, Phy::S1, false},     // water
     {"ELV", 40112233, 0x2A, 0x04, Phy::T1, false},     // heat
@@ -26,6 +26,8 @@ const Meter kMeters[] = {
     {"SEN", 72004711, 0x0C, 0x16, Phy::C1B, false},    // cold water, a long frame in format B
     {"QDS", 83001234, 0x05, 0x08, Phy::R2, false},     // heat cost allocator
     {"ITW", 94005566, 0x02, 0x07, Phy::N1, false},     // water on 169 MHz
+    {"SAG", 21436587, 0x01, 0x03, Phy::N24, true, true},   // Wize gas meter, 2.4 kbit/s, format B, L7 encrypted (3.9)
+    {"ITW", 13572468, 0x01, 0x07, Phy::N1, false, true},   // Wize water meter, 4.8 kbit/s, format B, key selector 0 (L7 in clear)
 };
 }
 
@@ -35,6 +37,16 @@ std::vector<uint8_t> WmbusGenerator::meterFrame(int mi, uint32_t n, Phy& phy, bo
     const Meter& m = kMeters[mi % meterCount()];
     phy = m.phy;
     std::vector<uint8_t> b;
+    if (m.wize) {   // Wize LAN v1.x DATA message: C = SND-NR, CI 0x20, PRES-EXCHANGE layer
+        uint8_t id4[4];
+        uint32_t v = m.id;
+        for (int i = 0; i < 4; i++) { id4[i] = (uint8_t)((v % 10) | ((v / 10) % 10) << 4); v /= 100; }
+        std::vector<uint8_t> l7;
+        uint32_t x = m.id * 2654435761u + n;
+        for (int i = 0; i < 20; i++) { x = x * 1664525u + 1013904223u; l7.push_back((uint8_t)(x >> 24)); }
+        return buildFrame(wizeBody(mfrStringToCode(m.mfr), id4, m.ver, m.type, 0x44, m.enc && encrypted ? 1 : 0, 0x0A, (int)(n & 0xFFFF), 0xFE, l7,
+                                   0xA1B2C3D4u ^ n, (int)((1794300000u + 60 * n) & 0xFFFF), (uint16_t)(0x5A5A ^ n)), true);
+    }
     b.push_back(0x44);                                  // C: SND-NR
     le(b, mfrStringToCode(m.mfr), 2);
     bcd(b, m.id, 4);
@@ -108,7 +120,7 @@ struct WmbusGenerator::Impl {
             const int mi = next++ % meterCount();
             Phy ph;
             auto air = WmbusGenerator::meterFrame(mi, counts[mi], ph, c.encryptedMeter);
-            const bool is169 = ph == Phy::N1;
+            const bool is169 = ph == Phy::N1 || ph == Phy::N24;
             if (is169 != (c.plan == 1)) continue;
             if (c.onlyPhy >= 0 && (int)ph != c.onlyPhy) continue;
             counts[mi]++;
@@ -121,7 +133,7 @@ struct WmbusGenerator::Impl {
             default: freq = 169.43125e6; break;
             }
             Burst b;
-            b.chips = encodeChips(ph, air, 20);
+            b.chips = encodeChips(ph, air, 20, kMeters[mi % meterCount()].wize ? kSyncNFormatB : 0);
             b.chipRate = sp.chipRate; b.dev = sp.devHz; b.offHz = freq - c.centreHz + c.cfoHz;
             b.start = nextAt; b.end = nextAt + (int64_t)((double)b.chips.size() / sp.chipRate * c.rate) + (int64_t)(4 * c.rate / sp.chipRate);
             b.amp = c.amp;
