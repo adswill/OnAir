@@ -68,6 +68,7 @@ struct DmrGenConfig {
     double txLat = 0, txLon = 0; // LRRP position (txCallType 4)
     bool txLrrpNoFix = false;    // LRRP: send a NoFix status instead of a position
     int txVoiceSuper = 10;       // voice: number of 360 ms superframes (10 = 3.6 s); kerchunk uses 1
+    double txLeadSec = 0;        // silence before the first slot (the slot sync of dmr_slot_sync.h puts the first burst into the repeater's inbound slot)
 };
 
 // What the generator has put on the air (for tests)

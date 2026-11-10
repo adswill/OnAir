@@ -192,6 +192,11 @@ TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier) {
         r.mesh.psk = s.meshPsk; r.mesh.preset = s.meshPreset; r.mesh.hopLimit = s.meshHop;
         r.mesh.callsign = s.callsign; r.mesh.callsignInMessage = s.meshCallInMsg; r.mesh.sendNodeInfo = s.meshNodeInfo;
     }
+    if (std::string(mode.id) == "dmr") {
+        r.opt["dmr.slotSync"] = s.dmrSlotSync ? 1.0 : 0.0;
+        r.opt["dmr.aligned"] = s.dmrAligned ? 1.0 : 0.0;
+        r.opt["dmr.latencyMs"] = s.dmrLatencyMs;
+    }
     if (std::string(mode.id) == "kaal") {
         r.text = r.text.substr(0, 100);
         r.opt["kaal.powerDbm"] = s.kaalPower;

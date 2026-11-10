@@ -607,6 +607,7 @@ struct DmrSignal::Impl {
             SlotScript& sc = c.txSlot == 2 ? s2 : s1;
             sc.setFamily(c.txMobile ? 1 : (c.txSlot == 2 ? 3 : 2));
             sc.queueTx(c);
+            if (c.txLeadSec > 0) extraPad = (int)std::lround(std::min(c.txLeadSec, 10.0) * 48000.0);
         } else if (c.direct) {
             if (c.mobile) { s1.setFamily(1); s2.setFamily(1); }
             else { s1.setFamily(2); s2.setFamily(3); }
@@ -708,7 +709,7 @@ struct DmrSignal::Impl {
     void produce48(size_t upTo) {
         while (base48 + f48.size() < upTo) {
             if (symQ.empty()) fillSymbols();
-            if (extraPad > 0 && c.direct) {
+            if (extraPad > 0 && (c.direct || c.txEnable)) {
                 const int n = extraPad;
                 extraPad = 0;
                 shaper.pad(n, f48, g48);

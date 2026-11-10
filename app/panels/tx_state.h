@@ -115,6 +115,8 @@ struct TxUi {
     bool meshCallInMsg = false, meshNodeInfo = true;
     bool kaalBeacon = true;
     double kaalPower = 10;
+    bool dmrSlotSync = true, dmrAligned = false, dmrSyncLoaded = false;   // DMR: wait for the repeater's inbound slot (dmr_slot_sync.h); aligned channel timing
+    double dmrLatencyMs = 0;                 // DMR slot sync: the radio's delay to the air (Advanced)
     int kaalBitrate = 16;                    // voice codec 12 / 16 / 24 / 32 kbit/s
     int kaalFrame = 3;                       // 3 = the v3 voice stream, 4 = frame version 4 (four slots, 20 kHz, docs/KAAL-NEXT.md)
     int kaalV4Profile = 2;                   // v4 voice profile: 1 = 8.0, 2 = 6.0, 3 = 4.8, 4 = 3.2 kbit/s
