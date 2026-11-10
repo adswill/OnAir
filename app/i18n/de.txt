@@ -3799,3 +3799,5 @@ Custom remove-after time (minutes)	Eigene Entfernungszeit (Minuten)
 Used by every Remove after row set to Custom.	Gilt für jede Zeile Entfernen nach mit Eigene.
 Default	Standard
 Custom	Eigene
+Join the Discord to get access to built codecs	Tritt dem Discord bei, um Zugang zu fertig gebauten Codecs zu bekommen
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Öffnet den OnAir-Discord im Browser. OnAir selbst lädt nie einen Codec herunter und enthält keinen.

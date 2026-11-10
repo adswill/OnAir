@@ -3787,3 +3787,5 @@ Custom remove-after time (minutes)	Tiempo personalizado para quitar (minutos)
 Used by every Remove after row set to Custom.	Lo usa cada fila Quitar tras en Personalizado.
 Default	Predeterminado
 Custom	Personalizado
+Join the Discord to get access to built codecs	Únete al Discord para acceder a códecs ya compilados
+Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Abre el Discord de OnAir en tu navegador. OnAir nunca descarga ni incluye un códec.

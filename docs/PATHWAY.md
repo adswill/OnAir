@@ -1299,3 +1299,6 @@ Family 600 (std 602 and 603, telemetry 601 and 602, slots 600 and 601), one list
 
 ## 2026-11-09 smart packages for 3.8 (feat38-smart)
 Built from the approved smart lists: ADS-B trust score, ACAS conflict view from DF16/TC 28, deeper bit repair, VDL2 station map, ADS-C contract tracking; DRM Whole span, alternative frequencies, station book and SDC combining; DAB census; echo advice, satellite from the NIT, ATSC 3.0 alerts, ISDB-T banner; sensor health, storm trend; ALE Whole span; survey schedules. All tested on simulated signals only, standalone against the prebuilt libraries; UI syntax-checked only. docs/SMART-PACKAGES-3.8.md lists what was skipped and why, and what was not reached. The POCSAG frame check from r2 cannot work as proposed (the low capcode bits are not sent).
+
+## 2026-11-10 Discord button on codec install screens (feat38-codecbtn)
+Shared helper `appcodec::discordCodecButton` ("Join the Discord to get access to built codecs", opens the invite). Added to the folder-button row used by all codec install screens, the voice codec missing line, ? help footers, Ease/CDR/HDR notices; docs/CODECS.md note; translations in 14 catalogs. Android has no codec install screen: skipped. Syntax-checked only. See docs/CODECBTN-3.8.md.

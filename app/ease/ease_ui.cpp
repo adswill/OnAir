@@ -7,6 +7,7 @@
 #include "dect2/audio/audioout.h"
 #include "dect2/ease/nit.h"
 #include "platform/platform.h"
+#include "codec/speech_codec_ui.h"
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -263,6 +264,7 @@ void codecNotice(App& a) {
         ImGui::PopTextWrapPos();
         const CodecHelp c = n == "NXDN" ? CodecHelp::NxdnAmbe : n.rfind("dPMR", 0) == 0 ? CodecHelp::DpmrAmbe : n == "D-STAR" ? CodecHelp::DstarAmbe : n.rfind("P25", 0) == 0 ? CodecHelp::P25Imbe : CodecHelp::DmrAmbe;
         if (n != "TETRA") { codecHelpButton(c, tr("How to install")); ImGui::SameLine(); }
+        appcodec::discordCodecButton(true); ImGui::SameLine();
         if (ImGui::SmallButton(tr("Hide##codecnote"))) plat::prefs().setB(key.c_str(), true);
         return;
     }
