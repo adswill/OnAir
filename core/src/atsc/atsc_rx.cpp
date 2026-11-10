@@ -18,6 +18,7 @@
 #include "dect2/common/platform.h"
 #include "dect2/dsp/simd.h"
 #include "dect2/common/mathconst.h"
+#include "dect2/common/stage_prof.h"
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
 #include <arm_neon.h>
 #include <cstdint>
@@ -434,9 +435,12 @@ struct Core {
         }
         if (fieldLock || pilotLock) noLockSamples = 0;
         else if ((noLockSamples += in.size()) > (uint64_t)(0.5 * fin)) { noLockSamples = 0; acqDone = false; }   // look again on the next block
+        DECT2_STAGE_VAR(stMix, "atsc.mix");
         if (mirrorIq) for (auto& v : in) v = std::conj(v);
         if (shiftHz != 0) mixIn(in);
+        stMix.stop();
         const double tA = now();
+        DECT2_STAGE_VAR(stFilt, "atsc.filter");
         {   // split into the two rows: one resize, then plain stores (a push_back per sample re-checks the capacity twice for every sample)
             const size_t at = inRe.size();
             inRe.resize(at + in.size()); inIm.resize(at + in.size());
@@ -448,13 +452,15 @@ struct Core {
         const size_t nOut = room > 0 ? (size_t)std::ceil(room / step) : 0;
         pfRe.resize(nOut);
         pfIm.resize(nOut);
-        auto filter = [&](size_t k0, size_t k1) { pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data()); };
+        auto filter = [&](size_t k0, size_t k1) { DECT2_STAGE("atsc.filter"); pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data()); };
         if (splitA && nOut >= 4096) {   // split across two threads
             std::thread helper([&] { dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); filter(nOut / 2, nOut); });
             filter(0, nOut / 2);
             helper.join();
         } else filter(0, nOut);
         pos += (double)nOut * step;
+        stFilt.stop();
+        DECT2_STAGE_VAR(stPll, "atsc.pll");
         dchunk.resize(nOut);
         // The pilot loop works in blocks of kPllN samples: its bandwidth (a few kHz, up to 30 kHz while acquiring) is far below the
         // block rate (1.3 MHz), so the phase detector runs once per block with its gains scaled by kPllN / 4 (the loop was written for a
@@ -549,7 +555,9 @@ struct Core {
             inBase += drop;
         }
         tPfb += now() - tA;
+        stPll.stop();
         if (dchunk.empty()) return;
+        DECT2_STAGE_VAR(stAgc, "atsc.agc");
         // DC (pilot) and gain
         if (!dcInit) {
             double m = 0, p = 0;
@@ -582,6 +590,8 @@ struct Core {
             pilotLock = tracking && goodRun > 20000;
         }
         d.insert(d.end(), dchunk.begin(), dchunk.end());
+        stAgc.stop();
+        DECT2_STAGE("atsc.symclock");
         const double tB = now();
         stageC();
         tCd += now() - tB;
@@ -731,6 +741,7 @@ struct Core {
     }
 
     void checkFieldSync() {
+        DECT2_STAGE("atsc.fieldsync");
         const size_t n = raw.size();
         const float* last = &raw[n - kSegSyms];
         const int64_t thisSeg = (int64_t)segAbs - 1;   // the segment that just completed
@@ -842,6 +853,7 @@ struct Core {
     }
     void decodeField(int64_t startSeg, int fieldParity) {
         if (dbg) fprintf(stderr, "[atsc] queue field at segment %lld (segAbs %llu)\n", (long long)startSeg, (unsigned long long)segAbs);
+        DECT2_STAGE("atsc.fieldcopy");
         Job j;
         j.f0 = startSeg * kSegSyms;
         j.parity = fieldParity;
@@ -1109,6 +1121,7 @@ struct Core {
         fieldSyncSymbols(job.parity == 2, prev12, fsSym);
         float fsLv[kSegSyms];
         for (int i = 0; i < kSegSyms; i++) fsLv[i] = levelOf(fsSym[i]);
+        DECT2_STAGE_VAR(stFit, "atsc.eq.fit");
         if (preD > 0 && cancelPre(view, fsLv, preD, uPre)) view.s = &uPre;
         const double tM0 = now();
         static const bool noDfe = getenv("ATSC_NODFE") != nullptr;   // test: the plain equaliser only
@@ -1127,6 +1140,8 @@ struct Core {
             if (!trained) trained = trainFF(view, fsLv, tp);
         } else trained = trainFF(view, fsLv, tp);
         tLs += now() - tM0;
+        stFit.stop();
+        DECT2_STAGE_VAR(stEq, "atsc.eq.filter");
         const double tM1 = now();
         if (trained) snr = equalize(view, fsLv, tp, (usePrev && tp.B) ? &prevLv[(size_t)(kFieldSyms - tp.B)] : nullptr, lv, hv);
         if (!trained || snr < 9.0) {   // the plain equaliser does not fit: try the decision feedback one on the sync symbols alone (strong echoes)
@@ -1196,7 +1211,9 @@ struct Core {
         }
         eqLast = tp;
         tEq += now() - tM1;
+        stEq.stop();
         const double tM2 = now();
+        DECT2_STAGE_VAR(stRetry, "atsc.decode.other");   // the copies and the second try; the trellis and RS inside count as their own stages
         FieldDecoder backup = dec;      // for the second try below
         FieldStats st;
         std::vector<uint8_t> out((size_t)kDataSegs * kTsBytes), psym((size_t)kFieldSyms, 0);
@@ -1234,6 +1251,8 @@ struct Core {
             }
         }
         tVit += now() - tM2;
+        stRetry.stop();
+        DECT2_STAGE("atsc.stats");
         if (dbg) fprintf(stderr, "[atsc] field start %lld parity %d: snr %.1f data %.1f  RS clean %d corr %d fail %d np %d%s%s\n", (long long)(f0 / kSegSyms), job.parity, snr, dataSnrAvg, st.rsClean, st.rsCorrected, st.rsFailed, np, usePrev ? "  (DFE, trained with the previous field)" : "", secondTry ? "  (second try with the other equaliser)" : "");
         // The gain of the equalised levels against the decoded symbols (decision directed): the next field is corrected by it.
         if (st.segments > 0 && st.rsFailed * 2 <= st.segments) {
@@ -1326,6 +1345,7 @@ void AtscReceiver::setLevelTap(std::function<void(const std::vector<float>&)> f)
 void AtscReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->c.cb = std::move(cb); }
 void AtscReceiver::feed(const cf32* x, size_t n) {
     if (!p_->c.ok || !n) return;
+    DECT2_STAGE("atsc.input");
     std::vector<cf32> v(x, x + n);
     for (auto& s : v) if (!std::isfinite(s.real()) || !std::isfinite(s.imag())) s = cf32(0, 0);   // one bad sample would poison every loop for good
     p_->c.processInput(v, n);

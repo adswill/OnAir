@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
 #include <chrono>
 #include "dect2/atsc3/atsc3_receiver.h"
@@ -29,6 +30,7 @@ struct Atsc3Receiver::CtiPlp {
 };
 
 PlpResult Atsc3Receiver::runCti(const PlpResult& in) {
+    DECT2_STAGE("a3.ti");
     PlpResult out;
     out.id = in.id;
     std::unique_ptr<CtiPlp>& up = cti_[in.id];

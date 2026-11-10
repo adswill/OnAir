@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/dsp/simd.h"
 #if defined(DECT2_X86_DISPATCH)
 #include <immintrin.h>
@@ -83,6 +84,7 @@ DECT2_AVX2_TARGET static void dot4Avx2(const float* const* h, const float* const
 #endif
 
 void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset) {
+    DECT2_STAGE("a3.resample");
     out.clear();
     if (n == 0) return;
     const double ratio = outRate / inRate;
@@ -120,6 +122,7 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
         m = &im[(size_t)base];
     };
     auto part = [&](long k0, long k1) {
+        DECT2_STAGE("a3.resample");
         long k = k0;
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
         // Four outputs at once: each keeps the four partial sums of the scalar loop below (lane j adds taps j, j + 4, ... in order, multiply then
@@ -170,6 +173,7 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
 }
 
 void derotate(cf32* x, size_t n, double f, double rate, double start) {
+    DECT2_STAGE("a3.derotate");
     // advance the phase in steps (a long cos/sin per sample would be slow); renormalise now and then
     const double w = -2.0 * M_PI * f / rate;
     std::complex<double> ph = std::polar(1.0, w * start), step = std::polar(1.0, w);
@@ -350,7 +354,9 @@ struct Atsc3Sync::Pool {
                 jobs.pop_front();
             }
             const auto t0 = std::chrono::steady_clock::now();
+            DECT2_STAGE_VAR(stFr, "a3.frame");
             Done d{decodeFrame(j.y.data(), j.y.size(), j.bs), j.bs};
+            stFr.stop();
             std::unique_lock<std::mutex> lk(m);
             secDecode += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
             done.emplace(j.seq, std::move(d));
@@ -361,7 +367,7 @@ struct Atsc3Sync::Pool {
                 done.erase(done.begin());
                 nextCommit++;
                 lk.unlock();
-                rx->commitFrame(c.fr, c.bs);
+                { DECT2_STAGE("a3.upper"); rx->commitFrame(c.fr, c.bs); }
                 lk.lock();
                 inflight--;
                 cvSpace.notify_all();
@@ -397,6 +403,7 @@ double secondsToNext(const Bootstrap& b) { return minTimeToNextMs(b.minTimeToNex
 }
 
 bool Atsc3Sync::search() {
+    DECT2_STAGE("a3.search");
     const auto t0 = std::chrono::steady_clock::now();
     struct Timer { double& d; std::chrono::steady_clock::time_point t; ~Timer() { d += std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); } } tm{st_.secSearch, t0};
     // look at everything available beyond the search start (a few frames long at most), converted to the bootstrap rate
@@ -506,6 +513,7 @@ double Atsc3Sync::centreOfChannel(const cf32* x, size_t n) const {
 }
 
 bool Atsc3Sync::cutFrame() {
+    DECT2_STAGE("a3.cut");
     struct Timer { double& d; std::chrono::steady_clock::time_point t; ~Timer() { d += std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); } } tm{st_.secCut, std::chrono::steady_clock::now()};
     const double frameRate = postBootstrapRate(bs_);
     const double rate = rateEff();

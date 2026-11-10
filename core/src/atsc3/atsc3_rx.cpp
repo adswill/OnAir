@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
 #include <deque>
 #include "dect2/atsc3/atsc3_rx.h"
@@ -59,6 +60,7 @@ void Atsc3Rx::reset() {
 
 void Atsc3Rx::feed(const cf32* x, size_t n) {
     if (stop_) return;
+    DECT2_STAGE("a3.input");
     std::unique_lock<std::mutex> lk(mu_);
     const size_t cap = (size_t)(rate_ * 1.5);   // a second and a half of samples may wait
     if (blocking_) {
@@ -100,7 +102,9 @@ void Atsc3Rx::worker() {
             cvSpace_.notify_all();
         }
         const double t0 = wallNow();
+        DECT2_STAGE_VAR(stSync, "a3.sync");
         sync_->push(blk.data(), blk.size());
+        stSync.stop();
         autoSelect();
         const double dt = wallNow() - t0;
         // the load over about the last ten seconds of signal
