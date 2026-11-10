@@ -62,3 +62,59 @@ void meshWatchSettings() {
     ImGui::TextDisabled(tr("%zu nodes watched. The alerts are the automations Mesh node silent, Mesh node battery low and New mesh node near me (off until you switch them on)."), W.cfg.watched.size());
     if (ch) save();
 }
+
+// ---- LoRaWAN receive-only packet forwarder (dect2/mesh/lorawan_fwd.h): the user's own gateway entry, uplinks only, never transmits ----
+#include "dect2/mesh/lorawan_fwd.h"
+#include <set>
+void meshFwdTick(App& a, bool live);
+void meshFwdSettings();
+namespace {
+struct Fw { bool loaded = false, on = false; char host[96] = {}, eui[24] = {}; int port = 1700; dect2::SemtechForwarder f; std::string err; std::set<std::string> sent; bool configured = false; };
+Fw F;
+void fwLoad() {
+    if (F.loaded) return;
+    F.loaded = true;
+    plat::Prefs& p = plat::prefs();
+    F.on = p.getB("lorawanFwdOn", false);
+    std::snprintf(F.host, sizeof F.host, "%s", p.getS("lorawanFwdHost", "").c_str());
+    std::snprintf(F.eui, sizeof F.eui, "%s", p.getS("lorawanFwdEui", "").c_str());
+    F.port = (int)p.getI("lorawanFwdPort", 1700);
+}
+void fwApply() {
+    F.err.clear();
+    F.f.configure(F.on ? F.host : "", F.port, F.eui, F.err);
+    F.configured = true;
+}
+}  // namespace
+
+void meshFwdTick(App& a, bool live) {
+    fwLoad();
+    if (!F.configured) fwApply();
+    if (!F.on || !live) return;
+    for (const auto& p : a.rx.mesh.packets) {
+        if (!dect2::semtechIsUplink(p)) continue;
+        char k[64]; std::snprintf(k, sizeof k, "%.3f|", p.timeSec);
+        if (!F.sent.insert(k + p.raw).second) continue;
+        F.f.forward(p);
+    }
+    if (F.sent.size() > 5000) F.sent.clear();
+    F.f.poll(ImGui::GetTime());
+}
+
+void meshFwdSettings() {
+    fwLoad();
+    ImGui::TextDisabled("%s", tr("LoRaWAN packet forwarder (receive only)"));
+    bool ch = ImGui::Checkbox(tr("Forward LoRaWAN uplinks to my network server##lwf"), &F.on);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Semtech UDP packet forwarder: the uplinks OnAir hears go to your own gateway entry on ChirpStack or The Things Network (register a gateway with the EUI below). Downlinks are never transmitted."));
+    ImGui::SetNextItemWidth(220 * gUi); ch |= ImGui::InputTextWithHint("##lwfhost", "eu1.cloud.thethings.network", F.host, sizeof F.host);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(80 * gUi); ch |= ImGui::InputInt("##lwfport", &F.port, 0, 0);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(170 * gUi); ch |= ImGui::InputTextWithHint("##lwfeui", tr("gateway EUI, 16 hex digits"), F.eui, sizeof F.eui);
+    if (ch) {
+        plat::Prefs& p = plat::prefs();
+        p.setB("lorawanFwdOn", F.on); p.setS("lorawanFwdHost", F.host); p.setI("lorawanFwdPort", F.port); p.setS("lorawanFwdEui", F.eui);
+        fwApply();
+    }
+    const dect2::SemtechStats st = F.f.stats();
+    if (F.on) ImGui::TextDisabled(tr("%llu sent, %llu acknowledged, keep-alive %llu / %llu%s%s"), (unsigned long long)st.pushed, (unsigned long long)st.acked, (unsigned long long)st.pullAcks,
+                                  (unsigned long long)st.pulls, F.err.empty() ? "" : "  ", F.err.c_str());
+}

@@ -13,6 +13,7 @@
 #include <ctime>
 #include <fstream>
 void meshWatchTick(App& a, bool live);   // mesh_watch_ui.cpp
+void meshFwdTick(App& a, bool live);
 
 using namespace meshui;
 
@@ -153,6 +154,7 @@ namespace meshui {
 void tick(App& a) {
     loadState();
     meshWatchTick(a, live(a));   // node watch (mesh_watch_ui.cpp)
+    meshFwdTick(a, live(a));     // LoRaWAN forwarder
     if (live(a)) {   // the records board: the farthest mesh node with a position
         static double last = 0;
         if (ImGui::GetTime() - last > 5) { last = ImGui::GetTime(); for (const auto& n : a.rx.mesh.nodes) if (n.hasPosition) recordsOffer("Mesh", "", recordsDistKm(n.lat, n.lon), n.longName.empty() ? n.id : n.longName + " " + n.id, n.hwModel); }

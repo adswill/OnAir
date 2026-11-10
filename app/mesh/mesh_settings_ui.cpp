@@ -12,6 +12,7 @@
 #include <fstream>
 #include <thread>
 void meshWatchSettings();   // mesh_watch_ui.cpp
+void meshFwdSettings();
 
 using namespace meshui;
 
@@ -424,6 +425,8 @@ void settingsView(App& a) {
     channelLink(a);
     ImGui::Spacing();
     meshWatchSettings();   // node watch (mesh_watch_ui.cpp)
+    ImGui::Spacing();
+    meshFwdSettings();
     ImGui::Spacing();
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Keys are kept in this computer's settings, never sent anywhere."); ImGui::PopTextWrapPos(); }
 }
