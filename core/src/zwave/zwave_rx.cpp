@@ -1,4 +1,5 @@
 // Z-Wave monitor, see zwave_rx.h
+#include "dect2/dsp/fast_phase.h"
 #include "dect2/zwave/zwave_rx.h"
 #include "dect2/wirecap/wire.h"
 #include "dect2/zwave/zwave_proto.h"
@@ -209,7 +210,7 @@ struct ZwaveReceiver::Impl {
         bursts++;
         lastBurst = now();
         std::vector<float> d(L, 0);
-        for (size_t i = 1; i < L; i++) d[i] = (float)(std::arg(g.cur[i] * std::conj(g.cur[i - 1])) * fs / (2 * kPi));
+        for (size_t i = 1; i < L; i++) { const cf32 q = g.cur[i] * std::conj(g.cur[i - 1]); d[i] = (float)(fastAtan2(q.imag(), q.real()) * fs / (2 * kPi)); }   // 3.9: fastAtan2
         const size_t a = g.s0 + (size_t)(0.0004 * fs);
         const size_t e = std::min(L, g.s0 + (size_t)(0.0024 * fs));
         double cfo = 0;

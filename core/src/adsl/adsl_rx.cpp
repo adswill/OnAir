@@ -6,6 +6,7 @@
 #include "dect2/adsl/adsl_tel.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/dsp/fast_phase.h"
 #include "dect2/geo/maidenhead.h"
 #include "dect2/results/results_io.h"
 #include "dect2/common/bits.h"
@@ -320,7 +321,8 @@ struct AdslReceiver::Impl {
         const uint32_t mask = 0xFFFFFFu;
         const size_t blockLen = (size_t)(c.workRate * 0.02);
         for (const cf32& s : *y) {
-            const float d = std::arg(s * std::conj(c.prev)) * kd;
+            const cf32 q = s * std::conj(c.prev);
+            const float d = fastAtan2(q.imag(), q.real()) * kd;   // 3.9: fastAtan2 instead of the libm call
             c.prev = s;
             const int p = (int)(c.n % sps);
             const int64_t k = c.n / sps;
