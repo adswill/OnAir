@@ -5,6 +5,7 @@
 //   neg     carrier -2 kHz and the sample clock -50 ppm
 //   snr     the clean signal with white noise at --snr dB (default 12) inside the signal's own 99 % band, measured over its active part
 //   noise   the same noise with no signal: nothing may decode (false-decode check)
+//   tx      the mode's own transmitter (TX registry: generator, output stage, limiter) instead of the test signal, at its rate
 // "Decoded" is the receiver's count of blocks that passed the protocol's own check (CRC, FEC, parity: Engine telemetry blocksOk; DVB-T and
 // ISDB-T: RS-clean + corrected packets; FM: RDS groups), so a decoded block carries the bits the generator sent. A mode that counts no blocks
 // (text and slot decoders: RTTY, FT8, NAVTEX ...) is measured by what it saves (Engine::saveResults) beyond what it saves for silence (a
@@ -25,6 +26,7 @@
 #include "dect2/engine/mode_synth.h"
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/source/source.h"
+#include "dect2/tx/tx.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -193,12 +195,57 @@ struct Writer {
     }
 };
 
+// the transmitter of the mode, if it has one (the TX registry's ids are the mode ids, DVB-T2 is "dvbt2")
+const TxModeSpec* txFor(const Entry& en) {
+    if (en.id == "t2") return txModeById("dvbt2");
+    return txModeById(en.id);
+}
+
+// the transmitter's own samples (generator, output stage, limiter, as a TX session makes them) into tx.ci16, at the rate it asks for, with
+// the channel moved to the centre as a recording has it. Returns the rate, 0 when there is no transmitter
+double writeTx(const Entry& en, double secs, const std::string& dir) {
+    const TxModeSpec* m = txFor(en);
+    if (!m) return 0;
+    TxRequest r;
+    r.modeId = m->id; r.callsign = "N0ABC"; r.grid = "KO24"; r.text = "CQ TEST"; r.name = "TEST";
+    const double rate = txRequestRate(*m, r, {});
+    std::string err;
+    auto g = rate > 0 ? makeTxGenerator(*m, r, rate, err) : nullptr;
+    if (!g) { fprintf(stderr, "tx %s: %s\n", m->id, err.c_str()); return 0; }
+    Writer w, wz;   // the transmitter's signal, and silence of the same length and rate (the baseline of its saved results)
+    w.f = fopen((dir + "/tx.ci16").c_str(), "wb");
+    wz.f = fopen((dir + "/txzero.ci16").c_str(), "wb");
+    if (!w.f || !wz.f) return 0;
+    w.gain = 0.5f;
+    std::vector<cf32> z;
+    const ModeTuning* mt = modeTuning(m->stdMode);
+    const double dph = 2 * M_PI * (mt ? mt->tuneOffsetHz : 0.0) / rate;
+    double ph = 0;
+    const size_t n = (size_t)(secs * rate);
+    std::vector<cf32> x;
+    for (size_t made = 0; made < n;) {
+        const size_t k = std::min<size_t>(1 << 15, n - made);
+        x.assign(k, cf32(0, 0));
+        if (!g->finished()) { g->generate(x.data(), k); txOutputStage(r, x.data(), k, made, rate); txSoftLimit(x.data(), k); }
+        if (dph != 0) for (auto& v : x) { v *= cf32((float)cos(ph), (float)sin(ph)); ph += dph; if (ph > M_PI) ph -= 2 * M_PI; if (ph < -M_PI) ph += 2 * M_PI; }
+        w.put(x);
+        z.assign(k, cf32(0, 0)); wz.put(z);
+        made += k;
+    }
+    fclose(w.f); fclose(wz.f);
+    return rate;
+}
+
 int genChild(const Entry& en, double rate, double secs, double snrDb, const std::string& dir) {
     setenv("DECT2_NOPACE", "1", 1);
     TuneSettings t;
     tuneFor(en, rate, t);
     t.centerHz = (en.defMhz * 1e6) + en.offsetHz;
-    if (en.kind == 0 && !makeModeSynth(en.synthMode, t.synth, rate)) { printf("NOGEN\n"); return 0; }
+    if (en.kind == 0 && !makeModeSynth(en.synthMode, t.synth, rate)) {   // no test signal: the transmitter alone, if there is one
+        const double txRate = writeTx(en, secs, dir);
+        printf("NOGEN TXRATE %.4f\n", txRate);
+        return 0;
+    }
     DeviceInfo dev; dev.kind = DeviceInfo::Synthetic; dev.name = "synthetic";
     auto src = makeSource(dev);
     IqRing ring(1u << 22);
@@ -305,7 +352,8 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     }
     for (auto& x : w) fclose(x.f);
     src->stop();
-    printf("RATE %.6f PSIG %.6g OBW %.1f ACTIVE %.3f CLIP %llu\n", r, psig, obw, bp.empty() ? 0.0 : (double)act / bp.size(), (unsigned long long)(w[0].clipped + w[3].clipped));
+    const double txRate = writeTx(en, secs, dir);
+    printf("RATE %.6f PSIG %.6g OBW %.1f ACTIVE %.3f CLIP %llu TXRATE %.4f\n", r, psig, obw, bp.empty() ? 0.0 : (double)act / bp.size(), (unsigned long long)(w[0].clipped + w[3].clipped), txRate);
     fflush(stdout);
     _exit(0);
 }
@@ -424,8 +472,8 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
         wd.arm("stop", 30); e.stop();
         wd.arm("restart", 60);
         const bool ok = e.start(dev, t, fo);
-        std::this_thread::sleep_for(std::chrono::milliseconds(400));
-        const double p2 = processed();
+        double p2 = 0;   // the widest modes (X band, up to 300 Msps) take a few seconds to set up
+        for (int i = 0; i < 100 && ok && (p2 = processed()) <= 0; i++) std::this_thread::sleep_for(std::chrono::milliseconds(100));
         wd.arm("stop after restart", 30); e.stop();
         wd.disarm();
         life = !ok ? "restart refused" : p2 <= 0 ? "no samples after restart" : "ok";
@@ -501,6 +549,8 @@ struct Row {
     bool gen = true, byRes = false, paced = false;   // byRes: the mode counts no blocks; its measure is what it saved beyond what it saves for silence
     uint64_t resZero = 0;
     CondRes c[kNC];
+    double txRate = 0;   // the transmitter's signal through the receiver (0: the mode has no transmitter)
+    CondRes tx;
     // the decoded measure of a condition: checked blocks, or saved bytes beyond silence (more than a line's worth)
     uint64_t m(int k) const { return byRes ? (c[k].res > resZero + 16 ? c[k].res - resZero : 0) : c[k].good; }
     std::vector<std::string> unexpected;
@@ -588,12 +638,18 @@ int main(int argc, char** argv) {
             char rs[64], ss[64], sn[32];
             snprintf(rs, sizeof rs, "%.4f", e->rate); snprintf(ss, sizeof ss, "%.3f", s); snprintf(sn, sizeof sn, "%.2f", snrDb);
             const ChildResult g = spawn({self, "--gen", e->id, rs, ss, sn, tmpDir}, 600, 900);
-            if (g.out.find("NOGEN") != std::string::npos) { r.gen = false; r.note = "no test signal"; done = true; break; }
+            if (g.out.find("NOGEN") != std::string::npos) {
+                r.gen = false; r.note = "no test signal"; done = true;
+                const size_t tp = g.out.find("TXRATE ");
+                if (tp != std::string::npos) r.txRate = atof(g.out.c_str() + tp + 7);
+                break;
+            }
             const size_t rp = g.out.find("RATE ");
             if (g.status != 0 || rp == std::string::npos) { r.note = g.timedOut ? "generator hang" : "generator failed (" + std::to_string(g.status) + ")"; r.c[0].verdict = "FAIL"; done = true; break; }
             double psig = 0, obw = 0, active = 0; unsigned long long clip = 0;
             sscanf(g.out.c_str() + rp, "RATE %lf PSIG %lf OBW %lf ACTIVE %lf CLIP %llu", &actual, &psig, &obw, &active, &clip);
             r.rate = actual; r.obw = obw; r.active = active;
+            { const size_t tp = g.out.find("TXRATE "); r.txRate = tp == std::string::npos ? 0 : atof(g.out.c_str() + tp + 7); }
             if (psig <= 0) r.note = "generator sends silence";
             snprintf(rs, sizeof rs, "%.4f", actual);
             {   // silence first: what the receiver saves with nothing to decode
@@ -618,16 +674,34 @@ int main(int argc, char** argv) {
             if (r.c[0].good > 0 || r.byRes || r.c[0].locked || r.c[0].verdict != "-") done = true;
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
+        if (r.txRate > 0) {   // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline
+            char rs[64], ss[64];
+            snprintf(rs, sizeof rs, "%.4f", r.txRate); snprintf(ss, sizeof ss, "%.3f", r.secs > 0 ? r.secs : secs);
+            const double s = r.secs > 0 ? r.secs : secs;
+            const ChildResult zr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/txzero.ci16", "zero"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
+            const size_t zp = zr.out.rfind('{');
+            const uint64_t z = zp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(zp), "res");
+            const ChildResult cr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/tx.ci16", "tx"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
+            const size_t jp = cr.out.rfind('{');
+            if (cr.out.find("HANG ") != std::string::npos || cr.timedOut) r.tx.verdict = "HANG";
+            else if (cr.status != 0 || jp == std::string::npos) r.tx.verdict = cr.out.find("STARTFAIL") != std::string::npos ? "NOSTART" : "CRASH(" + std::to_string(cr.status) + ")";
+            else {
+                const std::string j = cr.out.substr(jp);
+                r.tx.good = (uint64_t)jnum(j, "good"); r.tx.res = (uint64_t)jnum(j, "res"); r.tx.locked = jnum(j, "locked") > 0;
+                r.tx.verdict = r.tx.good > 0 || r.tx.res > z + 16 ? "pass" : r.tx.locked ? "lock" : "FAIL";
+            }
+        }
         unsetenv("QA_PACE");
         for (const char* c : kConds) std::filesystem::remove(tmpDir + "/" + c + ".ci16");
-        std::filesystem::remove(tmpDir + "/zero.ci16");
+        for (const char* c : {"zero", "tx", "txzero"}) std::filesystem::remove(tmpDir + "/" + std::string(c) + ".ci16");
         // verdicts
         if (r.gen && r.c[0].verdict == "-") {
             const bool blocks = r.m(0) > 0;
             for (int c = 0; c < kNC; c++) {
                 CondRes& cc = r.c[c];
                 if (cc.verdict != "-") continue;
-                if (c == 4) cc.verdict = (blocks ? r.m(4) == 0 : !cc.locked) ? "pass" : "FALSE";
+                // noise: a decoded block is a false decode; a mode that only locks (audio, spectrum tools) may well lock on noise: shown, not a failure
+                if (c == 4) cc.verdict = blocks ? (r.m(4) == 0 ? "pass" : "FALSE") : (cc.locked ? "lock" : "pass");
                 else if (c > 0 && !blocks && !r.c[0].locked) cc.verdict = "-";
                 else if (blocks) cc.verdict = r.m(c) > 0 ? (c > 0 && r.m(c) * 2 < r.m(0) ? "weak" : "pass") : "FAIL";
                 else cc.verdict = cc.locked ? "lock" : "FAIL";
@@ -642,17 +716,24 @@ int main(int argc, char** argv) {
             if (bad && !why) r.unexpected.push_back(std::string(kConds[c]) + " " + v);
             if (!bad && why && v != "-" && strict) r.unexpected.push_back(std::string(kConds[c]) + " passes now: drop it from qa_known.inc");
         }
+        {
+            const std::string& v = r.tx.verdict;
+            const bool bad = v == "FAIL" || v == "HANG" || v == "NOSTART" || v.rfind("CRASH", 0) == 0;
+            const char* why = knownWhy(r.id, "tx");
+            if (bad && !why) r.unexpected.push_back("tx " + v);
+            if (!bad && why && v != "-" && strict) r.unexpected.push_back("tx passes now: drop it from qa_known.inc");
+        }
         unexpected += (int)r.unexpected.size();
-        fprintf(stderr, "%s %s %s %s %s cpu %.4f %s%s\n", r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(), r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.cost,
+        fprintf(stderr, "%s %s %s %s %s tx %s cpu %.4f %s%s\n", r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(), r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.tx.verdict.c_str(), r.cost,
                 r.note.c_str(), r.unexpected.empty() ? "" : "  <-- UNEXPECTED");
         rows.push_back(r);
     }
     std::error_code ec;
     std::filesystem::remove_all(tmpDir, ec);
-    printf("\n%-16s %4s %9s %6s | %-6s %-6s %-6s %-6s %-6s | %8s %9s %s\n", "mode", "std", "rate Msps", "secs", "clean", "pos", "neg", "snr", "noise", "cpu", "clean blk", "notes");
+    printf("\n%-16s %4s %9s %6s | %-6s %-6s %-6s %-6s %-6s %-6s | %8s %9s %s\n", "mode", "std", "rate Msps", "secs", "clean", "pos", "neg", "snr", "noise", "tx", "cpu", "clean blk", "notes");
     for (auto& r : rows) {
-        printf("%-16s %4d %9.4g %6.1f | %-6s %-6s %-6s %-6s %-6s | %8.4f %9llu %s%s", r.id.c_str(), r.stdMode, r.rate / 1e6, r.secs, r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(),
-               r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.cost, (unsigned long long)r.m(0), ((r.byRes ? "(saved bytes) " : "") + std::string(r.paced ? "(real time) " : "") + r.note).c_str(), r.life != "ok" && r.life != "-" ? (" life:" + r.life).c_str() : "");
+        printf("%-16s %4d %9.4g %6.1f | %-6s %-6s %-6s %-6s %-6s %-6s | %8.4f %9llu %s%s", r.id.c_str(), r.stdMode, r.rate / 1e6, r.secs, r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(),
+               r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.tx.verdict.c_str(), r.cost, (unsigned long long)r.m(0), ((r.byRes ? "(saved bytes) " : "") + std::string(r.paced ? "(real time) " : "") + r.note).c_str(), r.life != "ok" && r.life != "-" ? (" life:" + r.life).c_str() : "");
         for (auto& u : r.unexpected) printf("  [UNEXPECTED %s]", u.c_str());
         printf("\n");
     }
@@ -660,12 +741,12 @@ int main(int argc, char** argv) {
         if (FILE* f = fopen((outPrefix + ".tsv").c_str(), "w")) {
             fprintf(f, "id\tname\tstd\trate\tsecs\tobw\tactive\tcpu\tlife\tnote");
             for (const char* c : kConds) fprintf(f, "\t%s\t%s_good\t%s_bad\t%s_first", c, c, c, c);
-            fprintf(f, "\tunexpected\n");
+            fprintf(f, "\ttx\ttx_rate\tunexpected\n");
             for (auto& r : rows) {
                 fprintf(f, "%s\t%s\t%d\t%.0f\t%.2f\t%.0f\t%.3f\t%.6f\t%s\t%s", r.id.c_str(), md(r.name).c_str(), r.stdMode, r.rate, r.secs, r.obw, r.active, r.cost, r.life.c_str(), r.note.c_str());
                 for (auto& c : r.c) fprintf(f, "\t%s\t%llu\t%llu\t%.2f", c.verdict.c_str(), (unsigned long long)(r.byRes ? c.res : c.good), (unsigned long long)c.bad, c.first);
                 std::string u; for (auto& x : r.unexpected) u += (u.empty() ? "" : "; ") + x;
-                fprintf(f, "\t%s\n", u.c_str());
+                fprintf(f, "\t%s\t%.0f\t%s\n", r.tx.verdict.c_str(), r.txRate, u.c_str());
             }
             fclose(f);
         }
