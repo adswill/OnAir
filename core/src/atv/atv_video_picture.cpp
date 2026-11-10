@@ -255,6 +255,28 @@ void AtvVideo::Impl::captureLine(double tL) {
         const double r = rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr;
         lineWave[(size_t)k] = (float)((Bline - r) / g);
     }
+
+}
+
+// The ghost report: blanking lines without data, averaged (a ghost of the sync pulse shows on them, and no picture can look like one)
+void AtvVideo::Impl::ghostLine(double tL) {
+    const double g = lineGain();
+    if (g <= 0) return;
+    const int n = 512;
+    if (ghostAcc.size() != (size_t)n) { ghostAcc.assign((size_t)n, 0.f); ghostN = 0; }
+    const double a = tL - 2.0 * spu;
+    for (int k = 0; k < n; k++) {
+        const double t = a + P * k / n;
+        const long i0 = (long)std::floor(t);
+        const double fr = t - (double)i0;
+        ghostAcc[(size_t)k] += (float)((Bline - (rvAt((uint64_t)i0) * (1 - fr) + rvAt((uint64_t)i0 + 1) * fr)) / g);
+    }
+    if (++ghostN >= 48) {
+        std::vector<float> avg((size_t)n);
+        for (int k = 0; k < n; k++) avg[(size_t)k] = ghostAcc[(size_t)k] / ghostN;
+        ghost = atvFindGhost(avg, 2.0, n * spu / P, P / spu > 90 ? 9.0 : P / spu < 55 ? 2.5 : 4.7);
+        std::fill(ghostAcc.begin(), ghostAcc.end(), 0.f); ghostN = 0;
+    }
 }
 
 void AtvVideo::Impl::captureVbi() {

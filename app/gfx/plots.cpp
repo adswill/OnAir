@@ -435,6 +435,11 @@ static WholeSpanTv wholeSpanTvState(const App& a) {
     switch (a.family) {   // family -> the engine's standard code
         case 0: w.offered = true; w.raster = true; w.stdMode = 1; break;    // DVB-T2 / DVB-T (the engine checks which one)
         case 6: w.offered = true; w.raster = false; w.stdMode = 8; break;   // DVB-S / S2
+        case 1: w.offered = true; w.stdMode = 3; break;                     // ATSC
+        case 3: w.offered = true; w.stdMode = 5; break;                     // ATSC 3.0
+        case 4: w.offered = true; w.stdMode = 6; break;                     // ISDB-T
+        case 7: w.offered = true; w.stdMode = 9; break;                     // DTMB
+        case 40: w.offered = true; w.stdMode = 42; break;                   // DVB-C
         default: return w;
     }
     const double rate = a.engine.sampleRate() > 0 ? a.engine.sampleRate() : a.tune.sampleRate;

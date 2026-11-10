@@ -111,7 +111,16 @@ void Engine::analysisLoop() {
         {
             RxTelemetry t;
             const bool dvbt = activeStd_.load() == 1;
-            if (activeStd_.load() == 2) {
+            if (mtvActive_.load() && mtvOther_.load() >= 0 && activeStd_.load() == mtvOther_.load()) {   // Whole span of a standard with its own telemetry branch below
+                if (auto m = mtvGet()) {
+                    RxTelemetry mt;
+                    if (m->poll(mt)) {
+                        mt.tvChannels = m->channels();
+                        std::lock_guard<std::mutex> lk(rxMu_);
+                        publishRx(std::move(mt));
+                    }
+                }
+            } else if (activeStd_.load() == 2) {
                 AtscTelemetry at;
                 if (rxA_.telemetry(at, atscSeq_)) {
                     atscSeq_ = at.seq;
@@ -196,7 +205,7 @@ void Engine::analysisLoop() {
                     std::lock_guard<std::mutex> lk(rxMu_);
                     publishRx(std::move(t));
                 }
-            } else if (mtvActive_.load() && (mtvSat_.load() ? activeStd_.load() == 7 : activeStd_.load() <= 1)) {
+            } else if (mtvActive_.load() && mtvMatches(activeStd_.load())) {
                 if (auto m = mtvGet()) {
                     RxTelemetry mt;
                     if (m->poll(mt)) {

@@ -36,7 +36,7 @@ From `broadcast.md`, `hamvoice.md`, `aviosensors.md` (packages F, H, I, J, K, L)
 - MLAT over the swarm (avio 2), sferics position from KiwiSDRs (11), Kiwi clock service (16): need timing across real network nodes, which has not been run.
 - KAAL link adaptation and HARQ (22, 23): change the owner's over-the-air specs, need a decision first.
 
-Not reached in this run, no blocker known: HD blend view (9), SFN solver (11), DAB/FM link table (12), antenna assistant (16, feat38-ease2 has a dish view), syndrome erasure (20), VBI data (21), analogue ghost (22), pass score (23), georeference (24), SSDV gap fill and Horus join (26, 27), sensor reverse engineering and repeat voting (8, 9), hydrogen drift scan (13), fast scan identify (14), KA link test (24), KA auto profile (r2), TV Whole span for ATSC/ISDB-T/DTMB/DVB-C (r2 2), HD and analogue TV Whole span, the rest of the r2 lists.
+Not reached, no blocker known: HD blend view (9), DAB/FM link table (12), syndrome erasure (20), pass score (23), Horus join for SSDV (27), sensor repeat voting (9), hydrogen drift scan (13), KA link test (24), KA auto profile (r2), analogue TV Whole span (r2 4), VPS, and most of the r2 lists (ATIS on the marine bank, HF coast bank, more WSJT slots, RS erasures for Meteor and VDL2, GNSS assisted acquisition, blind IQ format, sonde salvage, DVB-C prior, SSB clarifier, AM sideband combining, static FIC/TPS prior, LoRa copy combining). Georeference and mosaic (24) already exist (`geo/wx_overlay`, `dsp/wxstudio` mosaicMaps).
 
 ## Tests
 

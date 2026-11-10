@@ -38,6 +38,7 @@ struct MultiTvOptions {
     bool blocking = true;         // a slow receiver holds feed() back (files, tests); false: it loses blocks (a live radio)
     double thresholdDb = 6;       // a slot is occupied this far above the quietest part of the span
     double minRsHz = 1e6;         // sat: the narrowest transponder looked for
+    int otherStd = -1;            // the engine's receiver number of another raster standard: 2 ATSC, 4 ATSC 3.0, 5 ISDB-T, 8 DTMB, 41 DVB-C (-1: DVB-T / DVB-T2 by dvbt)
 };
 
 struct MultiService {
@@ -93,8 +94,10 @@ public:
     // sat: the transponders seen now (test hook and the table)
     std::vector<Transponder> lastTransponders();
 
-private:
     struct Slot;
+
+private:
+    bool makeOtherReceiver(Slot& s, int std, double rate, double widthMhz, bool blocking);
     void evaluate();
     void mtvDeliver(int slot, const uint8_t* pk, size_t n, double secs, const TsSnapshot& snap);   // a receiver thread: the selected slot's packets go on
     void startSlot(const SlotPower& p);

@@ -1,5 +1,10 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/engine/multitv.h"
+#include "dect2/atsc/atsc_rx.h"
+#include "dect2/atsc3/atsc3_rx.h"
+#include "dect2/dtmb/dtmb_rx.h"
+#include "dect2/dvbc/dvbc_rx.h"
+#include "dect2/isdbt/isdbt_rx.h"
 #include <algorithm>
 #include <chrono>
 #include <climits>
@@ -27,6 +32,9 @@ struct MultiTv::Slot {
     std::unique_ptr<T2Receiver> t2;
     std::unique_ptr<DvbtReceiver> t;
     std::unique_ptr<DvbsReceiver> sat;
+    std::shared_ptr<void> other;                                 // ATSC, ATSC 3.0, ISDB-T, DTMB or DVB-C (MultiTvOptions::otherStd)
+    std::function<void(const cf32*, size_t)> otherFeed;
+    std::function<bool(RxTelemetry&, uint64_t)> otherTel;
     bool dvbt = false;
     Transponder tp;
     DvbsTelemetry dtel;
@@ -54,7 +62,7 @@ struct MultiTv::Slot {
     int absent = 0;
     bool occupied = true;
 
-    ~Slot() { t2.reset(); t.reset(); sat.reset(); }   // the receivers' threads call back into this slot: they go first
+    ~Slot() { t2.reset(); t.reset(); sat.reset(); other.reset(); }   // the receivers' threads call back into this slot: they go first
     void deliver(const uint8_t* pk, size_t n, double secs) {
         TsSnapshot s;
         {
@@ -101,7 +109,7 @@ struct MultiTv::Slot {
             const uint64_t t0 = nowNs();
             o.clear();
             filter.process(b->data(), b->size(), o);
-            if (!o.empty()) { if (sat) sat->feed(o.data(), o.size()); else if (dvbt) t->feed(o.data(), o.size()); else t2->feed(o.data(), o.size()); }
+            if (!o.empty()) { if (otherFeed) otherFeed(o.data(), o.size()); else if (sat) sat->feed(o.data(), o.size()); else if (dvbt) t->feed(o.data(), o.size()); else t2->feed(o.data(), o.size()); }
             busyNs += nowNs() - t0;
             { std::lock_guard<std::mutex> lk(qMu); busy = false; }
             qCv.notify_all();
@@ -167,6 +175,59 @@ MultiTv::Slot* MultiTv::find(int slot) {
     return nullptr;
 }
 
+// One receiver of a standard that gives its own telemetry type, brought to the common RxTelemetry as the engine does for the single receiver
+template <class Rx, class Tel> static void bindOther(MultiTv::Slot& s, std::shared_ptr<Rx> rx, int std, Tel RxTelemetry::*slot) {
+    s.other = rx;
+    s.otherFeed = [r = rx.get()](const cf32* x, size_t n) { r->feed(x, n); };
+    s.otherTel = [r = rx.get(), std, slot](RxTelemetry& t, uint64_t last) {
+        Tel m;
+        if (!r->telemetry(m, last)) return false;
+        t.standard = std; t.seq = m.seq; t.state = m.state; t.cfoHz = m.cfoHz; t.dataValid = m.dataValid; t.dataSnrDb = m.snrDb; t.blocksOk = m.blocksOk; t.blocksBad = m.blocksBad; t.rateOk = true;
+        t.*slot = std::move(m);
+        return true;
+    };
+}
+
+bool MultiTv::makeOtherReceiver(Slot& s, int std, double rate, double widthMhz, bool blocking) {
+    auto deliver = [raw = &s](const uint8_t* pk, size_t n, double secs) { raw->deliver(pk, n, secs); };
+    switch (std) {
+    case 8: { auto r = std::make_shared<DtmbReceiver>(); r->configure(rate, widthMhz); r->setPacketCallback(deliver); bindOther(s, r, 8, &RxTelemetry::dtmb); return true; }
+    case 41: { auto r = std::make_shared<DvbcReceiver>(); r->configure(rate); r->setPacketCallback(deliver); bindOther(s, r, 41, &RxTelemetry::dvbc); return true; }
+    case 5: {
+        auto r = std::make_shared<IsdbtReceiver>(); r->configure(rate, (int)std::lround(widthMhz)); r->setPacketCallback(deliver);
+        s.other = r; s.otherFeed = [p = r.get()](const cf32* x, size_t n) { p->feed(x, n); };
+        s.otherTel = [p = r.get()](RxTelemetry& t, uint64_t last) { return p->telemetry(t, last); };
+        return true;
+    }
+    case 2: {
+        auto r = std::make_shared<AtscReceiver>(); r->configure(rate); r->setBlocking(blocking); r->setPacketCallback(deliver);
+        s.other = r; s.otherFeed = [p = r.get()](const cf32* x, size_t n) { p->feed(x, n); };
+        s.otherTel = [p = r.get()](RxTelemetry& t, uint64_t last) {
+            AtscTelemetry at;
+            if (!p->telemetry(at, last)) return false;
+            t.standard = 2; t.seq = at.seq; t.state = at.fieldSync ? 2 : at.segSync ? 1 : 0; t.cfoHz = at.cfoHz; t.sroPpm = at.sroPpm;
+            t.dataValid = at.fieldSync && at.eqTrained; t.dataSnrDb = (float)at.snrDb; t.blocksOk = at.rsClean + at.rsCorrected; t.blocksBad = at.rsFailed; t.rateOk = p->rateOk();
+            t.atsc = std::move(at);
+            return true;
+        };
+        return true;
+    }
+    case 4: {
+        auto r = std::make_shared<Atsc3Rx>(); r->configure(rate); r->setPacketCallback(deliver);
+        s.other = r; s.otherFeed = [p = r.get()](const cf32* x, size_t n) { p->feed(x, n); };
+        s.otherTel = [p = r.get()](RxTelemetry& t, uint64_t last) {
+            Atsc3Telemetry at;
+            if (!p->telemetry(at, last)) return false;
+            t.standard = 4; t.seq = at.seq; t.state = at.locked ? 2 : at.bootstraps > 0 ? 1 : 0; t.cfoHz = at.cfoHz;
+            t.dataValid = at.locked && at.serviceReady; t.blocksOk = at.bbPackets - at.bbBad; t.blocksBad = at.bbBad; t.rateOk = true;
+            return true;
+        };
+        return true;
+    }
+    default: return false;
+    }
+}
+
 void MultiTv::startSlot(const SlotPower& p) {
     auto s = std::make_unique<Slot>();
     s->pos = p.pos; s->owner = this; s->dvbt = o_.dvbt;
@@ -174,7 +235,9 @@ void MultiTv::startSlot(const SlotPower& p) {
     if (!s->filter.configure(o_.spanRate, p.pos.offsetHz, outRate)) return;
     Slot* raw = s.get();
     s->unpack.setSink([raw](const uint8_t* pkt) { raw->demux.feed(pkt); raw->frameBuf.insert(raw->frameBuf.end(), pkt, pkt + 188); });   // under tsMu (onPlp)
-    if (o_.dvbt) {
+    if (o_.otherStd >= 0) {
+        if (!makeOtherReceiver(*raw, o_.otherStd, outRate, o_.widthMhz, o_.blocking)) return;
+    } else if (o_.dvbt) {
         s->t = std::make_unique<DvbtReceiver>();
         s->t->configure(outRate, o_.widthMhz);
         s->t->setPacketCallback([raw](const uint8_t* pk, size_t n, double secs) { raw->deliver(pk, n, secs); });
@@ -304,7 +367,8 @@ bool MultiTv::poll(RxTelemetry& out) {
                 s.dtel = dt;
                 t.dvbs = std::move(dt);
             }
-        } else got = s.dvbt ? s.t->telemetry(t, s.telSeq) : s.t2->telemetry(t, s.telSeq);
+        } else if (s.otherTel) got = s.otherTel(t, s.telSeq);
+        else got = s.dvbt ? s.t->telemetry(t, s.telSeq) : s.t2->telemetry(t, s.telSeq);
         if (got) {
             s.telSeq = t.seq; s.tel = std::move(t); s.haveTel = true;
             if (s.pos.index == sel) selNew = true;

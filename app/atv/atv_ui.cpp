@@ -1,6 +1,7 @@
 // Analog TV screens: the picture with a line scope, the status lamps, the vertical-interval and level panels, the receiver readouts and the options
 // of the test signal. The receiver (AtvReceiver) makes the pictures; the telemetry carries the waveforms and the numbers.
 #include "app.h"
+#include "dect2/atv/atv_ghost.h"
 #include "panels/enhance_ui.h"
 #include "dect2/atv/atv_std.h"
 #include <cmath>
@@ -300,6 +301,18 @@ void tab(App& a) {
         kv(a, "burst", on && t.colour ? num(true, "%.0f %%", t.burstLevel * 100) : "-", 96);
         kv(a, "sound", on && t.soundPresent ? num(true, "%.0f dBFS", t.soundLevelDb) : "-", 96);
         kv(a, "detector", on ? (t.syncDetector ? "synchronous" : "envelope") : "-", 96);
+        if (!t.wssText.empty()) kv(a, "picture format", t.wssText, 96);
+        if (!t.captions.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s: %s", tr("captions"), t.captions.c_str()); ImGui::PopTextWrapPos(); }
+        if (t.ttx && t.ttxPackets > 0 && ImGui::TreeNode(trw("Teletext"))) {
+            static int page = 100;
+            ImGui::SetNextItemWidth(90 * gUi); ImGui::InputInt("##atvttx", &page, 1, 10);
+            const auto pages = t.ttx->pages();
+            ImGui::SameLine(); ImGui::TextDisabled("%zu %s", pages.size(), tr("pages"));
+            TtxPage pg; TtxGrid grid;
+            if (t.ttx->page(page, pg)) { ttxRender(pg, grid); for (int r = 0; r < 25; r++) if (pg.rowMask & (1u << r)) ImGui::TextUnformatted(ttxRowText(grid, r).c_str()); }
+            ImGui::TreePop();
+        }
+        { dect2::AtvGhost gh; gh.found = t.ghostFound; gh.delayUs = t.ghostDelayUs; gh.levelDb = t.ghostDb; kv(a, "ghost", on ? dect2::atvGhostText(gh) : "-", 96); }
         ImGui::EndGroup();
     } else {
         const float scopeH = std::min(150.f * gUi, rest * 0.3f);
