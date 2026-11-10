@@ -1271,3 +1271,6 @@ Added GOES GRB, GVAR, CDA, MDL, GK-2A UHRIT and CDAS, a generic S-band CCSDS mod
 
 ## 2026-11-09 feat38-issues: owner-approved GitHub feature requests
 Branch feat38-issues on integ-38. Built #464 #449 #438 #455 #421 #427 #443 #453 #375 (TV texts) #431 #432 #436 #368 #466 and the R8600 firmware check (#357/#430); details, checks and what was skipped (#397 download, #233 native stage gains, #242 multi-viewport, #165 already done) in docs/ISSUES-3.8.md. Checks were syntax-only for GUI code, unit tests for the DRM filter, SARSAT frames, RDS EON and the R8600 records; no full build was run.
+
+## 2026-11-10 feat38-iss2: bugs from the 3.7 test replies
+Branch feat38-iss2 on integ-38. Fixed #440 (the Inmarsat panel never registered onair-codec-aeroambe), #472 (an update removed user-installed DLLs from the install folder), #471 (audio files over 10 minutes restarted early on transmit), #335 (LRRP positions behind a Motorola proprietary header were dropped), #468 (the Windows codec helper failed to link against the static mbelib-neo) and a Lime FTDI driver hint (#169). Details and checks in docs/ISSUES2-3.8.md.
