@@ -422,7 +422,10 @@ struct DvbsReceiver::Impl {
         const uint64_t interval = std::max<uint64_t>(65536, (uint64_t)(0.15 * rsUsed)) * (uint64_t)std::min(4, 1 << std::min(huntCycles, 2));
         if (huntBuf.size() >= kHuntWindow && huntSinceTry >= interval && symTotal > 20000) {
             huntSinceTry = 0;
-            if (tryDvbs2() || tryDvbs()) { huntFails = 0; return; }
+            // DVB-S first: its test is a fourth-power estimate and one sync search, while the DVB-S2 header hunt (fitHeader over every
+            // gain and code, the VL-SNR hunt) is the dearest part of acquiring; a DVB-S signal now skips it (CPU over the first 1.5 s of a
+            // 1 Msym/s DVB-S signal 0.29 -> 0.13 s per second, DVB-S2 lock and thresholds unchanged; 3.9 sensitivity pass D)
+            if (tryDvbs() || tryDvbs2()) { huntFails = 0; return; }
             // The spectrum gives the symbol rate to a percent or two at best, and in noise the timing loop cannot pull in much more than that:
             // after a few attempts the rate is moved a little and the front end starts again
             if (++huntFails >= 3 && huntBuf.size() >= 150000) {
