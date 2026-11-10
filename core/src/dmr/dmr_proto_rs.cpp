@@ -23,7 +23,7 @@ struct AbiCheck {
 
 template <size_t N> void take(const Bits& b, uint8_t (&a)[N]) {
     memset(a, 0, N);
-    memcpy(a, b.data(), std::min(b.size(), N));
+    if (!b.empty()) memcpy(a, b.data(), std::min(b.size(), N));   // (empty: data() may be null)
 }
 inline const char* cs(const uint8_t* p) { return reinterpret_cast<const char*>(p); }
 
