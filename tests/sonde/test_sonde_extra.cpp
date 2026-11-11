@@ -135,11 +135,34 @@ static void meiseiTest() {
     }
 }
 
+// 4.0: the iMS-100 sync (48 symbols) is found with up to 3 symbol errors
+static void meiseiSyncTolerance() {
+    SondeTruth t = truth();
+    const uint64_t k0 = 0b101010101011010100101011001101001100101011001101ULL, k1 = 0b110011001101001101001101010100101010110010101010ULL, m = (1ULL << 48) - 1;
+    for (int inv = 0; inv < 2; inv++) for (int e : {0, 3, 4, 6}) {
+        auto d = makeMeiseiDecoder();
+        std::vector<SondeFix> out;
+        for (int cnt = 0; cnt < 18; cnt++) {
+            auto s = meiseiSymbols(t, cnt, 12345678);
+            uint64_t reg = 0; size_t end = 0;
+            for (size_t i = 0; i < s.size(); i++) { reg = (reg << 1) | (s[i] & 1); if ((reg & m) == k0 || (reg & m) == k1) { end = i + 1; break; } }
+            CHECK(end >= 48);
+            for (int k = 0; k < e; k++) s[end - 48 + (size_t)(5 + 9 * k)] ^= 1;
+            if (inv) for (auto& x : s) x = !x;
+            std::vector<uint8_t> pad(64, inv ? 1 : 0);
+            d->push(pad.data(), pad.size(), 0, out);
+            d->push(s.data(), s.size(), 0, out);
+        }
+        CHECK(e <= 3 ? !out.empty() : out.empty());
+    }
+}
+
 int main() {
     imetBitsTest();
     mrzTest();
     mrzSyncTolerance();
     imet54Test();
     meiseiTest();
+    meiseiSyncTolerance();
     return testSummary("sonde_extra");
 }

@@ -355,8 +355,10 @@ private:
         if (!run_) {
             hdr_ = (hdr_ << 1) | (uint64_t)(s & 1);
             const uint64_t m = (1ULL << 48) - 1, v = hdr_ & m;
-            if (v == kSync0) { which_ = 0; inv_ = false; } else if (v == kSync1) { which_ = 1; inv_ = false; }
-            else if (v == (kSync0 ^ m)) { which_ = 0; inv_ = true; } else if (v == (kSync1 ^ m)) { which_ = 1; inv_ = true; } else return;
+            // 4.0: up to 3 symbol errors in the 48 (an exact match needed all 48 right: 38 % of the frames at a 2 % symbol error rate); the four words differ by
+            // far more than that from each other and from their shifts
+            if (__builtin_popcountll(v ^ kSync0) <= 3) { which_ = 0; inv_ = false; } else if (__builtin_popcountll(v ^ kSync1) <= 3) { which_ = 1; inv_ = false; }
+            else if (__builtin_popcountll(v ^ kSync0 ^ m) <= 3) { which_ = 0; inv_ = true; } else if (__builtin_popcountll(v ^ kSync1 ^ m) <= 3) { which_ = 1; inv_ = true; } else return;
             run_ = true; raw_.clear();
             return;
         }
