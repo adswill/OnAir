@@ -54,7 +54,8 @@ struct Reg {
             man.set("library", aj::Value::string(lib)); man.set("permissions", strArr(s.pkgPermsSet ? s.pkgPerms : s.perms));
             if (!s.minOnAir.empty()) man.set("minimum_onair", aj::Value::string(s.minOnAir));
             std::string body = "LIBRARY-BYTES-LIBRARY-BYTES-LIBRARY-BYTES";
-            auto pkg = plugin::zipStore({{"manifest.json", std::vector<uint8_t>(aj::dump(man).begin(), aj::dump(man).end())}, {lib, std::vector<uint8_t>(body.begin(), body.end())}});
+            const std::string manText = aj::dump(man);
+            auto pkg = plugin::zipStore({{"manifest.json", std::vector<uint8_t>(manText.begin(), manText.end())}, {lib, std::vector<uint8_t>(body.begin(), body.end())}});
             std::string sha = ps::sha256Hex(pkg);
             if (s.badCrc) { auto it = std::search(pkg.begin(), pkg.end(), body.begin(), body.end()); if (it != pkg.end()) *(it + 3) ^= 0x55; sha = ps::sha256Hex(pkg); }   // valid hash, broken zip
             if (s.badSha) sha = std::string(64, 'a');
