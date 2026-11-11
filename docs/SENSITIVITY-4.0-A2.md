@@ -144,6 +144,11 @@ Measured with sens_curve in this pass, and read against the Eb/N0 each needs:
   (SENSITIVITY-3.6.md, 3.9-B). **P25, NXDN, dPMR, D-STAR, YSF, TETRA:** within 1 dB of the figures in 3.6, 3.7, 3.9-B and 3.9-D; the TETRA
   decision-feedback attempt of 3.9-D lost 1 dB. No change made.
 * **FM click suppression, soft-decision RS, MSDD:** see part 1.
+* **Survey with sens_curve, AWGN, 4 trials, 3 dB steps, noise in the harness bandwidth** (first point where the fraction falls under 50 %, and Eb/N0 there):
+  Sigfox (DBPSK 100 bit/s in 600 Hz) 0 dB, 7.8 dB; Z-Wave (100 kbit/s FSK) 9 dB, 9 dB; FLARM 3 dB, 6 dB; ADS-L 3 dB; BLE (1 Mbit/s GFSK) 9 dB, 9 dB;
+  Zigbee 0 dB; Remote ID 9 dB; UAT 978 about 3 dB (plateau 89 %); Wi-SUN FAN 9 dB in 200 kHz (its per-rate matched filter is already
+  deviation + 0.35 x bit rate wide); Orbcomm above. Each is within about 3 dB of the non-coherent figure for its modulation and frame length, and the
+  receivers already filter to the signal's own width: no gap found that a filter or follow-up would close.
 
 ## Not reached in this pass
 

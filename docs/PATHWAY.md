@@ -1796,3 +1796,13 @@ filter of 4 kHz half width (sonde_rx.cpp, SondeBitDecoder::narrowChannel): 90 % 
 6 dB instead of 9 with a 20 ppm carrier error or 150 kHz off-centre, noise-only runs still decode nothing. Test: sonde_sens40. New
 tool sens_curve (fraction of units per SNR, any harness mode). Measured and not kept: soft RS erasures for the RS41, click suppression for
 APRS, wM-Bus tone correlators (the 17 dB wM-Bus figure was the five-PHY mix), see docs/SENSITIVITY-4.0-A.md.
+
+## 2026-11-12 (night), 4.0 lane A part 2: more narrow paths, Argos acquisition (feat40-sensA2)
+The part-1 lesson (a channel filter much wider than the signal sits under the FM threshold) applied to the other receivers, each with before/after
+curves from sens_curve and noise-only checks (docs/SENSITIVITY-4.0-A2.md): the RS41 narrow path now also feeds RS92, DFM and iMet-54 (about 2.5, 2, 3 dB);
+FmFront gets an opt-in SpectralAfc (power-spectrum carrier follow-up) and EDACS (6.5 kHz instead of 9) and SmartNet (5 kHz instead of 7) use it
+(1.5 and 1.7 dB, 2.5 dB with 3.1 kHz carrier error); Fusion and MPT 1327 get a narrow filter that follows the carrier in open loop (about 2.5 dB, and a
+decode with 5 to 6 kHz carrier error where 3.9 had none). Largest find: Argos PTT uplink needed the burst 6 dB over the noise of the whole 32 kHz stream;
+coherent 1 ms power for the extent and the length chosen from the phase steps give about 14 dB (90 % at 0 dB in 5 kHz instead of 13 dB). Tests:
+sonde_sens40 (extended), edacs_sens40, argos_sens40. Measured and not kept: ACARS coherent detection with a carrier memory (0.2 dB), POCSAG/FLEX
+narrower filter (POCSAG +3 dB, FLEX collapses), M10 narrow path, MRZ narrow path (breaks a test). At theory: DMR, AIS, APRS, Orbcomm, the IoT set.
