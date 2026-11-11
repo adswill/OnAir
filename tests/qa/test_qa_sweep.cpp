@@ -439,6 +439,12 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
         if (Clock::now() - lastMove > std::chrono::seconds(5) && proc >= 0.9 * secs) break;   // the file ended a block short
         if (Clock::now() - lastMove > std::chrono::seconds(90)) break;                         // stuck: report what there is
     }
+    if (en.stdMode == 39) { e.js8().flush(); e.js8().waitIdle(); }   // JS8 decodes its slots on its own thread: the slot in progress and the queued ones, as at the end of a recording
+    if (en.stdMode == 133)   // KAIT decodes a captured burst on its own thread (several seconds): let a decode that started before the file ended finish
+        for (int i = 0; i < 600 && rx.standard == 132 && rx.kait.state == 3; i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            if (e.latestRx(rx, seq)) { seq = rx.seq; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } }
+        }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));   // the last report
     if (e.latestRx(rx, seq)) { standard = rx.standard; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } locked = locked || lockOf(rx); bad = std::max<uint64_t>(bad, rx.blocksBad); }
     if (getenv("QA_SWEEP_VERBOSE")) {   // the engine's log and the last report, for a mode that does not decode

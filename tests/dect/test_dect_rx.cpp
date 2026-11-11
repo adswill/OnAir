@@ -59,6 +59,12 @@ int main() {
             CHECK(t.blocksOk >= 90, "%.3f Msps: %llu fields", r / 1e6, (unsigned long long)t.blocksOk);
         }
     }
+    {   // no noise at all (digital silence between the bursts, as a transmitter's own signal or a squelched recording has it): the power floor's
+        // running sum once drifted below zero there and every sample after the first burst looked like a burst start (docs/QA-SWEEP-3.9.md)
+        DectGenConfig c; c.rate = 5e6; c.snrDb = 400; c.dialOffsetHz = -1e6; c.handset = true; c.bases = dectTestBases(0);
+        const DectTelemetry t = run(c, 1.0);
+        CHECK(t.blocksOk >= 380, "no noise: %llu fields of 400", (unsigned long long)t.blocksOk);
+    }
     {   // wrong CRC: counted bad, no base station listed
         DectGenConfig c; c.rate = 5e6; c.snrDb = 30; c.dialOffsetHz = -1e6; c.bases = dectTestBases(1); c.bases[0].badCrc = true;
         const DectTelemetry t = run(c, 1.0);

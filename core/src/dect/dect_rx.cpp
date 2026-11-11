@@ -149,7 +149,9 @@ struct DectReceiver::Impl {
         meanSum += s - meanBuf[(size_t)meanPos]; meanBuf[(size_t)meanPos] = s; meanPos = (meanPos + 1) % kMean;
         const float pw = std::norm(y);
         pwSum += pw - pwBuf[pwPos]; pwBuf[pwPos] = pw; pwPos = (pwPos + 1) % kMean;
-        const double pAvg = pwSum / kMean;
+        if (pwPos == 0) { double e = 0; for (float v : pwBuf) e += v; pwSum = e; }   // the running sum drifts: after a burst into digital silence it went below
+                                                                                     // zero, the floor with it, and every sample then looked like a burst start
+        const double pAvg = std::max(pwSum / kMean, 1e-12);
         if (g < kMean) {}
         else if (pAvg < noiseFloor) noiseFloor = pAvg;
         else noiseFloor += (pAvg - noiseFloor) * 2e-7;
