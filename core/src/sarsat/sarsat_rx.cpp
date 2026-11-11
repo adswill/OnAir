@@ -13,6 +13,7 @@
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/fftutil.h"
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <complex>
 #include <ctime>
@@ -236,6 +237,8 @@ struct SarsatReceiver::Impl {
     // burst state
     bool active = false;
     int miss = 0, dets = 0;
+    double falseBank = 0, bankT = 0, falseLimit = 1.0;   // seconds of search spent on bursts that did not look like a beacon (see finishBurst)
+    uint64_t falseSkipped = 0;
     uint64_t firstBlockStart = 0, lastDetEnd = 0;   // sample counts (at kDet): first block of a burst, end of its last block with a line
     std::vector<float> linePow;                       // power of the line in each detecting block of the burst
     std::vector<double> peaks;
@@ -288,6 +291,16 @@ struct SarsatReceiver::Impl {
                 std::nth_element(post.begin(), post.begin() + (long)(post.size() / 2), post.end());
                 plausible = post[post.size() / 2] <= 0.7f * pre[2];
             }
+            // The search below costs a few hundred ms of CPU per burst. A band with many carriers (radiosondes, pagers, a noisy site) makes the
+            // detector fire all the time, and every such burst that does not look like a beacon would run it: a falseBank of seconds of search,
+            // paid back at 0.15 s per second of signal, stops that. A burst that looks like a beacon is always searched.
+            {
+                const double now = (double)n32 / kDet;
+                falseBank = std::max(0.0, falseBank - 0.15 * (now - bankT)); bankT = now;
+            }
+            const bool skipSearch = !plausible && falseBank > falseLimit;
+            if (skipSearch) { falseSkipped++; peaks.clear(); linePow.clear(); dets = 0; peakSnr = -200; peakLevel = -200; publish(); return; }
+            const auto wall0 = std::chrono::steady_clock::now();
             const uint64_t start = firstBlockStart >= 8192 ? firstBlockStart - 8192 : 0;
             const uint64_t from = n32 > kRing - 4096 && start < n32 - (kRing - 4096) ? n32 - (kRing - 4096) : start;
             std::vector<cf32> x;
@@ -331,6 +344,7 @@ struct SarsatReceiver::Impl {
             } else if (plausible) {
                 tel.blocksBad++;
             }
+            if (!plausible) falseBank += std::chrono::duration<double>(std::chrono::steady_clock::now() - wall0).count();
             tel.cfoHz = carrier; tel.snrDb = peakSnr; tel.levelDb = peakLevel;
         }
         peaks.clear(); linePow.clear(); dets = 0; peakSnr = -200; peakLevel = -200;
@@ -452,6 +466,8 @@ bool SarsatReceiver::telemetry(SarsatTelemetry& out, uint64_t lastSeq) {
     return true;
 }
 
+void SarsatReceiver::setFalseBurstBudget(double seconds) { std::lock_guard<std::mutex> lk(p_->mu); p_->falseLimit = seconds; }
+uint64_t SarsatReceiver::falseBurstsSkipped() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->falseSkipped; }
 void SarsatReceiver::setWideSearch(bool on) { std::lock_guard<std::mutex> lk(p_->mu); if (on != p_->wide) { p_->wide = on; p_->kidsDirty = true; } }
 bool SarsatReceiver::wideSearch() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide; }
 double SarsatReceiver::wideSpanHz() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide ? p_->wideSpan : 0; }

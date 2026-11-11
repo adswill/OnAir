@@ -40,6 +40,9 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);
     // Search the whole capture (issue #214: the satellites' L-band downlink, each satellite somewhere in 1544 - 1545 MHz): a bank of
     // burst finders 90 kHz apart across up to 1.1 MHz of the input (as much as the sample rate holds), merged into one beacon list.
+    // CPU guard: seconds of burst search that bursts which do not look like a beacon may use before they are skipped (paid back 0.15 s per s of signal)
+    void setFalseBurstBudget(double seconds);
+    uint64_t falseBurstsSkipped() const;
     void setWideSearch(bool on);
     bool wideSearch() const;
     double wideSpanHz() const;          // what the bank covers now (0: off)

@@ -75,6 +75,7 @@
 #include "dect2/rid/rid_rx.h"
 #include "dect2/roshf/roshf_rx.h"
 #include "dect2/same/same_rx.h"
+#include "dect2/sarsat/sarsat_rx.h"
 #include "dect2/satmisc/satdetect_live.h"
 #include "dect2/selcal/selcal_rx.h"
 #include "dect2/sensors/sensors_rx.h"
@@ -546,6 +547,12 @@ static bool set_90(Engine& e, const std::string& n, double v) {
     auto& r = e.tones();
     if (n == "setSelcalOnly") { call(r, &Rx<decltype(r)>::setSelcalOnly, v); return true; }
     if (n == "setDemod") { call(r, &Rx<decltype(r)>::setDemod, v); return true; }
+    return false;
+}
+static const char kOpt_93[] = R"JSON([{"n":"setFalseBurstBudget","k":"num","l":"False Burst Budget","t":"s"}])JSON";
+static bool set_93(Engine& e, const std::string& n, double v) {
+    auto& r = e.sarsat();
+    if (n == "setFalseBurstBudget") { call(r, &Rx<decltype(r)>::setFalseBurstBudget, v); return true; }
     return false;
 }
 static const char kOpt_96[] = R"JSON([{"n":"setBandwidth","k":"int","l":"Bandwidth","h":"0 automatic, or 500 / 1000 / 2000","t":"s"},{"n":"setInterleave","k":"choice","c":[{"v":0,"l":"automatic"},{"v":1,"l":"short"},{"v":2,"l":"long"}],"l":"Interleave","h":"0 automatic, 1 short, 2 long","t":"s"}])JSON";
@@ -1022,6 +1029,7 @@ const OptEntry kOpt[] = {
     {84, kOpt_84, set_84},
     {85, kOpt_85, set_85},
     {90, kOpt_90, set_90},
+    {93, kOpt_93, set_93},
     {96, kOpt_96, set_96},
     {99, kOpt_99, set_99},
     {102, kOpt_102, set_102},

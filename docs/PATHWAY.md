@@ -1734,3 +1734,5 @@ the PMT knows the DVB AC-4 descriptor, the panels show "Dolby Atmos (E-AC-3 JOC)
 device's speakers, or Stereo / Lt-Rt / 5.1 / 7.1), and an off-by-default IEC 61937 passthrough (WASAPI exclusive, CoreAudio hog mode, ALSA
 IEC958) sends AC-3 / E-AC-3 untouched to a receiver. Passthrough is NOT tested on hardware; Atmos streams are simulated. Objects can't be
 rendered (Dolby's licensed renderer) and Dolby Access can't be fed a bitstream by an app. docs/ATMOS-3.9.md.
+## 2026-11-11: COSPAS-SARSAT extra modes in the log, CPU (branch feat39-sarsatcpu)
+EG's report (3.8.0 vs 0.2.9). The other modes' lines were configure() messages from every receiver on each restart (log callbacks persist), now dropped during start(). SARSAT receiver is identical to 0.2.9 per sample; engine CPU 0.07-0.09 s/s at 0.5 Msps with the 20 kHz offset, beacons 6/6; the 70 % was not reproduced. Added a false-burst search budget and test_sarsat_engine. See docs/SARSAT-CPU-3.9.md.

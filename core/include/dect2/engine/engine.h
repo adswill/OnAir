@@ -756,6 +756,8 @@ public:
 
     // Log
     void log(const std::string& line);
+    void rxLog(const std::string& line) { if (!rxLogQuiet_.load(std::memory_order_relaxed)) log(line); }   // a receiver's own message: dropped while start() configures every receiver
+    std::atomic<bool> rxLogQuiet_{false};
     std::vector<std::string> logSnapshot(size_t& total);
     void clearLog();
 
