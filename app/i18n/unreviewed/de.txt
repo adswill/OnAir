@@ -572,3 +572,52 @@ or %s, %.0f %%
 an unknown timing
 A monitor, TV or its HDMI / DVI cable leaks its pixel clock and the picture data repeating every line: lines at the clock and its harmonics, with a comb at the line rate around them. Switch the display off or unplug its cable to confirm.
 Display emission
+Zoom in
+Zoom out
+could not read
+not a qt-dab transmitter list
+qt-dab's list: %d transmitters (FMLIST data, personal use, read in place)
+using qt-dab's transmitter list in place:
+%d transmitter position(s) known: %d from %d shared list(s), %d from your own file, %d from qt-dab's list%s
+no transmitter list yet
+Optional: only if you know where this transmitter stands. It puts it on the map for everyone who hears it.
+Only positions you know yourself or from a source that allows it: not from qt-dab's or FMLIST's list.
+The ensemble's country is not known yet (it comes with FIG 0/9) and none is set below, so no shared list is used.
+Nobody has shared a transmitter for %s yet: the OnAir-channels repository has no list for it.
+The shared list for %s could not be downloaded (no network?).
+The shared list for %s is being fetched.
+The shared list for %s has %d transmitter(s).
+(Country from the setting below: the ensemble has not sent its own yet.)
+No list in use knows any transmitter of this ensemble (EId %04X).
+The lists know %d transmitter(s) of this ensemble (EId %04X), but not TII %d/%d.
+The ensemble sends transmitter positions (FIG 0/22), but none for this transmitter or its MainId.
+The ensemble does not send transmitter positions (FIG 0/22): few networks do, and later editions of the standard dropped it.
+\nThe ensemble names this transmitter's region (FIG 0/11): %s, about %.2f..%.2f N, %.2f..%.2f E.
+\nThe ensemble names this transmitter's region (FIG 0/11): %s.
+Where transmitter positions come from
+A DAB transmitter sends only its own TII code (MainId / SubId), not where it stands. Some networks also send a table of positions (FIG 0/22), most do not: then a list is needed that says where each code of the ensemble stands.\n\n1. The shared list (OnAir-channels, public domain): filled by users. It is downloaded for the country set below and for the country of every ensemble heard. A country nobody has shared a transmitter for has no list yet.\n\n2. qt-dab's list: if you use qt-dab, its file .txdata.tii in your home folder (or helpers/tiiFile.zip from the qt-dab repository, unzipped) can be used with "import list..." or the button OnAir shows when it finds the file. It holds FMLIST's data, which is for personal use: OnAir reads it where it is, does not copy, export or share it, and does not ship it.\n\n3. Your own file (dab-transmitters.csv, "open folder"): CSV, columns eid,main,sub,lat,lon,site,power_kw,channel_mhz. "export heard" writes every transmitter heard in these columns: fill in the positions you know and "import list..." it back.\n\nOnAir does not ship a list for Germany or other countries where no list with a licence that allows it exists (FMLIST, ukwtv.de and wohnort.org do not allow copying; the Bundesnetzagentur's data has no TII codes). Sharing a transmitter you know ("share...") is optional and makes it work for everyone. See docs/dab-transmitters.md.
+position(s) from qt-dab's list left out (FMLIST data, not for sharing)
+near MainId %d's reference point
+position sent by the ensemble
+no position known yet for the transmitters heard: the reasons are below the map
+%d of %d transmitter(s) heard have no known position yet.
+What you can do:
+qt-dab's transmitter list was found on this computer:
+use it
+FMLIST's data, for personal use: OnAir reads it where it is and never copies, exports or shares it.
+Have a transmitter list (qt-dab's .txdata.tii, or a CSV)? "import list..." below.
+Know where a transmitter stands? Put it in your own list ("export heard", fill in, "import list..."), or share it with everyone: "share..." on its row (optional).
+from your own file
+from qt-dab's list (FMLIST data, personal use)
+from the shared list (OnAir-channels, public domain)
+sent by the ensemble itself (FIG 0/22), no site name
+Approximate: the ensemble sends the reference point of this MainId (FIG 0/22) but not this SubId's own position.\nThe distance is to that point.
+position unknown
+share...
+Optional. If you know where this transmitter stands, share it: OnAir asks for its latitude and longitude,\nthen your browser opens GitHub with everything filled in; press Submit there.\nGitHub shows your user name on the issue; the data becomes public domain (CC0).
+not reachable
+downloading
+shared lists:
+stop using it
+The country of the shared transmitter list (ISO code, e.g. GB, DE, NO); Enter downloads it.\nThe lists of the countries of the ensembles heard are fetched as well.
+Add the transmitters of a CSV file to your own list (columns eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid in hex):\nan export of heard transmitters with the positions filled in, or a list someone shares; rows without a position are skipped.\nqt-dab's .txdata.tii is used where it is instead (FMLIST data, personal use).
