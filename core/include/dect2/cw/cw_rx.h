@@ -56,6 +56,11 @@ public:
     bool wide() const;
     void setSpotShiftHz(double hz);      // internal (slice skimmers): added to a signal's offset for the PSK Reporter spot
     void setSidetoneTap(std::function<void(const float* x, size_t n)> cb);   // tests: the 8 kHz sidetone (mono)
+    // The timing decoder: 0 automatic (the default: both run on every signal and the text comes from the one that suits the sender),
+    // 1 the fixed clustering of 0.2.7 (cw_morse.h Timing), 2 the adaptive one (cw_decoder.h FistDecoder)
+    void setTimingDecoder(int which);
+    int timingDecoder() const;
+    void setKeyTap(std::function<void(int id, double offsetHz, bool key)> cb);   // tests: every signal's detector output, once a millisecond
 
 private:
     struct Impl;

@@ -4,6 +4,7 @@
 #include "dect2/results/results_io.h"
 #include "dect2/cw/cw_tel.h"
 #include "dect2/cw/cw_morse.h"
+#include "dect2/cw/cw_decoder.h"
 #include "dect2/net/pskreporter.h"
 #include "dect2/marine/marine_dsp.h"
 #include "dect2/dsp/fftutil.h"
@@ -60,8 +61,12 @@ struct Chan {
     // detector
     bool init = false, key = false, raw = false;
     float hi = 0, lo = 0;
-    cw::Timing tm;
+    cw::Timing tm;               // the 0.2.7 timing, with its Keyer (debounce)
     cw::Keyer keyer;
+    std::unique_ptr<cw::FistDecoder> fist = std::make_unique<cw::FistDecoder>();   // the adaptive timing, with the same debounce
+    bool fKey = false, fStarted = false;
+    int fRun = 0, fCnt = 0;
+    int shown = 1;               // whose text is shown: 1 the 0.2.7 timing, 2 the adaptive one
     std::string text;
     std::vector<std::string> calls;
     double firstSec = 0, lastActive = 0, lastPeak = 0;
@@ -101,6 +106,8 @@ struct CwReceiver::Impl {
     std::vector<float> lp = bbf::overrideTaps("cw", lowpass1k(), 1000.0, 100.0, kFir, kFir);   // 65 taps always: the delay lines are that long
     float triW[kTri] = {};
     std::vector<Chan> chans;
+    std::atomic<int> timingSel{0};
+    std::function<void(int, double, bool)> keyTap;
     int nextId = 1, focusId = -1;
     std::vector<float> toneBuf;
     double tonePh = 0;
@@ -129,6 +136,7 @@ struct CwReceiver::Impl {
             r->setSilent(true);
             r->setSpotShiftHz(k * kSlice);
             r->setThresholdDb(thrDb.load());
+            r->setTimingDecoder(timingSel.load());
             r->configure(w->dec.outRate());
             r->setSignalOffset(k * kSlice);
             w->centre.push_back(k * kSlice);
@@ -224,7 +232,7 @@ struct CwReceiver::Impl {
         c.setFreq(hz);
         c.firstSec = c.lastActive = c.lastPeak = sigSec();
         seed(c, hz);
-        chans.push_back(c);
+        chans.push_back(std::move(c));
         return chans.back();
     }
 
@@ -295,10 +303,20 @@ struct CwReceiver::Impl {
         else c.lo += (e < c.lo ? 0.05f : 0.004f) * (e - c.lo);
         c.hi -= 0.0005f * (c.hi - c.lo);
         c.raw = k;
+        if (keyTap) keyTap(c.id, c.f, k);
         c.keyer.sample(k, c.tm);
-        c.key = c.keyer.key();
+        fistKeyer(c, k);
+        const int sel = timingSel.load(std::memory_order_relaxed);
+        c.shown = sel == 1 || sel == 2 ? sel : chooseTiming(c);
+        c.key = c.shown == 2 ? c.fKey : c.keyer.key();
         if (c.key) c.lastActive = sigSec();
-        std::string s = c.tm.take();
+        std::string s = c.tm.take(), sa;
+        {
+            cw::DecTok t[32];
+            for (size_t nt; (nt = c.fist->pop(t, 32)) > 0;)
+                for (size_t i = 0; i < nt; i++) sa += t[i].text;
+        }
+        if (c.shown == 2) s.swap(sa);
         if (!s.empty()) {
             for (char ch : s) { if (ch == '*') c.bad++; if (ch != ' ') c.chars++; }
             c.text += s;
@@ -311,6 +329,26 @@ struct CwReceiver::Impl {
             c.calls = now;
         }
     }
+
+    // the debounce of cw::Keyer, for the adaptive timing (its own dot length sets the hold-off)
+    static void fistKeyer(Chan& c, bool raw) {
+        cw::FistDecoder& d = *c.fist;
+        const int g = d.locked() ? std::max(3, std::min(25, (int)std::lround(0.33 * d.dotMs()))) : 6;
+        c.fCnt = raw != c.fKey ? c.fCnt + 1 : 0;
+        c.fRun++;
+        if (c.fCnt >= g) {
+            const int len = c.fRun - c.fCnt;
+            if (c.fKey) d.mark(len); else if (c.fStarted) d.space(len);
+            c.fStarted = true;
+            c.fKey = raw;
+            c.fRun = c.fCnt;
+            c.fCnt = 0;
+        }
+        if (!c.fKey && c.fStarted && c.fRun % 10 == 0) d.idle(c.fRun);
+    }
+
+    // automatic: which timing's text is shown
+    static int chooseTiming(const Chan& c) { return c.shown; }
 
     void sidetoneMs(const Chan* c) {
         const float target = c && c->key ? 1.f : 0.f;
@@ -387,9 +425,11 @@ struct CwReceiver::Impl {
         for (const Chan& c : chans) {
             CwSignal s;
             s.id = c.id; s.offsetHz = c.f; s.manual = c.manual;
-            s.wpm = c.tm.locked() ? (float)c.tm.wpm() : 0.f;
+            const bool ad = c.shown == 2;
+            s.wpm = ad ? (float)c.fist->wpm() : c.tm.locked() ? (float)c.tm.wpm() : 0.f;
             s.snrDb = c.lo > 0 ? (float)(20 * std::log10(std::max(1e-6f, c.hi) / c.lo)) : 0.f;
-            s.key = c.key; s.locked = c.tm.locked(); s.farnsworth = c.tm.farnsworth();
+            s.key = c.key; s.locked = ad ? c.fist->locked() : c.tm.locked();
+            if (ad) { cw::FistStats fs; c.fist->stats(fs); s.farnsworth = fs.locked && fs.charGapDots > 4.2f; } else s.farnsworth = c.tm.farnsworth();
             s.lastActiveSec = c.lastActive; s.firstSec = c.firstSec;
             s.chars = c.chars; s.text = c.text; s.calls = c.calls;
             ok += c.chars - c.bad; bad += c.bad;
@@ -469,7 +509,11 @@ void CwReceiver::feed(const cf32* x, size_t n) {
         m.wide->buf.clear();
         m.wide->dec.process(x, n, m.wide->buf);
         for (cf32& v : m.wide->buf) if (!std::isfinite(v.real()) || !std::isfinite(v.imag())) v = cf32(0, 0);
-        for (auto& r : m.wide->subs) r->feed(m.wide->buf.data(), m.wide->buf.size());
+        const int sel = m.timingSel.load();
+        for (auto& r : m.wide->subs) {
+            if (r->timingDecoder() != sel) r->setTimingDecoder(sel);
+            r->feed(m.wide->buf.data(), m.wide->buf.size());
+        }
     } else if (m.running) {
         m.base.clear();
         m.front.process(x, n, m.base);
@@ -616,5 +660,11 @@ void CwReceiver::setWide(bool on, double spanHz) {
 }
 bool CwReceiver::wide() const { return p_->wideReq.load(); }
 void CwReceiver::setSpotShiftHz(double hz) { p_->spotShift = hz; }
+void CwReceiver::setTimingDecoder(int which) {
+    which = which == 1 || which == 2 ? which : 0;
+    p_->timingSel = which;   // the slice skimmers of the whole span follow in feed()
+}
+int CwReceiver::timingDecoder() const { return p_->timingSel.load(); }
+void CwReceiver::setKeyTap(std::function<void(int, double, bool)> cb) { p_->keyTap = std::move(cb); }
 
 } // namespace dect2
