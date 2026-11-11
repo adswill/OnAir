@@ -4,7 +4,10 @@
 #include "dect2/engine/modes.h"
 #include "dect2/sarsat/sarsat_gen.h"
 #include "dect2/sarsat/sarsat_rx.h"
+#include <ctime>
+#ifndef _WIN32
 #include <sys/resource.h>
+#endif
 #include <chrono>
 #include <algorithm>
 #include <cmath>
@@ -14,7 +17,11 @@
 using namespace dect2;
 #include "../common/test_util.h"
 
+#ifdef _WIN32
+static double cpuSec() { return (double)std::clock() / CLOCKS_PER_SEC; }   // the process CPU time on Windows
+#else
 static double cpuSec() { rusage u; getrusage(RUSAGE_SELF, &u); return u.ru_utime.tv_sec + u.ru_stime.tv_sec + (u.ru_utime.tv_usec + u.ru_stime.tv_usec) * 1e-6; }
+#endif
 
 int main() {
     const ModeTuning* mt = modeTuningById("sarsat");

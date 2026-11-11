@@ -27,22 +27,26 @@ public:
 private:
     // the event monitors: a looped stretch of the test signal of hamsci_evt.h (the loop length keeps the buffer under 8 million samples)
     void prepareEvt() {
+        // above 4 Msps (a custom wide capture) the stretch is made at rate_ / hold_ and each sample is held hold_ times: made at the full
+        // rate, the burst and beacon signals took longer than an engine waits for its first signal (custom_bandwidth_all, 6 MHz wide)
+        hold_ = rate_ > 4e6 ? (int)std::ceil(rate_ / 2e6) : 1;
+        const double gr = rate_ / hold_;
         hamsci::EvtGenOpt o;
-        o.seconds = std::clamp(8e6 / rate_, 4.0, 60.0);
+        o.seconds = std::clamp(8e6 / gr, 4.0, 60.0);
         o.offsetHz = cfg_.cfoHz;
         const double L = o.seconds;
         switch (kind_) {
-        case kHsSchumann: evt_ = hamsci::evtGenSchumann(rate_, o); break;
-        case kHsWhistler: evt_ = hamsci::evtGenWhistler(rate_, o, {0.07 * L, 0.5 * L}, {0.03 * L, 0.2 * L, 0.35 * L, 0.65 * L, 0.85 * L}); break;
-        case kHsEme: o.seconds = std::max(L, 16.0); evt_ = hamsci::evtGenEme(rate_, o, {2.0, 9.0}, 1.5, 2.55, 120.0, 4.0, 10.0); break;
-        case kHsJove: o.offsetHz = 0; evt_ = hamsci::evtGenBursts(rate_, o, {0.2 * L, 0.55 * L}, 0.15 * L, 0, 0.8 * rate_); break;
-        case kHsCallisto: o.offsetHz = -0.25 * rate_; evt_ = hamsci::evtGenBursts(rate_, o, {0.2 * L, 0.6 * L}, 0.25 * L, 0.2 * rate_ / (0.25 * L), 0.2 * rate_); break;
-        default: o.seconds = std::max(L, 30.0); o.level = 30.0; evt_ = hamsci::evtGenBeacon(rate_, o, {5.0, 40.0}, 18.0, kind_ == kHsAurora ? 120.0 : 0.0, 3.0); break;
+        case kHsSchumann: evt_ = hamsci::evtGenSchumann(gr, o); break;
+        case kHsWhistler: evt_ = hamsci::evtGenWhistler(gr, o, {0.07 * L, 0.5 * L}, {0.03 * L, 0.2 * L, 0.35 * L, 0.65 * L, 0.85 * L}); break;
+        case kHsEme: o.seconds = std::max(L, 16.0); evt_ = hamsci::evtGenEme(gr, o, {2.0, 9.0}, 1.5, 2.55, 120.0, 4.0, 10.0); break;
+        case kHsJove: o.offsetHz = 0; evt_ = hamsci::evtGenBursts(gr, o, {0.2 * L, 0.55 * L}, 0.15 * L, 0, 0.8 * gr); break;
+        case kHsCallisto: o.offsetHz = -0.25 * gr; evt_ = hamsci::evtGenBursts(gr, o, {0.2 * L, 0.6 * L}, 0.25 * L, 0.2 * gr / (0.25 * L), 0.2 * gr); break;
+        default: o.seconds = std::max(L, 30.0); o.level = 30.0; evt_ = hamsci::evtGenBeacon(gr, o, {5.0, 40.0}, 18.0, kind_ == kHsAurora ? 120.0 : 0.0, 3.0); break;
         }
         if (evt_.empty()) evt_.assign(1024, cf32(0, 0));
     }
     void genEvt(cf32* out, size_t n) {
-        for (size_t i = 0; i < n; i++) { out[i] = evt_[evtPos_]; if (++evtPos_ >= evt_.size()) evtPos_ = 0; }
+        for (size_t i = 0; i < n; i++) { out[i] = evt_[evtPos_]; if (++evtSub_ >= hold_) { evtSub_ = 0; if (++evtPos_ >= evt_.size()) evtPos_ = 0; } }
     }
 
     void prepare() {
@@ -166,6 +170,7 @@ private:
     std::vector<cf32> chunk_;
     std::vector<cf32> evt_;
     size_t evtPos_ = 0;
+    int hold_ = 1, evtSub_ = 0;
     size_t pos2_ = 0;
     uint64_t block_ = 0;
 };

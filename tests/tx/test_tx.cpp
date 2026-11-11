@@ -870,7 +870,7 @@ static TxPayloadKind expectedKind(const std::string& id) {
     if (id == "dab" || id == "drm" || id == "hdr" || id == "cdr") return TxPayloadKind::BroadcastAudio;
     if (id == "ft8" || id == "ft4" || id == "wspr" || id == "ft2" || id == "jt65" || id == "jt9" || id == "q65" || id == "fst4" || id == "msk144") return TxPayloadKind::Ftx;
     if (id == "rtty") return TxPayloadKind::Rtty;
-    if (id == "olivia" || id == "contestia" || id == "mfsk" || id == "thor" || id == "dominoex" || id == "hell") return TxPayloadKind::Keyboard;
+    if (id == "olivia" || id == "contestia" || id == "mfsk" || id == "thor" || id == "dominoex" || id == "hell" || id == "cp16") return TxPayloadKind::Keyboard;
     if (id == "cw") return TxPayloadKind::Cw;
     if (id == "psk") return TxPayloadKind::Psk;
     if (id == "js8") return TxPayloadKind::Js8;
