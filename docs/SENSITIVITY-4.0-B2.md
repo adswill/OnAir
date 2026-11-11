@@ -83,3 +83,20 @@ integrator, +-4 kHz) is taken off before it so that a radio some kHz off does no
 a filter alone gave 0 % at +3 kHz). 4 kHz instead of 4.5 kHz measured 0.3 dB better at AWGN; 4.5 kHz was kept for a transmitter with more deviation than the generator's.
 `MarineReceiver::setVhfNarrowChannel(false)` is the 3.9 path. ATIS (atis_rx.cpp) uses the same VhfSlicer and has the narrow path now too (atis_mode passes; not measured).
 Tests: sens40b guard (dsc), marine_dsc_* (audit, bands, bitsweep, calls, kat, sweep), marine_basic, marine_engine, atis_mode, marinevhf_mode pass. Simulated only: the generator's deviation is assumed.
+
+## MPT 1327 control channel (core/src/mpt1327/mpt1327_engine.cpp, new core/include/dect2/dsp/narrow_if.h)
+
+SNR in 12.5 kHz, 12 trials a point (harness entries `mpt1327` / `mpt1327-off`); a trial passes when at least half of the codewords of a clean run decode.
+
+| | 3.9 receiver | 4.0 receiver | gain |
+|---|---|---|---|
+| AWGN, 90 % point | 9 dB (8 dB: 6 / 12) | **6 dB** (5 dB: 4 / 12) | 3 dB |
+| 20 ppm carrier error (3.1 kHz, capped) | above 9 dB (0 / 12 at 9 dB; 11 dB in 3.9-D) | 6 to 7 dB (6 dB: 10 / 12) | 4 dB or more |
+| 50 ppm clock | 9 dB | 6 dB | 3 dB |
+| off-centre carrier (2.5 kHz) | above 9 dB (3 / 12 at 9 dB) | 6 dB | 3 dB or more |
+| noise only | 0 of 12 | 0 of 40 per scenario | |
+
+The 24 kHz decimated stream went straight into the FM discriminator: an IF noise bandwidth of 24 kHz for a signal of +-3.3 kHz (FFSK tones 1.2 / 1.8 kHz, deviation 1.3 to 2.7 kHz). The same
+filter-plus-follow-up as the DSC path now sits in front (`NarrowIf`: two-section Butterworth at 5.5 kHz, carrier error = 50 ms mean of the discriminator, slow integrator, +-4 kHz).
+4.5 kHz gave 0.7 dB more but cut a 2.7 kHz-deviation transmission (mpt1327_std sweep: 2 wrong results), so 5.5 kHz it is. `MptReceiver::setWeakSignalPath(false)` is the 3.9 path.
+Tests: sens40b guard (mpt1327 at 6 dB), mpt1327, mpt1327_mode, mpt1327_chan, mpt1327_std (216-case engine sweep: sample rate, offset, deviation, polarity, clock) pass. Simulated only.

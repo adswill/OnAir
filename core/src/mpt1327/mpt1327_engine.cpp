@@ -6,6 +6,7 @@
 #include "dect2/mpt1327/mpt1327_rx.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/mpt1327/mpt1327_chan.h"
+#include "dect2/dsp/narrow_if.h"
 #include "dect2/trunkpool/one_radio.h"
 #include "dect2/trunkpool/slice_ddc.h"
 #include <algorithm>
@@ -36,6 +37,8 @@ struct MptReceiver::Impl {
     std::complex<float> acc{0, 0};
     int accN = 0;
     std::complex<float> lastZ{0, 0};
+    NarrowIf nif;                 // 4.0: 5.5 kHz channel filter and carrier follow-up in front of the discriminator
+    bool weakPath = true;
     std::vector<float> audio;
     double powSum = 0;
     size_t powN = 0;
@@ -65,6 +68,7 @@ struct MptReceiver::Impl {
         decim = r > kTargetFs ? (int)std::lround(r / kTargetFs) : 1;
         if (decim < 1) decim = 1;
         fsEff = r > 0 ? r / decim : 0;
+        if (fsEff > 0) nif.configure(fsEff, std::min(5500.0, 0.45 * fsEff));
     }
     void play(int tg, const float* x, size_t cnt, int r) {
         if (audioTap) audioTap(tg, x, cnt, r);
@@ -113,7 +117,7 @@ struct MptReceiver::Impl {
     void clearState() {
         dec.reset();
         audio.clear();
-        acc = {0, 0}; accN = 0; lastZ = {0, 0}; phase = 0;
+        acc = {0, 0}; accN = 0; lastZ = {0, 0}; phase = 0; nif.reset();
         powSum = 0; powN = 0;
         seenMessages = 0;
         chans.clear();
@@ -239,9 +243,11 @@ void MptReceiver::feed(const std::complex<float>* x, size_t n) {
             s.accN = 0;
             s.powSum += (double)std::norm(z);
             s.powN++;
-            const std::complex<float> d = z * std::conj(s.lastZ);   // FM discriminator
-            s.lastZ = z;
+            const std::complex<float> zf = s.weakPath ? s.nif.process(z) : z;
+            const std::complex<float> d = zf * std::conj(s.lastZ);   // FM discriminator
+            s.lastZ = zf;
             const float hz = (float)(std::atan2(d.imag(), d.real()) * s.fsEff / (2 * kPi));
+            if (s.weakPath) s.nif.feedback(hz);
             s.audio.push_back(hz * kAudioScale);
             if (s.audio.size() >= block) s.processAudio();
         }
@@ -264,6 +270,7 @@ void MptReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     p_->log = std::move(cb);
 }
 
+void MptReceiver::setWeakSignalPath(bool on) { std::lock_guard<std::mutex> l(p_->mu); p_->weakPath = on; }
 void MptReceiver::setFollow(bool on) { std::lock_guard<std::mutex> l(p_->mu); p_->follow = on; p_->snap.follow = on; }
 void MptReceiver::setVoiceSlots(int n) { std::lock_guard<std::mutex> l(p_->mu); p_->one.setSlots(n); p_->snap.voiceSlots = p_->one.slots(); }
 void MptReceiver::setChannelPlan(int controlChannel, double spacingHz) {
