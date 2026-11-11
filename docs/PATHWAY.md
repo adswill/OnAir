@@ -1757,3 +1757,9 @@ airband clips in the same second keep separate files; chanvoice and hamsci test 
 av_opt_set_int; Windows macro names and POSIX-only test code; i18n catalog entries and German strings for the new screens. ci.yml run 43029255764 on
 15a2907f0 passed on Linux, macOS and Windows; tools/ci_times.tsv refreshed from it. Known flakes and slow-label failures are listed in the
 integration log.
+## 2026-11-11 OnAir 3.9.0 released
+Published v3.9.0 from 15a2907f0 with 12 assets (2 dmg, 2 deb, 2 portable tar.gz, 2 AppImage, Windows zip and installer, signed Android APK,
+SHA256SUMS). The Windows installer job on GitHub could not install NSIS (the runners could not resolve Ubuntu's package servers that evening), so
+the installer was built on the Mac with makensis 3.13 from the zip the CI built (makensis on macOS needs LANG/LC_ALL=en_US.UTF-8, otherwise it
+ends with bad_alloc). The tag's Docker image job failed for the same reason and has to be run again. main fast-forwarded to the release commit,
+website deployed, replies posted on #235 #239 #301 #358 #407 #410 #463 #474 #475 #476, the 67 merged feat39-* branches deleted from the public repo.
