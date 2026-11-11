@@ -1700,3 +1700,11 @@ apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-cen
 too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
 source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
 qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
+
+## 2026-11-11 Dolby Atmos: detection, 5.1/7.1 bed, experimental passthrough (feat39-atmos)
+Discord "Dolby Atmos Compatibility?". Before: every TV track was mixed to stereo, Atmos was not shown. Now the player reads the E-AC-3
+bsi of every frame (TS 103 420 addbsi flag and complexity index, chanmap beds) and the AC-4 dac4 DSI (objects / height channels, ATSC 3.0),
+the PMT knows the DVB AC-4 descriptor, the panels show "Dolby Atmos (E-AC-3 JOC), 5.1 bed", AudioOut plays 2/6/8 channels (Automatic by the
+device's speakers, or Stereo / Lt-Rt / 5.1 / 7.1), and an off-by-default IEC 61937 passthrough (WASAPI exclusive, CoreAudio hog mode, ALSA
+IEC958) sends AC-3 / E-AC-3 untouched to a receiver. Passthrough is NOT tested on hardware; Atmos streams are simulated. Objects can't be
+rendered (Dolby's licensed renderer) and Dolby Access can't be fed a bitstream by an app. docs/ATMOS-3.9.md.

@@ -63,14 +63,15 @@ static void bitstreamThread(AudioOut::Impl* I, BitstreamState* b) {
         I->render(scratch.data(), block);
         const uint64_t consumed = I->played.load() - p0;
         // keep the bursts in step with the clock: the words queued should cover what the PCM ring holds; a whole burst is dropped or
-        // waited for when they part by more than one and a half bursts (a decode error, a gap filled with PCM silence)
+        // waited for when they part by more than two and a half bursts (a decode error, a gap filled with PCM silence)
         const int64_t pcmQueued = (int64_t)(I->w.load() - I->r.load());
         uint64_t ird = I->ir.load(std::memory_order_relaxed);
         const uint64_t iwr = I->iw.load(std::memory_order_acquire);
         const int64_t iecQueued = (int64_t)(iwr - ird) / ratio;
         bool hold = false;
-        if (iecQueued - pcmQueued > period * 3 / (2 * ratio) && iwr - ird >= (uint64_t)period) { ird += (uint64_t)period; I->ir.store(ird); }
-        else if (pcmQueued - iecQueued > period * 3 / (2 * ratio)) hold = true;
+        const int64_t slack = (int64_t)period * 5 / (2 * ratio);   // 2.5 bursts: the E-AC-3 packer hands a burst over one frame late
+        if (iecQueued - pcmQueued > slack && iwr - ird >= (uint64_t)period) { ird += (uint64_t)period; I->ir.store(ird); }
+        else if (pcmQueued - iecQueued > slack) hold = true;
         const size_t want = (size_t)consumed * (size_t)ratio;
         size_t take = hold ? 0 : (size_t)std::min<uint64_t>(want, I->iw.load(std::memory_order_acquire) - ird);
         const bool mute = I->muted.load() || kForceMute;
@@ -164,7 +165,7 @@ AudioOut::~AudioOut() { stop(); }
 
 bool AudioOut::start(int rate, int channels) {
     channels = channels == 6 || channels == 8 ? channels : 2;
-    if (running_ && !bitstream_ && channels == ch_ && rate == rate_) return true;
+    if (running_ && !bitstream_ && channels == ch_) return true;   // as before: a running output keeps its rate
     if (running_) stop();
     if (channels != p_->channels) { p_->channels = channels; p_->ring.assign(p_->frames * (size_t)channels, 0.f); p_->r.store(p_->w.load()); }
     ch_ = channels;

@@ -74,6 +74,27 @@ int audioDeviceChannels(const std::string& name) {
         AudioObjectPropertyAddress a = {kAudioHardwarePropertyDefaultOutputDevice, kAudioObjectPropertyScopeGlobal, kAudioObjectPropertyElementMain};
         if (AudioObjectGetPropertyData(kAudioObjectSystemObject, &a, 0, nullptr, &sz, &dev) != noErr) return 0;
     }
+    {   // the speakers the user set up (Audio MIDI Setup > Configure Speakers): only channels with a loudspeaker label count, so an
+        // 18-output studio interface is not taken for a surround system
+        AudioObjectPropertyAddress pl = {kAudioDevicePropertyPreferredChannelLayout, kAudioObjectPropertyScopeOutput, kAudioObjectPropertyElementMain};
+        UInt32 lsz = 0;
+        if (AudioObjectGetPropertyDataSize(dev, &pl, 0, nullptr, &lsz) == noErr && lsz >= offsetof(AudioChannelLayout, mChannelDescriptions)) {
+            std::vector<uint8_t> lb(lsz);
+            auto* L = reinterpret_cast<AudioChannelLayout*>(lb.data());
+            if (AudioObjectGetPropertyData(dev, &pl, 0, nullptr, &lsz, L) == noErr) {
+                int n = 0;
+                if (L->mChannelLayoutTag == kAudioChannelLayoutTag_UseChannelDescriptions) {
+                    for (UInt32 i = 0; i < L->mNumberChannelDescriptions && offsetof(AudioChannelLayout, mChannelDescriptions) + (i + 1) * sizeof(AudioChannelDescription) <= lsz; i++) {
+                        const AudioChannelLabel c = L->mChannelDescriptions[i].mChannelLabel;
+                        if ((c >= kAudioChannelLabel_Left && c <= kAudioChannelLabel_VerticalHeightRight) || (c >= kAudioChannelLabel_RearSurroundLeft && c <= kAudioChannelLabel_LFE2)) n++;
+                    }
+                } else if (L->mChannelLayoutTag == kAudioChannelLayoutTag_UseChannelBitmap) {
+                    for (UInt32 b = L->mChannelBitmap; b; b &= b - 1) n++;
+                } else n = (int)AudioChannelLayoutTag_GetNumberOfChannels(L->mChannelLayoutTag);
+                if (n > 0) return n;
+            }
+        }
+    }
     AudioObjectPropertyAddress a = {kAudioDevicePropertyStreamConfiguration, kAudioObjectPropertyScopeOutput, kAudioObjectPropertyElementMain};
     UInt32 sz = 0;
     if (AudioObjectGetPropertyDataSize(dev, &a, 0, nullptr, &sz) != noErr || sz < sizeof(AudioBufferList)) return 0;
