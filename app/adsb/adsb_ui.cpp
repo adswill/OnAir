@@ -1,6 +1,7 @@
 // ADS-B mode entry: the screen state, the receiver position, the tick, and the entry points the shell calls (tab,
 // list, receiver, panels, status, summary, tuner, decoder, synth, meters). The table views are in adsb_table_ui.cpp, the
 // radar and map in adsb_map_ui.cpp.
+#include "../d40/d40_ui.h"
 #include "adsb_internal.h"
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
@@ -162,6 +163,7 @@ void tick(App& a) {
             S.jam.observe(o);
         }
         atmosFeed(t, ImGui::GetTime());
+        d40AdsbFeed(t);   // 4.0: track replay (app/d40)
     }
 }
 
@@ -169,7 +171,7 @@ void tick(App& a) {
 
 void tab(App& a) {
     kit::modeHeader({11, "ADS-B", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("adsbv", S.viewMode, {{tr("Live"), 1}, {tr("Tracks"), 5}, {tr("Map"), 0}, {tr("Radar"), 2, true}, {tr("Range"), 3, true}, {tr("Range stats"), 4, true}, {tr("Atmosphere"), 6, true}, {tr("Overhead"), 7, true}, {tr("History"), 8, true}, {tr("Airport"), 9, true}});
+    kit::modeNav("adsbv", S.viewMode, {{tr("Live"), 1}, {tr("Tracks"), 5}, {tr("Map"), 0}, {tr("Radar"), 2, true}, {tr("Range"), 3, true}, {tr("Range stats"), 4, true}, {tr("Atmosphere"), 6, true}, {tr("Overhead"), 7, true}, {tr("History"), 8, true}, {tr("Airport"), 9, true}, {tr("Replay"), 10, true}});
     if (S.viewMode == 0 || S.viewMode == 1 || S.viewMode == 2) { filterBar(a); overheadBanner(a); }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     const float dw = std::min(250.f * gUi, W * 0.26f);
@@ -188,6 +190,7 @@ void tab(App& a) {
     else if (S.viewMode == 7) overheadView(a);
     else if (S.viewMode == 8) seenView(a);
     else if (S.viewMode == 9) airportView(a);
+    else if (S.viewMode == 10) d40AdsbReplayView(a, S.refLat, S.refLon, [&](uint32_t icao) { for (const auto& ac : a.rx.adsb.aircraft) if (ac.icao == icao) return ac.callsign; return std::string(); });
     else statsView(a);
     ImGui::EndChild();
     if (pane) {
