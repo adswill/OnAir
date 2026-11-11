@@ -1554,6 +1554,6 @@ The documented leftovers of the three 3.9 network features are done. Everything 
   - Waterfall zoom: the server cuts the part from its FFT, up to 64x, with at least 64 bins.
   - Mode options: 257 options for 113 standards, generated from the receivers' setters by `tools/gen_web_options.py`, with a `--check` in the gate.
   - Digital-voice speech in the browser for DMR, P25, P25 phase 2, NXDN, dPMR, D-STAR, M17 and Fusion. It comes from their audio taps, and the demodulator is off for those modes.
-  - Tests: `web_app_client` passed locally, `web_schema` and `webapp` were extended.
+  - Tests: `web_app_client` passed locally. On quick CI, `webapp` passed in run 42937680306, and the M17 speech arrived (43200 samples in 8 s, rms 1635). In run 42933322311 the option checks of `web_schema` passed, but the test failed on 5 mode rows merged earlier without telemetry (3G-ALE, DVB-SH, Link 11 CLEW, STANAG 4481 FSK, STANAG 4539). Those rows are not from this branch. The EchoLink and Winlink tests passed in the same run.
 
 Docs: ECHOLINK-3.9.md, WINLINK-3.9.md, WEB-3.9.md and WEB-SCHEMA-3.9.md.
