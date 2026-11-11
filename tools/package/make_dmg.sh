@@ -22,6 +22,7 @@ cp $BUILD/dect2 "$APP/Contents/MacOS/OnAir"
 cp $BUILD/onair-extcap "$APP/Contents/MacOS/onair-extcap"   # Wireshark capture interface (docs/WIRESHARK-3.8.md)
 cp $BUILD/onair-server "$APP/Contents/MacOS/onair-server"   # the headless server for OnAir Web (docs/headless-server.md); bundle_macos.py gives it the same libraries
 mkdir -p "$APP/Contents/Resources/web"; cp -R web/onair-web "$APP/Contents/Resources/web/"   # the OnAir Web browser page (onair-server looks in ../Resources/web/onair-web)
+cp -R web/onair-app "$APP/Contents/Resources/web/"   # OnAir Web 3.9 (onair-server looks in ../Resources/web/onair-app)
 cp packaging/icons/OnAir.icns "$APP/Contents/Resources/OnAir.icns"
 cat > "$APP/Contents/Info.plist" <<PLIST
 <?xml version="1.0" encoding="UTF-8"?>
