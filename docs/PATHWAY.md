@@ -1784,3 +1784,6 @@ feat40-feat4: header-only mode helpers in core/include/dect2/d40/ (FM station na
 Features: AIS coverage / type mix / name cache, ATIS tracker, pager keywords and groups, callsign parser, mode guess, spot summary, tone identification, ISM classifier. docs/FEATURES-4.0-C.md, tests/feat40c (simulated only, headers not yet wired into the UI).
 
 Feat40-feat3 (later): ADS-B orbit detector, clear TX frequency, band hop, Sarsat incidents, DTMF numbers, ACARS channel load.
+
+## 2026-11-12 4.0 wiring (feat40-wire)
+Cards for the core-only 4.0 engines in app/d40/: FM names + DX alarm, DVB-S blind scan / modcods / dish pointing, sweep activity map + new-signal alert + classification, AM carrier offset / sideband / schedule ID, DAB ranking + transmitter table, ADS-B replay + orbits, transmit link budget / ramp / SWR, talkgroup activity for P25 / NXDN / TETRA, ACARS channel load, AIS coverage + type mix, pager groups. Syntax-checked with clang++ -fsyntax-only only; list of what is still unwired is in docs/WIRING-4.0.md.
