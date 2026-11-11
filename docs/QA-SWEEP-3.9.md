@@ -54,7 +54,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | class | count |
 |---|---|
 | unrealistic | 76 |
-| open | 40 |
+| open | 20 (40 before feat39-qafixA) |
 | threshold | 16 |
 | too short | 15 |
 | no check | 10 |
@@ -93,7 +93,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | meshcom | 22 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.073 | 1 | generator sends silence |
 | meshcore | 22 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.100 | 1 |  |
 | meshtastic | 22 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.059 | 2 |  |
-| hdr | 23 | 2 | 3 | pass | FAIL | pass | FAIL | pass | pass | 0.132 | 1 | pos open, snr threshold |
+| hdr | 23 | 2 | 32 | pass | pass | pass | FAIL | pass | pass | 0.051 | 20 | snr threshold; feat39-qafixA |
 | cdr | 24 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.098 | 40 |  |
 | flex | 25 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.045 | 88 |  |
 | pager | 25 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.083 | 16 |  |
@@ -106,7 +106,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | ft2 | 27 | 2 | 32 | pass | pass | weak | pass | pass | pass | 0.062 | 12 |  |
 | ft4 | 27 | 2 | 32 | pass | FAIL | weak | pass | pass | pass | 0.060 | 5 | pos unrealistic |
 | ft8 | 27 | 2 | 32 | pass | weak | weak | pass | pass | pass | 0.204 | 1274 | (saved bytes) (real time) |
-| hamdrm | 27 | 2 | 8 | pass | FAIL | FAIL | pass | pass | FAIL | 0.046 | 1551 | pos unrealistic, neg unrealistic, tx open; (saved bytes) |
+| hamdrm | 27 | 2 | 8 | pass | FAIL | FAIL | FAIL | pass | pass | 0.028 | 1551 | snr threshold, pos unrealistic, neg unrealistic; (saved bytes); feat39-qafixA |
 | hell | 27 | 2 | 3 | pass | FAIL | FAIL | pass | pass | pass | 0.052 | 50 | pos unrealistic, neg unrealistic |
 | hfdig | 27 | 2 | 3 | pass | FAIL | weak | pass | pass | - | 0.061 | 14 | pos unrealistic |
 | jt4 | 27 | 2 | 32 | FAIL | - | - | - | pass | - | 0.060 | 0 | clean too short; (real time) |
@@ -133,7 +133,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | cw | 36 | 2 | 3 | pass | pass | pass | weak | pass | pass | 0.075 | 128 |  |
 | hfdl | 37 | 2 | 3 | pass | FAIL | FAIL | pass | pass | pass | 0.116 | 3 | pos unrealistic, neg unrealistic |
 | psk | 38 | 2 | 3 | pass | pass | FAIL | pass | pass | pass | 0.078 | 13 | neg unrealistic |
-| js8 | 39 | 2 | 32 | pass | FAIL | FAIL | FAIL | pass | FAIL | 0.104 | 3 | pos unrealistic, neg unrealistic, snr open, tx open; (real time) |
+| js8 | 39 | 2 | 32 | pass | pass | weak | pass | pass | pass | 0.058 | 8 | feat39-qafixA |
 | nxdn | 40 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.123 | 38 |  |
 | gsmr | 41 | 5 | 14 | pass | pass | pass | pass | pass | pass | 0.419 | 50 | (real time) |
 | dvbc | 42 | 10 | 3 | pass | pass | pass | FAIL | pass | pass | 0.772 | 56107 | snr threshold |
@@ -144,11 +144,11 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | dpmr | 47 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.073 | 26 |  |
 | tetra | 48 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.058 | 131 | qafixB, this Mac; tx fixed in feat39-tetrafix |
 | mac | 49 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.681 | 6068 |  |
-| astro | 50 | 2.5 | 28 | FAIL | - | - | - | pass | FAIL | 0.047 | 0 | clean open, tx open; (real time) |
+| astro | 50 | 2.5 | 3 | lock | lock | lock | lock | lock | lock | 0.053 | 0 | feat39-qafixA |
 | ale | 51 | 2 | 3 | pass | FAIL | FAIL | pass | pass | pass | 0.078 | 6 | pos unrealistic, neg unrealistic |
 | p25 | 52 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.059 | 86 |  |
 | ble | 53 | 4 | 3 | pass | pass | pass | pass | pass | pass | 0.122 | 857 |  |
-| iono | 54 | 20 | 3.5 | FAIL | - | - | - | pass | FAIL | 0.675 | 0 | clean open, tx open; (real time) |
+| iono | 54 | 20 | 3 | lock | lock | lock | lock | pass | lock | 0.289 | 0 | feat39-qafixA |
 | qo100 | 55 | 10 | 3 | lock | lock | lock | lock | pass | lock | 0.213 | 0 | qafixB, this Mac |
 | wifi | 56 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.814 | 765 |  |
 | am | 57 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.099 | 299 |  |
@@ -164,7 +164,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | hrpt | 66 | 6 | 3 | pass | pass | pass | pass | pass | pass | 0.525 | 850 |  |
 | zigbee | 67 | 4 | 3 | pass | pass | pass | pass | pass | pass | 0.315 | 893 |  |
 | flarm | 68 | 1 | 3 | pass | pass | pass | pass | pass | pass | 0.061 | 9 |  |
-| hfbeacon | 69 | 10 | 7 | FAIL | - | - | - | pass | FAIL | 0.168 | 0 | clean open, tx open; (real time) |
+| hfbeacon | 69 | 10 | 7 | lock | FAIL | FAIL | lock | pass | lock | 0.052 | 0 | pos unrealistic, neg unrealistic; feat39-qafixA |
 | dji | 70 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.780 | 3 |  |
 | nbiot | 71 | 2 | 32 | pass | pass | pass | pass | pass | pass | 0.026 | 2 | qafixB, this Mac |
 | halow | 72 | 6 | 3 | pass | pass | pass | pass | pass | pass | 1.449 | 520 |  |
@@ -175,14 +175,14 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | multitone | 77 | 2 | 8 | pass | pass | pass | FAIL | pass | pass | 0.027 | 11 | snr threshold |
 | same | 78 | 2 | 8 | pass | pass | pass | pass | pass | pass | 0.040 | 1 |  |
 | ant | 79 | 4 | 3 | pass | pass | pass | pass | pass | pass | 0.229 | 36 |  |
-| dect | 80 | 5 | 14 | FAIL | - | - | - | pass | pass | 0.209 | 0 | clean open; (real time) |
+| dect | 80 | 5 | 3 | pass | pass | pass | pass | pass | pass | 0.168 | 1198 | feat39-qafixA |
 | tetrapol | 81 | 0.25 | 3 | pass | pass | pass | pass | pass | pass | 0.043 | 148 |  |
 | elektro | 82 | 2.4 | 3 | pass | pass | pass | pass | pass | pass | 0.200 | 118 |  |
 | lbj | 83 | 0.96 | 3 | pass | pass | pass | pass | pass | pass | 0.061 | 2 |  |
 | vdl4 | 84 | 2 | 3 | pass | pass | pass | FAIL | pass | pass | 0.073 | 3 | snr threshold |
 | uat | 85 | 2 | 3 | pass | pass | pass | weak | pass | pass | 0.049 | 10 | qafixB, this Mac |
 | wisun | 86 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.907 | 45 |  |
-| eczas | 87 | 0.256 | 32 | pass | FAIL | FAIL | FAIL | pass | pass | 0.005 | 3 | pos unrealistic, neg unrealistic, snr open |
+| eczas | 87 | 0.256 | 32 | pass | FAIL | FAIL | FAIL | pass | pass | 0.003 | 3 | pos unrealistic, neg unrealistic, snr threshold; feat39-qafixA |
 | wmbus | 88 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.122 | 6 |  |
 | tones | 91 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.064 | 1 |  |
 | sarsat | 94 | 0.256 | 8 | pass | pass | pass | pass | pass | - | 0.046 | 2 |  |
@@ -205,7 +205,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | fusion | 130 | 2 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
 | ltr | 131 | 0.48 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
 | edacs | 132 | 0.48 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
-| kait | 133 | 1 | 32 | FAIL | - | - | - | pass | pass | 0.120 | 0 | clean open; (real time) |
+| kait | 133 | 1 | 32 | pass | pass | pass | pass | pass | pass | 0.093 | 381 | feat39-qafixA |
 | kaws | 135 | 2 | 32 | FAIL | - | - | - | pass | - | 0.045 | 0 | clean generator; (real time) generator sends silence |
 | ardop | 142 | 2 | 8 | pass | FAIL | pass | pass | pass | pass | 0.077 | 4 | pos unrealistic |
 | goesdcs | 143 | 1 | 8 | pass | pass | pass | pass | pass | pass | 0.055 | 3 |  |
@@ -228,14 +228,14 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | lorasat | 203 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.092 | 1 |  |
 | pskd | 204 | 2 | 3 | lock | lock | lock | lock | pass | - | 0.099 | 0 |  |
 | pactor | 205 | 2 | 3 | pass | pass | FAIL | pass | pass | - | 0.072 | 2 | neg unrealistic |
-| esubghz | 206 | 2 | 3 | pass | pass | pass | pass | pass | FAIL | 0.083 | 5 | tx open |
+| esubghz | 206 | 2 | 32 | pass | pass | pass | pass | pass | pass | 0.032 | 45 | feat39-qafixA |
 | roshf | 207 | 2 | 32 | pass | FAIL | FAIL | pass | pass | - | 0.177 | 11 | pos unrealistic, neg unrealistic |
 | ssdv | 208 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.095 | 1 |  |
 | ebicab | 209 | 10 | 3 | pass | pass | pass | pass | pass | - | 0.274 | 348 |  |
-| inmsat | 210 | 6 | 8 | pass | FAIL | pass | FAIL | pass | - | 0.194 | 52 | pos open, snr open |
+| inmsat | 210 | 6 | 11.7 | pass | pass | pass | pass | pass | - | 0.105 | 486 | feat39-qafixA |
 | iptv | 211 | 2 | 32 | FAIL | - | - | - | pass | - | 0.040 | 0 | clean no signal; (real time) generator sends silence |
 | nrf24 | 212 | 8 | 3 | pass | pass | pass | pass | pass | - | 0.377 | 1383 |  |
-| atis | 213 | 1 | 3 | pass | pass | pass | FAIL | pass | - | 0.077 | 1 | snr open |
+| atis | 213 | 1 | 32 | pass | pass | pass | weak | pass | - | 0.019 | 12 | snr threshold; feat39-qafixA |
 | shortwave | 214 | 2 | 3 | lock | lock | lock | lock | lock | - | 0.141 | 0 |  |
 | gk2alrit | 232 | 2.4 | 3 | pass | pass | pass | pass | pass | - | 0.090 | 20 |  |
 | gk2ahrit | 233 | 10 | 3 | pass | pass | pass | pass | pass | - | 0.547 | 1094 |  |
@@ -259,7 +259,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | meteorhrpt | 266 | 6 | 3 | pass | pass | pass | pass | FALSE | - | 0.707 | 238 | noise no check |
 | elektrordas | 267 | 45 | 1.6 | pass | pass | pass | pass | FALSE | - | 5.501 | 5654 | noise no check |
 | arktikardas | 268 | 45 | 1.6 | pass | pass | pass | pass | FALSE | - | 4.205 | 5654 | noise no check |
-| arktikaggak | 269 | 1.024 | 32 | FAIL | - | - | - | pass | - | 0.037 | 0 | clean open; (real time) |
+| arktikaggak | 269 | 1.024 | 32 | pass | pass | pass | pass | pass | - | 0.015 | 44 | feat39-qafixA |
 | awsl | 270 | 6 | 3 | pass | pass | pass | pass | pass | - | 0.608 | 515 |  |
 | msgraw | 271 | 6 | 3 | pass | pass | pass | pass | pass | - | 0.501 | 1081 |  |
 | himawaricast | 272 | 6 | 3 | pass | pass | pass | pass | pass | - | 0.261 | 180 |  |
@@ -282,7 +282,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | frs | 343 | 2 | 8 | pass | pass | pass | FAIL | pass | - | 0.083 | 3 | snr threshold |
 | pmr446 | 344 | 1 | 32 | pass | pass | pass | FAIL | pass | - | 0.062 | 15 | snr threshold; qafixB, this Mac |
 | hamfm | 345 | 2 | 8 | pass | pass | pass | FAIL | pass | - | 0.113 | 4 | snr threshold |
-| hfvoice | 346 | 0.25 | 32 | FAIL | - | - | - | pass | - | 0.086 | 0 | clean open; (real time) |
+| hfvoice | 346 | 0.25 | 32 | pass | pass | pass | pass | pass | - | 0.006 | 3 | feat39-qafixA |
 | mdc1200 | 347 | 2 | 8 | pass | pass | pass | FAIL | pass | - | 0.125 | 3 | snr threshold |
 | wmic | 348 | 10 | 3 | lock | lock | lock | lock | pass | - | 0.171 | 0 | qafixB, this Mac |
 | elrs | 362 | 8 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
@@ -310,7 +310,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | arqn | 435 | 2 | 32 | pass | pass | FAIL | pass | pass | - | 0.014 | 425 | neg unrealistic |
 | autospec | 436 | 2 | 32 | pass | pass | FAIL | pass | pass | - | 0.013 | 204 | neg unrealistic |
 | spreadhf | 437 | 2 | 32 | pass | pass | FAIL | pass | pass | - | 0.027 | 195 | neg unrealistic |
-| gtor | 438 | 2 | 3 | pass | pass | FAIL | FAIL | pass | - | 0.099 | 70 | neg unrealistic, snr open |
+| gtor | 438 | 2 | 32 | pass | pass | weak | pass | pass | - | 0.014 | 480 | neg unrealistic; feat39-qafixA |
 | efr | 439 | 2 | 3 | pass | pass | FAIL | pass | pass | - | 0.110 | 34 | neg unrealistic |
 | piccolo | 440 | 2 | 8 | pass | pass | FAIL | pass | pass | - | 0.044 | 18 | neg unrealistic |
 | coquelet | 441 | 2 | 8 | pass | pass | FAIL | pass | pass | - | 0.445 | 16 | neg unrealistic |
@@ -427,6 +427,70 @@ generator or engine was wrong, and given a unit test with the impairment. Simula
   which brought the TETRA TEDS / D8PSK work (7889a28de, f70d8f73a), it fails in three runs out of three (the clean signal still passes).
   Not this branch's change: it stays `open` in `qa_known.inc` for the TETRA worker.
 - **NavIC** and **riometer**: not decoder faults, see below.
+
+### Open failures fixed in feat39-qafixA (the first half of the open list, arktikaggak .. kait)
+
+The rows of these modes in the table above are from this branch's local run (the Mac, `localbuild.sh`, 21 modes, 0 unexpected failures).
+
+All on simulated signals (each mode's own generator and transmitter); no recording was used for these fixes.
+
+- **arktikaggak (Arktika-M GGAK)** (`core/src/elektro/elektro_ggak.cpp`): three faults, none of them seen before because
+  `test_wxsat_rx` only printed the GGAK result. The generator ran sample-spaced RRC taps over a symbol-spaced history, so the test signal
+  was a 750 Hz wide smear, active 40 % of the time; it now sums each symbol's pulse at its own time. The Gardner timing error had the wrong
+  sign and held the sampling half a symbol off (lock metric 0.3, every CRC failed). Acquisition squared the signal after the matched filter
+  at 2.3 samples per symbol, which reaches only +-2.9 kHz and cut an offset signal: it now runs before the matched filter at 4.8 samples per
+  symbol (+-6 kHz). Result: 14 frames of 14 in 10 s at 240 ksps and 1.024 Msps, +-2 kHz and +-5.5 kHz off, -50 ppm; the test now checks it.
+- **astro, iono** (`core/src/engine/engine_telemetry.cpp`): neither reported a lock flag, so the sweep saw nothing. Radio astronomy is a
+  measuring tool: it now locks while it integrates a signal (above -150 dBFS). The ionospheric sounder locks once a sounder's sweep was
+  found; on noise it finds none (the noise row passes, not `lock`).
+- **dect** (`core/src/dect/dect_rx.cpp`): the 32-bit running power sum drifted below zero after a burst into digital silence; the floor
+  followed it and every sample after the first burst looked like a burst start. The test signal decoded 2 of 1200 bursts in 3 s, the
+  transmitter (no noise at all) all of them. The sum is now recomputed each window and the average clamped; 1197 of 1200. `test_dect_rx`
+  has a no-noise case.
+- **hfbeacon** (`core/src/hfbeacon/hfbeacon_gen.cpp`): the test signal had its beacons only near 3.6 MHz, outside the span at the mode's
+  14.5 MHz default (10.5 - 18.5 MHz). It now also keys the D and K markers of the 13.5277 MHz cluster at their offset from 14.5 MHz (the
+  NCDXF beacons need the computer clock, which a file has not). Clean, 12 dB and the transmitter lock; +-2 kHz is the HF class (the
+  beacons are searched within 50 Hz of their frequency).
+- **hfvoice** (`core/src/engine/engine_start.cpp`, `core/src/chanvoice/chv_gen.cpp`): the engine never set the channelised-voice service;
+  only the panel did, so without it every one of the seven entries ran the CB receiver, and HF voice's USB calls stayed silent. The engine
+  now sets it from the mode. The voice scenes sat on the plan's centre instead of the tune offset below it (as a radio receives them), the
+  SSB speech was 24 kHz wide, and the scene's loop had a pause shorter than the SSB squelch's hang; with no noise to dither the 8-bit test
+  source the speech also made spurs 46 and 92 kHz away that the finder took for calls. Now: one call per loop, all six conditions pass.
+  Side effects (feat39-qafixB's entries, left in its list): `pmr446` +-2 kHz passes now (its scene was 25 kHz off the channel plan), and
+  `wmic` locks on its clean signal (it ran as CB before).
+- **js8, kait**: both decode on their own threads after the file ends. The sweep now flushes JS8's slots and waits for a KAIT decode in
+  progress. **KAIT** (`core/src/kait/kait_live.cpp`, `kait_rx.cpp`): a burst on the first sample with the carrier above the dial had its
+  start sweep's correlation peak before the buffer, so the search took a later peak inside the burst; the stream now starts with the lead's
+  worth of silence. At 50 ppm the header (78 000 samples, read with a 1.0 clock ratio) slipped 4 samples and never decoded, and the fine
+  timing searched only +-0.5 samples (2.7 dB lost): the header now tries clock steps of 30 ppm up to +-90 ppm and the fine timing +-1.5
+  samples. `test_kait_phy` has +-50 ppm cases (7 of 8 layers at 8 dB, as at 18 ppm), `test_kait_live` the first-sample case.
+- **esubghz tx** (`core/src/esubghz/esubghz_rx.cpp`, sweep): the sweep moved every transmitter by the mode's tune offset; a TX session
+  does not for the modes with their own frequency plan (`txModeTuneOffsetHz`: KA modes, NFC, Flipper Sub-GHz), so the Flipper packet sat
+  300 kHz off. With that fixed, the packet (keyed 5 ms into the recording) was inside the receiver's first 2000 samples, which set the
+  noise floor from it; a rise far above the quietest power so far now ends the start-up. `test_esubghz_rx` has the no-lead case.
+- **gtor snr** (`core/src/hfutil/hfu_fsk.cpp`): the baud search counted every discriminator crossing of 0.2 x its mean; at 12 dB the
+  noise crossings diluted the clock line under the 0.25 ratio. Hysteresis at 0.6 x: 140 blocks at 12 dB (0 before), the same 150 at
+  60 dB; ARQ-E, ARQ-N, Autospec, SPREAD, EFR, Piccolo and Coquelet sweep as before.
+- **hamdrm tx**: passes in this branch's runs (1551 saved bytes clean, the transmitter's picture saved). The failing CI run was not
+  reproduced.
+- **hdr pos, inmsat pos / snr**: the decoders lock late (HD Radio's first block 4.4 s into 8 s, Inmarsat's first 10500 bit/s SU 7.6 s
+  clean, 9.4 s with the offset or at 12 dB) and the sweep judged them at a length the clean run only just decoded in. HD Radio's lock flag
+  also ended the length search at 3 s (one block). The sweep now takes the next length when the clean run's first block came in the last
+  quarter of the signal, and a lock ends the search only for a mode that counts no blocks. HD Radio passes +2 kHz at 32 s (20 blocks clean); Inmarsat
+  passes every condition at 11.7 s (486 SUs clean; 1842 / 1732 / 1732 clean / +2 kHz / 12 dB at 24 s). Inmarsat's lock time (the Aero
+  receiver's band search in each window) is the thing to shorten.
+- **js8 snr, tx**: JS8 takes its 15 s slots from UTC. On a file the receiver took them from the computer clock when it started reading,
+  while the generator and the transmitter had put their frames on the wall clock's slots when they made the file seconds earlier: the
+  frames landed anywhere in the receiver's slots and decoded by chance (CI failed, the Mac passed). The sweep now gives JS8 the file's
+  start time (`Js8Receiver::setStartTime`), as a recording's metadata would; every condition passes, +-2 kHz too (4 to 8 decodes in
+  32 s clean). In the app nothing passes a recording's start time to JS8 yet: a file plays with slots from the computer clock.
+- **hamdrm snr** became `threshold`: the 99 % band without the floor (3.4 kHz, 3.9 before) puts 0.6 dB more noise in the band; HamDRM
+  saves nothing at 12 dB and the picture at 13 dB.
+- **atis snr, eczas snr** are now `threshold` with the numbers in `qa_known.inc`: ATIS's 99 % band is that of a mostly unmodulated FM
+  carrier (1.7 kHz), so 12 dB there is 2 dB in the 16 kHz channel (it decodes at 5 dB there). e-Czas at 12 dB is 14.7 dB in 100 Hz,
+  under its decoder's 17 dB edge; the GUM spec names a Reed-Solomon code but not its field or generator, so the decoder has the CRC only.
+- Sweep: the 99 % band leaves out the floor (the 10th percentile of the spectrum): a bursty narrow signal over a floor of 1 % of its
+  power got a band of half the rate.
 
 ## Unrealistic conditions and generators (not decoder bugs)
 
@@ -545,30 +609,9 @@ plus noise alone on all 20 links (0 frames, 86 - 88 % of the input skipped). Sim
 ## Still failing (open)
 
 These failures are not explained by the condition. They are in `qa_known.inc` as `open`, so the test passes today, but each needs a look at its mode.
-The second half of the list (navic .. xb_oceansat2, 20 entries) is done except `tetra/tx` (below): see "Second half of the open list" and the CPU section. The
-entries left are the first half's (feat39-qafixA).
+Both halves of the list were worked through (feat39-qafixA: arktikaggak .. kait; feat39-qafixB: navic .. xb_oceansat2; feat39-tetrafix: `tetra/tx`). The `open` entries left in tests/qa/qa_known.inc:
 
-- `tetra/tx`: its transmitter's signal does not decode since the TETRA TEDS / D8PSK merge (to investigate)
-- `hdr/pos`: fails with the offset (to investigate)
-- `hamdrm/tx`: its transmitter's signal does not decode (to investigate)
-- `js8/snr`: fails at 12 dB (to investigate)
-- `js8/tx`: its transmitter's signal does not decode (to investigate)
-- `astro/clean`: does not decode its own test signal through the engine (to investigate)
-- `astro/tx`: its transmitter's signal does not decode (to investigate)
-- `iono/clean`: does not decode its own test signal through the engine (to investigate)
-- `iono/tx`: its transmitter's signal does not decode (to investigate)
-- `hfbeacon/clean`: does not decode its own test signal through the engine (to investigate)
-- `hfbeacon/tx`: its transmitter's signal does not decode (to investigate)
-- `dect/clean`: does not decode its own test signal through the engine (to investigate)
-- `eczas/snr`: fails at 12 dB (to investigate)
-- `kait/clean`: does not decode its own test signal through the engine (to investigate)
-- `esubghz/tx`: its transmitter's signal does not decode (to investigate)
-- `inmsat/pos`: fails with the offset (to investigate)
-- `inmsat/snr`: fails at 12 dB (to investigate)
-- `atis/snr`: fails at 12 dB (to investigate)
-- `arktikaggak/clean`: does not decode its own test signal through the engine (to investigate)
-- `hfvoice/clean`: does not decode its own test signal through the engine (to investigate)
-- `gtor/snr`: fails at 12 dB (to investigate)
+
 
 ## Not done
 
@@ -578,5 +621,5 @@ entries left are the first half's (feat39-qafixA).
   error. It reported only three more memcpy-from-null sites (DAB generator, DMR bridge, DRM bridge: all fixed) and an ATSC spectrum check
   (ATSC belongs to another worker). With no overflow or use-after-free found, the corruption is most likely a data race between those
   six Engines. The next step is a ThreadSanitizer run of `iq_modes` (`DECT2_SANITIZE_THREAD=ON`).
-- The first half's `open` failures above (feat39-qafixA).
+- The `open` entries above.
 - CPU: the other wide downlinks of the top ten (ISDB-S, FY-3 MPT, Elektro / Arktika RDAS, GEONETCAST) were not touched here.

@@ -56,6 +56,18 @@ int main() {
     CHECK(t.image && t.image->w == 960 && kait::psnrRgb(img, *t.image) > 33.0, "picture missing or poor (%.1f dB)", t.image ? kait::psnrRgb(img, *t.image) : 0.0);
     CHECK(t.bursts >= 1 && t.burstsDecoded >= 1, "burst counters %llu %llu", (unsigned long long)t.bursts, (unsigned long long)t.burstsDecoded);
     CHECK(!kaitSummary(t).empty(), "summary");
+    {   // a burst on the very first sample (a recording started by the burst), +500 Hz off: the start sweep's correlation peak moves before the
+        // first sample; the receiver once took a later peak inside the burst and never decoded it (docs/QA-SWEEP-3.9.md)
+        kaittest::Rng rng0(3);
+        const std::vector<kait::cf> c0 = kaittest::channel(burst, 20.0, 500.0, 0.0, 0, (size_t)(1.5 * kait::kInternalRate), rng0);
+        KaitLiveReceiver r0;
+        r0.configure(kait::kInternalRate);
+        for (size_t p = 0; p < c0.size(); p += 40000) r0.feed(c0.data() + p, std::min<size_t>(40000, c0.size() - p));
+        r0.waitIdle();
+        KaitTelemetry t0;
+        for (int i = 0; i < 5; i++) r0.telemetry(t0, 0);
+        CHECK(t0.state == 4 && t0.headerOk && t0.layersComplete >= 7, "burst on the first sample: state %d header %d layers %d", t0.state, t0.headerOk, t0.layersComplete);
+    }
     // noise only: stays listening
     KaitLiveReceiver q;
     q.configure(1000000.0);

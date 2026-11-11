@@ -79,6 +79,7 @@ int poll49(Rx& rx, RxTelemetry& t, uint64_t* seqs) {
             t.seq = mt.seq;
             t.state = mt.state;
             t.cfoHz = 0;
+            t.dataValid = (mt.frames > 0 || mt.completed > 0) && mt.powerDb > -150;   // integrating a signal (a measuring tool: no checked blocks)
             t.rateOk = rx.ready();
             t.astro = std::move(mt);
             return 1;
@@ -115,6 +116,11 @@ int poll53(Rx& rx, RxTelemetry& t, uint64_t* seqs) {
             t.seq = mt.seq;
             t.state = mt.state;
             t.cfoHz = 0;
+            {   // a sounder's sweep was found (the chirp detector's hit count over its rate's threshold)
+                int sw = 0;
+                for (const auto& so : mt.sounders) sw += so.sweeps;
+                t.dataValid = sw > 0;
+            }
             t.rateOk = rx.ready();
             t.iono = std::move(mt);
             return 1;

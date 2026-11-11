@@ -1,6 +1,7 @@
 #include "dect2/hfbeacon/hfbeacon_gen.h"
 #include "dect2/hfbeacon/hfbeacon_dsp.h"
 #include "dect2/hfbeacon/hfbeacon_list.h"
+#include "dect2/hfbeacon/hfbeacon_rx.h"
 #include <cmath>
 #include <cstring>
 
@@ -129,6 +130,14 @@ public:
         put(3595.3, 'K', 15);
         hfb::GenSrc cw; cw.kind = hfb::GenSrc::Carrier; cw.freqHz = 3595.45e3; cw.snr100Db = 15;
         if (std::fabs(cw.freqHz - fc) < 0.4 * fs_ - 3000) g_.add(cw);
+        // the same two markers on the 13.5277 MHz cluster, at the offsets they have from the mode's own default frequency (14.5 MHz): the test
+        // signal does not know the radio's frequency, and from 14.5 MHz the 3.59 MHz cluster is out of the span. Around 3.65 MHz these sit
+        // 970 kHz below, on nothing in the beacon list. (The NCDXF beacons need the computer clock, which a file or the test signal has not.)
+        const double off = 13527.7e3 - hfbeaconTuning().defMhz * 1e6;
+        if (std::fabs(off) < 0.4 * fs_ - 3000) {
+            put(fc / 1e3 + off / 1e3, 'D', 15);
+            put(fc / 1e3 + off / 1e3 + 0.6, 'K', 15);
+        }
     }
     double sampleRate() const override { return fs_; }
     void generate(cf32* out, size_t n) override { g_.generate(out, n); }

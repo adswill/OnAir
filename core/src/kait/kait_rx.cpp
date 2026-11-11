@@ -197,7 +197,7 @@ void matchedFilter(Frontend& f, long lo, long hi) {
 
 std::vector<cf> extractSlots(const Frontend& f, double s1, double ratio, long nSlots) {
     std::vector<cf> r((size_t)nSlots);
-    const double base = s1 + 2.0 * kSweepSamples + kGuardSamples;
+    const double base = s1 + (2.0 * kSweepSamples + kGuardSamples) * ratio;   // the sweeps and the guard take the receiver's clock too (50 ppm: 2.5 samples)
     for (long k = 0; k < nSlots; k++) r[(size_t)k] = interp(f.mf, base + (double)k * kSps * ratio);
     return r;
 }
@@ -264,12 +264,18 @@ RxResult decodeBurst(const std::vector<cf>& inRaw, const RxConfig& cfg, const Pr
     // 3. header, with a few timing guesses
     const long hdrSlots = kHeaderDataSyms + kHeaderDataSyms / kPilotGroup;
     Tracked tr;
-    double s1 = sw.start;
+    double s1 = sw.start, hdrRatio = 1.0;
     const double tries[] = {0.0, 0.25, -0.25, 0.5, -0.5, 0.75, -0.75};
-    for (double dt : tries) {
-        const std::vector<cf> r = extractSlots(fe, sw.start + dt, 1.0, hdrSlots);
-        tr = trackPilots(r, 64);
-        if (decodeHeader(tr.y, tr.nvNorm, res.hdr)) { res.headerOk = true; s1 = sw.start + dt; break; }
+    // and a few sample clock errors: over the header's 78 000 samples a 50 ppm clock (a cheap radio's crystal) slips 4 samples, past the
+    // timing guesses above; the end sweep measures the clock only after the header is read
+    const double clocks[] = {0.0, 30e-6, -30e-6, 60e-6, -60e-6, 90e-6, -90e-6};
+    for (double dc : clocks) {
+        for (double dt : tries) {
+            const std::vector<cf> r = extractSlots(fe, sw.start + dt, 1.0 + dc, hdrSlots);
+            tr = trackPilots(r, 64);
+            if (decodeHeader(tr.y, tr.nvNorm, res.hdr)) { res.headerOk = true; s1 = sw.start + dt; hdrRatio = 1.0 + dc; break; }
+        }
+        if (res.headerOk) break;
     }
     res.esn0Db = 10.0 * std::log10(std::max(tr.esn0, 1e-6));
     res.snrDb = res.esn0Db - 10.0 * std::log10(kBandwidthHz / kSymRate);
@@ -278,7 +284,7 @@ RxResult decodeBurst(const std::vector<cf>& inRaw, const RxConfig& cfg, const Pr
     res.cfoHz = sw.cfoHz + tr.cfoResHz;
 
     // 4. end sweep: sample clock
-    double ratio = 1.0;
+    double ratio = hdrRatio;
     {
         const long e0 = endSweepOffset(H);
         const long win = (long)(3e-4 * (double)e0) + 40;
@@ -293,9 +299,9 @@ RxResult decodeBurst(const std::vector<cf>& inRaw, const RxConfig& cfg, const Pr
     {
         const long probe = std::min<long>(H.slots(), 60000);
         double bestEs = -1e9, bestDt = 0.0;
-        double es[9];
-        for (int i = 0; i < 9; i++) {
-            const double dt = -0.5 + 0.125 * i;
+        double es[25];
+        for (int i = 0; i < 25; i++) {   // +-1.5 samples: the header's timing guess is only as good as its clock guess (30 ppm steps)
+            const double dt = -1.5 + 0.125 * i;
             es[i] = trackPilots(extractSlots(fe, s1 + dt, ratio, probe), 128).esn0;
             if (es[i] > bestEs) { bestEs = es[i]; bestDt = dt; }
         }

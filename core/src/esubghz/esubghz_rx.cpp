@@ -84,6 +84,8 @@ struct EsubghzReceiver::Impl {
     int dcount = 0;
     float pe = 0, nz = 0;
     int nzInit = 0, above = 0, below = 0;
+    float nzMin = 0;
+    int initRise = 0;
     bool inBurst = false;
     std::vector<cf32> hist;
     size_t hpos = 0, hfill = 0;
@@ -134,7 +136,7 @@ struct EsubghzReceiver::Impl {
         for (auto& t : taps) t = (float)(t / sum);
         ring.assign((size_t)N, cf32(0, 0));
         rpos = 0; dcount = 0;
-        pe = nz = 0; nzInit = above = below = 0;
+        pe = nz = 0; nzMin = 0; initRise = 0; nzInit = above = below = 0;
         inBurst = false;
         hist.assign(256, cf32(0, 0));
         hpos = hfill = 0;
@@ -246,7 +248,15 @@ struct EsubghzReceiver::Impl {
             const cf32 y(re, im);
             const float p = re * re + im * im;
             pe += 0.2f * (p - pe);
-            if (nzInit < 2000) nz += (pe - nz) / (float)(++nzInit);
+            if (nzInit < 2000) {
+                // the first 2000 samples set the floor; a burst in them (a transmitter keyed with the recording, 5 ms in) once became the
+                // floor and was never heard: a rise far over the quietest power so far ends the start-up there
+                nzMin = nzInit == 0 ? pe : std::min(nzMin, pe);
+                initRise = nzInit > 20 && pe > 30 * nzMin + 1e-9f ? initRise + 1 : 0;
+                if (initRise >= 6) nzInit = 2000;   // the floor stays the mean of what came before the rise
+                else if (initRise == 0) nz += (pe - nz) / (float)(++nzInit);
+                else ++nzInit;
+            }
             nz = std::max(nz, 1e-10f);   // a recording with digital silence: bursts still end
             if (!inBurst) {
                 if (pe < 3 * nz) nz += 0.002f * (pe - nz);
