@@ -1647,3 +1647,5 @@ FistDecoder's weak points from sensE are fixed, and the skimmer now uses it (doc
 - After a pause, the next word is held and the speed is re-estimated. A lost lock keeps the learned classes.
 - Receiver CER, 4 seeds: machine 2 dB 13.2 -> 6.6, sloppy 10 dB 20.4 -> 6.6, Farnsworth 4 dB 18.0 -> 8.7. No scenario point is worse.
 - The 0.2.7 timing is kept behind CwReceiver::setTimingDecoder(1). New test cw_fistrx and bench tests/cw/cw_skim_bench.cpp.
+## 2026-11-11 TETRA TX loop fix (feat39-tetrafix)
+The QA sweep's tetra/tx condition (the transmitter's 16-bit output decoded by the receiver) failed after feat39-tetra. The carrier search's lower threshold (4 dB) kept a strong, clean carrier's skirts over the floor beyond 25 kHz. The rise was cut into two carriers about 4.5 kHz either side of the true centre, outside the frequency correction's range. A rise more than 30 dB over the floor is now measured again 30 dB below its own peak. tetra/tx passes 3 of 3 runs (131 blocks) and was removed from tests/qa/qa_known.inc. Regression check in test_tetra_sens: it fails on the previous code and passes now.

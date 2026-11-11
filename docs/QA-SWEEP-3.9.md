@@ -142,7 +142,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | uplink | 45 | 10 | 3 | pass | pass | pass | pass | pass | pass | 0.156 | 70 |  |
 | orbcomm | 46 | 1 | 3 | pass | pass | pass | pass | pass | pass | 0.093 | 94 |  |
 | dpmr | 47 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.073 | 26 |  |
-| tetra | 48 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.058 | 131 | qafixB, this Mac |
+| tetra | 48 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.058 | 131 | qafixB, this Mac; tx fixed in feat39-tetrafix |
 | mac | 49 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.681 | 6068 |  |
 | astro | 50 | 2.5 | 28 | FAIL | - | - | - | pass | FAIL | 0.047 | 0 | clean open, tx open; (real time) |
 | ale | 51 | 2 | 3 | pass | FAIL | FAIL | pass | pass | pass | 0.078 | 6 | pos unrealistic, neg unrealistic |

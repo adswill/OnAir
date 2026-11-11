@@ -15,7 +15,7 @@ Each symbol was detected against the one before it (differential detection, with
 - **Timing.** Each slot's symbol instant comes from the matched filter energy over all 255 symbols. One least-squares line is then fitted over the slots of the capture, twice, dropping slots more than half a sample off the line.
 - **Re-filtering.** After a tuning error above 150 Hz, the frequency is corrected before the matched filter, and the filter runs again.
 - **Turbo detection.** A new log-MAP SISO decoder for the punctured 16-state RCPC code (`sisoDecode23`, `channelExtrinsic`) feeds extrinsic LLRs back to the slot detector. This repeats up to 3 times, until every signalling block of the slot passes its CRC. It runs for BSCH, SCH/HD, BNCH and SCH/F. Traffic bursts never go through it. When the AACH fails first time, it is decoded again from the refined bits.
-- **Carrier search.** A rise of 4 dB over the local floor is now enough (was 6 dB). Noise alone still gives no carrier (test).
+- **Carrier search.** A rise of 4 dB over the local floor is now enough (was 6 dB). Noise alone still gives no carrier (test). A rise more than 30 dB over the floor is measured again 30 dB below its own peak. Without that, the skirts of a strong, clean carrier (the transmitter's 16-bit output in the QA sweep's tetra/tx check) stayed over the lower threshold beyond 25 kHz. The rise was then cut into two carriers 4 to 5 kHz either side of the centre, outside the frequency correction's range, and nothing decoded. The fix is in feat39-tetrafix, with a regression check in `test_tetra_sens`.
 
 ### Measured
 

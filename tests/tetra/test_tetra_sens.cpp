@@ -103,6 +103,20 @@ int main() {
         for (size_t i = 0; i < x.size(); i++) x[i] += up[i] * a;
         const auto cs = findCarriers(x.data(), x.size(), fs);
         CHECK(cs.size() == 1 && std::fabs(cs[0].off - 150e3) < 3e3, "a 3 dB carrier: %zu found", cs.size());
+        // a clean, strong carrier quantised to 16 bits (what the transmitter writes): its skirts stay over the floor far beyond 25 kHz; it must
+        // still be one carrier at its centre, not two cut 4.5 kHz either side of it (3.9 regression, the QA sweep's tetra/tx)
+        std::vector<cf32> q(x.size());
+        for (size_t i = 0; i < q.size(); i++) {
+            const cf32 v = up[i] * 0.25f;
+            q[i] = cf32(std::round(v.real() * 32767.f) / 32767.f, std::round(v.imag() * 32767.f) / 32767.f);
+        }
+        const auto qs = findCarriers(q.data(), q.size(), fs);
+        int near0 = 0;
+        for (const auto& c : qs) if (std::fabs(c.off - 150e3) < 12.5e3) { near0++; CHECK(std::fabs(c.off - 150e3) < 1e3, "strong carrier found %.0f Hz off", c.off - 150e3); }
+        CHECK(near0 == 1, "strong clean carrier cut into %d", near0);
+        const std::vector<cf32> c72 = channelize(q.data(), q.size(), fs, qs.empty() ? 150e3 : qs[0].off);
+        const CarrierDecode dq = decodeCarrier(c72.data(), c72.size());
+        CHECK(dq.synced && dq.blocksBad == 0, "strong clean carrier decoded: synced %d bad %d", dq.synced, dq.blocksBad);
     }
     struct Imp { const char* name; double cfo, ppm; };
     const Imp imps[] = {{"awgn", 0, 0}, {"cfo 1.2 kHz", 1200, 0}, {"clock 50 ppm", 0, 50}};
