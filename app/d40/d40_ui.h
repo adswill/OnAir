@@ -25,3 +25,5 @@ void d40TetraTick(const TetraTelemetry& t);          // builds TETRA calls from 
 void d40TetraActivity();
 void d40AcarsFeed(const dect2::AcarsTelemetry& t);   // d40_acars_ui.cpp: every new message into the channel load
 void d40AcarsLoadCard();
+void d40AisFeed(const AisTelemetry& t, double lat, double lon);   // d40_ais_ui.cpp: every position into the coverage map
+void d40AisRangeCard(const AisTelemetry& t);
