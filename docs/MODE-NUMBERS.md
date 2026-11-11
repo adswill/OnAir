@@ -139,6 +139,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | HF packet 300 Bd | 800 | 802 | 801 | 801 | feat39-w1a | 3.9; AX.25 over 300 Bd AFSK, full decode; simulated signals only |
 | Voice inversion scrambler | 801 | 803 | 802 | 802 | feat39-w1a | 3.9; full-band inversion detection and descrambling; simulated signals only |
 | ELT 121.5 MHz | 802 | 804 | 803 | 803 | feat39-w1a | 3.9; swept-tone detection only; simulated signals only |
+| Fleet Broadcast (UHF SATCOM) | 870 | 872 | 871 | 870 | feat39-fbr | 3.9; 16 x 75 Bd UHF SATCOM multiplex, framing and channel activity only, see docs/FBR-3.9.md; simulated signals only |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |

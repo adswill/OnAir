@@ -32,6 +32,7 @@
 #include "dect2/dvbsh/dvbsh_engine.h"
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/elektro/elektro_rx.h"
+#include "dect2/fbr/fbr_rx.h"
 #include "dect2/flarm/flarm_rx.h"
 #include "dect2/fpv/fpv_live.h"
 #include "dect2/fsq/fsq_rx.h"
@@ -938,6 +939,12 @@ static bool set_747(Engine& e, const std::string& n, double v) {
     if (n == "setTdmGoldCode") { call(r, &Rx<decltype(r)>::setTdmGoldCode, v); return true; }
     return false;
 }
+static const char kOpt_871[] = R"JSON([{"n":"setInvert","k":"bool","l":"Invert","h":"flip the bit polarity (the real polarity is not published)","t":"s"}])JSON";
+static bool set_871(Engine& e, const std::string& n, double v) {
+    auto& r = e.fbr();
+    if (n == "setInvert") { call(r, &Rx<decltype(r)>::setInvert, v); return true; }
+    return false;
+}
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
 const OptEntry kOpt[] = {
     {7, kOpt_7, set_7},
@@ -1054,6 +1061,7 @@ const OptEntry kOpt[] = {
     {701, kOpt_701, set_701},
     {742, kOpt_742, set_742},
     {747, kOpt_747, set_747},
+    {871, kOpt_871, set_871},
 };
 } // namespace
 

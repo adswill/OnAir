@@ -2942,3 +2942,21 @@ case 856: {
     { Table tb({"Time Sec", "Wall Time", "Framing", "Sat", "From", "To", "Path", "Type"}); int n = 0; for (auto it = t.frames.rbegin(); it != t.frames.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.timeSec), cell(e.wallTime), cell(e.framing), cell(e.sat), cell(e.from), cell(e.to), cell(e.path), cell(e.type)}); } if (n) addTable(o, "Frames", tb); }
     break;
 }
+case 871: {
+    const auto& t = rx.fbr; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Offset Hz", t.offsetHz);
+    cardIf(o, "Freq Mhz", t.freqMhz);
+    cardIf(o, "Carrier", t.carrier);
+    cardIf(o, "Tone Db", t.toneDb);
+    { Table tb({"Item"}); int n = 0; for (auto it = t.frameLog.rbegin(); it != t.frameLog.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Frame Log", tb); }
+    { Table tb({"Item"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Log", tb); }
+    break;
+}

@@ -353,6 +353,7 @@
         <item>HF packet 300 Bd</item>
         <item>Voice inversion scrambler</item>
         <item>ELT 121.5 MHz</item>
+        <item>Fleet Broadcast (UHF SATCOM)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -687,6 +688,7 @@
         <item>HF packet radio, full decode: AX.25 frames in 300 Bd AFSK (tones 1600 and 1800 Hz, 200 Hz shift) on the upper sideband, with NRZI, bit stuffing and CRC-16. Each good frame is shown as sender&gt;destination,path:text, and a tuning error of up to a quarter of the shift is followed. Simulated signals only so far</item>
         <item>Analog voice scrambler detector and descrambler for full-band frequency inversion (every audio frequency f becomes fc - f, carriers from 2.7 to 3.7 kHz). Tune a narrow-FM voice channel: the long-term spectrum of the voiced audio is compared with speech as heard and flipped, the carrier is estimated to about 100 - 200 Hz, and the descrambled audio can be written to a WAV file. Split-band inversion and rolling-code scramblers are not covered. Simulated signals only so far</item>
         <item>Emergency locator transmitter on 121.5 MHz, detection only: an AM carrier with a tone swept downwards from about 1600 to 300 Hz two to four times a second. The sweep, its rate, its range and the modulation depth are measured and logged; the analogue beacon carries no data and 406 MHz beacons are a different system. Simulated signals only so far</item>
+        <item>Fleet Broadcast on 250.450 / 250.550 / 250.650 MHz: a 16 channel, 75 Bd multiplex from UHF military satellites (1200 Bd differential BPSK). Finds the carrier, the clock and the frame and shows what each channel looks like. The channels are usually encrypted-looking data: nothing is decoded or decrypted. Receive only; simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1021,6 +1023,7 @@
         <item>AX.25, upper sideband, HF</item>
         <item>Analog scrambler, narrow FM</item>
         <item>Emergency beacon, AM</item>
+        <item>16 channel SATCOM multiplex</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1355,5 +1358,6 @@
         <item>hf packet radio 300 baud ax.25 ax25 afsk 1600 1800 bell 103 usb pactor winlink</item>
         <item>voice inversion scrambler speech descrambler frequency inversion split band analog privacy vhf uhf</item>
         <item>elt emergency locator transmitter 121.5 distress beacon swept tone siren aviation guard sar</item>
+        <item>fleet broadcast fltsatcom ufo uhf satcom 250 mhz 75 baud 16 channel multiplex dbpsk 1200 baud 250.450 250.550 250.650 doppler r00t</item>
     </string-array>
 </resources>

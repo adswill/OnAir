@@ -125,6 +125,7 @@
 #include "dect2/bgan/bgan_tel.h"
 #include "dect2/sferics/sferics_tel.h"
 #include "dect2/sferics/ltpos_tel.h"
+#include "dect2/fbr/fbr_tel.h"
 #include "dect2/atis/atis_tel.h"
 #include "dect2/selcal/selcal_tel.h"
 #include "dect2/umts/umts_rx.h"
@@ -287,6 +288,7 @@ struct RxTelemetry {
     SensorsTelemetry sensors; // valid when standard == 242 (Sub-GHz sensors, family 241, engine standard 243)
     BganTelemetry bgan;       // valid when standard == 246 (Inmarsat BGAN, family 245, engine standard 247)
     SfericsTelemetry sferics; // valid when standard == 244 (Sferics, family 243, engine standard 245)
+    FbrTelemetry fbr;       // valid when standard == 871 (Fleet Broadcast, family 870, engine standard 872)
     LtPosTelemetry ltpos;   // valid when standard == 791 (Lightning position, family 790, engine standard 792)
     CisHfTelemetry cishf;     // valid when standard == 621 .. 627 (CIS HF modes, families 620 - 626)
     W1aTelemetry w1a;         // valid when standard == 801 .. 803 (HF packet 300 Bd, voice inversion, ELT; families 800 - 802)

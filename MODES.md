@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**325 modes.**
+**326 modes.**
 
 ## TV (17)
 
@@ -75,7 +75,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (54)
+## Satellite & Navigation (55)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -116,6 +116,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Zombie satellites** - Zombie satellite carriers: found and checked against their orbits
 - **What satellite is this?** - Names an unknown satellite carrier from its Doppler curve (mystery satellite hunter)
 - **UHF SATCOM skimmer** - Active channels on UHF military satellites (detection only)
+- **Fleet Broadcast (UHF SATCOM)** - Fleet Broadcast: 16 x 75 Bd UHF SATCOM multiplex, framing and channel activity (receive only, nothing decoded)
 - **Thuraya GMR-1 channels** - Active Thuraya channels, detection only
 - **Starlink detector** - Starlink frame detection, no decoding
 - **OneWeb detector** - OneWeb frame detection, no decoding
