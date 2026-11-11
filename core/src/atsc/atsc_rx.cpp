@@ -44,21 +44,29 @@ struct PfbPad { const float* t = nullptr; int L = 0, W = 0; size_t avail = 0; };
 DECT2_AVX2_TARGET static size_t pfbPadAvx2(int J, int NPH, const float* re, const float* im, int64_t base, double pos0, double step, size_t k,
                                            size_t k1, float* outRe, float* outIm, const PfbPad& pad) {
     const int W = pad.W, L = pad.L;
+    // the four positions side by side: pos = pos0 + (k + u) step, its floor relative to the buffer (exact in double, small enough for int32),
+    // the nearest of the NPH phases, and the step to the next sample when that phase is NPH
+    const __m256d vpos0 = _mm256_set1_pd(pos0), vstep = _mm256_set1_pd(step), voff = _mm256_set_pd(3, 2, 1, 0);
+    const __m256d vbase = _mm256_set1_pd((double)base), vnph = _mm256_set1_pd((double)NPH), vhalf = _mm256_set1_pd(0.5);
+    const __m128i lastPh = _mm_set1_epi32(NPH - 1);
     for (; k + 4 <= k1; k += 4) {
-        int64_t i0[4]; int phi[4];
-        for (int u = 0; u < 4; u++) {
-            const double pos = pos0 + (double)(k + (size_t)u) * step;
-            i0[u] = (int64_t)std::floor(pos);   // one instruction here (the target has SSE4.1)
-            phi[u] = (int)((pos - (double)i0[u]) * NPH + 0.5);
-            if (phi[u] >= NPH) { phi[u] = 0; i0[u]++; }
-        }
-        const int64_t b = i0[0] - base - J + 1;
+        const __m256d pos = _mm256_add_pd(vpos0, _mm256_mul_pd(_mm256_add_pd(_mm256_set1_pd((double)k), voff), vstep));
+        const __m256d fl = _mm256_floor_pd(pos);
+        __m128i ph = _mm256_cvttpd_epi32(_mm256_add_pd(_mm256_mul_pd(_mm256_sub_pd(pos, fl), vnph), vhalf));
+        __m128i rel = _mm256_cvttpd_epi32(_mm256_sub_pd(fl, vbase));
+        const __m128i wrap = _mm_cmpgt_epi32(ph, lastPh);   // -1 where the phase rounded up to NPH: phase 0 of the next sample
+        ph = _mm_andnot_si128(wrap, ph);
+        rel = _mm_sub_epi32(rel, wrap);
+        alignas(16) int32_t ri[4], phi[4];
+        _mm_store_si128((__m128i*)ri, rel);
+        _mm_store_si128((__m128i*)phi, ph);
+        const int64_t b = (int64_t)ri[0] - J + 1;
         bool fits = b >= 0 && (size_t)(b + W) <= pad.avail;
         const float* tp[4];
         for (int u = 0; u < 4; u++) {
-            const int64_t sh = i0[u] - i0[0];
+            const int sh = ri[u] - ri[0];
             fits = fits && sh >= 0 && sh <= kPfbShift;
-            tp[u] = pad.t + (size_t)phi[u] * L + (kPfbShift - (int)std::min<int64_t>(std::max<int64_t>(sh, 0), kPfbShift));
+            tp[u] = pad.t + (size_t)phi[u] * L + (kPfbShift - std::min(std::max(sh, 0), kPfbShift));
         }
         if (!fits) break;
         const float* pr = re + b;
@@ -373,6 +381,12 @@ struct Core {
     std::vector<float> inRe, inIm;   // input samples, split
     std::vector<float> pfRe, pfIm;
     bool splitA = std::thread::hardware_concurrency() >= 2;
+    // The work of the sample thread (with the filter's helper) per second of signal, averaged. The filter is split over two threads only while one
+    // thread would be busy more than about half the time (a slow processor): otherwise the second thread costs more CPU than it saves (a thread
+    // started per block, and on a processor with two threads per core both run slower side by side).
+    double feedLoad = 0;
+    bool splitOn = false;
+    uint64_t helperNs = 0;
     uint64_t inBase = 0;
     double pos = 0, step = 0;
     // ---- stage B: pilot loop
@@ -619,6 +633,14 @@ struct Core {
         }
         if (fieldLock || pilotLock) noLockSamples = 0;
         else if ((noLockSamples += in.size()) > (uint64_t)(0.5 * fin)) { noLockSamples = 0; acqDone = false; }   // look again on the next block
+        struct LoadMeter {
+            Core& c; uint64_t t0; double dur;
+            ~LoadMeter() {
+                const double w = ((double)(prof::threadCpuNs() - t0) + (double)c.helperNs) * 1e-9;
+                c.helperNs = 0;
+                if (dur > 0) c.feedLoad += 0.2 * (std::min(w / dur, 4.0) - c.feedLoad);
+            }
+        } meter{*this, prof::threadCpuNs(), (double)in.size() / fin};
         DECT2_STAGE_VAR(stMix, "atsc.mix");
         {   // split into the two rows: one resize, then plain stores (a push_back per sample re-checks the capacity twice for every sample), with the
             // mirror (conjugate) and the mixer to the channel centre in the same pass
@@ -642,8 +664,15 @@ struct Core {
         static const bool noPad = getenv("ATSC_NOPAD") != nullptr;   // test: the one-window-per-output filter
         if (!tapsPad.empty() && !noPad) { pad.t = tapsPad.data(); pad.L = padL; pad.W = padW; pad.avail = inRe.size(); }
         auto filter = [&](size_t k0, size_t k1) { DECT2_STAGE("atsc.filter"); pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data(), pad); };
-        if (splitA && nOut >= 4096) {   // split across two threads
-            std::thread helper([&] { dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); DenormalsOff ftz; filter(nOut / 2, nOut); });
+        static const int forceSplit = getenv("ATSC_SPLIT") ? atoi(getenv("ATSC_SPLIT")) : -1;   // test: 1 always split, 0 never
+        splitOn = forceSplit >= 0 ? forceSplit > 0 : (splitOn ? feedLoad > 0.45 : feedLoad > 0.6);
+        if (splitA && splitOn && nOut >= 4096) {   // split across two threads
+            std::thread helper([&] {
+                dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); DenormalsOff ftz;
+                const uint64_t h0 = prof::threadCpuNs();
+                filter(nOut / 2, nOut);
+                helperNs += prof::threadCpuNs() - h0;
+            });
             filter(0, nOut / 2);
             helper.join();
         } else filter(0, nOut);

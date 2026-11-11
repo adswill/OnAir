@@ -23,6 +23,9 @@ on:
       env:
         description: "environment for the tests: NAME=value pairs separated by semicolons (optional)"
         default: ""
+      compare:
+        description: "another branch or tag: the same tests are built from it too and run after this branch's on the same runner (optional)"
+        default: ""
 concurrency:
   group: quick-${{ github.ref }}-${{ inputs.os }}
   cancel-in-progress: true
@@ -67,14 +70,27 @@ jobs:
           SEL=""; for t in $T $EXTRA; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t" || echo "note: no target $t (the test may live in a bundle; building by test name is skipped)"; done
           [ -n "$SEL" ] || { echo "nothing to build"; exit 1; }
           cmake --build build -j 4 --target $SEL
+      - name: Build the comparison ref
+        if: inputs.compare != ''
+        env: { TESTS: "${{ inputs.tests }}", CMP: "${{ inputs.compare }}", CCACHE_BASEDIR: "${{ runner.temp }}/cmp" }
+        run: |
+          git fetch --depth=1 origin "$CMP"
+          git worktree add "$RUNNER_TEMP/cmp" FETCH_HEAD
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S "$RUNNER_TEMP/cmp" -B build-cmp -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+          T=""; for t in $TESTS; do T="$T test_$t"; done
+          ALL=$(ninja -C build-cmp -t targets all | cut -d: -f1)
+          SEL=""; for t in $T; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t"; done
+          [ -n "$SEL" ] && cmake --build build-cmp -j 4 --target $SEL
       - name: Save ccache
         if: always()
         uses: actions/cache/save@v6
         with: { path: .ccache, key: "ccache-${{ inputs.os }}-quick-${{ github.sha }}" }
       - name: Test
-        env: { TESTS: "${{ inputs.tests }}", VERBOSE: "${{ inputs.verbose }}", TEST_ENV: "${{ inputs.env }}" }
+        env: { TESTS: "${{ inputs.tests }}", VERBOSE: "${{ inputs.verbose }}", TEST_ENV: "${{ inputs.env }}", CMP: "${{ inputs.compare }}" }
         run: |
           if [ -n "$TEST_ENV" ]; then IFS=';' read -ra KV <<< "$TEST_ENV"; for kv in "${KV[@]}"; do export "$kv"; echo "env: $kv"; done; fi
           R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
           V=""; [ "$VERBOSE" = true ] && { V="-V"; lscpu 2>/dev/null | head -20 || sysctl -n machdep.cpu.brand_string; }
           ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900 $V
+          if [ -d build-cmp ]; then echo "===== the same tests from $CMP ====="; ctest --test-dir build-cmp -j 4 -R "$R" --output-on-failure --timeout 900 $V || true; fi
