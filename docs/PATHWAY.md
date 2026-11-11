@@ -1651,3 +1651,13 @@ FistDecoder's weak points from sensE are fixed, and the skimmer now uses it (doc
 The QA sweep's tetra/tx condition (the transmitter's 16-bit output decoded by the receiver) failed after feat39-tetra. The carrier search's lower threshold (4 dB) kept a strong, clean carrier's skirts over the floor beyond 25 kHz. The rise was cut into two carriers about 4.5 kHz either side of the true centre, outside the frequency correction's range. A rise more than 30 dB over the floor is now measured again 30 dB below its own peak. tetra/tx passes 3 of 3 runs (131 blocks) and was removed from tests/qa/qa_known.inc. Regression check in test_tetra_sens: it fails on the previous code and passes now.
 ## 2026-11-11 QA sweep open failures, first half (feat39-qafixA)
 The first 20 open entries of docs/QA-SWEEP-3.9.md (arktikaggak .. kait). Fixed: GGAK generator, timing loop sign and acquisition range; astro / iono lock flags; DECT power-floor drift; HF beacon test signal at 14.5 MHz; the engine now sets the channelised-voice service (all seven entries ran CB before), voice scenes at the tune offset, SSB band-limited and dithered; KAIT burst on the first sample, header and fine timing at 50 ppm; Flipper chat floor from a packet at the start; G-TOR baud search at 12 dB. Sweep: transmitters offset as a TX session tunes them, 99 % band without the floor, JS8 flush and KAIT wait at the file end, longer runs for late locks. JS8 gets the file's start time in the sweep (slots from UTC). Reclassified with numbers: atis / eczas snr (threshold). Simulated signals only.
+## 2026-11-11 Lightning position (network) (feat39-ltpos)
+New mode, family 790. Several stations time sferics; a server matches the detections and locates strikes by TDOA. It uses robust least
+squares on WGS-84 with clock groups, ambiguity folding, an optional hop model, a chi-square check and a 95 % ellipse. The map colours
+strikes by age.
+- Timing sources, ranked and shown per station: GPS radio time (Soapy / UHD hardware timestamps after a PPS reset,
+  source/hw_time.h), GNSS marks, MSK common view (decision-directed symbol timing, about 1 us at 45 dB), and PTP / NTP for association
+  only. The sample clock drift is fitted per source.
+- Network: UDP packets signed with HMAC-SHA256, replay window, off by default, no relay.
+- Simulated only: median 0.12 to 0.40 km at 0.3 to 1 us with 6 stations; the whole chain from IQ gave a median of 158 m.
+- docs/LIGHTNING-POSITION-3.9.md.
