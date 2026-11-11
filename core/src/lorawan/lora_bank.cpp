@@ -186,6 +186,13 @@ void Bank::feed(const cf32* x, size_t n, std::vector<Decoded>& out) {
     if (i < n) m.pend.insert(m.pend.end(), x + i, x + n);
 }
 
+void Bank::flushPending(std::vector<Decoded>& out) {
+    Impl& m = *p_;
+    if (m.pend.empty()) return;
+    m.block(m.pend.data(), m.pend.size(), out);
+    m.pend.clear();
+}
+
 double Bank::timeSec() const { return p_->rate > 0 ? (double)(p_->nProc + (int64_t)p_->pend.size()) / p_->rate : 0; }
 int64_t Bank::samples() const { return p_->nProc + (int64_t)p_->pend.size(); }
 const std::vector<DecoderStat>& Bank::stats() const { return p_->stats; }
