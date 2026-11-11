@@ -32,6 +32,7 @@
 #include "dect2/chanvoice/chv_tel.h"
 #include "dect2/cishf/cishf_tel.h"
 #include "dect2/codar/codar_tel.h"
+#include "dect2/cp16/cp16_tel.h"
 #include "dect2/cquam/cquam_tel.h"
 #include "dect2/cubesat/cubesat_proto.h"
 #include "dect2/cubesat/cubesat_tel.h"
@@ -853,6 +854,8 @@ static void ev_dect2__dvbc2__L1Notch(std::string& s, const dect2::dvbc2::L1Notch
 static void ev_dect2__dvbc2__L1Part2(std::string& s, const dect2::dvbc2::L1Part2& v);
 static void ev_dect2__Dvbc2PlpRow(std::string& s, const dect2::Dvbc2PlpRow& v);
 static void ev_dect2__Dvbc2Telemetry(std::string& s, const dect2::Dvbc2Telemetry& v);
+static void ev_dect2__Cp16Char(std::string& s, const dect2::Cp16Char& v);
+static void ev_dect2__Cp16Telemetry(std::string& s, const dect2::Cp16Telemetry& v);
 static void ev_dect2__DvbsIpFlow(std::string& s, const dect2::DvbsIpFlow& v) {
     detail::J o(s);
     o.key("src"); detail::vstr(s, v.src, 4096);
@@ -13993,6 +13996,47 @@ static void ev_dect2__Dvbc2Telemetry(std::string& s, const dect2::Dvbc2Telemetry
     o.end();
 }
 
+static void ev_dect2__Cp16Char(std::string& s, const dect2::Cp16Char& v) {
+    detail::J o(s);
+    o.key("serial"); detail::vu64(s, (unsigned long long)(v.serial));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("cp"); detail::vnum(s, (double)(v.cp));
+    o.key("score"); detail::vnum(s, (double)(v.score));
+    o.key("margin"); detail::vnum(s, (double)(v.margin));
+    o.key("sure"); detail::vbool(s, v.sure);
+    o.end();
+}
+
+static void ev_dect2__Cp16Telemetry(std::string& s, const dect2::Cp16Telemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("rateOk"); detail::vbool(s, v.rateOk);
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("nowSec"); detail::vnum(s, (double)(v.nowSec));
+    o.key("baseHz"); detail::vnum(s, (double)(v.baseHz));
+    o.key("spacingHz"); detail::vnum(s, (double)(v.spacingHz));
+    o.key("rowSec"); detail::vnum(s, (double)(v.rowSec));
+    o.key("charSec"); detail::vnum(s, (double)(v.charSec));
+    o.key("mirrored"); detail::vbool(s, v.mirrored);
+    o.key("combScore"); detail::vnum(s, (double)(v.combScore));
+    o.key("timingScore"); detail::vnum(s, (double)(v.timingScore));
+    o.key("fontName"); detail::vstr(s, v.fontName, 4096);
+    o.key("rows"); { detail::Arr a(s); const size_t n = (v.rows).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); { detail::Arr a(s); const size_t n = ((v.rows)[i]).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)(((v.rows)[i])[i])); } a.end(); } } a.end(); }
+    o.key("firstRow"); detail::vu64(s, (unsigned long long)(v.firstRow));
+    o.key("rowCount"); detail::vu64(s, (unsigned long long)(v.rowCount));
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("chars"); { detail::Arr a(s); const size_t n = (v.chars).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__Cp16Char(s, (v.chars)[i]); } a.end(); }
+    o.end();
+}
+
 static const char kSchema_dect2__DvbsIpFlow[] = R"JSON([{"n":"src","l":"Src","k":"text"},{"n":"dst","l":"Dst","k":"text"},{"n":"protocol","l":"Protocol","k":"text"},{"n":"sport","l":"Sport","k":"num"},{"n":"dport","l":"Dport","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"encrypted","l":"The headers are good but the UDP checksums fail: the payload was changed in transit","k":"bool"}])JSON";
 static const char kSchema_dect2__DvbsIpLabel[] = R"JSON([{"n":"label","l":"Label","k":"text"},{"n":"pdus","l":"Pdus","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"ip","l":"Ip","k":"num"},{"n":"addrs","l":"Addrs","k":"lines"},{"n":"modcods","l":"\"QPSK 5/6 41 %, 16APSK 3/4 59 %\": where the bytes went","k":"text"}])JSON";
 static const char kSchema_dect2__DvbsMediaFlow[] = R"JSON([{"n":"dst","l":"Dst","k":"text"},{"n":"src","l":"Src","k":"text"},{"n":"kind","l":"Kind","k":"text"},{"n":"codec","l":"Codec","k":"text"},{"n":"port","l":"Port","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"lost","l":"Lost","k":"num"},{"n":"kbps","l":"Kbps","k":"num"},{"n":"services","l":"MPEG-TS flows: the programmes found in them","k":"lines"},{"n":"scrambled","l":"Transport packets of the flow are scrambled: only labelled","k":"bool"}])JSON";
@@ -14634,6 +14678,8 @@ static const char kSchema_dect2__dvbc2__L1Notch[] = R"JSON([{"n":"start","l":"St
 static const char kSchema_dect2__dvbc2__L1Part2[] = R"JSON([{"n":"networkId","l":"Network ID","k":"num"},{"n":"systemId","l":"System ID","k":"num"},{"n":"startFrequency","l":"24 bits, absolute carrier index of K_min","k":"num"},{"n":"bandwidth","l":"C2_BANDWIDTH: the system spans bandwidth * D_X + 1 carriers","k":"num"},{"n":"guardInterval","l":"0 = 1/128, 1 = 1/64","k":"num"},{"n":"frameLength","l":"Frame Length","k":"num"},{"n":"changeCounter","l":"Change Counter","k":"num"},{"n":"slices","l":"Slices","k":"table","s":"dect2::dvbc2::L1DataSlice","f":[{"n":"id","l":"ID","k":"num"},{"n":"tunePos","l":"DSLICE_TUNE_POS, in multiples of D_X from START_FREQUENCY","k":"num"},{"n":"offsetLeft","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"offsetRight","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"tiDepth","l":"0 none, 1 four symbols, 2 eight, 3 sixteen","k":"num"},{"n":"type","l":"0 Type 1, 1 Type 2","k":"num"},{"n":"fecHeaderType","l":"Type 2: 0 robust","k":"num"},{"n":"constConf","l":"Const Conf","k":"num"},{"n":"leftNotch","l":"Left Notch","k":"num"},{"n":"plps","l":"Plps","k":"table","s":"dect2::dvbc2::L1Plp","f":[{"n":"id","l":"ID","k":"num"},{"n":"bundled","l":"Bundled","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"groupId","l":"Group ID","k":"num"},{"n":"start","l":"PLP_START","k":"num"},{"n":"fecType","l":"Data Slice Type 1 only","k":"num"},{"n":"mod","l":"Data Slice Type 1 only","k":"num"},{"n":"cod","l":"Data Slice Type 1 only","k":"num"},{"n":"psiSiReprocessing","l":"Psi Si Reprocessing","k":"num"},{"n":"tsId","l":"Ts ID","k":"num"},{"n":"onId","l":"On ID","k":"num"},{"n":"reserved1","l":"Reserved1","k":"num"}]},{"n":"reserved2","l":"Reserved2","k":"num"}]},{"n":"notches","l":"Notches","k":"table","s":"dect2::dvbc2::L1Notch","f":[{"n":"start","l":"Start","k":"num"},{"n":"width","l":"Width","k":"num"},{"n":"reserved3","l":"Reserved3","k":"num"}]},{"n":"reservedTone","l":"Reserved Tone","k":"num"},{"n":"ews","l":"Ews","k":"num"},{"n":"version","l":"Version","k":"num"},{"n":"reserved4","l":"Reserved4","k":"num"},{"n":"crcOk","l":"CRC OK","k":"bool"}])JSON";
 static const char kSchema_dect2__Dvbc2PlpRow[] = R"JSON([{"n":"sliceId","l":"Slice ID","k":"num"},{"n":"plpId","l":"Plp ID","k":"num"},{"n":"fecType","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"mod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"cod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"bitrate","l":"Measured bit/s of its transport stream","u":"bit/s","k":"num"}])JSON";
 static const char kSchema_dect2__Dvbc2Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 searching, 1 symbol timing, 2 preamble found, 3 L1 decoded, 4 decoding data","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"Es/N0 from the pilots of the data symbols","u":"dB","k":"num"},{"n":"dataValid","l":"Packets came out recently","k":"bool"},{"n":"blocksOk","l":"FEC blocks","k":"num"},{"n":"blocksBad","l":"FEC blocks","k":"num"},{"n":"guardInterval","l":"0 = 1/128, 1 = 1/64, -1 unknown","k":"num"},{"n":"clockPpm","l":"Sample clock error being corrected","u":"ppm","k":"num"},{"n":"windowCarrier","l":"Absolute carrier index of the centre of the input","k":"num"},{"n":"l1Ok","l":"L1 OK","k":"bool"},{"n":"frames","l":"Frames","k":"num"},{"n":"l1Good","l":"L1 Good","k":"num"},{"n":"l1Bad","l":"L1 Bad","k":"num"},{"n":"syncLosses","l":"Sync Losses","k":"num"},{"n":"l1","l":"The last one decoded","k":"obj","s":"dect2::dvbc2::L1Part2","f":[{"n":"networkId","l":"Network ID","k":"num"},{"n":"systemId","l":"System ID","k":"num"},{"n":"startFrequency","l":"24 bits, absolute carrier index of K_min","k":"num"},{"n":"bandwidth","l":"C2_BANDWIDTH: the system spans bandwidth * D_X + 1 carriers","k":"num"},{"n":"guardInterval","l":"0 = 1/128, 1 = 1/64","k":"num"},{"n":"frameLength","l":"Frame Length","k":"num"},{"n":"changeCounter","l":"Change Counter","k":"num"},{"n":"slices","l":"Slices","k":"table","s":"dect2::dvbc2::L1DataSlice","f":[{"n":"id","l":"ID","k":"num"},{"n":"tunePos","l":"DSLICE_TUNE_POS, in multiples of D_X from START_FREQUENCY","k":"num"},{"n":"offsetLeft","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"offsetRight","l":"Signed, multiples of D_X from the tuning position","k":"num"},{"n":"tiDepth","l":"0 none, 1 four symbols, 2 eight, 3 sixteen","k":"num"},{"n":"type","l":"0 Type 1, 1 Type 2","k":"num"},{"n":"fecHeaderType","l":"Type 2: 0 robust","k":"num"},{"n":"constConf","l":"Const Conf","k":"num"},{"n":"leftNotch","l":"Left Notch","k":"num"},{"n":"plps","l":"Plps","k":"table","s":"dect2::dvbc2::L1Plp","f":[{"n":"id","l":"ID","k":"num"},{"n":"bundled","l":"Bundled","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"groupId","l":"Group ID","k":"num"},{"n":"start","l":"PLP_START","k":"num"},{"n":"fecType","l":"Data Slice Type 1 only","k":"num"},{"n":"mod","l":"Data Slice Type 1 only","k":"num"},{"n":"cod","l":"Data Slice Type 1 only","k":"num"},{"n":"psiSiReprocessing","l":"Psi Si Reprocessing","k":"num"},{"n":"tsId","l":"Ts ID","k":"num"},{"n":"onId","l":"On ID","k":"num"},{"n":"reserved1","l":"Reserved1","k":"num"}]},{"n":"reserved2","l":"Reserved2","k":"num"}]},{"n":"notches","l":"Notches","k":"table","s":"dect2::dvbc2::L1Notch","f":[{"n":"start","l":"Start","k":"num"},{"n":"width","l":"Width","k":"num"},{"n":"reserved3","l":"Reserved3","k":"num"}]},{"n":"reservedTone","l":"Reserved Tone","k":"num"},{"n":"ews","l":"Ews","k":"num"},{"n":"version","l":"Version","k":"num"},{"n":"reserved4","l":"Reserved4","k":"num"},{"n":"crcOk","l":"CRC OK","k":"bool"}]},{"n":"plps","l":"Plps","k":"table","s":"dect2::Dvbc2PlpRow","f":[{"n":"sliceId","l":"Slice ID","k":"num"},{"n":"plpId","l":"Plp ID","k":"num"},{"n":"fecType","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"mod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"cod","l":"Type 1 from the L1, Type 2 from the last FECFrame header seen","k":"num"},{"n":"type","l":"Type","k":"num"},{"n":"payloadType","l":"Payload Type","k":"num"},{"n":"bitrate","l":"Measured bit/s of its transport stream","u":"bit/s","k":"num"}]},{"n":"selectedSlice","l":"Ids being decoded","k":"num"},{"n":"selectedPlp","l":"Ids being decoded","k":"num"},{"n":"merDb","l":"Of the decoded data cells","u":"dB","k":"num"},{"n":"preBer","l":"Pre Ber","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"ipPackets","l":"GSE PLPs: IP packets out, BB frame data fields taken","k":"num"},{"n":"gseFields","l":"GSE PLPs: IP packets out, BB frame data fields taken","k":"num"},{"n":"netMbps","l":"Net Mbps","k":"num"},{"n":"headerMetric","l":"Type 2: the last FECFrame header's agreement","k":"num"},{"n":"stage","l":"Stage","k":"text"},{"n":"cells","l":"Recent equalised data cells, at most 2048","k":"const"},{"n":"psdDb","l":"Spectrum of the input, fft shifted over the input rate","u":"dB","k":"list"},{"n":"psdSpanHz","l":"Psd Span Hz","u":"Hz","k":"num"},{"n":"dropped","l":"Input samples lost because the decoder fell behind","k":"num"}])JSON";
+static const char kSchema_dect2__Cp16Char[] = R"JSON([{"n":"serial","l":"Serial","k":"num"},{"n":"timeSec","l":"Start of its first row, seconds of signal","u":"s","k":"num"},{"n":"text","l":"The character","k":"text"},{"n":"cp","l":"Cp","k":"num"},{"n":"score","l":"Correlation with the font's glyph, 0 .. 1","k":"num"},{"n":"margin","l":"Over the runner-up","k":"num"},{"n":"sure","l":"Score and margin high enough to be taken as read","k":"bool"}])JSON";
+static const char kSchema_dect2__Cp16Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 listening, 1 carriers found, 2 rows in step","k":"num"},{"n":"cfoHz","l":"The lowest carrier against the expected position","u":"Hz","k":"num"},{"n":"snrDb","l":"Inked dots over blank dots, dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Characters read with confidence","k":"num"},{"n":"blocksBad","l":"Cells with dots that matched no character well","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"rateOk","l":"Rate OK","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"nowSec","l":"Now Sec","u":"s","k":"num"},{"n":"baseHz","l":"Audio frequency of the column-0 carrier","u":"Hz","k":"num"},{"n":"spacingHz","l":"Spacing Hz","u":"Hz","k":"num"},{"n":"rowSec","l":"Row Sec","u":"s","k":"num"},{"n":"charSec","l":"17 rows","u":"s","k":"num"},{"n":"mirrored","l":"Lower sideband","k":"bool"},{"n":"combScore","l":"How clearly 16 equally spaced carriers stand out, dB","u":"dB","k":"num"},{"n":"timingScore","l":"Coherence of the row edges, 0 .. 1","k":"num"},{"n":"fontName","l":"Font Name","k":"text"},{"n":"rows","l":"Rows","k":"list"},{"n":"firstRow","l":"Serial of rows[0]","k":"num"},{"n":"rowCount","l":"Rows made so far","k":"num"},{"n":"text","l":"Characters read","k":"text"},{"n":"chars","l":"Newest last","k":"table","s":"dect2::Cp16Char","f":[{"n":"serial","l":"Serial","k":"num"},{"n":"timeSec","l":"Start of its first row, seconds of signal","u":"s","k":"num"},{"n":"text","l":"The character","k":"text"},{"n":"cp","l":"Cp","k":"num"},{"n":"score","l":"Correlation with the font's glyph, 0 .. 1","k":"num"},{"n":"margin","l":"Over the runner-up","k":"num"},{"n":"sure","l":"Score and margin high enough to be taken as read","k":"bool"}]}])JSON";
 struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };
 static bool put_7(const RxTelemetry& rx, std::string& s) { ev_dect2__DvbsTelemetry(s, rx.dvbs); return true; }
 static bool put_8(const RxTelemetry& rx, std::string& s) { ev_dect2__DtmbTelemetry(s, rx.dtmb); return true; }
@@ -14899,6 +14945,7 @@ static bool put_662(const RxTelemetry& rx, std::string& s) { ev_dect2__TdscdmaTe
 static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTelemetry(s, rx.hrdcp); return true; }
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
+static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__Cp16Telemetry(s, rx.cp16); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -15164,6 +15211,7 @@ static const StdEntry kStd[] = {
     {701, "hrdcp", "dect2::DcsTelemetry", kSchema_dect2__DcsTelemetry, put_701},
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
+    {791, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_791},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15426,6 +15474,7 @@ static const WebModeRow kRows[] = {
     {25, "MFSK", 10, "MFSK: error-corrected keyboard text", "mfsk", 27, 26, "hfdig"},
     {25, "THOR", 10, "THOR: robust keyboard text", "thor", 27, 26, "hfdig"},
     {25, "DominoEX", 10, "DominoEX: keyboard text that ignores tuning", "dominoex", 27, 26, "hfdig"},
+    {790, "CP16", 10, "CP16: Chinese characters drawn on the waterfall by 16 carriers (CRAC)", "", 792, 791, "cp16"},
     {25, "Hellschreiber", 10, "Hell: text drawn as a picture", "hell", 27, 26, "hfdig"},
     {25, "FreeDV", 11, "FreeDV: open digital voice on HF", "freedv", 27, 26, "hfdig"},
     {31, "M17", 11, "M17: open digital voice, text messages and positions on VHF / UHF", "", 33, 32, "m17"},

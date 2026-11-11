@@ -133,6 +133,7 @@
 #include "dect2/cdma/cdma_rx.h"
 #include "dect2/tdscdma/tdscdma_rx.h"
 #include "dect2/vdl3/vdl3_rx.h"
+#include "dect2/cp16/cp16_rx.h"
 #include "dect2/tv/tr101290.h"
 #include "dect2/t2/t2mi_in.h"
 #include "dect2/t2/t2plp_merge.h"
@@ -587,6 +588,7 @@ public:
     CdmaReceiver& cdma() { return rxCdma_; }   // CDMA2000 cells (family 660)
     TdscdmaReceiver& tdscdma() { return rxTds_; }   // TD-SCDMA cells (family 661)
     Vdl3Receiver& vdl3() { return rxVdl3_; }   // VDL Mode 3 (family 640)
+    Cp16Receiver& cp16() { return rxCp16_; }   // CP16 picture text (family 790)
     SelcalReceiver& selcal() { return rxSelcal_; }   // SELCAL: call log, aircraft table, Listen volume / mute (telemetry through latestRx)
     AtisReceiver& atis() { return rxAtis_; }   // ATIS (inland waterways): clear the lists, Listen volume / mute (telemetry through latestRx)
     ShortwaveReceiver& shortwave() { return rxSw_; }   // Shortwave: the general receiver and the one-click decoders (telemetry through latestRx)
@@ -1052,6 +1054,7 @@ private:
     CdmaReceiver rxCdma_;
     TdscdmaReceiver rxTds_;
     Vdl3Receiver rxVdl3_;
+    Cp16Receiver rxCp16_;
     Fy3Receiver rxFy3a_{0}, rxFy3m_{1};
     PactorHfReceiver rxPh2_{2}, rxPh3_{3}, rxPh4_{4};   // PACTOR-II (family 237), -III (238), -IV (239)
     ShortwaveReceiver rxSw_;

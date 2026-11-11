@@ -343,6 +343,7 @@
         <item>CIS OFDM HDR</item>
         <item>CIS-128</item>
         <item>CIS-3000</item>
+        <item>CP16</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -667,6 +668,7 @@
         <item>CIS OFDM HDR modem (CIS-45, CIS-60, CIS-93), identification only: the OFDM symbol (useful part, guard, rate), the carrier count and the PSK order are measured and the variant named. No frame format is published. Simulated signals only so far</item>
         <item>CIS-128, identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz, from the carrier spacing, the symbol rate and the guard. The 6 kHz form is not covered. No frame format is published. Simulated signals only so far</item>
         <item>CIS-3000, identification only: a single carrier 8-PSK at 3000 Bd, from its symbol-rate line and the constellation order. No frame format is published. Simulated signals only so far</item>
+        <item>CP16, the Chinese Radio Amateurs Club picture text: 16 carriers 10 to 20 Hz apart keyed by 16 x 16 dot characters, read on a waterfall (1 to 4 s a character, GB2312). Finds the carriers and the rows by itself on either sideband, shows the picture and reads the characters against the font. Receive and send</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -991,6 +993,7 @@
         <item>Identification only, HF</item>
         <item>Identification only, HF</item>
         <item>Identification only, HF</item>
+        <item>Waterfall text, HF</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1315,5 +1318,6 @@
         <item>cis-45 cis45 cis-60 cis60 cis-93 cis93 cis ofdm hdr modem russian ofdm hf identification sigidwiki</item>
         <item>cis-128 cis128 russian ofdm 128 tone hf identification sigidwiki</item>
         <item>cis-3000 cis3000 russian single carrier 8psk 3000 baud hf identification sigidwiki</item>
+        <item>cp16 cp-16 crac chinese pattern hanzi gb2312 waterfall picture text weak signal emergency hf digital amateur</item>
     </string-array>
 </resources>

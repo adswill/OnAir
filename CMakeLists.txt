@@ -212,6 +212,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES cishf)   # CIS HF modes (families 620 - 626, docs/CIS-HF-3.9.md): core/src/cishf, app/cishf, tests/cishf
   list(APPEND DECT2_MODES cdma tdscdma)   # CDMA2000 / IS-95 cells (family 660), TD-SCDMA cells (661), docs/CELL-3.9.md: core/src/<mode>, app/<mode>, tests/<mode>
   list(APPEND DECT2_MODES vdl3)   # VDL Mode 3 (family 640, docs/AVIA-3.9.md): core/src/vdl3, app/vdl3, tests/vdl3
+  list(APPEND DECT2_MODES cp16)   # CP16, the CRAC 16-carrier picture text (family 790, docs/CP16-3.9.md): core/src/cp16, app/cp16, tests/cp16
   list(APPEND DECT2_MODES xlink)   # Extra links (family 600): core/src/xlink, app/xlink, tests/xlink (docs/LEFTOVERS-3.8.md)
   list(APPEND DECT2_MODES rclink)   # RC and mesh links (family 360): core/src/rclink, app/rclink, tests/rclink (docs/MESH-RC-3.8.md)
   list(APPEND DECT2_MODES thread)   # Thread (family 244): core/src/thread (6LoWPAN / MLE layer; the receiver is the 802.15.4 one in core/src/zigbee), app/thread, tests/thread
@@ -2876,7 +2877,7 @@ if(DECT2_BUILD_TESTS)
     target_compile_definitions(test_pskdsp_engine PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
   endif()
   # read a file of the source tree (a recording, a font): __FILE__ does not lead there (-ffile-prefix-map, Windows separators)
-  foreach(t test_sarsat_rx test_hfdig_kbd test_aero_cchan_real test_cubesat_ao40 test_cubesat_telem test_cubesat_more)
+  foreach(t test_cp16_all test_sarsat_rx test_hfdig_kbd test_aero_cchan_real test_cubesat_ao40 test_cubesat_telem test_cubesat_more)
     if(TARGET ${t})
       target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     endif()

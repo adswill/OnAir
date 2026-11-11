@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**315 modes.**
+**316 modes.**
 
 ## TV (17)
 
@@ -262,7 +262,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
 
-## Amateur - Digital (35)
+## Amateur - Digital (36)
 
 - **QRSS grabber** - QRSS: very slow Morse read from a spectrogram, receive only
 - **DFCW grabber** - DFCW: slow Morse with a frequency for dots and one for dashes, receive only
@@ -297,6 +297,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MFSK** - MFSK: error-corrected keyboard text
 - **THOR** - THOR: robust keyboard text
 - **DominoEX** - DominoEX: keyboard text that ignores tuning
+- **CP16** - CP16: Chinese characters drawn on the waterfall by 16 carriers (CRAC)
 - **Hellschreiber** - Hell: text drawn as a picture
 - **ROS (HF)** - ROS (HF): detects the ROS weak-signal mode and its sub-mode, marks it on the waterfall; text decoding partial (needs a public spec)
 

@@ -2774,3 +2774,20 @@ case 747: {
     cardIf(o, "Input Rate", t.inputRate);
     break;
 }
+case 791: {
+    const auto& t = rx.cp16; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Now Sec", t.nowSec);
+    cardIf(o, "Base Hz", t.baseHz);
+    cardIf(o, "Spacing Hz", t.spacingHz);
+    cardIf(o, "Row Sec", t.rowSec);
+    cardIf(o, "Char Sec", t.charSec);
+    cardIf(o, "Comb Score", t.combScore);
+    { Table tb({"Serial", "Time Sec", "Text", "Cp", "Score", "Margin"}); int n = 0; for (auto it = t.chars.rbegin(); it != t.chars.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.serial), cell(e.timeSec), cell(e.text), cell(e.cp), cell(e.score), cell(e.margin)}); } if (n) addTable(o, "Chars", tb); }
+    break;
+}

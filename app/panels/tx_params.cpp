@@ -161,6 +161,15 @@ std::vector<P> build(const TxModeSpec& m, bool analog, int variant) {
         });
         break;
     case TxPayloadKind::Keyboard:
+        if (id == "cp16") {   // read by makeCp16TxGenerator (cp16_gen.h)
+            add(v, {
+                F("cp16.char", Sec::Modulation, N_("Seconds a character"), N_("How long one 16-row character and its blank row take. CRAC finds 1 to 4 seconds readable; slower is stronger."), 2, 0.5, 8, "%.1f s"),
+                F("cp16.spacing", Sec::Modulation, N_("Carrier spacing"), N_("The distance between the 16 carriers. CRAC uses 10 to 20 Hz."), 15, 5, 30, "%.1f Hz"),
+                F("cp16.base", Sec::Modulation, N_("Lowest carrier"), N_("The audio frequency of the left column of the character."), 1000, 200, 3000, "%.0f Hz"),
+                B("cp16.lsb", Sec::Modulation, N_("Lower sideband"), N_("Send below the dial frequency instead of above it."), false),
+            });
+            break;
+        }
         add(v, {
             F("audio.tone", Sec::Modulation, N_("Centre frequency"), N_("Where the middle of the signal sits in the audio passband, as an offset above the dial frequency."), 1500, 200, 3000, "%.0f Hz", nullptr, Bind::ToneHz),
             C("hf.sideband", Sec::Modulation, N_("Sideband"), N_("Which sideband is sent."), 0, {sideband[0], sideband[1]}, 0, Bind::Variant),

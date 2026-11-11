@@ -19,6 +19,7 @@
 #include "dect2/atv/atv_rx.h"
 #include "dect2/avroad/avroad_rx.h"
 #include "dect2/bletrk/bletrk_live.h"
+#include "dect2/cp16/cp16_rx.h"
 #include "dect2/cquam/cquam_rx.h"
 #include "dect2/cw/cw_rx.h"
 #include "dect2/datawell/datawell_rx.h"
@@ -938,6 +939,12 @@ static bool set_747(Engine& e, const std::string& n, double v) {
     if (n == "setTdmGoldCode") { call(r, &Rx<decltype(r)>::setTdmGoldCode, v); return true; }
     return false;
 }
+static const char kOpt_791[] = R"JSON([{"n":"setRead","k":"bool","l":"Read","t":"s"}])JSON";
+static bool set_791(Engine& e, const std::string& n, double v) {
+    auto& r = e.cp16();
+    if (n == "setRead") { call(r, &Rx<decltype(r)>::setRead, v); return true; }
+    return false;
+}
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
 const OptEntry kOpt[] = {
     {7, kOpt_7, set_7},
@@ -1054,6 +1061,7 @@ const OptEntry kOpt[] = {
     {701, kOpt_701, set_701},
     {742, kOpt_742, set_742},
     {747, kOpt_747, set_747},
+    {791, kOpt_791, set_791},
 };
 } // namespace
 
