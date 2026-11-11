@@ -3878,3 +3878,9 @@ shared lists:	geteilte Listen:
 stop using it	nicht mehr verwenden
 The country of the shared transmitter list (ISO code, e.g. GB, DE, NO); Enter downloads it.\nThe lists of the countries of the ensembles heard are fetched as well.	Das Land der geteilten Senderliste (ISO-Code, z. B. GB, DE, NO); Enter lädt sie herunter.\nDie Listen der Länder der empfangenen Ensembles werden ebenfalls geladen.
 Add the transmitters of a CSV file to your own list (columns eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid in hex):\nan export of heard transmitters with the positions filled in, or a list someone shares; rows without a position are skipped.\nqt-dab's .txdata.tii is used where it is instead (FMLIST data, personal use).	Die Sender einer CSV-Datei zu deiner eigenen Liste hinzufügen (Spalten eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid hexadezimal):\nein Export der empfangenen Sender mit eingetragenen Positionen oder eine Liste, die jemand teilt; Zeilen ohne Position werden übersprungen.\nDie .txdata.tii von qt-dab wird stattdessen an Ort und Stelle genutzt (FMLIST-Daten, privater Gebrauch).
+Satellites, AX100 Mode 5	Satelliten, AX100 Mode 5
+Satellites, AX100 Mode 6	Satelliten, AX100 Mode 6
+Satellites, USP	Satelliten, USP
+Satellites, NGHam	Satelliten, NGHam
+Satellites, U482C	Satelliten, U482C
+Satellites, BEESAT / Mobitex	Satelliten, BEESAT / Mobitex

@@ -162,7 +162,7 @@ void Engine::configureReceiver(int a, double r) {
     case 56: rxGeneral_.configure(r); for (auto& g : extraGeneral_) g.configure(r); break;
     case 59: rxTime_.configure(r); break;
     case 60: rxMeteor_.configure(r); break;
-    case 62: rxCube_.configure(r); break;
+    case 62: case 841: case 844: case 847: case 850: case 853: case 856: rxCube_.configure(r); break;
     case 63: rxGs_.configure(r); break;
     case 64: rxVdes_.configure(r); break;
     case 65: rxHrpt_.configure(r); break;
@@ -390,7 +390,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 56: rxGeneral_.setSignalOffset(o); for (auto& g : extraGeneral_) g.setSignalOffset(o); break;
     case 59: rxTime_.setSignalOffset(o); rxTime_.setDialHz(dialHz); break;
     case 60: rxMeteor_.setSignalOffset(o); break;
-    case 62: rxCube_.setSignalOffset(o); rxCube_.setDialHz(dialHz); break;
+    case 62: case 841: case 844: case 847: case 850: case 853: case 856: rxCube_.setSignalOffset(o); rxCube_.setDialHz(dialHz); break;
     case 63: rxGs_.setSignalOffset(o); rxGs_.setDialHz(dialHz); break;
     case 64: rxVdes_.setSignalOffset(o); rxVdes_.setDialHz(dialHz); break;
     case 65: rxHrpt_.setSignalOffset(o); break;

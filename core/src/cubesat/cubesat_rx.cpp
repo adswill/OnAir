@@ -10,6 +10,7 @@
 #include "dect2/packet/packet_ax25.h"
 #include "dect2/packet/packet_demod.h"
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cmath>
@@ -171,6 +172,7 @@ struct CubesatReceiver::Impl {
     double dialHz = 0;
     int trackedNorad = 0; std::string trackedName;
     bool forwardKiss = true, wallClock = false;
+    std::atomic<uint32_t> framingMask{0};   // setFramingMask(): 0 every framing
     int ccsdsLen = 255;
 
     int64_t nextReport = 0;
@@ -278,6 +280,7 @@ struct CubesatReceiver::Impl {
     void accept(CubeFrame f, int64_t tt) {
         // a good frame explains failures of the other demodulators around it
         for (auto it = fails.begin(); it != fails.end();) { if (std::llabs(it->t - tt) < (int64_t)(1.2 * kMidRate)) it = fails.erase(it); else ++it; }
+        if (const uint32_t m = framingMask.load(std::memory_order_relaxed); m && !((m >> f.framing) & 1u)) return;   // a view onto one framing
         if (dup(f.data, tt)) return;
         f.timeSec = (double)tt / kMidRate;
         f.wallTime = wallClock ? (int64_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count() : 0;
@@ -522,6 +525,7 @@ void CubesatReceiver::setCcsdsLength(int bytes) {
     for (auto& f : p_->framer) f.ccsdsLen = p_->ccsdsLen;
 }
 void CubesatReceiver::setWallClock(bool on) { std::lock_guard<std::mutex> lk(p_->procMu); p_->wallClock = on; }
+void CubesatReceiver::setFramingMask(uint32_t mask) { p_->framingMask.store(mask, std::memory_order_relaxed); }
 bool CubesatReceiver::ready() const { std::lock_guard<std::mutex> lk(p_->procMu); return p_->isReady; }
 void CubesatReceiver::reset() { std::lock_guard<std::mutex> lk(p_->procMu); if (p_->isReady) p_->resetState(); }
 void CubesatReceiver::clearFrames() {
@@ -558,9 +562,38 @@ bool CubesatReceiver::telemetry(CubeTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->telMu);
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
+    if (const uint32_t m = p_->framingMask.load(std::memory_order_relaxed)) {   // a view onto one framing: only its frames and counts
+        std::vector<CubeFrame> keep;
+        for (const CubeFrame& f : out.frames) if ((m >> f.framing) & 1u) keep.push_back(f);
+        out.frames.swap(keep);
+        uint64_t ok = 0;
+        for (int i = 0; i < cubesat::kNumFramings; i++) { if ((m >> i) & 1u) ok += out.perFraming[i]; else out.perFraming[i] = 0; }
+        out.blocksOk = ok;
+        out.dataValid = out.dataValid && !out.frames.empty();
+    }
     return true;
 }
 void CubesatReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->procMu); p_->log = std::move(cb); }
+
+// the framings with a mode-list entry of their own (families 840 .. 855, stride 3: family, active standard family + 1, engine standard family + 2)
+static const CubesatView kViews[] = {
+    {840, "ax100m5", "AX100 Mode 5 (ASM + Golay)", Ax100Mode5, "AX100 M5"},
+    {843, "ax100m6", "AX100 Mode 6 (Reed-Solomon)", Ax100Mode6, "AX100 M6"},
+    {846, "usp", "USP (Sputnix)", Usp, "USP"},
+    {849, "ngham", "NGHam", Ngham, "NGHam"},
+    {852, "u482c", "U482C (GomX-1)", U482c, "U482C"},
+    {855, "beesat", "BEESAT / Mobitex", Mobitex, "Mobitex"},
+};
+const CubesatView* cubesatViews(int& count) { count = (int)(sizeof kViews / sizeof *kViews); return kViews; }
+const CubesatView* cubesatViewForActive(int a) { for (const auto& v : kViews) if (v.family + 1 == a) return &v; return nullptr; }
+const CubesatView* cubesatViewForStd(int s) { for (const auto& v : kViews) if (v.family + 2 == s) return &v; return nullptr; }
+
+ModeTuning cubesatViewTuning(int i) {
+    ModeTuning t = cubesatTuning();
+    const CubesatView& v = kViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
+    return t;
+}
 
 ModeTuning cubesatTuning() {
     ModeTuning t;

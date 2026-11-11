@@ -239,7 +239,7 @@ const ModeUi* modeUi(int family) {
     case 54: return &kWifiUi;
     case 55: return &kGeneralUi;
     case 58: return &kTimeUi;
-    case 61: return &kCubesatUi;
+    case 61: case 840: case 843: case 846: case 849: case 852: case 855: return &kCubesatUi;   // 840 .. 855: one framing each, the same panel (cubesat_rx.h: cubesatViews)
     case 62: return &kGlobalstarUi;
     case 63: return &kVdesUi;
     case 65: return &kZigbeeUi;

@@ -563,6 +563,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxQo100_.configure(rate_);
     rxTime_.configure(rate_);
     rxCube_.configure(rate_);
+    { const CubesatView* cv = cubesatViewForActive(activeStdFor(stdMode_.load())); rxCube_.setFramingMask(cv ? 1u << cv->framing : 0u); }   // an entry of one framing hears that framing only
     rxGs_.configure(rate_);
     rxGs_.setWallClock(dev.kind != DeviceInfo::File);
     rxGs_.setLogCallback([this](const std::string& s) { log(s); });
