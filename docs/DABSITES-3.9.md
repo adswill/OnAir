@@ -71,6 +71,7 @@ up to tens of km without saying so.
   (DE, GB, NL, CH); a simulated ensemble (EId 10BC, ECC E0, four TII codes at 0 / -3 / -6 / -9 dB, TII every frame, FIG 0/9, 0/11, 0/22,
   1/3) through the receiver at 20 dB SNR, +800 Hz, 8-bit samples, matched as the Map tab does: 2 exact, 1 approximate, 1 from a list.
 - `dab_txlist`: qt-dab list plain and scrambled (keys 0x07, 0xAA, 0x30), skipped rows, matching precedence and key separation.
+- quick.yml (Linux, builds dect2 too): dab_fig, dab_txlist, dab_tii passed, https://github.com/adswill/OnAir/actions/runs/42970713929.
 - No real German capture with FIG 0/22 exists; the zoom fix is checked by code review, not by a GUI run (battery: no local build).
 
 ## Left for the owner
