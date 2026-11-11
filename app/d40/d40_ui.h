@@ -12,3 +12,4 @@ void d40SatCard(App& a);       // d40_sat_ui.cpp: blind scan list, modcod fit, d
 namespace dect2::sweep { struct Sweep; struct PersistentSignal; }
 void d40ScanFeed(const dect2::sweep::Sweep& s);                         // d40_scan_ui.cpp: from the sweep thread after each sweep
 void d40ScanCard(const std::vector<dect2::sweep::PersistentSignal>& persist);   // under the Band survey in the sweep scanner
+void d40AmCard(App& a);        // d40_am_ui.cpp: carrier offset, best sideband, AM or DRM hint, station ID from the user's schedule
