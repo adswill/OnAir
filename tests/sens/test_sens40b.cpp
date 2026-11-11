@@ -172,7 +172,7 @@ int main() {
             const Mode* m = nullptr;
             for (const auto& x : all) if (x.id == g.id) m = &x;
             if (!m) { printf("%-8s not in the harness\n", g.id); fails++; continue; }
-            Mode mm = *m; mm.secs = std::min(mm.secs, 3.0);
+            Mode mm = *m;   // the whole signal: FLEX needs about 4 s to find its first frame
             Prep P;
             if (!prepare(mm, P)) { printf("%-8s FAIL: no valid output on the clean test signal\n", g.id); fails++; continue; }
             const double ok = rate(mm, P, g.snrDb, 0, 0, 2, 1);
