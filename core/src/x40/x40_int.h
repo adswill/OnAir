@@ -54,6 +54,14 @@ std::unique_ptr<Decoder> makeRadar();
 std::unique_ptr<Decoder> makeGnssJam();
 std::unique_ptr<Decoder> makePassband();
 std::unique_ptr<Decoder> makeVlfMsk();
+std::unique_ptr<Decoder> makeOccupancy();
+std::unique_ptr<Decoder> makeEvm();
+std::unique_ptr<Decoder> makeFreqAcc();
+std::unique_ptr<Decoder> makePttLog();
+std::unique_ptr<Decoder> makeIntermod();
+std::unique_ptr<Decoder> makeSpur();
+std::unique_ptr<Decoder> makeDopplerLog();
+std::unique_ptr<Decoder> makeHopAnalyser();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {
