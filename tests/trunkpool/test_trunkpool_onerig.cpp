@@ -197,44 +197,13 @@ static void testP25() {
 
 // ------------------------------------------------------------------------------------------------ DMR and NXDN (generator carriers, grants given)
 
-// diagnosis (prints only): one carrier of the mode's generator, decoded directly at the capture rate and through the slice filter at two narrow rates
-static void diagCarrier(int stdMode, const char* name) {
-    const double rate = 1.2e6;
-    for (double off : {0.0, 262500.0}) {
-        SynthConfig c; c.mode = stdMode; c.snrDb = 30; c.cfoHz = off;
-        std::unique_ptr<ModeSynth> g = makeModeSynth(stdMode, c, rate);
-        if (!g) return;
-        const size_t n = (size_t)(rate * 6);
-        std::vector<cf32> x(n);
-        g->generate(x.data(), n);
-        for (double minOut : {0.0, 48000.0, 96000.0, 240000.0}) {
-            uint64_t frames = 0;
-            tp::SliceDdc d;
-            if (minOut > 0) d.configure(rate, off, 9000, minOut);
-            const double r = minOut > 0 ? d.outRate() : rate;
-            if (stdMode == 11) {
-                DmrReceiver rx; rx.setSilent(true);
-                if (minOut > 0) rx.configureChannel(r); else rx.configure(r);
-                rx.setVoiceCallback([&](int, int, const uint8_t*) { frames++; });
-                for (size_t i = 0; i < n; i += 12000) { const size_t m = std::min<size_t>(12000, n - i); if (minOut > 0) { const auto& o = d.process(x.data() + i, m); rx.feed(o.data(), o.size()); } else if (off == 0) rx.feed(x.data() + i, m); }
-                DmrTelemetry t; rx.telemetry(t, 0);
-                printf("diag %s off %.0f minOut %.0f (rate %.0f): ready %d state %d voiceBursts %llu frames %llu\n", name, off, minOut, r, (int)rx.ready(), t.state, (unsigned long long)t.voiceBursts, (unsigned long long)frames);
-            } else {
-                NxdnReceiver rx; rx.setSilent(true); rx.configure(r); rx.setSignalOffset(minOut > 0 ? 0 : off);
-                rx.setVoiceTap([&](const uint8_t*) { frames++; });
-                for (size_t i = 0; i < n; i += 12000) { const size_t m = std::min<size_t>(12000, n - i); if (minOut > 0) { const auto& o = d.process(x.data() + i, m); rx.feed(o.data(), o.size()); } else rx.feed(x.data() + i, m); }
-                printf("diag %s off %.0f minOut %.0f (rate %.0f): frames %llu\n", name, off, minOut, r, (unsigned long long)frames);
-            }
-        }
-    }
-}
-
 static void testCarriers(int stdMode, tp::Proto proto, const char* name) {
     const double rate = 1.2e6, C = 460.0e6;
     const double off[3] = {-312500, 12500, 262500};
     std::vector<std::unique_ptr<ModeSynth>> g;
     for (int k = 0; k < 3; k++) {
-        SynthConfig c; c.mode = stdMode; c.snrDb = 99; c.cfoHz = off[k] + (k - 1) * 300.0; c.sroPpm = (k - 1) * 25.0;
+        // the generators model a small tuning error only (DMR's modulator assumes a phase step below 0.1 rad): the carrier is moved to its channel here
+        SynthConfig c; c.mode = stdMode; c.snrDb = 99; c.cfoHz = (k - 1) * 300.0; c.sroPpm = (k - 1) * 25.0;
         if (stdMode == 11) { c.modeOpt[4] = k + 1; c.modeOpt[3] = 2; }   // DMR: a different seed per carrier, busy traffic
         g.push_back(makeModeSynth(stdMode, c, rate));
         if (!g.back()) { CHECK(false, "%s: no generator", name); return; }
@@ -247,6 +216,7 @@ static void testCarriers(int stdMode, tp::Proto proto, const char* name) {
         double p = 0; for (const cf32& v : tmp) p += std::norm(v);
         scale[k] = (float)(0.05 / std::sqrt(p / (double)n + 1e-20));
     }
+    std::complex<double> ph[3] = {1.0, 1.0, 1.0};
     std::mt19937 rng(3);
     const float sg = (float)std::sqrt(0.05 * 0.05 / std::pow(10.0, 22 / 10.0) * rate / 12500 / 2);   // 22 dB in 12.5 kHz
     std::normal_distribution<float> nd(0.f, sg);
@@ -256,7 +226,12 @@ static void testCarriers(int stdMode, tp::Proto proto, const char* name) {
     int maxActive = 0;
     for (double t = 0; t < 6.0; t += 0.05) {
         for (size_t i = 0; i < n; i++) buf[i] = cf32(nd(rng), nd(rng)) + cf32(0.02f, 0.01f);   // noise and a DC spur
-        for (int k = 0; k < 3; k++) { g[(size_t)k]->generate(tmp.data(), n); for (size_t i = 0; i < n; i++) buf[i] += tmp[i] * scale[k]; }
+        for (int k = 0; k < 3; k++) {
+            g[(size_t)k]->generate(tmp.data(), n);
+            const std::complex<double> st = std::polar(1.0, 2 * M_PI * off[k] / rate);
+            for (size_t i = 0; i < n; i++) { buf[i] += tmp[i] * scale[k] * cf32((float)ph[k].real(), (float)ph[k].imag()); ph[k] *= st; }
+            ph[k] /= std::abs(ph[k]);
+        }
         if (std::fmod(t + 1e-9, 1.0) < 0.05)   // a grant (repeat) for each carrier every second
             for (int k = 0; k < 3; k++) { tp::GrantEvent e; e.proto = proto; e.tg = 200 + k; e.src = 7000 + k; e.freqHz = C + off[k]; one.onGrant(e); }
         one.feed(buf.data(), n);
@@ -410,8 +385,6 @@ int main() {
     testCoverage();
     testDdc();
     testP25();
-    diagCarrier(11, "DMR");
-    diagCarrier(40, "NXDN");
     testCarriers(11, tp::Proto::DmrTier3, "DMR");
     testCarriers(40, tp::Proto::Nxdn, "NXDN");
     testSmartnet();
