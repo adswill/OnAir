@@ -33,6 +33,7 @@ public:
     void setFollowPrivate(bool on);             // ... also unit-to-unit calls (off by default)
     void setFollowGroups(const std::vector<int>& tgs);   // only these talkgroups (empty: all)
     void setListenTg(int tg);                   // the talkgroup whose sound is played; -1 the newest call
+    void setVoiceSlots(int n);                  // calls followed at once inside the capture, 1 .. 16 (default 4; single-radio trunking, docs/TRUNK1-3.9.md)
     void setRecordDir(const std::string& dir);  // one WAV + JSON per call; empty: no files
     void setVolume(float v);
     void setMuted(bool m);

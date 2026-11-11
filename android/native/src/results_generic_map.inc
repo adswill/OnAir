@@ -1178,8 +1178,10 @@ case 128: {
     cardIf(o, "Sys Id", t.sysId);
     cardIf(o, "Input Rate", t.inputRate);
     cardIf(o, "Center Hz", t.centerHz);
+    cardIf(o, "Voice Slots", t.voiceSlots);
     { Table tb({"T", "Type", "Called", "Caller", "Channel", "Detail", "Carrier Id", "Carrier Hz"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.t), cell(e.type), cell(e.called), cell(e.caller), cell(e.channel), cell(e.detail), cell(e.carrierId), cell(e.carrierHz)}); } if (n) addTable(o, "Rows", tb); }
     { Table tb({"Channel", "Count", "Last T", "Called", "Caller"}); int n = 0; for (auto it = t.channels.rbegin(); it != t.channels.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.channel), cell(e.count), cell(e.lastT), cell(e.called), cell(e.caller)}); } if (n) addTable(o, "Channels", tb); }
+    { Table tb({"Id", "Called", "Caller", "Channel", "Freq Hz", "Voice Slot", "State", "Note"}); int n = 0; for (auto it = t.calls.rbegin(); it != t.calls.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.called), cell(e.caller), cell(e.channel), cell(e.freqHz), cell(e.voiceSlot), cell(e.state), cell(e.note)}); } if (n) addTable(o, "Calls", tb); }
     break;
 }
 case 129: {

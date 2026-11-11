@@ -60,6 +60,7 @@
 #include "dect2/mesh/mesh_rx.h"
 #include "dect2/meteor/meteor_rx.h"
 #include "dect2/modeac/modeac_live.h"
+#include "dect2/mpt1327/mpt1327_engine.h"
 #include "dect2/mscatter/mscatter_live.h"
 #include "dect2/mt63/mt63_rx.h"
 #include "dect2/ndb/ndb_rx.h"
@@ -598,12 +599,21 @@ static bool set_117(Engine& e, const std::string& n, double v) {
     if (n == "setSpeed") { call(r, &Rx<decltype(r)>::setSpeed, v); return true; }
     return false;
 }
-static const char kOpt_131[] = R"JSON([{"n":"setInverted","k":"bool","l":"Inverted","h":"no effect: the polarity is found from the sync word and the check bits (kept for the callers)","t":"s"},{"n":"setFollow","k":"bool","l":"Follow","h":"listen to the voice channel of an announced call","t":"s"},{"n":"setFollowActivity","k":"bool","l":"Follow Activity","h":"... also to a carrier on a channel of the table that no message announced","t":"s"}])JSON";
+static const char kOpt_128[] = R"JSON([{"n":"setFollow","k":"bool","l":"Follow","h":"follow calls inside the capture (on by default; needs the channel plan)","t":"s"},{"n":"setVoiceSlots","k":"int","l":"Voice Slots","h":"calls followed at once, 1 .. 16 (default 4)","t":"s"},{"n":"setListenTg","k":"int","l":"Listen Tg","h":"the call whose sound is played (PFIX << 13 | IDENT1); -1 the newest","t":"s"}])JSON";
+static bool set_128(Engine& e, const std::string& n, double v) {
+    auto& r = e.mpt1327();
+    if (n == "setFollow") { call(r, &Rx<decltype(r)>::setFollow, v); return true; }
+    if (n == "setVoiceSlots") { call(r, &Rx<decltype(r)>::setVoiceSlots, v); return true; }
+    if (n == "setListenTg") { call(r, &Rx<decltype(r)>::setListenTg, v); return true; }
+    return false;
+}
+static const char kOpt_131[] = R"JSON([{"n":"setInverted","k":"bool","l":"Inverted","h":"no effect: the polarity is found from the sync word and the check bits (kept for the callers)","t":"s"},{"n":"setFollow","k":"bool","l":"Follow","h":"listen to the voice channel of an announced call","t":"s"},{"n":"setFollowActivity","k":"bool","l":"Follow Activity","h":"... also to a carrier on a channel of the table that no message announced","t":"s"},{"n":"setVoiceSlots","k":"int","l":"Voice Slots","h":"calls decoded at once, 1 .. 16 (default 4)","t":"s"}])JSON";
 static bool set_131(Engine& e, const std::string& n, double v) {
     auto& r = e.edacs();
     if (n == "setInverted") { call(r, &Rx<decltype(r)>::setInverted, v); return true; }
     if (n == "setFollow") { call(r, &Rx<decltype(r)>::setFollow, v); return true; }
     if (n == "setFollowActivity") { call(r, &Rx<decltype(r)>::setFollowActivity, v); return true; }
+    if (n == "setVoiceSlots") { call(r, &Rx<decltype(r)>::setVoiceSlots, v); return true; }
     return false;
 }
 static const char kOpt_141[] = R"JSON([{"n":"setDemod","k":"int","l":"Demod","h":"HfDemod (hf_demod.h): USB (default), LSB, NFM, AM; Auto counts as USB","t":"s"}])JSON";
@@ -736,12 +746,13 @@ static bool set_301(Engine& e, const std::string& n, double v) {
     if (n == "setExpiry") { call(r, &Rx<decltype(r)>::setExpiry, v); return true; }
     return false;
 }
-static const char kOpt_321[] = R"JSON([{"n":"setFollow","k":"bool","l":"Follow","h":"follow calls inside the capture","t":"s"},{"n":"setFollowPrivate","k":"bool","l":"Follow Private","h":"... also unit-to-unit calls (off by default)","t":"s"},{"n":"setListenTg","k":"int","l":"Listen Tg","h":"the talkgroup whose sound is played; -1 the newest call","t":"s"}])JSON";
+static const char kOpt_321[] = R"JSON([{"n":"setFollow","k":"bool","l":"Follow","h":"follow calls inside the capture","t":"s"},{"n":"setFollowPrivate","k":"bool","l":"Follow Private","h":"... also unit-to-unit calls (off by default)","t":"s"},{"n":"setListenTg","k":"int","l":"Listen Tg","h":"the talkgroup whose sound is played; -1 the newest call","t":"s"},{"n":"setVoiceSlots","k":"int","l":"Voice Slots","h":"calls followed at once inside the capture, 1 .. 16 (default 4; single-radio trunking, docs/TRUNK1-3.9.md)","t":"s"}])JSON";
 static bool set_321(Engine& e, const std::string& n, double v) {
     auto& r = e.smartnet();
     if (n == "setFollow") { call(r, &Rx<decltype(r)>::setFollow, v); return true; }
     if (n == "setFollowPrivate") { call(r, &Rx<decltype(r)>::setFollowPrivate, v); return true; }
     if (n == "setListenTg") { call(r, &Rx<decltype(r)>::setListenTg, v); return true; }
+    if (n == "setVoiceSlots") { call(r, &Rx<decltype(r)>::setVoiceSlots, v); return true; }
     return false;
 }
 static const char kOpt_361[] = R"JSON([{"n":"setProtocols","k":"int","l":"Protocols","h":"rclink::Proto bits","t":"s"},{"n":"setElrsDomain","k":"int","l":"Elrs Domain","h":"index into elrsDomains()","t":"s"}])JSON";
@@ -1018,6 +1029,7 @@ const OptEntry kOpt[] = {
     {108, kOpt_108, set_108},
     {114, kOpt_114, set_114},
     {117, kOpt_117, set_117},
+    {128, kOpt_128, set_128},
     {131, kOpt_131, set_131},
     {141, kOpt_141, set_141},
     {142, kOpt_142, set_142},

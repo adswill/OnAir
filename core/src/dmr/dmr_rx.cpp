@@ -272,12 +272,12 @@ struct DmrReceiver::Impl {
         reset();
     }
 
-    void configure(double fs) {
+    void configure(double fs, bool channel = false) {
         inRate = fs;
         inCount = 0;
         ready = false;
         stages.clear();
-        if (fs < dmrTuning().minSampleRate - 1) return;
+        if (fs < (channel ? kWorkRate : dmrTuning().minSampleRate) - 1) return;
         const int d = pickDecimation(fs);
         const std::vector<int> f = splitFactors(d);
         double r = fs;
@@ -627,6 +627,7 @@ DmrReceiver::DmrReceiver() : p_(std::make_unique<Impl>()) {}
 DmrReceiver::~DmrReceiver() = default;
 
 void DmrReceiver::configure(double inputRateHz) { p_->configure(inputRateHz); }
+void DmrReceiver::configureChannel(double inputRateHz) { p_->configure(inputRateHz, true); }
 bool DmrReceiver::ready() const { return p_->ready; }
 void DmrReceiver::reset() { if (p_->ready) p_->reset(); }
 void DmrReceiver::feed(const cf32* x, size_t n) { p_->feed(x, n); }

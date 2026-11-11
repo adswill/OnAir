@@ -36,6 +36,7 @@ struct EdacsCall {
     int64_t wallTime = 0;
     double startSec = 0, lastSec = 0, durSec = 0;
     double freqHz = 0;                // from the frequency table, 0 when the LCN is not in it
+    int voiceSlot = -1;               // single-radio trunking: the voice slot decoding it at the same time as the others (0 ...), -1 none
 };
 
 struct EdacsTalkgroup {
@@ -81,6 +82,10 @@ struct EdacsTelemetry {
     int followLcn = 0;                      // the voice channel listened to now (0 none)
     bool audioOpen = false;                 // sound is playing from it
     std::string note;                       // why nothing is followed, when it is not (no table, outside the capture ...)
+    // single-radio trunking (docs/TRUNK1-3.9.md): every analog call inside the capture is decoded at once, each in its own voice slot
+    int voiceSlots = 4;
+    int slotsInUse = 0;
+    std::string slotsStatus;                // what the voice slots do, or the newest notice (a call outside the capture with the bandwidth it needs)
 };
 
 constexpr size_t kEdacsCallMax = 200, kEdacsTgMax = 200;

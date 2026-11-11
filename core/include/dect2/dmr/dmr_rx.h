@@ -25,6 +25,8 @@ public:
     ~DmrReceiver();
 
     void configure(double inputRateHz);
+    // A channel already cut out of a wide capture at 0 Hz (single-radio trunking, trunkpool/capture_voice.h): any rate from 48 kHz, without the radio minimum of configure()
+    void configureChannel(double inputRateHz);
     bool ready() const;                                  // false when the input rate is too low for this mode
     void reset();                                        // after a retune: forget the signal, drop queued output (the call log stays: clearResults)
     void feed(const cf32* x, size_t n);

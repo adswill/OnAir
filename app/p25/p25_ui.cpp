@@ -39,6 +39,7 @@
 #include <string>
 #include <map>
 #include <vector>
+#include "trunkpool/trunk1.h"
 
 namespace {
 
@@ -742,8 +743,9 @@ void followView(App& a) {
     if (a.wideFollow) ImGui::TextDisabled("calls inside the capture get a decoder when they are granted (up to %d Phase 1 at once, one Phase 2 as the second mode); outside it the radio leaves the control channel for them", T.ctl.follower.config().maxSlices);
     else if (wideActive(a)) ImGui::TextDisabled("whole span: every carrier in the capture is decoded, the sound moves to the followed call (up to %d at once)", T.ctl.follower.config().maxSlices);
     else ImGui::TextDisabled("single channel: the radio leaves the control channel for each call");
+    trunk1::section(a);
     FollowConfig fc = T.ctl.follower.config();
-    ImGui::SetNextItemWidth(110 * gUi); bool ch = ImGui::SliderInt("simultaneous calls", &fc.maxSlices, 1, 4);
+    ImGui::SetNextItemWidth(110 * gUi); bool ch = ImGui::SliderInt("simultaneous calls", &fc.maxSlices, 1, 8);
     ImGui::SameLine(0, 10 * gUi); ImGui::SetNextItemWidth(110 * gUi); ch |= ImGui::SliderFloat("hang time s", &S.hang, 0.5f, 6.f, "%.1f");
     fc.hangSec = S.hang;
     ch |= ImGui::Checkbox("retune the radio", &fc.allowRetune);

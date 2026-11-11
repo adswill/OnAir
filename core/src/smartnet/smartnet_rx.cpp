@@ -92,6 +92,7 @@ struct SmartnetReceiver::Impl {
         c.systemName = "typeii";
         c.recordDir = recordDir; c.record = !recordDir.empty(); c.recordMetaOnly = false;
         c.promoteControl = false;
+        c.maxCalls = std::max(8, voice.slots());
         pool = std::make_unique<tpool::TrunkPool>(c);
         pool->wallBase = (int64_t)std::time(nullptr);
         pool->addDeviceRef(&voice);
@@ -150,6 +151,7 @@ struct SmartnetReceiver::Impl {
         if (m.group) touchTg(m);
         const double now = timeSec();
         pool->onControlSeen(now);
+        if (tuned() > 0) pool->setControlChannel(tuned());   // the "needs X MHz" of a call outside the capture counts from here
         if (!wanted(m) || m.kind == Kind::InterconnectGrant) return;   // interconnect (telephone) calls are logged only
         tpool::GrantEvent g;
         g.proto = dig ? tpool::Proto::P25p1 : tpool::Proto::MotorolaTypeII;
@@ -339,6 +341,7 @@ struct SmartnetReceiver::Impl {
         const auto& st = pool->stats();
         tel.grants = st.grants; tel.followed = st.followed; tel.missedOutside = st.missedOutside; tel.missedBusy = st.missedBusy; tel.encrypted = st.encrypted;
         tel.poolStatus = pool->statusLine(now);
+        tel.voiceSlots = voice.slots();
         for (auto& t : tel.talkgroups) t.active = false;
         tel.calls.clear();
         tel.audioOpen = false;
@@ -350,6 +353,7 @@ struct SmartnetReceiver::Impl {
             c.wallStart = it->wallStart; c.durationSec = c.active ? now - it->startSec : it->durationSec(); c.audioSec = it->audioSec;
             c.state = tpool::callStateName(it->state); c.note = it->note;
             c.listening = c.active && it->slice >= 0 && it->slice == listenSlice;
+            c.voiceSlot = c.active && it->followed ? it->slice : -1;
             if (c.listening && !muted.load()) tel.audioOpen = true;
             if (c.active && c.group) for (auto& t : tel.talkgroups) if (t.tg == c.tg) t.active = true;
             tel.calls.push_back(std::move(c));
@@ -405,6 +409,12 @@ void SmartnetReceiver::setBand(smartnet::Band b, const smartnet::CustomPlan& c) 
 void SmartnetReceiver::setFollow(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->follow = on; p_->tel.follow = on; }
 void SmartnetReceiver::setFollowPrivate(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->followPrivate = on; p_->tel.followPrivate = on; }
 void SmartnetReceiver::setFollowGroups(const std::vector<int>& g) { std::lock_guard<std::mutex> lk(p_->mu); p_->followGroups = g; }
+void SmartnetReceiver::setVoiceSlots(int n) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->voice.setSlots(n);
+    tpool::PoolConfig c = p_->pool->config(); c.maxCalls = std::max(8, p_->voice.slots()); p_->pool->setConfig(c);
+    p_->tel.voiceSlots = p_->voice.slots();
+}
 void SmartnetReceiver::setListenTg(int tg) { std::lock_guard<std::mutex> lk(p_->mu); p_->listenTg = tg; p_->tel.listenTg = tg; }
 void SmartnetReceiver::setRecordDir(const std::string& d) { std::lock_guard<std::mutex> lk(p_->mu); p_->recordDir = d; if (p_->pool) { auto c = p_->pool->config(); c.recordDir = d; c.record = !d.empty(); p_->pool->setConfig(c); } }
 void SmartnetReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f, v)); }
