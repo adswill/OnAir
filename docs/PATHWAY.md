@@ -1768,3 +1768,6 @@ A user's handheld read OnAir's transmitted D023N as D411N (five codes reported).
 marker bits and the Golay polynomial the wrong way round; the tone decoder's table (tones_proto.cpp) was right and predicts all five wrong
 readings exactly. The transmitter and the DCS squelch now use that one table (023 = 0x763813). Test: test_audio_control. PR #481 (bellx2,
 Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.
+
+## 2026-11-12 feat40-feat1: mode features group A (part 1)
+Echo and interferer diagnosis for DVB-T / T2, FM co-channel / adjacent / antenna heading tools, DAB ensemble change watch, pass quality rating, General receiver signal guess. Logic headers plus unit tests, UI hooks in the existing panels. See docs/FEATURES-4.0-A.md.

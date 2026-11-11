@@ -6,6 +6,7 @@
 #include "state/results_export.h"
 #include "dect2/dab/dab_announce.h"
 #include "dect2/dab/dab_fig.h"
+#include "dect2/dab/dab_watch.h"
 #include <ctime>
 #include <filesystem>
 
@@ -850,6 +851,8 @@ void dabEnsembleTab(App& a) {
 }
 
 // ------------------------------------------------------------------ the census: every ensemble of a wide capture at once
+static dect2::dabwatch::Watch gDabWatch;   // multiplex changes: new / gone ensembles, added and removed services, bit rate changes
+
 static void dabCensusSection(App& a) {
     bool on = a.engine.dabCensusOn();
     if (ImGui::Checkbox(tr("Every ensemble in the capture"), &on)) a.engine.setDabCensus(on);
@@ -871,6 +874,20 @@ static void dabCensusSection(App& a) {
             ImGui::PopID();
         }
         ImGui::EndTable();
+    }
+    {   // ensemble change watch: a ten-second-old FIC glitch is not a change, see dab_watch.h
+        std::vector<dect2::dabwatch::Obs> obs;
+        for (const auto& r : rows) {
+            dect2::dabwatch::Obs o; o.channel = r.channel; o.active = r.active && r.locked; o.eid = r.eid; o.ensemble = r.ensemble;
+            for (const auto& sv : r.services) o.services.push_back({sv.sid, sv.label, sv.dabPlus, sv.bitrate});
+            obs.push_back(std::move(o));
+        }
+        for (const auto& e : gDabWatch.update(ImGui::GetTime(), obs)) a.engine.log("DAB: " + e.text);
+        const auto& lg = gDabWatch.log();
+        if (!lg.empty() && ImGui::TreeNode(trw("Ensemble changes"))) {
+            for (auto it = lg.rbegin(); it != lg.rend(); ++it) { ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(it->text.c_str()); ImGui::PopTextWrapPos(); }
+            ImGui::TreePop();
+        }
     }
     const auto merged = dect2::dabCensusMerge(rows);
     if (!merged.empty() && ImGui::TreeNode(trw("All services"))) {
