@@ -14878,6 +14878,10 @@ static bool put_562(const RxTelemetry& rx, std::string& s) { ev_dect2__NavicTele
 static bool put_563(const RxTelemetry& rx, std::string& s) { ev_dect2__SatDetectTelemetry(s, rx.satdetect); return true; }
 static bool put_601(const RxTelemetry& rx, std::string& s) { ev_dect2__XlinkTelemetry(s, rx.xlink); return true; }
 static bool put_602(const RxTelemetry& rx, std::string& s) { ev_dect2__XlinkTelemetry(s, rx.xlink); return true; }
+static bool put_604(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
+static bool put_605(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
+static bool put_606(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
+static bool put_607(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_621(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
 static bool put_622(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
 static bool put_623(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
@@ -15139,6 +15143,10 @@ static const StdEntry kStd[] = {
     {563, "satdetect", "dect2::SatDetectTelemetry", kSchema_dect2__SatDetectTelemetry, put_563},
     {601, "xlink", "dect2::XlinkTelemetry", kSchema_dect2__XlinkTelemetry, put_601},
     {602, "xlink", "dect2::XlinkTelemetry", kSchema_dect2__XlinkTelemetry, put_602},
+    {604, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_604},
+    {605, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_605},
+    {606, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_606},
+    {607, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_607},
     {621, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_621},
     {622, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_622},
     {623, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_623},
@@ -15267,10 +15275,10 @@ static const WebModeRow kRows[] = {
     {239, "PACTOR-IV", 12, "PACTOR-IV: HF 1800 baud single carrier, detection and constellation estimate (physical layer only; no text)", "", 241, 240, "pactorhf"},
     {430, "MIL-STD-188-110 serial", 12, "MIL-STD-188-110: serial tone HF data modem with STANAG 5066 framing (simulated signals only)", "", 432, 431, "hfutil"},
     {431, "STANAG 4285", 12, "STANAG 4285: NATO HF data modem with STANAG 5066 framing (simulated signals only)", "", 433, 432, "hfutil"},
-    {603, "STANAG 4539", 12, "STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)", "", 605, 604, ""},
-    {604, "3G-ALE", 12, "3G-ALE: third-generation HF link setup, traffic management and HDL / LDL data bursts BW0 to BW4 (simulated signals only)", "", 606, 605, ""},
-    {605, "Link 11 CLEW", 12, "Link 11 CLEW: message detector and frame structure, no data (simulated signals only)", "", 607, 606, ""},
-    {606, "STANAG 4481 FSK", 12, "STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)", "", 608, 607, ""},
+    {603, "STANAG 4539", 12, "STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)", "", 605, 604, "hfutil"},
+    {604, "3G-ALE", 12, "3G-ALE: third-generation HF link setup, traffic management and HDL / LDL data bursts BW0 to BW4 (simulated signals only)", "", 606, 605, "hfutil"},
+    {605, "Link 11 CLEW", 12, "Link 11 CLEW: message detector and frame structure, no data (simulated signals only)", "", 607, 606, "hfutil"},
+    {606, "STANAG 4481 FSK", 12, "STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)", "", 608, 607, "hfutil"},
     {432, "ARQ-E", 12, "ARQ-E: HF duplex ARQ teleprinter (simulated signals only)", "", 434, 433, "hfutil"},
     {433, "ARQ-N", 12, "ARQ-N: HF duplex ARQ teleprinter (simulated signals only)", "", 435, 434, "hfutil"},
     {434, "AUTOSPEC", 12, "AUTOSPEC: HF FEC teleprinter (simulated signals only)", "", 436, 435, "hfutil"},

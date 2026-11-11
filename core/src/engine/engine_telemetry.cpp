@@ -199,6 +199,7 @@ int poll81(Rx& rx, RxTelemetry& t, uint64_t* seqs) {
 // The report of the receivers from DVB-S on (the first mode and the second, each with its own report numbers): 1 = a new one in t,
 // 0 = none new, -1 = a is not one of them
 static_assert(horus::kActiveStandard < Engine::kPollSeqSlots, "the Horus poll slot is its active standard");
+static_assert(kHfuHdrFamily + 1 == 604 && kHfuAle3gFamily + 1 == 605 && kHfuLink11Family + 1 == 606 && kHfu4481Family + 1 == 607, "the HF military case labels in pollMode");   // literal labels: tools/gen_web_schema.py reads them
 int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     if (wideOn_.load(std::memory_order_relaxed) && WideModes::supports(a)) return wide_.telemetry(a, t, wideSeq_[a & 255]) ? 1 : 0;
     t.wide.clear();
@@ -400,7 +401,7 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 236: return pollStd(rxFy3a_, 236, t, seqs[195], &RxTelemetry::fy3a);   // FY-3 AHRPT (slot 195)
     case 237: return pollStd(rxFy3m_, 237, t, seqs[196], &RxTelemetry::fy3m);   // FY-3 MPT (slot 196)
     case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: return pollStd(rxHfu_[a - 431], a, t, hfuSeq_[a - 431], &RxTelemetry::hfutil);   // HF utility modes
-    case kHfuHdrFamily + 1: case kHfuAle3gFamily + 1: case kHfuLink11Family + 1: case kHfu4481Family + 1: return pollStd(rxHfm_[a - kHfuExtraActiveFirst], a, t, hfmSeq_[a - kHfuExtraActiveFirst], &RxTelemetry::hfutil);   // STANAG 4539 (603), 3G-ALE (604), Link 11 (605), STANAG 4481 (606)
+    case 604: case 605: case 606: case 607:   /* kHfuHdrFamily + 1 .. kHfu4481Family + 1 */ return pollStd(rxHfm_[a - kHfuExtraActiveFirst], a, t, hfmSeq_[a - kHfuExtraActiveFirst], &RxTelemetry::hfutil);   // STANAG 4539 (603), 3G-ALE (604), Link 11 (605), STANAG 4481 (606)
     case 238: return pollStd(rxPh2_, 238, t, seqs[197], &RxTelemetry::pactorhf);   // PACTOR-II (slot 197)
     case 239: return pollStd(rxPh3_, 239, t, seqs[198], &RxTelemetry::pactorhf);   // PACTOR-III (slot 198)
     case 240: return pollStd(rxPh4_, 240, t, seqs[199], &RxTelemetry::pactorhf);   // PACTOR-IV (slot 199)
