@@ -17,7 +17,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **TV sat beacon decoder** - TV sat beacon decoder: carrier level, offset and drift, with telemetry frames and a decoded view when the beacon carries data
 - **DTMB** - DTMB digital terrestrial television (China, Hong Kong, Macau, Cuba, Pakistan)
 - **ISDB-S (BS)** - ISDB-S, BS satellite TV of Japan (ARIB STD-B20), clear streams only
-- **DVB-SH** - DVB-SH: satellite and terrestrial mobile TV (S band 2170 - 2200 MHz, also UHF and L band), OFDM form
+- **DVB-SH** - DVB-SH: satellite and terrestrial mobile TV (S band 2170 - 2200 MHz, also UHF and L band), OFDM and TDM forms
 - **DVB-C2** - DVB-C2 second generation digital cable television (OFDM), needs the cable network as the input (not an antenna)
 - **DVB-C** - DVB-C digital cable television, needs the cable network as the input (not an antenna)
 - **Analog TV** - Analogue television (PAL, SECAM, NTSC)

@@ -1,7 +1,7 @@
 // DVB-SH (ETSI EN 302 583 V1.2.1): the common channel coding (CRC-16, EHEADER, EScrambler, the 3GPP2 turbo code with the twelve
 // puncturing patterns, the bit-wise interleaver with rate adaptation, the 48-branch convolutional time interleaver) and the OFDM (SH-A)
 // physical layer: the DVB-T OFDM with the extra 1K mode, QPSK / 16-QAM (uniform and non-uniform), the symbol interleaver and the TPS
-// with the DVB-SH bits (s53 = 1: code rates, time interleaver profile and super-frame number). The TDM (SH-B) path is not implemented.
+// with the DVB-SH bits (s53 = 1: code rates, time interleaver profile and super-frame number). The TDM (SH-B) path is in dvbsh_tdm.h.
 // Reuses the DVB-T reference sequence, constellations and demapper (dect2/dvbt/dvbt.h).
 #pragma once
 #include <algorithm>
