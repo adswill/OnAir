@@ -15,7 +15,7 @@ on:
         description: "extra configure flags, e.g. -DDECT2_SANITIZE=ON (optional; no ccache reuse then)"
         default: ""
       env:
-        description: "space-separated NAME=value pairs set for the tests, e.g. ONAIR_TEST_LONG=1 (optional)"
+        description: "NAME=value pairs set for the tests, separated by spaces or semicolons, e.g. ONAIR_TEST_LONG=1 (optional)"
         default: ""
       timeout:
         description: "ctest --timeout in seconds for tests without their own"
@@ -28,6 +28,16 @@ on:
         type: choice
         options: [linux, macos]
         default: linux
+      verbose:
+        description: "run ctest with -V (prints the output of passing tests)"
+        type: boolean
+        default: false
+      compare:
+        description: "another branch or tag: the same tests are built from it too and run after this branch's on the same runner (optional)"
+        default: ""
+      perf:
+        description: "Linux: one of the tests to run once more under perf record, with the hottest functions printed (optional)"
+        default: ""
 concurrency:
   group: quick-${{ github.ref }}-${{ inputs.os }}
   cancel-in-progress: true
@@ -72,17 +82,45 @@ jobs:
           SEL=""; for t in $T $EXTRA; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t" || echo "note: no target $t (the test may live in a bundle; building by test name is skipped)"; done
           [ -n "$SEL" ] || { echo "nothing to build"; exit 1; }
           cmake --build build -j 4 --target $SEL
+      - name: Build the comparison ref
+        if: inputs.compare != ''
+        env: { TESTS: "${{ inputs.tests }}", CMP: "${{ inputs.compare }}", CCACHE_BASEDIR: "${{ runner.temp }}/cmp" }
+        run: |
+          git fetch --depth=1 origin "$CMP"
+          git worktree add "$RUNNER_TEMP/cmp" FETCH_HEAD
+          LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
+          cmake -S "$RUNNER_TEMP/cmp" -B build-cmp -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $LD
+          T=""; for t in $TESTS; do T="$T test_$t"; done
+          ALL=$(ninja -C build-cmp -t targets all | cut -d: -f1)
+          SEL=""; for t in $T; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t"; done
+          [ -n "$SEL" ] && cmake --build build-cmp -j 4 --target $SEL
       - name: Save ccache
         uses: actions/cache/save@v6
         # one entry per branch (the first run's; later saves of the same key are skipped): a copy per commit filled the cache store
         if: always() && steps.cc.outputs.cache-hit != 'true'
         with: { path: .ccache, key: "ccache-${{ inputs.os }}-quick-${{ github.ref_name }}" }
       - name: Test
-        env: { TESTS: "${{ inputs.tests }}", TEST_ENV: "${{ inputs.env }}", TEST_TIMEOUT: "${{ inputs.timeout }}" }
+        env: { TESTS: "${{ inputs.tests }}", TEST_ENV: "${{ inputs.env }}", TEST_TIMEOUT: "${{ inputs.timeout }}", VERBOSE: "${{ inputs.verbose }}", CMP: "${{ inputs.compare }}" }
         run: |
-          for kv in $TEST_ENV; do export "$kv"; done
+          for kv in $(echo "$TEST_ENV" | tr ';' ' '); do export "$kv"; echo "env: $kv"; done   # NAME=value pairs, separated by spaces or semicolons
           R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
-          ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout "$TEST_TIMEOUT"
+          V=""; [ "$VERBOSE" = true ] && { V="-V"; lscpu 2>/dev/null | head -20 || sysctl -n machdep.cpu.brand_string; }
+          rc=0; ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout "$TEST_TIMEOUT" $V || rc=$?
+          if [ -d build-cmp ]; then echo "===== the same tests from $CMP ====="; ctest --test-dir build-cmp -j 4 -R "$R" --output-on-failure --timeout "$TEST_TIMEOUT" $V || true; fi
+          exit $rc
       - name: Figures printed by passing tests (load tools)
         if: always()
         run: grep -h -B3 -A10 'CPU %' build/Testing/Temporary/LastTest.log 2>/dev/null || true
+      - name: Profile
+        if: inputs.perf != '' && runner.os == 'Linux'
+        env: { PERFT: "${{ inputs.perf }}", TEST_ENV: "${{ inputs.env }}" }
+        run: |
+          for kv in $(echo "$TEST_ENV" | tr ';' ' '); do export "$kv"; done
+          sudo apt-get install -y -o Acquire::Retries=5 linux-tools-common "linux-tools-$(uname -r)" || sudo apt-get install -y linux-tools-azure || true
+          sudo sysctl -w kernel.perf_event_paranoid=-1 kernel.kptr_restrict=0
+          B=$(find build -type f -name "test_$PERFT" | head -1)
+          [ -n "$B" ] || { echo "no binary test_$PERFT"; exit 0; }
+          perf record -F 1999 -o perf.data -- "$B" > /dev/null 2>&1 || true
+          perf report -i perf.data --stdio --no-children --percent-limit 0.3 --sort comm,symbol 2>/dev/null | grep -v "^$" | head -150 || true
+          echo "===== the hottest function, by instruction ====="
+          perf annotate -i perf.data --stdio --no-source 2>/dev/null | grep -v "^\s*0.00 *:" | head -260 || true

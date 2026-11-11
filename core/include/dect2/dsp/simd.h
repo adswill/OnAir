@@ -34,3 +34,37 @@ inline bool cpuHasAvx2() {
 #define DECT2_AVX2_DISPATCH(ret, name, params, args) \
     ret name params { return name##Body args; }
 #endif
+
+// Exact floor and round-half-away-from-zero to an integer without a libm call. The x86-64 baseline (SSE2) has no rounding instruction, so
+// std::floor and std::lround there are function calls (a few per sample in the receivers' inner loops); elsewhere (ARM, SSE4.1 builds) they
+// stay the library functions, which compile to one instruction. Same results for finite |x| < 2^52 (the truncation and x - trunc(x) are exact).
+#include <cmath>
+#include <cstdint>
+namespace dect2 {
+#if defined(__x86_64__) && !defined(__SSE4_1__)
+inline int64_t ifloor(double x) { const int64_t i = (int64_t)x; return i - (int64_t)((double)i > x); }
+inline int32_t ifloorf(float x) { const int32_t i = (int32_t)x; return i - (int32_t)((float)i > x); }
+inline int64_t iround(double x) { const int64_t i = (int64_t)x; const double f = x - (double)i; return i + (int64_t)(f >= 0.5) - (int64_t)(f <= -0.5); }
+#else
+inline int64_t ifloor(double x) { return (int64_t)std::floor(x); }
+inline int32_t ifloorf(float x) { return (int32_t)std::floor(x); }
+inline int64_t iround(double x) { return (int64_t)std::lround(x); }
+#endif
+} // namespace dect2
+
+// Flush-to-zero and denormals-are-zero for the scope (x86: MXCSR, restored at the end). Denormal operands cost a microcode assist of about a
+// hundred cycles each on x86; the receivers' decaying filters and accumulators can reach them on silence. ARM: nothing (results unchanged there).
+#if defined(__x86_64__) || defined(_M_X64)
+#include <xmmintrin.h>
+namespace dect2 {
+struct DenormalsOff {
+    unsigned old;
+    DenormalsOff() : old(_mm_getcsr()) { _mm_setcsr(old | 0x8040u); }
+    ~DenormalsOff() { _mm_setcsr(old); }
+    DenormalsOff(const DenormalsOff&) = delete;
+    DenormalsOff& operator=(const DenormalsOff&) = delete;
+};
+} // namespace dect2
+#else
+namespace dect2 { struct DenormalsOff { DenormalsOff() {} DenormalsOff(const DenormalsOff&) = delete; DenormalsOff& operator=(const DenormalsOff&) = delete; }; }
+#endif

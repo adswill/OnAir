@@ -174,6 +174,14 @@ Detection detectBootstrap(const cf32* x, size_t n, int seedOnly) {
     long bestPos = -1; int bestSeed = 0; double bestM = 0;
     size_t lastStart = n - (size_t)4 * L;   // keep room for four symbols
     std::vector<cf32> blk(F), prod(F);
+#if defined(__x86_64__) || defined(_M_X64)
+    // x86: the products written out (the complex operator's NaN check keeps that loop scalar) and the metric compared squared (std::abs of a
+    // complex is a hypotf() call in libm there): the same products, the same order of the metric
+    constexpr bool kX86 = true;
+#else
+    constexpr bool kX86 = false;
+#endif
+    double bestM2 = 0;
     for (size_t p0 = 0; p0 <= lastStart; p0 += F - L) {
         size_t m = std::min<size_t>(F, n - p0);
         std::fill(blk.begin(), blk.end(), cf32(0, 0));
@@ -181,16 +189,33 @@ Detection detectBootstrap(const cf32* x, size_t n, int seedOnly) {
         big.forward(blk.data());
         for (int s = s0; s < s1; s++) {
             const cf32* tf = tpl[(size_t)s]->tf.data();
-            for (int i = 0; i < F; i++) prod[i] = blk[i] * tf[i];
+            if (kX86) {
+                const float* a = reinterpret_cast<const float*>(blk.data());
+                const float* b = reinterpret_cast<const float*>(tf);
+                float* o = reinterpret_cast<float*>(prod.data());
+                for (int i = 0; i < F; i++) {
+                    const float ar = a[2 * i], ai = a[2 * i + 1], br = b[2 * i], bi = b[2 * i + 1];
+                    o[2 * i] = ar * br - ai * bi; o[2 * i + 1] = ar * bi + ai * br;
+                }
+            } else
+                for (int i = 0; i < F; i++) prod[i] = blk[i] * tf[i];
             big.inverse(prod.data());   // sum over e^{+j}: with the forward transforms above this is F times the cross-correlation
+            const double ff = (double)F * F;
             for (int i = 0; i + L <= (int)m && i < F - L + 1 && p0 + i <= lastStart; i++) {
                 double ew = csum[p0 + i + L] - csum[p0 + i];
                 if (ew <= 0) continue;
+                if (kX86) {
+                    const double pr = prod[i].real(), pi = prod[i].imag();
+                    const double m2 = (pr * pr + pi * pi) / ff / (Et * ew);
+                    if (m2 > bestM2) { bestM2 = m2; bestPos = (long)(p0 + i); bestSeed = s; }
+                    continue;
+                }
                 double met = std::abs(prod[i]) / F / std::sqrt(Et * ew);
                 if (met > bestM) { bestM = met; bestPos = (long)(p0 + i); bestSeed = s; }
             }
         }
     }
+    if (kX86) bestM = std::sqrt(bestM2);
     d.metric = (float)bestM;
     if (bestM < 0.2 || bestPos < 0) return d;
     d.found = true;

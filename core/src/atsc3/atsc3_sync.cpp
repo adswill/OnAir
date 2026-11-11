@@ -99,6 +99,47 @@ DECT2_AVX2_TARGET static void dot4Avx2(const float* const* h, const float* const
         o[u] = cf32(_mm_cvtss_f32(a), _mm_cvtss_f32(_mm_shuffle_ps(a, a, 1)));
     }
 }
+// Four outputs from one shared window (the layout of Bank::hp), eight lanes: each data vector is loaded once for the four outputs, and their sums
+// across lanes are formed together (two rounds of hadd) instead of one reduction per output. Returns where it stopped.
+DECT2_AVX2_TARGET static long resPadAvx2(const Bank& b, const float* re, const float* im, long pad, double startOffset, double step, long k, long k1, cf32* out) {
+    const int W = b.padW, L = b.padL, S = b.shift;
+    for (; k + 4 <= k1; k += 4) {
+        long i[4]; int p0[4];
+        for (int u = 0; u < 4; u++) {
+            const double pos = startOffset + (double)(k + u) * step;
+            i[u] = (long)std::floor(pos);   // one instruction here (the target has SSE4.1)
+            p0[u] = (int)iround((pos - (double)i[u]) * b.phases);
+        }
+        const float* hq[4];
+        bool fits = true;
+        for (int u = 0; u < 4; u++) {
+            const long sh = i[u] - i[0];
+            fits = fits && sh >= 0 && sh <= S;
+            hq[u] = &b.hp[(size_t)p0[u] * L + (size_t)(S - std::min<long>(std::max<long>(sh, 0), S))];
+        }
+        if (!fits) break;
+        const float* r = &re[(size_t)(i[0] - (b.half - 1) + pad)];
+        const float* m = &im[(size_t)(i[0] - (b.half - 1) + pad)];
+        __m256 ar[4], ai[4];
+        for (int u = 0; u < 4; u++) ar[u] = ai[u] = _mm256_setzero_ps();
+        for (int t = 0; t < W; t += 8) {
+            const __m256 rv = _mm256_loadu_ps(r + t), mv = _mm256_loadu_ps(m + t);
+            for (int u = 0; u < 4; u++) {
+                const __m256 hv = _mm256_loadu_ps(hq[u] + t);
+                ar[u] = _mm256_fmadd_ps(rv, hv, ar[u]);
+                ai[u] = _mm256_fmadd_ps(mv, hv, ai[u]);
+            }
+        }
+        const __m256 hr = _mm256_hadd_ps(_mm256_hadd_ps(ar[0], ar[1]), _mm256_hadd_ps(ar[2], ar[3]));
+        const __m256 hi = _mm256_hadd_ps(_mm256_hadd_ps(ai[0], ai[1]), _mm256_hadd_ps(ai[2], ai[3]));
+        const __m128 sr = _mm_add_ps(_mm256_castps256_ps128(hr), _mm256_extractf128_ps(hr, 1));   // re of outputs 0..3
+        const __m128 si = _mm_add_ps(_mm256_castps256_ps128(hi), _mm256_extractf128_ps(hi, 1));
+        float* o = reinterpret_cast<float*>(out + k);
+        _mm_storeu_ps(o, _mm_unpacklo_ps(sr, si));
+        _mm_storeu_ps(o + 4, _mm_unpackhi_ps(sr, si));
+    }
+    return k;
+}
 #endif
 
 namespace {
@@ -174,8 +215,8 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
     // where output k reads: the input rows from base and the tap row of its nearest phase
     auto locate = [&](long k, const float*& h, const float*& r, const float*& m) {
         const double pos = startOffset + (double)k * step;
-        const long i = (long)std::floor(pos);
-        const int p0 = (int)std::lround((pos - (double)i) * b.phases);   // nearest phase of the bank: a timing error below 1/1000 of a sample
+        const long i = (long)ifloor(pos);   // no libm call on the x86 baseline (dect2/dsp/simd.h); the same values
+        const int p0 = (int)iround((pos - (double)i) * b.phases);   // nearest phase of the bank: a timing error below 1/1000 of a sample
         h = &b.h[(size_t)p0 * taps];
         const long base = i - (b.half - 1) + pad;
         r = &re[(size_t)base];
@@ -248,6 +289,8 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
 #endif
 #ifdef DECT2_X86_DISPATCH
         if (cpuHasAvx2()) {
+            static const bool noPadX = getenv("ATSC3_NOPAD") != nullptr;   // test: one window per output
+            if (!b.hp.empty() && !noPadX) k = resPadAvx2(b, re.data(), im.data(), pad, startOffset, step, k, k1, out.data());
             for (; k + 4 <= k1; k += 4) {
                 const float *h[4], *r[4], *m[4];
                 for (int u = 0; u < 4; u++) locate(k + u, h[u], r[u], m[u]);
@@ -264,14 +307,33 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
             out[(size_t)k] = cf32((ar[0] + ar[1]) + (ar[2] + ar[3]), (ai[0] + ai[1]) + (ai[2] + ai[3]));
         }
     };
-    // long blocks are split over a few threads (the outputs do not depend on each other)
+    // Long blocks are split over a few threads (the outputs do not depend on each other), but only while one thread would spend more than about
+    // a third of real time here (a slow processor): otherwise the threads started per block cost more CPU than they save, and on a processor with
+    // two threads per core both run slower side by side. The load is the resampler's CPU time per second of input, averaged over all calls.
+    static std::atomic<float> load{0.f};
+    static const int forceSplit = getenv("ATSC3_SPLIT") ? atoi(getenv("ATSC3_SPLIT")) : -1;   // test: 1 always split, 0 never
     const int hw = (int)std::thread::hardware_concurrency();
-    const int nt = (count >= 200000 && hw >= 4) ? std::min(4, hw / 2) : 1;
-    if (nt <= 1) { part(0, count); return; }
+    const float ld = load.load(std::memory_order_relaxed);
+    const bool want = forceSplit >= 0 ? forceSplit > 0 : ld > 0.33f;
+    // the parts stay the same whether they run on threads or one after the other here (each groups its outputs from its own start: the same bits)
+    const int parts = (count >= 200000 && hw >= 4) ? std::min(4, hw / 2) : 1;
+    const int nt = want ? parts : 1;
+    const double secs = (double)n / inRate;
+    const uint64_t c0 = prof::threadCpuNs();
+    if (nt <= 1) {
+        for (int t = 0; t < parts; t++) part(count * t / parts, count * (t + 1) / parts);
+        const double w = (double)(prof::threadCpuNs() - c0) * 1e-9;
+        if (secs > 0) load.store(ld + 0.2f * ((float)std::min(w / secs, 4.0) - ld), std::memory_order_relaxed);
+        return;
+    }
     std::vector<std::thread> th;
-    for (int t = 1; t < nt; t++) th.emplace_back(dect2::namedThread("onair-a3sync", part, count * t / nt, count * (t + 1) / nt));
+    std::atomic<uint64_t> helperNs{0};
+    auto timedPart = [&](long a, long e) { const uint64_t h0 = prof::threadCpuNs(); part(a, e); helperNs += prof::threadCpuNs() - h0; };
+    for (int t = 1; t < nt; t++) th.emplace_back(dect2::namedThread("onair-a3sync", timedPart, count * t / nt, count * (t + 1) / nt));
     part(0, count / nt);
     for (auto& t : th) t.join();
+    const double w = ((double)(prof::threadCpuNs() - c0) + (double)helperNs.load()) * 1e-9;
+    if (secs > 0) load.store(ld + 0.2f * ((float)std::min(w / secs, 4.0) - ld), std::memory_order_relaxed);
 }
 
 } // namespace
@@ -316,15 +378,24 @@ BootstrapFind findBootstrap(const cf32* x, size_t n, double maxCfo, double cente
         e2[i + 1] = e2[i] + std::norm(std::complex<double>(x[i + lag]));
     }
     std::vector<double> met(m - win + 1);
+#if defined(__x86_64__) || defined(_M_X64)
+    // x86: the metric squared (the threshold too): only its order and the threshold are used, and std::abs of a complex is a hypot() call in
+    // libm there, the largest part of the search's time
+    constexpr bool kSquared = true;
+#else
+    constexpr bool kSquared = false;
+#endif
+    const double metThr = kSquared ? 0.35 * 0.35 : 0.35;
     for (size_t p = 0; p + win <= m; p++) {
         double a = e1[p + win] - e1[p], b = e2[p + win] - e2[p];
-        met[p] = (a > 0 && b > 0) ? std::abs(pre[p + win] - pre[p]) / std::sqrt(a * b) : 0.0;
+        if (kSquared) met[p] = (a > 0 && b > 0) ? std::norm(pre[p + win] - pre[p]) / (a * b) : 0.0;
+        else met[p] = (a > 0 && b > 0) ? std::abs(pre[p + win] - pre[p]) / std::sqrt(a * b) : 0.0;
     }
     // 2. the strongest peaks, at least one symbol apart
     std::vector<std::pair<double, size_t>> cand;
     {
         std::vector<std::pair<double, size_t>> all;
-        for (size_t p = 0; p < met.size(); p++) if (met[p] > 0.35 && (p == 0 || met[p] >= met[p - 1]) && (p + 1 == met.size() || met[p] > met[p + 1])) all.push_back({met[p], p});
+        for (size_t p = 0; p < met.size(); p++) if (met[p] > metThr && (p == 0 || met[p] >= met[p - 1]) && (p + 1 == met.size() || met[p] > met[p + 1])) all.push_back({met[p], p});
         std::sort(all.rbegin(), all.rend());
         for (auto& c : all) {
             bool tooClose = false;
@@ -441,6 +512,7 @@ struct Atsc3Sync::Pool {
         cvSpace.wait(lk, [&] { return inflight == 0; });
     }
     void run() {
+        DenormalsOff ftz;
         for (;;) {
             Job j;
             {
