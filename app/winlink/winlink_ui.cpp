@@ -1,5 +1,5 @@
-// Winlink email: Inbox, Outbox, Sent, Compose, Gateways and Settings, and the Connect button that runs one B2F session with the chosen
-// gateway over packet (1200 / 9600 baud AX.25), ARDOP, or (only when turned on in Settings) Telnet to the CMS. The gateway list is
+// Winlink email: Inbox, Outbox, Sent, Compose, Gateways, Modems and Settings, and the Connect button that runs one B2F session with the chosen
+// gateway over packet (1200 / 9600 baud AX.25), ARDOP, an external modem program (ARDOP / VARA / Mercury over TCP), or (only when turned on in Settings) Telnet to the CMS. The gateway list is
 // entered by hand: OnAir never looks gateways up on the internet. The Winlink password stays in memory for this run only.
 // The frames go out as one-shot bursts of the "winlinkpkt" / "winlinkardop" transmit modes and come back through the receivers'
 // frame taps; the receiver is paused while its radio transmits (half duplex), as on the MeshCore screen.
@@ -11,9 +11,11 @@
 #include "dect2/engine/device_claims.h"
 #include "dect2/packet/packet_rx.h"
 #include "dect2/tx/tx.h"
+#include "dect2/winlink/wl_extmodem.h"
 #include "dect2/winlink/wl_modem.h"
 #include "dect2/winlink/wl_station.h"
 #include <algorithm>
+#include <atomic>
 #include <cctype>
 #include <chrono>
 #include <cmath>
@@ -26,6 +28,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace {
@@ -41,8 +44,21 @@ struct Taps {
     std::vector<ArdopRxFrameIn> ar;
 };
 
+struct ModemTest {
+    std::atomic<bool> done{false};
+    ModemTestResult r;
+};
+
 struct W {
     bool loaded = false;
+    // external modems (ARDOP / VARA / Mercury programs reached over TCP)
+    std::vector<ModemProfile> modems;
+    int modemSel = -1;
+    int mType = 0, mCmd = 8515, mData = 8516, mTimeout = 0;
+    char mName[48] = "", mHost[96] = "127.0.0.1", mBw[16] = "", mPtt[96] = "", mAudio[96] = "";
+    std::shared_ptr<ModemTest> mtest;
+    std::string mtestMsg;
+    int gModem = -1;
     Mailbox mb;
     std::unique_ptr<WinlinkStation> st;
     std::vector<Gateway> gws;
@@ -51,7 +67,7 @@ struct W {
     bool telnetOn = false;
     bool gzipOn = false, resumeOn = true, gPeer = false;
     float txGain = 10;
-    int view = 0;                        // 0 inbox 1 outbox 2 sent 3 compose 4 gateways 5 settings
+    int view = 0;                        // 0 inbox 1 outbox 2 sent 3 compose 4 gateways 5 modems 6 settings
     std::string selMid;
     std::vector<MailEntry> list;
     int listFolder = -1;
@@ -95,6 +111,11 @@ void addLog(const std::string& s) {
 }
 
 void saveGws() { plat::prefs().setS("winlinkGateways", saveGateways(w().gws)); plat::prefs().flush(); }
+void saveModems() { plat::prefs().setS("winlinkModems", saveModemProfiles(w().modems)); plat::prefs().flush(); }
+const ModemProfile* findModem(const std::string& name) {
+    for (const ModemProfile& m : w().modems) if (m.name == name) return &m;
+    return nullptr;
+}
 
 void load() {
     W& d = w();
@@ -103,6 +124,7 @@ void load() {
     d.mb.setDir(plat::dataDir() + "/winlink");
     d.st = std::make_unique<WinlinkStation>(d.mb);
     d.gws = loadGateways(plat::prefs().getS("winlinkGateways", ""));
+    d.modems = loadModemProfiles(plat::prefs().getS("winlinkModems", ""));
     d.gwSel = (int)plat::prefs().getI("winlinkGateway", d.gws.empty() ? -1 : 0);
     if (d.gwSel >= (int)d.gws.size()) d.gwSel = d.gws.empty() ? -1 : 0;
     snprintf(d.call, sizeof d.call, "%s", plat::prefs().getS("winlinkCall", "").c_str());
@@ -114,7 +136,7 @@ void load() {
 }
 
 bool fits(int ctx, Transport t) {
-    if (t == Transport::Telnet) return true;
+    if (t == Transport::Telnet || t == Transport::Modem) return true;
     return ctx == 1 ? t == Transport::Ardop : t != Transport::Ardop;
 }
 
@@ -247,10 +269,15 @@ void connect(App& a) {
     c.p2p = g.peer;
     c.gzip = d.gzipOn;
     c.resume = d.resumeOn;
+    if (g.transport == Transport::Modem) {
+        const ModemProfile* mp = findModem(g.modem);
+        if (!mp) { d.error = tr("this gateway uses a modem profile that does not exist: add it under Modems"); return; }
+        c.modem = *mp;
+    }
     std::string err;
     if (!d.st->start(c, mono(), err)) { d.error = err; return; }
     d.tr = g.transport;
-    if (g.transport != Transport::Telnet) {
+    if (g.transport != Transport::Telnet && g.transport != Transport::Modem) {   // an external modem owns its radio: OnAir neither tunes nor transmits
         if (g.mhz > 0 && std::fabs(a.freqMhz - g.mhz) > 1e-6) tuneFreq(a, g.mhz);
         if (!a.engine.running()) startReceiver(a);
         setTaps(a, true);
@@ -269,9 +296,15 @@ void listenP2p(App& a, int ctx) {
     c.gateway = g;
     c.gzip = d.gzipOn;
     c.resume = d.resumeOn;
+    if (g.transport == Transport::Modem) {
+        const ModemProfile* mp = findModem(g.modem);
+        if (!mp) { d.error = tr("this gateway uses a modem profile that does not exist: add it under Modems"); return; }
+        c.modem = *mp;
+    }
     std::string err;
     if (!d.st->listen(c, mono(), err)) { d.error = err; return; }
     d.tr = g.transport;
+    if (g.transport == Transport::Modem) return;
     if (g.mhz > 0 && std::fabs(a.freqMhz - g.mhz) > 1e-6) tuneFreq(a, g.mhz);
     if (!a.engine.running()) startReceiver(a);
     setTaps(a, true);
@@ -447,7 +480,9 @@ void gateways(int ctx) {
             if (ImGui::Selectable(id, d.gwSel == (int)i)) { d.gwSel = (int)i; plat::prefs().setI("winlinkGateway", d.gwSel); }
             ImGui::TableNextColumn(); ImGui::Text("%s%s", tr(transportName(g.transport)), g.peer ? tr(", peer to peer") : "");
             ImGui::TableNextColumn();
-            if (g.transport == Transport::Telnet) ImGui::Text("%s:%d", g.host.c_str(), g.port); else ImGui::Text("%.4f", g.mhz);
+            if (g.transport == Transport::Telnet) ImGui::Text("%s:%d", g.host.c_str(), g.port);
+            else if (g.transport == Transport::Modem) ImGui::TextUnformatted(g.modem.c_str());
+            else ImGui::Text("%.4f", g.mhz);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(g.via.c_str());
             ImGui::TableNextColumn(); ImGui::TextUnformatted(g.note.c_str());
             ImGui::TableNextColumn();
@@ -458,13 +493,30 @@ void gateways(int ctx) {
     }
     ImGui::Separator();
     ImGui::TextUnformatted(tr("Add a gateway"));
-    static const char* kTr[] = {"Packet 1200", "Packet 9600", "ARDOP", "Telnet"};
+    static const char* kTr[] = {N_("Packet 1200"), N_("Packet 9600"), N_("ARDOP"), N_("Telnet"), N_("External modem")};
     if (d.gTransport == 0 && ctx == 1) d.gTransport = 2;
-    ImGui::SetNextItemWidth(140 * gUi); ImGui::Combo("##wlgt", &d.gTransport, kTr, 4);
+    {
+        const char* trs[5];
+        for (int i = 0; i < 5; i++) trs[i] = tr(kTr[i]);
+        ImGui::SetNextItemWidth(160 * gUi); ImGui::Combo("##wlgt", &d.gTransport, trs, 5);
+    }
     ImGui::SameLine(); ImGui::SetNextItemWidth(140 * gUi); ImGui::InputTextWithHint("##wlgc", tr("call sign"), d.gCall, sizeof d.gCall);
     if (d.gTransport == 3) {
         ImGui::SameLine(); ImGui::SetNextItemWidth(200 * gUi); ImGui::InputTextWithHint("##wlgh", tr("host"), d.gHost, sizeof d.gHost);
         ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi); ImGui::InputInt("##wlgp", &d.gPort, 0);
+    } else if (d.gTransport == 4) {
+        ImGui::SameLine(); ImGui::SetNextItemWidth(200 * gUi);
+        if (d.gModem >= (int)d.modems.size()) d.gModem = -1;
+        if (d.gModem < 0 && !d.modems.empty()) d.gModem = 0;
+        const char* cur = d.gModem >= 0 ? d.modems[(size_t)d.gModem].name.c_str() : tr("(no modem profile: add one under Modems)");
+        if (ImGui::BeginCombo("##wlgmod", cur)) {
+            for (size_t i = 0; i < d.modems.size(); i++) {
+                const std::string l = d.modems[i].name + " (" + modemTypeName(d.modems[i].type) + ")##gm" + std::to_string(i);
+                if (ImGui::Selectable(l.c_str(), d.gModem == (int)i)) d.gModem = (int)i;
+            }
+            ImGui::EndCombo();
+        }
+        ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ImGui::InputTextWithHint("##wlgv", tr("digipeaters (VARA FM, optional)"), d.gVia, sizeof d.gVia);
     } else {
         ImGui::SameLine(); ImGui::SetNextItemWidth(120 * gUi); ImGui::InputDouble("MHz##wlgm", &d.gMhz, 0, 0, "%.4f");
         if (d.gTransport != 2) { ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ImGui::InputTextWithHint("##wlgv", tr("digipeaters (optional)"), d.gVia, sizeof d.gVia); }
@@ -477,7 +529,11 @@ void gateways(int ctx) {
         g.call = d.gCall; g.transport = (Transport)d.gTransport; g.mhz = d.gMhz; g.via = d.gVia; g.host = d.gHost; g.port = std::max(1, std::min(65535, d.gPort)); g.note = d.gNote;
         g.peer = d.gPeer && g.transport != Transport::Telnet;
         for (auto& c : g.call) c = (char)toupper((unsigned char)c);
-        if (g.transport == Transport::Telnet ? !g.host.empty() : !g.call.empty()) {
+        if (g.transport == Transport::Modem) {
+            if (d.gModem >= 0 && d.gModem < (int)d.modems.size()) g.modem = d.modems[(size_t)d.gModem].name;
+            g.mhz = 0;
+        }
+        if (g.transport == Transport::Telnet ? !g.host.empty() : (!g.call.empty() && (g.transport != Transport::Modem || !g.modem.empty()))) {
             d.gws.push_back(g);
             d.gwSel = (int)d.gws.size() - 1;
             plat::prefs().setI("winlinkGateway", d.gwSel);
@@ -485,6 +541,136 @@ void gateways(int ctx) {
             d.gCall[0] = d.gVia[0] = d.gHost[0] = d.gNote[0] = 0;
         }
     }
+}
+
+// ---------------------------------------------------------------- external modems
+
+void modemHelpBlock(ModemType t) {
+    const ModemHelp h = modemHelp(t);
+    ImGui::PushTextWrapPos(ImGui::GetFontSize() * 38);
+    size_t i = 0;
+    while (i < h.steps.size()) {
+        size_t e = h.steps.find('\n', i);
+        if (e == std::string::npos) e = h.steps.size();
+        const std::string line = h.steps.substr(i, e - i);
+        if (!line.empty()) ImGui::TextUnformatted(tr(line.c_str()));
+        i = e + 1;
+    }
+    ImGui::Spacing();
+    ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", tr(h.licence.c_str()));
+    ImGui::Text("%s %s", tr("Get it from:"), h.installUrl.c_str());
+    ImGui::TextDisabled("%s %s", tr("Interface taken from:"), h.source.c_str());
+    ImGui::PopTextWrapPos();
+    if (ImGui::SmallButton(tr("Copy the download link"))) ImGui::SetClipboardText(h.installUrl.c_str());
+}
+
+void loadModemEditor(const ModemProfile& m) {
+    W& d = w();
+    d.mType = (int)m.type; d.mCmd = m.cmdPort; d.mData = m.dataPort; d.mTimeout = m.connectTimeoutSec;
+    snprintf(d.mName, sizeof d.mName, "%s", m.name.c_str());
+    snprintf(d.mHost, sizeof d.mHost, "%s", m.host.c_str());
+    snprintf(d.mBw, sizeof d.mBw, "%s", m.bw.c_str());
+    snprintf(d.mPtt, sizeof d.mPtt, "%s", m.pttNote.c_str());
+    snprintf(d.mAudio, sizeof d.mAudio, "%s", m.audioNote.c_str());
+}
+
+ModemProfile editorProfile() {
+    W& d = w();
+    ModemProfile m;
+    m.type = (ModemType)std::max(0, std::min(3, d.mType));
+    m.name = d.mName; m.host = d.mHost;
+    m.cmdPort = std::max(1, std::min(65535, d.mCmd));
+    m.dataPort = std::max(1, std::min(65535, d.mData));
+    m.bw = d.mBw; m.connectTimeoutSec = std::max(0, std::min(3600, d.mTimeout));
+    m.pttNote = d.mPtt; m.audioNote = d.mAudio;
+    return m;
+}
+
+void modems() {
+    W& d = w();
+    ImGui::PushTextWrapPos(0);
+    ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.35f, 1), "%s", tr("OnAir does not include, start or bundle ARDOP, VARA or Mercury. Each is a separate program that does the radio part; OnAir connects to it over TCP and carries the Winlink session through it."));
+    ImGui::TextDisabled("%s", tr("Tested only against mock modems built from the published command descriptions: no real ARDOP, VARA or Mercury modem was used."));
+    ImGui::PopTextWrapPos();
+    if (d.mtest && d.mtest->done) { d.mtestMsg = d.mtest->r.message; d.mtest.reset(); }
+    if (ImGui::BeginTable("##wlmod", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
+        ImGui::TableSetupColumn(tr("Name")); ImGui::TableSetupColumn(tr("Type")); ImGui::TableSetupColumn(tr("Host : command / data port"));
+        ImGui::TableSetupColumn(tr("BW"), ImGuiTableColumnFlags_WidthStretch); ImGui::TableSetupColumn("");
+        ImGui::TableHeadersRow();
+        for (size_t i = 0; i < d.modems.size(); i++) {
+            const ModemProfile& m = d.modems[i];
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn();
+            char id[96]; snprintf(id, sizeof id, "%s##wlm%zu", m.name.c_str(), i);
+            if (ImGui::Selectable(id, d.modemSel == (int)i)) { d.modemSel = (int)i; loadModemEditor(m); d.mtestMsg.clear(); }
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(modemTypeName(m.type));
+            ImGui::TableNextColumn(); ImGui::Text("%s : %d / %d", m.host.c_str(), m.cmdPort, m.dataPort);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(m.bw.empty() ? tr("modem's own") : m.bw.c_str());
+            ImGui::TableNextColumn();
+            char rb[32]; snprintf(rb, sizeof rb, "%s##wlmr%zu", tr("Remove"), i);
+            if (ImGui::SmallButton(rb)) { d.modems.erase(d.modems.begin() + (long)i); d.modemSel = -1; saveModems(); break; }
+        }
+        ImGui::EndTable();
+    }
+    ImGui::Separator();
+    ImGui::TextUnformatted(d.modemSel >= 0 ? tr("Edit the modem profile") : tr("Add a modem profile"));
+    ImGui::SameLine();
+    if (ImGui::SmallButton("?##wlmodhelp")) ImGui::OpenPopup("##wlmodhelppop");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Setup steps for this modem"));
+    if (ImGui::BeginPopup("##wlmodhelppop")) { modemHelpBlock((ModemType)std::max(0, std::min(3, d.mType))); ImGui::EndPopup(); }
+    static const char* kT[] = {N_("ARDOP"), N_("VARA HF"), N_("VARA FM"), N_("Mercury")};
+    const char* trs[4];
+    for (int i = 0; i < 4; i++) trs[i] = tr(kT[i]);
+    ImGui::SetNextItemWidth(130 * gUi);
+    const int before = d.mType;
+    if (ImGui::Combo("##wlmt", &d.mType, trs, 4) && d.mType != before) {
+        const ModemProfile def = defaultModemProfile((ModemType)d.mType);
+        d.mCmd = def.cmdPort; d.mData = def.dataPort; d.mBw[0] = 0;
+        if (!d.mName[0]) snprintf(d.mName, sizeof d.mName, "%s", def.name.c_str());
+    }
+    ImGui::SameLine(); ImGui::SetNextItemWidth(180 * gUi); ImGui::InputTextWithHint("##wlmn", tr("name"), d.mName, sizeof d.mName);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ImGui::InputTextWithHint("##wlmh", tr("host"), d.mHost, sizeof d.mHost);
+    ImGui::SetNextItemWidth(90 * gUi); ImGui::InputInt(tr("command port##wlmc"), &d.mCmd, 0);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi); ImGui::InputInt(tr("data port##wlmd"), &d.mData, 0);
+    const std::vector<std::string> bws = modemBwChoices((ModemType)std::max(0, std::min(3, d.mType)));
+    if (bws.empty()) ImGui::TextDisabled("%s", tr("This modem type has no BW command."));
+    else {
+        ImGui::SetNextItemWidth(110 * gUi); ImGui::InputTextWithHint("##wlmb", tr("BW (empty: modem's own)"), d.mBw, sizeof d.mBw);
+        ImGui::SameLine();
+        if (ImGui::BeginCombo("##wlmbc", tr("choices"), ImGuiComboFlags_NoPreview | ImGuiComboFlags_HeightLarge)) {
+            for (const std::string& b : bws) if (ImGui::Selectable(b.c_str())) snprintf(d.mBw, sizeof d.mBw, "%s", b.c_str());
+            ImGui::EndCombo();
+        }
+        if (d.mBw[0] && !modemBwValid((ModemType)d.mType, d.mBw)) { ImGui::SameLine(); ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.45f, 1), "%s", tr("not a BW this modem documents: it will not be sent")); }
+    }
+    ImGui::SetNextItemWidth(90 * gUi); ImGui::InputInt(tr("connect timeout, s (0: default)##wlmt2"), &d.mTimeout, 0);
+    ImGui::SetNextItemWidth(260 * gUi); ImGui::InputTextWithHint("##wlmp", tr("PTT note (set it in the modem program)"), d.mPtt, sizeof d.mPtt);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(260 * gUi); ImGui::InputTextWithHint("##wlma", tr("audio note (set it in the modem program)"), d.mAudio, sizeof d.mAudio);
+    const bool nameOk = d.mName[0] != 0 && d.mHost[0] != 0;
+    if (ImGui::Button(d.modemSel >= 0 ? tr("Save changes") : tr("Add")) && nameOk) {
+        ModemProfile m = editorProfile();
+        if (d.modemSel >= 0 && d.modemSel < (int)d.modems.size()) {
+            const std::string old = d.modems[(size_t)d.modemSel].name;
+            d.modems[(size_t)d.modemSel] = m;
+            if (old != m.name) for (Gateway& g : d.gws) if (g.transport == Transport::Modem && g.modem == old) g.modem = m.name;
+            saveGws();
+        } else { d.modems.push_back(m); d.modemSel = (int)d.modems.size() - 1; }
+        saveModems();
+    }
+    ImGui::SameLine();
+    if (ImGui::Button(tr("New profile"))) { d.modemSel = -1; d.mName[0] = 0; const ModemProfile def = defaultModemProfile((ModemType)d.mType); d.mCmd = def.cmdPort; d.mData = def.dataPort; }
+    ImGui::SameLine();
+    ImGui::BeginDisabled(d.mtest != nullptr);
+    if (ImGui::Button(tr("Test connection")) && d.mHost[0]) {
+        d.mtest = std::make_shared<ModemTest>();
+        d.mtestMsg = tr("testing...");
+        std::shared_ptr<ModemTest> t = d.mtest;
+        const ModemProfile p = editorProfile();
+        std::thread([t, p] { t->r = testModemProfile(p, 3000); t->done = true; }).detach();
+    }
+    ImGui::EndDisabled();
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Opens the two ports and asks for the version. Nothing is sent over the air."));
+    if (!d.mtestMsg.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(d.mtestMsg.c_str()); ImGui::PopTextWrapPos(); }
 }
 
 void settings() {
@@ -554,7 +740,7 @@ void winlinkPanel(App& a, int ctx) {
     const std::string s = d.st->status();
     if (!d.error.empty()) ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.45f, 1), "%s", d.error.c_str());
     else ImGui::TextDisabled("%s%s", s.c_str(), d.sending ? ", transmitting" : "");
-    subNav("wlv", d.view, {"Inbox", "Outbox", "Sent", "Compose", "Gateways", "Settings"});
+    subNav("wlv", d.view, {"Inbox", "Outbox", "Sent", "Compose", "Gateways", "Modems", "Settings"});
     const float logH = 90 * gUi;
     if (ImGui::BeginChild("##wlmain", ImVec2(0, ImGui::GetContentRegionAvail().y - logH))) {
         switch (d.view) {
@@ -563,6 +749,7 @@ void winlinkPanel(App& a, int ctx) {
         case 2: mailList(Folder::Sent); break;
         case 3: compose(); break;
         case 4: gateways(ctx); break;
+        case 5: modems(); break;
         default: settings(); break;
         }
     }

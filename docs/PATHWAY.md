@@ -1712,3 +1712,15 @@ entries with no framing of their own. Tests: tests/cubesat/test_cubesat_views.cp
 Three new receive-only modes, families 800 - 802 (core/src/w1a, app/w1a, tests/w1a): HF packet 300 Bd (AX.25 full decode on the repo's own AFSK receiver), voice inversion scrambler (full-band inversion detection from the long-term speech spectrum, carrier estimate, descrambled audio to WAV), ELT 121.5 MHz (swept-tone detection only). Simulated signals only. Skipped from the candidate list: 96 and 97 (milhf already has a buzzer / numbers-style carrier), 150 (Airband already follows ATIS), 218 AMPS (no checkable public layout), 273 (no specification found); 98 and 219 are one mode. docs/W1A-3.9.md.
 ## 2026-11-11 Fleet Broadcast, UHF SATCOM 16 x 75 Bd (feat39-fbr)
 Owner request from a Discord thread (SATCOM 250 MHz modes): new mode 870 (own entry; the UHF SATCOM skimmer at 552 only detects energy). Source: the r00t.cz page (DBPSK 1200 Bd, 16 channels of 75 Bd, channel 0 sync, others mostly encrypted-looking) and a US Navy FLTSATCOM description of 75 bit/s subchannels at 1200 bit/s. The r00t.cz software is personal-use binary only, so nothing was ported and no credit entry is needed. Not public: the sync pattern, polarity, pulse shape and any message framing: so the mode finds carrier (Doppler +-4.5 kHz), clock and the one repeating column (taken for channel 0, an assumption), shows 16 channel classes, hex and a bit matrix, and decodes no text and decrypts nothing. Simulated signals only (own 31-bit sync sequence in the generator). Standard 872, slot 870. docs/FBR-3.9.md.
+
+## 2026-11-11 External modems for Winlink and P2P: ARDOP, VARA, Mercury (feat39-hfmodems)
+Owner request: use the HF / VHF data modems people talk about for Winlink and station-to-station links. Winlink had OnAir's own packet and
+simplified ARDOP links plus Telnet; there was no client for an external modem. New `ExtModemLink` (a `ByteLink`, core/src/winlink/wl_extmodem.cpp):
+OnAir connects over TCP to a separate program (ardopcf 8515 / 8516 with length-and-tag data frames, VARA HF and FM 8300 / 8301, Mercury 8300 /
+8301) and runs the existing B2F session through its data port: connect, listen and accept P2P, BW choice, buffer / S/N / busy / PTT status,
+modem-not-running and timeout messages. Commands come only from the published documents (ardopcf Host_Interface_Commands.md, EA5HVK's VARA
+Native TNC Commands, Mercury docs/TNC.md; Pat, Pat-Vara and wl2k-go, MIT, were read for behaviour and no code was taken). UI: Modems view under
+Winlink (profile editor, Test connection that sends only VERSION, "?" setup help with the Wine note), gateway type External modem, German
+strings. OnAir does not include or start any modem. Verified only against mock modems written from the documents; no real ARDOP, VARA or Mercury
+modem was used. Skipped: a native ARDOP or Mercury decoder, and reading the hermes-modem repository. docs/HFMODEMS-3.9.md,
+tests/winlink/test_winlink_extmodem.cpp.

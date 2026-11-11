@@ -1,6 +1,6 @@
 # Winlink email (3.9)
 
-OnAir can now send and receive Winlink email. It runs a B2F session with a gateway over its own packet modem (AX.25, 1200 or 9600 baud), its own ARDOP modem, or Telnet to the Winlink CMS. Telnet is off unless you turn it on.
+OnAir can now send and receive Winlink email. It runs a B2F session with a gateway over its own packet modem (AX.25, 1200 or 9600 baud), its own ARDOP modem, or Telnet to the Winlink CMS. Telnet is off unless you turn it on. It can also run through an external ARDOP, VARA or Mercury modem program over TCP: see `docs/HFMODEMS-3.9.md`.
 
 **Everything below was tested only against a local mock gateway** in the test programs: over a simulated channel, through OnAir's own generators and receivers, and over TCP on 127.0.0.1. Nothing has connected to a real gateway, a real RMS or the real CMS, and nothing has been sent over the air.
 
