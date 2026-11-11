@@ -40,6 +40,8 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);
     // 0 auto (400 Hz, 1020 Hz or a keyed carrier, whichever is being keyed), 1 force 400 Hz, 2 force 1020 Hz, 3 force keyed carrier
     void setToneMode(int mode);
+    // 4.0 weak-signal path (default on; off = the 3.9 receiver, for before / after measurements)
+    void setWeakSignalPath(bool on);
     // "Listen": the keyed tone (a 400 Hz tone gated by the carrier when the beacon sends no modulating tone). Off by default
     void setListen(bool on);
     bool listening() const;

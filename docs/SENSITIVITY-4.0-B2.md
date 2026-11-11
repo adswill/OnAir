@@ -38,3 +38,29 @@ Changes:
 Argos A2 has no checksum, so the false-decode protection is the line detector (a persistent carrier line) and the closeness test above; an unmodulated
 carrier scores -0.59 and is rejected. Simulated only: the generator's pulse shape (0.3 ms edges) and the real transmitters' carrier stability are assumed.
 Test: sens40b guard (`argos` at 0 dB, noise only gives nothing; the 3.9 receiver fails at 0 dB); argos_rx, argos_sigfox_mode pass.
+
+## NDB, 400 / 1020 Hz tone idents (core/src/ndb/ndb_rx.cpp)
+
+SNR in 300 Hz. A trial (40 s of a beacon sending the ident BND) passes when the receiver reports the generator's ident (any rotation of it: the cycle has no
+marked start) at least half as often as a clean run. The sens_sweep metric counts any confirmed word, so the harness entry here counts only the right ident.
+
+| | 3.9 receiver | 4.0 receiver | gain |
+|---|---|---|---|
+| AWGN, 90 % point | 14 dB (13 dB: 10 / 12, 12 dB: 0 / 12) | **9 dB** (9: 12 / 12, 8: 5 / 12) | 5 dB |
+| 20 ppm carrier error (8 Hz at 400 kHz) | 13 dB: 11 / 12 | 9 dB: 11 / 12 | 4 to 5 dB |
+| 50 ppm clock | 13 dB: 11 / 12 | 9 dB: 12 / 12 | 4 to 5 dB |
+| off-centre carrier (60 Hz) | 13 dB: 11 / 12 | 9 dB: 11 / 12 | 4 to 5 dB |
+| noise only | 0 of 12 | 0 of 60 trials (40 s of noise each) | |
+
+1. The 8 kHz stream is limited to +-1.5 kHz (two biquads on I and Q) before the envelope: the tones are at 400 and 1020 Hz, the stream was 8 kHz wide. About 2 dB.
+2. The tones are read from the carrier-synchronous component: a frequency loop (30 Hz average of the de-rotated stream, +-200 Hz range) holds the carrier at 0 Hz,
+   a 3 Hz average of it is the phase reference, the in-phase part is band-passed at 400 / 1020 Hz and normalised by the carrier amplitude (not by the noise-driven
+   peak of the envelope). The synchronous detector has no squaring loss against noise. Another 2 to 3 dB.
+3. False-word guards (the first synchronous version produced single-letter 'E' and 'T' words from noise at 6 dB and below, where the 3.9 receiver produced
+   nothing): the carrier line must stand out of the noise in the 3 Hz estimate (5 x the noise variance), a word counts only when the on / off contrast
+   of the tone is at least 5 dB, one letter needs five repeats and two letters three (was 3 and 2). With these, in 16 trials at 7 to 8 dB two gave a wrong
+   ident (7 dB, signal present); noise alone gave none in 60 runs.
+4. The path choice (400 Hz, 1020 Hz, keyed carrier) leaves the keyed carrier for a tone only with 2.5 x the contrast (the synchronous tone depths of a keyed-carrier
+   station flicker, ndb_census failed on it before this).
+Keyed-carrier stations (no tone) are read as before (envelope): they gain only from item 1.
+Test: sens40b guard (ndb at 14 dB, noise only), ndb_rx, ndb_census pass. Simulated only.
