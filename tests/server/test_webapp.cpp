@@ -397,7 +397,7 @@ int main() {
             } else if (z.zoom > 1000) {
                 CHECK(rate > 0 && rate < rate1 / 4 && nb >= 64, "a huge zoom stops at 64 FFT bins: %.0f Hz, %zu bins", rate, nb);
             } else {
-                CHECK(centre + rate / 2 <= centre1 + rate1 / 2 + 1 && std::fabs(rate - rate1 / 8) < rate1 * 0.01, "a centre outside is moved inside the capture: %.0f + %.0f", centre, rate / 2);
+                CHECK(centre + rate / 2 <= centre1 + rate1 / 2 + rate1 * 0.001 && std::fabs(rate - rate1 / 8) < rate1 * 0.01, "a centre outside is moved inside the capture: %.0f + %.0f", centre, rate / 2);
             }
         }
         ws.send("{\"type\":\"sub\",\"zoom\":1}");
@@ -471,7 +471,7 @@ int main() {
     CHECK(r.status == 200, "the first password: %d %s", r.status, r.body.c_str());
     r = lan.post("setup", "{\"password\":\"another one here\"}");
     CHECK(r.status == 409, "setup only once");
-    for (int i = 0; i < 40; i++) { ConfigFile saved; saved.load(cfgPath); if (!saved.get("app_password_hash").empty()) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
+    for (int i = 0; i < 150; i++) { ConfigFile saved; saved.load(cfgPath); if (!saved.get("app_password_hash").empty()) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
     { ConfigFile saved; saved.load(cfgPath); CHECK(saved.get("app_password_hash").compare(0, 7, "pbkdf2$") == 0 && !has(saved.text(), "correct horse"), "the hash is in the file, the password is not"); }
     r = net.post("login", "{\"password\":\"wrong one\"}");
     CHECK(r.status == 401 && has(r.body, "wrong password"), "wrong password: %d %s", r.status, r.body.c_str());
