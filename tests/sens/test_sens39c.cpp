@@ -5,6 +5,7 @@
 //   ONAIR_TEST_LONG=1: the full measurement: threshold for 90 % (1 dB steps, 10 trials), the carrier offset and clock error still decoded at
 //     threshold + 3 dB, lock time and CPU per second of signal; ONAIR_SENS_MODES=<regex> picks modes
 // Simulated signals only: no recording is involved.
+#include "../common/test_long.h"
 #include "sens_modes.h"
 #include <algorithm>
 #include <atomic>
@@ -109,7 +110,7 @@ int calibrate(const std::vector<Mode>& all, const std::regex& want) {
 }
 
 int main() {
-    const bool full = std::getenv("ONAIR_TEST_LONG") != nullptr;
+    const bool full = testLong();
     const char* sel = std::getenv("ONAIR_SENS_MODES");
     const std::regex want(sel ? sel : "^(adsb1|ais1|ais|acars1|vdl2|sonde|dsc|uat|flarm|adsl|rid|dji|vdes|zigbee|zwave|ble|wmbus|loraraw|mesh)$");
     const int threads = full ? std::max(1u, std::thread::hardware_concurrency() / 2) : 1;

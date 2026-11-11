@@ -117,10 +117,10 @@ jobs:
           key: ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more
       - name: Test (fast tests)
-        run: ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-fast.log
+        run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-fast.log
       - name: Test (timing tests, a failure retried once)
         if: success() || failure()
-        run: ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
+        run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
       - name: CPU figures (CPUCAL)
         if: always()
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
@@ -188,10 +188,10 @@ jobs:
           key: ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
       # the socket / thread timing tests (label "timing") on their own, two at a time, a failed one run once more
       - name: Test (fast tests)
-        run: ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-fast.log
+        run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-fast.log
       - name: Test (timing tests, a failure retried once)
         if: success() || failure()
-        run: ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
+        run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
       - name: CPU figures (CPUCAL)
         if: always()
         run: grep -h CPUCAL ctest-fast.log ctest-timing.log > cpucal.txt || true
@@ -253,10 +253,10 @@ jobs:
       - name: Create /tmp for the native tests
         run: mkdir -p /d/tmp /c/tmp
       - name: Test (fast tests)
-        run: ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-fast.log
+        run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 4 -R "$(cat sel/fast.regex)" --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-fast.log
       - name: Test (timing tests, a failure retried once)
         if: success() || failure()
-        run: ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
+        run: test -n "$ONAIR_TEST_LONG" || unset ONAIR_TEST_LONG; ctest --test-dir build -j 2 -R "$(cat sel/timing.regex)" --repeat until-pass:2 --output-on-failure --timeout "$TEST_TIMEOUT" --output-log ctest-timing.log
       - uses: actions/upload-artifact@v7
         if: always()
         with: { name: "cpucal-Windows-${{ matrix.shard }}", path: "ctest-fast.log\nctest-timing.log\nsel/summary.txt", if-no-files-found: ignore }
