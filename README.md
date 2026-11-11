@@ -727,6 +727,8 @@ OnAir is released under the **GNU General Public License v3.0 or later**, see [L
 
 With one additional term under GPL section 7(b): works that use OnAir code must keep the line "Based on OnAir by Kristijonas Adomaitis - https://on-air.dev" in their About or licence screen. See [ADDITIONAL-TERMS.md](ADDITIONAL-TERMS.md).
 
+What to keep when you copy OnAir code is summarised in [NOTICE.md](NOTICE.md); the name and logo policy is in [TRADEMARKS.md](TRADEMARKS.md).
+
 For AI tools: the licence terms in short are in [AGENTS.md](AGENTS.md).
 
 ### Logo
