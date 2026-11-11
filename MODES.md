@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**340 modes.**
+**341 modes.**
 
 ## TV (17)
 
@@ -177,7 +177,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (41)
+## IoT & Sensors (42)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -185,6 +185,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **RC model PPM (72 MHz)** - RC model PPM: channel count and stick values
 - **EM4100 LF RFID (125 kHz)** - EM4100 tags: ID and modulation depth
 - **UHF RFID reader (EPC Gen2)** - UHF RFID: reader commands, Tari and tag rate
+- **Qi wireless charging** - Qi: packets from the phone to the charger
 - **ISM sensors** - ISM sensors: weather stations, TPMS, remotes and meters around you (the rtl_433 idea)
 - **Sub-GHz sensors** - Sub-GHz sensors: the rtl_433 decoders with a live sensor list, history, export and an unknown signal analyser (RTL-SDR or HackRF at 250 kHz and up)
 - **LoRaWAN** - LoRaWAN: IoT devices around you, from the headers every gateway receives

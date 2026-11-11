@@ -1782,3 +1782,7 @@ EM4100 / EM4102 125 kHz tag reader: Manchester frame with row and column parity,
 ## 2026-11-12: UHF RFID reader commands (family 887)
 
 EPC Gen2 reader decoder: PIE timing, Query / QueryRep / QueryAdjust / ACK / NAK / Select / Req_RN / Read / Write / Kill / Lock / Access, CRC-5 and CRC-16. Tests: Tari, data-1 ratio, clock error, offset, drift, noise sweep, false-command run. Tag replies not decoded. Simulated signals only (docs/UHFRFID-4.0.md).
+
+## 2026-11-12: Qi wireless charging packets (family 888)
+
+Qi baseline-profile receiver-to-transmitter packets: load modulation, differential bi-phase, byte parity and checksum, named messages. New shared ASK slicer core/src/x40/x40_ask.h. Tests: clock error, depth, offset, wander, noise sweep, false-packet run. Simulated signals only (docs/QI-4.0.md).

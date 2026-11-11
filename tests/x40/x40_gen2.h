@@ -91,4 +91,36 @@ inline std::vector<cf32> uhfReader(const Uhf& u, const std::vector<std::pair<Bit
     return x;
 }
 
+
+// ---- Qi (receiver to transmitter) ---------------------------------------------------------------------------------------------------------
+// Bytes -> bits of a Qi packet: preamble ones, then per byte start 0, 8 data bits LSB first, odd parity, stop 1; the checksum is the XOR of header and message.
+inline Bits qiPacket(const std::vector<int>& hdrAndMsg, int preamble = 12) {
+    Bits b(preamble, 1); int x = 0;
+    auto byte = [&](int v) { b.push_back(0); int par = 0; for (int i = 0; i < 8; i++) { const int bit = (v >> i) & 1; b.push_back(bit); par ^= bit; } b.push_back(par ^ 1); b.push_back(1); };
+    for (int v : hdrAndMsg) { byte(v); x ^= v; }
+    byte(x); return b;
+}
+struct Qi { double depth = 0.05, clockPpm = 0, wanderHz = 0, wanderDepth = 0, gapSec = 0.03; };
+// The packets back to back in a power signal of amplitude 1; differential bi-phase at 2 kbit/s, smoothed edges (one pole, 12 kHz).
+inline std::vector<cf32> qiSignal(const Qi& q, const std::vector<Bits>& pk, double fs, double leadSec = 0.05, double tailSec = 0.6) {
+    const double bit = 500e-6 * (1 + q.clockPpm * 1e-6);
+    std::vector<int> half;                          // levels of half bits
+    int lvl = 0;
+    for (auto& p : pk) {
+        for (int b : p) { lvl ^= 1; half.push_back(lvl); if (b) lvl ^= 1; half.push_back(lvl); }
+        for (int i = 0; i < (int)(q.gapSec / bit * 2); i++) half.push_back(lvl);
+    }
+    const double total = leadSec + half.size() * bit / 2 + tailSec;
+    std::vector<cf32> x((size_t)(total * fs));
+    float y = 0; const float a = (float)(1 - std::exp(-2 * kPi * 12000 / fs));
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / fs - leadSec; int l = 0;
+        if (t >= 0) { const size_t h = (size_t)(t / (bit / 2)); l = h < half.size() ? half[h] : 0; }
+        y += a * ((float)l - y);
+        const double w = q.wanderDepth * std::sin(2 * kPi * q.wanderHz * i / fs);
+        x[i] = cf32((float)((1 - q.depth * y) * (1 + w)), 0);
+    }
+    return x;
+}
+
 }

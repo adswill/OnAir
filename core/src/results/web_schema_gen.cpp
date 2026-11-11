@@ -15634,6 +15634,7 @@ static const WebModeRow kRows[] = {
     {885, "Beacon propagation monitor", 9, "Beacon monitor: path class, level, Doppler spread", "", 887, 886, ""},
     {886, "EM4100 LF RFID (125 kHz)", 8, "EM4100 tags: ID and modulation depth", "", 888, 887, ""},
     {887, "UHF RFID reader (EPC Gen2)", 8, "UHF RFID: reader commands, Tari and tag rate", "", 889, 888, ""},
+    {888, "Qi wireless charging", 8, "Qi: packets from the phone to the charger", "", 890, 889, ""},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},

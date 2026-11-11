@@ -368,6 +368,7 @@
         <item>Beacon propagation monitor</item>
         <item>EM4100 LF RFID (125 kHz)</item>
         <item>UHF RFID reader (EPC Gen2)</item>
+        <item>Qi wireless charging</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -717,6 +718,7 @@
         <item>Follows one steady beacon (28 / 50 / 144 / 432 MHz, CW or a carrier) and says what the path does to it: steady, fading (sporadic-E or tropospheric swings) or aurora-like (the line smeared over tens to hundreds of Hz). A reading of the signal, not a forecast. Simulated signals only</item>
         <item>EM4100 / EM4102 125 kHz RFID tags in the field of a reader: the 40-bit ID (version and 32-bit number) from the load modulation of the carrier, with the modulation depth. RF/64 and RF/32. Receive only, nothing is written to or copied from a tag. Needs a radio that reaches 125 kHz (direct sampling or an LF capable SDR) and a coil or loop near the reader. Simulated signals only</item>
         <item>UHF RFID readers (EPC Class-1 Gen-2 / ISO 18000-63, 860 - 960 MHz): the commands of the reader (Query with its slot count and session, QueryRep, QueryAdjust, ACK, Select with its mask, Req_RN, Read, Write, Kill, Lock, Access) with the Tari, RTcal and TRcal timing. The tags\' replies are not decoded. Receive only. Needs a 2 Msps radio. Simulated signals only</item>
+        <item>Qi wireless chargers (WPC baseline profile, 110 - 205 kHz power signal): what the phone tells the charger by load modulation at 2 kbit/s: signal strength, control error, received power, charge status, end of power transfer, configuration and identification with the manufacturer code. Receive only. Needs a radio that reaches the LF band and a pick-up loop near the charger. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1066,6 +1068,7 @@
         <item>Path class</item>
         <item>Tag</item>
         <item>Command</item>
+        <item>Packet</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1415,5 +1418,6 @@
         <item>beacon propagation monitor aurora sporadic-e es tropo fading doppler spread cw 144 mhz 50 mhz 28 mhz ncdxf</item>
         <item>em4100 em4102 rfid 125 khz lf tag id card proximity access read only low frequency</item>
         <item>uhf rfid epc gen2 iso 18000-63 reader query inventory tag 865 915 868 902 928 select pie tari</item>
+        <item>qi wireless charging wpc charger phone load modulation 110 khz 205 khz power transfer identification received power</item>
     </string-array>
 </resources>
