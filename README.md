@@ -110,6 +110,7 @@ The full list, with what was measured and the known limits, is in [docs/CHANGELO
 - **Dolby Atmos**: the format is detected and shown, 5.1 / 7.1 output is available; bitstream passthrough is experimental and untested on real hardware. Atmos objects are not rendered.
 - **Smart features**: View > Insights, boards (ADS-B airport and overhead, AIS arrivals, records), alerts, uploads (weather stations, radiosondes to APRS-IS aggregators, SatNOGS DB), long sensor history, daily digest.
 - **Plugin Store**: a signed plug-in registry under View > Plugins > Store ([adswill.github.io/onair-plugins](https://adswill.github.io/onair-plugins/)); it is live but empty, no plug-ins are listed yet.
+- **Project files**: NOTICE.md, TRADEMARKS.md (drafts, not legal advice) and a DCO sign-off check for outside pull requests.
 - **Also**: TMC in plain words (#476), HDMI / display emission finder (#475), DAB map fixes, DTMF keypad for transmit.
 - **Better decoders**: lower thresholds and lower CPU in many modes (MetOp AHRPT, TETRA, UAT, FLARM, ADS-L, MFSK, THOR, ARQ-E, Wireless M-Bus, HD Radio AM, CW skimmer, GNSS, ATSC), with the figures in the changelog. ATSC 1.0 plus 3.0 together still need more than one core on a typical x86 runner.
 - **Fixes** from your reports: #139, #358, #407, #408, #410, #301, #235, #239, #463.
@@ -393,7 +394,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 ### Amateur: digital
 
-- **JT6M**, **CP16** (Chinese characters on 16 carriers), and ham science monitors: **Schumann resonances**, **whistlers and tweeks**, **Moon echo (EME) test**, **Radio Jove**, **e-CALLISTO** solar bursts and an **aurora / Es / TEP beacon** log. Receive only, generated signals only.
+- **JT6M**, **CP16** (Chinese characters on 16 carriers, receive and transmit; slow rows are not read reliably), and ham science monitors: **Schumann resonances**, **whistlers and tweeks**, **Moon echo (EME) test**, **Radio Jove**, **e-CALLISTO** solar bursts and an **aurora / Es / TEP beacon** log. Receive only apart from CP16 (which also transmits); generated signals only.
 - **FSQ** and **IFKP** keyboard chat (33 tones).
 - **ARDOP** and **SITOR** are listed under HF utility.
 - **WSJT family:** FT8, FT4, FT2, WSPR (with an optional spot upload to wsprnet.org), JT65, JT9, Q65, FST4 / FST4W, MSK144, and **JS8Call**.

@@ -24,6 +24,9 @@ Install notes are in the README. Questions, recordings and reports: the Discord 
 
 **Measured** numbers come from OnAir's own generated test signals, not from over-the-air recordings, unless a line says so. Read **Known limits** at the end before relying on a new feature.
 
+
+**Measured** numbers come from OnAir's own generated test signals, not from over-the-air recordings, unless a line says so. Read **Known limits** at the end before relying on a new feature.
+
 ## Highlights
 
 - 39 new modes: HF military and CIS data modes, ham science event monitors, DVB-SH, DVB-C2, ISDB-TSB, CubeSat framings, cellular broadcast cells and others. The list is in MODES.md, generated from the app's mode table.
@@ -35,7 +38,7 @@ Install notes are in the README. Questions, recordings and reports: the Discord 
 
 ## New modes
 
-All of these are receive only. Unless a line says otherwise they were tested on simulated signals only: no recording of these signals was available.
+All of these are receive only, except CP16, which can also transmit. Unless a line says otherwise they were tested on simulated signals only: no recording of these signals was available.
 
 - **TV**: ISDB-TSB (narrow-band ISDB, one or three segments), DVB-SH (S-band mobile TV, OFDM and TDM forms), DVB-C2 (needs the cable network as input, not an antenna). Details: docs/BCAST-3.9.md, docs/DVBSH-3.9.md, docs/DVBC2-3.9.md.
 - **Aviation**: VDL Mode 3 (burst receiver), ELT 121.5 MHz (swept-tone detection). Details: docs/AVIA-3.9.md, docs/W1A-3.9.md.
@@ -43,7 +46,7 @@ All of these are receive only. Unless a line says otherwise they were tested on 
 - **Two-way radio**: voice inversion scrambler (detection and descrambling). Details: docs/W1A-3.9.md.
 - **Cellular**: CDMA2000 cells (pilot PN, SID / NID, system time) and TD-SCDMA cells (cell parameter from the SYNC-DL code; the broadcast channel is not decoded). Details: docs/CELL-3.9.md.
 - **IoT and radio control**: Futaba S-FHSS and Spektrum DSM2 / DSMX link monitors (2.4 GHz, need a fast SDR). Details: docs/IOTRC-3.9.md.
-- **Ham science and weak signal**: JT6M, Schumann resonance monitor (needs an ELF sensor input), whistler and tweek detector (needs VLF audio), Moon echo (EME) test, Radio Jove, e-CALLISTO style solar bursts and an aurora / Es / TEP beacon event log; CP16 (Chinese characters on 16 carriers, CRAC; request #474). Details: docs/MISC-3.9.md, docs/W1B-3.9.md, docs/CP16-3.9.md.
+- **Ham science and weak signal**: JT6M, Schumann resonance monitor (needs an ELF sensor input), whistler and tweek detector (needs VLF audio), Moon echo (EME) test, Radio Jove, e-CALLISTO style solar bursts and an aurora / Es / TEP beacon event log; CP16 (family 880; Chinese characters on 16 carriers, CRAC; request #474; receive and transmit, the transmit not tried on the air). Details: docs/MISC-3.9.md, docs/W1B-3.9.md, docs/CP16-3.9.md.
 - **Lightning**: Lightning position (network): strikes located from several stations' arrival times. Details: docs/LIGHTNING-POSITION-3.9.md.
 - **Amateur packet**: HF packet 300 Bd (AX.25 frames).
 - **HF utility**: STANAG 4539, 3G-ALE, Link 11 CLEW (message detector and frame structure, no data), STANAG 4481 FSK, CIS-36-50 / 50-50 (BEE), CIS-14, CIS-12 (MS5). CIS-36 (MFSK), CIS OFDM HDR, CIS-128 and CIS-3000 are **identification only**. SITOR also reads ARQ links (SITOR-A / AMTOR) now. Details: docs/HF-MIL-3.9.md, docs/CIS-HF-3.9.md.
@@ -64,6 +67,7 @@ All of these are receive only. Unless a line says otherwise they were tested on 
 - **Smart features, round 4** (docs/R4-PER-MODE-3.9.md): APRS weather stations and messages; sensor names, Home Assistant devices and alerts, long history; ADS-B filter and search, overhead log, arrivals and departures board, theoretical range outline, plane-alert-db lists; AIS arrivals board; ADS-B and AIS history over days; airband clip per transmission; FM and DAB played list with artist, word and traffic alerts; FT8 / WSPR band hopping, "when is the band open", ham.decode alerts; Meshtastic channel links, mesh node watch, a receive-only LoRaWAN packet forwarder; weather station upload (Weather Underground, CWOP); Meteor pass report card; geostationary loops as GIF; SatNOGS DB forwarding; a records board; a daily digest; `image.done` event.
 - **Smart features, round 5** (docs/SMART5-LIST-3.9.md and the SMART5-*-3.9.md pages): View > Insights with tabs for ham, voice, pagers, HF utility, aviation, marine and IoT; broadcast watchdogs (FM, AM, DAB, HD Radio, DRM), TV (fault or reception, per-carrier SNR), satellite, GNSS and radio astronomy engines. Everything runs on the figures the decoders already measure. **Simulated data only.**
 - **Plugin Store** (docs/PLUGIN-MARKETPLACE-3.9.md, docs/plugins.md): View > Plugins > Store browses, installs, updates and removes plug-ins from a signed registry (Ed25519 signature on the index, SHA-256 per package, revocations). Nothing is fetched until you open it. The registry is live at https://adswill.github.io/onair-plugins/ (repository adswill/onair-plugins) and its public key is built into OnAir. **It is empty: no plug-ins are listed yet.**
+- **Project files**: NOTICE.md (what to keep when you copy OnAir code), TRADEMARKS.md (the name and logo; both are drafts for review by the owner's lawyer, not legal advice) and a DCO sign-off check (`git commit -s`) on pull requests from outside authors (CONTRIBUTING.md).
 - **Transmit**: DTMF keypad for analog voice, airband and QO-100, DMR slot sync to the repeater's timing (docs/TXFEAT-3.9.md). Transmit has still not been tried on the air.
 - **Wide captures**: ISDB-S, FY-3 MPT, Elektro-L / Arktika-M RDAS, GEONETCAST and the X-band downlinks cost much less CPU on noise (docs/QA-SWEEP-3.9.md, docs/WIDECPU-3.9.md).
 
@@ -109,7 +113,8 @@ Please read these before relying on a new feature.
 - **Radiosonde upload** follows the dxlAPRS / radiosonde_auto_rx format and was tested against a mock APRS-IS server.
 - **ATSC CPU**: one core in total on the x86 CI runner was not reached.
 - **Transmit has not been tried on the air** (DTMF, DMR slot sync, CP16 and earlier modes).
-- **Tests**: some tests compare noisy results across platforms and can fail on a slow runner.
+- **Tests**: on the Windows CI shards some tests have load-dependent timing flakes (adsb_engine, js8_engine, hfdig_multiband_dsp, spectrum_threads, the specx tests, a webapp timeout). In the full-scope run three slow-label tests fail: qa_sweep_d, qa_sweep_i and marine_slow_dsc_snr. The slow-runner and cross-platform test fixes of 3.9 (the ci4fix and ci5fix rounds) did not remove every one.
+- **CP16**: the long sweep (`ONAIR_TEST_LONG=1`) does not pass: row timing is wrong for slow rows (about 1 to 1.5 s a character at 10 to 15 Hz) and little is read there. Details: docs/CP16-3.9.md.
 - **Plugin Store**: the registry is empty, and installing from it has not been tried with a real plug-in package.
 - **Not built** from the round 4 list: flight routes, solar / K-index, trunk clip upload, WSPR neighbour comparison (they need internet services and an owner decision); Windy and AWEKAS uploads were not verified.
 - **Carried over from 3.8**: transmit untried on the air, Android in-app update and IQ recording untried on a phone, DRM xHE-AAC #331 without a recording.
