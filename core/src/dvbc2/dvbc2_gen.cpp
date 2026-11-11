@@ -29,11 +29,11 @@ struct PlpSource {
     std::function<void(uint8_t*)> src;
     uint64_t packets = 0, blocks = 0;
     std::mt19937 rng{7};
-    std::unique_ptr<dvbsip::GseEncapsulator> gse;
+    std::shared_ptr<dvbsip::GseEncapsulator> gse;   // shared, not unique: libstdc++ copies PlpSource when the vectors grow (SliceStream stays copyable)
     uint64_t ipPackets = 0;
     // GSE (payload type 2): the data field is GSE packets (TS 102 606), PDUs cut across BB frames where they do not fit
     void makeGseCells(std::vector<cf32>& cells) {
-        if (!gse) gse = std::make_unique<dvbsip::GseEncapsulator>();
+        if (!gse) gse = std::make_shared<dvbsip::GseEncapsulator>();
         const size_t bytes = (size_t)(d.kBch - 80) / 8;
         std::vector<uint8_t> pkt;
         while (gse->queued() < 3 && cfg.ip && cfg.ip(pkt)) {
