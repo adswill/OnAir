@@ -537,6 +537,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxC2_.configure(rate_);
     rxC2_.setBlocking(dev.kind == DeviceInfo::File);
     rxC2_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
+    rxC2_.setIpCallback([this](const uint8_t* ip, size_t n) { ipOut_.packet(ip, n); });   // GSE PLPs
     rxC2_.setLogCallback([this](const std::string& s) { log(s); });
     rxIsdbs_.configure(rate_);
     rxDvbsh_.configure(rate_);

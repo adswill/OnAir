@@ -1,6 +1,6 @@
 # DVB-SH (3.9)
 
-DVB-SH is mobile TV to handhelds from satellite and terrestrial repeaters, ETSI EN 302 583 (V1.2.1, 2011). It is used in the S band (2170 - 2200 MHz, 5 MHz channels), and it is also defined for UHF (8, 7, 6 MHz) and the L band (1.7 MHz). OnAir 3.9 adds the OFDM form, SH-A, as a new mode-list entry: **DVB-SH** (family 746, engine standard 748, active receiver 747). The TDM satellite form, SH-B, is not implemented.
+DVB-SH is mobile TV to handhelds from satellite and terrestrial repeaters, ETSI EN 302 583 (V1.2.1, 2011). It is used in the S band (2170 - 2200 MHz, 5 MHz channels), and it is also defined for UHF (8, 7, 6 MHz) and the L band (1.7 MHz). OnAir 3.9 adds the OFDM form, SH-A, as a new mode-list entry: **DVB-SH** (family 746, engine standard 748, active receiver 747). The TDM satellite form, SH-B, was added on branch feat39-bcast2 to the same entry (see "SH-B (TDM)" below).
 
 **Validation status: simulated signals only.** Every test plays OnAir's own generator into OnAir's receiver. No real DVB-SH recording was available, and no DVB-SH network is known to be on air in Europe today. The block sizes, tables and bit orders follow the standard's text. They have not been compared with another implementation, because none with a usable licence was found.
 
@@ -67,9 +67,81 @@ Engine (`tests/dvbsh/test_dvbsh_engine.cpp`): the test signal at radio rates thr
 
 Local runs: dvbsh_fec 0.7 s, dvbsh_chain 12 s, dvbsh_engine 4 s (Apple M-series).
 
+## SH-B (TDM), branch feat39-bcast2
+
+`core/include/dect2/dvbsh/dvbsh_tdm.h`, `core/src/dvbsh/dvbsh_tdm.cpp`, from EN 302 583 V1.2.1 clauses 5.5.2 and 5.6. The channel coding
+(EFRAMEs, turbo code, bit-wise interleaver, rate adaptation, time interleaver) is the SH-A code above, unchanged.
+
+- **TDM SH frame** (5.5.2.4). It starts with a HEADER of 3 CU: the 288-bit SOF (F3484536 ... ACCF9E4F) and the 5 760-bit signalling
+  field. The DATA part follows: whole code words, NCW = (frame width - 3) div the code word's CU, and only the data part goes through
+  the time interleaver. The PADDING part is the PRBS of figure 5.13, restarted every frame. The frame width comes from table 5.12
+  (TDM and OFDM in the same bandwidth) or from the signalling.
+- **Signalling field** (table 5.9). Signalling_Version, Frame_Width_CUs, Punct_Pat_ID, the five time interleaver parameters and a
+  CRC-16 over the first 96 bits, then the LL part with its own CRC-16, zeros to 1 146 bits. It is turbo coded at rate 1/5 (pattern 0)
+  and bit-interleaved with H(w) = 73 w mod 5 760 (table 5.6), with no 126-of-128 puncturing. A field whose RFU byte is not 0 is
+  ignored, as the table says.
+- **Constellations.** QPSK and 8PSK are the DVB-S2 mappings (figures 5.17 and 5.18 are DVB-S2's figures 9 and 10). 16APSK uses the
+  DVB-S2 labels on rings R1 = 1/sqrt(7) and R2 = 3/sqrt(7) (gamma = 3, figure 5.19).
+- **PL slots** (5.6.4). A slot is 2 176 symbols: a pilot field of 80 symbols (1 + j)/sqrt(2) before each of the two 1 008-symbol
+  sub-slots, which carry 2, 3 or 4 CU. Each slot is PL-scrambled with the DVB-S2 Gold sequence of code n (default 0), restarted every
+  slot. A frame is a whole number of slots for every entry of table 5.12.
+- **Symbol rate and shaping.** The rate comes from table 5.13 for 8, 7, 6, 5 and 1.7 MHz, the OFDM guard and the roll-off (0.15, 0.25,
+  0.35), with root raised cosine shaping. For every combination of width, guard, roll-off, OFDM constellation and TDM modulation, the
+  test checks that a TDM frame lasts exactly one OFDM SH frame.
+- **Generator** (`TdmGenerator`, `TdmSignal`). Symbols, RRC shaping at 4 samples per symbol, resampling to any rate with a clock error,
+  a carrier offset and noise at a given Es/N0. The engine's test signal has it as option 5 of the DVB-SH entry (TDM QPSK, 8PSK,
+  16APSK, roll-off 0.25).
+- **Receiver** (`TdmReceiver`).
+  - Front end: the DVB-S/S2 front end (resampler to 2 samples per symbol, RRC matched filter, Gardner timing loop).
+  - Slot timing: the scrambled pilot fields of four slots, correlated in blocks of 20 symbols (carrier offsets up to 1/40 of the
+    symbol rate). The coarse frequency comes from the block-to-block phase steps, the fine one from the two fields of a slot.
+  - Tracking: per field the phase and level, linear phase interpolation across each sub-slot, a frequency loop, and a slot grid check
+    of +-2 symbols.
+  - Frames: SOF correlation for each of the three modulations, which finds the frame start and the modulation, then the signalling
+    field.
+  - Data: max-log demapping into the same int8 time de-interleaver and turbo decoder as SH-A.
+  - Symbol rate: automatic. The 12 rows of table 5.13 for the width are tried in turn (0.1 s without slots, 0.7 s without a frame),
+    or the rate can be set. The clock offset is measured from the symbols produced against the samples fed, relative to the nearest
+    table rate.
+  - Blockages: when the input power drops, the timing loop is held at the last good rate. Slots without pilots are erased (LLR 0)
+    rather than demapped, since the front end's gain would otherwise make the noise look like confident symbols. The slot grid and
+    the frame grid run on as a flywheel for up to 2 s, so that the de-interleaver keeps its alignment.
+- **Engine and app.** The DVB-SH entry (one entry per protocol) is automatic by default. It tries every channel width as OFDM first,
+  0.3 s each as before, then every width as TDM, 1.3 s each. Under Advanced: OFDM only, TDM only, and the TDM scrambling code number.
+  The Receiver tab shows the modulation, symbol rate, clock offset, frame width, code rate and time interleaver. The summary line
+  reads "DVB-SH TDM ...".
+
+Measured (simulated; `tests/dvbsh/test_dvbsh_tdm.cpp`, ctest `dvbsh_tdm`, about 15 s). Packets carry their sequence number and a
+checksum, so "good" means byte-exact and in order:
+
+| case | impairments | result |
+|---|---|---|
+| QPSK 1/3, 5 MHz, GI 1/4, roll-off 0.15 (952 CU), rate automatic | 3 dB Es/N0, +12.3 kHz, +20 ppm, random start | 1584 good, 0 bad codewords, clock measured +20.1 ppm, CFO +12 308 Hz |
+| 8PSK 1/2, 8 MHz, GI 1/8, roll-off 0.25, rate automatic | 10 dB, -7 kHz, -15 ppm | 2480 good, 0 bad, clock -15.0 ppm |
+| 16APSK 2/3, 5 MHz, OFDM 16-QAM frame (672 CU), roll-off 0.35 | 14 dB, +2.5 kHz, +8 ppm | 6368 good, 0 bad |
+| QPSK 1/3, early/late interleaver 2/24/2/1/1 | 6 dB, signal off for 50 ms | 2184 good, 0 bad codewords |
+| the same, short (uniform) interleaver | the same blockage | 10 bad codewords, none passed as good |
+| 8PSK 2/3c | 2 dB (below threshold) | every codeword flagged bad, no wrong packet |
+| signalling field alone (BPSK) | Es/N0 -2 dB / -8 dB | decoded / refused |
+| sweep (ONAIR_TEST_LONG): QPSK/8PSK/16APSK x rates 1/5, 2/7, 2/5c, 2/3c x 5, 7, 1.7 MHz, rate automatic | 8 / 13 / 17 dB, +1.5 kHz, +6 ppm | 36 of 36 with 0 bad codewords |
+
+Engine (`test_dvbsh_engine`): the TDM 8PSK test signal (5 MHz, GI 1/8, roll-off 0.25) at 8 Msps through the automatic search, with
+18 dB, +6 kHz and +8 ppm: found after the OFDM widths, 3896 good packets, 0 bad, clock +8.0 ppm, CFO +6 003 Hz. The OFDM cases of this
+test are unchanged.
+
+Interpretations (the standard leaves these open, or the PDF text was unclear):
+- The SH frame capacity that the time interleaver's slice_distance refers to is taken as the DATA part of the TDM frame, the only part
+  that passes the interleaver. For OFDM it is the whole 816 CU.
+- NCW is the largest number of whole code words that fit after the header. Table 5.11 gives NCW only for OFDM.
+- The formulas for TDM and OFDM in different bandwidths were not legible in the PDF text, so only equal bandwidths (tables 5.12 and
+  5.13) are built in. Another frame width is still received, since it is signalled.
+- The scrambling code number n is not in the signalling field. The receiver uses 0 unless it is set under Advanced.
+
 ## Limits and what is left
 
-- **SH-B (TDM)** is not implemented: no 8PSK / 16APSK, PL slots, pilots, PL scrambling or signalling field reception. The turbo code for the 1146-bit signalling field is in place and tested.
+- **SH-B low latency.** The low latency extension (annex B) is not separated on TDM either. LL_par_present and the burst descriptions are
+  read and shown, nothing more. TDM / OFDM code combining in an SH-B receiver (both paths at once) is not done; one waveform is received
+  at a time.
 - **Low latency extension (annex B)** and the **SHIP** packet (annex A) are not interpreted. SHIP arrives as an ordinary TS packet.
 - **Channel estimate.** Frequency interpolation is linear, and time interpolation is a zero-order hold with phase and timing correction. That is fine for static and slowly changing channels. Fast fading at vehicle speeds would need proper time interpolation, which is not tested.
 - **CPU.** The turbo decoder runs on the receive thread. At good SNR it averages 1 to 2 iterations, so an 8 MHz QPSK 1/3 signal at 10 Msps decodes in about real time on an M-series Mac. Near threshold (8 iterations) it is slower than real time, and a live radio then drops samples. Files play at any speed.

@@ -4,11 +4,17 @@
 //      punctured RS columns, a packet loss sweep up to where MPE-FEC gives up; every datagram compared with the one sent, the real-time parameters (delta-t) read back
 //   3. plain MPE (MAC addresses, no real-time parameters) and time slicing without MPE-FEC
 //   4. the whole DVB-H chain: MPE-FEC transport stream -> DVB-T 4K in-depth generator -> noise and offset -> DVB-T receiver -> MpeDemux
+//   5. the IP output: MPE-FEC with packet loss -> MpeDemux -> IpOut, the pcap file read back record by record, the UDP forward received
+//      on a local socket (payload mode and whole packets), IPv4 fragments put back together before the payload goes out, bad input refused
 // All signals are simulated: no recording of a DVB-H transmission was available.
 #include "dect2/tv/mpe_fec.h"
 #include "dect2/dvbt/dvbt_gen.h"
 #include "dect2/dvbt/dvbt_rx.h"
 #include "dect2/t2/t2.h"
+#include "dect2/tv/ip_out.h"
+#include "dect2/dvbs/dvbs_ip.h"
+#include "../../core/src/net/netcompat.h"
+#include "../../core/src/net/tcp_client.h"
 #include "../common/jobs.h"
 #include <atomic>
 #include <cmath>
@@ -20,6 +26,10 @@
 #include <random>
 #include <set>
 #include <vector>
+#include <chrono>
+#include <filesystem>
+#include <string>
+#include <thread>
 
 using namespace dect2;
 using testjobs::jprintf;
@@ -106,8 +116,119 @@ static Run runTs(const mpe::EncoderConfig& c, int frames, double loss, unsigned 
     return r;
 }
 
+// a local UDP receiver on 127.0.0.1 (any free port)
+struct UdpSink {
+    sock_t s = kBadSock;
+    int port = 0;
+    UdpSink() {
+        netInit();
+        s = socket(AF_INET, SOCK_DGRAM, 0);
+        if (s == kBadSock) return;
+        int big = 8 << 20;
+        setsockopt(s, SOL_SOCKET, SO_RCVBUF, (const char*)&big, sizeof big);
+        sockaddr_in a{}; a.sin_family = AF_INET; a.sin_port = 0; inet_pton(AF_INET, "127.0.0.1", &a.sin_addr);
+        if (bind(s, (const sockaddr*)&a, sizeof a) != 0) { sockClose(s); s = kBadSock; return; }
+        socklen_t l = sizeof a;
+        getsockname(s, (sockaddr*)&a, &l);
+        port = ntohs(a.sin_port);
+        sockSetNonBlocking(s, true);
+    }
+    ~UdpSink() { if (s != kBadSock) sockClose(s); }
+    std::vector<std::vector<uint8_t>> take() {
+        std::vector<std::vector<uint8_t>> out;
+        uint8_t b[70000];
+        for (int idle = 0; idle < 50;) {
+            const long long n = sockRecv(s, b, sizeof b);
+            if (n > 0) { out.emplace_back(b, b + n); idle = 0; } else { idle++; std::this_thread::sleep_for(std::chrono::milliseconds(2)); }
+        }
+        return out;
+    }
+};
+
+static std::vector<std::vector<uint8_t>> readPcap(const std::string& path, uint32_t* linkType) {
+    std::vector<std::vector<uint8_t>> recs;
+    FILE* f = fopen(path.c_str(), "rb");
+    if (!f) return recs;
+    uint8_t h[24];
+    if (fread(h, 1, 24, f) == 24) {
+        *linkType = (uint32_t)h[20] | (uint32_t)h[21] << 8 | (uint32_t)h[22] << 16 | (uint32_t)h[23] << 24;
+        uint8_t r[16];
+        while (fread(r, 1, 16, f) == 16) {
+            const uint32_t incl = (uint32_t)r[8] | (uint32_t)r[9] << 8 | (uint32_t)r[10] << 16 | (uint32_t)r[11] << 24;
+            std::vector<uint8_t> d(incl);
+            if (fread(d.data(), 1, incl, f) != incl) break;
+            recs.push_back(std::move(d));
+        }
+    }
+    fclose(f);
+    return recs;
+}
+
+static void testIpOut() {
+    const std::string path = (std::filesystem::temp_directory_path() / ("onair_test_ip_out_" + std::to_string((unsigned long)std::random_device{}()) + ".pcap")).string();
+    UdpSink sink;
+    check(sink.s != kBadSock, "ip out", "local UDP socket");
+    IpOut io;
+    check(!io.active(), "ip out", "off by default");
+    IpOutConfig c; c.pcap = true; c.pcapPath = path; c.udp = true; c.udpHost = "127.0.0.1"; c.udpPort = sink.port;
+    check(io.configure(c) && io.active(), "ip out", "pcap and UDP switched on");
+    // MPE-FEC frames with 3 % of the transport packets lost: what MPE-FEC repairs comes out, nothing damaged does
+    mpe::EncoderConfig ec; ec.rows = 512; ec.pid = 0x321;
+    mpe::MpeEncoder enc(ec);
+    mpe::MpeDemux dmx;
+    dmx.setRealTimeParams(true);
+    std::vector<std::vector<uint8_t>> delivered;
+    dmx.setDatagramCallback([&](const uint8_t* d, size_t n, bool rel, int) { if (rel) { delivered.emplace_back(d, d + n); io.packet(d, n); } });
+    std::mt19937 rng(21);
+    uint32_t seq = 0;
+    for (int f = 0; f < 4; f++) {
+        std::vector<std::vector<uint8_t>> dg;
+        size_t used = 0;
+        while (true) { const size_t len = 40 + rng() % 1400; if (used + len > (size_t)191 * ec.rows * 8 / 10) break; dg.push_back(mpe::testDatagram(seq++, len)); used += len; }
+        std::vector<uint8_t> ts;
+        enc.frame(dg, ts);
+        for (size_t i = 0; i < ts.size(); i += 188) { uint8_t pk[188]; memcpy(pk, ts.data() + i, 188); if (rng() % 100 < 3) pk[1] |= 0x80; dmx.feed(pk, 1); }
+    }
+    dmx.flush();
+    const IpOutStats st = io.stats();
+    const auto udp = sink.take();
+    io.close();
+    uint32_t link = 0;
+    const auto recs = readPcap(path, &link);
+    size_t same = 0, udpSame = 0;
+    for (size_t i = 0; i < recs.size() && i < delivered.size(); i++) same += recs[i] == delivered[i];
+    for (size_t i = 0; i < udp.size() && i < delivered.size(); i++) udpSame += udp[i].size() + 28 == delivered[i].size() && memcmp(udp[i].data(), delivered[i].data() + 28, udp[i].size()) == 0;
+    jprintf("  IP output: %u datagrams sent, %zu delivered by MPE-FEC, pcap %zu records (%zu identical, link type %u), UDP %zu payloads (%zu identical), stats %llu/%llu/%llu\n", seq, delivered.size(), recs.size(), same,
+            link, udp.size(), udpSame, (unsigned long long)st.packets, (unsigned long long)st.written, (unsigned long long)st.forwarded);
+    check(delivered.size() >= seq * 95 / 100, "ip out", "MPE-FEC delivers nearly every datagram at 3 % loss");
+    check(recs.size() == delivered.size() && same == delivered.size() && link == 101, "ip out", "pcap holds every datagram, byte for byte (link type RAW)");
+    check(udp.size() == delivered.size() && udpSame == delivered.size(), "ip out", "UDP forward: every UDP payload, in order");
+    std::remove(path.c_str());
+    // whole packets, IPv4 fragments, invalid input
+    IpOutConfig w; w.udp = true; w.udpHost = "127.0.0.1"; w.udpPort = sink.port; w.wholePackets = true;
+    check(io.configure(w), "ip out", "whole-packet forward on");
+    const std::vector<uint8_t> big = mpe::testDatagram(77, 3000);
+    io.packet(big.data(), big.size());
+    const uint8_t junk[40] = {0x45, 0, 0, 40};
+    io.packet(junk, sizeof junk);
+    auto u2 = sink.take();
+    check(u2.size() == 1 && u2[0] == big, "ip out", "whole IP packet forwarded, a bad header dropped");
+    check(io.stats().invalid == 1, "ip out", "the bad packet is counted");
+    IpOutConfig pl = w; pl.wholePackets = false;
+    io.configure(pl);
+    const auto frags = dvbsip::fragmentIpv4(big, 1400);
+    for (const auto& fr : frags) io.packet(fr.data(), fr.size());
+    auto u3 = sink.take();
+    check(frags.size() >= 3 && u3.size() == 1 && u3[0].size() == big.size() - 28 && memcmp(u3[0].data(), big.data() + 28, u3[0].size()) == 0, "ip out", "fragments reassembled before the payload is forwarded");
+    IpOutConfig bad; bad.udp = true; bad.udpHost = "not an address";
+    check(!io.configure(bad) && !io.error().empty() && !io.active(), "ip out", "a bad address is refused with a message");
+    IpOutConfig badFile; badFile.pcap = true; badFile.pcapPath = "/nonexistent-dir-onair/x.pcap";
+    check(!io.configure(badFile) && !io.active(), "ip out", "an unwritable pcap path is refused");
+}
+
 int main() {
     testRs();
+    testIpOut();
     testjobs::Jobs jobs;
     // 2. every frame size, losses the code can carry: all datagrams back
     for (int fs = 0; fs < 4; fs++)

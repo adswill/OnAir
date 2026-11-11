@@ -187,7 +187,66 @@ void frameMapTab(App& a) {
     ImGui::Dummy(ImVec2(availW + 70, ch * bm.size()));
 }
 
+// The IP datagrams of DVB-H (MPE / MPE-FEC) and of DVB-C2 GSE PLPs: a pcap file in the data folder with one click; the UDP forward
+// (to a player or an analyser) under Advanced. Both start off. Only what is received in the clear is written.
+static void ipOutputControls(App& a, uint64_t packetsSeen) {
+    IpOut& io = a.engine.ipOutput();
+    IpOutConfig c = io.config();
+    static char host[64] = "127.0.0.1";
+    static int port = 5004;
+    static bool whole = false, udpOn = false;
+    ImGui::Spacing();
+    ImGui::TextColored(pal::heading(), "%s", tr("IP datagrams"));
+    ImGui::TextDisabled(tr("%llu IP packets received"), (unsigned long long)packetsSeen);
+    bool pc = c.pcap;
+    if (ImGui::Checkbox(tr("Write them to a pcap file"), &pc)) {
+        IpOutConfig n = c;
+        n.pcap = pc;
+        n.pcapPath = plat::dataDir() + "/broadcast_ip.pcap";
+        io.configure(n);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Every IP packet (DVB-H MPE, DVB-C2 GSE) goes to broadcast_ip.pcap in the data folder (libpcap, link type RAW). Open it in Wireshark. Switching it on again starts a new file."));
+    if (ImGui::TreeNode(tr("Advanced: forward over UDP"))) {
+        ImGui::SetNextItemWidth(140 * gUi);
+        ImGui::InputText(tr("address"), host, sizeof host);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90 * gUi);
+        ImGui::InputInt(tr("port"), &port, 0);
+        port = std::max(0, std::min(65535, port));
+        ImGui::Checkbox(tr("whole IP packets (not just the UDP payload)"), &whole);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Off: the payload of each UDP datagram goes to the address, so a player can open udp://@:port (port 0 keeps each datagram's own port). On: every IP packet is sent whole, for an analyser."));
+        bool on = c.udp;
+        if (ImGui::Checkbox(tr("forward"), &on) || (on && (std::string(host) != c.udpHost || port != c.udpPort || whole != c.wholePackets))) {
+            IpOutConfig n = c;
+            n.udp = on; n.udpHost = host; n.udpPort = port; n.wholePackets = whole;
+            if (!(n == c)) io.configure(n);
+        }
+        udpOn = on;
+        ImGui::TreePop();
+    }
+    (void)udpOn;
+    const IpOutStats st = io.stats();
+    if (c.pcap) ImGui::TextDisabled(tr("pcap: %llu packets, %.1f MB in %s"), (unsigned long long)st.written, (double)st.bytesWritten / 1e6, c.pcapPath.c_str());
+    if (c.udp) ImGui::TextDisabled(tr("UDP: %llu datagrams to %s:%d, %llu not UDP, %llu send errors"), (unsigned long long)st.forwarded, c.udpHost.c_str(), c.udpPort, (unsigned long long)st.notUdp, (unsigned long long)st.sendErrors);
+    const std::string err = io.error();
+    if (!err.empty()) ImGui::TextColored(pal::warnAmber(), "%s", err.c_str());
+}
+
 void signallingTab(App& a) {
+    if (a.rx.standard == 742) {   // DVB-C2: the L1 and, for GSE PLPs, the IP output
+        const Dvbc2Telemetry& t = a.rx.dvbc2;
+        if (!t.l1Ok) { ImGui::TextDisabled("%s", tr("the L1 signalling part 2 has not been decoded yet")); return; }
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextUnformatted(dvbc2::l1Summary(t.l1).c_str());
+        bool gse = t.ipPackets > 0;
+        for (const auto& r : t.plps) {
+            ImGui::TextDisabled(tr("data slice %d PLP %d: %s %s, payload %s"), r.sliceId, r.plpId, dvbc2::modName(r.mod), dvbc2::codName(r.fecType, r.cod), r.payloadType == 3 ? "TS" : r.payloadType == 2 ? "GSE" : r.payloadType == 1 ? "GCS" : "GFPS");
+            gse |= r.payloadType == 2;
+        }
+        ImGui::PopTextWrapPos();
+        if (gse) ipOutputControls(a, t.ipPackets);
+        return;
+    }
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
         if (!rx.dvbt.tpsOk) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("TPS (transmission parameter signalling) has not been decoded yet"); ImGui::PopTextWrapPos(); } return; }
@@ -217,6 +276,7 @@ void signallingTab(App& a) {
             ImGui::EndTable();
         }
         if (rx.dvbt.hier) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! hierarchical modulation is announced: only the high-priority stream is decoded correctly by this receiver"); ImGui::PopTextWrapPos(); }
+        if (rx.dvbt.dvbh || rx.dvbt.mpePid >= 0) ipOutputControls(a, rx.dvbt.mpeDatagrams);
         return;
     }
     const RxTelemetry& rx = a.rx;

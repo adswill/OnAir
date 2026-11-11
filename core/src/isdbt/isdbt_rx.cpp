@@ -363,7 +363,7 @@ struct IsdbtReceiver::Impl {
         // Every whole-sample step of the timing loop moved the window and gave the carriers a phase ramp of 2 pi k / N; take the steps back out so
         // that the carriers stay comparable from one symbol to the next (the slope that remains is the clock drift, which the demodulator follows)
         if (cumStep != 0 && !getenv("ISDBT_NOCOMP")) {
-            const double stepPh = 2.0 * M_PI * (double)(cumStep % N) / N;
+            const double stepPh = -2.0 * M_PI * (double)(cumStep % N) / N;   // a window d samples later sees X[k] e^{+j 2 pi k d / N}
             const cd rot2(std::cos(stepPh), std::sin(stepPh));
             cd c2(1, 0);
             for (int i = 0; i < N / 2; i++) { fbuf[(size_t)i] *= cf32((float)c2.real(), (float)c2.imag()); c2 *= rot2; if ((i & 255) == 255) c2 /= std::abs(c2); }
@@ -420,8 +420,10 @@ struct IsdbtReceiver::Impl {
         double terr, eraw, mag;
         cpTrack(s, terr, eraw, mag);
         timingAcc += 0.08 * terr;
-        if (std::fabs(timingAcc) >= 1.0) { const double stp = std::round(timingAcc); symStart += stp; timingAcc -= stp; cumStep += (int64_t)stp; }
-        trackClock();
+        // a whole-sample step moves the window from the next symbol on (this one's start s is already taken), so its compensation (cumStep)
+        // starts with the next symbol too; counting it for this symbol gave it a phase ramp of one sample across the band
+        int64_t stepNow = 0;
+        if (std::fabs(timingAcc) >= 1.0) { const double stp = std::round(timingAcc); symStart += stp; timingAcc -= stp; stepNow = (int64_t)stp; }
         const double d = wrap(eraw - epsFrac);
         epsFrac += 0.15 * d;
         if (epsFrac > 0.5 || epsFrac < -0.5) {
@@ -430,6 +432,8 @@ struct IsdbtReceiver::Impl {
             if (state == 2) intShift += (int)stp;
         }
         transform(s);
+        cumStep += stepNow;
+        trackClock();
         symStart += P;
         if (state == 1) { huntStore(); absSym++; }
         else { processLocked(); absSym++; }

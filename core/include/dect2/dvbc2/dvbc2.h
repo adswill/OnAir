@@ -10,7 +10,7 @@
 //    DVB-T2's for 2/3 .. 5/6 and DVB-S2's for 8/9 and 9/10, the code annexes A and B list the same addresses),
 //  - the data slice time interleaver (clause 9.4.4) and the 4K frequency interleaver (clause 9.4.5, DVB-T2's 4K address generator).
 // Carrier indices are absolute (multiples of the carrier spacing from 0 Hz), as in the standard: the pilots, the scrambling and the
-// L1 block structure all depend on the absolute index. 1024-QAM and 4096-QAM, GSE payloads and reserved tones are not implemented.
+// L1 block structure all depend on the absolute index. GSE payloads are taken apart into IP packets (dvbc2_gse.h).
 // Nothing here has met a real DVB-C2 network: generator and receiver were checked against each other only (docs/DVBC2-3.9.md).
 #pragma once
 #include "dect2/common/ring.h"
@@ -70,6 +70,10 @@ inline bool isScatteredPilot(int64_t k, int ld, int gi) {    // clause 9.6.2.1: 
     return ((k % (d * kDy)) + d * kDy) % (d * kDy) == d * (ld % kDy);
 }
 extern const int kContinualPilots[30];
+// Reserved tones (clause 9.7, table 36): in data symbol l_d, carrier k is reserved when (k - D_X (l_d mod D_Y)) mod (8 K_L1) is in S0.
+// Only when the L1 sets RESERVED_TONES; never inside a notch, and a pilot stays a pilot.
+extern const int kReservedS0[288];
+bool isReservedTone(int64_t k, int ld, int gi);
 
 // ---------------------------------------------------------------- Reed-Muller (32,16) headers (clause 7.2.2)
 uint32_t rmEncode(uint16_t info);                            // bit i of the result = codeword bit lambda_i
@@ -98,7 +102,7 @@ struct PreambleHeader {
 };
 
 // ---------------------------------------------------------------- FEC of the PLPs (clause 6)
-// PLP_MOD 1 16QAM, 2 64QAM, 3 256QAM (4 1024QAM and 5 4096QAM are not implemented); PLP_COD 1 2/3, 2 3/4, 3 4/5, 4 5/6, 5 8/9 (16K) / 9/10 (64K)
+// PLP_MOD 1 16QAM, 2 64QAM, 3 256QAM, 4 1024QAM, 5 4096QAM; PLP_COD 1 2/3, 2 3/4, 3 4/5, 4 5/6, 5 8/9 (16K) / 9/10 (64K)
 struct Fec {
     int fecType = 1;    // PLP_FEC_TYPE: 0 = 16 200 bits, 1 = 64 800
     int mod = 3;
@@ -117,6 +121,10 @@ int xfecFrameCells(int fecType, int mod);   // table 16(b): 0 for the reserved v
 // The bit interleaver (clause 6.1.3) with the demultiplexer (6.2.1) folded in: map[p] = codeword bit carried by label bit p
 // (p = cell * bitsPerCell + position, position 0 = the MSB of the cell label)
 const std::vector<int>& bitMap(const Fec& f);
+// The unnormalised level of one axis (tables 12: n bits, the first the sign) and the normalised cell of a label (table 13), PLP_MOD 0 .. 5
+// (0 = QPSK, used by the headers)
+float axisLevel(int bitsPerAxis, unsigned bits);
+cf32 cellPoint(int mod, unsigned label);
 // One FEC block: `bb` holds kBch bits (one per byte, plain: the BB scrambler is applied here) -> cells of the XFECFrame
 void encodeBlock(const Fec& f, const std::vector<uint8_t>& bb, std::vector<cf32>& cells);
 // Equalised cells with their noise variance per real dimension -> the kBch bits of the BB frame (descrambled). false: not decodable.
@@ -207,7 +215,8 @@ struct SliceCells {
         return false;
     }
     bool isPilot(int64_t k, int ld) const { return isEdgePilot(k) || isContinualPilot(k) || isScatteredPilot(k, ld, gi); }
-    bool isData(int64_t k, int ld) const { return !isNotch(k) && !isPilot(k, ld); }
+    bool reservedTones = false;                         // L1 RESERVED_TONES
+    bool isData(int64_t k, int ld) const { return !isNotch(k) && !isPilot(k, ld) && !(reservedTones && isReservedTone(k, ld, gi)); }
     // the data carriers of data symbol ld, in increasing k
     void dataCarriers(int ld, std::vector<int64_t>& out) const;
     int width() const { return (int)(kMax - kMin + 1); }

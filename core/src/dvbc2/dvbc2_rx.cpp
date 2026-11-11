@@ -3,6 +3,7 @@
 #include "dect2/t2/t2interleave.h"
 #include "dect2/t2/t2ofdm.h"
 #include "dect2/tv/bbunpack.h"
+#include "dect2/dvbs/dvbs_ip.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/dsp/resampler.h"
 #include "dect2/dsp/clock_correct.h"
@@ -53,6 +54,10 @@ struct Dvbc2Receiver::Impl {
     double centerHz = 0, sigOffset = 0;
     std::function<void(const std::string&)> logCb;
     std::function<void(const uint8_t*, size_t, double)> pktCb;
+    std::function<void(const uint8_t*, size_t)> ipCb;
+    // GSE PLPs (payload type 2, BB header TS/GS = 10): the data fields to IP packets (TS 102 606, the DVB-S2 GSE decoder)
+    std::unique_ptr<dvbsip::GseIp> gse;
+    uint64_t ipPackets = 0, gseFields = 0;
     std::atomic<bool> blocking{false};
     std::thread th;
     std::mutex mu;
@@ -104,6 +109,7 @@ struct Dvbc2Receiver::Impl {
     // channel
     std::vector<cf32> havg;       // the averaged channel at the D_X grid (and every 6th bin from the preamble)
     std::vector<uint8_t> hvalid;
+    bool dataEst = false;         // the data symbols' pilots have given a noise estimate (sigma2) since the timing was found
     std::vector<cf32> H;
     std::vector<uint8_t> presentMask;   // bins whose nearest pilot carries signal (the window reaches beyond the system and into notches)
     GridInterpolator interp;
@@ -200,6 +206,7 @@ struct Dvbc2Receiver::Impl {
         clockInt = 0; clockPpm = 0; cfoHz = 0; ncoPhase = 0; slopeAcc = 0; mixPhase = 0;
         buf.clear(); bufPos = 0; consumed = 0;
         state = Search; haveKBase = false; prevPreambleLike = false; symIndex = 0; haveHdr = false; l1Ok = false; preambleMiss = 0;
+        dataEst = false;
         havg.assign(kFft, cf32(0, 0)); hvalid.assign(kFft, 0); H.assign(kFft, cf32(0, 0)); presentMask.assign(kFft, 0);
         sliceOk = false; sliceIdx = plpIdx = -1; stream.clear(); streamN0.clear(); aligned = false; headerLocked = false; headerFails = 0; decodeFails = 0;
         unpack = BbUnpacker();
@@ -271,6 +278,7 @@ struct Dvbc2Receiver::Impl {
         advance((size_t)bestM);
         cfoHz = eps * kCarrierSpacingHz;
         ncoPhase = 0;
+        dataEst = false;
         state = Timing;
         prevPreambleLike = false;
         char b[160];
@@ -482,7 +490,7 @@ struct Dvbc2Receiver::Impl {
             const int delta = (int)std::lround(d - gs / 2);
             if (delta != 0 && std::abs(delta) < 3 * gs) {
                 std::vector<cf32> Y2;
-                if (retakeSymbol(Y2, delta)) { Y.swap(Y2); slopeAcc = 0; }
+                if (retakeSymbol(Y2, delta)) { Y.swap(Y2); slopeAcc = 0; dataEst = false; }
             }
         }
         // channel at the pilots (the preamble gives every 6th carrier: better than the data symbols' grid, so it replaces the average)
@@ -495,7 +503,10 @@ struct Dvbc2Receiver::Impl {
             if (std::norm(hp[i]) <= 0.1f * sigPower || std::norm(hp[i - 1]) <= 0.1f * sigPower || std::norm(hp[i + 1]) <= 0.1f * sigPower) continue;
             acc += std::norm(hp[i - 1] - 2.f * hp[i] + hp[i + 1]); n++;   // the second difference cancels the timing slope; its noise is 6 sigma^2 / A^2
         }
-        sigma2 = n > 0 ? (float)(acc / n / 6 * app * app) : sigma2;
+        // only until the data symbols have their own: this estimate also holds the channel's curvature over 12 carriers and the phase step
+        // of the window delay between neighbours, which made it some 16 dB too high at good SNR; the data cells after every preamble then
+        // carried LLRs that small for some 20 symbols, and blocks of the high rates across the frame start (4096-QAM 9/10) failed
+        if (!dataEst) sigma2 = n > 0 ? (float)(acc / n / 6 * app * app) : sigma2;
         // the 2 840 cells of the L1 block, both copies of a cell combined
         std::vector<cf32> x((size_t)kL1DataCells, cf32(0, 0));
         std::vector<float> w((size_t)kL1DataCells, 0.f);
@@ -574,7 +585,7 @@ struct Dvbc2Receiver::Impl {
         const L1DataSlice& s = l1.slices[(size_t)si];
         if (newSel) {
             geom = SliceCells();
-            geom.gi = gi; geom.sysKMin = l1.kMin(); geom.sysKMax = l1.kMax();
+            geom.gi = gi; geom.sysKMin = l1.kMin(); geom.sysKMax = l1.kMax(); geom.reservedTones = l1.reservedTone != 0;   // clause 9.7: no data there
             for (const auto& n : l1.notches) if (n.width > 0) geom.notches.push_back({l1.notchKMin(n), l1.notchKMax(n)});
             geom.kMin = l1.sliceKMin(s); geom.kMax = l1.sliceKMax(s);
             tiDepth = s.tiDepth == 0 ? 1 : 4 << (s.tiDepth - 1);
@@ -582,6 +593,7 @@ struct Dvbc2Receiver::Impl {
             if (!sliceOk) { stage = "the data slice is outside the input window"; log("DVB-C2: data slice " + std::to_string(s.id) + " is not inside the 7.61 MHz window: tune to its tuning position"); return; }
             stream.clear(); streamN0.clear(); aligned = false; headerLocked = false; headerFails = 0; decodeFails = 0;
             unpack = BbUnpacker();
+            gse.reset();
             unpack.setSink([this](const uint8_t* p) { pktBatch.insert(pktBatch.end(), p, p + 188); });
             char b[200];
             snprintf(b, sizeof b, "DVB-C2: decoding data slice %d (%d carriers, %s, time interleaving %d) PLP %d", s.id, geom.width(), s.type ? "Type 2" : "Type 1", tiDepth, s.plps[(size_t)pi].id);
@@ -645,6 +657,7 @@ struct Dvbc2Receiver::Impl {
             const cf32 h = Y[(size_t)b] / pilotRef(b, kPilotAmp);
             if (hvalid[(size_t)b]) havg[(size_t)b] = 0.75f * havg[(size_t)b] + 0.25f * h; else { havg[(size_t)b] = h; hvalid[(size_t)b] = 1; }
         }
+        dataEst = true;
         interpolateGrid(dxv, (int)floorMod(-kBase, dxv), H);
         if (!sliceOk) return;
         // the slice's data cells of this symbol, equalised, in carrier order after the frequency de-interleaver
@@ -722,7 +735,7 @@ struct Dvbc2Receiver::Impl {
                 dropCells((size_t)hc);
                 headerLocked = true; headerFails = 0;
                 curFec = f; curCells = len; curBlocks = h.counter + 1; curPlpId = h.plpId;
-                curWanted = h.mod >= 1 && h.mod <= 3 && h.plpId == s.plps[(size_t)plpIdx].id && dims(f).ok;
+                curWanted = h.mod >= 1 && h.mod <= 5 && h.plpId == s.plps[(size_t)plpIdx].id && dims(f).ok;
                 auto it = rows.find({s.id, h.plpId});
                 if (it != rows.end() && h.mod != 0) { it->second.fecType = h.fecType; it->second.mod = h.mod; it->second.cod = h.cod; }
                 continue;
@@ -751,7 +764,7 @@ struct Dvbc2Receiver::Impl {
             headerFails = 0;
             dropCells((size_t)hc);
             curFec = f; curCells = len; curBlocks = h.counter + 1; curPlpId = h.plpId;
-            curWanted = h.mod >= 1 && h.mod <= 3 && h.plpId == s.plps[(size_t)plpIdx].id && dims(f).ok;
+            curWanted = h.mod >= 1 && h.mod <= 5 && h.plpId == s.plps[(size_t)plpIdx].id && dims(f).ok;
             auto it = rows.find({s.id, h.plpId});
             if (it != rows.end() && h.mod != 0) { it->second.fecType = h.fecType; it->second.mod = h.mod; it->second.cod = h.cod; }
         }
@@ -780,14 +793,29 @@ struct Dvbc2Receiver::Impl {
             for (int i = 0; i < curCells; i += step) {
                 const cf32 z = c[(size_t)i];
                 float bd = 1e30f;
-                const int order = 1 << (2 * (curFec.mod + 1));
-                for (int l = 0; l < order; l++) { const float d = std::norm(z - qamPoint(curFec.mod, false, (unsigned)l)); if (d < bd) bd = d; }
+                // per axis: the nearest level (the constellations are square and separable)
+                const int nb = curFec.mod + 1;
+                const float norm = std::abs(cellPoint(curFec.mod, 0)) / std::abs(cf32(axisLevel(nb, 0), axisLevel(nb, 0)));
+                float br = 1e30f, bi = 1e30f;
+                for (unsigned l = 0; l < (1u << nb); l++) { const float v = axisLevel(nb, l) * norm; br = std::min(br, (z.real() - v) * (z.real() - v)); bi = std::min(bi, (z.imag() - v) * (z.imag() - v)); }
+                bd = br + bi;
                 sp += 1.0; ep += bd;
             }
             if (ep > 0) { merSum += 10 * std::log10(sp / ep); merN++; }
         }
         BbHeader h;
         if (!parseBbHeader(bb.data(), h)) { unpack.lost(); return; }
+        if (h.tsGs == 2) {   // GSE
+            const size_t bytes = (size_t)std::min(h.dfl, (int)bb.size() - 80) / 8;
+            std::vector<uint8_t> field(bytes);
+            for (size_t i = 0; i < bytes; i++) { unsigned v = 0; for (int q = 0; q < 8; q++) v = v << 1 | (bb[80 + i * 8 + (size_t)q] & 1); field[i] = (uint8_t)v; }
+            if (!gse) gse = std::make_unique<dvbsip::GseIp>();
+            std::vector<dvbsip::IpPacket> ips;
+            gse->dataField(field.data(), field.size(), ips);
+            gseFields++;
+            for (const auto& ip : ips) { ipPackets++; lastPacketTime = now; if (ipCb) ipCb(ip.data.data(), ip.data.size()); }
+            return;
+        }
         unpack.push(bb, h);
         flushPackets();
     }
@@ -886,6 +914,7 @@ struct Dvbc2Receiver::Impl {
         if (merN > 256) { merSum /= 2; merN /= 2; }
         if (preBerN > 256) { preBerSum /= 2; preBerN /= 2; }
         t.packets = packets;
+        t.ipPackets = ipPackets; t.gseFields = gseFields;
         if (now - timeAtMark > 1.0) { netMbps = (double)(packets - packetsAtMark) * 188 * 8 / (now - timeAtMark) / 1e6; packetsAtMark = packets; timeAtMark = now; }
         t.netMbps = netMbps;
         for (auto& p : t.plps) if (p.sliceId == t.selectedSlice && p.plpId == t.selectedPlp) p.bitrate = netMbps * 1e6;
@@ -936,6 +965,7 @@ bool Dvbc2Receiver::telemetry(Dvbc2Telemetry& out, uint64_t lastSeq) {
 }
 void Dvbc2Receiver::setLogCallback(std::function<void(const std::string&)> cb) { p_->logCb = std::move(cb); }
 void Dvbc2Receiver::setPacketCallback(std::function<void(const uint8_t*, size_t, double)> cb) { p_->pktCb = std::move(cb); }
+void Dvbc2Receiver::setIpCallback(std::function<void(const uint8_t*, size_t)> cb) { p_->ipCb = std::move(cb); }
 void Dvbc2Receiver::setSignalOffset(double hz) { p_->sigOffset = hz; }
 void Dvbc2Receiver::setCenterHz(double hz) { p_->centerHz = hz; }
 void Dvbc2Receiver::selectPlp(int sliceId, int plpId) { p_->wantSlice = sliceId; p_->wantPlp = plpId; }

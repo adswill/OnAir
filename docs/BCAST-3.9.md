@@ -27,10 +27,21 @@ ARIB STD-B29 / ITU-R BS.1114 System F: the narrow-band ISDB of one or three segm
   - the one-seg service of ISDB-T
   - a noise sweep for QPSK 1/2
   - the engine's own test signal through the receiver
-- Known limit: three-segment signals with DQPSK segments are unreliable. Both layers lose 10-25 % of their packets, even at 20-30 dB
-  and with a steady lock and TMCC. That holds whether every segment is DQPSK or only the centre one is. One-segment DQPSK and
-  every coherent combination decode cleanly. The test prints the loss for these cases but does not fail on it. The cause is not
-  found yet; the next suspect is the common-phase tracking, where the DQPSK segments' TMCC carriers outnumber the other pilots.
+- Three-segment DQPSK (fixed in branch feat39-bcast2): three-segment signals with DQPSK segments used to lose 10-25 % of their packets in
+  bursts. The cause was the timing loop's whole-sample window steps. A step moves the FFT window from the next symbol on, but its phase-ramp
+  correction was applied to the current symbol already, and with the wrong sign. A one-sample error is a phase ramp of 2 pi k / N across
+  the band. The demodulator's slope fit took it out wherever it had enough reference points: the scattered pilots of coherent segments,
+  and the TMCC carriers from symbol 17 of the frame on. In the first 17 symbols of a frame the differential segments only had their few
+  continual pilots, so every step there broke two DQPSK symbols, and after the time and frequency de-interleaving that became a burst of
+  bad packets in every layer. One-segment DQPSK hit it less often only because its timing loop stepped less. The correction now has the
+  sign of a later window (X[k] e^{+j 2 pi k d / N} taken out) and starts with the symbol whose window moved. The sample clock tracking
+  reads the step count after the update. This code is shared with 13-segment ISDB-T, whose tests (isdbt_chain, isdbt_rx, isdbt_engine,
+  isdbt_bw, isdbt_basic, isdbt_impair) still pass.
+  - The test now asserts these cases (they were only printed before): 3 seg all DQPSK (+1.5 kHz, 20 dB), all twenty layer-A modulation
+    x code rate combinations including DQPSK, and two new cases: A DQPSK 2/3 + B 16QAM 1/2 with +30 ppm, -2.3 kHz, 15 Hz/s drift at
+    21 dB; and all DQPSK in mode 2 with -35 ppm, 300 kHz off centre at 19 dB.
+  - Measured (simulated): 3 seg all DQPSK went from 253 bad of 2456 packets (10.3 %) to 0 bad of 2456. Across the carrier offsets
+    0 - 2 kHz it went from 4.7 - 13.6 % to 0. The two new cases had 0 bad packets.
 - Fixed on the way:
   - The impulse-response display wrote past its buffer (the full ISDB-T carrier range in the small FFT); this was the double free
     CI showed.
@@ -70,8 +81,23 @@ DVB-H is signalled in the DVB-T TPS and found automatically, so it stays in the 
     - a loss sweep
     - plain MPE and time slicing without FEC
     - the whole chain: MPE-FEC transport stream through 4K in-depth OFDM and the DVB-T receiver into the MPE demultiplexer
+- IP output (branch feat39-bcast2, `core/src/tv/ip_out.cpp`, `Engine::ipOutput()`):
+  - Every datagram whose bytes are all known good goes to the engine's IP output. A byte is known good when its section CRC passed,
+    or when MPE-FEC corrected its row. DVB-C2 GSE PLPs feed the same output.
+  - Both outputs are off by default. They are on the Signalling tab of the DVB-T analysis (when DVB-H or an MPE stream is present)
+    and on the DVB-C2 one (when a PLP carries GSE).
+    - One click: "Write them to a pcap file" writes `broadcast_ip.pcap` in the data folder (libpcap, link type RAW, the IP packets as
+      they are). Switching it on again starts a new file.
+    - Under Advanced: forward over UDP to a dotted IPv4 address and port. By default only the payload of each UDP datagram is sent,
+      after IPv4 fragments are put back together, so a player can open `udp://@:port`; port 0 keeps each datagram's own destination
+      port. "whole IP packets" sends every packet whole, for an analyser.
+  - Nothing is decrypted. The settings are not saved between sessions.
+  - Test (`tests/tv/test_mpe_fec.cpp`, case 5): MPE-FEC frames of 512 rows with 3 % of the transport packets lost went through the
+    demultiplexer into the IP output. MPE-FEC delivered 411 of 427 datagrams. The pcap file was read back: 411 records, byte for byte
+    equal, link type 101. A local UDP socket received 411 payloads, equal and in order. The test also checks whole-packet mode, a
+    3 000-byte datagram in three IPv4 fragments (forwarded as one payload), a bad header (dropped and counted), and a bad address and an
+    unwritable path (both refused with a message).
 - Not done:
-  - The datagrams are counted, not yet written out (no pcap or UDP output).
   - Damaged TS packets erase the whole section; packet-level erasure inside a section is not used.
   - The INT table (IP/MAC notification) is not read.
 - Simulated only: no recording of a DVB-H transmission was available.

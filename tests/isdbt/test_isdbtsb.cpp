@@ -137,7 +137,7 @@ static Result run(const Params& p, const Channel& ch, double seconds, int rxSegm
         for (size_t i = 0; i < n; i++) {
             const uint8_t* q = pk + i * 188;
             int layer = -1;
-            if (!(q[1] & 0x80) && samePacket(q) && checkCountingPacket(q, &layer, nullptr)) r.good[layer]++;
+            if (!(q[1] & 0x80) && samePacket(q) && checkCountingPacket(q, &layer, nullptr)) { r.good[layer]++;}
             else r.bad++;
         }
     });
@@ -171,19 +171,12 @@ static Result run(const Params& p, const Channel& ch, double seconds, int rxSegm
     return r;
 }
 
-// knownLimit: three-segment signals with DQPSK segments lose 10-25 % of their packets (docs/BCAST-3.9.md). The lock, the TMCC and the mode
-// stay hard checks; the packet loss is printed, not asserted.
-static void expectFlow(const char* name, const Result& r, const Params& p, long minGood, bool allLayers = true, bool knownLimit = false) {
+static void expectFlow(const char* name, const Result& r, const Params& p, long minGood, bool allLayers = true) {
     jprintf("  %s: tmcc %d, %d seg, mode %d, CFO %.0f Hz, SNR %.1f dB, good %ld/%ld/%ld, bad %ld; RS A %llu/%llu/%llu B %llu/%llu/%llu (clean/corrected/failed)\n", name, (int)r.tmcc, r.segs, r.mode, r.cfo, r.snr,
             r.good[0], r.good[1], r.good[2], r.bad, (unsigned long long)r.is.layer[0].rsClean, (unsigned long long)r.is.layer[0].rsCorrected, (unsigned long long)r.is.layer[0].rsFailed,
             (unsigned long long)r.is.layer[1].rsClean, (unsigned long long)r.is.layer[1].rsCorrected, (unsigned long long)r.is.layer[1].rsFailed);
     check(r.tmcc, name, "TMCC decoded");
     check(r.mode == p.mode, name, "mode");
-    if (knownLimit) {
-        const long g = r.good[0] + r.good[1] + r.good[2];
-        jprintf("  KNOWN LIMIT (three-segment DQPSK): %s: %.1f %% of the packets out were bad\n", name, g + r.bad ? 100.0 * (double)r.bad / (double)(g + r.bad) : 0.0);
-        return;
-    }
     for (int i = 0; i < 3; i++) {
         if (!p.layer[i].used() || (!allLayers && i > 0)) continue;
         check(r.good[i] >= minGood, name, "packets flowing in every layer");
@@ -248,7 +241,19 @@ int main() {
         p.layer[0].segments = 1; p.layer[0].mod = kDqpsk; p.layer[0].rate = kR12;
         p.layer[1].segments = 2; p.layer[1].mod = kDqpsk; p.layer[1].rate = kR23;
         Channel ch; ch.inRate = 2.0e6; ch.cfoHz = 1500; ch.snrDb = 20;
-        expectFlow("3 seg all DQPSK", run(p, ch, 6.0, 0), p, 150, true, true);
+        expectFlow("3 seg all DQPSK", run(p, ch, 6.0, 0), p, 150);
+    });
+    // three segments with DQPSK: the differential segments see every whole-sample step of the timing loop (a 1-sample window move is a
+    // phase ramp across the band), so a sample clock error, which makes the loop step, is the hard case; mixed and all-differential layouts
+    add([] {
+        Params p = three(3, kGi16, kDqpsk, kR23, k16Qam, kR12, 1);
+        Channel ch; ch.inRate = 2.4e6; ch.cfoHz = -2300; ch.snrDb = 21; ch.ppm = 30; ch.driftHzPerS = 15;
+        expectFlow("3 seg A DQPSK 2/3 + B 16QAM 1/2, +30 ppm, -2.3 kHz, drift, 21 dB", run(p, ch, 6.0, 0), p, 150);
+    });
+    add([] {
+        Params p = three(2, kGi8, kDqpsk, kR12, kDqpsk, kR34, 2);
+        Channel ch; ch.inRate = 2.048e6; ch.cfoHz = 3700; ch.snrDb = 19; ch.ppm = -35; ch.offsetHz = 300e3;
+        expectFlow("3 seg all DQPSK mode 2, -35 ppm, 300 kHz off centre, 19 dB", run(p, ch, 6.0, 0), p, 100);
     });
     // the one-segment receiver inside a three-segment band: only layer A
     add([] {
@@ -319,7 +324,7 @@ int main() {
                 Params p = three(3, kGi8, mod, rate, mod == kDqpsk ? kDqpsk : k16Qam, kR12);
                 Channel ch; ch.inRate = 2.2e6; ch.cfoHz = -800; ch.snrDb = 32;
                 char nm[64]; snprintf(nm, sizeof nm, "3 seg layer A %s %s", isdbt::modName(mod), isdbt::rateName(rate));
-                expectFlow(nm, run(p, ch, 3.0, 3), p, 20, true, mod == kDqpsk);
+                expectFlow(nm, run(p, ch, 3.0, 3), p, 20);
             }
         });
     // 6. noise sweep, one segment QPSK 1/2 (mode 3, I = 2)

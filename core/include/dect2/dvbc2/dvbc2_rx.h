@@ -7,7 +7,7 @@
 // preamble header (Reed-Muller 32,16), L1 part 2 (16K LDPC, BCH, CRC-32) -> the data symbols: scattered, continual and edge pilots for the
 // channel, common phase and clock tracking -> the chosen data slice: frequency and time de-interleaving, Data Slice Packets (the PLP_START
 // pointer of Type 1, the FECFrame headers of Type 2) -> LDPC, BCH, BB frames -> transport stream packets to the packet callback.
-// Receive only, and only what is sent in the clear. 16-QAM to 256-QAM; 1024 / 4096-QAM, GSE and reserved tones are not decoded.
+// Receive only, and only what is sent in the clear. 16-QAM to 4096-QAM; GSE payloads to IP packets (dvbc2_gse.h); reserved tones are skipped.
 // Nothing here has met a real cable network: checked against the generator only (docs/DVBC2-3.9.md).
 #pragma once
 #include "dvbc2.h"
@@ -48,6 +48,7 @@ struct Dvbc2Telemetry {
     double merDb = 0;            // of the decoded data cells
     double preBer = 0;
     uint64_t packets = 0;
+    uint64_t ipPackets = 0, gseFields = 0;   // GSE PLPs: IP packets out, BB frame data fields taken
     double netMbps = 0;
     int headerMetric = 0;        // Type 2: the last FECFrame header's agreement (of 32)
     std::string stage;
@@ -70,6 +71,7 @@ public:
     bool telemetry(Dvbc2Telemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);
     void setPacketCallback(std::function<void(const uint8_t* packets, size_t nPackets, double secs)> cb);
+    void setIpCallback(std::function<void(const uint8_t* ip, size_t n)> cb);   // GSE PLPs: each IP packet (runs on the receiver thread)
     void setSignalOffset(double hz);                     // where the window sits relative to the centre of the input
     void setCenterHz(double hz);                         // the tuned frequency (0 = unknown: the absolute carrier index is searched)
     void selectPlp(int sliceId, int plpId);              // -1, -1: the first data slice and its first PLP

@@ -9,6 +9,7 @@
 #include "dect2/dsp/gen_util.h"
 #include "dect2/source/source.h"
 #include "dect2/common/mathconst.h"
+#include "dect2/dvbs/dvbs_ip.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -28,7 +29,30 @@ struct PlpSource {
     std::function<void(uint8_t*)> src;
     uint64_t packets = 0, blocks = 0;
     std::mt19937 rng{7};
+    std::unique_ptr<dvbsip::GseEncapsulator> gse;
+    uint64_t ipPackets = 0;
+    // GSE (payload type 2): the data field is GSE packets (TS 102 606), PDUs cut across BB frames where they do not fit
+    void makeGseCells(std::vector<cf32>& cells) {
+        if (!gse) gse = std::make_unique<dvbsip::GseEncapsulator>();
+        const size_t bytes = (size_t)(d.kBch - 80) / 8;
+        std::vector<uint8_t> pkt;
+        while (gse->queued() < 3 && cfg.ip && cfg.ip(pkt)) {
+            dvbsip::Label lab; lab.type = 2;
+            const uint16_t proto = !pkt.empty() && (pkt[0] >> 4) == 6 ? 0x86DD : 0x0800;
+            gse->push(proto, lab, pkt);
+            ipPackets++;
+        }
+        const std::vector<uint8_t> field = gse->fill(bytes);
+        std::vector<uint8_t> bits((size_t)d.kBch, 0);
+        BbHeader h;
+        h.tsGs = 2; h.sisMis = 1; h.ccmAcm = 1; h.upl = 0; h.dfl = (int)bytes * 8; h.sync = 0; h.syncd = 0;
+        buildBbHeader(h, bits.data());
+        for (size_t i = 0; i < field.size() && i < bytes; i++) for (int q = 0; q < 8; q++) bits[80 + i * 8 + (size_t)q] = (field[i] >> (7 - q)) & 1;
+        encodeBlock(fec, bits, cells);
+        blocks++;
+    }
     void makeCells(std::vector<cf32>& cells) {
+        if (cfg.payloadType == 2) { makeGseCells(cells); return; }
         const int npk = (d.kBch - 80) / 1504;
         std::vector<uint8_t> bits((size_t)d.kBch, 0);
         BbHeader h;
@@ -128,6 +152,7 @@ struct Generator::Impl {
         // L1 (the per-frame fields are filled in buildL1)
         l1.networkId = cfg.networkId; l1.systemId = cfg.systemId; l1.startFrequency = cfg.startFrequency; l1.bandwidth = cfg.bandwidth;
         l1.guardInterval = cfg.gi; l1.frameLength = kDataSymbols;
+        l1.reservedTone = cfg.reservedTones ? 1 : 0;
         for (const NotchConfig& n : cfg.notches) { L1Notch ln; ln.start = n.start; ln.width = n.width; l1.notches.push_back(ln); }
         for (const SliceConfig& s : cfg.slices) {
             SliceStream ss;
@@ -142,7 +167,7 @@ struct Generator::Impl {
             }
             slices.push_back(std::move(ss));
             SliceCells g;
-            g.gi = cfg.gi; g.sysKMin = kMin; g.sysKMax = kMax; g.notches = notches;
+            g.gi = cfg.gi; g.sysKMin = kMin; g.sysKMax = kMax; g.notches = notches; g.reservedTones = cfg.reservedTones;
             g.kMin = kMin + (int64_t)(s.tunePos + s.offsetLeft) * dxv;
             g.kMax = kMin + (int64_t)(s.tunePos + s.offsetRight) * dxv - 1;
             geom.push_back(g);
@@ -255,6 +280,8 @@ struct Generator::Impl {
             bool pil = cp[(size_t)b] || k == kMin || k == kMax || isScatteredPilot(k, ld, cfg.gi);
             if (!pil) for (auto& n : notches) if (k == n.first - 1 || k == n.second + 1) pil = true;
             if (pil) X[(size_t)b] = cf32(kPilotAmp * (1.f - 2.f * pilotBit[(size_t)b]), 0.f);
+            // reserved tones (clause 9.7): free values, here a random phase at 0.8 of the pilot amplitude (what a PAPR reduction might put there)
+            else if (cfg.reservedTones && isReservedTone(k, ld, cfg.gi)) { const float a = (float)(rng() % 3600) * (float)math::kPi / 1800.f; X[(size_t)b] = std::polar(0.8f * kPilotAmp, a); }
         }
         for (size_t s = 0; s < slices.size(); s++) {
             SliceStream& ss = slices[s];
@@ -382,8 +409,8 @@ dvbc2::GenConfig synthConfig(const SynthConfig& cfg, double sampleRate) {
     const int gi = cfg.modeOpt[1] == 1 ? 0 : 1;
     const int64_t tune = (int64_t)std::llround(dvbc2Tuning().defMhz * 1e6 / dvbc2::kCarrierSpacingHz);
     dvbc2::GenConfig c = dvbc2::defaultSystem(gi, tune);
-    static const int mods[6] = {3, 1, 2, 3, 2, 3}, cods[6] = {4, 3, 1, 2, 5, 5};
-    const int opt = std::clamp(cfg.modeOpt[0], 0, 5);
+    static const int mods[8] = {3, 1, 2, 3, 2, 3, 4, 5}, cods[8] = {4, 3, 1, 2, 5, 5, 2, 4};
+    const int opt = std::clamp(cfg.modeOpt[0], 0, 7);
     dvbc2::SliceConfig& s = c.slices[0];
     s.type = cfg.modeOpt[2] >= 1 ? 1 : 0;
     s.fecHeaderType = cfg.modeOpt[2] == 2 ? 1 : 0;
