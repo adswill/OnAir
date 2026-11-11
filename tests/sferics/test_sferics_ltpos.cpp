@@ -534,6 +534,30 @@ static void testSynth() {
     CHECK(a == TimeSrc::CommonView && core.refTimer().locked() && std::fabs(ppm - 7) < 1.0, "the reference locks and gives the drift (%s, ppm %.2f)", timeSrcName(a), ppm);
 }
 
+// the test signal as the engine's synthetic source delivers it (and an 8-bit radio): a noise floor below one 8-bit step is digital silence between
+// the strikes, and 3.9 never found a floor in it (QA sweep 4.0)
+static void testEightBit() {
+    SynthConfig cfg;
+    cfg.snrDb = 60;
+    const double rate = 1e6;
+    auto syn = makeLtposSynth(cfg, rate);
+    StationCfg c;
+    StationCore core;
+    core.configure(rate, c);
+    std::vector<std::complex<float>> x(8192);
+    const int64_t t0 = 1762800000LL * 1000000000LL;
+    uint64_t pos = 0;
+    auto q = [](float v) { return std::round(std::min(127.f, std::max(-128.f, v * 128.f))) / 128.f; };
+    while (pos < (uint64_t)(8 * rate)) {
+        syn->generate(x.data(), x.size());
+        for (auto& v : x) v = std::complex<float>(q(v.real()), q(v.imag()));
+        pos += x.size();
+        core.feed(x.data(), x.size(), t0 + (int64_t)((double)pos / rate * 1e9));
+    }
+    std::printf("8-bit samples, silence between strikes: %llu sferics, floor valid %d\n", (unsigned long long)core.pulseCount(), core.pulses().floorValid() ? 1 : 0);
+    CHECK(core.pulses().floorValid() && core.pulseCount() >= 8, "8-bit samples: floor valid %d, %llu sferics", core.pulses().floorValid() ? 1 : 0, (unsigned long long)core.pulseCount());
+}
+
 // ---------------------------------------------------------------- hardware time and the receiver over UDP on this computer
 static void testHwTimeAndReceiver() {
     using namespace dect2;
@@ -626,6 +650,7 @@ int main() {
     std::printf("whole chain, IQ at 250 kHz, six stations (GPS, GNSS, two common view, GPS, NTP):\n");
     testChain();
     testSynth();
+    testEightBit();
     testHwTimeAndReceiver();
     std::printf(fails ? "ltpos: %d FAILED\n" : "ltpos: all passed\n", fails);
     return fails ? 1 : 0;

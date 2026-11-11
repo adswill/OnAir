@@ -153,8 +153,6 @@
     {"dvbc2/snr", "threshold: 12 dB is below or at this modulation's threshold"},
     {"cell/tx", "open: 4.0 QA: the transmitter's file decodes nothing in 3 s on a 3-core runner (passed in the 3.9 sweep)"},
     {"tetra/tx", "open: 4.0 QA: the transmitter's file decodes nothing (3.9 fixed it in feat39-tetrafix); to investigate"},
-    {"vdl3/clean", "open: 4.0 QA: nothing decodes through the Engine, from a file or from the synthetic source directly (qa_sweep_sel QA_DIRECT=1); the receiver's own tests pass"},
-    {"ltpos/clean", "open: 4.0 QA: nothing decodes through the Engine, from a file or from the synthetic source directly (qa_sweep_sel QA_DIRECT=1)"},
     {"sonde/snr", "open: 4.0 QA: 12 dB in the signal's band; passed in the 3.9 sweep"},
     {"ax100m6/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate"},
     {"cell/rate", "open: 4.0 QA: nothing decodes at 1.37 x the default sample rate (27.4 Msps); the engine log shows the cell search finding no cell"},

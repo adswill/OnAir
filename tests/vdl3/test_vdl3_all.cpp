@@ -115,6 +115,7 @@ static void testBits() {
     printf("  burst bits: all eight kinds round trip with bit errors\n");
 }
 
+static bool g_quant8 = false;   // the samples as an 8-bit radio (or the engine's test source) delivers them: a noise floor below one step is digital silence
 struct RunRes { int expect = 0, got = 0, falseKinds = 0, bad = 0; double cpu = 0; };
 
 // The receiver on the test signal against the traffic the generator sent. Only bursts at or above minEsN0 (ground SNR + the burst's level) count.
@@ -138,6 +139,7 @@ static RunRes runRx(double rate, double cfo, double snr, double drift, double sr
     for (size_t done = 0; done < total;) {
         const size_t n = std::min(buf.size(), total - done);
         syn->generate(buf.data(), n);
+        if (g_quant8) for (size_t i = 0; i < n; i++) { auto q = [](float x) { return std::round(std::min(127.f, std::max(-128.f, x * 128.f))) / 128.f; }; buf[i] = cf32(q(buf[i].real()), q(buf[i].imag())); }
         const auto t0 = std::chrono::steady_clock::now();
         rx.feed(buf.data(), n);
         res.cpu += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
@@ -204,6 +206,14 @@ int main() {
                 CHECK(SANITIZED || r.cpu < secs * 4, "%.2f Msps: %.2f s CPU for %.1f s", rate / 1e6, r.cpu, secs);
             }
         }
+    }
+    // 8-bit samples with gaps of digital silence between the bursts (the QA sweep's file path; 3.9 never started a burst: its floor was zero)
+    {
+        g_quant8 = true;
+        RunRes r = runRx(1e6, 0, 60, 0, 0, 0, false, 1.2, 20);
+        g_quant8 = false;
+        printf("  8-bit samples, silence between bursts: %d of %d, %d other\n", r.got, r.expect, r.falseKinds);
+        CHECK(r.expect >= 20 && r.got >= r.expect * 95 / 100 && r.falseKinds <= 1, "8-bit samples: %d of %d bursts (%d other)", r.got, r.expect, r.falseKinds);
     }
     // drift, sample rate offset, the channel 100 kHz below the centre (the mode's tuning offset), all at once
     {
