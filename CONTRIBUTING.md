@@ -34,3 +34,46 @@ Name every thread you create: `dect2::namedThread("onair-xxx", fn, args...)` ins
 OnAir is released under the GNU General Public License v3.0 or later. By sending a contribution you agree that it is released under the same licence, including the attribution term in [ADDITIONAL-TERMS.md](ADDITIONAL-TERMS.md) (GPL section 7(b)). This is "inbound = outbound": you keep the copyright of your contribution, it is covered by the holder line "OnAir contributors" (see REUSE.toml and docs/PROVENANCE.md), and there is no copyright assignment. If your contribution contains code or data from another project, say so in the pull request with its licence; it needs a REUSE.toml entry and a THIRD_PARTY.md row.
 
 What to keep when copying OnAir code is in [NOTICE.md](NOTICE.md); the name and logo policy is in [TRADEMARKS.md](TRADEMARKS.md).
+
+## Sign-off (Developer Certificate of Origin)
+
+New contributions from pull requests by people other than the maintainer carry a `Signed-off-by` line on every commit. It certifies the Developer Certificate of Origin 1.1 below: that you wrote the change or have the right to submit it under the licence above. It does not transfer any rights and does not put your earlier contributions under new terms.
+
+Sign off with `git commit -s` (it adds `Signed-off-by: Your Name <you@example.com>`, using your git name and email). To fix a missing one: `git commit --amend -s` for the last commit, or `git rebase --signoff origin/main` for the whole branch, then `git push --force-with-lease`. A GitHub Action (`.github/workflows/dco.yml`) checks pull requests from forks and outside authors; it does not run on pushes and does not look at the maintainer's own branches.
+
+```
+Developer Certificate of Origin
+Version 1.1
+
+Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
+
+Everyone is permitted to copy and distribute verbatim copies of this
+license document, but changing it is not allowed.
+
+
+Developer's Certificate of Origin 1.1
+
+By making a contribution to this project, I certify that:
+
+(a) The contribution was created in whole or in part by me and I
+    have the right to submit it under the open source license
+    indicated in the file; or
+
+(b) The contribution is based upon previous work that, to the best
+    of my knowledge, is covered under an appropriate open source
+    license and I have the right under that license to submit that
+    work with modifications, whether created in whole or in part
+    by me, under the same open source license (unless I am
+    permitted to submit under a different license), as indicated
+    in the file; or
+
+(c) The contribution was provided directly to me by some other
+    person who certified (a), (b) or (c) and I have not modified
+    it.
+
+(d) I understand and agree that this project and the contribution
+    are public and that a record of the contribution (including all
+    personal information I submit with it, including my sign-off) is
+    maintained indefinitely and may be redistributed consistent with
+    this project or the open source license(s) involved.
+```

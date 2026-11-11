@@ -1,0 +1,46 @@
+# DCO sign-off check (CONTRIBUTING.md, "Sign-off"). Pull requests only, from authors other than the owner (forks and outside
+# contributors). The owner's own commits and the integration branches are not checked, and nothing runs on pushes.
+# Light job: no checkout, no code from the pull request is run; it only reads the commit list through the GitHub API.
+name: DCO
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+jobs:
+  dco:
+    name: Signed-off-by
+    if: github.event.pull_request.user.login != 'adswill' && github.event.pull_request.user.type != 'Bot'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Check every commit for Signed-off-by
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          set -u
+          bad=0
+          # one line per non-merge commit: sha, then 1 if a Signed-off-by line is present
+          while IFS=$'\t' read -r sha ok; do
+            if [ "$ok" != "1" ]; then
+              echo "::error::Commit ${sha:0:10} has no Signed-off-by line"
+              bad=1
+            fi
+          done < <(gh api --paginate "repos/$REPO/pulls/$PR/commits" --jq \
+            '.[] | select((.parents | length) < 2) | [.sha, (if (.commit.message | test("(^|\\n)Signed-off-by: .+ <.+>")) then "1" else "0" end)] | @tsv')
+          if [ "$bad" != "0" ]; then
+            {
+              echo "Some commits are missing a Signed-off-by line (Developer Certificate of Origin)."
+              echo "Add it with: git commit -s   (new commit)  or  git commit --amend -s   (last commit)"
+              echo "For several commits: git rebase --signoff origin/main, then git push --force-with-lease"
+              echo "See CONTRIBUTING.md, section Sign-off."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+          echo "All commits are signed off."
