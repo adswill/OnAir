@@ -132,7 +132,7 @@ atsc3_sync	1.0	0.5	1.0
 atsc3_synth_basic	18.1	12.2	17.3
 atsc3_synth_rx	37.8	27.2	68.0
 atsc3_ti	0.1	0.1	0.1
-atsc_fec	0.4	0.4	0.4
+atsc_fec	0.4	0.3	0.4
 atsc_mh	0.8	0.3	0.3
 atv_blend	0.1	0.1	0.1
 atv_btsc	37.4	29.9	48.8
@@ -178,7 +178,7 @@ avroad_road	20.6	6.5	8.9
 avsplus	0.0	0.0	0.0
 backup	1.2	2.0	1.3
 bandplan	0.9	0.8	0.7
-bandwidth	1.6	0.9	1.4
+bandwidth	1.4	0.7	1.7
 bar_flow	0.0	0.0	0.0
 bench_modes_smoke	3.4	2.8	
 bgan_demod	2.9	3.1	4.9
@@ -309,7 +309,7 @@ dji_engine	9.8	10.2	11.3
 dji_proto	0.1	0.1	0.1
 dji_resampler	0.0	0.0	0.0
 dji_rx	22.2	13.4	15.7
-dme	21.7	23.4	20.3
+dme	12.9	15.6	17.1
 dme_mode	0.0	0.1	0.0
 dme_tacan	11.0	7.0	13.3
 dmr_air	10.3	6.5	24.5
@@ -561,7 +561,7 @@ gpu_ldpc_exact	0.0	1.4	0.0
 gpu_policy	0.0	0.0	0.0
 gsmr_engine	6.0	4.8	8.0
 gsmr_phy	0.1	0.1	0.1
-gui_rules	4.0	11.9	4.0
+gui_rules	2.4	9.0	3.9
 halow_engine	13.2	13.2	12.5
 halow_frames	0.0	0.1	0.0
 halow_modes	207.9	102.8	77.1
@@ -662,7 +662,7 @@ hrpt_rx	28.0	12.9	11.5
 hrpt_viterbi	0.1	0.1	0.1
 hw_guard	0.0	0.1	0.0
 hytera	0.0	0.1	0.0
-i18n	0.5	1.2	0.5
+i18n	0.6	1.5	0.8
 icom_r8600	0.0	0.2	0.1
 idgaps	15.0	7.4	25.7
 ifkp_codec	0.0	0.2	0.1
@@ -897,7 +897,7 @@ mheg_engine	0.0	0.0	0.0
 milhf_ident	7.9	5.0	11.6
 milhf_mode	0.0	0.2	0.1
 mode_actions	0.0	0.0	0.0
-mode_numbers	0.1	0.2	0.1
+mode_numbers	0.2	0.2	0.2
 mode_panel_logic	0.0	0.0	0.0
 mode_picker	0.0	0.0	0.0
 mode_visibility	0.0	0.0	0.0
@@ -1076,6 +1076,7 @@ pskdsp_engine	2.4	3.0	3.5
 pskdsp_rx	12.5	4.6	7.4
 pskdsp_span	19.4	10.3	15.4
 pskreporter	0.0	0.1	0.0
+pstore_store	0.1	0.3	0.2
 qo100_auto	64.6	50.8	66.4
 qo100_decimator	0.0	0.1	0.0
 qo100_dvbs_second	9.5	9.9	14.2
@@ -1114,7 +1115,7 @@ rid_rx	9.7	6.1	4.9
 rig_control	1.0	1.4	1.1
 rig_setup	0.0	0.1	0.1
 rooms_net	2.5	2.6	0.0
-ros_detect	14.6	7.0	11.5
+ros_detect	7.5	4.3	8.2
 roshf_engine	27.4	27.2	27.4
 roshf_mode	0.0	0.2	0.1
 roshf_rx	111.8	38.7	178.2
@@ -1255,7 +1256,7 @@ swarm	0.0	0.1	0.0
 swarm_ctl	1.7	2.1	4.1
 swbc	0.0	0.1	0.0
 sweep	0.5	0.8	0.7
-sync	98.3	29.8	71.9
+sync	56.0	37.7	41.4
 synth_wide	5.0	9.6	6.8
 t2_fef_layers	35.6	70.4	29.3
 t2_miso	25.7	47.5	43.2
@@ -1405,7 +1406,7 @@ web_hub	2.1	2.0	2.1
 web_proto	0.3	0.4	0.5
 web_ranges	0.0	0.1	0.0
 web_relay	3.4	3.8	3.4
-web_safety	0.1	0.7	0.2
+web_safety	0.1	0.7	0.3
 web_server	7.1	7.9	7.2
 web_tx_guard	0.0	0.0	0.0
 webonair_e2e	0.0	1.4	

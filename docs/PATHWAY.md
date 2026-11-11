@@ -1749,3 +1749,11 @@ modem was used. Skipped: a native ARDOP or Mercury decoder, and reading the herm
 tests/winlink/test_winlink_extmodem.cpp.
 ## 2026-11-11 Plugin store, client side (feat39-store)
 Owner request: a plugin marketplace. Design: a static, Ed25519-signed registry (index.json + per-plugin pages + packages) on any HTTPS host or local folder; docs/PLUGIN-MARKETPLACE-3.9.md has the trust model, limits, submission flow and the owner's hosting checklist. Built: core/src/pstore (fetch, signature, sha256, ABI/version/platform filter, install with rollback, downgrade and replay refusal, updates, uninstall, offline cache), a kill switch in the plugin manager (plugins/revoked.json), a Store tab in View > Plugins (opt-in network, permissions in plain words, native-code confirmation, trust badges, registry address and key under Advanced), tools/marketplace (onair_registry.py: lint, index, sign, verify, keygen; sample registry with stub packages signed by a published test key), German strings. Test: tests/pstore/test_pstore_store.cpp (local mock registries). Not done: sandbox for untrusted plugins, hosting, the real signing key, screenshots in the tab.
+## 2026-11-11 3.9 integration, release batch (integ-39)
+Batches 8-11 plus the release batch merged into integ-39: widecpu, nbfix, worksbutA/B, ltpos, tmchdmi, dabsites, w1a, w1c, fbr, cp16 (renumbered to
+family 880, standards 881/882: 790-792 are Lightning position), w1b, trunk1, sondeup, atmos, sarsatcpu, hfmodems, notice, licence2, store, ci5fix,
+pkgfix and release. Integration fixes: CI no longer runs the long tests when ONAIR_TEST_LONG is empty; GeoNetCast receiver freed in the right order;
+airband clips in the same second keep separate files; chanvoice and hamsci test signals made fast enough at wide rates; Android stand-in for
+av_opt_set_int; Windows macro names and POSIX-only test code; i18n catalog entries and German strings for the new screens. ci.yml run 43029255764 on
+15a2907f0 passed on Linux, macOS and Windows; tools/ci_times.tsv refreshed from it. Known flakes and slow-label failures are listed in the
+integration log.
