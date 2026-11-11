@@ -1768,3 +1768,10 @@ A user's handheld read OnAir's transmitted D023N as D411N (five codes reported).
 marker bits and the Golay polynomial the wrong way round; the tone decoder's table (tones_proto.cpp) was right and predicts all five wrong
 readings exactly. The transmitter and the DCS squelch now use that one table (023 = 0x763813). Test: test_audio_control. PR #481 (bellx2,
 Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.
+
+## 2026-11-12 Sensitivity 4.0 B: POCSAG 2 dB (feat40-sensB)
+POCSAG symbols come from tone energies (the two tones found from the sync word's known symbols) instead of the discriminator's mean frequency,
+and the sync search takes up to 5 wrong bits of 32 when the tone correlation confirms it: 90 % point -1 -> -3 dB, 50 % point -2.2 -> -4.3 dB
+(AWGN, 50 ppm clock the same; off-centre carriers fall back to the discriminator). 0 of 300 noise-only trials gave a unit; FLEX and the pager
+tests unchanged. New: test_sens40b (4.0 and 3.9 receiver in one binary, same seeds), test_hfdig_sens40b (WSJT modes baseline: at WSJT-X levels).
+Baseline table of 40 narrowband modes in docs/SENSITIVITY-4.0-B.md. Tried and not kept: summing discriminator products (DMR, D-STAR, NXDN, dPMR, P25).

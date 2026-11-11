@@ -1182,6 +1182,13 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_sens39c PRIVATE dect2core)
   add_test(NAME sens39c COMMAND test_sens39c)
   set_tests_properties(sens39c PROPERTIES TIMEOUT 600)
+  if(NOT WIN32)   # 4.0 pass B (docs/SENSITIVITY-4.0-B.md): narrowband and data modes, 3.9 and 4.0 receiver paths side by side
+    add_executable(test_sens40b tests/sens/test_sens40b.cpp)
+    target_include_directories(test_sens40b PRIVATE tools/sens)
+    target_link_libraries(test_sens40b PRIVATE dect2core)
+    add_test(NAME sens40b COMMAND test_sens40b)
+    set_tests_properties(sens40b PROPERTIES TIMEOUT 1500)
+  endif()
   add_executable(sens_gk2a_gap tools/sens/sens_gk2a_gap.cpp)   # GK-2A: receiver against an ideal one (docs/GK2A.md)
   target_link_libraries(sens_gk2a_gap PRIVATE dect2core)
   if(NOT WIN32)   # 3.9 pass A thresholds (docs/SENSITIVITY-3.9-A.md): short by default, full sweep with ONAIR_TEST_LONG=1

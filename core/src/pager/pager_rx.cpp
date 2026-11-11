@@ -41,6 +41,10 @@ constexpr size_t kRing = 8192, kMask = kRing - 1;
 constexpr size_t kMaxMessages = 2000;
 constexpr double kMinAmp = 0.2;                // rad/sample: the smallest mean deviation a sync may have (the full one is about 0.6)
 constexpr double kTimingGain = 0.02;
+constexpr int kSyncMism = 5;                 // POCSAG sync candidates: up to this many wrong bits of 32 (2 without tone detection), then the tone check decides
+constexpr double kToneSyncMin = 0.52, kToneSyncSlope = 0.025;   // tone correlation a candidate with more than 2 wrong bits needs: min + slope * wrong bits
+constexpr double kToneMaxOffset = 0.4;       // rad/sample (3 kHz at 48 kHz): beyond it the channel filter's edge is in the upper tone
+
 constexpr int kFirstBatchValid = 10;           // of the 16 words of the first batch after a searched sync, at least this many valid
 constexpr float kDoubtText = 1.5f;             // message words (FLEX vectors too): any of the least reliable bits (a wrong one only damages a text)
 constexpr float kDoubt = 0.6f;                // soft repair: only bits nearer the decision threshold than 0.6 of the outer amplitude may be overruled
@@ -120,6 +124,7 @@ struct Hit {
     int pol = 1;               // +1 as defined (1 = lower frequency), -1 inverted
     uint16_t code = 0;         // FLEX: the sync code
     int64_t at = 0;            // sample index of the end of the pattern
+    double ts = 0;             // tone-energy correlation with the pattern, -1 .. 1 (0: not computed)
 };
 
 } // namespace
@@ -170,6 +175,9 @@ struct PagerReceiver::Impl {
     cf32 prev = cf32(0, 0);
     double phase = 0;
     std::vector<double> ring = std::vector<double>(kRing, 0.0);
+    std::vector<cf32> zring = std::vector<cf32>(kRing, cf32(0, 0));   // the complex samples, for the tone-energy symbol values
+    std::atomic<bool> toneChipsOn{true};   // setToneDetection(): POCSAG symbols from tone energies (default on)
+    bool toneChips = true;                 // the value of toneChipsOn at the last reset (receiver thread)
     int64_t cur = -1;                      // index of the newest sample
     // channel power
     double blkPow = 0; int blkN = 0;
@@ -272,6 +280,7 @@ struct PagerReceiver::Impl {
         }
         (void)off;
         prev = cf32(0, 0); phase = 0; cur = -1; selPrevPhase = 0; selWasOn = false;
+        toneChips = toneChipsOn.load();
         std::fill(ring.begin(), ring.end(), 0.0);
         blkPow = 0; blkN = 0; noiseFloor = 0; snrEma = 0; sigHold = 0; haveFloor = false;
         peakH = -1; locked = false; lockH = -1; hold = 0;
@@ -385,6 +394,23 @@ struct PagerReceiver::Impl {
         } else if (sigHold > 0) sigHold--;
     }
 
+    // The symbol value from tone energies instead of the mean frequency: the two tones m -+ amp (rad/sample) correlated over the symbol window
+    // (noncoherent matched detection of the 2FSK), scaled to m + amp * s with s in -1 .. 1. The unwrapped phase of the discriminator takes a
+    // 2 pi step at every click of a weak signal; the energies do not.
+    double toneValue(int64_t idx, int win) const {
+        double ar = 0, ai = 0, br = 0, bi = 0;
+        const std::complex<double> sh = std::polar(1.0, -(m + amp)), sl = std::polar(1.0, -(m - amp));
+        std::complex<double> rh(1, 0), rl(1, 0);
+        for (int k = 0; k < win; k++) {
+            const cf32 z = zring[(size_t)(idx - win + 1 + k) & kMask];
+            ar += z.real() * rh.real() - z.imag() * rh.imag(); ai += z.real() * rh.imag() + z.imag() * rh.real();
+            br += z.real() * rl.real() - z.imag() * rl.imag(); bi += z.real() * rl.imag() + z.imag() * rl.real();
+            rh *= sh; rl *= sl;
+        }
+        const double eh = (ar * ar + ai * ai) * invGHi, el = (br * br + bi * bi) * invGLo, t = eh + el;
+        return t > 0 ? m + amp * (eh - el) / t : m;
+    }
+
     void onSample(cf32 z) {
         blkPow += std::norm(z);
         if (++blkN >= 480) blockPower();
@@ -393,12 +419,43 @@ struct PagerReceiver::Impl {
         prev = z;
         cur++;
         ring[(size_t)cur & kMask] = phase;
+        zring[(size_t)cur & kMask] = z;
         if (selOn.load(std::memory_order_relaxed)) selIn.push_back((float)((phase - selPrevPhase) * (kWork / (2 * kPi))));
         selPrevPhase = phase;
         step();
     }
 
     // ---- searching
+    // The sync pattern against the tone energies: for each of its symbols the energy at the lower tone against the upper one, for the centre and
+    // deviation the discriminator found and a few around them (it is biased in noise), the best mean of the expected sign over the 32 symbols.
+    double toneSync(const Pat& P, uint32_t word, int pol, int64_t at, double mean, double score) const {
+        const int win = P.w;
+        if (win < 4 || at < P.off[0] + win + 2) return 0;
+        double best = -1;
+        static const double dm[3] = {-0.09, 0, 0.09};
+        const double amps[3] = {0.45, 0.58, 0.7};
+        (void)score;
+        for (double d : dm) for (double a : amps) {
+            const std::complex<double> sl = std::polar(1.0, -(mean + d - a)), sh = std::polar(1.0, -(mean + d + a));
+            double acc = 0;
+            for (int k = 0; k < 32; k++) {
+                const int64_t idx = at - P.off[k];
+                std::complex<double> rl(1, 0), rh(1, 0), al(0, 0), ah(0, 0);
+                for (int j = 0; j < win; j++) {
+                    const cf32 z = zring[(size_t)(idx - win + 1 + j) & kMask];
+                    const std::complex<double> zz(z.real(), z.imag());
+                    al += zz * rl; ah += zz * rh; rl *= sl; rh *= sh;
+                }
+                const double el = std::norm(al), eh = std::norm(ah), t = el + eh;
+                const int sb = (int)((word >> (31 - k)) & 1u);
+                const int bit = pol > 0 ? sb : 1 - sb;   // 1: the lower tone
+                if (t > 0) acc += (bit ? el - eh : eh - el) / t;
+            }
+            best = std::max(best, acc / 32);
+        }
+        return best;
+    }
+
     // POCSAG sync word at baud index h
     Hit evalPocsag(int h) const {
         Hit r;
@@ -416,12 +473,20 @@ struct PagerReceiver::Impl {
         for (int k = 0; k < 32; k++) word = (word << 1) | (x[k] < mean ? 1u : 0u);
         const int mism = popcount32(word ^ pager::kPocsagSync);
         int pl;
-        if (mism <= 2) pl = 1; else if (mism >= 30) pl = -1; else return r;
+        const int lim = toneChips ? kSyncMism : 2;
+        if (mism <= lim) pl = 1; else if (mism >= 32 - lim) pl = -1; else return r;
         double score = 0;
         for (int k = 0; k < 32; k++) score += ((pager::kPocsagSync >> (31 - k)) & 1 ? -1.0 : 1.0) * (x[k] - mean);
         score *= pl;
         score /= 32;
         if (score < kMinAmp) return r;
+        if (toneChips) {
+            r.ts = toneSync(P, pager::kPocsagSync, pl, cur, mean, score);
+            // The tone decisions of a pattern that only looks like the sync word agree with the discriminator's hard bits, so they match about as
+            // well as the discriminator did (1 - 2 mism / 32); a real sync word is matched better by the tones. Hence the threshold grows with mism.
+            const int mmEff = std::min(mism, 32 - mism);
+            if (mmEff > 2 && r.ts < kToneSyncMin + kToneSyncSlope * (double)mmEff) return r;
+        }
         r.ok = true; r.score = score; r.mean = mean; r.pol = pl; r.at = cur;
         return r;
     }
@@ -465,7 +530,7 @@ struct PagerReceiver::Impl {
         if (locked) { advance(); return; }
         if (peakH >= 0) {
             const Hit h = peakH == 3 ? evalFlex() : evalPocsag(peakH);
-            if (h.ok && h.score > best.score) best = h;
+            if (h.ok && (toneChips && peakH != 3 ? h.ts > best.ts : h.score > best.score)) best = h;
             if (--hold <= 0) { const int hh = peakH; peakH = -1; startLock(hh, best); }
             return;
         }
@@ -522,10 +587,52 @@ struct PagerReceiver::Impl {
         return afcBuf.data();
     }
 
+    // The tone-energy values need the two tone frequencies; the discriminator's mean and outer amplitude are biased by noise. The 32 symbols of the sync
+    // word are known: a grid search over the centre and the deviation for the pair that puts the most energy on the expected tones (and the least on the
+    // other ones) over the whole word.
+    void refineTones(int h, const Hit& hit) {
+        const Pat& P = h < 3 ? pat[h] : flexPat;
+        const uint32_t word = h < 3 ? pager::kPocsagSync : pager::kFlexMarker;
+        const int win = P.w;
+        if (win < 4 || hit.at < P.off[0] + win + 2) return;
+        auto energy = [&](int64_t idx, double om) {
+            std::complex<double> acc(0, 0), r(1, 0);
+            const std::complex<double> st = std::polar(1.0, -om);
+            for (int k = 0; k < win; k++) { const cf32 z = zring[(size_t)(idx - win + 1 + k) & kMask]; acc += std::complex<double>(z.real(), z.imag()) * r; r *= st; }
+            return std::norm(acc);
+        };
+        double bestScore = -1e300, bm = m, ba = amp, bgh = 1, bgl = 1;
+        const double m0 = hit.mean;
+        for (int im = -6; im <= 6; im++) {
+            const double mm = m0 + 0.03 * im;
+            for (int ia = 0; ia <= 12; ia++) {
+                const double aa = 0.3 + 0.05 * ia;
+                double sc = 0, gh = 0, gl = 0;
+                int nh = 0, nl = 0;
+                for (int k = 0; k < 32; k++) {
+                    const int64_t idx = hit.at - P.off[k];
+                    const int sb = (int)((word >> (31 - k)) & 1u);
+                    const int bit = hit.pol > 0 ? sb : 1 - sb;     // 1: the lower tone
+                    const double eLo = energy(idx, mm - aa), eHi = energy(idx, mm + aa);
+                    sc += bit ? eLo - eHi : eHi - eLo;
+                    if (bit) { gl += eLo; nl++; } else { gh += eHi; nh++; }
+                }
+                if (sc > bestScore) { bestScore = sc; bm = mm; ba = aa; bgh = nh ? gh / nh : 0; bgl = nl ? gl / nl : 0; }
+            }
+        }
+        if (std::fabs(bm) > kToneMaxOffset) { toneOk = false; return; }   // an off-centre carrier: the channel filter cuts the upper tone, the discriminator copes better
+        m = bm; amp = ba; toneOk = true;
+        const double g = 0.5 * (bgh + bgl);
+        invGHi = bgh > 0.3 * g ? 1.0 / bgh : 1.0 / std::max(g, 1e-30);   // the two energies are from few symbols: a wild ratio is not believed
+        invGLo = bgl > 0.3 * g ? 1.0 / bgl : 1.0 / std::max(g, 1e-30);
+    }
+
     // ---- reading a transmission
     void startLock(int h, const Hit& hit) {
         locked = true; lockH = h; pol = hit.pol;
         m = hit.mean; amp = std::max(hit.score, 0.1);
+        invGHi = invGLo = 1; toneOk = false;
+        if (toneChips && h < 3) refineTones(h, hit);
         tel.cfoHz = m * kWork / (2 * kPi) + afcHz;
         parser.reset();
         wi = bi = 0; curWord = 0; inSync = false;
@@ -560,7 +667,10 @@ struct PagerReceiver::Impl {
             const int64_t idx = (int64_t)std::llround(tNext);
             if (idx + delta > cur) return;
             if (idx - delta - w < cur - (int64_t)kRing + 8) { endLock(); return; }        // fell too far behind: lost
-            const double x = v(idx, w);
+            const double xd = v(idx, w);
+            const bool two = lockH < 3;   // FLEX keeps the discriminator (see docs/SENSITIVITY-4.0-B.md)
+            const double x = toneOk && two && !(lockH == 3 && stage == 1) && !(lockH == 3 && stage == 3) ? toneValue(idx, w) : xd;
+            xDisc = xd;
             const double e = (std::fabs(v(idx + delta, w) - m) - std::fabs(v(idx - delta, w) - m)) / std::max(amp, 0.05);
             const double adj = std::max(-1.0, std::min(1.0, kTimingGain * e * sps * 0.5));
             const double tCur = tNext;
@@ -571,6 +681,9 @@ struct PagerReceiver::Impl {
         }
     }
 
+    bool toneOk = false;             // this lock reads tone energies
+    double invGHi = 1, invGLo = 1;   // the inverse signal energy of each tone (the channel filter's slope makes them differ with a carrier offset)
+    double xDisc = 0;   // the discriminator's value of the symbol being read (the centre follows it; the tone value does not carry the offset)
     void symbol(double x, double tCur) {
         if (lockH < 3) pocsagSymbol(x);
         else flexSymbol(x, tCur);
@@ -581,7 +694,7 @@ struct PagerReceiver::Impl {
     void pocsagSymbol(double x) {
         curWord = (curWord << 1) | (uint32_t)bitOf(x);
         wordRel[bi] = (float)(std::fabs(x - m) / std::max(amp, 0.05));
-        m += 0.004 * (x - m);
+        m += 0.004 * (xDisc - m);
         if (++bi < 32) return;
         bi = 0;
         if (inSync) {
@@ -917,6 +1030,8 @@ bool PagerReceiver::combineCopies() const { return p_->combineOn; }
 void PagerReceiver::setSelcall(bool on) { p_->selOn = on; }
 bool PagerReceiver::selcall() const { return p_->selOn; }
 void PagerReceiver::setPocsagBauds(int mask) { p_->pocsagBaudMask = mask & 7; }
+void PagerReceiver::setToneDetection(bool on) { p_->toneChipsOn = on; p_->resetReq = true; }
+bool PagerReceiver::toneDetection() const { return p_->toneChipsOn.load(); }
 void PagerReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 
 ModeTuning pagerTuning() {
