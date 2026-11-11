@@ -63,7 +63,6 @@
     {"specx/clean", "open: does not decode its own test signal through the engine (to investigate)"},
     {"specx/tx", "open: its transmitter's signal does not decode (to investigate)"},
     {"specan/noise", "no check: counts picture lines or measurements, which carry no check, also on noise"},
-    {"tetra/tx", "open: its transmitter's signal does not decode (to investigate)"},
     {"astro/clean", "open: does not decode its own test signal through the engine (to investigate)"},
     {"astro/tx", "open: its transmitter's signal does not decode (to investigate)"},
     {"ale/pos", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},

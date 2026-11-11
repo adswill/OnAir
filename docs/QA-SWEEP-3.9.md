@@ -142,7 +142,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | uplink | 45 | 10 | 3 | pass | pass | pass | pass | pass | pass | 0.156 | 70 |  |
 | orbcomm | 46 | 1 | 3 | pass | pass | pass | pass | pass | pass | 0.093 | 94 |  |
 | dpmr | 47 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.073 | 26 |  |
-| tetra | 48 | 2 | 3 | pass | pass | pass | pass | pass | FAIL | 0.111 | 131 | tx open |
+| tetra | 48 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.111 | 131 | tx fixed in feat39-tetrafix |
 | mac | 49 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.681 | 6068 |  |
 | astro | 50 | 2.5 | 28 | FAIL | - | - | - | pass | FAIL | 0.047 | 0 | clean open, tx open; (real time) |
 | ale | 51 | 2 | 3 | pass | FAIL | FAIL | pass | pass | pass | 0.078 | 6 | pos unrealistic, neg unrealistic |
@@ -451,7 +451,6 @@ These failures are not explained by the condition. They are in `qa_known.inc` as
 - `js8/tx`: its transmitter's signal does not decode (to investigate)
 - `specx/clean`: does not decode its own test signal through the engine (to investigate)
 - `specx/tx`: its transmitter's signal does not decode (to investigate)
-- `tetra/tx`: its transmitter's signal does not decode (to investigate)
 - `astro/clean`: does not decode its own test signal through the engine (to investigate)
 - `astro/tx`: its transmitter's signal does not decode (to investigate)
 - `iono/clean`: does not decode its own test signal through the engine (to investigate)

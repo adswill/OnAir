@@ -14,6 +14,7 @@
 #include <cmath>
 #include <condition_variable>
 #include <ctime>
+#include <functional>
 #include <map>
 #include <mutex>
 #include <thread>
@@ -738,11 +739,8 @@ std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, dou
     // 4 dB over the local floor (3.8: 6 dB, which missed carriers below about 4 dB SNR that the demodulator now decodes; the Welch average
     // of up to 300 spectra keeps the noise within a fraction of a dB, and a rise must still be 9 kHz wide)
     auto above = [&](int k) { return p[(size_t)k] >= floorP[(size_t)k] * 2.5; };
-    int i = lo;
-    while (i <= hi) {
-        if (!above(i)) { i++; continue; }
-        int j = i;
-        while (j + 1 <= hi && (above(j + 1) || (j + 2 <= hi && above(j + 2)))) j++;
+    // One rise [i, j] of the spectrum: cut into 25 kHz carriers
+    auto emit = [&](int i, int j) {
         const double w = (j - i + 1) * bin;
         if (w >= 9e3 && w <= 400e3) {
             const int nc = std::max(1, (int)std::lround(w / 25e3));
@@ -760,8 +758,34 @@ std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, dou
                 out.push_back(cr);
             }
         }
-        i = j + 1;
-    }
+    };
+    // The rises over the threshold. A strong carrier's skirts (and the spurs of a clean, quantised signal) stay above it far beyond 25 kHz,
+    // and the rise was then cut into carriers several kHz off the true centre, out of the frequency correction's reach (3.9: the TX loop
+    // test failed): a rise more than 30 dB over the floor is measured again at 30 dB under its own peak.
+    auto scan = [&](int lo2, int hi2, const std::function<bool(int)>& on, bool top) {
+        int i = lo2;
+        while (i <= hi2) {
+            if (!on(i)) { i++; continue; }
+            int j = i;
+            while (j + 1 <= hi2 && (on(j + 1) || (j + 2 <= hi2 && on(j + 2)))) j++;
+            double pk = 0, fl = 0;
+            for (int k = i; k <= j; k++) { pk = std::max(pk, p[(size_t)k]); fl = std::max(fl, floorP[(size_t)k]); }
+            if (top && pk > fl * 1000.0) {
+                const double t = pk / 1000.0;
+                std::function<bool(int)> strong = [&](int k) { return p[(size_t)k] >= std::max(t, floorP[(size_t)k] * 2.5); };
+                int a = i;
+                while (a <= j) {   // the parts of the rise over pk / 1000, as rises of their own
+                    if (!strong(a)) { a++; continue; }
+                    int b = a;
+                    while (b + 1 <= j && (strong(b + 1) || (b + 2 <= j && strong(b + 2)))) b++;
+                    emit(a, b);
+                    a = b + 1;
+                }
+            } else emit(i, j);
+            i = j + 1;
+        }
+    };
+    scan(lo, hi, above, true);
     std::sort(out.begin(), out.end(), [](const CarrierPeak& a, const CarrierPeak& b) { return a.levelDb > b.levelDb; });
     if (maxCarriers > 0 && out.size() > maxCarriers) out.resize(maxCarriers);
     return out;
