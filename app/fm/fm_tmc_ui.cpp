@@ -6,6 +6,7 @@
 #include "dect2/common/u8file.h"
 #include "dect2/fm/tmc_db.h"
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <cstdio>
 #include <filesystem>

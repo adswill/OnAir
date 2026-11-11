@@ -1592,7 +1592,7 @@ static std::string headlineOf(const Result& R) {
 // A local display's HDMI / TMDS emission (dect2/rfi/display_emission.h): a candidate of its own when the signal asked about is the pixel clock
 // line or a line of its comb, so a monitor's leak is not taken for a transmitter or for the radio's own LO
 static void addDisplayEmission(Result& R, const cf32* x, size_t n, double fs, const Options& o) {
-    if (!R.f.valid || o.rfHz <= 0) return;
+    if (o.rfHz <= 0) return;   // also when the features failed: a clean line is often too narrow for them
     const dispem::Result d = dispem::analyseIq(x, n, fs, o.rfHz);
     if (!d.found) return;
     const double lo = o.rfHz + std::min(o.loHz, o.hiHz) - 2e3, hi = o.rfHz + std::max(o.loHz, o.hiHz) + 2e3;
@@ -1630,6 +1630,7 @@ Result identify(const cf32* x, size_t n, double fs, const Options& o) {
     Result R = identifyImpl(x, n, fs, o2);
     addDisplayEmission(R, x, n, fs, o2);
     R.headline = headlineOf(R);
+    if (!R.f.valid && !R.cands.empty() && R.cands[0].name == dispem::label()) R.headline = R.cands[0].name + ": " + R.cands[0].why;
     R.ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     return R;
 }

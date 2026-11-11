@@ -107,7 +107,7 @@ int main() {
     }
 #ifndef ONAIR_TEST_STANDALONE
     {   // the signal identifier lists it
-        GenConfig g; g.timing = findTiming("1920x1080 60 Hz"); g.rfCentreHz = 148.7e6; g.seconds = 0.3; g.levelDb = 45;
+        GenConfig g; g.timing = findTiming("1920x1080 60 Hz"); g.rfCentreHz = 148.7e6; g.seconds = 1.0; g.levelDb = 45;
         const std::vector<cf32> x = generateIq(g);
         sigid::Options o; o.rfHz = g.rfCentreHz; o.loHz = 148.5e6 - g.rfCentreHz - 20e3; o.hiHz = 148.5e6 - g.rfCentreHz + 20e3;
         const sigid::Result r = sigid::identify(x.data(), x.size(), g.rateHz, o);
