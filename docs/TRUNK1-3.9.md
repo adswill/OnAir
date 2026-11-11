@@ -55,7 +55,7 @@ The two-radio setup is unchanged: the pool still takes another radio for a call 
 | P25, 2 slots for the same 4 calls | 2 at once, the others "busy: every voice slot is in use" |
 | P25 grant at 853.506 MHz (2 MHz above the centre) | "outside the capture (needs 3.0 MHz) (853.5063 MHz, the capture is 2.0 MHz wide): add a second radio or widen the capture" |
 | DMR, 1.2 Msps, 3 base-station carriers at -312.5 / +12.5 / +262.5 kHz (+-300 Hz, +-25 ppm, 22 dB, DC spur) | 3 at once, 114 to 138 voice bursts each in 6 s |
-| NXDN, the same layout | NXDN_RESULT |
+| NXDN, the same layout | 3 at once, 88 to 96 voice frames each in 6 s |
 | Type II, 1.92 Msps, control channel 12.5 kHz from a DC spur (+400 Hz, +60 ppm), 5 analog calls at once | 4 slots: 4 followed, the fifth busy, 4 tones recovered; 5 slots: 5 followed, 5 tones; 210 OSWs; a grant at 857.4 MHz: "outside the capture (needs 7.1 MHz)" |
 | MPT 1327, 1.2 Msps, control channel at -300 kHz (+40 ppm), 3 calls at -175 / +12.5 (DC) / +200 kHz | 43 messages, 3 at once, 3 tones; channel 220: "outside the capture (needs 1.8 MHz)" |
 | EDACS, 0.96 Msps, 3 overlapping calls | 3 in voice slots at once, 3 tones |
