@@ -1535,3 +1535,11 @@ Changes:
 
 Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
 Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.
+
+## 2026-11-11 Sensitivity pass E (feat39-sensE)
+
+The four leftovers of SENSITIVITY-3.9-C/-D, measured before and after on simulated signals (docs/SENSITIVITY-3.9-E.md).
+- Wireless M-Bus: 84 kHz channel filter (was 140), chip value over 80 % of the chip, soft Manchester and 3-out-of-6 decisions. sens39c 17 -> 11 dB, CPU unchanged.
+- GNSS: the cold search runs the first window with 64 ms right after the 16 ms round. A 32 dB-Hz sky: 0 -> 3 of 8 satellites in 34 s. 4 ms coherent integration was measured (no gain per CPU) and not kept.
+- HD Radio AM: the prefix filter no longer switches while block numbers are read, each filter keeps its frequency, the carrier corrects the frequency in sync, and the carrier's phase wander is removed per sample. sens_sweep awgn and cfo20ppm 22 -> 18 dB, lock 11 -> 7.5 s. 3 Hz phase noise still fails (a limit of the scenario).
+- CW: the adaptive timing decoder (cw_decoder.h) was measured in the skimmer; it is better for irregular fists and worse at low SNR and with Farnsworth spacing, so the skimmer is unchanged.

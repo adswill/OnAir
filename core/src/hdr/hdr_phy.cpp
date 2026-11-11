@@ -602,6 +602,8 @@ struct AmRx::Impl {
     int cpBlocks = 0;                // blocks searched with this filter
     float angF[2] = {0, 0};          // the prefix frequency estimate of each filter (hybrid, all-digital)
     int validAge = 99;               // blocks since the last one with a valid block number
+    std::vector<cf32> pnCorr, pnLp;  // the carrier's phase wander in this block, sample by sample (see carrierWander)
+    std::vector<float> pnPh;
     double drCum = 0, drE0 = 0, ppmOut = 0;    // sample clock measurement (see syncProcess)
     int drBlocks = 0;
     bool drHave = false, ppmNew = false;
@@ -699,6 +701,7 @@ struct AmRx::Impl {
         ang -= 2 * kPi * (float)cfo;
         phase *= std::polar(1.0, -(double)(fftcp / 2 - se) * ang / kFftAm);
         cd inc = std::polar(1.0, (double)ang / kFftAm);
+        carrierWander(se, phase, inc);
         // the analog carrier gives the phase and the fine frequency (nrsc5 acquire.c, AM)
         {
             float y = 0, sy = 0, sxy = 0, sx2 = 0;
@@ -742,9 +745,37 @@ struct AmRx::Impl {
         idx = keep;
     }
 
+    // 3.9 (docs/SENSITIVITY-3.9-E.md): the oscillator's phase noise. The carrier is 30 dB over the digital subcarriers, so a few hertz of
+    // linewidth spread it over the reference and the inner subcarriers (ICI) and turn the block by radians: no block number could be read
+    // with 3 Hz. The carrier's phase, sample by sample (a zero-phase low-pass of 40 Hz over the block, mixed as the first pass mixes it),
+    // less its straight line (the frequency and the phase, which the block fit below keeps measuring), is taken out of every sample.
+    void carrierWander(int se, const cd& ph0, const cd& inc) {
+        const size_t L = (size_t)kBlk * kSymAm;
+        pnLp.resize(L); pnCorr.resize(L);
+        cd ph = ph0;
+        for (size_t n = 0; n < L; n++) { pnLp[n] = cf32(ph) * in[n + (size_t)se]; ph *= inc; if ((n & 255) == 255) ph /= std::abs(ph); }
+        const float a = (float)(1 - std::exp(-2 * kPi * 40.0 / kRateAm));
+        cf32 z = pnLp[0];
+        for (size_t n = 0; n < L; n++) { z += a * (pnLp[n] - z); pnLp[n] = z; }
+        for (size_t n = L; n-- > 0;) { z += a * (pnLp[n] - z); pnLp[n] = z; }
+        // unwrapped phase and its least-squares line
+        double y = std::arg(pnLp[0]), sx = 0, sy = 0, sxx = 0, sxy = 0;
+        std::vector<float>& yv = pnPh; yv.resize(L);
+        for (size_t n = 0; n < L; n++) {
+            if (n) y += std::arg(pnLp[n] * std::conj(pnLp[n - 1]));
+            yv[n] = (float)y;
+            const double x = (double)n;
+            sx += x; sy += y; sxx += x * x; sxy += x * y;
+        }
+        const double nn = (double)L, b = (nn * sxy - sx * sy) / (nn * sxx - sx * sx), a0 = (sy - b * sx) / nn;
+        for (size_t n = 0; n < L; n++) pnCorr[n] = std::polar(1.f, -(float)(yv[n] - (a0 + b * (double)n)));
+    }
+
     void symbolFft(int i, int se, cd& ph, const cd& inc, int off) {
+        const cf32* pc = pnCorr.size() == (size_t)kBlk * kSymAm ? &pnCorr[(size_t)i * kSymAm] : nullptr;
         for (int j = 0; j < kSymAm; j++) {
-            const cf32 s = cf32(ph) * in[(size_t)(i * kSymAm + j + se)];
+            cf32 s = cf32(ph) * in[(size_t)(i * kSymAm + j + se)];
+            if (pc) s *= pc[j];
             const size_t d = (size_t)((j + off) % kFftAm);
             if (j < kCpAm) fftBuf[d] = shape[(size_t)j] * s;
             else if (j < kFftAm) fftBuf[d] = s;
