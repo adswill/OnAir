@@ -544,3 +544,31 @@ Custom remove-after time (minutes)
 Used by every Remove after row set to Custom.
 Join the Discord to get access to built codecs
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.
+Could not copy the file into the settings folder
+%d files imported, %d skipped (not TMC lists or tables).
+The event text or the location is not in your TMC files. Location tables are national data and are not included: get your country's event list and location table (CSV, or the TISA exchange files) from its TMC service, then use "TMC tables and log" below, Import file or Import folder. They are kept in the settings folder.
+Table %d%s. Locations from your table (%zu).
+, enhanced mode
+Table %d%s. Locations are shown as codes: import your country's location table.
+Your location table is number %d, the station uses table %d: the names may be wrong.
+No messages yet.
+diversion advised
+%s; received %d min ago, expires in %d min
+TMC tables and log
+Your files: %zu events, %zu locations (in %s).
+Import file...
+An event list or a location table (CSV with ; , or tab, or a TISA .DAT file); the columns are found on their own
+Import folder...
+Every list and table in a folder, such as the TISA exchange files (POINTS, ROADS, SEGMENTS, NAMES, OFFSETS ...)
+Remove all
+The TMC files were removed from the settings folder.
+Event language
+Write a log (CSV and text)
+Log file...
+No log file set: choose one and every new message is written to it.
+Logging to %s.csv and .txt
+ (in the sweep)
+or %s, %.0f %%
+an unknown timing
+A monitor, TV or its HDMI / DVI cable leaks its pixel clock and the picture data repeating every line: lines at the clock and its harmonics, with a comb at the line rate around them. Switch the display off or unplug its cable to confirm.
+Display emission

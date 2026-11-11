@@ -3799,3 +3799,32 @@ Default	Standard
 Custom	Eigene
 Join the Discord to get access to built codecs	Tritt dem Discord bei, um Zugang zu fertig gebauten Codecs zu bekommen
 Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec.	Öffnet den OnAir-Discord im Browser. OnAir selbst lädt nie einen Codec herunter und enthält keinen.
+#  RDS-TMC tables and log, display (HDMI) emission (3.9)
+Could not copy the file into the settings folder	Die Datei konnte nicht in den Einstellungsordner kopiert werden
+%d files imported, %d skipped (not TMC lists or tables).	%d Dateien importiert, %d übersprungen (keine TMC-Listen oder -Tabellen).
+The event text or the location is not in your TMC files. Location tables are national data and are not included: get your country's event list and location table (CSV, or the TISA exchange files) from its TMC service, then use "TMC tables and log" below, Import file or Import folder. They are kept in the settings folder.	Der Ereignistext oder der Ort ist nicht in deinen TMC-Dateien. Ortstabellen sind nationale Daten und nicht enthalten: Hol dir die Ereignisliste und die Ortstabelle deines Landes (CSV oder die TISA-Austauschdateien) vom dortigen TMC-Dienst und nutze dann unten „TMC-Tabellen und Protokoll“, Datei importieren oder Ordner importieren. Sie werden im Einstellungsordner abgelegt.
+Table %d%s. Locations from your table (%zu).	Tabelle %d%s. Orte aus deiner Tabelle (%zu).
+, enhanced mode	, erweiterter Modus
+Table %d%s. Locations are shown as codes: import your country's location table.	Tabelle %d%s. Orte werden als Codes angezeigt: Importiere die Ortstabelle deines Landes.
+Your location table is number %d, the station uses table %d: the names may be wrong.	Deine Ortstabelle hat die Nummer %d, der Sender nutzt Tabelle %d: Die Namen können falsch sein.
+No messages yet.	Noch keine Meldungen.
+diversion advised	Umleitung empfohlen
+%s; received %d min ago, expires in %d min	%s; vor %d min empfangen, läuft in %d min ab
+TMC tables and log	TMC-Tabellen und Protokoll
+Your files: %zu events, %zu locations (in %s).	Deine Dateien: %zu Ereignisse, %zu Orte (in %s).
+Import file...	Datei importieren...
+An event list or a location table (CSV with ; , or tab, or a TISA .DAT file); the columns are found on their own	Eine Ereignisliste oder eine Ortstabelle (CSV mit ; , oder Tabulator, oder eine TISA-.DAT-Datei); die Spalten werden selbst erkannt
+Import folder...	Ordner importieren...
+Every list and table in a folder, such as the TISA exchange files (POINTS, ROADS, SEGMENTS, NAMES, OFFSETS ...)	Alle Listen und Tabellen eines Ordners, etwa die TISA-Austauschdateien (POINTS, ROADS, SEGMENTS, NAMES, OFFSETS ...)
+Remove all	Alle entfernen
+The TMC files were removed from the settings folder.	Die TMC-Dateien wurden aus dem Einstellungsordner entfernt.
+Event language	Sprache der Ereignisse
+Write a log (CSV and text)	Protokoll schreiben (CSV und Text)
+Log file...	Protokolldatei...
+No log file set: choose one and every new message is written to it.	Keine Protokolldatei gewählt: Wähle eine, dann wird jede neue Meldung hineingeschrieben.
+Logging to %s.csv and .txt	Protokoll in %s.csv und .txt
+ (in the sweep)	 (im Suchlauf)
+or %s, %.0f %%	oder %s, %.0f %%
+an unknown timing	ein unbekanntes Timing
+A monitor, TV or its HDMI / DVI cable leaks its pixel clock and the picture data repeating every line: lines at the clock and its harmonics, with a comb at the line rate around them. Switch the display off or unplug its cable to confirm.	Ein Monitor, Fernseher oder sein HDMI-/DVI-Kabel strahlt den Pixeltakt und die sich mit jeder Zeile wiederholenden Bilddaten ab: Linien beim Takt und seinen Oberwellen, umgeben von einem Kamm im Abstand der Zeilenfrequenz. Schalte das Display aus oder zieh sein Kabel ab, um es zu bestätigen.
+Display emission	Display-Abstrahlung
