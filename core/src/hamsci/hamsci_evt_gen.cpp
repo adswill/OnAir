@@ -65,7 +65,7 @@ std::vector<cf> evtGenSchumann(double rate, const EvtGenOpt& o, double f1) {
             v += sg * r.gauss();
             if (o.level > 0 && t >= 70.0) {
                 const double tt = std::fmod(t - 70.0, 60.0);
-                v += 4.0 * o.level * std::exp(-0.5 * std::pow((tt - 0.5) / 0.25, 2.0)) * std::sin(2 * kPi * 12.0 * tt);
+                v += 12.0 * o.level * std::exp(-0.5 * std::pow((tt - 0.5) / 0.25, 2.0)) * std::sin(2 * kPi * 12.0 * tt);
             }
             lastV = v;
         }

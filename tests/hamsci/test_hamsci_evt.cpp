@@ -170,6 +170,10 @@ int main() {
         for (const Case& c : cs) {
             EvtGenOpt o; o.seconds = 90; o.seed = 41; o.offsetHz = 60.0; o.driftHz = 8.0; o.level = c.level;
             auto x = evtGenBeacon(8000, o, {20.0}, 30.0, c.spread, c.flutter);
+            {   // diagnostics: the status line every 10 s
+                EvtMonitor dm(kEvtAurora); dm.configure(8000);
+                for (size_t i = 0; i < x.size(); i += 80000) { dm.feed(x.data() + i, std::min<size_t>(80000, x.size() - i)); std::printf("  %s t=%zu s: %s\n", c.name, (i + 80000) / 8000, dm.state().info.empty() ? "-" : dm.state().info[0].c_str()); }
+            }
             auto ev = run(kEvtAurora, x, 8000, 0);
             std::printf("beacon %s: %zu events", c.name, ev.size());
             for (auto& e : ev) std::printf(", at %.1f s for %.1f s, %.1f dB, %s", e.timeSec, e.durSec, e.peakDb, e.note.c_str());

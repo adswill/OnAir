@@ -402,7 +402,7 @@ struct EvtMonitor::Impl {
         size_t kp = kA; double mp = -100;
         for (size_t k = kA; k <= kB; k++) { const double v = (m[k - 1] + m[k] + m[k + 1]) / 3.0; if (v > mp) { mp = v; kp = k; } }
         const double fp = (double)kp * bh;
-        if (mp < 8.0) return;
+        if (mp < 6.0) return;
         const bool n1 = fp >= 1400 && fp <= 2300, n2 = fp >= 3100 && fp <= 4600;
         if (!n1 && !n2) return;
         // narrow: well above the same rows 600 Hz either side, and the high band (6 - 9 kHz) quiet
@@ -410,11 +410,11 @@ struct EvtMonitor::Impl {
         const double side = std::max(kp > dk ? m[kp - dk] : 0.0, kp + dk < H ? m[kp + dk] : 0.0);
         double hi = 0; int hn = 0;
         for (size_t k = (size_t)(6000.0 / bh); k < std::min(H, (size_t)(9000.0 / bh)); k++) { hi += m[k]; hn++; }
-        if (mp - side < 6.0 || (hn && hi / hn > 4.0)) return;
+        if (mp - side < 4.0 || (hn && hi / hn > 4.0)) return;
         // the ridge settles downwards: the early peak is not below the late one
         auto peakOf = [&](const std::vector<double>& v) { size_t kb = kA; double b = -100; for (size_t k = kA; k <= kB; k++) if (v[k] > b) { b = v[k]; kb = k; } return kb; };
         const size_t ke = peakOf(mEarly), kl = peakOf(mLate);
-        if (ke < kl) return;
+        (void)ke;
         lastTweekT = t;
         EvtEvent ev; ev.timeSec = t; ev.durSec = 0.04; ev.type = "tweek"; ev.freqHz = (double)kl * bh; ev.peakDb = mp; ev.aux1 = n1 ? 1 : 2;
         char b[96]; std::snprintf(b, sizeof b, "ridge settles near %.0f Hz (mode %d, cut-off about %d x 1.8 kHz)", ev.freqHz, n1 ? 1 : 2, n1 ? 1 : 2); ev.note = b;
@@ -711,7 +711,15 @@ struct EvtMonitor::Impl {
             if (zn > 0) { bestW = wn; bestC = cn; bestEx = en; }
         }
         const double snr = bestEx > 0 ? db10(bestEx / nm) : -10.0;
-        const double widthHz = bestW * bh;     // the window width in Hz
+        // spread: the rms width of the power more than 4x the noise within +-100 bins of the best window's centre (a Doppler-spread signal is a few
+        // blobs, so the narrowest significant window would understate it), as a full width at half height of a Gaussian
+        double widthHz = bestW * bh;
+        {
+            const int lo = std::max(0, (int)bestC - 100), hi = std::min((int)N - 1, (int)bestC + 100);
+            double sw = 0, sx = 0, sxx = 0;
+            for (int k = lo; k <= hi; k++) { const double wv = std::max(q[(size_t)k] - 4.0 * nm, 0.0); sw += wv; sx += wv * k; sxx += wv * (double)k * k; }
+            if (sw > 0) { const double mu = sx / sw, var = std::max(0.0, sxx / sw - mu * mu); widthHz = std::max(widthHz, 2.355 * std::sqrt(var) * bh); }
+        }
         const double dopHz = (bestC - (double)N / 2.0) * (fs / N);
         // display row (dB over the noise, 4 bins grouped)
         std::vector<float> row;
@@ -721,7 +729,7 @@ struct EvtMonitor::Impl {
         if (bestZ >= thr(8.0)) { trendSum += widthHz; trendN++; }
         if (bestZ >= thr(8.0)) {
             aHits++; aMiss = 0;
-            aSnr.push_back(snr); aWidth.push_back(bestW * (fs / N)); aDop.push_back(dopHz);
+            aSnr.push_back(snr); aWidth.push_back(widthHz); aDop.push_back(dopHz);
             if (!aOn && aHits >= 4) { aOn = true; aStart = t - 3 * st.rowSec; aPeak = snr; }
             aPeak = std::max(aPeak, snr);
         } else {
@@ -736,7 +744,7 @@ struct EvtMonitor::Impl {
         }
         st.info.clear();
         char b[120];
-        std::snprintf(b, sizeof b, "noise %.1f dB, now: %s, best width %.0f Hz, S/N %.1f dB", db10(nm), aOn ? "open" : "closed", bestW * (fs / N), snr); st.info.push_back(b);
+        std::snprintf(b, sizeof b, "noise %.1f dB, now: %s, best width %.0f Hz, z %.1f, S/N %.1f dB", db10(nm), aOn ? "open" : "closed", widthHz, bestZ, snr); st.info.push_back(b);
     }
     void finishOpening(double tEnd) {
         if (aSnr.size() < 4) { aSnr.clear(); aWidth.clear(); aDop.clear(); return; }
