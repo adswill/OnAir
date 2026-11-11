@@ -40,3 +40,13 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 
 | Mode | Family | Active standard | Engine standard | Poll slot |
 |---|---|---|---|---|
+| Spectrum occupancy monitor | 752 | 753 | 754 | 752 |
+| Modulation quality (MER) meter | 753 | 754 | 755 | 753 |
+| Carrier frequency accuracy meter | 754 | 755 | 756 | 754 |
+| PTT and duty-cycle logger | 755 | 756 | 757 | 755 |
+| Intermodulation finder | 756 | 757 | 758 | 756 |
+| Spur and image finder | 757 | 758 | 759 | 757 |
+| Satellite Doppler curve logger | 758 | 759 | 760 | 758 |
+| Frequency-hopper analyser | 759 | 760 | 761 | 759 |
+
+Families 760 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).

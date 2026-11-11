@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**348 modes.**
+**356 modes.**
 
 ## TV (17)
 
@@ -78,7 +78,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (56)
+## Satellite & Navigation (57)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -107,6 +107,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Orbcomm** - Orbcomm satellite downlinks: satellite IDs, positions, channel assignments, messages
 - **QO-100** - QO-100: the amateur satellite's transponders with exact frequencies from its beacons
 - **GNSS interference detector** - GNSS interference: class, level, sweep
+- **Satellite Doppler curve logger** - Doppler logger: TCA, Doppler span, slope, carrier
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
 - **AX100 Mode 5** - AX100 Mode 5 (ASM + Golay): GOMspace satellite frames, CSP packets
 - **AX100 Mode 6** - AX100 Mode 6 (Reed-Solomon): GOMspace satellite frames, CSP packets
@@ -378,9 +379,16 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 
-## General & Tools (5)
+## General & Tools (12)
 
 - **Power-line noise locator** - Noise locator: impulse rate, repetition, level
+- **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
+- **Modulation quality (MER) meter** - MER meter: modulation, symbol rate, MER, EVM
+- **Carrier frequency accuracy meter** - Frequency meter: offset, ppm, drift, Allan deviation
+- **PTT and duty-cycle logger** - PTT logger: transmissions, lengths, duty cycle
+- **Intermodulation finder** - Intermod finder: products of strong signals and their verdict
+- **Spur and image finder** - Spur finder: DC spike, images, harmonics, fixed spurs
+- **Frequency-hopper analyser** - Hopper analyser: hop rate, channels, spacing, dwell
 - **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
 - **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
 - **Spectrum explorer** - Spectrum explorer: look, measure and sweep

@@ -1841,3 +1841,8 @@ GNSS interference detector (tone / narrowband / swept chirp with range and perio
 ## 2026-11-12: VLF MSK transmitter monitor (family 895)
 
 VLF naval MSK station monitor: carrier and bit rate from the two lines of the squared signal, on / off / rate-change log, station hint from a short frequency list. Encrypted traffic not decoded. Tests: 50 to 300 bit/s, offsets, drift, on / off, noise sweep to -3 dB, 20 min noise false-on run. Simulated signals only (docs/VLFMSK-4.0.md).
+
+## 2026-11-12: third block of 4.0 signal modes (families 752 - 759, branch feat40-modes3)
+
+Free numbers: a scan of the mode table, registry and poll slots found 406 usable family numbers below 900 (docs/FAMILY-NUMBERS-4.0.md), so kNumFamilies and kPollSeqSlots stay. The x40 receiver now maps variants 15 and up to families 752 and up.
+Eight new modes: spectrum occupancy monitor, modulation quality (MER) meter, carrier frequency accuracy meter, PTT and duty-cycle logger, intermodulation finder, spur and image finder, satellite Doppler curve logger, frequency-hopper analyser. Each has a decoder, a generator in the tests, tests with offsets, drift, noise sweeps and false-report runs, and a page (docs/OCCUPANCY-4.0.md and the others). All checked on simulated signals only.

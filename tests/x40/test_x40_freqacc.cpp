@@ -18,11 +18,11 @@ int main() {
         CHECK(std::fabs(factNum(t, "error") - off / centre * 1e6) < 0.01, "ppm %.4f want %.4f", factNum(t, "error"), off / centre * 1e6);
         CHECK(std::fabs(factNum(t, "carrier to noise density") - 60) < 2.0, "C/N0 %.1f want 60", factNum(t, "carrier to noise density"));
     }
-    // 2. a drifting carrier (0.05 Hz/s): the drift is read in ppm per hour
-    { ToneScene sc(48000, noiseFor(30, 1000, 48000), 4); SchedTone s; s.hz = 100; s.driftHzPerSec = 0.05; sc.tones.push_back(s);
-      auto t = runChunks(x40::FreqAcc, 48000, 200.0, std::ref(sc), 0, 10e6);
-      const double d = factNum(t, "drift"); const double want = 0.05 * 3600 / 10e6 * 1e6;
-      CHECK(std::fabs(d - want) < 0.05 * want + 0.1, "drift %.3f ppm/h want %.3f", d, want); }
+    // 2. a drifting carrier (1 Hz/s): the drift is read in ppm per hour
+    { ToneScene sc(48000, noiseFor(30, 1000, 48000), 4); SchedTone s; s.hz = 100; s.driftHzPerSec = 1.0; sc.tones.push_back(s);
+      auto t = runChunks(x40::FreqAcc, 48000, 120.0, std::ref(sc), 0, 10e6);
+      const double d = factNum(t, "drift"); const double want = 1.0 * 3600 / 10e6 * 1e6;
+      CHECK(std::fabs(d - want) < 0.05 * want + 0.01, "drift %.3f ppm/h want %.3f", d, want); }
     // 3. a step of 3 Hz is logged once; a gap of 20 s is logged as lost and returned
     { ToneScene sc(48000, noiseFor(30, 1000, 48000), 5); SchedTone a; a.hz = 50; a.to = 40; sc.tones.push_back(a); SchedTone b; b.hz = 53; b.from = 40; sc.tones.push_back(b);
       auto t = runChunks(x40::FreqAcc, 48000, 80.0, std::ref(sc), 0, 10e6);

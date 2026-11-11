@@ -376,6 +376,14 @@
         <item>GNSS interference detector</item>
         <item>Passband signal classifier</item>
         <item>VLF MSK transmitter monitor</item>
+        <item>Spectrum occupancy monitor</item>
+        <item>Modulation quality (MER) meter</item>
+        <item>Carrier frequency accuracy meter</item>
+        <item>PTT and duty-cycle logger</item>
+        <item>Intermodulation finder</item>
+        <item>Spur and image finder</item>
+        <item>Satellite Doppler curve logger</item>
+        <item>Frequency-hopper analyser</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -733,6 +741,14 @@
         <item>GNSS interference detector (L1 1575.42 MHz, L2 1227.6 MHz and others, needs a radio with a few MHz of bandwidth and a GNSS antenna): says whether a navigation band is clean, or holds a tone, narrowband interference, a swept chirp (a car jammer: range, period, rate) or wideband noise, and how strong it is. Detects and describes only; no position is computed. Simulated signals only</item>
         <item>Passband signal classifier: every signal in the 48 kHz around the tuned frequency (a satellite linear transponder, a band segment, a repeater input) is tracked and named after a second and a half: unmodulated carrier, keyed CW, narrow data, SSB or voice-like, or a wideband steady signal, with its offset, width and level. A guess from width and level behaviour; nothing is demodulated. Simulated signals only</item>
         <item>VLF MSK transmitter monitor (10 - 30 kHz naval long-wave stations): the carrier frequency, the bit rate (50 to 300 bit/s) and the level of a station, and when it goes on, off or changes rate; a list of public carrier frequencies hints at the station. The traffic is encrypted and is not decoded. Needs a radio that reaches the VLF band. Simulated signals only</item>
+        <item>Spectrum occupancy monitor: the whole captured span in 25 kHz channels, judged busy or idle every 10 ms against a noise floor that follows the quietest channels. Per channel the share of the time it was busy, the number of transmissions and the longest one; the band occupancy; every finished transmission is listed with its length and strength. What this radio hears in this place. Simulated signals only</item>
+        <item>Modulation quality meter: the MER and EVM of a BPSK, QPSK or 8-PSK carrier found blind (symbol rate, order, carrier offset, roll-off), 300 baud to about 40 kBd in the default 250 ksps channel. Hard decisions: below about 8 dB MER the number reads too good. QAM, APSK, FSK and OFDM are not measured. Simulated signals only</item>
+        <item>Carrier frequency accuracy meter: tune a carrier of a known frequency (a time-signal or broadcast station, a GPS-locked beacon) and read the radio\'s error in Hz and parts per million, its drift in ppm per hour, the Allan deviation from 1 to 32 s, and steps or loss of the carrier. The reading is the radio\'s error plus the transmitter\'s. Simulated signals only</item>
+        <item>PTT and duty-cycle logger for one 12.5 kHz channel: every transmission with its start, length, strength and the gap since the one before; kerchunks (key-ups under half a second), a stuck key after 3 minutes, the duty cycle over the run and the last ten minutes, and the rate per hour. Short fades inside one over do not split it. Simulated signals only</item>
+        <item>Intermodulation finder for a wide capture: finds the strong signals and the peaks at 2 f1 - f2, 2 f2 - f1 and f2 - f1, and tests whether such a peak follows the law of a product as the signals fade (it moves 2 dB per dB of f1 and 1 dB per dB of f2 for a third-order product) or is a transmitter of its own. With steady signals it says it cannot tell. Simulated signals only</item>
+        <item>Spur and image finder for your own SDR: the DC spike, the mirror image of each strong signal at -f (image rejection in dB and the gain or phase mismatch it implies), second and third harmonics folded into the span, and steady spurs at multiples of fs / 16. A peak counts as an image only if it follows the signal; steady signals give \"cannot tell\". Simulated signals only</item>
+        <item>Satellite beacon Doppler curve logger (100 MHz - 3 GHz, a steady carrier within 14 kHz of the tuned frequency): logs the carrier frequency through a pass and fits the flyby curve: time of closest approach, the carrier without Doppler, the largest Doppler, the steepest slope and, with the tuned frequency known, a rough speed and closest distance. Weak beacons are lost where the slope is steepest. Simulated signals only</item>
+        <item>Frequency-hopper analyser for a wide capture: the hop rate, dwell and guard time, the number of channels, their spacing and the span of one hopper (the strongest narrow signal), from at least 40 dwells on 3 channels. Needs a clear signal (about 12 dB over the noise in 25 kHz); channels closer than about 1.5 bins (fs / 256) are not told apart. Does not follow the sequence. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1090,6 +1106,14 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1447,5 +1471,13 @@
         <item>gnss gps jammer interference chirp jamming spoofing l1 1575 l2 1227 glonass galileo beidou detector sawtooth</item>
         <item>passband signal classifier transponder linear cw ssb carrier rtty psk activity band scan spotter qo-100 satellite transponder</item>
         <item>vlf msk naval 24 khz naa nlk nml npm nwc hwu gqd dho38 submarine 200 baud long wave</item>
+        <item>occupancy channel duty cycle busy spectrum band usage activity monitor</item>
+        <item>mer evm modulation error ratio quality constellation bpsk qpsk 8psk symbol rate blind</item>
+        <item>frequency accuracy ppm calibration reference carrier allan deviation drift offset wwv sdr error</item>
+        <item>ptt duty cycle transmission log kerchunk stuck key repeater usage push to talk</item>
+        <item>intermodulation intermod imd third order product overload front end sdr attenuator ghost signal</item>
+        <item>spur image iq imbalance dc offset harmonic alias mirror sdr rejection converter</item>
+        <item>doppler curve satellite beacon pass tca closest approach cubesat carrier frequency fit</item>
+        <item>frequency hopping hopper fhss hop rate dwell channels spacing spread spectrum analyser</item>
     </string-array>
 </resources>
