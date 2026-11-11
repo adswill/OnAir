@@ -63,6 +63,9 @@ int main(int argc, char** argv) {
         {"pocsag", -4.5, 0, 50, 0.6, 6},
         {"pocsag", 0.0, 3100, 0, 0.65, 4},      // the second path must not cost the carrier error case (3.9: 62 %)
         {"flex", 8.0, 0, 0, 0.55, 6},            // FLEX is untouched: 67 % with and without the second path
+        {"zigbee", 1.5, 0, 0, 0.7, 6},          // 3.9: 38 %
+        {"zigbee", 1.5, 48000, 0, 0.7, 6},      // 20 ppm at 2.4 GHz (3.9: 36 %)
+        {"zigbee", 1.5, 0, 50, 0.6, 6},
         {"globalstar", -4.5, 0, 0, 0.9, 4},     // 3.9: nothing below -2 dB
         {"globalstar", -4.5, 18000, 50, 0.9, 4},
     };
@@ -76,7 +79,7 @@ int main(int argc, char** argv) {
         printf("%s %.1f dB, carrier %.0f Hz, clock %.0f ppm: %.0f %% (need %.0f %%)\n", r.id, r.snr, r.cfo, r.sro, 100 * f, 100 * r.need);
         CHECK(f >= r.need, "%s %.1f dB %.0f Hz %.0f ppm: %.2f", r.id, r.snr, r.cfo, r.sro, f);
     }
-    const char* noiseIds[] = {"halow", "globalstar", "pocsag"};
+    const char* noiseIds[] = {"halow", "globalstar", "pocsag", "zigbee"};
     for (const char* id : noiseIds) {
         if (only && std::strcmp(only, id) != 0) continue;
         const Case N = makeCase(id, std::strcmp(id, "globalstar") == 0 ? 20.0 : 0);

@@ -254,7 +254,7 @@ struct ZigbeeReceiver::Impl {
         const std::complex<float> z = y * std::conj(yring[ph]);   // y four samples ago: one chip
         yring[ph] = y;
         const float v = std::atan2(z.imag(), z.real());
-        vb.push_back(v);
+        vb.push_back((float)(1.5707963 * std::sin(v)));   // 4.0: the chip values are the sine of the phase step (peak pi/2 at the nominal step): a click of the discriminator at low SNR no longer swamps a symbol correlation (docs/SENSITIVITY-4.0-A3.md)
         pb.push_back(std::norm(y));
         meanSum += v - meanBuf[meanPos]; meanBuf[meanPos] = v; meanPos = (meanPos + 1) % kMean;
         const uint32_t bit = v > (float)(meanSum / kMean) ? 1u : 0u;
