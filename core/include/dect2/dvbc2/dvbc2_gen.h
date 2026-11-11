@@ -1,7 +1,8 @@
 // DVB-C2 test signal (EN 302 769): one C2 system of up to one L1 block width (3 409 carriers, 7.61 MHz) with its data slices, PLPs and
 // notches, built in the frequency domain symbol by symbol (preamble with the L1 part 2, data symbols with scattered / continual / edge
 // pilots), 4K IFFT at 64/7 Msample/s, guard interval, then an echo, the sample clock error, the carrier offset and noise, resampled to the
-// requested rate. The transport streams come from the per-PLP packet sources (the small test stream when none is given).
+// requested rate. The transport streams come from the per-PLP packet sources (the small test stream when none is given); a GSE PLP takes IP
+// packets instead.
 // Simulated only: this generator and the receiver of dvbc2_rx.h were checked against each other, never against a cable network.
 #pragma once
 #include "dvbc2.h"
@@ -23,6 +24,9 @@ struct PlpConfig {
     int type = 2, payloadType = 3, groupId = 0; // normal data PLP carrying a TS
     int tsId = 1, onId = 1;
     std::function<void(uint8_t*)> ts;           // 188-byte packets; empty = the small test stream
+    // payloadType 2 (GSE): IP packets instead of a transport stream, each sent as one GSE PDU (EtherType 0x0800 / 0x86DD, no label);
+    // returns false when it has nothing (the BB frame is padded)
+    std::function<bool(std::vector<uint8_t>&)> ip;
 };
 struct SliceConfig {
     int id = 0;
@@ -49,6 +53,7 @@ struct GenConfig {
     double cfoHz = 0;
     double clockPpm = 0;             // the transmitter's clock fast (positive) or slow against the receiver's
     double echoDb = 0, echoUs = 0, echoDeg = 0;   // one echo: attenuation (0 = none), delay, phase
+    bool reservedTones = false;      // RESERVED_TONES: the carriers of clause 9.7 carry no data (filled with random values at pilot level or below)
     double level = 0.22;             // rms of the output
     unsigned seed = 1;
 };
@@ -75,7 +80,7 @@ private:
 
 ModeTuning dvbc2Tuning();
 // SynthConfig for the test signal: modeOpt[0] modulation and code rate (0 256-QAM 5/6, 1 16-QAM 4/5, 2 64-QAM 2/3, 3 256-QAM 3/4,
-// 4 64-QAM 9/10, 5 256-QAM 9/10), modeOpt[1] guard interval (0 1/64, 1 1/128), modeOpt[2] data slice type (0 Type 1, 1 Type 2 robust
+// 4 64-QAM 9/10, 5 256-QAM 9/10, 6 1024-QAM 3/4, 7 4096-QAM 5/6), modeOpt[1] guard interval (0 1/64, 1 1/128), modeOpt[2] data slice type (0 Type 1, 1 Type 2 robust
 // header, 2 Type 2 high efficiency header), modeOpt[3] time interleaving depth (0 none, 1 four, 2 eight, 3 sixteen symbols),
 // modeOpt[4] 1 = a narrowband notch in the slice, modeOpt[5] 1 = 16K FEC frames, modeOpt[6] 1 = two PLPs (Type 2);
 // modeVal[0] clock offset ppm; snrDb Es/N0 per cell, cfoHz the carrier offset, echoDb / echoDelay (samples) one echo.
