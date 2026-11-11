@@ -3,6 +3,10 @@
 #elif defined(__SSE2__) && !defined(DECT2_NO_SIMD)
 #include <emmintrin.h>
 #endif
+#include "dect2/dsp/simd.h"
+#if defined(DECT2_X86_DISPATCH)
+#include <immintrin.h>
+#endif
 #include "dect2/atsc/atsc.h"
 #include "dect2/fec/fec_proto.h"
 #include "dect2/common/stage_prof.h"
@@ -252,7 +256,7 @@ void viterbiLanes(const float* xt, int n, uint8_t* dec, int* fin) {
 #elif defined(__SSE2__) && !defined(DECT2_NO_SIMD)
 static_assert(kLanes == 12, "three SSE vectors of four lanes");
 // The same arithmetic as the portable loop below (bit-exact: the same adds, compares and minimums), with SSE2 intrinsics: the state metrics stay in registers.
-void viterbiLanes(const float* xt, int n, uint8_t* dec, int* fin) {
+static void viterbiLanesSse2(const float* xt, int n, uint8_t* dec, int* fin) {
     __m128 pm[8][3];
     for (int s = 0; s < 8; s++) for (int v = 0; v < 3; v++) pm[s][v] = _mm_setzero_ps();
     const __m128i two = _mm_set1_epi32(2);
@@ -297,6 +301,78 @@ void viterbiLanes(const float* xt, int n, uint8_t* dec, int* fin) {
         for (int s = 1; s < 8; s++) if (f[s][l] < f[state][l]) state = s;
         fin[l] = state;
     }
+}
+#if defined(DECT2_X86_DISPATCH)
+// AVX2: the same operations as the SSE2 version (bit-exact), lanes 0-7 in one 256-bit vector and lanes 8-11 in a 128-bit one: two vectors per
+// operation instead of three
+DECT2_AVX2_TARGET static void viterbiLanesAvx2(const float* xt, int n, uint8_t* dec, int* fin) {
+    __m256 pa[8]; __m128 pb[8];
+    for (int s = 0; s < 8; s++) { pa[s] = _mm256_setzero_ps(); pb[s] = _mm_setzero_ps(); }
+    const __m256i twoA = _mm256_set1_epi32(2);
+    const __m128i twoB = _mm_set1_epi32(2);
+    for (int t = 0; t < n; t++) {
+        const float* xv = xt + (size_t)t * kLanes;
+        const __m256 xa = _mm256_loadu_ps(xv);
+        const __m128 xb = _mm_loadu_ps(xv + 8);
+        __m256 da[8]; __m128 db[8];
+        for (int s = 0; s < 8; s++) {
+            const float lv = (float)(2 * s - 7);
+            const __m256 a = _mm256_sub_ps(xa, _mm256_set1_ps(lv));
+            const __m128 b = _mm_sub_ps(xb, _mm_set1_ps(lv));
+            da[s] = _mm256_mul_ps(a, a); db[s] = _mm_mul_ps(b, b);
+        }
+        uint8_t* dp = dec + (size_t)t * 8 * kLanes;
+        __m256 nma[8], mna = _mm256_set1_ps(1e30f);
+        __m128 nmb[8], mnb = _mm_set1_ps(1e30f);
+        for (int ns = 0; ns < 8; ns++) {
+            const int f0 = kVit.from[ns][0], f1 = kVit.from[ns][1], f2 = kVit.from[ns][2], f3 = kVit.from[ns][3];
+            const int s0 = kVit.sym[ns][0], s1 = kVit.sym[ns][1], s2 = kVit.sym[ns][2], s3 = kVit.sym[ns][3];
+            __m256i dva;
+            {
+                const __m256 m0 = _mm256_add_ps(pa[f0], da[s0]), m1 = _mm256_add_ps(pa[f1], da[s1]);
+                const __m256 m2 = _mm256_add_ps(pa[f2], da[s2]), m3 = _mm256_add_ps(pa[f3], da[s3]);
+                const __m256i b01 = _mm256_castps_si256(_mm256_cmp_ps(m1, m0, _CMP_LT_OS)), b23 = _mm256_castps_si256(_mm256_cmp_ps(m3, m2, _CMP_LT_OS));
+                const __m256 a = _mm256_min_ps(m0, m1), c = _mm256_min_ps(m2, m3);
+                const __m256i cw = _mm256_castps_si256(_mm256_cmp_ps(c, a, _CMP_LT_OS));
+                nma[ns] = _mm256_min_ps(a, c);
+                mna = _mm256_min_ps(mna, nma[ns]);
+                const __m256i hi = _mm256_add_epi32(twoA, _mm256_srli_epi32(b23, 31)), lo = _mm256_srli_epi32(b01, 31);
+                dva = _mm256_or_si256(_mm256_and_si256(cw, hi), _mm256_andnot_si256(cw, lo));
+            }
+            __m128i dvb;
+            {
+                const __m128 m0 = _mm_add_ps(pb[f0], db[s0]), m1 = _mm_add_ps(pb[f1], db[s1]);
+                const __m128 m2 = _mm_add_ps(pb[f2], db[s2]), m3 = _mm_add_ps(pb[f3], db[s3]);
+                const __m128i b01 = _mm_castps_si128(_mm_cmplt_ps(m1, m0)), b23 = _mm_castps_si128(_mm_cmplt_ps(m3, m2));
+                const __m128 a = _mm_min_ps(m0, m1), c = _mm_min_ps(m2, m3);
+                const __m128i cw = _mm_castps_si128(_mm_cmplt_ps(c, a));
+                nmb[ns] = _mm_min_ps(a, c);
+                mnb = _mm_min_ps(mnb, nmb[ns]);
+                const __m128i hi = _mm_add_epi32(twoB, _mm_srli_epi32(b23, 31)), lo = _mm_srli_epi32(b01, 31);
+                dvb = _mm_or_si128(_mm_and_si128(cw, hi), _mm_andnot_si128(cw, lo));
+            }
+            const __m128i p01 = _mm_packs_epi32(_mm256_castsi256_si128(dva), _mm256_extracti128_si256(dva, 1)), p2 = _mm_packs_epi32(dvb, dvb);
+            const __m128i b = _mm_packus_epi16(p01, p2);   // bytes 0..7 = lanes 0..7, bytes 8..11 = lanes 8..11
+            _mm_storel_epi64((__m128i*)(dp + ns * kLanes), b);
+            const int32_t w = _mm_cvtsi128_si32(_mm_srli_si128(b, 8));
+            memcpy(dp + ns * kLanes + 8, &w, 4);
+        }
+        for (int s = 0; s < 8; s++) { pa[s] = _mm256_sub_ps(nma[s], mna); pb[s] = _mm_sub_ps(nmb[s], mnb); }
+    }
+    alignas(32) float f[8][kLanes];
+    for (int s = 0; s < 8; s++) { _mm256_storeu_ps(&f[s][0], pa[s]); _mm_storeu_ps(&f[s][8], pb[s]); }
+    for (int l = 0; l < kLanes; l++) {
+        int state = 0;
+        for (int s = 1; s < 8; s++) if (f[s][l] < f[state][l]) state = s;
+        fin[l] = state;
+    }
+}
+#endif
+void viterbiLanes(const float* xt, int n, uint8_t* dec, int* fin) {
+#if defined(DECT2_X86_DISPATCH)
+    if (cpuHasAvx2()) { viterbiLanesAvx2(xt, n, dec, fin); return; }
+#endif
+    viterbiLanesSse2(xt, n, dec, fin);
 }
 #else
 void viterbiLanes(const float* xt, int n, uint8_t* dec, int* fin) {

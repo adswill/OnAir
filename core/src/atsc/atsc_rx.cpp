@@ -277,11 +277,16 @@ inline cf32 expj(double a) { return cf32((float)std::cos(a), (float)std::sin(a))
 // The nearest of the eight levels: max(-7, min(7, 2 floor(y / 2) + 1)), the same value for every y (NaN gives 7 in both). The halved value is
 // clamped first so that the floor is of a small number: on x86 without SSE4.1 that is a truncation, not a call to floorf.
 inline float quant8(float y) {
-#if defined(__x86_64__) && !defined(__SSE4_1__)
-    float t = y * 0.5f;
-    t = t < 3.5f ? t : 3.5f;
-    t = t > -4.f ? t : -4.f;
-    return 2.f * (float)ifloorf(t) + 1.f;
+#if defined(DECT2_X86_DISPATCH)
+    // x86: 7 - 2 * (the number of the boundaries -3 ... 3 above y / 2), the comparisons side by side in two vectors: one conversion instead of
+    // a truncation and two conversions (this sits on the decision feedback's chain from one symbol to the next)
+    const __m128 t = _mm_set1_ps(y * 0.5f);
+    const __m128i a = _mm_castps_si128(_mm_cmplt_ps(t, _mm_setr_ps(-3.f, -2.f, -1.f, 0.f)));
+    const __m128i b = _mm_castps_si128(_mm_cmplt_ps(t, _mm_setr_ps(1.f, 2.f, 3.f, -INFINITY)));   // the last lane never counts
+    __m128i c = _mm_add_epi32(a, b);   // per lane 0, -1 or -2
+    c = _mm_add_epi32(c, _mm_shuffle_epi32(c, 0x4E));
+    c = _mm_add_epi32(c, _mm_shuffle_epi32(c, 0xB1));
+    return 7.f + 2.f * (float)_mm_cvtsi128_si32(c);
 #else
     return std::max(-7.f, std::min(7.f, 2.f * std::floor(y * 0.5f) + 1.f));
 #endif
