@@ -85,7 +85,7 @@ Validated on simulated signals only (the app's generators). No real ATSC capture
 - ATSC 1.0 pll, symclock and trellis (about 0.18 together) are unchanged.
 - The filter helper thread is still created per input block (about 150 a second).
 - The ATSC 3.0 OFDM FFT, channel estimate, equaliser and demapper are unchanged.
-- **x86 is not under one core yet.** The first CI run (Linux x86_64 runner, Intel Xeon 6973P-C, 4 threads, the tests running 4 at a time) measured:
+- **x86:** feat39-atscx86 continues this on x86 (docs/ATSC-X86-3.9.md): about half the CPU on the same runner, and the atsc3_engine race found and fixed. Earlier state: **x86 is not under one core yet.** The first CI run (Linux x86_64 runner, Intel Xeon 6973P-C, 4 threads, the tests running 4 at a time) measured:
 
   | Case | CPU s per s |
   |---|---|
