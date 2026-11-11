@@ -1493,6 +1493,20 @@ Branch feat39-dvbc2 on integ-39, family 741 (engine standard 743). A new mode ro
 - Fixed smart5_science on macOS. The cause was std::poisson_distribution, which differs between libc++ and libstdc++. The meteor-rate sporadic curve is now one smooth least-squares fit. Seed sweep: 2 of 40 fail, was 7 of 40.
 - Simulated only. Details are in docs/SMART5-UI-3.9.md.
 
+## 2026-11-11 CI 42921489043 failures (feat39-ci4fix)
+
+Fixed the eight non-slow failures, one commit each. Details are in docs/CI4FIX-3.9.md.
+- Code fixes:
+  - The CIS mode rows had subIds that matched no SubMode entry.
+  - dropNonFinite wrote samples through an aliasing uint32_t pointer, which GCC miscompiled.
+  - Keyboard Auto now analyses only the audio after the text stopped.
+  - The CCSDS concatenated generator sends a coded lead before the ASM.
+  - VDL3 masks training sequences that start inside the last good burst.
+- Test fixes, each with its reason stated:
+  - voice_insight: random quiet hours that really were busy were counted as false alerts.
+  - marine_fax_thread: the reader thread was starved on Windows.
+  - webapp: a detached supervisor thread outlived the app.
+
 ## 2026-11-11 Sensitivity pass D (feat39-sensD)
 Branch feat39-sensD on integ-39. Thresholds, offset and clock tolerance and CPU for the decoders the first passes did not measure (docs/SENSITIVITY-3.9-D.md).
 - Meteor LRPT OQPSK: carrier, symbol clock and timing from the lines of the squared signal, narrow loops from the start, a best-scoring sync search; 90 % point 5 / 8 dB -> 2 / 3 dB Es/N0 (AWGN / 20 ppm). StripRows places the first row of a pass that starts mid-row correctly.
