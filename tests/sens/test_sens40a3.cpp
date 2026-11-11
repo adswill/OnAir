@@ -63,9 +63,9 @@ int main(int argc, char** argv) {
         {"pocsag", -4.5, 0, 50, 0.6, 6},
         {"pocsag", 0.0, 3100, 0, 0.65, 4},      // the second path must not cost the carrier error case (3.9: 62 %)
         {"flex", 8.0, 0, 0, 0.55, 6},            // FLEX is untouched: 67 % with and without the second path
-        {"zigbee", 1.5, 0, 0, 0.7, 6},          // 3.9: 38 %
-        {"zigbee", 1.5, 48000, 0, 0.7, 6},      // 20 ppm at 2.4 GHz (3.9: 36 %)
-        {"zigbee", 1.5, 0, 50, 0.6, 6},
+        {"zigbee", 1.5, 0, 0, 0.78, 6},         // 3.9: 38 %
+        {"zigbee", 1.5, 48000, 0, 0.78, 6},     // 20 ppm at 2.4 GHz (3.9: 36 %)
+        {"zigbee", 1.5, 0, 50, 0.65, 6},
         {"globalstar", -4.5, 0, 0, 0.9, 4},     // 3.9: nothing below -2 dB
         {"globalstar", -4.5, 18000, 50, 0.9, 4},
     };
