@@ -19,7 +19,7 @@ int main() {
     sc.rate = 10e6; sc.snrDb = 30;
     sc.tx.header = Header::Pn420; sc.tx.profile.map = Mapping::Qam16; sc.tx.profile.rate = Rate::R06;
     Signal sig(sc, testPacketSource(1));
-    const size_t total = (size_t)(1.6 * sc.rate);
+    const size_t total = (size_t)(2.0 * sc.rate);
     std::vector<cf32> x(total);
     sig.generate(x.data(), total);
     for (auto& v : x) v = cf32(std::round(v.real() * 128.f) / 128.f, std::round(v.imag() * 128.f) / 128.f);
@@ -39,10 +39,12 @@ int main() {
 
     std::atomic<bool> feeding{true};
     std::atomic<size_t> fed{0};
+    std::atomic<int> gate{0};   // 0 feeding, 1 the feeder waits for a lock before the reset, 2 reset done: the reset point depends on lock, not on the clock
     std::thread feeder([&] {
         static const size_t sizes[] = {16384, 4096, 65536, 7, 1000, 12345};
         size_t pos = 0, k = 0;
         while (pos < total) {
+            if (gate == 0 && pos >= total * 40 / 100) { gate = 1; while (gate == 1) std::this_thread::sleep_for(std::chrono::milliseconds(1)); }
             const size_t n = std::min(sizes[k++ % 6], total - pos);
             rx.feed(&x[pos], n);
             pos += n;
@@ -53,13 +55,18 @@ int main() {
     uint64_t last = 0, seqBack = 0, polls = 0;
     bool resetDone = false;
     uint64_t goodBeforeReset = 0;
+    std::chrono::steady_clock::time_point gateSince{};
+    bool gateSet = false;
     DtmbTelemetry t;
     while (feeding) {
         std::this_thread::sleep_for(std::chrono::milliseconds(3));
         if (rx.telemetry(t, last)) { if (t.seq < last) seqBack++; last = t.seq; }
         polls++;
         if (polls % 7 == 0) rx.setDecoderThreads((int)(polls / 7) % 4);
-        if (!resetDone && fed > total * 45 / 100) { goodBeforeReset = good; rx.reset(); resetDone = true; }
+        if (!resetDone && gate == 1) {
+            if (!gateSet) { gateSet = true; gateSince = std::chrono::steady_clock::now(); }
+            if (good > 100 || std::chrono::steady_clock::now() - gateSince > std::chrono::seconds(30)) { goodBeforeReset = good; rx.reset(); resetDone = true; gate = 2; }
+        }
     }
     feeder.join();
     rx.flush();

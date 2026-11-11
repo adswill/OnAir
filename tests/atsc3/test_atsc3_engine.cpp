@@ -68,11 +68,13 @@ int main(int argc, char** argv) {
     e.setStandard(5);
     CHECK(e.start(dev, tune, fo), "engine started");
     CHECK(e.activeStandard() == 4, "ATSC 3.0 is the active standard");
-    bool locked = false, ready = false, tsOk = false;
+    bool locked = false, ready = false, tsOk = false, rxLocked = false;   // rxLocked is sampled while the file plays: after its end the engine rightly reports no signal
     Atsc3Telemetry t;
     for (int i = 0; i < 120 && !(locked && ready && tsOk); i++) {
         std::this_thread::sleep_for(std::chrono::milliseconds(250));
         if (e.atsc3Telemetry(t)) { locked |= t.locked || t.frames >= 3; ready |= t.serviceReady; }
+        RxTelemetry rl;
+        if (e.latestRx(rl, 0) && rl.standard == 4 && rl.state == 2) rxLocked = true;
         auto ts = e.tsSnapshot();
         for (auto& s : ts.services) {
             bool v = false, a = false;
@@ -85,7 +87,8 @@ int main(int argc, char** argv) {
     auto ts = e.tsSnapshot();
     for (auto& s : ts.services) { printf("  TS service %d '%s':", s.id, s.name.c_str()); for (auto& x : s.streams) printf(" %s/%s", x.kind.c_str(), x.codec.c_str()); printf("\n"); }
     RxTelemetry rt;
-    CHECK(e.latestRx(rt, 0) && rt.standard == 4 && rt.state == 2, "telemetry reports ATSC 3.0, locked");
+    e.latestRx(rt, 0);
+    CHECK(rxLocked, "telemetry reports ATSC 3.0, locked");
     CHECK(locked, "locked");
     CHECK(t.services.size() == 1 && t.services[0].serviceId == 1001 && t.selected == 1001, "service found and selected by itself");
     CHECK(ready, "service signaling received");
