@@ -68,7 +68,7 @@ std::vector<float> jt6mGenerate(const std::string& msg, double fs, double second
     return y;
 }
 
-// Runs of frames with a clear sync (a gap of up to 2 frames is bridged); a ping needs 3 good frames, or 2 with a strong sync.
+// Runs of frames with a clear sync (a gap of up to 2 frames is bridged); a ping needs 3 good frames, or 2 with a strong sync (mean 14).
 std::vector<Jt6mPing> jt6mGroupPings(const std::vector<Jt6mFrame>& fr, double frameSec) {
     std::vector<Jt6mPing> pings;
     size_t i = 0;
@@ -81,7 +81,7 @@ std::vector<Jt6mPing> jt6mGroupPings(const std::vector<Jt6mFrame>& fr, double fr
             if (fr[j].good) { last = j; good++; rsum += fr[j].sync; }
             j++;
         }
-        if (good >= 2 && (good >= 3 || rsum / good >= 10.0)) {
+        if (good >= 2 && (good >= 3 || rsum / good >= 14.0)) {   // 14, was 10: noise alone gave one false ping in 32 s (4.0 QA)
             Jt6mPing p;
             p.startSec = fr[i].startSec;
             p.durSec = fr[last].startSec - fr[i].startSec + frameSec;
