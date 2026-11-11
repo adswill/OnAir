@@ -84,6 +84,25 @@ int main() {
         const CarrierDecode d = decodeCarrier(x.data(), x.size());
         CHECK(d.blocksOk == 0 && !d.synced, "noise decoded %d blocks", d.blocksOk);
     }
+    // the carrier search (4 dB over the local floor since 3.9) finds nothing in noise alone, and finds a carrier at 3 dB
+    {
+        const double fs = 1e6;
+        std::vector<cf32> x((size_t)(0.5 * fs));
+        std::mt19937 g(4);
+        dect2::normal_distribution<float> nd(0.f, 1.f);
+        for (auto& v : x) v = cf32(nd(g), nd(g));
+        CHECK(findCarriers(x.data(), x.size(), fs).empty(), "carriers found in noise: %zu", findCarriers(x.data(), x.size(), fs).size());
+        // a carrier at 3 dB in 25 kHz, 150 kHz off centre
+        const std::vector<cf32> c = capture(0, 200, 0, 0, 5);
+        cell::Resampler rs(0.45);
+        std::vector<cf32> up(x.size());
+        rs.run(c.data(), c.size(), rs.halfLen() + 2, kRate / fs, up.data(), std::min(up.size(), (size_t)((double)(c.size() - 64) * fs / kRate)));
+        cell::mixDown(up.data(), up.size(), -150e3, fs);
+        const float a = (float)std::sqrt(std::pow(10.0, 0.3) * 25e3 / fs * 2);   // noise power 2 per sample: 3 dB in 25 kHz
+        for (size_t i = 0; i < x.size(); i++) x[i] += up[i] * a;
+        const auto cs = findCarriers(x.data(), x.size(), fs);
+        CHECK(cs.size() == 1 && std::fabs(cs[0].off - 150e3) < 3e3, "a 3 dB carrier: %zu found", cs.size());
+    }
     struct Imp { const char* name; double cfo, ppm; };
     const Imp imps[] = {{"awgn", 0, 0}, {"cfo 1.2 kHz", 1200, 0}, {"clock 50 ppm", 0, 50}};
     if (!longRun) {

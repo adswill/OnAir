@@ -730,7 +730,9 @@ std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, dou
         const double f = std::max(1e-30, tmp[tmp.size() / 5]);
         for (int k = g; k <= std::min(hi, g + step - 1); k++) floorP[(size_t)k] = f;
     }
-    auto above = [&](int k) { return p[(size_t)k] >= floorP[(size_t)k] * 4.0; };   // 6 dB over the local floor
+    // 4 dB over the local floor (3.8: 6 dB, which missed carriers below about 4 dB SNR that the demodulator now decodes; the Welch average
+    // of up to 300 spectra keeps the noise within a fraction of a dB, and a rise must still be 9 kHz wide)
+    auto above = [&](int k) { return p[(size_t)k] >= floorP[(size_t)k] * 2.5; };
     int i = lo;
     while (i <= hi) {
         if (!above(i)) { i++; continue; }
