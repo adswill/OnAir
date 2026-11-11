@@ -137,24 +137,24 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | nxdn | 40 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.123 | 38 |  |
 | gsmr | 41 | 5 | 14 | pass | pass | pass | pass | pass | pass | 0.419 | 50 | (real time) |
 | dvbc | 42 | 10 | 3 | pass | pass | pass | FAIL | pass | pass | 0.772 | 56107 | snr threshold |
-| specx | 43 | 10 | 7 | FAIL | - | - | - | pass | FAIL | 0.156 | 0 | clean open, tx open; (real time) |
+| specx | 43 | 10 | 3 | lock | lock | lock | lock | pass | lock | 0.109 | 0 | qafixB, this Mac |
 | specan | 44 | 20 | 3 | pass | pass | pass | pass | FALSE | pass | 0.241 | 58593 | noise no check |
 | uplink | 45 | 10 | 3 | pass | pass | pass | pass | pass | pass | 0.156 | 70 |  |
 | orbcomm | 46 | 1 | 3 | pass | pass | pass | pass | pass | pass | 0.093 | 94 |  |
 | dpmr | 47 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.073 | 26 |  |
-| tetra | 48 | 2 | 3 | pass | pass | pass | pass | pass | FAIL | 0.111 | 131 | tx open |
+| tetra | 48 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.058 | 131 | qafixB, this Mac |
 | mac | 49 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.681 | 6068 |  |
 | astro | 50 | 2.5 | 28 | FAIL | - | - | - | pass | FAIL | 0.047 | 0 | clean open, tx open; (real time) |
 | ale | 51 | 2 | 3 | pass | FAIL | FAIL | pass | pass | pass | 0.078 | 6 | pos unrealistic, neg unrealistic |
 | p25 | 52 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.059 | 86 |  |
 | ble | 53 | 4 | 3 | pass | pass | pass | pass | pass | pass | 0.122 | 857 |  |
 | iono | 54 | 20 | 3.5 | FAIL | - | - | - | pass | FAIL | 0.675 | 0 | clean open, tx open; (real time) |
-| qo100 | 55 | 10 | 7 | FAIL | - | - | - | pass | FAIL | 0.328 | 0 | clean open, tx open; (real time) |
+| qo100 | 55 | 10 | 3 | lock | lock | lock | lock | pass | lock | 0.213 | 0 | qafixB, this Mac |
 | wifi | 56 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.814 | 765 |  |
 | am | 57 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.099 | 299 |  |
 | general | 57 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.099 | 299 |  |
 | rid | 58 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.952 | 2963 |  |
-| nr | 59 | 20 | 3.5 | FAIL | - | - | - | pass | FAIL | 0.799 | 0 | clean open, tx open; (real time) |
+| nr | 59 | 20 | 3.5 | pass | pass | pass | pass | pass | pass | 1.075 | 24 | qafixB, this Mac |
 | time | 60 | 0.256 | 8 | lock | FAIL | FAIL | lock | pass | - | 0.022 | 0 | pos unrealistic, neg unrealistic |
 | meteor | 61 | 1 | 3 | pass | pass | pass | pass | pass | pass | 0.062 | 24 |  |
 | goes | 62 | 2.4 | 3 | pass | pass | pass | pass | pass | pass | 0.317 | 167 |  |
@@ -166,7 +166,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | flarm | 68 | 1 | 3 | pass | pass | pass | pass | pass | pass | 0.061 | 9 |  |
 | hfbeacon | 69 | 10 | 7 | FAIL | - | - | - | pass | FAIL | 0.168 | 0 | clean open, tx open; (real time) |
 | dji | 70 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.780 | 3 |  |
-| nbiot | 71 | 2 | 8 | pass | pass | FAIL | pass | pass | pass | 0.090 | 1 | neg open |
+| nbiot | 71 | 2 | 32 | pass | pass | pass | pass | pass | pass | 0.026 | 2 | qafixB, this Mac |
 | halow | 72 | 6 | 3 | pass | pass | pass | pass | pass | pass | 1.449 | 520 |  |
 | loraraw | 73 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.144 | 6 |  |
 | codar | 74 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.111 | 123 |  |
@@ -180,7 +180,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | elektro | 82 | 2.4 | 3 | pass | pass | pass | pass | pass | pass | 0.200 | 118 |  |
 | lbj | 83 | 0.96 | 3 | pass | pass | pass | pass | pass | pass | 0.061 | 2 |  |
 | vdl4 | 84 | 2 | 3 | pass | pass | pass | FAIL | pass | pass | 0.073 | 3 | snr threshold |
-| uat | 85 | 2 | 32 | FAIL | - | - | - | pass | FAIL | 0.042 | 0 | clean open, tx open; (real time) |
+| uat | 85 | 2 | 3 | pass | pass | pass | weak | pass | pass | 0.049 | 10 | qafixB, this Mac |
 | wisun | 86 | 20 | 3 | pass | pass | pass | pass | pass | pass | 0.907 | 45 |  |
 | eczas | 87 | 0.256 | 32 | pass | FAIL | FAIL | FAIL | pass | pass | 0.005 | 3 | pos unrealistic, neg unrealistic, snr open |
 | wmbus | 88 | 2 | 3 | pass | pass | pass | pass | pass | pass | 0.122 | 6 |  |
@@ -246,7 +246,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | fy3mpt | 238 | 20 | 3 | pass | pass | pass | pass | pass | - | 6.155 | 6840 |  |
 | pactor2 | 239 | 2 | 32 | pass | pass | FAIL | pass | pass | - | 0.196 | 8 | neg unrealistic; (real time) |
 | pactor3 | 240 | 2 | 32 | pass | FAIL | FAIL | pass | pass | - | 0.220 | 8 | pos unrealistic, neg unrealistic; (real time) |
-| pactor4 | 241 | 2 | 32 | FAIL | - | - | - | pass | - | 0.109 | 0 | clean open; (real time) |
+| pactor4 | 241 | 2 | 8 | lock | FAIL | FAIL | lock | pass | - | 0.026 | 0 | pos, neg unrealistic (HF); qafixB, this Mac |
 | selcal | 242 | 2 | 8 | pass | FAIL | FAIL | pass | pass | - | 0.024 | 1 | pos unrealistic, neg unrealistic |
 | sensors | 243 | 0.25 | 3 | pass | pass | pass | pass | pass | - | 0.054 | 2 |  |
 | sferics | 245 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.055 | 8 |  |
@@ -280,11 +280,11 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | opensky | 324 | 0.24 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
 | cb | 342 | 1 | 3 | pass | pass | pass | FAIL | pass | - | 0.302 | 51 | snr threshold |
 | frs | 343 | 2 | 8 | pass | pass | pass | FAIL | pass | - | 0.083 | 3 | snr threshold |
-| pmr446 | 344 | 1 | 3 | pass | FAIL | FAIL | FAIL | pass | - | 0.103 | 2 | pos open, neg open, snr threshold |
+| pmr446 | 344 | 1 | 32 | pass | pass | pass | FAIL | pass | - | 0.062 | 15 | snr threshold; qafixB, this Mac |
 | hamfm | 345 | 2 | 8 | pass | pass | pass | FAIL | pass | - | 0.113 | 4 | snr threshold |
 | hfvoice | 346 | 0.25 | 32 | FAIL | - | - | - | pass | - | 0.086 | 0 | clean open; (real time) |
 | mdc1200 | 347 | 2 | 8 | pass | pass | pass | FAIL | pass | - | 0.125 | 3 | snr threshold |
-| wmic | 348 | 10 | 7 | FAIL | - | - | - | pass | - | 0.392 | 0 | clean open; (real time) |
+| wmic | 348 | 10 | 3 | lock | lock | lock | lock | pass | - | 0.171 | 0 | qafixB, this Mac |
 | elrs | 362 | 8 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
 | flysky | 362 | 8 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
 | frsky | 362 | 8 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
@@ -320,43 +320,43 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | iscat | 465 | 0.6 | 8 | pass | FAIL | FAIL | pass | pass | - | 0.061 | 1 | pos unrealistic, neg unrealistic |
 | pi4 | 466 | 0.6 | 32 | pass | FAIL | FAIL | pass | pass | - | 0.027 | 1 | pos unrealistic, neg unrealistic |
 | throb | 467 | 0.6 | 32 | pass | pass | FAIL | pass | pass | - | 0.043 | 16 | neg unrealistic |
-| umts | 482 | 7.68 | 3 | pass | FAIL | FAIL | pass | pass | - | 0.343 | 2 | pos open, neg open |
+| umts | 482 | 7.68 | 9.1 | pass | pass | pass | pass | pass | - | 0.519 | 2 | qafixB, this Mac |
 | supersid | 502 | 0.25 | 8 | lock | lock | lock | lock | lock | - | 0.033 | 0 |  |
-| riometer | 503 | 2 | 32 | FAIL | - | - | - | pass | - | 0.076 | 0 | clean open; (real time) |
+| riometer | 503 | 2 | 32 | FAIL | - | - | - | pass | - | 0.048 | 0 | clean too short (file cap); qafixB, this Mac |
 | pulsar | 504 | 2.4 | 29.2 | lock | lock | lock | lock | pass | - | 0.057 | 0 |  |
 | erminaz | 512 | 0.25 | 3 | lock | lock | lock | lock | lock | - | 0.050 | 0 |  |
-| xb_npp | 532 | 25 | 2.8 | pass | pass | pass | pass | pass | - | 1.857 | 5053 |  |
-| xb_jpss2 | 533 | 40 | 1.8 | pass | pass | pass | pass | pass | - | 2.903 | 4194 |  |
-| xb_aqua | 534 | 15 | 3 | pass | pass | pass | pass | pass | - | 1.452 | 5335 |  |
-| xb_terra | 535 | 45 | 1.6 | pass | pass | pass | pass | pass | - | 3.669 | 1238 |  |
-| xb_metopd | 536 | 45 | 1.6 | pass | pass | pass | pass | pass | - | 6.912 | 12917 |  |
-| xb_metopsg | 537 | 140 | 0.5 | pass | pass | pass | pass | pass | - | 22.530 | 5133 |  |
-| xb_landsatx | 538 | 300 | 0.2 | pass | pass | pass | pass | pass | - | 39.719 | 3451 |  |
-| xb_landsats | 539 | 6 | 3 | pass | pass | pass | pass | pass | - | 0.586 | 262 |  |
-| xb_probas | 540 | 4 | 3 | pass | pass | pass | pass | pass | - | 0.244 | 231 |  |
-| xb_probav | 541 | 45 | 1.6 | pass | pass | pass | pass | pass | - | 3.764 | 5240 |  |
-| xb_gcomw | 542 | 20 | 3 | pass | pass | pass | pass | pass | - | 1.592 | 2860 |  |
-| xb_gcomc | 543 | 90 | 0.8 | pass | pass | pass | pass | pass | - | 10.485 | 10397 |  |
-| xb_stereo | 544 | 3 | 3 | pass | pass | pass | pass | pass | - | 0.266 | 315 |  |
-| xb_oceansat2 | 545 | 35 | 2 | pass | pass | pass | pass | FALSE | - | 2.831 | 53 | noise open |
-| xb_oceansat3 | 546 | 3 | 3 | pass | pass | pass | pass | pass | - | 0.321 | 255 |  |
-| xb_saral | 547 | 3 | 3 | pass | pass | pass | pass | pass | - | 0.321 | 113 |  |
-| xb_oceansat3x | 548 | 120 | 0.6 | pass | pass | pass | pass | pass | - | 8.801 | 5290 |  |
-| xb_saralx | 549 | 25 | 2.8 | pass | pass | pass | pass | pass | - | 1.943 | 4348 |  |
-| xb_kanopus | 550 | 90 | 0.8 | pass | pass | pass | pass | pass | - | 10.460 | 5866 |  |
-| xb_dmsp | 551 | 2 | 3 | pass | pass | pass | pass | FALSE | - | 0.198 | 11855 | noise no check |
+| xb_npp | 532 | 25 | 2.8 | pass | pass | pass | pass | pass | - | 1.749 | 5025 | qafixB, this Mac |
+| xb_jpss2 | 533 | 40 | 1.8 | pass | pass | pass | pass | pass | - | 2.738 | 4174 | qafixB, this Mac |
+| xb_aqua | 534 | 15 | 3 | pass | pass | pass | pass | pass | - | 0.777 | 5207 | qafixB, this Mac |
+| xb_terra | 535 | 45 | 1.6 | pass | pass | pass | pass | pass | - | 1.753 | 1189 | qafixB, this Mac |
+| xb_metopd | 536 | 45 | 1.6 | pass | pass | pass | pass | pass | - | 3.893 | 13228 | qafixB, this Mac |
+| xb_metopsg | 537 | 140 | 0.5 | pass | pass | pass | pass | pass | - | 11.052 | 5155 | qafixB, this Mac |
+| xb_landsatx | 538 | 300 | 0.2 | pass | pass | pass | pass | pass | - | 18.465 | 3260 | qafixB, this Mac |
+| xb_landsats | 539 | 6 | 3 | pass | pass | pass | pass | pass | - | 0.226 | 280 | qafixB, this Mac |
+| xb_probas | 540 | 4 | 3 | pass | pass | pass | pass | pass | - | 0.218 | 271 | qafixB, this Mac |
+| xb_probav | 541 | 45 | 1.6 | pass | pass | pass | pass | pass | - | 3.409 | 5235 | qafixB, this Mac |
+| xb_gcomw | 542 | 20 | 3 | pass | pass | pass | pass | pass | - | 0.999 | 2747 | qafixB, this Mac |
+| xb_gcomc | 543 | 90 | 0.8 | pass | pass | pass | pass | pass | - | 5.516 | 10377 | qafixB, this Mac |
+| xb_stereo | 544 | 3 | 3 | pass | pass | pass | pass | pass | - | 0.156 | 329 | qafixB, this Mac |
+| xb_oceansat2 | 545 | 35 | 2 | pass | pass | pass | pass | pass | - | 2.144 | 54 | qafixB, this Mac |
+| xb_oceansat3 | 546 | 3 | 3 | pass | pass | pass | pass | pass | - | 0.148 | 255 | qafixB, this Mac |
+| xb_saral | 547 | 3 | 3 | pass | pass | pass | pass | pass | - | 0.127 | 124 | qafixB, this Mac |
+| xb_oceansat3x | 548 | 120 | 0.6 | pass | pass | pass | pass | pass | - | 8.982 | 5306 | qafixB, this Mac |
+| xb_saralx | 549 | 25 | 2.8 | pass | pass | pass | pass | pass | - | 1.805 | 4340 | qafixB, this Mac |
+| xb_kanopus | 550 | 90 | 0.8 | pass | pass | pass | pass | pass | - | 5.668 | 5787 | qafixB, this Mac |
+| xb_dmsp | 551 | 2 | 3 | pass | pass | pass | pass | pass | - | 0.111 | 13644 | qafixB, this Mac |
 | zombie | 552 | 1 | 3 | lock | lock | lock | lock | pass | - | 0.078 | 0 |  |
 | whatsat | 553 | 1 | 3 | lock | lock | lock | lock | pass | - | 0.046 | 0 |  |
 | uhfsatcom | 554 | 10 | 7 | pass | pass | pass | pass | pass | - | 0.080 | 15 |  |
 | gmr1 | 555 | 10 | 7 | pass | pass | pass | pass | pass | - | 0.096 | 10 |  |
 | starlink | 556 | 20 | 3 | pass | pass | pass | pass | pass | - | 0.216 | 1 |  |
-| oneweb | 557 | 20 | 3 | pass | FAIL | pass | pass | pass | - | 0.287 | 1 | pos open |
+| oneweb | 557 | 20 | 3.5 | pass | pass | pass | pass | pass | - | 0.200 | 1 | qafixB, this Mac |
 | tdrs | 558 | 2 | 3 | lock | lock | lock | lock | pass | - | 0.173 | 0 |  |
 | css | 559 | 1 | 3 | lock | lock | lock | lock | pass | - | 0.101 | 0 |  |
 | tsikada | 560 | 1 | 3 | lock | lock | lock | lock | pass | - | 0.101 | 0 |  |
 | gonets | 561 | 4 | 3 | pass | pass | pass | pass | pass | - | 0.061 | 66 |  |
 | tiantong | 562 | 10 | 7 | pass | pass | pass | pass | pass | - | 0.077 | 8 |  |
-| navic | 563 | 4.096 | 17.1 | FAIL | - | - | - | pass | - | 0.606 | 0 | clean open; (real time) |
+| navic | 563 | 4.096 | 17.1 | FAIL | - | - | - | pass | - | 0.420 | 0 | clean too short (file cap); qafixB, this Mac |
 | issdown | 564 | 1 | 3 | lock | lock | lock | lock | pass | - | 0.095 | 0 |  |
 | wfbng | 602 | 20 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
 | xlink | 602 | 20 | 3 | - | - | - | - | - | - | 0.000 | 0 | no test signal |
@@ -378,6 +378,55 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
   as a live radio sees it, so the narrow receivers measured CPU on a signal they never found. The sweep had the same bug and the same fix.
 - Build: `DECT2_SANITIZE_RECOVER=ON` (with `DECT2_SANITIZE`) reports every undefined-behaviour site of a run instead of stopping at the first.
 - `quick.yml`: optional `cmake_args`, `env`, `timeout` and `minutes` inputs, for sanitizer runs and long sweeps on one runner.
+
+### Second half of the open list (feat39-qafixB)
+
+Each was reproduced on its own (the sweep with `--mode`, then a short program on the receiver alone), fixed where the decoder,
+generator or engine was wrong, and given a unit test with the impairment. Simulated signals only: no recording was used.
+
+- **UMTS +-50 ppm** (`core/src/umts/umts_cell.cpp`): any sample clock error broke the cell search, not only 50 ppm: at 5 ppm no cell
+  was found. The search takes one sample a chip over 80 ms, and a clock off by a few ppm moves the chips through the samples (1.5 chips
+  at 5 ppm), so the frame and broadcast-channel correlations fell apart. The search now measures the clock on the strongest P-SCH (its
+  peak in every frame, a line through them), resamples the block to the cell's chip clock with its chips on the even samples, and
+  searches again; the better result is kept. -50 .. +50 ppm: both test cells and their BCH blocks (test_umts_cell).
+- **NB-IoT -50 ppm** (`core/src/nbiot/nbiot_search.cpp`): the first NPSS timing window searched +-20 samples around the coarse timing,
+  a mean over the block. At 50 ppm the first frames sit up to 100 samples from it, so the window held a side peak 60 samples off and
+  NSSS and MIB failed (only one sign of the clock error, by where the side peak fell). The first window now searches +-128.
+  Regression cases at -50, +50 and -40 ppm (test_nbiot_rx).
+- **OneWeb +2 kHz / +50 ppm** (`core/src/satmisc/satdetect_live.cpp`): the repetition detector multiplies the signal by itself one
+  period (1 ms) earlier. The sequence is white at the capture's rate, and 50 ppm moves a 20000-sample period by one sample, so the
+  product at the nominal lag lost it. It now folds three lags (the period and one sample either side) and takes the best.
+- **UAT clean and transmitter** (`core/src/uat/uat_gen.cpp`, `uat_demod.cpp`): nothing decoded, and nothing could have. The test
+  signal (also the transmitter's) had 6 kHz of deviation instead of DO-282B's +-312.5 kHz and sent its bits at two samples a bit at any
+  rate, 1 Mbit/s at 2 Msps instead of 1.041667. The receiver also took two samples a bit at the input rate, so a real 2 Msps recording
+  slipped 17 bits over a frame, and dump978's 8-bit phase table quantised a weak recording's phase to about 10 levels a rail. Now: the
+  generator is CPFSK at 1.041667 Mbit/s, h = 0.6; the demodulator resamples any rate to 2.083333 Msps (carried over the blocks) and
+  takes the phase from the float sample. A new round-trip test (test_uat_gen): 2, 2.083, 2.4 and 4 Msps, +-2 kHz, +-50 ppm, 14 dB
+  noise, noise alone. In the sweep UAT passes all conditions (snr: weak, the -18 dB aircraft is under the noise).
+- **5G NR clean and transmitter** (`core/src/engine/engine_start.cpp`): on a file the NR receiver got no centre frequency, so it only
+  searched an SSB on the centre; the test signal's SSB sits on a sync raster point off it. It now gets the recording's centre (the
+  frequency entered for it) when that is in 400 MHz - 7.2 GHz, as Remote ID does. Passes all conditions (24 PBCH blocks in 3.5 s).
+- **Channelised voice in headless runs** (`engine_start.cpp`, `engine.cpp`, `engine_place.cpp`): only the app's screen set the
+  receiver's service (CB, FRS, PMR446, ham, HF voice, MDC-1200, wireless mics), so the command line, the web interface and the sweep
+  ran CB for all seven. The engine now sets the service of the mode at start and on a mode change. `wmic` finds its three microphones
+  (it reports them, so it shows as `lock`); `hfvoice` (first half's list) also passes now.
+- **PMR446 +-2 kHz**: the decoder was right (a direct test: all five calls at +-2 kHz with +-50 ppm). The sweep judged it on 3 s, where
+  the second call ends after the file, because a clean run that locked stopped the longer tries even with fewer than 8 blocks. The
+  harness now goes on to the longer run in that case (`tests/qa/test_qa_sweep.cpp`). PMR446 then passes clean, pos and neg (23 calls in
+  32 s).
+- **Oceansat-2 on noise** (`core/src/wxsat/wxsat_proto.cpp`, `xband_rx.cpp`): the frames have no check of their own, and a 34-bit sync
+  word with 2 errors allowed turns up in noise about once a second on each rail order; each such hit gave a frame. The deframer can now
+  hold a frame until the sync word after it is found (`Deframer::setConfirm`), and Oceansat-2 uses it. Noise: 0 frames on all 20
+  X-band links (new noise case in test_xband_rx); Oceansat-2's own test still gives its lines.
+- **QO-100 and the spectrum explorer** (`core/src/engine/engine_telemetry.cpp`): neither set the engine's valid flag, so the sweep saw
+  nothing. QO-100 is valid when its beacons are locked and the LNB error is measured; the explorer when its averaged spectrum shows a
+  signal 10 dB over the floor (noise alone stays a few dB over it). Both show as `lock` on every condition and pass noise.
+- **PACTOR-IV** (`core/src/pactorhf/pactorhf_rx.cpp`): its framing is proprietary, so the monitor identifies it (1800 Bd, the
+  constellation) and has no frame to find; it never set valid. Identifying it now counts as valid (`lock`). +-2 kHz is the HF window
+  condition, as for the other HF modes.
+- **TETRA transmitter**: passes in every local run of this branch (131 blocks in 3 s, all six conditions) with no change here. Not
+  reproduced; dropped from the list.
+- **NavIC** and **riometer**: not decoder faults, see below.
 
 ## Unrealistic conditions and generators (not decoder bugs)
 
@@ -402,6 +451,12 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
   cannot keep up with. In the app a file plays at its own speed, so the sweep's last try plays it at the radio's speed. FT8 decodes there:
   16 messages in 32 s.
 
+- **NavIC**: a subframe is 12 s, and the first one decodes after about 24 s. The 280 MB file cap holds 17 s at 4.096 Msps. With
+  `--max-samples 150e6` it passes all six conditions (first block at 24 s).
+- **Riometer**: it reports one power value a minute of signal. The file cap holds 35 s at its 2 Msps. It accepts 48 kS/s, where a
+  minute fits under the cap (not run here).
+- **PACTOR-IV +-2 kHz**: as the other HF modes (above).
+
 ## Harness notes
 
 - The first CI run counted nothing for 118 modes. There were two causes. The offset-tuned modes were shifted the wrong way (fixed). The
@@ -409,6 +464,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
   results.
 - The X-band modes (90-300 Msps) ran out of the child's CPU limit on the noise file (`CRASH(152)`, SIGXCPU). On noise their receiver
   searches far longer per second of signal than it decodes on the clean file. This is listed under CPU.
+- A clean run that locked with fewer than 8 blocks now goes on to the longer run, as one with blocks does (PMR446).
 
 ## CPU: the top 10 and what was tried
 
@@ -432,7 +488,7 @@ grows with the sample rate: about 0.1-0.15 CPU s per Msps for the X-band receive
 profile of `xb_gcomc` (90 Msps) put the time in the receiver's per-sample loop (`XbandReceiver::Impl::feed`) and the CCSDS deframer.
 Two changes that keep the output the same were tried: the SNR worked out per report instead of per symbol, and a bulk bit path through
 the deframer. Neither made a measurable difference (5.55 against 5.51-5.60 CPU s/s, the same blocks decoded), so both were left out.
-No optimisation shipped in this branch.
+No optimisation shipped in feat39-qa; feat39-qafixB did the X-band receivers (below).
 
 Found on the way: on the **noise** file the X-band receivers (`xb_jpss2`, `xb_probav`, `xb_saralx` and others) went over the child's CPU
 limit, 300 CPU s for under a second of signal (`CRASH(152)`, SIGXCPU). Their search with no signal costs far more than decoding a locked
@@ -441,50 +497,77 @@ signal. That is the first thing to optimise in this family.
 Before the offset fix, the first CI run showed the cost of the modes that never found their signal. For example COQUELET used 4.2 CPU s/s
 while it searched, against 0.29 when it decodes. The searching state of several narrow modes is much dearer than the decoding one.
 
+### X-band receivers on noise, and the clean cost (feat39-qafixB)
+
+What made noise dear was a bug, not the search itself: before a lock the receiver keeps the last three frames of symbols, and it cut
+the oldest symbol off the front of that buffer for every new symbol, moving the whole buffer (tens of thousands of floats) each
+symbol. On a clean signal it locks within a frame, so only noise showed it. Changes (`core/src/xband/xband_rx.cpp`):
+
+- The buffer is cut a frame at a time.
+- **The pre-check before the full chain**: the search block (131072 samples) is the power-law carrier-line search the receiver already
+  ran. When it finds no line (peak to mean under 16) the receiver looks at one block in eight and skips the other seven: no
+  demodulator, no symbols, no sync search, no Viterbi. Measured on all 20 links' test signals with a 20 kHz offset: a signal's line is
+  40 or more at 3 dB Es/N0 (120 - 13000 on the links that still decode there); white noise reached 11.7 at most. A signal is found
+  within eight blocks (0.07 s at 15 Msps). The heavy FEC (Viterbi) already ran only after a sync hit, and the CCSDS RS only on frames.
+- The sample rate already sits at 1.3 - 1.6 samples a symbol on these links (`sampleRate` / symbol rate), so there is nothing to decimate
+  first; the decimating FIR only runs where the ratio is 2 or more.
+- Clean-path cost: the carrier NCO took `std::cos` and `std::sin` in double every sample: now a table (`FastSinCos`, error 3e-7); the
+  timing-loop gains were worked out every symbol: now once; the SNR's `log10` every symbol: now when it is reported; the deframer's
+  per-bit call is inline inside a frame; the RRC and decimating FIRs go through `firDot` (sixteen accumulators the compiler vectorises;
+  with 13 taps this one made no measurable difference).
+- A report is published at least every second of signal, not only every 0.25 s of wall time: DMSP got cheap enough that a 3 s file
+  went by in 0.24 s and its first, empty report stayed to the end (seen as an `xb_dmsp/neg` failure in one run).
+
+Receiver CPU seconds per second of signal on this Mac (the receiver alone, `XbandReceiver::feed` timed with the thread's CPU clock; the
+same test signals, before = the `feat39-qa` receiver built into the same program). Every clean run decoded the same frames before and
+after.
+
+| link | Msps | noise before | noise after | clean (12 dB) before | clean after | frames (same both) |
+|---|---|---|---|---|---|---|
+| xb_landsatx | 300 | 328 - 332 | 1.08 - 1.16 | 16.80 | 14.47 | 597 |
+| xb_metopsg | 140 | 334 | 0.41 | 11.17 | 9.14 | 334 |
+| xb_oceansat3x | 120 | 351 | 0.44 | 9.97 | 7.50 | 766 |
+| xb_gcomc | 90 | 110 | 0.33 | 6.27 | 4.99 | 1356 |
+| xb_kanopus | 90 | 8.7 | 0.37 | 6.24 | 5.16 | 765 |
+| xb_metopd | 45 | 44 | 0.18 | 4.13 | 3.30 | 894 |
+| xb_probav | 45 | 112 | 0.19 | | | |
+| xb_jpss2 | 40 | 88 | 0.18 | | | |
+| xb_saralx | 25 | 27 | 0.09 | | | |
+
+The noise figures before are from 5 - 10 ms of noise: the buffer fills during that time, so the steady-state cost was higher still (the
+sweep's child ran out of its 300 CPU s limit). Noise is now 80 - 1000 times cheaper, and 10 - 30 times cheaper than decoding.
+The clean runs are 13 - 25 % cheaper. The sweep (engine, this Mac) after the change: all 20 X-band links pass all five conditions,
+`xb_oceansat2/noise` and `xb_dmsp/noise` included (DMSP's frames have a 13-bit sync word and no check: it passes noise because the
+pre-check keeps the demodulator off; `xb_dmsp/noise` is out of `qa_known.inc`); clean CPU landsatx 18.5, metopsg 11.1, oceansat3x 9.0, kanopus 5.7, gcomc 5.5,
+metopd 3.9 CPU s/s (the doc's table above is from a CI runner: compare within a run). test_xband_rx: every link's own tests unchanged,
+plus noise alone on all 20 links (0 frames, 86 - 88 % of the input skipped). Simulated signals only.
+
 ## Still failing (open)
 
 These failures are not explained by the condition. They are in `qa_known.inc` as `open`, so the test passes today, but each needs a look at its mode.
+The second half of the list (navic .. xb_oceansat2, 20 entries) is done: see "Second half of the open list" and the CPU section. The
+entries left are the first half's (feat39-qafixA).
 
 - `hdr/pos`: fails with the offset (to investigate)
 - `hamdrm/tx`: its transmitter's signal does not decode (to investigate)
 - `js8/snr`: fails at 12 dB (to investigate)
 - `js8/tx`: its transmitter's signal does not decode (to investigate)
-- `specx/clean`: does not decode its own test signal through the engine (to investigate)
-- `specx/tx`: its transmitter's signal does not decode (to investigate)
-- `tetra/tx`: its transmitter's signal does not decode (to investigate)
 - `astro/clean`: does not decode its own test signal through the engine (to investigate)
 - `astro/tx`: its transmitter's signal does not decode (to investigate)
 - `iono/clean`: does not decode its own test signal through the engine (to investigate)
 - `iono/tx`: its transmitter's signal does not decode (to investigate)
-- `qo100/clean`: does not decode its own test signal through the engine (to investigate)
-- `qo100/tx`: its transmitter's signal does not decode (to investigate)
-- `nr/clean`: does not decode its own test signal through the engine (to investigate)
-- `nr/tx`: its transmitter's signal does not decode (to investigate)
 - `hfbeacon/clean`: does not decode its own test signal through the engine (to investigate)
 - `hfbeacon/tx`: its transmitter's signal does not decode (to investigate)
-- `nbiot/neg`: fails with the offset (to investigate)
 - `dect/clean`: does not decode its own test signal through the engine (to investigate)
-- `uat/clean`: does not decode its own test signal through the engine (to investigate)
-- `uat/tx`: its transmitter's signal does not decode (to investigate)
 - `eczas/snr`: fails at 12 dB (to investigate)
 - `kait/clean`: does not decode its own test signal through the engine (to investigate)
 - `esubghz/tx`: its transmitter's signal does not decode (to investigate)
 - `inmsat/pos`: fails with the offset (to investigate)
 - `inmsat/snr`: fails at 12 dB (to investigate)
 - `atis/snr`: fails at 12 dB (to investigate)
-- `pactor4/clean`: does not decode its own test signal through the engine (to investigate)
 - `arktikaggak/clean`: does not decode its own test signal through the engine (to investigate)
-- `pmr446/pos`: fails with the offset (to investigate)
-- `pmr446/neg`: fails with the offset (to investigate)
 - `hfvoice/clean`: does not decode its own test signal through the engine (to investigate)
-- `wmic/clean`: does not decode its own test signal through the engine (to investigate)
 - `gtor/snr`: fails at 12 dB (to investigate)
-- `umts/pos`: fails with the offset (to investigate)
-- `umts/neg`: fails with the offset (to investigate)
-- `riometer/clean`: does not decode its own test signal through the engine (to investigate)
-- `xb_oceansat2/noise`: decodes on noise (false decode, to investigate)
-- `oneweb/pos`: fails with the offset (to investigate)
-- `navic/clean`: does not decode its own test signal through the engine (to investigate)
 
 ## Not done
 
@@ -494,5 +577,5 @@ These failures are not explained by the condition. They are in `qa_known.inc` as
   error. It reported only three more memcpy-from-null sites (DAB generator, DMR bridge, DRM bridge: all fixed) and an ATSC spectrum check
   (ATSC belongs to another worker). With no overflow or use-after-free found, the corruption is most likely a data race between those
   six Engines. The next step is a ThreadSanitizer run of `iq_modes` (`DECT2_SANITIZE_THREAD=ON`).
-- The 40 `open` failures above.
-- The CPU optimisations (see above).
+- The first half's `open` failures above (feat39-qafixA).
+- CPU: the other wide downlinks of the top ten (ISDB-S, FY-3 MPT, Elektro / Arktika RDAS, GEONETCAST) were not touched here.

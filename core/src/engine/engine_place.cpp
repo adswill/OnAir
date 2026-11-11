@@ -296,7 +296,7 @@ void Engine::configureReceiver(int a, double r) {
     case 322: rxTetraDmo_.configure(r); break;
     case 323: rxOpenSky_.configure(r); break;
     case 156: rxMarineVhf_.configure(r); break;
-    case 341: case 342: case 343: case 344: case 345: case 346: case 347: rxChv_.configure(r); rxChv_.setService((chv::Service)(a - 341)); break;   // the service of the mode (only the app's screen set it: headless and the sweep ran CB)
+    case 341: case 342: case 343: case 344: case 345: case 346: case 347: rxChv_.configure(r); rxChv_.setService((chv::Service)(a - 341)); break;   // the service of the mode (see engine_start.cpp)
     case 181: rxP25p2_.configure(r); break;
     default: break;
     }

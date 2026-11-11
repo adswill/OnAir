@@ -691,10 +691,13 @@ struct XbandReceiver::Impl {
         maybePublish(0);
     }
 
+    // every 0.25 s, and at least every second of signal: a recording read faster than that (DMSP: 3 s in 0.24 s once the receiver got
+    // cheaper) kept its first report to the end otherwise
+    int64_t lastPubN = 0;
     void maybePublish(size_t) {
         const double now = nowSec();
-        if (now - lastPub < 0.25) return;
-        lastPub = now;
+        if (now - lastPub < 0.25 && !(rate > 0 && (double)(nIn - lastPubN) >= rate)) return;
+        lastPub = now; lastPubN = nIn;
         tel.packets = inst.packets();
         tel.lines = inst.lines();
         tel.satName = inst.satName();
