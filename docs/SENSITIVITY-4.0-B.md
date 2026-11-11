@@ -178,6 +178,11 @@ threshold of this mix: its Eb/N0 equals the SNR, which is about the textbook fig
 The RS41 and DFM would decode at lower SNR alone; not measured separately. Real sondes' deviations differ from the generator's by up to a
 few tenths of a kHz; with +-25 % the loss of tone detection is about 1 dB (not measured here).
 
+Together with pass A's narrow RS41 filter (feat40-sensA, merged into this branch): the 3.9 path in test_sens40b (`sonde-off`) then
+already reads 90 % at 9 dB (8 dB: 1 of 20, 20 ppm carrier 8 dB: 0 of 20), and the tone symbols on top (`sonde`) give 8 dB: 13 of 20
+(20 ppm carrier: 9 of 20), 7 dB: 0 of 20: about 0.7 dB at the 50 % point and none at the 90 % point of the mix, whose limit is the M10. The two
+changes overlap for the RS41 (a narrower filter and a matched detector both take noise away); both are kept.
+
 Tests: sens40b (sonde, noise), sonde_* (26 tests incl. rs41_rf, rs92_rf, rf_dfm, rf_m10, rf_m20, all_rf): pass.
 
 ## Not done
