@@ -600,6 +600,10 @@ struct AmRx::Impl {
     unsigned history = 0;
     bool wideCp = false;             // the cyclic prefix search uses the MA3 filter
     int cpBlocks = 0;                // blocks searched with this filter
+    float angF[2] = {0, 0};          // the prefix frequency estimate of each filter (hybrid, all-digital)
+    int validAge = 99;               // blocks since the last one with a valid block number
+    std::vector<cf32> pnCorr, pnLp;  // the carrier's phase wander in this block, sample by sample (see carrierWander)
+    std::vector<float> pnPh;
     double drCum = 0, drE0 = 0, ppmOut = 0;    // sample clock measurement (see syncProcess)
     int drBlocks = 0;
     bool drHave = false, ppmNew = false;
@@ -641,7 +645,7 @@ struct AmRx::Impl {
     }
     void reset() {
         idx = 0; prevAngle = 0; phase = cd(1, 0); keepExtra = 0; cfo = 0; state = 0; slope = 0;
-        sidx = 0; psmi = 1; bc = 0; rdbi = 0; cfoWait = 0; history = 0; samperr = 0; wideCp = false; cpBlocks = 0;
+        sidx = 0; psmi = 1; bc = 0; rdbi = 0; cfoWait = 0; history = 0; samperr = 0; wideCp = false; cpBlocks = 0; angF[0] = angF[1] = 0; validAge = 99;
         drCum = 0; drE0 = 0; drBlocks = 0; drHave = false; ppmNew = false;
         mlHist.clear(); muHist.clear(); emlHist.clear(); emuHist.clear(); frames = 0; ber = 0; mer = 0; merAcc = 0; merN = 0; badRun = 0; lastBc = -1;
         std::fill(ring.begin(), ring.end(), cf32(0, 0));
@@ -678,7 +682,14 @@ struct AmRx::Impl {
         } else {
             // hybrid (MA1) or all-digital (MA3): the two filters take turns, 10 blocks (1.9 s) each, until block sync (which takes about 5 blocks);
             // the hybrid one first. A station lost and searched for again keeps the filter it was found with.
-            if (++cpBlocks > 10) { cpBlocks = 0; wideCp = !wideCp; }
+            // 3.9: not while the block numbers are being read (one of the last three blocks had a valid one; up to 30 blocks), and each filter
+            // keeps its own frequency: the MA3 filter's estimate of a hybrid station runs off by a subcarrier within 10 blocks, and a station whose
+            // sync was cut off by the switch came back with that error (no P1 frame in 20 s in about one trial in ten at 34 dB, SENSITIVITY-3.9-E.md)
+            if (++cpBlocks > 10 && (validAge >= 3 || cpBlocks > 30)) {
+                angF[wideCp ? 1 : 0] = prevAngle;
+                cpBlocks = 0; wideCp = !wideCp;
+                prevAngle = angF[wideCp ? 1 : 0];
+            }
             cf32 best;
             se = cps.run(in.data(), kFftAm, kCpAm, kBlk, wideCp ? tapsMa3() : kTapsAm, shape, best);
             const float diff = std::arg(best * std::polar(1.f, -prevAngle));
@@ -690,6 +701,7 @@ struct AmRx::Impl {
         ang -= 2 * kPi * (float)cfo;
         phase *= std::polar(1.0, -(double)(fftcp / 2 - se) * ang / kFftAm);
         cd inc = std::polar(1.0, (double)ang / kFftAm);
+        carrierWander(se, phase, inc);
         // the analog carrier gives the phase and the fine frequency (nrsc5 acquire.c, AM)
         {
             float y = 0, sy = 0, sxy = 0, sx2 = 0;
@@ -714,6 +726,9 @@ struct AmRx::Impl {
             }
             slope = sxy / sx2;
             inc *= std::polar(1.0, -(double)slope);
+            // 3.9: in sync the carrier's frequency from the block corrects the next blocks (the prefix estimate was frozen at sync, and the
+            // block's own fit had to take the whole error every block)
+            if (state == 2 && std::fabs(slope) < 0.02f) prevAngle -= 0.3f * slope * (float)kFftAm;
             // nrsc5 subtracts another 0.06 rad here; OnAir puts the carrier at exactly 0: then the analog audio cancels completely when the
             // complementary lower subcarriers are added to the upper ones, and a digital part turned against the carrier only costs cos()
             // of that angle there (the training symbols take care of the phase of every column)
@@ -730,9 +745,37 @@ struct AmRx::Impl {
         idx = keep;
     }
 
+    // 3.9 (docs/SENSITIVITY-3.9-E.md): the oscillator's phase noise. The carrier is 30 dB over the digital subcarriers, so a few hertz of
+    // linewidth spread it over the reference and the inner subcarriers (ICI) and turn the block by radians: no block number could be read
+    // with 3 Hz. The carrier's phase, sample by sample (a zero-phase low-pass of 40 Hz over the block, mixed as the first pass mixes it),
+    // less its straight line (the frequency and the phase, which the block fit below keeps measuring), is taken out of every sample.
+    void carrierWander(int se, const cd& ph0, const cd& inc) {
+        const size_t L = (size_t)kBlk * kSymAm;
+        pnLp.resize(L); pnCorr.resize(L);
+        cd ph = ph0;
+        for (size_t n = 0; n < L; n++) { pnLp[n] = cf32(ph) * in[n + (size_t)se]; ph *= inc; if ((n & 255) == 255) ph /= std::abs(ph); }
+        const float a = (float)(1 - std::exp(-2 * kPi * 40.0 / kRateAm));
+        cf32 z = pnLp[0];
+        for (size_t n = 0; n < L; n++) { z += a * (pnLp[n] - z); pnLp[n] = z; }
+        for (size_t n = L; n-- > 0;) { z += a * (pnLp[n] - z); pnLp[n] = z; }
+        // unwrapped phase and its least-squares line
+        double y = std::arg(pnLp[0]), sx = 0, sy = 0, sxx = 0, sxy = 0;
+        std::vector<float>& yv = pnPh; yv.resize(L);
+        for (size_t n = 0; n < L; n++) {
+            if (n) y += std::arg(pnLp[n] * std::conj(pnLp[n - 1]));
+            yv[n] = (float)y;
+            const double x = (double)n;
+            sx += x; sy += y; sxx += x * x; sxy += x * y;
+        }
+        const double nn = (double)L, b = (nn * sxy - sx * sy) / (nn * sxx - sx * sx), a0 = (sy - b * sx) / nn;
+        for (size_t n = 0; n < L; n++) pnCorr[n] = std::polar(1.f, -(float)(yv[n] - (a0 + b * (double)n)));
+    }
+
     void symbolFft(int i, int se, cd& ph, const cd& inc, int off) {
+        const cf32* pc = pnCorr.size() == (size_t)kBlk * kSymAm ? &pnCorr[(size_t)i * kSymAm] : nullptr;
         for (int j = 0; j < kSymAm; j++) {
-            const cf32 s = cf32(ph) * in[(size_t)(i * kSymAm + j + se)];
+            cf32 s = cf32(ph) * in[(size_t)(i * kSymAm + j + se)];
+            if (pc) s *= pc[j];
             const size_t d = (size_t)((j + off) % kFftAm);
             if (j < kCpAm) fftBuf[d] = shape[(size_t)j] * s;
             else if (j < kFftAm) fftBuf[d] = s;
@@ -775,6 +818,7 @@ struct AmRx::Impl {
         } else if (cfoWait > 0) cfoWait--;
         if (state == 1) {
             const int b = findBlock(kCenterAm + kRefAm);
+            validAge = b < 0 ? validAge + 1 : 0;
             if (b < 0) history = 0;
             else history = (history << 4) | (unsigned)b;
             if ((history & 0xFFFF) == 0x5670) {

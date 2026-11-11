@@ -40,7 +40,9 @@ static void runCase(int k, CaseOut& out) {
         CHECK(t.blocksBad <= t.blocksOk / 20 + 1, "%llu bad subframes against %llu good", (unsigned long long)t.blocksBad, (unsigned long long)t.blocksOk);
         if (k == 0) { CHECK(t.fix.valid && t.fix.nSats >= 4 && hz < 40.0, "a 40 dB-Hz sky must give a fix"); CHECK(tracked >= 5, "only %d satellites tracked at 40 dB-Hz", tracked); }
         if (k == 1) { CHECK(tracked >= 3, "only %d satellites tracked at 36 dB-Hz", tracked); CHECK(decoded >= 3, "only %d decoded", decoded); }
-        // nothing is claimed for the weakest sky: it is there to show the limit; the receiver must not invent satellites
+        // the weakest sky shows the limit; 3.9 (docs/SENSITIVITY-3.9-E.md): the long integration of the first window comes second in the cold
+        // search, so its strongest satellites (about 30 to 32 dB-Hz) are found within the 34 s (3.8: none). The receiver must not invent satellites.
+        if (k == 2) CHECK(tracked >= 2, "only %d satellites tracked at 32 dB-Hz", tracked);
         for (auto& c : t.channels) if (c.state >= GnssChLocked) CHECK(sim.sats()[(size_t)c.prn - 1].transmitted, "PRN %d tracked but not transmitted", c.prn);
     }
 }
