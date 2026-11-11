@@ -399,6 +399,8 @@
         <item>AFSK (TNC) tone tuner</item>
         <item>OOK / ASK pulse analyser</item>
         <item>Transmitter frequency stability meter</item>
+        <item>Crest factor (PAPR / CCDF) meter</item>
+        <item>Occupied bandwidth meter</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -779,6 +781,8 @@
         <item>AFSK tone tuner for 1200 baud packet (Bell 202, APRS, AX.25) on FM: for each burst the mark and space tones (error against 1200 and 2200 Hz), the twist (space over mark, dB), the peak deviation (3 kHz is the usual aim on 25 kHz), the length and the gap before it, for setting a TNC or a radio\'s data input level. Does not decode the packets. Simulated signals only</item>
         <item>OOK / ASK pulse analyser (key fobs, remote switches, sensors, 300 - 920 MHz; like the analyse mode of rtl_433): from the envelope in the 90 kHz around the tuned frequency, the pulse and gap timing, the modulation named (PWM, PPM, Manchester, PCM / NRZ-like), the bits in binary and hex (short = 0, long = 1 is a convention; the real protocol may invert it), the timings in microseconds and the repeats of a frame in a train. Names the pattern, not the product. Simulated signals only</item>
         <item>Transmitter frequency stability meter for one channel: for every transmission of a second or more the frequency at the start and at the end, the key-up step, the settling time, the drift in Hz per second and the mean offset in Hz and ppm, to see a transmitter warm up and drift. Best with a carrier, a tone or a quiet transmission (speech skews single readings). Simulated signals only</item>
+        <item>Crest factor meter: the distribution of the instantaneous power of the captured signal against its mean: crest factor, and the levels exceeded 10, 1, 0.1 and 0.01 % of the time (CCDF), with Gaussian theory beside them (3.6, 6.6, 8.4, 9.6 dB) to tell OFDM or multi-carrier (Gaussian), single-carrier PSK, constant-envelope FM or FSK, clipped or impulsive signals. Includes the radio\'s own noise and limits. Simulated signals only</item>
+        <item>Occupied bandwidth meter (ITU-R SM.328): for the strongest signal of a wide capture, the 99 % occupied bandwidth, the bandwidths at 3, 6, 20 and 26 dB below the peak, the centre against the tuned frequency, the signal to noise ratio and the adjacent and alternate power (dB under the signal, bands as wide as the signal at 1.25 and 2.5 bandwidths). What arrives at this radio, noise and neighbours included. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1136,6 +1140,8 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
@@ -1539,5 +1545,7 @@
         <item>afsk bell 202 1200 baud aprs tnc ax.25 twist deviation tone level packet transmitter setup mark space</item>
         <item>ook ask pulse analyser key fob remote pwm ppm manchester pt2262 ev1527 timing bits 433 315 868 rtl_433</item>
         <item>transmitter frequency stability drift warm up settling key-up step ppm handheld repeater offset</item>
+        <item>papr crest factor ccdf peak to average power ofdm headroom amplifier backoff clipping gaussian</item>
+        <item>occupied bandwidth 99 percent x db 26 db emission designator itu sm.328 acpr adjacent channel power spectrum width transmitter</item>
     </string-array>
 </resources>

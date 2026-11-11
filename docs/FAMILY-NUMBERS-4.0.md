@@ -64,5 +64,7 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | AFSK (TNC) tone tuner | 772 | 773 | 774 | 772 |
 | OOK / ASK pulse analyser | 773 | 774 | 775 | 773 |
 | Transmitter frequency stability meter | 774 | 775 | 776 | 774 |
+| Crest factor (PAPR / CCDF) meter | 775 | 776 | 777 | 775 |
+| Occupied bandwidth meter | 776 | 777 | 778 | 776 |
 
-Families 775 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
+Families 777 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).

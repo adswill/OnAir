@@ -15665,6 +15665,8 @@ static const WebModeRow kRows[] = {
     {772, "AFSK (TNC) tone tuner", 13, "AFSK tuner: tones, twist, deviation per burst", "", 774, 773, ""},
     {773, "OOK / ASK pulse analyser", 8, "OOK analyser: modulation, bits, timings, repeats", "", 775, 774, ""},
     {774, "Transmitter frequency stability meter", 13, "Tx stability: key-up step, settling, drift, offset", "", 776, 775, ""},
+    {775, "Crest factor (PAPR / CCDF) meter", 13, "PAPR: crest factor and CCDF against Gaussian", "", 777, 776, ""},
+    {776, "Occupied bandwidth meter", 13, "Occupied bandwidth: 99 %, x dB, centre, adjacent power", "", 778, 777, ""},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},
