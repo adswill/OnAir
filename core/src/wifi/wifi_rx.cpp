@@ -10,6 +10,7 @@
 #include "dect2/engine/channelizer.h"
 #include "dect2/dsp/gen_util.h"
 #include <algorithm>
+#include <cstdint>
 #include <atomic>
 #include <cmath>
 #include <complex>
@@ -83,6 +84,7 @@ struct WifiReceiver::Impl {
     // correlator output and input power, from global index base
     std::vector<float> cr, ci, pw;
     int64_t base = 0, g = -1;
+    int64_t doneTo = INT64_MAX;          // inside workBlock: cr / pw hold the block ahead of the search; process() looks only up to here
     // the 20 phase detectors
     struct Chain { std::complex<float> prev{0, 0}; uint8_t scr = 0; uint64_t h = 0; float e = 0; };
     Chain ch[kSps];
@@ -270,7 +272,7 @@ struct WifiReceiver::Impl {
         // the history of the next block, and the ring work() uses
         for (int t = 0; t < kSps - 1; t++) { lr[t] = lr[k + t]; li[t] = li[k + t]; }
         for (int j = std::max(0, k - kSps); j < k; j++) { hr[hp] = hr[hp + kSps] = y[j].real(); hi[hp] = hi[hp + kSps] = y[j].imag(); hp = hp + 1 == kSps ? 0 : hp + 1; }
-        // cr / ci / pw hold the whole block now (process() may look ahead; the values are final)
+        // cr / ci / pw hold the whole block now; process() is held to the samples searched so far (doneTo), so it trims nothing still needed
         const int64_t first = base + (int64_t)o;   // global index of the block's first sample in cr / pw
         for (int j = 0; j < k; j++) {
             g++;
@@ -279,7 +281,7 @@ struct WifiReceiver::Impl {
             if (nOut < kSps && ++nOut < kSps) { cr[(size_t)at] = 0; ci[(size_t)at] = 0; continue; }   // the first kSps - 1 samples: no full window yet
             cr[(size_t)at] = ar[j]; ci[(size_t)at] = ai[j];
             detect(std::complex<float>(ar[j], ai[j]));
-            if (pending && first + j + 1 - kSps >= pd.need) process();
+            if (pending && first + j + 1 - kSps >= pd.need) { doneTo = first + j + 1; process(); doneTo = INT64_MAX; }
         }
     }
 
@@ -365,7 +367,7 @@ struct WifiReceiver::Impl {
     }
 
     void process() {
-        const int64_t end = base + (int64_t)cr.size() - kSps;   // the last symbol start with its correlation in
+        const int64_t end = std::min(base + (int64_t)cr.size(), doneTo) - kSps;   // the last symbol start with its correlation in (and searched)
         while (pending && end >= pd.need) {
             if (pd.stage == 0) {
                 Demod dm;
