@@ -196,7 +196,7 @@ int main() {
         CHECK(src.start(ts, ring, err), "starts with one radio");
         CHECK(err.find("only one radio") != std::string::npos, "says so: %s", err.c_str());
         std::vector<cf32> out;
-        for (int i = 0; i < 10; i++) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); drain(ring, out); }
+        for (int i = 0; i < 300 && (i < 10 || out.size() <= 100000); i++) { std::this_thread::sleep_for(std::chrono::milliseconds(100)); drain(ring, out); }   // until enough arrived, not a fixed second
         CHECK(out.size() > 100000, "radio A passes through (%zu samples)", out.size());
         double e = 0; size_t n = std::min<size_t>(out.size(), 50000);
         // samples are A's exactly (sigma 0, no CFO): signal index 1000 + i, less the DC removal (a slow mean)
