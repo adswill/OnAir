@@ -15650,6 +15650,8 @@ static const WebModeRow kRows[] = {
     {757, "Spur and image finder", 13, "Spur finder: DC spike, images, harmonics, fixed spurs", "", 759, 758, ""},
     {758, "Satellite Doppler curve logger", 4, "Doppler logger: TCA, Doppler span, slope, carrier", "", 760, 759, ""},
     {759, "Frequency-hopper analyser", 13, "Hopper analyser: hop rate, channels, spacing, dwell", "", 761, 760, ""},
+    {760, "Persistent carrier (birdie) finder", 13, "Birdie finder: persistent carriers, level, drift", "", 762, 761, ""},
+    {761, "Burst finder", 13, "Burst finder: frequency, length, bandwidth, repetition", "", 763, 762, ""},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},

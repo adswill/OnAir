@@ -384,6 +384,8 @@
         <item>Spur and image finder</item>
         <item>Satellite Doppler curve logger</item>
         <item>Frequency-hopper analyser</item>
+        <item>Persistent carrier (birdie) finder</item>
+        <item>Burst finder</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -749,6 +751,8 @@
         <item>Spur and image finder for your own SDR: the DC spike, the mirror image of each strong signal at -f (image rejection in dB and the gain or phase mismatch it implies), second and third harmonics folded into the span, and steady spurs at multiples of fs / 16. A peak counts as an image only if it follows the signal; steady signals give \"cannot tell\". Simulated signals only</item>
         <item>Satellite beacon Doppler curve logger (100 MHz - 3 GHz, a steady carrier within 14 kHz of the tuned frequency): logs the carrier frequency through a pass and fits the flyby curve: time of closest approach, the carrier without Doppler, the largest Doppler, the steepest slope and, with the tuned frequency known, a rough speed and closest distance. Weak beacons are lost where the slope is steepest. Simulated signals only</item>
         <item>Frequency-hopper analyser for a wide capture: the hop rate, dwell and guard time, the number of channels, their spacing and the span of one hopper (the strongest narrow signal), from at least 40 dwells on 3 channels. Needs a clear signal (about 12 dB over the noise in 25 kHz); channels closer than about 1.5 bins (fs / 256) are not told apart. Does not follow the sequence. Simulated signals only</item>
+        <item>Persistent carrier finder for a wide capture: the narrow, steady carriers (birdies, spurs, switching supplies, a neighbour\'s equipment) present most of the time, with frequency to a few Hz, level, drift in Hz per minute, scatter, and whether each is a bare carrier or something modulated. A new and a vanished carrier are logged. It lists; it does not name the source. Simulated signals only</item>
+        <item>Burst finder for a wide capture: every short transmission wherever it is in the span, with frequency, length, bandwidth (narrow or wide) and level, many at once; bursts at one frequency that repeat with a steady spacing (a telemetry sensor, a key fob, a beacon) are reported as repeating every T s. Needs about 14 dB over the noise in a bin of fs / 256. Lists and times; does not decode. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1106,6 +1110,8 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
@@ -1479,5 +1485,7 @@
         <item>spur image iq imbalance dc offset harmonic alias mirror sdr rejection converter</item>
         <item>doppler curve satellite beacon pass tca closest approach cubesat carrier frequency fit</item>
         <item>frequency hopping hopper fhss hop rate dwell channels spacing spread spectrum analyser</item>
+        <item>birdie persistent carrier interference qrm spur noise source narrow steady rfi drift</item>
+        <item>burst transient short transmission key fob sensor repetition period tdma wide capture</item>
     </string-array>
 </resources>

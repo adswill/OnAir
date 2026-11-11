@@ -48,5 +48,7 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | Spur and image finder | 757 | 758 | 759 | 757 |
 | Satellite Doppler curve logger | 758 | 759 | 760 | 758 |
 | Frequency-hopper analyser | 759 | 760 | 761 | 759 |
+| Persistent carrier (birdie) finder | 760 | 761 | 762 | 760 |
+| Burst finder | 761 | 762 | 763 | 761 |
 
-Families 760 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
+Families 762 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).

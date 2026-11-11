@@ -11,6 +11,8 @@ struct Track {
     double hz = 0;
     int first = 0;                        // snapshot index of lv[0]
     std::vector<float> lv;                // dB over the noise; NaN: no peak there in that snapshot
+    std::vector<float> fq;                // the peak's frequency in each snapshot (NaN when absent)
+    float narrow = 0;                     // share of the power within +-8 bins that lies within +-2 bins of the peak (a carrier is near 1, a modulated signal is lower)
     int lastSeen = -1;
     float at(int snap) const { const int i = snap - first; return i >= 0 && i < (int)lv.size() ? lv[(size_t)i] : std::nanf(""); }
     float mean() const { double s = 0; int n = 0; for (float v : lv) if (!std::isnan(v)) { s += v; n++; } return n ? (float)(s / n) : -99.f; }
@@ -79,7 +81,7 @@ private:
     void snapshot() {
         std::vector<float> s(last_); std::nth_element(s.begin(), s.begin() + kFft / 2, s.end()); noise_ = std::max(1e-20, (double)s[kFft / 2] / (1.0 - 1.0 / (3.0 * frames_)));
         const double thr = noise_ * std::pow(10.0, thrDb_ / 10);
-        struct P { double hz; float db; float pw; }; std::vector<P> pk;
+        struct P { double hz; float db; float pw; float nar; }; std::vector<P> pk;
         for (int k = 0; k < kFft; k++) {
             const int j = k < kFft / 2 ? k : k - kFft; if (std::abs(j) <= 3) continue;
             if (last_[k] < thr) continue;
@@ -88,18 +90,19 @@ private:
             const double la = std::log(last_[(k + kFft - 1) % kFft] + 1e-30), lb = std::log(last_[k] + 1e-30), lc = std::log(last_[(k + 1) % kFft] + 1e-30), den = la - 2 * lb + lc;
             const double dl = den < -1e-12 ? 0.5 * (la - lc) / den : 0.0;
             double pw = 0; for (int d = -2; d <= 2; d++) pw += last_[(k + d + kFft) % kFft];
-            pk.push_back({(j + dl) * binHz(), (float)(10 * std::log10(pw / noise_)), (float)pw});
+            double pw17 = 0; for (int d = -8; d <= 8; d++) pw17 += last_[(k + d + kFft) % kFft];
+            pk.push_back({(j + dl) * binHz(), (float)(10 * std::log10(pw / noise_)), (float)pw, (float)(pw / std::max(pw17, 1e-30))});
         }
         std::sort(pk.begin(), pk.end(), [](const P& a, const P& b) { return a.db > b.db; }); if (pk.size() > 200) pk.resize(200);
         lastPeaks_ = (int)pk.size();
-        for (auto& t : tracks_) { t.lv.push_back(std::nanf("")); }
+        for (auto& t : tracks_) { t.lv.push_back(std::nanf("")); t.fq.push_back(std::nanf("")); }
         for (const P& p : pk) {
             Track* best = nullptr; double bd = 2.5 * binHz();
             for (auto& t : tracks_) { const double d = std::fabs(t.hz - p.hz); if (d < bd && std::isnan(t.lv.back())) { bd = d; best = &t; } }
-            if (!best) { tracks_.push_back(Track()); best = &tracks_.back(); best->hz = p.hz; best->first = snap_; best->lv.assign(1, std::nanf("")); }
-            best->lv.back() = p.db; best->hz = 0.8 * best->hz + 0.2 * p.hz; best->lastSeen = snap_;
+            if (!best) { tracks_.push_back(Track()); best = &tracks_.back(); best->hz = p.hz; best->first = snap_; best->lv.assign(1, std::nanf("")); best->fq.assign(1, std::nanf("")); best->narrow = p.nar; }
+            best->lv.back() = p.db; best->fq.back() = (float)p.hz; best->narrow = 0.9f * best->narrow + 0.1f * p.nar; best->hz = 0.8 * best->hz + 0.2 * p.hz; best->lastSeen = snap_;
         }
-        for (auto& t : tracks_) if ((int)t.lv.size() > kHist) { t.lv.erase(t.lv.begin()); t.first++; }
+        for (auto& t : tracks_) if ((int)t.lv.size() > kHist) { t.lv.erase(t.lv.begin()); t.fq.erase(t.fq.begin()); t.first++; }
         tracks_.erase(std::remove_if(tracks_.begin(), tracks_.end(), [&](const Track& t) { return snap_ - t.lastSeen > 60; }), tracks_.end());
         snap_++;
         if (onSnapshot) onSnapshot();

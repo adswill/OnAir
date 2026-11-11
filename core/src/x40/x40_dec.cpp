@@ -28,6 +28,8 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case Spur: return makeSpur();
     case DopplerLog: return makeDopplerLog();
     case HopAnalyser: return makeHopAnalyser();
+    case Birdie: return makeBirdie();
+    case Burst: return makeBurst();
     default: return nullptr;
     }
 }
@@ -61,6 +63,8 @@ ModeTuning x40Tuning(int v) {
         {"spur", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
         {"dopplerlog", 100, 3000, 435.000, 48000, 24000, 0.03, true},
         {"hop", 0.1, 6000, 433.900, 2000000, 1000000, 2.0, false},
+        {"birdie", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
+        {"burst", 0.1, 6000, 433.920, 2000000, 1000000, 2.0, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];
