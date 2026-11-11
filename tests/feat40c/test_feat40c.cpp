@@ -10,6 +10,8 @@
 #include "dect2/adsb/adsb_loiter.h"
 #include "dect2/ham/ham_clearfreq.h"
 #include "dect2/ham/ham_bandhop.h"
+#include "dect2/tones/dtmf_numbers.h"
+#include "dect2/acars/acars_load.h"
 #include "dect2/sarsat/sarsat_incidents.h"
 #include <cstdio>
 #include <random>
@@ -265,7 +267,31 @@ static void hopTest() {
     CHECK(maxGap < 2000 + 15 * 4);
 }
 
+static void dtmfTest() {
+    DtmfNumbers d; double t = 0;
+    auto send = [&](const char* k) { for (const char* c = k; *c; c++) { d.key(*c, t); t += 0.2; } };
+    send("0037061234567"); t += 5; send("*21#"); t += 5; send("123"); t += 5; send("*21#");   // code repeated within 120 s
+    d.tick(t + 10);
+    auto& e = d.entries();
+    CHECK(e.size() == 3);
+    CHECK(e[0].keys == "0037061234567" && e[0].kind == "number" && e[1].keys == "*21#" && e[1].kind == "code" && e[1].times == 2 && e[2].kind == "short");
+    // after 120 s the same code is a new entry; a star code without # is "star"
+    send("*21#"); t += 300; send("*21#"); t += 3; send("*55"); d.tick(t + 10);
+    CHECK(d.entries().size() == 5 && d.entries().back().kind == "star");
+}
+static void acarsLoadTest() {
+    AcarsLoad l; std::mt19937 rng(1);
+    for (int i = 0; i < 1000; i++) { const double t = i * 0.6; const int r = rng() % 100; l.add(r < 55 ? 131.550 : r < 85 ? 131.725 : r < 95 ? 130.025 : 129.125, rng() % 10 != 0, t); }
+    auto v = l.ranking(600, 600);
+    CHECK(v.size() == 4 && v[0].freqMHz == 131.55 && v[0].msgs > v[1].msgs && v[1].freqMHz == 131.725);
+    CHECK(v[0].perMin > 50 && v[0].goodPct > 80 && v[0].goodPct < 98);
+    CHECK(std::fabs(v[3].cumulativeSharePct - 100) < 1e-9);
+    auto b = l.bestChannels(600, 600, 80); CHECK(b.size() == 2 && b[0] == 131.55);
+    CHECK(l.ranking(600, 1).size() <= 1 && l.ranking(5000, 10).empty());
+}
+
 int main() {
+    dtmfTest(); acarsLoadTest();
     hopTest();
     loiterTest(); clearTest(); sarsatTest();
     aisTest(); atisTest(); pagerTest(); callTest(); guessTest(); spotTest(); ismTest();

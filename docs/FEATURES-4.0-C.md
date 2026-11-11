@@ -34,3 +34,12 @@ Pure logic in dect2/<mode>/ headers, tests in tests/feat40c (simulated data only
 
 ## Cospas-Sarsat
 - **Beacon incidents** (sarsat/sarsat_incidents.h): bursts grouped by beacon ID with count, median repeat interval (a real beacon repeats about every 50 s; a 5 s echo is flagged as not plausible), self-tests kept apart, position drift, and an "alert" rank. Why: an annual test or a decoder echo must not look like a distress. Core only.
+
+## DTMF
+- **Number assembler** (tones/dtmf_numbers.h): keys become dialled numbers and codes (gap splits entries, `#` ends a code, `*...` star code, 7+ digits a number, a repeat within 2 min is counted not listed). Why: a log of single keys is unreadable.
+
+## ACARS / VDL2
+- **Channel load ranking** (acars/acars_load.h): per frequency message rate, good-decode share, cumulative traffic share, and the fewest channels that carry 90 % of the traffic. Why: with limited bandwidth, the user picks the two or three channels that matter. (Flight grouping and message categories already exist in acars_log.h, HFDL frequency ranking in hfdl_prop.h / hfdl_hop.h.)
+
+## Not wired yet
+Everything in this file is a tested core. None of it has been put into the UI panels (the app was not built in this lane), and nothing was run on recorded signals. Skipped as already present: airband auto-find of active AM channels (AirbandBandWatch), LoRa SF/BW search (loraraw_survey.h), LoRaWAN health, CC health for trunking (cc_health.h), sensor battery trends (sensors_health.h), wM-Bus usage and leaks, ADIF export (ham_upload.h). Talkgroup follow for P25 / NXDN / TETRA needs the voice panels and was left.

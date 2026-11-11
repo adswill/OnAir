@@ -1774,3 +1774,5 @@ Talkgroup activity and follow-the-busiest (DMR view), radiosonde launch clock (S
 
 ## 2026-11-12 feat40-feat3: Lane B group 3
 Features: AIS coverage / type mix / name cache, ATIS tracker, pager keywords and groups, callsign parser, mode guess, spot summary, tone identification, ISM classifier. docs/FEATURES-4.0-C.md, tests/feat40c (simulated only, headers not yet wired into the UI).
+
+Feat40-feat3 (later): ADS-B orbit detector, clear TX frequency, band hop, Sarsat incidents, DTMF numbers, ACARS channel load.
