@@ -135,7 +135,10 @@ Mac, under load from other workers, generator signal, 2 s, both carriers, receiv
 - On noise alone the whole receiver takes 0.16 s/s.
 - The generator's band is busy: Wi-Fi is handed 50 to 60 % of it. On a quieter band the gate saves more.
 
-CI (GitHub Linux runner, test_rid_cpu): see the "CI" line of the PATHWAY entry for this branch.
+CI: quick.yml run 42937005020 (GitHub Linux) passed all 14 targeted tests (adsb_overlap, rid_cpu, rid_rx, rid_engine, ble_rx, ble_engine,
+wifi_rx, wifi_ofdm, wifi_engine, wifi_56, adsb_rx, adsb_impair, adsb_deeprepair, real_adsb). ctest does not print the CPU figures of
+rid_cpu, so the CI-core figure after the change was not captured. Scaled by the 2.5x Mac-to-CI ratio of the sensC measurement, the
+estimate is about 0.9 s/s: real time, with little margin on one CI core.
 
 ### Found, not changed
 
