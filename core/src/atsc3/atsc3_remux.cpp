@@ -1,6 +1,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/atsc3/atsc3_remux.h"
 #include "dect2/audio/ac4_dec.h"
+#include "dect2/audio/dolby_audio.h"
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -414,6 +415,10 @@ void Atsc3Remux::push(int id, const std::vector<uint8_t>& data) {
                 snprintf(b, sizeof b, "AC-4%s%s", dsi.valid ? (dsi.sampleRate() == 48000 ? ", 48 kHz" : ", 44.1 kHz") : "", ch > 0 ? (ch >= 6 ? ", 5.1 or more" : ", stereo or mono") : "");
                 std::string d = b;
                 if (dsi.valid) d += ", " + std::to_string(dsi.presentations) + " presentation(s)";
+                // Dolby Atmos in AC-4: a presentation with objects / A-JOC or height channels (TS 103 190-2 E.10, dolby_audio.h)
+                const Ac4DsiInfo di = parseAc4DsiV1(dsi.raw.data(), dsi.raw.size());
+                ac4NoteDsi(di);
+                if (di.immersive) d += ", Dolby Atmos (AC-4" + (di.bed.empty() ? std::string() : ", " + di.bed) + ")";
                 ac4NoteSeen(d);
             }
         }

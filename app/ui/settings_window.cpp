@@ -2,6 +2,7 @@
 // setting and per category, a marker for what differs from the default, and an Advanced foldout per category. The rows are in
 // settings_table.h; here each row is bound to the field that holds its value (the same fields the old menus use, saved by
 // app/state/prefs.cpp), so a row without a field is not shown. Docs: docs/SETTINGS.md.
+#include "dect2/audio/dolby_audio.h"
 #include "../app.h"
 #include "../i18n/i18n.h"
 #include "../platform/platform.h"
@@ -57,6 +58,13 @@ const std::map<std::string, Bind>& binds() {
         NB("tuningMode", a.tuningMode); NB("centreTuning", a.centreTuning); NB("dragMovesTuned", a.dragMovesTuned); NB("specDrag", a.specDrag);
         NB("specSnapHz", a.specSnapHz); NB("bwAuto", a.bwAuto); NB("gpuGlobal", a.gpuGlobal);
         NB("popTop", a.popTop); NB("subsOn", a.subsOn);
+        // TV sound (dolby_audio.h): straight into the player's configuration, and the playing sound is opened again
+        m["surroundLayout"] = Bind{[](App&) -> double { return (double)plat::prefs().getI("surroundLayout", 0); },
+                                   [](App& a, double v) { plat::prefs().setI("surroundLayout", (long)v); dect2::DolbyOutputConfig::global().layout = (int)v; a.engine.player().reopenAudio(); }, nullptr, nullptr};
+        m["dolbyPassthrough"] = Bind{[](App&) -> double { return plat::prefs().getB("dolbyPassthrough", false) ? 1.0 : 0.0; },
+                                     [](App& a, double v) { plat::prefs().setB("dolbyPassthrough", v != 0); dect2::DolbyOutputConfig::global().passthrough = v != 0; a.engine.player().reopenAudio(); }, nullptr, nullptr};
+        m["iecDevice"] = Bind{nullptr, nullptr, [](App&) -> std::string { return plat::prefs().getS("iecDevice", ""); },
+                              [](App& a, const std::string& v) { plat::prefs().setS("iecDevice", v); dect2::DolbyOutputConfig::global().setDevice(v); a.engine.player().reopenAudio(); }};
         m["recFormat"] = Bind{[](App& a) -> double { return a.recFormat; }, [](App& a, double v) { a.recFormat = (int)v; plat::prefs().setI("recFormat", (long)v); }, nullptr, nullptr};
         NB("fmMono", a.fmMono); NB("fmStereo", a.fmStereo); NB("fmDeemph", a.fmDeemph); NB("fmRegion", a.fmRegion);
         NB("fmSquelch", a.fmSquelch); NB("ttxPage", a.ttxPage); SB("tvLang", a.tvLang);
