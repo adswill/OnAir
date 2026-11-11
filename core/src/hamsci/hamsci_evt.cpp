@@ -379,21 +379,18 @@ struct EvtMonitor::Impl {
             if (r < ringBase + 10 || r + 10 > ringBase + ring.size()) continue;
             tweekCheck(r);
         }
-        st.info.assign(1, tweekLog);
         // ---- whistler search every 0.5 s
         if (absRow % 94 == 0 && ring.size() >= (size_t)(3.0 / hopSec)) whistlerSearch();
     }
     float bbAt(uint64_t r) const { return bbHist[(size_t)(r - ringBase)]; }
-    std::string tweekLog;
-    void dbgTweek(uint64_t r, int code) { const double tt = (double)r * (double)hop / fs; if ((code == 1 || code == 2) && !((tt > 4.9 && tt < 5.1) || (tt > 39.9 && tt < 40.1))) return; if (code == 1 && !((tt > 4.95 && tt < 5.05) || (tt > 39.95 && tt < 40.05))) return; char b[80]; std::snprintf(b, sizeof b, "t=%.3f r%d bb%.1f ", tt, code, (double)bbAt(r)); if (tweekLog.size() < 600) tweekLog += b; }
     void tweekCheck(uint64_t r) {
         const double bh = fs / N, hopSec = (double)hop / fs;
         const float c = bbAt(r);
-        if (c < 8.f) { dbgTweek(r, 1); return; }
-        for (int j = -8; j <= 8; j++) if (bbAt(r + j) > c || (bbAt(r + j) == c && j < 0)) { dbgTweek(r, 2); return; }   // not the local maximum
+        if (c < 5.f) return;
+        for (int j = -8; j <= 8; j++) if (bbAt(r + j) > c || (bbAt(r + j) == c && j < 0)) return;   // not the local maximum
         sfericCount++;
         const double t = (double)r * hopSec;
-        if (t - lastTweekT < 0.12) { dbgTweek(r, 3); return; }
+        if (t - lastTweekT < 0.12) return;
         const size_t H = N / 2 + 1;
         std::vector<double> m(H, 0.0), mEarly(H, 0.0), mLate(H, 0.0);
         for (int j = 3; j <= 9; j++) {
@@ -405,15 +402,15 @@ struct EvtMonitor::Impl {
         size_t kp = kA; double mp = -100;
         for (size_t k = kA; k <= kB; k++) { const double v = (m[k - 1] + m[k] + m[k + 1]) / 3.0; if (v > mp) { mp = v; kp = k; } }
         const double fp = (double)kp * bh;
-        if (mp < 6.0) { dbgTweek(r, 4); return; }
+        if (mp < 6.0) return;
         const bool n1 = fp >= 1400 && fp <= 2300, n2 = fp >= 3100 && fp <= 4600;
-        if (!n1 && !n2) { dbgTweek(r, 5); return; }
+        if (!n1 && !n2) return;
         // narrow: well above the same rows 600 Hz either side, and the high band (6 - 9 kHz) quiet
         const size_t dk = (size_t)(600.0 / bh);
         const double side = std::max(kp > dk ? m[kp - dk] : 0.0, kp + dk < H ? m[kp + dk] : 0.0);
         double hi = 0; int hn = 0;
         for (size_t k = (size_t)(6000.0 / bh); k < std::min(H, (size_t)(9000.0 / bh)); k++) { hi += m[k]; hn++; }
-        if (mp - side < 4.0 || (hn && hi / hn > 4.0)) { dbgTweek(r, 6); return; }
+        if (mp - side < 4.0 || (hn && hi / hn > 4.0)) return;
         // the ridge settles downwards: the early peak is not below the late one
         auto peakOf = [&](const std::vector<double>& v) { size_t kb = kA; double b = -100; for (size_t k = kA; k <= kB; k++) if (v[k] > b) { b = v[k]; kb = k; } return kb; };
         const size_t ke = peakOf(mEarly), kl = peakOf(mLate);
