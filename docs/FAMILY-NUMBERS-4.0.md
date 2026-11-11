@@ -20,7 +20,8 @@ number per mode: family F, active standard F + 1, engine standard F + 2, poll sl
 | Radar pulse analyser | 892 | 893 | 894 | 892 |
 | GNSS interference detector | 893 | 894 | 895 | 893 |
 | Passband signal classifier | 894 | 895 | 896 | 894 |
+| VLF MSK transmitter monitor | 895 | 896 | 897 | 895 |
 
-Lane C (feat40-modes2) used families 886 to 894 (`x40::kNumVariants` is 14; the engine switches use `DECT2_X40_ACTIVE_CASES` for the active standards 882 to 897). Free for further modes of this receiver: families 895 and 896. Families 897 to 899 stay free. A mode needing numbers above 900 needs the integrator to raise `kNumFamilies` and `kPollSeqSlots` (one deliberate change).
+Lane C (feat40-modes2) used families 886 to 895 (`x40::kNumVariants` is 15; the engine switches use `DECT2_X40_ACTIVE_CASES` for the active standards 882 to 897). Free for further modes of this receiver: family 896 (the last number the receiver's active-standard range 882 - 897 allows). Families 897 to 899 stay free. A mode needing numbers above 900 needs the integrator to raise `kNumFamilies` and `kPollSeqSlots` (one deliberate change).
 Merge note: the integrator should rerun `python3 tools/gen_modes_list.py`, `tools/gen_web_schema.py`, `tools/gen_web_options.py`, `android/tools/gen_modes.py` and `android/tools/gen_results_map.py`
 after merging, because the generated files of this branch and another branch conflict by construction.

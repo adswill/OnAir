@@ -161,6 +161,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Radar pulse analyser | 892 | 894 | 893 | 892 | feat40-modes2 | 4.0; simulated signals only (docs/RADAR-4.0.md) |
 | GNSS interference detector | 893 | 895 | 894 | 893 | feat40-modes2 | 4.0; simulated signals only (docs/GNSSJAM-4.0.md) |
 | Passband signal classifier | 894 | 896 | 895 | 894 | feat40-modes2 | 4.0; simulated signals only (docs/PASSBAND-4.0.md) |
+| VLF MSK transmitter monitor | 895 | 897 | 896 | 895 | feat40-modes2 | 4.0; simulated signals only (docs/VLFMSK-4.0.md) |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
