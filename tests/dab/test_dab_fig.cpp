@@ -313,7 +313,8 @@ static void testEnsembleChange() {
 // (noise, a carrier offset, 8-bit samples) and matched the way the Map tab does (app/dab/dab_txlist.h). The ids and places are test values.
 static std::vector<uint8_t> label16(uint8_t head, uint8_t id, const char* l) {
     std::vector<uint8_t> v{head, id};
-    for (int i = 0; i < 16; i++) v.push_back((uint8_t)(l[i] ? l[i] : ' '));
+    const size_t n = std::string(l).size();   // padded with spaces to 16 (never read past the end of `l`)
+    for (size_t i = 0; i < 16; i++) v.push_back((uint8_t)(i < n ? l[i] : ' '));
     v.push_back(0xFF); v.push_back(0x00);
     return v;
 }

@@ -59,6 +59,7 @@ struct State {
     std::shared_ptr<Download> dl;
     adsbmap::View map;
     bool fitted = false;
+    double atLat = 1e9, atLon = 1e9;   // the antenna position the map was last centred on while nothing is placed
     double refLat = 0, refLon = 0;
     bool haveRef = false;
     // the positions the ensemble itself broadcasts (FIG 0/22), refreshed every couple of seconds: key as in sites, the lists win
@@ -530,8 +531,7 @@ void dabTransmittersTab(App& a) {
             if (S.haveRef) { la += S.refLat; lo += S.refLon; n++; }
             S.map.lat = la / n; S.map.lon = lo / n; S.map.zoom = 8; S.fitted = true;
         } else if (!S.fitted && S.haveRef) {
-            static double atLat = 1e9, atLon = 1e9;   // the antenna it was last centred on: again only when it moves
-            if (atLat != S.refLat || atLon != S.refLon) { S.map.lat = S.refLat; S.map.lon = S.refLon; S.map.zoom = 8; atLat = S.refLat; atLon = S.refLon; }
+            if (S.atLat != S.refLat || S.atLon != S.refLon) { S.map.lat = S.refLat; S.map.lon = S.refLon; S.map.zoom = 8; S.atLat = S.refLat; S.atLon = S.refLon; }
         }
         const ImVec2 p0 = ImGui::GetCursorScreenPos();
         adsbmap::draw(S.map, size);
@@ -575,7 +575,7 @@ void dabTransmittersTab(App& a) {
         ImGui::SameLine(0, 4 * gUi);
         if (ImGui::Button("-", ImVec2(26 * gUi, 0))) { S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); S.fitted = true; } if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
         ImGui::SameLine(0, 4 * gUi);
-        if (ImGui::Button("fit")) S.fitted = false;
+        if (ImGui::Button("fit")) { S.fitted = false; S.atLat = 1e9; }
         ImGui::SameLine(0, 8 * gUi);
         adsbmap::tileControls("never the position itself");
         ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + size.y - ImGui::GetTextLineHeightWithSpacing()));
