@@ -215,7 +215,7 @@ that librfnm finds on USB and on the network is listed once, on USB. `onair.log`
 
 # Icom IC-R8600 (I/Q OUT, receive only)
 
-**Experimental: no IC-R8600 was available when this was written; it needs a user test.** Full notes: [docs/ICOM-R8600.md](docs/ICOM-R8600.md).
+**Experimental: no IC-R8600 was available when this was written; it needs a user test.**
 
 OnAir drives the receiver's [I/Q OUT] USB port itself (libusb, no SoapySDR module). 10 kHz to 3 GHz, six sample rates from 0.24 to 5.12 Msps.
 The port needs Icom's firmware (`IC-R8600_usb_iq.spt` from Icom's "USB I/Q Package for HDSDR"), which OnAir cannot ship: **Radio settings > Import Icom

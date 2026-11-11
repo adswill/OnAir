@@ -1,12 +1,12 @@
 # OnAir in a browser: the whole desktop GUI runs on a virtual display inside the container and Selkies streams picture and
 # sound to any browser (https://<host>:3001). For servers and NAS boxes without a screen. See README.md here.
 #   docker build -t onair packaging/docker                                  (the latest release that this file names)
-#   docker build -t onair --build-arg ONAIR_VERSION=0.2.6 packaging/docker  (another release)
+#   docker build -t onair --build-arg ONAIR_VERSION=3.7.0 packaging/docker  (another release)
 
 # ---------- full: the Selkies desktop with OnAir installed, minus what no OnAir user needs ----------
 FROM ghcr.io/linuxserver/baseimage-selkies:ubuntunoble AS full
 
-ARG ONAIR_VERSION=0.2.5
+ARG ONAIR_VERSION=3.8.0
 ARG TARGETARCH
 
 # The release .deb: it carries its own FFmpeg and the libraries of the radios OnAir drives itself; the SoapySDR modules add the rest.
