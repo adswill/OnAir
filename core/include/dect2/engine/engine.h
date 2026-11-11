@@ -21,6 +21,7 @@
 #include "dect2/atsc3/atsc3_rx.h"
 #include "dect2/isdbt/isdbt_rx.h"
 #include "dect2/tv/mpe_fec.h"
+#include "dect2/tv/ip_out.h"
 #include "dect2/fm/fm_rx.h"
 #include "dect2/fm/fm_census.h"
 #include "dect2/dab/dab_census.h"
@@ -675,6 +676,7 @@ public:
     WifiReceiver& wifi() { return rxWifi_; }   // Wi-Fi networks: clear the network table (telemetry through latestRx)
     Qo100Receiver& qo100() { return rxQo100_; }   // QO-100: LNB oscillator, SSB dial and listening (telemetry through latestRx)
     Dvbc2Receiver& dvbc2() { return rxC2_; }   // DVB-C2 (active standard 742): data slice and PLP choice
+    IpOut& ipOutput() { return ipOut_; }       // IP datagrams of DVB-H (MPE / MPE-FEC) and DVB-C2 GSE PLPs: pcap file, UDP forward (off by default)
     DvbcReceiver& dvbc() { return rxDvbc_; }   // DVB-C: symbol rate, QAM, annex (the interface reads telemetry through latestRx)
     PskReceiver& psk() { return rxPsk_; }   // PSK31: the receiver's own controls and results (the interface reads telemetry through latestRx)
     DstarReceiver& dstar() { return rxDstar_; }   // D-STAR: the receiver's own controls and results (the interface reads telemetry through latestRx)
@@ -847,6 +849,7 @@ private:
     TeletextDecoder ttx_;
     DvbSubDecoder dvbsub_;
     mpe::MpeDemux mpe_;      // DVB-H: MPE / MPE-FEC IP datagrams of the stream (under tsMu_)
+    IpOut ipOut_;            // where those datagrams and the DVB-C2 GSE packets go (thread-safe)
     int lastT2Frame_ = -1;
     std::atomic<bool> resetReq_{false};
     std::atomic<uint64_t> resets_{0};

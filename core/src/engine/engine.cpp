@@ -120,7 +120,11 @@ void Engine::ingest(cf32* x, size_t n) {
     nSamp_ += n;
 }
 
-Engine::Engine() : t0_(std::chrono::steady_clock::now()) { wide_.setTuning(WideTuning()); }   // the whole-span banks get the CPU limit
+Engine::Engine() : t0_(std::chrono::steady_clock::now()) {
+    wide_.setTuning(WideTuning());   // the whole-span banks get the CPU limit
+    // DVB-H / IP datacasting: datagrams whose bytes are all known good (section CRCs, MPE-FEC) go to the IP output
+    mpe_.setDatagramCallback([this](const uint8_t* d, size_t n, bool reliable, int) { if (reliable) ipOut_.packet(d, n); });
+}
 
 void Engine::cpuAccounts() {
     const std::string p = "rx" + std::to_string(receiverId_) + " ";

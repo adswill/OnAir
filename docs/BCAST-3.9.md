@@ -81,8 +81,23 @@ DVB-H is signalled in the DVB-T TPS and found automatically, so it stays in the 
     - a loss sweep
     - plain MPE and time slicing without FEC
     - the whole chain: MPE-FEC transport stream through 4K in-depth OFDM and the DVB-T receiver into the MPE demultiplexer
+- IP output (branch feat39-bcast2, `core/src/tv/ip_out.cpp`, `Engine::ipOutput()`):
+  - Every datagram whose bytes are all known good goes to the engine's IP output. A byte is known good when its section CRC passed,
+    or when MPE-FEC corrected its row. DVB-C2 GSE PLPs feed the same output.
+  - Both outputs are off by default. They are on the Signalling tab of the DVB-T analysis (when DVB-H or an MPE stream is present)
+    and on the DVB-C2 one (when a PLP carries GSE).
+    - One click: "Write them to a pcap file" writes `broadcast_ip.pcap` in the data folder (libpcap, link type RAW, the IP packets as
+      they are). Switching it on again starts a new file.
+    - Under Advanced: forward over UDP to a dotted IPv4 address and port. By default only the payload of each UDP datagram is sent,
+      after IPv4 fragments are put back together, so a player can open `udp://@:port`; port 0 keeps each datagram's own destination
+      port. "whole IP packets" sends every packet whole, for an analyser.
+  - Nothing is decrypted. The settings are not saved between sessions.
+  - Test (`tests/tv/test_mpe_fec.cpp`, case 5): MPE-FEC frames of 512 rows with 3 % of the transport packets lost went through the
+    demultiplexer into the IP output. MPE-FEC delivered 411 of 427 datagrams. The pcap file was read back: 411 records, byte for byte
+    equal, link type 101. A local UDP socket received 411 payloads, equal and in order. The test also checks whole-packet mode, a
+    3 000-byte datagram in three IPv4 fragments (forwarded as one payload), a bad header (dropped and counted), and a bad address and an
+    unwritable path (both refused with a message).
 - Not done:
-  - The datagrams are counted, not yet written out (no pcap or UDP output).
   - Damaged TS packets erase the whole section; packet-level erasure inside a section is not used.
   - The INT table (IP/MAC notification) is not read.
 - Simulated only: no recording of a DVB-H transmission was available.

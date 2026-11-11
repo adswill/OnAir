@@ -149,6 +149,7 @@ target_sources(dect2core PRIVATE core/src/dsp/synth_wide.cpp)
 target_sources(dect2core PRIVATE core/src/source/synth_group.cpp core/src/source/diversity_source.cpp core/src/dsp/diversity.cpp)   # radio groups: stitched wide (synth_group.h) and diversity pairs (diversity_source.h, dsp/diversity.h)
 target_sources(dect2core PRIVATE core/src/t2/t2ldpc.cpp)
 target_sources(dect2core PRIVATE core/src/tv/avsplus_dec.cpp)
+target_sources(dect2core PRIVATE core/src/tv/ip_out.cpp)   # IP output of DVB-H MPE and DVB-C2 GSE: pcap file and UDP forward
 target_sources(dect2core PRIVATE core/src/sweep/survey.cpp core/src/fastscan/floor.cpp core/src/fastscan/hits.cpp core/src/fastscan/plan.cpp core/src/fastscan/record.cpp core/src/fastscan/scanner.cpp core/src/fastscan/profile.cpp core/src/fastscan/qualify.cpp core/src/fastscan/fwsweep.cpp)
 target_sources(dect2core PRIVATE core/src/source/usb_fd.cpp core/src/source/usb_fd_io.cpp core/src/source/audio_push.cpp)   # radios opened by the platform and handed over as USB descriptors (Android): rtl_fd_shim.h
 # the built-in band plans: data/bandplans/builtin.json compiled in as text (bandplan.cpp parses it); a changed file configures again
