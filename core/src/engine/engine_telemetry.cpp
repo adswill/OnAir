@@ -345,6 +345,10 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 246: return pollStd(rxBgan_, 246, t, seqs[205], &RxTelemetry::bgan);   // Inmarsat BGAN (slot 205)
     case 244: return pollStd(rxSfer_, 244, t, seqs[203], &RxTelemetry::sferics);   // Sferics (slot 203)
     case 791: return pollStd(rxLtpos_, 791, t, seqs[790], &RxTelemetry::ltpos);   // Lightning position (slot 790)
+    case 882: return pollStd(rxX40_, 882, t, seqs[881], &RxTelemetry::x40);   // 4.0 signal modes (slots 881 - 884)
+    case 883: return pollStd(rxX40_, 883, t, seqs[882], &RxTelemetry::x40);
+    case 884: return pollStd(rxX40_, 884, t, seqs[883], &RxTelemetry::x40);
+    case 885: return pollStd(rxX40_, 885, t, seqs[884], &RxTelemetry::x40);
     case 871: return pollStd(rxFbr_, 871, t, seqs[870], &RxTelemetry::fbr);   // Fleet Broadcast (slot 870)
     case 602: return pollStd(rxXlink_, 602, t, seqs[601], &RxTelemetry::xlink);   // Extra links, narrow-band members
     case 601: return pollStd(rxXlink_, 601, t, seqs[600], &RxTelemetry::xlink);   // Extra links (slot 600)

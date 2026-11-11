@@ -211,6 +211,7 @@
 #include "dect2/wmbus/wmbus_proto.h"
 #include "dect2/wmbus/wmbus_tel.h"
 #include "dect2/wxsat/wxsat_tel.h"
+#include "dect2/x40/x40_tel.h"
 #include "dect2/xband/xband_tel.h"
 #include "dect2/xlink/xlink_tel.h"
 #include "dect2/zigbee/zigbee_tel.h"
@@ -869,6 +870,8 @@ static void ev_dect2__FbrChannel(std::string& s, const dect2::FbrChannel& v);
 static void ev_dect2__FbrTelemetry(std::string& s, const dect2::FbrTelemetry& v);
 static void ev_dect2__Cp16Char(std::string& s, const dect2::Cp16Char& v);
 static void ev_dect2__Cp16Telemetry(std::string& s, const dect2::Cp16Telemetry& v);
+static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v);
+static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v);
 static void ev_dect2__DvbsIpFlow(std::string& s, const dect2::DvbsIpFlow& v) {
     detail::J o(s);
     o.key("src"); detail::vstr(s, v.src, 4096);
@@ -14268,6 +14271,35 @@ static void ev_dect2__Cp16Telemetry(std::string& s, const dect2::Cp16Telemetry& 
     o.end();
 }
 
+static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v) {
+    detail::J o(s);
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("kind"); detail::vstr(s, v.kind, 4096);
+    o.key("id"); detail::vstr(s, v.id, 4096);
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.end();
+}
+
+static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("variant"); detail::vnum(s, (double)(v.variant));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("headline"); detail::vstr(s, v.headline, 4096);
+    o.key("facts"); { detail::Arr a(s); const size_t n = (v.facts).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); s += '['; { detail::vstr(s, ((v.facts)[i]).first, 4096); } s += ','; { detail::vstr(s, ((v.facts)[i]).second, 4096); } s += ']'; } a.end(); }
+    o.key("rows"); { detail::Arr a(s); const size_t n = (v.rows).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__X40Row(s, (v.rows)[i]); } a.end(); }
+    o.end();
+}
+
 static const char kSchema_dect2__DvbsIpFlow[] = R"JSON([{"n":"src","l":"Src","k":"text"},{"n":"dst","l":"Dst","k":"text"},{"n":"protocol","l":"Protocol","k":"text"},{"n":"sport","l":"Sport","k":"num"},{"n":"dport","l":"Dport","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"encrypted","l":"The headers are good but the UDP checksums fail: the payload was changed in transit","k":"bool"}])JSON";
 static const char kSchema_dect2__DvbsIpLabel[] = R"JSON([{"n":"label","l":"Label","k":"text"},{"n":"pdus","l":"Pdus","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"ip","l":"Ip","k":"num"},{"n":"addrs","l":"Addrs","k":"lines"},{"n":"modcods","l":"\"QPSK 5/6 41 %, 16APSK 3/4 59 %\": where the bytes went","k":"text"}])JSON";
 static const char kSchema_dect2__DvbsMediaFlow[] = R"JSON([{"n":"dst","l":"Dst","k":"text"},{"n":"src","l":"Src","k":"text"},{"n":"kind","l":"Kind","k":"text"},{"n":"codec","l":"Codec","k":"text"},{"n":"port","l":"Port","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"lost","l":"Lost","k":"num"},{"n":"kbps","l":"Kbps","k":"num"},{"n":"services","l":"MPEG-TS flows: the programmes found in them","k":"lines"},{"n":"scrambled","l":"Transport packets of the flow are scrambled: only labelled","k":"bool"}])JSON";
@@ -14920,6 +14952,8 @@ static const char kSchema_dect2__FbrChannel[] = R"JSON([{"n":"cls","l":"'S' repe
 static const char kSchema_dect2__FbrTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing, 1 a BPSK carrier found, 2 symbols locked","k":"num"},{"n":"cfoHz","l":"Carrier offset from the radio's centre as tracked","u":"Hz","k":"num"},{"n":"snrDb","l":"Symbol-to-noise ratio in 1.2 kHz, estimated from the differential decisions","u":"dB","k":"num"},{"n":"levelDb","l":"Input level, dBFS","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Frames passed since the frame alignment","k":"num"},{"n":"blocksBad","l":"Times the alignment was lost","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerMhz","l":"Where the radio is tuned","u":"MHz","k":"num"},{"n":"offsetHz","l":"Carrier from the radio's tuned frequency","u":"Hz","k":"num"},{"n":"freqMhz","l":"Absolute","u":"MHz","k":"num"},{"n":"carrier","l":"The listed carrier within 5 kHz","u":"kHz","k":"text"},{"n":"toneDb","l":"Peak of the squared signal over its noise floor at acquisition, dB","u":"dB","k":"num"},{"n":"baud","l":"Assumed symbol rate","k":"num"},{"n":"clockPpm","l":"Symbol clock offset measured against it","u":"ppm","k":"num"},{"n":"eye","l":"Quadrature share of the differential decisions: 0 clean, towards 1 noisy","k":"num"},{"n":"symbols","l":"Symbols","k":"num"},{"n":"inverted","l":"The bit polarity switch is on","k":"bool"},{"n":"bits","l":"The last bits as received, '0' / '1', oldest first","k":"text"},{"n":"framed","l":"Framed","k":"bool"},{"n":"ambiguous","l":"Several columns repeat: the frame start cannot be told","k":"bool"},{"n":"syncPeriod","l":"The repeat length of the sync channel found, in frames","k":"num"},{"n":"syncQuality","l":"Agreement of the sync channel with its own repeat, percent","k":"num"},{"n":"frames","l":"Frames","k":"num"},{"n":"status","l":"\"[Sr-i...]\": one letter per channel","k":"text"},{"n":"ch","l":"Ch","k":"table","s":"dect2::FbrChannel","f":[{"n":"cls","l":"'S' repeating pattern","k":"num"},{"n":"activity","l":"Share of frame-to-frame bit changes, 0 .. 1","k":"num"},{"n":"period","l":"'S': the repeat length in frames","k":"num"},{"n":"ones","l":"Share of 1 bits","k":"num"},{"n":"hex","l":"The last 64 bits of the channel as 16 hex digits, oldest first","k":"text"}]},{"n":"frameLog","l":"The last frames as 4 hex digits, channel 0 is the top bit, newest last","k":"lines"},{"n":"log","l":"Events, newest last","k":"lines"}])JSON";
 static const char kSchema_dect2__Cp16Char[] = R"JSON([{"n":"serial","l":"Serial","k":"num"},{"n":"timeSec","l":"Start of its first row, seconds of signal","u":"s","k":"num"},{"n":"text","l":"The character","k":"text"},{"n":"cp","l":"Cp","k":"num"},{"n":"score","l":"Correlation with the font's glyph, 0 .. 1","k":"num"},{"n":"margin","l":"Over the runner-up","k":"num"},{"n":"sure","l":"Score and margin high enough to be taken as read","k":"bool"}])JSON";
 static const char kSchema_dect2__Cp16Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 listening, 1 carriers found, 2 rows in step","k":"num"},{"n":"cfoHz","l":"The lowest carrier against the expected position","u":"Hz","k":"num"},{"n":"snrDb","l":"Inked dots over blank dots, dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Characters read with confidence","k":"num"},{"n":"blocksBad","l":"Cells with dots that matched no character well","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"rateOk","l":"Rate OK","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"nowSec","l":"Now Sec","u":"s","k":"num"},{"n":"baseHz","l":"Audio frequency of the column-0 carrier","u":"Hz","k":"num"},{"n":"spacingHz","l":"Spacing Hz","u":"Hz","k":"num"},{"n":"rowSec","l":"Row Sec","u":"s","k":"num"},{"n":"charSec","l":"17 rows","u":"s","k":"num"},{"n":"mirrored","l":"Lower sideband","k":"bool"},{"n":"combScore","l":"How clearly 16 equally spaced carriers stand out, dB","u":"dB","k":"num"},{"n":"timingScore","l":"Coherence of the row edges, 0 .. 1","k":"num"},{"n":"fontName","l":"Font Name","k":"text"},{"n":"rows","l":"Rows","k":"list"},{"n":"firstRow","l":"Serial of rows[0]","k":"num"},{"n":"rowCount","l":"Rows made so far","k":"num"},{"n":"text","l":"Characters read","k":"text"},{"n":"chars","l":"Newest last","k":"table","s":"dect2::Cp16Char","f":[{"n":"serial","l":"Serial","k":"num"},{"n":"timeSec","l":"Start of its first row, seconds of signal","u":"s","k":"num"},{"n":"text","l":"The character","k":"text"},{"n":"cp","l":"Cp","k":"num"},{"n":"score","l":"Correlation with the font's glyph, 0 .. 1","k":"num"},{"n":"margin","l":"Over the runner-up","k":"num"},{"n":"sure","l":"Score and margin high enough to be taken as read","k":"bool"}]}])JSON";
+static const char kSchema_dect2__X40Row[] = R"JSON([{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}])JSON";
+static const char kSchema_dect2__X40Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no signal, 1 energy but nothing decoded lately, 2 decoding","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"variant","l":"X40::Variant","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"headline","l":"One line on what is being heard","k":"text"},{"n":"facts","l":"Label","k":"list"},{"n":"rows","l":"Newest first","k":"table","s":"dect2::X40Row","f":[{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}]}])JSON";
 struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };
 static bool put_7(const RxTelemetry& rx, std::string& s) { ev_dect2__DvbsTelemetry(s, rx.dvbs); return true; }
 static bool put_8(const RxTelemetry& rx, std::string& s) { ev_dect2__DtmbTelemetry(s, rx.dtmb); return true; }
@@ -15203,6 +15237,10 @@ static bool put_853(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelem
 static bool put_856(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_871(const RxTelemetry& rx, std::string& s) { ev_dect2__FbrTelemetry(s, rx.fbr); return true; }
 static bool put_881(const RxTelemetry& rx, std::string& s) { ev_dect2__Cp16Telemetry(s, rx.cp16); return true; }
+static bool put_882(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_883(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_884(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_885(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -15486,6 +15524,10 @@ static const StdEntry kStd[] = {
     {856, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_856},
     {871, "fbr", "dect2::FbrTelemetry", kSchema_dect2__FbrTelemetry, put_871},
     {881, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_881},
+    {882, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_882},
+    {883, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_883},
+    {884, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_884},
+    {885, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_885},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15627,6 +15669,10 @@ static const WebModeRow kRows[] = {
     {409, "ERMES paging", 7, "ERMES: European paging on 169 MHz", "", 411, 410, "avroad"},
     {410, "Marine radar (detect)", 3, "Marine radar: rotation and pulse pattern", "", 412, 411, "avroad"},
     {411, "Weather radar (detect)", 9, "Weather radar: scan pattern and pulse timing", "", 413, 412, "avroad"},
+    {881, "RC model PPM (72 MHz)", 8, "RC model PPM: channel count and stick values", "", 883, 882, "x40"},
+    {882, "UVB-76 buzzer monitor", 12, "UVB-76: buzz rate and breaks", "", 884, 883, "x40"},
+    {883, "GRAVES meteor echoes", 9, "GRAVES: meteor echo list", "", 885, 884, "x40"},
+    {884, "Radio Jove bursts", 9, "Radio Jove: burst list", "", 886, 885, "x40"},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},

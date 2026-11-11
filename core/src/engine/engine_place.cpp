@@ -215,6 +215,7 @@ void Engine::configureReceiver(int a, double r) {
     case 244: rxSfer_.configure(r); break;
     case 791: rxLtpos_.configure(r); break;
     case 871: rxFbr_.configure(r); break;
+    case 882: case 883: case 884: case 885: rxX40_.setVariant(x40::variantOfActive(a)); rxX40_.configure(r); break;
     case 212: rxAtis_.configure(r); break;
     case 241: rxSelcal_.configure(r); break;
     case 481: rxUmts_.configure(r); break;
@@ -450,6 +451,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 246: rxBgan_.setSignalOffset(o); rxBgan_.setCenterHz(centreHz); break;
     case 244: rxSfer_.setSignalOffset(o); rxSfer_.setCenterHz(centreHz); break;
     case 791: rxLtpos_.setCenterHz(centreHz); break;
+    case 882: case 883: case 884: case 885: rxX40_.setSignalOffset(o); rxX40_.setCenterHz(centreHz); break;
     case 871: rxFbr_.setSignalOffset(o); rxFbr_.setCenterHz(centreHz); break;
     case 212: rxAtis_.setSignalOffset(o); break;
     case 241: rxSelcal_.setSignalOffset(o); rxSelcal_.setDialHz(dialHz); break;

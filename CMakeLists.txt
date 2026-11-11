@@ -206,6 +206,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES smartnet tetradmo opensky)   # Motorola Type II (320), TETRA Direct Mode (321), OpenSky identifier (322): docs/VOICE-TRUNK-3.8.md
   list(APPEND DECT2_MODES pactor)   # PACTOR-I monitor (family 203): core/src/pactor, app/pactor, tests/pactor
   list(APPEND DECT2_MODES dvbsh)   # DVB-SH OFDM (SH-A) receiver and generator (family 746, docs/DVBSH-3.9.md): core/src/dvbsh, tests/dvbsh
+  list(APPEND DECT2_MODES x40)   # 4.0 signal modes: RC PPM (family 881), UVB-76 (882), GRAVES echoes (883), Radio Jove (884), docs/X40-4.0.md: core/src/x40, app/x40, tests/x40
   list(APPEND DECT2_MODES fbr)   # Fleet Broadcast, UHF SATCOM 16 x 75 Bd (family 870, docs/FBR-3.9.md): core/src/fbr, app/fbr, tests/fbr
   list(APPEND DECT2_MODES dvbc2)   # DVB-C2 (family 741, docs/DVBC2-3.9.md): core/src/dvbc2, tests/dvbc2
   list(APPEND DECT2_MODES roshf ssdv ebicab nrf24 atis selcal umts)   # ROS (HF) detector (family 205), SSDV pictures (206), EBICab / Eurobalise up-link (207): core/src/<mode>, app/<mode>, tests/<mode>

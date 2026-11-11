@@ -267,6 +267,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxFlarm_.setSignalOffset(o);
         rxAdsl_.setSignalOffset(o);
         rxAvRoad_.setSignalOffset(o);
+        rxX40_.setSignalOffset(o); rxX40_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxAvRoad_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxAdsl_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which channels are in the capture
         rxDji_.setSignalOffset(o);
@@ -581,6 +582,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxFlarm_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAdsl_.configure(rate_);
     if (const int v = avroad::variantOfActive(activeStdFor(stdMode_.load())); v >= 0) { rxAvRoad_.setVariant(v); rxAvRoad_.configure(rate_); }
+    if (const int v = x40::variantOfActive(activeStdFor(stdMode_.load())); v >= 0) { rxX40_.setVariant(v); rxX40_.configure(rate_); }
+    rxX40_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAvRoad_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAdsl_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxDji_.configure(rate_);

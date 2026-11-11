@@ -31,4 +31,6 @@ struct X40Telemetry {
     std::vector<X40Row> rows;        // newest first
 };
 
+inline std::string x40Summary(const X40Telemetry& t) { return t.headline; }
+
 } // namespace dect2

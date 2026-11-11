@@ -1768,3 +1768,7 @@ A user's handheld read OnAir's transmitted D023N as D411N (five codes reported).
 marker bits and the Golay polynomial the wrong way round; the tone decoder's table (tones_proto.cpp) was right and predicts all five wrong
 readings exactly. The transmitter and the DCS squelch now use that one table (023 = 0x763813). Test: test_audio_control. PR #481 (bellx2,
 Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.
+
+## 2026-11-12: four 4.0 signal modes (feat40-modes1)
+
+RC model PPM (881), UVB-76 buzzer monitor (882), GRAVES meteor echoes (883) and Radio Jove bursts (884): decoders, test generators, round-trip tests with offset, drift, noise and false-decode runs, mode-list entries, docs/X40-4.0.md. Simulated signals only. Families 881 to 899 are used because kNumFamilies is 900 (docs/FAMILY-NUMBERS-4.0.md).
