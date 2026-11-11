@@ -1,4 +1,4 @@
-// The screens of the 4.0 signal modes (families 881 - 884, docs/X40-4.0.md): one table of what was decoded, one Receiver page. One click: the mode tunes and needs no settings.
+// The screens of the 4.0 signal modes (families 881 - 885, docs/X40-4.0.md): one table of what was decoded, one Receiver page. One click: the mode tunes and needs no settings.
 #include "app.h"
 #include "dect2/x40/x40_rx.h"
 #include "dect2/x40/x40_tel.h"
@@ -77,5 +77,5 @@ template <int V> constexpr ModeUi makeUi() {
 
 } // namespace
 
-extern const ModeUi kX40Ui[4];
-const ModeUi kX40Ui[4] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>()};
+extern const ModeUi kX40Ui[5];
+const ModeUi kX40Ui[5] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>()};

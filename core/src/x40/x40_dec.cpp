@@ -9,6 +9,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case Uvb76: return makeUvb76();
     case Graves: return makeGraves();
     case Jove: return makeJove();
+    case Beacon: return makeBeacon();
     default: return nullptr;
     }
 }
@@ -23,6 +24,7 @@ ModeTuning x40Tuning(int v) {
         {"uvb76", 4, 5, 4.625, 1000000, 24000, 0.012, true},
         {"graves", 143, 143.1, 143.050, 250000, 8000, 0.004, true},
         {"jove", 19, 22, 20.100, 1000000, 24000, 0.012, false},
+        {"beacon", 28, 450, 144.400, 250000, 8000, 0.004, true},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

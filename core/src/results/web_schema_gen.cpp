@@ -15241,6 +15241,7 @@ static bool put_882(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Teleme
 static bool put_883(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_884(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_885(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_886(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -15528,6 +15529,7 @@ static const StdEntry kStd[] = {
     {883, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_883},
     {884, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_884},
     {885, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_885},
+    {886, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_886},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15673,6 +15675,7 @@ static const WebModeRow kRows[] = {
     {882, "UVB-76 buzzer monitor", 12, "UVB-76: buzz rate and breaks", "", 884, 883, "x40"},
     {883, "GRAVES meteor echoes", 9, "GRAVES: meteor echo list", "", 885, 884, "x40"},
     {884, "Radio Jove bursts", 9, "Radio Jove: burst list", "", 886, 885, "x40"},
+    {885, "Beacon propagation monitor", 9, "Beacon monitor: path class, level, Doppler spread", "", 887, 886, "x40"},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},

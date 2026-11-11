@@ -151,6 +151,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | UVB-76 buzzer monitor | 882 | 884 | 883 | 882 | feat40-modes1 | 4.0; buzz train timing only, voice not decoded; simulated signals only |
 | GRAVES meteor echoes | 883 | 885 | 884 | 883 | feat40-modes1 | 4.0; carrier and meteor echo finder; simulated signals only |
 | Radio Jove bursts | 884 | 886 | 885 | 884 | feat40-modes1 | 4.0; power burst finder; simulated signals only |
+| Beacon propagation monitor | 885 | 887 | 886 | 885 | feat40-modes1 | 4.0; steady / fading / aurora-like path class of one beacon; simulated signals only |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |

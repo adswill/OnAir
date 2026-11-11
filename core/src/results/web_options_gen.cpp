@@ -995,6 +995,12 @@ static bool set_885(Engine& e, const std::string& n, double v) {
     if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
     return false;
 }
+static const char kOpt_886[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_886(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
 const OptEntry kOpt[] = {
     {7, kOpt_7, set_7},
@@ -1119,6 +1125,7 @@ const OptEntry kOpt[] = {
     {883, kOpt_883, set_883},
     {884, kOpt_884, set_884},
     {885, kOpt_885, set_885},
+    {886, kOpt_886, set_886},
 };
 } // namespace
 

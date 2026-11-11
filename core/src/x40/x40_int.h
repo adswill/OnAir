@@ -43,6 +43,7 @@ std::unique_ptr<Decoder> makeRcPpm();
 std::unique_ptr<Decoder> makeUvb76();
 std::unique_ptr<Decoder> makeGraves();
 std::unique_ptr<Decoder> makeJove();
+std::unique_ptr<Decoder> makeBeacon();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {

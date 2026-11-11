@@ -365,6 +365,7 @@
         <item>UVB-76 buzzer monitor</item>
         <item>GRAVES meteor echoes</item>
         <item>Radio Jove bursts</item>
+        <item>Beacon propagation monitor</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -711,6 +712,7 @@
         <item>UVB-76 \'The Buzzer\' on 4625 kHz AM: times the buzz train (rate, length, regularity), logs breaks in it and long transmissions. Timing only: voice is not decoded. Needs an HF capable radio. Simulated signals only</item>
         <item>The GRAVES space radar\'s carrier on 143.050 MHz and the meteor echoes around it: Doppler shift, strength, duration and drift of every echo. Needs a steady radio and a narrow channel. Simulated signals only</item>
         <item>Radio Jove (20.1 MHz): a power-versus-time burst finder for Jupiter and solar radio bursts. 5 ms resolution, short and long bursts with their height over the baseline. Cannot tell interference from a real burst. Simulated signals only</item>
+        <item>Follows one steady beacon (28 / 50 / 144 / 432 MHz, CW or a carrier) and says what the path does to it: steady, fading (sporadic-E or tropospheric swings) or aurora-like (the line smeared over tens to hundreds of Hz). A reading of the signal, not a forecast. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1057,6 +1059,7 @@
         <item>Buzz train timing</item>
         <item>Meteor echoes</item>
         <item>Burst finder</item>
+        <item>Path class</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1403,5 +1406,6 @@
         <item>uvb-76 uvb76 buzzer the buzzer 4625 khz russia numbers station mdz</item>
         <item>graves radar 143.050 mhz meteor scatter echo doppler space surveillance france</item>
         <item>radio jove jupiter sun solar burst 20.1 mhz s-burst l-burst radio astronomy</item>
+        <item>beacon propagation monitor aurora sporadic-e es tropo fading doppler spread cw 144 mhz 50 mhz 28 mhz ncdxf</item>
     </string-array>
 </resources>

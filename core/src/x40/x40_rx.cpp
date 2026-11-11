@@ -8,7 +8,7 @@ namespace dect2 {
 using namespace x40;
 
 const char* x40::variantName(int v) {
-    static const char* n[kNumVariants] = {"RC model PPM (72 MHz)", "UVB-76 buzzer monitor", "GRAVES meteor echoes", "Radio Jove bursts"};
+    static const char* n[kNumVariants] = {"RC model PPM (72 MHz)", "UVB-76 buzzer monitor", "GRAVES meteor echoes", "Radio Jove bursts", "Beacon propagation monitor"};
     return v >= 0 && v < kNumVariants ? n[v] : "";
 }
 

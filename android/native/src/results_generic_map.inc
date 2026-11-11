@@ -3035,3 +3035,17 @@ case 885: {
     { Table tb({"Time Sec", "Kind", "Id", "Text", "Level Db"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.timeSec), cell(e.kind), cell(e.id), cell(e.text), cell(e.levelDb)}); } if (n) addTable(o, "Rows", tb); }
     break;
 }
+case 886: {
+    const auto& t = rx.x40; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Variant", t.variant);
+    cardIf(o, "Time Sec", t.timeSec);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Level Db", t.levelDb);
+    cardIf(o, "Headline", t.headline);
+    { Table tb({"Time Sec", "Kind", "Id", "Text", "Level Db"}); int n = 0; for (auto it = t.rows.rbegin(); it != t.rows.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.timeSec), cell(e.kind), cell(e.id), cell(e.text), cell(e.levelDb)}); } if (n) addTable(o, "Rows", tb); }
+    break;
+}
