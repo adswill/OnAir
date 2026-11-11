@@ -131,7 +131,7 @@ public:
             int ci = -1;
             const bool mid = d->midpointSlicer();
             for (size_t i = 0; i < chains.size(); i++) if (std::fabs(chains[i].baud() - baud) < 1e-6 && chains[i].midpoint() == mid) ci = (int)i;
-            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid); ci = (int)chains.size() - 1; }
+            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid, toneChips ? toneDevFor(baud) : 0.0); ci = (int)chains.size() - 1; }
             Dec e; e.d = std::move(d); e.kind = kind; e.chain = ci; e.rs41 = r41; e.rs92 = r92;
             decs.push_back(std::move(e));
         };
@@ -150,6 +150,14 @@ public:
         syms.assign(chains.size(), {});
         symT.assign(chains.size(), 0.0);
     }
+
+    // 4.0: the FSK deviation of the sonde types whose symbols are decided by tone energies (0: the discriminator, as in 3.9)
+    static double toneDevFor(double baud) {
+        if (std::fabs(baud - 4800) < 1 || std::fabs(baud - 2500) < 1) return 2400.0;   // RS41, RS92, DFM
+        if (std::fabs(baud - 9615) < 1 || std::fabs(baud - 9600) < 1) return 4800.0;   // M10, M20
+        return 0.0;
+    }
+    bool toneChips = true;
 
     void release() { used = false; decs.clear(); chains.clear(); }
     void setNoise(double noiseVar, bool lband) {
@@ -191,6 +199,7 @@ public:
             for (size_t c = 0; c < chains.size(); c++) {
                 if (!chainActive(c)) continue;
                 const size_t before = syms[c].size();
+                if (chains[c].toneOn()) chains[c].pushTone(y, dc);
                 chains[c].step(d, dc, syms[c]);
                 if (before == 0 && !syms[c].empty()) symT[c] = tHere;
             }
@@ -261,6 +270,7 @@ struct SondeReceiver::Impl {
     double fs = 0;
     std::atomic<double> sigOff{0}, centerHz{0};      // set from the interface thread, read by the worker
     std::atomic<int> maxChan{kMaxChan};
+    std::atomic<bool> toneChipsOn{true};              // setToneDetection(): symbols of RS41 / RS92 / DFM / M10 / M20 from tone energies
     std::function<void(const std::string&)> log;
     SondeTelemetry tel;
     bool syncMode = false;
@@ -486,6 +496,7 @@ struct SondeReceiver::Impl {
             int usedN = 0;
             for (auto& ch : chans) { if (ch.used) usedN++; else if (!fr) fr = &ch; }
             if (!fr || usedN >= maxChan.load()) continue;
+            fr->toneChips = toneChipsOn.load();
             fr->init((int)(fr - chans.data()), fs, car.offHz, tNow, noiseVar, lband);
             fr->snrDb = car.level;
             car.assigned = true; car.channel = fr->id;
@@ -691,6 +702,8 @@ void SondeReceiver::reset() {
 }
 void SondeReceiver::setSynchronous(bool on) { p_->syncMode = on; }
 void SondeReceiver::setCenterMhz(double mhz) { p_->centerHz = mhz * 1e6; }
+void SondeReceiver::setToneDetection(bool on) { p_->toneChipsOn = on; }
+bool SondeReceiver::toneDetection() const { return p_->toneChipsOn.load(); }
 void SondeReceiver::setMaxChannels(int n) { p_->maxChan = std::clamp(n, 1, kMaxChan); }
 void SondeReceiver::clearSondes() {
     // done by the worker's lock: the list belongs to the processing state

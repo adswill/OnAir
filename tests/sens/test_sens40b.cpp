@@ -104,6 +104,14 @@ std::vector<Mode> modes40b() {
         satdata(on ? "zwave" : "zwave-off", on ? "Z-Wave (4.0 receiver)" : "Z-Wave (3.9 receiver)", 100, 4.0, 100e3, 25, [on](Mode& m) {
             m.make = factory<ZwaveReceiver, ZwaveTelemetry>([on](ZwaveReceiver& rx, double r) { prepGeneric(rx, r, 100); rx.setToneDetection(on != 0); }, blocks<ZwaveTelemetry>);
         });
+    for (int on = 1; on >= 0; on--) {   // radiosondes: an RS41 on the centre, a DFM-17 and an M10 elsewhere (as sens_modes.h)
+        Mode m; m.id = on ? "sonde" : "sonde-off"; m.name = on ? "Radiosonde (4.0 receiver)" : "Radiosonde (3.9 receiver)"; m.family = "narrowband-data"; m.stdMode = 15;
+        m.rate = 8e6; m.secs = 5.0; m.bwHz = 10e3; m.mhz = 403; m.snrHi = 25; m.maxJobs = 4;
+        m.gen = [](size_t n) { return clean(15, SynthConfig(), 8e6, n); };
+        m.make = factory<SondeReceiver, SondeTelemetry>([on](SondeReceiver& rx, double r) { rx.setToneDetection(on != 0); rx.setSynchronous(true); rx.setSignalOffset(0); rx.configure(r); rx.setCenterMhz(403); },
+                                                        blocks<SondeTelemetry>, false, [](SondeReceiver& rx) { rx.flush(); });
+        v.push_back(m);
+    }
     return v;
 }
 
@@ -175,7 +183,7 @@ int points(const std::vector<Mode>& all, const std::regex& want, const char* lis
 int main() {
     const bool full = testLong();
     const char* sel = std::getenv("ONAIR_SENS_MODES");
-    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off|zwave|zwave-off)$");
+    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off|zwave|zwave-off|sonde|sonde-off)$");
     const int threads = full ? std::max(1u, std::thread::hardware_concurrency() / 2) : 1;
     int fails = 0;
     const auto all = modes40b();

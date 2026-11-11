@@ -1777,3 +1777,4 @@ tests unchanged. New: test_sens40b (4.0 and 3.9 receiver in one binary, same see
 Baseline table of 40 narrowband modes in docs/SENSITIVITY-4.0-B.md. Tried and not kept: summing discriminator products (DMR, D-STAR, NXDN, dPMR, P25).
 2026-11-12 (sensitivity 4.0 B, Z-Wave): chips judged by tone energies from the burst's complex samples and a more sensitive burst detector (start 6x -> 3x the noise floor):
 AWGN 90 % point 9.5 -> 6 dB (50 %: 9 -> 5.3), 0 false frames in 300 noise-only trials; test_sens40b has zwave and zwave-off side by side.
+2026-11-12 (sensitivity 4.0 B, radiosondes): RS41/RS92/DFM/M10/M20 symbols decided by tone energies (symbol clock still from the discriminator): sonde mix AWGN 90 % point 11 -> 9 dB, 0 false units in 40 noise-only trials.

@@ -153,6 +153,33 @@ The test signal is the generator's own (zwave_gen), R1 to R3 in turn: simulated 
 
 Tests: sens40b (zwave guard at 14 dB, noise), sens39c guard (zwave), zwave_rx / proto / engine / homenet: pass.
 
+## Radiosondes (core/src/sonde/sonde_dsp.cpp, sonde_chan.h, sonde_rx.cpp)
+
+Test signal: an RS41 on the centre, a DFM-17 and an M10 elsewhere (sens_modes.h `sonde`); SNR in 10 kHz; a trial passes when at least half of the
+frames of a clean run decode.
+
+| | 3.9 receiver | 4.0 receiver | gain |
+|---|---|---|---|
+| AWGN, 90 % point | 11 dB | **9 dB** | 2 dB |
+| AWGN, 50 % point | about 10.4 dB | about 8.4 dB | about 2 dB |
+| 20 ppm carrier error, 50 ppm clock, off-centre (20 % of 10 kHz) | all 10 / 10 down to 12 dB, 0 / 10 at 10 dB | all 10 / 10 down to 10 dB, 0 / 10 at 8 dB | 2 dB |
+| noise only | 0 of 40 trials (at -40 dB) | 0 of 40 | |
+| CPU per second of signal at threshold + 10 dB | 0.189 | 0.200 | +6 % |
+
+20 trials a point, same seeds (test_sens40b sonde / sonde-off): 4.0: 11 dB 20, 10.5 dB 20, 10 dB 20, 9.5 dB 18, 9 dB 20, 8.5 dB 7; 3.9: 11 dB 19, 10.5 dB 9, 10 dB 0.
+sens_sweep reads 13 / 17 / 12 dB for the 3.9 receiver in the table above (random start points, 8 trials, 1 dB steps).
+
+The symbol of RS41, RS92, DFM (+-2.4 kHz) and M10, M20 (+-4.8 kHz, the deviations of the generator) is decided by the energy at the upper
+tone against the energy at the lower tone over the symbol, from the complex samples of the channel (centre = the discriminator's mean,
+as the slicer's threshold was), instead of by the sign of the smoothed discriminator. The symbol clock still comes from the discriminator's
+zero crossings; the decision is taken when the clock says the symbol has ended (the smoothing delays the clock by 0.35 symbol). The other types
+(iMet, MRZ, Meisei, LMS6, the AFSK iMet) keep the discriminator. The M10 (9.6 kbaud in a 10 kHz noise bandwidth) is the type that sets the
+threshold of this mix: its Eb/N0 equals the SNR, which is about the textbook figure for noncoherent FSK at the error rate its frames survive.
+The RS41 and DFM would decode at lower SNR alone; not measured separately. Real sondes' deviations differ from the generator's by up to a
+few tenths of a kHz; with +-25 % the loss of tone detection is about 1 dB (not measured here).
+
+Tests: sens40b (sonde, noise), sonde_* (26 tests incl. rs41_rf, rs92_rf, rf_dfm, rf_m10, rf_m20, all_rf): pass.
+
 ## Not done
 
 * The wrong-message decodes of FT8 / FT4 / FT2 / JT4 next to strong signals.

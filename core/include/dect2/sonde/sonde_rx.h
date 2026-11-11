@@ -34,6 +34,8 @@ public:
     // Setters for the interface; safe while feed() runs
     void setCenterMhz(double mhz);                       // the tuned centre frequency: lets the telemetry carry absolute frequencies
     void clearSondes();                                  // empty the list of sondes heard (channels keep following their carriers)
+    void setToneDetection(bool on);                      // symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards
+    bool toneDetection() const;
     void setMaxChannels(int n);                          // 1 to 8 (default 8)
     // Tests and tools
     void setSynchronous(bool on);                        // process inside feed() instead of on the worker thread (deterministic; set before the first feed)
