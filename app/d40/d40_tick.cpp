@@ -1,0 +1,6 @@
+// 4.0 wiring: the per-frame feeding of every card (docs/WIRING-4.0.md).
+#include "d40_ui.h"
+
+void d40Tick(App& a) {
+    d40FmTick(a);
+}

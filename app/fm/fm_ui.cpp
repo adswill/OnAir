@@ -1,4 +1,5 @@
 // FM broadcast radio panels: tuning, status line, station panel with RDS, diagnostic plots and the band scanner.
+#include "../d40/d40_ui.h"
 #include "app.h"
 #include "dab/played_ui.h"
 #include "../ui/typography.h"
@@ -488,6 +489,7 @@ void fmRadioPanel(App& a) {
         ImGui::EndTable();
     }
     ImGui::Spacing();
+    if (live) d40FmCard(a);   // 4.0: station names, DX opening alarm (app/d40)
     if (live) smart5FmCard(a);   // round-5 smart checks: watchdog, BS.412 power, transmitter fingerprint (app/smart5)
     if (live && fm.rdsSync && (!fm.rds.afMhz.empty() || fm.rds.language >= 0 || !fm.rds.ptyn.empty() || fm.rds.clockUtc || fm.rds.ecc >= 0 || !fm.rds.eon.empty() || !fm.rds.oda.empty())) {
         // the rest of RDS: what the station sends beyond the name and the text
