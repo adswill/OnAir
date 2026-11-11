@@ -1151,7 +1151,13 @@ void Fy3Receiver::feed(const cf32* x, size_t n) {
         if (++m.idleRun >= kIdleBlock) {
             m.idleRun = 0;
             if (m.idle()) { m.idleLeft = (int64_t)kIdleSkip * kIdleBlock; m.idled = true; }
-            else if (m.idled) { m.idled = false; if (!m.railLocked && m.holdSyms > 0) m.holdSyms = std::min(m.holdSyms, kWarmSyms); }
+            else if (m.idled) {   // something came up: the carrier loop opens to pull it in, and the code search follows when it has settled
+                m.idled = false;
+                if (!m.railLocked) {
+                    m.loopStage = 0; m.nSym = 0; m.loopGains(0.02);
+                    m.holdSyms = std::min<int64_t>(std::max<int64_t>(m.holdSyms, 0), (int64_t)(m.rs * 0.03));
+                }
+            }
         }
     }
 }
