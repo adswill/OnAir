@@ -257,16 +257,16 @@ struct Cp16Receiver::Impl {
     // The rows: each carrier's envelope through a box filter 1 / spacing long (zeros on the neighbours, so no beats), the squared slopes of all 16
     // summed: a pulse train at the row edges. The strongest lines in 2 .. 40 Hz and a half and a third of them are the candidates for the row rate; each
     // is tried as rows (rowFisher) and the longest row that explains the envelopes nearly as well as the best is taken. The phase of its line gives the edges.
-    bool findTiming(int64_t w0, int64_t w1, double& P, double& b0, float& score) {
-        const int L = std::max(8, (int)std::lround(kFs / combD));
+    struct Cn { double u, edge, conc; float ratio; };
+    // the candidates of one envelope filter length L (samples): rates with a clear line whose rows are long enough for the filter, folded
+    bool timingCands(int64_t w0, int64_t w1, int L, std::vector<Cn>& tried) {
         const int64_t n = w1 - w0;
         constexpr int kBinSteps = 4;                    // slopes summed per 2 ms bin
         constexpr int kBinS = kStep * kBinSteps;        // samples a bin
         constexpr double kBinRate = kFs / kBinS;        // 500 Hz
         const int64_t m = n / kBinS;
         if (m < 512) return false;
-        std::vector<float> g((size_t)m, 0.f), gc((size_t)m, 0.f);
-        constexpr int kBend = 12;                       // 6 ms
+        std::vector<float> g((size_t)m, 0.f);
         std::vector<cf32> mixed((size_t)n);
         const int64_t ks = n / kStep;
         std::vector<float> e((size_t)ks);
@@ -287,8 +287,6 @@ struct Cp16Receiver::Impl {
                 if (b >= m) break;
                 const float dlt = e[(size_t)k] - e[(size_t)(k - kBinSteps)];
                 g[(size_t)b] += dlt * dlt;
-                // the corners of the ramps (start and end of each edge): the bend of the envelope over kBend steps
-                if (k >= 2 * kBend && k % kBinSteps == 0) gc[(size_t)b] += std::fabs(e[(size_t)k] - 2 * e[(size_t)(k - kBend)] + e[(size_t)(k - 2 * kBend)]);
             }
         }
         double mean = 0;
@@ -334,8 +332,6 @@ struct Cp16Receiver::Impl {
         cands.erase(std::unique(cands.begin(), cands.end()), cands.end());
         // each candidate folded: how much of the slope energy falls into one filter length of the row (1 at the row rate and its multiples, little elsewhere);
         // the longest row that concentrates it nearly as well as the best is the row
-        struct Cn { double u, edge, conc; float ratio; };
-        std::vector<Cn> tried;
         for (int c : cands) {
             double u = c * res;
             const double a = mag[(size_t)c - 1], b = mag[(size_t)c], cc = mag[(size_t)c + 1];
@@ -343,52 +339,30 @@ struct Cp16Receiver::Impl {
             if (den < 0) u += std::clamp(0.5 * (a - cc) / den, -0.5, 0.5) * res;
             if (mag[(size_t)c] < kTimeRatio * med || u <= 0) continue;   // too weak a line to be the rows
             double edge = 0;
-            // a row hardly longer than the filter: the slope pulses fill the row, so the corners of the ramps are folded instead
-            const double conc = (double)L > 0.55 * (kFs / u) ? foldCorners(gc, kFs / u, L, kBend * kStep, kBinS, edge) : fold(g, mean, kFs / u, L, kBinS, edge);
-            if (conc > -1) tried.push_back({u, edge, conc, (float)(mag[(size_t)c] / med)});
+            if ((double)L > 0.55 * (kFs / u)) continue;   // the slope pulses would fill the row: left to the shorter filter
+            const double conc = fold(g, mean, kFs / u, L, kBinS, edge);
+            if (conc > -1) tried.push_back({u, (double)w0 + edge, conc, (float)(mag[(size_t)c] / med)});
         }
+        return true;
+    }
+
+    // The rows from two filter lengths: one spacing (zeros on the neighbours) and half of it (for rows hardly longer than one spacing, where the slopes of the
+    // longer filter fill the row). Of all candidates the longest row that concentrates its edges nearly as well as the best is taken.
+    bool findTiming(int64_t w0, int64_t w1, double& P, double& b0, float& score) {
+        const int L = std::max(8, (int)std::lround(kFs / combD));
+        std::vector<Cn> tried;
+        timingCands(w0, w1, L, tried);
+        timingCands(w0, w1, std::max(8, L / 2), tried);
         double cmax = 0;
         for (const Cn& c : tried) cmax = std::max(cmax, c.conc);
         if (cmax <= 0) return false;
         const Cn* pick = nullptr;
-        for (const Cn& c : tried) if (c.conc >= 0.85 * cmax && (!pick || c.u < pick->u)) pick = &c;
+        for (const Cn& c : tried) if (c.conc >= 0.85 * cmax && (!pick || c.u < pick->u * 0.99)) pick = &c;
         score = (float)pick->conc;
         if (pick->conc < kConcMin) return false;
         P = kFs / pick->u;
-        b0 = (double)w0 + pick->edge;
+        b0 = pick->edge;
         return true;
-    }
-
-    // The ramp corners folded at period P: each edge bends the envelope where its ramp starts and, L samples later, where it ends. The share of the corner
-    // energy in the best narrow window against a flat fold; the window is the start of the ramps when the window L later holds more than the one L before.
-    static double foldCorners(const std::vector<float>& gc, double P, int L, int bendS, int binS, double& edge) {
-        if (!(P > 2.0 * binS) || !std::isfinite(P)) return -2;
-        const int nb = std::clamp((int)(P / binS), 16, 256);
-        std::vector<double> h((size_t)nb, 0.0);
-        double total = 0, mean = 0;
-        for (float v : gc) mean += v;
-        mean /= (double)std::max<size_t>(1, gc.size());
-        for (size_t b = 0; b < gc.size(); b++) {
-            const double t = ((double)b + 0.5) * binS;
-            const double v = std::max(0.0, (double)gc[b] - 0.5 * mean);
-            const int k = std::clamp((int)(std::fmod(t, P) / P * nb), 0, nb - 1);
-            h[(size_t)k] += v;
-            total += v;
-        }
-        if (total <= 0) return -2;
-        const int wb = std::max(1, (int)std::lround((2.0 * bendS + 2 * binS) / P * nb));
-        if (wb * 3 >= nb) return -2;
-        auto win = [&](int k0) { double a = 0; for (int k = k0; k < k0 + wb; k++) a += h[(size_t)(((k % nb) + nb) % nb)]; return a; };
-        int bestK = 0; double bestAcc = -1;
-        for (int k = 0; k < nb; k++) { const double a = win(k); if (a > bestAcc) { bestAcc = a; bestK = k; } }
-        const int lb = (int)std::lround((double)L / P * nb);
-        const bool isStart = win(bestK + lb) >= win(bestK - lb);
-        // the corner signal at bin b covers the bend over the last 2 x bendS samples: its peak is bendS after the corner
-        double pos = ((double)bestK + wb / 2.0) / nb * P - bendS - binS / 2.0;
-        if (!isStart) pos -= L;
-        edge = std::fmod(pos + 4 * P, P);
-        const double uni = (double)wb / nb;
-        return (bestAcc / total - uni) / (1 - uni);
     }
 
     // The slopes folded at period P (samples): the share of their energy in the best window one filter long, against what a flat fold would give (0 flat, 1 all
