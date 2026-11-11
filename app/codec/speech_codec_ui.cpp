@@ -87,9 +87,9 @@ const char* discordInviteUrl() { return "https://discord.gg/ptxkzCuzR"; }
 
 const char* discordCodecLabel() { return tr("Join the Discord to get access to built codecs"); }
 
-bool discordCodecButton(bool small) {
+bool discordCodecButton(bool compact) {
     ImGui::PushID("codec_discord");
-    const bool clicked = small ? ImGui::SmallButton(discordCodecLabel()) : ImGui::Button(discordCodecLabel());
+    const bool clicked = compact ? ImGui::SmallButton(discordCodecLabel()) : ImGui::Button(discordCodecLabel());
     ImGui::PopID();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Opens the OnAir Discord in your browser. OnAir itself never downloads or includes a codec."));
     if (clicked) dect2::openUrl(discordInviteUrl());
