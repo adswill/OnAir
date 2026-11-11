@@ -134,29 +134,45 @@ bool align(const std::vector<cf32>& y240, const Det& d, Aligned& out) {
     const int W = 8;
     for (int j0 = 0; j0 + 2 <= maxFrames; j0 += W) {
         const int jn = std::min(W, maxFrames - j0);
-        // the first window searches wide: the coarse timing is a mean over the whole block, and with a 50 ppm sample clock the first frames
-        // sit up to 100 samples (at 1.92 Msps) from it. +-20 then held a side peak of the NPSS, 60 samples off, and the cell's NSSS and MIB failed.
-        const int R = pts.empty() ? 128 : 20;
-        std::vector<double> S((size_t)(2 * R + 1), 0.0);
-        int used = 0;
-        for (int dl = -R; dl <= R; dl++) {
-            double sum = 0;
-            used = 0;
-            for (int j = j0; j < j0 + jn; j++) {
-                const long s = (long)std::lround(a0 + L * j) + dl;
-                if (s < 0 || (size_t)(s + symUseful(13) + kFft + 2) > N1) continue;
-                sum += npssMetric(y1.data(), N1, s);
-                used++;
+        // the NPSS metric summed over the window's frames at offsets -R .. R from the predicted positions
+        auto scanWin = [&](int R, std::vector<double>& S) {
+            S.assign((size_t)(2 * R + 1), 0.0);
+            int used = 0;
+            for (int dl = -R; dl <= R; dl++) {
+                double sum = 0;
+                used = 0;
+                for (int j = j0; j < j0 + jn; j++) {
+                    const long s = (long)std::lround(a0 + L * j) + dl;
+                    if (s < 0 || (size_t)(s + symUseful(13) + kFft + 2) > N1) continue;
+                    sum += npssMetric(y1.data(), N1, s);
+                    used++;
+                }
+                S[(size_t)(dl + R)] = sum;
             }
-            S[(size_t)(dl + R)] = sum;
-        }
-        if (used < 2) continue;
-        const int nS = 2 * R + 1;
+            return used;
+        };
+        int R = 20;
+        std::vector<double> S;
+        if (scanWin(R, S) < 2) continue;
         int pk = 0;
-        for (int i = 1; i < nS; i++) if (S[(size_t)i] > S[(size_t)pk]) pk = i;
-        std::vector<double> sorted = S;
-        std::nth_element(sorted.begin(), sorted.begin() + R, sorted.end());
-        if (S[(size_t)pk] < 2.2 * sorted[(size_t)R]) continue;
+        for (int i = 1; i < 2 * R + 1; i++) if (S[(size_t)i] > S[(size_t)pk]) pk = i;
+        {   // the decision as before: +-20, the peak 2.2 times the median (a wider window here let noise through: phantom cells)
+            std::vector<double> sorted = S;
+            std::nth_element(sorted.begin(), sorted.begin() + R, sorted.end());
+            if (S[(size_t)pk] < 2.2 * sorted[(size_t)R]) continue;
+        }
+        // The first window's peak on the edge: the coarse timing is a mean over the whole block, and with a 50 ppm sample clock the first
+        // frames sit up to 100 samples (at 1.92 Msps) from it, so +-20 held a side peak of the NPSS 60 samples off (NSSS and MIB then failed).
+        // Only the peak's place is then taken from +-128; whether there is a cell stays the +-20 decision above.
+        if (pts.empty() && (pk == 0 || pk == 2 * R)) {
+            std::vector<double> W2;
+            if (scanWin(128, W2) >= 2) {
+                int p2 = 0;
+                for (int i = 1; i < 257; i++) if (W2[(size_t)i] > W2[(size_t)p2]) p2 = i;
+                if (p2 > 0 && p2 < 256 && W2[(size_t)p2] > S[(size_t)pk]) { R = 128; S.swap(W2); pk = p2; }
+            }
+        }
+        const int nS = 2 * R + 1;
         double frac = 0;
         if (pk > 0 && pk < nS - 1) { const double a = S[(size_t)pk - 1], b = S[(size_t)pk], c = S[(size_t)pk + 1]; const double den = a - 2 * b + c; if (den < 0) frac = 0.5 * (a - c) / den; }
         const double jc = j0 + 0.5 * (jn - 1);
