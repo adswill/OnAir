@@ -10,7 +10,7 @@ namespace {
 using dect2::X40Row;
 using dect2::X40Telemetry;
 
-template <int V> bool live(const App& a) { return a.rx.standard == 882 + V; }
+template <int V> bool live(const App& a) { return a.rx.standard == dect2::x40::activeOfVariant(V); }
 
 template <int V> void tab(App& a) {
     if (!live<V>(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); return; }
@@ -77,5 +77,5 @@ template <int V> constexpr ModeUi makeUi() {
 
 } // namespace
 
-extern const ModeUi kX40Ui[15];
-const ModeUi kX40Ui[15] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>()};
+extern const ModeUi kX40Ui[23];
+const ModeUi kX40Ui[23] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>()};

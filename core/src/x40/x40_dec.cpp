@@ -27,7 +27,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
 ModeTuning x40Tuning(int v) {
     using namespace x40;
     ModeTuning t;
-    t.stdMode = kFamilyBase + 3 + v;
+    t.stdMode = familyOfVariant(v) + 2;
     struct T { const char* id; double minMhz, maxMhz, defMhz, rate, minRate, bwMhz; bool carrier; };
     static const T k[kNumVariants] = {
         {"rcppm", 26, 75, 72.350, 1000000, 200000, 0.04, false},
