@@ -6,6 +6,7 @@
 // block interleaver of 1 to 72 frames, an optional 32-bit end-of-message pattern.
 //
 // Figure C-5 (the scrambler drawing) is not text: the shift direction used here is an interpretation, see docs/HF-MIL-3.9.md.
+// Multipath is handled by a decision-feedback equaliser (feed-forward -2 T .. +6 T, 8 feedback taps, RLS) trained on the known symbols.
 // Receive only; nothing is decrypted (the payload stays as bytes). Input: complex baseband at 24 kHz with the sub-carrier at +1800 Hz.
 #pragma once
 #include "dect2/common/ring.h"
@@ -53,6 +54,9 @@ public:
     void setByteSink(std::function<void(uint8_t)> cb);                     // decoded bytes, least significant bit first, aligned to the start of a message
     void setEventSink(std::function<void(const SerialEvent&)> cb);
     void setD5066Sink(std::function<void(const D5066&)> cb);
+    // the decision-feedback equaliser (on by default): RLS, trained on the preamble, the mini-probes and the reinserted preambles.
+    // Off: the channel is interpolated between the mini-probes (one tap), as before 3.9.
+    void setEqualizer(bool on);
     HdrStatus status() const;
 private:
     struct Impl;

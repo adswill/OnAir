@@ -297,6 +297,19 @@ struct HighRateRx::Impl {
     int bps = 0, frames = 0, frame = 1, superN = 0, badProbes = 0;
     cf hPrev; double hPrevPos = 0;
     double noise = 1e-3, sig = 1;
+    double phRef = 0, phPos = 0;     // the frequency correction's phase at phPos: a change of frequency keeps the phase continuous
+    // decision-feedback equaliser (RLS), trained on the preamble, the mini-probes and the reinserted preambles
+    static constexpr int kFfLo = -4, kFfHi = 12;                 // feed-forward taps T/2 apart, -2 T to +6 T around the first path
+    static constexpr int kNff = kFfHi - kFfLo + 1, kNfb = 8, kNeq = kNff + kNfb;
+    bool useEq = true;
+    std::vector<std::complex<double>> w, P, pu;
+    cf u[kNeq];
+    cf fb[kNfb];                     // the last decisions, the newest first
+    float inScale = 1;
+    double eqLambda = 0.993, eqMse = 0.1, eqAcc = 0;
+    int eqAccN = 0;
+    std::vector<double> prof;        // the power delay profile of the probes (lags -20 .. +60 samples), averaged
+    std::vector<cf> cirPrev;
     std::vector<float> soft;
     std::vector<uint8_t> bitHist;    // for the EOM search
     uint32_t eomWin = 0;
@@ -328,8 +341,13 @@ struct HighRateRx::Impl {
         const int64_t a = i - y0;
         if (a < 0 || a + 1 >= (int64_t)y.size()) return cf(0, 0);
         const cf v = y[(size_t)a] * (1 - fr) + y[(size_t)a + 1] * fr;
-        const double ph = -2 * kPi * cfo * pos / kFs;
+        const double ph = phRef - 2 * kPi * cfo * (pos - phPos) / kFs;
         return v * cf((float)std::cos(ph), (float)std::sin(ph));
+    }
+    void setCfo(double f, double pos) {
+        phRef = std::remainder(phRef - 2 * kPi * cfo * (pos - phPos) / kFs, 2 * kPi);
+        phPos = pos;
+        cfo = f;
     }
     double posOf(int64_t m) const { return t0 + (double)m * sps; }
     cf symAt(int64_t m) const { return at(posOf(m)); }
@@ -409,6 +427,7 @@ struct HighRateRx::Impl {
     }
 
     bool lockAt(int64_t t, double f0) {
+        phRef = 0; phPos = 0;
         // fine timing (tenth of a sample) and frequency (the phase slope between the two mini-probes)
         double bestT = (double)t, bestE = -1;
         for (double dt = -1.0; dt <= 1.0001; dt += 0.1) {
@@ -433,7 +452,8 @@ struct HighRateRx::Impl {
         for (int k = 0; k < 184; k++) { const cf v = symAt(k - 184); s += v * std::conj(psk8(kSync184[k])); e += std::abs(v); }
         const bool start = e > 0 && std::abs(s) / e > 0.5;
         bps = r; frames = fr; frame = 1; superN = 0; badProbes = 0; goodProbes = 0;
-        hPrev = hh; hPrevPos = posOf(kBlock - 16);
+        if (useEq) eqStart(start, dv, hh);
+        hPrev = useEq ? fitFixed(t0, cfo, 71, kBlock) / 32.0f : hh; hPrevPos = posOf(kBlock - 16);
         soft.clear();
         curByte = 0; curBits = 0; eomWin = 0; pendingBits.clear();
         state = 2;
@@ -469,6 +489,215 @@ struct HighRateRx::Impl {
         snr = 10 * std::log10(sp / std::max(ns, 1e-12));
         (void)pw;
         return snr > 0;   // a side peak or noise does not fit the known symbols
+    }
+
+    // ---- decision-feedback equaliser ------------------------------------------------------------------------------------------------
+    // the channel at lags lo .. hi samples from n known symbols starting at symbol m0
+    void cirAt(int64_t m0, const uint8_t* sym, int n, int lo, int hi, std::vector<cf>& c) const {
+        c.assign((size_t)(hi - lo + 1), cf(0, 0));
+        for (int l = lo; l <= hi; l++) {
+            cf a(0, 0);
+            for (int i = 0; i < n; i++) a += at(posOf(m0 + i) + l) * std::conj(psk8(sym[i]));
+            c[(size_t)(l - lo)] = a / (float)n;
+        }
+    }
+    // the position (in samples, relative to lag lo) of the first path: the first lag within 5 dB of the strongest, then up to its peak
+    static double firstPath(const std::vector<double>& pw, int lo) {
+        double mx = 0;
+        for (double v : pw) mx = std::max(mx, v);
+        if (mx <= 0) return 0;
+        size_t i = 0;
+        while (i < pw.size() && pw[i] < 0.3 * mx) i++;
+        while (i + 1 < pw.size() && pw[i + 1] > pw[i]) i++;
+        double d = 0;
+        if (i > 0 && i + 1 < pw.size()) {
+            const double a = pw[i - 1], b = pw[i], c = pw[i + 1], den = a - 2 * b + c;
+            if (den < 0) d = std::clamp(0.5 * (a - c) / den, -0.5, 0.5);
+        }
+        return (double)i + d + (double)lo;
+    }
+    void eqResetP() {
+        P.assign((size_t)(kNeq * kNeq), 0.0);
+        for (int i = 0; i < kNeq; i++) P[(size_t)(i * kNeq + i)] = 10.0;
+    }
+    void eqRegress(int64_t m) {
+        const double p0 = posOf(m);
+        for (int i = 0; i < kNff; i++) u[i] = at(p0 + (double)(kFfLo + i) * sps * 0.5) * inScale;
+        for (int j = 0; j < kNfb; j++) u[kNff + j] = fb[j];
+    }
+    cf eqOut() const {
+        std::complex<double> z = 0;
+        for (int i = 0; i < kNeq; i++) z += std::conj(w[(size_t)i]) * std::complex<double>(u[i]);
+        return cf((float)z.real(), (float)z.imag());
+    }
+    // RLS (output w^H u, a priori error e)
+    void eqUpdate(cf e) {
+        const int N = kNeq;
+        double den = eqLambda;
+        for (int r = 0; r < N; r++) {
+            std::complex<double> a = 0;
+            for (int c = 0; c < N; c++) a += P[(size_t)(r * N + c)] * std::complex<double>(u[c]);
+            pu[(size_t)r] = a;
+            den += (std::conj(std::complex<double>(u[r])) * a).real();
+        }
+        if (!(den > 1e-12) || !std::isfinite(den)) { eqResetP(); return; }
+        const std::complex<double> ce = std::conj(std::complex<double>(e));
+        double tr = 0;
+        for (int r = 0; r < N; r++) {
+            const std::complex<double> k = pu[(size_t)r] / den;
+            w[(size_t)r] += k * ce;
+            for (int c = 0; c < N; c++) P[(size_t)(r * N + c)] = (P[(size_t)(r * N + c)] - k * std::conj(pu[(size_t)c])) / eqLambda;
+            tr += P[(size_t)(r * N + r)].real();
+        }
+        if (!(tr < 1e7)) eqResetP();
+    }
+    void eqPush(cf d) { for (int j = kNfb - 1; j > 0; j--) fb[j] = fb[j - 1]; fb[0] = d; }
+    cf eqTrain(int64_t m, cf d) {
+        eqRegress(m);
+        const cf z = eqOut();
+        eqUpdate(d - z);
+        eqPush(d);
+        eqAcc += std::norm(d - z); eqAccN++;
+        return z;
+    }
+
+    // at a lock: the reference on the first path of the channel, then the equaliser trained on the known symbols
+    void eqStart(bool start, const int dv[3], cf hh) {
+        uint8_t pp[31], pm[31];
+        for (int i = 0; i < 31; i++) { pp[i] = kProbePlus[i]; pm[i] = (uint8_t)((kProbePlus[i] + 4) & 7); }
+        std::vector<cf> c1, c2, c3;
+        cirAt(0, pp, 31, -60, 60, c1);
+        cirAt(72, pm, 31, -60, 60, c2);
+        if (start) cirAt(-184, kSync184, 184, -60, 60, c3);
+        std::vector<double> pw(c1.size());
+        for (size_t i = 0; i < pw.size(); i++) pw[i] = std::norm(c1[i]) + std::norm(c2[i]) + (c3.empty() ? 0.0 : 2 * std::norm(c3[i]));
+        t0 += firstPath(pw, -60);
+        inScale = 1.0f / std::max(std::abs(hh), 1e-6f);
+        w.assign((size_t)kNeq, 0.0);
+        pu.assign((size_t)kNeq, 0.0);
+        eqResetP();
+        for (auto& v : fb) v = cf(0, 0);
+        if (start) for (int k = 0; k < 184; k++) eqTrain(k - 184, psk8(kSync184[k]));
+        const auto b = block103(dv);
+        for (int k = 0; k < kBlock; k++) { if (k == kBlock - 31) { eqAcc = 0; eqAccN = 0; } eqTrain(k, psk8(b[(size_t)k])); }
+        eqMse = std::clamp(eqAcc / std::max(1, eqAccN), 1e-4, 1.0);
+        prof.clear();
+        cirPrev.clear();
+    }
+
+    // one data frame through the equaliser, then the probe after it (at frame 72 the reinserted preamble) to train it
+    bool trackEq() {
+        const int64_t mData = kBlock + (int64_t)(frame - 1) * kFrame;
+        const int64_t mProbe = mData + kData;
+        const bool last = frame == kFramesPerSuper;
+        const int64_t mEnd = !last ? mProbe + kProbe : mProbe + kBlock;
+        if (posOf(mEnd) + (double)kFfHi * sps * 0.5 + 64 >= (double)nY) return false;
+        const int bpsym = hdrBitsPerSymbol(bps), it = scrIters(bps), M = 1 << bpsym;
+        const ScrTable& sc = scrTable();
+        cf zs[kData];
+        for (int i = 0; i < kData; i++) {
+            eqRegress(mData + i);
+            const cf z = eqOut();
+            const int s = sc.v[it][(size_t)i];
+            int bestL = 0;
+            float bestD = 1e30f;
+            for (int L = 0; L < M; L++) { const float dd = std::norm(z - dataPoint(bps, L, s)); if (dd < bestD) { bestD = dd; bestL = L; } }
+            const cf d = dataPoint(bps, bestL, s);
+            eqUpdate(d - z);
+            eqPush(d);
+            zs[i] = z;
+        }
+        // the known symbols after the frame
+        eqAcc = 0; eqAccN = 0;
+        int dvNew[3] = {-1, -1, -1};
+        uint8_t ps[31];
+        const int sg = !last ? probeSign(frame, bps, frames) : 1;
+        for (int i = 0; i < 31; i++) ps[i] = (uint8_t)((kProbePlus[i] + (sg < 0 ? 4 : 0)) & 7);
+        if (!last) {
+            for (int i = 0; i < kProbe; i++) eqTrain(mProbe + i, psk8(ps[i]));
+        } else {
+            int d0[3] = {0, 0, 0};
+            const auto b = block103(d0);
+            for (int k = 0; k < 32; k++) eqTrain(mProbe + k, psk8(b[(size_t)k]));
+            cf zd[39];
+            for (int k = 32; k < 71; k++) {   // D0 D1 D2: decisions on the four even phases
+                eqRegress(mProbe + k);
+                const cf z = eqOut();
+                const int q = (int)std::lround(std::arg(z) / (kPi / 2));
+                const cf d = psk8(((q % 4 + 4) % 4) * 2);
+                eqUpdate(d - z);
+                eqPush(d);
+                zd[k - 32] = z;
+            }
+            for (int k = 71; k < kBlock; k++) eqTrain(mProbe + k, psk8(b[(size_t)k]));
+            for (int i = 0; i < 3; i++) {
+                cf a(0, 0);
+                for (int k = 0; k < 13; k++) a += zd[13 * i + k] * std::conj(psk8(kBarker[k]));
+                const int q = (int)std::lround(std::arg(a) / (kPi / 2));
+                dvNew[i] = ((q % 4 + 4) % 4) * 2;
+            }
+        }
+        const double mse = eqAccN ? eqAcc / eqAccN : 1.0;
+        const bool good = mse < 0.5;
+        badProbes = good ? 0 : badProbes + 1;
+        if (good) goodProbes++;
+        if (badProbes >= (goodProbes ? 6 : 3)) {
+            if (goodProbes == 0) { st.messages--; unlock("false start dropped", (double)lockScan); }
+            else unlock("signal lost", posOf(mData));
+            return true;
+        }
+        // soft values with the noise of the probes before and after the frame
+        const float scale = (float)(2.0 / std::max(eqMse + mse, 2e-4));
+        eqMse = std::clamp(mse, 1e-4, 1.0);
+        for (int i = 0; i < kData; i++) {
+            float best0[6], best1[6];
+            for (int k = 0; k < bpsym; k++) best0[k] = best1[k] = 1e30f;
+            const int s = sc.v[it][(size_t)i];
+            for (int L = 0; L < M; L++) {
+                const float dd = std::norm(zs[i] - dataPoint(bps, L, s));
+                for (int k = 0; k < bpsym; k++) { if ((L >> (bpsym - 1 - k)) & 1) best1[k] = std::min(best1[k], dd); else best0[k] = std::min(best0[k], dd); }
+            }
+            for (int k = 0; k < bpsym; k++) soft.push_back(std::clamp((best1[k] - best0[k]) * scale, -50.f, 50.f));
+        }
+        noise = 0.9 * noise + 0.1 * std::max(mse, 1e-9);
+        sig = 1;
+        st.snrDb = 10 * std::log10(1.0 / noise);
+        // frequency (the phase change of the whole channel since the last probe) and the timing of the first path
+        std::vector<cf> c;
+        cirAt(mProbe, ps, 31, -20, 60, c);
+        const double here = posOf(mProbe + 15);
+        if (cirPrev.size() == c.size()) {
+            cf a(0, 0);
+            for (size_t l = 0; l < c.size(); l++) a += c[l] * std::conj(cirPrev[l]);
+            const double dist = (here - hPrevPos) / kFs;
+            if (dist > 0 && std::abs(a) > 0) setCfo(cfo + 0.3 * std::arg(a) / (2 * kPi * dist), here);
+        }
+        cirPrev = c;
+        if (prof.size() != c.size()) prof.assign(c.size(), 0.0);
+        for (size_t l = 0; l < c.size(); l++) prof[l] = goodProbes <= 1 ? std::norm(c[l]) : 0.9 * prof[l] + 0.1 * std::norm(c[l]);
+        if (goodProbes >= 4) {
+            const double lead = firstPath(prof, -20);
+            if (std::fabs(lead) > 0.3) t0 += std::clamp(0.2 * lead, -0.25, 0.25);
+        }
+        hPrevPos = here;
+        st.framesRx++;
+        if (frame % frames == 0) {
+            const std::vector<uint8_t> bits = hdrDecodeBlock(soft, bps, frames);
+            soft.clear();
+            st.blocks++;
+            if (deliver(bits)) { unlock("end of message", posOf(mProbe)); return true; }
+        }
+        if (last) {
+            t0 = posOf(kSuper);
+            int r = 0, fr = 0;
+            if (hdrFromD(dvNew, r, fr) && (r != bps || fr != frames)) { event("the rate changed at a reinserted preamble"); bps = r; frames = fr; soft.clear(); }
+            superN++; st.superframes++;
+            frame = 1;
+        } else {
+            frame++;
+        }
+        st.cfoHz = cfo;
+        return true;
     }
 
     cf probeGain(int64_t m0, int sign, double& energy) const {
@@ -512,6 +741,7 @@ struct HighRateRx::Impl {
 
     // one data frame and the probe after it; at frame 72, the reinserted block
     bool track() {
+        if (useEq) return trackEq();
         const int64_t mData = kBlock + (int64_t)(frame - 1) * kFrame;   // first data symbol of this frame
         const int64_t mProbe = mData + kData;
         const int64_t mEnd = frame < kFramesPerSuper ? mProbe + kProbe : mProbe + kBlock;
@@ -543,7 +773,7 @@ struct HighRateRx::Impl {
         const double dist = (posOf(mProbe + 15) - hPrevPos) / kFs;
         if (dist > 0 && std::abs(hPrev) > 0) {
             const double dph = std::arg(hN * std::conj(hPrev));
-            cfo += 0.5 * dph / (2 * kPi * dist);
+            setCfo(cfo + 0.5 * dph / (2 * kPi * dist), posOf(mProbe + 15));
             // keep hN consistent with the new frequency
             hN = probeGain(mProbe, sg, e0);
         }
@@ -613,9 +843,12 @@ HighRateRx::HighRateRx() : p_(new Impl) {}
 HighRateRx::~HighRateRx() = default;
 void HighRateRx::reset() {
     auto b = std::move(p_->byteCb); auto e = std::move(p_->evCb); auto d = std::move(p_->pduCb);
+    const bool eq = p_->useEq;
     p_.reset(new Impl);
     p_->byteCb = std::move(b); p_->evCb = std::move(e); p_->pduCb = std::move(d);
+    p_->useEq = eq;
 }
+void HighRateRx::setEqualizer(bool on) { p_->useEq = on; }
 void HighRateRx::push(const cf32* x, size_t n) { p_->push(x, n); }
 void HighRateRx::setByteSink(std::function<void(uint8_t)> cb) { p_->byteCb = std::move(cb); }
 void HighRateRx::setEventSink(std::function<void(const SerialEvent&)> cb) { p_->evCb = std::move(cb); }
