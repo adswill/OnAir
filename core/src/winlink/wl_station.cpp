@@ -109,6 +109,75 @@ bool Mailbox::remove(Folder f, const std::string& mid) {
     return fs::remove(path(f, mid), ec);
 }
 
+bool Mailbox::savePartial(const B2Proposal& p, const std::vector<uint8_t>& held) {
+    if (dir_.empty() || !safeMid(p.mid) || held.empty()) return false;
+    std::error_code ec;
+    fs::create_directories(fs::path(dir_) / "partial", ec);
+    const fs::path f = fs::path(dir_) / "partial" / (p.mid + ".part");
+    std::ofstream o(f, std::ios::binary | std::ios::trunc);
+    if (!o) return false;
+    o << "OnAirPartial1 " << p.code << ' ' << p.size << ' ' << p.csize << '\n';
+    o.write((const char*)held.data(), (std::streamsize)held.size());
+    return (bool)o;
+}
+
+std::vector<uint8_t> Mailbox::loadPartial(const B2Proposal& p) {
+    std::vector<uint8_t> b;
+    if (dir_.empty() || !safeMid(p.mid)) return b;
+    const fs::path f = fs::path(dir_) / "partial" / (p.mid + ".part");
+    if (!readFile(f, b)) return {};
+    const auto nl = std::find(b.begin(), b.end(), (uint8_t)'\n');
+    char code = 0;
+    int size = -1, csize = -1;
+    const std::string head(b.begin(), nl);
+    if (nl == b.end() || std::sscanf(head.c_str(), "OnAirPartial1 %c %d %d", &code, &size, &csize) != 3 || code != p.code || size != p.size ||
+        csize != p.csize || (int)(b.end() - nl - 1) >= csize) {
+        removePartial(p.mid);   // another message with this ID, or a stale file
+        return {};
+    }
+    return std::vector<uint8_t>(nl + 1, b.end());
+}
+
+void Mailbox::removePartial(const std::string& mid) {
+    if (dir_.empty() || !safeMid(mid)) return;
+    std::error_code ec;
+    fs::remove(fs::path(dir_) / "partial" / (mid + ".part"), ec);
+}
+
+std::vector<std::string> Mailbox::partials() const {
+    std::vector<std::string> v;
+    std::error_code ec;
+    for (const auto& e : fs::directory_iterator(fs::path(dir_) / "partial", ec))
+        if (e.path().extension() == ".part") v.push_back(e.path().stem().string());
+    std::sort(v.begin(), v.end());
+    return v;
+}
+
+namespace {
+std::string baseCall(std::string s) {
+    const size_t at = s.find('@');
+    if (at != std::string::npos) {
+        std::string dom = s.substr(at + 1);
+        for (auto& c : dom) c = (char)tolower((unsigned char)c);
+        if (dom != "winlink.org") return std::string();   // an internet address: not a station
+        s.resize(at);
+    }
+    const size_t dash = s.find('-');
+    if (dash != std::string::npos) s.resize(dash);
+    std::string o;
+    for (char c : s) if (!isspace((unsigned char)c)) o += (char)toupper((unsigned char)c);
+    return o;
+}
+} // namespace
+
+bool addressedTo(const B2Message& m, const std::string& call) {
+    const std::string want = baseCall(call);
+    if (want.empty()) return false;
+    for (const char* k : {"To", "Cc"})
+        for (const std::string& v : m.getAll(k)) if (baseCall(v) == want) return true;
+    return false;
+}
+
 bool Mailbox::has(const std::string& mid) const {
     if (!safeMid(mid)) return false;
     std::error_code ec;
@@ -141,7 +210,7 @@ std::string saveGateways(const std::vector<Gateway>& g) {
     char b[32];
     for (const auto& x : g) {
         snprintf(b, sizeof b, "%.6f", x.mhz);
-        o += clean(x.call) + "|" + std::to_string((int)x.transport) + "|" + b + "|" + clean(x.via) + "|" + clean(x.host) + "|" + std::to_string(x.port) + "|" + clean(x.note) + "\n";
+        o += clean(x.call) + "|" + std::to_string((int)x.transport) + "|" + b + "|" + clean(x.via) + "|" + clean(x.host) + "|" + std::to_string(x.port) + "|" + clean(x.note) + (x.peer ? "|1" : "") + "\n";
     }
     return o;
 }
@@ -166,6 +235,7 @@ std::vector<Gateway> loadGateways(const std::string& text) {
         if (p.size() > 4) g.host = p[4];
         if (p.size() > 5) g.port = std::max(1, std::min(65535, atoi(p[5].c_str())));
         if (p.size() > 6) g.note = p[6];
+        if (p.size() > 7) g.peer = p[7] == "1";
         v.push_back(g);
     }
     return v;
@@ -288,18 +358,8 @@ WinlinkStation::~WinlinkStation() { if (link_) link_->abort(); }
 
 bool WinlinkStation::running() const { return link_ != nullptr; }
 
-bool WinlinkStation::start(const StationConfig& c, double now, std::string& err) {
-    if (link_) { err = "a Winlink session is already running"; return false; }
-    if (c.mycall.empty()) { err = "enter your call sign first"; return false; }
-    if (c.gateway.call.empty() && c.gateway.transport != Transport::Telnet) { err = "pick a gateway (its call sign)"; return false; }
-    if (c.gateway.transport == Transport::Telnet && !c.telnetEnabled) { err = "Telnet to the CMS is off: turn it on in the Winlink settings"; return false; }
-    if (c.gateway.transport == Transport::Telnet && c.gateway.host.empty()) { err = "enter the Telnet host"; return false; }
-    c_ = c;
-    stopping_ = false; sessionEnded_ = false;
-    lastOk_ = false; lastErr_.clear();
-    startedAt_ = now;
+bool WinlinkStation::makeLink(const StationConfig& c, std::string& err) {
     ax_ = nullptr; ar_ = nullptr;
-    outAx_.clear(); outAr_.clear();
     const Transport t = c.gateway.transport;
     if (t == Transport::Packet1200 || t == Transport::Packet9600) {
         Ax25LinkConfig lc;
@@ -315,6 +375,7 @@ bool WinlinkStation::start(const StationConfig& c, double now, std::string& err)
             i = e + 1;
         }
         lc.paclen = c.paclen; lc.window = c.window;
+        if (c.t3Sec > 0) lc.t3Sec = c.t3Sec;
         lc.t1Sec = c.t1Sec > 0 ? c.t1Sec : (t == Transport::Packet9600 ? 3.0 : 6.0) + 2.0 * (double)lc.via.size();
         auto l = std::make_unique<Ax25Link>(lc);
         l->sendFrame = [this](const ax25::Frame& f) { outAx_.push_back(f); };
@@ -328,48 +389,120 @@ bool WinlinkStation::start(const StationConfig& c, double now, std::string& err)
         ar_ = l.get();
         link_ = std::move(l);
     } else {
+        if (c.p2p) { err = "peer-to-peer sessions run over packet or ARDOP, not Telnet"; return false; }
         link_ = std::make_unique<TelnetLink>(c.gateway.host, c.gateway.port, c.mycall);
     }
-    B2fSession::Config sc;
-    sc.role = B2fSession::Role::Client;
-    sc.mycall = c.mycall; sc.targetCall = c.gateway.call.empty() ? std::string("CMS") : c.gateway.call;
-    sc.locator = c.locator; sc.password = c.password;
+    return true;
+}
+
+B2fSession::Hooks WinlinkStation::hooks() {
     B2fSession::Hooks h;
     h.send = [this](const uint8_t* d, size_t n) { if (link_) link_->write(d, n); };
     h.outbound = [this]() {
         std::vector<B2Proposal> v;
+        const char code = session_ && session_->gzipAgreed() ? 'D' : 'C';
+        std::string peer = peer_;
+        if (c_.p2p && peer.empty() && link_) peer = link_->remoteCall();
         for (const MailEntry& e : mb_.list(Folder::Outbox)) {
             B2Message m;
-            if (mb_.load(Folder::Outbox, e.mid, m)) v.push_back(makeProposal(m));
+            if (!mb_.load(Folder::Outbox, e.mid, m)) continue;
+            if (c_.p2p && !addressedTo(m, peer)) continue;   // peer to peer: only what is for that station
+            v.push_back(makeProposal(m, code));
             if (v.size() >= 5) break;
         }
         std::reverse(v.begin(), v.end());   // oldest first
         return v;
     };
     h.inboundAnswer = [this](const B2Proposal& p) { return mb_.has(p.mid) ? '-' : '+'; };
-    h.received = [this](const B2Message& m, const B2Proposal&) {
+    h.received = [this](const B2Message& m, const B2Proposal& p) {
         std::string e;
+        mb_.removePartial(p.mid);
         if (!mb_.save(Folder::Inbox, m, &e)) log_.push_back("could not store " + m.mid() + ": " + e);
-        else log_.push_back("received " + m.mid() + " \"" + m.subject() + "\" from " + m.from());
+        else log_.push_back("received " + m.mid() + " \"" + m.subject() + "\" from " + m.from() + (p.offset > 0 ? " (resumed from byte " + std::to_string(p.offset) + ")" : ""));
     };
     h.sent = [this](const std::string& mid, bool rejected) {
         mb_.move(mid, Folder::Outbox, Folder::Sent);
-        log_.push_back(rejected ? "the gateway already had " + mid : "sent " + mid);
+        log_.push_back(rejected ? (c_.p2p ? "the other station already had " : "the gateway already had ") + mid : "sent " + mid);
     };
+    if (c_.resume) {
+        h.resumeData = [this](const B2Proposal& p) { return mb_.loadPartial(p); };
+        h.partial = [this](const B2Proposal& p, const std::vector<uint8_t>& held) {
+            if (held.empty()) mb_.removePartial(p.mid);
+            else if (mb_.savePartial(p, held)) log_.push_back("kept " + std::to_string(held.size()) + " of " + std::to_string(p.csize) + " bytes of " + p.mid + ": the rest comes at the next connection");
+        };
+    }
     h.log = [this](const std::string& l) { log_.push_back(l); };
-    session_ = std::make_unique<B2fSession>(sc, h);
+    return h;
+}
+
+bool WinlinkStation::start(const StationConfig& c, double now, std::string& err) {
+    if (link_) { err = "a Winlink session is already running"; return false; }
+    if (c.mycall.empty()) { err = "enter your call sign first"; return false; }
+    if (c.gateway.call.empty() && (c.gateway.transport != Transport::Telnet || c.p2p)) { err = c.p2p ? "enter the other station's call sign" : "pick a gateway (its call sign)"; return false; }
+    if (c.gateway.transport == Transport::Telnet && !c.telnetEnabled && !c.p2p) { err = "Telnet to the CMS is off: turn it on in the Winlink settings"; return false; }
+    if (c.gateway.transport == Transport::Telnet && c.gateway.host.empty() && !c.p2p) { err = "enter the Telnet host"; return false; }
+    c_ = c;
+    stopping_ = false; sessionEnded_ = false;
+    lastOk_ = false; lastErr_.clear();
+    startedAt_ = now;
+    outAx_.clear(); outAr_.clear();
+    peer_ = c.gateway.call;
+    if (!makeLink(c, err)) return false;
+    B2fSession::Config sc;
+    sc.role = B2fSession::Role::Client;
+    sc.mycall = c.mycall; sc.targetCall = c.gateway.call.empty() ? std::string("CMS") : c.gateway.call;
+    sc.locator = c.locator; sc.password = c.p2p ? std::string() : c.password;   // a peer gets no Winlink password
+    sc.gzip = c.gzip;
+    session_ = std::make_unique<B2fSession>(sc, hooks());
     link_->log = [this](const std::string& l) { log_.push_back(l); };
     link_->onData = [this](const uint8_t* d, size_t n) { if (session_) session_->onBytes(d, n); };
     link_->onState = [this](LinkState s) {
         if (s == LinkState::Connected && session_ && session_->state() == B2fSession::State::Idle) session_->start();
     };
-    log_.push_back(std::string("calling ") + sc.targetCall + " (" + transportName(t) + ")");
+    log_.push_back(std::string("calling ") + sc.targetCall + " (" + transportName(c.gateway.transport) + (c.p2p ? ", peer to peer" : "") + ")");
     link_->connect(now);
     return true;
 }
 
+bool WinlinkStation::listen(const StationConfig& cfg, double now, std::string& err) {
+    if (link_) { err = "a Winlink session is already running"; return false; }
+    if (cfg.mycall.empty()) { err = "enter your call sign first"; return false; }
+    StationConfig c = cfg;
+    c.p2p = true;
+    c.gateway.call.clear();
+    c_ = c;
+    stopping_ = false; sessionEnded_ = false;
+    lastOk_ = false; lastErr_.clear();
+    startedAt_ = now;
+    outAx_.clear(); outAr_.clear();
+    peer_.clear();
+    if (!makeLink(c, err)) return false;
+    B2fSession::Config sc;
+    sc.role = B2fSession::Role::Gateway;
+    sc.p2p = true;
+    sc.mycall = c.mycall;
+    sc.locator = c.locator;
+    sc.gzip = c.gzip;
+    session_ = std::make_unique<B2fSession>(sc, hooks());
+    link_->log = [this](const std::string& l) { log_.push_back(l); };
+    link_->onData = [this](const uint8_t* d, size_t n) { if (session_) session_->onBytes(d, n); };
+    link_->onState = [this](LinkState s) {
+        if (s == LinkState::Connected && session_ && session_->state() == B2fSession::State::Idle) {
+            peer_ = link_->remoteCall();
+            log_.push_back("connected by " + (peer_.empty() ? std::string("another station") : peer_) + " (peer to peer)");
+            session_->start();
+        }
+    };
+    log_.push_back(std::string("listening for a peer-to-peer call (") + transportName(c.gateway.transport) + ")");
+    listenAgain_ = true;
+    link_->listen();
+    return true;
+}
+
 void WinlinkStation::stop(double now) {
+    listenAgain_ = false;
     if (!link_) return;
+    if (link_->state() == LinkState::Listening) { link_->abort(); finish(now); return; }
     if (stopping_) { link_->abort(); finish(now); return; }
     stopping_ = true;
     link_->disconnect(now);
@@ -396,6 +529,11 @@ void WinlinkStation::tick(double now) {
         if (s == LinkState::Failed && lastErr_.empty()) lastErr_ = link_->error();
         if (session_ && !sessionEnded_) { session_->linkClosed(); lastOk_ = false; if (lastErr_.empty()) lastErr_ = session_->error(); }
         finish(now);
+        if (listenAgain_) {
+            const StationConfig again = c_;
+            std::string err;
+            if (!listen(again, now, err)) { listenAgain_ = false; log_.push_back("cannot listen again: " + err); }
+        }
     }
 }
 

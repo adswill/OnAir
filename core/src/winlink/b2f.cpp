@@ -16,6 +16,8 @@
 // SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 #include "dect2/winlink/b2f.h"
 #include "dect2/winlink/lzhuf.h"
+#include "dect2/winlink/wl_gzip.h"
+#include "dect2/common/inflate.h"
 
 #include <algorithm>
 #include <cctype>
@@ -37,12 +39,13 @@ bool startsWith(const std::string& s, const char* p) { return s.compare(0, strle
 std::string upper(std::string s) { for (auto& c : s) c = (char)toupper((unsigned char)c); return s; }
 } // namespace
 
-B2Proposal makeProposal(const B2Message& m) {
+B2Proposal makeProposal(const B2Message& m, char code) {
     B2Proposal p;
+    p.code = code == 'D' ? 'D' : 'C';
     p.mid = m.mid();
     const std::vector<uint8_t> raw = encodeMessage(m);
     p.size = (int)raw.size();
-    p.cdata = lzhufCompress(raw, true);
+    p.cdata = p.code == 'D' ? gzipCompress(raw) : lzhufCompress(raw, true);
     p.csize = (int)p.cdata.size();
     p.title = m.subject();
     if (p.title.empty()) p.title = "No title";
@@ -85,6 +88,39 @@ bool parseProposalLine(const std::string& line, B2Proposal& p) {
 
 B2fSession::B2fSession(const Config& c, const Hooks& h) : cfg_(c), h_(h) {}
 
+// wl2k-go: "B2FHM$", with "G" before the "$" when gzip is offered
+std::string B2fSession::ourSid() const {
+    return "[" + cfg_.appName + "-" + cfg_.appVersion + "-B2FHM" + (cfg_.gzip ? "G" : "") + "$]";
+}
+
+bool B2fSession::gzipAgreed() const { return cfg_.gzip && remoteSid_.find('G') != std::string::npos; }
+
+// The whole compressed message from the held part and what arrived. A resumed transfer carries the bytes from the offset on, as
+// wl2k-go sends them; FBB version 1 senders send the 6 header bytes (CRC and length) again first, which is recognised too.
+bool B2fSession::assemble(const B2Proposal& p, std::vector<uint8_t>& full) const {
+    if (p.offset <= 0) { full = dataBuf_; return (int)full.size() == p.csize; }
+    const size_t off = (size_t)p.offset, need = (size_t)(p.csize - p.offset);
+    if (p.cdata.size() < off) return false;
+    full.assign(p.cdata.begin(), p.cdata.begin() + (long)off);
+    if (dataBuf_.size() == need) { full.insert(full.end(), dataBuf_.begin(), dataBuf_.end()); return true; }
+    if (p.code == 'C' && off >= 6 && dataBuf_.size() == need + 6 && std::equal(dataBuf_.begin(), dataBuf_.begin() + 6, p.cdata.begin())) {
+        full.insert(full.end(), dataBuf_.begin() + 6, dataBuf_.end());
+        return true;
+    }
+    return false;
+}
+
+// What to keep of a message cut off part way
+std::vector<uint8_t> B2fSession::held(const B2Proposal& p) const {
+    if (p.offset <= 0) return dataBuf_;
+    std::vector<uint8_t> h(p.cdata.begin(), p.cdata.begin() + (long)std::min(p.cdata.size(), (size_t)p.offset));
+    if (p.code == 'C' && p.offset >= 6 && dataBuf_.size() >= 6 && std::equal(dataBuf_.begin(), dataBuf_.begin() + 6, p.cdata.begin()))
+        h.insert(h.end(), dataBuf_.begin() + 6, dataBuf_.end());
+    else if (p.code != 'C' || dataBuf_.size() >= 6)
+        h.insert(h.end(), dataBuf_.begin(), dataBuf_.end());
+    return h;
+}
+
 void B2fSession::trace(char dir, const std::string& s) {
     if (h_.log) h_.log(std::string(1, dir) + s);
 }
@@ -111,7 +147,7 @@ void B2fSession::start() {
     st_ = State::Handshake;
     if (cfg_.role == Role::Gateway) {
         for (const auto& l : cfg_.motd) sendLine(l);
-        sendLine("[WL2K-5.0-B2FWIHJM$]");
+        sendLine(cfg_.p2p ? ourSid() : std::string("[WL2K-5.0-B2FWIHJM") + (cfg_.gzip ? "G" : "") + "$]");
         if (!cfg_.challenge.empty()) sendLine(";PQ: " + cfg_.challenge);
         sendLine((cfg_.mycall.empty() ? std::string("CMS") : cfg_.mycall) + ">");
         loginOk_ = cfg_.expectPassword.empty();
@@ -121,6 +157,14 @@ void B2fSession::start() {
 
 void B2fSession::linkClosed() {
     if (st_ == State::Done || st_ == State::Failed) return;
+    if (st_ == State::Receiving && haveHeader_ && curIdx_ < rxProps_.size() && h_.partial) {
+        const B2Proposal& p = rxProps_[curIdx_];
+        const std::vector<uint8_t> h = held(p);
+        if (!h.empty() && (int)h.size() < p.csize) {
+            h_.partial(p, h);
+            trace('!', "kept " + std::to_string(h.size()) + " of " + std::to_string(p.csize) + " bytes of " + p.mid + " to resume next time");
+        }
+    }
     fail("the connection ended before the session did");
 }
 
@@ -199,7 +243,7 @@ void B2fSession::handshakeLine(const std::string& line) {
 
 void B2fSession::sendClientHandshake() {
     sendLine(";FW: " + upper(cfg_.mycall));
-    sendLine("[" + cfg_.appName + "-" + cfg_.appVersion + "-B2FHM$]");
+    sendLine(ourSid());
     if (!challengeSeen_.empty()) sendLine(";PR: " + secureLoginResponse(challengeSeen_, cfg_.password));
     sendLine("; " + upper(cfg_.targetCall) + " DE " + upper(cfg_.mycall) + " (" + cfg_.locator + ")");
     loginOk_ = true;
@@ -326,10 +370,21 @@ void B2fSession::theirLine(const std::string& line) {
         std::set<std::string> seen;
         std::string ans;
         for (auto& p : rxProps_) {
-            if (seen.count(p.mid) || p.code != 'C') p.answer = '=';
+            const bool known = p.code == 'C' || (p.code == 'D' && gzipAgreed());
+            if (seen.count(p.mid) || !known) p.answer = '=';
             else p.answer = h_.inboundAnswer ? h_.inboundAnswer(p) : '+';
             if (p.answer != '+' && p.answer != '-' && p.answer != '=') p.answer = '=';
             seen.insert(p.mid);
+            if (p.answer == '+' && h_.resumeData) {
+                std::vector<uint8_t> have = h_.resumeData(p);
+                if (!have.empty() && (int)have.size() < p.csize && have.size() <= 999999) {
+                    p.offset = (int)have.size();
+                    p.cdata = std::move(have);
+                    ans += "!" + std::to_string(p.offset);
+                    trace('!', "resuming " + p.mid + " from byte " + std::to_string(p.offset) + " of " + std::to_string(p.csize));
+                    continue;
+                }
+            }
             ans += p.answer;
         }
         sendLine("FS " + ans);
@@ -388,13 +443,26 @@ bool B2fSession::receiveBinary() {
         dataSum_ = (dataSum_ + d[1]) & 0xFF;
         inPos_ += 2;
         if (dataSum_ != 0) { fail("message checksum error"); return false; }
-        if ((int)dataBuf_.size() != p.csize) { fail("message length differs from the proposal"); return false; }
+        std::vector<uint8_t> full;
+        if (!assemble(p, full)) {
+            if (p.offset > 0 && h_.partial) h_.partial(p, {});
+            fail("message length differs from the proposal");
+            return false;
+        }
         std::vector<uint8_t> raw;
         std::string err;
-        if (!lzhufDecompress(dataBuf_.data(), dataBuf_.size(), raw, true, &err)) { fail("message does not decompress: " + err); return false; }
+        const bool unpacked = p.code == 'D' ? gunzip(full.data(), full.size(), raw, 64u << 20) : lzhufDecompress(full.data(), full.size(), raw, true, &err);
+        if (!unpacked) {
+            if (p.code == 'D') err = "gzip data is damaged";
+            if (p.offset > 0) {
+                if (h_.partial) h_.partial(p, {});
+                fail("the resumed message does not decompress (" + err + "): the held part was dropped and it will come whole next time");
+            } else fail("message does not decompress: " + err);
+            return false;
+        }
         B2Message m;
         if (!parseMessage(raw.data(), raw.size(), m, &err)) { fail("message does not parse: " + err); return false; }
-        p.cdata = dataBuf_;
+        p.cdata = std::move(full);
         nRx_++;
         if (h_.received) h_.received(m, p);
         haveHeader_ = false; dataBuf_.clear(); dataSum_ = 0;

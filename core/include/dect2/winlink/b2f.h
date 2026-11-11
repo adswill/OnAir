@@ -2,6 +2,9 @@
 // connection, or the Telnet CMS link): the handshake (SID, ;FW, the ;PQ / ;PR secure login), turns of proposals ("FC EM <mid> <size>
 // <compressed size> 0", "F> <checksum>"), answers ("FS +-="), the compressed blocks (SOH title offset, STX data, EOT checksum), and
 // the end ("FF" no more messages, "FQ" quit).
+// Also: resuming a message that was cut off part way (the answer "!offset": the held part is kept by the station and the rest is asked
+// for), gzip proposals ("FD", Pat's GZIP_EXPERIMENT: used only when both sides put "G" in the SID), and the answering side of a
+// peer-to-peer session between two stations (Config::p2p: our own SID, no secure login).
 //
 // Two roles: Client (OnAir calling a gateway: the gateway speaks first, the client offers its messages first) and Gateway (the answering
 // side; OnAir uses it for the local mock gateway of the tests and for peer-to-peer tests, never as a public gateway).
@@ -23,19 +26,19 @@ namespace dect2 {
 namespace winlink {
 
 struct B2Proposal {
-    char code = 'C';                 // 'C': B2 (LZHUF) message
+    char code = 'C';                 // 'C': B2 (LZHUF) message, 'D': gzip (when both sides offer "G" in the SID)
     std::string type = "EM";         // "EM" encapsulated message, "CM" (CMS internal)
     std::string mid;
     int size = 0;                    // uncompressed bytes
     int csize = 0;                   // compressed bytes
     std::string title;               // the subject, sent in the SOH header
-    int offset = 0;                  // resume point the other side asked for
+    int offset = 0;                  // resume point: asked for by the other side (sending), or asked for by us (receiving)
     char answer = 0;                 // '+' accept, '-' reject (already have it), '=' defer
-    std::vector<uint8_t> cdata;      // LZHUF (B2) data
+    std::vector<uint8_t> cdata;      // the compressed data (receiving and resuming: the part already held, then the whole)
 };
 
-// A proposal for a message: encoded and compressed
-B2Proposal makeProposal(const B2Message& m);
+// A proposal for a message: encoded and compressed (code 'C' LZHUF, 'D' gzip)
+B2Proposal makeProposal(const B2Message& m, char code = 'C');
 // The line of a proposal ("FC EM MID 1234 567 0") and the checksum of a block of proposal lines
 std::string proposalLine(const B2Proposal& p);
 int proposalChecksum(const std::vector<std::string>& lines);
@@ -56,6 +59,8 @@ public:
         std::string challenge;           // ";PQ" challenge to send (empty: none)
         std::string expectPassword;      // the password the caller must prove (empty: anything is accepted)
         std::vector<std::string> motd;   // greeting lines before the SID
+        bool p2p = false;                // gateway role for another station (peer to peer): our own SID, no ;PQ
+        bool gzip = false;               // offer "G" in the SID and accept / send gzip proposals when the other side does too
     };
     struct Hooks {
         std::function<void(const uint8_t* d, size_t n)> send;               // bytes to the link
@@ -64,6 +69,12 @@ public:
         std::function<void(const B2Message& m, const B2Proposal& p)> received;
         std::function<void(const std::string& mid, bool rejected)> sent;    // delivered (or refused as a duplicate by the other side)
         std::function<void(const std::string& line)> log;                  // protocol trace ("<" received, ">" sent)
+        // Resume: the compressed bytes already held of an accepted proposal (from an earlier, cut-off session); empty = none.
+        // The answer is then "!<bytes held>" and only the rest is sent.
+        std::function<std::vector<uint8_t>(const B2Proposal& p)> resumeData;
+        // A message cut off part way (the link closed while receiving it): the compressed bytes held so far, to keep for next time.
+        // Called with no bytes when held data turned out bad (drop it).
+        std::function<void(const B2Proposal& p, const std::vector<uint8_t>& held)> partial;
     };
     enum class State { Idle, Handshake, OurTurn, WaitAnswer, TheirTurn, Receiving, Done, Failed };
 
@@ -78,8 +89,9 @@ public:
     const std::string& remoteSid() const { return remoteSid_; }
     const std::string& challengeSeen() const { return challengeSeen_; }
     bool loginOk() const { return loginOk_; }       // gateway: the ;PR answer matched (or none was required)
+    bool gzipAgreed() const;                        // both SIDs carry "G" (our Config::gzip on): gzip proposals may be used
     // transfer progress of the message being received
-    size_t rxBytes() const { return dataBuf_.size(); }
+    size_t rxBytes() const { return (curIdx_ < rxProps_.size() ? (size_t)rxProps_[curIdx_].offset : 0) + dataBuf_.size(); }
     size_t rxTotal() const { return curIdx_ < rxProps_.size() ? (size_t)rxProps_[curIdx_].csize : 0; }
     uint64_t bytesIn() const { return bytesIn_; }
     uint64_t bytesOut() const { return bytesOut_; }
@@ -101,6 +113,9 @@ private:
     void commitSent();
     void sendBlock(const B2Proposal& p);
     void trace(char dir, const std::string& s);
+    std::string ourSid() const;
+    bool assemble(const B2Proposal& p, std::vector<uint8_t>& full) const;
+    std::vector<uint8_t> held(const B2Proposal& p) const;
 
     Config cfg_;
     Hooks h_;

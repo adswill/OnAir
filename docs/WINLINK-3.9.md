@@ -24,6 +24,47 @@ The panel has these tabs:
 
 Messages are kept one per file as `<data folder>/winlink/{inbox,outbox,sent,archive}/<MID>.b2f`. Each file holds the B2 message bytes in the same form Pat uses.
 
+## Resume, gzip and peer to peer
+
+### Resuming a cut-off message
+
+When the link drops while a message is arriving, the part received so far is kept as `<data folder>/winlink/partial/<MID>.part`. The file has a header line with the proposal code, the size and the compressed size, then the bytes.
+
+At the next connection, when the same message is proposed again with the same sizes, OnAir answers `!<bytes held>` instead of `+`, and only the rest is sent.
+
+- **Byte layout.** The resumed transfer may carry the bytes from the offset on, as wl2k-go sends them. Or it may first repeat the 6 header bytes (CRC and length), as the F6FBB description of compressed version 1 says. Both layouts are recognised.
+- **Integrity.** The joined message must pass LZHUF's CRC (or gzip's CRC-32). If it does not, the held part is dropped, the session reports it, and the message comes whole the next time.
+- **Safety.** A held part that belongs to a different proposal (another size) is deleted, not used. Offsets stay below 1,000,000, the protocol's limit.
+- **Settings.** Settings > Advanced has "Resume a message that was cut off" (on by default) and lists the held messages, each with a Drop button.
+
+### gzip proposals (FD)
+
+Settings > Advanced > "Offer gzip compression" is off by default. When it is on, OnAir puts `G` in its SID, as Pat does with `GZIP_EXPERIMENT=1`. When the other side's SID has `G` too, messages are proposed as `FD EM ...` and sent gzip-compressed. Otherwise the usual LZHUF `FC` proposals are used. An `FD` proposal that arrives without gzip agreed is deferred (`=`).
+
+The compressor is OnAir's own (`core/src/winlink/wl_gzip.cpp`): one deflate block with the fixed Huffman codes and LZ77 over a 32 KB window. Decompression is the existing `gunzip`.
+
+Compression compared with LZHUF:
+
+| input | gzip | LZHUF |
+|---|---|---|
+| 1548 bytes of text | 381 bytes | 354 bytes |
+| 200 kB of text | 30416 bytes | 27235 bytes |
+| 70000 identical bytes | 463 bytes | 1506 bytes |
+
+Fixed Huffman codes are a little larger than LZHUF on text. The point of `FD` is compatibility with Pat's experiment, not size.
+
+### Peer to peer (P2P)
+
+A Gateways entry can be marked "another station (peer to peer)". Connect then runs a P2P session with that station over packet or ARDOP:
+
+- no secure login, and the Winlink password is not sent
+- only outbox messages addressed to that station are offered (To or Cc is its call sign, any SSID, or `CALL@winlink.org`)
+- everything else stays in the outbox
+
+**Listen for a station** is the answering side. It listens on the selected entry's link and frequency, or on 1200-baud packet (ARDOP on the ARDOP screen) when no entry is selected. Any caller is answered, with OnAir's own SID and no `;PQ`. After a session it listens again until Stop listening. P2P over Telnet is not offered.
+
+The AX.25 link gained the idle poll of AX.25 2.2 (T3, 300 s by default). A connected link that hears nothing polls the other station and gives up after its retries. Without it, the answering side of a link whose caller had vanished stayed connected forever.
+
 ## What was built
 
 | Part | File | What it does |
@@ -41,7 +82,47 @@ Messages are kept one per file as `<data folder>/winlink/{inbox,outbox,sent,arch
 
 ## Tests (simulated only)
 
-`tests/winlink/` holds four test programs.
+`tests/winlink/` holds five test programs.
+
+### `winlink_p2p` (about 0.5 s)
+
+**gzip**
+- Round trips through `gunzip` for:
+  - empty input
+  - one byte
+  - 5000 spaces
+  - 70000 identical bytes
+  - 30 kB of random data
+  - 200 kB and 1548 bytes of text
+- Damaged streams are refused.
+- A 210 kB output was also checked once with Python's `gzip` module, outside the test.
+
+**Mailbox and gateway list**
+- held parts: round trip, a part for another proposal dropped, bad message IDs refused
+- the P2P address matching
+- the gateway list keeping the peer flag and still loading older lists
+
+**Resume**
+- 24 cut sessions: input chunks of 1, 7, 125 and 4096 bytes, each cut at 1/7 to 6/7 of a 20 kB attachment.
+- **All 24 complete from the held part**: the answer is `FS !<n>`, the attachment is byte for byte the same, and the held file is removed.
+- Example: cut after 1625 of 3176 bytes, the second session moved 1995 bytes against 3870 for an uncut session.
+- A damaged held part is dropped, and the message then comes whole.
+- A hand-written sender resumes both ways: data from the offset, and FBB v1 with the 6 header bytes again.
+
+**gzip sessions**
+- both sides gzip (`FD` both ways)
+- only one side gzip (`FC`)
+- an `FD` proposal without agreement is deferred
+
+**P2P between two OnAir stations**
+- **AX.25 1200, clean:** 53 s simulated.
+- **AX.25 9600, 15 % frame loss, gzip on:** 66 s simulated.
+- **ARDOP, 10 % frame loss:** 148 s simulated.
+- In each case both directions are delivered, and the messages for other stations stay in the outboxes. There is no `;PQ` / `;PR`, the answering side logs who called and listens again, and Stop ends listening.
+
+**P2P resume over AX.25 9600**
+- The channel goes silent halfway through a 12 kB message. Both links give up (the receiving side through T3), and the receiving station keeps the part.
+- On the second call it asks for the rest, and the message arrives whole.
 
 ### `winlink_lzhuf`
 
@@ -102,9 +183,8 @@ This test also covers:
 - **The ARDOP ARQ is OnAir's own simplification** built from the ARDOP frame types. It talks to another OnAir and to the mock gateway. Working with ardopcf, ARDOP_Win or a real ARDOP RMS gateway is **not verified**. The real ARDOP ARQ also has bandwidth negotiation, other data modes (PSK / QAM, 600 baud) and its own timing; none of that is here.
 - **No real gateway, RMS or CMS has been contacted**, over the air or over the internet. B2F interoperability rests on following wl2k-go and the public notes, plus the published test vectors.
 - **The panel has only been syntax-checked** (no app build, by the overnight rules). The transmit path follows the MeshCore screen, and an on-air key-up has not been tried.
+- Resume, gzip and P2P were tested only between OnAir's own sessions and stations. That includes the hand-written FBB-style sender, but no real gateway, Pat or Winlink Express. Whether a real CMS resumes the way the F6FBB description says is not verified.
 - Not done:
-  - resuming a partly received message (OnAir always answers `+`, never offsets; offsets asked for by the other side are honoured)
-  - gzip proposals (`FD`, an experiment in Pat)
-  - P2P sessions from the panel
+  - P2P over Telnet
   - the Winlink "pending messages" list
 - The password is not stored, so you enter it once per run. OnAir has no general secret store yet.

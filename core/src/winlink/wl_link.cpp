@@ -70,6 +70,8 @@ Ax25Link::Ax25Link(const Ax25LinkConfig& c) : c_(c) {
     for (const auto& v : c_.via) via_.push_back(addrOf(v));
 }
 
+std::string Ax25Link::remoteCall() const { return st_ == LinkState::Idle || st_ == LinkState::Listening ? c_.peer : peer_.str(); }
+
 size_t Ax25Link::pendingTx() const {
     size_t n = txq_.size();
     for (int i = 0; i < nbuf_; i++) n += win_[(va_ + i) & 7].size();
@@ -176,6 +178,7 @@ void Ax25Link::onFrame(const ax25::Frame& f, double now) {
     }
     if (!forMe(f)) return;
     framesReceived++;
+    heardAt_ = now;
     const uint8_t c = f.control;
     const bool pf = (c & kPf) != 0;
     const bool command = f.to.h && !f.from.h;
@@ -205,6 +208,7 @@ void Ax25Link::onFrame(const ax25::Frame& f, double now) {
         if (type == kRej) { vs_ = va_; retries++; }
         if (command && pf) sendS(kRr, false, true);
         if (!command && pf) tries_ = 0;   // the other side answered our poll: it is there (AX.25 2.2: RC = 0 on F = 1)
+        if (!command && pf && nbuf_ == 0) t1At_ = -1;   // an idle poll (T3) answered
         if (!command && pf && nbuf_ > 0) { vs_ = va_; retries++; }   // the answer to our poll: send again what is not acknowledged
         if (type == kRnr) t1At_ = now + c_.t1Sec;   // the other side is busy: wait
         pump(now);
@@ -287,6 +291,13 @@ void Ax25Link::pump(double now) {
 void Ax25Link::tick(double now) {
     now_ = now;
     if (st_ == LinkState::Connected && (!txq_.empty() || discWanted_)) pump(now);
+    if (st_ == LinkState::Connected && t1At_ < 0 && c_.t3Sec > 0 && now - heardAt_ >= c_.t3Sec) {   // T3: is the other station still there?
+        heardAt_ = now;
+        tries_ = 0;
+        sendS(kRr, true, true);
+        t1At_ = now + c_.t1Sec;
+        return;
+    }
     if (t1At_ < 0 || now < t1At_) return;
     if (++tries_ > c_.n2) {
         t1At_ = -1;
@@ -298,8 +309,8 @@ void Ax25Link::tick(double now) {
     t1At_ = now + c_.t1Sec;
     if (st_ == LinkState::Connecting) sendU(kSabm | kPf, true);
     else if (st_ == LinkState::Disconnecting) sendU(kDisc | kPf, true);
-    else if (st_ == LinkState::Connected && nbuf_ > 0) {
-        // poll: the other side answers with RR F=1 and its N(R); the frames it lacks are sent again then
+    else if (st_ == LinkState::Connected) {
+        // poll (also the idle poll of T3): the other side answers with RR F=1 and its N(R); the frames it lacks are sent again then
         sendS(kRr, true, true);
     }
 }

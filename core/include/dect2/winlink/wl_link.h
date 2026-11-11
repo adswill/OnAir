@@ -36,6 +36,7 @@ public:
     virtual void abort() = 0;                                 // at once, no frame sent
     virtual void tick(double now) = 0;
     virtual size_t pendingTx() const = 0;                     // bytes not yet acknowledged
+    virtual std::string remoteCall() const { return std::string(); }   // the station at the other end (a listening link: the caller)
     LinkState state() const { return st_; }
     const std::string& error() const { return err_; }
     std::function<void(const uint8_t* d, size_t n)> onData;   // bytes received in order
@@ -58,6 +59,7 @@ struct Ax25LinkConfig {
     int window = 4;              // k, at most 7
     double t1Sec = 6;            // retry timer (FRACK); about 3 s at 9600 baud, 6 s at 1200 baud
     int n2 = 10;                 // retries before giving up
+    double t3Sec = 300;          // idle link: nothing heard for this long, poll (RR P=1); no answer after n2 tries ends the link (AX.25 2.2 T3)
 };
 
 class Ax25Link : public ByteLink {
@@ -72,6 +74,7 @@ public:
     void abort() override;
     void tick(double now) override;
     size_t pendingTx() const override;
+    std::string remoteCall() const override;
     const Ax25LinkConfig& config() const { return c_; }
 private:
     void sendU(uint8_t ctl, bool command);
@@ -90,6 +93,7 @@ private:
     double t1At_ = -1;
     bool ackDue_ = false, rejSent_ = false, discWanted_ = false;
     double now_ = 0;
+    double heardAt_ = 0;         // the last frame from the other station (T3)
 };
 
 // ---------------------------------------------------------------- ARDOP
@@ -131,6 +135,7 @@ public:
     void abort() override;
     void tick(double now) override;
     size_t pendingTx() const override { return txq_.size() + cur_.size(); }
+    std::string remoteCall() const override { return c_.peer; }
     bool isIss() const { return iss_; }
     uint8_t sid() const { return sid_; }
 private:
