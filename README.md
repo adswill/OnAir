@@ -616,6 +616,8 @@ Off by default. **View > Show in Discord** shows on your Discord profile that yo
 
 - Encrypted (scrambled) services cannot be decoded.
 > [!NOTE]
+> **Built codecs on Discord.** Don't want to build them yourself? Join the [OnAir Discord](https://discord.gg/ptxkzCuzR) to get access to built codecs. Whether you install or use them is your own responsibility: follow the patent and radio-listening law where you live. Details: [docs/CODECS.md](docs/CODECS.md).
+
 > **mbelib is not included from 0.2.6.** DMR, P25, NXDN, dPMR and D-STAR voice is silent until you install mbelib yourself, because the AMBE / IMBE vocoders are patented. Calls, IDs and data work without it. Put the library in the codecs folder (the **?** next to the sound has an **Open codecs folder** button), then press **Look again**. Steps: **[docs/CODECS.md](docs/CODECS.md)**.
 >
 > **HD Radio sound is not included.** HDC is a proprietary codec of Xperi, so OnAir shows the stations, program data and pictures but is silent until you build the HDC-patched FAAD2 (`libfaad_hdc`) yourself from the open-source nrsc5 patch and put it in the codecs folder, then press **Look again** (the **?** next to the sound). Steps and the legal note: **[docs/CODECS.md](docs/CODECS.md#hd-radio-sound-hdc-build-it-yourself)**.
@@ -633,7 +635,7 @@ Off by default. **View > Show in Discord** shows on your Discord profile that yo
 - **The radio is not listed.** Windows: install the WinUSB driver once with [Zadig](https://zadig.akeo.ie), see [Install](#install). SDRplay RSPs need the SDRplay API installed first. Notes per radio are in [DEVICES.md](DEVICES.md).
 - **The picture breaks up.** Use **Auto-tune** or **Optimise gain**, and move the antenna while you watch the quality score, see [Quick start](#quick-start). A weak or echo-filled signal is the usual cause.
 - **macOS will not open the app.** It is not signed with a developer certificate yet: right-click it and choose *Open* on the first launch.
-- **No voice in DMR, P25, NXDN, dPMR or D-STAR.** Install mbelib yourself, see [Good to know](#good-to-know) and [docs/CODECS.md](docs/CODECS.md).
+- **No voice in DMR, P25, NXDN, dPMR or D-STAR.** Install mbelib yourself, see [Good to know](#good-to-know) and [docs/CODECS.md](docs/CODECS.md). Built codecs are available on the [Discord](https://discord.gg/ptxkzCuzR).
 - **No radio at all.** Open an IQ recording through the *IQ recording file* source, or press **Tour**.
 - **Still stuck.** Press **Save bug report** (one zip with diagnostics, log and crash report) and send it on [Discord](https://discord.gg/ptxkzCuzR) or in [GitHub Issues](https://github.com/adswill/OnAir/issues).
 </details>
