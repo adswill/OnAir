@@ -1,5 +1,6 @@
 // TETRA test signal (tetra_gen.h).
 #include "dect2/tetra/tetra_gen.h"
+#include "dect2/tetra/tetra_teds.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/cell/cell_dsp.h"
 #include "dect2/source/source.h"
@@ -9,7 +10,7 @@
 
 namespace dect2 {
 
-int tetraTestCells(int scene) { return scene == 1 ? 2 : 1; }
+int tetraTestCells(int scene) { return scene == 1 ? 2 : 1; }   // scene 3: one cell (and the QAM carrier, made apart)
 
 namespace {
 
@@ -26,6 +27,11 @@ TetraCellCfg tetraTestCell(int scene, int index) {
     tetra::Sysinfo& s = c.si;
     s.band = 3; s.duplex = 0; s.reverse = false; s.numScch = 0; s.msTxPwrMax = 4; s.rxLevAccessMin = 3; s.accessParam = 7; s.dlTimeout = 6;
     s.cckFlag = false; s.optFlag = 3; s.subscriberClass = 0xFFFF;
+    if (scene == 3) {   // TEDS: the scene 0 cell, announcing pi/8-D8PSK and 25 / 50 kHz QAM, timeslot 3 in pi/8-D8PSK
+        c = tetraTestCell(0, 0);
+        c.tedsServices = true; c.tedsD8psk = true; c.tedsQamMask = 3; c.d8pskTs = 3;
+        return c;
+    }
     const bool second = scene == 1 && index == 1;
     if (!second) {
         c.sync.colourCode = 5;
@@ -91,6 +97,23 @@ TetraWideCell tetraWideCell(int index, int count, double rateHz) {
 
 namespace tetra {
 
+namespace {
+// The cell's SYSINFO in multiframe mn: a TEDS cell's optional field is the extended services broadcast, section 1 in odd multiframes,
+// section 2 in even ones
+Sysinfo cellSysinfo(const TetraCellCfg& c, int mn) {
+    Sysinfo si = c.si;
+    if (c.tedsServices) {
+        ExtServices e;
+        e.security = (int)((c.si.optValue >> 12) & 0xFF);
+        e.sdsTl = 1;
+        e.section = (mn & 1) ? 0 : 1;
+        e.qos = true; e.d8psk = c.tedsD8psk; e.sec2 = c.tedsQamMask != 0; e.qamMask = c.tedsQamMask;
+        si.optFlag = 3; si.optValue = encodeExtServices(e);
+    }
+    return si;
+}
+} // namespace
+
 Bits cellSlot(const TetraCellCfg& c, uint32_t abs) {
     abs %= 60u * 72u;
     const int tn = (int)(abs % 4) + 1, fn = (int)((abs / 4) % 18) + 1, mn = (int)(abs / 72) + 1;
@@ -99,8 +122,9 @@ Bits cellSlot(const TetraCellCfg& c, uint32_t abs) {
     if (fn != 18 && tn != 1) { hdr = 1; f1 = tn == c.trafficTs ? 5 : 0; }
     const Bits bb = encodeAach((uint16_t)((hdr << 12) | (f1 << 6) | f2), scr);
     auto split = [](const Bits& b432, Bits& a, Bits& b) { a.assign(b432.begin(), b432.begin() + 216); b.assign(b432.begin() + 216, b432.end()); };
+    const Sysinfo si0 = cellSysinfo(c, mn);
     if (fn == 18) {
-        const Bits si = encodeChannel(encodeSysinfo(c.si), kSchHd, scr);
+        const Bits si = encodeChannel(encodeSysinfo(si0), kSchHd, scr);
         const Bits nul = encodeChannel(macNullPdu(124), kSchHd, scr);
         if (tn == 4 - ((mn + 1) % 4)) {
             Sync s = c.sync; s.tn = tn; s.fn = fn; s.mn = mn;
@@ -125,6 +149,25 @@ Bits cellSlot(const TetraCellCfg& c, uint32_t abs) {
     return normalBurst(a, bb, b, false);
 }
 
+std::vector<int> cellSlotSteps(const TetraCellCfg& c, uint32_t abs) {
+    abs %= 60u * 72u;
+    const int tn = (int)(abs % 4) + 1, fn = (int)((abs / 4) % 18) + 1, mn = (int)(abs / 72) + 1;
+    if (c.d8pskTs > 0 && tn == c.d8pskTs && fn != 18) {
+        const uint32_t scr = scramblerInit(c.sync.mcc, c.sync.mnc, c.sync.colourCode);
+        const Bits bb = encodeAach((uint16_t)((1 << 12) | (0 << 6) | 1), scr);   // common control, unallocated uplink
+        // block 1: SYSINFO as sent with pi/8-D8PSK (21.4.4.1: 28 reserved bits before the MLE part, 152 bits) and a null PDU; block 2: a null PDU
+        Bits s = encodeSysinfo(cellSysinfo(c, mn));
+        s.insert(s.begin() + 82, 28, 0);
+        const Bits nul = macNullPdu(kSchP8Hd.type1 - (int)s.size());
+        s.insert(s.end(), nul.begin(), nul.end());
+        return normalBurstP8(encodeChannel(s, kSchP8Hd, scr), bb, encodeChannel(macNullPdu(kSchP8Hd.type1), kSchP8Hd, scr), true);
+    }
+    const Bits b = cellSlot(c, abs);
+    std::vector<int> st(b.size() / 2);
+    for (size_t k = 0; k < st.size(); k++) st[k] = 2 * dibitPhase(b[2 * k], b[2 * k + 1]);
+    return st;
+}
+
 } // namespace tetra
 
 namespace {
@@ -140,10 +183,19 @@ public:
             if (scene == 2) { const TetraWideCell w = tetraWideCell(i, n, out_); b.c = w.cfg; b.offHz = w.offHz + w.errHz; }   // (a wide capture: each cell with its own tuning error)
             else b.c = tetraTestCell(scene, i);
             if (scene != 2) b.offHz = tetra::dlCarrierHz(b.c.si.band, b.c.si.mainCarrier, b.c.si.offset) - kTetraTestCentreHz;
-            b.rs.reset(new cell::Resampler(std::min(0.5, 0.5 * out_ / tetra::kRate) * 0.95));
+            b.rs.reset(new cell::Resampler(std::min(0.5, 0.5 * out_ / b.rate) * 0.95));
             b.abs = b.c.startSlot;
             bts_.push_back(std::move(b));
             pmax = std::max(pmax, (double)bts_.back().c.amp * bts_.back().c.amp);
+        }
+        if (scene == 3 && out_ >= 120e3) {   // the TEDS QAM carrier (needs the 50 kHz of it inside the capture)
+            Bts q;
+            q.c.amp = 0.2f;
+            q.qam.reset(new tetra::QamGen(tetra::kTetraTedsQamKHz, tetra::kTetraTedsQamOrder, 4242));
+            q.rate = tetra::kQamGenRate;
+            q.offHz = tetra::kTetraTedsQamOffHz;
+            q.rs.reset(new cell::Resampler(std::min(0.5, 0.5 * out_ / q.rate) * 0.95));
+            bts_.push_back(std::move(q));
         }
         noise_ = (float)std::sqrt(pmax * (out_ / 25e3) / std::pow(10.0, c.snrDb / 10) / 2);
         if (c.snrDb >= 99) noise_ = 0;
@@ -152,8 +204,8 @@ public:
     void generate(cf32* o, size_t n) override {
         for (size_t i = 0; i < n; i++) o[i] = 0;
         std::vector<cf32> tmp(n);
-        const double step = tetra::kRate * (1 + ppm_ * 1e-6) / out_;
         for (auto& b : bts_) {
+            const double step = b.rate * (1 + ppm_ * 1e-6) / out_;
             const int H = b.rs->halfLen();
             size_t done = 0;
             while (done < n) {
@@ -185,13 +237,17 @@ private:
         uint32_t abs = 0;
         std::unique_ptr<cell::Resampler> rs;
         tetra::Modulator mod;
+        std::unique_ptr<tetra::QamGen> qam;   // scene 3: a TEDS QAM carrier instead of a cell
+        double rate = tetra::kRate;
         std::vector<cf32> buf;
     };
     void more(Bts& b) {
         const long keep = std::max(0L, (long)std::floor(b.pos) - b.rs->halfLen() - 2);
         if (keep > 0) { b.buf.erase(b.buf.begin(), b.buf.begin() + keep); b.pos -= (double)keep; }
+        if (b.qam) { b.qam->push(240, b.buf); return; }   // 0.1 s
         for (int k = 0; k < 24; k++) {   // six frames at a time
-            b.mod.push(tetra::cellSlot(b.c, b.abs), b.buf);
+            if (b.c.d8pskTs) b.mod.pushSteps(tetra::cellSlotSteps(b.c, b.abs), b.buf);
+            else b.mod.push(tetra::cellSlot(b.c, b.abs), b.buf);
             b.abs = (b.abs + 1) % (60u * 72u);
         }
     }

@@ -1554,3 +1554,17 @@ The four leftovers of SENSITIVITY-3.9-C/-D, measured before and after on simulat
 - GNSS: the cold search runs the first window with 64 ms right after the 16 ms round. A 32 dB-Hz sky: 0 -> 3 of 8 satellites in 34 s. 4 ms coherent integration was measured (no gain per CPU) and not kept.
 - HD Radio AM: the prefix filter no longer switches while block numbers are read, each filter keeps its frequency, the carrier corrects the frequency in sync, and the carrier's phase wander is removed per sample. sens_sweep awgn and cfo20ppm 22 -> 18 dB, lock 11 -> 7.5 s. 3 Hz phase noise still fails (a limit of the scenario).
 - CW: the adaptive timing decoder (cw_decoder.h) was measured in the skimmer; it is better for irregular fists and worse at low SNR and with Farnsworth spacing, so the skimmer is unchanged.
+## 2026-11-11 TETRA sensitivity and TEDS (feat39-tetra)
+The pi/4-DQPSK demodulator is now coherent: a 4-state log-MAP detector, with the carrier phase from the fourth power and the slot's known bits as a-priori. It also uses one timing line per capture, re-filters after a large tuning error, and exchanges extrinsic information with a new log-MAP decoder of the RCPC code, up to 3 passes on slots whose CRC fails. The carrier search needs 4 dB over the floor instead of 6.
+
+Measured on the test signal only:
+- `decodeCarrier` threshold 6 -> 4 dB, under AWGN, +-1.2 kHz and +-50 ppm (`test_tetra_sens`).
+- Full receiver with two cells at 2 MHz: 7 -> 5 dB for the stronger cell (9.2 -> 7.2 dB in the sens_sweep convention).
+
+TEDS, identity and signalling only:
+- The cell's pi/8-D8PSK and QAM bandwidth support is read from the extended services broadcast of SYSINFO.
+- pi/8-D8PSK slots are found by their training sequences and their SCH-P8/HD and SCH-P8/F signalling is decoded.
+- QAM carriers are identified, not decoded: bandwidth, sub-carrier count and 4/16/64-QAM estimate. The QAM bursts, the PCCC turbo code and SYSINFO-Q are not done.
+- Test signal scene 3 has a TEDS cell and a 50 kHz 16-QAM carrier.
+
+Not done: soft RM decoding of the AACH (it would accept more noise). Simulated only. Details are in docs/TETRA-3.9.md.
