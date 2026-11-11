@@ -28,6 +28,8 @@ public:
     void setRegion(const std::string& id);   // "EU", "US", ... ; "" picks by the frequency
     bool ready() const;
     void reset();
+    void setToneDetection(bool on);          // chips from tone energies (default on; off: the discriminator only, as in 3.9)
+    bool toneDetection() const;
     void clearResults();
     void feed(const cf32* x, size_t n);
     bool telemetry(ZwaveTelemetry& out, uint64_t lastSeq);

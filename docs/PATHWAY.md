@@ -1775,3 +1775,5 @@ and the sync search takes up to 5 wrong bits of 32 when the tone correlation con
 (AWGN, 50 ppm clock the same; off-centre carriers fall back to the discriminator). 0 of 300 noise-only trials gave a unit; FLEX and the pager
 tests unchanged. New: test_sens40b (4.0 and 3.9 receiver in one binary, same seeds), test_hfdig_sens40b (WSJT modes baseline: at WSJT-X levels).
 Baseline table of 40 narrowband modes in docs/SENSITIVITY-4.0-B.md. Tried and not kept: summing discriminator products (DMR, D-STAR, NXDN, dPMR, P25).
+2026-11-12 (sensitivity 4.0 B, Z-Wave): chips judged by tone energies from the burst's complex samples and a more sensitive burst detector (start 6x -> 3x the noise floor):
+AWGN 90 % point 9.5 -> 6 dB (50 %: 9 -> 5.3), 0 false frames in 300 noise-only trials; test_sens40b has zwave and zwave-off side by side.

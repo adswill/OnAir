@@ -90,13 +90,27 @@ std::vector<Mode> modes40b() {
     pager("pocsag-off", "POCSAG (3.9 receiver)", 1, false);
     pager("flex", "FLEX (4.0 receiver)", 2, true);
     pager("flex-off", "FLEX (3.9 receiver)", 2, false);
+    // satellite-data style entries: the mode's own test signal at its tuning rate; `on` switches the 4.0 path of the receiver
+    auto satdata = [&](const char* id, const char* name, int std_, double secs, double bw, double snrHi, auto prep) {
+        const ModeTuning* mt = modeTuning(std_);
+        Mode m; m.id = id; m.name = name; m.family = "satdata"; m.stdMode = std_; m.rate = mt->sampleRate; m.secs = secs; m.bwHz = bw; m.mhz = mt->defMhz;
+        m.snrHi = snrHi; m.maxJobs = 4;
+        const double rate = mt->sampleRate;
+        m.gen = [rate, std_](size_t n) { return clean(std_, SynthConfig(), rate, n); };
+        prep(m);
+        v.push_back(m);
+    };
+    for (int on = 1; on >= 0; on--)
+        satdata(on ? "zwave" : "zwave-off", on ? "Z-Wave (4.0 receiver)" : "Z-Wave (3.9 receiver)", 100, 4.0, 100e3, 25, [on](Mode& m) {
+            m.make = factory<ZwaveReceiver, ZwaveTelemetry>([on](ZwaveReceiver& rx, double r) { prepGeneric(rx, r, 100); rx.setToneDetection(on != 0); }, blocks<ZwaveTelemetry>);
+        });
     return v;
 }
 
 // the guard of the short run: the SNR (dB in the mode's noise bandwidth) a few dB above the 4.0 threshold
 struct Guard { const char* id; double snrDb; };
 const Guard kGuards[] = {
-    {"pocsag", -1}, {"flex", 5},
+    {"pocsag", -1}, {"flex", 5}, {"zwave", 14},
 };
 }
 using namespace s40;
@@ -161,7 +175,7 @@ int points(const std::vector<Mode>& all, const std::regex& want, const char* lis
 int main() {
     const bool full = testLong();
     const char* sel = std::getenv("ONAIR_SENS_MODES");
-    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off)$");
+    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off|zwave|zwave-off)$");
     const int threads = full ? std::max(1u, std::thread::hardware_concurrency() / 2) : 1;
     int fails = 0;
     const auto all = modes40b();

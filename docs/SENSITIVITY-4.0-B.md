@@ -126,6 +126,33 @@ The pager test signal is the receiver's own (pager_gen): its pulse shape is not 
 
 Tests: sens40b (guard, noise), sens39d pocsag row (-1 -> -3 dB), pager_* (21 tests; pager_proto_rs is only built with the Rust crate): all pass.
 
+## Z-Wave (core/src/zwave/zwave_rx.cpp)
+
+| | 3.9 receiver | 4.0 receiver | gain |
+|---|---|---|---|
+| AWGN, 90 % point (SNR in 100 kHz) | 9.5 dB | **6 dB** | 3.5 dB |
+| AWGN, 50 % point | about 9.0 dB | about 5.3 dB | about 3.7 dB |
+| 20 ppm carrier error (17 kHz) | 90 % at 9 dB (30 trials: 9: 30/30, 8.5: 2/30) | 90 % at 6 dB | 3 dB |
+| 50 ppm sample clock, off-centre carrier (20 kHz) | same as AWGN | same as AWGN | |
+| noise only | 0 of 300 trials (60 each at -40 dB; 4 s a trial) | 0 of 300 | |
+| CPU per second of signal, 10 dB over threshold | 0.050 | 0.051 | |
+
+Passes of 30 trials, same seeds (test_sens40b zwave / zwave-off): 4.0: 7 dB 30, 6 dB 30, 5 dB 1, 4 dB 0; 3.9: 10 dB 30, 9.5 dB 30, 9 dB 19, 8.5 dB 0.
+(sens_sweep reads 13 / 9 / 13 dB for AWGN / 20 ppm / 50 ppm in the table above: its trials start at random points of the signal and need
+half of the frames; the shape is the same, this harness' clean-signal reference and its criterion differ.)
+
+1. Each chip is judged by the energy at the upper tone (carrier offset + deviation) against the lower one over the chip, from the burst's
+   complex samples, instead of by the mean of the FM discriminator over the chip (noncoherent matched detection of the FSK; the
+   discriminator's clicks fill a weak burst with chip errors). The chip clock search uses the same value. The deviation is the one
+   of the rate (20 kHz for R1 and R2, 29 kHz for R3) and the carrier offset the burst's mean frequency from the preamble, as before. When the tones
+   give no frame the discriminator is tried as before.
+2. The burst detector started a burst at 6 times the noise floor (smoothed power in the +-110 kHz channel) and ended it at 2.5; at the
+   threshold the signal is only about 3.5 times the floor, so most bursts were never opened. With the tone chips: start at 3, end at 1.8.
+   A noise-only trial opens a few bursts now, each decoded and dropped by its checksum (no false frame in 300 trials).
+The test signal is the generator's own (zwave_gen), R1 to R3 in turn: simulated only.
+
+Tests: sens40b (zwave guard at 14 dB, noise), sens39c guard (zwave), zwave_rx / proto / engine / homenet: pass.
+
 ## Not done
 
 * The wrong-message decodes of FT8 / FT4 / FT2 / JT4 next to strong signals.
