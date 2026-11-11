@@ -69,7 +69,13 @@ void AirbandClipWriter::finish(int chan, Ch& c) {
     const double sec = (double)c.clip.size() / rate_;
     if (sec >= minSec_ && enabled_) {
         const AirbandClipChannel& ch = (size_t)chan < chans_.size() ? chans_[(size_t)chan] : AirbandClipChannel();
-        const std::string path = folder_ + "/" + fileName(ch.name, ch.freqHz, c.startUtc);
+        std::string path = folder_ + "/" + fileName(ch.name, ch.freqHz, c.startUtc);
+        // two transmissions that start in the same second would share the name: the later one gets -2, -3 ... instead of overwriting
+        {
+            std::error_code fe;
+            const std::string stem = path.substr(0, path.size() - 4);
+            for (int k = 2; k < 1000 && std::filesystem::exists(P(path), fe); k++) path = stem + "-" + std::to_string(k) + ".wav";
+        }
         std::string err;
         if (!writeWav(path, c.clip, err).empty()) {
             voice::Clip k;
