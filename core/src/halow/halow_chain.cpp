@@ -21,7 +21,7 @@ using namespace halow;
 
 namespace {
 using dect2::math::kPi;
-constexpr float kThr = 0.55f;            // detector threshold on the normalised correlation
+constexpr float kThr = 0.30f;           // detector threshold on the normalised correlation
 
 struct Cand {
     int64_t fire = 0;
