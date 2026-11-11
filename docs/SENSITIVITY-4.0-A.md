@@ -39,7 +39,8 @@ Not simulated: a real RS41's deviation, its TCXO drift and the real Gaussian sha
 Test: `tests/sonde/test_sonde_sens40.cpp` (ctest `sonde_sens40`): RS41 at 7 dB with 0, +8 kHz and -3 kHz carrier error, 3 of 3 seeded trials
 (the 3.9 receiver fails all three at 7 dB), DFM and M10 at 20 dB still decode, noise alone gives
 nothing. The existing sonde tests were run against the changed objects: basic, all_rf, interf, extra_rf, rs41_roundtrip, rs41_kat,
-rf_dfm, rf_m10, rf_m20, flight, profile all pass (test_sonde_engine and the GUI not run locally).
+rf_dfm, rf_m10, rf_m20, flight, profile all pass locally; GitHub quick.yml run 43093142496 (Linux, 4.5 kHz version): sonde_sens40, sonde_basic,
+sonde_all_rf, sonde_rs41_kat, sonde_interf, sonde_rf_dfm, sonde_rf_m10, sonde_extra_rf and sonde_engine pass (9 of 9). Windows and the GUI not run.
 
 ## Tried, measured, not kept
 
