@@ -1535,3 +1535,17 @@ Changes:
 
 Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
 Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.
+## 2026-11-11 TETRA sensitivity and TEDS (feat39-tetra)
+The pi/4-DQPSK demodulator is now coherent: a 4-state log-MAP detector, with the carrier phase from the fourth power and the slot's known bits as a-priori. It also uses one timing line per capture, re-filters after a large tuning error, and exchanges extrinsic information with a new log-MAP decoder of the RCPC code, up to 3 passes on slots whose CRC fails. The carrier search needs 4 dB over the floor instead of 6.
+
+Measured on the test signal only:
+- `decodeCarrier` threshold 6 -> 4 dB, under AWGN, +-1.2 kHz and +-50 ppm (`test_tetra_sens`).
+- Full receiver with two cells at 2 MHz: 7 -> 5 dB for the stronger cell (9.2 -> 7.2 dB in the sens_sweep convention).
+
+TEDS, identity and signalling only:
+- The cell's pi/8-D8PSK and QAM bandwidth support is read from the extended services broadcast of SYSINFO.
+- pi/8-D8PSK slots are found by their training sequences and their SCH-P8/HD and SCH-P8/F signalling is decoded.
+- QAM carriers are identified, not decoded: bandwidth, sub-carrier count and 4/16/64-QAM estimate. The QAM bursts, the PCCC turbo code and SYSINFO-Q are not done.
+- Test signal scene 3 has a TEDS cell and a 50 kHz 16-QAM carrier.
+
+Not done: soft RM decoding of the AACH (it would accept more noise). Simulated only. Details are in docs/TETRA-3.9.md.

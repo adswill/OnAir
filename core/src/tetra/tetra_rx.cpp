@@ -576,6 +576,11 @@ CarrierDecode decodeCarrier(const cf32* x, size_t n, int kMcc, int kMnc, int kCc
             else if (sl.f.type == Burst::NormalHalf) { br.push_back({kNbBkn1, 216, 0, 0, &kSchHd, scr}); br.push_back({kNbBkn2, 216, 0, 0, &kSchHd, scr}); }
             else if (usage >= 0 && usage < 4) br.push_back({kNbBkn1, 216, kNbBkn2, 216, &kSchF, scr});
             refineSlot(sl.z, kZ0, sl.f.type, br, llr.data());
+            if (usage < 0 && !br.empty()) {   // the access assignment again, from the refined bits
+                if (sl.f.type == Burst::Sync) std::copy(llr.begin() + kSbBb, llr.begin() + kSbBb + 30, bb);
+                else { std::copy(llr.begin() + kNbBb1, llr.begin() + kNbBb1 + 14, bb); std::copy(llr.begin() + kNbBb2, llr.begin() + kNbBb2 + 16, bb + 14); }
+                if (decodeAach(bb, scr, aa)) { usage = aachDlUsage(aa, fn == 18); if (tn >= 1 && usage >= 0) out.tsUsage[tn - 1] = usage; }
+            }
         }
         static thread_local FragReassembler localFrag;
         auto block = [&](const float* l, const ChanSpec& c) {
