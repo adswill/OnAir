@@ -56,7 +56,7 @@ using Clock = std::chrono::steady_clock;
 
 namespace {
 
-const char* const kConds[] = {"clean", "pos", "neg", "snr", "noise", "rate"};
+const char* const kConds[] = {"clean", "pos", "neg", "snr", "noise", "rate"};   // "rate" is generated at its own sample rate: a second --gen run
 constexpr int kNC = 6;
 static const double kRateMul = getenv("QA_RATEMUL") ? atof(getenv("QA_RATEMUL")) : 1.37, kBwMul = getenv("QA_BWMUL") ? atof(getenv("QA_BWMUL")) : 1.3;   // QA_RATEMUL / QA_BWMUL: for finding which of the two a mode fails on;   // "rate": the clean signal at a sample rate 1.37 x the default (a non-integer ratio) with a 1.3 x wider custom bandwidth
 
@@ -354,11 +354,12 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     const float g = (float)std::min(1.0, 0.25 / std::sqrt(std::max(1e-12, psig + pn)));   // the noisy files keep a total rms of 0.25 at most
     Writer w[kNC + 1];   // the conditions and silence (the baseline of the saved results)
     for (int c = 0; c <= kNC; c++) {
+        if (c == kNC - 1) continue;   // "rate" is its own generator run (below), not a resampled copy: a copy has no noise outside the old band and no image-free signal
         w[c].f = fopen((dir + "/" + (c < kNC ? kConds[c] : "zero") + ".ci16").c_str(), "wb");
         if (!w[c].f) return 4;
         w[c].gain = (c == 3 || c == 4) ? g : clean0;
     }
-    Resampler rp, rn, rr; rp.step = 1.0 + 50e-6; rn.step = 1.0 - 50e-6; rr.step = 1.0 / kRateMul;
+    Resampler rp, rn; rp.step = 1.0 + 50e-6; rn.step = 1.0 - 50e-6;
     double php = 0, phn = 0;
     const double dcp = 2 * M_PI * 2000.0 / r;
     genutil::NoiseSource ns1(7), ns2(11);
@@ -373,7 +374,6 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
         w[2].put(tmp);
         o = x; ns1.add(o.data(), o.size(), sigma); w[3].put(o);
         o.assign(x.size(), cf32(0, 0)); ns2.add(o.data(), o.size(), sigma); w[4].put(o);
-        tmp.clear(); rr.push(x.data(), x.size(), tmp); w[5].put(tmp);
         o.assign(x.size(), cf32(0, 0)); w[kNC].put(o);
     };
     emit(all);
@@ -384,9 +384,9 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
         done += chunk.size();
         emit(chunk);
     }
-    for (auto& x : w) fclose(x.f);
+    for (auto& x : w) if (x.f) fclose(x.f);
     src->stop();
-    const double txRate = writeTx(en, secs, dir);
+    const double txRate = getenv("QA_NOTX") ? 0.0 : writeTx(en, secs, dir);
     printf("RATE %.6f PSIG %.6g OBW %.1f ACTIVE %.3f CLIP %llu TXRATE %.4f\n", r, psig, obw, bp.empty() ? 0.0 : (double)act / bp.size(), (unsigned long long)(w[0].clipped + w[3].clipped), txRate);
     fflush(stdout);
     _exit(0);
@@ -813,8 +813,26 @@ int main(int argc, char** argv) {
             for (int c = 0; c < kNC; c++) {
                 if (c == 1) r.byRes = r.c[0].good == 0 && r.c[0].res > r.resZero + 16;
                 if (c > 0 && r.m(0) == 0 && !r.c[0].locked) break;   // nothing in the clean run: the others say nothing more
-                char rsc[64]; snprintf(rsc, sizeof rsc, "%.4f", c == 5 ? actual * kRateMul : actual);
-                const ChildResult cr = spawn({self, "--run", e->id, rsc, ss, tmpDir + "/" + kConds[c] + ".ci16", kConds[c]}, std::max(300.0, s * 20), std::max(600.0, s * 30));
+                std::string runFile = tmpDir + "/" + kConds[c] + ".ci16", savedT0;
+                double runRate = actual;
+                const char* oldT0 = getenv("QA_T0"); if (oldT0) savedT0 = oldT0;
+                if (c == 5) {   // a non-default sample rate: the generator again at 1.37 x the rate, the radio's own noise over the whole new band
+                    const std::string rd = tmpDir + "/rate";
+                    std::filesystem::create_directories(rd);
+                    char rq[64]; snprintf(rq, sizeof rq, "%.4f", actual * kRateMul);
+                    setenv("QA_NOTX", "1", 1);
+                    const ChildResult g2 = spawn({self, "--gen", e->id, rq, ss, sn, rd}, 600, 900);
+                    unsetenv("QA_NOTX");
+                    const size_t rp2 = g2.out.find("RATE ");
+                    if (g2.status != 0 || rp2 == std::string::npos) { r.c[c].verdict = g2.timedOut ? "HANG" : "NOGEN2"; continue; }
+                    runRate = atof(g2.out.c_str() + rp2 + 5);
+                    const size_t p0 = g2.out.find("T0 ");
+                    if (p0 != std::string::npos && (p0 == 0 || g2.out[p0 - 1] == '\n')) setenv("QA_T0", std::to_string(atof(g2.out.c_str() + p0 + 3)).c_str(), 1);
+                    runFile = rd + "/clean.ci16";
+                }
+                char rsc[64]; snprintf(rsc, sizeof rsc, "%.4f", runRate);
+                const ChildResult cr = spawn({self, "--run", e->id, rsc, ss, runFile, kConds[c]}, std::max(300.0, s * 20), std::max(600.0, s * 30));
+                if (c == 5) { if (oldT0) setenv("QA_T0", savedT0.c_str(), 1); std::error_code ec2; std::filesystem::remove_all(tmpDir + "/rate", ec2); }
                 CondRes& cc = r.c[c];
                 const size_t jp = cr.out.rfind('{');
                 const size_t hp = cr.out.find("HANG ");
@@ -886,7 +904,7 @@ int main(int argc, char** argv) {
         if (r.gen && r.life != "ok" && r.life != "-") r.unexpected.push_back("lifecycle: " + r.life);
         if (r.gen) for (int c = 0; c < kNC; c++) {
             const std::string& v = r.c[c].verdict;
-            const bool bad = v == "FAIL" || v == "FALSE" || v == "HANG" || v == "NOSTART" || v.rfind("CRASH", 0) == 0;
+            const bool bad = v == "FAIL" || v == "FALSE" || v == "HANG" || v == "NOGEN2" || v == "NOSTART" || v.rfind("CRASH", 0) == 0;
             const char* why = knownWhy(r.id, kConds[c]);
             if (bad && !why) r.unexpected.push_back(std::string(kConds[c]) + " " + v);
             if (!bad && why && v != "-" && strict) r.unexpected.push_back(std::string(kConds[c]) + " passes now: drop it from qa_known.inc");
