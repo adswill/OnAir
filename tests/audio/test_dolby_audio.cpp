@@ -319,7 +319,7 @@ static void testPmt() {
 // ---- IEC 61937 ------------------------------------------------------------------------------------------------------------------------
 static void testIecFraming() {
     // AC-3: one burst per frame, 1536 frames, Pd in bits, bsmod in Pc, the first payload word is the sync word
-    std::vector<uint8_t> f = genAc3(0, 18, 7, 1, 3);   // 48 kHz, 448 kbps: 1792 bytes
+    std::vector<uint8_t> f = genAc3(0, 22, 7, 1, 3);   // 48 kHz, 448 kbps (code 22): 1792 bytes
     DolbyFrame d; parseDolbyFrame(f.data(), f.size(), d);
     f.resize((size_t)d.frameBytes);
     Iec61937Packer pk;

@@ -170,9 +170,10 @@ void DolbyStreamInfo::feed(const uint8_t* p, size_t n) {
         if (pend_[i] != 0x0B || pend_[i + 1] != 0x77) { i++; continue; }
         DolbyFrame f;
         if (!parseDolbyFrame(&pend_[i], pend_.size() - i, f)) { i++; continue; }
-        if (i + (size_t)f.frameBytes > pend_.size()) break;   // the rest of this frame comes with the next packet
-        // the next frame should follow directly; when it does not, this was a false sync (or the stream is damaged): look further
-        if (i + (size_t)f.frameBytes + 2 <= pend_.size() && !(pend_[i + f.frameBytes] == 0x0B && pend_[i + f.frameBytes + 1] == 0x77)) { i++; continue; }
+        // the next frame should follow directly; when it does not, this was a false sync (or the stream is damaged): look further.
+        // A frame is taken only once the start of the next one is here (one frame of delay), so a false sync cannot swallow real frames.
+        if (i + (size_t)f.frameBytes + 2 > pend_.size()) break;
+        if (!(pend_[i + f.frameBytes] == 0x0B && pend_[i + f.frameBytes + 1] == 0x77)) { i++; continue; }
         const bool program = !f.eac3 || f.frameType != 1;   // an independent (or AC-3) frame starts the next program's frames
         if (program && f.substreamId == 0) {
             if (curSpk_) {
