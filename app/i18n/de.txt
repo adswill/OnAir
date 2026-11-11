@@ -4044,3 +4044,58 @@ stereo downmix	Stereo-Downmix
 Dolby Atmos: OnAir plays the channel bed; the objects need Dolby's renderer. A receiver or soundbar renders them: Settings > Audio > Pass Dolby audio through.	Dolby Atmos: OnAir spielt das Kanal-Bed; die Objekte brauchen Dolbys Renderer. Ein Receiver oder eine Soundbar gibt sie wieder: Einstellungen > Audio > Dolby-Ton durchreichen.
 Automatic (the device's speakers)	Automatisch (die Lautsprecher des Geräts)
 Stereo, Dolby Surround (Lt/Rt)	Stereo, Dolby Surround (Lt/Rt)
+this gateway uses a modem profile that does not exist: add it under Modems	Dieses Gateway nutzt ein Modemprofil, das es nicht gibt: unter Modems anlegen
+External modem	Externes Modem
+(no modem profile: add one under Modems)	(kein Modemprofil: unter Modems eines anlegen)
+digipeaters (VARA FM, optional)	Digipeater (VARA FM, optional)
+Get it from:	Bezug:
+Interface taken from:	Schnittstelle nach:
+Copy the download link	Download-Link kopieren
+OnAir does not include, start or bundle ARDOP, VARA or Mercury. Each is a separate program that does the radio part; OnAir connects to it over TCP and carries the Winlink session through it.	OnAir enthält ARDOP, VARA und Mercury nicht, startet sie nicht und liefert sie nicht mit. Jedes ist ein eigenes Programm für den Funkteil; OnAir verbindet sich per TCP damit und führt die Winlink-Sitzung darüber.
+Tested only against mock modems built from the published command descriptions: no real ARDOP, VARA or Mercury modem was used.	Nur gegen Test-Modems getestet, die nach den veröffentlichten Befehlsbeschreibungen gebaut sind: es wurde kein echtes ARDOP-, VARA- oder Mercury-Modem verwendet.
+Host : command / data port	Host : Befehls-/Datenport
+modem's own	vom Modem
+Edit the modem profile	Modemprofil bearbeiten
+Add a modem profile	Modemprofil hinzufügen
+Setup steps for this modem	Einrichtung für dieses Modem
+host	Host
+command port	Befehlsport
+data port	Datenport
+This modem type has no BW command.	Dieser Modemtyp hat keinen BW-Befehl.
+BW (empty: modem's own)	Bandbreite (leer: vom Modem)
+choices	Auswahl
+not a BW this modem documents: it will not be sent	keine Bandbreite, die dieses Modem dokumentiert: wird nicht gesendet
+connect timeout, s (0: default)	Verbindungs-Timeout, s (0: Standard)
+PTT note (set it in the modem program)	PTT-Notiz (im Modemprogramm einstellen)
+audio note (set it in the modem program)	Audio-Notiz (im Modemprogramm einstellen)
+Save changes	Änderungen speichern
+New profile	Neues Profil
+Test connection	Verbindung testen
+testing...	teste ...
+Opens the two ports and asks for the version. Nothing is sent over the air.	Öffnet die beiden Ports und fragt die Version ab. Es wird nichts über Funk gesendet.
+OnAir does not include, start or bundle this modem: it is a separate program that OnAir connects to over TCP.	OnAir enthält dieses Modem nicht, startet es nicht und liefert es nicht mit: es ist ein eigenes Programm, mit dem sich OnAir per TCP verbindet.
+The modem program owns the sound card and the radio's PTT. Set the audio device and PTT in the modem program, not in OnAir.	Das Modemprogramm besitzt die Soundkarte und die PTT des Funkgeräts. Audiogerät und PTT im Modemprogramm einstellen, nicht in OnAir.
+Use Test connection: it opens the two ports and asks for the version; nothing is sent over the air.	Mit „Verbindung testen“ werden die beiden Ports geöffnet und die Version abgefragt; es wird nichts über Funk gesendet.
+1. Install ardopcf (open source) and start it: ardopcf 8515 <capture device> <playback device> (see its USAGE files).	1. ardopcf (Open Source) installieren und starten: ardopcf 8515 <Aufnahmegerät> <Wiedergabegerät> (siehe seine USAGE-Dateien).
+2. In OnAir add an ARDOP profile: host 127.0.0.1, command port 8515, data port 8516.	2. In OnAir ein ARDOP-Profil anlegen: Host 127.0.0.1, Befehlsport 8515, Datenport 8516.
+3. Choose the BW (ARQBW), for example 500MAX, or leave it empty for the modem's own setting.	3. Die Bandbreite (ARQBW) wählen, z. B. 500MAX, oder leer lassen für die Einstellung des Modems.
+4. Add a gateway with link type External modem, pick the profile, enter the gateway's call sign.	4. Ein Gateway mit der Verbindungsart „Externes Modem“ anlegen, das Profil wählen und das Rufzeichen des Gateways eintragen.
+ardopcf listens on all network interfaces by default: keep the ports behind a firewall.	ardopcf lauscht standardmäßig auf allen Netzwerkschnittstellen: die Ports hinter einer Firewall halten.
+ardopcf is open source (MIT licence). ARDOP's specification is public.	ardopcf ist Open Source (MIT-Lizenz). Die ARDOP-Spezifikation ist öffentlich.
+1. Install VARA HF from its author's site (EA5HVK) and start it. It is Windows software.	1. VARA HF von der Seite seines Autors (EA5HVK) installieren und starten. Es ist Windows-Software.
+2. Linux and macOS: people run it under Wine in its own prefix (see the Pat wiki page on VARA and the DF3FY guide, linked in docs/HFMODEMS-3.9.md). OnAir cannot check that setup.	2. Linux und macOS: man betreibt es unter Wine in einem eigenen Prefix (siehe die Pat-Wiki-Seite zu VARA und die DF3FY-Anleitung, verlinkt in docs/HFMODEMS-3.9.md). OnAir kann diese Einrichtung nicht prüfen.
+3. In OnAir add a VARA HF profile: host 127.0.0.1, command port 8300, data port 8301 (the defaults; check VARA's Settings > TCP ports).	3. In OnAir ein VARA-HF-Profil anlegen: Host 127.0.0.1, Befehlsport 8300, Datenport 8301 (die Standardwerte; in VARA unter Settings > TCP ports prüfen).
+4. BW: 500, 2300 (the default) or 2750. Add a gateway with link type External modem and pick the profile.	4. Bandbreite: 500, 2300 (Standard) oder 2750. Ein Gateway mit der Verbindungsart „Externes Modem“ anlegen und das Profil wählen.
+5. For a peer-to-peer session mark the gateway entry as another station: OnAir then sends P2P SESSION.	5. Für eine Peer-to-Peer-Sitzung den Eintrag als andere Station markieren: OnAir sendet dann P2P SESSION.
+VARA's free version is speed limited; a licence key (bought from the author) removes the limit. OnAir does not read or change it.	Die kostenlose VARA-Version ist in der Geschwindigkeit begrenzt; ein Lizenzschlüssel (beim Autor gekauft) hebt die Grenze auf. OnAir liest oder ändert ihn nicht.
+VARA is closed, proprietary, Windows-only software by EA5HVK. Its licence and any registration are between you and its author. OnAir does not contain or decode VARA.	VARA ist geschlossene, proprietäre Windows-Software von EA5HVK. Lizenz und Registrierung regeln Sie mit dem Autor. OnAir enthält VARA nicht und dekodiert es nicht.
+1. Install VARA FM from its author's site and start it. It is Windows software.	1. VARA FM von der Seite seines Autors installieren und starten. Es ist Windows-Software.
+2. In OnAir add a VARA FM profile: host 127.0.0.1, command port 8300, data port 8301 (VARA FM and HF both default to these, so run one at a time or change one program's ports).	2. In OnAir ein VARA-FM-Profil anlegen: Host 127.0.0.1, Befehlsport 8300, Datenport 8301 (VARA FM und HF verwenden beide diese Werte: nur eines gleichzeitig betreiben oder die Ports eines Programms ändern).
+3. VARA FM has no BW command. Digipeaters go in the gateway's Via field and are sent as: CONNECT <mycall> <call> via <digi1> <digi2>.	3. VARA FM hat keinen BW-Befehl. Digipeater kommen in das Feld Via des Gateways und werden gesendet als: CONNECT <mycall> <call> via <digi1> <digi2>.
+4. Add a gateway with link type External modem and pick the profile.	4. Ein Gateway mit der Verbindungsart „Externes Modem“ anlegen und das Profil wählen.
+VARA FM is closed, proprietary, Windows-only software by EA5HVK. OnAir does not contain or decode it.	VARA FM ist geschlossene, proprietäre Windows-Software von EA5HVK. OnAir enthält es nicht und dekodiert es nicht.
+1. Install Mercury (Rhizomatica, open source) and start it; it exposes a VARA-style TCP interface.	1. Mercury (Rhizomatica, Open Source) installieren und starten; es bietet eine TCP-Schnittstelle im VARA-Stil.
+2. In OnAir add a Mercury profile: host 127.0.0.1, command port 8300, data port 8301 (Mercury: -p <base_port>, data = base + 1).	2. In OnAir ein Mercury-Profil anlegen: Host 127.0.0.1, Befehlsport 8300, Datenport 8301 (Mercury: -p <base_port>, Daten = Basis + 1).
+3. BW: 500, 2300 or 2750 (2750 behaves as 2300 today). Add a gateway with link type External modem and pick the profile.	3. Bandbreite: 500, 2300 oder 2750 (2750 verhält sich derzeit wie 2300). Ein Gateway mit der Verbindungsart „Externes Modem“ anlegen und das Profil wählen.
+A Mercury call can last up to 300 s before it gives up: the connect timeout of the profile is 330 s unless you set one.	Ein Mercury-Anruf kann bis zu 300 s dauern, bevor er aufgibt: das Verbindungs-Timeout des Profils beträgt 330 s, sofern keines gesetzt ist.
+Mercury is open source (GPL-3.0-or-later; some bundled parts under LGPL, MIT, Unlicense).	Mercury ist Open Source (GPL-3.0-or-later; einige enthaltene Teile unter LGPL, MIT, Unlicense).

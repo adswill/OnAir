@@ -194,6 +194,7 @@ const char* transportName(Transport t) {
     case Transport::Packet9600: return "Packet 9600";
     case Transport::Ardop: return "ARDOP";
     case Transport::Telnet: return "Telnet";
+    case Transport::Modem: return "External modem";
     }
     return "?";
 }
@@ -210,7 +211,7 @@ std::string saveGateways(const std::vector<Gateway>& g) {
     char b[32];
     for (const auto& x : g) {
         snprintf(b, sizeof b, "%.6f", x.mhz);
-        o += clean(x.call) + "|" + std::to_string((int)x.transport) + "|" + b + "|" + clean(x.via) + "|" + clean(x.host) + "|" + std::to_string(x.port) + "|" + clean(x.note) + (x.peer ? "|1" : "") + "\n";
+        o += clean(x.call) + "|" + std::to_string((int)x.transport) + "|" + b + "|" + clean(x.via) + "|" + clean(x.host) + "|" + std::to_string(x.port) + "|" + clean(x.note) + "|" + (x.peer ? "1" : "") + "|" + clean(x.modem) + "\n";
     }
     return o;
 }
@@ -229,13 +230,14 @@ std::vector<Gateway> loadGateways(const std::string& text) {
         Gateway g;
         g.call = p[0];
         const int t = atoi(p[1].c_str());
-        g.transport = (Transport)std::max(0, std::min(3, t));
+        g.transport = (Transport)std::max(0, std::min(4, t));
         if (p.size() > 2) g.mhz = atof(p[2].c_str());
         if (p.size() > 3) g.via = p[3];
         if (p.size() > 4) g.host = p[4];
         if (p.size() > 5) g.port = std::max(1, std::min(65535, atoi(p[5].c_str())));
         if (p.size() > 6) g.note = p[6];
         if (p.size() > 7) g.peer = p[7] == "1";
+        if (p.size() > 8) g.modem = p[8];
         v.push_back(g);
     }
     return v;
@@ -388,8 +390,24 @@ bool WinlinkStation::makeLink(const StationConfig& c, std::string& err) {
         l->sendFrame = [this](const ArdopLinkFrame& f) { outAr_.push_back(f); };
         ar_ = l.get();
         link_ = std::move(l);
+    } else if (t == Transport::Modem) {
+        ExtModemConfig mc;
+        mc.profile = c.modem;
+        mc.mycall = c.mycall; mc.peer = c.gateway.call;
+        mc.p2p = c.p2p;
+        const std::string v = c.gateway.via;
+        for (size_t i = 0; i < v.size();) {
+            size_t e = v.find(',', i);
+            if (e == std::string::npos) e = v.size();
+            std::string one = v.substr(i, e - i);
+            while (!one.empty() && one.front() == ' ') one.erase(0, 1);
+            while (!one.empty() && one.back() == ' ') one.pop_back();
+            if (!one.empty()) mc.via.push_back(one);
+            i = e + 1;
+        }
+        link_ = std::make_unique<ExtModemLink>(mc);
     } else {
-        if (c.p2p) { err = "peer-to-peer sessions run over packet or ARDOP, not Telnet"; return false; }
+        if (c.p2p) { err = "peer-to-peer sessions run over packet, ARDOP or an external modem, not Telnet"; return false; }
         link_ = std::make_unique<TelnetLink>(c.gateway.host, c.gateway.port, c.mycall);
     }
     return true;
@@ -441,6 +459,7 @@ bool WinlinkStation::start(const StationConfig& c, double now, std::string& err)
     if (c.gateway.call.empty() && (c.gateway.transport != Transport::Telnet || c.p2p)) { err = c.p2p ? "enter the other station's call sign" : "pick a gateway (its call sign)"; return false; }
     if (c.gateway.transport == Transport::Telnet && !c.telnetEnabled && !c.p2p) { err = "Telnet to the CMS is off: turn it on in the Winlink settings"; return false; }
     if (c.gateway.transport == Transport::Telnet && c.gateway.host.empty() && !c.p2p) { err = "enter the Telnet host"; return false; }
+    if (c.gateway.transport == Transport::Modem && c.modem.host.empty()) { err = "pick a modem profile (Winlink > Modems)"; return false; }
     c_ = c;
     stopping_ = false; sessionEnded_ = false;
     lastOk_ = false; lastErr_.clear();
@@ -469,6 +488,7 @@ bool WinlinkStation::listen(const StationConfig& cfg, double now, std::string& e
     if (cfg.mycall.empty()) { err = "enter your call sign first"; return false; }
     StationConfig c = cfg;
     c.p2p = true;
+    if (c.gateway.transport == Transport::Modem && c.modem.host.empty()) { err = "pick a modem profile (Winlink > Modems)"; return false; }
     c.gateway.call.clear();
     c_ = c;
     stopping_ = false; sessionEnded_ = false;
@@ -561,6 +581,8 @@ std::string WinlinkStation::status() const {
         default: break;
         }
     }
+    const std::string dt = link_->detail();
+    if (!dt.empty()) s += " (" + dt + ")";
     return s;
 }
 

@@ -1736,3 +1736,14 @@ IEC958) sends AC-3 / E-AC-3 untouched to a receiver. Passthrough is NOT tested o
 rendered (Dolby's licensed renderer) and Dolby Access can't be fed a bitstream by an app. docs/ATMOS-3.9.md.
 ## 2026-11-11: COSPAS-SARSAT extra modes in the log, CPU (branch feat39-sarsatcpu)
 EG's report (3.8.0 vs 0.2.9). The other modes' lines were configure() messages from every receiver on each restart (log callbacks persist), now dropped during start(). SARSAT receiver is identical to 0.2.9 per sample; engine CPU 0.07-0.09 s/s at 0.5 Msps with the 20 kHz offset, beacons 6/6; the 70 % was not reproduced. Added a false-burst search budget and test_sarsat_engine. See docs/SARSAT-CPU-3.9.md.
+## 2026-11-11 External modems for Winlink and P2P: ARDOP, VARA, Mercury (feat39-hfmodems)
+Owner request: use the HF / VHF data modems people talk about for Winlink and station-to-station links. Winlink had OnAir's own packet and
+simplified ARDOP links plus Telnet; there was no client for an external modem. New `ExtModemLink` (a `ByteLink`, core/src/winlink/wl_extmodem.cpp):
+OnAir connects over TCP to a separate program (ardopcf 8515 / 8516 with length-and-tag data frames, VARA HF and FM 8300 / 8301, Mercury 8300 /
+8301) and runs the existing B2F session through its data port: connect, listen and accept P2P, BW choice, buffer / S/N / busy / PTT status,
+modem-not-running and timeout messages. Commands come only from the published documents (ardopcf Host_Interface_Commands.md, EA5HVK's VARA
+Native TNC Commands, Mercury docs/TNC.md; Pat, Pat-Vara and wl2k-go, MIT, were read for behaviour and no code was taken). UI: Modems view under
+Winlink (profile editor, Test connection that sends only VERSION, "?" setup help with the Wine note), gateway type External modem, German
+strings. OnAir does not include or start any modem. Verified only against mock modems written from the documents; no real ARDOP, VARA or Mercury
+modem was used. Skipped: a native ARDOP or Mercury decoder, and reading the hermes-modem repository. docs/HFMODEMS-3.9.md,
+tests/winlink/test_winlink_extmodem.cpp.

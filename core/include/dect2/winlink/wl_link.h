@@ -37,6 +37,7 @@ public:
     virtual void tick(double now) = 0;
     virtual size_t pendingTx() const = 0;                     // bytes not yet acknowledged
     virtual std::string remoteCall() const { return std::string(); }   // the station at the other end (a listening link: the caller)
+    virtual std::string detail() const { return std::string(); }       // one line of link status for the screen (external modems: BW, buffer, S/N, busy)
     LinkState state() const { return st_; }
     const std::string& error() const { return err_; }
     std::function<void(const uint8_t* d, size_t n)> onData;   // bytes received in order

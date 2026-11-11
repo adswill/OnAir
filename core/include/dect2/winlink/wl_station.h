@@ -4,6 +4,7 @@
 #pragma once
 #include "dect2/winlink/b2f.h"
 #include "dect2/winlink/b2msg.h"
+#include "dect2/winlink/wl_extmodem.h"
 #include "dect2/winlink/wl_link.h"
 #include <atomic>
 #include <cstdint>
@@ -54,7 +55,7 @@ private:
 
 // ---------------------------------------------------------------- gateways
 
-enum class Transport { Packet1200 = 0, Packet9600 = 1, Ardop = 2, Telnet = 3 };
+enum class Transport { Packet1200 = 0, Packet9600 = 1, Ardop = 2, Telnet = 3, Modem = 4 };   // Modem: an external program (ARDOP / VARA / Mercury) over TCP, wl_extmodem.h
 const char* transportName(Transport t);
 
 struct Gateway {
@@ -65,9 +66,10 @@ struct Gateway {
     std::string host;             // Telnet: host name
     int port = 8772;              // Telnet: port
     std::string note;
+    std::string modem;            // Transport::Modem: the name of the modem profile to use (VARA FM digipeaters go in via)
     bool peer = false;            // another station, not a gateway: Connect runs a peer-to-peer session (packet or ARDOP)
 };
-// one gateway per line: call|transport|mhz|via|host|port|note|peer (peer: 1, optional)
+// one gateway per line: call|transport|mhz|via|host|port|note|peer|modem (peer: 1 or empty; modem optional)
 std::string saveGateways(const std::vector<Gateway>& g);
 std::vector<Gateway> loadGateways(const std::string& text);
 
@@ -105,6 +107,7 @@ private:
 struct StationConfig {
     std::string mycall, locator, password;   // password: the Winlink account's, for the secure login (kept by the app, never logged)
     Gateway gateway;
+    ModemProfile modem;                       // Transport::Modem: the resolved profile (the app looks gateway.modem up in its list)
     bool telnetEnabled = false;               // Settings: "Allow Telnet to the CMS" (off by default)
     int paclen = 128, window = 4;
     double t1Sec = 0;                          // 0: from the speed (6 s at 1200 baud, 3 s at 9600 baud)
