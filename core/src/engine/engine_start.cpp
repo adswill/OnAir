@@ -622,6 +622,9 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMarineVhf_.setLogCallback([this](const std::string& s) { log(s); });
     rxChv_.configure(rate_);
     rxChv_.setLogCallback([this](const std::string& s) { log(s); });
+    // the service of the mode (CB, FRS, PMR446, ham FM, HF voice, MDC-1200, wireless mics): set here too, not only by the panel, so a run
+    // without the panel (command line, tests) decodes the mode it asked for and not the receiver's default (CB, FM: HF voice's USB calls stayed silent)
+    if (const int a = activeStdFor(stdMode_.load()); a >= 341 && a <= 347) rxChv_.setService((chv::Service)(a - 341));
     rxP25p2_.configure(rate_);
     rxP25p2_.setLogCallback([this](const std::string& s) { log(s); });
     rxMt_.configure(rate_);

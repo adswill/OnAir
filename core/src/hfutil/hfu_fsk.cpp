@@ -378,7 +378,7 @@ struct FskRx::Impl {
         double mean = p0 / (double)n;
         std::vector<float> trans(n, 0);
         int last = 0;
-        for (size_t i = 1; i < n; i++) { int cur = disc[i] > 0.2 * mean ? 1 : disc[i] < -0.2 * mean ? -1 : last; if (last && cur != last) trans[i] = 1; if (cur) last = cur; }
+        for (size_t i = 1; i < n; i++) { int cur = disc[i] > 0.6 * mean ? 1 : disc[i] < -0.6 * mean ? -1 : last; if (last && cur != last) trans[i] = 1; if (cur) last = cur; }
         double bestB = 0, bestV = 0;
         std::vector<std::pair<double, double>> vals;
         for (double b : cand) {

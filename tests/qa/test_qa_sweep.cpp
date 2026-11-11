@@ -223,8 +223,7 @@ double writeTx(const Entry& en, double secs, const std::string& dir) {
     if (!w.f || !wz.f) return 0;
     w.gain = 0.5f;
     std::vector<cf32> z;
-    const ModeTuning* mt = modeTuning(m->stdMode);
-    const double dph = 2 * M_PI * (mt ? mt->tuneOffsetHz : 0.0) / rate;
+    const double dph = 2 * M_PI * txModeTuneOffsetHz(*m) / rate;   // as a TX session tunes the radio (the modes with their own frequency plan: none)
     double ph = 0;
     const size_t n = (size_t)(secs * rate);
     std::vector<cf32> x;
@@ -310,7 +309,12 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     {
         std::vector<double> s(nfft);   // fftshifted
         double tot = 0;
-        for (int k = 0; k < nfft; k++) { s[k] = psd[(k + nfft / 2) % nfft]; tot += s[k]; }
+        // the floor (the 10th percentile of the bins: a generator's own noise, or an 8-bit radio's dither) is not the signal: without this a
+        // bursty narrow signal over a floor of 1 % of its power got a 99 % band of half the rate, and its 12 dB test was 30 dB in its own band
+        std::vector<double> srt(psd);
+        std::nth_element(srt.begin(), srt.begin() + nfft / 10, srt.end());
+        const double floorP = srt[(size_t)(nfft / 10)];
+        for (int k = 0; k < nfft; k++) { s[k] = std::max(0.0, psd[(k + nfft / 2) % nfft] - floorP); tot += s[k]; }
         if (tot > 0) {
             double acc = 0; int lo = 0, hi = nfft - 1;
             for (lo = 0; lo < nfft; lo++) { acc += s[lo]; if (acc > 0.005 * tot) break; }

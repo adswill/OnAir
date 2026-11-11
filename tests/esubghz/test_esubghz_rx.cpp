@@ -117,6 +117,15 @@ int main() {
         air.silence(0.7, 2e6);
         const EsubghzTelemetry t = run(air, 2e6, 300e3, nullptr);
         CHECK(t.chat.size() == 1 && t.chat[0].text == "OnAir: via the TX row", "TX generator line: %s", t.chat.empty() ? "(none)" : t.chat[0].text.c_str());
+        {   // the transmitter's own output with no silence before it (it keys 5 ms in): the first 2000 samples once set the noise floor from
+            // the packet itself and nothing was heard (docs/QA-SWEEP-3.9.md)
+            auto g0 = makeEsubghzTxGenerator(r, 2e6, err);
+            Air a0;
+            while (g0 && !g0->finished()) { g0->generate(blk.data(), blk.size()); a0.iq.insert(a0.iq.end(), blk.begin(), blk.end()); }
+            a0.silence(0.7, 2e6);
+            const EsubghzTelemetry t0 = run(a0, 2e6, 300e3, nullptr);
+            CHECK(t0.chat.size() == 1 && t0.chat[0].text == "OnAir: via the TX row", "TX generator line without a lead: %s", t0.chat.empty() ? "(none)" : t0.chat[0].text.c_str());
+        }
         r.payload = std::string(1100, 'x');
         CHECK(!makeEsubghzTxGenerator(r, 2e6, err) && !err.empty(), "a message longer than 1024 octets is refused");
     }
