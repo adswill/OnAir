@@ -23,3 +23,5 @@ void d40P25Activity(const P25Telemetry& t);      // d40_tg_ui.cpp: talkgroup air
 void d40NxdnActivity(const NxdnTelemetry& t);
 void d40TetraTick(const TetraTelemetry& t);          // builds TETRA calls from the slot states (talkgroups only, never terminal numbers)
 void d40TetraActivity();
+void d40AcarsFeed(const dect2::AcarsTelemetry& t);   // d40_acars_ui.cpp: every new message into the channel load
+void d40AcarsLoadCard();

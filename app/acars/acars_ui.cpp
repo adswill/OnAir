@@ -1,4 +1,5 @@
 // ACARS screens: the message list with a detail pane, the aircraft table and the channel bars.
+#include "../d40/d40_ui.h"
 #include "acars_wx_ui.h"
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/mode_panel.h"
@@ -505,6 +506,7 @@ void aircraftView(const App& a) {
 
 // one bar per channel: the level over a scale of -100 to -20 dB, a carrier marker, the counts as text
 void channelView(const App& a) {
+    d40AcarsLoadCard();   // 4.0: channel load ranking (app/d40)
     const dect2::AcarsTelemetry& t = a.rx.acars;
     const bool on = live(a);
     ImDrawList* dl = ImGui::GetWindowDrawList();
