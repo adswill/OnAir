@@ -600,6 +600,7 @@ struct AmRx::Impl {
     unsigned history = 0;
     bool wideCp = false;             // the cyclic prefix search uses the MA3 filter
     int cpBlocks = 0;                // blocks searched with this filter
+    float angF[2] = {0, 0};          // the prefix frequency estimate of each filter (hybrid, all-digital)
     double drCum = 0, drE0 = 0, ppmOut = 0;    // sample clock measurement (see syncProcess)
     int drBlocks = 0;
     bool drHave = false, ppmNew = false;
@@ -641,7 +642,7 @@ struct AmRx::Impl {
     }
     void reset() {
         idx = 0; prevAngle = 0; phase = cd(1, 0); keepExtra = 0; cfo = 0; state = 0; slope = 0;
-        sidx = 0; psmi = 1; bc = 0; rdbi = 0; cfoWait = 0; history = 0; samperr = 0; wideCp = false; cpBlocks = 0;
+        sidx = 0; psmi = 1; bc = 0; rdbi = 0; cfoWait = 0; history = 0; samperr = 0; wideCp = false; cpBlocks = 0; angF[0] = angF[1] = 0;
         drCum = 0; drE0 = 0; drBlocks = 0; drHave = false; ppmNew = false;
         mlHist.clear(); muHist.clear(); emlHist.clear(); emuHist.clear(); frames = 0; ber = 0; mer = 0; merAcc = 0; merN = 0; badRun = 0; lastBc = -1;
         std::fill(ring.begin(), ring.end(), cf32(0, 0));
@@ -678,7 +679,14 @@ struct AmRx::Impl {
         } else {
             // hybrid (MA1) or all-digital (MA3): the two filters take turns, 10 blocks (1.9 s) each, until block sync (which takes about 5 blocks);
             // the hybrid one first. A station lost and searched for again keeps the filter it was found with.
-            if (++cpBlocks > 10) { cpBlocks = 0; wideCp = !wideCp; }
+            // 3.9: not while the block numbers are being read (the last block had a valid one; up to 20 blocks), and each filter keeps its own
+            // frequency: the MA3 filter's estimate of a hybrid station runs off by a subcarrier within 10 blocks, and a station whose sync was cut
+            // off by the switch came back with that error (no P1 frame in 20 s in about one trial in ten at 34 dB, docs/SENSITIVITY-3.9-E.md)
+            if (++cpBlocks > 10 && (history == 0 || cpBlocks > 20)) {
+                angF[wideCp ? 1 : 0] = prevAngle;
+                cpBlocks = 0; wideCp = !wideCp;
+                prevAngle = angF[wideCp ? 1 : 0];
+            }
             cf32 best;
             se = cps.run(in.data(), kFftAm, kCpAm, kBlk, wideCp ? tapsMa3() : kTapsAm, shape, best);
             const float diff = std::arg(best * std::polar(1.f, -prevAngle));
@@ -714,6 +722,9 @@ struct AmRx::Impl {
             }
             slope = sxy / sx2;
             inc *= std::polar(1.0, -(double)slope);
+            // 3.9: in sync the carrier's frequency from the block corrects the next blocks (the prefix estimate was frozen at sync, and the
+            // block's own fit had to take the whole error every block)
+            if (state == 2 && std::fabs(slope) < 0.02f) prevAngle -= 0.3f * slope * (float)kFftAm;
             // nrsc5 subtracts another 0.06 rad here; OnAir puts the carrier at exactly 0: then the analog audio cancels completely when the
             // complementary lower subcarriers are added to the upper ones, and a digital part turned against the carrier only costs cos()
             // of that angle there (the training symbols take care of the phase of every column)
