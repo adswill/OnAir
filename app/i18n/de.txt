@@ -4024,3 +4024,4 @@ Not a valid callsign (like DG9BFC-10).	Kein gültiges Rufzeichen (z. B. DG9BFC-1
 %s, %llu packets forwarded, %llu beacons, %llu dropped, %llu reconnects	%s, %llu Pakete weitergeleitet, %llu Baken, %llu verworfen, %llu Neuverbindungen
 last line:	letzte Zeile:
 Privacy: the sites publish your station position and callsign. Set your location in View > Map first. Your passcode stays in your settings only. M10 and M20 sondes are not sent (no agreed APRS name for them).	Datenschutz: Die Seiten veröffentlichen deine Stationsposition und dein Rufzeichen. Lege zuerst deinen Standort fest (Ansicht > Karte). Dein Passcode bleibt nur in deinen Einstellungen. M10- und M20-Sonden werden nicht gesendet (kein vereinbarter APRS-Name dafür).
+Add a target...	Ziel hinzufügen...

@@ -694,3 +694,4 @@ The audio frequency of the left column of the character.
 Send below the dial frequency instead of above it.
 Font:
 Waterfall text, HF
+Add a target...
