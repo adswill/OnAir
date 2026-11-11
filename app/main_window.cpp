@@ -8,6 +8,7 @@
 #include "dect2/power/power.h"
 #include "ui/typography.h"
 #include "ui/cjk_fonts.h"
+#include "i18n/i18n.h"
 #include "ui/contrast.h"
 #include "dect2/source/iq_file.h"
 #include "panels/gallery.h"
@@ -145,12 +146,16 @@ GLFWwindow* createMainWindow(int argc, char** argv) {
 // (ImGui 1.92: MergeMode always merges into the font added LAST, whatever ImFontConfig::DstFont says, so each base font gets its CJK fonts before the next base font is added;
 // merging into the first font after the second was added trips an assert in ImFontAtlasBuildSetupFontSpecialGlyphs in a Debug build, #104)
 static void mergeCjk(ImGuiIO& io, ImFont* dst) {
-    for (const auto& f : plat::cjkFontCandidates()) {
+    // the interface language puts its own CJK fonts first (cjk_order.h); loadFonts() runs again when the language changes
+    for (const auto& f : plat::cjkFontCandidates(i18n::current())) {
         if (access(f.c_str(), R_OK) != 0) continue;
         ImFontConfig mc;
         mc.MergeMode = true;
         mc.DstFont = dst;
-        io.Fonts->AddFontFromFileTTF(f.c_str(), dst->Sources[0]->SizePixels, &mc);
+        // Hiragino (macOS, "ヒラギノ" in the Japanese file name) fills its em box, so at 100% its kana and kanji look larger than the Latin
+        // text; 0.9 matches the bundled Chinese font (cjk_fonts.cpp). The other CJK fonts keep the size of dst.
+        const bool hiragino = f.find("Hiragino") != std::string::npos || f.find("\xE3\x83\x92\xE3\x83\xA9\xE3\x82\xAE\xE3\x83\x8E") != std::string::npos;
+        io.Fonts->AddFontFromFileTTF(f.c_str(), dst->Sources[0]->SizePixels * (hiragino ? 0.9f : 1.0f), &mc);
     }
 }
 

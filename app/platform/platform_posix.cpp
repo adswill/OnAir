@@ -3,6 +3,7 @@
 #include "platform.h"
 #include "prefs_text.h"
 #include "datadir_ptr.h"
+#include "cjk_order.h"
 #include "dect2/common/png.h"
 #include <algorithm>
 #include <atomic>
@@ -522,7 +523,7 @@ std::string saveFileDialog(const char* name) {
 #endif
 
 #if defined(__linux__)
-std::vector<std::string> cjkFontCandidatesFixed();
+std::vector<std::string> cjkFontCandidatesFixed(const std::string& lang);
 #endif
 std::vector<std::string> uiFontCandidates() {
     return {"C:/Windows/Fonts/segoeui.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf", "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
@@ -567,19 +568,21 @@ static void addLinuxCjkFonts(std::vector<std::string>& out) {
     }
 }
 #endif
-std::vector<std::string> cjkFontCandidates() {
+std::vector<std::string> cjkFontCandidates(const std::string& lang) {
 #if defined(__linux__)
-    std::vector<std::string> v = cjkFontCandidatesFixed();
+    std::vector<std::string> v = cjkFontCandidatesFixed(lang);
     addLinuxCjkFonts(v);
     return v;
 }
-std::vector<std::string> cjkFontCandidatesFixed() {
+std::vector<std::string> cjkFontCandidatesFixed(const std::string& lang) {
 #endif
-    return {"C:/Windows/Fonts/malgun.ttf", "C:/Windows/Fonts/msyh.ttc", "C:/Windows/Fonts/simsun.ttc",
-            "C:/Windows/Fonts/YuGothM.ttc", "C:/Windows/Fonts/meiryo.ttc",   // kana and kanji for Japanese if the Chinese fonts are missing
-            "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
-            "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc", "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-            "/usr/share/fonts/wenquanyi/wqy-microhei/wqy-microhei.ttc"};
+    // Windows by language; then the Linux fonts, which cover all three (Noto Sans CJK, WenQuanYi)
+    std::vector<std::string> v = cjkFontOrder(lang, {"C:/Windows/Fonts/YuGothM.ttc", "C:/Windows/Fonts/meiryo.ttc"},
+                                              {"C:/Windows/Fonts/msyh.ttc", "C:/Windows/Fonts/simsun.ttc"}, {"C:/Windows/Fonts/malgun.ttf"});
+    v.insert(v.end(), {"/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc", "/usr/share/fonts/noto-cjk/NotoSansCJK-Regular.ttc",
+                       "/usr/share/fonts/google-noto-cjk/NotoSansCJK-Regular.ttc", "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+                       "/usr/share/fonts/wenquanyi/wqy-microhei/wqy-microhei.ttc"});
+    return v;
 }
 std::vector<std::string> monoFontCandidates() {
     return {"C:/Windows/Fonts/consola.ttf", "C:/Windows/Fonts/lucon.ttf", "/usr/share/fonts/truetype/dejavu/DejaVuSansMono.ttf", "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf",
