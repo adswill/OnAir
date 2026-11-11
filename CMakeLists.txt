@@ -3220,7 +3220,7 @@ if(TEST kaws_synth)
 endif()
 
 # 4.0 lane B round 2 (docs/FEATURES-4.0-D.md): header-only mode helpers
-foreach(t40d fm_d40 am_d40 dab_d40 sat_d40 tv_d40 scan_d40)
+foreach(t40d fm_d40 am_d40 dab_d40 sat_d40 tv_d40 scan_d40 sat_e40 hf_e40 radio_e40)
   if(EXISTS ${CMAKE_SOURCE_DIR}/tests/d40/test_${t40d}.cpp)
     add_executable(test_${t40d} tests/d40/test_${t40d}.cpp)
     target_include_directories(test_${t40d} PRIVATE core/include)
