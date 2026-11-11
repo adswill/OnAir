@@ -121,7 +121,7 @@ public:
         }
     }
 private:
-    struct Phase { uint32_t reg = 0; int left = 0; uint8_t body[kBodyBits] = {}; };
+    struct Phase { uint32_t reg = 0; int left = 0; int serr = 0; uint8_t body[kBodyBits] = {}; };
     bool hot() const { return std::fabs(centre_ - 452.9375e6) < 1e6; }
     void bit(Phase& p, int b) {
         if (p.left > 0) {
@@ -130,13 +130,14 @@ private:
             return;
         }
         p.reg = (p.reg << 1 | (uint32_t)b) & 0x1FFFF;
-        if (__builtin_popcount(p.reg ^ kSync) <= 1) { p.left = kBodyBits; syncs_++; out->energy(); }
+        if (const int se = __builtin_popcount(p.reg ^ kSync); se <= 1) { p.left = kBodyBits; p.serr = se; syncs_++; out->energy(); }
     }
     void finish(Phase& p) {
         int fixed = 0;
         uint8_t b[kBodyBits];
         memcpy(b, p.body, kBodyBits);
         if (!eotCheck(b, &fixed)) { out->bad(); return; }
+        if (fixed == 2 && p.serr > 0) { out->bad(); return; }   // a sync with an error plus two repaired bits: three errors, which noise alone passes too often (4.0 QA noise-only run)
         const double t = out->now();
         std::string key(reinterpret_cast<const char*>(b), 45);
         if (t - lastT_ < 0.05 && key == lastKey_) return;      // the same frame through a neighbouring sampling phase
