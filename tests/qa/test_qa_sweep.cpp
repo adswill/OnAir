@@ -58,7 +58,7 @@ namespace {
 
 const char* const kConds[] = {"clean", "pos", "neg", "snr", "noise", "rate"};
 constexpr int kNC = 6;
-constexpr double kRateMul = 1.37, kBwMul = 1.3;   // "rate": the clean signal at a sample rate 1.37 x the default (a non-integer ratio) with a 1.3 x wider custom bandwidth
+static const double kRateMul = getenv("QA_RATEMUL") ? atof(getenv("QA_RATEMUL")) : 1.37, kBwMul = getenv("QA_BWMUL") ? atof(getenv("QA_BWMUL")) : 1.3;   // QA_RATEMUL / QA_BWMUL: for finding which of the two a mode fails on;   // "rate": the clean signal at a sample rate 1.37 x the default (a non-integer ratio) with a 1.3 x wider custom bandwidth
 
 // ------------------------------------------------------------------ known failures: "id/cond" -> reason (the table in the doc says the same)
 struct Known { const char* key; const char* why; };
@@ -702,6 +702,7 @@ int main(int argc, char** argv) {
         else if (a == "--long") {}
         else if (a == "--strict") strict = true;
         else if (a == "--switch") doSwitch = true;
+        else if (a == "--sel") { if (!getenv("QA_MODES")) { printf("qa_sweep_sel: set QA_MODES to the mode ids to run\n"); return 0; } }
         else if (a == "--mode") modes = next();
         else if (a == "--seconds") secs = atof(next().c_str());
         else if (a == "--snr") snrDb = atof(next().c_str());
@@ -713,6 +714,7 @@ int main(int argc, char** argv) {
         else if (a == "--run") { stage = a; stId = next(); stRate = atof(next().c_str()); stSecs = atof(next().c_str()); stFile = next(); stCond = next(); }
         else { fprintf(stderr, "unknown option %s\n", a.c_str()); return 2; }
     }
+    if (modes.empty() && getenv("QA_MODES")) modes = getenv("QA_MODES");   // ctest qa_sweep_sel: the modes to run, set in the environment
     const std::vector<Entry> all = allEntries();
     auto find = [&](const std::string& id) -> const Entry* { for (auto& e : all) if (e.id == id) return &e; return nullptr; };
     if (!stage.empty()) {
