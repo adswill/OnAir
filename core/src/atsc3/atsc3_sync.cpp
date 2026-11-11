@@ -307,14 +307,31 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
             out[(size_t)k] = cf32((ar[0] + ar[1]) + (ar[2] + ar[3]), (ai[0] + ai[1]) + (ai[2] + ai[3]));
         }
     };
-    // long blocks are split over a few threads (the outputs do not depend on each other)
+    // Long blocks are split over a few threads (the outputs do not depend on each other), but only while one thread would spend more than about
+    // a third of real time here (a slow processor): otherwise the threads started per block cost more CPU than they save, and on a processor with
+    // two threads per core both run slower side by side. The load is the resampler's CPU time per second of input, averaged over all calls.
+    static std::atomic<float> load{0.f};
+    static const int forceSplit = getenv("ATSC3_SPLIT") ? atoi(getenv("ATSC3_SPLIT")) : -1;   // test: 1 always split, 0 never
     const int hw = (int)std::thread::hardware_concurrency();
-    const int nt = (count >= 200000 && hw >= 4) ? std::min(4, hw / 2) : 1;
-    if (nt <= 1) { part(0, count); return; }
+    const float ld = load.load(std::memory_order_relaxed);
+    const bool want = forceSplit >= 0 ? forceSplit > 0 : ld > 0.33f;
+    const int nt = (count >= 200000 && hw >= 4 && want) ? std::min(4, hw / 2) : 1;
+    const double secs = (double)n / inRate;
+    const uint64_t c0 = prof::threadCpuNs();
+    if (nt <= 1) {
+        part(0, count);
+        const double w = (double)(prof::threadCpuNs() - c0) * 1e-9;
+        if (secs > 0) load.store(ld + 0.2f * ((float)std::min(w / secs, 4.0) - ld), std::memory_order_relaxed);
+        return;
+    }
     std::vector<std::thread> th;
-    for (int t = 1; t < nt; t++) th.emplace_back(dect2::namedThread("onair-a3sync", part, count * t / nt, count * (t + 1) / nt));
+    std::atomic<uint64_t> helperNs{0};
+    auto timedPart = [&](long a, long e) { const uint64_t h0 = prof::threadCpuNs(); part(a, e); helperNs += prof::threadCpuNs() - h0; };
+    for (int t = 1; t < nt; t++) th.emplace_back(dect2::namedThread("onair-a3sync", timedPart, count * t / nt, count * (t + 1) / nt));
     part(0, count / nt);
     for (auto& t : th) t.join();
+    const double w = ((double)(prof::threadCpuNs() - c0) + (double)helperNs.load()) * 1e-9;
+    if (secs > 0) load.store(ld + 0.2f * ((float)std::min(w / secs, 4.0) - ld), std::memory_order_relaxed);
 }
 
 } // namespace

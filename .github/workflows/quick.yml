@@ -26,6 +26,9 @@ on:
       compare:
         description: "another branch or tag: the same tests are built from it too and run after this branch's on the same runner (optional)"
         default: ""
+      perf:
+        description: "Linux: one of the tests to run once more under perf record, with the hottest functions printed (optional)"
+        default: ""
 concurrency:
   group: quick-${{ github.ref }}-${{ inputs.os }}
   cancel-in-progress: true
@@ -94,3 +97,14 @@ jobs:
           V=""; [ "$VERBOSE" = true ] && { V="-V"; lscpu 2>/dev/null | head -20 || sysctl -n machdep.cpu.brand_string; }
           ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900 $V
           if [ -d build-cmp ]; then echo "===== the same tests from $CMP ====="; ctest --test-dir build-cmp -j 4 -R "$R" --output-on-failure --timeout 900 $V || true; fi
+      - name: Profile
+        if: inputs.perf != '' && runner.os == 'Linux'
+        env: { PERFT: "${{ inputs.perf }}", TEST_ENV: "${{ inputs.env }}" }
+        run: |
+          if [ -n "$TEST_ENV" ]; then IFS=';' read -ra KV <<< "$TEST_ENV"; for kv in "${KV[@]}"; do export "$kv"; done; fi
+          sudo apt-get install -y -o Acquire::Retries=5 linux-tools-common "linux-tools-$(uname -r)" || sudo apt-get install -y linux-tools-azure || true
+          sudo sysctl -w kernel.perf_event_paranoid=-1 kernel.kptr_restrict=0
+          B=$(find build -type f -name "test_$PERFT" | head -1)
+          [ -n "$B" ] || { echo "no binary test_$PERFT"; exit 0; }
+          perf record -F 1999 -o perf.data -- "$B" > /dev/null 2>&1 || true
+          perf report -i perf.data --stdio --no-children --percent-limit 0.3 --sort comm,symbol 2>/dev/null | grep -v "^$" | head -150 || true
