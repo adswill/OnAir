@@ -59,10 +59,10 @@ ImVec2 fitButton(const char* label, float minW) {
     return ImVec2(std::max(minW, ImGui::CalcTextSize(label, nullptr, true).x + 2 * ImGui::GetStyle().FramePadding.x), 0);
 }
 
-bool runningButton(const App& a, const char* label, bool small) {
+bool runningButton(const App& a, const char* label, bool compact) {
     const bool run = a.engine.running();
     ImGui::BeginDisabled(!run);
-    const bool hit = small ? ImGui::SmallButton(label) : ImGui::Button(label);
+    const bool hit = compact ? ImGui::SmallButton(label) : ImGui::Button(label);
     ImGui::EndDisabled();
     if (!run && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Start the receiver first"));
     return hit && run;

@@ -728,7 +728,7 @@ void keepWindowsReachable();
 // SetNextWindowSize(..., ImGuiCond_FirstUseEver) with the size made to fit the display (a large window at 150 % on a laptop screen)
 void firstWindowSize(float w, float h);
 // a button that only acts while the receiver runs: greyed out (with the reason as its tooltip) while it is stopped, instead of doing nothing
-bool runningButton(const App& a, const char* label, bool small = false);
+bool runningButton(const App& a, const char* label, bool compact = false);
 // a panel that answers Space itself (the TV picture, the transmitter) sets this to the frame number; the new interface's Space = start /
 // stop the receiver is then left out, so one key press does not do two things (widgets.cpp)
 extern int gSpaceClaimFrame;
