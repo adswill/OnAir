@@ -1805,3 +1805,8 @@ filter of 4 kHz half width (sonde_rx.cpp, SondeBitDecoder::narrowChannel): 90 % 
 6 dB instead of 9 with a 20 ppm carrier error or 150 kHz off-centre, noise-only runs still decode nothing. Test: sonde_sens40. New
 tool sens_curve (fraction of units per SNR, any harness mode). Measured and not kept: soft RS erasures for the RS41, click suppression for
 APRS, wM-Bus tone correlators (the 17 dB wM-Bus figure was the five-PHY mix), see docs/SENSITIVITY-4.0-A.md.
+
+## 2026-11-12 (night): sensitivity 4.0, pass B2 (feat40-sensB2)
+Argos PTT-A2 uplink 13 dB to about -5.5 dB (coherent gate, line-detector start, length by bit closeness), NDB 14 to 9 dB (synchronous tone detection with a carrier frequency loop),
+Marine VHF DSC 4 / 6 dB to 2 dB (4.5 kHz IF with carrier follow-up), MPT 1327 9 to 6 dB (5.5 kHz IF, new dsp/narrow_if.h), FT8 and JT4 wrong-text decodes to 0 (AP score floor, all-zero word).
+Tried and not kept: Wi-SUN burst gate (about 1 dB at 90 %, nothing at 50 %), EDACS 6.5 kHz IF with AFC (1 dB). Details: docs/SENSITIVITY-4.0-B2.md.

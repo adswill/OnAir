@@ -125,3 +125,19 @@ Noise-only slots (6 per mode): 0 decodes before and after in all four.
   skipped by `nearDecoded`. Open: a plausibility rule for the callsign of an a-priori CQ hit and a wider exclusion zone around decoded signals in the deep stage.
 Test: `hfdig_sens40b` guard now also runs FT8 and JT4 at -22 / -23 dB with the dial and clock error and fails on a wrong text (the old code does not fail every run of 4 slots: the wrong decodes are about 1 in 10 slots).
 hfdig_ft4, hfdig_ft8, hfdig_ftxsens, hfdig_ftxsmart, hfdig_ftxmulti, hfdig_jt4 pass. Simulated only.
+
+## Tried, measured, not kept
+
+* **Wi-SUN FAN, burst gate** (bins open at 3 x the learned floor instead of 5, close at 1.8 x instead of 2.5): 14 dB 94 % against 13 dB 82 % before, i.e. about 1 dB at the 90 % point and nothing at the 50 % point (10 dB, 54 % both).
+  The limit is the discriminator-based start-of-frame and bit decisions (the FM threshold of the 100 kHz channel). A tone-energy detector for h = 1 FSK needs the carrier offset before the preamble search; not done.
+* **EDACS, 6.5 kHz channel filter (was 9) with a carrier follow-up** in `FmFront`: 12 dB to 11 dB (12 trials a point, all scenarios). Reverted; the cliff is the BCH check of the frame.
+* **FLEX tone symbols**: not pursued again (POCSAG's change lost FLEX pages in the shared channel last time).
+
+## Where the modes stand against theory (from the baseline table of SENSITIVITY-4.0-B.md)
+
+* At or near theory (measured or reasoned, no change): NAVTEX / SITOR-B (tone slicer already; about 2 dB), AIS (3 dB, GMSK 9600), VDL2 (12 dB, D8PSK with FEC), Sigfox (1 dB, DBPSK 100 bit/s: Eb/N0 9 dB),
+  Orbcomm (7 dB), LoRa raw (-8 dB), HFDL, Zigbee, ADS-B, FT8 / WSPR / JT9 / Q65 / FST4 (WSJT-X figures).
+* Improved here and now near their limit: Argos (the demodulator's half-bit noise bandwidth; about 3 dB from a coherent PLL demodulator, no FEC to help), NDB (about 3 dB from the idents' own keying statistics), DSC VHF, MPT 1327.
+* Still open with a known gap: Aero (11 dB for 600 / 1200 bit/s BPSK in 12.5 kHz is about 20 dB Eb/N0; the squaring-line carrier search with a 5.5 x median threshold after 32 averages looks like the limit),
+  ISM (a mix of protocols, 50 % at 7 dB), Wi-SUN (see above), ACARS (coherent AM detection with a carrier memory, SENSITIVITY-4.0-A.md), CW with a carrier error (5 dB against 1 dB), FT4 / FT2 wrong texts, FLEX.
+* Not examined in this pass: STANAG, Iridium / Inmarsat bursts, LoRa SF12 coherent multi-symbol dechirp, AX.25 9600 and 300, ALE.
