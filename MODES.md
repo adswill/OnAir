@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**369 modes.**
+**371 modes.**
 
 ## TV (17)
 
@@ -182,7 +182,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (42)
+## IoT & Sensors (43)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -191,6 +191,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **EM4100 LF RFID (125 kHz)** - EM4100 tags: ID and modulation depth
 - **UHF RFID reader (EPC Gen2)** - UHF RFID: reader commands, Tari and tag rate
 - **Qi wireless charging** - Qi: packets from the phone to the charger
+- **OOK / ASK pulse analyser** - OOK analyser: modulation, bits, timings, repeats
 - **ISM sensors** - ISM sensors: weather stations, TPMS, remotes and meters around you (the rtl_433 idea)
 - **Sub-GHz sensors** - Sub-GHz sensors: the rtl_433 decoders with a live sensor list, history, export and an unknown signal analyser (RTL-SDR or HackRF at 250 kHz and up)
 - **LoRaWAN** - LoRaWAN: IoT devices around you, from the headers every gateway receives
@@ -380,7 +381,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 
-## General & Tools (24)
+## General & Tools (25)
 
 - **Power-line noise locator** - Noise locator: impulse rate, repetition, level
 - **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
@@ -402,6 +403,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Noise floor logger** - Noise floor: sub-band floors, rises, baseline
 - **Narrowband FM deviation and CTCSS meter** - NFM meter: voice deviation, CTCSS tone and deviation
 - **AFSK (TNC) tone tuner** - AFSK tuner: tones, twist, deviation per burst
+- **Transmitter frequency stability meter** - Tx stability: key-up step, settling, drift, offset
 - **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
 - **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
 - **Spectrum explorer** - Spectrum explorer: look, measure and sweep

@@ -397,6 +397,8 @@
         <item>Noise floor logger</item>
         <item>Narrowband FM deviation and CTCSS meter</item>
         <item>AFSK (TNC) tone tuner</item>
+        <item>OOK / ASK pulse analyser</item>
+        <item>Transmitter frequency stability meter</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -775,6 +777,8 @@
         <item>Noise floor logger for a wide capture: the noise floor in 16 sub-bands, once a second, over hours (the median bin power, so narrow signals do not count), with the 10th, 50th and 90th percentiles, a baseline from the last ten minutes, and rows when a sub-band rises 3 dB or more for 3 s (a switching supply, an inverter, an LED lamp, a neighbour) and when it falls back; a gain change that moves every sub-band is logged as one whole-band row. Relative dB, not calibrated. Simulated signals only</item>
         <item>Narrowband FM deviation and CTCSS meter for two-way radio: the voice peak deviation (300 - 3000 Hz), the CTCSS tone (frequency, nearest of the 50 standard tones, deviation in Hz and as a share of 2.5 and 5 kHz), the carrier offset, and over-deviation events over 2.5 and 5 kHz. DCS is not measured. Not a type-approval instrument. Simulated signals only</item>
         <item>AFSK tone tuner for 1200 baud packet (Bell 202, APRS, AX.25) on FM: for each burst the mark and space tones (error against 1200 and 2200 Hz), the twist (space over mark, dB), the peak deviation (3 kHz is the usual aim on 25 kHz), the length and the gap before it, for setting a TNC or a radio\'s data input level. Does not decode the packets. Simulated signals only</item>
+        <item>OOK / ASK pulse analyser (key fobs, remote switches, sensors, 300 - 920 MHz; like the analyse mode of rtl_433): from the envelope in the 90 kHz around the tuned frequency, the pulse and gap timing, the modulation named (PWM, PPM, Manchester, PCM / NRZ-like), the bits in binary and hex (short = 0, long = 1 is a convention; the real protocol may invert it), the timings in microseconds and the repeats of a frame in a train. Names the pattern, not the product. Simulated signals only</item>
+        <item>Transmitter frequency stability meter for one channel: for every transmission of a second or more the frequency at the start and at the end, the key-up step, the settling time, the drift in Hz per second and the mean offset in Hz and ppm, to see a transmitter warm up and drift. Best with a carrier, a tone or a quiet transmission (speech skews single readings). Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1132,6 +1136,8 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
@@ -1531,5 +1537,7 @@
         <item>noise floor logger rfi interference rise baseline sub-band monitor switching supply inverter led urban noise</item>
         <item>nfm deviation ctcss tone pl two-way radio repeater handheld over-deviation voice peak 12.5 khz</item>
         <item>afsk bell 202 1200 baud aprs tnc ax.25 twist deviation tone level packet transmitter setup mark space</item>
+        <item>ook ask pulse analyser key fob remote pwm ppm manchester pt2262 ev1527 timing bits 433 315 868 rtl_433</item>
+        <item>transmitter frequency stability drift warm up settling key-up step ppm handheld repeater offset</item>
     </string-array>
 </resources>

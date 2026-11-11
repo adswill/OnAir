@@ -41,6 +41,8 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case NoiseFloor: return makeNoiseFloor();
     case NfmDev: return makeNfmDev();
     case Afsk: return makeAfsk();
+    case OokPulse: return makeOokPulse();
+    case TxStability: return makeTxStability();
     default: return nullptr;
     }
 }
@@ -87,6 +89,8 @@ ModeTuning x40Tuning(int v) {
         {"noisefloor", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
         {"nfmdev", 26, 6000, 146.520, 48000, 24000, 0.016, true},
         {"afsk", 26, 6000, 144.390, 48000, 24000, 0.016, true},
+        {"ookpulse", 26, 2000, 433.920, 250000, 100000, 0.2, false},
+        {"txstability", 26, 6000, 146.520, 48000, 24000, 0.016, true},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];
