@@ -53,6 +53,15 @@ rf_dfm, rf_m10, rf_m20, flight, profile all pass (test_sonde_engine and the GUI 
   receiver (one PHY at a time, 8 trials): S1 10 dB, T1 11 dB, C1 12 dB, which is the ideal non-coherent figure for the chip error rate a
   frame without FEC needs (about 12 dB for T1). The 17 dB of docs/SENSITIVITY-3.9-C.md is the five-PHY mix of the harness (units from the
   weakest PHY), not a receiver gap. Reverted.
+* **ACARS, coherent AM detection** (a phase-locked loop on the carrier instead of the envelope detector; `acars1`, one aircraft, 25 kHz noise
+  bandwidth, 16 trials a point). With the carrier within about 100 Hz of the channel centre it is a real gain: 4 dB 51 % -> 88 %, 3 dB 24 % ->
+  79 %, 90 % point 5.3 -> 4.7 dB, 50 % point 4.0 -> 2.4 dB (a loop of about 40 Hz bandwidth, the frame decodes from the first block). But the
+  harness (and a 20 ppm radio, 2.6 kHz at 131 MHz) puts the carrier 150 Hz to 2.6 kHz away: the loop then needs 0.1 s or more to pull in
+  (0 % at 150 Hz and 600 Hz), and every frequency aid tried (an AFC rotating the signal, a frequency-locked pull of the loop's integrator,
+  with and without a 4 kHz second filter, a lock detector that falls back to the envelope) either left the low-SNR gain out or made the
+  low-SNR end worse, because the carrier-frequency estimate's jitter turns into phase noise. A narrower RF filter alone (4.5 kHz instead of
+  7.5) gave only about 0.4 dB. Not kept; the next step is a per-channel carrier follow-up that tracks the aircraft's frequency over bursts
+  (aircraft and radio errors are constant for minutes) so that the loop starts on the carrier.
 * **Looked at, nothing to gain:** TETRA (coherent detector with training-sequence reference and soft bits since 3.9), Meteor LRPT (2 / 3 / 2 dB
   since the 3.9 joint acquisition: at theory), HD Radio AM and FM (16 to 17 dB in the harness is about 0 to 1 dB of digital sideband Es/N0,
   at theory for the rate-2/5 code), CW (the detector already works in a 100 Hz bandwidth, 4 dB in 500 Hz).
@@ -64,3 +73,6 @@ rf_dfm, rf_m10, rf_m20, flight, profile all pass (test_sonde_engine and the GUI 
   M10 / M20 (+-4.8 kHz; filter 10 kHz half width now), DFM, POCSAG / FLEX, the 4FSK voice modes, EDACS, SmartNet, Fusion.
 * The 20 ppm and off-centre cases are now better than AWGN-before for the RS41; a joint timing and carrier search for the other sonde types
   and a multi-symbol (MSDD) detector for h = 1 GFSK are open.
+* ACARS: the coherent detector above, with a per-channel carrier memory (about 1.5 dB at the 50 % point).
+* APRS / AFSK 1200 sits at about 6 dB in 25 kHz (90 %); the discriminator click experiment did not change the curve, so the limit is elsewhere
+  (candidate repair and voting are in the way of a clean A/B: switch them off in a bench first).
