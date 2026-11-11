@@ -347,6 +347,30 @@ DECT2_AVX2_TARGET void dfeFieldAvx2(const float* ffo, float bias, float* fbAcc, 
         dfeAddAvx2(fbAcc + i + 4, fbs, fbs + B, fbs + 2 * B, fbs + 3 * B, B, d0, d1, d2, d3);
     }
 }
+// x86, AVX2: the sum over a field's data symbols (segments 1 .., positions 4 ..) of the squared distance to the nearest level, eight at a time
+// (the distances as before, the sum in four double lanes)
+DECT2_AVX2_TARGET double dataDistAvx2(const float* lv) {
+    __m256d s0 = _mm256_setzero_pd(), s1 = s0;
+    const __m256 three = _mm256_set1_ps(3.f), mfour = _mm256_set1_ps(-4.f), half = _mm256_set1_ps(0.5f), two = _mm256_set1_ps(2.f), one = _mm256_set1_ps(1.f);
+    double tail = 0;
+    for (int sg = 1; sg < kFieldSegs; sg++) {
+        const float* p = lv + (size_t)sg * kSegSyms + 4;
+        int j = 0;
+        for (; j + 8 <= kSegSyms - 4; j += 8) {
+            const __m256 v = _mm256_loadu_ps(p + j);
+            __m256 r = _mm256_floor_ps(_mm256_mul_ps(v, half));
+            r = _mm256_max_ps(_mm256_min_ps(r, three), mfour);
+            const __m256 d = _mm256_sub_ps(v, _mm256_fmadd_ps(r, two, one));
+            const __m256 d2 = _mm256_mul_ps(d, d);
+            s0 = _mm256_add_pd(s0, _mm256_cvtps_pd(_mm256_castps256_ps128(d2)));
+            s1 = _mm256_add_pd(s1, _mm256_cvtps_pd(_mm256_extractf128_ps(d2, 1)));
+        }
+        for (; j < kSegSyms - 4; j++) { const float v = p[j], nr = quant8(v); tail += (v - nr) * (v - nr); }
+    }
+    alignas(32) double t[4];
+    _mm256_store_pd(t, _mm256_add_pd(s0, s1));
+    return ((t[0] + t[1]) + (t[2] + t[3])) + tail;
+}
 // x86, AVX2 + FMA: c[i] = sum_k f[k] a[i + k] (the feed-forward equaliser, 65 or 129 taps), 32 outputs at a time with one broadcast tap per step:
 // four independent chains and no reduction per output (the portable convCorr runs one 8-lane chain and a reduction for every output)
 DECT2_AVX2_TARGET void corrAvx2(const float* a, const float* f, float* c, int n, int p) {
@@ -1494,6 +1518,19 @@ struct Core {
         auto measureData = [&]() {
             levelsOut.clear();
             double dd = 0; int cnt = 0;
+#if defined(DECT2_X86_DISPATCH)
+            if (cpuHasAvx2()) {
+                // the sampled levels for the display: the same positions as below, listed once
+                static const std::vector<int> pick = [] {
+                    std::vector<int> v;
+                    for (int i = kSegSyms; i < kFieldSyms; i++) if (i % kSegSyms >= 4 && (i * 2654435761u >> 7) % 128 == 0) v.push_back(i);
+                    return v;
+                }();
+                for (int i : pick) levelsOut.push_back(lv[(size_t)i]);
+                dd = dataDistAvx2(lv.data());
+                cnt = (kFieldSegs - 1) * (kSegSyms - 4);
+            } else
+#endif
             for (int i = kSegSyms; i < kFieldSyms; i++) {
                 if (i % kSegSyms < 4) continue;
                 const float vv = lv[(size_t)i];

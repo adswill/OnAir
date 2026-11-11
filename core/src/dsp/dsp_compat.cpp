@@ -243,14 +243,8 @@ DECT2_SIMD_BODY void forwardBody(float* __restrict re, float* __restrict im, int
 // contraction clang gives the one-stage loop in its AVX2 copy (the first product of each sum fused; tests/dsp/test_fft_bits.cpp compares
 // against that loop compiled the same way, run under Rosetta with AVX2 forced on).
 DECT2_AVX2_TARGET static inline void bfly8(__m256& ar, __m256& ai, __m256& br, __m256& bi, __m256 wr, __m256 wi) {
-#if defined(__clang__)
     const __m256 tr = _mm256_fmsub_ps(wr, br, _mm256_mul_ps(wi, bi));
     const __m256 ti = _mm256_fmadd_ps(wr, bi, _mm256_mul_ps(wi, br));
-#else
-    // GCC contracts the one-stage loop's butterfly with the second product fused (seen on the x86 CI): the same here
-    const __m256 tr = _mm256_fnmadd_ps(wi, bi, _mm256_mul_ps(wr, br));
-    const __m256 ti = _mm256_fmadd_ps(wi, br, _mm256_mul_ps(wr, bi));
-#endif
     br = _mm256_sub_ps(ar, tr); bi = _mm256_sub_ps(ai, ti);
     ar = _mm256_add_ps(ar, tr); ai = _mm256_add_ps(ai, ti);
 }
@@ -273,7 +267,12 @@ DECT2_AVX2_TARGET static void stagesPassAvx2(float* __restrict re, float* __rest
         }
 }
 DECT2_AVX2_TARGET static void forwardAvx2(float* __restrict re, float* __restrict im, int log2n) {
-    // (GCC: bfly8 above follows its contraction of the one-stage loop, so the passes give that loop's bits; tests/dsp/test_fft_bits.cpp checks)
+#if !defined(__clang__)
+    // GCC: its AVX2 copy of the one-stage loop rounds differently from the explicit passes (seen on the x86 CI with the second product
+    // fused, the form GCC uses on arm64), so GCC builds keep that loop for every stage here (the faster bit reversal still applies)
+    forwardBody(re, im, log2n, 1 << 30);
+    return;
+#endif
     forwardBody(re, im, log2n, 8);
     const Plan& pl = planFor(log2n);
     const int n = pl.n;

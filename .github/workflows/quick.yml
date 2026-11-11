@@ -95,8 +95,9 @@ jobs:
           if [ -n "$TEST_ENV" ]; then IFS=';' read -ra KV <<< "$TEST_ENV"; for kv in "${KV[@]}"; do export "$kv"; echo "env: $kv"; done; fi
           R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
           V=""; [ "$VERBOSE" = true ] && { V="-V"; lscpu 2>/dev/null | head -20 || sysctl -n machdep.cpu.brand_string; }
-          ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900 $V
+          rc=0; ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900 $V || rc=$?
           if [ -d build-cmp ]; then echo "===== the same tests from $CMP ====="; ctest --test-dir build-cmp -j 4 -R "$R" --output-on-failure --timeout 900 $V || true; fi
+          exit $rc
       - name: Profile
         if: inputs.perf != '' && runner.os == 'Linux'
         env: { PERFT: "${{ inputs.perf }}", TEST_ENV: "${{ inputs.env }}" }
