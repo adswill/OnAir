@@ -158,7 +158,9 @@ int main() {
         std::vector<cf32> out;
         DiversitySourceStatus st;
         bool combining = false;
-        for (int i = 0; i < 120 && !combining; i++) {   // up to 12 s
+        // wait for the alignment itself and for the offset estimate to settle, not just for the first "combining" state:
+        // on a slow computer (shared runners) the pair starts combining before the delay and offset are found
+        for (int i = 0; i < 300 && !(combining && st.aligned && std::fabs(std::fabs(st.dsp.cfoHz) - 2100.0) < 100); i++) {   // up to 30 s
             std::this_thread::sleep_for(std::chrono::milliseconds(100));
             drain(ring, out);
             st = src.status();
