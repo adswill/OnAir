@@ -222,9 +222,9 @@ Download the file for your system from the **[latest release](https://github.com
 |---|---|---|
 | **macOS** 15 or later | `OnAir-…-macos-arm64.dmg` (Apple silicon)<br>`OnAir-…-macos-x86_64.dmg` (Intel) | Open the `.dmg` and drag OnAir to Applications. The app is not signed with a developer certificate yet, so on the first launch right-click it and choose *Open*. Intel Macs need a CPU with AVX2 (2013 or newer). |
 | **Windows** 10 / 11, 64-bit | `OnAir-…-windows-x64-setup.exe`<br>or `OnAir-…-windows-x64.zip` | Run the installer, or unpack the zip and start `OnAir.exe`. Windows may warn about an unknown publisher because the installer is not code-signed. Needs a CPU with AVX2 (Intel or AMD from about 2013 on). |
-| **Linux** x86-64 and arm64 | `onair_…_amd64.deb` / `onair_…_arm64.deb`<br>or `onair-…-portable.tar.gz` | Debian / Ubuntu: `sudo apt install ./onair_<version>_<arch>.deb`, then start OnAir from the menu or with `onair`. The `.deb` carries its own video decoder, so it does not depend on your system's FFmpeg. Other distributions: unpack the portable archive and run `bin/onair`. |
+| **Linux** x86-64 and arm64 | `onair_…_amd64.deb` / `onair_…_arm64.deb`<br>`OnAir-…-linux-<arch>.AppImage`<br>or `onair-…-portable.tar.gz` | Debian / Ubuntu: `sudo apt install ./onair_<version>_<arch>.deb`, then start OnAir from the menu or with `onair`. The `.deb` carries its own video decoder, so it does not depend on your system's FFmpeg. Other distributions: make the AppImage executable and run it (it updates itself in place, no root), or unpack the portable archive and run `bin/onair`. |
 | **Android** 9+, arm64 | `OnAir-…-android.apk` | Sideload the APK, see [Android app](#android-app). |
-| **Docker** (a server without a screen, used from a browser) | `packaging/docker` in this repository | `docker compose up -d --build` in that folder, then open `https://<server>:3001`. See [packaging/docker/README.md](packaging/docker/README.md) for radios, graphics chips and settings. |
+| **Docker** (a server without a screen, used from a browser) | `packaging/docker` in this repository | create a `.env` file with `ONAIR_PASSWORD=<a password>` in that folder, run `docker compose up -d --build`, then open `https://<server>:3001`. See [packaging/docker/README.md](packaging/docker/README.md) for radios, graphics chips and settings. |
 
 > [!NOTE]
 > **SDRplay RSPs (RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx):** install the free **[SDRplay Hardware API](https://sdrplay.com/hardware-api/)** once, separately from SDRconnect, and restart OnAir. OnAir loads SDRplay's own library and service; it does not bundle them. Make sure the "SDRplay API Service" is running (the installer starts it). For the RSPduo, select the input with the antenna: **Tuner 1**, **Tuner 2**, or **Tuner 1 Hi-Z**. OnAir uses one tuner at a time, at 62.5 kS/s to 10 MS/s; see [tested features and limits](DEVICES.md#sdrplay-rspduo). An RSP-compatible radio not made by SDRplay (for example a Mirics MSi2500 "RSP1A clone") is not seen by the SDRplay API; use SoapySDR's `mirisdr` module instead.
@@ -237,12 +237,12 @@ Download the file for your system from the **[latest release](https://github.com
 <details>
 <summary><b>The Android app: sources, limits, how to install</b></summary>
 
- is the desktop decoder core (the same C++ code, built as `libonair.so`) with a phone interface in Kotlin Compose: spectrum and waterfall, the mode list with search and groups, a results tab with the decoded data of the selected mode, and a log.
+OnAir for Android is the desktop decoder core (the same C++ code, built as `libonair.so`) with a phone interface in Kotlin Compose: spectrum and waterfall, the mode list with search and groups, a results tab with the decoded data of the selected mode, and a log.
 
-- **Receive only.** The app never transmits. Its only permission is INTERNET (for rtl_tcp and SpyServer, and for map tiles).
+- **Receive only.** The app never transmits. Network access (for rtl_tcp, SpyServer, map tiles and the in-app update) is its only data link: nothing is sent to any server. Other permissions are for the receive service and the sound (foreground service, wake lock, notifications), the sound-card source (microphone, only while that source runs), a walk-around direction finder (location, only while a walk runs) and installing the in-app update (you confirm it).
 - **Sources:** an RTL-SDR on the USB port (0.2.7), `rtl_tcp` (an RTL-SDR served over the network, or on the phone itself), SpyServer, an IQ file (cs8, cu8, cf32, ci16, cu16, with its sample rate) and a built-in test signal for the selected mode that needs no radio.
 - **Results:** per-mode results (cards and tables), an OpenStreetMap map (tiles are only fetched after you agree), and FM with RDS.
-- **Modes:** the mode list has every row of the desktop list (183 in the 3.7 audit; 3 cannot be used on a phone). Results cards and tables are generated for 107 more modes than before. This was checked on an Android 15 emulator against the built-in test signal, not on a phone or with a real radio ([docs/ANDROID-3.7.md](docs/ANDROID-3.7.md)).
+- **Modes:** the mode list has every row of the desktop list (294 in 3.8; the 3.7 audit found 3 that cannot be used on a phone). Results cards and tables are generated for 107 more modes than before. This was checked on an Android 15 emulator against the built-in test signal, not on a phone or with a real radio ([docs/ANDROID-3.7.md](docs/ANDROID-3.7.md)).
 - **Use it:** pick a source on the Receiver tab, a mode on the Mode tab, press play. Tap the spectrum to tune, drag to move, pinch to zoom (double tap resets).
 - **Install:** download `OnAir-…-android.apk` from the [release](https://github.com/adswill/OnAir/releases/latest), copy it to the phone, open it and allow installs from unknown sources for the app you opened it with. The APK is signed with the project's own key, not a Play Store key; updating later needs the same key.
 - **Limits:** arm64-v8a only, Android 9 (API 28) or newer. Direct USB works for RTL-SDR radios (new in 0.2.7); HackRF and Airspy USB are not supported yet, so use rtl_tcp or SpyServer for those. No vocoder voice (DMR, P25, NXDN, D-STAR, TETRA), no TV video or sound, and no images yet (the satellite pictures and the SSTV / fax pictures). Wide modes (DVB, ATSC, ISDB, DTMB) will usually not keep up on a typical phone. No channel scan and no import screen for voice codec plug-ins.
@@ -270,7 +270,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 ## Modes
 
-<!-- modecount -->292<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
+<!-- modecount -->292<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons and a Mode Builder entry, so [MODES.md](MODES.md) counts 294). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
 
 <details>
 <summary><b>All modes, by family</b></summary>
@@ -287,6 +287,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **Analog TV:** PAL, SECAM, NTSC; systems B/G, I, D/K, M, N, H, K', 405-line A, C, E (819 lines), L, L'; NBTV and mechanical TV. Picture and sound.
 - **FPV video (analog):** drone video links on the 5.8 GHz bands A, B, E, F, R (Raceband), L and the 1.2 GHz plan: every channel with its level, a scan that tunes to the strongest transmitter, the live picture (PAL or NTSC, frequency modulated) with its 6.0 / 6.5 MHz sound, snapshots and recording; the on-screen display is part of the picture, not decoded; needs 20 Msps ([details](docs/fpv.md)).
 - **MAC:** D2-MAC and D-MAC satellite TV (FM, 27 MHz; 20 Msps sees most of it); picture, channel name, digital sound; EuroCrypt is detected, not descrambled.
+- **Internet TV (IPTV)** (no radio): playlists (M3U / M3U8) and single streams (HLS, MPEG-TS over HTTP, UDP, RTP, multicast) with channel list, favourites, XMLTV guide and the antenna TV's player; OnAir ships no channels and plays no DRM streams; [details](docs/IPTV.md).
 
 ### Broadcast radio
 
@@ -301,7 +302,6 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 - **ADS-B** (1090 MHz): aircraft on a map with altitude, speed and callsign; aviation or metric units; feeds from other receivers; offline registrations and countries; range statistics.
 - **Mode A/C** (1090 MHz secondary-radar replies): squawk and altitude of aircraft that answer radar, the ident pulse, emergency squawks, matched to the Mode S aircraft of the same capture on the ADS-B map; [details](docs/modeac.md).
-- **Internet TV (IPTV)** (no radio): playlists (M3U / M3U8) and single streams (HLS, MPEG-TS over HTTP, UDP, RTP, multicast) with channel list, favourites, XMLTV guide and the antenna TV's player; OnAir ships no channels and plays no DRM streams; [details](docs/IPTV.md).
 - **ASTERIX** (no radio: UDP or a recording): EUROCONTROL surveillance data, CAT 021 ADS-B, CAT 048 monoradar plots and CAT 062 system tracks, as a track table and a map; [details](docs/asterix.md). A radar's own pulses cannot be received by a software radio, so this reads the data a radar or ground station sends.
 - **UAT** (978 MHz, DO-282): ADS-B reports, FIS-B weather products, TIS-B traffic relay. **Mode S uplink** (1030 MHz, needs 8 Msps): interrogator codes, TCAS coordination.
 - **ACARS**, **VDL Mode 2** (every channel at once), **VDL Mode 4** (STDMA; spec-based, no live captures validated yet) and **HFDL** (every channel in the band at once), with positions on a map.
@@ -329,7 +329,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 - **Tone decoders** (CTCSS, DCS, DTMF, five-tone, SELCAL and two-tone pages; [details](docs/tones.md)).
 - **DMR**, **NXDN** (NXDN48 / 96), **P25** (Phase 1, conventional and trunked), **dPMR / PMR446** (all 16 channels scanned), **D-STAR** (also in the amateur group) and **M17**: call logs with IDs and talkgroups, data and short messages. P25 encrypted calls are only reported as encrypted. Voice for the AMBE / IMBE modes needs mbelib you install yourself, see [Good to know](#good-to-know).
-- **TETRA** (base station broadcast: network and colour code, location area, carriers, services, neighbours, whether encryption is used; scan over a span) and **TETRAPOL** (D_SYSTEM_INFO). Receive only, no voice, nothing decrypted.
+- **TETRA** (base station broadcast: network and colour code, location area, carriers, services, neighbours, whether encryption is used; scan over a span) and **TETRAPOL** (D_SYSTEM_INFO). Receive only, nothing decrypted; voice of unencrypted TETRA calls (TETRAPOL: clear calls) plays only through a codec plug-in you install, see [docs/CODECS.md](docs/CODECS.md).
 
 ### Cellular and rail
 
@@ -355,7 +355,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 - **Bluetooth LE** (advertising, never connects), **Zigbee / 802.15.4** (2.4 GHz needs a fast radio; also the sub-GHz BPSK bands, 868.3 MHz and 906-924 MHz, with channel presets), **Thread** (the same 802.15.4 receiver: beacon network name, MAC security header, 6LoWPAN, MLE and CoAP where sent in the clear; encrypted traffic is shown as encrypted, no keys), **Wi-Fi networks** (2.4 GHz beacons, passive), **Wi-Fi HaLow** (802.11ah sub-GHz beacons), **Z-Wave** (G.9959 R1 / R2 / R3, encrypted payloads stay encrypted), **Wi-SUN FAN** (smart meter and street light mesh, all regional band plans), **ANT+ sensors** and **DECT cordless phones** (base stations from beacons; calls are encrypted, no voice; Europe 1880-1900 MHz, US/Canada DECT 6.0 1920-1930 MHz, Brazil, Latin America and the US 900 MHz ISM band, see docs/DECT.md).
 - **Sub-GHz sensors** (433.92 MHz first, also 315, 868 and 915 MHz: weather stations, thermometers, tyre pressure, remotes and meters, decoded with the vendored [rtl_433](https://github.com/merbanan/rtl_433) decoders, GPL-2.0-or-later; live list with history graphs, an unknown signal analyser, custom decoders, CSV / JSON / MQTT-style export; it decodes the listed protocols only, receive only; [details](docs/SENSORS-3.7.md)).
 - **Flipper Zero Sub-GHz chat** (receive and send: chat with Flippers running the Enhanced Sub-GHz Chat app on 433.92 MHz or any frequency they use, plain or AES-256-GCM encrypted with their password or hex key; a HackRF pauses its receiver while a line goes out; [details](docs/esubghz.md)).
-- **NFC / RFID 13.56 MHz** (*in development*): ISO/IEC 14443 Type A and Type B and ISO/IEC 15693, receive only. Tag UIDs, ATQA / SAK / ATS, CRC checks and NDEF text / URI from Type 2 tags, with a frame log and a tag table. Needs an HF-capable receiver at a few Msps so the 847.5 kHz load-modulation subcarrier fits. An active reader can transmit through the TX gate (13.553-13.567 MHz ISM band only). Nothing is cloned and no encrypted content is decoded; pet microchips are 134.2 kHz, a different band. See docs/NFC.md.
+- **NFC / RFID 13.56 MHz** (*experimental*): ISO/IEC 14443 Type A and Type B and ISO/IEC 15693, receive only. Tag UIDs, ATQA / SAK / ATS, CRC checks and NDEF text / URI from Type 2 tags, with a frame log and a tag table. Needs an HF-capable receiver at a few Msps so the 847.5 kHz load-modulation subcarrier fits. An active reader can transmit through the TX gate (13.553-13.567 MHz ISM band only). Nothing is cloned and no encrypted content is decoded; pet microchips are 134.2 kHz, a different band. See docs/NFC.md.
 
 ### Weather and science
 
@@ -382,13 +382,13 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 ### Amateur: voice and packet
 
-- **Yaesu Fusion** (C4FM, in development): callsigns, call mode and slow data; voice only through a codec plug-in you install.
+- **Yaesu Fusion** (C4FM): callsigns, call mode and slow data; voice only through a codec plug-in you install.
 - **FreeDV** (codec2 included), **M17**, **D-STAR**, **APRS (AFSK)** / AX.25 packet (whole span at once), **LoRa APRS** and **MeshCom**.
 
 ### HF utility
 
 - **HF waveform ID** (identify only): estimates the baud rate, tone spacing and repetition of a military or government HF signal and ranks candidate waveforms; nothing is decoded.
-- **SITOR** (FEC-A and FEC-B, in development) and **ARDOP** (Winlink HF frames, monitor only).
+- **SITOR** (SITOR-B; SITOR-A is not decoded) and **ARDOP** (Winlink HF frames, monitor only).
 - **HF ALE** (2G calls, soundings, LQA), **HF beacons** (NCDXF / IARU propagation monitor), **Datawell Buoy HF Link** (wave-buoy telemetry, HXV format decoded; the 4FSK HVA format is not public) and **CODAR / HF ocean radar** (sweeps measured; propagation only, no positions).
 
 ### Kris custom modes (KA family, in development)
@@ -397,7 +397,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 ### More 0.2.8 modes
 
-- **eLoran / Loran-C** (100 kHz, in development), **MPT1327**, **LTR** and **EDACS** trunking control channels (in development; control data only, no voice), **GOES DCS** (data collection platforms, 401.7 - 402.1 MHz), **Mode A/C** (squawk and altitude), **BLE tracker detector** (AirTag, Tile and others; warns about one that follows you), **AM stereo (C-QUAM)**, **DGPS beacon** and **DME** (in development).
+- **eLoran / Loran-C** (100 kHz), **MPT1327**, **LTR** and **EDACS** trunking control channels (control data only, no voice), **GOES DCS** (data collection platforms, 401.7 - 402.1 MHz), **Mode A/C** (squawk and altitude), **BLE tracker detector** (AirTag, Tile and others; warns about one that follows you), **AM stereo (C-QUAM)**, **DGPS beacon** and **DME**.
 
 ### General and tools
 
@@ -508,7 +508,7 @@ OnAir supports the **HackRF One and HackRF Pro** natively, and drives these radi
 | **Airspy HF+** | ❌ | Narrow channels only | Specified for HF and 60 – 260 MHz |
 | **Fobos SDR** (agile firmware) | ✅ | ✅ | Contributed, untested here. Specified for 50 MHz – 6 GHz on the RF input, HF on the HF1 / HF2 inputs. Library not included: put RigExpert's `fobos_sdr` library next to OnAir, see [DEVICES.md](DEVICES.md) |
 | **RX888 MkII** | ✅ | ✅ | Native SDDC/USB driver (FX3 firmware, 16-bit ADC), still being hardened on real hardware. USB 3 required. Packages include `SDDC_FX3.img` (RAM load only); see [DEVICES.md](DEVICES.md) |
-| **Icom IC-R8600 (I/Q OUT)** | ✅ | ✅ | Native USB driver, receive only, 10 kHz to 3 GHz, 0.24 to 5.12 Msps. Needs Icom's own firmware file (imported once, never shipped); **needs a user test**. See [docs/ICOM-R8600.md](docs/ICOM-R8600.md) |
+| **Icom IC-R8600 (I/Q OUT)** | ✅ | ✅ | Native USB driver, receive only, 10 kHz to 3 GHz, 0.24 to 5.12 Msps. Needs Icom's own firmware file (imported once, never shipped); **needs a user test**. See [DEVICES.md](DEVICES.md#icom-ic-r8600-iq-out-receive-only) |
 | **RFNM** | ✅ | ✅ | Contributed. Only in builds made with [librfnm](https://github.com/rfnm/librfnm) installed (not the downloads yet), see [DEVICES.md](DEVICES.md). One entry per receive channel of the daughterboards |
 | **ESP32 / nRF24L01 module** (USB serial) | ❌ | ❌ | nRF24 (2.4 GHz), BLE adverts and WiFi observation through your own ESP32 and the firmware in `firmware/esp32/`; WiFi is observed only, never transmitted. **Untested on real hardware**, see [docs/ESP32-NRF24-DESIGN.md](docs/ESP32-NRF24-DESIGN.md) |
 | **Anything else** | depends | depends | Through [SoapySDR](https://github.com/pothosware/SoapySDR), once its SoapySDR module is installed |
@@ -605,7 +605,7 @@ The server is `core/src/net/remote_api.cpp`; `tests/net/test_remote_api.cpp` run
 OnAir checks GitHub for a newer version a few seconds after it starts (then at most once a day), downloads the package for your system in the background, verifies it against the SHA-256 that GitHub lists, and installs it when you close the program.
 
 - The version button at the top right shows the state and has the settings: turn the check off, turn automatic install off (you then get a button instead), or leave out pre-releases.
-- macOS replaces `OnAir.app`; Windows runs the installer quietly (Windows asks for permission); Linux replaces the portable folder, and a `.deb` install asks for your password through the system's installer.
+- macOS replaces `OnAir.app`; Windows runs the installer quietly (Windows asks for permission); Linux replaces the portable folder or the AppImage in place; a `.deb` install is downloaded and checked, and OnAir shows the `sudo apt install` command to run.
 - Only github.com is contacted, and nothing is sent but the usual request. If GitHub is blocked or very slow where you are (for example in China), see **[docs/UPDATE-MIRROR.md](docs/UPDATE-MIRROR.md)**: an optional, off-by-default mirror for the update check and the download, with the same checksum checks.
 
 ## Discord status
@@ -618,7 +618,7 @@ Off by default. **View > Show in Discord** shows on your Discord profile that yo
 > [!NOTE]
 > **Built codecs on Discord.** Don't want to build them yourself? Join the [OnAir Discord](https://discord.gg/ptxkzCuzR) to get access to built codecs. Whether you install or use them is your own responsibility: follow the patent and radio-listening law where you live. Details: [docs/CODECS.md](docs/CODECS.md).
 
-> **mbelib is not included from 0.2.6.** DMR, P25, NXDN, dPMR and D-STAR voice is silent until you install mbelib yourself, because the AMBE / IMBE vocoders are patented. Calls, IDs and data work without it. Put the library in the codecs folder (the **?** next to the sound has an **Open codecs folder** button), then press **Look again**. Steps: **[docs/CODECS.md](docs/CODECS.md)**.
+> **mbelib is not included from 0.2.6.** DMR, P25, NXDN, dPMR and D-STAR voice is silent until you install mbelib yourself, because the AMBE / IMBE vocoders are patented. Calls, IDs and data work without it. Put the library in the codecs folder (the **?** next to the sound has an **Open codecs folder** button), then press **Look again**. The build helper in **Help > Voice codecs** builds the plug-ins on your computer for you. Steps: **[docs/CODECS.md](docs/CODECS.md)**.
 >
 > **HD Radio sound is not included.** HDC is a proprietary codec of Xperi, so OnAir shows the stations, program data and pictures but is silent until you build the HDC-patched FAAD2 (`libfaad_hdc`) yourself from the open-source nrsc5 patch and put it in the codecs folder, then press **Look again** (the **?** next to the sound). Steps and the legal note: **[docs/CODECS.md](docs/CODECS.md#hd-radio-sound-hdc-build-it-yourself)**.
 
@@ -751,7 +751,7 @@ If your work is used and not credited correctly, please open an issue.
 
 ## Contributors
 
-Thank you to everyone who sent fixes, reported bugs, shared recordings, translated or suggested ideas. The full list, with what each person did and for which mode, is in **[CONTRIBUTORS.md](CONTRIBUTORS.md)** (also in the program: Help, Credits, tab Contributors, and in each mode's tooltip). Code contributors: [@0xVANISHED](https://github.com/0xVANISHED), [@A2ureIm4la](https://github.com/A2ureIm4la), [@andriux26](https://github.com/andriux26), [@drelectro](https://github.com/drelectro), [@drfruct](https://github.com/drfruct), [@F5OEO](https://github.com/F5OEO), [@ffishman](https://github.com/ffishman), [@frank-1225](https://github.com/frank-1225), [@modemuser](https://github.com/modemuser), [@MUSTARDTIGERFPV](https://github.com/MUSTARDTIGERFPV), [@peterdewitte](https://github.com/peterdewitte), [@PU2SWX](https://github.com/PU2SWX), [@sbuchweitz](https://github.com/sbuchweitz), [@WispAyr](https://github.com/WispAyr) and [@YZYMC](https://github.com/YZYMC). Want your name changed or removed? Tell us on Discord or open an issue.
+Thank you to everyone who sent fixes, reported bugs, shared recordings, translated or suggested ideas. The full list, with what each person did and for which mode, is in **[CONTRIBUTORS.md](CONTRIBUTORS.md)** (also in the program: Help, Credits, tab Contributors, and in each mode's tooltip). Code contributors: [@0xVANISHED](https://github.com/0xVANISHED), [@A2ureIm4la](https://github.com/A2ureIm4la), [@andriux26](https://github.com/andriux26), [@bellx2](https://github.com/bellx2), [@BI8SYN](https://github.com/BI8SYN), [@DME-3](https://github.com/DME-3), [@drelectro](https://github.com/drelectro), [@drfruct](https://github.com/drfruct), [@F5OEO](https://github.com/F5OEO), [@ffishman](https://github.com/ffishman), [@frank-1225](https://github.com/frank-1225), [@modemuser](https://github.com/modemuser), [@MUSTARDTIGERFPV](https://github.com/MUSTARDTIGERFPV), [@peterdewitte](https://github.com/peterdewitte), [@PU2SWX](https://github.com/PU2SWX), [@sbuchweitz](https://github.com/sbuchweitz), [@WispAyr](https://github.com/WispAyr) and [@YZYMC](https://github.com/YZYMC). Want your name changed or removed? Tell us on Discord or open an issue.
 
 ---
 
