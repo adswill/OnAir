@@ -15268,7 +15268,7 @@ static const WebModeRow kRows[] = {
     {430, "MIL-STD-188-110 serial", 12, "MIL-STD-188-110: serial tone HF data modem with STANAG 5066 framing (simulated signals only)", "", 432, 431, "hfutil"},
     {431, "STANAG 4285", 12, "STANAG 4285: NATO HF data modem with STANAG 5066 framing (simulated signals only)", "", 433, 432, "hfutil"},
     {603, "STANAG 4539", 12, "STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)", "", 605, 604, ""},
-    {604, "3G-ALE", 12, "3G-ALE: third-generation HF link setup calls and handshakes, BW0 bursts (simulated signals only)", "", 606, 605, ""},
+    {604, "3G-ALE", 12, "3G-ALE: third-generation HF link setup, traffic management and HDL / LDL data bursts BW0 to BW4 (simulated signals only)", "", 606, 605, ""},
     {605, "Link 11 CLEW", 12, "Link 11 CLEW: message detector and frame structure, no data (simulated signals only)", "", 607, 606, ""},
     {606, "STANAG 4481 FSK", 12, "STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)", "", 608, 607, ""},
     {432, "ARQ-E", 12, "ARQ-E: HF duplex ARQ teleprinter (simulated signals only)", "", 434, 433, "hfutil"},
