@@ -487,6 +487,8 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
         for (auto& l : e.logSnapshot(n)) fprintf(stderr, "  log: %s\n", l.c_str());
         fprintf(stderr, "  last report: std %d state %d valid %d ok %llu bad %llu cfo %.1f snr %.1f processed %.2f s\n", rx.standard, rx.state, rx.dataValid ? 1 : 0,
                 (unsigned long long)rx.blocksOk, (unsigned long long)rx.blocksBad, rx.cfoHz, rx.dataSnrDb, proc);
+        if (rx.standard == 641) fprintf(stderr, "  vdl3: syncs %llu noise %.1f dB level %.1f dB rate %.0f ok %d center %.0f now %.2f s\n", (unsigned long long)rx.vdl3.syncs, rx.vdl3.noiseDb, rx.vdl3.levelDb, rx.vdl3.inputRate, rx.vdl3.rateOk ? 1 : 0, rx.vdl3.centerHz, rx.vdl3.nowSec);
+        if (rx.standard == 791) fprintf(stderr, "  ltpos: state %d pulses %llu floor %.1f dB peak %.1f dB threshold %.1f rate %.0f time %.2f s\n", rx.ltpos.state, (unsigned long long)rx.ltpos.pulses, rx.ltpos.floorDb, rx.ltpos.snrDb, rx.ltpos.thresholdDb, rx.ltpos.inputRate, rx.ltpos.timeSec);
         if (rx.standard == 26) fprintf(stderr, "  hfdig: rtty chars %llu text %zu, ftx decodes %zu, audio %.1f dB, level %.1f dB\n", (unsigned long long)rx.hfdig.rtty.chars, rx.hfdig.rtty.text.size(), rx.hfdig.ftx.decodes.size(), rx.hfdig.audioDb, rx.hfdig.levelDb);
     }
     // what the receiver saved (its decoded lists, text, pictures): the measure of the modes that count no blocks
@@ -803,6 +805,7 @@ int main(int argc, char** argv) {
             sscanf(g.out.c_str() + rp, "RATE %lf PSIG %lf OBW %lf ACTIVE %lf CLIP %llu", &actual, &psig, &obw, &active, &clip);
             r.rate = actual; r.obw = obw; r.active = active;
             { const size_t tp = g.out.find("TXRATE "); r.txRate = tp == std::string::npos ? 0 : atof(g.out.c_str() + tp + 7); }
+            if (getenv("QA_SWEEP_VERBOSE")) fprintf(stderr, "  signal: rate %.0f psig %.4g obw %.0f Hz active %.3f\n", actual, psig, obw, active);
             if (psig <= 0) r.note = "generator sends silence";
             snprintf(rs, sizeof rs, "%.4f", actual);
             {   // silence first: what the receiver saves with nothing to decode (read as fast as it goes, also on the real-time try)
