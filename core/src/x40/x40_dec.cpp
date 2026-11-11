@@ -38,6 +38,9 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case FskAnalyser: return makeFskAnalyser();
     case YFactor: return makeYFactor();
     case CwKeying: return makeCwKeying();
+    case NoiseFloor: return makeNoiseFloor();
+    case NfmDev: return makeNfmDev();
+    case Afsk: return makeAfsk();
     default: return nullptr;
     }
 }
@@ -81,6 +84,9 @@ ModeTuning x40Tuning(int v) {
         {"fskan", 0.1, 6000, 433.920, 250000, 48000, 0.1, false},
         {"yfactor", 0.1, 6000, 145.000, 2000000, 250000, 0.2, false},
         {"cwkeying", 0.1, 500, 7.030, 48000, 12000, 0.004, true},
+        {"noisefloor", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
+        {"nfmdev", 26, 6000, 146.520, 48000, 24000, 0.016, true},
+        {"afsk", 26, 6000, 144.390, 48000, 24000, 0.016, true},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

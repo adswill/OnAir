@@ -59,5 +59,8 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | FSK parameter analyser | 767 | 768 | 769 | 767 |
 | Noise figure (Y-factor) meter | 768 | 769 | 770 | 768 |
 | CW keying quality meter | 769 | 770 | 771 | 769 |
+| Noise floor logger | 770 | 771 | 772 | 770 |
+| Narrowband FM deviation and CTCSS meter | 771 | 772 | 773 | 771 |
+| AFSK (TNC) tone tuner | 772 | 773 | 774 | 772 |
 
-Families 770 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
+Families 773 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).

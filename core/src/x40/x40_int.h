@@ -72,6 +72,9 @@ std::unique_ptr<Decoder> makeSinad();
 std::unique_ptr<Decoder> makeFskAnalyser();
 std::unique_ptr<Decoder> makeYFactor();
 std::unique_ptr<Decoder> makeCwKeying();
+std::unique_ptr<Decoder> makeNoiseFloor();
+std::unique_ptr<Decoder> makeNfmDev();
+std::unique_ptr<Decoder> makeAfsk();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {

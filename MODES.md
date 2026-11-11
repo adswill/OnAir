@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**366 modes.**
+**369 modes.**
 
 ## TV (17)
 
@@ -380,7 +380,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 
-## General & Tools (21)
+## General & Tools (24)
 
 - **Power-line noise locator** - Noise locator: impulse rate, repetition, level
 - **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
@@ -399,6 +399,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FSK parameter analyser** - FSK analyser: baud, levels, shift, index
 - **Noise figure (Y-factor) meter** - Noise figure: Y-factor, NF for the source ENR
 - **CW keying quality meter** - CW keying: wpm, dah ratio, gaps, weight, rise, chirp
+- **Noise floor logger** - Noise floor: sub-band floors, rises, baseline
+- **Narrowband FM deviation and CTCSS meter** - NFM meter: voice deviation, CTCSS tone and deviation
+- **AFSK (TNC) tone tuner** - AFSK tuner: tones, twist, deviation per burst
 - **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
 - **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
 - **Spectrum explorer** - Spectrum explorer: look, measure and sweep

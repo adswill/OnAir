@@ -394,6 +394,9 @@
         <item>FSK parameter analyser</item>
         <item>Noise figure (Y-factor) meter</item>
         <item>CW keying quality meter</item>
+        <item>Noise floor logger</item>
+        <item>Narrowband FM deviation and CTCSS meter</item>
+        <item>AFSK (TNC) tone tuner</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -769,6 +772,9 @@
         <item>FSK parameter analyser for an unknown FSK or GFSK signal: the symbol rate, 2 or 4 levels, the shift, the modulation index (MSK is 0.5), the centre frequency and the eye quality, to know which decoder to try and with what settings. A plain FM discriminator in the whole channel: needs a clean signal (about 18 dB over the noise in 50 kHz for 9600 Bd). Does not decode. Simulated signals only</item>
         <item>Noise figure (Y-factor) meter: switch a noise source on and off in front of the receiver and read the step in the middle 200 kHz of the capture: Y in dB, and the receiver noise figure NF = ENR - 10 log(Y - 1) for the common source values (ENR 5, 6.5, 15, 25 dB; read the line for your source). Needs fixed gain (no AGC) and only noise in the band. Simulated signals only</item>
         <item>CW keying quality meter for a keyed carrier within 1.5 kHz of the tuned frequency: speed in wpm (PARIS), dit and dah lengths and their ratio (ideal 3), element, character and word gaps as multiples of the dit, weight, dit scatter (keyer or hand), rise and fall times of the edges (key clicks) and chirp. Rise times under about 1.5 ms read 1.5 ms. Does not copy the text. Simulated signals only</item>
+        <item>Noise floor logger for a wide capture: the noise floor in 16 sub-bands, once a second, over hours (the median bin power, so narrow signals do not count), with the 10th, 50th and 90th percentiles, a baseline from the last ten minutes, and rows when a sub-band rises 3 dB or more for 3 s (a switching supply, an inverter, an LED lamp, a neighbour) and when it falls back; a gain change that moves every sub-band is logged as one whole-band row. Relative dB, not calibrated. Simulated signals only</item>
+        <item>Narrowband FM deviation and CTCSS meter for two-way radio: the voice peak deviation (300 - 3000 Hz), the CTCSS tone (frequency, nearest of the 50 standard tones, deviation in Hz and as a share of 2.5 and 5 kHz), the carrier offset, and over-deviation events over 2.5 and 5 kHz. DCS is not measured. Not a type-approval instrument. Simulated signals only</item>
+        <item>AFSK tone tuner for 1200 baud packet (Bell 202, APRS, AX.25) on FM: for each burst the mark and space tones (error against 1200 and 2200 Hz), the twist (space over mark, dB), the peak deviation (3 kHz is the usual aim on 25 kHz), the length and the gap before it, for setting a TNC or a radio\'s data input level. Does not decode the packets. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1126,6 +1132,9 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
@@ -1519,5 +1528,8 @@
         <item>fsk gfsk msk 4fsk symbol rate shift modulation index deviation unknown signal analyser baud</item>
         <item>noise figure y factor nf enr noise source lna gain measurement sdr sensitivity hot cold</item>
         <item>cw keying quality morse wpm dit dah weight spacing rise time key clicks chirp fist keyer</item>
+        <item>noise floor logger rfi interference rise baseline sub-band monitor switching supply inverter led urban noise</item>
+        <item>nfm deviation ctcss tone pl two-way radio repeater handheld over-deviation voice peak 12.5 khz</item>
+        <item>afsk bell 202 1200 baud aprs tnc ax.25 twist deviation tone level packet transmitter setup mark space</item>
     </string-array>
 </resources>
