@@ -1677,3 +1677,6 @@ Also fixed here: the custom_bandwidth_all segfault at GeoNetCast. A file-broadca
 
 ## 2026-11-11 "Works, but" follow-ups A (feat39-worksbutA)
 Ten issues where the reporter said "works, but ..." were reread. Four were fixed. #410: a retune to a same-id single-service carrier restarts the player, because the GPU decoder stayed silent on the old session. #301: in target mode the General receiver's arrows and typed frequency centre the radio. #235: the ADS-B selection is dropped with the aircraft. #239: full-screen analog TV and FPV pull new frames. Four were already fixed (#243, #338, #344, #432 export). Listed as feature requests: separate OS windows (#242), ATV brightness and contrast, RTL-SDR ATV, FT8 UDP feed. #422 needs info. Tests: dvbs_autoservice, adsb_display. Docs: docs/WORKSBUT-A-3.9.md.
+
+## 2026-11-11 "Works, but" issues, batch B (feat39-worksbutB)
+Went through 17 issues where a fix was followed by a remaining problem. Fixed: ELT(DT) protocol 9 per C/S T.001 Rev. 7 (#407), plus standard location offset bit widths, the homing bit and the 5-bit operator designator found while checking; Hamlib sound card by name and from a list (#358); Android keeps no old RDS after a station change (#463). The rest were already fixed, need a recording or log, or are feature requests. Details in docs/WORKSBUT-B-3.9.md.

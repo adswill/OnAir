@@ -3,6 +3,7 @@
 // Receiving never keys the transmitter: only HamlibTx (the transmit subsystem, an operator action) calls PTT.
 #ifdef DECT2_HAVE_HAMLIB
 
+#include "dect2/audio/audioin.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/ham/ham.h"
 #include "dect2/source/hamlib_link.h"
@@ -265,7 +266,11 @@ DeviceInfo audioDevFor(const DeviceInfo& ham) {
         a.serial = "silence";
         a.name = "silence";
     } else {
-        a.serial = ham.nativeArgs;
+        // the sound card as it was typed in: an id, "Default input" or a device name (#358); a name that matches no card stays as it is, so
+        // the audio source reports the card as missing
+        std::string id = ham.nativeArgs;
+        resolveAudioInputId(ham.nativeArgs, listAudioInputs(), id);
+        a.serial = id;
         a.name = ham.nativeArgs;
     }
     return a;
