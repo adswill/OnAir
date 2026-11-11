@@ -5,6 +5,7 @@ void d40Tick(App& a) {
     d40FmTick(a);
     d40SatTick(a);
     d40DabTick(a);
+    if (a.engine.running() && a.rx.standard == 24) d40PagerFeed(a.rx.pager);
     if (a.engine.running() && !a.rx.acars.messages.empty()) d40AcarsFeed(a.rx.acars);
     if (a.engine.running() && a.rx.standard == 47) d40TetraTick(a.rx.tetra);
 }

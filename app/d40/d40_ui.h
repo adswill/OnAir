@@ -27,3 +27,5 @@ void d40AcarsFeed(const dect2::AcarsTelemetry& t);   // d40_acars_ui.cpp: every 
 void d40AcarsLoadCard();
 void d40AisFeed(const AisTelemetry& t, double lat, double lon);   // d40_ais_ui.cpp: every position into the coverage map
 void d40AisRangeCard(const AisTelemetry& t);
+void d40PagerFeed(const PagerTelemetry& t);   // d40_pager_ui.cpp: paged capcodes into the group finder
+void d40PagerGroupsCard();
