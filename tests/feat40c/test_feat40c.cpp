@@ -7,6 +7,10 @@
 #include "dect2/ham/ham_modeguess.h"
 #include "dect2/ham/ham_spotsum.h"
 #include "dect2/ism/ism_classify.h"
+#include "dect2/adsb/adsb_loiter.h"
+#include "dect2/ham/ham_clearfreq.h"
+#include "dect2/ham/ham_bandhop.h"
+#include "dect2/sarsat/sarsat_incidents.h"
 #include <cstdio>
 #include <random>
 static int fails = 0;
@@ -108,7 +112,7 @@ static void callTest() {
     l = hamParseCall("LY1ABC DE DL2XYZ UR 599 5NN");
     CHECK(l.kind == HamCallLine::Reply && l.to == "LY1ABC" && l.from == "DL2XYZ" && l.report == "599");
     l = hamParseCall("hello world"); CHECK(l.kind == HamCallLine::None);
-    HamHeard h; h.feed("CQ TEST DE W1AW", 10); h.feed("W1AW DE LY1ABC 599", 20); h.feed("CQ DE JA1YKX K", 30);
+    HamCallHeard h; h.feed("CQ TEST DE W1AW", 10); h.feed("W1AW DE LY1ABC 599", 20); h.feed("CQ DE JA1YKX K", 30);
     auto lst = h.list();
     CHECK(lst.size() == 3 && lst[0].call == "JA1YKX" && h.size() == 3);
     bool w1awCq = false; for (auto& e : lst) if (e.call == "W1AW") w1awCq = e.cq && e.count == 2;
@@ -184,7 +188,86 @@ static void ismTest() {
     CHECK(ismClassify({{100, 100}, {100, 100}}).coding == "unknown");
 }
 
+static void loiterTest() {
+    AdsbLoiterDetector d; double la, lo; bool orbit = false;
+    // an aircraft in a holding circle: radius 5 km, 140 kt (72 m/s), 2 laps; fix every 5 s
+    const double R = 5000, w = 72.0 / R;   // rad/s
+    for (double t = 0; t < 900; t += 5) {
+        track::gcDestination(55, 21, std::fmod(w * t * 180 / 3.14159265, 360.0), R, la, lo); orbit = d.add(1, t, la, lo);
+    }
+    CHECK(orbit && d.find(1) && d.find(1)->turns > 1.5 && d.find(1)->radiusKm > 4.5 && d.find(1)->radiusKm < 5.6 && d.find(1)->clockwise);
+    CHECK(std::fabs(d.find(1)->centreLat - 55) < 0.05);
+    // counter-clockwise
+    AdsbLoiterDetector e; for (double t = 0; t < 900; t += 5) { track::gcDestination(40, 10, std::fmod(360 - w * t * 180 / 3.14159265, 360.0), R, la, lo); e.add(2, t, la, lo); }
+    CHECK(e.find(2) && !e.find(2)->clockwise);
+    // an airliner flying straight with a 30 degree bend is not an orbit; with GPS jitter (60 m) neither
+    AdsbLoiterDetector s; std::mt19937 rng(8); std::normal_distribution<double> n(0, 0.0005);
+    for (double t = 0; t < 900; t += 5) { track::gcDestination(50, 8, t < 450 ? 80 : 110, 230.0 * t, la, lo); s.add(3, t, la + n(rng), lo + n(rng)); }
+    CHECK(!s.find(3));
+    // a parked aircraft (ADS-B jitter on the ground) is not an orbit
+    AdsbLoiterDetector p; for (double t = 0; t < 900; t += 5) p.add(4, t, 52.0 + n(rng), 5.0 + n(rng));
+    CHECK(!p.find(4));
+    // a very wide loop (a route that bends, 60 km) is not an orbit
+    AdsbLoiterDetector wd; for (double t = 0; t < 900; t += 5) { track::gcDestination(45, 5, std::fmod(0.0012 * t * 180 / 3.14159265 * 4.0, 360.0), 60000, la, lo); wd.add(5, t, la, lo); }
+    CHECK(!wd.find(5));
+    d.expire(2000); CHECK(d.all().empty());
+}
+static void clearTest() {
+    std::vector<SlotSignal> s;
+    for (double f : {300.0, 500.0, 800.0, 1000.0, 1050.0, 2400.0}) s.push_back({f, 0, 50});
+    for (double f : {600.0, 2000.0}) s.push_back({f, 1, 50});
+    auto c = findClearFreq(s);
+    CHECK(c.signals[0] == 6 && c.signals[1] == 2 && c.quieterParity == 1);
+    // even: widest gap is 1100+..2400-: [1085, 2365] centre 1725
+    CHECK(std::fabs(c.hz[0] - 1725) < 1 && c.gapHz[0] > 1200);
+    // odd: gaps [200,565] [635,1965] [2035,2900]: widest is the middle one
+    CHECK(c.hz[1] > 1200 && c.hz[1] < 1400);
+    // no room: every 60 Hz occupied
+    std::vector<SlotSignal> full; for (double f = 200; f < 2900; f += 60) full.push_back({f, 0, 50});
+    auto fc = findClearFreq(full); CHECK(fc.hz[0] == 0 && fc.hz[1] > 0);
+    // overlapping signals merge
+    auto o = findClearFreq({{1000, 0, 50}, {1010, 0, 50}, {1020, 0, 50}}); CHECK(o.gapHz[0] > 0 && o.signals[0] == 3);
+}
+static void sarsatTest() {
+    SarsatIncidents inc; sarsat::Beacon b; b.valid = true; b.hexId = "ADCD0123456789A"; b.beaconType = "EPIRB"; b.country = "Lithuania";
+    std::mt19937 rng(6); double t = 1000;
+    for (int i = 0; i < 6; i++) { b.hasPos = true; b.lat = 55.0 + i * 0.01; b.lon = 21.0; inc.add(b, t); inc.add(b, t + 0.5); t += 47 + rng() % 10; }
+    sarsat::Beacon test = b; test.hexId = "A1B2C3D4E5F6071"; test.selfTest = true; test.hasPos = false; inc.add(test, 5); inc.add(test, 60);
+    sarsat::Beacon bad = b; bad.valid = false; bad.hexId = "BAD"; inc.add(bad, 1);
+    auto l = inc.list();
+    CHECK(l.size() == 2 && l[0].hexId == "ADCD0123456789A" && l[0].bursts == 6 && l[0].alert && l[0].plausibleRepeat);
+    CHECK(l[0].driftKm > 4.5 && l[0].driftKm < 6.5 && l[0].medianGapS > 46 && l[0].medianGapS < 58);
+    CHECK(l[1].tests == 2 && !l[1].alert && l[1].bursts == 0);
+    // a decoder echo every 5 s is not a plausible beacon
+    SarsatIncidents e; for (int i = 0; i < 10; i++) e.add(b, 100 + 5.0 * i);
+    CHECK(!e.list()[0].plausibleRepeat && !e.list()[0].alert);
+}
+
+static void hopTest() {
+    HamBandHop h; h.setBands({"40m", "20m", "15m", "10m"}); h.exclude("10m", true);
+    std::map<std::string, int> slots; std::string prev; int changes = 0; double lastSwitch = 0, minDwell = 1e9;
+    for (int i = 0; i < 960; i++) {   // 4 hours of 15 s slots
+        const double t = i * 15.0;
+        // 20 m is busy, 40 m quiet, 15 m silent; a spot is only heard while the receiver is on that band
+        const std::string b = h.next(t);
+        slots[b]++;
+        if (b != prev) { if (!prev.empty()) { changes++; minDwell = std::min(minDwell, t - lastSwitch); } lastSwitch = t; prev = b; }
+        if (b == "20m" && i % 2 == 0) h.spot(b, t);
+        if (b == "40m" && i % 20 == 0) h.spot(b, t);
+    }
+    CHECK(slots["10m"] == 0);                                   // excluded
+    CHECK(slots["20m"] > 10 * slots["15m"] && slots["40m"] >= slots["15m"] && slots["15m"] >= 16);   // busy band most, silent band still visited
+    CHECK(minDwell >= 4 * 15.0 - 1e-9);                         // never switches before the minimum dwell
+    CHECK(changes > 4 && changes < 400);
+    // an opening is found: 15 m was silent for hours, then spots appear as soon as it is visited; it must be visited at least every 30 min
+    HamBandHop g; g.setBands({"20m", "15m"}); double lastSeen15 = 0, maxGap = 0;
+    for (int i = 0; i < 960; i++) { const double t = i * 15.0; const std::string b = g.next(t); if (b == "20m") g.spot(b, t); if (b == "15m") { maxGap = std::max(maxGap, t - lastSeen15); lastSeen15 = t; } }
+    CHECK(maxGap < 2000 + 15 * 4);
+}
+
 int main() {
+    hopTest();
+    loiterTest(); clearTest(); sarsatTest();
     aisTest(); atisTest(); pagerTest(); callTest(); guessTest(); spotTest(); ismTest();
     printf(fails ? "feat40c: %d FAILED\n" : "feat40c: all passed\n", fails);
     return fails != 0;

@@ -3,7 +3,7 @@
 //    or a prefix like DL/), in the order they appear. "DE" is read as the separator, so "CQ CQ DE LY1ABC LY1ABC K" gives LY1ABC.
 //  - hamParseCall(): what the line is: a CQ call (who is calling, "CQ DX", "CQ TEST"), a reply (to, from), or nothing; the signal report
 //    (599, 5NN, 579 ...) when one is sent.
-//  - HamHeard: the stations heard on the decoder with their last time, count and last text, so the user clicks one to start the log entry.
+//  - HamCallHeard: the stations heard on the decoder with their last time, count and last text, so the user clicks one to start the log entry.
 #pragma once
 #include <algorithm>
 #include <cctype>
@@ -84,7 +84,7 @@ inline HamCallLine hamParseCall(const std::string& text) {
     return r;
 }
 
-class HamHeard {
+class HamCallHeard {
 public:
     struct Entry { std::string call; int count = 0; double lastS = 0; bool cq = false; std::string lastText; };
     void feed(const std::string& text, double nowS) {
