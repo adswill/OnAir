@@ -161,10 +161,10 @@ bool align(const std::vector<cf32>& y240, const Det& d, Aligned& out) {
             std::nth_element(sorted.begin(), sorted.begin() + R, sorted.end());
             if (S[(size_t)pk] < 2.2 * sorted[(size_t)R]) continue;
         }
-        // The first window's peak on the edge: the coarse timing is a mean over the whole block, and with a 50 ppm sample clock the first
-        // frames sit up to 100 samples (at 1.92 Msps) from it, so +-20 held a side peak of the NPSS 60 samples off (NSSS and MIB then failed).
-        // Only the peak's place is then taken from +-128; whether there is a cell stays the +-20 decision above.
-        if (pts.empty() && (pk == 0 || pk == 2 * R)) {
+        // The first window: the coarse timing is a mean over the whole block, and with a 50 ppm sample clock the first frames sit up to 100
+        // samples (at 1.92 Msps) from it, so +-20 can hold only a side peak of the NPSS, 60 samples off (NSSS and MIB then failed). The peak's
+        // place is taken from +-128 when the true one is there; whether there is a cell stays the +-20 decision above.
+        if (pts.empty()) {
             std::vector<double> W2;
             if (scanWin(128, W2) >= 2) {
                 int p2 = 0;
