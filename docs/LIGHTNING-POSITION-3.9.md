@@ -130,8 +130,9 @@ Position error, median / 95 %, in km, against the timing error per station (60 s
   reference. The packets go through encoding, light reordering and duplicates into the server: 17 of 17 strikes located, 16 within 3 km,
   median 158 m, 95 % 850 m. The NTP station is associated in every strike and never used.
 - The mode's test signal goes through one station: the reference locks and gives the drift.
-- The receiver over UDP on the same computer: a server and four clients with GPS marks, plus one client with the wrong key. Those
-  results come from the quick.yml run (see the branch's last commit).
+- The receiver over UDP on the same computer: a server and four clients with GPS marks, plus one client with the wrong key. The test
+  requires both strikes located within 3 km, the wrong key's packets refused and only the four keyed stations listed. It passed on
+  quick.yml run 42956431741 (Linux); the run did not keep the printed figures.
 
 ## Not done / limits
 
