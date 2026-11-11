@@ -1,6 +1,6 @@
 // MPT 1327 trunking control channel in the engine: the decoder of mpt1327_rx.h behind the engine's interface (configure, offset, feed, telemetry).
-// Engine stdMode 129, active standard 128 (family 127, "MPT1327 trunking (WIP)"). Receive only; control channel messages only: no traffic channel audio is decoded
-// and nothing encrypted is decoded.
+// Engine stdMode 129, active standard 128 (family 127, "MPT1327 trunking (WIP)"). Receive only. The traffic channels inside the capture are followed
+// as analog FM slices of it (single-radio trunking); nothing encrypted is decoded.
 #pragma once
 #include "dect2/mpt1327/mpt1327_rx.h"
 #include "dect2/engine/mode_tuning.h"
@@ -33,6 +33,18 @@ struct MptChannelRow {
     std::string called, caller;    // of the last GTC for it
 };
 
+// A traffic channel call the control channel allocated (GTC), followed inside the capture when it can be (single-radio trunking, docs/TRUNK1-3.9.md)
+struct MptCall {
+    uint64_t id = 0;
+    int called = -1, caller = -1;  // PFIX << 13 | IDENT1, and IDENT2
+    int channel = -1;
+    double freqHz = 0;             // from the channel plan, 0 when the plan is not known
+    bool active = false, followed = false;
+    int voiceSlot = -1;            // the slot decoding it (0 ...), -1 not followed
+    double durationSec = 0;
+    std::string state, note;
+};
+
 struct MptTelemetry {
     uint64_t seq = 0;
     int state = 0;                 // 0 no input, 1 searching, 2 locked
@@ -52,6 +64,15 @@ struct MptTelemetry {
     std::vector<MptChannelRow> channels;    // channels seen, by channel number
     double inputRate = 0;
     double centerHz = 0;
+    // single-radio trunking: the traffic channels inside the capture are followed as FM slices of it, several at once
+    bool follow = true;
+    int voiceSlots = 4;
+    double controlHz = 0;          // where the control channel is (the capture's centre plus the receiver's offset)
+    int planControlChannel = -1;   // the channel plan: the control channel's number and the spacing (Hz), -1 not given
+    double planSpacingHz = 12500;
+    std::vector<MptCall> calls;    // active first, then the newest
+    std::string followStatus;      // what the follower does, or why it cannot follow
+    std::string followNote;        // the newest notice (a call outside the capture with the bandwidth it needs ...)
 };
 
 class MptReceiver {
@@ -69,6 +90,16 @@ public:
     void feed(const std::complex<float>* x, size_t n);
     bool telemetry(MptTelemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);
+    // ---- single-radio trunking (docs/TRUNK1-3.9.md): the traffic channels the GTCs name are followed inside the capture, as FM, several at once
+    void setFollow(bool on);                              // follow calls inside the capture (on by default; needs the channel plan)
+    void setVoiceSlots(int n);                            // calls followed at once, 1 .. 16 (default 4)
+    void setChannelPlan(int controlChannel, double spacingHz);   // the control channel's number and the channel spacing: channel n is at control + (n - control) x spacing
+    void setRecordDir(const std::string& dir);            // one WAV + JSON per call; empty: no files
+    void setListenTg(int called);                         // the call whose sound is played (PFIX << 13 | IDENT1); -1 the newest
+    void setSilent(bool s);                               // follow but never open the sound device
+    void setVolume(float v);
+    void setMuted(bool m);
+    void setAudioTap(std::function<void(int called, const float* x, size_t n, int rate)> cb);   // tests: the sound of each followed call
 
 private:
     struct Impl;

@@ -1,6 +1,7 @@
 // The trunk pool controller: device roles, allocation of voice radios to grants, the call state machine, preemption, device loss, the call log
 // (see trunkpool.h). No threads; time is what the host passes in, so every path is testable with a simulated clock.
 #include "dect2/trunkpool/trunkpool.h"
+#include "dect2/trunkpool/coverage.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -370,11 +371,19 @@ void TrunkPool::start(const GrantEvent& g, const AccessDecision& d, double now) 
     CallRecord& r = row();
     int voiceRadios = 0;
     for (int i = 0; i < (int)dev_.size(); i++) if (i != ctl_ && dev_[(size_t)i].rx && dev_[(size_t)i].enabled && dev_[(size_t)i].role != Role::Lost) voiceRadios++;
-    if (voiceRadios == 0) {
+    bool inside = false;   // a radio's capture holds the channel, but every one of its slices is in use
+    for (const Dev& d : dev_) if (d.rx && d.enabled && d.role != Role::Lost && d.role != Role::Off && d.rx->present() && d.rx->maxSlices() > 0 && covers(*d.rx, g.freqHz)) inside = true;
+    if (inside && cfg_.allowSlices) {
+        if (!r.missed) st_.missedBusy++;
+        miss(r, "busy: every voice slot is in use", now);
+    } else if (voiceRadios == 0) {
         const bool first = !r.missed;
-        char b[220];
-        const double span = ctl_ >= 0 && dev_[(size_t)ctl_].rx ? dev_[(size_t)ctl_].rx->captureSpanHz() : 0;
-        snprintf(b, sizeof b, "outside the capture (%s, %.1f MHz wide): add a second radio or widen the capture", mhz(g.freqHz).c_str(), span / 1e6);
+        char b[260];
+        const VoiceReceiver* cr = ctl_ >= 0 ? dev_[(size_t)ctl_].rx : nullptr;
+        const double span = cr ? cr->captureSpanHz() : 0;
+        // "outside the capture (needs 3.4 MHz)": the bandwidth a capture holding the control channel and this channel needs (coverage.h)
+        const std::string need = outsideText(g.freqHz, ccHz_, cr ? cr->captureCentreHz() : 0, cfg_.edgeGuardHz);
+        snprintf(b, sizeof b, "%s (%s, the capture is %.1f MHz wide): add a second radio or widen the capture", need.c_str(), mhz(g.freqHz).c_str(), span / 1e6);
         why_ = std::string("Control channel only: ") + b;
         bool seen = false;
         for (auto& n : noted_) if (std::fabs(n.first - g.freqHz) < 1) { seen = now - n.second < cfg_.notFollowedLogSec; if (!seen) n.second = now; }
@@ -508,6 +517,16 @@ void TrunkPool::tick(double now) {
         }
     }
     if (ctl_ < 0 && ccSeen_) promote(now);
+    // a radio whose number of slices changed (the user's voice slots): calls on slices that are gone end, the table follows
+    for (int i = 0; i < (int)dev_.size(); i++) {
+        Dev& d = dev_[(size_t)i];
+        if (!d.rx) continue;
+        const size_t want = (size_t)std::max(0, d.rx->maxSlices());
+        if (d.sliceCalls.size() == want) continue;
+        for (size_t k = want; k < d.sliceCalls.size(); k++)
+            if (d.sliceCalls[k]) if (Live* l = liveById(d.sliceCalls[k])) endCall(*l, "voice slots reduced", now, false);
+        d.sliceCalls.resize(want, 0);
+    }
     std::vector<uint64_t> ids;
     for (const Live& l : live_) ids.push_back(l.id);
     for (uint64_t id : ids) {

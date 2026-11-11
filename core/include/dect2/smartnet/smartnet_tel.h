@@ -23,6 +23,7 @@ struct SmartnetCall {
     int64_t wallStart = 0;
     double durationSec = 0, audioSec = 0;
     std::string state, note;
+    int voiceSlot = -1;               // the voice slot decoding it (0 ...), -1 not followed
 };
 
 struct SmartnetTalkgroup {
@@ -66,6 +67,7 @@ struct SmartnetTelemetry {
     int listenTg = -1;
     uint64_t grants = 0, followed = 0, missedOutside = 0, missedBusy = 0, encrypted = 0;
     std::string poolStatus, note;
+    int voiceSlots = 4;               // calls followed at once inside the capture
 };
 
 constexpr size_t kSmartnetRowsMax = 400, kSmartnetCallsMax = 200, kSmartnetTgMax = 200;

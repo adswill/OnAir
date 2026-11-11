@@ -11,6 +11,7 @@
 #include "dect2/edacs/edacs_msg.h"
 #include "dect2/edacs/edacs_proto.h"
 #include "dect2/edacs/edacs_tel.h"
+#include "dect2/trunkpool/one_radio.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -115,6 +116,32 @@ struct EdacsReceiver::Impl {
     uint64_t pvBlocks = 0, pvFrames = 0, pvBad = 0;
     int pendingLid = -1;
     double pendingLidT = -1e9;
+    // ---- single-radio trunking: every analog call inside the capture in a voice slot of its own
+    tpool::OneRadio one{"edacs", 4};
+
+    void slotsStep() {
+        one.setEnabled(follow);
+        one.setControlHz(centreHz > 0 ? centreHz + offHz : 0);
+        if (follow)
+            for (const auto& c : tel.calls) {
+                if (!c.active || c.freqHz <= 0 || c.digital) continue;   // ProVoice: only the listened channel (its decoder is the plug-in's)
+                if (c.fromActivity && !followAct) continue;
+                if (!followGroups.empty() && std::find(followGroups.begin(), followGroups.end(), c.gid) == followGroups.end()) continue;
+                tpool::GrantEvent g;
+                g.proto = tpool::Proto::Edacs; g.tg = c.gid; g.src = c.lid; g.freqHz = c.freqHz; g.channel = c.lcn; g.group = c.group; g.emergency = c.emergency;
+                one.onGrant(g);   // repeated every report while the call runs: the slot keeps it, a new call gets a free slot
+            }
+        int used = 0;
+        const std::vector<tpool::OneRadioCall> rows = one.calls(64);
+        for (auto& c : tel.calls) {
+            c.voiceSlot = -1;
+            if (!c.active) continue;
+            for (const auto& r : rows) if (r.active && r.followed && r.voiceSlot >= 0 && std::fabs(r.freqHz - c.freqHz) < 1 && r.tg == c.gid) { c.voiceSlot = r.voiceSlot; used++; break; }
+        }
+        tel.voiceSlots = one.slots(); tel.slotsInUse = used;
+        const std::string n = one.lastNote();
+        tel.slotsStatus = n.empty() ? one.status() : n;
+    }
 
     void initActivity() {
         int N = 256;
@@ -507,6 +534,7 @@ struct EdacsReceiver::Impl {
         tel.locked = timeSec() - lastGoodSec < kLockSec;
         tel.state = rateSet ? (tel.locked ? 2 : 1) : 0;
         housekeeping();
+        slotsStep();
         tel.seq++;
     }
 };
@@ -526,9 +554,11 @@ void EdacsReceiver::configure(double inputRateHz) {
     p_->pvLp.lowpass(6000.0, kWork, 0.7071);
     p_->initActivity();
     p_->clearState();
+    p_->one.configure(p_->rateSet ? inputRateHz : 0);
+    p_->one.setCentreHz(p_->centreHz);
 }
 void EdacsReceiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->offHz = hz; p_->fm.setOffset(hz); }
-void EdacsReceiver::setCenterHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->centreHz = hz; p_->tel.centerHz = hz; if (p_->fft) p_->resizeChannels(); }
+void EdacsReceiver::setCenterHz(double hz) { std::lock_guard<std::mutex> lk(p_->mu); p_->centreHz = hz; p_->tel.centerHz = hz; if (p_->fft) p_->resizeChannels(); p_->one.setCentreHz(hz); }
 void EdacsReceiver::setInverted(bool inv) { std::lock_guard<std::mutex> lk(p_->mu); p_->inverted = inv; p_->tel.inverted = inv; p_->tel.seq++; }
 bool EdacsReceiver::ready() const { return p_->rateSet; }
 void EdacsReceiver::reset() { std::lock_guard<std::mutex> lk(p_->mu); p_->clearState(); }
@@ -559,6 +589,7 @@ void EdacsReceiver::feed(const cf32* x, size_t n) {
         p_->voice.feed(x, n, p_->vdisc);
         p_->voiceSamples();
     }
+    p_->one.feed(x, n);   // the voice slots, from the same samples
     if (p_->timeSec() - p_->lastPub >= 0.25) { p_->lastPub = p_->timeSec(); p_->publish(); }
 }
 bool EdacsReceiver::telemetry(EdacsTelemetry& out, uint64_t lastSeq) {
@@ -583,5 +614,8 @@ void EdacsReceiver::setVolume(float v) { p_->volume = std::max(0.f, std::min(1.f
 void EdacsReceiver::setMuted(bool m) { p_->muted = m; }
 void EdacsReceiver::setSilent(bool s) { p_->silent = s; }
 void EdacsReceiver::setAudioTap(std::function<void(int, const float*, size_t)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->tap = std::move(cb); }
+void EdacsReceiver::setVoiceSlots(int n) { std::lock_guard<std::mutex> lk(p_->mu); p_->one.setSlots(n); p_->tel.voiceSlots = p_->one.slots(); }
+void EdacsReceiver::setRecordDir(const std::string& dir) { std::lock_guard<std::mutex> lk(p_->mu); p_->one.setRecordDir(dir); }
+void EdacsReceiver::setSlotAudioTap(std::function<void(int, const float*, size_t, int)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->one.setAudioTap(std::move(cb)); }
 
 } // namespace dect2

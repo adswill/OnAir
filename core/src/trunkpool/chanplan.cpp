@@ -22,6 +22,7 @@ const char* protoName(Proto p) {
     case Proto::Edacs: return "EDACS";
     case Proto::Ltr: return "LTR";
     case Proto::MotorolaTypeII: return "Motorola Type II";
+    case Proto::Nxdn: return "NXDN";
     default: return "other";
     }
 }

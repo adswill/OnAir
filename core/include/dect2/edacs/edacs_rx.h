@@ -41,6 +41,11 @@ public:
     void setMuted(bool m);
     void setSilent(bool s);                               // follow and decode but never open the sound device
     void setAudioTap(std::function<void(int lcn, const float* x, size_t n)> cb);   // tests: the 48 kHz sound of the followed channel (and which one it is)
+    // ---- single-radio trunking (docs/TRUNK1-3.9.md): with following on, every analog call inside the capture is also decoded in a voice slot of its
+    // own at the same time (its own sound, recording and call row); the listened channel above stays the one played
+    void setVoiceSlots(int n);                            // calls decoded at once, 1 .. 16 (default 4)
+    void setRecordDir(const std::string& dir);            // one WAV + JSON per call; empty: no files
+    void setSlotAudioTap(std::function<void(int gid, const float* x, size_t n, int rate)> cb);   // tests: the sound of every call in a voice slot
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

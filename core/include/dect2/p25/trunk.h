@@ -174,7 +174,7 @@ struct Action {
 };
 
 struct FollowConfig {
-    int maxSlices = 2;           // simultaneous followed calls inside the capture (CPU limit)
+    int maxSlices = 4;           // simultaneous followed calls inside the capture (CPU limit; the voice slots of single-radio trunking, docs/TRUNK1-3.9.md)
     double hangSec = 2.0;        // a call with no grant repeat or voice for this long has ended
     double ccLossSec = 4.0;      // no control message for this long: the control channel is lost
     double ccDwellSec = 12.0;    // time spent on each candidate while looking for the control channel (a retune restarts the receiver: tuner settle, gain, sync)
