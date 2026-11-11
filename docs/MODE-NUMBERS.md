@@ -135,6 +135,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | DMSP RTD | 549 | 551 | 550 | 549 | feat38-sat-xband | 3.8; numbers may need to move at merge |
 | CDMA2000 cells | 660 | 662 | 661 | 660 | feat39-cell | 3.9; IS-95 / cdma2000 pilot + Sync Channel; synthetic signals only |
 | TD-SCDMA cells | 661 | 663 | 662 | 661 | feat39-cell | 3.9; DwPTS SYNC-DL + TS0 midamble cell parameter, no BCH; synthetic signals only |
+| Lightning position (network) | 790 | 792 | 791 | 790 | feat39-ltpos | 3.9; TDOA from several stations, see docs/LIGHTNING-POSITION-3.9.md; simulated signals only |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |

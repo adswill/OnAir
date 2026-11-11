@@ -2774,3 +2774,21 @@ case 747: {
     cardIf(o, "Input Rate", t.inputRate);
     break;
 }
+case 791: {
+    const auto& t = rx.ltpos; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Role", t.role);
+    cardIf(o, "Time Source", t.timeSource);
+    cardIf(o, "Clock Sigma Us", t.clockSigmaUs);
+    cardIf(o, "Ppm", t.ppm);
+    cardIf(o, "Ppm Sigma", t.ppmSigma);
+    cardIf(o, "Pulses", t.pulses);
+    cardIf(o, "Sent", t.sent);
+    cardIf(o, "Send Errors", t.sendErrors);
+    { Table tb({"Id", "Name", "Lat", "Lon", "Time Source", "Sigma Us", "Age S", "Detections"}); int n = 0; for (auto it = t.stations.rbegin(); it != t.stations.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.name), cell(e.lat), cell(e.lon), cell(e.timeSource), cell(e.sigmaUs), cell(e.ageS), cell(e.detections)}); } if (n) addTable(o, "Stations", tb); }
+    { Table tb({"Utc Ns", "Lat", "Lon", "Major Km", "Minor Km", "Az Deg", "Stations", "Also Heard"}); int n = 0; for (auto it = t.strikes.rbegin(); it != t.strikes.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utcNs), cell(e.lat), cell(e.lon), cell(e.majorKm), cell(e.minorKm), cell(e.azDeg), cell(e.stations), cell(e.alsoHeard)}); } if (n) addTable(o, "Strikes", tb); }
+    break;
+}

@@ -1680,3 +1680,13 @@ Ten issues where the reporter said "works, but ..." were reread. Four were fixed
 
 ## 2026-11-11 "Works, but" issues, batch B (feat39-worksbutB)
 Went through 17 issues where a fix was followed by a remaining problem. Fixed: ELT(DT) protocol 9 per C/S T.001 Rev. 7 (#407), plus standard location offset bit widths, the homing bit and the 5-bit operator designator found while checking; Hamlib sound card by name and from a list (#358); Android keeps no old RDS after a station change (#463). The rest were already fixed, need a recording or log, or are feature requests. Details in docs/WORKSBUT-B-3.9.md.
+## 2026-11-11 Lightning position (network) (feat39-ltpos)
+New mode, family 790. Several stations time sferics; a server matches the detections and locates strikes by TDOA. It uses robust least
+squares on WGS-84 with clock groups, ambiguity folding, an optional hop model, a chi-square check and a 95 % ellipse. The map colours
+strikes by age.
+- Timing sources, ranked and shown per station: GPS radio time (Soapy / UHD hardware timestamps after a PPS reset,
+  source/hw_time.h), GNSS marks, MSK common view (decision-directed symbol timing, about 1 us at 45 dB), and PTP / NTP for association
+  only. The sample clock drift is fitted per source.
+- Network: UDP packets signed with HMAC-SHA256, replay window, off by default, no relay.
+- Simulated only: median 0.12 to 0.40 km at 0.3 to 1 us with 6 stations; the whole chain from IQ gave a median of 158 m.
+- docs/LIGHTNING-POSITION-3.9.md.

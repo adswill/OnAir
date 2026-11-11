@@ -196,6 +196,7 @@ inline AntennaNeed antennaNeed(const char* modeName, double mhz) {
         {"Iridium", N_("an L-band patch with open sky")}, {"NFC / RFID 13.56 MHz", N_("a loop within a few centimetres of the reader")},
         {"Time signals", N_("a loop or long wire, far from electronics")}, {"e-Czas (225 kHz, Poland)", N_("a loop or long wire")},
         {"Sferics (lightning)", N_("a long wire or large loop")},
+        {"Lightning position (network)", N_("a long wire or large loop")},
         {"GOES HRIT", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")}, {"Elektro-L", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")},
         {"GK-2A LRIT", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")}, {"GK-2A HRIT", N_("a dish of 1.2 m or larger with a 1.7 GHz LNA")},
         {"FY-4 LRIT", N_("a dish of 80 cm or larger with a 1.7 GHz LNA")}, {"FY-2 S-VISSR", N_("a dish of 1.2 m or larger with a 1.7 GHz LNA")},
