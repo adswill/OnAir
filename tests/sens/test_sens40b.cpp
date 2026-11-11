@@ -113,6 +113,12 @@ std::vector<Mode> modes40b() {
             m.make = factory<NdbReceiver, NdbTelemetry>([on](NdbReceiver& rx, double r) { prepGeneric(rx, r, 31); rx.setWeakSignalPath(on != 0); },
                 [](const NdbTelemetry& t) { const bool ok = t.ident.size() == 3 && std::string("BNDBND").find(t.ident) != std::string::npos; return Metric{ok ? (double)t.blocksOk : 0.0, 0.0}; });   // only the generator's ident (any rotation of it) counts
         });
+    for (int on = 1; on >= 0; on--)
+        satdata(on ? "dsc" : "dsc-off", on ? "Marine DSC VHF ch 70 (4.0 receiver)" : "Marine DSC VHF ch 70 (3.9 receiver)", 17, 25.0, 25e3, 25, [on](Mode& m) {
+            m.mhz = 156.525;
+            m.gen = [r = m.rate](size_t n) { SynthConfig c; c.modeOpt[0] = 4; return clean(17, c, r, n); };
+            m.make = factory<MarineReceiver, MarineTelemetry>([on](MarineReceiver& rx, double r) { prepGeneric(rx, r, 17); rx.setVhfNarrowChannel(on != 0); }, blocks<MarineTelemetry>);
+        });
     for (int on = 1; on >= 0; on--) {   // radiosondes: an RS41 on the centre, a DFM-17 and an M10 elsewhere (as sens_modes.h)
         Mode m; m.id = on ? "sonde" : "sonde-off"; m.name = on ? "Radiosonde (4.0 receiver)" : "Radiosonde (3.9 receiver)"; m.family = "narrowband-data"; m.stdMode = 15;
         m.rate = 8e6; m.secs = 5.0; m.bwHz = 10e3; m.mhz = 403; m.snrHi = 25; m.maxJobs = 4;
@@ -127,7 +133,7 @@ std::vector<Mode> modes40b() {
 // the guard of the short run: the SNR (dB in the mode's noise bandwidth) a few dB above the 4.0 threshold
 struct Guard { const char* id; double snrDb; };
 const Guard kGuards[] = {
-    {"pocsag", -1}, {"flex", 5}, {"zwave", 14}, {"argos", 0}, {"ndb", 14},
+    {"pocsag", -1}, {"flex", 5}, {"zwave", 14}, {"argos", 0}, {"ndb", 14}, {"dsc", 8},
 };
 }
 using namespace s40;
@@ -192,7 +198,7 @@ int points(const std::vector<Mode>& all, const std::regex& want, const char* lis
 int main() {
     const bool full = testLong();
     const char* sel = std::getenv("ONAIR_SENS_MODES");
-    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off|zwave|zwave-off|sonde|sonde-off|argos|argos-off|ndb|ndb-off)$");
+    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off|zwave|zwave-off|sonde|sonde-off|argos|argos-off|ndb|ndb-off|dsc|dsc-off)$");
     const int threads = full ? std::max(1u, std::thread::hardware_concurrency() / 2) : 1;
     int fails = 0;
     const auto all = modes40b();

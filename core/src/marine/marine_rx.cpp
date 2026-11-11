@@ -382,6 +382,7 @@ bool MarineReceiver::telemetry(MarineTelemetry& out, uint64_t lastSeq) {
 }
 
 void MarineReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
+void MarineReceiver::setVhfNarrowChannel(bool on) { p_->vhf.setNarrowChannel(on); }
 void MarineReceiver::setService(int s) { p_->service = s < 0 || s > 3 ? 0 : s; }
 void MarineReceiver::setFrequencyHz(double hz) {
     std::lock_guard<std::mutex> lk(p_->mu);

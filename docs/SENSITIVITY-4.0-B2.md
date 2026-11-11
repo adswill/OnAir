@@ -64,3 +64,22 @@ marked start) at least half as often as a clean run. The sens_sweep metric count
    station flicker, ndb_census failed on it before this).
 Keyed-carrier stations (no tone) are read as before (envelope): they gain only from item 1.
 Test: sens40b guard (ndb at 14 dB, noise only), ndb_rx, ndb_census pass. Simulated only.
+
+## Marine DSC on VHF channel 70 (core/src/marine/marine_dsp.cpp, VhfSlicer)
+
+SNR in 25 kHz. A trial passes when at least half of the units of a clean run decode (16 trials a point, harness entries `dsc` / `dsc-off`).
+
+| | 3.9 receiver | 4.0 receiver | gain |
+|---|---|---|---|
+| AWGN, 90 % point | 4 dB (3 dB: 5 / 16) | **2 dB** (1 dB: 0 / 16) | 2 dB |
+| 20 ppm carrier error (3 kHz at 156.5 MHz) | 6 dB (5 dB: 11 / 16, 4 dB: 0 / 16) | 2 dB | 4 dB |
+| 50 ppm clock | 4 dB | 2 dB | 2 dB |
+| off-centre carrier (5 kHz) | above 5 dB (0 / 16 at 5 dB) | 4 dB | 2 dB or more |
+| noise only | 0 of 16 | 0 of 40 per scenario (-40 dB) | |
+
+The VHF path took the 24 kHz stream (a 9 kHz front filter) straight into the FM discriminator: the signal (+-3 kHz deviation, 1300 / 2100 Hz tones) needs about +-5 kHz.
+Now a 4.5 kHz two-section Butterworth low-pass sits in front of the discriminator, and the carrier error (the mean of the discriminator over 50 ms, followed by a slow
+integrator, +-4 kHz) is taken off before it so that a radio some kHz off does not push the signal into the filter's edge (without the follow-up the 20 ppm case failed outright:
+a filter alone gave 0 % at +3 kHz). 4 kHz instead of 4.5 kHz measured 0.3 dB better at AWGN; 4.5 kHz was kept for a transmitter with more deviation than the generator's.
+`MarineReceiver::setVhfNarrowChannel(false)` is the 3.9 path. ATIS (atis_rx.cpp) uses the same VhfSlicer and has the narrow path now too (atis_mode passes; not measured).
+Tests: sens40b guard (dsc), marine_dsc_* (audit, bands, bitsweep, calls, kat, sweep), marine_basic, marine_engine, atis_mode, marinevhf_mode pass. Simulated only: the generator's deviation is assumed.
