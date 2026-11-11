@@ -1690,3 +1690,6 @@ strikes by age.
 - Network: UDP packets signed with HMAC-SHA256, replay window, off by default, no relay.
 - Simulated only: median 0.12 to 0.40 km at 0.3 to 1 us with 6 stations; the whole chain from IQ gave a median of 158 m.
 - docs/LIGHTNING-POSITION-3.9.md.
+
+## 2026-11-11 TMC in plain words and HDMI emission finder (feat39-tmchdmi)
+Issue #476: RDS-TMC messages in plain words from the user's own event list and location table (core/src/fm/fm_tmc_db.cpp). The importer detects the delimiter, header, encoding and columns. It reads German / English lists, the LCL layout and the TISA exchange files, and copies them to <data folder>/tmc. Each message shows road, location, direction, extent, duration, diversion and details. New messages go to a CSV and text log, on by default once a file is set. No country data ships: without files, codes stay with a "(?)" hint. Issue #475: local display / HDMI emission finder (core/src/rfi/display_emission.cpp). It matches pixel clock harmonics against 49 CEA-861 / VESA timings and separates timings that share a clock by the line-rate comb. It gives a confidence and alternatives, and shows up in the spectrum explorer (ticks, label, tab) and as an identifier candidate labelled "not your SDR". Generator and tests tmc_db, display_emission; simulated only. docs/TMC-PLAIN-3.9.md, docs/HDMI-EMISSION-3.9.md.
