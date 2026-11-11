@@ -575,4 +575,37 @@ std::unique_ptr<ModeSynth> makeAdsbSynth(const SynthConfig& cfg, double sampleRa
     return std::make_unique<AdsbSynth>(cfg, sampleRate);
 }
 
+std::vector<AdsbTx> adsbOverlapScenario(const AdsbOverlapConfig& c) {
+    // xorshift: the same numbers everywhere (the standard distributions differ between libraries)
+    uint64_t st = 0x9E3779B97F4A7C15ull * (c.seed + 1) ^ 0xA0761D6478BD642Full;
+    auto u = [&]() { st ^= st << 13; st ^= st >> 7; st ^= st << 17; return (double)(st >> 11) * (1.0 / 9007199254740992.0); };
+    for (int k = 0; k < 8; k++) u();
+    std::vector<AdsbTx> out;
+    out.reserve((size_t)std::max(0, c.pairs) * 2);
+    const uint32_t base = 0x4B0000 + (c.seed & 0xFF) * 0x100;
+    const int fleet = std::max(2, c.aircraft);
+    auto position = [&](uint32_t a) {
+        const double lat = 54.5 + u(), lon = 24.5 + u();
+        return adsb::encodeAirbornePosition(a, 5, 11, (int)(2000 + u() * 36000) / 25 * 25, false, u() < 0.5, lat, lon);
+    };
+    for (int i = 0; i < c.pairs; i++) {
+        AdsbTx a, b;
+        a.t = c.startSec + i * c.spacingUs * 1e-6;
+        const int ia = (int)(u() * fleet) % fleet;
+        a.frame = position(base + (uint32_t)ia);
+        a.amp = c.amp;
+        a.cfoHz = (2 * u() - 1) * c.cfoMaxHz;
+        a.phase = (float)(2 * M_PI * u());
+        b.t = a.t + (c.offLoUs + u() * (c.offHiUs - c.offLoUs)) * 1e-6;
+        const uint32_t ib = base + (uint32_t)((ia + 1 + (int)(u() * (fleet - 1)) % (fleet - 1)) % fleet);
+        b.frame = u() < c.shortShare ? adsb::encodeAllCall(ib, 5) : position(ib);
+        b.amp = (float)(c.amp * std::pow(10.0, (c.relLoDb + u() * (c.relHiDb - c.relLoDb)) / 20.0));
+        b.cfoHz = (2 * u() - 1) * c.cfoMaxHz;
+        b.phase = (float)(2 * M_PI * u());
+        out.push_back(a);
+        out.push_back(b);
+    }
+    return out;
+}
+
 } // namespace dect2

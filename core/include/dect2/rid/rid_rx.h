@@ -11,6 +11,13 @@
 // Wi-Fi channel 6 (2437) 5 MHz above it, so both are heard. Tuned elsewhere, the nearest Wi-Fi channel is used and BLE only when an
 // advertising channel is within 8 MHz. With a file (no centre known) both demodulators look at 0 Hz.
 //
+// Burst gate (3.9): the Wi-Fi demodulator (802.11b chain and OFDM receiver at 20 Msps) is handed only the stretches around bursts in its channel.
+// A cheap detector looks first: 128-point FFTs over half of every 25.6 us window, the energy in the Wi-Fi channel (the BLE channel and the DC
+// spike left out) against its own noise floor (lower quartile of every 16th window over 26 ms). The demodulator gets the windows from 102 us
+// before a window with energy (0.8 dB over the floor: an 802.11b frame at -6 dB SNR) to 205 us after one, the bursts joined with noise around
+// each. During the first windows, and while the channel is busy more than 60 % of the time, it gets everything as before. BLE is not gated: the
+// joins cost packets near its sensitivity.
+//
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),
 // telemetry() and the setters from the interface thread.
 #pragma once
@@ -52,6 +59,7 @@ public:
     std::string saveResults() const;                     // for the results file (results_io.h)
     bool loadResults(const std::string& blob);           // false: not this build's format, nothing changes
     void setLogCallback(std::function<void(const std::string&)> cb);
+    void setGate(bool on);                // test knob: the burst gate (on by default); off hands every sample to both demodulators
 
 private:
     struct Impl;

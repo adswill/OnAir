@@ -110,6 +110,24 @@ private:
     std::unique_ptr<Impl> p_;
 };
 
+// Overlap scenario (3.9): pairs of replies on the air at once, for the overlapping-reply recovery of the receiver. The first of every pair is a DF17
+// airborne position, the second a DF17 (or a DF11 all-call reply, shortShare of them) from another aircraft that starts offLo to offHi us after the
+// first, at relLo to relHi dB relative to it (the addresses are drawn from `aircraft` of them); each has a carrier offset within +-cfoMaxHz and a random phase. Pairs follow each other every
+// spacingUs, starting at startSec. Same seed, same list on every platform.
+struct AdsbOverlapConfig {
+    int pairs = 200;
+    int aircraft = 24;                             // the replies come from this many addresses (two different ones in every pair), so that they are known
+    uint32_t seed = 1;
+    double offLoUs = 2, offHiUs = 118;
+    double relLoDb = -12, relHiDb = 12;
+    float amp = 0.1f;                              // pulse amplitude of the first reply (0.1: the level of an aircraft at 50 NM)
+    double cfoMaxHz = 150e3;
+    double shortShare = 0.25;
+    double spacingUs = 1000;                       // busy, but leaving the receiver quiet stretches for its noise estimate
+    double startSec = 0.003;                       // after the receiver's noise estimate has settled
+};
+std::vector<AdsbTx> adsbOverlapScenario(const AdsbOverlapConfig& c);
+
 std::unique_ptr<ModeSynth> makeAdsbSynth(const SynthConfig& cfg, double sampleRate);   // nullptr: sample rate below 2 Msps
 
 } // namespace dect2

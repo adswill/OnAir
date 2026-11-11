@@ -13,6 +13,13 @@
 //      half of every microsecond, handed to the checks (CRC, address); a frame that passes is skipped over
 //   5. a frame that fails is sliced again coherently (sliceCoherent: carrier offset from the pulses, complex integrals of the half bits along a
 //      phase reference, about 1.5 dB) and with sequence estimation against the smearing of the radio's filter, then with the older retries
+//   6. overlapping replies (3.9): a frame that decodes is rebuilt from its bits (its carrier, its gain and a pulse shape learnt from the frame itself)
+//      and subtracted from the samples, the bins and scores under it are worked out again, and the search goes on inside it: a second preamble
+//      that was buried in its data is then found. Candidates that failed earlier and that the decoded frame overlaps are tried again on what is
+//      left. A frame that fails while another preamble lies inside it, a decoded frame lies over it, or that is strong (10 dB and more) and fails
+//      anyway, gets two more hypotheses: the separation slicer (a sequence estimate whose cost lets the residual of every half bit hold a piece of
+//      the other reply, at that reply's level and any phase) and the coherent bits with the bits on which the slicers disagree marked least
+//      certain, for the tracker's CRC repair (DF11 / 17 / 18 from known addresses, as set under error correction)
 #pragma once
 #include "adsb_track.h"
 #include "dect2/common/ring.h"
@@ -52,13 +59,18 @@ public:
     int effort() const { return effort_; }
     void setCoherent(int mode) { coherent_ = mode != 0; coherentFirst_ = mode == 2; }   // test knob: 0 off, 1 on (default), 2 only the coherent slices
     uint64_t dataRejects() const { return dataRejects_; }   // preambles that the contrast of the first 56 bits showed to be noise
+    void setOverlap(bool on) { overlap_ = on; }             // test knob: overlapping-reply recovery (step 6), on by default
+    uint64_t cancelled() const { return cancelled_; }      // decoded frames subtracted from the signal
+    uint64_t recovered() const { return recovered_; }      // frames decoded after a cancellation, on a retry or by a separation slicer
 
 private:
     void pushSamples(const cf32* x, size_t m);
     void makeBins();
     void scanCandidates();
     bool tryFrame(int64_t bin);
-    bool sliceCoherent(AdsbRaw& r, double x, double w, const AdsbRaw& guide, AdsbRaw* isi = nullptr);
+    bool sliceCoherent(AdsbRaw& r, double x, double w, const AdsbRaw& guide, AdsbRaw* isi = nullptr, AdsbRaw* sep = nullptr);
+    bool cancelFrame(double x, const AdsbRaw& r);   // subtract the decoded frame whose preamble starts at local sample x; false: not possible here
+    float scoreAt(const float* p, float thr, float dThr) const;   // the preamble score of the bin at p (see makeBins)
     void compact();
     void updateNoise(float bin);
     void endBlock();
@@ -84,6 +96,17 @@ private:
     uint64_t dataRejects_ = 0;
     bool coherent_ = true, coherentFirst_ = false;
     int effort_ = 2;
+    // overlapping replies (step 6)
+    bool overlap_ = true, retrying_ = false;
+    int64_t cancelStart_ = 0, cancelEnd_ = 0;      // bins of the last frame that was subtracted
+    int64_t goodEnd_ = 0;                           // end bin of the last frame that decoded
+    std::vector<int64_t> failed_;                   // bins of recent candidates that failed: tried again when a frame over them is subtracted
+    std::vector<cf32> rot_, yv_;                    // cancelFrame's work arrays
+    struct Cut { uint8_t head[4] = {}; double t = -1e9; };
+    Cut cuts_[4];                                   // the last frames subtracted (DF, address and time): their remains are not handed on again
+    unsigned cutPos_ = 0;
+    bool emit(AdsbRaw& r, bool last);
+    uint64_t cancelled_ = 0, recovered_ = 0;
 
     uint64_t samples_ = 0;                          // samples fed since the start (the clock)
     uint64_t smpBase_ = 0;                          // global index of pw_[0]

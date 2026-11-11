@@ -54,7 +54,7 @@ public:
     void setAllowQpsk(bool on);                                // also read QPSK rate 1/2 frames (802.11p); off by default
     void reset();                                              // forget the buffer; the counters stay
     void feed(const cf32* x, size_t n);                        // 20 Msps samples, any block size
-    struct Stats { uint64_t triggers = 0, noSync = 0, signalOk = 0, signalBad = 0, otherRate = 0, framesOk = 0, framesBad = 0; };
+    struct Stats { uint64_t triggers = 0, noSync = 0, signalOk = 0, signalBad = 0, otherRate = 0, framesOk = 0, framesBad = 0, narrow = 0; };   // narrow: triggers of a narrowband signal, dropped
     const Stats& stats() const;
 private:
     struct Impl;

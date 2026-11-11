@@ -31,6 +31,7 @@ static void usage() {
             "  adsbtool rx recording.cs8 [--rate 2e6] [--format cs8|cu8|cf32] [--fix 0|1|2] [--ref lat lon] [--messages] [--table]\n"
             "                       [--older-demod]\n"
             "  adsbtool sim [--rate 2e6] [--seconds 10] [--snr 30] [--aircraft 12] [--seed 1] [--filter 0] [--cfo 0] [--sro 0] [--dc 0] [--mult 1] [--noquant] [--fix 1]\n"
+            "                       [--overlap pairs] [--no-overlap-rx]\n"
             "  adsbtool sweep [--rate 2e6] [--filter 0] [--from 6] [--to 20] [--step 1] [--frames 1000] [--noquant] [--fix 1] [--cfo 0] [--sro 0] [--short]\n"
             "  adsbtool decode HEX [HEX ...]\n");
 }
@@ -188,6 +189,8 @@ static int rxMain(int argc, char** argv) {
 // the generator straight into the receiver, with the list of what was sent checked off
 static int sim(int argc, char** argv) {
     AdsbSimConfig c;
+    int overlapPairs = 0;
+    bool overlapRx = true;
     for (int i = 2; i < argc; i++) {
         const std::string a = argv[i];
         auto next = [&]() { return i + 1 < argc ? atof(argv[++i]) : 0.0; };
@@ -203,9 +206,18 @@ static int sim(int argc, char** argv) {
         else if (a == "--mult") c.mult = next();
         else if (a == "--noquant") c.quantise = false;
         else if (a == "--fix") c.fixBits = (int)next();
+        else if (a == "--overlap") overlapPairs = (int)next();       // the overlap scenario (adsbOverlapScenario) instead of the airspace
+        else if (a == "--no-overlap-rx") overlapRx = false;          // the receiver without its overlapping-reply recovery, for comparisons
         else { usage(); return 1; }
     }
+    if (overlapPairs > 0) {
+        AdsbOverlapConfig oc;
+        oc.pairs = overlapPairs; oc.seed = c.seed;
+        c.custom = adsbOverlapScenario(oc);
+        c.seconds = 0;
+    }
     AdsbReceiver rx;
+    rx.setOverlap(overlapRx);
     AdsbSimResult r = adsbSimulate(c, rx);
     printf("sent %zu, decoded %zu (%.1f %%), phantom messages %zu; feed() took %.2f s for %.1f s of signal (%.1fx real time)\n", r.sent.size(), r.decoded,
            r.sent.empty() ? 0.0 : 100.0 * r.decoded / r.sent.size(), r.phantom, r.cpuSec, r.signalSec, r.signalSec / std::max(1e-9, r.cpuSec));
