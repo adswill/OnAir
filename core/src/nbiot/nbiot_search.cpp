@@ -134,9 +134,12 @@ bool align(const std::vector<cf32>& y240, const Det& d, Aligned& out) {
     const int W = 8;
     for (int j0 = 0; j0 + 2 <= maxFrames; j0 += W) {
         const int jn = std::min(W, maxFrames - j0);
-        std::vector<double> S(41, 0.0);
+        // the first window searches wide: the coarse timing is a mean over the whole block, and with a 50 ppm sample clock the first frames
+        // sit up to 100 samples (at 1.92 Msps) from it. +-20 then held a side peak of the NPSS, 60 samples off, and the cell's NSSS and MIB failed.
+        const int R = pts.empty() ? 128 : 20;
+        std::vector<double> S((size_t)(2 * R + 1), 0.0);
         int used = 0;
-        for (int dl = -20; dl <= 20; dl++) {
+        for (int dl = -R; dl <= R; dl++) {
             double sum = 0;
             used = 0;
             for (int j = j0; j < j0 + jn; j++) {
@@ -145,18 +148,19 @@ bool align(const std::vector<cf32>& y240, const Det& d, Aligned& out) {
                 sum += npssMetric(y1.data(), N1, s);
                 used++;
             }
-            S[(size_t)(dl + 20)] = sum;
+            S[(size_t)(dl + R)] = sum;
         }
         if (used < 2) continue;
+        const int nS = 2 * R + 1;
         int pk = 0;
-        for (int i = 1; i < 41; i++) if (S[(size_t)i] > S[(size_t)pk]) pk = i;
+        for (int i = 1; i < nS; i++) if (S[(size_t)i] > S[(size_t)pk]) pk = i;
         std::vector<double> sorted = S;
-        std::nth_element(sorted.begin(), sorted.begin() + 20, sorted.end());
-        if (S[(size_t)pk] < 2.2 * sorted[20]) continue;
+        std::nth_element(sorted.begin(), sorted.begin() + R, sorted.end());
+        if (S[(size_t)pk] < 2.2 * sorted[(size_t)R]) continue;
         double frac = 0;
-        if (pk > 0 && pk < 40) { const double a = S[(size_t)pk - 1], b = S[(size_t)pk], c = S[(size_t)pk + 1]; const double den = a - 2 * b + c; if (den < 0) frac = 0.5 * (a - c) / den; }
+        if (pk > 0 && pk < nS - 1) { const double a = S[(size_t)pk - 1], b = S[(size_t)pk], c = S[(size_t)pk + 1]; const double den = a - 2 * b + c; if (den < 0) frac = 0.5 * (a - c) / den; }
         const double jc = j0 + 0.5 * (jn - 1);
-        pts.push_back({jc, a0 + L * jc + (pk - 20) + frac});
+        pts.push_back({jc, a0 + L * jc + (pk - R) + frac});
         if (pts.size() >= 2) {   // least squares line through the points
             double sx = 0, sy = 0, sxx = 0, sxy = 0;
             for (const auto& p : pts) { sx += p.first; sy += p.second; sxx += p.first * p.first; sxy += p.first * p.second; }

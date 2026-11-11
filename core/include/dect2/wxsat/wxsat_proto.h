@@ -42,12 +42,16 @@ public:
     void push(int bit);
     bool locked() const { return lock_; }
     bool inverted() const { return inv_; }
+    // Hold each frame until the sync word that follows it is found, and drop it when that sync is missing (a sync word with no
+    // check of its own, found by chance in noise, gives no frame then). Off by default.
+    void setConfirm(bool on) { confirm_ = on; }
     uint64_t hits = 0;
 private:
     uint64_t sync_ = 0, mask_ = 0, sr_ = 0;
     int syncBits_ = 0, frameBits_ = 0, tolAcq_ = 0, tolTrack_ = 0;
-    bool allowInv_ = true;
+    bool allowInv_ = true, confirm_ = false, pending_ = false;
     bool lock_ = false, inv_ = false;
+    std::vector<uint8_t> held_;
     int pos_ = 0, misses_ = 0;
     std::vector<uint8_t> frame_;
     void start();
