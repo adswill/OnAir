@@ -1,6 +1,7 @@
 // ISDB-S: the coding of a frame, see isdbs_fec.h.
 #include "isdbs_fec.h"
 #include <algorithm>
+#include <array>
 #include <cmath>
 #include <cstring>
 #include <limits>
@@ -157,27 +158,40 @@ void FrameEncoder::encode(const Layout& L, const uint8_t* header, const std::vec
 // ============================================================================ decoder
 float viterbi(const Branch* b, int n, int startState, int endState, const int8_t* forced, uint8_t* bits, uint8_t* states) {
     const float kNeg = -1e30f;
-    float pm[64], npm[64];
+    alignas(64) float pm[64], npm[64];
     for (int s = 0; s < 64; s++) pm[s] = startState < 0 || s == startState ? 0.f : kNeg;
-    std::vector<uint64_t> dec((size_t)n);
+    // The two branches into state j (input 0) come from 2j and 2j + 1; into j + 32 (input 1) from the same two. Both generators use the
+    // input and the oldest bit, so flipping either flips both outputs: with a the output of 2j -> j, the branch 2j + 1 -> j sends a ^ 3,
+    // 2j -> j + 32 sends a ^ 3 and 2j + 1 -> j + 32 sends a. The sums and comparisons are the same as one state at a time; laid out like this
+    // the loop over the states vectorises.
+    static const auto outA = [] { std::array<uint8_t, 32> t{}; for (int j = 0; j < 32; j++) t[(size_t)j] = (uint8_t)convOut((unsigned)(j << 1), 0); return t; }();
+    thread_local std::vector<uint8_t> dec;   // the decision of each state at each step (1: from the odd predecessor)
+    if (dec.size() < (size_t)n * 64) dec.resize((size_t)n * 64);
     double acc = 0;
-    // the outputs of the two branches into each state: from s = ((ns & 31) << 1) | k with input ns >> 5
-    static unsigned outTab[64][2];
-    static bool init = false;
-    if (!init) { for (int ns = 0; ns < 64; ns++) for (int k = 0; k < 2; k++) outTab[ns][k] = convOut((unsigned)(((ns & 31) << 1) | k), ns >> 5); init = true; }
     for (int t = 0; t < n; t++) {
         const float* m = b[t].m;
-        uint64_t d = 0;
-        const int f = forced ? forced[t] : -1;
-        for (int ns = 0; ns < 64; ns++) {
-            const int p0 = (ns & 31) << 1, p1 = p0 | 1;
-            const float c0 = pm[p0] + m[outTab[ns][0]], c1 = pm[p1] + m[outTab[ns][1]];
-            if (c1 > c0) { npm[ns] = c1; d |= 1ull << ns; } else npm[ns] = c0;
-            if (f >= 0 && (ns >> 5) != f) npm[ns] = kNeg;
+        alignas(64) float bA[32], bB[32];
+        for (int j = 0; j < 32; j++) {   // selects rather than indexed loads: this loop vectorises too
+            const int a = outA[(size_t)j];
+            bA[j] = a == 0 ? m[0] : a == 1 ? m[1] : a == 2 ? m[2] : m[3];
+            bB[j] = a == 0 ? m[3] : a == 1 ? m[2] : a == 2 ? m[1] : m[0];
         }
-        dec[(size_t)t] = d;
+        uint8_t* d = &dec[(size_t)t * 64];
+        for (int j = 0; j < 32; j++) {
+            const float e = pm[2 * j], o = pm[2 * j + 1];
+            const float c0 = e + bA[j], c1 = o + bB[j];
+            const float c2 = e + bB[j], c3 = o + bA[j];
+            d[j] = c1 > c0; npm[j] = c1 > c0 ? c1 : c0;
+            d[j + 32] = c3 > c2; npm[j + 32] = c3 > c2 ? c3 : c2;
+        }
+        const int f = forced ? forced[t] : -1;
+        if (f == 0) for (int s = 32; s < 64; s++) npm[s] = kNeg;
+        else if (f == 1) for (int s = 0; s < 32; s++) npm[s] = kNeg;
+        float h8[8];   // the largest metric, in eight lanes (the same value as one at a time)
+        for (int k = 0; k < 8; k++) h8[k] = npm[k];
+        for (int s = 8; s < 64; s += 8) for (int k = 0; k < 8; k++) h8[k] = std::max(h8[k], npm[s + k]);
         float hi = kNeg;
-        for (int s = 0; s < 64; s++) hi = std::max(hi, npm[s]);
+        for (int k = 0; k < 8; k++) hi = std::max(hi, h8[k]);
         for (int s = 0; s < 64; s++) pm[s] = npm[s] < -1e29f ? kNeg : npm[s] - hi;
         acc += hi;
     }
@@ -187,7 +201,7 @@ float viterbi(const Branch* b, int n, int startState, int endState, const int8_t
     if (states) states[n] = (uint8_t)s;
     for (int t = n - 1; t >= 0; t--) {
         bits[t] = (uint8_t)(s >> 5);
-        s = ((s & 31) << 1) | (int)((dec[(size_t)t] >> s) & 1);
+        s = ((s & 31) << 1) | (int)dec[(size_t)t * 64 + (size_t)s];
         if (states) states[t] = (uint8_t)s;
     }
     return metric;
