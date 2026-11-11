@@ -34,7 +34,7 @@ The "next free is above the highest" rule was too strict: there are many gaps be
 
 Some of these are blocks another receiver reserved by arithmetic (for example the hamsci families 820 + 3k leave 821 / 822 unused on purpose, the chanvoice block 340-346): before using a range, run `test_mode_numbers` after adding the row. Because 406 numbers are free, **`kNumFamilies` and `kPollSeqSlots` do not need to change** for 20 or more new modes, so no `FAMILY-LIMIT-4.0.md` was written.
 
-### Third block of the shared x40 receiver: families 752 to 759 (this branch)
+### Third block of the shared x40 receiver: families 752 to 777 (this branch, feat40-modes3)
 
 The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)`: variants 0 - 14 keep 881 + v; variants 15 and up take 752, 753 ... (active standard family + 1, engine standard family + 2, poll slot = family). 752 - 787 (36 numbers) are reserved for this block; the macro `DECT2_X40_ACTIVE_CASES` lists the active standards in use.
 
@@ -50,7 +50,6 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | Frequency-hopper analyser | 759 | 760 | 761 | 759 |
 | Persistent carrier (birdie) finder | 760 | 761 | 762 | 760 |
 | Burst finder | 761 | 762 | 763 | 761 |
-
 | Fading analyser | 762 | 763 | 764 | 762 |
 | SDR input health meter | 763 | 764 | 765 | 763 |
 | Phase noise meter | 764 | 765 | 766 | 764 |
@@ -68,4 +67,4 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | Occupied bandwidth meter | 776 | 777 | 778 | 776 |
 | Spectral kurtosis RFI finder | 777 | 778 | 779 | 777 |
 
-Families 778 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
+Families 778 - 787 stay reserved for further modes of this block. A new variant needs: the enum entry and the active-standard `case` label in `x40_rx.h`, `makeX()` in `x40_int.h` / `x40_dec.cpp`, the tuning row in `x40_dec.cpp`, the name in `x40_rx.cpp`, `x40Tuning(v)` in the registry list of `core/src/engine/modes.cpp`, the table sizes and `makeUi<v>()` in `app/x40/x40_ui.cpp`, the `case` in `app/panels/modeui.cpp` and the mode-table row (`x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
