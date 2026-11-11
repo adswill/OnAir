@@ -176,6 +176,7 @@ struct SameReceiver::Impl {
     void configure(double rate) {
         fs = rate;
         isReady = false;
+        fe.chanPass2 = 4500.0; fe.chanStop2 = fe.chanPass2 * 1.8;   // 4.0: the 520 baud tones need much less than the 9 kHz channel (docs/SENSITIVITY-4.0-A3.md)
         if (!fe.configure(fs, sameTuning().minSampleRate)) return;
         audio48.design(dmr::lowpassTaps(3300.0, 8000.0, kMidRate, 50, 9), 2);
         audio8.design(dmr::lowpassTaps(3200.0, 800.0, 48000.0, 50, 9), 6);
@@ -417,7 +418,8 @@ struct SameReceiver::Impl {
 
     void feed(const cf32* x, size_t n) {
         if (!isReady || n == 0) return;
-        const std::vector<float>& disc = fe.process(x, n);
+        fe.process(x, n);
+        const std::vector<float>& disc = fe.narrowDisc();
         a48.clear();
         audio48.process(disc.data(), disc.size(), a48);
         if (listen.on.load() && !a48.empty()) { a8.clear(); audio8.process(a48.data(), a48.size(), a8); listen.play(a8.data(), a8.size()); }

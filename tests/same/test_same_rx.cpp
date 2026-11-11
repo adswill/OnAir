@@ -66,6 +66,14 @@ int main() {
     checkTwo("carrier +4 kHz", run(twoAlerts(25, 4000)), 3);
     checkTwo("carrier -3 kHz, 14 dB", run(twoAlerts(14, -3000)), 2);
     checkTwo("noisy 10 dB", run(twoAlerts(10, 500)), 2);
+    // 4.0 (docs/SENSITIVITY-4.0-A3.md): the tones through a 4.5 kHz channel of their own. Both alerts and both ends must come out exactly (3.9 decoded
+    // about half of the messages at 3 dB and 12 to 22 percent at 2 dB)
+    for (const auto& w : {std::pair<double, double>{3, 0}, {3, 3000}, {3, -5000}, {2, 0}}) {
+        const auto t = run(twoAlerts(w.first, w.second));
+        const auto v = inOrder(t);
+        printf("weak %.0f dB, carrier %+.0f Hz: %zu messages, snr %.1f dB\n", w.first, w.second, v.size(), t.snrDb);
+        CHECK(v.size() == 4 && v[0].valid && v[0].raw == sameTestTornado() && v[2].valid && v[2].raw == sameTestWeekly(), "weak %.0f dB %+.0f Hz: %zu messages", w.first, w.second, v.size());
+    }
 
     {   // one repeat corrupted (bit errors in the text): the 3-way vote repairs it
         SameGenConfig c = twoAlerts(30, 0);
@@ -75,7 +83,8 @@ int main() {
         checkTwo("corrupted repeat", t, 2);
         for (const auto& al : t.alerts) printf("  [%d/%d fixed %d] %s\n", al.agreeing, al.bursts, al.bitsFixed, al.raw.c_str());
         const auto v = inOrder(t);
-        if (v.size() == 4) CHECK(v[0].bitsFixed >= 1 && v[0].agreeing == 2 && v[2].agreeing >= 2, "voting fixed %d / %d bits, %d agree", v[0].bitsFixed, v[2].bitsFixed, v[0].agreeing);
+        if (v.size() == 4) CHECK(v[0].agreeing == 2 && v[2].agreeing >= 2,   // (bitsFixed: 6 in 3.9; the damaged repeat now reaches the vote with a different tail, so the count is 0 and the vote still repairs it)
+                     "voting fixed %d / %d bits, %d agree", v[0].bitsFixed, v[2].bitsFixed, v[0].agreeing);
     }
     {   // a repeat missing (2 of 3 heard) and a repeat damaged in the other
         SameGenConfig c = twoAlerts(30, 0);
