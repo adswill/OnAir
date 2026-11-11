@@ -1,4 +1,4 @@
-# Sensitivity 3.9 E: wM-Bus, GNSS acquisition, CW timing, HD Radio AM (feat39-sensE)
+# Sensitivity 3.9 E: wM-Bus, GNSS acquisition, CW timing, HD Radio AM (feat39-sensE, CW: feat39-cwfist)
 
 Branch feat39-sensE on integ-39. The four leftovers of docs/SENSITIVITY-3.9-C.md and -D.md. Every figure here is from simulated signals
 (each mode's own generator, white Gaussian noise, the sens_sweep impairments). No recording was used: simulated only.
@@ -8,7 +8,7 @@ Branch feat39-sensE on integ-39. The four leftovers of docs/SENSITIVITY-3.9-C.md
 | Wireless M-Bus (sens39c mix, 100 kHz) | 17 dB | **11 dB** | yes |
 | GNSS, 32 dB-Hz sky, 34 s (test_gnss_sweep) | 0 of 8 satellites tracked | **3 of 8** (2 with the frame) | yes |
 | GNSS one-satellite acquisition, 16 ms (test_gnss_loops A) | 90 % point 35.8 dB-Hz | unchanged (see below) | - |
-| CW skimmer timing | legacy clustering | unchanged (see below) | no |
+| CW skimmer, CER % at 2 / 4 dB (4 seeds, section 3) | machine 13.2 / 6.6, sloppy 35.6 / 28.2, Farnsworth 53.5 / 18.0 | **machine 6.6 / 2.6, sloppy 21.0 / 10.9, Farnsworth 36.0 / 8.7** (adaptive timing, feat39-cwfist) | yes |
 | HD Radio AM (sens_sweep, 6 trials, 1 dB steps) | awgn 22, cfo20ppm 22 dB, lock 11 s | **awgn 18, cfo20ppm 18 dB**, lock 7.5 s | yes |
 
 ## 1. Wireless M-Bus (core/src/wmbus/wmbus_live.cpp, wmbus_proto.cpp)
@@ -79,30 +79,105 @@ time). The sweep now checks that the 32 dB-Hz sky gives at least 2 satellites. g
 Not done: the 16 ms one-satellite figure itself (35.8 dB-Hz) is unchanged; lowering it means a longer first round, which delays a strong
 sky. The 36 dB-Hz sky's missing fix is the ephemeris time after late locks, not acquisition.
 
-## 3. CW timing (not changed)
+## 3. CW timing (feat39-cwfist: the skimmer now uses the adaptive decoder)
 
-The adaptive classifier asked for exists: cw::FistDecoder (cw_decoder.h, 0.2.8), a Bayesian timing model in the log domain with learned
-dot / dash / gap classes, a beam search and a character model, behind cw::Chain (cw_chain.h). The skimmer (CwReceiver) never used it: it
-runs the 0.2.7 detector, Keyer and Timing. This pass wired Chain into the skimmer behind a switch and measured both on the receiver
-(CwGenerator, "CQ DE LY2ABC LY2ABC K" repeated with 1 s pauses, 80 s, 2 seeds, CER of the middle copies):
+The adaptive classifier is cw::FistDecoder (cw_decoder.h, 0.2.8), a Bayesian timing model in the log domain with learned dot / dash / gap
+classes, a beam search and a character model. The skimmer (CwReceiver) ran the 0.2.7 Timing. The first pass (sensE) wired FistDecoder in
+and found it better on irregular fists but worse at low SNR, with Farnsworth spacing and on the first character after a pause, so it was
+reverted. feat39-cwfist fixed those weaknesses in FistDecoder and switched the skimmer to it.
+
+Changes in core/src/cw/cw_decoder.cpp:
+1. Wide gaps. The character gap may now be learned up to 15 dots (was 6.7) and the word gap up to 40 (was 20). Farnsworth 20 / 12 sends
+   about 8 and 19. The gap classes are fitted from the data: the intra start is the shortest quarter, the character start is the median
+   of the longer gaps, and the word start is their top. A fit with more word gaps than character gaps is rejected. The classes are also
+   fitted from the backlog at the lock, which now waits for three gaps between characters. Before this, Farnsworth's first transmission
+   read "C Q D E L Y 2".
+2. Noise in the gaps (low SNR). The detector opens on noise for a few ms in the gaps of a weak signal, and those blips had pulled the
+   dot length down to the noise. At 0 dB a 22 WPM signal was read at 60 WPM, all "E" and "T". Three changes:
+   - The lock ignores marks under half a dot.
+   - The marks are fitted anchored on the dashes: a 2-means in linear time, then a 3-class mixture (blip, dot, dash).
+   - A blip on a noisy signal no longer counts against the fit, so it no longer drops the lock.
+3. Soft mark / space decisions. A clear drop-out (under 0.3 dot) or spike (under 0.33 dot) is merged as before. Other events are decided
+   by the model when the detector is noisy, measured as the learned rate of clear spikes (over 1.5 %). The model compares the three events
+   as read against one merged event plus the log chance of a detector error. The single-element word ("E", "T") between longer gaps has a
+   1 % prior. In the beam, a mark at the start of a word may be noise, and the character model decides, so "CQ" wins over ";Q" or "<AR>Q".
+   This is the fix for the first character after a pause. The soft merges are off on a clean signal: there, those patterns are a change of
+   speed, and the stress case 12 -> 24 WPM went to 34 % CER until this gate was added.
+4. Timing after a pause. After a pause (over twice the word gap), the next word (up to 10 marks) is held. If another dot length explains
+   its marks and gaps at least twice as well, the model moves to that speed before the word is read. Decoder alone, "TEST DL1XYZ ..." after
+   a 3 s pause at another speed: 25 -> 15, 20 -> 10 and 30 -> 18 WPM read "T E T" before and "TEST" now; 15 -> 30 and 12 -> 24 WPM lost the
+   word before and read it now.
+5. A lost lock keeps what it learned. When the lock drops (a long noisy stretch) and comes back within 25 % of the old speed, it starts
+   from the old classes. Before this, Farnsworth copies after a drop read one letter a word.
+
+Skimmer (core/src/cw/cw_rx.cpp): the adaptive timing is the default and runs behind the same debounce as cw::Keyer. The 0.2.7 timing is
+kept behind CwReceiver::setTimingDecoder(1), used for comparison and by the tests. The whole-span slice skimmers follow the setting.
+setKeyTap gives tests the detector output. CPU: test_cw_wide (12 signals, whole span) measures 5.89 s for 40 s, against 5.85 s with the old
+receiver.
+
+### Results: the whole receiver
+
+These figures come from tests/cw/cw_skim_bench.cpp `rx 4 80`: CwReceiver at 250 kHz, CwGenerator sending "CQ DE LY2ABC LY2ABC K" with
+1 s pauses at +500 Hz, 80 s, seeds 1 - 4. CER is the edit distance of every copy after the first, against the decoded text. This is
+stricter than sensE's middle copies: the last copy counts too, and with Farnsworth's few copies the best one could no longer stand in for
+the rest. The scenarios are machine 22 WPM, hand 20 WPM (12 % jitter, 3.4 ratio), sloppy 20 WPM (22 %, 2.7) and Farnsworth 20 / 12.
 
 | CER % at SNR in 500 Hz | 0 | 2 | 4 | 6 | 10 | 20 |
 |---|---|---|---|---|---|---|
-| machine 22 WPM, legacy | 26.9 | 13.8 | 4.6 | 1.5 | 0 | 0 |
-| machine, adaptive | 60.0 | 16.9 | 8.5 | 5.4 | 6.2 | 0 |
-| hand (12 % jitter, 3.4 ratio), legacy | 17.4 | 4.7 | 0 | 0 | 0 | 0 |
-| hand, adaptive | 52.3 | 24.4 | 5.8 | 4.7 | 4.7 | 0 |
-| sloppy (22 %, 2.7), legacy | 57.0 | 31.4 | 18.6 | 18.6 | 15.1 | 15.1 |
-| sloppy, adaptive | 68.6 | 32.6 | 10.5 | 10.5 | 9.3 | 3.5 |
-| Farnsworth 20 / 12, legacy | 64.3 | 54.8 | 7.1 | 0 | 0 | 0 |
-| Farnsworth, adaptive | 71.4 | 64.3 | 40.5 | 26.2 | 9.5 | 0 |
+| machine, 0.2.7 timing | 30.5 | 13.2 | 6.6 | 1.1 | 0 | 0 |
+| machine, adaptive (now) | **23.6** | **6.6** | **2.6** | **0.3** | 0 | 0 |
+| hand, 0.2.7 timing | 30.4 | 13.8 | 1.9 | 0.4 | 0 | 0 |
+| hand, adaptive (now) | **25.4** | **6.5** | **1.2** | **0** | 0 | 0 |
+| sloppy, 0.2.7 timing | 58.3 | 35.6 | 28.2 | 20.4 | 20.4 | 21.6 |
+| sloppy, adaptive (now) | **47.7** | **21.0** | **10.9** | **7.2** | **6.6** | **6.3** |
+| Farnsworth, 0.2.7 timing | 65.7 | 53.5 | 18.0 | 7.0 | 0 | 0 |
+| Farnsworth, adaptive (now) | **59.9** | **36.0** | **8.7** | **1.7** | 0 | 0 |
 
-With the 0.2.7 detector in front of the adaptive timing (T_LEGDET) machine is 7.7 / 4.6 / 0 at 4 / 6 / 10 dB and sloppy 2.3 at 10 dB.
-The fist benchmark (tests/cw/cw_fist_bench.cpp, the chain alone) gives mean CER 15.0 -> 2.4 % at 15 dB over its 11 fists but
-29.1 -> 27.4 % at 2 dB, machine 6.7 -> 14.4 %. The adaptive decoder misreads the first character after a pause ("CQ" as "NQ" or "I Q")
-and loses at low SNR on steady keying and on Farnsworth spacing, so it is better only for irregular fists. Not a clean gain: the wiring was
-reverted and the skimmer is unchanged. Next step: the first mark after a long gap (the speed and the mark level after the pause) and the
-Farnsworth gaps in FistDecoder, then the switch.
+The adaptive timing is no worse than the 0.2.7 timing at every point, and better at every point where either has errors. The second capture
+(seeds 1 - 2, captured separately) gives the same result. The decoder was tuned on saved detector output (`cap` / `rep`). Replaying the
+0.2.7 timing on it reproduces the receiver's own figures exactly. Because the adaptive timing is never worse, the skimmer uses it for every
+signal, and no per-signal choice is needed.
+
+For comparison with sensE's table, measured the same way (middle copies only, 2 seeds), FistDecoder before this branch gave Farnsworth
+4 dB 26.2 % and machine 0 dB 45.4 %.
+
+### Results: the chain alone
+
+These figures come from tests/cw/cw_fist_bench.cpp: cw::Chain, 11 fists, QSO text, 3 seeds x 200 characters, adaptive decoder before and
+after.
+
+| mean CER % at | 2 dB | 6 dB | 10 dB | 15 dB | 25 dB |
+|---|---|---|---|---|---|
+| QSO text, before | 27.4 | 4.0 | 2.3 | 2.4 | 2.4 |
+| QSO text, after | **23.1** | **3.5** | 2.2 | 2.2 | 2.1 |
+| free text (2 seeds), before | 27.8 | 6.5 | 5.8 | 5.4 | 5.6 |
+| free text, after | **22.2** | **6.0** | 5.6 | 5.3 | 5.5 |
+| the skimmer's detector in front (T_LEGDET, 2 seeds), before | 31.6 | 4.4 | 2.3 | 2.3 | 2.3 |
+| same, after | **19.7** | **3.1** | 2.0 | 2.0 | 2.1 |
+
+A few points of the 11 fists got slightly worse: straight key 1.5 -> 1.8 % at 10 - 25 dB, heavy 22.9 -> 23.8 % at 2 dB, and slow-hand
+9.3 -> 9.6 % at 6 dB. The stress set (straight key, 3 seeds) moved from before to after as follows:
+- clean 1.6 -> 1.4 %
+- key clicks 5.6 -> 5.6 %
+- noise crashes 2.3 -> 2.5 %
+- 12 -> 24 WPM 6.0 -> 5.8 %
+- 25 -> 10 WPM 6.0 -> 5.6 %
+
+Noise alone gave 0 characters in 4 x 3 minutes, before and after.
+
+Not fixed: the first character of a signal's first transmission is still sometimes wrong ("GQ", "FQ" for "CQ"). The skimmer opens a signal
+on a carrier it has just seen, inside that first mark, so the first mark is cut. The 0.2.7 timing prints "*" there. Rules that dropped the
+first character also dropped good ones (6 WPM), so none was kept.
+
+Tests: tests/cw/test_cw_fistrx.cpp (ctest cw_fistrx, about 11 s) covers:
+- the decoder alone: Farnsworth 20 / 10 from the first transmission, blips in a pause, speed changes after a pause, a lock lost in noise;
+- the receiver: the bench's points (machine and hand at 2 dB, Farnsworth at 4 dB) under the 0.2.7 timing's figures;
+- sloppy at 10 dB against a live run of the 0.2.7 timing;
+- "K CQ DE" after every pause, and the Farnsworth flag with a 90 Hz tuning error;
+- noise alone.
+
+ONAIR_TEST_LONG=1 runs the whole table. cw_rx, cw_wide, cw_morse and cw_engine pass with the adaptive default. All of this is on simulated
+signals only: no CW recording was used.
 
 ## 4. HD Radio AM (core/src/hdr/hdr_phy.cpp)
 
@@ -143,5 +218,6 @@ Test: test_hdr_am starts an MA1 signal (30 dB, no tuning error) at four points a
 ## Tests and validation
 
 Local (prebuilt integ-39 libraries plus the changed files, Mac): wmbus_live, wmbus_engine, wmbus_proto, wmbus_wize, wmbus_leak, sens39c,
-gnss_loops, gnss_sweep, gnss_cfo, gnss_rx, gnss_engine, gnss_rates, hdr_am, hdr_rx, hdr_engine, hdr_wide, hdr_realworld. All simulated
+gnss_loops, gnss_sweep, gnss_cfo, gnss_rx, gnss_engine, gnss_rates, hdr_am, hdr_rx, hdr_engine, hdr_wide, hdr_realworld; for CW
+(feat39-cwfist) cw_fistrx, cw_rx, cw_wide, cw_morse, cw_engine. All simulated
 signals; nothing here was checked on a recording.

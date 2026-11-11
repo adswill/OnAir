@@ -4,8 +4,9 @@
 // held with a fast attack and a slow release so a keyed carrier stays visible between its elements, finds the carriers: peaks 10 dB over
 // the median of the window (the noise floor), at least 60 Hz apart. Each carrier gets its own signal path: mixed to 0 Hz, CIC to 1 kHz,
 // a 65-tap low-pass (+-50 Hz), the envelope, and an adaptive threshold between a mark level (fast attack, follows the fading) and a noise
-// level, with hysteresis. The key-down / key-up durations go to the timing decoder (cw_morse.h): speed 5 - 50 WPM followed from the
-// dot / dash clusters, Farnsworth spacing, prosigns. A signal that stays silent for 30 s is dropped (unless it is the focus).
+// level, with hysteresis. The key-down / key-up durations go to the timing decoder: the adaptive one (cw_decoder.h: the sender's dot,
+// dash and gap classes learned, speed 5 - 50 WPM, Farnsworth spacing, prosigns, noise in the gaps of a weak signal decided by the model)
+// or, chosen with setTimingDecoder, the fixed clustering of 0.2.7 (cw_morse.h). A signal that stays silent for 30 s is dropped (unless it is the focus).
 //
 // The focus (setFocusHz, a click on the waterfall) is the signal of the big text view; it can have a sidetone: a tone (400 - 1000 Hz, 700 default) keyed by its
 // decoder, off by default (setSidetone).
@@ -56,6 +57,11 @@ public:
     bool wide() const;
     void setSpotShiftHz(double hz);      // internal (slice skimmers): added to a signal's offset for the PSK Reporter spot
     void setSidetoneTap(std::function<void(const float* x, size_t n)> cb);   // tests: the 8 kHz sidetone (mono)
+    // The timing decoder: 0 automatic (the default: the adaptive one), 1 the fixed clustering of 0.2.7 (cw_morse.h Timing, kept for
+    // comparison), 2 the adaptive one (cw_decoder.h FistDecoder: learns the sender, reads hand keying and Farnsworth spacing)
+    void setTimingDecoder(int which);
+    int timingDecoder() const;
+    void setKeyTap(std::function<void(int id, double offsetHz, bool key)> cb);   // tests: every signal's detector output, once a millisecond
 
 private:
     struct Impl;

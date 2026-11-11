@@ -1636,3 +1636,14 @@ Details: docs/BCAST-3.9.md, docs/DVBC2-3.9.md, docs/DVBSH-3.9.md.
 
 ## 2026-11-11 QA sweep fixes, second half, and X-band CPU (feat39-qafixB)
 The second half of the sweep's open list (navic .. xb_oceansat2, 20 entries), each reproduced, root-caused and tested (docs/QA-SWEEP-3.9.md, "Second half of the open list"). Decoder fixes: UMTS measures the sample clock on the P-SCH and resamples to the chip clock (no cell was found at 5 ppm before); NB-IoT's first NPSS timing window searches +-128 samples (a side peak at -50 ppm); the OneWeb repetition detector folds three lags; UAT (fixed by feat39-sensC, kept at the merge) gets a round-trip test over rates, offsets, clock error and noise; NR gets a recording's centre; the engine sets the channelised-voice service itself (headless runs were CB for all seven); Oceansat-2 frames wait for the next sync word; QO-100, the spectrum explorer and PACTOR-IV report valid results. Harness: a locked clean run with few blocks goes on to the longer run. NavIC and riometer need more signal than the file cap; PACTOR-IV +-2 kHz is the HF window condition. X-band: a buffer moved every symbol made noise cost 30 - 350 CPU s per second; with that fixed and a carrier-line pre-check that skips seven blocks in eight on noise it is 0.1 - 1.2 (80 - 1000 times less); the clean path is 13 - 25 % cheaper (table NCO, inline deframer, hoisted loop gains), same frames decoded. All on simulated signals.
+
+## 2026-11-11 CW skimmer on the adaptive timing (feat39-cwfist)
+
+FistDecoder's weak points from sensE are fixed, and the skimmer now uses it (docs/SENSITIVITY-3.9-E.md section 3, simulated only).
+- Wide gap classes for Farnsworth. Gap classes are fitted from the data, including the backlog at the lock.
+- At low SNR: a lock and mark fit that ignore noise blips and are anchored on the dashes, and soft merges of split marks and noise
+  spikes decided by the model when the detector is noisy.
+- A beam option for noise at the start of a word, which fixes the first character after a pause.
+- After a pause, the next word is held and the speed is re-estimated. A lost lock keeps the learned classes.
+- Receiver CER, 4 seeds: machine 2 dB 13.2 -> 6.6, sloppy 10 dB 20.4 -> 6.6, Farnsworth 4 dB 18.0 -> 8.7. No scenario point is worse.
+- The 0.2.7 timing is kept behind CwReceiver::setTimingDecoder(1). New test cw_fistrx and bench tests/cw/cw_skim_bench.cpp.
