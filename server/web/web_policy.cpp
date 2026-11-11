@@ -91,6 +91,7 @@ const std::set<std::string>& restrictedKnownKinds() {
     "vdl3",   // 3.9
     "fbr",   // 3.9: Fleet Broadcast (UHF SATCOM); blocked until the owner approves it
     "ltpos",   // 3.9: Lightning position has a network key and a server role
+    "cp16",   // 3.9
     "iptv", "atis", "selcal", "gk2alrit", "gk2ahrit", "opensky",   // (esubghz was never classified: web_safety failed on integ-32)
     // 3.5 modes: blocked likewise (shortwave is a broadcast receiver like "general", but the web allow-list is the owner's call)
     "shortwave",

@@ -9,6 +9,8 @@
 #include "../ui/typography.h"
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/hfdig/hfdig_kbd.h"
+#include "dect2/cp16/cp16_proto.h"
+#include "../ui/cjk_fonts.h"
 #include "dect2/tv/videogen.h"
 #include <algorithm>
 #include <cmath>
@@ -235,6 +237,19 @@ void hellFontRow() {
     if (ImGui::Button(tr("Built-in glyphs only"))) { path[0] = 0; apply(""); }
     if (!msg.empty()) ImGui::TextDisabled("%s", msg.c_str());
     ImGui::TreePop();
+}
+
+// CP16: the characters are drawn with the font of the mode's screen (the bundled Chinese font, or the file chosen under its Advanced)
+void cp16FontRow() {
+    static bool init = false;
+    if (!init) {
+        init = true;
+        std::string err;
+        dect2::cp16::setDefaultFontData(cjk::regularFontData(), "Noto Sans CJK SC", err);
+        const std::string p = plat::prefs().getS("cp16Font", "");
+        if (!p.empty()) dect2::cp16::loadFontFile(p, err);
+    }
+    ImGui::TextDisabled("%s %s", tr("Font:"), dect2::cp16::fontName().c_str());
 }
 
 void browseFile(TxUi& s, const char* id) {
@@ -554,6 +569,7 @@ void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running) {
     case TxPayloadKind::Keyboard:
         if (ImGui::InputText(tr("Text"), s.text, sizeof s.text)) saveStr("tx.text", s.text);
         if (mode.id && std::string(mode.id) == "hell") hellFontRow();
+        if (mode.id && std::string(mode.id) == "cp16") cp16FontRow();
         break;
     case TxPayloadKind::Cw:
         if (ImGui::InputText(tr("Text"), s.text, sizeof s.text)) saveStr("tx.text", s.text);

@@ -12,6 +12,12 @@ extern const unsigned char regular[], bold[];
 extern const size_t regularSize, boldSize;
 }
 
+std::vector<uint8_t> regularFontData() {
+    std::vector<uint8_t> raw;
+    if (!dect2::inflateRaw(data::regular, data::regularSize, raw)) raw.clear();
+    return raw;
+}
+
 void configureBase(ImFontConfig& config) {
     if (std::strcmp(i18n::current(), "zh") != 0) return;
     static const ImWchar exclude[] = {0x2e80, 0x9fff, 0xa960, 0xa97f, 0xac00, 0xd7ff, 0xf900, 0xfaff, 0xff00, 0xffef, 0};

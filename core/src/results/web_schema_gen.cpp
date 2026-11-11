@@ -32,6 +32,7 @@
 #include "dect2/chanvoice/chv_tel.h"
 #include "dect2/cishf/cishf_tel.h"
 #include "dect2/codar/codar_tel.h"
+#include "dect2/cp16/cp16_tel.h"
 #include "dect2/cquam/cquam_tel.h"
 #include "dect2/cubesat/cubesat_proto.h"
 #include "dect2/cubesat/cubesat_tel.h"
@@ -863,6 +864,8 @@ static void ev_dect2__W1aEvent(std::string& s, const dect2::W1aEvent& v);
 static void ev_dect2__W1aTelemetry(std::string& s, const dect2::W1aTelemetry& v);
 static void ev_dect2__FbrChannel(std::string& s, const dect2::FbrChannel& v);
 static void ev_dect2__FbrTelemetry(std::string& s, const dect2::FbrTelemetry& v);
+static void ev_dect2__Cp16Char(std::string& s, const dect2::Cp16Char& v);
+static void ev_dect2__Cp16Telemetry(std::string& s, const dect2::Cp16Telemetry& v);
 static void ev_dect2__DvbsIpFlow(std::string& s, const dect2::DvbsIpFlow& v) {
     detail::J o(s);
     o.key("src"); detail::vstr(s, v.src, 4096);
@@ -14161,6 +14164,47 @@ static void ev_dect2__FbrTelemetry(std::string& s, const dect2::FbrTelemetry& v)
     o.end();
 }
 
+static void ev_dect2__Cp16Char(std::string& s, const dect2::Cp16Char& v) {
+    detail::J o(s);
+    o.key("serial"); detail::vu64(s, (unsigned long long)(v.serial));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("cp"); detail::vnum(s, (double)(v.cp));
+    o.key("score"); detail::vnum(s, (double)(v.score));
+    o.key("margin"); detail::vnum(s, (double)(v.margin));
+    o.key("sure"); detail::vbool(s, v.sure);
+    o.end();
+}
+
+static void ev_dect2__Cp16Telemetry(std::string& s, const dect2::Cp16Telemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("rateOk"); detail::vbool(s, v.rateOk);
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("nowSec"); detail::vnum(s, (double)(v.nowSec));
+    o.key("baseHz"); detail::vnum(s, (double)(v.baseHz));
+    o.key("spacingHz"); detail::vnum(s, (double)(v.spacingHz));
+    o.key("rowSec"); detail::vnum(s, (double)(v.rowSec));
+    o.key("charSec"); detail::vnum(s, (double)(v.charSec));
+    o.key("mirrored"); detail::vbool(s, v.mirrored);
+    o.key("combScore"); detail::vnum(s, (double)(v.combScore));
+    o.key("timingScore"); detail::vnum(s, (double)(v.timingScore));
+    o.key("fontName"); detail::vstr(s, v.fontName, 4096);
+    o.key("rows"); { detail::Arr a(s); const size_t n = (v.rows).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); { detail::Arr a(s); const size_t n = ((v.rows)[i]).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)(((v.rows)[i])[i])); } a.end(); } } a.end(); }
+    o.key("firstRow"); detail::vu64(s, (unsigned long long)(v.firstRow));
+    o.key("rowCount"); detail::vu64(s, (unsigned long long)(v.rowCount));
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("chars"); { detail::Arr a(s); const size_t n = (v.chars).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__Cp16Char(s, (v.chars)[i]); } a.end(); }
+    o.end();
+}
+
 static const char kSchema_dect2__DvbsIpFlow[] = R"JSON([{"n":"src","l":"Src","k":"text"},{"n":"dst","l":"Dst","k":"text"},{"n":"protocol","l":"Protocol","k":"text"},{"n":"sport","l":"Sport","k":"num"},{"n":"dport","l":"Dport","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"encrypted","l":"The headers are good but the UDP checksums fail: the payload was changed in transit","k":"bool"}])JSON";
 static const char kSchema_dect2__DvbsIpLabel[] = R"JSON([{"n":"label","l":"Label","k":"text"},{"n":"pdus","l":"Pdus","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"ip","l":"Ip","k":"num"},{"n":"addrs","l":"Addrs","k":"lines"},{"n":"modcods","l":"\"QPSK 5/6 41 %, 16APSK 3/4 59 %\": where the bytes went","k":"text"}])JSON";
 static const char kSchema_dect2__DvbsMediaFlow[] = R"JSON([{"n":"dst","l":"Dst","k":"text"},{"n":"src","l":"Src","k":"text"},{"n":"kind","l":"Kind","k":"text"},{"n":"codec","l":"Codec","k":"text"},{"n":"port","l":"Port","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"lost","l":"Lost","k":"num"},{"n":"kbps","l":"Kbps","k":"num"},{"n":"services","l":"MPEG-TS flows: the programmes found in them","k":"lines"},{"n":"scrambled","l":"Transport packets of the flow are scrambled: only labelled","k":"bool"}])JSON";
@@ -14809,6 +14853,8 @@ static const char kSchema_dect2__W1aEvent[] = R"JSON([{"n":"utc","l":"Utc","k":"
 static const char kSchema_dect2__W1aTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 searching, 1 signal found, 2 decoded / confirmed","k":"num"},{"n":"cfoHz","l":"Packet: the tone offset found","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Packet: frames with a good / bad FCS","k":"num"},{"n":"blocksBad","l":"Packet: frames with a good / bad FCS","k":"num"},{"n":"kind","l":"W1a::Kind","k":"num"},{"n":"mode","l":"One line: what was found","k":"text"},{"n":"params","l":"Params","k":"list"},{"n":"text","l":"Packet: the newest frames, one per line","k":"text"},{"n":"events","l":"Newest first","k":"table","s":"dect2::W1aEvent","f":[{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"text","l":"Text","k":"text"}]},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"spec","l":"Inversion: the long-term audio spectrum, dB, 0 .. 4.8 kHz in 50 Hz steps","u":"dB","k":"list"},{"n":"recording","l":"Inversion: the descrambled audio is being written to a WAV file","k":"bool"},{"n":"recordPath","l":"Record Path","k":"text"}])JSON";
 static const char kSchema_dect2__FbrChannel[] = R"JSON([{"n":"cls","l":"'S' repeating pattern","k":"num"},{"n":"activity","l":"Share of frame-to-frame bit changes, 0 .. 1","k":"num"},{"n":"period","l":"'S': the repeat length in frames","k":"num"},{"n":"ones","l":"Share of 1 bits","k":"num"},{"n":"hex","l":"The last 64 bits of the channel as 16 hex digits, oldest first","k":"text"}])JSON";
 static const char kSchema_dect2__FbrTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing, 1 a BPSK carrier found, 2 symbols locked","k":"num"},{"n":"cfoHz","l":"Carrier offset from the radio's centre as tracked","u":"Hz","k":"num"},{"n":"snrDb","l":"Symbol-to-noise ratio in 1.2 kHz, estimated from the differential decisions","u":"dB","k":"num"},{"n":"levelDb","l":"Input level, dBFS","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Frames passed since the frame alignment","k":"num"},{"n":"blocksBad","l":"Times the alignment was lost","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerMhz","l":"Where the radio is tuned","u":"MHz","k":"num"},{"n":"offsetHz","l":"Carrier from the radio's tuned frequency","u":"Hz","k":"num"},{"n":"freqMhz","l":"Absolute","u":"MHz","k":"num"},{"n":"carrier","l":"The listed carrier within 5 kHz","u":"kHz","k":"text"},{"n":"toneDb","l":"Peak of the squared signal over its noise floor at acquisition, dB","u":"dB","k":"num"},{"n":"baud","l":"Assumed symbol rate","k":"num"},{"n":"clockPpm","l":"Symbol clock offset measured against it","u":"ppm","k":"num"},{"n":"eye","l":"Quadrature share of the differential decisions: 0 clean, towards 1 noisy","k":"num"},{"n":"symbols","l":"Symbols","k":"num"},{"n":"inverted","l":"The bit polarity switch is on","k":"bool"},{"n":"bits","l":"The last bits as received, '0' / '1', oldest first","k":"text"},{"n":"framed","l":"Framed","k":"bool"},{"n":"ambiguous","l":"Several columns repeat: the frame start cannot be told","k":"bool"},{"n":"syncPeriod","l":"The repeat length of the sync channel found, in frames","k":"num"},{"n":"syncQuality","l":"Agreement of the sync channel with its own repeat, percent","k":"num"},{"n":"frames","l":"Frames","k":"num"},{"n":"status","l":"\"[Sr-i...]\": one letter per channel","k":"text"},{"n":"ch","l":"Ch","k":"table","s":"dect2::FbrChannel","f":[{"n":"cls","l":"'S' repeating pattern","k":"num"},{"n":"activity","l":"Share of frame-to-frame bit changes, 0 .. 1","k":"num"},{"n":"period","l":"'S': the repeat length in frames","k":"num"},{"n":"ones","l":"Share of 1 bits","k":"num"},{"n":"hex","l":"The last 64 bits of the channel as 16 hex digits, oldest first","k":"text"}]},{"n":"frameLog","l":"The last frames as 4 hex digits, channel 0 is the top bit, newest last","k":"lines"},{"n":"log","l":"Events, newest last","k":"lines"}])JSON";
+static const char kSchema_dect2__Cp16Char[] = R"JSON([{"n":"serial","l":"Serial","k":"num"},{"n":"timeSec","l":"Start of its first row, seconds of signal","u":"s","k":"num"},{"n":"text","l":"The character","k":"text"},{"n":"cp","l":"Cp","k":"num"},{"n":"score","l":"Correlation with the font's glyph, 0 .. 1","k":"num"},{"n":"margin","l":"Over the runner-up","k":"num"},{"n":"sure","l":"Score and margin high enough to be taken as read","k":"bool"}])JSON";
+static const char kSchema_dect2__Cp16Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 listening, 1 carriers found, 2 rows in step","k":"num"},{"n":"cfoHz","l":"The lowest carrier against the expected position","u":"Hz","k":"num"},{"n":"snrDb","l":"Inked dots over blank dots, dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Characters read with confidence","k":"num"},{"n":"blocksBad","l":"Cells with dots that matched no character well","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"rateOk","l":"Rate OK","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"nowSec","l":"Now Sec","u":"s","k":"num"},{"n":"baseHz","l":"Audio frequency of the column-0 carrier","u":"Hz","k":"num"},{"n":"spacingHz","l":"Spacing Hz","u":"Hz","k":"num"},{"n":"rowSec","l":"Row Sec","u":"s","k":"num"},{"n":"charSec","l":"17 rows","u":"s","k":"num"},{"n":"mirrored","l":"Lower sideband","k":"bool"},{"n":"combScore","l":"How clearly 16 equally spaced carriers stand out, dB","u":"dB","k":"num"},{"n":"timingScore","l":"Coherence of the row edges, 0 .. 1","k":"num"},{"n":"fontName","l":"Font Name","k":"text"},{"n":"rows","l":"Rows","k":"list"},{"n":"firstRow","l":"Serial of rows[0]","k":"num"},{"n":"rowCount","l":"Rows made so far","k":"num"},{"n":"text","l":"Characters read","k":"text"},{"n":"chars","l":"Newest last","k":"table","s":"dect2::Cp16Char","f":[{"n":"serial","l":"Serial","k":"num"},{"n":"timeSec","l":"Start of its first row, seconds of signal","u":"s","k":"num"},{"n":"text","l":"The character","k":"text"},{"n":"cp","l":"Cp","k":"num"},{"n":"score","l":"Correlation with the font's glyph, 0 .. 1","k":"num"},{"n":"margin","l":"Over the runner-up","k":"num"},{"n":"sure","l":"Score and margin high enough to be taken as read","k":"bool"}]}])JSON";
 struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };
 static bool put_7(const RxTelemetry& rx, std::string& s) { ev_dect2__DvbsTelemetry(s, rx.dvbs); return true; }
 static bool put_8(const RxTelemetry& rx, std::string& s) { ev_dect2__DtmbTelemetry(s, rx.dtmb); return true; }
@@ -15085,6 +15131,7 @@ static bool put_850(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelem
 static bool put_853(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_856(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_871(const RxTelemetry& rx, std::string& s) { ev_dect2__FbrTelemetry(s, rx.fbr); return true; }
+static bool put_881(const RxTelemetry& rx, std::string& s) { ev_dect2__Cp16Telemetry(s, rx.cp16); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -15361,6 +15408,7 @@ static const StdEntry kStd[] = {
     {853, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_853},
     {856, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_856},
     {871, "fbr", "dect2::FbrTelemetry", kSchema_dect2__FbrTelemetry, put_871},
+    {881, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_881},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15631,6 +15679,7 @@ static const WebModeRow kRows[] = {
     {25, "MFSK", 10, "MFSK: error-corrected keyboard text", "mfsk", 27, 26, "hfdig"},
     {25, "THOR", 10, "THOR: robust keyboard text", "thor", 27, 26, "hfdig"},
     {25, "DominoEX", 10, "DominoEX: keyboard text that ignores tuning", "dominoex", 27, 26, "hfdig"},
+    {880, "CP16", 10, "CP16: Chinese characters drawn on the waterfall by 16 carriers (CRAC)", "", 882, 881, "cp16"},
     {25, "Hellschreiber", 10, "Hell: text drawn as a picture", "hell", 27, 26, "hfdig"},
     {25, "FreeDV", 11, "FreeDV: open digital voice on HF", "freedv", 27, 26, "hfdig"},
     {31, "M17", 11, "M17: open digital voice, text messages and positions on VHF / UHF", "", 33, 32, "m17"},
