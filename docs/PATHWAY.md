@@ -1771,3 +1771,6 @@ Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.
 
 ## 2026-11-12 feat40-feat2 (Lane B group 2)
 Talkgroup activity and follow-the-busiest (DMR view), radiosonde launch clock (Sites view), APRS channel use / beacon rates, TX frequency-plan warnings, ADS-B track replay core, link budget and power ramp helpers. Tests: feat40b, sonde_sites (simulated data). Details in docs/FEATURES-4.0-B.md.
+
+## 2026-11-12 feat40-feat3: Lane B group 3
+Features: AIS coverage / type mix / name cache, ATIS tracker, pager keywords and groups, callsign parser, mode guess, spot summary, tone identification, ISM classifier. docs/FEATURES-4.0-C.md, tests/feat40c (simulated only, headers not yet wired into the UI).
