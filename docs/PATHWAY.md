@@ -1535,3 +1535,10 @@ Changes:
 
 Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
 Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.
+## 2026-11-11 Broadcast 2 (feat39-bcast2)
+Finished what the 3.9 broadcast branches had left out. Simulated signals only.
+- ISDB-TSB: three-segment DQPSK lost 10-25 % of its packets in bursts. The timing loop's whole-sample window steps were compensated on the symbol before the window moved, and with the wrong sign. Wherever there were enough pilots, the slope fit hid the error. In the differential segments' first 17 symbols of each frame there were not, and the error broke two DQPSK symbols at a time. Now 0 bad packets. The gated test cases are hard asserts again, with two new cases (clock error, offset, drift). All ISDB-T tests pass.
+- DVB-C2: 1024-QAM and 4096-QAM (bit interleavers, demultiplexers, constellations of tables 6, 7, 10, 12(j)-(m)), GSE PLPs to IP packets, reserved tones. Fixed the preamble's noise estimate. It replaced the data symbols' estimate every frame while about 16 dB too high, and 4096-QAM 9/10 blocks across the frame start failed even without noise.
+- DVB-H and DVB-C2 GSE: IP datagrams to a pcap file (one click on the Signalling tab) and a UDP forward under Advanced, both off by default (core/src/tv/ip_out.cpp).
+- DVB-SH: the TDM waveform SH-B with the SOF, the signalling field, QPSK/8PSK/16APSK, PL slots, pilots, scrambling and the table 5.13 symbol rates, and automatic rate search. It is in the same mode entry: automatic tries OFDM, then TDM. The receiver keeps its alignment through a 50 ms blockage under the long interleaver.
+Details: docs/BCAST-3.9.md, docs/DVBC2-3.9.md, docs/DVBSH-3.9.md.
