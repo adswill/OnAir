@@ -28,6 +28,7 @@ public:
     ~Rs92Decoder() override;
     const char* type() const override { return "RS92"; }
     double symbolRate() const override { return 4800.0; }
+    bool narrowChannel() const override { return true; }
     void push(const uint8_t* sym, size_t n, double timeSec, std::vector<SondeFix>& out) override;
     void reset() override;
     // frame: 240 bytes as sent (header, message, parity), already unframed. Returns true when the header matched.

@@ -264,6 +264,7 @@ class Imet54Decoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "iMet-54"; }
     double symbolRate() const override { return 4800; }
+    bool narrowChannel() const override { return true; }
     bool midpointSlicer() const override { return true; }
     void reset() override { hdr_ = 0; run_ = false; bits_.clear(); }
     void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], out); }

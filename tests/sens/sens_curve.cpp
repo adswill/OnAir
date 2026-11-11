@@ -2,7 +2,7 @@
 // optional carrier error and clock error, plus a noise-only false-decode count. A finer view than the 90 % threshold of sens_sweep: use it to
 // see a gain of a fraction of a dB. Usage: sens_curve <mode> <snrFrom> <snrTo> <step> <trials> [cfoHz] [sroPpm] [offFrac]
 // Simulated signals only (the mode's own generator through tools/sens/sens_modes.h).
-#include "sens_modes.h"
+#include "sens_modes_d.h"
 #include <algorithm>
 #include <atomic>
 #include <cstdio>
@@ -35,7 +35,8 @@ int main(int argc, char** argv) {
     if (argc < 6) { printf("usage: sens_curve mode from to step trials [cfoHz] [sroPpm]\n"); return 2; }
     const double lo = atof(argv[2]), hi = atof(argv[3]), st = atof(argv[4]); const int n = atoi(argv[5]);
     const double cfo = argc > 6 ? atof(argv[6]) : 0, sro = argc > 7 ? atof(argv[7]) : 0;
-    const auto all = allModes();
+    auto all = allModes();
+    for (auto& m : extraModesD()) all.push_back(std::move(m));
     const Mode* mp = nullptr;
     for (const auto& m : all) if (m.id == argv[1]) mp = &m;
     if (!mp) { printf("no mode %s\n", argv[1]); return 2; }

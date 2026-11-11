@@ -1841,3 +1841,12 @@ GNSS interference detector (tone / narrowband / swept chirp with range and perio
 ## 2026-11-12: VLF MSK transmitter monitor (family 895)
 
 VLF naval MSK station monitor: carrier and bit rate from the two lines of the squared signal, on / off / rate-change log, station hint from a short frequency list. Encrypted traffic not decoded. Tests: 50 to 300 bit/s, offsets, drift, on / off, noise sweep to -3 dB, 20 min noise false-on run. Simulated signals only (docs/VLFMSK-4.0.md).
+## 2026-11-12 (night), 4.0 lane A part 2: more narrow paths, Argos acquisition (feat40-sensA2)
+The part-1 lesson (a channel filter much wider than the signal sits under the FM threshold) applied to the other receivers, each with before/after
+curves from sens_curve and noise-only checks (docs/SENSITIVITY-4.0-A2.md): the RS41 narrow path now also feeds RS92, DFM and iMet-54 (about 2.5, 2, 3 dB);
+FmFront gets an opt-in SpectralAfc (power-spectrum carrier follow-up) and EDACS (6.5 kHz instead of 9) and SmartNet (5 kHz instead of 7) use it
+(1.5 and 1.7 dB, 2.5 dB with 3.1 kHz carrier error); Fusion and MPT 1327 get a narrow filter that follows the carrier in open loop (about 2.5 dB, and a
+decode with 5 to 6 kHz carrier error where 3.9 had none). Largest find: Argos PTT uplink needed the burst 6 dB over the noise of the whole 32 kHz stream;
+coherent 1 ms power for the extent and the length chosen from the phase steps give about 14 dB (90 % at 0 dB in 5 kHz instead of 13 dB). Tests:
+sonde_sens40 (extended), edacs_sens40, argos_sens40. Measured and not kept: ACARS coherent detection with a carrier memory (0.2 dB), POCSAG/FLEX
+narrower filter (POCSAG +3 dB, FLEX collapses), M10 narrow path, MRZ narrow path (breaks a test). At theory: DMR, AIS, APRS, Orbcomm, the IoT set.

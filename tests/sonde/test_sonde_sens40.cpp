@@ -59,6 +59,15 @@ int main() {
         printf("RS41 7 dB, carrier error %.0f Hz: %d of 3\n", cfo, ok);
         CHECK(ok == 3, "RS41 at 7 dB, %.0f Hz: %d of 3", cfo, ok);
     }
+    // part 2: the narrow path also feeds RS92 and DFM (3.9 receiver: RS92 8 % at 8 dB, DFM 10 % at 8 dB with +8 kHz)
+    const Case rs92 = makeCase(16);
+    for (double cfo : {0.0, 8000.0}) {
+        const int ok = passes(rs92, 8.0, cfo, 4);
+        printf("RS92 8 dB, carrier error %.0f Hz: %d of 4\n", cfo, ok);
+        CHECK(ok >= 3, "RS92 at 8 dB, %.0f Hz: %d of 4", cfo, ok);
+    }
+    { const Case im = makeCase(128); const int ok = passes(im, 16.0, 8000.0, 4); printf("iMet-54 16 dB +8 kHz: %d of 4\n", ok); CHECK(ok >= 3, "iMet-54 at 16 dB, +8 kHz: %d of 4", ok); }
+    { const int ok = passes(dfm, 8.0, 8000.0, 4); printf("DFM 8 dB +8 kHz: %d of 4\n", ok); CHECK(ok >= 2, "DFM at 8 dB, +8 kHz: %d of 4", ok); }
     const int okd = passes(dfm, 20.0, 0, 3), okm = passes(m10, 20.0, 0, 3);
     printf("DFM 20 dB %d of 3, M10 20 dB %d of 3\n", okd, okm);
     CHECK(okd >= 2, "DFM at 20 dB: %d of 3", okd);

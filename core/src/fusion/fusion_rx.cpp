@@ -3,6 +3,7 @@
 #include "dect2/fusion/fusion_gps.h"
 #include <cstring>
 #include "dect2/dsp/cic3.h"
+#include "dect2/dsp/spectral_afc.h"
 #include "dect2/fusion/fusion_proto.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/voice/voice_monitor.h"
@@ -21,6 +22,8 @@ namespace {
 using dect2::math::kPi;
 constexpr double kFs = 48000;           // demodulator rate, 10 samples per symbol
 constexpr int kSps = 10;
+constexpr double kChanWideHz = 8000.0;     // channel filter until the carrier follow-up has settled
+constexpr double kChanCutHz = 5500.0;      // 4.0: after it (the 3.9 receiver always used 8 kHz)
 constexpr int kFrame = fusion::kFrameDibits * kSps;   // samples per frame (100 ms)
 constexpr int kYMask = 16383;
 
@@ -83,6 +86,8 @@ struct FusionReceiver::Impl {
     int D = 1;
     double fd = 0;
     std::complex<double> lo{1, 0}, loStep{1, 0};
+    SpectralAfc afc;
+    double afcApplied = 0;
     int loCount = 0;
     Cic3 cic;   // the decimator (dsp/cic3.h: exact for as long as it runs)
     int decCount = 0;
@@ -91,6 +96,31 @@ struct FusionReceiver::Impl {
     double rp = 0, rstep = 0;
     int M = 0, nPh = 64;
     std::vector<float> fir;
+    std::vector<cf32> firNarrow;
+    double narrowAt = 1e9;                 // centre of the narrow filter (Hz from 0 Hz of the stream); 1e9: not built yet
+    void buildNarrow(double f0) {
+        narrowAt = f0;
+        firNarrow.assign((size_t)nPh * 2 * M, cf32(0, 0));
+        const double fc = kChanCutHz / fd;
+        for (int ph = 0; ph < nPh; ph++) {
+            const double frac = (double)ph / nPh;
+            double sum = 0;
+            std::vector<double> v((size_t)2 * M);
+            for (int k = 0; k < 2 * M; k++) {
+                const double t = (double)(k - M + 1) - frac;
+                const double x = 2 * fc * t;
+                const double s = std::fabs(x) < 1e-9 ? 1.0 : std::sin(kPi * x) / (kPi * x);
+                const double w = 0.42 + 0.5 * std::cos(kPi * t / M) + 0.08 * std::cos(2 * kPi * t / M);
+                v[(size_t)k] = std::fabs(t) < M ? 2 * fc * s * w : 0;
+                sum += v[(size_t)k];
+            }
+            for (int k = 0; k < 2 * M; k++) {
+                const double t = (double)(k - M + 1) - frac;
+                const double ph2 = -2 * kPi * f0 * t / fd;
+                firNarrow[(size_t)ph * 2 * M + k] = cf32((float)(v[(size_t)k] / sum * std::cos(ph2)), (float)(v[(size_t)k] / sum * std::sin(ph2)));
+            }
+        }
+    }
     cf32 prevZ{0, 0};
     float fh[7] = {0, 0, 0, 0, 0, 0, 0};
     int fhPos = 0;
@@ -126,28 +156,32 @@ struct FusionReceiver::Impl {
         fd = rate > 0 ? rate / D : 0;
         lo = 1; loCount = 0;
         loStep = rate > 0 ? std::polar(1.0, -2 * kPi * offset / rate) : std::complex<double>(1, 0);
+        afc.configure(fd); afc.setOpenLoop(true); afcApplied = 0; narrowAt = 1e9;
         cic.reset();
         decCount = 0;
         dbuf.assign(8192, cf32(0, 0)); dN = 0;
         if (fd > 0) {
             rstep = fd / kFs;
             M = std::max(8, (int)std::ceil(5.5 * fd / 5000.0 / 2));
-            fir.assign((size_t)nPh * 2 * M, 0.f);
-            const double fc = 8000.0 / fd;   // the channel filter: windowed sinc, 8 kHz cut
-            for (int ph = 0; ph < nPh; ph++) {
-                const double frac = (double)ph / nPh;
-                double sum = 0;
-                for (int k = 0; k < 2 * M; k++) {
-                    const double t = (double)(k - M + 1) - frac;
-                    const double x = 2 * fc * t;
-                    const double s = std::fabs(x) < 1e-9 ? 1.0 : std::sin(kPi * x) / (kPi * x);
-                    const double w = 0.42 + 0.5 * std::cos(kPi * t / M) + 0.08 * std::cos(2 * kPi * t / M);
-                    const double v = std::fabs(t) < M ? 2 * fc * s * w : 0;
-                    fir[(size_t)ph * 2 * M + k] = (float)v;
-                    sum += v;
+            auto build = [&](std::vector<float>& tab, double cutHz) {
+                tab.assign((size_t)nPh * 2 * M, 0.f);
+                const double fc = cutHz / fd;   // the channel filter: windowed sinc
+                for (int ph = 0; ph < nPh; ph++) {
+                    const double frac = (double)ph / nPh;
+                    double sum = 0;
+                    for (int k = 0; k < 2 * M; k++) {
+                        const double t = (double)(k - M + 1) - frac;
+                        const double x = 2 * fc * t;
+                        const double s = std::fabs(x) < 1e-9 ? 1.0 : std::sin(kPi * x) / (kPi * x);
+                        const double w = 0.42 + 0.5 * std::cos(kPi * t / M) + 0.08 * std::cos(2 * kPi * t / M);
+                        const double v = std::fabs(t) < M ? 2 * fc * s * w : 0;
+                        tab[(size_t)ph * 2 * M + k] = (float)v;
+                        sum += v;
+                    }
+                    for (int k = 0; k < 2 * M; k++) tab[(size_t)ph * 2 * M + k] /= (float)sum;
                 }
-                for (int k = 0; k < 2 * M; k++) fir[(size_t)ph * 2 * M + k] /= (float)sum;
-            }
+            };
+            build(fir, kChanWideHz);          // until the carrier follow-up has found the signal's centre
             rp = M + 2;
         }
         prevZ = cf32(0, 0);
@@ -180,16 +214,23 @@ struct FusionReceiver::Impl {
     }
 
     void pushDecimated(cf32 z) {
+        afc.push(&z, 1);
+        if (afc.settled() && std::fabs(afc.adjustHz() - narrowAt) > 150.0 && M > 0) buildNarrow(afc.adjustHz());   // follow the carrier with the narrow filter
         dbuf[(size_t)(dN & 8191)] = z;
         dN++;
         while (dN > (int64_t)std::floor(rp) + M) {
             const int64_t base = (int64_t)std::floor(rp);
             const double frac = rp - (double)base;
             const int ph = std::min(nPh - 1, (int)std::lround(frac * nPh));
-            const float* h = &fir[(size_t)ph * 2 * M];
             cf32 acc(0, 0);
             const int64_t i0 = base - M + 1;
-            for (int k = 0; k < 2 * M; k++) acc += dbuf[(size_t)((i0 + k) & 8191)] * h[k];
+            if (narrowAt < 1e8) {      // narrow filter centred on the signal (complex taps: the signal is not moved, the discriminator sees what it saw before)
+                const cf32* hc = &firNarrow[(size_t)ph * 2 * M];
+                for (int k = 0; k < 2 * M; k++) acc += dbuf[(size_t)((i0 + k) & 8191)] * hc[k];
+            } else {
+                const float* h = &fir[(size_t)ph * 2 * M];
+                for (int k = 0; k < 2 * M; k++) acc += dbuf[(size_t)((i0 + k) & 8191)] * h[k];
+            }
             rp += rstep;
             demod(acc);
         }
@@ -256,7 +297,7 @@ struct FusionReceiver::Impl {
         if (!fusion::parseFrameBits(bits.data(), c)) { tel.blocksBad++; return false; }
         polarity = pol;
         tel.inverted = pol < 0;
-        tel.cfoHz = d;
+        tel.cfoHz = d + afcApplied;
         tel.snrDb = snr;
         tel.blocksOk++;
         lastFrameSec = (double)S / kFs;
