@@ -409,8 +409,9 @@ static void toolbarStandard(App& a, bool vertical) {
 namespace {
 struct BbfDef { const char* key; double bw, trans, fs; };   // the mode's own bandwidth and transition (for the plot and the slider hints), a rate to draw at
 const BbfDef kBbfDefs[] = {{"hfdl", 3400, 2000, 28800}, {"acars", 7200, 1500, 25000}, {"vdl2", 15000, 4000, 80000}, {"airband", 16000, 4000, 48000}, {"ais", 22500, 7500, 48000},
-                           {"pager", 20000, 4000, 96000}, {"packet", 8000, 4000, 96000}, {"cw", 100, 80, 1000}, {"general", 3000, 600, 48000}, {"hfdig", 3000, 600, 48000}};
-const char* const kBbfAll[] = {"hfdl", "acars", "vdl2", "airband", "ais", "pager", "packet", "cw", "general", "hfdig"};
+                           {"pager", 20000, 4000, 96000}, {"packet", 8000, 4000, 96000}, {"cw", 100, 80, 1000}, {"general", 3000, 600, 48000}, {"hfdig", 3000, 600, 48000},
+                           {"tetrapol", 13000, 6000, 64000}};
+const char* const kBbfAll[] = {"hfdl", "acars", "vdl2", "airband", "ais", "pager", "packet", "cw", "general", "hfdig", "tetrapol"};
 void bbfSyncImpl() {   // once: the saved filters into the registry the modes read when they design theirs
     static bool done = false;
     if (done) return;

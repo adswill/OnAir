@@ -349,6 +349,7 @@ void receiver(App& a) {
     kvRow(a, "packets", "%llu, %llu CRC errors", (unsigned long long)t.packets, (unsigned long long)t.crcErrors);
     kvRow(a, "files", "%llu, %llu with errors, %zu products kept", (unsigned long long)t.files, (unsigned long long)t.fileErrors, t.products.size());
     kvRow(a, "input", "%.3f Msps, %.1f dBFS", t.inputRate / 1e6, t.levelDb);
+    smart5GeoCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void panels(App& a) {

@@ -26,12 +26,12 @@ namespace {
 using automation::Event;
 using automation::Value;
 
-const char* kKept[] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "lora", "ble", "rid", "dsc", "qso", "mesh", "dab", "epg", "session", "msg"};
+const char* kKept[] = {"adsb", "acars", "vdl2", "hfdl", "pager", "ais", "aprs", "sonde", "lora", "ble", "rid", "dsc", "qso", "mesh", "dab", "epg", "session", "msg", "ham", "sensor", "broadcast", "image"};
 
 std::string family(const std::string& type) { return type.substr(0, type.find('.')); }
 
 // types that repeat every few seconds for the same object: stored at most once per kThrottleS per identity
-bool chatty(const std::string& t) { return t == "adsb.aircraft" || t == "ais.vessel" || t == "sonde.update" || t == "ble.device" || t == "rid.drone"; }
+bool chatty(const std::string& t) { return t == "adsb.aircraft" || t == "ais.vessel" || t == "sonde.update" || t == "ble.device" || t == "rid.drone" || t == "ham.decode" || t == "sensor.reading"; }
 constexpr double kThrottleS = 60;
 
 std::string fld(const Event& e, const char* k) {

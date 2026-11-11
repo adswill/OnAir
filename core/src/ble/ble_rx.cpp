@@ -31,6 +31,7 @@ constexpr int kMean = 160;                // the running mean the bits are slice
 constexpr int kMaxBytes = ble::kMaxPdu + 3;
 constexpr int kNeed = (kMaxBytes * 8 + 2) * kSps + 8;   // samples after the access address a candidate waits for
 constexpr int kHist = 40 * kSps + 16;     // samples kept before the oldest pending candidate
+constexpr int kBlock = 1024;              // input samples mixed at a time
 
 int popc(uint32_t v) { return dect2::bits::popcount(v); }
 }
@@ -49,8 +50,11 @@ struct BleReceiver::Impl {
     std::complex<double> lo{1, 0}, loStep{1, 0};
     int loCount = 0;
     int L = 1;
-    std::vector<float> taps, hr, hi;      // hr / hi: the input history written twice, so a window is contiguous
-    int hp = 0;
+    std::vector<float> taps, hr, hi;      // hr / hi: the mixed input, the last L samples of the block before first (a window is contiguous)
+    std::vector<std::complex<float>> stepTab;   // loStep^j for j < kBlock: the mixer of a block without a recurrence (it vectorises)
+    bool twoStage = false;                // the filter in two stages (initFront): taps at the input rate, tapsB at 4 Msps over the ring br / bi
+    int LB = 1, bp = 0;
+    std::vector<float> tapsB, br, bi;
     double step = 1;
     int64_t outK = 0;
     std::complex<float> yF{0, 0}, prevY{0, 0};
@@ -80,21 +84,41 @@ struct BleReceiver::Impl {
         lo = 1; loCount = 0;
         loStep = rate > 0 ? std::polar(1.0, -2 * kPi * offset / rate) : std::complex<double>(1, 0);
         step = rate / kOut;
-        // windowed sinc, cut-off 650 kHz: the GFSK main lobe passes, the noise beyond it does not
-        L = std::max(15, (int)std::ceil(6.5 * rate / 1e6)) | 1;
-        taps.assign((size_t)L, 0.f);
-        const double fc = 650e3 / rate;
-        double sum = 0;
-        for (int i = 0; i < L; i++) {
-            const double m = i - (L - 1) / 2.0;
-            const double s = m == 0 ? 2 * fc : std::sin(2 * kPi * fc * m) / (kPi * m);
-            const double w = 0.54 - 0.46 * std::cos(2 * kPi * i / (L - 1));
-            taps[(size_t)i] = (float)(s * w);
-            sum += s * w;
+        // windowed sinc (Hamming), unit gain at DC, reversed: the dot runs over the history oldest first
+        auto design = [](std::vector<float>& h, int n, double fc) {
+            h.assign((size_t)n, 0.f);
+            double sum = 0;
+            for (int i = 0; i < n; i++) {
+                const double m = i - (n - 1) / 2.0;
+                const double s = m == 0 ? 2 * fc : std::sin(2 * kPi * fc * m) / (kPi * m);
+                const double w = 0.54 - 0.46 * std::cos(2 * kPi * i / (n - 1));
+                h[(size_t)i] = (float)(s * w);
+                sum += s * w;
+            }
+            for (float& t : h) t = (float)(t / sum);
+            std::reverse(h.begin(), h.end());
+        };
+        // cut-off 650 kHz over 6.5 us: the GFSK main lobe passes, the noise beyond it does not. When the rate is a whole multiple of 4 Msps (20 Msps
+        // for Remote ID) in two stages (3.9): a short filter at the input rate that keeps out what would fold into the passband and the transition of
+        // the second one at 4 Msps (cut-off 2 MHz over 1.5 us: flat to 0.9 MHz, stopband from 3.1 MHz), then the same 650 kHz filter at 4 Msps:
+        // the same response for less than half the arithmetic. (The demodulator does better at some sampling phases than at others, so the delay is
+        // kept as it was: on the generator's packets a delay off by a fraction of a 4 Msps sample cost up to a third of them at 9 dB.)
+        twoStage = rate > 0 && step >= 2 && std::fabs(step - std::round(step)) < 1e-9;
+        if (twoStage) {
+            // its delay a whole number of 4 Msps samples, so the instants the demodulator sees fall where they did with one stage
+            L = 2 * (int)std::lround(step) * 3 + 1;
+            design(taps, L, 2.0e6 / rate);
+            LB = std::max(15, (int)std::ceil(6.5 * kOut / 1e6)) | 1;
+            design(tapsB, LB, 650e3 / kOut);
+            br.assign((size_t)LB * 2, 0.f); bi.assign((size_t)LB * 2, 0.f); bp = 0;
+        } else {
+            L = std::max(15, (int)std::ceil(6.5 * rate / 1e6)) | 1;
+            design(taps, L, 650e3 / rate);
         }
-        for (float& t : taps) t = (float)(t / sum);
-        std::reverse(taps.begin(), taps.end());   // dot with the history oldest first
-        hr.assign((size_t)L * 2, 0.f); hi.assign((size_t)L * 2, 0.f); hp = 0;
+        hr.assign((size_t)(L + kBlock), 0.f); hi.assign((size_t)(L + kBlock), 0.f);
+        stepTab.resize(kBlock);
+        yo.assign((size_t)(kBlock + 2), std::complex<float>(0, 0));
+        for (int j = 0; j < kBlock; j++) { const std::complex<double> v = std::polar(1.0, -2 * kPi * offset / std::max(rate, 1.0) * j); stepTab[(size_t)j] = std::complex<float>((float)v.real(), (float)v.imag()); }
         outK = 0; nIn = 0;
         yF = prevY = std::complex<float>(0, 0);
     }
@@ -147,55 +171,120 @@ struct BleReceiver::Impl {
 
     // ---------------------------------------------------------------- front end
 
-    void input(float re, float im) {
-        // mix
-        // the two complex products written out (the same bits as std::complex<double>, without its NaN-recovery call)
-        const double lr = lo.real(), li = lo.imag(), sr = loStep.real(), si = loStep.imag();
-        const std::complex<double> v((double)re * lr - (double)im * li, (double)re * li + (double)im * lr);
-        lo = std::complex<double>(lr * sr - li * si, lr * si + li * sr);
-        if (++loCount >= 4096) { lo /= std::abs(lo); loCount = 0; }
-        hr[(size_t)hp] = hr[(size_t)(hp + L)] = (float)v.real();
-        hi[(size_t)hp] = hi[(size_t)(hp + L)] = (float)v.imag();
-        hp = hp + 1 == L ? 0 : hp + 1;
-        const int64_t i = nIn;
-        double t = outK * step;
-        int64_t f = (int64_t)std::floor(t);
-        if (i != f && i != f + 1) return;
-        float o[2];
-        genutil::dot2(taps.data(), hr.data() + hp, hi.data() + hp, L, o);
-        const std::complex<float> y(o[0], o[1]);
-        for (;;) {
-            t = outK * step; f = (int64_t)std::floor(t);
-            const float fr = (float)(t - (double)f);
-            if (i == f) {
-                yF = y;
-                if (fr < 1e-6f) { outK++; demod(y); continue; }
-                break;
-            }
-            if (i == f + 1) { outK++; demod(yF * (1 - fr) + y * fr); continue; }
-            break;
+    // A block of input (at most kBlock samples): mixed to 0 Hz, then the low-pass FIR at the instants an output sample needs (linear interpolation
+    // to 4 Msps between two of them). The mixer of the block is the phase at its start times a table of the step's powers, so the loop has no
+    // dependency from one sample to the next; the phase at the start goes on in double precision.
+    void block(const cf32* x, int k) {
+        float* rr = hr.data() + L;
+        float* ri = hi.data() + L;
+        const std::complex<float> l0((float)lo.real(), (float)lo.imag());
+        const std::complex<float>* st = stepTab.data();
+        double pw = 0;
+        for (int j = 0; j < k; j++) {
+            float re = x[j].real(), im = x[j].imag();
+            if (!(std::fabs(re) <= 3.0e38f) || !(std::fabs(im) <= 3.0e38f)) re = im = 0;   // not finite
+            pw += (double)re * re + (double)im * im;
+            const std::complex<float> w = l0 * st[j];
+            rr[j] = re * w.real() - im * w.imag();
+            ri[j] = re * w.imag() + im * w.real();
         }
+        power += pw;
+        lo *= std::polar(1.0, -2 * kPi * offset / rate * k);
+        if (++loCount >= 64) { lo /= std::abs(lo); loCount = 0; }
+        // outputs: sample f of the stream is at buffer index f - nIn + L (the window of L samples ending there starts at f - nIn + 1)
+        const int64_t end = nIn + k;
+        if (yo.size() < (size_t)((double)k / step) + 4) yo.resize((size_t)((double)k / step) + 4);
+        int no = 0;
+        for (;;) {
+            const double t = outK * step;
+            const int64_t f = (int64_t)std::floor(t);
+            const float fr = (float)(t - (double)f);
+            const bool interp = fr >= 1e-6f;
+            if (f + (interp ? 1 : 0) >= end) break;
+            float o[2];
+            genutil::dot2(taps.data(), hr.data() + (f - nIn + 1), hi.data() + (f - nIn + 1), L, o);
+            if (twoStage) {   // no interpolation: the instants fall on input samples
+                br[(size_t)bp] = br[(size_t)(bp + LB)] = o[0];
+                bi[(size_t)bp] = bi[(size_t)(bp + LB)] = o[1];
+                bp = bp + 1 == LB ? 0 : bp + 1;
+                genutil::dot2(tapsB.data(), br.data() + bp, bi.data() + bp, LB, o);
+                outK++;
+                yo[(size_t)(no++)] = std::complex<float>(o[0], o[1]);
+                continue;
+            }
+            std::complex<float> y(o[0], o[1]);
+            if (interp) {
+                genutil::dot2(taps.data(), hr.data() + (f - nIn + 2), hi.data() + (f - nIn + 2), L, o);
+                y = y * (1 - fr) + std::complex<float>(o[0], o[1]) * fr;
+            }
+            outK++;
+            yo[(size_t)(no++)] = y;
+        }
+        demodBlock(yo.data(), no);
+        // the last L samples become the history of the next block
+        std::memmove(hr.data(), hr.data() + k, sizeof(float) * (size_t)L);
+        std::memmove(hi.data(), hi.data() + k, sizeof(float) * (size_t)L);
+        nIn = end;
     }
 
     // ---------------------------------------------------------------- demodulator
 
-    __attribute__((always_inline)) void demod(std::complex<float> y) {   // inlined: a call per sample stored the two floats and loaded them as one 8-byte value (store-forwarding stall)
-        const std::complex<float> z = y * std::conj(prevY);
-        prevY = y;
-        const float fHz = (float)(std::atan2(z.imag(), z.real()) * (kOut / (2 * kPi)));
-        boxSum += fHz - box[boxPos]; box[boxPos] = fHz; boxPos = (boxPos + 1) % kSps;
-        const float s = boxSum / kSps;
-        meanSum += s - meanBuf[(size_t)meanPos]; meanBuf[(size_t)meanPos] = s; meanPos = (meanPos + 1) % kMean;
-        fb.push_back(s);
-        pb.push_back(std::norm(y));
-        g++;
-        const int ph = (int)(g & (kSps - 1));
-        const uint32_t bit = s > (float)(meanSum / kMean) ? 1u : 0u;
-        reg[ph] = (reg[ph] >> 1) | (bit << 31);
-        if (g >= skipUntil) {
-            const int e = popc(reg[ph] ^ ble::kAdvAccess);
-            if (e <= 1) { cands.push_back({g, e}); skipUntil = g + kSps; tel.aaHits++; }
+    // atan2 to about 1e-6 rad (a minimax polynomial for atan on [0, 1] and the octant): no library call, and it vectorises. The frequency it gives is
+    // off by well under 1 Hz, against 250 kHz of deviation.
+    static inline float fastAtan2(float y, float x) {
+        const float ax = std::fabs(x), ay = std::fabs(y);
+        const float mx = std::max(ax, ay), mn = std::min(ax, ay);
+        const float a = mx > 0 ? mn / mx : 0.f;
+        const float q = a * a;
+        float r = a * (0.99997726f + q * (-0.33262347f + q * (0.19354346f + q * (-0.11643287f + q * (0.05265332f + q * -0.01172120f)))));
+        r = ay > ax ? 1.57079632679f - r : r;
+        r = x < 0 ? 3.14159265359f - r : r;
+        return y < 0 ? -r : r;
+    }
+
+    // The demodulator for a block of 4 Msps samples: the instantaneous frequency of all of them first (no dependency between samples), then the
+    // smoothing, the slicer and the access address search sample by sample, on locals
+    std::vector<std::complex<float>> yo;   // the block's 4 Msps samples
+    std::vector<float> fz;
+    void demodBlock(const std::complex<float>* y, int cnt) {
+        if (cnt <= 0) return;
+        fz.resize((size_t)cnt);
+        {
+            std::complex<float> p = prevY;
+            const float kf = (float)(kOut / (2 * kPi));
+            for (int j = 0; j < cnt; j++) {
+                const std::complex<float> v = y[j];
+                const float zr = v.real() * p.real() + v.imag() * p.imag(), zi = v.imag() * p.real() - v.real() * p.imag();   // v conj(p)
+                fz[(size_t)j] = fastAtan2(zi, zr) * kf;
+                p = v;
+            }
+            prevY = p;
         }
+        const size_t o = fb.size();
+        fb.resize(o + (size_t)cnt); pb.resize(o + (size_t)cnt);
+        float* fo = fb.data() + o;
+        float* po = pb.data() + o;
+        for (int j = 0; j < cnt; j++) po[j] = std::norm(y[j]);
+        float bs = boxSum;
+        double ms = meanSum;
+        int bpos = boxPos, mpos = meanPos;
+        int64_t gg = g;
+        for (int j = 0; j < cnt; j++) {
+            const float fHz = fz[(size_t)j];
+            bs += fHz - box[bpos]; box[bpos] = fHz; bpos = (bpos + 1) & (kSps - 1);
+            const float sm = bs / kSps;
+            ms += sm - meanBuf[(size_t)mpos]; meanBuf[(size_t)mpos] = sm; if (++mpos == kMean) mpos = 0;
+            fo[j] = sm;
+            gg++;
+            const int ph = (int)(gg & (kSps - 1));
+            const uint32_t bit = sm > (float)(ms / kMean) ? 1u : 0u;
+            reg[ph] = (reg[ph] >> 1) | (bit << 31);
+            if (gg >= skipUntil) {
+                const int e = popc(reg[ph] ^ ble::kAdvAccess);
+                if (e <= 1) { cands.push_back({gg, e}); skipUntil = gg + kSps; tel.aaHits++; }
+            }
+        }
+        boxSum = bs; meanSum = ms; boxPos = bpos; meanPos = mpos; g = gg;
     }
 
     float at(int64_t k) const { return fb[(size_t)(k - base)]; }
@@ -479,12 +568,12 @@ void BleReceiver::feed(const cf32* x, size_t n) {
         if (m.rate > 0) { m.nIn += (int64_t)n; if ((double)m.nIn >= m.nextReport) { m.nextReport += 0.25 * m.rate; m.report(); } }
         return;
     }
-    for (size_t i = 0; i < n; i++) {
-        float re = x[i].real(), im = x[i].imag();
-        if (!std::isfinite(re) || !std::isfinite(im)) re = im = 0;
-        m.power += (double)re * re + (double)im * im;
-        m.input(re, im);
-        m.nIn++;
+    for (size_t i = 0; i < n;) {
+        // in blocks, cut at the reports
+        const int64_t toReport = std::max<int64_t>(1, (int64_t)std::ceil(m.nextReport) - m.nIn);
+        const int k = (int)std::min<int64_t>({(int64_t)(n - i), (int64_t)kBlock, toReport});
+        m.block(x + i, k);
+        i += (size_t)k;
         if ((double)m.nIn >= m.nextReport) { m.process(); m.nextReport += 0.25 * m.rate; m.report(); }
     }
     m.nPower += (int64_t)n;

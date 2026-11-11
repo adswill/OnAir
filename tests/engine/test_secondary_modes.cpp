@@ -15,6 +15,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static std::string writeCapture(int sm, double rate, double secs) {
     SynthConfig cfg;
@@ -89,6 +90,8 @@ int main() {
         double rate = mt->sampleRate;
         if (!Engine::secondaryCheck(29, sm, 100e6, rate, 100e6).empty()) rate *= 2;
         printf("%s (mode %d), %.2f Msps, allowed as second: %s\n", mt->name, sm, rate / 1e6, Engine::secondaryAllowed(sm) ? "yes" : "no");
+        // a refused mode's alone run has no check: by default it is left out (ONAIR_TEST_LONG=1 runs it, as before)
+        if (!testLong() && !Engine::secondaryAllowed(sm)) continue;
         const std::string path = writeCapture(sm, rate, 8.0);
         if (path.empty()) { CHECK(false, "no test signal for mode %d", sm); continue; }
         int rep = 0, wrong = 0;

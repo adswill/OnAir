@@ -435,6 +435,9 @@ int StripRows::place(int c, int seq, int k, uint32_t ms) {
     int adv = 0;
     if (rowMs_ > 0 && rd >= 0 && rd < 30 * 60000) adv = (int)std::lround((double)rd / rowMs_);   // also a row whose first channel was lost
     else if (d > 43 && d < 8192) adv = d / 43;
+    // before a row time is known: a later time stamp is a new row (all channels of a row carry its time). Without this, a pass that
+    // started mid-row put the next row's first channel into the first row (found when the 3.9 line acquisition locked earlier)
+    if (!adv && rowMs_ <= 0 && rd > 0 && rd < 20000) adv = 1;
     if (!adv && lastPos_[c] >= 0 && k <= lastPos_[c]) adv = 1;
     if (adv == 1 && d <= 43 && rd > 0 && rd < 20000) rowMs_ = rowMs_ > 0 ? 0.8 * rowMs_ + 0.2 * (double)rd : (double)rd;   // learn a row's time
     if (adv) { cur_ += adv; rowStartMs_ = ms; std::fill(std::begin(lastPos_), std::end(lastPos_), -1); }

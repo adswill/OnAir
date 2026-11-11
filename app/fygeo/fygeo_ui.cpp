@@ -335,6 +335,7 @@ template <int F> void receiver(App& a) {
         for (size_t i = 0; i < t.log.size() && i < 20; i++) { ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(t.log[i].c_str()); ImGui::PopTextWrapPos(); }
         ImGui::PopFont();
     }
+    smart5GeoCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 template <int F> void panels(App& a) {

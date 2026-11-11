@@ -4,6 +4,7 @@
 #include "dect2/nxdn/nxdn_gen.h"
 #include "dect2/nxdn/nxdn_tel.h"
 #include "../common/short_burst.h"
+#include "../common/test_long.h"
 #include <cstring>
 using namespace dect2;
 
@@ -44,10 +45,16 @@ int main(int argc, char** argv) {
     };
     int fails = 0;
     printf("%-26s %6s %8s %8s %12s %6s\n", "NXDN short calls", "calls", "decoded", "frames%", "lost/call", "extra");
-    for (const auto& f : faults) {
+    // the quick run: of the offsets only the largest each way (the clock error, noise, late entry and neighbour cases all stay); ONAIR_TEST_LONG=1: all
+    const bool quick[] = {true, false, false, true, true, true, false, false, false, true, true, false, true, true, true};
+    static_assert(sizeof quick / sizeof quick[0] == sizeof faults / sizeof faults[0], "one entry per fault");
+    const uint32_t seeds = 3;   // 3 seeds also in the quick run: with 1 seed the 0.95 cases had too few calls (quick run 42881392517)
+    for (size_t fi = 0; fi < sizeof faults / sizeof faults[0]; fi++) {
+        const auto& f = faults[fi];
         if (argc > 2 && !strstr(f.name, argv[2])) continue;
+        if (!testLong() && !quick[fi]) continue;
         double ratio = 0, lost = 0; int calls = 0, dec = 0, extra = 0;
-        for (uint32_t seed = 1; seed <= 3; seed++) {
+        for (uint32_t seed = 1; seed <= seeds; seed++) {
             NxdnGenConfig c = base;
             c.snrDb = f.snr; c.cfoHz = f.cfo; c.clockPpm = f.ppm; c.seed = seed;
             auto tx2 = txs;
@@ -56,7 +63,7 @@ int main(int argc, char** argv) {
             calls += r.calls; dec += r.decoded; ratio += r.ratio; lost += r.lostFrames; extra += r.extra;
         }
         const double share = (double)dec / calls;
-        printf("%-26s %6d %7.0f%% %7.0f%% %12.2f %6d\n", f.name, calls, 100 * share, 100 * ratio / 3, lost / 3, extra);
+        printf("%-26s %6d %7.0f%% %7.0f%% %12.2f %6d\n", f.name, calls, 100 * share, 100 * ratio / seeds, lost / seeds, extra);
         if (!printOnly && share < f.minShare) { printf("FAIL: %s: only %.0f%% of short calls decoded\n", f.name, 100 * share); fails++; }
     }
     printf(fails ? "%d FAILED\n" : "done\n", fails);

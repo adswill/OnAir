@@ -16,6 +16,7 @@
 #include <random>
 #include <string>
 #include <vector>
+#include "../common/test_long.h"
 using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
@@ -123,6 +124,7 @@ static void instruments() {
       CHECK(t.blocksOk > 50, "kanopus frames"); CHECK(t.lines > 400, "kanopus lines"); }
     // FY-3D / E / F X-band AHRPT is the existing FY-3 AHRPT receiver (family 235) with the X-band symbol rates: simulated check at 40 Msps
     for (int sat : {3, 4, 5}) {
+        if (!testLong() && sat == 5) continue;   // quick: FY-3F has FY-3E's symbol rate
         Fy3GenConfig g; g.rate = 50e6; g.product = 0; g.sat = sat; g.symbolRate = sat == 3 ? 30e6 : 38.4e6; g.rolloff = 0.35; g.snrDb = 20; g.cfoHz = 40000; Fy3Generator gen(g);
         Fy3Receiver rx(0); rx.configure(50e6); rx.setSymbolRate(g.symbolRate); rx.setRolloff(0.35);
         std::vector<cf32> b(1 << 16); Fy3Telemetry t; uint64_t q = 0;
@@ -146,6 +148,8 @@ static void instruments() {
 }
 int main(int argc, char** argv) {
     int only = argc > 1 ? atoi(argv[1]) : -1;
+    // quick run: Terra at its second rate, FY-3F (same rate as FY-3E) and the report-only points of the SNR sweeps are dropped; ONAIR_TEST_LONG=1 runs all
+    const bool L = testLong();
     std::vector<Case> cs = {
         {kXbSaralL, 3e6, 0.25, 20, 12000, 0, 0, 0, 5, 0},
         {kXbSaralL, 3e6, 0.4, 8, -8000, 500, 20, 5, 5, 0},
@@ -155,7 +159,7 @@ int main(int argc, char** argv) {
         {kXbNpp, 25e6, 0.3, 20, 50000, 0, 0, 3, 5, 0},
         {kXbJpss2, 40e6, 0.2, 20, -30000, 0, 0, 0, 5, 0},
         {kXbAquaAura, 15e6, 0.1, 25, 10000, 0, 0, 0, 5, 0},
-        {kXbTerra, 45e6, 0.12, 20, 40000, 0, 0, 0, 5, 0}, {kXbTerra, 39.375e6, 0.12, 30, 0, 0, 0, 0, 5, 0},
+        {kXbTerra, 45e6, 0.12, 20, 40000, 0, 0, 0, 5, 0},
         {kXbMetopDump, 45e6, 0.02, 25, 10000, 0, 0, 2, 5, 0},
         {kXbProbaVX, 45e6, 0.05, 20, 0, 0, 0, 0, 3, 0},
         {kXbGcomW1, 20e6, 0.1, 20, 5000, 0, 0, 0, 3, 0},
@@ -163,6 +167,7 @@ int main(int argc, char** argv) {
         {kXbOceansat3X, 120e6, 0.02, 25, 0, 0, 0, 0, 3, 0},
         {kXbMetopSg, 140e6, 0.02, 20, 0, 0, 0, 1, 3, 0},
     };
+    if (L) cs.push_back({kXbTerra, 39.375e6, 0.12, 30, 0, 0, 0, 0, 5, 0});
     for (int p = 0; p < kXbNumProfiles; p++) if (xbLink(p).caduBytes > 0 && xbLink(p).fec != kXbFecLdpc && xbLink(p).fec != kXbFecTurbo && (only < 0 || only == p)) {
         // the CADU layer alone (what a .cadu file does): every frame must come through, with symbol errors within the Reed-Solomon power
         auto v = xbandTestCadus(p, 30);
@@ -182,8 +187,8 @@ int main(int argc, char** argv) {
     if (only < 0 || only == 100) instruments();
     if (only < 0 || only == 101) {
         for (int amb = 0; amb < 8; amb++) { Case k{kXbSaralL, 3e6, 0.25, 12, 3000, 0, 0, amb, 5, 0}; expect(k); }
-        for (double snr : {14.0, 10.0, 7.0, 5.0, 4.0}) { Case k{kXbSaralL, 3e6, 0.4, snr, 6000, 200, 15, 0, 8, 0}; XbTelemetry t = run(k); printf("    Saral coded link at %.0f dB: %llu frames\n", snr, (unsigned long long)t.blocksOk); if (snr >= 5) CHECK(t.blocksOk >= 8, "coded link %.0f dB", snr); }
-        for (double snr : {16.0, 12.0, 9.0}) { Case k{kXbMetopDump, 45e6, 0.03, snr, 2000, 0, 0, 0, 10, 0}; XbTelemetry t = run(k); printf("    MetOp uncoded link at %.0f dB: %llu frames, %llu bad\n", snr, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad); if (snr >= 12) CHECK(t.blocksOk >= 10, "uncoded link %.0f dB", snr); }
+        for (double snr : L ? std::vector<double>{14.0, 10.0, 7.0, 5.0, 4.0} : std::vector<double>{10.0, 5.0}) { Case k{kXbSaralL, 3e6, 0.4, snr, 6000, 200, 15, 0, 8, 0}; XbTelemetry t = run(k); printf("    Saral coded link at %.0f dB: %llu frames\n", snr, (unsigned long long)t.blocksOk); if (snr >= 5) CHECK(t.blocksOk >= 8, "coded link %.0f dB", snr); }
+        for (double snr : L ? std::vector<double>{16.0, 12.0, 9.0} : std::vector<double>{12.0}) { Case k{kXbMetopDump, 45e6, 0.03, snr, 2000, 0, 0, 0, 10, 0}; XbTelemetry t = run(k); printf("    MetOp uncoded link at %.0f dB: %llu frames, %llu bad\n", snr, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad); if (snr >= 12) CHECK(t.blocksOk >= 10, "uncoded link %.0f dB", snr); }
     }
     if (only < 0 || only == 102) {
         // noise alone, every link (QA sweep 3.9: Oceansat-2 counted frames on noise, and the searching receivers took 30 - 330 CPU s a

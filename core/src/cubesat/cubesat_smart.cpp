@@ -343,14 +343,14 @@ struct SmartCubesat::Impl {
         for (size_t i = 0; i < sc.size(); i++) {
             if (claimed[i]) continue;
             // inside an existing track's channel?
-            Track* near = nullptr;
-            for (auto& t : tracks) if (std::fabs(t->freqHz - absHz(sc[i])) < std::max(2500.0, 0.6 * std::max(t->widthHz, sc[i].widthHz)) && !(t->table && !t->chanOn)) near = t.get();
-            if (near) {
+            Track* nearV = nullptr;
+            for (auto& t : tracks) if (std::fabs(t->freqHz - absHz(sc[i])) < std::max(2500.0, 0.6 * std::max(t->widthHz, sc[i].widthHz)) && !(t->table && !t->chanOn)) nearV = t.get();
+            if (nearV) {
                 claimed[i] = true;
-                if (!near->table) {
-                    near->lastSeen = sampleT; near->snrDb = sc[i].snrDb; near->widthHz = sc[i].widthHz; near->scanId = sc[i].id;
-                    near->freqHz += 0.35 * (absHz(sc[i]) - near->freqHz);
-                } else { near->lastSeen = sampleT; }
+                if (!nearV->table) {
+                    nearV->lastSeen = sampleT; nearV->snrDb = sc[i].snrDb; nearV->widthHz = sc[i].widthHz; nearV->scanId = sc[i].id;
+                    nearV->freqHz += 0.35 * (absHz(sc[i]) - nearV->freqHz);
+                } else { nearV->lastSeen = sampleT; }
                 continue;
             }
             if (!cfg.blind || sc[i].hits < 4 || sc[i].snrDb < cfg.minSnrDb) continue;
@@ -601,6 +601,27 @@ std::string exportSatnogsJson(const std::vector<SmartPacket>& v, const std::stri
         o += "\"version\":\"OnAir Smart CubeSat\",\"framing\":\"" + jsonEsc(p.framing) + "\"}\n";
     }
     return o;
+}
+
+std::string sidsForm(const SmartPacket& p, const std::string& call, double lat, double lon, int64_t wallMs) {
+    if (p.data.empty() || p.norad <= 0 || p.wallTime <= 0 || call.empty()) return {};
+    auto enc = [](const std::string& s) { std::string o; for (unsigned char c : s) { if (isalnum(c) || c == '-' || c == '_' || c == '.' || c == '~') o += (char)c; else { char b[4]; snprintf(b, sizeof b, "%%%02X", c); o += b; } } return o; };
+    const int64_t ms = wallMs > 0 ? wallMs : p.wallTime * 1000;
+    const time_t t = (time_t)(ms / 1000);
+    struct tm g;
+#ifdef _WIN32
+    gmtime_s(&g, &t);
+#else
+    gmtime_r(&t, &g);
+#endif
+    char ts[40];
+    snprintf(ts, sizeof ts, "%04d-%02d-%02dT%02d:%02d:%02d.%03dZ", g.tm_year + 1900, g.tm_mon + 1, g.tm_mday, g.tm_hour, g.tm_min, g.tm_sec, (int)(ms % 1000));
+    std::string hexUp = hexOf(p.data);
+    for (char& c : hexUp) c = (char)toupper((unsigned char)c);   // upper case, as gr-satellites sends it
+    char la[32], lo[32];
+    snprintf(la, sizeof la, "%.4f%c", std::fabs(lat), lat >= 0 ? 'N' : 'S');
+    snprintf(lo, sizeof lo, "%.4f%c", std::fabs(lon), lon >= 0 ? 'E' : 'W');
+    return "noradID=" + std::to_string(p.norad) + "&source=" + enc(call) + "&timestamp=" + enc(ts) + "&frame=" + hexUp + "&locator=longLat&longitude=" + enc(lo) + "&latitude=" + enc(la) + "&version=" + enc("OnAir 3.9");
 }
 
 std::string exportCsv(const std::vector<SmartPacket>& v) {

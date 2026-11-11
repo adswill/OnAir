@@ -244,9 +244,10 @@ void SymbolTimer::process(SplitBuf& in, std::vector<cf32>& out) {
     const float* xr = buf_.re.data();
     const float* xi = buf_.im.data();
     const size_t outBase = out.size();
-    // How many symbols fit in what we have (a symbol is about two samples; the loop corrections are tiny)
+    // How many symbols fit in what we have: a symbol is about two samples, and the step 2 (1 - corr) never falls to 1 because the correction
+    // is held below 0.5 (below). Sizing for 1.5 samples a symbol let a pulled loop (impulsive noise, clipping) write past the end (ASan, fuzz_engine_modes).
     const double lim = (double)buf_.size() - m_ - 1;
-    out.resize(outBase + (size_t)std::max(0.0, (lim - t_) / 1.5) + 2);
+    out.resize(outBase + (size_t)std::max(0.0, lim - t_) + 2);
     cf32* o = out.data() + outBase;
     size_t made = 0;
 #if defined(DVBS_AVX2_DOT)

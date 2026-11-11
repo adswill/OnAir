@@ -213,15 +213,15 @@ void postPadMap(int ksig, int mod, std::vector<uint8_t>& pad) {
 }
 
 struct PostDims { int ksig, npunc, npost; };
-PostDims postDims(int ksig, int mod, int nP2) {
-    int eta = etaMod(mod);
+// `multiple`: the coded length is rounded up to a multiple of this many bits
+PostDims postDimsM(int ksig, int mod, int multiple) {
     int npuncTemp = (6 * (KBCH12 - ksig)) / 5;
     int npostTemp = ksig + NBCH_PARITY + 9000 - npuncTemp;
-    int npost;
-    if (nP2 == 1) npost = (int)std::ceil((float)npostTemp / (2.f * eta)) * 2 * eta;
-    else npost = (int)std::ceil((float)npostTemp / ((float)eta * nP2)) * eta * nP2;
+    const int npost = (int)std::ceil((double)npostTemp / multiple) * multiple;
     return {ksig, npuncTemp - (npost - npostTemp), npost};
 }
+int postMultiple(int mod, int nP2) { const int eta = etaMod(mod); return nP2 == 1 ? 2 * eta : eta * nP2; }
+PostDims postDims(int ksig, int mod, int nP2) { return postDimsM(ksig, mod, postMultiple(mod, nP2)); }
 
 std::vector<uint8_t> postRandomizer() {
     std::vector<uint8_t> r(KBCH12);
@@ -389,7 +389,19 @@ std::vector<cf32> encodeL1Post(L1Pre& pre, const L1Post& post, int nP2, bool fef
     }
     PostDims d = postDims(ksig, mod, nP2);
     pre.postSize = d.npost / etaMod(mod);
+    return encodeL1Block(bits, mod, postMultiple(mod, nP2));
+}
 
+int l1BlockBits(int ksig, int mod, int multiple) {
+    if (mod < 0 || mod > 3 || ksig > KBCH12 || ksig < 33 || multiple < 1) return 0;
+    return postDimsM(ksig, mod, multiple).npost;
+}
+
+std::vector<cf32> encodeL1Block(const std::vector<uint8_t>& bits, int mod, int multiple) {
+    const int ksig = (int)bits.size();
+    std::vector<cf32> out;
+    if (!l1BlockBits(ksig, mod, multiple)) return out;
+    PostDims d = postDimsM(ksig, mod, multiple);
     std::vector<uint8_t> pad;
     postPadMap(ksig, mod, pad);
     std::vector<uint8_t> msg(KBCH12, 0);
@@ -415,7 +427,6 @@ std::vector<cf32> encodeL1Post(L1Pre& pre, const L1Post& post, int nP2, bool fef
         int cols = mod == 2 ? 8 : 12, rows = (int)s.size() / cols;
         for (int k = 0; k < rows; k++) for (int w = 0; w < cols; w++) t[k * cols + w] = s[rows * w + k];
     }
-    std::vector<cf32> out;
     const int nb = modBits(mod);
     if (mod == 0) for (size_t i = 0; i < s.size(); i++) out.push_back(mapCell(0, s[i]));
     else if (mod == 1) for (size_t i = 0; i + 1 < s.size(); i += 2) out.push_back(mapCell(1, (s[i] << 1) | s[i + 1]));
@@ -433,15 +444,13 @@ std::vector<cf32> encodeL1Post(L1Pre& pre, const L1Post& post, int nP2, bool fef
     return out;
 }
 
-L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, int nP2, bool fef, L1Post& out, const std::vector<float>* n0v) {
+L1Result decodeL1Block(const std::vector<cf32>& y, float n0, int ksig, int mod, int multiple, std::vector<uint8_t>& bits, const std::vector<float>* n0v) {
     L1Result r;
-    const int mod = pre.l1Mod;
-    if (mod < 0 || mod > 3 || pre.l1Cod != 0 || pre.l1Fec != 0) return r; // only rate 1/2, short FEC frames
-    const int ksig = pre.postInfoSize + 32;
-    if (ksig > KBCH12 || ksig < 33) return r;
-    PostDims d = postDims(ksig, mod, nP2);
+    bits.clear();
+    if (!l1BlockBits(ksig, mod, multiple)) return r;
+    PostDims d = postDimsM(ksig, mod, multiple);
     const int nb = modBits(mod), eta = etaMod(mod);
-    if ((int)y.size() < d.npost / eta || pre.postSize != d.npost / eta) return r;
+    if ((int)y.size() < d.npost / eta) return r;
 
     // demap to a bit-LLR stream in transmit-interleaved order
     std::vector<float> lt(d.npost, 0.f);
@@ -483,8 +492,24 @@ L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, in
     std::vector<uint8_t> hard;
     if (!ldpcPost().decodeFast(llr, 100, hard, &r.ldpcIters, 0.8f) && tlSlowL1 && !getenv("DECT2_T2_L1_MINSUM")) ldpcPost().decodeBp(llr, 40, hard, &r.ldpcIters);
     r.bchOk = bchCheck(hard, NBCH12);
-    std::vector<uint8_t> bits;
     for (int n = 0; n < KBCH12; n++) if (!pad[n]) bits.push_back(hard[n]);
+    if ((int)bits.size() != ksig) { bits.clear(); return r; }
+    r.ok = r.bchOk;
+    return r;
+}
+
+L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, int nP2, bool fef, L1Post& out, const std::vector<float>* n0v) {
+    L1Result r;
+    const int mod = pre.l1Mod;
+    if (mod < 0 || mod > 3 || pre.l1Cod != 0 || pre.l1Fec != 0) return r; // only rate 1/2, short FEC frames
+    const int ksig = pre.postInfoSize + 32;
+    if (ksig > KBCH12 || ksig < 33) return r;
+    PostDims d = postDims(ksig, mod, nP2);
+    const int eta = etaMod(mod);
+    if ((int)y.size() < d.npost / eta || pre.postSize != d.npost / eta) return r;
+    std::vector<uint8_t> bits;
+    r = decodeL1Block(y, n0, ksig, mod, postMultiple(mod, nP2), bits, n0v);
+    r.ok = false;
     if ((int)bits.size() != ksig) return r;
     if (l1PostScrambled(pre)) {
         auto rnd = postRandomizer();
@@ -502,34 +527,47 @@ L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, in
 }
 
 // ------------------------------------------------------------------ P2 distribution
+// (nPre and nPost come from a decoded L1-pre, so they are not trusted: a post size that is not a multiple of nP2, or more cells than the
+// P2 symbols hold, used to write past the end of `stream` (heap overflow found by fuzz_engine_modes). Every index is checked; a valid
+// signal gives the same cells as before.)
 void p2Distribute(const std::vector<cf32>& stream, int nP2, int cP2, int nPre, int nPost, std::vector<std::vector<cf32>>& sym) {
+    if (nP2 < 1 || cP2 < 0) { sym.clear(); return; }
     sym.assign(nP2, std::vector<cf32>(cP2, cf32(0, 0)));
     if (nP2 == 1) {
         for (int i = 0; i < cP2 && i < (int)stream.size(); i++) sym[0][i] = stream[i];
         return;
     }
-    auto at = [&](int j) { return j < (int)stream.size() ? stream[j] : cf32(0, 0); };
+    nPre = std::max(nPre, 0); nPost = std::max(nPost, 0);
+    auto at = [&](long j) { return j >= 0 && j < (long)stream.size() ? stream[(size_t)j] : cf32(0, 0); };
     for (int n = 0; n < nP2; n++) {
         int idx = 0;
-        for (int j = 0; j < nPre / nP2; j++) sym[n][idx++] = at(n + j * nP2);
-        for (int j = 0; j < nPost / nP2; j++) sym[n][idx++] = at(nPre + n + j * nP2);
+        for (int j = 0; j < nPre / nP2 && idx < cP2; j++) sym[n][idx++] = at(n + (long)j * nP2);
+        for (int j = 0; j < nPost / nP2 && idx < cP2; j++) sym[n][idx++] = at(nPre + n + (long)j * nP2);
     }
-    int rd = nPre + nPost;
+    long rd = (long)nPre + nPost;
     for (int n = 0; n < nP2; n++)
-        for (int idx = (nPre + nPost) / nP2; idx < cP2; idx++) sym[n][idx] = at(rd++);
+        for (int idx = (nPre / nP2 + nPost / nP2); idx < cP2; idx++) sym[n][idx] = at(rd++);
 }
 
+// nPost comes from a decoded L1-pre (L1_POST_SIZE). A pre that passes its CRC under the wrong carrier-mode hypothesis, or a damaged one, can
+// signal more L1-post cells than the P2 symbols hold: the cells were then written past the end of the stream (heap corruption in iq_modes on
+// Linux and Windows, ASan: heap-buffer-overflow in p2Gather). Every write and read is bounded; such a frame just fails its L1-post decode.
 void p2Gather(const std::vector<std::vector<cf32>>& sym, int nP2, int cP2, int nPre, int nPost, std::vector<cf32>& stream) {
+    if (nP2 < 1 || cP2 < 0 || (int)sym.size() < nP2) { stream.clear(); return; }
     stream.assign((size_t)nP2 * cP2, cf32(0, 0));
-    if (nP2 == 1) { for (int i = 0; i < cP2; i++) stream[i] = sym[0][i]; return; }
+    const long total = (long)stream.size();
+    auto cell = [&](int n, int idx) { return idx >= 0 && idx < (int)sym[(size_t)n].size() ? sym[(size_t)n][(size_t)idx] : cf32(0, 0); };
+    if (nP2 == 1) { for (int i = 0; i < cP2; i++) stream[(size_t)i] = cell(0, i); return; }
+    nPre = (int)std::max(0L, std::min((long)nPre, total));
+    nPost = (int)std::max(0L, std::min((long)nPost, total - nPre));
     for (int n = 0; n < nP2; n++) {
         int idx = 0;
-        for (int j = 0; j < nPre / nP2; j++) stream[n + j * nP2] = sym[n][idx++];
-        for (int j = 0; j < nPost / nP2; j++) stream[nPre + n + j * nP2] = sym[n][idx++];
+        for (int j = 0; j < nPre / nP2 && idx < cP2; j++) { const long k = n + (long)j * nP2; if (k < total) stream[(size_t)k] = cell(n, idx); idx++; }
+        for (int j = 0; j < nPost / nP2 && idx < cP2; j++) { const long k = nPre + n + (long)j * nP2; if (k < total) stream[(size_t)k] = cell(n, idx); idx++; }
     }
-    int rd = nPre + nPost;
+    long rd = (long)nPre + nPost;
     for (int n = 0; n < nP2; n++)
-        for (int idx = (nPre + nPost) / nP2; idx < cP2; idx++) stream[rd++] = sym[n][idx];
+        for (int idx = (nPre / nP2 + nPost / nP2); idx < cP2 && rd < total; idx++) stream[(size_t)rd++] = cell(n, idx);
 }
 
 } // namespace dect2

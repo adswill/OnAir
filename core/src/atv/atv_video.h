@@ -64,6 +64,7 @@ public:
         int fieldNo = 0;
         bool state1 = false, state2 = false;
         std::vector<float> lineWave, vbiWave;
+        std::vector<std::vector<float>> vitsLines; std::vector<int> vitsLineNo; double vitsRate = 0;   // test-line candidates (VITS)
         AtvGhost ghost;
         AtvVbiStatus vbi;
         std::shared_ptr<TeletextDecoder> ttx;

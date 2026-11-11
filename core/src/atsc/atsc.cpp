@@ -5,6 +5,7 @@
 #endif
 #include "dect2/atsc/atsc.h"
 #include "dect2/fec/fec_proto.h"
+#include "dect2/common/stage_prof.h"
 #include <algorithm>
 #include <cmath>
 #include <cstring>
@@ -345,6 +346,7 @@ int FieldDecoder::decode(const float* levels, uint8_t* out, FieldStats* st, uint
     xt.resize((size_t)per * kLanes);
     decb.resize((size_t)per * 8 * kLanes);
     double dist = 0; long cntSym = 0;
+    DECT2_STAGE_VAR(stVit, "atsc.trellis");
     for (int blk = 0; blk < 26; blk++)
         for (int e = 0; e < kNumEnc; e++) {
             const float* src = levels + (size_t)(1 + blk * 12) * kSegSyms;
@@ -368,9 +370,13 @@ int FieldDecoder::decode(const float* levels, uint8_t* out, FieldStats* st, uint
         }
     }
     (void)dist; (void)cntSym;
+    stVit.stop();
+    DECT2_STAGE_VAR(stDil, "atsc.deinterleave");
     dil_.syncCommutator();
     std::vector<uint8_t> de(bytes.size());
     dil_.process(bytes.data(), de.data(), bytes.size());
+    stDil.stop();
+    DECT2_STAGE("atsc.rs");
     int written = 0;
     for (int j = 0; j < kDataSegs; j++) {
         if (warm_ > 0) { warm_--; continue; }

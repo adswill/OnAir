@@ -187,29 +187,96 @@ void frameMapTab(App& a) {
     ImGui::Dummy(ImVec2(availW + 70, ch * bm.size()));
 }
 
+// The IP datagrams of DVB-H (MPE / MPE-FEC) and of DVB-C2 GSE PLPs: a pcap file in the data folder with one click; the UDP forward
+// (to a player or an analyser) under Advanced. Both start off. Only what is received in the clear is written.
+static void ipOutputControls(App& a, uint64_t packetsSeen) {
+    IpOut& io = a.engine.ipOutput();
+    IpOutConfig c = io.config();
+    static char host[64] = "127.0.0.1";
+    static int port = 5004;
+    static bool whole = false, udpOn = false;
+    ImGui::Spacing();
+    ImGui::TextColored(pal::heading(), "%s", tr("IP datagrams"));
+    ImGui::TextDisabled(tr("%llu IP packets received"), (unsigned long long)packetsSeen);
+    bool pc = c.pcap;
+    if (ImGui::Checkbox(tr("Write them to a pcap file"), &pc)) {
+        IpOutConfig n = c;
+        n.pcap = pc;
+        n.pcapPath = plat::dataDir() + "/broadcast_ip.pcap";
+        io.configure(n);
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Every IP packet (DVB-H MPE, DVB-C2 GSE) goes to broadcast_ip.pcap in the data folder (libpcap, link type RAW). Open it in Wireshark. Switching it on again starts a new file."));
+    if (ImGui::TreeNode(trw("Advanced: forward over UDP"))) {
+        ImGui::SetNextItemWidth(140 * gUi);
+        ImGui::InputText(tr("address"), host, sizeof host);
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(90 * gUi);
+        ImGui::InputInt(tr("port"), &port, 0);
+        port = std::max(0, std::min(65535, port));
+        ImGui::Checkbox(tr("whole IP packets (not just the UDP payload)"), &whole);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Off: the payload of each UDP datagram goes to the address, so a player can open udp://@:port (port 0 keeps each datagram's own port). On: every IP packet is sent whole, for an analyser."));
+        bool on = c.udp;
+        if (ImGui::Checkbox(tr("forward"), &on) || (on && (std::string(host) != c.udpHost || port != c.udpPort || whole != c.wholePackets))) {
+            IpOutConfig n = c;
+            n.udp = on; n.udpHost = host; n.udpPort = port; n.wholePackets = whole;
+            if (!(n == c)) io.configure(n);
+        }
+        udpOn = on;
+        ImGui::TreePop();
+    }
+    (void)udpOn;
+    const IpOutStats st = io.stats();
+    if (c.pcap) ImGui::TextDisabled(tr("pcap: %llu packets, %.1f MB in %s"), (unsigned long long)st.written, (double)st.bytesWritten / 1e6, c.pcapPath.c_str());
+    if (c.udp) ImGui::TextDisabled(tr("UDP: %llu datagrams to %s:%d, %llu not UDP, %llu send errors"), (unsigned long long)st.forwarded, c.udpHost.c_str(), c.udpPort, (unsigned long long)st.notUdp, (unsigned long long)st.sendErrors);
+    const std::string err = io.error();
+    if (!err.empty()) ImGui::TextColored(pal::warnAmber(), "%s", err.c_str());
+}
+
 void signallingTab(App& a) {
+    if (a.rx.standard == 742) {   // DVB-C2: the L1 and, for GSE PLPs, the IP output
+        const Dvbc2Telemetry& t = a.rx.dvbc2;
+        if (!t.l1Ok) { ImGui::TextDisabled("%s", tr("the L1 signalling part 2 has not been decoded yet")); return; }
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextUnformatted(dvbc2::l1Summary(t.l1).c_str());
+        bool gse = t.ipPackets > 0;
+        for (const auto& r : t.plps) {
+            ImGui::TextDisabled(tr("data slice %d PLP %d: %s %s, payload %s"), r.sliceId, r.plpId, dvbc2::modName(r.mod), dvbc2::codName(r.fecType, r.cod), r.payloadType == 3 ? "TS" : r.payloadType == 2 ? "GSE" : r.payloadType == 1 ? "GCS" : "GFPS");
+            gse |= r.payloadType == 2;
+        }
+        ImGui::PopTextWrapPos();
+        if (gse) ipOutputControls(a, t.ipPackets);
+        return;
+    }
     if (a.rx.standard == 1) {
         const RxTelemetry& rx = a.rx;
         if (!rx.dvbt.tpsOk) { { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("TPS (transmission parameter signalling) has not been decoded yet"); ImGui::PopTextWrapPos(); } return; }
-        static const char* modes[] = {"2K", "8K"}; static const char* hier[] = {"non-hierarchical", "hierarchical, alpha = 1", "hierarchical, alpha = 2", "hierarchical, alpha = 4"};
+        static const char* modes[] = {"2K", "8K", "4K (DVB-H)", "?"}; static const char* hier[] = {"non-hierarchical", "hierarchical, alpha = 1", "hierarchical, alpha = 2", "hierarchical, alpha = 4"};
         dvbt::Params q; q.mode = rx.dvbt.mode; q.guard = rx.dvbt.guard; q.mod = rx.dvbt.mod; q.hier = rx.dvbt.hier; q.crHp = rx.dvbt.crHp; q.crLp = rx.dvbt.crLp;
         { ImGui::PushTextWrapPos(0); ImGui::TextColored(pal::heading(), "DVB-T transmission parameters (TPS, EN 300 744)"); ImGui::PopTextWrapPos(); }
         if (ImGui::BeginTable("tps", 2, ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_RowBg)) {
             ImGui::TableSetupColumn("k", ImGuiTableColumnFlags_WidthFixed, 200 * gUi);
             auto row = [&](const char* k, const char* fmt, auto... args) { ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::TextDisabled("%s", k); ImGui::TableNextColumn(); char b[160]; snprintf(b, sizeof b, fmt, args...); ImGui::TextUnformatted(b); };
-            row("FFT mode", "%s (%d carriers, %d data carriers per symbol)", modes[rx.dvbt.mode & 1], dvbt::carriersK(rx.dvbt.mode), dvbt::dataCarriers(rx.dvbt.mode));
+            row("FFT mode", "%s (%d carriers, %d data carriers per symbol)", modes[rx.dvbt.mode & 3], dvbt::carriersK(rx.dvbt.mode), dvbt::dataCarriers(rx.dvbt.mode));
             row("Guard interval", "%s of the useful symbol (%d samples)", dvbt::guardName(rx.dvbt.guard), dvbt::guardSamples(rx.dvbt.mode, rx.dvbt.guard));
             row("Constellation", "%s", dvbt::modName(rx.dvbt.mod));
             row("Hierarchy", "%s", hier[rx.dvbt.hier & 3]);
             row("Code rate (high priority)", "%s", dvbt::rateName(rx.dvbt.crHp));
             row("Code rate (low priority)", "%s", dvbt::rateName(rx.dvbt.crLp));
             row("Cell identifier", "%d", rx.dvbt.cellId);
+            if (rx.dvbt.mode != dvbt::k8K) row("Inner interleaver", "%s", rx.dvbt.indepth ? "in-depth (DVB-H)" : "native");
+            if (rx.dvbt.dvbh) {
+                row("DVB-H", "%s, %s", rx.dvbt.timeSlicing ? "time slicing" : "no time slicing", rx.dvbt.mpeFec ? "MPE-FEC" : "no MPE-FEC");
+                if (rx.dvbt.mpePid >= 0)
+                    row("IP datagrams (MPE)", "%llu on PID %d, MPE-FEC rows corrected %llu, failed %llu", (unsigned long long)rx.dvbt.mpeDatagrams, rx.dvbt.mpePid,
+                        (unsigned long long)rx.dvbt.mpeRowsCorrected, (unsigned long long)rx.dvbt.mpeRowsFailed);
+            }
             row("Frame in superframe", "%d of 4   (symbol %d of 68)", rx.dvbt.frameIdx + 1, rx.dvbt.symbolIdx + 1);
             row("Net bit rate", "%.2f Mbit/s", dvbt::netBitrate(q, rx.nativeRate) / 1e6);
             row("TPS block age", "%.2f s", rx.dvbt.secSinceTps);
             ImGui::EndTable();
         }
         if (rx.dvbt.hier) { ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.2f, 1), "! hierarchical modulation is announced: only the high-priority stream is decoded correctly by this receiver"); ImGui::PopTextWrapPos(); }
+        if (rx.dvbt.dvbh || rx.dvbt.mpePid >= 0) ipOutputControls(a, rx.dvbt.mpeDatagrams);
         return;
     }
     const RxTelemetry& rx = a.rx;
@@ -705,6 +772,7 @@ static void tsPidsView(App& a) {
                 a.bb.hem ? "high-efficiency" : "normal", a.bb.issyi, a.bb.npd, a.bb.sisMis, a.bb.isi, (unsigned long long)a.bb.resyncs, (unsigned long long)a.bb.crcErrors, (unsigned long long)a.bb.unsupported); ImGui::PopTextWrapPos(); }
     ImGui::PopFont();
     ImGui::Spacing();
+    smart5TvCard(a);   // round-5 smart checks: off air at the source, fault split, cell, interferers (app/smart5)
     if (ImGui::BeginTable("pids", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp, ImVec2(0, -1))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("PID", ImGuiTableColumnFlags_WidthFixed, 70 * gUi);

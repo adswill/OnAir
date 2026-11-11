@@ -67,6 +67,9 @@ struct AtvTelemetry {
     // scope views
     std::vector<float> lineWave; // one line of video, about 512 points over one line period, normalised levels (sync at the left)
     std::vector<float> vbiWave;  // the vertical interval: about 512 points over 15 lines, around the field sync
+    std::vector<std::vector<float>> vitsLines;   // blanking lines without teletext after the equalising pulses, once a second: IRE at vitsRate (VITS analyser)
+    std::vector<int> vitsLineNo;                 // their line numbers (approximate, counted from the field sync)
+    double vitsRate = 0;
     // the spectrum of what the receiver sees (relative power around the vision carrier, dB), -1.5 .. +7 MHz, for the UI
     std::vector<float> specDb;
     uint64_t ttxPackets = 0; std::shared_ptr<TeletextDecoder> ttx;   // teletext from the blanking lines

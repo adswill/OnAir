@@ -8,6 +8,7 @@
 #include <thread>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 constexpr double kRate = 250000, kOff = -20000;
@@ -43,8 +44,10 @@ PskGenSignal sig(double hz, int mode, double snr) {
 int main() {
     const auto t0 = std::chrono::steady_clock::now();
     // 1. every modulation, offset, drift and clock error
-    int ok = 0;
+    int ok = 0, tried = 0;
     for (int m = 0; m < kPskModes; m++) {
+        if (psk8psk(m)) continue;   // 8PSK is not in Auto (chosen by hand)
+        tried++;
         PskGenSignal s = sig(1000 + 150.0 * m, m, 20);
         s.driftHzPerMin = 3;
         s.clockPpm = 15;
@@ -53,10 +56,14 @@ int main() {
         printf("  %-8s offset, drift, clock: auto %s, locked %d, %llu chars\n", pskModeName(m), t.autoMode >= 0 ? pskModeName(t.autoMode) : "none", (int)t.autoLocked, (unsigned long long)t.blocksOk);
         ok += hit;
     }
-    printf("PSK31 family, every modulation (20 dB in its bandwidth, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, kPskModes);
-    CHECK(ok >= kPskModes - 1, "%d of %d", ok, kPskModes);
+    printf("PSK31 family, every modulation (20 dB in its bandwidth, 80 Hz offset, 3 Hz/min drift, 15 ppm clock): %d of %d right\n", ok, tried);
+    CHECK(ok >= tried - 1, "%d of %d", ok, tried);
+    // by default the noise sweep runs only at 12 dB (the lowest checked point), noise alone 3 times and the unchecked two-signal case is left out;
+    // the long run (ONAIR_TEST_LONG=1) does every SNR, 8 noise runs and the two signals
+    const bool L = testLong();
     // 2. noise sweep on BPSK31 and BPSK63
     for (double snr : {20.0, 12.0, 8.0, 5.0}) {
+        if (!L && snr != 12.0) continue;
         int g = 0, tot = 0;
         for (int m : {0, 1}) for (int k = 0; k < 4; k++) {
             const auto t = runLive({sig(800 + 300.0 * k, m, snr)}, 20, 0, (uint32_t)(200 + 10 * m + k), true);
@@ -69,15 +76,16 @@ int main() {
     // 3. noise alone: no false lock
     {
         int bad = 0;
-        for (int k = 0; k < 8; k++) {
+        const int nNoise = L ? 8 : 3;
+        for (int k = 0; k < nNoise; k++) {
             const auto t = runLive({}, 20, 0, (uint32_t)(300 + k), true);
             bad += t.autoLocked;
         }
-        printf("noise alone: %d false locks of 8\n", bad);
+        printf("noise alone: %d false locks of %d\n", bad, nNoise);
         CHECK(bad == 0, "noise false locks %d", bad);
     }
     // 4. two signals in view, the mode with the most decoded text wins
-    {
+    if (L) {
         const auto t = runLive({sig(700, 0, 22), sig(2000, 1, 12)}, 24, 0, 50, true);
         printf("two signals (BPSK31 strong, PSK63 weak): auto %s, locked %d\n", t.autoMode >= 0 ? pskModeName(t.autoMode) : "none", (int)t.autoLocked);
     }

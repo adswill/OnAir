@@ -14,6 +14,15 @@ const uint8_t kTrainY[38] = {1,1, 0,0, 0,0, 0,1, 1,0, 0,1, 1,1, 0,0, 1,1, 1,0, 1
 const uint8_t kFreqCorr[80] = {1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
                                0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1};
 
+// 9.4.4.3.2, equations 9.7 and 9.8
+const uint8_t kTrainN8[33] = {1,1,1, 0,0,1, 1,0,1, 1,1,1, 0,0,0, 1,1,1, 1,0,0, 0,1,1, 1,1,0, 0,0,0, 0,0,0};
+const uint8_t kTrainP8[33] = {1,0,1, 0,1,1, 1,1,1, 1,0,1, 0,1,0, 1,0,1, 1,1,0, 0,0,1, 1,0,0, 0,1,0, 0,1,0};
+
+int tribitPhase(int b1, int b2, int b3) {
+    const int mag = !b1 ? (!b3 ? 1 : 3) : (b3 ? 5 : 7);
+    return b2 ? -mag : mag;
+}
+
 int dibitPhase(int b1, int b2) {
     if (!b1 && !b2) return 1;
     if (!b1 && b2) return 3;
@@ -97,6 +106,65 @@ Bits viterbiDecode23(const float* llr3, int n3) {
         s = (s >> 1) | (old << 3);
     }
     return t2;
+}
+
+namespace {
+inline float lse(float a, float b) {
+    if (a < b) std::swap(a, b);
+    return b < -1e29f ? a : a + std::log1p(std::exp(b - a));
+}
+} // namespace
+
+void sisoDecode23(const float* llr3, int n3, float* ext3) {
+    const int n = n3 * 2 / 3;
+    std::vector<float> m((size_t)n * 4, 0.f);
+    for (int j = 0; j < n3; j++) m[(size_t)punct23(j)] = llr3[j];
+    static int out[16][2][4];
+    static bool init = false;
+    if (!init) { for (int s = 0; s < 16; s++) for (int u = 0; u < 2; u++) mother(u, s, out[s][u]); init = true; }
+    // branch metric: half the LLR sum, +l/2 for a 1 and -l/2 for a 0
+    auto bm = [&](int i, int s, int u) {
+        const float* l = &m[(size_t)i * 4];
+        const int* o = out[s][u];
+        float v = 0;
+        for (int k = 0; k < 4; k++) v += o[k] ? 0.5f * l[k] : -0.5f * l[k];
+        return v;
+    };
+    std::vector<float> A((size_t)(n + 1) * 16, -1e30f), B((size_t)(n + 1) * 16, -1e30f);
+    A[0] = 0;
+    for (int i = 0; i < n; i++)
+        for (int s = 0; s < 16; s++) {
+            const float a = A[(size_t)i * 16 + (size_t)s];
+            if (a < -1e29f) continue;
+            for (int u = 0; u < 2; u++) { const int ns = ((s << 1) | u) & 15; float& t = A[(size_t)(i + 1) * 16 + (size_t)ns]; t = lse(t, a + bm(i, s, u)); }
+        }
+    B[(size_t)n * 16] = 0;   // the tail ends in state 0
+    for (int i = n - 1; i >= 0; i--)
+        for (int s = 0; s < 16; s++) {
+            float t = -1e30f;
+            for (int u = 0; u < 2; u++) { const int ns = ((s << 1) | u) & 15; const float b = B[(size_t)(i + 1) * 16 + (size_t)ns]; if (b > -1e29f) t = lse(t, b + bm(i, s, u)); }
+            B[(size_t)i * 16 + (size_t)s] = t;
+        }
+    // APP of each mother bit; extrinsic = APP - channel (the channel term of the bit itself taken out of its branch)
+    std::vector<float> app1((size_t)n * 4, -1e30f), app0((size_t)n * 4, -1e30f);
+    for (int i = 0; i < n; i++)
+        for (int s = 0; s < 16; s++) {
+            const float a = A[(size_t)i * 16 + (size_t)s];
+            if (a < -1e29f) continue;
+            for (int u = 0; u < 2; u++) {
+                const int ns = ((s << 1) | u) & 15;
+                const float b = B[(size_t)(i + 1) * 16 + (size_t)ns];
+                if (b < -1e29f) continue;
+                const float v = a + bm(i, s, u) + b;
+                const int* o = out[s][u];
+                for (int k = 0; k < 4; k++) { float& t = o[k] ? app1[(size_t)i * 4 + (size_t)k] : app0[(size_t)i * 4 + (size_t)k]; t = lse(t, v); }
+            }
+        }
+    for (int j = 0; j < n3; j++) {
+        const size_t q = (size_t)punct23(j);
+        const float L = std::max(-50.f, std::min(50.f, app1[q] - app0[q]));
+        ext3[j] = L - llr3[j];
+    }
 }
 
 // ---------------------------------------------------------------- interleaving, scrambling
@@ -217,6 +285,15 @@ bool decodeChannel(const float* llr5, const ChanSpec& c, uint32_t scr, Bits& t1)
     return true;
 }
 
+void channelExtrinsic(const float* llr5, const ChanSpec& c, uint32_t scr, float* ext5) {
+    std::vector<float> a(llr5, llr5 + c.K), b((size_t)c.K), e((size_t)c.K);
+    descramble(a.data(), c.K, scr);
+    deinterleave(a.data(), b.data(), c.K, c.a);
+    sisoDecode23(b.data(), c.K, e.data());
+    for (int i = 1; i <= c.K; i++) ext5[(c.a * i) % c.K] = e[(size_t)(i - 1)];   // interleave back
+    descramble(ext5, c.K, scr);                                                   // the same sign flips as the bits
+}
+
 Bits encodeAach(uint16_t aa, uint32_t scr) {
     const uint32_t cw = rm3014Encode(aa);
     Bits b(30);
@@ -282,6 +359,30 @@ Bits normalBurst(const Bits& bkn1, const Bits& bb, const Bits& bkn2, bool two) {
     return b;
 }
 
+std::vector<int> normalBurstP8(const Bits& bkn1, const Bits& bb, const Bits& bkn2, bool two) {
+    std::vector<int> st((size_t)kSlotSyms + 1, 0);   // 1-based
+    auto dq = [&](int sym, const uint8_t* b, int nb) { for (int i = 0; i < nb / 2; i++) st[(size_t)(sym + i)] = 2 * dibitPhase(b[2 * i], b[2 * i + 1]); };
+    auto d8 = [&](int sym, const uint8_t* b, int nb) { for (int i = 0; i < nb / 3; i++) st[(size_t)(sym + i)] = tribitPhase(b[3 * i], b[3 * i + 1], b[3 * i + 2]); };
+    dq(1, kTrainQ + 10, 12);
+    d8(kP8Bkn1Sym, bkn1.data(), 324);
+    dq(116, bb.data(), 14);
+    d8(kP8TrainSym, two ? kTrainP8 : kTrainN8, 33);
+    dq(134, bb.data() + 14, 16);
+    d8(kP8Bkn2Sym, bkn2.data(), 324);
+    dq(251, kTrainQ, 10);
+    // the phase adjustment symbols (9.4.4.3.6, table 9.16): ha balances symbols 8..122 to +pi/8, hb balances 123..249 to 0
+    auto adj = [&](int at, int n1, int n2, int target) {
+        int sum = 0;
+        for (int n = n1; n <= n2; n++) sum += st[(size_t)n];
+        int a = ((target - sum) % 16 + 16) % 16;
+        if (a > 8) a -= 16;   // an odd multiple of pi/8 in -7 .. +7
+        st[(size_t)at] = a;
+    };
+    adj(7, 8, 122, 1);
+    adj(250, 123, 249, 0);
+    return std::vector<int>(st.begin() + 1, st.end());
+}
+
 // ---------------------------------------------------------------- modulation
 
 std::vector<float> rrcTaps(int sps, int span) {
@@ -309,22 +410,33 @@ namespace { constexpr int kSpan = 8; }
 Modulator::Modulator() : h_(rrcTaps(kSps, kSpan)), hist_((size_t)(2 * kSpan + 1), cf32(0, 0)) {}
 
 void Modulator::push(const Bits& bits, std::vector<cf32>& out) {
-    const int L = 2 * kSpan + 1;
     for (size_t k = 0; k + 1 < bits.size(); k += 2) {
-        phase_ = (phase_ + dibitPhase(bits[k], bits[k + 1]) + 8) & 7;
-        const double ph = phase_ * M_PI / 4;
-        std::rotate(hist_.begin(), hist_.begin() + 1, hist_.end());
-        hist_[(size_t)(L - 1)] = cf32((float)std::cos(ph), (float)std::sin(ph));
-        // the samples of the symbol in the middle of the history: symbol c + m sits at hist_[kSpan + m]
-        for (int j = 0; j < kSps; j++) {
-            cf32 y(0, 0);
-            for (int m = -kSpan; m <= kSpan; m++) {
-                const int idx = -kSps * m + j + kSpan * kSps;
-                if (idx < 0 || idx >= (int)h_.size()) continue;
-                y += hist_[(size_t)(kSpan + m)] * h_[(size_t)idx];
-            }
-            out.push_back(y);
+        phase_ = (phase_ + 2 * dibitPhase(bits[k], bits[k + 1]) + 16) & 15;
+        symbol(out);
+    }
+}
+
+void Modulator::pushSteps(const std::vector<int>& steps, std::vector<cf32>& out) {
+    for (int st : steps) {
+        phase_ = ((phase_ + st) % 16 + 16) % 16;
+        symbol(out);
+    }
+}
+
+void Modulator::symbol(std::vector<cf32>& out) {
+    const int L = 2 * kSpan + 1;
+    const double ph = phase_ * M_PI / 8;
+    std::rotate(hist_.begin(), hist_.begin() + 1, hist_.end());
+    hist_[(size_t)(L - 1)] = cf32((float)std::cos(ph), (float)std::sin(ph));
+    // the samples of the symbol in the middle of the history: symbol c + m sits at hist_[kSpan + m]
+    for (int j = 0; j < kSps; j++) {
+        cf32 y(0, 0);
+        for (int m = -kSpan; m <= kSpan; m++) {
+            const int idx = -kSps * m + j + kSpan * kSps;
+            if (idx < 0 || idx >= (int)h_.size()) continue;
+            y += hist_[(size_t)(kSpan + m)] * h_[(size_t)idx];
         }
+        out.push_back(y);
     }
 }
 

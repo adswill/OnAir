@@ -10,6 +10,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static const double kDial = 118.700e6;
 static const double kOff = airbandTuning().tuneOffsetHz;
@@ -107,10 +108,15 @@ static void check(const char* what, const Setup& st, const Run& r, double secs, 
 int main() {
     const double secs = 12;
     const Setup st = layout8(secs);
-    // ---- 2.4 Msps (RTL-SDR) and 2 Msps, radio right
-    check("2.4 Msps, no error", st, run(st, 2.4e6, 0, 25, secs), secs, 2.0);
+    // by default: 8 s where the check starts at 2 s (every channel keys once in 2 .. 7.3 s), one radio error of each sign and size, the harder
+    // band watch, a shorter noise run; the long run (ONAIR_TEST_LONG=1) does every case for 12 s. Runs that start checking at 6 s keep 12 s.
+    const bool L = testLong();
+    const double secsQ = L ? secs : 8;
+    // ---- 2.4 Msps (RTL-SDR) and 2 Msps, radio right (the 22 dB run below covers it by default)
+    if (L) check("2.4 Msps, no error", st, run(st, 2.4e6, 0, 25, secs), secs, 2.0);
     // ---- the radio's tuning error: +-5 kHz (37 ppm) and +-7 kHz (51 ppm) at 137 MHz, on 25 kHz channels only and on all eight
     for (double cfo : {-5000.0, 7000.0, -7000.0}) {
+        if (!L && cfo == -7000.0) continue;
         const double rate = cfo == -5000.0 ? 2.0e6 : 2.4e6;   // 2.0 Msps with the radio 5 kHz low, 2.4 Msps with it +-7 kHz
         char b[64]; snprintf(b, sizeof b, "%.1f Msps, radio %+.0f Hz", rate / 1e6, cfo);
         const Run r = run(st, rate, cfo, 25, secs);
@@ -122,6 +128,7 @@ int main() {
         Setup s25;
         for (int i : {0, 1, 2, 5, 6, 7}) { s25.gen.push_back(st.gen[(size_t)i]); s25.list.push_back(st.list[(size_t)i]); }
         for (double cfo : {10000.0, -10000.0}) {
+            if (!L && cfo < 0) continue;
             char b[64]; snprintf(b, sizeof b, "25 kHz only, radio %+.0f Hz", cfo);
             const Run r = run(s25, 2.4e6, cfo, 25, secs);
             CHECK(std::fabs(r.tel.cfoHz - cfo) < 500 && r.tel.tuneKnown, "%s: measured %+.0f", b, r.tel.cfoHz);
@@ -129,7 +136,7 @@ int main() {
         }
     }
     // ---- weak signals: 22 dB carrier to noise (the weakest channel is 12 dB below)
-    check("2.4 Msps, 22 dB", st, run(st, 2.4e6, 0, 22, secs), secs, 2.0);
+    check("2.4 Msps, 22 dB", st, run(st, 2.4e6, 0, 22, secsQ), secsQ, 2.0);
     // ---- per-channel squelch: raise one channel's threshold above its carrier: it stays closed, the others still open
     {
         std::vector<AirbandChannel> l = st.list;
@@ -147,6 +154,7 @@ int main() {
     }
     // ---- the band watch: channels that are on the air but not in the list are found, named right, and listed ones are not repeated
     for (double cfo : {0.0, 6000.0}) {
+        if (!L && cfo == 0.0) continue;
         std::vector<AirbandChannel> l = {st.list[0], st.list[1], st.list[2]};
         const Run r = run(st, 2.4e6, cfo, 25, secs, &l);
         int found = 0, wrong = 0;
@@ -170,7 +178,7 @@ int main() {
         Setup q = st;
         for (auto& g : q.gen) g.levelDb = -200;
         std::vector<AirbandChannel> none;
-        const Run r = run(q, 2.4e6, 0, 20, 12, &none);
+        const Run r = run(q, 2.4e6, 0, 20, testLongPick(6.0, 12.0), &none);
         CHECK(r.tel.seen.empty() && r.tel.activity.empty(), "noise: %zu carriers seen", r.tel.seen.size());
     }
     // ---- scan with hold: the scan stays on the channel it stopped on; without hold it goes on to the next one that opens

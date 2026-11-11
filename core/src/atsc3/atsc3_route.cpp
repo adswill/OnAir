@@ -108,8 +108,13 @@ bool wholeBoxes(const std::vector<uint8_t>& d, size_t n) {
 }
 
 void RouteReceiver::push(const LctPacket& p, std::vector<RouteObject>& done) {
+    // offsets and lengths come from the air: the end of the payload is computed in 64 bits (a 32-bit sum wraps and the copy below would
+    // write before the buffer it sized), and an object larger than any ATSC 3.0 object is not taken (fuzz_parsers)
+    const uint64_t end = (uint64_t)p.startOffset + p.payload.size();
+    if (end > kMaxObjectBytes || p.transferLength > (int64_t)kMaxObjectBytes) return;
     counter_++;
     auto key = std::make_pair(p.tsi, p.toi);
+    auto drop = [&](std::map<std::pair<uint32_t, uint32_t>, Open>::iterator it) { openBytes_ -= it->second.data.size(); return open_.erase(it); };
     if (!open_.count(key) && p.startOffset == 0) {   // a new object: older ones of the TSI without a signalled length may have ended
         for (auto it = open_.begin(); it != open_.end();) {
             Open& q = it->second;
@@ -118,19 +123,27 @@ void RouteReceiver::push(const LctPacket& p, std::vector<RouteObject>& done) {
                 r.tsi = it->first.first; r.toi = it->first.second; r.codePoint = q.codePoint; r.hasSct = q.hasSct; r.sct = q.sct;
                 r.data.assign(q.data.begin(), q.data.begin() + q.ranges[0].second);
                 done.push_back(std::move(r));
-                it = open_.erase(it);
+                it = drop(it);
             } else ++it;
         }
+    }
+    // room for this packet among the unfinished objects: the oldest other ones go first
+    while (!p.payload.empty() && openBytes_ + end > kMaxOpenBytes && !open_.empty()) {
+        auto oldest = open_.end();
+        for (auto it = open_.begin(); it != open_.end(); ++it)
+            if (it->first != key && (oldest == open_.end() || it->second.age < oldest->second.age)) oldest = it;
+        if (oldest == open_.end()) break;
+        drop(oldest);
     }
     Open& o = open_[key];
     o.age = counter_;
     o.codePoint = p.codePoint;
     if (p.hasSct) { o.hasSct = true; o.sct = p.sct; }
     if (p.transferLength >= 0) o.length = p.transferLength;
-    if (p.closeObject) o.length = (int64_t)p.startOffset + (int64_t)p.payload.size();
+    if (p.closeObject) o.length = (int64_t)end;
     if (!p.payload.empty()) {
-        const uint32_t from = p.startOffset, to = p.startOffset + (uint32_t)p.payload.size();
-        if (o.data.size() < to) o.data.resize(to);
+        const uint32_t from = p.startOffset, to = (uint32_t)end;
+        if (o.data.size() < to) { openBytes_ += to - o.data.size(); o.data.resize(to); }
         std::copy(p.payload.begin(), p.payload.end(), o.data.begin() + from);
         o.ranges.push_back({from, to});
         std::sort(o.ranges.begin(), o.ranges.end());
@@ -146,10 +159,10 @@ void RouteReceiver::push(const LctPacket& p, std::vector<RouteObject>& done) {
         r.tsi = p.tsi; r.toi = p.toi; r.codePoint = o.codePoint; r.hasSct = o.hasSct; r.sct = o.sct;
         r.data.assign(o.data.begin(), o.data.begin() + o.length);
         done.push_back(std::move(r));
-        open_.erase(key);
+        drop(open_.find(key));
     }
     if (open_.size() > 256) {   // objects that never completed
-        for (auto it = open_.begin(); it != open_.end();) { if (counter_ - it->second.age > 5000) it = open_.erase(it); else ++it; }
+        for (auto it = open_.begin(); it != open_.end();) { if (counter_ - it->second.age > 5000) it = drop(it); else ++it; }
     }
 }
 

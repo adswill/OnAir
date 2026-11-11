@@ -112,16 +112,7 @@ struct GoesReceiver::Impl {
     int alignParity = 0;
     float firstOfPair = 0;
     hrpt::Viterbi vit;                    // fast 16 bit butterflies: 3 Msym/s QPSK (GK-2A HRIT) needs it
-    bool oqpsk = false;                   // Elektro HRIT 1.15 Msym/s: the Q rail starts half a symbol later (SatDump pipeline elektro_hrit); I is delayed to line them up
-    std::vector<float> iDelay; size_t iPos = 0;
-    cf32 oqpskAlign(cf32 v) {
-        const size_t nd = std::max<size_t>(1, (size_t)std::lround(sps / 2));
-        if (iDelay.size() != nd) { iDelay.assign(nd, 0.f); iPos = 0; }
-        const float old = iDelay[iPos];
-        iDelay[iPos] = v.real();
-        iPos = (iPos + 1) % nd;
-        return cf32(old, v.imag());
-    }
+    bool oqpsk = false;                   // Elektro HRIT 1.15 Msym/s: the Q rail starts half a symbol later (SatDump pipeline elektro_hrit); Q is taken half a symbol after I, after the carrier loop (timing())
     bool qpsk = false;                    // GK-2A HRIT: QPSK, G1 on I and G2 on Q; the receiver turns the serial order and polarity up in the sync search
     bool swapIQ = false;
     std::vector<float> syncBuf2;          // the same symbols with I and Q swapped (QPSK: a quarter turn swaps them)
@@ -356,8 +347,10 @@ struct GoesReceiver::Impl {
     }
 
     // ---- a symbol out of the timing loop
-    void symbol(cf32 v) {
-        const cf32 z = v * cf32((float)std::cos(-cPhase), (float)std::sin(-cPhase));
+    // vq (offset QPSK): the sample half a symbol later, where the Q rail has its symbol; z takes I from v and Q from vq, each turned back by its own carrier phase
+    void symbol(cf32 v, const cf32* vq = nullptr) {
+        cf32 z = v * cf32((float)std::cos(-cPhase), (float)std::sin(-cPhase));
+        if (vq) z = cf32(z.real(), (*vq * cf32((float)std::cos(-(cPhase + 0.5 * cFreq)), (float)std::sin(-(cPhase + 0.5 * cFreq)))).imag());
         const float re = z.real(), im = z.imag();
         // carrier loop (BPSK: the quadrature part against the sign of I; QPSK: decision directed with the points on the diagonals)
         float e, lockNow;
@@ -593,20 +586,36 @@ struct GoesReceiver::Impl {
     void timing() {
         // symbols at pos (fractional index into y), Gardner's error from the sample half a symbol earlier
         const double half = spsEst / 2;
-        while (pos + 3 < (double)y.size()) {
+        while (pos + (oqpsk ? half : 0) + 3 < (double)y.size()) {
             if (pos - half - 2 < 0) { pos += 1; continue; }
             const cf32 yk = cubic(y.data(), pos), ym = cubic(y.data(), pos - half);
             agc += 0.001f * (std::norm(yk) - agc);
             const float g = 1.f / std::sqrt(std::max(1e-12f, agc));
             const cf32 a = yk * g, m = ym * g;
-            const float e = ((yprev - a) * std::conj(m)).real();
-            yprev = a;
-            spsEst += tBeta * e;
+            float e;
+            cf32 q(0, 0);
+            if (oqpsk) {
+                // offset QPSK: Gardner on each rail in the carrier's frame. I has its symbols at pos (the middle at pos - half), Q at pos + half (its middle at pos)
+                q = cubic(y.data(), pos + half) * g;
+                const cf32 r((float)std::cos(-cPhase), (float)std::sin(-cPhase));
+                const cf32 ar = a * r, mr = m * r, qr = q * r;
+                e = (yprev.real() - ar.real()) * mr.real() + (yprev.imag() - qr.imag()) * ar.imag();
+                yprev = cf32(ar.real(), qr.imag());
+            } else {
+                e = ((yprev - a) * std::conj(m)).real();
+                yprev = a;
+            }
+            if (std::isfinite(e)) spsEst += tBeta * e;
             spsEst = std::max(sps * 0.995, std::min(sps * 1.005, spsEst));
-            pos += spsEst + tAlpha * e * sps;
-            symbol(a);
+            // a burst after silence (the AGC still tiny) or a damaged sample gives a wild error: the step stays between half a symbol and
+            // two, so the loop always moves forward (a negative step hung it) and never jumps past the buffer (fuzz_engine_modes)
+            const double step = spsEst + tAlpha * (std::isfinite(e) ? e : 0.f) * sps;
+            pos += std::max(0.5 * spsEst, std::min(2.0 * spsEst, step));
+            if (oqpsk) symbol(a, &q); else symbol(a);
         }
-        const int drop = (int)std::floor(pos - spsEst - 4);
+        if (!(pos >= 0 && pos < 1e12)) pos = (double)y.size();   // never a NaN or a wild index into the cast below (UB) or into y
+        const double dropD = std::floor(pos - spsEst - 4);
+        const int drop = dropD > 0 && dropD < 2e9 ? (int)dropD : 0;
         if (drop > 0 && drop <= (int)y.size()) { y.erase(y.begin(), y.begin() + drop); pos -= drop; }
     }
 
@@ -627,7 +636,6 @@ struct GoesReceiver::Impl {
                 decPhase = 0;
                 d = lpf.out();
             }
-            if (oqpsk) d = oqpskAlign(d);
             mf.push(d);
             const cf32 o = mf.out();
             y.push_back(o);

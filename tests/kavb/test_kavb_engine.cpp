@@ -25,6 +25,7 @@ using namespace dect2;
 namespace fs = std::filesystem;
 #include "../common/cpu_time.h"
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 struct Impair {
     double cfoHz = 0;
@@ -188,6 +189,7 @@ int main() {
     Impair i3; i3.cfoHz = 6000; i3.esn0Db = 20;
     Impair i4; i4.cfoHz = -3000; i4.eightBit = true; i4.ppm = 50;
     for (const Case& c : {Case{"A +2% 8-bit +20 ppm 22 dB", i1}, Case{"A -2% 8-bit -20 ppm 22 dB", i2}, Case{"A +6 kHz 20 dB", i3}, Case{"A -3 kHz 8-bit +50 ppm", i4}}) {
+        if (!testLong() && c.im.cfoHz == i2.cfoHz) continue;   // the quick run leaves out the mirror of the first case (-3 kHz, +50 ppm keeps a negative offset)
         const Result r = receive(sigA, kRate, c.im, 0, savePath, kSym);
         print(c.name, r);
         CHECK(r.saved == data, "%s: the saved payload differs (%zu of %zu bytes)", c.name, r.saved.size(), data.size());
@@ -207,6 +209,7 @@ int main() {
         rq.opt["kavb.seconds"] = 3;
         const std::vector<cf32> sig = generate(rq, kRate, err);
         for (double cfo : {35000.0, -35000.0, 56000.0, -56000.0, 84000.0, -84000.0}) {
+            if (!testLong() && cfo != -35000.0 && cfo != 84000.0) continue;   // the quick run: the smallest and the largest offset, one each way
             Impair im; im.cfoHz = cfo; im.esn0Db = 24;
             const Result r = receive(sig, kRate, im, 0, "", kSym);
             char nm[64];
@@ -251,6 +254,7 @@ int main() {
     // ---- the synthetic test stream at each profile (video and audio sized units); B at 2.4 Msps, C and D at 3.2 Msps (the radio rate must be at least 1.6 symbol rates)
     struct Prof { int id; double rate; double sym; };
     for (const Prof pr : {Prof{0, 2.4e6, 700e3}, Prof{1, 2.4e6, 1050e3}, Prof{2, 3.2e6, 1400e3}, Prof{3, 3.2e6, 1400e3}}) {
+        if (!testLong() && pr.id == 0) continue;   // the quick run: profile A's test stream is the one of the carrier search above
         TxRequest rq;
         rq.modeId = "kavb";
         rq.callsign = "LY2XYZ";

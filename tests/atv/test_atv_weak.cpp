@@ -5,6 +5,7 @@
 #include "dect2/atv/atv_testkit.h"
 #include "dect2/common/stable_random.h"
 #include "../common/jobs.h"
+#include "../common/test_long.h"
 #include <atomic>
 #include <cmath>
 #include <cstdio>
@@ -23,7 +24,10 @@ int main() {
     struct Level { double cnr, maxLuma; };
     const Level levels[] = {{16, 30}, {12, 42}, {8, 54}, {5, 64}};
     testjobs::Jobs jobs;
-    for (const Sys& s : systems) for (const Level& l : levels) jobs.add([=] {
+    // the default run: every system at the weakest level and PAL at the strongest too, and 3 s of noise; ONAIR_TEST_LONG=1 every level and 10 s of noise
+    for (const Sys& s : systems) for (const Level& l : levels) {
+        if (!testLong() && !(l.cnr == 5 || (s.sys == kAtvG && l.cnr == 16))) continue;
+        jobs.add([=] {
         AtvFormat f; atvMakeFormat(s.sys, s.colour, f);
         AtvGenConfig c; c.sys = s.sys; c.colour = s.colour; c.cnrDb = l.cnr; c.rate = 10e6; c.sound = 4;
         c.cfoHz = 120e3;                                         // and a carrier that is not where the channel plan has it
@@ -33,7 +37,7 @@ int main() {
         CHECK(r.tel.state == 2, "%s C/N %.0f: state %d", s.name, l.cnr, r.tel.state);
         CHECK(r.tel.lines == s.lines, "%s C/N %.0f: %d lines", s.name, l.cnr, r.tel.lines);
         CHECK(luma < l.maxLuma, "%s C/N %.0f: luminance difference %.1f (limit %.0f)", s.name, l.cnr, luma, l.maxLuma);
-    });
+    }); }
     // noise alone, for a long time: no lock, no picture
     jobs.add([] {
         AtvReceiver rx;
@@ -44,7 +48,8 @@ int main() {
         std::vector<cf32> x(65536);
         uint64_t fs = 0;
         int frames = 0, locked = 0;
-        for (int k = 0; k < 160; k++) {                          // about 1 s each 15 chunks: 10 s
+        const int chunks = testLongPick(48, 160);
+        for (int k = 0; k < chunks; k++) {                       // about 1 s each 15 chunks: 3 s (10 s in the long run)
             for (auto& v : x) v = cf32{g(rng), g(rng)};
             rx.feed(x.data(), x.size());
             if (rx.frame(fs)) frames++;

@@ -207,7 +207,7 @@ private:
         dec1_ = std::make_unique<Viterbi>(7, kPoly1, kPoly2, 45);
         dec2_ = std::make_unique<Viterbi>(7, kPoly1, kPoly2, 45);
         pair_[0] = pair_[1] = 0;
-        hist_.clear(); wasLocked_ = false; symcounter_ = 0; met1_ = met2_ = 0; metric_ = 0; shreg_ = 1;
+        hist_.clear(); wasLocked_ = false; symcounter_ = 0; met1_ = met2_ = 0; metric_ = 0; shreg_ = 1; sig2_ = 0; amp2_ = 0;
         locked = false; snrDb = 0; offsetHz = 0;
         tf_ = TextFilter();
         shown_ = 0;
@@ -267,16 +267,22 @@ private:
         for (int i = 0; i < nt; i++) if (m[i] > 2.0 * avg) burst++;
         const bool staticBurst = burst == nt;
         (void)hard;
-        // soft symbols: Gray decoded tone amplitudes onto the bits
-        double b[8] = {0};
-        for (int i = 0; i < nt; i++) {
-            const unsigned j = binaryCode((unsigned)i);
-            for (int k = 0; k < p_.symbits; k++) b[k] += (j & (1u << (p_.symbits - k - 1))) ? m[i] : -m[i];
+        // soft symbols: the log likelihood ratio of each (Gray decoded) bit from the tone magnitudes, against running estimates of the
+        // noise per tone and of the signal's tone magnitude (fskSoftBits)
+        {
+            double e2 = 0;
+            for (int i = 0; i < nt; i++) e2 += m[i] * m[i];
+            const double noise = (e2 - mx * mx) / std::max(1, nt - 1);
+            sig2_ = sig2_ > 0 ? decayAvg(sig2_, noise, 32) : noise;
+            amp2_ = decayAvg(amp2_, std::max(0.0, mx * mx - sig2_), 32);
         }
+        unsigned label[64];
+        for (int i = 0; i < nt; i++) label[i] = binaryCode((unsigned)i);
         uint8_t sym[8];
-        for (int k = 0; k < p_.symbits; k++) {
-            sym[k] = staticBurst ? 128 : (uint8_t)std::clamp(128.0 + b[k] / sum * 256.0, 0.0, 255.0);
-        }
+        // the noise floor at most 10 dB under the tone: a strong tone between two bins (tuning error, a retune by the signal finder)
+        // otherwise gives sure but wrong bits
+        fskSoftBits(m, nt, label, p_.symbits, std::sqrt(amp2_), std::max(sig2_, kSnrCap * amp2_), kSoftGain, sym);
+        if (staticBurst) for (int k = 0; k < p_.symbits; k++) sym[k] = 128;
         inl_->symbols(sym);
         for (int k = 0; k < p_.symbits; k++) decodeSymbol(sym[k], k);
         // lock and level
@@ -500,6 +506,9 @@ private:
     std::vector<uint8_t> hist_;
     bool wasLocked_ = false;
     static constexpr float kLockLevel = 20.f;
+    // soft bits: 32 per unit of log likelihood ratio (the Viterbi metric and the lock level on it were set for bits that are mostly
+    // sure on a clean signal: 16 lost the MFSK32 picture behind the signal finder); the per-tone SNR capped at 10 dB
+    static constexpr double kSoftGain = 32.0, kSnrCap = 0.1;
     KbdConfig cfg_;
     MfskP p_;
     double spacing_, centre_ = 1500;
@@ -515,6 +524,7 @@ private:
     std::unique_ptr<Viterbi> dec1_, dec2_;
     uint8_t pair_[2] = {0, 0};
     double met1_ = 0, met2_ = 0, metric_ = 0;
+    double sig2_ = 0, amp2_ = 0;   // noise power and signal power per tone, for the soft bits
     unsigned shreg_ = 1;
     float shown_ = 0;
     TextFilter tf_;

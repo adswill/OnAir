@@ -207,6 +207,7 @@ void Engine::configureReceiver(int a, double r) {
     case 209: rxInmsat_.configure(r); break;
     case 361: rxRc_.configure(r); break;
     case 601: case 602: rxXlink_.configure(r); break;
+    case 621: case 622: case 623: case 624: case 625: case 626: case 627: rxCis_[a - 621].configure(r); break;
     case 211: rxNrf_.configure(r); break;
     case 242: rxSens_.configure(r); break;
     case 246: rxBgan_.configure(r); break;
@@ -214,6 +215,9 @@ void Engine::configureReceiver(int a, double r) {
     case 212: rxAtis_.configure(r); break;
     case 241: rxSelcal_.configure(r); break;
     case 481: rxUmts_.configure(r); break;
+    case 661: rxCdma_.configure(r); break;
+    case 662: rxTds_.configure(r); break;
+    case 641: rxVdl3_.configure(r); break;
     case 236: rxFy3a_.configure(r); break;
     case 291: rxSd3_[0].configure(r); break;
     case 292: rxSd3_[1].configure(r); break;
@@ -235,6 +239,7 @@ void Engine::configureReceiver(int a, double r) {
     case 501: rxHs_[6].configure(r); break;
     case 502: rxHs_[7].configure(r); break;
     case 503: rxHs_[8].configure(r); break;
+    case 751: rxHs_[9].configure(r); break;
     case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
     case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].configure(r); break;
     case 261: rxWx_[0].configure(r); break;
@@ -251,6 +256,7 @@ void Engine::configureReceiver(int a, double r) {
     case 272: rxWx_[11].configure(r); break;
     case 237: rxFy3m_.configure(r); break;
     case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: rxHfu_[a - 431].configure(r); break;
+    case kHfuHdrFamily + 1: case kHfuAle3gFamily + 1: case kHfuLink11Family + 1: case kHfu4481Family + 1: rxHfm_[a - kHfuExtraActiveFirst].configure(r); break;
     case 238: rxPh2_.configure(r); break;
     case 239: rxPh3_.configure(r); break;
     case 240: rxPh4_.configure(r); break;
@@ -279,6 +285,7 @@ void Engine::configureReceiver(int a, double r) {
     case 108: rxCq_.configure(r); break;
     case 105: rxMs_.configure(r); break;
     case 142: rxGd_.configure(r); break;
+    case 701: rxHrdcp_.configure(r); break;
     case 143: rxModeAc_.configure(r); break;
     case 144: rxBt_.configure(r); break;
     case 146: rxMilhf_.configure(r); break;
@@ -289,7 +296,10 @@ void Engine::configureReceiver(int a, double r) {
     case 145: rxSb_.configure(r); break;
     case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: rxSatd_.setSystem(a + 1); rxSatd_.configure(r); break;
     case 562: rxNavic_.configure(r); break;
+    case 731: rxTsb_.configureTsb(r, 6, 0); break;
+    case 742: rxC2_.configure(r); break;
     case 155: rxIsdbs_.configure(r); break;
+    case 747: rxDvbsh_.configure(r); break;
     case 130: rxLtr_.configure(r); break;
     case 131: rxEdacs_.configure(r); break;
     case 321: rxSmartnet_.configure(r); break;
@@ -423,6 +433,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 209: rxInmsat_.setSignalOffset(o); rxInmsat_.setCenterFrequency(centreHz); break;
     case 361: rxRc_.setSignalOffset(o); rxRc_.setCenterHz(centreHz); break;
     case 601: case 602: rxXlink_.setSignalOffset(o); rxXlink_.setCenterHz(centreHz); break;
+    case 621: case 622: case 623: case 624: case 625: case 626: case 627: rxCis_[a - 621].setSignalOffset(o); break;
     case 211: rxNrf_.setSignalOffset(o); break;
     case 242: rxSens_.setSignalOffset(o); rxSens_.setCenterHz(centreHz); break;
     case 246: rxBgan_.setSignalOffset(o); rxBgan_.setCenterHz(centreHz); break;
@@ -430,6 +441,9 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 212: rxAtis_.setSignalOffset(o); break;
     case 241: rxSelcal_.setSignalOffset(o); rxSelcal_.setDialHz(dialHz); break;
     case 481: rxUmts_.setSignalOffset(o); break;
+    case 662: rxTds_.setSignalOffset(o); break;
+    case 661: rxCdma_.setSignalOffset(o); rxCdma_.setCenterHz(lastDev_.isRadio() ? centreHz : 0.0); break;
+    case 641: rxVdl3_.setSignalOffset(o); rxVdl3_.setCenterHz(centreHz); break;
     case 236: rxFy3a_.setSignalOffset(o); break;
     case 291: rxSd3_[0].setSignalOffset(o); break;
     case 292: rxSd3_[1].setSignalOffset(o); break;
@@ -451,6 +465,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 501: rxHs_[6].setSignalOffset(o); rxHs_[6].setCenterHz(centreHz); break;
     case 502: rxHs_[7].setSignalOffset(o); rxHs_[7].setCenterHz(centreHz); break;
     case 503: rxHs_[8].setSignalOffset(o); rxHs_[8].setCenterHz(centreHz); break;
+    case 751: rxHs_[9].setSignalOffset(o); rxHs_[9].setCenterHz(centreHz); break;
     case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
     case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].setSignalOffset(o); break;
     case 261: rxWx_[0].setSignalOffset(o); break;
@@ -467,6 +482,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 272: rxWx_[11].setSignalOffset(o); break;
     case 237: rxFy3m_.setSignalOffset(o); break;
     case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: rxHfu_[a - 431].setSignalOffset(o); break;
+    case kHfuHdrFamily + 1: case kHfuAle3gFamily + 1: case kHfuLink11Family + 1: case kHfu4481Family + 1: rxHfm_[a - kHfuExtraActiveFirst].setSignalOffset(o); break;
     case 238: rxPh2_.setSignalOffset(o); break;
     case 239: rxPh3_.setSignalOffset(o); break;
     case 240: rxPh4_.setSignalOffset(o); break;
@@ -489,6 +505,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 108: rxCq_.setSignalOffset(o); break;
     case 105: rxMs_.setSignalOffset(o); rxMs_.setCenterHz(centreHz); break;
     case 142: rxGd_.setSignalOffset(o); rxGd_.setCenterHz(centreHz); break;
+    case 701: rxHrdcp_.setSignalOffset(o); rxHrdcp_.setCenterHz(centreHz); break;
     case 143: rxModeAc_.setSignalOffset(o); break;
     case 144: rxBt_.setSignalOffset(o); rxBt_.setCenterHz(centreHz); break;
     case 146: rxMilhf_.setSignalOffset(o); rxMilhf_.setCenterHz(centreHz); break;
@@ -498,6 +515,8 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 145: rxSb_.setSignalOffset(o); rxSb_.setCenterHz(centreHz); break;
     case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: rxSatd_.setCenterHz(centreHz); break;
     case 155: rxIsdbs_.setSignalOffset(o); rxIsdbs_.setCenterHz(centreHz); break;
+    case 747: rxDvbsh_.setSignalOffset(o); break;
+    case 742: rxC2_.setSignalOffset(o); rxC2_.setCenterHz(centreHz); break;
     case 130: rxLtr_.setSignalOffset(o); rxLtr_.setCenterHz(centreHz); break;
     case 131: rxEdacs_.setSignalOffset(o); rxEdacs_.setCenterHz(centreHz); break;
     case 321: rxSmartnet_.setCenterHz(centreHz); rxSmartnet_.setSignalOffset(o); break;

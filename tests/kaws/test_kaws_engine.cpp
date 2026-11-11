@@ -25,6 +25,7 @@ using namespace dect2;
 namespace fs = std::filesystem;
 #include "../common/cpu_time.h"
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static constexpr double kBase = 1.8e9;   // a multiple of 240 s: slot index parity and every slot grid line up
 
@@ -176,7 +177,10 @@ int main() {
     // ---- P3 chat messages and P0 short beacons, +-50 Hz carrier offset, easy SNR (a P0 chat message is at least two blocks: it takes two slots, 240 s apart)
     struct Case { int profile, kind; double snr, cfo, ifHz; };
     const Case cases[] = {{3, 0, 3.0, 50, 20000}, {3, 0, 3.0, -50, 0}, {0, 1, -8.0, 50, 0}, {0, 1, -8.0, -50, 20000}};
+    // the quick run: one P0 beacon (P0's slot is 120 s), the one with the negative offset and the IF; and the two-slot P0 message below (about 370 s of signal)
+    // is left to ONAIR_TEST_LONG=1, the first slot of it still checked
     for (const Case& c : cases) {
+        if (!testLong() && c.profile == 0 && c.cfo > 0) continue;
         const std::string text = "HELLO KAWS P" + std::to_string(c.profile);
         TxRequest rq = chatReq(c.profile, text);
         rq.opt["kaws.kind"] = c.kind;
@@ -211,7 +215,7 @@ int main() {
     }
 
     // ---- a two-block P0 chat message: the blocks come in two slots 240 s apart and the message completes with the second
-    {
+    if (testLong()) {
         const Run r = run(chatReq(0, "HELLO KAWS P0"), 0, 250000, 0, 30, INFINITY, true, 240.0);
         printf("P0 chat, both slots: messages %llu, blocks %llu/%llu\n", (unsigned long long)r.t.messages, (unsigned long long)r.t.blocksOk, (unsigned long long)r.t.blocksBad);
         CHECK(r.t.messages == 1 && !r.t.chats.empty() && r.t.chats[0].text == "HELLO KAWS P0", "P0 chat completes across two slots (%llu messages, %llu blocks)", (unsigned long long)r.t.messages, (unsigned long long)r.t.blocksOk);

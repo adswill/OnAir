@@ -2,11 +2,13 @@
 #include "dect2/automation/json_mini.h"
 #include "dect2/common/thread_name.h"
 #include <algorithm>
+#include <cctype>
 #include <chrono>
 #include <condition_variable>
 #include <cstdio>
 #include <deque>
 #include <fstream>
+#include <map>
 #include <mutex>
 #include <random>
 #include <thread>
@@ -183,6 +185,117 @@ std::vector<HaSensor> haSensors(const MqttSettings& m) {
     return v;
 }
 
+namespace {
+// one Home Assistant entity per value of a sensor: which values get one, and how Home Assistant should show them
+struct HaField { const char* key; const char* label; const char* component; const char* devClass; const char* unit; const char* stateClass; const char* icon; };
+const HaField kHaFields[] = {
+    {"temperature_C", "Temperature", "sensor", "temperature", "\xC2\xB0" "C", "measurement", ""},
+    {"temperature_F", "Temperature", "sensor", "temperature", "\xC2\xB0" "F", "measurement", ""},
+    {"temperature_1_C", "Temperature 1", "sensor", "temperature", "\xC2\xB0" "C", "measurement", ""},
+    {"temperature_2_C", "Temperature 2", "sensor", "temperature", "\xC2\xB0" "C", "measurement", ""},
+    {"humidity", "Humidity", "sensor", "humidity", "%", "measurement", ""},
+    {"moisture", "Moisture", "sensor", "moisture", "%", "measurement", ""},
+    {"pressure_hPa", "Pressure", "sensor", "atmospheric_pressure", "hPa", "measurement", ""},
+    {"pressure_kPa", "Pressure", "sensor", "pressure", "kPa", "measurement", ""},
+    {"pressure_PSI", "Pressure", "sensor", "pressure", "psi", "measurement", ""},
+    {"pressure_bar", "Pressure", "sensor", "pressure", "bar", "measurement", ""},
+    {"wind_avg_km_h", "Wind speed", "sensor", "wind_speed", "km/h", "measurement", ""},
+    {"wind_max_km_h", "Wind gust", "sensor", "wind_speed", "km/h", "measurement", ""},
+    {"wind_avg_m_s", "Wind speed", "sensor", "wind_speed", "m/s", "measurement", ""},
+    {"wind_max_m_s", "Wind gust", "sensor", "wind_speed", "m/s", "measurement", ""},
+    {"wind_avg_mi_h", "Wind speed", "sensor", "wind_speed", "mph", "measurement", ""},
+    {"wind_max_mi_h", "Wind gust", "sensor", "wind_speed", "mph", "measurement", ""},
+    {"wind_dir_deg", "Wind direction", "sensor", "", "\xC2\xB0", "measurement", "mdi:compass"},
+    {"rain_mm", "Rain total", "sensor", "precipitation", "mm", "total_increasing", ""},
+    {"rain_in", "Rain total", "sensor", "precipitation", "in", "total_increasing", ""},
+    {"rain_rate_mm_h", "Rain rate", "sensor", "precipitation_intensity", "mm/h", "measurement", ""},
+    {"rain_rate_in_h", "Rain rate", "sensor", "precipitation_intensity", "in/h", "measurement", ""},
+    {"uv", "UV index", "sensor", "", "UV index", "measurement", "mdi:weather-sunny"},
+    {"uvi", "UV index", "sensor", "", "UV index", "measurement", "mdi:weather-sunny"},
+    {"light_lux", "Light", "sensor", "illuminance", "lx", "measurement", ""},
+    {"lux", "Light", "sensor", "illuminance", "lx", "measurement", ""},
+    {"battery_mV", "Battery voltage", "sensor", "voltage", "mV", "measurement", ""},
+    {"power_W", "Power", "sensor", "power", "W", "measurement", ""},
+    {"energy_kWh", "Energy", "sensor", "energy", "kWh", "total_increasing", ""},
+    {"current_A", "Current", "sensor", "current", "A", "measurement", ""},
+    {"voltage_V", "Voltage", "sensor", "voltage", "V", "measurement", ""},
+    {"co2_ppm", "CO2", "sensor", "carbon_dioxide", "ppm", "measurement", ""},
+    {"pm2_5_ug_m3", "PM2.5", "sensor", "pm25", "\xC2\xB5g/m\xC2\xB3", "measurement", ""},
+    {"pm10_ug_m3", "PM10", "sensor", "pm10", "\xC2\xB5g/m\xC2\xB3", "measurement", ""},
+    {"depth_cm", "Depth", "sensor", "distance", "cm", "measurement", ""},
+    {"strike_count", "Lightning strikes", "sensor", "", "", "total_increasing", "mdi:flash"},
+    {"storm_dist_km", "Lightning distance", "sensor", "distance", "km", "measurement", ""},
+    {"battery_ok", "Battery", "binary_sensor", "battery", "", "", ""},
+    {"rssi_db", "Signal", "sensor", "signal_strength", "dB", "measurement", ""},
+};
+
+// a part of an object id: letters, digits and _ only
+std::string haId(const std::string& s) {
+    std::string o;
+    for (unsigned char c : s) o += isalnum(c) ? (char)tolower(c) : '_';
+    while (o.find("__") != std::string::npos) o.replace(o.find("__"), 2, "_");
+    if (o.size() > 80) o.resize(80);
+    return o.empty() ? "_" : o;
+}
+
+std::string evText(const au::Event& ev, const char* k) {
+    auto it = ev.f.find(k);
+    return it == ev.f.end() ? std::string() : it->second.text();
+}
+}  // namespace
+
+std::string haSensorStateTopic(const MqttSettings& m, const automation::Event& ev) {
+    return m.haBase + "/sensor/" + haId(evText(ev, "key"));
+}
+
+std::vector<HaSensor> haSensorEntities(const MqttSettings& m, const automation::Event& ev) {
+    std::vector<HaSensor> v;
+    if (ev.type != "sensor.reading") return v;
+    const std::string key = evText(ev, "key");
+    if (key.empty()) return v;
+    const std::string dev = "onair_sensor_" + haId(key);
+    const std::string state = haSensorStateTopic(m, ev);
+    std::string devName = evText(ev, "name");
+    if (devName.empty()) devName = evText(ev, "model");
+    for (const HaField& f : kHaFields) {
+        auto it = ev.f.find(f.key);
+        if (it == ev.f.end() || it->second.t != au::Value::Num) continue;
+        HaSensor s;
+        s.key = dev + "_" + haId(f.key);
+        s.name = devName + " " + f.label;
+        s.family = "sensor";
+        s.icon = f.icon;
+        s.stateTopic = state;
+        s.configTopic = m.haPrefix + "/" + f.component + "/" + s.key + "/config";
+        js::Value c = js::Value::object();
+        c.set("name", js::Value::string(f.label));
+        c.set("unique_id", js::Value::string(s.key));
+        c.set("object_id", js::Value::string(s.key));
+        c.set("state_topic", js::Value::string(state));
+        if (std::string(f.component) == "binary_sensor")   // battery: on means low
+            c.set("value_template", js::Value::string(std::string("{{ 'OFF' if (value_json.fields.") + f.key + " | float(1)) > 0.5 else 'ON' }}"));
+        else c.set("value_template", js::Value::string(std::string("{{ value_json.fields.") + f.key + " }}"));
+        if (*f.devClass) c.set("device_class", js::Value::string(f.devClass));
+        if (*f.unit) c.set("unit_of_measurement", js::Value::string(f.unit));
+        if (*f.stateClass) c.set("state_class", js::Value::string(f.stateClass));
+        if (*f.icon) c.set("icon", js::Value::string(f.icon));
+        if (std::string(f.key) == "rssi_db" || std::string(f.key) == "battery_ok") c.set("entity_category", js::Value::string("diagnostic"));
+        c.set("availability_topic", js::Value::string(m.haBase + "/status"));
+        js::Value d = js::Value::object();
+        js::Value ids = js::Value::array();
+        ids.push(js::Value::string(dev));
+        d.set("identifiers", ids);
+        d.set("name", js::Value::string(devName));
+        d.set("model", js::Value::string(evText(ev, "model")));
+        d.set("manufacturer", js::Value::string("Sub-GHz sensor (OnAir)"));
+        d.set("via_device", js::Value::string("onair"));
+        c.set("device", d);
+        s.configJson = js::dump(c);
+        v.push_back(std::move(s));
+    }
+    return v;
+}
+
 // ---- settings file ----
 std::string toJson(const Settings& s) {
     js::Value root = js::Value::object();
@@ -277,6 +390,7 @@ struct Hub::Impl {
     // worker-only state
     mqtt::Client client;
     bool haSent = false;
+    std::map<std::string, std::string> haSensorCfg;   // Home Assistant per-sensor config topics sent on this connection, with the payload
     double nextTry = 0;
     double backoff = 2;
     std::string clientIdUsed, cfgKey;
@@ -323,6 +437,7 @@ struct Hub::Impl {
             return false;
         }
         backoff = 2;
+        haSensorCfg.clear();
         setMqttStatus("connected");
         if (m.haDiscovery) {
             std::string e;
@@ -340,12 +455,23 @@ struct Hub::Impl {
         if (m.haDiscovery) {
             const std::string fam = familyPart(ev);
             for (const HaSensor& hs : haSensors(m)) if (hs.family == fam) topics.push_back({hs.stateTopic, m.retain});
+            if (ev.type == "sensor.reading") topics.push_back({haSensorStateTopic(m, ev), true});   // one device per sensor (haSensorEntities)
         }
         for (int attempt = 0; attempt < 2; attempt++) {
             if (!ensureMqtt(s)) { std::lock_guard<std::mutex> lk(mu); st.mqttFailed++; return; }
             bool ok = true;
             std::string err;
+            if (m.haDiscovery && ev.type == "sensor.reading") {   // the entities of a sensor the first time it is heard on this connection, again when its name changes
+                if (haSensorCfg.size() > 4000) haSensorCfg.clear();
+                for (const HaSensor& hs : haSensorEntities(m, ev)) {
+                    auto it = haSensorCfg.find(hs.configTopic);
+                    if (it != haSensorCfg.end() && it->second == hs.configJson) continue;
+                    if (!client.publish(hs.configTopic, hs.configJson, 1, true, err)) { ok = false; break; }
+                    haSensorCfg[hs.configTopic] = hs.configJson;
+                }
+            }
             for (const auto& t : topics) {
+                if (!ok) break;
                 if (!mqtt::topicNameValid(t.first)) { ok = true; continue; }
                 if (!client.publish(t.first, json, m.qos, t.second, err)) { ok = false; break; }
                 std::lock_guard<std::mutex> lk(mu);

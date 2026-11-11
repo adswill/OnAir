@@ -255,6 +255,14 @@ void GnssReceiver::Impl::resetState() {
     tel = GnssTelemetry(); telReady = false;
 }
 
+// The search stages while nothing is locked: 0 the first window, 1 +-45 kHz, 2 +-170 kHz, 3..5 the same with the long integration.
+// 3.9: the long integration of the first window comes second (0, 3, 1, 2, 4, 5): a weak sky with a good oscillator (or a remembered error)
+// is found within the first rounds instead of after the +-170 kHz round, which alone takes about 35 s (docs/SENSITIVITY-3.9-E.md)
+static int nextStage(int s) {
+    static const int next[6] = {3, 2, 4, 1, 5, 0};
+    return next[s >= 0 && s < 6 ? s : 0];
+}
+
 // Where and how long to search next. With satellites locked the radio's error lies within 5.5 kHz of each of their Dopplers, so the others are within
 // 11 kHz of all of them; with a fix it is measured. With nothing locked the window widens round by round (TCXO, HackRF, cheap dongle), then the
 // same with a four times longer integration for weak signals, and starts over.
@@ -284,7 +292,7 @@ void GnssReceiver::Impl::planSearch() {
         if (newRound) {
             stageRounds = r;
             if (nPull == 0) {
-                stage = (stage + 1) % 6;
+                stage = nextStage(stage);
                 static const char* what[6] = {"", "+-45 kHz (a radio without a TCXO, such as a HackRF)", "+-170 kHz (a dongle without a TCXO)",
                                                "with a 64 ms integration for weak signals", "+-45 kHz with a 64 ms integration", "+-170 kHz with a 64 ms integration"};
                 if (stage > 0) logf(std::string("nothing found yet: searching ") + what[stage]);
@@ -326,7 +334,7 @@ void GnssReceiver::Impl::planOwn(GnssAcq& acq, SearchPlan& pl, int sys, double r
         if (newRound) {
             pl.stageRounds = r;
             if (nPull == 0) {
-                pl.stage = (pl.stage + 1) % 6;
+                pl.stage = nextStage(pl.stage);
                 static const char* what[6] = {"", "+-45 kHz", "+-170 kHz", "with a 64 ms integration", "+-45 kHz with a 64 ms integration", "+-170 kHz with a 64 ms integration"};
                 if (pl.stage > 0) logf(std::string(name) + ": nothing found yet, searching " + what[pl.stage]);
             }

@@ -2,6 +2,7 @@
 // their Doppler, scans the span for narrow carriers, identifies each (CW, AFSK, FSK / GMSK, BPSK and its baud rate) and decodes it. The view
 // shows the next passes, the carriers with what each is doing, the decoded packets with their telemetry, and the exports (SatNOGS-ready file,
 // CSV, KISS). Everything manual is under Advanced.
+#include <set>
 #include "app.h"
 #include "dect2/cubesat/cubesat_smart.h"
 #include <algorithm>
@@ -445,6 +446,37 @@ void cubesatSmartView(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Writes the packets as a SatNOGS-ready file (one telemetry record per line), a CSV and a KISS file to the data folder. Nothing is uploaded."));
     ImGui::SameLine();
     if (ImGui::SmallButton(tr("Clear##csm_clr"))) { sm.clearPackets(); S.selKey = 0; }
+    {   // live forwarding to SatNOGS DB (SiDS), off by default, under the user's callsign and position
+        static bool loadedF = false, fwd = false;
+        static char call[16] = {};
+        static std::set<std::string> sent;
+        static std::shared_ptr<std::atomic<int>> okN = std::make_shared<std::atomic<int>>(0), badN = std::make_shared<std::atomic<int>>(0);
+        if (!loadedF) { loadedF = true; fwd = plat::prefs().getB("cubesatSids", false); snprintf(call, sizeof call, "%s", plat::prefs().getS("cubesatSidsCall", "").c_str()); }
+        if (ImGui::Checkbox(tr("Forward to SatNOGS DB##csm_sids"), &fwd)) plat::prefs().setB("cubesatSids", fwd);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Each new frame of a known satellite (NORAD number) is sent at once to db.satnogs.org under your callsign and the receiver position, as gr-satellites does. The satellite teams use these frames."));
+        ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+        if (ImGui::InputTextWithHint("##csm_sidscall", tr("your callsign"), call, sizeof call, ImGuiInputTextFlags_CharsUppercase)) plat::prefs().setS("cubesatSidsCall", call);
+        if (fwd) {
+            ImGui::SameLine();
+            ImGui::TextDisabled(tr("%d sent, %d failed"), okN->load(), badN->load());
+            if (!call[0] || !receiverLocationSet()) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.25f, 1), "%s", tr("Needs your callsign and the receiver position (Tuner, Locate)."));
+            else {
+                double lat, lon; receiverLocation(lat, lon);
+                for (const SmartPacket& p : pk) {
+                    const std::string body = dect2::cubesat::sidsForm(p, call, lat, lon);
+                    if (body.empty()) continue;
+                    const std::string k = std::to_string(p.wallTime) + "|" + std::to_string(p.norad) + "|" + std::to_string(p.data.size()) + "|" + std::to_string(std::hash<std::string>()(std::string(p.data.begin(), p.data.end())));
+                    if (!sent.insert(k).second) continue;
+                    if (sent.size() > 20000) sent.clear();
+                    auto okC = okN, badC = badN;
+                    std::thread([body, okC, badC] {
+                        const bool ok = plat::postRequest(dect2::cubesat::kSidsSatnogsUrl, body, "application/x-www-form-urlencoded", {}, std::string("OnAir/") + ONAIR_VERSION);
+                        (ok ? *okC : *badC)++;
+                    }).detach();
+                }
+            }
+        }
+    }
     const SmartStatus st = sm.status();
     ImGui::AlignTextToFramePadding();
     if (!on) ImGui::TextDisabled("%s", tr("Press the button: it does the rest."));

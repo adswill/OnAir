@@ -11,6 +11,7 @@
 // request on the control channel. OnAir never attempts access to an encrypted system and encrypts nothing without keys the user imported.
 #pragma once
 #include "dect2/dmr/dmr_gen.h"
+#include "dect2/dmr/dmr_slot_sync.h"
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -42,6 +43,9 @@ struct DmrTxConfig {
     bool lrrpNoFix = false;       // LRRP: send a NoFix status instead of a position
     double voiceSeconds = 3.6;    // length of a voice call (rounded to whole 360 ms superframes)
     bool encrypted = false;       // set only the privacy flag of the service options; OnAir never scrambles the payload here
+    // slot sync (dmr_slot_sync.h): silence before the first burst so that it lands in the repeater's inbound slot. 0: start at once (asynchronous,
+    // the "BS activation" case of TS 102 361-1 4.4.1). The lead already allows for a slot 2 transmission starting 30 ms into the frame.
+    double leadSec = 0;
 };
 
 // The generator config for one transmission (the inverse mapping is not needed). dest 0 with AllCallVoice becomes 0xFFFFFF.
@@ -50,5 +54,14 @@ DmrGenConfig dmrTxGenConfig(const DmrTxConfig& t);
 std::unique_ptr<ModeSynth> makeDmrTxSynth(const DmrTxConfig& t);
 // One line for the panel, the log and the documentation (call type, IDs, slot, colour code).
 std::string dmrTxSummary(const DmrTxConfig& t);
+
+// The delay of the DMR generator from its first output sample to symbol 0 of its first burst (pulse shaping), for the slot sync.
+double dmrTxGenDelaySec();
+// Slot sync of one transmission (dmr_slot_sync.h): from the repeater timing the receiver heard (DmrSlotClock::global()), the lead for a
+// transmission whose first sample goes on the air at txStartSec (steady clock). Sets t.leadSec and t.slot (the inbound slot) when the repeater was
+// heard recently (only t.leadSec changes); leaves t asynchronous otherwise. logicalChannel is the slot the user picked; aligned: the repeater uses aligned channel timing.
+DmrTxLead dmrTxApplySlotSync(DmrTxConfig& t, int logicalChannel, bool aligned, double txStartSec);
+// the same from a given fit (tests; the clock of txStartSec is the fit's)
+DmrTxLead dmrTxApplySlotSync(DmrTxConfig& t, int logicalChannel, bool aligned, double txStartSec, const DmrSlotClock::Fit& f);
 
 } // namespace dect2

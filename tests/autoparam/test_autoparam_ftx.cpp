@@ -5,6 +5,7 @@
 #include <thread>
 using namespace wsjttest;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 using namespace dect2;
 
 namespace {
@@ -41,10 +42,18 @@ int main() {
         ok += hit;
         printf("  %-10s sub %d period %-5g at %5.0f dB: found %d, sub %d, period %g, decode time %.0f ms\n", name, s, p, snr, (int)o.found, o.sub, o.period, o.ms);
     };
-    for (int s = 0; s < 3; s++) one("JT65", ftx::kJt65, s, 0, -10, (uint64_t)(100 + s));   // one period only
-    for (int s = 0; s < 7; s += 3) one("JT4", ftx::kJt4, s, 0, -8, (uint64_t)(200 + s));
-    for (double p : {15.0, 30.0, 60.0}) for (int s = 0; s < 5; s += 2) one("Q65", ftx::kQ65, s, p, -10, (uint64_t)(300 + s + (int)p));
-    for (double p : {15.0, 30.0, 60.0}) one("FST4", ftx::kFst4, 0, p, -8, (uint64_t)(400 + (int)p));
+    if (testLong()) {
+        for (int s = 0; s < 3; s++) one("JT65", ftx::kJt65, s, 0, -10, (uint64_t)(100 + s));   // one period only
+        for (int s = 0; s < 7; s += 3) one("JT4", ftx::kJt4, s, 0, -8, (uint64_t)(200 + s));
+        for (double p : {15.0, 30.0, 60.0}) for (int s = 0; s < 5; s += 2) one("Q65", ftx::kQ65, s, p, -10, (uint64_t)(300 + s + (int)p));
+        for (double p : {15.0, 30.0, 60.0}) one("FST4", ftx::kFst4, 0, p, -8, (uint64_t)(400 + (int)p));
+    } else {   // by default one point per mode and both Q65 period and sub-mode ends (same seeds as the long run); the long run does every setting
+        one("JT65", ftx::kJt65, 0, 0, -10, 100);
+        one("JT4", ftx::kJt4, 6, 0, -8, 206);
+        one("Q65", ftx::kQ65, 4, 15, -10, 319);
+        one("Q65", ftx::kQ65, 0, 60, -10, 360);
+        one("FST4", ftx::kFst4, 0, 15, -8, 415);
+    }
     {   // MSK144 pings repeat fast enough to decode in the 15 s and the 30 s candidate alike: found either way counts, the decode is what matters
         const Out o = run(ftx::kMsk144, 0, 15, -2, 501);
         n++; ok += o.found;

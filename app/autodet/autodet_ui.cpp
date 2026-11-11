@@ -40,7 +40,7 @@ struct AutoState {
 std::map<const App*, AutoState> gState;
 bool gInternal = false;          // our own selectMode() calls do not end the automatic mode
 
-bool tvFamily(int f) { return f == 0 || f == 1 || f == 3 || f == 4 || f == 6 || f == 7 || f == 8 || f == 40; }
+bool tvFamily(int f) { return f == 0 || f == 1 || f == 3 || f == 4 || f == 6 || f == 7 || f == 8 || f == 40 || f == 741; }
 bool voiceFamily(int f) { return f == 9 || f == 50 || f == 180 || f == 38 || f == 33 || f == 45 || f == 128 || f == 46 || f == 31; }
 
 void switchTo(App& a, int fam) {

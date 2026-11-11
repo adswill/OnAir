@@ -9,6 +9,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static void run(const char* name, double rate, double ebn0, double cfo, int nTones, double secs) {
     SynthConfig cfg;
@@ -53,8 +54,10 @@ static void run(const char* name, double rate, double ebn0, double cfo, int nTon
 }
 
 int main() {
-    run("2.4 Msps, 10 tones, clean", 2.4e6, 12, 0, 10, 40);
-    run("4 Msps, 10 tones, cfo +4.3 kHz", 4e6, 10, 4300, 10, 40);
+    // the channel is found in about 3 s and a 10500 bit/s frame lasts 0.5 s: 10 s by default for the two easy cases (the long run 40 s);
+    // the 6 dB case keeps its 50 s (12 s decoded nothing, quick run 42881392517)
+    run("2.4 Msps, 10 tones, clean", 2.4e6, 12, 0, 10, testLongPick(10, 40));
+    run("4 Msps, 10 tones, cfo +4.3 kHz", 4e6, 10, 4300, 10, testLongPick(10, 40));
     run("4 Msps, 14 tones, 6 dB", 4e6, 6, -3100, 14, 50);
     // noise alone: no channel
     {
@@ -63,7 +66,7 @@ int main() {
         std::vector<cf32> buf(65536);
         uint64_t s = 12345;
         auto g = [&]() { s ^= s << 13; s ^= s >> 7; s ^= s << 17; return (float)((s >> 11) & 0xFFFFFF) / 16777216.f - 0.5f; };
-        for (double done = 0; done < 30 * 2.4e6; done += (double)buf.size()) {
+        for (double done = 0; done < testLongPick(8, 30) * 2.4e6; done += (double)buf.size()) {
             for (auto& v : buf) v = cf32(g() * 2, g() * 2);
             rx.feed(buf.data(), buf.size());
         }

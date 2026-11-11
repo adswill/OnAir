@@ -16,6 +16,13 @@ SitorLiveReceiver::SitorLiveReceiver() {
             t.push_back(err ? '?' : static_cast<char>(ch));
             if (t.size() > kKeepChars) t.erase(0, t.size() - kKeepChars);
         });
+        arq_[i].setEventSink([this, i](const std::string& e) {
+            std::string& l = arqLog_[i];
+            l += e;
+            l += '\n';
+            if (l.size() > kKeepChars) l.erase(0, l.size() - kKeepChars);
+            if (log_) log_(e);
+        });
     }
 }
 
@@ -26,7 +33,9 @@ void SitorLiveReceiver::configure(double inputRateHz) {
     if (ready_) { front_.configure(rate_); front_.setOffsetHz(offsetHz_); }
     spec_.reset(); fsk_.reset();
     for (auto& d : dec_) d.reset();
+    for (auto& m : arq_) m.reset();
     text_[0].clear(); text_[1].clear();
+    arqLog_[0].clear(); arqLog_[1].clear();
     snap_ = SitorTelemetry();
     seq_++;
 }
@@ -46,7 +55,9 @@ void SitorLiveReceiver::reset() {
     std::lock_guard<std::mutex> lk(mu_);
     spec_.reset(); fsk_.reset();
     for (auto& d : dec_) d.reset();
+    for (auto& m : arq_) m.reset();
     text_[0].clear(); text_[1].clear();
+    arqLog_[0].clear(); arqLog_[1].clear();
     info_ = marine::Spectrum::Fsk();
     snap_ = SitorTelemetry();
     seq_++;
@@ -63,7 +74,7 @@ void SitorLiveReceiver::feed(const cf32* x, size_t n) {
         info_ = spec_.findFsk(170.0, 600.0);
         if (info_.found) fsk_.setCentreHz(info_.centreHz);
     }
-    fsk_.process(base_.data(), base_.size(), [&](float v) { dec_[0].pushBit(v); dec_[1].pushBit(v); });   // B = 1 = the higher tone
+    fsk_.process(base_.data(), base_.size(), [&](float v) { dec_[0].pushBit(v); dec_[1].pushBit(v); arq_[0].pushBit(v); arq_[1].pushBit(v); });   // B = 1 = the higher tone
     publish();
     seq_++;
 }
@@ -84,6 +95,16 @@ void SitorLiveReceiver::publish() {
     snap_.chars = d.charsDecoded();
     snap_.dataValid = snap_.chars > 0;
     snap_.text = text_[k];
+    // SITOR-A: the polarity whose monitor has read more blocks
+    const int q = arq_[1].stats().blocks > arq_[0].stats().blocks ? 1 : 0;
+    const sitor::ArqStats& s = arq_[q].stats();
+    snap_.arqLocked = s.locked;
+    snap_.arqBlocks = s.blocks; snap_.arqNew = s.newBlocks; snap_.arqRepeats = s.repeats; snap_.arqBad = s.bad;
+    snap_.arqCs = s.controlSignals; snap_.arqChars = s.chars; snap_.arqCsOffset = s.csOffsetBits;
+    snap_.arqText = arq_[q].text();
+    snap_.selcall = arq_[q].selcall();
+    snap_.arqLog = arqLog_[q];
+    if (s.locked && !locked) { snap_.inverted = q == 1; snap_.dataValid = s.chars > 0 || snap_.dataValid; }
 }
 
 bool SitorLiveReceiver::telemetry(SitorTelemetry& out, uint64_t lastSeq) {

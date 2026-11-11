@@ -2,6 +2,7 @@
 #include "dect2/ais/ais_rx.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/ais/ais_testutil.h"
+#include "../common/test_long.h"
 #include <cstdio>
 #include <random>
 using namespace dect2;
@@ -12,7 +13,7 @@ int main() {
     for (double fs : {3e6, 2e6, 1e6}) {
         AisReceiver rx;
         rx.configure(fs);
-        std::vector<cf32> x((size_t)(fs * 60));
+        std::vector<cf32> x((size_t)(fs * testLongPick(15, 60)));   // 15 s of noise per rate by default, 60 s in the long run
         const double gateHz = fs > 0 ? 50.0 : 0;  // keyed noise: bursts of strong noise, as a pulsed interferer
         for (size_t i = 0; i < x.size(); i++) {
             const double ph = std::fmod((double)i / fs * gateHz, 1.0);

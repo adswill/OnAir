@@ -7,6 +7,15 @@
 #include "i18n/i18n.h"
 #include "dect2/common/time_fmt.h"
 #include "dect2/sensors/sensors_rx.h"
+#include "dect2/sensors/sensors_names.h"
+#include "dect2/sensors/pws_upload.h"
+#include "dect2/sensors/sensors_archive.h"
+#include <filesystem>
+#include <map>
+#include <atomic>
+#include <memory>
+#include <mutex>
+#include <thread>
 #include "dect2/sensors/sensors_tel.h"
 #include <algorithm>
 #include <cmath>
@@ -18,6 +27,9 @@
 #include <sstream>
 #include <string>
 #include <vector>
+
+void sensorsMineTick(const dect2::SensorsTelemetry& t);   // sensors_mine_ui.cpp (3.9): my meters and tyres
+void sensorsMineView(const dect2::SensorsTelemetry& t);
 
 namespace {
 
@@ -37,6 +49,15 @@ struct State {
     std::string note;
     std::string graphKey;               // which value of the selected sensor the graph shows ("" or kBothKey: the two main values together)
     std::set<std::string> pinned;       // sensors that never expire (saved as sensorsPinned)
+    dect2::SensorNames names;           // the user's names (saved as sensorsNames)
+    std::set<std::string> hintsNo;      // move hints answered "No" this session (by the new key)
+    std::string nameKey;                // the Name popup is for this sensor
+    char nameBuf[64] = {};
+    std::string alertKey, alertField, alertNote;   // the Alert popup
+    int alertAbove = 1;
+    double alertValue = 0;
+    double lastTouch = 0;
+    bool openName = false, openAlert = false;   // open the popup on the next frame (asked from inside the table)
 };
 State S;
 
@@ -73,6 +94,8 @@ void load(App& a) {
         while (std::getline(ps, k, '\n')) if (!k.empty()) S.pinned.insert(k);
         a.engine.sensors().setPinned(std::vector<std::string>(S.pinned.begin(), S.pinned.end()));
     }
+    S.names.parse(plat::prefs().getS("sensorsNames", ""));
+    a.engine.sensors().setNames(S.names.plain());
     std::stringstream ss(plat::prefs().getS("sensorsFlex", ""));
     std::string l;
     while (std::getline(ss, l, '\n')) if (!l.empty()) S.custom.push_back(l);
@@ -85,6 +108,11 @@ void load(App& a) {
 void saveCustom(App& a) {
     plat::prefs().setS("sensorsFlex", join(S.custom, '\n'));
     a.engine.sensors().setCustomDecoders(S.custom);
+}
+
+void saveNames(App& a) {
+    plat::prefs().setS("sensorsNames", S.names.serialize());
+    a.engine.sensors().setNames(S.names.plain());
 }
 
 void saveDiff() {
@@ -198,6 +226,71 @@ void sensorsView(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("One line per value: topic and payload, topics as rtl_433's MQTT output (rtl_433/devices/<model>/<channel>/<id>/<value>), ready for mosquitto_pub."));
     if (!S.note.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", S.note.c_str()); }
 
+    // a named sensor went quiet and one of the same model and channel appeared just after: a battery change gives most sensors a new id
+    {
+        const int64_t nowH = (int64_t)std::time(nullptr);
+        if (ImGui::GetTime() - S.lastTouch > 5) { S.lastTouch = ImGui::GetTime(); if (S.names.touch(t)) plat::prefs().setS("sensorsNames", S.names.serialize()); }
+        for (const auto& h : S.names.hints(t, nowH)) {
+            if (S.hintsNo.count(h.toKey)) continue;
+            std::string m, id, ch, m2, id2, ch2;
+            dect2::SensorNames::splitKey(h.fromKey, m, id, ch); dect2::SensorNames::splitKey(h.toKey, m2, id2, ch2);
+            ImGui::AlignTextToFramePadding();
+            ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.3f, 1), tr("\"%s\" (%s %s) went quiet and %s %s appeared on the same channel. New battery?"), h.name.c_str(), m.c_str(), id.c_str(), m2.c_str(), id2.c_str());
+            ImGui::SameLine();
+            if (ImGui::SmallButton((std::string(tr("Move the name")) + "##mv" + h.toKey).c_str())) { S.names.move(h.fromKey, h.toKey, nowH); saveNames(a); }
+            ImGui::SameLine();
+            if (ImGui::SmallButton((std::string(tr("No")) + "##mvno" + h.toKey).c_str())) S.hintsNo.insert(h.toKey);
+            break;   // one at a time
+        }
+    }
+    if (S.openName) { ImGui::OpenPopup("##sensname"); S.openName = false; }
+    if (ImGui::BeginPopup("##sensname")) {
+        ImGui::TextUnformatted(tr("Name this sensor"));
+        ImGui::TextDisabled("%s", S.nameKey.c_str());
+        ImGui::SetNextItemWidth(220 * gUi);
+        if (ImGui::IsWindowAppearing()) ImGui::SetKeyboardFocusHere();
+        const bool enter = ImGui::InputText("##sensnm", S.nameBuf, sizeof S.nameBuf, ImGuiInputTextFlags_EnterReturnsTrue);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Shown in the table, the graph, the automations and Home Assistant. Empty removes the name."));
+        if (ImGui::Button(tr("Save##sensnm")) || enter) { S.names.set(S.nameKey, S.nameBuf, (int64_t)std::time(nullptr)); saveNames(a); ImGui::CloseCurrentPopup(); }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Cancel##sensnm"))) ImGui::CloseCurrentPopup();
+        ImGui::EndPopup();
+    }
+    // Alert: a threshold rule for one sensor (sensors_names.h sensorAlertRule), shown and edited in Automations afterwards
+    if (S.openAlert) { ImGui::OpenPopup("##sensalert"); S.openAlert = false; }
+    if (ImGui::BeginPopup("##sensalert")) {
+        const dect2::SensorDevice* ad = nullptr;
+        for (const auto& d : t.devices) if (d.key == S.alertKey) ad = &d;
+        if (!ad) { ImGui::TextDisabled("%s", tr("The sensor left the list.")); }
+        else {
+            const std::string label = dect2::sensorLabel(*ad, S.names);
+            ImGui::Text(tr("Alert for %s"), label.c_str());
+            std::vector<const dect2::SensorField*> nums;
+            for (const auto& f : ad->latest) if (f.numeric && f.key != "id" && f.key != "channel" && f.key != "subtype" && f.key != "mic") nums.push_back(&f);
+            if (nums.empty()) ImGui::TextDisabled("%s", tr("This sensor sends no values to compare."));
+            else {
+                if (S.alertField.empty()) { S.alertField = nums.front()->key; S.alertValue = nums.front()->num; }
+                ImGui::SetNextItemWidth(170 * gUi);
+                if (ImGui::BeginCombo("##sensalf", S.alertField.c_str())) {
+                    for (const auto* f : nums) if (ImGui::Selectable(f->key.c_str(), f->key == S.alertField)) { S.alertField = f->key; S.alertValue = f->num; }
+                    ImGui::EndCombo();
+                }
+                ImGui::SameLine();
+                ImGui::RadioButton(tr("above"), &S.alertAbove, 1); ImGui::SameLine(); ImGui::RadioButton(tr("below"), &S.alertAbove, 0); ImGui::SameLine();
+                ImGui::SetNextItemWidth(90 * gUi);
+                ImGui::InputDouble("##sensalv", &S.alertValue, 0, 0, "%.2f");
+                ImGui::TextDisabled("%s", tr("A notification and a sound, at most every 30 minutes while it holds. Edit or switch it off in View > Automations."));
+                if (ImGui::Button(tr("Add the alert##sensal"))) {
+                    std::string err;
+                    if (automationAddRule(dect2::sensorAlertRule(ad->key, label, S.alertField, S.alertAbove != 0, S.alertValue), err)) { S.note = tr("Alert added (View > Automations)."); ImGui::CloseCurrentPopup(); }
+                    else S.alertNote = err;
+                }
+                if (!S.alertNote.empty()) ImGui::TextColored(ImVec4(0.95f, 0.5f, 0.4f, 1), "%s", S.alertNote.c_str());
+            }
+        }
+        ImGui::EndPopup();
+    }
+
     const float graphH = 170 * gUi;   // the lower box: the history of the selected row
     if (!ImGui::BeginTable("##sensl", 12, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable,
                            ImVec2(0, std::max(60.f * gUi, ImGui::GetContentRegionAvail().y - graphH - 6 * gUi)))) return;
@@ -228,10 +321,16 @@ void sensorsView(App& a) {
         }
         ImGui::TableNextColumn();
         const bool sel = d.key == S.selKey;
-        if (ImGui::Selectable((d.model + "##" + d.key).c_str(), sel, ImGuiSelectableFlags_SpanAllColumns)) { S.selKey = sel ? "" : d.key; S.graphKey.clear(); }
+        const std::string nm = S.names.get(d.key);
+        if (ImGui::Selectable(((nm.empty() ? d.model : nm) + "##" + d.key).c_str(), sel, ImGuiSelectableFlags_SpanAllColumns)) { S.selKey = sel ? "" : d.key; S.graphKey.clear(); }
         if (ImGui::IsItemHovered()) {
             const std::string o = otherText(d);
-            ImGui::SetTooltip("%s: %s  (%llu)\n%s", d.kind.c_str(), d.model.c_str(), (unsigned long long)d.count, o.c_str());
+            ImGui::SetTooltip("%s: %s  (%llu)\n%s\n%s", d.kind.c_str(), d.model.c_str(), (unsigned long long)d.count, o.c_str(), tr("Right-click: name this sensor, or an alert"));
+        }
+        if (ImGui::BeginPopupContextItem(("##sensctx" + d.key).c_str())) {
+            if (ImGui::MenuItem(tr("Name..."))) { S.nameKey = d.key; std::snprintf(S.nameBuf, sizeof S.nameBuf, "%s", nm.c_str()); S.openName = true; }
+            if (ImGui::MenuItem(tr("Alert..."))) { S.alertKey = d.key; S.alertField.clear(); S.alertNote.clear(); S.openAlert = true; }
+            ImGui::EndPopup();
         }
         ImGui::TableNextColumn(); ImGui::TextUnformatted(d.id.c_str());
         ImGui::TableNextColumn(); ImGui::TextUnformatted(d.channel.c_str());
@@ -270,7 +369,7 @@ void sensorsView(App& a) {
     const bool canBoth = s2 != nullptr;
     if (S.graphKey.empty() || (S.graphKey == kBothKey && !canBoth) || (S.graphKey != kBothKey && !find(S.graphKey.c_str()))) S.graphKey = canBoth ? kBothKey : s1->key;
     ImGui::AlignTextToFramePadding();
-    ImGui::TextUnformatted(sd->model.c_str()); ImGui::SameLine();
+    ImGui::TextUnformatted(dect2::sensorLabel(*sd, S.names).c_str()); ImGui::SameLine();
     ImGui::SetNextItemWidth(200 * gUi);
     const std::string cur = S.graphKey == kBothKey ? std::string(tr("Both values")) : S.graphKey;
     if (ImGui::BeginCombo("##sensg", cur.c_str())) {
@@ -474,14 +573,186 @@ void decodersView(App& a) {
     ImGui::EndChild();
 }
 
+void tick(App& a) { if (live(a)) sensorsMineTick(a.rx.sensors); }
+// ----- weather upload (Weather Underground, CWOP): off by default, the user's id and key -----
+struct Pws {
+    bool loaded = false, wu = false, cwop = false;
+    std::string key1, key2;                 // the sensors that make the station
+    char wuId[32] = {}, wuKey[64] = {}, cwCall[16] = {}, cwPass[12] = {};
+    int minutes = 5;
+    double last = 0;
+    struct Status { std::mutex mu; std::string text; };
+    std::shared_ptr<Status> status = std::make_shared<Status>();
+    std::shared_ptr<std::atomic<bool>> busy = std::make_shared<std::atomic<bool>>(false);
+};
+Pws P;
+void pwsLoad() {
+    if (P.loaded) return;
+    P.loaded = true;
+    plat::Prefs& d = plat::prefs();
+    P.wu = d.getB("pwsWu", false); P.cwop = d.getB("pwsCwop", false);
+    P.key1 = d.getS("pwsKey1", ""); P.key2 = d.getS("pwsKey2", "");
+    std::snprintf(P.wuId, sizeof P.wuId, "%s", d.getS("pwsWuId", "").c_str()); std::snprintf(P.wuKey, sizeof P.wuKey, "%s", d.getS("pwsWuKey", "").c_str());
+    std::snprintf(P.cwCall, sizeof P.cwCall, "%s", d.getS("pwsCwCall", "").c_str()); std::snprintf(P.cwPass, sizeof P.cwPass, "%s", d.getS("pwsCwPass", "").c_str());
+    P.minutes = std::max(5, (int)d.getI("pwsMinutes", 5));
+}
+void pwsSave() {
+    plat::Prefs& d = plat::prefs();
+    d.setB("pwsWu", P.wu); d.setB("pwsCwop", P.cwop); d.setS("pwsKey1", P.key1); d.setS("pwsKey2", P.key2);
+    d.setS("pwsWuId", P.wuId); d.setS("pwsWuKey", P.wuKey); d.setS("pwsCwCall", P.cwCall); d.setS("pwsCwPass", P.cwPass); d.setI("pwsMinutes", P.minutes);
+}
+int tzOffNow() { const time_t t = time(nullptr); struct tm l = *localtime(&t), g = *gmtime(&t); l.tm_isdst = 0; g.tm_isdst = 0; return (int)difftime(mktime(&l), mktime(&g)); }
+
+void pwsTick(App& a) {
+    pwsLoad();
+    if ((!P.wu && !P.cwop) || !live(a) || P.busy->load()) return;
+    const double now = (double)time(nullptr);
+    if (now - P.last < P.minutes * 60.0) return;
+    dect2::PwsReading r;
+    bool have = false;
+    for (const auto& d : a.rx.sensors.devices) {
+        if (d.key != P.key1 && d.key != P.key2) continue;
+        if (now - (double)d.lastSeen > 15 * 60) continue;   // a silent sensor sends nothing old
+        r = have ? dect2::pwsMerge(r, dect2::pwsFromSensor(d, (int64_t)now, tzOffNow())) : dect2::pwsFromSensor(d, (int64_t)now, tzOffNow());
+        have = true;
+    }
+    if (!have || !r.any()) return;
+    P.last = now;
+    const std::string wuUrl = P.wu && P.wuId[0] && P.wuKey[0] ? dect2::pwsWundergroundUrl(P.wuId, P.wuKey, r, (int64_t)now) : "";
+    std::string cw;
+    double la = 0, lo = 0;
+    if (P.cwop && P.cwCall[0] && receiverLocationSet()) { receiverLocation(la, lo); cw = dect2::pwsCwopPacket(P.cwCall, la, lo, r, (int64_t)now); }
+    const std::string call = P.cwCall, pass = P.cwPass, tmp = plat::dataDir() + "/pws-reply.txt";
+    auto st = P.status; auto busy = P.busy;
+    busy->store(true);
+    std::thread([wuUrl, cw, call, pass, tmp, st, busy] {
+        std::string out;
+        if (!wuUrl.empty()) {
+            const bool ok = plat::fetchUrl(wuUrl, tmp, std::string("OnAir/") + ONAIR_VERSION);
+            std::ifstream f(tmp); std::string reply; std::getline(f, reply);
+            out += ok && reply.find("success") != std::string::npos ? "Weather Underground: sent" : "Weather Underground: not accepted (" + reply.substr(0, 60) + ")";
+            std::remove(tmp.c_str());
+        }
+        if (!cw.empty()) { std::string err; const bool ok = dect2::pwsCwopSend(call, pass, cw, err); out += (out.empty() ? "" : "; ") + std::string(ok ? "CWOP: sent" : "CWOP: " + err); }
+        { std::lock_guard<std::mutex> lk(st->mu); st->text = out; }
+        busy->store(false);
+    }).detach();
+}
+
+void uploadView(App& a) {
+    pwsLoad();
+    const dect2::SensorsTelemetry& t = a.rx.sensors;
+    ImGui::TextWrapped("%s", tr("Send one weather station's values to Weather Underground and CWOP every few minutes. Off until you switch it on; your station id, key and callsign. Windy and AWEKAS are not supported."));
+    bool ch = false;
+    auto pick = [&](const char* id, std::string& key) {
+        std::string cur = key.empty() ? std::string(tr("(none)")) : key;
+        for (const auto& d : t.devices) if (d.key == key) cur = dect2::sensorLabel(d, S.names);
+        ImGui::SetNextItemWidth(260 * gUi);
+        if (ImGui::BeginCombo(id, cur.c_str())) {
+            if (ImGui::Selectable(tr("(none)"), key.empty())) { key.clear(); ch = true; }
+            for (const auto& d : t.devices) if (d.kind == "weather" || !d.history.empty()) if (ImGui::Selectable((dect2::sensorLabel(d, S.names) + "##pws" + d.key).c_str(), d.key == key)) { key = d.key; ch = true; }
+            ImGui::EndCombo();
+        }
+    };
+    ImGui::AlignTextToFramePadding(); ImGui::TextUnformatted(tr("Station sensor")); ImGui::SameLine(); pick("##pws1", P.key1);
+    ImGui::SameLine(); ImGui::TextUnformatted(tr("and")); ImGui::SameLine(); pick("##pws2", P.key2);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A second sensor fills what the first does not send (for example a rain gauge next to a thermometer)."));
+    ImGui::SetNextItemWidth(90 * gUi);
+    if (ImGui::InputInt(tr("minutes between uploads##pws"), &P.minutes)) { P.minutes = std::max(5, std::min(60, P.minutes)); ch = true; }
+    ImGui::Separator();
+    ch |= ImGui::Checkbox("Weather Underground##pwswu", &P.wu);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(120 * gUi); ch |= ImGui::InputTextWithHint("##pwswuid", tr("station ID"), P.wuId, sizeof P.wuId);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ch |= ImGui::InputTextWithHint("##pwswukey", tr("station key"), P.wuKey, sizeof P.wuKey, ImGuiInputTextFlags_Password);
+    ch |= ImGui::Checkbox("CWOP##pwscw", &P.cwop);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(120 * gUi); ch |= ImGui::InputTextWithHint("##pwscwc", tr("CW1234 or callsign"), P.cwCall, sizeof P.cwCall);
+    ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi); ch |= ImGui::InputTextWithHint("##pwscwp", tr("passcode"), P.cwPass, sizeof P.cwPass, ImGuiInputTextFlags_Password);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("CW stations need none (-1). A licensed amateur uses the APRS-IS passcode of the callsign. The position is the receiver position."));
+    if (P.cwop && !receiverLocationSet()) ImGui::TextColored(ImVec4(0.95f, 0.6f, 0.25f, 1), "%s", tr("CWOP needs the receiver position (Tuner, Locate)."));
+    if (ch) pwsSave();
+    { std::string t2; { std::lock_guard<std::mutex> lk(P.status->mu); t2 = P.status->text; } if (!t2.empty()) ImGui::TextDisabled("%s", t2.c_str()); }
+}
+
+// ----- long history: daily min / max / mean and rain per day, kept between sessions -----
+struct Arch { bool loaded = false; dect2::SensorArchive ar; std::map<std::string, int64_t> fed; double lastSave = 0; std::string sel; };
+Arch AR;
+std::filesystem::path archFile() { return std::filesystem::path(reinterpret_cast<const char8_t*>((plat::dataDir() + "/stats").c_str())) / "sensors-days.txt"; }
+void archSave() {
+    std::error_code ec;
+    std::filesystem::create_directories(archFile().parent_path(), ec);
+    std::ofstream o(archFile(), std::ios::binary | std::ios::trunc);
+    o << AR.ar.serialize();
+    AR.ar.clearDirty();
+}
+void archTick(App& a) {
+    if (!AR.loaded) {
+        AR.loaded = true;
+        AR.ar.setTzOffset(tzOffNow());
+        std::ifstream f(archFile(), std::ios::binary);
+        std::stringstream ss; ss << f.rdbuf();
+        AR.ar.parse(ss.str());
+    }
+    if (live(a)) for (const auto& d : a.rx.sensors.devices) {
+        int64_t& last = AR.fed[d.key];
+        if (d.lastSeen == last) continue;
+        last = d.lastSeen;
+        std::vector<std::pair<std::string, double>> v;
+        for (const auto& f : d.latest) if (f.numeric) v.push_back({f.key, f.num});
+        AR.ar.add(d.key, d.lastSeen, v);
+    }
+    const double now = (double)time(nullptr);
+    if (AR.ar.dirty() && (now - AR.lastSave > 600 || !live(a))) { AR.lastSave = now; archSave(); }   // every 10 minutes, and when the receiver stops
+}
+void historyView(App& a) {
+    const auto keys = AR.ar.keys();
+    if (keys.empty()) { ImGui::TextDisabled("%s", tr("No history yet: every reading is added per day and kept between sessions.")); return; }
+    if (AR.sel.empty() || !AR.ar.days(AR.sel)) AR.sel = !S.selKey.empty() && AR.ar.days(S.selKey) ? S.selKey : keys.front();
+    auto label = [&](const std::string& k) { for (const auto& d : a.rx.sensors.devices) if (d.key == k) return dect2::sensorLabel(d, S.names); const std::string n = S.names.get(k); return n.empty() ? k : n; };
+    ImGui::SetNextItemWidth(280 * gUi);
+    if (ImGui::BeginCombo("##senshist", label(AR.sel).c_str())) {
+        for (const auto& k : keys) if (ImGui::Selectable((label(k) + "##sh" + k).c_str(), k == AR.sel)) AR.sel = k;
+        ImGui::EndCombo();
+    }
+    const auto& days = *AR.ar.days(AR.sel);
+    const std::string today = days.back().day;
+    ImGui::SameLine();
+    ImGui::TextDisabled(tr("rain this month %.1f mm, this year %.1f mm"), AR.ar.rainTotal(AR.sel, today.substr(0, 7)), AR.ar.rainTotal(AR.sel, today.substr(0, 4)));
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Save now##senshist"))) archSave();
+    // the columns: the values this sensor has, temperature and humidity first
+    std::vector<std::string> cols;
+    for (const char* k : {"temperature_C", "humidity", "pressure_hPa", "wind_avg_km_h", "wind_max_km_h"}) for (const auto& d : days) if (d.values.count(k)) { cols.push_back(k); break; }
+    for (const auto& d : days) for (const auto& kv : d.values) if (std::find(cols.begin(), cols.end(), kv.first) == cols.end() && cols.size() < 6) cols.push_back(kv.first);
+    bool rain = false;
+    for (const auto& d : days) rain |= d.hasRain;
+    const int nc = 1 + (int)cols.size() + (rain ? 1 : 0);
+    if (!ImGui::BeginTable("##senshistt", nc, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Day"));
+    for (const auto& c : cols) ImGui::TableSetupColumn((c + " min / max").c_str());
+    if (rain) ImGui::TableSetupColumn(tr("Rain mm"));
+    ImGui::TableHeadersRow();
+    for (auto it = days.rbegin(); it != days.rend(); ++it) {
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(it->day.c_str());
+        for (const auto& c : cols) {
+            ImGui::TableNextColumn();
+            auto v = it->values.find(c);
+            if (v == it->values.end()) ImGui::TextDisabled("-"); else ImGui::Text("%.1f / %.1f", v->second.min, v->second.max);
+        }
+        if (rain) { ImGui::TableNextColumn(); if (it->hasRain) ImGui::Text("%.1f", it->rainMm); else ImGui::TextDisabled("-"); }
+    }
+    ImGui::EndTable();
+}
+
 void tab(App& a) {
     load(a);
     easeui::autoBandControl(a, "sensAutoBand", a.rx.sensors.blocksOk);
     banner(a);
     ImGui::Spacing();
-    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders"});
-    if (!live(a) && S.view != 3) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
-    if (S.view == 0) sensorsView(a); else if (S.view == 1) messagesView(a); else if (S.view == 2) unknownView(a); else decodersView(a);
+    subNav("sensv", S.view, {"Sensors", "Messages", "Unknown signals", "Decoders", tr("Upload"), tr("History"), "Mine"});
+    if (S.view == 6) { sensorsMineView(a.rx.sensors); return; }
+    if (!live(a) && S.view != 3 && S.view != 4 && S.view != 5) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
+    if (S.view == 0) sensorsView(a); else if (S.view == 1) messagesView(a); else if (S.view == 2) unknownView(a); else if (S.view == 3) decodersView(a); else if (S.view == 4) uploadView(a); else historyView(a);
 }
 
 void list(App& a) {
@@ -492,7 +763,7 @@ void list(App& a) {
     ImGui::TableSetupColumn(tr("Sensor")); ImGui::TableSetupColumn(tr("Value"), ImGuiTableColumnFlags_WidthStretch);
     for (const auto& d : dv) {
         ImGui::TableNextRow();
-        ImGui::TableNextColumn(); ImGui::TextUnformatted((d.model + (d.id.empty() ? "" : " " + d.id)).c_str());
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(dect2::sensorLabel(d, S.names).c_str());
         ImGui::TableNextColumn();
         std::string v = tempText(d);
         const std::string h = humText(d), p = presText(d);
@@ -548,5 +819,5 @@ const ModeUi kSensorsUi = {
     .list = list,
     .status = status,
     .summary = summary,
-    .tick = nullptr,
+    .tick = [](App& a) { load(a); pwsTick(a); archTick(a); tick(a); },   // the weather upload and the long history run whatever view is open
 };

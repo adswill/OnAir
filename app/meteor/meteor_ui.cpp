@@ -18,6 +18,8 @@
 #include <filesystem>
 #include <string>
 #include <vector>
+void meteorPassTick(App& a);    // meteor_pass_ui.cpp
+void meteorPassPanel(App& a);
 
 namespace {
 
@@ -234,6 +236,7 @@ void tab(App& a) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Keep the newest lines in view while the picture grows");
     flowEnd();
     if (!S.msg.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", S.msg.c_str()); ImGui::PopTextWrapPos(); }
+    meteorPassPanel(a);   // pass reports (meteor_pass_ui.cpp)
     const MeteorImage* im = on ? t.image.get() : nullptr;
     if (!im || im->rows == 0 || !S.tex) {
         ImGui::Spacing();
@@ -288,6 +291,7 @@ void receiver(App& a) {
     if (t.image) kvRow(a, "picture", "%d lines of %d pixels", t.image->rows * 8, dect2::kMeteorWidth);
     kvRow(a, "input", "%.3f Msps, %.1f dBFS", t.inputRate / 1e6, t.levelDb);
     kvRow(a, "signal time", "%.1f s", t.timeSec);
+    smart5WxPassCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void panels(App& a) {
@@ -379,6 +383,7 @@ void galleryTick(const MeteorTelemetry& t, bool live) {
 void tick(App& a) {
     loadState();
     galleryTick(a.rx.meteor, a.engine.running());
+    meteorPassTick(a);   // the pass report card (meteor_pass_ui.cpp)
     if (!a.engine.running()) { S.pushedMod = -1; return; }
     if (S.pushedMod != S.mod) { a.engine.meteor().setModulation(S.mod); S.pushedMod = S.mod; }
 }

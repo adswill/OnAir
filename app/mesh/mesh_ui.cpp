@@ -1,5 +1,6 @@
 // Mesh (LoRa) mode entry: the screen state, the mode's tick, and the entry points the shell calls (tab, list, receiver,
 // panels, status, summary, tuner, decoder, synth, meters). The tables, views, LoRaWAN screens and settings are in the other mesh_*.cpp.
+#include "adsb/records_ui.h"
 #include "mesh_internal.h"
 #include "ui/topo_view.h"
 #include "ui/kit/mode_panel.h"
@@ -11,6 +12,8 @@
 #include <cstring>
 #include <ctime>
 #include <fstream>
+void meshWatchTick(App& a, bool live);   // mesh_watch_ui.cpp
+void meshFwdTick(App& a, bool live);
 
 using namespace meshui;
 
@@ -148,8 +151,18 @@ double meshRtlRate(App& a) {
 
 namespace meshui {
 
+void meshCoverageFeed(const dect2::MeshTelemetry& t, double rxLat, double rxLon, bool rxSet);   // mesh_coverage_ui.cpp (3.9)
+void meshCoverageCard();
 void tick(App& a) {
     loadState();
+    static uint64_t covSeq = 0;
+    if (live(a) && a.rx.mesh.seq != covSeq) { covSeq = a.rx.mesh.seq; double la = 0, lo = 0; receiverLocation(la, lo); meshCoverageFeed(a.rx.mesh, la, lo, receiverLocationSet()); }
+    meshWatchTick(a, live(a));   // node watch (mesh_watch_ui.cpp)
+    meshFwdTick(a, live(a));     // LoRaWAN forwarder
+    if (live(a)) {   // the records board: the farthest mesh node with a position
+        static double last = 0;
+        if (ImGui::GetTime() - last > 5) { last = ImGui::GetTime(); for (const auto& n : a.rx.mesh.nodes) if (n.hasPosition) recordsOffer("Mesh", "", recordsDistKm(n.lat, n.lon), n.longName.empty() ? n.id : n.longName + " " + n.id, n.hwModel); }
+    }
     if (subMask(a) == 2) meshcoreTick(a);   // the MeshCore device: frames heard, retries, the transmitter (also while another view is open)
     dect2::MeshReceiver& r = a.engine.mesh();
     {
@@ -239,6 +252,7 @@ void tab(App& a) {
     ImGui::SameLine();
     ImGui::BeginChild("##mesh_r", ImVec2(0, H));
     nodeCard(a);
+    meshCoverageCard();
     ImGui::EndChild();
 }
 

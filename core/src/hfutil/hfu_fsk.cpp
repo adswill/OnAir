@@ -351,7 +351,58 @@ struct FskRx::Impl {
         }
     }
 
+    // The baud from the eye instead (3.9 sensitivity pass D): noise adds transitions, so the clock line above fell under a quarter of
+    // them in noise that the slicer copes with (G-TOR 100 needed 6 dB in 3 kHz with it, -2 dB with the baud given). For each candidate the
+    // two tone energies are integrated over one of its symbols and the decisions sampled at 12 clock phases: at the right baud (and at its
+    // multiples) the best phase gives decisions far sharper than the worst; at a fraction of it the windows straddle symbols. The lowest
+    // candidate with an eye within 15 % of the best wins, and only an eye of at least kEyeMin counts (noise alone: about 1.1). It goes
+    // first; the clock line is the fallback (it also picked a multiple of the G-TOR 100 baud at 7 dB, one trial in three).
+    static constexpr double kEyeMin = 1.6;
+    bool findBaudEye() {
+        auto cand = bauds();
+        const size_t n = std::min<size_t>(y.size(), 32768);
+        if (n < 8192) return false;
+        const size_t st0 = y.size() - n;
+        std::vector<cf> m0(n), m1(n);
+        {
+            const cf w0((float)std::cos(-2 * kPi * f0 / kFs), (float)std::sin(-2 * kPi * f0 / kFs));
+            const cf w1((float)std::cos(-2 * kPi * f1 / kFs), (float)std::sin(-2 * kPi * f1 / kFs));
+            cf r0(1, 0), r1(1, 0);
+            for (size_t i = 0; i < n; i++) {
+                m0[i] = y[st0 + i] * r0; m1[i] = y[st0 + i] * r1; r0 *= w0; r1 *= w1;
+                if ((i & 255) == 0) { r0 /= std::abs(r0); r1 /= std::abs(r1); }
+            }
+        }
+        std::vector<double> eye(cand.size(), 0), d(n);
+        for (size_t c = 0; c < cand.size(); c++) {
+            const double Ts = kFs / cand[c];
+            const int L = std::max(2, (int)std::lround(Ts));
+            if ((size_t)L * 40 > n) continue;
+            cf a0(0, 0), a1(0, 0);
+            for (size_t i = 0; i < n; i++) {
+                a0 += m0[i]; a1 += m1[i];
+                if (i >= (size_t)L) { a0 -= m0[i - L]; a1 -= m1[i - L]; }
+                d[i] = std::norm(a1) - std::norm(a0);   // the symbol that ends at i
+            }
+            double hi = 0, lo = 1e300;
+            for (int k = 0; k < 12; k++) {
+                double sum = 0; int cnt = 0;
+                for (double t = L + Ts * k / 12.0; t < (double)n; t += Ts) { sum += std::fabs(d[(size_t)t]); cnt++; }
+                if (!cnt) continue;
+                sum /= cnt;
+                hi = std::max(hi, sum); lo = std::min(lo, sum);
+            }
+            eye[c] = lo > 0 ? hi / lo : 0;
+        }
+        double best = 0;
+        for (double e : eye) best = std::max(best, e);
+        if (best < kEyeMin) return false;
+        for (size_t c = 0; c < cand.size(); c++)
+            if (eye[c] >= 0.85 * best) { baud = cand[c]; st.baud = baud; return true; }
+        return false;
+    }
     bool findBaud() {
+        if (forcedBaud <= 0 && findBaudEye()) return true;
         // the transition signal of the demodulated bits: power at the baud against nearby frequencies
         auto cand = bauds();
         const size_t n = std::min<size_t>(y.size(), 32768);

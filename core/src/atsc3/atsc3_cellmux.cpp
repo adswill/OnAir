@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/atsc3/atsc3_cellmux.h"
 #include "dect2/atsc3/atsc3_bb.h"
 #include <algorithm>
@@ -64,9 +65,12 @@ bool demodulateSubframe(const SubframeParams& s, const cf32* x, size_t n, std::v
     active.clear();
     // the channel estimate of every symbol is averaged with those of its neighbours (a few symbols are far shorter than the channel changes)
     std::vector<SymbolRx> rx((size_t)s.numSymbols);
+    DECT2_STAGE_VAR(stFft, "a3.ofdm.fft+est");
     for (int l = 0; l < s.numSymbols; l++)
         if (!receiveSymbol(s, l, x + symLen * l, rx[(size_t)l])) return false;
     const int half = 0;   // averaging over 2 symbols on each side made no difference on a real capture (-33 dB error vector at the decoder), so it is off
+    stFft.stop();
+    DECT2_STAGE("a3.ofdm.equalise");
     std::vector<cf32> h, cells;
     for (int l = 0; l < s.numSymbols; l++) {
         smoothChannel(rx, l, half, h);

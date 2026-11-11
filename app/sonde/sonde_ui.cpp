@@ -1,5 +1,9 @@
 // Radiosonde screens: the map with every sonde's track and a balloon marker, the table of sondes heard, the detail of the selected one
 // (all fields, altitude and temperature plots, calibration progress), the carriers the search found in the band, and the test signal options.
+#include "dect2/sonde/sonde_profile.h"
+#include <fstream>
+#include <filesystem>
+#include "dect2/sonde/sonde_flight.h"
 #include "app.h"
 #include "ui/kit/export.h"
 #include "ui/kit/mode_panel.h"
@@ -13,6 +17,9 @@
 #include <ctime>
 #include <algorithm>
 #include <cmath>
+void sondeSitesTick(App& a, bool live);   // sonde_sites_ui.cpp
+void sondeSitesView(App& a);
+void sondeSitesDraw(ImDrawList* dl);
 
 namespace {
 
@@ -64,9 +71,47 @@ const SondeInfo* selected(const SondeTelemetry& t) {
     return t.sondes.empty() ? nullptr : &t.sondes.front();
 }
 
+// Sounding view (3.9, docs/SMART5-avia-3.9.md): the ascent cut into 500 m layers (wind from the drift, temperature, lapse rate), the
+// tropopause, freezing level and burst, and while still climbing a landing point from the measured winds and an assumed burst height.
+void soundingView(App& a) {
+    const SondeInfo* s = selected(a.rx.sonde);
+    if (!s) { ImGui::TextDisabled("%s", tr("no sonde yet")); return; }
+    if (!s->trackIncluded || s->track.size() < 4) { ImGui::TextDisabled("%s", tr("waiting for the track")); return; }
+    const dect2::SondeSounding snd = dect2::sondeSounding(s->track);
+    ImGui::Text("%s %s", s->type.c_str(), s->serial.c_str());
+    if (snd.ascentMs > 0) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.1f m/s", tr("climb"), snd.ascentMs); }
+    if (snd.hasTropo) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.0f m (%.0f C)", tr("tropopause"), snd.tropoM, snd.tropoTempC); }
+    if (snd.hasFreezing) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.0f m", tr("freezing level"), snd.freezingM); }
+    if (snd.burst) { ImGui::SameLine(0, 16 * gUi); ImGui::Text("%s %.0f m", tr("burst"), snd.burstM); }
+    if (!snd.burst) {
+        static float burstKm = (float)plat::prefs().getD("sondeBurstKm", 30.0);
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::SliderFloat(tr("assumed burst (km)"), &burstKm, 15, 40, "%.1f")) { plat::prefs().setD("sondeBurstKm", burstKm); plat::prefs().flush(); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The burst height is not measured before it happens: 30 km suits a 600-800 g balloon. The landing point below moves with it."));
+        const dect2::SondeEarlyLanding e = dect2::predictSondeLandingAscent(s->track, s->lat, s->lon, s->altM, burstKm * 1000.0);
+        if (e.ok) ImGui::TextColored(ImVec4(0.95f, 0.75f, 0.30f, 1), "%s %.4f %.4f: %s", tr("early landing estimate"), e.lat, e.lon, e.text.c_str());
+    }
+    if (!ImGui::BeginTable("##sndg", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, ImGui::GetContentRegionAvail().y))) return;
+    ImGui::TableSetupScrollFreeze(0, 1);
+    ImGui::TableSetupColumn(tr("Layer (m)")); ImGui::TableSetupColumn(tr("Wind")); ImGui::TableSetupColumn(tr("Temp C")); ImGui::TableSetupColumn(tr("Lapse K/km")); ImGui::TableSetupColumn(tr("Points"));
+    ImGui::TableHeadersRow();
+    for (size_t i = snd.layers.size(); i-- > 0;) {
+        const auto& L = snd.layers[i];
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::Text("%.0f", L.baseM);
+        ImGui::TableNextColumn(); if (L.hasWind) ImGui::Text("%03.0f / %.1f m/s", L.windFromDeg, L.windMs); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (L.hasTemp) ImGui::Text("%.1f", L.tempC); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (L.hasLapse) ImGui::Text("%.1f", L.lapseKkm); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); ImGui::Text("%d", L.points);
+    }
+    ImGui::EndTable();
+}
+
+
 bool descending(const SondeInfo& s) { return s.hasVel && s.vSpeed < -1.0 && s.maxAltM > s.altM + 200; }
 
 void tick(App& a) {
+    sondeSitesTick(a, live(a));
     loadState();
     if (a.engine.running()) {
         dect2::SondeReceiver& r = a.engine.sonde();
@@ -110,6 +155,7 @@ void mapView(App& a, ImVec2 size) {
     const bool clicked = adsbmap::clickedAt(click);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
+    sondeSitesDraw(dl);   // launch sites and their landings (sonde_sites_ui.cpp)
     const SondeInfo* sel = on ? selected(t) : nullptr;
     const SondeInfo* hit = nullptr;
     float hitD = 18.f * gUi;
@@ -288,6 +334,22 @@ void detailCard(const App& a) {
             if (ImGui::SmallButton("copy landing position")) { snprintf(b, sizeof b, "%.5f, %.5f", ld.lat, ld.lon); ImGui::SetClipboardText(b); }
         }
     }
+    if (sp && (s.trackIncluded || s.hasPos)) {   // the flight as a track: ascent and descent lines, launch, burst, landing (dect2/sonde/sonde_flight.h)
+        static std::string tnote;
+        const dect2::SondeFlight fl = dect2::sondeFlight(s, s.hasVel && s.vSpeed < -1.0 ? landing(s) : dect2::SondeLanding());
+        auto put = [&](const char* ext, const std::string& body) {
+            const std::string p = saveFileDialog((s.serial + ext).c_str());
+            if (p.empty()) return;
+            std::ofstream o(std::filesystem::path(reinterpret_cast<const char8_t*>(p.c_str())), std::ios::binary);
+            o << body;
+            tnote = o ? std::string("saved ") + p : std::string("could not write ") + p;
+        };
+        if (ImGui::SmallButton("track KML...")) put(".kml", dect2::xport::toKml(fl.points, fl.tracks, s.serial));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("The flight for Google Earth or OsmAnd: the ascent and the descent as lines with altitude, the launch, the burst and the landing (or the predicted landing).");
+        ImGui::SameLine();
+        if (ImGui::SmallButton("GPX...")) put(".gpx", dect2::xport::toGpx(fl.points, fl.tracks, s.serial));
+        if (!tnote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", tnote.c_str()); }
+    }
     if (sp && s.hasTime) { time_t tt = (time_t)s.unixTime; struct tm g;
 #ifdef _WIN32
         gmtime_s(&g, &tt);
@@ -345,10 +407,12 @@ void carrierStrip(const App& a, ImVec2 size) {
 
 void tab(App& a) {
     kit::modeHeader({13, "Radiosondes", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}});
+    kit::modeNav("sondev", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 2}, {tr("Table"), 1, true}, {tr("Sounding"), 3, true}, {tr("Sites"), 4, true}});
     if (S.viewMode == 2) { kit::sessionItems(13, 3, "sonde"); return; }
+    if (S.viewMode == 3) { soundingView(a); return; }
     const float W = ImGui::GetContentRegionAvail().x, H = ImGui::GetContentRegionAvail().y;
     if (S.viewMode == 1) { sondeTable(a, false); return; }
+    if (S.viewMode == 4) { sondeSitesView(a); return; }
     const float cw = std::min(300.f * gUi, W * 0.32f);
     ImGui::BeginChild("##sonde_l", ImVec2(W - cw - 8 * gUi, H));
     mapView(a, ImGui::GetContentRegionAvail());

@@ -95,6 +95,7 @@ struct CarrierPeak {
     double off = 0;        // Hz from the centre of the capture
     float levelDb = 0;     // peak over the local floor
     float powerDb = 0;     // power of the rise
+    double riseOff = 0, riseHz = 0;   // the whole rise this carrier was cut from (a TEDS QAM carrier is 25 to 150 kHz wide)
 };
 constexpr double kUsableBand = 0.72;
 constexpr double kFloorWindowHz = 600e3;
@@ -116,6 +117,7 @@ struct CarrierDecode {
     double cfoHz = 0;          // the frequency error found, relative to the carrier's assumed centre
     float snrDb = -99;
     int slots = 0, trafficSlots = 0, blocksOk = 0, blocksBad = 0;
+    int p8Slots = 0, p8BlocksOk = 0, p8BlocksBad = 0;   // TEDS pi/8-D8PSK slots and their signalling blocks (also in blocksOk / blocksBad)
     int voicePassed = 0, voiceNotDecoded = 0;   // traffic bursts that passed the encryption gate / refused (encrypted or state unknown);
                                                 // a passed burst of a timeslot other than voiceTn asked for is not handed to the sink
     const char* voiceStatus = "";                // text of the last traffic burst verdict (tetra_voice.h)

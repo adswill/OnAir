@@ -26,6 +26,7 @@ struct CellTower {
     bool tdd = false, extCp = false;
     int nRb = 0, ports = 0, phichDur = 0, phichRes = 0;   // MIB: bandwidth in resource blocks, antenna ports, PHICH duration / Ng index
     int sfn = 0;                  // the last system frame number read
+    int mibTail = 0;              // MIB bits 14 - 23: LTE-M schedulingInfoSIB1-BR (lteMibSib1Br(), cell_lte.h; 0 = no LTE-M), systemInfoUnchanged-BR
     // SIB1
     bool hasMib = false;          // the PBCH decoded at least once (else the cell is known from PSS / SSS only)
     bool hasSib1 = false;

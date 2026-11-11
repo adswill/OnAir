@@ -8,6 +8,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 int main() {
     std::mt19937_64 rng(12345);
@@ -18,9 +19,15 @@ int main() {
     const size_t blocks[] = {1, 7, 96, 4801, 65536};
     const double rates[] = {250000, 1.25e+06, 2.4e+06};
     int cases = 0, locked = 0;
-    for (double rate : rates)
-        for (const Src& s : srcs)
-            for (size_t bs : blocks) {
+    // quick run: every source with every block size at 250 ksps, at the radio rates each source with one block size (rotating, so every size
+    // still runs at each rate); ONAIR_TEST_LONG=1 runs the whole matrix at every rate
+    for (size_t ri = 0; ri < 3; ri++)
+        for (size_t si = 0; si < 5; si++)
+            for (size_t bi = 0; bi < 5; bi++) {
+                if (!testLong() && ri > 0 && bi != (si + ri) % 5) continue;
+                const double rate = rates[ri];
+                const Src& s = srcs[si];
+                const size_t bs = blocks[bi];
                 KaftLiveReceiver rx;
                 rx.configure(rate);
                 const size_t total = (size_t)(rate * 4);   // 4 s of input

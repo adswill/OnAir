@@ -122,6 +122,7 @@ struct RcLinkReceiver::Impl {
     void rebuild() {
         dirty = false;
         finder.configure(fs);
+        dsmPend.clear(); dsmDone.clear(); dsmDoneFrom = dsmDoneTo = -1;
         defs.clear();
         chains.clear();
         if (protocols & Sik) {
@@ -147,6 +148,11 @@ struct RcLinkReceiver::Impl {
                 d.pattern = bitsOfBytes({0x54, 0x75, 0xC5, 0x2A}, msb);
                 defs.push_back(d);
             }
+        }
+        if ((protocols & Sfhss) && 128143.0 * 2.5 <= fs) {   // Futaba S-FHSS: CC2500 2-FSK 128 kbit/s, 38 kHz deviation, 4 preamble bytes, sync D3 91, 13 + 2 bytes
+            FskDef d; d.proto = Sfhss; d.rate = 128143; d.kind = 4; d.maxBytes = 15; d.maxErrors = 1;
+            d.pattern = bitsOfBytes({0xAA, 0xAA, 0xD3, 0x91});
+            defs.push_back(d);
         }
         if (protocols & Reticulum) {
             std::vector<double> bws = {125000, 250000, 62500};
@@ -200,8 +206,87 @@ struct RcLinkReceiver::Impl {
         }
     }
 
+    // Spektrum DSM2 / DSMX: 1 Mchip/s, 64 chip 8DR symbols. The SOP code (and so the pn row and SOP column) is not known in advance: all 40 are tried.
+    // The spectrum of a DSSS burst is lumpy: the finder may report pieces of it, in frequency and in time. Each piece queues a search window from one
+    // packet length before it to one packet length after it (searched once those samples are in); the piece's centre, the nearest 1 MHz channel (when the
+    // radio's frequency is known) and +-400 kHz are tried. Pieces that start inside a packet already decoded are dropped.
+    std::vector<Burst> dsmPend;
+    int64_t dsmDoneFrom = -1, dsmDoneTo = -1;
+    std::vector<std::pair<int64_t, int64_t>> dsmDone;   // the packets decoded lately: first chip after the SOP, end
+    int64_t dsmNeed() const { return (int64_t)((24 + 128 + 19 * 64 + 96) * fs / 1e6); }
+    void dsmDrain(bool all) {
+        std::sort(dsmPend.begin(), dsmPend.end(), [](const Burst& a, const Burst& b) { return a.start < b.start; });
+        size_t i = 0;
+        for (; i < dsmPend.size(); i++) {
+            const Burst& b0 = dsmPend[i];
+            if (!all && b0.start + dsmNeed() > finder.end()) break;
+            if (b0.start >= dsmDoneFrom && b0.start <= dsmDoneTo) continue;
+            std::vector<double> fq = {b0.freqHz};
+            if (centre > 0) { const double ch = 2400e6 + std::round((centre + b0.freqHz - 2400e6) / 1e6) * 1e6 - centre; if (std::fabs(ch - b0.freqHz) > 50e3) fq.push_back(ch); }
+            fq.push_back(b0.freqHz - 400e3);
+            fq.push_back(b0.freqHz + 400e3);
+            for (double f : fq) {
+                Burst b = b0;
+                b.freqHz = f;
+                b.start = std::max(finder.begin(), b0.start - dsmNeed());
+                b.end = std::min(finder.end(), b0.start + dsmNeed());
+                if (dsmTry(b)) break;
+            }
+        }
+        dsmPend.erase(dsmPend.begin(), dsmPend.begin() + (std::ptrdiff_t)i);
+    }
+    bool dsmTry(const Burst& b) {
+        double actual = 0;
+        const std::vector<float> disc = discriminate(finder, b, 1.3e6, 4e6, &actual);
+        if (actual < 3.5e6 || disc.empty()) return false;
+        const double sps = actual / 1e6;
+        SyncHit best;
+        int bestRow = -1, bestCol = -1;
+        for (int row = 0; row < 5; row++)
+            for (int col = 0; col < 8; col++) {
+                const DsmCodes k = dsmCodes(row, col);
+                std::vector<uint8_t> pat;
+                for (int j = 0; j < 64; j++) pat.push_back((uint8_t)((k.sop >> j) & 1));
+                for (int j = 0; j < 64; j++) pat.push_back((uint8_t)(!((k.sop >> j) & 1)));
+                const SyncHit h = findSync(disc, sps, pat, 16, false);
+                if (h.found && (!best.found || h.errors < best.errors)) { best = h; bestRow = row; bestCol = col; }
+            }
+        if (!best.found) return false;
+        const DsmCodes k = dsmCodes(bestRow, bestCol);
+        const std::vector<uint8_t> chips = sliceBytes(disc, sps, best, 19 * 8, false);
+        if (chips.size() < 19 * 8) return false;
+        uint8_t v[19];
+        for (int s = 0; s < 19; s++) {
+            uint64_t c = 0;
+            for (int i = 0; i < 8; i++) c |= (uint64_t)chips[(size_t)(8 * s + i)] << (8 * i);
+            int e = 0;
+            const int x = dsmDespread(k, c, &e);
+            if (x < 0 || e > 14) return false;
+            v[s] = (uint8_t)x;
+        }
+        if (v[0] != 16) return false;
+        if (std::fabs(best.offset * actual / (2 * M_PI)) > 600e3) return false;   // heard through the filter's skirt (an alias): a closer centre is tried
+        const int64_t at = b.start + (int64_t)std::llround(best.position * std::max(1.0, std::floor(fs / 4e6)));   // the first chip after the SOP
+        for (const auto& w : dsmDone) if (at > w.first - (int64_t)(64 * fs / 1e6) && at < w.second) return true;   // heard already, from another piece
+        const double f = (centre > 0 ? centre : 0.0) + b.freqHz + best.offset * actual / (2 * M_PI);   // the discriminator's mean is the residual carrier
+        int rf = -1;
+        if (centre > 0) { const long n = std::lround((f - 2400e6) / 1e6); if (n >= 0 && n < 80 && std::fabs(f - 2400e6 - n * 1e6) < 300e3) rf = (int)n; }
+        Decoded x = dsmParse(v + 1, 16, rf, bestRow);
+        if (!x.ok) return false;
+        dsmDoneFrom = at - (int64_t)(160 * fs / 1e6);
+        dsmDoneTo = at + (int64_t)(19 * 64 * fs / 1e6);
+        dsmDone.push_back({at, dsmDoneTo});
+        if (dsmDone.size() > 16) dsmDone.erase(dsmDone.begin());
+        char t[60];
+        std::snprintf(t, sizeof t, ", pn row %d, SOP column %d", bestRow, bestCol);
+        x.detail += t;
+        addFrame(x, f, b.snrDb, v + 1, 16);
+        return true;
+    }
+
     void onBurst(const Burst& b) {
         { std::lock_guard<std::mutex> g(m); tel.bursts++; if (tel.state == 0) tel.state = 1; }
+        if ((protocols & Dsm) && fs >= 4e6 && b.bwHz < 3.5e6) dsmPend.push_back(b);
         bool done = false;
         for (const FskDef& d : defs) {
             if (done) break;
@@ -247,6 +332,7 @@ struct RcLinkReceiver::Impl {
         Decoded x;
         if (d.kind == 1) x = frskyD8Parse(bytes.data(), bytes.size());
         else if (d.kind == 2) x = frskyXParse(bytes.data(), bytes.size());
+        else if (d.kind == 4) x = sfhssParse(bytes.data(), bytes.size());
         else x = flyskyParse(bytes.data(), bytes.size());
         if (!x.ok) return false;
         addFrame(x, f, b.snrDb, bytes.data(), std::min<size_t>(bytes.size(), d.kind == 1 ? 20 : bytes.size()));
@@ -325,7 +411,8 @@ void RcLinkReceiver::feed(const cf32* x, size_t n) {
     { std::lock_guard<std::mutex> g(s.m); rebuild = s.dirty && s.fs > 0; }
     if (rebuild) { std::lock_guard<std::mutex> g(s.m); s.rebuild(); }
     if (s.fs <= 0) return;
-    if (!s.defs.empty()) s.finder.feed(x, n, [&](const Burst& b) { s.onBurst(b); });
+    if (!s.defs.empty() || (s.protocols & Dsm)) s.finder.feed(x, n, [&](const Burst& b) { s.onBurst(b); });
+    if (!s.dsmPend.empty()) s.dsmDrain(false);
     bool anyInv = false;
     for (LoraChain& c : s.chains) if (c.inverted) anyInv = true;
     if (anyInv) { s.conj.resize(n); for (size_t i = 0; i < n; i++) s.conj[i] = std::conj(x[i]); }
@@ -343,7 +430,8 @@ void RcLinkReceiver::feed(const cf32* x, size_t n) {
 
 void RcLinkReceiver::flush() {
     Impl& s = *p_;
-    if (!s.defs.empty()) s.finder.flush([&](const Burst& b) { s.onBurst(b); });
+    if (!s.defs.empty() || (s.protocols & Dsm)) s.finder.flush([&](const Burst& b) { s.onBurst(b); });
+    if (!s.dsmPend.empty()) s.dsmDrain(true);
     s.updatePreambles();
 }
 
@@ -355,3 +443,5 @@ bool RcLinkReceiver::telemetry(RcTelemetry& out, uint64_t lastSeq) {
 }
 
 } // namespace dect2
+
+

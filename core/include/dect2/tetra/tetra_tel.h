@@ -37,6 +37,10 @@ struct TetraCell {
     int numScch = 0, msTxPwrMax = 0, rxLevAccessMin = 0, accessParam = 0, dlTimeout = 0;
     bool cckFlag = false; int hyperframeOrCck = 0;
     int optFlag = 0; uint32_t optValue = 0;
+    // TEDS (3.9), from the extended services broadcast of SYSINFO (sections 1 and 2 come in turn): -1 not heard yet
+    int tedsD8psk = -1;                // pi/8-D8PSK operation supported on this cell
+    int tedsQamMask = -1;              // QAM supported: bit 0 25 kHz, bit 1 50 kHz, bit 2 100 kHz, bit 3 150 kHz
+    uint64_t p8Slots = 0, p8BlocksOk = 0;   // pi/8-D8PSK slots seen on this carrier and their signalling blocks decoded
     int la = -1, subscriberClass = 0, bsService = 0;
     bool secValid = false, authRequired = false, secClass1 = false, secClass2 = false, secClass3 = false;
     bool aie = false;                  // the cell's "air interface encryption service" bit (D-MLE-SYSINFO): the cell supports class 2 / 3 MS
@@ -65,7 +69,18 @@ struct TetraCell {
 struct TetraEvent { int64_t wallTime = 0; double sec = 0; std::string text; };
 // One clear SDS message, status or LIP position (tetra_sds.h)
 struct TetraSdsRec { int64_t wallTime = 0; double freqHz = 0; int fromIssi = -1, toAddr = -1; std::string kind, text; bool hasPos = false; double lat = 0, lon = 0; int count = 1; };
-struct TetraCarrierSeen { double freqHz = 0; float levelDb = 0; bool synced = false; };   // a 25 kHz hump in the spectrum
+struct TetraCarrierSeen {   // a hump in the spectrum
+    double freqHz = 0;                 // the centre of the hump
+    float levelDb = 0;                 // over the local floor
+    bool synced = false;               // a TETRA synchronisation burst decoded
+    // 3.9, what the carrier is (tetra_teds.h): 0 unknown, 1 pi/4-DQPSK, 2 pi/8-D8PSK, 3 QAM (TEDS: identified, not decoded)
+    int kind = 0;
+    double bwHz = 0;                   // 25 / 50 / 100 / 150 kHz
+    int subcarriers = 0;               // QAM: 8 per 25 kHz
+    int qamOrder = 0;                  // QAM: 4, 16 or 64 (an estimate; 16 also stands for "16 or 64" unless orderSure)
+    bool orderSure = false;
+    int p8Slots = 0;                   // a TETRA carrier: its pi/8-D8PSK slots in this capture
+};
 
 struct TetraTelemetry {
     uint64_t seq = 0;

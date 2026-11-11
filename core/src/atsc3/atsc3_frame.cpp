@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/atsc3/atsc3_frame.h"
 #include "dect2/atsc3/atsc3_ti.h"
 #include "dect2/atsc3/atsc3_bb.h"
@@ -158,7 +159,8 @@ static void decodeBlocks(const Bicm& bicm, const std::vector<std::vector<cf32>>&
 
 FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
     FrameResult r;
-    r.preamble = decodePreamble(x, n, bs);
+    { DECT2_STAGE("a3.preamble"); r.preamble = decodePreamble(x, n, bs); }
+    DECT2_STAGE("a3.cells");
     if (!r.preamble.basicOk || !r.preamble.detailOk || r.preamble.detail.subframes.empty()) return r;
     const L1Basic& l1 = r.preamble.basic;
     const L1Detail& d = r.preamble.detail;

@@ -1,3 +1,4 @@
+#include "dect2/common/stage_prof.h"
 #include "dect2/dsp/simd.h"
 #if defined(DECT2_X86_DISPATCH)
 #include <immintrin.h>
@@ -19,6 +20,8 @@
 #include <memory>
 #include <mutex>
 #include "dect2/common/window.h"
+#include <cstdlib>
+#include <cstring>
 
 namespace dect2 {
 namespace atsc3 {
@@ -31,9 +34,16 @@ cf32 expj(double ph) { return cf32((float)std::cos(ph), (float)std::sin(ph)); }
 
 namespace {
 struct Bank {
-    int half = 16, taps = 32, phases = 2048, stride = 32;   // stride: taps rounded up to a multiple of four, the extra coefficients are zero
+    // 512 phases: the nearest one is within 1/1024 of a sample, an error of about -65 dB over a 6 MHz channel (-70 dB on a 0.9 MHz tone at
+    // 10 Msps), far under the receiver's own (about -33 dB at the decoder on a real capture). 2048 phases (a 400 kB bank, a random row of it for
+    // every output) cost a third more time in cache misses for nothing measurable: same transport stream.
+    int half = 16, taps = 32, phases = 512, stride = 32;   // stride: taps rounded up to a multiple of four, the extra coefficients are zero
     double fc = 0.5;
     std::vector<float> h;   // (phases + 1) x taps
+    // the same rows in the shared-window layout: shift zeros, the taps, zeros up to padL; four outputs whose windows start within `shift` samples of
+    // the first one's read padW samples of one window, output u from offset shift - s_u of its row (empty: not used)
+    int shift = 0, padW = 0, padL = 0;
+    std::vector<float> hp;
 };
 
 double besselI0(double x) { return dect2::window::besselI0(x, 30, 0.0); }
@@ -59,6 +69,15 @@ Bank makeBank(double ratio) {
         }
         for (int k = 0; k < b.taps; k++) b.h[(size_t)p * b.stride + k] = (float)(t[k] / sum);
     }
+    // four outputs span three steps of 1 / ratio input samples (the nearest phase may be the row after the last, never the next sample)
+    b.shift = (int)std::ceil(3.0 / ratio) + 1;
+    if (b.shift <= 16) {
+        b.padW = (b.taps + b.shift + 7) & ~7;
+        b.padL = (b.shift + b.padW + 3) & ~3;
+        b.hp.assign((size_t)(b.phases + 1) * b.padL, 0.f);
+        for (int p = 0; p <= b.phases; p++)
+            for (int k = 0; k < b.taps; k++) b.hp[(size_t)p * b.padL + b.shift + k] = b.h[(size_t)p * b.stride + k];
+    }
     return b;
 }
 }
@@ -82,7 +101,49 @@ DECT2_AVX2_TARGET static void dot4Avx2(const float* const* h, const float* const
 }
 #endif
 
+namespace {
+// x[i] * exp(j w (i + start)), w = -2 pi f / rate, written split (re, im) or back in place (re == nullptr). The phase is exact (double) at the start
+// of every block of 256 samples and inside a block comes from a table of exp(j w k): no chain of products, so the loop vectorises; the error is a few
+// 1e-7 rad (the former running product in double, converted to float per sample, was no better than float either).
+void rotate(cf32* xio, const cf32* x, size_t n, double f, double rate, double start, float* re, float* im) {
+    constexpr int kB = 256;
+    const double w = -2.0 * M_PI * f / rate;
+    float tr[kB], ti[kB];
+    for (int k = 0; k < kB; k++) { tr[k] = (float)std::cos(w * k); ti[k] = (float)std::sin(w * k); }
+    for (size_t i0 = 0; i0 < n; i0 += kB) {
+        const double a = std::fmod(w * (start + (double)i0), 2.0 * M_PI);
+        const float cr = (float)std::cos(a), ci = (float)std::sin(a);
+        const size_t e = std::min<size_t>(kB, n - i0);
+        const float* xp = reinterpret_cast<const float*>(x + i0);
+        if (re) {
+            float* __restrict orr = re + i0;
+            float* __restrict oi = im + i0;
+            for (size_t k = 0; k < e; k++) {
+                const float pr = cr * tr[k] - ci * ti[k], pi = cr * ti[k] + ci * tr[k], xr = xp[2 * k], xi = xp[2 * k + 1];
+                orr[k] = xr * pr - xi * pi; oi[k] = xr * pi + xi * pr;
+            }
+        } else {
+            float* o = reinterpret_cast<float*>(xio + i0);   // may be x itself: no restrict here
+            for (size_t k = 0; k < e; k++) {
+                const float pr = cr * tr[k] - ci * ti[k], pi = cr * ti[k] + ci * tr[k], xr = xp[2 * k], xi = xp[2 * k + 1];
+                o[2 * k] = xr * pr - xi * pi; o[2 * k + 1] = xr * pi + xi * pr;
+            }
+        }
+    }
+}
+void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset, double rotHz, double rotStart);
+}
+
 void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset) {
+    resampleImpl(in, n, inRate, outRate, out, startOffset, 0.0, 0.0);
+}
+void resampleExactRot(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double rotHz, double rotStart, double startOffset) {
+    resampleImpl(in, n, inRate, outRate, out, startOffset, rotHz, rotStart);
+}
+
+namespace {
+void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::vector<cf32>& out, double startOffset, double rotHz, double rotStart) {
+    DECT2_STAGE("a3.resample");
     out.clear();
     if (n == 0) return;
     const double ratio = outRate / inRate;
@@ -104,27 +165,71 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
     const long count = (long)std::floor(((double)n - 1 - startOffset) / step) + 1;
     if (count <= 0) return;
     // split input with zero padding on both sides, so that the inner loop has no bounds checks
-    const long pad = b.stride + 2;
+    const long pad = b.stride + 2 + b.shift + 8;   // room for the shared windows' longer reads too
     std::vector<float> re((size_t)n + 2 * pad, 0.f), im((size_t)n + 2 * pad, 0.f);
-    for (size_t i = 0; i < n; i++) { re[i + pad] = in[i].real(); im[i + pad] = in[i].imag(); }
+    if (rotHz != 0.0) rotate(nullptr, in, n, rotHz, inRate, rotStart, &re[(size_t)pad], &im[(size_t)pad]);
+    else for (size_t i = 0; i < n; i++) { re[i + pad] = in[i].real(); im[i + pad] = in[i].imag(); }
     out.resize((size_t)count);
     const int taps = b.stride;
     // where output k reads: the input rows from base and the tap row of its nearest phase
     auto locate = [&](long k, const float*& h, const float*& r, const float*& m) {
         const double pos = startOffset + (double)k * step;
         const long i = (long)std::floor(pos);
-        const int p0 = (int)std::lround((pos - (double)i) * b.phases);   // nearest phase of the fine bank: a timing error below 1/4000 of a sample
+        const int p0 = (int)std::lround((pos - (double)i) * b.phases);   // nearest phase of the bank: a timing error below 1/1000 of a sample
         h = &b.h[(size_t)p0 * taps];
         const long base = i - (b.half - 1) + pad;
         r = &re[(size_t)base];
         m = &im[(size_t)base];
     };
     auto part = [&](long k0, long k1) {
+        DECT2_STAGE("a3.resample");
         long k = k0;
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
-        // Four outputs at once: each keeps the four partial sums of the scalar loop below (lane j adds taps j, j + 4, ... in order, multiply then
-        // add, lanes joined (0 + 1) + (2 + 3)), so every output is bit-identical; the four independent chains hide the add latency that one
-        // output's chain of 24 dependent additions has (the compiler's own vectorisation of that loop added the lanes one by one).
+        // Four outputs from one shared window of input samples (each output's taps at its offset in a zero-padded row): the data are loaded once
+        // for all four and each tap vector feeds two multiply-adds, where one window per output loads three vectors for two (the loop below is
+        // load-bound). Two partial sums per row and output: sixteen independent chains. (x86 keeps its AVX2 path, eight lanes wide.)
+        static const bool noPad = getenv("ATSC3_NOPAD") != nullptr;   // test: one window per output
+        if (!b.hp.empty() && !noPad) {
+            typedef float v4 __attribute__((vector_size(16)));
+            auto ld = [](const float* q) { v4 v; std::memcpy(&v, q, 16); return v; };
+            const int W = b.padW, L = b.padL, S = b.shift;
+            for (; k + 4 <= k1; k += 4) {
+                long i[4]; int p0[4];
+                for (int u = 0; u < 4; u++) {
+                    const double pos = startOffset + (double)(k + u) * step;
+                    i[u] = (long)std::floor(pos);
+                    p0[u] = (int)std::lround((pos - (double)i[u]) * b.phases);
+                }
+                const float* hq[4];
+                bool fits = true;
+                for (int u = 0; u < 4; u++) {
+                    const long sh = i[u] - i[0];
+                    fits = fits && sh >= 0 && sh <= S;
+                    hq[u] = &b.hp[(size_t)p0[u] * L + (size_t)(S - std::min<long>(std::max<long>(sh, 0), S))];
+                }
+                if (!fits) break;
+                const float* r = &re[(size_t)(i[0] - (b.half - 1) + pad)];
+                const float* m = &im[(size_t)(i[0] - (b.half - 1) + pad)];
+                v4 ar[4] = {}, ai[4] = {}, br[4] = {}, bi[4] = {};
+                for (int t = 0; t < W; t += 8) {
+                    const v4 r0 = ld(r + t), m0 = ld(m + t), r1 = ld(r + t + 4), m1 = ld(m + t + 4);
+                    for (int u = 0; u < 4; u++) {
+                        const v4 h0 = ld(hq[u] + t), h1 = ld(hq[u] + t + 4);
+                        ar[u] += r0 * h0; ai[u] += m0 * h0;
+                        br[u] += r1 * h1; bi[u] += m1 * h1;
+                    }
+                }
+                for (int u = 0; u < 4; u++) {
+                    const v4 sr = ar[u] + br[u], si = ai[u] + bi[u];
+                    out[(size_t)(k + u)] = cf32((sr[0] + sr[1]) + (sr[2] + sr[3]), (si[0] + si[1]) + (si[2] + si[3]));
+                }
+            }
+        }
+#endif
+#if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
+        // Four outputs at once: each keeps the four partial sums of the scalar loop below (lane j adds taps j, j + 4, ... in order, lanes joined
+        // (0 + 1) + (2 + 3)); the four independent chains hide the latency of one output's chain of dependent additions. Fused multiply-adds
+        // (as the AVX2 path): half the instructions, and a few ulp from the scalar loop, which rounds the product first.
         for (; k + 4 <= k1; k += 4) {
             const float *h[4], *r[4], *m[4];
             float32x4_t ar[4], ai[4];
@@ -132,8 +237,8 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
             for (int t = 0; t < taps; t += 4)
                 for (int u = 0; u < 4; u++) {
                     const float32x4_t hv = vld1q_f32(h[u] + t);
-                    ar[u] = vaddq_f32(ar[u], vmulq_f32(vld1q_f32(r[u] + t), hv));
-                    ai[u] = vaddq_f32(ai[u], vmulq_f32(vld1q_f32(m[u] + t), hv));
+                    ar[u] = vfmaq_f32(ar[u], vld1q_f32(r[u] + t), hv);
+                    ai[u] = vfmaq_f32(ai[u], vld1q_f32(m[u] + t), hv);
                 }
             for (int u = 0; u < 4; u++) {
                 const float32x4_t s = vpaddq_f32(ar[u], ai[u]);   // (re0+re1) (re2+re3) (im0+im1) (im2+im3)
@@ -169,15 +274,11 @@ void resampleExact(const cf32* in, size_t n, double inRate, double outRate, std:
     for (auto& t : th) t.join();
 }
 
+} // namespace
+
 void derotate(cf32* x, size_t n, double f, double rate, double start) {
-    // advance the phase in steps (a long cos/sin per sample would be slow); renormalise now and then
-    const double w = -2.0 * M_PI * f / rate;
-    std::complex<double> ph = std::polar(1.0, w * start), step = std::polar(1.0, w);
-    for (size_t i = 0; i < n; i++) {
-        x[i] *= cf32((float)ph.real(), (float)ph.imag());
-        ph *= step;
-        if ((i & 1023) == 1023) ph /= std::abs(ph);
-    }
+    DECT2_STAGE("a3.derotate");
+    if (n) rotate(x, x, n, f, rate, start, nullptr, nullptr);
 }
 
 double estimateCfoGuard(const cf32* x, size_t n, int fft, int guard, int symbols, double rate) {
@@ -350,7 +451,9 @@ struct Atsc3Sync::Pool {
                 jobs.pop_front();
             }
             const auto t0 = std::chrono::steady_clock::now();
+            DECT2_STAGE_VAR(stFr, "a3.frame");
             Done d{decodeFrame(j.y.data(), j.y.size(), j.bs), j.bs};
+            stFr.stop();
             std::unique_lock<std::mutex> lk(m);
             secDecode += std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
             done.emplace(j.seq, std::move(d));
@@ -361,7 +464,7 @@ struct Atsc3Sync::Pool {
                 done.erase(done.begin());
                 nextCommit++;
                 lk.unlock();
-                rx->commitFrame(c.fr, c.bs);
+                { DECT2_STAGE("a3.upper"); rx->commitFrame(c.fr, c.bs); }
                 lk.lock();
                 inflight--;
                 cvSpace.notify_all();
@@ -397,6 +500,7 @@ double secondsToNext(const Bootstrap& b) { return minTimeToNextMs(b.minTimeToNex
 }
 
 bool Atsc3Sync::search() {
+    DECT2_STAGE("a3.search");
     const auto t0 = std::chrono::steady_clock::now();
     struct Timer { double& d; std::chrono::steady_clock::time_point t; ~Timer() { d += std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); } } tm{st_.secSearch, t0};
     // look at everything available beyond the search start (a few frames long at most), converted to the bootstrap rate
@@ -416,10 +520,8 @@ bool Atsc3Sync::search() {
     double pre = haveHint_ ? cfo_ : coarse_;
     BootstrapFind bf;
     for (int attempt = 0; attempt < 2; attempt++) {
-        std::vector<cf32> work(seg);
-        derotate(work.data(), work.size(), pre, rate, (double)from);
         std::vector<cf32> y;
-        resampleExact(work.data(), work.size(), rate, kBootstrapRate, y);
+        resampleExactRot(seg.data(), seg.size(), rate, kBootstrapRate, y, pre, (double)from);
         if (attempt == 0) st_.searches++;
         bf = haveHint_ ? findBootstrap(y.data(), y.size(), 2500.0, 0.0, bs_.minorVersion) : findBootstrap(y.data(), y.size(), 20000.0);
         if (bf.found && bf.det.valid) break;
@@ -506,6 +608,7 @@ double Atsc3Sync::centreOfChannel(const cf32* x, size_t n) const {
 }
 
 bool Atsc3Sync::cutFrame() {
+    DECT2_STAGE("a3.cut");
     struct Timer { double& d; std::chrono::steady_clock::time_point t; ~Timer() { d += std::chrono::duration<double>(std::chrono::steady_clock::now() - t).count(); } } tm{st_.secCut, std::chrono::steady_clock::now()};
     const double frameRate = postBootstrapRate(bs_);
     const double rate = rateEff();
@@ -516,10 +619,8 @@ bool Atsc3Sync::cutFrame() {
     if (frameSamples_ == 0) {
         const long headSamples = (long)std::ceil((double)(pp.fftSize + pp.guard) * 6 * rate / frameRate) + 64;   // up to six Preamble symbols
         if (availEnd < frameStart_ + headSamples) return false;
-        std::vector<cf32> head(raw_.begin() + (frameStart_ - rawStart_), raw_.begin() + (frameStart_ - rawStart_) + headSamples);
-        derotate(head.data(), head.size(), cfo_, rate, (double)frameStart_);
-        std::vector<cf32> y;
-        resampleExact(head.data(), head.size(), rate, frameRate, y);
+        std::vector<cf32> y;   // carrier offset removed at the radio's rate, in the resampler's input pass (no copy of the samples)
+        resampleExactRot(raw_.data() + (frameStart_ - rawStart_), (size_t)headSamples, rate, frameRate, y, cfo_, (double)frameStart_);
         if (y.size() > (size_t)(pp.fftSize + pp.guard)) {
             double res = estimateCfoGuard(y.data(), y.size(), pp.fftSize, pp.guard, 1, frameRate);
             if (std::fabs(res) < 0.4 * frameRate / pp.fftSize) { cfo_ += res; st_.cfoHz = cfo_; }
@@ -541,10 +642,8 @@ bool Atsc3Sync::cutFrame() {
     }
     if (availEnd < frameStart_ + frameSamples_ + 16) return false;
     // 2. the whole frame: carrier offset removed at the radio's rate, then the rate converted to the frame's
-    std::vector<cf32> seg(raw_.begin() + (frameStart_ - rawStart_), raw_.begin() + (frameStart_ - rawStart_) + frameSamples_ + 16);
-    derotate(seg.data(), seg.size(), cfo_, rate, (double)frameStart_);
     std::vector<cf32> y;
-    resampleExact(seg.data(), seg.size(), rate, frameRate, y);
+    resampleExactRot(raw_.data() + (frameStart_ - rawStart_), (size_t)(frameSamples_ + 16), rate, frameRate, y, cfo_, (double)frameStart_);
     if (pool_) {
         pool_->submit(std::move(y), bs_);
         st_.frames++;

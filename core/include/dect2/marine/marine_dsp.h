@@ -31,6 +31,7 @@ private:
     uint64_t comb_[2][4] = {};
     int cnt_ = 0;
     double cicScale_ = 1;
+    float clip_ = 8.f;                   // input limit of the CIC (configure)
     std::vector<cf32> buf_;
     double pos_ = 0;
     static constexpr int kTaps = 192, kPhases = 256;

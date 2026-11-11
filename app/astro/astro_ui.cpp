@@ -497,6 +497,7 @@ void receiver(App& a) {
     ImGui::TextWrapped("Reference: %s%s", kRefName[S.ref], S.ref == 1 ? (S.refSpec.empty() ? " (not captured)" : (" - " + S.refNote).c_str()) : S.ref == 2 ? (t.switching ? " (running)" : " (needs a radio)") : "");
     if (S.res.peak >= 0) ImGui::TextWrapped("Peak %.4f MHz, %+.1f km/s, %.3f%% over the reference, SNR %.1f (noise %.3f%% rms)", S.res.peakHz / 1e6, S.res.peakKms, 100 * S.res.peakRatio, S.res.snr, 100 * S.res.rms);
     ImGui::TextDisabled("Velocities: radio convention, topocentric (no LSR correction, up to about +-30 km/s)");
+    smart5AstroCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void status(App& a) {

@@ -53,6 +53,7 @@ struct Rec { PacketStation s; };
 struct PacketReceiver::Impl {
     std::mutex procMu, telMu;
     std::function<void(const std::string&)> log;
+    std::function<void(const ax25::Frame&, int)> frameTap;   // setFrameTap (set under procMu)
 
     double fs = 0;
     std::atomic<int> capScale{1};          // setTableScale(): frame and station caps times this
@@ -93,6 +94,7 @@ struct PacketReceiver::Impl {
     std::deque<Fail> fails;
     std::deque<PacketFrameInfo> frames;
     std::unordered_map<std::string, Rec> stations;
+    AprsMessageLog msgs;                   // messages and bulletins (aprs_board.h)
     PacketTelemetry t;
     int lastState = 0;
     PacketTelemetry pub;
@@ -170,7 +172,12 @@ struct PacketReceiver::Impl {
 
     void shiftTimes(double dt) {
         for (auto& f : frames) f.timeSec += dt;
-        for (auto& kv : stations) kv.second.s.lastHeardSec += dt;
+        for (auto& kv : stations) {
+            kv.second.s.lastHeardSec += dt;
+            kv.second.s.wx.timeSec += dt;
+            for (AprsWx& w : kv.second.s.wxHist) w.timeSec += dt;
+        }
+        msgs.shiftTimes(dt);
         paths.shiftTimes(dt);
     }
     void fillLists(PacketTelemetry& o) const {
@@ -180,6 +187,8 @@ struct PacketReceiver::Impl {
         std::sort(order.begin(), order.end(), [](const PacketStation* a, const PacketStation* b) { return a->lastHeardSec > b->lastHeardSec; });
         o.stations.clear();
         for (const PacketStation* s : order) o.stations.push_back(*s);
+        o.messages = msgs.list();
+        o.myCall = msgs.myCall();
     }
     void republish() {   // procMu held: the lists alone, with no signal to wait for
         std::lock_guard<std::mutex> lk(telMu);
@@ -294,6 +303,10 @@ struct PacketReceiver::Impl {
             if (a->symTable) { s.symTable = a->symTable; s.symCode = a->symCode; }
             s.comment = a->comment;
         } else if (a->type == "Status") s.comment = a->text;
+        if (a->hasWx) {   // a weather report, with or without a position (aprs_board.h)
+            const AprsWx w = aprsWxFromReport(a->wx, tnow);
+            if (w.any()) { aprsWxAdd(s.wx, s.wxHist, w); s.hasWx = true; }
+        }
     }
 
     void accept(int baud, const std::vector<uint8_t>& dat, int64_t tt, int fixedBits) {
@@ -301,6 +314,7 @@ struct PacketReceiver::Impl {
         ax25::Frame f;
         if (!ax25::parseFrame(dat.data(), dat.size(), f)) { t.blocksBad++; if (baud == 1200) t.bad1200++; else t.bad9600++; return; }
         if (wire::on(wire::Aprs)) wire::Hub::get().publish(wire::Aprs, dat);
+        if (frameTap) frameTap(f, baud);
         t.blocksOk++;
         if (baud == 1200) { t.ok1200++; t.last1200Sec = tnow; } else { t.ok9600++; t.last9600Sec = tnow; }
         aprs::Info a;
@@ -355,7 +369,21 @@ struct PacketReceiver::Impl {
             stations[inner].s.via = pf.from;
         } else touchStation(pf.from, isAprs ? &a : nullptr, false, "", tnow);
         if (isAprs && (a.type == "Object" || a.type == "Item") && !a.name.empty()) touchStation(a.name, &a, true, inner.empty() ? pf.from : inner, tnow);
+        if (isAprs && a.type == "Message") noteMessage(inner.empty() ? pf.from : inner, a, tnow);
         clearFailsNear(baud, tt);
+    }
+
+    // a message, bulletin, ack or reject: into the Messages view, and new ones to the automations (aprs.message)
+    void noteMessage(const std::string& from, const aprs::Info& a, double tnow) {
+        msgs.setMax(500 * (size_t)capScale.load());
+        if (msgs.add(tnow, from, a) != AprsMessageLog::Added::New) return;
+        const AprsMessage& m = msgs.list()[(size_t)msgs.lastIndex()];
+        if (m.toMe) say("APRS: message to you from " + m.from + ": " + m.text);
+        if (!automation::wants(automation::FAprs)) return;
+        automation::Event ev("aprs.message");
+        ev.at(automation::wallNow(), "APRS", 0);
+        ev.str("from", m.from).str("to", m.to).str("text", m.text).str("msgno", m.msgNo).str("kind", aprsMsgKindName(m.kind)).flag("to_me", m.toMe);
+        automation::emit(std::move(ev));
     }
 
     // a good frame explains a failure of another demodulator at the same moment (a failure is only counted 1.3 s after it, for this)
@@ -439,6 +467,12 @@ void PacketReceiver::setWideInput(bool on) {
     p_->wideInput = on;
     if (p_->fs > 0) p_->configure(p_->fs);
 }
+void PacketReceiver::setMyCall(const std::string& call) {
+    std::lock_guard<std::mutex> lk(p_->procMu);
+    if (call == p_->msgs.myCall()) return;
+    p_->msgs.setMyCall(call);
+    p_->republish();
+}
 void PacketReceiver::setTableScale(int scale) { p_->capScale = std::max(1, std::min(20, scale)); }
 void PacketReceiver::setNarrowChannel(bool on) {
     std::lock_guard<std::mutex> lk(p_->procMu);
@@ -518,7 +552,7 @@ bool PacketReceiver::telemetry(PacketTelemetry& out, uint64_t lastSeq) {
 }
 void PacketReceiver::clearResults() {
     std::lock_guard<std::mutex> lk(p_->procMu);
-    p_->frames.clear(); p_->stations.clear();
+    p_->frames.clear(); p_->stations.clear(); p_->msgs.clear();
     p_->paths.clear();
     p_->republish();
     { std::lock_guard<std::mutex> tl(p_->telMu); p_->pub.digis.clear(); p_->pub.edges.clear(); p_->pub.directFrames = 0; }
@@ -544,6 +578,11 @@ void PacketReceiver::setVolume(float v) { p_->listen.volume = std::max(0.f, std:
 void PacketReceiver::setMuted(bool m) { p_->listen.muted = m; }
 void PacketReceiver::setSilent(bool s) { p_->listen.silent = s; }
 void PacketReceiver::setListenTap(std::function<void(const float* x, size_t n)> cb) { p_->listen.setTap(std::move(cb)); }
+void PacketReceiver::setFrameTap(std::function<void(const ax25::Frame& f, int baud)> cb) {
+    std::lock_guard<std::mutex> lk(p_->procMu);
+    p_->frameTap = std::move(cb);
+}
+
 void PacketReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     p_->log = std::move(cb);

@@ -315,6 +315,27 @@
         <item>WINMOR</item>
         <item>mioty</item>
         <item>DECT NR+</item>
+        <item>ISDB-TSB</item>
+        <item>Futaba RC (S-FHSS)</item>
+        <item>Spektrum RC (DSM2 / DSMX)</item>
+        <item>CIS-36-50 / 50-50 (BEE)</item>
+        <item>CIS-14</item>
+        <item>CIS-12 (MS5)</item>
+        <item>CIS-36 (MFSK)</item>
+        <item>CIS OFDM HDR</item>
+        <item>CIS-128</item>
+        <item>CIS-3000</item>
+        <item>CDMA2000 cells</item>
+        <item>TD-SCDMA cells</item>
+        <item>JT6M</item>
+        <item>VDL3</item>
+        <item>Meteosat HRDCP</item>
+        <item>DVB-SH</item>
+        <item>STANAG 4539</item>
+        <item>3G-ALE</item>
+        <item>Link 11 CLEW</item>
+        <item>STANAG 4481 FSK</item>
+        <item>DVB-C2</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -336,7 +357,7 @@
         <item>ACARS aircraft data link messages around 131 MHz</item>
         <item>VDL Mode 2: the aircraft data link on 136.725 to 136.975 MHz, every channel at once. Every frame of the session is kept with its UTC date and time and can be saved as CSV, JSON or text; under Advanced the bandwidth and the sample rate can be set to anything (Custom)</item>
         <item>HFDL: the HF aircraft data link (ARINC 635), 3 to 22 MHz, every channel in the band at once</item>
-        <item>Airband AM voice, 118 to 137 MHz: several 25 and 8.33 kHz channels at once</item>
+        <item>Airband AM voice, 118 to 137 MHz: several 25 and 8.33 kHz channels at once; also the military UHF air band, 225 to 400 MHz (25 kHz channels, 243.000 guard)</item>
         <item>VOR navigation beacons, 108 to 118 MHz: the radial, the identification and a position from two stations</item>
         <item>ILS approach guidance: localizer 108.10 - 111.95 MHz, glide slope 329 - 335 MHz, marker beacons on 75 MHz</item>
         <item>NDB (non-directional beacon) on long wave, 190-535 kHz: the Morse ident of an aeronautical beacon (a keyed 400 Hz or 1020 Hz tone, or a keyed carrier, about 7 WPM). Receive only. Not the HF beacon list</item>
@@ -358,7 +379,7 @@
         <item>QO-100 (Es\'hail-2) geostationary amateur satellite, 10489.5 - 10500 MHz through a Ku LNB: beacon lock corrects the LNB\'s error and drift, narrowband SSB listening, wideband DATV hand-over to DVB-S/S2</item>
         <item>FLARM: glider and light-aircraft collision-avoidance broadcasts on 868.2 and 868.4 MHz (Europe), received like the Open Glider Network does. Old-protocol positions are decoded (device ID, type, altitude, speed, track, climb) and shown in a table and on the live map with distance and bearing from your receiver; the newer protocol is only counted. Receive only; aircraft that set the no-track or stealth flag are only counted, never shown or saved</item>
         <item>DJI drones on 2.4 and 5.8 GHz, receive only: wideband OFDM burst trains are classified by their shape (OcuSync-like, Lightbridge-like, unknown wideband OFDM) from the width, burst period, duty cycle and cyclic-prefix correlation, with a confidence and a clear note that this is a guess from the signal shape; DJI DroneID (the OcuSync 2 broadcast: Zadoff-Chu roots 600 and 147, turbo code, CRC-24) is decoded to the drone\'s serial number, position, home point and pilot position as sent in the clear. Needs 16 Msps or more (HackRF at 20 Msps; Pluto, bladeRF, USRP). The encrypted video link is never decoded</item>
-        <item>CubeSat telemetry from amateur satellites on 2 m / 70 cm (145.8 - 146 and 435 - 438 MHz): AX.25 at 1200 baud AFSK and 9600 baud G3RUH, GOMspace AX100 Mode 5 (ASM + Golay + Reed-Solomon) and Mode 6, CCSDS Reed-Solomon frames; callsigns, hex and ASCII dumps, satellite names from an editable table, KISS out to SatNOGS-style tools; the pass planner starts it with Doppler</item>
+        <item>CubeSat telemetry from amateur satellites on 2 m / 70 cm (145.8 - 146 and 435 - 438 MHz): AX.25 at 1200 baud AFSK and 9600 baud G3RUH, GOMspace AX100 Mode 5 (ASM + Golay + Reed-Solomon) and Mode 6, CCSDS Reed-Solomon frames, GOMspace U482C (AFSK), CCSDS concatenated (Viterbi + RS), SPUTNIX USP, NGHam and Mobitex / BEESAT; callsigns, hex and ASCII dumps, satellite names from an editable table, KISS out to SatNOGS-style tools; the pass planner starts it with Doppler and sets the framing and baud rate from the gr-satellites satellite table</item>
         <item>Globalstar L-band terminal uplink (mobile to satellite), 1610 - 1626.5 MHz; the satellite downlink is S-band 2483.5 - 2500 MHz and is not tuned. Activity monitor only (receive only, the spread and encrypted content is not decoded): power, occupancy and Doppler of the 13 CDMA channels, an event log, and a pass overlay from the pass planner\'s TLEs</item>
         <item>DMR two-slot digital voice and data, 12.5 kHz channel</item>
         <item>NXDN digital two-way radio: NXDN48 (6.25 kHz) and NXDN96 (12.5 kHz), conventional and trunked</item>
@@ -369,7 +390,7 @@
         <item>LTE cells around you: operator, band, EARFCN, PCI, eNB and sector, TAC, neighbours (receive only, public broadcast)</item>
         <item>5G NR cells around you from their SS/PBCH blocks on the sync raster (GSCN) of n1, n3, n7, n8, n20, n28, n38, n40, n41, n77, n78: PCI, SSB index / beam, SS-RSRP / RSRQ / SINR, MIB (SFN, subcarrier spacing, k_SSB, CORESET#0, barred) (receive only, public broadcast)</item>
         <item>LTE NB-IoT cells around you (180 kHz carriers, in-band, guard band or standalone) from their NPSS / NSSS, NPBCH (MIB-NB) and SIB1-NB: PCI, operating mode, antenna ports, SFN, operator (MCC / MNC), tracking area, cell identity, band, level; band scan over the 100 kHz raster. Receive only: the public broadcast only, nothing addressed to a device is decoded</item>
-        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 900 / DCS 1800 bands: cell identity, location area, operator, channel lists (receive only, public broadcast)</item>
+        <item>GSM base stations, railway GSM-R (921 - 925 MHz) and the public GSM 850 / 900, DCS 1800 and PCS 1900 bands: cell identity, location area, operator, channel lists, GPRS and 3G / 4G neighbour indications, and the paging / access load of the common control channel (message kinds only). Receive only, public broadcast</item>
         <item>LBJ (Chinese railway train proximity warning) on about 821.2375 MHz: FM voice channel with 1200 bit/s FSK data for train number, kilometre marker, locomotive ID, direction and speed (receive only)</item>
         <item>POCSAG paging messages (512, 1200 and 2400 bd) on a 25 kHz channel</item>
         <item>FLEX paging messages (1600, 3200 and 6400 bit/s) on a 25 kHz channel</item>
@@ -462,7 +483,7 @@
         <item>BLE tracker detector (2402 / 2426 / 2480 MHz): recognises Apple Find My accessories such as AirTag, Tile, Chipolo, Samsung SmartTag and Google Find My Device tags from their advertisements, shows how long and how close each stays and warns about one that follows you (receive only; identifiers are kept for a short window and never saved)</item>
         <item>Thread (the IPv6 mesh of Matter smart homes) on the 2.4 GHz 802.15.4 channels 11 - 26 (O-QPSK, 250 kbit/s): networks from their beacons (network name, extended PAN ID, version), devices from their 802.15.4 addresses, 6LoWPAN headers (mesh, fragments, IPHC, UDP ports, MLE and CoAP) where a frame is sent in the clear, a live frame log; channel scan. Receive only. Almost all Thread traffic is AES-CCM encrypted at the link layer: those frames show the 802.15.4 header, the frame counter and key index and are marked encrypted; their content (IPv6, MLE, CoAP) is not readable without the network key, and OnAir does not decrypt or recover keys. Needs a fast radio (4 Msps or more), not an RTL-SDR</item>
         <item>Wi-SUN FAN smart utility networks (smart meters, street lights) (IEEE 802.15.4g FSK at 50, 100 and 150 kbit/s) with the band plans of every Wi-SUN region from 470 MHz to 2.4 GHz: a whole band at once (the nodes hop over every channel, all of 915 - 928 MHz at 16 Msps), networks with their name and border router, nodes with vendor, role, routing cost and schedules, links with the levels acks report, a frame log and a hop chart. Receive only: nothing is sent or joined; PAN configurations and data are encrypted and stay so. Needs 16 Msps or more for the whole band (a few channels from 2 Msps)</item>
-        <item>Wireless M-Bus (EN 13757-4) utility meters: S1 on 868.3 MHz, T1 and C1 on 868.95 MHz, R2 on 868.03 - 868.15 MHz and N1 on 169.4 MHz (2-FSK / GFSK, Manchester, 3-out-of-6 and NRZ chips, frame formats A and B with their block CRCs): manufacturer, meter ID, version and device type (water, heat, gas, electricity, heat cost allocator), and for unencrypted frames the readings (volume, energy, power, temperatures, dates). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Wireless M-Bus (EN 13757-4) utility meters: S1 on 868.3 MHz, T1 and C1 on 868.95 MHz, R2 on 868.03 - 868.15 MHz and N1 on 169.4 MHz, with Wize frames (169 MHz, 2.4 / 4.8 kbit/s, format B, CI 0x20: network, application, counter and time stamp; the L7 data stays encrypted) (2-FSK / GFSK, Manchester, 3-out-of-6 and NRZ chips, frame formats A and B with their block CRCs): manufacturer, meter ID, version and device type (water, heat, gas, electricity, heat cost allocator), and for unencrypted frames the readings (volume, energy, power, temperatures, dates). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
         <item>NFC / RFID at 13.56 MHz, receive only: ISO/IEC 14443 Type A (REQA/WUPA, ATQA, anticollision, SELECT, SAK, UID sizes, CRC_A, HLTA, RATS/ATS, APDU framing as hex, NDEF text/URI from Type 2 READ answers), Type B (REQB/ATQB on the BPSK subcarrier) and ISO/IEC 15693 (1-of-4 / 1-of-256 pulse position, inventory, UID, system info) as far as the public specs allow. Reader frames are 100%% ASK Miller; tag answers load-modulate the 847.5 kHz (14443) or 423.75 kHz (15693) subcarrier. Needs an HF-capable receiver (RTL-SDR V4 direct HF, HackRF, Airspy HF+, RX888) at a few Msps so the +-847.5 kHz sidebands fit. Nothing is cloned, no encrypted content is decoded, no keys are attacked. Pet microchips are 134.2 kHz FDX-B, a different band (see docs/NFC.md)</item>
         <item>Z-Wave home automation (ITU-T G.9959 FSK: R1 9.6 kbit/s Manchester, R2 40 kbit/s, R3 100 kbit/s) on the sub-GHz channels of Europe, USA, Australia / New Zealand, Hong Kong, India, Russia, China, Israel, Japan and Korea: networks by home ID, nodes, command classes and commands, a frame log. Receive only: S0 and S2 encrypted payloads are shown as encrypted and never decoded. Europe fits in 2 Msps centred on 869.13 MHz</item>
         <item>Sigfox uplinks, receive only: ultra-narrowband D-BPSK at 100 bit/s (RC1 868.130 MHz, RC3, RC5, RC6) or 600 bit/s (RC2 902.200 MHz, RC4) anywhere in the 200 kHz macro channel. Each frame\'s type, device ID, message counter, payload in hex (or the single bit), the downlink request flag and the authentication code (shown, never checked: it needs the device key), the CRC checked, and the three repetitions (ranks 1 - 3, each with its own convolution code) merged into one message with their frequencies and level. Frame layout from the public Sigfox radio specification. Nothing is decrypted</item>
@@ -474,9 +495,9 @@
         <item>MT63 keyboard chat (500 / 1000 / 2000 Hz, short or long interleave, found automatically): 64 carriers with Walsh-Hadamard coded characters that survive fades and interference, 14.1095 MHz</item>
         <item>FSQ (Fast Simple QSO) keyboard chat: 33 tones, speeds 1.5 to 6 baud found automatically, directed messages with sender, addressee and command, 14.105 MHz</item>
         <item>IFKP (Incremental Frequency Keying Plus) keyboard chat: 33 tones, speeds 0.5, 1.0 and 2.0 found automatically, 14.083 MHz</item>
-        <item>SITOR-B (FEC) teletype, CCIR 476 / ITU-R M.476, 100 baud FSK with 170 Hz shift: NAVTEX on 518 / 490 kHz and HF coast stations. The FSK tones, the polarity and the character phase are found automatically and the text is shown as it is received; SITOR-A (ARQ) is a two-way link and is not decoded. Receive only</item>
-        <item>DME (distance measuring equipment) on 962-1213 MHz: the channel (number from the tuned frequency, X or Y from the pulse spacing: 12 us, 30 us reply, 36 us interrogation) of the beacon from its pulse pairs, the pair rate and the Morse ident, found as a regular 1350 pairs per second train; receive only, needs a radio that tunes to about 1 GHz at 2 Msps or more</item>
-        <item>Loran-C at 100 kHz: the group repetition interval, the master and secondary stations with their arrival times relative to the master, level and phase code, and the chain that uses the GRI. The eLoran data channel (9th pulse, Eurofix) is not decoded: the Reed-Solomon constants and message layouts of the Loran Data Channel standard are not public text. Receive only, needs a radio or downconverter that tunes to 100 kHz at 250 ksps or more</item>
+        <item>SITOR-B (FEC) teletype, CCIR 476 / ITU-R M.476, 100 baud FSK with 170 Hz shift: NAVTEX on 518 / 490 kHz and HF coast stations. The FSK tones, the polarity and the character phase are found automatically and the text is shown as it is received. SITOR-A / AMTOR (ARQ) links are monitored too: both stations, the selective call, repeats dropped by following the control signals, changes of direction (SITOR-A tested on simulated signals). Receive only</item>
+        <item>DME (distance measuring equipment) on 962-1213 MHz: the channel (number from the tuned frequency, X or Y from the pulse spacing: 12 us, 30 us reply, 36 us interrogation) of the beacon from its pulse pairs, the pair rate and the Morse ident, found as a regular 1350 pairs per second train; on a TACAN beacon also the radial, from the 15 and 135 Hz modulation and the reference bursts; receive only (the slant range needs an interrogation, which OnAir does not send), needs a radio that tunes to about 1 GHz at 2 Msps or more</item>
+        <item>Loran-C at 100 kHz: the group repetition interval, the master and secondary stations with their arrival times relative to the master, level and phase code, and the chain that uses the GRI (Loran-C chains and the Russian Chayka chains, which send the same 100 kHz pulse groups). The eLoran data channel (9th pulse, Eurofix) is not decoded: the Reed-Solomon constants and message layouts of the Loran Data Channel standard are not public text. Receive only, needs a radio or downconverter that tunes to 100 kHz at 250 ksps or more</item>
         <item>ASTERIX surveillance data from a network or a file (no radio): CAT 021 ADS-B target reports, CAT 048 monoradar target reports and CAT 062 system tracks as UDP datagrams (unicast or multicast) or a recording (raw blocks or a pcap capture), shown as a track table and a map. A radar\'s own pulses cannot be received by a software radio; this reads the data a radar or ground station sends. Receive only, the port is closed until you start listening</item>
         <item>ARDOP (Amateur Radio Digital Open Protocol, the HF modem of Winlink) frames on 200, 500, 1000 and 2000 Hz channels, monitor only: the two-tone leader and the 4FSK frame type of every frame, connect requests, IDs and pings with call signs and grid square, ACK / NAK quality, and the data of the 4FSK frames that pass their CRC; PSK and QAM data frames are listed by header</item>
         <item>Yaesu System Fusion (C4FM 4800 symbols/s, 12.5 kHz), 2 m and 70 cm. Receive only: callsigns, call mode and slow data are decoded (the frames are bit-identical to what MMDVMHost writes); V/D mode 1 voice plays through the mbelib you install for DMR and NXDN, the other voice types need a speech codec plug-in that you install yourself</item>
@@ -611,6 +632,27 @@
         <item>WINMOR HF frames: the 1500 Hz pilot with tuning error and the raw frame-type tones. The specification does not define the 4FSK symbol mapping, the Reed-Solomon generator or the callsign packing, so frames are detected, not read. Simulated signals only so far</item>
         <item>mioty (ETSI TS 103 357 TS-UNB) uplinks: the 24 hopped radio-bursts found and decoded, every uplink TSMA pattern, extension frames. MAC fields shown (address, counter, flags); the payload is encrypted with the network key and stays encrypted. Simulated signals only so far</item>
         <item>DECT NR+ (DECT-2020 NR) packets on a 1.728 MHz channel: the physical control field of each packet (network ID, transmitter and receiver IDs, length, MCS, HARQ). Data channel not decoded. Simulated signals only so far</item>
+        <item>ISDB-TSB (ARIB STD-B29) narrow-band digital sound and data broadcasting: one or three segments, detected from the TMCC; the one-segment receiver also takes the one-seg service of an ISDB-T channel. Three-segment signals with DQPSK segments are unreliable (10-25 % of packets lost). Simulated signals only so far</item>
+        <item>Futaba S-FHSS 2.4 GHz RC links (CC2500 2-FSK 128 kbit/s, 30 hop channels): transmitter id, hop code and the four channel values of each packet; layout from the DIY-Multiprotocol-TX-Module project, simulated signals only so far. FASST is not decodable (no public description)</item>
+        <item>Spektrum DSM2 and DSMX 2.4 GHz RC links (CYRF6936 DSSS, 1 Mchip/s): every pn code tried, transmitter id bytes and channel values; DSMX told from DSM2 by the hop channel when the radio\'s frequency is known. The CRC is not checked (not published). Simulated signals only so far</item>
+        <item>Russian Navy BEE (T-600) 2-FSK, receive only: idle reversals at 36 or 50 Bd and traffic at 50 or 100 Bd (75 and 150 Bd too), shift and polarity found automatically. The 44-bit start word, the 70-bit session key sent twice, the 7-bit 3:4 characters and the end-of-message are read and shown as hex. The traffic is encrypted: nothing is decrypted. Simulated signals only so far</item>
+        <item>CIS-14 (AMOR, AMOR96) 2-FSK at 96 Bd, receive only: the 14-bit frame is found from its period and every frame\'s fields are shown raw (2 state bits, two 5-bit code words, 2 parity bits). The parity rule and the state codes are not published, so they are shown, not checked. Simulated signals only so far</item>
+        <item>CIS-12 (MS5, AT-3004D, AT-3104D, FIRE, T-230), receive only, physical layer: the 3300 Hz pilot and its offset, the 12 carriers 700 - 2900 Hz at 120 Bd, the PSK order (DBPSK / DQPSK) and the raw phase steps of every carrier. No frame format is published, so nothing further is read. Simulated signals only so far</item>
+        <item>CIS-36 MFSK duplex ARQ, identification only: the tone count, the 40 Hz spacing, the 10 / 20 / 40 Bd tone rate and the tone groups are measured and the signal named. No frame format is published. Simulated signals only so far</item>
+        <item>CIS OFDM HDR modem (CIS-45, CIS-60, CIS-93), identification only: the OFDM symbol (useful part, guard, rate), the carrier count and the PSK order are measured and the variant named. No frame format is published. Simulated signals only so far</item>
+        <item>CIS-128, identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz, from the carrier spacing, the symbol rate and the guard. The 6 kHz form is not covered. No frame format is published. Simulated signals only so far</item>
+        <item>CIS-3000, identification only: a single carrier 8-PSK at 3000 Bd, from its symbol-rate line and the constellation order. No frame format is published. Simulated signals only so far</item>
+        <item>cdma2000 / IS-95 base stations in a 1.25 MHz channel: every pilot by PN offset (Ec/Io, level, carrier offset) and its Sync Channel Message: system and network identity (SID, NID), pilot PN, protocol revision, system time, leap seconds, local time offset, paging channel rate and frequency. Receive only, public broadcast</item>
+        <item>TD-SCDMA (3G TDD, 1.28 Mcps) cells in a 1.6 MHz channel: the downlink pilot\'s SYNC-DL code (code group), the cell parameter (scrambling code and midamble) from time slot 0, the frame parity and P-CCPCH position from the SYNC-DL phases, level and carrier offset. Receive only; the broadcast channel is not decoded</item>
+        <item>JT6M 6 m scatter (44 tones 21.5 Hz apart from 1076.66 Hz, 21.5 baud, a sync tone every third symbol): finds the pings, the tuning error and the frame timing, lists the characters of each ping and folds a long signal into its repeating message</item>
+        <item>VDL Mode 3: TDMA D8PSK voice and data link on 118 to 137 MHz (ICAO Annex 10; trialled, never deployed; synthetic + spec; receive only). Burst kinds, Golay and Reed-Solomon checked, data octets; the system data and headers as raw values (ICAO Doc 9805 is not public), voice not decoded</item>
+        <item>Meteosat high rate data collection platforms (HRDCP, EUMETSAT TD 16) on the 402.2 - 402.435 MHz regional band: a 2 s carrier, then the message at 1200 bit/s offset QPSK with a convolutional code (r = 1/2, K = 7), the CCSDS randomiser, Reed-Solomon (255,223) frames and a CRC-32. Every carrier in the capture is followed; the BCH-protected platform address, the channel, the sequence counter, alert or self-timed, the health bits and the platform data (ASCII, pseudo-binary or binary) are shown, with a table of the platforms heard and a CSV log. Needs a radio that covers 402.2 - 402.435 MHz (0.25 Msps or more) and a UHF antenna</item>
+        <item>DVB-SH (ETSI EN 302 583) mobile TV in the OFDM form SH-A: 1K / 2K / 4K / 8K, QPSK or 16-QAM (also hierarchical), the 3GPP2 turbo code and the long time interleaver, parameters from the TPS, channel width found automatically (5, 8, 7, 6, 1.7 MHz); and the TDM satellite form SH-B (QPSK, 8PSK, 16APSK, symbol rate found from the standard\'s table). Simulated signals only so far</item>
+        <item>STANAG 4539 / MIL-STD-188-110C Appendix C high-rate HF modem, receive only: 2400 Bd on 1800 Hz, 3200 to 12800 bit/s (QPSK, 8-PSK, 16/32/64-QAM). Speed and interleaver are read from the preamble, which is also found in the middle of a transmission; a decision-feedback equaliser computed from the channel measured on every mini-probe, so multipath channels such as ITU-R Poor (2 ms, 1 Hz fading) decode; deinterleaver and tail-biting Viterbi decoding, the end-of-message pattern, STANAG 5066 D_PDU framing when present. Tested on simulated signals.</item>
+        <item>3G-ALE (MIL-STD-188-141B Appendix C, the link setup of STANAG 4538), receive only: BW0 bursts of 8-PSK at 2400 Bd on 1800 Hz, found from their preamble at any time; Walsh symbols, deinterleaver and Viterbi decoding, the CRC of each PDU, then LE_Call, LE_Handshake, LE_Notification and LE_Broadcast in words. Also the traffic bursts: BW1 (TM link requests, confirms and terminations, HDL acknowledgements), BW2 (HDL data packets), BW3 (LDL data packets) and BW4 (LDL acknowledgements), with the packets put back together into datagrams. Tested on simulated signals.</item>
+        <item>Link 11 CLEW (the conventional 16-tone HF waveform), receive only, frame structure only: each message is found from its 605 Hz Doppler and 2915 Hz sync tones, then the frame rate (13.33 or 22 ms), the Doppler offset, the number of frames and the raw phase changes of the 15 data tones. The bit mapping, error code and addresses are not public, so no data is shown. Link 11 SLEW is not covered. Tested on simulated signals.</item>
+        <item>STANAG 4481 naval HF broadcast, FSK part, receive only: single-channel RATT with a +-425 Hz shift, or up to 16 sub-carriers at 255 + 170 n Hz shifted +-42.5 Hz, found automatically. Each channel\'s speed is measured; plain ITA2 text is shown, encrypted (synchronous) channels only by speed and bit count. The PSK part of STANAG 4481 is STANAG 4285, its own mode. Tested on simulated signals.</item>
+        <item>DVB-C2 cable TV (EN 302 769): 4K OFDM, guard interval 1/64 or 1/128, the L1 signalling, Data Slice Types 1 and 2, 16 to 4096-QAM with 16K and 64K LDPC, transport streams and GSE (IP); needs a cable feed. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -770,7 +812,7 @@
         <item>Robust chat, 14.1095 MHz</item>
         <item>Directed chat, 14.105 MHz</item>
         <item>Keyboard chat, 14.083 MHz</item>
-        <item>SITOR-B teletype text</item>
+        <item>SITOR-B and SITOR-A teletype text</item>
         <item>DME, 962-1213 MHz</item>
         <item>Loran-C, 100 kHz</item>
         <item>CAT 021, 048, 062 over UDP or from a file</item>
@@ -907,6 +949,27 @@
         <item>HF data, pilot only</item>
         <item>LPWAN, header only</item>
         <item>Mesh radio, header only</item>
+        <item>Narrow-band ISDB, Japan</item>
+        <item>RC link</item>
+        <item>RC link</item>
+        <item>HF FSK, 36 / 50 Bd</item>
+        <item>HF FSK, 96 Bd</item>
+        <item>HF 12-tone PSK</item>
+        <item>Identification only, HF</item>
+        <item>Identification only, HF</item>
+        <item>Identification only, HF</item>
+        <item>Identification only, HF</item>
+        <item>Cells, CDMA2000</item>
+        <item>Cells, TD-SCDMA</item>
+        <item>6 m scatter, 50.230 MHz</item>
+        <item>TDMA link, 25 kHz</item>
+        <item>Platform messages, 402.3 MHz</item>
+        <item>Mobile TV, S band</item>
+        <item>HF data modem, QAM</item>
+        <item>HF ALE, 8-PSK</item>
+        <item>HF tactical data link, tones</item>
+        <item>HF broadcast, FSK</item>
+        <item>Cable, OFDM</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -950,7 +1013,7 @@
         <item>qo100 qo-100 eshail es\'hail-2 oscar 100 geostationary amateur satellite lnb ku 10489 739 ssb datv beacon bullseye</item>
         <item>flarm glider gliders soaring light aircraft collision avoidance ogn open glider network 868 868.2 868.4 sailplane</item>
         <item>dji drone drones ocusync lightbridge droneid drone id mavic mini phantom inspire dronesecurity zadoff chu turbo ofdm 2.4 ghz 5.8 ghz uav uas fpv video link hackrf pluto iqengine</item>
-        <item>cubesat cube sat satellite telemetry amateur ax.25 ax25 g3ruh 9600 afsk 1200 gmsk ax100 gomspace mode 5 mode 6 golay reed solomon ccsds csp satnogs kiss beacon 435 437 145.8 70 cm 2 m doppler</item>
+        <item>cubesat cube sat satellite telemetry amateur ax.25 ax25 g3ruh 9600 afsk 1200 gmsk ax100 gomspace mode 5 mode 6 golay reed solomon ccsds csp u482c usp sputnix ngham mobitex beesat viterbi concatenated satnogs kiss beacon 435 437 145.8 70 cm 2 m doppler</item>
         <item>globalstar gstar satellite phone iot l-band 1610 1618 1626 cdma doppler occupancy activity spot</item>
         <item></item>
         <item>nxdn nxdn48 nxdn96 kenwood nexedge icom idas digital voice two-way radio trunking ambe</item>
@@ -1066,9 +1129,9 @@
         <item>mt63 olivia walsh hadamard keyboard chat hf amateur digital</item>
         <item>fsq fast simple qso fldigi directed keyboard chat mfsk hf amateur digital</item>
         <item>ifkp incremental frequency keying fldigi keyboard chat mfsk hf amateur digital</item>
-        <item>sitor ccir 476 fec-b navtex teletype hf marine coast station</item>
+        <item>sitor ccir 476 fec-b navtex teletype hf marine coast station sitor-a amtor arq selcall</item>
         <item>dme distance measuring equipment navigation ils vor tacan x y channel ident beacon aviation</item>
-        <item>eloran loran loran-c lorac gri 100 khz navigation hyperbolic pulse chain master secondary</item>
+        <item>eloran loran loran-c lorac chayka rsdn gri 100 khz navigation hyperbolic pulse chain master secondary</item>
         <item>asterix eurocontrol radar surveillance cat021 cat048 cat062 cat 21 48 62 psr ssr mode s track tracks udp multicast pcap sdps atc</item>
         <item>ardop winlink hf radio email arq fsk psk amateur digital</item>
         <item>yaesu fusion system fusion ysf c4fm dn vw wires-x digital voice ambe amateur vhf uhf repeater</item>
@@ -1203,5 +1266,26 @@
         <item>winmor winlink kn6kb hf pilot</item>
         <item>mioty ts-unb lpwan telegram splitting 868 iot sensor</item>
         <item>dect nr+ dect-2020 nr nrplus mesh 1.9 ghz ts 103 636</item>
+        <item>isdb tsb isdb-tsb sb arib std-b29 one segment three segment 1seg oneseg narrow band digital radio japan v-low</item>
+        <item>futaba sfhss s-fhss rc</item>
+        <item>spektrum dsm dsm2 dsmx rc</item>
+        <item>cis-36-50 cis-50-50 cis36 cis50 bee bee-36 bee36 t600 t-600 russian navy fsk hf sigidwiki</item>
+        <item>cis-14 cis14 amor amor96 russian fsk 96 baud hf sigidwiki</item>
+        <item>cis-12 cis12 ms5 ms-5 at-3004d at3004d at-3104d fire t-230 russian 12 tone psk 3300 pilot hf sigidwiki</item>
+        <item>cis-36 cis36 mfsk-36 mfsk36 russian mfsk arq hf identification sigidwiki</item>
+        <item>cis-45 cis45 cis-60 cis60 cis-93 cis93 cis ofdm hdr modem russian ofdm hf identification sigidwiki</item>
+        <item>cis-128 cis128 russian ofdm 128 tone hf identification sigidwiki</item>
+        <item>cis-3000 cis3000 russian single carrier 8psk 3000 baud hf identification sigidwiki</item>
+        <item>cdma cdma2000 is-95 is95 1x 2g 3g pilot pn sync channel sid nid base station band class 0 800 pcs 1900 verizon sprint</item>
+        <item>td-scdma tdscdma 3g tdd china mobile 1.28 mcps dwpts sync-dl midamble cell parameter code group band a f 2010 1880</item>
+        <item>jt6m wsjt 6m 50 meteor scatter ionoscatter ping amateur</item>
+        <item>vdl vdl3 vdl mode 3 tdma d8psk nexcom voice data link golay reed-solomon airband experimental</item>
+        <item>hrdcp meteosat eumetsat dcp data collection platform high rate 1200 oqpsk 402.3 402.2 regional msg mtg river gauge weather station buoy hydrology sensor telemetry hex address bch crc reed solomon</item>
+        <item>dvbsh dvb-sh sh-a sh-b tdm mobile tv s-band satellite turbo en302583</item>
+        <item>stanag 4539 mil-std-188-110c 110b appendix c high rate hdr hf modem qam 9600 64qam 5066 data utility</item>
+        <item>3g-ale 3g ale third generation stanag 4538 mil-std-188-141b appendix c bw0 hf link establishment le_call handshake bw1 bw2 bw3 bw4 hdl ldl tm_request traffic management</item>
+        <item>link 11 link-11 clew tadil a mil-std-188-203 16 tone 605 2915 doppler hf tactical data link frame</item>
+        <item>stanag 4481 naval broadcast fsk ratt vft multichannel 16 channel 850 85 hz shift ita2 75 baud</item>
+        <item>dvbc2 dvb-c2 c2 cable ofdm en 302 769 catv tv second generation</item>
     </string-array>
 </resources>

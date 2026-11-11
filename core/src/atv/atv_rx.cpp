@@ -14,6 +14,8 @@
 #include <algorithm>
 #include <atomic>
 #include <cmath>
+#include <cstdio>
+#include <cstdlib>
 #include <mutex>
 
 namespace dect2 {
@@ -514,7 +516,7 @@ struct AtvReceiver::Impl {
         if (nv) video.process(front.v(), front.i(), front.q(), nv);
         // the detector: synchronous once the carrier loop is locked (and the user did not ask for the envelope)
         const bool want = detMode.load() == 0 && video.wantSyncDetector();
-        if (want != syncOn) { syncOn = want; front.setSyncDetector(want); video.syncDetectorChanged(want); }
+        if (want != syncOn) { if (getenv("ATVDBG")) fprintf(stderr, "ATVDBG t=%.3f sync->%d lineLocked=%d fieldLocked=%d\n", nIn / fs, (int)want, (int)video.lineLocked(), (int)video.fieldLocked()); syncOn = want; front.setSyncDetector(want); video.syncDetectorChanged(want); }
         // sound: AM with the positive-modulation systems
         {
             const bool am = isAmSpacing(carrier.spacingMhz) || (video.lineLocked() && video.positive());
@@ -649,6 +651,7 @@ struct AtvReceiver::Impl {
         t.lineCount = vi.lines_; t.fieldCount = vi.fields; t.frameCount = vi.frames; t.fieldNo = vi.fieldNo;
         t.syncDepthPct = vi.syncTip; t.whitePeak = vi.whitePeak; t.burstLevel = vi.burstLevel; t.syncCompressionPct = vi.syncCompressionPct; t.chromaPhaseErrDeg = vi.chromaErrDeg;
         t.blocksOk = vi.fieldsOk; t.blocksBad = vi.fieldsBad;
+        t.vitsLines = vi.vitsLines; t.vitsLineNo = vi.vitsLineNo; t.vitsRate = vi.vitsRate;
         t.lineWave = vi.lineWave; t.vbiWave = vi.vbiWave; t.ttxPackets = vi.vbi.ttxPackets; t.ttx = vi.ttx; t.wssText = vi.vbi.wssText; t.captions = vi.vbi.captions; t.ghostFound = vi.ghost.found; t.ghostDelayUs = vi.ghost.delayUs; t.ghostDb = vi.ghost.levelDb;
         t.soundSystem = soundSys;
         t.soundPresent = sound.present(); t.soundDevKhz = sound.devKhz(); t.soundLevelDb = sound.levelDb();

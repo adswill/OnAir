@@ -104,6 +104,15 @@ L1Result decodeL1Pre(const std::vector<cf32>& y, float n0, L1Pre& out);
 // n0v: optional noise variance per cell (equalised noise grows where the channel is faded); n0 is used when it is null.
 L1Result decodeL1Post(const std::vector<cf32>& y, float n0, const L1Pre& pre, int nP2, bool fefPresent, L1Post& out, const std::vector<float>* n0v = nullptr);
 
+// ---- the shortened and punctured 16K rate-1/2 signalling block that DVB-T2 (L1-post, above) and DVB-C2 (L1 part 2, EN 302 769 clause 8.4)
+// share: Ksig information bits (CRC included) -> BCH -> LDPC -> puncturing -> bit interleaving -> cells. `mod` as l1Mod (0 BPSK, 1 QPSK,
+// 2 16QAM, 3 64QAM). The coded length is rounded up to a multiple of `multiple` bits (T2: 2 eta for one P2 symbol, eta nP2 otherwise;
+// C2: 2 eta N_L1part2_FEC_Block, or 2 eta N_L1_TI_Depth when the L1 is time interleaved).
+int l1BlockBits(int ksig, int mod, int multiple);             // coded bits (N_post / N_L1part2); 0 when ksig is out of range
+std::vector<cf32> encodeL1Block(const std::vector<uint8_t>& ksigBits, int mod, int multiple);
+// y: l1BlockBits / eta cells. `bits` receives the Ksig bits; ok = the BCH check passed (no CRC check here)
+L1Result decodeL1Block(const std::vector<cf32>& y, float n0, int ksig, int mod, int multiple, std::vector<uint8_t>& bits, const std::vector<float>* n0v = nullptr);
+
 // ---- P2 cell distribution
 // Stream order: [L1-pre][L1-post][other cells]. Distribute across nP2 symbols of cP2 cells (zig-zag), and back.
 void p2Distribute(const std::vector<cf32>& stream, int nP2, int cP2, int nPre, int nPost, std::vector<std::vector<cf32>>& sym);

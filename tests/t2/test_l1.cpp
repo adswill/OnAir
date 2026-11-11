@@ -71,6 +71,19 @@ int main() {
         for (size_t i = 0; same && i < st.size(); i++) if (back[i] != st[i]) same = false;
         CHECK(same, "P2 distribute/gather mismatch nP2 %d", nP2);
     }
+    // sizes from a damaged L1-pre (fuzz_engine_modes): a post size that is not a multiple of nP2 wrote past the end of the stream, one larger
+    // than the P2 symbols read past the cells. Every size now stays inside both; run under DECT2_SANITIZE=ON to see the old overflow.
+    for (int nP2 : {1, 2, 8}) for (int nPost : {0, 961, 963, 4471, 100000, -5}) for (int ragged : {0, 1}) {
+        const int cP2 = 2000;
+        std::vector<std::vector<cf32>> sym(nP2, std::vector<cf32>(cP2, cf32(1, 0)));
+        if (ragged) sym[nP2 - 1].resize(cP2 / 2);
+        std::vector<cf32> back;
+        p2Gather(sym, nP2, cP2, 1840, nPost, back);
+        CHECK(back.size() == (size_t)nP2 * cP2, "P2 gather of a damaged size: %zu cells", back.size());
+        std::vector<cf32> st((size_t)nP2 * cP2 / 3, cf32(2, 0));
+        p2Distribute(st, nP2, cP2, 1840, nPost, sym);
+        CHECK(sym.size() == (size_t)nP2 && sym[0].size() == (size_t)cP2, "P2 distribute of a damaged size");
+    }
     // frequency interleaver: permutation property
     for (int fft : {3, 0, 2, 1, 4, 5}) for (int cells : {558, 1118, 764, 2236}) for (int odd : {0, 1}) {
         int maxC = fft == 3 ? 1024 : fft == 0 ? 2048 : fft == 2 ? 4096 : fft == 1 ? 8192 : fft == 4 ? 16384 : 32768;

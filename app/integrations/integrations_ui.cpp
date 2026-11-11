@@ -90,6 +90,7 @@ const FamilyRow kFamilies[] = {
     {au::FAdsb, N_("Aircraft (ADS-B)")}, {au::FAcars, N_("ACARS")}, {au::FVdl2, N_("VDL Mode 2")}, {au::FHfdl, N_("HFDL")}, {au::FPager, N_("Pagers")},
     {au::FAis, N_("Ships (AIS)")}, {au::FDsc, N_("DSC")}, {au::FAprs, N_("APRS")}, {au::FSonde, N_("Radiosondes")}, {au::FGnss, N_("GNSS")}, {au::FLora, N_("LoRa and mesh")},
     {au::FBle, N_("Bluetooth")}, {au::FRid, N_("Drone Remote ID")}, {au::FSignal, N_("Signals (SARSAT, beacons, ...)")}, {au::FMsg, N_("Text messages (Inmarsat-C, Aero, NAVTEX ...)")}, {au::FVoice, N_("Digital voice calls (who called whom, never audio)")},
+    {au::FSensor, N_("Sub-GHz sensors (readings)")}, {au::FHam, N_("HF digital and CW decodes")}, {au::FBroadcast, N_("FM and DAB text (now playing)")}, {au::FImage, N_("Finished pictures")},
     {au::FPlugin, N_("Plug-in events")}, {au::FSession, N_("Finished sessions")}, {au::FSatellite, N_("Satellite passes")}, {au::FTime, N_("Time signals")}, {au::FReceiver, N_("Receiver status")},
 };
 

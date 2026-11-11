@@ -43,6 +43,8 @@ public:
     std::string devicesJson() override;
     std::string modesJson() override;
     std::string telemetryJson(uint64_t& seq) override;
+    std::string panelJson(uint64_t& seq);   // the mode's web panel (dect2::webschema::panelJson), built once per new telemetry report; "null" when not running
+    void captureInfo(double& centreHz, double& rateHz);   // what the spectrum frames describe
     std::string spectrumJson(int maxBins, uint64_t& seq) override;
     bool start(int deviceIndex, std::string& err) override;
     bool stop(std::string& err) override;
@@ -53,10 +55,23 @@ public:
     bool setGainDb(double db, std::string& err) override;
     std::string indexHtml() override;
     bool spectrumBinary(int bins, uint64_t& seq, std::string& frame) override;
+    // Waterfall zoom: the part of the capture zoom times narrower than the whole, centred on centreHz (moved inside the capture), as the
+    // same binary frame (its centre and width are those of the part). zoom 1: the whole capture. At least 64 FFT bins stay visible.
+    bool spectrumBinaryZoom(int bins, double zoom, double centreHz, uint64_t& seq, std::string& frame);
+    // Mode options (dect2/results/web_options.h): the current mode's own setters, applied now and again at every start, kept in the settings
+    // file as opt.<standard>.<name>. optionValuesJson: {"standard":n,"values":{name:value,...}} of the current mode.
+    bool setOption(const std::string& name, double value, std::string& err);
+    std::string optionValuesJson();
+    int telemetryStandard() const;           // RxTelemetry::standard of the chosen mode (-1: a TV / broadcast family)
+    // What the browser hears: "fm" (the FM receiver's stereo), "voice" (a digital voice mode's decoded speech), "monitor" (the Listen demodulator)
+    std::string audioSource() const;
     int audioOpen(int rateHz) override;
     bool audioRead(int id, std::string& pcm) override;
     void audioClose(int id) override;
     int handleExtra(const std::string& method, const std::string& path, const std::map<std::string, dect2::JsonVal>& body, std::string& json) override;
+    bool recordStart(const std::string& kind, std::string& err) override;   // "iq": a .cf32 file in rec_dir (default: ~/OnAir-recordings); audio is not recorded here
+    bool recordStop(std::string& err) override;
+    std::string recordingJson() override;
 
     // Resolves a mode id or number text ("fm", "dvbs", "ft8", "7") to a mode entry; nullptr when it is none.
     const ModeEntry* findMode(const std::string& idOrNumber) const;
@@ -85,6 +100,11 @@ private:
     std::mutex snapMu_;
     std::string telJson_ = "{\"running\":false,\"available\":false}";
     uint64_t telSeq_ = 0;
+    std::string recPath_;                   // the IQ recording running now (under mu_), empty: none
+    double recStart_ = 0;
+    dect2::RxTelemetry rxSnap_;             // the latest report, for the web panel (built on demand under snapMu_)
+    uint64_t rxSnapSeq_ = 0, panelSeq_ = 0;
+    std::string panelJson_;
     dect2::SpectrumFrame spec_;
     double specCentreHz_ = 0, specRateHz_ = 0;
     std::thread snapTh_;
@@ -97,6 +117,13 @@ private:
     std::map<int, Listener> listeners_;
     int nextListener_ = 1;
     std::atomic<bool> fmTap_{false};
+    std::atomic<bool> voiceTap_{false};     // a digital voice mode: its decoded speech goes to the browser instead of the monitor
+    // 8 kHz (or any rate) mono speech -> 48 kHz for audioIn (engine thread only)
+    double voicePhase_ = 0;
+    float voiceLast_ = 0;
+    int voiceRate_ = 0;
+    void voiceIn(const float* x, size_t n, int rate);
+    void applyOptionsLocked();              // under mu_: the stored options of the chosen mode
 
     void snapLoop();
     void audioIn(const float* l, const float* r, size_t n, bool interleaved);

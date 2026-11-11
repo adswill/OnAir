@@ -17,7 +17,7 @@ using dect2::math::kPi;
 struct Sender {
     PskGenSignal s;
     double amp = 0, ph = 0;       // carrier phase
-    std::vector<int> turns;       // the phase steps of one sending (quarter turns), then the carrier goes off
+    std::vector<int> turns;       // the phase steps of one sending (eighth turns), then the carrier goes off
     size_t idx = 0;
     double u = 0;                 // position in the current symbol, 0 .. 1
     std::complex<double> prev{0, 0}, cur{0, 0};
@@ -27,6 +27,12 @@ struct Sender {
         turns.clear();
         const double baud = pskBaud(s.mode);
         const int idle = std::max(8, (int)(s.idleSec * baud));
+        if (psk8psk(s.mode)) {
+            turns = psk::psk8Steps(s.text, idle, idle);
+            idx = 0; u = 0;
+            prev = 0; cur = std::polar(1.0, s.phase0);
+            return;
+        }
         std::vector<uint8_t> bits(idle, 0);
         const std::vector<uint8_t> tb = psk::varicodeBits(s.text);
         bits.insert(bits.end(), tb.begin(), tb.end());
@@ -34,9 +40,9 @@ struct Sender {
         if (pskQpsk(s.mode)) {
             psk::ConvEncoder enc;
             for (int k = 0; k < 8; k++) bits.push_back(0);   // flush the code
-            for (uint8_t b : bits) turns.push_back(psk::qpskTurns(enc.encode(b)));
+            for (uint8_t b : bits) turns.push_back(2 * psk::qpskTurns(enc.encode(b)));
         } else {
-            for (uint8_t b : bits) turns.push_back(b ? 0 : 2);
+            for (uint8_t b : bits) turns.push_back(b ? 0 : 4);
         }
         idx = 0; u = 0;
         prev = 0; cur = std::polar(1.0, s.phase0);
@@ -91,7 +97,7 @@ void PskGenerator::generate(cf32* out, size_t n) {
                     g.offLeft = g.s.pauseSec;
                     continue;
                 }
-                g.cur = g.idx < g.turns.size() ? g.prev * std::polar(1.0, g.turns[g.idx] * kPi / 2) : std::complex<double>(0, 0);
+                g.cur = g.idx < g.turns.size() ? g.prev * std::polar(1.0, g.turns[g.idx] * kPi / 4) : std::complex<double>(0, 0);
                 if (g.idx == 0) g.prev = 0;
             }
             const double w = 0.5 + 0.5 * std::cos(kPi * g.u);

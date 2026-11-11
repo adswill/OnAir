@@ -6,6 +6,7 @@
 #include "dect2/adsl/adsl_tel.h"
 #include "dect2/dmr/dmr_dsp.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/dsp/fast_phase.h"
 #include "dect2/geo/maidenhead.h"
 #include "dect2/results/results_io.h"
 #include "dect2/common/bits.h"
@@ -29,6 +30,10 @@ constexpr double kDefaultCentreWide = 868.875e6, kDefaultCentreNarrow = 868.3e6;
 constexpr double kWideRate = 1.6e6;        // from this sample rate the unknown centre is taken as the wide one
 constexpr int kDcChips = 32;
 
+// e^{j pi n / 8}, n = 0 .. 15: +50 kHz at 800 ksps
+const cf32 kLo16[16] = {{1.f, 0.f}, {0.9238795f, 0.3826834f}, {0.7071068f, 0.7071068f}, {0.3826834f, 0.9238795f}, {0.f, 1.f}, {-0.3826834f, 0.9238795f},
+                        {-0.7071068f, 0.7071068f}, {-0.9238795f, 0.3826834f}, {-1.f, 0.f}, {-0.9238795f, -0.3826834f}, {-0.7071068f, -0.7071068f},
+                        {-0.3826834f, -0.9238795f}, {0.f, -1.f}, {0.3826834f, -0.9238795f}, {0.7071068f, -0.7071068f}, {0.9238795f, -0.3826834f}};
 struct BandCfg { double passHz, stopHz; int sps; bool manchester; uint32_t sync; };
 constexpr BandCfg kCfg[kNumBands] = {
     {85e3, 140e3, 8, true, kSyncMBand},
@@ -53,6 +58,8 @@ struct Chan {
     cf32 prev = cf32(1.f, 0.f);
     int64_t n = 0;
     float dring[kMaxSps] = {};
+    cf32 t1[kMaxSps] = {}, t0[kMaxSps] = {};   // M-band tone detector: samples turned by -+50 kHz, and their sums
+    cf32 b1 = cf32(0.f, 0.f), b0 = cf32(0.f, 0.f);
     float S = 0;
     std::vector<float> soft;               // sps * kRing
     std::vector<float> pw;
@@ -72,6 +79,8 @@ struct Chan {
         lp.reset(); if (!rsPass) rs.reset();
         phase = 0; prev = cf32(1.f, 0.f); n = 0;
         for (float& f : dring) f = 0;
+        for (int j = 0; j < kMaxSps; j++) t1[j] = t0[j] = cf32(0.f, 0.f);
+        b1 = b0 = cf32(0.f, 0.f);
         S = 0;
         std::fill(soft.begin(), soft.end(), 0.f);
         std::fill(pw.begin(), pw.end(), 0.f);
@@ -320,7 +329,9 @@ struct AdslReceiver::Impl {
         const uint32_t mask = 0xFFFFFFu;
         const size_t blockLen = (size_t)(c.workRate * 0.02);
         for (const cf32& s : *y) {
-            const float d = std::arg(s * std::conj(c.prev)) * kd;
+            const bool toneChips = c.cfg.manchester && sps == 8 && AdslReceiver::toneDetect;
+            const cf32 q = s * std::conj(c.prev);
+            const float d = toneChips ? 0.f : fastAtan2(q.imag(), q.real()) * kd;   // 3.9: fastAtan2 instead of the libm call, and none for tone chips
             c.prev = s;
             const int p = (int)(c.n % sps);
             const int64_t k = c.n / sps;
@@ -329,8 +340,21 @@ struct AdslReceiver::Impl {
             if (p == sps - 1) c.pw[(size_t)(k & (kRing - 1))] = c.pwAcc;
             c.blkSum += pwr;
             if (++c.blkN >= blockLen) blockEnd(c);
-            c.S += d - c.dring[p];
-            c.dring[p] = d;
+            if (toneChips) {
+                // M-band chips (3.9, as FLARM): the energy at +50 kHz minus that at -50 kHz over one chip, the noncoherent detector of the h = 1 GFSK
+                const int ph16 = (int)(c.n & 15);
+                const cf32 n1 = s * kLo16[(16 - ph16) & 15], n0 = s * kLo16[ph16];
+                c.b1 += n1 - c.t1[p]; c.b0 += n0 - c.t0[p];              // running sums over the last chip
+                c.t1[p] = n1; c.t0[p] = n0;
+                if ((c.n & 1023) == 0) {                                  // rounding: the sums again from scratch now and then
+                    c.b1 = c.b0 = cf32(0.f, 0.f);
+                    for (int j = 0; j < 8; j++) { c.b1 += c.t1[j]; c.b0 += c.t0[j]; }
+                }
+                c.S = std::norm(c.b1) - std::norm(c.b0);
+            } else {
+                c.S += d - c.dring[p];
+                c.dring[p] = d;
+            }
             c.at(p, k) = c.S;
             uint32_t* rg; float dc = 0;
             if (c.cfg.manchester) {

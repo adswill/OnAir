@@ -6,6 +6,7 @@
 #include "dect2/tetrapol/tetrapol_tel.h"
 #include "dect2/tetrapol/tetrapol_voice.h"
 #include "dect2/codec/codec_registry.h"
+#include "dect2/dsp/baseband_filter.h"
 #include "dect2/results/results_io.h"
 #include <algorithm>
 #include <cmath>
@@ -88,8 +89,8 @@ struct TetrapolReceiver::Impl {
     cf32 boxSum{0.f, 0.f};
     int boxN = 0;
     double hold = 0;
-    float fir[kFirTaps] = {};
-    cf32 firBuf[kFirTaps] = {};
+    std::vector<float> fir;    // channel filter at kWork: the mode's own (31 taps, about +-6.5 kHz) or the user's (Baseband filter "tetrapol")
+    std::vector<cf32> firBuf;
     int firPos = 0;
     cf32 prevZ{0.f, 0.f};
     double dc = 0;
@@ -132,15 +133,22 @@ struct TetrapolReceiver::Impl {
 
     void designFir() {
         const double fc = 6500.0 / kWork;
+        std::vector<float> def(kFirTaps);
         double sum = 0;
         for (int i = 0; i < kFirTaps; i++) {
             const double m = i - (kFirTaps - 1) / 2.0;
             const double s = m == 0 ? 2 * fc : std::sin(2 * kPi * fc * m) / (kPi * m);
             const double w = 0.54 - 0.46 * std::cos(2 * kPi * i / (kFirTaps - 1));
-            fir[i] = (float)(s * w);
+            def[i] = (float)(s * w);
             sum += s * w;
         }
-        for (float& v : fir) v = (float)(v / sum);
+        for (float& v : def) v = (float)(v / sum);
+        fir = bbf::overrideTaps("tetrapol", def, kWork, 13000.0, 5, 401);   // the user's channel filter (#408), else the mode's own
+        double g = 0;
+        for (float v : fir) g += v;
+        if (g > 1e-6) for (float& v : fir) v = (float)(v / g);
+        firBuf.assign(fir.size(), cf32(0.f, 0.f));
+        firPos = 0;
     }
 
     void event(const std::string& text) {
@@ -612,7 +620,8 @@ struct TetrapolReceiver::Impl {
             if (tsym < kSps / 2 + 3) { tsym += kSps; continue; }
             const float s = soft(tsym), se = soft(tsym - 2), sl = soft(tsym + 2);
             const float ae = std::fabs(se), al = std::fabs(sl);
-            const float err = (al - ae) / (ae + al + 1e-9f);
+            float err = (al - ae) / (ae + al + 1e-9f);
+            if (!std::isfinite(err)) err = 0;   // a NaN here reached the cast of tsym below (UBSan, fuzz_engine_modes)
             raw.push_back(s < 0.f ? 1 : 0);
             rawRel.push_back(std::fabs(s));
             const float a = std::fabs(s);
@@ -643,10 +652,11 @@ struct TetrapolReceiver::Impl {
             const cf32 z0 = boxSum / (float)boxN;
             boxSum = cf32(0.f, 0.f);
             boxN = 0;
-            firBuf[firPos] = z0;
-            firPos = (firPos + 1) % kFirTaps;
+            const int nt = (int)fir.size();
+            firBuf[(size_t)firPos] = z0;
+            firPos = (firPos + 1) % nt;
             cf32 z(0.f, 0.f);
-            for (int k = 0; k < kFirTaps; k++) z += firBuf[(firPos + k) % kFirTaps] * fir[k];
+            for (int k = 0; k < nt; k++) z += firBuf[(size_t)((firPos + k) % nt)] * fir[(size_t)k];
             const bool first = prevZ == cf32(0.f, 0.f);
             const float d = first ? 0.f : std::arg(z * std::conj(prevZ));
             prevZ = z;
@@ -698,8 +708,7 @@ struct TetrapolReceiver::Impl {
         boxSum = cf32(0.f, 0.f);
         boxN = 0;
         hold = 0;
-        for (auto& v : firBuf) v = cf32(0.f, 0.f);
-        firPos = 0;
+        designFir();   // a changed channel filter applies from here (a start, a retune)
         prevZ = cf32(0.f, 0.f);
         dc = 0;
         dcN = 0;

@@ -76,21 +76,69 @@ struct OfdmRx::Impl {
         for (int k = -26; k <= 26; k++) out[k + 26] = t[bin(k)];
     }
 
-    void feedOne(cf32 x) {
-        b.push_back(x);
-        const int64_t m = n++;
-        const double p = (double)std::norm(x);
-        P += p;
-        if (m >= kLag) C += std::complex<double>(at(m - kLag)) * std::conj(std::complex<double>(x));
-        if (m >= kW) P -= (double)std::norm(at(m - kW));
-        if (m >= kW + kLag) { const cf32 u = at(m - kW - kLag), v = at(m - kW); C -= std::complex<double>(u) * std::conj(std::complex<double>(v)); }
-        if (m < kW + kLag + 2 || m < skipUntil || pending || trig >= 0) { if (trig < 0) run = 0; return; }
-        const double met = P > 1e-12 ? std::norm(C) / (P * P) : 0;
-        if (met > kThresh) {
-            if (met > bestM) { bestM = met; bestC = C; }
-            if (++run >= kMinRun) { trig = m; st.triggers++; cfoCoarse = -std::arg(bestC) * kRate / (2 * kPi * kLag); }
-        } else { run = 0; bestM = 0; }
+    // Samples n .. n + k - 1, already in b. The products the running sums take in and give back are worked out for the whole block first (no
+    // dependency between samples, so it vectorises); the sums themselves, the trigger and the later stages then go sample by sample.
+    void feedBlock(int k) {
+        const cf32* bp = b.data() - base;   // bp[i] = sample i
+        dC.resize((size_t)k); dP.resize((size_t)k);
+        const int64_t m0 = n;
+        int j0 = 0;
+        for (; j0 < k && m0 + j0 < kW + kLag; j0++) {   // the start of the stream
+            const int64_t m = m0 + j0;
+            const cf32 x = bp[m];
+            float p = std::norm(x);
+            cf32 c(0, 0);
+            if (m >= kLag) c = bp[m - kLag] * std::conj(x);
+            if (m >= kW) p -= std::norm(bp[m - kW]);
+            dC[(size_t)j0] = c; dP[(size_t)j0] = p;
+        }
+        {   // everywhere else: plain arithmetic on the real and imaginary parts
+            const float* xs = reinterpret_cast<const float*>(bp + m0);
+            const float* as = reinterpret_cast<const float*>(bp + m0 - kLag);
+            const float* us = reinterpret_cast<const float*>(bp + m0 - kW - kLag);
+            const float* vs = reinterpret_cast<const float*>(bp + m0 - kW);
+            float* dc = reinterpret_cast<float*>(dC.data());
+            float* dp = dP.data();
+            for (int j = j0; j < k; j++) {
+                const float xr = xs[2 * j], xi = xs[2 * j + 1], ar = as[2 * j], ai = as[2 * j + 1];
+                const float ur = us[2 * j], ui = us[2 * j + 1], vr = vs[2 * j], vi = vs[2 * j + 1];
+                dc[2 * j] = (ar * xr + ai * xi) - (ur * vr + ui * vi);        // a conj(x) - u conj(v)
+                dc[2 * j + 1] = (ai * xr - ar * xi) - (ui * vr - ur * vi);
+                dp[j] = (xr * xr + xi * xi) - (vr * vr + vi * vi);
+            }
+        }
+        // the state in locals (written back around the rare calls that read or change it, so the loop is not held up by stores to memory)
+        double cr = C.real(), ci = C.imag(), pp = P;
+        int64_t nn = n;
+        for (int j = 0; j < k; j++) {
+            const int64_t m = nn++;
+            cr += (double)dC[(size_t)j].real(); ci += (double)dC[(size_t)j].imag();
+            pp += (double)dP[(size_t)j];
+            const double nc = cr * cr + ci * ci;
+            if (m < kW + kLag + 2 || m < skipUntil || pending || trig >= 0) { if (trig < 0) run = 0; }
+            else if (pp > 1e-12 && nc > kThresh * pp * pp) {
+                const double met = nc / (pp * pp);
+                if (met > bestM) { bestM = met; bestC = std::complex<double>(cr, ci); }
+                if (++run >= kMinRun) {
+                    // A narrowband signal (a Bluetooth packet, a carrier) repeats after 16 samples as well, but it also does after 8: the short
+                    // training does not (its tones lie 1.25 MHz apart, so half of them turn by half a cycle in 8 samples and the sum cancels). Such a
+                    // trigger would only cost a long-training search that fails.
+                    std::complex<double> c8(0, 0);
+                    for (int64_t i = m - kW + 9; i <= m; i++) c8 += std::complex<double>(at(i - 8)) * std::conj(std::complex<double>(at(i)));
+                    if (std::abs(c8) > 0.5 * std::sqrt(nc)) { run = 0; bestM = 0; st.narrow++; }
+                    else { trig = m; st.triggers++; cfoCoarse = -std::arg(bestC) * kRate / (2 * kPi * kLag); }
+                }
+            } else if (run) { run = 0; bestM = 0; }
+            // act as soon as the trigger's wait or the packet's end is reached (a block may span several packets)
+            if ((trig >= 0 && nn >= trig + kSyncWait) || (pending && nn >= pend + 4)) {
+                C = std::complex<double>(cr, ci); P = pp; n = nn;
+                run_();
+            }
+        }
+        C = std::complex<double>(cr, ci); P = pp; n = nn;
     }
+    std::vector<cf32> dC;
+    std::vector<float> dP;
 
     // long-training search and SIGNAL decode; true: a frame is pending
     bool sync() {
@@ -276,11 +324,17 @@ void OfdmRx::reset() { p_->reset(); }
 const OfdmRx::Stats& OfdmRx::stats() const { return p_->st; }
 void OfdmRx::feed(const cf32* x, size_t cnt) {
     Impl& m = *p_;
-    for (size_t i = 0; i < cnt; i++) {
-        const float re = x[i].real(), im = x[i].imag();
-        m.feedOne(std::isfinite(re) && std::isfinite(im) ? x[i] : cf32(0, 0));
-        // act as soon as the trigger's wait or the packet's end is reached (a block may span several packets)
-        if ((m.trig >= 0 && m.n >= m.trig + kSyncWait) || (m.pending && m.n >= m.pend + 4)) m.run_();
+    for (size_t i = 0; i < cnt;) {
+        const int k = (int)std::min<size_t>(cnt - i, 512);
+        const size_t o = m.b.size();
+        m.b.resize(o + (size_t)k);
+        cf32* d = m.b.data() + o;
+        for (int j = 0; j < k; j++) {
+            const float re = x[i + (size_t)j].real(), im = x[i + (size_t)j].imag();
+            d[j] = std::fabs(re) <= 3.0e38f && std::fabs(im) <= 3.0e38f ? x[i + (size_t)j] : cf32(0, 0);   // finite
+        }
+        m.feedBlock(k);
+        i += (size_t)k;
     }
     m.trim();
 }

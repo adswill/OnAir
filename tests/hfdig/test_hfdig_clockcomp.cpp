@@ -3,6 +3,7 @@
 #include "dect2/hfdig/hfdig_rx.h"
 #include "hfdig_ftx_testutil.h"
 #include <memory>
+#include "../common/test_long.h"
 
 using namespace ftxtest;
 
@@ -36,15 +37,16 @@ static void dump(const HfdigFtxTelemetry& t) {   // every decode: slot, DT, earl
 static int lateDecodes(const HfdigFtxTelemetry& t) { int n = 0; for (const auto& d : t.decodes) if (std::fabs(d.dt) < 0.6) n++; return n; }
 
 int main() {
+    // fewer slots by default (the correction lands after two steady slots; the wide search after four quiet ones and up to five search slots), the long run as before
     {   // stations late by 1.5 s: inside the normal search, the correction removes it
-        const HfdigFtxTelemetry t = run(1.5, 0, 8);
+        const HfdigFtxTelemetry t = run(1.5, 0, testLongPick(6, 8));
         printf("late 1.5 s: trim %+.2f s, %d decodes, %d near 0\n", t.clockTrim, (int)t.decodes.size(), lateDecodes(t));
         if (std::fabs(t.clockTrim + 1.5) >= 0.4) dump(t);
         CHECK(std::fabs(t.clockTrim + 1.5) < 0.4, "trim %.2f", t.clockTrim);
         CHECK(lateDecodes(t) >= 6, "decodes near DT 0 after the correction: %d", lateDecodes(t));
     }
     {   // the computer clock 1.2 s fast: the same seen from the other side
-        const HfdigFtxTelemetry t = run(0, 1.2, 8);
+        const HfdigFtxTelemetry t = run(0, 1.2, testLongPick(5, 8));
         printf("clock +1.2 s: trim %+.2f s, %d decodes\n", t.clockTrim, (int)t.decodes.size());
         CHECK(std::fabs(t.clockTrim + 1.2) < 0.4, "trim %.2f", t.clockTrim);
     }
@@ -55,7 +57,7 @@ int main() {
         CHECK(t.decodes.size() >= 12, "decodes %d", (int)t.decodes.size());
     }
     {   // 4 s out, beyond the decoder's normal +-2.5 s: nothing decodes until the one wider search finds the slots
-        const HfdigFtxTelemetry t = run(4.0, 0, 16);
+        const HfdigFtxTelemetry t = run(4.0, 0, testLongPick(11, 16));
         printf("out by 4 s: trim %+.2f s, %d decodes, %d near 0\n", t.clockTrim, (int)t.decodes.size(), lateDecodes(t));
         CHECK(std::fabs(t.clockTrim + 4.0) < 0.5, "trim %.2f", t.clockTrim);
         CHECK(lateDecodes(t) >= 3, "decodes near 0: %d", lateDecodes(t));

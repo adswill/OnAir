@@ -68,7 +68,10 @@ std::vector<cf32> btsFrames(const GsmrCellCfg& c, uint32_t fn0, int nFrames) {
             for (int st : starts) if (mod >= st && mod < st + 4) b0 = st;
             const bool bcch = b0 == 2;
             // the block is built when its first burst is reached; encode once per frame, cheap enough
-            const Frame23 fr = bcch ? sched[tc] : idleFrame();
+            // CCCH: a paging request type 1 in the first block, an immediate assignment in every second multiframe's second block, the
+            // rest idle (the bodies carry no identities)
+            const uint32_t mf = fn / 51;
+            const Frame23 fr = bcch ? sched[tc] : !c.ccchLoad ? idleFrame() : b0 == 6 ? encodePagingKind(0x21) : (b0 == 12 && (mf & 1) == 0) ? encodePagingKind(0x3F) : idleFrame();
             const Bits coded = xcchEncode(fr.data());
             xcchInterleave(coded, blk);
             place(normalBurst(blk[mod - b0], c.bcc, 1), f, 0);

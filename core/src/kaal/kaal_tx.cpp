@@ -43,10 +43,11 @@ public:
         buf_.insert(buf_.end(), in, in + n);
         while (true) {
             const int64_t i0 = (int64_t)std::floor(pos_);
-            if (i0 + kH >= base_ + (int64_t)buf_.size()) break;
             int p = (int)std::lround((pos_ - (double)i0) * kPhases);
             int64_t ii = i0;
             if (p >= kPhases) { p = 0; ii++; }
+            // the kernel reads buf_ up to ii + kH: checked after the phase rounded up to the next sample (it read one past the end, ASan)
+            if (ii + kH >= base_ + (int64_t)buf_.size()) break;
             const float* k = &tab_[(size_t)p * 2 * kH];
             const cf* v = &buf_[(size_t)(ii - kH + 1 - base_)];
             float ar = 0, ai = 0;

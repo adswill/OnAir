@@ -26,6 +26,10 @@ std::vector<FieldInfo> adsbFields() {
 std::vector<EventInfo> build() {
     std::vector<EventInfo> v;
     v.push_back({"adsb.new", "Aircraft heard for the first time", kAc, "ADS-B", 1090e6, adsbFields()});
+    v.push_back({"adsb.first_ever", "Aircraft heard for the first time ever (ADS-B, History; not on the store's first day)", "ADS-B", "ADS-B", 1090e6, {
+        {"hex", 's', "ICAO address", "4840D6"}, {"callsign", 's', "callsign", "KLM1023"}, {"registration", 's', "registration (database)", "PH-BXA"},
+        {"type", 's', "type (database)", "B738"}, {"operator", 's', "operator (database)", "KLM"}, {"alt_ft", 'n', "altitude, ft", "36000"},
+        {"distance_km", 'n', "distance from the receiver", "41.2"}, {"unique_ever", 'n', "airframes heard ever", "18234"}}});
     v.push_back({"adsb.aircraft", "Aircraft update (new squawk, or every 2 s per aircraft)", kAc, "ADS-B", 1090e6, adsbFields()});
     v.push_back({"acars.message", "ACARS message", "ACARS", "ACARS", 131.725e6, {
         {"tail", 's', "registration or address", "A6-EDA"}, {"flight", 's', "flight id of a downlink", "EK0201"}, {"label", 's', "two-character label", "H1"},
@@ -59,10 +63,123 @@ std::vector<EventInfo> build() {
     v.push_back({"ais.anomaly", "AIS anomaly (spoofed or cloned identity, moved aid, dark ship ...)", "AIS", "AIS", 162.0e6, {
         {"mmsi", 'n', "MMSI number", "219012345"}, {"name", 's', "ship name", "NORDIC STAR"}, {"kind", 's', "jump, clash, aton_moved, aton_off_position, mmsi_class, speed_type, name_change, dark, reappeared", "clash"},
         {"severity", 'n', "0 information, 1 warning, 2 alarm", "2"}, {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"}, {"text", 's', "one-line reading", "MMSI 219012345 reports from two places 60 nm apart"}}});
+    v.push_back({"ais.behaviour", "AIS vessel behaviour (rendezvous, loitering, status against motion, draught or destination change, dragging anchor)", "AIS", "AIS", 162.0e6, {
+        {"mmsi", 'n', "MMSI number", "219012345"}, {"other", 'n', "the other vessel (rendezvous), else 0", "0"}, {"name", 's', "ship name", "NORDIC STAR"},
+        {"kind", 's', "rendezvous, loiter, status_moving, status_stopped, draught, destination, anchor_drag", "anchor_drag"}, {"severity", 'n', "0 information, 1 warning, 2 alarm", "2"},
+        {"lat", 'n', "latitude", "55.1"}, {"lon", 'n', "longitude", "21.2"}, {"value", 'n', "metres from the anchor, minutes, draught change in m ...", "140"},
+        {"text", 's', "one-line reading", "NORDIC STAR dragging anchor: 140 m from its anchor position"}}});
     v.push_back({"aprs.packet", "AX.25 / APRS packet", "APRS", "APRS", 144.8e6, {
         {"from", 's', "source call sign", "LY1ABC-9"}, {"to", 's', "destination", "APRS"}, {"path", 's', "digipeater path", "WIDE1-1"},
         {"info", 's', "information field", "!5441.40N/02517.00E>test"}, {"type", 's', "packet type", "position"}, {"summary", 's', "one-line reading", "position"},
         {"lat", 'n', "latitude when the packet has a position", "54.69"}, {"lon", 'n', "longitude when the packet has a position", "25.28"}}});
+    {   // the smart insights (core/include/dect2/insight, docs/SMART5-*-3.9.md); sent under the signal family
+        auto insightFields = [] {
+            return std::vector<FieldInfo>{{"area", 's', "ham, voice, pager, hfutil, aviation, marine, iot, broadcast, tv, satellite, gnss or science", "voice"}, {"key", 's', "what it is about: call sign, talkgroup, capcode, channel", "DMR TG 91"},
+                                          {"text", 's', "the finding", "DMR TG 91 busier than usual"}, {"severity", 'n', "0 information, 1 warning, 2 alarm", "0"}};
+        };
+        v.push_back({"insight.heard_me", "A station hears you (FT8, FT4, JS8), first time per band", "Insights", "FT8", 14.074e6, insightFields()});
+        v.push_back({"insight.aprs_overbeacon", "APRS station beacons too often", "Insights", "APRS", 144.8e6, insightFields()});
+        v.push_back({"insight.aprs_flood", "APRS packet flooded through many digipeaters", "Insights", "APRS", 144.8e6, insightFields()});
+        v.push_back({"insight.aprs_digi_silent", "Regular APRS digipeater gone silent", "Insights", "APRS", 144.8e6, insightFields()});
+        v.push_back({"insight.voice_busy", "Talkgroup busier than usual this hour", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.trunk_load", "Trunked system near capacity (Erlang B)", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.tg_encrypted", "Talkgroup went encrypted", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.tg_emergency", "Several emergency calls on one talkgroup", "Insights", "DMR", 438.5e6, insightFields()});
+        v.push_back({"insight.pager_auto", "Capcode sends automatic pages", "Insights", "POCSAG", 152.0e6, insightFields()});
+        v.push_back({"insight.pager_burst", "Paging burst from a quiet capcode", "Insights", "POCSAG", 152.0e6, insightFields()});
+        v.push_back({"insight.pager_silent", "Pager channel gone silent", "Insights", "POCSAG", 152.0e6, insightFields()});
+        v.push_back({"insight.overdue", "HF utility broadcast overdue", "Insights", "WEFAX", 10.1008e6, insightFields()});
+        v.push_back({"insight.adsb_emergency", "Aircraft emergency squawk or emergency status", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_descent", "Aircraft descending unusually fast", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_climb", "Aircraft climbing unusually fast", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_turn", "Aircraft turning sharply", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_go_around", "Aircraft go-around (approach turned into a climb)", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.adsb_touch_and_go", "Aircraft touch-and-go", "Insights", "ADS-B", 1090e6, insightFields()});
+        v.push_back({"insight.thermal", "Strong thermal found from circling gliders (FLARM, OGN)", "Insights", "FLARM", 868.3e6, insightFields()});
+        v.push_back({"insight.hfdl_station_up", "HFDL ground station heard again after hours of silence", "Insights", "HFDL", 8.927e6, insightFields()});
+        v.push_back({"insight.ais_ducting", "AIS ships heard far beyond the normal range (tropospheric ducting)", "Insights", "AIS", 162e6, insightFields()});
+        v.push_back({"insight.ais_ducting_end", "AIS ducting over", "Insights", "AIS", 162e6, insightFields()});
+        v.push_back({"insight.navtex_in_force", "New NAVTEX warning in force", "Insights", "NAVTEX", 518e3, insightFields()});
+        v.push_back({"insight.navtex_cancelled", "NAVTEX warning cancelled", "Insights", "NAVTEX", 518e3, insightFields()});
+        v.push_back({"insight.navtex_expired", "NAVTEX warning expired", "Insights", "NAVTEX", 518e3, insightFields()});
+        v.push_back({"insight.mesh_busy", "Mesh LoRa channel busy (airtime)", "Insights", "LoRa", 869.525e6, insightFields()});
+        v.push_back({"insight.mesh_router", "New mesh router or repeater heard", "Insights", "LoRa", 869.525e6, insightFields()});
+        v.push_back({"insight.lorawan_join_storm", "LoRaWAN device keeps trying to join", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.lorawan_no_accepts", "LoRaWAN join requests without any join accept", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.lorawan_loss", "LoRaWAN device losing many uplinks (frame-counter gaps)", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.lorawan_sf_shift", "LoRaWAN devices falling back to SF11 / SF12", "Insights", "LoRaWAN", 868.1e6, insightFields()});
+        v.push_back({"insight.leak_night", "Water used at night on your own meter", "Insights", "Wireless M-Bus", 868.95e6, insightFields()});
+        v.push_back({"insight.leak_continuous", "Water flowing without a pause on your own meter", "Insights", "Wireless M-Bus", 868.95e6, insightFields()});
+        // round 5 broadcast, TV, satellites, GNSS and science (app/smart5, docs/SMART5-UI-3.9.md)
+        v.push_back({"insight.fm_dead_air", "FM station: dead air (carrier on, no programme)", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_pilot", "FM station: stereo pilot lost", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_rds_stuck", "FM station: RDS radio text frozen", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_clock", "FM station: RDS clock wrong", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_over_deviation", "FM station: over-deviation", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_mpx_power", "FM station: multiplex power above the BS.412 limit", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.fm_other_tx", "FM: another transmitter of the same network", "Insights", "FM", 98.0e6, insightFields()});
+        v.push_back({"insight.am_health", "AM station: over-modulation, carrier shift or dead air", "Insights", "AM", 1.0e6, insightFields()});
+        v.push_back({"insight.am_carriers", "AM channel: several carriers (split channel, het)", "Insights", "AM", 1.0e6, insightFields()});
+        v.push_back({"insight.dab_change", "DAB ensemble reconfigured", "Insights", "DAB", 223.936e6, insightFields()});
+        v.push_back({"insight.service_fault", "One service fails while the multiplex is clean (the station's feed)", "Insights", "DAB", 223.936e6, insightFields()});
+        v.push_back({"insight.hd_sideband", "HD Radio sidebands unequal", "Insights", "HD Radio", 98.0e6, insightFields()});
+        v.push_back({"insight.service_off_air", "TV service off air at the source", "Insights", "DVB-T", 506.0e6, insightFields()});
+        v.push_back({"insight.ofdm_interferer", "Interferer inside an OFDM channel", "Insights", "DVB-T", 506.0e6, insightFields()});
+        v.push_back({"insight.cell_changed", "DVB-T/T2 transmitter cell changed", "Insights", "DVB-T", 506.0e6, insightFields()});
+        v.push_back({"insight.sat_fade", "Satellite TV fade", "Insights", "DVB-S", 11.0e9, insightFields()});
+        v.push_back({"insight.vits_found", "Analogue TV test lines found", "Insights", "Analog TV", 55.25e6, insightFields()});
+        v.push_back({"insight.product_overdue", "Geostationary weather product overdue", "Insights", "GOES", 1694.1e6, insightFields()});
+        v.push_back({"insight.sun_outage", "Sun outage in progress", "Insights", "GOES", 1694.1e6, insightFields()});
+        v.push_back({"insight.carrier_outage", "L-band carrier outage", "Insights", "Inmarsat", 1545.0e6, insightFields()});
+        v.push_back({"insight.beacon_missed", "CubeSat beacon missed while the satellite is up", "Insights", "CubeSat", 437.0e6, insightFields()});
+        v.push_back({"insight.radio_clock", "Radio crystal error measured from GNSS", "Insights", "GNSS", 1575.42e6, insightFields()});
+        v.push_back({"insight.scintillation", "GNSS ionospheric scintillation", "Insights", "GNSS", 1575.42e6, insightFields()});
+        v.push_back({"insight.multipath", "GNSS multipath near the antenna", "Insights", "GNSS", 1575.42e6, insightFields()});
+        v.push_back({"insight.drift_scan", "Sun drift-scan result", "Insights", "Radio astronomy", 1420.4e6, insightFields()});
+        v.push_back({"insight.vlf_terminator", "Sunrise or sunset on a VLF path", "Insights", "SuperSID", 24.0e3, insightFields()});
+        v.push_back({"insight.meteor_outburst", "Meteor rate above the expected", "Insights", "Meteor scatter", 143.05e6, insightFields()});
+    }
+    v.push_back({"aprs.message", "APRS message or bulletin heard for the first time (not the retries, acks or rejects)", "APRS", "APRS", 144.8e6, {
+        {"from", 's', "sender", "LY1ABC-9"}, {"to", 's', "addressee, or the bulletin id", "LY2XX-7"}, {"text", 's', "message text", "QSY 145.500?"},
+        {"msgno", 's', "message number, empty when none", "12"}, {"kind", 's', "message, bulletin, announcement, group bulletin, weather service", "message"},
+        {"to_me", 'b', "addressed to your callsign (APRS view, Messages)", "true"}}});
+    v.push_back({"sensor.reading", "Sub-GHz sensor reading (one per transmission; the radio's repeats are one)", "Sub-GHz sensors", "Sensors", 433.92e6, {
+        {"key", 's', "model|id|channel, what tells sensors apart", "Acurite-Tower|12345|A"}, {"name", 's', "your name for the sensor, else model and id", "Freezer"},
+        {"named", 'b', "you gave the sensor a name (Sensors view)", "true"}, {"model", 's', "decoder model", "Acurite-Tower"}, {"id", 's', "sensor id", "12345"},
+        {"channel", 's', "channel", "A"}, {"kind", 's', "weather, tpms, meter, remote, security, other", "weather"},
+        {"temperature_C", 'n', "temperature, °C (when the sensor sends it)", "-14.5"}, {"humidity", 'n', "humidity, %", "61"},
+        {"battery_ok", 'n', "1 good, 0 low (when sent)", "1"}, {"battery_low", 'b', "the sensor reports a low battery", "false"},
+        {"wind_avg_km_h", 'n', "wind, km/h", "12.4"}, {"rain_mm", 'n', "rain counter, mm", "102.6"}, {"detect_wet", 'n', "leak sensor: 1 wet", "0"},
+        {"contact_open", 'n', "door / window sensor: 1 open", "0"}, {"rssi_db", 'n', "signal level, dB", "-8.1"}}});
+    v.push_back({"broadcast.now_playing", "FM (RadioText+) or DAB (DL Plus) station tagged a new song", "FM, DAB", "FM", 93.9e6, {
+        {"source", 's', "FM or DAB", "FM"}, {"station", 's', "PS name or service label", "RADIO 1"}, {"artist", 's', "artist", "Queen"},
+        {"title", 's', "title", "Bohemian Rhapsody"}, {"pty", 's', "programme type", "Pop Music"}, {"freq_mhz", 'n', "frequency, MHz", "93.9"}}});
+    v.push_back({"broadcast.text", "FM radio text or DAB dynamic label changed, or a traffic announcement started or ended (FM TA)", "FM, DAB", "FM", 93.9e6, {
+        {"source", 's', "FM or DAB", "FM"}, {"station", 's', "PS name or service label", "RADIO 1"}, {"text", 's', "radio text / dynamic label", "Traffic: A1 closed"},
+        {"artist", 's', "artist when tagged", "Queen"}, {"title", 's', "title when tagged", "Bohemian Rhapsody"}, {"pty", 's', "programme type", "News"},
+        {"ta", 'b', "traffic announcement on air (FM)", "false"}, {"ta_start", 'b', "a traffic announcement has just started", "false"}, {"freq_mhz", 'n', "frequency, MHz", "93.9"}}});
+    v.push_back({"image.done", "A picture is finished (weather satellites, GOES and other geostationary, SSTV, fax, SSDV, HamDRM): no change for 20 s", "Images", "Meteor", 137.9e6, {
+        {"path", 's', "the PNG in the image gallery folder", "/home/me/OnAir/images/20261110-meteor.png"}, {"source", 's', "the mode that made it", "Meteor"},
+        {"satellite", 's', "satellite, when known", "Meteor-M2 4"}, {"detail", 's', "channels, product, pass", "channels 1 2 3, pass 09:41, max 62 deg"},
+        {"key", 's', "the receiver's name for the picture", "meteor-123"}, {"width", 'n', "pixels", "1568"}, {"height", 'n', "lines", "2200"},
+        {"picture_time", 'n', "when it was taken (Unix seconds)", "1794310637"}}});
+    v.push_back({"ham.decode", "A station heard on FT8, FT4, FT2, WSPR, the other WSJT modes or in the CW skimmer, with the logbook's marks (once per decode)", "HF digital, CW", "FT8", 14.074e6, {
+        {"call", 's', "the calling station", "LY2XX"}, {"from", 's', "the same, for the message history", "LY2XX"}, {"grid", 's', "its locator, when sent", "KO24"},
+        {"text", 's', "the message", "CQ LY2XX KO24"}, {"mode", 's', "FT8, FT4, WSPR, CW ...", "FT8"}, {"band", 's', "ADIF band", "20m"},
+        {"country", 's', "DXCC entity", "Lithuania"}, {"snr_db", 'n', "SNR, dB", "-12"}, {"dt", 'n', "time offset, s", "0.2"}, {"audio_hz", 'n', "audio frequency", "1200"},
+        {"dial_mhz", 'n', "dial frequency", "14.074"}, {"cq", 'b', "a CQ call", "true"}, {"dbm", 'n', "WSPR power, dBm", "37"}, {"lat", 'n', "from the locator", "54.5"}, {"lon", 'n', "from the locator", "25"},
+        {"new_dxcc", 'b', "an entity not in the logbook", "false"}, {"new_dxcc_band", 'b', "an entity not worked on this band", "false"}, {"new_grid", 'b', "a grid not in the logbook", "false"},
+        {"new_grid_band", 'b', "a grid not worked on this band", "false"}, {"worked", 'b', "the call is in the logbook", "false"}, {"worked_band", 'b', "worked on this band and mode", "false"}}});
+    v.push_back({"session.digest", "The daily digest at the time set (Settings: digestMinute, 21:00 by default): a line from each mode that heard something today", "All", "", 0, {
+        {"day", 's', "local date", "2026-11-10"}, {"text", 's', "the digest", "312 aircraft (4 new ever), farthest 412 km; 2 new DXCC (Bouvet, Tonga)"}, {"empty", 'b', "nothing was heard", "false"}}});
+    v.push_back({"lora.node_silent", "A watched mesh node has not been heard for the set hours, or is heard again (back)", "Mesh", "Mesh", 869.525e6, {
+        {"id", 's', "node id", "!1a2b3c4d"}, {"name", 's', "long name", "Hill router"}, {"hours", 'n', "hours silent (0 when back)", "6.5"}, {"back", 'b', "heard again after the alert", "false"},
+        {"lat", 'n', "last position", "54.9"}, {"lon", 'n', "last position", "23.9"}}});
+    v.push_back({"lora.node_battery", "A watched mesh node reports a battery below the set level", "Mesh", "Mesh", 869.525e6, {
+        {"id", 's', "node id", "!1a2b3c4d"}, {"name", 's', "long name", "Hill router"}, {"battery_pct", 'n', "battery, %", "18"}, {"voltage", 'n', "volts", "3.45"}}});
+    v.push_back({"lora.node_new", "A mesh node heard for the first time this session within the set distance", "Mesh", "Mesh", 869.525e6, {
+        {"id", 's', "node id", "!1a2b3c4d"}, {"name", 's', "long name", "Kaunas 1"}, {"distance_km", 'n', "from the receiver", "4.2"}, {"hw", 's', "hardware", "HELTEC_V3"},
+        {"lat", 'n', "position", "54.9"}, {"lon", 'n', "position", "23.9"}}});
     v.push_back({"sferics.storm", "Thunderstorm trend changed (approaching, overhead, receding)", "Lightning", "Sferics", 0, {
         {"phase", 's', "storm approaching, overhead or receding", "storm approaching"}, {"db_change", 'n', "strength change over 5 minutes, dB", "3.2"}, {"per_min", 'n', "strikes per minute", "8"}}});
     v.push_back({"sonde.update", "Radiosonde frame (at most one per 5 s per sonde)", "Radiosondes", "Sonde", 403.0e6, {

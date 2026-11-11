@@ -9,6 +9,7 @@
 using namespace dect2;
 using namespace dect2::autotest;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 std::vector<float> tx(const KbdConfig& c, double seconds, double offset, double ppm, const std::string& text = "") {
@@ -28,11 +29,15 @@ bool hit(const std::vector<KbdAutoHyp>& h, const KbdConfig& c) {
 const char* nameOf(const std::vector<KbdAutoHyp>& h) { static char b[64]; if (h.empty()) return "none"; snprintf(b, sizeof b, "%d/%d v%d (%u chars, %.2f read)", h[0].tones, h[0].bandwidth, h[0].variant, h[0].chars, h[0].readable); return b; }
 
 struct Tally { int ok = 0, n = 0; };
+// by default every second setting of a family at 15 dB (the checked point) and 4 noise-alone runs; the long run (ONAIR_TEST_LONG=1) does every
+// setting at 15 and 6 dB and 10 noise runs
 Tally sweepFamily(int family, double snr, bool verbose) {
     Tally t;
+    int idx = 0;
     if (family == KbdOlivia || family == KbdContestia) {
         for (int bw : kKbdBwList) for (int tones : {4, 8, 16, 32, 64}) {
             if ((double)bw / tones < 7.8) continue;
+            if (!testLong() && idx++ % 2) continue;
             KbdConfig c; c.family = family; c.tones = tones; c.bandwidth = bw;
             auto a = tx(c, (double)bw / tones < 10 ? 45 : 24, t.n % 2 ? 40 : -40, 0);
             shift(a, 8000, 0, 5);
@@ -44,6 +49,7 @@ Tally sweepFamily(int family, double snr, bool verbose) {
         }
     } else {
         for (int v = 0; v < kbdVariantCount(family); v++) {
+            if (!testLong() && idx++ % 2) continue;
             KbdConfig c; c.family = family; c.variant = v;
             auto a = tx(c, (family == KbdMfsk && v <= 2) || (family != KbdMfsk && family != KbdHell && v <= 1) ? 45 : 24, t.n % 2 ? 30 : -30, 0);
             shift(a, 8000, 0, 5);
@@ -63,6 +69,7 @@ int main() {
     const auto t0 = std::chrono::steady_clock::now();
     for (int f = 0; f < kKbdFamilies; f++) {
         for (double snr : {15.0, 6.0}) {
+            if (!testLong() && snr != 15.0) continue;
             const Tally t = sweepFamily(f, snr, snr == 15.0);
             printf("%-14s %4.0f dB in 3 kHz: %d of %d exact (offset, 5 Hz/min drift)\n", kbdFamilyName(f), snr, t.ok, t.n);
             if (snr == 15.0 && f != KbdHell) CHECK(t.ok * 100 >= t.n * 60, "%s %g: %d of %d", kbdFamilyName(f), snr, t.ok, t.n);
@@ -71,7 +78,7 @@ int main() {
     // noise alone
     for (int f = 0; f < kKbdFamilies; f++) {
         int bad = 0;
-        const int tot = 10;
+        const int tot = testLongPick(4, 10);
         for (int k = 0; k < tot; k++) {
             auto a = noiseOnly(8000, 24, 0.2, (uint64_t)(5000 + 100 * f + k));
             bad += !kbdAutoAnalyse(a.data(), a.size(), f, 3).empty();

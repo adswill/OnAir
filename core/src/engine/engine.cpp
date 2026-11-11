@@ -77,6 +77,7 @@ void Engine::ingest(cf32* x, size_t n) {
         }
     } else if (nbWas_) { nbWas_ = false; nbPct_ = 0.f; nb_.reset(); }   // switched off: the next start learns the level again
     const auto a0 = std::chrono::steady_clock::now();
+    const uint64_t c0 = cpu::threadNs();
     lastSamples_ = a0;   // the radio is alive, whether or not the resampler gives a sample out of this block
     if (offResample_) { offBuf_.clear(); offRs_.process(x, n, offBuf_); x = offBuf_.data(); n = offBuf_.size(); }
     if (!n) return;
@@ -115,10 +116,15 @@ void Engine::ingest(cf32* x, size_t n) {
         feedRx(x, n);
     }
     tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
+    tRxCpu_ += (double)(cpu::threadNs() - c0) * 1e-9;
     nSamp_ += n;
 }
 
-Engine::Engine() : t0_(std::chrono::steady_clock::now()) { wide_.setTuning(WideTuning()); }   // the whole-span banks get the CPU limit
+Engine::Engine() : t0_(std::chrono::steady_clock::now()) {
+    wide_.setTuning(WideTuning());   // the whole-span banks get the CPU limit
+    // DVB-H / IP datacasting: datagrams whose bytes are all known good (section CRCs, MPE-FEC) go to the IP output
+    mpe_.setDatagramCallback([this](const uint8_t* d, size_t n, bool reliable, int) { if (reliable) ipOut_.packet(d, n); });
+}
 
 void Engine::cpuAccounts() {
     const std::string p = "rx" + std::to_string(receiverId_) + " ";
@@ -286,6 +292,7 @@ void Engine::applyReset() {
     rxSpecan_.reset();
     rxAstro_.reset();
     rxDvbc_.reset();
+    rxC2_.reset();
     rxOrb_.reset();
     rxUplink_.reset();
     rxAle_.reset();
@@ -335,12 +342,16 @@ void Engine::applyReset() {
     rxNrf_.reset();
     rxRc_.reset();
     rxXlink_.reset();
+    for (auto& r : rxCis_) r.reset();
     rxSens_.reset();
     rxBgan_.reset();
     rxSfer_.reset();
     rxAtis_.reset();
     rxSelcal_.reset();
     rxUmts_.reset();
+    rxCdma_.reset();
+    rxTds_.reset();
+    rxVdl3_.reset();
     rxFy3a_.reset();
     for (auto& w : rxWx_) w.reset();
     for (auto& h : rxHs_) h.reset();
@@ -348,6 +359,7 @@ void Engine::applyReset() {
     for (auto& w : rxSd3_) w.reset();
     rxFy3m_.reset();
     for (auto& h : rxHfu_) h.reset();
+    for (auto& h : rxHfm_) h.reset();
     rxPh2_.reset();
     rxPh3_.reset();
     rxPh4_.reset();
@@ -375,7 +387,9 @@ void Engine::applyReset() {
     rxSb_.reset();
     rxSatd_.reset();
     rxNavic_.reset();
+    rxTsb_.reset();
     rxIsdbs_.reset();
+    rxDvbsh_.reset();
     rxKaws_.reset();
     rxKapp_.reset();
     rxKavb_.reset();
@@ -383,6 +397,7 @@ void Engine::applyReset() {
     rxCq_.reset();
     rxMs_.reset();
     rxGd_.reset();
+    rxHrdcp_.reset();
     rxRid_.reset();
     rxMeteor_.reset();
     rxNr_.reset();
@@ -402,6 +417,7 @@ void Engine::applyReset() {
     {
         std::lock_guard<std::mutex> lk(tsMu_);
         demux_.reset();
+        mpe_.reset();
         unpack_ = BbUnpacker();
         unpack_.setSink([this](const uint8_t* in) { uint8_t merged[188]; memcpy(merged, in, 188); plpMerge_.step(merged); const uint8_t* pkt = merged; demux_.feed(pkt); if (!playerExternal_) { ttx_.feedTs(pkt); dvbsub_.feedTs(pkt); } frameBuf_.insert(frameBuf_.end(), pkt, pkt + 188); });
         tsSnap_ = TsSnapshot();
@@ -440,6 +456,7 @@ void Engine::onTsPackets(const uint8_t* pk, size_t n, double secs) {
         if (!playerExternal_) ttx_.feedTs(q);
         if (!playerExternal_) dvbsub_.feedTs(q);
     }
+    mpe_.feed(pk, n);   // DVB-H and other IP datacasting: MPE / MPE-FEC sections found by themselves
     demux_.advance(secs);
     tsSnap_ = demux_.snapshot();
     outputs_.packets(pk, n, &tsSnap_);
@@ -502,7 +519,7 @@ void Engine::feedReceiver(int a, const cf32* x, size_t n) {
     }   // whole-span decoding: one decoder per carrier
     if (a >= 401 && a <= 412) { rxAvRoad_.feed(x, n); return; }   // aviation, rail and road modes
     if (a == 301) { rxAdsl_.feed(x, n); rxFlarm_.feed(x, n); return; }   // ADS-L hears FLARM from the same capture
-    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else if (a == 7) rxDvbs_.feed(x, n); else if (a == 8) rxDtmb_.feed(x, n); else if (a == 9) rxAtv_.feed(x, n); else if (a == 10) rxDmr_.feed(x, n); else if (a == 11) rxDrm_.feed(x, n); else if (a == 12) rxAdsb_.feed(x, n); else if (a == 13) rxGnss_.feed(x, n); else if (a == 14) rxSonde_.feed(x, n); else if (a == 15) rxAis_.feed(x, n); else if (a == 16) rxMarine_.feed(x, n); else if (a == 17) rxAcars_.feed(x, n); else if (a == 18) rxInmc_.feed(x, n); else if (a == 19) rxAero_.feed(x, n); else if (a == 20) rxIridium_.feed(x, n); else if (a == 21) rxMesh_.feed(x, n); else if (a == 22) rxHdr_.feed(x, n); else if (a == 23) rxCdr_.feed(x, n); else if (a == 24) rxPager_.feed(x, n); else if (a == 25) rxPacket_.feed(x, n); else if (a == 26) rxHfdig_.feed(x, n); else if (a == 27) rxAirband_.feed(x, n); else if (a == 28) rxVdl2_.feed(x, n); else if (a == 29) rxIsm_.feed(x, n); else if (a == 30) rxNdb_.feed(x, n); else if (a == 31) rxVor_.feed(x, n); else if (a == 32) rxM17_.feed(x, n); else if (a == 33) rxCell_.feed(x, n); else if (a == 35) rxCw_.feed(x, n); else if (a == 34) rxDstar_.feed(x, n); else if (a == 36) rxHfdl_.feed(x, n); else if (a == 39) rxNxdn_.feed(x, n); else if (a == 46) rxDpmr_.feed(x, n); else if (a == 40) rxGsmr_.feed(x, n); else if (a == 37) rxPsk_.feed(x, n); else if (a == 38) rxJs8_.feed(x, n); else if (a == 42) rxSpecx_.feed(x, n); else if (a == 43) rxSpecan_.feed(x, n); else if (a == 41) rxDvbc_.feed(x, n); else if (a == 45) rxOrb_.feed(x, n); else if (a == 44) rxUplink_.feed(x, n); else if (a == 47) rxTetra_.feed(x, n); else if (a == 50) rxAle_.feed(x, n); else if (a == 48) rxMac_.feed(x, n); else if (a == 49) rxAstro_.feed(x, n); else if (a == 51) rxP25_.feed(x, n); else if (a == 52) rxBle_.feed(x, n); else if (a == 53) rxIono_.feed(x, n); else if (a == 54) rxQo100_.feed(x, n); else if (a == 55) rxWifi_.feed(x, n); else if (a == 56) { rxGeneral_.feed(x, n); for (int i = 0, k = extraGeneralN_.load(std::memory_order_relaxed); i < k; i++) extraGeneral_[(size_t)i].feed(x, n); } else if (a == 59) rxTime_.feed(x, n); else if (a == 57) rxRid_.feed(x, n); else if (a == 60) rxMeteor_.feed(x, n); else if (a == 58) rxNr_.feed(x, n); else if (a == 61) rxGoes_.feed(x, n); else if (a == 62) rxCube_.feed(x, n); else if (a == 63) rxGs_.feed(x, n); else if (a == 64) rxVdes_.feed(x, n); else if (a == 65) rxHrpt_.feed(x, n); else if (a == 66) rxZb_.feed(x, n); else if (a == 245) rxTh_.feed(x, n); else if (a == 67) rxFlarm_.feed(x, n); else if (a == 68) rxHfb_.feed(x, n); else if (a == 69) rxDji_.feed(x, n); else if (a == 70) rxNb_.feed(x, n); else if (a == 71) rxHl_.feed(x, n); else if (a == 73) rxCd_.feed(x, n); else if (a == 74) rxWb_.feed(x, n); else if (a == 75) rxDw_.feed(x, n); else if (a == 77) rxSame_.feed(x, n); else if (a == 78) rxAnt_.feed(x, n); else if (a == 79) rxDect_.feed(x, n); else if (a == 80) rxTetrapol_.feed(x, n); else if (a == 81) rxEl_.feed(x, n); else if (a == 82) rxLbj_.feed(x, n); else if (a == railway::kKlwActiveStandard) rxKlw_.feed(x, n); else if (a == railway::kTdcsActiveStandard) rxTdcs_.feed(x, n); else if (a == horus::kActiveStandard) rxHorus_.feed(x, n); else if (a == 83) rxVdl4_.feed(x, n); else if (a == 84) rxUat_.feed(x, n); else if (a == 85) rxWs_.feed(x, n); else if (a == 86) rxEcz_.feed(x, n); else if (a == 87) rxWmb_.feed(x, n); else if (a == 102) rxFpv_.feed(x, n); else if (a == 90) rxTones_.feed(x, n); else if (a == 93) rxSar_.feed(x, n); else if (a == 96) rxMt63_.feed(x, n); else if (a == 114) rxFsq_.feed(x, n); else if (a == 117) rxIfkp_.feed(x, n); else if (a == 121) rxDgps_.feed(x, n); else if (a == 99) rxZw_.feed(x, n); else if (a == 105) rxMs_.feed(x, n); else if (a == 76) rxMt_.feed(x, n); else if (a == 72) rxLr_.feed(x, n); else if (a == 108) rxCq_.feed(x, n); else if (a == 122) rxDme_.feed(x, n); else if (a == 120) rxSitor_.feed(x, n); else if (a == 123) rxKaal_.feed(x, n); else if (a == 127) rxEloran_.feed(x, n); else if (a == 149) rxNfc_.feed(x, n); else if (a == 128) rxMpt_.feed(x, n); else if (a == 129) rxFusion_.feed(x, n); else if (a == 141) rxArd_.feed(x, n); else if (a == 142) rxGd_.feed(x, n); else if (a == 143) rxModeAc_.feed(x, n); else if (a == 144) rxBt_.feed(x, n); else if (a == 145) rxSb_.feed(x, n); else if (a == 124) rxKavb_.feed(x, n); else if (a == 134) rxKaws_.feed(x, n); else if (a == 146) rxMilhf_.feed(x, n); else if (a == 153) rxArgos_.feed(x, n); else if (a == 154) rxSfx_.feed(x, n); else if (a == 151) rxSbas_.feed(x, n); else if (a == 152) rxAsterix_.feed(x, n); else if (a == 130) rxLtr_.feed(x, n); else if (a == 131) rxEdacs_.feed(x, n); else if (a == 181) rxP25p2_.feed(x, n); else if (a == 156) rxMarineVhf_.feed(x, n); else if (a == 132) rxKait_.feed(x, n); else if (a == 125) rxKapp_.feed(x, n); else if (a == 126) rxKaft_.feed(x, n); else if (a == 201) rxLw_.feed(x, n); else if (a == 202) rxLs_.feed(x, n); else if (a == 155) rxIsdbs_.feed(x, n); else if (a == 204) rxPac_.feed(x, n); else if (a == 205) rxEsg_.feed(x, n); else if (a == 206) rxRoshf_.feed(x, n); else if (a == 207) rxSsdv_.feed(x, n); else if (a == 208) rxEbi_.feed(x, n); else if (a == 209) rxInmsat_.feed(x, n); else if (a == 210) {}   /* Internet TV: no receiver, the stream goes straight to the player */ else if (a == 211) rxNrf_.feed(x, n); else if (a == 242) rxSens_.feed(x, n); else if (a == 246) rxBgan_.feed(x, n); else if (a == 361) rxRc_.feed(x, n); else if (a >= 261 && a < 261 + kWxNumProfiles) rxWx_[a - 261].feed(x, n); else if (a == 244) rxSfer_.feed(x, n); else if (a == 212) rxAtis_.feed(x, n); else if (a == 241) rxSelcal_.feed(x, n); else if (a == 236) rxFy3a_.feed(x, n); else if (a == 237) rxFy3m_.feed(x, n); else if (a == 238) rxPh2_.feed(x, n); else if (a == 239) rxPh3_.feed(x, n); else if (a == 240) rxPh4_.feed(x, n); else if (a == 231) rxGkL_.feed(x, n); else if (a == 232) rxGkH_.feed(x, n); else if (a == 213) rxSw_.feed(x, n); else if (a == 203) rxPskd_.feed(x, n); else if (a >= 233 && a <= 235) rxFy_.feed(x, n); else if (a == 381) rxBtc_.feed(x, n); else if (a >= 341 && a <= 347) rxChv_.feed(x, n); else if ((a >= 291 && a <= 300) || a == 511) rxSd3_[sd3ProfileOfActive(a)].feed(x, n); else if (a >= 431 && a <= 440) rxHfu_[a - 431].feed(x, n); else if (hamsciKindOfActive(a) >= 0) rxHs_[hamsciKindOfActive(a)].feed(x, n); else if (a == 481) rxUmts_.feed(x, n); else if (isSatDetectActive(a)) rxSatd_.feed(x, n); else if (a == 562) rxNavic_.feed(x, n); else if (a >= 531 && a <= 550) rxXb_[a - 531].feed(x, n); else if (a == 601 || a == 602) rxXlink_.feed(x, n); else rx_.feed(x, n);
+    if (a == 5) rxI_.feed(x, n); else if (a == 4) rxA3_.feed(x, n); else if (a == 3) rxD_.feed(x, n); else if (a == 2) rxA_.feed(x, n); else if (a == 1) rxT_.feed(x, n); else if (a == 6) rxFm_.feed(x, n); else if (a == 7) rxDvbs_.feed(x, n); else if (a == 8) rxDtmb_.feed(x, n); else if (a == 9) rxAtv_.feed(x, n); else if (a == 10) rxDmr_.feed(x, n); else if (a == 11) rxDrm_.feed(x, n); else if (a == 12) rxAdsb_.feed(x, n); else if (a == 13) rxGnss_.feed(x, n); else if (a == 14) rxSonde_.feed(x, n); else if (a == 15) rxAis_.feed(x, n); else if (a == 16) rxMarine_.feed(x, n); else if (a == 17) rxAcars_.feed(x, n); else if (a == 18) rxInmc_.feed(x, n); else if (a == 19) rxAero_.feed(x, n); else if (a == 20) rxIridium_.feed(x, n); else if (a == 21) rxMesh_.feed(x, n); else if (a == 22) rxHdr_.feed(x, n); else if (a == 23) rxCdr_.feed(x, n); else if (a == 24) rxPager_.feed(x, n); else if (a == 25) rxPacket_.feed(x, n); else if (a == 26) rxHfdig_.feed(x, n); else if (a == 27) rxAirband_.feed(x, n); else if (a == 28) rxVdl2_.feed(x, n); else if (a == 29) rxIsm_.feed(x, n); else if (a == 30) rxNdb_.feed(x, n); else if (a == 31) rxVor_.feed(x, n); else if (a == 32) rxM17_.feed(x, n); else if (a == 33) rxCell_.feed(x, n); else if (a == 35) rxCw_.feed(x, n); else if (a == 34) rxDstar_.feed(x, n); else if (a == 36) rxHfdl_.feed(x, n); else if (a == 39) rxNxdn_.feed(x, n); else if (a == 46) rxDpmr_.feed(x, n); else if (a == 40) rxGsmr_.feed(x, n); else if (a == 37) rxPsk_.feed(x, n); else if (a == 38) rxJs8_.feed(x, n); else if (a == 42) rxSpecx_.feed(x, n); else if (a == 43) rxSpecan_.feed(x, n); else if (a == 41) rxDvbc_.feed(x, n); else if (a == 45) rxOrb_.feed(x, n); else if (a == 44) rxUplink_.feed(x, n); else if (a == 47) rxTetra_.feed(x, n); else if (a == 50) rxAle_.feed(x, n); else if (a == 48) rxMac_.feed(x, n); else if (a == 49) rxAstro_.feed(x, n); else if (a == 51) rxP25_.feed(x, n); else if (a == 52) rxBle_.feed(x, n); else if (a == 53) rxIono_.feed(x, n); else if (a == 54) rxQo100_.feed(x, n); else if (a == 55) rxWifi_.feed(x, n); else if (a == 56) { rxGeneral_.feed(x, n); for (int i = 0, k = extraGeneralN_.load(std::memory_order_relaxed); i < k; i++) extraGeneral_[(size_t)i].feed(x, n); } else if (a == 59) rxTime_.feed(x, n); else if (a == 57) rxRid_.feed(x, n); else if (a == 60) rxMeteor_.feed(x, n); else if (a == 58) rxNr_.feed(x, n); else if (a == 61) rxGoes_.feed(x, n); else if (a == 62) rxCube_.feed(x, n); else if (a == 63) rxGs_.feed(x, n); else if (a == 64) rxVdes_.feed(x, n); else if (a == 65) rxHrpt_.feed(x, n); else if (a == 66) rxZb_.feed(x, n); else if (a == 245) rxTh_.feed(x, n); else if (a == 67) rxFlarm_.feed(x, n); else if (a == 68) rxHfb_.feed(x, n); else if (a == 69) rxDji_.feed(x, n); else if (a == 70) rxNb_.feed(x, n); else if (a == 71) rxHl_.feed(x, n); else if (a == 73) rxCd_.feed(x, n); else if (a == 74) rxWb_.feed(x, n); else if (a == 75) rxDw_.feed(x, n); else if (a == 77) rxSame_.feed(x, n); else if (a == 78) rxAnt_.feed(x, n); else if (a == 79) rxDect_.feed(x, n); else if (a == 80) rxTetrapol_.feed(x, n); else if (a == 81) rxEl_.feed(x, n); else if (a == 82) rxLbj_.feed(x, n); else if (a == railway::kKlwActiveStandard) rxKlw_.feed(x, n); else if (a == railway::kTdcsActiveStandard) rxTdcs_.feed(x, n); else if (a == horus::kActiveStandard) rxHorus_.feed(x, n); else if (a == 83) rxVdl4_.feed(x, n); else if (a == 84) rxUat_.feed(x, n); else if (a == 85) rxWs_.feed(x, n); else if (a == 86) rxEcz_.feed(x, n); else if (a == 87) rxWmb_.feed(x, n); else if (a == 102) rxFpv_.feed(x, n); else if (a == 90) rxTones_.feed(x, n); else if (a == 93) rxSar_.feed(x, n); else if (a == 96) rxMt63_.feed(x, n); else if (a == 114) rxFsq_.feed(x, n); else if (a == 117) rxIfkp_.feed(x, n); else if (a == 121) rxDgps_.feed(x, n); else if (a == 99) rxZw_.feed(x, n); else if (a == 105) rxMs_.feed(x, n); else if (a == 76) rxMt_.feed(x, n); else if (a == 72) rxLr_.feed(x, n); else if (a == 108) rxCq_.feed(x, n); else if (a == 122) rxDme_.feed(x, n); else if (a == 120) rxSitor_.feed(x, n); else if (a == 123) rxKaal_.feed(x, n); else if (a == 127) rxEloran_.feed(x, n); else if (a == 149) rxNfc_.feed(x, n); else if (a == 128) rxMpt_.feed(x, n); else if (a == 129) rxFusion_.feed(x, n); else if (a == 141) rxArd_.feed(x, n); else if (a == 142) rxGd_.feed(x, n); else if (a == 701) rxHrdcp_.feed(x, n); else if (a == 143) rxModeAc_.feed(x, n); else if (a == 144) rxBt_.feed(x, n); else if (a == 145) rxSb_.feed(x, n); else if (a == 124) rxKavb_.feed(x, n); else if (a == 134) rxKaws_.feed(x, n); else if (a == 146) rxMilhf_.feed(x, n); else if (a == 153) rxArgos_.feed(x, n); else if (a == 154) rxSfx_.feed(x, n); else if (a == 151) rxSbas_.feed(x, n); else if (a == 152) rxAsterix_.feed(x, n); else if (a == 130) rxLtr_.feed(x, n); else if (a == 131) rxEdacs_.feed(x, n); else if (a == 181) rxP25p2_.feed(x, n); else if (a == 156) rxMarineVhf_.feed(x, n); else if (a == 132) rxKait_.feed(x, n); else if (a == 125) rxKapp_.feed(x, n); else if (a == 126) rxKaft_.feed(x, n); else if (a == 201) rxLw_.feed(x, n); else if (a == 202) rxLs_.feed(x, n); else if (a == 155) rxIsdbs_.feed(x, n); else if (a == 204) rxPac_.feed(x, n); else if (a == 205) rxEsg_.feed(x, n); else if (a == 206) rxRoshf_.feed(x, n); else if (a == 207) rxSsdv_.feed(x, n); else if (a == 208) rxEbi_.feed(x, n); else if (a == 209) rxInmsat_.feed(x, n); else if (a == 210) {}   /* Internet TV: no receiver, the stream goes straight to the player */ else if (a == 211) rxNrf_.feed(x, n); else if (a == 242) rxSens_.feed(x, n); else if (a == 246) rxBgan_.feed(x, n); else if (a == 361) rxRc_.feed(x, n); else if (a >= 261 && a < 261 + kWxNumProfiles) rxWx_[a - 261].feed(x, n); else if (a == 244) rxSfer_.feed(x, n); else if (a == 212) rxAtis_.feed(x, n); else if (a == 241) rxSelcal_.feed(x, n); else if (a == 236) rxFy3a_.feed(x, n); else if (a == 237) rxFy3m_.feed(x, n); else if (a == 238) rxPh2_.feed(x, n); else if (a == 239) rxPh3_.feed(x, n); else if (a == 240) rxPh4_.feed(x, n); else if (a == 231) rxGkL_.feed(x, n); else if (a == 232) rxGkH_.feed(x, n); else if (a == 213) rxSw_.feed(x, n); else if (a == 203) rxPskd_.feed(x, n); else if (a >= 233 && a <= 235) rxFy_.feed(x, n); else if (a == 381) rxBtc_.feed(x, n); else if (a >= 341 && a <= 347) rxChv_.feed(x, n); else if ((a >= 291 && a <= 300) || a == 511) rxSd3_[sd3ProfileOfActive(a)].feed(x, n); else if (a >= 431 && a <= 440) rxHfu_[a - 431].feed(x, n); else if (a >= kHfuExtraActiveFirst && a <= kHfuExtraActiveLast) rxHfm_[a - kHfuExtraActiveFirst].feed(x, n); else if (hamsciKindOfActive(a) >= 0) rxHs_[hamsciKindOfActive(a)].feed(x, n); else if (a == 481) rxUmts_.feed(x, n); else if (a == 661) rxCdma_.feed(x, n); else if (a == 662) rxTds_.feed(x, n); else if (a == 641) rxVdl3_.feed(x, n); else if (isSatDetectActive(a)) rxSatd_.feed(x, n); else if (a == 562) rxNavic_.feed(x, n); else if (a == 731) rxTsb_.feed(x, n); else if (a == 747) rxDvbsh_.feed(x, n); else if (a >= 531 && a <= 550) rxXb_[a - 531].feed(x, n); else if (a == 601 || a == 602) rxXlink_.feed(x, n); else if (a >= 621 && a <= 627) rxCis_[a - 621].feed(x, n); else if (a == 742) rxC2_.feed(x, n); else rx_.feed(x, n);
 }
 
 void Engine::setAmDiversity(bool on, double offsetHz) {
@@ -610,6 +627,7 @@ void Engine::resetReceiver(int a) {
     case 43: rxSpecan_.reset(); break;
     case 49: rxAstro_.reset(); break;
     case 41: rxDvbc_.reset(); break;
+    case 742: rxC2_.reset(); break;
     case 45: rxOrb_.reset(); break;
     case 44: rxUplink_.reset(); break;
     case 50: rxAle_.reset(); break;
@@ -638,6 +656,7 @@ void Engine::resetReceiver(int a) {
     case 209: rxInmsat_.reset(); break;
     case 361: rxRc_.reset(); break;
     case 601: case 602: rxXlink_.reset(); break;
+    case 621: case 622: case 623: case 624: case 625: case 626: case 627: rxCis_[a - 621].reset(); break;
     case 211: rxNrf_.reset(); break;
     case 242: rxSens_.reset(); break;
     case 246: rxBgan_.reset(); break;
@@ -645,6 +664,9 @@ void Engine::resetReceiver(int a) {
     case 212: rxAtis_.reset(); break;
     case 241: rxSelcal_.reset(); break;
     case 481: rxUmts_.reset(); break;
+    case 661: rxCdma_.reset(); break;
+    case 662: rxTds_.reset(); break;
+    case 641: rxVdl3_.reset(); break;
     case 236: rxFy3a_.reset(); break;
     case 461: rxHs_[0].reset(); break;
     case 462: rxHs_[1].reset(); break;
@@ -655,6 +677,7 @@ void Engine::resetReceiver(int a) {
     case 501: rxHs_[6].reset(); break;
     case 502: rxHs_[7].reset(); break;
     case 503: rxHs_[8].reset(); break;
+    case 751: rxHs_[9].reset(); break;
     case 531: case 532: case 533: case 534: case 535: case 536: case 537: case 538: case 539: case 540:
     case 541: case 542: case 543: case 544: case 545: case 546: case 547: case 548: case 549: case 550: rxXb_[a - 531].reset(); break;
     case 291: rxSd3_[0].reset(); break;
@@ -682,6 +705,7 @@ void Engine::resetReceiver(int a) {
     case 272: rxWx_[11].reset(); break;
     case 237: rxFy3m_.reset(); break;
     case 431: case 432: case 433: case 434: case 435: case 436: case 437: case 438: case 439: case 440: rxHfu_[a - 431].reset(); break;
+    case kHfuHdrFamily + 1: case kHfuAle3gFamily + 1: case kHfuLink11Family + 1: case kHfu4481Family + 1: rxHfm_[a - kHfuExtraActiveFirst].reset(); break;
     case 238: rxPh2_.reset(); break;
     case 239: rxPh3_.reset(); break;
     case 240: rxPh4_.reset(); break;
@@ -710,6 +734,7 @@ void Engine::resetReceiver(int a) {
     case 108: rxCq_.reset(); break;
     case 105: rxMs_.reset(); break;
     case 142: rxGd_.reset(); break;
+    case 701: rxHrdcp_.reset(); break;
     case 143: rxModeAc_.reset(); break;
     case 144: rxBt_.reset(); break;
     case 146: rxMilhf_.reset(); break;
@@ -720,7 +745,9 @@ void Engine::resetReceiver(int a) {
     case 145: rxSb_.reset(); break;
     case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: rxSatd_.reset(); break;
     case 562: rxNavic_.reset(); break;
+    case 731: rxTsb_.reset(); break;
     case 155: rxIsdbs_.reset(); break;
+    case 747: rxDvbsh_.reset(); break;
     case 130: rxLtr_.reset(); break;
     case 131: rxEdacs_.reset(); break;
     case 321: rxSmartnet_.reset(); break;

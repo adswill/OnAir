@@ -19,6 +19,9 @@ on:
       base:
         description: "git ref the change is measured against (auto scope)"
         default: origin/main
+      long:
+        description: "true: the long form of the tests (ONAIR_TEST_LONG=1, as on tags and the nightly Full CI)"
+        default: "false"
 
 # A newer push cancels the run still going for an older one.
 concurrency:
@@ -37,6 +40,13 @@ env:
   SCOPE: ${{ inputs.scope || (startsWith(github.ref, 'refs/tags/') && 'full') || 'auto' }}
   TEST_TIMEOUT: ${{ (inputs.scope == 'full' || startsWith(github.ref, 'refs/tags/')) && '1500' || '600' }}
   BASE_IN: ${{ inputs.base || github.event.before }}
+  # the long form of the shortened tests (tests/common/test_long.h): release tags and the nightly Full CI; docs/CI-SPEED-3.9.md
+  ONAIR_TEST_LONG: ${{ (startsWith(github.ref, 'refs/tags/') || inputs.long == 'true') && '1' || '' }}
+  # ccache is saved only by main and the integration branches: a feature branch's own copy filled the 10 GB of the repository and pushed
+  # the integration caches out (cache usage 10.7 GB, 2026-11-10); feature branches restore main's (the nightly warm-up of ci-full.yml)
+  SAVE_CACHE: ${{ (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/heads/integ-')) && '1' || '' }}
+  HOMEBREW_NO_AUTO_UPDATE: "1"
+  HOMEBREW_NO_INSTALL_CLEANUP: "1"
 
 jobs:
   lint:
@@ -62,18 +72,14 @@ jobs:
           - { name: "Linux x86_64", os: ubuntu-24.04, shard: 3, of: 4, plat: linux }
           - { name: "Linux x86_64", os: ubuntu-24.04, shard: 4, of: 4, plat: linux }
     steps:
-      - name: Free disk space (Linux)
+      - name: Free disk space (Linux, in the background while the next steps run)
         if: runner.os == 'Linux'
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
-          df -h /
+        run: nohup sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost > /dev/null 2>&1 &
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          tools/release/retry.sh sudo apt-get update
-          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 build-essential cmake pkg-config ccache lld ninja-build libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
+        uses: ./.github/actions/linux-deps
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: tools/release/retry.sh brew install cmake ninja pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
@@ -85,7 +91,10 @@ jobs:
           restore-keys: |
             ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
             ccache-${{ matrix.plat }}-s${{ matrix.shard }}-
+            ccache-${{ matrix.plat }}-warm-
             ccache-${{ matrix.plat }}-
+      - name: Zero the ccache counters (the statistics step then shows this run's hit rate)
+        run: ccache -z
       - name: Configure
         run: |
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
@@ -94,14 +103,14 @@ jobs:
         run: |
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
-          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --times tools/ci_times.tsv --plat ${{ matrix.plat }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build the selected targets
         run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
       - name: ccache statistics
         if: always()
         run: ccache -s
       - name: Save ccache
-        if: always()
+        if: always() && env.SAVE_CACHE == '1'
         uses: actions/cache/save@v6
         with:
           path: .ccache
@@ -129,21 +138,19 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - { name: "macOS arm64", os: macos-15, shard: 1, of: 2, plat: macos }
-          - { name: "macOS arm64", os: macos-15, shard: 2, of: 2, plat: macos }
+          # three shards: macOS was the longest leg (two shards of 33-46 min of tests, run 42820553355); the free plan runs 5 macOS jobs at once
+          - { name: "macOS arm64", os: macos-15, shard: 1, of: 3, plat: macos }
+          - { name: "macOS arm64", os: macos-15, shard: 2, of: 3, plat: macos }
+          - { name: "macOS arm64", os: macos-15, shard: 3, of: 3, plat: macos }
     steps:
-      - name: Free disk space (Linux)
+      - name: Free disk space (Linux, in the background while the next steps run)
         if: runner.os == 'Linux'
-        run: |
-          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost
-          df -h /
+        run: nohup sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL /usr/local/share/boost > /dev/null 2>&1 &
       - uses: actions/checkout@v7
         with: { fetch-depth: 0 }
       - name: Install dependencies (Linux)
         if: runner.os == 'Linux'
-        run: |
-          tools/release/retry.sh sudo apt-get update
-          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 build-essential cmake pkg-config ccache lld ninja-build libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev
+        uses: ./.github/actions/linux-deps
       - name: Install dependencies (macOS)
         if: runner.os == 'macOS'
         run: tools/release/retry.sh brew install cmake ninja pkg-config ccache hackrf soapysdr libusb ffmpeg glfw
@@ -155,7 +162,10 @@ jobs:
           restore-keys: |
             ccache-${{ matrix.plat }}-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
             ccache-${{ matrix.plat }}-s${{ matrix.shard }}-
+            ccache-${{ matrix.plat }}-warm-
             ccache-${{ matrix.plat }}-
+      - name: Zero the ccache counters (the statistics step then shows this run's hit rate)
+        run: ccache -z
       - name: Configure
         run: |
           LD=""; [ "$RUNNER_OS" = Linux ] && LD="-DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_SHARED_LINKER_FLAGS=-fuse-ld=lld"
@@ -164,14 +174,14 @@ jobs:
         run: |
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
-          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
+          python3 tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/${{ matrix.of }} --times tools/ci_times.tsv --plat ${{ matrix.plat }} --out sel | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Build the selected targets
         run: cmake --build build -j 4 --target $(tr -d "\r" < sel/targets.txt)
       - name: ccache statistics
         if: always()
         run: ccache -s
       - name: Save ccache
-        if: always()
+        if: always() && env.SAVE_CACHE == '1'
         uses: actions/cache/save@v6
         with:
           path: .ccache
@@ -217,20 +227,23 @@ jobs:
           restore-keys: |
             ccache-windows-s${{ matrix.shard }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-
             ccache-windows-s${{ matrix.shard }}-
+            ccache-windows-warm-
             ccache-windows-
+      - name: Zero the ccache counters
+        run: ccache -z
       - name: Configure, select and build
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           BASE="$BASE_IN"; case "$BASE" in ""|0000000000000000000000000000000000000000) BASE=origin/main;; esac
           git rev-parse --verify -q "$BASE^{commit}" > /dev/null || BASE=origin/main
-          python tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/4 --out sel
+          python tools/ci_select.py --build-dir build --base "$BASE" --scope "$SCOPE" --shard ${{ matrix.shard }}/4 --times tools/ci_times.tsv --plat windows --out sel
           T=$(tr -d "\r" < sel/targets.txt); [ ${{ matrix.shard }} = 1 ] && T="$T dect2"
           cmake --build build -j 4 --target $T
       - name: ccache statistics
         if: always()
         run: ccache -s
       - name: Save ccache
-        if: always()
+        if: always() && env.SAVE_CACHE == '1'
         uses: actions/cache/save@v6
         with:
           path: .ccache
@@ -255,20 +268,20 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Install dependencies
-        run: |
-          tools/release/retry.sh sudo apt-get update
-          tools/release/retry.sh sudo apt-get install -y -o Acquire::Retries=5 build-essential cmake ninja-build pkg-config ccache lld libhackrf-dev libsoapysdr-dev libusb-1.0-0-dev libavformat-dev libavcodec-dev libavutil-dev libswscale-dev libswresample-dev libglfw3-dev xvfb libgl1-mesa-dri
+        uses: ./.github/actions/linux-deps
+        with: { extra: "xvfb libgl1-mesa-dri", set-name: gl31 }
       - uses: actions/cache/restore@v6
         with:
           path: .ccache
           key: ccache-gl31-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
           restore-keys: ccache-gl31-
+      - run: ccache -z
       - name: Build the app only
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DDECT2_BUILD_TESTS=OFF -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=lld -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache
           cmake --build build -j 4 --target dect2
       - uses: actions/cache/save@v6
-        if: always()
+        if: always() && env.SAVE_CACHE == '1'
         with:
           path: .ccache
           key: ccache-gl31-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}

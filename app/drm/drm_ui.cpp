@@ -961,6 +961,7 @@ void receiver(App& a) {
     ImGui::TextDisabled("DRM+ (mode E, 100 kHz) needs a radio rate of at least 100 ksps. Below 30 MHz a HackRF needs an upconverter or a long antenna.");
     ImGui::PopTextWrapPos();
     ImGui::EndChild();
+    smart5DrmCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 // ---------------------------------------------------------------- the test signal
@@ -1005,9 +1006,11 @@ void synth(App& a, bool& changed) {
     if (E) { int z = 0; combo("##doE", 110, occE, 1, 0, z); }   // mode E has one occupancy
     else if (combo("##do", 110, occ, 7, sc.modeOpt[1], v, dis)) { sc.modeOpt[1] = v; changed = true; }
     flowNext(6 * gUi);
-    if (combo("##dq", 76, E ? qamE : qam, 2, sc.modeOpt[2], v)) { sc.modeOpt[2] = v; changed = true; }
+    if (combo("##dq", 76, E ? qamE : qam, 2, sc.modeOpt[2], v)) { sc.modeOpt[2] = v; if (!E && v == 1 && sc.modeOpt[3] > 2) sc.modeOpt[3] = 2; changed = true; }
     flowNext(6 * gUi);
-    if (combo("##dp", 120, prot, 5, sc.modeOpt[3], v)) { sc.modeOpt[3] = v; changed = true; }
+    bool pdis[5] = {};
+    if (!E && sc.modeOpt[2] == 1) pdis[3] = pdis[4] = true;   // 16-QAM in modes A to D has protection levels 0 and 1 only
+    if (combo("##dp", 120, prot, 5, sc.modeOpt[3], v, pdis)) { sc.modeOpt[3] = v; changed = true; }
     flowNext(6 * gUi);
     if (combo("##di", 130, il, 2, sc.modeOpt[4], v)) { sc.modeOpt[4] = v; changed = true; }
     flowNext(6 * gUi);

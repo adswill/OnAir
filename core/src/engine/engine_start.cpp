@@ -39,7 +39,7 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     ring_.clear();
     ring_.resetDropped();
     radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0;
-    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
+    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
     holdDelivery(1000);   // a radio often stutters while its stream starts
     std::string err;
     if (int holder = 0; !claimDevice(dev, receiverId_, &holder)) { log("this radio is in use by " + deviceHolderText(holder)); return false; }
@@ -170,6 +170,8 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxD_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // DMB video, on the receiver thread
     rxI_.configure(rate_, tune.isdbtBwMhz);
     rxI_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
+    rxTsb_.configureTsb(rate_, tune.isdbtBwMhz == 7 || tune.isdbtBwMhz == 8 ? tune.isdbtBwMhz : 6, 0);
+    rxTsb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });
     rxFm_.configure(rate_);
     rxFm_.setStationFinder(lastDev_.kind == DeviceInfo::File || lastDev_.kind == DeviceInfo::Synthetic);   // a live radio stays on the frequency tuned: a weak station is not traded for a strong neighbour
     if (stdMode_.load() == 7 && !rxFm_.ready()) log("FM needs a sample rate of at least 500 ksps");
@@ -278,6 +280,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxInmsat_.setSignalOffset(o);
         rxRc_.setSignalOffset(o);
         rxXlink_.setSignalOffset(o);
+        for (auto& r : rxCis_) r.setSignalOffset(o);
         rxXlink_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxRc_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxNrf_.setSignalOffset(o);
@@ -294,6 +297,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         for (auto& w : rxXb_) w.setSignalOffset(o);
         rxFy3m_.setSignalOffset(o);
         for (auto& h : rxHfu_) h.setSignalOffset(o);
+        for (auto& h : rxHfm_) h.setSignalOffset(o);
         rxPh2_.setSignalOffset(o);
         rxPh3_.setSignalOffset(o);
         rxPh4_.setSignalOffset(o);
@@ -325,6 +329,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxMs_.setSignalOffset(o);
         rxGd_.setSignalOffset(o);
         rxGd_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // for the channel numbers and the CSV
+        rxHrdcp_.setSignalOffset(o);
+        rxHrdcp_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxModeAc_.setSignalOffset(o);
         rxBt_.setSignalOffset(o);
         rxMs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // for the CSV and the screen
@@ -374,7 +380,10 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxMilhf_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxDgps_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxIsdbs_.setSignalOffset(o);
+        rxDvbsh_.setSignalOffset(o);
         rxIsdbs_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxC2_.setSignalOffset(o);
+        rxC2_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxMpt_.setSignalOffset(o);
         rxMpt_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxLtr_.setSignalOffset(o);
@@ -527,7 +536,14 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxDvbc_.setBlocking(dev.kind == DeviceInfo::File);
     rxDvbc_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDvbc_.setLogCallback([this](const std::string& s) { log(s); });
+    rxC2_.configure(rate_);
+    rxC2_.setBlocking(dev.kind == DeviceInfo::File);
+    rxC2_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
+    rxC2_.setIpCallback([this](const uint8_t* ip, size_t n) { ipOut_.packet(ip, n); });   // GSE PLPs
+    rxC2_.setLogCallback([this](const std::string& s) { log(s); });
     rxIsdbs_.configure(rate_);
+    rxDvbsh_.configure(rate_);
+    rxDvbsh_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // DVB-SH: to the TV player
     rxIsdbs_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxIsdbs_.setLogCallback([this](const std::string& s) { log(s); });
     rxOrb_.configure(rate_);
@@ -649,6 +665,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxEbi_.setLogCallback([this](const std::string& s) { log(s); });
     rxRc_.configure(rate_);
     rxXlink_.configure(rate_);
+    for (auto& r : rxCis_) { r.configure(rate_); r.setLogCallback([this](const std::string& s) { log(s); }); }
     rxNrf_.configure(rate_);
     rxSens_.configure(rate_);
     rxBgan_.configure(rate_);
@@ -666,6 +683,12 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxSelcal_.setLogCallback([this](const std::string& s) { log(s); });
     rxUmts_.configure(rate_);
     rxUmts_.setLogCallback([this](const std::string& s) { log(s); });
+    rxCdma_.configure(rate_);
+    rxCdma_.setLogCallback([this](const std::string& s) { log(s); });
+    rxTds_.configure(rate_);
+    rxTds_.setLogCallback([this](const std::string& s) { log(s); });
+    rxVdl3_.configure(rate_);
+    rxVdl3_.setLogCallback([this](const std::string& s) { log(s); });
     rxAtis_.configure(rate_);
     rxAtis_.setLogCallback([this](const std::string& s) { log(s); });
     for (auto& w : rxWx_) { w.setBlocking(!src_->realtimeHardware()); w.configure(rate_); w.setLogCallback([this](const std::string& s) { log(s); }); }
@@ -677,6 +700,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxFy3m_.configure(rate_);
     rxFy3m_.setLogCallback([this](const std::string& s) { log(s); });
     for (auto& h : rxHfu_) { h.configure(rate_); h.setLogCallback([this](const std::string& s) { log(s); }); }
+    for (auto& h : rxHfm_) { h.configure(rate_); h.setLogCallback([this](const std::string& s) { log(s); }); }
     rxPh2_.configure(rate_);
     rxPh2_.setLogCallback([this](const std::string& s) { log(s); });
     rxPh3_.configure(rate_);
@@ -737,6 +761,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMs_.setLogCallback([this](const std::string& s) { log(s); });
     rxGd_.configure(rate_);
     rxGd_.setLogCallback([this](const std::string& s) { log(s); });
+    rxHrdcp_.configure(rate_);
+    rxHrdcp_.setLogCallback([this](const std::string& s) { log(s); });
     rxBt_.setLogCallback([this](const std::string& s) { log(s); });
     rxEcz_.setLogCallback([this](const std::string& s) { log(s); });
     rxEcz_.setClockMode(dev.kind == DeviceInfo::File ? 0 : 1);   // a file has no clock to compare; a radio and the test signal run on the computer's
@@ -854,7 +880,7 @@ void Engine::announceAndRun(const DeviceInfo& dev, const TuneSettings& tune) {
         snprintf(b, sizeof b, "radio centre %.3f MHz%s  LNA %d dB  VGA %d dB  amp %s", tune.centerHz / 1e6, hwNote(tune).c_str(), tune.lnaDb, tune.vgaDb, tune.ampOn ? "on" : "off");
         log(b);
     }
-    tSpec_ = tRx_ = 0; nSamp_ = 0;
+    tSpec_ = tRx_ = tRxCpu_ = 0; nSamp_ = 0;
     stopReq_ = false;
     startEpoch_++;
     running_ = true;

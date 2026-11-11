@@ -132,7 +132,7 @@ void Engine::logIsdbtEvents(const RxTelemetry& t) {
 void Engine::logDvbtEvents(const RxTelemetry& t) {
     char b[200];
     if (t.fftN && (t.fftN != logTMode_ || t.giIdx != logTGi_)) {
-        snprintf(b, sizeof b, "DVB-T found: %s, guard interval %s, CFO %+.1f Hz", t.fftN == 8192 ? "8K" : "2K", dvbt::guardName(t.giIdx), t.cfoHz);
+        snprintf(b, sizeof b, "DVB-T found: %s, guard interval %s, CFO %+.1f Hz", t.fftN == 8192 ? "8K" : t.fftN == 4096 ? "4K" : "2K", dvbt::guardName(t.giIdx), t.cfoHz);
         log(b);
         logTMode_ = t.fftN; logTGi_ = t.giIdx;
     }

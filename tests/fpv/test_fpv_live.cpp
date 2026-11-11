@@ -8,6 +8,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 namespace {
 
@@ -118,6 +119,8 @@ int main() {
         uint64_t seq = 0;
         FpvTelemetry t;
         for (double c : centres) {
+            // by default only the empty R1, both transmitters and the top end (the middle steps measure the same way); the long run steps every centre
+            if (!testLong() && c != 5658e6 && c != 5725e6 && c != 5806e6 && c != 5917e6) continue;
             rx.setCenterHz(c);
             // the strongest transmitter inside the capture (±5 MHz), or none
             const double off5806 = std::fabs(txs[0] - c), off5725 = std::fabs(txs[1] - c);

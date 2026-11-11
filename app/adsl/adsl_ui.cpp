@@ -7,6 +7,11 @@
 #include "dect2/adsl/adsl_tel.h"
 #include "dect2/flarm/flarm_proto.h"
 #include "dect2/flarm/flarm_tel.h"
+#include "dect2/flarm/flarm_outland.h"
+#include "dect2/airports/airports.h"
+#include "../smart5/smart5_ui.h"
+#include <deque>
+#include <unordered_map>
 #include "dect2/geo/maidenhead.h"
 #include <algorithm>
 #include <cmath>
@@ -197,6 +202,49 @@ void mapView(App&, const std::vector<Row>& v) {
     adsbmap::legend(size.x, "%zu aircraft", v.size());
 }
 
+// Out-landing alert (docs/SMART5-avia-3.9.md item 4, wired for ADS-L and the FLARM / OGN packets heard with it): an aircraft that flew and now
+// stands still more than 3 km from every airfield of the airport table. FLARM ids are 24-bit; ADS-L ones get bit 31 so the two never mix.
+dect2::OutlandingWatch gOut;
+std::deque<dect2::OutlandingAlert> gOutAlerts;
+std::unordered_map<uint32_t, uint32_t> gOutPackets;
+void outlandFix(const dect2::TrafficFix& f, const char* via) {
+    if (!gOut.nearestAirfieldKm) gOut.nearestAirfieldKm = [](double lat, double lon) {
+        const auto h = dect2::AirportDb::builtin().nearby(lat, lon, 30, 1, false);
+        return h.empty() ? -1.0 : h[0].km;
+    };
+    dect2::OutlandingAlert al;
+    if (!gOut.add(f, &al)) return;
+    gOutAlerts.push_back(al);
+    if (gOutAlerts.size() > 50) gOutAlerts.pop_front();
+    char key[24];
+    snprintf(key, sizeof key, "%08X", (unsigned)al.id);
+    s5ui::post("aviation", "outlanding", 1, key, std::string(via) + " " + key + ": " + al.text);
+}
+void outlandFeed(App& a) {
+    const double now = ImGui::GetTime();
+    for (const dect2::AdslAircraft& ac : a.rx.adsl.aircraft) {
+        if (!ac.hasPos || ac.packets == gOutPackets[ac.id | 0x80000000u]) continue;
+        gOutPackets[ac.id | 0x80000000u] = ac.packets;
+        dect2::TrafficFix f; f.id = ac.id | 0x80000000u; f.t = now - ac.ageSec; f.lat = ac.lat; f.lon = ac.lon; f.altM = ac.hasAlt ? ac.altM : 0;
+        f.speedMs = ac.hasSpeed ? ac.speedKmh / 3.6 : 0; f.climbMs = ac.hasClimb ? ac.climbMs : 0; f.reportsGround = ac.flightState == 1;
+        outlandFix(f, "ADS-L");
+    }
+    for (const auto& ac : gFlarm.aircraft) {
+        if (!ac.hasPos || ac.packets == gOutPackets[ac.id & 0xFFFFFF]) continue;
+        gOutPackets[ac.id & 0xFFFFFF] = ac.packets;
+        dect2::TrafficFix f; f.id = ac.id & 0xFFFFFF; f.t = now - ac.ageSec; f.lat = ac.lat; f.lon = ac.lon; f.altM = ac.altM;
+        f.speedMs = ac.speedKmh / 3.6; f.climbMs = ac.climbMs; f.reportsGround = !ac.airborne;
+        outlandFix(f, "FLARM / OGN");
+    }
+}
+void outlandView() {
+    { ImGui::PushTextWrapPos(0);
+      ImGui::TextDisabled("%s", tr("An aircraft that was flying and now stands still on the ground more than 3 km from any airfield in the airport table: a possible out-landing (a retrieve, or a crew that may need help). Each landing is listed once."));
+      ImGui::PopTextWrapPos(); }
+    if (gOutAlerts.empty()) { ImGui::TextDisabled("%s", tr("none")); return; }
+    for (auto it = gOutAlerts.rbegin(); it != gOutAlerts.rend(); ++it) ImGui::TextColored(pal::warnAmber(), "%08X: %s", (unsigned)it->id, it->text.c_str());
+}
+
 void note() {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("Receive only. Positions are what the aircraft broadcast. Packets from a random privacy address are shown here but never shared to the public map."));
@@ -205,12 +253,12 @@ void note() {
 
 void tab(App& a) {
     loadState();
-    subNav("adv", S.view, {tr("Map"), tr("Table")});
+    subNav("adv", S.view, {tr("Map"), tr("Table"), gOutAlerts.empty() ? tr("Out-landings") : (std::string(tr("Out-landings")) + " (" + std::to_string(gOutAlerts.size()) + ")").c_str()});
     if (S.view == 0) { ImGui::SameLine(0, 12 * gUi); adsbmap::tileControls("never the position itself"); }
     if (!live(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); note(); return; }
     const std::vector<Row> v = rows(a);
     if (v.empty()) ImGui::TextDisabled("%s", tr(a.rx.adsl.state >= 1 ? "energy on the channels, no decodable packet yet" : "listening on 868.2, 868.4 and 869.525 MHz"));
-    if (S.view == 0) mapView(a, v); else tableView(a, v);
+    if (S.view == 0) mapView(a, v); else if (S.view == 2) outlandView(); else tableView(a, v);
 }
 
 void list(App& a) {
@@ -289,6 +337,7 @@ void tick(App& a) {
     }
     if (!live(a)) return;
     a.engine.flarm().telemetry(gFlarm, 0);
+    outlandFeed(a);
     if (!S.flarmRefSet) for (const dect2::AdslAircraft& ac : a.rx.adsl.aircraft) if (ac.hasPos) {     // ADS-L positions are absolute: the first one anchors FLARM's relative ones
         a.engine.flarm().setReference(ac.lat, ac.lon);
         S.flarmRefSet = true;

@@ -334,6 +334,7 @@ void receiver(App& a) {
     kvRow(a, "keys", "%d loaded%s", t.keysLoaded, t.segmentsLocked ? (", " + std::to_string(t.segmentsLocked) + " picture segments waiting for a key").c_str() : "");
     kvRow(a, "input", "%.3f Msps, %.1f dBFS", t.inputRate / 1e6, t.levelDb);
     if (!t.hint.empty()) kvRow(a, "hint", "%s", t.hint.c_str());
+    smart5GeoCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
 void panels(App& a) {

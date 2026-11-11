@@ -1,4 +1,5 @@
-// Airband receiver: AM voice in the VHF aeronautical band (118 - 137 MHz), several channels of the sample band at once.
+// Airband receiver: AM voice in the VHF aeronautical band (118 - 137 MHz) and the military UHF air band (225 - 400 MHz, 25 kHz channels),
+// several channels of the sample band at once.
 //
 // Every channel of the user's list that lies inside the sample band is mixed to 0 Hz, brought down by a CIC decimator to about 50 kHz,
 // corrected by the radio's tuning error, filtered (8.33 kHz channels: pass +-3.4 kHz, stop 4.9 kHz; 25 kHz channels: pass +-5 kHz, stop
@@ -54,6 +55,7 @@ struct AirbandChannel {
 // 118.04167). Names ending in 20, 45, 70 or 95 do not exist.
 // Parses a channel name or a frequency in MHz ("118.0083", "118.008333"); false when it is neither on the 25 kHz nor on the 8.33 kHz raster
 // or outside 118.000 - 136.990. A name ending in 0 or 5 that is also a frequency on the raster is read as the name (as a radio does).
+// The military UHF air band (225.000 - 399.975 MHz AM) is taken too, on the 25 kHz raster only ("243.000", "282.8"): is833 is false there.
 bool airbandParse(const std::string& text, double& freqHz, bool& is833);
 std::string airbandName(double freqHz, bool is833);   // the channel name: "118.010"
 bool airbandOnRaster(double freqHz, bool is833);      // within 10 Hz of the raster
@@ -96,6 +98,8 @@ public:
     void setMuted(bool m);
     void setSilent(bool s);                              // decode but do not open the sound device (tests, command line)
     void setChannelTap(std::function<void(int chan, const float* x, size_t n)> cb);   // tests: each channel's 8 kHz audio after the squelch
+    // one WAV per transmission and the 30 s replay (airband_clips.h): fed with the same audio as the channel tap; nullptr: none
+    void setClipWriter(std::shared_ptr<class AirbandClipWriter> w);
     void setMixTap(std::function<void(const float* x, size_t n)> cb);                 // tests: the 8 kHz mix that goes to the sound card
 
 private:

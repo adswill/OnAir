@@ -71,6 +71,63 @@ std::vector<Recipe> builtinRecipes() {
     v.push_back(rule("Radiosonde landed near me", "A radiosonde has come down within 50 km of the receiver position: go and find it.",
         "sonde.landed", "distance_km <= 50",
         {act("notify", {{"title", "Sonde {{serial}} landed"}, {"body", "{{distance_km}} km away at {{lat}}, {{lon}}"}}), act("log", {{"file", "sondes-landed"}})}, "serial", 3600));
+    v.push_back(rule("APRS message to me", "An APRS message addressed to your callsign (set it in APRS, Messages): tells you and beeps.",
+        "aprs.message", "to_me",
+        {act("notify", {{"title", "APRS message from {{from}}"}, {"body", "{{text}}"}}), act("sound")}, "from", 30));
+    v.push_back(rule("Freezer too warm", "A sensor you named with \"freezer\" in the name reads above -12 °C. Name your sensors in Sensors (click the name).",
+        "sensor.reading", "named and name contains 'freezer' and temperature_C > -12",
+        {act("notify", {{"title", "{{name}} is at {{temperature_C}} °C"}, {"body", "Above -12 °C"}}), act("sound")}, "key", 1800));
+    v.push_back(rule("Frost", "One of your named sensors reads below 0 °C.",
+        "sensor.reading", "named and temperature_C < 0",
+        {act("notify", {{"title", "Frost: {{name}} {{temperature_C}} °C"}, {"body", "Below 0 °C"}})}, "key", 6 * 3600));
+    v.push_back(rule("Water leak", "One of your named leak sensors reports water.",
+        "sensor.reading", "named and (detect_wet == 1 or water == 1 or leak == 1)",
+        {act("notify", {{"title", "Water: {{name}}"}, {"body", "The leak sensor is wet"}}), act("sound")}, "key", 300));
+    v.push_back(rule("Door or window opened", "One of your named door or window sensors reports open.",
+        "sensor.reading", "named and (contact_open == 1 or opened == 1)",
+        {act("notify", {{"title", "Open: {{name}}"}, {"body", "{{model}} {{id}}"}})}, "key", 60));
+    v.push_back(rule("Sensor battery low", "One of your named sensors reports a low battery. Once a day per sensor.",
+        "sensor.reading", "named and battery_low",
+        {act("notify", {{"title", "Battery low: {{name}}"}, {"body", "{{model}} {{id}}"}})}, "key", 86400));
+    v.push_back(rule("Favourite artist on the radio", "A station you listen to (FM or DAB) plays an artist you name: tells you and records 4 minutes of the sound. Change the name.",
+        "broadcast.now_playing", "artist contains 'change me'",
+        {act("notify", {{"title", "{{artist}} on {{station}}"}, {"body", "{{title}}"}}), act("record_audio", {{"seconds", "240"}})}, "station", 600));
+    v.push_back(rule("Word in the radio text", "The radio text or DAB label of the station mentions a word (traffic, a place, a name). Change the word.",
+        "broadcast.text", "text contains 'traffic'",
+        {act("notify", {{"title", "{{station}}"}, {"body", "{{text}}"}})}, "station", 300));
+    v.push_back(rule("Traffic announcement", "The FM station starts a traffic announcement (TA): tells you and records 2 minutes.",
+        "broadcast.text", "ta_start",
+        {act("notify", {{"title", "Traffic on {{station}}"}, {"body", "{{text}}"}}), act("record_audio", {{"seconds", "120"}})}, "station", 120));
+    v.push_back(rule("Post my Meteor pass to Discord", "When a Meteor picture is finished, posts its satellite, pass and size to your Discord channel (paste the channel's webhook address). The picture itself is not attached: the message says where it was saved.",
+        "image.done", "source contains 'meteor' or satellite contains 'meteor'",
+        {act("webhook", {{"preset", "discord"}, {"url", "https://discord.com/api/webhooks/change-this"}, {"text", "New {{satellite}} picture: {{detail}}, {{width}} x {{height}}"}})}, "key", 600));
+    v.push_back(rule("Picture finished", "Any picture finished (satellite, SSTV, fax, SSDV, HamDRM): a notification with where it was saved.",
+        "image.done", "",
+        {act("notify", {{"title", "{{source}} picture"}, {"body", "{{detail}} {{path}}"}})}, "key", 60));
+    v.push_back(rule("New DXCC heard", "JTAlert-style: a station of an entity not in your logbook is heard (FT8, FT4, WSPR, CW ...). Tells you and beeps.",
+        "ham.decode", "new_dxcc and country != ''",
+        {act("notify", {{"title", "New one: {{country}}"}, {"body", "{{call}} {{grid}} on {{band}} {{mode}}, {{snr_db}} dB: {{text}}"}}), act("sound")}, "country", 1800));
+    v.push_back(rule("New on this band", "A station of an entity you have not worked on this band calls CQ.",
+        "ham.decode", "cq and new_dxcc_band and not new_dxcc and country != ''",
+        {act("notify", {{"title", "New on {{band}}: {{country}}"}, {"body", "{{call}} {{grid}} {{mode}} {{snr_db}} dB"}})}, "country", 1800));
+    v.push_back(rule("New grid", "A locator not in your logbook (VHF and FT8 grid chasing).",
+        "ham.decode", "new_grid and grid != ''",
+        {act("notify", {{"title", "New grid {{grid}}"}, {"body", "{{call}} on {{band}} {{mode}}"}})}, "grid", 1800));
+    v.push_back(rule("Wanted callsign heard", "A callsign you are looking for is on the air. Put your calls in the list.",
+        "ham.decode", "call in ['CHANGE1', 'CHANGE2']",
+        {act("notify", {{"title", "{{call}} on {{band}}"}, {"body", "{{mode}} {{snr_db}} dB: {{text}}"}}), act("sound")}, "call", 900));
+    v.push_back(rule("Daily digest", "Once a day (21:00 by default) a notification with what every mode heard: aircraft, ships, new DXCC, Meteor passes. Change the action to ntfy or Telegram to get it on the phone.",
+        "session.digest", "not empty",
+        {act("notify", {{"title", "OnAir today"}, {"body", "{{text}}"}})}, "day", 3600));
+    v.push_back(rule("Mesh node silent", "A node you watch (Mesh, Nodes, Watch) has not been heard for the set hours (6 by default).",
+        "lora.node_silent", "not back",
+        {act("notify", {{"title", "{{name}} silent"}, {"body", "Not heard for {{hours}} h"}})}, "id", 3600));
+    v.push_back(rule("Mesh node battery low", "A node you watch reports a battery below the set level (20 % by default).",
+        "lora.node_battery", "",
+        {act("notify", {{"title", "{{name}} battery {{battery_pct}} %"}, {"body", "{{voltage}} V"}})}, "id", 3600));
+    v.push_back(rule("New mesh node near me", "A mesh node heard for the first time within the set distance of the receiver.",
+        "lora.node_new", "",
+        {act("notify", {{"title", "New node {{name}}"}, {"body", "{{distance_km}} km away, {{hw}}"}})}, "id", 3600));
     v.push_back(rule("Emergency squawk to my phone (ntfy)", "Sends the emergency squawk to the ntfy app on your phone. Change the topic to something only you know.",
         "adsb.aircraft", "squawk in [7500, 7600, 7700]",
         {act("webhook", {{"preset", "ntfy"}, {"topic", "onair-change-this-topic"}, {"title", "Squawk {{squawk}}"}, {"text", "{{callsign}} {{hex}} at {{alt_ft}} ft"}})}, "hex", 900));

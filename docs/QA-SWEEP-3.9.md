@@ -396,13 +396,12 @@ generator or engine was wrong, and given a unit test with the impairment. Simula
 - **OneWeb +2 kHz / +50 ppm** (`core/src/satmisc/satdetect_live.cpp`): the repetition detector multiplies the signal by itself one
   period (1 ms) earlier. The sequence is white at the capture's rate, and 50 ppm moves a 20000-sample period by one sample, so the
   product at the nominal lag lost it. It now folds three lags (the period and one sample either side) and takes the best.
-- **UAT clean and transmitter** (`core/src/uat/uat_gen.cpp`, `uat_demod.cpp`): nothing decoded, and nothing could have. The test
-  signal (also the transmitter's) had 6 kHz of deviation instead of DO-282B's +-312.5 kHz and sent its bits at two samples a bit at any
-  rate, 1 Mbit/s at 2 Msps instead of 1.041667. The receiver also took two samples a bit at the input rate, so a real 2 Msps recording
-  slipped 17 bits over a frame, and dump978's 8-bit phase table quantised a weak recording's phase to about 10 levels a rail. Now: the
-  generator is CPFSK at 1.041667 Mbit/s, h = 0.6; the demodulator resamples any rate to 2.083333 Msps (carried over the blocks) and
-  takes the phase from the float sample. A new round-trip test (test_uat_gen): 2, 2.083, 2.4 and 4 Msps, +-2 kHz, +-50 ppm, 14 dB
-  noise, noise alone. In the sweep UAT passes all conditions (snr: weak, the -18 dB aircraft is under the noise).
+- **UAT clean and transmitter**: nothing decoded. The test signal (also the transmitter's) had 6 kHz of deviation instead of
+  DO-282B's +-312.5 kHz and sent two samples a bit at any rate (1 Mbit/s at 2 Msps), and the receiver took two samples a bit at the
+  input rate. feat39-sensC fixed the same bug in parallel (real bit rate, float phase, low-pass, soft erasures) and its receiver and
+  generator are the ones kept; this branch's own rewrite was dropped at the merge. The round-trip test added here (test_uat_gen: 2,
+  2.083, 2.4 and 4 Msps, +-2 kHz, +-50 ppm, 14 dB noise, noise alone) runs on sensC's version: 12 of 12 bursts at every rate and offset,
+  6 at 14 dB, 0 on noise. In the sweep UAT passes all conditions.
 - **5G NR clean and transmitter** (`core/src/engine/engine_start.cpp`): on a file the NR receiver got no centre frequency, so it only
   searched an SSB on the centre; the test signal's SSB sits on a sync raster point off it. It now gets the recording's centre (the
   frequency entered for it) when that is in 400 MHz - 7.2 GHz, as Remote ID does. Passes all conditions (24 PBCH blocks in 3.5 s).
@@ -424,8 +423,9 @@ generator or engine was wrong, and given a unit test with the impairment. Simula
 - **PACTOR-IV** (`core/src/pactorhf/pactorhf_rx.cpp`): its framing is proprietary, so the monitor identifies it (1800 Bd, the
   constellation) and has no frame to find; it never set valid. Identifying it now counts as valid (`lock`). +-2 kHz is the HF window
   condition, as for the other HF modes.
-- **TETRA transmitter**: passes in every local run of this branch (131 blocks in 3 s, all six conditions) with no change here. Not
-  reproduced; dropped from the list.
+- **TETRA transmitter**: passed in every local run of this branch before the merge with integ-39 (131 blocks in 3 s). After the merge,
+  which brought the TETRA TEDS / D8PSK work (7889a28de, f70d8f73a), it fails in three runs out of three (the clean signal still passes).
+  Not this branch's change: it stays `open` in `qa_known.inc` for the TETRA worker.
 - **NavIC** and **riometer**: not decoder faults, see below.
 
 ## Unrealistic conditions and generators (not decoder bugs)
@@ -545,9 +545,10 @@ plus noise alone on all 20 links (0 frames, 86 - 88 % of the input skipped). Sim
 ## Still failing (open)
 
 These failures are not explained by the condition. They are in `qa_known.inc` as `open`, so the test passes today, but each needs a look at its mode.
-The second half of the list (navic .. xb_oceansat2, 20 entries) is done: see "Second half of the open list" and the CPU section. The
+The second half of the list (navic .. xb_oceansat2, 20 entries) is done except `tetra/tx` (below): see "Second half of the open list" and the CPU section. The
 entries left are the first half's (feat39-qafixA).
 
+- `tetra/tx`: its transmitter's signal does not decode since the TETRA TEDS / D8PSK merge (to investigate)
 - `hdr/pos`: fails with the offset (to investigate)
 - `hamdrm/tx`: its transmitter's signal does not decode (to investigate)
 - `js8/snr`: fails at 12 dB (to investigate)

@@ -1,5 +1,6 @@
 // HF ALE receiver (see ale_rx.h).
 #include "dect2/ale/ale_rx.h"
+#include "dect2/automation/engine.h"
 #include "dect2/ale/ale_lqa.h"
 #include "dect2/results/results_io.h"
 #include "dect2/ale/ale_tel.h"
@@ -15,6 +16,7 @@
 #include <mutex>
 #include <vector>
 #include "dect2/common/mathconst.h"
+#include "dect2/dsp/dsp_compat.h"
 
 namespace dect2 {
 
@@ -29,7 +31,11 @@ constexpr int kTrack = 4;                      // in sync: the next word within 
 constexpr int kAudioN = 8192, kHopN = 4096;    // rings (powers of two)
 constexpr int kAcqVote = 10, kAcqGolay = 2;    // to find the word clock: few errors of either kind
 constexpr int kTrackVote = 24;                 // in sync
-constexpr double kMaxAfc = 150;
+// acquisition (3.9 sensitivity pass D): the tuning error from the averaged audio spectrum, the 8 tone bands against the bands just outside
+// them, while no word is in sync; up to +-kSearchHz (a 20 ppm radio at 14 MHz is 280 Hz off: the decoder, whose tone filters are 125 Hz
+// wide and whose AFC moves only after a decoded word, found nothing beyond about 100 Hz)
+constexpr int kSpecLog2 = 10, kSpecN = 1 << kSpecLog2;   // 7.8 Hz bins
+constexpr double kSearchHz = 400;
 
 double nowUtc() { return std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count(); }
 
@@ -75,6 +81,9 @@ struct AleReceiver::Impl {
     float hq[kHopN] = {}, hbest[kHopN] = {}, hother[kHopN] = {};
     int64_t nh = 0;                      // instants so far
     double afc = 0, twAfc = 1e9;
+    std::vector<float> spRe, spIm, spPow;   // the averaged audio spectrum (acquisition)
+    int64_t spNext = kSpecN, spBlocks = 0, spLastWord = 0;
+    double spCand = 1e9;
     float twc[8][kSps], tws[8][kSps];
     // word sync
     bool locked = false, acq = false;
@@ -125,6 +134,7 @@ struct AleReceiver::Impl {
         as.finish();
         txWords = 0; txVote = 0; txSnr = 0;
         afc = 0; setTwiddles();
+        spPow.assign(kSpecN, 0.f); spNext = kSpecN; spBlocks = 0; spLastWord = 0; spCand = 1e9;
         nIn = 0; nextReport = 0; power = 0; nPower = 0;
         t0 = st >= 0 ? st : nowUtc();
         { std::lock_guard<std::mutex> lk(mu); pub.inputRate = curRate; pub.timeMode = st >= 0 ? 1 : 0; }
@@ -199,7 +209,8 @@ struct AleReceiver::Impl {
         const double snr = so > 0 ? std::max(1e-3, (sb - so) / so) * kBaudOverBw() : 1e-3;
         const float snrDb = (float)(10 * std::log10(snr));
         const double d = offsetOf(h);
-        afc = std::max(-kMaxAfc, std::min(kMaxAfc, afc + 0.5 * d));
+        afc = std::max(-kSearchHz, std::min(kSearchHz, afc + 0.5 * d));
+        spLastWord = na;
         if (as.empty()) { txUtc = utc; txVote = 0; txWords = 0; txSnr = 0; }
         as.add(w);
         txVote += w.voteErrs; txWords++; txSnr += snrDb;
@@ -262,6 +273,11 @@ struct AleReceiver::Impl {
                 }
         }
         events.push_back(e);
+        if (!e.from.empty() && e.dialHz > 0 && automation::wants(automation::FMsg)) {   // rules, integrations and the learned sounding schedules (insight/schedule_watch.h)
+            automation::Event ex;
+            ex.str("station", e.from).str("to", e.to).str("call_type", e.type);
+            automation::emitMessage("ale", "ALE", e.dialHz, e.from, e.type + " " + e.from + (e.to.empty() ? "" : " to " + e.to), e.snrDb, std::move(ex));
+        }
         if (!e.from.empty() && e.dialHz > 0) {   // the link-quality memory (ale_lqa.h): every call heard is a measurement of the path from that station
             AleLqaObs q; q.utc = e.utc; q.station = e.from; q.hz = e.dialHz; q.snrDb = e.snrDb; q.ber = e.ber; q.sounding = e.type == "Sounding";
             AleLqa::global().add(q);
@@ -279,6 +295,36 @@ struct AleReceiver::Impl {
             log(b);
         }
         changed = true;
+    }
+
+    void spectrum() {
+        if (spRe.empty()) { spRe.resize(kSpecN); spIm.resize(kSpecN); if (spPow.empty()) spPow.assign(kSpecN, 0.f); }
+        const int64_t s0 = na - kSpecN;
+        for (int n = 0; n < kSpecN; n++) {
+            spRe[(size_t)n] = ring[(s0 + n) & (kAudioN - 1)] * (float)(0.5 - 0.5 * std::cos(2 * kPi * n / kSpecN));
+            spIm[(size_t)n] = 0;
+        }
+        fftSplit(spRe.data(), spIm.data(), kSpecLog2, false);
+        const float a = spBlocks < 8 ? 1.f / (float)(spBlocks + 1) : 0.125f;
+        for (int k = 0; k < kSpecN / 2; k++) spPow[(size_t)k] += a * (spRe[(size_t)k] * spRe[(size_t)k] + spIm[(size_t)k] * spIm[(size_t)k] - spPow[(size_t)k]);
+        spBlocks++;
+        if (locked || acq || spBlocks < 4 || (spBlocks & 3)) return;
+        const double bin = kFs / kSpecN;
+        auto band = [&](double f) { double e = 0; const int c = (int)std::lround(f / bin); for (int k = c - 4; k <= c + 4; k++) if (k > 0 && k < kSpecN / 2) e += spPow[(size_t)k]; return e; };
+        double best = -1e300, bestD = 0, bestOut = 0;
+        for (double d = -kSearchHz; d <= kSearchHz + 1e-9; d += bin) {
+            double in = 0;
+            for (int k = 0; k < 8; k++) in += band(ale::kTone0 + ale::kToneStep * k + d);
+            const double out = 0.5 * (band(ale::kTone0 - ale::kToneStep + d) + band(ale::kTone0 + ale::kToneStep * 8 + d));
+            const double sc = in / 8 - out;
+            if (sc > best) { best = sc; bestD = d; bestOut = out; }
+        }
+        // only a clear error, seen twice, with no word for 2.5 s: within +-60 Hz the words decode and the AFC after each word does better,
+        // and acting on single noisy estimates cost 1.5 dB at the threshold
+        const bool cand = best > 0.5 * bestOut && std::fabs(bestD - afc) > 60;
+        const bool quiet = (double)(na - spLastWord) > 2.5 * kFs;
+        if (cand && quiet && std::fabs(bestD - spCand) < 16) { afc = bestD; spCand = 1e9; }
+        else spCand = cand ? bestD : 1e9;
     }
 
     void step() {   // one instant: the tones, then the word clock
@@ -317,6 +363,7 @@ struct AleReceiver::Impl {
         for (size_t i = 0; i < n; i++) {
             ring[na & (kAudioN - 1)] = x[i];
             na++;
+            if (na >= spNext) { spNext += kSpecN / 2; spectrum(); }
             if (na >= kSps && (na & (kHop - 1)) == 0) step();
         }
     }

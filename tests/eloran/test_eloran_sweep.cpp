@@ -30,9 +30,12 @@ int main() {
     // ---- chain names
     CHECK(std::string(loran::chainName(99600)) == "Northeast U.S." && std::string(loran::chainName(89700)) == "Great Lakes" && std::string(loran::chainName(99400)) == "U.S. West Coast" &&
           std::string(loran::chainName(59300)) == "Canadian East Coast" && loran::chainName(12340) == nullptr, "chain names");
+    // Chayka (the Russian Loran-C equivalent, same 100 kHz pulse groups) chains by GRI
+    CHECK(std::string(loran::chainName(80000)) == "Western Russia Chayka" && std::string(loran::chainName(79500)) == "Eastern Russia Chayka" &&
+          std::string(loran::chainName(49700)) == "North-Western Russia Chayka" && std::string(loran::chainName(59700)) == "South Ural Chayka", "Chayka chain names");
 
     // ---- every chain, sweeps
-    const int gris[] = {5543, 5930, 5980, 5990, 6042, 6731, 6780, 7001, 7030, 7270, 7430, 7499, 7950, 7960, 7980, 7990, 8290, 8390, 8830, 8930, 8970, 9007, 9610, 9930, 9940, 9960, 9990};
+    const int gris[] = {4970, 5543, 5930, 5960, 5970, 5980, 5990, 6042, 6731, 6780, 7001, 7030, 7270, 7430, 7499, 7950, 7960, 7980, 7990, 8000, 8290, 8390, 8830, 8930, 8970, 9007, 9610, 9930, 9940, 9960, 9990};
     std::mt19937 rng(77);
     int cases = 0, bad = 0;
     double worst = 0;

@@ -644,6 +644,7 @@ void receiver(App& a) {
     cidSection(a, t);
     streamsSection(a, t);
     ipSection(a, t);
+    smart5DvbsCard(a);   // round-5 smart checks: rain fade and margin log (app/smart5)
     ImGui::Spacing();
     ImGui::TextColored(pal::accent(), "NOTES");
     ImGui::PushTextWrapPos(0);
@@ -676,8 +677,9 @@ void tuner(App& a, bool& retune) {
     if (ImGui::IsItemHovered())
         ImGui::SetTooltip("Auto measures the width of the carrier in the spectrum. Set it by hand for weak or narrow carriers, or when Auto is a few percent off.\n\n"
                           "A HackRF sees about 17 MHz of band at most (20 Msps), which is a carrier of up to about %.1f Msym/s.\n"
-                          "At %.0f Msps the limit is %.1f Msym/s. Wide transponders (27.5 Msym/s and more) do not fit: use a recording or a wider radio.",
-                          dvbsMaxSymbolRate(20e6) / 1e6, fs / 1e6, dvbsMaxSymbolRate(fs) / 1e6);
+                          "At %.0f Msps the limit is %.1f Msym/s. Wide transponders (27.5 Msym/s and more) do not fit: use a recording or a wider radio.\n"
+                          "Narrow carriers (reduced bandwidth DATV): Auto finds them down to %.0f ksym/s at this rate, by hand down to %.0f ksym/s.",
+                          dvbsMaxSymbolRate(20e6) / 1e6, fs / 1e6, dvbsMaxSymbolRate(fs) / 1e6, dvbsMinAutoSymbolRate(fs) / 1e3, dvbsMinSymbolRate() / 1e3);
     sameLineIf(ImGui::GetFrameHeight() + ImGui::GetStyle().ItemInnerSpacing.x + ImGui::CalcTextSize("Auto").x, 6 * gUi);
     bool autoSr = S.srMsym <= 0;
     if (ImGui::Checkbox("Auto##dvbssr", &autoSr)) {
@@ -693,7 +695,7 @@ void tuner(App& a, bool& retune) {
     ImGui::SetNextItemWidth(std::min(104 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     double v = autoSr ? (live(a) ? a.rx.dvbs.symbolRate / 1e6 : 0.0) : S.srMsym;
     if (ImGui::InputDouble("##dvbssrv", &v, 0, 0, autoSr ? "%.3f Msym/s" : "%.3f Msym/s")) {
-        if (!autoSr) { S.srMsym = std::max(0.05, std::min(maxMsym, v)); ch = true; }
+        if (!autoSr) { S.srMsym = std::max(dvbsMinSymbolRate() / 1e6, std::min(maxMsym, v)); ch = true; }
     }
     ImGui::EndDisabled();
     ImGui::TextDisabled("Standard");

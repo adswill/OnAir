@@ -37,6 +37,7 @@ struct HamsciReceiver::Impl {
     double nco = 0;
     // decoders
     hamsci::Fsk441Decoder fsk{kAudioFs};
+    hamsci::Jt6mDecoder jt6{kAudioFs};
     hamsci::IscatDecoder isc{kAudioFs, 2};
     hamsci::Pi4Decoder pi4{kAudioFs};
     hamsci::ThrobDecoder thr{kAudioFs};
@@ -73,7 +74,7 @@ struct HamsciReceiver::Impl {
     void clearAll() {
         n = 0; nextSnap = 0; okCount = badCount = 0; lines.clear(); text.clear(); levelAcc = 0; levelN = 0; levelDb = -200; found.clear(); state = 0;
         base.clear(); hist.assign(taps.size(), cf32(0, 0)); hpos = 0; dphase = 0; audio.clear(); nco = 0;
-        fsk.reset(); isc.reset(); pi4.reset(); thr.reset(); qrss.reset(); qrss.setDfcw(kind == kHsDfcw);
+        fsk.reset(); jt6.reset(); isc.reset(); pi4.reset(); thr.reset(); qrss.reset(); qrss.setDfcw(kind == kHsDfcw);
         sid.reset(); sidDirty = true;
         rio.reset(); rio.setStartUnix((double)startUtc);
         psr.reset(); psrResult = hamsci::PulsarResult(); psrNext = 20.0;
@@ -136,6 +137,18 @@ struct HamsciReceiver::Impl {
             fsk.feed(audio.data(), audio.size());
             for (auto& b : fsk.take()) { pushLine(b.text, b.freqOffsetHz, b.snrDb, "", b.startSec); state = 3; }
             if (fsk.levelDb() > 3) state = std::max(state, 2);
+            break;
+        }
+        case kHsJt6m: {
+            jt6.feed(audio.data(), audio.size());
+            for (auto& p : jt6.take()) {
+                char note[64]; std::snprintf(note, sizeof note, "%d frames, %.1f s", p.frames, p.durSec);
+                pushLine(p.text, p.freqOffsetHz, p.snrDb, note, p.startSec);
+                found = "JT6M, tuning " + std::to_string((int)std::lround(p.freqOffsetHz)) + " Hz";
+                state = 3;
+            }
+            if (!jt6.lastAveraged().averaged.empty()) text = jt6.lastAveraged().averaged;   // the folded message of the last window that gave one
+            if (jt6.levelDb() > 3) state = std::max(state, 2);
             break;
         }
         case kHsIscat: {
@@ -263,7 +276,7 @@ struct HamsciReceiver::Impl {
             t.pulsarNeededM2 = psrNeeded;
         }
         t.state = n == 0 ? 0 : std::max(1, state);
-        if (kind <= kHsThrob && t.state < 2 && n > 0) t.state = 1;
+        if (hamsciAudioKind(kind) && t.state < 2 && n > 0) t.state = 1;
         t.seq = snap.seq + 1;
         snap = std::move(t);
     }
@@ -346,11 +359,11 @@ bool HamsciReceiver::telemetry(HamsciTelemetry& out, uint64_t lastSeq) {
 
 // ---------------------------------------------------------------------------------------------------------------------------------- tuning, names
 const char* hamsciId(int kind) {
-    static const char* id[kHamsciKinds] = {"qrss", "dfcw", "fsk441", "iscat", "pi4", "throb", "supersid", "riometer", "pulsar"};
+    static const char* id[kHamsciKinds] = {"qrss", "dfcw", "fsk441", "iscat", "pi4", "throb", "supersid", "riometer", "pulsar", "jt6m"};
     return id[std::clamp(kind, 0, (int)kHamsciKinds - 1)];
 }
 const char* hamsciName(int kind) {
-    static const char* nm[kHamsciKinds] = {"QRSS grabber", "DFCW grabber", "FSK441", "ISCAT", "PI4", "Throb", "SuperSID (VLF)", "Riometer", "Pulsar folding"};
+    static const char* nm[kHamsciKinds] = {"QRSS grabber", "DFCW grabber", "FSK441", "ISCAT", "PI4", "Throb", "SuperSID (VLF)", "Riometer", "Pulsar folding", "JT6M"};
     return nm[std::clamp(kind, 0, (int)kHamsciKinds - 1)];
 }
 
@@ -369,6 +382,7 @@ ModeTuning hamsciTuning(int kind) {
     case kHsDfcw: t.minMhz = 0.1; t.maxMhz = 30; t.defMhz = 0.1375; break;
     case kHsFsk441: t.minMhz = 28; t.maxMhz = 1300; t.defMhz = 144.140; break;
     case kHsIscat: t.minMhz = 28; t.maxMhz = 1300; t.defMhz = 144.140; break;
+    case kHsJt6m: t.minMhz = 28; t.maxMhz = 148; t.defMhz = 50.230; break;   // 6 m JT6M calling frequency (USB dial)
     case kHsPi4: t.minMhz = 28; t.maxMhz = 24000; t.defMhz = 1296.0; break;
     case kHsThrob: t.minMhz = 1.8; t.maxMhz = 30; t.defMhz = 14.075; break;
     case kHsSid: t.minMhz = 0.003; t.maxMhz = 0.1; t.defMhz = 0.022; t.sampleRate = 250000; t.bandwidthMhz = 0.2; t.minSampleRate = 48000; break;

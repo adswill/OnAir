@@ -11,6 +11,7 @@
 #include <vector>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/test_long.h"
 
 static SarsatTelemetry run(const SynthConfig& cfg, double rate, double seconds, bool noiseOnly = false, bool wide = false) {
     SarsatReceiver rx;
@@ -66,11 +67,14 @@ static int countFound(const SarsatTelemetry& t, const char* what) {
 int main() {
     const double rate = 256000;
     const double seconds = 5 * 3.6 + 3;   // five bursts of at most 0.62 s, 3 s apart
+    // quick run: one of each mirror-image pair (offset, bit rate error, search edge, wide transponder, whole-capture side), 2.4 Msps as the other rate;
+    // ONAIR_TEST_LONG=1 runs every case
+    const bool L = testLong();
     {
         SynthConfig cfg; cfg.snrDb = 40;
         countFound(run(cfg, rate, seconds), "clean");
     }
-    {
+    if (L) {
         SynthConfig cfg; cfg.snrDb = 22; cfg.cfoHz = 4500;
         countFound(run(cfg, rate, seconds), "22 dB, +4.5 kHz");
     }
@@ -82,7 +86,7 @@ int main() {
         SynthConfig cfg; cfg.snrDb = 30; cfg.modeVal[0] = 0.8; cfg.cfoHz = 1200;
         countFound(run(cfg, rate, seconds), "bit rate +0.8 %");
     }
-    {
+    if (L) {
         SynthConfig cfg; cfg.snrDb = 30; cfg.modeVal[0] = -0.8;
         countFound(run(cfg, rate, seconds), "bit rate -0.8 %");
     }
@@ -92,24 +96,24 @@ int main() {
     }
     {
         SynthConfig cfg; cfg.snrDb = 25; cfg.cfoHz = 2000;
-        countFound(run(cfg, 1024000, seconds), "1.024 Msps");
+        if (L) countFound(run(cfg, 1024000, seconds), "1.024 Msps");
         countFound(run(cfg, 2400000, seconds), "2.4 Msps");
     }
     {   // edges of the search range and weak signals
         SynthConfig cfg; cfg.snrDb = 25; cfg.cfoHz = 11500;
-        countFound(run(cfg, rate, seconds), "+11.5 kHz");
+        if (L) countFound(run(cfg, rate, seconds), "+11.5 kHz");
         cfg.cfoHz = -11500;
         countFound(run(cfg, rate, seconds), "-11.5 kHz");
         cfg.cfoHz = 40000;
         countFound(run(cfg, rate, seconds), "+40 kHz (wide transponder)");
         cfg.cfoHz = -40000;
-        countFound(run(cfg, rate, seconds), "-40 kHz (wide transponder)");
+        if (L) countFound(run(cfg, rate, seconds), "-40 kHz (wide transponder)");
         cfg.cfoHz = 300; cfg.snrDb = 14;
         countFound(run(cfg, rate, seconds * 2), "14 dB");
     }
     {   // the whole-capture search (issue #214, the 1544 - 1545 MHz downlink): beacons far from the dial at 1 Msps, merged without duplicates
         SynthConfig cfg; cfg.snrDb = 25;
-        for (double off : {330000.0, -260000.0, 2000.0}) {
+        for (double off : L ? std::vector<double>{330000.0, -260000.0, 2000.0} : std::vector<double>{-260000.0}) {
             cfg.cfoHz = off;
             char what[64]; snprintf(what, sizeof what, "whole capture, %+.0f kHz", off / 1e3);
             const SarsatTelemetry t = run(cfg, 1e6, seconds, false, true);

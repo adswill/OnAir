@@ -12,6 +12,7 @@
 #include "dect2/fm/fm_tone.h"
 #include "dect2/fm/fm_subcarrier.h"
 #include "dect2/fm/fm_neighbour.h"
+#include "dect2/smart5/mpx412.h"
 #include "dect2/dsp/resampler.h"
 #include <algorithm>
 #include <atomic>
@@ -358,6 +359,8 @@ struct FmReceiver::Impl {
     double freqSum = 0; uint64_t freqN = 0;
     double cfoEma = 0;
     float peakMpx = 0;
+    smart5::Mpx412Meter mpx412;               // ITU-R BS.412 multiplex power and the peak-deviation distribution (docs/SMART5-broadcast-3.9.md item 2)
+    std::vector<float> devHz;                 // this block's instantaneous deviation for it
     std::vector<float> win, mpxRing;
     size_t ringPos = 0;
     std::vector<float> specPow;
@@ -387,6 +390,7 @@ struct FmReceiver::Impl {
         // channel filter: decimate to about 500 kHz in stages of at most 10
         const int dTotal = std::max(1, (int)std::lround(fs / 500e3));
         fo = fs / dTotal; fm = fo / 2; fa = fm / 5;
+        mpx412.configure(fm);
         dcChA = (float)(1.0 / (0.5 * fo));
         restartFinder(); setTune(0);
         chanStages.clear();
@@ -447,6 +451,7 @@ struct FmReceiver::Impl {
         prevSym = 0; symAvg = 0.01f; constHist.clear();
         rds.reset();
         pwSum = envSum = freqSum = 0; pwN = freqN = 0; cfoEma = 0; peakMpx = 0; sincePub = 0;
+        if (fm > 0) mpx412.configure(fm);
         std::fill(mpxRing.begin(), mpxRing.end(), 0.f);
         std::fill(specPow.begin(), specPow.end(), 0.f); specFresh = true;
         if (audio) audio->flush();
@@ -595,6 +600,7 @@ struct FmReceiver::Impl {
         mpxDecim.process(freq.data(), cn, mpx);
         if (split) { mpxR.clear(); mpxDecimR.process(freqR.data(), cn, mpxR); if (mpxR.size() != mpx.size()) mpxR.resize(mpx.size(), 0.f); }
         runMpx();
+        if (!analysis && !devHz.empty()) mpx412.push(devHz.data(), devHz.size());
         if (sincePub >= inRate / 10) publish();
     }
 
@@ -606,10 +612,12 @@ struct FmReceiver::Impl {
         const double ampA = 1.0 / (0.05 * fm);
         const double wn = 2 * kPi * (pilotLock ? 20.0 : 80.0), zeta = 0.707;
         if (rdsOwn == pilotLock) { rdsOwn = !pilotLock; costasPh = costasFr = 0; }
+        devHz.resize(n);
         for (size_t i = 0; i < n; i++) {
             dc += (mpx[i] - dc) * dcA;
             const float m = mpx[i] - (float)dc;
             peakMpx = std::max(peakMpx, std::fabs(m));
+            devHz[i] = m * (float)kDevHz;
             const float pb = bp2.process(bp1.process(m));
             const double ph0 = phi, sn = std::sin(ph0), cs = std::cos(ph0);
             pAmp2 += ((double)pb * pb - pAmp2) * ampA;
@@ -820,6 +828,9 @@ struct FmReceiver::Impl {
         t.trafficAlert = rds.ta; t.trafficProgram = rds.tp; t.music = rds.ms; t.piCode = rds.groups ? rds.pi : 0;
         t.rds = rds.info;
         t.multipathPct = 100 * mpRipple; t.equaliser = cmaUse;
+        {   const smart5::Mpx412Report& m = mpx412.report();
+            t.mpx412Valid = m.valid; t.mpxPowerDbr = (float)m.mpxPowerDbr; t.mpxRunningDbr = (float)m.runningDbr;
+            t.devP50Khz = (float)m.p50Khz; t.devP99Khz = (float)m.p99Khz; t.devP999Khz = (float)m.p999Khz; t.over75Pct = (float)m.over75Pct; }
         t.clicksFixed = clicks;
         t.neighbourDb = canceller.activeOffsetHz() != 0 ? canceller.neighbourDb() : 0;
         t.neighbourKhz = (float)(canceller.activeOffsetHz() / 1e3);

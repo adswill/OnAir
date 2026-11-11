@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <random>
 #include <vector>
+#include "../common/test_long.h"
 using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)
@@ -54,7 +55,9 @@ int main() {
     }
 
     // Receiver
+    // the default run: the weaker signal only (the subframes need the whole 34 s); ONAIR_TEST_LONG=1 both
     for (double cn0 : {46.0, 42.0}) {
+        if (!testLong() && cn0 > 44) continue;
         NavicGenConfig gc; gc.cn0Db = cn0; gc.nSats = 2; gc.dopplerHz = 2800;
         NavicGenerator gen(gc);
         NavicReceiver rx; rx.configure(kNavicFs);

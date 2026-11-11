@@ -141,6 +141,11 @@ private:
 
 // Export formats of the packet list. Nothing is sent anywhere.
 std::string exportSatnogsJson(const std::vector<SmartPacket>& v, const std::string& stationCall, double latDeg, double lonDeg);   // one SatNOGS telemetry record per line
+// Live forwarding to SatNOGS DB (the SiDS form gr-satellites' telemetry forwarder posts to https://db.satnogs.org/api/telemetry/): noradID, source,
+// timestamp (UTC, ms, Z), frame (upper-case hex), locator=longLat, longitude "25.28E", latitude "54.69N", version. "" when the packet cannot go
+// (no NORAD number, no bytes, a file rather than a live capture).
+std::string sidsForm(const SmartPacket& p, const std::string& callsign, double latDeg, double lonDeg, int64_t wallMs = 0);
+constexpr const char* kSidsSatnogsUrl = "https://db.satnogs.org/api/telemetry/";
 std::string exportCsv(const std::vector<SmartPacket>& v);
 std::string exportKiss(const std::vector<SmartPacket>& v);                                                                  // AX.25 / data frames as KISS
 std::string packetSummary(const SmartPacket& p);

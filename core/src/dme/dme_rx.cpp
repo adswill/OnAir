@@ -130,10 +130,17 @@ void Receiver::onPulse(double startSec) {
 void Receiver::onPair(double startSec) {
     const double period = 1.0 / kIdentRatePps;
     if (havePair_) {
+        // lastPairSec_ is the last pair on the ident's grid. On a TACAN beacon the reference bursts (700 us at 135 Hz) take the place of
+        // ident pairs and put their own pairs in between: once a run has three regular intervals, a pair between grid points is ignored
+        // and one or two missing grid points (held to 10 us) still count.
         const double dt = startSec - lastPairSec_;
-        if (std::fabs(dt - period) <= kIdentTolUs * 1e-6) {
+        const bool one = std::fabs(dt - period) <= kIdentTolUs * 1e-6;
+        const double kk = std::round(dt / period);
+        const bool two = regular_ >= 3 && (kk == 2 || kk == 3) && std::fabs(dt - kk * period) <= 10e-6;
+        if (regular_ >= 3 && !one && !two && dt < 3.5 * period) return;   // a burst pair inside the run
+        if (one || two) {
             regular_++;
-            intervalSum_ += dt;
+            intervalSum_ += two ? dt / kk : dt;
             if (regular_ >= kKeyRun) {
                 if (!keyed_) {
                     // a new key-down: close the letter that the gap before it ended, then start counting
@@ -171,7 +178,7 @@ void Receiver::endKey() {
 void Receiver::closeBin() {
     binPairs_ = 0;
     const double now = timeSec();
-    if (keyed_ && now - lastRegSec_ > 3.0 / kIdentRatePps) endKey();       // no regular pair for three periods: key up
+    if (keyed_ && now - lastRegSec_ > 4.5 / kIdentRatePps) endKey();       // no regular pair for four periods: key up (TACAN bursts and noise drop a few)
     if (!keyed_) {                       // the key-up: a letter gap ends the letter, a longer one the word
         const double off = now - offStartSec_;
         if (!code_.empty() && !letterFlushed_ && off >= kLetterGapSec) {
