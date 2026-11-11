@@ -555,7 +555,11 @@ struct Cp16Receiver::Impl {
                         readPtr = std::max(lockRow, rows.front().serial); lastEnd = readPtr; anyChar = lockAny;
                         continue;
                     }
-                    if (arrVotes >= 40) arrFixed = true;
+                    // settled: a clear leader (clean characters fit one arrangement exactly), or many characters
+                    double first = 0, second = 0;
+                    for (int q = 0; q < kNumArr; q++) { if (arrScore[q] > first) { second = first; first = arrScore[q]; } else if (arrScore[q] > second) second = arrScore[q]; }
+                    if ((arrVotes >= 4 && arrScore[arr] >= 0.9 * arrVotes && arrScore[arr] >= first) ||
+                        (arrVotes >= 8 && arrScore[arr] >= first && first >= 1.15 * second) || arrVotes >= 40) arrFixed = true;
                 }
                 t = valid[arr] ? all[arr] : all[bi];
             } else t = bestStart(readPtr, r, arr);
