@@ -1693,3 +1693,10 @@ strikes by age.
 
 ## 2026-11-11 TMC in plain words and HDMI emission finder (feat39-tmchdmi)
 Issue #476: RDS-TMC messages in plain words from the user's own event list and location table (core/src/fm/fm_tmc_db.cpp). The importer detects the delimiter, header, encoding and columns. It reads German / English lists, the LCL layout and the TISA exchange files, and copies them to <data folder>/tmc. Each message shows road, location, direction, extent, duration, diversion and details. New messages go to a CSV and text log, on by default once a file is set. No country data ships: without files, codes stay with a "(?)" hint. Issue #475: local display / HDMI emission finder (core/src/rfi/display_emission.cpp). It matches pixel clock harmonics against 49 CEA-861 / VESA timings and separates timings that share a clock by the line-rate comb. It gives a confidence and alternatives, and shows up in the spectrum explorer (ticks, label, tab) and as an identifier candidate labelled "not your SDR". Generator and tests tmc_db, display_emission; simulated only. docs/TMC-PLAIN-3.9.md, docs/HDMI-EMISSION-3.9.md.
+
+## 2026-11-11 DAB Map tab: positions and zoom (feat39-dabsites)
+German user report (DR Deutschland 5C, six TII codes, none placed, zoom dead). Causes: OnAir-channels has no dab-tii/DE.csv (404, told
+apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-centred the map every frame when nothing was placed (Cell map
+too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
+source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
+qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.

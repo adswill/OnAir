@@ -46,7 +46,7 @@ struct State {
     std::map<uint64_t, Pos> towers;   // (mcc, mnc, eci) -> position
     std::string towerFile, towerNote;
     adsbmap::View map;
-    bool keyLoaded = false, showKey = false, fitted = false;
+    bool keyLoaded = false, showKey = false, fitted = false, fitRxOnly = false;
     char key[128] = {};
     std::unique_ptr<dect2::OcidLookup> ocid;
     char find[48] = {};           // operator / PLMN / eNB / TAC / PCI search
@@ -465,12 +465,16 @@ void mapView(App& a) {
     if (sz.y < 40) return;
     const double rLat = plat::prefs().getD("adsbLat", 0), rLon = plat::prefs().getD("adsbLon", 0);
     const bool haveRx = rLat != 0 || rLon != 0;   // the antenna position the map modes share
-    if (!S.fitted) {   // centre on the first tower placed, else the receiver
-        for (const auto& c : a.rx.cell.cells) { const Loc l = towerOf(c); if (l.src) { S.map.lat = l.p.lat; S.map.lon = l.p.lon; S.map.zoom = 13; S.fitted = true; break; } }
-        if (!S.fitted && haveRx) { S.map.lat = rLat; S.map.lon = rLon; S.map.zoom = 12; }
+    // centre on the first tower placed, else the receiver until a tower is placed or the map is moved. Once only: a reset every frame
+    // undid every zoom and pan (the + / - buttons and the wheel did nothing while no tower had a position)
+    if (!S.fitted || S.fitRxOnly) {
+        for (const auto& c : a.rx.cell.cells) { const Loc l = towerOf(c); if (l.src) { S.map.lat = l.p.lat; S.map.lon = l.p.lon; S.map.zoom = 13; S.fitted = true; S.fitRxOnly = false; break; } }
+        if (!S.fitted && haveRx) { S.map.lat = rLat; S.map.lon = rLon; S.map.zoom = 12; S.fitted = true; S.fitRxOnly = true; }
     }
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
+    const double mLat0 = S.map.lat, mLon0 = S.map.lon; const int mZoom0 = S.map.zoom;
     adsbmap::draw(S.map, sz);
+    if (S.map.lat != mLat0 || S.map.lon != mLon0 || S.map.zoom != mZoom0) S.fitRxOnly = false;   // the user moved it: it stays where they put it
     adsbmap::fullCorner(p0, sz);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + sz.x, p0.y + sz.y), true);

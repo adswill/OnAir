@@ -85,6 +85,14 @@ struct DabFicInfo {
     // FIG 0/22 sub-identifiers: a transmitter of the network at an offset from its main identifier's position (the main one must have been heard)
     struct SubTx { int mainId = 0, subId = 0, delayUs = 0; double lat = 0, lng = 0; bool placed = false; };
     std::vector<SubTx> subTransmitters;
+    // FIG 0/11 region definitions (EN 300 401 V1.4.1 clause 8.1.16.1, dropped from V2): the transmitters (MainId, SubId) that serve a region,
+    // or a rectangle (corner + extents), with the region's name from FIG 1/3 where it is sent. Few networks send them.
+    struct Region { int id = 0; bool global = false; std::vector<std::pair<int, int>> tii; bool hasBox = false; double lat = 0, lng = 0, extLat = 0, extLng = 0; std::string label; };
+    std::vector<Region> regions;
+    const Region* regionOf(int mainId, int subId) const {   // the region whose TII list names this transmitter, else null
+        for (const auto& g : regions) for (const auto& t : g.tii) if (t.first == mainId && t.second == subId) return &g;
+        return nullptr;
+    }
 };
 DabFicInfo dabFicInfo(const DabFicAnalysis& a);
 const char* dabLanguageName(int code);
