@@ -77,3 +77,20 @@ carrier takes over, so the discriminator sees the same signal. CPU: one FFT per 
 Noise-only: 0 units. The first second of a carrier-error signal is decoded with the old filter, so the first transmission after tuning at the
 threshold is where the 3.9 numbers apply. `fusion_rx`, `fusion_sweep`, `fusion_mode`, `fusion_interop` pass. `edacs_sens40` has the Fusion rows
 (7 dB at 0 and +3.1 kHz, 10 dB at -6 kHz).
+
+## 4. MPT 1327 control channel: narrow filter that follows the carrier
+
+The engine receiver (`core/src/mpt1327/mpt1327_engine.cpp`) decimated to 24 kS/s with a plain average and took the discriminator of the whole
++-12 kHz: no channel filter. Change: `SpectralAfc` in open loop on the 24 kS/s stream; once two looks agree the stream is shifted to 0 Hz,
+filtered by a 4.5 kHz (two-section) low-pass on I and Q, shifted back (so the discriminator values keep their frequencies) and handed to the same
+discriminator. Until then it is the old path. 3.5 kHz was 1 dB better still in the generator, 5.5 kHz 1.5 dB worse; 4.5 kHz kept as margin.
+The harness's score plateaus at about 70 % of the clean units even at 14 dB, before and after (the SNR figures below are relative to that).
+
+| MPT 1327 (SNR in 12.5 kHz, 8 trials) | before: 10 / 8 / 6 / 4 dB | after | gain at the 50 % of plateau |
+|---|---|---|---|
+| AWGN | 67 / 47 / 15 / 0 % | 70 / 64 / 56 / 25 % | about 2.5 dB |
+| +3.1 kHz carrier | 51 / 14 / 0 / 0 % | 61 / 57 / 42 / 10 % | more than 3 dB |
+| -5 kHz carrier | 13 / 0 / 0 / 0 % | 54 / 45 / 17 / 1 % | decodes where 3.9 does not |
+
+Noise-only: 0 units. 50 ppm clock: no change in the harness number (the 6 s test signal does not see it). `mpt1327`, `mpt1327_mode`, `mpt1327_chan`,
+`mpt1327_std` pass; `edacs_sens40` has three MPT rows. Generator signal only: the deviation of real MPT 1327 FFSK (+-1.5 to 2 kHz here) is assumed.
