@@ -265,7 +265,8 @@ struct Cp16Receiver::Impl {
         constexpr double kBinRate = kFs / kBinS;        // 500 Hz
         const int64_t m = n / kBinS;
         if (m < 512) return false;
-        std::vector<float> g((size_t)m, 0.f);
+        std::vector<float> g((size_t)m, 0.f), gc((size_t)m, 0.f);
+        constexpr int kBend = 12;                       // 6 ms
         std::vector<cf32> mixed((size_t)n);
         const int64_t ks = n / kStep;
         std::vector<float> e((size_t)ks);
@@ -286,6 +287,8 @@ struct Cp16Receiver::Impl {
                 if (b >= m) break;
                 const float dlt = e[(size_t)k] - e[(size_t)(k - kBinSteps)];
                 g[(size_t)b] += dlt * dlt;
+                // the corners of the ramps (start and end of each edge): the bend of the envelope over kBend steps
+                if (k >= 2 * kBend && k % kBinSteps == 0) gc[(size_t)b] += std::fabs(e[(size_t)k] - 2 * e[(size_t)(k - kBend)] + e[(size_t)(k - 2 * kBend)]);
             }
         }
         double mean = 0;
@@ -337,9 +340,11 @@ struct Cp16Receiver::Impl {
             double u = c * res;
             const double a = mag[(size_t)c - 1], b = mag[(size_t)c], cc = mag[(size_t)c + 1];
             const double den = a - 2 * b + cc;
-            if (den < 0) u += 0.5 * (a - cc) / den * res;
+            if (den < 0) u += std::clamp(0.5 * (a - cc) / den, -0.5, 0.5) * res;
+            if (mag[(size_t)c] < kTimeRatio * med || u <= 0) continue;   // too weak a line to be the rows
             double edge = 0;
-            const double conc = fold(g, mean, kFs / u, L, kBinS, edge);
+            // a row hardly longer than the filter: the slope pulses fill the row, so the corners of the ramps are folded instead
+            const double conc = (double)L > 0.55 * (kFs / u) ? foldCorners(gc, kFs / u, L, kBend * kStep, kBinS, edge) : fold(g, mean, kFs / u, L, kBinS, edge);
             if (conc > -1) tried.push_back({u, edge, conc, (float)(mag[(size_t)c] / med)});
         }
         double cmax = 0;
@@ -348,15 +353,48 @@ struct Cp16Receiver::Impl {
         const Cn* pick = nullptr;
         for (const Cn& c : tried) if (c.conc >= 0.85 * cmax && (!pick || c.u < pick->u)) pick = &c;
         score = (float)pick->conc;
-        if (pick->ratio < kTimeRatio || pick->conc < kConcMin) return false;
+        if (pick->conc < kConcMin) return false;
         P = kFs / pick->u;
         b0 = (double)w0 + pick->edge;
         return true;
     }
 
+    // The ramp corners folded at period P: each edge bends the envelope where its ramp starts and, L samples later, where it ends. The share of the corner
+    // energy in the best narrow window against a flat fold; the window is the start of the ramps when the window L later holds more than the one L before.
+    static double foldCorners(const std::vector<float>& gc, double P, int L, int bendS, int binS, double& edge) {
+        if (!(P > 2.0 * binS) || !std::isfinite(P)) return -2;
+        const int nb = std::clamp((int)(P / binS), 16, 256);
+        std::vector<double> h((size_t)nb, 0.0);
+        double total = 0, mean = 0;
+        for (float v : gc) mean += v;
+        mean /= (double)std::max<size_t>(1, gc.size());
+        for (size_t b = 0; b < gc.size(); b++) {
+            const double t = ((double)b + 0.5) * binS;
+            const double v = std::max(0.0, (double)gc[b] - 0.5 * mean);
+            const int k = std::clamp((int)(std::fmod(t, P) / P * nb), 0, nb - 1);
+            h[(size_t)k] += v;
+            total += v;
+        }
+        if (total <= 0) return -2;
+        const int wb = std::max(1, (int)std::lround((2.0 * bendS + 2 * binS) / P * nb));
+        if (wb * 3 >= nb) return -2;
+        auto win = [&](int k0) { double a = 0; for (int k = k0; k < k0 + wb; k++) a += h[(size_t)(((k % nb) + nb) % nb)]; return a; };
+        int bestK = 0; double bestAcc = -1;
+        for (int k = 0; k < nb; k++) { const double a = win(k); if (a > bestAcc) { bestAcc = a; bestK = k; } }
+        const int lb = (int)std::lround((double)L / P * nb);
+        const bool isStart = win(bestK + lb) >= win(bestK - lb);
+        // the corner signal at bin b covers the bend over the last 2 x bendS samples: its peak is bendS after the corner
+        double pos = ((double)bestK + wb / 2.0) / nb * P - bendS - binS / 2.0;
+        if (!isStart) pos -= L;
+        edge = std::fmod(pos + 4 * P, P);
+        const double uni = (double)wb / nb;
+        return (bestAcc / total - uni) / (1 - uni);
+    }
+
     // The slopes folded at period P (samples): the share of their energy in the best window one filter long, against what a flat fold would give (0 flat, 1 all
     // in the window); edge: the first row edge, samples from the start. -2 when the row is shorter than the window.
     static double fold(const std::vector<float>& g, double mean, double P, int L, int binS, double& edge) {
+        if (!(P > 2.0 * binS) || !std::isfinite(P)) return -2;
         const double W = std::min((double)L + 2 * binS, 0.6 * P);
         const int nb = std::clamp((int)(P / binS), 16, 256);
         std::vector<double> h((size_t)nb, 0.0);
@@ -365,7 +403,7 @@ struct Cp16Receiver::Impl {
             const double t = ((double)b + 0.5) * binS;
             const double v = std::max(0.0, (double)g[b] - 0.5 * mean);
             int k = (int)(std::fmod(t, P) / P * nb);
-            if (k >= nb) k = nb - 1;
+            k = std::clamp(k, 0, nb - 1);
             h[(size_t)k] += v;
             total += v;
         }
