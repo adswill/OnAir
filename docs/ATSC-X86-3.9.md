@@ -17,13 +17,14 @@ This branch follows feat39-atscperf (docs/ATSC-PERF-3.9.md). That work brought A
 
 | Runner | ATSC 1.0 8 Msps | ATSC 1.0 10 Msps | ATSC 3.0 10 Msps | both together |
 |---|---|---|---|---|
-| EPYC 7763 (Zen 3), final code | 1.761 → 0.793 | 1.737 → 0.906 | 0.679 → 0.615 | 2.636 → **1.720** |
-| EPYC 9V74 (Zen 4) | 1.421 → 0.695 | 1.478 → 0.725 | 0.567 → 0.510 | 2.179 → **1.499** |
+| EPYC 9V74 (Zen 4), final code | 1.375 → 0.613 | 1.452 → 0.639 | 0.563 → 0.468 | 2.179 → **1.416** |
+| EPYC 7763 (Zen 3) | 1.761 → 0.793 | 1.737 → 0.906 | 0.679 → 0.615 | 2.636 → **1.720** |
 | EPYC 9V45 (Zen 5) | 1.179 → 0.522 | 1.241 → 0.536 | 0.472 → 0.353 | 1.802 → **1.102** |
 
-- The Zen 4 and Zen 5 rows are from one or two commits before the final code. Those commits are without the AVX2 data-SNR pass and the telemetry fix; the other changes are in.
+- The Zen 4 row is run 42945110183, the final code. The Zen 3 row is the commit before it, which differs only in where the filter splits its block when no helper thread runs.
+- The Zen 5 row is from three commits earlier: without the AVX2 data-SNR pass, the telemetry fix and that split.
 - A second Zen 4 run had a busy neighbour: base 2.957, new 1.904 together. It shows the same ratio.
-- **Under one core together was not reached on the CI runner.** The best runner gives 1.10 and the slowest 1.72; before this round they gave 1.80 and 2.64.
+- **Under one core together was not reached on the CI runner.** The best runner gives 1.10 and the slowest 1.72; before this round they gave 1.80 and 2.64. Every runner shows about the same ratio: ATSC 1.0 needs 0.43-0.52 of its base CPU, ATSC 3.0 0.75-0.91, and both together 0.61-0.65.
 - **Why "both" is higher than the sum of the two alone:** the two receivers run 7 threads on 2 physical cores. Threads that share a core run slower, and every thread's CPU time counts in full.
 - **Desktop x86:** a desktop with more cores than busy threads should come in well under the Zen 5 runner's 1.10. This was not measured.
 
@@ -31,7 +32,7 @@ This branch follows feat39-atscperf (docs/ATSC-PERF-3.9.md). That work brought A
 
 | Stage | Base | New | What changed (x86 only) |
 |---|---|---|---|
-| atsc.filter | 0.567 | 0.183 | The shared-window matched filter is eight lanes wide in AVX2 + FMA (`pfbPadAvx2`). The four outputs' lane sums come from two rounds of hadd, and their positions and phases are worked out side by side in one vector. perf shows the loop's fused multiply-adds take most of the time now: 56 per four outputs, the filter's own size. The filter's helper thread is only started when the sample thread is busy more than 60 % of real time (stopped below 45 %). Before, it started for every block (`ATSC_SPLIT=1/0` forces it). |
+| atsc.filter | 0.567 | 0.183 | The shared-window matched filter is eight lanes wide in AVX2 + FMA (`pfbPadAvx2`). The four outputs' lane sums come from two rounds of hadd, and their positions and phases are worked out side by side in one vector. perf shows the loop's fused multiply-adds take most of the time now: 56 per four outputs, the filter's own size. The filter's helper thread is only started when the sample thread is busy more than 60 % of real time (stopped below 45 %). Before, it started for every block. Without the helper the two halves run one after the other on the sample thread, so the output bits are the same either way (`ATSC_SPLIT=1/0` forces it). |
 | atsc.eq.dfe | 0.273 | 0.090 | The decision feedback loop over a field is AVX2 + FMA (`dfeFieldAvx2`). Its level decision is one `roundss` plus clamps. It was a call to `floorf`: the SSE2 baseline has no rounding instruction, so GCC calls libm. The accumulator pass is eight lanes wide. |
 | atsc.eq.fit | 0.177 | 0.066 | `syrkLowerT` keeps 4 x 16 tiles in registers over blocks of 256 rows. Each element still adds the rows in order with one fused multiply-add, the same bits as the AVX2 copy of the axpy loop (checked against `std::fma` under Rosetta). |
 | atsc.symclock | 0.175 | 0.089 | The symbol interpolator uses SSE2 (the same additions in the same order, so the same bits). The floor is exact and needs no libm call (`dect2::ifloor`). The buffer limits are converted to double once per call, not per symbol. |
@@ -46,7 +47,7 @@ This branch follows feat39-atscperf (docs/ATSC-PERF-3.9.md). That work brought A
 
 | Stage | Base | New | What changed (x86 only) |
 |---|---|---|---|
-| a3.resample | 0.214 | 0.117 | The shared-window resampler is in AVX2 (`resPadAvx2`), with the lane sums of four outputs formed together. The output position's floor and round need no libm call. The resampler only splits a block over threads when it uses more than a third of real time (`ATSC3_SPLIT=1/0` forces it). |
+| a3.resample | 0.214 | 0.117 | The shared-window resampler is in AVX2 (`resPadAvx2`), with the lane sums of four outputs formed together. The output position's floor and round need no libm call. The resampler only splits a block over threads when it uses more than a third of real time. Otherwise the same parts run one after the other (`ATSC3_SPLIT=1/0` forces it). |
 | a3.search | 0.113 | 0.091 | The bootstrap search compares its metrics squared. On x86, `std::abs` of a complex is a `hypot` call. The template products are written out, because the complex operator's NaN check kept that loop scalar. |
 | a3.ofdm.fft+est | 0.096 | 0.105 | unchanged (noise) |
 | a3.ofdm.equalise, ldpc, others | ~0.17 | ~0.18 | unchanged |
@@ -61,7 +62,7 @@ The ATSC 1.0 sample thread (inside `feed()`, with MXCSR restored on return), its
 
 ## Quality (same runner, base against new)
 
-- **Tests:** atsc_rx, atsc_fec, atsc_realworld, atsc3_sync, atsc3_frame, atsc3_stream, atsc3_receiver, atsc3_engine, atsc3_realworld, fft_bits and atsc_cpu pass on the final code (run 42937781102).
+- **Tests:** atsc_rx, atsc_fec, atsc_realworld, atsc3_sync, atsc3_frame, atsc3_stream, atsc3_receiver, atsc3_engine, atsc3_realworld, fft_bits and atsc_cpu pass on the final code (run 42945110183). In the same run the base failed atsc3_engine with the race described below.
 - **atsc_rx, 12 seeds, x86** (`ATSC_RX_SEEDS=12`; `ATSC_RX_CASE` now takes comma-separated names). Good packets, base → new:
 
   | Case | Base | New |
@@ -72,8 +73,12 @@ The ATSC 1.0 sample thread (inside `feed()`, with MXCSR restored on return), its
   | three echoes + CFO + SRO | 232111 | 232115 |
 
   Wrong packets: 0 in every case. The x86 base gives exactly the same counts on Intel and AMD runners.
-- **ATSC 1.0 at 10 Msps, test signal:** 49868 packets on both builds. 431 are flagged, against 409 on base, all within the first 933, before lock-up.
-- **ARM:** see the macOS comparison below.
+- **ATSC 1.0 at 10 Msps, test signal:** 49868 packets on both builds. 415 are flagged, against 409 on base, all within packets 131 to 933, before lock-up.
+- **ARM (macOS arm64 runner, base and new on the same runner, run 42945106852):**
+  - All 14 atsc_rx cases give identical packet, good, flagged and wrong counts.
+  - ATSC 1.0 at 10 Msps gives 50180 packets with 576 flagged on both builds.
+  - CPU is within that runner's noise: 1.33 together, against 1.23 for base. An earlier run gave 1.50 against 1.50.
+  - One commit before, macOS showed two atsc_rx cases with changed flagged counts. The cause was where the filter split its block when no helper thread ran; that is fixed.
 
 ## atsc3_engine on Linux
 
