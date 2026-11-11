@@ -8,6 +8,7 @@
 #include "dect2/gnss/gnss_tel.h"
 #include "dect2/net/aprs_gate.h"
 #include "dect2/net/feed_targets.h"
+#include "dect2/net/sonde_upload.h"
 #include "dect2/vdl2/vdl2_tel.h"
 #include <atomic>
 #include <condition_variable>
@@ -37,6 +38,7 @@ struct FeedConfig {
     std::string aprsServer = "rotate.aprs2.net"; int aprsServerPort = 14580;
     AprsGateConfig aprsGate;                                   // rate limits and the duplicate window of the iGate (aprs_gate.h)
     std::vector<FeedTarget> targets;                           // outbound aggregator targets (feed_targets.h), each off until enabled
+    std::vector<SondeUploadTarget> sondeTargets;               // radiosonde upload to APRS-IS aggregators (sonde_upload.h), each off until enabled
     std::string stationId = "OnAir";                           // station_id in the ACARS / VDL2 JSON
 };
 

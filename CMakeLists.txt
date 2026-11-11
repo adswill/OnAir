@@ -302,6 +302,7 @@ target_sources(dect2core PRIVATE core/src/ros/ros_detect.cpp)   # ROS identifier
 # TLS for the remote-control API (headless server): OpenSSL, off by default so the packages need no extra library (docs/headless-server.md)
 option(DECT2_WITH_TLS "Serve the remote-control API over HTTPS / wss (links OpenSSL)" OFF)
 target_sources(dect2core PRIVATE core/src/net/tls_conn.cpp core/src/net/remote_json.cpp)
+target_sources(dect2core PRIVATE core/src/net/sonde_upload.cpp)   # radiosonde upload to APRS-IS aggregators
 target_sources(dect2core PRIVATE core/src/integrations/mqtt.cpp core/src/integrations/integrations.cpp core/src/integrations/msg_archive.cpp)   # Integrations: MQTT client, webhook and JSON-lines sinks (docs/INTEGRATIONS.md)
 target_sources(dect2core PRIVATE core/src/net/swarm.cpp core/src/net/swarm_net.cpp core/src/net/swarm_ctl.cpp)   # LAN swarm: announce packets, merged results, range splitting, pairing handshake, memory sync
 if(UNIX AND NOT APPLE AND NOT DECT2_WITH_TLS)
@@ -1393,6 +1394,9 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_aprs_gate tests/net/test_aprs_gate.cpp)   # APRS-IS iGate rules, rate limits, passcode handling, a fake server on localhost
   target_link_libraries(test_aprs_gate PRIVATE dect2core)
   add_test(NAME aprs_gate COMMAND test_aprs_gate)
+  add_executable(test_sonde_upload tests/net/test_sonde_upload.cpp)   # radiosonde APRS-IS upload: formats and a mock APRS-IS server on localhost
+  target_link_libraries(test_sonde_upload PRIVATE dect2core)
+  add_test(NAME sonde_upload COMMAND test_sonde_upload)
   add_executable(test_feed_targets tests/net/test_feed_targets.cpp)
   target_link_libraries(test_feed_targets PRIVATE dect2core)
   add_test(NAME feed_targets COMMAND test_feed_targets)

@@ -2,6 +2,7 @@
 #include "dect2/session/mode_adapters.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/sonde/sonde_rx.h"
+#include "dect2/net/sonde_upload.h"
 #include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
 #include "dect2/dsp/fftutil.h"
@@ -602,6 +603,11 @@ struct SondeReceiver::Impl {
             if (s.batteryV >= 0) ev.num("batt_v", s.batteryV);
             if (s.sats >= 0) ev.num("sats", s.sats);
             automation::emit(std::move(ev));
+        }
+        if (f.hasPos && SondeUpload::get().wanted()) {   // the aggregator upload (sonde_upload.h): off unless the user enabled a target; it rate-limits per sonde itself
+            SondeInfo up = s;
+            up.freqHz = centerHz > 0 ? centerHz + s.offsetHz : r->announcedHz;
+            SondeUpload::get().frame(up, (double)time(nullptr));
         }
     }
 

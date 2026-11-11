@@ -3,6 +3,7 @@
 // holds up this thread). A slow client gets its data dropped once it has 512 kB waiting.
 #include "dect2/common/thread_name.h"
 #include "dect2/net/feeds.h"
+#include "dect2/net/sonde_upload.h"
 #include "dect2/common/timecompat.h"
 #include "dect2/ais/ais_proto.h"
 #include "dect2/net/feed_targets.h"
@@ -353,6 +354,7 @@ Feeds::~Feeds() { stop(); }
 void Feeds::configure(const FeedConfig& c) {
     netInit();
     FeedTargets::get().configure(c.targets);
+    SondeUpload::get().configure(c.sondeTargets);
     Impl& I = *impl_;
     I.gate.configure(c.aprsGate);
     bool any = false;
@@ -388,6 +390,7 @@ FeedStatus Feeds::status(int id) const {
 
 void Feeds::stop() {
     FeedTargets::get().stop();
+    SondeUpload::get().stop();
     Impl& I = *impl_;
     for (auto& w : want_) w.store(false);
     {
