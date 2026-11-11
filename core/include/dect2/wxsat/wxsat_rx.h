@@ -26,6 +26,7 @@ public:
     void clearImage();
     void feed(const cf32* x, size_t n);
     bool telemetry(WxsatTelemetry& out, uint64_t lastSeq);
+    uint64_t idleInputSamples() const;   // input samples let go by unprocessed while there was no signal (the no-signal pre-check; tests)
     void clearResults();
     std::string saveResults() const;
     bool loadResults(const std::string& blob);

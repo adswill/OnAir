@@ -4,6 +4,7 @@
 #include "dect2/isdbs/isdbs.h"
 #include "dect2/isdbs/isdbs_rx.h"
 #include "../../core/src/isdbs/isdbs_fec.h"
+#include <algorithm>
 #include <chrono>
 #include <cmath>
 #include <cstdio>
@@ -402,6 +403,50 @@ int main(int argc, char** argv) {
         IsdbsTelemetry t;
         rx.telemetry(t, 0);
         CHECK(!t.locked && pk == 0, "noise must not lock (locked %d, state %d, %llu packets)", (int)t.locked, t.state, (unsigned long long)pk);
+    }
+
+    printf("-- receiver, 0.6 s of noise (most of it let go by), then a signal\n");
+    {
+        const double fs = 57.72e6;
+        IsdbsReceiver rx;
+        rx.configure(fs);
+        std::vector<uint8_t> all;
+        rx.setPacketCallback([&](const uint8_t* p, size_t c, double) { all.insert(all.end(), p, p + c * 188); });
+        std::mt19937 rng(11);
+        std::normal_distribution<float> nd(0.f, 0.2f / std::sqrt(2.f));   // the level of the signal that follows
+        std::vector<cf32> buf(65536);
+        uint64_t seq = 0, fed = 0, lastRep = 0, maxGap = 0;
+        IsdbsTelemetry t;
+        const uint64_t noiseN = (uint64_t)(0.6 * fs);
+        while (fed < noiseN) {
+            for (auto& v : buf) v = cf32(nd(rng), nd(rng));
+            rx.feed(buf.data(), buf.size());
+            fed += buf.size();
+            if (rx.telemetry(t, seq)) { seq = t.seq; maxGap = std::max(maxGap, fed - lastRep); lastRep = fed; }
+        }
+        maxGap = std::max(maxGap, fed - lastRep);
+        const double idle = (double)rx.idleInputSamples() / (double)fed;
+        printf("  noise: %.0f %% of the input let go by, longest gap between reports %.2f s, %zu packets\n", 100 * idle, maxGap / fs, all.size() / 188);
+        CHECK(all.empty() && !t.locked, "noise: %zu packets", all.size() / 188);
+        CHECK(idle > 0.6, "noise: only %.0f %% of the input let go by", 100 * idle);
+        CHECK(maxGap <= (uint64_t)fs, "noise: %.2f s without a report", maxGap / fs);
+        GenConfig g = single(kTc8psk23, 12, 300e3, 0);
+        g.sampleRate = fs;
+        Generator gen(g);
+        const uint64_t sigN = (uint64_t)(160.0 * kFrameSyms / g.symbolRate * fs);
+        uint64_t firstAt = 0;
+        for (uint64_t done = 0; done < sigN; done += buf.size()) {
+            gen.generate(buf.data(), buf.size());
+            rx.feed(buf.data(), buf.size());
+            if (!firstAt && !all.empty()) firstAt = done + buf.size();
+        }
+        RunResult r;
+        rx.telemetry(r.tel, 0);
+        size_t bad = 0, gaps = 0;
+        const size_t good = countGood(all, 0x40, "after the noise", &bad, &gaps);
+        printf("  first packets %.3f s after the signal started\n", firstAt / fs);
+        CHECK(good > 1500 && bad == 0, "after the noise: %zu good %zu bad", good, bad);
+        CHECK(firstAt > 0 && firstAt < (uint64_t)(0.12 * fs), "first packets %.3f s after the signal started", firstAt / fs);
     }
 
     printf("%s\n", g_fail ? "FAILED" : "all ok");

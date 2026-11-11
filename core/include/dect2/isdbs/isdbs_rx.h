@@ -58,6 +58,7 @@ public:
     void reset();
     void feed(const std::complex<float>* x, size_t n);
     bool telemetry(IsdbsTelemetry& out, uint64_t lastSeq);
+    uint64_t idleInputSamples() const;   // input samples let go by unprocessed while there was no signal (the no-signal pre-check; tests)
     void setLogCallback(std::function<void(const std::string&)> cb);
     // The decoded transport stream: whole 188 byte packets, `secs` of signal time since the previous call. Runs on the receiver thread.
     void setPacketCallback(std::function<void(const uint8_t* packets, size_t nPackets, double secs)> cb);
