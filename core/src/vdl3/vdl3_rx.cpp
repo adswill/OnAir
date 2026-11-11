@@ -64,7 +64,7 @@ struct Vdl3Receiver::Impl {
     int64_t bestIdx = 0;
     cd bestD;
     int bestFam = 0;
-    int64_t busyUntil = -1;                   // the end of the last good burst: training sequences found inside it are its own data
+    int64_t busyUntil = -1;                   // the last symbol of the last good burst: training sequences starting inside it are its own data
     double blkSum = 0;
     int blkN = 0;
     std::vector<double> blkMeans;
@@ -170,7 +170,7 @@ struct Vdl3Receiver::Impl {
         vdl3Scramble(bits);
         Vdl3Decoded dec;
         if (!vdl3DecodePayload(sy, L, bits, dec)) return;
-        if (dec.golayOk) busyUntil = p.syncEnd + (int64_t)kSps * (L + 4);
+        if (dec.golayOk) busyUntil = p.syncEnd + (int64_t)kSps * L;   // its last payload symbol
         Vdl3Burst m;
         m.serial = ++serial;
         m.timeSec = (double)p.syncEnd / (kSps * kVdl3SymbolRate);
@@ -269,7 +269,9 @@ struct Vdl3Receiver::Impl {
         while (!pend.empty() && a >= pend.front().syncEnd + (int64_t)kSps * (kMaxPayload + 10) + 2 && (pend.size() > 1 || winLeft == 0)) {
             const Pend p = pend.front();
             pend.erase(pend.begin());
-            if (p.syncEnd > busyUntil) decode(p);
+            // a training sequence that starts inside the last good burst is that burst's own data: bursts on one channel never overlap (ramps and
+            // a guard time lie between them). The end of the sequence alone let one that began in a burst's last symbols through (vdl3_all)
+            if (p.syncEnd - (int64_t)kSps * (kVdl3SyncSyms - 1) > busyUntil) decode(p);
         }
         if (z.size() > 65536) {
             int64_t keep = (int64_t)z.size() - kSps * 40;
