@@ -100,7 +100,7 @@ private:
         std::vector<float> band(E.begin() + kLo, E.begin() + kHi); const float medE = median(band);
         std::vector<int> cand;
         for (int pass = 0; pass < 3; pass++) {
-            int kb = -1; for (int k = kLo; k < kHi; k++) { bool near = false; for (int c : cand) if (std::abs(k - c) < 20) near = true; if (!near && (kb < 0 || E[k] > E[kb])) kb = k; }
+            int kb = -1; for (int k = kLo; k < kHi; k++) { bool close = false; for (int c : cand) if (std::abs(k - c) < 20) close = true; if (!close && (kb < 0 || E[k] > E[kb])) kb = k; }
             if (kb < 0 || E[kb] < (float)kRateRatio * medE) break;
             cand.push_back(kb);
         }

@@ -13,7 +13,7 @@ static std::vector<Item> items(const X40Telemetry& t) {
         if (sscanf(f.second.c_str(), "%lf MHz, %lf dB over the noise (+-%lf dB), %39[^,], drift %lf Hz/min, scatter %lf Hz, present %d of %d", &x.mhz, &x.level, &sd, kind, &x.drift, &x.jitter, &a, &b) >= 6) { x.bare = std::string(kind).find("bare") == 0; v.push_back(x); } }
     return v;
 }
-static const Item* near(const std::vector<Item>& v, double hz, double centre, double tol = 8) { for (auto& x : v) if (std::fabs(x.mhz * 1e6 - (centre + hz)) < tol) return &x; return nullptr; }
+static const Item* findNear(const std::vector<Item>& v, double hz, double centre, double tol = 8) { for (auto& x : v) if (std::fabs(x.mhz * 1e6 - (centre + hz)) < tol) return &x; return nullptr; }
 
 int main() {
     const double fs = 1000000, centre = 145e6, noise = 2e-6;
@@ -32,12 +32,12 @@ int main() {
         };
         auto t = runChunks(x40::Birdie, fs, 100.0, gen, 0, centre, 0.5);
         auto v = items(t);
-        const Item* a = near(v, 123456.7 + shift + 0.5 * 100 * 0.95, centre, 40), *b = near(v, -75000.3 + shift, centre, 6), *w = near(v, 300000.0 + shift, centre, 8);
+        const Item* a = findNear(v, 123456.7 + shift + 0.5 * 100 * 0.95, centre, 40), *b = findNear(v, -75000.3 + shift, centre, 6), *w = findNear(v, 300000.0 + shift, centre, 8);
         CHECK(a != nullptr, "shift %.0f: drifting carrier missing (%zu listed: %s)", shift, v.size(), t.headline.c_str());
         if (a) { CHECK(std::fabs(a->drift - 30.0) < 3.0, "drift %.1f Hz/min want 30", a->drift); CHECK(a->bare, "drifting carrier not 'bare'"); }
         CHECK(b != nullptr && b->bare && std::fabs(b->drift) < 1.0, "steady carrier: %s", b ? "listed but drifts or not bare" : "missing");
         CHECK(w != nullptr, "weak carrier (41 dB in its bin) missing");
-        CHECK(near(v, -240000.0 + shift, centre, 400) == nullptr, "keyed carrier listed as persistent");
+        CHECK(findNear(v, -240000.0 + shift, centre, 400) == nullptr, "keyed carrier listed as persistent");
         for (auto& x : v) if (std::fabs(x.mhz * 1e6 - (centre + 450000 + shift)) < 15000) CHECK(!x.bare, "an FM signal listed as a bare carrier");
         CHECK(countKind(t, "Carrier") >= 3, "carrier rows %d", countKind(t, "Carrier"));
         if (shift == 0) printf("  listed %zu carriers, strongest %.0f dB, weak one %.0f dB over the noise\n", v.size(), v.empty() ? 0.0 : v[0].level, w ? w->level : 0.0);
@@ -49,7 +49,7 @@ int main() {
     printf("carrier level over the noise (one 61 Hz bin of the averaged spectrum) -> found:");
     for (double amp : {0.003, 0.001, 0.0005, 0.0003, 0.0002, 0.00015, 0.0001}) {
         ToneScene sc(fs, noise, 6); SchedTone a; a.hz = 55555.5; a.amp = amp; sc.tones.push_back(a);
-        auto t = runChunks(x40::Birdie, fs, 60.0, std::ref(sc), 0, centre, 0.5); const bool ok = near(items(t), 55555.5, centre, 8) != nullptr;
+        auto t = runChunks(x40::Birdie, fs, 60.0, std::ref(sc), 0, centre, 0.5); const bool ok = findNear(items(t), 55555.5, centre, 8) != nullptr;
         const double db = 10 * std::log10(amp * amp * 8192.0 * 8192.0 / (noise * 6144.0));
         printf(" %.0f dB:%s", db, ok ? "yes" : "no");
         if (db >= 18) CHECK(ok, "%.0f dB not found", db);

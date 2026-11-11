@@ -72,7 +72,7 @@ private:
         const double bh = rate_ / (double)nf_; const int kLo = std::max(3, (int)(kMinBaud / bh)), kHi = (int)(rate_ / 5.0 / bh);
         std::vector<float> band(E.begin() + kLo, E.begin() + kHi); const float med = median(band);
         std::vector<int> cand;
-        for (int pass = 0; pass < 3; pass++) { int kb = -1; for (int k = kLo; k < kHi; k++) { bool near = false; for (int c : cand) if (std::abs(k - c) < 20) near = true; if (!near && (kb < 0 || E[k] > E[kb])) kb = k; } if (kb < 0 || E[kb] < 8.f * med) break; cand.push_back(kb); }
+        for (int pass = 0; pass < 3; pass++) { int kb = -1; for (int k = kLo; k < kHi; k++) { bool close = false; for (int c : cand) if (std::abs(k - c) < 20) close = true; if (!close && (kb < 0 || E[k] > E[kb])) kb = k; } if (kb < 0 || E[kb] < 8.f * med) break; cand.push_back(kb); }
         // a symbol-rate line is also the strongest at the baud and the lower candidates are its sub-harmonics: try each, keep the best eye
         Res best; best.snr = -1e9;
         for (int kc : cand) {
