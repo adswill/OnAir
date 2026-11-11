@@ -34,6 +34,7 @@ namespace dect2 {
 bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOptions& file) {
     std::lock_guard<std::recursive_mutex> ctl(engineControlMutex());
     stop();
+    { std::lock_guard<std::mutex> lk(rxMu_); rxTel_ = RxTelemetry(); }   // the last report of the previous mode must not be shown as this mode's (its seq stays below rxPub_)
     cpuAccounts();   // the receiver's CPU accounts (its number may have changed since the last start)
     noTuneOffset_ = dev.tunesAtDial();   // a sound card or a Hamlib rig's audio has no DC spike to tune off: the signal is where the IF centre puts it (0 Hz)
     ring_.clear();
