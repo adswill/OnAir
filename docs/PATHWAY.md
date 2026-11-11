@@ -1535,3 +1535,25 @@ Changes:
 
 Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
 Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.
+
+## 2026-11-11 EchoLink, Winlink and OnAir Web leftovers (feat39-netleft)
+
+The documented leftovers of the three 3.9 network features are done. Everything was tested on mocks, simulated channels and 127.0.0.1 only; no real EchoLink server, proxy, Winlink gateway or CMS was contacted.
+
+- **EchoLink.**
+  - Hosting a conference: one session per station, an 80 ms mixer that sends everyone the others plus the host, the station list in the info text, chat passed on, a station limit, NAT pairs told apart by port.
+  - The proxy (relay) mode, following SvxLink's EchoLinkProxy: the nonce + MD5 log-in, UDP and the directory TCP carried in blocks.
+  - Test `echolink_conf`. Two talkers at once each hear only the other at about 6000 of 6000. 10 % loss, duplicates and reordering still pass. The loopback conference and the client behind a mock proxy pass.
+- **Winlink.**
+  - A cut-off message is held and resumed with `!offset`. Both the wl2k-go and the FBB v1 layouts are read.
+  - gzip `FD` proposals with the `G` SID flag. The fixed-Huffman deflate is OnAir's own, and Python's gzip read its output.
+  - P2P between two OnAir stations: gateway entries marked as a station, and Listen for a station.
+  - AX.25 gained the T3 idle poll.
+  - Test `winlink_p2p`: 24 of 24 cut sessions resumed, and P2P worked over AX.25 1200, 9600 with 15 % loss and gzip, and ARDOP with 10 % loss.
+- **OnAir Web.**
+  - Waterfall zoom: the server cuts the part from its FFT, up to 64x, with at least 64 bins.
+  - Mode options: 257 options for 113 standards, generated from the receivers' setters by `tools/gen_web_options.py`, with a `--check` in the gate.
+  - Digital-voice speech in the browser for DMR, P25, P25 phase 2, NXDN, dPMR, D-STAR, M17 and Fusion. It comes from their audio taps, and the demodulator is off for those modes.
+  - Tests: `web_app_client` passed locally, `web_schema` and `webapp` were extended.
+
+Docs: ECHOLINK-3.9.md, WINLINK-3.9.md, WEB-3.9.md and WEB-SCHEMA-3.9.md.

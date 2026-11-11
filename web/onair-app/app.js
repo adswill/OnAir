@@ -101,7 +101,8 @@
     };
   }
   function send(o) { if (S.ws && S.ws.readyState === 1) S.ws.send(JSON.stringify(o)); }
-  function sub() { send({ type: "sub", panel: true, status: true, spectrum: $("specon").checked, bins: S.bins, fps: S.fps, panelMs: S.panelMs, audio: S.listening, rate: S.arate }); }
+  function sub() { send({ type: "sub", panel: true, status: true, spectrum: $("specon").checked, bins: S.bins, fps: S.fps, panelMs: S.panelMs, audio: S.listening, rate: S.arate,
+                          zoom: S.spec ? S.spec.zoom : 1, zoomHz: S.spec ? S.spec.zoomHz : 0 }); }
   function setState(cls, text) { $("dot").className = "dot " + cls; $("state").textContent = text; }
   function onText(j) {
     if (j.type === "hello") { S.perms = L.permissions(j); return; }
@@ -117,6 +118,10 @@
     setState(s.running ? "ok" : s.wanted ? "wait" : "", s.running ? "receiving" + (s.device ? " - " + s.device : "") : s.wanted ? "waiting for the radio" : "stopped");
     $("startbtn").textContent = s.running || s.wanted ? "Stop" : "Start";
     $("startbtn").className = s.running || s.wanted ? "" : "p";
+    if (S.spec && isFinite(s.captureCentreHz)) S.spec.setCapture(s.captureCentreHz, s.captureRateHz);
+    $("listenbtn").title = s.audioSource === "voice" ? "Listen: the decoded speech of this voice mode (needs the voice codec installed on the server, as in the desktop app)"
+                         : s.audioSource === "fm" ? "Listen: the FM broadcast" : "Listen: the Listen demodulator (Radio card)";
+    S.optValues = s.options && s.options.values ? s.options.values : {};
     if (isFinite(s.frequencyHz) && !S.editingFreq) { S.tuneHz = s.frequencyHz; $("freq").textContent = L.formatMhz(s.frequencyHz); S.spec.setTune(s.frequencyHz); }
     $("modename").textContent = row ? row.name + (row.sub ? "" : "") : (s.mode || "Mode");
     if (!S.focus("gain")) $("gain").value = Math.round(s.gainDb);
@@ -128,7 +133,56 @@
     if (s.app) t.push(s.app.viewers + " visitor" + (s.app.viewers === 1 ? "" : "s"));
     $("about").textContent = t.join(" - ") || "stopped";
     const key = row ? row.family + "/" + row.sub : "";
-    if (key !== S.lastRow) { S.lastRow = key; S.panel.clear(); S.lastPanelSeq = -1; $("panelTitle").textContent = row ? row.name : "Decoder"; renderQuick(row); }
+    if (key !== S.lastRow) { S.lastRow = key; S.panel.clear(); S.lastPanelSeq = -1; $("panelTitle").textContent = row ? row.name : "Decoder"; renderQuick(row); S.optKey = ""; }
+    renderOptions(row);
+  }
+
+  // ---- the mode's own options (generated from the receivers' setters: web_options.h), the owner only; Simple / Advanced as the panel
+  function renderOptions(row) {
+    const box = $("options");
+    const schema = row && S.options ? S.options[String(row.standard)] : null;
+    if (!schema || !S.perms.owner) { box.hidden = true; box.textContent = ""; S.optKey = ""; return; }
+    const items = L.buildOptions(schema, S.optValues, S.advanced);
+    const key = row.standard + "/" + (S.advanced ? 1 : 0) + "/" + JSON.stringify(S.optValues);
+    if (key === S.optKey || box.contains(document.activeElement)) return;
+    S.optKey = key;
+    box.hidden = !items.length;
+    box.textContent = "";
+    const h = el("div", "opt-head", "Options"); box.appendChild(h);
+    const set = async (name, v) => {
+      if (!isFinite(v)) { toast("not a valid value", true); return; }
+      try { const r = await api("option", { name, value: v }); if (r.current) S.optValues = r.current.values || {}; S.optKey = ""; renderOptions(row); }
+      catch (e) { toast(e.message, true); }
+    };
+    for (const it of items) {
+      const lab = el("label", "opt");
+      lab.title = it.help;
+      const name = el("span", "", it.label + (it.unit ? " (" + it.unit + ")" : ""));
+      if (it.kind === "bool") {
+        const c = el("input"); c.type = "checkbox"; c.checked = it.value === 1; c.onchange = () => set(it.name, L.optionValue("bool", c.checked));
+        lab.appendChild(c); lab.appendChild(name);
+      } else if (it.kind === "choice") {
+        const sel = el("select");
+        if (it.value === null) { const o = el("option", "", "(as the mode starts)"); o.value = ""; sel.appendChild(o); }
+        for (const c of it.choices) { const o = el("option", "", c.l); o.value = c.v; if (it.value === c.v) o.selected = true; sel.appendChild(o); }
+        sel.onchange = () => { if (sel.value !== "") set(it.name, L.optionValue("choice", sel.value)); };
+        lab.appendChild(name); lab.appendChild(sel);
+      } else if (it.kind === "mask") {
+        lab.appendChild(name);
+        for (const c of it.choices) {
+          const cb = el("input"); cb.type = "checkbox"; cb.checked = it.value !== null && (it.value & c.v) !== 0;
+          cb.onchange = () => set(it.name, L.maskToggle(it.value === null ? 0 : it.value, c.v, cb.checked));
+          const l2 = el("span", "muted", c.l); lab.appendChild(cb); lab.appendChild(l2);
+        }
+      } else {
+        const inp = el("input"); inp.type = "text"; inp.inputMode = "decimal"; inp.size = 8; inp.value = it.value === null ? "" : String(it.value);
+        inp.placeholder = it.value === null ? "as the mode starts" : "";
+        inp.onkeydown = (ev) => { if (ev.key === "Enter") inp.blur(); };
+        inp.onchange = () => set(it.name, L.optionValue(it.kind, inp.value));
+        lab.appendChild(name); lab.appendChild(inp);
+      }
+      box.appendChild(lab);
+    }
   }
   S.focus = (id) => document.activeElement === $(id);
 
@@ -145,7 +199,7 @@
     S.panel.render(widgets, "No fields reported yet.");
   }
   $("advanced").checked = S.advanced;
-  $("advanced").onchange = () => { S.advanced = $("advanced").checked; localStorage.setItem("onair.advanced", S.advanced ? "1" : "0"); };
+  $("advanced").onchange = () => { S.advanced = $("advanced").checked; localStorage.setItem("onair.advanced", S.advanced ? "1" : "0"); S.optKey = ""; if (S.status) renderOptions(S.status.row); };
 
   // ---- quick controls under the spectrum: the mode's sub-modes (siblings in the same family)
   function renderQuick(row) {
@@ -190,6 +244,7 @@
   async function loadModes() {
     S.modes = await api("modes");
     S.schemas = await api("schema");
+    try { const o = await api("options"); S.options = o.schemas || {}; } catch (e) { S.options = {}; }
   }
   function showModes() {
     if (!S.modes) return;
@@ -356,6 +411,10 @@
   // ---- start
   async function main() {
     S.spec = new window.SpectrumView($("spec"), $("wf"), $("tuneline"), (hz, live) => tune(hz, live));
+    S.spec.onZoom = (z) => { $("zoomtxt").textContent = z + "\u00d7"; sub(); };
+    $("zoomin").onclick = () => S.spec.zoomBy(1);
+    $("zoomout").onclick = () => S.spec.zoomBy(-1);
+    $("zoomtxt").onclick = () => S.spec.zoomBy(0);
     S.panel = new window.PanelView($("panel"));
     try { await loadSession(); } catch (e) { setState("", "server unreachable"); setTimeout(main, 3000); return; }
     if (S.session.role !== "none") {

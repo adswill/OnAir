@@ -75,3 +75,8 @@ canvas.const,canvas.map,canvas.spark{width:100%;background:#000;border-radius:6p
   input[type=range]{width:60px}#settingsbtn,#recbtn{display:none}
   #spec{height:120px}#wf{height:220px}.panel{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
 }
+.zoom{display:inline-flex;gap:2px}.zoom button{min-height:30px;padding:2px 9px}
+.options{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:flex-end;padding:8px 10px;margin:0 0 10px;border:1px solid var(--line);border-radius:9px;background:var(--card)}
+.options .opt-head{width:100%;font-weight:600;font-size:13px}
+.options label.opt{flex-direction:row;align-items:center;gap:6px;flex-wrap:wrap;color:var(--fg);font-size:13px}
+.options input[type=text]{width:7em;min-height:32px;padding:4px 8px}.options select{min-height:32px;padding:4px 8px}

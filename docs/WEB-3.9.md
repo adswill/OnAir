@@ -42,8 +42,44 @@ Coverage per mode row of the mode table (app/ui/mode_table.cpp, 295 rows):
 | Mode Builder, Plugins | not receivers; a plugin mode shows the common block |
 
 Every one of the 290 receiver rows can be selected through the page; tests/server/test_webapp.cpp selects each and checks the server
-reports it back. What the panel cannot do yet: TV video and the sound of the digital voice modes are not streamed (the server's audio is
-the Listen demodulator, as in 3.8); the hand-drawn desktop plots (channel response, impulse response) appear as lists.
+reports it back. What the panel cannot do yet: TV video is not streamed; the hand-drawn desktop plots (channel response, impulse response)
+appear as lists.
+
+### Mode options
+
+Above the decoder panel, the owner sees the mode's own options. Visitors never see them: the options change how the receiver decodes for
+everyone. The options are generated, not written per mode (tools/gen_web_options.py, docs/WEB-SCHEMA-3.9.md "Mode options"). They are
+the receivers' own public setters, the same functions the desktop panels call:
+
+| setter takes | control |
+|---|---|
+| bool | a checkbox |
+| enum | a list |
+| int whose comment lists its values ("0 automatic, 1 DVB-S only, 2 DVB-S2 only") | a list |
+| int whose comment lists bits ("1 POCSAG, 2 FLEX") | checkboxes |
+| any other number | a field |
+
+The first four options of a mode are Simple; Advanced shows all of them, the same switch as the panel's. The help text is the
+setter's comment. 113 standards have 257 options between them.
+
+Setters the engine or the Radio card own are left out by name: tuning, offsets, sample rates, gain, volume and mute, sound devices,
+files, keys, transmit and callbacks. A value is checked before it is used:
+
+* it must be finite
+* whole for an int, a list or bits
+* 0 or 1 for a checkbox
+* one of the listed values, or only the listed bits
+
+The value is then applied at once and again at every start. It is kept in `server.conf` as `opt.<standard>.<setter>`. The page shows
+the values set from the page; an option never set shows "as the mode starts", because the receivers have no getters to read
+back.
+
+The desktop app shows its own controls, which are hand-made per mode. Where those use a setter, the browser has the same setting;
+where the desktop does more (a combined control, a map click, a list editor), the browser does not. The data-driven set is what the
+receivers' headers declare.
+
+Not covered: standards whose receiver has no accessor of the same name in `Engine` (the shared families such as weather satellites, the
+SatDump tiers and the HF utility modes, 89 standards) and options of other types (strings, 64-bit counters, structs).
 
 ## Access and security
 
@@ -120,11 +156,40 @@ admin API token and `mcp_*`. Those are docs/ONAIR-WEB.md.
 
 ## Audio and latency
 
-Listen opens an AudioWorklet fed by 16 kHz PCM frames (40 ms each) from the server's Listen demodulator; the jitter buffer aims at 100 ms
+What Listen plays depends on the mode:
+
+| mode | what is heard |
+|---|---|
+| FM broadcast | the FM receiver's stereo, as in 3.8 |
+| DMR, P25 (phase 1 and 2), NXDN, dPMR, D-STAR, M17, System Fusion | the receiver's decoded speech: the PCM the desktop plays, upsampled from the codec's 8 kHz to 48 kHz and then to the page's rate |
+| every other mode | the Listen demodulator |
+
+The status message's `audioSource` says which (`fm`, `voice`, `monitor`), and the Listen button's tooltip tells it.
+
+For the voice modes the demodulator is switched off, so its noise never mixes with the speech. Speech needs the voice codec the user
+installed on the server, as on the desktop, since OnAir ships no patented codec (docs/CODECS.md). Only clear calls are heard:
+encrypted calls are decoded only with keys the user imported. DMR is now silenced on the server, as the other voice modes already
+were, so the server's own speakers stay quiet.
+
+TETRA voice is not routed: its speech goes to a codec sink, not to an audio tap.
+
+Listen opens an AudioWorklet fed by 16 kHz PCM frames (40 ms each) from the server; the jitter buffer aims at 100 ms
 and drops the oldest audio past 400 ms, so on a LAN the delay is about 150 ms, through the relay about 150 ms plus the round trip. The rate
 is a setting (8 to 48 kHz; 16 kHz is 256 kbit/s); the owner's demodulator choice (auto, NFM, AM, USB, LSB) applies to everyone listening.
 "Save audio in the browser" writes a WAV of what you heard; nothing is written on the server. **Record** (owner) writes the raw IQ of the
 capture as `.cf32` into `rec_dir`, named with the mode, frequency, time and rate so OnAir can play it back.
+
+## Waterfall zoom
+
+The `-`, `1x` and `+` buttons in the spectrum toolbar zoom the spectrum and the waterfall in steps of two, up to 64 times. Ctrl or Cmd with
+the wheel zooms about the pointer: the frequency under it stays put.
+
+The server cuts the visible part out of its own FFT before reducing it to the row's bins, so a zoomed row keeps the full resolution of the
+FFT. At least 64 FFT bins stay visible, and a bigger zoom stops there. The part is centred on the frequency asked for and moved inside the
+capture at the edges. When the tuned frequency leaves the part shown, the page centres on it again. The waterfall is cleared when the zoom
+changes, because rows of different spans would not line up.
+
+The spectrum frame format is unchanged: its centre and width are those of the part shown.
 
 ## Phones and touch
 
@@ -165,7 +230,8 @@ Everything the page does is HTTP under `/app/v1/` (JSON, POST bodies are flat ob
 | `POST start {device?}`, `stop`, `mode {family, sub} or {id}`, `frequency {hz}`, `gain {db}`, `samplerate {hz}`, `bandwidth {hz}`, `demod {demod}`, `autostart {on}` | control (owner, or visitors when allowed) |
 | `POST record/start {kind:"iq"}`, `record/stop`, `tx/start`, `tx/stop` | owner |
 | `GET settings`, `POST settings {key: value, ...}`, `GET viewers` | owner |
-| `GET ws?csrf=...` | the WebSocket: send `{"type":"sub","panel":true,"status":true,"spectrum":true,"bins":1024,"fps":10,"panelMs":500,"audio":true,"rate":16000}`; `{"type":"tune","hz":..}`, `{"type":"gain","db":..}`, `{"type":"ping","t":..}`, `{"type":"bye"}`. Receive text `hello`, `status`, `panel`, `pong`, `error`; binary `[1]` spectrum (u32 seq, f32 centre, rate, floor, top, u8 bins) and `[2]` audio (u32 rate, PCM16 mono) |
+| `GET options`, `POST option {name, value}` | the mode options: every standard's option schema and the values set; setting one is the owner's (403 otherwise; 400 for a bad name or value) |
+| `GET ws?csrf=...` | the WebSocket: send `{"type":"sub","panel":true,"status":true,"spectrum":true,"bins":1024,"fps":10,"panelMs":500,"audio":true,"rate":16000,"zoom":4,"zoomHz":100500000}` (zoom 1 to 1024, zoomHz the centre of the part shown); `{"type":"tune","hz":..}`, `{"type":"gain","db":..}`, `{"type":"ping","t":..}`, `{"type":"bye"}`. Receive text `hello`, `status`, `panel`, `pong`, `error`; binary `[1]` spectrum (u32 seq, f32 centre, rate, floor, top, u8 bins) and `[2]` audio (u32 rate, PCM16 mono) |
 
 ## Tests and CI
 
@@ -183,12 +249,34 @@ integrator's.
   It is **opt-in** (`ONAIR_PLAYWRIGHT=1` and `npm i playwright@1.49.1 && npx playwright install chromium`), skipped otherwise: the shared CI
   runners do not download a browser. The WebSocket-level checks of `webapp` cover the server side without one.
 
+## Tests of the 3.9 additions
+
+* **`web_app_client`**
+  * zoom steps and limits
+  * the centre kept inside the capture
+  * zooming about the pointer (the frequency under it stays within 1e-9 of its place)
+  * following the tuning
+  * the option model: Simple / Advanced, values, kinds, bit toggles
+* **`web_schema`**
+  * every generated option schema is valid JSON
+  * NaN, an unknown name, fractions for whole kinds, out-of-list values and foreign bits are refused
+  * every checkbox, list and bits option is applied on an idle `Engine` (a safe value: off, the first entry, the first bit)
+* **`webapp`**
+  * zoom 4 about a quarter span up gives a row a quarter as wide centred there
+  * a huge zoom stops at 64 bins
+  * a centre outside the capture is moved in
+  * zoom 1 gives the whole capture again
+  * the options API: get, set, refusals, the status value, the settings file
+  * `audioSource` for ADS-B, M17 and FM
+  * the M17 speech of the test signal reaches the browser. This runs only where the Codec2 library is installed; otherwise it says it was skipped
+
+Simulated only: all of these ran on the built-in test signal and 127.0.0.1.
+
 ## What is left
 
-* TV video and digital voice audio in the browser (the server streams the Listen demodulator only).
-* Per-mode controls beyond the shared ones (sub-mode buttons exist; a mode's own options such as a PLP or a service need a settings schema
-  like the panel's).
-* The waterfall shows the capture's span only (no zoom into a part of it; the classic page's per-listener receivers do that).
+* TV video in the browser.
+* TETRA speech in the browser (its codec sink has no audio tap).
+* Mode options for the 89 standards without a matching `Engine` accessor, and options taking strings or structs.
 * Several owner accounts, a second factor, and a persistent session store.
 * The smoke test in CI once a runner with a browser is acceptable.
 * Real-radio and real-internet trials: everything above ran on the test signal and 127.0.0.1 (the proxy header stands in for the relay).

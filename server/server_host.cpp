@@ -12,6 +12,7 @@
 #include "dect2/net/netradio.h"
 #include "dect2/results/rx_json.h"
 #include "dect2/results/web_schema.h"
+#include "dect2/results/web_options.h"
 #include "dect2/source/agc.h"
 #include "dect2/source/gain.h"
 #include "dect2/source/iq_file.h"
@@ -56,7 +57,14 @@ ServerHost::ServerHost(ConfigFile& cfg) : cfg_(cfg) {
     e_.specx().setSilent(true); e_.uplink().setSilent(true); e_.specan().setSilent(true); e_.astro().setSilent(true);
     e_.iono().setSilent(true); e_.qo100().setSilent(true); e_.general().setSilent(true); e_.hfbeacon().setSilent(true);
     e_.same().setSilent(true); e_.dstar().setSilent(true); e_.nxdn().setSilent(true); e_.dpmr().setSilent(true);
-    e_.p25().setSilent(true); e_.mac().setSilent(true);
+    e_.p25().setSilent(true); e_.mac().setSilent(true); e_.dmr().setSilent(true);
+    // Digital voice: the receivers' decoded speech (the same sound the desktop plays) goes to the browser while such a mode is chosen.
+    // Only clear calls reach these taps: encrypted voice is decoded only with keys the user imported, as in the desktop app.
+    auto v8 = [this](const float* x, size_t n) { if (voiceTap_.load(std::memory_order_relaxed)) voiceIn(x, n, 8000); };
+    e_.dmr().setAudioTap([this](const float* l, const float* r, size_t n) { if (voiceTap_.load(std::memory_order_relaxed)) audioIn(l, r, n, false); });
+    e_.p25().setAudioTap(v8); e_.p25p2().setAudioTap(v8); e_.nxdn().setAudioTap(v8); e_.dpmr().setAudioTap(v8);
+    e_.dstar().setAudioTap(v8); e_.m17().setAudioTap(v8);
+    e_.fusion().setAudioTap([this](const float* x, size_t n, int rate) { if (voiceTap_.load(std::memory_order_relaxed)) voiceIn(x, n, rate); });
     e_.fm().setAudioTap([this](const float* l, const float* r, size_t n) { if (fmTap_.load(std::memory_order_relaxed)) audioIn(l, r, n, false); });
     e_.monitor().setSink([this](const float* s, int frames) { audioIn(s, nullptr, (size_t)frames, true); });
     buildModes();
@@ -209,6 +217,12 @@ bool ServerHost::startLocked(std::string& err) {
     e_.setBandwidthAuto(false);
     e_.setSpectrumEnabled(true);
     fmTap_ = m.family == 7;
+    {
+        const ModeTuning* mt = modeTuning(m.family);
+        const std::string id = mt && mt->id ? mt->id : "";
+        voiceTap_ = id == "dmr" || id == "p25" || id == "p25p2" || id == "nxdn" || id == "dpmr" || id == "dstar" || id == "m17" || id == "fusion";
+    }
+    applyOptionsLocked();
     quality_.reset();
     if (!e_.start(d, tune_, file)) {
         size_t n = 0;
@@ -216,6 +230,7 @@ bool ServerHost::startLocked(std::string& err) {
         err = "could not start the receiver" + (log.empty() ? std::string() : ": " + log.back());
         return false;
     }
+    applyOptionsLocked();   // again: start() may have set the receiver up afresh
     applyMonitor();
     return true;
 }
@@ -241,7 +256,7 @@ void ServerHost::applyMonitor() {
     bool any;
     { std::lock_guard<std::mutex> lk(aMu_); any = !listeners_.empty(); }
     MonitorConfig c;
-    c.on = any && modes_[(size_t)modeIdx_].family != 7;   // FM broadcast has its own stereo audio (the tap); every other mode is heard through the monitor
+    c.on = any && modes_[(size_t)modeIdx_].family != 7 && !voiceTap_.load();   // FM broadcast and the digital voice modes have their own audio (the taps); every other mode is heard through the monitor
     c.demod = effectiveDemod();
     c.yield = false;
     c.net = false;
@@ -499,23 +514,113 @@ std::string ServerHost::spectrumJson(int maxBins, uint64_t& seq) {
     return o + "]}";
 }
 
-bool ServerHost::spectrumBinary(int bins, uint64_t& seq, std::string& frame) {
+bool ServerHost::spectrumBinary(int bins, uint64_t& seq, std::string& frame) { return spectrumBinaryZoom(bins, 1, 0, seq, frame); }
+
+bool ServerHost::spectrumBinaryZoom(int bins, double zoom, double centreHz, uint64_t& seq, std::string& frame) {
     std::lock_guard<std::mutex> lk(snapMu_);
     if (spec_.dbfs.empty()) return false;
     seq = spec_.seq;
-    const std::vector<float> v = decimateMax(spec_.dbfs, bins);
+    const size_t total = spec_.dbfs.size();
+    double rate = specRateHz_, centre = specCentreHz_;
+    std::vector<float> part;
+    const std::vector<float>* src = &spec_.dbfs;
+    if (std::isfinite(zoom) && zoom > 1.0001 && rate > 0 && total >= 128) {
+        const double z = std::min(zoom, (double)total / 64.0);   // at least 64 bins stay
+        const size_t n = std::max<size_t>(64, (size_t)std::lround((double)total / z));
+        const double binHz = rate / (double)total;
+        // the first bin of the part: centred on centreHz, moved inside the capture
+        const double c = std::isfinite(centreHz) && centreHz > 0 ? centreHz : centre;
+        long long first = (long long)std::llround((c - (centre - rate / 2)) / binHz - (double)n / 2);
+        first = std::max(0LL, std::min((long long)(total - n), first));
+        part.assign(spec_.dbfs.begin() + first, spec_.dbfs.begin() + first + (long long)n);
+        rate = binHz * (double)n;
+        centre = (specCentreHz_ - specRateHz_ / 2) + binHz * ((double)first + (double)n / 2);
+        src = &part;
+    }
+    const std::vector<float> v = decimateMax(*src, std::min<int>(bins, (int)src->size()));
     const float floorDb = -120.f, topDb = 0.f;
     frame.clear();
     frame.push_back('\x01');
     auto put32 = [&](uint32_t x) { for (int i = 0; i < 4; i++) frame.push_back((char)((x >> (8 * i)) & 0xFF)); };
     auto putF = [&](float f) { uint32_t x; memcpy(&x, &f, 4); put32(x); };
     put32((uint32_t)spec_.seq);
-    putF((float)specCentreHz_); putF((float)specRateHz_); putF(floorDb); putF(topDb);
+    putF((float)centre); putF((float)rate); putF(floorDb); putF(topDb);
     for (float d : v) frame.push_back((char)(unsigned char)std::lround(std::max(0.f, std::min(1.f, (d - floorDb) / (topDb - floorDb))) * 255.f));
     return true;
 }
 
+// ---------------------------------------------------------------- mode options
+int ServerHost::telemetryStandard() const {
+    const int f = modes_[(size_t)modeIdx_].family;
+    return f >= 8 ? f - 1 : -1;   // engine standard = family + 2, telemetry standard = family + 1 (docs/WEB-SCHEMA-3.9.md)
+}
+
+void ServerHost::applyOptionsLocked() {
+    const int sd = telemetryStandard();
+    const char* schema = sd >= 0 ? webschema::optionsJson(sd) : nullptr;
+    if (!schema) return;
+    const std::string pre = "opt." + std::to_string(sd) + ".";
+    // every option the schema names that the settings file holds a value for
+    for (const char* p = std::strstr(schema, "{\"n\":\""); p; p = std::strstr(p + 6, "{\"n\":\"")) {
+        const char* q = std::strchr(p + 6, '"');
+        if (!q) break;
+        const std::string name(p + 6, (size_t)(q - p - 6));
+        if (!cfg_.has(pre + name)) continue;
+        std::string why;
+        webschema::applyOption(e_, sd, name, cfg_.num(pre + name, 0), why);
+    }
+}
+
+bool ServerHost::setOption(const std::string& name, double value, std::string& err) {
+    std::lock_guard<std::mutex> lk(mu_);
+    const int sd = telemetryStandard();
+    if (sd < 0 || !webschema::optionsJson(sd)) { err = "this mode has no options of its own"; return false; }
+    if (!webschema::applyOption(e_, sd, name, value, err)) return false;
+    cfg_.setNum("opt." + std::to_string(sd) + "." + name, value);
+    dirty_ = true;
+    return true;
+}
+
+std::string ServerHost::optionValuesJson() {
+    std::lock_guard<std::mutex> lk(mu_);
+    const int sd = telemetryStandard();
+    std::string o = "{\"standard\":" + std::to_string(sd) + ",\"values\":{";
+    const char* schema = sd >= 0 ? webschema::optionsJson(sd) : nullptr;
+    bool first = true;
+    const std::string pre = "opt." + std::to_string(sd) + ".";
+    for (const char* p = schema ? std::strstr(schema, "{\"n\":\"") : nullptr; p; p = std::strstr(p + 6, "{\"n\":\"")) {
+        const char* q = std::strchr(p + 6, '"');
+        if (!q) break;
+        const std::string name(p + 6, (size_t)(q - p - 6));
+        if (!cfg_.has(pre + name)) continue;
+        if (!first) o += ',';
+        first = false;
+        o += "\"" + name + "\":" + jsonNum(cfg_.num(pre + name, 0));
+    }
+    return o + "}}";
+}
+
+std::string ServerHost::audioSource() const {
+    return fmTap_.load() ? "fm" : voiceTap_.load() ? "voice" : "monitor";
+}
+
 // ---------------------------------------------------------------- audio for the browser
+// Speech at its codec's rate (8 kHz for AMBE, IMBE, Codec2) up to the 48 kHz audioIn takes, by linear interpolation
+void ServerHost::voiceIn(const float* x, size_t n, int rate) {
+    if (!x || !n || rate <= 0 || rate > 48000) return;
+    if (rate != voiceRate_) { voiceRate_ = rate; voicePhase_ = 0; voiceLast_ = 0; }
+    const double step = (double)rate / 48000.0;
+    std::vector<float> out;
+    out.reserve((size_t)((double)n / step) + 2);
+    for (size_t i = 0; i < n; i++) {
+        const float a = voiceLast_, b = x[i];
+        while (voicePhase_ < 1.0) { out.push_back(a + (b - a) * (float)voicePhase_); voicePhase_ += step; }
+        voicePhase_ -= 1.0;
+        voiceLast_ = b;
+    }
+    audioIn(out.data(), out.data(), out.size(), false);
+}
+
 void ServerHost::audioIn(const float* a, const float* b, size_t n, bool interleaved) {
     std::lock_guard<std::mutex> lk(aMu_);
     if (listeners_.empty()) return;
