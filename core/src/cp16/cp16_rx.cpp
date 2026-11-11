@@ -104,7 +104,6 @@ struct Cp16Receiver::Impl {
     // what was measured
     bool combOk = false, timeOk = false;
     int lostCount = 0;
-    uint64_t searches = 0;
     double combF = 0, combD = 15;    // comb: positions combF + j * combD, j = 0 .. 15 (baseband Hz)
     bool lsb = false;
     double period = 0;               // samples a row
@@ -202,11 +201,11 @@ struct Cp16Receiver::Impl {
         double manB = 0, manS = 0; int side = 0;
         { std::lock_guard<std::mutex> lk(mu); manB = manBase; manS = manSpacing; side = manSide; }
         if (manS > 0) { sp0 = manS - 0.3; sp1 = manS + 0.3; }
-        const bool near0 = combOk && (++searches % 10) != 0;   // following a found comb: search around it, the whole band now and then
+        const bool near0 = combOk;   // following a found comb: only around it (less than half a spacing), so its numbering stays; lost, the whole band again
         if (near0) { sp0 = std::max(sp0, combD - 0.3); sp1 = std::min(sp1, combD + 0.3); }
         // where to search: a manual base frequency, or the strongest 300 Hz of the band
         std::vector<std::pair<double, double>> ranges;
-        if (near0) ranges.push_back({combF - 20, combF + 20});
+        if (near0) ranges.push_back({combF - 0.4 * combD, combF + 0.4 * combD});
         else if (manB > 0) {
             const double spanMax = 15 * sp1;
             // the given frequency itself (a few Hz of tuning error): a comb further off could be another tone of the signal, a pilot or a marker
