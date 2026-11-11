@@ -41,7 +41,7 @@ struct MockModem {
     std::string lineBuf, calledMy, calledPeer;
     bool connected = false, listening = false;
     std::vector<uint8_t> frameBuf;
-    bool asCaller = false;
+    bool asCaller = false, firstData = false;
 
     static sock_t mkListen(int& port) {
         sock_t s = socket(AF_INET, SOCK_STREAM, 0);
@@ -91,7 +91,7 @@ struct MockModem {
         connected = true;
         if (arq()) sendLine("NEWSTATE ISS"), sendLine("CONNECTED " + dst + " 500");
         else sendLine("CONNECTED " + src + " " + dst + (type == ModemType::VaraFM ? "" : " " + callerBw));
-        sendLine("PTT ON"); sendLine("BUSY ON"); sendLine("PTT OFF"); sendLine("BUSY OFF");
+        sendLine("PTT ON"); sendLine("BUSY ON");   // switched off again at the first data
         if (!arq()) sendLine("IAMALIVE");
         if (type == ModemType::Mercury) { sendLine("SN 8.2"); sendLine("BITRATE (3) 1200 BPS"); }
         if (arq()) {   // an ID frame before the data: not session data
@@ -165,10 +165,10 @@ struct MockModem {
         } else payload.assign(d, d + n);
         if (payload.empty()) return;
         { std::lock_guard<std::mutex> lk(mu); gotData.insert(gotData.end(), payload.begin(), payload.end()); }
-        sendLine("BUFFER " + std::to_string(payload.size()));
+        if (!firstData) { firstData = true; sendLine("PTT OFF"); sendLine("BUSY OFF"); }
+        sendLine("BUFFER " + std::to_string(payload.size()));   // stays until the next data or DISCONNECTED
         if (gw.s) gw.s->onBytes(payload.data(), payload.size());
         if (peerClient) peerClient->onBytes(payload.data(), payload.size());
-        sendLine("BUFFER 0");
     }
 
     void startPeerCall() {   // this mock is the caller of a P2P session: our station was listening
@@ -434,10 +434,12 @@ void testDropMid() {
         MockModem m;
         m.begin(t);
         m.dropAfterBytes = 300;
-        m.gw.waiting.push_back(msg("LY1GW", kMyCall, "big", std::string(3000, 'r'), t0));
+        std::mt19937 rg(7);
+        auto rnd = [&](size_t n) { std::string r; for (size_t i = 0; i < n; i++) r += (char)('a' + rg() % 26); return r; };   // does not compress
+        m.gw.waiting.push_back(msg("LY1GW", kMyCall, "big", rnd(3000), t0));
         const std::string dir = tempDir("extmodem-drop");
         Mailbox mb(dir);
-        mb.save(Folder::Outbox, msg(kMyCall, "friend@example.com", "outgoing", std::string(4000, 'x'), t0 + 2));
+        mb.save(Folder::Outbox, msg(kMyCall, "friend@example.com", "outgoing", rnd(4000), t0 + 2));
         WinlinkStation st(mb);
         std::string err;
         CHECK(st.start(baseCfg(m), 0, err), "start");
