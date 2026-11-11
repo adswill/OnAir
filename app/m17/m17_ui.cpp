@@ -185,9 +185,9 @@ void mapView(App& a) {
         const double span = std::max(0.005, std::max(lo1 - lo0, (la1 - la0) * 1.4));
         S.map.zoom = std::max(2, std::min(14, (int)std::floor(std::log2(0.7 * size.x * 360.0 / (256.0 * span)))));
     }
-    const double lat0 = S.map.lat, lon0 = S.map.lon;
+    const double lat0 = S.map.lat, lon0 = S.map.lon; const int zoom0 = S.map.zoom;
     adsbmap::draw(S.map, size);
-    if (S.map.lat != lat0 || S.map.lon != lon0) S.mapFollow = false;
+    if (S.map.lat != lat0 || S.map.lon != lon0 || S.map.zoom != zoom0) S.mapFollow = false;   // panned or zoomed (the wheel at the centre moves nothing)
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
     if (on) {

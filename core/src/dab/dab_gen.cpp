@@ -462,6 +462,10 @@ struct Transmitter::Impl {
         for (const auto& f : fig013()) place(1, f);
         if (cfg.pty >= 0 && subs.size() <= 8) place(1, fig017());
         if (cfg.annCluster > 0 && subs.size() <= 6) { place(1, fig018()); if (cfg.annActive) place(0, fig019()); }
+        for (size_t k = 0; k < cfg.extraFigs.size(); k++) {   // in turn, from where this frame's turn starts, as many as fit
+            const auto& x = cfg.extraFigs[(size_t)((m + k) % cfg.extraFigs.size())];
+            if (!x.data.empty() && x.data.size() <= 29) place(1, fig(x.type, x.data));
+        }
         const size_t nl = subs.size() + 1;
         for (size_t k = 0; k < 3; k++) {
             const size_t idx = (size_t)((m * 3 + k) % nl);

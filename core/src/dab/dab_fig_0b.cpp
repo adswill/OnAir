@@ -251,7 +251,7 @@ void fig0_22(Fig& g) {   // 8.1.9
             g.add(1, "SubId Fields:");
             const auto pos = g.ctx->mainPos.find(key);
             for (int j = i; j < i + n * 6 && j < g.len - 5; j += 6) {
-                const int sub = f[j] >> 3, td = ((f[j] & 3) << 8) | f[j + 1];
+                const int sub = f[j] >> 3, td = ((f[j] & 7) << 8) | f[j + 1];   // TD: 11 bits (EN 300 401 V1.4.1 figure 53)
                 const int16_t dla = (int16_t)g.u16(j + 2), dlo = (int16_t)g.u16(j + 4);
                 g.add(2, pf("Transmitter SubId 0x%X", sub));
                 g.add(3, pf("SubId=0x%X", sub));

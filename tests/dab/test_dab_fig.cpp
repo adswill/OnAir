@@ -4,7 +4,9 @@
 #include "dect2/dab/dab_fig.h"
 #include "dect2/dab/dab_announce.h"
 #include "dect2/dab/dab_gen.h"
+#include "dect2/fm/fm_dx.h"
 #include "../common/jobs.h"
+#include "../../app/dab/dab_txlist.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -306,6 +308,106 @@ static void testEnsembleChange() {
     CHECK(rx.ensemble().services.empty(), "reset clears the services");
 }
 
+// The transmitter data an ensemble may carry (EN 300 401 V1.4.1): FIG 0/22 positions with the 11-bit time delay, FIG 0/11 regions (a TII
+// list, a rectangle) with their FIG 1/3 names, the country from EId + ECC; then all of it from a simulated network through the receiver
+// (noise, a carrier offset, 8-bit samples) and matched the way the Map tab does (app/dab/dab_txlist.h). The ids and places are test values.
+static std::vector<uint8_t> label16(uint8_t head, uint8_t id, const char* l) {
+    std::vector<uint8_t> v{head, id};
+    for (int i = 0; i < 16; i++) v.push_back((uint8_t)(l[i] ? l[i] : ' '));
+    v.push_back(0xFF); v.push_back(0x00);
+    return v;
+}
+
+static void testTransmitterData() {
+    const std::vector<uint8_t> main5 = {22, 5, 77, 203, 17, 253, 188};                           // MainId 5 at 54.7, 25.3
+    const std::vector<uint8_t> sub5 = {22, 133, 1, 24, 40, 2, 70, 254, 221};                     // 5/3: 0.1 N, 0.1 W of it, 40 us
+    const std::vector<uint8_t> main6 = {22, 6, 77, 203, 17, 253, 188};                           // MainId 6: only its reference point
+    const std::vector<uint8_t> sub6 = {22, 0x86, 1, (uint8_t)(7 << 3 | 0x05), 0xDC, 0, 0, 0, 0};  // 6/7 at the reference, TD 0x5DC = 1500 us (11 bits)
+    const std::vector<uint8_t> reg = {0x0B, 0x00, 0x41, 0x04, 0x05, 0x02, 0x19, 0xC0};          // region 0x041: TII list MainId 5, SubIds 3 and 7
+    const std::vector<uint8_t> box = {0x0B, 0x10, 0x41, 0x4C, 0xCD, 0x11, 0xC7, 0x0B, 0x60, 0xB6}; // region 0x041: 54.0 N 25.0 E, extents 0.5 / 1.0
+    const std::vector<uint8_t> lab = label16(0x03, 0x01, "Test Region");                         // FIG 1/3: region (lower part) 1
+    {
+        DabFicAnalysis a;
+        a.figs.push_back(rec(0, 22, 0, 0, 0, main5)); a.figs.push_back(rec(0, 22, 0, 0, 0, sub5));
+        a.figs.push_back(rec(0, 22, 0, 0, 0, main6)); a.figs.push_back(rec(0, 22, 0, 0, 0, sub6));
+        a.figs.push_back(rec(0, 11, 0, 0, 0, reg)); a.figs.push_back(rec(0, 11, 0, 0, 0, box)); a.figs.push_back(rec(1, 3, 0, 0, 0, lab));
+        const DabFicInfo i = dabFicInfo(a);
+        const DabFicInfo::SubTx* s67 = nullptr;
+        for (const auto& t : i.subTransmitters) if (t.mainId == 6 && t.subId == 7) s67 = &t;
+        CHECK(s67 && s67->delayUs == 1500 && s67->placed && std::fabs(s67->lat - 54.7) < 0.001, "0/22 TD is 11 bits: %d us, 1500 sent", s67 ? s67->delayUs : -1);
+        const DabFigDecoded d = dabFigDecode(rec(0, 22, 0, 0, 0, sub6), dabFigContext(a));
+        CHECK(has(d, "TD=1500 us"), "the analyser shows TD=1500 us");
+        CHECK(i.regions.size() == 1, "%zu regions, one sent in two FIGs", i.regions.size());
+        if (i.regions.size() == 1) {
+            const auto& g = i.regions[0];
+            CHECK(g.id == 0x041 && g.tii.size() == 2 && g.tii[0] == std::make_pair(5, 3) && g.tii[1] == std::make_pair(5, 7), "0/11 TII list (%zu)", g.tii.size());
+            CHECK(g.hasBox && std::fabs(g.lat - 54.0) < 0.01 && std::fabs(g.lng - 25.0) < 0.01 && std::fabs(g.extLat - 0.5) < 0.01 && std::fabs(g.extLng - 1.0) < 0.01, "0/11 rectangle");
+            CHECK(g.label == "Test Region", "1/3 region label '%s'", g.label.c_str());
+            CHECK(i.regionOf(5, 7) == &g && !i.regionOf(5, 4) && !i.regionOf(6, 7), "region of a transmitter");
+        }
+        CHECK(rdsCountry(0x10BC, 0xE0) == "DE" && rdsCountry(0xD210, 0xE0) == "DE" && rdsCountry(0xC221, 0xE1) == "GB" &&
+              rdsCountry(0x8001, 0xE3) == "NL" && rdsCountry(0x4001, 0xE1) == "CH" && rdsCountry(0x10BC, -1).empty(), "ensemble country from EId + ECC");
+    }
+    // ---- through the receiver: four transmitters heard, the ensemble sends the positions of some
+    dabgen::TxConfig tc;
+    tc.eid = 0x10BC;
+    tc.utcSeconds = 1700000000;
+    tc.tii = {{5, 3, 0.0}, {6, 7, -3.0}, {6, 11, -6.0}, {9, 12, -9.0}};
+    tc.tiiEveryFrame = true;
+    tc.extraFigs = {{0, {0x09, 0x02, 0xE0, 0x01}}, {0, main5}, {0, sub5}, {0, main6}, {0, sub6}, {0, reg}, {0, box}, {1, lab}};
+    SynthConfig sc;
+    sc.snrDb = 20; sc.cfoHz = 800;
+    const double rate = 2.048e6;
+    auto syn = makeDabSynth(tc, sc, rate);
+    CHECK(syn != nullptr, "no generator");
+    if (!syn) return;
+    DabReceiver rx;
+    rx.configure(rate);
+    rx.audio().setSilent(true);
+    rx.select(-1);
+    std::vector<cf32> x(65536);
+    const size_t total = (size_t)(6.0 * rate);
+    for (size_t done = 0; done < total; done += x.size()) {
+        const size_t n = std::min(x.size(), total - done);
+        syn->generate(x.data(), n);
+        for (size_t k = 0; k < n; k++) x[k] = cf32(std::round(x[k].real() * 127.f) / 127.f, std::round(x[k].imag() * 127.f) / 127.f);
+        rx.feed(x.data(), n);
+    }
+    DabTelemetry t;
+    rx.telemetry(t, 0);
+    const DabEnsemble ens = rx.ensemble();
+    CHECK(t.state == 2 && ens.eid == 0x10BC, "lock %d, EId %04X", t.state, ens.eid);
+    CHECK(t.tii.size() == 4, "%zu transmitters heard, 4 sent", t.tii.size());
+    const DabFicInfo fi = dabFicInfo(rx.ficAnalysis());
+    CHECK(fi.hasEcc && rdsCountry(ens.eid, fi.ecc) == "DE", "the ensemble's country");
+    CHECK(fi.transmitters.size() == 2 && fi.subTransmitters.size() == 2 && fi.regions.size() == 1 && fi.regions[0].label == "Test Region",
+          "FIGs through the receiver: %zu main, %zu sub, %zu regions", fi.transmitters.size(), fi.subTransmitters.size(), fi.regions.size());
+    // the Map tab's matching: the ensemble's positions, then one transmitter from a list
+    std::map<uint64_t, dabtx::Site> lists, air;
+    for (const auto& m : fi.transmitters) { dabtx::Site s; s.lat = m.lat; s.lon = m.lng; s.src = dabtx::Src::AirMain; s.mainRef = m.mainId; air[dabtx::key(ens.eid, m.mainId, 0)] = s; }
+    for (const auto& u : fi.subTransmitters) if (u.placed) { dabtx::Site s; s.lat = u.lat; s.lon = u.lng; s.src = dabtx::Src::Air; air[dabtx::key(ens.eid, u.mainId, u.subId)] = s; }
+    dabtx::Row row;
+    CHECK(dabtx::parse("10BC,9,12,50.10000,8.60000,Test site,2,178.352", row) == dabtx::Line::Ok, "a list line");
+    dabtx::Site ls; ls.lat = row.lat; ls.lon = row.lon; ls.name = row.site; ls.src = dabtx::Src::Shared; lists[dabtx::key(row.eid, row.mainId, row.subId)] = ls;
+    int exact = 0, approx = 0, listed = 0, unknown = 0;
+    for (const auto& h : t.tii) {
+        const dabtx::Site* p = dabtx::resolve(lists, air, ens.eid, h.mainId, h.subId);
+        if (!p) unknown++;
+        else if (p->src == dabtx::Src::Air) exact++;
+        else if (p->src == dabtx::Src::AirMain) approx++;
+        else listed++;
+        if (h.mainId == 5 && h.subId == 3) CHECK(p && std::fabs(p->lat - 54.8) < 0.001 && std::fabs(p->lon - 25.2) < 0.001, "5/3 at its broadcast position");
+        if (h.mainId == 6 && h.subId == 11) CHECK(p && p->src == dabtx::Src::AirMain && p->mainRef == 6, "6/11: only MainId 6's reference");
+    }
+    CHECK(exact == 2 && approx == 1 && listed == 1 && unknown == 0, "matched: %d exact, %d approximate, %d from the list, %d unknown", exact, approx, listed, unknown);
+    lists.clear();
+    int left = 0;
+    for (const auto& h : t.tii) if (!dabtx::resolve(lists, air, ens.eid, h.mainId, h.subId)) left++;
+    CHECK(left == 1, "without the list, 9/12 stays unknown (%d)", left);
+    jprintf("  transmitter data: %zu TII heard, FIG 0/22 %zu+%zu, region '%s'\n", t.tii.size(), fi.transmitters.size(), fi.subTransmitters.size(),
+            fi.regions.empty() ? "" : fi.regions[0].label.c_str());
+}
+
 int main() {
     testEnsembleChange();
     testDecoders();
@@ -313,6 +415,7 @@ int main() {
     testReceiver();
     testAnnounce();
     testUtf8Labels();
+    testTransmitterData();
     if (fails) { jprintf("%d FAILED\n", fails); return 1; }
     jprintf("test_dab_fig: all passed\n");
     return 0;

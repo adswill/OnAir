@@ -261,10 +261,47 @@ DabFicInfo dabFicInfo(const DabFicAnalysis& a) {
                         i++;
                         for (int j = 0; j < n && i + 6 <= len; j++, i += 6) {
                             DabFicInfo::SubTx t;
-                            t.mainId = main; t.subId = f[i] >> 3; t.delayUs = ((f[i] & 3) << 8) | f[i + 1];
+                            t.mainId = main; t.subId = f[i] >> 3; t.delayUs = ((f[i] & 7) << 8) | f[i + 1];   // TD: 11 bits (figure 53)
                             t.lat = (int16_t)(f[i + 2] << 8 | f[i + 3]) * 90.0 / 524288; t.lng = (int16_t)(f[i + 4] << 8 | f[i + 5]) * 180.0 / 524288;
                             c.subTransmitters.push_back(t);
                         }
+                    }
+                }
+                break;
+            case 11:   // region definitions (8.1.16.1): GATy 0 a TII list, GATy 1 a rectangle; a region may come in both kinds
+                if (r.oe) break;
+                for (int i = 1; i + 2 <= len;) {
+                    const int gaty = f[i] >> 4, global = (f[i] >> 3) & 1, id = ((f[i] & 7) << 8) | f[i + 1];
+                    i += 2;
+                    DabFicInfo::Region* g = nullptr;
+                    for (auto& q : c.regions) if (q.id == id) g = &q;
+                    if (!g) { c.regions.emplace_back(); g = &c.regions.back(); g->id = id; }
+                    g->global = global;
+                    if (gaty == 0) {
+                        if (i >= len) break;
+                        const int end = std::min(len, i + 1 + (f[i] & 0x1F));   // length of the TII list in bytes, after this byte
+                        i++;
+                        while (i + 2 <= end) {
+                            const int main = f[i] & 0x7F, nb = f[i + 1] & 0x1F;   // length of the SubId list in bytes: 5-bit SubIds, zero padding
+                            i += 2;
+                            const int se = std::min(end, i + nb);
+                            for (int bit = 0; (i * 8 + bit + 5) <= se * 8; bit += 5) {
+                                const int at = i * 8 + bit;
+                                const int v = (((f[at / 8] << 8) | f[at / 8 + 1]) >> (11 - at % 8)) & 0x1F;
+                                if (v >= 1 && v <= 23) g->tii.push_back({main, v});
+                            }
+                            i = se;
+                        }
+                        i = end;
+                    } else if (gaty == 1) {
+                        if (i + 7 > len) break;
+                        const int16_t la = (int16_t)(f[i] << 8 | f[i + 1]), lo = (int16_t)(f[i + 2] << 8 | f[i + 3]);
+                        const int el = (f[i + 4] << 4) | (f[i + 5] >> 4), eo = ((f[i + 5] & 15) << 8) | f[i + 6];
+                        g->hasBox = true; g->lat = la * 90.0 / 32768; g->lng = lo * 180.0 / 32768; g->extLat = el * 90.0 / 32768; g->extLng = eo * 180.0 / 32768;
+                        i += 7;
+                    } else {   // reserved kinds carry their length like GATy 0
+                        if (i >= len) break;
+                        i += 1 + (f[i] & 0x1F);
                     }
                 }
                 break;
@@ -281,6 +318,11 @@ DabFicInfo dabFicInfo(const DabFicAnalysis& a) {
             default: break;
         }
     }
+    for (const DabFigRecord& r : a.figs)   // FIG 1/3: region labels, by the lower six bits of the region id (8.1.16.2)
+        if (r.type == 1 && r.ext == 3 && !r.oe && r.data.size() >= 20) {
+            const std::string l = dab_fig_detail::labelUtf8(r.data[0] >> 4, r.data.data() + r.data.size() - 18, 16);
+            for (auto& g : c.regions) if ((g.id & 0x3F) == (r.data[1] & 0x3F)) g.label = l;
+        }
     for (auto& t : c.subTransmitters)   // the offset is from the position of the main identifier
         for (const auto& m : c.transmitters) if (m.mainId == t.mainId) { t.lat += m.lat; t.lng += m.lng; t.placed = true; break; }
     return c;
