@@ -18,7 +18,7 @@ namespace dect2 {
 struct X40Telemetry;
 
 namespace x40 {
-enum Variant : int { RcPpm, Uvb76, Graves, Jove, Beacon, Em4100, UhfRfid, Qi, FmMon, AmMon, PlNoise, Radar, GnssJam, Passband, kNumVariants };
+enum Variant : int { RcPpm, Uvb76, Graves, Jove, Beacon, Em4100, UhfRfid, Qi, FmMon, AmMon, PlNoise, Radar, GnssJam, Passband, VlfMsk, kNumVariants };
 // variant v: family 881 + v, active standard 882 + v, engine standard 883 + v, poll slot 881 + v (kNumFamilies = 900 and kPollSeqSlots = 901 stay)
 constexpr int kFamilyBase = 880;
 constexpr int variantOfActive(int active) { return active >= kFamilyBase + 2 && active <= kFamilyBase + 1 + (int)kNumVariants ? active - kFamilyBase - 2 : -1; }

@@ -327,4 +327,20 @@ struct PbGen {
     static long patSlots(const char* p) { long s = 0; for (; *p; p++) s += *p == '.' ? 2 : *p == '-' ? 4 : *p == ' ' ? 2 : 4; return s; }
 };
 
+
+// ---- VLF MSK ----------------------------------------------------------------------------------------------------------------------------------
+struct Msk { double fcHz = 0, rateBd = 200, snrDb = 0, driftHzPerSec = 0, from = 0, to = 1e9; double fsOut = 8000; unsigned seed = 1; };
+// MSK carrier of amplitude 1 at fcHz (from the tuned frequency) with random bits at rateBd; noise sigma chosen so that the signal is snrDb over the noise in 2 kHz
+inline std::vector<cf32> mskSignal(const Msk& m, double fs, double seconds) {
+    Rng r(m.seed); std::vector<cf32> x((size_t)(fs * seconds)); double ph = 0; int bit = 1; double nextBit = 0;
+    const double sigma = std::sqrt(std::pow(10.0, -m.snrDb / 10) * fs / 2000.0 / 2.0);
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / fs; if (t >= nextBit) { bit = r.g() > 0 ? 1 : -1; nextBit += 1.0 / m.rateBd; }
+        ph += 2 * kPi * (m.fcHz + m.driftHzPerSec * t + bit * m.rateBd / 4) / fs;
+        const float a = (t >= m.from && t < m.to) ? 1.f : 0.f;
+        x[i] = a * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32((float)(sigma * r.g()), (float)(sigma * r.g()));
+    }
+    return x;
+}
+
 }

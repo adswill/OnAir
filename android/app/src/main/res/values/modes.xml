@@ -375,6 +375,7 @@
         <item>Radar pulse analyser</item>
         <item>GNSS interference detector</item>
         <item>Passband signal classifier</item>
+        <item>VLF MSK transmitter monitor</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -731,6 +732,7 @@
         <item>Radar pulse analyser: the pulses of the strongest pulsed emitter (marine, air-traffic or weather radar, needs a 2 Msps radio and the right band converter): pulse width, repetition interval and rate, constant / staggered / jittered spacing, the carrier inside the pulse and the antenna turn time from the beam passing. It measures the emitter, not what it is. Simulated signals only</item>
         <item>GNSS interference detector (L1 1575.42 MHz, L2 1227.6 MHz and others, needs a radio with a few MHz of bandwidth and a GNSS antenna): says whether a navigation band is clean, or holds a tone, narrowband interference, a swept chirp (a car jammer: range, period, rate) or wideband noise, and how strong it is. Detects and describes only; no position is computed. Simulated signals only</item>
         <item>Passband signal classifier: every signal in the 48 kHz around the tuned frequency (a satellite linear transponder, a band segment, a repeater input) is tracked and named after a second and a half: unmodulated carrier, keyed CW, narrow data, SSB or voice-like, or a wideband steady signal, with its offset, width and level. A guess from width and level behaviour; nothing is demodulated. Simulated signals only</item>
+        <item>VLF MSK transmitter monitor (10 - 30 kHz naval long-wave stations): the carrier frequency, the bit rate (50 to 300 bit/s) and the level of a station, and when it goes on, off or changes rate; a list of public carrier frequencies hints at the station. The traffic is encrypted and is not decoded. Needs a radio that reaches the VLF band. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1087,6 +1089,7 @@
         <item>Emitter</item>
         <item>Interference</item>
         <item>Signal</item>
+        <item>Transmitter</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1443,5 +1446,6 @@
         <item>radar pulse analyser pri prf pulse width stagger jitter marine radar x band s band weather radar atc scan period antenna rotation</item>
         <item>gnss gps jammer interference chirp jamming spoofing l1 1575 l2 1227 glonass galileo beidou detector sawtooth</item>
         <item>passband signal classifier transponder linear cw ssb carrier rtty psk activity band scan spotter qo-100 satellite transponder</item>
+        <item>vlf msk naval 24 khz naa nlk nml npm nwc hwu gqd dho38 submarine 200 baud long wave</item>
     </string-array>
 </resources>

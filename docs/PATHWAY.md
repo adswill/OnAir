@@ -1806,3 +1806,7 @@ Pulse analyser: width, PRI and PRF, constant / staggered / jittered classificati
 ## 2026-11-12: GNSS interference detector and passband classifier (families 893, 894)
 
 GNSS interference detector (tone / narrowband / swept chirp with range and period / wideband noise, 4 and 10 Msps) and passband signal classifier (carrier, CW, narrow data, voice-like, wideband in 48 kHz). Tests: classes alone and mixed, levels, start and stop, noise-only false-row runs. Family numbers 886 to 894 listed in docs/FAMILY-NUMBERS-4.0.md. Simulated signals only (docs/GNSSJAM-4.0.md, docs/PASSBAND-4.0.md).
+
+## 2026-11-12: VLF MSK transmitter monitor (family 895)
+
+VLF naval MSK station monitor: carrier and bit rate from the two lines of the squared signal, on / off / rate-change log, station hint from a short frequency list. Encrypted traffic not decoded. Tests: 50 to 300 bit/s, offsets, drift, on / off, noise sweep to -3 dB, 20 min noise false-on run. Simulated signals only (docs/VLFMSK-4.0.md).

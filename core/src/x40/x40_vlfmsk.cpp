@@ -69,7 +69,7 @@ private:
         auto freqOf = [&](int k) { return (k < kFft / 2 ? k : k - kFft) * bin; };
         // the squared band holds frequencies up to twice the signal's: search only within +-1200 Hz of the origin
         int p1 = -1; double v1 = 0; for (int k = 0; k < kFft; k++) { const double f = freqOf(k); if (std::fabs(f) > 1200) continue; if (q[k] > v1) { v1 = q[k]; p1 = k; } }
-        bool sig = p1 >= 0 && v1 > 12.0 * qmed && snr > 3.0;      // a line 10.8 dB over the typical bin, and a signal over the noise
+        bool sig = p1 >= 0 && v1 > 9.0 * qmed;      // a line 9.5 dB over the typical bin of the squared spectrum
         double rate = 0, fc = 0; std::string cls = "carrier only";
         if (sig) {
             // sub-bin position of the first line (parabolic), and the second line
@@ -77,7 +77,7 @@ private:
             int p2 = -1; double v2 = 0;
             for (int k = 0; k < kFft; k++) { const double f = freqOf(k); if (std::fabs(f) > 1200) continue; const double dist = std::fabs(f - freqOf(p1)); if (dist < 20 || dist > 420) continue; if (q[k] > v2) { v2 = q[k]; p2 = k; } }
             const double f1 = pos(p1);
-            if (p2 >= 0 && v2 > 0.2 * v1 && v2 > 12.0 * qmed) {
+            if (p2 >= 0 && v2 > 0.2 * v1 && v2 > 9.0 * qmed) {
                 const double f2 = pos(p2); rate = std::fabs(f2 - f1); fc = (f1 + f2) / 4; cls = "MSK";
             } else fc = f1 / 2;
         }
