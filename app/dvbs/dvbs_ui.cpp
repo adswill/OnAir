@@ -1,6 +1,7 @@
 // DVB-S/S2 screens: lock lamps and readouts, constellation and quality plots, the receiver tab, symbol rate and standard controls,
 // and the options of the test signal.
 #include "app.h"
+#include "d40/d40_ui.h"
 #include "ease/ease_ui.h"
 #include "dect2/satmisc/feed_hunter.h"
 #include "dect2/dvbs/dvbs_s2.h"
@@ -645,6 +646,7 @@ void receiver(App& a) {
     cidSection(a, t);
     streamsSection(a, t);
     ipSection(a, t);
+    d40SatCard(a);   // 4.0: blind scan, modcods, dish pointing (app/d40)
     smart5DvbsCard(a);   // round-5 smart checks: rain fade and margin log (app/smart5)
     ImGui::Spacing();
     ImGui::TextColored(pal::accent(), "NOTES");

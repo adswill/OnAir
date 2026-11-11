@@ -1,6 +1,7 @@
 // Insights (View > Insights; docs/SMART5-ham-3.9.md, SMART5-voice-3.9.md, SMART5-pager-3.9.md, SMART5-hfutil-3.9.md): what the smart analysers of
 // core/include/dect2/insight found in this receiver's own decodes. On by default; they are fed through the automation analyser hook and the FT8 view,
 // and every finding also goes on as an automation event "insight.<kind>". Offline; per talkgroup or system, never per radio.
+#include "../d40/d40_ui.h"
 #include "../app.h"
 #include "dect2/insight/live.h"
 #include "dect2/hfdl/hfdl_proto.h"
@@ -508,6 +509,7 @@ std::string insightBustedHint(const std::string& call, std::string* why) {
 
 void insightWindow(App& a) {
     tick(a);
+    d40Tick(a);   // 4.0 features wired into the mode screens (app/d40, docs/WIRING-4.0.md)
     smart5Tick(a);   // the round-5 engines of broadcast, TV, satellites, GNSS and science (app/smart5), whatever screen is open
     if (!a.insightOpen) return;
     firstWindowSize(760 * gUi, 460 * gUi);

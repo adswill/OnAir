@@ -1787,3 +1787,5 @@ Feat40-feat3 (later): ADS-B orbit detector, clear TX frequency, band hop, Sarsat
 
 ## 2026-11-12 feat40-feat5: group E mode features
 - Satellite, HF, public safety, aviation, rail, LoRa and science helpers: `core/include/dect2/d40/{sat,hf,radio}_e40.h`, tests `sat_e40 hf_e40 radio_e40` (all pass locally, simulated data), doc `docs/FEATURES-4.0-E.md`. Core only, not wired into the GUI.
+## 2026-11-12 4.0 wiring (feat40-wire)
+Cards for the core-only 4.0 engines in app/d40/: FM names + DX alarm, DVB-S blind scan / modcods / dish pointing, sweep activity map + new-signal alert + classification, AM carrier offset / sideband / schedule ID, DAB ranking + transmitter table, ADS-B replay + orbits, transmit link budget / ramp / SWR, talkgroup activity for P25 / NXDN / TETRA, ACARS channel load, AIS coverage + type mix, pager groups. Syntax-checked with clang++ -fsyntax-only only; list of what is still unwired is in docs/WIRING-4.0.md.

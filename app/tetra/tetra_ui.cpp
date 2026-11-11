@@ -1,6 +1,8 @@
 // TETRA screens: the base station table (frequency, network code, location area, colour code, encryption, last heard), the details of
 // the selected carrier, its neighbour cells, the carriers seen in the spectrum, a scan over a span, and the log. Only what base stations
 // broadcast in the clear to every terminal is shown: nothing is decrypted, no voice, no short data, no subscriber identities.
+#include "../d40/d40_ui.h"
+#include "../ui/typography.h"
 #include "app.h"
 #include "ui/voice_why_ui.h"
 #include "dect2/voice/voice_why_modes.h"
@@ -616,6 +618,7 @@ std::string tgTime(int64_t t) {
 }
 
 void talkgroupView(App& a) {
+    if (typo::collapsingHeader(trw("Talkgroup activity"), 0)) d40TetraActivity();   // 4.0 (app/d40)
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("Talkgroups (GSSI) heard in calls that are not encrypted. The list is kept when you close OnAir (tetra_talkgroups.csv in the data folder) and stays on this computer. Terminal numbers (ISSI) are not kept."));
     ImGui::PopTextWrapPos();

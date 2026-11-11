@@ -88,6 +88,7 @@ void levelRow(TxUi& s, const DeviceInfo* radio) {
         if (!radio->txGainNote.empty()) ImGui::TextDisabled("%s", tr(radio->txGainNote.c_str()));
         if (radio->kind == DeviceInfo::HackRF) ImGui::Checkbox(tr("+14 dB amplifier"), &s.ampOn);
         powerReadout(s, radio);   // the predicted output power from this radio's measured table (tx_control_ui.cpp)
+        planReadouts(s, radio);   // 4.0: link budget, ramp steps, SWR advice (app/d40/d40_tx_ui.cpp)
         // the output choice: a radio with one output has no choice; txChannels 0 means not known until it has been opened
         int nOut = radio->txChannels;
         if (nOut <= 0) nOut = radio->board == "uhd" ? 4 : 2;

@@ -1,5 +1,6 @@
 // DAB / DAB+ digital radio panels.
 #include "app.h"
+#include "d40/d40_ui.h"
 #include "dab/played_ui.h"
 #include "panels/journaline_view.h"
 #include "panels/enhance_ui.h"
@@ -774,6 +775,7 @@ void dabRadioTab(App& a) {
         }
     }
     ImGui::Spacing();
+    d40DabCard(a);   // 4.0: service ranking, transmitter table (app/d40)
     smart5DabCard(a);   // round-5 smart checks: ensemble change log, fault or reception (app/smart5)
     if (ImGui::BeginTable("dabtbl", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 34 * gUi);

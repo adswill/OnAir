@@ -1,4 +1,5 @@
 // Pagers screens: lamps for the signal, the sync and the two protocols; the message list with a filter; the statistics per speed.
+#include "../d40/d40_ui.h"
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
@@ -524,6 +525,7 @@ void statsView(App& a) {
 void capcodeView(App& a) {
     const dect2::PagerTelemetry& t = a.rx.pager;
     if (!live(a)) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see the capcodes"); ImGui::PopTextWrapPos(); return; }
+    d40PagerGroupsCard();   // 4.0: capcode groups (app/d40)
     const std::vector<dect2::PagerHeard> rows = dect2::pagerHeardTable(messagesOf(t));
     const bool wide = wideActive(a);
     ImGui::PushTextWrapPos(0);

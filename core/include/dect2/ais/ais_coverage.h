@@ -61,34 +61,34 @@ private:
     int n_; std::vector<Sector> s_; double lat_ = 0, lon_ = 0; bool has_ = false;
 };
 
-enum class AisClass : uint8_t { Unknown, Cargo, Tanker, Passenger, Fishing, Tug, Sailing, Pleasure, Military, SarLaw, HighSpeed, Other };
-inline const char* aisClassName(AisClass c) {
+enum class AisShipClass : uint8_t { Unknown, Cargo, Tanker, Passenger, Fishing, Tug, Sailing, Pleasure, Military, SarLaw, HighSpeed, Other };
+inline const char* aisShipClassName(AisShipClass c) {
     static const char* n[] = {"Unknown", "Cargo", "Tanker", "Passenger", "Fishing", "Tug / towing", "Sailing", "Pleasure craft", "Military", "SAR / law", "High speed", "Other"};
     return n[(int)c];
 }
 // ITU-R M.1371 ship and cargo type (message 5 / 24) to a class
-inline AisClass aisTypeClass(int type) {
-    if (type <= 0) return AisClass::Unknown;
-    if (type >= 70 && type <= 79) return AisClass::Cargo;
-    if (type >= 80 && type <= 89) return AisClass::Tanker;
-    if (type >= 60 && type <= 69) return AisClass::Passenger;
-    if (type == 30) return AisClass::Fishing;
-    if (type == 31 || type == 32 || type == 52) return AisClass::Tug;
-    if (type == 36) return AisClass::Sailing;
-    if (type == 37) return AisClass::Pleasure;
-    if (type == 35) return AisClass::Military;
-    if (type == 51 || type == 55 || type == 50 || type == 58) return AisClass::SarLaw;
-    if (type >= 40 && type <= 49) return AisClass::HighSpeed;
-    return AisClass::Other;
+inline AisShipClass aisTypeClass(int type) {
+    if (type <= 0) return AisShipClass::Unknown;
+    if (type >= 70 && type <= 79) return AisShipClass::Cargo;
+    if (type >= 80 && type <= 89) return AisShipClass::Tanker;
+    if (type >= 60 && type <= 69) return AisShipClass::Passenger;
+    if (type == 30) return AisShipClass::Fishing;
+    if (type == 31 || type == 32 || type == 52) return AisShipClass::Tug;
+    if (type == 36) return AisShipClass::Sailing;
+    if (type == 37) return AisShipClass::Pleasure;
+    if (type == 35) return AisShipClass::Military;
+    if (type == 51 || type == 55 || type == 50 || type == 58) return AisShipClass::SarLaw;
+    if (type >= 40 && type <= 49) return AisShipClass::HighSpeed;
+    return AisShipClass::Other;
 }
 struct AisTypeMix {
     int count[12] = {0};
     void add(int type) { count[(int)aisTypeClass(type)]++; }
     int total() const { int t = 0; for (int c : count) t += c; return t; }
     // classes with at least one ship, most ships first
-    std::vector<std::pair<AisClass, int>> ranked() const {
-        std::vector<std::pair<AisClass, int>> v;
-        for (int i = 0; i < 12; i++) if (count[i]) v.push_back({(AisClass)i, count[i]});
+    std::vector<std::pair<AisShipClass, int>> ranked() const {
+        std::vector<std::pair<AisShipClass, int>> v;
+        for (int i = 0; i < 12; i++) if (count[i]) v.push_back({(AisShipClass)i, count[i]});
         std::stable_sort(v.begin(), v.end(), [](const auto& a, const auto& b) { return a.second > b.second; });
         return v;
     }

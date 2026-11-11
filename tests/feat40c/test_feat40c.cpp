@@ -47,8 +47,8 @@ static void aisTest() {
     CHECK(c2.blindSectors(2, 100).empty());
     // type mix
     AisTypeMix m; for (int t : {70, 71, 79, 80, 60, 30, 37, 36, 0, 99}) m.add(t);
-    CHECK(m.total() == 10 && m.ranked()[0].first == AisClass::Cargo && m.ranked()[0].second == 3);
-    CHECK(aisTypeClass(52) == AisClass::Tug && aisTypeClass(35) == AisClass::Military);
+    CHECK(m.total() == 10 && m.ranked()[0].first == AisShipClass::Cargo && m.ranked()[0].second == 3);
+    CHECK(aisTypeClass(52) == AisShipClass::Tug && aisTypeClass(35) == AisShipClass::Military);
     // name cache: part A name, part B call sign; blanks never erase; '@' padding
     AisNameCache nc;
     nc.learn(123456789, "MAERSK@@@@@", "", 0, 0, 10);

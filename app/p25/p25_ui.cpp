@@ -1,6 +1,8 @@
 // P25 Phase 1 screens: the current call (unit ID, talkgroup, emergency, encryption, voice), the call log (calls, voice grants, data
 // packets), the trunking system (site, adjacent sites, channel identifiers), the talkgroups with their activity, the decoded control
 // messages, and a "?" about the mbelib library the voice needs (docs/CODECS.md). Receive only; encrypted calls are only reported.
+#include "../d40/d40_ui.h"
+#include "../ui/typography.h"
 #include "dect2/common/time_fmt.h"
 #include "ui/kit/export.h"
 #include "app.h"
@@ -182,6 +184,7 @@ void nowView(App& a) {
 void callsView(App& a) {
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver to see the calls"); return; }
     const auto& log = a.rx.p25.log;
+    if (typo::collapsingHeader(trw("Talkgroup activity"), 0)) d40P25Activity(a.rx.p25);   // 4.0 (app/d40)
     if (ImGui::Button("Copy")) {
         std::string txt;
         for (const auto& e : log) {
