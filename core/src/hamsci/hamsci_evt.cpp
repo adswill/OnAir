@@ -385,7 +385,7 @@ struct EvtMonitor::Impl {
     }
     float bbAt(uint64_t r) const { return bbHist[(size_t)(r - ringBase)]; }
     std::string tweekLog;
-    void dbgTweek(uint64_t r, int code) { if (code == 1 || code == 2) return; char b[80]; std::snprintf(b, sizeof b, "t=%.2f r%d ", (double)r * (double)hop / fs, code); if (tweekLog.size() < 600) tweekLog += b; }
+    void dbgTweek(uint64_t r, int code) { const double tt = (double)r * (double)hop / fs; if ((code == 1 || code == 2) && !((tt > 4.9 && tt < 5.1) || (tt > 39.9 && tt < 40.1))) return; if (code == 1 && !((tt > 4.95 && tt < 5.05) || (tt > 39.95 && tt < 40.05))) return; char b[80]; std::snprintf(b, sizeof b, "t=%.3f r%d bb%.1f ", tt, code, (double)bbAt(r)); if (tweekLog.size() < 600) tweekLog += b; }
     void tweekCheck(uint64_t r) {
         const double bh = fs / N, hopSec = (double)hop / fs;
         const float c = bbAt(r);
