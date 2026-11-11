@@ -3,6 +3,8 @@
 #pragma once
 #include "dect2/common/ring.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/dsp/fftutil.h"
+#include <memory>
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -43,9 +45,16 @@ public:
         return ok_;
     }
     bool ready() const { return ok_; }
-    void setOffset(double hz) { off_ = hz; }   // where the channel sits relative to 0 Hz in the input
+    // Carrier follow-up (opt-in, 4.0): lets the channel filter be narrow without losing a signal that is off its nominal frequency
+    // (a radio's reference error, 20 ppm is 17 kHz at 850 MHz). The mean power spectrum of the resampled channel is averaged over about
+    // 0.4 s, the noise floor is taken from its quietest quarter, and the centroid of what stands above the floor inside +-searchHz moves
+    // the mixer (never by more than maxHz in all). The discriminator mean would be pulled to the filter centre by the noise; the
+    // centroid of the power spectrum is not. Does nothing until the channel carries at least a quarter of the noise power in the window.
+    void setAfc(bool on, double searchHz = 9000.0, double maxHz = 20000.0) { afc_ = on; afcSearch_ = searchHz; afcMax_ = maxHz; adj_ = 0; afcFill_ = 0; afcBlocks_ = 0; }
+    double afcOffsetHz() const { return adj_; }
+    void setOffset(double hz) { if (hz != off_) adj_ = 0; off_ = hz; }   // where the channel sits relative to 0 Hz in the input
     void reset() {
-        rs_.reset(); phRe_ = 1; phIm_ = 0; prev_ = cf32(0, 0); pw_ = 0;
+        afcFill_ = 0; afcBlocks_ = 0; rs_.reset(); phRe_ = 1; phIm_ = 0; prev_ = cf32(0, 0); pw_ = 0;
         for (int i = 0; i < 2; i++) { lr_[i].clear(); li_[i].clear(); }
     }
     double levelDb() const { return pw_ > 0 ? 10 * std::log10(pw_ + 1e-30) : -200; }
@@ -54,7 +63,7 @@ public:
     void feed(const cf32* x, size_t n, std::vector<float>& out) {
         if (!ok_ || !x || !n) return;
         // the mixer: a phasor turned by one step per sample (double, renormalised every 1024 samples) instead of a cos and a sin per sample
-        const double step = -2 * 3.14159265358979323846 * off_ / in_;
+        const double step = -2 * 3.14159265358979323846 * (off_ + adj_) / in_;
         if (step != stepW_) { stepW_ = step; stRe_ = std::cos(step); stIm_ = std::sin(step); }
         mix_.resize(n);
         double pr = phRe_, pi = phIm_;
@@ -69,6 +78,7 @@ public:
         rsb_.clear();
         rs_.process(mix_.data(), n, rsb_);
         const double k = work_ / (2 * 3.14159265358979323846);
+        if (afc_) afcFeed();
         for (const cf32& v : rsb_) {
             double re = lr_[0].run(v.real()), im = li_[0].run(v.imag());
             re = lr_[1].run(re); im = li_[1].run(im);
@@ -79,6 +89,61 @@ public:
         }
     }
 private:
+    void afcFeed() {
+        if (!afcFft_) {
+            afcN_ = 128;
+            while (afcN_ < work_ / 250.0 && afcN_ < 1024) afcN_ *= 2;
+            afcFft_ = std::make_unique<Fft>(afcN_);
+            afcWin_.resize((size_t)afcN_); afcBuf_.assign((size_t)afcN_, cf32(0, 0)); afcAvg_.assign((size_t)afcN_, 0.0);
+            for (int i = 0; i < afcN_; i++) afcWin_[(size_t)i] = (float)(0.5 - 0.5 * std::cos(2 * 3.14159265358979323846 * (i + 0.5) / afcN_));
+            afcFill_ = 0;
+        }
+        const double alpha = std::min(0.5, (double)afcN_ / (afcSec_ * work_));
+        for (const cf32& v : rsb_) {
+            afcBuf_[(size_t)afcFill_] = v * afcWin_[(size_t)afcFill_];
+            if (++afcFill_ < afcN_) continue;
+            afcFill_ = 0;
+            afcFft_->forward(afcBuf_.data());
+            for (int k = 0; k < afcN_; k++) {
+                const double p = (double)std::norm(afcBuf_[(size_t)k]);
+                afcAvg_[(size_t)k] += (afcBlocks_ == 0 ? 1.0 : alpha) * (p - afcAvg_[(size_t)k]);
+            }
+            if (++afcBlocks_ < (int)std::ceil(afcSec_ * work_ / afcN_)) continue;
+            // floor: the quietest quarter of the bins
+            afcTmp_ = afcAvg_;
+            std::nth_element(afcTmp_.begin(), afcTmp_.begin() + afcN_ / 4, afcTmp_.end());
+            const double floor = std::max(1e-30, afcTmp_[(size_t)(afcN_ / 4)]);
+            double sw = 0, swf = 0, excess = 0; int nb = 0;
+            for (int k = 0; k < afcN_; k++) {
+                const int kk = k < afcN_ / 2 ? k : k - afcN_;
+                const double f = kk * work_ / afcN_;
+                if (std::fabs(f) > afcSearch_) continue;
+                nb++;
+                const double e = afcAvg_[(size_t)k] - floor;
+                excess += e;
+                if (afcAvg_[(size_t)k] < 1.4 * floor) continue;
+                sw += e; swf += e * f;
+            }
+            if (sw > 0 && excess > 0.25 * floor * nb) {
+                const double c = swf / sw;
+                if (std::fabs(c) > afcDead_) {
+                    adj_ = std::max(-afcMax_, std::min(afcMax_, adj_ + 0.8 * c));
+                    afcBlocks_ = 0;     // the spectrum moved under the averages: start them again
+                    continue;
+                }
+            }
+            afcBlocks_ = (int)std::ceil(afcSec_ * work_ / afcN_) - 1;   // keep averaging, look again at the next block
+        }
+    }
+    double afcDead_ = 500;
+    double afcSec_ = 0.8;
+    bool afc_ = false;
+    double afcSearch_ = 9000, afcMax_ = 20000, adj_ = 0;
+    int afcN_ = 0, afcFill_ = 0, afcBlocks_ = 0;
+    std::unique_ptr<Fft> afcFft_;
+    std::vector<float> afcWin_;
+    std::vector<cf32> afcBuf_;
+    std::vector<double> afcAvg_, afcTmp_;
     double in_ = 0, work_ = 0, off_ = 0, pw_ = 0;
     double phRe_ = 1, phIm_ = 0, stepW_ = 0, stRe_ = 1, stIm_ = 0;   // mixer phasor and its step
     bool ok_ = false;

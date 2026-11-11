@@ -29,3 +29,33 @@ path: at 9600 Bd they need more than the 4.5 kHz half width.
 Test: `sonde_sens40` extended (RS92 8 dB at 0 and +8 kHz 4 of 4 trials, iMet-54 16 dB +8 kHz 4 of 4, DFM 8 dB +8 kHz 2 of 4; the 3.9 receiver
 fails these). `sonde_extra_rf`, `sonde_rf_dfm`, `sonde_rs92_rf`, `sonde_all_rf`, `sonde_interf`, `sonde_basic`, `sonde_rs92_kat` pass locally.
 Real RS92, DFM and iMet-54 deviations and skirts are not measured: the generator's values are assumed.
+
+## 2. EDACS and Motorola Type II: narrower channel filter plus a carrier follow-up (FmFront)
+
+Cause. The control-channel receivers (shared `FmFront`) used a 9 kHz (EDACS) and 7 kHz (SmartNet) half-width channel filter, much wider than
+the signal (h = 0.29, 9600 and 3600 Bd), so the discriminator sat below its threshold early. Narrowing the filter alone cost 2 to 5 dB when the
+carrier was off its nominal frequency (3.1 kHz error: EDACS 12 dB 77 % -> 72 %, SmartNet 3 dB worse; the earlier SmartNet attempt in
+SENSITIVITY-3.9-D.md failed for this reason).
+Change (`core/include/dect2/dsp/fm_front.h`, opt-in `setAfc()`): the mean power spectrum of the resampled channel is averaged over 0.8 s, the noise
+floor is the quietest quarter of the bins, and the centroid of what stands above 1.4 x the floor inside +-9 kHz moves the mixer (steps of 80 % of
+the centroid, dead band 500 Hz because the centroid of a short FSK stretch is data dependent by a few hundred Hz, at most 20 kHz in all). Unlike the
+discriminator mean, the centroid is not pulled to the filter centre by the noise. EDACS now uses a 6.5 kHz filter, SmartNet 5 kHz, both with
+`setAfc(true)`. (EDACS 5.5 kHz was 0.5 dB better in the generator; 6.5 kHz was kept as margin for real deviations. SmartNet 4 kHz was 1 dB better
+at 2 dB; 5 kHz kept.) LTR uses the same FmFront but is not in the harness: unchanged. CPU: one 256 to 1024 point FFT per 3 to 13 ms of channel.
+
+| | 90 % of units before | after | gain | fraction before / after at the cliff |
+|---|---|---|---|---|
+| EDACS AWGN | 12.8 dB | 11.3 dB | about 1.5 dB | 12 dB 75 % / 98 %, 10 dB 4 % / 45 % |
+| EDACS +3.1 kHz | 12.7 dB | 11.5 dB | about 1.2 dB | 12 dB 77 % / 92 % |
+| EDACS -6 kHz | > 14 dB | 12.3 dB | > 2 dB | 12 dB 33 % / 82 % |
+| EDACS 50 ppm clock | 12.8 dB | 11.3 dB | about 1.5 dB | 12 dB 74 % / 98 % |
+| SmartNet AWGN | 5.5 dB | 3.8 dB | about 1.7 dB | 4 dB 72 % / 93 %, 2 dB 0 % / 20 % |
+| SmartNet +3.1 kHz | 7 dB | 4.5 dB | about 2.5 dB | 6 dB 39 % / 95 %, 4 dB 0 % / 79 % |
+| SmartNet 50 ppm clock | 5.5 dB | 3.8 dB | about 1.7 dB | 4 dB 68 % / 94 %, 2 dB 1 % / 26 % |
+
+(SNR in 12.5 kHz, 8 trials a point; EDACS 16 dB and above 99 to 100 % both ways with +3.1 kHz 98 % after, a small settling cost.) Noise-only runs: 0 units
+before and after. The AFC needs about 1 s of carrier to settle; the control channels are continuous.
+Test: `edacs_sens40` (tests/edacs/test_edacs_sens40.cpp): EDACS 12 dB at 0, +3.1 and -6 kHz, SmartNet 4 dB at 0 and +3.1 kHz, 6 dB at +3.1 kHz,
+noise alone: all pass; the 3.9 values above fail the same thresholds. `edacs_rx`, `edacs_follow`, `edacs_provoice`, `ltr_edacs_mode`, `ltr_rx`,
+`smartnet_rx` pass locally. Simulated signals only: the real deviations of EDACS and Type II control channels, and a real radio's drift, are not
+measured. `sens_curve` now also knows the POCSAG, FLEX, EDACS, SmartNet, MPT 1327, Fusion, DVB-S, ALE and APT entries of sens_modes_d.h.

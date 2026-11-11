@@ -545,8 +545,9 @@ EdacsReceiver::~EdacsReceiver() = default;
 void EdacsReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->fs = inputRateHz;
-    p_->rateSet = inputRateHz >= edacsTuning().minSampleRate - 1 && p_->fm.configure(inputRateHz, kWork, 9000.0);
+    p_->rateSet = inputRateHz >= edacsTuning().minSampleRate - 1 && p_->fm.configure(inputRateHz, kWork, 6500.0);
     p_->fm.setOffset(p_->offHz);
+    p_->fm.setAfc(true);   // 4.0: a 6.5 kHz channel filter (was 9) with the carrier follow-up, see docs/SENSITIVITY-4.0-A2.md
     p_->post.lowpass(6000.0, kWork, 0.7071);
     p_->voiceOk = p_->rateSet && p_->voice.configure(inputRateHz, kVoiceRate, 7500.0);
     p_->vlp.lowpass(3400.0, kVoiceRate, 0.7071);

@@ -374,8 +374,9 @@ SmartnetReceiver::~SmartnetReceiver() = default;
 void SmartnetReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->fs = inputRateHz;
-    p_->rateSet = inputRateHz >= smartnetTuning().minSampleRate - 1 && p_->fm.configure(inputRateHz, kWork, 7000.0);
+    p_->rateSet = inputRateHz >= smartnetTuning().minSampleRate - 1 && p_->fm.configure(inputRateHz, kWork, 5000.0);
     p_->fm.setOffset(p_->offHz);
+    p_->fm.setAfc(true);   // 4.0: a 5 kHz channel filter (was 7) with the carrier follow-up, see docs/SENSITIVITY-4.0-A2.md
     p_->post.lowpass(2700.0, kWork, 0.7071);
     p_->voice.setAudioSink([this](int s, const float* x, size_t n, int r) { p_->audio(s, x, n, r); });
     p_->clearState();
