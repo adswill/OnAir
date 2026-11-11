@@ -12,6 +12,7 @@
 #include "dect2/p25/p25_proto.h"
 #include "dect2/pager/pager_proto.h"
 #include "dect2/ros/ros_detect.h"
+#include "dect2/rfi/display_emission.h"
 #include "dect2/specx/specx_measure.h"
 #include <algorithm>
 #include <chrono>
@@ -1588,6 +1589,35 @@ static std::string headlineOf(const Result& R) {
     return h;
 }
 
+// A local display's HDMI / TMDS emission (dect2/rfi/display_emission.h): a candidate of its own when the signal asked about is the pixel clock
+// line or a line of its comb, so a monitor's leak is not taken for a transmitter or for the radio's own LO
+static void addDisplayEmission(Result& R, const cf32* x, size_t n, double fs, const Options& o) {
+    if (!R.f.valid || o.rfHz <= 0) return;
+    const dispem::Result d = dispem::analyseIq(x, n, fs, o.rfHz);
+    if (!d.found) return;
+    const double lo = o.rfHz + std::min(o.loHz, o.hiHz) - 2e3, hi = o.rfHz + std::max(o.loHz, o.hiHz) + 2e3;
+    bool in = false;
+    for (double f : d.members) if (f >= lo && f <= hi) in = true;
+    if (!in) return;
+    Candidate c;
+    c.name = dispem::label();
+    c.family = "Interference";
+    c.confidence = d.confidence;
+    c.score = d.confidence * 100;
+    c.why = d.summary;
+    c.evidence = d.evidence;
+    const auto& T = dispem::timings();
+    for (size_t i = 1; i < d.matches.size() && i < 4; i++) {
+        char b[160];
+        snprintf(b, sizeof b, "or %s, %.0f %%", d.matches[i].timing >= 0 ? T[(size_t)d.matches[i].timing].name : "an unknown timing", d.matches[i].confidence * 100);
+        c.evidence.push_back(b);
+    }
+    auto it = std::find_if(R.cands.begin(), R.cands.end(), [&](const Candidate& k) { return k.confidence < c.confidence; });
+    const bool top = it == R.cands.begin();
+    R.cands.insert(it, c);
+    if (top && c.confidence >= 0.6) R.verdict = VerdictLikely;
+}
+
 Result identify(const cf32* x, size_t n, double fs, const Options& o) {
     const auto t0 = std::chrono::steady_clock::now();
     Options o2 = o;
@@ -1598,6 +1628,7 @@ Result identify(const cf32* x, size_t n, double fs, const Options& o) {
         if (best) { o2.loHz = best->loHz; o2.hiHz = best->hiHz; }
     }
     Result R = identifyImpl(x, n, fs, o2);
+    addDisplayEmission(R, x, n, fs, o2);
     R.headline = headlineOf(R);
     R.ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     return R;

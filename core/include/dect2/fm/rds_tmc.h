@@ -12,6 +12,8 @@ struct TmcMessage {
     int event = 0;              // ISO 14819-2 event code (1 - 2047)
     std::string text;           // the event in English ("event N" when it is not in the built-in table)
     std::vector<std::string> more;   // additional events and details (speed limit, length of the route) from multi-group messages
+    struct Detail { int label = 0, value = 0; };   // the same details as numbers (ISO 14819-1 label, value): 2 length, 3 speed, 9 event, 10 diversion, 11 destination
+    std::vector<Detail> details;
     int location = 0;           // location code in the table LTN
     int extent = 0;             // locations the message reaches beyond the first (0 - 7)
     bool negative = false;      // direction: true = the direction of decreasing location numbers
@@ -48,6 +50,9 @@ public:
     bool active() const { return sys_.seen; }
 
     static std::string eventText(int code, bool* longLasting = nullptr);   // the built-in English table (about 170 frequent events)
+    static bool eventKnown(int code);                                       // in the built-in table
+    // The duration or persistence text of a duration code (1 - 7) for a dynamic (longLasting false) or longer-lasting event; "" for 0
+    static std::string durationText(int code, bool longLasting);
 
 private:
     struct Pending {
