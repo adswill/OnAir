@@ -308,9 +308,9 @@ int main() {
             CHECK(e.store->detail("log-to-file", l, err) && l.permissions == plugin::PermFilesystem && l.downloads.size() == 5 && !l.description.empty(), "detail of log-to-file: %s", err.c_str());
             auto r = e.store->install("tone-detector", true);
             std::string v;
-#ifdef _WIN32
-            // the sample archives carry stub libraries for Linux and macOS only: on Windows the install must refuse with that reason
-            CHECK(!r.ok && r.error.find("no library for this platform") != std::string::npos, "the sample plugin without a Windows library is refused: %s", r.error.c_str());
+#ifndef __linux__
+            // the sample archives carry a stub library for Linux only: elsewhere the install must refuse with that reason
+            CHECK(!r.ok && r.error.find("no library for this platform") != std::string::npos, "the sample plugin without a library for this platform is refused: %s", r.error.c_str());
             (void)v;
 #else
             CHECK(r.ok && e.installed("tone-detector", &v) && v == "1.0.0", "a stub sample plugin installs: %s", r.error.c_str());
