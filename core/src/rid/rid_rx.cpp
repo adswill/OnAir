@@ -57,7 +57,6 @@ public:
         rate_ = rate;
         bpw_ = std::max(2, (int)std::lround(rate / 5e6));   // blocks of kF per window: 4 at 20 Msps (25.6 us)
         W_ = bpw_ * kF;
-        win_.assign((size_t)W_, cf32(0, 0));
         ring_.assign((size_t)W_ * (kPre + 1), cf32(0, 0));
         buf_.assign(kF, cf32(0, 0));
         wifi_.bins.clear();
@@ -80,7 +79,7 @@ public:
     void push(const cf32* x, size_t n, const Out& toBle, const Out& toWifi) {
         while (n) {
             const size_t k = std::min(n, (size_t)(W_ - fill_));
-            std::copy(x, x + k, win_.begin() + fill_);
+            std::copy(x, x + k, ring_.begin() + (ptrdiff_t)((size_t)(nWin_ % (kPre + 1)) * (size_t)W_ + (size_t)fill_));   // straight into its slot
             for (size_t i = 0; i < k; i++) power_ += (double)std::norm(x[i]);
             nPower_ += k;
             fill_ += (int)k; x += k; n -= k;
@@ -117,14 +116,14 @@ private:
     }
     void window(const Out& toBle, const Out& toWifi) {
         float ew = 0;
+        const int R = kPre + 1;
+        const cf32* cur = ring_.data() + (size_t)(nWin_ % R) * (size_t)W_;
         for (int blk = 0; blk < bpw_; blk += 2) {   // half of the window is enough to see a burst
-            std::copy(win_.begin() + blk * kF, win_.begin() + (blk + 1) * kF, buf_.begin());
+            std::copy(cur + blk * kF, cur + (blk + 1) * kF, buf_.begin());
             fft_.forward(buf_.data());
             for (int k : wifi_.bins) ew += std::norm(buf_[(size_t)k]);
         }
         update(wifi_, ew);
-        const int R = kPre + 1;
-        std::copy(win_.begin(), win_.end(), ring_.begin() + (size_t)(nWin_ % R) * (size_t)W_);
         nWin_++;
         if (nWin_ <= kPre) return;
         const cf32* old = ring_.data() + (size_t)(nWin_ % R) * (size_t)W_;   // the window kPre before the newest
@@ -136,7 +135,7 @@ private:
 
     Band wifi_;
     Fft fft_{kF};
-    std::vector<cf32> win_, ring_, buf_;
+    std::vector<cf32> ring_, buf_;   // ring_: the last kPre + 1 windows
     double rate_ = 0;
     int bpw_ = 4, W_ = 512, fill_ = 0;
     int64_t nWin_ = 0;

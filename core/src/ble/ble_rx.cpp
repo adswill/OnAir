@@ -117,6 +117,7 @@ struct BleReceiver::Impl {
         }
         hr.assign((size_t)(L + kBlock), 0.f); hi.assign((size_t)(L + kBlock), 0.f);
         stepTab.resize(kBlock);
+        yo.assign((size_t)(kBlock + 2), std::complex<float>(0, 0));
         for (int j = 0; j < kBlock; j++) { const std::complex<double> v = std::polar(1.0, -2 * kPi * offset / std::max(rate, 1.0) * j); stepTab[(size_t)j] = std::complex<float>((float)v.real(), (float)v.imag()); }
         outK = 0; nIn = 0;
         yF = prevY = std::complex<float>(0, 0);
@@ -192,6 +193,8 @@ struct BleReceiver::Impl {
         if (++loCount >= 64) { lo /= std::abs(lo); loCount = 0; }
         // outputs: sample f of the stream is at buffer index f - nIn + L (the window of L samples ending there starts at f - nIn + 1)
         const int64_t end = nIn + k;
+        if (yo.size() < (size_t)((double)k / step) + 4) yo.resize((size_t)((double)k / step) + 4);
+        int no = 0;
         for (;;) {
             const double t = outK * step;
             const int64_t f = (int64_t)std::floor(t);
@@ -206,7 +209,7 @@ struct BleReceiver::Impl {
                 bp = bp + 1 == LB ? 0 : bp + 1;
                 genutil::dot2(tapsB.data(), br.data() + bp, bi.data() + bp, LB, o);
                 outK++;
-                demod(std::complex<float>(o[0], o[1]));
+                yo[(size_t)(no++)] = std::complex<float>(o[0], o[1]);
                 continue;
             }
             std::complex<float> y(o[0], o[1]);
@@ -215,8 +218,9 @@ struct BleReceiver::Impl {
                 y = y * (1 - fr) + std::complex<float>(o[0], o[1]) * fr;
             }
             outK++;
-            demod(y);
+            yo[(size_t)(no++)] = y;
         }
+        demodBlock(yo.data(), no);
         // the last L samples become the history of the next block
         std::memmove(hr.data(), hr.data() + k, sizeof(float) * (size_t)L);
         std::memmove(hi.data(), hi.data() + k, sizeof(float) * (size_t)L);
@@ -225,23 +229,62 @@ struct BleReceiver::Impl {
 
     // ---------------------------------------------------------------- demodulator
 
-    __attribute__((always_inline)) void demod(std::complex<float> y) {   // inlined: a call per sample stored the two floats and loaded them as one 8-byte value (store-forwarding stall)
-        const std::complex<float> z = y * std::conj(prevY);
-        prevY = y;
-        const float fHz = (float)(std::atan2(z.imag(), z.real()) * (kOut / (2 * kPi)));
-        boxSum += fHz - box[boxPos]; box[boxPos] = fHz; boxPos = (boxPos + 1) % kSps;
-        const float s = boxSum / kSps;
-        meanSum += s - meanBuf[(size_t)meanPos]; meanBuf[(size_t)meanPos] = s; meanPos = (meanPos + 1) % kMean;
-        fb.push_back(s);
-        pb.push_back(std::norm(y));
-        g++;
-        const int ph = (int)(g & (kSps - 1));
-        const uint32_t bit = s > (float)(meanSum / kMean) ? 1u : 0u;
-        reg[ph] = (reg[ph] >> 1) | (bit << 31);
-        if (g >= skipUntil) {
-            const int e = popc(reg[ph] ^ ble::kAdvAccess);
-            if (e <= 1) { cands.push_back({g, e}); skipUntil = g + kSps; tel.aaHits++; }
+    // atan2 to about 1e-6 rad (a minimax polynomial for atan on [0, 1] and the octant): no library call, and it vectorises. The frequency it gives is
+    // off by well under 1 Hz, against 250 kHz of deviation.
+    static inline float fastAtan2(float y, float x) {
+        const float ax = std::fabs(x), ay = std::fabs(y);
+        const float mx = std::max(ax, ay), mn = std::min(ax, ay);
+        const float a = mx > 0 ? mn / mx : 0.f;
+        const float q = a * a;
+        float r = a * (0.99997726f + q * (-0.33262347f + q * (0.19354346f + q * (-0.11643287f + q * (0.05265332f + q * -0.01172120f)))));
+        r = ay > ax ? 1.57079632679f - r : r;
+        r = x < 0 ? 3.14159265359f - r : r;
+        return y < 0 ? -r : r;
+    }
+
+    // The demodulator for a block of 4 Msps samples: the instantaneous frequency of all of them first (no dependency between samples), then the
+    // smoothing, the slicer and the access address search sample by sample, on locals
+    std::vector<std::complex<float>> yo;   // the block's 4 Msps samples
+    std::vector<float> fz;
+    void demodBlock(const std::complex<float>* y, int cnt) {
+        if (cnt <= 0) return;
+        fz.resize((size_t)cnt);
+        {
+            std::complex<float> p = prevY;
+            const float kf = (float)(kOut / (2 * kPi));
+            for (int j = 0; j < cnt; j++) {
+                const std::complex<float> v = y[j];
+                const float zr = v.real() * p.real() + v.imag() * p.imag(), zi = v.imag() * p.real() - v.real() * p.imag();   // v conj(p)
+                fz[(size_t)j] = fastAtan2(zi, zr) * kf;
+                p = v;
+            }
+            prevY = p;
         }
+        const size_t o = fb.size();
+        fb.resize(o + (size_t)cnt); pb.resize(o + (size_t)cnt);
+        float* fo = fb.data() + o;
+        float* po = pb.data() + o;
+        for (int j = 0; j < cnt; j++) po[j] = std::norm(y[j]);
+        float bs = boxSum;
+        double ms = meanSum;
+        int bpos = boxPos, mpos = meanPos;
+        int64_t gg = g;
+        for (int j = 0; j < cnt; j++) {
+            const float fHz = fz[(size_t)j];
+            bs += fHz - box[bpos]; box[bpos] = fHz; bpos = (bpos + 1) & (kSps - 1);
+            const float sm = bs / kSps;
+            ms += sm - meanBuf[(size_t)mpos]; meanBuf[(size_t)mpos] = sm; if (++mpos == kMean) mpos = 0;
+            fo[j] = sm;
+            gg++;
+            const int ph = (int)(gg & (kSps - 1));
+            const uint32_t bit = sm > (float)(ms / kMean) ? 1u : 0u;
+            reg[ph] = (reg[ph] >> 1) | (bit << 31);
+            if (gg >= skipUntil) {
+                const int e = popc(reg[ph] ^ ble::kAdvAccess);
+                if (e <= 1) { cands.push_back({gg, e}); skipUntil = gg + kSps; tel.aaHits++; }
+            }
+        }
+        boxSum = bs; meanSum = ms; boxPos = bpos; meanPos = mpos; g = gg;
     }
 
     float at(int64_t k) const { return fb[(size_t)(k - base)]; }
