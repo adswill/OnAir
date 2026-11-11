@@ -105,8 +105,11 @@ void Decim::process(const cf32* in, size_t n, std::vector<cf32>& out) {
     }
 }
 
-void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint) {
+void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint, double devHz) {
     fs_ = fs; baud_ = baud; afsk_ = afsk; midpoint_ = midpoint;
+    devHz_ = (afsk || midpoint) ? 0.0 : devHz;
+    Lw_ = std::max(2, (int)std::lround(fs / baud));
+    tu_.assign((size_t)Lw_, std::complex<double>(0, 0)); tl_.assign((size_t)Lw_, std::complex<double>(0, 0));
     decay_ = (float)(baud / fs / 12.0);                    // about a dozen symbols
     max_ = min_ = 0;
     dp0_ = baud / fs;
@@ -134,6 +137,8 @@ void SymbolChain::reset() {
     wpos_ = 0; wsum_ = 0;
     prev_ = 0; havePrev_ = false;
     dp_ = dp0_; ph_ = 0;
+    su_ = sl_ = std::complex<double>(0, 0); phU_ = phL_ = 0; tPos_ = 0;
+    std::fill(tu_.begin(), tu_.end(), std::complex<double>(0, 0)); std::fill(tl_.begin(), tl_.end(), std::complex<double>(0, 0));
     nTrans_ = 0; nOut_ = 0;
 }
 

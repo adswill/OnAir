@@ -25,6 +25,7 @@ namespace {
 constexpr double kChanRate = 400e3;     // the rate of every channel stream, about
 constexpr double kMaxBurstSec = 0.25;
 constexpr int kTab = 256, kChunk = 4096;
+constexpr float kBurstOn = 3.0f, kBurstOff = 1.8f;   // burst start / end against the noise floor with tone detection (3.9: 6 and 2.5)
 
 struct Decoded { zwave::Frame f; int rate = 0; bool ok = false; bool sawSof = false; };
 
@@ -51,15 +52,38 @@ void searchFrames(const std::vector<uint8_t>& bits, int rate, Decoded& out) {
     }
 }
 
-// FM demodulated burst -> frame at one rate
-Decoded decodeRate(const std::vector<float>& d, size_t a, int rate, double chanRate) {
+// FM demodulated burst -> frame at one rate. With `x` (the burst's complex samples) and the carrier offset, each chip is judged by the energy at the
+// upper tone against the energy at the lower one over the chip (noncoherent matched detection of the FSK, 4.0) instead of by the mean of the
+// discriminator, whose clicks a weak signal fills with errors; the discriminator is the second try.
+Decoded decodeRate(const std::vector<float>& d, size_t a, int rate, double chanRate, const std::vector<cf32>* x = nullptr, double cfoHz = 0) {
     Decoded res;
     const double spc = chanRate / zwave::chipRate(rate);
     const size_t w = (size_t)std::max(1.0, std::round(spc));
     if (d.size() < a + 40 * (size_t)spc + w) return res;
     std::vector<double> ps(d.size() + 1, 0);
-    for (size_t i = 0; i < d.size(); i++) ps[i + 1] = ps[i] + d[i];
-    auto m = [&](double pos) { const long i = std::lround(pos); if (i < (long)w || i >= (long)d.size()) return 0.0; return (ps[(size_t)i + 1] - ps[(size_t)i + 1 - w]) / (double)w; };
+    std::vector<std::complex<double>> pu, pl;   // prefix sums of the burst mixed down by cfo +- deviation
+    if (x && x->size() == d.size()) {
+        const double dev = rate == 3 ? 29e3 : 20e3;
+        pu.assign(d.size() + 1, 0); pl.assign(d.size() + 1, 0);
+        const std::complex<double> su = std::polar(1.0, -2 * kPi * (cfoHz + dev) / chanRate), sl = std::polar(1.0, -2 * kPi * (cfoHz - dev) / chanRate);
+        std::complex<double> ru(1, 0), rl(1, 0);
+        for (size_t i = 0; i < d.size(); i++) {
+            const std::complex<double> z((*x)[i].real(), (*x)[i].imag());
+            pu[i + 1] = pu[i] + z * ru; pl[i + 1] = pl[i] + z * rl;
+            ru *= su; rl *= sl;
+            if ((i & 255) == 255) { ru /= std::abs(ru); rl /= std::abs(rl); }
+        }
+        for (size_t i = 0; i < d.size(); i++) ps[i + 1] = ps[i];
+    } else for (size_t i = 0; i < d.size(); i++) ps[i + 1] = ps[i] + d[i];
+    auto m = [&](double pos) {
+        const long i = std::lround(pos);
+        if (i < (long)w || i >= (long)d.size()) return 0.0;
+        if (!pu.empty()) {
+            const double eu = std::norm(pu[(size_t)i + 1] - pu[(size_t)i + 1 - w]), el = std::norm(pl[(size_t)i + 1] - pl[(size_t)i + 1 - w]), t = eu + el;
+            return t > 0 ? (eu - el) / t : 0.0;
+        }
+        return (ps[(size_t)i + 1] - ps[(size_t)i + 1 - w]) / (double)w;
+    };
     double best = -1, bphi = 0;
     for (double phi = 0; phi < spc; phi += 0.5) {
         double s = 0;
@@ -137,6 +161,8 @@ struct ZwaveReceiver::Impl {
     double topoAt = -1e9;
     std::map<uint32_t, ZwNetwork> nets;
     std::map<uint64_t, ZwNode> nodes;
+    std::atomic<bool> toneChipsOn{true};       // setToneDetection()
+    bool toneChips = true;
     std::map<std::string, uint64_t> perCc;
     zwave::S0Session s0;
     uint64_t ok = 0, bad = 0, bursts = 0, perRate[3] = {}, encS0 = 0, encS2 = 0, acks = 0;
@@ -200,6 +226,7 @@ struct ZwaveReceiver::Impl {
             g.mre.assign((size_t)N - 1 + kChunk, 0.f); g.mim.assign((size_t)N - 1 + kChunk, 0.f);
             g.hist.assign(512, cf32(0, 0));
         }
+        toneChips = toneChipsOn.load();
         resetReq = false;
     }
 
@@ -226,7 +253,8 @@ struct ZwaveReceiver::Impl {
         Decoded best; bool saw = false; int sawRate = 0;
         for (int r = 1; r <= 3 && !best.ok; r++) {
             if (!(g.mask & (1 << r))) continue;
-            Decoded dec = decodeRate(d, a, r, fs);
+            Decoded dec = toneChips ? decodeRate(d, a, r, fs, &g.cur, cfo) : Decoded();
+            if (!dec.ok) { const bool sof = dec.sawSof; dec = decodeRate(d, a, r, fs); dec.sawSof = dec.sawSof || sof; }
             if (dec.ok) best = dec;
             else if (dec.sawSof) { saw = true; sawRate = r; }
         }
@@ -340,7 +368,7 @@ struct ZwaveReceiver::Impl {
             if (!g.inBurst) {
                 if (g.pe < 3 * g.nz) g.nz += 0.002f * (g.pe - g.nz);
                 g.hist[g.hpos] = y; g.hpos = (g.hpos + 1) % g.hist.size(); g.hfill = std::min(g.hfill + 1, g.hist.size());
-                if (g.nzInit >= 2000 && g.pe > 6 * g.nz) g.above++; else g.above = 0;
+                if (g.nzInit >= 2000 && g.pe > (toneChips ? kBurstOn : 6.f) * g.nz) g.above++; else g.above = 0;
                 if (g.above >= 6) {
                     g.inBurst = true; g.below = 0; g.nzAtStart = g.nz;
                     const size_t pre = std::min<size_t>(g.hfill, 206);
@@ -350,7 +378,7 @@ struct ZwaveReceiver::Impl {
                 }
             } else {
                 g.cur.push_back(y);
-                if (g.pe < 2.5f * g.nzAtStart) g.below++; else g.below = 0;
+                if (g.pe < (toneChips ? kBurstOff : 2.5f) * g.nzAtStart) g.below++; else g.below = 0;
                 if (g.below >= 160 || g.cur.size() > (size_t)(kMaxBurstSec * g.chanRate)) {
                     g.inBurst = false; g.above = 0; g.hfill = 0;
                     burstDone(g);
@@ -375,6 +403,8 @@ void ZwaveReceiver::setDialHz(double hz) { if (hz != p_->dialHz.exchange(hz)) p_
 void ZwaveReceiver::setRegion(const std::string& id) { std::lock_guard<std::mutex> lk(p_->mu); if (id != p_->regionSet) { p_->regionSet = id; p_->resetReq = true; } }
 bool ZwaveReceiver::ready() const { return p_->rate >= zwaveTuning().minSampleRate - 1; }
 void ZwaveReceiver::reset() { p_->resetReq = true; }
+void ZwaveReceiver::setToneDetection(bool on) { p_->toneChipsOn = on; p_->resetReq = true; }
+bool ZwaveReceiver::toneDetection() const { return p_->toneChipsOn.load(); }
 void ZwaveReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 
 void ZwaveReceiver::clearResults() {

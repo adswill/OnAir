@@ -1789,6 +1789,15 @@ Feat40-feat3 (later): ADS-B orbit detector, clear TX frequency, band hop, Sarsat
 - Satellite, HF, public safety, aviation, rail, LoRa and science helpers: `core/include/dect2/d40/{sat,hf,radio}_e40.h`, tests `sat_e40 hf_e40 radio_e40` (all pass locally, simulated data), doc `docs/FEATURES-4.0-E.md`. Core only, not wired into the GUI.
 ## 2026-11-12 4.0 wiring (feat40-wire)
 Cards for the core-only 4.0 engines in app/d40/: FM names + DX alarm, DVB-S blind scan / modcods / dish pointing, sweep activity map + new-signal alert + classification, AM carrier offset / sideband / schedule ID, DAB ranking + transmitter table, ADS-B replay + orbits, transmit link budget / ramp / SWR, talkgroup activity for P25 / NXDN / TETRA, ACARS channel load, AIS coverage + type mix, pager groups. Syntax-checked with clang++ -fsyntax-only only; list of what is still unwired is in docs/WIRING-4.0.md.
+## 2026-11-12 Sensitivity 4.0 B: POCSAG 2 dB (feat40-sensB)
+POCSAG symbols come from tone energies (the two tones found from the sync word's known symbols) instead of the discriminator's mean frequency,
+and the sync search takes up to 5 wrong bits of 32 when the tone correlation confirms it: 90 % point -1 -> -3 dB, 50 % point -2.2 -> -4.3 dB
+(AWGN, 50 ppm clock the same; off-centre carriers fall back to the discriminator). 0 of 300 noise-only trials gave a unit; FLEX and the pager
+tests unchanged. New: test_sens40b (4.0 and 3.9 receiver in one binary, same seeds), test_hfdig_sens40b (WSJT modes baseline: at WSJT-X levels).
+Baseline table of 40 narrowband modes in docs/SENSITIVITY-4.0-B.md. Tried and not kept: summing discriminator products (DMR, D-STAR, NXDN, dPMR, P25).
+2026-11-12 (sensitivity 4.0 B, Z-Wave): chips judged by tone energies from the burst's complex samples and a more sensitive burst detector (start 6x -> 3x the noise floor):
+AWGN 90 % point 9.5 -> 6 dB (50 %: 9 -> 5.3), 0 false frames in 300 noise-only trials; test_sens40b has zwave and zwave-off side by side.
+2026-11-12 (sensitivity 4.0 B, radiosondes): RS41/RS92/DFM/M10/M20 symbols decided by tone energies (symbol clock still from the discriminator): sonde mix AWGN 90 % point 11 -> 9 dB, 0 false units in 40 noise-only trials.
 ## 2026-11-12 4.0 sensitivity, lane A part 1: RS41 2 to 3 dB (feat40-sensA)
 Every 400 MHz radiosonde channel had one 10 kHz half-width filter in front of the discriminator, three times what an RS41 needs, so its
 discriminator sat under the FM threshold from 8 dB down and Reed-Solomon never got frames. The RS41 symbol chain is now fed from a second
