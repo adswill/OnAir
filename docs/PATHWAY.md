@@ -1778,3 +1778,7 @@ RC model PPM (881), UVB-76 buzzer monitor (882), GRAVES meteor echoes (883) and 
 ## 2026-11-12: EM4100 LF RFID (family 886)
 
 EM4100 / EM4102 125 kHz tag reader: Manchester frame with row and column parity, RF/64 and RF/32, load modulation depth. Tests: offset, drift, clock error, noise sweep, 15 min false-read run. Simulated signals only (docs/EM4100-4.0.md).
+
+## 2026-11-12: UHF RFID reader commands (family 887)
+
+EPC Gen2 reader decoder: PIE timing, Query / QueryRep / QueryAdjust / ACK / NAK / Select / Req_RN / Read / Write / Kill / Lock / Access, CRC-5 and CRC-16. Tests: Tari, data-1 ratio, clock error, offset, drift, noise sweep, false-command run. Tag replies not decoded. Simulated signals only (docs/UHFRFID-4.0.md).

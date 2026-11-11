@@ -11,6 +11,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case Jove: return makeJove();
     case Beacon: return makeBeacon();
     case Em4100: return makeEm4100();
+    case UhfRfid: return makeUhfRfid();
     default: return nullptr;
     }
 }
@@ -27,6 +28,7 @@ ModeTuning x40Tuning(int v) {
         {"jove", 19, 22, 20.100, 1000000, 24000, 0.012, false},
         {"beacon", 28, 450, 144.400, 250000, 8000, 0.004, true},
         {"em4100", 0.1, 0.15, 0.125, 250000, 24000, 0.01, true},
+        {"uhfrfid", 860, 960, 865.700, 2000000, 400000, 0.6, true},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];
