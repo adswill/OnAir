@@ -131,7 +131,7 @@ int main() {
         FbrGenConfig d = c; d.scenario = 1;
         const FbrTelemetry t = run(d, 14);
         show("sync + constant channels", t);
-        CHECK(t.framed && t.status.size() == 18 && t.status[1] == 'i' && t.status[0] == 'S' && t.syncPeriod == 31, "scenario 1: %s", t.status.c_str());
+        CHECK(t.framed && t.status.size() == 18 && t.status[2] == 'i' && t.status[1] == 'S' && t.syncPeriod == 31, "scenario 1: %s", t.status.c_str());
     }
     {   // never claim a frame without one
         FbrGenConfig d = c; d.scenario = 2;
