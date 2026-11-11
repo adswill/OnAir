@@ -99,8 +99,8 @@ static void testFazzt() {
     push(std::vector<uint8_t>(5, 0)); push(std::vector<uint8_t>{0, 3, 200, 0, 1, 2, 3, 4, 5}); // short, length beyond the packet
     { auto f = head(9, "idx.bin", 1, 10); push(f); push(body(9, 7, 100, 1)); }                 // part out of range
     CHECK(a.stats.bad > badBefore + 3, "hostile frames counted: %llu", (unsigned long long)(a.stats.bad - badBefore));
-    FazztAssembler small(1000); small.maxFileBytes = 4096;
-    { auto f = head(1, "big.bin", 100, 90000); small.push(f.data(), f.size(), 0, out); CHECK(small.filesOpen() == 0, "per-file limit"); }
+    FazztAssembler capped(1000); capped.maxFileBytes = 4096;
+    { auto f = head(1, "big.bin", 100, 90000); capped.push(f.data(), f.size(), 0, out); CHECK(capped.filesOpen() == 0, "per-file limit"); }
     FazztAssembler tight(1000); tight.maxOpenBytes = 2500; out.clear();
     for (uint32_t id = 1; id <= 3; id++) { auto f = head(id, "file.bin", 1, 900); tight.push(f.data(), f.size(), (double)id, out); }
     CHECK(tight.filesOpen() == 2 && out.size() == 1 && tight.stats.evicted == 1, "memory limit evicts the oldest (%zu open)", tight.filesOpen());
