@@ -228,7 +228,8 @@ static void testCarriers(int stdMode, tp::Proto proto, const char* name) {
         for (size_t i = 0; i < n; i++) buf[i] = cf32(nd(rng), nd(rng)) + cf32(0.02f, 0.01f);   // noise and a DC spur
         for (int k = 0; k < 3; k++) {
             g[(size_t)k]->generate(tmp.data(), n);
-            const std::complex<double> st = std::polar(1.0, 2 * M_PI * off[k] / rate);
+            const double dial = stdMode == 40 ? nxdnTuning().tuneOffsetHz : 0.0;   // the NXDN generator puts its carrier at the mode's dial (-50 kHz)
+            const std::complex<double> st = std::polar(1.0, 2 * M_PI * (off[k] + dial) / rate);
             for (size_t i = 0; i < n; i++) { buf[i] += tmp[i] * scale[k] * cf32((float)ph[k].real(), (float)ph[k].imag()); ph[k] *= st; }
             ph[k] /= std::abs(ph[k]);
         }

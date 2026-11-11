@@ -1700,3 +1700,6 @@ apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-cen
 too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
 source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
 qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
+
+## 2026-11-11 Single-radio trunking: control channel and several calls from one capture (feat39-trunk1)
+Discord "Multi-Trunk with one radio". Before: P25 followed 2 Phase 1 calls inside the capture (one sound), Type II 4 slices, EDACS one call, MPT 1327 none. New: voice slots cut their channel out of the capture (SliceDdc, about 50 kHz) and run FM, P25 Phase 1 / 2, DMR or NXDN at the narrow rate, 4 at once by default, each with its own sound, WAV + JSON and call row (OneRadio, CaptureVoice). Coverage: "outside the capture (needs X MHz)" against the radio's limit, a plan and one retune button that covers the control channel and the busiest learned channels off the DC spike. MPT 1327 now follows GTCs; EDACS decodes every analog call at once; P25 default 4 slots. Two-radio pool unchanged. Simulated only. docs/TRUNK1-3.9.md.
