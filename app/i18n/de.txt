@@ -3947,3 +3947,33 @@ Invert bits	Bits invertieren
 The bit polarity is not published. Switch it when the idle channels look swapped.	Die Bitpolarität ist nicht veröffentlicht. Umschalten, wenn die Leerlaufkanäle vertauscht aussehen.
 Link	Link
 16 channel SATCOM multiplex	SATCOM-Multiplex mit 16 Kanälen
+#  CP16 picture text (3.9)
+Start the receiver.	Starte den Empfänger.
+Listening for 16 equally spaced carriers. CP16 is read by eye on a waterfall: the picture appears here once the carriers and their rows are found (about 10 seconds of signal).	Es wird auf 16 gleichmäßig verteilte Träger gehört. CP16 wird mit dem Auge im Wasserfall gelesen: Das Bild erscheint hier, sobald die Träger und ihre Zeilen gefunden sind (etwa 10 Sekunden Signal).
+Dot size	Punktgröße
+Characters read	Gelesene Zeichen
+None yet.	Noch keine.
+Read by matching the dots against the font. The picture above is what was received; trust it over the characters when they differ.	Gelesen durch Abgleich der Punkte mit der Schrift. Das Bild oben ist das Empfangene; vertrau ihm mehr als den Zeichen, wenn sie abweichen.
+Lowest carrier	Unterster Träger
+spacing	Abstand
+Row	Zeile
+a character	pro Zeichen
+Lower sideband	Unteres Seitenband
+Upper sideband	Oberes Seitenband
+contrast	Kontrast
+Fixed parameters (instead of measuring them)	Feste Parameter (statt sie zu messen)
+Lowest carrier (Hz)	Unterster Träger (Hz)
+Spacing (Hz)	Abstand (Hz)
+Seconds a character	Sekunden pro Zeichen
+Read characters	Zeichen lesen
+Font: CP16 stations send 16 x 16 dot characters, usually from an HZK16 font. The characters are read best with the sender's font: choose an HZK16 file or a .ttf / .otf here. Empty: the bundled Noto Sans CJK SC, drawn at 16 dots.	Schrift: CP16-Stationen senden Zeichen aus 16 x 16 Punkten, meist aus einer HZK16-Schrift. Am besten werden die Zeichen mit der Schrift des Senders gelesen: Wähle hier eine HZK16-Datei oder eine .ttf / .otf. Leer: das mitgelieferte Noto Sans CJK SC, mit 16 Punkten gezeichnet.
+Font file	Schriftdatei
+Use this font	Diese Schrift verwenden
+Font loaded.	Schrift geladen.
+How long one 16-row character and its blank row take. CRAC finds 1 to 4 seconds readable; slower is stronger.	Wie lange ein Zeichen aus 16 Zeilen samt Leerzeile dauert. Laut CRAC sind 1 bis 4 Sekunden lesbar; langsamer ist robuster.
+Carrier spacing	Trägerabstand
+The distance between the 16 carriers. CRAC uses 10 to 20 Hz.	Der Abstand zwischen den 16 Trägern. CRAC verwendet 10 bis 20 Hz.
+The audio frequency of the left column of the character.	Die Tonfrequenz der linken Spalte des Zeichens.
+Send below the dial frequency instead of above it.	Unterhalb statt oberhalb der Anzeigefrequenz senden.
+Font:	Schrift:
+Waterfall text, HF	Wasserfalltext, KW

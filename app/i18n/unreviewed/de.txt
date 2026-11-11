@@ -665,3 +665,32 @@ Invert bits
 The bit polarity is not published. Switch it when the idle channels look swapped.
 Link
 16 channel SATCOM multiplex
+Start the receiver.
+Listening for 16 equally spaced carriers. CP16 is read by eye on a waterfall: the picture appears here once the carriers and their rows are found (about 10 seconds of signal).
+Dot size
+Characters read
+None yet.
+Read by matching the dots against the font. The picture above is what was received; trust it over the characters when they differ.
+Lowest carrier
+spacing
+Row
+a character
+Lower sideband
+Upper sideband
+contrast
+Fixed parameters (instead of measuring them)
+Lowest carrier (Hz)
+Spacing (Hz)
+Seconds a character
+Read characters
+Font: CP16 stations send 16 x 16 dot characters, usually from an HZK16 font. The characters are read best with the sender's font: choose an HZK16 file or a .ttf / .otf here. Empty: the bundled Noto Sans CJK SC, drawn at 16 dots.
+Font file
+Use this font
+Font loaded.
+How long one 16-row character and its blank row take. CRAC finds 1 to 4 seconds readable; slower is stronger.
+Carrier spacing
+The distance between the 16 carriers. CRAC uses 10 to 20 Hz.
+The audio frequency of the left column of the character.
+Send below the dial frequency instead of above it.
+Font:
+Waterfall text, HF
