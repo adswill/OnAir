@@ -61,6 +61,8 @@ int poll42(Rx& rx, RxTelemetry& t, uint64_t* seqs) {
             t.seq = mt.seq;
             t.state = mt.state;
             t.rateOk = rx.ready();
+            // valid: the averaged spectrum is ready and a signal stands 10 dB over the floor (noise alone stays a few dB over it)
+            t.dataValid = mt.state == 1 && mt.frames >= (uint64_t)std::max(1, mt.averaging) && mt.peakDb - mt.floorDb > 10;
             t.specx = std::move(mt);
             return 1;
         }
@@ -131,6 +133,7 @@ int poll54(Rx& rx, RxTelemetry& t, uint64_t* seqs) {
             t.state = mt.state;
             t.cfoHz = mt.corrValid ? mt.lnbErrHz : 0;
             t.rateOk = rx.ready();
+            t.dataValid = mt.corrValid;   // the beacons are locked and the LNB error is measured
             t.qo100 = std::move(mt);
             return 1;
         }

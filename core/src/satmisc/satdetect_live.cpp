@@ -71,9 +71,12 @@ struct SatDetectReceiver::Impl {
     size_t dlyPos = 0, dlyLen = 0;
     int foldBins = 32, foldPos = 0, foldBlock = 0;
     uint64_t foldN = 0;
-    cf32 foldAcc{0, 0};
+    // three lags (the period and one sample either side): a 50 ppm sample clock moves a 20000-sample period by a sample, and the
+    // sequence is white at the capture's rate, so the product at the nominal lag alone lost the repetition
+    static constexpr int kLags = 3;
+    cf32 foldAcc[kLags] = {};
     float foldPow = 0;
-    std::vector<float> fold, foldMag;
+    std::vector<float> fold[kLags], foldMag;
     int foldCount = 0;
 
     static int64_t nowUtc() { return (int64_t)std::chrono::duration_cast<std::chrono::seconds>(std::chrono::system_clock::now().time_since_epoch()).count(); }
@@ -114,11 +117,11 @@ struct SatDetectReceiver::Impl {
                 envFill = 0; envAcc = 0; envSum = 0; envCount = 0;
             } else {
                 dlyLen = (size_t)std::lround(rate / sys->frameHz);
-                dly.assign(dlyLen, cf32(0, 0)); dlyPos = 0;
+                dly.assign(dlyLen + 1, cf32(0, 0)); dlyPos = 0;
                 foldBins = 64;
-                fold.assign((size_t)foldBins, 0.f);
+                for (auto& f : fold) f.assign((size_t)foldBins, 0.f);
                 foldMag.assign((size_t)foldBins, 0.f);
-                foldN = 0; foldPos = 0; foldAcc = cf32(0, 0); foldPow = 0; foldCount = 0;
+                foldN = 0; foldPos = 0; for (auto& a : foldAcc) a = cf32(0, 0); foldPow = 0; foldCount = 0;
             }
         }
     }
@@ -260,17 +263,20 @@ struct SatDetectReceiver::Impl {
     }
 
     void repeatSeq(const cf32* x, size_t n) {
+        const size_t D = dlyLen + 1;   // the ring holds the last D samples: from its oldest slot on, lags dlyLen + 1, dlyLen, dlyLen - 1
         for (size_t i = 0; i < n; i++) {
-            const cf32 past = dly[dlyPos];
+            const cf32 p0 = dly[dlyPos], p1 = dly[dlyPos + 1 < D ? dlyPos + 1 : 0], p2 = dly[dlyPos + 2 < D ? dlyPos + 2 : dlyPos + 2 - D];
             dly[dlyPos] = x[i];
-            if (++dlyPos == dlyLen) dlyPos = 0;
-            foldAcc += x[i] * std::conj(past);
+            if (++dlyPos == D) dlyPos = 0;
+            foldAcc[0] += x[i] * std::conj(p0);
+            foldAcc[1] += x[i] * std::conj(p1);
+            foldAcc[2] += x[i] * std::conj(p2);
             foldPow += std::norm(x[i]);
             const int pos = (int)(foldN % dlyLen * (uint64_t)foldBins / dlyLen);
             foldN++;
             if (pos != foldPos) {   // a fold bin ended: one bin per position of the frame, however the frame divides
-                fold[(size_t)foldPos] += std::abs(foldAcc) / std::max(foldPow, 1e-20f);
-                foldAcc = cf32(0, 0); foldPow = 0;
+                for (int k = 0; k < kLags; k++) { fold[k][(size_t)foldPos] += std::abs(foldAcc[k]) / std::max(foldPow, 1e-20f); foldAcc[k] = cf32(0, 0); }
+                foldPow = 0;
                 if (pos == 0 && ++foldCount % 400 == 0) foldEval();
                 foldPos = pos;
             }
@@ -278,16 +284,19 @@ struct SatDetectReceiver::Impl {
     }
 
     void foldEval() {
-        std::vector<float> s = fold;
-        std::nth_element(s.begin(), s.begin() + (long)s.size() / 2, s.end());
-        const float med = std::max(s[s.size() / 2], 1e-12f);
-        float pk = 0;
-        for (float v : fold) pk = std::max(pk, v);
-        // the spread of the other bins sets how far out a peak must be
-        float dev = 0;
-        for (float v : fold) dev += std::fabs(v - med);
-        dev = std::max(dev / (float)fold.size(), 1e-12f);
-        const float z = (pk - med) / dev;
+        float z = 0;   // the best of the three lags
+        for (int k = 0; k < kLags; k++) {
+            std::vector<float> s = fold[k];
+            std::nth_element(s.begin(), s.begin() + (long)s.size() / 2, s.end());
+            const float med = std::max(s[s.size() / 2], 1e-12f);
+            float pk = 0;
+            for (float v : fold[k]) pk = std::max(pk, v);
+            // the spread of the other bins sets how far out a peak must be
+            float dev = 0;
+            for (float v : fold[k]) dev += std::fabs(v - med);
+            dev = std::max(dev / (float)fold[k].size(), 1e-12f);
+            z = std::max(z, (pk - med) / dev);
+        }
         std::lock_guard<std::mutex> lk(mu);
         frame.levelDb = 10 * std::log10(std::max(z, 1e-3f));
         frame.measuredHz = sys->frameHz;
@@ -296,7 +305,7 @@ struct SatDetectReceiver::Impl {
         if (det && !frame.detected) ok++;
         frame.detected = det;
         foldCount = 0;
-        std::fill(fold.begin(), fold.end(), 0.f);
+        for (auto& f : fold) std::fill(f.begin(), f.end(), 0.f);
     }
 
     void publish() {

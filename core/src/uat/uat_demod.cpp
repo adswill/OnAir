@@ -1,6 +1,7 @@
 // UAT demodulator: phase-difference slicing at 2 samples/symbol (dump978 algorithm).
 #include "dect2/uat/uat_demod.h"
 #include "dect2/uat/uat_frame.h"
+#include "dect2/dsp/fast_phase.h"
 extern "C" {
 #include "fec.h"
 }
@@ -87,38 +88,20 @@ static int demodUplink(const uint16_t* phi, uint8_t* to, int* rs) {
     return 0;
 }
 
-static uint16_t gIqPhase[65536];
-static bool gIqInit = false;
-
-static void initIqPhase() {
-    if (gIqInit) return;
-    gIqInit = true;
-    for (int i = 0; i < 256; i++) {
-        const double di = i - 127.5;
-        for (int q = 0; q < 256; q++) {
-            const double dq = q - 127.5;
-            double ang = std::atan2(dq, di) + M_PI;
-            double scaled = std::round(32768.0 * ang / M_PI);
-            if (scaled < 0) scaled = 0;
-            if (scaled > 65535) scaled = 65535;
-            const int idx = (i & 0xff) | ((q & 0xff) << 8);
-            gIqPhase[idx] = (uint16_t)scaled;
-        }
-    }
-}
-
 } // namespace
 
+// the phase as 0 .. 65535 for 0 .. 2 pi (dump978's scale), from the float sample: dump978's 8-bit table quantised a weak signal's phase so
+// coarsely (a recording at -20 dBFS has about 10 levels a rail) that the frequency steps of the slicer disappeared
 uint16_t UatDemod::iqPhase(const cf32& v) {
-    initIqPhase();
-    const int ir = std::clamp((int)std::lround(v.real() * 127.5 + 127.5), 0, 255);
-    const int qr = std::clamp((int)std::lround(v.imag() * 127.5 + 127.5), 0, 255);
-    return gIqPhase[ir | (qr << 8)];
+    const float a = fastAtan2(v.imag(), v.real()) + 3.14159265359f;
+    return (uint16_t)std::clamp((int)std::lround(a * (32768.0f / 3.14159265359f)), 0, 65535);
 }
 
 void UatDemod::configure(double inputRateHz) {
     rate_ = inputRateHz;
-    workRate_ = inputRateHz >= 3.5e6 ? 2e6 : inputRateHz;   // hold 2 Msps when possible
+    // two samples a bit (DO-282: 1.041667 Mbit/s): dump978's 2.083333 Msps. The slicer reads every second phase step, so any other rate is
+    // resampled to it (at 2 Msps the bits used to be taken as 1 Mbit/s: 4 % slow, and a frame slipped 17 bits)
+    workRate_ = 2 * kUatBitRate;
     reset();
     static bool fecOnce = false;
     if (!fecOnce) { init_fec(); fecOnce = true; }
@@ -126,28 +109,31 @@ void UatDemod::configure(double inputRateHz) {
 
 void UatDemod::reset() {
     phi_.clear();
+    rsPos_ = 0; rsHave_ = false; rsLast_ = cf32(0, 0);
     samples_ = 0;
     noiseDbfs_ = -120;
 }
 
 void UatDemod::feed(const cf32* x, size_t n) {
-    if (!ready()) return;
+    if (!ready() || n == 0) return;
     const double ratio = rate_ / workRate_;
-    if (std::fabs(ratio - 1.0) < 0.01) {
+    if (std::fabs(ratio - 1.0) < 1e-4) {
         pushPhi(x, n);
         samples_ += n;
-    } else {
-        const size_t outN = (size_t)std::ceil(n / ratio) + 4;
-        std::vector<cf32> y(outN);
-        double pos = 0;
-        size_t o = 0;
-        while (pos + 1 < (double)n && o < outN) {
-            const size_t i = (size_t)pos;
-            const double f = pos - (double)i;
-            y[o++] = x[i] * (float)(1.0 - f) + x[i + 1] * (float)f;
-            pos += ratio;
+    } else {   // linear, carried over the blocks: the next output sits at input position rsPos_ (-1 .. 0: between the previous block's last sample and x[0])
+        std::vector<cf32> y;
+        y.reserve((size_t)((double)n / ratio) + 4);
+        while (rsPos_ < (double)n - 1) {
+            const double p = rsPos_;
+            const long i = (long)std::floor(p);
+            const float f = (float)(p - (double)i);
+            const cf32 a = i < 0 ? (rsHave_ ? rsLast_ : x[0]) : x[i], b = x[i + 1];
+            y.push_back(a * (1.f - f) + b * f);
+            rsPos_ += ratio;
         }
-        pushPhi(y.data(), o);
+        rsPos_ -= (double)n;
+        rsLast_ = x[n - 1]; rsHave_ = true;
+        pushPhi(y.data(), y.size());
         samples_ += n;
     }
     processPhi();
@@ -199,7 +185,7 @@ void UatDemod::processPhi() {
                 f.rsErrors = rs0;
                 f.dataBytes = (bufA[0] >> 3) == 0 ? UAT_SHORT_FRAME_DATA_BYTES : UAT_LONG_FRAME_DATA_BYTES;
                 std::memcpy(f.data, bufA, (size_t)f.dataBytes);
-                f.timeSec = (double)(samples_ - (len - index) / 2) / rate_;
+                f.timeSec = (double)samples_ / rate_ - (double)(len - index) / workRate_;
                 f.levelDbfs = noiseDbfs_;
                 sink_(f);
                 bit = start + sk0;
@@ -211,7 +197,7 @@ void UatDemod::processPhi() {
                 f.rsErrors = rs1;
                 f.dataBytes = (bufB[0] >> 3) == 0 ? UAT_SHORT_FRAME_DATA_BYTES : UAT_LONG_FRAME_DATA_BYTES;
                 std::memcpy(f.data, bufB, (size_t)f.dataBytes);
-                f.timeSec = (double)(samples_ - (len - index - 1) / 2) / rate_;
+                f.timeSec = (double)samples_ / rate_ - (double)(len - index - 1) / workRate_;
                 f.levelDbfs = noiseDbfs_;
                 sink_(f);
                 bit = start + sk1;
@@ -230,7 +216,7 @@ void UatDemod::processPhi() {
                 f.rsErrors = rs0;
                 f.dataBytes = UAT_UPLINK_FRAME_DATA_BYTES;
                 std::memcpy(f.data, bufA, (size_t)f.dataBytes);
-                f.timeSec = (double)(samples_ - (len - index) / 2) / rate_;
+                f.timeSec = (double)samples_ / rate_ - (double)(len - index) / workRate_;
                 f.levelDbfs = noiseDbfs_;
                 sink_(f);
                 bit = start + sk0;
@@ -242,7 +228,7 @@ void UatDemod::processPhi() {
                 f.rsErrors = rs1;
                 f.dataBytes = UAT_UPLINK_FRAME_DATA_BYTES;
                 std::memcpy(f.data, bufB, (size_t)f.dataBytes);
-                f.timeSec = (double)(samples_ - (len - index - 1) / 2) / rate_;
+                f.timeSec = (double)samples_ / rate_ - (double)(len - index - 1) / workRate_;
                 f.levelDbfs = noiseDbfs_;
                 sink_(f);
                 bit = start + sk1;

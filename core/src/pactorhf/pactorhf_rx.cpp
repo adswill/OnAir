@@ -196,7 +196,9 @@ struct PactorHfReceiver::Impl {
             for (const auto& c : L.car) { p.carrierHz.push_back(c.hz); p.carrierOrder.push_back(c.order); }
             p.framePeriod = L.frame.period; p.framePeriodSec = L.frame.periodSec; p.syncPos = L.frame.syncPos; p.syncLen = L.frame.syncLen;
             p.syncHex = L.frame.syncHex; p.frameCopies = L.frame.copies; p.frameMatch = L.frame.match;
-            p.dataValid = L.frame.found;
+            // PACTOR-IV's framing is not public: identifying it (symbol rate, constellation) is what the monitor gives, so that is its valid
+            // result; PACTOR-II and III have a repeating frame to find
+            p.dataValid = L.frame.found || L.variant == 4;
             p.blocksOk = (uint64_t)L.frame.copies;
             p.state = L.frame.found ? 2 : 1;
             p.cfoHz = L.variant == 2 ? L.centreHz - 885.0 : L.variant == 3 ? L.centreHz - 1500.0 : L.variant == 4 ? L.centreHz - 1500.0 : 0;

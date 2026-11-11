@@ -75,7 +75,7 @@ void Deframer::start() {
     pos_ = syncBits_;
 }
 
-void Deframer::push(int bit) {
+void Deframer::pushSlow(int bit) {
     sr_ = sr_ << 1 | (uint64_t)(bit & 1);
     if (lock_ && pos_ >= syncBits_) {
         if (((bit & 1) ^ (inv_ ? 1 : 0)) != 0) frame_[(size_t)pos_ >> 3] |= (uint8_t)(0x80 >> (pos_ & 7));

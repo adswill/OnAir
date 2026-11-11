@@ -5,6 +5,7 @@
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/dsp_compat.h"
 #include "dect2/dsp/fir_dot.h"
+#include "dect2/dsp/fast_sincos.h"
 #include "dect2/dsp/rrc.h"
 #include "dect2/hrpt/hrpt_proto.h"
 #include "dect2/wxsat/wxsat_proto.h"
@@ -98,7 +99,9 @@ public:
     XbMod mod = kXbQpsk;
     bool acquired = false;
     double cfoCoarse = 0;
-    float agc = 1, carrierLock = 0, snrDb = 0;
+    float agc = 1, carrierLock = 0;
+    // the SNR from the spread of the symbol magnitudes, worked out when it is reported (not a log10 every symbol)
+    float snrDb() const { return 10.f * (float)std::log10(std::max(1e-3f, meanAbs_ * meanAbs_ / std::max(1e-6f, 2 * varAbs_))); }
     std::vector<std::pair<float, float>> cons;
     size_t consPos = 0;
 
@@ -113,6 +116,7 @@ public:
         rrc_.design(spsNom_, alpha);
         loopGains(m == kXbBpsk ? 0.008 : 0.005, 0.707, cA_, cB_);
         tBl_ = 0.006;
+        loopGains(tBl_, 0.9, tA_, tB_);
         resetAll();
     }
     void setOffset(double hz) { offsetHz = hz; updateStep(); }
@@ -121,7 +125,7 @@ public:
         rot_ = 1; for (auto& h : h_) h = 0;
         acquired = false; acq_.clear(); acq_.reserve(kAcq); cfoCoarse = 0; idle = false; skipLeft_ = 0; updateStep();
         phase_ = 0; freq_ = 0; t_ = spsNom_ / 2; strobePh_ = 0; lastStrobe_ = 0; mid_ = 0; prevMid_ = 0; sps_ = spsNom_;
-        agc = 0.1f; carrierLock = 0; snrDb = 0; meanAbs_ = 0; varAbs_ = 0;
+        agc = 0.1f; carrierLock = 0; meanAbs_ = 0; varAbs_ = 0;
         cons.clear(); consPos = 0;
     }
     void reacquire() { acquired = false; acq_.clear(); idle = false; skipLeft_ = 0; }
@@ -159,7 +163,7 @@ private:
     Rrc rrc_;
     int ratio_ = 1;
     double alpha_ = 0.5;
-    double spsNom_ = 2, sps_ = 2, cA_ = 0.01, cB_ = 1e-4, tBl_ = 0.005;
+    double spsNom_ = 2, sps_ = 2, cA_ = 0.01, cB_ = 1e-4, tBl_ = 0.005, tA_ = 0, tB_ = 0;
     double phase_ = 0, freq_ = 0, t_ = 1;
     cfp rot_{1, 0}, step_{1, 0};
     uint32_t renorm_ = 0;
@@ -249,7 +253,7 @@ private:
             if ((int)acq_.size() >= kAcq) { acquire(); acq_.clear(); }
             return;
         }
-        const cfp nco((float)std::cos(phase_), (float)-std::sin(phase_));
+        const cfp nco = FastSinCos::get().polar(1.f, -phase_);   // a table: std::cos and std::sin in double each sample were the largest single cost
         cfp v = y * nco;
         phase_ += freq_;
         v = rrc_.push(v);
@@ -282,8 +286,7 @@ private:
         e /= std::max(1e-6f, agc * agc);
         lastStrobe_ = a;
         e = std::clamp(e, -1.f, 1.f);
-        double wA, wB;
-        loopGains(tBl_, 0.9, wA, wB);
+        const double wA = tA_, wB = tB_;
         sps_ = std::clamp(sps_ + wB * e * spsNom_, spsNom_ * 0.992, spsNom_ * 1.008);
         t_ += sps_ * 0.5 + wA * e * spsNom_ * 0.5;
         const float I = sy.real() / agc, Q = sy.imag() / agc;
@@ -295,7 +298,6 @@ private:
         const float ab = mod == kXbBpsk ? std::fabs(I) : 0.5f * (std::fabs(I) + std::fabs(Q));
         meanAbs_ += 0.003f * (ab - meanAbs_);
         varAbs_ += 0.003f * ((ab - meanAbs_) * (ab - meanAbs_) - varAbs_);
-        snrDb = 10.f * (float)std::log10(std::max(1e-3f, meanAbs_ * meanAbs_ / std::max(1e-6f, 2 * varAbs_)));
         if (cons.size() < 256) cons.emplace_back(I, mod == kXbBpsk ? 0.f : Q);
         else { cons[consPos] = {I, mod == kXbBpsk ? 0.f : Q}; consPos = (consPos + 1) % 256; }
         sink(I, Q);
@@ -698,7 +700,7 @@ struct XbandReceiver::Impl {
         tel.satName = inst.satName();
         tel.scid = inst.lastScid() >= 0 ? inst.lastScid() : tel.scid;
         tel.cfoHz = dem.currentCfo();
-        tel.snrDb = dem.snrDb; tel.carrierLock = dem.carrierLock; tel.acqPeak = dem.lastPeak; tel.idleSkipped = dem.skipped;
+        tel.snrDb = dem.snrDb(); tel.carrierLock = dem.carrierLock; tel.acqPeak = dem.lastPeak; tel.idleSkipped = dem.skipped;
         tel.symbolRate = L.symbolRate; tel.inputRate = rate;
         tel.dataValid = tel.blocksOk > 0;
         tel.frameLock = tel.frameLock && def.locked();

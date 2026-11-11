@@ -682,7 +682,8 @@ int main(int argc, char** argv) {
             }
             // a clean run with only a few blocks is too short to judge the other conditions by: the next length (unless this was the last)
             const bool few = !r.byRes && r.c[0].good > 0 && r.c[0].good < 8 && li + 2 < lens.size();
-            if ((r.c[0].good > 0 && !few) || r.byRes || r.c[0].locked || r.c[0].verdict != "-") done = true;
+            // (a lock with a few blocks is not enough either: PMR446's calls end after its 3 s, so +-2 kHz was judged on calls cut by the file end)
+            if ((r.c[0].good > 0 && !few) || r.byRes || (r.c[0].locked && r.c[0].good == 0) || r.c[0].verdict != "-") done = true;
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
         // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline; when it decodes nothing in a short run,

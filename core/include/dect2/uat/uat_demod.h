@@ -17,6 +17,8 @@ struct UatRawFrame {
     double timeSec = 0;
 };
 
+constexpr double kUatBitRate = 1041666.6666666667;   // DO-282B
+
 class UatDemod {
 public:
     void configure(double inputRateHz);
@@ -35,7 +37,10 @@ private:
     static uint16_t iqPhase(const cf32& v);
 
     double rate_ = 0;
-    double workRate_ = 2e6;
+    double workRate_ = 2 * kUatBitRate;
+    double rsPos_ = 0;
+    bool rsHave_ = false;
+    cf32 rsLast_{0, 0};
     uint64_t samples_ = 0;
     float noiseDbfs_ = -120;
     uint64_t candidates_ = 0;

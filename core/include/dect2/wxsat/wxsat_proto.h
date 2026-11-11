@@ -39,7 +39,15 @@ public:
     std::function<void(const uint8_t* frame)> onFrame;
     void configure(uint64_t sync, int syncBits, int frameBits, int tolAcq, int tolTrack, bool allowInverted = true);
     void reset();
-    void push(int bit);
+    void push(int bit) {   // inside a frame: inline (at X-band rates the call per bit was a quarter of the receiver's time)
+        if (lock_ && pos_ >= syncBits_ && pos_ + 1 < frameBits_) {
+            sr_ = sr_ << 1 | (uint64_t)(bit & 1);
+            if (((bit & 1) ^ (inv_ ? 1 : 0)) != 0) frame_[(size_t)pos_ >> 3] |= (uint8_t)(0x80 >> (pos_ & 7));
+            ++pos_;
+            return;
+        }
+        pushSlow(bit);
+    }
     bool locked() const { return lock_; }
     bool inverted() const { return inv_; }
     // Hold each frame until the sync word that follows it is found, and drop it when that sync is missing (a sync word with no
@@ -55,6 +63,7 @@ private:
     int pos_ = 0, misses_ = 0;
     std::vector<uint8_t> frame_;
     void start();
+    void pushSlow(int bit);
 };
 
 // TIP minor frame -> HIRS

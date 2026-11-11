@@ -405,7 +405,9 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxRid_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fc24);
         rxMeteor_.setSignalOffset(o);
         rxNr_.setSignalOffset(o);
-        rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the sync raster points searched
+        // the sync raster points searched; a recording: its centre (the frequency entered for it) when it is in the NR bands (with none, only the
+        // dial was searched and an SSB on a raster point off the centre was never found)
+        { const double fcn = fileCentreHz_.load(); rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : (fcn >= 400e6 && fcn <= 7.2e9 ? fcn : 0.0)); }
         rxGoes_.setSignalOffset(o);
         rxEl_.setSignalOffset(o);
         rxGkL_.setSignalOffset(o);

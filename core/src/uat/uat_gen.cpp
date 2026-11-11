@@ -1,6 +1,8 @@
 // UAT test signal: modulated downlink frames (DO-282 vectors via dump978 fec_tests).
 #include "dect2/uat/uat_gen.h"
 #include "dect2/uat/uat_rx.h"
+#include "dect2/uat/uat_demod.h"
+#include <algorithm>
 #include "dect2/dsp/gen_util.h"
 #include <cmath>
 #include <cstdio>
@@ -32,38 +34,23 @@ static bool parseHex(const char* s, uint8_t* out, int n) {
     return true;
 }
 
-static void modByte(uint8_t b, int16_t center, std::vector<int16_t>& dphi) {
-    for (int bit = 7; bit >= 0; bit--) {
-        const bool one = (b >> bit) & 1;
-        dphi.push_back(one ? center + 400 : center - 400);
-        dphi.push_back(one ? center + 400 : center - 400);
-    }
-}
-
-static std::vector<cf32> dphiToIq(const std::vector<int16_t>& dphi, double rate, double cfoHz, float gain) {
-    std::vector<cf32> y(dphi.size());
-    double phase = 0;
-    const double w = 2 * kPi * cfoHz / rate;
-    uint16_t ph = 0;
-    for (size_t i = 0; i < dphi.size(); i++) {
-        ph = (uint16_t)(ph + (uint16_t)dphi[i]);
-        phase += w;
-        const double ang = (ph * (kPi / 32768.0)) + phase;
-        y[i] = cf32((float)(gain * std::cos(ang)), (float)(gain * std::sin(ang)));
+// binary CPFSK as DO-282B sends it: 1.041667 Mbit/s, modulation index 0.6 (+-312.5 kHz), a one above the carrier. The bits are timed at
+// the bit rate whatever the sample rate (they used to be two samples a bit at any rate, so at 2 Msps 1 Mbit/s, with a deviation of 6 kHz)
+static std::vector<cf32> modulateCodeword(const uint8_t* codeword, int codewordBytes, double rate, double cfoHz, float gain) {
+    std::vector<uint8_t> bits;
+    for (int i = 0; i < kSyncBits; i++) bits.push_back((uint8_t)((kAdsbSync >> (35 - i)) & 1));
+    for (int i = 0; i < codewordBytes; i++) for (int b = 7; b >= 0; b--) bits.push_back((uint8_t)((codeword[i] >> b) & 1));
+    const double rb = kUatBitRate, dev = 0.6 * rb / 2;
+    const size_t n = (size_t)std::ceil((double)bits.size() / rb * rate);
+    std::vector<cf32> y(n);
+    double ph = 0;
+    for (size_t k = 0; k < n; k++) {
+        const size_t bi = std::min(bits.size() - 1, (size_t)((double)k * rb / rate));
+        y[k] = cf32((float)(gain * std::cos(ph)), (float)(gain * std::sin(ph)));
+        ph += 2 * kPi * ((bits[bi] ? dev : -dev) + cfoHz) / rate;
+        if (ph > kPi) ph -= 2 * kPi; else if (ph < -kPi) ph += 2 * kPi;
     }
     return y;
-}
-
-static std::vector<cf32> modulateCodeword(const uint8_t* codeword, int codewordBytes, double rate, double cfoHz, float gain) {
-    std::vector<int16_t> dphi;
-    for (int i = 0; i < kSyncBits; i++) {
-        const bool one = (kAdsbSync >> (35 - i)) & 1;
-        dphi.push_back(one ? 500 : -500);
-        dphi.push_back(one ? 500 : -500);
-    }
-    const int16_t center = 0;
-    for (int i = 0; i < codewordBytes; i++) modByte(codeword[i], center, dphi);
-    return dphiToIq(dphi, rate, cfoHz, gain);
 }
 
 } // namespace

@@ -38,6 +38,20 @@ int main() {
             CHECK(ok, "BCH snr %.0f cfo %.0f", snr, cfo);
         }
     }
+    // the radio's sample clock off (QA sweep 3.9: the chips moved through the samples, and at 5 ppm no cell was found): -50 .. +50 ppm
+    for (double ppm : {-50.0, -15.0, -5.0, 5.0, 30.0}) {
+        auto x0 = umtsGenerate({{17, -2000, 1, 500, 0.4, 1, 1, 2, 0x123456}, {280, 300, 0.7, 9000, 0.3, 1, 1, 2, 0x234567}}, 38400 * 2 * 8 + 2000, 30, 13);
+        std::vector<cf32> x;
+        for (double t = 1; t + 2 < (double)x0.size() && x.size() < 38400 * 2 * 8; t += 1 + ppm * 1e-6) {
+            const size_t i = (size_t)t; const float fr = (float)(t - (double)i);
+            x.push_back(x0[i] * (1 - fr) + x0[i + 1] * fr);
+        }
+        auto f = umtsCellSearch(x.data(), x.size(), 7500, 6);
+        int cells = 0, bch = 0;
+        for (auto& c : f) { if (c.scramblingCode == 17 || c.scramblingCode == 280) cells++; bch += c.bchBlocks; }
+        printf("  clock %+.0f ppm: %d cells, %d BCH blocks\n", ppm, cells, bch);
+        CHECK(cells == 2 && bch >= 3, "clock %.0f ppm: %d cells, %d BCH", ppm, cells, bch);
+    }
     printf(fails ? "umts cells FAILED\n" : "umts cells passed\n");
     return fails ? 1 : 0;
 }
