@@ -281,6 +281,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxRc_.setSignalOffset(o);
         rxXlink_.setSignalOffset(o);
         for (auto& r : rxCis_) r.setSignalOffset(o);
+        for (auto& r : rxW1a_) r.setSignalOffset(o);
         rxXlink_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxRc_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxNrf_.setSignalOffset(o);
@@ -668,6 +669,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxRc_.configure(rate_);
     rxXlink_.configure(rate_);
     for (auto& r : rxCis_) { r.configure(rate_); r.setLogCallback([this](const std::string& s) { log(s); }); }
+    for (auto& r : rxW1a_) { r.configure(rate_); r.setLogCallback([this](const std::string& s) { log(s); }); }
     rxNrf_.configure(rate_);
     rxSens_.configure(rate_);
     rxBgan_.configure(rate_);

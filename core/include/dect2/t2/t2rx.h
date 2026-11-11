@@ -119,6 +119,7 @@
 #include "dect2/rclink/rc_tel.h"
 #include "dect2/xlink/xlink_tel.h"
 #include "dect2/cishf/cishf_tel.h"
+#include "dect2/w1a/w1a_tel.h"
 #include "dect2/nrf24/nrf24_tel.h"
 #include "dect2/sensors/sensors_tel.h"
 #include "dect2/bgan/bgan_tel.h"
@@ -288,6 +289,7 @@ struct RxTelemetry {
     SfericsTelemetry sferics; // valid when standard == 244 (Sferics, family 243, engine standard 245)
     LtPosTelemetry ltpos;   // valid when standard == 791 (Lightning position, family 790, engine standard 792)
     CisHfTelemetry cishf;     // valid when standard == 621 .. 627 (CIS HF modes, families 620 - 626)
+    W1aTelemetry w1a;         // valid when standard == 801 .. 803 (HF packet 300 Bd, voice inversion, ELT; families 800 - 802)
     XlinkTelemetry xlink;     // valid when standard == 601 (Extra links, family 600, engine standard 602)
     RcTelemetry rclink;       // valid when standard == 361 (RC and mesh links, family 360, engine standard 362)
     Nrf24Telemetry nrf24;     // valid when standard == 211 (nRF24L01, family 210, engine standard 212)

@@ -200,6 +200,7 @@
 #include "dect2/vdl3/vdl3_tel.h"
 #include "dect2/vdl4/vdl4_tel.h"
 #include "dect2/vor/vor_tel.h"
+#include "dect2/w1a/w1a_tel.h"
 #include "dect2/wb/wb_tel.h"
 #include "dect2/wifi/wifi_clients.h"
 #include "dect2/wifi/wifi_tel.h"
@@ -857,6 +858,8 @@ static void ev_dect2__Dvbc2Telemetry(std::string& s, const dect2::Dvbc2Telemetry
 static void ev_dect2__LtStationRow(std::string& s, const dect2::LtStationRow& v);
 static void ev_dect2__LtStrikeRow(std::string& s, const dect2::LtStrikeRow& v);
 static void ev_dect2__LtPosTelemetry(std::string& s, const dect2::LtPosTelemetry& v);
+static void ev_dect2__W1aEvent(std::string& s, const dect2::W1aEvent& v);
+static void ev_dect2__W1aTelemetry(std::string& s, const dect2::W1aTelemetry& v);
 static void ev_dect2__DvbsIpFlow(std::string& s, const dect2::DvbsIpFlow& v) {
     detail::J o(s);
     o.key("src"); detail::vstr(s, v.src, 4096);
@@ -14079,6 +14082,37 @@ static void ev_dect2__LtPosTelemetry(std::string& s, const dect2::LtPosTelemetry
     o.end();
 }
 
+static void ev_dect2__W1aEvent(std::string& s, const dect2::W1aEvent& v) {
+    detail::J o(s);
+    o.key("utc"); detail::vi64(s, (long long)(v.utc));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.end();
+}
+
+static void ev_dect2__W1aTelemetry(std::string& s, const dect2::W1aTelemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("kind"); detail::vnum(s, (double)(v.kind));
+    o.key("mode"); detail::vstr(s, v.mode, 4096);
+    o.key("params"); { detail::Arr a(s); const size_t n = (v.params).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); s += '['; { detail::vstr(s, ((v.params)[i]).first, 4096); } s += ','; { detail::vstr(s, ((v.params)[i]).second, 4096); } s += ']'; } a.end(); }
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("events"); { detail::Arr a(s); const size_t n = (v.events).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__W1aEvent(s, (v.events)[i]); } a.end(); }
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("spec"); { detail::Arr a(s); const size_t n = (v.spec).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)((v.spec)[i])); } a.end(); }
+    o.key("recording"); detail::vbool(s, v.recording);
+    o.key("recordPath"); detail::vstr(s, v.recordPath, 4096);
+    o.end();
+}
+
 static const char kSchema_dect2__DvbsIpFlow[] = R"JSON([{"n":"src","l":"Src","k":"text"},{"n":"dst","l":"Dst","k":"text"},{"n":"protocol","l":"Protocol","k":"text"},{"n":"sport","l":"Sport","k":"num"},{"n":"dport","l":"Dport","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"encrypted","l":"The headers are good but the UDP checksums fail: the payload was changed in transit","k":"bool"}])JSON";
 static const char kSchema_dect2__DvbsIpLabel[] = R"JSON([{"n":"label","l":"Label","k":"text"},{"n":"pdus","l":"Pdus","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"ip","l":"Ip","k":"num"},{"n":"addrs","l":"Addrs","k":"lines"},{"n":"modcods","l":"\"QPSK 5/6 41 %, 16APSK 3/4 59 %\": where the bytes went","k":"text"}])JSON";
 static const char kSchema_dect2__DvbsMediaFlow[] = R"JSON([{"n":"dst","l":"Dst","k":"text"},{"n":"src","l":"Src","k":"text"},{"n":"kind","l":"Kind","k":"text"},{"n":"codec","l":"Codec","k":"text"},{"n":"port","l":"Port","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"lost","l":"Lost","k":"num"},{"n":"kbps","l":"Kbps","k":"num"},{"n":"services","l":"MPEG-TS flows: the programmes found in them","k":"lines"},{"n":"scrambled","l":"Transport packets of the flow are scrambled: only labelled","k":"bool"}])JSON";
@@ -14723,6 +14757,8 @@ static const char kSchema_dect2__Dvbc2Telemetry[] = R"JSON([{"n":"seq","l":"Seq"
 static const char kSchema_dect2__LtStationRow[] = R"JSON([{"n":"id","l":"Station number","k":"num"},{"n":"name","l":"Name","k":"text"},{"n":"lat","l":"Its position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Its position, degrees","u":"deg","k":"num"},{"n":"timeSource","l":"Ltpos::TimeSrc of its latest detections","k":"num"},{"n":"sigmaUs","l":"Its timing error, 1 sigma, microseconds","u":"us","k":"num"},{"n":"ageS","l":"Seconds since its last packet","k":"num"},{"n":"detections","l":"Detections received","k":"num"},{"n":"used","l":"Of them used in a position fix","k":"num"},{"n":"fine","l":"Timed well enough to take part in a fix","k":"bool"},{"n":"tiedUtc","l":"Its clock is tied to UTC","k":"bool"},{"n":"corrUs","l":"The common-view correction applied, microseconds","u":"us","k":"num"}])JSON";
 static const char kSchema_dect2__LtStrikeRow[] = R"JSON([{"n":"utcNs","l":"Strike time, nanoseconds since 1970","k":"num"},{"n":"lat","l":"Position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Position, degrees","u":"deg","k":"num"},{"n":"majorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"minorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"azDeg","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"deg","k":"num"},{"n":"stations","l":"Fine-timed stations in the fix","k":"num"},{"n":"alsoHeard","l":"Coarse-timed stations whose detection fits","k":"num"},{"n":"rmsUs","l":"Rms of the arrival-time residuals, microseconds","u":"us","k":"num"},{"n":"chi2","l":"Chi2","k":"num"},{"n":"dof","l":"Dof","k":"num"},{"n":"unchecked","l":"Three stations: nothing could reject a wrong match","k":"bool"},{"n":"ambiguous","l":"A second position fits as well","k":"bool"},{"n":"utc","l":"The time is UTC","k":"bool"}])JSON";
 static const char kSchema_dect2__LtPosTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"State","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"The last sferic over the floor, dB","u":"dB","k":"num"},{"n":"dataValid","l":"At least one sferic timed","k":"bool"},{"n":"blocksOk","l":"Strikes located","k":"num"},{"n":"blocksBad","l":"Packets refused","k":"num"},{"n":"role","l":"0 this station only, 1 client","k":"num"},{"n":"timeSource","l":"Ltpos::TimeSrc stamping the detections now","k":"num"},{"n":"clockSigmaUs","l":"Its estimated error, 1 sigma, microseconds","u":"us","k":"num"},{"n":"ppm","l":"The radio's sample clock error against that source","k":"num"},{"n":"ppmSigma","l":"Ppm Sigma","k":"num"},{"n":"fine","l":"Good enough for a position fix","k":"bool"},{"n":"srcSigmaUs","l":"Per ltpos::TimeSrc 1..6: the error each source gives now, -1 when it is not available","u":"us","k":"list"},{"n":"pulses","l":"Sferics timed here","k":"num"},{"n":"sent","l":"Detections sent to the server","k":"num"},{"n":"sendErrors","l":"Send Errors","k":"num"},{"n":"floorDb","l":"Noise floor, dBFS","u":"dB","k":"num"},{"n":"thresholdDb","l":"Threshold dB","u":"dB","k":"num"},{"n":"refOn","l":"Ref On","k":"bool"},{"n":"refLocked","l":"Ref Locked","k":"bool"},{"n":"refName","l":"Ref Name","k":"text"},{"n":"refSnrDb","l":"Ref SNR dB","u":"dB","k":"num"},{"n":"refSigmaUs","l":"One block's symbol timing error, microseconds","u":"us","k":"num"},{"n":"refFreqErrHz","l":"Ref Freq Err Hz","u":"Hz","k":"num"},{"n":"listening","l":"The server's port is open","k":"bool"},{"n":"netStatus","l":"One line: \"sending to ...\", \"listening on port ...\", an error","k":"text"},{"n":"packetsOk","l":"Packets OK","k":"num"},{"n":"packetsAuth","l":"Packets Auth","k":"num"},{"n":"packetsReplay","l":"Packets Replay","k":"num"},{"n":"packetsBad","l":"Packets Bad","k":"num"},{"n":"stations","l":"Stations","k":"table","s":"dect2::LtStationRow","f":[{"n":"id","l":"Station number","k":"num"},{"n":"name","l":"Name","k":"text"},{"n":"lat","l":"Its position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Its position, degrees","u":"deg","k":"num"},{"n":"timeSource","l":"Ltpos::TimeSrc of its latest detections","k":"num"},{"n":"sigmaUs","l":"Its timing error, 1 sigma, microseconds","u":"us","k":"num"},{"n":"ageS","l":"Seconds since its last packet","k":"num"},{"n":"detections","l":"Detections received","k":"num"},{"n":"used","l":"Of them used in a position fix","k":"num"},{"n":"fine","l":"Timed well enough to take part in a fix","k":"bool"},{"n":"tiedUtc","l":"Its clock is tied to UTC","k":"bool"},{"n":"corrUs","l":"The common-view correction applied, microseconds","u":"us","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"id"}},{"n":"strikes","l":"Newest first","k":"table","s":"dect2::LtStrikeRow","f":[{"n":"utcNs","l":"Strike time, nanoseconds since 1970","k":"num"},{"n":"lat","l":"Position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Position, degrees","u":"deg","k":"num"},{"n":"majorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"minorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"azDeg","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"deg","k":"num"},{"n":"stations","l":"Fine-timed stations in the fix","k":"num"},{"n":"alsoHeard","l":"Coarse-timed stations whose detection fits","k":"num"},{"n":"rmsUs","l":"Rms of the arrival-time residuals, microseconds","u":"us","k":"num"},{"n":"chi2","l":"Chi2","k":"num"},{"n":"dof","l":"Dof","k":"num"},{"n":"unchecked","l":"Three stations: nothing could reject a wrong match","k":"bool"},{"n":"ambiguous","l":"A second position fits as well","k":"bool"},{"n":"utc","l":"The time is UTC","k":"bool"}],"map":{"lat":"lat","lon":"lon","label":"utcNs"}},{"n":"groups","l":"Groups","k":"num"},{"n":"fixes","l":"Fixes","k":"num"},{"n":"rejected","l":"Rejected","k":"num"},{"n":"unmatched","l":"Unmatched","k":"num"},{"n":"coarseOnly","l":"Coarse Only","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerHz","l":"Center Hz","u":"Hz","k":"num"}])JSON";
+static const char kSchema_dect2__W1aEvent[] = R"JSON([{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"text","l":"Text","k":"text"}])JSON";
+static const char kSchema_dect2__W1aTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 searching, 1 signal found, 2 decoded / confirmed","k":"num"},{"n":"cfoHz","l":"Packet: the tone offset found","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Packet: frames with a good / bad FCS","k":"num"},{"n":"blocksBad","l":"Packet: frames with a good / bad FCS","k":"num"},{"n":"kind","l":"W1a::Kind","k":"num"},{"n":"mode","l":"One line: what was found","k":"text"},{"n":"params","l":"Params","k":"list"},{"n":"text","l":"Packet: the newest frames, one per line","k":"text"},{"n":"events","l":"Newest first","k":"table","s":"dect2::W1aEvent","f":[{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"text","l":"Text","k":"text"}]},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"spec","l":"Inversion: the long-term audio spectrum, dB, 0 .. 4.8 kHz in 50 Hz steps","u":"dB","k":"list"},{"n":"recording","l":"Inversion: the descrambled audio is being written to a WAV file","k":"bool"},{"n":"recordPath","l":"Record Path","k":"text"}])JSON";
 struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };
 static bool put_7(const RxTelemetry& rx, std::string& s) { ev_dect2__DvbsTelemetry(s, rx.dvbs); return true; }
 static bool put_8(const RxTelemetry& rx, std::string& s) { ev_dect2__DtmbTelemetry(s, rx.dtmb); return true; }
@@ -14989,6 +15025,9 @@ static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTeleme
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
+static bool put_801(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
+static bool put_802(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
+static bool put_803(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_841(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_844(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_847(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
@@ -15261,6 +15300,9 @@ static const StdEntry kStd[] = {
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
+    {801, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_801},
+    {802, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_802},
+    {803, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_803},
     {841, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_841},
     {844, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_844},
     {847, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_847},
@@ -15592,6 +15634,9 @@ static const WebModeRow kRows[] = {
     {124, "KAPP", 15, "KAPP: KAAL packet data, 100 kHz wide", "", 126, 125, "kapp"},
     {125, "KAFT", 15, "KAFT: KAAL file transfer, 200 kHz to 1 MHz wide", "", 127, 126, "kaft"},
     {133, "KAWS", 15, "KAWS: HF weak-signal chat and beacons, 2.4 kHz", "", 135, 134, "kaws"},
+    {800, "HF packet 300 Bd", 11, "HF packet 300 Bd: AX.25 frames, full decode (simulated only)", "", 802, 801, "w1a"},
+    {801, "Voice inversion scrambler", 5, "Voice inversion scrambler: detection and descrambling of full-band inversion (simulated only)", "", 803, 802, "w1a"},
+    {802, "ELT 121.5 MHz", 2, "ELT 121.5 MHz: swept-tone detection (simulated only)", "", 804, 803, "w1a"},
 };
 } // namespace
 

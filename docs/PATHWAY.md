@@ -1708,3 +1708,5 @@ demodulators, only that framing's frames and counts), with its own row, tuning, 
 CubeSat telemetry entry is unchanged and says they exist. Skipped: FUNcube (the Smart CubeSat chain, not the shared receiver), FX.25 and
 IL2P (the packet receiver drops which FEC produced a frame), Fox DUV, the linear transponder tracker, AO-7 and the gr-satellites table
 entries with no framing of their own. Tests: tests/cubesat/test_cubesat_views.cpp (generated signals only). docs/W1C-3.9.md.
+## 2026-11-11 W1A voiceband modes: HF packet 300 Bd, voice inversion, ELT (feat39-w1a)
+Three new receive-only modes, families 800 - 802 (core/src/w1a, app/w1a, tests/w1a): HF packet 300 Bd (AX.25 full decode on the repo's own AFSK receiver), voice inversion scrambler (full-band inversion detection from the long-term speech spectrum, carrier estimate, descrambled audio to WAV), ELT 121.5 MHz (swept-tone detection only). Simulated signals only. Skipped from the candidate list: 96 and 97 (milhf already has a buzzer / numbers-style carrier), 150 (Airband already follows ATIS), 218 AMPS (no checkable public layout), 273 (no specification found); 98 and 219 are one mode. docs/W1A-3.9.md.

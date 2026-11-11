@@ -237,6 +237,8 @@
 #include "dect2/xlink/xlink_rx.h"
 #include "dect2/cishf/cishf_rx.h"
 #include "dect2/cishf/cishf_tel.h"
+#include "dect2/w1a/w1a_rx.h"
+#include "dect2/w1a/w1a_tel.h"
 #include "dect2/nrf24/nrf24_rx.h"
 #include "dect2/shortwave/shortwave_rx.h"
 #include "dect2/shortwave/shortwave_gen.h"
@@ -515,6 +517,7 @@ static std::vector<ModeTuning> withSatDetect(std::vector<ModeTuning> t) {
     for (const auto& s : satmisc::satSystems()) t.push_back(satDetectTuning(s.stdMode));
     t.push_back(navicTuning());
     for (int k = 0; k < kCisHfKinds; k++) { ModeTuning m = cisHfTuning(k); m.minMhz = 0.001; m.maxMhz = kMaxTuneMhz; t.push_back(m); }   // CIS HF modes (families 620 - 626), any frequency
+    for (int k = 0; k < kW1aKinds; k++) { ModeTuning m = w1aTuning(k); m.minMhz = 0.001; m.maxMhz = kMaxTuneMhz; t.push_back(m); }   // W1A voiceband modes (families 800 - 802), any frequency
     t.push_back(hfUtilTuning(kHfuKindHdr));   // STANAG 4539 / 110C high rate (family 603)
     t.push_back(hfUtilTuning(kHfuKindAle3g));   // 3G-ALE (family 604)
     t.push_back(hfUtilTuning(kHfuKindLink11));   // Link 11 CLEW (family 605)
@@ -850,6 +853,7 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 146: return makeSatbeaconSynth(cfg, sampleRate);
     case 563: return makeNavicSynth(cfg, sampleRate);
     case 622: case 623: case 624: case 625: case 626: case 627: case 628: return makeCisHfSynth(stdMode - 622, cfg, sampleRate);   // CIS HF modes
+    case 802: case 803: case 804: return makeW1aSynth(stdMode - 802, cfg, sampleRate);   // W1A voiceband modes (families 800 - 802)
     case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 562: case 564: return makeSatDetectSynth(stdMode, cfg, sampleRate);
     case 150: return nfc::makeNfcSynth(cfg, sampleRate);   // NFC / RFID (engine standard 150)
     case 152: return makeSbasSynth(cfg, sampleRate);
@@ -1052,6 +1056,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 145: return sbSummary(t.satbeacon);
     case 562: return navicSummary(t.navic);
     case 621: case 622: case 623: case 624: case 625: case 626: case 627: return cisHfSummary(t.cishf);   // CIS HF modes
+    case 801: case 802: case 803: return w1aSummary(t.w1a);   // W1A voiceband modes
     case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: return sdSummary(t.satdetect);
     case 149: return nfcSummary(t.nfc);   // NFC / RFID 13.56 MHz (active standard 149)
     case 155: return isdbsSummary(t.isdbs);

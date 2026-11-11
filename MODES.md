@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**322 modes.**
+**325 modes.**
 
 ## TV (17)
 
@@ -34,7 +34,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AM stereo (C-QUAM)** - AM stereo: C-QUAM on medium wave, stereo found by its 25 Hz pilot
 - **CDR** - CDR: China's digital radio in the FM band
 
-## Aviation (26)
+## Aviation (27)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -62,6 +62,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **DME** - DME: distance measuring equipment beacons, pulse pairs and ident
 - **eLoran / Loran-C** - eLoran / Loran-C: 100 kHz hyperbolic navigation pulses, GRI and station arrival times
 - **ASTERIX** - ASTERIX: radar and ADS-B surveillance data from UDP or a file
+- **ELT 121.5 MHz** - ELT 121.5 MHz: swept-tone detection (simulated only)
 
 ## Maritime (8)
 
@@ -131,7 +132,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Inmarsat (all carriers)** - Inmarsat: all Aero P and Inmarsat-C carriers at once, needs an L-band antenna and a wide radio (needs a user test)
 - **Inmarsat BGAN** - Inmarsat BGAN: forward carriers, bearer types, spot beams and network from the broadcast signalling (needs a user test, signalling only)
 
-## Two-way Radio (20)
+## Two-way Radio (21)
 
 - **DMR** - DMR (Digital Mobile Radio), two-slot TDMA
 - **Digital voice (auto)** - Digital voice, automatic: every system in the span found from the signal itself, with how sure
@@ -153,6 +154,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **TETRA DMO** - TETRA Direct Mode: DSB and DNB bursts, DM-SETUP and the calls
 - **OpenSky identifier** - OpenSky: identification only, the channel is measured and nothing is decoded
 - **EDACS trunking** - EDACS trunking: control channel frames, calls and analog voice following of a trunked system
+- **Voice inversion scrambler** - Voice inversion scrambler: detection and descrambling of full-band inversion (simulated only)
 
 ## Cellular & Rail (10)
 
@@ -307,7 +309,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Hellschreiber** - Hell: text drawn as a picture
 - **ROS (HF)** - ROS (HF): detects the ROS weak-signal mode and its sub-mode, marks it on the waterfall; text decoding partial (needs a public spec)
 
-## Amateur - Voice & Packet (8)
+## Amateur - Voice & Packet (9)
 
 - **FreeDV** - FreeDV: open digital voice on HF
 - **M17** - M17: open digital voice, text messages and positions on VHF / UHF
@@ -317,6 +319,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **LoRa APRS** - LoRa APRS: APRS stations over LoRa on 433 MHz
 - **MeshCom** - MeshCom: amateur LoRa mesh messages and positions on 433 MHz
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
+- **HF packet 300 Bd** - HF packet 300 Bd: AX.25 frames, full decode (simulated only)
 
 ## HF Utility (32)
 

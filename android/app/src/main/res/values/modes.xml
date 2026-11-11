@@ -350,6 +350,9 @@
         <item>NGHam</item>
         <item>U482C</item>
         <item>BEESAT / Mobitex</item>
+        <item>HF packet 300 Bd</item>
+        <item>Voice inversion scrambler</item>
+        <item>ELT 121.5 MHz</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -681,6 +684,9 @@
         <item>NGHam (Next Generation Ham radio protocol, FloripaSat and other cubesats) on 70 cm: GMSK / FSK frames with Reed-Solomon and CRC. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
         <item>GOMspace U482C (GomX-1 and similar) on 70 cm: AFSK at 4800 bit/s on a 3600 Hz audio carrier, scrambled and Reed-Solomon coded frames. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
         <item>BEESAT-1 / BEESAT-9 and other TU Berlin and TECHNOSAT cubesats on 70 cm: Mobitex-NX blocks with Mobitex CRCs at 4800 bit/s GMSK. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
+        <item>HF packet radio, full decode: AX.25 frames in 300 Bd AFSK (tones 1600 and 1800 Hz, 200 Hz shift) on the upper sideband, with NRZI, bit stuffing and CRC-16. Each good frame is shown as sender&gt;destination,path:text, and a tuning error of up to a quarter of the shift is followed. Simulated signals only so far</item>
+        <item>Analog voice scrambler detector and descrambler for full-band frequency inversion (every audio frequency f becomes fc - f, carriers from 2.7 to 3.7 kHz). Tune a narrow-FM voice channel: the long-term spectrum of the voiced audio is compared with speech as heard and flipped, the carrier is estimated to about 100 - 200 Hz, and the descrambled audio can be written to a WAV file. Split-band inversion and rolling-code scramblers are not covered. Simulated signals only so far</item>
+        <item>Emergency locator transmitter on 121.5 MHz, detection only: an AM carrier with a tone swept downwards from about 1600 to 300 Hz two to four times a second. The sweep, its rate, its range and the modulation depth are measured and logged; the analogue beacon carries no data and 406 MHz beacons are a different system. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1012,6 +1018,9 @@
         <item>Satellites, NGHam</item>
         <item>Satellites, U482C</item>
         <item>Satellites, BEESAT / Mobitex</item>
+        <item>AX.25, upper sideband, HF</item>
+        <item>Analog scrambler, narrow FM</item>
+        <item>Emergency beacon, AM</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1343,5 +1352,8 @@
         <item>ngham floripasat next generation ham radio protocol reed solomon cubesat satellite 4800 gmsk 435 437</item>
         <item>u482c gomspace gomx afsk 4800 3600 reed solomon cubesat satellite 435 437</item>
         <item>beesat mobitex technosat tu berlin gmsk 4800 cubesat satellite 435 437</item>
+        <item>hf packet radio 300 baud ax.25 ax25 afsk 1600 1800 bell 103 usb pactor winlink</item>
+        <item>voice inversion scrambler speech descrambler frequency inversion split band analog privacy vhf uhf</item>
+        <item>elt emergency locator transmitter 121.5 distress beacon swept tone siren aviation guard sar</item>
     </string-array>
 </resources>
