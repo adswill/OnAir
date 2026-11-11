@@ -45,6 +45,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case TxStability: return makeTxStability();
     case OccBw: return makeOccBw();
     case Papr: return makePapr();
+    case SpecKurt: return makeSpecKurt();
     default: return nullptr;
     }
 }
@@ -95,6 +96,7 @@ ModeTuning x40Tuning(int v) {
         {"txstability", 26, 6000, 146.520, 48000, 24000, 0.016, true},
         {"occbw", 0.1, 6000, 145.000, 1000000, 100000, 0.5, false},
         {"papr", 0.1, 6000, 145.000, 1000000, 100000, 0.5, false},
+        {"speckurt", 0.1, 6000, 145.000, 2000000, 250000, 2.0, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];
