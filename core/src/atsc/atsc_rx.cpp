@@ -313,6 +313,40 @@ DECT2_AVX2_TARGET void dfeAddAvx2(float* __restrict a, const float* __restrict f
     }
     for (; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
 }
+// x86, AVX2 + FMA: the decision feedback equaliser's loop over a field (equalize(), B > 0), the same steps with fused multiply-adds and the
+// level decision as one rounding instruction: the chain from one decision to the next is that decision, a multiply-add and the clamps.
+DECT2_AVX2_TARGET static inline float quant8Avx2(float y) {
+    __m128 t = _mm_mul_ss(_mm_set_ss(y), _mm_set_ss(0.5f));
+    t = _mm_floor_ss(t, t);
+    t = _mm_max_ss(_mm_min_ss(t, _mm_set_ss(3.f)), _mm_set_ss(-4.f));   // min first: NaN becomes 3 (a level of 7), as in quant8()
+    return _mm_cvtss_f32(_mm_fmadd_ss(t, _mm_set_ss(2.f), _mm_set_ss(1.f)));
+}
+DECT2_AVX2_TARGET static inline float decideAvx2(int i, float y, const float* fsLv, int mseFrom, float* lv, float* hvB, double& mse, int& nm) {
+    static const float syncLv[4] = {5, -5, -5, 5};
+    float dec;
+    const int sp = i % kSegSyms;
+    if (i < 728) {
+        dec = fsLv[i];
+        if (i >= mseFrom) { const double e = y - fsLv[i]; mse += e * e; nm++; }
+    } else if (sp < 4) dec = syncLv[sp];
+    else dec = quant8Avx2(y);
+    lv[i] = y;
+    hvB[i] = dec;
+    return dec;
+}
+DECT2_AVX2_TARGET void dfeFieldAvx2(const float* ffo, float bias, float* fbAcc, const float* fbs, const float* fbt, int B, const float* fsLv,
+                                    float* lv, float* hvB, double& mse, int& nm) {
+    const int mseFrom = std::max(B, 8);
+    for (int i = 0; i < kFieldSyms; i += 4) {
+        const float* c = fbAcc + i;
+        const float b0 = ffo[i] + bias, b1 = ffo[i + 1] + bias, b2 = ffo[i + 2] + bias, b3 = ffo[i + 3] + bias;
+        const float d0 = decideAvx2(i, b0 + c[0], fsLv, mseFrom, lv, hvB, mse, nm);
+        const float d1 = decideAvx2(i + 1, b1 + c[1] + d0 * fbt[0], fsLv, mseFrom, lv, hvB, mse, nm);
+        const float d2 = decideAvx2(i + 2, b2 + c[2] + d0 * fbt[1] + d1 * fbt[0], fsLv, mseFrom, lv, hvB, mse, nm);
+        const float d3 = decideAvx2(i + 3, b3 + c[3] + d0 * fbt[2] + d1 * fbt[1] + d2 * fbt[0], fsLv, mseFrom, lv, hvB, mse, nm);
+        dfeAddAvx2(fbAcc + i + 4, fbs, fbs + B, fbs + 2 * B, fbs + 3 * B, B, d0, d1, d2, d3);
+    }
+}
 // x86, AVX2 + FMA: c[i] = sum_k f[k] a[i + k] (the feed-forward equaliser, 65 or 129 taps), 32 outputs at a time with one broadcast tap per step:
 // four independent chains and no reduction per output (the portable convCorr runs one 8-lane chain and a reduction for every output)
 DECT2_AVX2_TARGET void corrAvx2(const float* a, const float* f, float* c, int n, int p) {
@@ -918,7 +952,9 @@ struct Core {
             trimD(accIdx > 12000 ? accIdx - 12000 : 0);
         }
         if (seg) {
-            while (tau + kInterpJ + 2 < (double)dEnd() && tau - kInterpJ - 1 >= (double)dBase) {
+            // the buffer's ends as doubles once (nothing in the loop changes them; an unsigned 64-bit conversion is several instructions on x86)
+            const double dE = (double)dEnd(), dB = (double)dBase;
+            while (tau + kInterpJ + 2 < dE && tau - kInterpJ - 1 >= dB) {
                 if (segPos < 4) tauSync[segPos] = tau;
                 segSyms.push_back(interpAt(tau));
                 segPos++;
@@ -1359,6 +1395,9 @@ struct Core {
             return dec;
         };
         if (!B) for (int i = 0; i < kFieldSyms; i++) decide(i, ffo[(size_t)i] + tp.bias);
+#if defined(DECT2_X86_DISPATCH)
+        else if (avx2) dfeFieldAvx2(ffo.data(), tp.bias, fbAcc.data(), fbs.data(), fbt, B, fsLv, lv.data(), hv.data() + B, mse, nm);
+#endif
         else
             for (int i = 0; i < kFieldSyms; i += kG) {
                 const float* c = &fbAcc[(size_t)i];
@@ -1373,9 +1412,6 @@ struct Core {
                 const float* __restrict f1 = &fbs[(size_t)B];
                 const float* __restrict f2 = &fbs[(size_t)2 * B];
                 const float* __restrict f3 = &fbs[(size_t)3 * B];
-#if defined(DECT2_X86_DISPATCH)
-                if (avx2) { dfeAddAvx2(a, f0, f1, f2, f3, B, d0, d1, d2, d3); continue; }
-#endif
                 for (int m = 0; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
             }
         mse /= std::max(1, nm);
