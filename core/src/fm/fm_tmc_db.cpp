@@ -715,14 +715,14 @@ int Log::update(const std::vector<TmcMessage>& msgs, const Station& st, const Da
     // oldest first, so the file reads in order
     for (auto it = msgs.rbegin(); it != msgs.rend(); ++it) {
         const std::string k = keyOf(*it);
-        if (std::find(seen_.begin(), seen_.end(), k) != seen_.end()) continue;
+        if (seen_.count(k)) continue;
         if (!open()) return n;
         const Plain p = describe(*it, db, lang);
         const std::string row = csvRow(*it, p, st), line = textLine(*it, p, st);
         fwrite(row.data(), 1, row.size(), csv_);
         fwrite(line.data(), 1, line.size(), txt_);
-        seen_.push_back(k);
-        if (seen_.size() > 2048) seen_.erase(seen_.begin(), seen_.begin() + 512);
+        seen_.insert(k); order_.push_back(k);
+        while (order_.size() > 2048) { seen_.erase(order_.front()); order_.pop_front(); }
         n++;
     }
     if (n) { fflush(csv_); fflush(txt_); }

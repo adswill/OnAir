@@ -1509,6 +1509,8 @@ void dabScanTab(App& a);
 void dabScanStep(App& a);
 void fmScanTab(App& a);
 void fmSmartTick(App& a);                    // fm_smart_ui.cpp: AF follow and the DX log
+void fmTmcTick(App& a);                      // fm_tmc_ui.cpp: the TMC log
+void fmTmcPanel(App& a);                     // fm_tmc_ui.cpp: TMC messages in plain words, the user's tables
 void fmAfPanel(App& a);
 void fmCensusPanel(App& a);
 double fmChannelDb(const SpectrumFrame& f, double fs, double offHz);

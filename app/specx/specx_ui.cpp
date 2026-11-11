@@ -11,6 +11,7 @@
 #include "dect2/specx/specx_measure.h"
 #include "dect2/specx/specx_rx.h"
 #include "dect2/specx/specx_tel.h"
+#include "dect2/rfi/display_emission.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -103,6 +104,8 @@ struct State {
     Sweep sw;
     int pushedFft = -1, pushedAvg = -1;
     bool wasRunning = false;
+    dect2::dispem::Result disp, dispPano;   // a local display's HDMI emission in view / in the last sweep's panorama
+    double dispT = 0;
 };
 State S;
 
@@ -350,6 +353,24 @@ void overlays(App& a, float l, float r, float top, float bot) {
         dl->AddLine(ImVec2(x, top), ImVec2(x, bot), IM_COL32(255, 210, 90, 170));
         char b[64]; snprintf(b, sizeof b, "M%zu %.1f", i + 1, levelAt(a, S.markers[i]));
         dl->AddText(ImVec2(x + 3, top + 2 + 14 * gUi * (float)(i % 3)), IM_COL32(255, 210, 90, 255), b);
+    }
+    {   // a local display's emission: its lines ticked at the top, the label at the first one in view
+        const dect2::dispem::Result& d = S.disp.found ? S.disp : S.dispPano;
+        if (d.found) {
+            bool labelled = false;
+            for (double f : d.members) {
+                if (f < S.viewLo || f > S.viewHi) continue;
+                const float x = X(f);
+                dl->AddLine(ImVec2(x, top), ImVec2(x, top + 10 * gUi), IM_COL32(235, 120, 235, 220), 2.f);
+                if (!labelled) {
+                    labelled = true;
+                    const auto& T = dect2::dispem::timings();
+                    std::string lab = tr(dect2::dispem::label());
+                    if (!d.matches.empty() && d.matches[0].timing >= 0) lab += std::string(": ") + T[(size_t)d.matches[0].timing].name;
+                    dl->AddText(ImVec2(x + 4, top + 12 * gUi), IM_COL32(235, 120, 235, 255), lab.c_str());
+                }
+            }
+        }
     }
     dl->PopClipRect();
     drawMarks(dl, S.viewLo, S.viewHi, l, r, top, bot);
@@ -652,6 +673,30 @@ void sweepPanel(App& a, float h) {
     }
 }
 
+// What the display / HDMI emission finder says: the likely timing, the evidence, the alternatives (docs/HDMI-EMISSION-3.9.md)
+void displayPanel() {
+    const auto& T = dect2::dispem::timings();
+    ImGui::PushTextWrapPos(0);
+    for (int which = 0; which < 2; which++) {
+        const dect2::dispem::Result& d = which == 0 ? S.disp : S.dispPano;
+        if (!d.found) continue;
+        ImGui::TextColored(ImVec4(0.92f, 0.47f, 0.92f, 1.f), "%s%s", tr(dect2::dispem::label()), which == 0 ? "" : tr(" (in the sweep)"));
+        ImGui::TextUnformatted(d.summary.c_str());
+        for (const std::string& e : d.evidence) ImGui::TextDisabled("%s", e.c_str());
+        for (size_t i = 1; i < d.matches.size(); i++) {
+            const dect2::dispem::Match& m = d.matches[i];
+            ImGui::TextDisabled(tr("or %s, %.0f %%"), m.timing >= 0 ? T[(size_t)m.timing].name : tr("an unknown timing"), m.confidence * 100);
+        }
+        ImGui::PushID(which);
+        if (ImGui::SmallButton(tr("Copy"))) ImGui::SetClipboardText(dect2::dispem::toText(d).c_str());
+        ImGui::PopID();
+        ImGui::Separator();
+    }
+    ImGui::TextDisabled("%s", tr("A monitor, TV or its HDMI / DVI cable leaks its pixel clock and the picture data repeating every line: lines at the clock and its "
+                                 "harmonics, with a comb at the line rate around them. Switch the display off or unplug its cable to confirm."));
+    ImGui::PopTextWrapPos();
+}
+
 void tab(App& a) {
     loadState();
     strip(a);
@@ -663,7 +708,7 @@ void tab(App& a) {
         S.lastCentre = c; S.lastRate = rate; S.peak.clear();
     }
     const float avail = ImGui::GetContentRegionAvail().y;
-    const bool panel = S.hasRegion || S.sw.active || !S.sw.pano.db.empty();
+    const bool panel = S.hasRegion || S.sw.active || !S.sw.pano.db.empty() || S.disp.found || S.dispPano.found;
     const float ph = panel ? std::min(avail * 0.42f, 260 * gUi) : 0;
     const float stripH = bandPlanStripHeight();
     const float rest = avail - ph - stripH - ImGui::GetStyle().ItemSpacing.y * (panel ? 3 : 2);
@@ -688,6 +733,7 @@ void tab(App& a) {
             ImGui::EndTabItem();
         }
         if (typo::beginTabItem("Sweep")) { sweepPanel(a, ImGui::GetContentRegionAvail().y); ImGui::EndTabItem(); }
+        if ((S.disp.found || S.dispPano.found) && typo::beginTabItem(tr("Display emission"))) { displayPanel(); ImGui::EndTabItem(); }
         ImGui::EndTabBar();
     }
     ImGui::EndChild();
@@ -812,6 +858,12 @@ void tick(App& a) {
     }
     if (S.lnb.inverted()) { std::vector<float> r(t.spectrum.rbegin(), t.spectrum.rend()); S.wf.push(r, S.lo, S.hi); }
     else S.wf.push(t.spectrum, S.lo, S.hi);
+    // a local display's HDMI emission in view, once a second (not through an inverting converter)
+    if (!S.lnb.inverted() && ImGui::GetTime() - S.dispT > 1.0) {
+        S.dispT = ImGui::GetTime();
+        const sx::SpecView v = view(a);
+        S.disp = dect2::dispem::analyseSpectrum(v.db, v.n, toRf(v.f0Hz), v.binHz);
+    }
     // sweep: tune, wait until the averaging has filled after the retune, take the spectrum, next
     Sweep& w = S.sw;
     if (!w.active || w.centres.empty()) return;
@@ -823,6 +875,7 @@ void tick(App& a) {
     if (++w.idx >= w.centres.size()) {
         w.idx = 0; w.passes++;
         w.found = sx::detect(w.pano.view(w.panoEnbw));
+        if (!S.lnb.inverted()) S.dispPano = dect2::dispem::analyseSpectrum(w.pano.db.data(), (int)w.pano.db.size(), toRf(w.pano.loHz + w.pano.binHz / 2), w.pano.binHz);
         std::vector<float> row(w.pano.db);
         if (S.lnb.inverted()) std::reverse(row.begin(), row.end());
         w.wf.push(row, S.lo, S.hi);

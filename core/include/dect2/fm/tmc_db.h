@@ -14,9 +14,11 @@
 #pragma once
 #include "dect2/fm/rds_tmc.h"
 #include <cstdio>
+#include <deque>
 #include <map>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace dect2 {
@@ -129,6 +131,7 @@ public:
     const std::string& path() const { return base_; }
     void setEnabled(bool on) { on_ = on; }
     bool enabled() const { return on_ && !base_.empty(); }
+    bool on() const { return on_; }
     // Logs what is new in msgs (now: seconds since 1970). Returns how many messages were written.
     int update(const std::vector<TmcMessage>& msgs, const Station& st, const Database* db, const std::string& lang);
     std::string lastError() const { return err_; }
@@ -141,7 +144,8 @@ private:
     bool on_ = true;
     FILE* csv_ = nullptr;
     FILE* txt_ = nullptr;
-    std::vector<std::string> seen_;                // keys of the messages already logged (bounded)
+    std::unordered_set<std::string> seen_;         // keys of the messages already logged (bounded)
+    std::deque<std::string> order_;
 };
 
 // The folder the app keeps the imported files in (settings folder / "tmc"), and loading every file there.
