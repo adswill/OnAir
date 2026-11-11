@@ -1700,3 +1700,6 @@ apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-cen
 too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
 source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
 qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
+
+## 2026-11-11 W1A voiceband modes: HF packet 300 Bd, voice inversion, ELT (feat39-w1a)
+Three new receive-only modes, families 800 - 802 (core/src/w1a, app/w1a, tests/w1a): HF packet 300 Bd (AX.25 full decode on the repo's own AFSK receiver), voice inversion scrambler (full-band inversion detection from the long-term speech spectrum, carrier estimate, descrambled audio to WAV), ELT 121.5 MHz (swept-tone detection only). Simulated signals only. Skipped from the candidate list: 96 and 97 (milhf already has a buzzer / numbers-style carrier), 150 (Airband already follows ATIS), 218 AMPS (no checkable public layout), 273 (no specification found); 98 and 219 are one mode. docs/W1A-3.9.md.

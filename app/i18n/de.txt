@@ -3878,3 +3878,28 @@ shared lists:	geteilte Listen:
 stop using it	nicht mehr verwenden
 The country of the shared transmitter list (ISO code, e.g. GB, DE, NO); Enter downloads it.\nThe lists of the countries of the ensembles heard are fetched as well.	Das Land der geteilten Senderliste (ISO-Code, z. B. GB, DE, NO); Enter lädt sie herunter.\nDie Listen der Länder der empfangenen Ensembles werden ebenfalls geladen.
 Add the transmitters of a CSV file to your own list (columns eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid in hex):\nan export of heard transmitters with the positions filled in, or a list someone shares; rows without a position are skipped.\nqt-dab's .txdata.tii is used where it is instead (FMLIST data, personal use).	Die Sender einer CSV-Datei zu deiner eigenen Liste hinzufügen (Spalten eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid hexadezimal):\nein Export der empfangenen Sender mit eingetragenen Positionen oder eine Liste, die jemand teilt; Zeilen ohne Position werden übersprungen.\nDie .txdata.tii von qt-dab wird stattdessen an Ort und Stelle genutzt (FMLIST-Daten, privater Gebrauch).
+# W1A voiceband modes (families 800 - 802)
+Analog voice scrambler, full-band inversion (every audio frequency f becomes fc - f). Tune a narrow-FM voice channel. The long-term spectrum of the voiced audio is compared with speech as heard and flipped about each carrier from 2.7 to 3.7 kHz; the carrier is found to about 100 - 200 Hz. Split-band inversion and rolling-code scramblers are not covered.	Analoger Sprachscrambler, Vollband-Inversion (jede Tonfrequenz f wird zu fc - f). Einen Schmalband-FM-Sprachkanal einstellen. Das Langzeitspektrum des Sprachtons wird mit Sprache wie empfangen und um jeden Träger von 2,7 bis 3,7 kHz gespiegelt verglichen; der Träger wird auf etwa 100 - 200 Hz genau gefunden. Split-Band-Inversion und Rolling-Code-Scrambler werden nicht abgedeckt.
+HF packet radio, full decode: AX.25 frames in 300 Bd AFSK, tones 1600 / 1800 Hz (200 Hz shift), upper sideband. Every frame with a good CRC is shown as sender>destination,path:text; a tuning error of up to a quarter of the shift is followed.	HF-Packet-Radio, volle Dekodierung: AX.25-Rahmen in 300-Bd-AFSK, Töne 1600 / 1800 Hz (200 Hz Hub), oberes Seitenband. Jeder Rahmen mit gutem CRC wird als Absender>Ziel,Weg:Text angezeigt; ein Abstimmfehler bis zu einem Viertel des Hubs wird nachgeführt.
+Emergency locator transmitter on 121.5 MHz, detection only: an AM carrier with a tone that sweeps downwards from about 1600 to 300 Hz two to four times a second. The sweep, its rate and its depth are measured; the old analogue beacons carry no data. Tune the AM channel.	Notfunksender (ELT) auf 121,5 MHz, nur Erkennung: ein AM-Träger mit einem Ton, der zwei- bis viermal pro Sekunde von etwa 1600 auf 300 Hz abwärts läuft. Durchlauf, Rate und Tiefe werden gemessen; die alten analogen Baken senden keine Daten. Den AM-Kanal einstellen.
+Carrier (Hz, 0 = automatic)	Träger (Hz, 0 = automatisch)
+Checked on simulated signals only: no real recording went through this mode.	Nur mit simulierten Signalen geprüft: keine echte Aufnahme ist durch diesen Modus gelaufen.
+Tune the dial frequency, upper sideband. Checked on simulated signals only.	Die Anzeigefrequenz einstellen, oberes Seitenband. Nur mit simulierten Signalen geprüft.
+Events	Ereignisse
+Long-term audio spectrum, 0 - 4.8 kHz	Langzeit-Tonspektrum, 0 - 4,8 kHz
+Record the descrambled audio	Entscrambelten Ton aufnehmen
+Stop recording	Aufnahme beenden
+The audio is written as a 12 kHz, 16-bit mono WAV file in the recordings folder.	Der Ton wird als WAV-Datei (12 kHz, 16 Bit, mono) im Aufnahmeordner gespeichert.
+failed the CRC	CRC fehlerhaft
+fit as heard	Passung wie empfangen
+fit inverted	Passung invertiert
+link layer	Sicherungsschicht
+scrambling	Verschleierung
+start the receiver	Empfänger starten
+stations	Stationen
+sweep range	Durchlaufbereich
+sweep rate	Durchlaufrate
+sweeps counted	gezählte Durchläufe
+AX.25, upper sideband, HF	AX.25, oberes Seitenband, KW
+Analog scrambler, narrow FM	Analoger Scrambler, Schmalband-FM
+Emergency beacon, AM	Notfallbake, AM

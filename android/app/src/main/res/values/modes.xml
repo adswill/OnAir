@@ -344,6 +344,9 @@
         <item>CIS-128</item>
         <item>CIS-3000</item>
         <item>Lightning position (network)</item>
+        <item>HF packet 300 Bd</item>
+        <item>Voice inversion scrambler</item>
+        <item>ELT 121.5 MHz</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -669,6 +672,9 @@
         <item>CIS-128, identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz, from the carrier spacing, the symbol rate and the guard. The 6 kHz form is not covered. No frame format is published. Simulated signals only so far</item>
         <item>CIS-3000, identification only: a single carrier 8-PSK at 3000 Bd, from its symbol-rate line and the constellation order. No frame format is published. Simulated signals only so far</item>
         <item>Lightning position (network): several OnAir stations with radios time the same sferic; one acts as the server, collects the detections and finds the strike by time difference of arrival. Each station shows which timing source it uses (GPS-disciplined radio time, a GNSS receiver, a common-view VLF / LF transmitter, or PTP / NTP for association only) and its estimated error; the server draws the strikes with error ellipses on the map. Authenticated with a network key, off until set up, nothing relayed elsewhere. Receive only</item>
+        <item>HF packet radio, full decode: AX.25 frames in 300 Bd AFSK (tones 1600 and 1800 Hz, 200 Hz shift) on the upper sideband, with NRZI, bit stuffing and CRC-16. Each good frame is shown as sender&gt;destination,path:text, and a tuning error of up to a quarter of the shift is followed. Simulated signals only so far</item>
+        <item>Analog voice scrambler detector and descrambler for full-band frequency inversion (every audio frequency f becomes fc - f, carriers from 2.7 to 3.7 kHz). Tune a narrow-FM voice channel: the long-term spectrum of the voiced audio is compared with speech as heard and flipped, the carrier is estimated to about 100 - 200 Hz, and the descrambled audio can be written to a WAV file. Split-band inversion and rolling-code scramblers are not covered. Simulated signals only so far</item>
+        <item>Emergency locator transmitter on 121.5 MHz, detection only: an AM carrier with a tone swept downwards from about 1600 to 300 Hz two to four times a second. The sweep, its rate, its range and the modulation depth are measured and logged; the analogue beacon carries no data and 406 MHz beacons are a different system. Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -994,6 +1000,9 @@
         <item>Identification only, HF</item>
         <item>Identification only, HF</item>
         <item>Lightning map, several stations</item>
+        <item>AX.25, upper sideband, HF</item>
+        <item>Analog scrambler, narrow FM</item>
+        <item>Emergency beacon, AM</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1319,5 +1328,8 @@
         <item>cis-128 cis128 russian ofdm 128 tone hf identification sigidwiki</item>
         <item>cis-3000 cis3000 russian single carrier 8psk 3000 baud hf identification sigidwiki</item>
         <item>lightning position network tdoa time difference arrival strike location map sferics stations blitzortung vlf lf common view gps</item>
+        <item>hf packet radio 300 baud ax.25 ax25 afsk 1600 1800 bell 103 usb pactor winlink</item>
+        <item>voice inversion scrambler speech descrambler frequency inversion split band analog privacy vhf uhf</item>
+        <item>elt emergency locator transmitter 121.5 distress beacon swept tone siren aviation guard sar</item>
     </string-array>
 </resources>

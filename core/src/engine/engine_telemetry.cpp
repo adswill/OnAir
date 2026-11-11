@@ -347,6 +347,9 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 625: return pollStd(rxCis_[4], a, t, seqs[625], &RxTelemetry::cishf);
     case 626: return pollStd(rxCis_[5], a, t, seqs[626], &RxTelemetry::cishf);
     case 627: return pollStd(rxCis_[6], a, t, seqs[627], &RxTelemetry::cishf);
+    case 801: return pollStd(rxW1a_[0], a, t, seqs[801], &RxTelemetry::w1a);   // W1A voiceband modes (slots 801 - 803)
+    case 802: return pollStd(rxW1a_[1], a, t, seqs[802], &RxTelemetry::w1a);
+    case 803: return pollStd(rxW1a_[2], a, t, seqs[803], &RxTelemetry::w1a);
     case 361: return pollStd(rxRc_, 361, t, seqs[360], &RxTelemetry::rclink);   // RC and mesh links (slot 360)
     case 211: return pollStd(rxNrf_, 211, t, seqs[186], &RxTelemetry::nrf24);   // nRF24L01 (slot 186)
     case 481: return pollStd(rxUmts_, 481, t, seqs[440], &RxTelemetry::umts);   // UMTS cells (slot 440)

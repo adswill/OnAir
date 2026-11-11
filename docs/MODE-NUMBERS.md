@@ -136,6 +136,9 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | CDMA2000 cells | 660 | 662 | 661 | 660 | feat39-cell | 3.9; IS-95 / cdma2000 pilot + Sync Channel; synthetic signals only |
 | TD-SCDMA cells | 661 | 663 | 662 | 661 | feat39-cell | 3.9; DwPTS SYNC-DL + TS0 midamble cell parameter, no BCH; synthetic signals only |
 | Lightning position (network) | 790 | 792 | 791 | 790 | feat39-ltpos | 3.9; TDOA from several stations, see docs/LIGHTNING-POSITION-3.9.md; simulated signals only |
+| HF packet 300 Bd | 800 | 802 | 801 | 801 | feat39-w1a | 3.9; AX.25 over 300 Bd AFSK, full decode; simulated signals only |
+| Voice inversion scrambler | 801 | 803 | 802 | 802 | feat39-w1a | 3.9; full-band inversion detection and descrambling; simulated signals only |
+| ELT 121.5 MHz | 802 | 804 | 803 | 803 | feat39-w1a | 3.9; swept-tone detection only; simulated signals only |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
