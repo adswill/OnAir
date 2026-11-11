@@ -1763,3 +1763,8 @@ SHA256SUMS). The Windows installer job on GitHub could not install NSIS (the run
 the installer was built on the Mac with makensis 3.13 from the zip the CI built (makensis on macOS needs LANG/LC_ALL=en_US.UTF-8, otherwise it
 ends with bad_alloc). The tag's Docker image job failed for the same reason and has to be run again. main fast-forwarded to the release commit,
 website deployed, replies posted on #235 #239 #301 #358 #407 #410 #463 #474 #475 #476, the 67 merged feat39-* branches deleted from the public repo.
+## 2026-11-12 DCS code on transmit (#479), Japanese fonts (#481)
+A user's handheld read OnAir's transmitted D023N as D411N (five codes reported). Cause: audio_control.cpp built its own DCS word with the
+marker bits and the Golay polynomial the wrong way round; the tone decoder's table (tones_proto.cpp) was right and predicts all five wrong
+readings exactly. The transmitter and the DCS squelch now use that one table (023 = 0x763813). Test: test_audio_control. PR #481 (bellx2,
+Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.

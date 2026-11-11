@@ -1,6 +1,7 @@
 // Audio control (audio_control.h): filter responses, notch depth, EQ gains, squelch hysteresis and hang, CTCSS and DCS detection, AGC level,
 // the auto notch, stereo modes, the clarifier shifting a tone, tail delay, settings round trip, device fallback, pass-through when off.
 #include "dect2/audio/audio_control.h"
+#include "dect2/tones/tones_proto.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -81,7 +82,10 @@ int main() {
       CHECK(!f.present(), "noise alone is not a tone"); }
     // DCS
     { CHECK(dcsWord(23) != dcsWord(25), "codes differ");
-      const uint32_t w = dcsWord(23); CHECK((w & 0x1FF) == 023 && ((w >> 9) & 7) == 1, "word layout %x", w);
+      const uint32_t w = dcsWord(23); CHECK((w & 0x1FF) == 023 && ((w >> 9) & 7) == 4, "word layout %x", w);
+      CHECK(w == 0x763813u, "D023 is the word real radios use (#479), got %06x", w);
+      // #479: what 3.9 transmitted for these codes was read by a handheld as 411, 412, 432, 053, 627. The words now decode as themselves.
+      for (int code : {23, 25, 65, 226, 703}) { dect2::tones::DcsHit h; CHECK(dect2::tones::dcsDecode(dcsWord(code), h) && h.code == code && !h.inverted, "D%03dN reads back as itself", code); }
       uint32_t r = w & 0x7FFFFF;   // a codeword leaves no remainder
       for (int b = 22; b >= 11; b--) if (r & (1u << b)) r ^= 0xC75u << (b - 11);
       CHECK((r & 0x7FF) == 0, "golay remainder zero");
