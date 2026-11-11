@@ -48,6 +48,7 @@ public:
     std::vector<AeatAlert> alerts() const { std::lock_guard<std::mutex> lk(mu_); return alerts_; }   // the advanced emergency alerts in force (the last AEAT)
     std::vector<SltService> services() const;                 // from the low level signaling received so far
     bool selectService(int serviceId);                        // false until the service is known; may be called before, it is remembered
+    bool selectServiceIfNone(int serviceId);                  // as selectService, but nothing happens when one is already selected (checked under the lock)
     int selectedService() const { return selected_; }
     // When no service has been chosen, take the first visible linear video service (ROUTE) as soon as the service list arrives.
     void setAutoSelect(bool on) { autoSelect_ = on; }

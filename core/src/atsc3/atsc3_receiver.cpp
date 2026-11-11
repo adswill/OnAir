@@ -297,6 +297,21 @@ bool Atsc3Receiver::selectService(int id) {
     return routeStarted_;
 }
 
+bool Atsc3Receiver::selectServiceIfNone(int id) {
+    {
+        std::lock_guard<std::mutex> lk(mu_);
+        if (selected_ >= 0) return routeStarted_;   // the receiver chose one itself from the signaling while the caller looked: do not restart its route
+        selected_ = id;
+        routeStarted_ = false;
+        route_.reset();
+        remuxIds_.clear();
+        lastInit_.clear();
+    }
+    startRoute();
+    std::lock_guard<std::mutex> lk(mu_);
+    return routeStarted_;
+}
+
 void Atsc3Receiver::startRoute() {
     std::lock_guard<std::mutex> lk(mu_);
     if (routeStarted_) return;

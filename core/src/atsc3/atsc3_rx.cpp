@@ -84,7 +84,7 @@ void Atsc3Rx::selectService(int id) {
 void Atsc3Rx::autoSelect() {
     if (!rx_ || rx_->selectedService() >= 0) return;
     for (auto& s : rx_->services()) {
-        if (s.category == 1 && !s.hidden && s.slsProtocol == 1) { rx_->selectService(s.serviceId); return; }
+        if (s.category == 1 && !s.hidden && s.slsProtocol == 1) { rx_->selectServiceIfNone(s.serviceId); return; }
     }
 }
 
