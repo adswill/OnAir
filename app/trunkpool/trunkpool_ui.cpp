@@ -12,6 +12,13 @@
 #include "dect2/p25/p25_tel.h"
 #include "dect2/p25p2/p25p2_tel.h"
 #include "dect2/trunkpool/trunkpool.h"
+#include "dect2/trunkpool/coverage.h"
+#include "dect2/smartnet/smartnet_rx.h"
+#include "dect2/smartnet/smartnet_tel.h"
+#include "dect2/edacs/edacs_rx.h"
+#include "dect2/edacs/edacs_tel.h"
+#include "dect2/mpt1327/mpt1327_engine.h"
+#include "trunkpool/trunk1.h"
 #include "voice/tgdir_ui.h"
 #include <algorithm>
 #include <chrono>
@@ -22,6 +29,7 @@
 #include <fstream>
 #include <map>
 #include <memory>
+#include <set>
 #include <sstream>
 
 dect2::trunk::Controller& p25TrunkController();   // p25_ui.cpp
@@ -402,7 +410,7 @@ void drawAdvanced(App& a) {
 }  // namespace
 
 void trunkPoolTick(App& a) {
-    (void)a;
+    trunk1::apply(a);
     if (!S.loaded) loadAll();
     connect();
     if (!S.on) return;
@@ -422,6 +430,7 @@ void trunkPoolWindow(App& a) {
     if (!ImGui::Begin(trw("Multi-radio trunking"), &a.trunkPoolOpen)) { ImGui::End(); return; }
     tp::TrunkPool& p = pool();
     ImGui::TextWrapped("%s", tr("One radio listens to the control channel of a trunked system. When it announces a call, another radio is tuned to the voice channel, and the call is logged. With one radio, calls inside its capture are followed and the rest are not."));
+    trunk1::section(a);
     ImGui::Spacing();
     if (ImGui::Checkbox(tr("Follow calls with several radios##tp_on"), &S.on)) saveCfg();
     ImGui::SameLine();
@@ -452,3 +461,177 @@ void trunkPoolWindow(App& a) {
     }
     ImGui::End();
 }
+
+// ------------------------------------------------------------------------------------------------ single-radio trunking (trunk1.h)
+
+namespace trunk1 {
+namespace {
+constexpr int kP25 = 51, kMpt = 128, kEdacs = 131, kSmartnet = 321;   // active standards
+struct T1 {
+    bool loaded = false;
+    int slots = 4;
+    bool record = false;
+    std::map<long long, tp::ChannelUsage> use;      // per control channel (kHz)
+    std::set<std::pair<long long, uint64_t>> seen;  // (control channel kHz, call) already counted
+    std::map<int, std::string> pushed;              // receiver id -> what was pushed to it
+    std::string note;
+    double reapplyUntil = 0, shiftHz = 0;           // after a retune: keep the decode shift on the control channel while the receiver restarts
+};
+T1 G;
+
+void load() {
+    if (G.loaded) return;
+    G.loaded = true;
+    plat::Prefs& pf = plat::basePrefs();
+    G.slots = std::clamp((int)pf.getI("trunk1.slots", 4), 1, 8);
+    G.record = pf.getB("trunk1.record", false);
+}
+void save() {
+    plat::Prefs& pf = plat::basePrefs();
+    pf.setI("trunk1.slots", G.slots);
+    pf.setB("trunk1.record", G.record);
+}
+
+const char* modeKey(int std_) {
+    switch (std_) { case kP25: return "p25"; case kMpt: return "mpt1327"; case kEdacs: return "edacs"; case kSmartnet: return "typeii"; default: return nullptr; }
+}
+
+// the control channel the running trunking mode decodes, and the calls it has heard (a key and the voice frequency each)
+double controlOf(const App& a) {
+    switch (a.rx.standard) {
+    case kP25: { const double c = p25TrunkController().follower.currentControlHz(); return c > 0 ? c : a.freqMhz * 1e6; }
+    case kMpt: return a.rx.mpt1327.controlHz > 0 ? a.rx.mpt1327.controlHz : a.freqMhz * 1e6;
+    case kSmartnet: return a.rx.smartnet.controlHz > 0 ? a.rx.smartnet.controlHz : a.freqMhz * 1e6;
+    case kEdacs: return a.freqMhz * 1e6;
+    default: return 0;
+    }
+}
+void learn(const App& a, double cc) {
+    const long long key = (long long)std::llround(cc / 1000);
+    tp::ChannelUsage& u = G.use[key];
+    auto add = [&](uint64_t id, double hz, double t) {
+        if (!(hz > 0) || std::fabs(hz - cc) < 100) return;
+        if (!G.seen.insert({key, id}).second) return;
+        u.add(hz, t);
+        if (G.seen.size() > 20000) G.seen.clear();
+    };
+    switch (a.rx.standard) {
+    case kP25: for (const auto& r : p25TrunkController().log.records()) add(r.id, r.freqHz, r.startSec); break;
+    case kMpt: for (const auto& c : a.rx.mpt1327.calls) add(c.id, c.freqHz, 0); break;
+    case kSmartnet: for (const auto& c : a.rx.smartnet.calls) add(c.id, c.freqHz, 0); break;
+    case kEdacs: for (const auto& c : a.rx.edacs.calls) add(((uint64_t)(uint32_t)c.lcn << 40) ^ (uint64_t)c.wallTime, c.freqHz, c.startSec); break;
+    default: break;
+    }
+}
+int followedNow(const App& a) {
+    int n = 0;
+    switch (a.rx.standard) {
+    case kP25: return p25TrunkController().follower.activeSlices();
+    case kMpt: for (const auto& c : a.rx.mpt1327.calls) n += c.active && c.voiceSlot >= 0; return n;
+    case kSmartnet: for (const auto& c : a.rx.smartnet.calls) n += c.active && c.voiceSlot >= 0; return n;
+    case kEdacs: return a.rx.edacs.slotsInUse;
+    default: return 0;
+    }
+}
+double radioMax(const App& a) {
+    if (a.devIdx < 0 || a.devIdx >= (int)a.devices.size()) return 0;
+    const DeviceInfo& d = a.devices[(size_t)a.devIdx];
+    if (!d.isRadio()) return 0;
+    if (d.maxRateHz > 0) return d.maxRateHz;
+    const double b = tp::radioMaxRateHz(d.board);
+    return b > 0 ? b : tp::radioMaxRateHz(d.name);
+}
+// the capture's centre to centreHz and its rate to rateHz, the decoder kept on the control channel (a decode shift from the new dial)
+void retune(App& a, double centreHz, double rateHz, double ccHz) {
+    const double off = a.engine.captureCentreHz() - a.tune.centerHz;   // the mode's tune offset (the capture centre less the dial)
+    const double dial = centreHz - off;
+    a.tune.centerHz = dial;
+    if (rateHz > 0 && std::fabs(rateHz - a.engine.sampleRate()) > 1000) chooseSampleRate(a, rateHz);   // restarts the receiver at the new dial
+    else tunework::post(a.engine, a.tune, true);
+    a.freqMhz = ccHz / 1e6;
+    G.shiftHz = ccHz - dial;
+    a.engine.setDecodeShiftHz(G.shiftHz);
+    G.reapplyUntil = nowSec() + 3.0;
+}
+}  // namespace
+
+int slots() { load(); return G.slots; }
+bool record() { load(); return G.record; }
+std::string recordDir(const char* mode) { return recordingsDir() + "/trunk1/" + mode; }
+
+void apply(App& a) {
+    load();
+    if (G.reapplyUntil > 0) {
+        if (nowSec() > G.reapplyUntil) G.reapplyUntil = 0;
+        else if (a.engine.running() && std::fabs(a.engine.decodeShiftHz() - G.shiftHz) > 1) a.engine.setDecodeShiftHz(G.shiftHz);
+    }
+    if (!a.engine.running()) return;
+    const char* m = modeKey(a.rx.standard);
+    if (!m) return;
+    const std::string want = std::string(m) + "," + std::to_string(G.slots) + "," + std::to_string(G.record) + "," + std::to_string((long long)a.engine.sampleRate());
+    std::string& had = G.pushed[a.rxId];
+    if (had == want) return;
+    had = want;
+    const std::string dir = G.record ? recordDir(m) : std::string();
+    switch (a.rx.standard) {
+    case kMpt: a.engine.mpt1327().setVoiceSlots(G.slots); a.engine.mpt1327().setRecordDir(dir); break;
+    case kEdacs: a.engine.edacs().setVoiceSlots(G.slots); a.engine.edacs().setRecordDir(dir); break;
+    case kSmartnet: a.engine.smartnet().setVoiceSlots(G.slots); break;   // its own record switch (the Type II tab) stays
+    default: break;
+    }
+}
+
+void section(App& a) {
+    load();
+    if (!ImGui::CollapsingHeader(trw("One radio: control channel and calls together##t1"), ImGuiTreeNodeFlags_DefaultOpen)) return;
+    if (!a.engine.running() || !modeKey(a.rx.standard)) {
+        ImGui::TextDisabled("%s", tr("Start a P25, Motorola Type II, EDACS or MPT 1327 receiver on the control channel: the calls inside the capture are followed at the same time, with no second radio."));
+        return;
+    }
+    const double cc = controlOf(a), centre = a.engine.captureCentreHz(), rate = a.engine.sampleRate(), maxRate = radioMax(a);
+    learn(a, cc);
+    const tp::ChannelUsage& u = G.use[(long long)std::llround(cc / 1000)];
+    ImGui::Text(tr("Following %d of %d voice slots from one capture: %.4f MHz, %.2f Msps"), followedNow(a), G.slots, centre / 1e6, rate / 1e6);
+    if (maxRate > 0) { ImGui::SameLine(); ImGui::TextDisabled(tr("(this radio reaches %.1f Msps)"), maxRate / 1e6); }
+    if (u.size() == 0) ImGui::TextDisabled("%s", tr("No voice channel heard yet: the list fills from the control channel's grants."));
+    else if (ImGui::BeginTable("##t1_chans", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_ScrollY, ImVec2(0, 130 * gUi))) {
+        ImGui::TableSetupScrollFreeze(0, 1);
+        ImGui::TableSetupColumn(tr("MHz"), ImGuiTableColumnFlags_None, 1.f);
+        ImGui::TableSetupColumn(tr("Calls"), ImGuiTableColumnFlags_None, 0.6f);
+        ImGui::TableSetupColumn(tr("Capture"), ImGuiTableColumnFlags_None, 3.f);
+        ImGui::TableHeadersRow();
+        for (const tp::ChannelUse& c : u.channels()) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%.4f", c.hz / 1e6);
+            ImGui::TableNextColumn(); ImGui::Text("%llu", (unsigned long long)c.grants);
+            ImGui::TableNextColumn();
+            if (tp::insideCapture(c.hz, centre, rate)) ImGui::TextUnformatted(tr("inside"));
+            else ImGui::TextDisabled("%s", tp::outsideText(c.hz, cc, centre, 12500, maxRate).c_str());
+        }
+        ImGui::EndTable();
+    }
+    tp::CoverageInput in;
+    in.controlHz = cc; in.channels = u.channels(); in.maxRateHz = maxRate;
+    const tp::CoveragePlan p = tp::planCoverage(in);
+    if (p.ok && p.total > 0) {
+        ImGui::TextWrapped("%s", p.summary.c_str());
+        const bool same = std::fabs(p.centreHz - centre) < 1000 && std::fabs(p.rateHz - rate) < 1000;
+        ImGui::BeginDisabled(same);
+        if (ImGui::Button(tr("Retune to cover the control channel and the busiest channels##t1_retune"))) retune(a, p.centreHz, p.rateHz, cc);
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Moves the centre of the capture (and the sample rate) so the control channel and the most used voice channels are inside it, none of them on the DC spike at the centre. The control channel stays decoded."));
+    }
+    if (ImGui::Checkbox(tr("Record each call##t1_rec"), &G.record)) { save(); G.pushed.clear(); }
+    if (G.record) { ImGui::SameLine(); kit::folderButton("t1rec", recordDir(modeKey(a.rx.standard))); }
+    if (!modepanel::easyModeOn() && a.rx.standard != kP25) {   // P25 has its own "simultaneous calls" beside its follower
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::SliderInt(tr("Voice slots (calls at once)##t1_slots"), &G.slots, 1, 8)) {
+            save(); G.pushed.clear();
+            dect2::trunk::FollowConfig fc = p25TrunkController().follower.config();   // P25 follows the same number
+            fc.maxSlices = G.slots; p25TrunkController().follower.setConfig(fc);
+            plat::basePrefs().setI("p25follow.slices", G.slots);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Each slot cuts its channel out of the capture and runs a decoder: more slots, more CPU. The DC spike is handled automatically; the app-wide Ignore DC spike switch is the manual one."));
+    }
+}
+}  // namespace trunk1

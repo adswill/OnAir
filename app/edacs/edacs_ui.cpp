@@ -7,6 +7,7 @@
 #include "dect2/edacs/edacs_tel.h"
 #include "dect2/common/u8file.h"
 #include "platform/platform.h"
+#include "trunkpool/trunk1.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -197,6 +198,8 @@ void tab(App& a) {
     ImGui::Text("Good frames: %llu   Bad frames: %llu", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad);
     ImGui::Text("Level: %.0f dBFS, data swing %.0f Hz", t.levelDb, t.deviationHz);
     ImGui::TextDisabled("Data polarity: %s (found from the sync word and the check bits)", t.inverted ? "inverted" : "normal");
+    if (t.follow) ImGui::TextDisabled("%d of %d voice slots in use. %s", t.slotsInUse, t.voiceSlots, t.slotsStatus.c_str());
+    trunk1::section(a);
     if (ImGui::Checkbox("Extended Addressing", &S.ea)) S.dirty = true;
     ImGui::SameLine();
     if (ImGui::Checkbox("ESK mask (0xA0)", &S.esk)) S.dirty = true;

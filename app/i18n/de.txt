@@ -3878,3 +3878,20 @@ shared lists:	geteilte Listen:
 stop using it	nicht mehr verwenden
 The country of the shared transmitter list (ISO code, e.g. GB, DE, NO); Enter downloads it.\nThe lists of the countries of the ensembles heard are fetched as well.	Das Land der geteilten Senderliste (ISO-Code, z. B. GB, DE, NO); Enter lädt sie herunter.\nDie Listen der Länder der empfangenen Ensembles werden ebenfalls geladen.
 Add the transmitters of a CSV file to your own list (columns eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid in hex):\nan export of heard transmitters with the positions filled in, or a list someone shares; rows without a position are skipped.\nqt-dab's .txdata.tii is used where it is instead (FMLIST data, personal use).	Die Sender einer CSV-Datei zu deiner eigenen Liste hinzufügen (Spalten eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid hexadezimal):\nein Export der empfangenen Sender mit eingetragenen Positionen oder eine Liste, die jemand teilt; Zeilen ohne Position werden übersprungen.\nDie .txdata.tii von qt-dab wird stattdessen an Ort und Stelle genutzt (FMLIST-Daten, privater Gebrauch).
+# Single-radio trunking (trunk1, docs/TRUNK1-3.9.md)
+One radio: control channel and calls together	Ein Radio: Steuerkanal und Anrufe zusammen
+Start a P25, Motorola Type II, EDACS or MPT 1327 receiver on the control channel: the calls inside the capture are followed at the same time, with no second radio.	Starten Sie einen P25-, Motorola-Type-II-, EDACS- oder MPT-1327-Empfänger auf dem Steuerkanal: Die Anrufe im Erfassungsbereich werden gleichzeitig verfolgt, ohne zweites Radio.
+Following %d of %d voice slots from one capture: %.4f MHz, %.2f Msps	%d von %d Sprachplätzen aus einer Erfassung belegt: %.4f MHz, %.2f MS/s
+(this radio reaches %.1f Msps)	(dieses Radio schafft %.1f MS/s)
+No voice channel heard yet: the list fills from the control channel's grants.	Noch kein Sprachkanal gehört: Die Liste füllt sich aus den Kanalzuweisungen des Steuerkanals.
+Capture	Erfassung
+inside	innerhalb
+Retune to cover the control channel and the busiest channels	Umstimmen auf Steuerkanal und meistgenutzte Kanäle
+Moves the centre of the capture (and the sample rate) so the control channel and the most used voice channels are inside it, none of them on the DC spike at the centre. The control channel stays decoded.	Verschiebt die Mitte der Erfassung (und die Abtastrate), sodass der Steuerkanal und die meistgenutzten Sprachkanäle darin liegen, keiner auf der DC-Spitze in der Mitte. Der Steuerkanal wird weiter dekodiert.
+Record each call	Jeden Anruf aufnehmen
+Voice slots (calls at once)	Sprachplätze (Anrufe gleichzeitig)
+Each slot cuts its channel out of the capture and runs a decoder: more slots, more CPU. The DC spike is handled automatically; the app-wide Ignore DC spike switch is the manual one.	Jeder Platz schneidet seinen Kanal aus der Erfassung und betreibt einen Decoder: mehr Plätze, mehr CPU. Die DC-Spitze wird automatisch behandelt; der programmweite Schalter DC-Spitze ignorieren ist der manuelle.
+Calls followed from this capture	Aus dieser Erfassung verfolgte Anrufe
+Caller	Anrufer
+Slot	Platz
+Input %.0f Hz, centre %.4f MHz. Traffic channels inside the capture are followed as FM; nothing encrypted is decoded.	Eingang %.0f Hz, Mitte %.4f MHz. Verkehrskanäle im Erfassungsbereich werden als FM verfolgt; nichts Verschlüsseltes wird dekodiert.

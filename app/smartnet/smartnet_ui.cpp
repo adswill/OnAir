@@ -4,6 +4,7 @@
 #include "dect2/smartnet/smartnet_rx.h"
 #include "dect2/smartnet/smartnet_tel.h"
 #include "platform/platform.h"
+#include "trunkpool/trunk1.h"
 #include <algorithm>
 #include <cstdio>
 #include <cstdlib>
@@ -97,6 +98,7 @@ void tab(App& a) {
     ImGui::TextDisabled("%s: %s%s   %s: %.0f dBFS, %s: %.1f dB", tr("Band plan"), t.band.c_str(), t.bandAuto ? tr(" (automatic)") : "", tr("Level"), t.levelDb, tr("SNR"), t.snrDb);
     if (!t.note.empty()) ImGui::TextColored(pal::warnAmber(), "%s", tr(t.note.c_str()));
     if (!t.poolStatus.empty()) ImGui::TextDisabled("%s", t.poolStatus.c_str());
+    trunk1::section(a);
     advanced();
     ImGui::Spacing();
     ImGui::SeparatorText(tr("Calls"));
