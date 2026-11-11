@@ -1768,3 +1768,6 @@ A user's handheld read OnAir's transmitted D023N as D411N (five codes reported).
 marker bits and the Golay polynomial the wrong way round; the tone decoder's table (tones_proto.cpp) was right and predicts all five wrong
 readings exactly. The transmitter and the DCS squelch now use that one table (023 = 0x763813). Test: test_audio_control. PR #481 (bellx2,
 Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.
+
+## 2026-11-12: QA 4.0 (feat40-qa)
+All-modes QA sweep extended: a non-default sample rate and bandwidth condition (generator rerun at 1.37 x the rate), noise-only runs for modes without a generator, `qa_switch` (one Engine through every mode twice: hangs, stale first report, thread and memory growth), `qa_sweep_sel` for single rows. Fixed: the previous mode's last report was returned after a mode switch (`Engine::start()`), HF ID and End of train counted noise as decodes. ASan + UBSan over `qa_switch`: no report. Open findings (vdl3 and ltpos do not decode through the Engine, cell/umts at odd rates, a few 12 dB rows) are in `docs/QA-4.0.md` and `tests/qa/qa_known.inc`. Simulated signals only.
