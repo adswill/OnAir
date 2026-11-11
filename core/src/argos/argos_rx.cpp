@@ -77,15 +77,29 @@ bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out) {
     // the burst's extent from its power (1 ms windows)
     const size_t W = 32;
     std::vector<double> env(n / W);
-    for (size_t k = 0; k < env.size(); k++) { double s = 0; for (size_t i = k * W; i < (k + 1) * W; i++) s += std::norm(x[i]); env[k] = s / W; }
+    // 4.0: the power of the coherent 1 ms sum, not the mean power of the samples: the carrier is at 0 Hz here, so the sum keeps the signal and
+    // takes 15 dB off the noise of the 32 kHz stream (the 3.9 version needed the burst 6 dB over the noise of the whole stream, 12 dB in 5 kHz)
+    for (size_t k = 0; k < env.size(); k++) env[k] = std::norm(h.P[(k + 1) * W] - h.P[k * W]) / ((double)W * (double)W);
     std::vector<double> srt = env;
     std::sort(srt.begin(), srt.end());
     const double ref = srt[srt.size() * 7 / 10], floorP = srt[srt.size() / 20];
     if (ref < 4 * floorP) return false;
     const double gate = floorP + 0.3 * (ref - floorP);
     size_t s0 = 0, s1 = env.size();
-    while (s0 < env.size() && env[s0] < gate) s0++;
-    while (s1 > s0 && env[s1 - 1] < gate) s1--;
+    // 4.0: six windows in a row (a single noise spike above the gate is not the start); the coherent sums have a noise power of 15 dB less but chi-square spikes
+    // (the Manchester part dips below the gate where a 1 ms sum straddles a phase step: at the end a window counts when it or its neighbour is above)
+    auto run = [&](size_t i, bool fwd) {
+        for (size_t k = 0; k < 6; k++) {
+            const size_t j = fwd ? i + k : i - 1 - k;
+            if (j >= env.size()) return false;
+            const size_t j2 = fwd ? j + 1 : j - 1;
+            const double e = j2 < env.size() ? std::max(env[j], env[j2]) : env[j];
+            if (e < gate) return false;
+        }
+        return true;
+    };
+    while (s0 < env.size() && !run(s0, true)) s0++;
+    while (s1 > s0 + 6 && !run(s1, false)) s1--;
     if (s1 <= s0 + 10) return false;
     const double start = (double)(s0 * W), end = (double)(s1 * W);
     // the carrier section: 2.5 ms sums keep their size while the carrier is bare; Manchester (or any) modulation shrinks them
@@ -134,18 +148,36 @@ bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out) {
             bestT = bt; bestSpb = bp;
         }
     }
-    // the bits, to the end of the burst
+    // the bits, to the end of the stream. 4.0: the length is not read off the power envelope (which a weak burst smears into the noise) but chosen
+    // among the valid A2 lengths by where the +-2.2 rad steps stop: a bit that is not a step scores 0.51 on average, so the sum of (closeness - 0.51)
+    // grows with the message and then wanders
     std::vector<uint8_t> bits;
-    double q = 0;
-    for (double b0 = bestT; b0 + bestSpb <= end + 0.3 * bestSpb; b0 += bestSpb) {
+    std::vector<double> cl;
+    for (double b0 = bestT; b0 + bestSpb <= (double)n; b0 += bestSpb) {
         double a, m;
         if (!h.step(b0, bestSpb, a, m)) break;
         bits.push_back(a > 0 ? 1 : 0);
-        q += closeness(a);
+        cl.push_back(closeness(a));
     }
-    out.quality = bits.empty() ? 0.f : (float)(q / (double)bits.size());
+    int L = 0;
+    {
+        // the first length counts when its bits are mostly steps; each further 32 bits are added while they still are (a block of bits that are not
+        // steps averages 0.51 with a spread of 0.1, a block of steps 0.8 and up)
+        size_t pos = 0;
+        for (int k = 0; k <= 7; k++) {
+            const size_t Lk = (size_t)(kMinBits + 32 * k);
+            if (Lk > bits.size() + 3) break;
+            double blk = 0; size_t cnt = 0;
+            for (size_t i = k == 0 ? 0 : pos; i < Lk && i < cl.size(); i++) { blk += cl[i]; cnt++; }
+            pos = Lk;
+            if (cnt == 0 || blk / (double)cnt < (k == 0 ? 0.5 : 0.70)) break;
+            L = (int)Lk;
+        }
+    }
+    double q = 0;
+    for (int i = 0; i < L && (size_t)i < cl.size(); i++) q += cl[(size_t)i];
+    out.quality = L > 0 ? (float)(q / (double)L) : 0.f;
     const double carrierMs = (bestT - start) / kFs * 1000.0;
-    const int L = nearestA2Length((int)bits.size());
     if (out.quality >= 0.5f && carrierMs >= 120 && carrierMs <= 210 && L > 0) {
         bits.resize((size_t)L, 0);
         out.kind = 1;

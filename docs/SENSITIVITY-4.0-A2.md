@@ -94,3 +94,59 @@ The harness's score plateaus at about 70 % of the clean units even at 14 dB, bef
 
 Noise-only: 0 units. 50 ppm clock: no change in the harness number (the 6 s test signal does not see it). `mpt1327`, `mpt1327_mode`, `mpt1327_chan`,
 `mpt1327_std` pass; `edacs_sens40` has three MPT rows. Generator signal only: the deviation of real MPT 1327 FFSK (+-1.5 to 2 kHz here) is assumed.
+
+## 5. Argos PTT uplink: burst extent and message length
+
+Found by looking for modes with no gap measured yet: Argos decoded 90 % of its bursts only at 13 dB in 5 kHz (23 dB Eb/N0 for a 400 bit/s
+message, about 12 dB over what its demodulator needs). The burst finder detects the carrier line at 30 dB, so the loss was after it:
+`demodUplinkBurst` (`core/src/argos/argos_rx.cpp`) takes the burst's start and end from the mean power of 1 ms windows of the 32 kHz stream and
+gave up unless the burst stood 6 dB over the noise of the whole stream (that is 12 dB in 5 kHz). Changes: (1) the window power is the coherent 1 ms
+sum (the carrier has been mixed to 0 Hz, so the sum keeps the signal and takes 15 dB off the noise); (2) the start needs six windows above the gate in
+a row and the end the same with each window counting when its neighbour is above (the Manchester part dips where a window straddles a phase step); (3) the
+message length is no longer read off the envelope but chosen from the valid A2 lengths: the first length when its bits are mostly +-2.2 rad
+steps, then each further 32 bits while their mean closeness stays at 0.70 or more (a block of bits that are not steps averages 0.51 with a spread of 0.1).
+
+| Argos (SNR in 5 kHz, 8 trials, 2 units a trial) | before: 14 / 12 / 10 / 6 dB | after: 4 / 2 / 0 / -2 / -4 / -6 dB | gain |
+|---|---|---|---|
+| AWGN | 88 / 50 / 0 / 0 % | 100 / 100 / 94 / 63 / 63 / 25 % | about 14 dB |
+| +3.1 kHz carrier | 88 / - / 0 / 0 % | 100 / 94 / 94 / 44 / 38 / 19 % | about 14 dB |
+| 50 ppm clock | 88 / - / 0 / 0 % | same as AWGN | about 14 dB |
+
+(The plateau of 88 to 100 % is the harness's two bursts a trial and the random start.) At 0 dB in 5 kHz the message has an Eb/N0 of 10 dB, the figure a
+coherent differential demodulator of this kind needs: the receiver is now at theory. Noise-only: 0 units before and after (4 runs, plus 3 in the
+test). `argos_rx`, `argos_proto`, `argos_sigfox_mode` pass. Test: `argos_sens40`. Simulated signals only: a real PTT's phase-modulation index
+(+-1.1 rad assumed), Doppler rate and oscillator noise are not measured. The COSPAS-SARSAT receiver has a similar burst finder but sits at 8 dB
+Eb/N0 in the harness (-1 dB 19 %, 2 dB 75 %), so it was not changed.
+
+## Tried, measured, not kept
+
+* **ACARS: coherent AM detection with a carrier memory.** Built it: a phase-locked loop (40 Hz, 150 Hz for the first 8 ms) on the 25 kS/s channel
+  signal, started on a remembered carrier frequency (per channel candidate, kept between bursts because the receiver reassigns a decoder to the
+  channel for every burst), the frequency from the power spectrum (log-parabola through the strongest line of a 1024-point averaged spectrum, good to
+  a few Hz), the phase initialised from the last 64 samples at the carrier's onset, lock detection from the share of power on the real axis. It
+  locked for 85 to 90 % of the carrier time in about 70 % of the bursts (the first burst on a channel has no memory, and in some bursts the loop
+  stayed 20 Hz off with a weak carrier and never pulled in). Result with 24 trials a point, one aircraft, carrier 0 and 2.5 kHz off: 4 dB 51 %
+  -> 57 %, 3 dB 25 % -> 26 %: about 0.2 dB, not the 1.5 dB the 100 Hz case of part 1 suggested. Not kept (more state and a failure mode for a
+  gain that small); reverted.
+* **POCSAG / FLEX narrower channel filter** (the 25 kHz path has a 10 kHz pass band). POCSAG gets about 3 dB better at 9.5 kHz (-4 dB 64 % against 3 %)
+  but FLEX collapses (2 dB 6 % against 77 %: its 4-level 6400 Bd needs the width) and 9 kHz and below break both; a switch by protocol needs a
+  second filter path in parallel. Not done.
+* **M10 on the narrow path** (cut 7 to 10 kHz): no change in the harness (its score plateaus at 61 to 67 % even at 20 dB with 2.7 units a trial).
+* **MRZ on the narrow path:** breaks `sonde_extra_rf` (see part 1). **Meisei:** cannot be measured in the harness (0 % before and after).
+
+## At theory, nothing to gain with the tools tried
+
+Measured with sens_curve in this pass, and read against the Eb/N0 each needs:
+* **DMR** (4FSK 4800 sym/s, 12.5 kHz): 6 dB 89 %, 4 dB 41 %, same with +3.1 kHz; 6 dB is about 7 dB Eb/N0 for 4FSK, the usual figure for 5 % BER. At theory.
+* **AIS** (GMSK 9600 Bd, 25 kHz): 4 dB 86 %, 2 dB 27 %, same with +3.1 kHz; about 7 dB Eb/N0, below the coherent GMSK figure for a clean packet because
+  the receiver combines repeated slots. At theory.
+* **APRS / AX.25 1200**: the packet front end already runs a second, narrower channel with its own discriminator (`chanPass2`); the limit is the FM threshold
+  (SENSITIVITY-3.6.md, 3.9-B). **P25, NXDN, dPMR, D-STAR, YSF, TETRA:** within 1 dB of the figures in 3.6, 3.7, 3.9-B and 3.9-D; the TETRA
+  decision-feedback attempt of 3.9-D lost 1 dB. No change made.
+* **FM click suppression, soft-decision RS, MSDD:** see part 1.
+
+## Not reached in this pass
+
+DSC, NAVTEX, POCSAG/FLEX filter switching, the Iridium and Inmarsat voice modes, GNSS acquisition, ADS-B overlapping replies, LoRa, CCSDS and
+the other modes of the brief's "no gap measured yet" list were not measured (Orbcomm was: 8 dB 90 %, 5 dB 10 %, about 10 dB Eb/N0, at theory;
+COSPAS-SARSAT above). The Argos result suggests the same kind of fixed acquisition gate may sit in other burst receivers: that is the first place to look.
