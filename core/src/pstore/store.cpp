@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 namespace aj = automation::json;
 
 // All zeros: the project's registry key has not been made yet. The owner makes it with tools/marketplace/onair_registry.py keygen.
-const char* const kBuiltInRegistryKeyHex = "0000000000000000000000000000000000000000000000000000000000000000";
+const char* const kBuiltInRegistryKeyHex = "52f3bcb35267424943486ef40478ac06e5e3b7580e2c90d936fde8a2d88613cb";
 const char* const kDefaultRegistryUrl = "https://adswill.github.io/onair-plugins/";
 
 namespace {
