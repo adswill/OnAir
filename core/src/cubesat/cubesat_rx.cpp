@@ -192,6 +192,7 @@ struct CubesatReceiver::Impl {
         fs = rate;
         isReady = false;
         fe.chanPass = 12000.0; fe.chanStop = 20000.0; fe.clipHz = 10000.f; fe.afcMaxHz = 15000.0;
+        fe.chanPass2 = 4500.0; fe.chanStop2 = fe.chanPass2 * 1.8;   // 4.0: the 1200 baud Bell 202 tones get a channel of their own (docs/SENSITIVITY-4.0-A3.md)
         if (!fe.configure(fs, cubesatTuning().minSampleRate)) return;
         audio48.design(dmr::lowpassTaps(3300.0, 8000.0, kMidRate, 50, 9), 2);
         lpG[0].design(dmr::lowpassTaps(5200.0, 11000.0, kMidRate, 40, 9), 1);
@@ -480,7 +481,7 @@ struct CubesatReceiver::Impl {
         const std::vector<float>& disc = fe.process(x, n);
         if (!disc.empty()) {
             a48.clear();
-            audio48.process(disc.data(), disc.size(), a48);
+            { const std::vector<float>& nd = fe.narrowDisc(); audio48.process(nd.data(), nd.size(), a48); }
             if (!a48.empty()) for (auto& a : afsk) a.process(a48.data(), a48.size());
             for (int i = 0; i < 2; i++) {
                 fg[i].clear();
