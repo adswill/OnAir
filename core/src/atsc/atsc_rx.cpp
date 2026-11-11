@@ -1664,7 +1664,11 @@ void AtscReceiver::feed(const cf32* x, size_t n) {
     DECT2_STAGE("atsc.input");
     DenormalsOff ftz;   // x86: flush denormals while the receiver runs on the caller's thread (restored on return)
     std::vector<cf32> v(x, x + n);
-    for (auto& s : v) if (!std::isfinite(s.real()) || !std::isfinite(s.imag())) s = cf32(0, 0);   // one bad sample would poison every loop for good
+    // one bad sample would poison every loop for good: such samples become 0. A vectorised test for any first (an exponent of all ones), the
+    // per-sample loop only when there is one.
+    uint32_t anyBad = 0;
+    for (size_t i = 0; i < 2 * n; i++) { uint32_t u; std::memcpy(&u, reinterpret_cast<const float*>(v.data()) + i, 4); anyBad |= (uint32_t)((u & 0x7f800000u) == 0x7f800000u); }
+    if (anyBad) for (auto& s : v) if (!std::isfinite(s.real()) || !std::isfinite(s.imag())) s = cf32(0, 0);
     p_->c.processInput(v, n);
     static long cnt = 0;
     if (getenv("ATSC_PROF") && ++cnt % 195 == 0) fprintf(stderr, "[atsc] time: pfb+pll %.2f s, symbol clock+fields %.2f s, field decode %.2f s (LS fit %.2f, equalise %.2f, trellis+RS %.2f)\n", p_->c.tPfb, p_->c.tCd, p_->c.tDec, p_->c.tLs, p_->c.tEq, p_->c.tVit);

@@ -108,3 +108,5 @@ jobs:
           [ -n "$B" ] || { echo "no binary test_$PERFT"; exit 0; }
           perf record -F 1999 -o perf.data -- "$B" > /dev/null 2>&1 || true
           perf report -i perf.data --stdio --no-children --percent-limit 0.3 --sort comm,symbol 2>/dev/null | grep -v "^$" | head -150 || true
+          echo "===== the hottest function, by instruction ====="
+          perf annotate -i perf.data --stdio --no-source 2>/dev/null | grep -v "^\s*0.00 *:" | head -260 || true
