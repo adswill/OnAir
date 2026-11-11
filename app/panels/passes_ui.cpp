@@ -5,6 +5,8 @@
 // the receiver. TLEs: the built-in CubeSat snapshot, then Celestrak / Keplerpass downloads (newest epoch wins), pasted ones on top.
 #include "dect2/common/thread_name.h"
 #include "../app.h"
+#include "dect2/wxsat/wxsat_pass.h"
+#include "dect2/ham/ham_ops.h"
 #include "../ui/typography.h"
 #include "../ui/ease_logic.h"
 #include "gallery.h"
@@ -1290,7 +1292,14 @@ void passTable(double now) {
             if (ImGui::Selectable(s.name.c_str(), sel)) { S.selSat = r.sat; S.selAos = r.p.aos; S.selName = s.name; }
             if (active) ImGui::PopStyleColor();
             ImGui::TableNextColumn(); ImGui::TextUnformatted(startsText(r, now).c_str());
-            ImGui::TableNextColumn(); ImGui::Text("%.0f\xC2\xB0", r.p.maxElDeg);
+            ImGui::TableNextColumn();
+            {   // pass quality 1 - 5 (wxsat_pass.h): elevation, length, daylight on the track for visible-light products
+                dect2::wxpass::Pass q; q.sat = s.name; q.aosS = r.p.aos; q.losS = r.p.los; q.maxElDeg = r.p.maxElDeg;
+                q.sunElDeg = dect2::ham::sunElevation(S.lat, S.lon, r.p.tca);
+                dect2::wxpass::rate(q);
+                ImGui::Text("%.0f\xC2\xB0  %d/5", r.p.maxElDeg, q.stars);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", q.why.c_str());
+            }
             ImGui::TableNextColumn(); { const int d = (int)std::lround(r.p.los - r.p.aos); ImGui::Text("%d:%02d", d / 60, d % 60); }
             ImGui::TableNextColumn(); ImGui::Text("%s > %s", compass(r.p.aosAzDeg), compass(r.p.losAzDeg));
             ImGui::TableNextColumn(); ImGui::Text("%s %.3f", s.ln().mode.c_str(), s.ln().hz / 1e6);

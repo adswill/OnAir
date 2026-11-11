@@ -3,6 +3,7 @@
 #include "../ui/typography.h"
 #include "dect2/fm/fm_af.h"
 #include "dect2/fm/fm_dx.h"
+#include "dect2/fm/fm_dxtools.h"
 #include <algorithm>
 #include <cmath>
 #include <ctime>
@@ -12,6 +13,9 @@
 namespace {
 dect2::FmAfFollow gAf;
 dect2::FmDxLog gDx;
+dect2::fmdx::PiWatch gPiWatch;                       // co-channel interference: two PIs alternating on one frequency
+std::vector<dect2::fmdx::HeadingSample> gHeadings;   // antenna direction helper: level per heading
+int gHeadingDeg = 0;
 bool gDxLoaded = false, gAfAuto = false, gAfInit = false;
 std::string gAfMsg;
 double gLastObserve = 0, gLastSave = 0;
@@ -58,7 +62,7 @@ void fmSmartTick(App& a) {
         const auto al = gDx.observe(t, mhz, pi, ecc, ps, above);
         if (al.fire) a.engine.log("FM DX: " + std::to_string(mhz) + " MHz " + ps + " from " + (al.certain ? al.country : al.likely) + (al.certain ? "" : " (likely)"));
     };
-    if (live && fm.piCode) seen(a.freqMhz, fm.piCode, fm.rds.ecc, fm.psName, fm.snrDb);
+    if (live && fm.piCode) { seen(a.freqMhz, fm.piCode, fm.rds.ecc, fm.psName, fm.snrDb); gPiWatch.add(a.freqMhz, fm.piCode, fm.snrDb); }
     if (a.engine.fmCensusOn()) for (const auto& r : a.engine.fmCensusRows()) if (r.active && r.pi) seen(r.mhz, r.pi, r.ecc, r.ps, r.aboveDb);
     if (now - gLastSave > 30) { gLastSave = now; dxSave(); }
 }
@@ -121,6 +125,31 @@ void fmCensusPanel(App& a) {
             ImGui::PopID();
         }
         ImGui::EndTable();
+    }
+    // Warnings from the census: stations that share a channel (two PIs alternate) and stations hidden next to a much stronger one.
+    if (on && !rows.empty()) {
+        for (const auto& c : gPiWatch.coChannel()) {
+            std::string txt;
+            for (const auto& q : c.pis) { char b[64]; snprintf(b, sizeof b, "%s%04X (%.0f%%, %.0f dB)", txt.empty() ? "" : " / ", q.pi, q.share * 100, q.snrDb); txt += b; }
+            ImGui::PushTextWrapPos(0); ImGui::TextColored(ImVec4(1.f, 0.75f, 0.2f, 1.f), "%.1f MHz: co-channel interference, two stations alternate: %s", c.mhz, txt.c_str()); ImGui::PopTextWrapPos();
+        }
+        std::vector<dect2::fmdx::ListedStation> ls;
+        for (const auto& r : rows) ls.push_back({r.mhz, r.levelDb});
+        for (const auto& k : dect2::fmdx::adjacentRisk(ls)) {
+            ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%.1f MHz sits %.0f kHz from a station %.0f dB stronger: expect splatter and poor RDS.", rows[(size_t)k.index].mhz, std::fabs(k.neighbourKhz), k.overDb); ImGui::PopTextWrapPos();
+        }
+    }
+    // Antenna direction helper: turn the antenna, record the level at each heading, read the best lobe.
+    if (typo::collapsingHeader(trw("Antenna direction"), 0)) {
+        ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("Turn the antenna to a heading, type it, press Add reading. After 4 or more headings that go around the compass the best direction is shown.")); ImGui::PopTextWrapPos();
+        ImGui::SetNextItemWidth(90 * gUi); ImGui::InputInt(tr("heading (deg)"), &gHeadingDeg, 15, 45);
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Add reading"))) gHeadings.push_back({(double)gHeadingDeg, (double)a.rx.fm.levelDbfs});
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Clear"))) gHeadings.clear();
+        const auto bh = dect2::fmdx::bestHeading(gHeadings);
+        if (bh.ok) ImGui::Text("Best heading %.0f deg, %.1f dB over the average, lobe about %.0f deg wide.", bh.deg, bh.gainDb, bh.widthDeg);
+        else if (!gHeadings.empty()) ImGui::TextDisabled("%zu readings; need 4 headings that go around the compass.", gHeadings.size());
     }
     // the DX log, under the census
     if (!gDx.alerts().empty()) {

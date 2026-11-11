@@ -1774,3 +1774,5 @@ Talkgroup activity and follow-the-busiest (DMR view), radiosonde launch clock (S
 ## 2026-11-12: five 4.0 signal modes (feat40-modes1)
 
 RC model PPM (881), UVB-76 buzzer monitor (882), GRAVES meteor echoes (883) and Radio Jove bursts (884) and the beacon propagation monitor (885): decoders, test generators, round-trip tests with offset, drift, noise and false-decode runs, mode-list entries, docs/X40-4.0.md. Simulated signals only. Families 881 to 899 are used because kNumFamilies is 900 (docs/FAMILY-NUMBERS-4.0.md).
+## 2026-11-12 feat40-feat1: mode features group A (part 1)
+Echo and interferer diagnosis for DVB-T / T2, FM co-channel / adjacent / antenna heading tools, DAB ensemble change watch, pass quality rating, General receiver signal guess. Logic headers plus unit tests, UI hooks in the existing panels. See docs/FEATURES-4.0-A.md.

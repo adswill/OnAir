@@ -3,6 +3,7 @@
 // over the spectrum and the waterfall. On those plots the channel is a marker: a click puts it there (inside the band the radio
 // covers, without retuning; outside it the radio is retuned), its filter edges can be dragged.
 #include "app.h"
+#include "dect2/general/sig_guess.h"
 #include "gfx/plot.h"
 #include "memory/memory_options.h"
 #include "dect2/general/general_gen.h"
@@ -326,6 +327,41 @@ void controls(App& a) {
     for (int d = 0; d < dect2::GenDemodCount; d++) {
         if (d) ImGui::SameLine();
         if (ImGui::RadioButton(dect2::generalDemodName(d), S.demod == d)) setDemod(d);
+    }
+    {   // "What is this signal?": bandwidth, shape and a ranked guess from the spectrum around the listening frequency (sig_guess.h)
+        static std::vector<dect2::sigguess::Guess> guess;
+        static std::string guessNote;
+        const bool have = a.engine.running() && !a.spec.dbfs.empty();
+        ImGui::BeginDisabled(!have);
+        if (ImGui::SmallButton("What is this signal?")) {
+            guess.clear();
+            const double fs = a.engine.sampleRate();
+            const size_t n = a.spec.dbfs.size();
+            const double binHz = fs / (double)n;
+            const double offHz = listenHz(a) - a.engine.captureCentreHz();
+            const double halfHz = std::min(fs * 0.45, 100e3);
+            const long c = (long)std::lround(offHz / binHz + (double)n / 2.0), hb = (long)(halfHz / binHz);
+            const long lo = std::max<long>(0, c - hb), hi = std::min<long>((long)n - 1, c + hb);
+            if (hi - lo >= 64) {
+                std::vector<float> win(a.spec.dbfs.begin() + lo, a.spec.dbfs.begin() + hi + 1);
+                const dect2::sigguess::Features f = dect2::sigguess::measure(win, binHz);
+                guess = dect2::sigguess::guess(f);
+                for (auto& g : guess) g.offsetHz += ((double)(lo + hi) / 2.0 - (double)n / 2.0) * binHz + a.engine.captureCentreHz() - 0;   // against the capture centre
+                char b[120]; std::snprintf(b, sizeof b, f.ok ? "Occupied bandwidth %.1f kHz, %.0f dB over the noise." : "No signal found near the listening frequency (%.1f kHz of span read).", f.ok ? f.obwHz / 1e3 : 2 * halfHz / 1e3, f.snrDb);
+                guessNote = b;
+            } else guessNote = "The capture is too narrow to look at the signal.";
+        }
+        ImGui::EndDisabled();
+        tip("Measures the occupied bandwidth and the shape of the spectrum around the listening frequency and suggests the mode (AM, NFM, SSB, CW, FSK, wide FM, OFDM) and where to tune.");
+        if (!guessNote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", guessNote.c_str()); }
+        for (size_t gi = 0; gi < guess.size() && gi < 3; gi++) {
+            const auto& g = guess[gi];
+            ImGui::PushID((int)gi);
+            ImGui::Text("%s  (%.0f%%)  %s", g.what.c_str(), g.confidence * 100, g.why.c_str());
+            const int d = g.mode == "AM" ? dect2::GenAm : g.mode == "USB" ? dect2::GenUsb : g.mode == "LSB" ? dect2::GenLsb : g.mode == "CW" ? dect2::GenCw : g.mode == "FM" ? dect2::GenWfm : g.mode == "NFM" ? dect2::GenNfm : -1;
+            if (d >= 0) { ImGui::SameLine(); if (ImGui::SmallButton("Use")) { setDemod(d); setListen(a, g.offsetHz, false); } }
+            ImGui::PopID();
+        }
     }
     if (amBroadcast(a)) {   // medium wave and the shortwave broadcast bands (kHz: the band centre, or a common frequency)
         static const struct { const char* name; double khz; } kPre[] = {{"MW 531", 531}, {"MW 999", 999}, {"MW 1368", 1368}, {"MW 1566", 1566}};
