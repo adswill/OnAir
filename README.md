@@ -443,7 +443,7 @@ In the Iridium screen, **Save for iridium-toolkit** writes every demodulated bur
 iridium-parser.py output.bits > output.parsed
 ```
 
-OnAir writes the bits only and never decodes voice (the AMBE codec is patented).
+That export is only the bits. OnAir ships no voice codec (the AMBE family is patented), but its Iridium screen also groups voice slots into calls, lists them, and plays and records them through an AMBE-family codec plug-in that you install yourself, see [docs/CODECS.md](docs/CODECS.md). Without the plug-in the calls are listed and silent. The voice path has not been checked against a real Iridium recording yet.
 </details>
 
 <details>
