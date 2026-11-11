@@ -55,7 +55,7 @@ struct WxsatGenerator::Impl {
         rs = info.symbolRate;
         if (P == kWxArktikaGgak) {
             GgakGenConfig g;
-            g.rate = c.rate; g.snrDb = c.snrDb; g.cfoHz = c.cfoHz; g.amplitude = c.amp;
+            g.rate = c.rate; g.snrDb = c.snrDb; g.cfoHz = c.cfoHz; g.amplitude = c.amp; g.sroPpm = c.clockPpm;
             ggak = std::make_unique<GgakGenerator>(g);
             return;
         }

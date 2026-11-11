@@ -8,6 +8,7 @@
 #include <atomic>
 #include <cmath>
 #include <cstring>
+#include <deque>
 #include <mutex>
 #include "dect2/common/mathconst.h"
 
@@ -159,13 +160,16 @@ struct GgakReceiver::Impl {
 
     void setup(double r) {
         rate = r;
-        D = std::max(1, (int)std::floor(r / (2.3 * symbolRate)));
+        // about 4.8 samples per symbol after the decimation: the squared signal's line (twice the carrier offset) stays inside the
+        // acquisition FFT for offsets up to +-fs2 / 4 (about +-6 kHz), and the channel filter passes the signal 6 kHz off before the
+        // offset is known (2.3 samples per symbol gave +-2.9 kHz and cut an offset signal's edge)
+        D = std::max(1, (int)std::floor(r / (4.8 * symbolRate)));
         fs2 = r / D;
         sps = fs2 / symbolRate;
         if (D > 1) {
             const int n = 8 * D + 1;
             std::vector<float> h((size_t)n);
-            const double fc = 0.85 * symbolRate / r;
+            const double fc = 0.4 * fs2 / r;
             double sum = 0;
             for (int i = 0; i < n; i++) {
                 const double m = i - (n - 1) / 2.0, w = 0.54 - 0.46 * std::cos(2 * kPi * i / (n - 1));
@@ -323,7 +327,7 @@ struct GgakReceiver::Impl {
         while (pos + 3 < (double)y.size() - 1) {
             const cf32 a = cubic(y.data(), pos);
             const cf32 b = cubic(y.data(), pos - spsEst / 2);
-            const float err = (a.real() - yprev.real()) * b.real() + (a.imag() - yprev.imag()) * b.imag();
+            const float err = (yprev.real() - a.real()) * b.real() + (yprev.imag() - a.imag()) * b.imag();
             yprev = a;
             const float p = std::norm(a);
             agc += 0.01f * (1.f - agc * agc * p);
@@ -356,7 +360,7 @@ struct GgakReceiver::Impl {
             mf.push(d);
             const cf32 o = mf.out();
             y.push_back(o);
-            if (acq) acquire(o * (1.f / std::sqrt(std::max(1e-12f, agc))));
+            if (acq) acquire(d);   // before the matched filter: it would cut a signal that is still off by up to 6 kHz
         }
         timing();
     }
@@ -466,11 +470,12 @@ bool GgakReceiver::loadResults(const std::string& blob) {
 }
 
 struct GgakGenerator::Impl {
+    // Pulse shaping: each symbol is a root-raised-cosine pulse centred on its own time (sample units); a sample is the sum of the pulses of
+    // the symbols within +-6 symbols of it. (The earlier version ran sample-spaced taps over a symbol-spaced history, which smeared the
+    // symbols into a narrow, mostly silent signal that the receiver never locked to.)
     GgakGenConfig c;
-    double pos = 0, sps = 0;
-    std::vector<float> taps;
-    std::vector<cf32> hist;
-    size_t hp = 0;
+    double sps = 0, spsEff = 0, half = 0, t = 0, nextT = 0, peak = 1;
+    std::deque<std::pair<double, float>> syms;   // (time in samples, +-amplitude)
     int bitI = 0, copy = 0, marker = 0;
     uint8_t frame[kGgakFrameBytes]{};
     std::complex<double> nco{1, 0}, rot{1, 0};
@@ -480,12 +485,10 @@ struct GgakGenerator::Impl {
 
     explicit Impl(const GgakGenConfig& cfg) : c(cfg), noise(cfg.seed) {
         sps = c.rate / c.symbolRate;
-        const int half = (int)std::ceil(6 * sps);
-        taps.resize((size_t)(2 * half + 1));
-        double e = 0;
-        for (int i = -half; i <= half; i++) { taps[(size_t)(i + half)] = (float)rrc(i / sps, c.rolloff); e += taps[(size_t)(i + half)] * taps[(size_t)(i + half)]; }
-        for (auto& v : taps) v = (float)(v / std::sqrt(e));
-        hist.assign(taps.size() * 2, cf32(0, 0));
+        spsEff = sps / (1.0 + c.sroPpm * 1e-6);
+        half = 6 * sps;
+        peak = rrc(0, c.rolloff);
+        if (std::fabs(peak) < 1e-9) peak = 1;
         const double w = 2 * kPi * c.cfoHz / c.rate;
         rot = std::complex<double>(std::cos(w), std::sin(w));
         nextFrame();
@@ -511,21 +514,18 @@ struct GgakGenerator::Impl {
         const float amp = (float)c.amplitude;
         const double nVar = c.snrDb >= 99 ? 0 : amp * amp * std::pow(10.0, -c.snrDb / 10.0);
         for (size_t i = 0; i < n; i++) {
-            while (pos >= 1) {
-                pos -= 1;
-                const float s = nextBit() ? -amp : amp;
-                hist[hp] = cf32(s, 0);
-                hist[hp + taps.size()] = hist[hp];
-                hp = (hp + 1) % taps.size();
-            }
-            cf32 acc(0, 0);
-            const cf32* h = hist.data() + hp;
-            for (size_t k = 0; k < taps.size(); k++) acc += taps[k] * h[k];
+            while (nextT <= t + half) { syms.emplace_back(nextT, nextBit() ? -amp : amp); nextT += spsEff; }
+            while (!syms.empty() && syms.front().first < t - half) syms.pop_front();
+            double acc = 0;
+            for (const auto& sy : syms) acc += sy.second * rrc((t - sy.first) / sps, c.rolloff);
+            cf32 v((float)(acc / peak), 0.f);
             nco *= rot;
-            acc *= cf32((float)nco.real(), (float)nco.imag());
-            if (nVar > 0) acc += noise.next((float)std::sqrt(nVar));
-            out[i] = acc;
-            pos += 1.0 / sps * (1.0 + c.sroPpm * 1e-6);
+            if ((i & 1023) == 0) nco /= std::abs(nco);
+            v *= cf32((float)nco.real(), (float)nco.imag());
+            if (nVar > 0) v += noise.next((float)std::sqrt(nVar));
+            out[i] = v;
+            t += 1;
+            if (t > 1e9) { for (auto& sy : syms) sy.first -= 1e9; nextT -= 1e9; t -= 1e9; }
         }
     }
 };
