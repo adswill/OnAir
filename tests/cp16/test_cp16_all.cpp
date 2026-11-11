@@ -22,6 +22,8 @@ using namespace dect2;
 #endif
 
 static int gFail = 0;
+static bool gDebug = false;   // CP16_DEBUG=1: the receiver's log and the picture of a failed case
+static void printPicture(const Cp16Telemetry& t, size_t from, size_t n);
 #define CHECK(c, ...) do { if (!(c)) { gFail++; std::printf("FAIL %s:%d: ", __FILE__, __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); } } while (0)
 
 static std::vector<uint8_t> readAll(const std::string& p) {
@@ -103,6 +105,7 @@ static double runCase(const Case& c, bool verbose) {
     o.seed = 7;
     Cp16Generator gen(o);
     Cp16Receiver rx;
+    if (gDebug) rx.setLogCallback([](const std::string& m) { std::printf("  log: %s\n", m.c_str()); });
     rx.configure(rate);
     rx.setSignalOffset(-cp16Tuning().tuneOffsetHz);
     const double sec = gen.messageSec() + o.leadSec + 7;
@@ -118,6 +121,7 @@ static double runCase(const Case& c, bool verbose) {
         std::printf("%-28s state %d base %.1f spacing %.2f row %.1f ms %s comb %.1f coh %.2f snr %.1f dB  read %.0f %%  \"%s\"\n", c.name, tel.state, tel.baseHz,
                     tel.spacingHz, tel.rowSec * 1000, tel.mirrored ? "mirrored" : "", tel.combScore, tel.timingScore, tel.snrDb, 100 * fr, tel.text.c_str());
     CHECK(fr >= c.minRead, "%s: read %.0f %% (need %.0f %%)", c.name, 100 * fr, 100 * c.minRead);
+    if (gDebug && fr < c.minRead) printPicture(tel, 0, 60);
     if (c.snr >= 10) {
         CHECK(std::fabs(tel.spacingHz - c.spacing * (1 + c.ppm * 1e-6)) < 0.15, "%s: spacing %.2f", c.name, tel.spacingHz);
         CHECK(std::fabs(tel.baseHz - (c.base + (c.lsb ? -c.cfo : c.cfo))) < 2.0, "%s: base %.1f", c.name, tel.baseHz);
@@ -161,6 +165,7 @@ static void testTx() {
     if (!g) return;
     // the transmitter's band through the receiver (the receiver is tuned to the dial: no offset)
     Cp16Receiver rx;
+    if (gDebug) rx.setLogCallback([](const std::string& m) { std::printf("  log: %s\n", m.c_str()); });
     rx.configure(rate);
     rx.setSignalOffset(0);
     std::vector<cf32> buf(25000);
@@ -176,6 +181,7 @@ static void testTx() {
     std::printf("tx: %.1f s, peak %.2f, read \"%s\" (%.0f %%)\n", blocks * 0.1, peak, tel.text.c_str(), 100 * fr);
     CHECK(peak < 1.0, "tx peak %.2f", peak);
     CHECK(fr >= 0.99, "tx: read %.0f %%", 100 * fr);
+    if (gDebug && fr < 0.99) { std::printf("tx levels: state %d base %.1f spacing %.2f row %.1f ms snr %.1f\n", tel.state, tel.baseHz, tel.spacingHz, tel.rowSec * 1000, tel.snrDb); printPicture(tel, 0, 60); }
     TxRequest bad = r;
     bad.opt["cp16.spacing"] = 50;
     CHECK(makeCp16TxGenerator(bad, rate, err) == nullptr, "tx: 50 Hz spacing accepted");
@@ -292,11 +298,13 @@ static void testCp16Plus() {
         const double acc = dotAccuracy(t, readAll(dir + f.truth), f.cells);
         std::printf("CP16+ %s fixed: dots right %.1f %%\n", f.file, 100 * acc);
         CHECK(acc >= 0.97, "CP16+ %s: dots right %.1f %%", f.file, 100 * acc);
+        if (gDebug && acc < 0.97) { std::printf("fixed: base %.1f spacing %.2f row %.2f ms\n", t.baseHz, t.spacingHz, t.rowSec * 1000); printPicture(t, 0, 80); }
     }
 }
 
 int main() {
     const bool longRun = std::getenv("ONAIR_TEST_LONG") != nullptr;
+    gDebug = std::getenv("CP16_DEBUG") != nullptr;
     if (!loadNoto()) { std::printf("FAIL: no font\n"); return 1; }
     testFont();
     static std::deque<std::string> names;   // the cases point at these

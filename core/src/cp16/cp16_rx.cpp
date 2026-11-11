@@ -192,7 +192,8 @@ struct Cp16Receiver::Impl {
         if (frames < 4) return false;
         std::vector<double> srt(P.begin() + kN / 16, P.end() - kN / 16);
         std::nth_element(srt.begin(), srt.begin() + (long)srt.size() / 2, srt.end());
-        const double floorP = std::max(1e-30, srt[srt.size() / 2]);
+        const double topP = *std::max_element(P.begin(), P.end());
+        const double floorP = std::max({1e-30, srt[srt.size() / 2], topP * 1e-6});   // 60 dB at most: a clean signal must not saturate lines and gaps alike
         A.assign(kN, 0.f);
         for (int i = 0; i < kN; i++) A[(size_t)i] = (float)std::min(7.0, std::max(0.0, std::log10(P[(size_t)i] / floorP)));
         double sp0 = 5, sp1 = 30;
