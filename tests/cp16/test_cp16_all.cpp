@@ -303,6 +303,7 @@ static void testCp16Plus() {
 }
 
 int main() {
+    std::setvbuf(stdout, nullptr, _IOLBF, 0);   // a crash keeps the lines before it
     const bool longRun = std::getenv("ONAIR_TEST_LONG") != nullptr;
     gDebug = std::getenv("CP16_DEBUG") != nullptr;
     if (!loadNoto()) { std::printf("FAIL: no font\n"); return 1; }
