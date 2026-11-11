@@ -101,30 +101,29 @@ filter-plus-follow-up as the DSC path now sits in front (`NarrowIf`: two-section
 4.5 kHz gave 0.7 dB more but cut a 2.7 kHz-deviation transmission (mpt1327_std sweep: 2 wrong results), so 5.5 kHz it is. `MptReceiver::setWeakSignalPath(false)` is the 3.9 path.
 Tests: sens40b guard (mpt1327 at 6 dB), mpt1327, mpt1327_mode, mpt1327_chan, mpt1327_std (216-case engine sweep: sample rate, offset, deviation, polarity, clock) pass. Simulated only.
 
-## Wrong-text decodes of the WSJT modes (core/src/hfdig/hfdig_ftx.cpp, hfdig_jt4.cpp)
+## Wrong-text decodes of the WSJT modes (core/src/hfdig/hfdig_jt4.cpp; FT8 / FT4 / FT2 not changed)
 
 `test_hfdig_sens40b` (6 to 10 slots a SNR point of 3 stations spread over the passband, white noise; plain and with a dial error of +40 Hz and +100 ppm) now prints the text, SNR and slot of every
-decode that was not sent. 10 slots, as the sweep goes down to the mode's last decoding point:
+decode that was not sent. 10 slots, as the sweep goes down to the mode's last decoding point (a-priori decoding on, as shipped):
 
-| mode | wrong texts before (plain / faults) | after (plain / faults) | 90 % / 50 % point before -> after |
+| mode | wrong texts (plain / faults) | after the change | 90 % / 50 % point |
 |---|---|---|---|
-| FT8 | 1 / 3 | **0 / 0** | -20 / -21 dB, unchanged |
 | JT4 | 1 / 3 | **0 / 0** | -22 / -24 dB, unchanged |
-| FT4 | 2 / 2 | 2 / 2 | -15 / -16 dB, unchanged (faults -14 / -16) |
-| FT2 | 1 / 1 | 1 / 1 | -12 / -13 dB, unchanged |
+| FT8 | 1 / 3 | not changed | -20 / -21 dB |
+| FT4 | 2 / 2 | not changed | -15 / -16 dB |
+| FT2 | 1 / 1 | not changed | -12 / -13 dB |
 
-Noise-only slots (6 per mode): 0 decodes before and after in all four.
+Noise-only slots (6 per mode): 0 decodes in all four, before and after.
 
-* FT8: the wrong texts were `W9XYZ K1ABC R ED35` (sent: `R-05`), `K0YGG W9XYZ R LO29`, `W9XYZ K1ABC R JJ76`: the a-priori decode with the two calls of a conversation heard in the slot taken as known and about
-  16 unknown bits, where an OSD hit with a valid CRC always fits (65536 words against a 14 bit CRC). Printing score and agreement of every such decode (36 of them) showed that all wrong ones had a candidate score of 2.19 to 2.49
-  and every right one 2.65 or more, with the same agreement range (0.77 to 0.99), so the floor for that stage went from 2.0 to 2.6 (`HFDIG_FTX_APQSOSCORE`). This costs no measured sensitivity (same 90 / 50 % points, 10 slots a point);
-  a station whose call-bearing candidate scores 2.0 to 2.6 and that is decoded only by this stage is lost, and none of the 36 decodes was of that kind.
-* JT4: the Fano decoder, which has no CRC, returned the all-zero word (`000AAA 000AAA RA90`, reencoding correlation 0.85 to 0.89) for four candidates; no station sends it. It is rejected now.
-* FT4 and FT2: `W9XYZ K1ABC JQ40` (-12 dB), `CQ B83LQK OP93`, `CQ HL2IPI/R R KH63` (-16 dB), FT2 `K1ABC W9XYZ R MI16`, `K1ABC W9XYZ BF14` (-5 dB, a strong station) are unchanged by the floor (the same counts at 2.0 and 2.6): the CQ ones come
-  from the a-priori CQ decode with OSD (an agreement test of the unknown bits does not separate them: 0.86 to 0.99 for right and wrong), the others from a candidate beside a decoded signal that is not within the 0.75 tone spacing / 1.5 symbol
-  skipped by `nearDecoded`. Open: a plausibility rule for the callsign of an a-priori CQ hit and a wider exclusion zone around decoded signals in the deep stage.
-Test: `hfdig_sens40b` guard now also runs FT8 and JT4 at -22 / -23 dB with the dial and clock error and fails on a wrong text (the old code does not fail every run of 4 slots: the wrong decodes are about 1 in 10 slots).
-hfdig_ft4, hfdig_ft8, hfdig_ftxsens, hfdig_ftxsmart, hfdig_ftxmulti, hfdig_jt4 pass. Simulated only.
+* JT4: the Fano decoder, which has no CRC, returned the all-zero word (`000AAA 000AAA RA90`, re-encoding correlation 0.85 to 0.89) for four candidates; no station sends it. It is rejected now. Fixed, no loss.
+* FT8: the wrong texts (`W9XYZ K1ABC R ED35` for a sent `R-05`, `K0YGG W9XYZ R LO29`, `W9XYZ K1ABC R JJ76`) are the a-priori decode with the two calls of a conversation heard in the slot taken as known and about 16 unknown
+  bits: the calls are right, the report or grid is a guess that fits a valid CRC (65536 words against a 14 bit CRC). All of them have `how` = 2 (a-priori) in the decode record. Measured over 36 such decodes: the wrong ones had a candidate score of
+  2.19 to 2.49, the right ones 2.65 or more, and agreement of the unknown bits 0.79 to 0.90 against 0.77 to 0.99 for the right ones. A floor of 2.6 on that stage removed all of them but also removed the gain the a-priori stage exists for:
+  `hfdig_ftxsmart` (apqso, weak messages decoded with and without the stage) failed with it (found by running the suite after the change), so it was reverted. The agreement test of the unknown bits does not separate right from wrong.
+* FT4 and FT2: `W9XYZ K1ABC JQ40` (-12 dB), `CQ B83LQK OP93`, `CQ HL2IPI/R R KH63` (-16 dB), FT2 `K1ABC W9XYZ R MI16`, `K1ABC W9XYZ BF14` (-5 dB, a strong station): the CQ ones come from the a-priori CQ decode with OSD
+  (agreement 0.86 to 0.99 for right and wrong alike), the others from the a-priori calls stage as in FT8.
+  Open: show a-priori decodes with their grade in the UI, a plausibility rule for the callsign of an a-priori CQ hit, a joint decision between the right and the wrong report instead of the first valid word.
+Test: the `hfdig_sens40b` guard also runs JT4 at -23 dB with the dial and clock error and fails on a wrong text. hfdig_ftxsens, hfdig_ftxmulti, hfdig_jt4 pass; hfdig_ftxsmart passes without the FT8 change.
 
 ## Tried, measured, not kept
 
@@ -139,5 +138,5 @@ hfdig_ft4, hfdig_ft8, hfdig_ftxsens, hfdig_ftxsmart, hfdig_ftxmulti, hfdig_jt4 p
   Orbcomm (7 dB), LoRa raw (-8 dB), HFDL, Zigbee, ADS-B, FT8 / WSPR / JT9 / Q65 / FST4 (WSJT-X figures).
 * Improved here and now near their limit: Argos (the demodulator's half-bit noise bandwidth; about 3 dB from a coherent PLL demodulator, no FEC to help), NDB (about 3 dB from the idents' own keying statistics), DSC VHF, MPT 1327.
 * Still open with a known gap: Aero (11 dB for 600 / 1200 bit/s BPSK in 12.5 kHz is about 20 dB Eb/N0; the squaring-line carrier search with a 5.5 x median threshold after 32 averages looks like the limit),
-  ISM (a mix of protocols, 50 % at 7 dB), Wi-SUN (see above), ACARS (coherent AM detection with a carrier memory, SENSITIVITY-4.0-A.md), CW with a carrier error (5 dB against 1 dB), FT4 / FT2 wrong texts, FLEX.
+  ISM (a mix of protocols, 50 % at 7 dB), Wi-SUN (see above), ACARS (coherent AM detection with a carrier memory, SENSITIVITY-4.0-A.md), CW with a carrier error (5 dB against 1 dB), FT8 / FT4 / FT2 wrong report from the a-priori stage, FLEX.
 * Not examined in this pass: STANAG, Iridium / Inmarsat bursts, LoRa SF12 coherent multi-symbol dechirp, AX.25 9600 and 300, ALE.

@@ -362,7 +362,7 @@ static const bool kFtxApQso = envOr("HFDIG_FTX_APQSO", 1) != 0;       // a-prior
 static const bool kFtxEarly = envOr("HFDIG_FTX_EARLY", 1) != 0;       // an early decode before the slot ends
 static const double kXHz = envOr("HFDIG_FTX_XHZ", 3.0), kXDt = envOr("HFDIG_FTX_XDT", 0.4);   // the same signal: frequency and DT apart at most
 static const int kXSlots = (int)envOr("HFDIG_FTX_XSLOTS", 6);          // slots the soft bits are kept for
-static const float kApQsoMinScore = (float)envOr("HFDIG_FTX_APQSOSCORE", 2.6);   // 4.0: was 2.0; the wrong-report decodes next to strong stations (known calls, a few unknown bits) all had a score of 2.2 to 2.5, the right ones 2.65 and up
+static const float kApQsoMinScore = (float)envOr("HFDIG_FTX_APQSOSCORE", 2.0);
 static const double kApQsoAgree = envOr("HFDIG_FTX_APAGREE", 0.7);     // least share of the unknown bits' reliability the result must agree with
 static const double kEarlyFrac = envOr("HFDIG_FTX_EARLYFRAC", 0.85);   // the early decode runs when this share of the transmission has been heard
 static const bool kNudgeDbg = envOr("HFDIG_FTX_NUDDBG", 0) != 0;

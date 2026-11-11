@@ -50,11 +50,11 @@ int main() {
             printf("%-5s %5.0f dB: %3.0f %%\n", m.name, snr, 100 * sh);
             CHECK(sh >= 0.8 && wrong == 0, "%s at %.0f dB: %.0f %% decoded, %d wrong", m.name, snr, 100 * sh, wrong);
         }
-        if (!full && !only && (m.mode == ftx::kFt8 || m.mode == ftx::kJt4)) {   // 4.0: the wrong-text decodes next to strong stations (FT8 AP with known calls, JT4 all-zero word): a few slots at the SNR where they showed
+        if (!full && !only && m.mode == ftx::kJt4) {   // 4.0: the all-zero word of the Fano decoder (wrong text next to strong stations): a few slots at the SNR where it showed
             wsjttest::Imp f;
             f.dialHz = 40; f.ppm = 100;
             int wrong = 0;
-            const double snr = m.mode == ftx::kFt8 ? -22 : -23;
+            const double snr = -23;
             share(m, snr, f, 4, &wrong);
             CHECK(wrong == 0, "%s at %.0f dB with a dial and clock error: %d decodes of a text that was not sent", m.name, snr, wrong);
         }

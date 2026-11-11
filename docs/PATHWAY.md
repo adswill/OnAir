@@ -1808,5 +1808,5 @@ APRS, wM-Bus tone correlators (the 17 dB wM-Bus figure was the five-PHY mix), se
 
 ## 2026-11-12 (night): sensitivity 4.0, pass B2 (feat40-sensB2)
 Argos PTT-A2 uplink 13 dB to about -5.5 dB (coherent gate, line-detector start, length by bit closeness), NDB 14 to 9 dB (synchronous tone detection with a carrier frequency loop),
-Marine VHF DSC 4 / 6 dB to 2 dB (4.5 kHz IF with carrier follow-up), MPT 1327 9 to 6 dB (5.5 kHz IF, new dsp/narrow_if.h), FT8 and JT4 wrong-text decodes to 0 (AP score floor, all-zero word).
+Marine VHF DSC 4 / 6 dB to 2 dB (4.5 kHz IF with carrier follow-up), MPT 1327 9 to 6 dB (5.5 kHz IF, new dsp/narrow_if.h), JT4 wrong-text decodes to 0 (all-zero word).
 Tried and not kept: Wi-SUN burst gate (about 1 dB at 90 %, nothing at 50 %), EDACS 6.5 kHz IF with AFC (1 dB). Details: docs/SENSITIVITY-4.0-B2.md.
