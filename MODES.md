@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**315 modes.**
+**316 modes.**
 
 ## TV (17)
 
@@ -209,7 +209,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
 - **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
 
-## Weather & Science (50)
+## Weather & Science (51)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -250,6 +250,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FY-3 MPT** - FY-3 MPT: Fengyun-3 MERSI pictures in X-band (needs a dish, a down-converter and a very fast radio)
 - **Weather radar (detect)** - Weather radar: scan pattern and pulse timing
 - **Sferics (lightning)** - Sferics: lightning strikes counted from their radio crackle
+- **Lightning position (network)** - Lightning position: strikes located from several stations' arrival times
 - **SuperSID (VLF)** - SuperSID: VLF station levels and the sudden changes of solar flares, receive only
 - **Riometer** - Riometer: ionospheric absorption from the cosmic noise level, receive only
 - **Pulsar folding** - Pulsar folding: dedisperse and fold a record to find a pulsar, needs a dish or array

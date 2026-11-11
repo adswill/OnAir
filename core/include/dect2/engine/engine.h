@@ -127,6 +127,7 @@
 #include "dect2/sensors/sensors_rx.h"
 #include "dect2/bgan/bgan_rx.h"
 #include "dect2/sferics/sferics_rx.h"
+#include "dect2/sferics/ltpos_rx.h"
 #include "dect2/atis/atis_rx.h"
 #include "dect2/selcal/selcal_rx.h"
 #include "dect2/umts/umts_rx.h"
@@ -592,6 +593,7 @@ public:
     ShortwaveReceiver& shortwave() { return rxSw_; }   // Shortwave: the general receiver and the one-click decoders (telemetry through latestRx)
     SensorsReceiver& sensors() { return rxSens_; }   // Sub-GHz sensors: protocols, custom decoders, clear (telemetry through latestRx)
     BganReceiver& bgan() { return rxBgan_; }   // Inmarsat BGAN (telemetry through latestRx)
+    LtPosReceiver& ltpos() { return rxLtpos_; }   // Lightning position (network), family 790
     SfericsReceiver& sferics() { return rxSfer_; }   // Sferics (lightning): threshold, mains filter, clear counts (telemetry through latestRx)
     XlinkReceiver& xlink() { return rxXlink_; }   // Extra links (family 600)
     CisHfReceiver& cisHf(int kind) { return rxCis_[kind >= 0 && kind < 7 ? kind : 0]; }   // CIS HF modes (families 620 - 626): Advanced settings, clear
@@ -1046,6 +1048,7 @@ private:
     SensorsReceiver rxSens_;
     BganReceiver rxBgan_;
     SfericsReceiver rxSfer_;
+    LtPosReceiver rxLtpos_;
     AtisReceiver rxAtis_;
     SelcalReceiver rxSelcal_;
     UmtsReceiver rxUmts_;

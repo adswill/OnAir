@@ -34,7 +34,7 @@ bool timeSrcFineCapable(TimeSrc s);           // GPS, GNSS and common view can r
 inline bool fineTiming(TimeSrc s, double sigmaNs) { return timeSrcFineCapable(s) && sigmaNs > 0 && sigmaNs <= kFineLimitNs; }
 
 // One time mark on a radio's sample clock: sample time sampleS (seconds of samples since the stream began, n / nominal rate) was at utcNs.
-// sigmaNs is the random part (it averages down over many marks), biasNs the part that does not (cable, driver and filter delays).
+// sigmaNs is the random part (it averages down over many marks), biasNs the part that does not (antenna feed, driver and filter delays).
 struct TimeMark {
     TimeSrc src = TimeSrc::None;
     double sampleS = 0;

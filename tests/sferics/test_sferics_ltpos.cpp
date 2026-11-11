@@ -5,7 +5,11 @@
 #include "dect2/sferics/ltpos.h"
 #include "dect2/sferics/ltpos_core.h"
 #include "dect2/sferics/ltpos_gen.h"
+#include "dect2/sferics/ltpos_rx.h"
+#include "dect2/source/hw_time.h"
 #include <algorithm>
+#include <chrono>
+#include <thread>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -14,6 +18,7 @@
 #include <vector>
 
 using namespace dect2::ltpos;
+using dect2::SynthConfig;
 
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { std::printf("FAIL line %d: ", __LINE__); std::printf(__VA_ARGS__); std::printf("\n"); fails++; } } while (0)
@@ -503,6 +508,110 @@ static void testChain() {
     for (const auto& kv : srv2.stations()) if (kv.second.name == "ntp-f") CHECK(kv.second.used == 0, "the NTP station is never in a fix");
 }
 
+// ---------------------------------------------------------------- the mode's test signal through one station
+static void testSynth() {
+    SynthConfig cfg;
+    cfg.snrDb = 30; cfg.modeOpt[0] = 1; cfg.modeVal[0] = 3; cfg.modeVal[1] = 50e3; cfg.sroPpm = 7;
+    const double rate = 250e3;
+    auto syn = makeLtposSynth(cfg, rate);
+    StationCfg c;
+    c.ref = RefTx{250, "test", 0, 200, 52.0, 10.0};
+    c.refOn = true; c.refOffsetHz = 50e3;
+    StationCore core;
+    core.configure(rate, c);
+    std::vector<std::complex<float>> x(8192);
+    const int64_t t0 = 1762800000LL * 1000000000LL;
+    uint64_t pos = 0;
+    while (pos < (uint64_t)(8 * rate)) {
+        syn->generate(x.data(), x.size());
+        pos += x.size();
+        core.feed(x.data(), x.size(), t0 + (int64_t)((double)pos / rate * 1e9));
+    }
+    double sg, ppm, pps;
+    const TimeSrc a = core.activeSource(sg, ppm, pps);
+    std::printf("test signal through one station: %llu sferics, clock %s, error %.2f us, ppm %+.2f (true +7), reference %s at %.1f dB\n", (unsigned long long)core.pulseCount(), timeSrcName(a), sg / 1e3, ppm, core.refTimer().locked() ? "locked" : "not locked", (double)core.refTimer().lastSnrDb());
+    CHECK(core.pulseCount() >= 12, "sferics from the generator: %llu", (unsigned long long)core.pulseCount());
+    CHECK(a == TimeSrc::CommonView && core.refTimer().locked() && std::fabs(ppm - 7) < 1.0, "the reference locks and gives the drift (%s, ppm %.2f)", timeSrcName(a), ppm);
+}
+
+// ---------------------------------------------------------------- hardware time and the receiver over UDP on this computer
+static void testHwTimeAndReceiver() {
+    using namespace dect2;
+    int key = 0;
+    hwtime::Mark m; uint64_t consumed = 0;
+    hwtime::board().consumed(&key, 500);
+    CHECK(!hwtime::board().latest(&key, m, consumed), "nothing before arming");
+    hwtime::board().arm(&key);
+    hwtime::board().consumed(&key, 1000);
+    hwtime::board().publish(&key, 800, 1234567890, 1e6);
+    CHECK(hwtime::board().latest(&key, m, consumed) && consumed == 1000 && m.srcIndex == 800 && m.seq == 1, "a mark and the samples handed on");
+    int other = 0;
+    CHECK(!hwtime::board().latest(&other, m, consumed), "another radio sees nothing");
+    hwtime::board().clear(&key);
+    CHECK(!hwtime::board().latest(&key, m, consumed), "cleared");
+    CHECK(hwtime::ppsTimeToUtcNs(250000000, 1762800000LL * 1000000000LL + 310000000) == 1762800000LL * 1000000000LL + 250000000, "whole seconds from the computer, the fraction from the PPS");
+    CHECK(hwtime::ppsTimeToUtcNs(990000000, 1762800001LL * 1000000000LL + 40000000) == 1762800000LL * 1000000000LL + 990000000, "across a second boundary");
+
+    // a server and four clients with GPS marks, and one client with the wrong key, over loopback
+    const double rate = 250e3;
+    const int64_t wall = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+    const int64_t epoch = wall - 4000000000LL;   // the scene happened four seconds ago, so the server need not wait
+    int port = 47500 + (int)(wall / 1000000 % 400);
+    const std::string keyText = "a shared network key";
+    LtPosReceiver server;
+    server.configure(rate);
+    LtPosSettings ss;
+    ss.role = 2; ss.port = port; ss.key = keyText; ss.name = "server"; ss.serverIsStation = false; ss.minStations = 4;
+    server.apply(ss);
+    LtPosTelemetry t;
+    for (int i = 0; i < 20 && !(server.telemetry(t, 0) && t.listening); i++) { ss.port = ++port; server.apply(ss); }
+    CHECK(t.listening, "the server listens");
+    SimScene sc;
+    sc.oscHz = 20e3;
+    SimStrike k1; k1.lat = 50.4; k1.lon = 11.2; k1.tS = 0.7; k1.ampAt100km = 0.3;
+    SimStrike k2; k2.lat = 51.9; k2.lon = 13.3; k2.tS = 1.1; k2.ampAt100km = 0.3;
+    sc.strikes = {k1, k2};
+    struct C { double lat, lon; const char* name; };
+    const std::vector<C> cs = {{52.52, 13.40, "b"}, {50.11, 8.68, "f"}, {48.14, 11.58, "m"}, {53.55, 10.00, "h"}, {51.05, 13.74, "wrong"}};
+    std::vector<std::unique_ptr<LtPosReceiver>> rx;
+    const size_t N = (size_t)(1.5 * rate);
+    std::vector<std::complex<float>> x(N);
+    std::mt19937 rng(4);
+    std::normal_distribution<double> nd(0, 1);
+    for (size_t i = 0; i < cs.size(); i++) {
+        auto r = std::make_unique<LtPosReceiver>();
+        r->configure(rate);
+        LtPosSettings s;
+        s.role = 1; s.host = "127.0.0.1"; s.port = port; s.key = cs[i].name == std::string("wrong") ? "not the right key" : keyText; s.name = cs[i].name;
+        s.lat = cs[i].lat; s.lon = cs[i].lon; s.posSet = true; s.useHwTime = false;
+        r->apply(s);
+        SimStation st;
+        st.lat = s.lat; st.lon = s.lon; st.ppm = 3.0 * (double)i; st.startS = 0.01 * (double)i; st.noiseRms = 0.004; st.seed = 40 + (uint32_t)i;
+        simRender(sc, st, rate, 0, N, x.data(), nullptr);
+        for (int q = 0; q <= 2; q++) {
+            const double trueT = (double)q + 0.25;
+            TimeMark gm{TimeSrc::GpsHw, simSampleTime(st, trueT), epoch + (int64_t)std::llround(trueT * 1e9 + 25 * nd(rng)), 25, 20};
+            r->addExternalMark(gm);
+        }
+        for (size_t p = 0; p < N; p += 16384) r->feed(x.data() + p, std::min<size_t>(16384, N - p));
+        rx.push_back(std::move(r));
+    }
+    // the network thread sends in the background and the server solves every 200 ms
+    bool done = false;
+    for (int i = 0; i < 40 && !done; i++) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        LtPosTelemetry tt;
+        if (server.telemetry(tt, 0)) { t = tt; done = t.strikes.size() >= 2 && t.packetsAuth > 0; }
+    }
+    CHECK(t.strikes.size() == 2, "two strikes located over UDP (%zu; %llu packets, %llu refused)", t.strikes.size(), (unsigned long long)t.packetsOk, (unsigned long long)t.packetsAuth);
+    CHECK(t.packetsAuth > 0, "the wrong key's packets are refused");
+    CHECK(t.stations.size() == 4, "only the four with the key are listed (%zu)", t.stations.size());
+    double worst = 0;
+    for (const LtStrikeRow& r : t.strikes) worst = std::max(worst, std::min(geodesicM(r.lat, r.lon, k1.lat, k1.lon), geodesicM(r.lat, r.lon, k2.lat, k2.lon)));
+    CHECK(!t.strikes.empty() && worst < 3000, "position over UDP within 3 km (%.0f m)", worst);
+    std::printf("receiver over UDP on this computer: %zu strikes, worst error %.0f m, %llu packets accepted, %llu refused\n", t.strikes.size(), worst, (unsigned long long)t.packetsOk, (unsigned long long)t.packetsAuth);
+}
+
 int main() {
     testGeodesy();
     testSampleClock();
@@ -514,6 +623,8 @@ int main() {
     testPackets();
     std::printf("whole chain, IQ at 250 kHz, six stations (GPS, GNSS, two common view, GPS, NTP):\n");
     testChain();
+    testSynth();
+    testHwTimeAndReceiver();
     std::printf(fails ? "ltpos: %d FAILED\n" : "ltpos: all passed\n", fails);
     return fails ? 1 : 0;
 }

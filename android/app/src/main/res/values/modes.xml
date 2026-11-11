@@ -336,6 +336,7 @@
         <item>Link 11 CLEW</item>
         <item>STANAG 4481 FSK</item>
         <item>DVB-C2</item>
+        <item>Lightning position (network)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -653,6 +654,7 @@
         <item>Link 11 CLEW (the conventional 16-tone HF waveform), receive only, frame structure only: each message is found from its 605 Hz Doppler and 2915 Hz sync tones, then the frame rate (13.33 or 22 ms), the Doppler offset, the number of frames and the raw phase changes of the 15 data tones. The bit mapping, error code and addresses are not public, so no data is shown. Link 11 SLEW is not covered. Tested on simulated signals.</item>
         <item>STANAG 4481 naval HF broadcast, FSK part, receive only: single-channel RATT with a +-425 Hz shift, or up to 16 sub-carriers at 255 + 170 n Hz shifted +-42.5 Hz, found automatically. Each channel\'s speed is measured; plain ITA2 text is shown, encrypted (synchronous) channels only by speed and bit count. The PSK part of STANAG 4481 is STANAG 4285, its own mode. Tested on simulated signals.</item>
         <item>DVB-C2 cable TV (EN 302 769): 4K OFDM, guard interval 1/64 or 1/128, the L1 signalling, Data Slice Types 1 and 2, 16 to 4096-QAM with 16K and 64K LDPC, transport streams and GSE (IP); needs a cable feed. Simulated signals only so far</item>
+        <item>Lightning position (network): several OnAir stations with radios time the same sferic; one acts as the server, collects the detections and finds the strike by time difference of arrival. Each station shows which timing source it uses (GPS-disciplined radio time, a GNSS receiver, a common-view VLF / LF transmitter, or PTP / NTP for association only) and its estimated error; the server draws the strikes with error ellipses on the map. Authenticated with a network key, off until set up, nothing relayed elsewhere. Receive only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -970,6 +972,7 @@
         <item>HF tactical data link, tones</item>
         <item>HF broadcast, FSK</item>
         <item>Cable, OFDM</item>
+        <item>Lightning map, several stations</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1287,5 +1290,6 @@
         <item>link 11 link-11 clew tadil a mil-std-188-203 16 tone 605 2915 doppler hf tactical data link frame</item>
         <item>stanag 4481 naval broadcast fsk ratt vft multichannel 16 channel 850 85 hz shift ita2 75 baud</item>
         <item>dvbc2 dvb-c2 c2 cable ofdm en 302 769 catv tv second generation</item>
+        <item>lightning position network tdoa time difference arrival strike location map sferics stations blitzortung vlf lf common view gps</item>
     </string-array>
 </resources>

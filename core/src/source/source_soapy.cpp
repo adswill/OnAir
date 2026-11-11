@@ -4,6 +4,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/engine/rate_choice.h"
 #include "dect2/source/source.h"
+#include "dect2/source/hw_time.h"
 #include "soapy_logic.h"
 #include "dect2/net/netradio.h"
 #include "dect2/common/ring.h"
@@ -370,6 +371,7 @@ public:
             if (!apply(s, err, false)) { close(); return false; }
             stream_ = dev_->setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32, {0});
             if (!stream_) { err = "setupStream failed"; close(); return false; }
+            armHardwareTime();
             if (dev_->activateStream(stream_) != 0) { err = "activateStream failed"; close(); return false; }
         } catch (const std::exception& e) {
             err = std::string("SoapySDR: ") + e.what();
@@ -387,6 +389,7 @@ public:
     void stop() override {
         run_ = false;
         if (th_.joinable()) th_.join();
+        if (ppsTime_) { hwtime::board().clear(ring_); ppsTime_ = false; }
         close();
     }
 
@@ -533,19 +536,42 @@ private:
         int failures = 0;
         while (run_) {
             int ret;
+            int flags = 0;
+            long long ts = 0;
             {
                 std::lock_guard<std::mutex> lk(mu_);
                 void* b[1] = {buf.data()};
-                int flags = 0;
-                long long ts = 0;
                 ret = dev_->readStream(stream_, b, buf.size(), flags, ts, 50000);
             }
-            if (ret > 0) { ring_->write(buf.data(), (size_t)ret); failures = 0; }
+            if (ret > 0) {
+                if (ppsTime_ && (flags & SOAPY_SDR_HAS_TIME) && std::chrono::steady_clock::now() >= ppsFrom_) {
+                    const int64_t sys = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+                    hwtime::board().publish(ring_, written_, hwtime::ppsTimeToUtcNs(ts, sys), rate_);
+                }
+                written_ += (uint64_t)ret;
+                ring_->write(buf.data(), (size_t)ret); failures = 0;
+            }
             else if (ret == SOAPY_SDR_TIMEOUT || ret == SOAPY_SDR_OVERFLOW) { if (ret == SOAPY_SDR_OVERFLOW) overflows_++; }
             else if (ret == 0) std::this_thread::sleep_for(std::chrono::milliseconds(1));   // no samples yet: a count, not an error code
             else if (++failures > 50) { fprintf(stderr, "SoapySDR: stream error %d, stopping the source\n", ret); break; }
             else std::this_thread::sleep_for(std::chrono::milliseconds(5));
         }
+    }
+
+    // Hardware time, only with a PPS-type time source (GPSDO, external): the time register is zeroed at the next PPS edge; marks start once that has passed
+    void armHardwareTime() {
+        ppsTime_ = false;
+        written_ = 0;
+        try {
+            std::string t = dev_->getTimeSource();
+            for (char& c : t) c = (char)std::tolower((unsigned char)c);
+            if (t.find("gps") == std::string::npos && t.find("ext") == std::string::npos && t.find("pps") == std::string::npos) return;
+            if (!dev_->hasHardwareTime()) return;
+            dev_->setHardwareTime(0, "PPS");
+            ppsTime_ = true;
+            ppsFrom_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(2500);
+            hwtime::board().arm(ring_);
+        } catch (...) { ppsTime_ = false; }   // a driver without it: this radio just has no hardware time
     }
 
     std::string args_, antenna_, key_, biasKey_;   // antenna_: the input the user picked ("" = the driver's default)
@@ -563,6 +589,9 @@ private:
     std::atomic<bool> run_{false};
     double rate_ = 0, requestedRate_ = 0;
     std::atomic<uint64_t> overflows_{0};
+    bool ppsTime_ = false;
+    uint64_t written_ = 0;
+    std::chrono::steady_clock::time_point ppsFrom_;
 };
 
 

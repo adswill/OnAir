@@ -1,6 +1,7 @@
 // Native driver for the USRP: the radio's own library is loaded at run time when it is installed. See native_common.h.
 #include "dect2/tx/tx_control.h"
 #include "native_common.h"
+#include "dect2/source/hw_time.h"
 #include <map>
 
 namespace dect2 {
@@ -38,6 +39,9 @@ struct UhdApi {
     err_t (DECT2_CALL* rx_metadata_make)(metadata_t**) = nullptr;
     err_t (DECT2_CALL* rx_metadata_free)(metadata_t**) = nullptr;
     err_t (DECT2_CALL* rx_metadata_error_code)(metadata_t*, int*) = nullptr;
+    err_t (DECT2_CALL* rx_metadata_has_time_spec)(metadata_t*, bool*) = nullptr;       // optional: hardware timestamps (Lightning position)
+    err_t (DECT2_CALL* rx_metadata_time_spec)(metadata_t*, int64_t*, double*) = nullptr;
+    err_t (DECT2_CALL* set_time_next_pps)(usrp_t*, int64_t, double, size_t) = nullptr;
     err_t (DECT2_CALL* meta_range_make)(range_t_**) = nullptr;
     err_t (DECT2_CALL* meta_range_free)(range_t_**) = nullptr;
     err_t (DECT2_CALL* meta_range_start)(range_t_*, double*) = nullptr;
@@ -98,6 +102,7 @@ struct UhdApi {
             lib.opt(get_last_error, "uhd_get_last_error"); lib.opt(usrp_last_error, "uhd_usrp_last_error"); lib.opt(get_rx_freq_range, "uhd_usrp_get_rx_freq_range");
             lib.opt(get_rx_num_channels, "uhd_usrp_get_rx_num_channels"); lib.opt(get_rx_antennas, "uhd_usrp_get_rx_antennas"); lib.opt(set_rx_antenna, "uhd_usrp_set_rx_antenna");
             lib.opt(set_clock_source, "uhd_usrp_set_clock_source"); lib.opt(set_time_source, "uhd_usrp_set_time_source");
+            lib.opt(rx_metadata_has_time_spec, "uhd_rx_metadata_has_time_spec"); lib.opt(rx_metadata_time_spec, "uhd_rx_metadata_time_spec"); lib.opt(set_time_next_pps, "uhd_usrp_set_time_next_pps");
             lib.opt(get_clock_sources, "uhd_usrp_get_clock_sources"); lib.opt(get_time_sources, "uhd_usrp_get_time_sources");
             lib.opt(get_mboard_sensor, "uhd_usrp_get_mboard_sensor"); lib.opt(sensor_make, "uhd_sensor_value_make");
             lib.opt(sensor_free, "uhd_sensor_value_free"); lib.opt(sensor_to_bool, "uhd_sensor_value_to_bool");
@@ -249,7 +254,8 @@ protected:
         }
         // the time (PPS) source (TuneSettings "time"): UHD's own choice unless picked. "external" = the PPS SMA, "gpsdo" = the GPS module, "mimo" = the
         // MIMO cable of an N2xx/X3xx pair. Sample capture does not need it; it only matters when radios are to be aligned in time.
-        if (const std::string ts = radioOption(s, "time", "default"); ts != "default") {
+        timeSourcePicked_ = radioOption(s, "time", "default");
+        if (const std::string ts = timeSourcePicked_; ts != "default") {
             std::string offered;
             if (!sourceOffered(false, ts, offered)) {
                 err = "USRP: this radio has no time source \"" + ts + "\" (it offers: " + offered + ")";
@@ -287,6 +293,7 @@ protected:
         if (cfg) addNote(err, lockNote_);
         return cfg;
     }
+    std::string timeSourcePicked_ = "default";
     double lastReqHz_ = -1;
     bool configure(const TuneSettings& s, std::string& err, bool live) override {
         if (!dev_) return false;
@@ -348,7 +355,11 @@ protected:
             const int e = uhd().rx_streamer_recv(streamer_, bufs, N, &md_, 1.0, false, &got);
             int code = 0;
             if (e == 0) uhd().rx_metadata_error_code(md_, &code);
-            if (e == 0 && (code == UhdApi::kErrNone || code == UhdApi::kRxOverflow) && got > 0) { push(conv_.data(), got); failures = timeouts = 0; }
+            if (e == 0 && (code == UhdApi::kErrNone || code == UhdApi::kRxOverflow) && got > 0) {
+                if (ppsTime_ && std::chrono::steady_clock::now() >= ppsFrom_) publishHardwareTime();
+                written_ += got;
+                push(conv_.data(), got); failures = timeouts = 0;
+            }
             // an overflow means samples were lost, not that the stream ended: continuous streaming goes on (rx_metadata_t::ERROR_CODE_OVERFLOW)
             else if (e == 0 && code == UhdApi::kRxOverflow) continue;
             // nothing for kStallS seconds (a network USRP whose cable was pulled only times out): treated as lost, so that it is opened again
@@ -359,6 +370,29 @@ protected:
 
 private:
     static constexpr int kStallS = 5;
+    // Hardware time, only with a PPS-type time source (the user picked it): the time register is zeroed at the next PPS edge; marks start once that has passed
+    bool ppsTime_ = false;
+    uint64_t written_ = 0;
+    std::chrono::steady_clock::time_point ppsFrom_;
+    void armHardwareTime(const std::string& timeSource) {
+        ppsTime_ = false;
+        written_ = 0;
+        if (timeSource != "gpsdo" && timeSource != "external") return;
+        if (!uhd().rx_metadata_time_spec || !uhd().rx_metadata_has_time_spec || !uhd().set_time_next_pps) return;
+        if (uhd().set_time_next_pps(dev_, 0, 0.0, 0) != 0) return;
+        ppsTime_ = true;
+        ppsFrom_ = std::chrono::steady_clock::now() + std::chrono::milliseconds(2500);
+        hwtime::board().arm(ring_);
+    }
+    void publishHardwareTime() {
+        bool has = false;
+        if (uhd().rx_metadata_has_time_spec(md_, &has) != 0 || !has) return;
+        int64_t full = 0; double frac = 0;
+        if (uhd().rx_metadata_time_spec(md_, &full, &frac) != 0) return;
+        const int64_t hw = full * 1000000000LL + (int64_t)std::llround(frac * 1e9);
+        const int64_t sys = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
+        hwtime::board().publish(ring_, written_, hwtime::ppsTimeToUtcNs(hw, sys), rate_);
+    }
     bool startReceiving(std::string& err) {
         size_t chan = ch_;
         // fc32 out of UHD: it converts sc8 (half the Ethernet load, 8-bit samples) and sc16 on the wire itself
@@ -367,11 +401,13 @@ private:
         snprintf(otw, sizeof otw, "%s", otw_.c_str());
         UhdApi::stream_args_t sa{cpu, otw, none, &chan, 1};
         if (uhd().rx_streamer_make(&streamer_) != 0 || uhd().rx_metadata_make(&md_) != 0 || uhd().get_rx_stream(dev_, &sa, streamer_) != 0) { err = "USRP: cannot set up the sample stream: " + uhd().text(dev_); stopReceiving(); return false; }
+        armHardwareTime(timeSourcePicked_);
         UhdApi::stream_cmd_t cmd{UhdApi::kStartContinuous, 0, true, 0, 0.0};
         if (uhd().rx_streamer_issue_stream_cmd(streamer_, &cmd) != 0) { err = "USRP: cannot start the sample stream: " + uhd().text(dev_); stopReceiving(); return false; }
         return true;
     }
     void stopReceiving() {
+        if (ppsTime_) { hwtime::board().clear(ring_); ppsTime_ = false; }
         if (streamer_) { UhdApi::stream_cmd_t cmd{UhdApi::kStopContinuous, 0, true, 0, 0.0}; uhd().rx_streamer_issue_stream_cmd(streamer_, &cmd); uhd().rx_streamer_free(&streamer_); }
         if (md_) uhd().rx_metadata_free(&md_);
         streamer_ = nullptr; md_ = nullptr;
