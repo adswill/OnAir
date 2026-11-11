@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "id": "tone-detector",
+  "name": "Tone detector",
+  "summary": "Finds the strongest tone in the tuned channel: offset in Hz, level and a spectrum plot.",
+  "description": "STUB package of the OnAir example plugin 'tone-detector' for testing the plugin store. Finds the strongest tone in the tuned channel: offset in Hz, level and a spectrum plot. Its library is a text file, not code. Source: sdk/examples/tone-detector in the OnAir repository.",
+  "author": "OnAir contributors",
+  "license": "CC0-1.0",
+  "version": "1.0.0",
+  "min_onair": "0.2.7",
+  "abi_version": 1,
+  "kind": "mode",
+  "permissions": [],
+  "categories": [
+    "analysis",
+    "test-tools"
+  ],
+  "tags": [
+    "tone",
+    "spectrum",
+    "example"
+  ],
+  "review": "reviewed",
+  "homepage": "https://github.com/adswill/OnAir",
+  "source": "https://github.com/adswill/OnAir/tree/main/sdk/examples/tone-detector",
+  "screenshots": [],
+  "downloads": {
+    "windows-x64": {
+      "url": "packages/tone-detector/tone-detector-1.0.0-windows-x64.onairplugin",
+      "size": 1123,
+      "sha256": "0cb04a444875b6cd1e02b7b212956b5e22a919e72147ffc9af6d87335e1b2fcb"
+    },
+    "macos-arm64": {
+      "url": "packages/tone-detector/tone-detector-1.0.0-macos-arm64.onairplugin",
+      "size": 1127,
+      "sha256": "42531cf3629c42124402d99b4133ffa8cf51e01d9aabe88f229349e76bbec521"
+    },
+    "macos-x86_64": {
+      "url": "packages/tone-detector/tone-detector-1.0.0-macos-x86_64.onairplugin",
+      "size": 1127,
+      "sha256": "42531cf3629c42124402d99b4133ffa8cf51e01d9aabe88f229349e76bbec521"
+    },
+    "linux-x86_64": {
+      "url": "packages/tone-detector/tone-detector-1.0.0-linux-x86_64.onairplugin",
+      "size": 1121,
+      "sha256": "0c1d0eaeb64988bfc8aed30da9710251215b1896a3cde44d6fca8d49b01d5a49"
+    },
+    "linux-aarch64": {
+      "url": "packages/tone-detector/tone-detector-1.0.0-linux-aarch64.onairplugin",
+      "size": 1121,
+      "sha256": "0c1d0eaeb64988bfc8aed30da9710251215b1896a3cde44d6fca8d49b01d5a49"
+    }
+  }
+}

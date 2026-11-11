@@ -1,0 +1,109 @@
+{
+  "schema": 1,
+  "serial": 1,
+  "generated": "2026-11-11T00:00:00Z",
+  "registry": "OnAir sample registry (test only)",
+  "plugins": [
+    {
+      "id": "burst-counter",
+      "name": "Burst counter",
+      "summary": "Counts bursts above the noise floor with start time, length and peak; emits plugin.burst events.",
+      "version": "1.0.0",
+      "author": "OnAir contributors",
+      "license": "CC0-1.0",
+      "kind": "mode",
+      "min_onair": "0.2.7",
+      "abi_version": 1,
+      "review": "reviewed",
+      "permissions": [],
+      "categories": [
+        "analysis",
+        "automation"
+      ],
+      "tags": [
+        "burst",
+        "pulse",
+        "example"
+      ],
+      "platforms": [
+        "linux-aarch64",
+        "linux-x86_64",
+        "macos-arm64",
+        "macos-x86_64",
+        "windows-x64"
+      ],
+      "manifest": {
+        "path": "plugins/burst-counter/plugin.json",
+        "sha256": "4f0b45d0c6eca6709753dbcde1b078cdd162848f67ff19b63275b176f2c4cfbf"
+      }
+    },
+    {
+      "id": "log-to-file",
+      "name": "Log to file",
+      "summary": "Writes every automation event to events.log in its own data folder.",
+      "version": "1.0.0",
+      "author": "OnAir contributors",
+      "license": "CC0-1.0",
+      "kind": "action",
+      "min_onair": "0.2.7",
+      "abi_version": 1,
+      "review": "reviewed",
+      "permissions": [
+        "filesystem"
+      ],
+      "categories": [
+        "automation"
+      ],
+      "tags": [
+        "log",
+        "events",
+        "example"
+      ],
+      "platforms": [
+        "linux-aarch64",
+        "linux-x86_64",
+        "macos-arm64",
+        "macos-x86_64",
+        "windows-x64"
+      ],
+      "manifest": {
+        "path": "plugins/log-to-file/plugin.json",
+        "sha256": "22034f9a6c0fe64c19ee75e32d1af7decd12d8efb33bbea3172f9986c34ac12e"
+      }
+    },
+    {
+      "id": "tone-detector",
+      "name": "Tone detector",
+      "summary": "Finds the strongest tone in the tuned channel: offset in Hz, level and a spectrum plot.",
+      "version": "1.0.0",
+      "author": "OnAir contributors",
+      "license": "CC0-1.0",
+      "kind": "mode",
+      "min_onair": "0.2.7",
+      "abi_version": 1,
+      "review": "reviewed",
+      "permissions": [],
+      "categories": [
+        "analysis",
+        "test-tools"
+      ],
+      "tags": [
+        "tone",
+        "spectrum",
+        "example"
+      ],
+      "platforms": [
+        "linux-aarch64",
+        "linux-x86_64",
+        "macos-arm64",
+        "macos-x86_64",
+        "windows-x64"
+      ],
+      "manifest": {
+        "path": "plugins/tone-detector/plugin.json",
+        "sha256": "c0a7b3913b775a77a378c03fd42a70449ab4a6ffa83633a01570a2607ff3bb96"
+      }
+    }
+  ],
+  "revoked": []
+}

@@ -1,0 +1,55 @@
+{
+  "schema": 1,
+  "id": "log-to-file",
+  "name": "Log to file",
+  "summary": "Writes every automation event to events.log in its own data folder.",
+  "description": "STUB package of the OnAir example plugin 'log-to-file' for testing the plugin store. Writes every automation event to events.log in its own data folder. Its library is a text file, not code. Source: sdk/examples/log-to-file in the OnAir repository.",
+  "author": "OnAir contributors",
+  "license": "CC0-1.0",
+  "version": "1.0.0",
+  "min_onair": "0.2.7",
+  "abi_version": 1,
+  "kind": "action",
+  "permissions": [
+    "filesystem"
+  ],
+  "categories": [
+    "automation"
+  ],
+  "tags": [
+    "log",
+    "events",
+    "example"
+  ],
+  "review": "reviewed",
+  "homepage": "https://github.com/adswill/OnAir",
+  "source": "https://github.com/adswill/OnAir/tree/main/sdk/examples/log-to-file",
+  "screenshots": [],
+  "downloads": {
+    "windows-x64": {
+      "url": "packages/log-to-file/log-to-file-1.0.0-windows-x64.onairplugin",
+      "size": 1006,
+      "sha256": "416c6cc2ad2348eae7dadb6c21d2760cbba0a20001d64ba01b0caf190d735d68"
+    },
+    "macos-arm64": {
+      "url": "packages/log-to-file/log-to-file-1.0.0-macos-arm64.onairplugin",
+      "size": 1010,
+      "sha256": "11abb03ae27a8ff69cc006dfc3a11eff49db47ff5ba0280cdfeb9b4c6168b9c0"
+    },
+    "macos-x86_64": {
+      "url": "packages/log-to-file/log-to-file-1.0.0-macos-x86_64.onairplugin",
+      "size": 1010,
+      "sha256": "11abb03ae27a8ff69cc006dfc3a11eff49db47ff5ba0280cdfeb9b4c6168b9c0"
+    },
+    "linux-x86_64": {
+      "url": "packages/log-to-file/log-to-file-1.0.0-linux-x86_64.onairplugin",
+      "size": 1004,
+      "sha256": "94e254353307cff070523e69fa21d018a01a2b6778dd3e31c6341af71d8d2410"
+    },
+    "linux-aarch64": {
+      "url": "packages/log-to-file/log-to-file-1.0.0-linux-aarch64.onairplugin",
+      "size": 1004,
+      "sha256": "94e254353307cff070523e69fa21d018a01a2b6778dd3e31c6341af71d8d2410"
+    }
+  }
+}

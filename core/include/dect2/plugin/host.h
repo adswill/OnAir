@@ -92,6 +92,7 @@ struct Entry {
     Manifest m;
     std::string dir, libraryPath, error;           // error: why it cannot run ("" = fine)
     bool bundled = false, valid = false, enabled = false, permsAnswered = false;
+    bool revoked = false;                          // switched off by the store's revocation list (error says why)
     uint32_t granted = 0;
     bool needsPrompt() const { return valid && m.permissions && !permsAnswered; }
 };
@@ -154,6 +155,10 @@ public:
     bool installFile(const std::string& zipPath, std::string& installedId, std::string& err);
     bool installBytes(const std::vector<uint8_t>& zip, std::string& installedId, std::string& err);
     bool remove(const std::string& id, std::string& err);
+    // The kill switch of the plugin store: id -> (version spec, reason). Written to plugins/revoked.json; every installed plugin it covers is
+    // stopped, shown as failed with the reason and cannot be turned on until the entry is gone. An empty map clears the list.
+    void setRevoked(const std::map<std::string, std::pair<std::string, std::string>>& r);
+    std::map<std::string, std::pair<std::string, std::string>> revoked() const;
 
     std::vector<std::string> log(const std::string& id, size_t n = 200) const;
     std::string pluginsDir() const { return cfg_.pluginsDir; }

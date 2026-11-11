@@ -82,6 +82,7 @@ struct Manager::Impl {
     std::vector<Entry> entries;
     std::map<std::string, PState> state;
     std::map<std::string, int> numbers;     // "plugin/mode" -> number
+    std::map<std::string, std::pair<std::string, std::string>> revoked;   // id -> (version spec, reason), from revoked.json
     std::map<std::string, std::shared_ptr<SettingValues>> settings;
     std::map<std::string, std::shared_ptr<Results>> results;
     std::map<std::string, std::deque<std::string>> logs;
@@ -99,6 +100,7 @@ Manager::Manager(ManagerConfig c) : p_(std::make_shared<Impl>()), cfg_(std::move
 Manager::~Manager() { stopAll(); if (p_->automationAttached) automation::global().setObserver(nullptr, 0); endSession(); }
 
 static fs::path statePath(const ManagerConfig& c) { return fs::path(c.pluginsDir) / "state.json"; }
+static fs::path revokedPath(const ManagerConfig& c) { return fs::path(c.pluginsDir) / "revoked.json"; }
 static fs::path markerPath(const ManagerConfig& c) { return fs::path(c.pluginsDir) / ".running"; }
 static fs::path safeFlagPath(const ManagerConfig& c) { return fs::path(c.pluginsDir) / "safe-mode.flag"; }
 
@@ -153,6 +155,13 @@ void Manager::scan() {
         }
         if (const aj::Value* n = root.get("numbers")) if (n->type == aj::Value::Obj) for (const auto& kv : n->o) if (kv.second.type == aj::Value::Num && kv.second.n >= kFirstModeNumber && kv.second.n < 1e6) p_->numbers[kv.first] = (int)kv.second.n;
     }
+    p_->revoked.clear();
+    {
+        aj::Value rv; std::string rerr;
+        const std::string rt = readFile(revokedPath(cfg_), 1 << 20);
+        if (!rt.empty() && aj::parse(rt, rv, rerr) && rv.type == aj::Value::Obj)
+            for (const auto& kv : rv.o) if (kv.second.type == aj::Value::Obj) p_->revoked[kv.first] = {kv.second.str("version", "*"), kv.second.str("reason")};
+    }
     auto scanDir = [&](const std::string& dir, bool bundled) {
         if (dir.empty()) return;
         std::error_code ec;
@@ -176,12 +185,19 @@ void Manager::scan() {
                     if (!fs::exists(e.libraryPath, ec)) e.error = "the library file " + lib + " is missing";
                 }
             }
+            {
+                auto rv = p_->revoked.find(e.m.id);
+                if (rv != p_->revoked.end() && !e.m.version.empty() && versionSpecMatches(rv->second.first, e.m.version)) {
+                    e.revoked = true;
+                    e.error = "Revoked by the plugin registry" + (rv->second.second.empty() ? std::string() : ": " + rv->second.second);
+                }
+            }
             e.valid = e.error.empty();
             bool dup = false;
             for (const auto& o : p_->entries) if (o.m.id == e.m.id) dup = true;
             if (dup) continue;   // a user-installed plugin hides a bundled one with the same id
             auto it = p_->state.find(e.m.id);
-            if (it != p_->state.end()) { e.enabled = it->second.enabled; e.permsAnswered = it->second.answered; e.granted = it->second.granted & e.m.permissions; }
+            if (it != p_->state.end()) { e.enabled = it->second.enabled && !e.revoked; e.permsAnswered = it->second.answered; e.granted = it->second.granted & e.m.permissions; }
             if (e.valid && !p_->settings.count(e.m.id)) {
                 auto sv = std::make_shared<SettingValues>(e.m);
                 if (it != p_->state.end()) sv->load(it->second.values);
@@ -538,6 +554,25 @@ bool Manager::remove(const std::string& id, std::string& err) {
     scan();
     return true;
 }
+void Manager::setRevoked(const std::map<std::string, std::pair<std::string, std::string>>& r) {
+    std::vector<Entry> before = entries();
+    aj::Value root = aj::Value::object();
+    for (const auto& kv : r) {
+        if (!validId(kv.first)) continue;
+        aj::Value o = aj::Value::object();
+        o.set("version", aj::Value::string(kv.second.first)); o.set("reason", aj::Value::string(kv.second.second.substr(0, 500)));
+        root.set(kv.first, o);
+    }
+    for (const auto& e : before) {
+        auto it = r.find(e.m.id);
+        if (it == r.end() || e.m.version.empty() || !versionSpecMatches(it->second.first, e.m.version)) continue;
+        for (const auto& m : e.m.modes) stop(e.m.id, m.id);
+        stop(e.m.id, "");
+    }
+    { std::lock_guard<std::mutex> lk(p_->mu); writeFileAtomic(revokedPath(cfg_), aj::dump(root, true)); }
+    scan();
+}
+std::map<std::string, std::pair<std::string, std::string>> Manager::revoked() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->revoked; }
 std::vector<std::string> Manager::log(const std::string& id, size_t n) const {
     std::lock_guard<std::mutex> lk(p_->mu);
     auto it = p_->logs.find(id);

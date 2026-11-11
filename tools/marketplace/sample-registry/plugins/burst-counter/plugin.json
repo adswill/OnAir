@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "id": "burst-counter",
+  "name": "Burst counter",
+  "summary": "Counts bursts above the noise floor with start time, length and peak; emits plugin.burst events.",
+  "description": "STUB package of the OnAir example plugin 'burst-counter' for testing the plugin store. Counts bursts above the noise floor with start time, length and peak; emits plugin.burst events. Its library is a text file, not code. Source: sdk/examples/burst-counter in the OnAir repository.",
+  "author": "OnAir contributors",
+  "license": "CC0-1.0",
+  "version": "1.0.0",
+  "min_onair": "0.2.7",
+  "abi_version": 1,
+  "kind": "mode",
+  "permissions": [],
+  "categories": [
+    "analysis",
+    "automation"
+  ],
+  "tags": [
+    "burst",
+    "pulse",
+    "example"
+  ],
+  "review": "reviewed",
+  "homepage": "https://github.com/adswill/OnAir",
+  "source": "https://github.com/adswill/OnAir/tree/main/sdk/examples/burst-counter",
+  "screenshots": [],
+  "downloads": {
+    "windows-x64": {
+      "url": "packages/burst-counter/burst-counter-1.0.0-windows-x64.onairplugin",
+      "size": 1512,
+      "sha256": "f60b8fde73697ae8052e7861cb1a338ea23311f24737c97993ea02b380c3515d"
+    },
+    "macos-arm64": {
+      "url": "packages/burst-counter/burst-counter-1.0.0-macos-arm64.onairplugin",
+      "size": 1516,
+      "sha256": "c86c5d8177b83300f81c1315bae66c64ef9297b882550484c40cceb4071290c5"
+    },
+    "macos-x86_64": {
+      "url": "packages/burst-counter/burst-counter-1.0.0-macos-x86_64.onairplugin",
+      "size": 1516,
+      "sha256": "c86c5d8177b83300f81c1315bae66c64ef9297b882550484c40cceb4071290c5"
+    },
+    "linux-x86_64": {
+      "url": "packages/burst-counter/burst-counter-1.0.0-linux-x86_64.onairplugin",
+      "size": 1510,
+      "sha256": "c53efae78c3b9cecf9e78e04e8c189896944051d0ef2dc37df9ec134a783adaf"
+    },
+    "linux-aarch64": {
+      "url": "packages/burst-counter/burst-counter-1.0.0-linux-aarch64.onairplugin",
+      "size": 1510,
+      "sha256": "c53efae78c3b9cecf9e78e04e8c189896944051d0ef2dc37df9ec134a783adaf"
+    }
+  }
+}

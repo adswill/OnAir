@@ -85,6 +85,12 @@ static bool numField(const aj::Value& o, const char* k, double& dst, double lo, 
     return true;
 }
 
+bool versionSpecMatches(const std::string& spec, const std::string& version) {
+    if (spec == "*") return true;
+    if (spec.compare(0, 2, "<=") == 0) return compareVersions(version, spec.substr(2)) <= 0;
+    return !spec.empty() && compareVersions(version, spec) == 0;
+}
+
 std::string Manifest::libraryFile() const {
 #if defined(__APPLE__)
     return libMac;

@@ -142,8 +142,8 @@ Be clear about what this protects and what it does not.
   sandboxed helper (macOS sandbox profile, Linux seccomp) is a planned hardening step, not part of this version.
 - **Packages.** `.onairplugin` files are zip archives. OnAir reads them with a bounded reader (64 entries, 128 MiB per file, 256 MiB in all, CRC-32
   checked, no encryption, no zip64), refuses names with `..`, absolute paths, backslashes or drive letters, validates `manifest.json` and that a library
-  for this platform is present, and unpacks into a temporary folder before replacing the plugin. Nothing is downloaded by OnAir: there is no store and no
-  auto-update; **Community plugins** only opens the wiki page in your browser.
+  for this platform is present, and unpacks into a temporary folder before replacing the plugin. OnAir downloads a plugin only from the **Store** tab
+  (a signed registry, on request, see `docs/PLUGIN-MARKETPLACE-3.9.md`); there is no auto-update. **Community plugins** opens the wiki page in your browser.
 - **Encrypted traffic** is never decoded by OnAir, and plugins should not do it either. Patented codecs are not bundled; a plugin that needs one
   must have the user install it, as OnAir's own voice modes do.
 
@@ -159,7 +159,7 @@ helper. IQ is copied through the pipe (about 8 bytes per sample), so very high s
 ## In the program
 
 - **View > Plugins** (and the **Plugins** row in the PLUGINS group of the mode list) is the manager: the installed and bundled plugins with
-  version, author, licence, kind and permissions; enable/disable; the first-use permission prompt; settings; each plugin's log; **Install from
+  version, author, licence, kind and permissions; enable/disable; the first-use permission prompt; settings; each plugin's log; **Store** (browse, install, update, remove from a signed registry); **Install from
   file...** (a `.onairplugin`); **Open folder**; **Remove**; **Safe mode**; **Community plugins**.
 - Plugin modes appear in the mode list under **PLUGINS** with a stable number (family 1000 and up, stored in `plugins/state.json`: assigned in order of
   first appearance, never reused, kept when a plugin is removed and reinstalled). A plugin's settings are saved per plugin id.
