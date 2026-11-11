@@ -10,6 +10,7 @@
 #include "../adsb/adsb_map.h"
 #include "packet_board_ui.h"
 #include "dect2/geo/maidenhead.h"
+#include "dect2/packet/packet_beacons.h"
 #include "dect2/packet/packet_tel.h"
 #include <algorithm>
 #include <cmath>
@@ -473,6 +474,34 @@ void controls(App& a) {
     }
 }
 
+// Channel use (4.0): who fills the channel and how often each station beacons, from the frames heard in the last 10 minutes.
+void channelUse(App& a) {
+    const dect2::PacketTelemetry& t = a.rx.packet;
+    const auto u = dect2::analyseChannel(t.frames, t.timeSec, 600);
+    ImGui::TextDisabled(tr("Channel busy %.0f %% of the last 10 minutes by %d stations"), u.occupancyPct, (int)u.stations.size());
+    if (u.stations.empty() || !ImGui::BeginTable("##pk_cu", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
+    ImGui::TableSetupColumn(tr("Station")); ImGui::TableSetupColumn(tr("Frames")); ImGui::TableSetupColumn(tr("Median gap s")); ImGui::TableSetupColumn(tr("Shortest s"));
+    ImGui::TableSetupColumn(tr("Airtime %")); ImGui::TableSetupColumn(tr("Same text")); ImGui::TableSetupColumn(tr("Notes"), ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableHeadersRow();
+    for (size_t i = 0; i < u.stations.size() && i < 12; i++) {
+        const auto& s = u.stations[i];
+        ImGui::TableNextRow();
+        ImGui::TableNextColumn(); ImGui::TextUnformatted(s.call.c_str());
+        ImGui::TableNextColumn(); ImGui::Text("%d", s.frames);
+        ImGui::TableNextColumn(); if (s.frames > 1) ImGui::Text("%.0f", s.medianGapS); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); if (s.frames > 1) ImGui::Text("%.0f", s.minGapS); else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn(); ImGui::Text("%.1f", s.sharePct);
+        ImGui::TableNextColumn(); ImGui::Text("%d", s.repeats);
+        ImGui::TableNextColumn();
+        std::string n;
+        if (s.fast) n += std::string(tr("beacons fast")) + "  ";
+        if (s.hog) n += std::string(tr("big share")) + "  ";
+        if (s.repeat) n += std::string(tr("same text again and again")) + "  ";
+        ImGui::TextUnformatted(n.c_str());
+    }
+    ImGui::EndTable();
+}
+
 void tab(App& a) {
     loadState();
     lamps(a);
@@ -492,6 +521,7 @@ void tab(App& a) {
     if (S.view == 3) { kit::sessionItems(24, 3, "aprs"); return; }
     if (S.view == 1) { mapView(a, ImGui::GetContentRegionAvail()); return; }
     if (!live(a)) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "start the receiver"); ImGui::PopTextWrapPos(); return; }
+    if (ImGui::TreeNode(trw("Channel use"))) { channelUse(a); ImGui::TreePop(); }
     stationTable(a, false);
 }
 

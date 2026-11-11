@@ -2,6 +2,7 @@
 #include "dect2/adsb/adsb_replay.h"
 #include "dect2/sonde/sonde_launch_clock.h"
 #include "dect2/trunkpool/tg_activity.h"
+#include "dect2/packet/packet_beacons.h"
 #include "dect2/tx/tx_plan.h"
 #include <cstdio>
 #include <random>
@@ -129,8 +130,44 @@ static void txTest() {
     CHECK(mono);
 }
 
+static PacketFrameInfo fr(const char* from, double t, const char* info, const char* path = "", int baud = 1200) {
+    PacketFrameInfo f; f.from = from; f.timeSec = t; f.info = info; f.path = path; f.baud = baud; return f;
+}
+static void beaconTest() {
+    std::vector<PacketFrameInfo> v;
+    for (int i = 0; i < 20; i++) v.push_back(fr("FAST-9", 100 + i * 20.0, ("!5430.00N/02518.00E>" + std::to_string(i)).c_str(), "WIDE1-1,WIDE2-1"));   // every 20 s, changing text
+    for (int i = 0; i < 6; i++) v.push_back(fr("SPAM-1", 100 + i * 30.0, "!5430.00N/02518.00E>stuck"));                                           // same text every 30 s
+    for (int i = 0; i < 3; i++) v.push_back(fr("QUIET-1", 100 + i * 600.0, "!5400.00N/02500.00E-home"));                                         // normal fixed station
+    v.push_back(fr("OLD-1", 1.0, "x"));                                                                                                             // outside the window
+    v.push_back(fr("", 150, "no source"));
+    std::reverse(v.begin(), v.end());   // any order
+    auto u = analyseChannel(v, 1300, 1200);
+    CHECK(u.stations.size() == 3);
+    const BeaconStat* fast = nullptr; const BeaconStat* spam = nullptr; const BeaconStat* quiet = nullptr;
+    for (const auto& s : u.stations) { if (s.call == "FAST-9") fast = &s; if (s.call == "SPAM-1") spam = &s; if (s.call == "QUIET-1") quiet = &s; }
+    CHECK(fast && spam && quiet);
+    if (fast && spam && quiet) {
+        CHECK(fast->frames == 20 && near_(fast->medianGapS, 20, 1e-9) && fast->fast && !fast->repeat);
+        CHECK(spam->repeat && spam->repeats == 5 && spam->fast);   // 30 s gaps are also "fast"
+        CHECK(!quiet->fast && !quiet->repeat && !quiet->hog && near_(quiet->medianGapS, 600, 1e-9) && near_(quiet->minGapS, 600, 1e-9));
+        CHECK(u.stations.front().call == "FAST-9");   // most airtime first
+    }
+    CHECK(u.occupancyPct > 0 && u.occupancyPct < 50);
+    // a hog: a 200-byte frame every 3 s at 1200 baud uses most of the channel
+    std::vector<PacketFrameInfo> h;
+    for (int i = 0; i < 100; i++) h.push_back(fr("HOG-1", i * 3.0, std::string(200, 'x').c_str()));
+    auto uh = analyseChannel(h, 300, 300);
+    CHECK(uh.stations.size() == 1 && uh.stations[0].hog && uh.occupancyPct > 60);
+    // 9600 baud is about eight times shorter
+    CHECK(frameAirtimeS(fr("A", 0, "0123456789", "", 9600)) < frameAirtimeS(fr("A", 0, "0123456789", "", 1200)) / 4);
+    CHECK(analyseChannel({}, 100, 100).stations.empty() && analyseChannel(v, 100, 0).stations.empty());
+    // single frame: no gap statistics, no flags
+    auto u1 = analyseChannel({fr("ONE-1", 5, "t")}, 10, 10);
+    CHECK(u1.stations.size() == 1 && u1.stations[0].medianGapS == 0 && !u1.stations[0].fast);
+}
+
 int main() {
-    tgTest(); sondeTest(); replayTest(); txTest();
+    beaconTest(); tgTest(); sondeTest(); replayTest(); txTest();
     printf(fails ? "FAILED\n" : "all ok\n");
     return fails ? 1 : 0;
 }
