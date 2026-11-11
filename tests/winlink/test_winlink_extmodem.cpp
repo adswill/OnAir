@@ -41,7 +41,7 @@ struct MockModem {
     std::string lineBuf, calledMy, calledPeer;
     bool connected = false, listening = false;
     std::vector<uint8_t> frameBuf;
-    bool asCaller = false, firstData = false;
+    bool asCaller = false, firstData = false, dataGone = false;
 
     static sock_t mkListen(int& port) {
         sock_t s = socket(AF_INET, SOCK_STREAM, 0);
@@ -206,7 +206,7 @@ struct MockModem {
         if (stop || ds == kBadSock) return;
         char buf[4096];
         while (!stop) {
-            fd_set rd; FD_ZERO(&rd); FD_SET(cs, &rd); FD_SET(ds, &rd);
+            fd_set rd; FD_ZERO(&rd); FD_SET(cs, &rd); if (!dataGone) FD_SET(ds, &rd);
             const int mx = (int)std::max(cs, ds) + 1;
             timeval tv{0, 30000};
             const int n = select(mx, &rd, nullptr, nullptr, &tv);
@@ -219,9 +219,9 @@ struct MockModem {
                 size_t p;
                 while ((p = lineBuf.find('\r')) != std::string::npos) { const std::string l = lineBuf.substr(0, p); lineBuf.erase(0, p + 1); if (!l.empty()) onCmd(l); }
             }
-            if (FD_ISSET(ds, &rd)) {
+            if (!dataGone && FD_ISSET(ds, &rd)) {
                 const long long k = sockRecv(ds, buf, sizeof buf);
-                if (k <= 0) { if (!stop) sockShutdown(cs); break; }
+                if (k <= 0) { dataGone = true; continue; }   // a client may close the data port alone (Test connection)
                 onData((const uint8_t*)buf, (size_t)k);
                 if (dropAfterBytes && gotData.size() >= dropAfterBytes) { sockShutdown(cs); sockShutdown(ds); break; }
             }

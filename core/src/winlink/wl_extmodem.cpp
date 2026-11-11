@@ -200,8 +200,6 @@ ModemTestResult testModemProfile(const ModemProfile& p, int timeoutMs) {
         return r;
     }
     r.cmdOpen = true;
-    sock_t ds = tcpConnect(p.host, p.dataPort, timeoutMs, err);
-    if (ds != kBadSock) { r.dataOpen = true; sockClose(ds); }
     const std::string q = "VERSION\r";
     sockSendAll(cs, q.data(), q.size());
     std::string buf;
@@ -224,6 +222,8 @@ ModemTestResult testModemProfile(const ModemProfile& p, int timeoutMs) {
         if (done) break;
     }
     sockClose(cs);
+    sock_t ds = tcpConnect(p.host, p.dataPort, timeoutMs, err);
+    if (ds != kBadSock) { r.dataOpen = true; sockClose(ds); }
     if (r.answered && !r.version.empty()) r.message = std::string(modemTypeName(p.type)) + " answered: " + r.version;
     else if (r.answered) r.message = std::string(modemTypeName(p.type)) + " answered, but it does not report a version";
     else r.message = "the command port is open but the modem did not answer VERSION within " + std::to_string(timeoutMs / 1000) + " s (some VARA versions do not)";
