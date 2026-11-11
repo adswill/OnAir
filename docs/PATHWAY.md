@@ -1794,3 +1794,7 @@ FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offs
 ## 2026-11-12: AM modulation monitor (family 890)
 
 AM broadcast modulation monitor: carrier offset, depth, peaks, asymmetry, hum, audio bandwidth, over-modulation and carrier-loss log. Tests: three input rates, offsets with drift, hum, asymmetry, noise sweep, false-row run. Simulated signals only (docs/AMMON-4.0.md).
+
+## 2026-11-12: Power-line noise locator (family 891)
+
+Impulse and power-line noise analyser: impulse rate and level, repetition at twice the mains, the mains rate or another steady rate, static. Tests: five rates at two input rates, drifting mains with missing and random impulses, Poisson impulses, 15 min noise false-pattern run, level sweep. Simulated signals only (docs/PLNOISE-4.0.md).

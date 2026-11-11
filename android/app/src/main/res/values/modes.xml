@@ -371,6 +371,7 @@
         <item>Qi wireless charging</item>
         <item>FM modulation monitor</item>
         <item>AM modulation monitor</item>
+        <item>Power-line noise locator</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -723,6 +724,7 @@
         <item>Qi wireless chargers (WPC baseline profile, 110 - 205 kHz power signal): what the phone tells the charger by load modulation at 2 kbit/s: signal strength, control error, received power, charge status, end of power transfer, configuration and identification with the manufacturer code. Receive only. Needs a radio that reaches the LF band and a pick-up loop near the charger. Simulated signals only</item>
         <item>FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offset, the 19 kHz pilot and stereo, the 57 kHz RDS injection, SCA subcarriers and the audio level of a station, with over-deviation logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
         <item>AM broadcast modulation monitor (LW, MW, SW): the carrier offset, modulation depth, positive and negative peaks, asymmetry, mains hum, audio bandwidth and over-modulation of one station, with loss and return of the carrier logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
+        <item>Power-line and impulse noise analyser: finds the impulses in a band and measures their rate and level, and tells a repetition at twice the mains frequency (100 / 120 Hz, an arcing insulator or a faulty lamp) from a half-wave one (50 / 60 Hz), a steady switching supply and random static. For hunting the source of interference with an antenna in hand. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1075,6 +1077,7 @@
         <item>Packet</item>
         <item>Event</item>
         <item>Event</item>
+        <item>Pattern</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1427,5 +1430,6 @@
         <item>qi wireless charging wpc charger phone load modulation 110 khz 205 khz power transfer identification received power</item>
         <item>fm modulation monitor deviation pilot 19 khz rds injection mpx power sca subcarrier stereo overmodulation bs.412 broadcast engineer</item>
         <item>am modulation monitor depth overmodulation carrier offset hum asymmetry audio bandwidth mw sw lw broadcast</item>
+        <item>power line noise interference rfi arcing insulator impulse noise dimmer switching supply mains 100 hz 120 hz noise hunting locator</item>
     </string-array>
 </resources>

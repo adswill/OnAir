@@ -173,4 +173,26 @@ inline std::vector<cf32> amStation(const Am& a, double fs, double seconds) {
     return x;
 }
 
+
+// ---- power-line / impulse noise -------------------------------------------------------------------------------------------------------------
+struct Pl { double rateHz = 100, jitterUs = 60, widthUs = 70, peakDb = 20, ampSpreadDb = 3, dropProb = 0.1, randomRate = 0, randomDb = 12, driftHzPerSec = 0, noiseSigma = 1.0; unsigned seed = 1; };
+// noise: complex Gaussian with sigma per quadrature noiseSigma; the envelope mean is 1.2533 sigma. Impulses are Gaussian bursts of random phase, peakDb over that mean.
+inline std::vector<cf32> plNoise(const Pl& p, double fs, double seconds) {
+    Rng r(p.seed); std::vector<cf32> x((size_t)(fs * seconds));
+    for (auto& v : x) v = cf32((float)(p.noiseSigma * r.g()), (float)(p.noiseSigma * r.g()));
+    std::mt19937 rr(p.seed + 99); std::uniform_real_distribution<double> U(0, 1);
+    auto burst = [&](double t0, double dB) {
+        const double A = 1.2533 * p.noiseSigma * std::pow(10.0, dB / 20), tau = p.widthUs * 1e-6 / 2.355, ph = U(rr) * 2 * kPi;
+        const long a = (long)((t0 - 5 * tau) * fs), b = (long)((t0 + 5 * tau) * fs);
+        for (long i = std::max(0L, a); i < b && i < (long)x.size(); i++) { const double d = i / fs - t0; x[i] += (float)(A * std::exp(-d * d / (2 * tau * tau))) * cf32((float)std::cos(ph), (float)std::sin(ph)); }
+    };
+    double t = 0.1, f = p.rateHz;
+    while (t < seconds - 0.01) {
+        if (p.rateHz > 0 && U(rr) >= p.dropProb) burst(t + p.jitterUs * 1e-6 * r.g(), p.peakDb + p.ampSpreadDb * r.g() * 0.5);
+        f = p.rateHz + p.driftHzPerSec * t; t += 1.0 / f;
+    }
+    if (p.randomRate > 0) { double tr = 0.1; std::exponential_distribution<double> E(p.randomRate); while (tr < seconds) { tr += E(rr); burst(tr, p.randomDb + 4 * r.g()); } }
+    return x;
+}
+
 }
