@@ -257,9 +257,8 @@ struct Cp16Receiver::Impl {
     // The rows: each carrier's envelope through a box filter 1 / spacing long (zeros on the neighbours, so no beats), the squared slopes of all 16
     // summed: a pulse train at the row edges. The strongest lines in 2 .. 40 Hz and a half and a third of them are the candidates for the row rate; each
     // is tried as rows (rowFisher) and the longest row that explains the envelopes nearly as well as the best is taken. The phase of its line gives the edges.
-    struct Cn { double u, edge, conc; float ratio; };
-    // the candidates of one envelope filter length L (samples): rates with a clear line whose rows are long enough for the filter, folded
-    bool timingCands(int64_t w0, int64_t w1, int L, std::vector<Cn>& tried) {
+    bool findTiming(int64_t w0, int64_t w1, double& P, double& b0, float& score) {
+        const int L = std::max(8, (int)std::lround(kFs / combD));
         const int64_t n = w1 - w0;
         constexpr int kBinSteps = 4;                    // slopes summed per 2 ms bin
         constexpr int kBinS = kStep * kBinSteps;        // samples a bin
@@ -332,36 +331,27 @@ struct Cp16Receiver::Impl {
         cands.erase(std::unique(cands.begin(), cands.end()), cands.end());
         // each candidate folded: how much of the slope energy falls into one filter length of the row (1 at the row rate and its multiples, little elsewhere);
         // the longest row that concentrates it nearly as well as the best is the row
+        struct Cn { double u, edge, conc; float ratio; };
+        std::vector<Cn> tried;
         for (int c : cands) {
             double u = c * res;
             const double a = mag[(size_t)c - 1], b = mag[(size_t)c], cc = mag[(size_t)c + 1];
             const double den = a - 2 * b + cc;
             if (den < 0) u += std::clamp(0.5 * (a - cc) / den, -0.5, 0.5) * res;
-            if (mag[(size_t)c] < kTimeRatio * med || u <= 0) continue;   // too weak a line to be the rows
+            if (u <= 0) continue;
             double edge = 0;
-            if ((double)L > 0.55 * (kFs / u)) continue;   // the slope pulses would fill the row: left to the shorter filter
             const double conc = fold(g, mean, kFs / u, L, kBinS, edge);
-            if (conc > -1) tried.push_back({u, (double)w0 + edge, conc, (float)(mag[(size_t)c] / med)});
+            if (conc > -1) tried.push_back({u, edge, conc, (float)(mag[(size_t)c] / med)});
         }
-        return true;
-    }
-
-    // The rows from two filter lengths: one spacing (zeros on the neighbours) and half of it (for rows hardly longer than one spacing, where the slopes of the
-    // longer filter fill the row). Of all candidates the longest row that concentrates its edges nearly as well as the best is taken.
-    bool findTiming(int64_t w0, int64_t w1, double& P, double& b0, float& score) {
-        const int L = std::max(8, (int)std::lround(kFs / combD));
-        std::vector<Cn> tried;
-        timingCands(w0, w1, L, tried);
-        timingCands(w0, w1, std::max(8, L / 2), tried);
         double cmax = 0;
         for (const Cn& c : tried) cmax = std::max(cmax, c.conc);
         if (cmax <= 0) return false;
         const Cn* pick = nullptr;
-        for (const Cn& c : tried) if (c.conc >= 0.85 * cmax && (!pick || c.u < pick->u * 0.99)) pick = &c;
+        for (const Cn& c : tried) if (c.conc >= 0.85 * cmax && (!pick || c.u < pick->u)) pick = &c;
         score = (float)pick->conc;
-        if (pick->conc < kConcMin) return false;
+        if (pick->ratio < kTimeRatio || pick->conc < kConcMin) return false;
         P = kFs / pick->u;
-        b0 = pick->edge;
+        b0 = (double)w0 + pick->edge;
         return true;
     }
 
