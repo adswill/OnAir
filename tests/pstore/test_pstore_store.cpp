@@ -308,7 +308,13 @@ int main() {
             CHECK(e.store->detail("log-to-file", l, err) && l.permissions == plugin::PermFilesystem && l.downloads.size() == 5 && !l.description.empty(), "detail of log-to-file: %s", err.c_str());
             auto r = e.store->install("tone-detector", true);
             std::string v;
+#ifdef _WIN32
+            // the sample archives carry stub libraries for Linux and macOS only: on Windows the install must refuse with that reason
+            CHECK(!r.ok && r.error.find("no library for this platform") != std::string::npos, "the sample plugin without a Windows library is refused: %s", r.error.c_str());
+            (void)v;
+#else
             CHECK(r.ok && e.installed("tone-detector", &v) && v == "1.0.0", "a stub sample plugin installs: %s", r.error.c_str());
+#endif
             // the same registry under a wrong key
             e.store.reset(new ps::Store(e.cfg(sample.string(), std::string(64, '2')), e.mgr.get()));
             CHECK(!e.store->refresh(), "the sample registry is refused under any other key");
