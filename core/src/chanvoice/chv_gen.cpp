@@ -1,5 +1,6 @@
 #include "dect2/chanvoice/chv_gen.h"
 #include "dect2/chanvoice/chv_rx.h"
+#include "dect2/dsp/fftutil.h"
 #include "dect2/dsp/resampler.h"
 #include "dect2/engine/mode_synth.h"
 #include "dect2/tones/tones_gen.h"
@@ -115,12 +116,28 @@ std::vector<cf32> makeChanVoiceScene(const GenScene& sc) {
                 sum += taps[(size_t)i];
             }
             for (float& v : taps) v = (float)(v / sum);
-            std::vector<cf32> y(up.size());
-            for (size_t i = 0; i < up.size(); i++) {
-                cf32 acc(0, 0);
-                for (int k = 0; k < L; k++) { const long j = (long)i + k - h; if (j >= 0 && j < (long)up.size()) acc += taps[(size_t)k] * up[(size_t)j]; }
-                y[i] = acc;
+            // the same filter by overlap-add FFT blocks: at 3.5 Msps it has about 1050 taps, and the direct sum took longer than the
+            // engine waits for the first signal (custom_bandwidth_all, cb and hfvoice typed 3.5 Msps)
+            int nf = 1;
+            while (nf < 4 * L) nf <<= 1;
+            const size_t B = (size_t)(nf - L + 1);
+            Fft fft(nf);
+            std::vector<cf32> H((size_t)nf, cf32(0, 0)), X((size_t)nf);
+            for (int k = 0; k < L; k++) H[(size_t)k] = cf32(taps[(size_t)k] / (float)nf, 0.f);   // 1/nf: the inverse is unnormalised
+            fft.forward(H.data());
+            std::vector<cf32> full(up.size() + (size_t)L - 1, cf32(0, 0));
+            for (size_t b = 0; b < up.size(); b += B) {
+                const size_t m = std::min(B, up.size() - b);
+                std::fill(X.begin(), X.end(), cf32(0, 0));
+                std::copy(up.begin() + (long)b, up.begin() + (long)(b + m), X.begin());
+                fft.forward(X.data());
+                for (int k = 0; k < nf; k++) X[(size_t)k] *= H[(size_t)k];
+                fft.inverse(X.data());
+                const size_t n = std::min((size_t)nf, full.size() - b);
+                for (size_t k = 0; k < n; k++) full[b + k] += X[k];
             }
+            std::vector<cf32> y(up.size());   // the taps are symmetric: y[i] = sum_k taps[k] up[i + k - h] = full[i + h]
+            for (size_t i = 0; i < up.size(); i++) y[i] = full[i + (size_t)h];
             up.swap(y);
         }
         const double f = (t.mhz - sc.centreMhz) * 1e6 + t.cfoHz;
