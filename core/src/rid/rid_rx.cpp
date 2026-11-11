@@ -10,12 +10,15 @@
 #include "dect2/wifi/wifi_proto.h"
 #include "dect2/wifi/wifi_rx.h"
 #include "dect2/wifi/wifi_tel.h"
+#include "dect2/dsp/fftutil.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <ctime>
+#include <functional>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace dect2 {
 
@@ -38,6 +41,111 @@ RidPlan ridPlan(double centerHz) {
     return p;
 }
 
+namespace {
+// The burst gate (rid_rx.h): which windows of the input the Wi-Fi demodulator is handed
+class BurstGate {
+public:
+    static constexpr int kF = 128;          // FFT size
+    static constexpr int kPre = 4, kPost = 8;   // windows handed on before and after a window with energy
+    static constexpr int kHist = 64;        // windows the noise floor is taken from (every 16th)
+    using Out = std::function<void(const cf32*, size_t)>;
+
+    bool on = true;
+
+    // bins of each channel: offsets from the centre of the capture, Hz; bleOn false: BLE is not listened to
+    void configure(double rate, bool bleOn, double bleOff, double wifiOff, bool live) {
+        rate_ = rate;
+        bpw_ = std::max(2, (int)std::lround(rate / 5e6));   // blocks of kF per window: 4 at 20 Msps (25.6 us)
+        W_ = bpw_ * kF;
+        win_.assign((size_t)W_, cf32(0, 0));
+        ring_.assign((size_t)W_ * (kPre + 1), cf32(0, 0));
+        buf_.assign(kF, cf32(0, 0));
+        wifi_.bins.clear();
+        bleOn_ = bleOn;
+        for (int k = 0; k < kF; k++) {
+            const double f = (k < kF / 2 ? k : k - kF) * rate / kF;
+            if (live && std::fabs(f) < 0.25e6) continue;                 // the radio's DC spike
+            if (bleOn && std::fabs(f - bleOff) <= 1.2e6) continue;       // a BLE packet should not open the Wi-Fi demodulator
+            if (std::fabs(f - wifiOff) <= 9.0e6 && std::fabs(f) <= 0.47 * rate) wifi_.bins.push_back(k);
+        }
+        wifi_.thr = 1.2f;   // 0.8 dB in about 16 MHz: an 802.11b frame at -6 dB SNR in the channel still opens it
+        reset();
+    }
+    void reset() {
+        fill_ = 0; nWin_ = 0;
+        Band& b = wifi_;
+        b.hn = b.hp = 0; b.q = 0; b.act = 0; b.busy = b.seen = 0; b.bypass = true; b.upd = 0;
+    }
+    // x: the input; the demodulators get what the gate lets through, kPre windows later
+    void push(const cf32* x, size_t n, const Out& toBle, const Out& toWifi) {
+        while (n) {
+            const size_t k = std::min(n, (size_t)(W_ - fill_));
+            std::copy(x, x + k, win_.begin() + fill_);
+            for (size_t i = 0; i < k; i++) power_ += (double)std::norm(x[i]);
+            nPower_ += k;
+            fill_ += (int)k; x += k; n -= k;
+            if (fill_ == W_) { window(toBle, toWifi); fill_ = 0; }
+        }
+    }
+    double levelDb() { const double l = nPower_ ? 10 * std::log10(power_ / (double)nPower_ + 1e-20) : -200.0; power_ = 0; nPower_ = 0; return l; }
+    float fedWifi() { const float r = allWifi_ ? (float)fedWifi_ / (float)allWifi_ : 1.f; fedWifi_ = allWifi_ = 0; return r; }
+
+private:
+    struct Band {
+        std::vector<int> bins;
+        float hist[kHist] = {};
+        int hn = 0, hp = 0, upd = 0;
+        float q = 0, thr = 1.5f;
+        uint32_t act = 0;                  // energy in the last windows, the newest in bit 0
+        int busy = 0, seen = 0;
+        bool bypass = true;                // the first windows, or a busy channel: everything is handed on
+    };
+    void update(Band& b, float e) {
+        const bool a = b.hn >= 16 && e > b.thr * b.q;
+        b.act = b.act << 1 | (a ? 1u : 0u);
+        b.busy += a ? 1 : 0;
+        if (++b.seen == 256) { b.bypass = b.bins.empty() || b.busy > 154; b.busy = b.seen = 0; }   // busy more than 60 % of the time
+        // the floor from every 16th window over the last 26 ms (all of the first 16): a packet (an 802.11b beacon lasts a few ms) cannot raise it
+        if ((b.upd++ & 15) != 0 && b.hn >= 16) return;
+        b.hist[b.hp] = e; b.hp = (b.hp + 1) % kHist;
+        if (b.hn < kHist) b.hn++;
+        if (b.hn < 16) return;
+        float t[kHist];
+        std::copy(b.hist, b.hist + b.hn, t);
+        std::nth_element(t, t + b.hn / 4, t + b.hn);
+        b.q = t[b.hn / 4];
+    }
+    void window(const Out& toBle, const Out& toWifi) {
+        float ew = 0;
+        for (int blk = 0; blk < bpw_; blk += 2) {   // half of the window is enough to see a burst
+            std::copy(win_.begin() + blk * kF, win_.begin() + (blk + 1) * kF, buf_.begin());
+            fft_.forward(buf_.data());
+            for (int k : wifi_.bins) ew += std::norm(buf_[(size_t)k]);
+        }
+        update(wifi_, ew);
+        const int R = kPre + 1;
+        std::copy(win_.begin(), win_.end(), ring_.begin() + (size_t)(nWin_ % R) * (size_t)W_);
+        nWin_++;
+        if (nWin_ <= kPre) return;
+        const cf32* old = ring_.data() + (size_t)(nWin_ % R) * (size_t)W_;   // the window kPre before the newest
+        const uint32_t mask = (1u << (kPre + kPost + 1)) - 1;
+        if (bleOn_) toBle(old, (size_t)W_);   // BLE gets everything (gating it cost packets near its sensitivity: docs/ADSB-REMOTEID-3.9.md)
+        allWifi_ += (uint64_t)W_;
+        if (!on || wifi_.bypass || (wifi_.act & mask)) { toWifi(old, (size_t)W_); fedWifi_ += (uint64_t)W_; }
+    }
+
+    Band wifi_;
+    Fft fft_{kF};
+    std::vector<cf32> win_, ring_, buf_;
+    double rate_ = 0;
+    int bpw_ = 4, W_ = 512, fill_ = 0;
+    int64_t nWin_ = 0;
+    bool bleOn_ = true;
+    double power_ = 0; uint64_t nPower_ = 0;
+    uint64_t fedWifi_ = 0, allWifi_ = 0;
+};
+}
+
 struct RidReceiver::Impl {
     std::mutex mu;
     std::function<void(const std::string&)> log;
@@ -47,6 +155,8 @@ struct RidReceiver::Impl {
 
     BleReceiver ble;
     WifiReceiver wifi;
+    BurstGate gate;
+    std::atomic<bool> gateOn{true};
     double rate = 0, offset = 0, center = -1;
     RidPlan plan;
     int64_t nIn = 0;
@@ -67,6 +177,7 @@ struct RidReceiver::Impl {
         tel.centerMhz = center > 0 ? center / 1e6 : 0;
         tel.bleChannel = plan.bleChannel; tel.wifiChannel = plan.wifiChannel;
         tel.bleOffsetHz = plan.bleOffsetHz; tel.wifiOffsetHz = plan.wifiOffsetHz;
+        if (rate > 0) gate.configure(rate, plan.bleChannel || center <= 0, offset + plan.bleOffsetHz, offset + plan.wifiOffsetHz, center > 0);
     }
 
     // The drone table and the message log stay through resets: Clear and a loaded file reach the feed thread's copy through these requests (mu), and the
@@ -231,6 +342,11 @@ struct RidReceiver::Impl {
         BleTelemetry bt; WifiTelemetry wt;
         const bool hb = ble.telemetry(bt, 0), hw = wifi.telemetry(wt, 0);
         tel.levelDb = hw ? wt.levelDb : hb ? bt.levelDb : -200.f;
+        {   // the demodulators only see the bursts: the level of the whole input comes from the gate
+            const double l = gate.levelDb();
+            if (gate.on && l > -199) tel.levelDb = (float)l;
+            tel.wifiFed = gate.fedWifi();
+        }
         tel.blocksBad = (hb ? bt.blocksBad : 0) + (hw ? wt.blocksBad : 0);
         // the carrier offset and SNR of whichever carrier was last heard with Remote ID
         if (!tel.log.empty()) {
@@ -283,8 +399,8 @@ void RidReceiver::feed(const cf32* x, size_t n) {
         const size_t left = (size_t)std::max<int64_t>(1, (int64_t)m.nextReport - m.nIn);
         const size_t k = std::min(n - i, left);
         if (m.rate >= ridTuning().minSampleRate - 1) {
-            if (m.plan.bleChannel || m.center <= 0) m.ble.feed(x + i, k);
-            m.wifi.feed(x + i, k);
+            m.gate.on = m.gateOn.load();
+            m.gate.push(x + i, k, [&m](const cf32* p, size_t c) { m.ble.feed(p, c); }, [&m](const cf32* p, size_t c) { m.wifi.feed(p, c); });
         }
         m.nIn += (int64_t)k;
         i += k;
@@ -316,6 +432,7 @@ bool RidReceiver::telemetry(RidTelemetry& out, uint64_t lastSeq) {
     out = p_->pub;
     return true;
 }
+void RidReceiver::setGate(bool on) { p_->gateOn = on; }
 void RidReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 
 ModeTuning ridTuning() {

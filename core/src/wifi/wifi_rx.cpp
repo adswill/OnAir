@@ -68,6 +68,9 @@ struct WifiReceiver::Impl {
     // front end: mixer and linear interpolation to 20 Msps
     std::complex<double> lo{1, 0}, loStep{1, 0};
     int loCount = 0;
+    static constexpr int kBlock = 1024;   // input samples mixed at a time
+    std::vector<std::complex<float>> stepTab, mixed;   // loStep^j for j < kBlock (the mixer without a recurrence); a mixed block
+    std::vector<float> linR, linI, corR, corI;         // at 20 Msps: the last kSps - 1 mixed samples and the block after them; the block's correlations
     double step = 1;
     bool direct = true;
     int64_t outK = 0;
@@ -144,6 +147,8 @@ struct WifiReceiver::Impl {
     void initFront() {
         lo = 1; loCount = 0;
         loStep = rate > 0 ? std::polar(1.0, -2 * kPi * offset / rate) : std::complex<double>(1, 0);
+        stepTab.resize(kBlock); mixed.resize(kBlock);
+        for (int j = 0; j < kBlock; j++) { const std::complex<double> v = std::polar(1.0, rate > 0 ? -2 * kPi * offset / rate * j : 0.0); stepTab[(size_t)j] = std::complex<float>((float)v.real(), (float)v.imag()); }
         direct = std::fabs(rate - kOut) < 1;
         step = rate / kOut;
         outK = 0; nIn = 0;
@@ -152,6 +157,8 @@ struct WifiReceiver::Impl {
         for (float& v : hr) v = 0;
         for (float& v : hi) v = 0;
         hp = 0; nOut = 0;
+        linR.assign((size_t)(kSps - 1 + kBlock), 0.f); linI.assign((size_t)(kSps - 1 + kBlock), 0.f);
+        corR.assign((size_t)kBlock, 0.f); corI.assign((size_t)kBlock, 0.f);
     }
 
     void resetDemod() {
@@ -204,25 +211,76 @@ struct WifiReceiver::Impl {
 
     // ---------------------------------------------------------------- front end
 
-    void input(float re, float im) {
-        // the two complex products written out (the same bits as std::complex<double>, without its NaN-recovery call)
-        const double lr = lo.real(), li = lo.imag(), sr = loStep.real(), si = loStep.imag();
-        const std::complex<double> v((double)re * lr - (double)im * li, (double)re * li + (double)im * lr);
-        lo = std::complex<double>(lr * sr - li * si, lr * si + li * sr);
-        if (++loCount >= 4096) { lo /= std::abs(lo); loCount = 0; }
-        const std::complex<float> y((float)v.real(), (float)v.imag());
-        if (direct) { work(y); nIn++; return; }
-        // linear interpolation between the previous input sample (index nIn - 1) and this one
-        const int64_t i = nIn;
-        for (;;) {
-            const double t = outK * step;
-            if (t > (double)i) break;
-            const float fr = (float)(t - (double)(i - 1));
-            work(yPrev * (1 - fr) + y * fr);
-            outK++;
+    // A block of input (at most kBlock samples), mixed to 0 Hz with the phase at its start times a table of the step's powers (no dependency
+    // from one sample to the next, so it vectorises; the phase at the start goes on in double precision), then sample by sample through the
+    // correlator. A frame whose samples are all in is decoded at once, not at the end of feed(): a pending frame holds the search for the next.
+    void block(const cf32* x, int k) {
+        const std::complex<float> l0((float)lo.real(), (float)lo.imag());
+        const std::complex<float>* st = stepTab.data();
+        std::complex<float>* y = mixed.data();
+        double pwr = 0;
+        for (int j = 0; j < k; j++) {
+            float re = x[j].real(), im = x[j].imag();
+            if (!(std::fabs(re) <= 3.0e38f) || !(std::fabs(im) <= 3.0e38f)) re = im = 0;   // not finite
+            pwr += (double)re * re + (double)im * im;
+            const std::complex<float> w = l0 * st[j];
+            y[j] = std::complex<float>(re * w.real() - im * w.imag(), re * w.imag() + im * w.real());
         }
-        yPrev = y;
-        nIn++;
+        power += pwr;
+        lo *= std::polar(1.0, -2 * kPi * offset / rate * k);
+        if (++loCount >= 64) { lo /= std::abs(lo); loCount = 0; }
+        if (direct) { workBlock(y, k); return; }
+        for (int j = 0; j < k; j++) {
+            {
+                // linear interpolation between the previous input sample (index nIn - 1) and this one
+                const int64_t i = nIn;
+                for (;;) {
+                    const double t = outK * step;
+                    if (t > (double)i) break;
+                    const float fr = (float)(t - (double)(i - 1));
+                    work(yPrev * (1 - fr) + y[j] * fr);
+                    outK++;
+                }
+                yPrev = y[j];
+                nIn++;
+            }
+            if (pending && base + (int64_t)cr.size() - kSps >= pd.need) process();
+        }
+    }
+
+    // work() for a block at 20 Msps: the power and the Barker correlations of the whole block first (a short FIR along the block, which
+    // vectorises), then the preamble search sample by sample
+    void workBlock(const std::complex<float>* y, int k) {
+        float* lr = linR.data();
+        float* li = linI.data();
+        for (int j = 0; j < k; j++) { lr[kSps - 1 + j] = y[j].real(); li[kSps - 1 + j] = y[j].imag(); }
+        const size_t o = pw.size();
+        pw.resize(o + (size_t)k); cr.resize(o + (size_t)k); ci.resize(o + (size_t)k);
+        float* pp = pw.data() + o;
+        for (int j = 0; j < k; j++) pp[j] = lr[kSps - 1 + j] * lr[kSps - 1 + j] + li[kSps - 1 + j] * li[kSps - 1 + j];
+        float* ar = corR.data();
+        float* ai = corI.data();
+        for (int j = 0; j < k; j++) { ar[j] = 0; ai[j] = 0; }
+        for (int t = 0; t < kSps; t++) {   // the window of sample j: samples j - kSps + 1 .. j, oldest first
+            const float h = taps[t];
+            const float* sr = lr + t;
+            const float* si = li + t;
+            for (int j = 0; j < k; j++) { ar[j] += h * sr[j]; ai[j] += h * si[j]; }
+        }
+        // the history of the next block, and the ring work() uses
+        for (int t = 0; t < kSps - 1; t++) { lr[t] = lr[k + t]; li[t] = li[k + t]; }
+        for (int j = std::max(0, k - kSps); j < k; j++) { hr[hp] = hr[hp + kSps] = y[j].real(); hi[hp] = hi[hp + kSps] = y[j].imag(); hp = hp + 1 == kSps ? 0 : hp + 1; }
+        // cr / ci / pw hold the whole block now (process() may look ahead; the values are final)
+        const int64_t first = base + (int64_t)o;   // global index of the block's first sample in cr / pw
+        for (int j = 0; j < k; j++) {
+            g++;
+            nIn++;
+            const int64_t at = first + j - base;
+            if (nOut < kSps && ++nOut < kSps) { cr[(size_t)at] = 0; ci[(size_t)at] = 0; continue; }   // the first kSps - 1 samples: no full window yet
+            cr[(size_t)at] = ar[j]; ci[(size_t)at] = ai[j];
+            detect(std::complex<float>(ar[j], ai[j]));
+            if (pending && first + j + 1 - kSps >= pd.need) process();
+        }
     }
 
     __attribute__((always_inline)) void work(std::complex<float> y) {   // inlined: a call per sample stored the two floats and loaded them as one 8-byte value (store-forwarding stall)
@@ -523,11 +581,12 @@ void WifiReceiver::feed(const cf32* x, size_t n) {
         while ((double)m.nIn >= m.nextReport) { m.nextReport += m.reportSec * m.rate; m.report(); }
         return;
     }
-    for (size_t i = 0; i < n; i++) {
-        float re = x[i].real(), im = x[i].imag();
-        if (!std::isfinite(re) || !std::isfinite(im)) re = im = 0;
-        m.power += (double)re * re + (double)im * im;
-        m.input(re, im);
+    for (size_t i = 0; i < n;) {
+        // in blocks, cut at the reports
+        const int64_t toReport = std::max<int64_t>(1, (int64_t)std::ceil(m.nextReport) - m.nIn);
+        const int k = (int)std::min<int64_t>({(int64_t)(n - i), (int64_t)Impl::kBlock, toReport});
+        m.block(x + i, k);
+        i += (size_t)k;
         if ((double)m.nIn >= m.nextReport) { m.process(); m.nextReport += m.reportSec * m.rate; m.report(); }
     }
     m.nPower += (int64_t)n;
