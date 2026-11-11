@@ -20,6 +20,9 @@ on:
       timeout:
         description: "ctest --timeout in seconds for tests without their own"
         default: "900"
+      minutes:
+        description: "job time limit in minutes (long sweeps)"
+        default: "90"
       os:
         description: "linux or macos"
         type: choice
@@ -32,7 +35,7 @@ jobs:
   quick:
     name: Quick ${{ inputs.os }}
     runs-on: ${{ inputs.os == 'macos' && 'macos-15' || 'ubuntu-24.04' }}
-    timeout-minutes: 90
+    timeout-minutes: ${{ fromJSON(inputs.minutes || '90') }}
     env:
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}

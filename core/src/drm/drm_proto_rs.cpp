@@ -65,7 +65,7 @@ int sdcParse(const uint8_t* d, int bytes, SdcInfo& out) {
         OnairDrmSdcAudio& o = c.audio[i];
         o.present = a.present; o.text = a.text; o.enhancement = a.enhancement; o.short_id = a.shortId; o.stream_id = a.streamId; o.coding = a.coding; o.sbr = a.sbr;
         o.mode = a.mode; o.rate_code = a.rateCode; o.mps = a.mps; o.n_config = (uint32_t)std::min<size_t>(a.config.size(), 128);
-        memcpy(o.config, a.config.data(), o.n_config);
+        if (o.n_config) memcpy(o.config, a.config.data(), o.n_config);   // (an empty vector: data() may be null)
         const SdcLabel& l = out.label[i];
         OnairDrmSdcLabel& p = c.label[i];
         p.present = l.present; p.short_id = l.shortId; p.text_control = l.textControl; p.n_text = (uint32_t)std::min<size_t>(l.text.size(), 128);
@@ -78,7 +78,7 @@ int sdcParse(const uint8_t* d, int bytes, SdcInfo& out) {
         OnairDrmSdcApp& r = c.app[i];
         r.present = s.present; r.packet = s.packet; r.data_unit = s.dataUnit; r.short_id = s.shortId; r.stream_id = s.streamId; r.domain = s.domain; r.packet_id = s.packetId;
         r.packet_len = s.packetLen; r.n_app = (uint32_t)std::min<size_t>(s.appData.size(), 128);
-        memcpy(r.app_data, s.appData.data(), r.n_app);
+        if (r.n_app) memcpy(r.app_data, s.appData.data(), r.n_app);
     }
     std::vector<uint8_t> other((size_t)(bytes < 0 ? 0 : bytes) / 2 + 1);
     const int count = onair_drm_sdc_parse(d, bytes < 0 ? 0 : (size_t)bytes, &c, other.data(), other.size());
