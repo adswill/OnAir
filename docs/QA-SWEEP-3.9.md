@@ -423,12 +423,15 @@ All on simulated signals (each mode's own generator and transmitter); no recordi
   reproduced.
 - **hdr pos, inmsat pos / snr**: the decoders lock late (HD Radio's first block 4.4 s into 8 s, Inmarsat's first 10500 bit/s SU 7.6 s
   clean, 9.4 s with the offset or at 12 dB) and the sweep judged them at a length the clean run only just decoded in. HD Radio's lock flag
-  also ended the length search at 3 s (one block). The sweep now takes the next length when the clean run's first block came after half
-  the signal, and a lock ends the search only for a mode that counts no blocks. HD Radio passes +2 kHz at 32 s (20 blocks clean); Inmarsat
+  also ended the length search at 3 s (one block). The sweep now takes the next length when the clean run's first block came in the last
+  quarter of the signal, and a lock ends the search only for a mode that counts no blocks. HD Radio passes +2 kHz at 32 s (20 blocks clean); Inmarsat
   passes every condition at 11.7 s (486 SUs clean; 1842 / 1732 / 1732 clean / +2 kHz / 12 dB at 24 s). Inmarsat's lock time (the Aero
   receiver's band search in each window) is the thing to shorten.
-- **js8 tx** is now `unrealistic`: the transmitter puts its frames on the computer clock's next 15 s slot (as on air), a file's slots
-  start at its first sample, so the frames land anywhere in them and decode only when the clock was near a slot. **js8 snr** passes.
+- **js8 snr, tx**: JS8 takes its 15 s slots from UTC. On a file the receiver took them from the computer clock when it started reading,
+  while the generator and the transmitter had put their frames on the wall clock's slots when they made the file seconds earlier: the
+  frames landed anywhere in the receiver's slots and decoded by chance (CI failed, the Mac passed). The sweep now gives JS8 the file's
+  start time (`Js8Receiver::setStartTime`), as a recording's metadata would; every condition passes, +-2 kHz too (4 to 8 decodes in
+  32 s clean). In the app nothing passes a recording's start time to JS8 yet: a file plays with slots from the computer clock.
 - **hamdrm snr** became `threshold`: the 99 % band without the floor (3.4 kHz, 3.9 before) puts 0.6 dB more noise in the band; HamDRM
   saves nothing at 12 dB and the picture at 13 dB.
 - **atis snr, eczas snr** are now `threshold` with the numbers in `qa_known.inc`: ATIS's 99 % band is that of a mostly unmodulated FM
@@ -502,7 +505,7 @@ while it searched, against 0.29 when it decodes. The searching state of several 
 ## Still failing (open)
 
 These failures are not explained by the condition. They are in `qa_known.inc` as `open`, so the test passes today, but each needs a look at its mode.
-The first half of the list (arktikaggak .. kait, 20 entries) was worked through in feat39-qafixA: see "Open failures fixed in feat39-qafixA" above; 17 pass now (hamdrm tx without a change), 3 are reclassified with their numbers (atis and eczas snr: threshold; js8 tx: unrealistic). New known entries from the fixes: hfbeacon +-2 kHz (HF), hamdrm snr (threshold).
+The first half of the list (arktikaggak .. kait, 20 entries) was worked through in feat39-qafixA: see "Open failures fixed in feat39-qafixA" above; 18 pass now (hamdrm tx without a change), 2 are reclassified with their numbers (atis and eczas snr: threshold); js8 +-2 kHz passes too and left the list. New known entries from the fixes: hfbeacon +-2 kHz (HF), hamdrm snr (threshold).
 
 - `specx/clean`: does not decode its own test signal through the engine (to investigate)
 - `specx/tx`: its transmitter's signal does not decode (to investigate)

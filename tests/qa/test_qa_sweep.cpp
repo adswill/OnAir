@@ -212,6 +212,7 @@ double writeTx(const Entry& en, double secs, const std::string& dir) {
     const TxModeSpec* m = txFor(en);
     if (!m) return 0;
     TxRequest r;
+    printf("TXT0 %.3f\n", std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count());   // the wall clock the slot modes (JS8) start from
     r.modeId = m->id; r.callsign = "N0ABC"; r.grid = "KO24"; r.text = "CQ TEST"; r.name = "TEST";
     const double rate = txRequestRate(*m, r, {});
     std::string err;
@@ -253,6 +254,7 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     DeviceInfo dev; dev.kind = DeviceInfo::Synthetic; dev.name = "synthetic";
     auto src = makeSource(dev);
     IqRing ring(1u << 22);
+    printf("T0 %.3f\n", std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count());   // the recording's start on the wall clock
     std::string err;
     if (!src || !src->start(t, ring, err)) { fprintf(stderr, "synthetic source: %s\n", err.c_str()); return 3; }
     const double r = src->sampleRate();
@@ -400,6 +402,9 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     Watchdog wd;
     Engine e;
     muteAndConfigure(e, en);
+    // JS8 takes its 15 s slots from UTC: a file's start time, as a recording's metadata gives it (the generator and the transmitter put their
+    // frames on the wall clock's slots when they made the file); without it the slots of the file and of the receiver fall anywhere
+    if (en.stdMode == 39 && !direct && getenv("QA_T0")) e.js8().setStartTime(atof(getenv("QA_T0")));
     DeviceInfo dev; dev.kind = direct ? DeviceInfo::Synthetic : DeviceInfo::File; dev.name = direct ? "synthetic" : path;
     FileOptions fo; fo.path = path; fo.format = FileFormat::CI16; fo.sampleRate = rate; fo.loop = false;
     const double cpu0 = cpuSeconds();
@@ -639,6 +644,8 @@ int main(int argc, char** argv) {
         // (32 s holds two 15 s FT8 slots and a NAVTEX message; the long run reaches the 2 min WSPR slot). The engine reads the file as fast as
         // it can; the last try plays it at the radio's speed, for the decoders that work on their own threads and skip what they cannot keep
         // up with (FT8 / WSPR slots: in the app a file plays at its own speed)
+        std::string txT0;
+        unsetenv("QA_T0");
         std::vector<double> lens = longRun ? std::vector<double>{secs, secs * 4, 120, 32} : std::vector<double>{secs, 8, 32, 32};
         double actual = e->rate;
         bool done = false;
@@ -655,6 +662,12 @@ int main(int argc, char** argv) {
             char rs[64], ss[64], sn[32];
             snprintf(rs, sizeof rs, "%.4f", e->rate); snprintf(ss, sizeof ss, "%.3f", s); snprintf(sn, sizeof sn, "%.2f", snrDb);
             const ChildResult g = spawn({self, "--gen", e->id, rs, ss, sn, tmpDir}, 600, 900);
+            {   // the wall-clock starts of the test signal and of the transmitter's file (JS8 needs them: see runChild)
+                const size_t p0 = g.out.find("T0 ");
+                if (p0 != std::string::npos && (p0 == 0 || g.out[p0 - 1] == '\n')) setenv("QA_T0", std::to_string(atof(g.out.c_str() + p0 + 3)).c_str(), 1);
+                const size_t p1 = g.out.find("TXT0 ");
+                txT0 = p1 == std::string::npos ? "" : std::to_string(atof(g.out.c_str() + p1 + 5));
+            }
             if (g.out.find("NOGEN") != std::string::npos) {
                 r.gen = false; r.note = "no test signal"; done = true;
                 const size_t tp = g.out.find("TXRATE ");
@@ -691,9 +704,9 @@ int main(int argc, char** argv) {
                 if (c == 0) { r.cost = jnum(j, "cost"); r.life = jstrv(j, "life"); }
             }
             // a clean run with only a few blocks is too short to judge the other conditions by: the next length (unless this was the last)
-            // or one whose first block came late (after half the signal): an offset or noise delays the lock and the other conditions fail by time, not
-            // by the condition (Inmarsat: the first SU at 7.6 s of 8 s clean, 9.4 s with the offset)
-            const bool few = !r.byRes && r.c[0].good > 0 && (r.c[0].good < 8 || r.c[0].first > 0.5 * s) && li + 2 < lens.size();
+            // or one whose first block came late (in the last quarter of the signal): an offset or noise delays the lock and the other conditions
+            // fail by time, not by the condition (Inmarsat: the first SU at 7.6 s of 8 s clean, 9.4 s with the offset)
+            const bool few = !r.byRes && r.c[0].good > 0 && (r.c[0].good < 8 || r.c[0].first > 0.75 * s) && li + 2 < lens.size();
             if ((r.c[0].good > 0 && !few) || r.byRes || (r.c[0].locked && r.c[0].good == 0) || r.c[0].verdict != "-") done = true;   // a lock alone ends it only for a mode that counts no blocks
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
@@ -704,7 +717,9 @@ int main(int argc, char** argv) {
             if (txTry == 1) {
                 if (r.tx.verdict != "FAIL" || s <= (r.secs > 0 ? r.secs : secs) + 0.5) break;
                 char ss0[64]; snprintf(ss0, sizeof ss0, "%.3f", s);
-                spawn({self, "--gentx", e->id, ss0, tmpDir}, 600, 900);
+                const ChildResult gt = spawn({self, "--gentx", e->id, ss0, tmpDir}, 600, 900);
+                const size_t p1 = gt.out.find("TXT0 ");
+                if (p1 != std::string::npos) txT0 = std::to_string(atof(gt.out.c_str() + p1 + 5));
             }
             char rs[64], ss[64];
             snprintf(rs, sizeof rs, "%.4f", r.txRate); snprintf(ss, sizeof ss, "%.3f", s);
@@ -713,6 +728,7 @@ int main(int argc, char** argv) {
             if (r.paced) setenv("QA_PACE", "1", 1);
             const size_t zp = zr.out.rfind('{');
             const uint64_t z = zp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(zp), "res");
+            if (!txT0.empty()) setenv("QA_T0", txT0.c_str(), 1); else unsetenv("QA_T0");
             const ChildResult cr = spawn({self, "--run", e->id, rs, ss, tmpDir + "/tx.ci16", "tx"}, std::max(300.0, s * 20), std::max(600.0, s * 30));
             const size_t jp = cr.out.rfind('{');
             if (cr.out.find("HANG ") != std::string::npos || cr.timedOut) r.tx.verdict = "HANG";
