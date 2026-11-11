@@ -31,14 +31,14 @@ int testNavtex() {
     NavtexStation l{3, 'A', 518, "x", 0, 0, 180};      // a station off the letter rule (a listed 03:00)
     CHECK(navtexSlotMinute(l) == 180);
 
-    auto near = navtexNearest(54.69, 25.28, 518, day);   // Vilnius
-    CHECK(!near.empty());
-    for (size_t i = 1; i < near.size(); i++) CHECK(near[i - 1].km <= near[i].km);
-    CHECK(near.size() >= 3);
-    CHECK(!strcmp(near[0].st->name, "Tallinn"));
-    CHECK(near[0].km > 500 && near[0].km < 560);
-    auto far = navtexNearest(-77.0, 0.0, 490, day);      // Antarctica: nothing in range, the single nearest
-    CHECK(far.size() == 1);
+    auto nearL = navtexNearest(54.69, 25.28, 518, day);   // Vilnius
+    CHECK(!nearL.empty());
+    for (size_t i = 1; i < nearL.size(); i++) CHECK(nearL[i - 1].km <= nearL[i].km);
+    CHECK(nearL.size() >= 3);
+    CHECK(!strcmp(nearL[0].st->name, "Tallinn"));
+    CHECK(nearL[0].km > 500 && nearL[0].km < 560);
+    auto farL = navtexNearest(-77.0, 0.0, 490, day);      // Antarctica: nothing in range, the single nearest
+    CHECK(farL.size() == 1);
 
     const NavtexStation* b = navtexByLetter('B', 518, true, 45.0, 34.0);   // B is both Algiers and Kerch: the near one
     CHECK(b && !strcmp(b->name, "Kerch"));
