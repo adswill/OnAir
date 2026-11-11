@@ -153,7 +153,8 @@ int main() {
         CHECK(known, "mode \"%s\" has no panel schema and is not on the known list", name.c_str());
     }
     printf("mode rows: %d, with a schema: %d, without: %d\n", n, withSchema, (int)noSchema.size());
-    CHECK(withSchema >= n - 12, "at least all but 12 rows have a schema (%d of %d)", withSchema, n);
+    const int nKnown = (int)(sizeof kKnownNoBlock / sizeof *kKnownNoBlock);
+    CHECK(withSchema >= n - nKnown, "at least all but the %d known rows have a schema (%d of %d)", nKnown, withSchema, n);
 
     // ---- 2. every standard: valid JSON from a default report; the schema is valid and its fields appear
     const std::vector<int> stds = schemaStandards();
