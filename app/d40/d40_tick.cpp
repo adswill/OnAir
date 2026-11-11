@@ -3,4 +3,5 @@
 
 void d40Tick(App& a) {
     d40FmTick(a);
+    d40SatTick(a);
 }

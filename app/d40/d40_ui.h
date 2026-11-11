@@ -7,3 +7,5 @@
 void d40Tick(App& a);
 void d40FmCard(App& a);        // d40_fm_ui.cpp: station names list and DX opening alarm
 void d40FmTick(App& a);
+void d40SatTick(App& a);
+void d40SatCard(App& a);       // d40_sat_ui.cpp: blind scan list, modcod fit, dish pointing readout
