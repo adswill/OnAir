@@ -609,8 +609,7 @@ plus noise alone on all 20 links (0 frames, 86 - 88 % of the input skipped). Sim
 ## Still failing (open)
 
 These failures are not explained by the condition. They are in `qa_known.inc` as `open`, so the test passes today, but each needs a look at its mode.
-Both halves of the list were worked through (feat39-qafixA: arktikaggak .. kait; feat39-qafixB: navic .. xb_oceansat2; feat39-tetrafix: `tetra/tx`). The `open` entries left in tests/qa/qa_known.inc:
-
+Both halves of the list were worked through (feat39-qafixA: arktikaggak .. kait; feat39-qafixB: navic .. xb_oceansat2; feat39-tetrafix: `tetra/tx`). No `open` entries are left in tests/qa/qa_known.inc (only `threshold` and `unrealistic` ones).
 
 
 ## Not done
@@ -621,5 +620,4 @@ Both halves of the list were worked through (feat39-qafixA: arktikaggak .. kait;
   error. It reported only three more memcpy-from-null sites (DAB generator, DMR bridge, DRM bridge: all fixed) and an ATSC spectrum check
   (ATSC belongs to another worker). With no overflow or use-after-free found, the corruption is most likely a data race between those
   six Engines. The next step is a ThreadSanitizer run of `iq_modes` (`DECT2_SANITIZE_THREAD=ON`).
-- The `open` entries above.
 - CPU: the other wide downlinks of the top ten (ISDB-S, FY-3 MPT, Elektro / Arktika RDAS, GEONETCAST) were not touched here.
