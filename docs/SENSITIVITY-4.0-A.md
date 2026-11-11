@@ -15,20 +15,22 @@ word are not the limit: 22 headers found in 24 trials at 6 dB) but the frames ca
 corrects. A hard 1.5 % bit error rate is the Reed-Solomon limit; ideal non-coherent FSK reaches it at about 5.5 dB.
 
 Change (`core/src/sonde/sonde_rx.cpp`, `SondeBitDecoder::narrowChannel()` in `sonde_bits.h`, true only for `Rs41Decoder`): next to the
-wide filter every 400 MHz channel now runs a second filter of 4 kHz half width (8 kHz noise bandwidth) and a second discriminator with its own
+wide filter every 400 MHz channel now runs a second filter of 4.5 kHz half width (9 kHz noise bandwidth) and a second discriminator with its own
 mean; the symbol chain of the RS41 (4800 Bd) is fed from that one. The wide path still serves the other types, the carrier follow-up (AFC),
 the 1 ms presence check (which is now also true when the narrow path sees the carrier). L-band (LMS6) is not changed. CPU: one more
 decimating FIR of about 50 taps at 96 kHz per channel.
 
-| RS41 alone | 90 % of the frames before | after | gain | 50 % point before / after |
+| RS41 alone | 90 % of the frames before | after | gain | at 6 dB before / after |
 |---|---|---|---|---|
-| AWGN | 9 dB | 7 dB | 2 dB | 8.2 / 5.8 dB |
-| 20 ppm carrier error (+8 kHz) | 9 dB | 6 dB | 3 dB | 8.3 / 5.5 dB |
-| off-centre (+150 kHz) | 9 dB | 6 dB | 3 dB | 8.3 / 5.5 dB |
-| 50 ppm clock | 9 dB | 7 dB | 2 dB | as AWGN |
+| AWGN | 9 dB | 7 dB | 2 dB | 0 % / 73 % |
+| 20 ppm carrier error (+8 kHz) | 9 dB | 6.5 dB | 2.5 dB | 0 % / 83 % |
+| off-centre (+150 kHz) | 9 dB | 6.5 dB | 2.5 dB | 0 % / 81 % |
+| 50 ppm clock | 9 dB | 7 dB | 2 dB | 0 % / 73 % |
 
-(before: 7 dB 0 %, 8 dB 42 %, 9 dB 94 %; after: 5 dB 3 %, 6 dB 79 %, 7 dB 95 %; with +8 kHz after: 6 dB 91 %.)
-Default test signal (RS41 + DFM-17 + M10 at the same level, the sens_sweep `sonde` mode): half of the units at 10.9 dB before, 8.8 dB after
+(before: 7 dB 0 %, 8 dB 42 %, 9 dB 94 %; after: 5 dB 1 %, 6 dB 73 %, 7 dB 95 %; 20 trials a point. The half width was 4 kHz in the first
+version: 6 dB 79 to 90 %, a little better in the simulation; 4.5 kHz was kept as margin because the generator's Gaussian-like spectrum is an
+assumption and a real RS41 may have more energy in its skirts. 3.5 to 4 kHz and 5 kHz were also measured: 6 dB 84 % / 62 %.)
+Default test signal (RS41 + DFM-17 + M10 at the same level, the sens_sweep `sonde` mode): half of the units at 10.9 dB before, about 9 dB after (measured with the 4 kHz filter: 8.8)
 (the DFM and M10 curves are unchanged by construction, so the mix cannot reach 90 %).
 False decodes: noise-only runs give 0 units before and after (4 runs of 4 s). A false header needs the 64 bit sync word with at most one
 error and then three block CRC-16 and the Reed-Solomon codewords to pass.

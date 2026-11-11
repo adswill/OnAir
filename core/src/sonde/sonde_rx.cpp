@@ -44,9 +44,9 @@ constexpr int kTrackedSondes = 5;       // sondes whose track goes into a report
 constexpr double kSearchPeriodS = 0.5;
 constexpr double kChanCutoffHz = 10000.0;       // half width of the channel filter (400 MHz sondes)
 constexpr double kChanNoiseBwHz = 20000.0;      // noise bandwidth of it
-// 4.0: sondes of +-2.4 kHz deviation (RS41) also go through a second, tighter filter (4 kHz half width, 8 kHz noise bandwidth: 4 dB under the
+// 4.0: sondes of +-2.4 kHz deviation (RS41) also go through a second, tighter filter (4.5 kHz half width, 9 kHz noise bandwidth: 3.5 dB under the
 // wide one), docs/SENSITIVITY-4.0-A.md. The wide path still serves the other types, the carrier follow-up and the presence check.
-constexpr double kNarrowCutoffHz = 4000.0;
+constexpr double kNarrowCutoffHz = 4500.0;
 constexpr double kNarrowNoiseBwHz = 2 * kNarrowCutoffHz;
 constexpr double kLbandCutoffHz = 95000.0;      // LMS6-1680: ~170 kHz RF bandwidth
 constexpr double kLbandNoiseBwHz = 190000.0;

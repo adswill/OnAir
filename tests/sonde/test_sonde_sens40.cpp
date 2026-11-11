@@ -1,4 +1,4 @@
-// 4.0 radiosonde sensitivity (docs/SENSITIVITY-4.0-A.md): RS41 goes through a second, tighter channel filter (4 kHz half width).
+// 4.0 radiosonde sensitivity (docs/SENSITIVITY-4.0-A.md): RS41 goes through a second, tighter channel filter (4.5 kHz half width).
 // The sondes are the receiver's own test signal (sonde_gen), one RS41 alone, noise added at the stated SNR in 10 kHz (the generator's definition).
 // Checks: the RS41 decodes at 7 dB with no carrier error, with +8 kHz (20 ppm at 403 MHz) and -3 kHz; DFM and M10 still decode as before
 // at 20 dB; noise alone gives no frame. The 3.9 receiver decodes the RS41 case at 7 dB in none of the frames, so this fails on it.
