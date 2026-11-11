@@ -81,7 +81,7 @@ Against local registries built on the fly and signed with a test key; no network
 The project's registry was set up this way and is already live; follow the steps with your own key and address for a custom one.
 
 1. Make the key on an offline computer: `python3 tools/marketplace/onair_registry.py keygen /Volumes/USB/onair-registry.key`. Back it up twice. Never commit it. It prints the public key.
-2. Put the public key into `kBuiltInRegistryKeyHex` (`core/src/pstore/store.cpp`) and set `kDefaultRegistryUrl` to the address (for a custom build), or enter the registry and its key in the Store settings if your build offers that. A build without a key says the key is not published and fetches nothing.
+2. Put the public key into `kBuiltInRegistryKeyHex` (`core/src/pstore/store.cpp`) and set `kDefaultRegistryUrl` to the address. A build without a key says the key is not published and fetches nothing.
 3. Create the public repo (suggested `adswill/onair-plugins`) and copy `tools/marketplace/sample-registry/*` into it, but **without** the three stub plugins, `packages/`, the test key and the sample `index.json*`; copy `tools/marketplace/onair_registry.py` to its `tools/`, and `sample-registry/.github/` to its root `.github/`.
 4. Add the first real plugins (or none), then `lint`, `index --serial 1`, `sign`, `verify`, commit, push.
 5. Enable GitHub Pages (branch `main`, root). The address is `https://adswill.github.io/onair-plugins/`. Check that `.../index.json` and `.../index.json.sig` open in a browser. (Any other HTTPS host works the same; a custom domain survives a change of host.)
