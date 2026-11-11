@@ -1768,3 +1768,11 @@ A user's handheld read OnAir's transmitted D023N as D411N (five codes reported).
 marker bits and the Golay polynomial the wrong way round; the tone decoder's table (tones_proto.cpp) was right and predicts all five wrong
 readings exactly. The transmitter and the DCS squelch now use that one table (023 = 0x763813). Test: test_audio_control. PR #481 (bellx2,
 Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.
+
+## 2026-11-12 4.0 sensitivity, lane A part 1: RS41 2 to 3 dB (feat40-sensA)
+Every 400 MHz radiosonde channel had one 10 kHz half-width filter in front of the discriminator, three times what an RS41 needs, so its
+discriminator sat under the FM threshold from 8 dB down and Reed-Solomon never got frames. The RS41 symbol chain is now fed from a second
+filter of 4 kHz half width (sonde_rx.cpp, SondeBitDecoder::narrowChannel): 90 % of frames at 7 dB instead of 9 (AWGN, 50 ppm clock),
+6 dB instead of 9 with a 20 ppm carrier error or 150 kHz off-centre, noise-only runs still decode nothing. Test: sonde_sens40. New
+tool sens_curve (fraction of units per SNR, any harness mode). Measured and not kept: soft RS erasures for the RS41, click suppression for
+APRS, wM-Bus tone correlators (the 17 dB wM-Bus figure was the five-PHY mix), see docs/SENSITIVITY-4.0-A.md.
