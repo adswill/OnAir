@@ -80,7 +80,7 @@ int main() {
         std::vector<cf32> z((size_t)4e6); for (auto& v : z) v = cf32(nd(rng), nd(rng));
         UatDemod d; d.configure(2e6); int ok = 0;
         d.setSink([&](UatRawFrame& f) { UatDecoded u; if (uatDecodeFrame(f, u)) ok++; });
-        for (size_t i = 0; i < z.size(); i += 16384) d.feed(z.data() + i, 16384);
+        for (size_t i = 0; i < z.size(); i += 16384) d.feed(z.data() + i, std::min<size_t>(16384, z.size() - i));
         CHECK(ok == 0, "noise: %d frames", ok);
     }
     if (fails) return 1;

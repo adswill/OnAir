@@ -74,8 +74,10 @@ int main() {
     CHECK(gifLoopFromPngs(pngs, out, 200, 25, err), "loop: %s", err.c_str());
     std::ifstream in(out, std::ios::binary);
     std::vector<uint8_t> gb((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    in.close();   // Windows cannot delete a file that is still open
     CHECK(gifDecodeGray(gb, back, bw, bh) && bw == 200 && bh == 150 && back.size() == 3 && back[0][0] == 0 && back[2][5000] == 160, "loop frames scaled, oldest first");
     CHECK(!gifLoopFromPngs({pngs[0]}, out, 200, 25, err), "one picture is no loop");
-    std::filesystem::remove_all(dir);
+    std::error_code cleanup;
+    std::filesystem::remove_all(dir, cleanup);
     return testSummary("goes_loop");
 }
