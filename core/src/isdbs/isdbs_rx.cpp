@@ -25,8 +25,26 @@ constexpr int kBack = 16;                 // symbols kept before the frame start
 constexpr int kExtra = 12;                // symbols of the next frame kept with a frame: W1's first 6 bits end the code's path
 constexpr double kSyncThr = 0.30;
 constexpr int kMargin = 240;              // trellis steps decoded on each side of the wanted slots
+// No frame found in a search window: the input is skipped (the front end too) for this many symbols' time before the next window. A
+// broadcast does not stop, so this delays the lock by a few milliseconds and costs no sensitivity: every window that is looked at gets
+// the whole search. After the slow search over the whole carrier range (every fourth window) the skip is longer, as before.
+constexpr double kIdleSkipSyms = 7.0 * (kSearchWin - (size_t)kFrameSyms - kHeaderSyms);
+constexpr double kGridSkipSyms = 24.0 * kFrameSyms;
 
 struct SyncHit { int pos = -1; double score = 0; };
+
+// out[i] = in[i] * exp(-j 2 pi (f i + ph0)): cos and sin at every 512th symbol, a double-precision recurrence in between (it drifts by
+// about 1e-13, far below the float result; the same values as cos and sin at every symbol)
+void derotate(const cf32* in, size_t n, double f, cf32* out, double ph0 = 0) {
+    if (f == 0 && ph0 == 0) { std::copy(in, in + n, out); return; }
+    const std::complex<double> st(std::cos(-kTwoPi * f), std::sin(-kTwoPi * f));
+    for (size_t i0 = 0; i0 < n; i0 += 512) {
+        const double a = -kTwoPi * (f * (double)i0 + ph0);
+        std::complex<double> r(std::cos(a), std::sin(a));
+        const size_t e = std::min(n, i0 + 512);
+        for (size_t i = i0; i < e; i++) { out[i] = in[i] * cf32((float)r.real(), (float)r.imag()); r *= st; }
+    }
+}
 
 // metric of the header's fixed parts for a frame starting at y[0]: the 20 known symbols of W1 (header 12..31) and the 20 of W2 / W3
 // (172..191, either sign): |correlation|^2 / (20 * energy), 1 for a clean frame
@@ -50,12 +68,41 @@ SyncHit findSync(const cf32* y, size_t len) {
     SyncHit h;
     if (len < (size_t)kFrameSyms + kHeaderSyms + 1) return h;
     const size_t n = len - kFrameSyms - kHeaderSyms;
-    for (size_t p = 0; p < n; p++) {
-        const double m1 = syncMetric(y + p);
-        if (m1 < kSyncThr) continue;
-        const double m2 = syncMetric(y + p + kFrameSyms);
-        const double s = std::min(m1, m2);
-        if (s > h.score && s >= kSyncThr) { h.score = s; h.pos = (int)p; }
+    // the first metric for eight starts at a time, each one summed in the same order as syncMetric(): the loop over the eight vectorises
+    constexpr int B = 8;
+    const auto& a = w1Tail();
+    const auto& bt = w2Tail();
+    for (size_t p0 = 0; p0 < n; p0 += B) {
+        if (p0 + B > n) {
+            for (size_t p = p0; p < n; p++) {
+                const double m1 = syncMetric(y + p);
+                if (m1 < kSyncThr) continue;
+                const double m2 = syncMetric(y + p + kFrameSyms);
+                const double s = std::min(m1, m2);
+                if (s > h.score && s >= kSyncThr) { h.score = s; h.pos = (int)p; }
+            }
+            break;
+        }
+        float r1[B] = {}, i1[B] = {}, r2[B] = {}, i2[B] = {}, e[B] = {};
+        for (int i = 0; i < 20; i++) {
+            const float av = a[(size_t)i], bv = bt[(size_t)i];
+            const cf32* u0 = y + p0 + kW1TailPos + i;
+            const cf32* v0 = y + p0 + kW2TailPos + i;
+            for (int k = 0; k < B; k++) {
+                const cf32 u = u0[k], v = v0[k];
+                r1[k] += u.real() * av; i1[k] += u.imag() * av;
+                r2[k] += v.real() * bv; i2[k] += v.imag() * bv;
+                e[k] += std::norm(u) + std::norm(v);
+            }
+        }
+        for (int k = 0; k < B; k++) {
+            const double m1 = e[k] > 1e-9f ? (double)(r1[k] * r1[k] + i1[k] * i1[k] + r2[k] * r2[k] + i2[k] * i2[k]) / (20.0 * e[k]) : 0.0;
+            if (m1 < kSyncThr) continue;
+            const size_t p = p0 + (size_t)k;
+            const double m2 = syncMetric(y + p + kFrameSyms);
+            const double s = std::min(m1, m2);
+            if (s > h.score && s >= kSyncThr) { h.score = s; h.pos = (int)p; }
+        }
     }
     return h;
 }
@@ -171,7 +218,7 @@ struct IsdbsReceiver::Impl {
     void resetAll() {
         front.reset();
         front.timer().setLoop(0.01, 0.707);    // wide while searching
-        sy.clear(); head = 0; skipSyms = 0; failures = 0; locked = false; cfo = 0; misses = 0; snrLin = 0;
+        sy.clear(); head = 0; idleSkip = 0; failures = 0; sinceTel = 0; locked = false; cfo = 0; misses = 0; snrLin = 0;
         collecting = false; nextFrame = 0;
         for (auto& h : hist) h = Tmcc();
         cfg = Tmcc(); layout = Layout(); rows.clear(); active = -1;
@@ -187,6 +234,7 @@ struct IsdbsReceiver::Impl {
     }
 
     void publish(int state) {
+        sinceTel = 0;
         std::lock_guard<std::mutex> l(mu);
         tel.state = state;
         tel.cfoHz = cfo * kSymbolRate + offsetHz;
@@ -227,7 +275,7 @@ struct IsdbsReceiver::Impl {
     // the header of the frame at y[0] after removing frequency f (cycles per symbol) and the phase of W1
     static double headerAt(const cf32* y, double f) {
         cf32 h[kHeaderSyms];
-        for (int i = 0; i < kHeaderSyms; i++) { const double a = -kTwoPi * f * i; h[i] = y[i] * cf32((float)std::cos(a), (float)std::sin(a)); }
+        derotate(y, kHeaderSyms, f, h);
         cf32 c1;
         syncMetric(h, &c1);
         const float m = std::abs(c1);
@@ -238,7 +286,8 @@ struct IsdbsReceiver::Impl {
     }
 
     int failures = 0;
-    size_t skipSyms = 0;                        // symbols to let go by before the next search
+    uint64_t idleSkip = 0;                      // input samples to let go by (no front end) before the next search window
+    uint64_t sinceTel = 0;                      // input samples since the last report
     bool search() {
         if (sy.size() - head < kSearchWin) return false;
         const cf32* w = sy.data() + head;
@@ -252,10 +301,7 @@ struct IsdbsReceiver::Impl {
         SyncHit best; double bestF = 0, bestQ = 0;
         std::vector<cf32> d(kSearchWin), fr(kFrameSyms);
         for (double f : cands) {
-            for (size_t i = 0; i < kSearchWin; i++) {
-                const double a = -kTwoPi * f * (double)i;
-                d[i] = w[i] * cf32((float)std::cos(a), (float)std::sin(a));
-            }
+            derotate(w, kSearchWin, f, d.data());
             const SyncHit h = findSync(d.data(), kSearchWin);
             if (h.pos < 0) continue;
             for (int i = 0; i < kFrameSyms; i++) fr[(size_t)i] = d[(size_t)(h.pos + i)];
@@ -272,10 +318,11 @@ struct IsdbsReceiver::Impl {
             if (q > bestQ) { bestQ = q; best = h; bestF = f + fb; }
         }
         if (best.pos < 0 || bestQ < 0.5) {
-            // nothing in this window: drop most of it, keep enough that a frame start cannot fall between two windows
+            // nothing in this window: let the input of the next few go by unprocessed, then look at a fresh window
             failures++;
-            head += kSearchWin - (size_t)kFrameSyms - kHeaderSyms;
-            if (grid) skipSyms = 24 * (size_t)kFrameSyms;   // that took longer than the signal lasted: let some of it go by
+            idleSkip = (uint64_t)((grid ? kGridSkipSyms : kIdleSkipSyms) * rate / kSymbolRate);
+            sy.clear(); head = 0;
+            if (sinceTel >= (uint64_t)(0.5 * rate)) publish(1);   // searching: still a report every half second of signal
             return true;
         }
         failures = 0;
@@ -294,10 +341,7 @@ struct IsdbsReceiver::Impl {
         std::vector<cf32> F;
         auto derot = [&](size_t from, size_t n, std::vector<cf32>& out) {
             out.resize(n);
-            for (size_t i = 0; i < n; i++) {
-                const double a = -kTwoPi * cfo * (double)i;
-                out[i] = sy[from + i] * cf32((float)std::cos(a), (float)std::sin(a));
-            }
+            derotate(&sy[from], n, cfo, out.data());
         };
         // local alignment: the header may have moved a few symbols (a slip of the symbol clock)
         int shift = 0;
@@ -358,10 +402,18 @@ struct IsdbsReceiver::Impl {
         {
             int k = 0;
             double slp = (sm[1] - sm[0]) / (pos[1] - pos[0]);
-            for (int i = 0; i < kFrameSyms + kExtra; i++) {
+            // the phase is a straight line between the points: cos and sin where a piece starts, a recurrence along it
+            int i = 0;
+            while (i < kFrameSyms + kExtra) {
                 while (k + 2 < nP && i > pos[(size_t)k + 1]) { k++; slp = (sm[(size_t)k + 1] - sm[(size_t)k]) / (pos[(size_t)k + 1] - pos[(size_t)k]); }
-                const double a = sm[(size_t)k] + slp * (i - pos[(size_t)k]);
-                F[(size_t)i] *= cf32((float)std::cos(-a), (float)std::sin(-a));
+                int e = kFrameSyms + kExtra;   // the piece: up to the next point (then k moves on), at most 512 symbols
+                if (k + 2 < nP) e = std::min(e, (int)std::floor(pos[(size_t)k + 1]) + 1);
+                e = std::min(e, i + 512);
+                if (e <= i) e = i + 1;
+                const double a0 = sm[(size_t)k] + slp * (i - pos[(size_t)k]);
+                std::complex<double> r(std::cos(-a0), std::sin(-a0));
+                const std::complex<double> st(std::cos(-slp), std::sin(-slp));
+                for (; i < e; i++) { F[(size_t)i] *= cf32((float)r.real(), (float)r.imag()); r *= st; }
             }
         }
         const double slope = (sm[(size_t)nP - 1] - sm[0]) / (pos[(size_t)nP - 1] - pos[0]) / kTwoPi;   // cycles per symbol
@@ -552,11 +604,7 @@ struct IsdbsReceiver::Impl {
 
     void run() {
         for (;;) {
-            if (!locked && skipSyms) {
-                const size_t k = std::min(skipSyms, sy.size() - head);
-                head += k; skipSyms -= k;
-                if (skipSyms) break;
-            }
+            if (!locked && idleSkip) break;
             bool progressed = locked ? frame() : search();
             if (!progressed) break;
             // free what has been used
@@ -604,8 +652,20 @@ void IsdbsReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t,
 void IsdbsReceiver::feed(const std::complex<float>* x, size_t n) {
     Impl& m = *p_;
     if (!m.configured || !n) return;
-    m.front.process(x, n, m.sy);
-    m.run();
+    m.sinceTel += n;
+    while (n) {
+        if (!m.locked && m.idleSkip) {
+            const size_t k = (size_t)std::min<uint64_t>(m.idleSkip, n);
+            x += k; n -= k; m.idleSkip -= k;
+            if (m.idleSkip) break;
+            m.front.reset();   // the next window starts on fresh samples
+        }
+        // while searching, in pieces: a search that finds nothing starts the skip at once
+        const size_t k = m.locked ? n : std::min<size_t>(n, 32768);
+        m.front.process(x, k, m.sy);
+        x += k; n -= k;
+        m.run();
+    }
     // a stream change the interface asked for
     if (m.cfg.valid && m.selRequest != m.active && m.selRequest >= 0 && m.cfg.packetsOf(m.selRequest) > 0) { Tmcc t = m.cfg; m.applyConfig(t); }
 }
