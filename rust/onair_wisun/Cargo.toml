@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir Wi-SUN FAN: IEEE 802.15.4g SUN FSK PHY header, whitening, FCS and the 802.15.4 MAC / Wi-SUN IE frame parser"
 
 [dependencies]

@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir engine threading core: the lock-free SPSC sample ring behind core/include/dect2/common/ring.h"
 
 [dependencies]

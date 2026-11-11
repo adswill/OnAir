@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir ADS-B / Mode S: CRC-24, altitude codes, CPR, Comm-B inference, message field extraction"
 
 [dependencies]

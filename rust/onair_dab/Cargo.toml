@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir DAB data layers: FIB / FIG parsing, MOT headers and data groups, PAD, packet mode, Journaline framing"
 
 [dependencies]

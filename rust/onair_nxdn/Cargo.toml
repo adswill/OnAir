@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir NXDN frame layer: LICH, SACCH, FACCH1, CAC coding, layer 3 messages"
 
 [dependencies]

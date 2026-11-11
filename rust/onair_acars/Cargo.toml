@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir ACARS: ARINC 618 block layer (CRC, parity repair, field parsing, label text)"
 
 [dependencies]

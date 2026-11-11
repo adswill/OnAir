@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir TETRA network information layer (ETSI EN 300 392-2)"
 
 [dependencies]
