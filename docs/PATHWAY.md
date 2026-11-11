@@ -1786,3 +1786,7 @@ EPC Gen2 reader decoder: PIE timing, Query / QueryRep / QueryAdjust / ACK / NAK 
 ## 2026-11-12: Qi wireless charging packets (family 888)
 
 Qi baseline-profile receiver-to-transmitter packets: load modulation, differential bi-phase, byte parity and checksum, named messages. New shared ASK slicer core/src/x40/x40_ask.h. Tests: clock error, depth, offset, wander, noise sweep, false-packet run. Simulated signals only (docs/QI-4.0.md).
+
+## 2026-11-12: FM modulation monitor (family 889)
+
+FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offset, pilot, stereo band, RDS injection, SCA 67 / 92 kHz, over-deviation log. Tests: three input rates, offsets, changes during a run, noise sweep, false-report run. Simulated signals only (docs/FMMON-4.0.md).

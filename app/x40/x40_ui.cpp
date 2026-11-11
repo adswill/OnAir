@@ -77,5 +77,5 @@ template <int V> constexpr ModeUi makeUi() {
 
 } // namespace
 
-extern const ModeUi kX40Ui[8];
-const ModeUi kX40Ui[8] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>()};
+extern const ModeUi kX40Ui[9];
+const ModeUi kX40Ui[9] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>()};

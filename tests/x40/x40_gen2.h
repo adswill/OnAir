@@ -123,4 +123,33 @@ inline std::vector<cf32> qiSignal(const Qi& q, const std::vector<Bits>& pk, doub
     return x;
 }
 
+
+// ---- FM broadcast (multiplex) ---------------------------------------------------------------------------------------------------------------
+struct Fm {
+    double audioDev = 30000, audio2Dev = 12000, pilot = 7500, lmr = 15000, rds = 2000, sca67 = 0, sca92 = 0, offsetHz = 0, driftHzPerSec = 0, scale = 1.0;
+    double pilotFrom = 0, pilotTo = 1e9, rdsFrom = 0, rdsTo = 1e9, scaFrom = 0;   // seconds the component is present
+    double peakHz = 0;                                                            // out: the largest |deviation| of the multiplex
+};
+inline std::vector<cf32> fmStation(Fm& f, double fs, double seconds, unsigned seed = 1) {
+    Rng r(seed); std::vector<cf32> x((size_t)(fs * seconds));
+    double ph = 0, rdsSign = 1, nextFlip = 0; f.peakHz = 0;
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / fs;
+        double m = f.audioDev * std::sin(2 * kPi * 1000 * t) + f.audio2Dev * std::sin(2 * kPi * 3300 * t + 1);
+        const bool pil = t >= f.pilotFrom && t < f.pilotTo;
+        if (pil) {
+            m += f.pilot * std::sin(2 * kPi * 19000 * t);
+            m += f.lmr * std::sin(2 * kPi * 2000 * t) * std::sin(2 * kPi * 38000 * t);
+        }
+        if (t >= f.rdsFrom && t < f.rdsTo) { if (t >= nextFlip) { rdsSign = (r.g() > 0 ? 1 : -1); nextFlip = t + 1.0 / 1187.5; } m += f.rds * rdsSign * std::sin(2 * kPi * 57000 * t); }
+        if (f.sca67 > 0 && t >= f.scaFrom) m += f.sca67 * std::sin(2 * kPi * 67000 * t + 0.4 * std::sin(2 * kPi * 600 * t));
+        if (f.sca92 > 0 && t >= f.scaFrom) m += f.sca92 * std::sin(2 * kPi * 92000 * t + 0.4 * std::sin(2 * kPi * 450 * t));
+        m *= f.scale;
+        f.peakHz = std::max(f.peakHz, std::fabs(m));
+        ph += 2 * kPi * (m + f.offsetHz + f.driftHzPerSec * t) / fs;
+        x[i] = cf32((float)std::cos(ph), (float)std::sin(ph));
+    }
+    return x;
+}
+
 }
