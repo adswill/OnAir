@@ -151,6 +151,7 @@ struct SmartnetReceiver::Impl {
         if (m.group) touchTg(m);
         const double now = timeSec();
         pool->onControlSeen(now);
+        if (tuned() > 0) pool->setControlChannel(tuned());   // the "needs X MHz" of a call outside the capture counts from here
         if (!wanted(m) || m.kind == Kind::InterconnectGrant) return;   // interconnect (telephone) calls are logged only
         tpool::GrantEvent g;
         g.proto = dig ? tpool::Proto::P25p1 : tpool::Proto::MotorolaTypeII;
