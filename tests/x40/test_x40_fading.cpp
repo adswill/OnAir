@@ -39,6 +39,7 @@ int main() {
         CHECK(std::fabs(afd - 0.1328 / fd) < 0.35 * 0.1328 / fd, "fd %.0f: fade length %.4f want %.4f", fd, afd, 0.1328 / fd);
         CHECK(std::fabs(dopp - fd / std::sqrt(2.0)) < 0.3 * fd / std::sqrt(2.0), "fd %.0f: Doppler spread %.1f want %.1f", fd, dopp, fd / std::sqrt(2.0));
         CHECK(kdb < 0, "fd %.0f: Rayleigh read as K %.1f dB", fd, kdb);
+        CHECK(std::fabs(factNum(t, "scintillation index S4") - 1.0) < 0.12, "fd %.0f: S4 %.3f want 1.0", fd, factNum(t, "scintillation index S4"));
     }
     // 2. Rician: K = 10 dB and 3 dB at fd 8 Hz, offset and drift
     for (double kdb : {10.0, 3.0}) {
@@ -46,6 +47,7 @@ int main() {
         double rd = 99; for (auto& q : t.facts) if (q.first == "Rician K-factor") rd = atof(q.second.c_str());
         printf("  Rician K %.0f dB put in: read %.1f dB\n", kdb, rd);
         CHECK(std::fabs(rd - kdb) < 2.0, "K %.0f dB read %.1f", kdb, rd);
+        { const double K = std::pow(10.0, kdb / 10), want = std::sqrt((2 * K + 1) / ((K + 1) * (K + 1))); CHECK(std::fabs(factNum(t, "scintillation index S4") - want) < 0.07, "S4 %.3f want %.3f", factNum(t, "scintillation index S4"), want); }
     }
     // 3. a clean carrier: no fading
     { Chan c{fs, 5.0, 1e6, 400, 0, 1e-4}; auto t = runChunks(x40::Fading, fs, 50.0, std::ref(c), 0, 144.4e6, 1.0); CHECK(factStr(t, "Rician K-factor").rfind("above 40 dB", 0) == 0, "clean carrier: %s", factStr(t, "Rician K-factor").c_str()); }

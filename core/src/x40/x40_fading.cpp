@@ -1,6 +1,6 @@
 // Fading analyser for one steady carrier (a beacon, a time-signal or broadcast carrier, a bench source) within +-2.8 kHz of the tuned frequency: what the path does to it. The carrier is
 // followed (1-2 s FFT windows), shifted to 0 Hz and low-passed at 220 Hz, and the envelope is watched over the last 60 s (first reading after 30 s): the level distribution against the mean power
-// (1, 10, 50, 90, 99 % levels, the fade depth), the Rician K-factor by the moment method (K = ((1-g) + sqrt(1-g)) / g with g = var(P) / mean(P)^2, 0 for g >= 1; infinite for a clean carrier), the rate
+// (1, 10, 50, 90, 99 % levels, the fade depth), the scintillation index S4 (the square root of var(P) / mean(P)^2), the Rician K-factor by the moment method (K = ((1-g) + sqrt(1-g)) / g with g = var(P) / mean(P)^2, 0 for g >= 1; infinite for a clean carrier), the rate
 // at which the level falls through -10 dB under the RMS and the average length of such a fade, and the Doppler spread (RMS width of the spectrum of the complex envelope around its centre of gravity).
 // Fades deeper than 20 dB, or longer than 0.5 s, are logged. Rayleigh theory gives a crossing rate of 0.72 fd and a fade length of 0.133 / fd at -10 dB (fd the maximum Doppler); the readings can be
 // compared with it. Limits: a fading bandwidth above about 200 Hz is cut off (fast mobile paths at UHF); the carrier must stay inside the window; noise adds its own fluctuations (the readings are
@@ -47,6 +47,7 @@ public:
         t.headline = fmt("%s, 10 %% of the time below %.1f dB, fade rate %.2f per s, Doppler spread %.1f Hz", res_.kdb >= 39.9 ? "steady carrier" : fmt("K %.1f dB", res_.kdb).c_str(), res_.p10, res_.lcr, res_.dopp);
         t.facts.push_back({"Rician K-factor", res_.kdb >= 39.9 ? std::string("above 40 dB (no fading to speak of)") : res_.k <= 0 ? std::string("0 (Rayleigh: no steady component)") : fmt("%.1f dB (K = %.2f)", res_.kdb, res_.k)});
         t.facts.push_back({"level against the mean power", fmt("1 %%: %.1f, 10 %%: %.1f, 50 %%: %.1f, 90 %%: %.1f, 99 %%: %.1f dB", res_.p1, res_.p10, res_.p50, res_.p90, res_.p99)});
+        t.facts.push_back({"scintillation index S4", fmt("%.3f (square root of var(P) / mean(P)^2; 0 steady, 1 Rayleigh; the ionospheric and GNSS scintillation measure)", res_.s4)});
         t.facts.push_back({"fade depth", fmt("%.1f dB (median to 1 %%)", res_.p50 - res_.p1)});
         t.facts.push_back({"fade rate at -10 dB", fmt("%.2f per second", res_.lcr)});
         t.facts.push_back({"average fade length at -10 dB", res_.lcr > 0 ? fmt("%.0f ms", res_.afd * 1000) : std::string("-")});
@@ -55,7 +56,7 @@ public:
         t.facts.push_back({"window", fmt("%.0f s, envelope at %.0f Hz", std::min((double)z_.size() / r2_, kWinSec), r2_)});
     }
 private:
-    struct Res { bool ok = false; double k = 0, kdb = 0, p1 = 0, p10 = 0, p50 = 0, p90 = 0, p99 = 0, lcr = 0, afd = 0, dopp = 0; };
+    struct Res { bool ok = false; double s4 = 0, k = 0, kdb = 0, p1 = 0, p10 = 0, p50 = 0, p90 = 0, p99 = 0, lcr = 0, afd = 0, dopp = 0; };
     void track() {
         have_ = true;
         std::vector<cf32> a((size_t)n1_); for (int i = 0; i < n1_; i++) a[i] = buf_[i] * win_[i];
@@ -96,7 +97,7 @@ private:
         const size_t N = z_.size();
         std::vector<float> P(N); double mp = 0; for (size_t i = 0; i < N; i++) { P[i] = std::norm(z_[i]); mp += P[i]; } mp /= (double)N; meanP_ = mp;
         double m2 = 0; for (float v : P) m2 += ((double)v - mp) * ((double)v - mp); m2 /= (double)N;
-        Res r; const double g = m2 / (mp * mp);
+        Res r; const double g = m2 / (mp * mp); r.s4 = std::sqrt(std::max(0.0, g));
         r.k = g >= 1 ? 0 : g < 1e-4 ? 1e4 : ((1 - g) + std::sqrt(1 - g)) / g; r.kdb = r.k > 0 ? 10 * std::log10(r.k) : -99;
         std::vector<float> s(P); std::sort(s.begin(), s.end());
         auto q = [&](double f) { return 10 * std::log10((double)s[std::min(N - 1, (size_t)(f * (double)N))] / mp + 1e-12); };
