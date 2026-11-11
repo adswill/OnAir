@@ -226,6 +226,8 @@ struct DvbsReceiver::Impl {
     double rsNominal = 0;                       // the rate the spectrum (or the user) gave; hunts that fail try rates a little either side of it
     int huntFails = 0, ditherIdx = 0, huntCycles = 0;     // failed attempts at one rate, the rate in the dither list, complete lists tried
     bool huntSkipped = false;                              // input went by since the last symbols: the hunt buffer starts again
+    int keptCycles = 0;                                    // huntCycles of the carrier hunted before the spectrum was measured again
+    double keptCenterHz = 0, keptRate = 0;
     uint64_t huntSkipSamples = 0;                          // input samples let go by (tests)
     // symbols between two attempts: a signal that is not there is looked for less often (the interval doubles after each complete
     // round of rates, up to four times as long)
@@ -417,7 +419,11 @@ struct DvbsReceiver::Impl {
         symTotal = 0; timingNarrow = false; recentred = false;
         huntBuf.clear(); huntSinceTry = 0;
         sfStrip.reset(); sfWasLocked = sfWasPilots = false;
-        rsNominal = rs; huntFails = 0; ditherIdx = 0; huntCycles = 0;
+        rsNominal = rs; huntFails = 0; ditherIdx = 0;
+        // the same carrier as before the spectrum was measured again: the hunt keeps its longer interval
+        const bool same = keptCycles > 0 && std::fabs(r.centerHz - keptCenterHz) < 0.02 * rs && std::fabs(rs / keptRate - 1.0) < 0.02;
+        huntCycles = same ? keptCycles : 0;
+        keptCycles = 0;
         mode = kHunt;
         logf("carrier found: %.3f Msym/s, %+.0f kHz from the centre", rs / 1e6, r.centerHz / 1e3);
     }
@@ -479,7 +485,17 @@ struct DvbsReceiver::Impl {
                 static const double d[6] = {0.012, -0.012, 0.024, -0.024, 0.036, -0.036};
                 const double f = ditherIdx < 6 ? d[ditherIdx] : 0.0;
                 ditherIdx = (ditherIdx + 1) % 7;
-                if (ditherIdx == 0) huntCycles++;
+                if (ditherIdx == 0) {
+                    huntCycles++;
+                    // a whole round of rates found nothing: the carrier may have been measured on something else (the noise before the
+                    // signal came up, a neighbour): the spectrum is measured again, and the hunt goes on where it is
+                    keptCycles = huntCycles; keptCenterHz = front.config().centerHz; keptRate = rsNominal;
+                    mode = kSearch;
+                    spec.reset(); nspec.reset(); raw.clear();
+                    huntBuf.clear(); huntSinceTry = 0;
+                    logf("no frames at %.3f Msym/s: measuring the spectrum again", rsNominal / 1e6);
+                    return;
+                }
                 huntFails = 0;
                 DvbsFront::Config c = front.config();
                 c.symbolRate = rsNominal * (1.0 + f);

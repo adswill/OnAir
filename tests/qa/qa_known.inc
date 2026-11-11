@@ -95,8 +95,6 @@
     {"noaagac/noise", "no check: counts picture lines or measurements, which carry no check, also on noise"},
     {"noaadsb/noise", "no check: counts picture lines or measurements, which carry no check, also on noise"},
     {"meteorhrpt/noise", "no check: counts picture lines or measurements, which carry no check, also on noise"},
-    {"elektrordas/noise", "no check: counts picture lines or measurements, which carry no check, also on noise"},
-    {"arktikardas/noise", "no check: counts picture lines or measurements, which carry no check, also on noise"},
     {"goesmdl/noise", "no check: counts picture lines or measurements, which carry no check, also on noise"},
     {"cb/snr", "threshold: 12 dB CNR is at the FM threshold: the squelch stays closed"},
     {"frs/snr", "threshold: 12 dB CNR is at the FM threshold: the squelch stays closed"},
