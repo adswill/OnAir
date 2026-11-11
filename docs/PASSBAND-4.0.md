@@ -1,0 +1,12 @@
+# Passband signal classifier (family 894)
+
+Tracks every signal in the 48 kHz around the tuned frequency (a satellite linear transponder, a band segment, a repeater input) and names it after 1.5 s. Receive only; nothing is demodulated. **Simulated signals only**; the generator (`tests/x40/x40_gen2.h`, rendered block by block) is not reachable from the application.
+The class is a guess from width and level behaviour. Tune the signal to hear or decode it.
+
+- Method: the capture is decimated to about 48 ksps; 512-point frames (94 Hz bins, 10.7 ms). The noise floor is the median bin. A cluster is a bin 9 dB over the floor that grows over neighbours above 4.5 dB and bridges gaps of up to four bins (a voice signal is a comb of lumps). Clusters are followed from frame to frame (a track survives 1.2 s without a match).
+  After 1.5 s a track is named from its median width, how much of the time it is present, the keying (separate on-runs), the level spread and the frame-to-frame level swing, and its long-term spectrum (the bins within 6 dB of the peak). A class must come out the same at two evaluations 0.2 s apart before it is logged.
+- Classes: unmodulated carrier (up to 4 bins wide, steady, one line), CW (keyed: at least five on-runs, present 10 - 90 % of the time, up to 700 Hz wide), narrow data (PSK / FSK: up to 1.5 kHz, steady; an FSK signal shows two lines in its long-term spectrum), SSB / voice-like (1.5 - 3.8 kHz, level moving), wideband steady signal (above 3.8 kHz: FM or high-rate data).
+- Each row: offset from the tuned frequency, class, width, level over the noise, how much of the time it was present, number of keyings, level spread.
+- Tested at 48, 96 and 250 ksps: each class alone (carrier, keyed CW with 5 ms edges, a 425 Hz-shift FSK, a 2.4 kHz voice-like comb with syllables and pauses, a 12 kHz steady signal); all five plus a second CW at once (22 s): each named once with its class; a carrier that stops and returns is two signals; level sweep; noise alone.
+  Level sweep at 96 ksps (bin power of the carrier / CW; voice-like total power 14 dB higher, signal power against the noise in one 94 Hz bin): carrier, CW and voice-like named correctly at 22, 18, 14 and 12 dB; at 10 dB the carrier is called CW. Noise alone, 3 minutes: no false signal.
+- Not covered: PSK31 and a 170 Hz-shift FSK look like a carrier (under two bins apart); SSB and AM voice are not told apart; two signals closer than about 4 bins merge; the class of a signal that fades in and out for most of its time is unreliable.

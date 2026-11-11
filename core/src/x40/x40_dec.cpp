@@ -10,6 +10,16 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case Graves: return makeGraves();
     case Jove: return makeJove();
     case Beacon: return makeBeacon();
+    case Em4100: return makeEm4100();
+    case UhfRfid: return makeUhfRfid();
+    case Qi: return makeQi();
+    case FmMon: return makeFmMon();
+    case AmMon: return makeAmMon();
+    case PlNoise: return makePlNoise();
+    case Radar: return makeRadar();
+    case GnssJam: return makeGnssJam();
+    case Passband: return makePassband();
+    case VlfMsk: return makeVlfMsk();
     default: return nullptr;
     }
 }
@@ -25,6 +35,16 @@ ModeTuning x40Tuning(int v) {
         {"graves", 143, 143.1, 143.050, 250000, 8000, 0.004, true},
         {"jove", 19, 22, 20.100, 1000000, 24000, 0.012, false},
         {"beacon", 28, 450, 144.400, 250000, 8000, 0.004, true},
+        {"em4100", 0.1, 0.15, 0.125, 250000, 24000, 0.01, true},
+        {"uhfrfid", 860, 960, 865.700, 2000000, 400000, 0.6, true},
+        {"qi", 0.1, 0.21, 0.140, 250000, 24000, 0.012, true},
+        {"fmmon", 64, 110, 100.000, 250000, 200000, 0.2, true},
+        {"ammon", 0.148, 30, 1.000, 250000, 24000, 0.012, true},
+        {"plnoise", 0.1, 1000, 7.100, 250000, 24000, 0.02, false},
+        {"radar", 100, 12000, 9410.000, 2000000, 1000000, 1.5, false},
+        {"gnssjam", 1100, 1700, 1575.420, 4000000, 2000000, 2.0, false},
+        {"passband", 28, 450, 145.900, 96000, 48000, 0.048, false},
+        {"vlfmsk", 0.01, 0.03, 0.0240, 48000, 8000, 0.003, true},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

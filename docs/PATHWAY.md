@@ -1805,3 +1805,39 @@ filter of 4 kHz half width (sonde_rx.cpp, SondeBitDecoder::narrowChannel): 90 % 
 6 dB instead of 9 with a 20 ppm carrier error or 150 kHz off-centre, noise-only runs still decode nothing. Test: sonde_sens40. New
 tool sens_curve (fraction of units per SNR, any harness mode). Measured and not kept: soft RS erasures for the RS41, click suppression for
 APRS, wM-Bus tone correlators (the 17 dB wM-Bus figure was the five-PHY mix), see docs/SENSITIVITY-4.0-A.md.
+
+## 2026-11-12: EM4100 LF RFID (family 886)
+
+EM4100 / EM4102 125 kHz tag reader: Manchester frame with row and column parity, RF/64 and RF/32, load modulation depth. Tests: offset, drift, clock error, noise sweep, 15 min false-read run. Simulated signals only (docs/EM4100-4.0.md).
+
+## 2026-11-12: UHF RFID reader commands (family 887)
+
+EPC Gen2 reader decoder: PIE timing, Query / QueryRep / QueryAdjust / ACK / NAK / Select / Req_RN / Read / Write / Kill / Lock / Access, CRC-5 and CRC-16. Tests: Tari, data-1 ratio, clock error, offset, drift, noise sweep, false-command run. Tag replies not decoded. Simulated signals only (docs/UHFRFID-4.0.md).
+
+## 2026-11-12: Qi wireless charging packets (family 888)
+
+Qi baseline-profile receiver-to-transmitter packets: load modulation, differential bi-phase, byte parity and checksum, named messages. New shared ASK slicer core/src/x40/x40_ask.h. Tests: clock error, depth, offset, wander, noise sweep, false-packet run. Simulated signals only (docs/QI-4.0.md).
+
+## 2026-11-12: FM modulation monitor (family 889)
+
+FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offset, pilot, stereo band, RDS injection, SCA 67 / 92 kHz, over-deviation log. Tests: three input rates, offsets, changes during a run, noise sweep, false-report run. Simulated signals only (docs/FMMON-4.0.md).
+
+## 2026-11-12: AM modulation monitor (family 890)
+
+AM broadcast modulation monitor: carrier offset, depth, peaks, asymmetry, hum, audio bandwidth, over-modulation and carrier-loss log. Tests: three input rates, offsets with drift, hum, asymmetry, noise sweep, false-row run. Simulated signals only (docs/AMMON-4.0.md).
+
+## 2026-11-12: Power-line noise locator (family 891)
+
+Impulse and power-line noise analyser: impulse rate and level, repetition at twice the mains, the mains rate or another steady rate, static. Tests: five rates at two input rates, drifting mains with missing and random impulses, Poisson impulses, 15 min noise false-pattern run, level sweep. Simulated signals only (docs/PLNOISE-4.0.md).
+
+## 2026-11-12: Radar pulse analyser (family 892)
+
+Pulse analyser: width, PRI and PRF, constant / staggered / jittered classification, carrier inside the pulse, antenna turn time. Tests: PRFs and widths, stagger 2 to 4, jitter, a scanning beam, level sweep, 5 min noise false-emitter run. Simulated signals only (docs/RADAR-4.0.md).
+
+## 2026-11-12: GNSS interference detector and passband classifier (families 893, 894)
+
+GNSS interference detector (tone / narrowband / swept chirp with range and period / wideband noise, 4 and 10 Msps) and passband signal classifier (carrier, CW, narrow data, voice-like, wideband in 48 kHz). Tests: classes alone and mixed, levels, start and stop, noise-only false-row runs. Family numbers 886 to 894 listed in docs/FAMILY-NUMBERS-4.0.md. Simulated signals only (docs/GNSSJAM-4.0.md, docs/PASSBAND-4.0.md).
+
+## 2026-11-12: VLF MSK transmitter monitor (family 895)
+
+VLF naval MSK station monitor: carrier and bit rate from the two lines of the squared signal, on / off / rate-change log, station hint from a short frequency list. Encrypted traffic not decoded. Tests: 50 to 300 bit/s, offsets, drift, on / off, noise sweep to -3 dB, 20 min noise false-on run. Simulated signals only (docs/VLFMSK-4.0.md).

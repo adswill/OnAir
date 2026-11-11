@@ -366,6 +366,16 @@
         <item>GRAVES meteor echoes</item>
         <item>Radio Jove bursts</item>
         <item>Beacon propagation monitor</item>
+        <item>EM4100 LF RFID (125 kHz)</item>
+        <item>UHF RFID reader (EPC Gen2)</item>
+        <item>Qi wireless charging</item>
+        <item>FM modulation monitor</item>
+        <item>AM modulation monitor</item>
+        <item>Power-line noise locator</item>
+        <item>Radar pulse analyser</item>
+        <item>GNSS interference detector</item>
+        <item>Passband signal classifier</item>
+        <item>VLF MSK transmitter monitor</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -713,6 +723,16 @@
         <item>The GRAVES space radar\'s carrier on 143.050 MHz and the meteor echoes around it: Doppler shift, strength, duration and drift of every echo. Needs a steady radio and a narrow channel. Simulated signals only</item>
         <item>Radio Jove (20.1 MHz): a power-versus-time burst finder for Jupiter and solar radio bursts. 5 ms resolution, short and long bursts with their height over the baseline. Cannot tell interference from a real burst. Simulated signals only</item>
         <item>Follows one steady beacon (28 / 50 / 144 / 432 MHz, CW or a carrier) and says what the path does to it: steady, fading (sporadic-E or tropospheric swings) or aurora-like (the line smeared over tens to hundreds of Hz). A reading of the signal, not a forecast. Simulated signals only</item>
+        <item>EM4100 / EM4102 125 kHz RFID tags in the field of a reader: the 40-bit ID (version and 32-bit number) from the load modulation of the carrier, with the modulation depth. RF/64 and RF/32. Receive only, nothing is written to or copied from a tag. Needs a radio that reaches 125 kHz (direct sampling or an LF capable SDR) and a coil or loop near the reader. Simulated signals only</item>
+        <item>UHF RFID readers (EPC Class-1 Gen-2 / ISO 18000-63, 860 - 960 MHz): the commands of the reader (Query with its slot count and session, QueryRep, QueryAdjust, ACK, Select with its mask, Req_RN, Read, Write, Kill, Lock, Access) with the Tari, RTcal and TRcal timing. The tags\' replies are not decoded. Receive only. Needs a 2 Msps radio. Simulated signals only</item>
+        <item>Qi wireless chargers (WPC baseline profile, 110 - 205 kHz power signal): what the phone tells the charger by load modulation at 2 kbit/s: signal strength, control error, received power, charge status, end of power transfer, configuration and identification with the manufacturer code. Receive only. Needs a radio that reaches the LF band and a pick-up loop near the charger. Simulated signals only</item>
+        <item>FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offset, the 19 kHz pilot and stereo, the 57 kHz RDS injection, SCA subcarriers and the audio level of a station, with over-deviation logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
+        <item>AM broadcast modulation monitor (LW, MW, SW): the carrier offset, modulation depth, positive and negative peaks, asymmetry, mains hum, audio bandwidth and over-modulation of one station, with loss and return of the carrier logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
+        <item>Power-line and impulse noise analyser: finds the impulses in a band and measures their rate and level, and tells a repetition at twice the mains frequency (100 / 120 Hz, an arcing insulator or a faulty lamp) from a half-wave one (50 / 60 Hz), a steady switching supply and random static. For hunting the source of interference with an antenna in hand. Simulated signals only</item>
+        <item>Radar pulse analyser: the pulses of the strongest pulsed emitter (marine, air-traffic or weather radar, needs a 2 Msps radio and the right band converter): pulse width, repetition interval and rate, constant / staggered / jittered spacing, the carrier inside the pulse and the antenna turn time from the beam passing. It measures the emitter, not what it is. Simulated signals only</item>
+        <item>GNSS interference detector (L1 1575.42 MHz, L2 1227.6 MHz and others, needs a radio with a few MHz of bandwidth and a GNSS antenna): says whether a navigation band is clean, or holds a tone, narrowband interference, a swept chirp (a car jammer: range, period, rate) or wideband noise, and how strong it is. Detects and describes only; no position is computed. Simulated signals only</item>
+        <item>Passband signal classifier: every signal in the 48 kHz around the tuned frequency (a satellite linear transponder, a band segment, a repeater input) is tracked and named after a second and a half: unmodulated carrier, keyed CW, narrow data, SSB or voice-like, or a wideband steady signal, with its offset, width and level. A guess from width and level behaviour; nothing is demodulated. Simulated signals only</item>
+        <item>VLF MSK transmitter monitor (10 - 30 kHz naval long-wave stations): the carrier frequency, the bit rate (50 to 300 bit/s) and the level of a station, and when it goes on, off or changes rate; a list of public carrier frequencies hints at the station. The traffic is encrypted and is not decoded. Needs a radio that reaches the VLF band. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1060,6 +1080,16 @@
         <item>Meteor echoes</item>
         <item>Burst finder</item>
         <item>Path class</item>
+        <item>Tag</item>
+        <item>Command</item>
+        <item>Packet</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Pattern</item>
+        <item>Emitter</item>
+        <item>Interference</item>
+        <item>Signal</item>
+        <item>Transmitter</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1407,5 +1437,15 @@
         <item>graves radar 143.050 mhz meteor scatter echo doppler space surveillance france</item>
         <item>radio jove jupiter sun solar burst 20.1 mhz s-burst l-burst radio astronomy</item>
         <item>beacon propagation monitor aurora sporadic-e es tropo fading doppler spread cw 144 mhz 50 mhz 28 mhz ncdxf</item>
+        <item>em4100 em4102 rfid 125 khz lf tag id card proximity access read only low frequency</item>
+        <item>uhf rfid epc gen2 iso 18000-63 reader query inventory tag 865 915 868 902 928 select pie tari</item>
+        <item>qi wireless charging wpc charger phone load modulation 110 khz 205 khz power transfer identification received power</item>
+        <item>fm modulation monitor deviation pilot 19 khz rds injection mpx power sca subcarrier stereo overmodulation bs.412 broadcast engineer</item>
+        <item>am modulation monitor depth overmodulation carrier offset hum asymmetry audio bandwidth mw sw lw broadcast</item>
+        <item>power line noise interference rfi arcing insulator impulse noise dimmer switching supply mains 100 hz 120 hz noise hunting locator</item>
+        <item>radar pulse analyser pri prf pulse width stagger jitter marine radar x band s band weather radar atc scan period antenna rotation</item>
+        <item>gnss gps jammer interference chirp jamming spoofing l1 1575 l2 1227 glonass galileo beidou detector sawtooth</item>
+        <item>passband signal classifier transponder linear cw ssb carrier rtty psk activity band scan spotter qo-100 satellite transponder</item>
+        <item>vlf msk naval 24 khz naa nlk nml npm nwc hwu gqd dho38 submarine 200 baud long wave</item>
     </string-array>
 </resources>

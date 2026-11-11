@@ -44,6 +44,16 @@ std::unique_ptr<Decoder> makeUvb76();
 std::unique_ptr<Decoder> makeGraves();
 std::unique_ptr<Decoder> makeJove();
 std::unique_ptr<Decoder> makeBeacon();
+std::unique_ptr<Decoder> makeEm4100();
+std::unique_ptr<Decoder> makeUhfRfid();
+std::unique_ptr<Decoder> makeQi();
+std::unique_ptr<Decoder> makeFmMon();
+std::unique_ptr<Decoder> makeAmMon();
+std::unique_ptr<Decoder> makePlNoise();
+std::unique_ptr<Decoder> makeRadar();
+std::unique_ptr<Decoder> makeGnssJam();
+std::unique_ptr<Decoder> makePassband();
+std::unique_ptr<Decoder> makeVlfMsk();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {

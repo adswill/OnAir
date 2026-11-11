@@ -10,12 +10,15 @@
 #include <memory>
 #include <string>
 
+// every active standard of the receiver (882 - 897), for switch statements
+#define DECT2_X40_ACTIVE_CASES case 882: case 883: case 884: case 885: case 886: case 887: case 888: case 889: case 890: case 891: case 892: case 893: case 894: case 895: case 896: case 897:
+
 namespace dect2 {
 
 struct X40Telemetry;
 
 namespace x40 {
-enum Variant : int { RcPpm, Uvb76, Graves, Jove, Beacon, kNumVariants };
+enum Variant : int { RcPpm, Uvb76, Graves, Jove, Beacon, Em4100, UhfRfid, Qi, FmMon, AmMon, PlNoise, Radar, GnssJam, Passband, VlfMsk, kNumVariants };
 // variant v: family 881 + v, active standard 882 + v, engine standard 883 + v, poll slot 881 + v (kNumFamilies = 900 and kPollSeqSlots = 901 stay)
 constexpr int kFamilyBase = 880;
 constexpr int variantOfActive(int active) { return active >= kFamilyBase + 2 && active <= kFamilyBase + 1 + (int)kNumVariants ? active - kFamilyBase - 2 : -1; }

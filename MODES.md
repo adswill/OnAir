@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**338 modes.**
+**348 modes.**
 
 ## TV (17)
 
@@ -24,7 +24,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FPV video (analog)** - Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)
 - **MAC** - MAC/packet satellite TV: picture, 4:3 / 16:9, channel name, digital sound, EuroCrypt detected
 
-## Broadcast Radio (7)
+## Broadcast Radio (9)
 
 - **DAB / DAB+** - DAB and DAB+ digital radio
 - **FM** - FM broadcast radio with stereo and RDS
@@ -33,8 +33,10 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AM broadcast** - AM broadcast: medium wave 531 - 1602 kHz and the shortwave broadcast bands, in the general receiver (AM mode)
 - **AM stereo (C-QUAM)** - AM stereo: C-QUAM on medium wave, stereo found by its 25 Hz pilot
 - **CDR** - CDR: China's digital radio in the FM band
+- **FM modulation monitor** - FM monitor: deviation, pilot, RDS, MPX power
+- **AM modulation monitor** - AM monitor: depth, peaks, hum, bandwidth
 
-## Aviation (27)
+## Aviation (28)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -56,6 +58,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **GBAS VDB** - GBAS VDB: burst structure of satellite landing data
 - **LDACS (structure)** - LDACS: L-band data link, structure only
 - **AeroMACS (structure)** - AeroMACS: airport data link, structure only
+- **Radar pulse analyser** - Radar pulses: PRI, width, stagger, antenna turn
 - **ADS-L** - ADS-L: light aircraft conspicuity on 868 and 869.5 MHz
 - **FLARM** - FLARM aircraft: gliders and light aircraft on 868 MHz
 - **DJI drones** - DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded
@@ -75,7 +78,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (55)
+## Satellite & Navigation (56)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -103,6 +106,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Erminaz** - Erminaz cubesat: 9k6 FSK CCSDS frames
 - **Orbcomm** - Orbcomm satellite downlinks: satellite IDs, positions, channel assignments, messages
 - **QO-100** - QO-100: the amateur satellite's transponders with exact frequencies from its beacons
+- **GNSS interference detector** - GNSS interference: class, level, sweep
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
 - **AX100 Mode 5** - AX100 Mode 5 (ASM + Golay): GOMspace satellite frames, CSP packets
 - **AX100 Mode 6** - AX100 Mode 6 (Reed-Solomon): GOMspace satellite frames, CSP packets
@@ -177,12 +181,15 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (39)
+## IoT & Sensors (42)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
 - **C-V2X (structure)** - C-V2X: LTE sidelink, structure only
 - **RC model PPM (72 MHz)** - RC model PPM: channel count and stick values
+- **EM4100 LF RFID (125 kHz)** - EM4100 tags: ID and modulation depth
+- **UHF RFID reader (EPC Gen2)** - UHF RFID: reader commands, Tari and tag rate
+- **Qi wireless charging** - Qi: packets from the phone to the charger
 - **ISM sensors** - ISM sensors: weather stations, TPMS, remotes and meters around you (the rtl_433 idea)
 - **Sub-GHz sensors** - Sub-GHz sensors: the rtl_433 decoders with a live sensor list, history, export and an unknown signal analyser (RTL-SDR or HackRF at 250 kHz and up)
 - **LoRaWAN** - LoRaWAN: IoT devices around you, from the headers every gateway receives
@@ -276,8 +283,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
 
-## Amateur - Digital (42)
+## Amateur - Digital (43)
 
+- **Passband signal classifier** - Passband: what each signal in 48 kHz is
 - **QRSS grabber** - QRSS: very slow Morse read from a spectrogram, receive only
 - **DFCW grabber** - DFCW: slow Morse with a frequency for dots and one for dashes, receive only
 - **FSK441** - FSK441: meteor scatter pings, 441 baud 4-FSK, receive only
@@ -333,7 +341,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 - **HF packet 300 Bd** - HF packet 300 Bd: AX.25 frames, full decode (simulated only)
 
-## HF Utility (33)
+## HF Utility (34)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -353,6 +361,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Piccolo Mk VI** - Piccolo Mk VI: HF MFSK teleprinter (simulated signals only)
 - **Coquelet-8** - Coquelet-8: HF MFSK teleprinter (simulated signals only)
 - **UVB-76 buzzer monitor** - UVB-76: buzz rate and breaks
+- **VLF MSK transmitter monitor** - VLF MSK: carrier, bit rate, on / off
 - **Datawell Buoy HF Link** - Datawell Buoy HF Link: wave heights, periods and spectra from wave buoys on HF (receive only)
 - **CODAR / HF ocean radar** - CODAR / HF ocean radar: the coastal radar chirps on the HF bands (receive only)
 - **Shortwave** - Shortwave listening with one-click decoders: retune and they follow
@@ -369,8 +378,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 
-## General & Tools (4)
+## General & Tools (5)
 
+- **Power-line noise locator** - Noise locator: impulse rate, repetition, level
 - **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
 - **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
 - **Spectrum explorer** - Spectrum explorer: look, measure and sweep
