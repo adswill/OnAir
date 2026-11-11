@@ -174,8 +174,8 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
     // where output k reads: the input rows from base and the tap row of its nearest phase
     auto locate = [&](long k, const float*& h, const float*& r, const float*& m) {
         const double pos = startOffset + (double)k * step;
-        const long i = (long)std::floor(pos);
-        const int p0 = (int)std::lround((pos - (double)i) * b.phases);   // nearest phase of the bank: a timing error below 1/1000 of a sample
+        const long i = (long)ifloor(pos);   // no libm call on the x86 baseline (dect2/dsp/simd.h); the same values
+        const int p0 = (int)iround((pos - (double)i) * b.phases);   // nearest phase of the bank: a timing error below 1/1000 of a sample
         h = &b.h[(size_t)p0 * taps];
         const long base = i - (b.half - 1) + pad;
         r = &re[(size_t)base];
@@ -441,6 +441,7 @@ struct Atsc3Sync::Pool {
         cvSpace.wait(lk, [&] { return inflight == 0; });
     }
     void run() {
+        DenormalsOff ftz;
         for (;;) {
             Job j;
             {

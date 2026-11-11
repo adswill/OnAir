@@ -3,6 +3,7 @@
 #if defined(DECT2_X86_DISPATCH)
 #include <immintrin.h>
 #endif
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
@@ -363,7 +364,57 @@ DECT2_SIMD_BODY void syrkLowerTBody(const float* x, int rows, int n, float* a) {
         }
     }
 }
+#if defined(DECT2_X86_DISPATCH)
+// AVX2 + FMA: the same sums in tiles of 4 x 16 elements of a held in registers over blocks of 256 rows (copied to a padded buffer that stays in
+// the cache). Every element still adds the rows in order with one fused multiply-add each, which is what the axpy loop above compiles to in its
+// AVX2 copy, so the result is the same; the axpy loop is bound by the loads and stores of a (one of each per multiply-add).
+DECT2_AVX2_TARGET static void syrkLowerTAvx2(const float* x, int rows, int n, float* a) {
+    std::memset(a, 0, sizeof(float) * (size_t)n * n);
+    constexpr int RB = 256;
+    const int np = (n + 3 + 15) & ~15;   // row length of the copy: room for the tiles past the last column and row
+    thread_local std::vector<float> buf;
+    for (int r0 = 0; r0 < rows; r0 += RB) {
+        const int nr = std::min(RB, rows - r0);
+        buf.assign((size_t)nr * np, 0.f);
+        for (int r = 0; r < nr; r++) std::memcpy(&buf[(size_t)r * np], x + (size_t)(r0 + r) * n, sizeof(float) * (size_t)n);
+        const float* bp = buf.data();
+        for (int i0 = 0; i0 < n; i0 += 4)
+            for (int j0 = 0; j0 <= i0 + 3 && j0 < n; j0 += 16) {
+                alignas(32) float t[4][16];
+                for (int q = 0; q < 4; q++)
+                    for (int c = 0; c < 16; c++) {
+                        const int i = i0 + q, j = j0 + c;
+                        t[q][c] = (i < n && j <= i) ? a[(size_t)i * n + j] : 0.f;
+                    }
+                __m256 c00 = _mm256_load_ps(&t[0][0]), c01 = _mm256_load_ps(&t[0][8]), c10 = _mm256_load_ps(&t[1][0]), c11 = _mm256_load_ps(&t[1][8]);
+                __m256 c20 = _mm256_load_ps(&t[2][0]), c21 = _mm256_load_ps(&t[2][8]), c30 = _mm256_load_ps(&t[3][0]), c31 = _mm256_load_ps(&t[3][8]);
+                for (int r = 0; r < nr; r++) {
+                    const float* xr = bp + (size_t)r * np;
+                    const __m256 x0 = _mm256_loadu_ps(xr + j0), x1 = _mm256_loadu_ps(xr + j0 + 8);
+                    const __m256 y0 = _mm256_broadcast_ss(xr + i0), y1 = _mm256_broadcast_ss(xr + i0 + 1);
+                    const __m256 y2 = _mm256_broadcast_ss(xr + i0 + 2), y3 = _mm256_broadcast_ss(xr + i0 + 3);
+                    c00 = _mm256_fmadd_ps(y0, x0, c00); c01 = _mm256_fmadd_ps(y0, x1, c01);
+                    c10 = _mm256_fmadd_ps(y1, x0, c10); c11 = _mm256_fmadd_ps(y1, x1, c11);
+                    c20 = _mm256_fmadd_ps(y2, x0, c20); c21 = _mm256_fmadd_ps(y2, x1, c21);
+                    c30 = _mm256_fmadd_ps(y3, x0, c30); c31 = _mm256_fmadd_ps(y3, x1, c31);
+                }
+                _mm256_store_ps(&t[0][0], c00); _mm256_store_ps(&t[0][8], c01); _mm256_store_ps(&t[1][0], c10); _mm256_store_ps(&t[1][8], c11);
+                _mm256_store_ps(&t[2][0], c20); _mm256_store_ps(&t[2][8], c21); _mm256_store_ps(&t[3][0], c30); _mm256_store_ps(&t[3][8], c31);
+                for (int q = 0; q < 4; q++)
+                    for (int c = 0; c < 16; c++) {
+                        const int i = i0 + q, j = j0 + c;
+                        if (i < n && j <= i) a[(size_t)i * n + j] = t[q][c];
+                    }
+            }
+    }
+}
+void syrkLowerT(const float* x, int rows, int n, float* a) {
+    if (cpuHasAvx2()) { syrkLowerTAvx2(x, rows, n, a); return; }
+    syrkLowerTBody(x, rows, n, a);
+}
+#else
 DECT2_AVX2_DISPATCH(void, syrkLowerT, (const float* x, int rows, int n, float* a), (x, rows, n, a))
+#endif
 
 DECT2_SIMD_BODY void gemvTBody(const float* x, int rows, int n, const float* t, float* b) {
     std::memset(b, 0, sizeof(float) * n);

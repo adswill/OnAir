@@ -20,6 +20,9 @@ on:
         description: "run ctest with -V (prints the output of passing tests)"
         type: boolean
         default: false
+      env:
+        description: "environment for the tests: NAME=value pairs separated by semicolons (optional)"
+        default: ""
 concurrency:
   group: quick-${{ github.ref }}-${{ inputs.os }}
   cancel-in-progress: true
@@ -69,8 +72,9 @@ jobs:
         uses: actions/cache/save@v6
         with: { path: .ccache, key: "ccache-${{ inputs.os }}-quick-${{ github.sha }}" }
       - name: Test
-        env: { TESTS: "${{ inputs.tests }}", VERBOSE: "${{ inputs.verbose }}" }
+        env: { TESTS: "${{ inputs.tests }}", VERBOSE: "${{ inputs.verbose }}", TEST_ENV: "${{ inputs.env }}" }
         run: |
+          if [ -n "$TEST_ENV" ]; then IFS=';' read -ra KV <<< "$TEST_ENV"; for kv in "${KV[@]}"; do export "$kv"; echo "env: $kv"; done; fi
           R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
           V=""; [ "$VERBOSE" = true ] && { V="-V"; lscpu 2>/dev/null | head -20 || sysctl -n machdep.cpu.brand_string; }
           ctest --test-dir build -j 4 -R "$R" --output-on-failure --timeout 900 $V

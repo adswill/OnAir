@@ -19,6 +19,9 @@
 #include "dect2/dsp/simd.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/common/stage_prof.h"
+#if defined(DECT2_X86_DISPATCH)
+#include <immintrin.h>
+#endif
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
 #include <arm_neon.h>
 #include <cstdint>
@@ -35,6 +38,50 @@ namespace atsc {
 // of a group of four whose window starts s_u samples after the group's first (0 <= s_u <= kPfbShift) reads W taps from offset kPfbShift - s_u.
 constexpr int kPfbShift = 3;
 struct PfbPad { const float* t = nullptr; int L = 0, W = 0; size_t avail = 0; };
+#if defined(DECT2_X86_DISPATCH)
+// x86, AVX2 + FMA: the shared-window filter below eight lanes wide (one data vector per eight taps of all four outputs), the four results summed
+// across lanes together with two rounds of hadd. Returns where it stopped (the last few outputs of the block go the usual way).
+DECT2_AVX2_TARGET static size_t pfbPadAvx2(int J, int NPH, const float* re, const float* im, int64_t base, double pos0, double step, size_t k,
+                                           size_t k1, float* outRe, float* outIm, const PfbPad& pad) {
+    const int W = pad.W, L = pad.L;
+    for (; k + 4 <= k1; k += 4) {
+        int64_t i0[4]; int phi[4];
+        for (int u = 0; u < 4; u++) {
+            const double pos = pos0 + (double)(k + (size_t)u) * step;
+            i0[u] = (int64_t)std::floor(pos);   // one instruction here (the target has SSE4.1)
+            phi[u] = (int)((pos - (double)i0[u]) * NPH + 0.5);
+            if (phi[u] >= NPH) { phi[u] = 0; i0[u]++; }
+        }
+        const int64_t b = i0[0] - base - J + 1;
+        bool fits = b >= 0 && (size_t)(b + W) <= pad.avail;
+        const float* tp[4];
+        for (int u = 0; u < 4; u++) {
+            const int64_t sh = i0[u] - i0[0];
+            fits = fits && sh >= 0 && sh <= kPfbShift;
+            tp[u] = pad.t + (size_t)phi[u] * L + (kPfbShift - (int)std::min<int64_t>(std::max<int64_t>(sh, 0), kPfbShift));
+        }
+        if (!fits) break;
+        const float* pr = re + b;
+        const float* pi_ = im + b;
+        __m256 ar[4], ai[4];
+        for (int u = 0; u < 4; u++) ar[u] = ai[u] = _mm256_setzero_ps();
+        for (int j = 0; j < W; j += 8) {
+            const __m256 r = _mm256_loadu_ps(pr + j), m = _mm256_loadu_ps(pi_ + j);
+            for (int u = 0; u < 4; u++) {
+                const __m256 t = _mm256_loadu_ps(tp[u] + j);
+                ar[u] = _mm256_fmadd_ps(r, t, ar[u]);
+                ai[u] = _mm256_fmadd_ps(m, t, ai[u]);
+            }
+        }
+        // hadd(hadd(s0, s1), hadd(s2, s3)) holds, in each 128-bit half, the four outputs' sums of that half
+        const __m256 hr = _mm256_hadd_ps(_mm256_hadd_ps(ar[0], ar[1]), _mm256_hadd_ps(ar[2], ar[3]));
+        const __m256 hi = _mm256_hadd_ps(_mm256_hadd_ps(ai[0], ai[1]), _mm256_hadd_ps(ai[2], ai[3]));
+        _mm_storeu_ps(outRe + k, _mm_add_ps(_mm256_castps256_ps128(hr), _mm256_extractf128_ps(hr, 1)));
+        _mm_storeu_ps(outIm + k, _mm_add_ps(_mm256_castps256_ps128(hi), _mm256_extractf128_ps(hi, 1)));
+    }
+    return k;
+}
+#endif
 DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float* re, const float* im, int64_t base,
                                  double pos0, double step, size_t k0, size_t k1, float* outRe, float* outIm, PfbPad pad) {
     const int T = 2 * J;
@@ -44,6 +91,9 @@ DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float
     // sample at 8-10 Msps), so with the taps of each placed at its offset in a zero-padded row (pad) the data are loaded once for all four, and
     // each tap vector feeds two multiply-adds: half the loads of one window per output (that loop is load-bound: three loads per two multiply-adds)
     // for 8 % more multiply-adds (W = 2J + 3 rounded up to 8). Two partial sums per row and output: sixteen independent chains.
+#if defined(DECT2_X86_DISPATCH)
+    if (pad.t && cpuHasAvx2()) k = pfbPadAvx2(J, NPH, re, im, base, pos0, step, k, k1, outRe, outIm, pad);
+#endif
     if (pad.t) {
         typedef float v4 __attribute__((vector_size(16)));
         auto ld = [](const float* p) { v4 v; std::memcpy(&v, p, 16); return v; };
@@ -52,7 +102,7 @@ DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float
             int64_t i0[4]; int phi[4];
             for (int u = 0; u < 4; u++) {
                 const double pos = pos0 + (double)(k + (size_t)u) * step;
-                i0[u] = (int64_t)std::floor(pos);
+                i0[u] = ifloor(pos);
                 phi[u] = (int)((pos - (double)i0[u]) * NPH + 0.5);
                 if (phi[u] >= NPH) { phi[u] = 0; i0[u]++; }
             }
@@ -167,7 +217,7 @@ DECT2_SIMD_BODY void pfbBlockBody(const float* taps, int J, int NPH, const float
 #endif
     for (; k < k1; k++) {
         const double pos = pos0 + (double)k * step;
-        int64_t i0 = (int64_t)std::floor(pos);
+        int64_t i0 = ifloor(pos);
         int phi = (int)((pos - (double)i0) * NPH + 0.5);
         if (phi >= NPH) { phi = 0; i0++; }
         const float* tp = &taps[(size_t)phi * T];
@@ -224,6 +274,56 @@ constexpr int kInterpPh = 64;
 inline cf32 expj(double a) { return cf32((float)std::cos(a), (float)std::sin(a)); }
 
 // cheaper atan2, good enough for the pll
+// The nearest of the eight levels: max(-7, min(7, 2 floor(y / 2) + 1)), the same value for every y (NaN gives 7 in both). The halved value is
+// clamped first so that the floor is of a small number: on x86 without SSE4.1 that is a truncation, not a call to floorf.
+inline float quant8(float y) {
+#if defined(__x86_64__) && !defined(__SSE4_1__)
+    float t = y * 0.5f;
+    t = t < 3.5f ? t : 3.5f;
+    t = t > -4.f ? t : -4.f;
+    return 2.f * (float)ifloorf(t) + 1.f;
+#else
+    return std::max(-7.f, std::min(7.f, 2.f * std::floor(y * 0.5f) + 1.f));
+#endif
+}
+
+#if defined(DECT2_X86_DISPATCH)
+// x86, AVX2 + FMA: the decision feedback pass of equalize() (four decisions into the next B accumulators), eight lanes with fused multiply-adds
+DECT2_AVX2_TARGET void dfeAddAvx2(float* __restrict a, const float* __restrict f0, const float* __restrict f1, const float* __restrict f2,
+                                  const float* __restrict f3, int B, float d0, float d1, float d2, float d3) {
+    const __m256 v0 = _mm256_set1_ps(d0), v1 = _mm256_set1_ps(d1), v2 = _mm256_set1_ps(d2), v3 = _mm256_set1_ps(d3);
+    int m = 0;
+    for (; m + 8 <= B; m += 8) {
+        const __m256 s = _mm256_fmadd_ps(v3, _mm256_loadu_ps(f0 + m), _mm256_mul_ps(v2, _mm256_loadu_ps(f1 + m)));
+        const __m256 t = _mm256_fmadd_ps(v1, _mm256_loadu_ps(f2 + m), _mm256_mul_ps(v0, _mm256_loadu_ps(f3 + m)));
+        _mm256_storeu_ps(a + m, _mm256_add_ps(_mm256_loadu_ps(a + m), _mm256_add_ps(s, t)));
+    }
+    for (; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
+}
+// x86, AVX2 + FMA: c[i] = sum_k f[k] a[i + k] (the feed-forward equaliser, 65 or 129 taps), 32 outputs at a time with one broadcast tap per step:
+// four independent chains and no reduction per output (the portable convCorr runs one 8-lane chain and a reduction for every output)
+DECT2_AVX2_TARGET void corrAvx2(const float* a, const float* f, float* c, int n, int p) {
+    int i = 0;
+    for (; i + 32 <= n; i += 32) {
+        __m256 s0 = _mm256_setzero_ps(), s1 = s0, s2 = s0, s3 = s0;
+        const float* x = a + i;
+        for (int k = 0; k < p; k++) {
+            const __m256 fk = _mm256_broadcast_ss(f + k);
+            s0 = _mm256_fmadd_ps(fk, _mm256_loadu_ps(x + k), s0);
+            s1 = _mm256_fmadd_ps(fk, _mm256_loadu_ps(x + k + 8), s1);
+            s2 = _mm256_fmadd_ps(fk, _mm256_loadu_ps(x + k + 16), s2);
+            s3 = _mm256_fmadd_ps(fk, _mm256_loadu_ps(x + k + 24), s3);
+        }
+        _mm256_storeu_ps(c + i, s0); _mm256_storeu_ps(c + i + 8, s1); _mm256_storeu_ps(c + i + 16, s2); _mm256_storeu_ps(c + i + 24, s3);
+    }
+    for (; i < n; i++) {
+        float s = 0;
+        for (int k = 0; k < p; k++) s += f[k] * a[i + k];
+        c[i] = s;
+    }
+}
+#endif
+
 inline float fastAtan2(float y, float x) {
     const float ax = std::fabs(x), ay = std::fabs(y);
     const float mx = std::max(ax, ay), mn = std::min(ax, ay);
@@ -538,7 +638,7 @@ struct Core {
         if (!tapsPad.empty() && !noPad) { pad.t = tapsPad.data(); pad.L = padL; pad.W = padW; pad.avail = inRe.size(); }
         auto filter = [&](size_t k0, size_t k1) { DECT2_STAGE("atsc.filter"); pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data(), pad); };
         if (splitA && nOut >= 4096) {   // split across two threads
-            std::thread helper([&] { dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); filter(nOut / 2, nOut); });
+            std::thread helper([&] { dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); DenormalsOff ftz; filter(nOut / 2, nOut); });
             filter(0, nOut / 2);
             helper.join();
         } else filter(0, nOut);
@@ -615,6 +715,26 @@ struct Core {
                 }
                 sr = pfbN * pf.real() + vaddvq_f32(accR); si = pfbN * pf.imag() + vaddvq_f32(accI);
             }
+#elif defined(DECT2_X86_DISPATCH)
+            // x86 (SSE2, the baseline): the NEON arrangement above with separate multiplies and adds; the samples are the scalar version's bits,
+            // the pilot sums are added in the NEON order
+            float sr, si;
+            {
+                const __m128 rr = _mm_loadu_ps(Rr), ri = _mm_loadu_ps(Ri);
+                __m128 accR = _mm_setzero_ps(), accI = _mm_setzero_ps();
+                for (int a = 0; a < 4; a++) {
+                    const __m128 par = _mm_set1_ps(Pr[a]), pai = _mm_set1_ps(Pi[a]);
+                    const __m128 pr = _mm_sub_ps(_mm_mul_ps(par, rr), _mm_mul_ps(pai, ri));
+                    const __m128 pi = _mm_add_ps(_mm_mul_ps(par, ri), _mm_mul_ps(pai, rr));
+                    const __m128 x_r = _mm_loadu_ps(xr + 4 * a), x_i = _mm_loadu_ps(xi + 4 * a);
+                    const __m128 zr = _mm_sub_ps(_mm_mul_ps(x_r, pr), _mm_mul_ps(x_i, pi)), zi = _mm_add_ps(_mm_mul_ps(x_r, pi), _mm_mul_ps(x_i, pr));
+                    _mm_storeu_ps(&dchunk[k + 4 * a], zr);
+                    const __m128 w = _mm_loadu_ps(pfw + 4 * a);
+                    accR = _mm_add_ps(accR, _mm_mul_ps(w, zr)); accI = _mm_add_ps(accI, _mm_mul_ps(w, zi));
+                }
+                auto hsum = [](__m128 v) { const __m128 h = _mm_add_ps(v, _mm_movehl_ps(v, v)); return _mm_cvtss_f32(_mm_add_ss(h, _mm_shuffle_ps(h, h, 1))); };
+                sr = pfbN * pf.real() + hsum(accR); si = pfbN * pf.imag() + hsum(accI);
+            }
 #else
             float zr[kPllN], zi[kPllN];
             for (int a = 0; a < 4; a++)
@@ -631,7 +751,7 @@ struct Core {
             pllUpdate();
         }
         for (; k < nOut; k++) step1(k);
-        const int64_t keepFrom = (int64_t)std::floor(pos) - J - 1;
+        const int64_t keepFrom = ifloor(pos) - J - 1;
         if (keepFrom > (int64_t)inBase) {
             const size_t drop = std::min((size_t)(keepFrom - (int64_t)inBase), inRe.size());
             inRe.erase(inRe.begin(), inRe.begin() + drop);
@@ -688,7 +808,7 @@ struct Core {
 
     // ---------------------------------------------------------------- stage C: symbol clock
     float interpAt(double t) const {
-        const int64_t i0 = (int64_t)std::floor(t);
+        const int64_t i0 = ifloor(t);
         const int ph = std::min(kInterpPh - 1, (int)((t - (double)i0) * kInterpPh));
         const float* tp = &interp[(size_t)ph * 2 * kInterpJ];
         const float* base = &d[(size_t)(i0 - (int64_t)dBase - kInterpJ + 1)];
@@ -698,6 +818,12 @@ struct Core {
         p = vfmaq_f32(p, vld1q_f32(base + 8), vld1q_f32(tp + 8));
         q = vfmaq_f32(q, vld1q_f32(base + 12), vld1q_f32(tp + 12));
         return vaddvq_f32(vaddq_f32(p, q));
+#elif defined(DECT2_X86_DISPATCH)
+        // SSE2: the scalar version's four partial sums as the four lanes (same products and additions in the same order: the same bits)
+        __m128 s = _mm_mul_ps(_mm_loadu_ps(base), _mm_loadu_ps(tp));
+        for (int j = 4; j < 2 * kInterpJ; j += 4) s = _mm_add_ps(s, _mm_mul_ps(_mm_loadu_ps(base + j), _mm_loadu_ps(tp + j)));
+        const __m128 h = _mm_add_ps(s, _mm_movehl_ps(s, s));   // (s0 + s2), (s1 + s3)
+        return _mm_cvtss_f32(_mm_add_ss(h, _mm_shuffle_ps(h, h, 1)));
 #else
         float s[4] = {0, 0, 0, 0};   // four independent partial sums: no chain of sixteen dependent additions
         for (int j = 0; j < 2 * kInterpJ; j += 4) for (int l = 0; l < 4; l++) s[l] += base[j + l] * tp[j + l];
@@ -915,6 +1041,7 @@ struct Core {
     }
     void workerReset() { std::lock_guard<std::mutex> lk(jm); jobs.clear(); decResetReq = true; }
     void workerLoop() {
+        DenormalsOff ftz;   // x86: no microcode assists on denormal values (nothing elsewhere)
         for (;;) {
             Job j;
             bool doReset = false;
@@ -1160,6 +1287,10 @@ struct Core {
         for (int k = 0; k < L; k++) wr[k] = tp.ff[L - 1 - k];
         const int64_t first = v.f0 + kNFf - (L - 1);
         for (size_t k = 0; k < xr.size(); k++) xr[k] = v.at(first + (int64_t)k);
+#if defined(DECT2_X86_DISPATCH)
+        if (cpuHasAvx2()) corrAvx2(xr.data(), wr.data(), ffo.data(), kFieldSyms, L);
+        else
+#endif
         convCorr(xr.data(), wr.data(), ffo.data(), 1, kFieldSyms, L);
         stFf.stop();
         DECT2_STAGE("atsc.eq.dfe");
@@ -1179,12 +1310,15 @@ struct Core {
             for (int k = 0; k < kG; k++) for (int m = 0; m + k < B; m++) fbs[(size_t)k * B + m] = tp.fb[(size_t)(m + k)];
         }
         const float* fbt = tp.fb.data();
+#if defined(DECT2_X86_DISPATCH)
+        const bool avx2 = cpuHasAvx2();
+#endif
         double mse = 0; int nm = 0;
         auto decide = [&](int i, float y) {
             float dec;
             if (i < 728) dec = fsLv[i];
             else if (i % kSegSyms < 4) dec = syncLv[i % kSegSyms];
-            else dec = std::max(-7.f, std::min(7.f, 2.f * std::floor(y * 0.5f) + 1.f));
+            else dec = quant8(y);
             if (i >= std::max(B, 8) && i < 728) { const double e = y - fsLv[i]; mse += e * e; nm++; }
             lv[(size_t)i] = y;
             hv[(size_t)B + i] = dec;
@@ -1205,6 +1339,9 @@ struct Core {
                 const float* __restrict f1 = &fbs[(size_t)B];
                 const float* __restrict f2 = &fbs[(size_t)2 * B];
                 const float* __restrict f3 = &fbs[(size_t)3 * B];
+#if defined(DECT2_X86_DISPATCH)
+                if (avx2) { dfeAddAvx2(a, f0, f1, f2, f3, B, d0, d1, d2, d3); continue; }
+#endif
                 for (int m = 0; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
             }
         mse /= std::max(1, nm);
@@ -1290,7 +1427,7 @@ struct Core {
             for (int i = kSegSyms; i < kFieldSyms; i++) {
                 if (i % kSegSyms < 4) continue;
                 const float vv = lv[(size_t)i];
-                const float nearest = std::max(-7.f, std::min(7.f, 2.f * std::floor(vv * 0.5f) + 1.f));
+                const float nearest = quant8(vv);
                 dd += (vv - nearest) * (vv - nearest); cnt++;
                 if ((i * 2654435761u >> 7) % 128 == 0) levelsOut.push_back(vv);
             }
@@ -1455,6 +1592,7 @@ void AtscReceiver::setPacketCallback(std::function<void(const uint8_t*, size_t, 
 void AtscReceiver::feed(const cf32* x, size_t n) {
     if (!p_->c.ok || !n) return;
     DECT2_STAGE("atsc.input");
+    DenormalsOff ftz;   // x86: flush denormals while the receiver runs on the caller's thread (restored on return)
     std::vector<cf32> v(x, x + n);
     for (auto& s : v) if (!std::isfinite(s.real()) || !std::isfinite(s.imag())) s = cf32(0, 0);   // one bad sample would poison every loop for good
     p_->c.processInput(v, n);

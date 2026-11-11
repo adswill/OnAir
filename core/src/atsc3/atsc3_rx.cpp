@@ -1,3 +1,4 @@
+#include "dect2/dsp/simd.h"
 #include "dect2/common/stage_prof.h"
 #include "dect2/common/thread_name.h"
 #include <deque>
@@ -88,6 +89,7 @@ void Atsc3Rx::autoSelect() {
 }
 
 void Atsc3Rx::worker() {
+    DenormalsOff ftz;   // x86: no microcode assists on denormal values (nothing elsewhere)
     double lastTel = 0;
     while (!stop_) {
         std::vector<cf32> blk;
