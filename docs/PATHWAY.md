@@ -1784,3 +1784,6 @@ feat40-feat4: header-only mode helpers in core/include/dect2/d40/ (FM station na
 Features: AIS coverage / type mix / name cache, ATIS tracker, pager keywords and groups, callsign parser, mode guess, spot summary, tone identification, ISM classifier. docs/FEATURES-4.0-C.md, tests/feat40c (simulated only, headers not yet wired into the UI).
 
 Feat40-feat3 (later): ADS-B orbit detector, clear TX frequency, band hop, Sarsat incidents, DTMF numbers, ACARS channel load.
+
+## 2026-11-12 feat40-feat5: group E mode features
+- Satellite, HF, public safety, aviation, rail, LoRa and science helpers: `core/include/dect2/d40/{sat,hf,radio}_e40.h`, tests `sat_e40 hf_e40 radio_e40` (all pass locally, simulated data), doc `docs/FEATURES-4.0-E.md`. Core only, not wired into the GUI.
