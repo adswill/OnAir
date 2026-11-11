@@ -36,6 +36,8 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case SsbTest: return makeSsbTest();
     case Sinad: return makeSinad();
     case FskAnalyser: return makeFskAnalyser();
+    case YFactor: return makeYFactor();
+    case CwKeying: return makeCwKeying();
     default: return nullptr;
     }
 }
@@ -77,6 +79,8 @@ ModeTuning x40Tuning(int v) {
         {"ssbtest", 0.1, 500, 14.200, 48000, 12000, 0.004, false},
         {"sinad", 26, 6000, 146.520, 48000, 24000, 0.016, true},
         {"fskan", 0.1, 6000, 433.920, 250000, 48000, 0.1, false},
+        {"yfactor", 0.1, 6000, 145.000, 2000000, 250000, 0.2, false},
+        {"cwkeying", 0.1, 500, 7.030, 48000, 12000, 0.004, true},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

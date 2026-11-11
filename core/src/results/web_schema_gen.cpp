@@ -15658,6 +15658,8 @@ static const WebModeRow kRows[] = {
     {765, "SSB transmitter test meter", 13, "SSB test: carrier, opposite sideband, IMD3/5/7", "", 767, 766, ""},
     {766, "FM SINAD meter", 13, "FM SINAD: SINAD, THD, deviation", "", 768, 767, ""},
     {767, "FSK parameter analyser", 13, "FSK analyser: baud, levels, shift, index", "", 769, 768, ""},
+    {768, "Noise figure (Y-factor) meter", 13, "Noise figure: Y-factor, NF for the source ENR", "", 770, 769, ""},
+    {769, "CW keying quality meter", 13, "CW keying: wpm, dah ratio, gaps, weight, rise, chirp", "", 771, 770, ""},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},

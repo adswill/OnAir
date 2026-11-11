@@ -392,6 +392,8 @@
         <item>SSB transmitter test meter</item>
         <item>FM SINAD meter</item>
         <item>FSK parameter analyser</item>
+        <item>Noise figure (Y-factor) meter</item>
+        <item>CW keying quality meter</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -765,6 +767,8 @@
         <item>SSB transmitter test meter: tune the dial frequency while the transmitter sends one test tone or two: carrier leak, opposite sideband and audio harmonics (one tone), or IMD3, IMD5 and IMD7 under one tone and under PEP (two tones), with the sideband detected. Products under the noise are reported as such. It measures at this radio: use the attenuator to see that the numbers are the transmitter\'s. Simulated signals only</item>
         <item>FM SINAD meter: a carrier modulated with a test tone (1 kHz) read through the radio: SINAD in 300 - 3000 Hz (flat weighting), THD, peak deviation and carrier offset, with the 12 dB SINAD crossing logged. Measures the transmitter, the path and this SDR together; FM thresholding makes it fall faster than theory under about 10 dB carrier to noise. Simulated signals only</item>
         <item>FSK parameter analyser for an unknown FSK or GFSK signal: the symbol rate, 2 or 4 levels, the shift, the modulation index (MSK is 0.5), the centre frequency and the eye quality, to know which decoder to try and with what settings. A plain FM discriminator in the whole channel: needs a clean signal (about 18 dB over the noise in 50 kHz for 9600 Bd). Does not decode. Simulated signals only</item>
+        <item>Noise figure (Y-factor) meter: switch a noise source on and off in front of the receiver and read the step in the middle 200 kHz of the capture: Y in dB, and the receiver noise figure NF = ENR - 10 log(Y - 1) for the common source values (ENR 5, 6.5, 15, 25 dB; read the line for your source). Needs fixed gain (no AGC) and only noise in the band. Simulated signals only</item>
+        <item>CW keying quality meter for a keyed carrier within 1.5 kHz of the tuned frequency: speed in wpm (PARIS), dit and dah lengths and their ratio (ideal 3), element, character and word gaps as multiples of the dit, weight, dit scatter (keyer or hand), rise and fall times of the edges (key clicks) and chirp. Rise times under about 1.5 ms read 1.5 ms. Does not copy the text. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1122,6 +1126,8 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
@@ -1511,5 +1517,7 @@
         <item>ssb transmitter test imd intermodulation two tone carrier suppression opposite sideband harmonics pep linearity ham</item>
         <item>sinad fm thd distortion deviation sensitivity 12 db test tone 1 khz repeater audio quality</item>
         <item>fsk gfsk msk 4fsk symbol rate shift modulation index deviation unknown signal analyser baud</item>
+        <item>noise figure y factor nf enr noise source lna gain measurement sdr sensitivity hot cold</item>
+        <item>cw keying quality morse wpm dit dah weight spacing rise time key clicks chirp fist keyer</item>
     </string-array>
 </resources>
