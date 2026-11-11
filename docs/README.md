@@ -187,6 +187,7 @@ The table below is the list of topic pages.
 | [TMC-PLAIN-3.9.md](TMC-PLAIN-3.9.md) | RDS-TMC in plain words and your own TMC files |
 | [HDMI-EMISSION-3.9.md](HDMI-EMISSION-3.9.md) | Display / HDMI emission finder |
 | [DABSITES-3.9.md](DABSITES-3.9.md) | DAB map: transmitter positions and zoom |
+| [PLUGIN-MARKETPLACE-3.9.md](PLUGIN-MARKETPLACE-3.9.md) | Plugin Store: signed registry design, client and tools |
 | [TXFEAT-3.9.md](TXFEAT-3.9.md) | DTMF keypad and DMR slot sync (transmit) |
 | [R4-PER-MODE-3.9.md](R4-PER-MODE-3.9.md) | Round 4 per-mode features (index of the pages below) |
 | [SMART5-LIST-3.9.md](SMART5-LIST-3.9.md) | Round 5 smart features (index; the SMART5-*-3.9.md pages follow it) |
