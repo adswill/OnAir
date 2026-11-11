@@ -3,6 +3,7 @@
 #include "dect2/common/mathconst.h"
 #include "dect2/fec/fec_proto.h"
 #include "isdbs_fec.h"
+#include <array>
 #include <cmath>
 #include <cstring>
 
@@ -199,10 +200,18 @@ const std::array<float, 20>& w2Tail() { static const auto a = wordTail(kW2); ret
 
 cf32 psk8Point(int label) {
     // (W, Y, X): 000 at 0 degrees, then 001, 011, 010 every 45 degrees; W = 1 is the opposite point
-    static const int kGray[4] = {0, 1, 3, 2};   // (Y, X) = 00, 01, 10, 11 -> 0, 1, 3, 2
-    const int idx = ((label >> 2) & 1) * 4 + kGray[label & 3];
-    const double a = dect2::math::kPi * 0.25 * idx;
-    return cf32((float)std::cos(a), (float)std::sin(a));
+    // worked out once: the receiver asks for a point per TC8PSK symbol
+    static const auto tab = [] {
+        static const int kGray[4] = {0, 1, 3, 2};   // (Y, X) = 00, 01, 10, 11 -> 0, 1, 3, 2
+        std::array<cf32, 8> t{};
+        for (int l = 0; l < 8; l++) {
+            const int idx = ((l >> 2) & 1) * 4 + kGray[l & 3];
+            const double a = dect2::math::kPi * 0.25 * idx;
+            t[(size_t)l] = cf32((float)std::cos(a), (float)std::sin(a));
+        }
+        return t;
+    }();
+    return tab[(size_t)(label & 7)];
 }
 
 }  // namespace isdbs

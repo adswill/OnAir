@@ -606,6 +606,76 @@ pre-check keeps the demodulator off; `xb_dmsp/noise` is out of `qa_known.inc`); 
 metopd 3.9 CPU s/s (the doc's table above is from a CI runner: compare within a run). test_xband_rx: every link's own tests unchanged,
 plus noise alone on all 20 links (0 frames, 86 - 88 % of the input skipped). Simulated signals only.
 
+### The other wide downlinks (feat39-widecpu)
+
+ISDB-S, FY-3 MPT, Elektro-L / Arktika-M RDAS and GEONETCAST (DVB-S2 through the DVB-S receiver). Profiled first with per-stage thread
+CPU timers and tick counters in a bench that feeds each receiver the sweep's own test files (no sampling profiler):
+
+| receiver | on noise the time went to | on a clean signal |
+|---|---|---|
+| ISDB-S | the frame search: derotation (cos and sin in double each symbol) and the sync metric at every start, 30 candidates every fourth window | the Viterbi (scalar, 64 states, a branch per state): 4.2 of 6.5 s |
+| FY-3 MPT | the whole demodulator, all the time (the code search waits 0.15 s of symbols between tries, and the demodulator ran through the wait); an `atan2` and `remainder` a symbol for a debug statistic | the same chain |
+| RDAS | the demodulator, locked to nothing (acquisition always ended "acquired"): cos and sin in double each sample, an in-order 13-tap sum, two `hypot` a symbol | the same |
+| GEONETCAST | the DVB-S2 hunt on the noise band (it looks like a carrier): the front end between tries, then the PLHEADER fit (256 code words, scalar, `hypot` each) | LDPC on the worker threads |
+
+Changes:
+
+- **ISDB-S** (`core/src/isdbs/`): a search window with no frame lets the next seven windows' input go by without the front end (24
+  frames after the slow full-range search, as before), so every window that is looked at still gets the whole search: no sensitivity
+  is lost, the lock comes up to 10 ms later. While searching it reports every 0.5 s of signal (before: one report for the whole noise
+  file). The Viterbi lays out the two branches into each pair of states side by side (the same sums and comparisons, it vectorises:
+  2.6x), the first sync metric is worked out for eight starts at a time (the same sums), the derotations use a double recurrence
+  between exact cos / sin every 512 symbols, and the 8PSK points come from a table.
+- **FY-3** (`core/src/fy3/fy3_rx.cpp`): when the code search has failed and the Es/N0 estimate is under -4 dB (white noise reads 0.05 -
+  0.16, a signal at +1 dB 1.0; the code needs +3 dB), the demodulator runs on one block of input in eight during the wait. When the
+  estimate comes up, the carrier loop opens to pull the signal in and the code search follows 30 ms later. The carrier NCO uses the
+  sine table (`FastSinCos`); the debug statistic only runs with `FY3_DEBUG2`.
+- **RDAS** (`core/src/wxsat/wxsat_rx.cpp`): a no-signal gate. When the acquisition finds no BPSK line (peak to mean under 40; noise
+  peaks at about 10, a signal at 0 dB Es/N0 at 2000) the demodulator stays off and the next seven blocks go by. This also ends the false
+  frames on noise (the RDAS sync word has no check): `elektrordas/noise` and `arktikardas/noise` pass and are out of `qa_known.inc`.
+  All wxsat links: the NCO from the sine table, the matched filter summed in eight lanes, the timing gains once, `std::norm` for the
+  AGC, the SNR worked out when it is reported.
+- **DVB-S receiver** (`core/src/dvbs/`, so DVB-S/S2 and GEONETCAST): after a failed attempt the next one looks only at the last 294912
+  symbols, so the input before those (less 65536 for the timing loop) goes by without the front end. The first attempt after a carrier
+  is found sees exactly the symbols it did before. The PLHEADER fit sums all 256 code words at once (the same products in the same
+  order: checked bit for bit) and takes `|s|` only for a word that can beat its best. After a whole round of symbol rates with no frames
+  the spectrum is measured again: a carrier measured on the noise before the signal came up was hunted at the wrong centre for good.
+- `idleInputSamples()` on the four receivers counts the input that was let go by (tests).
+
+Measured on this Mac, the same files before and after. **Engine** = the sweep's own child (`--run`, file source, all threads, steady
+state); **receiver** = the receiver alone, fed the file directly, process CPU (DVB-S2's LDPC runs on worker threads).
+
+| mode | Msps | noise before | noise after | clean before | clean after | engine noise before -> after | engine clean before -> after |
+|---|---|---|---|---|---|---|---|
+| isdbs | 48 | 2.12 | 0.68 | 4.35 | 2.25 | 2.50 -> 1.02 | 4.83 -> 2.86 |
+| fy3mpt | 20 | 2.65 | 0.24 | 3.56 | 2.88 | 2.79 -> 0.35 | 3.63 -> 3.09 |
+| elektrordas | 45 | 2.61 | 0.08 | 2.59 | 2.04 | 3.00 -> 0.37 | 2.98 -> 2.44 |
+| arktikardas | 45 | 2.62 | 0.08 | 2.62 | 2.02 | 2.99 -> 0.36 | 2.98 -> 2.43 |
+| geonetcast | 52 | 1.30 | 0.58 | 2.33 | 2.29 | 1.54 -> 1.00 | 2.75 -> 2.80 |
+
+(GEONETCAST noise on the receiver: 5.2 s, the 1.3 s file four times; the hunt's interval only settles after a few seconds.) At these
+rates the engine itself (reading and converting the file) costs about 0.3 CPU s/s, which is most of what is left on noise for FY-3 and
+RDAS. GEONETCAST's clean cost is LDPC and did not change.
+
+Frames on the clean signals: the receiver bench hashes everything decoded (ISDB-S transport packets, FY-3 frame counters, virtual
+channels and picture rows, wxsat counters and saved results, DVB-S2 file layer). Every clean file gives the same hash before and after,
+and `idleInputSamples()` is 0 on all of them. The receivers' own tests give the same output before and after: `test_isdbs` (and its
+sensitivity sweep: the same good packets at every Es/N0 down to BPSK 1 dB; one 3 dB case moves 2 of 4608 packets from "clean" to "RS
+corrected"), `test_fy3_rx`, `test_wxsat_rx`, `test_dvbs_rx`, `rx2`, `rx3`, `impair`, `vlsnr`, `s2x` (`rx3`'s symbol-dump check
+failed in some runs before and after: the dump file's timing). At the FY-3 threshold (3 dB) the frames are the same and the RS correction count moves by 2, which
+the compiler's inlining alone also does. The sweep for the five modes: all pass all five conditions.
+
+A signal that comes up after noise (the noise file, then the clean one): ISDB-S first packets 23 ms after the switch (34 ms before);
+FY-3 0.25 s (1.0 s before); RDAS 10 ms, 5988 frames in the 1.6 s (before: 86, most of them false ones from the noise: the demodulator
+had locked to the noise and waits for a reacquisition every 2.5 s); GEONETCAST 0.65 - 1.7 s (before 0.65 - 1.0 s), because the
+noise gave a wrong centre either way (after a long noise stretch the new spectrum measurement finds the right one: 1552 frames
+against 929). New tests: ISDB-S and RDAS noise then a signal, MPT noise (82 % let go by, a report every 0.25 s), a
+5 dB AHRPT signal that is never taken for noise.
+
+The noise CPU of every other mode in the sweep (all 237 others, the same child, this Mac): none is above 1 CPU s/s. The highest are
+`gk2auhrit` 1.00 (30 Msps), `gk2ahrit` 0.97, `goesgrb` 0.77, `msgraw` 0.75, `fpv` 0.71; ATSC 1.0 was left out (another worker's).
+Simulated signals only.
+
 ## Still failing (open)
 
 These failures are not explained by the condition. They are in `qa_known.inc` as `open`, so the test passes today, but each needs a look at its mode.
@@ -620,4 +690,6 @@ Both halves of the list were worked through (feat39-qafixA: arktikaggak .. kait;
   error. It reported only three more memcpy-from-null sites (DAB generator, DMR bridge, DRM bridge: all fixed) and an ATSC spectrum check
   (ATSC belongs to another worker). With no overflow or use-after-free found, the corruption is most likely a data race between those
   six Engines. The next step is a ThreadSanitizer run of `iq_modes` (`DECT2_SANITIZE_THREAD=ON`).
-- CPU: the other wide downlinks of the top ten (ISDB-S, FY-3 MPT, Elektro / Arktika RDAS, GEONETCAST) were not touched here.
+- CPU: the other wide downlinks of the top ten (ISDB-S, FY-3 MPT, Elektro / Arktika RDAS, GEONETCAST) were not touched here; see
+  "The other wide downlinks (feat39-widecpu)". Still dear on noise there: ISDB-S's slow full-range search (every fourth window, 30
+  carrier candidates) and the DVB-S2 header hunt's frame-length sums.

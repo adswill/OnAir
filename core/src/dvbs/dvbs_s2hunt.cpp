@@ -20,6 +20,9 @@ struct Ref {
     bool valid[256];
     cf32 rs[25];          // s[k+1] conj(s[k]) of the SOF, +-j
     cf32 rp[32];          // the same for the pairs of the PLS code (pilot flag 0; the flag turns the sign)
+    // the PLS part (symbols 26 .. 89) conjugated, symbol major: one symbol's value for all 256 words side by side, so that the fit sums
+    // all the words at once in vector code
+    alignas(64) float cr[64][256], ci[64][256];
     Ref() {
         for (int c = 0; c < 256; c++) {
             int mc; bool sh, pil;
@@ -27,6 +30,8 @@ struct Ref {
             valid[c] = s2PlsKind(c) >= 0;
             s2PlHeader(mc, sh, pil, hdr[c]);
         }
+        for (int k = 0; k < 64; k++)
+            for (int c = 0; c < 256; c++) { const cf32 h = std::conj(hdr[c][26 + k]); cr[k][c] = h.real(); ci[k][c] = h.imag(); }
         const cf32* h0 = hdr[0];
         for (int k = 0; k < 25; k++) rs[k] = h0[k + 1] * std::conj(h0[k]);
         for (int i = 0; i < 32; i++) rp[i] = h0[27 + 2 * i] * std::conj(h0[26 + 2 * i]);
@@ -70,6 +75,32 @@ HdrFit fitHeader(const cf32* v, double gCenter, double gSpan, double gStep, bool
             for (int k = 0; k < 90; k++) { w[k] = u[k] * r; r *= st; }
             cf32 sSof(0, 0);
             for (int k = 0; k < 26; k++) sSof += w[k] * std::conj(R.hdr[0][k]);
+            if (only < 0) {
+                // every word: the sums of the 64 PLS symbols for the 256 words together (the products as std::complex forms them, in the
+                // same order of symbols), then |s| only for a word whose squared sum can beat its best so far
+                alignas(64) float sr[256], si[256];
+                for (int c = 0; c < 256; c++) { sr[c] = sSof.real(); si[c] = sSof.imag(); }
+                for (int k = 0; k < 64; k++) {
+                    const float a = w[26 + k].real(), b = w[26 + k].imag();
+                    const float* hr = R.cr[k];
+                    const float* hi = R.ci[k];
+                    for (int c = 0; c < 256; c++) {
+                        const float ac = a * hr[c], bd = b * hi[c];
+                        const float ad = a * hi[c], bc = b * hr[c];
+                        const float re = ac - bd, im = ad + bc;
+                        sr[c] += re; si[c] += im;
+                    }
+                }
+                const float n2 = norm * norm;
+                for (int c = 0; c < 256; c++) {
+                    if (!R.valid[c]) continue;
+                    if (bestS[c] >= 0 && (sr[c] * sr[c] + si[c] * si[c]) * n2 < bestS[c] * bestS[c] * 0.9999f) continue;   // cannot win (rounding margin 1e-4)
+                    const cf32 sc(sr[c], si[c]);
+                    const float rho = std::abs(sc) * norm;
+                    if (rho > bestS[c]) { bestS[c] = rho; bestC[c] = sc; bestG[c] = g; bestI[c] = inv != 0; }
+                }
+                continue;
+            }
             for (int c = 0; c < 256; c++) {
                 if (!R.valid[c] || (only >= 0 && c != only)) continue;
                 cf32 s = sSof;
