@@ -206,7 +206,7 @@ static void ipOutputControls(App& a, uint64_t packetsSeen) {
         io.configure(n);
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Every IP packet (DVB-H MPE, DVB-C2 GSE) goes to broadcast_ip.pcap in the data folder (libpcap, link type RAW). Open it in Wireshark. Switching it on again starts a new file."));
-    if (ImGui::TreeNode(tr("Advanced: forward over UDP"))) {
+    if (ImGui::TreeNode(trw("Advanced: forward over UDP"))) {
         ImGui::SetNextItemWidth(140 * gUi);
         ImGui::InputText(tr("address"), host, sizeof host);
         ImGui::SameLine();

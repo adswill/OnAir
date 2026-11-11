@@ -69,6 +69,7 @@
 #include "dect2/psk/psk_rx.h"
 #include "dect2/qo100/qo100_rx.h"
 #include "dect2/rclink/rc_rx.h"
+#include "dect2/rid/rid_rx.h"
 #include "dect2/roshf/roshf_rx.h"
 #include "dect2/same/same_rx.h"
 #include "dect2/satmisc/satdetect_live.h"
@@ -151,13 +152,14 @@ static bool set_11(Engine& e, const std::string& n, double v) {
     if (n == "setChannelFilterHz") { call(r, &Rx<decltype(r)>::setChannelFilterHz, v); return true; }
     return false;
 }
-static const char kOpt_12[] = R"JSON([{"n":"setCorrection","k":"int","l":"Correction","h":"error correction of DF11 / 17 / 18: 0 off, 1 one bit, 2 up to three bits among the least certain ones (the app default)","t":"s"},{"n":"setDropSec","k":"num","l":"Drop Sec","h":"the display option: how long a silent aircraft stays in the table and on the map (0: the expiry above; a huge value: never)","u":"s","t":"s"},{"n":"setExpiry","k":"num","l":"Expiry","h":"an aircraft that has been silent this long leaves the table (default 60)","t":"s"},{"n":"setCoherent","k":"bool","l":"Coherent","t":"s"},{"n":"setEffort","k":"int","l":"Effort","t":"a"}])JSON";
+static const char kOpt_12[] = R"JSON([{"n":"setCorrection","k":"int","l":"Correction","h":"error correction of DF11 / 17 / 18: 0 off, 1 one bit, 2 up to three bits among the least certain ones (the app default)","t":"s"},{"n":"setDropSec","k":"num","l":"Drop Sec","h":"the display option: how long a silent aircraft stays in the table and on the map (0: the expiry above; a huge value: never)","u":"s","t":"s"},{"n":"setExpiry","k":"num","l":"Expiry","h":"an aircraft that has been silent this long leaves the table (default 60)","t":"s"},{"n":"setCoherent","k":"bool","l":"Coherent","t":"s"},{"n":"setOverlap","k":"bool","l":"Overlap","h":"test knob: overlapping-reply recovery (AdsbDemod::setOverlap), on by default","t":"a"},{"n":"setEffort","k":"int","l":"Effort","t":"a"}])JSON";
 static bool set_12(Engine& e, const std::string& n, double v) {
     auto& r = e.adsb();
     if (n == "setCorrection") { call(r, &Rx<decltype(r)>::setCorrection, v); return true; }
     if (n == "setDropSec") { call(r, &Rx<decltype(r)>::setDropSec, v); return true; }
     if (n == "setExpiry") { call(r, &Rx<decltype(r)>::setExpiry, v); return true; }
     if (n == "setCoherent") { call(r, &Rx<decltype(r)>::setCoherent, v); return true; }
+    if (n == "setOverlap") { call(r, &Rx<decltype(r)>::setOverlap, v); return true; }
     if (n == "setEffort") { call(r, &Rx<decltype(r)>::setEffort, v); return true; }
     return false;
 }
@@ -429,6 +431,12 @@ static bool set_56(Engine& e, const std::string& n, double v) {
     if (n == "setCwPitchHz") { call(r, &Rx<decltype(r)>::setCwPitchHz, v); return true; }
     if (n == "setAmDetector") { call(r, &Rx<decltype(r)>::setAmDetector, v); return true; }
     if (n == "setListenHz") { call(r, &Rx<decltype(r)>::setListenHz, v); return true; }
+    return false;
+}
+static const char kOpt_57[] = R"JSON([{"n":"setGate","k":"bool","l":"Gate","h":"test knob: the burst gate (on by default); off hands every sample to both demodulators","t":"s"}])JSON";
+static bool set_57(Engine& e, const std::string& n, double v) {
+    auto& r = e.rid();
+    if (n == "setGate") { call(r, &Rx<decltype(r)>::setGate, v); return true; }
     return false;
 }
 static const char kOpt_59[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
@@ -920,11 +928,13 @@ static bool set_742(Engine& e, const std::string& n, double v) {
     if (n == "setBlocking") { call(r, &Rx<decltype(r)>::setBlocking, v); return true; }
     return false;
 }
-static const char kOpt_747[] = R"JSON([{"n":"setBandwidth","k":"num","l":"Bandwidth","h":"0 automatic (default), or 8, 7, 6, 5, 1.7","t":"s"},{"n":"setLowPriority","k":"bool","l":"Low Priority","h":"hierarchical 16-QAM: the LP stream","t":"s"}])JSON";
+static const char kOpt_747[] = R"JSON([{"n":"setBandwidth","k":"num","l":"Bandwidth","h":"0 automatic (default), or 8, 7, 6, 5, 1.7","t":"s"},{"n":"setLowPriority","k":"bool","l":"Low Priority","h":"hierarchical 16-QAM: the LP stream","t":"s"},{"n":"setWaveform","k":"int","l":"Waveform","h":"0 automatic (default): OFDM and TDM tried in turn, 1 OFDM (SH-A) only, 2 TDM (SH-B) only","t":"s"},{"n":"setTdmGoldCode","k":"int","l":"Tdm Gold Code","h":"TDM PL scrambling code number (default 0)","t":"s"}])JSON";
 static bool set_747(Engine& e, const std::string& n, double v) {
     auto& r = e.dvbsh();
     if (n == "setBandwidth") { call(r, &Rx<decltype(r)>::setBandwidth, v); return true; }
     if (n == "setLowPriority") { call(r, &Rx<decltype(r)>::setLowPriority, v); return true; }
+    if (n == "setWaveform") { call(r, &Rx<decltype(r)>::setWaveform, v); return true; }
+    if (n == "setTdmGoldCode") { call(r, &Rx<decltype(r)>::setTdmGoldCode, v); return true; }
     return false;
 }
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
@@ -969,6 +979,7 @@ const OptEntry kOpt[] = {
     {54, kOpt_54, set_54},
     {55, kOpt_55, set_55},
     {56, kOpt_56, set_56},
+    {57, kOpt_57, set_57},
     {59, kOpt_59, set_59},
     {60, kOpt_60, set_60},
     {61, kOpt_61, set_61},

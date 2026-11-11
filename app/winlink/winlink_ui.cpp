@@ -500,7 +500,7 @@ void settings() {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("Off by default. When on, a Telnet gateway in the list connects over the internet to the host you entered; nothing connects until you press Connect."));
     ImGui::PopTextWrapPos();
-    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
         if (ImGui::Checkbox(tr("Resume a message that was cut off (ask only for the rest)"), &d.resumeOn)) plat::prefs().setB("winlinkResume", d.resumeOn);
         const std::vector<std::string> parts = d.mb.partials();
         if (!parts.empty()) {
