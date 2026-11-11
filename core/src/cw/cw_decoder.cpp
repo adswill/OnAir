@@ -468,8 +468,8 @@ struct FistDecoder::Impl {
 
     // the three gap classes (inside a character, between characters, between words) from a window of gaps (ln, relative to the dot).
     // Started from the data rather than from fixed shares: the shortest quarter gives the gap inside a character, the median of the
-    // longer ones the gap between characters, their top the word gap. Farnsworth spacing puts the character gaps at 8 - 12 dots and the word gaps at 20 - 30, where share-based starting points
-    // landed inside the class of short gaps. A fit with more word gaps than character gaps is not Morse spacing (a run of split marks
+    // longer ones the gap between characters, their top the word gap. Farnsworth spacing puts the character gaps at 8 - 12 dots and
+    // the word gaps at 20 - 30, where share-based starting points landed inside the class of short gaps. A fit with more word gaps than character gaps is not Morse spacing (a run of split marks
     // made a false class) and is not taken.
     // minCnt: the fewest gaps a class needs (the backlog at the lock has only a few characters)
     bool fitGaps(const float* v, int m, float w, int minCnt = 4) {

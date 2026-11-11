@@ -1543,3 +1543,14 @@ The four leftovers of SENSITIVITY-3.9-C/-D, measured before and after on simulat
 - GNSS: the cold search runs the first window with 64 ms right after the 16 ms round. A 32 dB-Hz sky: 0 -> 3 of 8 satellites in 34 s. 4 ms coherent integration was measured (no gain per CPU) and not kept.
 - HD Radio AM: the prefix filter no longer switches while block numbers are read, each filter keeps its frequency, the carrier corrects the frequency in sync, and the carrier's phase wander is removed per sample. sens_sweep awgn and cfo20ppm 22 -> 18 dB, lock 11 -> 7.5 s. 3 Hz phase noise still fails (a limit of the scenario).
 - CW: the adaptive timing decoder (cw_decoder.h) was measured in the skimmer; it is better for irregular fists and worse at low SNR and with Farnsworth spacing, so the skimmer is unchanged.
+
+## 2026-11-11 CW skimmer on the adaptive timing (feat39-cwfist)
+
+FistDecoder's weak points from sensE are fixed, and the skimmer now uses it (docs/SENSITIVITY-3.9-E.md section 3, simulated only).
+- Wide gap classes for Farnsworth. Gap classes are fitted from the data, including the backlog at the lock.
+- At low SNR: a lock and mark fit that ignore noise blips and are anchored on the dashes, and soft merges of split marks and noise
+  spikes decided by the model when the detector is noisy.
+- A beam option for noise at the start of a word, which fixes the first character after a pause.
+- After a pause, the next word is held and the speed is re-estimated. A lost lock keeps the learned classes.
+- Receiver CER, 4 seeds: machine 2 dB 13.2 -> 6.6, sloppy 10 dB 20.4 -> 6.6, Farnsworth 4 dB 18.0 -> 8.7. No scenario point is worse.
+- The 0.2.7 timing is kept behind CwReceiver::setTimingDecoder(1). New test cw_fistrx and bench tests/cw/cw_skim_bench.cpp.
