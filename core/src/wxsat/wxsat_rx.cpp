@@ -901,6 +901,7 @@ void WxsatReceiver::clearImage() {
     p_->clearReq = true;
 }
 void WxsatReceiver::feed(const cf32* x, size_t n) { p_->feed(x, n); }
+uint64_t WxsatReceiver::idleInputSamples() const { return p_->dem.gateSkipped + (p_->dvb ? p_->dvb->idleInputSamples() : 0); }
 bool WxsatReceiver::telemetry(WxsatTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->pub.seq == lastSeq) return false;

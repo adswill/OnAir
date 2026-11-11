@@ -267,6 +267,7 @@ struct Fy3Receiver::Impl {
     uint64_t seq = 0;
     int64_t nIn = 0;
     int64_t idleLeft = 0, idleRun = 0;   // input samples still to let go by; processed since the last skip
+    uint64_t idleTotal = 0;              // input samples let go by (tests)
     bool idled = false;
     bool idle() const { return !railLocked && holdSyms > kWarmSyms && stage >= 1 && coarseDone && !wideOn && nSym > 4000 && snrLin < kIdleSnr; }
     double nextReport = 0, power = 0;
@@ -1135,6 +1136,7 @@ void Fy3Receiver::feed(const cf32* x, size_t n) {
             const int64_t k = std::min<int64_t>(m.idleLeft, (int64_t)(n - i));
             m.idleLeft -= k;
             m.nIn += k;
+            m.idleTotal += (uint64_t)k;
             m.holdSyms = std::max<int64_t>(kWarmSyms, m.holdSyms - (int64_t)((double)k * m.rs / m.rate));
             i += (size_t)k - 1;
             if ((double)m.nIn >= m.nextReport) { m.nextReport += kPubSec * m.rate; m.report(); }
@@ -1153,6 +1155,8 @@ void Fy3Receiver::feed(const cf32* x, size_t n) {
         }
     }
 }
+
+uint64_t Fy3Receiver::idleInputSamples() const { return p_->idleTotal; }
 
 bool Fy3Receiver::telemetry(Fy3Telemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);

@@ -38,6 +38,7 @@ public:
     void clearImage();                    // start new pictures
     void feed(const cf32* x, size_t n);
     bool telemetry(Fy3Telemetry& out, uint64_t lastSeq);
+    uint64_t idleInputSamples() const;   // input samples let go by unprocessed while there was no signal (the no-signal pre-check; tests)
     void clearResults();
     std::string saveResults() const { return {}; }        // pictures are saved as PNG from the screen, not kept in the results file
     bool loadResults(const std::string&) { return false; }

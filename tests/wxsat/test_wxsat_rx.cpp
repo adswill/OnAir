@@ -4,10 +4,12 @@
 #include "dect2/wxsat/wxsat_rx.h"
 #include "dect2/wxsat/wxsat_tel.h"
 #include "dect2/hrpt/hrpt_tel.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdint>
 #include <cstdlib>
+#include <random>
 #include <string>
 #include <vector>
 using namespace dect2;
@@ -108,6 +110,40 @@ int main(int argc, char** argv) {
     // RDAS
     { Case k{kWxElektroRdas, 45e6, 0.5, 18, 300e3, 0, 30, 2, 400}; WxsatTelemetry t = run(k); CHECK(t.blocksOk >= 400, "rdas"); CHECK(t.packets >= 50, "rdas packets %llu", (unsigned long long)t.packets); }
     { Case k{kWxArktikaRdas, 45e6, 0.4, 18, -200e3, 0, -20, 1, 200}; expect(k); }
+    {   // RDAS on noise: no frames (the sync word has no check of its own), the demodulator off for most of it, a report every 0.1 s;
+        // then the signal comes up and is decoded
+        const double fs = 45e6;
+        WxsatReceiver rx(kWxElektroRdas);
+        rx.configure(fs);
+        std::mt19937 rng(12);
+        std::normal_distribution<float> nd(0.f, 0.35f);
+        std::vector<cf32> buf(1 << 16);
+        WxsatTelemetry t;
+        uint64_t seq = 0, fed = 0, lastRep = 0, maxGap = 0;
+        while (fed < (uint64_t)(0.4 * fs)) {
+            for (auto& v : buf) v = cf32(nd(rng), nd(rng));
+            rx.feed(buf.data(), buf.size()); fed += buf.size();
+            if (rx.telemetry(t, seq)) { seq = t.seq; maxGap = std::max(maxGap, fed - lastRep); lastRep = fed; }
+        }
+        const double idle = (double)rx.idleInputSamples() / (double)fed;
+        printf("  RDAS noise: %s, %llu frames, %.0f %% of the input let go by, longest gap between reports %.2f s\n", wxsatSummary(t).c_str(), (unsigned long long)t.blocksOk, 100 * idle, maxGap / fs);
+        CHECK(t.blocksOk == 0, "rdas noise: %llu frames", (unsigned long long)t.blocksOk);
+        CHECK(idle > 0.7, "rdas noise: only %.0f %% let go by", 100 * idle);
+        CHECK(maxGap <= (uint64_t)(0.2 * fs), "rdas noise: %.2f s without a report", maxGap / fs);
+        WxsatGenConfig g; g.profile = kWxElektroRdas; g.rate = fs; g.snrDb = 10; g.cfoHz = 150e3; g.seed = 8;
+        WxsatGenerator gen(g);
+        const uint64_t idle0 = rx.idleInputSamples();
+        uint64_t firstAt = 0;
+        for (uint64_t done = 0; done < (uint64_t)(0.4 * fs); done += buf.size()) {
+            gen.generate(buf.data(), buf.size());
+            rx.feed(buf.data(), buf.size());
+            if (rx.telemetry(t, seq)) seq = t.seq;
+            if (!firstAt && t.blocksOk > 0) firstAt = done + buf.size();
+        }
+        printf("  RDAS after the noise: %llu frames, first %.3f s after the signal started\n", (unsigned long long)t.blocksOk, firstAt / fs);
+        CHECK(t.blocksOk >= 300 && firstAt > 0 && firstAt < (uint64_t)(0.06 * fs), "rdas after noise: %llu frames, first at %.3f s", (unsigned long long)t.blocksOk, firstAt / fs);
+        CHECK(rx.idleInputSamples() - idle0 < (uint64_t)(0.05 * fs), "rdas: the signal was let go by");
+    }
     // AWS
     { Case k{kWxAws, 6e6, 2.0, 10, 28e3, -700, 40, 40, 250}; WxsatTelemetry t = run(k); CHECK(t.blocksOk >= 250, "aws"); CHECK(t.lines >= 40, "aws lines"); if (t.image) CHECK(t.image->channels == 19, "aws ch"); }
     // GGAK

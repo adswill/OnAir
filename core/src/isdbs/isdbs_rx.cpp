@@ -288,6 +288,7 @@ struct IsdbsReceiver::Impl {
     int failures = 0;
     uint64_t idleSkip = 0;                      // input samples to let go by (no front end) before the next search window
     uint64_t sinceTel = 0;                      // input samples since the last report
+    uint64_t idleTotal = 0;                     // input samples let go by (tests)
     bool search() {
         if (sy.size() - head < kSearchWin) return false;
         const cf32* w = sy.data() + head;
@@ -656,7 +657,7 @@ void IsdbsReceiver::feed(const std::complex<float>* x, size_t n) {
     while (n) {
         if (!m.locked && m.idleSkip) {
             const size_t k = (size_t)std::min<uint64_t>(m.idleSkip, n);
-            x += k; n -= k; m.idleSkip -= k;
+            x += k; n -= k; m.idleSkip -= k; m.idleTotal += k;
             if (m.idleSkip) break;
             m.front.reset();   // the next window starts on fresh samples
         }
@@ -669,6 +670,8 @@ void IsdbsReceiver::feed(const std::complex<float>* x, size_t n) {
     // a stream change the interface asked for
     if (m.cfg.valid && m.selRequest != m.active && m.selRequest >= 0 && m.cfg.packetsOf(m.selRequest) > 0) { Tmcc t = m.cfg; m.applyConfig(t); }
 }
+
+uint64_t IsdbsReceiver::idleInputSamples() const { return p_->idleTotal; }
 
 bool IsdbsReceiver::telemetry(IsdbsTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> l(p_->mu);
