@@ -133,6 +133,43 @@ tests/web/test_web_schema.cpp fails when a new row joins this list, so a new mod
 * `tests/server/test_webapp.cpp` (ctest `webapp`): the server side, including selecting every mode row through the API.
 * `tests/web/app.test.js` (ctest `web_app_client`): the page's `buildPanel`, table columns, search, frames, the audio ring.
 
+## Mode options
+
+`tools/gen_web_options.py` (it imports the panel generator's header reader) writes `core/src/results/web_options_gen.cpp`:
+
+```
+engine_telemetry.cpp   standard -> RxTelemetry member (the same map as the panels)
+engine.h               member name -> Engine accessor of that receiver (e.g. AdsbReceiver& adsb())
+the receiver's header  public one-argument setters: void setX(bool | int | float | double | enum v);  // comment
+        |
+        v
+web_options_gen.cpp:   kOpt_<standard>   the option schema (JSON)
+                       set_<standard>    if (name == "setX") call(e.adsb(), &AdsbReceiver::setX, value)
+```
+
+| key | meaning |
+|---|---|
+| `n` | the setter's name |
+| `k` | `bool`, `int`, `num`, `choice` (an enum, or an int whose comment reads "0 a, 1 b, 2 c"), `mask` (an int whose comment lists powers of two) |
+| `l` | the setter's name split into words |
+| `h` | the setter's comment (the help text) |
+| `u` | the unit, from the name or the comment |
+| `c` | for `choice` and `mask`: `[{"v":value,"l":label}]` |
+| `t` | `s` Simple (the first four, declaration order) or `a` Advanced |
+
+The schema leaves out:
+
+* setters whose names say the engine, the radio settings or the app own them (offsets, centre, rates, gain, volume, mute, silent, sound
+  devices, files and folders, keys and passwords, transmit, record, callbacks, taps, threads, sessions; the list is `EXCLUDE` in the
+  script)
+* overloaded setters
+* static setters
+* setters in a non-public section
+
+`web_options.cpp` checks a value against its kind before the generated dispatch calls the setter (`applyOption`). The quick gate runs the
+script with `--check`. A new setter in a receiver's header is on the web the next time the script runs. The way to keep an internal
+setter off the page is a name the exclusion list matches.
+
 ## Adding to it
 
 * A new telemetry field: nothing to do beyond the header (and `python3 tools/gen_web_schema.py`).

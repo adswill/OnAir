@@ -6,6 +6,8 @@
 // Session is the connection logic alone (no sockets, the caller's clock) so the tests can drive it; Client adds the sockets and a thread.
 #pragma once
 #include "dect2/echolink/el_proto.h"
+#include "dect2/echolink/el_proxy.h"
+#include <condition_variable>
 #include "dect2/echolink/gsm610.h"
 #include <atomic>
 #include <cstdint>
@@ -25,6 +27,8 @@ const char* qsoStateName(QsoState s);   // "not connected", "connecting", "conne
 
 struct RxPacket { uint16_t seq; int nframes; uint8_t frames[kFramesPerPacket][kGsmFrameBytes]; };
 
+class Conference;
+
 class Session {
 public:
     // ctrl: the control port (else the audio port); the packet goes to ip:port
@@ -32,6 +36,7 @@ public:
     void setSend(SendFn f) { send_ = std::move(f); }
     void setLocal(const std::string& call, const std::string& name, const std::string& info);
     void setAcceptIncoming(bool on) { accept_ = on; }
+    void setInfo(const std::string& info);               // a new info text, sent at once when connected (a conference's station list)
 
     // Start a connection: SDES to ip at its audio port + 1, repeated every kKeepAliveMs, given up after kConnectRetries
     bool connect(const std::string& ip, int remoteAudioPort, int64_t nowMs);
@@ -47,6 +52,8 @@ public:
     const std::string& peerName() const { return peerName_; }
     const std::string& peerIp() const { return peerIp_; }
     const std::string& peerInfo() const { return peerInfo_; }   // the station's info text (a conference: who is connected)
+    int peerAudioPort() const { return peerAudio_; }
+    int peerCtrlPort() const { return peerCtrl_; }
     bool rxActive(int64_t nowMs) const { return state_ == QsoState::Connected && lastAudioMs_ >= 0 && nowMs - lastAudioMs_ < 300; }
     // what arrived since the last call
     std::vector<RxPacket> takeAudio();
@@ -87,7 +94,18 @@ struct ClientConfig {
     std::string bindAddress = "0.0.0.0";
     bool acceptIncoming = true;
     int directoryTimeoutMs = 10000;
+    // Host a conference: every station that connects joins, everyone hears everyone (el_conference.h). The callsign should be the
+    // conference's own (*NAME*), registered for it at echolink.org.
+    bool conference = false;
+    int conferenceMax = 10;
+    // Relay / proxy: all EchoLink traffic through one TCP connection to an EchoLink proxy (el_proxy.h), for a station whose UDP ports
+    // cannot be reached. Empty host = direct UDP. An empty password means a public proxy ("PUBLIC").
+    std::string proxyHost;
+    int proxyPort = kProxyPort;
+    std::string proxyPassword;
 };
+
+struct ConferenceMemberStatus { std::string call, name, ip; bool connecting = false, talking = false; uint64_t packetsIn = 0, lost = 0; };
 
 struct ClientStatus {
     bool portsOpen = false;
@@ -99,6 +117,10 @@ struct ClientStatus {
     bool rx = false, tx = false;
     uint64_t packetsIn = 0, packetsOut = 0, lost = 0;
     int listAgeSec = -1;                                 // seconds since the station list arrived (-1 = none yet)
+    bool conference = false;                             // hosting a conference: members holds who is connected
+    std::vector<ConferenceMemberStatus> members;
+    bool viaProxy = false;
+    std::string proxy;                                   // "connected to proxy ...", "bad proxy password", ...: never the password
 };
 
 class Client {
@@ -119,9 +141,10 @@ public:
     void refreshList();
     std::vector<Station> stations() const;
 
-    bool connectTo(const std::string& ip, int remoteAudioPort = kDefaultAudioPort);
+    bool connectTo(const std::string& ip, int remoteAudioPort = kDefaultAudioPort);   // in a conference: adds the station
     bool connectCall(const std::string& call);           // looks the callsign up in the station list
-    void disconnect();
+    void disconnect();                                   // in a conference: every station
+    bool disconnectStation(const std::string& call);     // a conference: one station
     bool sendChat(const std::string& message);
 
     // audio at 8 kHz. setTransmit(true) sends what pushTx() gives, 4 frames per packet; false flushes the rest (padded with silence).
@@ -142,6 +165,11 @@ private:
     bool dirExchange(const std::string& cmd, bool list, std::string& reply, std::string& err);
     void log(const std::string& s);
     void flushTx(bool pad);
+    void sendPacket(bool ctrl, const std::string& ip, int port, const std::vector<uint8_t>& pkt);
+    bool proxyOpen(const ClientConfig& c, std::string& err);
+    void proxyWrite(const std::vector<uint8_t>& b);
+    void proxyInput(int64_t now);                         // mu_ held
+    bool proxyDirExchange(const std::string& host, int timeoutMs, const std::string& cmd, bool list, std::string& reply, std::string& err);
 
     mutable std::mutex mu_;
     ClientConfig cfg_;
@@ -155,10 +183,22 @@ private:
     std::string dirText_;
     bool loggedIn_ = false;
     int64_t lastLogin_ = 0;
-    std::atomic<bool> open_{false}, stop_{false}, tx_{false}, dirBusy_{false};
+    std::atomic<bool> open_{false}, stop_{false}, tx_{false}, dirBusy_{false}, closing_{false};
     int boundAudio_ = 0;
     long long sa_ = -1, sc_ = -1;                       // sockets (sock_t fits)
     std::thread net_, dir_;
+    std::unique_ptr<Conference> conf_;
+    bool confMode_ = false;
+    // proxy
+    bool proxyMode_ = false;
+    std::atomic<bool> proxyUp_{false};
+    long long sp_ = -1;
+    std::mutex pxWrite_;
+    ProxyParser px_;
+    std::string proxyText_;
+    int pxTcp_ = 0;                                      // 0 none, 1 opening, 2 open, 3 closed, 4 refused
+    std::string pxReply_;
+    std::condition_variable pxCv_;
 };
 
 int64_t monoMs();

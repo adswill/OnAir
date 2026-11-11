@@ -1604,3 +1604,25 @@ Details are in docs/ADSB-REMOTEID-3.9.md. New tests: adsb_overlap, rid_cpu. Simu
 - tests/common/watterson.h: a Watterson (ITU-R F.520) channel for the C++ tests.
 - Measured (simulated only): table C-XV very long interleaver, ITU-R Poor at the table levels, BER 0 / 3.0e-4 / 8.1e-4 / 3.0e-3 / 1.3e-3 for 3200 to 9600 bit/s over 10 x 26 s; 3 dB above the table, 0 / 0 / 0 / 4e-5 / 1.3e-4. AWGN at the table levels: 0 to 1.7e-5. Details are in docs/HF-MIL-3.9.md.
 - Not done: BW5 and BW6 (not in MIL-STD-188-141B), BW3 with 256 and 512 bytes (the printed interleaver of table C-XVI is not a permutation), BW2 code combining and BW2 multipath. The BW2 PN generator as drawn in figure C-12 has period 21845, not 65535.
+
+## 2026-11-11 EchoLink, Winlink and OnAir Web leftovers (feat39-netleft)
+
+The documented leftovers of the three 3.9 network features are done. Everything was tested on mocks, simulated channels and 127.0.0.1 only; no real EchoLink server, proxy, Winlink gateway or CMS was contacted.
+
+- **EchoLink.**
+  - Hosting a conference: one session per station, an 80 ms mixer that sends everyone the others plus the host, the station list in the info text, chat passed on, a station limit, NAT pairs told apart by port.
+  - The proxy (relay) mode, following SvxLink's EchoLinkProxy: the nonce + MD5 log-in, UDP and the directory TCP carried in blocks.
+  - Test `echolink_conf`. Two talkers at once each hear only the other at about 6000 of 6000. 10 % loss, duplicates and reordering still pass. The loopback conference and the client behind a mock proxy pass.
+- **Winlink.**
+  - A cut-off message is held and resumed with `!offset`. Both the wl2k-go and the FBB v1 layouts are read.
+  - gzip `FD` proposals with the `G` SID flag. The fixed-Huffman deflate is OnAir's own, and Python's gzip read its output.
+  - P2P between two OnAir stations: gateway entries marked as a station, and Listen for a station.
+  - AX.25 gained the T3 idle poll.
+  - Test `winlink_p2p`: 24 of 24 cut sessions resumed, and P2P worked over AX.25 1200, 9600 with 15 % loss and gzip, and ARDOP with 10 % loss.
+- **OnAir Web.**
+  - Waterfall zoom: the server cuts the part from its FFT, up to 64x, with at least 64 bins.
+  - Mode options: 257 options for 113 standards, generated from the receivers' setters by `tools/gen_web_options.py`, with a `--check` in the gate.
+  - Digital-voice speech in the browser for DMR, P25, P25 phase 2, NXDN, dPMR, D-STAR, M17 and Fusion. It comes from their audio taps, and the demodulator is off for those modes.
+  - Tests: `web_app_client` passed locally. On quick CI, `webapp` passed in run 42937680306, and the M17 speech arrived (43200 samples in 8 s, rms 1635). In run 42933322311 the option checks of `web_schema` passed, but the test failed on 5 mode rows merged earlier without telemetry (3G-ALE, DVB-SH, Link 11 CLEW, STANAG 4481 FSK, STANAG 4539). Those rows are not from this branch. The EchoLink and Winlink tests passed in the same run.
+
+Docs: ECHOLINK-3.9.md, WINLINK-3.9.md, WEB-3.9.md and WEB-SCHEMA-3.9.md.

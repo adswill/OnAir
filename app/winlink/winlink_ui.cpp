@@ -49,6 +49,7 @@ struct W {
     int gwSel = -1;
     char call[16] = "", grid[12] = "", password[64] = "";
     bool telnetOn = false;
+    bool gzipOn = false, resumeOn = true, gPeer = false;
     float txGain = 10;
     int view = 0;                        // 0 inbox 1 outbox 2 sent 3 compose 4 gateways 5 settings
     std::string selMid;
@@ -107,6 +108,8 @@ void load() {
     snprintf(d.call, sizeof d.call, "%s", plat::prefs().getS("winlinkCall", "").c_str());
     snprintf(d.grid, sizeof d.grid, "%s", plat::prefs().getS("winlinkGrid", "").c_str());
     d.telnetOn = plat::prefs().getB("winlinkTelnet", false);
+    d.gzipOn = plat::prefs().getB("winlinkGzip", false);
+    d.resumeOn = plat::prefs().getB("winlinkResume", true);
     d.txGain = (float)plat::prefs().getD("winlinkTxGain", 10);
 }
 
@@ -241,6 +244,9 @@ void connect(App& a) {
     c.mycall = d.call; c.locator = d.grid; c.password = d.password;
     c.gateway = g;
     c.telnetEnabled = d.telnetOn;
+    c.p2p = g.peer;
+    c.gzip = d.gzipOn;
+    c.resume = d.resumeOn;
     std::string err;
     if (!d.st->start(c, mono(), err)) { d.error = err; return; }
     d.tr = g.transport;
@@ -249,6 +255,26 @@ void connect(App& a) {
         if (!a.engine.running()) startReceiver(a);
         setTaps(a, true);
     }
+}
+
+// Peer to peer, the answering side: on the selected entry's link and frequency (packet or ARDOP), any station may connect
+void listenP2p(App& a, int ctx) {
+    W& d = w();
+    d.error.clear();
+    Gateway g;
+    if (d.gwSel >= 0 && d.gwSel < (int)d.gws.size() && d.gws[(size_t)d.gwSel].transport != Transport::Telnet) g = d.gws[(size_t)d.gwSel];
+    else g.transport = ctx == 1 ? Transport::Ardop : Transport::Packet1200;
+    StationConfig c;
+    c.mycall = d.call; c.locator = d.grid;
+    c.gateway = g;
+    c.gzip = d.gzipOn;
+    c.resume = d.resumeOn;
+    std::string err;
+    if (!d.st->listen(c, mono(), err)) { d.error = err; return; }
+    d.tr = g.transport;
+    if (g.mhz > 0 && std::fabs(a.freqMhz - g.mhz) > 1e-6) tuneFreq(a, g.mhz);
+    if (!a.engine.running()) startReceiver(a);
+    setTaps(a, true);
 }
 
 } // namespace
@@ -419,7 +445,7 @@ void gateways(int ctx) {
             ImGui::TableNextColumn();
             char id[64]; snprintf(id, sizeof id, "%s##wlg%zu", g.call.empty() ? "CMS" : g.call.c_str(), i);
             if (ImGui::Selectable(id, d.gwSel == (int)i)) { d.gwSel = (int)i; plat::prefs().setI("winlinkGateway", d.gwSel); }
-            ImGui::TableNextColumn(); ImGui::TextUnformatted(tr(transportName(g.transport)));
+            ImGui::TableNextColumn(); ImGui::Text("%s%s", tr(transportName(g.transport)), g.peer ? tr(", peer to peer") : "");
             ImGui::TableNextColumn();
             if (g.transport == Transport::Telnet) ImGui::Text("%s:%d", g.host.c_str(), g.port); else ImGui::Text("%.4f", g.mhz);
             ImGui::TableNextColumn(); ImGui::TextUnformatted(g.via.c_str());
@@ -444,10 +470,12 @@ void gateways(int ctx) {
         if (d.gTransport != 2) { ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ImGui::InputTextWithHint("##wlgv", tr("digipeaters (optional)"), d.gVia, sizeof d.gVia); }
     }
     ImGui::SetNextItemWidth(300 * gUi); ImGui::InputTextWithHint("##wlgn", tr("note (optional)"), d.gNote, sizeof d.gNote);
+    if (d.gTransport != 3) { ImGui::SameLine(); ImGui::Checkbox(tr("another station (peer to peer)"), &d.gPeer); }
     ImGui::SameLine();
     if (ImGui::Button(tr("Add"))) {
         Gateway g;
         g.call = d.gCall; g.transport = (Transport)d.gTransport; g.mhz = d.gMhz; g.via = d.gVia; g.host = d.gHost; g.port = std::max(1, std::min(65535, d.gPort)); g.note = d.gNote;
+        g.peer = d.gPeer && g.transport != Transport::Telnet;
         for (auto& c : g.call) c = (char)toupper((unsigned char)c);
         if (g.transport == Transport::Telnet ? !g.host.empty() : !g.call.empty()) {
             d.gws.push_back(g);
@@ -472,6 +500,23 @@ void settings() {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("Off by default. When on, a Telnet gateway in the list connects over the internet to the host you entered; nothing connects until you press Connect."));
     ImGui::PopTextWrapPos();
+    if (ImGui::CollapsingHeader(tr("Advanced"))) {
+        if (ImGui::Checkbox(tr("Resume a message that was cut off (ask only for the rest)"), &d.resumeOn)) plat::prefs().setB("winlinkResume", d.resumeOn);
+        const std::vector<std::string> parts = d.mb.partials();
+        if (!parts.empty()) {
+            ImGui::TextDisabled(tr("%d message(s) held part way:"), (int)parts.size());
+            for (const std::string& m : parts) {
+                ImGui::BulletText("%s", m.c_str());
+                ImGui::SameLine();
+                char b[48]; snprintf(b, sizeof b, "%s##wlpart%s", tr("Drop"), m.c_str());
+                if (ImGui::SmallButton(b)) d.mb.removePartial(m);
+            }
+        }
+        if (ImGui::Checkbox(tr("Offer gzip compression (experimental, as Pat's GZIP_EXPERIMENT)"), &d.gzipOn)) plat::prefs().setB("winlinkGzip", d.gzipOn);
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextDisabled("%s", tr("Used only when the other side offers it too (\"G\" in its SID); otherwise messages go LZHUF compressed as usual."));
+        ImGui::PopTextWrapPos();
+    }
     ImGui::SetNextItemWidth(160 * gUi);
     if (ImGui::SliderFloat(tr("Transmit gain (dB)"), &d.txGain, 0, 60, "%.0f")) plat::prefs().setD("winlinkTxGain", d.txGain);
     ImGui::TextDisabled("%s %s", tr("Mailbox folder:"), d.mb.dir().c_str());
@@ -499,8 +544,12 @@ void winlinkPanel(App& a, int ctx) {
         ImGui::EndCombo();
     }
     ImGui::SameLine();
-    if (!run) { if (ImGui::Button(tr("Connect"), ImVec2(120 * gUi, 0))) connect(a); }
-    else if (ImGui::Button(tr("Stop"), ImVec2(120 * gUi, 0))) d.st->stop(mono());
+    if (!run) {
+        if (ImGui::Button(tr("Connect"), ImVec2(120 * gUi, 0))) connect(a);
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Listen for a station"))) listenP2p(a, ctx);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Peer to peer: another station connects to you on the selected entry's link and frequency (tested between two OnAir stations only)."));
+    } else if (ImGui::Button(d.st->listening() ? tr("Stop listening") : tr("Stop"), ImVec2(120 * gUi, 0))) d.st->stop(mono());
     ImGui::SameLine();
     const std::string s = d.st->status();
     if (!d.error.empty()) ImGui::TextColored(ImVec4(0.95f, 0.55f, 0.45f, 1), "%s", d.error.c_str());

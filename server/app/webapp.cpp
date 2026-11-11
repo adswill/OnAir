@@ -1,6 +1,7 @@
 #include "webapp.h"
 #include "dect2/net/remote_api.h"
 #include "dect2/results/web_schema.h"
+#include "dect2/results/web_options.h"
 #include "web/web_hub.h"
 #include "web/web_json.h"
 #include <algorithm>
@@ -157,11 +158,13 @@ std::string WebApp::statusJson() {
     double c = 0, rt = 0;
     host_.captureInfo(c, rt);
     s += ",\"captureCentreHz\":" + dect2::jsonNum(c) + ",\"captureRateHz\":" + dect2::jsonNum(rt);
+    s += ",\"audioSource\":" + jsonStr(host_.audioSource()) + ",\"options\":" + host_.optionValuesJson();
     s += ",\"app\":{\"viewers\":" + std::to_string(viewers_.load()) + ",\"connections\":" + std::to_string(conns_.load()) + "}";
     s += '}';
     return s;
 }
 
+static bool asBool(const JsonVal& v, bool& out);
 static bool numArg(const std::map<std::string, JsonVal>& b, const char* k, double& v) {
     auto it = b.find(k);
     if (it == b.end() || it->second.kind != JsonVal::Num || !std::isfinite(it->second.num)) return false;
@@ -322,6 +325,7 @@ bool WebApp::api(const AppRequest& r, AppReply& out) {
     if (!post) {
         if (p == "modes") { json(out, 200, dect2::webschema::webModesJson()); return true; }
         if (p == "schema") { json(out, 200, dect2::webschema::allSchemasJson()); return true; }
+        if (p == "options") { json(out, 200, "{\"schemas\":" + dect2::webschema::allOptionsJson() + ",\"current\":" + host_.optionValuesJson() + "}"); return true; }
         if (p == "devices") { json(out, 200, host_.devicesJson()); return true; }
         if (p == "status") { json(out, 200, statusJson()); return true; }
         if (p == "panel" || p == "telemetry") {
@@ -354,6 +358,19 @@ bool WebApp::api(const AppRequest& r, AppReply& out) {
         std::string j = "{\"ok\":true,\"changed\":[";
         for (size_t i = 0; i < changed.size(); i++) { if (i) j += ','; j += jsonStr(changed[i]); }
         json(out, 200, j + "]}");
+        return true;
+    }
+    if (p == "option") {   // a mode option (web_options.h): the owner only, it changes how the receiver decodes for everyone
+        if (!sessions_.maySettings(w)) { err(out, 403, "owner only"); return true; }
+        std::string name, e;
+        double v = 0;
+        bool b = false;
+        strArg(body, "name", name);
+        const auto it = body.find("value");
+        if (it == body.end()) { err(out, 400, "value missing"); return true; }
+        if (!numArg(body, "value", v)) { if (asBool(it->second, b)) v = b ? 1 : 0; else { err(out, 400, "value must be a number or true / false"); return true; } }
+        if (!host_.setOption(name, v, e)) { err(out, 400, e); return true; }
+        json(out, 200, "{\"ok\":true,\"current\":" + host_.optionValuesJson() + "}");
         return true;
     }
     if (p == "record/start" || p == "record/stop") {
@@ -493,6 +510,7 @@ void WebApp::webSocket(onair_web::AppWs& ws) {
 
     bool subPanel = true, subStatus = true, subSpec = false, subAudio = false;
     int bins = 1024, fps = 10, panelMs = 500, audioRate = 16000, audioId = -1;
+    double zoom = 1, zoomHz = 0;   // waterfall zoom: 1 the whole capture; zoomHz the centre of the part shown (0: the capture's centre)
     double nextSpec = 0, nextPanel = 0, nextStatus = 0, nextAudio = 0;
     uint64_t specSeq = 0, panelSeq = 0;
     std::string lastStatus;
@@ -514,6 +532,8 @@ void WebApp::webSocket(onair_web::AppWs& ws) {
                 if (j.count("spectrum") && asBool(j.at("spectrum"), b)) subSpec = b;
                 if (numArg(j, "bins", v)) bins = (int)std::max(64.0, std::min(4096.0, v));
                 if (numArg(j, "fps", v)) fps = (int)std::max(1.0, std::min(30.0, v));
+                if (numArg(j, "zoom", v) && std::isfinite(v)) zoom = std::max(1.0, std::min(1024.0, v));
+                if (numArg(j, "zoomHz", v) && std::isfinite(v)) zoomHz = std::max(0.0, v);
                 if (numArg(j, "panelMs", v)) panelMs = (int)std::max(250.0, std::min(5000.0, v));
                 if (numArg(j, "rate", v)) { audioRate = 8000; for (int x : {8000, 12000, 16000, 24000, 48000}) if (x <= v) audioRate = x; }   // the host's rates
                 if (j.count("audio") && asBool(j.at("audio"), b)) {
@@ -568,7 +588,7 @@ void WebApp::webSocket(onair_web::AppWs& ws) {
             nextSpec = now + 1.0 / fps;
             uint64_t seq = 0;
             std::string frame;
-            if (host_.spectrumBinary(bins, seq, frame) && seq != specSeq) { specSeq = seq; ok = ws.sendBinary(frame); }
+            if (host_.spectrumBinaryZoom(bins, zoom, zoomHz, seq, frame) && seq != specSeq) { specSeq = seq; ok = ws.sendBinary(frame); }
         }
         if (ok && subAudio && audioId >= 0 && now >= nextAudio) {
             nextAudio = now + 0.04;

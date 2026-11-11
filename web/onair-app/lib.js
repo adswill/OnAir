@@ -197,11 +197,57 @@
     return String(raw);
   }
 
+  // ---- waterfall zoom: 1, 2, 4 ... times narrower than the capture, at most so that 64 FFT bins stay (the server says how many it has).
+  // The centre of the part shown: the tuned frequency, kept inside the capture; a frequency at the pointer stays under it on a wheel zoom.
+  const ZOOM_MAX = 64;
+  function zoomStep(zoom, dir) {
+    const z = Math.round(Math.log2(Math.max(1, zoom || 1))) + (dir > 0 ? 1 : dir < 0 ? -1 : 0);
+    return Math.pow(2, Math.max(0, Math.min(Math.log2(ZOOM_MAX), z)));
+  }
+  function zoomCentre(captureCentreHz, captureRateHz, zoom, wantHz) {
+    if (!(captureRateHz > 0) || !(zoom > 1)) return captureCentreHz;
+    const half = captureRateHz / zoom / 2, lo = captureCentreHz - captureRateHz / 2 + half, hi = captureCentreHz + captureRateHz / 2 - half;
+    const c = isFinite(wantHz) ? wantHz : captureCentreHz;
+    return Math.max(lo, Math.min(hi, c));
+  }
+  // zooming about the pointer: the new centre that keeps pointerHz at the same place x (0..1) on the screen
+  function zoomAbout(pointerHz, x, captureCentreHz, captureRateHz, newZoom) {
+    const span = captureRateHz / Math.max(1, newZoom);
+    return zoomCentre(captureCentreHz, captureRateHz, newZoom, pointerHz - (x - 0.5) * span);
+  }
+  // the tuned frequency left the part shown: centre on it again
+  function zoomFollow(frameCentreHz, frameRateHz, tuneHz) {
+    if (!isFinite(tuneHz) || !(frameRateHz > 0)) return null;
+    const x = hzToX(tuneHz, frameCentreHz, frameRateHz);
+    return x < 0.05 || x > 0.95 ? tuneHz : null;
+  }
+
+  // ---- mode options: the controls of a mode's own setters (GET /app/v1/options; web_options.h). Simple shows the first ones, Advanced all.
+  function buildOptions(schema, values, advanced) {
+    const out = [];
+    for (const o of schema || []) {
+      if (!advanced && o.t === "a") continue;
+      const v = values && Object.prototype.hasOwnProperty.call(values, o.n) ? values[o.n] : null;
+      out.push({ name: o.n, kind: o.k, label: o.l || humanize(o.n.replace(/^set/, "")), help: o.h || "", unit: o.u || "", choices: o.c || [], value: v, tier: o.t || "s" });
+    }
+    return out;
+  }
+  // the value an option control gives back: a number for the API, NaN when the text is not one
+  function optionValue(kind, raw) {
+    if (kind === "bool") return raw ? 1 : 0;
+    const n = Number(String(raw).trim());
+    if (!isFinite(n) || String(raw).trim() === "") return NaN;
+    if (kind === "int" || kind === "choice" || kind === "mask") return Number.isInteger(n) ? n : NaN;
+    return n;
+  }
+  function maskToggle(value, bit, on) { const v = (value | 0); return on ? (v | bit) : (v & ~bit); }
+
   // ---- the viewer's state of a session: what the page may do (from hello / session)
   function permissions(hello) {
     const h = hello || {};
     return { control: !!h.control, owner: !!h.owner, role: h.role || "none" };
   }
 
-  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions };
+  return { formatMhz, parseFreq, tuneStep, decodeSpectrum, decodeAudio, xToHz, hzToX, modeSearch, buildPanel, tableColumns, humanize, formatValue, groupSettings, settingValue, permissions,
+           zoomStep, zoomCentre, zoomAbout, zoomFollow, ZOOM_MAX, buildOptions, optionValue, maskToggle };
 });

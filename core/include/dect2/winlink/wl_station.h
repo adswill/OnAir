@@ -41,6 +41,12 @@ public:
     bool move(const std::string& mid, Folder from, Folder to);
     bool remove(Folder f, const std::string& mid);
     bool has(const std::string& mid) const;            // in any folder (a gateway offering it again gets "-")
+    // A message cut off part way: <dir>/partial/<MID>.part holds the compressed bytes received so far, for the proposal with this code
+    // and these sizes. loadPartial returns nothing when the file belongs to a different proposal (and removes it).
+    bool savePartial(const B2Proposal& p, const std::vector<uint8_t>& held);
+    std::vector<uint8_t> loadPartial(const B2Proposal& p);
+    void removePartial(const std::string& mid);
+    std::vector<std::string> partials() const;         // MIDs with a held part
 private:
     std::string path(Folder f, const std::string& mid) const;
     std::string dir_;
@@ -59,8 +65,9 @@ struct Gateway {
     std::string host;             // Telnet: host name
     int port = 8772;              // Telnet: port
     std::string note;
+    bool peer = false;            // another station, not a gateway: Connect runs a peer-to-peer session (packet or ARDOP)
 };
-// one gateway per line: call|transport|mhz|via|host|port|note
+// one gateway per line: call|transport|mhz|via|host|port|note|peer (peer: 1, optional)
 std::string saveGateways(const std::vector<Gateway>& g);
 std::vector<Gateway> loadGateways(const std::string& text);
 
@@ -101,7 +108,16 @@ struct StationConfig {
     bool telnetEnabled = false;               // Settings: "Allow Telnet to the CMS" (off by default)
     int paclen = 128, window = 4;
     double t1Sec = 0;                          // 0: from the speed (6 s at 1200 baud, 3 s at 9600 baud)
+    double t3Sec = 0;                          // AX.25 idle poll; 0: 300 s
+    // Peer to peer: a session with another station instead of a gateway (gateway.call is that station). Only outbox messages addressed
+    // to it are offered. No secure login.
+    bool p2p = false;
+    bool gzip = false;                         // offer gzip proposals (Pat's GZIP_EXPERIMENT); used only when the other side offers it too
+    bool resume = true;                        // keep a message cut off part way and ask for only the rest next time
 };
+
+// Is the message for this station? (To or Cc is its call sign, any SSID, with or without @winlink.org)
+bool addressedTo(const B2Message& m, const std::string& call);
 
 class WinlinkStation {
 public:
@@ -109,6 +125,11 @@ public:
     ~WinlinkStation();
     // false with err: no call sign, Telnet not allowed, a session already running
     bool start(const StationConfig& c, double now, std::string& err);
+    // Peer to peer, the answering side: waits for another station to connect over packet or ARDOP (not Telnet), then runs the session
+    // as the answering station. gateway.call is ignored (any caller is answered; its messages go to the inbox, and only outbox messages
+    // addressed to it are offered). After a session it listens again, until stop().
+    bool listen(const StationConfig& c, double now, std::string& err);
+    bool listening() const { return link_ && link_->state() == LinkState::Listening; }
     void stop(double now);                   // ends the session politely (disconnect); a second stop aborts
     void tick(double now);
     bool running() const;
@@ -129,6 +150,10 @@ public:
     const ByteLink* link() const { return link_.get(); }
 private:
     void finish(double now);
+    bool makeLink(const StationConfig& c, std::string& err);
+    B2fSession::Hooks hooks();
+    bool listenAgain_ = false;      // P2P listening: answer the next caller after a session ends (until stop())
+    std::string peer_;              // the other station (a gateway, or a peer); P2P listening: learned on connect
     Mailbox& mb_;
     StationConfig c_;
     std::unique_ptr<ByteLink> link_;

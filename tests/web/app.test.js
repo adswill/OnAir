@@ -187,4 +187,57 @@ test("Ring: gain applies", () => {
   near(out[0], 0.5, 1e-6);
 });
 
+test("waterfall zoom: steps, limits, centre inside the capture, zoom about the pointer, follow the tuning", () => {
+  assert.strictEqual(L.zoomStep(1, 1), 2);
+  assert.strictEqual(L.zoomStep(2, 1), 4);
+  assert.strictEqual(L.zoomStep(4, -1), 2);
+  assert.strictEqual(L.zoomStep(1, -1), 1);
+  assert.strictEqual(L.zoomStep(L.ZOOM_MAX, 1), L.ZOOM_MAX);
+  assert.strictEqual(L.zoomStep(3, 0), 4);   // an odd value snaps to a power of two
+  // a 2.4 MHz capture at 100 MHz, zoom 4 (600 kHz shown)
+  assert.strictEqual(L.zoomCentre(100e6, 2.4e6, 4, 100.5e6), 100.5e6);
+  assert.strictEqual(L.zoomCentre(100e6, 2.4e6, 4, 101.2e6), 100.9e6);   // the part stays inside: 101.2 - 0.3
+  assert.strictEqual(L.zoomCentre(100e6, 2.4e6, 4, 98e6), 99.1e6);
+  assert.strictEqual(L.zoomCentre(100e6, 2.4e6, 1, 98e6), 100e6);
+  assert.strictEqual(L.zoomCentre(100e6, 2.4e6, 4, NaN), 100e6);
+  // about the pointer: the frequency under it stays at the same place
+  for (const [hz, x, z] of [[100.3e6, 0.75, 2], [99.5e6, 0.1, 8], [100e6, 0.5, 4]]) {
+    const c = L.zoomAbout(hz, x, 100e6, 2.4e6, z), span = 2.4e6 / z;
+    near(L.hzToX(hz, c, span), x, 1e-9, "pointer stays");
+  }
+  near(L.zoomAbout(98.85e6, 0.6, 100e6, 2.4e6, 2), 99.4e6, 1, "at the edge the part is held inside");
+  assert.strictEqual(L.zoomFollow(100e6, 600e3, 100.1e6), null);
+  assert.strictEqual(L.zoomFollow(100e6, 600e3, 100.29e6), 100.29e6);
+  assert.strictEqual(L.zoomFollow(100e6, 600e3, 99.5e6), 99.5e6);
+  assert.strictEqual(L.zoomFollow(100e6, 0, 99.5e6), null);
+});
+test("mode options: Simple / Advanced, values, kinds", () => {
+  const schema = [
+    { n: "setThresholdDb", k: "num", l: "Threshold Db", u: "dB", h: "over the floor", t: "s" },
+    { n: "setScan", k: "bool", l: "Scan", t: "s" },
+    { n: "setStandardHint", k: "choice", l: "Standard Hint", c: [{ v: 0, l: "automatic" }, { v: 1, l: "DVB-S only" }], t: "s" },
+    { n: "setProtocols", k: "mask", l: "Protocols", c: [{ v: 1, l: "POCSAG" }, { v: 2, l: "FLEX" }], t: "s" },
+    { n: "setEffort", k: "int", l: "Effort", t: "a" },
+  ];
+  const simple = L.buildOptions(schema, { setScan: 1 }, false);
+  assert.deepStrictEqual(simple.map(o => o.name), ["setThresholdDb", "setScan", "setStandardHint", "setProtocols"]);
+  assert.strictEqual(simple[1].value, 1);
+  assert.strictEqual(simple[0].value, null);
+  assert.strictEqual(simple[0].unit, "dB");
+  assert.strictEqual(simple[2].choices.length, 2);
+  assert.strictEqual(L.buildOptions(schema, {}, true).length, 5);
+  assert.strictEqual(L.buildOptions(null, {}, true).length, 0);
+  assert.strictEqual(L.optionValue("bool", true), 1);
+  assert.strictEqual(L.optionValue("bool", false), 0);
+  assert.strictEqual(L.optionValue("num", " 12.5 "), 12.5);
+  assert.ok(isNaN(L.optionValue("num", "")));
+  assert.ok(isNaN(L.optionValue("num", "abc")));
+  assert.strictEqual(L.optionValue("int", "3"), 3);
+  assert.ok(isNaN(L.optionValue("int", "3.5")));
+  assert.strictEqual(L.optionValue("choice", "1"), 1);
+  assert.strictEqual(L.maskToggle(1, 2, true), 3);
+  assert.strictEqual(L.maskToggle(3, 1, false), 2);
+  assert.strictEqual(L.maskToggle(0, 2, false), 0);
+});
+
 console.log("app.test.js: " + passed + " passed" + (process.exitCode ? ", some FAILED" : ""));

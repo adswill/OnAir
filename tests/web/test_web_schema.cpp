@@ -5,9 +5,12 @@
 //  3. the value writers: UTF-8 cleaning, NaN -> null, constellation subsampling, tables with positions get a map hint, pictures become a
 //     PNG data URL (decoded back and checked), the size cap, and the mode list JSON.
 #include "dect2/results/web_schema.h"
+#include "dect2/results/web_options.h"
+#include "dect2/engine/engine.h"
 #include "dect2/t2/t2rx.h"
 #include "../common/test_util.h"
 #include <cmath>
+#include <cstdlib>
 #include <cstring>
 #include <set>
 #include <string>
@@ -285,6 +288,57 @@ int main() {
         // FSQ inherits its block: the base's fields are exported
         CHECK(schemaJson(114) && std::string(schemaJson(114)).size() > 50, "FSQ (standard 114) has the fields of its base struct");
         CHECK(anyLines, "at least one mode exports text lines");
+    }
+    // ---- mode options (web_options.h): generated from the receivers' setters
+    {
+        const std::vector<int> os = optionStandards();
+        CHECK(os.size() >= 100, "options for at least 100 standards (%zu)", os.size());
+        std::string why;
+        const std::string all = allOptionsJson();
+        CHECK(validJson(all, &why), "allOptionsJson: %s", why.c_str());
+        dect2::Engine eng;
+        int applied = 0, kinds[5] = {};
+        for (int sd : os) {
+            const std::string sch = optionsJson(sd);
+            CHECK(validJson(sch, &why), "options %d: %s", sd, why.c_str());
+            std::set<std::string> names;
+            jsonKeys(sch, names);
+            CHECK(!names.empty(), "options %d have names", sd);
+            // every option: a wrong value is refused; a safe one (off, the first choice, the first bit) is applied on an idle engine
+            for (size_t p = sch.find("{\"n\":\""); p != std::string::npos; p = sch.find("{\"n\":\"", p + 6)) {
+                const size_t q = sch.find('"', p + 6);
+                const std::string n = sch.substr(p + 6, q - p - 6);
+                const size_t k = sch.find("\"k\":\"", q);
+                const std::string kind = sch.substr(k + 5, sch.find('"', k + 5) - k - 5);
+                CHECK(n.rfind("set", 0) == 0, "option %d %s is a setter", sd, n.c_str());
+                CHECK(!checkOption(sd, n, std::nan(""), why), "NaN refused (%d %s)", sd, n.c_str());
+                CHECK(!checkOption(sd, n + "Nope", 0, why), "an unknown name refused");
+                if (kind == "bool") {
+                    kinds[0]++;
+                    CHECK(!checkOption(sd, n, 2, why) && !checkOption(sd, n, 0.5, why), "bool %d %s takes 0 / 1 only", sd, n.c_str());
+                    CHECK(applyOption(eng, sd, n, 0, why), "apply %d %s = 0: %s", sd, n.c_str(), why.c_str());
+                    applied++;
+                } else if (kind == "choice" || kind == "mask") {
+                    kinds[kind == "choice" ? 1 : 2]++;
+                    const size_t v = sch.find("{\"v\":", k);
+                    const double first = atof(sch.c_str() + v + 5);
+                    CHECK(!checkOption(sd, n, 1e6, why) && !checkOption(sd, n, first + 0.5, why), "%s %d %s: only the listed values", kind.c_str(), sd, n.c_str());
+                    CHECK(applyOption(eng, sd, n, first, why), "apply %d %s = %g: %s", sd, n.c_str(), first, why.c_str());
+                    applied++;
+                } else if (kind == "int") {
+                    kinds[3]++;
+                    CHECK(!checkOption(sd, n, 1.5, why) && checkOption(sd, n, 3, why), "int %d %s: whole numbers", sd, n.c_str());
+                } else {
+                    kinds[4]++;
+                    CHECK(kind == "num" && checkOption(sd, n, 1.5, why) && !checkOption(sd, n, 1e13, why), "num %d %s (%s)", sd, n.c_str(), kind.c_str());
+                }
+            }
+        }
+        printf("mode options: %zu standards; %d bool, %d choice, %d mask, %d int, %d number; %d applied on an idle engine\n", os.size(), kinds[0], kinds[1], kinds[2],
+               kinds[3], kinds[4], applied);
+        CHECK(!optionsJson(0) && !checkOption(0, "setX", 0, why), "the TV families have no generated options");
+        // ADS-B (standard 12): the correction setting is there and reaches the receiver
+        CHECK(optionsJson(12) && std::string(optionsJson(12)).find("\"n\":\"setCorrection\"") != std::string::npos, "ADS-B has setCorrection");
     }
     printf("web_schema: %s (%d failures)\n", fails ? "FAIL" : "ok", fails);
     return fails ? 1 : 0;

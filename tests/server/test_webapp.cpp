@@ -3,6 +3,7 @@
 // server with the app mounted, and talks HTTP and WebSocket to it from 127.0.0.1 (an owner by address), through a trusted "proxy" header as
 // an internet visitor (login needed; public mode; the visitor cap; what a visitor may do), and checks that every mode of the mode table can
 // be selected through the API and reports its row back. No browser, no sound, no files outside a temporary settings file.
+#include "dect2/m17/m17_codec2.h"
 #include "../../core/src/net/tcp_client.h"
 #include "../../server/app/webapp.h"
 #include "../../server/server_config.h"
@@ -12,7 +13,9 @@
 #include "../../server/web/web_server.h"
 #include "dect2/results/web_schema.h"
 #include "../common/test_util.h"
+#include <atomic>
 #include <chrono>
+#include <cmath>
 #include <cstring>
 #include <filesystem>
 #include <thread>
@@ -238,8 +241,8 @@ int main() {
     onair_web::WebServer web(hub);
     CHECK(web.start(webCfg.server), "web server starts: %s", web.status().lastError.c_str());
     const int port = web.status().port;
-    std::thread sup([&] { for (int i = 0; i < 600 && port; i++) { host.supervise(cfgPath); app.tick(onair_web::wallSeconds()); std::this_thread::sleep_for(std::chrono::milliseconds(50)); } });
-    sup.detach();
+    std::atomic<bool> supStop{false};
+    std::thread sup([&] { while (!supStop && port) { host.supervise(cfgPath); app.tick(onair_web::wallSeconds()); std::this_thread::sleep_for(std::chrono::milliseconds(50)); } });
 
     // ---- this computer: an implicit owner
     Client lan{port};
@@ -366,6 +369,87 @@ int main() {
         r = lan.get("viewers");
         CHECK(has(r.body, "\"connections\":0"), "the connection is counted away: %s", r.body.c_str());
     }
+    // ---- 3.9 leftovers: waterfall zoom, the mode options, digital voice in the browser
+    {
+        auto f32 = [](const std::string& b, size_t at) { float v; uint32_t x = 0; for (int i = 0; i < 4; i++) x |= (uint32_t)(unsigned char)b[at + (size_t)i] << (8 * i); std::memcpy(&v, &x, 4); return v; };
+        Ws ws;
+        CHECK(ws.open(port, "lan", "", ""), "WebSocket for zoom");
+        ws.send("{\"type\":\"sub\",\"panel\":false,\"status\":false,\"spectrum\":true,\"bins\":512,\"fps\":10}");
+        std::vector<std::string> texts, bins;
+        ws.collect(1200, texts, bins);
+        float rate1 = 0, centre1 = 0;
+        for (const auto& b : bins) if (b.size() > 21 && b[0] == 1) { centre1 = f32(b, 5); rate1 = f32(b, 9); }
+        CHECK(rate1 > 0, "a whole-capture row (%.0f Hz wide)", rate1);
+        // zoom 4 about a frequency a quarter span above the centre; then a zoom past the limit; then a centre outside the capture
+        struct Z { double zoom, hz; } zs[] = {{4, centre1 + rate1 / 4}, {1e6, centre1}, {8, centre1 + rate1 * 10}};
+        for (const Z& z : zs) {
+            char m[160];
+            snprintf(m, sizeof m, "{\"type\":\"sub\",\"spectrum\":true,\"zoom\":%.0f,\"zoomHz\":%.0f}", z.zoom, z.hz);
+            ws.send(m);
+            texts.clear(); bins.clear();
+            ws.collect(1200, texts, bins);
+            float rate = 0, centre = 0;
+            size_t nb = 0;
+            for (const auto& b : bins) if (b.size() > 21 && b[0] == 1) { centre = f32(b, 5); rate = f32(b, 9); nb = b.size() - 21; }
+            const double want = rate1 / std::min(z.zoom, 1e9);
+            if (z.zoom == 4) {
+                CHECK(std::fabs(rate - want) < want * 0.02 && std::fabs(centre - z.hz) < rate1 * 0.01, "zoom 4: %.0f Hz wide around %.0f (want %.0f around %.0f)", rate, centre, want, z.hz);
+                CHECK(nb >= 64 && nb <= 512, "zoomed bins %zu", nb);
+            } else if (z.zoom > 1000) {
+                CHECK(rate > 0 && rate < rate1 / 4 && nb >= 64, "a huge zoom stops at 64 FFT bins: %.0f Hz, %zu bins", rate, nb);
+            } else {
+                CHECK(centre + rate / 2 <= centre1 + rate1 / 2 + rate1 * 0.001 && std::fabs(rate - rate1 / 8) < rate1 * 0.01, "a centre outside is moved inside the capture: %.0f + %.0f", centre, rate / 2);
+            }
+        }
+        ws.send("{\"type\":\"sub\",\"zoom\":1}");
+        texts.clear(); bins.clear();
+        ws.collect(800, texts, bins);
+        float rateBack = 0;
+        for (const auto& b : bins) if (b.size() > 21 && b[0] == 1) rateBack = f32(b, 9);
+        CHECK(std::fabs(rateBack - rate1) < 1, "zoom 1: the whole capture again (%.0f)", rateBack);
+        ws.close();
+
+        // the mode options: ADS-B (standard 12) has setCorrection; a visitor may not set them
+        r = lan.post("mode", "{\"id\":\"adsb\"}");
+        CHECK(r.status == 200, "ADS-B: %d %s", r.status, r.body.c_str());
+        r = lan.get("options");
+        CHECK(r.status == 200 && has(r.body, "\"schemas\":{") && has(r.body, "\"12\":[") && has(r.body, "setCorrection"), "options: %.200s", r.body.c_str());
+        r = lan.post("option", "{\"name\":\"setCorrection\",\"value\":1}");
+        CHECK(r.status == 200 && has(r.body, "\"setCorrection\":1"), "set an option: %d %s", r.status, r.body.c_str());
+        r = lan.post("option", "{\"name\":\"setCorrection\",\"value\":1.5}");
+        CHECK(r.status == 400, "a fraction for an int option refused: %d", r.status);
+        r = lan.post("option", "{\"name\":\"setNoSuchThing\",\"value\":1}");
+        CHECK(r.status == 400, "an unknown option refused: %d", r.status);
+        r = lan.post("option", "{\"name\":\"setCorrection\"}");
+        CHECK(r.status == 400, "no value refused");
+        r = lan.get("status");
+        CHECK(has(r.body, "\"options\":{\"standard\":12,\"values\":{\"setCorrection\":1}"), "status shows the option: %.300s", r.body.c_str());
+        for (int i = 0; i < 40; i++) { ConfigFile saved; saved.load(cfgPath); if (saved.has("opt.12.setCorrection")) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
+        { ConfigFile saved; saved.load(cfgPath); CHECK(saved.get("opt.12.setCorrection") == "1", "the option is kept in the settings file"); }
+        CHECK(has(r.body, "\"audioSource\":\"monitor\""), "ADS-B is heard through the monitor");
+
+        // digital voice: M17 (Codec2 is part of OnAir) on the test signal; the browser gets the decoded speech, not the demodulator
+        r = lan.post("mode", "{\"id\":\"m17\"}");
+        CHECK(r.status == 200, "M17: %d %s", r.status, r.body.c_str());
+        r = lan.get("status");
+        CHECK(has(r.body, "\"audioSource\":\"voice\""), "M17 audio is the voice: %.200s", r.body.c_str());
+        Ws wv;
+        CHECK(wv.open(port, "lan", "", ""), "WebSocket for voice");
+        wv.send("{\"type\":\"sub\",\"panel\":false,\"status\":false,\"spectrum\":false,\"audio\":true,\"rate\":8000}");
+        texts.clear(); bins.clear();
+        wv.collect(8000, texts, bins);
+        size_t samples = 0;
+        double energy = 0;
+        for (const auto& b : bins) if (b.size() > 5 && b[0] == 2) for (size_t i = 5; i + 1 < b.size(); i += 2) { const int16_t v = (int16_t)((unsigned char)b[i] | ((unsigned char)b[i + 1] << 8)); energy += (double)v * v; samples++; }
+        const double rms = samples ? std::sqrt(energy / (double)samples) : 0;
+        printf("webapp: M17 voice in the browser: %zu samples at 8 kHz in 8 s, rms %.0f\n", samples, rms);
+        if (dect2::m17Codec2Available()) CHECK(samples >= 8000 && rms > 100, "M17 speech reaches the browser (%zu samples, rms %.0f)", samples, rms);
+        else printf("webapp: Codec2 is not available in this build: the M17 speech check is skipped\n");
+        wv.close();
+        r = lan.post("mode", "{\"id\":\"fm\"}");
+        r = lan.get("status");
+        CHECK(has(r.body, "\"audioSource\":\"fm\""), "FM is heard through its own audio");
+    }
     { Ws ws; CHECK(!ws.open(port, "wrong", "", "") || true, "opening with a wrong csrf"); std::vector<std::string> t, b; if (ws.s != kBadSock) ws.collect(500, t, b); CHECK(ws.closeCode == 4003 || has(ws.buf, "csrf"), "a wrong csrf closes the WebSocket (%d)", ws.closeCode); ws.close(); }
 
     // ---- an internet visitor (through the trusted proxy header): login needed
@@ -388,8 +472,9 @@ int main() {
     CHECK(r.status == 200, "the first password: %d %s", r.status, r.body.c_str());
     r = lan.post("setup", "{\"password\":\"another one here\"}");
     CHECK(r.status == 409, "setup only once");
-    for (int i = 0; i < 40; i++) { ConfigFile saved; saved.load(cfgPath); if (!saved.get("app_password_hash").empty()) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
-    { ConfigFile saved; saved.load(cfgPath); CHECK(saved.get("app_password_hash").compare(0, 7, "pbkdf2$") == 0 && !has(saved.text(), "correct horse"), "the hash is in the file, the password is not"); }
+    for (int i = 0; i < 150; i++) { ConfigFile saved; saved.load(cfgPath); if (!saved.get("app_password_hash").empty()) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
+    { ConfigFile saved; saved.load(cfgPath); CHECK(saved.get("app_password_hash").compare(0, 7, "pbkdf2$") == 0 && !has(saved.text(), "correct horse"), "the hash is in the file, the password is not (hash '%.12s', password in the file: %d, %zu bytes)",
+                    saved.get("app_password_hash").c_str(), (int)has(saved.text(), "correct horse"), saved.text().size()); }
     r = net.post("login", "{\"password\":\"wrong one\"}");
     CHECK(r.status == 401 && has(r.body, "wrong password"), "wrong password: %d %s", r.status, r.body.c_str());
     r = net.post("login", "{\"password\":\"correct horse battery\"}");
@@ -495,6 +580,8 @@ int main() {
     }
     r = lan.post("stop", "{}");
     CHECK(r.status == 200, "stop");
+    supStop = true;
+    if (sup.joinable()) sup.join();
     web.stop();
     host.setWebHub(nullptr);
     hub.stop();

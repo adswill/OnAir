@@ -27,6 +27,12 @@ struct ElUi {
     char passEdit[64] = {};          // the field while the user types; cleared after it is taken
     int port = kDefaultAudioPort;
     bool accept = true;
+    bool conference = false;         // host a conference (Advanced)
+    int confMax = 10;
+    char proxyHost[128] = {};        // relay / proxy (Advanced); empty = direct UDP
+    int proxyPort = kProxyPort;
+    std::string proxyPass;           // settings key echolinkProxyPassword: a credential (isSecretPrefKey)
+    char proxyPassEdit[64] = {};
     int kindFilter = 0;              // 0 all, 1 stations, 2 links, 3 repeaters, 4 conferences
     bool vox = false, pttLatched = false, pttHeld = false;
     float voxDb = -30, volume = 1.f;
@@ -84,6 +90,11 @@ void load() {
     e.password = d.getS("echolinkPassword", "");
     e.port = (int)d.getI("echolinkPort", kDefaultAudioPort);
     e.accept = d.getB("echolinkAccept", true);
+    e.conference = d.getB("echolinkConference", false);
+    e.confMax = (int)d.getI("echolinkConferenceMax", 10);
+    copyTo(e.proxyHost, sizeof e.proxyHost, d.getS("echolinkProxyHost", ""));
+    e.proxyPort = (int)d.getI("echolinkProxyPort", kProxyPort);
+    e.proxyPass = d.getS("echolinkProxyPassword", "");
     e.vox = d.getB("echolinkVox", false);
     e.voxDb = (float)d.getD("echolinkVoxDb", -30);
     e.voxHoldMs = (int)d.getI("echolinkVoxHold", 800);
@@ -108,6 +119,8 @@ void save() {
     d.setS("echolinkCall", e.call); d.setS("echolinkName", e.name); d.setS("echolinkLocation", e.location); d.setS("echolinkServers", e.servers);
     d.setS("echolinkPassword", e.password);
     d.setI("echolinkPort", e.port); d.setB("echolinkAccept", e.accept);
+    d.setB("echolinkConference", e.conference); d.setI("echolinkConferenceMax", e.confMax);
+    d.setS("echolinkProxyHost", e.proxyHost); d.setI("echolinkProxyPort", e.proxyPort); d.setS("echolinkProxyPassword", e.proxyPass);
     d.setB("echolinkVox", e.vox); d.setD("echolinkVoxDb", e.voxDb); d.setI("echolinkVoxHold", e.voxHoldMs); d.setD("echolinkVolume", e.volume);
     d.setS("echolinkMic", e.micDev); d.setS("echolinkSpeaker", e.spkDev);
     d.setB("echolinkBridgeAck", e.bridgeAck); d.setS("echolinkBridgeIn", e.rigIn); d.setS("echolinkBridgeOut", e.rigOut);
@@ -123,6 +136,11 @@ ClientConfig config() {
     c.servers = splitServers(e.servers);
     c.audioPort = e.port;
     c.acceptIncoming = e.accept;
+    c.conference = e.conference;
+    c.conferenceMax = e.confMax;
+    c.proxyHost = e.proxyHost;
+    c.proxyPort = e.proxyPort;
+    c.proxyPassword = e.proxyPass;
     c.info = std::string("OnAir ") + (e.name[0] ? std::string("- ") + e.name : std::string()) + (e.location[0] ? std::string("\n") + e.location : std::string());
     return c;
 }
@@ -347,16 +365,40 @@ void stationList() {
 void qsoSection(const ClientStatus& st) {
     ElUi& e = S();
     ImGui::PushID("qso");
-    if (st.qso == QsoState::Idle) {
+    if (st.qso == QsoState::Idle || st.conference) {
         ImGui::BeginDisabled(e.selected.empty());
-        if (ImGui::Button(e.selected.empty() ? tr("Connect") : (std::string(tr("Connect to")) + " " + e.selected).c_str())) {
+        const char* what = st.conference ? tr("Add to the conference") : tr("Connect to");
+        if (ImGui::Button(e.selected.empty() ? (st.conference ? tr("Add to the conference") : tr("Connect")) : (std::string(what) + " " + e.selected).c_str())) {
             if (ensureOpen() && !e.client.connectCall(e.selected)) e.error = tr("That station is not in the list any more: refresh it.");
         }
         ImGui::EndDisabled();
+        if (st.conference && !st.members.empty()) { ImGui::SameLine(); if (ImGui::Button(tr("Disconnect everyone"))) e.client.disconnect(); }
     } else {
         if (ImGui::Button(tr("Disconnect"))) e.client.disconnect();
         ImGui::SameLine();
         ImGui::Text("%s %s %s", tr(qsoStateName(st.qso)), st.peerCall.c_str(), st.peerName.c_str());
+    }
+    if (st.conference) {
+        ImGui::Text(tr("Hosting a conference: %s connected"), st.peerCall.c_str());
+        if (!st.members.empty() && ImGui::BeginTable("##members", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders | ImGuiTableFlags_SizingStretchProp)) {
+            ImGui::TableSetupColumn(tr("Callsign")); ImGui::TableSetupColumn(tr("Name")); ImGui::TableSetupColumn(tr("State"));
+            ImGui::TableSetupColumn(tr("Packets in / lost")); ImGui::TableSetupColumn("");
+            ImGui::TableHeadersRow();
+            for (const ConferenceMemberStatus& m : st.members) {
+                ImGui::TableNextRow();
+                ImGui::PushID(m.call.c_str());
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(m.call.empty() ? m.ip.c_str() : m.call.c_str());
+                ImGui::TableNextColumn(); ImGui::TextUnformatted(m.name.c_str());
+                ImGui::TableNextColumn();
+                if (m.connecting) ImGui::TextDisabled("%s", tr("calling"));
+                else ImGui::TextColored(m.talking ? ImVec4(0.3f, 0.9f, 0.3f, 1) : ImVec4(0.6f, 0.6f, 0.6f, 1), "%s", m.talking ? tr("talking") : tr("listening"));
+                ImGui::TableNextColumn(); ImGui::Text("%llu / %llu", (unsigned long long)m.packetsIn, (unsigned long long)m.lost);
+                ImGui::TableNextColumn();
+                if (!m.call.empty() && ImGui::SmallButton(tr("Disconnect"))) e.client.disconnectStation(m.call);
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
     }
     if (st.qso == QsoState::Connected) {
         ImGui::TextColored(st.rx ? ImVec4(0.3f, 0.9f, 0.3f, 1) : ImVec4(0.6f, 0.6f, 0.6f, 1), "%s", st.rx ? tr("RECEIVING") : tr("quiet"));
@@ -400,7 +442,31 @@ void advancedSection() {
     ImGui::SetNextItemWidth(120 * gUi);
     if (ImGui::InputInt(tr("UDP port (audio; control is the next one)"), &e.port)) { e.port = std::clamp(e.port, 1024, 65534); ch = true; }
     ch |= ImGui::Checkbox(tr("Accept calls from other stations"), &e.accept);
-    ImGui::SetNextItemWidth(160 * gUi); ch |= ImGui::SliderFloat(tr("VOX threshold (dBFS)"), &e.voxDb, -60.f, -5.f, "%.0f");
+    bool reopen = false;
+    if (ImGui::Checkbox(tr("Host a conference (everyone who connects hears everyone)"), &e.conference)) { ch = true; reopen = true; }
+    if (e.conference) {
+        ImGui::SameLine();
+        ImGui::SetNextItemWidth(100 * gUi);
+        if (ImGui::InputInt(tr("Stations at most"), &e.confMax)) { e.confMax = std::clamp(e.confMax, 2, 50); ch = true; }
+        ImGui::TextDisabled("%s", tr("Use the conference's own callsign (*NAME*), registered for it at echolink.org."));
+    }
+    typo::separatorText(tr("Proxy (relay)"));
+    ImGui::TextDisabled("%s", tr("For a computer whose UDP ports cannot be reached: everything goes through one TCP connection to an EchoLink proxy."));
+    ImGui::SetNextItemWidth(220 * gUi);
+    if (ImGui::InputTextWithHint(tr("Proxy host"), tr("empty = no proxy"), e.proxyHost, sizeof e.proxyHost)) { ch = true; reopen = true; }
+    ImGui::SetNextItemWidth(100 * gUi);
+    if (ImGui::InputInt(tr("Proxy port"), &e.proxyPort)) { e.proxyPort = std::clamp(e.proxyPort, 1, 65535); ch = true; reopen = true; }
+    ImGui::SetNextItemWidth(160 * gUi);
+    const char* phint = e.proxyPass.empty() ? tr("empty = public proxy") : tr("saved (type to change)");
+    if (ImGui::InputTextWithHint(tr("Proxy password"), phint, e.proxyPassEdit, sizeof e.proxyPassEdit, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_EnterReturnsTrue) ||
+        (ImGui::IsItemDeactivatedAfterEdit() && e.proxyPassEdit[0])) {
+        e.proxyPass = e.proxyPassEdit;
+        std::memset(e.proxyPassEdit, 0, sizeof e.proxyPassEdit);
+        ch = true; reopen = true;
+    }
+    (void)reopen;
+    const ClientStatus now = e.client.status();
+    if (e.client.isOpen() && (now.conference != e.conference || now.viaProxy != (e.proxyHost[0] != 0))) ImGui::TextColored(ImVec4(1, 0.8f, 0.3f, 1), "%s", tr("Takes effect at the next log-in (Log out, then Log in)."));    ImGui::SetNextItemWidth(160 * gUi); ch |= ImGui::SliderFloat(tr("VOX threshold (dBFS)"), &e.voxDb, -60.f, -5.f, "%.0f");
     ImGui::SetNextItemWidth(160 * gUi); ch |= ImGui::SliderInt(tr("VOX hold (ms)"), &e.voxHoldMs, 100, 3000);
     static std::vector<dect2::AudioInputDevice> ins;
     static std::vector<std::string> outs;
@@ -530,7 +596,8 @@ void echolinkWindow(App& a) {
     qsoSection(st);
     if (ImGui::CollapsingHeader(trw("RF link"))) bridgeSection();
     if (ImGui::CollapsingHeader(trw("Advanced"))) advancedSection();
-    ImGui::TextDisabled("%s", tr("UDP ports 5198 and 5199 must reach this computer (forward them on the router) for stations to hear you."));
+    if (st.viaProxy) ImGui::TextDisabled("%s %s", tr("Proxy:"), st.proxy.c_str());
+    else ImGui::TextDisabled("%s", tr("UDP ports 5198 and 5199 must reach this computer (forward them on the router) for stations to hear you, or use a proxy (Advanced)."));
     ImGui::End();
 }
 

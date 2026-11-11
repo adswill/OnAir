@@ -35,6 +35,7 @@
       <div class="spec-tools">
         <label>Rows/s <select id="fps"><option>2</option><option>5</option><option selected>10</option><option>20</option></select></label>
         <label>Bins <select id="bins"><option>256</option><option>512</option><option selected>1024</option><option>2048</option></select></label>
+        <span class="zoom"><button id="zoomout" title="Zoom out (Ctrl or Cmd with the wheel zooms about the pointer)">&minus;</button><button id="zoomtxt" title="The whole capture">1&times;</button><button id="zoomin" title="Zoom in">+</button></span>
         <label><input type="checkbox" id="specon" checked> Spectrum</label>
         <span id="specinfo" class="muted"></span>
       </div>
@@ -48,6 +49,7 @@
       <span id="panelState" class="muted"></span>
       <label class="tier"><input type="checkbox" id="advanced"> Advanced</label>
     </div>
+    <div id="options" class="options" hidden></div>
     <div id="panel" class="panel"></div>
   </section>
 

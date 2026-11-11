@@ -1,6 +1,7 @@
-/* OnAir Web 3.9: the spectrum and waterfall with drag-to-tune (mouse, pen and touch). The capture's span is shown; the tuned frequency is
- * the red line. Drag anywhere: the line follows the pointer and the receiver is tuned on release (or while dragging, throttled, when
- * live is on). The keyboard arrows step the frequency. */
+/* OnAir Web 3.9: the spectrum and waterfall with drag-to-tune (mouse, pen and touch). The capture's span is shown, or a zoomed part of it
+ * (the + and - buttons, or Ctrl / Cmd with the wheel about the pointer; the server cuts the part from its FFT, so a zoomed row has its full
+ * resolution); the tuned frequency is the red line. Drag anywhere: the line follows the pointer and the receiver is tuned on release (or
+ * while dragging, throttled, when live is on). The keyboard arrows step the frequency. */
 (function (root) {
   "use strict";
   const L = root.OnAirLib;
@@ -13,6 +14,7 @@
       this.minDb = -110; this.maxDb = -20; this.auto = true;
       this.pal = SpectrumView.palette();
       this.rows = 0;
+      this.zoom = 1; this.zoomHz = 0; this.capCentre = 0; this.capRate = 0; this.onZoom = null;
       const wrap = specCanvas.parentElement;
       let dragging = false, moved = false, lastSend = 0, id = null;
       const hzAt = (ev) => {
@@ -50,6 +52,12 @@
       wrap.addEventListener("wheel", (ev) => {
         if (!this.frame) return;
         ev.preventDefault();
+        if (ev.ctrlKey || ev.metaKey) {   // zoom about the pointer
+          const b = wrap.getBoundingClientRect();
+          const x = Math.max(0, Math.min(1, (ev.clientX - b.left) / b.width));
+          this.zoomBy(ev.deltaY < 0 ? 1 : -1, hzAt(ev), x);
+          return;
+        }
         const step = L.tuneStep(this.frame.rateHz) * (ev.shiftKey ? 10 : 1);
         this.onTune(this.tuneHz + (ev.deltaY < 0 ? step : -step), false);
       }, { passive: false });
@@ -68,6 +76,24 @@
       return p;
     }
     setTune(hz) { this.tuneHz = hz; this.drawLine(); }
+    setCapture(centreHz, rateHz) { this.capCentre = centreHz; this.capRate = rateHz; }
+    // dir +1 in, -1 out, 0 back to the whole capture; pointerHz / x: keep that frequency under the pointer
+    zoomBy(dir, pointerHz, x) {
+      const z = dir === 0 ? 1 : L.zoomStep(this.zoom, dir);
+      const cc = this.capCentre || (this.frame ? this.frame.centreHz : 0), cr = this.capRate || (this.frame ? this.frame.rateHz * this.zoom : 0);
+      let c;
+      if (z <= 1) c = 0;
+      else if (isFinite(pointerHz) && isFinite(x)) c = L.zoomAbout(pointerHz, x, cc, cr, z);
+      else c = L.zoomCentre(cc, cr, z, this.tuneHz);
+      this.setZoom(z, c);
+    }
+    setZoom(z, centreHz) {
+      if (z === this.zoom && Math.abs(centreHz - this.zoomHz) < 1) return;
+      this.zoom = z; this.zoomHz = centreHz;
+      this.peak = null;
+      this.wc.fillStyle = "#000"; this.wc.fillRect(0, 0, this.wf.width, this.wf.height);   // rows of another span would not line up
+      if (this.onZoom) this.onZoom(z, centreHz);
+    }
     drawLine() {
       const hz = isFinite(this.dragHz) ? this.dragHz : this.tuneHz;
       if (!this.frame || !isFinite(hz)) { this.line.style.display = "none"; return; }
@@ -80,6 +106,10 @@
       this.frame = frame;
       const db = frame.db, n = db.length;
       if (!n) return;
+      if (this.zoom > 1 && !isFinite(this.dragHz)) {   // the tuned frequency left the part shown: follow it
+        const f = L.zoomFollow(frame.centreHz, frame.rateHz, this.tuneHz);
+        if (f !== null) this.setZoom(this.zoom, L.zoomCentre(this.capCentre || frame.centreHz, this.capRate || frame.rateHz * this.zoom, this.zoom, f));
+      }
       // automatic range: the noise floor (10th percentile) a little under, the peak a little over, moving slowly
       if (this.auto) {
         const s = Array.from(db).sort((a, b) => a - b);
