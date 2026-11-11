@@ -32,6 +32,7 @@ KEEP long av_interleaved_write_frame(void) { return -1; }
 KEEP int64_t av_log_get_level(void) { return 0; }
 KEEP long av_log_set_level(void) { return -1; }
 KEEP void* av_malloc(void) { return NULL; }
+KEEP int av_opt_set_int(void) { return -1; }
 KEEP void* av_mallocz(void) { return NULL; }
 KEEP long av_new_packet(void) { return -1; }
 KEEP void* av_new_program(void) { return NULL; }
