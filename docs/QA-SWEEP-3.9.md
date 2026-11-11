@@ -54,7 +54,7 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 | class | count |
 |---|---|
 | unrealistic | 76 |
-| open | 40 |
+| open | 20 (40 before feat39-qafixA) |
 | threshold | 16 |
 | too short | 15 |
 | no check | 10 |
@@ -379,6 +379,64 @@ Failures by class (one per mode and condition, as in `tests/qa/qa_known.inc`):
 - Build: `DECT2_SANITIZE_RECOVER=ON` (with `DECT2_SANITIZE`) reports every undefined-behaviour site of a run instead of stopping at the first.
 - `quick.yml`: optional `cmake_args`, `env`, `timeout` and `minutes` inputs, for sanitizer runs and long sweeps on one runner.
 
+### Open failures fixed in feat39-qafixA (the first half of the open list, arktikaggak .. kait)
+
+All on simulated signals (each mode's own generator and transmitter); no recording was used for these fixes.
+
+- **arktikaggak (Arktika-M GGAK)** (`core/src/elektro/elektro_ggak.cpp`): three faults, none of them seen before because
+  `test_wxsat_rx` only printed the GGAK result. The generator ran sample-spaced RRC taps over a symbol-spaced history, so the test signal
+  was a 750 Hz wide smear, active 40 % of the time; it now sums each symbol's pulse at its own time. The Gardner timing error had the wrong
+  sign and held the sampling half a symbol off (lock metric 0.3, every CRC failed). Acquisition squared the signal after the matched filter
+  at 2.3 samples per symbol, which reaches only +-2.9 kHz and cut an offset signal: it now runs before the matched filter at 4.8 samples per
+  symbol (+-6 kHz). Result: 14 frames of 14 in 10 s at 240 ksps and 1.024 Msps, +-2 kHz and +-5.5 kHz off, -50 ppm; the test now checks it.
+- **astro, iono** (`core/src/engine/engine_telemetry.cpp`): neither reported a lock flag, so the sweep saw nothing. Radio astronomy is a
+  measuring tool: it now locks while it integrates a signal (above -150 dBFS). The ionospheric sounder locks once a sounder's sweep was
+  found; on noise it finds none (the noise row passes, not `lock`).
+- **dect** (`core/src/dect/dect_rx.cpp`): the 32-bit running power sum drifted below zero after a burst into digital silence; the floor
+  followed it and every sample after the first burst looked like a burst start. The test signal decoded 2 of 1200 bursts in 3 s, the
+  transmitter (no noise at all) all of them. The sum is now recomputed each window and the average clamped; 1197 of 1200. `test_dect_rx`
+  has a no-noise case.
+- **hfbeacon** (`core/src/hfbeacon/hfbeacon_gen.cpp`): the test signal had its beacons only near 3.6 MHz, outside the span at the mode's
+  14.5 MHz default (10.5 - 18.5 MHz). It now also keys the D and K markers of the 13.5277 MHz cluster at their offset from 14.5 MHz (the
+  NCDXF beacons need the computer clock, which a file has not). Clean, 12 dB and the transmitter lock; +-2 kHz is the HF class (the
+  beacons are searched within 50 Hz of their frequency).
+- **hfvoice** (`core/src/engine/engine_start.cpp`, `core/src/chanvoice/chv_gen.cpp`): the engine never set the channelised-voice service;
+  only the panel did, so without it every one of the seven entries ran the CB receiver, and HF voice's USB calls stayed silent. The engine
+  now sets it from the mode. The voice scenes sat on the plan's centre instead of the tune offset below it (as a radio receives them), the
+  SSB speech was 24 kHz wide, and the scene's loop had a pause shorter than the SSB squelch's hang; with no noise to dither the 8-bit test
+  source the speech also made spurs 46 and 92 kHz away that the finder took for calls. Now: one call per loop, all six conditions pass.
+  Side effect: `pmr446` +-2 kHz passes now (its scene was 25 kHz off the channel plan).
+- **js8, kait**: both decode on their own threads after the file ends. The sweep now flushes JS8's slots and waits for a KAIT decode in
+  progress. **KAIT** (`core/src/kait/kait_live.cpp`, `kait_rx.cpp`): a burst on the first sample with the carrier above the dial had its
+  start sweep's correlation peak before the buffer, so the search took a later peak inside the burst; the stream now starts with the lead's
+  worth of silence. At 50 ppm the header (78 000 samples, read with a 1.0 clock ratio) slipped 4 samples and never decoded, and the fine
+  timing searched only +-0.5 samples (2.7 dB lost): the header now tries clock steps of 30 ppm up to +-90 ppm and the fine timing +-1.5
+  samples. `test_kait_phy` has +-50 ppm cases (7 of 8 layers at 8 dB, as at 18 ppm), `test_kait_live` the first-sample case.
+- **esubghz tx** (`core/src/esubghz/esubghz_rx.cpp`, sweep): the sweep moved every transmitter by the mode's tune offset; a TX session
+  does not for the modes with their own frequency plan (`txModeTuneOffsetHz`: KA modes, NFC, Flipper Sub-GHz), so the Flipper packet sat
+  300 kHz off. With that fixed, the packet (keyed 5 ms into the recording) was inside the receiver's first 2000 samples, which set the
+  noise floor from it; a rise far above the quietest power so far now ends the start-up. `test_esubghz_rx` has the no-lead case.
+- **gtor snr** (`core/src/hfutil/hfu_fsk.cpp`): the baud search counted every discriminator crossing of 0.2 x its mean; at 12 dB the
+  noise crossings diluted the clock line under the 0.25 ratio. Hysteresis at 0.6 x: 140 blocks at 12 dB (0 before), the same 150 at
+  60 dB; ARQ-E, ARQ-N, Autospec, SPREAD, EFR, Piccolo and Coquelet sweep as before.
+- **hamdrm tx**: passes in this branch's runs (1551 saved bytes clean, the transmitter's picture saved). The failing CI run was not
+  reproduced.
+- **hdr pos, inmsat pos / snr**: the decoders lock late (HD Radio's first block 4.4 s into 8 s, Inmarsat's first 10500 bit/s SU 7.6 s
+  clean, 9.4 s with the offset or at 12 dB) and the sweep judged them at a length the clean run only just decoded in. HD Radio's lock flag
+  also ended the length search at 3 s (one block). The sweep now takes the next length when the clean run's first block came after half
+  the signal, and a lock ends the search only for a mode that counts no blocks. HD Radio passes +2 kHz at 32 s (20 blocks clean); Inmarsat
+  passes every condition at 11.7 s (486 SUs clean; 1842 / 1732 / 1732 clean / +2 kHz / 12 dB at 24 s). Inmarsat's lock time (the Aero
+  receiver's band search in each window) is the thing to shorten.
+- **js8 tx** is now `unrealistic`: the transmitter puts its frames on the computer clock's next 15 s slot (as on air), a file's slots
+  start at its first sample, so the frames land anywhere in them and decode only when the clock was near a slot. **js8 snr** passes.
+- **hamdrm snr** became `threshold`: the 99 % band without the floor (3.4 kHz, 3.9 before) puts 0.6 dB more noise in the band; HamDRM
+  saves nothing at 12 dB and the picture at 13 dB.
+- **atis snr, eczas snr** are now `threshold` with the numbers in `qa_known.inc`: ATIS's 99 % band is that of a mostly unmodulated FM
+  carrier (1.7 kHz), so 12 dB there is 2 dB in the 16 kHz channel (it decodes at 5 dB there). e-Czas at 12 dB is 14.7 dB in 100 Hz,
+  under its decoder's 17 dB edge; the GUM spec names a Reed-Solomon code but not its field or generator, so the decoder has the CRC only.
+- Sweep: the 99 % band leaves out the floor (the 10th percentile of the spectrum): a bursty narrow signal over a floor of 1 % of its
+  power got a band of half the rate.
+
 ## Unrealistic conditions and generators (not decoder bugs)
 
 - **+-2 kHz on HF and on SSB-audio decoders.** Below 30 MHz a 50 ppm crystal is off by at most 1.5 kHz. The HF digital decoders
@@ -444,41 +502,22 @@ while it searched, against 0.29 when it decodes. The searching state of several 
 ## Still failing (open)
 
 These failures are not explained by the condition. They are in `qa_known.inc` as `open`, so the test passes today, but each needs a look at its mode.
+The first half of the list (arktikaggak .. kait, 20 entries) was worked through in feat39-qafixA: see "Open failures fixed in feat39-qafixA" above; 17 pass now (hamdrm tx without a change), 3 are reclassified with their numbers (atis and eczas snr: threshold; js8 tx: unrealistic). New known entries from the fixes: hfbeacon +-2 kHz (HF), hamdrm snr (threshold).
 
-- `hdr/pos`: fails with the offset (to investigate)
-- `hamdrm/tx`: its transmitter's signal does not decode (to investigate)
-- `js8/snr`: fails at 12 dB (to investigate)
-- `js8/tx`: its transmitter's signal does not decode (to investigate)
 - `specx/clean`: does not decode its own test signal through the engine (to investigate)
 - `specx/tx`: its transmitter's signal does not decode (to investigate)
 - `tetra/tx`: its transmitter's signal does not decode (to investigate)
-- `astro/clean`: does not decode its own test signal through the engine (to investigate)
-- `astro/tx`: its transmitter's signal does not decode (to investigate)
-- `iono/clean`: does not decode its own test signal through the engine (to investigate)
-- `iono/tx`: its transmitter's signal does not decode (to investigate)
 - `qo100/clean`: does not decode its own test signal through the engine (to investigate)
 - `qo100/tx`: its transmitter's signal does not decode (to investigate)
 - `nr/clean`: does not decode its own test signal through the engine (to investigate)
 - `nr/tx`: its transmitter's signal does not decode (to investigate)
-- `hfbeacon/clean`: does not decode its own test signal through the engine (to investigate)
-- `hfbeacon/tx`: its transmitter's signal does not decode (to investigate)
 - `nbiot/neg`: fails with the offset (to investigate)
-- `dect/clean`: does not decode its own test signal through the engine (to investigate)
 - `uat/clean`: does not decode its own test signal through the engine (to investigate)
 - `uat/tx`: its transmitter's signal does not decode (to investigate)
-- `eczas/snr`: fails at 12 dB (to investigate)
-- `kait/clean`: does not decode its own test signal through the engine (to investigate)
-- `esubghz/tx`: its transmitter's signal does not decode (to investigate)
-- `inmsat/pos`: fails with the offset (to investigate)
-- `inmsat/snr`: fails at 12 dB (to investigate)
-- `atis/snr`: fails at 12 dB (to investigate)
 - `pactor4/clean`: does not decode its own test signal through the engine (to investigate)
-- `arktikaggak/clean`: does not decode its own test signal through the engine (to investigate)
 - `pmr446/pos`: fails with the offset (to investigate)
 - `pmr446/neg`: fails with the offset (to investigate)
-- `hfvoice/clean`: does not decode its own test signal through the engine (to investigate)
 - `wmic/clean`: does not decode its own test signal through the engine (to investigate)
-- `gtor/snr`: fails at 12 dB (to investigate)
 - `umts/pos`: fails with the offset (to investigate)
 - `umts/neg`: fails with the offset (to investigate)
 - `riometer/clean`: does not decode its own test signal through the engine (to investigate)
@@ -494,5 +533,5 @@ These failures are not explained by the condition. They are in `qa_known.inc` as
   error. It reported only three more memcpy-from-null sites (DAB generator, DMR bridge, DRM bridge: all fixed) and an ATSC spectrum check
   (ATSC belongs to another worker). With no overflow or use-after-free found, the corruption is most likely a data race between those
   six Engines. The next step is a ThreadSanitizer run of `iq_modes` (`DECT2_SANITIZE_THREAD=ON`).
-- The 40 `open` failures above.
+- The 20 `open` failures above (the second half of the original 40).
 - The CPU optimisations (see above).

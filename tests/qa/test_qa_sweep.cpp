@@ -691,8 +691,10 @@ int main(int argc, char** argv) {
                 if (c == 0) { r.cost = jnum(j, "cost"); r.life = jstrv(j, "life"); }
             }
             // a clean run with only a few blocks is too short to judge the other conditions by: the next length (unless this was the last)
-            const bool few = !r.byRes && r.c[0].good > 0 && r.c[0].good < 8 && li + 2 < lens.size();
-            if ((r.c[0].good > 0 && !few) || r.byRes || r.c[0].locked || r.c[0].verdict != "-") done = true;
+            // or one whose first block came late (after half the signal): an offset or noise delays the lock and the other conditions fail by time, not
+            // by the condition (Inmarsat: the first SU at 7.6 s of 8 s clean, 9.4 s with the offset)
+            const bool few = !r.byRes && r.c[0].good > 0 && (r.c[0].good < 8 || r.c[0].first > 0.5 * s) && li + 2 < lens.size();
+            if ((r.c[0].good > 0 && !few) || r.byRes || (r.c[0].locked && r.c[0].good == 0) || r.c[0].verdict != "-") done = true;   // a lock alone ends it only for a mode that counts no blocks
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
         // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline; when it decodes nothing in a short run,
