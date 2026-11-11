@@ -9,9 +9,11 @@
 #include <cstring>
 #include "dect2/xband/xband_rx.h"
 #include "dect2/xband/xband_tel.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <random>
 #include <string>
 #include <vector>
 #include "../common/test_long.h"
@@ -187,6 +189,24 @@ int main(int argc, char** argv) {
         for (int amb = 0; amb < 8; amb++) { Case k{kXbSaralL, 3e6, 0.25, 12, 3000, 0, 0, amb, 5, 0}; expect(k); }
         for (double snr : L ? std::vector<double>{14.0, 10.0, 7.0, 5.0, 4.0} : std::vector<double>{10.0, 5.0}) { Case k{kXbSaralL, 3e6, 0.4, snr, 6000, 200, 15, 0, 8, 0}; XbTelemetry t = run(k); printf("    Saral coded link at %.0f dB: %llu frames\n", snr, (unsigned long long)t.blocksOk); if (snr >= 5) CHECK(t.blocksOk >= 8, "coded link %.0f dB", snr); }
         for (double snr : L ? std::vector<double>{16.0, 12.0, 9.0} : std::vector<double>{12.0}) { Case k{kXbMetopDump, 45e6, 0.03, snr, 2000, 0, 0, 0, 10, 0}; XbTelemetry t = run(k); printf("    MetOp uncoded link at %.0f dB: %llu frames, %llu bad\n", snr, (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad); if (snr >= 12) CHECK(t.blocksOk >= 10, "uncoded link %.0f dB", snr); }
+    }
+    if (only < 0 || only == 102) {
+        // noise alone, every link (QA sweep 3.9: Oceansat-2 counted frames on noise, and the searching receivers took 30 - 330 CPU s a
+        // second of noise): no frame, and the pre-check skips most of the input
+        std::mt19937 rng(11); std::normal_distribution<float> nd(0.f, 0.2f);
+        std::vector<cf32> z(1 << 16);
+        for (int p = 0; p < (int)kXbNumProfiles; p++) {
+            const XbLink& L = xbLink(p);
+            XbandReceiver rx(p); rx.configure(L.sampleRate);
+            const size_t total = (size_t)std::max(4e6, 0.05 * L.sampleRate);
+            for (size_t done = 0; done < total; done += z.size()) { for (auto& v : z) v = cf32(nd(rng), nd(rng)); rx.feed(z.data(), z.size()); }
+            rx.finish();
+            XbTelemetry t; rx.telemetry(t, 0);
+            const double skipped = (double)t.idleSkipped / (double)total;
+            printf("    noise %-14s: %llu frames, line %.1f, %.0f %% skipped\n", L.id, (unsigned long long)t.blocksOk, t.acqPeak, 100 * skipped);
+            CHECK(t.blocksOk == 0, "%s: %llu frames on noise", L.id, (unsigned long long)t.blocksOk);
+            CHECK(skipped > 0.6, "%s: the pre-check skipped %.0f %% of the noise", L.id, 100 * skipped);
+        }
     }
     printf("%s\n", fails ? "FAILED" : "ok");
     return fails ? 1 : 0;

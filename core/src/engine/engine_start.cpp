@@ -414,7 +414,9 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxRid_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : fc24);
         rxMeteor_.setSignalOffset(o);
         rxNr_.setSignalOffset(o);
-        rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // the sync raster points searched
+        // the sync raster points searched; a recording: its centre (the frequency entered for it) when it is in the NR bands (with none, only the
+        // dial was searched and an SSB on a raster point off the centre was never found)
+        { const double fcn = fileCentreHz_.load(); rxNr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : (fcn >= 400e6 && fcn <= 7.2e9 ? fcn : 0.0)); }
         rxGoes_.setSignalOffset(o);
         rxEl_.setSignalOffset(o);
         rxGkL_.setSignalOffset(o);
@@ -637,6 +639,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxMarineVhf_.configure(rate_);
     rxMarineVhf_.setLogCallback([this](const std::string& s) { log(s); });
     rxChv_.configure(rate_);
+    // the service of the mode: only the app's screen chose it, so headless runs (command line, web, the QA sweep) ran CB on every one
+    if (const int ca = activeStdFor(stdMode_.load()); ca >= 341 && ca <= 347) rxChv_.setService((chv::Service)(ca - 341));
     rxChv_.setLogCallback([this](const std::string& s) { log(s); });
     rxP25p2_.configure(rate_);
     rxP25p2_.setLogCallback([this](const std::string& s) { log(s); });

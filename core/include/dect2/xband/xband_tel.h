@@ -94,6 +94,8 @@ struct XbTelemetry {
     uint64_t blocksOk = 0, blocksBad = 0;
     double symbolRate = 0, inputRate = 0, timeSec = 0;
     float carrierLock = 0;
+    float acqPeak = 0;                  // the last search block's carrier line (peak to mean of the power-law spectrum; noise stays under 4.5)
+    uint64_t idleSkipped = 0;           // input samples the pre-check skipped while there was no line
     bool frameLock = false, rateTooLow = false;
     uint64_t asmHits = 0, rsCorrected = 0, packets = 0, packetsBad = 0, lines = 0;
     int scid = -1, vcid = -1;

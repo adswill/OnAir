@@ -67,7 +67,7 @@ void Deframer::configure(uint64_t sync, int syncBits, int frameBits, int tolAcq,
     reset();
 }
 
-void Deframer::reset() { lock_ = false; inv_ = false; pos_ = 0; misses_ = 0; sr_ = 0; hits = 0; }
+void Deframer::reset() { lock_ = false; inv_ = false; pos_ = 0; misses_ = 0; sr_ = 0; hits = 0; pending_ = false; }
 
 void Deframer::start() {
     std::fill(frame_.begin(), frame_.end(), 0);
@@ -75,23 +75,32 @@ void Deframer::start() {
     pos_ = syncBits_;
 }
 
-void Deframer::push(int bit) {
+void Deframer::pushSlow(int bit) {
     sr_ = sr_ << 1 | (uint64_t)(bit & 1);
     if (lock_ && pos_ >= syncBits_) {
         if (((bit & 1) ^ (inv_ ? 1 : 0)) != 0) frame_[(size_t)pos_ >> 3] |= (uint8_t)(0x80 >> (pos_ & 7));
-        if (++pos_ == frameBits_) { if (onFrame) onFrame(frame_.data()); pos_ = 0; }
+        if (++pos_ == frameBits_) {
+            if (confirm_) { held_ = frame_; pending_ = true; }
+            else if (onFrame) onFrame(frame_.data());
+            pos_ = 0;
+        }
         return;
     }
     const int e = __builtin_popcountll((sr_ ^ sync_) & mask_), ei = allowInv_ ? syncBits_ - e : syncBits_ + 1;
     if (lock_) {
         if (++pos_ < syncBits_) return;
         const int m = std::min(e, ei);
-        if (m <= tolTrack_) { misses_ = 0; inv_ = ei < e; hits++; start(); return; }
+        if (m <= tolTrack_) {
+            if (pending_ && onFrame) onFrame(held_.data());
+            pending_ = false;
+            misses_ = 0; inv_ = ei < e; hits++; start(); return;
+        }
+        pending_ = false;
         if (++misses_ > 3) { lock_ = false; pos_ = 0; return; }
         start();   // keep flywheeling on the expected frame position
         return;
     }
-    if (e <= tolAcq_ || ei <= tolAcq_) { lock_ = true; inv_ = ei < e; hits++; misses_ = 0; start(); }
+    if (e <= tolAcq_ || ei <= tolAcq_) { lock_ = true; inv_ = ei < e; hits++; misses_ = 0; pending_ = false; start(); }
 }
 
 // ------------------------------------------------------------ TIP / HIRS

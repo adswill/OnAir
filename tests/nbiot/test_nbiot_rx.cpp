@@ -66,6 +66,10 @@ int main() {
     run("scene 1, -9.5 kHz, +15 ppm", 1, 15, -9500, 15, 2e6);
     run("scene 2, +3 kHz, -20 ppm", 2, 15, 3000, -20, 2e6);
     run("scene 3, -14 kHz, +8 ppm", 3, 15, -14000, 8, 2e6);
+    // a cheap radio's crystal both ways (QA sweep 3.9: -50 ppm took a side peak of the NPSS in the first timing window)
+    run("scene 0, -2 kHz, -50 ppm", 0, 15, -2000, -50, 2e6);
+    run("scene 0, +2 kHz, +50 ppm", 0, 15, 2000, 50, 2e6);
+    run("scene 2, -1 kHz, -40 ppm", 2, 15, -1000, -40, 2e6);
     printf("noise\n");
     run("scene 0, 5 dB", 0, 5, 1500, 0, 2e6);
     run("scene 1, 3 dB (2 ports)", 1, 3, -2000, 0, 2e6);

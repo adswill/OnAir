@@ -63,8 +63,10 @@ void scramble(int n, std::vector<cf32>& out) {
 }
 }  // namespace
 
-std::vector<UmtsCell> umtsCellSearch(const cf32* x2, size_t n, double maxCfoHz, int maxCells, double* scanMs) {
-    const auto t0 = std::chrono::steady_clock::now();
+namespace {
+struct Strongest { bool ok = false; int pos = 0, phase = 0; double cfo = 0; };
+
+std::vector<UmtsCell> searchBlock(const cf32* x2, size_t n, double maxCfoHz, int maxCells, Strongest* st) {
     std::vector<UmtsCell> found;
     // chip-rate samples (every second sample) and their power
     const size_t N = n / 2;
@@ -77,7 +79,7 @@ std::vector<UmtsCell> umtsCellSearch(const cf32* x2, size_t n, double maxCfoHz, 
     const std::vector<int>& p = psc();
     const int bins = std::max(1, (int)std::ceil(maxCfoHz / 2500.0));
     std::vector<double> bestByPos;
-    struct Pk { int pos; double m; double cfo; };
+    struct Pk { int pos; double m; double cfo; int phase; };
     std::vector<Pk> peaks;
     std::vector<double> slot((size_t)kChipsPerSlot * 4);
     // a correlation of 256 chips is split into 16 sub-sums of 16 chips, so each frequency bin only re-sums 16 values; per position the best bin is kept
@@ -115,11 +117,12 @@ std::vector<UmtsCell> umtsCellSearch(const cf32* x2, size_t n, double maxCfoHz, 
             bool near = false;
             for (auto& q : peaks) { const int d = std::abs(q.pos - o); if (std::min(d, kChipsPerSlot - d) < 4) near = true; }
             if (near) continue;
-            peaks.push_back({o, pwr[(size_t)o], frq[(size_t)o]});
+            peaks.push_back({o, pwr[(size_t)o], frq[(size_t)o], phase});
         }
         if (phase == 0 && !peaks.empty()) break;       // the first pass found something: its timing is good enough
     }
     std::sort(peaks.begin(), peaks.end(), [](const Pk& a2, const Pk& b2) { return a2.m > b2.m; });
+    if (st && !peaks.empty()) { st->ok = true; st->pos = peaks[0].pos; st->phase = peaks[0].phase; st->cfo = peaks[0].cfo; }
     const std::vector<std::vector<int>>& S = ssc();
     for (const Pk& pk : peaks) {
         if ((int)found.size() >= maxCells) break;
@@ -217,6 +220,83 @@ std::vector<UmtsCell> umtsCellSearch(const cf32* x2, size_t n, double maxCfoHz, 
         bool dup = false;
         for (auto& f : found) if (f.scramblingCode == cell.scramblingCode) dup = true;
         if (!dup) found.push_back(cell);
+    }
+    return found;
+}
+
+// The sample clock of the block from the strongest P-SCH: its peak in every frame (half-chip steps, interpolated), a line through them.
+// Returns false when fewer than three frames show it. pos0: the peak's position in the first frame, in samples; rate: samples per nominal sample.
+bool clockOf(const cf32* x2, size_t n, const Strongest& st, double& pos0, double& rate) {
+    const std::vector<int>& p = psc();
+    const double w = 2 * kPi * st.cfo / (2 * kChipRate);
+    std::vector<cf32> pr(256);
+    for (int k = 0; k < 256; k++) pr[(size_t)k] = (float)p[(size_t)k] * cf32((float)std::cos(w * 2 * k), -(float)std::sin(w * 2 * k));
+    const int R = 48;   // +-24 chips: 80 ms at 75 ppm
+    std::vector<std::pair<double, double>> pts;
+    for (int f = 0;; f++) {
+        std::vector<double> m((size_t)(2 * R + 1), 0.0);
+        int used = 0;
+        for (int j = 0; j < 15; j++) {
+            const long c0 = 2L * (st.pos + (long)(15 * f + j) * kChipsPerSlot) + st.phase;
+            if (c0 + R + 512 > (long)n) break;
+            if (c0 - R < 0) continue;
+            used++;
+            for (int d = -R; d <= R; d++) {
+                cf32 a(0, 0);
+                const cf32* x = x2 + c0 + d;
+                for (int k = 0; k < 256; k++) a += x[2 * k] * pr[(size_t)k];
+                m[(size_t)(d + R)] += std::norm(a);
+            }
+        }
+        if (used < 8) break;
+        int pk = 1;
+        for (int i = 1; i < 2 * R; i++) if (m[(size_t)i] > m[(size_t)pk]) pk = i;
+        double mean = 0; for (double v : m) mean += v; mean /= (double)m.size();
+        if (m[(size_t)pk] < 3 * mean) continue;
+        const double a = m[(size_t)pk - 1], b = m[(size_t)pk], c = m[(size_t)pk + 1], den = a - 2 * b + c;
+        const double frac = den < 0 ? 0.5 * (a - c) / den : 0;
+        pts.push_back({(double)f, 2.0 * (st.pos + 15.0 * f * kChipsPerSlot) + st.phase + (pk - R) + frac});
+    }
+    if (pts.size() < 3) return false;
+    double sx = 0, sy = 0, sxx = 0, sxy = 0;
+    for (const auto& q : pts) { sx += q.first; sy += q.second; sxx += q.first * q.first; sxy += q.first * q.second; }
+    const double k = (double)pts.size(), den = k * sxx - sx * sx;
+    if (den <= 0) return false;
+    const double slope = (k * sxy - sx * sy) / den;   // samples a frame
+    pos0 = (sy - slope * sx) / k;
+    rate = slope / (2.0 * 38400);
+    return std::fabs(rate - 1) < 300e-6;
+}
+}  // namespace
+
+std::vector<UmtsCell> umtsCellSearch(const cf32* x2, size_t n, double maxCfoHz, int maxCells, double* scanMs) {
+    const auto t0 = std::chrono::steady_clock::now();
+    Strongest st;
+    std::vector<UmtsCell> found = searchBlock(x2, n, maxCfoHz, maxCells, &st);
+    // A sample clock a few ppm off moves the chips through the samples within the block (1.5 chips in 80 ms at 5 ppm) and the frame and
+    // broadcast correlations, one sample a chip, fall apart. With the clock measured on the P-SCH the block is resampled to the cell's chip
+    // clock, its chips on the even samples, and searched again; the better of the two searches is kept.
+    double pos0 = 0, rate = 1;
+    if (st.ok && clockOf(x2, n, st, pos0, rate)) {
+        const double K0 = 2 * std::floor(pos0 / 2);   // output sample K0 is the peak: an even sample, on a chip
+        const double off = pos0 - K0 - std::round(pos0 - K0);
+        if (std::fabs(rate - 1) > 0.5e-6 || std::fabs(off) > 0.2) {
+            std::vector<cf32> y;
+            y.reserve(n);
+            for (size_t k = 0;; k++) {   // 4-point Lagrange
+                const double t = pos0 + ((double)k - K0) * rate;
+                if (t + 2 >= (double)n) break;
+                if (t < 1) { y.push_back(cf32(0, 0)); continue; }
+                const size_t i = (size_t)t;
+                const float fr = (float)(t - (double)i);
+                const float w0 = -fr * (fr - 1) * (fr - 2) / 6, w1 = (fr + 1) * (fr - 1) * (fr - 2) / 2, w2 = -(fr + 1) * fr * (fr - 2) / 2, w3 = (fr + 1) * fr * (fr - 1) / 6;
+                y.push_back(x2[i - 1] * w0 + x2[i] * w1 + x2[i + 1] * w2 + x2[i + 2] * w3);
+            }
+            if (y.size() % 2) y.pop_back();
+            std::vector<UmtsCell> again = searchBlock(y.data(), y.size(), maxCfoHz, maxCells, nullptr);
+            auto score = [](const std::vector<UmtsCell>& v) { int s2 = 0; for (const auto& c : v) s2 += 100 + c.bchBlocks; return s2; };
+            if (score(again) > score(found)) found = std::move(again);
+        }
     }
     if (scanMs) *scanMs = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - t0).count();
     return found;

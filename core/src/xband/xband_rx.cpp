@@ -4,6 +4,8 @@
 #include "dect2/xband/xband_products.h"
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/dsp_compat.h"
+#include "dect2/dsp/fir_dot.h"
+#include "dect2/dsp/fast_sincos.h"
 #include "dect2/dsp/rrc.h"
 #include "dect2/hrpt/hrpt_proto.h"
 #include "dect2/wxsat/wxsat_proto.h"
@@ -36,9 +38,10 @@ void loopGains(double bl, double zeta, double& a, double& b) {
     a = 4 * zeta * w / d; b = 4 * w * w / d;
 }
 
-// Decimating FIR, complex data, doubled ring
+// Decimating FIR, complex data, doubled ring; the dot product through firDot (sixteen accumulators the compiler vectorises)
 struct FirDec {
-    std::vector<float> taps, re, im;
+    std::vector<float> taps, h2;
+    std::vector<cfp> ring;
     int pos = 0, n = 0, dec = 1, cnt = 0;
     void design(int ratio, double cutoffNorm) {
         dec = std::max(1, ratio);
@@ -52,26 +55,24 @@ struct FirDec {
             sum += taps[(size_t)i];
         }
         for (auto& v : taps) v /= (float)sum;
-        re.assign((size_t)n * 2, 0); im.assign((size_t)n * 2, 0);
+        h2 = firDoubleTaps(taps.data(), n);
+        ring.assign((size_t)n * 2, cfp(0, 0));
         pos = 0; cnt = 0;
     }
-    void clear() { std::fill(re.begin(), re.end(), 0.f); std::fill(im.begin(), im.end(), 0.f); pos = 0; cnt = 0; }
+    void clear() { std::fill(ring.begin(), ring.end(), cfp(0, 0)); pos = 0; cnt = 0; }
     bool push(cfp x, cfp& out) {
         pos = (pos == 0 ? n : pos) - 1;
-        re[(size_t)pos] = re[(size_t)pos + n] = x.real();
-        im[(size_t)pos] = im[(size_t)pos + n] = x.imag();
+        ring[(size_t)pos] = ring[(size_t)pos + n] = x;
         if (++cnt < dec) return false;
         cnt = 0;
-        float a = 0, b = 0;
-        const float* r = &re[(size_t)pos], *i2 = &im[(size_t)pos];
-        for (int k = 0; k < n; k++) { a += taps[(size_t)k] * r[k]; b += taps[(size_t)k] * i2[k]; }
-        out = {a, b};
+        out = firDot(h2.data(), &ring[(size_t)pos], n);
         return true;
     }
 };
 
 struct Rrc {
-    std::vector<float> h, re, im;
+    std::vector<float> h, h2;
+    std::vector<cfp> ring;
     int n = 0, pos = 0;
     void design(double sps, double alpha) {
         const int half = std::max(4, (int)std::ceil(4 * sps));
@@ -80,18 +81,15 @@ struct Rrc {
         double e = 0;
         for (int i = 0; i < n; i++) { h[(size_t)i] = (float)dsp::rrc((i - half) / sps, alpha); e += h[(size_t)i] * h[(size_t)i]; }
         for (auto& v : h) v /= (float)std::sqrt(e);
-        re.assign((size_t)n * 2, 0); im.assign((size_t)n * 2, 0);
+        h2 = firDoubleTaps(h.data(), n);
+        ring.assign((size_t)n * 2, cfp(0, 0));
         pos = 0;
     }
-    void clear() { std::fill(re.begin(), re.end(), 0.f); std::fill(im.begin(), im.end(), 0.f); pos = 0; }
+    void clear() { std::fill(ring.begin(), ring.end(), cfp(0, 0)); pos = 0; }
     cfp push(cfp x) {
         pos = (pos == 0 ? n : pos) - 1;
-        re[(size_t)pos] = re[(size_t)pos + n] = x.real();
-        im[(size_t)pos] = im[(size_t)pos + n] = x.imag();
-        float a = 0, b = 0;
-        const float* r = &re[(size_t)pos], *i2 = &im[(size_t)pos];
-        for (int k = 0; k < n; k++) { a += h[(size_t)k] * r[k]; b += h[(size_t)k] * i2[k]; }
-        return {a, b};
+        ring[(size_t)pos] = ring[(size_t)pos + n] = x;
+        return firDot(h2.data(), &ring[(size_t)pos], n);
     }
 };
 
@@ -101,7 +99,9 @@ public:
     XbMod mod = kXbQpsk;
     bool acquired = false;
     double cfoCoarse = 0;
-    float agc = 1, carrierLock = 0, snrDb = 0;
+    float agc = 1, carrierLock = 0;
+    // the SNR from the spread of the symbol magnitudes, worked out when it is reported (not a log10 every symbol)
+    float snrDb() const { return 10.f * (float)std::log10(std::max(1e-3f, meanAbs_ * meanAbs_ / std::max(1e-6f, 2 * varAbs_))); }
     std::vector<std::pair<float, float>> cons;
     size_t consPos = 0;
 
@@ -116,25 +116,39 @@ public:
         rrc_.design(spsNom_, alpha);
         loopGains(m == kXbBpsk ? 0.008 : 0.005, 0.707, cA_, cB_);
         tBl_ = 0.006;
+        loopGains(tBl_, 0.9, tA_, tB_);
         resetAll();
     }
     void setOffset(double hz) { offsetHz = hz; updateStep(); }
     void resetAll() {
         fir_.clear(); rrc_.clear();
         rot_ = 1; for (auto& h : h_) h = 0;
-        acquired = false; acq_.clear(); acq_.reserve(kAcq); cfoCoarse = 0; updateStep();
+        acquired = false; acq_.clear(); acq_.reserve(kAcq); cfoCoarse = 0; idle = false; skipLeft_ = 0; updateStep();
         phase_ = 0; freq_ = 0; t_ = spsNom_ / 2; strobePh_ = 0; lastStrobe_ = 0; mid_ = 0; prevMid_ = 0; sps_ = spsNom_;
-        agc = 0.1f; carrierLock = 0; snrDb = 0; meanAbs_ = 0; varAbs_ = 0;
+        agc = 0.1f; carrierLock = 0; meanAbs_ = 0; varAbs_ = 0;
         cons.clear(); consPos = 0;
     }
-    void reacquire() { acquired = false; acq_.clear(); }
+    void reacquire() { acquired = false; acq_.clear(); idle = false; skipLeft_ = 0; }
     double currentCfo() const { return cfoCoarse + freq_ * decRate / (2 * kPi); }
 
+    // The pre-check: with no carrier line in a search block (the power-law spectrum of noise is flat) the receiver looks at one block of
+    // every kIdleEvery and skips the rest, until a line shows. A signal is found within kIdleEvery blocks (8 x 131072 samples: 0.07 s at 15 Msps).
+    static constexpr int kIdleEvery = 8;
+    // Measured on the test signals (all profiles, 0.15 s, CFO 20 kHz): a signal's line is 40 or more at 3 dB Es/N0 (120-13000 on the links
+    // that still decode there); white noise reached 11.7 at most (the OQPSK and narrow links: their filtered noise is not flat).
+    // A noise block over the threshold only costs what every block cost before.
+    static constexpr double kGatePeak = 16.0;
+    float lastPeak = 0;
+    bool idle = false;
+    uint64_t skipped = 0;
+
     template<class S> void feed(const cf32* x, size_t n, S&& sink) {
-        for (size_t i = 0; i < n; i++) {
+        for (size_t i = 0; i < n;) {
+            if (skipLeft_ > 0) { const size_t k = (size_t)std::min<uint64_t>(skipLeft_, n - i); skipLeft_ -= k; skipped += k; i += k; continue; }
             rot_ *= step_;
             if (((++renorm_) & 4095) == 0) rot_ /= std::abs(rot_);
             cfp v = cfp(x[i].real(), x[i].imag()) * rot_;
+            i++;
             cfp y;
             if (ratio_ == 1) y = v; else if (!fir_.push(v, y)) continue;
             sample(y, sink);
@@ -143,12 +157,13 @@ public:
 
 private:
     static constexpr int kAcq = 1 << 17;
+    uint64_t skipLeft_ = 0;
     std::vector<cfp> acq_;
     FirDec fir_;
     Rrc rrc_;
     int ratio_ = 1;
     double alpha_ = 0.5;
-    double spsNom_ = 2, sps_ = 2, cA_ = 0.01, cB_ = 1e-4, tBl_ = 0.005;
+    double spsNom_ = 2, sps_ = 2, cA_ = 0.01, cB_ = 1e-4, tBl_ = 0.005, tA_ = 0, tB_ = 0;
     double phase_ = 0, freq_ = 0, t_ = 1;
     cfp rot_{1, 0}, step_{1, 0};
     uint32_t renorm_ = 0;
@@ -219,6 +234,13 @@ private:
             const double p2 = scan(2, (int)std::lround(sym * 0.5 / decRate * N), o2);
             peak = p4 >= p2 ? p4 : p2; off = p4 >= p2 ? o4 : o2;
         }
+        lastPeak = (float)peak;
+        if (peak < kGatePeak) {   // noise: stay in the search, skip ahead
+            idle = true;
+            skipLeft_ = (uint64_t)(kIdleEvery - 1) * kAcq * (uint64_t)ratio_;
+            return;
+        }
+        idle = false;
         if (peak > 6) cfoCoarse += off;
         updateStep();
         phase_ = 0; freq_ = 0;
@@ -231,7 +253,7 @@ private:
             if ((int)acq_.size() >= kAcq) { acquire(); acq_.clear(); }
             return;
         }
-        const cfp nco((float)std::cos(phase_), (float)-std::sin(phase_));
+        const cfp nco = FastSinCos::get().polar(1.f, -phase_);   // a table: std::cos and std::sin in double each sample were the largest single cost
         cfp v = y * nco;
         phase_ += freq_;
         v = rrc_.push(v);
@@ -264,8 +286,7 @@ private:
         e /= std::max(1e-6f, agc * agc);
         lastStrobe_ = a;
         e = std::clamp(e, -1.f, 1.f);
-        double wA, wB;
-        loopGains(tBl_, 0.9, wA, wB);
+        const double wA = tA_, wB = tB_;
         sps_ = std::clamp(sps_ + wB * e * spsNom_, spsNom_ * 0.992, spsNom_ * 1.008);
         t_ += sps_ * 0.5 + wA * e * spsNom_ * 0.5;
         const float I = sy.real() / agc, Q = sy.imag() / agc;
@@ -277,7 +298,6 @@ private:
         const float ab = mod == kXbBpsk ? std::fabs(I) : 0.5f * (std::fabs(I) + std::fabs(Q));
         meanAbs_ += 0.003f * (ab - meanAbs_);
         varAbs_ += 0.003f * ((ab - meanAbs_) * (ab - meanAbs_) - varAbs_);
-        snrDb = 10.f * (float)std::log10(std::max(1e-3f, meanAbs_ * meanAbs_ / std::max(1e-6f, 2 * varAbs_)));
         if (cons.size() < 256) cons.emplace_back(I, mod == kXbBpsk ? 0.f : Q);
         else { cons[consPos] = {I, mod == kXbBpsk ? 0.f : Q}; consPos = (consPos + 1) % 256; }
         sink(I, Q);
@@ -346,7 +366,7 @@ struct XbandReceiver::Impl {
         if (haveRate) { dem.configure(rate, L.symbolRate, L.mod, L.alpha); dem.setOffset(offset); }
         if (L.caduBytes > 0) def.configure(xband::kAsm, 32, L.caduBytes * 8, 3, 10, true);
         if (P == kXbDmsp) { def.configure(0b1010110011111, 13, 150, 0, 5, true); def.onFrame = [this](const uint8_t* f) { dmspFrame(f); }; }
-        if (P == kXbOceansat2) for (int k = 0; k < 2; k++) { osDef[k].configure(0b0000000111111011111000010011001101ull, 34, 737760, 2, 6, false); osDef[k].onFrame = [this](const uint8_t* f) { oceansatFrame(f); }; }
+        if (P == kXbOceansat2) for (int k = 0; k < 2; k++) { osDef[k].configure(0b0000000111111011111000010011001101ull, 34, 737760, 2, 6, false); osDef[k].setConfirm(true); osDef[k].onFrame = [this](const uint8_t* f) { oceansatFrame(f); }; }
         if (P == kXbKanopus) { kanBits.assign((size_t)kKanBits, 0); kanW = 0; kanSkip = 0; kanLocked = false; kanBad = 0; pmssFrm.clear(); pmssIn = 0; pmssSync = false; }
         frameSyms = L.caduBytes > 0 ? symsPerFrame() : 0;
         resetState();
@@ -421,7 +441,9 @@ struct XbandReceiver::Impl {
         if (locked) { pathSymbol(I, Q); return; }
         symI.push_back(I); symQ.push_back(Q);
         const size_t cap = (size_t)frameSyms * 3 + 800;
-        if (symI.size() > cap) { const size_t cut = symI.size() - cap; symI.erase(symI.begin(), symI.begin() + (std::ptrdiff_t)cut); symQ.erase(symQ.begin(), symQ.begin() + (std::ptrdiff_t)cut); }
+        // trim in steps of a frame: cutting one symbol off the front each symbol moved the whole buffer every symbol (on noise, where it
+        // never locks, that cost more than the rest of the receiver)
+        if (symI.size() > cap + (size_t)std::max(frameSyms, 1000)) { const size_t cut = symI.size() - cap; symI.erase(symI.begin(), symI.begin() + (std::ptrdiff_t)cut); symQ.erase(symQ.begin(), symQ.begin() + (std::ptrdiff_t)cut); }
         if (++sinceSearch >= std::max(frameSyms, 1000) && (int)symI.size() >= frameSyms * 2 + 800) { sinceSearch = 0; search(); }
     }
 
@@ -669,16 +691,19 @@ struct XbandReceiver::Impl {
         maybePublish(0);
     }
 
+    // every 0.25 s, and at least every second of signal: a recording read faster than that (DMSP: 3 s in 0.24 s once the receiver got
+    // cheaper) kept its first report to the end otherwise
+    int64_t lastPubN = 0;
     void maybePublish(size_t) {
         const double now = nowSec();
-        if (now - lastPub < 0.25) return;
-        lastPub = now;
+        if (now - lastPub < 0.25 && !(rate > 0 && (double)(nIn - lastPubN) >= rate)) return;
+        lastPub = now; lastPubN = nIn;
         tel.packets = inst.packets();
         tel.lines = inst.lines();
         tel.satName = inst.satName();
         tel.scid = inst.lastScid() >= 0 ? inst.lastScid() : tel.scid;
         tel.cfoHz = dem.currentCfo();
-        tel.snrDb = dem.snrDb; tel.carrierLock = dem.carrierLock;
+        tel.snrDb = dem.snrDb(); tel.carrierLock = dem.carrierLock; tel.acqPeak = dem.lastPeak; tel.idleSkipped = dem.skipped;
         tel.symbolRate = L.symbolRate; tel.inputRate = rate;
         tel.dataValid = tel.blocksOk > 0;
         tel.frameLock = tel.frameLock && def.locked();

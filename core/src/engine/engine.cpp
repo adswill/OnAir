@@ -754,7 +754,7 @@ void Engine::resetReceiver(int a) {
     case 322: rxTetraDmo_.reset(); break;
     case 323: rxOpenSky_.reset(); break;
     case 156: rxMarineVhf_.reset(); break;
-    case 341: case 342: case 343: case 344: case 345: case 346: case 347: rxChv_.reset(); break;
+    case 341: case 342: case 343: case 344: case 345: case 346: case 347: rxChv_.setService((chv::Service)(a - 341)); rxChv_.reset(); break;   // a mode change: its service
     case 181: rxP25p2_.reset(); break;
     case 61: rxGoes_.reset(); break;
     case 65: rxHrpt_.reset(); break;
