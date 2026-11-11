@@ -308,10 +308,10 @@ void controls(App& a) {
     ImGui::PopFont();
     tip("The frequency listened to: the dial plus where the channel marker sits.\nClick the spectrum or the waterfall to move it; drag the edges of the light band to change the filter.");
     flowNext(10 * gUi);
-    if (freqStepArrow("##gdn", ImGuiDir_Left)) setListen(a, snap(listenHz(a)) - stepHz());
+    if (freqStepArrow("##gdn", ImGuiDir_Left)) setListen(a, snap(listenHz(a)) - stepHz(), a.centreTuning);   // target button: the radio follows (#301)
     tip("Down one step. Hold for a continuous change.");
     ImGui::SameLine(0, 2 * gUi);
-    if (freqStepArrow("##gup", ImGuiDir_Right)) setListen(a, snap(listenHz(a)) + stepHz());
+    if (freqStepArrow("##gup", ImGuiDir_Right)) setListen(a, snap(listenHz(a)) + stepHz(), a.centreTuning);
     tip("Up one step. Hold for a continuous change.");
     ImGui::SameLine(0, 4 * gUi);
     ImGui::SetNextItemWidth(95 * gUi);
@@ -727,7 +727,8 @@ void synth(App& a, bool& changed) {
 
 // ---- the Memory panel (app/memory): the listening frequency and the options a memory keeps for this mode
 double generalListenHz(const App& a) { load(); return listenHz(a); }
-void generalSetListenHz(App& a, double hz) { load(); setListen(a, hz); }   // the big readout: the VFO inside the band, the radio only past its edge
+// the big readout: the VFO inside the band, the radio only past its edge; with the target button on the radio centres on it, as in the other modes (#301)
+void generalSetListenHz(App& a, double hz) { load(); setListen(a, hz, a.centreTuning); }
 void generalRecallHz(App& a, double hz) { load(); S.chanOff = 0; a.freqMhz = hz / 1e6; S.lastDial = a.freqMhz; save(); }   // the channel back on the dial, the dial on hz
 // ---- the remote API (app/platform/remote_api_app.cpp): the demodulator and the squelch of the General receiver
 int generalApiDemod() { load(); return S.demod; }

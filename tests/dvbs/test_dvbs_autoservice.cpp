@@ -39,6 +39,30 @@ int main() {
     autoServicePick(d, {svc(3)}, -1, true, 1);   // user stop
     autoServicePick(d, {svc(3)}, -1, false, 2); autoServicePick(d, {svc(3)}, -1, false, 2.5);
     CHECK(autoServicePick(d, {svc(3)}, -1, true, 3) == -1);
+    // #410: a retune to another carrier whose only service has the same id while it is still selected: restart the player session
+    {
+        AutoServiceState r; bool rs = false; double u = 0;
+        CHECK(autoServicePick(r, {svc(1)}, -1, true, u, &rs) == 1 && !rs);
+        CHECK(autoServicePick(r, {svc(1)}, 1, true, u += 0.25, &rs) == -1 && !rs);
+        // the retune clears the service list while the lock stays (fast relock): the same id comes back on the new carrier
+        CHECK(autoServicePick(r, {}, 1, true, u += 0.25, &rs) == -1 && !rs);
+        CHECK(autoServicePick(r, {svc(1)}, 1, true, u += 0.25, &rs) == 1 && rs);
+        CHECK(autoServicePick(r, {svc(1)}, 1, true, u += 0.25, &rs) == -1 && !rs);   // once only
+        // the lock is gone for longer than the relock time, the same id comes back: restart again
+        for (int i = 0; i < 10; i++) autoServicePick(r, {svc(1)}, 1, false, u += 0.25, &rs);
+        CHECK(autoServicePick(r, {svc(1)}, 1, true, u += 0.25, &rs) == 1 && rs);
+        // a short dropout on the same carrier (services kept) is not a new signal
+        autoServicePick(r, {svc(1)}, 1, false, u += 0.25, &rs); autoServicePick(r, {svc(1)}, 1, false, u += 0.25, &rs);
+        CHECK(autoServicePick(r, {svc(1)}, 1, true, u += 0.25, &rs) == -1 && !rs);
+        // stopped by hand, then a retune with the same id: an ordinary start, no restart needed
+        autoServicePick(r, {svc(1)}, -1, true, u += 0.25, &rs);
+        for (int i = 0; i < 10; i++) autoServicePick(r, {}, -1, false, u += 0.25, &rs);
+        CHECK(autoServicePick(r, {svc(1)}, -1, true, u += 0.25, &rs) == 1 && !rs);
+        // a caller without the restart flag keeps the old behaviour
+        AutoServiceState o;
+        autoServicePick(o, {svc(2)}, -1, true, 0); autoServicePick(o, {}, 2, true, 1);
+        CHECK(autoServicePick(o, {svc(2)}, 2, true, 2) == -1);
+    }
     printf(fails ? "FAILED\n" : "ok\n");
     return fails ? 1 : 0;
 }

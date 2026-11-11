@@ -127,8 +127,9 @@ void tick(App& a) {
     S.wasRunning = run;
     if (run && S.autoSvc && live(a)) {   // one service in the signal: play it, and again after a retune to another signal
         Player& pl = a.engine.player();
-        const int id = dect2::autoServicePick(S.as, a.ts.services, pl.selected(), a.rx.dvbs.tsLock, ImGui::GetTime());
-        if (id >= 0) { pl.select(id); pl.setVolume(a.volume); }
+        bool restart = false;
+        const int id = dect2::autoServicePick(S.as, a.ts.services, pl.selected(), a.rx.dvbs.tsLock, ImGui::GetTime(), &restart);
+        if (id >= 0) { if (restart) pl.select(-1); pl.select(id); pl.setVolume(a.volume); }   // restart: same id on a new carrier (#410)
     }
     if (live(a) && a.rx.seq != S.lastSeq) {
         S.lastSeq = a.rx.seq;

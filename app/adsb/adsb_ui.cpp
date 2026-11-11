@@ -111,6 +111,12 @@ void pollLocate(App& a) {
 void tick(App& a) {
     loadState();
     pollLocate(a);
+    if (live(a)) {   // the selected aircraft went (dropped by the tracker): its readout panel closes with it (#235)
+        static double missingSince = -1;
+        bool present = false;
+        for (const auto& x : a.rx.adsb.aircraft) if (x.icao == S.sel) { present = true; break; }
+        if (dect2::adsbd::selectionGone(S.sel != 0xFFFFFFFFu, present, ImGui::GetTime(), missingSince)) S.sel = 0xFFFFFFFFu;
+    }
     a.tune.synth.modeVal[2] = S.refLat; a.tune.synth.modeVal[3] = S.refLon;   // the simulated traffic flies around the reference point
     const bool run = a.engine.running();
     if (run) {

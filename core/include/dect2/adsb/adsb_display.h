@@ -51,4 +51,15 @@ inline bool expired(double ageSec, int dropSec) { return dropSec > 0 && ageSec >
 // What the tracker is given as its expiry: "never" is a very long time (the table is bounded anyway).
 inline double trackerDropSec(int dropSec) { return dropSec > 0 ? (double)dropSec : 1e9; }
 
+// The selected aircraft left the table (the tracker dropped it): drop the selection too, so its readout panel (side pane, full screen map)
+// closes instead of staying open and empty (#235). `present`: the selection is in the newest aircraft list. A short grace (graceSec) rides
+// over a list that is briefly rebuilt without it. Returns true when the selection should be cleared now; `missingSince` is the caller's state.
+inline bool selectionGone(bool haveSelection, bool present, double nowSec, double& missingSince, double graceSec = 1.0) {
+    if (!haveSelection || present) { missingSince = -1; return false; }
+    if (missingSince < 0) { missingSince = nowSec; return false; }
+    if (nowSec - missingSince < graceSec) return false;
+    missingSince = -1;
+    return true;
+}
+
 } // namespace dect2::adsbd

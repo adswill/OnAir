@@ -74,9 +74,9 @@ static void tickReceiver(App& a) {
 }
 
 // analog TV (standard 9) and FPV (102): their pictures in the video-only view (#326)
-bool atvFullPicture(ImVec2 disp); bool atvHasPicture();
-bool fpvFullPicture(ImVec2 disp); bool fpvHasPicture();
-bool analogFullPicture(App& a, ImVec2 disp) { return a.rx.standard == 9 ? atvFullPicture(disp) : a.rx.standard == 102 ? fpvFullPicture(disp) : false; }
+bool atvFullPicture(App& a, ImVec2 disp); bool atvHasPicture();
+bool fpvFullPicture(App& a, ImVec2 disp); bool fpvHasPicture();
+bool analogFullPicture(App& a, ImVec2 disp) { return a.rx.standard == 9 ? atvFullPicture(a, disp) : a.rx.standard == 102 ? fpvFullPicture(a, disp) : false; }
 bool analogHasPicture(const App& a) { return a.rx.standard == 9 ? atvHasPicture() : a.rx.standard == 102 ? fpvHasPicture() : false; }
 
 // F toggles the video-only view; Escape leaves it

@@ -48,6 +48,16 @@ int main() {
         CHECK(std::fabs(d.timeSec() - t1 - 30) < 1e-3, "clock kept through a rate change: %.4f", d.timeSec() - t1);
     }
     CHECK(!strcmp(kPrefAltColour, "adsbAltColour") && !strcmp(kPrefTrackWidth, "adsbTrackWidth") && !strcmp(kPrefDropSec, "adsbDropSec"), "pref keys");
+    {   // #235: the selected aircraft is dropped by the tracker: the selection (and its readout panel) goes after the grace time
+        double ms = -1;
+        CHECK(!selectionGone(true, true, 0.0, ms), "present: kept");
+        CHECK(!selectionGone(true, false, 1.0, ms), "missing: grace starts");
+        CHECK(!selectionGone(true, false, 1.5, ms), "missing 0.5 s: still in grace");
+        CHECK(!selectionGone(true, true, 1.8, ms) && ms < 0, "back in the list: grace reset");
+        CHECK(!selectionGone(true, false, 2.0, ms), "missing again: grace restarts");
+        CHECK(selectionGone(true, false, 3.1, ms), "missing 1.1 s: cleared");
+        CHECK(!selectionGone(false, false, 9.0, ms), "nothing selected: nothing to clear");
+    }
     printf(fails ? "FAILED\n" : "adsb display ok\n");
     return fails ? 1 : 0;
 }
