@@ -27,7 +27,8 @@ namespace argos {
 constexpr double kFs = 32000.0;   // the uplink burst demodulator's rate
 struct DemodResult { int kind = 0; float carrierMs = 0, quality = 0; std::vector<uint8_t> bits; };
 // The A2 demodulator on its own: x holds a burst at kFs with its carrier near 0 Hz, starting a little before the carrier
-bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out);
+// hintStart: where the burst starts in x when the line detector knows (used only where the power gate cannot see the burst), -1 none
+bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out, long hintStart = -1, bool legacy = false);
 }
 
 class ArgosReceiver {
@@ -39,6 +40,7 @@ public:
     void setSignalOffset(double hz);
     void setDialHz(double hz);       // the link follows the dial when the setting is automatic (0: unknown, a file: uplink)
     void setLink(int link);          // 0 automatic, 1 uplink, 2 downlink
+    void setWeakSignalPath(bool on); // 4.0 weak-signal uplink path (default on); off = the 3.9 receiver, for before / after measurements
     bool ready() const;
     void reset();
     void clearResults();
