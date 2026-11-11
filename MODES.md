@@ -319,7 +319,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **MIL-STD-188-110 serial** - MIL-STD-188-110: serial tone HF data modem with STANAG 5066 framing (simulated signals only)
 - **STANAG 4285** - STANAG 4285: NATO HF data modem with STANAG 5066 framing (simulated signals only)
 - **STANAG 4539** - STANAG 4539: MIL-STD-188-110C high-rate HF data modem, 3200 to 12800 bit/s (simulated signals only)
-- **3G-ALE** - 3G-ALE: third-generation HF link setup calls and handshakes, BW0 bursts (simulated signals only)
+- **3G-ALE** - 3G-ALE: third-generation HF link setup, traffic management and HDL / LDL data bursts BW0 to BW4 (simulated signals only)
 - **Link 11 CLEW** - Link 11 CLEW: message detector and frame structure, no data (simulated signals only)
 - **STANAG 4481 FSK** - STANAG 4481 FSK: naval broadcast, single or 16-channel FSK, plain text shown (simulated signals only)
 - **ARQ-E** - ARQ-E: HF duplex ARQ teleprinter (simulated signals only)

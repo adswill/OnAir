@@ -1,5 +1,6 @@
 // 3G-ALE BW0 receiver, PDU reader and test generator; see hfu_ale3g.h. Clean-room from the text of MIL-STD-188-141B Appendix C.
 #include "dect2/hfutil/hfu_ale3g.h"
+#include "dect2/hfutil/hfu_ale3gbw.h"
 #include "dect2/hfutil/hfu_serial.h"
 #include <algorithm>
 #include <cmath>
@@ -193,6 +194,9 @@ uint32_t bw0Decode(const std::vector<float>& soft) {
     return b;
 }
 
+const uint8_t* ale3gTlcTable() { return kTlc; }
+const uint8_t* ale3gPnTable() { return kPn; }
+
 std::vector<cf32> genBw0(uint32_t bits26, double leadSec, double tailSec) {
     std::vector<int> sy;
     for (int i = 0; i < kNTlc; i++) sy.push_back(kTlc[i]);
@@ -228,8 +232,19 @@ struct Ale3gRx::Impl {
     uint64_t nBursts = 0, nGood = 0;
     double cfoLast = 0, snrLast = 0;
     std::function<void(const Ale3gPdu&)> cb;
+    Ale3gTrafficRx traffic;            // BW1 to BW4
+
+    void hookTraffic() {
+        traffic.setSink([this](const Ale3gTraffic& t) {
+            Ale3gPdu p;
+            p.waveform = t.waveform; p.type = t.type; p.text = t.text; p.crcOk = t.crcOk; p.snrDb = t.snrDb; p.cfoHz = t.cfoHz;
+            snrLast = t.snrDb; cfoLast = t.cfoHz;
+            if (cb) cb(p);
+        });
+    }
 
     Impl() {
+        hookTraffic();
         hist.assign(h.size(), cf(0, 0));
         for (int hI = 0; hI < kHyp; hI++) {
             const double f = -80.0 + 40.0 * hI;
@@ -253,6 +268,7 @@ struct Ale3gRx::Impl {
     }
 
     void push(const cf32* x, size_t n) {
+        traffic.push(x, n);
         const double w = -2 * kPi * kCarrier / kFs;
         const size_t L = h.size();
         for (size_t i = 0; i < n; i++) {
@@ -368,8 +384,8 @@ Ale3gRx::~Ale3gRx() = default;
 void Ale3gRx::reset() { auto c = std::move(p_->cb); p_.reset(new Impl); p_->cb = std::move(c); }
 void Ale3gRx::push(const cf32* x, size_t n) { p_->push(x, n); }
 void Ale3gRx::setPduSink(std::function<void(const Ale3gPdu&)> cb) { p_->cb = std::move(cb); }
-uint64_t Ale3gRx::bursts() const { return p_->nBursts; }
-uint64_t Ale3gRx::good() const { return p_->nGood; }
+uint64_t Ale3gRx::bursts() const { return p_->nBursts + p_->traffic.bursts(); }
+uint64_t Ale3gRx::good() const { return p_->nGood + p_->traffic.good(); }
 double Ale3gRx::lastCfoHz() const { return p_->cfoLast; }
 double Ale3gRx::lastSnrDb() const { return p_->snrLast; }
 

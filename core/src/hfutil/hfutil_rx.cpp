@@ -3,6 +3,7 @@
 #include "dect2/hfutil/hfu_serial.h"
 #include "dect2/hfutil/hfu_hdr.h"
 #include "dect2/hfutil/hfu_ale3g.h"
+#include "dect2/hfutil/hfu_ale3gbw.h"
 #include "dect2/hfutil/hfu_link11.h"
 #include "dect2/hfutil/hfu_4481.h"
 #include "dect2/hfutil/hfu_fsk.h"
@@ -233,7 +234,7 @@ void HfUtilReceiver::feed(const cf32* x, size_t n) {
     } else if (p_->ale3g) {
         const auto& r = *p_->ale3g;
         p_->tel.state = r.bursts() ? 2 : 0; p_->tel.cfoHz = r.lastCfoHz(); p_->tel.snrDb = (float)r.lastSnrDb();
-        char m[80]; snprintf(m, sizeof m, "%llu BW0 bursts, %llu PDUs", (unsigned long long)r.bursts(), (unsigned long long)r.good());
+        char m[80]; snprintf(m, sizeof m, "%llu bursts, %llu PDUs", (unsigned long long)r.bursts(), (unsigned long long)r.good());
         p_->tel.mode = r.bursts() ? m : "";
         p_->tel.blocksOk = r.good(); p_->tel.blocksBad = r.bursts() - r.good(); p_->tel.dataValid = r.good() > 0;
     } else if (p_->fsk) {
@@ -306,6 +307,12 @@ public:
                 const auto b = hfu::genBw0(pdu, 0.2, 0.2);
                 x.insert(x.end(), b.begin(), b.end());
             }
+            // then traffic management and a short LDL transfer: TM_REQUEST, TM_CONFIRM, LDL_DATA, LDL_ACK, TM_TERM
+            const std::vector<uint8_t> d(msg.begin(), msg.begin() + std::min<size_t>(msg.size(), 64));
+            for (const auto& b : {hfu::genBw1(hfu::tmPdu(0, 2, (5 << 5) | 3, (17 << 5) | 3, 7), 0.2, 0.2), hfu::genBw1(hfu::tmPdu(1, 3, (17 << 5) | 3, (5 << 5) | 3, 7), 0.2, 0.2),
+                                  hfu::genBw3(hfu::ldlPacket(d, 64, hfu::seqOnly((int)d.size())), 64, 0, 0.2, 0.2), hfu::genBw4(3, 0.2, 0.2),
+                                  hfu::genBw1(hfu::tmPdu(2, 3, (17 << 5) | 3, (5 << 5) | 3, 0), 0.2, 0.2)})
+                x.insert(x.end(), b.begin(), b.end());
         } else if (kind == kHfuKindHdr) {
             hfu::HdrGenCfg c;
             c.bps = 4800; c.frames = 3;
