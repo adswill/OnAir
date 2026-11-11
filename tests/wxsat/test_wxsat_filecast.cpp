@@ -270,6 +270,21 @@ static void testRf() {
     CHECK(g.files.filesComplete >= 5, "GeoNetCast files %llu", (unsigned long long)g.files.filesComplete);
 }
 
+// The receiver destroyed while the DVB-S2 workers are still decoding (no flush): they hand packets to the file layer, which must still be
+// there. Destruction freed the file layer first and a worker wrote into freed memory (custom_bandwidth_all segfaulted at GeoNetCast).
+static void testTeardown() {
+    WxsatGenConfig g; g.profile = kWxGeoNetCast; g.rate = 8e6; g.snrDb = 16; g.seed = 6; g.fileSymbolRate = 3e6;
+    WxsatGenerator gen(g);
+    std::vector<cf32> buf(1 << 16);
+    for (int run = 0; run < 6; run++) {
+        WxsatReceiver rx(kWxGeoNetCast);
+        rx.configure(g.rate);
+        rx.setFilecastSymbolRate(3e6);
+        for (double done = 0; done < (0.6 + 0.1 * run) * g.rate; done += (double)buf.size()) { gen.generate(buf.data(), buf.size()); rx.feed(buf.data(), buf.size()); }
+    }   // destroyed with frames in flight
+    printf("  GeoNetCast receiver destroyed mid-stream 6 times: ok\n");
+}
+
 // ---- real files
 static int real(const char* dir, const char* hrx) {
     FilecastLayer l(kWxHimawariCast);
@@ -314,6 +329,7 @@ int main(int argc, char** argv) {
     testLayer();
     testMsg();
     testRf();
+    testTeardown();
     printf(fails ? "filecast: %d FAILED\n" : "filecast: all passed\n", fails);
     return fails ? 1 : 0;
 }
