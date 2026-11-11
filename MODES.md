@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**333 modes.**
+**338 modes.**
 
 ## TV (17)
 
@@ -177,11 +177,12 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (38)
+## IoT & Sensors (39)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
 - **C-V2X (structure)** - C-V2X: LTE sidelink, structure only
+- **RC model PPM (72 MHz)** - RC model PPM: channel count and stick values
 - **ISM sensors** - ISM sensors: weather stations, TPMS, remotes and meters around you (the rtl_433 idea)
 - **Sub-GHz sensors** - Sub-GHz sensors: the rtl_433 decoders with a live sensor list, history, export and an unknown signal analyser (RTL-SDR or HackRF at 250 kHz and up)
 - **LoRaWAN** - LoRaWAN: IoT devices around you, from the headers every gateway receives
@@ -218,7 +219,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
 - **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
 
-## Weather & Science (51)
+## Weather & Science (54)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -258,6 +259,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FY-3 AHRPT** - FY-3 AHRPT: Fengyun-3 VIRR / MERSI pictures at 1.7 GHz (needs a dish and a fast radio)
 - **FY-3 MPT** - FY-3 MPT: Fengyun-3 MERSI pictures in X-band (needs a dish, a down-converter and a very fast radio)
 - **Weather radar (detect)** - Weather radar: scan pattern and pulse timing
+- **GRAVES meteor echoes** - GRAVES: meteor echo list
+- **Radio Jove bursts** - Radio Jove: burst list
+- **Beacon propagation monitor** - Beacon monitor: path class, level, Doppler spread
 - **Sferics (lightning)** - Sferics: lightning strikes counted from their radio crackle
 - **Lightning position (network)** - Lightning position: strikes located from several stations' arrival times
 - **SuperSID (VLF)** - SuperSID: VLF station levels and the sudden changes of solar flares, receive only
@@ -329,7 +333,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 - **HF packet 300 Bd** - HF packet 300 Bd: AX.25 frames, full decode (simulated only)
 
-## HF Utility (32)
+## HF Utility (33)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -348,6 +352,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **EFR teleswitch** - EFR: DCF49 / DCF39 radio teleswitch telegrams (simulated signals only)
 - **Piccolo Mk VI** - Piccolo Mk VI: HF MFSK teleprinter (simulated signals only)
 - **Coquelet-8** - Coquelet-8: HF MFSK teleprinter (simulated signals only)
+- **UVB-76 buzzer monitor** - UVB-76: buzz rate and breaks
 - **Datawell Buoy HF Link** - Datawell Buoy HF Link: wave heights, periods and spectra from wave buoys on HF (receive only)
 - **CODAR / HF ocean radar** - CODAR / HF ocean radar: the coastal radar chirps on the HF bands (receive only)
 - **Shortwave** - Shortwave listening with one-click decoders: retune and they follow

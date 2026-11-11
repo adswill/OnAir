@@ -96,6 +96,7 @@
 #include "dect2/vor/vor_rx.h"
 #include "dect2/wifi/wifi_rx.h"
 #include "dect2/wisun/wisun_rx.h"
+#include "dect2/x40/x40_rx.h"
 #include "dect2/xlink/xlink_rx.h"
 #include "dect2/zwave/zwave_rx.h"
 namespace dect2::webschema {
@@ -970,6 +971,36 @@ static bool set_881(Engine& e, const std::string& n, double v) {
     if (n == "setRead") { call(r, &Rx<decltype(r)>::setRead, v); return true; }
     return false;
 }
+static const char kOpt_882[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_882(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_883[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_883(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_884[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_884(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_885[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_885(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_886[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_886(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
 const OptEntry kOpt[] = {
     {7, kOpt_7, set_7},
@@ -1090,6 +1121,11 @@ const OptEntry kOpt[] = {
     {747, kOpt_747, set_747},
     {871, kOpt_871, set_871},
     {881, kOpt_881, set_881},
+    {882, kOpt_882, set_882},
+    {883, kOpt_883, set_883},
+    {884, kOpt_884, set_884},
+    {885, kOpt_885, set_885},
+    {886, kOpt_886, set_886},
 };
 } // namespace
 

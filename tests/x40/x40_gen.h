@@ -1,0 +1,114 @@
+// Test signals for the 4.0 signal modes. These generators exist only in the tests; none is reachable from the transmit side of the application.
+#pragma once
+#include "dect2/common/ring.h"
+#include "dect2/x40/x40_rx.h"
+#include "dect2/x40/x40_tel.h"
+#include <cmath>
+#include <cstdint>
+#include <cstdio>
+#include <random>
+#include <vector>
+
+namespace x40gen {
+using dect2::cf32;
+inline constexpr double kPi = 3.14159265358979323846;
+
+struct Rng {
+    std::mt19937 r; std::normal_distribution<float> n{0, 1};
+    explicit Rng(unsigned s) : r(s) {}
+    float g() { return n(r); }
+};
+
+// Complex Gaussian noise with the given power per sample (added in place)
+inline void addNoise(std::vector<cf32>& x, double power, unsigned seed) {
+    Rng r(seed); const float s = (float)std::sqrt(power / 2);
+    for (auto& v : x) v += cf32(s * r.g(), s * r.g());
+}
+// Carrier offset with a linear drift (Hz and Hz per second)
+inline void mix(std::vector<cf32>& x, double hz, double driftHzPerSec, double fs) {
+    double p = 0, f = hz; const double df = driftHzPerSec / fs;
+    for (auto& v : x) { v *= cf32((float)std::cos(p), (float)std::sin(p)); p += 2 * kPi * f / fs; f += df; }
+}
+
+// RC PPM: amplitude of the carrier over time. notchUs: the pulse; invert: the carrier is high only during the pulse. clockPpm scales every time.
+struct Ppm { std::vector<double> chMs{1.5, 1.5, 1.5, 1.5}; double frameMs = 20.0, notchUs = 350, jitterUs = 0, clockPpm = 0, depth = 1.0; bool invert = false; };
+inline std::vector<cf32> ppm(const Ppm& p, double fs, double seconds, unsigned seed = 1) {
+    Rng r(seed); std::vector<cf32> x((size_t)(fs * seconds), cf32(1, 0));
+    const double k = 1 + p.clockPpm * 1e-6;
+    double t = 0.0013;
+    auto pulse = [&](double t0) {
+        const size_t a = (size_t)(t0 * k * fs), b = (size_t)((t0 + p.notchUs * 1e-6) * k * fs);
+        for (size_t i = a; i < b && i < x.size(); i++) x[i] = cf32((float)(1 - p.depth), 0);
+    };
+    if (p.invert) for (auto& v : x) v = cf32((float)(1 - p.depth), 0);
+    auto setPulse = [&](double t0) {
+        const size_t a = (size_t)(t0 * k * fs), b = (size_t)((t0 + p.notchUs * 1e-6) * k * fs);
+        for (size_t i = a; i < b && i < x.size(); i++) x[i] = p.invert ? cf32(1, 0) : cf32((float)(1 - p.depth), 0);
+    };
+    (void)pulse;
+    while (t * k < seconds) {
+        double fr = 0;
+        for (double c : p.chMs) { setPulse(t + fr * 1e-3); fr += c + p.jitterUs * 1e-3 * r.g(); }
+        setPulse(t + fr * 1e-3);
+        t += p.frameMs * 1e-3;
+    }
+    return x;
+}
+
+// UVB-76: AM carrier; the buzz is a 30 Hz harsh tone burst (sawtooth), buzzLen long, every period. Optional breaks (no buzz) and a long transmission.
+struct Buzz { double period = 2.4, buzzLen = 1.2, depth = 0.6, ppm = 0; double breakAt = -1, breakLen = 0, voiceAt = -1, voiceLen = 0; };
+inline std::vector<cf32> buzzer(const Buzz& b, double fs, double seconds, unsigned seed = 1) {
+    Rng r(seed); std::vector<cf32> x((size_t)(fs * seconds));
+    const double per = b.period * (1 + b.ppm * 1e-6);
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / fs; double a = 0;
+        const bool inBreak = b.breakAt >= 0 && t >= b.breakAt && t < b.breakAt + b.breakLen;
+        const bool voice = b.voiceAt >= 0 && t >= b.voiceAt && t < b.voiceAt + b.voiceLen;
+        if (voice) a = 0.5 * std::sin(2 * kPi * 300 * t) * (0.6 + 0.4 * std::sin(2 * kPi * 3.1 * t)) + 0.3 * std::sin(2 * kPi * 1100 * t) * std::sin(2 * kPi * 2.3 * t);
+        else if (!inBreak && std::fmod(t, per) < b.buzzLen) { const double ph = std::fmod(t * 30.0, 1.0); a = (ph * 2 - 1) * 0.7; }
+        x[i] = cf32((float)(1 + b.depth * a), 0);
+    }
+    return x;
+}
+
+// GRAVES: carrier at carrierHz, meteor echoes as short tones at carrierHz + dop with amplitude amp (relative to the carrier of 1)
+struct Echo { double start, dur, dop, amp, driftHzPerSec = 0; };
+inline std::vector<cf32> graves(double fs, double seconds, double carrierHz, double carrierAmp, const std::vector<Echo>& e, unsigned seed = 1) {
+    std::vector<cf32> x((size_t)(fs * seconds)); double pc = 0;
+    std::vector<double> pe(e.size(), 0.0);
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / fs;
+        cf32 v = (float)carrierAmp * cf32((float)std::cos(pc), (float)std::sin(pc)); pc += 2 * kPi * carrierHz / fs;
+        for (size_t k = 0; k < e.size(); k++) if (t >= e[k].start && t < e[k].start + e[k].dur) {
+            const double f = carrierHz + e[k].dop + e[k].driftHzPerSec * (t - e[k].start);
+            pe[k] += 2 * kPi * f / fs;
+            const double env = std::sin(kPi * (t - e[k].start) / e[k].dur);   // smooth start and end
+            v += (float)(e[k].amp * env) * cf32((float)std::cos(pe[k]), (float)std::sin(pe[k]));
+        }
+        x[i] = v;
+    }
+    (void)seed;
+    return x;
+}
+
+// Radio Jove: noise of power 1 is added by the caller; this makes bursts of extra noise power `extra` at the given times (start, length)
+struct Burst { double start, len, extra; };
+inline std::vector<cf32> jove(double fs, double seconds, const std::vector<Burst>& b, unsigned seed = 1) {
+    Rng r(seed); std::vector<cf32> x((size_t)(fs * seconds));
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / fs; double pw = 1;
+        for (auto& e : b) if (t >= e.start && t < e.start + e.len) pw += e.extra;
+        const float s = (float)std::sqrt(pw / 2);
+        x[i] = cf32(s * r.g(), s * r.g());
+    }
+    return x;
+}
+
+inline dect2::X40Telemetry run(int variant, const std::vector<cf32>& x, double fs, double offset = 0) {
+    dect2::X40Receiver rx; rx.setVariant(variant); rx.configure(fs); rx.setSignalOffset(offset);
+    for (size_t i = 0; i < x.size(); i += 4096) rx.feed(x.data() + i, std::min<size_t>(4096, x.size() - i));
+    dect2::X40Telemetry t; rx.telemetry(t, 0);
+    return t;
+}
+inline int countKind(const dect2::X40Telemetry& t, const char* kind) { int n = 0; for (auto& r : t.rows) if (r.kind == kind) n++; return n; }
+}

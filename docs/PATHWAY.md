@@ -1771,3 +1771,6 @@ Japanese text mixing two fonts) merged. integ-40 started from main for 4.0.
 
 ## 2026-11-12 feat40-feat2 (Lane B group 2)
 Talkgroup activity and follow-the-busiest (DMR view), radiosonde launch clock (Sites view), APRS channel use / beacon rates, TX frequency-plan warnings, ADS-B track replay core, link budget and power ramp helpers. Tests: feat40b, sonde_sites (simulated data). Details in docs/FEATURES-4.0-B.md.
+## 2026-11-12: five 4.0 signal modes (feat40-modes1)
+
+RC model PPM (881), UVB-76 buzzer monitor (882), GRAVES meteor echoes (883) and Radio Jove bursts (884) and the beacon propagation monitor (885): decoders, test generators, round-trip tests with offset, drift, noise and false-decode runs, mode-list entries, docs/X40-4.0.md. Simulated signals only. Families 881 to 899 are used because kNumFamilies is 900 (docs/FAMILY-NUMBERS-4.0.md).

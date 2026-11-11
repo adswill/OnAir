@@ -130,6 +130,7 @@
 #include "dect2/sferics/sferics_rx.h"
 #include "dect2/sferics/ltpos_rx.h"
 #include "dect2/fbr/fbr_rx.h"
+#include "dect2/x40/x40_rx.h"
 #include "dect2/atis/atis_rx.h"
 #include "dect2/selcal/selcal_rx.h"
 #include "dect2/umts/umts_rx.h"
@@ -597,6 +598,7 @@ public:
     ShortwaveReceiver& shortwave() { return rxSw_; }   // Shortwave: the general receiver and the one-click decoders (telemetry through latestRx)
     SensorsReceiver& sensors() { return rxSens_; }   // Sub-GHz sensors: protocols, custom decoders, clear (telemetry through latestRx)
     BganReceiver& bgan() { return rxBgan_; }   // Inmarsat BGAN (telemetry through latestRx)
+    X40Receiver& x40() { return rxX40_; }   // 4.0 signal modes (families 881 - 896; telemetry through latestRx)
     FbrReceiver& fbr() { return rxFbr_; }   // Fleet Broadcast (UHF SATCOM), family 870: bit polarity, clear the log
     LtPosReceiver& ltpos() { return rxLtpos_; }   // Lightning position (network), family 790
     SfericsReceiver& sferics() { return rxSfer_; }   // Sferics (lightning): threshold, mains filter, clear counts (telemetry through latestRx)
@@ -1059,6 +1061,7 @@ private:
     SfericsReceiver rxSfer_;
     LtPosReceiver rxLtpos_;
     FbrReceiver rxFbr_;
+    X40Receiver rxX40_;
     AtisReceiver rxAtis_;
     SelcalReceiver rxSelcal_;
     UmtsReceiver rxUmts_;
