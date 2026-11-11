@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cstddef>
 #include <cstdint>
+#include <cstring>
 
 namespace dect2 {
 
@@ -43,15 +44,18 @@ constexpr uint32_t kSampleExpLimit = (127u + 20u) << 23;   // the exponent bits 
 inline void dropNonFinite(cf32* x, size_t n) {
     // looks at the exponent bits of every float: at or above 2^20 (all ones: NaN or infinity). One branch per block of 256 values, the loop vectorises.
     static_assert(sizeof(cf32) == 2 * sizeof(float), "cf32 layout");
-    uint32_t* w = reinterpret_cast<uint32_t*>(x);
+    // The bits are read through memcpy and the floats written as float (complex<float> is array-accessible as float): writing the samples
+    // through a uint32_t* broke strict aliasing, and GCC -O2 kept a stale sample after the call (sample_guard on Linux).
+    float* f = reinterpret_cast<float*>(x);
+    const auto expOf = [](float v) { uint32_t u; std::memcpy(&u, &v, sizeof u); return u & 0x7F800000u; };
     const size_t total = 2 * n;
     for (size_t b = 0; b < total; b += 256) {
         const size_t e = std::min<size_t>(b + 256, total);
         uint32_t bad = 0;
-        for (size_t i = b; i < e; i++) bad |= (uint32_t)((w[i] & 0x7F800000u) >= kSampleExpLimit);
+        for (size_t i = b; i < e; i++) bad |= (uint32_t)(expOf(f[i]) >= kSampleExpLimit);
         if (bad)
             for (size_t i = b & ~(size_t)1; i < e; i += 2)
-                if ((w[i] & 0x7F800000u) >= kSampleExpLimit || (w[i + 1] & 0x7F800000u) >= kSampleExpLimit) { w[i] = 0; w[i + 1] = 0; }
+                if (expOf(f[i]) >= kSampleExpLimit || expOf(f[i + 1]) >= kSampleExpLimit) { f[i] = 0.f; f[i + 1] = 0.f; }
     }
 }
 
