@@ -195,4 +195,49 @@ inline std::vector<cf32> plNoise(const Pl& p, double fs, double seconds) {
     return x;
 }
 
+
+// ---- radar pulses (rendered block by block: a long stream at 2 Msps would not fit in memory) -------------------------------------------------
+struct RadarPulse { double t, w, amp, f; };
+struct RadarPlan {
+    std::vector<double> priPattern{1e-3};      // the spacings, repeated (one value: constant)
+    double jitter = 0, pw = 1e-6, offsetHz = 0, durationSec = 8.0, scanSec = 0, lobeSec = 0.012, sideDb = -40, noiseSigma = 1.0, snrDb = 25;   // amplitude: snrDb over the noise sigma
+    unsigned seed = 5;
+};
+inline std::vector<RadarPulse> radarPulses(const RadarPlan& p) {
+    Rng r(p.seed); std::vector<RadarPulse> v; double t = 0.05; size_t k = 0;
+    const double A = p.noiseSigma * std::pow(10.0, p.snrDb / 20);
+    while (t < p.durationSec - 0.01) {
+        double amp = A;
+        if (p.scanSec > 0) { double ph = std::fmod(t, p.scanSec) - p.scanSec / 2; amp = A * std::max(std::pow(10.0, p.sideDb / 20), std::exp(-0.5 * ph * ph / (p.lobeSec * p.lobeSec))); }
+        v.push_back({t, p.pw, amp, p.offsetHz});
+        t += p.priPattern[k++ % p.priPattern.size()] * (1 + p.jitter * (r.g() * 0.5));
+    }
+    return v;
+}
+// feeds the receiver block by block; returns its telemetry
+inline dect2::X40Telemetry runRadar(const RadarPlan& p, double fs, unsigned seed = 1) {
+    const auto pl = radarPulses(p);
+    dect2::X40Receiver rx; rx.setVariant(dect2::x40::Radar); rx.configure(fs);
+    Rng rn(seed); std::vector<cf32> blk(8192);
+    const size_t N = (size_t)(fs * p.durationSec); size_t pi = 0;
+    for (size_t i0 = 0; i0 < N; i0 += blk.size()) {
+        const size_t n = std::min(blk.size(), N - i0);
+        for (size_t i = 0; i < n; i++) blk[i] = cf32((float)(p.noiseSigma * rn.g()), (float)(p.noiseSigma * rn.g()));
+        const double ta = i0 / fs, tb = (i0 + n) / fs;
+        while (pi < pl.size() && pl[pi].t + pl[pi].w + 1e-6 < ta) pi++;
+        for (size_t q = pi; q < pl.size() && pl[q].t < tb; q++) {
+            const auto& u = pl[q];
+            const size_t a = (size_t)std::max(0.0, (u.t - ta) * fs), b = (size_t)std::min((double)n, (u.t + u.w - ta) * fs + 1);
+            for (size_t i = a; i < b; i++) {
+                const double tt = (i0 + i) / fs - u.t; const double edge = std::min(1.0, std::min(tt, u.w - tt) * fs / 1.5 + 0.0);   // a rise over about a sample and a half
+                const double g = std::max(0.0, std::min(1.0, 0.5 + edge));
+                const double ph = 2 * kPi * u.f * tt;
+                blk[i] += (float)(u.amp * g) * cf32((float)std::cos(ph), (float)std::sin(ph));
+            }
+        }
+        rx.feed(blk.data(), n);
+    }
+    dect2::X40Telemetry t; rx.telemetry(t, 0); return t;
+}
+
 }

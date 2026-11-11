@@ -372,6 +372,7 @@
         <item>FM modulation monitor</item>
         <item>AM modulation monitor</item>
         <item>Power-line noise locator</item>
+        <item>Radar pulse analyser</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -725,6 +726,7 @@
         <item>FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offset, the 19 kHz pilot and stereo, the 57 kHz RDS injection, SCA subcarriers and the audio level of a station, with over-deviation logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
         <item>AM broadcast modulation monitor (LW, MW, SW): the carrier offset, modulation depth, positive and negative peaks, asymmetry, mains hum, audio bandwidth and over-modulation of one station, with loss and return of the carrier logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
         <item>Power-line and impulse noise analyser: finds the impulses in a band and measures their rate and level, and tells a repetition at twice the mains frequency (100 / 120 Hz, an arcing insulator or a faulty lamp) from a half-wave one (50 / 60 Hz), a steady switching supply and random static. For hunting the source of interference with an antenna in hand. Simulated signals only</item>
+        <item>Radar pulse analyser: the pulses of the strongest pulsed emitter (marine, air-traffic or weather radar, needs a 2 Msps radio and the right band converter): pulse width, repetition interval and rate, constant / staggered / jittered spacing, the carrier inside the pulse and the antenna turn time from the beam passing. It measures the emitter, not what it is. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1078,6 +1080,7 @@
         <item>Event</item>
         <item>Event</item>
         <item>Pattern</item>
+        <item>Emitter</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1431,5 +1434,6 @@
         <item>fm modulation monitor deviation pilot 19 khz rds injection mpx power sca subcarrier stereo overmodulation bs.412 broadcast engineer</item>
         <item>am modulation monitor depth overmodulation carrier offset hum asymmetry audio bandwidth mw sw lw broadcast</item>
         <item>power line noise interference rfi arcing insulator impulse noise dimmer switching supply mains 100 hz 120 hz noise hunting locator</item>
+        <item>radar pulse analyser pri prf pulse width stagger jitter marine radar x band s band weather radar atc scan period antenna rotation</item>
     </string-array>
 </resources>

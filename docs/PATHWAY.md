@@ -1798,3 +1798,7 @@ AM broadcast modulation monitor: carrier offset, depth, peaks, asymmetry, hum, a
 ## 2026-11-12: Power-line noise locator (family 891)
 
 Impulse and power-line noise analyser: impulse rate and level, repetition at twice the mains, the mains rate or another steady rate, static. Tests: five rates at two input rates, drifting mains with missing and random impulses, Poisson impulses, 15 min noise false-pattern run, level sweep. Simulated signals only (docs/PLNOISE-4.0.md).
+
+## 2026-11-12: Radar pulse analyser (family 892)
+
+Pulse analyser: width, PRI and PRF, constant / staggered / jittered classification, carrier inside the pulse, antenna turn time. Tests: PRFs and widths, stagger 2 to 4, jitter, a scanning beam, level sweep, 5 min noise false-emitter run. Simulated signals only (docs/RADAR-4.0.md).

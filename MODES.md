@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**344 modes.**
+**345 modes.**
 
 ## TV (17)
 
@@ -36,7 +36,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FM modulation monitor** - FM monitor: deviation, pilot, RDS, MPX power
 - **AM modulation monitor** - AM monitor: depth, peaks, hum, bandwidth
 
-## Aviation (27)
+## Aviation (28)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -58,6 +58,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **GBAS VDB** - GBAS VDB: burst structure of satellite landing data
 - **LDACS (structure)** - LDACS: L-band data link, structure only
 - **AeroMACS (structure)** - AeroMACS: airport data link, structure only
+- **Radar pulse analyser** - Radar pulses: PRI, width, stagger, antenna turn
 - **ADS-L** - ADS-L: light aircraft conspicuity on 868 and 869.5 MHz
 - **FLARM** - FLARM aircraft: gliders and light aircraft on 868 MHz
 - **DJI drones** - DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded

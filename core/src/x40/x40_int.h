@@ -50,6 +50,7 @@ std::unique_ptr<Decoder> makeQi();
 std::unique_ptr<Decoder> makeFmMon();
 std::unique_ptr<Decoder> makeAmMon();
 std::unique_ptr<Decoder> makePlNoise();
+std::unique_ptr<Decoder> makeRadar();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {
