@@ -66,7 +66,7 @@ struct Chan {
     std::unique_ptr<cw::FistDecoder> fist = std::make_unique<cw::FistDecoder>();   // the adaptive timing, with the same debounce
     bool fKey = false, fStarted = false;
     int fRun = 0, fCnt = 0;
-    int shown = 1;               // whose text is shown: 1 the 0.2.7 timing, 2 the adaptive one
+    int shown = 2;               // the timing that runs: 1 the 0.2.7 one, 2 the adaptive one
     std::string text;
     std::vector<std::string> calls;
     double firstSec = 0, lastActive = 0, lastPeak = 0;
@@ -304,19 +304,25 @@ struct CwReceiver::Impl {
         c.hi -= 0.0005f * (c.hi - c.lo);
         c.raw = k;
         if (keyTap) keyTap(c.id, c.f, k);
-        c.keyer.sample(k, c.tm);
-        fistKeyer(c, k);
-        const int sel = timingSel.load(std::memory_order_relaxed);
-        c.shown = sel == 1 || sel == 2 ? sel : chooseTiming(c);
-        c.key = c.shown == 2 ? c.fKey : c.keyer.key();
-        if (c.key) c.lastActive = sigSec();
-        std::string s = c.tm.take(), sa;
-        {
+        const int sel = timingSel.load(std::memory_order_relaxed) == 1 ? 1 : 2;
+        if (sel != c.shown) {   // switched: the other timing starts afresh
+            c.tm.reset(); c.keyer.reset(); c.fist->reset();
+            c.fKey = c.fStarted = false; c.fRun = c.fCnt = 0;
+            c.shown = sel;
+        }
+        std::string s;
+        if (sel == 1) {
+            c.keyer.sample(k, c.tm);
+            c.key = c.keyer.key();
+            s = c.tm.take();
+        } else {
+            fistKeyer(c, k);
+            c.key = c.fKey;
             cw::DecTok t[32];
             for (size_t nt; (nt = c.fist->pop(t, 32)) > 0;)
-                for (size_t i = 0; i < nt; i++) sa += t[i].text;
+                for (size_t i = 0; i < nt; i++) s += t[i].text;
         }
-        if (c.shown == 2) s.swap(sa);
+        if (c.key) c.lastActive = sigSec();
         if (!s.empty()) {
             for (char ch : s) { if (ch == '*') c.bad++; if (ch != ' ') c.chars++; }
             c.text += s;
@@ -346,9 +352,6 @@ struct CwReceiver::Impl {
         }
         if (!c.fKey && c.fStarted && c.fRun % 10 == 0) d.idle(c.fRun);
     }
-
-    // automatic: which timing's text is shown
-    static int chooseTiming(const Chan& c) { return c.shown; }
 
     void sidetoneMs(const Chan* c) {
         const float target = c && c->key ? 1.f : 0.f;

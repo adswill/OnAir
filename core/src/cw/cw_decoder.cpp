@@ -78,13 +78,15 @@ struct Hyp {
     uint8_t nPend = 0, wLen = 0;
     uint8_t c1 = kLmSpace, c2 = kLmSpace;
     uint8_t zc = 0;                      // the worst z of the elements of the character in progress, x40
+    uint8_t atWord = 1;                  // at the start of a word (after a word gap): a mark here may be noise in the pause
+    uint8_t skip = 0;                    // the last mark was read as noise: the gap after it goes on with the pause
     uint8_t pend[kPend] = {};
     uint8_t pz[kPend] = {};
     uint8_t word[kWord] = {};
 };
 
 bool sameHyp(const Hyp& a, const Hyp& b) {
-    return a.node == b.node && a.nPend == b.nPend && a.c1 == b.c1 && a.c2 == b.c2 && a.wLen == b.wLen &&
+    return a.node == b.node && a.nPend == b.nPend && a.c1 == b.c1 && a.c2 == b.c2 && a.wLen == b.wLen && a.skip == b.skip &&
            !std::memcmp(a.pend, b.pend, a.nPend) && !std::memcmp(a.word, b.word, a.wLen);
 }
 
@@ -117,8 +119,11 @@ struct FistDecoder::Impl {
     Ev q[4]; int nq = 0;
     bool haveMark = false;               // a mark was seen (a space before the first one is nothing)
     bool idleFlushed = false;
-    bool pauseNoise = false;
-    float rDrop = 0.01f, rSpike = 0.01f;   // how often the detector splits a mark / opens on noise in a gap (soft decisions)             // a noise blip was dropped in the pause: the gap after it is not a whole pause
+    // the sender learned before the lock was lost (a long fade, a burst of noise): a new lock at about the same speed starts from it
+    struct Prior { bool ok = false; float L, ldr, gi, gc, gw, sd, sD, si, sc, sw; } prior;
+    // how often the detector opens on noise in a gap (a mark under a third of a dot between two gaps): the soft decisions' measure of
+    // how weak the signal is. Not the split marks: after a doubling of the speed the new gaps look like drop-outs to the old model
+    float rSpike = 0.01f;
     bool lastSpace = true;
     // the beam
     Hyp hyp[kBeam]; int nh = 1;
@@ -133,7 +138,7 @@ struct FistDecoder::Impl {
         sd = 0.2f; sD = 0.25f; si = 0.3f; sc = 0.3f; sw = 0.4f; n = 0; fit = 1; badRun = 0; ringN = 0;
         nwm = nwg = sinceM = sinceG = 0; batchM = batchG = false;
         std::memset(hMarks, 0, sizeof hMarks); std::memset(hGaps, 0, sizeof hGaps);
-        nBack = 0; nq = 0; haveMark = false; idleFlushed = false; pauseNoise = false; lastSpace = true; rDrop = rSpike = 0.01f;
+        nBack = 0; nq = 0; haveMark = false; idleFlushed = false; collecting = false; nPost = 0; prior = Prior(); lastSpace = true; rSpike = 0.01f;
         nh = 1; hyp[0] = Hyp(); oh = ot = vis = 0; fitG = 1; confirmed = false;
     }
 
@@ -158,8 +163,10 @@ struct FistDecoder::Impl {
         confirmed = true; vis = ot;
     }
     void dropLock() {
+        if (std::getenv("CW_TRACE")) fprintf(stderr, "DROPLOCK fit %.1f fitG %.1f\n", fit, fitG);
+        if (confirmed) { prior = {true, L, ldr, gi, gc, gw, sd, sD, si, sc, sw}; }
         ot = vis;            // the held text was noise
-        locked = false; confirmed = false; nBack = 0; nq = 0; haveMark = false; idleFlushed = false;
+        locked = false; confirmed = false; nBack = 0; nq = 0; haveMark = false; idleFlushed = false; collecting = false; nPost = 0;
         nh = 1; hyp[0] = Hyp(); n = 0; fit = 1; fitG = 1; badRun = 0; ringN = 0; nwm = nwg = 0; batchM = batchG = false;
     }
 
@@ -198,14 +205,23 @@ struct FistDecoder::Impl {
         h.score += tu.wordWeight * lmWordBonus(h.word, h.wLen);
         emitTok(h, T().space, tu.lmWeight);
         h.wLen = 0;
+        h.atWord = 1;
     }
 
     void extendMark(float x) {
         const float ld = lpGauss(x, L, sd) - 0.60f, lD = lpGauss(x, L + ldr, sD) - 0.80f;
         const float zd = std::fabs(x - L) / sd, zD = std::fabs(x - L - ldr) / sD;
         const float best = std::max(ld, lD);
+        // in the pause before a word the detector may open on noise: that reading is kept beside the others, and the character model
+        // decides ("CQ" after a noise blip, not ";Q" or "<AR>Q"). Its chance is the learned rate of noise in the gaps.
+        const float lNoise = x < L + 0.4f ? std::log(std::max(0.003f, std::min(0.3f, rSpike))) + lpGauss(x, L - 0.7f, 0.5f) : -1e9f;
         int nc = 0;
-        for (int i = 0; i < nh; i++)
+        for (int i = 0; i < nh; i++) {
+            if (hyp[i].atWord && hyp[i].node == 1 && lNoise > best - 9.f) {
+                Hyp c = hyp[i];
+                c.score += lNoise; c.skip = 1;
+                cand[nc++] = c;
+            }
             for (int dash = 0; dash < 2; dash++) {
                 const float ll = dash ? lD : ld;
                 if (ll < best - 9.f) continue;
@@ -217,8 +233,10 @@ struct FistDecoder::Impl {
                     const int nn = c.node * 2 + dash;
                     if (c.node >= 512 || !T().alive[nn]) { c.node = 0; c.score -= 7.f; } else c.node = (uint16_t)nn;
                 }
+                c.atWord = 0; c.skip = 0;
                 cand[nc++] = c;
             }
+        }
         select(nc);
     }
 
@@ -232,6 +250,11 @@ struct FistDecoder::Impl {
         int nc = 0;
         for (int i = 0; i < nh; i++) {
             const Hyp& h = hyp[i];
+            if (h.skip) {   // the gap after a noise mark: still the pause (the word gap was scored before the mark)
+                Hyp c = h; c.skip = 0;
+                cand[nc++] = c;
+                continue;
+            }
             if (!wordOnly && (h.node == 0 || t.hasChild(h.node))) {
                 Hyp c = h; c.score += li;
                 c.zc = (uint8_t)std::max<int>(c.zc, (int)std::min(255.f, zi * 40.f));
@@ -240,6 +263,10 @@ struct FistDecoder::Impl {
             if (!wordOnly) {
                 Hyp c = h; c.zc = (uint8_t)std::max<int>(c.zc, (int)std::min(255.f, zc * 40.f));
                 c.score += lc; emitChar(c); cand[nc++] = c;
+            }
+            if (wordOnly && h.node == 1) {   // nothing in progress (the word was ended by its gap already): the pause goes on
+                cand[nc++] = h;
+                continue;
             }
             {
                 Hyp c = h; c.zc = (uint8_t)std::max<int>(c.zc, (int)std::min(255.f, zw * 40.f));
@@ -332,9 +359,12 @@ struct FistDecoder::Impl {
         const float tot = pd + pD + 1e-12f;
         const float rd = pd / tot, rD = pD / tot;
         const float z2 = std::min(zd * zd, zD * zD);
+        ring[ringN % kRing] = x; ringN++;   // the speed check sees every mark (twice the speed: the dots are half a dot long)
+        // on a noisy signal (the detector opens on noise in the gaps: rSpike) a mark under half a dot is that noise, not a sign of a
+        // wrong model: it does not count against the fit (which drops the lock) and teaches nothing
+        if (x < L - 0.7f && rSpike > 0.02f) { n++; return; }
         fit += 0.08f * (std::min(z2, 25.f) - fit);
         if (z2 > 9.f) badRun++; else badRun = 0;
-        ring[ringN % kRing] = x; ringN++;
         if (z2 > 16.f) { n++; return; }   // an outlier teaches nothing
         const float a = rate(tu.alphaC), aL = rate(tu.alphaL);
         const float dd = x - L, dD = x - L - ldr;
@@ -394,12 +424,41 @@ struct FistDecoder::Impl {
         return true;
     }
 
+    // dots and dashes from a set of marks (ln), anchored on the dashes. The dashes carry most of the key-down time, so a 2-means in
+    // linear time (started at the 25th and 90th percentiles) finds them even when the detector opens on noise in the gaps of a weak
+    // signal; a mixture of three classes (noise blips, dots, dashes) started from that dash length then gives the dot, the ratio and
+    // the spreads. Without the blip class those blips pulled the dot length down to the noise (a 22 WPM signal at 0 dB was read at
+    // 60 WPM, all "E" and "T").
+    static bool dashFit(const float* xs, int m, float& dotL, float& ratio, float& sdd, float& sDD, int minCnt) {
+        if (m < 8) return false;
+        m = std::min(m, 128);
+        float lin[128];
+        for (int i = 0; i < m; i++) lin[i] = std::exp(xs[i]);
+        std::sort(lin, lin + m);
+        float c1 = lin[m / 4], c2 = lin[m * 9 / 10];
+        int n1 = 0, n2 = 0;
+        for (int it = 0; it < 12; it++) {
+            float s1 = 0, s2 = 0; n1 = n2 = 0;
+            const float mid = 0.5f * (c1 + c2);
+            for (int i = 0; i < m; i++) { if (lin[i] < mid) { s1 += lin[i]; n1++; } else { s2 += lin[i]; n2++; } }
+            if (n1) c1 = s1 / (float)n1;
+            if (n2) c2 = s2 / (float)n2;
+        }
+        if (n2 < minCnt || c2 < 1.8f * c1) return false;
+        const float d = std::log(c2);
+        const float init[3] = {d - 2.3f, d - 1.1f, d};
+        const float prior[3] = {0.12f, 0.50f, 0.38f};
+        float mu[3], sg[3]; int cnt[3] = {0, 0, 0};
+        if (!gmm(xs, m, 3, prior, 0.06f, false, mu, sg, cnt, init)) return false;
+        if (cnt[1] < minCnt || cnt[2] < minCnt || mu[2] - mu[1] < 0.5f || mu[2] - mu[1] > 1.7f) return false;
+        dotL = mu[1]; ratio = mu[2] - mu[1]; sdd = sg[1]; sDD = sg[2];
+        return true;
+    }
+
     void batchMarks() {
-        const float prior[2] = {0.55f, 0.45f};
-        float mu[2], sg[2]; int cnt[2] = {0, 0};
-        if (!gmm(wm, nwm, 2, prior, 0.06f, false, mu, sg, cnt)) return;
-        if (cnt[0] < 3 || cnt[1] < 3 || mu[1] - mu[0] < 0.5f) return;
-        const float c1 = mu[0];
+        float c1, r, s1, s2;
+        if (!dashFit(wm, nwm, c1, r, s1, s2, 3)) return;
+        const float mu[2] = {c1, c1 + r}, sg[2] = {s1, s2};
         if (manualDot <= 0) { L += c1; for (int i = 0; i < nwm; i++) wm[i] -= c1; }
         ldr = 0.5f * ldr + 0.5f * (mu[1] - c1);
         sd = 0.5f * sd + 0.5f * sg[0];
@@ -412,8 +471,9 @@ struct FistDecoder::Impl {
     // longer ones the gap between characters, their top the word gap. Farnsworth spacing puts the character gaps at 8 - 12 dots and the word gaps at 20 - 30, where share-based starting points
     // landed inside the class of short gaps. A fit with more word gaps than character gaps is not Morse spacing (a run of split marks
     // made a false class) and is not taken.
-    bool fitGaps(const float* v, int m, float w) {
-        if (m < 16) return false;
+    // minCnt: the fewest gaps a class needs (the backlog at the lock has only a few characters)
+    bool fitGaps(const float* v, int m, float w, int minCnt = 4) {
+        if (m < 4 * minCnt) return false;
         m = std::min(m, 128);
         float srt[128];
         std::memcpy(srt, v, sizeof(float) * (size_t)m);
@@ -422,14 +482,14 @@ struct FistDecoder::Impl {
         init[0] = srt[m / 4];
         float rest[128]; int nr = 0;
         for (int i = 0; i < m; i++) if (srt[i] > init[0] + 0.55f) rest[nr++] = srt[i];
-        if (nr < 4) return false;
+        if (nr < minCnt) return false;
         init[1] = rest[nr / 2];                                      // most of the longer gaps end a character
         init[2] = std::max(init[1] + 0.6f, rest[std::min(nr - 1, (int)(0.92f * (float)nr))]);
         const float prior[3] = {0.58f, 0.34f, 0.08f};
         float mu[3], sg[3]; int cnt[3] = {0, 0, 0};
         const bool conv = gmm(v, m, 3, prior, 0.07f, true, mu, sg, cnt, init);
         if (std::getenv("CW_TRACE")) fprintf(stderr, "gapGMM n %d mu %.2f %.2f %.2f sg %.2f %.2f %.2f cnt %d %d %d\n", m, mu[0], mu[1], mu[2], sg[0], sg[1], sg[2], cnt[0], cnt[1], cnt[2]);
-        if (!conv || cnt[0] < 4 || cnt[1] < 4 || mu[1] - mu[0] < 0.45f || cnt[1] + 1 < cnt[2]) return false;
+        if (!conv || cnt[0] < minCnt || cnt[1] < minCnt || mu[1] - mu[0] < 0.45f || cnt[1] + 1 < cnt[2]) return false;
         gi += w * (mu[0] - gi); gc += w * (mu[1] - gc);
         si += w * (sg[0] - si); sc += w * (sg[1] - sc);
         if (mu[2] - mu[1] > 0.35f && cnt[2] >= 2) { gw += w * (mu[2] - gw); sw += w * (sg[2] - sw); }
@@ -488,6 +548,7 @@ struct FistDecoder::Impl {
 
     // a run of marks the model cannot explain: the speed changed. Rebuild the dot length from the last marks.
     void relock() {
+        if (std::getenv("CW_TRACE")) fprintf(stderr, "RELOCK\n");
         const int m = std::min(ringN, kRing);
         if (m < 10) return;
         float v[kRing];
@@ -514,7 +575,13 @@ struct FistDecoder::Impl {
     // the first estimate of the classes from what was heard before the lock: marks in two clusters, the gaps in three
     void fromBacklog(const float* xs, int m, int from) {
         float c1, c2, sg; int n1, n2;
-        if (m >= 8) {
+        float fd, fr, f1, f2;
+        if (dashFit(xs, m, fd, fr, f1, f2, 2)) {
+            if (manualDot <= 0) L = fd;
+            ldr = std::max(0.64f, std::min(1.65f, fr));
+            sd = std::max(0.1f, std::min(0.4f, f1));
+            sD = std::max(0.1f, std::min(0.4f, f2));
+        } else if (m >= 8) {
             twoMeans(xs, m, c1, c2, n1, n2, sg);
             if (c2 - c1 >= 0.52f && n1 >= 2 && n2 >= 2) {
                 const float mid = 0.5f * (c1 + c2);
@@ -533,7 +600,7 @@ struct FistDecoder::Impl {
                     const float r = std::log(back[i].ms) - L;
                     if (r < 3.4f) g[ng++] = r;
                 }
-            fitGaps(g, ng, 1.0f);
+            fitGaps(g, ng, 1.0f, 2);
         }
         clampModel();
     }
@@ -559,8 +626,9 @@ struct FistDecoder::Impl {
         if (m < 8) return false;
         float c1, c2, sig; int n1, n2;
         twoMeans(xs, m, c1, c2, n1, n2, sig);
-        float dotL = 0, ratio = 0;
-        if (c2 - c1 >= 0.52f && n1 >= 2 && n2 >= 2 && sig <= 0.45f) { dotL = c1; ratio = c2 - c1; }
+        float dotL = 0, ratio = 0, s1, s2;
+        if (dashFit(xs, m, dotL, ratio, s1, s2, 2) && std::fabs(dotL - c1) > 0.2f) {}   // blips in the marks: the dash-anchored fit
+        else if (c2 - c1 >= 0.52f && n1 >= 2 && n2 >= 2 && sig <= 0.45f) { dotL = c1; ratio = c2 - c1; }
         else if (m >= 20) {
             float mean = 0; for (int i = 0; i < m; i++) mean += xs[i];
             mean /= (float)m;
@@ -588,11 +656,21 @@ struct FistDecoder::Impl {
             if (lowQ < dotL - 1.0f || lowQ > dotL + 0.7f) return false;
             float ss = 0; for (int i = 0; i < ns / 2; i++) ss += (sp[i] - lowQ) * (sp[i] - lowQ);
             if (std::sqrt(ss / (float)(ns / 2)) > 0.5f) return false;
+            // and three gaps between characters at least, so the gap classes can be fitted before the backlog is read: with the book's
+            // classes Farnsworth character gaps (8 - 12 dots) read as word gaps ("C Q D E")
+            int longGaps = 0;
+            for (int i = 0; i < ns; i++) if (sp[i] > dotL + 0.7f) longGaps++;
+            if (longGaps < 3) return false;
         }
         L = dotL; ldr = std::max(0.64f, std::min(1.65f, ratio));
         gi = 0; gc = 1.0986f; gw = 1.9459f;
         sd = 0.2f; sD = 0.25f; si = 0.3f; sc = 0.3f; sw = 0.4f; n = 0; fit = 1; badRun = 0; ringN = 0;
         nwm = nwg = sinceM = sinceG = 0; batchM = batchG = false; fitG = 1; confirmed = false;
+        if (prior.ok && std::fabs(L - prior.L) < 0.25f) {   // the same sender again: its classes, refined by the backlog below
+            ldr = prior.ldr; gi = prior.gi; gc = prior.gc; gw = prior.gw;
+            sd = prior.sd; sD = prior.sD; si = prior.si; sc = prior.sc; sw = prior.sw;
+            batchM = batchG = true;                       // known classes: only the window fits move them
+        }
         fromBacklog(xs, m, from);
         locked = true;
         return true;
@@ -629,6 +707,7 @@ struct FistDecoder::Impl {
             nw += std::min(25.f, std::min(c * c, d * d));
         }
         if (nw > 0.5f * cur) return;
+        if (std::getenv("CW_TRACE")) fprintf(stderr, "SPEED %.0f -> %.0f\n", std::exp(L), std::exp(nl));
         L = nl; ldr = nr; n = std::min(n, 3);
         nwm = nwg = 0; badRun = 0; fit = 1;
         clampModel();
@@ -646,9 +725,10 @@ struct FistDecoder::Impl {
 
     // ---------------------------------------------------------------- soft mark / space decisions
     // A weak signal's detector splits marks (a fade inside a dash) and opens on noise in the gaps. The clear cases (shorter than a third
-    // of a dot) are merged outright; the rest are decided by the model: the three events read as they are (mark, gap, mark or gap, mark,
-    // gap, each in its best class) against the one merged event plus the log chance of such a detector error. That chance is learned
-    // from the clear cases (how often they happen is how noisy the detector is): high on a weak signal, a floor on a strong one.
+    // of a dot) are merged outright; on a noisy detector the rest are decided by the model: the three events read as they are (mark,
+    // gap, mark or gap, mark, gap, each in its best class) against the one merged event plus the log chance of such a detector error.
+    // That chance is learned from the clear noise spikes (how often they happen is how noisy the detector is).
+    static constexpr float kNoisy = 0.015f;   // the rate of clear detector errors above which the soft decisions are made
     float lMark(float x) const { return std::max(lpGauss(x, L, sd) - 0.60f, lpGauss(x, L + ldr, sD) - 0.80f); }
     float lGap(float x, bool intraOnly) const {
         const float li = lpGauss(x, L + gi, si) - 0.60f;
@@ -662,13 +742,21 @@ struct FistDecoder::Impl {
         const float d = dot();
         const float a = std::log(std::max(1.f, q[0].ms)), b = std::log(std::max(1.f, q[1].ms)), c = std::log(std::max(1.f, q[2].ms));
         const float all = std::log(q[0].ms + q[1].ms + q[2].ms);
+        // only on a noisy detector (a weak signal): on a clean one the same patterns are a change of speed, which must reach the model
         if (dropOut) {
-            if (q[1].ms > 0.8f * d) return false;
-            const float pr = std::max(0.003f, std::min(0.3f, rDrop));
+            if (q[1].ms > 0.8f * d || rSpike < kNoisy) return false;
+            const float pr = std::max(0.003f, std::min(0.3f, rSpike));
             return lMark(all) + std::log(pr) > lMark(a) + lGap(b, false) + lMark(c);
         }
-        if (q[1].ms > 0.9f * d) return false;
+        if (rSpike < kNoisy) return false;
         const float pr = std::max(0.003f, std::min(0.3f, rSpike));
+        // a mark alone between a word gap and a character gap or longer would be a word of one element ("E", "T"): rare in traffic
+        // (-4.6: about 1 %), common as noise in the pause of a weak signal
+        if (std::max(a, c) >= L + gw - sw && std::min(a, c) >= L + gc - sc && b < L + ldr + 2.f * sD)
+            return lGap(all, false) + std::log(pr) > lGap(a, false) + lMark(b) + lGap(c, false) - 4.6f;
+        if (q[1].ms > 0.9f * d) return false;
+        // a dot between two gaps inside a character is a dot (a weak one is short): noise is looked for only next to a character gap
+        if (std::max(a, c) < L + gc - sc) return false;
         return lGap(all, false) + std::log(pr) > lGap(a, false) + lMark(b) + lGap(c, false);
     }
 
@@ -679,9 +767,7 @@ struct FistDecoder::Impl {
                 const float d = dot();
                 bool merge = false;
                 if (q[0].on && !q[1].on && q[2].on) {            // a drop-out inside a mark?
-                    const bool sure = q[1].ms < 0.30f * d;
-                    merge = sure || softMerge(true);
-                    rDrop += 0.02f * ((sure ? 1.f : 0.f) - rDrop);
+                    merge = q[1].ms < 0.30f * d || softMerge(true);
                 } else if (!q[0].on && q[1].on && !q[2].on) {    // a noise spike inside a gap?
                     const bool sure = q[1].ms < 0.33f * d;
                     merge = sure || softMerge(false);
@@ -710,13 +796,19 @@ struct FistDecoder::Impl {
     void event(bool on, float ms) {
         if (ms <= 0) return;
         if (std::getenv("CW_TRACE")) fprintf(stderr, "%c %.0f  (dot %.0f)\n", on ? 'M' : 's', ms, locked ? std::exp(L) : 0.f);
-        // in a pause (the text was flushed): a short mark is noise that opened the detector, not the start of the next transmission. It
-        // would be read as a dot in front of the first character ("CQ" as "NQ", "EK ER Q") and pull the speed down
-        if (on && idleFlushed && locked && ms < 0.6f * dot()) { pauseNoise = true; return; }
-        if (!on && idleFlushed) {
+        if (!on && idleFlushed) {   // the pause ends: what follows is held until the timing is checked (afterPause)
             idleFlushed = false;
-            if (locked && haveMark && !pauseNoise) learnGap(std::log(std::max(1.f, ms)));
-            pauseNoise = false;
+            if (locked && haveMark) {
+                learnGap(std::log(std::max(1.f, ms)));
+                if (ms > 2.f * std::exp(L + gw)) { nPost = 0; collecting = true; }   // a pause, not a word gap
+            }
+            return;
+        }
+        if (collecting && locked) {
+            post[nPost++] = {on, ms};
+            int marks = 0;
+            for (int i = 0; i < nPost; i++) marks += post[i].on;
+            if (marks >= kPostMarks || nPost >= kPost || (!on && marks >= 4 && ms > std::exp(L + 0.5f * (gc + gw)))) afterPause();
             return;
         }
         if (!locked) {
@@ -732,8 +824,68 @@ struct FistDecoder::Impl {
         feed(on, ms);
     }
 
+    // After a pause the sender may be another one, or the same at another speed. The first marks after it (up to a word) are held
+    // and checked against the model: when a dot length that explains them (and their gaps) at least twice as well is found, the model
+    // moves to it before they are read. The speed check that runs on the go needs 16 marks, so the first word after a pause at a new
+    // speed was lost ("TEST" read as "T E T", or not at all).
+    static constexpr int kPost = 40, kPostMarks = 10;
+    Ev post[kPost]; int nPost = 0;
+    bool collecting = false;
+    float misfit(float l, const float* xs, int m, const float* gs, int ng) const {
+        float e = 0;
+        for (int i = 0; i < m; i++) {
+            const float a = (xs[i] - l) / sd, b = (xs[i] - l - ldr) / sD;
+            e += std::min(25.f, std::min(a * a, b * b));
+        }
+        for (int i = 0; i < ng; i++) {
+            const float a = (gs[i] - l - gi) / si, b = (gs[i] - l - gc) / sc, c = gs[i] > l + gw ? 0.f : (gs[i] - l - gw) / sw;
+            e += std::min(25.f, std::min(a * a, std::min(b * b, c * c)));
+        }
+        return e;
+    }
+    void afterPause() {
+        collecting = false;
+        float xs[kPost], gs[kPost]; int m = 0, ng = 0;
+        const float d = dot();
+        for (int i = 0; i < nPost; i++) {
+            if (post[i].ms < 0.25f * d) continue;   // noise blips and drop-outs say nothing about the speed
+            if (post[i].on) xs[m++] = std::log(post[i].ms); else if (i + 1 < nPost) gs[ng++] = std::log(post[i].ms);
+        }
+        if (m >= 4 && manualDot <= 0) {
+            float cand[6]; int nc = 0;
+            float c1, c2, sg; int n1, n2;
+            twoMeans(xs, m, c1, c2, n1, n2, sg);
+            if (c2 - c1 >= 0.5f) cand[nc++] = c1;
+            float mean = 0; for (int i = 0; i < m; i++) mean += xs[i];
+            mean /= (float)m;
+            cand[nc++] = mean; cand[nc++] = mean - ldr;
+            if (ng >= 3) { float g[kPost]; std::memcpy(g, gs, sizeof(float) * (size_t)ng); std::sort(g, g + ng); cand[nc++] = g[ng / 4] - gi; }
+            const float cur = misfit(L, xs, m, gs, ng);
+            float best = cur, bl = L;
+            for (int i = 0; i < nc; i++) {
+                const float l = std::max(std::log(20.f), std::min(std::log(260.f), cand[i]));
+                const float e = misfit(l, xs, m, gs, ng);
+                if (e < best) { best = e; bl = l; }
+            }
+            if (std::fabs(bl - L) > 0.18f && best < 0.5f * cur) {
+                if (std::getenv("CW_TRACE")) fprintf(stderr, "AFTER PAUSE %.0f -> %.0f (misfit %.1f -> %.1f)\n", std::exp(L), std::exp(bl), cur, best);
+                L = bl; n = std::min(n, 3);
+                nwm = nwg = 0; badRun = 0; fit = 1; ringN = 0;
+                clampModel();
+            }
+        }
+        const int k = nPost; nPost = 0;
+        for (int i = 0; i < k && locked; i++) feed(post[i].on, post[i].ms);
+    }
+
     void idle(float ms) {
         if (!locked) return;
+        if (collecting && nPost > 0) {   // a pause again: the held marks are read (a short word waits longer: the sender may be slower)
+            int marks = 0;
+            for (int i = 0; i < nPost; i++) marks += post[i].on;
+            if (ms > (marks >= 4 ? std::exp(L + 0.5f * (gc + gw)) : 2.f * std::exp(L + gw))) afterPause();
+            else return;
+        }
         const float thr = std::exp(L + 0.5f * (gc + gw));
         if (ms < thr || idleFlushed) return;
         drain(true);

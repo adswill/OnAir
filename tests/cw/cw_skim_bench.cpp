@@ -1,10 +1,10 @@
 // CW skimmer timing benchmark: the 0.2.7 timing (cw_morse.h) against the adaptive one (cw_decoder.h) on the whole receiver (CwReceiver),
 // the scenarios of docs/SENSITIVITY-3.9-E.md section 3. Not a ctest: build by hand, run
-//   cw_skim_bench rx [seeds=2] [secs=80]        the receiver itself, every timing choice (legacy, adaptive, automatic)
+//   cw_skim_bench rx [seeds=2] [secs=80]        the receiver itself: the 0.2.7 timing and the default (adaptive)
 //   cw_skim_bench cap <dir> [seeds=2] [secs=80] the receiver once per case, the detector's key saved (one byte a millisecond)
 //   cw_skim_bench rep <dir> [seeds=2]           the saved keys through both timings (fast: for tuning the decoder)
 //   cw_skim_bench one <dir> <case> <snr> <seed> the saved keys of one case through both, the texts printed
-// CER: the edit distance of the middle copies of the text (not the first and the last) in the decoded text.
+// CER: the edit distance of the copies of the text after the first (the decoder is still learning in the first) in the decoded text.
 #include "fist_harness.h"
 #include "dect2/cw/cw_gen.h"
 #include "dect2/cw/cw_rx.h"
@@ -46,7 +46,7 @@ std::string refText(const Case& c, double secs) {
     const double per = CwGenerator::messageSec(s) + s.pauseSec;
     const int copies = (int)((secs - s.startSec - 1.0) / per);
     std::string r;
-    for (int i = 1; i + 1 < copies; i++) { if (!r.empty()) r += ' '; r += kText; }
+    for (int i = 1; i < copies; i++) { if (!r.empty()) r += ' '; r += kText; }
     return r;
 }
 
@@ -135,11 +135,11 @@ int main(int argc, char** argv) {
     if (cmd == "rx") {
         const int seeds = argc > 2 ? atoi(argv[2]) : 2;
         const double secs = argc > 3 ? atof(argv[3]) : 80;
-        const char* tn[] = {"auto", "legacy", "adaptive"};
+        const char* tn[] = {"adaptive (default)", "0.2.7 timing", "adaptive"};
         printf("| CER %% at SNR in 500 Hz |"); for (double s : kSnr) printf(" %g |", s); printf("\n");
         for (int ci = 0; ci < 4; ci++) {
             const std::string ref = refText(kCases[ci], secs);
-            for (int tmg : {1, 2, 0}) {
+            for (int tmg : {1, 0}) {
                 printf("| %s, %s |", kCases[ci].name, tn[tmg]);
                 for (double snr : kSnr) {
                     double e = 0;
