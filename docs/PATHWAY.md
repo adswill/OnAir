@@ -1802,3 +1802,7 @@ Impulse and power-line noise analyser: impulse rate and level, repetition at twi
 ## 2026-11-12: Radar pulse analyser (family 892)
 
 Pulse analyser: width, PRI and PRF, constant / staggered / jittered classification, carrier inside the pulse, antenna turn time. Tests: PRFs and widths, stagger 2 to 4, jitter, a scanning beam, level sweep, 5 min noise false-emitter run. Simulated signals only (docs/RADAR-4.0.md).
+
+## 2026-11-12: GNSS interference detector and passband classifier (families 893, 894)
+
+GNSS interference detector (tone / narrowband / swept chirp with range and period / wideband noise, 4 and 10 Msps) and passband signal classifier (carrier, CW, narrow data, voice-like, wideband in 48 kHz). Tests: classes alone and mixed, levels, start and stop, noise-only false-row runs. Family numbers 886 to 894 listed in docs/FAMILY-NUMBERS-4.0.md. Simulated signals only (docs/GNSSJAM-4.0.md, docs/PASSBAND-4.0.md).

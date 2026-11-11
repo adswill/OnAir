@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**345 modes.**
+**347 modes.**
 
 ## TV (17)
 
@@ -78,7 +78,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (55)
+## Satellite & Navigation (56)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -106,6 +106,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Erminaz** - Erminaz cubesat: 9k6 FSK CCSDS frames
 - **Orbcomm** - Orbcomm satellite downlinks: satellite IDs, positions, channel assignments, messages
 - **QO-100** - QO-100: the amateur satellite's transponders with exact frequencies from its beacons
+- **GNSS interference detector** - GNSS interference: class, level, sweep
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
 - **AX100 Mode 5** - AX100 Mode 5 (ASM + Golay): GOMspace satellite frames, CSP packets
 - **AX100 Mode 6** - AX100 Mode 6 (Reed-Solomon): GOMspace satellite frames, CSP packets
@@ -282,8 +283,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
 
-## Amateur - Digital (42)
+## Amateur - Digital (43)
 
+- **Passband signal classifier** - Passband: what each signal in 48 kHz is
 - **QRSS grabber** - QRSS: very slow Morse read from a spectrogram, receive only
 - **DFCW grabber** - DFCW: slow Morse with a frequency for dots and one for dashes, receive only
 - **FSK441** - FSK441: meteor scatter pings, 441 baud 4-FSK, receive only

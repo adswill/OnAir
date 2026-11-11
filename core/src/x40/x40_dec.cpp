@@ -17,6 +17,8 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case AmMon: return makeAmMon();
     case PlNoise: return makePlNoise();
     case Radar: return makeRadar();
+    case GnssJam: return makeGnssJam();
+    case Passband: return makePassband();
     default: return nullptr;
     }
 }
@@ -39,6 +41,8 @@ ModeTuning x40Tuning(int v) {
         {"ammon", 0.148, 30, 1.000, 250000, 24000, 0.012, true},
         {"plnoise", 0.1, 1000, 7.100, 250000, 24000, 0.02, false},
         {"radar", 100, 12000, 9410.000, 2000000, 1000000, 1.5, false},
+        {"gnssjam", 1100, 1700, 1575.420, 4000000, 2000000, 2.0, false},
+        {"passband", 28, 450, 145.900, 96000, 48000, 0.048, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

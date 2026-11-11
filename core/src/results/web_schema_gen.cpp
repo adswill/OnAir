@@ -15639,6 +15639,8 @@ static const WebModeRow kRows[] = {
     {890, "AM modulation monitor", 1, "AM monitor: depth, peaks, hum, bandwidth", "", 892, 891, ""},
     {891, "Power-line noise locator", 13, "Noise locator: impulse rate, repetition, level", "", 893, 892, ""},
     {892, "Radar pulse analyser", 2, "Radar pulses: PRI, width, stagger, antenna turn", "", 894, 893, ""},
+    {893, "GNSS interference detector", 4, "GNSS interference: class, level, sweep", "", 895, 894, ""},
+    {894, "Passband signal classifier", 10, "Passband: what each signal in 48 kHz is", "", 896, 895, ""},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},

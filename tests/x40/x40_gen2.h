@@ -240,4 +240,91 @@ inline dect2::X40Telemetry runRadar(const RadarPlan& p, double fs, unsigned seed
     dect2::X40Telemetry t; rx.telemetry(t, 0); return t;
 }
 
+
+// ---- block-wise rendering for wide captures -------------------------------------------------------------------------------------------------
+template <class Fill> inline dect2::X40Telemetry runStream(int variant, double fs, double seconds, Fill&& fill) {
+    dect2::X40Receiver rx; rx.setVariant(variant); rx.configure(fs);
+    std::vector<cf32> blk(16384); const size_t N = (size_t)(fs * seconds);
+    for (size_t i0 = 0; i0 < N; i0 += blk.size()) { const size_t n = std::min(blk.size(), N - i0); fill(i0, n, blk.data()); rx.feed(blk.data(), n); }
+    dect2::X40Telemetry t; rx.telemetry(t, 0); return t;
+}
+// GNSS-band interference: noise (sigma 1 per quadrature) plus one interferer of power jamDb over the noise power (2)
+struct Jam {
+    enum Kind { None, Cw, Narrow, Chirp, Wide } kind = None;
+    double jamDb = 20, centerHz = 0, bwHz = 0, periodSec = 10e-6, spanHz = 8e6; double fromSec = 0, toSec = 1e9; unsigned seed = 1;
+};
+struct JamGen {
+    Jam j; double fs; Rng rn; std::vector<double> tp, tf, ta; double phase = 0;
+    JamGen(const Jam& jj, double f) : j(jj), fs(f), rn(jj.seed) {
+        if (j.kind == Jam::Narrow) { for (int k = 0; k < 48; k++) { tf.push_back(j.centerHz + j.bwHz * (std::fmod(k * 0.6180339887 + 0.13, 1.0) - 0.5)); tp.push_back(rn.g() * 3.14); } }
+    }
+    void render(size_t i0, size_t n, cf32* out) {
+        const double A = std::sqrt(2.0 * std::pow(10.0, j.jamDb / 10));
+        for (size_t i = 0; i < n; i++) {
+            const double t = (i0 + i) / fs;
+            cf32 v((float)rn.g(), (float)rn.g());
+            if (t >= j.fromSec && t < j.toSec) {
+                if (j.kind == Jam::Cw) v += (float)A * cf32((float)std::cos(2 * kPi * j.centerHz * t), (float)std::sin(2 * kPi * j.centerHz * t));
+                else if (j.kind == Jam::Narrow) { cf32 a(0, 0); for (size_t k = 0; k < tf.size(); k++) a += cf32((float)std::cos(2 * kPi * tf[k] * t + tp[k]), (float)std::sin(2 * kPi * tf[k] * t + tp[k])); v += (float)(A / std::sqrt((double)tf.size())) * a; }
+                else if (j.kind == Jam::Chirp) { const double fr = std::fmod(t, j.periodSec) / j.periodSec; const double fi = j.centerHz - j.spanHz / 2 + j.spanHz * fr; phase += 2 * kPi * fi / fs; v += (float)A * cf32((float)std::cos(phase), (float)std::sin(phase)); }
+                else if (j.kind == Jam::Wide) v += (float)(std::sqrt(std::pow(10.0, j.jamDb / 10))) * cf32((float)rn.g(), (float)rn.g());
+            }
+            out[i] = v;
+        }
+    }
+};
+
+
+// ---- passband (48 kHz) of mixed signals -----------------------------------------------------------------------------------------------------
+// A bank of rotating phasors with a common gain envelope. total power P relative to the noise power in a 94 Hz bin: bin94Db.
+struct PbSig {
+    enum Kind { Carrier, Cw, Rtty, Ssb, Wide } kind; double freq; double bin94Db = 25; double from = 0, to = 1e9; double driftHzPerSec = 0;
+};
+struct PbGen {
+    std::vector<PbSig> sigs; double fs; Rng rn;
+    struct Bank { std::vector<cf32> z, w; double amp; };
+    std::vector<Bank> banks; std::vector<std::vector<int>> cwKey;
+    std::mt19937 mt; std::vector<double> env, envT, cwE;
+    PbGen(const std::vector<PbSig>& s, double f, unsigned seed = 1) : sigs(s), fs(f), rn(seed), mt(seed + 7) {
+        for (auto& g : sigs) {
+            Bank b; const double P = std::pow(10.0, g.bin94Db / 10) * (2.0 * 94.0 / 48000.0); std::vector<double> fr;
+            if (g.kind == PbSig::Carrier || g.kind == PbSig::Cw) fr = {0.0};
+            else if (g.kind == PbSig::Rtty) fr = {-212.5, 212.5};      // 425 Hz shift: a 170 Hz shift is under two bins of the classifier and reads as a carrier
+            else if (g.kind == PbSig::Ssb) for (double q = 350; q < 2700; q += 60) fr.push_back(q);
+            else for (double q = -5800; q <= 5800; q += 90) fr.push_back(q);
+            b.amp = std::sqrt(P / (g.kind == PbSig::Rtty ? 1.0 : (double)fr.size()));
+            for (double q : fr) { const double ph = std::uniform_real_distribution<double>(0, 6.28)(mt); b.z.push_back(cf32((float)std::cos(ph), (float)std::sin(ph))); const double w = 2 * kPi * (g.freq + q) / fs; b.w.push_back(cf32((float)std::cos(w), (float)std::sin(w))); }
+            banks.push_back(std::move(b));
+        }
+        env.assign(sigs.size(), 1.0); envT.assign(sigs.size(), 0.0); cwE.assign(sigs.size(), 0.0);
+    }
+    void render(size_t i0, size_t n, cf32* out) {
+        for (size_t i = 0; i < n; i++) {
+            const double t = (i0 + i) / fs; cf32 v((float)rn.g(), (float)rn.g());
+            if (((i0 + i) & 0x3FFF) == 0) for (auto& bk : banks) for (auto& z : bk.z) z /= std::abs(z);
+            for (size_t s = 0; s < sigs.size(); s++) {
+                const auto& g = sigs[s]; auto& b = banks[s]; double e = 1.0;
+                if (t < g.from || t >= g.to) { for (size_t k = 0; k < b.z.size(); k++) b.z[k] *= b.w[k]; continue; }
+                if (g.kind == PbSig::Cw) {   // 15 wpm "CQ CQ DE" pattern: dot 0.08 s
+                    static const char* pat = "-.-. --.- / -.-. --.- / -.. .";
+                    long slot = (long)((t - g.from) / 0.08); long pos = 0; double on = 0;
+                    const long len = (long)std::strlen(pat);
+                    // expand the pattern: dot = on 1 off 1, dash = on 3 off 1, space = off 2 (the letter gap), '/' = off 4
+                    long u = slot; const long total = patSlots(pat); u %= total; for (long c = 0; c < len; c++) { const long ln = pat[c] == '.' ? 2 : pat[c] == '-' ? 4 : pat[c] == ' ' ? 2 : 4; if (u < ln) { on = (pat[c] == '.' && u < 1) || (pat[c] == '-' && u < 3); break; } u -= ln; } (void)pos;
+                    cwE[s] += 0.2 * (on - cwE[s]); e = cwE[s];   // keying edges of about 5 ms
+                } else if (g.kind == PbSig::Ssb) {   // syllables of 0.15 - 0.4 s and pauses
+                    while (t >= envT[s]) { const bool talk = std::uniform_real_distribution<double>(0, 1)(mt) > 0.25; env[s] = talk ? std::uniform_real_distribution<double>(0.15, 1.0)(mt) : 0.0; envT[s] = t + std::uniform_real_distribution<double>(0.08, 0.35)(mt); }
+                    e = env[s];
+                } else if (g.kind == PbSig::Rtty) {   // 45.45 baud, random bits: only one tone at a time
+                    const long bit = (long)(t * 45.45); const bool mark = ((bit * 2654435761u) >> 7) & 1; e = 1.0; for (size_t k = 0; k < b.z.size(); k++) { b.z[k] *= b.w[k]; v += (float)(b.amp * ((k == 1) == mark ? 1.0 : 0.0)) * b.z[k]; } continue;
+                }
+                cf32 a(0, 0); for (size_t k = 0; k < b.z.size(); k++) { b.z[k] *= b.w[k]; a += b.z[k]; }
+                v += (float)(b.amp * e) * a;
+            }
+            out[i] = v;
+        }
+    }
+    static long patSlots(const char* p) { long s = 0; for (; *p; p++) s += *p == '.' ? 2 : *p == '-' ? 4 : *p == ' ' ? 2 : 4; return s; }
+};
+
 }

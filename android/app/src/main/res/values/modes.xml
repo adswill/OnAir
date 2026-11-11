@@ -373,6 +373,8 @@
         <item>AM modulation monitor</item>
         <item>Power-line noise locator</item>
         <item>Radar pulse analyser</item>
+        <item>GNSS interference detector</item>
+        <item>Passband signal classifier</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -727,6 +729,8 @@
         <item>AM broadcast modulation monitor (LW, MW, SW): the carrier offset, modulation depth, positive and negative peaks, asymmetry, mains hum, audio bandwidth and over-modulation of one station, with loss and return of the carrier logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
         <item>Power-line and impulse noise analyser: finds the impulses in a band and measures their rate and level, and tells a repetition at twice the mains frequency (100 / 120 Hz, an arcing insulator or a faulty lamp) from a half-wave one (50 / 60 Hz), a steady switching supply and random static. For hunting the source of interference with an antenna in hand. Simulated signals only</item>
         <item>Radar pulse analyser: the pulses of the strongest pulsed emitter (marine, air-traffic or weather radar, needs a 2 Msps radio and the right band converter): pulse width, repetition interval and rate, constant / staggered / jittered spacing, the carrier inside the pulse and the antenna turn time from the beam passing. It measures the emitter, not what it is. Simulated signals only</item>
+        <item>GNSS interference detector (L1 1575.42 MHz, L2 1227.6 MHz and others, needs a radio with a few MHz of bandwidth and a GNSS antenna): says whether a navigation band is clean, or holds a tone, narrowband interference, a swept chirp (a car jammer: range, period, rate) or wideband noise, and how strong it is. Detects and describes only; no position is computed. Simulated signals only</item>
+        <item>Passband signal classifier: every signal in the 48 kHz around the tuned frequency (a satellite linear transponder, a band segment, a repeater input) is tracked and named after a second and a half: unmodulated carrier, keyed CW, narrow data, SSB or voice-like, or a wideband steady signal, with its offset, width and level. A guess from width and level behaviour; nothing is demodulated. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1081,6 +1085,8 @@
         <item>Event</item>
         <item>Pattern</item>
         <item>Emitter</item>
+        <item>Interference</item>
+        <item>Signal</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1435,5 +1441,7 @@
         <item>am modulation monitor depth overmodulation carrier offset hum asymmetry audio bandwidth mw sw lw broadcast</item>
         <item>power line noise interference rfi arcing insulator impulse noise dimmer switching supply mains 100 hz 120 hz noise hunting locator</item>
         <item>radar pulse analyser pri prf pulse width stagger jitter marine radar x band s band weather radar atc scan period antenna rotation</item>
+        <item>gnss gps jammer interference chirp jamming spoofing l1 1575 l2 1227 glonass galileo beidou detector sawtooth</item>
+        <item>passband signal classifier transponder linear cw ssb carrier rtty psk activity band scan spotter qo-100 satellite transponder</item>
     </string-array>
 </resources>

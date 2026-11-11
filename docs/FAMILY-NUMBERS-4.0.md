@@ -11,8 +11,16 @@ number per mode: family F, active standard F + 1, engine standard F + 2, poll sl
 | GRAVES meteor echoes | 883 | 884 | 885 | 883 |
 | Radio Jove bursts | 884 | 885 | 886 | 884 |
 | Beacon propagation monitor | 885 | 886 | 887 | 885 |
+| EM4100 LF RFID (125 kHz) | 886 | 887 | 888 | 886 |
+| UHF RFID reader (EPC Gen2) | 887 | 888 | 889 | 887 |
+| Qi wireless charging | 888 | 889 | 890 | 888 |
+| FM modulation monitor | 889 | 890 | 891 | 889 |
+| AM modulation monitor | 890 | 891 | 892 | 890 |
+| Power-line noise locator | 891 | 892 | 893 | 891 |
+| Radar pulse analyser | 892 | 893 | 894 | 892 |
+| GNSS interference detector | 893 | 894 | 895 | 893 |
+| Passband signal classifier | 894 | 895 | 896 | 894 |
 
-Free for further modes of this receiver: families 886 to 896 (`x40::kNumVariants` is 5; the active-standard range 882 to 897 is already routed in `Engine::feedReceiver`).
-Families 897 to 899 stay free. A mode needing numbers above 900 needs the integrator to raise `kNumFamilies` and `kPollSeqSlots` (one deliberate change).
+Lane C (feat40-modes2) used families 886 to 894 (`x40::kNumVariants` is 14; the engine switches use `DECT2_X40_ACTIVE_CASES` for the active standards 882 to 897). Free for further modes of this receiver: families 895 and 896. Families 897 to 899 stay free. A mode needing numbers above 900 needs the integrator to raise `kNumFamilies` and `kPollSeqSlots` (one deliberate change).
 Merge note: the integrator should rerun `python3 tools/gen_modes_list.py`, `tools/gen_web_schema.py`, `tools/gen_web_options.py`, `android/tools/gen_modes.py` and `android/tools/gen_results_map.py`
 after merging, because the generated files of this branch and another branch conflict by construction.
