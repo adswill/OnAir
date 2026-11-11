@@ -1,7 +1,9 @@
 // Voice insights (docs/SMART5-voice-3.9.md): talkgroup heatmap and busy-time prediction, trunk load with Erlang B, talkgroup change alerts.
 // Simulated call streams only (Poisson arrivals, exponential holding times, a blocked-calls-lost trunk); no real trunked recording.
 #include "dect2/insight/voice_activity.h"
+#include <cmath>
 #include <cstdio>
+#include <map>
 #include <random>
 #include "../common/test_util.h"
 
@@ -33,6 +35,9 @@ static void testHeatmap() {
         TalkgroupHeatmap h(tz);
         std::vector<Insight> out;
         const double t0 = kMonday - tz;   // Monday 00:00 local
+        // the TG 1 airtime each quiet hour was given: a few random quiet hours (Poisson calls, exponential holding times) reach the busy
+        // threshold by chance (std:: distributions differ between libc++ and libstdc++), and an alert there is right, not false
+        std::map<long long, double> quietAir;
         for (int w = 0; w < 6; w++)
             for (int d = 0; d < 7; d++)
                 for (int hr = 0; hr < 24; hr++) {
@@ -41,10 +46,19 @@ static void testHeatmap() {
                     const bool busy = d == 1 && (hr == 18 || hr == 19);
                     std::poisson_distribution<int> calls(busy ? 40 : 0.3);
                     const int nc = calls(r);
-                    for (int k = 0; k < nc; k++) h.addCall(hs + std::uniform_real_distribution<double>(0, 3500)(r), hold(r) + 2, "TG 1", &out);
+                    for (int k = 0; k < nc; k++) {
+                        const double st = hs + std::uniform_real_distribution<double>(0, 3500)(r), du = hold(r) + 2;
+                        if (!busy) quietAir[(long long)std::floor((hs + tz) / 3600.0)] += du;   // may run into the next hour: counted as this one's (only lowers what the next hour is given)
+                        h.addCall(st, du, "TG 1", &out);
+                    }
                 }
-        int falseBusy = 0;
-        for (const auto& i : out) if (i.key == "TG 1") falseBusy++;
+        int falseBusy = 0, unusualQuiet = 0;
+        const double minSec = TalkgroupHeatmap::Limits().busyMinSec;
+        for (const auto& i : out) if (i.key == "TG 1") {
+            auto q = quietAir.find((long long)std::floor((i.time - 1 + tz) / 3600.0));
+            if (q != quietAir.end() && q->second >= minSec) unusualQuiet++; else falseBusy++;
+        }
+        if (unusualQuiet) printf("tz %d: %d alert(s) in quiet hours that got %.0f s or more of random calls (right)\n", tz, unusualQuiet, minSec);
         CHECK(falseBusy == 0, "tz %d: no busy alerts in ordinary weeks (got %d)", tz, falseBusy);
         // from the Monday of week 7 at noon, the next busy hour is Tuesday 18:00 local
         const double mon7 = t0 + 6 * 7 * 86400.0 + 12 * 3600;
