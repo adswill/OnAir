@@ -14,6 +14,9 @@
 #include "dect2/edacs/edacs_rx.h"
 #include "dect2/edacs/edacs_tel.h"
 #include "dect2/engine/mode_synth.h"
+#include "dect2/dmr/dmr_rx.h"
+#include "dect2/dmr/dmr_tel.h"
+#include "dect2/nxdn/nxdn_rx.h"
 #include "dect2/mpt1327/mpt1327_engine.h"
 #include "dect2/mpt1327/mpt1327_gen.h"
 #include "dect2/smartnet/smartnet_gen.h"
@@ -94,7 +97,7 @@ static void testDdc() {
         std::vector<cf32> x(n);
         for (size_t i = 0; i < n; i++) {
             const double t = (double)i / rate;
-            x[i] = std::polar(0.1f, (float)(2 * M_PI * (off + 1000) * t)) + std::polar(1.0f, (float)(2 * M_PI * (off + 30000) * t));
+            x[i] = std::polar(0.1f, (float)(2 * M_PI * (off + 1000) * t)) + std::polar(1.0f, (float)(2 * M_PI * (off + 62500) * t));
         }
         std::vector<cf32> y;
         for (size_t i = 0; i < n; i += 4096) { const auto& o = d.process(x.data() + i, std::min<size_t>(4096, n - i)); y.insert(y.end(), o.begin(), o.end()); }
@@ -105,12 +108,12 @@ static void testDdc() {
         for (size_t i = s0; i < y.size(); i++) {
             const double t = (double)i / d.outRate();
             a1 += std::complex<double>(y[i]) * std::polar(1.0, -2 * M_PI * 1000 * t);
-            a2 += std::complex<double>(y[i]) * std::polar(1.0, -2 * M_PI * std::remainder(30000.0, d.outRate()) * t);
+            a2 += std::complex<double>(y[i]) * std::polar(1.0, -2 * M_PI * std::remainder(62500.0, d.outRate()) * t);   // where the neighbour would alias to
         }
         p1 = std::norm(a1); p2 = std::norm(a2);
         const double rej = 10 * std::log10((p1 + 1e-30) / (p2 + 1e-30)) + 20;   // the wanted tone is 20 dB weaker at the input
-        CHECK(rej > 50, "%.0f: the neighbour is only %.1f dB down", rate, rej);
-        if (rate == 2.4e6) printf("channel filter at 2.4 Msps: out %.0f Hz, neighbour 30 kHz away %.1f dB down\n", d.outRate(), rej);
+        CHECK(rej > 50, "%.0f: the neighbour 62.5 kHz away is only %.1f dB down", rate, rej);
+        printf("channel filter at %.2f Msps: out %.0f Hz, neighbour 62.5 kHz away %.1f dB down\n", rate / 1e6, d.outRate(), rej);
     }
 }
 
@@ -194,14 +197,45 @@ static void testP25() {
 
 // ------------------------------------------------------------------------------------------------ DMR and NXDN (generator carriers, grants given)
 
+// diagnosis (prints only): one carrier of the mode's generator, decoded directly at the capture rate and through the slice filter at two narrow rates
+static void diagCarrier(int stdMode, const char* name) {
+    const double rate = 1.2e6;
+    for (double off : {0.0, 262500.0}) {
+        SynthConfig c; c.mode = stdMode; c.snrDb = 30; c.cfoHz = off;
+        std::unique_ptr<ModeSynth> g = makeModeSynth(stdMode, c, rate);
+        if (!g) return;
+        const size_t n = (size_t)(rate * 6);
+        std::vector<cf32> x(n);
+        g->generate(x.data(), n);
+        for (double minOut : {0.0, 48000.0, 96000.0, 240000.0}) {
+            uint64_t frames = 0;
+            tp::SliceDdc d;
+            if (minOut > 0) d.configure(rate, off, 9000, minOut);
+            const double r = minOut > 0 ? d.outRate() : rate;
+            if (stdMode == 11) {
+                DmrReceiver rx; rx.setSilent(true);
+                if (minOut > 0) rx.configureChannel(r); else rx.configure(r);
+                rx.setVoiceCallback([&](int, int, const uint8_t*) { frames++; });
+                for (size_t i = 0; i < n; i += 12000) { const size_t m = std::min<size_t>(12000, n - i); if (minOut > 0) { const auto& o = d.process(x.data() + i, m); rx.feed(o.data(), o.size()); } else if (off == 0) rx.feed(x.data() + i, m); }
+                DmrTelemetry t; rx.telemetry(t, 0);
+                printf("diag %s off %.0f minOut %.0f (rate %.0f): ready %d state %d voiceBursts %llu frames %llu\n", name, off, minOut, r, (int)rx.ready(), t.state, (unsigned long long)t.voiceBursts, (unsigned long long)frames);
+            } else {
+                NxdnReceiver rx; rx.setSilent(true); rx.configure(r); rx.setSignalOffset(minOut > 0 ? 0 : off);
+                rx.setVoiceTap([&](const uint8_t*) { frames++; });
+                for (size_t i = 0; i < n; i += 12000) { const size_t m = std::min<size_t>(12000, n - i); if (minOut > 0) { const auto& o = d.process(x.data() + i, m); rx.feed(o.data(), o.size()); } else rx.feed(x.data() + i, m); }
+                printf("diag %s off %.0f minOut %.0f (rate %.0f): frames %llu\n", name, off, minOut, r, (unsigned long long)frames);
+            }
+        }
+    }
+}
+
 static void testCarriers(int stdMode, tp::Proto proto, const char* name) {
     const double rate = 1.2e6, C = 460.0e6;
     const double off[3] = {-312500, 12500, 262500};
     std::vector<std::unique_ptr<ModeSynth>> g;
     for (int k = 0; k < 3; k++) {
         SynthConfig c; c.mode = stdMode; c.snrDb = 99; c.cfoHz = off[k] + (k - 1) * 300.0; c.sroPpm = (k - 1) * 25.0;
-        c.modeOpt[4] = k + 1;   // DMR: a different seed per carrier
-        if (stdMode == 11) c.modeOpt[3] = 2;   // DMR: busy traffic
+        if (stdMode == 11) { c.modeOpt[4] = k + 1; c.modeOpt[3] = 2; }   // DMR: a different seed per carrier, busy traffic
         g.push_back(makeModeSynth(stdMode, c, rate));
         if (!g.back()) { CHECK(false, "%s: no generator", name); return; }
     }
@@ -376,6 +410,8 @@ int main() {
     testCoverage();
     testDdc();
     testP25();
+    diagCarrier(11, "DMR");
+    diagCarrier(40, "NXDN");
     testCarriers(11, tp::Proto::DmrTier3, "DMR");
     testCarriers(40, tp::Proto::Nxdn, "NXDN");
     testSmartnet();
