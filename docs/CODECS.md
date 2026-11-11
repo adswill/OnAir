@@ -366,7 +366,7 @@ pictures are 4:2:0 8 bit (anything else is refused with a message), interlaced a
 Licences: the project is MIT and FFmpeg LGPL, so building it yourself is fine for copyright; AVS+ is covered by patents (check where you live).
 OnAir ships and downloads nothing of it.
 
-Details and the external-player route (save the TS / stream UDP, copy the VLC / mpv command): [AVSPLUS.md](AVSPLUS.md).
+The external-player route (save the TS / stream UDP, copy the VLC / mpv command) is in the TV tab.
 
 The player panel has a **?** button next to these messages. A channel that signals a CA system (a CA descriptor, free_CA_mode) but sends
 its streams in the clear is not shown as scrambled: OnAir goes by the scrambling bits of the stream packets.

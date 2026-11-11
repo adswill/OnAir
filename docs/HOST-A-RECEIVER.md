@@ -342,7 +342,7 @@ The .deb already contains a service file, switched off. Switch it on:
 
 ## Step 7. List your receiver on web.on-air.dev (OnAir 3.2 or newer)
 
-> **Coming in 3.2.** The OnAir 3.1 download cannot talk to the directory (it has no HTTPS support built in), so listing does not work there. If you have 3.1, skip this step now and come back after you update to 3.2. Please do not build from source for this.
+> **OnAir 3.1 only.** The OnAir 3.1 download cannot talk to the directory (it has no HTTPS support built in), so listing does not work there. If you have 3.1, update to 3.2 or newer first. Please do not build from source for this.
 
 The list is at https://web.on-air.dev . It is optional, switched off by default, and nobody has to approve you. Your server signs each message with its own key, so nobody else can change your entry. It sends your name, description, public address, a rough location (you choose how rough), what your radio covers and the **number** of listeners, every 5 minutes. It never sends listener addresses or what they listen to.
 
