@@ -664,3 +664,4 @@ The three Fleet Broadcast carriers listed on r00t.cz. The satellite's Doppler sh
 Invert bits
 The bit polarity is not published. Switch it when the idle channels look swapped.
 Link
+16 channel SATCOM multiplex

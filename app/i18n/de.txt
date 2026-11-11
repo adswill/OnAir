@@ -3946,3 +3946,4 @@ The three Fleet Broadcast carriers listed on r00t.cz. The satellite's Doppler sh
 Invert bits	Bits invertieren
 The bit polarity is not published. Switch it when the idle channels look swapped.	Die Bitpolarität ist nicht veröffentlicht. Umschalten, wenn die Leerlaufkanäle vertauscht aussehen.
 Link	Link
+16 channel SATCOM multiplex	SATCOM-Multiplex mit 16 Kanälen
