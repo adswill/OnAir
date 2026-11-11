@@ -310,7 +310,7 @@ struct HighRateRx::Impl {
     int l0Votes = 0;
     static constexpr int kEqSeg = 16;
     bool useEq = true;
-    struct ProbeEst { double c = 0; int64_t p0 = 0; cf h[kCirN]; bool ok = false; };   // c: the centre, in symbols from the lock block
+    struct ProbeEst { double c = 0; int64_t p0 = 0; cf h[kCirN]; bool ok = false; double e = 0; };   // e: the energy of the taps   // c: the centre, in symbols from the lock block
     std::vector<ProbeEst> prs;
     int64_t frameK = 1, probedFrames = 0;   // the next frame to read (from the lock), frames whose following probes are estimated
     bool syncBefore = false;                // the 184 sync symbols precede the lock block
@@ -474,7 +474,8 @@ struct HighRateRx::Impl {
         int dv[3];
         cf hh;
         double snr;
-        if (!readD(dv, hh, snr)) return false;
+        if (!readD(dv, hh, snr) && (!useEq || snr < -8)) return false;   // with multipath the other paths count as noise in this fit
+        if (useEq && !eqAcquire(dv, hh)) return false;
         int r = 0, fr = 0;
         if (!hdrFromD(dv, r, fr)) { char b[80]; snprintf(b, sizeof b, "preamble with an unknown rate code D = %d %d %d", dv[0], dv[1], dv[2]); event(b); return false; }
         // was this the start of a transmission (the 184 sync symbols just before) or a reinserted preamble?
@@ -519,7 +520,7 @@ struct HighRateRx::Impl {
         noise = std::max(ns, 1e-9); sig = sp;
         snr = 10 * std::log10(sp / std::max(ns, 1e-12));
         (void)pw;
-        return snr > (useEq ? -4 : 0);   // a side peak or noise does not fit the known symbols (with multipath the other paths count as noise here)
+        return snr > 0;   // a side peak or noise does not fit the known symbols
     }
 
     // the channel at lags lo .. hi samples from n known symbols starting at symbol m0
@@ -587,6 +588,7 @@ struct HighRateRx::Impl {
             cf a(0, 0);
             for (int m = L0 + 15; m <= L0 + 30; m++) a += yv[m - L0 - 15] * std::conj(psk8(sy[m - (l + L0)]));
             e.h[l] = a / 16.0f;
+            e.e += std::norm(e.h[l]);
         }
         return e;
     }
@@ -597,8 +599,10 @@ struct HighRateRx::Impl {
         int after = -1;
         for (size_t i = 0; i < prs.size(); i++) if (prs[i].c > m) { after = (int)i; break; }
         const int start = after < 0 ? (int)prs.size() : after;
-        for (int i = start - 1, c = 0; i >= 0 && c < 2; i--) if (prs[(size_t)i].ok) { idx[n++] = i; c++; }
-        if (after >= 0) for (int i = after, c = 0; i < (int)prs.size() && c < 2; i++) if (prs[(size_t)i].ok) { idx[n++] = i; c++; }
+        // the nearest probes, also those in a fade (weak and noisy, but nearer than any other); none further than two intervals away
+        auto usable = [&](int i) { return prs[(size_t)i].e > 1e-9 && std::fabs(prs[(size_t)i].c - m) < 2.5 * kFrame; };
+        for (int i = start - 1, c = 0; i >= 0 && c < 2; i--) if (usable(i)) { idx[n++] = i; c++; }
+        if (after >= 0) for (int i = after, c = 0; i < (int)prs.size() && c < 2; i++) if (usable(i)) { idx[n++] = i; c++; }
         for (int l = 0; l < kCirN; l++) out[l] = cf(0, 0);
         if (n == 0) return;
         if (n == 1) { for (int l = 0; l < kCirN; l++) out[l] = prs[(size_t)idx[0]].h[l]; return; }
@@ -703,7 +707,7 @@ struct HighRateRx::Impl {
             const double rho = eb > 0 ? std::abs(a) / std::sqrt(ea * eb) : 0;
             // a probe holds the signal when its taps carry clearly more than the noise (the shape may change fast in a fade);
             // after a gap, it must also look like the last good one
-            e.ok = ea > 4 * std::max(eqNoise, 1e-4) && (p.ok || rho > 0.3);
+            e.ok = ea > 4 * std::max(eqNoise, 1e-4) && rho > 0.3;
             if (e.ok && p.ok) {
                 const double dt = (e.c - p.c) * sps / kFs;
                 if (dt > 0) setCfo(cfo + 0.15 * std::arg(a) / (2 * kPi * dt), posOf((int64_t)e.c));
@@ -712,11 +716,24 @@ struct HighRateRx::Impl {
         if (e.ok) {
             // where the window should start: just after the lag (modulo 16) with the least averaged power
             for (int l = 0; l < kCirN; l++) { const int c = (((l + cirL0) % 16) + 16) % 16; profC[c] = (goodEst == 0 ? 0.0 : 0.9 * profC[c]) + (goodEst == 0 ? 1.0 : 0.1) * std::norm(e.h[l]) / ea; }
-            auto cost = [&](int L) { auto P = [&](int x) { return profC[((x % 16) + 16) % 16]; }; return P(L - 1) + 0.5 * (P(L - 2) + P(L)); };
+            // the cut goes in the middle of the longest run of lags (modulo 16) with little power, so that no path is split
+            double mxp = 0;
+            for (double v : profC) mxp = std::max(mxp, v);
+            int runStart = -1, runLen = 0;
+            for (int st0 = 0; st0 < 16; st0++) {
+                if (profC[(st0 + 15) % 16] < 0.03 * mxp || profC[st0] >= 0.03 * mxp) continue;   // a run starts here
+                int len = 0;
+                while (len < 16 && profC[(st0 + len) % 16] < 0.03 * mxp) len++;
+                if (len > runLen) { runLen = len; runStart = st0; }
+            }
             int bestL = cirL0;
-            for (int L = -12; L <= 0; L++) if (cost(L) < cost(bestL) - 1e-9) bestL = L;
-            l0Votes = bestL != cirL0 && cost(cirL0) > 2 * cost(bestL) + 1e-4 ? l0Votes + 1 : 0;
-            if (l0Votes >= 2 || (goodEst == 0 && bestL != cirL0 && cost(cirL0) > 2 * cost(bestL) + 1e-4)) {
+            if (runStart >= 0 && runLen < 16) {
+                const int cut = (runStart + (runLen - 1) / 2) % 16;   // the last lag before the window
+                bestL = ((cut + 1) % 16) - 16;                      // as a lag in -16 .. -1
+                if (bestL < -12) bestL += 16;                      // ... or 0 .. 3
+            }
+            l0Votes = bestL != cirL0 ? l0Votes + 1 : 0;
+            if (l0Votes >= 2 || (goodEst == 0 && bestL != cirL0)) {
                 // move the window and estimate the stored probes again (their samples are still here)
                 cirL0 = bestL;
                 l0Votes = 0;
@@ -762,6 +779,7 @@ struct HighRateRx::Impl {
     }
     int64_t goodEst = 0;
     int noiseUpdates = 0;
+    int blockBad = 0;        // frames of the current interleaver block whose probe held no signal
     double cvNoise = 0.05;   // the noise from the probes (with the channel's change over two probe intervals: high in fast fading)
     double ddNoise = -1;     // the error after the equaliser, on the decisions
 
@@ -785,8 +803,20 @@ struct HighRateRx::Impl {
         }
         addProbe(estimate(bs));
         addProbe(estimate(bs + 72));
-        // D0 D1 D2: equalised with the block's channel, decisions on the four even phases
         SuperInfo& ni = supers[(size_t)sIdx + 1];
+        int dv[3];
+        readDEq(bs, ni.blk.data(), dv);
+        int r = 0, fr = 0;
+        if (hdrFromD(dv, r, fr)) { ni.bps = r; ni.frames = fr; }
+        int dd[3];
+        hdrDValues(ni.bps, ni.frames, dd);
+        ni.blk = block103(dd);
+        return true;
+    }
+
+    // D0 D1 D2 of the 103 block at symbol bs, equalised with the channel of its probes (in prs); decisions on the four even phases.
+    // blk: the block's symbols (the D part is not used)
+    void readDEq(int64_t bs, const uint8_t* blk, int dv[3]) const {
         std::complex<double> w[kNff], b[kMaxFb];
         double g = 1;
         int l1 = 0, nfb = 0;
@@ -795,23 +825,41 @@ struct HighRateRx::Impl {
         int dec[39];
         for (int k2 = 32; k2 < 71; k2++) {
             if ((k2 - 32) % 13 == 0) { interpH((double)(bs + k2 + 6), hh); mmse(hh, w, b, nfb, g, l1); }
-            const cf z = eqSymbol(bs + k2, l1, w, b, nfb, g, [&](int j) { const int r = k2 - j; return r >= 32 ? psk8(dec[r - 32]) : psk8(ni.blk[(size_t)r]); });
+            const cf z = eqSymbol(bs + k2, l1, w, b, nfb, g, [&](int j) { const int r = k2 - j; return r >= 32 ? psk8(dec[r - 32]) : psk8(blk[r]); });
             const int q = (int)std::lround(std::arg(z) / (kPi / 2));
             dec[k2 - 32] = ((q % 4 + 4) % 4) * 2;
             zd[k2 - 32] = z;
         }
-        int dv[3];
         for (int i = 0; i < 3; i++) {
             cf a(0, 0);
             for (int k2 = 0; k2 < 13; k2++) a += zd[13 * i + k2] * std::conj(psk8(kBarker[k2]));
             const int q = (int)std::lround(std::arg(a) / (kPi / 2));
             dv[i] = ((q % 4 + 4) % 4) * 2;
         }
-        int r = 0, fr = 0;
-        if (hdrFromD(dv, r, fr)) { ni.bps = r; ni.frames = fr; }
-        int dd[3];
-        hdrDValues(ni.bps, ni.frames, dd);
-        ni.blk = block103(dd);
+    }
+
+    // at an acquisition: the channel of the block's two probes (they must agree: else it was data that looked like the block), and
+    // D0 D1 D2 through the equaliser
+    bool eqAcquire(int dv[3], cf hh) {
+        inScale = 1.0f / std::max(std::abs(hh), 1e-6f);
+        prs.clear(); supers.clear();
+        cirL0 = -6;
+        syncBefore = false;
+        SuperInfo si;
+        int d0[3] = {0, 0, 0};
+        si.blk = block103(d0);
+        supers.push_back(si);
+        ProbeEst a = estimate(0), b2 = estimate(72);
+        double ea = 0, eb = 0;
+        cf c(0, 0);
+        for (int l = 0; l < kCirN; l++) { ea += std::norm(a.h[l]); eb += std::norm(b2.h[l]); c += b2.h[l] * std::conj(a.h[l]); }
+        const double rho = ea > 0 && eb > 0 ? std::abs(c) / std::sqrt(ea * eb) : 0;
+        if (rho < 0.6) return false;
+        a.ok = b2.ok = true;
+        prs.push_back(a);
+        prs.push_back(b2);
+        eqNoise = 0.02;
+        readDEq(0, supers[0].blk.data(), dv);
         return true;
     }
 
@@ -826,7 +874,7 @@ struct HighRateRx::Impl {
         SuperInfo si;
         si.bps = bps; si.frames = frames; si.blk = block103(dv);
         supers.push_back(si);
-        frameK = 1; probedFrames = 0; superDone = 0;
+        frameK = 1; probedFrames = 0; superDone = 0; blockBad = 0;
         eqNoise = 0.05;
         addProbe(estimate(0));
         addProbe(estimate(72));
@@ -847,9 +895,19 @@ struct HighRateRx::Impl {
 
     // one data frame through the equaliser (once the channel estimates of the next two probes are in)
     bool trackEq() {
-        while (probedFrames < frameK + 1) { if (!probesAfter(probedFrames + 1)) return false; probedFrames++; }
+        while (probedFrames < frameK) { if (!probesAfter(probedFrames + 1)) return false; probedFrames++; }
         const int64_t k = frameK, sIdx = (k - 1) / kFramesPerSuper, f = (k - 1) % kFramesPerSuper + 1;
         const int64_t d0 = dataStartOf(k);
+        if (probedFrames < frameK + 1) {
+            // the channel after the next probe as well, unless the signal ends here (the last frame of a message)
+            const int64_t nx = dataStartOf(k + 1);
+            if (posOf(nx + 48) + 4 >= (double)nY) return false;
+            double e = 0, ef = 0;
+            for (int i = 8; i < 40; i++) e += std::norm(sampleAt(nx + i));
+            for (int i = 0; i < kData; i += 8) ef += std::norm(sampleAt(d0 + i));
+            const bool goesOn = e / 32 > 0.1 * ef / (kData / 8);
+            if (goesOn) { if (!probesAfter(probedFrames + 1)) return false; probedFrames++; }
+        }
         const SuperInfo& si = supers[(size_t)sIdx];
         if (si.bps != bps || si.frames != frames) {   // a new rate from a reinserted preamble
             event("the rate changed at a reinserted preamble");
@@ -904,7 +962,9 @@ struct HighRateRx::Impl {
         for (const auto& pe : prs) if (pe.p0 == d0 + kData) good = pe.ok;
         badProbes = good ? 0 : badProbes + 1;
         if (good) goodProbes++;
-        if (badProbes >= (goodProbes ? 6 : 3)) {
+        blockBad += !good;
+        // a fade of every path can last a second or more in ITU-R Poor conditions: a well established signal is held for 24 probes
+        if (badProbes >= (goodProbes == 0 ? 3 : goodProbes < 4 ? 6 : 24)) {
             if (goodProbes == 0) { st.messages--; unlock("false start dropped", (double)lockScan); }
             else unlock("signal lost", posOf(d0));
             return true;
@@ -924,8 +984,10 @@ struct HighRateRx::Impl {
                 const std::vector<uint8_t> bits = hdrDecodeBlock(soft, bps, frames);
                 st.blocks++;
                 soft.clear();
-                if (deliver(bits)) { unlock("end of message", posOf(d0 + kData)); return true; }
-            } else if ((int)soft.size() > hdrInterleaverBits(bps, frames)) soft.clear();
+                const bool mostlyLost = 2 * blockBad > frames;   // the signal was gone for most of the block: nothing to deliver
+                blockBad = 0;
+                if (!mostlyLost && deliver(bits)) { unlock("end of message", posOf(d0 + kData)); return true; }
+            } else if ((int)soft.size() > hdrInterleaverBits(bps, frames)) { soft.clear(); blockBad = 0; }
         }
         if (f == kFramesPerSuper) { superN++; st.superframes++; }
         frameK++;
