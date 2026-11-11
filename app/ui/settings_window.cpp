@@ -26,6 +26,9 @@
 
 using namespace settings;
 
+// Choice items are translated one by one (tr(items[n])); the ones no other tr() has are listed here for the catalog check
+[[maybe_unused]] static const char* const kChoiceItemTexts[] = {N_("Automatic (the device's speakers)"), N_("Stereo, Dolby Surround (Lt/Rt)")};
+
 namespace {
 
 struct Bind {

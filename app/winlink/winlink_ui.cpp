@@ -519,7 +519,7 @@ void gateways(int ctx) {
         ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ImGui::InputTextWithHint("##wlgv", tr("digipeaters (VARA FM, optional)"), d.gVia, sizeof d.gVia);
     } else {
         ImGui::SameLine(); ImGui::SetNextItemWidth(120 * gUi); ImGui::InputDouble("MHz##wlgm", &d.gMhz, 0, 0, "%.4f");
-        if (d.gTransport != 2) { ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ImGui::InputTextWithHint("##wlgv", tr("digipeaters (optional)"), d.gVia, sizeof d.gVia); }
+        if (d.gTransport != 2) { ImGui::SameLine(); ImGui::SetNextItemWidth(160 * gUi); ImGui::InputTextWithHint("##wlgvia", tr("digipeaters (optional)"), d.gVia, sizeof d.gVia); }
     }
     ImGui::SetNextItemWidth(300 * gUi); ImGui::InputTextWithHint("##wlgn", tr("note (optional)"), d.gNote, sizeof d.gNote);
     if (d.gTransport != 3) { ImGui::SameLine(); ImGui::Checkbox(tr("another station (peer to peer)"), &d.gPeer); }
@@ -544,6 +544,37 @@ void gateways(int ctx) {
 }
 
 // ---------------------------------------------------------------- external modems
+
+// The help lines come from the core (modemHelp in core/src/winlink/wl_extmodem.cpp) and are translated line by line in modemHelpBlock:
+// listed here so that the catalog check (tests/app/test_i18n.cpp) knows them.
+[[maybe_unused]] static const char* const kModemHelpTexts[] = {
+    N_("OnAir does not include, start or bundle this modem: it is a separate program that OnAir connects to over TCP."),
+    N_("The modem program owns the sound card and the radio's PTT. Set the audio device and PTT in the modem program, not in OnAir."),
+    N_("Use Test connection: it opens the two ports and asks for the version; nothing is sent over the air."),
+    N_("1. Install ardopcf (open source) and start it: ardopcf 8515 <capture device> <playback device> (see its USAGE files)."),
+    N_("2. In OnAir add an ARDOP profile: host 127.0.0.1, command port 8515, data port 8516."),
+    N_("3. Choose the BW (ARQBW), for example 500MAX, or leave it empty for the modem's own setting."),
+    N_("4. Add a gateway with link type External modem, pick the profile, enter the gateway's call sign."),
+    N_("ardopcf listens on all network interfaces by default: keep the ports behind a firewall."),
+    N_("ardopcf is open source (MIT licence). ARDOP's specification is public."),
+    N_("1. Install VARA HF from its author's site (EA5HVK) and start it. It is Windows software."),
+    N_("2. Linux and macOS: people run it under Wine in its own prefix (see the Pat wiki page on VARA and the DF3FY guide, linked in docs/HFMODEMS-3.9.md). OnAir cannot check that setup."),
+    N_("3. In OnAir add a VARA HF profile: host 127.0.0.1, command port 8300, data port 8301 (the defaults; check VARA's Settings > TCP ports)."),
+    N_("4. BW: 500, 2300 (the default) or 2750. Add a gateway with link type External modem and pick the profile."),
+    N_("5. For a peer-to-peer session mark the gateway entry as another station: OnAir then sends P2P SESSION."),
+    N_("VARA's free version is speed limited; a licence key (bought from the author) removes the limit. OnAir does not read or change it."),
+    N_("VARA is closed, proprietary, Windows-only software by EA5HVK. Its licence and any registration are between you and its author. OnAir does not contain or decode VARA."),
+    N_("1. Install VARA FM from its author's site and start it. It is Windows software."),
+    N_("2. In OnAir add a VARA FM profile: host 127.0.0.1, command port 8300, data port 8301 (VARA FM and HF both default to these, so run one at a time or change one program's ports)."),
+    N_("3. VARA FM has no BW command. Digipeaters go in the gateway's Via field and are sent as: CONNECT <mycall> <call> via <digi1> <digi2>."),
+    N_("4. Add a gateway with link type External modem and pick the profile."),
+    N_("VARA FM is closed, proprietary, Windows-only software by EA5HVK. OnAir does not contain or decode it."),
+    N_("1. Install Mercury (Rhizomatica, open source) and start it; it exposes a VARA-style TCP interface."),
+    N_("2. In OnAir add a Mercury profile: host 127.0.0.1, command port 8300, data port 8301 (Mercury: -p <base_port>, data = base + 1)."),
+    N_("3. BW: 500, 2300 or 2750 (2750 behaves as 2300 today). Add a gateway with link type External modem and pick the profile."),
+    N_("A Mercury call can last up to 300 s before it gives up: the connect timeout of the profile is 330 s unless you set one."),
+    N_("Mercury is open source (GPL-3.0-or-later; some bundled parts under LGPL, MIT, Unlicense)."),
+};
 
 void modemHelpBlock(ModemType t) {
     const ModemHelp h = modemHelp(t);
