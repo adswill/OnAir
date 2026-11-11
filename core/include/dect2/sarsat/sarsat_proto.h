@@ -34,7 +34,7 @@ struct Beacon {
     bool fine = false;           // the 4 second offsets of the long message were added
     double lat = 0, lon = 0;
     double posPrecisionDeg = 0;  // half of the cell the position can lie in
-    bool homing = false;         // bit 111: a 121.5 MHz homing transmitter is fitted
+    bool homing = false;         // a 121.5 MHz homing transmitter is fitted (bit 112, RLS bit 108, user protocols bits 84-85 = 01)
     bool bch2Present = false, bch2Ok = false;
     int corrected = 0;           // bits the BCH codes repaired
     std::string rawHex;          // all message bits (sync included) as hex, after the BCH repair
@@ -72,6 +72,8 @@ std::vector<uint8_t> encode(const Spec& s);
 // text packed as the 6 bit modified Baudot of the user protocols (n characters)
 uint64_t baudotPack(const std::string& s, int n);
 std::string baudotUnpack(uint64_t v, int n);
+// the 5 bit shortened Baudot of the aircraft operator designator (letters only)
+std::string baudot5Unpack(uint64_t v, int n);
 
 std::string countryOfMid(int mid);
 std::string protocolName(bool user, int code, std::string* type);

@@ -197,6 +197,18 @@ uint64_t baudotPack(const std::string& s, int n) {
     }
     return v;
 }
+// the shortened 5-bit modified Baudot of the aircraft operator designator (A3.3.5.2 note 2, A3.3.8.3 g): letters are 6-bit codes whose first bit is
+// always 1, which is dropped
+std::string baudot5Unpack(uint64_t v, int n) {
+    std::string s;
+    for (int i = n - 1; i >= 0; i--) {
+        const uint8_t code = (uint8_t)(0x20 | ((v >> (5 * i)) & 0x1F));
+        char c = '?';
+        for (const BaudotEnt& e : kBaudot) if (e.code == code && e.c >= 'A' && e.c <= 'Z') c = e.c;
+        s.push_back(c);
+    }
+    return s;
+}
 std::string baudotUnpack(uint64_t v, int n) {
     std::string s;
     for (int i = n - 1; i >= 0; i--) {
@@ -228,7 +240,13 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
         else if (!o.userProto && get(bits, 37, 40) == 9) { put(id, 67, 85, 0); put(id, 68, 75, 255); put(id, 77, 85, 511); }
         o.hexId = bitsToHex(id, 26, 85);
     }
-    o.homing = bits[110] != 0;
+    {   // the 121.5 MHz homing flag (C/S T.001 A3.3.2.2): bit 112 in the standard and national location protocols, bit 108 in RLS, bits 84-85 = 01 in
+        // the user protocols (not orbitography); the ELT-DT protocol has no such field (bits 109-112 are the altitude there)
+        const int pc = o.userProto ? (int)get(bits, 37, 39) : (int)get(bits, 37, 40);
+        if (o.userProto) o.homing = pc != 0 && get(bits, 84, 85) == 1;
+        else if (pc == 13) o.homing = o.longMsg && bits[107] != 0;
+        else if (pc != 9) o.homing = o.longMsg && bits[111] != 0;
+    }
     if (o.longMsg) {
         o.bch2Present = true;
         const int c2 = bch2().correct(bits, 107);
@@ -268,9 +286,7 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
         o.idText = b;
         break;
     case 5: {
-        const uint64_t v = get(bits, 41, 55);
-        std::string op;
-        for (int k = 2; k >= 0; k--) { const int ch = (int)((v >> (5 * k)) & 31); op.push_back(ch >= 1 && ch <= 26 ? (char)('A' + ch - 1) : '?'); }
+        const std::string op = baudot5Unpack(get(bits, 41, 55), 3);
         snprintf(b, sizeof b, "operator %s, serial %d", op.c_str(), (int)get(bits, 56, 64));
         o.idText = b;
         break;
@@ -279,34 +295,51 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
         snprintf(b, sizeof b, "aircraft address %06X", (unsigned)get(bits, 41, 64));
         o.idText = b;
         break;
-    case 9: {   // ELT-DT: bits 41-42 identification type, 43-66 aircraft address (type 0), 67-85 PDF-1 position, 107-132 status + offsets
+    case 9: {   // ELT(DT) location protocol, C/S T.001 Issue 4 Rev. 7 A3.3.8
+        // PDF-1: bits 41-42 type of identity (00 24-bit aircraft address, 01 aircraft operator designator and serial number, 10 TAC and serial number,
+        // 11 reserved), bits 43-66 the identity (all 0s or all 1s: the ELT(DT) location test protocol), bits 67-85 the position to 30 minutes.
+        // A3.3.8.1 does not spell out how bits 43-66 split for types 01 and 10; the split of the serial location protocols (A3.3.5.2 c: 15-bit
+        // shortened Baudot designator + 9-bit serial, 10-bit TAC + 14-bit serial) is used, and the raw 24 bits are shown with it.
         const int idType = (int)get(bits, 41, 42);
-        if (idType == 0) snprintf(b, sizeof b, "aircraft address %06X", (unsigned)get(bits, 43, 66));
-        else snprintf(b, sizeof b, "identification not available");
+        const uint32_t idv = (uint32_t)get(bits, 43, 66);
+        const bool cancel = get(bits, 67, 75) == 0x1FA && get(bits, 76, 85) == 0x3FA && (!o.longMsg || (get(bits, 107, 114) == 0x3C && get(bits, 115, 132) == 0x1E0F0));
+        if (idv == 0 || idv == 0xFFFFFF) snprintf(b, sizeof b, "ELT(DT) location test (bits 43-66 all %d)", idv ? 1 : 0);
+        else if (idType == 0) snprintf(b, sizeof b, "aircraft address %06X", (unsigned)idv);
+        else if (idType == 1) snprintf(b, sizeof b, "aircraft operator %s, serial %u (bits 43-66 %06X)", baudot5Unpack(idv >> 9, 3).c_str(), (unsigned)(idv & 0x1FF), (unsigned)idv);
+        else if (idType == 2) snprintf(b, sizeof b, "certificate %u, serial %u (bits 43-66 %06X)", (unsigned)(idv >> 14), (unsigned)(idv & 0x3FFF), (unsigned)idv);
+        else snprintf(b, sizeof b, "identity type 11 (reserved), bits 43-66 %06X", (unsigned)idv);
         o.idText = b;
+        if (idv == 0 || idv == 0xFFFFFF) o.beaconType = "Test";
+        if (cancel) { o.idText += ", cancellation message (alert cancelled)"; return true; }
         const int latU = (int)get(bits, 68, 75), lonU = (int)get(bits, 77, 85);
-        if (latU <= 180 && lonU <= 360) {   // 255 / 511 is the "no position" default
+        const bool havePos = latU <= 180 && lonU <= 360;   // 0 11111111 / 0 111111111 is the "no position" default
+        if (havePos) {
             o.hasPos = true;
             o.lat = (bits[66] ? -1.0 : 1.0) * latU * 0.5;
             o.lon = (bits[75] ? -1.0 : 1.0) * lonU * 0.5;
             o.posPrecisionDeg = 0.25;
-            if (o.longMsg && o.bch2Ok) {
-                static const char* act[] = {"manual", "automatic (G-switch)", "automatic (external)", "spare"};
-                static const char* alt[] = {"<=400 m", ">400 m", ">800 m", ">1200 m", ">1600 m", ">2200 m", ">2800 m", ">3400 m", ">4000 m", ">4800 m", ">5600 m", ">6600 m", ">7600 m", ">8800 m", ">10000 m", "n/a"};
-                static const char* fresh[] = {"rotating field", ">60 s old", ">2 s <=60 s old", "<=2 s old"};
-                const int fr = (int)get(bits, 113, 114);
-                std::string extra = std::string(", ") + act[get(bits, 107, 108)] + " activation, altitude " + alt[get(bits, 109, 112)];
-                if (fr > 0) {
-                    const int lm = (int)get(bits, 116, 119), ls = (int)get(bits, 120, 123), om = (int)get(bits, 125, 128), os = (int)get(bits, 129, 132);
+        }
+        if (o.longMsg && o.bch2Ok) {   // PDF-2 (A3.3.8.3)
+            static const char* act[] = {"manual activation", "automatic activation by the beacon", "automatic activation by external means", "activation code 11 (spare)"};
+            static const char* alt[] = {"<=400 m", ">400 m", ">800 m", ">1200 m", ">1600 m", ">2200 m", ">2800 m", ">3400 m", ">4000 m", ">4800 m", ">5600 m", ">6600 m", ">7600 m", ">8800 m", ">10000 m", "not available"};
+            static const char* fresh[] = {"", "location more than 60 s old or default", "location 2-60 s old", "location current (<=2 s)"};
+            const int fr = (int)get(bits, 113, 114);
+            std::string extra = std::string(", ") + act[get(bits, 107, 108)] + ", altitude " + alt[get(bits, 109, 112)];
+            if (fr == 0) {   // the PDF-2 rotating field: bits 115-117 its type, 000 = the aircraft operator 3LD in bits 118-132
+                if (get(bits, 115, 117) == 0) extra += ", aircraft operator " + baudot5Unpack(get(bits, 118, 132), 3);
+                else extra += ", rotating field type " + std::to_string((int)get(bits, 115, 117));
+            } else {
+                extra += std::string(", ") + fresh[fr];
+                const int lm = (int)get(bits, 116, 119), ls = (int)get(bits, 120, 123), om = (int)get(bits, 125, 128), os = (int)get(bits, 129, 132);
+                if (havePos && ls <= 14 && os <= 14) {   // seconds 1111 = the default (no offset)
                     const double dl = lm / 60.0 + ls * 4.0 / 3600.0, dn = om / 60.0 + os * 4.0 / 3600.0;
                     o.lat += bits[114] ? dl : -dl;
                     o.lon += bits[123] ? dn : -dn;
                     o.fine = true;
                     o.posPrecisionDeg = 2.0 / 3600.0;
                 }
-                extra += std::string(", location ") + fresh[fr];
-                o.idText += extra;
             }
+            o.idText += extra;
         }
         return true;
     }
@@ -320,8 +353,9 @@ bool decode(std::vector<uint8_t>& bits, Beacon& o) {
             o.lon = (bits[74] ? -1.0 : 1.0) * lonU * 0.25;
             o.posPrecisionDeg = 0.125;
             if (o.longMsg && o.bch2Ok) {
-                const int lm = (int)get(bits, 114, 117), ls = (int)get(bits, 118, 122), om = (int)get(bits, 124, 127), os = (int)get(bits, 128, 132);
-                if (lm <= 14 && ls <= 14 && om <= 14 && os <= 14) {
+                // A3.3.5.4: bit 113 sign, 114-118 minutes (0-30), 119-122 seconds in 4 s steps (0-14; 1111 is the default, no offset); 123-132 the same for longitude
+                const int lm = (int)get(bits, 114, 118), ls = (int)get(bits, 119, 122), om = (int)get(bits, 124, 128), os = (int)get(bits, 129, 132);
+                if (lm <= 30 && ls <= 14 && om <= 30 && os <= 14) {
                     const double dl = lm / 60.0 + ls * 4.0 / 3600.0, dn = om / 60.0 + os * 4.0 / 3600.0;
                     o.lat += bits[112] ? dl : -dl;
                     o.lon += bits[122] ? dn : -dn;
@@ -358,16 +392,20 @@ std::vector<uint8_t> encode(const Spec& s) {
             if (s.longMsg && s.fine) {
                 const double dl = la - cl, dn = lo - co;
                 const int tl = (int)std::lround(std::fabs(dl) * 3600.0 / 4.0), tn = (int)std::lround(std::fabs(dn) * 3600.0 / 4.0);
-                b[112] = dl >= 0 ? 1 : 0; put(b, 114, 117, (uint64_t)(tl / 15)); put(b, 118, 122, (uint64_t)(tl % 15));
-                b[122] = dn >= 0 ? 1 : 0; put(b, 124, 127, (uint64_t)(tn / 15)); put(b, 128, 132, (uint64_t)(tn % 15));
+                b[112] = dl >= 0 ? 1 : 0; put(b, 114, 118, (uint64_t)(tl / 15)); put(b, 119, 122, (uint64_t)(tl % 15));
+                b[122] = dn >= 0 ? 1 : 0; put(b, 124, 128, (uint64_t)(tn / 15)); put(b, 129, 132, (uint64_t)(tn % 15));
             } else if (s.longMsg) {
-                put(b, 113, 132, 0xFFFFF);
+                put(b, 113, 122, 0x20F); put(b, 123, 132, 0x20F);   // the default offsets: 1 00000 1111
             }
         } else if (s.longMsg) {
-            put(b, 113, 132, 0xFFFFF);
+            put(b, 113, 122, 0x20F); put(b, 123, 132, 0x20F);
+        }
+        if (s.longMsg && s.protoCode != 9 && s.protoCode != 13) {
+            put(b, 107, 110, 0xD);          // "1101" fixed
+            b[110] = 1;                     // bit 111: an internal navigation device
+            b[111] = s.homing ? 1 : 0;      // bit 112: 121.5 MHz homing
         }
     }
-    b[110] = s.homing ? 1 : 0;
     {   // parity = remainder of the data followed by 21 zeros
         std::vector<uint8_t> w(b.begin(), b.begin() + 85);
         w.resize(106, 0);
