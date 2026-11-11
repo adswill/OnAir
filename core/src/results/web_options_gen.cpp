@@ -305,7 +305,7 @@ static bool set_32(Engine& e, const std::string& n, double v) {
     if (n == "setCanFilter") { call(r, &Rx<decltype(r)>::setCanFilter, v); return true; }
     return false;
 }
-static const char kOpt_35[] = R"JSON([{"n":"setFocusHz","k":"num","l":"Focus Hz","h":"the signal nearest this offset from the dial becomes the focus (a new one when none is near)","u":"Hz","t":"s"},{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"how far over the noise floor a carrier must be to be followed (default 10)","u":"dB","t":"s"},{"n":"setSidetone","k":"bool","l":"Sidetone","h":"a tone for the focused signal (off by default)","t":"s"},{"n":"setSidetoneHz","k":"num","l":"Sidetone Hz","u":"Hz","t":"s"},{"n":"setSpotShiftHz","k":"num","l":"Spot Shift Hz","h":"internal (slice skimmers): added to a signal's offset for the PSK Reporter spot","u":"Hz","t":"a"}])JSON";
+static const char kOpt_35[] = R"JSON([{"n":"setFocusHz","k":"num","l":"Focus Hz","h":"the signal nearest this offset from the dial becomes the focus (a new one when none is near)","u":"Hz","t":"s"},{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"how far over the noise floor a carrier must be to be followed (default 10)","u":"dB","t":"s"},{"n":"setSidetone","k":"bool","l":"Sidetone","h":"a tone for the focused signal (off by default)","t":"s"},{"n":"setSidetoneHz","k":"num","l":"Sidetone Hz","u":"Hz","t":"s"},{"n":"setSpotShiftHz","k":"num","l":"Spot Shift Hz","h":"internal (slice skimmers): added to a signal's offset for the PSK Reporter spot","u":"Hz","t":"a"},{"n":"setTimingDecoder","k":"int","l":"Timing Decoder","t":"a"}])JSON";
 static bool set_35(Engine& e, const std::string& n, double v) {
     auto& r = e.cw();
     if (n == "setFocusHz") { call(r, &Rx<decltype(r)>::setFocusHz, v); return true; }
@@ -313,6 +313,7 @@ static bool set_35(Engine& e, const std::string& n, double v) {
     if (n == "setSidetone") { call(r, &Rx<decltype(r)>::setSidetone, v); return true; }
     if (n == "setSidetoneHz") { call(r, &Rx<decltype(r)>::setSidetoneHz, v); return true; }
     if (n == "setSpotShiftHz") { call(r, &Rx<decltype(r)>::setSpotShiftHz, v); return true; }
+    if (n == "setTimingDecoder") { call(r, &Rx<decltype(r)>::setTimingDecoder, v); return true; }
     return false;
 }
 static const char kOpt_36[] = R"JSON([{"n":"setParallel","k":"bool","l":"Parallel","h":"channels in parallel on the shared pool (default) or one after the other; same results either way (tests)","t":"s"},{"n":"setWholeSpan","k":"bool","l":"Whole Span","h":"Whole span: the station table in the capture plus the list; off: the list replaces the table","t":"s"}])JSON";
