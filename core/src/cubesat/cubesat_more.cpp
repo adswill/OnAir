@@ -323,7 +323,10 @@ static std::vector<uint8_t> concatBlock(const std::vector<uint8_t>& frame, const
 }
 
 std::vector<uint8_t> ccsdsConcatEncode(const std::vector<uint8_t>& frame, const ConcatParams& p) {
-    std::vector<uint8_t> by;
+    // a coded lead first, as a transmitter's continuous stream has: the convolutional code then runs before the ASM, so the receiver's
+    // Viterbi path has settled when the ASM comes. Without it the ASM followed uncoded symbols, and for every code but CCSDS (whose
+    // all-zero output is the 0101 preamble) about 5 % of the ASMs came out of the Viterbi with more than 4 bit errors (cubesat_more)
+    std::vector<uint8_t> by(8, 0x55);
     putU32(by, kAsmCcsds);
     const std::vector<uint8_t> blk = concatBlock(frame, p);
     by.insert(by.end(), blk.begin(), blk.end());

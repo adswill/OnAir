@@ -302,9 +302,13 @@ void HfdigKbd::Impl::autoTick(const float* x, size_t n) {
     autoLocked = false;
     if (autoFill < (size_t)(8 * kbd::kFs) || samples - autoLastRun < (uint64_t)(6 * kbd::kFs)) return;
     autoLastRun = samples;
-    std::vector<float> a(autoFill);
-    const size_t st = (autoPos + kCap - autoFill) % kCap;
-    for (size_t i = 0; i < autoFill; i++) a[i] = autoHist[(st + i) % kCap];
+    // after a lock, only the audio since the text stopped (8 s at least): older audio is the signal the old settings fitted, and with
+    // it in the window the analysis found the old set again, so a change took two slow runs to follow (autoparam_kbd "live relock")
+    size_t use = autoFill;
+    if (autoHave) use = std::min(autoFill, std::max((size_t)(8 * kbd::kFs), (size_t)std::min<uint64_t>(quiet, kCap)));
+    std::vector<float> a(use);
+    const size_t st = (autoPos + kCap - use) % kCap;
+    for (size_t i = 0; i < use; i++) a[i] = autoHist[(st + i) % kCap];
     const int fam = cfg.family;
     autoJob = std::async(std::launch::async, [v = std::move(a), fam]() { return kbdAutoAnalyse(v.data(), v.size(), fam, 3); });
 }

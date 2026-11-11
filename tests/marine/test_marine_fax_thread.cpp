@@ -1,6 +1,7 @@
 // Threads and speed: push() on one thread while status() / latestImage() and the setters run on others, and the
 // real-time factor of push() at 12 kHz and 48 kHz audio.
 #include "../data/marine/fax/fax_util.h"
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <thread>
@@ -36,7 +37,19 @@ int main() {
                 std::this_thread::sleep_for(std::chrono::microseconds(300));
             }
         });
-        feedAll(d, a, 1024);
+        // push() runs flat out (170 s of audio in a fraction of a second), and a starved reader thread (Windows CI: 18 of over a thousand
+        // updates) proves nothing about the decoder. When the reader has seen nothing new for 8 chunks the producer yields (50 ms at most)
+        // until it has: push, the reads and the setters still overlap all the time, and the reader is sure to run.
+        int lastSeen = 0, stale = 0;
+        for (size_t i = 0; i < a.size(); i += 1024) {
+            d.push(a.data() + i, std::min<size_t>(1024, a.size() - i));
+            if (images.load() != lastSeen) { lastSeen = images.load(); stale = 0; continue; }
+            if (++stale < 8) continue;
+            stale = 0;
+            const auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(50);
+            while (images.load() == lastSeen && std::chrono::steady_clock::now() < until) std::this_thread::yield();
+            lastSeen = images.load();
+        }
         done = true;
         reader.join();
         setter.join();
