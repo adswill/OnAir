@@ -152,4 +152,25 @@ inline std::vector<cf32> fmStation(Fm& f, double fs, double seconds, unsigned se
     return x;
 }
 
+
+// ---- AM broadcast ---------------------------------------------------------------------------------------------------------------------------
+struct Am {
+    double d1 = 0.5, d2 = 0.2, asym = 0, hum = 0, humHz = 100, offsetHz = 0, driftHzPerSec = 0, cutFrom = 1e9, cutTo = 1e9, audioHz1 = 1000, audioHz2 = 3300;
+    bool clip = true;
+};
+inline std::vector<cf32> amStation(const Am& a, double fs, double seconds) {
+    std::vector<cf32> x((size_t)(fs * seconds)); double ph = 0;
+    for (size_t i = 0; i < x.size(); i++) {
+        const double t = i / fs;
+        double m = a.d1 * std::sin(2 * kPi * a.audioHz1 * t) + a.d2 * std::sin(2 * kPi * a.audioHz2 * t + 1);
+        m += a.asym * (m > 0 ? m : 0);                    // positive peaks larger than the negative ones
+        m += a.hum * std::sin(2 * kPi * a.humHz * t);
+        double env = 1 + m; if (a.clip && env < 0) env = 0;
+        if (t >= a.cutFrom && t < a.cutTo) env = 0;
+        ph += 2 * kPi * (a.offsetHz + a.driftHzPerSec * t) / fs;
+        x[i] = (float)env * cf32((float)std::cos(ph), (float)std::sin(ph));
+    }
+    return x;
+}
+
 }

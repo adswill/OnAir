@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**342 modes.**
+**343 modes.**
 
 ## TV (17)
 
@@ -24,7 +24,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FPV video (analog)** - Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)
 - **MAC** - MAC/packet satellite TV: picture, 4:3 / 16:9, channel name, digital sound, EuroCrypt detected
 
-## Broadcast Radio (8)
+## Broadcast Radio (9)
 
 - **DAB / DAB+** - DAB and DAB+ digital radio
 - **FM** - FM broadcast radio with stereo and RDS
@@ -34,6 +34,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AM stereo (C-QUAM)** - AM stereo: C-QUAM on medium wave, stereo found by its 25 Hz pilot
 - **CDR** - CDR: China's digital radio in the FM band
 - **FM modulation monitor** - FM monitor: deviation, pilot, RDS, MPX power
+- **AM modulation monitor** - AM monitor: depth, peaks, hum, bandwidth
 
 ## Aviation (27)
 

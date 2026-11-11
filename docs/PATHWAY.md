@@ -1790,3 +1790,7 @@ Qi baseline-profile receiver-to-transmitter packets: load modulation, differenti
 ## 2026-11-12: FM modulation monitor (family 889)
 
 FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offset, pilot, stereo band, RDS injection, SCA 67 / 92 kHz, over-deviation log. Tests: three input rates, offsets, changes during a run, noise sweep, false-report run. Simulated signals only (docs/FMMON-4.0.md).
+
+## 2026-11-12: AM modulation monitor (family 890)
+
+AM broadcast modulation monitor: carrier offset, depth, peaks, asymmetry, hum, audio bandwidth, over-modulation and carrier-loss log. Tests: three input rates, offsets with drift, hum, asymmetry, noise sweep, false-row run. Simulated signals only (docs/AMMON-4.0.md).

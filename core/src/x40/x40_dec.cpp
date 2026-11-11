@@ -14,6 +14,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case UhfRfid: return makeUhfRfid();
     case Qi: return makeQi();
     case FmMon: return makeFmMon();
+    case AmMon: return makeAmMon();
     default: return nullptr;
     }
 }
@@ -33,6 +34,7 @@ ModeTuning x40Tuning(int v) {
         {"uhfrfid", 860, 960, 865.700, 2000000, 400000, 0.6, true},
         {"qi", 0.1, 0.21, 0.140, 250000, 24000, 0.012, true},
         {"fmmon", 64, 110, 100.000, 250000, 200000, 0.2, true},
+        {"ammon", 0.148, 30, 1.000, 250000, 24000, 0.012, true},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

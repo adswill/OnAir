@@ -370,6 +370,7 @@
         <item>UHF RFID reader (EPC Gen2)</item>
         <item>Qi wireless charging</item>
         <item>FM modulation monitor</item>
+        <item>AM modulation monitor</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -721,6 +722,7 @@
         <item>UHF RFID readers (EPC Class-1 Gen-2 / ISO 18000-63, 860 - 960 MHz): the commands of the reader (Query with its slot count and session, QueryRep, QueryAdjust, ACK, Select with its mask, Req_RN, Read, Write, Kill, Lock, Access) with the Tari, RTcal and TRcal timing. The tags\' replies are not decoded. Receive only. Needs a 2 Msps radio. Simulated signals only</item>
         <item>Qi wireless chargers (WPC baseline profile, 110 - 205 kHz power signal): what the phone tells the charger by load modulation at 2 kbit/s: signal strength, control error, received power, charge status, end of power transfer, configuration and identification with the manufacturer code. Receive only. Needs a radio that reaches the LF band and a pick-up loop near the charger. Simulated signals only</item>
         <item>FM broadcast modulation monitor: peak and RMS deviation, MPX power, carrier offset, the 19 kHz pilot and stereo, the 57 kHz RDS injection, SCA subcarriers and the audio level of a station, with over-deviation logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
+        <item>AM broadcast modulation monitor (LW, MW, SW): the carrier offset, modulation depth, positive and negative peaks, asymmetry, mains hum, audio bandwidth and over-modulation of one station, with loss and return of the carrier logged. A reading of what arrives, not a type-approval instrument. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1071,6 +1073,7 @@
         <item>Tag</item>
         <item>Command</item>
         <item>Packet</item>
+        <item>Event</item>
         <item>Event</item>
     </string-array>
     <string-array name="mode_keys">
@@ -1423,5 +1426,6 @@
         <item>uhf rfid epc gen2 iso 18000-63 reader query inventory tag 865 915 868 902 928 select pie tari</item>
         <item>qi wireless charging wpc charger phone load modulation 110 khz 205 khz power transfer identification received power</item>
         <item>fm modulation monitor deviation pilot 19 khz rds injection mpx power sca subcarrier stereo overmodulation bs.412 broadcast engineer</item>
+        <item>am modulation monitor depth overmodulation carrier offset hum asymmetry audio bandwidth mw sw lw broadcast</item>
     </string-array>
 </resources>
