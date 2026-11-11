@@ -344,6 +344,7 @@
         <item>CIS-128</item>
         <item>CIS-3000</item>
         <item>Lightning position (network)</item>
+        <item>Fleet Broadcast (UHF SATCOM)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -669,6 +670,7 @@
         <item>CIS-128, identification only: about 128 OFDM carriers at about 21 Bd in 3 kHz, from the carrier spacing, the symbol rate and the guard. The 6 kHz form is not covered. No frame format is published. Simulated signals only so far</item>
         <item>CIS-3000, identification only: a single carrier 8-PSK at 3000 Bd, from its symbol-rate line and the constellation order. No frame format is published. Simulated signals only so far</item>
         <item>Lightning position (network): several OnAir stations with radios time the same sferic; one acts as the server, collects the detections and finds the strike by time difference of arrival. Each station shows which timing source it uses (GPS-disciplined radio time, a GNSS receiver, a common-view VLF / LF transmitter, or PTP / NTP for association only) and its estimated error; the server draws the strikes with error ellipses on the map. Authenticated with a network key, off until set up, nothing relayed elsewhere. Receive only</item>
+        <item>Fleet Broadcast on 250.450 / 250.550 / 250.650 MHz: a 16 channel, 75 Bd multiplex from UHF military satellites (1200 Bd differential BPSK). Finds the carrier, the clock and the frame and shows what each channel looks like. The channels are usually encrypted-looking data: nothing is decoded or decrypted. Receive only; simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -994,6 +996,7 @@
         <item>Identification only, HF</item>
         <item>Identification only, HF</item>
         <item>Lightning map, several stations</item>
+        <item>16 channel SATCOM multiplex</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1319,5 +1322,6 @@
         <item>cis-128 cis128 russian ofdm 128 tone hf identification sigidwiki</item>
         <item>cis-3000 cis3000 russian single carrier 8psk 3000 baud hf identification sigidwiki</item>
         <item>lightning position network tdoa time difference arrival strike location map sferics stations blitzortung vlf lf common view gps</item>
+        <item>fleet broadcast fltsatcom ufo uhf satcom 250 mhz 75 baud 16 channel multiplex dbpsk 1200 baud 250.450 250.550 250.650 doppler r00t</item>
     </string-array>
 </resources>

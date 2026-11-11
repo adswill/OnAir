@@ -3878,3 +3878,40 @@ shared lists:	geteilte Listen:
 stop using it	nicht mehr verwenden
 The country of the shared transmitter list (ISO code, e.g. GB, DE, NO); Enter downloads it.\nThe lists of the countries of the ensembles heard are fetched as well.	Das Land der geteilten Senderliste (ISO-Code, z. B. GB, DE, NO); Enter lädt sie herunter.\nDie Listen der Länder der empfangenen Ensembles werden ebenfalls geladen.
 Add the transmitters of a CSV file to your own list (columns eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid in hex):\nan export of heard transmitters with the positions filled in, or a list someone shares; rows without a position are skipped.\nqt-dab's .txdata.tii is used where it is instead (FMLIST data, personal use).	Die Sender einer CSV-Datei zu deiner eigenen Liste hinzufügen (Spalten eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid hexadezimal):\nein Export der empfangenen Sender mit eingetragenen Positionen oder eine Liste, die jemand teilt; Zeilen ohne Position werden übersprungen.\nDie .txdata.tii von qt-dab wird stattdessen an Ort und Stelle genutzt (FMLIST-Daten, privater Gebrauch).
+Receive only. Fleet Broadcast is a 16 channel, 75 Bd multiplex sent as 1200 Bd differential BPSK from UHF military SATCOM satellites. Channel 0 is for synchronisation; the other channels are usually random-looking, encrypted data. This screen finds the carrier, the clock and the frame and shows what each channel looks like. Nothing is decoded and nothing is decrypted.	Nur Empfang. Fleet Broadcast ist ein Multiplex aus 16 Kanälen mit 75 Bd, gesendet als differentielle BPSK mit 1200 Bd von militärischen UHF-SATCOM-Satelliten. Kanal 0 dient der Synchronisation; die übrigen Kanäle tragen meist zufällig wirkende, verschlüsselte Daten. Dieser Bildschirm findet Träger, Takt und Rahmen und zeigt, wie jeder Kanal aussieht. Nichts wird dekodiert und nichts entschlüsselt.
+sync pattern (repeats)	Synchronmuster (wiederholt sich)
+reversals 1010...	Wechsel 1010...
+idle (constant)	Leerlauf (konstant)
+random-looking, probably encrypted: not decoded	zufällig wirkend, vermutlich verschlüsselt: nicht dekodiert
+not enough data	zu wenig Daten
+One row per frame, newest at the bottom, one column per channel (0 on the left); a filled cell is a 1 bit.	Eine Zeile pro Rahmen, der neueste unten, eine Spalte pro Kanal (0 links); eine gefüllte Zelle ist ein 1-Bit.
+start the receiver to look for a Fleet Broadcast carrier	Empfänger starten, um einen Fleet-Broadcast-Träger zu suchen
+Forget the log and the symbol count	Protokoll und Symbolzähler verwerfen
+no bits yet: waiting for a BPSK carrier with a 1200 Bd clock	noch keine Bits: warte auf einen BPSK-Träger mit 1200-Bd-Takt
+Several columns of the 16-bit frame repeat, so the frame start cannot be told. The columns are shown as they come.	Mehrere Spalten des 16-Bit-Rahmens wiederholen sich, der Rahmenanfang ist daher nicht bestimmbar. Die Spalten werden unsortiert gezeigt.
+Bits are flowing but no column repeats yet (the sync pattern of channel 0 is not published: a repeat of 3 to 64 frames is looked for). The columns are shown as they come.	Bits kommen an, aber keine Spalte wiederholt sich bisher (das Synchronmuster von Kanal 0 ist nicht veröffentlicht: gesucht wird eine Wiederholung nach 3 bis 64 Rahmen). Die Spalten werden unsortiert gezeigt.
+Col	Sp.
+Looks like	Sieht aus wie
+Changes	Wechsel
+Ones	Einsen
+Last 64 bits (hex)	Letzte 64 Bit (hex)
+Frames as 16 bit words (hex, channel 0 is the top bit, newest last)	Rahmen als 16-Bit-Wörter (hex, Kanal 0 ist das höchste Bit, neueste zuletzt)
+No plain text is expected here: the public description has never seen any on Fleet Broadcast. A random-looking channel is shown as hex and left alone.	Klartext ist hier nicht zu erwarten: laut öffentlicher Beschreibung wurde auf Fleet Broadcast nie welcher gesehen. Ein zufällig wirkender Kanal wird als Hex gezeigt und nicht angetastet.
+no BPSK carrier heard yet	noch kein BPSK-Träger gehört
+listed carrier	gelisteter Träger
+acquisition	Erfassung
+symbol clock	Symboltakt
+decision quality	Entscheidungsgüte
+Last bits as received (the polarity is not published)	Zuletzt empfangene Bits (die Polarität ist nicht veröffentlicht)
+What each part rests on:	Worauf jeder Teil beruht:
+Carriers 250.450, 250.550 and 250.650 MHz; 16 channel, 75 Bd multiplex; differential BPSK at 1200 Bd; channel 0 for synchronisation; the other channels usually random-looking, encrypted data, sometimes KG-84; no plain text ever seen: the description on r00t.cz (Fleet Broadcast Decoder v0.5, 2009).	Träger 250,450, 250,550 und 250,650 MHz; Multiplex aus 16 Kanälen mit 75 Bd; differentielle BPSK mit 1200 Bd; Kanal 0 zur Synchronisation; die übrigen Kanäle meist zufällig wirkende, verschlüsselte Daten, manchmal KG-84; nie Klartext gesehen: die Beschreibung auf r00t.cz (Fleet Broadcast Decoder v0.5, 2009).
+16 channels of 75 Bd make 1200 Bd: a frame is 16 bits, one bit per channel. A US Navy FLTSATCOM shore-terminal description also gives 75 bit/s subchannels sent time-division multiplexed at 1200 bit/s.	16 Kanäle mit je 75 Bd ergeben 1200 Bd: ein Rahmen hat 16 Bit, ein Bit pro Kanal. Auch eine Beschreibung des FLTSATCOM-Landterminals der US Navy nennt 75-Bit/s-Unterkanäle im Zeitmultiplex mit 1200 Bit/s.
+The software on that page is personal-use, binary only: none of it is used. Everything here is written from the description.	Die Software auf jener Seite ist nur für den persönlichen Gebrauch und nur als Binärdatei verfügbar: nichts davon wird verwendet. Alles hier ist nach der Beschreibung neu geschrieben.
+Not published, so not claimed: the sync pattern of channel 0, the pulse shape, the bit polarity, any message framing inside a channel, which satellite uses which carrier. The frame start is found as the one column of the 16-bit frame that repeats (3 to 64 frames) and taken for channel 0: that is an assumption, not a check against the real sync word. Use the polarity switch if the idle channels look swapped.	Nicht veröffentlicht und daher nicht behauptet: das Synchronmuster von Kanal 0, die Impulsform, die Bitpolarität, jede Nachrichtenstruktur innerhalb eines Kanals, welcher Satellit welchen Träger nutzt. Der Rahmenanfang wird als die eine Spalte des 16-Bit-Rahmens gefunden, die sich wiederholt (3 bis 64 Rahmen), und für Kanal 0 gehalten: das ist eine Annahme, kein Vergleich mit dem echten Synchronwort. Mit dem Polaritätsschalter lassen sich vertauschte Leerlaufkanäle korrigieren.
+Checked only on simulated signals built from the description (the test sync pattern is our own 31-bit sequence). No real recording was available. Nothing is decrypted and nothing is transmitted. Know your local rules before receiving.	Nur an simulierten Signalen nach der Beschreibung geprüft (das Test-Synchronmuster ist eine eigene 31-Bit-Folge). Eine echte Aufnahme stand nicht zur Verfügung. Nichts wird entschlüsselt und nichts gesendet. Kenne die örtlichen Vorschriften, bevor du empfängst.
+Carriers (click to tune)	Träger (zum Abstimmen anklicken)
+Bits	Bits
+The three Fleet Broadcast carriers listed on r00t.cz. The satellite's Doppler shift of a few kHz is searched around the tuned frequency.	Die drei auf r00t.cz genannten Fleet-Broadcast-Träger. Die Doppler-Verschiebung des Satelliten von einigen kHz wird um die eingestellte Frequenz gesucht.
+Invert bits	Bits invertieren
+The bit polarity is not published. Switch it when the idle channels look swapped.	Die Bitpolarität ist nicht veröffentlicht. Umschalten, wenn die Leerlaufkanäle vertauscht aussehen.
+Link	Link

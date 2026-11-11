@@ -1700,3 +1700,6 @@ apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-cen
 too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
 source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
 qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
+
+## 2026-11-11 Fleet Broadcast, UHF SATCOM 16 x 75 Bd (feat39-fbr)
+Owner request from a Discord thread (SATCOM 250 MHz modes): new mode 870 (own entry; the UHF SATCOM skimmer at 552 only detects energy). Source: the r00t.cz page (DBPSK 1200 Bd, 16 channels of 75 Bd, channel 0 sync, others mostly encrypted-looking) and a US Navy FLTSATCOM description of 75 bit/s subchannels at 1200 bit/s. The r00t.cz software is personal-use binary only, so nothing was ported and no credit entry is needed. Not public: the sync pattern, polarity, pulse shape and any message framing: so the mode finds carrier (Doppler +-4.5 kHz), clock and the one repeating column (taken for channel 0, an assumption), shows 16 channel classes, hex and a bit matrix, and decodes no text and decrypts nothing. Simulated signals only (own 31-bit sync sequence in the generator). Standard 872, slot 870. docs/FBR-3.9.md.

@@ -288,6 +288,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxBgan_.setSignalOffset(o); rxBgan_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxSfer_.setSignalOffset(o);
         rxLtpos_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
+        rxFbr_.setSignalOffset(o); rxFbr_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // Fleet Broadcast: the Doppler shift is searched around this
         rxAtis_.setSignalOffset(o);
         rxSelcal_.setSignalOffset(o);
         rxSelcal_.setDialHz(tune.centerHz);
@@ -676,6 +677,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxLtpos_.setClockKey(&ring_);
     rxLtpos_.configure(rate_);
     rxLtpos_.setLogCallback([this](const std::string& s) { log(s); });
+    rxFbr_.configure(rate_);
+    rxFbr_.setLogCallback([this](const std::string& s) { log(s); });
     rxSw_.configure(rate_);
     rxSw_.setLogCallback([this](const std::string& s) { log(s); });
     rxRc_.setLogCallback([this](const std::string& s) { log(s); });

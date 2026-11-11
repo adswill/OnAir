@@ -65,6 +65,7 @@
 #include "dect2/eloran/eloran_engine.h"
 #include "dect2/eloran/eloran_rx.h"
 #include "dect2/esubghz/esubghz_tel.h"
+#include "dect2/fbr/fbr_tel.h"
 #include "dect2/flarm/flarm_tel.h"
 #include "dect2/fpv/fpv_tel.h"
 #include "dect2/fsq/fsq_tel.h"
@@ -857,6 +858,8 @@ static void ev_dect2__Dvbc2Telemetry(std::string& s, const dect2::Dvbc2Telemetry
 static void ev_dect2__LtStationRow(std::string& s, const dect2::LtStationRow& v);
 static void ev_dect2__LtStrikeRow(std::string& s, const dect2::LtStrikeRow& v);
 static void ev_dect2__LtPosTelemetry(std::string& s, const dect2::LtPosTelemetry& v);
+static void ev_dect2__FbrChannel(std::string& s, const dect2::FbrChannel& v);
+static void ev_dect2__FbrTelemetry(std::string& s, const dect2::FbrTelemetry& v);
 static void ev_dect2__DvbsIpFlow(std::string& s, const dect2::DvbsIpFlow& v) {
     detail::J o(s);
     o.key("src"); detail::vstr(s, v.src, 4096);
@@ -14079,6 +14082,51 @@ static void ev_dect2__LtPosTelemetry(std::string& s, const dect2::LtPosTelemetry
     o.end();
 }
 
+static void ev_dect2__FbrChannel(std::string& s, const dect2::FbrChannel& v) {
+    detail::J o(s);
+    o.key("cls"); detail::vnum(s, (double)(v.cls));
+    o.key("activity"); detail::vnum(s, (double)(v.activity));
+    o.key("period"); detail::vnum(s, (double)(v.period));
+    o.key("ones"); detail::vnum(s, (double)(v.ones));
+    o.key("hex"); detail::vstr(s, v.hex, 4096);
+    o.end();
+}
+
+static void ev_dect2__FbrTelemetry(std::string& s, const dect2::FbrTelemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("centerMhz"); detail::vnum(s, (double)(v.centerMhz));
+    o.key("offsetHz"); detail::vnum(s, (double)(v.offsetHz));
+    o.key("freqMhz"); detail::vnum(s, (double)(v.freqMhz));
+    o.key("carrier"); detail::vstr(s, v.carrier, 4096);
+    o.key("toneDb"); detail::vnum(s, (double)(v.toneDb));
+    o.key("baud"); detail::vnum(s, (double)(v.baud));
+    o.key("clockPpm"); detail::vnum(s, (double)(v.clockPpm));
+    o.key("eye"); detail::vnum(s, (double)(v.eye));
+    o.key("symbols"); detail::vu64(s, (unsigned long long)(v.symbols));
+    o.key("inverted"); detail::vbool(s, v.inverted);
+    o.key("bits"); detail::vstr(s, v.bits, 4096);
+    o.key("framed"); detail::vbool(s, v.framed);
+    o.key("ambiguous"); detail::vbool(s, v.ambiguous);
+    o.key("syncPeriod"); detail::vnum(s, (double)(v.syncPeriod));
+    o.key("syncQuality"); detail::vnum(s, (double)(v.syncQuality));
+    o.key("frames"); detail::vu64(s, (unsigned long long)(v.frames));
+    o.key("status"); detail::vstr(s, v.status, 4096);
+    o.key("ch"); { detail::Arr a(s); const size_t n = (size_t)(kFbrChannels); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__FbrChannel(s, (v.ch)[i]); } a.end(); }
+    o.key("frameLog"); { detail::Arr a(s); const size_t n = (v.frameLog).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vstr(s, (v.frameLog)[i], 4096); } a.end(); }
+    o.key("log"); { detail::Arr a(s); const size_t n = (v.log).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vstr(s, (v.log)[i], 4096); } a.end(); }
+    o.end();
+}
+
 static const char kSchema_dect2__DvbsIpFlow[] = R"JSON([{"n":"src","l":"Src","k":"text"},{"n":"dst","l":"Dst","k":"text"},{"n":"protocol","l":"Protocol","k":"text"},{"n":"sport","l":"Sport","k":"num"},{"n":"dport","l":"Dport","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"encrypted","l":"The headers are good but the UDP checksums fail: the payload was changed in transit","k":"bool"}])JSON";
 static const char kSchema_dect2__DvbsIpLabel[] = R"JSON([{"n":"label","l":"Label","k":"text"},{"n":"pdus","l":"Pdus","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"ip","l":"Ip","k":"num"},{"n":"addrs","l":"Addrs","k":"lines"},{"n":"modcods","l":"\"QPSK 5/6 41 %, 16APSK 3/4 59 %\": where the bytes went","k":"text"}])JSON";
 static const char kSchema_dect2__DvbsMediaFlow[] = R"JSON([{"n":"dst","l":"Dst","k":"text"},{"n":"src","l":"Src","k":"text"},{"n":"kind","l":"Kind","k":"text"},{"n":"codec","l":"Codec","k":"text"},{"n":"port","l":"Port","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"bytes","l":"Bytes","k":"num"},{"n":"lost","l":"Lost","k":"num"},{"n":"kbps","l":"Kbps","k":"num"},{"n":"services","l":"MPEG-TS flows: the programmes found in them","k":"lines"},{"n":"scrambled","l":"Transport packets of the flow are scrambled: only labelled","k":"bool"}])JSON";
@@ -14723,6 +14771,8 @@ static const char kSchema_dect2__Dvbc2Telemetry[] = R"JSON([{"n":"seq","l":"Seq"
 static const char kSchema_dect2__LtStationRow[] = R"JSON([{"n":"id","l":"Station number","k":"num"},{"n":"name","l":"Name","k":"text"},{"n":"lat","l":"Its position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Its position, degrees","u":"deg","k":"num"},{"n":"timeSource","l":"Ltpos::TimeSrc of its latest detections","k":"num"},{"n":"sigmaUs","l":"Its timing error, 1 sigma, microseconds","u":"us","k":"num"},{"n":"ageS","l":"Seconds since its last packet","k":"num"},{"n":"detections","l":"Detections received","k":"num"},{"n":"used","l":"Of them used in a position fix","k":"num"},{"n":"fine","l":"Timed well enough to take part in a fix","k":"bool"},{"n":"tiedUtc","l":"Its clock is tied to UTC","k":"bool"},{"n":"corrUs","l":"The common-view correction applied, microseconds","u":"us","k":"num"}])JSON";
 static const char kSchema_dect2__LtStrikeRow[] = R"JSON([{"n":"utcNs","l":"Strike time, nanoseconds since 1970","k":"num"},{"n":"lat","l":"Position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Position, degrees","u":"deg","k":"num"},{"n":"majorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"minorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"azDeg","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"deg","k":"num"},{"n":"stations","l":"Fine-timed stations in the fix","k":"num"},{"n":"alsoHeard","l":"Coarse-timed stations whose detection fits","k":"num"},{"n":"rmsUs","l":"Rms of the arrival-time residuals, microseconds","u":"us","k":"num"},{"n":"chi2","l":"Chi2","k":"num"},{"n":"dof","l":"Dof","k":"num"},{"n":"unchecked","l":"Three stations: nothing could reject a wrong match","k":"bool"},{"n":"ambiguous","l":"A second position fits as well","k":"bool"},{"n":"utc","l":"The time is UTC","k":"bool"}])JSON";
 static const char kSchema_dect2__LtPosTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"State","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"The last sferic over the floor, dB","u":"dB","k":"num"},{"n":"dataValid","l":"At least one sferic timed","k":"bool"},{"n":"blocksOk","l":"Strikes located","k":"num"},{"n":"blocksBad","l":"Packets refused","k":"num"},{"n":"role","l":"0 this station only, 1 client","k":"num"},{"n":"timeSource","l":"Ltpos::TimeSrc stamping the detections now","k":"num"},{"n":"clockSigmaUs","l":"Its estimated error, 1 sigma, microseconds","u":"us","k":"num"},{"n":"ppm","l":"The radio's sample clock error against that source","k":"num"},{"n":"ppmSigma","l":"Ppm Sigma","k":"num"},{"n":"fine","l":"Good enough for a position fix","k":"bool"},{"n":"srcSigmaUs","l":"Per ltpos::TimeSrc 1..6: the error each source gives now, -1 when it is not available","u":"us","k":"list"},{"n":"pulses","l":"Sferics timed here","k":"num"},{"n":"sent","l":"Detections sent to the server","k":"num"},{"n":"sendErrors","l":"Send Errors","k":"num"},{"n":"floorDb","l":"Noise floor, dBFS","u":"dB","k":"num"},{"n":"thresholdDb","l":"Threshold dB","u":"dB","k":"num"},{"n":"refOn","l":"Ref On","k":"bool"},{"n":"refLocked","l":"Ref Locked","k":"bool"},{"n":"refName","l":"Ref Name","k":"text"},{"n":"refSnrDb","l":"Ref SNR dB","u":"dB","k":"num"},{"n":"refSigmaUs","l":"One block's symbol timing error, microseconds","u":"us","k":"num"},{"n":"refFreqErrHz","l":"Ref Freq Err Hz","u":"Hz","k":"num"},{"n":"listening","l":"The server's port is open","k":"bool"},{"n":"netStatus","l":"One line: \"sending to ...\", \"listening on port ...\", an error","k":"text"},{"n":"packetsOk","l":"Packets OK","k":"num"},{"n":"packetsAuth","l":"Packets Auth","k":"num"},{"n":"packetsReplay","l":"Packets Replay","k":"num"},{"n":"packetsBad","l":"Packets Bad","k":"num"},{"n":"stations","l":"Stations","k":"table","s":"dect2::LtStationRow","f":[{"n":"id","l":"Station number","k":"num"},{"n":"name","l":"Name","k":"text"},{"n":"lat","l":"Its position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Its position, degrees","u":"deg","k":"num"},{"n":"timeSource","l":"Ltpos::TimeSrc of its latest detections","k":"num"},{"n":"sigmaUs","l":"Its timing error, 1 sigma, microseconds","u":"us","k":"num"},{"n":"ageS","l":"Seconds since its last packet","k":"num"},{"n":"detections","l":"Detections received","k":"num"},{"n":"used","l":"Of them used in a position fix","k":"num"},{"n":"fine","l":"Timed well enough to take part in a fix","k":"bool"},{"n":"tiedUtc","l":"Its clock is tied to UTC","k":"bool"},{"n":"corrUs","l":"The common-view correction applied, microseconds","u":"us","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"id"}},{"n":"strikes","l":"Newest first","k":"table","s":"dect2::LtStrikeRow","f":[{"n":"utcNs","l":"Strike time, nanoseconds since 1970","k":"num"},{"n":"lat","l":"Position, degrees","u":"deg","k":"num"},{"n":"lon","l":"Position, degrees","u":"deg","k":"num"},{"n":"majorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"minorKm","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"km","k":"num"},{"n":"azDeg","l":"95 % error ellipse: semi-axes, azimuth of the major axis","u":"deg","k":"num"},{"n":"stations","l":"Fine-timed stations in the fix","k":"num"},{"n":"alsoHeard","l":"Coarse-timed stations whose detection fits","k":"num"},{"n":"rmsUs","l":"Rms of the arrival-time residuals, microseconds","u":"us","k":"num"},{"n":"chi2","l":"Chi2","k":"num"},{"n":"dof","l":"Dof","k":"num"},{"n":"unchecked","l":"Three stations: nothing could reject a wrong match","k":"bool"},{"n":"ambiguous","l":"A second position fits as well","k":"bool"},{"n":"utc","l":"The time is UTC","k":"bool"}],"map":{"lat":"lat","lon":"lon","label":"utcNs"}},{"n":"groups","l":"Groups","k":"num"},{"n":"fixes","l":"Fixes","k":"num"},{"n":"rejected","l":"Rejected","k":"num"},{"n":"unmatched","l":"Unmatched","k":"num"},{"n":"coarseOnly","l":"Coarse Only","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerHz","l":"Center Hz","u":"Hz","k":"num"}])JSON";
+static const char kSchema_dect2__FbrChannel[] = R"JSON([{"n":"cls","l":"'S' repeating pattern","k":"num"},{"n":"activity","l":"Share of frame-to-frame bit changes, 0 .. 1","k":"num"},{"n":"period","l":"'S': the repeat length in frames","k":"num"},{"n":"ones","l":"Share of 1 bits","k":"num"},{"n":"hex","l":"The last 64 bits of the channel as 16 hex digits, oldest first","k":"text"}])JSON";
+static const char kSchema_dect2__FbrTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing, 1 a BPSK carrier found, 2 symbols locked","k":"num"},{"n":"cfoHz","l":"Carrier offset from the radio's centre as tracked","u":"Hz","k":"num"},{"n":"snrDb","l":"Symbol-to-noise ratio in 1.2 kHz, estimated from the differential decisions","u":"dB","k":"num"},{"n":"levelDb","l":"Input level, dBFS","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Frames passed since the frame alignment","k":"num"},{"n":"blocksBad","l":"Times the alignment was lost","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerMhz","l":"Where the radio is tuned","u":"MHz","k":"num"},{"n":"offsetHz","l":"Carrier from the radio's tuned frequency","u":"Hz","k":"num"},{"n":"freqMhz","l":"Absolute","u":"MHz","k":"num"},{"n":"carrier","l":"The listed carrier within 5 kHz","u":"kHz","k":"text"},{"n":"toneDb","l":"Peak of the squared signal over its noise floor at acquisition, dB","u":"dB","k":"num"},{"n":"baud","l":"Assumed symbol rate","k":"num"},{"n":"clockPpm","l":"Symbol clock offset measured against it","u":"ppm","k":"num"},{"n":"eye","l":"Quadrature share of the differential decisions: 0 clean, towards 1 noisy","k":"num"},{"n":"symbols","l":"Symbols","k":"num"},{"n":"inverted","l":"The bit polarity switch is on","k":"bool"},{"n":"bits","l":"The last bits as received, '0' / '1', oldest first","k":"text"},{"n":"framed","l":"Framed","k":"bool"},{"n":"ambiguous","l":"Several columns repeat: the frame start cannot be told","k":"bool"},{"n":"syncPeriod","l":"The repeat length of the sync channel found, in frames","k":"num"},{"n":"syncQuality","l":"Agreement of the sync channel with its own repeat, percent","k":"num"},{"n":"frames","l":"Frames","k":"num"},{"n":"status","l":"\"[Sr-i...]\": one letter per channel","k":"text"},{"n":"ch","l":"Ch","k":"table","s":"dect2::FbrChannel","f":[{"n":"cls","l":"'S' repeating pattern","k":"num"},{"n":"activity","l":"Share of frame-to-frame bit changes, 0 .. 1","k":"num"},{"n":"period","l":"'S': the repeat length in frames","k":"num"},{"n":"ones","l":"Share of 1 bits","k":"num"},{"n":"hex","l":"The last 64 bits of the channel as 16 hex digits, oldest first","k":"text"}]},{"n":"frameLog","l":"The last frames as 4 hex digits, channel 0 is the top bit, newest last","k":"lines"},{"n":"log","l":"Events, newest last","k":"lines"}])JSON";
 struct StdEntry { int standard; const char* member; const char* structName; const char* schema; bool (*put)(const RxTelemetry&, std::string&); };
 static bool put_7(const RxTelemetry& rx, std::string& s) { ev_dect2__DvbsTelemetry(s, rx.dvbs); return true; }
 static bool put_8(const RxTelemetry& rx, std::string& s) { ev_dect2__DtmbTelemetry(s, rx.dtmb); return true; }
@@ -14989,6 +15039,7 @@ static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTeleme
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
+static bool put_871(const RxTelemetry& rx, std::string& s) { ev_dect2__FbrTelemetry(s, rx.fbr); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -15255,6 +15306,7 @@ static const StdEntry kStd[] = {
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
+    {871, "fbr", "dect2::FbrTelemetry", kSchema_dect2__FbrTelemetry, put_871},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15476,6 +15528,7 @@ static const WebModeRow kRows[] = {
     {550, "Zombie satellites", 4, "Zombie satellite carriers: found and checked against their orbits", "", 552, 551, "satdetect"},
     {551, "What satellite is this?", 4, "Names an unknown satellite carrier from its Doppler curve (mystery satellite hunter)", "", 553, 552, "satdetect"},
     {552, "UHF SATCOM skimmer", 4, "Active channels on UHF military satellites (detection only)", "", 554, 553, "satdetect"},
+    {870, "Fleet Broadcast (UHF SATCOM)", 4, "Fleet Broadcast: 16 x 75 Bd UHF SATCOM multiplex, framing and channel activity (receive only, nothing decoded)", "", 872, 871, "fbr"},
     {553, "Thuraya GMR-1 channels", 4, "Active Thuraya channels, detection only", "", 555, 554, "satdetect"},
     {554, "Starlink detector", 4, "Starlink frame detection, no decoding", "", 556, 555, "satdetect"},
     {555, "OneWeb detector", 4, "OneWeb frame detection, no decoding", "", 557, 556, "satdetect"},

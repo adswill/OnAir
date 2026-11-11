@@ -621,3 +621,40 @@ shared lists:
 stop using it
 The country of the shared transmitter list (ISO code, e.g. GB, DE, NO); Enter downloads it.\nThe lists of the countries of the ensembles heard are fetched as well.
 Add the transmitters of a CSV file to your own list (columns eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid in hex):\nan export of heard transmitters with the positions filled in, or a list someone shares; rows without a position are skipped.\nqt-dab's .txdata.tii is used where it is instead (FMLIST data, personal use).
+Receive only. Fleet Broadcast is a 16 channel, 75 Bd multiplex sent as 1200 Bd differential BPSK from UHF military SATCOM satellites. Channel 0 is for synchronisation; the other channels are usually random-looking, encrypted data. This screen finds the carrier, the clock and the frame and shows what each channel looks like. Nothing is decoded and nothing is decrypted.
+sync pattern (repeats)
+reversals 1010...
+idle (constant)
+random-looking, probably encrypted: not decoded
+not enough data
+One row per frame, newest at the bottom, one column per channel (0 on the left); a filled cell is a 1 bit.
+start the receiver to look for a Fleet Broadcast carrier
+Forget the log and the symbol count
+no bits yet: waiting for a BPSK carrier with a 1200 Bd clock
+Several columns of the 16-bit frame repeat, so the frame start cannot be told. The columns are shown as they come.
+Bits are flowing but no column repeats yet (the sync pattern of channel 0 is not published: a repeat of 3 to 64 frames is looked for). The columns are shown as they come.
+Col
+Looks like
+Changes
+Ones
+Last 64 bits (hex)
+Frames as 16 bit words (hex, channel 0 is the top bit, newest last)
+No plain text is expected here: the public description has never seen any on Fleet Broadcast. A random-looking channel is shown as hex and left alone.
+no BPSK carrier heard yet
+listed carrier
+acquisition
+symbol clock
+decision quality
+Last bits as received (the polarity is not published)
+What each part rests on:
+Carriers 250.450, 250.550 and 250.650 MHz; 16 channel, 75 Bd multiplex; differential BPSK at 1200 Bd; channel 0 for synchronisation; the other channels usually random-looking, encrypted data, sometimes KG-84; no plain text ever seen: the description on r00t.cz (Fleet Broadcast Decoder v0.5, 2009).
+16 channels of 75 Bd make 1200 Bd: a frame is 16 bits, one bit per channel. A US Navy FLTSATCOM shore-terminal description also gives 75 bit/s subchannels sent time-division multiplexed at 1200 bit/s.
+The software on that page is personal-use, binary only: none of it is used. Everything here is written from the description.
+Not published, so not claimed: the sync pattern of channel 0, the pulse shape, the bit polarity, any message framing inside a channel, which satellite uses which carrier. The frame start is found as the one column of the 16-bit frame that repeats (3 to 64 frames) and taken for channel 0: that is an assumption, not a check against the real sync word. Use the polarity switch if the idle channels look swapped.
+Checked only on simulated signals built from the description (the test sync pattern is our own 31-bit sequence). No real recording was available. Nothing is decrypted and nothing is transmitted. Know your local rules before receiving.
+Carriers (click to tune)
+Bits
+The three Fleet Broadcast carriers listed on r00t.cz. The satellite's Doppler shift of a few kHz is searched around the tuned frequency.
+Invert bits
+The bit polarity is not published. Switch it when the idle channels look swapped.
+Link

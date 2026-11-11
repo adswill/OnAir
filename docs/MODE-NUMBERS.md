@@ -136,6 +136,7 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | CDMA2000 cells | 660 | 662 | 661 | 660 | feat39-cell | 3.9; IS-95 / cdma2000 pilot + Sync Channel; synthetic signals only |
 | TD-SCDMA cells | 661 | 663 | 662 | 661 | feat39-cell | 3.9; DwPTS SYNC-DL + TS0 midamble cell parameter, no BCH; synthetic signals only |
 | Lightning position (network) | 790 | 792 | 791 | 790 | feat39-ltpos | 3.9; TDOA from several stations, see docs/LIGHTNING-POSITION-3.9.md; simulated signals only |
+| Fleet Broadcast (UHF SATCOM) | 870 | 872 | 871 | 870 | feat39-fbr | 3.9; 16 x 75 Bd UHF SATCOM multiplex, framing and channel activity only, see docs/FBR-3.9.md; simulated signals only |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |
