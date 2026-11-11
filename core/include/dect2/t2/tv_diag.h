@@ -52,10 +52,10 @@ inline EchoReport findEchoes(const std::vector<float>& irDb, int tauMin, double 
     std::sort(pk.begin(), pk.end(), [&](size_t a, size_t b) { return irDb[a] > irDb[b]; });
     std::vector<size_t> kept;
     for (size_t p : pk) {
-        bool near = false;
-        for (size_t k : kept) if (std::labs((long)p - (long)k) < minSepSamples) { near = true; break; }
-        if (main != p && std::labs((long)p - (long)main) < minSepSamples) near = true;   // the skirt of the main path
-        if (!near) kept.push_back(p);
+        bool tooClose = false;
+        for (size_t k : kept) if (std::labs((long)p - (long)k) < minSepSamples) { tooClose = true; break; }
+        if (main != p && std::labs((long)p - (long)main) < minSepSamples) tooClose = true;   // the skirt of the main path
+        if (!tooClose) kept.push_back(p);
     }
     for (size_t p : kept) {
         Echo e;

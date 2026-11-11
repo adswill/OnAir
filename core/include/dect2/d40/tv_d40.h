@@ -131,17 +131,17 @@ inline CarrierMer merPerCarrier(const std::vector<std::complex<float>>& rx, cons
 struct AtvGuess { bool ok = false; int lines = 0; std::string colour; std::string name; };
 inline AtvGuess classifyAtv(double lineRateHz, double burstHz, bool secamIdent, bool palSwitch) {
     AtvGuess g;
-    auto near = [](double v, double t, double tol) { return std::fabs(v - t) <= t * tol; };
-    if (near(lineRateHz, 15625.0, 0.004)) g.lines = 625;
-    else if (near(lineRateHz, 15734.264, 0.004)) g.lines = 525;
+    auto tooClose = [](double v, double t, double tol) { return std::fabs(v - t) <= t * tol; };
+    if (tooClose(lineRateHz, 15625.0, 0.004)) g.lines = 625;
+    else if (tooClose(lineRateHz, 15734.264, 0.004)) g.lines = 525;
     else return g;
     g.ok = true;
     if (secamIdent) g.colour = g.lines == 625 ? "SECAM" : "SECAM (525)";
     else if (burstHz <= 0) g.colour = "mono";
-    else if (near(burstHz, 4433618.75, 0.003)) g.colour = (g.lines == 625 && palSwitch) ? "PAL" : (g.lines == 625 ? "NTSC 4.43" : "PAL 525 (4.43)");
-    else if (near(burstHz, 3575611.49, 0.0003)) g.colour = "PAL-M";        // these three differ by 700 - 1100 ppm: a crystal is 50 ppm
-    else if (near(burstHz, 3582056.25, 0.0003)) g.colour = g.lines == 625 ? "PAL-N" : "NTSC-N";
-    else if (near(burstHz, 3579545.0, 0.0003)) g.colour = g.lines == 525 ? "NTSC" : "NTSC 3.58 on 625";
+    else if (tooClose(burstHz, 4433618.75, 0.003)) g.colour = (g.lines == 625 && palSwitch) ? "PAL" : (g.lines == 625 ? "NTSC 4.43" : "PAL 525 (4.43)");
+    else if (tooClose(burstHz, 3575611.49, 0.0003)) g.colour = "PAL-M";        // these three differ by 700 - 1100 ppm: a crystal is 50 ppm
+    else if (tooClose(burstHz, 3582056.25, 0.0003)) g.colour = g.lines == 625 ? "PAL-N" : "NTSC-N";
+    else if (tooClose(burstHz, 3579545.0, 0.0003)) g.colour = g.lines == 525 ? "NTSC" : "NTSC 3.58 on 625";
     else { g.ok = false; return g; }
     g.name = g.colour + " " + std::to_string(g.lines) + " lines";
     return g;
