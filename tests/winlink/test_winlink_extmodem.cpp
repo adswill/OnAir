@@ -202,15 +202,16 @@ struct MockModem {
         };
         acceptOne(lc, cs);
         if (stop || cs == kBadSock) return;
-        acceptOne(ld, ds);
-        if (stop || ds == kBadSock) return;
         char buf[4096];
         while (!stop) {
-            fd_set rd; FD_ZERO(&rd); FD_SET(cs, &rd); if (!dataGone) FD_SET(ds, &rd);
-            const int mx = (int)std::max(cs, ds) + 1;
+            // the data port is accepted whenever the client opens it (the Test connection opens it and closes it again)
+            fd_set rd; FD_ZERO(&rd); FD_SET(cs, &rd);
+            int mx = (int)cs;
+            if (ds == kBadSock) { FD_SET(ld, &rd); mx = std::max(mx, (int)ld); }
+            else if (!dataGone) { FD_SET(ds, &rd); mx = std::max(mx, (int)ds); }
             timeval tv{0, 30000};
-            const int n = select(mx, &rd, nullptr, nullptr, &tv);
-            if (injectCall && !connected) { injectCall = false; startPeerCall(); }
+            const int n = select(mx + 1, &rd, nullptr, nullptr, &tv);
+            if (injectCall && !connected && ds != kBadSock) { injectCall = false; startPeerCall(); }
             if (n <= 0) continue;
             if (FD_ISSET(cs, &rd)) {
                 const long long k = sockRecv(cs, buf, sizeof buf);
@@ -219,9 +220,10 @@ struct MockModem {
                 size_t p;
                 while ((p = lineBuf.find('\r')) != std::string::npos) { const std::string l = lineBuf.substr(0, p); lineBuf.erase(0, p + 1); if (!l.empty()) onCmd(l); }
             }
+            if (ds == kBadSock) { if (FD_ISSET(ld, &rd)) ds = accept(ld, nullptr, nullptr); continue; }
             if (!dataGone && FD_ISSET(ds, &rd)) {
                 const long long k = sockRecv(ds, buf, sizeof buf);
-                if (k <= 0) { dataGone = true; continue; }   // a client may close the data port alone (Test connection)
+                if (k <= 0) { dataGone = true; continue; }   // a client may close the data port alone
                 onData((const uint8_t*)buf, (size_t)k);
                 if (dropAfterBytes && gotData.size() >= dropAfterBytes) { sockShutdown(cs); sockShutdown(ds); break; }
             }
@@ -545,7 +547,7 @@ void testConnectionTest() {
         m.begin(t);
         const ModemTestResult r = testModemProfile(m.profile(), 2000);
         printf("%-8s test: %s\n", modemTypeName(t), r.message.c_str());
-        CHECK(r.cmdOpen && r.dataOpen && r.answered, "%s: ports open and the modem answered", modemTypeName(t));
+        CHECK(r.cmdOpen && r.dataOpen && r.answered, "%s: ports open and the modem answered (%d %d %d, %zu commands): %s", modemTypeName(t), r.cmdOpen, r.dataOpen, r.answered, m.all().size(), r.message.c_str());
         if (t != ModemType::VaraHF) CHECK(r.version.find("mock") != std::string::npos, "%s: version read: %s", modemTypeName(t), r.version.c_str());
         // nothing but VERSION was sent: no INITIALIZE, no MYCALL, no CONNECT, no PTT-relevant command
         const auto all = m.all();
