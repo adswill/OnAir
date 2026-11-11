@@ -19,3 +19,7 @@ void d40DabTick(App& a);
 void d40DabCard(App& a);       // d40_dab_ui.cpp: service ranking, transmitter table from a user CSV
 void d40AdsbFeed(const AdsbTelemetry& t);   // d40_adsb_ui.cpp: every position fix into the replay
 void d40AdsbReplayView(App& a, double refLat, double refLon, const std::function<std::string(uint32_t)>& nameOf);   // the Replay view
+void d40P25Activity(const P25Telemetry& t);      // d40_tg_ui.cpp: talkgroup airtime ranking, timeline, busiest talkgroup
+void d40NxdnActivity(const NxdnTelemetry& t);
+void d40TetraTick(const TetraTelemetry& t);          // builds TETRA calls from the slot states (talkgroups only, never terminal numbers)
+void d40TetraActivity();

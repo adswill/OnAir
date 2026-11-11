@@ -5,4 +5,5 @@ void d40Tick(App& a) {
     d40FmTick(a);
     d40SatTick(a);
     d40DabTick(a);
+    if (a.engine.running() && a.rx.standard == 47) d40TetraTick(a.rx.tetra);
 }
