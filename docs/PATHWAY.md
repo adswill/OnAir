@@ -1535,3 +1535,31 @@ Changes:
 
 Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
 Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.
+## 2026-11-11 ADS-B overlapping replies, Remote ID CPU (feat39-adsbov)
+ADS-B overlapping replies:
+- A decoded frame is rebuilt and subtracted from the samples, using its carrier, its gain and a pulse shape learnt from the frame itself.
+- The search then goes on inside the subtracted frame, and earlier failed candidates under it are tried again on what is left.
+- Frames that still fail with another reply on the air get two more hypotheses: a separation sequence estimate, and a frame whose disagreeing bits are marked least certain for the CRC repair.
+- New generator scenario: `adsbOverlapScenario`, also in `adsbtool sim --overlap N`.
+
+ADS-B results, recovery off -> on:
+
+| Case | Decoded |
+|---|---|
+| Pairs, 2 Msps, 30 dB | 32 -> 65 % |
+| Pairs, 2.4 Msps, 30 dB | 42 -> 84 % |
+| Pairs, 8 Msps, 30 dB | 49 -> 98 % |
+| Overlapped frames, airspace of 150 aircraft | 26 -> 42 % |
+| Overlapped frames, airspace of 300 aircraft | 22 -> 36 % |
+
+There were no phantoms. Frames on their own were not affected.
+
+Remote ID CPU:
+- A burst gate decides which parts of the input the Wi-Fi demodulator gets.
+- The BLE and 802.11b front ends now mix and filter a block at a time. BLE filters in two stages and uses a polynomial atan2.
+- The OFDM receiver drops narrowband triggers.
+- Mac CPU fell from 0.97 to 0.36 s per second of signal.
+- BLE decodes within one packet of before at every SNR.
+- Fixed: the 802.11b chain lost every frame after the first in a large block. More Wi-Fi Remote ID frames are now found (119 -> 343 at 30 dB).
+
+Details are in docs/ADSB-REMOTEID-3.9.md. New tests: adsb_overlap, rid_cpu. Simulated signals only.
