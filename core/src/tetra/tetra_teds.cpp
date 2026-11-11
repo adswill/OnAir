@@ -95,17 +95,26 @@ cf32 lerp(const std::vector<cf32>& v, double p) {
 
 } // namespace
 
-CarrierClass classifyCarrier(const cf32* x, size_t n, double fs, double offHz, double widthHz) {
-    CarrierClass r;
-    if (!x || fs <= 0) return r;
-    // up to 0.35 s, a power of two
-    size_t use = std::min(n, (size_t)(0.35 * fs));
-    if (use < 4096) return r;
+TedsIdentifier::TedsIdentifier(const cf32* x, size_t n, double fs) : fs_(fs) {
+    // up to 0.35 s (and 2^21 samples), a power of two
+    const size_t use = std::min(std::min(n, (size_t)(0.35 * fs)), size_t(1) << 21);
+    if (!x || fs <= 0 || use < 4096) return;
     const int lg = log2Floor(use);
-    const int N = 1 << lg;
-    std::vector<float> re((size_t)N), im((size_t)N);
-    for (int i = 0; i < N; i++) { re[(size_t)i] = x[i].real(); im[(size_t)i] = x[i].imag(); }
-    fftSplit(re.data(), im.data(), lg, false);
+    N_ = 1 << lg;
+    re_.resize((size_t)N_); im_.resize((size_t)N_);
+    for (int i = 0; i < N_; i++) { re_[(size_t)i] = x[i].real(); im_[(size_t)i] = x[i].imag(); }
+    fftSplit(re_.data(), im_.data(), lg, false);
+}
+
+TedsCarrierClass classifyCarrier(const cf32* x, size_t n, double fs, double offHz, double widthHz) { return TedsIdentifier(x, n, fs).classify(offHz, widthHz); }
+
+TedsCarrierClass TedsIdentifier::classify(double offHz, double widthHz) const {
+    TedsCarrierClass r;
+    if (N_ == 0) return r;
+    const int N = N_;
+    const double fs = fs_;
+    const std::vector<float>& re = re_;
+    const std::vector<float>& im = im_;
     const double bin = fs / N;
     // the spectrum around the candidate, smoothed to about 300 Hz
     const int sm = std::max(1, (int)std::lround(300.0 / bin));
@@ -187,7 +196,7 @@ CarrierClass classifyCarrier(const cf32* x, size_t n, double fs, double offHz, d
             if (std::min(d, 16 - d) <= 2) agree++;
         }
         const float depth = mx > 0 ? (float)((mx - mn) / mx) : 0.f;
-        const float score = depth * (float)agree / (float)M;
+        const float score = agree * 4 >= M * 3 ? depth : 0.f;   // three quarters of the sub-carriers on the common clock
         if (score > qamScore) {
             qamScore = score; qamM = M;
             // the constellation: the normalised fourth moment of the symbols at the common clock, the noise taken out (from the floor)
@@ -205,7 +214,9 @@ CarrierClass classifyCarrier(const cf32* x, size_t n, double fs, double offHz, d
         }
     }
     r.score = std::max(qamScore, std::max(r4, r8));
-    if (qamScore > 0.25f && qamScore > r4 && qamScore > r8) {
+    // QAM: the symbol clock shows (an RRC 0.2 pulse modulates the matched filter energy by about 10 %) and the sub-carrier symbols are not
+    // Gaussian (a pi/4-DQPSK carrier cut into 2.7 kHz slices gives a fourth moment of about 2)
+    if (qamScore > 0.04f && qamKurt > 0.8 && qamKurt < 1.6 && r4 < 0.5f && r8 < 0.4f) {
         r.kind = CarrierKind::Qam;
         r.subcarriers = qamM;
         r.bwHz = qamM / 8 * 25e3;
@@ -213,11 +224,11 @@ CarrierClass classifyCarrier(const cf32* x, size_t n, double fs, double offHz, d
         if (qamKurt > 0 && qamKurt < 1.13) { r.qamOrder = 4; r.orderSure = qamSnr > 12; }
         else if (qamKurt >= 1.13) {
             r.qamOrder = 16;
-            if (qamSnr > 28) { r.orderSure = true; if (qamKurt > 1.33) r.qamOrder = 64; }
+            if (qamSnr > 28) { r.orderSure = true; if (qamKurt > 1.31) r.qamOrder = 64; }
         }
-    } else if (r4 > 0.3f && r4 >= r8 * 0.6f) {
+    } else if (r4 > 0.5f) {
         r.kind = CarrierKind::Dqpsk; r.bwHz = 25e3;
-    } else if (r8 > 0.3f) {
+    } else if (r8 > 0.4f) {
         r.kind = CarrierKind::D8psk; r.bwHz = 25e3;
     }
     return r;
@@ -251,7 +262,7 @@ QamGen::QamGen(int bwKHz, int order, uint32_t seed) : M_(std::max(1, bwKHz / 25)
 }
 
 cf32 QamGen::dataSymbol() {
-    auto rnd = [&]() { rng_ = rng_ * 1664525u + 1013904223u; return rng_ >> 8; };
+    auto rnd = [&]() { rng_ ^= rng_ << 13; rng_ ^= rng_ >> 17; rng_ ^= rng_ << 5; return rng_ >> 16; };   // xorshift32
     const int lv = order_ == 64 ? 8 : order_ == 16 ? 4 : 2;
     const float sc = order_ == 64 ? 1.f / std::sqrt(42.f) : order_ == 16 ? 1.f / std::sqrt(10.f) : 1.f / std::sqrt(2.f);
     const int a = (int)(rnd() % (unsigned)lv), b = (int)(rnd() % (unsigned)lv);

@@ -460,6 +460,15 @@ void detail(App& a) {
     for (int i = 0; i < 4; i++) { ts += "TS" + std::to_string(i + 1) + " " + dect2::tetra::dlUsageText(c.tsUsage[i]); if (i < 3) ts += ", "; }
     ImGui::Text("timeslots: %s", ts.c_str());
     if (!c.netTime.empty()) ImGui::Text("network time: %s", c.netTime.c_str());
+    // TEDS (3.9): what the cell's extended services broadcast says, and the pi/8-D8PSK slots seen on this carrier
+    if (c.tedsD8psk >= 0 || c.tedsQamMask >= 0 || c.p8Slots > 0) {
+        std::string q;
+        if (c.tedsQamMask < 0) q = tr("not heard yet");
+        else if (c.tedsQamMask == 0) q = tr("none");
+        else { static const char* bw[4] = {"25", "50", "100", "150"}; for (int i = 0; i < 4; i++) if (c.tedsQamMask & (1 << i)) { if (!q.empty()) q += ", "; q += bw[i]; } q += " kHz"; }
+        ImGui::Text(tr("TEDS: pi/8-D8PSK %s, QAM %s"), c.tedsD8psk < 0 ? tr("not heard yet") : c.tedsD8psk ? tr("supported") : tr("not supported"), q.c_str());
+        if (c.p8Slots > 0) ImGui::Text(tr("%llu pi/8-D8PSK slots on this carrier, %llu of their signalling blocks decoded"), (unsigned long long)c.p8Slots, (unsigned long long)c.p8BlocksOk);
+    }
 }
 
 void neighbourView(App& a) {
@@ -485,8 +494,20 @@ void neighbourView(App& a) {
 void carrierView(App& a) {
     const dect2::TetraTelemetry& t = a.rx.tetra;
     if (t.carriers.empty()) { ImGui::TextDisabled("no carriers in the last block"); return; }
-    for (const auto& c : t.carriers)
-        ImGui::BulletText("%.4f MHz, %.0f dB over the floor, %s", c.freqHz / 1e6, c.levelDb, c.synced ? "TETRA synchronisation" : "no TETRA synchronisation in this block");
+    for (const auto& c : t.carriers) {
+        if (c.kind == 3) {   // TEDS QAM (3.9): identified from its sub-carriers, never decoded
+            char ord[48] = "";
+            if (c.qamOrder == 4) snprintf(ord, sizeof ord, ", 4-QAM%s", c.orderSure ? "" : "?");
+            else if (c.qamOrder > 0) snprintf(ord, sizeof ord, c.orderSure ? ", %d-QAM" : ", 16- or 64-QAM", c.qamOrder);
+            ImGui::BulletText(tr("%.4f MHz, %.0f dB over the floor, TEDS QAM %.0f kHz (%d sub-carriers%s), identified only"), c.freqHz / 1e6, c.levelDb, c.bwHz / 1e3,
+                              c.subcarriers, ord);
+            continue;
+        }
+        std::string what = c.synced ? tr("TETRA synchronisation") : tr("no TETRA synchronisation in this block");
+        if (c.kind == 1 && c.p8Slots > 0) what += std::string(", ") + tr("pi/8-D8PSK slots (TEDS)");
+        else if (c.kind == 2) what = tr("pi/8-D8PSK carrier (TEDS), no TETRA synchronisation");
+        ImGui::BulletText("%.4f MHz, %.0f dB over the floor, %s", c.freqHz / 1e6, c.levelDb, what.c_str());
+    }
 }
 
 // clear SDS messages, status and LIP positions (D-SDS-DATA, D-STATUS)
@@ -720,12 +741,12 @@ void synthOptions(App& a, bool& changed) {
     dect2::SynthConfig& sc = a.tune.synth;
     ImGui::TextDisabled("%s", "TETRA test signal");
     flowNext(10 * gUi);
-    static const char* scenes[] = {"one cell (wide capture from 4 Msps)", "two cells", "wide capture"};
-    int sc0 = std::max(0, std::min(2, sc.modeOpt[0]));
+    static const char* scenes[] = {N_("one cell (wide capture from 4 Msps)"), N_("two cells"), N_("wide capture"), N_("TEDS cell and QAM carrier")};
+    int sc0 = std::max(0, std::min(3, sc.modeOpt[0]));
     if (sc0 == 0 && a.tune.sampleRate >= 4e6) sc0 = 2;
     ImGui::SetNextItemWidth(120 * gUi);
-    if (ImGui::BeginCombo("##tetrascene", scenes[sc0])) {
-        for (int i = 0; i < 3; i++) if (ImGui::Selectable(scenes[i], i == sc0)) { sc.modeOpt[0] = i; changed = true; }
+    if (ImGui::BeginCombo("##tetrascene", tr(scenes[sc0]))) {
+        for (int i = 0; i < 4; i++) if (ImGui::Selectable(tr(scenes[i]), i == sc0)) { sc.modeOpt[0] = i; changed = true; }
         ImGui::EndCombo();
     }
     if (sc0 == 2) {

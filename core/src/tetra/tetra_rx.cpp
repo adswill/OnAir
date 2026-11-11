@@ -8,6 +8,7 @@
 #include "dect2/results/results_io.h"
 #include "dect2/cell/cell_dsp.h"
 #include "dect2/tetra/tetra_tel.h"
+#include "dect2/tetra/tetra_teds.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -748,6 +749,7 @@ std::vector<tetra::CarrierPeak> tetra::findCarriers(const cf32* x, size_t n, dou
                 cr.off = (sf / sp - nfft / 2.0) * bin;
                 cr.levelDb = (float)(10 * std::log10(pk / fl));
                 cr.powerDb = (float)(10 * std::log10((sp + fl * (b - a + 1)) / (0.375 * nfft) + 1e-30));
+                cr.riseOff = ((i + j) / 2.0 - nfft / 2.0) * bin; cr.riseHz = w;
                 out.push_back(cr);
             }
         }
@@ -899,6 +901,7 @@ struct TetraReceiver::Impl {
         struct Found { Carrier c; tetra::CarrierDecode d; double freq; };
         std::vector<Found> found;
         std::vector<TetraCarrierSeen> seen;
+        std::vector<double> seenRise;   // per entry of seen: the rise it was cut from (NaN: a TETRA carrier)
         voicePick.newCapture();
         // One carrier's voice per capture: what each candidate gives is collected first and only the chosen one is handed to the sink, so a
         // carrier that gave silence is never heard in front of (or besides) the carrier that gave the speech
@@ -945,13 +948,17 @@ struct TetraReceiver::Impl {
             }
             const double freq = (center > 0 ? center : 0.0) + c.off + d.cfoHz;
             TetraCarrierSeen cs; cs.freqHz = d.tetra ? freq : (center > 0 ? center : 0.0) + c.off; cs.levelDb = c.levelDb; cs.synced = d.synced;
+            const bool isTetra = d.tetra && (d.synced || d.blocksOk > 0);   // the slot structure alone is not enough: a TEDS QAM carrier can show one
+            if (isTetra) { cs.kind = 1; cs.bwHz = 25e3; cs.p8Slots = d.p8Slots; }
             seen.push_back(cs);
+            seenRise.push_back(isTetra ? std::nan("") : (c.riseHz > 0 ? c.riseOff : c.off));
             if (d.tetra && (d.synced || d.scrambler)) found.push_back({c, std::move(d), freq});
         }
         if (!voiced) {   // no carrier gave speech: the silence of the first followed one (pauses keep their length), then the end of the capture
             if (SpeechFrameSink* vs = voiceSink.load()) { if (haveFallback) fallback.flush(*vs); vs->onCaptureEnd(); }
         }
         if (!gaveVoice) { playCarrierHz = 0.0; playTn = 0; }
+        identifyOthers(x, center, fs, car, seen, seenRise, g);
         std::lock_guard<std::mutex> lk(mu);
         if (gen.load() != g) return;
         if (clearReq.exchange(false)) { tel.cells.clear(); tel.events.clear(); tel.sds.clear(); tel.blocksOk = tel.blocksBad = 0; }
@@ -962,6 +969,47 @@ struct TetraReceiver::Impl {
         if (tel.cells.size() > kTetraMax) tel.cells.resize(kTetraMax);
         refreshState(sec);
         publish();
+    }
+
+    // TEDS (3.9): the rises of the spectrum that gave no TETRA slot structure are identified from their physical layer (tetra_teds.h): a QAM
+    // carrier (8 sub-carriers per 25 kHz, 2 400 symbols/s) becomes one entry with its bandwidth, a pi/8-D8PSK carrier is marked as such.
+    // Identity only: nothing of a QAM carrier is decoded. At most kIdentifyMax rises per capture, the strongest first.
+    static constexpr size_t kIdentifyMax = 8;
+    void identifyOthers(const std::vector<cf32>& x, double center, double fs, const std::vector<Carrier>& car, std::vector<TetraCarrierSeen>& seen,
+                        const std::vector<double>& rise, uint64_t g) {
+        std::vector<size_t> todo;   // the first entry of each rise not decoded as TETRA
+        for (size_t i = 0; i < seen.size() && i < rise.size(); i++) {
+            if (std::isnan(rise[i])) continue;
+            bool dup = false;
+            for (size_t j : todo) if (std::fabs(rise[j] - rise[i]) < 1.0) dup = true;
+            // a rise that also holds a TETRA carrier is a row of carriers, not one wide QAM carrier
+            for (size_t j = 0; j < seen.size() && j < car.size(); j++) if (std::isnan(rise[j]) && car[j].riseHz > 0 && std::fabs(car[j].riseOff - rise[i]) < 1.0) dup = true;
+            if (!dup) todo.push_back(i);
+        }
+        if (todo.empty()) return;
+        if (todo.size() > kIdentifyMax) todo.resize(kIdentifyMax);
+        const tetra::TedsIdentifier id(x.data(), x.size(), fs);
+        std::vector<TetraCarrierSeen> out;
+        std::vector<char> drop(seen.size(), 0);
+        for (size_t i : todo) {
+            if (gen.load() != g) return;
+            const double w = i < car.size() && car[i].riseHz > 0 ? car[i].riseHz : 25e3;
+            const tetra::TedsCarrierClass cc = id.classify(rise[i], w);
+            if (cc.kind == tetra::CarrierKind::Qam) {
+                for (size_t j = 0; j < seen.size() && j < rise.size(); j++) if (!std::isnan(rise[j]) && std::fabs(rise[j] - rise[i]) < 1.0) drop[j] = 1;
+                TetraCarrierSeen q;
+                q.freqHz = (center > 0 ? center : 0.0) + rise[i];
+                q.levelDb = seen[i].levelDb;
+                q.kind = 3; q.bwHz = cc.bwHz; q.subcarriers = cc.subcarriers; q.qamOrder = cc.qamOrder; q.orderSure = cc.orderSure;
+                out.push_back(q);
+            } else if (cc.kind != tetra::CarrierKind::Unknown) {
+                seen[i].kind = (int)cc.kind; seen[i].bwHz = cc.bwHz;
+            }
+        }
+        std::vector<TetraCarrierSeen> keep;
+        for (size_t j = 0; j < seen.size(); j++) if (!drop[j]) keep.push_back(seen[j]);
+        keep.insert(keep.end(), out.begin(), out.end());
+        seen.swap(keep);
     }
 
     void refreshState(double sec) {
@@ -1000,6 +1048,7 @@ struct TetraReceiver::Impl {
         t->lastWall = wallNow(); t->lastSec = sec; t->seen++;
         t->bschOk += (uint64_t)d.syncs;
         t->blocksOk += (uint64_t)d.blocksOk; t->blocksBad += (uint64_t)d.blocksBad;
+        t->p8Slots += (uint64_t)d.p8Slots; t->p8BlocksOk += (uint64_t)d.p8BlocksOk;
         tel.blocksOk += (uint64_t)d.blocksOk; tel.blocksBad += (uint64_t)d.blocksBad;
         for (int i = 0; i < 4; i++) if (d.tsUsage[i] >= 0) t->tsUsage[i] = d.tsUsage[i];
         for (int i = 0; i < 4; i++) {
@@ -1044,6 +1093,8 @@ struct TetraReceiver::Impl {
                 t->mainCarrier = s.mainCarrier; t->band = s.band; t->offset = s.offset; t->duplex = s.duplex; t->reverse = s.reverse;
                 t->numScch = s.numScch; t->msTxPwrMax = s.msTxPwrMax; t->rxLevAccessMin = s.rxLevAccessMin; t->accessParam = s.accessParam; t->dlTimeout = s.dlTimeout;
                 t->cckFlag = s.cckFlag; t->hyperframeOrCck = s.hyperframeOrCck; t->optFlag = s.optFlag; t->optValue = s.optValue;
+                tetra::ExtServices es;
+                if (tetra::parseExtServices(s.optFlag, s.optValue, es)) { tetra::TedsCaps caps{t->tedsD8psk, t->tedsQamMask}; caps.add(es); t->tedsD8psk = caps.d8psk; t->tedsQamMask = caps.qamMask; }
                 t->la = s.la; t->subscriberClass = s.subscriberClass; t->bsService = s.bsService;
                 t->aie = (s.bsService & tetra::kSvcAirEncryption) != 0;
                 const tetra::Security sc = tetra::parseSecurity(s);

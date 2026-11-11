@@ -51,7 +51,7 @@ constexpr double kQamSymRate = 2400.0;
 constexpr double kQamSpacingHz = 2700.0;
 constexpr double kQamRolloff = 0.2;
 
-struct CarrierClass {
+struct TedsCarrierClass {
     CarrierKind kind = CarrierKind::Unknown;
     double bwHz = 0;           // 25e3 .. 150e3 for QAM and phase modulation; 0 unknown
     int subcarriers = 0;       // QAM: 8, 16, 32 or 48
@@ -61,8 +61,17 @@ struct CarrierClass {
     float snrDb = -99;         // in the carrier's own bandwidth
 };
 // x: a capture at fs; the candidate centred at offHz from its centre, spread over about widthHz (a rise of the spectrum, findCarriers).
-// Up to 0.35 s of the capture is used.
-CarrierClass classifyCarrier(const cf32* x, size_t n, double fs, double offHz, double widthHz);
+// Up to 0.35 s of the capture (at most 2^21 samples) is used. TedsIdentifier transforms the capture once for any number of candidates.
+class TedsIdentifier {
+public:
+    TedsIdentifier(const cf32* x, size_t n, double fs);
+    TedsCarrierClass classify(double offHz, double widthHz) const;
+private:
+    double fs_ = 0;
+    int N_ = 0;
+    std::vector<float> re_, im_;   // the spectrum, natural order
+};
+TedsCarrierClass classifyCarrier(const cf32* x, size_t n, double fs, double offHz, double widthHz);
 
 // ---------------------------------------------------------------- test signal
 

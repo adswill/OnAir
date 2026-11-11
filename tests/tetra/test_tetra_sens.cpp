@@ -2,8 +2,9 @@
 // error, a random start and AWGN measured in the 25 kHz channel, through tetra::decodeCarrier. A capture counts as decoded when it gives at
 // least half the signalling blocks (CRC good) the clean capture gives, the criterion of tools/sens/sens_sweep. Simulated signals only.
 //
-// Default (a few seconds): the clean capture decodes every block, the weak points pass under every impairment, noise alone gives nothing.
-// ONAIR_TEST_LONG=1: the threshold sweep (2 dB down to 0 dB in 1 dB steps, 8 trials per point) for AWGN, +-1.2 kHz and 50 ppm.
+// Default (about a second): the clean capture decodes every block, 5 dB passes under every impairment, noise alone gives nothing.
+// ONAIR_TEST_LONG=1: the threshold sweep (TETRA_SENS_HI = 10 dB down to TETRA_SENS_LO = 0 dB in 1 dB steps, 8 trials per point, stopping
+// below 90 %) for AWGN, +-1.2 kHz and +-50 ppm. docs/TETRA-3.9.md has the results.
 #include "dect2/tetra/tetra_gen.h"
 #include "dect2/common/stable_random.h"
 #include "dect2/cell/cell_dsp.h"
@@ -86,8 +87,8 @@ int main() {
     struct Imp { const char* name; double cfo, ppm; };
     const Imp imps[] = {{"awgn", 0, 0}, {"cfo 1.2 kHz", 1200, 0}, {"clock 50 ppm", 0, 50}};
     if (!longRun) {
-        // 3.9: the weak point every impairment must still pass (the 3.8 demodulator needed 6 dB here)
-        const double snr = std::getenv("TETRA_SENS_SNR") ? std::atof(std::getenv("TETRA_SENS_SNR")) : 4.5;
+        // 3.9: the weak point every impairment must still pass (the 3.8 demodulator decoded 5, 1 and 4 of 8 captures here)
+        const double snr = std::getenv("TETRA_SENS_SNR") ? std::atof(std::getenv("TETRA_SENS_SNR")) : 5.0;
         for (const Imp& im : imps) {
             const Point p = run(snr, im.cfo, im.ppm, 4, clean, 1000);
             printf("%-14s %4.1f dB: %d / %d decoded, %.1f blocks\n", im.name, snr, p.ok, p.trials, p.blocks);

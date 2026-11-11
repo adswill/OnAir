@@ -95,6 +95,7 @@ struct CarrierPeak {
     double off = 0;        // Hz from the centre of the capture
     float levelDb = 0;     // peak over the local floor
     float powerDb = 0;     // power of the rise
+    double riseOff = 0, riseHz = 0;   // the whole rise this carrier was cut from (a TEDS QAM carrier is 25 to 150 kHz wide)
 };
 constexpr double kUsableBand = 0.72;
 constexpr double kFloorWindowHz = 600e3;
