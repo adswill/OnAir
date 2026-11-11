@@ -10,6 +10,7 @@
 #include "dect2/tetra/tetra_tel.h"
 #include "dect2/tetra/tetra_teds.h"
 #include <chrono>
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <random>

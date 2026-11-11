@@ -10,6 +10,7 @@
 #include "dect2/cell/cell_dsp.h"
 #include "dect2/tetra/tetra_phy.h"
 #include "dect2/tetra/tetra_rx.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
