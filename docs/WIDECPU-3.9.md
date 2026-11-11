@@ -17,3 +17,14 @@ This page says how they were measured, so that they can be repeated.
 - New counters: `idleInputSamples()` on `IsdbsReceiver`, `Fy3Receiver`, `WxsatReceiver` and `DvbsReceiver`.
 
 Simulated signals only: no off-air recording of these downlinks was available.
+
+## The custom_bandwidth_all segfault at GeoNetCast (separate fix)
+
+`custom_bandwidth_all` crashed at GeoNetCast in a DVB-S2 worker thread (`onair-dvbs-w`). Not caused by a custom width or rate: it is
+the test's many engine starts and stops. Reproduced (2 of 3 runs plain; every run under AddressSanitizer with the wxsat and file-layer
+code instrumented): heap-use-after-free in `FilecastLayer::pushTs`, called by `S2Rx::emitPackets` on the worker, of the file layer
+freed by `WxsatReceiver::Impl::~Impl`. The DVB-S2 receiver's packet callback holds a pointer to the file layer, and the members were
+destroyed in reverse order of declaration: `files` before `dvb`, whose destructor is what stops the workers. Fix: `~Impl()` resets
+`dvb` first (`core/src/wxsat/wxsat_rx.cpp`). New test in `test_wxsat_filecast`: a GeoNetCast receiver destroyed with frames in flight,
+six times. ASan before: heap-use-after-free; after: clean, and `custom_bandwidth_all` with `ONAIR_TEST_MODES=geonetcast` no longer
+crashes (0 of 6 runs, 6 of 6 before). HimawariCast shares the path and the fix.

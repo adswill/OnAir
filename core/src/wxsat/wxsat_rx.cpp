@@ -366,6 +366,9 @@ struct WxsatReceiver::Impl {
     float mmn[32], mmx[32];
     bool mwrInit = false;
 
+    // The DVB-S2 receiver's worker threads hand packets to `files` (the packet callback holds a pointer to it): stop them first. Left to
+    // the member order, `files` went first and a worker still delivering wrote into freed memory (the custom_bandwidth_all segfault).
+    ~Impl() { dvb.reset(); }
     explicit Impl(int p) : P(std::clamp(p, 0, (int)kWxNumProfiles - 1)), info(wxProfile(P)) {
         tel.profile = pub.profile = P;
         if (isFilecast()) files = std::make_unique<wxsat::FilecastLayer>(P);
