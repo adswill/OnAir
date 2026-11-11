@@ -160,7 +160,7 @@ jobs:
         run: |
           cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $EXTRA_CMAKE
           T=""; for t in $TESTS; do T="$T test_$t"; done
-          ALL=$(ninja -C build -t targets all | cut -d: -f1 | tr -d '\r')
+          ALL=$(ninja -C build -t targets all | cut -d: -f1 | tr -d '\r' | sed 's/\.exe$//')
           SEL=""; for t in $T $EXTRA; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t" || echo "note: no target $t"; done
           [ -n "$SEL" ] || { echo "nothing to build"; exit 1; }
           cmake --build build -j 4 --target $SEL
