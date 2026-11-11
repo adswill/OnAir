@@ -1668,3 +1668,10 @@ The first 20 open entries of docs/QA-SWEEP-3.9.md (arktikaggak .. kait). Fixed: 
 
 ## 2026-11-11 ATSC on x86 (feat39-atscx86)
 x86-only AVX2/SSE paths for the ATSC receivers: the shared-window matched filter (8 lanes, batched lane sums, vector positions), the DFE field loop with a rounding-instruction level decision, the feed-forward equaliser, a register-tiled syrkLowerT (same bits), the 12-lane Viterbi in one 256-bit and one 128-bit vector (bit-exact), the data-SNR pass, SSE2 pilot block and symbol interpolator, exact floor/round helpers in simd.h (no libm calls on the SSE2 baseline), the ATSC 3.0 shared-window resampler and a bootstrap search without hypot. FTZ/DAZ in the receiver threads (dect2::DenormalsOff). Thread splits of the ATSC 1.0 filter and the ATSC 3.0 resampler only when one thread would be busy. ATSC 3.0 worker now selects the service and refreshes telemetry on idle wake-ups (the atsc3_engine race on Linux). quick.yml: verbose, env, compare (same tests from another ref on the same runner) and perf inputs. Same runner, base to new, together: 2.18 to 1.42 (EPYC 9V74, final), 2.64 to 1.72 (7763), 1.80 to 1.10 (9V45); under one core on CI not reached. 12-seed sweep unchanged within 0.1 %, 0 wrong packets. docs/ATSC-X86-3.9.md.
+
+## 2026-11-11 DAB Map tab: positions and zoom (feat39-dabsites)
+German user report (DR Deutschland 5C, six TII codes, none placed, zoom dead). Causes: OnAir-channels has no dab-tii/DE.csv (404, told
+apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-centred the map every frame when nothing was placed (Cell map
+too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
+source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
+qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
