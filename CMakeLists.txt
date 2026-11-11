@@ -3081,6 +3081,7 @@ if(DECT2_BUILD_APP AND NOT APPLE)
   install(PROGRAMS $<TARGET_FILE:onair-server> DESTINATION ${CMAKE_INSTALL_BINDIR})
   install(FILES packaging/linux/onair-server.service DESTINATION lib/systemd/system)
   install(DIRECTORY web/onair-web DESTINATION share/onair/web)   # the OnAir Web browser page: onair-server looks in ../share/onair/web/onair-web
+  install(DIRECTORY web/onair-app DESTINATION share/onair/web)   # OnAir Web 3.9, the whole receiver in a browser: onair-server looks in ../share/onair/web/onair-app
   if(DECT2_BUILD_PLUGIN_EXAMPLES)
     install(DIRECTORY ${CMAKE_BINARY_DIR}/plugins/ DESTINATION ${CMAKE_INSTALL_LIBDIR}/onair/plugins USE_SOURCE_PERMISSIONS)
   endif()
