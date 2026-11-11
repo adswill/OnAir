@@ -28,7 +28,7 @@ double share(const M& m, double snr, const wsjttest::Imp& imp, int slots, int* w
         for (const auto& x : d) {
             bool sent = false;
             for (const auto& s : st) sent |= x.msg == s.msg;
-            if (!sent) { (*wrong)++; printf("  false \"%s\"\n", x.msg.c_str()); }
+            if (!sent) { (*wrong)++; printf("  false \"%s\" (%.0f dB, slot %d)\n", x.msg.c_str(), snr, t); }
         }
     }
     return (double)ok / (double)all;
@@ -41,14 +41,22 @@ int main() {
     const char* only = std::getenv("ONAIR_SENS40B_MODES");
     const int slots = std::getenv("ONAIR_SENS40B_SLOTS") ? std::atoi(std::getenv("ONAIR_SENS40B_SLOTS")) : 6;
     for (const M& m : kModes) {
-        if (only ? !strstr(only, m.name) : (!full && m.mode != ftx::kFt8 && m.mode != ftx::kWspr)) continue;
+        if (only ? !strstr(only, m.name) : (!full && m.mode != ftx::kFt8 && m.mode != ftx::kWspr && m.mode != ftx::kJt4)) continue;
         if (!full && !only) {   // the guard: one point a few dB above the measured 90 % point, no wrong text
             wsjttest::Imp imp;
             int wrong = 0;
-            const double snr = m.mode == ftx::kFt8 ? -16 : -24;
+            const double snr = m.mode == ftx::kFt8 ? -16 : m.mode == ftx::kJt4 ? -18 : -24;
             const double sh = share(m, snr, imp, 3, &wrong);
             printf("%-5s %5.0f dB: %3.0f %%\n", m.name, snr, 100 * sh);
             CHECK(sh >= 0.8 && wrong == 0, "%s at %.0f dB: %.0f %% decoded, %d wrong", m.name, snr, 100 * sh, wrong);
+        }
+        if (!full && !only && (m.mode == ftx::kFt8 || m.mode == ftx::kJt4)) {   // 4.0: the wrong-text decodes next to strong stations (FT8 AP with known calls, JT4 all-zero word): a few slots at the SNR where they showed
+            wsjttest::Imp f;
+            f.dialHz = 40; f.ppm = 100;
+            int wrong = 0;
+            const double snr = m.mode == ftx::kFt8 ? -22 : -23;
+            share(m, snr, f, 4, &wrong);
+            CHECK(wrong == 0, "%s at %.0f dB with a dial and clock error: %d decodes of a text that was not sent", m.name, snr, wrong);
         }
         for (int sc = 0; sc < (full || only ? 2 : 0); sc++) {
             wsjttest::Imp imp;
