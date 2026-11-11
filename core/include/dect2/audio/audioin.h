@@ -1,6 +1,7 @@
 // Audio capture for the transmitter: CoreAudio on macOS, miniaudio elsewhere (the same split as audioout_*).
 // The microphone is never opened until startMic() — TxSession does that only on START TRANSMITTING.
 #pragma once
+#include <cctype>
 #include <cstdint>
 #include <memory>
 #include <string>
@@ -14,6 +15,25 @@ struct AudioInputDevice {
 };
 
 std::vector<AudioInputDevice> listAudioInputs();   // the default input first
+// The device id for what a user typed or picked as a sound card: an id as it is, "Default input" / "default" -> "" (the default input), or a
+// device name, with or without the "Sound card: " of the source list, matched without case (#358: a Hamlib rig's sound card was typed as its
+// name, "USB Audio CODEC", and never found). Returns false (id untouched) when nothing matches.
+inline bool resolveAudioInputId(const std::string& typed, const std::vector<AudioInputDevice>& devices, std::string& id) {
+    auto low = [](std::string v) {
+        size_t b = 0, e = v.size();
+        while (b < e && (v[b] == ' ' || v[b] == '\t')) b++;
+        while (e > b && (v[e - 1] == ' ' || v[e - 1] == '\t')) e--;
+        v = v.substr(b, e - b);
+        for (char& c : v) c = (char)std::tolower((unsigned char)c);
+        return v;
+    };
+    std::string t = low(typed);
+    if (t.rfind("sound card:", 0) == 0) t = low(t.substr(11));
+    if (t.empty() || t == "default" || t == "default input") { id.clear(); return true; }
+    for (const AudioInputDevice& d : devices) if (!d.id.empty() && d.id == typed) { id = d.id; return true; }
+    for (const AudioInputDevice& d : devices) if (low(d.name) == t) { id = d.id; return true; }
+    return false;
+}
 
 class AudioIn {
 public:

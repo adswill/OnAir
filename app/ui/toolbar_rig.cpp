@@ -1,6 +1,7 @@
 // Radios added by address: the Network radios window (PlutoSDR by IP, rtl_tcp, SoapyRemote, SpyServer, Hermes Lite 2,
 // Red Pitaya) and the Hamlib rigs window (model search, serial port, baud rate), plus following a rig's dial.
 // Split from toolbar.cpp.
+#include "dect2/audio/audioin.h"
 #include "dect2/common/thread_name.h"
 #include "../app.h"
 #include "dect2/engine/rate_choice.h"
@@ -337,9 +338,23 @@ static void hamlibRigBaud(App& a, const RigModelInfo* cur, bool netPath) {
 static void hamlibRigAdd(App& a, const RigModelInfo* cur, bool netPath) {
     ImGui::SetNextItemWidth(330 * gUi);
     ImGui::InputTextWithHint(tr("Label"), tr("optional"), a.hamlibAddLabel, sizeof a.hamlibAddLabel);
-    ImGui::SetNextItemWidth(330 * gUi);
-    ImGui::InputTextWithHint(tr("Sound card id"), tr("empty = CAT only (silence IQ)"), a.hamlibAddAudio, sizeof a.hamlibAddAudio);
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The same device id as in “Sound card: …” in the source list. Use a VAC or line input for WebSDR-style IQ."));
+    {   // the rig's sound card picked from the list (#358: a typed name such as "USB Audio CODEC" was never found); "default" = the default input
+        static std::vector<AudioInputDevice> cards;
+        const std::string curId = a.hamlibAddAudio;
+        std::string cur = curId.empty() ? tr("None (CAT only)") : curId == "default" ? tr("Default input") : curId;
+        for (const auto& d : cards) if (!d.id.empty() && d.id == curId) cur = d.name;
+        ImGui::SetNextItemWidth(330 * gUi);
+        if (ImGui::BeginCombo(tr("Sound card"), cur.c_str())) {
+            if (ImGui::IsWindowAppearing()) cards = listAudioInputs();
+            if (ImGui::Selectable(tr("None (CAT only)"), curId.empty())) a.hamlibAddAudio[0] = 0;
+            for (const auto& d : cards) {
+                const std::string id = d.id.empty() ? std::string("default") : d.id;
+                if (ImGui::Selectable(d.id.empty() ? tr("Default input") : d.name.c_str(), id == curId)) snprintf(a.hamlibAddAudio, sizeof a.hamlibAddAudio, "%s", id.c_str());
+            }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The sound card the rig's audio or IQ comes in on (the rig's USB audio, a VAC or a line input). None: CAT control only, silence as IQ."));
+    }
     static bool hamlibPathMissing = false;
     if (ImGui::Button(tr("Add"))) {
         HamlibRig r;

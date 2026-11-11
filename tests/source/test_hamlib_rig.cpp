@@ -1,6 +1,7 @@
 // Hamlib rig control against Hamlib's own dummy rig (model 1), in process and through rigctld (model 2, netrigctl): open and close, both
 // directions of frequency and mode, polling, a rig that disappears and comes back, repeated and concurrent start/stop, mode names, and a
 // check that receiving never keys the transmitter. rigctld missing: the network tests are skipped with a note.
+#include "dect2/audio/audioin.h"
 #include "dect2/source/hamlib_link.h"
 #include "dect2/source/hamlib_rig.h"
 #include "dect2/common/ring.h"
@@ -357,8 +358,21 @@ static void testTxIsSeparate(const std::string& tmp) {
 
 #endif // DECT2_HAVE_HAMLIB
 
+// #358: the rig's sound card typed as its name ("USB Audio CODEC", "Sound card: USB Audio CODEC", "Default input") finds the device id
+static void testSoundCardName() {
+    const std::vector<AudioInputDevice> devs = {{"", "Default input"}, {"ca:AppleUSBAudioEngine:Burr-Brown:USB Audio CODEC:1", "USB Audio CODEC"}, {"ca:BlackHole2ch_UID", "BlackHole 2ch"}};
+    std::string id = "x";
+    CHECK(resolveAudioInputId("USB Audio CODEC", devs, id) && id == devs[1].id, "name");
+    id = "x"; CHECK(resolveAudioInputId("  sound card: usb audio codec ", devs, id) && id == devs[1].id, "source-list name");
+    id = "x"; CHECK(resolveAudioInputId("Default input", devs, id) && id.empty(), "default input");
+    id = "x"; CHECK(resolveAudioInputId("default", devs, id) && id.empty(), "default");
+    id = "x"; CHECK(resolveAudioInputId("ca:BlackHole2ch_UID", devs, id) && id == "ca:BlackHole2ch_UID", "an id stays");
+    id = "keep"; CHECK(!resolveAudioInputId("Scarlett 2i2", devs, id) && id == "keep", "an unknown card is not replaced");
+}
+
 int main() {
     testPure();
+    testSoundCardName();
 #ifdef DECT2_HAVE_HAMLIB
     testModes();
     testDummy();
