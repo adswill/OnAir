@@ -9,6 +9,7 @@
 #include <cmath>
 #include <complex>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <deque>
 #include <mutex>
@@ -86,6 +87,7 @@ struct Cp16Receiver::Impl {
     double manBase = 0, manSpacing = 0, manChar = 0;
     int manSide = 0;
     bool readOn = true;
+    const bool dbg = std::getenv("CP16_DEBUG") != nullptr;   // the arrangement scores of each character in the log (tests)
 
     // analysis thread
     Cp16Telemetry tel;
@@ -535,6 +537,11 @@ struct Cp16Receiver::Impl {
                     if (bi < 0 || all[a].m.score > all[bi].m.score) bi = a;
                 }
                 if (bi < 0) { bi = 0; all[0] = bestStart(readPtr, r, 0); }
+                if (dbg) {
+                    std::string l = "CP16 debug: row " + std::to_string(r) + " arr " + std::to_string(kArrs[arr]) + ":";
+                    for (int a = 0; a < kNumArr; a++) { char b[48]; snprintf(b, sizeof b, " %+d%s%.2f", kArrs[a], valid[a] ? "=" : "x", valid[a] ? all[a].m.score : 0.f); l += b; }
+                    say(l);
+                }
                 if (all[bi].m.score >= kShow) {
                     for (int a = 0; a < kNumArr; a++) if (valid[a]) arrScore[a] += std::max(0.f, all[a].m.score);
                     arrVotes++;
