@@ -57,6 +57,19 @@ int main() {
             CHECK(t.devices.size() <= 6, "invented meters at %.0f dB: %zu", snr, t.devices.size());
         }
     }
+    {   // 3.9 sensitivity (docs/SENSITIVITY-3.9-E.md): T1, C1 and S1 alone at 10 dB in 250 kHz (14 dB in 100 kHz), with and without a
+        // 15 kHz carrier error; 3.8 decoded no T1 frame and a few C1 frames here
+        struct G { Phy ph; double cfo, share; };
+        for (const G g : {G{Phy::T1, 0, 0.8}, G{Phy::C1A, 0, 0.6}, G{Phy::S1, 0, 0.9}, G{Phy::T1, 15000, 0.6}, G{Phy::C1A, -15000, 0.4}}) {
+            WmbusGenConfig c; c.snrDb = 99; c.gapSec = 0.05; c.onlyPhy = (int)g.ph; c.cfoHz = g.cfo;
+            const double clean = (double)run(c, 3).blocksOk;
+            c.snrDb = 10;
+            const WmbusTelemetry t = run(c, 3);
+            printf("  %s alone, cfo %+.0f Hz, 10 dB: %llu of %.0f frames, %llu bad\n", phyName(g.ph), g.cfo, (unsigned long long)t.blocksOk, clean, (unsigned long long)t.blocksBad);
+            CHECK(clean > 10 && (double)t.blocksOk >= g.share * clean, "%s at 10 dB, cfo %.0f: %llu of %.0f frames", phyName(g.ph), g.cfo, (unsigned long long)t.blocksOk, clean);
+            CHECK(t.devices.size() <= 6, "invented meters: %zu", t.devices.size());
+        }
+    }
     {   // sample rates
         for (double r : {1.2e6, 2.4e6, 2.56e6}) {
             WmbusGenConfig c; c.rate = r; c.snrDb = 30; c.gapSec = 0.05;

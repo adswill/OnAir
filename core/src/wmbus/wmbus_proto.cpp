@@ -432,8 +432,10 @@ std::vector<ChannelDef> channelPlan(double centre, double rate) {
     if (centre > 0 && centre < 300e6) {
         for (int i = 0; i < 6; i++) { const double f = 169.40625e6 + 12.5e3 * i; all.push_back({f, false, 48000, 5500, {Phy::N1, Phy::N24}, lab(f)}); }
     } else {
-        all.push_back({868.300e6, true, 400000, 140000, {Phy::S1}, lab(868.3e6)});
-        all.push_back({868.950e6, true, 400000, 140000, {Phy::T1, Phy::C1A}, lab(868.95e6)});
+        // the channel filter of S and T / C: 84 kHz (3.9, was 140 kHz: 4 to 5 dB for T1 and C1 at the FM threshold, docs/SENSITIVITY-3.9-E.md);
+        // +-50 kHz deviation and a 17 kHz (20 ppm) carrier error still pass
+        all.push_back({868.300e6, true, 400000, 84000, {Phy::S1}, lab(868.3e6)});
+        all.push_back({868.950e6, true, 400000, 84000, {Phy::T1, Phy::C1A}, lab(868.95e6)});
         for (double f : {868.030e6, 868.090e6, 868.150e6}) all.push_back({f, false, 48000, 14000, {Phy::R2}, lab(f)});
     }
     if (centre <= 0) centre = all.empty() ? 868.625e6 : (all[0].freqHz < 300e6 ? 169.4375e6 : 868.625e6);
