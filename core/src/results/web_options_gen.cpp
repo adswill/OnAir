@@ -175,9 +175,10 @@ static bool set_13(Engine& e, const std::string& n, double v) {
     if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
     return false;
 }
-static const char kOpt_14[] = R"JSON([{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static const char kOpt_14[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
 static bool set_14(Engine& e, const std::string& n, double v) {
     auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
     if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
     return false;
 }
@@ -240,12 +241,13 @@ static bool set_22(Engine& e, const std::string& n, double v) {
     if (n == "setProgram") { call(r, &Rx<decltype(r)>::setProgram, v); return true; }
     return false;
 }
-static const char kOpt_24[] = R"JSON([{"n":"setProtocols","k":"choice","c":[{"v":1,"l":"POCSAG"},{"v":2,"l":"FLEX"}],"l":"Protocols","h":"1 POCSAG, 2 FLEX (default 3: both)","t":"s"},{"n":"setSelcall","k":"bool","l":"Selcall","h":"also decode five-tone selective calls (CCIR, ZVEI, EEA, EIA, DZVEI) on the channel audio (default off)","t":"s"},{"n":"setPocsagBauds","k":"int","l":"Pocsag Bauds","h":"1 512, 2 1200, 4 2400 bd (default 7: all three)","t":"s"},{"n":"setCombineCopies","k":"bool","l":"Combine Copies","h":"multi-copy combining of repeated messages (default on); applies from the next lock","t":"s"},{"n":"setSmartRepair","k":"bool","l":"Smart Repair","t":"a"},{"n":"setSmartInsight","k":"bool","l":"Smart Insight","t":"a"},{"n":"setAnalyseMedical","k":"bool","l":"Analyse Medical","t":"a"}])JSON";
+static const char kOpt_24[] = R"JSON([{"n":"setProtocols","k":"choice","c":[{"v":1,"l":"POCSAG"},{"v":2,"l":"FLEX"}],"l":"Protocols","h":"1 POCSAG, 2 FLEX (default 3: both)","t":"s"},{"n":"setSelcall","k":"bool","l":"Selcall","h":"also decode five-tone selective calls (CCIR, ZVEI, EEA, EIA, DZVEI) on the channel audio (default off)","t":"s"},{"n":"setPocsagBauds","k":"int","l":"Pocsag Bauds","h":"1 512, 2 1200, 4 2400 bd (default 7: all three)","t":"s"},{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"POCSAG symbols from tone energies and a sync search that uses them (default on; off: the discriminator only, as in 3.9)","t":"s"},{"n":"setCombineCopies","k":"bool","l":"Combine Copies","h":"multi-copy combining of repeated messages (default on); applies from the next lock","t":"a"},{"n":"setSmartRepair","k":"bool","l":"Smart Repair","t":"a"},{"n":"setSmartInsight","k":"bool","l":"Smart Insight","t":"a"},{"n":"setAnalyseMedical","k":"bool","l":"Analyse Medical","t":"a"}])JSON";
 static bool set_24(Engine& e, const std::string& n, double v) {
     auto& r = e.pager();
     if (n == "setProtocols") { call(r, &Rx<decltype(r)>::setProtocols, v); return true; }
     if (n == "setSelcall") { call(r, &Rx<decltype(r)>::setSelcall, v); return true; }
     if (n == "setPocsagBauds") { call(r, &Rx<decltype(r)>::setPocsagBauds, v); return true; }
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
     if (n == "setCombineCopies") { call(r, &Rx<decltype(r)>::setCombineCopies, v); return true; }
     if (n == "setSmartRepair") { call(r, &Rx<decltype(r)>::setSmartRepair, v); return true; }
     if (n == "setSmartInsight") { call(r, &Rx<decltype(r)>::setSmartInsight, v); return true; }
@@ -562,10 +564,11 @@ static bool set_96(Engine& e, const std::string& n, double v) {
     if (n == "setInterleave") { call(r, &Rx<decltype(r)>::setInterleave, v); return true; }
     return false;
 }
-static const char kOpt_99[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","u":"Hz","t":"s"}])JSON";
+static const char kOpt_99[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","u":"Hz","t":"s"},{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"chips from tone energies (default on; off: the discriminator only, as in 3.9)","t":"s"}])JSON";
 static bool set_99(Engine& e, const std::string& n, double v) {
     auto& r = e.zwave();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
     return false;
 }
 static const char kOpt_102[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"s"},{"n":"setSaturation","k":"num","l":"Saturation","t":"s"},{"n":"setAudio","k":"bool","l":"Audio","t":"s"},{"n":"setAudioSubcarrier","k":"num","l":"Audio Subcarrier","t":"a"}])JSON";
