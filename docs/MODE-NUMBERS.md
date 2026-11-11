@@ -112,6 +112,12 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | Riometer | 501 | 503 | 502 | 502 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
 | Pulsar folding | 502 | 504 | 503 | 503 | feat38-ham-science | 3.8; simulated signals only; numbers may need to move at merge |
 | JT6M | 750 | 752 | 751 | 751 | feat39-misc | 3.9; simulated signals only |
+| Schumann resonance monitor | 820 | 822 | 821 | 821 | feat39-w1b | 3.9; ham science event monitor (hamsci kind 10); simulated signals only |
+| Whistler and tweek detector | 823 | 825 | 824 | 824 | feat39-w1b | 3.9; ham science event monitor (hamsci kind 11); simulated signals only |
+| Moon echo (EME) test | 826 | 828 | 827 | 827 | feat39-w1b | 3.9; ham science event monitor (hamsci kind 12); simulated signals only |
+| Radio Jove | 829 | 831 | 830 | 830 | feat39-w1b | 3.9; ham science event monitor (hamsci kind 13); simulated signals only |
+| e-CALLISTO solar bursts | 832 | 834 | 833 | 833 | feat39-w1b | 3.9; ham science event monitor (hamsci kind 14); simulated signals only |
+| Aurora / Es / TEP beacons | 835 | 837 | 836 | 836 | feat39-w1b | 3.9; ham science event monitor (hamsci kind 15); simulated signals only |
 | UMTS cells | 480 | 482 | 481 | 440 | feat38-broadcast | 3.8; 3G cell search by primary scrambling code (no BCH); synthetic signals only; numbers may need to move at merge |
 | JPSS HRD (NPP, NOAA-20) | 530 | 532 | 531 | 530 | feat38-sat-xband | 3.8; numbers may need to move at merge |
 | JPSS HRD (NOAA-21) | 531 | 533 | 532 | 531 | feat38-sat-xband | 3.8; numbers may need to move at merge |

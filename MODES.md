@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**327 modes.**
+**333 modes.**
 
 ## TV (17)
 
@@ -272,12 +272,18 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
 
-## Amateur - Digital (36)
+## Amateur - Digital (42)
 
 - **QRSS grabber** - QRSS: very slow Morse read from a spectrogram, receive only
 - **DFCW grabber** - DFCW: slow Morse with a frequency for dots and one for dashes, receive only
 - **FSK441** - FSK441: meteor scatter pings, 441 baud 4-FSK, receive only
 - **JT6M** - JT6M: 6 m meteor and ionospheric scatter, 44-tone FSK, receive only
+- **Schumann resonance monitor** - Schumann resonances: ELF peaks near 7.83 Hz, a spectrogram, the fundamental over time and transient events (needs an ELF sensor input)
+- **Whistler and tweek detector** - Whistlers and tweeks: VLF lightning-launched tones found in a spectrogram, with time and dispersion (needs a VLF audio input)
+- **Moon echo (EME) test** - Moon echo test: delay, Doppler shift, level and spread of your own signal reflected from the Moon (receive only)
+- **Radio Jove** - Radio Jove: bursts and the background at 20.1 MHz in a spectrogram, with an event list and CSV (receive only)
+- **e-CALLISTO solar bursts** - e-CALLISTO style solar bursts: spectrogram, burst list with drift rate, CSV (one capture of the radio, no frequency sweep)
+- **Aurora / Es / TEP beacons** - Beacon events: openings of a VHF beacon logged with time, S/N, Doppler width and a character class (aurora / TEP / sporadic-E like)
 - **ISCAT** - ISCAT: 42-tone scatter mode, A and B found automatically, receive only
 - **PI4** - PI4: microwave beacon mode, 27 s frames with an 8 character message, receive only
 - **Throb** - Throb: two-tone keyboard mode, six variants found automatically, receive only

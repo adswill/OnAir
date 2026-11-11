@@ -1113,7 +1113,7 @@ private:
     HrptReceiver rxHrpt_;
     Sd3Receiver rxSd3_[kSd3NumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10}};   // families 290 - 299, 510
     WxsatReceiver rxWx_[kWxNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11}};   // the SatDump-list weather links, families 260 - 271 (slots 220 - 231)
-    HamsciReceiver rxHs_[kHamsciKinds]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9}};   // QRSS, DFCW, FSK441, ISCAT, PI4, Throb, SuperSID, riometer, pulsar: families 460 - 465, 500 - 502 (slots 461 - 466, 501 - 503)
+    HamsciReceiver rxHs_[kHamsciKinds]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15}};   // QRSS, DFCW, FSK441, ISCAT, PI4, Throb, SuperSID, riometer, pulsar: families 460 - 465, 500 - 502 (slots 461 - 466, 501 - 503)
     XbandReceiver rxXb_[kXbNumProfiles]{{0},{1},{2},{3},{4},{5},{6},{7},{8},{9},{10},{11},{12},{13},{14},{15},{16},{17},{18},{19}};   // the X-band links, families 530 - 549 (slots 530 - 549)
     FlarmReceiver rxFlarm_;
     AdslReceiver rxAdsl_;

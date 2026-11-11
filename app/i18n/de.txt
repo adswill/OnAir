@@ -3977,3 +3977,25 @@ The audio frequency of the left column of the character.	Die Tonfrequenz der lin
 Send below the dial frequency instead of above it.	Unterhalb statt oberhalb der Anzeigefrequenz senden.
 Font:	Schrift:
 Waterfall text, HF	Wasserfalltext, KW
+bottom	unten
+top	oben
+per column, newest on the right	pro Spalte, neueste rechts
+Published Hz	Veröffentlicht (Hz)
+Found Hz	Gefunden (Hz)
+dB over baseline	dB über der Basislinie
+Five minute average spectrum, dB over the baseline	Fünf-Minuten-Mittelspektrum, dB über der Basislinie
+events	Ereignisse
+Events per UTC hour of the day	Ereignisse pro UTC-Stunde des Tages
+Copy events (CSV)	Ereignisse kopieren (CSV)
+Copy trend (CSV)	Verlauf kopieren (CSV)
+Save CSV files	CSV-Dateien speichern
+could not write to the data folder	Schreiben in den Datenordner nicht möglich
+Event list	Ereignisliste
+Detection threshold (0 = automatic)	Erkennungsschwelle (0 = automatisch)
+Schumann transients, Jove and CALLISTO bursts: dB over the background. Whistlers: path score. Moon echo and beacon openings: sigma over the noise. Lower finds weaker events and more false ones.	Schumann-Transienten, Jove- und CALLISTO-Bursts: dB über dem Untergrund. Whistler: Pfadwert. Mondecho und Baken-Öffnungen: Sigma über dem Rauschen. Niedriger findet schwächere, aber auch mehr falsche Ereignisse.
+ELF, 7.83 Hz	ELF, 7,83 Hz
+VLF, 1 - 10 kHz	VLF, 1 - 10 kHz
+EME echo, 144 MHz and up	EME-Echo, ab 144 MHz
+Jupiter and Sun, 20.1 MHz	Jupiter und Sonne, 20,1 MHz
+Solar bursts, 45 - 870 MHz	Sonnen-Bursts, 45 - 870 MHz
+Beacon openings, VHF	Baken-Öffnungen, UKW

@@ -355,6 +355,12 @@
         <item>ELT 121.5 MHz</item>
         <item>Fleet Broadcast (UHF SATCOM)</item>
         <item>CP16</item>
+        <item>Schumann resonance monitor</item>
+        <item>Whistler and tweek detector</item>
+        <item>Moon echo (EME) test</item>
+        <item>Radio Jove</item>
+        <item>e-CALLISTO solar bursts</item>
+        <item>Aurora / Es / TEP beacons</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -691,6 +697,12 @@
         <item>Emergency locator transmitter on 121.5 MHz, detection only: an AM carrier with a tone swept downwards from about 1600 to 300 Hz two to four times a second. The sweep, its rate, its range and the modulation depth are measured and logged; the analogue beacon carries no data and 406 MHz beacons are a different system. Simulated signals only so far</item>
         <item>Fleet Broadcast on 250.450 / 250.550 / 250.650 MHz: a 16 channel, 75 Bd multiplex from UHF military satellites (1200 Bd differential BPSK). Finds the carrier, the clock and the frame and shows what each channel looks like. The channels are usually encrypted-looking data: nothing is decoded or decrypted. Receive only; simulated signals only</item>
         <item>CP16, the Chinese Radio Amateurs Club picture text: 16 carriers 10 to 20 Hz apart keyed by 16 x 16 dot characters, read on a waterfall (1 to 4 s a character, GB2312). Finds the carriers and the rows by itself on either sideband, shows the picture and reads the characters against the font. Receive and send</item>
+        <item>Schumann resonances: the Earth-ionosphere cavity rings at about 7.83, 14.1, 20.3, 26.3 and 32.5 Hz, driven by lightning worldwide. A spectrogram of 3 - 45 Hz, a five minute average spectrum with the five peaks marked (frequency, height over the baseline, Q), the fundamental over the day, and a list of ELF transients with times and strengths; CSV export. Needs an ELF input: a magnetic-field coil and sound card or ADC (a radio cannot hear 8 Hz). Receive only. Tested on simulated signals only</item>
+        <item>Whistlers and tweeks in a VLF audio recording (1 - 10 kHz): whistlers are descending tones that follow t = t0 + D / sqrt(f), found by a path search over the dispersion D; tweeks are the ringing of the Earth-ionosphere waveguide after a lightning impulse, a short ridge near 1.8 kHz (or a multiple). A spectrogram, an event list with time, dispersion or ridge frequency, strength, and sferics per minute; CSV export. Needs a VLF receiver or antenna into a sound card. Receive only. Tested on simulated signals only</item>
+        <item>Moon-echo test: finds your own keyed carrier (a pulse of 1 s or more) and looks 2.3 - 2.85 s later for the echo from the Moon, anywhere within +-500 Hz (the Doppler shift at 144 MHz reaches about +-440 Hz). Per pulse: delay, Doppler shift, level (below your carrier and over the noise) and spread (libration). A spectrogram around the carrier, an event list and CSV export. The transmitter is yours and is not controlled here; pulses should be 10 s apart or more. Receive only. Tested on simulated signals only</item>
+        <item>Radio Jove: Jupiter, the Sun and the galactic background around 20.1 MHz (the project\'s frequency, inside the Jupiter decametric band and above the ionospheric cut-off). A spectrogram of the capture with narrowband interference ignored, broadband bursts counted with time, duration, strength and width, the background level over the day (galactic noise) and CSV export. Needs an HF-capable radio and an antenna for 20 MHz (a dipole pair as in the Radio Jove kit, or an active loop). Receive only. Tested on simulated signals only</item>
+        <item>Solar radio bursts in the style of the e-CALLISTO network (45 - 870 MHz, 62.5 kHz frequency steps, 0.25 s rows): a spectrogram of one capture of the radio, bursts as events with start, duration, strength, bandwidth and drift rate (MHz per second, from the sloping ridge of the burst), the background over the day and CSV export. One capture covers only a few MHz: the CALLISTO spectrometer sweeps 200 channels per sweep over the whole band and this mode does not (it does not write CALLISTO FITS files either). Receive only. Tested on simulated signals only</item>
+        <item>Beacon event log for VHF and up: a carrier at the tuned frequency is followed in a +-1 kHz window and every opening is logged with start, duration, peak S/N, Doppler width and shift, and flutter. The kind is named by the signal\'s character only: a Doppler-spread signal as aurora-like, a fluttering carrier as TEP or scatter-like, a steady carrier as sporadic-E-like; the path itself is not proven. A spectrogram, an hourly count and CSV. Receive only. Tested on simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1027,6 +1039,12 @@
         <item>Emergency beacon, AM</item>
         <item>16 channel SATCOM multiplex</item>
         <item>Waterfall text, HF</item>
+        <item>ELF, 7.83 Hz</item>
+        <item>VLF, 1 - 10 kHz</item>
+        <item>EME echo, 144 MHz and up</item>
+        <item>Jupiter and Sun, 20.1 MHz</item>
+        <item>Solar bursts, 45 - 870 MHz</item>
+        <item>Beacon openings, VHF</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1363,5 +1381,11 @@
         <item>elt emergency locator transmitter 121.5 distress beacon swept tone siren aviation guard sar</item>
         <item>fleet broadcast fltsatcom ufo uhf satcom 250 mhz 75 baud 16 channel multiplex dbpsk 1200 baud 250.450 250.550 250.650 doppler r00t</item>
         <item>cp16 cp-16 crac chinese pattern hanzi gb2312 waterfall picture text weak signal emergency hf digital amateur</item>
+        <item>schumann resonance elf 7.83 magnetometer coil earth ionosphere cavity lightning global thunderstorm q-burst</item>
+        <item>whistler tweek vlf dawn chorus sferic lightning magnetosphere dispersion audio inspire</item>
+        <item>eme moon echo moonbounce earth moon earth test 144 432 1296 libration doppler delay 2.5 s</item>
+        <item>radio jove jupiter io decametric sun solar burst galactic noise 20.1 mhz 20 radio astronomy nasa spectrograph</item>
+        <item>callisto e-callisto solar radio burst type ii type iii spectrometer fits sun flare cme drift 45 870 mhz heliophysics</item>
+        <item>aurora sporadic e es tep trans equatorial beacon propagation opening vhf 50 70 144 beacon log doppler spread flutter 6m 2m</item>
     </string-array>
 </resources>

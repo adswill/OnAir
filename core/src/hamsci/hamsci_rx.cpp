@@ -15,7 +15,7 @@ namespace dect2 {
 
 namespace {
 constexpr double kAudioFs = 12000.0;
-constexpr size_t kMaxLines = 100;
+constexpr size_t kMaxLines = 100, kMaxEvtLines = 2000;
 constexpr size_t kMaxText = 4000;
 }
 
@@ -45,6 +45,7 @@ struct HamsciReceiver::Impl {
     hamsci::SidMonitor sid;
     hamsci::Riometer rio;
     hamsci::PulsarFolder psr;
+    std::unique_ptr<hamsci::EvtMonitor> evt;     // the event monitors (kinds 10 .. 15)
     // pulsar worker
     std::thread worker;
     std::atomic<bool> searching{false};
@@ -66,7 +67,7 @@ struct HamsciReceiver::Impl {
     bool manualCentre = false;
     double manualDot = 0;
 
-    explicit Impl(int k) : kind(k) {}
+    explicit Impl(int k) : kind(k) { if (hamsciEvtKind(k)) evt.reset(new hamsci::EvtMonitor(k - kHsSchumann)); }
     ~Impl() { if (worker.joinable()) worker.join(); }
 
     void say(const std::string& s) { std::function<void(const std::string&)> cb; { std::lock_guard<std::mutex> l(mu); cb = log; } if (cb) cb(s); }
@@ -78,6 +79,7 @@ struct HamsciReceiver::Impl {
         sid.reset(); sidDirty = true;
         rio.reset(); rio.setStartUnix((double)startUtc);
         psr.reset(); psrResult = hamsci::PulsarResult(); psrNext = 20.0;
+        if (evt) { evt->setStartUnix((double)startUtc); evt->setSignalOffset(offsetHz); if (rate > 0) evt->configure(rate); }
         snap = HamsciTelemetry(); snap.kind = kind;
     }
 
@@ -120,7 +122,7 @@ struct HamsciReceiver::Impl {
         HamsciLine l;
         l.timeSec = timeSec; l.utc = startUtc + (int64_t)timeSec; l.text = t; l.freqHz = freq; l.snrDb = snr; l.note = note;
         lines.insert(lines.begin(), l);
-        if (lines.size() > kMaxLines) lines.pop_back();
+        if (lines.size() > (hamsciEvtKind(kind) ? kMaxEvtLines : kMaxLines)) lines.pop_back();
         okCount++;
     }
     void appendText(const std::string& t) {
@@ -234,6 +236,18 @@ struct HamsciReceiver::Impl {
         }
     }
 
+    void feedEvt(const cf32* x, size_t cnt) {
+        evt->feed(x, cnt);
+        for (const auto& e : evt->take()) {
+            pushLine(e.type, e.freqHz, e.peakDb, e.note, e.timeSec);
+            evtAux.insert(evtAux.begin(), e);
+            if (evtAux.size() > kMaxEvtLines) evtAux.pop_back();
+            state = 3;
+        }
+        if (evt->state().timeSec > 5) state = std::max(state, 2);
+    }
+    std::vector<hamsci::EvtEvent> evtAux;   // the events with all their fields (CSV), newest first
+
     void startPulsarSearch() {
         if (searching.exchange(true)) return;
         if (worker.joinable()) worker.join();
@@ -275,6 +289,13 @@ struct HamsciReceiver::Impl {
             t.snrDb = (float)t.pulsar.snr;
             t.pulsarNeededM2 = psrNeeded;
         }
+        if (evt) {
+            t.evt = evt->state(); t.startUtc = startUtc;
+            t.dataValid = t.evt.timeSec > 5; t.levelDb = t.evt.levelDb;
+            t.found = t.evt.info.empty() ? std::string() : t.evt.info.back();
+            found = t.found;
+            if (!lines.empty() && state < 3) state = 3;
+        }
         t.state = n == 0 ? 0 : std::max(1, state);
         if (hamsciAudioKind(kind) && t.state < 2 && n > 0) t.state = 1;
         t.seq = snap.seq + 1;
@@ -291,7 +312,7 @@ HamsciReceiver::HamsciReceiver(int kind) : p_(new Impl(std::clamp(kind, 0, (int)
 HamsciReceiver::~HamsciReceiver() = default;
 
 void HamsciReceiver::configure(double r) { std::lock_guard<std::mutex> l(p_->mu); p_->configureRate(r); }
-void HamsciReceiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> l(p_->mu); p_->offsetHz = hz; if (p_->rate >= 250000.0) p_->front.setOffsetHz(hz); p_->sidDirty = true; }
+void HamsciReceiver::setSignalOffset(double hz) { std::lock_guard<std::mutex> l(p_->mu); p_->offsetHz = hz; if (p_->evt) p_->evt->setSignalOffset(hz); if (p_->rate >= 250000.0) p_->front.setOffsetHz(hz); p_->sidDirty = true; }
 void HamsciReceiver::setCenterHz(double hz) {
     std::lock_guard<std::mutex> l(p_->mu);
     p_->centerHz = hz; p_->sidDirty = true;
@@ -299,7 +320,7 @@ void HamsciReceiver::setCenterHz(double hz) {
 }
 bool HamsciReceiver::ready() const { std::lock_guard<std::mutex> l(p_->mu); return p_->rate >= hamsciTuning(kind_).minSampleRate; }
 void HamsciReceiver::reset() { std::lock_guard<std::mutex> l(p_->mu); if (p_->rate > 0) p_->clearAll(); }
-void HamsciReceiver::clearResults() { std::lock_guard<std::mutex> l(p_->mu); p_->lines.clear(); p_->text.clear(); p_->okCount = p_->badCount = 0; p_->found.clear(); }
+void HamsciReceiver::clearResults() { std::lock_guard<std::mutex> l(p_->mu); p_->evtAux.clear(); p_->lines.clear(); p_->text.clear(); p_->okCount = p_->badCount = 0; p_->found.clear(); }
 void HamsciReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> l(p_->mu); p_->log = std::move(cb); }
 
 void HamsciReceiver::setAuto(bool on) {
@@ -326,6 +347,9 @@ void HamsciReceiver::setPulsarTarget(double periodS, double dm, double flux) {
     p_->psrResult = hamsci::PulsarResult();
     p_->psrNext = 20.0;
 }
+void HamsciReceiver::setEvtThresholdDb(double db) { std::lock_guard<std::mutex> l(p_->mu); if (p_->evt) p_->evt->setThresholdDb(db); }
+std::string HamsciReceiver::evtExportCsv() const { std::lock_guard<std::mutex> l(p_->mu); std::vector<hamsci::EvtEvent> v(p_->evtAux.rbegin(), p_->evtAux.rend()); return hamsci::evtCsv(v, p_->startUtc); }
+std::string HamsciReceiver::evtExportTrendCsv() const { std::lock_guard<std::mutex> l(p_->mu); return p_->evt ? hamsci::evtTrendCsv(p_->evt->state(), p_->startUtc) : std::string(); }
 void HamsciReceiver::pulsarSearchNow() { std::lock_guard<std::mutex> l(p_->mu); if (kind_ == kHsPulsar) p_->startPulsarSearch(); }
 
 void HamsciReceiver::feed(const cf32* x, size_t cnt) {
@@ -342,6 +366,7 @@ void HamsciReceiver::feed(const cf32* x, size_t cnt) {
         if (obs >= s.psrNext && !s.searching.load()) { s.psrNext = obs + std::max(15.0, obs * 0.3); s.startPulsarSearch(); }
         break;
     }
+    case kHsSchumann: case kHsWhistler: case kHsEme: case kHsJove: case kHsCallisto: case kHsAurora: s.feedEvt(x, cnt); break;
     default: s.feedAudioKind(x, cnt); break;   // the audio modes need the channel front end (a radio rate of 250 kHz or more)
     }
     s.n += cnt;
@@ -359,11 +384,11 @@ bool HamsciReceiver::telemetry(HamsciTelemetry& out, uint64_t lastSeq) {
 
 // ---------------------------------------------------------------------------------------------------------------------------------- tuning, names
 const char* hamsciId(int kind) {
-    static const char* id[kHamsciKinds] = {"qrss", "dfcw", "fsk441", "iscat", "pi4", "throb", "supersid", "riometer", "pulsar", "jt6m"};
+    static const char* id[kHamsciKinds] = {"qrss", "dfcw", "fsk441", "iscat", "pi4", "throb", "supersid", "riometer", "pulsar", "jt6m", "schumann", "whistler", "emeecho", "radiojove", "callisto", "beaconevents"};
     return id[std::clamp(kind, 0, (int)kHamsciKinds - 1)];
 }
 const char* hamsciName(int kind) {
-    static const char* nm[kHamsciKinds] = {"QRSS grabber", "DFCW grabber", "FSK441", "ISCAT", "PI4", "Throb", "SuperSID (VLF)", "Riometer", "Pulsar folding", "JT6M"};
+    static const char* nm[kHamsciKinds] = {"QRSS grabber", "DFCW grabber", "FSK441", "ISCAT", "PI4", "Throb", "SuperSID (VLF)", "Riometer", "Pulsar folding", "JT6M", "Schumann resonances", "Whistlers and tweeks", "Moon echo (EME)", "Radio Jove", "e-CALLISTO bursts", "Aurora / Es / TEP beacons"};
     return nm[std::clamp(kind, 0, (int)kHamsciKinds - 1)];
 }
 
@@ -387,6 +412,13 @@ ModeTuning hamsciTuning(int kind) {
     case kHsThrob: t.minMhz = 1.8; t.maxMhz = 30; t.defMhz = 14.075; break;
     case kHsSid: t.minMhz = 0.003; t.maxMhz = 0.1; t.defMhz = 0.022; t.sampleRate = 250000; t.bandwidthMhz = 0.2; t.minSampleRate = 48000; break;
     case kHsRiometer: t.minMhz = 20; t.maxMhz = 60; t.defMhz = 30.0; t.sampleRate = 2e6; t.bandwidthMhz = 1.0; t.minSampleRate = 48000; t.notCircular = true; break;
+    // event monitors: the first two take a sound-card or ADC input (an ELF or VLF receiver) like SuperSID, the others a narrow or wide RF capture
+    case kHsSchumann: t.minMhz = 0.0; t.maxMhz = 0.1; t.defMhz = 0.0; t.sampleRate = 48000; t.bandwidthMhz = 0.01; t.minSampleRate = 400; t.notCircular = true; break;
+    case kHsWhistler: t.minMhz = 0.0; t.maxMhz = 0.1; t.defMhz = 0.0; t.sampleRate = 48000; t.bandwidthMhz = 0.048; t.minSampleRate = 16000; t.notCircular = true; break;
+    case kHsEme: t.minMhz = 50; t.maxMhz = 10400; t.defMhz = 144.0; t.sampleRate = 250000; t.bandwidthMhz = 0.2; t.minSampleRate = 8000; break;
+    case kHsJove: t.minMhz = 10; t.maxMhz = 40; t.defMhz = 20.1; t.sampleRate = 2e6; t.bandwidthMhz = 2.0; t.minSampleRate = 250000; break;
+    case kHsCallisto: t.minMhz = 45; t.maxMhz = 870; t.defMhz = 200.0; t.sampleRate = 2e6; t.bandwidthMhz = 2.0; t.minSampleRate = 250000; break;
+    case kHsAurora: t.minMhz = 28; t.maxMhz = 1300; t.defMhz = 50.0; t.sampleRate = 250000; t.bandwidthMhz = 0.2; t.minSampleRate = 8000; break;
     default: t.minMhz = 100; t.maxMhz = 6000; t.defMhz = 408.0; t.sampleRate = 2.4e6; t.bandwidthMhz = 2.4; t.minSampleRate = 1e6; break;
     }
     return t;
@@ -416,6 +448,15 @@ std::string hamsciSummary(const HamsciTelemetry& t) {
         if (t.pulsar.ok) std::snprintf(b, sizeof b, "Pulsar: detected, S/N %.1f, period %.6f s, DM %.1f", t.pulsar.snr, t.pulsar.periodS, t.pulsar.dm);
         else std::snprintf(b, sizeof b, "Pulsar: no detection yet (%.0f s observed, best S/N %.1f)", t.pulsarObservedSec, t.pulsar.snr);
         break;
+    case kHsSchumann:
+        if (t.evt.peakHz.empty() || t.evt.peakHz[0] <= 0) std::snprintf(b, sizeof b, "Schumann: averaging (%.0f s), no fundamental yet", t.timeSec);
+        else std::snprintf(b, sizeof b, "Schumann: fundamental %.2f Hz, %.1f dB over the baseline, %d transients", (double)t.evt.peakHz[0], (double)t.evt.peakDb[0], t.evt.eventsTotal);
+        break;
+    case kHsWhistler: std::snprintf(b, sizeof b, "Whistlers and tweeks: %d events", t.evt.eventsTotal); break;
+    case kHsEme: if (t.evt.eventsTotal) std::snprintf(b, sizeof b, "Moon echo: %d echoes found", t.evt.eventsTotal); else std::snprintf(b, sizeof b, "Moon echo: %d own pulses seen, no echo yet", t.evt.txPulses); break;
+    case kHsJove: std::snprintf(b, sizeof b, "Radio Jove: %d bursts", t.evt.eventsTotal); break;
+    case kHsCallisto: std::snprintf(b, sizeof b, "e-CALLISTO bursts: %d bursts", t.evt.eventsTotal); break;
+    case kHsAurora: std::snprintf(b, sizeof b, "Beacon events: %d openings%s", t.evt.eventsTotal, t.state >= 3 && !t.lines.empty() ? ", last: " : ""); break;
     default:
         if (!t.lines.empty()) std::snprintf(b, sizeof b, "%s: %llu decodes, last: %.60s", nm, (unsigned long long)t.blocksOk, t.lines[0].text.c_str());
         else if (!t.text.empty()) std::snprintf(b, sizeof b, "%s: %llu characters%s%s", nm, (unsigned long long)t.blocksOk, t.found.empty() ? "" : ", ", t.found.c_str());

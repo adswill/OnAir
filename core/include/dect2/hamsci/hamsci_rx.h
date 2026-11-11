@@ -48,6 +48,10 @@ public:
     // pulsar: the target's nominal period (s), dispersion measure, the observing frequency (MHz) and bandwidth set by the radio; search ranges stay automatic
     void setPulsarTarget(double periodS, double dm, double fluxJy);
     void pulsarSearchNow();
+    // event monitors (kinds 10 .. 15, hamsci_evt.h): detection threshold (the kind's default when never set), CSV of the events and of the trend
+    void setEvtThresholdDb(double db);
+    std::string evtExportCsv() const;
+    std::string evtExportTrendCsv() const;
 
 private:
     struct Impl;

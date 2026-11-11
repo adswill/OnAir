@@ -1715,3 +1715,11 @@ Owner request from a Discord thread (SATCOM 250 MHz modes): new mode 870 (own en
 
 ## 2026-11-11 CP16 (feat39-cp16, #474)
 New mode CP16, CRAC's 16-carrier picture text (family 880, engine standard 882), receive and transmit, from CRAC's published descriptions (T/RAC 019-2019 itself is not public). The receiver finds the carriers, the sideband and the rows by itself, shows the dots as a picture and reads the characters against a GB2312 font (the user's HZK16 / TTF, or the bundled Noto Sans CJK SC). The transmitter sends typed text. CP16+ (MIT) recordings and truth files are used as test vectors; the dots match them 100 % with the parameters fixed. The default test passes on GitHub. The long sweep shows limits: short rows (spacing x row below about 1.3), 4 s a character, and machine reading below -3 dB. Details: docs/CP16-3.9.md. Simulated only.
+2026-11-11 feat39-w1b (ham science event monitors, docs/W1B-3.9.md). Six new modes as kinds 10 to 15 of the hamsci receiver, one mode-list entry
+each: Schumann resonance monitor (820), whistler and tweek detector (823), Moon echo test (826, rows 138 and 270 merged), Radio Jove (829),
+e-CALLISTO style solar bursts (832) and aurora / sporadic-E / TEP beacon events (835). Spectrogram, event list with times, trend per minute,
+events per UTC hour and CSV (events, trend, save to the data folder) for each; generators in hamsci_evt_gen.cpp; Android and web schema regenerated.
+GRAVES (269) skipped: the Meteor scatter mode (104) already follows GRAVES and matches satellite echoes. Specs were read from Wikipedia (Schumann,
+whistlers), the NASA Radio Jove FAQ, the e-CALLISTO site, the tweek papers and the EME libration pages; what has no source (whistler D range,
+aurora / TEP / Es split, burst drift classes) is marked as ours. Simulated signals only. Written with no local build (battery rule): syntax checks
+only, tests run with quick.yml.
