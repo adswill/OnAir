@@ -3947,3 +3947,42 @@ Invert bits	Bits invertieren
 The bit polarity is not published. Switch it when the idle channels look swapped.	Die Bitpolarität ist nicht veröffentlicht. Umschalten, wenn die Leerlaufkanäle vertauscht aussehen.
 Link	Link
 16 channel SATCOM multiplex	SATCOM-Multiplex mit 16 Kanälen
+# plugin store (docs/PLUGIN-MARKETPLACE-3.9.md)
+Advanced: registry address and key	Erweitert: Registry-Adresse und Schlüssel
+All categories	Alle Kategorien
+All installed plugins are up to date.	Alle installierten Plugins sind aktuell.
+Check for updates	Nach Updates suchen
+I understand that this plugin is native code	Ich weiß, dass dieses Plugin nativer Code ist
+Install	Installieren
+Install now	Jetzt installieren
+Install plugin?	Plugin installieren?
+Installed version	Installierte Version
+It asks for	Es verlangt
+It asks for no permissions.	Es verlangt keine Berechtigungen.
+It is off until you turn it on in the Installed tab.	Es ist ausgeschaltet, bis Sie es im Reiter Installiert einschalten.
+List from	Liste vom
+Listed: it only meets the listing rules (open licence, declared permissions). Nobody has looked at its code.	Gelistet: Es erfüllt nur die Listenregeln (offene Lizenz, angegebene Berechtigungen). Niemand hat sich den Code angesehen.
+No list yet. Press Refresh.	Noch keine Liste. Drücken Sie Aktualisieren.
+No plugins to show.	Keine Plugins zum Anzeigen.
+No signing key is set for this registry, so its list cannot be trusted and nothing is fetched. The project's key is not published yet; for another registry, set its address and key under Advanced.	Für diese Registry ist kein Signaturschlüssel gesetzt, deshalb ist ihrer Liste nicht zu trauen und es wird nichts abgerufen. Der Schlüssel des Projekts ist noch nicht veröffentlicht; für eine andere Registry setzen Sie Adresse und Schlüssel unter Erweitert.
+Nothing is fetched until you press Refresh, open a plugin or install one. The registry is %s; that server sees your IP address and the OnAir version, nothing else. No account, no telemetry.	Es wird nichts abgerufen, bis Sie Aktualisieren drücken, ein Plugin öffnen oder eines installieren. Die Registry ist %s; dieser Server sieht Ihre IP-Adresse und die OnAir-Version, sonst nichts. Kein Konto, keine Telemetrie.
+Plugins are native code and run with this program's rights. There is no sandbox for untrusted plugins yet: install only plugins you trust. Reviewed means a person looked at it, not a guarantee.	Plugins sind nativer Code und laufen mit den Rechten dieses Programms. Für nicht vertrauenswürdige Plugins gibt es noch keine Sandbox: Installieren Sie nur Plugins, denen Sie vertrauen. Geprüft heißt, dass sich eine Person den Code angesehen hat, keine Garantie.
+Project page	Projektseite
+Public key (hex); empty = the project's key for the project's registry	Öffentlicher Schlüssel (hex); leer = der Schlüssel des Projekts für die Registry des Projekts
+Removed	Entfernt
+Reviewed: a person looked at it. This is not a guarantee.	Geprüft: Eine Person hat es sich angesehen. Das ist keine Garantie.
+Source code	Quellcode
+Store	Store
+Switched off by the registry	Von der Registry abgeschaltet
+The list is up to date.	Die Liste ist aktuell.
+The registry is a folder of files on an https:// address (or a local folder). Its list is signed; OnAir only accepts a list signed with the key below (64 hex digits). Do not use a registry whose key you did not get from its owner.	Die Registry ist ein Ordner mit Dateien unter einer https://-Adresse (oder ein lokaler Ordner). Ihre Liste ist signiert; OnAir akzeptiert nur eine Liste, die mit dem unten stehenden Schlüssel (64 Hexziffern) signiert ist. Verwenden Sie keine Registry, deren Schlüssel Sie nicht von ihrem Betreiber haben.
+This is native code. Once it runs it can do anything this program can do on your computer, whatever it asks for here; there is no sandbox yet. Install it only if you trust its author.	Dies ist nativer Code. Sobald er läuft, kann er auf Ihrem Computer alles tun, was dieses Programm kann, egal was er hier verlangt; es gibt noch keine Sandbox. Installieren Sie ihn nur, wenn Sie seinem Autor vertrauen.
+Use the project's registry	Registry des Projekts verwenden
+Verified: a maintainer read the source, built it and compared it with the package. This is still not a guarantee.	Verifiziert: Ein Maintainer hat den Quellcode gelesen, gebaut und mit dem Paket verglichen. Auch das ist keine Garantie.
+listed	gelistet
+listing(s) hidden: not for this computer, this plugin interface version or this OnAir version.	Eintrag/Einträge ausgeblendet: nicht für diesen Computer, diese Plugin-Schnittstellenversion oder diese OnAir-Version.
+reviewed	geprüft
+the registry folder	der Registry-Ordner
+update	Update
+update(s) available. Select a plugin and press Update.	Update(s) verfügbar. Wählen Sie ein Plugin und drücken Sie Update.
+verified	verifiziert

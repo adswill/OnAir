@@ -6,6 +6,7 @@
 #include "dect2/engine/mode_tuning.h"
 #include "dect2/plugin/host.h"
 #include "platform/platform.h"
+#include "pstore/store_ui.h"
 #include "ui/theme.h"
 #include <algorithm>
 #include <cmath>
@@ -493,10 +494,23 @@ void managerPanel(App& a) {
     ImGui::EndChild();
 }
 
+// the manager with its two tabs: what is installed, and the Store (docs/PLUGIN-MARKETPLACE-3.9.md)
+void managerTabs(App& a) {
+    if (!P.inited) { managerPanel(a); return; }
+    if (ImGui::BeginTabBar("##plugtabs")) {
+        if (ImGui::BeginTabItem(trw("Installed"))) { managerPanel(a); ImGui::EndTabItem(); }
+        if (ImGui::BeginTabItem(trw("Store"))) {
+            if (pluginStoreTab(a, *P.mgr, [](const std::string& id) { if (P.activeId == id) stopActive(); })) registerModes();
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
+}
+
 // the main tab of the "Plugins" row and of every plugin mode
 void tab(App& a) {
     if (!P.inited) return;
-    if (a.family == 999) { managerPanel(a); return; }
+    if (a.family == 999) { managerTabs(a); return; }
     std::string pid, mid;
     if (!P.mgr->modeFromNumber(a.family, pid, mid)) { ImGui::TextDisabled("%s", tr("This plugin mode is not installed any more.")); return; }
     dp::Entry e;
@@ -596,6 +610,7 @@ void pluginFrame(App& a) {
 }
 
 void pluginShutdown() {
+    pluginStoreShutdown();
     if (!P.inited) return;
     stopActive();
     P.mgr->stopAll();
@@ -609,6 +624,6 @@ void pluginManagerWindow(App& a) {
     if (!P.inited) init(a);
     firstWindowSize(820 * gUi, 520 * gUi);
     if (!ImGui::Begin(trw("Plugins"), &a.pluginsOpen)) { ImGui::End(); return; }
-    managerPanel(a);
+    managerTabs(a);
     ImGui::End();
 }

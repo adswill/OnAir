@@ -1,0 +1,23 @@
+# Copy to .github/workflows/ of the registry repository (the folder that holds index.json). Needs tools/onair_registry.py from OnAir's tools/marketplace.
+name: Validate registry
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  lint:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Lint pages, artefacts and policy
+        run: python3 tools/onair_registry.py lint . --fetch
+      - name: Index is not edited by hand
+        if: github.event_name == 'pull_request'
+        run: |
+          git fetch origin ${{ github.base_ref }} --depth=1
+          if git diff --name-only origin/${{ github.base_ref }} -- index.json index.json.sig | grep .; then
+            echo "index.json and index.json.sig are made by the maintainer, not in pull requests"; exit 1
+          fi
