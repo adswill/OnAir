@@ -419,7 +419,7 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     if (!getenv("QA_PACE")) setenv("DECT2_NOPACE", "1", 1);
     TuneSettings t;
     tuneFor(en, rate, t);
-    if (custom) t.bandwidthMhz *= kBwMul;
+    if (custom && en.kind != 1 && en.kind != 2) t.bandwidthMhz *= kBwMul;   // DVB-T / T2: the bandwidth is the channel raster (symbol rate), not a filter
     const bool direct = getenv("QA_DIRECT") != nullptr;   // debugging: the engine on the synthetic source itself, no file
     if (!direct) t.synth = SynthConfig();   // the engine reads a file: no generator
     else t.centerHz += en.offsetHz;
