@@ -3,6 +3,7 @@
 #include "app.h"
 #include "adsb/adsb_map.h"
 #include "dect2/sonde/sonde_sites.h"
+#include "dect2/sonde/sonde_launch_clock.h"
 #include "i18n/i18n.h"
 #include <cmath>
 #include <cstdio>
@@ -63,9 +64,9 @@ void sondeSitesView(App& a) {
     ImGui::TextDisabled("%s", tr("A site is where sondes are first heard low and climbing (within 5 km is the same site). A landing is the last position after a burst, below 1500 m."));
     const auto& v = G.st.sites();
     if (v.empty()) { ImGui::TextDisabled("%s", tr("No launch seen yet.")); return; }
-    if (!ImGui::BeginTable("##sondesitest", 6, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
+    if (!ImGui::BeginTable("##sondesitest", 7, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) return;
     ImGui::TableSetupColumn(tr("Site")); ImGui::TableSetupColumn(tr("Position")); ImGui::TableSetupColumn(tr("Launches")); ImGui::TableSetupColumn(tr("Landings"));
-    ImGui::TableSetupColumn(tr("Usually lands")); ImGui::TableSetupColumn(tr("Last"), ImGuiTableColumnFlags_WidthStretch);
+    ImGui::TableSetupColumn(tr("Usually lands")); ImGui::TableSetupColumn(tr("Next launch (UTC)")); ImGui::TableSetupColumn(tr("Last"), ImGuiTableColumnFlags_WidthStretch);
     ImGui::TableHeadersRow();
     for (const auto& s : v) {
         ImGui::TableNextRow();
@@ -85,6 +86,18 @@ void sondeSitesView(App& a) {
             const double r = 3.14159265358979 / 180, dy = (la - s.lat) * 111.2, dx = (lo - s.lon) * 111.2 * std::cos(s.lat * r);
             ImGui::Text("%.0f km at %.0f deg", std::hypot(dx, dy), std::fmod(std::atan2(dx, dy) / r + 360, 360));
         } else ImGui::TextDisabled("-");
+        ImGui::TableNextColumn();
+        {   // the launch clock: when this site usually sends a sonde, and "tune now" inside the window
+            const int64_t now = (int64_t)std::time(nullptr);
+            const auto p = dect2::predictNextLaunch(s.launchTimes, now);
+            if (!p.valid) ImGui::TextDisabled("%s", tr("learning"));
+            else {
+                const int sod = (int)(p.nextUtc % 86400); char b[24]; std::snprintf(b, sizeof b, "%02d:%02d", sod / 3600, sod / 60 % 60);
+                if (dect2::launchWindowOpen(p, now)) ImGui::TextColored(ImVec4(0.3f, 0.9f, 0.4f, 1.f), "%s  %s", b, tr("now: tune in"));
+                else ImGui::Text("%s  (+/- %d min)", b, p.spreadMin / 2 + 1);
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Learned from the launches this station heard: the usual time of day of this site's sondes. Tune in about 15 minutes before."));
+        }
         ImGui::TableNextColumn(); { const time_t t = (time_t)s.lastUtc; struct tm l = *localtime(&t); char b[24]; std::strftime(b, sizeof b, "%Y-%m-%d %H:%M", &l); ImGui::TextUnformatted(b); }
     }
     ImGui::EndTable();

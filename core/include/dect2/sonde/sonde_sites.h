@@ -15,6 +15,7 @@ struct SondeSite {
     double lat = 0, lon = 0;           // the mean of the launches
     int launches = 0;
     int64_t lastUtc = 0;
+    std::vector<int64_t> launchTimes;  // unix times of the launches heard (last 80): feeds the launch clock (sonde_launch_clock.h)
     std::vector<std::pair<float, float>> landings;   // lat, lon of the last positions after a burst
 };
 

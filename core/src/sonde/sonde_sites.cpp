@@ -34,6 +34,7 @@ void SondeSites::update(const std::vector<SondeInfo>& v, int64_t utc) {
                 st.lat = (st.lat * st.launches + f.lat) / (st.launches + 1);
                 st.lon = (st.lon * st.launches + f.lon) / (st.launches + 1);
                 st.launches++; st.lastUtc = utc;
+                st.launchTimes.push_back(utc); if (st.launchTimes.size() > 80) st.launchTimes.erase(st.launchTimes.begin());
                 w.site = st.id;
                 dirty_ = true;
             }
@@ -61,6 +62,7 @@ std::string SondeSites::serialize() const {
     for (const auto& s : sites_) {
         std::string n = s.name; for (char& c : n) if (c == '\t' || c == '\n') c = ' ';
         o << "S\t" << s.id << '\t' << n << '\t' << s.lat << '\t' << s.lon << '\t' << s.launches << '\t' << s.lastUtc << '\n';
+        for (int64_t t : s.launchTimes) o << "T\t" << s.id << '\t' << t << '\n';
         for (const auto& l : s.landings) o << "L\t" << s.id << '\t' << l.first << '\t' << l.second << '\n';
     }
     return o.str();
@@ -78,6 +80,9 @@ void SondeSites::parse(const std::string& text) {
         if (f.size() >= 7 && f[0] == "S") {
             SondeSite s; s.id = std::atoi(f[1].c_str()); s.name = f[2]; s.lat = std::atof(f[3].c_str()); s.lon = std::atof(f[4].c_str()); s.launches = std::atoi(f[5].c_str()); s.lastUtc = std::atoll(f[6].c_str());
             if (s.id > 0) { sites_.push_back(s); nextId_ = std::max(nextId_, s.id + 1); }
+        } else if (f.size() >= 3 && f[0] == "T") {
+            const int id = std::atoi(f[1].c_str());
+            for (auto& s : sites_) if (s.id == id) s.launchTimes.push_back(std::atoll(f[2].c_str()));
         } else if (f.size() >= 4 && f[0] == "L") {
             const int id = std::atoi(f[1].c_str());
             for (auto& s : sites_) if (s.id == id) s.landings.push_back({(float)std::atof(f[2].c_str()), (float)std::atof(f[3].c_str())});

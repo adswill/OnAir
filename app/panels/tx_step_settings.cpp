@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include "../platform/platform.h"
+#include "dect2/tx/tx_plan.h"
 
 using namespace txui;
 
@@ -64,6 +65,12 @@ void rangeNote(TxUi& s, const DeviceInfo* radio) {
     if (!noRadio(s)) {
         const std::string note = txRangeInfo(*radio, s.freqMhz * 1e6);
         if (!note.empty()) banner(Note::Info, note.c_str());
+        // frequency plan check (warning only, never blocks): the carrier or a harmonic lands on a protected band
+        const auto plan = dect2::planCheck(s.freqMhz);
+        for (const auto& w : plan) {
+            char b[200]; std::snprintf(b, sizeof b, "%.3f MHz: %s", w.mhz, w.what.c_str());
+            banner(Note::Warn, b);
+        }
     }
 }
 

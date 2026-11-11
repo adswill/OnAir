@@ -30,6 +30,7 @@ int main() {
     st.rename(1, "Kaunas");
     SondeSites r; r.parse(st.serialize() + "junk\n");
     CHECK(r.sites().size() == 2 && r.sites()[0].name == "Kaunas" && r.sites()[0].landings.size() == 2 && r.sites()[1].landings.size() == 1, "saved and read back");
+    CHECK(r.sites()[0].launchTimes.size() == 2 && r.sites()[0].launchTimes[0] == t, "launch times kept and read back");
     r.update({flight("D1", 54.70, 25.31, 100, false, false)}, t + 9000);
     CHECK(r.sites()[0].launches == 3 && r.sites().size() == 2, "new launch at a known site after loading");
     return testSummary("sonde_sites");
