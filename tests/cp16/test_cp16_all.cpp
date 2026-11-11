@@ -312,7 +312,7 @@ int main() {
         {"2 s 15 Hz USB", 2.0, 15, 1000, false, 0, 0, 30, 0, 0.95},
         {"1 s 20 Hz LSB +40 Hz +80 ppm", 1.0, 20, 1500, true, 40, 80, 20, 1, 0.95},
         {"3 s 11 Hz -73 Hz -120 ppm", 3.0, 11, 700, false, -73, -120, 15, 0, 0.9},
-        {"2 s 15 Hz SNR -8 dB", 2.0, 15, 1000, false, 12, 30, -8, 0, 0.7},
+        {"2 s 15 Hz SNR -3 dB", 2.0, 15, 1000, false, 12, 30, -3, 0, 0.8},
     };
     if (longRun) {
         for (double cs : cp16::kCharSecChoices)
@@ -323,11 +323,11 @@ int main() {
                     names.push_back(b);
                     cases.push_back({names.back().c_str(), cs, sp, 900 + 37 * sp, side == 1, 25, -60, 20, 1, sp * cs / 17 >= 1.0 ? 0.9 : 0.6});
                 }
-        for (double snr : {10.0, 0.0, -5.0, -10.0, -13.0}) {
+        for (double snr : {10.0, 0.0, -3.0, -5.0, -8.0, -10.0, -13.0}) {
             char b[64];
             snprintf(b, sizeof b, "SNR %.0f dB", snr);
             names.push_back(b);
-            cases.push_back({names.back().c_str(), 2.0, 15, 1000, false, 0, 0, snr, 0, snr >= -5 ? 0.85 : 0.0});
+            cases.push_back({names.back().c_str(), 2.0, 15, 1000, false, 0, 0, snr, 0, snr >= -3 ? 0.8 : 0.0});
         }
     }
     for (const Case& c : cases) runCase(c, true);

@@ -207,8 +207,10 @@ struct Cp16Receiver::Impl {
         if (near0) ranges.push_back({combF - 20, combF + 20});
         else if (manB > 0) {
             const double spanMax = 15 * sp1;
-            if (side != 2) ranges.push_back({manB - 60, manB + 60});
-            if (side != 1) ranges.push_back({-manB - spanMax - 60, -manB - 15 * sp0 + 60});
+            // the given frequency itself (a few Hz of tuning error): a comb further off could be another tone of the signal, a pilot or a marker
+            (void)spanMax;
+            if (side != 2) ranges.push_back({manB - 4, manB + 4});
+            if (side != 1) ranges.push_back({-manB - 15 * sp1 - 4, -manB - 15 * sp0 + 4});
         } else {
             const int wbox = (int)(300 / kBin);
             double best = -1; int bi = 0;
@@ -491,15 +493,22 @@ struct Cp16Receiver::Impl {
         return best;
     }
 
-    // which arrangements hold (nearly) all the ink read so far in their 16 columns
+    // which arrangements hold (nearly) all the ink read so far in their 16 columns, with its centre near theirs (the glyphs of a font sit in the middle of the cell)
     void arrangementsThatFit(bool valid[kNumArr]) const {
-        double ink[kPos] = {}, total = 0;
-        for (const Row& r : rows) for (int p = 0; p < kPos; p++) if (r.d[p] >= 0.5f) { ink[p] += 1; total += 1; }
+        double ink[kPos] = {}, total = 0, mom = 0;
+        for (const Row& r : rows) for (int p = 0; p < kPos; p++) if (r.d[p] >= 0.5f) { ink[p] += 1; total += 1; mom += p; }
+        const double centre = total > 0 ? mom / total : 0;
+        int nearest = 0;
+        bool any = false;
         for (int a = 0; a < kNumArr; a++) {
             double out = 0;
             for (int p = 0; p < kPos; p++) { const int j = p - kMaxShift - kArrs[a]; if (j < 0 || j >= cp16::kCarriers) out += ink[p]; }
-            valid[a] = total < 1 || out <= 0.03 * total;
+            const double wc = kMaxShift + kArrs[a] + 7.5;
+            if (std::fabs(wc - centre) < std::fabs(kMaxShift + kArrs[nearest] + 7.5 - centre)) nearest = a;
+            valid[a] = total < 50 || (out <= 0.03 * total && std::fabs(wc - centre) <= 1.6);
+            any = any || valid[a];
         }
+        if (!any) valid[nearest] = true;
     }
 
     void readCharacters() {
