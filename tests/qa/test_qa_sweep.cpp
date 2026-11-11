@@ -433,6 +433,12 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     if (en.stdMode == 39 && !direct && getenv("QA_T0")) e.js8().setStartTime(atof(getenv("QA_T0")));
     DeviceInfo dev; dev.kind = direct ? DeviceInfo::Synthetic : DeviceInfo::File; dev.name = direct ? "synthetic" : path;
     FileOptions fo; fo.path = path; fo.format = FileFormat::CI16; fo.sampleRate = rate; fo.loop = false;
+    struct TapStat { std::atomic<uint64_t> n{0}, nz{0}; std::atomic<double> p{0}; } tap;   // QA_SWEEP_VERBOSE: what the engine took in, before any processing
+    if (getenv("QA_SWEEP_VERBOSE")) e.setIqTap([&tap](const std::complex<float>* x, size_t n, double) {
+        double p = 0; uint64_t nz = 0;
+        for (size_t i = 0; i < n; i++) { const float m = std::norm(x[i]); p += m; if (m > 0) nz++; }
+        tap.n += n; tap.nz += nz; tap.p = tap.p.load() + p;
+    });
     const double cpu0 = cpuSeconds();
     wd.arm("start", 60);
     if (!e.start(dev, t, fo)) {
@@ -487,6 +493,7 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
         for (auto& l : e.logSnapshot(n)) fprintf(stderr, "  log: %s\n", l.c_str());
         fprintf(stderr, "  last report: std %d state %d valid %d ok %llu bad %llu cfo %.1f snr %.1f processed %.2f s\n", rx.standard, rx.state, rx.dataValid ? 1 : 0,
                 (unsigned long long)rx.blocksOk, (unsigned long long)rx.blocksBad, rx.cfoHz, rx.dataSnrDb, proc);
+        fprintf(stderr, "  ingest: %llu samples, %.1f %% non-zero, rms %.6g\n", (unsigned long long)tap.n.load(), tap.n ? 100.0 * (double)tap.nz.load() / (double)tap.n.load() : 0.0, tap.n ? std::sqrt(tap.p.load() / (double)tap.n.load()) : 0.0);
         if (rx.standard == 641) fprintf(stderr, "  vdl3: syncs %llu noise %.1f dB level %.1f dB rate %.0f ok %d center %.0f now %.2f s\n", (unsigned long long)rx.vdl3.syncs, rx.vdl3.noiseDb, rx.vdl3.levelDb, rx.vdl3.inputRate, rx.vdl3.rateOk ? 1 : 0, rx.vdl3.centerHz, rx.vdl3.nowSec);
         if (rx.standard == 791) fprintf(stderr, "  ltpos: state %d pulses %llu floor %.1f dB peak %.1f dB threshold %.1f rate %.0f time %.2f s\n", rx.ltpos.state, (unsigned long long)rx.ltpos.pulses, rx.ltpos.floorDb, rx.ltpos.snrDb, rx.ltpos.thresholdDb, rx.ltpos.inputRate, rx.ltpos.timeSec);
         if (rx.standard == 26) fprintf(stderr, "  hfdig: rtty chars %llu text %zu, ftx decodes %zu, audio %.1f dB, level %.1f dB\n", (unsigned long long)rx.hfdig.rtty.chars, rx.hfdig.rtty.text.size(), rx.hfdig.ftx.decodes.size(), rx.hfdig.audioDb, rx.hfdig.levelDb);
