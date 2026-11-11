@@ -318,9 +318,6 @@ struct HighRateRx::Impl {
     std::vector<SuperInfo> supers;          // per superframe since the lock: the rate and the 103 known symbols
     float inScale = 1;
     double eqNoise = 0.05;                  // noise per sample, relative to the signal at the lock
-    std::vector<double> prof;               // the averaged power of the channel taps (the sample clock)
-    double profRef = -1;
-    int64_t superDone = 0;
     std::vector<float> soft;
     std::vector<uint8_t> bitHist;    // for the EOM search
     uint32_t eomWin = 0;
@@ -607,8 +604,8 @@ struct HighRateRx::Impl {
         if (n == 0) return;
         if (n == 1) { for (int l = 0; l < kCirN; l++) out[l] = prs[(size_t)idx[0]].h[l]; return; }
         if (n == 2 && (prs[(size_t)idx[0]].c < m) == (prs[(size_t)idx[1]].c < m)) {   // both on one side: hold the nearer one
-            const int near = std::fabs(prs[(size_t)idx[0]].c - m) < std::fabs(prs[(size_t)idx[1]].c - m) ? idx[0] : idx[1];
-            for (int l = 0; l < kCirN; l++) out[l] = prs[(size_t)near].h[l];
+            const int closest = std::fabs(prs[(size_t)idx[0]].c - m) < std::fabs(prs[(size_t)idx[1]].c - m) ? idx[0] : idx[1];
+            for (int l = 0; l < kCirN; l++) out[l] = prs[(size_t)closest].h[l];
             return;
         }
         // the probes in time order; the mean rotation between them is taken out before the interpolation (a frequency error, the
@@ -743,9 +740,7 @@ struct HighRateRx::Impl {
                 e.ok = ok;
                 ea = 0;
                 for (int l = 0; l < kCirN; l++) ea += std::norm(e.h[l]);
-                prof.clear();
                 goodEst = std::min<int64_t>(goodEst, 1);
-                profRef = -1;
             }
             goodEst++;
         }
@@ -866,15 +861,15 @@ struct HighRateRx::Impl {
     // at a lock: the rate, the known symbols of the lock block and its two channel estimates
     void eqStart(bool start, const int dv[3], cf hh) {
         inScale = 1.0f / std::max(std::abs(hh), 1e-6f);
-        prs.clear(); supers.clear(); prof.clear();
-        profRef = -1; goodEst = 0;
+        prs.clear(); supers.clear();
+        goodEst = 0;
         cirL0 = -6; l0Votes = 0;
         for (double& v : profC) v = 0;
         syncBefore = start;
         SuperInfo si;
         si.bps = bps; si.frames = frames; si.blk = block103(dv);
         supers.push_back(si);
-        frameK = 1; probedFrames = 0; superDone = 0; blockBad = 0;
+        frameK = 1; probedFrames = 0; blockBad = 0;
         eqNoise = 0.05;
         addProbe(estimate(0));
         addProbe(estimate(72));

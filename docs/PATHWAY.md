@@ -1535,3 +1535,11 @@ Changes:
 
 Not touched: custom_bandwidth_all, iq_modes and tx (QA worker), and families 601-789. Details are in docs/CI-SPEED-3.9.md.
 Measured: CI runs 42886049629 and 42900861790 (wide scope) against 42820553355. Test minutes went from 305 to 216. The longest test leg went from 48 to 26 min. Other overhead went from 39 to 23 min. Builds were cold on the feature branch. The warm-cache wall time (about 30 min instead of 55) is an expectation and still has to be measured on integ-39.
+
+## 2026-11-11 STANAG 4539 equaliser, 3G-ALE BW1 to BW4 (feat39-hfmil2)
+
+- STANAG 4539 (family 603): a decision-feedback equaliser built on the channel measured on every mini-probe and reinserted preamble (exact 16-tap estimates from the periodic Frank probe, cubic interpolation, MMSE filters every 16 symbols). The equalised D read, the window placement from the delay profile and the hold through long fades came with it.
+- 3G-ALE (family 604): BW1 (TM, HDL_ACK, HDL_EOM), BW2 (HDL_DATA), BW3 (LDL_DATA, 64 and 128 bytes, retransmissions combined) and BW4 (LDL_ACK / LDL_EOM), in words, with datagrams put back together. RAKE combining for BW1, BW3 and BW4.
+- tests/common/watterson.h: a Watterson (ITU-R F.520) channel for the C++ tests.
+- Measured (simulated only): table C-XV very long interleaver, ITU-R Poor at the table levels, BER 0 / 3.0e-4 / 8.1e-4 / 3.0e-3 / 1.3e-3 for 3200 to 9600 bit/s over 10 x 26 s; 3 dB above the table, 0 / 0 / 0 / 4e-5 / 1.3e-4. AWGN at the table levels: 0 to 1.7e-5. Details are in docs/HF-MIL-3.9.md.
+- Not done: BW5 and BW6 (not in MIL-STD-188-141B), BW3 with 256 and 512 bytes (the printed interleaver of table C-XVI is not a permutation), BW2 code combining and BW2 multipath. The BW2 PN generator as drawn in figure C-12 has period 21845, not 65535.
