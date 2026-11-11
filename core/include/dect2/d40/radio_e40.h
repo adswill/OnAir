@@ -149,7 +149,7 @@ inline std::vector<Ping> findPings(const std::vector<float>& env, double fsHz, d
                 const double den = m * stt - st * st, slope = (m * sty - st * sy) / den;
                 const double vy = m * syy - sy * sy, r2 = vy > 0 ? (m * sty - st * sy) * (m * sty - st * sy) / (den * vy) : 0;
                 if (slope < 0) p.decayTauSec = 10.0 / std::log(10.0) / -slope * 1.0;   // power in dB: tau = 10 log10(e) / |slope| seconds for e-fold in power
-                size_t near = 0; for (size_t k = i; k < j; k++) near += env[k] > env[pk] - 2.0f;   // time within 2 dB of the peak: a plateau means overdense
+                size_t plateauN = 0; for (size_t k = i; k < j; k++) plateauN += env[k] > env[pk] - 2.0f;   // time within 2 dB of the peak: a plateau means overdense
                 p.underdense = slope < 0 && r2 > 0.9 && (double)(pk - i) / fsHz < 0.3 * dur && (double)near / (double)(j - i) < 0.2;
             }
             out.push_back(p);
