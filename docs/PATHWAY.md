@@ -1778,3 +1778,10 @@ Baseline table of 40 narrowband modes in docs/SENSITIVITY-4.0-B.md. Tried and no
 2026-11-12 (sensitivity 4.0 B, Z-Wave): chips judged by tone energies from the burst's complex samples and a more sensitive burst detector (start 6x -> 3x the noise floor):
 AWGN 90 % point 9.5 -> 6 dB (50 %: 9 -> 5.3), 0 false frames in 300 noise-only trials; test_sens40b has zwave and zwave-off side by side.
 2026-11-12 (sensitivity 4.0 B, radiosondes): RS41/RS92/DFM/M10/M20 symbols decided by tone energies (symbol clock still from the discriminator): sonde mix AWGN 90 % point 11 -> 9 dB, 0 false units in 40 noise-only trials.
+## 2026-11-12 4.0 sensitivity, lane A part 1: RS41 2 to 3 dB (feat40-sensA)
+Every 400 MHz radiosonde channel had one 10 kHz half-width filter in front of the discriminator, three times what an RS41 needs, so its
+discriminator sat under the FM threshold from 8 dB down and Reed-Solomon never got frames. The RS41 symbol chain is now fed from a second
+filter of 4 kHz half width (sonde_rx.cpp, SondeBitDecoder::narrowChannel): 90 % of frames at 7 dB instead of 9 (AWGN, 50 ppm clock),
+6 dB instead of 9 with a 20 ppm carrier error or 150 kHz off-centre, noise-only runs still decode nothing. Test: sonde_sens40. New
+tool sens_curve (fraction of units per SNR, any harness mode). Measured and not kept: soft RS erasures for the RS41, click suppression for
+APRS, wM-Bus tone correlators (the 17 dB wM-Bus figure was the five-PHY mix), see docs/SENSITIVITY-4.0-A.md.
