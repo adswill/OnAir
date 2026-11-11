@@ -12,6 +12,7 @@
 #include "../../server/web/web_server.h"
 #include "dect2/results/web_schema.h"
 #include "../common/test_util.h"
+#include <atomic>
 #include <chrono>
 #include <cstring>
 #include <filesystem>
@@ -238,8 +239,10 @@ int main() {
     onair_web::WebServer web(hub);
     CHECK(web.start(webCfg.server), "web server starts: %s", web.status().lastError.c_str());
     const int port = web.status().port;
-    std::thread sup([&] { for (int i = 0; i < 600 && port; i++) { host.supervise(cfgPath); app.tick(onair_web::wallSeconds()); std::this_thread::sleep_for(std::chrono::milliseconds(50)); } });
-    sup.detach();
+    // the app's supervisor loop, as onair-server's main runs it; joined before the teardown (detached, it outlived `app` and its
+    // Sessions mutex at exit: "mutex lock failed" on macOS)
+    std::atomic<bool> supStop{false};
+    std::thread sup([&] { while (!supStop && port) { host.supervise(cfgPath); app.tick(onair_web::wallSeconds()); std::this_thread::sleep_for(std::chrono::milliseconds(50)); } });
 
     // ---- this computer: an implicit owner
     Client lan{port};
@@ -495,6 +498,8 @@ int main() {
     }
     r = lan.post("stop", "{}");
     CHECK(r.status == 200, "stop");
+    supStop = true;
+    sup.join();
     web.stop();
     host.setWebHub(nullptr);
     hub.stop();
