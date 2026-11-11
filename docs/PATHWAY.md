@@ -1779,3 +1779,8 @@ Echo and interferer diagnosis for DVB-T / T2, FM co-channel / adjacent / antenna
 
 ## 2026-11-12 (night): 4.0 lane B round 2, group D
 feat40-feat4: header-only mode helpers in core/include/dect2/d40/ (FM station naming / DX alarm / SFN follower, AM carrier offset / heterodyne / best sideband / AM-DRM switch / schedule lookup, DAB ranking / TII table / blob collector, satellite blind scan / modcod / pointing / LNB drift, QAM order / HD Radio levels / MER per carrier / ATV standard / video score / FPV picker, scan classification / activity map / new-signal watch). Tests tests/d40 (simulated only). Not wired into the GUI. See docs/FEATURES-4.0-D.md.
+
+## 2026-11-12 feat40-feat3: Lane B group 3
+Features: AIS coverage / type mix / name cache, ATIS tracker, pager keywords and groups, callsign parser, mode guess, spot summary, tone identification, ISM classifier. docs/FEATURES-4.0-C.md, tests/feat40c (simulated only, headers not yet wired into the UI).
+
+Feat40-feat3 (later): ADS-B orbit detector, clear TX frequency, band hop, Sarsat incidents, DTMF numbers, ACARS channel load.

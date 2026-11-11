@@ -1006,6 +1006,12 @@ if(DECT2_BUILD_TESTS)
   add_executable(test_feat40b tests/feat40b/test_feat40b.cpp)   # 4.0 lane B group 2: talkgroup activity, sonde launch clock, ADS-B replay, TX planning
   target_include_directories(test_feat40b PRIVATE core/include)
   add_test(NAME feat40b COMMAND test_feat40b)
+  add_executable(test_feat40c tests/feat40c/test_feat40c.cpp)   # 4.0 lane B group 3: AIS coverage, ATIS, pager watch, callsigns, mode guess, spot summary, ISM classifier
+  target_include_directories(test_feat40c PRIVATE core/include)
+  add_test(NAME feat40c COMMAND test_feat40c)
+  add_executable(test_feat40c_tones tests/feat40c/test_feat40c_tones.cpp)   # tone system identification (needs the tone tables)
+  target_link_libraries(test_feat40c_tones PRIVATE dect2core)
+  add_test(NAME feat40c_tones COMMAND test_feat40c_tones)
   add_executable(test_per_receiver tests/state/test_per_receiver.cpp)
   add_test(NAME per_receiver COMMAND test_per_receiver)
   add_executable(test_rx_width tests/state/test_rx_width.cpp)
