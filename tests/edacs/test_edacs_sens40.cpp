@@ -1,4 +1,4 @@
-// 4.0 sensitivity part 2 (docs/SENSITIVITY-4.0-A2.md): EDACS and Motorola Type II control channels with a narrower channel filter plus
+// 4.0 sensitivity part 2 (docs/SENSITIVITY-4.0-A2.md): EDACS, Motorola Type II and Fusion with a narrower channel filter plus
 // the FmFront carrier follow-up (power-spectrum centroid). The receivers' own test signals through tools/sens, noise in the mode's
 // bandwidth. Checks the fraction of units decoded at SNRs where the 3.9 receiver gets about a third or less, with a carrier error, and that
 // noise alone gives nothing. Simulated signals only.
@@ -51,11 +51,12 @@ int main() {
 #ifndef _WIN32
     setenv("DECT2_NOPACE", "1", 1);
 #endif
-    const Case ed = makeCase("edacs"), sn = makeCase("smartnet");
+    const Case ed = makeCase("edacs"), sn = makeCase("smartnet"), fu = makeCase("fusion39");
     CHECK(ed.ref >= 2 && sn.ref >= 2, "clean reference EDACS %.1f SmartNet %.1f", ed.ref, sn.ref);
     // 3.9 receiver: EDACS 12 dB 75 % (0 Hz), 33 % (-6 kHz); SmartNet 4 dB 72 % (0 Hz), 0 % (+3.1 kHz), 6 dB 39 % (+3.1 kHz)
     struct R { const Case* c; const char* n; double snr, cfo, need; } rows[] = {
         {&ed, "EDACS", 12, 0, 0.9}, {&ed, "EDACS", 12, -6000, 0.7}, {&ed, "EDACS", 12, 3100, 0.8},
+        {&fu, "Fusion", 7, 0, 0.7}, {&fu, "Fusion", 7, 3100, 0.65}, {&fu, "Fusion", 10, -6000, 0.8},   // 3.9: 8 dB 64 % (0 Hz), 7 dB about 35 %; -6 kHz 0 %
         {&sn, "SmartNet", 4, 0, 0.85}, {&sn, "SmartNet", 6, 3100, 0.8}, {&sn, "SmartNet", 4, 3100, 0.5},
     };
     for (const auto& r : rows) {
@@ -64,7 +65,7 @@ int main() {
         CHECK(f >= r.need, "%s %.0f dB %.0f Hz: %.2f", r.n, r.snr, r.cfo, f);
     }
     double falses = 0;
-    for (int i = 0; i < 2; i++) falses += trial(ed, 10, 0, true, 1000 + (uint64_t)i) + trial(sn, 10, 0, true, 2000 + (uint64_t)i);
+    for (int i = 0; i < 2; i++) falses += trial(ed, 10, 0, true, 1000 + (uint64_t)i) + trial(sn, 10, 0, true, 2000 + (uint64_t)i) + trial(fu, 10, 0, true, 3000 + (uint64_t)i);
     printf("noise only: %.0f units\n", falses);
     CHECK(falses == 0, "noise-only runs gave %.0f units", falses);
     printf(fails ? "%d FAILED\n" : "all passed\n", fails);

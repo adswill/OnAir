@@ -36,7 +36,7 @@ Cause. The control-channel receivers (shared `FmFront`) used a 9 kHz (EDACS) and
 the signal (h = 0.29, 9600 and 3600 Bd), so the discriminator sat below its threshold early. Narrowing the filter alone cost 2 to 5 dB when the
 carrier was off its nominal frequency (3.1 kHz error: EDACS 12 dB 77 % -> 72 %, SmartNet 3 dB worse; the earlier SmartNet attempt in
 SENSITIVITY-3.9-D.md failed for this reason).
-Change (`core/include/dect2/dsp/fm_front.h`, opt-in `setAfc()`): the mean power spectrum of the resampled channel is averaged over 0.8 s, the noise
+Change (`core/include/dect2/dsp/spectral_afc.h`, used by `FmFront::setAfc()` in `fm_front.h`): the mean power spectrum of the resampled channel is averaged over 0.8 s, the noise
 floor is the quietest quarter of the bins, and the centroid of what stands above 1.4 x the floor inside +-9 kHz moves the mixer (steps of 80 % of
 the centroid, dead band 500 Hz because the centroid of a short FSK stretch is data dependent by a few hundred Hz, at most 20 kHz in all). Unlike the
 discriminator mean, the centroid is not pulled to the filter centre by the noise. EDACS now uses a 6.5 kHz filter, SmartNet 5 kHz, both with
@@ -59,3 +59,21 @@ Test: `edacs_sens40` (tests/edacs/test_edacs_sens40.cpp): EDACS 12 dB at 0, +3.1
 noise alone: all pass; the 3.9 values above fail the same thresholds. `edacs_rx`, `edacs_follow`, `edacs_provoice`, `ltr_edacs_mode`, `ltr_rx`,
 `smartnet_rx` pass locally. Simulated signals only: the real deviations of EDACS and Type II control channels, and a real radio's drift, are not
 measured. `sens_curve` now also knows the POCSAG, FLEX, EDACS, SmartNet, MPT 1327, Fusion, DVB-S, ALE and APT entries of sens_modes_d.h.
+
+## 3. Yaesu Fusion (C4FM): narrow channel filter that follows the carrier
+
+The receiver's channel filter was 8 kHz (windowed sinc) for a C4FM signal of about +-3 kHz. A 5 to 5.5 kHz filter gave about 3 dB more
+sensitivity with the carrier on its nominal frequency but lost the signal at 3.1 kHz error. Change (`core/src/fusion/fusion_rx.cpp`): the same
+`SpectralAfc` runs in open loop on the 100 kS/s stream before the filter (nothing is retuned: a retune lost one frame of a 0.7 s
+transmission in `fusion_sweep`); until two looks agree the 8 kHz filter stays, then a 5.5 kHz filter with complex taps centred on the measured
+carrier takes over, so the discriminator sees the same signal. CPU: one FFT per 5 ms of stream, a complex instead of a real FIR after the lock.
+
+| Fusion (SNR in 12.5 kHz, 8 trials) | before: 12 / 10 / 8 / 6 dB | after: 12 / 10 / 8 / 6 dB | gain |
+|---|---|---|---|
+| AWGN | 99 / 95 / 64 / 9 % | 99 / 99 / 92 / 51 % | about 2.5 dB |
+| +3.1 kHz carrier | 99 / 95 / 73 / 12 % | 99 / 98 / 92 / 49 % | about 2.5 dB |
+| -6 kHz carrier | 12 / 0 / 0 / 0 % | 90 / 89 / 83 / 38 % | decodes where 3.9 does not |
+
+Noise-only: 0 units. The first second of a carrier-error signal is decoded with the old filter, so the first transmission after tuning at the
+threshold is where the 3.9 numbers apply. `fusion_rx`, `fusion_sweep`, `fusion_mode`, `fusion_interop` pass. `edacs_sens40` has the Fusion rows
+(7 dB at 0 and +3.1 kHz, 10 dB at -6 kHz).
