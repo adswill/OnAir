@@ -1774,3 +1774,7 @@ Talkgroup activity and follow-the-busiest (DMR view), radiosonde launch clock (S
 ## 2026-11-12: five 4.0 signal modes (feat40-modes1)
 
 RC model PPM (881), UVB-76 buzzer monitor (882), GRAVES meteor echoes (883) and Radio Jove bursts (884) and the beacon propagation monitor (885): decoders, test generators, round-trip tests with offset, drift, noise and false-decode runs, mode-list entries, docs/X40-4.0.md. Simulated signals only. Families 881 to 899 are used because kNumFamilies is 900 (docs/FAMILY-NUMBERS-4.0.md).
+
+## 2026-11-12: EM4100 LF RFID (family 886)
+
+EM4100 / EM4102 125 kHz tag reader: Manchester frame with row and column parity, RF/64 and RF/32, load modulation depth. Tests: offset, drift, clock error, noise sweep, 15 min false-read run. Simulated signals only (docs/EM4100-4.0.md).

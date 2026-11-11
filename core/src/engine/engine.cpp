@@ -672,7 +672,7 @@ void Engine::resetReceiver(int a) {
     case 244: rxSfer_.reset(); break;
     case 791: rxLtpos_.reset(); break;
     case 871: rxFbr_.reset(); break;
-    case 882: case 883: case 884: case 885: case 886: rxX40_.reset(); break;
+    DECT2_X40_ACTIVE_CASES rxX40_.reset(); break;
     case 212: rxAtis_.reset(); break;
     case 241: rxSelcal_.reset(); break;
     case 481: rxUmts_.reset(); break;

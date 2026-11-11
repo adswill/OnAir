@@ -366,6 +366,7 @@
         <item>GRAVES meteor echoes</item>
         <item>Radio Jove bursts</item>
         <item>Beacon propagation monitor</item>
+        <item>EM4100 LF RFID (125 kHz)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -713,6 +714,7 @@
         <item>The GRAVES space radar\'s carrier on 143.050 MHz and the meteor echoes around it: Doppler shift, strength, duration and drift of every echo. Needs a steady radio and a narrow channel. Simulated signals only</item>
         <item>Radio Jove (20.1 MHz): a power-versus-time burst finder for Jupiter and solar radio bursts. 5 ms resolution, short and long bursts with their height over the baseline. Cannot tell interference from a real burst. Simulated signals only</item>
         <item>Follows one steady beacon (28 / 50 / 144 / 432 MHz, CW or a carrier) and says what the path does to it: steady, fading (sporadic-E or tropospheric swings) or aurora-like (the line smeared over tens to hundreds of Hz). A reading of the signal, not a forecast. Simulated signals only</item>
+        <item>EM4100 / EM4102 125 kHz RFID tags in the field of a reader: the 40-bit ID (version and 32-bit number) from the load modulation of the carrier, with the modulation depth. RF/64 and RF/32. Receive only, nothing is written to or copied from a tag. Needs a radio that reaches 125 kHz (direct sampling or an LF capable SDR) and a coil or loop near the reader. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1060,6 +1062,7 @@
         <item>Meteor echoes</item>
         <item>Burst finder</item>
         <item>Path class</item>
+        <item>Tag</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1407,5 +1410,6 @@
         <item>graves radar 143.050 mhz meteor scatter echo doppler space surveillance france</item>
         <item>radio jove jupiter sun solar burst 20.1 mhz s-burst l-burst radio astronomy</item>
         <item>beacon propagation monitor aurora sporadic-e es tropo fading doppler spread cw 144 mhz 50 mhz 28 mhz ncdxf</item>
+        <item>em4100 em4102 rfid 125 khz lf tag id card proximity access read only low frequency</item>
     </string-array>
 </resources>
