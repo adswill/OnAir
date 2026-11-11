@@ -204,6 +204,7 @@ void radioControlPanel(TxUi& s, const DeviceInfo* radio, bool running);         
 void schedulePanel(TxUi& s, bool running);                                            // Advanced > Timing: start at, repeat every, times
 void calibrationPanel(App& a, TxUi& s, const DeviceInfo* radio, bool running);      // Advanced > Calibration of this radio
 void powerReadout(TxUi& s, const DeviceInfo* radio);                                  // the predicted output power and "Set the level for"
+void planReadouts(TxUi& s, const DeviceInfo* radio);                                  // d40_tx_ui.cpp: link budget, power ramp steps, SWR advice (notes only, never blocks)
 bool scheduleConfigured(const TxUi& s);
 void scheduleArm(TxUi& s);                                                            // Start was pressed with a schedule: the first start is planned
 void scheduleStatus(TxUi& s);                                                         // the "Scheduled: next start ..." line with Cancel
