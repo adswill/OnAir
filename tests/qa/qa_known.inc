@@ -153,5 +153,4 @@
     {"ltpos/clean", "open: 4.0 QA: nothing decodes through the Engine, from a file or from the synthetic source directly (qa_sweep_sel QA_DIRECT=1)"},
     {"sonde/snr", "open: 4.0 QA: 12 dB in the signal's band; passed in the 3.9 sweep"},
     {"ax100m6/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate"},
-    {"umts/rate", "open: 4.0 QA: nothing decodes at 1.37 x the default sample rate (cell passes at the default)"},
     {"cell/rate", "open: 4.0 QA: nothing decodes at 1.37 x the default sample rate (27.4 Msps); the engine log shows the cell search finding no cell"},
