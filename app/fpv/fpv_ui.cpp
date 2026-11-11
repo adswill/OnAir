@@ -609,7 +609,10 @@ void synth(App& a, bool& changed) {
 
 } // namespace
 
-bool fpvFullPicture(ImVec2 disp) {
+bool fpvFullPicture(App& a, ImVec2 disp) {   // full screen draws instead of the tab: take the new frames here too (#239)
+    loadState();
+    pullFrame(a);
+    upload();
     if (!S.img || !S.frame) return false;
     const float ar = S.imgH > 0 ? (float)S.imgW / S.imgH : 4.f / 3.f;
     ImVec2 sz = disp;

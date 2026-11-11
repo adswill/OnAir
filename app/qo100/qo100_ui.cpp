@@ -762,8 +762,9 @@ void tick(App& a) {
                 if (pick) { pl.select(pick->id); pl.setVolume(a.volume); S.autoPlay = false; }
             }
             if (dvbsAutoService()) {   // a signal with one service: play it, and follow it when the view is moved to another carrier (#322)
-                const int id = dect2::autoServicePick(S.autoSvc, a.ts.services, pl.selected(), S.rx2.dvbs.tsLock, glfwGetTime());
-                if (id >= 0) { pl.select(id); pl.setVolume(a.volume); S.autoPlay = false; }
+                bool restart = false;
+                const int id = dect2::autoServicePick(S.autoSvc, a.ts.services, pl.selected(), S.rx2.dvbs.tsLock, glfwGetTime(), &restart);
+                if (id >= 0) { if (restart) pl.select(-1); pl.select(id); pl.setVolume(a.volume); S.autoPlay = false; }   // restart: same id, new carrier (#410)
             }
         } else if (S.dvbsRefused.empty()) S.dvbsOn = false;   // another second mode took the place
     }
