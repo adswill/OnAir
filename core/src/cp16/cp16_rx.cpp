@@ -739,7 +739,7 @@ bool Cp16Receiver::loadResults(const std::string& blob) {
 
 ModeTuning cp16Tuning() {
     ModeTuning t;
-    t.stdMode = 792;
+    t.stdMode = 882;
     t.id = "cp16";
     t.name = "CP16";
     t.minMhz = 1.8;

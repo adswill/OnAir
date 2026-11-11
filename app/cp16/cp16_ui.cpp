@@ -22,7 +22,7 @@ struct State {
 };
 State S;
 
-bool live(const App& a) { return a.rx.standard == 791; }
+bool live(const App& a) { return a.rx.standard == 881; }
 
 // the font the characters are drawn and read with: the user's file, else the bundled Chinese font (SIL OFL 1.1)
 void ensureFont() {

@@ -588,7 +588,7 @@ public:
     CdmaReceiver& cdma() { return rxCdma_; }   // CDMA2000 cells (family 660)
     TdscdmaReceiver& tdscdma() { return rxTds_; }   // TD-SCDMA cells (family 661)
     Vdl3Receiver& vdl3() { return rxVdl3_; }   // VDL Mode 3 (family 640)
-    Cp16Receiver& cp16() { return rxCp16_; }   // CP16 picture text (family 790)
+    Cp16Receiver& cp16() { return rxCp16_; }   // CP16 picture text (family 880)
     SelcalReceiver& selcal() { return rxSelcal_; }   // SELCAL: call log, aircraft table, Listen volume / mute (telemetry through latestRx)
     AtisReceiver& atis() { return rxAtis_; }   // ATIS (inland waterways): clear the lists, Listen volume / mute (telemetry through latestRx)
     ShortwaveReceiver& shortwave() { return rxSw_; }   // Shortwave: the general receiver and the one-click decoders (telemetry through latestRx)

@@ -3,7 +3,7 @@
 // The carriers are made at 16 kHz complex (cp16::Modulator) and interpolated to the output rate (cubic), with the sample clock error, then moved to
 // the dial's place in the band and given the tuning error.
 //
-// Through the engine (SynthConfig, mode 792):
+// Through the engine (SynthConfig, mode 882):
 //   modeOpt[0]  speed: index into cp16::kCharSecChoices (0: 2 s a character)
 //   modeOpt[1]  spacing: index into cp16::kSpacingChoices (0: 15 Hz)
 //   modeOpt[2]  1 = lower sideband

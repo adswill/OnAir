@@ -15211,7 +15211,7 @@ static const StdEntry kStd[] = {
     {701, "hrdcp", "dect2::DcsTelemetry", kSchema_dect2__DcsTelemetry, put_701},
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
-    {791, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_791},
+    {881, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_791},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15474,7 +15474,7 @@ static const WebModeRow kRows[] = {
     {25, "MFSK", 10, "MFSK: error-corrected keyboard text", "mfsk", 27, 26, "hfdig"},
     {25, "THOR", 10, "THOR: robust keyboard text", "thor", 27, 26, "hfdig"},
     {25, "DominoEX", 10, "DominoEX: keyboard text that ignores tuning", "dominoex", 27, 26, "hfdig"},
-    {790, "CP16", 10, "CP16: Chinese characters drawn on the waterfall by 16 carriers (CRAC)", "", 792, 791, "cp16"},
+    {880, "CP16", 10, "CP16: Chinese characters drawn on the waterfall by 16 carriers (CRAC)", "", 882, 881, "cp16"},
     {25, "Hellschreiber", 10, "Hell: text drawn as a picture", "hell", 27, 26, "hfdig"},
     {25, "FreeDV", 11, "FreeDV: open digital voice on HF", "freedv", 27, 26, "hfdig"},
     {31, "M17", 11, "M17: open digital voice, text messages and positions on VHF / UHF", "", 33, 32, "m17"},

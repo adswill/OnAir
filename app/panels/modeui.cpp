@@ -308,7 +308,7 @@ const ModeUi* modeUi(int family) {
     case 660: return &kCdmaUi;
     case 661: return &kTdscdmaUi;
     case 640: return &kVdl3Ui;
-    case 790: return &kCp16Ui;
+    case 880: return &kCp16Ui;
     case 212: return &kShortwaveUi;
     case 230: return &kGk2aLritUi;
     case 231: return &kGk2aHritUi;

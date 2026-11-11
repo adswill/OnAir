@@ -1061,7 +1061,7 @@ const OptEntry kOpt[] = {
     {701, kOpt_701, set_701},
     {742, kOpt_742, set_742},
     {747, kOpt_747, set_747},
-    {791, kOpt_791, set_791},
+    {881, kOpt_791, set_791},
 };
 } // namespace
 

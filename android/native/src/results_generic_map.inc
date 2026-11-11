@@ -2774,7 +2774,7 @@ case 747: {
     cardIf(o, "Input Rate", t.inputRate);
     break;
 }
-case 791: {
+case 881: {
     const auto& t = rx.cp16; (void)t;
     cardIf(o, "Cfo Hz", t.cfoHz);
     cardIf(o, "Snr Db", t.snrDb);

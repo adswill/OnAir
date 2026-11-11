@@ -749,7 +749,7 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 662: return makeCdmaSynth(cfg, sampleRate);
     case 663: return makeTdscdmaSynth(cfg, sampleRate);
     case 642: return makeVdl3Synth(cfg, sampleRate);
-    case 792: return makeCp16Synth(cfg, sampleRate);
+    case 882: return makeCp16Synth(cfg, sampleRate);
     case 243: return makeSensorsSynth(cfg, sampleRate);   // Sub-GHz sensors (family 241)
     case 247: return makeBganSynth(cfg, sampleRate);   // Inmarsat BGAN (family 245)
     case 245: return makeSfericsSynth(cfg, sampleRate);   // Sferics (family 243)
@@ -966,7 +966,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 661: return cdmaSummary(t.cdma);
     case 662: return tdscdmaSummary(t.tdscdma);
     case 641: return vdl3Summary(t.vdl3);
-    case 791: return cp16Summary(t.cp16);
+    case 881: return cp16Summary(t.cp16);
     case 242: return sensorsSummary(t.sensors);
     case 246: return bganSummary(t.bgan);
     case 244: return sfericsSummary(t.sferics);
