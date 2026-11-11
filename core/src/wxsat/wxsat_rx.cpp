@@ -6,6 +6,7 @@
 #include "dect2/common/mathconst.h"
 #include "dect2/dsp/dsp_compat.h"
 #include "dect2/dsp/rrc.h"
+#include "dect2/dsp/fast_sincos.h"
 #include "dect2/elektro/elektro_ggak.h"
 #include "dect2/hrpt/hrpt_proto.h"
 #include "dect2/meteor/meteor_proto.h"
@@ -65,37 +66,46 @@ struct FirDec {
     }
 };
 
-// Symmetric matched filter
+// Symmetric matched filter. The taps are padded with zeros to a multiple of eight and summed in eight lanes, so the loops vectorise
+// (one long sum in order does not: the compiler may not reorder it).
 struct Rrc {
     std::vector<float> h, re, im;
-    int n = 0, pos = 0;
+    int n = 0, np = 8, pos = 0;
     void design(double sps, double alpha) {
         const int half = std::max(4, (int)std::ceil(4 * sps));
         n = 2 * half + 1;
-        h.resize((size_t)n);
+        np = (n + 7) / 8 * 8;
+        h.assign((size_t)np, 0.f);
         double e = 0;
         for (int i = 0; i < n; i++) { h[(size_t)i] = (float)dsp::rrc((i - half) / sps, alpha); e += h[(size_t)i] * h[(size_t)i]; }
-        for (auto& v : h) v /= (float)std::sqrt(e);
-        re.assign((size_t)n * 2, 0); im.assign((size_t)n * 2, 0);
+        for (int i = 0; i < n; i++) h[(size_t)i] /= (float)std::sqrt(e);
+        re.assign((size_t)np * 2, 0); im.assign((size_t)np * 2, 0);
         pos = 0;
     }
     void clear() { std::fill(re.begin(), re.end(), 0.f); std::fill(im.begin(), im.end(), 0.f); pos = 0; }
+    static float dot(const float* h, const float* r, int np) {
+        float a[8] = {};
+        for (int i = 0; i < np; i += 8)
+            for (int k = 0; k < 8; k++) a[k] += h[i + k] * r[i + k];
+        return ((a[0] + a[1]) + (a[2] + a[3])) + ((a[4] + a[5]) + (a[6] + a[7]));
+    }
     cfp push(cfp x, bool complexIn) {
-        pos = (pos == 0 ? n : pos) - 1;
-        re[(size_t)pos] = re[(size_t)pos + n] = x.real();
-        float a = 0;
-        const float* r = &re[(size_t)pos];
-        for (int k = 0; k < n; k++) a += h[(size_t)k] * r[k];
+        pos = (pos == 0 ? np : pos) - 1;
+        re[(size_t)pos] = re[(size_t)pos + np] = x.real();
+        const float a = dot(h.data(), &re[(size_t)pos], np);
         if (!complexIn) return {a, 0};
-        im[(size_t)pos] = im[(size_t)pos + n] = x.imag();
-        float b = 0;
-        const float* i2 = &im[(size_t)pos];
-        for (int k = 0; k < n; k++) b += h[(size_t)k] * i2[k];
-        return {a, b};
+        im[(size_t)pos] = im[(size_t)pos + np] = x.imag();
+        return {a, dot(h.data(), &im[(size_t)pos], np)};
     }
 };
 
 enum Mod { Pm, Bpsk, Qpsk };
+
+// a * b for finite values, the products apart as std::complex does them (the same result, without its NaN check every sample)
+inline cfp cmul(cfp a, cfp b) {
+    const float ac = a.real() * b.real(), bd = a.imag() * b.imag(), ad = a.real() * b.imag(), bc = a.imag() * b.real();
+    return {ac - bd, ad + bc};
+}
 
 void loopGains(double bl, double zeta, double& a, double& b) {
     const double w = bl / (zeta + 1.0 / (4 * zeta));
@@ -109,7 +119,11 @@ public:
     Mod mod = Bpsk;
     bool acquired = false, acqPending = false;
     double cfoCoarse = 0;
-    float agc = 1, carrierLock = 0, snrDb = 0;
+    float agc = 1, carrierLock = 0;
+    // No-signal gate (the wide links): when the acquisition finds no line (peak to mean under kLineMin) the demodulator stays off and
+    // the next kGateSkip blocks of input go by before another look. White noise peaks at about 10, a signal at 0 dB Es/N0 at 2000 and more.
+    bool lineGate = false;
+    uint64_t gateSkipped = 0;             // input samples let go by (tests)
     std::vector<std::pair<float, float>> cons;
     size_t consPos = 0;
     double acqPeak = 0;
@@ -126,6 +140,7 @@ public:
         // loop bandwidths per symbol
         loopGains(m == Pm ? 0.004 * (spsNom_ / 4.0) : m == Bpsk ? 0.008 : 0.005, 0.707, cA_, cB_);
         tBl_ = 0.006;
+        loopGains(tBl_, 0.9, tA_, tB_);   // the timing loop's gains (they do not change)
         resetAll();
     }
     void setOffset(double hz) { offsetHz = hz; updateStep(); }
@@ -134,17 +149,23 @@ public:
         rot_ = 1; for (auto& h : h_) h = 0;
         acquired = false; acq_.clear(); acq_.reserve(kAcq); cfoCoarse = 0; updateStep();
         phase_ = 0; freq_ = 0; t_ = spsNom_ / 2; strobePh_ = 0; lastStrobe_ = 0; mid_ = 0; sps_ = spsNom_;
-        agc = 0.1f; carrierLock = 0; snrDb = 0; meanAbs_ = 0; varAbs_ = 0;
+        agc = 0.1f; carrierLock = 0; meanAbs_ = 0; varAbs_ = 0; skip_ = 0;
         cons.clear(); consPos = 0;
     }
     void reacquire() { acquired = false; acq_.clear(); }
     double currentCfo() const { return cfoCoarse + freq_ * decRate / (2 * kPi); }
+    float snrDb() const { return meanAbs_ == 0 && varAbs_ == 0 ? 0.f : 10.f * (float)std::log10(std::max(1e-3f, meanAbs_ * meanAbs_ / std::max(1e-6f, 2 * varAbs_))); }
 
     template<class S> void feed(const cf32* x, size_t n, S&& sink) {
         for (size_t i = 0; i < n; i++) {
-            rot_ *= step_;
+            if (skip_) {   // the gate: no signal, this stretch goes by
+                const size_t k = (size_t)std::min<uint64_t>(skip_, n - i);
+                skip_ -= k; gateSkipped += k; i += k - 1;
+                continue;
+            }
+            rot_ = cmul(rot_, step_);
             if (((++renorm_) & 4095) == 0) rot_ /= std::abs(rot_);
-            cfp v = cfp(x[i].real(), x[i].imag()) * rot_;
+            cfp v = cmul(cfp(x[i].real(), x[i].imag()), rot_);
             cfp y;
             if (ratio_ == 1) y = v; else if (!fir_.push(v, y)) continue;
             sample(y, sink);
@@ -153,6 +174,10 @@ public:
 
 private:
     static constexpr int kAcq = 1 << 15;
+    static constexpr double kLineMin = 40;
+    static constexpr int kGateSkip = 7;
+    uint64_t skip_ = 0;
+    double tA_ = 0, tB_ = 0;
     std::vector<cfp> acq_;
     FirDec fir_;
     Rrc rrc_;
@@ -190,6 +215,7 @@ private:
         double total = 0;
         for (int k = -maxBin; k <= maxBin; k++) { const float v = pow[(size_t)((k + N) % N)]; total += v; if (v > bv) { bv = v; best = k; } }
         acqPeak = bv / std::max(1e-9, total / (2 * maxBin + 1));
+        if (lineGate && acqPeak < kLineMin) { skip_ = (uint64_t)kGateSkip * kAcq * (uint64_t)ratio_; return; }   // nothing there: look again later
         double delta = 0;
         if (acqPeak > 6) {
             const float l = pow[(size_t)((best - 1 + N) % N)], c = bv, r = pow[(size_t)((best + 1 + N) % N)];
@@ -209,8 +235,8 @@ private:
             return;
         }
         // carrier
-        const cfp nco((float)std::cos(phase_), (float)-std::sin(phase_));
-        cfp v = y * nco;
+        const cfp nco = std::conj(FastSinCos::get().polar(1.f, phase_));   // a table (error 3e-7): cos and sin in double each sample were the dearest part
+        cfp v = cmul(y, nco);
         if (mod == Pm) {
             const float e = std::atan2(v.imag(), v.real());
             freq_ += cB_ * e * 0.5f;
@@ -240,7 +266,7 @@ private:
     template<class S> void event(cfp a, S&& sink) {
         if (strobePh_ == 0) { mid_ = a; strobePh_ = 1; t_ += sps_ * 0.5; return; }
         strobePh_ = 0;
-        const float mag2 = std::max(1e-9f, std::abs(a) * std::abs(a));
+        const float mag2 = std::max(1e-9f, std::norm(a));   // |a|^2 (two hypot calls a symbol were a third of the demodulator)
         agc += 0.002f * (std::sqrt(mag2 / (mod == Qpsk ? 2 : 1)) - agc);
         // Gardner
         float e;
@@ -249,8 +275,7 @@ private:
         e /= std::max(1e-6f, agc * agc);
         lastStrobe_ = a;
         e = std::clamp(e, -1.f, 1.f);
-        double wA, wB;
-        loopGains(tBl_, 0.9, wA, wB);
+        const double wA = tA_, wB = tB_;
         sps_ = std::clamp(sps_ + wB * e * spsNom_, spsNom_ * 0.992, spsNom_ * 1.008);
         t_ += sps_ * 0.5 + wA * e * spsNom_ * 0.5;
         // carrier (BPSK, QPSK)
@@ -265,7 +290,6 @@ private:
         const float ab = (mod == Qpsk) ? 0.5f * (std::fabs(I) + std::fabs(Q)) : std::fabs(I);
         meanAbs_ += 0.003f * (ab - meanAbs_);
         varAbs_ += 0.003f * ((ab - meanAbs_) * (ab - meanAbs_) - varAbs_);
-        snrDb = 10.f * (float)std::log10(std::max(1e-3f, meanAbs_ * meanAbs_ / std::max(1e-6f, 2 * varAbs_)));
         if (cons.size() < 256) cons.emplace_back(I, mod == Qpsk ? Q : 0.f);
         else { cons[consPos] = {I, mod == Qpsk ? Q : 0.f}; consPos = (consPos + 1) % 256; }
         sink(I, Q);
@@ -395,7 +419,7 @@ struct WxsatReceiver::Impl {
         }
         if (P == kWxArktikaGgak) { ggak.configure(rate); ggak.setSignalOffset(offset); return; }
         if (isFilecast()) { if (dvb) configureDvb(); return; }
-        if (rate >= info.minRate - 1) { dem.configure(rate, info.symbolRate, mod, alpha); dem.setOffset(offset); }
+        if (rate >= info.minRate - 1) { dem.configure(rate, info.symbolRate, mod, alpha); dem.setOffset(offset); dem.lineGate = P == kWxElektroRdas || P == kWxArktikaRdas; }
         const auto frameCb = [this](const uint8_t* f) { frame(f); };
         for (int k = 0; k < 2; k++) def[k].onFrame = frameCb;
         defCcsds.onFrame = frameCb;
@@ -795,7 +819,7 @@ struct WxsatReceiver::Impl {
             tel.cfoHz = aptCfo; tel.symbolRate = 4160;
         } else if (rate >= info.minRate - 1) {
             tel.cfoHz = dem.currentCfo();
-            tel.snrDb = dem.snrDb;
+            tel.snrDb = dem.snrDb();
             tel.carrierLock = dem.carrierLock;
             tel.constellation = dem.cons;
             bool fl = false;
