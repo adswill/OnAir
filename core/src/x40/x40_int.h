@@ -64,6 +64,12 @@ std::unique_ptr<Decoder> makeDopplerLog();
 std::unique_ptr<Decoder> makeHopAnalyser();
 std::unique_ptr<Decoder> makeBirdie();
 std::unique_ptr<Decoder> makeBurst();
+std::unique_ptr<Decoder> makeFading();
+std::unique_ptr<Decoder> makeInputHealth();
+std::unique_ptr<Decoder> makePhaseNoise();
+std::unique_ptr<Decoder> makeSsbTest();
+std::unique_ptr<Decoder> makeSinad();
+std::unique_ptr<Decoder> makeFskAnalyser();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {

@@ -386,6 +386,12 @@
         <item>Frequency-hopper analyser</item>
         <item>Persistent carrier (birdie) finder</item>
         <item>Burst finder</item>
+        <item>Fading analyser</item>
+        <item>SDR input health meter</item>
+        <item>Phase noise meter</item>
+        <item>SSB transmitter test meter</item>
+        <item>FM SINAD meter</item>
+        <item>FSK parameter analyser</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -753,6 +759,12 @@
         <item>Frequency-hopper analyser for a wide capture: the hop rate, dwell and guard time, the number of channels, their spacing and the span of one hopper (the strongest narrow signal), from at least 40 dwells on 3 channels. Needs a clear signal (about 12 dB over the noise in 25 kHz); channels closer than about 1.5 bins (fs / 256) are not told apart. Does not follow the sequence. Simulated signals only</item>
         <item>Persistent carrier finder for a wide capture: the narrow, steady carriers (birdies, spurs, switching supplies, a neighbour\'s equipment) present most of the time, with frequency to a few Hz, level, drift in Hz per minute, scatter, and whether each is a bare carrier or something modulated. A new and a vanished carrier are logged. It lists; it does not name the source. Simulated signals only</item>
         <item>Burst finder for a wide capture: every short transmission wherever it is in the span, with frequency, length, bandwidth (narrow or wide) and level, many at once; bursts at one frequency that repeat with a steady spacing (a telemetry sensor, a key fob, a beacon) are reported as repeating every T s. Needs about 14 dB over the noise in a bin of fs / 256. Lists and times; does not decode. Simulated signals only</item>
+        <item>Fading analyser for one steady carrier (a beacon, a time-signal or broadcast carrier within 2.8 kHz of the tuned frequency): the level distribution over the last minute, the Rician K-factor, the fade rate and average fade length at -10 dB, the Doppler spread and deep fades, to compare a path with theory (Rayleigh: 0.72 fd fades a second). Fading faster than about 200 Hz is cut off. Simulated signals only</item>
+        <item>SDR input health meter: the level of the samples that reach the program (RMS, peak, crest factor, dB re full scale), clipping, the DC offset, and the IQ gain and phase mismatch read blind from the samples with the image rejection they cause, with a plain verdict (too low, good, high, overload). Reads this input, not the radio\'s specification. Simulated signals only</item>
+        <item>Phase noise meter: the single-sideband phase noise of a carrier (a generator, an oscillator, a beacon) in dBc/Hz at 10 Hz to 100 kHz offsets, the spurs next to it and the integrated jitter, from averaged high-resolution spectra. The radio\'s own oscillator and noise floor are part of the reading: tuning a good source on a poor SDR measures the SDR. Simulated signals only</item>
+        <item>SSB transmitter test meter: tune the dial frequency while the transmitter sends one test tone or two: carrier leak, opposite sideband and audio harmonics (one tone), or IMD3, IMD5 and IMD7 under one tone and under PEP (two tones), with the sideband detected. Products under the noise are reported as such. It measures at this radio: use the attenuator to see that the numbers are the transmitter\'s. Simulated signals only</item>
+        <item>FM SINAD meter: a carrier modulated with a test tone (1 kHz) read through the radio: SINAD in 300 - 3000 Hz (flat weighting), THD, peak deviation and carrier offset, with the 12 dB SINAD crossing logged. Measures the transmitter, the path and this SDR together; FM thresholding makes it fall faster than theory under about 10 dB carrier to noise. Simulated signals only</item>
+        <item>FSK parameter analyser for an unknown FSK or GFSK signal: the symbol rate, 2 or 4 levels, the shift, the modulation index (MSK is 0.5), the centre frequency and the eye quality, to know which decoder to try and with what settings. A plain FM discriminator in the whole channel: needs a clean signal (about 18 dB over the noise in 50 kHz for 9600 Bd). Does not decode. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1110,6 +1122,12 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
@@ -1487,5 +1505,11 @@
         <item>frequency hopping hopper fhss hop rate dwell channels spacing spread spectrum analyser</item>
         <item>birdie persistent carrier interference qrm spur noise source narrow steady rfi drift</item>
         <item>burst transient short transmission key fob sensor repetition period tdma wide capture</item>
+        <item>fading analyser rician k factor rayleigh fade rate doppler spread multipath level distribution beacon path</item>
+        <item>sdr input health level clipping overload dc offset iq imbalance image rejection gain headroom dbfs</item>
+        <item>phase noise dbc hz oscillator jitter spur reference clock lo single sideband measurement</item>
+        <item>ssb transmitter test imd intermodulation two tone carrier suppression opposite sideband harmonics pep linearity ham</item>
+        <item>sinad fm thd distortion deviation sensitivity 12 db test tone 1 khz repeater audio quality</item>
+        <item>fsk gfsk msk 4fsk symbol rate shift modulation index deviation unknown signal analyser baud</item>
     </string-array>
 </resources>

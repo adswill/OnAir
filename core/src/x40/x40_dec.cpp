@@ -30,6 +30,12 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case HopAnalyser: return makeHopAnalyser();
     case Birdie: return makeBirdie();
     case Burst: return makeBurst();
+    case Fading: return makeFading();
+    case InputHealth: return makeInputHealth();
+    case PhaseNoise: return makePhaseNoise();
+    case SsbTest: return makeSsbTest();
+    case Sinad: return makeSinad();
+    case FskAnalyser: return makeFskAnalyser();
     default: return nullptr;
     }
 }
@@ -65,6 +71,12 @@ ModeTuning x40Tuning(int v) {
         {"hop", 0.1, 6000, 433.900, 2000000, 1000000, 2.0, false},
         {"birdie", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
         {"burst", 0.1, 6000, 433.920, 2000000, 1000000, 2.0, false},
+        {"fading", 0.1, 6000, 144.400, 48000, 8000, 0.006, true},
+        {"inputhealth", 0.1, 6000, 145.000, 2000000, 100000, 2.0, false},
+        {"phasenoise", 0.1, 6000, 10.000, 250000, 50000, 0.1, true},
+        {"ssbtest", 0.1, 500, 14.200, 48000, 12000, 0.004, false},
+        {"sinad", 26, 6000, 146.520, 48000, 24000, 0.016, true},
+        {"fskan", 0.1, 6000, 433.920, 250000, 48000, 0.1, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

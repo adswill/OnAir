@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**358 modes.**
+**364 modes.**
 
 ## TV (17)
 
@@ -227,7 +227,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
 - **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
 
-## Weather & Science (54)
+## Weather & Science (55)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -270,6 +270,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **GRAVES meteor echoes** - GRAVES: meteor echo list
 - **Radio Jove bursts** - Radio Jove: burst list
 - **Beacon propagation monitor** - Beacon monitor: path class, level, Doppler spread
+- **Fading analyser** - Fading: K-factor, fade rate and depth, Doppler spread
 - **Sferics (lightning)** - Sferics: lightning strikes counted from their radio crackle
 - **Lightning position (network)** - Lightning position: strikes located from several stations' arrival times
 - **SuperSID (VLF)** - SuperSID: VLF station levels and the sudden changes of solar flares, receive only
@@ -379,7 +380,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 
-## General & Tools (14)
+## General & Tools (19)
 
 - **Power-line noise locator** - Noise locator: impulse rate, repetition, level
 - **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
@@ -391,6 +392,11 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Frequency-hopper analyser** - Hopper analyser: hop rate, channels, spacing, dwell
 - **Persistent carrier (birdie) finder** - Birdie finder: persistent carriers, level, drift
 - **Burst finder** - Burst finder: frequency, length, bandwidth, repetition
+- **SDR input health meter** - Input health: level, clipping, DC, IQ mismatch
+- **Phase noise meter** - Phase noise: L(f), spurs, jitter
+- **SSB transmitter test meter** - SSB test: carrier, opposite sideband, IMD3/5/7
+- **FM SINAD meter** - FM SINAD: SINAD, THD, deviation
+- **FSK parameter analyser** - FSK analyser: baud, levels, shift, index
 - **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
 - **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
 - **Spectrum explorer** - Spectrum explorer: look, measure and sweep

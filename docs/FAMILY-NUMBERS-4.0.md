@@ -51,4 +51,11 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | Persistent carrier (birdie) finder | 760 | 761 | 762 | 760 |
 | Burst finder | 761 | 762 | 763 | 761 |
 
-Families 762 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
+| Fading analyser | 762 | 763 | 764 | 762 |
+| SDR input health meter | 763 | 764 | 765 | 763 |
+| Phase noise meter | 764 | 765 | 766 | 764 |
+| SSB transmitter test meter | 765 | 766 | 767 | 765 |
+| FM SINAD meter | 766 | 767 | 768 | 766 |
+| FSK parameter analyser | 767 | 768 | 769 | 767 |
+
+Families 768 - 787 stay reserved for further modes of this block (`DECT2_X40_ACTIVE_CASES` then needs the extra `case` labels; `x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
