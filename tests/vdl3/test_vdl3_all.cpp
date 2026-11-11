@@ -132,7 +132,7 @@ static RunRes runRx(double rate, double cfo, double snr, double drift, double sr
     auto syn = makeVdl3Synth(sc, rate);
     Vdl3Receiver rx;
     rx.configure(rate);
-    rx.setSignalOffset(chanOff);
+    rx.setSignalOffset(chanOff - vdl3Tuning().tuneOffsetHz);   // the generator puts the channel tuneOffsetHz below the centre, as a radio tuned off the channel delivers it
     std::vector<cf32> buf(32768);
     RunRes res;
     const size_t total = (size_t)(rate * secs);

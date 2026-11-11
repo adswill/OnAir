@@ -486,6 +486,11 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             if (e.latestRx(rx, seq)) { seq = rx.seq; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } }
         }
+    if (en.stdMode == 34)   // the cell search of the last block runs on its own thread, 1 to 5 s on a CI runner at 20 Msps: let a search that started before the file ended finish
+        for (int i = 0; i < 1500 && e.cell().busy(); i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            if (e.latestRx(rx, seq)) { seq = rx.seq; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } locked = locked || lockOf(rx); }
+        }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));   // the last report
     if (e.latestRx(rx, seq)) { standard = rx.standard; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } locked = locked || lockOf(rx); bad = std::max<uint64_t>(bad, rx.blocksBad); }
     if (getenv("QA_SWEEP_VERBOSE")) {   // the engine's log and the last report, for a mode that does not decode
