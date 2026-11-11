@@ -27,10 +27,21 @@ ARIB STD-B29 / ITU-R BS.1114 System F: the narrow-band ISDB of one or three segm
   - the one-seg service of ISDB-T
   - a noise sweep for QPSK 1/2
   - the engine's own test signal through the receiver
-- Known limit: three-segment signals with DQPSK segments are unreliable. Both layers lose 10-25 % of their packets, even at 20-30 dB
-  and with a steady lock and TMCC. That holds whether every segment is DQPSK or only the centre one is. One-segment DQPSK and
-  every coherent combination decode cleanly. The test prints the loss for these cases but does not fail on it. The cause is not
-  found yet; the next suspect is the common-phase tracking, where the DQPSK segments' TMCC carriers outnumber the other pilots.
+- Three-segment DQPSK (fixed in branch feat39-bcast2): three-segment signals with DQPSK segments used to lose 10-25 % of their packets in
+  bursts. The cause was the timing loop's whole-sample window steps. A step moves the FFT window from the next symbol on, but its phase-ramp
+  correction was applied to the current symbol already, and with the wrong sign. A one-sample error is a phase ramp of 2 pi k / N across
+  the band. The demodulator's slope fit took it out wherever it had enough reference points: the scattered pilots of coherent segments,
+  and the TMCC carriers from symbol 17 of the frame on. In the first 17 symbols of a frame the differential segments only had their few
+  continual pilots, so every step there broke two DQPSK symbols, and after the time and frequency de-interleaving that became a burst of
+  bad packets in every layer. One-segment DQPSK hit it less often only because its timing loop stepped less. The correction now has the
+  sign of a later window (X[k] e^{+j 2 pi k d / N} taken out) and starts with the symbol whose window moved. The sample clock tracking
+  reads the step count after the update. This code is shared with 13-segment ISDB-T, whose tests (isdbt_chain, isdbt_rx, isdbt_engine,
+  isdbt_bw, isdbt_basic, isdbt_impair) still pass.
+  - The test now asserts these cases (they were only printed before): 3 seg all DQPSK (+1.5 kHz, 20 dB), all twenty layer-A modulation
+    x code rate combinations including DQPSK, and two new cases: A DQPSK 2/3 + B 16QAM 1/2 with +30 ppm, -2.3 kHz, 15 Hz/s drift at
+    21 dB; and all DQPSK in mode 2 with -35 ppm, 300 kHz off centre at 19 dB.
+  - Measured (simulated): 3 seg all DQPSK went from 253 bad of 2456 packets (10.3 %) to 0 bad of 2456. Across the carrier offsets
+    0 - 2 kHz it went from 4.7 - 13.6 % to 0. The two new cases had 0 bad packets.
 - Fixed on the way:
   - The impulse-response display wrote past its buffer (the full ISDB-T carrier range in the small FFT); this was the double free
     CI showed.
