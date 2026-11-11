@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**374 modes.**
+**375 modes.**
 
 ## TV (17)
 
@@ -381,7 +381,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 
-## General & Tools (28)
+## General & Tools (29)
 
 - **Power-line noise locator** - Noise locator: impulse rate, repetition, level
 - **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
@@ -407,6 +407,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Crest factor (PAPR / CCDF) meter** - PAPR: crest factor and CCDF against Gaussian
 - **Occupied bandwidth meter** - Occupied bandwidth: 99 %, x dB, centre, adjacent power
 - **Spectral kurtosis RFI finder** - Spectral kurtosis: clean share, pulsed and steady regions
+- **SDR stream glitch detector** - Glitches: dropped samples, zero runs, repeats, level steps
 - **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
 - **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
 - **Spectrum explorer** - Spectrum explorer: look, measure and sweep

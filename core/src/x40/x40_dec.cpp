@@ -46,6 +46,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case OccBw: return makeOccBw();
     case Papr: return makePapr();
     case SpecKurt: return makeSpecKurt();
+    case Glitch: return makeGlitch();
     default: return nullptr;
     }
 }
@@ -97,6 +98,7 @@ ModeTuning x40Tuning(int v) {
         {"occbw", 0.1, 6000, 145.000, 1000000, 100000, 0.5, false},
         {"papr", 0.1, 6000, 145.000, 1000000, 100000, 0.5, false},
         {"speckurt", 0.1, 6000, 145.000, 2000000, 250000, 2.0, false},
+        {"glitch", 0.1, 6000, 145.000, 2000000, 100000, 2.0, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

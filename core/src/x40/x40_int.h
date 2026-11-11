@@ -80,6 +80,7 @@ std::unique_ptr<Decoder> makeTxStability();
 std::unique_ptr<Decoder> makeOccBw();
 std::unique_ptr<Decoder> makePapr();
 std::unique_ptr<Decoder> makeSpecKurt();
+std::unique_ptr<Decoder> makeGlitch();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {

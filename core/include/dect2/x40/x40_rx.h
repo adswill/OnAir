@@ -11,7 +11,7 @@
 #include <string>
 
 // every active standard of the receiver (882 - 897 and, for the third block, 753 - 760), for switch statements
-#define DECT2_X40_ACTIVE_CASES case 753: case 754: case 755: case 756: case 757: case 758: case 759: case 760: case 761: case 762: case 763: case 764: case 765: case 766: case 767: case 768: case 769: case 770: case 771: case 772: case 773: case 774: case 775: case 776: case 777: case 778: case 882: case 883: case 884: case 885: case 886: case 887: case 888: case 889: case 890: case 891: case 892: case 893: case 894: case 895: case 896: case 897:
+#define DECT2_X40_ACTIVE_CASES case 753: case 754: case 755: case 756: case 757: case 758: case 759: case 760: case 761: case 762: case 763: case 764: case 765: case 766: case 767: case 768: case 769: case 770: case 771: case 772: case 773: case 774: case 775: case 776: case 777: case 778: case 779: case 882: case 883: case 884: case 885: case 886: case 887: case 888: case 889: case 890: case 891: case 892: case 893: case 894: case 895: case 896: case 897:
 
 namespace dect2 {
 
@@ -19,7 +19,7 @@ struct X40Telemetry;
 
 namespace x40 {
 enum Variant : int { RcPpm, Uvb76, Graves, Jove, Beacon, Em4100, UhfRfid, Qi, FmMon, AmMon, PlNoise, Radar, GnssJam, Passband, VlfMsk,
-               Occupancy, Evm, FreqAcc, PttLog, Intermod, Spur, DopplerLog, HopAnalyser, Birdie, Burst, Fading, InputHealth, PhaseNoise, SsbTest, Sinad, FskAnalyser, YFactor, CwKeying, NoiseFloor, NfmDev, Afsk, OokPulse, TxStability, OccBw, Papr, SpecKurt,   // third block (docs/X40-4.0.md, feat40-modes3): families 752 - 759
+               Occupancy, Evm, FreqAcc, PttLog, Intermod, Spur, DopplerLog, HopAnalyser, Birdie, Burst, Fading, InputHealth, PhaseNoise, SsbTest, Sinad, FskAnalyser, YFactor, CwKeying, NoiseFloor, NfmDev, Afsk, OokPulse, TxStability, OccBw, Papr, SpecKurt, Glitch,   // third block (docs/X40-4.0.md, feat40-modes3): families 752 - 759
                kNumVariants };
 // variants 0 - 14: family 881 + v, active standard 882 + v, engine standard 883 + v, poll slot 881 + v.
 // variants 15 and up (third block): family 752 + (v - 15), active standard family + 1, engine standard family + 2, poll slot = family. kNumFamilies = 900 and kPollSeqSlots = 901 stay.

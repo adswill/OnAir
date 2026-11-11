@@ -66,5 +66,6 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | Crest factor (PAPR / CCDF) meter | 775 | 776 | 777 | 775 |
 | Occupied bandwidth meter | 776 | 777 | 778 | 776 |
 | Spectral kurtosis RFI finder | 777 | 778 | 779 | 777 |
+| SDR stream glitch detector | 778 | 779 | 780 | 778 |
 
-Families 778 - 787 stay reserved for further modes of this block. A new variant needs: the enum entry and the active-standard `case` label in `x40_rx.h`, `makeX()` in `x40_int.h` / `x40_dec.cpp`, the tuning row in `x40_dec.cpp`, the name in `x40_rx.cpp`, `x40Tuning(v)` in the registry list of `core/src/engine/modes.cpp`, the table sizes and `makeUi<v>()` in `app/x40/x40_ui.cpp`, the `case` in `app/panels/modeui.cpp` and the mode-table row (`x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
+Families 779 - 787 stay reserved for further modes of this block. A new variant needs: the enum entry and the active-standard `case` label in `x40_rx.h`, `makeX()` in `x40_int.h` / `x40_dec.cpp`, the tuning row in `x40_dec.cpp`, the name in `x40_rx.cpp`, `x40Tuning(v)` in the registry list of `core/src/engine/modes.cpp`, the table sizes and `makeUi<v>()` in `app/x40/x40_ui.cpp`, the `case` in `app/panels/modeui.cpp` and the mode-table row (`x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).

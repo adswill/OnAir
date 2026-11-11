@@ -402,6 +402,7 @@
         <item>Crest factor (PAPR / CCDF) meter</item>
         <item>Occupied bandwidth meter</item>
         <item>Spectral kurtosis RFI finder</item>
+        <item>SDR stream glitch detector</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -785,6 +786,7 @@
         <item>Crest factor meter: the distribution of the instantaneous power of the captured signal against its mean: crest factor, and the levels exceeded 10, 1, 0.1 and 0.01 % of the time (CCDF), with Gaussian theory beside them (3.6, 6.6, 8.4, 9.6 dB) to tell OFDM or multi-carrier (Gaussian), single-carrier PSK, constant-envelope FM or FSK, clipped or impulsive signals. Includes the radio\'s own noise and limits. Simulated signals only</item>
         <item>Occupied bandwidth meter (ITU-R SM.328): for the strongest signal of a wide capture, the 99 % occupied bandwidth, the bandwidths at 3, 6, 20 and 26 dB below the peak, the centre against the tuned frequency, the signal to noise ratio and the adjacent and alternate power (dB under the signal, bands as wide as the signal at 1.25 and 2.5 bandwidths). What arrives at this radio, noise and neighbours included. Simulated signals only</item>
         <item>Spectral kurtosis RFI finder (the estimator used in radio astronomy) for a wide capture: which frequencies hold something that is not Gaussian noise, and whether it is a steady carrier (SK under 1) or pulsed (SK over 1: radar, TDMA bursts, arcing, switching supplies), with the share of the band that is clean and the share of frames at full power for pulsed ones. Lists and classifies; does not say what the source is. Simulated signals only</item>
+        <item>SDR stream glitch detector, for debugging a radio link or a driver: dropped and repeated samples (a phase step of the strongest steady tone, with the number of samples), runs of zero samples, a block sent twice, and level steps of 1 dB or more (an AGC or gain change), each with its time. A drop cannot be seen without a steady tone 20 dB over the noise. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1142,6 +1144,7 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
@@ -1551,5 +1554,6 @@
         <item>papr crest factor ccdf peak to average power ofdm headroom amplifier backoff clipping gaussian</item>
         <item>occupied bandwidth 99 percent x db 26 db emission designator itu sm.328 acpr adjacent channel power spectrum width transmitter</item>
         <item>spectral kurtosis sk rfi pulsed steady carrier radio astronomy non-gaussian interference radar burst detector</item>
+        <item>sdr glitch dropped samples overrun usb buffer repeat zero agc level step stream health debug</item>
     </string-array>
 </resources>
