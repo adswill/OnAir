@@ -272,6 +272,13 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 60: return pollStd(rxMeteor_, 60, t, seqs[54], &RxTelemetry::meteor);
     case 61: return pollStd(rxGoes_, 61, t, seqs[55], &RxTelemetry::goes);
     case 62: return pollStd(rxCube_, 62, t, seqs[56], &RxTelemetry::cube);
+    // 3.9: one entry per framing, the same receiver with the frames of that framing only (cubesat_rx.h: cubesatViews)
+    case 841: return pollStd(rxCube_, 841, t, seqs[841], &RxTelemetry::cube);   // AX100 Mode 5 (family 840)
+    case 844: return pollStd(rxCube_, 844, t, seqs[844], &RxTelemetry::cube);   // AX100 Mode 6 (family 843)
+    case 847: return pollStd(rxCube_, 847, t, seqs[847], &RxTelemetry::cube);   // USP (family 846)
+    case 850: return pollStd(rxCube_, 850, t, seqs[850], &RxTelemetry::cube);   // NGHam (family 849)
+    case 853: return pollStd(rxCube_, 853, t, seqs[853], &RxTelemetry::cube);   // U482C (family 852)
+    case 856: return pollStd(rxCube_, 856, t, seqs[856], &RxTelemetry::cube);   // BEESAT / Mobitex (family 855)
     case 63: return pollStd(rxGs_, 63, t, seqs[57], &RxTelemetry::globalstar);
     case 64: return pollStd(rxVdes_, 64, t, seqs[58], &RxTelemetry::vdes);
     case 65: return pollStd(rxHrpt_, 65, t, seqs[59], &RxTelemetry::hrpt);

@@ -35,6 +35,7 @@ public:
     void setForwardKiss(bool on);                           // frames to the KISS feed while that feed is on (default on)
     void setCcsdsLength(int bytes);                         // the CCSDS code block length, 33 .. 255 (default 255)
     void setWallClock(bool on);                             // stamp frames with the computer clock (a radio; off for a file)
+    void setFramingMask(uint32_t mask);                     // 3.9: only the framings with a bit set (1 << cubesat::Framing) are accepted and reported; 0 = all (default)
     bool ready() const;
     void reset();                                           // the demodulators; the frame log stays
     void clearFrames();
@@ -51,5 +52,19 @@ private:
 };
 
 ModeTuning cubesatTuning();
+
+// 3.9: the framings that OnAir lists as modes of their own, each a view onto this receiver (the same demodulators and decoders, the frames of
+// one framing only). family N, active standard N + 1 (what Engine::activeStandard() and RxTelemetry::standard report), engine standard N + 2.
+struct CubesatView {
+    int family;              // the mode-list family number (840, 843, ...)
+    const char* id;          // dect2cli --standard
+    const char* name;        // the mode-list name
+    int framing;             // cubesat::Framing
+    const char* shortName;   // "AX100 M5": the framing as the frame list names it
+};
+const CubesatView* cubesatViews(int& count);
+const CubesatView* cubesatViewForActive(int activeStd);     // by the active standard (family + 1), nullptr for any other
+ModeTuning cubesatViewTuning(int i);                        // the tuning of view i (the CubeSat telemetry settings, its own id, name and standard)
+const CubesatView* cubesatViewForStd(int stdMode);          // by the engine standard (family + 2), nullptr for any other
 
 } // namespace dect2

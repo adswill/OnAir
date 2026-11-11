@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**316 modes.**
+**322 modes.**
 
 ## TV (17)
 
@@ -74,7 +74,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (48)
+## Satellite & Navigation (54)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -103,6 +103,12 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Orbcomm** - Orbcomm satellite downlinks: satellite IDs, positions, channel assignments, messages
 - **QO-100** - QO-100: the amateur satellite's transponders with exact frequencies from its beacons
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
+- **AX100 Mode 5** - AX100 Mode 5 (ASM + Golay): GOMspace satellite frames, CSP packets
+- **AX100 Mode 6** - AX100 Mode 6 (Reed-Solomon): GOMspace satellite frames, CSP packets
+- **USP** - USP (Sputnix): satellite frames with CRC
+- **NGHam** - NGHam: satellite frames with Reed-Solomon
+- **U482C** - U482C (AFSK 4800): GOMspace satellite frames
+- **BEESAT / Mobitex** - BEESAT (Mobitex): satellite frames from TU Berlin cubesats
 - **Globalstar** - Globalstar: channel activity and Doppler (content is not decoded)
 - **GOES DCS** - GOES DCS: river gauges, weather stations and buoys reporting through the GOES and Meteosat satellites
 - **Meteosat HRDCP** - Meteosat HRDCP: high rate weather and hydrology platforms reporting through Meteosat

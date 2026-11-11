@@ -1700,3 +1700,11 @@ apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-cen
 too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
 source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
 qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
+
+## 2026-11-11 Own entries for six CubeSat framings (feat39-w1c)
+Own mode-list entries for six CubeSat framings that were only inside CubeSat telemetry (families 840 - 855, stride 3): AX100 Mode 5, AX100
+Mode 6, USP, NGHam, U482C and BEESAT / Mobitex. Each is a view onto the shared CubeSat receiver (`CubesatReceiver::setFramingMask`: same
+demodulators, only that framing's frames and counts), with its own row, tuning, test signal, summary, poll case and web/Android entries; the
+CubeSat telemetry entry is unchanged and says they exist. Skipped: FUNcube (the Smart CubeSat chain, not the shared receiver), FX.25 and
+IL2P (the packet receiver drops which FEC produced a frame), Fox DUV, the linear transponder tracker, AO-7 and the gr-satellites table
+entries with no framing of their own. Tests: tests/cubesat/test_cubesat_views.cpp (generated signals only). docs/W1C-3.9.md.

@@ -621,3 +621,9 @@ shared lists:
 stop using it
 The country of the shared transmitter list (ISO code, e.g. GB, DE, NO); Enter downloads it.\nThe lists of the countries of the ensembles heard are fetched as well.
 Add the transmitters of a CSV file to your own list (columns eid,main,sub,lat,lon,site,power_kw,channel_mhz, eid in hex):\nan export of heard transmitters with the positions filled in, or a list someone shares; rows without a position are skipped.\nqt-dab's .txdata.tii is used where it is instead (FMLIST data, personal use).
+Satellites, AX100 Mode 5
+Satellites, AX100 Mode 6
+Satellites, USP
+Satellites, NGHam
+Satellites, U482C
+Satellites, BEESAT / Mobitex

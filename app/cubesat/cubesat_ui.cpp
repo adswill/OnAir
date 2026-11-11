@@ -51,7 +51,7 @@ void loadState() {
     S.ccsdsLen = (int)plat::prefs().getI("cubesatCcsdsLen", 255);
 }
 
-bool live(const App& a) { return a.rx.standard == 62; }   // the engine reports its standard code minus one
+bool live(const App& a) { return a.rx.standard == 62 || dect2::cubesatViewForActive(a.rx.standard) != nullptr; }   // the engine reports its standard code minus one
 
 std::string clock(int64_t t, double sigSec) {
     char b[24];

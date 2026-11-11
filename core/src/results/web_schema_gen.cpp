@@ -14989,6 +14989,12 @@ static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTeleme
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
+static bool put_841(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_844(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_847(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_850(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_853(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_856(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -15255,6 +15261,12 @@ static const StdEntry kStd[] = {
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
+    {841, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_841},
+    {844, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_844},
+    {847, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_847},
+    {850, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_850},
+    {853, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_853},
+    {856, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_856},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15400,6 +15412,12 @@ static const WebModeRow kRows[] = {
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},
     {61, "CubeSat telemetry", 4, "CubeSat telemetry: frames from amateur satellites, named and dumped", "", 63, 62, "cube"},
+    {840, "AX100 Mode 5", 4, "AX100 Mode 5 (ASM + Golay): GOMspace satellite frames, CSP packets", "", 842, 841, "cube"},
+    {843, "AX100 Mode 6", 4, "AX100 Mode 6 (Reed-Solomon): GOMspace satellite frames, CSP packets", "", 845, 844, "cube"},
+    {846, "USP", 4, "USP (Sputnix): satellite frames with CRC", "", 848, 847, "cube"},
+    {849, "NGHam", 4, "NGHam: satellite frames with Reed-Solomon", "", 851, 850, "cube"},
+    {852, "U482C", 4, "U482C (AFSK 4800): GOMspace satellite frames", "", 854, 853, "cube"},
+    {855, "BEESAT / Mobitex", 4, "BEESAT (Mobitex): satellite frames from TU Berlin cubesats", "", 857, 856, "cube"},
     {62, "Globalstar", 4, "Globalstar: channel activity and Doppler (content is not decoded)", "", 64, 63, "globalstar"},
     {9, "DMR", 5, "DMR (Digital Mobile Radio), two-slot TDMA", "", 11, 10, "dmr"},
     {9, "Digital voice (auto)", 5, "Digital voice, automatic: every system in the span found from the signal itself, with how sure", "", 11, 10, "dmr"},
