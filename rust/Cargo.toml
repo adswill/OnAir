@@ -12,6 +12,7 @@ version = "0.1.0"
 edition = "2021"
 rust-version = "1.70"
 publish = false
+license = "GPL-3.0-or-later"
 
 # One set of profiles for everything (profiles are only read from the workspace root). panic=abort: nothing may unwind across the C boundary.
 [profile.release]

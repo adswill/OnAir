@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir HFDL layers: bursts, scrambler, interleaver, convolutional code and Viterbi decoder, FCS, ground stations, SPDU / MPDU / LPDU / HFNPDU parser"
 
 [dependencies]

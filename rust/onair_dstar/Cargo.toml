@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir D-STAR frame layer: header, FEC, flags, slow data GPS text"
 
 [dependencies]

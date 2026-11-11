@@ -3,6 +3,7 @@ name = "level-meter"
 version = "0.1.0"
 edition = "2021"
 publish = false
+license = "CC0-1.0"
 
 [lib]
 crate-type = ["cdylib"]

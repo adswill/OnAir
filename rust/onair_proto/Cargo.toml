@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir protocol frame layers (AIS) that parse untrusted over-the-air bytes, behind a plain C ABI"
 
 [dependencies]

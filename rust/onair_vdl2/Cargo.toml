@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir VDL Mode 2 link layers: burst header code, scrambler, Reed-Solomon (255,249), HDLC / AVLC frames, X.25 / CLNP / COTP and XID text"
 
 [dependencies]

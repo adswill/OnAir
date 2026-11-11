@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 rust-version.workspace = true
 publish.workspace = true
+license.workspace = true
 description = "OnAir USB SDR drivers: RTL-SDR protocol layer (RTL2832U, R820T/R828D, E4000) over a transfer trait"
 
 [dependencies]
