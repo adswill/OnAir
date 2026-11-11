@@ -27,6 +27,7 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
 
     // ---- controls (any thread)
+    void setVhfNarrowChannel(bool on);                   // 4.0: VHF DSC reads through a 4.5 kHz channel filter with a carrier follow-up (default on; off = the 3.9 receiver)
     void setService(int s);                              // 0 auto (by frequency; all services when the frequency is not known), 1 NAVTEX, 2 DSC, 3 weather fax
     void setFrequencyHz(double hz);                      // the tuned (dial) frequency: picks the service in auto mode and MF/HF or VHF for DSC; 0 = unknown
     void setParallelDsc(const std::vector<double>& hz);   // extra MF/HF DSC carriers to decode at the same time; those outside the capture are ignored

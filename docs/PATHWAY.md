@@ -1852,3 +1852,11 @@ sonde_sens40 (extended), edacs_sens40, argos_sens40. Measured and not kept: ACAR
 narrower filter (POCSAG +3 dB, FLEX collapses), M10 narrow path, MRZ narrow path (breaks a test). At theory: DMR, AIS, APRS, Orbcomm, the IoT set.
 ## 2026-11-12: QA 4.0 (feat40-qa)
 All-modes QA sweep extended: a non-default sample rate and bandwidth condition (generator rerun at 1.37 x the rate), noise-only runs for modes without a generator, `qa_switch` (one Engine through every mode twice: hangs, stale first report, thread and memory growth), `qa_sweep_sel` for single rows. Fixed: the previous mode's last report was returned after a mode switch (`Engine::start()`), HF ID and End of train counted noise as decodes. ASan + UBSan over `qa_switch`: no report. Open findings (vdl3 and ltpos do not decode through the Engine, cell/umts at odd rates, a few 12 dB rows) are in `docs/QA-4.0.md` and `tests/qa/qa_known.inc`. Simulated signals only.
+## 2026-11-12 (night): sensitivity 4.0, pass B2 (feat40-sensB2)
+Argos PTT-A2 uplink 13 dB to about -5.5 dB (coherent gate, line-detector start, length by bit closeness), NDB 14 to 9 dB (synchronous tone detection with a carrier frequency loop),
+Marine VHF DSC 4 / 6 dB to 2 dB (4.5 kHz IF with carrier follow-up), MPT 1327 9 to 6 dB (5.5 kHz IF, new dsp/narrow_if.h), JT4 wrong-text decodes to 0 (all-zero word).
+Tried and not kept: Wi-SUN burst gate (about 1 dB at 90 %, nothing at 50 %), EDACS 6.5 kHz IF with AFC (1 dB). Details: docs/SENSITIVITY-4.0-B2.md.
+## 2026-11-12 Integration note: Argos and MPT 1327 were improved twice
+feat40-sensA2 and feat40-sensB2 both changed core/src/argos/argos_rx.cpp and core/src/mpt1327/mpt1327_engine.cpp. In integ-40 the Argos receiver is
+the sensB2 version (about -5.5 dB 90 % point) and the MPT 1327 engine the sensA2 version (4.5 kHz carrier-following filter). Both sets of guard tests
+(argos_sens40, sens40b) stay; if one fails the other version of that file is on pub/feat40-sensA2 / pub/feat40-sensB2.
