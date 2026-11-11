@@ -472,7 +472,8 @@ int main() {
     r = lan.post("setup", "{\"password\":\"another one here\"}");
     CHECK(r.status == 409, "setup only once");
     for (int i = 0; i < 150; i++) { ConfigFile saved; saved.load(cfgPath); if (!saved.get("app_password_hash").empty()) break; std::this_thread::sleep_for(std::chrono::milliseconds(100)); }
-    { ConfigFile saved; saved.load(cfgPath); CHECK(saved.get("app_password_hash").compare(0, 7, "pbkdf2$") == 0 && !has(saved.text(), "correct horse"), "the hash is in the file, the password is not"); }
+    { ConfigFile saved; saved.load(cfgPath); CHECK(saved.get("app_password_hash").compare(0, 7, "pbkdf2$") == 0 && !has(saved.text(), "correct horse"), "the hash is in the file, the password is not (hash '%.12s', password in the file: %d, %zu bytes)",
+                    saved.get("app_password_hash").c_str(), (int)has(saved.text(), "correct horse"), saved.text().size()); }
     r = net.post("login", "{\"password\":\"wrong one\"}");
     CHECK(r.status == 401 && has(r.body, "wrong password"), "wrong password: %d %s", r.status, r.body.c_str());
     r = net.post("login", "{\"password\":\"correct horse battery\"}");
