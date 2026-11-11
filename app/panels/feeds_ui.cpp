@@ -86,6 +86,55 @@ void targetsSection(dect2::FeedConfig& c, bool ais, bool& changed) {
     ImGui::PopTextWrapPos();
     ImGui::PopID();
 }
+
+// Radiosonde upload to APRS-IS aggregators: a list of targets, each off until its own box is ticked
+void sondeUploadSection(dect2::FeedConfig& c, bool& changed) {
+    ImGui::PushID("sondeup");
+    ImGui::PushTextWrapPos(460 * gUi);
+    ImGui::TextDisabled("%s", tr("Sends every decoded radiosonde (position, speed, altitude, climb rate, temperature, humidity, pressure, frequency, type) to APRS-IS sites such as wettersonde.net "
+                                 "and radiosondy.info, after a station beacon with your location. Each target is off until you tick it."));
+    ImGui::PopTextWrapPos();
+    for (size_t i = 0; i < c.sondeTargets.size(); i++) {
+        dect2::SondeUploadTarget& t = c.sondeTargets[i];
+        ImGui::PushID((int)i);
+        changed |= ImGui::Checkbox(t.name.c_str(), &t.enabled);
+        ImGui::SameLine(); changed |= textField("##host", t.host, 0, 140);
+        ImGui::SameLine(); changed |= portField(N_("Port"), t.port);
+        ImGui::SameLine(); if (ImGui::SmallButton(tr("Remove"))) { c.sondeTargets.erase(c.sondeTargets.begin() + (long)i); changed = true; ImGui::PopID(); break; }
+        ImGui::Indent();
+        changed |= textField(N_("Callsign-SSID"), t.call, ImGuiInputTextFlags_CharsUppercase, 120);
+        changed |= textField(N_("Passcode"), t.pass, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsDecimal, 120);
+        ImGui::SetNextItemWidth(90 * gUi);
+        changed |= ImGui::SliderInt(tr("beacon every (min)"), &t.beaconMin, 1, 120);
+        if (!t.call.empty() && !dect2::aprsValidCallsign(t.call)) ImGui::TextColored(pal::warnAmber(), "%s", tr("Not a valid callsign (like DG9BFC-10)."));
+        const dect2::SondeUploadStatus s = dect2::SondeUpload::get().status(i);
+        if (!t.enabled) ImGui::TextDisabled("%s", tr("off"));
+        else {
+            ImGui::TextColored(s.connected ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), tr("%s, %llu packets forwarded, %llu beacons, %llu dropped, %llu reconnects"),
+                               s.state.c_str(), (unsigned long long)s.sent, (unsigned long long)s.beacons, (unsigned long long)s.dropped, (unsigned long long)s.reconnects);
+            if (!s.lastError.empty()) { ImGui::PushTextWrapPos(460 * gUi); ImGui::TextColored(pal::badRed(), "%s", s.lastError.c_str()); ImGui::PopTextWrapPos(); }
+            if (!s.lastLine.empty()) { ImGui::PushTextWrapPos(460 * gUi); ImGui::TextDisabled("%s %s", tr("last line:"), s.lastLine.c_str()); ImGui::PopTextWrapPos(); }
+        }
+        ImGui::Unindent();
+        ImGui::PopID();
+    }
+    if (ImGui::BeginCombo("##addsonde", tr("Add a target..."))) {
+        for (const dect2::SondeUploadPreset& p : dect2::sondeUploadPresets()) {
+            if (ImGui::Selectable(p.name)) {
+                dect2::SondeUploadTarget t; t.name = p.name; t.host = p.host; t.port = p.port;
+                if (!c.aprsCall.empty()) t.call = c.aprsCall;
+                c.sondeTargets.push_back(t); changed = true;
+            }
+            if (ImGui::IsItemHovered() && p.note[0]) ImGui::SetTooltip("%s", p.note);
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::PushTextWrapPos(460 * gUi);
+    ImGui::TextDisabled("%s", tr("Privacy: the sites publish your station position and callsign. Set your location in View > Map first. Your passcode stays in your settings only. "
+                                 "M10 and M20 sondes are not sent (no agreed APRS name for them)."));
+    ImGui::PopTextWrapPos();
+    ImGui::PopID();
+}
 } // namespace
 
 void loadFeedPrefs(App& a) {
@@ -122,9 +171,20 @@ void loadFeedPrefs(App& a) {
         t.host = d.getS((k + "Host").c_str(), ""); t.port = (int)d.getI((k + "Port").c_str(), 0); t.key = d.getS((k + "Key").c_str(), ""); t.enabled = d.getB((k + "On").c_str(), false);
         c.targets.push_back(t);
     }
+    const int ns = (int)d.getI("sondeUpCount", 0);
+    c.sondeTargets.clear();
+    for (int i = 0; i < ns && i < 8; i++) {
+        const std::string k = "sondeUp" + std::to_string(i);
+        dect2::SondeUploadTarget t;
+        t.name = d.getS((k + "Name").c_str(), ""); t.host = d.getS((k + "Host").c_str(), ""); t.port = (int)d.getI((k + "Port").c_str(), 14580);
+        t.call = d.getS((k + "Call").c_str(), ""); t.pass = d.getS((k + "AprsPass").c_str(), ""); t.enabled = d.getB((k + "On").c_str(), false);
+        t.beaconMin = (int)d.getI((k + "Beacon").c_str(), 10);
+        c.sondeTargets.push_back(t);
+    }
     bool any = false;
     for (bool o : c.on) any = any || o;
     for (const dect2::FeedTarget& t : c.targets) any = any || t.enabled;
+    for (const dect2::SondeUploadTarget& t : c.sondeTargets) any = any || t.enabled;
     if (any) dect2::Feeds::get().configure(c);
     dect2::ShareConfig& sc = a.share;
     sc.on = d.getB("shareOn", false); sc.port = (int)d.getI("sharePort", sc.port); sc.lan = d.getI("shareLan", 0) != 0; sc.allowControl = d.getI("shareControl", 0) != 0;
@@ -135,6 +195,7 @@ void loadFeedPrefs(App& a) {
 
 // Remote control from the clients of "Share my radio": their frequency and gain commands (only arrive when the box is ticked)
 void shareTick(App& a) {
+    if (a.rxId == 1) { double la = 0, lo = 0; receiverLocation(la, lo); dect2::SondeUpload::get().setStation(la, lo, receiverLocationSet()); }   // the station beacon position
     if (a.rxId != 1 || !a.share.on || !a.share.allowControl) return;
     bool retune = false;
     for (const dect2::ShareCommand& m : dect2::ShareServer::get().takeCommands()) {
@@ -166,6 +227,13 @@ void saveFeedPrefs(const App& a) {
         const dect2::FeedTarget& t = c.targets[i];
         d.setS((k + "Name").c_str(), t.name); d.setI((k + "Kind").c_str(), (int)t.kind); d.setI((k + "Proto").c_str(), (int)t.proto);
         d.setS((k + "Host").c_str(), t.host); d.setI((k + "Port").c_str(), t.port); d.setS((k + "Key").c_str(), t.key); d.setB((k + "On").c_str(), t.enabled);
+    }
+    d.setI("sondeUpCount", (long)c.sondeTargets.size());
+    for (size_t i = 0; i < c.sondeTargets.size(); i++) {
+        const std::string k = "sondeUp" + std::to_string(i);
+        const dect2::SondeUploadTarget& t = c.sondeTargets[i];
+        d.setS((k + "Name").c_str(), t.name); d.setS((k + "Host").c_str(), t.host); d.setI((k + "Port").c_str(), t.port);
+        d.setS((k + "Call").c_str(), t.call); d.setS((k + "AprsPass").c_str(), t.pass); d.setB((k + "On").c_str(), t.enabled); d.setI((k + "Beacon").c_str(), t.beaconMin);
     }
     d.setB("shareOn", a.share.on); d.setI("sharePort", a.share.port); d.setI("shareLan", a.share.lan ? 1 : 0); d.setI("shareControl", a.share.allowControl ? 1 : 0);
     remoteApiSavePrefs(a);
@@ -230,6 +298,8 @@ void feedsWindow(App& a) {
     ImGui::Unindent();
     statusLine(dect2::kFeedAprsIs, false);
     ImGui::PopID();
+    typo::separatorText(tr("Radiosonde upload (APRS-IS)"));
+    sondeUploadSection(c, changed);
     ImGui::PushID("kiss");
     changed |= ImGui::Checkbox(tr("KISS (TCP server)"), &c.on[dect2::kFeedKiss]);
     ImGui::SameLine(); changed |= portField(N_("Port"), c.kissPort);

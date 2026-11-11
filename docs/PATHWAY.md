@@ -1700,3 +1700,6 @@ apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-cen
 too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
 source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
 qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
+
+## 2026-11-11 Radiosonde upload to APRS-IS aggregators (feat39-sondeup)
+German user: wettersonde.net target connected but 0 packets forwarded. Cause: the APRS-IS iGate is fed only by the AX.25 packet decoder; the sonde receiver never called any feed and no sonde APRS text existed. New SondeUpload (core/src/net/sonde_upload.cpp): several targets (host, port, callsign-SSID, passcode, enable), station beacon on connect and every N min, one APRS object per sonde in the dxlAPRS / auto_rx format (knots, feet, 9-char padded names, fields left out when not reported), 5 s per sonde, reconnect with backoff, per-target status in View > Data feeds. M10 / M20 / iMet-1/4 not sent (no agreed ID). Tested with golden lines and a localhost mock server only; radiosondy.info host/port unconfirmed (editable). docs/SONDE-UPLOAD-3.9.md.
