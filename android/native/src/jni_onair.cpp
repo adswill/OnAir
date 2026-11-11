@@ -278,8 +278,11 @@ FN(jstring, nativeNote)(JNIEnv* e, jobject) { return mk(e, gB->eng.sourceNote())
 FN(void, nativeRetune)(JNIEnv*, jobject, jdouble hz) {
     Bridge& b = *gB;
     std::lock_guard<std::mutex> lk(b.mu);
+    const bool moved = std::fabs(b.tune.centerHz - hz) > 1;
     b.tune.centerHz = hz;
-    if (b.eng.running()) b.eng.retune(b.tune);
+    // a new frequency forgets the old station (its RDS name and text, its queued sound), as the desktop does for FM and the modes after the TV
+    // standards (#463: the next station kept the previous one's RDS); the gain and radio calls below keep using retune()
+    if (b.eng.running()) { if (moved && b.std >= 6) b.eng.retuneReset(b.tune); else b.eng.retune(b.tune); }
 }
 FN(void, nativeSetGain)(JNIEnv*, jobject, jdouble db, jboolean agc) {
     Bridge& b = *gB;
