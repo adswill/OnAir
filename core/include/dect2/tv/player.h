@@ -62,7 +62,9 @@ inline size_t trimVideoQueue(Q& q, size_t cap, double clock, bool haveClock) {
     return n;
 }
 
-struct AudioTrackInfo { int pid = 0; std::string codec, lang; int channels = 0; };
+// format: the Dolby line read from the stream's own headers (dolby_audio.h), e.g. "Dolby Atmos (E-AC-3 JOC), 5.1 bed"; empty for other codecs.
+// atmos: 1 E-AC-3 with JOC objects (FFmpeg plays its channel bed; the objects need a receiver: passthrough), 0 none.
+struct AudioTrackInfo { int pid = 0; std::string codec, lang; int channels = 0; std::string format, bed; int atmos = 0; int complexity = 0; };
 
 struct PlayerStats {
     bool active = false;
@@ -87,6 +89,13 @@ struct PlayerStats {
     // what of the service the FFmpeg in OnAir cannot show or play (AVS+ / AVS2 / AVS3 video, DRA sound; docs/CODECS.md), one sentence, else empty
     std::string videoNote, audioNote;
     int videoStreamType = -1;   // PMT stream_type of the video (0x42 AVS family, 0xD2 AVS2, 0xD4 AVS3), -1 unknown
+    // Dolby sound (dolby_audio.h): the format line of the playing track, whether it carries Atmos (1 E-AC-3 JOC), its bed and object count
+    std::string audioFormat, audioBed;
+    int atmos = 0, jocComplexity = 0;
+    int audioOutChannels = 0;   // what goes to the sound device: 2, 6 (5.1) or 8 (7.1); 0 while nothing plays
+    bool matrixStereo = false;  // the stereo is Dolby Surround (Lt/Rt) matrix-encoded
+    bool passthrough = false;   // the AC-3 / E-AC-3 goes out untouched as an IEC 61937 bitstream (experimental)
+    std::string passthroughNote;   // why passthrough is not in use although it is switched on (empty otherwise)
     int avsProfile = -1;        // profile_id of the AVS sequence header (0x20 JiZhun, 0x48 Guangdian = AVS+), -1 not seen yet
 };
 
@@ -119,6 +128,7 @@ public:
     void setVolume(float v) { audio_.setVolume(v); }
     void setMuted(bool m) { audio_.setMuted(m); }
     void setAudioTrack(int index);         // index into audioTracks()
+    void reopenAudio() { reopenAudio_ = true; }   // the speaker layout or passthrough setting changed (DolbyOutputConfig): open the sound again
     void setSubtitles(bool on) { subsOn_ = on; }
     void setConceal(bool on) { conceal_ = on; }    // bridge gaps in the stream: continue the audio, interpolate missing pictures
     bool conceal() const { return conceal_; }
@@ -162,6 +172,7 @@ private:
     std::thread th_;
     std::atomic<bool> stop_{false}, restart_{false};
     std::atomic<bool> subsOn_{true}, subsAvail_{false};
+    std::atomic<bool> reopenAudio_{false};
     std::atomic<bool> conceal_{false};   // off by default: interpolating pictures costs CPU that slower computers need for decoding
     std::atomic<bool> hwAllowed_{true};
     std::atomic<bool> hwFallback_{false};   // the GPU decoder stayed silent on this service: software decoding until the service or the setting changes

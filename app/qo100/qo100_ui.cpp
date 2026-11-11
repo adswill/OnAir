@@ -2,6 +2,7 @@
 // downlink or the narrowband transponder, the beacon lock (LNB error in kHz and ppm, drift), the narrowband transponder as a zoomable
 // spectrum over a waterfall (a click puts the SSB dial there) with Listen, the wideband transponder with its DATV carriers and a
 // hand-over to DVB-S/S2, and the drift history. Every frequency shown is the corrected downlink frequency once the beacons are locked.
+#include "../panels/tv_dolby_text.h"
 #include "dect2/common/time_fmt.h"
 #include "app.h"
 #include "ease/ease_ui.h"
@@ -457,7 +458,7 @@ void decodePanel(App& a, float h) {
     }
     if (pl.selected() >= 0) {
         if (ps.hasVideo) ImGui::TextDisabled("%s  %dx%d  %.1f fps", ps.videoCodec.c_str(), ps.width, ps.height, ps.fps);
-        if (ps.hasAudio) ImGui::TextDisabled("%s  %d ch", ps.audioCodec.c_str(), ps.audioChannels);
+        if (ps.hasAudio) { const std::string dl = dolbytext::line(ps); if (dl.empty()) ImGui::TextDisabled("%s  %d ch", ps.audioCodec.c_str(), ps.audioChannels); else ImGui::TextDisabled("%s", dl.c_str()); }
         ImGui::TextDisabled("%llu pictures shown, %llu errors", (unsigned long long)ps.shown, (unsigned long long)ps.errors);
         ImGui::SetNextItemWidth(130 * gUi);
         if (ImGui::SliderFloat("volume", &a.volume, 0, 1, "%.2f")) pl.setVolume(a.volume);

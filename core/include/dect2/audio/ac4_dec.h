@@ -38,6 +38,7 @@ std::vector<AudioCodecKind> mpdAudioKinds(const std::string& mpd);
 struct Ac4Dsi {
     bool valid = false;
     int dsiVersion = -1, bitstreamVersion = -1, fsIndex = -1, frameRateIndex = -1, presentations = 0;
+    std::vector<uint8_t> raw;   // the box payload, for parseAc4DsiV1() (dolby_audio.h: presentations, immersive / Atmos)
     int sampleRate() const { return fsIndex == 1 ? 48000 : fsIndex == 0 ? 44100 : 0; }
 };
 // `payload` is the content of the box (after its 8 byte header)

@@ -695,3 +695,16 @@ Send below the dial frequency instead of above it.
 Font:
 Waterfall text, HF
 Add a target...
+TV sound speakers
+Automatic plays 5.1 or 7.1 TV sound (Dolby Digital, Dolby Digital Plus, the bed of Dolby Atmos) on as many speakers as the output device has, and mixes it to stereo otherwise. Or always stereo, stereo with Dolby Surround (Lt/Rt) matrix for a surround decoder, 5.1 or 7.1.
+Pass Dolby audio through to my receiver (bitstream, experimental)
+Sends Dolby Digital and Dolby Digital Plus (with its Dolby Atmos) untouched over HDMI or optical to an AV receiver or soundbar, which decodes it: OnAir decodes nothing. Works only with devices that accept a bitstream; a laptop's own speakers cannot take it. Not tested on real hardware yet. The volume is then set on the receiver.
+Passthrough output
+The output that goes to the receiver. Empty: the TV sound's output. Linux: an ALSA device such as hdmi:CARD=0,DEV=0 (the receiver's HDMI port).
+bed
+bitstream to the receiver (experimental)
+7.1 to the speakers
+5.1 to the speakers
+stereo, Dolby Surround matrix
+stereo downmix
+Dolby Atmos: OnAir plays the channel bed; the objects need Dolby's renderer. A receiver or soundbar renders them: Settings > Audio > Pass Dolby audio through.

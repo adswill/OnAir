@@ -30,7 +30,7 @@ bool open(Backend* b, AudioOut::Impl* I, int rate, const ma_backend* backends, m
     b->haveCtx = true;
     ma_device_config dc = ma_device_config_init(ma_device_type_playback);
     dc.playback.format = ma_format_f32;
-    dc.playback.channels = 2;
+    dc.playback.channels = (ma_uint32)I->channels;   // miniaudio's default map for 6 / 8 is the WAVE order AudioOut uses
     dc.sampleRate = (ma_uint32)rate;
     ma_device_id chosen{};
     if (!I->device.empty()) {   // a named output device; not found: the default

@@ -1,6 +1,8 @@
 // Start-up of the main program: the startup guard and first-run dialogs, and the developer / test command-line flags.
 // Split from main.cpp.
 // The flags are listed where they are parsed (parseDevFlags); none of them is saved.
+#include "dect2/audio/dolby_audio.h"
+#include <algorithm>
 #include "dect2/packs/datasets.h"
 #include "dect2/session/session_store.h"
 #include "ui/input_map.h"
@@ -74,6 +76,12 @@ void startApp(App& app, int argc, char** argv) {
         if (const char* sa = getenv("DECT2_SETUPANT")) app.setupAntenna = atoi(sa); }
     app.wizStepT = ImGui::GetTime();
     app.engine.player().setHardwareDecode(plat::prefs().getB("hwVideo", true));
+    {   // TV sound: speaker layout and Dolby passthrough (Settings > Audio, dolby_audio.h)
+        dect2::DolbyOutputConfig& dc = dect2::DolbyOutputConfig::global();
+        dc.layout = (int)std::max(0L, std::min(4L, plat::prefs().getI("surroundLayout", 0)));
+        dc.passthrough = plat::prefs().getB("dolbyPassthrough", false);
+        dc.setDevice(plat::prefs().getS("iecDevice", ""));
+    }
     app.tune.synth.demoTv = true;   // the synthetic DVB-T / ATSC signal carries a test-card programme
     if (const char* ws = getenv("DECT2_WIZSTEP")) wizEnter(app, atoi(ws));
     app.engine.log("OnAir started");

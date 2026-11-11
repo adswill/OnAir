@@ -211,6 +211,11 @@ pub fn parse_pmt(s: &[u8], streams: &mut [PmtStream], subs: &mut [PmtSub]) -> Op
                     set_codec(&mut st, b"AAC");
                     st.kind = KIND_AUDIO;
                 }
+                // extension descriptor: AC-4 (descriptor_tag_extension 0x15, EN 300 468 annex D.7)
+                0x7F if l >= 1 && d[0] == 0x15 => {
+                    set_codec(&mut st, b"AC-4");
+                    st.kind = KIND_AUDIO;
+                }
                 0x59 => {
                     set_codec(&mut st, b"DVB subtitles");
                     st.kind = KIND_SUBTITLES;

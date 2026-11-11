@@ -2,6 +2,7 @@
 // favourites, the programme guide (XMLTV), and the player with its usual controls. OnAir only plays: it ships no channels (docs/IPTV.md).
 // The bytes are fetched by dect2::iptv::Stream (HTTP(S), HLS, UDP / RTP) and go to the Player as transport stream packets, the same way a
 // recording does (tvrec_ui.cpp).
+#include "../panels/tv_dolby_text.h"
 #include "app.h"
 #include "dect2/common/png.h"
 #include "dect2/common/thread_name.h"
@@ -419,7 +420,7 @@ void drawStatus(App& a) {
     std::string line;
     if (!i.kind.empty()) line += i.kind;
     if (ps.width > 0) line += (line.empty() ? "" : "  |  ") + std::to_string(ps.width) + "x" + std::to_string(ps.height) + (ps.fps > 0 ? " " + std::to_string((int)(ps.fps + 0.5)) + " fps" : "");
-    if (!ps.videoCodec.empty()) line += "  |  " + ps.videoCodec + (ps.audioCodec.empty() ? "" : " + " + ps.audioCodec);
+    if (!ps.videoCodec.empty()) { const std::string dl = dolbytext::line(ps); line += "  |  " + ps.videoCodec + (ps.audioCodec.empty() ? "" : " + " + (dl.empty() ? ps.audioCodec : dl)); }
     if (i.measuredBps > 0) { char b[48]; snprintf(b, sizeof b, "  |  %.1f Mbit/s download", i.measuredBps / 1e6); line += b; }
     if (i.bufferedSec > 0.05) { char b[48]; snprintf(b, sizeof b, "  |  %.0f s buffered", i.bufferedSec); line += b; }
     if (i.reconnects) line += "  |  reconnected " + std::to_string(i.reconnects) + "x";

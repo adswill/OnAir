@@ -51,21 +51,22 @@ struct Wasapi {
         release(render); release(client); release(dev); release(en);
         if (event) { CloseHandle(event); event = nullptr; }
     }
-    bool open(int rate) {
+    bool open(int rate, int C = 2) {
         close();
         if (FAILED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&en))) return false;
         if (FAILED(en->GetDefaultAudioEndpoint(eRender, eConsole, &dev))) return false;
         if (FAILED(dev->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void**)&client))) return false;
         WAVEFORMATEXTENSIBLE wf{};
         wf.Format.wFormatTag = WAVE_FORMAT_EXTENSIBLE;
-        wf.Format.nChannels = 2;
+        wf.Format.nChannels = (WORD)C;
         wf.Format.nSamplesPerSec = (DWORD)rate;
         wf.Format.wBitsPerSample = 32;
-        wf.Format.nBlockAlign = 8;
-        wf.Format.nAvgBytesPerSec = (DWORD)rate * 8;
+        wf.Format.nBlockAlign = (WORD)(4 * C);
+        wf.Format.nAvgBytesPerSec = (DWORD)rate * 4 * (DWORD)C;
         wf.Format.cbSize = 22;
         wf.Samples.wValidBitsPerSample = 32;
-        wf.dwChannelMask = SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT;
+        // the order of AudioOut: FL FR FC LFE SL SR (5.1), FL FR FC LFE BL BR SL SR (7.1); the system mixes down to the device's speakers
+        wf.dwChannelMask = C == 8 ? 0x63F : C == 6 ? 0x60F : (SPEAKER_FRONT_LEFT | SPEAKER_FRONT_RIGHT);
         wf.SubFormat = {0x00000003, 0x0000, 0x0010, {0x80, 0x00, 0x00, 0xaa, 0x00, 0x38, 0x9b, 0x71}};   // KSDATAFORMAT_SUBTYPE_IEEE_FLOAT
         // the system converts our format to the one of the device (rate and channels)
         const DWORD flags = AUDCLNT_STREAMFLAGS_EVENTCALLBACK | AUDCLNT_STREAMFLAGS_AUTOCONVERTPCM | AUDCLNT_STREAMFLAGS_SRC_DEFAULT_QUALITY;
@@ -91,7 +92,8 @@ void threadMain(NativeBackend* b, AudioOut::Impl* I, int rate) {
     }
     if (!task) setThreadPriority(ThreadPriority::Realtime);
     Wasapi w;
-    bool open = w.open(rate);
+    const int C = I->channels;
+    bool open = w.open(rate, C);
     b->ok = open; b->opened = true;
     if (!open) { w.close(); CoUninitialize(); return; }   // release the COM objects while COM is still there
     while (!b->stop) {
@@ -107,11 +109,27 @@ void threadMain(NativeBackend* b, AudioOut::Impl* I, int rate) {
         }
         if (FAILED(hr)) {   // the device went away (headphones unplugged, default device changed): open the new default device
             w.close();
-            while (!b->stop && !w.open(rate)) std::this_thread::sleep_for(std::chrono::milliseconds(500));
+            while (!b->stop && !w.open(rate, C)) std::this_thread::sleep_for(std::chrono::milliseconds(500));
         }
     }
     w.close();
     CoUninitialize();
+}
+
+int deviceChannelsWin() {
+    int n = 0;
+    std::thread t([&n] {   // a thread of its own: the caller's COM apartment is left alone
+        const bool com = SUCCEEDED(CoInitializeEx(nullptr, COINIT_MULTITHREADED));
+        IMMDeviceEnumerator* en = nullptr; IMMDevice* dev = nullptr; IAudioClient* cl = nullptr; WAVEFORMATEX* mix = nullptr;
+        if (SUCCEEDED(CoCreateInstance(__uuidof(MMDeviceEnumerator), nullptr, CLSCTX_ALL, __uuidof(IMMDeviceEnumerator), (void**)&en)) &&
+            SUCCEEDED(en->GetDefaultAudioEndpoint(eRender, eConsole, &dev)) && SUCCEEDED(dev->Activate(__uuidof(IAudioClient), CLSCTX_ALL, nullptr, (void**)&cl)) &&
+            SUCCEEDED(cl->GetMixFormat(&mix)) && mix) n = mix->nChannels;
+        if (mix) CoTaskMemFree(mix);
+        release(cl); release(dev); release(en);
+        if (com) CoUninitialize();
+    });
+    t.join();
+    return n;
 }
 #else
 // ---------------------------------------------------------------- ALSA (libasound is loaded when needed, nothing is linked)
@@ -137,12 +155,13 @@ struct Alsa {
         drop = (decltype(drop))dlsym(lib, "snd_pcm_drop");
         return open && setParams && writei && recover && close && drop;
     }
+    int C = 2;
     bool openDevice(int rate) {
         closeDevice();
         const char* name = getenv("DECT2_ALSA_DEVICE") ? getenv("DECT2_ALSA_DEVICE") : "default";
         if (open(&pcm, name, 0 /* playback */, 0) < 0) { pcm = nullptr; return false; }
         // interleaved 32-bit float, the system resamples; 60 ms of buffering
-        if (setParams(pcm, 14 /* FLOAT_LE */, 3 /* RW_INTERLEAVED */, 2, (unsigned)rate, 1, 60000) < 0) { closeDevice(); return false; }
+        if (setParams(pcm, 14 /* FLOAT_LE */, 3 /* RW_INTERLEAVED */, (unsigned)C, (unsigned)rate, 1, 60000) < 0) { closeDevice(); return false; }
         return true;
     }
     void closeDevice() { if (pcm) { drop(pcm); close(pcm); pcm = nullptr; } }
@@ -152,14 +171,23 @@ struct Alsa {
 void threadMain(NativeBackend* b, AudioOut::Impl* I, int rate) {
     setThreadPriority(ThreadPriority::Realtime);
     Alsa a;
+    const int C = I->channels;
+    a.C = C;
     const bool open = a.load() && a.openDevice(rate);
     b->ok = open; b->opened = true;
     if (!open) return;
     const unsigned block = (unsigned)std::max(240, rate / 100);   // 10 ms
-    std::vector<float> buf((size_t)block * 2);
+    std::vector<float> buf((size_t)block * (size_t)C), alsaBuf((size_t)block * (size_t)C);
+    // ALSA's surround order is FL FR RL RR FC LFE [SL SR]; AudioOut's is FL FR FC LFE SL SR / FL FR FC LFE BL BR SL SR
+    static const int kAlsaFrom[8] = {0, 1, 4, 5, 2, 3, 6, 7};
     while (!b->stop) {
         I->render(buf.data(), block);
-        const unsigned char* p = reinterpret_cast<const unsigned char*>(buf.data());
+        const float* src = buf.data();
+        if (C > 2) {
+            for (unsigned i = 0; i < block; i++) for (int c = 0; c < C; c++) alsaBuf[(size_t)C * i + (size_t)c] = buf[(size_t)C * i + (size_t)kAlsaFrom[c]];
+            src = alsaBuf.data();
+        }
+        const unsigned char* p = reinterpret_cast<const unsigned char*>(src);
         unsigned left = block;
         while (left && !b->stop) {
             const long n = a.writei(a.pcm, p, left);
@@ -170,13 +198,22 @@ void threadMain(NativeBackend* b, AudioOut::Impl* I, int rate) {
                 }
                 break;
             }
-            p += (size_t)n * 8; left -= (unsigned)n;
+            p += (size_t)n * 4 * (size_t)C; left -= (unsigned)n;
         }
     }
 }
 #endif
 
 } // namespace
+
+int audioDeviceChannels(const std::string& name) {
+#ifdef _WIN32
+    return name.empty() ? deviceChannelsWin() : 0;   // a named device: unknown (Settings can force 5.1 / 7.1)
+#else
+    (void)name;
+    return 0;   // ALSA does not say how many speakers are behind "default"
+#endif
+}
 
 bool audioBackendStart(AudioOut::Impl* I, int rate) {
     const char* want = getenv("DECT2_AUDIO");

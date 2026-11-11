@@ -133,6 +133,7 @@ Ac4Dsi parseDac4(const uint8_t* p, size_t n) {
     d.fsIndex = (int)((v >> 13) & 1);
     d.frameRateIndex = (int)((v >> 9) & 0xf);
     d.presentations = (int)(v & 0x1ff);
+    d.raw.assign(p, p + n);
     d.valid = true;
     return d;
 }
