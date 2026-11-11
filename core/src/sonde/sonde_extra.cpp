@@ -184,8 +184,11 @@ private:
             const uint64_t m = (1ULL << 44) - 1;
             const uint64_t v = sync_ & m;
             int match = -1;
-            if (v == pat) match = 0;   // exact: the preamble repeats, a loose match would lock early
-            else if (v == (pat ^ m)) match = 1;
+            // 4.0: up to 3 symbol errors in the 44 (the preamble repeats: a copy of the pattern shifted by 2 or 4 symbols differs from it by 4 in the last
+            // 8 symbols, so a looser match there could lock early; an exact match needed 44 right symbols in a row, 41 % of the frames at a 2 % symbol error rate)
+            // (the last 8 symbols, 10101010, may have one error at most: a copy of the pattern shifted by 2 or 4 symbols differs there by 4)
+            if (__builtin_popcountll(v ^ pat) <= 3 && __builtin_popcountll((v ^ pat) & 0xFF) <= 1) match = 0;
+            else if (__builtin_popcountll(v ^ (pat ^ m)) <= 3 && __builtin_popcountll((v ^ pat ^ m) & 0xFF) <= 1) match = 1;
             if (match >= 0) { inv_ = match; run_ = true; phase_ = 0; bits_.clear(); }
             return;
         }

@@ -59,6 +59,36 @@ static void mrzTest() {
     }
 }
 
+// 4.0: the MRZ sync (9 x 1001 and 10101010) is found with up to 3 symbol errors, at most one in its last 8; copies shifted by 2 and 4 symbols never lock
+static void mrzSyncTolerance() {
+    SondeTruth t = truth();
+    auto s = mrzSymbols(t, 0xC, false);
+    // find the sync: the first position where 44 symbols match the pattern
+    const uint64_t pat = 0x99999999999AAULL & ((1ULL << 44) - 1);
+    size_t end = 0;
+    {
+        uint64_t reg = 0;
+        for (size_t i = 0; i < s.size(); i++) { reg = (reg << 1) | (s[i] & 1); if ((reg & ((1ULL << 44) - 1)) == pat) { end = i + 1; break; } }
+    }
+    CHECK(end >= 44);
+    const struct { int e[4]; int n; bool ok; } cases[] = {
+        {{5, 20, 30, 0}, 3, true},        // three errors in the preamble part
+        {{43, 10, 0, 0}, 2, true},        // one in the last 8 symbols
+        {{43, 42, 0, 0}, 2, false},       // two in the last 8: not accepted
+        {{1, 2, 3, 4}, 4, false},         // four errors
+    };
+    for (const auto& c : cases) {
+        auto d = makeMrzDecoder();
+        std::vector<SondeFix> out;
+        auto q = s;
+        for (int k = 0; k < c.n; k++) q[end - 44 + (size_t)c.e[k]] ^= 1;
+        std::vector<uint8_t> pad(50, 1);
+        d->push(pad.data(), pad.size(), 0, out);
+        d->push(q.data(), q.size(), 0, out);
+        CHECK((out.size() == 1) == c.ok);
+    }
+}
+
 static void imet54Test() {
     SondeTruth t = truth();
     for (int flips : {0, 8, 16}) for (int inv = 0; inv < 2; inv++) {
@@ -108,6 +138,7 @@ static void meiseiTest() {
 int main() {
     imetBitsTest();
     mrzTest();
+    mrzSyncTolerance();
     imet54Test();
     meiseiTest();
     return testSummary("sonde_extra");
