@@ -201,6 +201,7 @@ struct FbrReceiver::Impl {
         std::nth_element(sorted.begin(), sorted.begin() + (long)mid, sorted.end());
         const double med = std::max(1e-30, sorted[mid]);
         const double ratio = 10 * std::log10(bestP / (med * 1.443));   // the median of an exponential is ln2 of its mean
+        if (getenv("FBR_DEBUG")) fprintf(stderr, "fbr: acquire best %.1f dB at bin %d (%.1f Hz) fs %.0f binHz %.2f median %.3g\n", ratio, best, (best < kAcqN / 2 ? best : best - kAcqN) * binHz / 2, fs, binHz, med);
         if (ratio < 17.0) return;
         // a parabola through the peak and its neighbours for a sub-bin frequency
         const double pm = pw[(size_t)((best + kAcqN - 1) % kAcqN)], p0 = pw[(size_t)best], pp = pw[(size_t)((best + 1) % kAcqN)];
