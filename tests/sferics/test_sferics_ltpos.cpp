@@ -555,7 +555,9 @@ static void testHwTimeAndReceiver() {
     // a server and four clients with GPS marks, and one client with the wrong key, over loopback
     const double rate = 250e3;
     const int64_t wall = std::chrono::duration_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now().time_since_epoch()).count();
-    const int64_t epoch = wall - 4000000000LL;   // the scene happened four seconds ago, so the server need not wait
+    // the scene starts a few seconds ahead: the server holds each detection 2 s for the others, and feeding five stations on a slow computer
+    // (Windows runners) can take longer than that, which would make it solve strikes from the first station's packets alone
+    const int64_t epoch = wall + 6000000000LL;
     int port = 47500 + (int)(wall / 1000000 % 400);
     const std::string keyText = "a shared network key";
     LtPosReceiver server;
@@ -598,7 +600,7 @@ static void testHwTimeAndReceiver() {
     }
     // the network thread sends in the background and the server solves every 200 ms
     bool done = false;
-    for (int i = 0; i < 40 && !done; i++) {
+    for (int i = 0; i < 300 && !done; i++) {   // up to 30 s: the scene lies ahead, then the hold
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         LtPosTelemetry tt;
         if (server.telemetry(tt, 0)) { t = tt; done = t.strikes.size() >= 2 && t.packetsAuth > 0; }
