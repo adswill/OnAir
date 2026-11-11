@@ -24,9 +24,9 @@ on:
         description: "job time limit in minutes (long sweeps)"
         default: "90"
       os:
-        description: "linux or macos"
+        description: "linux, macos or windows (Windows: a separate MSYS2 UCRT64 job like the Windows shards of ci.yml)"
         type: choice
-        options: [linux, macos]
+        options: [linux, macos, windows]
         default: linux
       verbose:
         description: "run ctest with -V (prints the output of passing tests)"
@@ -43,6 +43,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   quick:
+    if: inputs.os != 'windows'
     name: Quick ${{ inputs.os }}
     runs-on: ${{ inputs.os == 'macos' && 'macos-15' || 'ubuntu-24.04' }}
     timeout-minutes: ${{ fromJSON(inputs.minutes || '90') }}
@@ -124,3 +125,55 @@ jobs:
           perf report -i perf.data --stdio --no-children --percent-limit 0.3 --sort comm,symbol 2>/dev/null | grep -v "^$" | head -150 || true
           echo "===== the hottest function, by instruction ====="
           perf annotate -i perf.data --stdio --no-source 2>/dev/null | grep -v "^\s*0.00 *:" | head -260 || true
+  quick-windows:
+    if: inputs.os == 'windows'
+    name: Quick windows
+    runs-on: windows-2022
+    timeout-minutes: ${{ fromJSON(inputs.minutes || '90') }}
+    defaults: { run: { shell: 'msys2 {0}' } }
+    env:
+      CCACHE_DIR: ${{ github.workspace }}/.ccache
+      CCACHE_BASEDIR: ${{ github.workspace }}
+      CCACHE_MAXSIZE: 1G
+      CCACHE_COMPRESS: "true"
+      CCACHE_SLOPPINESS: "time_macros,pch_defines,include_file_mtime,include_file_ctime"
+    steps:
+      - uses: actions/checkout@v7
+      - uses: msys2/setup-msys2@v2
+        with:
+          msystem: UCRT64
+          update: true
+          install: >-
+            git python mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja mingw-w64-ucrt-x86_64-pkgconf mingw-w64-ucrt-x86_64-ccache mingw-w64-ucrt-x86_64-rust
+            mingw-w64-ucrt-x86_64-ffmpeg mingw-w64-ucrt-x86_64-glfw mingw-w64-ucrt-x86_64-hackrf mingw-w64-ucrt-x86_64-soapysdr mingw-w64-ucrt-x86_64-libiconv mingw-w64-ucrt-x86_64-python
+      - name: Restore ccache
+        id: cc
+        uses: actions/cache/restore@v6
+        with:
+          path: .ccache
+          key: ccache-windows-quick-${{ github.ref_name }}
+          restore-keys: |
+            ccache-windows-warm-
+            ccache-windows-
+      - name: Configure and build
+        env: { TESTS: "${{ inputs.tests }}", EXTRA: "${{ inputs.targets }}", EXTRA_CMAKE: "${{ inputs.cmake_args }}" }
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DDECT2_BUILD_APP=ON -DCMAKE_C_FLAGS=-g0 -DCMAKE_CXX_FLAGS=-g0 -DCMAKE_C_COMPILER_LAUNCHER=ccache -DCMAKE_CXX_COMPILER_LAUNCHER=ccache $EXTRA_CMAKE
+          T=""; for t in $TESTS; do T="$T test_$t"; done
+          ALL=$(ninja -C build -t targets all | cut -d: -f1)
+          SEL=""; for t in $T $EXTRA; do echo "$ALL" | grep -qx "$t" && SEL="$SEL $t" || echo "note: no target $t"; done
+          [ -n "$SEL" ] || { echo "nothing to build"; exit 1; }
+          cmake --build build -j 4 --target $SEL
+      - name: Save ccache
+        uses: actions/cache/save@v6
+        if: always() && steps.cc.outputs.cache-hit != 'true'
+        with: { path: .ccache, key: "ccache-windows-quick-${{ github.ref_name }}" }
+      - name: Create /tmp for the native tests
+        run: mkdir -p /d/tmp /c/tmp
+      - name: Test
+        env: { TESTS: "${{ inputs.tests }}", TEST_ENV: "${{ inputs.env }}", TEST_TIMEOUT: "${{ inputs.timeout }}", VERBOSE: "${{ inputs.verbose }}" }
+        run: |
+          for kv in $(echo "$TEST_ENV" | tr ';' ' '); do export "$kv"; echo "env: $kv"; done
+          R=$(echo $TESTS | tr ' ' '\n' | sed 's/.*/^&$/' | paste -sd'|' -)
+          V=""; [ "$VERBOSE" = true ] && V="-V"
+          ctest --test-dir build -j 2 -R "$R" --output-on-failure --timeout "$TEST_TIMEOUT" $V
