@@ -725,9 +725,9 @@ struct EvtMonitor::Impl {
         std::vector<float> row;
         for (size_t k = 0; k + 3 < N; k += 4) row.push_back((float)std::clamp(db10(std::max({q[k], q[k + 1], q[k + 2], q[k + 3]}) / nm), -5.0, 40.0));
         pushRow(row, 120);
-        trendMax = std::max(trendMax, bestZ >= thr(8.0) ? snr : 0.0);
-        if (bestZ >= thr(8.0)) { trendSum += widthHz; trendN++; }
-        if (bestZ >= thr(8.0)) {
+        trendMax = std::max(trendMax, bestZ >= thr(12.0) ? snr : 0.0);
+        if (bestZ >= thr(12.0)) { trendSum += widthHz; trendN++; }
+        if (bestZ >= thr(12.0)) {
             aHits++; aMiss = 0;
             aSnr.push_back(snr); aWidth.push_back(widthHz); aDop.push_back(dopHz);
             if (!aOn && aHits >= 4) { aOn = true; aStart = t - 3 * st.rowSec; aPeak = snr; }

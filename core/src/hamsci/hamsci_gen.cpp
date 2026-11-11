@@ -37,7 +37,7 @@ private:
         case kHsEme: o.seconds = std::max(L, 16.0); evt_ = hamsci::evtGenEme(rate_, o, {2.0, 9.0}, 1.5, 2.55, 120.0, 4.0, 10.0); break;
         case kHsJove: o.offsetHz = 0; evt_ = hamsci::evtGenBursts(rate_, o, {0.2 * L, 0.55 * L}, 0.15 * L, 0, 0.8 * rate_); break;
         case kHsCallisto: o.offsetHz = -0.25 * rate_; evt_ = hamsci::evtGenBursts(rate_, o, {0.2 * L, 0.6 * L}, 0.25 * L, 0.2 * rate_ / (0.25 * L), 0.2 * rate_); break;
-        default: o.seconds = std::max(L, 30.0); evt_ = hamsci::evtGenBeacon(rate_, o, {5.0, 40.0}, 18.0, kind_ == kHsAurora ? 120.0 : 0.0, 3.0); break;
+        default: o.seconds = std::max(L, 30.0); o.level = 30.0; evt_ = hamsci::evtGenBeacon(rate_, o, {5.0, 40.0}, 18.0, kind_ == kHsAurora ? 120.0 : 0.0, 3.0); break;
         }
         if (evt_.empty()) evt_.assign(1024, cf32(0, 0));
     }

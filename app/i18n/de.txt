@@ -3894,24 +3894,7 @@ could not write to the data folder	Schreiben in den Datenordner nicht möglich
 Event list	Ereignisliste
 Detection threshold (0 = automatic)	Erkennungsschwelle (0 = automatisch)
 Schumann transients, Jove and CALLISTO bursts: dB over the background. Whistlers: path score. Moon echo and beacon openings: sigma over the noise. Lower finds weaker events and more false ones.	Schumann-Transienten, Jove- und CALLISTO-Bursts: dB über dem Untergrund. Whistler: Pfadwert. Mondecho und Baken-Öffnungen: Sigma über dem Rauschen. Niedriger findet schwächere, aber auch mehr falsche Ereignisse.
-fundamental peak, Hz	Grundschwingung, Hz
-fundamental peak, dB over baseline	Grundschwingung, dB über der Basislinie
-events per minute	Ereignisse pro Minute
-sferics per minute	Sferics pro Minute
-echo level, dB (last in the minute)	Echopegel, dB (letzter der Minute)
-echo delay, s	Echolaufzeit, s
-background level, dB re first minute	Untergrundpegel, dB zur ersten Minute
-bursts per minute	Bursts pro Minute
-peak S/N in the minute, dB	Spitzen-S/N in der Minute, dB
-best width, Hz	beste Breite, Hz
 Events	Ereignisse
-EVENTS	EREIGNISSE
-Schumann resonances: the Earth-ionosphere cavity rings near 7.83, 14.1, 20.3, 26.3 and 32.5 Hz, driven by lightning around the world. Needs an ELF input (a magnetic coil and a sound card or ADC): a radio cannot hear 8 Hz. The peaks need a few minutes of averaging. Receive only. Tested on simulated signals only.	Schumann-Resonanzen: Der Hohlraum Erde-Ionosphäre schwingt bei etwa 7,83, 14,1, 20,3, 26,3 und 32,5 Hz, angeregt von Blitzen weltweit. Braucht einen ELF-Eingang (Magnetspule und Soundkarte oder ADC): ein Funkgerät hört keine 8 Hz. Die Spitzen brauchen einige Minuten Mittelung. Nur Empfang. Nur mit simulierten Signalen getestet.
-Whistlers and tweeks: lightning-launched tones in a VLF audio recording. A whistler is a tone that falls over a second or two (t = t0 + D / sqrt(f)); a tweek is a short ridge near 1.8 kHz after a sferic. Needs a VLF antenna and receiver into a sound card. Receive only. Tested on simulated signals only.	Whistler und Tweeks: von Blitzen ausgelöste Töne in einer VLF-Audioaufnahme. Ein Whistler ist ein Ton, der über ein bis zwei Sekunden fällt (t = t0 + D / sqrt(f)); ein Tweek ist ein kurzer Streifen bei 1,8 kHz nach einem Sferic. Braucht eine VLF-Antenne und einen Empfänger an einer Soundkarte. Nur Empfang. Nur mit simulierten Signalen getestet.
-Moon echo test: send a keyed carrier of a second or more (your own transmitter, not controlled here; pulses 10 s apart or more) and the monitor looks 2.3 to 2.85 s later for the echo. Receive only. Tested on simulated signals only.	Mondecho-Test: Senden Sie einen getasteten Träger von einer Sekunde oder mehr (Ihr eigener Sender, hier nicht gesteuert; Pulse mindestens 10 s auseinander); der Monitor sucht 2,3 bis 2,85 s später das Echo. Nur Empfang. Nur mit simulierten Signalen getestet.
-Radio Jove: Jupiter, the Sun and the galactic background near 20.1 MHz in a spectrogram; broadband bursts are listed and narrowband interference is ignored. Needs a radio that tunes 20 MHz and a suitable antenna. Receive only. Tested on simulated signals only.	Radio Jove: Jupiter, Sonne und galaktischer Hintergrund bei etwa 20,1 MHz im Spektrogramm; Breitband-Bursts werden gelistet, Schmalbandstörungen ignoriert. Braucht ein Funkgerät, das 20 MHz abstimmt, und eine passende Antenne. Nur Empfang. Nur mit simulierten Signalen getestet.
-e-CALLISTO style solar bursts: a spectrogram of one capture and the bursts in it with their drift rate. One capture covers a few MHz; the CALLISTO spectrometer sweeps the whole band and this mode does not. Receive only. Tested on simulated signals only.	Solare Bursts im Stil von e-CALLISTO: ein Spektrogramm einer Aufnahme und die Bursts darin mit ihrer Driftrate. Eine Aufnahme deckt wenige MHz ab; das CALLISTO-Spektrometer überstreicht das ganze Band, dieser Modus nicht. Nur Empfang. Nur mit simulierten Signalen getestet.
-Beacon events: a VHF beacon carrier is followed and each opening is logged with time, S/N, Doppler width and flutter. The class (aurora-like, TEP-like, sporadic-E-like) comes from the signal's character only and does not prove the path. Receive only. Tested on simulated signals only.	Baken-Ereignisse: Der Träger einer UKW-Bake wird verfolgt und jede Öffnung mit Zeit, S/N, Doppler-Breite und Flattern protokolliert. Die Klasse (aurora-, TEP- oder Es-ähnlich) ergibt sich nur aus dem Charakter des Signals und beweist den Ausbreitungsweg nicht. Nur Empfang. Nur mit simulierten Signalen getestet.
 ELF, 7.83 Hz	ELF, 7,83 Hz
 VLF, 1 - 10 kHz	VLF, 1 - 10 kHz
 EME echo, 144 MHz and up	EME-Echo, ab 144 MHz

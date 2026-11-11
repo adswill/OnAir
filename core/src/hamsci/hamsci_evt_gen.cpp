@@ -28,7 +28,7 @@ struct Ou {
 // ------------------------------------------------------------------------------------------------------------------ Schumann
 // Five resonances at the published frequencies (7.83, 14.1, 20.3, 26.3, 32.5 Hz, scaled with fundamentalHz / 7.83), each a stationary narrowband process of
 // about 20 % relative width made from 9 sinusoids with Rayleigh amplitudes; the first peaks stand about 10 dB over a white background in the 200 Hz output,
-// the higher ones less. 50 Hz mains (amplitude 0.5) is added at the input rate. When o.level > 0 a decaying 12 Hz transient of amplitude 4 * level comes
+// the higher ones less. 50 Hz mains (amplitude 0.5) is added at the input rate. When o.level > 1 a decaying 12 Hz transient of amplitude 4 * level comes
 // every 60 s from 70 s on (a stand-in for ELF transients; not a model of a real Q-burst). o.noiseDb raises the white background (peaks down).
 std::vector<cf> evtGenSchumann(double rate, const EvtGenOpt& o, double f1) {
     Rng r(o.seed);
@@ -63,9 +63,9 @@ std::vector<cf> evtGenSchumann(double rate, const EvtGenOpt& o, double f1) {
             const double to = std::floor(t * fo) / fo;
             for (const auto& c : comps) v += c.a * std::cos(2 * kPi * (c.f + o.driftHz * to / std::max(1.0, o.seconds)) * to + c.ph);
             v += sg * r.gauss();
-            if (o.level > 0 && t >= 70.0) {
+            if (o.level > 1.0 && t >= 70.0) {
                 const double tt = std::fmod(t - 70.0, 60.0);
-                v += 12.0 * o.level * std::exp(-0.5 * std::pow((tt - 0.5) / 0.25, 2.0)) * std::sin(2 * kPi * 12.0 * tt);
+                v += 6.0 * o.level * std::exp(-0.5 * std::pow((tt - 0.5) / 0.25, 2.0)) * std::sin(2 * kPi * 12.0 * tt);
             }
             lastV = v;
         }

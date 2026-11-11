@@ -59,7 +59,7 @@ int main() {
         }
         std::printf("\n");
         // transients every 60 s from 70 s
-        EvtGenOpt o4 = o; o4.level = 1.0; o4.seed = 8; o4.seconds = 330;
+        EvtGenOpt o4 = o; o4.level = 2.0; o4.seed = 8; o4.seconds = 330;
         auto evt = run(kEvtSchumann, evtGenSchumann(200, o4), 200, 0);
         int hit = 0;
         for (double t0 : {70.0, 130.0, 190.0, 250.0, 310.0})
@@ -86,6 +86,7 @@ int main() {
             if (e.type == "tweek") { for (double t0 : tw) if (std::fabs(e.timeSec - t0) < 0.08 && e.freqHz > 1650 && e.freqHz < 2150) tk++; }
         }
         std::printf("whistler: %zu events, whistlers right %d of 2, tweeks right %d of 4, sferics/min trend %.0f\n", ev.size(), w, tk, st.trend2.empty() ? 0.0 : (double)st.trend2.back());
+        for (auto& e : ev) std::printf("  %s at %.3f s, %.0f Hz, %.1f dB, aux %.1f\n", e.type.c_str(), e.timeSec, e.freqHz, e.peakDb, e.aux1);
         CHECK(w >= 2, "whistlers %d of 2", w);
         CHECK(tk >= 3, "tweeks %d of 4", tk);
         CHECK((int)ev.size() <= 7, "no more than a few extra events: %zu", ev.size());
