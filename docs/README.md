@@ -3,14 +3,14 @@
 The user guides and notes that live in the repository. The same text is on the [wiki](https://github.com/adswill/OnAir/wiki) and at [on-air.dev/docs](https://on-air.dev/docs/). The main README is [../README.md](../README.md); radios are in [../DEVICES.md](../DEVICES.md); the code layout is in [../ARCHITECTURE.md](../ARCHITECTURE.md).
 
 
-**Start here (OnAir 3.8.0):**
+**Start here (OnAir 3.9.0):**
 
-- Install and first run: [../README.md](../README.md) (assets: `OnAir-3.8.0-macos-arm64.dmg`, `-macos-x86_64.dmg`, `-windows-x64-setup.exe`, `-windows-x64.zip`, `onair_3.8.0_amd64.deb` / `_arm64.deb`, Linux portable `.tar.gz` and AppImage, the Android APK, `SHA256SUMS`).
+- Install and first run: [../README.md](../README.md) (assets: `OnAir-3.9.0-macos-arm64.dmg`, `-macos-x86_64.dmg`, `-windows-x64-setup.exe`, `-windows-x64.zip`, `onair_3.9.0_amd64.deb` / `_arm64.deb`, Linux portable `.tar.gz` and AppImage, the Android APK, `SHA256SUMS`).
 - Radios: [../DEVICES.md](../DEVICES.md), [NETWORK_RADIOS.md](NETWORK_RADIOS.md), [RASPBERRY_PI.md](RASPBERRY_PI.md). Every mode: [../MODES.md](../MODES.md).
 - Settings and keys: [SETTINGS.md](SETTINGS.md), [CONTROLS.md](CONTROLS.md), [SIMPLE-ADVANCED.md](SIMPLE-ADVANCED.md).
 - Voice codecs and optional libraries (you install them): [CODECS.md](CODECS.md), [OPTIONAL-LIBRARIES.md](OPTIONAL-LIBRARIES.md), [USERLIBS-3.8.md](USERLIBS-3.8.md).
 - Share, serve and automate: [HOST-A-RECEIVER.md](HOST-A-RECEIVER.md), [headless-server.md](headless-server.md), [REMOTE-API.md](REMOTE-API.md), [MCP.md](MCP.md), [INTEGRATIONS.md](INTEGRATIONS.md), [plugins.md](plugins.md).
-- What changed in each release: [CHANGELOG-3.8.md](CHANGELOG-3.8.md) and the older `CHANGELOG-*.md` files. Dated files such as `*-3.7.md`, `*-3.8.md`, `ISSUES-*` and `PATHWAY.md` describe the version in their name.
+- What changed in each release: [CHANGELOG-3.9.md](CHANGELOG-3.9.md), [CHANGELOG-3.8.md](CHANGELOG-3.8.md) and the older `CHANGELOG-*.md` files. Dated files such as `*-3.7.md`, `*-3.8.md`, `*-3.9.md`, `ISSUES-*` and `PATHWAY.md` describe the version in their name.
 
 The table below is the list of topic pages.
 
@@ -169,5 +169,48 @@ The table below is the list of topic pages.
 | [HOST-A-RECEIVER.md](HOST-A-RECEIVER.md) | Host a receiver | Put your radio on the internet and list it on web.on-air.dev. |
 | [OPTIONAL-LIBRARIES.md](OPTIONAL-LIBRARIES.md) | Optional libraries | Codecs and libraries you install yourself. |
 | [PLUGIN-SDK.md](PLUGIN-SDK.md) | Plug-in SDK | What exists for plug-in authors. |
+
+## Added in 3.9
+
+| File | Topic |
+|---|---|
+| [WEB-3.9.md](WEB-3.9.md) | OnAir Web: the whole receiver in a browser (user guide); WEB-SCHEMA-3.9.md is the developer side |
+| [WINLINK-3.9.md](WINLINK-3.9.md) | Winlink email: packet, ARDOP, Telnet |
+| [HFMODEMS-3.9.md](HFMODEMS-3.9.md) | External ARDOP, VARA and Mercury modems for Winlink and peer to peer |
+| [ECHOLINK-3.9.md](ECHOLINK-3.9.md) | EchoLink client |
+| [TRUNK1-3.9.md](TRUNK1-3.9.md) | Single-radio trunking: control channel and several calls from one radio |
+| [ATMOS-3.9.md](ATMOS-3.9.md) | Dolby Atmos detection, 5.1 / 7.1 output and passthrough (experimental) |
+| [LIGHTNING-POSITION-3.9.md](LIGHTNING-POSITION-3.9.md) | Lightning position (network) |
+| [SONDE-UPLOAD-3.9.md](SONDE-UPLOAD-3.9.md) | Radiosonde upload to APRS-IS aggregators |
+| [SONDE-TRACK-3.9.md](SONDE-TRACK-3.9.md) | Radiosonde flight track as KML and GPX |
+| [SONDE-SITES-3.9.md](SONDE-SITES-3.9.md) | Radiosonde launch sites |
+| [TMC-PLAIN-3.9.md](TMC-PLAIN-3.9.md) | RDS-TMC in plain words and your own TMC files |
+| [HDMI-EMISSION-3.9.md](HDMI-EMISSION-3.9.md) | Display / HDMI emission finder |
+| [DABSITES-3.9.md](DABSITES-3.9.md) | DAB map: transmitter positions and zoom |
+| [TXFEAT-3.9.md](TXFEAT-3.9.md) | DTMF keypad and DMR slot sync (transmit) |
+| [R4-PER-MODE-3.9.md](R4-PER-MODE-3.9.md) | Round 4 per-mode features (index of the pages below) |
+| [SMART5-LIST-3.9.md](SMART5-LIST-3.9.md) | Round 5 smart features (index; the SMART5-*-3.9.md pages follow it) |
+| [BCAST-3.9.md](BCAST-3.9.md) | ISDB-TSB |
+| [DVBSH-3.9.md](DVBSH-3.9.md) | DVB-SH |
+| [DVBC2-3.9.md](DVBC2-3.9.md) | DVB-C2 |
+| [AVIA-3.9.md](AVIA-3.9.md) | Military UHF air band, VDL Mode 3, FANS-1/A, TACAN, ILS markers |
+| [W1A-3.9.md](W1A-3.9.md) | HF packet 300 Bd, voice inversion, ELT 121.5 MHz |
+| [W1B-3.9.md](W1B-3.9.md) | Ham science event monitors |
+| [W1C-3.9.md](W1C-3.9.md) | CubeSat framings as own entries |
+| [MISC-3.9.md](MISC-3.9.md) | JT6M and other small modes |
+| [CP16-3.9.md](CP16-3.9.md) | CP16 |
+| [HF-MIL-3.9.md](HF-MIL-3.9.md) | HF military modes (STANAG 4539, 3G-ALE, Link 11 CLEW, STANAG 4481) |
+| [CIS-HF-3.9.md](CIS-HF-3.9.md) | CIS HF data modes |
+| [FBR-3.9.md](FBR-3.9.md) | Fleet Broadcast (UHF SATCOM) |
+| [CELL-3.9.md](CELL-3.9.md) | Cellular broadcast information (CDMA2000, TD-SCDMA, LTE-M, GSM) |
+| [IOTRC-3.9.md](IOTRC-3.9.md) | IoT and RC links (Futaba, Spektrum, Wize, ISM sensors) |
+| [CUBESAT-3.9.md](CUBESAT-3.9.md) | CubeSat framings and the satellite table |
+| [SAT-DCS-XRIT-3.9.md](SAT-DCS-XRIT-3.9.md) | Meteosat HRDCP, DCS channel plans, xRIT links |
+| [SENSITIVITY-3.9-A.md](SENSITIVITY-3.9-A.md) | Sensitivity 3.9: broadcast, TV, satellites (B to E follow: SENSITIVITY-3.9-B.md ... -E.md) |
+| [ATSC-PERF-3.9.md](ATSC-PERF-3.9.md) | ATSC CPU (ATSC-X86-3.9.md for x86) |
+| [QA-SWEEP-3.9.md](QA-SWEEP-3.9.md) | All-modes QA sweep and CPU per mode |
+| [FUZZ-3.9.md](FUZZ-3.9.md) | Fuzzing every decoder |
+| [WORKSBUT-A-3.9.md](WORKSBUT-A-3.9.md) | Issue follow-ups A (WORKSBUT-B-3.9.md: B) |
+| [FIXES-3.9.md](FIXES-3.9.md) | Fixes in 3.9 (FIXES2-3.9.md, SARSAT-CPU-3.9.md) |
 
 The release text is [CHANGELOG-3.0.md](CHANGELOG-3.0.md) (generated by `tools/release/gen_changelog.py`); the new strings for the translation pass are in [I18N-NEW-STRINGS-3.0.md](I18N-NEW-STRINGS-3.0.md).
