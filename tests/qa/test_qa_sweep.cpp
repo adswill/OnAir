@@ -848,7 +848,9 @@ int main(int argc, char** argv) {
             // or one whose first block came late (in the last quarter of the signal): an offset or noise delays the lock and the other conditions
             // fail by time, not by the condition (Inmarsat: the first SU at 7.6 s of 8 s clean, 9.4 s with the offset)
             const bool few = !r.byRes && r.c[0].good > 0 && (r.c[0].good < 8 || r.c[0].first > 0.75 * s) && li + 2 < lens.size();
-            if ((r.c[0].good > 0 && !few) || r.byRes || (r.c[0].locked && r.c[0].good == 0) || r.c[0].verdict != "-") done = true;   // a lock alone ends it only for a mode that counts no blocks
+            // a lock without a block in a 3 s file may only be a track that has not reached its minimum length (the satellite carrier trackers want 2.5 s of line): the 8 s try
+            const bool lockShort = !r.byRes && r.c[0].good == 0 && r.c[0].locked && r.secs < 7.5 && li + 2 < lens.size() && maxSamples / rr >= 7.5;
+            if (((r.c[0].good > 0 && !few) || r.byRes || (r.c[0].locked && r.c[0].good == 0) || r.c[0].verdict != "-") && !lockShort) done = true;   // a lock alone ends it only for a mode that counts no blocks
             if (!done && !paced) for (auto& c : r.c) c = CondRes();   // the next try starts afresh
         }
         // the transmitter (tx.ci16 from the last generator run), with its own silence as the baseline; when it decodes nothing in a short run,

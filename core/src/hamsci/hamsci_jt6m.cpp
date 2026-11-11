@@ -81,7 +81,7 @@ std::vector<Jt6mPing> jt6mGroupPings(const std::vector<Jt6mFrame>& fr, double fr
             if (fr[j].good) { last = j; good++; rsum += fr[j].sync; }
             j++;
         }
-        if (good >= 2 && (good >= 3 || rsum / good >= 14.0)) {   // 14, was 10: noise alone gave one false ping in 32 s (4.0 QA)
+        if (good >= 2 && rsum / good >= (good >= 3 ? 7.0 : 14.0)) {   // mean sync 7 for three frames or more (new), 14 for two (was 10): noise alone gave one false ping in 32 s (4.0 QA)
             Jt6mPing p;
             p.startSec = fr[i].startSec;
             p.durSec = fr[last].startSec - fr[i].startSec + frameSec;
