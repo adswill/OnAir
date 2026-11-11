@@ -4042,3 +4042,5 @@ bitstream to the receiver (experimental)	Bitstream an den Receiver (experimentel
 stereo, Dolby Surround matrix	Stereo, Dolby-Surround-Matrix
 stereo downmix	Stereo-Downmix
 Dolby Atmos: OnAir plays the channel bed; the objects need Dolby's renderer. A receiver or soundbar renders them: Settings > Audio > Pass Dolby audio through.	Dolby Atmos: OnAir spielt das Kanal-Bed; die Objekte brauchen Dolbys Renderer. Ein Receiver oder eine Soundbar gibt sie wieder: Einstellungen > Audio > Dolby-Ton durchreichen.
+Automatic (the device's speakers)	Automatisch (die Lautsprecher des Geräts)
+Stereo, Dolby Surround (Lt/Rt)	Stereo, Dolby Surround (Lt/Rt)
