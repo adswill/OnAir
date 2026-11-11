@@ -34,6 +34,7 @@ public:
     ~Rs41Decoder() override;
     const char* type() const override { return "RS41"; }
     double symbolRate() const override { return 4800.0; }
+    bool narrowChannel() const override { return true; }
     void push(const uint8_t* sym, size_t n, double timeSec, std::vector<SondeFix>& out) override;
     void reset() override;                               // forgets a half received frame, keeps the calibration of the sonde
     // frame: 320 or 518 bytes, de-whitened, RS parity as received. Returns true when it was a frame (header matched);

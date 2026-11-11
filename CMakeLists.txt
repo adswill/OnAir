@@ -1202,6 +1202,9 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_sens39a PRIVATE dect2core)
     add_test(NAME sens39a COMMAND test_sens39a)
     set_tests_properties(sens39a PROPERTIES TIMEOUT 1500)
+    add_executable(sens_curve tests/sens/sens_curve.cpp)   # smooth curve of one mode (fraction of units decoded per SNR, carrier / clock error): docs/SENSITIVITY-4.0-A.md
+    target_include_directories(sens_curve PRIVATE tools/sens)
+    target_link_libraries(sens_curve PRIVATE dect2core)
   endif()
   # run by the build workers (ctest -R sens_quick / sens_full, or -L sens-quick / sens-full); results land in <build>/sens-out/*.json
   add_test(NAME sens_quick COMMAND sens_sweep --quick --mode "dvbt$|dab|fm" --out ${CMAKE_BINARY_DIR}/sens-out)
