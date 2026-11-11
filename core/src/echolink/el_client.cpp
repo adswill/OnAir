@@ -1,6 +1,7 @@
 // EchoLink client: see el_client.h. Connection behaviour (SDES connect / keep-alive every 10 s, 5 tries, 50 s time-out, BYE, info text on
 // connect) follows SvxLink's EchoLinkQso.cpp (GPL-2.0-or-later, Tobias Blomberg SM0SVX); the code is OnAir's own.
 #include "dect2/echolink/el_client.h"
+#include "dect2/echolink/el_conference.h"
 #include "../net/tcp_client.h"
 #include <chrono>
 #include <cstring>
@@ -25,6 +26,11 @@ const char* qsoStateName(QsoState s) {
 // ---- Session ------------------------------------------------------------------------------------------------------------------------------
 void Session::setLocal(const std::string& call, const std::string& name, const std::string& info) {
     call_ = upperCall(call); name_ = name; info_ = info.empty() ? "Running OnAir" : info;
+}
+
+void Session::setInfo(const std::string& info) {
+    info_ = info.empty() ? "Running OnAir" : info;
+    if (state_ == QsoState::Connected && send_) send_(false, peerIp_, peerAudio_, makeInfoPacket(info_));
 }
 
 void Session::sendSdes() {
@@ -203,7 +209,7 @@ std::string hhmm() {
 }
 } // namespace
 
-Client::Client() {}
+Client::Client() : conf_(new Conference) {}
 Client::~Client() { close(); }
 
 void Client::configure(const ClientConfig& c) {
@@ -212,6 +218,152 @@ void Client::configure(const ClientConfig& c) {
     cfg_.call = upperCall(c.call);
     sess_.setLocal(cfg_.call, cfg_.name, cfg_.info);
     sess_.setAcceptIncoming(cfg_.acceptIncoming);
+    conf_->setLocal(cfg_.call, cfg_.name, cfg_.info);
+    conf_->setMaxStations(cfg_.conferenceMax);
+    conf_->setAcceptIncoming(cfg_.acceptIncoming);
+}
+
+// mu_ held (the network thread), or from open()
+void Client::sendPacket(bool ctrl, const std::string& ip, int port, const std::vector<uint8_t>& pkt) {
+    if (proxyMode_) {
+        if (proxyUp_) proxyWrite(makeProxyBlock(ctrl ? ProxyType::UdpControl : ProxyType::UdpData, ip, pkt.data(), pkt.size()));
+        return;
+    }
+    sockaddr_in to{};
+    to.sin_family = AF_INET;
+    to.sin_port = htons((uint16_t)port);
+    if (inet_pton(AF_INET, ip.c_str(), &to.sin_addr) != 1) return;
+    sockSendTo((sock_t)(ctrl ? sc_ : sa_), pkt.data(), pkt.size(), to);
+}
+
+void Client::proxyWrite(const std::vector<uint8_t>& b) {
+    std::lock_guard<std::mutex> lk(pxWrite_);
+    if (sp_ < 0 || !sockSendAll((sock_t)sp_, b.data(), b.size())) proxyUp_ = false;
+}
+
+// Connects to the proxy and answers its nonce. A wrong password is told afterwards (a SYSTEM block), read by the network thread.
+bool Client::proxyOpen(const ClientConfig& c, std::string& err) {
+    std::string e;
+    sock_t s = tcpConnect(c.proxyHost, c.proxyPort, c.directoryTimeoutMs, e);
+    if (s == kBadSock) { err = "cannot reach the proxy " + c.proxyHost + ": " + e; return false; }
+    sockRecvTimeout(s, c.directoryTimeoutMs);
+    px_.reset();
+    char b[64];
+    const int64_t t0 = monoMs();
+    while (!px_.nonceReady()) {
+        const long long n = sockRecv(s, b, sizeof b);
+        if (n <= 0 || monoMs() - t0 > c.directoryTimeoutMs) { sockClose(s); err = "the proxy " + c.proxyHost + " sent no greeting"; return false; }
+        px_.feed((const uint8_t*)b, (size_t)n);
+    }
+    const std::vector<uint8_t> auth = proxyAuthReply(c.call, c.proxyPassword, px_.nonce());
+    if (!sockSendAll(s, auth.data(), auth.size())) { sockClose(s); err = "cannot send to the proxy " + c.proxyHost; return false; }
+    sockRecvTimeout(s, 0);
+    sp_ = (long long)s;
+    proxyUp_ = true;
+    pxTcp_ = 0;
+    pxReply_.clear();
+    proxyText_ = "connected to the proxy " + c.proxyHost;
+    log(proxyText_);
+    return true;
+}
+
+// mu_ held: what the proxy sent
+void Client::proxyInput(int64_t now) {
+    char b[8192];
+    const long long n = recv((sock_t)sp_, b, (int)sizeof b, 0);
+    if (n <= 0) {
+        proxyUp_ = false;
+        proxyText_ = "the proxy closed the connection";
+    } else {
+        px_.feed((const uint8_t*)b, (size_t)n);
+        ProxyBlock blk;
+        while (px_.next(blk)) {
+            switch (blk.type) {
+            case ProxyType::UdpData:
+                if (confMode_) conf_->onAudio(blk.ip, kDefaultAudioPort, blk.data.data(), blk.data.size(), now);
+                else sess_.onAudio(blk.ip, kDefaultAudioPort, blk.data.data(), blk.data.size(), now);
+                break;
+            case ProxyType::UdpControl:
+                if (confMode_) conf_->onCtrl(blk.ip, kDefaultAudioPort + 1, blk.data.data(), blk.data.size(), now);
+                else sess_.onCtrl(blk.ip, kDefaultAudioPort + 1, blk.data.data(), blk.data.size(), now);
+                break;
+            case ProxyType::TcpStatus: {
+                uint32_t st = 1;
+                if (blk.data.size() == 4) st = (uint32_t)blk.data[0] | (uint32_t)blk.data[1] << 8 | (uint32_t)blk.data[2] << 16 | (uint32_t)blk.data[3] << 24;
+                if (pxTcp_ == 1) pxTcp_ = st == 0 ? 2 : 4;
+                break;
+            }
+            case ProxyType::TcpData:
+                if (pxTcp_ == 2 && pxReply_.size() < (1u << 24)) pxReply_.append((const char*)blk.data.data(), blk.data.size());
+                break;
+            case ProxyType::TcpClose:
+                if (pxTcp_ == 1 || pxTcp_ == 2) pxTcp_ = 3;
+                break;
+            case ProxyType::System:
+                proxyUp_ = false;
+                proxyText_ = proxySystemText(blk.data.empty() ? 0 : blk.data[0]);
+                break;
+            default:   // TCP_OPEN is the client's message
+                break;
+            }
+        }
+        if (px_.failed()) { proxyUp_ = false; proxyText_ = "the proxy sent a broken stream"; }
+    }
+    if (!proxyUp_) {
+        log(proxyText_);
+        sess_.disconnect();
+        conf_->disconnectAll();
+        if (pxTcp_ == 1 || pxTcp_ == 2) pxTcp_ = 3;
+    }
+    pxCv_.notify_all();
+}
+
+// The directory command through the proxy: TCP_OPEN to the server's address, TCP_DATA, the answer until TCP_CLOSE (or a whole list)
+bool Client::proxyDirExchange(const std::string& host, int timeoutMs, const std::string& cmd, bool list, std::string& reply, std::string& err) {
+    std::string ip;
+    {
+        netInit();
+        addrinfo hints{};
+        hints.ai_family = AF_INET;
+        hints.ai_socktype = SOCK_STREAM;
+        addrinfo* res = nullptr;
+        if (getaddrinfo(host.c_str(), nullptr, &hints, &res) != 0 || !res) { err = "cannot find the address " + host; return false; }
+        char t[INET_ADDRSTRLEN] = {};
+        inet_ntop(AF_INET, &((const sockaddr_in*)res->ai_addr)->sin_addr, t, sizeof t);
+        freeaddrinfo(res);
+        ip = t;
+    }
+    std::unique_lock<std::mutex> lk(mu_);
+    if (!proxyUp_) { err = "the proxy is not connected" + (proxyText_.empty() ? std::string() : ": " + proxyText_); return false; }
+    pxTcp_ = 1;
+    pxReply_.clear();
+    lk.unlock();
+    proxyWrite(makeProxyBlock(ProxyType::TcpOpen, ip));
+    lk.lock();
+    const auto until = std::chrono::steady_clock::now() + std::chrono::milliseconds(timeoutMs);
+    pxCv_.wait_until(lk, until, [&] { return pxTcp_ != 1; });
+    if (pxTcp_ != 2) {
+        err = pxTcp_ == 1 ? "the proxy did not answer" : "the proxy could not reach " + host;
+        pxTcp_ = 0;
+        return false;
+    }
+    lk.unlock();
+    proxyWrite(makeProxyBlock(ProxyType::TcpData, "", (const uint8_t*)cmd.data(), cmd.size()));
+    lk.lock();
+    StationListParser lp;
+    size_t fed = 0;
+    pxCv_.wait_until(lk, until, [&] {
+        if (pxTcp_ != 2) return true;
+        if (list) { lp.feed(pxReply_.data() + fed, pxReply_.size() - fed); fed = pxReply_.size(); return lp.done() || lp.failed(); }
+        return pxReply_.size() >= 2;
+    });
+    reply = pxReply_;
+    const bool stillOpen = pxTcp_ == 2;
+    pxTcp_ = 0;
+    lk.unlock();
+    if (stillOpen) proxyWrite(makeProxyBlock(ProxyType::TcpClose, ""));
+    if (reply.empty()) { err = host + " closed the connection without an answer (through the proxy)"; return false; }
+    return true;
 }
 
 void Client::log(const std::string& s) {
@@ -223,20 +375,24 @@ bool Client::open(std::string& err) {
     ClientConfig c;
     { std::lock_guard<std::mutex> lk(mu_); c = cfg_; }
     if (!validCallsign(c.call)) { err = "set your callsign first"; return false; }
-    sock_t a = udpBind(c.bindAddress, c.audioPort, err);
-    if (a == kBadSock) return false;
-    sock_t k = udpBind(c.bindAddress, c.audioPort + 1, err);
-    if (k == kBadSock) { sockClose(a); return false; }
-    sa_ = (long long)a; sc_ = (long long)k;
-    boundAudio_ = c.audioPort;
-    sess_.setSend([this](bool ctrl, const std::string& ip, int port, const std::vector<uint8_t>& pkt) {
-        sockaddr_in to{};
-        to.sin_family = AF_INET;
-        to.sin_port = htons((uint16_t)port);
-        if (inet_pton(AF_INET, ip.c_str(), &to.sin_addr) != 1) return;
-        sockSendTo((sock_t)(ctrl ? sc_ : sa_), pkt.data(), pkt.size(), to);
-    });
+    confMode_ = c.conference;
+    proxyMode_ = !c.proxyHost.empty();
+    if (proxyMode_) {
+        if (!proxyOpen(c, err)) return false;
+        boundAudio_ = 0;
+    } else {
+        sock_t a = udpBind(c.bindAddress, c.audioPort, err);
+        if (a == kBadSock) return false;
+        sock_t k = udpBind(c.bindAddress, c.audioPort + 1, err);
+        if (k == kBadSock) { sockClose(a); return false; }
+        sa_ = (long long)a; sc_ = (long long)k;
+        boundAudio_ = c.audioPort;
+    }
+    auto send = [this](bool ctrl, const std::string& ip, int port, const std::vector<uint8_t>& pkt) { sendPacket(ctrl, ip, port, pkt); };
+    sess_.setSend(send);
+    conf_->setSend(send);
     stop_ = false;
+    closing_ = false;
     open_ = true;
     net_ = std::thread([this] { run(); });
     return true;
@@ -244,13 +400,17 @@ bool Client::open(std::string& err) {
 
 void Client::close() {
     if (!open_) return;
-    stop_ = true;
-    if (net_.joinable()) net_.join();   // first: it may start a log-in refresh
+    closing_ = true;                    // no more log-in refreshes
     disconnect();                       // the BYE still goes out: the sockets are open
-    if (loggedIn_) logout();
+    if (loggedIn_) logout();            // the network thread still runs: through a proxy it carries the answer
     if (dir_.joinable()) dir_.join();
-    sockClose((sock_t)sa_); sockClose((sock_t)sc_);
-    sa_ = sc_ = -1;
+    stop_ = true;
+    if (net_.joinable()) net_.join();
+    if (sa_ >= 0) sockClose((sock_t)sa_);
+    if (sc_ >= 0) sockClose((sock_t)sc_);
+    if (sp_ >= 0) { std::lock_guard<std::mutex> lk(pxWrite_); sockClose((sock_t)sp_); }
+    sa_ = sc_ = sp_ = -1;
+    proxyUp_ = false;
     open_ = false;
 }
 
@@ -259,16 +419,19 @@ void Client::run() {
     while (!stop_) {
         fd_set rd;
         FD_ZERO(&rd);
-        const sock_t a = (sock_t)sa_, k = (sock_t)sc_;
-        FD_SET(a, &rd); FD_SET(k, &rd);
+        const sock_t a = (sock_t)sa_, k = (sock_t)sc_, px = (sock_t)sp_;
+        sock_t top = 0;
+        if (proxyMode_) { if (proxyUp_) { FD_SET(px, &rd); top = px; } }
+        else { FD_SET(a, &rd); FD_SET(k, &rd); top = a > k ? a : k; }
         timeval tv{0, 10000};
-        const int maxfd = (int)(a > k ? a : k) + 1;
-        const int r = select(maxfd, &rd, nullptr, nullptr, &tv);
+        const int r = proxyMode_ && !proxyUp_ ? (std::this_thread::sleep_for(std::chrono::milliseconds(10)), 0)
+                                              : select((int)top + 1, &rd, nullptr, nullptr, &tv);
         const int64_t now = monoMs();
         bool refresh = false;
         {
         std::lock_guard<std::mutex> lk(mu_);
-        for (int which = 0; r > 0 && which < 2; which++) {
+        if (proxyMode_ && r > 0 && FD_ISSET(px, &rd)) proxyInput(now);
+        for (int which = 0; !proxyMode_ && r > 0 && which < 2; which++) {
             const sock_t s = which == 0 ? a : k;
             if (!FD_ISSET(s, &rd)) continue;
             sockaddr_in from{};
@@ -278,9 +441,21 @@ void Client::run() {
             char ip[INET_ADDRSTRLEN] = {};
             inet_ntop(AF_INET, &from.sin_addr, ip, sizeof ip);
             const int port = ntohs(from.sin_port);
-            if (which == 0) sess_.onAudio(ip, port, buf.data(), (size_t)n, now);
+            if (confMode_) {
+                if (which == 0) conf_->onAudio(ip, port, buf.data(), (size_t)n, now);
+                else conf_->onCtrl(ip, port, buf.data(), (size_t)n, now);
+            } else if (which == 0) sess_.onAudio(ip, port, buf.data(), (size_t)n, now);
             else sess_.onCtrl(ip, port, buf.data(), (size_t)n, now);
         }
+        if (confMode_) {
+            conf_->tick(now);
+            int16_t mix[kMixBlockSamples];
+            for (int got; (got = conf_->pullLocal(mix, kMixBlockSamples)) > 0;) rxq_.insert(rxq_.end(), mix, mix + got);
+            while (rxq_.size() > kRxMaxSamples) rxq_.pop_front();
+            for (std::string& s : conf_->takeChat()) chat_.push_back(std::move(s));
+            for (std::string& s : conf_->takeEvents()) log(s);
+            if (loggedIn_ && !dirBusy_ && !closing_ && now - lastLogin_ >= kRegistrationRefreshMs) { lastLogin_ = now; refresh = true; }
+        } else {
         sess_.tick(now);
         for (const RxPacket& p : sess_.takeAudio()) {
             for (int f = 0; f < p.nframes; f++) {
@@ -294,7 +469,8 @@ void Client::run() {
         for (std::string& s : sess_.takeEvents()) log(s);
         if (sess_.state() != QsoState::Connected) txq_.clear();
         flushTx(false);
-        if (loggedIn_ && !dirBusy_ && now - lastLogin_ >= kRegistrationRefreshMs) { lastLogin_ = now; refresh = true; }
+        if (loggedIn_ && !dirBusy_ && !closing_ && now - lastLogin_ >= kRegistrationRefreshMs) { lastLogin_ = now; refresh = true; }
+        }
         }
         if (refresh) login();   // outside the lock: the directory job takes it
     }
@@ -317,6 +493,7 @@ void Client::flushTx(bool pad) {
 
 void Client::setTransmit(bool on) {
     std::lock_guard<std::mutex> lk(mu_);
+    if (confMode_) { conf_->setLocalTalk(on); tx_ = on; return; }
     if (tx_ && !on) flushTx(true);
     if (!tx_ && on) { txq_.clear(); enc_.reset(); }
     tx_ = on;
@@ -325,6 +502,7 @@ void Client::setTransmit(bool on) {
 void Client::pushTx(const int16_t* pcm, int n) {
     if (!tx_ || n <= 0) return;
     std::lock_guard<std::mutex> lk(mu_);
+    if (confMode_) { if (conf_->connectedCount() > 0) conf_->pushLocal(pcm, n); return; }
     if (sess_.state() != QsoState::Connected) return;
     txq_.insert(txq_.end(), pcm, pcm + n);
     while (txq_.size() > kTxMaxSamples) txq_.pop_front();
@@ -344,6 +522,11 @@ bool Client::connectTo(const std::string& ip, int remoteAudioPort) {
     in_addr tmp{};
     if (inet_pton(AF_INET, ip.c_str(), &tmp) != 1) return false;
     std::lock_guard<std::mutex> lk(mu_);
+    if (confMode_) {
+        const bool ok = conf_->connect(ip, remoteAudioPort, monoMs());
+        for (std::string& s : conf_->takeEvents()) log(s);
+        return ok;
+    }
     dec_.reset();
     rxq_.clear();
     return sess_.connect(ip, remoteAudioPort, monoMs());
@@ -362,13 +545,23 @@ bool Client::connectCall(const std::string& call) {
 void Client::disconnect() {
     std::lock_guard<std::mutex> lk(mu_);
     sess_.disconnect();
+    conf_->disconnectAll();
     txq_.clear();
     for (std::string& s : sess_.takeEvents()) log(s);
+    for (std::string& s : conf_->takeEvents()) log(s);
+}
+
+bool Client::disconnectStation(const std::string& call) {
+    std::lock_guard<std::mutex> lk(mu_);
+    const bool ok = confMode_ ? conf_->disconnect(call) : (upperCall(call) == sess_.peerCall() && (sess_.disconnect(), true));
+    for (std::string& s : sess_.takeEvents()) log(s);
+    for (std::string& s : conf_->takeEvents()) log(s);
+    return ok;
 }
 
 bool Client::sendChat(const std::string& message) {
     std::lock_guard<std::mutex> lk(mu_);
-    return sess_.sendChat(message);
+    return confMode_ ? conf_->sendChat(message) : sess_.sendChat(message);
 }
 
 // ---- directory ----------------------------------------------------------------------------------------------------------------------------
@@ -395,6 +588,11 @@ bool Client::dirExchange(const std::string& cmd, bool list, std::string& reply, 
     if (c.servers.empty()) { err = "no directory server set"; return false; }
     for (const std::string& host : c.servers) {
         std::string e;
+        if (proxyMode_) {
+            if (proxyDirExchange(host, c.directoryTimeoutMs, cmd, list, reply, e)) return true;
+            err = e;
+            continue;
+        }
         sock_t s = tcpConnect(host, c.directoryPort, c.directoryTimeoutMs, e);
         if (s == kBadSock) { err = "cannot reach " + host + ": " + e; continue; }
         sockRecvTimeout(s, c.directoryTimeoutMs);
@@ -469,6 +667,27 @@ ClientStatus Client::status() const {
     s.tx = tx_ && sess_.state() == QsoState::Connected;
     s.packetsIn = sess_.packetsIn(); s.packetsOut = sess_.packetsOut(); s.lost = sess_.packetsLost();
     s.listAgeSec = listAt_ < 0 ? -1 : (int)((now - listAt_) / 1000);
+    s.viaProxy = proxyMode_;
+    s.proxy = proxyText_;
+    if (confMode_) {
+        s.conference = true;
+        const int nc = conf_->connectedCount();
+        s.qso = nc > 0 ? QsoState::Connected : conf_->size() > 0 ? QsoState::Connecting : QsoState::Idle;
+        s.peerCall = std::to_string(nc) + (nc == 1 ? " station" : " stations");
+        s.peerName.clear(); s.peerIp.clear();
+        s.peerInfo = conf_->infoText();
+        s.rx = conf_->anyTalking();
+        s.tx = tx_ && nc > 0;
+        s.packetsIn = s.lost = 0;
+        for (const ConferenceMember& m : conf_->members()) {
+            ConferenceMemberStatus ms;
+            ms.call = m.call; ms.name = m.name; ms.ip = m.ip; ms.connecting = m.connecting; ms.talking = m.talking;
+            ms.packetsIn = m.packetsIn; ms.lost = m.lost;
+            s.members.push_back(ms);
+            s.packetsIn += m.packetsIn; s.lost += m.lost;
+        }
+        s.packetsOut = conf_->packetsOut();
+    }
     return s;
 }
 
