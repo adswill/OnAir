@@ -724,15 +724,17 @@ struct Core {
         auto filter = [&](size_t k0, size_t k1) { DECT2_STAGE("atsc.filter"); pfbBlock(taps.data(), J, NPH, inRe.data(), inIm.data(), (int64_t)inBase, pos, step, k0, k1, pfRe.data(), pfIm.data(), pad); };
         static const int forceSplit = getenv("ATSC_SPLIT") ? atoi(getenv("ATSC_SPLIT")) : -1;   // test: 1 always split, 0 never
         splitOn = forceSplit >= 0 ? forceSplit > 0 : (splitOn ? feedLoad > 0.45 : feedLoad > 0.6);
-        if (splitA && splitOn && nOut >= 4096) {   // split across two threads
-            std::thread helper([&] {
-                dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); DenormalsOff ftz;
-                const uint64_t h0 = prof::threadCpuNs();
-                filter(nOut / 2, nOut);
-                helperNs += prof::threadCpuNs() - h0;
-            });
-            filter(0, nOut / 2);
-            helper.join();
+        if (splitA && nOut >= 4096) {   // in two halves (the outputs are grouped from the start of each: the same bits either way below)
+            if (splitOn) {   // across two threads
+                std::thread helper([&] {
+                    dect2::setThreadName("onair-atsc-pf"); setThreadPriority(ThreadPriority::Realtime); DenormalsOff ftz;
+                    const uint64_t h0 = prof::threadCpuNs();
+                    filter(nOut / 2, nOut);
+                    helperNs += prof::threadCpuNs() - h0;
+                });
+                filter(0, nOut / 2);
+                helper.join();
+            } else { filter(0, nOut / 2); filter(nOut / 2, nOut); }
         } else filter(0, nOut);
         pos += (double)nOut * step;
         stFilt.stop();

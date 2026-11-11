@@ -315,11 +315,13 @@ void resampleImpl(const cf32* in, size_t n, double inRate, double outRate, std::
     const int hw = (int)std::thread::hardware_concurrency();
     const float ld = load.load(std::memory_order_relaxed);
     const bool want = forceSplit >= 0 ? forceSplit > 0 : ld > 0.33f;
-    const int nt = (count >= 200000 && hw >= 4 && want) ? std::min(4, hw / 2) : 1;
+    // the parts stay the same whether they run on threads or one after the other here (each groups its outputs from its own start: the same bits)
+    const int parts = (count >= 200000 && hw >= 4) ? std::min(4, hw / 2) : 1;
+    const int nt = want ? parts : 1;
     const double secs = (double)n / inRate;
     const uint64_t c0 = prof::threadCpuNs();
     if (nt <= 1) {
-        part(0, count);
+        for (int t = 0; t < parts; t++) part(count * t / parts, count * (t + 1) / parts);
         const double w = (double)(prof::threadCpuNs() - c0) * 1e-9;
         if (secs > 0) load.store(ld + 0.2f * ((float)std::min(w / secs, 4.0) - ld), std::memory_order_relaxed);
         return;
