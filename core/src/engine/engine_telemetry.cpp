@@ -376,6 +376,12 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 502: return pollStd(rxHs_[7], 502, t, seqs[502], &RxTelemetry::hamsci);   // riometer (slot 502)
     case 503: return pollStd(rxHs_[8], 503, t, seqs[503], &RxTelemetry::hamsci);   // pulsar (slot 503)
     case 751: return pollStd(rxHs_[9], 751, t, seqs[751], &RxTelemetry::hamsci);   // JT6M (slot 751)
+    case 821: return pollStd(rxHs_[10], 821, t, seqs[821], &RxTelemetry::hamsci);   // event monitor, kind 10 (slot 821)
+    case 824: return pollStd(rxHs_[11], 824, t, seqs[824], &RxTelemetry::hamsci);   // event monitor, kind 11 (slot 824)
+    case 827: return pollStd(rxHs_[12], 827, t, seqs[827], &RxTelemetry::hamsci);   // event monitor, kind 12 (slot 827)
+    case 830: return pollStd(rxHs_[13], 830, t, seqs[830], &RxTelemetry::hamsci);   // event monitor, kind 13 (slot 830)
+    case 833: return pollStd(rxHs_[14], 833, t, seqs[833], &RxTelemetry::hamsci);   // event monitor, kind 14 (slot 833)
+    case 836: return pollStd(rxHs_[15], 836, t, seqs[836], &RxTelemetry::hamsci);   // event monitor, kind 15 (slot 836)
     case 531: return pollStd(rxXb_[0], 531, t, seqs[530], &RxTelemetry::xband);
     case 532: return pollStd(rxXb_[1], 532, t, seqs[531], &RxTelemetry::xband);
     case 533: return pollStd(rxXb_[2], 533, t, seqs[532], &RxTelemetry::xband);

@@ -2,16 +2,19 @@
 // Receive only; nothing is transmitted.
 #pragma once
 #include "dect2/hamsci/hamsci_dsp.h"
+#include "dect2/hamsci/hamsci_evt.h"
 #include <cstdint>
 #include <string>
 #include <vector>
 
 namespace dect2 {
 
-// kinds (HamsciReceiver(kind)): family numbers 460 .. 465, 500 .. 502 and 750 (JT6M, 3.9), engine standard = family + 2, poll slot 300 + kind
-enum HamsciKind { kHsQrss = 0, kHsDfcw, kHsFsk441, kHsIscat, kHsPi4, kHsThrob, kHsSid, kHsRiometer, kHsPulsar, kHsJt6m, kHamsciKinds };
-inline int hamsciFamily(int kind) { return kind < 6 ? 460 + kind : kind < 9 ? 500 + (kind - 6) : 750 + (kind - 9); }
-inline int hamsciKindOfFamily(int fam) { return fam >= 460 && fam <= 465 ? fam - 460 : fam >= 500 && fam <= 502 ? 6 + (fam - 500) : fam == 750 ? 9 : -1; }
+// kinds (HamsciReceiver(kind)): family numbers 460 .. 465, 500 .. 502, 750 (JT6M, 3.9) and 820, 823 .. 835 (the event monitors, 3.9), engine standard = family + 2, poll slot 300 + kind
+enum HamsciKind { kHsQrss = 0, kHsDfcw, kHsFsk441, kHsIscat, kHsPi4, kHsThrob, kHsSid, kHsRiometer, kHsPulsar, kHsJt6m,
+                  kHsSchumann, kHsWhistler, kHsEme, kHsJove, kHsCallisto, kHsAurora, kHamsciKinds };   // 10 .. 15: the event monitors (3.9, hamsci_evt.h), families 820 + 3 * (kind - 10)
+constexpr bool hamsciEvtKind(int kind) { return kind >= kHsSchumann; }
+inline int hamsciFamily(int kind) { return kind < 6 ? 460 + kind : kind < 9 ? 500 + (kind - 6) : kind == 9 ? 750 : 820 + 3 * (kind - 10); }
+inline int hamsciKindOfFamily(int fam) { return fam >= 460 && fam <= 465 ? fam - 460 : fam >= 500 && fam <= 502 ? 6 + (fam - 500) : fam == 750 ? 9 : fam >= 820 && fam <= 835 && (fam - 820) % 3 == 0 ? 10 + (fam - 820) / 3 : -1; }
 inline int hamsciStd(int kind) { return hamsciFamily(kind) + 2; }
 inline int hamsciKindOfStd(int std) { return hamsciKindOfFamily(std - 2); }
 inline int hamsciKindOfActive(int a) { return hamsciKindOfFamily(a - 1); }   // the active standard the engine reports is the family + 1
@@ -53,6 +56,9 @@ struct HamsciTelemetry {
     double pulsarObservedSec = 0;
     bool pulsarSearching = false;
     double pulsarNeededM2 = 0;      // the radiometer equation for the target set, 0 = unknown
+    // event monitors (kinds 10 .. 15): spectrogram, trend, peaks, counts; the events themselves are `lines` (newest first, up to 2000)
+    hamsci::EvtState evt;
+    int64_t startUtc = 0;           // wall clock of the capture start (the events' times are signal times)
 };
 
 }  // namespace dect2

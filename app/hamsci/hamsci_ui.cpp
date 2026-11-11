@@ -1,4 +1,4 @@
-// Screens of the ham science modes (families 460 - 465, 500 - 502 and 750 JT6M, one receiver class, docs/HAM-SCIENCE-3.8.md): QRSS and DFCW (a spectrogram of the
+// Screens of the ham science modes (families 460 - 465, 500 - 502, 750 JT6M and the 3.9 event monitors 820 - 835, one receiver class, docs/HAM-SCIENCE-3.8.md and docs/W1B-3.9.md): QRSS and DFCW (a spectrogram of the
 // keyed tone and the text), FSK441, ISCAT and PI4 (a list of decodes), Throb (running text), SuperSID (VLF station levels and the sudden changes of a solar
 // flare), the riometer (absorption against a sidereal quiet-day curve) and pulsar folding (profile, S/N, and what antenna it takes).
 // Auto is on for every mode; the manual settings sit under the decoder options and turn Auto off when changed.
@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
+#include <fstream>
 #include <string>
 #include <vector>
 
@@ -30,6 +31,8 @@ struct State {
     int sidSel = 0;
     int psrSel = 0;
     float psrFlux = 1.5f, psrTsys = 150.f, psrHours = 1.f, psrBwMHz = 2.4f, psrDuty = 3.f;
+    float evtThr = 0.f;              // event monitors: detection threshold, 0 = automatic
+    std::string saved;               // last CSV saved (path or error)
     bool pushed = false;
     uint64_t qdcSeen = 0;
     std::string qdcSaved;
@@ -56,6 +59,7 @@ void load(int K) {
     s.psrTsys = (float)plat::prefs().getD("hsPsrTsys", 150.0);
     s.psrHours = (float)plat::prefs().getD("hsPsrHours", 1.0);
     s.qdcSaved = plat::prefs().getS("hsRioQdc", "");
+    s.evtThr = (float)plat::prefs().getD(("hsEvtThr_" + id).c_str(), 0.0);
 }
 
 void save(const char* key, double v) { plat::prefs().setD(key, v); plat::prefs().flush(); }
@@ -87,7 +91,13 @@ void intro(int K) {
         "SuperSID: the strength of VLF navy transmitters (15 to 30 kHz) follows the ionosphere. A solar flare shows as a sudden step in a signal. It needs a VLF-capable radio and a loop or whip antenna, and the step must be checked against the GOES X-ray flux before you call it a flare.",
         "Riometer: the cosmic radio noise (about 30 MHz) shrinks when the ionosphere absorbs it during a geomagnetic or solar particle event. The receiver measures a rejected-interference noise power and compares it with a quiet-day curve per sidereal hour. The curve needs one to two days and a receiver gain that never changes.",
         "Pulsar folding: weak periodic pulses are found by dedispersing and folding the record at the pulsar's period. This is a radio astronomy job: it needs a dish or array, a low-noise amplifier and an hour or more; the antenna line below says how big.",
-        "JT6M: 6 m meteor and ionospheric scatter, 44-tone FSK at 21.5 baud with a sync tone every third symbol. The receiver lists the pings and folds a long signal into its repeating message. Receive only."};
+        "JT6M: 6 m meteor and ionospheric scatter, 44-tone FSK at 21.5 baud with a sync tone every third symbol. The receiver lists the pings and folds a long signal into its repeating message. Receive only.",
+        "Schumann resonances: the Earth-ionosphere cavity rings near 7.83, 14.1, 20.3, 26.3 and 32.5 Hz, driven by lightning around the world. Needs an ELF input (a magnetic coil and a sound card or ADC): a radio cannot hear 8 Hz. The peaks need a few minutes of averaging. Receive only. Tested on simulated signals only.",
+        "Whistlers and tweeks: lightning-launched tones in a VLF audio recording. A whistler is a tone that falls over a second or two (t = t0 + D / sqrt(f)); a tweek is a short ridge near 1.8 kHz after a sferic. Needs a VLF antenna and receiver into a sound card. Receive only. Tested on simulated signals only.",
+        "Moon echo test: send a keyed carrier of a second or more (your own transmitter, not controlled here; pulses 10 s apart or more) and the monitor looks 2.3 to 2.85 s later for the echo. Receive only. Tested on simulated signals only.",
+        "Radio Jove: Jupiter, the Sun and the galactic background near 20.1 MHz in a spectrogram; broadband bursts are listed and narrowband interference is ignored. Needs a radio that tunes 20 MHz and a suitable antenna. Receive only. Tested on simulated signals only.",
+        "e-CALLISTO style solar bursts: a spectrogram of one capture and the bursts in it with their drift rate. One capture covers a few MHz; the CALLISTO spectrometer sweeps the whole band and this mode does not. Receive only. Tested on simulated signals only.",
+        "Beacon events: a VHF beacon carrier is followed and each opening is logged with time, S/N, Doppler width and flutter. The class (aurora-like, TEP-like, sporadic-E-like) comes from the signal's character only and does not prove the path. Receive only. Tested on simulated signals only."};
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr(txt[K]));
     ImGui::PopTextWrapPos();
@@ -233,6 +243,101 @@ void pulsarTab(App& a, const HamsciTelemetry& t, State& s) {
     kv(a, tr("effective area for S/N 5"), "%.1f m2 (3 %% pulse width, %.1f MHz, both polarisations)", area, bw / 1e6);
 }
 
+// ---- the event monitors (kinds 10 .. 15): spectrogram, trend, events, exports
+std::string evtFreqLabel(int K, const HamsciTelemetry& t, int idx) {
+    const auto& e = t.evt;
+    char b[48];
+    switch (K) {
+    case kHsSchumann: snprintf(b, sizeof b, "%.1f Hz", e.f0Hz + idx * e.binHz * 4); break;
+    case kHsWhistler: snprintf(b, sizeof b, "%.1f kHz", (e.f0Hz + idx * e.binHz) / 1e3); break;
+    case kHsEme: snprintf(b, sizeof b, "%+.0f Hz", e.f0Hz + idx * e.binHz); break;
+    case kHsJove: case kHsCallisto: snprintf(b, sizeof b, "%.3f MHz", (t.centerHz + e.f0Hz + idx * e.binHz) / 1e6); break;
+    default: snprintf(b, sizeof b, "%+.0f Hz", e.f0Hz + idx * e.binHz); break;
+    }
+    return b;
+}
+
+void evtSpectrogram(App&, const HamsciTelemetry& t, int K, float h) {
+    const auto& rows = t.evt.rows;
+    ImVec2 p = ImGui::GetCursorScreenPos();
+    const float w = ImGui::GetContentRegionAvail().x;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    dl->AddRectFilled(p, ImVec2(p.x + w, p.y + h), IM_COL32(10, 12, 18, 255));
+    const float range = K == kHsJove || K == kHsCallisto ? 8.f : K == kHsSchumann ? 12.f : 24.f;
+    int B = 0;
+    if (!rows.empty() && !rows[0].empty()) {
+        const size_t R = rows.size();
+        B = (int)rows[0].size();
+        const float cw = w / 150.f, ch = h / (float)B;
+        for (size_t r = 0; r < R; r++)
+            for (int b = 0; b < B && (size_t)b < rows[r].size(); b++) {
+                const float v = std::clamp(rows[r][(size_t)b] / range, 0.f, 1.f);
+                if (v < 0.05f) continue;
+                const int g = (int)(40 + 215 * v);
+                const float x0 = p.x + w - (float)(R - r) * cw;
+                dl->AddRectFilled(ImVec2(x0, p.y + h - ((float)b + 1) * ch), ImVec2(x0 + cw + 0.5f, p.y + h - (float)b * ch), IM_COL32(g, (int)(g * 0.85f), (int)(60 * v + 30), 255));
+            }
+    }
+    ImGui::Dummy(ImVec2(w, h));
+    if (B > 0) ImGui::TextDisabled("%s %s  -  %s %s,  %.2f s %s", tr("bottom"), evtFreqLabel(K, t, 0).c_str(), tr("top"), evtFreqLabel(K, t, B).c_str(), t.evt.rowSec, tr("per column, newest on the right"));
+}
+
+void evtPlot(const char* id, const std::vector<float>& v, const std::string& name) {
+    if (v.size() < 2) return;
+    ImGui::TextDisabled("%s", tr(name.c_str()));
+    ImGui::PlotLines(id, v.data(), (int)v.size(), 0, nullptr, FLT_MAX, FLT_MAX, ImVec2(ImGui::GetContentRegionAvail().x, std::max(70.f, 90 * gUi)));
+}
+
+void evtTab(App& a, const HamsciTelemetry& t, State& s, int K) {
+    const auto& e = t.evt;
+    evtSpectrogram(a, t, K, std::max(150.f, 200 * gUi));
+    ImGui::Spacing();
+    if (K == kHsSchumann) {
+        static const double kNom[5] = {7.83, 14.1, 20.3, 26.3, 32.5};
+        if (ImGui::BeginTable("##schpk", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_BordersInnerV)) {
+            ImGui::TableSetupColumn(tr("Mode")); ImGui::TableSetupColumn(tr("Published Hz")); ImGui::TableSetupColumn(tr("Found Hz")); ImGui::TableSetupColumn(tr("dB over baseline")); ImGui::TableSetupColumn("Q");
+            ImGui::TableHeadersRow();
+            ImGui::PushFont(a.mono, 0);
+            for (int m = 0; m < 5; m++) {
+                const bool ok = (size_t)m < e.peakHz.size() && e.peakHz[(size_t)m] > 0;
+                ImGui::TableNextRow();
+                ImGui::TableNextColumn(); ImGui::Text("%d", m + 1);
+                ImGui::TableNextColumn(); ImGui::Text("%.2f", kNom[m]);
+                ImGui::TableNextColumn(); if (ok) ImGui::Text("%.2f", (double)e.peakHz[(size_t)m]); else ImGui::TextDisabled("-");
+                ImGui::TableNextColumn(); if (ok) ImGui::Text("%.1f", (double)e.peakDb[(size_t)m]); else ImGui::TextDisabled("-");
+                ImGui::TableNextColumn(); if (ok) ImGui::Text("%.1f", (double)e.peakQ[(size_t)m]); else ImGui::TextDisabled("-");
+            }
+            ImGui::PopFont();
+            ImGui::EndTable();
+        }
+        if (e.avgSpec.size() > 2) { ImGui::TextDisabled("%s", tr("Five minute average spectrum, dB over the baseline")); ImGui::PlotLines("##schavg", e.avgSpec.data(), (int)e.avgSpec.size(), 0, nullptr, -2.f, 14.f, ImVec2(ImGui::GetContentRegionAvail().x, std::max(80.f, 100 * gUi))); }
+    }
+    kv(a, tr("events"), "%d", e.eventsTotal);
+    evtPlot("##evtt1", e.trend, e.trendName);
+    evtPlot("##evtt2", e.trend2, e.trend2Name);
+    if (e.hourly.size() == 24) {
+        std::vector<float> h(24);
+        for (size_t i = 0; i < 24; i++) h[i] = (float)e.hourly[i];
+        ImGui::TextDisabled("%s", tr("Events per UTC hour of the day"));
+        ImGui::PlotHistogram("##evth", h.data(), 24, 0, nullptr, 0.f, FLT_MAX, ImVec2(ImGui::GetContentRegionAvail().x, std::max(60.f, 70 * gUi)));
+    }
+    ImGui::Spacing();
+    HamsciReceiver& r = a.engine.hamsci(K);
+    if (ImGui::SmallButton((std::string(tr("Copy events (CSV)")) + "##evcp").c_str())) ImGui::SetClipboardText(r.evtExportCsv().c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton((std::string(tr("Copy trend (CSV)")) + "##evtr").c_str())) ImGui::SetClipboardText(r.evtExportTrendCsv().c_str());
+    ImGui::SameLine();
+    if (ImGui::SmallButton((std::string(tr("Save CSV files")) + "##evsv").c_str())) {
+        const std::string base = plat::dataDir() + "/" + hamsciId(K);
+        std::ofstream f1(base + "_events.csv", std::ios::binary), f2(base + "_trend.csv", std::ios::binary);
+        if (f1 && f2) { f1 << r.evtExportCsv(); f2 << r.evtExportTrendCsv(); s.saved = base + "_events.csv, " + base + "_trend.csv"; }
+        else s.saved = tr("could not write to the data folder");
+    }
+    if (!s.saved.empty()) ImGui::TextDisabled("%s", s.saved.c_str());
+    ImGui::Spacing();
+    if (ImGui::CollapsingHeader(trw("Event list"), ImGuiTreeNodeFlags_DefaultOpen)) decodeList(a, t);
+}
+
 // ---- the tab
 void tab(App& a, int K) {
     load(K);
@@ -250,6 +355,7 @@ void tab(App& a, int K) {
     case kHsRiometer: rioTab(a, t); break;
     case kHsPulsar: pulsarTab(a, t, s); break;
     case kHsJt6m: if (!t.text.empty()) kv(a, tr("averaged message"), "%s", t.text.c_str()); decodeList(a, t); break;
+    case kHsSchumann: case kHsWhistler: case kHsEme: case kHsJove: case kHsCallisto: case kHsAurora: evtTab(a, t, s, K); break;
     default: decodeList(a, t); break;
     }
 }
@@ -263,6 +369,7 @@ void receiver(App& a, int K) {
     kv(a, tr("input"), "%.3f Msps", t.inputRate / 1e6);
     kv(a, tr("signal time"), "%.1f s", t.timeSec);
     if (hamsciAudioKind(K)) kv(a, tr("decoded"), "%llu", (unsigned long long)t.blocksOk);
+    if (hamsciEvtKind(K)) { for (const auto& l : t.evt.info) kv(a, tr("status"), "%s", l.c_str()); kv(a, tr("events"), "%d", t.evt.eventsTotal); }
     smart5SidCard(a);   // round-5 smart checks (app/smart5, docs/SMART5-UI-3.9.md)
 }
 
@@ -328,6 +435,11 @@ void decoder(App& a, bool&, int K) {
         if (ImGui::SmallButton(tr("Search now##psr"))) r.pulsarSearchNow();
         break;
     }
+    case kHsSchumann: case kHsWhistler: case kHsEme: case kHsJove: case kHsCallisto: case kHsAurora:
+        ImGui::SetNextItemWidth(110 * gUi);
+        if (ImGui::SliderFloat(tr("Detection threshold (0 = automatic)"), &s.evtThr, 0.f, 20.f, "%.1f")) { save(("hsEvtThr_" + std::string(hamsciId(K))).c_str(), s.evtThr); r.setEvtThresholdDb(s.evtThr > 0.f ? s.evtThr : -1.0); }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Schumann transients, Jove and CALLISTO bursts: dB over the background. Whistlers: path score. Moon echo and beacon openings: sigma over the noise. Lower finds weaker events and more false ones."));
+        break;
     default: break;
     }
     if (ImGui::SmallButton((std::string(tr("Clear")) + "##hsclear").c_str())) r.clearResults();
@@ -372,6 +484,7 @@ void tick(App& a, int K) {
             if (K == kHsThrob) r.setVariant(s.variant - 1);
         }
         if (K == kHsSid) r.setSidRiseDb(s.sidRise);
+        if (hamsciEvtKind(K)) r.setEvtThresholdDb(s.evtThr > 0.f ? s.evtThr : -1.0);
         if (K == kHsRiometer) { r.setRioLongitude(s.rioLon); r.setRioThresholdDb(s.rioThr); if (!s.qdcSaved.empty()) r.rioImportQdc(s.qdcSaved); }
     }
     if (K == kHsRiometer && run && live(a, K) && a.rx.hamsci.seq != s.qdcSeen && a.rx.hamsci.rio.powerHistory.size() % 30 == 1) {   // keep the quiet-day curve between runs, every 30 minutes
@@ -406,7 +519,7 @@ void command(App& a, int K) {
 }
 
 template <int K> constexpr ModeUi makeUi() {
-    return ModeUi{.sideTitle = hamsciAudioKind(K) ? "DECODES" : "READINGS", .tabName = hamsciAudioKind(K) ? "Messages" : K == kHsSid ? "Stations" : K == kHsRiometer ? "Absorption" : "Pulsar", .tabIcon = Ic::Wave,
+    return ModeUi{.sideTitle = hamsciAudioKind(K) ? "DECODES" : hamsciEvtKind(K) ? "EVENTS" : "READINGS", .tabName = hamsciAudioKind(K) ? "Messages" : hamsciEvtKind(K) ? "Events" : K == kHsSid ? "Stations" : K == kHsRiometer ? "Absorption" : "Pulsar", .tabIcon = Ic::Wave,
                   .tab = [](App& a) { tab(a, K); }, .receiver = [](App& a) { receiver(a, K); }, .list = [](App& a) { list(a, K); },
                   .status = [](App& a) { status(a, K); }, .summary = [](const App& a, std::string& x, std::string& y) { summary(a, x, y, K); },
                   .decoder = [](App& a, bool& rt) { decoder(a, rt, K); }, .synth = [](App& a, bool& ch) { synth(a, ch, K); },
@@ -416,4 +529,4 @@ template <int K> constexpr ModeUi makeUi() {
 }  // namespace
 
 extern const ModeUi kHamsciUi[kHamsciKinds];
-const ModeUi kHamsciUi[kHamsciKinds] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>()};
+const ModeUi kHamsciUi[kHamsciKinds] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>()};

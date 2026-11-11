@@ -1700,3 +1700,12 @@ apart from no network now), DR Deutschland sends no FIG 0/22, and the tab re-cen
 too). FIG 0/22 TD is 11 bits now; FIG 0/11 regions and 1/3 labels are decoded; the ensemble's country (EId + ECC) picks the list. No
 source with German TII codes allows copying (FMLIST, ukwtv.de, wohnort.org; BNetzA has no TII), so nothing is bundled; the user's own
 qt-dab .txdata.tii can be read in place. Unknown rows say why and what to do; sharing is optional. docs/DABSITES-3.9.md.
+
+2026-11-11 feat39-w1b (ham science event monitors, docs/W1B-3.9.md). Six new modes as kinds 10 to 15 of the hamsci receiver, one mode-list entry
+each: Schumann resonance monitor (820), whistler and tweek detector (823), Moon echo test (826, rows 138 and 270 merged), Radio Jove (829),
+e-CALLISTO style solar bursts (832) and aurora / sporadic-E / TEP beacon events (835). Spectrogram, event list with times, trend per minute,
+events per UTC hour and CSV (events, trend, save to the data folder) for each; generators in hamsci_evt_gen.cpp; Android and web schema regenerated.
+GRAVES (269) skipped: the Meteor scatter mode (104) already follows GRAVES and matches satellite echoes. Specs were read from Wikipedia (Schumann,
+whistlers), the NASA Radio Jove FAQ, the e-CALLISTO site, the tweek papers and the EME libration pages; what has no source (whistler D range,
+aurora / TEP / Es split, burst drift classes) is marked as ours. Simulated signals only. Written with no local build (battery rule): syntax checks
+only, tests run with quick.yml.
