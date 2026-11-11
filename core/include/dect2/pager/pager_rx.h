@@ -32,6 +32,8 @@ public:
     void setProtocols(int mask);                         // 1 POCSAG, 2 FLEX (default 3: both)
     void setSelcall(bool on);                            // also decode five-tone selective calls (CCIR, ZVEI, EEA, EIA, DZVEI) on the channel audio (default off)
     bool selcall() const;
+    void setPocsagSecondPath(bool on);                   // 4.0: a second POCSAG-only decoder behind a 7 kHz channel filter next to the 10 kHz one FLEX needs (default on, 25 kHz channels)
+    bool pocsagSecondPath() const;
     void setPocsagBauds(int mask);                       // 1 512, 2 1200, 4 2400 bd (default 7: all three)
     void setToneDetection(bool on);                      // POCSAG symbols from tone energies and a sync search that uses them (default on; off: the discriminator only, as in 3.9)
     bool toneDetection() const;

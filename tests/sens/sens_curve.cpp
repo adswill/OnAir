@@ -42,6 +42,7 @@ int main(int argc, char** argv) {
     if (!mp) { printf("no mode %s\n", argv[1]); return 2; }
     Mode mcopy = *mp;
     if (getenv("CURVE_OPT0") && mcopy.id == "sonde") { const int o0 = atoi(getenv("CURVE_OPT0")); mcopy.gen = [o0](size_t n) { SynthConfig c; c.modeOpt[0] = o0; c.modeOpt[1] = 1; return clean(15, c, 8e6, n); }; }
+    if (getenv("CURVE_SECS")) mcopy.secs = atof(getenv("CURVE_SECS"));   // a longer trial gives more units for modes with a slow frame rate
     const Mode& m = mcopy;
     Prep P;
     P.trialN = (size_t)(m.secs * m.rate);
