@@ -16,6 +16,7 @@ Branch `feat39-ci4fix`, based on `pub/integ-39` at b10e8bd2e. Each item has its 
 ## Verification
 
 - quick.yml on Linux (run 42941933736): custom_bandwidth_all, sample_guard, autoparam_kbd and marine_fax_thread pass. web_schema still fails on 3G-ALE, DVB-SH, Link 11 CLEW and the two STANAG rows. Those are fixed in the integrator's held batch, not on this branch.
+- quick.yml on macOS (run 42945977316): webapp, voice_insight, cubesat_more, vdl3_all, marine_fax_thread and custom_bandwidth_all all pass.
 - Local runs on macOS: voice_insight, cubesat_more (1600-frame sweeps), vdl3_all (also with ONAIR_TEST_LONG=1), and marine_fax_thread (also under TSan). All pass.
 
 ## Limits
