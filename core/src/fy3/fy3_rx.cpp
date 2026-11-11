@@ -5,6 +5,7 @@
 #include "dect2/fy3/fy3_proto.h"
 #include "dect2/meteor/meteor_proto.h"
 #include "dect2/dsp/dsp_compat.h"
+#include "dect2/dsp/fast_sincos.h"
 #include "dect2/common/mathconst.h"
 #include <algorithm>
 #include <atomic>
@@ -29,6 +30,14 @@ constexpr int kAcqLog2 = 10, kAcqN = 1 << kAcqLog2, kAcqBlocks = 48;
 constexpr int kRateLog2 = 14, kRateN = 1 << kRateLog2, kRateBlocks = 96;
 constexpr int kWideLog2 = 13, kWideN = 1 << kWideLog2, kWideBlocks = 40;
 constexpr int kSearchSyms = 40000;      // symbols the code search looks at
+// No signal: between two code searches the receiver waits 0.15 s of symbols (holdSyms). When the Es/N0 estimate also says there is
+// nothing there (under -4 dB; the code needs about +3 dB and the estimate reads 0.05 - 0.16 on white noise, 1.0 at +1 dB), the
+// demodulator runs on one block of input in eight during that wait and the rest goes by. The loops keep running on what they see; a
+// signal that comes up lifts the estimate within a block and the receiver runs on every sample again.
+constexpr int kIdleBlock = 32768;        // input samples processed per idle cycle
+constexpr int kIdleSkip = 7;             // blocks let go by after each one processed
+constexpr float kIdleSnr = 0.4f;
+constexpr int64_t kWarmSyms = 20000;     // symbols run after a skip before the next code search collects any
 constexpr double kSearchHzLband = 75000; // coarse carrier search range (L-band Doppler is up to about +-40 kHz)
 
 double rrcTap(double t, double a) {     // t in symbols
@@ -195,6 +204,7 @@ struct Fy3Receiver::Impl {
     int64_t nSym = 0, symAbs = 0;
     int loopStage = 0;
     double dbgE = 0; int64_t dbgN = 0;
+    const bool kDebug2 = getenv("FY3_DEBUG2") != nullptr;   // the angle error print (an atan2 a symbol: only when asked for)
     float lockAvg = 0, m2 = 0, m4 = 0, snrLin = 1;
     float iqZr = 0, iqZi = 0, iqPf = 0, iqWr = 0, iqWi = 0, iqInv = 1;   // blind IQ correction: E[y^2] / E[|y|^2]
     uint32_t iqN = 0;
@@ -256,6 +266,9 @@ struct Fy3Receiver::Impl {
     Fy3Telemetry tel, pub;
     uint64_t seq = 0;
     int64_t nIn = 0;
+    int64_t idleLeft = 0, idleRun = 0;   // input samples still to let go by; processed since the last skip
+    bool idled = false;
+    bool idle() const { return !railLocked && holdSyms > kWarmSyms && stage >= 1 && coarseDone && !wideOn && nSym > 4000 && snrLin < kIdleSnr; }
     double nextReport = 0, power = 0;
     int64_t nPower = 0;
     std::vector<std::pair<float, float>> constel;
@@ -384,6 +397,7 @@ struct Fy3Receiver::Impl {
         { std::lock_guard<std::mutex> lk(mu); rate = rateSet; offset = offsetSet; rsUser = rsSet; alphaUser = alphaSet; }
         presetRun = presetSet.load();
         autoIdx = 0; rsMeasured = 0;
+        idleLeft = 0; idleRun = 0; idled = false;
         stage = 0;
         pickRate();
         coarseHz = 0; wideDone = false; wideUsed = false; rsDesignWide = 0;
@@ -605,7 +619,8 @@ struct Fy3Receiver::Impl {
 
     void symbol() {
         const double T = spsEst;
-        const float c0 = (float)std::cos(theta), s0 = (float)std::sin(theta);
+        const cf32 cs = FastSinCos::get().polar(1.f, theta);   // error 3e-7: a table, not cos and sin in double each symbol
+        const float c0 = cs.real(), s0 = cs.imag();
         const float hw = (float)(omega / 2), ch = 1.f - hw * hw / 2, sh = hw;
         const cf32 r0(c0, -s0), r1(c0 * ch + s0 * sh, -(s0 * ch - c0 * sh));
         const cf32 a = interp(tau) * r0;
@@ -622,7 +637,7 @@ struct Fy3Receiver::Impl {
         // soft-decision carrier detector: tanh of the rails at the confidence the current SNR allows (hard decisions when it is high)
         const float k = std::clamp(2.f * snrLin, 1.f, 8.f);
         const float eC = std::clamp(fastTanh(k * In) * Qn - fastTanh(k * Qn) * In, -1.f, 1.f);
-        { double ang = std::atan2((double)Qn, (double)In) - kPi / 4; ang = std::remainder(ang, kPi / 2); dbgE += ang * ang; dbgN++; }
+        if (kDebug2) { double ang = std::atan2((double)Qn, (double)In) - kPi / 4; ang = std::remainder(ang, kPi / 2); dbgE += ang * ang; dbgN++; }
         theta += omega + lalpha * eC;
         omega += lbeta * eC;
         omega = std::clamp(omega, -0.25, 0.25);
@@ -1037,7 +1052,7 @@ struct Fy3Receiver::Impl {
     }
 
     void report() {
-        if (getenv("FY3_DEBUG2") && dbgN) { fprintf(stderr, "angle error rms %.3f rad, omega %.5f, lalpha %.5f snrLin %.2f\n", std::sqrt(dbgE / (double)dbgN), omega, lalpha, snrLin); dbgE = 0; dbgN = 0; }
+        if (kDebug2 && dbgN) { fprintf(stderr, "angle error rms %.3f rad, omega %.5f, lalpha %.5f snrLin %.2f\n", std::sqrt(dbgE / (double)dbgN), omega, lalpha, snrLin); dbgE = 0; dbgN = 0; }
         supervise();
         const double now = nowSec();
         tel.seq = ++seq;
@@ -1116,13 +1131,27 @@ void Fy3Receiver::feed(const cf32* x, size_t n) {
         return;
     }
     for (size_t i = 0; i < n; i++) {
+        if (m.idleLeft > 0) {   // no signal: let this stretch go by (the wait between code searches counts it)
+            const int64_t k = std::min<int64_t>(m.idleLeft, (int64_t)(n - i));
+            m.idleLeft -= k;
+            m.nIn += k;
+            m.holdSyms = std::max<int64_t>(kWarmSyms, m.holdSyms - (int64_t)((double)k * m.rs / m.rate));
+            i += (size_t)k - 1;
+            if ((double)m.nIn >= m.nextReport) { m.nextReport += kPubSec * m.rate; m.report(); }
+            continue;
+        }
         float re = x[i].real(), im = x[i].imag();
         if (!std::isfinite(re) || !std::isfinite(im)) re = im = 0;
         m.power += (double)re * re + (double)im * im;
+        m.nPower++;
         m.input(cf32(re, im));
         if ((double)m.nIn >= m.nextReport) { m.nextReport += kPubSec * m.rate; m.report(); }
+        if (++m.idleRun >= kIdleBlock) {
+            m.idleRun = 0;
+            if (m.idle()) { m.idleLeft = (int64_t)kIdleSkip * kIdleBlock; m.idled = true; }
+            else if (m.idled) { m.idled = false; if (!m.railLocked && m.holdSyms > 0) m.holdSyms = std::min(m.holdSyms, kWarmSyms); }
+        }
     }
-    m.nPower += (int64_t)n;
 }
 
 bool Fy3Receiver::telemetry(Fy3Telemetry& out, uint64_t lastSeq) {
