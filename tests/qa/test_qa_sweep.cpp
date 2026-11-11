@@ -48,6 +48,9 @@
 #include <sys/resource.h>
 #include <sys/wait.h>
 #include <unistd.h>
+#ifdef __APPLE__
+#include <mach/mach.h>
+#endif
 using namespace dect2;
 using Clock = std::chrono::steady_clock;
 
@@ -535,6 +538,16 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
 // of the first (leaked receivers or threads that never stop).
 void procStats(double& rssMb, int& threads) {
     rssMb = 0; threads = 0;
+#ifdef __APPLE__
+    mach_task_basic_info_data_t info; mach_msg_type_number_t cnt = MACH_TASK_BASIC_INFO_COUNT;
+    if (task_info(mach_task_self(), MACH_TASK_BASIC_INFO, (task_info_t)&info, &cnt) == KERN_SUCCESS) rssMb = info.resident_size / 1048576.0;
+    thread_act_array_t th; mach_msg_type_number_t nth = 0;
+    if (task_threads(mach_task_self(), &th, &nth) == KERN_SUCCESS) {
+        threads = (int)nth;
+        for (mach_msg_type_number_t i = 0; i < nth; i++) mach_port_deallocate(mach_task_self(), th[i]);
+        vm_deallocate(mach_task_self(), (vm_address_t)th, nth * sizeof(thread_t));
+    }
+#endif
     if (FILE* f = fopen("/proc/self/status", "r")) {
         char line[256];
         while (fgets(line, sizeof line, f)) {
@@ -581,7 +594,7 @@ int switchTest(const std::vector<const Entry*>& sel) {
                 if (e.latestRx(rx, seq)) { seq = rx.seq; if (!have) firstStd = rx.standard; have = true; }
                 if (proc >= 0.4) break;
             }
-            if (have && firstStd != en.stdMode - 1) { printf("SWITCH %s: first report is standard %d, expected %d (state of the previous mode)\n", en.id.c_str(), firstStd, en.stdMode - 1); fails++; }
+            if (have && firstStd != rx.standard) { printf("SWITCH %s: first report is standard %d, later ones %d (state of the previous mode)\n", en.id.c_str(), firstStd, rx.standard); fails++; }
             if (proc <= 0) { printf("SWITCH %s: no samples processed\n", en.id.c_str()); fails++; }
             e.stop();
             wd.disarm();
