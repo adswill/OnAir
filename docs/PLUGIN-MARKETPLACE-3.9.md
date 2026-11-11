@@ -2,7 +2,7 @@
 
 **Design in two sentences.** The marketplace is a *static registry*: a signed `index.json` plus one page and one package per plugin, hosted as plain files on any HTTPS host (GitHub Pages is enough) or in a local folder, so no server exists to run or attack. OnAir's Store tab (View > Plugins > Store) reads it only when asked, accepts it only if the index is signed with the registry's Ed25519 key, checks every package against the sha256 in the signed listing before a byte reaches the plugins folder, and then uses the existing install path, watchdog, helper process and safe mode.
 
-Status: client, tools and sample registry are built and tested; the registry itself is not hosted and has no real key yet (see [Owner checklist](#owner-checklist-host-the-registry)).
+Status: the registry is live at https://adswill.github.io/onair-plugins/ (repository adswill/onair-plugins). It is signed and empty: no plugins are listed yet. Its public key is built into OnAir (`kBuiltInRegistryKeyHex` in `core/src/pstore/store.cpp`); the private key is kept offline by the owner. The section below, "Host a registry", is for anyone who wants a custom registry.
 
 ## 1. The registry
 
@@ -76,10 +76,12 @@ Store tab: browse, search, category filter, trust badge per plugin (listed / rev
 
 Against local registries built on the fly and signed with a test key; no network host is used. Good install (and refusal without the confirmation), tampered index, flipped signature, wrong key, no key configured, wrong sha256 (nothing written), `..` in a download path, a package asking for more permissions than listed, wrong ABI, too-new minimum version, other platform, platform filter, update, downgrade refused, replayed older index refused, mismatching package refused, damaged archive with a valid hash (the old version stays), revocation (reason shown, cannot enable, survives a restart, lifted later), offline cache with its notice, damaged cache ignored, uninstall; and the checked-in sample registry (signed by the Python tool) verifies and installs a stub. What is **not** tested: real HTTPS (the HTTP client has its own tests in `iptv`), the ImGui tab (checked to compile with g++-16 `-fsyntax-only` only), and no real plugin binary is installed by these tests (the stubs are text files; the three real examples already load in `tests/plugin`).
 
-## Owner checklist: host the registry
+## Host a registry (the project's own steps, for a custom registry)
+
+The project's registry was set up this way and is already live; follow the steps with your own key and address for a custom one.
 
 1. Make the key on an offline computer: `python3 tools/marketplace/onair_registry.py keygen /Volumes/USB/onair-registry.key`. Back it up twice. Never commit it. It prints the public key.
-2. Put the public key into `kBuiltInRegistryKeyHex` (`core/src/pstore/store.cpp`) and set `kDefaultRegistryUrl` to the real address. Until then the Store says the project's key is not published and fetches nothing.
+2. Put the public key into `kBuiltInRegistryKeyHex` (`core/src/pstore/store.cpp`) and set `kDefaultRegistryUrl` to the address (for a custom build), or enter the registry and its key in the Store settings if your build offers that. A build without a key says the key is not published and fetches nothing.
 3. Create the public repo (suggested `adswill/onair-plugins`) and copy `tools/marketplace/sample-registry/*` into it, but **without** the three stub plugins, `packages/`, the test key and the sample `index.json*`; copy `tools/marketplace/onair_registry.py` to its `tools/`, and `sample-registry/.github/` to its root `.github/`.
 4. Add the first real plugins (or none), then `lint`, `index --serial 1`, `sign`, `verify`, commit, push.
 5. Enable GitHub Pages (branch `main`, root). The address is `https://adswill.github.io/onair-plugins/`. Check that `.../index.json` and `.../index.json.sig` open in a browser. (Any other HTTPS host works the same; a custom domain survives a change of host.)
