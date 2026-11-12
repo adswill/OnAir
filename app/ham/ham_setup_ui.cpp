@@ -1,6 +1,7 @@
 #include "ease/ease_ui.h"
 // The Ham view's station setup wizard, the in-app Ham guide and the keyboard shortcut table: see ham_ops_ui.h.
 #include "ham_ops_ui.h"
+#include "ham_station_ui.h"
 #include "../platform/platform.h"
 #include "dect2/geo/maidenhead.h"
 #include <algorithm>
@@ -56,6 +57,12 @@ void hamSetupWizard(App& a, char* call, size_t callN, char* grid, size_t gridN, 
         ImGui::InputText(tr("Callsign"), call, callN, U);
         ImGui::SetNextItemWidth(100 * gUi);
         ImGui::InputText(tr("Grid"), grid, gridN, U);
+        if (receiverLocationSet()) {   // 4.0: the locator from the receiver position (View > Map, GPS)
+            double la = 0, lo = 0;
+            receiverLocation(la, lo);
+            const std::string g = toMaidenhead(la, lo, 6);
+            if (g != grid) { ImGui::SameLine(); if (ImGui::SmallButton((std::string(tr("From my position: ")) + g).c_str())) snprintf(grid, gridN, "%s", g.c_str()); }
+        }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("4 or 6 characters, e.g. KO24 or KO24pq. The Map view of OnAir shows the locator of any place."));
         const bool cOk = ham::hamCallValid(call), gOk = ham::hamGridValid(grid);
         if (call[0] && !cOk) ImGui::TextColored(ImVec4(1, 0.6f, 0.3f, 1), "%s", tr("That does not look like a callsign."));
@@ -83,6 +90,7 @@ void hamSetupWizard(App& a, char* call, size_t callN, char* grid, size_t gridN, 
         ImGui::Combo(tr("Band plan"), &o.region, kRegion, 4);
         if (const int s = suggestRegion(grid); s && s != o.region) { ImGui::SameLine(); if (ImGui::SmallButton(tr("Use the region of my grid"))) o.region = s; }
         ImGui::TextDisabled("%s", tr("The band bar warns when the dial is outside your region's band."));
+        hamStationWizardExtras(grid, gridN);   // 4.0: country (sets the region), the grid from your position, antennas
         ImGui::Checkbox(tr("I hold an amateur licence for this callsign and will follow its rules"), &licence);
         if (!licence) ImGui::TextColored(ImVec4(1, 0.7f, 0.3f, 1), "%s", tr("Without it OnAir warns you when you transmit: you are responsible for being allowed to."));
         canNext = true;   // receiving and logging work without a licence
@@ -93,6 +101,7 @@ void hamSetupWizard(App& a, char* call, size_t callN, char* grid, size_t gridN, 
         ImGui::SetNextItemWidth(80 * gUi); ImGui::InputText(tr("Power W"), pwr, sizeof pwr, ImGuiInputTextFlags_CharsDecimal);
         ImGui::SetNextItemWidth(320 * gUi); ImGui::InputText(tr("Antenna"), ant, sizeof ant);
         if (ImGui::CollapsingHeader(trw("Country file"))) hamCountryUi();
+        if (ImGui::CollapsingHeader(trw("Callsign lookup (optional)"))) hamCallbookSettings();
         break;
     case 3:
         ImGui::TextWrapped("%s", tr("PTT: a Hamlib rig keys the transmitter over CAT; none means VOX (the rig keys on the audio). Audio out is the sound card that feeds the rig. Receive audio comes from the radio source chosen in the toolbar (an SDR, or the rig's sound card as an audio source)."));
@@ -184,6 +193,19 @@ void hamGuideTab(App& a) {
         "The map shows the stations heard with a grid, coloured as the decode list, the great-circle path (short and, if chosen, long) to the "
         "station picked and to the running QSO with distance and bearing, and the grayline (night side shaded, the terminator, the sun). Spots lists "
         "every station heard in the last hour from your own decodes; nothing is fetched from the network.");
+    sec("Cluster (online spots)",
+        "DX cluster, Reverse Beacon Network, POTA, SOTA and PSK Reporter, each off until you switch it on (the cluster and RBN ask for your "
+        "callsign; PSK Reporter is asked who heard your callsign). The list marks what each station would add to your log (new DXCC, band, "
+        "mode, zone, state, grid, prefix); a click tunes there and puts the call in the QSO panel. Alerts: needed stations and your watch list.");
+    sec("Callsign lookup",
+        "The QSO panel shows the name, QTH and grid of the station from your earlier QSOs and the local cache, and from QRZ.com or HamQTH when "
+        "you enter your own account in the station setup. The account stays on this computer and goes only to that service.");
+    sec("Activations (POTA, SOTA, WWFF, IOTA)",
+        "Activate tab: your reference goes into every QSO logged while the activation runs, with the count against the program's minimum and "
+        "the POTA file / SOTA CSV for you to upload. A station picked from a POTA or SOTA spot gets its reference in the log.");
+    sec("Contests on FT8 / FT4",
+        "Operate: choose ARRL Field Day or RTTY Roundup and your exchange. The sequence sends the exchange instead of grid and report, and the "
+        "log keeps it for the Cabrillo export.");
     sec("Macros",
         "The Messages box keeps your own texts. {MYCALL} {MYGRID} {CALL} {GRID} {RST} {SNR} {SERIAL} {EXCH} {NAME} {QTH} are filled in. Click "
         "Send next to send one in the next slot (FT8 free text: 13 characters).");
