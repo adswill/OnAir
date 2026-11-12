@@ -83,9 +83,12 @@ SarsatResult sarsatTrial(int path, double snrDb, double cfoHz, double ppm, int n
     SarsatReceiver rx;
     rx.configure(rate);
     rx.setSignalOffset(-sarsatTuning().tuneOffsetHz);
-    // path 0: 3.9; 1: full burst window; 2: + coherent bits; 3: + repeat combining (the 4.0 receiver)
+    // path 0: 3.9; 1: full burst window and 4-block detection; 2: + coherent bits; 3: + repeat combining (the 4.0 receiver);
+    // 4: the 4.0 receiver without the repair-cost check (measurement of that check only)
     rx.setRepeatCombining(path >= 3);
     rx.setWeakBurstPath(path >= 1, path >= 2);
+    if (path == 4) rx.setRepairCostLimit(1e9);
+    const bool verbose = path == 4 && getenv("ONAIR_X1_VERBOSE");
     std::vector<cf> buf(32768);
     std::vector<cf> rot(nb);
     for (int k = 0; k < nb; k++) rot[(size_t)k] = std::polar(1.f, (float)(2 * M_PI * U(rng)));
@@ -106,8 +109,8 @@ SarsatResult sarsatTrial(int path, double snrDb, double cfoHz, double ppm, int n
         if (rx.telemetry(tel, 0) && tel.blocksOk > seen) {
             for (size_t j = 0; j < tel.blocksOk - seen && j < tel.log.size(); j++) {
                 const SarsatEntry& e = tel.log[j];
-                if (!sent.count(e.b.hexId)) { r.wrong++; if (getenv("ONAIR_X1_VERBOSE")) printf("    wrong id %s (sent %s), corrected %d, cost %.2f, combined %d\n", e.b.hexId.c_str(), sent.begin()->c_str(), e.b.corrected, e.b.repairCost, e.combined); continue; }
-                if (getenv("ONAIR_X1_VERBOSE") && e.b.corrected) printf("    right id, corrected %d, cost %.2f, combined %d\n", e.b.corrected, e.b.repairCost, e.combined);
+                if (!sent.count(e.b.hexId)) { r.wrong++; if (verbose) printf("    wrong id %s (sent %s), corrected %d, cost %.2f, combined %d\n", e.b.hexId.c_str(), sent.begin()->c_str(), e.b.corrected, e.b.repairCost, e.combined); continue; }
+                if (verbose && e.b.corrected) printf("    right id, corrected %d, cost %.2f, combined %d\n", e.b.corrected, e.b.repairCost, e.combined);
                 r.decodes++;
                 if (e.combined) r.combinedDecodes++;
                 if (!r.firstBurst) {   // which burst had just ended
@@ -128,12 +131,12 @@ const Scen kScen[] = {{"awgn", 0, 0}, {"cfo 20 ppm (8 kHz)", 8120, 0}, {"clock 5
 void sarsatCurve() {
     const int trials = envInt("ONAIR_X1_TRIALS", 16), nb = 4;
     for (const Scen& sc : kScen) {
-        printf("COSPAS-SARSAT, %s: share of %d trials identified within 1 / 2 / 4 bursts (3.9 | full burst window | + coherent bits | + combining), 4 bursts 50 s apart\n", sc.name, trials);
+        printf("COSPAS-SARSAT, %s: share of %d trials identified within 1 / 2 / 4 bursts (3.9 | window + 4-block detection | + coherent bits | + combining = 4.0 | 4.0 without the repair-cost check), 4 bursts 50 s apart\n", sc.name, trials);
         for (double snr : points("ONAIR_X1_POINTS", {2, 0, -1, -2, -3, -4, -5})) {
-            int w[4][3] = {{0}}, wrong[4] = {0, 0, 0, 0}, comb = 0;
+            int w[5][3] = {{0}}, wrong[5] = {0, 0, 0, 0, 0}, comb = 0;
             std::mutex mu;
-            parallel(4 * trials, [&](int j) {
-                const int path = j % 4, i = j / 4;
+            parallel(5 * trials, [&](int j) {
+                const int path = j % 5, i = j / 5;
                 const SarsatResult r = sarsatTrial(path, snr, sc.cfo, sc.ppm, nb, mix64(0x5a45ull * 7919 + (uint64_t)i + (uint64_t)((snr + 50) * 100) * 131), i % 5);
                 std::lock_guard<std::mutex> lk(mu);
                 if (r.firstBurst && r.firstBurst <= 1) w[path][0]++;
@@ -143,17 +146,18 @@ void sarsatCurve() {
                 if (path == 3) comb += r.combinedDecodes;
             });
             printf("  %5.1f dB:", snr);
-            for (int p = 0; p < 4; p++) printf(" %3.0f/%3.0f/%3.0f%s", 100.0 * w[p][0] / trials, 100.0 * w[p][1] / trials, 100.0 * w[p][2] / trials, p < 3 ? " |" : "");
-            printf("  wrong %d|%d|%d|%d, comb %d\n", wrong[0], wrong[1], wrong[2], wrong[3], comb);
+            for (int p = 0; p < 5; p++) printf(" %3.0f/%3.0f/%3.0f%s", 100.0 * w[p][0] / trials, 100.0 * w[p][1] / trials, 100.0 * w[p][2] / trials, p < 4 ? " |" : "");
+            printf("  wrong %d|%d|%d|%d|%d, combined decodes %d\n", wrong[0], wrong[1], wrong[2], wrong[3], wrong[4], comb);
             fflush(stdout);
         }
     }
 }
 
 void sarsatGuard() {
-    // identified within 2 bursts at -1.5 dB in 3 kHz, and within 4 bursts at -3.5 dB: the 3.9 path (best single burst) is clearly below
+    // identified within 2 bursts at -3 dB in 3 kHz, and within 4 bursts at -5 dB (with the carrier error, the clock error and off centre too): the 3.9
+    // receiver identifies nothing below -2 dB
     struct G { double snr; int within; const Scen* sc; double need; };
-    const G rows[] = {{-1.5, 2, &kScen[0], 0.75}, {-1.5, 2, &kScen[1], 0.75}, {-1.5, 2, &kScen[2], 0.75}, {-3.5, 4, &kScen[0], 0.6}};
+    const G rows[] = {{-3, 2, &kScen[0], 0.6}, {-3, 2, &kScen[1], 0.6}, {-3, 2, &kScen[2], 0.6}, {-3, 2, &kScen[3], 0.6}, {-5, 4, &kScen[0], 0.4}};
     const int trials = envInt("ONAIR_X1_TRIALS", 8);
     for (const G& g : rows) {
         int ok[2] = {0, 0}, wrong = 0;

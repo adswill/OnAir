@@ -28,13 +28,19 @@ bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out);
 struct SoftBurst {
     std::vector<float> soft;
     bool test = false;          // the self-test sync word matched better
-    float conf = 0;             // the sync word's correlation (0 to 1)
+    float conf = 0;             // the sync word's correlation
+    // further timings of the same burst (best first after `soft`): a weak burst's best-looking timing is often half a bit or one rate step off, so
+    // the combiner aligns bursts by the correlation of their soft bits (the same message correlates, a wrong timing does not)
+    std::vector<std::vector<float>> alt;
 };
 // As demodBurst; when nothing decodes and `failed` is set, it gets the soft bits of the best sync candidate (returns false either way).
 bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftBurst* failed, bool coherent = true);
 // Decodes summed soft bits with stricter checks than a single burst (a perfect or 23 of 24 sync word, at most 3 repaired bits, the second BCH intact
 // when more than one bit was repaired in a long message, a country code that exists).
-bool decodeCombined(const std::vector<float>& soft, Beacon& out);
+bool decodeCombined(const std::vector<float>& soft, Beacon& out, double costPerBit = 0.6);
+// 4.0: a repair counts only when the soft confidence of the repaired bits stays under costPerBit x the mean confidence per repaired bit (a bit the
+// noise flipped had a small soft value; a decoder that landed on a wrong codeword flips ordinary ones). Applied with the coherent bits.
+constexpr double kRepairCostPerBit = 0.6;
 }
 
 class SarsatReceiver {
@@ -63,6 +69,8 @@ public:
     // burst (line visible only in the preamble) keeps its whole message; false is the 3.9 end of burst (6 blocks of 32 ms without a line).
     // coherentBits: the message bits are detected against the burst's own residual carrier (see sarsat_rx.cpp); false is the 3.9 differential slicer.
     void setWeakBurstPath(bool fullWindow, bool coherentBits);
+    // the repair-cost limit of the coherent path (kRepairCostPerBit; a large value turns the check off: measurement only)
+    void setRepairCostLimit(double perBit);
     bool wideSearch() const;
     double wideSpanHz() const;          // what the bank covers now (0: off)
 

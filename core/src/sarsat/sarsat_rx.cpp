@@ -58,6 +58,7 @@ struct Slicer {
     std::vector<cd> P;   // prefix sums of the rotated burst
     size_t n = 0;
     bool coherent = true;   // false: the 3.9 differential message bits
+    double costPerBit = kRepairCostPerBit;
     bool soft(double b0, double spb, double& d) const {
         const double bm = b0 + spb * 0.5, b1 = b0 + spb;
         if (b0 < 0 || b1 > (double)n) return false;
@@ -190,15 +191,17 @@ bool tryDecode(const Slicer& s, const Cand& c, Beacon& out, int& matches) {
     o.rxHex = bitsToHex(received, 1, o.longMsg ? kLongBits : kShortBits);
     for (int i = 0; i < (o.longMsg ? kLongBits : kShortBits) && i < (int)b.size() && i < (int)received.size(); i++) if ((b[(size_t)i] & 1) != (received[(size_t)i] & 1)) o.fixedBits.push_back(i + 1);
     o.repairCost = repairCost(d, o.fixedBits, o.longMsg ? kLongBits : kShortBits);
+    if (s.coherent && o.corrected > 0 && o.repairCost > s.costPerBit * o.corrected) return false;
     out = o;
     return true;
 }
 
 }  // namespace
 
+bool demodBurst2(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftBurst* failed, bool coherent, double costPerBit);
 bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out) { return demodBurst(x, carrierHz, out, nullptr, true); }
 
-bool decodeCombined(const std::vector<float>& soft, Beacon& out) {
+bool decodeCombined(const std::vector<float>& soft, Beacon& out, double costPerBit) {
     if (soft.size() < (size_t)kShortBits) return false;
     std::vector<uint8_t> b(soft.size());
     for (size_t k = 0; k < soft.size(); k++) b[k] = soft[k] > 0 ? 1 : 0;
@@ -223,15 +226,19 @@ bool decodeCombined(const std::vector<float>& soft, Beacon& out) {
     o.rxHex = bitsToHex(received, 1, nb);
     for (int i = 0; i < nb && i < (int)b.size(); i++) if ((b[(size_t)i] & 1) != (received[(size_t)i] & 1)) o.fixedBits.push_back(i + 1);
     o.repairCost = repairCost(soft, o.fixedBits, nb);
+    if (o.corrected > 0 && o.repairCost > costPerBit * o.corrected) return false;
     out = o;
     return true;
 }
 
-bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftBurst* failed, bool coherent) {
+bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftBurst* failed, bool coherent) { return demodBurst2(x, carrierHz, out, failed, coherent, kRepairCostPerBit); }
+
+bool demodBurst2(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftBurst* failed, bool coherent, double costPerBit) {
     const size_t n = x.size();
     if (n < (size_t)(kFs * 0.4)) return false;
     Slicer s;
     s.coherent = coherent;
+    s.costPerBit = costPerBit;
     s.n = n;
     s.P.assign(n + 1, cd(0, 0));
     cd lo(1, 0);
@@ -262,6 +269,7 @@ bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftB
     double bestConf = -1;
     Cand softC;               // for repeat combining: the candidate with the best sync correlation that has the bare-carrier preamble before it
     double softConf = -1;
+    std::vector<std::pair<double, Cand>> softList;   // coherent: every timing that passed the sync and preamble tests, with its message quality
     for (const Cand& c0 : cands) {
         for (double dt = -4; dt <= 4; dt += 1) {
             for (double dr = -0.0025; dr <= 0.0026; dr += 0.0025) {
@@ -290,7 +298,10 @@ bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftB
                     if (failed && c.matches >= 20) {
                         double q = 0;
                         for (double v : y) q += std::fabs(v);
-                        if (q > softConf && preambleOk(s, c.t0, spb)) { softConf = q; softC = c; }
+                        if (preambleOk(s, c.t0, spb)) {
+                            softList.emplace_back(q, c);
+                            if (q > softConf) { softConf = q; softC = c; }
+                        }
                     }
                 } else if (failed && c.matches >= 22) {
                     // the timing and bit rate that make the whole message look most like +-2.2 rad steps (the 24 sync bits alone do not tell a
@@ -317,6 +328,22 @@ bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftB
             for (size_t k = 0; k < d.size(); k++) failed->soft[k] = (float)(softC.inv ? -d[k] : d[k]);
             failed->test = softC.test;
             failed->conf = (float)(softC.conf / kSyncBits);
+            // up to 5 more timings, best quality first, each at least a quarter bit or one rate step from those taken, or of the other polarity
+            std::sort(softList.begin(), softList.end(), [](const auto& a, const auto& b) { return a.first > b.first; });
+            std::vector<Cand> taken{softC};
+            for (const auto& e : softList) {
+                if (failed->alt.size() >= 5) break;
+                const Cand& c = e.second;
+                bool near = false;
+                for (const Cand& t : taken) if (t.inv == c.inv && std::fabs(t.t0 - c.t0) < 0.25 * spb && std::fabs(t.r - c.r) < 0.002) near = true;
+                if (near) continue;
+                const std::vector<double> v = s.coherentBits(c.t0, kFs / kBitRate * (1 + c.r), kLongBits);
+                if (v.size() < (size_t)kShortBits) continue;
+                std::vector<float> f(v.size());
+                for (size_t k = 0; k < v.size(); k++) f[k] = (float)(c.inv ? -v[k] : v[k]);
+                failed->alt.push_back(std::move(f));
+                taken.push_back(c);
+            }
         }
     }
     return found;
@@ -376,11 +403,12 @@ struct SarsatReceiver::Impl {
     double lastDecodeSec = -1e9, lastPublish = 0;
 
     // repeat combining: the soft bits of bursts that did not decode, kept for the beacon's next bursts
-    struct Kept { double t = 0, carrier = 0; std::vector<float> soft; };
+    struct Kept { double t = 0, carrier = 0; std::vector<std::vector<float>> cands; };   // cands[0]: best-looking timing
     std::vector<Kept> kept;
     bool combineOn = true;
     bool fullWindow = true;   // false: the 3.9 burst end (6 blocks without a line)
     bool coherentOn = true;   // false: the 3.9 differential message bits
+    double costPerBit = sarsat::kRepairCostPerBit;
     std::vector<std::vector<float>> last4;   // the last 4 block spectra (weak burst detection)
     size_t last4i = 0;
     int last4n = 0;
@@ -410,8 +438,15 @@ struct SarsatReceiver::Impl {
     }
 
     // A failed burst at time t on `carrier`: add it to the kept bursts of the same beacon (same carrier, at the repeat interval or a multiple of it),
-    // newest first, one more at a time, and decode each sum. Returns the number of bursts in the sum that decoded (0: none; the burst is then kept).
-    int combine(double t, double carrier, const std::vector<float>& soft, sarsat::Beacon& b) {
+    // newest first, one more at a time, and decode each sum. The timing of each burst is the one of its candidates whose soft bits correlate best with
+    // the new burst's (a cheap match: the same message correlates by 0.4 to 0.8 at the levels where combining is needed, a wrong timing or another
+    // message by about 0 +- 0.08); a kept burst joins only above 0.3. Returns the number of bursts in the sum that decoded (0: none; the burst is kept).
+    static double corr(const std::vector<float>& a, const std::vector<float>& b) {
+        double ab = 0, aa = 0, bb = 0;
+        for (size_t k = 0; k < a.size() && k < b.size(); k++) { ab += (double)a[k] * b[k]; aa += (double)a[k] * a[k]; bb += (double)b[k] * b[k]; }
+        return aa > 0 && bb > 0 ? ab / std::sqrt(aa * bb) : 0.0;
+    }
+    int combine(double t, double carrier, const std::vector<std::vector<float>>& mine, sarsat::Beacon& b) {
         const double keepFor = 4 * perMax + 2;
         kept.erase(std::remove_if(kept.begin(), kept.end(), [&](const Kept& k) { return t - k.t > keepFor; }), kept.end());
         auto periodic = [&](double dt) {
@@ -423,19 +458,39 @@ struct SarsatReceiver::Impl {
             if (std::fabs(kept[i].carrier - carrier) <= 150.0 && periodic(t - kept[i].t)) match.push_back(i);
         std::sort(match.begin(), match.end(), [&](size_t a, size_t c) { return kept[a].t > kept[c].t; });
         if (match.size() > 3) match.resize(3);
-        std::vector<float> sum = soft;
-        for (size_t j = 0; j < match.size(); j++) {
-            const std::vector<float>& o = kept[match[j]].soft;
-            for (size_t k = 0; k < sum.size(); k++) sum[k] += k < o.size() ? o[k] : 0.f;
-            if (sarsat::decodeCombined(sum, b)) {
-                std::vector<size_t> used(match.begin(), match.begin() + (long)j + 1);
-                std::sort(used.rbegin(), used.rend());
-                for (size_t u : used) kept.erase(kept.begin() + (long)u);
-                return (int)j + 2;
+        constexpr double kMinCorr = 0.3;
+        // the new burst's timing: the candidate with the largest summed best correlation to the kept bursts
+        size_t bi = 0;
+        double bestTot = -1;
+        for (size_t i = 0; i < mine.size(); i++) {
+            double tot = 0;
+            for (size_t m : match) {
+                double best = 0;
+                for (const auto& kc : kept[m].cands) best = std::max(best, corr(mine[i], kc));
+                if (best >= kMinCorr) tot += best;
+            }
+            if (tot > bestTot) { bestTot = tot; bi = i; }
+        }
+        if (!mine.empty() && !match.empty()) {
+            std::vector<float> sum = mine[bi];
+            std::vector<size_t> used;
+            for (size_t m : match) {
+                size_t bj = 0;
+                double best = -1;
+                for (size_t j = 0; j < kept[m].cands.size(); j++) { const double c = corr(mine[bi], kept[m].cands[j]); if (c > best) { best = c; bj = j; } }
+                if (best < kMinCorr) continue;
+                const std::vector<float>& o = kept[m].cands[bj];
+                for (size_t k = 0; k < sum.size(); k++) sum[k] += k < o.size() ? o[k] : 0.f;
+                used.push_back(m);
+                if (sarsat::decodeCombined(sum, b, costPerBit)) {
+                    std::sort(used.rbegin(), used.rend());
+                    for (size_t u : used) kept.erase(kept.begin() + (long)u);
+                    return (int)used.size() + 1;
+                }
             }
         }
         Kept k;
-        k.t = t; k.carrier = carrier; k.soft = soft;
+        k.t = t; k.carrier = carrier; k.cands = mine;
         kept.push_back(std::move(k));
         if (kept.size() > 16) kept.erase(kept.begin());
         return 0;
@@ -501,13 +556,15 @@ struct SarsatReceiver::Impl {
             }
             sarsat::Beacon b;
             sarsat::SoftBurst sb;
-            bool got = sarsat::demodBurst(y, 0.0, b, combineOn ? &sb : nullptr, coherentOn);
+            bool got = sarsat::demodBurst2(y, 0.0, b, combineOn ? &sb : nullptr, coherentOn, costPerBit);
             int combined = 0;
             const double tBurst = (double)firstBlockStart / kDet;
             if (got && combineOn) {   // the beacon decoded: its kept bursts are not needed any more
                 kept.erase(std::remove_if(kept.begin(), kept.end(), [&](const Kept& k) { return std::fabs(k.carrier - carrier) <= 150.0 && tBurst - k.t < 4 * perMax + 2; }), kept.end());
             } else if (combineOn && !sb.soft.empty()) {
-                combined = combine(tBurst, carrier, sb.soft, b);
+                std::vector<std::vector<float>> mine{sb.soft};
+                for (auto& a : sb.alt) mine.push_back(std::move(a));
+                combined = combine(tBurst, carrier, mine, b);
                 got = combined > 0;
             }
             if (got || plausible || combined) tel.bursts++;
@@ -707,6 +764,11 @@ void SarsatReceiver::setWeakBurstPath(bool fullWindow, bool coherentBits) {
     p_->coherentOn = coherentBits;
     for (auto& k : p_->kids) k->setWeakBurstPath(fullWindow, coherentBits);
 }
+void SarsatReceiver::setRepairCostLimit(double perBit) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->costPerBit = perBit;
+    for (auto& k : p_->kids) k->setRepairCostLimit(perBit);
+}
 void SarsatReceiver::setWideSearch(bool on) { std::lock_guard<std::mutex> lk(p_->mu); if (on != p_->wide) { p_->wide = on; p_->kidsDirty = true; } }
 bool SarsatReceiver::wideSearch() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide; }
 double SarsatReceiver::wideSpanHz() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->wide ? p_->wideSpan : 0; }
@@ -730,6 +792,7 @@ void SarsatReceiver::feed(const cf32* x, size_t n) {
                 r->setSignalOffset(m.offHz + d);
                 r->setRepeatCombining(m.combineOn, m.perMin, m.perMax);
                 r->setWeakBurstPath(m.fullWindow, m.coherentOn);
+                r->setRepairCostLimit(m.costPerBit);
                 m.kids.push_back(std::move(r)); m.kidShift.push_back(d); m.kidSeq.push_back(0);
             }
             m.tel.wideSpanHz = m.wideSpan; m.tel.wideChannels = k;
