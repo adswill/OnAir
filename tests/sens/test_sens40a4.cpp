@@ -54,6 +54,7 @@ int main() {
 #ifndef _WIN32
     setenv("DECT2_NOPACE", "1", 1);
 #endif
+    setvbuf(stdout, nullptr, _IONBF, 0);
     struct R { const char* name; int mask; double secs; double snrs[6]; };
     const R rs[] = {
         {"iMet-54", 128, 12.0, {19, 16, 13, 11, 9, 7}},
