@@ -4431,3 +4431,6 @@ pilots	Piloten
 Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.	Kanäle, die niemand nutzt (aus der letzten Suche), so verteilt, dass sich die Piloten nicht stören: nicht näher als 20 MHz an einem Sender, mindestens 37 MHz auseinander. Nie gemessene Kanäle werden nicht angeboten: zuerst suchen.
 Scan first.	Zuerst suchen.
 No free channel found.	Kein freier Kanal gefunden.
+Previews of the looks	Vorschau der Darstellungen
+Hover a colour palette, layout, font look, text size or waterfall colour map (in Settings and the View menu) to see a small picture of the interface with it. Nothing changes until you pick one.	Zeigen Sie auf eine Farbpalette, ein Layout, ein Schriftbild, eine Textgröße oder eine Wasserfall-Farbskala (in den Einstellungen und im Menü Ansicht), um ein kleines Bild der Oberfläche damit zu sehen. Erst mit der Auswahl ändert sich etwas.
+Applies after a restart	Gilt nach einem Neustart

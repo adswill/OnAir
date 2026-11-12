@@ -1000,3 +1000,6 @@ pilots
 Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.
 Scan first.
 No free channel found.
+Previews of the looks
+Hover a colour palette, layout, font look, text size or waterfall colour map (in Settings and the View menu) to see a small picture of the interface with it. Nothing changes until you pick one.
+Applies after a restart
