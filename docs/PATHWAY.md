@@ -1898,3 +1898,11 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+
+## 2026-11-12 (night): hover previews of the looks (feat40-uipreview)
+Hovering or keyboard-focusing an appearance choice (palette, Dark / Light / High contrast, the eight layouts, Classic / Unified, font look,
+text size presets, touch, Easy mode, Classic interface, waterfall colour maps, trace colour, tuner style) in Settings, the View menu, the
+side panel and the plot popups shows a live ImGui miniature of the interface with it; nothing changes until it is picked. The palette
+colours moved to app/ui/palette_data.h, which loadTheme() and the preview both read. Pure description in ui_preview_logic.h, tests
+ui_preview and ui_preview_render (the miniature rasterised on the CPU, pixels checked). Off switch: Settings > Appearance > Previews of
+the looks. Dev page: --previewgallery. Details: docs/UI-PREVIEW-4.0.md.
