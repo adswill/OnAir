@@ -29,6 +29,7 @@
 #include "state/workspace.h"
 #include "gfx/render_caps.h"
 #include "voice/tgdir_ui.h"
+#include "ui/ui_preview.h"
 void recordingLibraryDevOpen();   // panels/recording_library_ui.cpp
 
 // the startup guard (a start that keeps crashing), the first-start tour and setup, the radio list and the results of the last run
@@ -231,6 +232,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--viewmenu") app.devViewMenu = 1;
         if (std::string(argv[i]) == "--viewmenu2") app.devViewMenu = 2;
         if (std::string(argv[i]) == "--kitgallery") app.kitGallery = true;   // dev: the UI kit gallery page instead of the main window
+        if (std::string(argv[i]) == "--previewgallery") uiprev::galleryOn() = true;   // dev: every hover preview of the looks on one page (ui/ui_preview.h)
         if (std::string(argv[i]) == "--theme" && i + 1 < argc) app.uiTheme = atoi(argv[++i]);
         if (std::string(argv[i]) == "--light") app.lightUi = true;   // dev: View > Theme > Light
         if (std::string(argv[i]) == "--touch") app.touchUi = true;   // the touch interface (not saved)

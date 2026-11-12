@@ -5,6 +5,7 @@
 #include "input_map.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "ui2_internal.h"
+#include "ui_preview.h"
 #include "../state/listen_freq.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
@@ -229,30 +230,48 @@ void sidebar(App& a) {
         ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Layout")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
         {
             const char* lay[2] = {tr("Classic"), tr("Unified")};
-            int cur = a.layoutUnified ? 1 : 0;
-            if (kit::combo("##layoutsel", &cur, lay, 2)) { a.layoutUnified = cur == 1; savePrefs(a); }
+            const int cur = a.layoutUnified ? 1 : 0;
+            if (ImGui::BeginCombo("##layoutsel", lay[cur])) {   // each row shows a preview of the layout when hovered (ui_preview.h)
+                for (int i = 0; i < 2; i++) {
+                    if (ImGui::Selectable(lay[i], cur == i)) { a.layoutUnified = i == 1; savePrefs(a); }
+                    uiprev::item(a, uiprev::Opt::Unified, i);
+                }
+                ImGui::EndCombo();
+            }
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Unified: the spectrum and waterfall stay on screen above the decoded views (F6 folds them)"));
         ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Look")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
         {
             static const char* lk[6] = {N_("Classic"), N_("Dev A"), N_("Dev B"), N_("Studio"), N_("Mono Pro"), N_("Daylight")};
             const char* names[6] = {tr(lk[0]), tr(lk[1]), tr(lk[2]), tr(lk[3]), tr(lk[4]), tr(lk[5])};
-            int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
-            if (kit::combo("##looksel", &cur, names, 6)) { a.uiTheme = cur == 0 ? 1 : 2 + cur; savePrefs(a); }
+            const int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
+            if (ImGui::BeginCombo("##looksel", names[cur])) {
+                for (int i = 0; i < 6; i++) {
+                    if (ImGui::Selectable(names[i], cur == i)) { a.uiTheme = i == 0 ? 1 : 2 + i; savePrefs(a); }
+                    uiprev::item(a, uiprev::Opt::Theme, i == 0 ? 1 : 2 + i);
+                }
+                ImGui::EndCombo();
+            }
         }
         if (ImGui::SmallButton(tr("Reset spectrum"))) resetSpectrum(a);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)"));
         ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Palette")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
         if (ImGui::BeginCombo("##wfmap", tr(Waterfall::mapName(a.wf.effMap())))) {   // also in the Waterfall popup on the plot
             for (int i = 0; i < Waterfall::NumMaps; i++)
+            {
                 if (ImGui::Selectable(tr(Waterfall::mapName(i)), a.wf.effMap() == i)) { a.wf.map = i; a.wf.palette(); savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::WfMap, i);
+            }
             ImGui::EndCombo();
         }
         {
             const char* ts[] = {N_("Classic"), N_("Simple")};
             ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Tuner style")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
             if (ImGui::BeginCombo("##tunerstyle", tr(ts[std::max(0, std::min(1, a.tunerStyle))]))) {
-                for (int i = 0; i < 2; i++) if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
+                for (int i = 0; i < 2; i++) {
+                    if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
+                    uiprev::item(a, uiprev::Opt::TunerStyle, i);
+                }
                 ImGui::EndCombo();
             }
         }
@@ -313,7 +332,7 @@ void sidebar(App& a) {
         ImGui::Separator();
         themeChoice(a, false);
         accentMenu();
-        typographyChoice(false);
+        typographyChoice(false, &a);
         dataFolderChoice();
         timeDisplayChoice(false);
         int pct = (int)std::lround(a.uiTextScale * 100);
@@ -322,6 +341,7 @@ void sidebar(App& a) {
         if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
         if (ImGui::Checkbox(tr("Touch interface"), &a.touchUi)) savePrefs(a);   // big targets, a bottom dock, full-screen pickers (ui/touch.h)
         if (ImGui::IsItemHovered()) wrapTooltip(280 * gUi, tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
+        uiprev::item(a, uiprev::Opt::Touch, a.touchUi ? 0 : 1);
         ImGui::Unindent(6 * gUi);
         ImGui::Spacing();
     }
@@ -549,36 +569,52 @@ static void viewMenu(App& a) {
     if (ImGui::BeginMenu(tr("View"))) {
         if (ImGui::BeginMenu(tr("Layout"))) {   // both switches act at once, the receiver keeps running; the same two values as Settings > Display
             if (ImGui::MenuItem(tr("Classic"), "Ctrl+Shift+L", !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Unified, 0);
             if (ImGui::MenuItem(tr("Unified"), "Ctrl+Shift+L", a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new layout: the spectrum and waterfall stay on screen above the decoded views"));
+            uiprev::item(a, uiprev::Opt::Unified, 1);   // after the text tooltip: the picture goes under it
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(tr("Look"))) {
             const int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
             if (ImGui::MenuItem(tr("Classic"), nullptr, cur == 0)) { if (cur != 0) a.uiTheme = 1; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Theme, cur == 0 ? a.uiTheme : 1);
             if (ImGui::MenuItem(tr("Studio"), nullptr, cur == 3)) { a.uiTheme = 5; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Theme, 5);
             if (ImGui::MenuItem(tr("Mono Pro"), nullptr, cur == 4)) { a.uiTheme = 6; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Theme, 6);
             if (ImGui::MenuItem(tr("Daylight"), nullptr, cur == 5)) { a.uiTheme = 7; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Theme, 7);
             if (ImGui::MenuItem(tr("Dev A"), nullptr, cur == 1)) { a.uiTheme = 3; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Theme, 3);
             if (ImGui::MenuItem(tr("Dev B"), nullptr, cur == 2)) { a.uiTheme = 4; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new look: flat, dense, one accent colour"));
+            uiprev::item(a, uiprev::Opt::Theme, 4);
             ImGui::EndMenu();
         }
         ImGui::Separator();
-        for (int v = 0; v < 8; v++) if (ImGui::MenuItem(tr(kVariantNames[v]), nullptr, a.uiVariant == v)) { a.uiVariant = v; savePrefs(a); }
+        for (int v = 0; v < 8; v++) {
+            if (ImGui::MenuItem(tr(kVariantNames[v]), nullptr, a.uiVariant == v)) { a.uiVariant = v; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Variant, v);
+        }
         ImGui::Separator();
         if (ImGui::BeginMenu(tr("Text size"))) {
             int pct = (int)std::lround(a.uiTextScale * 100);
             ImGui::SetNextItemWidth(160 * gUi);
             if (ImGui::SliderInt("##txtsz", &pct, 80, 200, "%d%%")) a.uiTextScale = std::max(0.8f, std::min(2.f, pct / 100.f));
             if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
-            for (int p : {80, 100, 125, 150, 200}) { char l[16]; snprintf(l, sizeof l, "%d%%", p); if (ImGui::MenuItem(l, nullptr, pct == p)) { a.uiTextScale = p / 100.f; savePrefs(a); } }
+            for (int p : {80, 100, 125, 150, 200}) {
+                char l[16]; snprintf(l, sizeof l, "%d%%", p);
+                if (ImGui::MenuItem(l, nullptr, pct == p)) { a.uiTextScale = p / 100.f; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::TextScale, p / 100.0);
+            }
             ImGui::Separator();
             ImGui::TextDisabled("%s", tr("Ctrl + / Ctrl - / Ctrl 0"));
             ImGui::EndMenu();
         }
         if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
+        uiprev::item(a, uiprev::Opt::Touch, a.touchUi ? 0 : 1);
         dockMenu(a);   // View > Docking (ui2_dock.cpp)
         if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
         if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
@@ -589,10 +625,13 @@ static void viewMenu(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."));
         ImGui::Separator();
         static const char* names[8] = {N_("Terminal palette"), N_("Instrument palette"), N_("Mono palette"), N_("Dev A (graphite)"), N_("Dev B (terminal green)"), N_("Studio (slate, rounded)"), N_("Mono Pro (OLED, amber)"), N_("Daylight (light, blue)")};
-        for (int t = 0; t < 8; t++) if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
+        for (int t = 0; t < 8; t++) {
+            if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Theme, t);
+        }
         themeChoice(a, true);
         accentMenu();
-        typographyChoice(true);
+        typographyChoice(true, &a);
         timeDisplayChoice(true);
         if (ImGui::BeginMenu(tr("Language"))) { languageMenuItems(a); ImGui::EndMenu(); }
         ImGui::Separator();
@@ -630,7 +669,8 @@ static void viewMenu(App& a) {
                 ImGui::SetTooltip("%s", tr(have ? "Shows on your Discord profile that you are using OnAir, the mode and the frequency. Needs the Discord desktop app running." : "Discord application ID not set in this build"));
         }
         ImGui::Separator();
-        if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }   // keeps this menu bar; Ctrl+Shift+M or View > Restore the default view comes back
+        if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }
+        uiprev::item(a, uiprev::Opt::NewUi, 0);   // keeps this menu bar; Ctrl+Shift+M or View > Restore the default view comes back
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(tr("Tools"))) {

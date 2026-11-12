@@ -48,6 +48,7 @@ inline const std::vector<Info>& table() {
         {"restoreView", kAppearance, N_("Restore the default view"), N_("Back to the new interface, Sidebar layout, no touch mode, no docking. Also Ctrl+Shift+M and View > Restore the default view."), "reset layout menu bar hidden compact classic", K::Custom},
         {"touchUi", kAppearance, N_("Touch interface"), N_("Big buttons, an on-screen keypad and a full-screen mode picker for tablets."), "tablet android large rows", K::Bool, 0},
         {"touchScale", kAppearance, N_("Touch text size"), N_("Extra text scale of the touch interface."), "touch large", K::Float, 1.35, 1, 2, nullptr, nullptr, "", true},
+        {"uiPreviews", kAppearance, N_("Previews of the looks"), N_("Hover a colour palette, layout, font look, text size or waterfall colour map (in Settings and the View menu) to see a small picture of the interface with it. Nothing changes until you pick one."), "preview hover thumbnail tooltip picture", K::Bool, 1},
         {"perfOverlay", kAppearance, N_("Performance overlay"), N_("Frame rate, CPU per thread and wake-ups in a corner."), "fps cpu debug", K::Bool, 0, 0, 0, nullptr, nullptr, "", true},
         // ---- Spectrum and waterfall
         {"wfMap3", kDisplay, N_("Waterfall colours"), N_("The colour map of the waterfall."), "palette colormap heat viridis", K::Choice, 15, 0, 0,

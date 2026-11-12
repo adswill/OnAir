@@ -5,6 +5,7 @@
 #include "ui2_internal.h"
 #include "input_map.h"
 #include "dect2/dsp/baseband_filter.h"
+#include "ui_preview.h"
 
 using namespace ui2;
 
@@ -263,6 +264,7 @@ void drawShell2(App& a, ImVec2 disp) {
         }
     }
     if (a.kitGallery) { kit::gallery(a, disp); return; }
+    if (uiprev::galleryOn()) { uiprev::gallery(a, disp.x, disp.y); return; }   // dev: --previewgallery (ui_preview.h)
     {   // Ctrl/Cmd+Shift+L: Classic <-> Unified (the receiver keeps running)
         ImGuiIO& io = ImGui::GetIO();
         if ((io.KeyCtrl || io.KeySuper) && io.KeyShift && !io.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_L, false)) { a.layoutUnified = !a.layoutUnified; savePrefs(a); }
