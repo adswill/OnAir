@@ -129,8 +129,6 @@ static const AllowDup kAllowDup[] = {
     {"app/hfdig/hfdig_sstv_ui.cpp", "##sstvpic"}, {"app/hfdig/hfdig_sstv_ui.cpp", "##sstvside"},   // wide and narrow layouts
     {"app/marine/marine_ui.cpp", "##msv"},
     {"app/mesh/mesh_ui.cpp", "all presets"},                                                     // one protocol entry or all
-    {"app/panels/tx_payload_ui.cpp", "Callsign"}, {"app/panels/tx_payload_ui.cpp", "Grid"}, {"app/panels/tx_payload_ui.cpp", "Text"},
-    {"app/panels/tx_payload_ui.cpp", "Baud"}, {"app/panels/tx_payload_ui.cpp", "Latitude"}, {"app/panels/tx_payload_ui.cpp", "Longitude"},   // switch cases
     {"app/panels/tx_step_settings.cpp", "Output level (dB)"},                                    // slider or field
     {"app/rooms/rooms_send.cpp", "Go live (Live rooms)..."},                                     // disabled or live form
     {"app/scan/scan_db_ui.cpp", "Cancel"},                                                       // dialog stages

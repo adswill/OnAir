@@ -8,47 +8,26 @@
 -	-
 1 kHz test tone	1 kHz 测试音
 8 MHz	8 MHz
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	P6 PPM 文件将作为图片发送；其他文件或空文件使用测试图片。呼号会叠加在图片上。
-A SAME header. ZCZC- is added when missing.	SAME 报头。缺少时会自动添加 ZCZC-。
-Aircraft registration	飞机注册号
-An RS41 with this serial. Empty: the demo sondes.	具有此序列号的 RS41。留空：演示探空仪。
 Are you sure? This clears all previous data and cannot be undone.	确定吗？这将清除所有先前的数据，且无法撤销。
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	ATSC 3.0 使用 ROUTE / fMP4 演示；自定义 MPEG-TS 不是载荷路径。
 Audio file	音频文件
 Audio input	音频输入
-AX.25 UI frame. Empty: the demo CubeSat cycle.	AX.25 UI 帧。留空：演示 CubeSat 循环。
 Baud	波特率
 Browse…	浏览…
-Callsign / my ID	呼号 / 我的 ID
-Capcode	Capcode
 Carrier tune	载波调谐
 Clear all	全部清除
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	清除所有先前的数据：每个已打开接收机上所有模式的解码列表（飞机、船舶、消息、图片等）。磁盘上的已保存副本也会被清空。
-Code rate / MODCOD index	码率 / MODCOD 索引
-Colour code	色码
 Comment	备注
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	D2-MAC 测试画面（自定义视频未接入此模拟发生器）。
 DATV (DVB-S/S2 file)	DATV（DVB-S/S2 文件）
 Default input	默认输入
 Destination	目的地
-Destination / ID	目的地 / ID
-Destination ID	目的地 ID
 Device ID	设备 ID
 Dial frequency the decoder should assume (the sound card is not tuned)	解码器应假定的刻度频率（声卡不会调谐）
 DVB standard	DVB 标准
-Empty: the demo 802.15.4 scene.	留空：演示 802.15.4 场景。
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	留空：演示 FLARM 场景。此 ID 不会被打包进未公开的新版协议。
-Empty: the demo Mode S uplink scene.	留空：演示 Mode S 上行场景。
-Empty: the demo VDES scene.	留空：演示 VDES 场景。
 File	文件
-File to send	要发送的文件
 Free text	自由文本
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	增益控制只对电台有效（不用于录音、声卡或合成信号）
 I/Q stereo	I/Q 立体声
-ICAO address	ICAO 地址
-Image (PNG / PPM)	图像 (PNG / PPM)
-Image (PPM)	图像 (PPM)
 Input device	输入设备
 Latitude	纬度
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	libcodec2 未加载：实时编码已关闭。仍可发送 1 kHz 音调、静音或 WAV/MP3。
@@ -62,57 +41,30 @@ Message	消息
 MHz	MHz
 Mic level	麦克风电平
 Microphone	麦克风
-MMSI	MMSI
 Mode	模式
-Morse identification, up to four letters.	摩尔斯识别码，最多四个字母。
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX 发送文本（缺少时会添加 ZCZC / NNNN）。DSC（选择该业务时）使用 MMSI。
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	本机网络上没有 Red Pitaya 应答（其 SDR 收发器应用是否在运行？）：请输入其地址。
-PAN / short address	PAN / 短地址
 Path	路径
-Payload text	载荷文本
-Power (dBm)	功率 (dBm)
-Pre-emphasis	预加重
-PSK variant	PSK 变体
 QO-100 path	QO-100 路径
 Radio ID	无线电 ID
-Radio text (RT)	无线电文本 (RT)
-RDS PI	RDS PI
 Report	报告
-Reverse (mark is the upper tone)	反转（标记音为高音）
-RFPI	RFPI
-RFPI of the base station.	基站的 RFPI。
 Roll-off	滚降
-Satellite standard	卫星标准
 searching for Red Pitaya boards…	正在查找 Red Pitaya 板…
 Send analog NFM of the audio instead of the digital test pattern	发送音频的模拟 NFM，而不是数字测试图案
 Send analog NFM of the microphone or a file instead of the test scene	发送麦克风或文件的模拟 NFM，而不是测试场景
-Serial / ID	序列号 / ID
 Shift	频移
 Sideband	边带
 Silence	静音
 sound card	声卡
 SSB (microphone)	SSB（麦克风）
-SSTV mode	SSTV 模式
-Station name (PS)	电台名称 (PS)
-Symbol rate (Hz)	符号率 (Hz)
 Talkgroup	通话组
-test DJI DroneID scene (custom serial is not packed)	测试 DJI DroneID 场景（不打包自定义序列号）
-test downlink scene (this generator does not take a custom message)	测试下行场景（此发生器不接受自定义消息）
-test LRPT/HRIT scene (custom image not wired)	测试 LRPT/HRIT 场景（自定义图像未接入）
-test NCDXF-style beacon scene	测试 NCDXF 式信标场景
-test weather-fax chart (custom image not wired)	测试传真气象图（自定义图像未接入）
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	此处不编码 TETRA ACELP。显示色码和 ID；发送下行测试图案。也可改为以模拟 NFM 发送 1 kHz 音调、静音或 WAV/MP3。
 Text	文本
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	声卡的采集速率。引擎按该速率运行；没有可调谐的电台。
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	文件字节将以此呼号作为 HamDRM 对象发送。空文件：测试图片。
 The microphone starts only when you press START TRANSMITTING.	只有按下 START TRANSMITTING 后麦克风才会启动。
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	注册号和自由文本将作为 H1 / ACARS 下行发送。留空：演示流量。
 this mode has no transmit generator	此模式没有发射发生器
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	此声码器无法编码：OnAir 仅加载 mbelib 用于解码 (AMBE/IMBE)。目的地 ID / 通话组 / 色码仍会发送；语音比特为测试图案。也可改为以模拟 NFM 发送 1 kHz 音调、静音或 WAV/MP3。
-Timeslot	时隙
 To	To
 USB audio	USB 音频
-Vessel name	船名
 View	视图
 Help	帮助
 Language	语言
@@ -153,8 +105,6 @@ State	状态
 Channel	信道
 Delay	时延
 dropped	丢失
-level %.1f dBFS	电平 %.1f dBFS
-load %.0f%%	负载 %.0f%%
 FM: no station	FM：无电台
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  %d 个服务
 OK	确定
@@ -499,9 +449,7 @@ Satellite	卫星
 Max el	最大仰角
 Duration	时长
 Frequency	频率
-AOS in %d:%02d:%02d	%d:%02d:%02d 后入境
 %s - %s, max %.0f deg	%s - %s，最大 %.0f 度
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	方位 %.0f  仰角 %.0f  %.0f km\n多普勒 %+.0f Hz
 Track	跟踪
 Auto start at AOS, stop at LOS	入境时自动开始，出境时停止
 Auto record IQ	自动录制 IQ
@@ -990,7 +938,6 @@ Frequency (MHz)	频率 (MHz)
 +14 dB amplifier	+14 dB 放大器
 Repeat until stopped	重复直到停止
 seconds	秒
-START TRANSMITTING	开始发射
 This radio has no transmit driver in OnAir.	此无线电在 OnAir 中没有发射驱动。
 Before you transmit	发射之前
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	在您所在的地方发射需要许可证或许可。您对所发射的内容以及不干扰他人（包括人们依赖其保障安全的服务）负责。开始前请将天线、衰减器或假负载连接到无线电。OnAir 不限制频率或功率：只有无线电自身的限制。
@@ -1145,10 +1092,8 @@ Sample rate	采样率
 Search signals...	搜索信号...
 Settings	设置
 Signal	信号
-Space = start / stop     Esc = stop	空格 = 开始 / 停止     Esc = 停止
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	停止发射或测试、载波和任何待处理的启动,并释放电台。
 TEST - NO RF	测试 - 无射频
-Test (dry run, no RF)	测试(空跑,无射频)
 Test (no RF)	测试(无射频)
 Test: the IQ the radio would get	测试:电台将收到的IQ
 The IQ going to the radio	发送到电台的IQ
@@ -1157,8 +1102,6 @@ The transmit panel is in its own window.	发射面板在独立窗口中。
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	加到发送给电台的频率上,用于实际辐射频率有偏差的电台。
 TX channel	TX 通道
 Transmit	发射
-Transmitting	发射中
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	此频率和电平的未调制载波,用于调整发射(激励、滤波器、驻波比、假负载电平),不是消息。按住按钮。停止始终有效。不会保存为正在发射。
 What will be sent (preview)	将要发送的内容(预览)
 at full scale: the limiter will round the peaks	满量程:限幅器会圆滑峰值
 making the preview...	正在生成预览...
@@ -2750,121 +2693,38 @@ decoder locked: gain frozen	解码器已锁定:增益冻结
 at the end of the gain range	已到增益范围的尽头
 holding the level	保持当前电平
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 为通常的抑制载波。加入少量载波可帮助接收机锁定；范围上限与最响的音频一样强。
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	叠加在第一个音调上的第二个音调（0 = 关闭）。两个音调构成双音线性度测试。
-AM (carrier and sidebands)	AM（载波和边带）
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM 发送载波和两个边带。抑制载波的双边带只发送边带。
-Audio above this level is turned down.	高于此电平的音频会被压低。
-Audio frequency	音频频率
-Boosts the high notes before sending (0 = off).	发送前提升高音（0 = 关闭）。
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	发送前提升高音。欧洲和世界大部分地区为 50 µs，美洲为 75 µs。
 CTCSS tone	CTCSS 音
-Carrier injection	载波注入
-Carrier level	载波电平
-Choose a radio below, or switch on the test (no RF).	请在下方选择一台电台，或开启测试（无射频）。
 Choose a signal in the list.	请在列表中选择一个信号。
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	截去高于此音高的音频，由此决定信号宽度（0 = 关闭）。
-DSB (suppressed carrier)	DSB（抑制载波）
 Default: %s	默认值：%s
 Deviation	频偏
-Esc = stop	Esc = 停止
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	均衡大声和小声的语音，使信号保持强劲而不过调制。
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	此信号的全部设置：调制、音频、滤波器、输出和时序。默认值已很合理；仅在需要更改时展开。
-Filters	滤波器
 Follow the receiver	跟随接收机
 Frequency offset	频率偏移
-Gain added after the compressor.	压缩器之后增加的增益。
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	在电台之前对整个信号施加的增益。当电平表显示削波时请调低；电台自身的增益在上方设置。
 HOLD TO TRANSMIT	按住即发送
-High-pass (low cut)	高通（低切）
-How far the RDS subcarrier deviates the carrier.	RDS 副载波使载波偏移的幅度。
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	音频使频率摆动的幅度。2.5 kHz 对应 12.5 kHz 信道，5 kHz 对应 25 kHz 信道。
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	音频使频率摆动的幅度。广播调频使用 75 kHz。
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	音频对信号的调制幅度。满调制为百分之一百；超过则过调制并失真。
-How fast the compressor lets go after a loud passage.	响亮段落之后压缩器恢复的速度。
-How long the VOX stays open after the sound stops.	声音停止后 VOX 保持开启的时间。
-How loud the audio must be to open the VOX.	音频需要多响才能打开 VOX。
-How loud the test tone is, as a share of full audio.	测试音的响度，占满音频的比例。
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	高于阈值的音频被压低的程度；20 接近硬限幅器。
-Key-up fade-in	发射启动渐入
-Left level	左声道电平
-Left test tone	左声道测试音
-Low-pass (audio bandwidth)	低通（音频带宽）
-Lower sideband (LSB)	下边带（LSB）
-Make-up gain	补偿增益
-Mirror the spectrum	镜像频谱
-Modulation depth	调制深度
 Music (not speech)	音乐（非语音）
 Name for a new preset	新预设的名称
 No presets saved for this signal yet.	此信号尚无已保存的预设。
 Output	输出
 Output level	输出电平
-Output trim	输出微调
-Peak level	峰值电平
-Pilot level	导频电平
-Pitch	音高
 Presets	预设
 Preview	预览
-Programme type	节目类型
 Push to talk (hold the button)	按键通话（按住按钮）
-RDS	RDS
-RDS level	RDS 电平
-RF level	射频电平
 RX %.6f MHz	RX %.6f MHz
-Ratio	比率
-Release	释放时间
-Removes rumble and hum below this pitch (0 = off).	去除低于此音高的轰鸣和嗡嗡声（0 = 关闭）。
 Reset to default	恢复默认值
-Right level	右声道电平
-Right test tone	右声道测试音
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	以电台的采样率运行信号发生器但不输出：不会打开电台，也不会发送任何内容。频谱和电平显示将要发出的内容。
 Save preset	保存预设
 Saves the settings below, the frequency and the level under this name.	以此名称保存下方的设置、频率和电平。
-Second test tone	第二测试音
-Sends the 19 kHz pilot and the stereo difference signal.	发送 19 kHz 导频和立体声差信号。
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	在 57 kHz 副载波上发送电台名称、广播文字和节目类型。
-Speech compressor	语音压缩器
 Start transmitting	开始发射
 Stereo	立体声
 Stop transmitting	停止发射
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	交换 I 和 Q，使信号翻转：上边带变为下边带。适用于会反转的电台或混频器。
 TRANSMITTING (release to stop)	发射中（松开即停止）
 TX = RX	TX = RX
 TX independent	TX 独立
-Test tone	测试音
-Test tone level	测试音电平
-The 19 kHz stereo pilot, as a share of the full deviation.	19 kHz 立体声导频，占全频偏的比例。
-The RDS flag for a station that carries traffic announcements.	表示电台播送交通信息的 RDS 标志。
-The RDS flag for music instead of speech.	表示音乐而非语音的 RDS 标志。
-The RDS flag that a traffic announcement is on the air.	表示正在播出交通信息的 RDS 标志。
-The RDS programme type code (0 to 31; 10 is pop music).	RDS 节目类型代码（0 至 31；10 为流行音乐）。
-The largest signal as a share of full scale.	最大信号占满量程的比例。
-The left test tone, as a share of full audio.	左声道测试音，占满音频的比例。
-The pitch of the Morse tone, as an offset above the dial frequency.	摩尔斯音的音高，相对拨号频率的偏移。
-The pitch of the test tone, used when the audio input is the test tone.	测试音的音高，在音频输入为测试音时使用。
-The pitch on the left channel, used when the audio input is the test tone.	左声道的音高，在音频输入为测试音时使用。
-The pitch on the right channel (0 = three times the left).	右声道的音高（0 = 左声道的三倍）。
 The radio's output level. Start low.	电台的输出电平。请从低处开始。
-The right test tone, as a share of full audio.	右声道测试音，占满音频的比例。
-The signal fades in over this time after Start, so the key-up does not click.	启动后信号在此时间内渐入，避免启动时出现爆音。
-The signal goes out only while there is sound on the audio input.	仅当音频输入有声音时才发出信号。
-The signal goes out only while you hold the button down.	仅在按住按钮期间发出信号。
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	载波大小占满量程的比例。调制深度为百分之八十五时，峰值接近满量程。
-The size of the signal as a share of full scale.	信号大小占满量程的比例。
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	发射频率跟随接收机。在此输入不同的频率会解除联动。点击可解除联动。
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	发射频率是独立的。接收机在 %.6f MHz。点击可让发射机跟随接收机。
 Threshold	阈值
 Timing	时序
-Traffic announcement now	正在播送交通信息
-Traffic programme	交通节目
-Upper sideband (USB)	上边带（USB）
-VOX (transmit on voice)	VOX（声控发射）
-VOX hang time	VOX 保持时间
-VOX threshold	VOX 阈值
 Well-known frequencies of this signal: pick one to set the transmit frequency	此信号的常见频率：选择一个即可设为发射频率
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	信号中心在音频通带内的位置，相对拨号频率的偏移。
-Where the signal sits in the audio passband, as an offset above the dial frequency.	信号在音频通带内的位置，相对拨号频率的偏移。
-Which sideband is sent.	发送哪一个边带。
 follows the receiver	跟随接收机
 on	开
 # full screen on every map

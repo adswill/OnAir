@@ -3,47 +3,26 @@
 # Some entries are machine translations that no native speaker has reviewed yet: they are listed in unreviewed/ru.txt. Corrections are welcome.
 # Machine-quality translation, not reviewed by a native speaker.
 1 kHz test tone	Тестовый тон 1 kHz
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	P6 PPM отправляется как изображение; любой другой или пустой файл использует тестовое изображение. На него наносится позывной.
-A SAME header. ZCZC- is added when missing.	Заголовок SAME. ZCZC- добавляется, если отсутствует.
-Aircraft registration	Регистрационный номер самолёта
-An RS41 with this serial. Empty: the demo sondes.	RS41 с этим серийным номером. Пусто: демонстрационные зонды.
 Are you sure? This clears all previous data and cannot be undone.	Вы уверены? Все прежние данные будут удалены, это нельзя отменить.
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	ATSC 3.0 использует демо ROUTE / fMP4; произвольный MPEG-TS не является путём полезной нагрузки.
 Audio file	Аудиофайл
 Audio input	Аудиовход
-AX.25 UI frame. Empty: the demo CubeSat cycle.	Кадр AX.25 UI. Пусто: демонстрационный цикл CubeSat.
 Baud	Бод
 Browse…	Обзор…
-Callsign / my ID	Позывной / мой ID
-Capcode	Capcode
 Carrier tune	Подстройка несущей
 Clear all	Очистить всё
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	Удаляет все прежние данные: списки декодированного во всех режимах (самолёты, суда, сообщения, изображения и так далее) на каждом открытом приёмнике. Сохранённая копия на диске тоже очищается.
-Code rate / MODCOD index	Скорость кода / индекс MODCOD
-Colour code	Цветовой код
 Comment	Комментарий
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	Тестовая сцена D2-MAC (свой видеофайл в этот аналоговый генератор не подключён).
 DATV (DVB-S/S2 file)	DATV (файл DVB-S/S2)
 Default input	Вход по умолчанию
 Destination	Получатель
-Destination / ID	Получатель / ID
-Destination ID	ID получателя
 Device ID	ID устройства
 Dial frequency the decoder should assume (the sound card is not tuned)	Частота циферблата, которую должен принять декодер (звуковая карта не настраивается)
 DVB standard	Стандарт DVB
-Empty: the demo 802.15.4 scene.	Пусто: демонстрационная сцена 802.15.4.
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Пусто: демонстрационная сцена FLARM. Этот ID не упаковывается в неопубликованный новый протокол.
-Empty: the demo Mode S uplink scene.	Пусто: демонстрационная сцена восходящего канала Mode S.
-Empty: the demo VDES scene.	Пусто: демонстрационная сцена VDES.
 File	Файл
-File to send	Файл для отправки
 Free text	Свободный текст
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Регуляторы усиления действуют только на радио (не на запись, звуковую карту или синтетический сигнал)
 I/Q stereo	I/Q стерео
-ICAO address	Адрес ICAO
-Image (PNG / PPM)	Изображение (PNG / PPM)
-Image (PPM)	Изображение (PPM)
 Input device	Устройство ввода
 Latitude	Широта
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	libcodec2 не загружена: живое кодирование отключено. Тон 1 kHz, тишину или WAV/MP3 всё же можно отправить.
@@ -55,55 +34,28 @@ LSB audio	LSB-звук
 Message	Сообщение
 Mic level	Уровень микрофона
 Microphone	Микрофон
-MMSI	MMSI
 Mode	Режим
-Morse identification, up to four letters.	Идентификация Морзе, до четырёх букв.
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX отправляет текст (ZCZC / NNNN добавляются, если отсутствуют). DSC (если выбран этот сервис) использует MMSI.
-PAN / short address	PAN / короткий адрес
 Path	Путь
-Payload text	Текст сообщения
-Power (dBm)	Мощность (dBm)
-Pre-emphasis	Предыскажение
-PSK variant	Вариант PSK
 QO-100 path	Путь QO-100
 Radio ID	ID радио
-Radio text (RT)	Радиотекст (RT)
-RDS PI	RDS PI
 Report	Отчёт
-Reverse (mark is the upper tone)	Обратный (метка - верхний тон)
-RFPI	RFPI
-RFPI of the base station.	RFPI базовой станции.
 Roll-off	Roll-off
-Satellite standard	Спутниковый стандарт
 Send analog NFM of the audio instead of the digital test pattern	Отправлять аналоговый NFM звука вместо цифровой тестовой таблицы
 Send analog NFM of the microphone or a file instead of the test scene	Отправлять аналоговый NFM микрофона или файла вместо тестовой сцены
-Serial / ID	Серийный номер / ID
 Shift	Сдвиг
 Sideband	Боковая полоса
 Silence	Тишина
 sound card	звуковая карта
 SSB (microphone)	SSB (микрофон)
-SSTV mode	Режим SSTV
-Station name (PS)	Название станции (PS)
-Symbol rate (Hz)	Символьная скорость (Hz)
 Talkgroup	Talkgroup
-test DJI DroneID scene (custom serial is not packed)	тестовая сцена DJI DroneID (свой серийный номер не упаковывается)
-test downlink scene (this generator does not take a custom message)	тестовая сцена нисходящего канала (этот генератор не принимает своё сообщение)
-test LRPT/HRIT scene (custom image not wired)	тестовая сцена LRPT/HRIT (своё изображение не подключено)
-test NCDXF-style beacon scene	тестовая сцена маяка в стиле NCDXF
-test weather-fax chart (custom image not wired)	тестовая карта метеофакса (своё изображение не подключено)
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	TETRA ACELP здесь не кодируется. Показаны цветовой код и ID; отправляется тестовая таблица нисходящего канала. Вместо этого можно отправить тон 1 kHz, тишину или WAV/MP3 как аналоговый NFM.
 Text	Текст
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	Частота захвата звуковой карты. Движок работает с этой частотой; радио настраивать нечего.
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	Байты файла уходят в эфир как объект HamDRM с этим позывным. Пустой файл: тестовое изображение.
 The microphone starts only when you press START TRANSMITTING.	Микрофон включается только после нажатия START TRANSMITTING.
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	Регистрационный номер и свободный текст уходят в эфир как нисходящий канал H1 / ACARS. Пусто: демонстрационный трафик.
 this mode has no transmit generator	у этого режима нет генератора передачи
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	Этот вокодер не умеет кодировать: OnAir загружает mbelib только для декодирования (AMBE/IMBE). ID получателя / talkgroup / цветовой код всё равно уходят в эфир; биты голоса - тестовая таблица. Вместо этого можно отправить тон 1 kHz, тишину или WAV/MP3 как аналоговый NFM.
-Timeslot	Тайм-слот
 To	To
 USB audio	USB-звук
-Vessel name	Название судна
 View	Вид
 Help	Справка
 Language	Язык
@@ -144,8 +96,6 @@ State	Состояние
 Channel	Канал
 Delay	Задержка
 dropped	потеряно
-level %.1f dBFS	уровень %.1f dBFS
-load %.0f%%	нагрузка %.0f%%
 FM: no station	FM: нет станции
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  служб: %d
 OK	OK
@@ -481,9 +431,7 @@ Satellite	Спутник
 Max el	Макс. угол
 Duration	Длительность
 Frequency	Частота
-AOS in %d:%02d:%02d	AOS через %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, макс. %.0f град.
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	аз %.0f  угол %.0f  %.0f км\nДоплер %+.0f Hz
 Track	Сопровождение
 Auto start at AOS, stop at LOS	Автозапуск на AOS, остановка на LOS
 Auto record IQ	Автозапись IQ
@@ -973,7 +921,6 @@ Frequency (MHz)	Частота (МГц)
 +14 dB amplifier	Усилитель +14 дБ
 Repeat until stopped	Повторять до остановки
 seconds	секунд
-START TRANSMITTING	НАЧАТЬ ПЕРЕДАЧУ
 This radio has no transmit driver in OnAir.	У этого радио нет драйвера передачи в OnAir.
 Before you transmit	Перед передачей
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	Для передачи нужна лицензия или разрешение там, где вы находитесь. Вы отвечаете за то, что излучаете, и за то, чтобы не мешать другим (включая службы, на которые люди полагаются ради безопасности). Перед началом подключите к радио антенну, аттенюатор или эквивалент нагрузки. OnAir не ограничивает ни частоту, ни мощность: действуют только пределы самого радио.
@@ -1128,10 +1075,8 @@ Sample rate	Частота дискретизации
 Search signals...	Поиск сигналов...
 Settings	Настройки
 Signal	Сигнал
-Space = start / stop     Esc = stop	Пробел = старт / стоп     Esc = стоп
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	Останавливает передачу или тест, несущую и ожидающий запуск и освобождает радио.
 TEST - NO RF	ТЕСТ - БЕЗ ВЧ
-Test (dry run, no RF)	Тест (холостой, без ВЧ)
 Test (no RF)	Тест (без ВЧ)
 Test: the IQ the radio would get	Тест: IQ, которые получило бы радио
 The IQ going to the radio	IQ, идущие в радио
@@ -1140,8 +1085,6 @@ The transmit panel is in its own window.	Панель передачи нахо�
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	Прибавляется к частоте, передаваемой в радио, для радио, излучающего со сдвигом.
 TX channel	Канал TX
 Transmit	Передача
-Transmitting	Передача
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	Немодулированная несущая на этой частоте и уровне для настройки передачи (раскачка, фильтр, КСВ, уровень на эквиваленте нагрузки), не сообщение. Удерживайте кнопку. Стоп по-прежнему действует. Не сохраняется как передача.
 What will be sent (preview)	Что будет передано (просмотр)
 at full scale: the limiter will round the peaks	полная шкала: ограничитель сгладит пики
 making the preview...	создаётся просмотр...
@@ -2733,121 +2676,38 @@ decoder locked: gain frozen	декодер захватил сигнал: уси
 at the end of the gain range	край диапазона усиления
 holding the level	уровень удерживается
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 — обычная подавленная несущая. Немного несущей помогает приёмнику захватить сигнал; верх диапазона так же силён, как самый громкий звук.
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Второй тон, добавляемый к первому (0 = выкл.). Два тона дают двухтональный тест линейности.
-AM (carrier and sidebands)	AM (несущая и боковые полосы)
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM передаёт несущую и обе боковые полосы. Двухполосная с подавленной несущей передаёт только боковые полосы.
-Audio above this level is turned down.	Звук выше этого уровня приглушается.
-Audio frequency	Звуковая частота
-Boosts the high notes before sending (0 = off).	Усиливает высокие частоты перед передачей (0 = выкл.).
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Усиливает высокие частоты перед передачей. 50 мкс в Европе и большинстве стран мира, 75 мкс в Америке.
 CTCSS tone	Тон CTCSS
-Carrier injection	Добавление несущей
-Carrier level	Уровень несущей
-Choose a radio below, or switch on the test (no RF).	Выберите радио ниже или включите тест (без ВЧ).
 Choose a signal in the list.	Выберите сигнал в списке.
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	Обрезает звук выше этой частоты, что задаёт ширину сигнала (0 = выкл.).
-DSB (suppressed carrier)	DSB (подавленная несущая)
 Default: %s	По умолчанию: %s
 Deviation	Девиация
-Esc = stop	Esc = стоп
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	Выравнивает громкую и тихую речь, чтобы сигнал оставался сильным без перемодуляции.
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	Все настройки этого сигнала: модуляция, звук, фильтры, выход и тайминг. Значения по умолчанию разумны; открывайте это, только чтобы их изменить.
-Filters	Фильтры
 Follow the receiver	Следовать за приёмником
 Frequency offset	Смещение частоты
-Gain added after the compressor.	Усиление, добавляемое после компрессора.
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	Усиление всего сигнала непосредственно перед радио. Уменьшите его, если индикатор показывает ограничение; собственное усиление радио задаётся выше.
 HOLD TO TRANSMIT	УДЕРЖИВАЙТЕ ДЛЯ ПЕРЕДАЧИ
-High-pass (low cut)	ФВЧ (срез низких)
-How far the RDS subcarrier deviates the carrier.	Насколько поднесущая RDS отклоняет несущую.
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	Насколько звук отклоняет частоту. 2,5 кГц — для канала 12,5 кГц, 5 кГц — для канала 25 кГц.
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	Насколько звук отклоняет частоту. Вещательное FM использует 75 кГц.
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	Насколько звук модулирует сигнал. Полная модуляция — 100 процентов; больше — перемодуляция и искажения.
-How fast the compressor lets go after a loud passage.	Как быстро компрессор отпускает после громкого фрагмента.
-How long the VOX stays open after the sound stops.	Как долго VOX остаётся открытым после окончания звука.
-How loud the audio must be to open the VOX.	Насколько громким должен быть звук, чтобы открыть VOX.
-How loud the test tone is, as a share of full audio.	Громкость тестового тона как доля полного уровня звука.
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	Насколько сильно приглушается звук выше порога; 20 близко к жёсткому ограничителю.
-Key-up fade-in	Плавное нарастание при включении
-Left level	Уровень слева
-Left test tone	Тестовый тон слева
-Low-pass (audio bandwidth)	ФНЧ (полоса звука)
-Lower sideband (LSB)	Нижняя боковая полоса (LSB)
-Make-up gain	Компенсирующее усиление
-Mirror the spectrum	Зеркально отразить спектр
-Modulation depth	Глубина модуляции
 Music (not speech)	Музыка (не речь)
 Name for a new preset	Имя нового пресета
 No presets saved for this signal yet.	Для этого сигнала пока нет сохранённых пресетов.
 Output	Выход
 Output level	Выходной уровень
-Output trim	Подстройка выхода
-Peak level	Пиковый уровень
-Pilot level	Уровень пилот-тона
-Pitch	Тон
 Presets	Пресеты
 Preview	Предпросмотр
-Programme type	Тип программы
 Push to talk (hold the button)	Push-to-talk (удерживайте кнопку)
-RDS	RDS
-RDS level	Уровень RDS
-RF level	Уровень ВЧ
 RX %.6f MHz	RX %.6f МГц
-Ratio	Коэффициент
-Release	Восстановление
-Removes rumble and hum below this pitch (0 = off).	Убирает гул и фон ниже этой частоты (0 = выкл.).
 Reset to default	Сбросить по умолчанию
-Right level	Уровень справа
-Right test tone	Тестовый тон справа
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	Запускает генератор сигнала на частоте дискретизации радио в никуда: радио не открывается и ничего не передаётся. Спектр и уровни показывают, что было бы передано.
 Save preset	Сохранить пресет
 Saves the settings below, the frequency and the level under this name.	Сохраняет настройки ниже, частоту и уровень под этим именем.
-Second test tone	Второй тестовый тон
-Sends the 19 kHz pilot and the stereo difference signal.	Передаёт пилот-тон 19 кГц и разностный стереосигнал.
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	Передаёт название станции, радиотекст и тип программы на поднесущей 57 кГц.
-Speech compressor	Компрессор речи
 Start transmitting	Начать передачу
 Stereo	Стерео
 Stop transmitting	Остановить передачу
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	Меняет местами I и Q, переворачивая сигнал: верхняя боковая полоса становится нижней. Для радио или смесителя, который инвертирует.
 TRANSMITTING (release to stop)	ПЕРЕДАЧА (отпустите, чтобы остановить)
 TX = RX	TX = RX
 TX independent	TX независим
-Test tone	Тестовый тон
-Test tone level	Уровень тестового тона
-The 19 kHz stereo pilot, as a share of the full deviation.	Стереопилот 19 кГц как доля полной девиации.
-The RDS flag for a station that carries traffic announcements.	Флаг RDS для станции, передающей дорожные сообщения.
-The RDS flag for music instead of speech.	Флаг RDS: музыка вместо речи.
-The RDS flag that a traffic announcement is on the air.	Флаг RDS: в эфире дорожное сообщение.
-The RDS programme type code (0 to 31; 10 is pop music).	Код типа программы RDS (от 0 до 31; 10 — поп-музыка).
-The largest signal as a share of full scale.	Наибольший сигнал как доля полной шкалы.
-The left test tone, as a share of full audio.	Левый тестовый тон как доля полного уровня звука.
-The pitch of the Morse tone, as an offset above the dial frequency.	Высота тона Морзе как смещение выше частоты настройки.
-The pitch of the test tone, used when the audio input is the test tone.	Высота тестового тона, используется, когда источник звука — тестовый тон.
-The pitch on the left channel, used when the audio input is the test tone.	Высота тона в левом канале, используется, когда источник звука — тестовый тон.
-The pitch on the right channel (0 = three times the left).	Высота тона в правом канале (0 = втрое выше левого).
 The radio's output level. Start low.	Выходной уровень радио. Начинайте с низкого.
-The right test tone, as a share of full audio.	Правый тестовый тон как доля полного уровня звука.
-The signal fades in over this time after Start, so the key-up does not click.	После старта сигнал плавно нарастает в течение этого времени, чтобы включение не щёлкало.
-The signal goes out only while there is sound on the audio input.	Сигнал передаётся только пока на звуковом входе есть звук.
-The signal goes out only while you hold the button down.	Сигнал передаётся только пока вы удерживаете кнопку.
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Размер несущей как доля полной шкалы. При глубине 85 процентов пики достигают почти полной шкалы.
-The size of the signal as a share of full scale.	Размер сигнала как доля полной шкалы.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Частота передачи следует за частотой приёмника. Ввод другой здесь разрывает связь. Нажмите, чтобы разорвать.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Частота передачи независима. Приёмник настроен на %.6f МГц. Нажмите, чтобы передатчик следовал за ним.
 Threshold	Порог
 Timing	Тайминг
-Traffic announcement now	Дорожное сообщение сейчас
-Traffic programme	Дорожная программа
-Upper sideband (USB)	Верхняя боковая полоса (USB)
-VOX (transmit on voice)	VOX (передача по голосу)
-VOX hang time	Время удержания VOX
-VOX threshold	Порог VOX
 Well-known frequencies of this signal: pick one to set the transmit frequency	Известные частоты этого сигнала: выберите одну, чтобы задать частоту передачи
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	Где в звуковой полосе находится середина сигнала — смещение выше частоты настройки.
-Where the signal sits in the audio passband, as an offset above the dial frequency.	Где в звуковой полосе находится сигнал — смещение выше частоты настройки.
-Which sideband is sent.	Какая боковая полоса передаётся.
 follows the receiver	следует за приёмником
 on	вкл.
 # full screen on every map

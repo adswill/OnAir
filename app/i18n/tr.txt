@@ -9,47 +9,26 @@
 -	-
 1 kHz test tone	1 kHz test tonu
 8 MHz	8 MHz
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	Resim olarak bir P6 PPM gönderilir; diğer veya boş bir dosya test resmini kullanır. Çağrı işareti üzerine basılır.
-A SAME header. ZCZC- is added when missing.	Bir SAME başlığı. Eksikse ZCZC- eklenir.
-Aircraft registration	Uçak tescil numarası
-An RS41 with this serial. Empty: the demo sondes.	Bu seri numaralı bir RS41. Boş: demo sondalar.
 Are you sure? This clears all previous data and cannot be undone.	Emin misiniz? Bu, önceki tüm verileri siler ve geri alınamaz.
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	ATSC 3.0 bir ROUTE / fMP4 demosu kullanır; özel bir MPEG-TS yük yolu değildir.
 Audio file	Ses dosyası
 Audio input	Ses girişi
-AX.25 UI frame. Empty: the demo CubeSat cycle.	AX.25 UI çerçevesi. Boş: demo CubeSat döngüsü.
 Baud	Baud
 Browse…	Gözat…
-Callsign / my ID	Çağrı işareti / kimliğim
-Capcode	Capcode
 Carrier tune	Taşıyıcı ayarı
 Clear all	Tümünü temizle
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	Önceki tüm verileri temizler: her kipin çözülen listelerini (uçak, gemi, mesajlar, resimler vb.), açık olan her alıcıda. Diskteki kayıtlı kopya da boşaltılır.
-Code rate / MODCOD index	Kod oranı / MODCOD dizini
-Colour code	Renk kodu
 Comment	Yorum
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	D2-MAC test sahnesi (özel video bu analog üreticiye bağlı değil).
 DATV (DVB-S/S2 file)	DATV (DVB-S/S2 dosyası)
 Default input	Varsayılan giriş
 Destination	Hedef
-Destination / ID	Hedef / kimlik
-Destination ID	Hedef kimliği
 Device ID	Aygıt kimliği
 Dial frequency the decoder should assume (the sound card is not tuned)	Çözücünün varsayacağı kadran frekansı (ses kartı ayarlanmaz)
 DVB standard	DVB standardı
-Empty: the demo 802.15.4 scene.	Boş: demo 802.15.4 sahnesi.
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Boş: demo FLARM sahnesi. Bu kimlik, yayımlanmamış daha yeni protokole paketlenmez.
-Empty: the demo Mode S uplink scene.	Boş: demo Mode S uplink sahnesi.
-Empty: the demo VDES scene.	Boş: demo VDES sahnesi.
 File	Dosya
-File to send	Gönderilecek dosya
 Free text	Serbest metin
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Kazanç denetimleri yalnızca telsizler için geçerlidir (kayıt, ses kartı veya sentetik sinyal için değil)
 I/Q stereo	I/Q stereo
-ICAO address	ICAO adresi
-Image (PNG / PPM)	Görüntü (PNG / PPM)
-Image (PPM)	Görüntü (PPM)
 Input device	Giriş aygıtı
 Latitude	Enlem
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	libcodec2 yüklü değil: canlı kodlama kapalı. Yine de 1 kHz ton, sessizlik veya bir WAV/MP3 gönderilebilir.
@@ -63,57 +42,30 @@ Message	Mesaj
 MHz	MHz
 Mic level	Mikrofon seviyesi
 Microphone	Mikrofon
-MMSI	MMSI
 Mode	Kip
-Morse identification, up to four letters.	Mors kimliği, en fazla dört harf.
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX metni gönderir (ZCZC / NNNN eksikse eklenir). DSC (o hizmet seçildiğinde) MMSI'yi kullanır.
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	Bu bilgisayarın ağlarında hiçbir Red Pitaya yanıt vermedi (SDR alıcı-verici uygulaması çalışıyor mu?): adresini yazın.
-PAN / short address	PAN / kısa adres
 Path	Yol
-Payload text	Yük metni
-Power (dBm)	Güç (dBm)
-Pre-emphasis	Ön vurgu
-PSK variant	PSK türü
 QO-100 path	QO-100 yolu
 Radio ID	Telsiz kimliği
-Radio text (RT)	Telsiz metni (RT)
-RDS PI	RDS PI
 Report	Rapor
-Reverse (mark is the upper tone)	Ters (işaret üst ton)
-RFPI	RFPI
-RFPI of the base station.	Baz istasyonunun RFPI'si.
 Roll-off	Roll-off
-Satellite standard	Uydu standardı
 searching for Red Pitaya boards…	Red Pitaya kartları aranıyor…
 Send analog NFM of the audio instead of the digital test pattern	Test deseni yerine sesin analog NFM'sini gönder
 Send analog NFM of the microphone or a file instead of the test scene	Test sahnesi yerine mikrofonun veya bir dosyanın analog NFM'sini gönder
-Serial / ID	Seri / kimlik
 Shift	Kaydırma
 Sideband	Yan bant
 Silence	Sessizlik
 sound card	ses kartı
 SSB (microphone)	SSB (mikrofon)
-SSTV mode	SSTV kipi
-Station name (PS)	İstasyon adı (PS)
-Symbol rate (Hz)	Sembol hızı (Hz)
 Talkgroup	Konuşma grubu
-test DJI DroneID scene (custom serial is not packed)	test DJI DroneID sahnesi (özel seri numarası paketlenmez)
-test downlink scene (this generator does not take a custom message)	test aşağı bağlantı sahnesi (bu üretici özel mesaj almaz)
-test LRPT/HRIT scene (custom image not wired)	test LRPT/HRIT sahnesi (özel görüntü bağlı değil)
-test NCDXF-style beacon scene	test NCDXF tarzı işaretçi sahnesi
-test weather-fax chart (custom image not wired)	test hava faksı grafiği (özel görüntü bağlı değil)
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	TETRA ACELP burada kodlanmaz. Renk kodu ve kimlikler gösterilir; aşağı bağlantı test deseni gönderilir. Bunun yerine analog NFM olarak 1 kHz ton, sessizlik veya WAV/MP3 gönderilebilir.
 Text	Metin
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	Ses kartının yakalama hızı. Motor bu hızda çalışır; ayarlanacak bir telsiz yok.
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	Dosya baytları bu çağrı işaretiyle bir HamDRM nesnesi olarak gönderilir. Boş dosya: test resmi.
 The microphone starts only when you press START TRANSMITTING.	Mikrofon yalnızca İLETİME BAŞLA'ya bastığınızda başlar.
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	Tescil ve serbest metin, bir H1 / ACARS aşağı bağlantısı olarak yayına gider. Boş: demo trafiği.
 this mode has no transmit generator	bu kipin iletim üreticisi yok
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	Bu ses kodlayıcı kodlayamaz: OnAir, mbelib'i yalnızca çözme için yükler (AMBE/IMBE). Hedef kimliği / konuşma grubu / renk kodu yine de yayına gider; ses bitleri test desenidir. Bunun yerine analog NFM olarak 1 kHz ton, sessizlik veya WAV/MP3 gönderilebilir.
-Timeslot	Zaman dilimi
 To	Kime
 USB audio	USB ses
-Vessel name	Gemi adı
 View	Görünüm
 Help	Yardım
 Language	Dil
@@ -154,8 +106,6 @@ State	Durum
 Channel	Kanal
 Delay	Gecikme
 dropped	düşürüldü
-level %.1f dBFS	seviye %.1f dBFS
-load %.0f%%	yük %.0f%%
 FM: no station	FM: istasyon yok
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  %d hizmet
 OK	Tamam
@@ -500,9 +450,7 @@ Satellite	Uydu
 Max el	Maks yük.
 Duration	Süre
 Frequency	Frekans
-AOS in %d:%02d:%02d	AOS %d:%02d:%02d sonra
 %s - %s, max %.0f deg	%s - %s, maks %.0f derece
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz
 Track	İzle
 Auto start at AOS, stop at LOS	AOS'ta otomatik başlat, LOS'ta durdur
 Auto record IQ	Otomatik IQ kaydı
@@ -989,7 +937,6 @@ Frequency (MHz)	Frekans (MHz)
 +14 dB amplifier	+14 dB yükselteç
 Repeat until stopped	Durdurulana kadar yinele
 seconds	saniye
-START TRANSMITTING	İLETİME BAŞLA
 This radio has no transmit driver in OnAir.	Bu radyonun OnAir'de iletim sürücüsü yok.
 Before you transmit	İletim yapmadan önce
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	İletim yapmak, bulunduğunuz yerde lisans veya izin gerektirir. Yaydığınız şeyden ve başkalarına (insanların güvenlik için güvendiği hizmetler dahil) girişim yapmamaktan siz sorumlusunuz. Başlamadan önce radyoya bir anten, zayıflatıcı veya yapay yük bağlayın. OnAir frekansı veya gücü sınırlamaz: tek sınır radyonun kendi sınırlarıdır.
@@ -1144,10 +1091,8 @@ Sample rate	Örnekleme hızı
 Search signals...	Sinyal ara...
 Settings	Ayarlar
 Signal	Sinyal
-Space = start / stop     Esc = stop	Boşluk = başlat / durdur     Esc = durdur
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	İletimi veya testi, taşıyıcıyı ve bekleyen herhangi bir başlatmayı durdurur ve radyoyu geri verir.
 TEST - NO RF	TEST - RF YOK
-Test (dry run, no RF)	Test (deneme, RF yok)
 Test (no RF)	Test (RF yok)
 Test: the IQ the radio would get	Test: radyonun alacağı IQ
 The IQ going to the radio	Radyoya giden IQ
@@ -1156,8 +1101,6 @@ The transmit panel is in its own window.	İletim paneli kendi penceresinde.
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	Bu, frekans dışına yayılan bir radyo için radyoya gönderilen frekansa eklenir.
 TX channel	TX kanalı
 Transmit	İletim
-Transmitting	İletim yapılıyor
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	Bu frekansta ve seviyede modüle edilmemiş taşıyıcı, iletimi ayarlamak için (sürme, filtre, SWR, yapay yük seviyesi), bir mesaj değil. Düğmeyi basılı tutun. Durdur yine de geçerlidir. İletim olarak kaydedilmez.
 What will be sent (preview)	Ne gönderilecek (önizleme)
 at full scale: the limiter will round the peaks	tam ölçekte: sınırlayıcı tepeleri yuvarlayacak
 making the preview...	önizleme hazırlanıyor...
@@ -2749,121 +2692,38 @@ decoder locked: gain frozen	çözücü kilitli: kazanç dondu
 at the end of the gain range	kazanç aralığının sonunda
 holding the level	seviye tutuluyor
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 normal bastırılmış taşıyıcıdır. Biraz taşıyıcı alıcının kilitlemesine yardımcı olur; aralığın üstü en yüksek ses kadar güçlüdür.
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Birinciye eklenen ikinci ton (0 = kapalı). İki ton, iki tonlu doğrusallık testi oluşturur.
-AM (carrier and sidebands)	AM (taşıyıcı ve yan bantlar)
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM taşıyıcıyı ve her iki yan bandı gönderir. Bastırılmış taşıyıcılı çift yan bant yalnızca yan bantları gönderir.
-Audio above this level is turned down.	Bu seviyenin üzerindeki ses kısılır.
-Audio frequency	Ses frekansı
-Boosts the high notes before sending (0 = off).	Göndermeden önce yüksek notaları yükseltir (0 = kapalı).
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Göndermeden önce yüksek notaları yükseltir. Avrupa'da ve dünyanın çoğunda 50 µs, Amerika'da 75 µs.
 CTCSS tone	CTCSS tonu
-Carrier injection	Taşıyıcı enjeksiyonu
-Carrier level	Taşıyıcı seviyesi
-Choose a radio below, or switch on the test (no RF).	Aşağıdan bir radyo seçin veya testi açın (RF yok).
 Choose a signal in the list.	Listeden bir sinyal seçin.
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	Bu perdenin üzerindeki sesi keser; bu da sinyalin ne kadar geniş olduğunu belirler (0 = kapalı).
-DSB (suppressed carrier)	DSB (bastırılmış taşıyıcı)
 Default: %s	Varsayılan: %s
 Deviation	Sapma
-Esc = stop	Esc = durdur
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	Yüksek ve sessiz konuşmayı eşitler, böylece sinyal aşırı modülasyona girmeden güçlü kalır.
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	Bu sinyalin her ayarı: modülasyon, ses, filtreler, çıkış ve zamanlama. Varsayılanlar makuldür; bunları değiştirmek için yalnızca burayı açın.
-Filters	Filtreler
 Follow the receiver	Alıcıyı izle
 Frequency offset	Frekans kayması
-Gain added after the compressor.	Sıkıştırıcıdan sonra eklenen kazanç.
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	Radyodan hemen önce tüm sinyale uygulanan kazanç. Gösterge kırpılma gösterdiğinde düşürün; radyonun kendi kazancı yukarıda ayarlanır.
 HOLD TO TRANSMIT	İLETİM İÇİN BASILI TUT
-High-pass (low cut)	Yüksek geçiren (alt kesim)
-How far the RDS subcarrier deviates the carrier.	RDS alt taşıyıcısının taşıyıcıyı ne kadar saptırdığı.
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	Sesin frekansı ne kadar salladığı. 2.5 kHz bir 12.5 kHz kanal, 5 kHz bir 25 kHz kanaldır.
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	Sesin frekansı ne kadar salladığı. Yayın FM'si 75 kHz kullanır.
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	Sesin sinyali ne kadar salladığı. Tam modülasyon yüzde 100'dedir; fazlası aşırı modüle eder ve bozar.
-How fast the compressor lets go after a loud passage.	Sıkıştırıcının yüksek bir pasajdan sonra ne kadar hızlı bıraktığı.
-How long the VOX stays open after the sound stops.	Ses durduktan sonra VOX'un ne kadar açık kaldığı.
-How loud the audio must be to open the VOX.	VOX'u açmak için sesin ne kadar yüksek olması gerektiği.
-How loud the test tone is, as a share of full audio.	Test tonunun tam sesin ne kadarı olduğu.
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	Eşiğin üzerindeki sesin ne kadar güçlü kısıldığı; 20 sert bir sınırlayıcıya yakındır.
-Key-up fade-in	Basma anında yükselme
-Left level	Sol seviye
-Left test tone	Sol test tonu
-Low-pass (audio bandwidth)	Alçak geçiren (ses bant genişliği)
-Lower sideband (LSB)	Alt yan bant (LSB)
-Make-up gain	Telafi kazancı
-Mirror the spectrum	Spektrumu aynala
-Modulation depth	Modülasyon derinliği
 Music (not speech)	Müzik (konuşma değil)
 Name for a new preset	Yeni ön ayar için ad
 No presets saved for this signal yet.	Bu sinyal için henüz ön ayar kaydedilmedi.
 Output	Çıkış
 Output level	Çıkış seviyesi
-Output trim	Çıkış ince ayarı
-Peak level	Tepe seviyesi
-Pilot level	Pilot seviyesi
-Pitch	Perde
 Presets	Ön ayarlar
 Preview	Önizleme
-Programme type	Program türü
 Push to talk (hold the button)	Bas-konuş (düğmeyi basılı tutun)
-RDS	RDS
-RDS level	RDS seviyesi
-RF level	RF seviyesi
 RX %.6f MHz	RX %.6f MHz
-Ratio	Oran
-Release	Bırakma
-Removes rumble and hum below this pitch (0 = off).	Bu perdenin altındaki uğultuyu ve vınlamayı kaldırır (0 = kapalı).
 Reset to default	Varsayılana sıfırla
-Right level	Sağ seviye
-Right test tone	Sağ test tonu
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	Sinyal üretecini radyonun örnekleme hızında hiçbir yere çalıştırır: hiçbir radyo açılmaz ve hiçbir şey gönderilmez. Spektrum ve seviyeler ne çıkacağını gösterir.
 Save preset	Ön ayarı kaydet
 Saves the settings below, the frequency and the level under this name.	Aşağıdaki ayarları, frekansı ve seviyeyi bu ad altında kaydeder.
-Second test tone	İkinci test tonu
-Sends the 19 kHz pilot and the stereo difference signal.	19 kHz pilotu ve stereo fark sinyalini gönderir.
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	İstasyon adını, radyo metnini ve program türünü 57 kHz alt taşıyıcıda gönderir.
-Speech compressor	Konuşma sıkıştırıcısı
 Start transmitting	İletimi başlat
 Stereo	Stereo
 Stop transmitting	İletimi durdur
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	I ve Q'yu değiştirir, böylece sinyal ters çevrilir: üst yan bant alt yan bant olur. Ters çeviren bir radyo veya mikser için.
 TRANSMITTING (release to stop)	İLETİM YAPILIYOR (durdurmak için bırakın)
 TX = RX	TX = RX
 TX independent	TX bağımsız
-Test tone	Test tonu
-Test tone level	Test tonu seviyesi
-The 19 kHz stereo pilot, as a share of the full deviation.	19 kHz stereo pilotu, tam sapmanın payı olarak.
-The RDS flag for a station that carries traffic announcements.	Trafik duyuruları taşıyan bir istasyon için RDS bayrağı.
-The RDS flag for music instead of speech.	Konuşma yerine müzik için RDS bayrağı.
-The RDS flag that a traffic announcement is on the air.	Bir trafik duyurusunun yayında olduğuna dair RDS bayrağı.
-The RDS programme type code (0 to 31; 10 is pop music).	RDS program türü kodu (0 ile 31; 10 pop müzik).
-The largest signal as a share of full scale.	Tam ölçeğin payı olarak en büyük sinyal.
-The left test tone, as a share of full audio.	Sol test tonu, tam sesin payı olarak.
-The pitch of the Morse tone, as an offset above the dial frequency.	Mors tonunun perdesi, kadran frekansının üzerinde bir kayma olarak.
-The pitch of the test tone, used when the audio input is the test tone.	Test tonunun perdesi, ses girişi test tonu olduğunda kullanılır.
-The pitch on the left channel, used when the audio input is the test tone.	Sol kanaldaki perde, ses girişi test tonu olduğunda kullanılır.
-The pitch on the right channel (0 = three times the left).	Sağ kanaldaki perde (0 = solun üç katı).
 The radio's output level. Start low.	Radyonun çıkış seviyesi. Düşük başlayın.
-The right test tone, as a share of full audio.	Sağ test tonu, tam sesin payı olarak.
-The signal fades in over this time after Start, so the key-up does not click.	Sinyal Başlat'tan sonra bu süre boyunca yükselir, böylece basma anında tık sesi olmaz.
-The signal goes out only while there is sound on the audio input.	Sinyal yalnızca ses girişinde ses varken çıkar.
-The signal goes out only while you hold the button down.	Sinyal yalnızca düğmeyi basılı tuttuğunuzda çıkar.
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Taşıyıcının tam ölçeğin payı olarak boyutu. Yüzde 85 derinlikte tepeler yaklaşık tam ölçeğe ulaşır.
-The size of the signal as a share of full scale.	Sinyalin tam ölçeğin payı olarak boyutu.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	İletim frekansı alıcınınkini izler. Buraya farklı bir tane yazmak bağlantılarını koparır. Bağlantıyı koparmak için tıklayın.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	İletim frekansı kendine ait. Alıcı %.6f MHz'de. Vericinin onu izlemesini sağlamak için tıklayın.
 Threshold	Eşik
 Timing	Zamanlama
-Traffic announcement now	Şu anda trafik duyurusu
-Traffic programme	Trafik programı
-Upper sideband (USB)	Üst yan bant (USB)
-VOX (transmit on voice)	VOX (sesle iletim)
-VOX hang time	VOX bekleme süresi
-VOX threshold	VOX eşiği
 Well-known frequencies of this signal: pick one to set the transmit frequency	Bu sinyalin bilinen frekansları: iletim frekansını ayarlamak için birini seçin
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	Sinyalin ortasının ses geçiş bandında nerede olduğu, kadran frekansının üzerinde bir kayma olarak.
-Where the signal sits in the audio passband, as an offset above the dial frequency.	Sinyalin ses geçiş bandında nerede olduğu, kadran frekansının üzerinde bir kayma olarak.
-Which sideband is sent.	Hangi yan bandın gönderildiği.
 follows the receiver	alıcıyı izler
 on	açık
 # full screen on every map

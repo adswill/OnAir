@@ -8,47 +8,26 @@
 -	-
 1 kHz test tone	1 kHz-es teszthang
 8 MHz	8 MHz
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	Képként egy P6 PPM megy ki; bármely más vagy üres fájl esetén a tesztkép. A hívójel rákerül.
-A SAME header. ZCZC- is added when missing.	Egy SAME fejléc. A ZCZC- hiányában hozzáadódik.
-Aircraft registration	Légijármű lajstromjele
-An RS41 with this serial. Empty: the demo sondes.	Egy RS41 ezzel a sorozatszámmal. Üresen: a demó szondák.
 Are you sure? This clears all previous data and cannot be undone.	Biztosan? Ez törli az összes korábbi adatot, és nem vonható vissza.
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	Az ATSC 3.0 ROUTE / fMP4 demót használ; az egyéni MPEG-TS nem a hasznos adat útja.
 Audio file	Hangfájl
 Audio input	Hangbemenet
-AX.25 UI frame. Empty: the demo CubeSat cycle.	AX.25 UI keret. Üresen: a demó CubeSat-ciklus.
 Baud	Baud
 Browse…	Tallózás…
-Callsign / my ID	Hívójel / saját azonosítóm
-Capcode	Capcode
 Carrier tune	Vivő hangolása
 Clear all	Összes törlése
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	Törli az összes korábbi adatot: minden üzemmód dekódolt listáit (repülők, hajók, üzenetek, képek stb.), minden megnyitott vevőn. A lemezen mentett példány is kiürül.
-Code rate / MODCOD index	Kódarány / MODCOD index
-Colour code	Színkód
 Comment	Megjegyzés
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	D2-MAC tesztkép (az egyéni videó nincs bekötve ebbe az analóg generátorba).
 DATV (DVB-S/S2 file)	DATV (DVB-S/S2 fájl)
 Default input	Alapértelmezett bemenet
 Destination	Cél
-Destination / ID	Cél / azonosító
-Destination ID	Cél azonosító
 Device ID	Eszközazonosító
 Dial frequency the decoder should assume (the sound card is not tuned)	A dekóder által feltételezett tárcsa-frekvencia (a hangkártya nincs hangolva)
 DVB standard	DVB szabvány
-Empty: the demo 802.15.4 scene.	Üresen: a demó 802.15.4 jelenet.
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Üresen: a demó FLARM jelenet. Ez az azonosító nem kerül be a nem publikált újabb protokollba.
-Empty: the demo Mode S uplink scene.	Üresen: a demó Mode S felfelé irányú jelenet.
-Empty: the demo VDES scene.	Üresen: a demó VDES jelenet.
 File	Fájl
-File to send	Küldendő fájl
 Free text	Szabad szöveg
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Az erősítésszabályzók csak rádiókra vonatkoznak (nem felvételre, hangkártyára vagy a szintetikus jelre)
 I/Q stereo	I/Q sztereó
-ICAO address	ICAO-cím
-Image (PNG / PPM)	Kép (PNG / PPM)
-Image (PPM)	Kép (PPM)
 Input device	Bemeneti eszköz
 Latitude	Szélesség
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	A libcodec2 nincs betöltve: az élő kódolás ki van kapcsolva. Egy 1 kHz-es hang, csend vagy WAV/MP3 továbbra is küldhető.
@@ -62,57 +41,30 @@ Message	Üzenet
 MHz	MHz
 Mic level	Mikrofon szintje
 Microphone	Mikrofon
-MMSI	MMSI
 Mode	Üzemmód
-Morse identification, up to four letters.	Morze azonosítás, legfeljebb négy betű.
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	A NAVTEX elküldi a szöveget (a ZCZC / NNNN hiányában hozzáadódik). A DSC (ha az a szolgáltatás van kiválasztva) az MMSI-t használja.
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	Egyetlen Red Pitaya sem válaszolt a számítógép hálózatain (fut az SDR transceiver alkalmazása?): írd be a címét.
-PAN / short address	PAN / rövid cím
 Path	Útvonal
-Payload text	Hasznos szöveg
-Power (dBm)	Teljesítmény (dBm)
-Pre-emphasis	Preemfázis
-PSK variant	PSK változat
 QO-100 path	QO-100 útvonal
 Radio ID	Rádióazonosító
-Radio text (RT)	Rádiószöveg (RT)
-RDS PI	RDS PI
 Report	Jelentés
-Reverse (mark is the upper tone)	Fordított (a mark a felső hang)
-RFPI	RFPI
-RFPI of the base station.	A bázisállomás RFPI-je.
 Roll-off	Roll-off
-Satellite standard	Műholdas szabvány
 searching for Red Pitaya boards…	Red Pitaya kártyák keresése…
 Send analog NFM of the audio instead of the digital test pattern	A digitális tesztkép helyett a hang analóg NFM-jének küldése
 Send analog NFM of the microphone or a file instead of the test scene	A tesztjelenet helyett a mikrofon vagy egy fájl analóg NFM-jének küldése
-Serial / ID	Sorozatszám / azonosító
 Shift	Shift
 Sideband	Oldalsáv
 Silence	Csend
 sound card	hangkártya
 SSB (microphone)	SSB (mikrofon)
-SSTV mode	SSTV üzemmód
-Station name (PS)	Állomásnév (PS)
-Symbol rate (Hz)	Szimbólumsebesség (Hz)
 Talkgroup	Talkgroup
-test DJI DroneID scene (custom serial is not packed)	teszt DJI DroneID jelenet (az egyéni sorozatszám nincs becsomagolva)
-test downlink scene (this generator does not take a custom message)	teszt lefelé irányú jelenet (ez a generátor nem fogad egyéni üzenetet)
-test LRPT/HRIT scene (custom image not wired)	teszt LRPT/HRIT jelenet (az egyéni kép nincs bekötve)
-test NCDXF-style beacon scene	teszt NCDXF-stílusú jeladó jelenet
-test weather-fax chart (custom image not wired)	teszt időjárási faxtérkép (az egyéni kép nincs bekötve)
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	A TETRA ACELP itt nincs kódolva. A színkód és az azonosítók megjelennek; a lefelé irányú tesztminta kerül elküldésre. Helyette egy 1 kHz-es hang, csend vagy WAV/MP3 küldhető analóg NFM-ként.
 Text	Szöveg
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	A hangkártya rögzítési sebessége. A motor ezen a sebességen fut; nincs hangolható rádió.
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	A fájl bájtjai HamDRM objektumként mennek ki ezzel a hívójellel. Üres fájl: a tesztkép.
 The microphone starts only when you press START TRANSMITTING.	A mikrofon csak akkor indul, amikor megnyomod az ADÁS INDÍTÁSA gombot.
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	A lajstromjel és a szabad szöveg H1 / ACARS lefelé irányú adásként megy ki. Üresen: a demó forgalom.
 this mode has no transmit generator	ennek az üzemmódnak nincs adásgenerátora
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	Ez a vokóder nem tud kódolni: az OnAir az mbelib-et csak dekódolásra tölti be (AMBE/IMBE). A cél azonosító / talkgroup / színkód így is kimegy; a hangbitek a tesztminta. Helyette egy 1 kHz-es hang, csend vagy WAV/MP3 küldhető analóg NFM-ként.
-Timeslot	Időrés
 To	To
 USB audio	USB hang
-Vessel name	Hajó neve
 View	Nézet
 Help	Súgó
 Language	Nyelv
@@ -153,8 +105,6 @@ State	Állapot
 Channel	Csatorna
 Delay	Késleltetés
 dropped	elveszett
-level %.1f dBFS	szint %.1f dBFS
-load %.0f%%	terhelés %.0f%%
 FM: no station	FM: nincs állomás
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  %d szolgáltatás
 OK	OK
@@ -490,9 +440,7 @@ Satellite	Műhold
 Max el	Max. emelk.
 Duration	Időtartam
 Frequency	Frekvencia
-AOS in %d:%02d:%02d	AOS %d:%02d:%02d múlva
 %s - %s, max %.0f deg	%s - %s, max. %.0f fok
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	azim. %.0f  emelk. %.0f  %.0f km\nDoppler %+.0f Hz
 Track	Követés
 Auto start at AOS, stop at LOS	Automatikus indítás AOS-nál, leállítás LOS-nál
 Auto record IQ	Automatikus IQ-felvétel
@@ -976,7 +924,6 @@ Frequency (MHz)	Frekvencia (MHz)
 +14 dB amplifier	+14 dB-es erősítő
 Repeat until stopped	Ismétlés leállításig
 seconds	másodperc
-START TRANSMITTING	ADÁS INDÍTÁSA
 This radio has no transmit driver in OnAir.	Ennek a rádiónak nincs adó-illesztőprogramja az OnAirben.
 Before you transmit	Adás előtt
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	Az adáshoz az Ön tartózkodási helyén engedély vagy licenc kell. Ön felel azért, amit kibocsát, és azért, hogy ne zavarjon másokat (azokat a szolgáltatásokat is beleértve, amelyekre az emberek a biztonságukért támaszkodnak). Indítás előtt csatlakoztasson a rádióhoz antennát, csillapítót vagy műterhelést. Az OnAir nem korlátozza sem a frekvenciát, sem a teljesítményt: csak maga a rádió korlátai érvényesek.
@@ -1131,10 +1078,8 @@ Sample rate	Mintavételi sebesség
 Search signals...	Jelek keresése...
 Settings	Beállítások
 Signal	Jel
-Space = start / stop     Esc = stop	Szóköz = indítás / leállítás     Esc = leállítás
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	Leállítja az adást vagy tesztet, a vivőt és minden függő indítást, és felszabadítja a rádiót.
 TEST - NO RF	TESZT - NINCS RF
-Test (dry run, no RF)	Teszt (szárazfutás, RF nélkül)
 Test (no RF)	Teszt (RF nélkül)
 Test: the IQ the radio would get	Teszt: az IQ, amit a rádió kapna
 The IQ going to the radio	A rádiónak küldött IQ
@@ -1143,8 +1088,6 @@ The transmit panel is in its own window.	Az adás panel saját ablakban van.
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	Hozzáadódik a rádiónak küldött frekvenciához, olyan rádiónál, amely eltolva sugároz.
 TX channel	TX csatorna
 Transmit	Adás
-Transmitting	Adás folyamatban
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	Modulálatlan vivőhullám ezen a frekvencián és szinten az adás beállításához (meghajtás, szűrő, ÁHF, műterhelés szintje), nem üzenet. Tartsd lenyomva a gombot. A leállítás továbbra is működik. Nem mentődik adásként.
 What will be sent (preview)	Mi lesz elküldve (előnézet)
 at full scale: the limiter will round the peaks	teljes kivezérlésen: a limiter lekerekíti a csúcsokat
 making the preview...	előnézet készül...
@@ -2736,121 +2679,38 @@ decoder locked: gain frozen	dekóder bekapcsolódott: az erősítés rögzítve
 at the end of the gain range	az erősítési tartomány végén
 holding the level	a szint tartása
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	A 0 a szokásos elnyomott vivő. Egy kis vivő segít a vevőnek ráakadni; a tartomány teteje olyan erős, mint a leghangosabb hang.
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Egy második hang az elsőhöz adva (0 = ki). Két hang kéttónusú linearitási tesztet ad.
-AM (carrier and sidebands)	AM (vivő és oldalsávok)
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	Az AM a vivőt és mindkét oldalsávot küldi. Az elnyomott vivős kétoldalsávos csak az oldalsávokat küldi.
-Audio above this level is turned down.	Az e szint feletti hangot lehalkítja.
-Audio frequency	Hangfrekvencia
-Boosts the high notes before sending (0 = off).	Küldés előtt kiemeli a magas hangokat (0 = ki).
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Küldés előtt kiemeli a magas hangokat. 50 µs Európában és a világ nagy részén, 75 µs Amerikában.
 CTCSS tone	CTCSS hang
-Carrier injection	Vivő beinjektálás
-Carrier level	Vivőszint
-Choose a radio below, or switch on the test (no RF).	Válassz alul egy rádiót, vagy kapcsold be a tesztet (RF nélkül).
 Choose a signal in the list.	Válassz egy jelet a listából.
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	Levágja az e hangmagasság feletti hangot, ez adja a jel szélességét (0 = ki).
-DSB (suppressed carrier)	DSB (elnyomott vivő)
 Default: %s	Alapértelmezett: %s
 Deviation	Elhajlás
-Esc = stop	Esc = leállítás
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	Kiegyenlíti a hangos és halk beszédet, hogy a jel erős maradjon túlmodulálás nélkül.
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	A jel összes beállítása: moduláció, hang, szűrők, kimenet és időzítés. Az alapértékek ésszerűek; csak módosításhoz nyisd meg.
-Filters	Szűrők
 Follow the receiver	A vevőt követi
 Frequency offset	Frekvenciaeltolás
-Gain added after the compressor.	A kompresszor után hozzáadott erősítés.
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	A teljes jelre közvetlenül a rádió előtt alkalmazott erősítés. Csökkentsd, ha a mérő vágást mutat; a rádió saját erősítése feljebb állítható.
 HOLD TO TRANSMIT	TARTSD LENYOMVA AZ ADÁSHOZ
-High-pass (low cut)	Felüláteresztő (mélyvágó)
-How far the RDS subcarrier deviates the carrier.	Mennyivel téríti el az RDS-alvivő a vivőt.
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	Mennyire téríti el a hang a frekvenciát. A 2,5 kHz 12,5 kHz-es csatornához, az 5 kHz 25 kHz-es csatornához való.
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	Mennyire téríti el a hang a frekvenciát. A műsorszóró FM 75 kHz-et használ.
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	Mennyire modulálja a hang a jelet. A teljes moduláció 100 százaléknál van; efölött túlmodulál és torzít.
-How fast the compressor lets go after a loud passage.	Milyen gyorsan enged el a kompresszor egy hangos szakasz után.
-How long the VOX stays open after the sound stops.	Meddig marad nyitva a VOX a hang megszűnése után.
-How loud the audio must be to open the VOX.	Milyen hangosnak kell lennie a hangnak a VOX kinyitásához.
-How loud the test tone is, as a share of full audio.	Milyen hangos a tesztjel, a teljes hangszint arányában.
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	Mennyire halkítja le a küszöb feletti hangot; a 20 már majdnem kemény korlátozó.
-Key-up fade-in	Adásindítási felfutás
-Left level	Bal szint
-Left test tone	Bal oldali tesztjel
-Low-pass (audio bandwidth)	Aluláteresztő (hangsávszélesség)
-Lower sideband (LSB)	Alsó oldalsáv (LSB)
-Make-up gain	Kiegészítő erősítés
-Mirror the spectrum	Spektrum tükrözése
-Modulation depth	Modulációs mélység
 Music (not speech)	Zene (nem beszéd)
 Name for a new preset	Új előbeállítás neve
 No presets saved for this signal yet.	Ehhez a jelhez még nincs mentett előbeállítás.
 Output	Kimenet
 Output level	Kimeneti szint
-Output trim	Kimeneti finomhangolás
-Peak level	Csúcsszint
-Pilot level	Pilotszint
-Pitch	Hangmagasság
 Presets	Előbeállítások
 Preview	Előnézet
-Programme type	Műsortípus
 Push to talk (hold the button)	Nyomd a beszéléshez (tartsd lenyomva a gombot)
-RDS	RDS
-RDS level	RDS szint
-RF level	RF szint
 RX %.6f MHz	RX %.6f MHz
-Ratio	Arány
-Release	Elengedés
-Removes rumble and hum below this pitch (0 = off).	Eltávolítja a zúgást és a búgást e hangmagasság alatt (0 = ki).
 Reset to default	Alapértékek visszaállítása
-Right level	Jobb szint
-Right test tone	Jobb oldali tesztjel
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	A jelgenerátort a rádió mintavételi sebességén a semmibe futtatja: nem nyit meg rádiót, és semmit sem küld. A spektrum és a szintek azt mutatják, mi menne ki.
 Save preset	Előbeállítás mentése
 Saves the settings below, the frequency and the level under this name.	Elmenti az alábbi beállításokat, a frekvenciát és a szintet ezen a néven.
-Second test tone	Második tesztjel
-Sends the 19 kHz pilot and the stereo difference signal.	Elküldi a 19 kHz-es pilotot és a sztereó különbségi jelet.
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	Egy 57 kHz-es alvivőn elküldi az állomás nevét, a rádiószöveget és a műsortípust.
-Speech compressor	Beszédkompresszor
 Start transmitting	Adás indítása
 Stereo	Sztereó
 Stop transmitting	Adás leállítása
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	Felcseréli az I-t és a Q-t, így a jel megfordul: a felső oldalsáv alsóvá válik. Fordító rádióhoz vagy keverőhöz.
 TRANSMITTING (release to stop)	ADÁS (engedd el a leállításhoz)
 TX = RX	TX = RX
 TX independent	TX független
-Test tone	Tesztjel
-Test tone level	Tesztjel szintje
-The 19 kHz stereo pilot, as a share of the full deviation.	A 19 kHz-es sztereó pilot a teljes elhajlás arányában.
-The RDS flag for a station that carries traffic announcements.	Az RDS-jelző a közlekedési közleményeket sugárzó állomáshoz.
-The RDS flag for music instead of speech.	Az RDS-jelző zenéhez beszéd helyett.
-The RDS flag that a traffic announcement is on the air.	Az RDS-jelző, hogy éppen közlekedési közlemény megy.
-The RDS programme type code (0 to 31; 10 is pop music).	Az RDS műsortípuskód (0–31; a 10 a popzene).
-The largest signal as a share of full scale.	A legnagyobb jel a teljes skála arányában.
-The left test tone, as a share of full audio.	A bal oldali tesztjel a teljes hangszint arányában.
-The pitch of the Morse tone, as an offset above the dial frequency.	A morzehang hangmagassága, a hangolt frekvencia feletti eltolásként.
-The pitch of the test tone, used when the audio input is the test tone.	A tesztjel hangmagassága, ha a hangbemenet a tesztjel.
-The pitch on the left channel, used when the audio input is the test tone.	A bal csatorna hangmagassága, ha a hangbemenet a tesztjel.
-The pitch on the right channel (0 = three times the left).	A jobb csatorna hangmagassága (0 = a bal háromszorosa).
 The radio's output level. Start low.	A rádió kimeneti szintje. Kezdd alacsonyan.
-The right test tone, as a share of full audio.	A jobb oldali tesztjel a teljes hangszint arányában.
-The signal fades in over this time after Start, so the key-up does not click.	A jel indítás után ennyi idő alatt halkan felfut, hogy az adásbekapcsolás ne ropogjon.
-The signal goes out only while there is sound on the audio input.	A jel csak addig megy ki, amíg van hang a hangbemeneten.
-The signal goes out only while you hold the button down.	A jel csak addig megy ki, amíg lenyomva tartod a gombot.
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	A vivő mérete a teljes skála arányában. 85 százalékos mélységnél a csúcsok nagyjából a teljes skálát érik el.
-The size of the signal as a share of full scale.	A jel mérete a teljes skála arányában.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Az adási frekvencia követi a vevőét. Ha itt másikat írsz be, szétválnak. Kattints a szétválasztáshoz.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Az adási frekvencia független. A vevő %.6f MHz-en van. Kattints, hogy az adó kövesse.
 Threshold	Küszöb
 Timing	Időzítés
-Traffic announcement now	Közlekedési közlemény most
-Traffic programme	Közlekedési műsor
-Upper sideband (USB)	Felső oldalsáv (USB)
-VOX (transmit on voice)	VOX (adás hangra)
-VOX hang time	VOX tartási idő
-VOX threshold	VOX küszöb
 Well-known frequencies of this signal: pick one to set the transmit frequency	A jel ismert frekvenciái: válassz egyet az adási frekvencia beállításához
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	Hol van a jel közepe a hangsávban, a hangolt frekvencia feletti eltolásként.
-Where the signal sits in the audio passband, as an offset above the dial frequency.	Hol van a jel a hangsávban, a hangolt frekvencia feletti eltolásként.
-Which sideband is sent.	Melyik oldalsávot küldi.
 follows the receiver	a vevőt követi
 on	be
 # full screen on every map

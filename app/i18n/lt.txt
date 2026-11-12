@@ -8,47 +8,26 @@
 -	-
 1 kHz test tone	1 kHz bandomasis tonas
 8 MHz	8 MHz
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	Kaip paveikslėlis siunčiamas P6 PPM; bet kuris kitas ar tuščias failas naudoja bandomąjį paveikslėlį. Ant jo išspausdinamas šaukinys.
-A SAME header. ZCZC- is added when missing.	SAME antraštė. ZCZC- pridedama, jei trūksta.
-Aircraft registration	Orlaivio registracija
-An RS41 with this serial. Empty: the demo sondes.	RS41 su šiuo serijos numeriu. Tuščia: demonstraciniai zondai.
 Are you sure? This clears all previous data and cannot be undone.	Ar tikrai? Tai išvalo visus ankstesnius duomenis ir negali būti atšaukta.
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	ATSC 3.0 naudoja ROUTE / fMP4 demonstraciją; pasirinktinis MPEG-TS nėra naudingosios apkrovos kelias.
 Audio file	Garso failas
 Audio input	Garso įvestis
-AX.25 UI frame. Empty: the demo CubeSat cycle.	AX.25 UI kadras. Tuščia: demonstracinis CubeSat ciklas.
 Baud	Baud
 Browse…	Naršyti…
-Callsign / my ID	Šaukinys / mano ID
-Capcode	Capcode
 Carrier tune	Nešlio derinimas
 Clear all	Išvalyti viską
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	Išvalo visus ankstesnius duomenis: visų režimų iššifruotus sąrašus (orlaivius, laivus, žinutes, paveikslėlius ir kt.) visuose atidarytuose imtuvuose. Diske išsaugota kopija taip pat ištuštinama.
-Code rate / MODCOD index	Kodo sparta / MODCOD indeksas
-Colour code	Spalvos kodas
 Comment	Komentaras
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	D2-MAC bandomoji scena (savo vaizdo įrašas šiame analoginiame generatoriuje nepalaikomas).
 DATV (DVB-S/S2 file)	DATV (DVB-S/S2 failas)
 Default input	Numatytoji įvestis
 Destination	Paskirtis
-Destination / ID	Paskirtis / ID
-Destination ID	Paskirties ID
 Device ID	Įrenginio ID
 Dial frequency the decoder should assume (the sound card is not tuned)	Rinkimo dažnis, kurį dekoderis turi laikyti (garso plokštė nederinama)
 DVB standard	DVB standartas
-Empty: the demo 802.15.4 scene.	Tuščia: demonstracinė 802.15.4 scena.
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Tuščia: demonstracinė FLARM scena. Šis ID nepakuojamas į nepaskelbtą naujesnį protokolą.
-Empty: the demo Mode S uplink scene.	Tuščia: demonstracinė Mode S uplink scena.
-Empty: the demo VDES scene.	Tuščia: demonstracinė VDES scena.
 File	Failas
-File to send	Siunčiamas failas
 Free text	Laisvas tekstas
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Stiprinimo valdikliai taikomi tik radijams (ne įrašui, garso plokštei ar sintetiniam signalui)
 I/Q stereo	I/Q stereo
-ICAO address	ICAO adresas
-Image (PNG / PPM)	Paveikslėlis (PNG / PPM)
-Image (PPM)	Paveikslėlis (PPM)
 Input device	Įvesties įrenginys
 Latitude	Platuma
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	libcodec2 neįkelta: gyvas kodavimas išjungtas. 1 kHz tonas, tyla ar WAV/MP3 vis tiek gali būti siunčiami.
@@ -62,57 +41,30 @@ Message	Žinutė
 MHz	MHz
 Mic level	Mikrofono lygis
 Microphone	Mikrofonas
-MMSI	MMSI
 Mode	Režimas
-Morse identification, up to four letters.	Morzės identifikacija, iki keturių raidžių.
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX siunčia tekstą (ZCZC / NNNN pridedama, jei trūksta). DSC (kai pasirinkta ši paslauga) naudoja MMSI.
 No Red Pitaya answered on this computer's networks (is its SDR transceiver app running?): type its address.	Šio kompiuterio tinkluose neatsakė joks Red Pitaya (ar paleista jo SDR transceiver programa?): įveskite jo adresą.
-PAN / short address	PAN / trumpasis adresas
 Path	Kelias
-Payload text	Naudingosios apkrovos tekstas
-Power (dBm)	Galia (dBm)
-Pre-emphasis	Pre-emphasis
-PSK variant	PSK variantas
 QO-100 path	QO-100 kelias
 Radio ID	Radijo ID
-Radio text (RT)	Radijo tekstas (RT)
-RDS PI	RDS PI
 Report	Ataskaita
-Reverse (mark is the upper tone)	Atvirkštinis (mark yra viršutinis tonas)
-RFPI	RFPI
-RFPI of the base station.	Bazinės stoties RFPI.
 Roll-off	Roll-off
-Satellite standard	Palydovo standartas
 searching for Red Pitaya boards…	ieškoma Red Pitaya plokščių…
 Send analog NFM of the audio instead of the digital test pattern	Siųsti analoginį NFM iš garso vietoj skaitmeninio bandomojo rašto
 Send analog NFM of the microphone or a file instead of the test scene	Siųsti analoginį NFM iš mikrofono ar failo vietoj bandomosios scenos
-Serial / ID	Serijos nr. / ID
 Shift	Poslinkis
 Sideband	Šoninė juosta
 Silence	Tyla
 sound card	garso plokštė
 SSB (microphone)	SSB (mikrofonas)
-SSTV mode	SSTV režimas
-Station name (PS)	Stoties pavadinimas (PS)
-Symbol rate (Hz)	Simbolių dažnis (Hz)
 Talkgroup	Talkgroup
-test DJI DroneID scene (custom serial is not packed)	bandomoji DJI DroneID scena (savas serijos numeris nepakuojamas)
-test downlink scene (this generator does not take a custom message)	bandomoji downlink scena (šis generatorius nepriima savos žinutės)
-test LRPT/HRIT scene (custom image not wired)	bandomoji LRPT/HRIT scena (savas paveikslėlis nepajungtas)
-test NCDXF-style beacon scene	bandomoji NCDXF tipo švyturio scena
-test weather-fax chart (custom image not wired)	bandomoji orų faksimilės schema (savas paveikslėlis nepajungtas)
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	TETRA ACELP čia nekoduojamas. Rodomi spalvos kodas ir ID; siunčiamas žemyn nukreiptas bandomasis raštas. Vietoj to galima siųsti 1 kHz toną, tylą ar WAV/MP3 kaip analoginį NFM.
 Text	Tekstas
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	Garso plokštės įrašymo sparta. Variklis veikia šia sparta; derinti radijo nėra.
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	Failo baitai siunčiami kaip HamDRM objektas su šiuo šaukiniu. Tuščias failas: bandomasis paveikslėlis.
 The microphone starts only when you press START TRANSMITTING.	Mikrofonas įsijungia tik paspaudus START TRANSMITTING.
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	Registracija ir laisvas tekstas išeina į eterį kaip H1 / ACARS downlink. Tuščia: demonstracinis srautas.
 this mode has no transmit generator	šis režimas neturi siuntimo generatoriaus
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	Šis vokoderis negali koduoti: OnAir įkelia mbelib tik dekodavimui (AMBE/IMBE). Paskirties ID / talkgroup / spalvos kodas vis tiek išeina į eterį; balso bitai yra bandomasis raštas. Vietoj to galima siųsti 1 kHz toną, tylą ar WAV/MP3 kaip analoginį NFM.
-Timeslot	Laiko tarpas
 To	To
 USB audio	USB garsas
-Vessel name	Laivo pavadinimas
 View	Rodinys
 Help	Pagalba
 Language	Kalba
@@ -153,8 +105,6 @@ State	Būsena
 Channel	Kanalas
 Delay	Vėlinimas
 dropped	prarasta
-level %.1f dBFS	lygis %.1f dBFS
-load %.0f%%	apkrova %.0f%%
 FM: no station	FM: stoties nėra
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  paslaugų: %d
 OK	Gerai
@@ -499,9 +449,7 @@ Satellite	Palydovas
 Max el	Maks. aukštis
 Duration	Trukmė
 Frequency	Dažnis
-AOS in %d:%02d:%02d	AOS po %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, maks. %.0f laipsn.
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  aukšt. %.0f  %.0f km\nDopleris %+.0f Hz
 Track	Sekti
 Auto start at AOS, stop at LOS	Automatiškai pradėti per AOS, sustoti per LOS
 Auto record IQ	Automatiškai įrašyti IQ
@@ -990,7 +938,6 @@ Frequency (MHz)	Dažnis (MHz)
 +14 dB amplifier	+14 dB stiprintuvas
 Repeat until stopped	Kartoti, kol sustabdysite
 seconds	sekundės
-START TRANSMITTING	PRADĖTI SIŲSTI
 This radio has no transmit driver in OnAir.	Šis radijas neturi siuntimo tvarkyklės OnAir.
 Before you transmit	Prieš siunčiant
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	Siųsti reikia licencijos ar leidimo ten, kur esate. Atsakote už tai, ką skleidžiate, ir už tai, kad netrukdytumėte kitiems (įskaitant tarnybas, kuriomis žmonės pasitiki saugumo sumetimais). Prieš pradėdami prijunkite prie radijo anteną, slopintuvą arba netikrą apkrovą. OnAir neriboja nei dažnio, nei galios: galioja tik paties radijo ribos.
@@ -1145,10 +1092,8 @@ Sample rate	Atrankos dažnis
 Search signals...	Ieškoti signalų...
 Settings	Nustatymai
 Signal	Signalas
-Space = start / stop     Esc = stop	Tarpas = pradėti / stabdyti     Esc = stabdyti
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	Sustabdo siuntimą ar bandymą, nešlį ir laukiantį paleidimą bei atlaisvina radiją.
 TEST - NO RF	BANDYMAS - BE RF
-Test (dry run, no RF)	Bandymas (sausas paleidimas, be RF)
 Test (no RF)	Bandymas (be RF)
 Test: the IQ the radio would get	Bandymas: IQ, kurį gautų radijas
 The IQ going to the radio	Radijui siunčiamas IQ
@@ -1157,8 +1102,6 @@ The transmit panel is in its own window.	Siuntimo skydelis yra savo lange.
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	Pridedama prie radijui siunčiamo dažnio, kai radijas spinduliuoja nukrypęs nuo dažnio.
 TX channel	TX kanalas
 Transmit	Siųsti
-Transmitting	Siunčiama
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	Nemoduliuotas nešlys šiuo dažniu ir lygiu siuntimui derinti (galia, filtras, SWR, fiktyvios apkrovos lygis), ne žinutė. Laikykite mygtuką. Stop vis tiek veikia. Neišsaugoma kaip siuntimas.
 What will be sent (preview)	Kas bus išsiųsta (peržiūra)
 at full scale: the limiter will round the peaks	visa skalė: ribotuvas suapvalins pikus
 making the preview...	kuriama peržiūra...
@@ -2750,121 +2693,38 @@ decoder locked: gain frozen	dekoderis užsifiksavo: stiprinimas užfiksuotas
 at the end of the gain range	stiprinimo ribos gale
 holding the level	lygis išlaikomas
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 – įprasta nuslopinta nešlio banga. Šiek tiek nešlio padeda imtuvui užsifiksuoti; didžiausia reikšmė tokia stipri kaip garsiausias garsas.
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Antras tonas, pridedamas prie pirmojo (0 = išjungta). Du tonai sudaro dviejų tonų tiesiškumo bandymą.
-AM (carrier and sidebands)	AM (nešlys ir šoninės juostos)
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM siunčia nešlį ir abi šonines juostas. Dvigubos šoninės juostos su nuslopintu nešliu siunčia tik šonines juostas.
-Audio above this level is turned down.	Garsas, viršijantis šį lygį, nutildomas.
-Audio frequency	Garso dažnis
-Boosts the high notes before sending (0 = off).	Prieš siunčiant sustiprina aukštus tonus (0 = išjungta).
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Prieš siunčiant sustiprina aukštus tonus. 50 µs Europoje ir didžiojoje pasaulio dalyje, 75 µs Amerikoje.
 CTCSS tone	CTCSS tonas
-Carrier injection	Nešlio įterpimas
-Carrier level	Nešlio lygis
-Choose a radio below, or switch on the test (no RF).	Pasirinkite radiją žemiau arba įjunkite bandymą (be RF).
 Choose a signal in the list.	Pasirinkite signalą sąraše.
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	Nukerpa garsą virš šio dažnio, o tai nustato signalo plotį (0 = išjungta).
-DSB (suppressed carrier)	DSB (nuslopintas nešlys)
 Default: %s	Numatytoji: %s
 Deviation	Nuokrypis
-Esc = stop	Esc = stabdyti
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	Išlygina garsią ir tylią kalbą, kad signalas liktų stiprus be perdėto moduliavimo.
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	Visi šio signalo nustatymai: moduliacija, garsas, filtrai, išvestis ir laikas. Numatytosios vertės yra protingos; atverkite tai tik norėdami jas keisti.
-Filters	Filtrai
 Follow the receiver	Sekti imtuvą
 Frequency offset	Dažnio poslinkis
-Gain added after the compressor.	Stiprinimas, pridedamas po kompresoriaus.
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	Stiprinimas visam signalui prieš pat radiją. Sumažinkite, kai matuoklis rodo nukirpimą; paties radijo stiprinimas nustatomas aukščiau.
 HOLD TO TRANSMIT	LAIKYKITE NUSPAUSTĄ SIUSTI
-High-pass (low cut)	Aukšto dažnio filtras (žemų pjovimas)
-How far the RDS subcarrier deviates the carrier.	Kiek RDS posluostis nukreipia nešlį.
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	Kiek garsas keičia dažnį. 2,5 kHz skirta 12,5 kHz kanalui, 5 kHz – 25 kHz kanalui.
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	Kiek garsas keičia dažnį. Transliacinis FM naudoja 75 kHz.
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	Kiek garsas moduliuoja signalą. Pilna moduliacija yra ties 100 procentų; daugiau – perdėta moduliacija ir iškraipymai.
-How fast the compressor lets go after a loud passage.	Kaip greitai kompresorius atsileidžia po garsios vietos.
-How long the VOX stays open after the sound stops.	Kiek ilgai VOX lieka atviras garsui nutilus.
-How loud the audio must be to open the VOX.	Kokio garsumo turi būti garsas, kad atsidarytų VOX.
-How loud the test tone is, as a share of full audio.	Kokio garsumo bandomasis tonas, kaip viso garso dalis.
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	Kaip stipriai nuslopinamas garsas virš slenksčio; 20 artima kietam ribotuvui.
-Key-up fade-in	Įjungimo švelnus didėjimas
-Left level	Kairysis lygis
-Left test tone	Kairysis bandomasis tonas
-Low-pass (audio bandwidth)	Žemų dažnių filtras (garso juostos plotis)
-Lower sideband (LSB)	Apatinė šoninė juosta (LSB)
-Make-up gain	Kompensacinis stiprinimas
-Mirror the spectrum	Veidrodžiu apversti spektrą
-Modulation depth	Moduliacijos gylis
 Music (not speech)	Muzika (ne kalba)
 Name for a new preset	Naujo išankstinio nustatymo pavadinimas
 No presets saved for this signal yet.	Šiam signalui dar nėra išsaugotų išankstinių nustatymų.
 Output	Išvestis
 Output level	Išvesties lygis
-Output trim	Išvesties koregavimas
-Peak level	Didžiausias lygis
-Pilot level	Pilotinio signalo lygis
-Pitch	Aukštis
 Presets	Išankstiniai nustatymai
 Preview	Peržiūra
-Programme type	Programos tipas
 Push to talk (hold the button)	Paspausk ir kalbėk (laikykite mygtuką nuspaustą)
-RDS	RDS
-RDS level	RDS lygis
-RF level	RF lygis
 RX %.6f MHz	RX %.6f MHz
-Ratio	Santykis
-Release	Atleidimas
-Removes rumble and hum below this pitch (0 = off).	Pašalina dundesį ir ūžesį žemiau šio dažnio (0 = išjungta).
 Reset to default	Atkurti numatytąsias vertes
-Right level	Dešinysis lygis
-Right test tone	Dešinysis bandomasis tonas
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	Paleidžia signalo generatorių radijo imties dažniu į tuštumą: radijas neatidaromas ir niekas nesiunčiama. Spektras ir lygiai rodo, kas būtų išsiųsta.
 Save preset	Išsaugoti nustatymą
 Saves the settings below, the frequency and the level under this name.	Išsaugo žemiau esančius nustatymus, dažnį ir lygį šiuo pavadinimu.
-Second test tone	Antrasis bandomasis tonas
-Sends the 19 kHz pilot and the stereo difference signal.	Siunčia 19 kHz pilotinį signalą ir stereo skirtuminį signalą.
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	Siunčia stoties pavadinimą, radijo tekstą ir programos tipą 57 kHz posluosčiu.
-Speech compressor	Kalbos kompresorius
 Start transmitting	Pradėti siųsti
 Stereo	Stereo
 Stop transmitting	Nustoti siųsti
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	Sukeičia I ir Q, todėl signalas apverčiamas: viršutinė šoninė juosta tampa apatine. Radijui ar maišytuvui, kuris apverčia.
 TRANSMITTING (release to stop)	SIUNČIA (atleiskite, kad sustotų)
 TX = RX	TX = RX
 TX independent	TX nepriklausomas
-Test tone	Bandomasis tonas
-Test tone level	Bandomojo tono lygis
-The 19 kHz stereo pilot, as a share of the full deviation.	19 kHz stereo pilotinis signalas, kaip viso nuokrypio dalis.
-The RDS flag for a station that carries traffic announcements.	RDS žymė stočiai, transliuojančiai eismo pranešimus.
-The RDS flag for music instead of speech.	RDS žymė muzikai vietoje kalbos.
-The RDS flag that a traffic announcement is on the air.	RDS žymė, kad eteryje eismo pranešimas.
-The RDS programme type code (0 to 31; 10 is pop music).	RDS programos tipo kodas (nuo 0 iki 31; 10 – pop muzika).
-The largest signal as a share of full scale.	Didžiausias signalas, kaip visos skalės dalis.
-The left test tone, as a share of full audio.	Kairysis bandomasis tonas, kaip viso garso dalis.
-The pitch of the Morse tone, as an offset above the dial frequency.	Morzės tono aukštis kaip poslinkis virš nustatyto dažnio.
-The pitch of the test tone, used when the audio input is the test tone.	Bandomojo tono aukštis, naudojamas, kai garso įvestis yra bandomasis tonas.
-The pitch on the left channel, used when the audio input is the test tone.	Kairiojo kanalo tono aukštis, naudojamas, kai garso įvestis yra bandomasis tonas.
-The pitch on the right channel (0 = three times the left).	Dešiniojo kanalo tono aukštis (0 = tris kartus didesnis nei kairiojo).
 The radio's output level. Start low.	Radijo išvesties lygis. Pradėkite nuo žemo.
-The right test tone, as a share of full audio.	Dešinysis bandomasis tonas, kaip viso garso dalis.
-The signal fades in over this time after Start, so the key-up does not click.	Pradėjus signalas šį laiką švelniai didėja, kad įjungimas nespragtelėtų.
-The signal goes out only while there is sound on the audio input.	Signalas siunčiamas tik tol, kol garso įvestyje yra garso.
-The signal goes out only while you hold the button down.	Signalas siunčiamas tik tol, kol laikote mygtuką nuspaustą.
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Nešlio dydis kaip visos skalės dalis. Esant 85 procentų gyliui, viršūnės pasiekia beveik visą skalę.
-The size of the signal as a share of full scale.	Signalo dydis kaip visos skalės dalis.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Siuntimo dažnis seka imtuvo dažnį. Įvedus kitą čia, jie atsiejami. Spustelėkite, kad atsietumėte.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Siuntimo dažnis yra atskiras. Imtuvas veikia %.6f MHz dažniu. Spustelėkite, kad siųstuvas jį sektų.
 Threshold	Slenkstis
 Timing	Laikas
-Traffic announcement now	Dabar eismo pranešimas
-Traffic programme	Eismo programa
-Upper sideband (USB)	Viršutinė šoninė juosta (USB)
-VOX (transmit on voice)	VOX (siųsti balsu)
-VOX hang time	VOX išlaikymo laikas
-VOX threshold	VOX slenkstis
 Well-known frequencies of this signal: pick one to set the transmit frequency	Žinomi šio signalo dažniai: pasirinkite vieną siuntimo dažniui nustatyti
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	Kur garso juostoje yra signalo vidurys, kaip poslinkis virš nustatyto dažnio.
-Where the signal sits in the audio passband, as an offset above the dial frequency.	Kur garso juostoje yra signalas, kaip poslinkis virš nustatyto dažnio.
-Which sideband is sent.	Kuri šoninė juosta siunčiama.
 follows the receiver	seka imtuvą
 on	įjungta
 # full screen on every map

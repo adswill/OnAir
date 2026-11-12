@@ -212,7 +212,7 @@ void loadPackage(const std::string& path) {
 }
 
 void uploadWindow() {
-    ImGui::SetNextWindowSize(ImVec2(560 * gUi, 640 * gUi), ImGuiCond_FirstUseEver);
+    firstWindowSize(560 * gUi, 640 * gUi);
     if (!ImGui::Begin(trw("Upload plugin"), &U.showUpload)) { ImGui::End(); return; }
     ImGui::TextDisabled("%s", tr("1. Sign in"));
     signInBlock();

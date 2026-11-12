@@ -3,47 +3,26 @@
 # Some entries are machine translations that no native speaker has reviewed yet: they are listed in unreviewed/nl.txt. Corrections are welcome.
 #  menus, status words, common buttons
 1 kHz test tone	1 kHz testtoon
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	Een P6 PPM wordt als beeld verzonden; elk ander of leeg bestand gebruikt het testbeeld. De roepletters worden erop gezet.
-A SAME header. ZCZC- is added when missing.	Een SAME-header. ZCZC- wordt toegevoegd als het ontbreekt.
-Aircraft registration	Registratie van het vliegtuig
-An RS41 with this serial. Empty: the demo sondes.	Een RS41 met dit serienummer. Leeg: de demosondes.
 Are you sure? This clears all previous data and cannot be undone.	Weet u het zeker? Hiermee worden alle eerdere gegevens gewist. Dit kan niet ongedaan worden gemaakt.
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	ATSC 3.0 gebruikt een ROUTE / fMP4-demo; een eigen MPEG-TS is niet het payloadpad.
 Audio file	Audiobestand
 Audio input	Audio-ingang
-AX.25 UI frame. Empty: the demo CubeSat cycle.	AX.25 UI-frame. Leeg: de demo-CubeSat-cyclus.
 Baud	Baud
 Browse…	Bladeren…
-Callsign / my ID	Roepletters / mijn ID
-Capcode	Capcode
 Carrier tune	Draaggolfafstemming
 Clear all	Alles wissen
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	Wist alle eerdere gegevens: de gedecodeerde lijsten van elke modus (vliegtuigen, schepen, berichten, beelden enzovoort), op elke geopende ontvanger. Ook de opgeslagen kopie op schijf wordt leeggemaakt.
-Code rate / MODCOD index	Coderate / MODCOD-index
-Colour code	Kleurcode
 Comment	Opmerking
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	D2-MAC-testbeeld (eigen video wordt door deze analoge generator niet ondersteund).
 DATV (DVB-S/S2 file)	DATV (DVB-S/S2-bestand)
 Default input	Standaardingang
 Destination	Bestemming
-Destination / ID	Bestemming / ID
-Destination ID	Bestemmings-ID
 Device ID	Apparaat-ID
 Dial frequency the decoder should assume (the sound card is not tuned)	Kiesfrequentie die de decoder moet aannemen (de geluidskaart wordt niet afgestemd)
 DVB standard	DVB-standaard
-Empty: the demo 802.15.4 scene.	Leeg: de demoscène voor 802.15.4.
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Leeg: de FLARM-demoscène. Dit ID wordt niet verpakt in het niet-gepubliceerde nieuwere protocol.
-Empty: the demo Mode S uplink scene.	Leeg: de Mode S-uplink-demoscène.
-Empty: the demo VDES scene.	Leeg: de VDES-demoscène.
 File	Bestand
-File to send	Te verzenden bestand
 Free text	Vrije tekst
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Versterkingsregelaars gelden alleen voor radio's (niet voor een opname, een geluidskaart of het synthetische signaal)
 I/Q stereo	I/Q-stereo
-ICAO address	ICAO-adres
-Image (PNG / PPM)	Afbeelding (PNG / PPM)
-Image (PPM)	Afbeelding (PPM)
 Input device	Ingangsapparaat
 Latitude	Latitude
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	libcodec2 is niet geladen: live coderen staat uit. Een 1 kHz-toon, stilte of een WAV/MP3 kan nog steeds worden verzonden.
@@ -55,57 +34,30 @@ LSB audio	LSB-audio
 Message	Bericht
 Mic level	Microfoonniveau
 Microphone	Microfoon
-MMSI	MMSI
 Mode	Modus
-Morse identification, up to four letters.	Morse-identificatie, maximaal vier letters.
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX verzendt de tekst (ZCZC / NNNN worden toegevoegd als ze ontbreken). DSC (als die dienst is gekozen) gebruikt de MMSI.
 OnAir still asks the radio for it, but the radio or its driver may not reach this frequency, or the signal may be weak or absent.	OnAir vraagt de radio er nog steeds om, maar de radio of het stuurprogramma bereikt deze frequentie mogelijk niet, of het signaal is zwak of afwezig.
-PAN / short address	PAN / kort adres
 Path	Pad
-Payload text	Payloadtekst
-Power (dBm)	Vermogen (dBm)
-Pre-emphasis	Pre-emphasis
-PSK variant	PSK-variant
 QO-100 path	QO-100-pad
 Radio ID	Radio-ID
-Radio text (RT)	Radiotekst (RT)
-RDS PI	RDS PI
 Report	Rapport
-Reverse (mark is the upper tone)	Omgekeerd (mark is de hogere toon)
-RFPI	RFPI
-RFPI of the base station.	RFPI van het basisstation.
 Roll-off	Roll-off
-Satellite standard	Satellietstandaard
 Send analog NFM of the audio instead of the digital test pattern	Analoge NFM van de audio verzenden in plaats van het digitale testpatroon
 Send analog NFM of the microphone or a file instead of the test scene	Analoge NFM van de microfoon of een bestand verzenden in plaats van de testscène
-Serial / ID	Serienummer / ID
 Shift	Shift
 Sideband	Zijband
 Silence	Stilte
 sound card	geluidskaart
 SSB (microphone)	SSB (microfoon)
-SSTV mode	SSTV-modus
-Station name (PS)	Stationsnaam (PS)
-Symbol rate (Hz)	Symboolsnelheid (Hz)
 Talkgroup	Talkgroup
-test DJI DroneID scene (custom serial is not packed)	test DJI DroneID-scène (eigen serienummer wordt niet verpakt)
-test downlink scene (this generator does not take a custom message)	test downlink-scène (deze generator accepteert geen eigen bericht)
-test LRPT/HRIT scene (custom image not wired)	test LRPT/HRIT-scène (eigen beeld niet aangesloten)
-test NCDXF-style beacon scene	test NCDXF-achtige bakenscène
-test weather-fax chart (custom image not wired)	test weerfaxkaart (eigen beeld niet aangesloten)
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	TETRA ACELP wordt hier niet gecodeerd. Kleurcode en ID's worden getoond; het downlink-testpatroon wordt verzonden. Een 1 kHz-toon, stilte of een WAV/MP3 kan in plaats daarvan als analoge NFM worden verzonden.
 Text	Tekst
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	De opnamesnelheid van de geluidskaart. De engine draait op deze snelheid; er is geen radio om af te stemmen.
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	De bestandsbytes gaan de lucht in als een HamDRM-object met deze roepletters. Leeg bestand: het testbeeld.
 The microphone starts only when you press START TRANSMITTING.	De microfoon start pas wanneer u op START ZENDEN drukt.
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	De registratie en vrije tekst gaan de lucht in als een H1 / ACARS-downlink. Leeg: het demoverkeer.
 This frequency is outside what this radio is specified for	Deze frequentie valt buiten het bereik waarvoor deze radio is gespecificeerd
 this mode has no transmit generator	deze modus heeft geen zendgenerator
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	Deze vocoder kan niet coderen: OnAir laadt mbelib alleen voor decodering (AMBE/IMBE). Bestemmings-ID / talkgroup / kleurcode gaan nog steeds de lucht in; de spraakbits zijn het testpatroon. Een 1 kHz-toon, stilte of een WAV/MP3 kan in plaats daarvan als analoge NFM worden verzonden.
-Timeslot	Timeslot
 To	To
 USB audio	USB-audio
-Vessel name	Scheepsnaam
 View	Weergave
 Help	Help
 Language	Taal
@@ -146,8 +98,6 @@ State	Status
 Channel	Kanaal
 Delay	Vertraging
 dropped	verloren
-level %.1f dBFS	niveau %.1f dBFS
-load %.0f%%	belasting %.0f%%
 FM: no station	FM: geen zender
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  %d diensten
 OK	OK
@@ -492,9 +442,7 @@ Satellite	Satelliet
 Max el	Max. elev.
 Duration	Duur
 Frequency	Frequentie
-AOS in %d:%02d:%02d	AOS over %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, max. %.0f gr.
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz
 Track	Volgen
 Auto start at AOS, stop at LOS	Automatisch starten bij AOS, stoppen bij LOS
 Auto record IQ	IQ automatisch opnemen
@@ -990,7 +938,6 @@ Frequency (MHz)	Frequentie (MHz)
 +14 dB amplifier	+14 dB-versterker
 Repeat until stopped	Herhalen tot stoppen
 seconds	seconden
-START TRANSMITTING	ZENDEN STARTEN
 This radio has no transmit driver in OnAir.	Deze radio heeft geen zenddriver in OnAir.
 Before you transmit	Voordat u zendt
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	Zenden vereist een licentie of toestemming waar u zich bevindt. U bent verantwoordelijk voor wat u uitzendt en voor het niet storen van anderen (ook diensten waarop mensen voor hun veiligheid vertrouwen). Sluit een antenne, een verzwakker of een kunstbelasting op de radio aan voordat u begint. OnAir beperkt noch de frequentie noch het vermogen: alleen de grenzen van de radio zelf gelden.
@@ -1145,10 +1092,8 @@ Sample rate	Samplefrequentie
 Search signals...	Signalen zoeken...
 Settings	Instellingen
 Signal	Signaal
-Space = start / stop     Esc = stop	Spatie = start / stop     Esc = stop
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	Stopt de uitzending of test, de draaggolf en een wachtende start, en geeft de radio vrij.
 TEST - NO RF	TEST - GEEN RF
-Test (dry run, no RF)	Test (proefrun, geen RF)
 Test (no RF)	Test (geen RF)
 Test: the IQ the radio would get	Test: de IQ die de radio zou krijgen
 The IQ going to the radio	De IQ die naar de radio gaat
@@ -1157,8 +1102,6 @@ The transmit panel is in its own window.	Het zendpaneel staat in een eigen venst
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	Wordt opgeteld bij de frequentie die naar de radio gaat, voor een radio die naast de frequentie uitzendt.
 TX channel	TX-kanaal
 Transmit	Zenden
-Transmitting	Zenden
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	Ongemoduleerde draaggolf op deze frequentie en dit niveau om de uitzending af te stellen (aansturing, filter, SWR, niveau op de kunstantenne), geen bericht. Houd de knop ingedrukt. Stop werkt altijd. Niet bewaard als zendend.
 What will be sent (preview)	Wat er verzonden wordt (voorbeeld)
 at full scale: the limiter will round the peaks	op volle schaal: de limiter rondt de pieken af
 making the preview...	voorbeeld wordt gemaakt...
@@ -2750,121 +2693,38 @@ decoder locked: gain frozen	decoder vergrendeld: versterking bevroren
 at the end of the gain range	aan het eind van het versterkingsbereik
 holding the level	niveau wordt vastgehouden
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 is de gewone onderdrukte draaggolf. Een beetje draaggolf helpt de ontvanger te vergrendelen; het bovenste einde van het bereik is even sterk als het luidste geluid.
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Een tweede toon bovenop de eerste (0 = uit). Twee tonen vormen een tweetoons-lineariteitstest.
-AM (carrier and sidebands)	AM (draaggolf en zijbanden)
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM zendt de draaggolf en beide zijbanden uit. Dubbele zijband met onderdrukte draaggolf zendt alleen de zijbanden uit.
-Audio above this level is turned down.	Geluid boven dit niveau wordt zachter gezet.
-Audio frequency	Audiofrequentie
-Boosts the high notes before sending (0 = off).	Versterkt de hoge tonen voor het zenden (0 = uit).
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Versterkt de hoge tonen voor het zenden. 50 µs in Europa en het grootste deel van de wereld, 75 µs in Amerika.
 CTCSS tone	CTCSS-toon
-Carrier injection	Draaggolfinjectie
-Carrier level	Draaggolfniveau
-Choose a radio below, or switch on the test (no RF).	Kies hieronder een radio of schakel de test in (zonder RF).
 Choose a signal in the list.	Kies een signaal in de lijst.
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	Knipt het geluid boven deze toonhoogte af, wat de breedte van het signaal bepaalt (0 = uit).
-DSB (suppressed carrier)	DSB (onderdrukte draaggolf)
 Default: %s	Standaard: %s
 Deviation	Deviatie
-Esc = stop	Esc = stoppen
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	Egaliseert luide en zachte spraak zodat het signaal sterk blijft zonder overmodulatie.
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	Alle instellingen van dit signaal: modulatie, audio, filters, uitgang en timing. De standaardwaarden zijn verstandig; open dit alleen om ze te wijzigen.
-Filters	Filters
 Follow the receiver	De ontvanger volgen
 Frequency offset	Frequentieverschuiving
-Gain added after the compressor.	Versterking die na de compressor wordt toegevoegd.
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	Versterking van het hele signaal vlak voor de radio. Zet hem lager als de meter clipping toont; de eigen versterking van de radio stel je hierboven in.
 HOLD TO TRANSMIT	HOUD INGEDRUKT OM TE ZENDEN
-High-pass (low cut)	Hoogdoorlaat (laagsnijder)
-How far the RDS subcarrier deviates the carrier.	Hoever de RDS-subdraaggolf de draaggolf afwijkt.
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	Hoever het geluid de frequentie laat variëren. 2,5 kHz hoort bij een kanaal van 12,5 kHz, 5 kHz bij een kanaal van 25 kHz.
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	Hoever het geluid de frequentie laat variëren. Omroep-FM gebruikt 75 kHz.
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	Hoever het geluid het signaal moduleert. Volle modulatie is 100 procent; meer geeft overmodulatie en vervorming.
-How fast the compressor lets go after a loud passage.	Hoe snel de compressor loslaat na een luide passage.
-How long the VOX stays open after the sound stops.	Hoe lang de VOX open blijft nadat het geluid stopt.
-How loud the audio must be to open the VOX.	Hoe luid het geluid moet zijn om de VOX te openen.
-How loud the test tone is, as a share of full audio.	Hoe luid de testtoon is, als deel van het volle geluidsniveau.
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	Hoe sterk geluid boven de drempel wordt teruggebracht; 20 komt dicht bij een harde limiter.
-Key-up fade-in	Opbouw bij het inschakelen
-Left level	Niveau links
-Left test tone	Testtoon links
-Low-pass (audio bandwidth)	Laagdoorlaat (audiobandbreedte)
-Lower sideband (LSB)	Onderste zijband (LSB)
-Make-up gain	Make-up-versterking
-Mirror the spectrum	Spectrum spiegelen
-Modulation depth	Modulatiediepte
 Music (not speech)	Muziek (geen spraak)
 Name for a new preset	Naam voor een nieuwe preset
 No presets saved for this signal yet.	Er zijn nog geen presets opgeslagen voor dit signaal.
 Output	Uitgang
 Output level	Uitgangsniveau
-Output trim	Uitgangstrim
-Peak level	Piekniveau
-Pilot level	Pilootniveau
-Pitch	Toonhoogte
 Presets	Presets
 Preview	Voorbeeld
-Programme type	Programmatype
 Push to talk (hold the button)	Push-to-talk (houd de knop ingedrukt)
-RDS	RDS
-RDS level	RDS-niveau
-RF level	RF-niveau
 RX %.6f MHz	RX %.6f MHz
-Ratio	Verhouding
-Release	Loslaten
-Removes rumble and hum below this pitch (0 = off).	Verwijdert gedreun en brom onder deze toonhoogte (0 = uit).
 Reset to default	Terug naar standaard
-Right level	Niveau rechts
-Right test tone	Testtoon rechts
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	Laat de signaalgenerator op de samplefrequentie van de radio in het niets draaien: er wordt geen radio geopend en er wordt niets uitgezonden. Spectrum en niveaus tonen wat eruit zou gaan.
 Save preset	Preset opslaan
 Saves the settings below, the frequency and the level under this name.	Slaat de instellingen hieronder, de frequentie en het niveau onder deze naam op.
-Second test tone	Tweede testtoon
-Sends the 19 kHz pilot and the stereo difference signal.	Zendt de 19-kHz-piloottoon en het stereoverschilsignaal uit.
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	Zendt de zendernaam, radiotekst en het programmatype uit op een subdraaggolf van 57 kHz.
-Speech compressor	Spraakcompressor
 Start transmitting	Zenden starten
 Stereo	Stereo
 Stop transmitting	Zenden stoppen
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	Verwisselt I en Q zodat het signaal wordt omgedraaid: een bovenste zijband wordt een onderste. Voor een radio of mixer die inverteert.
 TRANSMITTING (release to stop)	ZENDT (loslaten om te stoppen)
 TX = RX	TX = RX
 TX independent	TX onafhankelijk
-Test tone	Testtoon
-Test tone level	Niveau van de testtoon
-The 19 kHz stereo pilot, as a share of the full deviation.	De 19-kHz-stereopiloot, als deel van de volledige deviatie.
-The RDS flag for a station that carries traffic announcements.	De RDS-vlag voor een zender die verkeersberichten uitzendt.
-The RDS flag for music instead of speech.	De RDS-vlag voor muziek in plaats van spraak.
-The RDS flag that a traffic announcement is on the air.	De RDS-vlag dat er nu een verkeersbericht wordt uitgezonden.
-The RDS programme type code (0 to 31; 10 is pop music).	De RDS-programmatypecode (0 tot 31; 10 is popmuziek).
-The largest signal as a share of full scale.	Het grootste signaal als deel van het volle bereik.
-The left test tone, as a share of full audio.	De linker testtoon, als deel van het volle geluidsniveau.
-The pitch of the Morse tone, as an offset above the dial frequency.	De toonhoogte van de morsetoon, als verschuiving boven de afstemfrequentie.
-The pitch of the test tone, used when the audio input is the test tone.	De toonhoogte van de testtoon, gebruikt wanneer de audio-ingang de testtoon is.
-The pitch on the left channel, used when the audio input is the test tone.	De toonhoogte op het linkerkanaal, gebruikt wanneer de audio-ingang de testtoon is.
-The pitch on the right channel (0 = three times the left).	De toonhoogte op het rechterkanaal (0 = drie keer de linker).
 The radio's output level. Start low.	Het uitgangsniveau van de radio. Begin laag.
-The right test tone, as a share of full audio.	De rechter testtoon, als deel van het volle geluidsniveau.
-The signal fades in over this time after Start, so the key-up does not click.	Het signaal wordt na de start over deze tijd opgebouwd, zodat het inschakelen niet klikt.
-The signal goes out only while there is sound on the audio input.	Het signaal gaat alleen uit zolang er geluid op de audio-ingang is.
-The signal goes out only while you hold the button down.	Het signaal gaat alleen uit zolang je de knop ingedrukt houdt.
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	De grootte van de draaggolf als deel van het volle bereik. Bij een diepte van 85 procent halen de pieken ongeveer het volle bereik.
-The size of the signal as a share of full scale.	De grootte van het signaal als deel van het volle bereik.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	De zendfrequentie volgt die van de ontvanger. Een andere typen ontkoppelt ze. Klik om te ontkoppelen.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	De zendfrequentie staat los. De ontvanger staat op %.6f MHz. Klik om de zender die te laten volgen.
 Threshold	Drempel
 Timing	Timing
-Traffic announcement now	Verkeersbericht nu
-Traffic programme	Verkeersprogramma
-Upper sideband (USB)	Bovenste zijband (USB)
-VOX (transmit on voice)	VOX (zenden op spraak)
-VOX hang time	VOX-nalooptijd
-VOX threshold	VOX-drempel
 Well-known frequencies of this signal: pick one to set the transmit frequency	Bekende frequenties van dit signaal: kies er een om de zendfrequentie in te stellen
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	Waar het midden van het signaal in de audioband ligt, als verschuiving boven de afstemfrequentie.
-Where the signal sits in the audio passband, as an offset above the dial frequency.	Waar het signaal in de audioband ligt, als verschuiving boven de afstemfrequentie.
-Which sideband is sent.	Welke zijband wordt uitgezonden.
 follows the receiver	volgt de ontvanger
 on	aan
 # full screen on every map
