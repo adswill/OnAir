@@ -15,10 +15,11 @@
 
 namespace dect2::vgen {
 
+// Rtmp: an RTMP server (videogen_rtmp.h) that OBS Studio or another PC streams to; its sound is AudioSource::FromFile
 // Generator: a copy of the moving test picture of the transmitter's built-in test transport stream (demo_ts.cpp, the one the DVB-T2
 // T2Generator carries in its real PLP), drawn at the output resolution (drawTestCard); text goes on it with the overlay
-enum class Source { Camera, Picture, VideoFile, Generator };
-enum class AudioSource { Silence, Tone, FromFile, Microphone, AudioFile };   // AudioFile: your own sound file (or folder), see audioPath
+enum class Source { Camera, Picture, VideoFile, Generator, Rtmp };
+enum class AudioSource { Silence, Tone, FromFile, Microphone, AudioFile };   // FromFile: the video file's or the RTMP stream's; AudioFile: your own sound file (or folder), see audioPath
 enum class Output { File, Udp, Rtp, Transmitter };   // Transmitter: the transport stream waits in a queue for the transmitter (generatorSpec(instanceId))
 enum class Fit { Stretch, Letterbox, Crop };
 
@@ -30,6 +31,7 @@ struct GenConfig {
     bool loop = true;                  // start again at the end (a folder starts over from its first file); off: the stream ends with the last file
     double slideSeconds = 10;          // a folder of pictures: how long each is shown
     int pattern = 0;                   // Generator: 0 test card, 1 colour bars, 2 grey ramp
+    std::string rtmpUrl = "rtmp://0.0.0.0:1935/live/stream";   // Rtmp: where to listen (kRtmpDefaultUrl); OBS streams to rtmp://<this PC>:1935/live, key "stream"
     AudioSource audio = AudioSource::Tone;
     std::string micId;                 // empty = the default input
     double toneHz = 1000;
@@ -56,6 +58,7 @@ struct GenStats {
     double kbps = 0;                          // measured TS rate
     int lateFrames = 0;                       // live: frames the encoder was too slow for
     std::string videoEncoder, audioEncoder;   // the FFmpeg encoders actually used
+    std::string input;                        // Rtmp: waiting for a sender / what it sends / why listening failed
     std::string notice;                       // the video encoder had to be opened without the profile / B-frames (and why)
     std::string error;
 };

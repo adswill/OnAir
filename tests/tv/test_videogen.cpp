@@ -6,8 +6,11 @@
 //  5. a .ts file from a still picture (MPEG-2 + MP2, two audio tracks, set service ID and PIDs): PAT, PMT, SDT name, length and mux rate
 //  6. the same with H.264 when this FFmpeg has an H.264 encoder; every encoder found (hardware ones too) with the settings a user picks
 //  7. UDP and RTP streaming to a local port: whole TS datagrams, RTP header with payload type 33
+//  8. RTMP server input (#490): the listen address and the OBS settings; a sender (FFmpeg's RTMP client, as OBS) streams twice, the
+//     generator shows its picture and sound, black and silence in between, and listens again after the first one stops
 // Run from the source root (the overlay font is third_party/fonts/Inter-Medium.ttf).
 #include "dect2/tv/videogen.h"
+#include "dect2/tv/videogen_rtmp.h"
 #include "dect2/tx/tx.h"
 #include <algorithm>
 #include <atomic>
@@ -16,6 +19,7 @@
 #include <cmath>
 #include <cstdarg>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <filesystem>
 #include <fstream>
@@ -24,6 +28,8 @@
 extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
+#include <libavutil/channel_layout.h>
+#include <libavutil/opt.h>
 }
 #ifndef _WIN32
 #include <arpa/inet.h>
@@ -1009,6 +1015,195 @@ static void testStream(const fs::path& pic, bool rtp) {
 }
 #endif
 
+
+// ---- RTMP server input ----
+static void testRtmpUrls() {
+    std::string lu, err, server, key;
+    int port = 0;
+    CHECK(parseRtmpListenUrl(kRtmpDefaultUrl, lu, port, err) && lu == "rtmp://0.0.0.0:1935/live/stream" && port == 1935, "default RTMP url: %s %s", lu.c_str(), err.c_str());
+    CHECK(parseRtmpListenUrl("rtmp://:1940/app", lu, port, err) && lu == "rtmp://0.0.0.0:1940/app" && port == 1940, "no host, no key: %s", lu.c_str());
+    CHECK(parseRtmpListenUrl(" RTMP://192.168.1.5/live/ ", lu, port, err) && lu == "rtmp://192.168.1.5:1935/live" && port == 1935, "no port: %s", lu.c_str());
+    CHECK(!parseRtmpListenUrl("rtmps://0.0.0.0/live", lu, port, err), "rtmps is not served");
+    CHECK(!parseRtmpListenUrl("http://0.0.0.0/live", lu, port, err), "http is no RTMP address");
+    CHECK(!parseRtmpListenUrl("rtmp://0.0.0.0:99999/live", lu, port, err), "port out of range");
+    CHECK(!parseRtmpListenUrl("rtmp://0.0.0.0:12a/live", lu, port, err), "port not a number");
+    CHECK(!parseRtmpListenUrl("rtmp://0.0.0.0:1935", lu, port, err), "no application");
+    CHECK(!parseRtmpListenUrl("rtmp://0.0.0.0/live?x=1", lu, port, err), "query part");
+    rtmpObsSettings(kRtmpDefaultUrl, "192.168.1.20", server, key);
+    CHECK(server == "rtmp://192.168.1.20/live" && key == "stream", "OBS settings: %s / %s", server.c_str(), key.c_str());
+    rtmpObsSettings("rtmp://10.0.0.2:1940/app/a/b", "x", server, key);
+    CHECK(server == "rtmp://10.0.0.2:1940/app" && key == "a/b", "OBS settings with a port: %s / %s", server.c_str(), key.c_str());
+}
+
+// what OBS does: an RTMP client streaming H.264 + AAC as FLV, `seconds` long in real time, a grey picture (luma) and a 1 kHz tone
+static bool rtmpSend(const std::string& url, double seconds, int luma, std::string& err) {
+    const AVCodec* vc = avcodec_find_encoder_by_name("libx264");
+    const AVCodec* ac = avcodec_find_encoder_by_name("aac");
+    if (!vc || !ac) { err = "no libx264 / aac encoder"; return false; }
+    AVFormatContext* oc = nullptr;
+    if (avformat_alloc_output_context2(&oc, nullptr, "flv", url.c_str()) < 0 || !oc) { err = "no flv muxer"; return false; }
+    AVCodecContext* v = avcodec_alloc_context3(vc);
+    AVCodecContext* a = avcodec_alloc_context3(ac);
+    v->width = 320; v->height = 240; v->pix_fmt = AV_PIX_FMT_YUV420P; v->time_base = AVRational{1, 25}; v->framerate = AVRational{25, 1};
+    v->gop_size = 10; v->max_b_frames = 0; v->bit_rate = 400000;
+    av_opt_set(v->priv_data, "preset", "ultrafast", 0);
+    av_opt_set(v->priv_data, "tune", "zerolatency", 0);
+    a->sample_rate = 48000; a->sample_fmt = AV_SAMPLE_FMT_FLTP; a->bit_rate = 128000; a->time_base = AVRational{1, 48000};
+    av_channel_layout_default(&a->ch_layout, 2);
+    v->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    a->flags |= AV_CODEC_FLAG_GLOBAL_HEADER;
+    bool ok = avcodec_open2(v, vc, nullptr) >= 0 && avcodec_open2(a, ac, nullptr) >= 0;
+    AVStream* vs = ok ? avformat_new_stream(oc, nullptr) : nullptr;
+    AVStream* as = ok ? avformat_new_stream(oc, nullptr) : nullptr;
+    if (vs && as) {
+        avcodec_parameters_from_context(vs->codecpar, v); vs->time_base = v->time_base;
+        avcodec_parameters_from_context(as->codecpar, a); as->time_base = a->time_base;
+    } else ok = false;
+    // the server may still be starting: try to connect for two seconds
+    int r = -1;
+    for (int i = 0; ok && i < 40 && (r = avio_open(&oc->pb, url.c_str(), AVIO_FLAG_WRITE)) < 0; i++) std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    if (ok && r < 0) { err = "cannot connect to " + url; ok = false; }
+    if (ok && avformat_write_header(oc, nullptr) < 0) { err = "flv header"; ok = false; }
+    AVFrame* vf = av_frame_alloc();
+    AVFrame* af = av_frame_alloc();
+    AVPacket* pk = av_packet_alloc();
+    if (ok) {
+        vf->format = v->pix_fmt; vf->width = v->width; vf->height = v->height;
+        af->format = a->sample_fmt; af->nb_samples = a->frame_size; af->sample_rate = 48000;
+        av_channel_layout_copy(&af->ch_layout, &a->ch_layout);
+        ok = av_frame_get_buffer(vf, 0) >= 0 && av_frame_get_buffer(af, 0) >= 0;
+    }
+    auto drain = [&](AVCodecContext* cx, AVStream* st) {
+        while (avcodec_receive_packet(cx, pk) >= 0) {
+            av_packet_rescale_ts(pk, cx->time_base, st->time_base);
+            pk->stream_index = st->index;
+            if (av_interleaved_write_frame(oc, pk) < 0) ok = false;
+        }
+    };
+    const auto t0 = std::chrono::steady_clock::now();
+    int64_t aPts = 0;
+    for (int n = 0; ok && n < (int)(seconds * 25); n++) {
+        std::this_thread::sleep_until(t0 + std::chrono::milliseconds(40 * n));
+        if (av_frame_make_writable(vf) < 0) { ok = false; break; }
+        for (int y = 0; y < 240; y++) std::fill_n(vf->data[0] + (size_t)y * vf->linesize[0], 320, (uint8_t)luma);
+        for (int y = 0; y < 120; y++) { std::fill_n(vf->data[1] + (size_t)y * vf->linesize[1], 160, (uint8_t)128); std::fill_n(vf->data[2] + (size_t)y * vf->linesize[2], 160, (uint8_t)128); }
+        vf->pts = n;
+        if (avcodec_send_frame(v, vf) >= 0) drain(v, vs);
+        while (ok && (double)aPts / 48000 < (n + 1) / 25.0) {
+            if (av_frame_make_writable(af) < 0) { ok = false; break; }
+            for (int i = 0; i < af->nb_samples; i++) {
+                const float x = 0.3f * (float)std::sin(2 * M_PI * 1000 * (double)(aPts + i) / 48000);
+                ((float*)af->data[0])[i] = x;
+                ((float*)af->data[1])[i] = x;
+            }
+            af->pts = aPts;
+            aPts += af->nb_samples;
+            if (avcodec_send_frame(a, af) >= 0) drain(a, as);
+        }
+    }
+    if (ok) av_write_trailer(oc);
+    av_frame_free(&vf); av_frame_free(&af); av_packet_free(&pk);
+    avcodec_free_context(&v); avcodec_free_context(&a);
+    if (oc->pb) avio_closep(&oc->pb);
+    avformat_free_context(oc);
+    if (!ok && err.empty()) err = "sending failed";
+    return ok;
+}
+
+static int freeTcpPort() {
+#ifndef _WIN32
+    const int fd = socket(AF_INET, SOCK_STREAM, 0);
+    sockaddr_in a{};
+    a.sin_family = AF_INET;
+    a.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+    socklen_t al = sizeof a;
+    int port = 0;
+    if (bind(fd, (sockaddr*)&a, sizeof a) == 0 && getsockname(fd, (sockaddr*)&a, &al) == 0) port = ntohs(a.sin_port);
+    close(fd);
+    if (port > 0) return port;
+#endif
+    return 19357;
+}
+
+static void testRtmpInput(const fs::path& dir) {
+    std::string why;
+    if (!rtmpSupported(why)) { std::printf("rtmp input: skipped (%s)\n", why.c_str()); return; }
+    if (!avcodec_find_encoder_by_name("libx264") || !avcodec_find_decoder(AV_CODEC_ID_H264) || !av_guess_format("flv", nullptr, nullptr)) {
+        std::printf("rtmp input: skipped (no libx264, H.264 decoder or flv muxer for the test sender)\n");
+        return;
+    }
+    const int port = freeTcpPort();
+    const std::string url = "rtmp://127.0.0.1:" + std::to_string(port) + "/live/stream";
+    GenConfig c;
+    c.source = Source::Rtmp;
+    c.rtmpUrl = url;
+    c.audio = AudioSource::FromFile;
+    c.output = Output::File;
+    c.tsPath = (dir / "rtmp.ts").string();
+    c.seconds = 6;
+    c.enc.width = 320; c.enc.height = 240; c.enc.fps = 10;
+    c.enc.videoEncoder = "mpeg2video";
+    c.enc.audioEncoder = "mp2";
+    VideoGenerator g;
+    std::string err;
+    if (!g.start(c, err)) { CHECK(false, "rtmp start: %s", err.c_str()); return; }
+    // the sender: 0.3 .. 2.3 s, nothing until 3.3 s, again until 5.3 s (the generator must listen again after the first one stops)
+    std::atomic<bool> sawReceiving{false}, sawWaitingAgain{false};
+    std::atomic<bool> firstDone{false};
+    std::thread watch([&] {
+        while (g.running()) {
+            const std::string in = g.stats().input;
+            if (in.rfind("Receiving", 0) == 0) sawReceiving = true;
+            if (firstDone && in.rfind("Waiting", 0) == 0) sawWaitingAgain = true;
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+    });
+    std::string e1, e2;
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    const bool s1 = rtmpSend(url, 2.0, 200, e1);
+    firstDone = true;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    const bool s2 = rtmpSend(url, 2.0, 200, e2);
+    CHECK(g.wait(10), "rtmp: the 6 s file is done");
+    watch.join();
+    const GenStats st = g.stats();
+    CHECK(s1 && s2, "rtmp sender: %s / %s", e1.c_str(), e2.c_str());
+    CHECK(st.error.empty(), "rtmp run: %s", st.error.c_str());
+    CHECK(sawReceiving, "rtmp: the status said Receiving");
+    CHECK(sawWaitingAgain, "rtmp: listening again after the sender stopped");
+    const auto luma = lumaSeries(c.tsPath);
+    CHECK(luma.size() >= 55, "rtmp: %zu frames in 6 s at 10 fps", luma.size());
+    // the order, not exact times (the machine may be busy): black, the first sender's grey, black, the second sender's grey
+    std::vector<int> runs;   // 0 black, 1 grey, one entry per run of at least 3 frames
+    for (size_t i = 0; i + 2 < luma.size(); i++) {
+        const auto kind = [&](size_t k) { return luma[k] < 40 ? 0 : luma[k] > 150 ? 1 : -1; };
+        const int k = kind(i);
+        if (k >= 0 && kind(i + 1) == k && kind(i + 2) == k && (runs.empty() || runs.back() != k)) runs.push_back(k);
+    }
+    std::string seq;
+    for (const int r : runs) seq += r ? 'G' : 'B';
+    CHECK(seq.rfind("BGBG", 0) == 0, "rtmp: picture order %s, want black, grey, black, grey", seq.c_str());
+    size_t firstGrey = 0;
+    while (firstGrey < luma.size() && luma[firstGrey] < 150) firstGrey++;
+    std::printf("rtmp input: picture order %s, first picture after %.1f s (sender from 0.3 s)\n", seq.c_str(), firstGrey / 10.0);
+    const double toneRms = audioRms(c.tsPath, 1.2, 2.0), quietRms = audioRms(c.tsPath, 2.9, 3.2);
+    CHECK(toneRms > 0.1, "rtmp: the sender's tone in the stream (rms %.3f)", toneRms);
+    CHECK(quietRms >= 0 && quietRms < 0.02, "rtmp: silence while nobody sends (rms %.3f)", quietRms);
+    // stop() while waiting for a sender returns at once
+    GenConfig w = c;
+    w.output = Output::Udp; w.host = "127.0.0.1"; w.port = 9;
+    VideoGenerator g2;
+    CHECK(g2.start(w, err), "rtmp start 2: %s", err.c_str());
+    std::this_thread::sleep_for(std::chrono::milliseconds(300));
+    const auto t0 = std::chrono::steady_clock::now();
+    g2.stop();
+    const double stopS = std::chrono::duration<double>(std::chrono::steady_clock::now() - t0).count();
+    CHECK(stopS < 1.0, "rtmp: stop while listening took %.2f s", stopS);
+    // a bad address is refused at start
+    w.rtmpUrl = "rtmp://0.0.0.0:1935";
+    CHECK(!g2.start(w, err) && err.find("RTMP address") != std::string::npos, "rtmp: bad address refused (%s)", err.c_str());
+}
+
 // Start preview in the window: the moving picture in real time, but no file, no stream and no encoded bytes, until it is stopped
 static void testPreviewOnly(const fs::path& dir) {
     GenConfig c;
@@ -1147,6 +1342,8 @@ int main() {
     testPreviewOnly(dir);
     testArgs();
     testInstancesAndTransmitter(dir, pic);
+    testRtmpUrls();
+    testRtmpInput(dir);
 #ifndef _WIN32
     testStream(pic, false);
     testStream(pic, true);
