@@ -44,3 +44,6 @@ namespace dect2 { struct HfbTelemetry; }
 void d40HfbFeed(const std::vector<double>& khz, const dect2::HfbTelemetry& t);   // d40_hf_ui.cpp: beacon readings into the hour-of-day table
 void d40HfbBestCard();
 void d40AirbandCard();   // d40_airband_ui.cpp: ATIS letter tracker and VOLMET airports from the live transcripts
+namespace dect2 { struct DvbcTelemetry; }
+void d40DvbcQamLine(const dect2::DvbcTelemetry& t);   // d40_tv_ui.cpp: the QAM order the symbol cloud looks like
+void d40HdrLevelsCard(App& a);                         // HD Radio digital sideband levels and imbalance
