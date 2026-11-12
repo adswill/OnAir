@@ -146,4 +146,6 @@ Not done: keying an external PTT line (rig CAT / RTS / DTR) from the generic Tra
 |---|---|
 | `tests/tx/test_tx_param_model.cpp` (`tx_param_model`) | every mode of `txModes()` (and its analog-voice and DATV variants, the weather-fax sub-mode): the table is sane (unique keys, defaults in range, conditions on rows of the same table); every drawn, non-meta row changes the generated IQ when its value changes; no generator reads an `opt` key that is not a row of its mode |
 
+| `tests/tx/test_tx_loopback.cpp` (`tx_loopback_tv`, `tx_loopback_rest`) | TX generator -> white noise at a set SNR in the occupied bandwidth and a carrier offset -> OnAir's receiver (Engine, file playback) for the table's defaults and a few parameter combinations per mode (DVB-T2 2K / PP2 / 16-QAM, DVB-T 2K 16-QAM 1/2, DVB-S 3/4, APRS 9600, POCSAG 2400, FLEX, CW 30 wpm, RTTY 50 Bd / 425 Hz, BPSK63, Olivia 8 / 500, LoRa SF9 ...); text modes must give the sent text back. Cases that decoded in 3.9 are "must", new combinations are reported |
+
 Simulated only. A row "changes the signal" means the generated IQ differs; whether a receiver decodes the change is the loop-back tests' job.
