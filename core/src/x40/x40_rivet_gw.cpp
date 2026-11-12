@@ -123,7 +123,8 @@ private:
         best = s;
         for (int i = lo + w; i < hi; i++) { s += p[(size_t)i] - p[(size_t)(i - w)]; if (s > best) { best = s; at = i - w + 1; } }
         // inside a burst its end is judged where the burst started (the strongest stretch of plain noise is well above the mean)
-        if (inBurst_) { best = 0; for (int a = std::max(lo, at0_ - 2); a <= std::min(hi - w, at0_ + 2); a++) { double q = 0; for (int i = a; i < a + w; i++) q += p[(size_t)i]; best = std::max(best, q); } }
+        // (twice as wide: the stretch found at the start may have held one tone only)
+        if (inBurst_) { best = 0; const int a = std::max(lo, at0_ - w / 2), z = std::min(hi, a + 2 * w); for (int i = a; i < z; i++) best += p[(size_t)i]; best *= (double)w / std::max(1, z - a); }
         std::vector<double> v(p.begin() + lo, p.begin() + hi);
         std::nth_element(v.begin(), v.begin() + (long)(v.size() / 2), v.end());
         const double nb = std::max(v[v.size() / 2] / 0.69, 1e-30);   // median of exponential bins / mean

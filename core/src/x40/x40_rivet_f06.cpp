@@ -122,9 +122,12 @@ private:
         const bool ok = b.divider || b.crc == b.calc;
         if (!ok && syncErr > 1) return;           // a loose sync match is kept only when the CRC confirms it
         hold_ = kBlockBits - 40;
-        // the 11-bit block number is outside the CRC: a block exactly one block after the last good one takes the next number
+        // the 11-bit block number is outside the CRC: a block a whole number of blocks after the last good one takes its number from that one
         bool renumbered = false;
-        if (ok && !b.divider && lastIdx_ >= 0 && nbits_ - lastBits_ == kBlockBits && b.index != lastIdx_ + 1) { b.index = lastIdx_ + 1; renumbered = true; }
+        if (ok && !b.divider && lastIdx_ >= 0) {
+            const long dist = nbits_ - lastBits_;
+            if (dist > 0 && dist % kBlockBits == 0 && dist / kBlockBits <= 64 && b.index != lastIdx_ + (int)(dist / kBlockBits)) { b.index = lastIdx_ + (int)(dist / kBlockBits); renumbered = true; }
+        }
         if (ok && !b.divider) { lastIdx_ = b.index; lastBits_ = nbits_; }
         if (ok && !b.divider) {                   // the same block again (a sender repeats blocks): shown once
             for (int i : recent_) if (i == b.index) return;
