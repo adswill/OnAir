@@ -1062,6 +1062,7 @@ void pluginRegister(App& a);       // plugin/plugin_app.cpp: discovery and the t
 void pluginFrame(App& a);          // plugin/plugin_app.cpp, every frame: discovery at the first call, starts and stops the running plugin mode, ticks the host
 void pluginShutdown();             // at exit: stops the plugins and removes the crash marker
 void pluginManagerWindow(App& a);  // View > Plugins
+void pluginStoreOpen(App& a);      // Tools > Plugin store: the plugin window, on its Store tab
 void automationWindow(App& a);   // automation_ui.cpp: the Automations window (View > Automations) and, every frame, the engine's actions that touch the receiver
 namespace dect2::automation { struct Rule; }
 bool automationAddRule(const dect2::automation::Rule& r, std::string& err);   // automation_ui.cpp: adds a rule made elsewhere (Sensors, Alert) as it is, saved and active

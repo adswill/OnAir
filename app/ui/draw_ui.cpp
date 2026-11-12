@@ -378,7 +378,7 @@ void drawUI(App& a, ImVec2 disp, bool draw) {
         ImGui::SetNextWindowPos(ImVec2(disp.x - 12 * gUi, disp.y - 48 * gUi), ImGuiCond_Always, ImVec2(1, 1));
         ImGui::SetNextWindowBgAlpha(0.95f);
         if (ImGui::Begin("##looknotice", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav)) {
-            ImGui::TextUnformatted(tr("OnAir now uses the new Dev A look. You can switch back in View > Look."));
+            ImGui::TextUnformatted(tr("OnAir now uses the new Dev A look. You can switch back in View > Theme."));
             if (ImGui::Button(tr("Switch back to Classic"))) { a.uiTheme = 1; a.lookNotice = false; plat::prefs().setB("lookNoticeDone", true); savePrefs(a); }
             ImGui::SameLine();
             if (ImGui::Button(tr("Dismiss"))) { a.lookNotice = false; plat::prefs().setB("lookNoticeDone", true); }
