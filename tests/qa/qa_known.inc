@@ -146,7 +146,6 @@
     {"cis36/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"cis128/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"cis3000/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
-    {"fbr/snr", "open: 4.0 QA: lock-only detector fails at 12 dB in the signal's band; to investigate"},
     {"u482c/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate"},
     {"ngham/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate"},
     {"nbiot/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate (passed in the 3.9 sweep)"},
