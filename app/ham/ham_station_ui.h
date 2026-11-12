@@ -56,6 +56,9 @@ struct HamStation {
     long lastHopSlot = -1;
     // CQ modifier (CQ DX, CQ POTA ...) for the slot modes, prefs ham.cqMod
     std::string cqMod;
+    // FT8 / FT4 contest exchange (WSJT-X): 0 none, 1 ARRL Field Day, 2 ARRL RTTY Roundup; prefs ham.ftxContest / ham.ftxExch
+    int ftxContest = 0;
+    std::string ftxExch;
     // CW speed matching (the keyboard panel), prefs ham.cwMatch
     bool cwMatch = false;
     dect2::ham::CwSpeedMatch cwm;

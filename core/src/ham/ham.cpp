@@ -302,9 +302,42 @@ std::string msgFree(const std::string& t) {
     return o.substr(0, 13);
 }
 
+std::string msgExch(const std::string& to, const std::string& me, const std::string& exch, bool roger) {
+    std::string e;
+    for (const auto& w : split(up(exch))) e += (e.empty() ? "" : " ") + w;
+    return up(to) + " " + up(me) + (roger ? " R " : " ") + e;
+}
+namespace {
+// the contest forms (4.0): [TU;] TO FROM [R] 6A WI (Field Day) / [TU;] TO FROM [R] 579 WI|0012 (RTTY Roundup)
+bool parseContest(std::vector<std::string> t, ParsedMsg& p) {
+    if (!t.empty() && t[0] == "TU;") t.erase(t.begin());
+    if (t.size() != 4 && t.size() != 5) return false;
+    const bool r = t.size() == 5;
+    if (r && t[2] != "R") return false;
+    const std::string& e1 = t[r ? 3 : 2];
+    const std::string& e2 = t[r ? 4 : 3];
+    auto digits = [](const std::string& x) { return !x.empty() && std::all_of(x.begin(), x.end(), [](char c) { return isdigit((unsigned char)c) != 0; }); };
+    int contest = 0;
+    if (e1.size() >= 2 && e1.size() <= 3 && e1.back() >= 'A' && e1.back() <= 'F' && digits(e1.substr(0, e1.size() - 1)) &&
+        e2.size() >= 2 && e2.size() <= 3 && std::all_of(e2.begin(), e2.end(), [](char c) { return isalpha((unsigned char)c) != 0; })) contest = 1;
+    else if (e1.size() == 3 && e1[0] == '5' && e1[2] == '9' && e1[1] >= '2' && e1[1] <= '9' && !e2.empty() && e2.size() <= 4) contest = 2;
+    if (!contest) return false;
+    p.to = stripAngle(t[0]);
+    p.from = stripAngle(t[1]);
+    p.kind = r ? ParsedMsg::RExch : ParsedMsg::Exch;
+    p.exch = e1 + " " + e2;
+    p.contest = contest;
+    return true;
+}
+}  // namespace
+
 ParsedMsg parseMessage(const std::string& msg) {
     ParsedMsg p;
     const auto t = split(up(msg));
+    {
+        ParsedMsg c;
+        if (parseContest(t, c)) return c;
+    }
     if (t.size() >= 2 && t[0] == "CQ") {
         p.kind = ParsedMsg::Cq;
         size_t k = 1;
@@ -360,6 +393,19 @@ void QsoEngine::logQso(double now) {
     q.rstSent = reportText(dxSnr_); q.rstRcvd = rstRcvd_;
     q.myCall = up(c_.myCall); q.myGrid = up(c_.myGrid);
     q.startUtc = startUtc_ > 0 ? startUtc_ : now; q.endUtc = now;
+    if (c_.contest) {   // the exchange: Field Day has no RST, RTTY Roundup starts with one
+        auto splitRst = [this](const std::string& e, std::string& rst, std::string& rest) {
+            const auto w = split(up(e));
+            rst.clear(); rest.clear();
+            for (size_t i = 0; i < w.size(); i++) {
+                if (i == 0 && c_.contest == 2) { rst = w[0]; continue; }
+                rest += (rest.empty() ? "" : " ") + w[i];
+            }
+        };
+        splitRst(c_.myExch, q.rstSent, q.stx);
+        splitRst(rcvdExch_, q.rstRcvd, q.srx);
+        q.contestId = c_.contest == 1 ? "ARRL-FD" : "ARRL-RTTY";
+    }
     if (onLog) onLog(q);
 }
 
@@ -370,7 +416,7 @@ void QsoEngine::onDecode(double now, const std::string& msg, int snr, double slo
     if (m.to != up(c_.myCall) || m.from.empty()) return;
     using K = ParsedMsg;
     // a station whose QSO we just finished repeats its R-report: it did not copy our RR73 (WSJT-X sends it again; logged once)
-    if ((s_ == Cq || s_ == Idle) && !lastDx_.empty() && m.from == lastDx_ && m.kind == K::RReport && slotUtc <= lastDxUntil_) {
+    if ((s_ == Cq || s_ == Idle) && !lastDx_.empty() && m.from == lastDx_ && (m.kind == K::RReport || m.kind == K::RExch) && slotUtc <= lastDxUntil_) {
         dx_ = lastDx_; s_ = Tx4RR73; sentCount_ = 0; lastDx_.clear();
         c_.txEven = !slotEven(slotUtc, slotPeriod(c_.mode));
         return;
@@ -386,6 +432,13 @@ void QsoEngine::onDecode(double now, const std::string& msg, int snr, double slo
         if (resumeCq_) { s_ = Cq; } else s_ = Idle;
         dx_.clear(); sentCount_ = 0;
     };
+    if (s_ == Cq && c_.contest && m.kind == K::Exch) {   // contest: the caller sends the exchange at once; we answer R + ours
+        dx_ = m.from; dxGrid_.clear(); dxSnr_ = snr; sentCount_ = 0; logged_ = false; startUtc_ = now; rcvdExch_ = m.exch; rstRcvd_.clear();
+        pickSlot_ = slotUtc; pickPri_ = priority ? priority(m.from) : 0; lastDx_.clear();
+        c_.txEven = !slotEven(slotUtc, slotPeriod(c_.mode));
+        s_ = Tx3RReport;
+        return;
+    }
     if (s_ == Cq) {
         if (m.kind == K::Grid || m.kind == K::Report) {
             dx_ = m.from; dxGrid_ = m.grid; dxSnr_ = snr; sentCount_ = 0; logged_ = false; startUtc_ = now; rstRcvd_.clear();
@@ -398,6 +451,11 @@ void QsoEngine::onDecode(double now, const std::string& msg, int snr, double slo
         return;
     }
     if (m.from != dx_) return;
+    if (c_.contest) {
+        if (s_ == Tx1Grid && (m.kind == K::RExch || m.kind == K::Exch)) { rcvdExch_ = m.exch; dxSnr_ = snr; logQso(now); s_ = Tx4RR73; sentCount_ = 0; return; }
+        if (s_ == Tx3RReport && (m.kind == K::RR73 || m.kind == K::Rrr || m.kind == K::Bye73)) { logQso(now); finish(slotUtc); return; }
+        if (s_ == Tx3RReport && m.kind == K::Exch) { rcvdExch_ = m.exch; sentCount_ = 0; return; }   // they repeat: ours was not copied
+    }
     switch (s_) {
     case Tx1Grid:
         if (m.kind == K::Report) { dxSnr_ = snr; rep(false); s_ = Tx3RReport; sentCount_ = 0; }
@@ -437,9 +495,9 @@ std::string QsoEngine::messageForSlot(double slotUtc) {
     }
     switch (s_) {
     case Cq: return msgCqMod(c_.cqMod, me, c_.myGrid);
-    case Tx1Grid: return msgGrid(dx_, me, c_.myGrid);
+    case Tx1Grid: return c_.contest ? msgExch(dx_, me, c_.myExch, false) : msgGrid(dx_, me, c_.myGrid);
     case Tx2Report: return msgReport(dx_, me, dxSnr_, false);
-    case Tx3RReport: return msgReport(dx_, me, dxSnr_, true);
+    case Tx3RReport: return c_.contest ? msgExch(dx_, me, c_.myExch, true) : msgReport(dx_, me, dxSnr_, true);
     case Tx4RR73: return hamModeUsesRRR(c_.mode) ? msgRRR(dx_, me) : msgRR73(dx_, me);
     case Tx5Bye: return msg73(dx_, me);
     default: return "";

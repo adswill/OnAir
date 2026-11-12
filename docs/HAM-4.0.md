@@ -73,6 +73,13 @@ what 4.0 adds, and what is still missing.
 - **Setup wizard**: country (its built-in band plan sets the IARU region), the grid from the receiver position (View > Map, GPS), a list
   of antennas, the callsign lookup account.
 
+### FT8 / FT4 contest exchanges
+The 77-bit ARRL Field Day (i3 0, n3 3 / 4) and ARRL RTTY Roundup (i3 3) messages: OnAir decoded them before; 4.0 can send them
+(`core/src/hfdig/hfdig_ftx_msg.cpp` `packFieldDay`, `packRttyRu`). In the Operate tab choose the contest and your exchange ("2B EMA",
+"579 MA" or "579 0001"); CQ becomes CQ FD / CQ RU, and the sequence is the WSJT-X one: the caller sends its exchange, the CQ station
+answers R + its exchange, the caller sends RR73. The QSO is logged with STX / SRX (and the RST for the Roundup) and CONTEST_ID ARRL-FD or
+ARRL-RTTY, so Export Cabrillo writes it. Other contests (NA VHF, EU VHF, WW Digi) are not done.
+
 ### The sequencer (WSJT-X rules)
 | Situation | Before | 4.0 |
 |---|---|---|
@@ -82,6 +89,7 @@ what 4.0 adds, and what is still missing.
 | Several callers in one slot | The first one decoded | The most needed (priority hook), until the first answer is sent |
 | CQ | CQ CALL GRID | Optional modifier: CQ DX / POTA / SOTA / WWFF / TEST / NA / EU |
 | Q65, FST4, MSK144 | not in the Ham view | Slot modes with the QSO engine (RR73) |
+| Field Day / RTTY Roundup | not sent | The contest sequence above |
 
 ## Rules kept
 - Nothing is sent to any service unless the user switches it on; credentials and keys stay in the local settings and go only to their
@@ -93,6 +101,7 @@ what 4.0 adds, and what is still missing.
 | Test | What |
 |---|---|
 | `tests/ham/test_ham_seq.cpp` | Sequencer flows: CQ answered with a report at once, RR73 once and again after a repeated R-report (logged once), repeats reset the retry count, the retry limit after silence, caller priority (and no switch after answering), CQ modifiers, JT65 RRR waiting for 73, tail-ending a busy station, MSK144 |
+| `tests/ham/test_ham_ftxcontest.cpp` | Field Day and RTTY Roundup messages pack and unpack to the same text (1 .. 32 transmitters, classes, sections, RSTs, serials, multipliers, TU;), what is not one keeps its old packing, the parser, both contest sequences with the logged exchange, a lost RR73 sent again |
 | `tests/ham/test_ham_station.cpp` | Catalog (every keyboard entry is a real preset, every slot entry a mode the engine runs), usual dials, frequency memory text, band plan segments (every segment inside an amateur band) and warnings, S-meter, region of a country, setup hints, CW speed matching, the hop schedule (wrap over midnight, errors), fake-it split |
 | `tests/ham/test_ham_spots.cpp` | Cluster and RBN lines (day wrap, locator, SNR / WPM, mode guess), POTA / SOTA JSON (escapes, null, nested values, malformed), PSK Reporter XML, split reading, spot book merge and expiry |
 | `tests/ham/test_ham_callbook.cpp` | QRZ / HamQTH XML (record, login, errors), the log as a callbook, cache file, the client with a fake transport: off sends nothing, password only in the body, cache hits, stale entries, an expired session logs in once more |
@@ -104,8 +113,6 @@ The services (QRZ, HamQTH, POTA, SOTA, PSK Reporter, DX clusters, RBN, TQSL) wer
 documented field names. The UI was built on GitHub (quick.yml); it has not been run with a real cluster or callbook account yet.
 
 ## Not done / next
-- FT8 contest messages (ARRL Field Day, RTTY Roundup, NA VHF, EU VHF in the 77-bit message types): the contest mode logs the exchange of
-  the keyboard modes; the FT8 special messages need the encoder's other message types.
 - Band hopping changes the band only, not the mode, of a schedule line.
 - FST4W beacon (like the WSPR beacon) and Q65 / FST4 periods other than 60 s in the Ham view.
 - Auto upload to LoTW: TQSL runs only on the button.

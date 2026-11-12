@@ -6,6 +6,7 @@
 #include <cctype>
 #include <cmath>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <sstream>
 #include "dect2/common/bits.h"
@@ -321,6 +322,66 @@ std::string CallHash::find10(uint32_t h) const { for (const auto& e : m_) if ((e
 
 // ---------------------------------------------------------------- pack / unpack
 
+// ARRL Field Day (i3 = 0, n3 = 3 / 4): "WA9XYZ KA1ABC R 16A EMA": c28 c28 R1 n4 k3 S7 (4.0, the Ham view's contest mode)
+bool packFieldDay(const std::vector<std::string>& t, uint8_t* b) {
+    if (t.size() != 4 && t.size() != 5) return false;
+    const bool r = t.size() == 5;
+    if (r && t[2] != "R") return false;
+    const std::string& cls = t[r ? 3 : 2];
+    const std::string& sec = t[r ? 4 : 3];
+    if (cls.size() < 2 || cls.size() > 3 || cls.back() < 'A' || cls.back() > 'F' || !isDigits(cls.substr(0, cls.size() - 1))) return false;
+    const int ntx = std::atoi(cls.substr(0, cls.size() - 1).c_str());
+    if (ntx < 1 || ntx > 32) return false;
+    int isec = 0;
+    for (int i = 0; i < 86; i++) if (sec == kArrlSections[i]) { isec = i + 1; break; }
+    if (!isec) return false;
+    if (isToken(t[0]) || isToken(t[1])) return false;
+    const int64_t na = pack28(t[0]), nb = pack28(t[1]);
+    if (na < 0 || nb < 0) return false;
+    const int n3 = ntx <= 16 ? 3 : 4;
+    setBits(b, 0, 28, (uint64_t)na);
+    setBits(b, 28, 28, (uint64_t)nb);
+    b[56] = r ? 1 : 0;
+    setBits(b, 57, 4, (uint64_t)(ntx - (n3 == 3 ? 1 : 17)));
+    setBits(b, 61, 3, (uint64_t)(cls.back() - 'A'));
+    setBits(b, 64, 7, (uint64_t)isec);
+    setBits(b, 71, 3, (uint64_t)n3);
+    setBits(b, 74, 3, 0);
+    return true;
+}
+// ARRL RTTY Roundup (i3 = 3): "TU; W9XYZ K1ABC R 579 MA" / "W9XYZ K1ABC 579 0012": t1 c28 c28 R1 r3 s13
+bool packRttyRu(const std::vector<std::string>& in, uint8_t* b) {
+    std::vector<std::string> t = in;
+    const bool tu = !t.empty() && t[0] == "TU;";
+    if (tu) t.erase(t.begin());
+    if (t.size() != 4 && t.size() != 5) return false;
+    const bool r = t.size() == 5;
+    if (r && t[2] != "R") return false;
+    const std::string& rst = t[r ? 3 : 2];
+    const std::string& ex = t[r ? 4 : 3];
+    if (rst.size() != 3 || rst[0] != '5' || rst[2] != '9' || rst[1] < '2' || rst[1] > '9') return false;
+    int nexch = 0;
+    if (isDigits(ex)) {
+        if (ex.size() > 4) return false;
+        nexch = std::atoi(ex.c_str());
+        if (nexch < 1 || nexch > 7999) return false;
+    } else {
+        for (int i = 0; i < 171; i++) if (ex == rttyMult(i)) { nexch = 8001 + i; break; }
+        if (!nexch) return false;
+    }
+    if (isToken(t[0]) || isToken(t[1])) return false;
+    const int64_t na = pack28(t[0]), nb = pack28(t[1]);
+    if (na < 0 || nb < 0) return false;
+    b[0] = tu ? 1 : 0;
+    setBits(b, 1, 28, (uint64_t)na);
+    setBits(b, 29, 28, (uint64_t)nb);
+    b[57] = r ? 1 : 0;
+    setBits(b, 58, 3, (uint64_t)(rst[1] - '2'));
+    setBits(b, 61, 13, (uint64_t)nexch);
+    setBits(b, 74, 3, 3);
+    return true;
+}
+
 bool pack77(const std::string& text, uint8_t* b) {
     std::string up;
     for (char c : text) up += (char)toupper((unsigned char)c);
@@ -330,6 +391,10 @@ bool pack77(const std::string& text, uint8_t* b) {
     std::memset(b, 0, 77);
     if (t.empty()) return false;
     if (t.size() >= 2 && packStandard(t, b)) return true;
+    std::memset(b, 0, 77);
+    if (packFieldDay(t, b)) return true;     // contest messages (4.0)
+    std::memset(b, 0, 77);
+    if (packRttyRu(t, b)) return true;
     std::memset(b, 0, 77);
     if (packType4(t, b)) return true;
     std::memset(b, 0, 77);

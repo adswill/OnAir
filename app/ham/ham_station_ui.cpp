@@ -79,6 +79,8 @@ void hamStationLoad() {
     if (s.antennas.empty() && !hamOps().antenna.empty()) s.antennas.push_back(hamOps().antenna);
     s.mem.fromText(p.getS("ham.freqMem", ""));
     s.cqMod = p.getS("ham.cqMod", "");
+    s.ftxContest = std::max(0, std::min(2, (int)p.getI("ham.ftxContest", 0)));
+    s.ftxExch = p.getS("ham.ftxExch", "");
     s.cwMatch = p.getB("ham.cwMatch", false);
     // spots: every feed off unless the user switched it on
     ham::SpotFeedConfig& f = s.feedCfg;
@@ -125,6 +127,7 @@ void hamStationSave() {
     p.setS("ham.antennas", a);
     p.setS("ham.freqMem", s.mem.toText());
     p.setS("ham.cqMod", s.cqMod);
+    p.setI("ham.ftxContest", s.ftxContest); p.setS("ham.ftxExch", s.ftxExch);
     p.setB("ham.cwMatch", s.cwMatch);
     const ham::SpotFeedConfig& f = s.feedCfg;
     p.setB("ham.feed.cluster", f.cluster); p.setS("ham.feed.clusterHost", f.clusterHost); p.setI("ham.feed.clusterPort", f.clusterPort);

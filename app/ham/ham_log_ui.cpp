@@ -316,6 +316,7 @@ ham::LogQso hamFromRecord(const ham::QsoRecord& r) {
     q.call = r.call; q.grid = r.grid; q.mode = r.mode; q.submode = r.submode; q.rstSent = r.rstSent; q.rstRcvd = r.rstRcvd;
     q.myCall = r.myCall; q.myGrid = r.myGrid; q.freqHz = r.freqHz; q.startUtc = r.startUtc; q.endUtc = r.endUtc;
     q.txPwr = hamOps().power;
+    q.stx = r.stx; q.srx = r.srx; q.contestId = r.contestId;   // FT8 Field Day / RTTY Roundup (4.0)
     return q;
 }
 

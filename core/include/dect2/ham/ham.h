@@ -39,6 +39,7 @@ bool hamGridValid(const std::string& grid);                  // 4 or 6 character
 struct QsoRecord {
     std::string call, grid, mode = "FT8", rstSent, rstRcvd, myCall, myGrid;
     std::string submode;          // ADIF SUBMODE (mode "PSK", submode "PSK31"); "" none
+    std::string stx, srx, contestId;   // the contest exchange sent / received (FT8 Field Day / RTTY Roundup), CONTEST_ID
     double freqHz = 0, startUtc = 0, endUtc = 0;
 };
 bool hamCbBand(double hz);                                    // 26.965-27.405 MHz: 11 m, the CB band (never an amateur band: the gate warns, the operator decides)
@@ -80,12 +81,16 @@ std::string msgReport(const std::string& to, const std::string& me, int snr, boo
 std::string msgRR73(const std::string& to, const std::string& me);
 std::string msgRRR(const std::string& to, const std::string& me);
 std::string msg73(const std::string& to, const std::string& me);
-std::string msgFree(const std::string& text);                // upper case, 13 characters at most, only the characters FT8 free text allows
+std::string msgFree(const std::string& text);
+// contest exchange (4.0): "K1ABC W9XYZ 6A WI" / "W9XYZ K1ABC R 2B EMA" (ARRL Field Day), "K1ABC W9XYZ 579 WI" / "... R 579 0012" (RTTY Roundup)
+std::string msgExch(const std::string& to, const std::string& me, const std::string& exch, bool roger);                // upper case, 13 characters at most, only the characters FT8 free text allows
 std::string reportText(int snr);                             // "-05" "+12", clamped to -30..+32
 
 struct ParsedMsg {
-    enum Kind { Other, Cq, Grid, Report, RReport, RR73, Rrr, Bye73 } kind = Other;
+    enum Kind { Other, Cq, Grid, Report, RReport, RR73, Rrr, Bye73, Exch, RExch } kind = Other;
     std::string to, from, grid;
+    std::string exch;             // Exch / RExch: "6A WI" (Field Day), "579 WI" / "579 0012" (RTTY Roundup)
+    int contest = 0;              // Exch / RExch: 1 ARRL Field Day, 2 RTTY Roundup
     int report = 0;
 };
 ParsedMsg parseMessage(const std::string& msg);
@@ -101,6 +106,8 @@ struct QsoConfig {
     int retryLimit = 4;           // transmissions of one message without an answer before the call is given up
     double watchdogSec = 360;     // no user action for this long: halt
     std::string cqMod;            // "DX", "POTA", "TEST", "NA" ...: CQ DX LY1ABC KO24; "" plain CQ
+    int contest = 0;              // 0 none, 1 ARRL Field Day ("6A WI"), 2 ARRL RTTY Roundup ("579 MA" / "579 0012"): the WSJT-X contest sequence
+    std::string myExch;           // my exchange in that contest: "2B EMA", "579 MA"
 };
 
 class QsoEngine {
@@ -137,7 +144,7 @@ private:
     void note(const std::string& s) { if (onEvent) onEvent(s); }
     Config c_;
     State s_ = Idle;
-    std::string dx_, dxGrid_, rstRcvd_;
+    std::string dx_, dxGrid_, rstRcvd_, rcvdExch_;
     int dxSnr_ = 0, sentCount_ = 0;
     double lastUser_ = 0, startUtc_ = 0, nowUtc_ = 0;
     bool resumeCq_ = false, wd_ = false, logged_ = false;

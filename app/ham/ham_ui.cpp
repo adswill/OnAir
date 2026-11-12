@@ -334,6 +334,8 @@ void hamPanel(App& a) {
     const bool isBeacon = h.mode == 3, isKbd = h.kbdIdx >= 0;
     const std::string band = ham::bandNameFor(a.freqMhz * 1e6), modeName = ham::hamModeName(h.mode), rxBand = ham::rxBandNameFor(a.freqMhz * 1e6);   // rxBand: also names 11 m (CB), which can transmit with a warning
     c.cqMod = hamStation().cqMod;   // CQ DX / CQ POTA ... (4.0)
+    c.contest = hamStation().ftxContest; c.myExch = hamStation().ftxExch;   // FT8 Field Day / RTTY Roundup exchange (4.0)
+    if (c.contest && c.myExch.empty()) c.contest = 0;
     h.eng.priority = [band, modeName](const std::string& cs) { return hamNeedOf(cs, "", band, modeName, false).level; };   // several callers: the most needed first
     if (o.workedDirty) { o.worked.build(o.log.qsos()); o.workedDirty = false; }
     const bool stationOk = ham::hamCallValid(h.call) && ham::hamGridValid(h.grid);
@@ -689,14 +691,31 @@ void hamPanel(App& a) {
             if (ImGui::Button(tr("Clear DX"))) { h.eng.halt(); h.override.clear(); h.dxGrid.clear(); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Ends the QSO without sending anything more (F4)"));
             {   // CQ DX / CQ POTA ...: the CQ the engine sends (4.0)
-                static const char* kMods[] = {"CQ", "CQ DX", "CQ POTA", "CQ SOTA", "CQ WWFF", "CQ TEST", "CQ NA", "CQ EU"};
-                static const char* kIds[] = {"", "DX", "POTA", "SOTA", "WWFF", "TEST", "NA", "EU"};
+                static const char* kMods[] = {"CQ", "CQ DX", "CQ POTA", "CQ SOTA", "CQ WWFF", "CQ TEST", "CQ NA", "CQ EU", "CQ FD", "CQ RU"};
+                static const char* kIds[] = {"", "DX", "POTA", "SOTA", "WWFF", "TEST", "NA", "EU", "FD", "RU"};
                 HamStation& st = hamStation();
                 int cur = 0;
-                for (int i = 0; i < 8; i++) if (st.cqMod == kIds[i]) cur = i;
+                for (int i = 0; i < 10; i++) if (st.cqMod == kIds[i]) cur = i;
                 ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi);
-                if (ImGui::Combo("##cqmod", &cur, kMods, 8)) { st.cqMod = kIds[cur]; hamStationSave(); }
+                if (ImGui::Combo("##cqmod", &cur, kMods, 10)) { st.cqMod = kIds[cur]; hamStationSave(); }
                 if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What your CQ says: CQ DX asks for distant stations only, CQ POTA for park hunters ..."));
+                // the WSJT-X contest exchanges: the sequence sends the exchange instead of grid and report
+                int ct = st.ftxContest;
+                ImGui::SameLine(); ImGui::SetNextItemWidth(130 * gUi);
+                if (ImGui::Combo("##ftxcontest", &ct, "no contest\0ARRL Field Day\0RTTY Roundup\0") && ct != st.ftxContest) {
+                    st.ftxContest = ct;
+                    st.cqMod = ct == 1 ? "FD" : ct == 2 ? "RU" : "";
+                    h.eng.halt();
+                    hamStationSave();
+                }
+                if (st.ftxContest) {
+                    static char ex[24] = {};
+                    static bool exInit = false;
+                    if (!exInit) { exInit = true; snprintf(ex, sizeof ex, "%s", st.ftxExch.c_str()); }
+                    ImGui::SameLine(); ImGui::SetNextItemWidth(110 * gUi);
+                    if (ImGui::InputTextWithHint("##ftxexch", st.ftxContest == 1 ? "2B EMA" : "579 MA", ex, sizeof ex, ImGuiInputTextFlags_CharsUppercase)) { st.ftxExch = ex; hamStationSave(); }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", st.ftxContest == 1 ? tr("Field Day: your class and ARRL / RAC section, e.g. 2B EMA") : tr("RTTY Roundup: 579 and your state / province, or a serial number from DX, e.g. 579 MA or 579 0001"));
+                }
             }
         }
         if (ImGui::CollapsingHeader(trw("Rig and audio"))) rigWidgets();
