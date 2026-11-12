@@ -1904,3 +1904,12 @@ Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked
 - NFM click removal built twice and dropped: the 12 dB SINAD point (8.4 dB) is above the FM threshold, gains were 0.3 dB at most.
 - Guard test hfdig_sstv_sens40; bench tests/hfdig/sstv_sens40_bench.cpp (not a ctest).
 - (feat40-sensX2, later) Weather fax: row Wiener filter on weak signals (mean row correlation at 2 dB 0.460 -> 0.634, sens39 passes 0 -> 3 of 3 at 2 and 1 dB). NOAA APT: click median + line Wiener filter with the noise of space A (PSNR at 2 dB 10.2 -> 12.8 dB, at 15 dB 30.5 -> 32.8 dB). Tests marine_fax_sens40, wxsat_apt40, measured on the GitHub Linux runner.
+
+## 2026-11-12 (feat40-settings): Settings 4.0, key editor, profiles
+- One action registry for every shortcut that was written into the code (Ctrl+, Ctrl+K M Ctrl+M Ctrl+Shift+F C I F F6 F11 Alt+Enter Ctrl+= - 0,
+  Ctrl+Shift+L/M, Ctrl+Alt+D, the TV picture's Space/R, the FT8 screen's F1-F8 Ctrl+L Ctrl+F): two keys per action, scopes, conflict marks,
+  press-to-record, import/export as a readable file, menus and tooltips show the user's keys. Fixes F6 and Ctrl+L firing twice in the FT8 screen.
+- Settings: pages Units, Keyboard and mouse, Notifications, Performance, Profiles; about 70 new wired rows (start-up mode/frequency, receiver at launch,
+  crash restore, confirm quit, FFT size, waterfall speed, line colours, default dB range, radio IQ fixes and noise blanker, audio device and new-mode
+  AGC/squelch, IQ file name pattern, IQ split and free-space guard, notifications and quiet hours, map tile server and cache); search highlight;
+  profiles saved/switched/exported. 3.9 keys unchanged. docs/SETTINGS-4.0.md. Checked on GitHub only (Mac on battery).

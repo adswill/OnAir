@@ -548,8 +548,8 @@ static void viewMenu(App& a) {
     gViewMenuCentre = ImVec2(ImGui::GetCursorScreenPos().x + ImGui::CalcTextSize(tr("View")).x * 0.5f + 6 * gUi, ImGui::GetCursorScreenPos().y + ImGui::GetFrameHeight() * 0.5f);
     if (ImGui::BeginMenu(tr("View"))) {
         if (ImGui::BeginMenu(tr("Layout"))) {   // both switches act at once, the receiver keeps running; the same two values as Settings > Display
-            if (ImGui::MenuItem(tr("Classic"), "Ctrl+Shift+L", !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Unified"), "Ctrl+Shift+L", a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Classic"), inputmap::shortcut(inputmap::Action::LayoutToggle).c_str(), !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Unified"), inputmap::shortcut(inputmap::Action::LayoutToggle).c_str(), a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new layout: the spectrum and waterfall stay on screen above the decoded views"));
             ImGui::EndMenu();
         }
@@ -580,13 +580,13 @@ static void viewMenu(App& a) {
         if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
         dockMenu(a);   // View > Docking (ui2_dock.cpp)
-        if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
+        if (ImGui::MenuItem(tr("Restore the default view"), inputmap::shortcut(inputmap::Action::RestoreView).c_str())) restoreDefaultView(a);
         if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
             a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; savePrefs(a); }
         if (ImGui::MenuItem(tr("Reset spectrum"))) resetSpectrum(a);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Put the panels back to their automatic sizes (drag the bars between panels to resize them)"));
-        if (ImGui::MenuItem(tr("Full screen"), "F11", gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."));
+        if (ImGui::MenuItem(tr("Full screen"), inputmap::shortcut(inputmap::Action::Fullscreen).c_str(), gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", inputmap::tip(tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."), inputmap::Action::Fullscreen).c_str());
         ImGui::Separator();
         static const char* names[8] = {N_("Terminal palette"), N_("Instrument palette"), N_("Mono palette"), N_("Dev A (graphite)"), N_("Dev B (terminal green)"), N_("Studio (slate, rounded)"), N_("Mono Pro (OLED, amber)"), N_("Daylight (light, blue)")};
         for (int t = 0; t < 8; t++) if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
@@ -596,7 +596,7 @@ static void viewMenu(App& a) {
         timeDisplayChoice(true);
         if (ImGui::BeginMenu(tr("Language"))) { languageMenuItems(a); ImGui::EndMenu(); }
         ImGui::Separator();
-        if (ImGui::MenuItem(tr("Controls (keys and mouse) ..."), nullptr, &inputmap::windowOpen())) {}
+        if (ImGui::MenuItem(tr("Controls (keys and mouse) ..."), inputmap::shortcut(inputmap::Action::ControlsWin).c_str(), &inputmap::windowOpen())) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What the mouse wheel, keys and extra mouse buttons do on the spectrum and waterfall: zoom, tune, pan, step size, shortcuts"));
         if (ImGui::MenuItem(tr("Performance overlay"), nullptr, &a.perfOverlay)) savePrefs(a);
         if (ImGui::MenuItem(tr("Verbose logging"), nullptr, &a.verboseLog)) savePrefs(a);
@@ -666,10 +666,10 @@ static void viewMenu(App& a) {
         ImGui::MenuItem(tr("Automations..."), nullptr, &a.automationOpen);
         ImGui::MenuItem(tr("Plugins..."), nullptr, &a.pluginsOpen);
         ImGui::MenuItem(tr("Backup and restore..."), nullptr, &a.backupOpen);
-        ImGui::MenuItem(tr("Memory..."), "Ctrl+M", &a.memoryOpen);
+        ImGui::MenuItem(tr("Memory..."), inputmap::shortcut(inputmap::Action::MemoryWin).c_str(), &a.memoryOpen);
         ImGui::MenuItem(tr("Datasets..."), nullptr, &a.datasetsOpen);
         ImGui::MenuItem(tr("Data packs..."), nullptr, &a.packsOpen);
-        ImGui::MenuItem(tr("Frequencies..."), "Ctrl+Shift+F", &a.freqOpen);
+        ImGui::MenuItem(tr("Frequencies..."), inputmap::shortcut(inputmap::Action::FreqDbWin).c_str(), &a.freqOpen);
         if (ImGui::MenuItem(tr("Show Frequencies as a tab"), nullptr, a.freqTab)) freqdbTabToggle(a);
         ImGui::MenuItem(tr("Transmit..."), nullptr, &txViewFlag());
         ImGui::MenuItem(tr("Map"), nullptr, &a.mapOpen);
@@ -805,7 +805,7 @@ float menuBar(App& a) {
         const float mx1 = ImGui::GetCursorScreenPos().x;
         tourMark("memory", ImVec2(mx0, my0), ImVec2(mx1, my1));
         mapSendServerMenu(a);
-        if (ImGui::MenuItem(tr("Settings"))) settingsOpen() = !settingsOpen();   // a window of its own, not a submenu (Ctrl+,)
+        if (ImGui::MenuItem(tr("Settings"), inputmap::shortcut(inputmap::Action::OpenSettings).c_str())) settingsOpen() = !settingsOpen();   // a window of its own, not a submenu (Ctrl+, by default; the menu shows the user's key)
         const float sx1 = ImGui::GetCursorScreenPos().x;
         tourMark("server", ImVec2(mx1, my0), ImVec2(sx1, my1));
         const float hx0 = ImGui::GetCursorScreenPos().x;

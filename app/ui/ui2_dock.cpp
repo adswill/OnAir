@@ -16,6 +16,7 @@
 #include <map>
 #include <set>
 #include <sstream>
+#include "input_map.h"
 
 using namespace ui2;
 
@@ -581,7 +582,7 @@ void dockDevSelfTest() { gST.on = true; }
 void dockFrameEnd(App& a) {
     struct Run { App& a; ~Run() { if (gST.on) selfTestFrame(a); } } run{a};
     ImGuiIO& io = ImGui::GetIO();
-    if (!a.touchUi && a.newUi && !io.WantTextInput && io.KeyCtrl && io.KeyAlt && !io.KeySuper && ImGui::IsKeyPressed(ImGuiKey_D, false)) { a.dockOn = !a.dockOn; savePrefs(a); }
+    if (!a.touchUi && a.newUi && inputmap::pressed(inputmap::Action::DockToggle)) { a.dockOn = !a.dockOn; savePrefs(a); }   // Ctrl+Alt+D by default
     if (!dockActive(a)) { gPend.on = false; return; }
     ImGuiContext& g = *GImGui;
     if (!gF.space) collectWindows();

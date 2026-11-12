@@ -44,7 +44,8 @@ template <class F> static void unifiedCentre(App& a, F tabs) {
     const ImU32 edge = ImGui::GetColorU32(ImGuiCol_Border), dim = ImGui::GetColorU32(ImGuiCol_TextDisabled), txt = ImGui::GetColorU32(ImGuiCol_Text);
     const ImGuiIO& io = ImGui::GetIO();
     bool changed = false;
-    if (!io.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_F6, false)) { st.col = !st.col; changed = true; }
+    if (inputmap::pressed(inputmap::Action::UnifiedColumn)) { st.col = !st.col; changed = true; }   // F6 by default
+    (void)io;
 
     // ---- the header: a tool-window title bar with a fold arrow and a 1 px rule under it
     const float hh = std::floor(kit::px(kit::tokens().headerH));

@@ -25,6 +25,7 @@
 #include "../main_internal.h"
 #include "top_row.h"
 #include "dect2/codec/codec_guard.h"
+#include "input_map.h"
 
 bool gIdentifyDev = false;   // --identify
 
@@ -84,9 +85,9 @@ static void videoOnlyKeys(App& a) {
     clipsui::tick(a);   // radio clips: settings, the audio ring, the C key and the dialog
     ImGuiIO& io = ImGui::GetIO();
     // I toggles the Identify tool (a click or a drag on the spectrum identifies the signal), Escape leaves it
-    if (!io.WantTextInput && !io.KeyCtrl && !io.KeySuper && !io.KeyAlt && ImGui::IsKeyPressed(ImGuiKey_I, false)) a.identifyTool = !a.identifyTool;
+    if (inputmap::pressed(inputmap::Action::IdentifyTool)) a.identifyTool = !a.identifyTool;
     if (a.identifyTool && !io.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_Escape, false)) a.identifyTool = false;
-    if (!io.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_F, false)) {
+    if (inputmap::pressed(inputmap::Action::VideoOnly)) {
         if (a.videoOnly) { a.videoOnly = false; if (glfwGetWindowMonitor(gWindow)) toggleFullscreen(); }
         else if (a.video.has() || analogHasPicture(a)) { a.videoOnly = true; if (!glfwGetWindowMonitor(gWindow)) toggleFullscreen(); }
     }
@@ -369,7 +370,8 @@ void drawUI(App& a, ImVec2 disp, bool draw) {
     if (adsbmap::fullDraw(&a, a.family, disp)) return;   // any other map screen: the tab it is on over the whole window (the "full screen" button on the map)
     {   // Ctrl+Shift+M (Cmd+Shift+M): the default view back, from any interface (also Settings > Appearance > Restore the default view)
         ImGuiIO& io = ImGui::GetIO();
-        if ((io.KeyCtrl || io.KeySuper) && io.KeyShift && ImGui::IsKeyPressed(ImGuiKey_M, false)) ui2::restoreDefaultView(a);
+        if (inputmap::pressed(inputmap::Action::RestoreView)) ui2::restoreDefaultView(a);
+        (void)io;
     }
     if (a.touchUi) touch::shell(a, disp);   // the touch interface (ui/touch_shell.cpp) over either interface's panels
     else if (a.newUi) drawShell2(a, disp);

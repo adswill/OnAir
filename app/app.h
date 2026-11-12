@@ -1261,6 +1261,15 @@ void modeVisibilityApplyText(App& a, const std::string& text);   // and put back
 bool& settingsOpen();          // the Settings window is open (menu bar > Settings, Ctrl+,)
 void settingsWindow(App& a);   // ui/settings_window.cpp: every preference in one searchable window (docs/SETTINGS.md)
 int settingsUnboundRows();     // rows of the table with no field behind them (listed on stderr)
+// ui/settings_apply.cpp (4.0): what the General, Recording and Audio pages of Settings do outside the window
+void settingsStartup(App& a, bool plainStart);   // after the preferences: start-up frequency and mode, the IQ file name pattern
+void settingsFrame(App& a);                      // every frame: start-up mode / receiver, crash restore, confirm before quitting, IQ split and free-space guard
+void toggleIqRecording(App& a);                  // start or stop an IQ recording of the radio (the Record IQ key)
+int sessionRestoreChoice();                      // Settings > General > After a crash: 0 ask, 1 always restore, 2 never offer
+void audioDefaultDeviceChanged();                // audio_control_ui.cpp: Settings > Audio > Output device changed
+// Settings > Spectrum and waterfall > Default range (-110 to -30 dB unless changed): Reset, the range key and a bad saved range go there
+inline float specDefaultLo() { const double lo = plat::prefs().getD("specDefLo", -110), hi = plat::prefs().getD("specDefHi", -30); return hi - lo >= 10 ? (float)lo : -110.f; }
+inline float specDefaultHi() { const double lo = plat::prefs().getD("specDefLo", -110), hi = plat::prefs().getD("specDefHi", -30); return hi - lo >= 10 ? (float)hi : -30.f; }
 void startReceiver(App& a);     // what the Start button does
 double audioViewOffsetHz(const App& a);   // a sound card in a Real mode with the audio-range view: where the spectrum's centre lies from the dial (else 0)
 void applyAudioSettings(App& a);   // the sound-card options into a.tune.radio (toolbar_source.cpp)

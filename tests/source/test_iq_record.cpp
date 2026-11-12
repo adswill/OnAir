@@ -6,6 +6,8 @@
 #include <chrono>
 #include <cmath>
 #include <cstdio>
+#include <ctime>
+#include <string>
 #include <filesystem>
 #include <thread>
 
@@ -62,7 +64,26 @@ static uint64_t record(const fs::path& dir, FileFormat fmt, std::string& path, d
     return fs::exists(path) ? (uint64_t)fs::file_size(path) : 0;
 }
 
+// 4.0: Settings > Recording and files > IQ file name (the pattern with tokens)
+static void namePattern() {
+    std::tm loc{}, utc{};
+    loc.tm_year = 126; loc.tm_mon = 10; loc.tm_mday = 12; loc.tm_hour = 21; loc.tm_min = 5; loc.tm_sec = 9;
+    utc = loc; utc.tm_hour = 17;
+    CHECK(expandRecordingPattern("onair_{mode}_{freq}MHz_{rate}Msps_{date}-{time}", "fm", 93.9e6, 2e6, loc, utc) == "onair_fm_93.900MHz_2Msps_20261112-210509", "the default pattern gives the built-in name");
+    CHECK(expandRecordingPattern("{utcdate}_{utctime}_{khz}kHz", "ais", 161975000, 1e6, loc, utc) == "20261112_170509Z_161975kHz", "UTC tokens and kHz");
+    CHECK(expandRecordingPattern("../{mode}:x|{nope}", "a b", 1e6, 1e6, loc, utc) == "_a-b_x_{nope}", "no path characters, unknown tokens kept");
+    setRecordingNamePattern("");
+    const std::string def = recordingFileName("fm", 93.9e6, 2e6, FileFormat::CS8);
+    CHECK(def.rfind("onair_fm_93.900MHz_2Msps_", 0) == 0 && def.size() > 4 && def.compare(def.size() - 4, 4, ".cs8") == 0, "empty pattern: the 3.9 name");
+    setRecordingNamePattern("site1_{mode}_{freq}MHz_{rate}Msps_{utcdate}");
+    const std::string n = recordingFileName("fm", 93.9e6, 2.4e6, FileFormat::CF32);
+    CHECK(n.rfind("site1_fm_93.900MHz_2.4Msps_", 0) == 0 && n.compare(n.size() - 5, 5, ".cf32") == 0, "a pattern names the file, the extension follows the format");
+    CHECK(std::fabs(guessSampleRate(n) - 2.4e6) < 1 && guessFormat(n) == FileFormat::CF32, "a pattern with {freq}MHz and {rate}Msps still reads back");
+    setRecordingNamePattern("");
+}
+
 int main() {
+    namePattern();
     const fs::path dir = fs::temp_directory_path() / "onair_iq_record_test";
     fs::remove_all(dir);
     fs::create_directories(dir);

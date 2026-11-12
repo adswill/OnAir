@@ -1000,3 +1000,289 @@ pilots
 Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.
 Scan first.
 No free channel found.
+Nothing in that file could be read: the keys are unchanged.
+Imported %d lines, %d not understood
+press a key ...
+not set
+Warning: this key is also used by
+Click Set to record another key, Clear to remove it.
+%d actions share a key with another action: both fire. They are marked in orange.
+Keys and mouse buttons
+Click Set, then press the key (with Ctrl, Shift or Alt if you like) or the middle / side mouse button. Esc cancels. Every action can have two keys.
+Search actions or keys
+Reads a file written by Export (one action per line). Without a file dialog, onair-keys.txt in the data folder is used.
+Key
+Second key
+Also used by:
+These take the key while their screen is shown:
+Set
+Set second
+Not available for rebinding: the left and right mouse buttons, Esc and Tab. A key of the TV picture or the FT8 screen wins over a global key while that screen is shown.
+The step is used by Tune by the step on the wheel and by the tune up / down and step keys above.
+Reset every key and the wheel to the defaults
+Every key and the wheel go back to the defaults. Continue?
+Choose what the keys, the extra mouse buttons and the mouse wheel do. Nothing here is needed: the defaults are what OnAir has always done. The same page is in Settings > Keyboard and mouse.
+over the plots
+on the TV picture
+in the FT8 / FT4 / WSPR screen
+Start or stop the receiver
+Mode 1 of the list
+Mode 2 of the list
+Mode 3 of the list
+Mode 4 of the list
+Mode 5 of the list
+Mode 6 of the list
+Mode 7 of the list
+Mode 8 of the list
+Mode 9 of the list
+Spectrum range up 5 dB
+Spectrum range down 5 dB
+Spectrum range wider
+Spectrum range narrower
+Spectrum range back to the default
+View one width up in frequency
+View one width down in frequency
+Tune up by the step
+Tuning
+Tune down by the step
+Zoom in (frequency)
+Zoom out (frequency)
+Show the whole band
+Pan the view left
+Pan the view right
+Larger tuning step
+Smaller tuning step
+Pause or resume the waterfall
+Mute or unmute the sound
+Open or close Settings
+Windows
+Command palette
+Mode picker
+Memory panel
+Frequencies database
+Radio clips
+Keyboard and mouse settings
+Classic or Unified layout
+Docking on or off
+Video only (picture over the whole screen)
+Identify tool (click a signal to identify it)
+Unified layout: side column
+Larger text
+Smaller text
+Text size back to 100 %
+Start or stop an IQ recording
+Pause or play the TV picture
+Record the TV service
+Guide tab
+Station setup
+Log tab
+Stop and clear the DX call
+Map tab
+Call CQ
+Answer the best caller
+Spots tab
+Add a contact to the log
+Search the log
+The left and right mouse buttons are click-to-tune and the menu
+Esc closes dialogs and stops the transmitter
+A modifier alone cannot be a key
+Tab moves between the controls
+Keyboard and mouse
+Notifications
+Performance
+Profiles
+Start-up mode
+The mode OnAir opens with: the one you had last (default) or always the same one.
+Start-up frequency
+The frequency OnAir starts on: the last one (default) or a fixed frequency below.
+Fixed start-up frequency (MHz)
+Used when Start-up frequency is A fixed frequency.
+Start the receiver when OnAir starts
+Opens the radio you used last and starts receiving at once. Off (default): press Start.
+After a crash, restore the last session
+When OnAir did not end normally: ask (default), restore it at once, or never offer it.
+Confirm before quitting
+Ask before the window closes: never (default), only while the radio receives or records, or always.
+Aircraft units
+ADS-B, Mode A/C and HFDL: aviation units (knots, feet, nautical miles) or metric (km/h or m/s, metres, km). Only what is shown and exported changes; the feeds stay in aviation units.
+Metric speed
+km/h or m/s, when the aircraft units are metric.
+FFT size
+Bins of the spectrum. Automatic picks 8192 to 32768 from the sample rate; more bins show finer detail and cost more CPU.
+Waterfall speed
+Rows per second. Every frame (default) is about 30; slower rows each keep the highest level of the frames in between.
+Max-hold line
+A second line that keeps the highest level, falling at the rate above.
+Min-hold line
+A line under the signals at the lowest level (the noise floor).
+Noise floor line
+A line at the noise floor with its level.
+Station names on the spectrum
+Names from the band plan, the frequency database, FM, DAB, DVB and the memories on the spectrum and the waterfall.
+Spectrum line colour
+The colour of the spectrum line. The colour-blind safe ones read for everybody.
+Max-hold line colour
+The usual grey, or one of the line colours.
+Smooth the spectrum line
+Mild smoothing passes over the line; As the look keeps the look's own choice.
+Frequency scale
+Frequencies, or offsets from the tuned frequency.
+Scale text size
+Size of the scale numbers, times the look's own.
+Smooth zoom
+The wheel zoom eases in over a few frames. Off: it jumps.
+Waterfall floor below the noise (dB)
+With the range following the noise floor: how far under the noise the darkest colour sits.
+Waterfall range (dB)
+With the range following the noise floor: from the darkest to the brightest colour.
+Default range: bottom (dB)
+Where the spectrum's scale starts after Reset and the range key (Ctrl+Home by default).
+Default range: top (dB)
+Where the spectrum's scale ends after Reset and the range key.
+Range keys step (dB)
+How far the range keys (Ctrl+Up and Ctrl+Down by default) move the scale.
+Automatic gain
+The radio's gain is set by itself (Auto in the gain control); off: the gains you set.
+Remove the DC spike
+Takes the centre spike of the radio out of the samples.
+Correct IQ imbalance
+Removes the mirror image a radio's IQ imbalance makes.
+Tune off-centre by itself
+Keeps the wanted signal away from the radio's centre spike.
+Notch fixed spurs
+Finds carriers that never move (the radio's own) and removes them.
+Noise blanker
+Cuts short pulses (ignition, power lines).
+Noise blanker threshold
+Times the mean level that counts as a pulse. Lower cuts more.
+Noise blanker width (us)
+How long each cut is.
+Output device
+The sound output for every mode that has not picked its own in its Audio pop-up. Default: the system's.
+Audio AGC for new modes
+The audio level control a mode starts with the first time you use it. Each mode keeps its own after that.
+Squelch for new modes
+The squelch a mode starts with the first time you use it: off, by level, or by speech-to-noise.
+Squelch opens at (dB)
+Level squelch: dBFS. Speech to noise: dB.
+FM bass (dB)
+Tone control of FM broadcast.
+FM treble (dB)
+FM warm sound
+A gentle -3 dB above 6 kHz.
+FM audio bandwidth
+Full is 15 kHz; narrower is quieter on a weak station.
+Hide short drop-outs
+Fills short gaps in TV and DAB sound instead of a click.
+Sound card rate (Hz)
+The sample rate of the sound card input and output.
+IQ file name
+Tokens: {mode} {freq} (MHz) {khz} {rate} (Msps) {date} {time} {utcdate} {utctime}. Empty: onair_{mode}_{freq}MHz_{rate}Msps_{date}-{time}. Keep {freq}MHz and {rate}Msps so OnAir can read the file back.
+Split IQ recordings every (MB)
+Starts a new file when one reaches this size. 0: one file.
+Stop recording below free space (MB)
+An IQ recording stops when the disk has less than this left. 0: only when it is full.
+SigMF metadata beside IQ files
+A .sigmf-meta file with the frequency, rate and mode next to each recording.
+Audio recording format
+WAV, FLAC or MP3 (MP3 needs the LAME library).
+Record audio only while there is sound
+Leaves the silence out.
+One audio file per transmission
+A new file each time the sound starts again.
+Keep recording audio across retunes
+Off: a retune ends the file.
+TV pause buffer (MB)
+How much of the TV service is kept so Pause can go on later.
+Keys, mouse buttons and wheel
+Every action with its keys: Set records a key, Clear removes it, Default puts it back. Conflicts are marked; import and export the whole set.
+System notifications
+Alerts (watch lists, automations, pass reminders) also go to the system's notification centre.
+Banner in OnAir
+Alerts show a banner at the top of the OnAir window.
+Banner time (seconds)
+How long the banner stays.
+Alert sounds
+Alerts that play a sound play it. Off: silent.
+Quiet hours
+No system notifications and no alert sounds between the two times below (the banner still shows).
+Quiet from (minutes after midnight)
+e.g. 1320 is 22:00. Local time.
+Quiet until (minutes after midnight)
+e.g. 420 is 07:00. Local time.
+Map tile server
+Address of the map tiles with {z} {x} {y}. Empty: OpenStreetMap (https://tile.openstreetmap.org/{z}/{x}/{y}.png). Tiles of another server are cached apart. The server sees which map area you look at.
+Map tile cache size (MB)
+When the tiles take more room, the ones used longest ago are deleted.
+Keep map tiles between runs
+Off: the tiles of a session are deleted when OnAir ends.
+Fetch online map tiles
+The map screens load OpenStreetMap tiles (or your tile server's). Only tile numbers are sent; the server sees your IP address and the area. Off: offline maps only.
+DVB error correction on
+CPU, GPU or Automatic (default) for the DVB-T2 LDPC decoder.
+Settings profiles
+Save every setting of this window and the keys under a name, switch between them (e.g. Home, Portable, Night), and export or import a profile as a file.
+Verbose logging
+USB transfer counts, data rates, stall restarts and frame times in the log. For bug reports.
+Current profile:
+Pick a saved profile
+Switch to it
+Profile %s: %d settings
+Could not read that profile
+Yes, delete it
+Could not delete it
+Profile deleted
+Name, e.g. Night
+Save the current settings as this profile
+Import a profile file...
+That file is not a settings profile
+Could not store the profile
+The mode of the last run
+Search modes
+The system's default
+That device is not connected: the system's default is used.
+Open the key editor
+Every setting in this window, the keys included, goes back to its default. Continue?
+%d keyboard actions match
+Show them
+Reset this page
+A recording is running: it ends when OnAir quits.
+The receiver is running.
+Quit OnAir?
+Settings > General > Confirm before quitting
+Quit
+IQ recording stopped: the disk is almost full
+The last frequency
+A fixed frequency
+Ask
+Always restore
+Never offer
+While receiving or recording
+Aviation (kt, ft, nm)
+Every frame
+60 rows/s
+10 rows/s
+5 rows/s
+2 rows/s
+1 row/s
+1 row per 10 s
+1 row per minute
+Soft white
+Amber
+Pale cyan
+Pale steel
+Grey (default)
+As the look
+Offsets from the tuned frequency
+Speech to noise
+Full (15 kHz)
+Never
+Always
+Green
+Yellow
+Orange (CB safe)
+Sky blue (CB safe)
+Pink
+Light blue
+Fast
+Slow

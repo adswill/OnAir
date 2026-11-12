@@ -14,6 +14,7 @@
 #include <filesystem>
 #include <fstream>
 #include <sstream>
+#include "../ui/input_map.h"
 
 namespace {
 
@@ -414,7 +415,8 @@ void panelBody(App& a) {
 
 void freqdbWindow(App& a) {
     ImGuiIO& io = ImGui::GetIO();
-    if ((io.KeyCtrl || io.KeySuper) && io.KeyShift && !io.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_F, false)) a.freqOpen = !a.freqOpen;
+    if (inputmap::pressed(inputmap::Action::FreqDbWin)) a.freqOpen = !a.freqOpen;   // Ctrl+Shift+F by default
+    (void)io;
     if (!u.tabLoaded) { u.tabLoaded = true; a.freqTab = a.freqTab || plat::prefs().getB("freqTab", false); }
     if (!a.freqOpen) return;
     firstWindowSize(820 * gUi, 480 * gUi);

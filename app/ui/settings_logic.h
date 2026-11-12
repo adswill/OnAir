@@ -69,6 +69,23 @@ inline std::vector<size_t> filter(const std::vector<Info>& t, const std::string&
     return out;
 }
 
+// Where the words of a search occur in a text (case-insensitive): sorted, merged [begin, end) ranges, for highlighting the match
+inline std::vector<std::pair<size_t, size_t>> highlightSpans(const std::string& text, const std::string& query) {
+    std::vector<std::pair<size_t, size_t>> r;
+    const std::string t = lower(text);
+    for (const std::string& w : split(lower(query), ' ')) {
+        if (w.empty()) continue;
+        for (size_t p = t.find(w); p != std::string::npos; p = t.find(w, p + 1)) r.push_back({p, p + w.size()});
+    }
+    std::sort(r.begin(), r.end());
+    std::vector<std::pair<size_t, size_t>> m;
+    for (const auto& x : r) {
+        if (!m.empty() && x.first <= m.back().second) m.back().second = std::max(m.back().second, x.second);
+        else m.push_back(x);
+    }
+    return m;
+}
+
 // the categories in the order of first use
 inline std::vector<std::string> categories(const std::vector<Info>& t) {
     std::vector<std::string> out;
@@ -97,7 +114,10 @@ inline bool isDefault(const Info& i, const Val& v) {
 inline int choiceIndex(const Info& i, double v) {
     if (!i.values) return (int)v;
     const std::vector<std::string> p = split(i.values, ',');
-    for (size_t k = 0; k < p.size(); k++) if (std::atof(p[k].c_str()) == v) return (int)k;
+    for (size_t k = 0; k < p.size(); k++) {   // a float field (0.1f) still finds its entry (0.1)
+        const double x = std::atof(p[k].c_str());
+        if (std::fabs(x - v) <= 1e-5 * std::max(1.0, std::fabs(x))) return (int)k;
+    }
     return 0;
 }
 inline double choiceValue(const Info& i, int idx) {

@@ -260,12 +260,15 @@ void drawShell2(App& a, ImVec2 disp) {
             const bool spaceTaken = gSpaceClaimFrame >= ImGui::GetFrameCount() - 1 || txViewFlag();   // the TV picture or the transmitter has it
             if (!spaceTaken && inputmap::pressed(inputmap::Action::StartStop)) { if (a.engine.running()) a.engine.stop(); else startReceiver(a); }
             if (inputmap::pressed(inputmap::Action::Mute)) { a.muted = !a.muted; a.engine.player().setMuted(a.muted); a.engine.dabAudio().setMuted(a.muted); }
+            if (inputmap::pressed(inputmap::Action::ControlsWin)) inputmap::windowOpen() = !inputmap::windowOpen();
+            if (inputmap::pressed(inputmap::Action::RecordIq)) toggleIqRecording(a);
         }
     }
     if (a.kitGallery) { kit::gallery(a, disp); return; }
     {   // Ctrl/Cmd+Shift+L: Classic <-> Unified (the receiver keeps running)
         ImGuiIO& io = ImGui::GetIO();
-        if ((io.KeyCtrl || io.KeySuper) && io.KeyShift && !io.WantTextInput && ImGui::IsKeyPressed(ImGuiKey_L, false)) { a.layoutUnified = !a.layoutUnified; savePrefs(a); }
+        if (inputmap::pressed(inputmap::Action::LayoutToggle)) { a.layoutUnified = !a.layoutUnified; savePrefs(a); }
+        (void)io;
     }
     if (a.devViewMenu > 0) {   // dev: --viewmenu opens the View menu by a click, for a hidden screenshot
         static int n = 0; ImGuiIO& io = ImGui::GetIO();

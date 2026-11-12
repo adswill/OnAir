@@ -109,6 +109,7 @@ ImU32 scoreColour(double sc) {
 }
 
 static void mainTabsInner(App& a, bool unified);
+#include "ui/input_map.h"
 #include "main_tabs_unified.inc"
 
 void mainTabs(App& a) {

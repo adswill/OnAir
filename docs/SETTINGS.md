@@ -1,5 +1,7 @@
 # Settings
 
+4.0: see docs/SETTINGS-4.0.md for the key editor, the new pages, profiles and every setting.
+
 Menu bar > **Settings** (or Ctrl+, / Cmd+,) opens one window with the preferences a user wants to control. It does not replace the old menus; both read and write the same fields, so a change in one shows in the other.
 
 ## How it works

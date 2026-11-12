@@ -6,6 +6,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <ctime>
 #include <deque>
 #include <mutex>
 #include <string>
@@ -26,6 +27,12 @@ struct RecordingStats {
 
 // "onair_dvb_554.000MHz_10Msps_20261009-071530.cs8": guessSampleRate() and guessFormat() read the rate and the format back from it
 std::string recordingFileName(const std::string& modeId, double centerHz, double rateHz, FileFormat fmt);
+// 4.0, Settings > Recording and files > IQ file name: a pattern for recordingFileName(); empty (default) keeps the name above. Tokens:
+// {mode} {freq} (MHz, 3 decimals) {khz} {rate} (Msps) {date} {time} (local, YYYYMMDD and HHMMSS) {utcdate} {utctime}. The extension is added;
+// characters a file name cannot hold become _. Keep {freq}MHz and {rate}Msps in it so replay can read the frequency and rate back.
+void setRecordingNamePattern(const std::string& pattern);
+std::string recordingNamePattern();
+std::string expandRecordingPattern(const std::string& pattern, const std::string& modeId, double centerHz, double rateHz, const std::tm& local, const std::tm& utc);
 // The engine standard a recording's mode id names ("fm" 7, "ale" ...), -1 for "dvb" (T or T2), "iq" and unknown ids: replay restores the mode from it
 int recordingStdMode(const std::string& modeId);
 // The short name of an engine standard as used in recording names ("dvb", "fm", "dab", ...)

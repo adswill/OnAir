@@ -48,7 +48,15 @@ void push(App& a) {   // volume and mute reach the engines the way the main slid
 void applyConfig() {
     AudioControlConfig::global().set(S.s);
     if (S.devs.empty()) S.devs = dect2::AudioOut::devices();
-    dect2::AudioOut::setDefaultDevice(audioPickDevice(S.devs, S.s.device));
+    // a mode without its own device uses Settings > Audio > Output device (empty: the system's)
+    dect2::AudioOut::setDefaultDevice(audioPickDevice(S.devs, S.s.device.empty() ? plat::prefs().getS("audioDevDefault", "") : S.s.device));
+}
+
+// Settings > Audio: what a mode starts with the first time it is used (AGC, squelch); each mode keeps its own after that
+void newModeDefaults(AudioControlSettings& s) {
+    const long agc = plat::prefs().getI("aclDefAgc", 0), sq = plat::prefs().getI("aclDefSq", 0);
+    if (agc >= 1 && agc <= 2) { s.agc = (dect2::actl::AgcMode)agc; s.on = true; }
+    if (sq >= 1 && sq <= 2) { s.sqKind = (dect2::actl::SquelchKind)sq; s.sqOpenDb = (float)plat::prefs().getD("aclDefSqDb", -50); s.on = true; }
 }
 
 void savePrefs(int family) { plat::prefs().setS(keyFor(family).c_str(), audioControlToString(S.s)); }
@@ -59,7 +67,7 @@ void loadFamily(App& a) {
     const std::string str = plat::prefs().getS(keyFor(a.family).c_str(), "");
     const bool had = !str.empty();
     AudioControlSettings s = had ? audioControlFromString(str, d) : d;
-    if (!had) { s.volume = a.volume; s.muted = a.muted; }   // a mode never visited starts at the volume you have now
+    if (!had) { s.volume = a.volume; s.muted = a.muted; newModeDefaults(s); }   // a mode never visited starts at the volume you have now
     S.s = s;
     if (had) { a.volume = s.volume; a.muted = s.muted; push(a); }   // this mode's own volume
     S.savedVol = a.volume; S.savedMute = a.muted;
@@ -410,3 +418,6 @@ bool audioControlButton(App& a) {
     ImGui::PopID();
     return changed;
 }
+
+// Settings > Audio > Output device changed: the sound goes there now (a mode with its own device keeps it)
+void audioDefaultDeviceChanged() { S.devs = dect2::AudioOut::devices(); applyConfig(); }

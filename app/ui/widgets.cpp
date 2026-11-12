@@ -5,6 +5,7 @@
 #include "command_palette.h"
 #include "imgui_internal.h"
 #include "window_fit.h"
+#include "input_map.h"
 
 // Frequency step arrows: one step on press, then after 0.40 s one more step every 0.08 s.
 // At most one step per frame so a hitch does not jump many channels.
@@ -188,11 +189,8 @@ void toggleFullscreen() {
 
 void handleFullscreenHotkeys() {
     ImGuiIO& io = ImGui::GetIO();
-    if (io.WantTextInput) return;   // F11 / Alt+Enter stay with the field while typing
-    const bool f11 = ImGui::IsKeyPressed(ImGuiKey_F11, false);
-    const bool altEnter = io.KeyAlt && !io.KeyCtrl && !io.KeySuper
-        && (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false));
-    if (f11 || altEnter) toggleFullscreen();
+    if (io.WantTextInput) return;   // F11 / Alt+Enter (by default) stay with the field while typing
+    if (inputmap::pressed(inputmap::Action::Fullscreen)) toggleFullscreen();
 }
 
 bool pillButton(const char* label, bool selected, float padX) {

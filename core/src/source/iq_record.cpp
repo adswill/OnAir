@@ -11,6 +11,7 @@
 #include <cstring>
 #include <ctime>
 #include <filesystem>
+#include <mutex>
 
 namespace dect2 {
 
@@ -21,20 +22,67 @@ std::string recordingModeId(int m) {
     return "iq";
 }
 
+namespace {
+std::mutex gPatMu;
+std::string gPattern;
+}
+void setRecordingNamePattern(const std::string& pattern) { std::lock_guard<std::mutex> lk(gPatMu); gPattern = pattern; }
+std::string recordingNamePattern() { std::lock_guard<std::mutex> lk(gPatMu); return gPattern; }
+
+std::string expandRecordingPattern(const std::string& pattern, const std::string& modeId, double centerHz, double rateHz, const std::tm& local, const std::tm& utc) {
+    std::string id = modeId.empty() ? "iq" : modeId;
+    for (auto& c : id) if (!isalnum((unsigned char)c)) c = '-';
+    char b[64];
+    std::string o;
+    for (size_t i = 0; i < pattern.size(); i++) {
+        if (pattern[i] == '{') {
+            const size_t e = pattern.find('}', i);
+            if (e != std::string::npos) {
+                const std::string tok = pattern.substr(i + 1, e - i - 1);
+                bool known = true;
+                if (tok == "mode") o += id;
+                else if (tok == "freq") { snprintf(b, sizeof b, "%.3f", centerHz / 1e6); o += b; }
+                else if (tok == "khz") { snprintf(b, sizeof b, "%.0f", centerHz / 1e3); o += b; }
+                else if (tok == "rate") { snprintf(b, sizeof b, "%.9g", rateHz / 1e6); o += b; }
+                else if (tok == "date") { strftime(b, sizeof b, "%Y%m%d", &local); o += b; }
+                else if (tok == "time") { strftime(b, sizeof b, "%H%M%S", &local); o += b; }
+                else if (tok == "utcdate") { strftime(b, sizeof b, "%Y%m%d", &utc); o += b; }
+                else if (tok == "utctime") { strftime(b, sizeof b, "%H%M%SZ", &utc); o += b; }
+                else known = false;
+                if (known) { i = e; continue; }
+            }
+        }
+        o += pattern[i];
+    }
+    for (auto& c : o) if ((unsigned char)c < 32 || strchr("/\\:*?\"<>|", c)) c = '_';
+    while (!o.empty() && (o[0] == '.' || o[0] == ' ')) o.erase(0, 1);
+    while (!o.empty() && (o.back() == '.' || o.back() == ' ')) o.pop_back();
+    if (o.size() > 180) o.resize(180);
+    return o;
+}
+
 std::string recordingFileName(const std::string& modeId, double centerHz, double rateHz, FileFormat fmt) {
     const std::time_t t = std::time(nullptr);
-    std::tm tm{};
+    std::tm tm{}, ut{};
 #ifdef _WIN32
     localtime_s(&tm, &t);
+    gmtime_s(&ut, &t);
 #else
     localtime_r(&t, &tm);
+    gmtime_r(&t, &ut);
 #endif
+    const char* ext = fmt == FileFormat::CF32 ? "cf32" : fmt == FileFormat::CI16 ? "cs16" : "cs8";
+    const std::string pat = recordingNamePattern();
+    if (!pat.empty()) {
+        const std::string n = expandRecordingPattern(pat, modeId, centerHz, rateHz, tm, ut);
+        if (!n.empty()) return n + "." + ext;
+    }
     char stamp[32];
     strftime(stamp, sizeof stamp, "%Y%m%d-%H%M%S", &tm);
     std::string id = modeId.empty() ? "iq" : modeId;
     for (auto& c : id) if (!isalnum((unsigned char)c)) c = '-';
     char b[160];
-    snprintf(b, sizeof b, "onair_%s_%.3fMHz_%.9gMsps_%s.%s", id.c_str(), centerHz / 1e6, rateHz / 1e6, stamp, fmt == FileFormat::CF32 ? "cf32" : fmt == FileFormat::CI16 ? "cs16" : "cs8");
+    snprintf(b, sizeof b, "onair_%s_%.3fMHz_%.9gMsps_%s.%s", id.c_str(), centerHz / 1e6, rateHz / 1e6, stamp, ext);
     return b;
 }
 
