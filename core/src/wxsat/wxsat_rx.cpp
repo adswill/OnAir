@@ -915,6 +915,7 @@ void WxsatReceiver::clearResults() { clearImage(); }
 void WxsatReceiver::setSaveDir(const std::string& dir) { if (p_->files) p_->files->setSaveDir(dir); }
 void WxsatReceiver::setFilecastSymbolRate(double hz) { p_->fcSymbols = hz; p_->fcSymbolsSet = true; }
 void WxsatReceiver::setFilecastPid(int pid) { if (p_->files) p_->files->setPid(pid); }
+void WxsatReceiver::setAptNoiseFilter(bool on) { p_->apt.setNoiseFilter(on); }
 wxsat::FilecastLayer* WxsatReceiver::fileLayer() { return p_->files.get(); }
 void WxsatReceiver::setBlocking(bool b) { p_->fileBlocking = b; }
 void WxsatReceiver::flush() { if (p_->dvb) { p_->dvb->flush(); } if (p_->files) p_->files->flush(); p_->report(); }
