@@ -42,7 +42,7 @@ static int blocksRight(const Msg& m, const X40Telemetry& t, int* wrongOk = nullp
         if (idx < 2 || idx >= (int)m.text.size()) continue;
         const bool crc = r.text.find("CRC OK") != std::string::npos, same = r.text.rfind(m.text[(size_t)idx], 0) == 0;
         if (crc && same) ok++;
-        else if (crc && !same && wrongOk) (*wrongOk)++;
+        else if (crc && !same && wrongOk) { if ((*wrongOk)++ < 6) printf("    wrong %s: '%s' sent '%s'\n", r.id.c_str(), r.text.c_str(), m.text[(size_t)idx].c_str()); }
     }
     return ok;
 }
