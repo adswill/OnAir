@@ -1219,8 +1219,6 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_sens40b3 PRIVATE dect2core)
     add_test(NAME sens40b3 COMMAND test_sens40b3)
     set_tests_properties(sens40b3 PROPERTIES TIMEOUT 1500)
-    add_executable(sens_ism_dev tests/sens/sens_ism_dev.cpp)   # ISM sensors: share of each test device's transmissions read against the SNR (docs/SENSITIVITY-4.0-B3.md)
-    target_link_libraries(sens_ism_dev PRIVATE dect2core)
   endif()
   # run by the build workers (ctest -R sens_quick / sens_full, or -L sens-quick / sens-full); results land in <build>/sens-out/*.json
   add_test(NAME sens_quick COMMAND sens_sweep --quick --mode "dvbt$|dab|fm" --out ${CMAKE_BINARY_DIR}/sens-out)
