@@ -448,6 +448,17 @@
         <item>AIS aids to navigation (AtoN)</item>
         <item>AIS search and rescue aircraft</item>
         <item>AIS-SART, MOB and EPIRB-AIS</item>
+        <item>DCF77 (Germany, 77.5 kHz)</item>
+        <item>MSF (United Kingdom, 60 kHz)</item>
+        <item>WWVB (United States, 60 kHz)</item>
+        <item>JJY 40 kHz (Japan)</item>
+        <item>JJY 60 kHz (Japan)</item>
+        <item>WWV / WWVH (United States, HF)</item>
+        <item>BPM (China, HF)</item>
+        <item>BPC (China, 68.5 kHz)</item>
+        <item>HLA (Korea, 5 MHz)</item>
+        <item>BPM coded (China, HF)</item>
+        <item>RWM (Russia, 9996 kHz)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -877,6 +888,17 @@
         <item>AIS aids to navigation on 161.975 and 162.025 MHz (message 21): buoys, beacons and lights with their type, name, position, whether they are off position, and virtual aids. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
         <item>AIS search and rescue aircraft on 161.975 and 162.025 MHz (message 9): position, altitude, speed and course of helicopters and aeroplanes in a search. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
         <item>Distress devices on the AIS channels 161.975 and 162.025 MHz: AIS-SART (MMSI 970xxxxxx), man-overboard devices (972xxxxxx) and EPIRB-AIS (974xxxxxx, ITU-R M.1371): the stations with these numbers and their position reports. A real alert is shown the same way: nothing here replaces a distress radio. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
+        <item>DCF77 time signal from Mainflingen, Germany, on 77.5 kHz: the carrier keyed to 15 % for 100 ms (0) or 200 ms (1) each second: time, date, summer time and leap second flags (CET / CEST), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>MSF time signal from Anthorn, United Kingdom, on 60 kHz: the carrier switched off for 100 ms and then bits A and B each second: time, date and summer time flags (UK time), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>WWVB time signal from Fort Collins, United States, on 60 kHz: the carrier lowered by 17 dB for 200 ms (0), 500 ms (1) or 800 ms (marker) each second: time, date, daylight saving and leap second flags, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>JJY time signal from Ohtakadoya, Japan, on 40 kHz: the carrier high for 800 ms (0), 500 ms (1) or 200 ms (marker) each second: time and date (JST), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>JJY time signal from Hagane, Japan, on 60 kHz: the carrier high for 800 ms (0), 500 ms (1) or 200 ms (marker) each second: time and date (JST), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>WWV and WWVH time signals on 2.5 - 20 MHz (10 MHz first): 5 ms ticks at 1000 Hz (WWV) or 1200 Hz (WWVH), the minute tone and the BCD time code as a 100 Hz subcarrier: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>BPM time signal (Chinese HF time station, 5 MHz first): the seconds tick and the time code: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>BPC time signal from China on 68.5 kHz: the keyed carrier: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>HLA time signal from Korea on 5 MHz: the seconds tick and the time code: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>BPM coded time signal (the coded time frames of the Chinese HF station BPM, 5 MHz first): time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
+        <item>RWM time signal from Moscow, Russia, on 9996 kHz (also 4996 and 14996 kHz): the carrier keyed with the time code: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1306,6 +1328,17 @@
         <item>Ships, AtoN</item>
         <item>Ships, SAR aircraft</item>
         <item>Ships, SART / MOB / EPIRB</item>
+        <item>Time, DCF77</item>
+        <item>Time, MSF</item>
+        <item>Time, WWVB</item>
+        <item>Time, JJY 40 kHz</item>
+        <item>Time, JJY 60 kHz</item>
+        <item>Time, WWV / WWVH</item>
+        <item>Time, BPM</item>
+        <item>Time, BPC</item>
+        <item>Time, HLA</item>
+        <item>Time, BPM coded</item>
+        <item>Time, RWM</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1735,5 +1768,16 @@
         <item>ais aton aid to navigation buoy beacon lighthouse virtual message 21 161.975 162.025 marine</item>
         <item>ais sar search and rescue aircraft helicopter message 9 161.975 162.025 marine</item>
         <item>ais sart mob man overboard epirb distress alert 970 972 974 gmdss search and rescue 161.975 162.025 marine</item>
+        <item>dcf77 germany mainflingen 77.5 khz time signal radio clock atomic clock cet cest utc</item>
+        <item>msf uk united kingdom anthorn 60 khz time signal radio clock atomic clock gmt bst utc</item>
+        <item>wwvb us usa fort collins 60 khz time signal radio clock atomic clock utc nist</item>
+        <item>jjy japan ohtakadoya 40 khz time signal radio clock atomic clock jst</item>
+        <item>jjy japan hagane 60 khz time signal radio clock atomic clock jst</item>
+        <item>wwv wwvh us usa hf time signal 2.5 5 10 15 20 mhz bcd tick atomic clock utc nist</item>
+        <item>bpm china chinese hf time signal 5 mhz atomic clock utc</item>
+        <item>bpc china chinese 68.5 khz time signal radio clock atomic clock</item>
+        <item>hla korea korean 5 mhz hf time signal atomic clock kriss</item>
+        <item>bpm coded china chinese hf time signal 5 mhz atomic clock</item>
+        <item>rwm russia russian moscow 9996 4996 14996 khz hf time signal atomic clock</item>
     </string-array>
 </resources>

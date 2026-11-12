@@ -47,7 +47,7 @@ void saveState() {
     plat::prefs().flush();
 }
 
-bool live(const App& a) { return a.rx.standard == 59; }   // the engine reports its standard code minus one
+bool live(const App& a) { return a.rx.standard == 59 || dect2::timeViewForActive(a.rx.standard) != nullptr; }   // the engine reports its standard code minus one
 
 void kvRow(const App& a, const char* k, const char* fmt, ...) {
     ImGui::TextDisabled("%s", k); kvColumn(130 * gUi);
@@ -217,7 +217,7 @@ void logView(App& a) {
 // ---------------------------------------------------------------- hooks
 
 void pushSettings(App& a) {
-    a.engine.timesig().setStation(S.station);
+    { const TimeView* tv = dect2::timeViewForActive(a.engine.activeStandard()); a.engine.timesig().setStation(tv ? tv->station : S.station); }   // an entry of one station keeps its station
     a.engine.timesig().setPref60(S.pref60);
     double lat, lon;
     receiverLocation(lat, lon);

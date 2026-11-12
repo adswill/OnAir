@@ -287,6 +287,18 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 57: return pollStd(rxRid_, 57, t, seqs[51], &RxTelemetry::rid);
     case 58: return pollStd(rxNr_, 58, t, seqs[52], &RxTelemetry::nr);
     case 59: return pollStd(rxTime_, 59, t, seqs[53], &RxTelemetry::timesig);
+    // 4.0: one entry per time station, the same receiver (time_rx.h: timeViews)
+    case 608: return pollStd(rxTime_, 608, t, seqs[607], &RxTelemetry::timesig);   // time station entry (family 607)
+    case 611: return pollStd(rxTime_, 611, t, seqs[610], &RxTelemetry::timesig);   // time station entry (family 610)
+    case 614: return pollStd(rxTime_, 614, t, seqs[613], &RxTelemetry::timesig);   // time station entry (family 613)
+    case 617: return pollStd(rxTime_, 617, t, seqs[616], &RxTelemetry::timesig);   // time station entry (family 616)
+    case 629: return pollStd(rxTime_, 629, t, seqs[628], &RxTelemetry::timesig);   // time station entry (family 628)
+    case 632: return pollStd(rxTime_, 632, t, seqs[631], &RxTelemetry::timesig);   // time station entry (family 631)
+    case 635: return pollStd(rxTime_, 635, t, seqs[634], &RxTelemetry::timesig);   // time station entry (family 634)
+    case 638: return pollStd(rxTime_, 638, t, seqs[637], &RxTelemetry::timesig);   // time station entry (family 637)
+    case 643: return pollStd(rxTime_, 643, t, seqs[642], &RxTelemetry::timesig);   // time station entry (family 642)
+    case 646: return pollStd(rxTime_, 646, t, seqs[645], &RxTelemetry::timesig);   // time station entry (family 645)
+    case 649: return pollStd(rxTime_, 649, t, seqs[648], &RxTelemetry::timesig);   // time station entry (family 648)
     case 60: return pollStd(rxMeteor_, 60, t, seqs[54], &RxTelemetry::meteor);
     case 61: return pollStd(rxGoes_, 61, t, seqs[55], &RxTelemetry::goes);
     case 62: return pollStd(rxCube_, 62, t, seqs[56], &RxTelemetry::cube);

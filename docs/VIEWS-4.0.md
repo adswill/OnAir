@@ -1,6 +1,6 @@
 # Radiosonde, wireless M-Bus and satellite framing entries (4.0, branch feat40-modes4)
 
-Twenty-four more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
+Thirty-five more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
 No decoder was added or changed. The sensor-family entries of the same branch are in `SENSORVIEWS-4.0.md`.
 
 ## Radiosonde types (receiver `SondeReceiver`, `setKindMask`)
@@ -53,3 +53,9 @@ Numbers come from the free ranges of `docs/FAMILY-NUMBERS-4.0.md` (663 - 697, 70
 `telemetry()` keeps the vessels of the class (or the device MMSIs) and, with them, the message records, application messages, alerts, anomalies and sentences of those stations; the counts are recomputed from the vessels' message counts.
 Test `tests/ais/test_ais_views.cpp`: the simulated port of `ais_gen` (30 s, clean at 34 dB and with +3 kHz at 26 dB) through one receiver per view and one without: each view lists exactly the stations of its class that the receiver without a view lists (19 stations in all, every class present),
 bursts of position reports of ships and of MMSI 970123456 / 972123456 / 974123456 (carrier errors of +-800 Hz, 28 dB): the device view lists exactly the three devices; noise only: nothing. **Simulated signals only**, no recording of an AIS-SART was available.
+
+## Time stations (receiver `TimeReceiver`, station fixed by the entry)
+Families 607, 610, 613, 616, 628, 631, 634, 637, 642, 645, 648 (active standard family + 1, engine standard family + 2, poll slot = family): DCF77, MSF, WWVB, JJY 40 kHz, JJY 60 kHz, WWV / WWVH, BPM, BPC, HLA, BPM coded and RWM; CHU is not offered (removed in the screen, #150).
+The engine fixes the station when the entry starts (`setStation`), the Time signals screen keeps it (`time_ui.cpp`), and the default frequency is the station's. The clock sync section stays in Time signals.
+Test `tests/time/test_time_views.cpp`: the test signal of each station (175 s at 64 ksps, 30 dB, carrier errors of +6 / -4 Hz, sample clock errors of +8 / -12 ppm, started part way into a minute) into a receiver fixed to it: the station is right, and for DCF77, MSF, WWVB, JJY 40, JJY 60, WWV and BPM the decoded time is right with no rejected minute;
+BPC, HLA, BPM coded and RWM are checked for the station only (their decoding is covered by `test_time_burst` and `test_time_rwm`). A DCF77 signal in the MSF entry, WWVB in the DCF77 entry and JJY 60 in the WWVB entry give no time; noise alone gives none in any entry. **Simulated signals only.**

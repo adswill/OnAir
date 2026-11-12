@@ -864,6 +864,30 @@ bool TimeReceiver::telemetry(TimeTelemetry& out, uint64_t lastSeq) {
 }
 void TimeReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 
+// 4.0: the stations with a mode-list entry of their own (family, active standard family + 1, engine standard family + 2, poll slot = family); CHU is not offered (removed, #150)
+static const TimeView kTimeViews[] = {
+    {607, "dcf77", "DCF77 (Germany, 77.5 kHz)", 0},
+    {610, "msf", "MSF (United Kingdom, 60 kHz)", 1},
+    {613, "wwvb", "WWVB (United States, 60 kHz)", 2},
+    {616, "jjy40", "JJY 40 kHz (Japan)", 3},
+    {628, "jjy60", "JJY 60 kHz (Japan)", 4},
+    {631, "wwv", "WWV / WWVH (United States, HF)", 5},
+    {634, "bpm", "BPM (China, HF)", 7},
+    {637, "bpc", "BPC (China, 68.5 kHz)", 8},
+    {642, "hla", "HLA (Korea, 5 MHz)", 9},
+    {645, "bpmcoded", "BPM coded (China, HF)", 10},
+    {648, "rwm", "RWM (Russia, 9996 kHz)", 11},
+};
+const TimeView* timeViews(int& count) { count = (int)(sizeof kTimeViews / sizeof *kTimeViews); return kTimeViews; }
+const TimeView* timeViewForActive(int a) { for (const auto& v : kTimeViews) if (v.family + 1 == a) return &v; return nullptr; }
+const TimeView* timeViewForStd(int s) { for (const auto& v : kTimeViews) if (v.family + 2 == s) return &v; return nullptr; }
+ModeTuning timeViewTuning(int i) {
+    ModeTuning t = timeTuning();
+    const TimeView& v = kTimeViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name; t.defMhz = timesig::stationKhz(v.station) / 1000.0;
+    return t;
+}
+
 ModeTuning timeTuning() {
     ModeTuning t;
     t.stdMode = 60; t.id = "time"; t.name = "Time signals";

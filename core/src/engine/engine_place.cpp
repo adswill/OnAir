@@ -160,7 +160,7 @@ void Engine::configureReceiver(int a, double r) {
     case 50: rxAle_.configure(r); break;
     case 51: rxP25_.configure(r); break;
     case 56: rxGeneral_.configure(r); for (auto& g : extraGeneral_) g.configure(r); break;
-    case 59: rxTime_.configure(r); break;
+    case 59: DECT2_TIMEVIEW_ACTIVE_CASES rxTime_.configure(r); break;
     case 60: rxMeteor_.configure(r); break;
     case 62: case 841: case 844: case 847: case 850: case 853: case 856: case 793: case 796: case 805: rxCube_.configure(r); break;
     case 63: rxGs_.configure(r); break;
@@ -398,7 +398,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 50: rxAle_.setSignalOffset(o); rxAle_.setDialHz(dialHz); break;
     case 51: rxP25_.setSignalOffset(o); break;
     case 56: rxGeneral_.setSignalOffset(o); for (auto& g : extraGeneral_) g.setSignalOffset(o); break;
-    case 59: rxTime_.setSignalOffset(o); rxTime_.setDialHz(dialHz); break;
+    case 59: DECT2_TIMEVIEW_ACTIVE_CASES rxTime_.setSignalOffset(o); rxTime_.setDialHz(dialHz); break;
     case 60: rxMeteor_.setSignalOffset(o); break;
     case 62: case 841: case 844: case 847: case 850: case 853: case 856: case 793: case 796: case 805: rxCube_.setSignalOffset(o); rxCube_.setDialHz(dialHz); break;
     case 63: rxGs_.setSignalOffset(o); rxGs_.setDialHz(dialHz); break;

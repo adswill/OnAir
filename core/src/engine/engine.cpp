@@ -644,7 +644,7 @@ void Engine::resetReceiver(int a) {
     case 54: rxQo100_.reset(); break;
     case 55: rxWifi_.reset(); break;
     case 56: rxGeneral_.reset(); for (auto& g : extraGeneral_) g.reset(); break;
-    case 59: rxTime_.reset(); break;
+    case 59: DECT2_TIMEVIEW_ACTIVE_CASES rxTime_.reset(); break;
     case 62: case 841: case 844: case 847: case 850: case 853: case 856: case 793: case 796: case 805: rxCube_.reset(); break;   // 841 .. 856: the framing entries (cubesat_rx.h)
     case 63: rxGs_.reset(); break;
     case 64: rxVdes_.reset(); break;

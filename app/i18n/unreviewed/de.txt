@@ -757,3 +757,14 @@ Ships, Base stations
 Ships, AtoN
 Ships, SAR aircraft
 Ships, SART / MOB / EPIRB
+Time, DCF77
+Time, MSF
+Time, WWVB
+Time, JJY 40 kHz
+Time, JJY 60 kHz
+Time, WWV / WWVH
+Time, BPM
+Time, BPC
+Time, HLA
+Time, BPM coded
+Time, RWM

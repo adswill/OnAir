@@ -572,6 +572,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxIono_.setTimeOrigin(dev.isRadio() ? std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() : 0.0);
     rxQo100_.configure(rate_);
     rxTime_.configure(rate_);
+    { const TimeView* tv = timeViewForActive(activeStdFor(stdMode_.load())); if (tv) rxTime_.setStation(tv->station); }   // an entry of one station fixes that station (the screen keeps it: time_ui.cpp)
     rxCube_.configure(rate_);
     { const CubesatView* cv = cubesatViewForActive(activeStdFor(stdMode_.load())); rxCube_.setFramingMask(cv ? 1u << cv->framing : 0u); }   // an entry of one framing hears that framing only
     rxGs_.configure(rate_);

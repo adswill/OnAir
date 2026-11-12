@@ -4187,3 +4187,14 @@ Ships, Base stations	Schiffe, Base stations
 Ships, AtoN	Schiffe, AtoN
 Ships, SAR aircraft	Schiffe, SAR aircraft
 Ships, SART / MOB / EPIRB	Schiffe, SART / MOB / EPIRB
+Time, DCF77	Zeit, DCF77
+Time, MSF	Zeit, MSF
+Time, WWVB	Zeit, WWVB
+Time, JJY 40 kHz	Zeit, JJY 40 kHz
+Time, JJY 60 kHz	Zeit, JJY 60 kHz
+Time, WWV / WWVH	Zeit, WWV / WWVH
+Time, BPM	Zeit, BPM
+Time, BPC	Zeit, BPC
+Time, HLA	Zeit, HLA
+Time, BPM coded	Zeit, BPM coded
+Time, RWM	Zeit, RWM

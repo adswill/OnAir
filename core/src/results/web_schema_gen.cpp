@@ -15183,6 +15183,10 @@ static bool put_604(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTel
 static bool put_605(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_606(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_607(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
+static bool put_608(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_611(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_614(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_617(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
 static bool put_621(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
 static bool put_622(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
 static bool put_623(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
@@ -15190,7 +15194,14 @@ static bool put_624(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTele
 static bool put_625(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
 static bool put_626(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
 static bool put_627(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTelemetry(s, rx.cishf); return true; }
+static bool put_629(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_632(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_635(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_638(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
 static bool put_641(const RxTelemetry& rx, std::string& s) { ev_dect2__Vdl3Telemetry(s, rx.vdl3); return true; }
+static bool put_643(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_646(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
+static bool put_649(const RxTelemetry& rx, std::string& s) { ev_dect2__TimeTelemetry(s, rx.timesig); return true; }
 static bool put_661(const RxTelemetry& rx, std::string& s) { ev_dect2__CdmaTelemetry(s, rx.cdma); return true; }
 static bool put_662(const RxTelemetry& rx, std::string& s) { ev_dect2__TdscdmaTelemetry(s, rx.tdscdma); return true; }
 static bool put_664(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
@@ -15508,6 +15519,10 @@ static const StdEntry kStd[] = {
     {605, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_605},
     {606, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_606},
     {607, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_607},
+    {608, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_608},
+    {611, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_611},
+    {614, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_614},
+    {617, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_617},
     {621, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_621},
     {622, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_622},
     {623, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_623},
@@ -15515,7 +15530,14 @@ static const StdEntry kStd[] = {
     {625, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_625},
     {626, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_626},
     {627, "cishf", "dect2::CisHfTelemetry", kSchema_dect2__CisHfTelemetry, put_627},
+    {629, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_629},
+    {632, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_632},
+    {635, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_635},
+    {638, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_638},
     {641, "vdl3", "dect2::Vdl3Telemetry", kSchema_dect2__Vdl3Telemetry, put_641},
+    {643, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_643},
+    {646, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_646},
+    {649, "timesig", "dect2::TimeTelemetry", kSchema_dect2__TimeTelemetry, put_649},
     {661, "cdma", "dect2::CdmaTelemetry", kSchema_dect2__CdmaTelemetry, put_661},
     {662, "tdscdma", "dect2::TdscdmaTelemetry", kSchema_dect2__TdscdmaTelemetry, put_662},
     {664, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_664},
@@ -15993,6 +16015,17 @@ static const WebModeRow kRows[] = {
     {813, "AIS aids to navigation (AtoN)", 3, "AIS AtoN: buoys, beacons and virtual aids", "", 815, 814, "ais"},
     {816, "AIS search and rescue aircraft", 3, "AIS SAR aircraft: search and rescue positions", "", 818, 817, "ais"},
     {857, "AIS-SART, MOB and EPIRB-AIS", 3, "AIS-SART, MOB and EPIRB-AIS: distress device positions", "", 859, 858, "ais"},
+    {607, "DCF77 (Germany, 77.5 kHz)", 9, "DCF77: German time code on 77.5 kHz", "", 609, 608, "timesig"},
+    {610, "MSF (United Kingdom, 60 kHz)", 9, "MSF: UK time code on 60 kHz", "", 612, 611, "timesig"},
+    {613, "WWVB (United States, 60 kHz)", 9, "WWVB: US time code on 60 kHz", "", 615, 614, "timesig"},
+    {616, "JJY 40 kHz (Japan)", 9, "JJY 40 kHz: Japanese time code", "", 618, 617, "timesig"},
+    {628, "JJY 60 kHz (Japan)", 9, "JJY 60 kHz: Japanese time code", "", 630, 629, "timesig"},
+    {631, "WWV / WWVH (United States, HF)", 9, "WWV / WWVH: US HF time signals", "", 633, 632, "timesig"},
+    {634, "BPM (China, HF)", 9, "BPM: Chinese HF time signal", "", 636, 635, "timesig"},
+    {637, "BPC (China, 68.5 kHz)", 9, "BPC: Chinese time code on 68.5 kHz", "", 639, 638, "timesig"},
+    {642, "HLA (Korea, 5 MHz)", 9, "HLA: Korean HF time signal", "", 644, 643, "timesig"},
+    {645, "BPM coded (China, HF)", 9, "BPM coded: Chinese HF time frames", "", 647, 646, "timesig"},
+    {648, "RWM (Russia, 9996 kHz)", 9, "RWM: Russian HF time signal", "", 650, 649, "timesig"},
 };
 } // namespace
 

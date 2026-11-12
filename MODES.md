@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**420 modes.**
+**431 modes.**
 
 ## TV (17)
 
@@ -262,7 +262,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Wireless M-Bus R2** - Wireless M-Bus R2: receive mode meters on 868.03 - 868.15 MHz
 - **Wireless M-Bus N1 (Wize, 169 MHz)** - Wireless M-Bus N1: 169 MHz and Wize meters
 
-## Weather & Science (65)
+## Weather & Science (76)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -329,6 +329,17 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Radiosonde: InterMet iMet-54** - InterMet iMet-54: weather balloon position data
 - **Radiosonde: Russian MRZ** - MRZ: Russian weather balloon sondes
 - **Radiosonde: Meisei iMS-100** - Meisei iMS-100: weather balloon position data
+- **DCF77 (Germany, 77.5 kHz)** - DCF77: German time code on 77.5 kHz
+- **MSF (United Kingdom, 60 kHz)** - MSF: UK time code on 60 kHz
+- **WWVB (United States, 60 kHz)** - WWVB: US time code on 60 kHz
+- **JJY 40 kHz (Japan)** - JJY 40 kHz: Japanese time code
+- **JJY 60 kHz (Japan)** - JJY 60 kHz: Japanese time code
+- **WWV / WWVH (United States, HF)** - WWV / WWVH: US HF time signals
+- **BPM (China, HF)** - BPM: Chinese HF time signal
+- **BPC (China, 68.5 kHz)** - BPC: Chinese time code on 68.5 kHz
+- **HLA (Korea, 5 MHz)** - HLA: Korean HF time signal
+- **BPM coded (China, HF)** - BPM coded: Chinese HF time frames
+- **RWM (Russia, 9996 kHz)** - RWM: Russian HF time signal
 
 ## Amateur - Digital (43)
 
