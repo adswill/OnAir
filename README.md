@@ -111,7 +111,7 @@ The full list, with what was measured and the known limits, is in [docs/CHANGELO
 - **Plugin marketplace**: community plugins at plugins.on-air.dev in the Store tab (not reviewed, marked so). **Map badges** with GitHub sign-in.
 - **Radiosondes**: landing predictor with an error ellipse, SondeHub upload, named launch sites. **HFDL**: nearby ground stations and a busiest-band search.
 - **NFM audio**: the General receiver's NFM audio filter is 3 kHz now (was 4 kHz), so NFM sounds less noisy and less bright.
-- **Fixes**: #479 (DCS on transmit), #484 (ATSC 3.0 signalling, partly), #481, and "too slow" / "USB 3" warnings on fast PCs, nRSP-ST above a few Msps.
+- **Fixes**: #479 (DCS on transmit), #463 (CDR sound on Android, with the DRA+ add-on you build), #435 (DTMB on Android over a lossy network link), #442 (FM panel, Mode A/C full screen, Windows folder picker and icon), #484 (ATSC 3.0 signalling, partly), #481, and "too slow" / "USB 3" warnings on fast PCs, nRSP-ST above a few Msps.
 
 ## What is new in 3.9
 
