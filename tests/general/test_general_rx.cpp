@@ -89,6 +89,16 @@ int main() {
         CHECK(r.tel.squelchOpen && r.tel.dataValid && r.tel.snrDb > 15, "%s squelch %d snr %.1f", c.name, r.tel.squelchOpen, r.tel.snrDb);
     }
 
+    // 4.0: NFM audio low-pass at 3 kHz (was 4 kHz): speech up to 2.5 kHz keeps its level, 3.8 kHz (passed by the 3.9 filter) is cut
+    {
+        const Run lo = run(GenNfm, GenNfm, 1.5, 30, false, 0, 0, 0, true, true, -60, 2500);
+        const Run hi = run(GenNfm, GenNfm, 1.5, 30, false, 0, 0, 0, true, true, -60, 3800);
+        const double aLo = toneAmp(lo.aud, 2500), aHi = toneAmp(hi.aud, 3800);
+        printf("  NFM 3 kHz low-pass: 2.5 kHz tone %.3f (want 0.25), 3.8 kHz tone %.4f\n", aLo, aHi);
+        CHECK(std::fabs(20 * std::log10(aLo / 0.25)) < 1.5, "NFM 2.5 kHz level %.3f", aLo);
+        CHECK(aHi < 0.1 * 0.25, "NFM 3.8 kHz not cut: %.4f", aHi);
+    }
+
     // 4.0: CW-L is the mirror of CW (a carrier 100 Hz above the dial: CW 800 Hz, CW-L 600 Hz; 100 Hz below: the other way round);
     // RAW passes the channel undemodulated (a carrier 1.5 kHz above the dial is a 1.5 kHz tone); the same at 20 dB SNR with the channel
     // put 25 kHz off the dial (the station there too), so it is not only the clean centred case

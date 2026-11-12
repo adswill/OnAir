@@ -2032,3 +2032,8 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
   Time stations: a minute that matches the expected time code counts (a-priori); measured no gain (the minutes fail by lost seconds), no wrong time.
   GitHub run 43166550047 (sens40x1 passed).
 - Simulated signals only; all measurement on GitHub (the laptop was on battery). Bench and guard: tests/sens/test_sens40x1.cpp (ctest sens40x1).
+
+## 2026-11-12: NFM audio low-pass 3 kHz (owner's choice)
+- General receiver NFM: the audio low-pass is now 3 kHz (127 taps) instead of 4 kHz (63 taps). FM noise rises with audio frequency, so this is
+  about 3.7 dB less noise at the same signal (sensX2 measurement note); speech up to about 2.7 kHz keeps its level. WFM, AM, SSB and CW unchanged.
+- test_general_rx: a 2.5 kHz tone keeps its level within 1.5 dB, a 3.8 kHz tone is cut by more than 20 dB.

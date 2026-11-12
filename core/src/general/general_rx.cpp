@@ -434,7 +434,9 @@ struct GeneralReceiver::Impl {
         win.resize(kNoiseN); wsum2 = 0;
         for (int i = 0; i < kNoiseN; i++) { win[(size_t)i] = (float)(0.5 - 0.5 * std::cos(2 * kPi * (i + 0.5) / kNoiseN)); wsum2 += (double)win[(size_t)i] * win[(size_t)i]; }
         if (wide) audLp.design(121, 15000.0 / demodRate, (int)std::lround(demodRate / kGeneralAudioRate));
-        else audLp.design(63, 4000.0 / demodRate, 1);
+        // NFM: 3 kHz audio low-pass (4.0, owner's choice; 3.9 had 4 kHz). FM noise rises with audio frequency, so 4 -> 3 kHz is about
+        // 3.7 dB less noise ((4/3)^3) while speech (300 .. 3000 Hz) is kept; 127 taps keep the passband flat up to about 2.7 kHz.
+        else audLp.design(127, 3000.0 / demodRate, 1);
         design();
         mixHz = 1e300;
         built = true;
