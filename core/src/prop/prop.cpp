@@ -268,7 +268,7 @@ double rainLossDb(double fMHz, double dKm, double rainMmH) {
 
 double gasSpecificDbKm(double fMHz) {
     // 4.0: ITU-R P.676-13 Annex 1 line by line, sea level, 15 C, 7.5 g/m3 (was a hand-drawn curve)
-    if (fMHz < 100) return 0;
+    if (fMHz < 1000) return 0;   // below 1 GHz it is under 0.01 dB/km, and P.1812 (VHF/UHF) leaves it out
     return itu::gammaGasDbKm(fMHz / 1000.0);
 }
 

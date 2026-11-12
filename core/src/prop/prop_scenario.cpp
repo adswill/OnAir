@@ -288,8 +288,8 @@ std::vector<BudgetRow> budget(const Params& p, const Point& q) {
     }
     v.push_back({"Receiver clutter", -q.clutterDb, "dB", "ITU-R P.2108 terminal clutter loss for a receive antenna below the buildings or trees around it."});
     if (p.fMHz >= 1000) {
-        v.push_back({"Rain", -q.rainDb, "dB", "ITU-R P.838 specific attenuation k R^alpha over an effective rain-cell length (P.530)."});
-        v.push_back({"Gases", -q.gasDb, "dB", "Oxygen and water vapour (rough P.676 curve at sea level): small below 10 GHz, peaks at 22 and 60 GHz."});
+        v.push_back({"Rain", -q.rainDb, "dB", "ITU-R P.838-3 specific attenuation k R^alpha (full regression) over an effective rain-cell length, for the rain rate you typed."});
+        v.push_back({"Gases", -q.gasDb, "dB", "Oxygen and water vapour, ITU-R P.676-13 line by line at sea level (15 C, 7.5 g/m3): small below 10 GHz, peaks at 22 and 60 GHz."});
     }
     v.push_back({"Polarisation mismatch", -q.polDb, "dB", "Crossed linear antennas lose about 20 dB, linear to circular 3 dB. On HF the ionosphere mixes polarisation (in the excess loss)."});
     v.push_back({"Total path loss", -q.pathLossDb, "dB", "The sum of the losses above (basic transmission loss).", true});

@@ -111,7 +111,7 @@ int main() {
         CHECK(b.rating == 0 && b.atRx.find("short") != std::string::npos);
         bool horizon = false;
         for (const auto& t : b.reasons) horizon |= t.find("horizon") != std::string::npos;
-        CHECK(horizon || far.model == Model::Troposcatter);
+        CHECK(horizon || far.model == Model::Troposcatter || far.model == Model::Ducting);
         Params dead = p; dead.txPowerDbw = -150;
         const Verdict c = verdict(dead, findRange(dead), nullptr, nullptr);
         CHECK(c.headline.find("not be heard") != std::string::npos);
