@@ -12,6 +12,8 @@
 #include "../ui/input_map.h"
 #include "tuner_style.h"
 #include "../state/tune_worker.h"
+#include "../state/listen_freq.h"
+#include "view_span.h"
 #include "dect2/specan/specan_dsp.h"
 #include <ctime>
 
@@ -713,13 +715,18 @@ static void clampFreqViewToBand(const App& a) {
     gXHi = hi;
 }
 
+// The Zoom slider and the zoom keys zoom around the tuned frequency (the VFO), not the middle of the view: it stays in the middle while the
+// span narrows, and the radio's centre does not move (gfx/view_span.h; docs/GENERAL-4.0.md). The wheel over the plots zooms around the mouse.
+static void zoomViewTo(App& a, double spanMhz) {
+    const double fs = sampleRateMhz(a), rc = radioCenterMhz(a);
+    const viewspan::View v = viewspan::zoomAround(listenMhz(a), spanMhz, rc - fs * 0.5, rc + fs * 0.5);
+    gXLo = v.lo; gXHi = v.hi;
+    clampFreqViewToBand(a);
+}
+
 static void applyFreqZoomSlider(App& a, float zoom) {
     specFreqViewUpdate(a);
-    double span = std::min(sampleRateMhz(a), freqSpanFromZoom(a, zoom));
-    const double center = (gXLo + gXHi) * 0.5;
-    gXLo = center - span * 0.5;
-    gXHi = center + span * 0.5;
-    clampFreqViewToBand(a);
+    zoomViewTo(a, std::min(sampleRateMhz(a), freqSpanFromZoom(a, zoom)));
     a.specZoom = zoom;
 }
 
@@ -1444,50 +1451,46 @@ void drawBandPlanStrip(ImDrawList* dl, float x0, float x1, float y, float h, dou
     }
 }
 
-// Two icon toggles by the spectrum controls (SDR++ style, shared by all modes): normal tuning (a click moves the marker inside the captured
-// band, the radio centre stays) and centre tuning (a click puts the clicked frequency in the middle by retuning the radio).
-// Drawn as one two-part switch with the height and top of the other header buttons (SmallButton: the font size tall, at plotMin.y + 4),
-// crisp vector icons on whole pixels with one stroke width, the chosen half filled in the accent colour with a light border.
+// One toggle by the spectrum controls (shared by all modes): normal tuning (a click moves the marker inside the captured band, the radio
+// centre stays; a two-way arrow) or centre tuning (a click puts the clicked frequency in the middle by retuning the radio; a target). The icon
+// shows the style in use and a press switches to the other one. It has the height and top of the other header buttons (SmallButton: the font
+// size tall, at plotMin.y + 4), crisp vector icons on whole pixels with one stroke width; centre tuning is filled in the accent colour.
 static float tuneStyleButtons(App& a, ImVec2 plotMin, ImVec2 plotSize, float rightUsed) {
     if (fileSourceSelected(a)) return 0;   // a recording is never retuned: the tune box always moves alone
-    const float h = std::round(ImGui::GetFontSize()), seg = std::round(h * 1.55f), m = 4 * gUi, w = 2 * seg;
+    const float h = std::round(ImGui::GetFontSize()), w = std::round(h * 1.55f), m = 4 * gUi;
     const float x = std::round(plotMin.x + plotSize.x - rightUsed - w - m), y = std::round(plotMin.y + m);
     if (x < plotMin.x + 40 * gUi || plotSize.y < h + 2 * m) return 0;
     const ImVec2 keep = ImGui::GetCursorScreenPos();
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const float rr = std::round(3 * gUi), t = std::max(1.f, std::round(1.25f * gUi));
+    const bool centre = a.centreTuning;
+    const ImVec2 p0(x, y), p1(x + w, y + h);
+    ImGui::SetCursorScreenPos(p0);
+    const bool click = ImGui::InvisibleButton("##tunestyle", ImVec2(w, h));
+    const bool hov = ImGui::IsItemHovered();
     ImVec4 frame = ImGui::GetStyleColorVec4(ImGuiCol_FrameBg); frame.w = 0.85f;
-    dl->AddRectFilled(ImVec2(x, y), ImVec2(x + w, y + h), ImGui::ColorConvertFloat4ToU32(frame), rr);
-    for (int i = 0; i < 2; i++) {   // 0: "click moves the tuned signal" (two-way arrow), 1: "click centres the spectrum" (target)
-        const bool on = (i == 1) == a.centreTuning;
-        const ImVec2 p0(x + i * seg, y), p1(p0.x + seg, y + h);
-        ImGui::SetCursorScreenPos(p0);
-        char id[16]; snprintf(id, sizeof id, "##tunestyle%d", i);
-        const bool click = ImGui::InvisibleButton(id, ImVec2(seg, h));
-        const bool hov = ImGui::IsItemHovered();
-        if (on) dl->AddRectFilled(p0, p1, ImGui::ColorConvertFloat4ToU32(pal::accent(hov ? 0.75f : 0.62f)), rr, i == 0 ? ImDrawFlags_RoundCornersLeft : ImDrawFlags_RoundCornersRight);
-        else if (hov) dl->AddRectFilled(p0, p1, IM_COL32(255, 255, 255, 26), rr, i == 0 ? ImDrawFlags_RoundCornersLeft : ImDrawFlags_RoundCornersRight);
-        const ImU32 fg = on ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_Text, 0.80f);
-        const float cx = std::floor((p0.x + p1.x) * 0.5f) + 0.5f, cy = std::floor((p0.y + p1.y) * 0.5f) + 0.5f;   // pixel centres: crisp 1 px strokes
-        const float r = std::floor(h * 0.30f);
-        if (i == 1) {   // target: a ring, four ticks outside it, a dot in the middle (all inside the button: no clipping)
-            dl->AddCircle(ImVec2(cx, cy), r, fg, 24, t);
-            const float g0 = r + 1, g1 = std::min(r + std::max(2.f, std::floor(h * 0.16f)), h * 0.5f - 1);
-            dl->AddLine(ImVec2(cx - g1, cy), ImVec2(cx - g0, cy), fg, t); dl->AddLine(ImVec2(cx + g0, cy), ImVec2(cx + g1, cy), fg, t);
-            dl->AddLine(ImVec2(cx, cy - g1), ImVec2(cx, cy - g0), fg, t); dl->AddLine(ImVec2(cx, cy + g0), ImVec2(cx, cy + g1), fg, t);
-            dl->AddCircleFilled(ImVec2(cx, cy), std::max(1.f, t), fg, 12);
-        } else {        // a two-way arrow: one shaft, two open chevron heads, the same stroke
-            const float L = std::floor(seg * 0.32f), k = std::floor(h * 0.22f);
-            dl->AddLine(ImVec2(cx - L, cy), ImVec2(cx + L, cy), fg, t);
-            const ImVec2 lh[3] = {ImVec2(cx - L + k, cy - k), ImVec2(cx - L, cy), ImVec2(cx - L + k, cy + k)};
-            const ImVec2 rh[3] = {ImVec2(cx + L - k, cy - k), ImVec2(cx + L, cy), ImVec2(cx + L - k, cy + k)};
-            dl->AddPolyline(lh, 3, fg, 0, t); dl->AddPolyline(rh, 3, fg, 0, t);
-        }
-        if (click && (i == 1) != a.centreTuning) { a.centreTuning = i == 1; savePrefs(a); }
-        if (hov) ImGui::SetTooltip("%s", i == 1 ? tr("Click centres the spectrum: a click retunes the radio so the clicked signal is in the middle")
-                                                : tr("Click moves the tuned signal: a click inside the band moves the tuning marker and the radio stays (the default)"));
+    dl->AddRectFilled(p0, p1, centre ? ImGui::ColorConvertFloat4ToU32(pal::accent(hov ? 0.75f : 0.62f)) : ImGui::ColorConvertFloat4ToU32(frame), rr);
+    if (hov && !centre) dl->AddRectFilled(p0, p1, IM_COL32(255, 255, 255, 26), rr);
+    const ImU32 fg = centre ? IM_COL32(255, 255, 255, 255) : ImGui::GetColorU32(ImGuiCol_Text, 0.85f);
+    const float cx = std::floor((p0.x + p1.x) * 0.5f) + 0.5f, cy = std::floor((p0.y + p1.y) * 0.5f) + 0.5f;   // pixel centres: crisp 1 px strokes
+    const float r = std::floor(h * 0.30f);
+    if (centre) {   // target: a ring, four ticks outside it, a dot in the middle (all inside the button: no clipping)
+        dl->AddCircle(ImVec2(cx, cy), r, fg, 24, t);
+        const float g0 = r + 1, g1 = std::min(r + std::max(2.f, std::floor(h * 0.16f)), h * 0.5f - 1);
+        dl->AddLine(ImVec2(cx - g1, cy), ImVec2(cx - g0, cy), fg, t); dl->AddLine(ImVec2(cx + g0, cy), ImVec2(cx + g1, cy), fg, t);
+        dl->AddLine(ImVec2(cx, cy - g1), ImVec2(cx, cy - g0), fg, t); dl->AddLine(ImVec2(cx, cy + g0), ImVec2(cx, cy + g1), fg, t);
+        dl->AddCircleFilled(ImVec2(cx, cy), std::max(1.f, t), fg, 12);
+    } else {        // a two-way arrow: one shaft, two open chevron heads, the same stroke
+        const float L = std::floor(w * 0.32f), k = std::floor(h * 0.22f);
+        dl->AddLine(ImVec2(cx - L, cy), ImVec2(cx + L, cy), fg, t);
+        const ImVec2 lh[3] = {ImVec2(cx - L + k, cy - k), ImVec2(cx - L, cy), ImVec2(cx - L + k, cy + k)};
+        const ImVec2 rh[3] = {ImVec2(cx + L - k, cy - k), ImVec2(cx + L, cy), ImVec2(cx + L - k, cy + k)};
+        dl->AddPolyline(lh, 3, fg, 0, t); dl->AddPolyline(rh, 3, fg, 0, t);
     }
-    dl->AddRect(ImVec2(x, y), ImVec2(x + w, y + h), IM_COL32(255, 255, 255, 40), rr, 0, 1.f);
+    if (click) { a.centreTuning = !centre; savePrefs(a); }
+    if (hov) ImGui::SetTooltip("%s", centre ? tr("Now: a click centres the spectrum (the radio retunes so the clicked signal is in the middle).\nPress for: a click moves the tuned signal, the radio stays.")
+                                            : tr("Now: a click moves the tuned signal (inside the band the tuning marker moves and the radio stays; the default).\nPress for: a click centres the spectrum by retuning the radio."));
+    dl->AddRect(p0, p1, IM_COL32(255, 255, 255, 40), rr, 0, 1.f);
     restoreCursor(keep);
     return w + m;
 }
@@ -1660,9 +1663,9 @@ static void extraInputActions(App& a, bool hov) {
     if (pressed(Action::StepPrev)) { st.stepHz = stepShift(st.stepHz, -1); save(); toast(std::string(tr("Tuning step")) + ": " + stepText(st.stepHz)); }
     if (hov) {
         if (gXHi > gXLo) {
-            const double c = (gXLo + gXHi) * 0.5, sp = gXHi - gXLo;
-            if (pressed(Action::ZoomIn, true)) { gXLo = c - sp * 0.4; gXHi = c + sp * 0.4; clampFreqViewToBand(a); }
-            if (pressed(Action::ZoomOut, true)) { gXLo = c - sp * 0.625; gXHi = c + sp * 0.625; clampFreqViewToBand(a); }
+            const double sp = gXHi - gXLo;
+            if (pressed(Action::ZoomIn, true)) zoomViewTo(a, sp * 0.8);    // around the tuned frequency (view_span.h)
+            if (pressed(Action::ZoomOut, true)) zoomViewTo(a, sp * 1.25);
             if (pressed(Action::PanLeft, true)) { gXLo -= sp * 0.25; gXHi -= sp * 0.25; clampFreqViewToBand(a); }
             if (pressed(Action::PanRight, true)) { gXLo += sp * 0.25; gXHi += sp * 0.25; clampFreqViewToBand(a); }
         }

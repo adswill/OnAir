@@ -5,8 +5,10 @@
 //    with a step that does not divide the frequency, a grab off the centre, frequencies from LF to 6 GHz
 //  - the frequency readout digits: place, typing a digit, the wheel (trackpad fractions add up), the limits
 //  - the Auto demodulator from the band plan service and the built-in ranges
+//  - the zoom of the slider and the keys around the tuned frequency, inside the captured band (gfx/view_span.h)
 #include "general/general_layout.h"
 #include "ui/freq_digits.h"
+#include "gfx/view_span.h"
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -151,6 +153,40 @@ static void testAuto() {
     CHECK(std::string(builtInService(2.4e9)).empty(), "no built-in range at 2.4 GHz");
 }
 
+static void testZoom() {
+    using namespace viewspan;
+    // the radio on 900 MHz capturing 20 MHz (890 - 910), tuned off to the side at 907 MHz
+    const double bLo = 890, bHi = 910;
+    View v = zoomAround(907, 2, bLo, bHi);
+    CHECK(std::fabs(v.lo - 906) < 1e-12 && std::fabs(v.hi - 908) < 1e-12, "2 MHz around the tuned 907: %.3f..%.3f", v.lo, v.hi);
+    CHECK(std::fabs((v.lo + v.hi) / 2 - 907) < 1e-12, "tuned frequency in the middle");
+    // repeated zoom steps in stay centred on the tuned frequency (no drift towards the capture centre)
+    View z{bLo, bHi};
+    for (int i = 0; i < 30; i++) { z = zoomBy(907, z.lo, z.hi, 0.8, bLo, bHi); if (z.hi - z.lo <= 6) CHECK(std::fabs((z.lo + z.hi) / 2 - 907) < 1e-9, "step %d centred: %.6f", i, (z.lo + z.hi) / 2); }
+    CHECK(z.hi - z.lo < 0.05 && z.hi - z.lo > 0, "zoomed in far: %.6f MHz", z.hi - z.lo);
+    // near the edge: 909.8 with a 2 MHz span cannot be centred: the view stops at the band edge, no empty space
+    v = zoomAround(909.8, 2, bLo, bHi);
+    CHECK(v.hi == bHi && std::fabs(v.lo - 908) < 1e-12, "clamped at the top edge: %.3f..%.3f", v.lo, v.hi);
+    v = zoomAround(890.1, 4, bLo, bHi);
+    CHECK(v.lo == bLo && std::fabs(v.hi - 894) < 1e-12, "clamped at the bottom edge");
+    // tuned outside the capture (a converter, a file): the nearest edge of the band
+    v = zoomAround(950, 2, bLo, bHi);
+    CHECK(v.hi == bHi && std::fabs(v.lo - 908) < 1e-12, "anchor outside the band");
+    // zooming out past the band: the whole band, the radio centre stays where it is (the band itself never moves)
+    v = zoomBy(907, 906, 908, 100, bLo, bHi);
+    CHECK(v.lo == bLo && v.hi == bHi, "zoom out to the whole band");
+    // bad input: never NaN, never outside the band
+    v = zoomAround(NAN, 2, bLo, bHi);
+    CHECK(std::fabs((v.lo + v.hi) / 2 - 900) < 1e-12, "NaN anchor: the band centre");
+    v = zoomAround(907, NAN, bLo, bHi);
+    CHECK(v.lo == bLo && v.hi == bHi, "NaN span: the whole band");
+    v = zoomAround(907, -1, bLo, bHi);
+    CHECK(v.lo == bLo && v.hi == bHi, "negative span: the whole band");
+    // a 6 GHz radio with a 1 kHz view: still exact
+    v = zoomAround(5800.123456, 0.001, 5790, 5810);
+    CHECK(std::fabs((v.lo + v.hi) / 2 - 5800.123456) < 1e-9 && std::fabs(v.hi - v.lo - 0.001) < 1e-9, "6 GHz, 1 kHz span");
+}
+
 int main() {
     testPrefs();
     testSide();
@@ -158,6 +194,7 @@ int main() {
     testDrag();
     testDigits();
     testAuto();
+    testZoom();
     std::printf("general_layout: %d checks, %d failed\n", checks, fails);
     return fails ? 1 : 0;
 }
