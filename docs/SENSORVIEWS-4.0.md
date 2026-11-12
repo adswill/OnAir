@@ -31,7 +31,7 @@ How it works: `SensorsReceiver::setView(patterns)` keeps a message only when the
 (`engine_start.cpp`), from the table `sensorsViews()` in `sensors_rx.cpp`. The user's protocol selection of the Sub-GHz sensors screen still applies. The unknown signal analyser is silent in a view. The screens are the Sub-GHz sensors panel.
 `DECT2_SENSVIEW_ACTIVE_CASES` (sensors_rx.h) lists the active standards for the engine switches. Numbers come from the free ranges of `docs/FAMILY-NUMBERS-4.0.md` (564 - 597 and 663 - 697); the integrator resolves any clash with another branch.
 
-## Tests (`tests/sensors/test_sensors_views.cpp`, run on this branch with a hand-built binary)
+## Tests (`tests/sensors/test_sensors_views.cpp`; passed on GitHub quick.yml and with a hand-built binary)
 The 28 real pulse trains of `tests/sensors/families.txt` (one recording of rtl_433's own test set per family: Acurite, Alecto, Ambient Weather, Bresser, Fine Offset, Hideki, security sensors, LaCrosse, Nexus / Prologue, Oregon, ERT, TFA, Schrader, X10)
 are rebuilt as IQ with three impairment sets each (carrier offset 0 / +18 kHz / -27 kHz, pulse timing x1.00 / x1.04 / x0.96) and run through every one of the 22 views.
 - A message appears in a view exactly when the receiver without a view decodes it and its model belongs to the view's family: 152 recording-and-impairment runs in their own view (the kind entries count too), 148 decoded (as without a view), 0 lost, 0 leaks into another view.
@@ -41,5 +41,6 @@ are rebuilt as IQ with three impairment sets each (carrier offset 0 / +18 kHz / 
 
 ## What was not checked
 - **Simulated signals only**, built from recorded pulse trains; no over-the-air capture.
+- Every pattern was also checked against the model strings in the vendored rtl_433 device sources (for example 24 Oregon, 16 Acurite, 21 LaCrosse, 17 Fine Offset / Ecowitt, 10 Bresser, 4 Hideki, 12 TFA models; the ERT pattern was corrected after that check: `ert-` matched Dickert and missed IDM / NETIDM).
 - Neptune R900, Renault, Toyota and Citroen TPMS have no recording in `families.txt`: only their decoder names and the view patterns were checked (the decoders exist and a view takes them), not a decode.
 - The mode panels, the web and Android lists were generated and read, not run in the running application.
