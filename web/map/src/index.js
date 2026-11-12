@@ -6,6 +6,10 @@ import { parseTrailRequest } from "./trail.js";
 import { TrackBook, sanitize, positionTimeMs, TTL_MS } from "./track-book.js";
 import { JamBook, sanitizeJam, CELL_DEG, JAM_TTL_MS, MIN_AIRCRAFT_PUBLISHED } from "./jam.js";
 import { computeFixes, DOA_TTL_MS, MAX_DOA_PER_INGEST } from "./doa.js";
+import { BadgeService } from "./badge-service.js";
+import { SqlBadgeBackend } from "./badge-store.js";
+import { fromLocator } from "./badge-geo.js";
+import { msgKey } from "./msgs.js";
 
 
 // sanitize is exported for the tests (it already was, from this file)
@@ -26,7 +30,7 @@ function cors(res) {
   const h = new Headers(res.headers);
   h.set("Access-Control-Allow-Origin", "*");
   h.set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-  h.set("Access-Control-Allow-Headers", "Content-Type, If-None-Match");
+  h.set("Access-Control-Allow-Headers", "Content-Type, If-None-Match, Authorization");
   h.set("Access-Control-Expose-Headers", "ETag");
   return new Response(res.body, { status: res.status, headers: h });
 }
@@ -90,6 +94,7 @@ export class MapHub {
     this.alarmAt = 0;
     this.loadCache = null;
     this.loadCacheAt = 0;
+    this.badges = null;               // accounts and badges (badge-service.js), made in init()
     this.ready = this.ctx.blockConcurrencyWhile(() => this.init());
   }
 
@@ -154,6 +159,8 @@ export class MapHub {
       const jr = sql.exec("SELECT json FROM meta WHERE k = 'jam'").toArray()[0];
       if (jr) this.jam.load(JSON.parse(jr.json), now);
     } catch { /* a bad row only empties the GPS layer */ }
+    // GitHub accounts, stats and badges (docs/MAP-BADGES-4.0.md): its own tables, created here like the others (no migration)
+    this.badges = new BadgeService(new SqlBadgeBackend(sql), this.env || {});
     for (const r of sql.exec("SELECT id, last, n FROM stations").toArray()) this.stationMap.set(r.id, { last: r.last, n: r.n, wAt: now, dirty: false });
     if (typeof WebSocketRequestResponsePair === "function" && this.ctx.setWebSocketAutoResponse) {
       // a client "ping" is answered by the runtime without waking the object
@@ -218,7 +225,12 @@ export class MapHub {
     for (const [id, s] of this.stationMap) if (s.dirty && now - s.wAt >= STATION_PERSIST_MS) stations.push([id, s]);
     const msgs = [];
     for (const [id, m] of this.msgCache) if (m.dirty) msgs.push([id, m]);
+    const badgeRows = this.badges ? this.badges.book.takeDirty(now) : [];
     this.ctx.storage.transactionSync(() => {
+      for (const { user, seen } of badgeRows) {   // a user's stats at most every 30 s (at once after a new badge), new unique objects once
+        this.badges.db.saveUser(user);
+        if (seen.length) this.badges.db.addSeen(user.uid, seen);
+      }
       for (const t of upserts) {
         sql.exec(
           `INSERT INTO tracks (id, kind, label, sub, lat, lon, alt, heading, speed, extra, t, squawk, cat, vrate, src, age, path, est, dv, by)
@@ -252,7 +264,13 @@ export class MapHub {
       }
       if (now - this.lastPrune >= PRUNE_EVERY_MS) this.prune(now);
     });
-    if (this.book.pending || this.dirtyStations() || msgs.length || this.jamDirty) this.armFlush(now);
+    if (this.book.pending || this.dirtyStations() || msgs.length || this.jamDirty || this.badgesDirty()) this.armFlush(now);
+  }
+
+  badgesDirty() {
+    if (!this.badges) return false;
+    for (const u of this.badges.book.users.values()) if (u._dirty) return true;
+    return false;
   }
 
   dirtyStations() {
@@ -268,6 +286,7 @@ export class MapHub {
     sql.exec("DELETE FROM stations WHERE last < ?", now - 24 * 3600e3);
     for (const [id, s] of this.stationMap) if (s.last < now - 24 * 3600e3) this.stationMap.delete(id);
     this.trails.prune(now); // after the tracks: trails of expired tracks go with them
+    if (this.badges) { this.badges.book.dropIdle(now); this.badges.db.tokenPrune(Math.floor(now / 1000)); }
     this.msgCache.clear();
     this.lastPrune = now;
   }
@@ -296,6 +315,14 @@ export class MapHub {
     if (url.pathname === "/jam" && req.method === "GET") return this.jamGet();
     if (url.pathname.startsWith("/api/by/") && req.method === "GET") return this.byUser(url);
     if (url.pathname === "/ws") return this.ws(req);
+    if (isBadgePath(url.pathname)) {
+      const r = await this.badges.handle(req, url);
+      if (r) {
+        if (url.pathname.startsWith("/api/") && r.status !== 302) { this.armFlush(Date.now()); return cors(r); }
+        this.armFlush(Date.now());
+        return r;
+      }
+    }
     return json({ error: "not found" }, 404);
   }
 
@@ -319,9 +346,18 @@ export class MapHub {
       return json({ error: "slow down" }, 429);
     }
 
+    // signed in (the app sends its OnAir session as a Bearer token): the post also counts for that user's stats and badges.
+    // Without a token nothing here changes; a bad token only adds account_error to the reply (the data is still taken).
+    const who = this.badges ? await this.badges.fromBearer(req) : null;
+    const acct = who && !who.error ? who : null;
     // optional public name (body.by): checked here, never logged; a bad one is dropped (the data is still taken) and the reply says why
-    const byCheck = validateBy(typeof body.by === "string" ? body.by.slice(0, 80) : null);
+    let byCheck = validateBy(typeof body.by === "string" ? body.by.slice(0, 80) : null);
+    if (byCheck.ok && byCheck.name && this.badges && !this.badges.byAllowed(byCheck.name, acct ? acct.uid : 0)) {
+      byCheck = { ok: false, message: "That name is linked to an OnAir account. Sign in with that account to use it." };
+    }
     const by = byCheck.ok ? byCheck.name : "";
+    const bb = acct ? this.badges.showcaseFor(acct.uid, by) : "";
+    const credRows = [], prevRows = new Map(), extraKeys = [], doaKhz = [];
     let kept = 0;
     let msgBudgetLeft = MSG_PER_INGEST;
     let doaLeft = MAX_DOA_PER_INGEST;
@@ -330,9 +366,17 @@ export class MapHub {
       if (raw && raw.kind === "doa") { if (doaLeft-- <= 0) continue; }
       const t = sanitize(raw, now, station, by);
       if (!t) continue;
+      if (bb && t.by) t.bb = bb;
+      const p0 = acct ? this.book.rows.get(t.id) : null;
+      const snap = p0 ? { lat: p0.lat, lon: p0.lon, t: p0.t, est: p0.est } : undefined;
       const row = this.book.accept(t, now);
       if (!row) continue;
       kept++;
+      if (acct) {
+        credRows.push(t);
+        if (snap) prevRows.set(t.id, snap);
+        if (t.kind === "doa") { try { const f = JSON.parse(t.extra || "{}").f; if (f > 0) doaKhz.push(Math.round(f / 1000)); } catch { /* no frequency */ } }
+      }
       this.trails.record(row.id, { t: positionTimeMs(now, row.age), lat: row.lat, lon: row.lon, alt: row.alt, hdg: row.heading }, now);
       if (row.visible) this.pendingUpserts.set(row.id, row);
       if (row.kind === "doa") sawDoa = true;
@@ -341,11 +385,16 @@ export class MapHub {
         list = list.slice(0, takeBudget(this.msgBudget, station, list.length, now));
         msgBudgetLeft -= list.length;
         if (list.length) this.storeMsgs(row.id, list, now);
+        if (acct) for (const m of list) extraKeys.push({ kind: "acars", key: "m:" + row.id.slice(9) + ":" + msgKey(m) });
       }
     }
     if (st) { st.last = now; st.n++; st.dirty = true; }
     else { st = { last: now, n: 1, wAt: 0, dirty: true }; this.stationMap.set(station, st); }
-    if (sawDoa) for (const f of this.currentFixes(now)) this.pendingUpserts.set(f.id, f);   // derived fix markers go out with the bearings
+    if (sawDoa) for (const f of this.currentFixes(now)) {   // derived fix markers go out with the bearings
+      this.pendingUpserts.set(f.id, f);
+      const khz = Number(String(f.id).slice(4));
+      if (acct && doaKhz.some((k) => Math.abs(k - khz) <= 3)) extraKeys.push({ kind: "fix", key: "x:" + khz + ":" + Math.floor(now / 600_000) });
+    }
     this.touchLoad(now, "ingest");
     this.loadCache = null;
     this.armFlush(now);
@@ -353,6 +402,11 @@ export class MapHub {
     this.maybeBroadcastLoad(now);
     const reply = { ok: true, n: kept, load: this.loadMetrics(now) };
     if (!byCheck.ok) reply.by_error = byCheck.message;
+    if (who && who.error) reply.account_error = who.error;
+    if (acct) {
+      const home = typeof body.home === "string" ? fromLocator(body.home.slice(0, 6)) : null;   // the station's locator square: used for range now, never stored
+      Object.assign(reply, this.badges.creditPost(acct, { station, rows: credRows, prev: prevRows, home, extraKeys, now }));
+    }
     return json(reply);
   }
 
@@ -699,6 +753,11 @@ async function cachedLive(req, env, ctx, url) {
   return cors(res);
 }
 
+/** Paths of the sign-in and badge API (badge-service.js). */
+function isBadgePath(p) {
+  return p.startsWith("/auth/") || p === "/api/me" || p.startsWith("/api/me/") || p.startsWith("/api/u/") || p === "/api/leaderboard" || p === "/api/badges/admin";
+}
+
 export default {
   async fetch(req, env, ctx) {
     const url = new URL(req.url);
@@ -711,8 +770,11 @@ export default {
     if (url.pathname === "/live" && req.method === "GET" && !url.searchParams.has("since") && url.searchParams.get("trails") !== "1") {
       return cachedLive(req, env, ctx, url);
     }
+    // profile and leaderboard pages (static; they read /api/u/<login> and /api/leaderboard)
+    if (/^\/u\/[A-Za-z0-9-]{1,39}\/?$/.test(url.pathname)) return env.ASSETS.fetch(new Request(url.origin + "/profile.html", req));
+    if (url.pathname === "/leaders" || url.pathname === "/leaders/") return env.ASSETS.fetch(new Request(url.origin + "/leaders.html", req));
     const api = url.pathname === "/ingest" || url.pathname === "/live" || url.pathname === "/msgs" || url.pathname === "/ws" || url.pathname === "/jam"
-      || url.pathname === "/trail" || url.pathname === "/trails" || url.pathname.startsWith("/api/by/");
+      || url.pathname === "/trail" || url.pathname === "/trails" || url.pathname.startsWith("/api/by/") || isBadgePath(url.pathname);
     if (api) {
       const id = env.MAP.idFromName("hub-v2");
       return env.MAP.get(id).fetch(req);

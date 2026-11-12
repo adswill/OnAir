@@ -2051,3 +2051,16 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
   buttons, age, source (squitter / hfdl.observer). The hfdl.observer list (its public active.json "Source Data" link, no terms published)
   is opt-in (Settings > Privacy), off in Offline mode, at most every 2 min, cached. Credits for hfdl.observer and Airframes.io.
 - Tests hfdl_live (saved list in tests/data/hfdl, no network) and hfdl_busy (simulated sky). Simulated only. docs/HFDL-STATIONS-4.0.md.
+## 2026-11-12 (feat40-badges): GitHub sign-in and badges on the live map (docs/MAP-BADGES-4.0.md)
+- One "OnAir" GitHub app serves map.on-air.dev and the plugin marketplace. The app reuses the marketplace's device-flow session
+  (plugins/.market/session.json) as a Bearer token on /ingest, and the map checks it with the shared SESSION_SECRET. The website uses the
+  web flow (HMAC-signed state cookie, CSRF token plus Origin check). Only token hashes are stored; no IP and no position are kept.
+- The hub counts each unique object once per user. It also keeps time, days and streaks, record range (direct sources, two agreeing
+  reports), countries, fields and rare catches. Anti-cheat: rate limits, hourly caps, plausible ids, no credit for duplicate or replayed
+  posts, and conflict checks against other stations.
+- 19 tiered badges are defined in one data file (public/badges/defs.js), with original medal art. New pages: /u/<login> and /leaders.
+  The map card shows a station badge. A linked map name can only be used by its own account.
+- In the app: the Badges window (Server menu and Settings), the Badge earned toast, and signed-in posts only while Earn badges is on.
+  Signed-out posts are unchanged.
+- Tests: node --test 172 pass, 40 of them new. C++ badges_client runs on GitHub quick.yml with settings, i18n and a dect2 build.
+  Nothing is deployed: the owner's steps are in the doc.

@@ -317,6 +317,9 @@ export class TrackBook {
     const row = prev || { id: t.id, ver: 0, json: null, w: null };
     for (const k of ["kind", "label", "sub", "lat", "lon", "alt", "heading", "speed", "extra", "t", "squawk", "cat", "vrate", "src", "age", "est", "dv", "path"]) row[k] = merged[k];
     row.by = merged.by || "";
+    const nbb = row.by && t.bb ? String(t.bb).slice(0, 64) : "";   // the sender's showcase badge ("id:tier"), only with a name; additive
+    if (nbb !== (row.bb || "")) visible = true;
+    row.bb = nbb;
     row.est = row.est ? 1 : 0;
     row.dv = row.dv ? 1 : 0;
     if (visible) { row.ver = ++this.version; row.json = null; if (row.kind === "doa") this.doaVersion = this.version; }
@@ -358,6 +361,7 @@ export class TrackBook {
       extra: row.extra, t: row.t, squawk: row.squawk, cat: row.cat, vrate: row.vrate,
       src: row.src, age: row.age, est: row.est ? 1 : 0, dv: row.dv ? 1 : 0,
       ...(row.by ? { by: row.by, heard_at: row.t } : {}),   // last writer wins: the sender of the newest report
+      ...(row.by && row.bb ? { bb: row.bb } : {}),          // that sender's badge (signed in, public profile, name linked)
     });
     return row.json;
   }

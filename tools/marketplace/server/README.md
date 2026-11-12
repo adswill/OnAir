@@ -34,18 +34,12 @@ npx wrangler login                     # the Cloudflare account of on-air.dev
    npx wrangler d1 execute onair-plugins --remote --file=schema.sql
    ```
 
-3. **GitHub OAuth app** (sign-in for uploading and reporting). On GitHub: Settings > Developer settings > OAuth Apps > New OAuth App.
-
-   | Field | Value |
-   | --- | --- |
-   | Application name | `OnAir Marketplace` |
-   | Homepage URL | `https://on-air.dev` |
-   | Application description | `Sign in to publish and report OnAir plugins` |
-   | Authorization callback URL | `https://plugins.on-air.dev/` (the form needs one; the device flow does not use it) |
-   | Enable Device Flow | **ticked** |
-
-   Press Register application. Copy the **Client ID** into `wrangler.jsonc` as `vars.GITHUB_CLIENT_ID`. No client secret is needed: do not
-   generate one. The app asks for no scopes, so a sign-in only tells the Worker the user's public id and login name.
+3. **GitHub app: already done (2026-11-12).** The marketplace and map.on-air.dev share ONE GitHub app, "OnAir" (owner adswill), so one
+   OnAir sign-in serves the plugin store and the map badges (docs/MAP-BADGES-4.0.md). Its Client ID `Ov23li3cNdYJUxpl572P` is already in
+   `wrangler.jsonc`. Device flow is enabled (this Worker uses it; it ignores callback URLs). The redirect URIs are `https://map.on-air.dev/auth/`
+   (the map's web flow) and `https://plugins.on-air.dev/`. The marketplace needs no client secret; only the map Worker has one
+   (`GITHUB_CLIENT_SECRET`). The app asks for no scopes. "Expire user access tokens" is on: the Worker uses the GitHub token once to read
+   the user's id and login and then drops it, so expiry and refresh tokens do not matter here.
 
 4. **Deploy** (until the secrets are set, every endpoint that needs one answers 503 "not set up yet", so nothing unsigned is served).
 
@@ -60,7 +54,8 @@ npx wrangler login                     # the Cloudflare account of on-air.dev
    ```sh
    npm run keygen                                   # prints SIGNING_KEY (secret) and the public key
    npx wrangler secret put SIGNING_KEY              # paste the 64-hex-digit seed
-   openssl rand -base64 48 | npx wrangler secret put SESSION_SECRET
+   openssl rand -base64 48 > /tmp/onair-session-secret   # the map Worker needs the SAME value (docs/MAP-BADGES-4.0.md); delete the file after
+   npx wrangler secret put SESSION_SECRET < /tmp/onair-session-secret
    openssl rand -base64 48 | npx wrangler secret put HASH_SALT
    openssl rand -hex 32                             # keep this one in your password manager: it is the admin token
    npx wrangler secret put ADMIN_TOKEN              # paste it
