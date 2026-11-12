@@ -726,10 +726,11 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         std::string digits;
         const std::string raw = r.callsign.empty() ? r.text : r.callsign;
         for (char c : raw) if (std::isdigit((unsigned char)c)) digits += c;
-        if ((svc == 2 || svc == 4) && (r.address || digits.size() >= 5)) {
+        if (svc == 2 || svc == 4) {   // DSC was chosen: a DSC call, never NAVTEX (no MMSI given: the test identity 247000000)
             char mmsi[16];
             if (r.address) snprintf(mmsi, sizeof mmsi, "%09u", (unsigned)(r.address % 1000000000u));
             else {
+                if (digits.size() < 5) digits = "247000000";
                 while (digits.size() < 9) digits.insert(digits.begin(), '0');
                 if (digits.size() > 9) digits.resize(9);
                 snprintf(mmsi, sizeof mmsi, "%s", digits.c_str());
@@ -821,7 +822,7 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
 
     if (id == "loraaprs") return loraAprsSynth(r, s, rate);   // before the Meshtastic text below: the same engine mode (22), its own packets
 
-    if (m.stdMode == 22 && !r.text.empty()) {   // Meshtastic text from the user's own node identity (mesh_tx.h); warnings only, never a refusal
+    if (m.stdMode == 22 && !r.text.empty() && !r.analogVoice) {   // Meshtastic text from the user's own node identity (mesh_tx.h); warnings only, never a refusal
         MeshLoraSettings ls;
         if (!meshtasticPreset(r.mesh.preset.empty() ? "LongFast" : r.mesh.preset, ls)) meshtasticPreset("LongFast", ls);
         LoraRawGenConfig c;

@@ -162,7 +162,7 @@ void outputCommon(std::vector<D>& v) {
     add(v, {
         A(num("out.trimDb", "Output trim", "Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping.", "dB", 0, -40, 6, "%.1f"), TxPGroup::Output),
         A(flag("out.swapIq", "Mirror the spectrum", "Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.", false), TxPGroup::Output),
-        TV(A(num("out.rampMs", "Soft start (fade-in)", "The signal fades in over this time after TRANSMIT (and out at Stop): a few ms stop the key click, a few seconds bring an amplifier up gently.", "ms", kTxDefaultRampMs, 0, 10000, "%.0f"), TxPGroup::Timing), 100),
+        TV(A(num("out.rampMs", "Soft start (fade-in)", "The signal fades in over this time after TRANSMIT (and out at Stop): a few ms stop the key click, a few seconds bring an amplifier up gently.", "ms", kTxDefaultRampMs, 0, 10000, "%.0f"), TxPGroup::Timing), 5000),
         META(A(num("tx.totSec", "Timeout timer", "Ends the transmission by itself after this many seconds, with the key-down fade (0 = off). Your own limit: OnAir sets none.", "s", 0, 0, 3600, "%.0f"), TxPGroup::Timing),
              "ends the session; tests/tx/test_tx_control.cpp checks it"),
     });
@@ -177,7 +177,7 @@ void hfAudioPos(std::vector<D>& v, double def, const char* label, const char* ls
 
 void dvbt2Rows(std::vector<D>& v) {
     add(v, {
-        PROBE(A(SET(pick("t2.fft", "FFT size", "More carriers are more robust against echoes, fewer against movement.", 3, {"1K", "2K", "4K", "8K", "16K", "32K"}, 0, {3, 0, 2, 1, 4, 5}),
+        PROBE(A(SET(TV(pick("t2.fft", "FFT size", "More carriers are more robust against echoes, fewer against movement.", 3, {"1K", "2K", "4K", "8K", "16K", "32K"}, 0, {3, 0, 2, 1, 4, 5}), 4),
                     [](TxRequest& r, double x) { r.synth.tx.s2field1 = (int)x; }), TxPGroup::Modulation), 0.12),
         PROBE(A(SET(pick("t2.gi", "Guard interval", "The pause before each symbol that absorbs echoes. Not every pilot pattern is allowed with every guard (EN 302 755 table 59).", 4,
                          {"1/32", "1/16", "1/8", "1/4", "1/128", "19/128", "19/256"}),
@@ -231,9 +231,9 @@ void isdbtRows(std::vector<D>& v) {
     });
 }
 
-void dvbsRows(std::vector<D>& v) {
+void dvbsRows(std::vector<D>& v, double symDef = 5e6) {
     add(v, {
-        S(SET(TV(num("dvbs.symrate", "Symbol rate", "Symbols a second (QO-100 DATV uses 333 k to 2 M, satellites 22 M to 30 M).", "sym/s", 5e6, 25e3, 60e6, "%.0f"), 2e6),
+        S(SET(TV(num("dvbs.symrate", "Symbol rate", "Symbols a second (QO-100 DATV uses 333 k to 2 M, satellites 22 M to 30 M).", "sym/s", symDef, 25e3, 60e6, "%.0f"), symDef * 0.5),
               [](TxRequest& r, double x) { r.synth.modeVal[0] = x; })),
         A(SET(pick("dvbs.std", "Standard", "DVB-S2, the older DVB-S, or DVB-S2X.", 0, {"DVB-S2", "DVB-S", "DVB-S2X"}), [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; }), TxPGroup::Modulation),
         W(A(SET(pick("dvbs.mod", "Modulation", "QPSK is the most robust; the APSK constellations carry more.", 0, {"QPSK", "8PSK", "16APSK", "32APSK"}),
@@ -301,6 +301,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             TT(text("drm.label", "Station label", "The station label in the SDC (up to 16 characters).", TxPField::Name), "ONAIR DRM"),
             text("drm.text", "Text message", "The text message the receiver shows.", TxPField::Text),
         });
+        for (auto& d : v) d.probeSec = 3.0;   // the SDC and the text come once a superframe (1.2 s)
         // HD Radio and CDR send their built-in demo programme: nothing to type
         break;
     case TxPayloadKind::Ftx: {
@@ -328,7 +329,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             A(FLD(flag("rtty.reverse", "Reverse", "Mark is the upper tone.", false), TxPField::Reverse), TxPGroup::Modulation),
             A(FLD(pick("hf.sideband", "Sideband", "Upper sideband puts the tones above the dial frequency, lower sideband below it.", 0, {kSideband[0], kSideband[1]}), TxPField::Variant), TxPGroup::Modulation),
         });
-        for (auto& d : v) d.probeSec = 0.5;
+        for (auto& d : v) d.probeSec = 1.5;
         break;
     case TxPayloadKind::Keyboard:
         if (id == "cp16") {   // makeCp16TxGenerator (cp16_gen.h)
@@ -356,7 +357,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
                 A(pick("meshcore.bwHz", "Bandwidth", "The LoRa bandwidth (the EU narrow preset uses 62.5 kHz).", 1, {"31.25 kHz", "62.5 kHz", "125 kHz", "250 kHz", "500 kHz"}, 0, {31250, 62500, 125000, 250000, 500000}), TxPGroup::Modulation),
                 A(pick("meshcore.cr", "Coding rate", "The forward error correction: 4/5 is the least, 4/8 the most.", 3, {"4/5", "4/6", "4/7", "4/8"}, 5), TxPGroup::Modulation),
                 TV(A(intr("meshcore.preamble", "Preamble", "The up-chirps before the sync word (32 at SF8 and below, else 16).", "", 32, 6, 64), TxPGroup::Framing), 16),
-                A(num("meshcore.gapSec", "Pause between frames", "Silence between two frames of the same burst.", "s", 0.05, 0, 10, "%.2f"), TxPGroup::Timing),
+                META(A(num("meshcore.gapSec", "Pause between frames", "Silence between two frames of the same burst.", "s", 0.05, 0, 10, "%.2f"), TxPGroup::Timing), "only between the frames of a burst; one text line is one frame"),
                 HID(custom("meshcore.name", "Sender name", "The node name the MeshCore screen sets.", TxPField::Name)),
                 A(num("meshcore.ifHz", "Offset from the centre", "Where the signal sits in the samples (default: where the Transmit window expects a LoRa signal).", "Hz", -meshTuning().tuneOffsetHz, -500000, 500000, "%.0f"), TxPGroup::Modulation),
             });
@@ -396,7 +397,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             S(FLD(pick("psk.mode", "Mode", "BPSK31 is the usual one; the faster and QPSK / 8PSK modes carry more.", 0, names), TxPField::Variant)),
         });
         hfAudioPos(v, 1000, "Audio frequency", nullptr);
-        for (auto& d : v) d.probeSec = 0.5;
+        for (auto& d : v) d.probeSec = 2.0;
         break;
     }
     case TxPayloadKind::Js8:
@@ -415,18 +416,18 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             text("hamdrm.call", "Callsign", "Your callsign, sent with the file.", TxPField::Callsign),
             META(file("hamdrm.file", "File to send", "Any file, sent as a HamDRM object. Empty: the test picture."), "a file of the test machine; tests/hfdig sends files"),
         });
-        for (auto& d : v) d.probeSec = 1.0;
+        for (auto& d : v) d.probeSec = 3.0;
         break;
     case TxPayloadKind::Sstv: {
         static std::vector<const char*> names;
         static std::once_flag once;
         std::call_once(once, [] { for (int i = 0; i < sstvModeCount(); i++) names.push_back(sstvModeInfo(i).name); });
         add(v, {
-            text("sstv.call", "Callsign", "Stamped on the picture.", TxPField::Callsign),
+            PROBE(text("sstv.call", "Callsign", "Stamped on the picture.", TxPField::Callsign), 8.0),
             META(file("sstv.file", "Picture (PPM)", "A P6 PPM; any other or empty file sends the test picture."), "a file of the test machine"),
             S(FLD(TV(pick("sstv.mode", "SSTV mode", "The picture format and speed (Martin M1 and Scottie S1 are common).", 0, names), 2), TxPField::Variant)),
         });
-        for (auto& d : v) d.probeSec = 0.5;
+        for (auto& d : v) if (!d.probeSec) d.probeSec = 1.5;
         break;
     }
     case TxPayloadKind::Freedv:   // the speech goes to Codec 2 at 8 kHz (txPullPcm8k): the analog audio chain does not apply
@@ -476,7 +477,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
     case TxPayloadKind::VoiceFm:
         add(v, {
             TT(text("bfm.ps", "Station name (PS)", "Eight characters the radio shows.", TxPField::Name), "ONAIRFM"),
-            text("bfm.rt", "Radio text (RT)", "Up to 64 characters of scrolling text.", TxPField::Text),
+            PROBE(text("bfm.rt", "Radio text (RT)", "Up to 64 characters of scrolling text.", TxPField::Text), 1.0),
             S(FLD(TV(hexr("bfm.pi", "RDS PI", "The programme identification code (four hex digits).", 0x4A21, 0, 0xFFFF, "%04X"), 0x1234), TxPField::RdsPi)),
             custom("bfm.live", "Live RDS control", "Programme type, flags, the clock and the command port while on the air."),
         });
@@ -515,7 +516,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         v.push_back(custom("qo100.path", "QO-100 path", "SSB of the microphone, or DATV (DVB-S/S2) of a file."));
         if (c.variant == 1) {
             tvPayload(v, "dvbs");
-            dvbsRows(v);
+            dvbsRows(v, 1e6);   // QO-100 DATV: 1 Msym/s in the wide transponder
             break;
         }
         audioSource(v);
@@ -548,9 +549,9 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         } else if (id == "p25" || id == "nxdn" || id == "dpmr") {
             add(v, {
                 S(FLD(TV(intr("dv.id", "Radio ID", id == "p25" ? "Your unit ID (24 bits)." : "Your radio ID.", "", 0, 0, 16777215), 123), TxPField::Address)),
-                TT(text("dv.dest", "Talkgroup / called ID", "The talkgroup or radio called, as a number (empty: the mode's test group).", TxPField::Dest), "777"),
+                W(TT(text("dv.dest", "Talkgroup / called ID", "The talkgroup or radio called, as a number (empty: the mode's test group). Used with your radio ID.", TxPField::Dest), "777"), "dv.id>0"),
             });
-            if (id != "p25") v.push_back(TT(text("dv.text", "Short data text", "A short text sent with the call.", TxPField::Text), "HELLO"));
+            if (id != "p25") v.push_back(W(TT(text("dv.text", "Short data text", "A short text sent with the call. Used with your radio ID.", TxPField::Text), "HELLO"), "dv.id>0"));
         } else if (id == "dstar") {
             add(v, {
                 text("dstar.my", "My callsign", "MYCALL in the header.", TxPField::Callsign),
@@ -578,7 +579,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             W(text("navtex.text", "Message", "The NAVTEX message (ZCZC and NNNN are added when missing).", TxPField::Text), "marine.service=0"),
             W(S(FLD(TV(intr("dsc.mmsi", "MMSI", "The calling station's nine-digit identity.", "", 0, 0, 999999999), 247123456), TxPField::Address)), "marine.service=1|3"),
         });
-        for (auto& d : v) d.probeSec = 2.0;
+        for (auto& d : v) d.probeSec = 8.0;   // NAVTEX phasing and the DSC dot pattern come first
         break;
     case TxPayloadKind::AcarsFamily:
         add(v, {
@@ -605,7 +606,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             TT(text("ale.to", "Called station", "The address called (empty: CQ).", TxPField::Dest), "N0ABC"),
             text("ale.text", "AMD message", "The automatic message display text.", TxPField::Text),
         });
-        for (auto& d : v) d.probeSec = 1.5;
+        for (auto& d : v) d.probeSec = 4.0;
         break;
     case TxPayloadKind::VorIls:
         add(v, {
@@ -615,7 +616,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             W(S(SET(TV(num("vor.radial", "Radial", "The bearing a receiver reads from the VOR.", "°", 0, 0, 359.9, "%.1f"), 90), [](TxRequest& r, double x) { r.synth.modeVal[0] = x; })), "vor.kind<2"),
             W(S(SET(TV(num("ils.ddm", "DDM", "The difference in depth of modulation (90 Hz minus 150 Hz): 0 is on the course.", "", 0, -0.4, 0.4, "%.3f"), 0.1), [](TxRequest& r, double x) { r.synth.modeVal[0] = x; })), "vor.kind=2|3"),
         });
-        for (auto& d : v) d.probeSec = 0.3;
+        for (auto& d : v) d.probeSec = 2.0;
         break;
     case TxPayloadKind::LoraRaw:
         add(v, {

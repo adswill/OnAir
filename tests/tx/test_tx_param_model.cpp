@@ -156,6 +156,12 @@ static void checkMode(const TxModeSpec& m, const TxParamCtx& c) {
     std::string err;
     const std::string tag = std::string(m.id) + (c.analogVoice ? " (analog voice)" : "") + (c.variant == 1 ? " (DATV)" : "");
     if (!make(m, c, rows, base, false, probe, a, keys, err)) { noGen.push_back(tag + ": " + err); FAIL("%s: no generator with the defaults: %s", tag.c_str(), err.c_str()); return; }
+    // a bursty generator may be silent at first: the window grows until it holds some signal (up to 8 s), and every row is compared over at least that
+    auto energy = [](const std::vector<cf32>& x) { double e = 0; for (const auto& v : x) e += std::norm(v); return e; };
+    while (energy(a) < 1e-9 && probe < 8) {
+        probe = std::min(8.0, probe * 4);
+        make(m, c, rows, base, false, probe, a, keys, err);
+    }
     auto checkKeys = [&](const char* what) {
         for (const auto& k : keys) if (!declared.count(k)) { FAIL("%s: the generator reads %s, which is not a row of the table (%s)", tag.c_str(), k.c_str(), what); declared.insert(k); }
     };
@@ -172,7 +178,7 @@ static void checkMode(const TxModeSpec& m, const TxParamCtx& c) {
         if (d.type == TxPType::Text) on.txt[d.key] = *d.testText ? d.testText : sample(d.field, true);
         else if (d.type == TxPType::File) continue;
         else on.num[d.key] = changedValue(d);
-        const double sec = d.probeSec > 0 ? d.probeSec : probe;
+        const double sec = std::max(probe, d.probeSec);
         std::vector<cf32> x, y;
         if (!make(m, c, rows, off, d.needsAudio, sec, x, keys, err)) { FAIL("%s: no generator with %s revealed: %s", tag.c_str(), d.key, err.c_str()); continue; }
         if (!make(m, c, rows, on, d.needsAudio, sec, y, keys, err)) { FAIL("%s: no generator with %s changed: %s", tag.c_str(), d.key, err.c_str()); continue; }

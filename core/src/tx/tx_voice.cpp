@@ -77,40 +77,49 @@ public:
         tone2_ = r.o("audio.tone2Hz", 0);
         toneAmp_ = (float)(r.o("audio.toneLevelPct", 50) / 100.0);
         dev_ = r.deviationHz > 0 ? r.deviationHz : (kind == 1 ? 5000.0 : 2500.0);
-        pre_ = r.o("fm.preemphUs", r.preemphUs > 0 ? r.preemphUs : 50);   // 0 = off
         silence_ = !pull_ && r.audioSrc == 3;
         hp_.set(kFs, r.o("audio.hpHz", 0), true);
         const double lp = r.o("audio.lpHz", 0);
         lp1_.set(kFs, lp, false);
         lp2_.set(kFs, lp, false);
         compOn_ = r.o("audio.compOn", 0) > 0.5;
-        compThr_ = (float)r.o("audio.compThreshDb", -18);
-        compRatio_ = (float)std::max(1.0, r.o("audio.compRatio", 4));
-        compMake_ = (float)std::pow(10.0, r.o("audio.compMakeupDb", 0) / 20.0);
-        compRel_ = (float)std::exp(-1.0 / (kFs * std::max(5.0, r.o("audio.compReleaseMs", 200)) * 1e-3));
+        if (compOn_) {
+            compThr_ = (float)r.o("audio.compThreshDb", -18);
+            compRatio_ = (float)std::max(1.0, r.o("audio.compRatio", 4));
+            compMake_ = (float)std::pow(10.0, r.o("audio.compMakeupDb", 0) / 20.0);
+            compRel_ = (float)std::exp(-1.0 / (kFs * std::max(5.0, r.o("audio.compReleaseMs", 200)) * 1e-3));
+        }
         compAtt_ = (float)std::exp(-1.0 / (kFs * 5e-3));
         voxOn_ = r.o("vox.on", 0) > 0.5;
-        voxThr_ = (float)std::pow(10.0, r.o("vox.threshDb", -35) / 20.0);
-        voxHang_ = (int)(r.o("vox.hangMs", 500) * 1e-3 * kFs);
-        amType_ = (int)r.o("am.type", 0);
-        amDepth_ = (float)(r.o("am.depthPct", 85) / 100.0);
-        amLevel_ = (float)r.o("am.carrierLevel", 0.55);
-        ssbLevel_ = (float)r.o("ssb.level", 0.4);
-        ssbCar_ = (float)(r.o("ssb.carrierPct", 0) / 100.0);
-        fmLevel_ = (float)r.o("fm.level", 0.40);
-        ctcss_ = r.o("fm.ctcssHz", 0);
-        if (const int ix = (int)r.o("fm.ctcssIdx", 0); ix > 0) ctcss_ = txCtcssToneHz(ix);   // the panel's pull-down of the standard tones (#373)
-        ctcssPct_ = r.o("fm.ctcssPct", 12) / 100.0;   // the usual 600 Hz at 5 kHz deviation
-        int dcs = (int)r.o("fm.dcsCode", 0);
-        if (const int ix = (int)r.o("fm.dcsIdx", 0); ix > 0) dcs = txDcsCode(ix);
-        if (dcs > 0) {   // DCS replaces the CTCSS tone: a radio sends one or the other
-            dcsWord_ = actl::dcsWord(dcs);
-            dcsOn_ = true;
-            dcsInv_ = r.o("fm.dcsInv", 0) > 0.5;
-            dcsPct_ = r.o("fm.dcsPct", 12) / 100.0;
-            dcsInc_ = tones::kDcsBaud / rate_;
-            dcsA_ = 1.0 - std::exp(-2 * kPi * 300.0 / rate_);   // two poles at 300 Hz: the bits stay below the voice band
-            ctcss_ = 0;
+        if (voxOn_) {
+            voxThr_ = (float)std::pow(10.0, r.o("vox.threshDb", -35) / 20.0);
+            voxHang_ = (int)(r.o("vox.hangMs", 500) * 1e-3 * kFs);
+        }
+        // only the keys of this modulation are read: each is a row of the mode's parameter table (tx_params.h), and no other is
+        if (kind == 2) {
+            amType_ = (int)r.o("am.type", 0);
+            amDepth_ = (float)(r.o("am.depthPct", 85) / 100.0);
+            amLevel_ = (float)r.o("am.carrierLevel", 0.55);
+        } else if (kind == 3 || kind == 4) {
+            ssbLevel_ = (float)r.o("ssb.level", 0.4);
+            ssbCar_ = (float)(r.o("ssb.carrierPct", 0) / 100.0);
+        } else {
+            pre_ = r.o("fm.preemphUs", r.preemphUs > 0 ? r.preemphUs : 50);   // 0 = off
+            fmLevel_ = (float)r.o("fm.level", 0.40);
+            ctcss_ = r.o("fm.ctcssHz", 0);
+            if (const int ix = (int)r.o("fm.ctcssIdx", 0); ix > 0) ctcss_ = txCtcssToneHz(ix);   // the panel's pull-down of the standard tones (#373)
+            ctcssPct_ = r.o("fm.ctcssPct", 12) / 100.0;   // the usual 600 Hz at 5 kHz deviation
+            int dcs = (int)r.o("fm.dcsCode", 0);
+            if (const int ix = (int)r.o("fm.dcsIdx", 0); ix > 0) dcs = txDcsCode(ix);
+            if (dcs > 0) {   // DCS replaces the CTCSS tone: a radio sends one or the other
+                dcsWord_ = actl::dcsWord(dcs);
+                dcsOn_ = true;
+                dcsInv_ = r.o("fm.dcsInv", 0) > 0.5;
+                dcsPct_ = r.o("fm.dcsPct", 12) / 100.0;
+                dcsInc_ = tones::kDcsBaud / rate_;
+                dcsA_ = 1.0 - std::exp(-2 * kPi * 300.0 / rate_);   // two poles at 300 Hz: the bits stay below the voice band
+                ctcss_ = 0;
+            }
         }
         step_ = kFs / rate_;
         acc_ = 1.0;
@@ -210,7 +219,7 @@ private:
             bQ_[3] = (kind_ == 4 ? 1.f : -1.f) * im;   // USB (3) puts the tone above the dial frequency, LSB (4) below it (checked by tests/tx/test_tx_params.cpp)
         }
     }
-    double rate_, off_, tone_, tone2_ = 0, dev_, pre_, cph_ = 0, cph2_ = 0, tph_ = 0, tph2_ = 0, step_ = 1, acc_ = 1, ctcss_ = 0, ctcssPct_ = 0.15;
+    double rate_, off_, tone_, tone2_ = 0, dev_, pre_ = 0, cph_ = 0, cph2_ = 0, tph_ = 0, tph2_ = 0, step_ = 1, acc_ = 1, ctcss_ = 0, ctcssPct_ = 0.15;
     bool dcsOn_ = false, dcsInv_ = false;
     uint32_t dcsWord_ = 0;
     int dcsBit_ = 0;
