@@ -235,7 +235,10 @@ NdbResult ndbTrial(int path, double snrDb, double cfoHz, double ppm, double secs
     auto isRot = [](const std::string& w) { return w == "BND" || w == "NDB" || w == "DBN"; };
     NdbResult r;
     r.ok = isRot(t.ident);
-    for (const auto& h : t.history) if (!isRot(h)) r.wrong++;
+    // a part of the ident ("ND", "B") is incomplete, not wrong: wrong is a word that is not in the repeated ident
+    for (const auto& h : t.history) if (std::string("BNDBND").find(h) == std::string::npos) r.wrong++;
+    if (path == 2 && getenv("ONAIR_X1_VERBOSE") && !r.ok)
+        printf("    ndb fold %.1f dB: period %.2f s, z %.1f, quality %.1f, text '%s', ident '%s'\n", snrDb, t.foldPeriodSec, t.foldZ, t.foldQuality, t.foldText.c_str(), t.ident.c_str());
     return r;
 }
 
@@ -246,7 +249,7 @@ void ndbCurve() {
     const double secs = envInt("ONAIR_X1_SECS", 60);
     for (const Scen& sc : kNdbScen) {
         printf("NDB 'BND' 7 WPM, %.0f s, %s: share of %d trials with the ident (3.9 | 4.0 weak path | + ident folding)\n", secs, sc.name, trials);
-        for (double snr : points("ONAIR_X1_POINTS", {9, 7, 5, 3, 1, -1, -3})) {
+        for (double snr : points("ONAIR_X1_NDB_POINTS", {9, 7, 6, 5, 4, 3, 1})) {
             int ok[3] = {0, 0, 0}, wrong[3] = {0, 0, 0};
             std::mutex mu;
             parallel(3 * trials, [&](int j) {
@@ -344,12 +347,12 @@ TimeResult timeTrial(int station, bool predicted, double snrDb, double cfoHz, do
 }
 
 void timeCurve() {
-    const int trials = envInt("ONAIR_X1_TRIALS", 6), mins = envInt("ONAIR_X1_MINS", 10);
+    const int trials = envInt("ONAIR_X1_TIME_TRIALS", 4), mins = envInt("ONAIR_X1_MINS", 10);
     struct St { int id; const char* name; };
     const St sts[] = {{timesig::Dcf77, "DCF77"}, {timesig::Msf, "MSF"}, {timesig::Wwvb, "WWVB"}};
     for (const St& st : sts) {
         printf("%s, %d minutes: minutes counted after the first decoded one (share of the minutes there were), plain | with the expected-minute check\n", st.name, mins);
-        for (double snr : points("ONAIR_X1_POINTS", {14, 11, 8, 5, 2})) {
+        for (double snr : points("ONAIR_X1_TIME_POINTS", {14, 11, 8, 5, 2})) {
             for (const Scen& sc : {Scen{"awgn", 0, 0}, Scen{"cfo 1 Hz, clock 50 ppm", 1.0, 50}}) {
                 double sh[2] = {0, 0};
                 int first[2] = {0, 0}, wrong[2] = {0, 0}, pred = 0;

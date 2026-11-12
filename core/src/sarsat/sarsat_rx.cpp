@@ -176,7 +176,7 @@ template <class T> bool chaseDecode(const std::vector<T>& y, const std::vector<u
     for (int k = kSyncBits; k < n0; k++) mean += std::fabs((double)y[(size_t)k]);
     mean /= std::max(1, n0 - kSyncBits);
     if (mean <= 0) return false;
-    constexpr int kFirst = 24, kLast = 106, kL = 7;
+    constexpr int kFirst = 24, kLast = 105, kL = 7;   // the BCH-1 code word: bits 25 - 106 (index 24 - 105); bit 107 on is PDF-2 with its own code
     std::vector<int> idx;
     for (int k = kFirst; k <= kLast && k < n0; k++) idx.push_back(k);
     std::partial_sort(idx.begin(), idx.begin() + kL, idx.end(), [&](int a, int b) { return std::fabs((double)y[(size_t)a]) < std::fabs((double)y[(size_t)b]); });
@@ -456,6 +456,9 @@ struct SarsatReceiver::Impl {
     // repeat combining: the soft bits of bursts that did not decode, kept for the beacon's next bursts
     struct Kept { double t = 0, carrier = 0; std::vector<std::vector<float>> cands; };   // cands[0]: best-looking timing
     std::vector<Kept> kept;
+    struct Pending { double t = 0, carrier = 0; std::string hexId; };   // repaired decodes waiting for a second burst with the same identification
+    std::vector<Pending> pending;
+    uint64_t heldBursts = 0;
     std::vector<std::pair<double, double>> expect;   // (carrier, time) of beacons heard: their next bursts are looked for with a lower line threshold
     bool combineOn = true;
     bool fullWindow = true;   // false: the 3.9 burst end (6 blocks without a line)
@@ -486,7 +489,7 @@ struct SarsatReceiver::Impl {
         std::fill(bg.begin(), bg.end(), 0.f);
         warm = 0; active = false; miss = 0; dets = 0; peaks.clear();
         lastDecodeSec = -1e9; lastPublish = 0;
-        kept.clear(); expect.clear(); last4.clear(); last4i = 0; last4n = 0; weakBurst = false;
+        kept.clear(); expect.clear(); pending.clear(); last4.clear(); last4i = 0; last4n = 0; weakBurst = false;
     }
 
     // A failed burst at time t on `carrier`: add it to the kept bursts of the same beacon (same carrier, at the repeat interval or a multiple of it),
@@ -624,13 +627,34 @@ struct SarsatReceiver::Impl {
             }
             if (combineOn && (got || !sb.soft.empty())) { expect.emplace_back(carrier, tBurst); if (expect.size() > 8) expect.erase(expect.begin()); }
             if (got || plausible || combined) tel.bursts++;
-            if (got) {
+            // 4.0 confirmation by repeat: a message that needed more than one repaired bit (or a long message whose second check failed) is held until a
+            // later burst of the same beacon (same carrier, within 4 repeat intervals) decodes to the same identification. BCH-1 can land on a wrong
+            // codeword when a weak burst has 4 or more errors, and the soft decoding and the timing search give it many chances; two such errors
+            // giving the same wrong identification do not happen. A message repaired by at most one bit with its checks intact is reported at once.
+            bool held = false;
+            int confirmed = 0;
+            if (got && coherentOn) {
+                const bool sure = b.corrected == 0 || (b.corrected == 1 && (!b.longMsg || b.bch2Ok));
+                pending.erase(std::remove_if(pending.begin(), pending.end(), [&](const Pending& q) { return tBurst - q.t > 4 * perMax + 2; }), pending.end());
+                auto same = std::find_if(pending.begin(), pending.end(), [&](const Pending& q) { return q.hexId == b.hexId && std::fabs(q.carrier - carrier) <= 150.0; });
+                if (same != pending.end()) { confirmed = 1; pending.erase(same); }
+                else if (!sure) {
+                    Pending q; q.t = tBurst; q.carrier = carrier; q.hexId = b.hexId;
+                    pending.push_back(q);
+                    if (pending.size() > 16) pending.erase(pending.begin());
+                    held = true;
+                }
+                if (sure && same == pending.end()) pending.erase(std::remove_if(pending.begin(), pending.end(), [&](const Pending& q) { return std::fabs(q.carrier - carrier) <= 150.0; }), pending.end());
+            }
+            if (got && held) heldBursts++;
+            if (got && !held) {
                 SarsatEntry e;
                 e.wallTime = (int64_t)std::time(nullptr);
                 e.timeSec = timeSec();
                 e.b = b;
                 e.snrDb = peakSnr; e.levelDb = peakLevel; e.cfoHz = (float)carrier;
                 e.combined = combined;
+                e.confirmedByRepeat = confirmed != 0;
                 tel.log.insert(tel.log.begin(), e);
                 if (tel.log.size() > kSarsatLogMax) tel.log.pop_back();
                 tel.blocksOk++;

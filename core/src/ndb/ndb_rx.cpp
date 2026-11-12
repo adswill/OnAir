@@ -154,7 +154,11 @@ struct NdbReceiver::Impl {
     }
 
     // Reads the ident from the average of the last ident periods of one path (50 Hz samples). Returns the word or "".
-    static std::string foldRead(const std::deque<float>& h, double* qualOut) {
+    struct FoldInfo { double period = 0, z = 0, qual = 0; std::string text; };
+    FoldInfo lastFold;
+    static std::string foldRead(const std::deque<float>& h, FoldInfo* info) {
+        FoldInfo dummy;
+        FoldInfo& fi = info ? *info : dummy;
         constexpr double kRate = 50.0;
         const int n = (int)h.size();
         const int lMin = (int)(2.0 * kRate), lMax = std::min((int)(30.0 * kRate), n / 3);
@@ -185,6 +189,7 @@ struct NdbReceiver::Impl {
         std::nth_element(srt.begin(), srt.begin() + (long)(srt.size() / 2), srt.end());
         const double mad = std::max(srt[srt.size() / 2], 1e-6);
         const double z = (r[(size_t)best] - med) / (1.4826 * mad);
+        fi.z = z; fi.period = best / kRate;
         if (z < 6.0 || r[(size_t)best] < 0.1) return "";
         // fractional period (parabola through the peak); the fold must not drift by a dot over 20 periods
         const double ra = r[(size_t)best - 1], rb = r[(size_t)best], rc = r[(size_t)best + 1];
@@ -211,7 +216,7 @@ struct NdbReceiver::Impl {
         std::sort(sf.begin(), sf.end());
         const double p10 = sf[sf.size() / 10], p90 = sf[sf.size() * 9 / 10];
         const double qual = (p90 - p10) / sigmaAvg;
-        if (qualOut) *qualOut = qual;
+        fi.qual = qual; fi.period = P / kRate;
         if (qual < 6.0) return "";
         // key up / down runs of the average, starting after the longest key-up (the gap between idents), read three times over
         const double thr = 0.5 * (p10 + p90);
@@ -240,6 +245,7 @@ struct NdbReceiver::Impl {
         }
         tm.idle(1e6);
         const std::string txt = tm.take();
+        fi.text = txt;
         // the ident is the word read in each of the later copies (the first copy can be lost while the dot length settles)
         std::vector<std::string> words;
         std::string w;
@@ -256,12 +262,15 @@ struct NdbReceiver::Impl {
         const int force = forcedPath();
         std::string best;
         double bestQ = 0;
+        FoldInfo shown;
         for (int i = 0; i < 3; i++) {
             if (force >= 0 && i != force) continue;
-            double q = 0;
-            const std::string w = foldRead(foldHist[i], &q);
-            if (!w.empty() && q > bestQ) { bestQ = q; best = w; }
+            FoldInfo fi;
+            const std::string w = foldRead(foldHist[i], &fi);
+            if (!w.empty() && fi.qual > bestQ) { bestQ = fi.qual; best = w; }
+            if (fi.z > shown.z) shown = fi;
         }
+        lastFold = shown;
         if (!best.empty() && best == foldLast) {
             foldReads++;
             if (best == ident) { repeats++; okCount++; }
@@ -502,6 +511,7 @@ struct NdbReceiver::Impl {
         t.history.assign(hist.begin(), hist.end());
         t.blocksOk = okCount;
         t.blocksBad = badCount;
+        t.foldPeriodSec = (float)lastFold.period; t.foldZ = (float)lastFold.z; t.foldQuality = (float)lastFold.qual; t.foldText = lastFold.text;
         t.dataValid = !ident.empty();
         if (path == 0) t.toneHz = 400;
         else if (path == 1) t.toneHz = 1020;
