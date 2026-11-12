@@ -1,5 +1,6 @@
 // Fleet Broadcast test signal (simulated, see fbr_gen.h).
 #include "dect2/fbr/fbr_gen.h"
+#include "dect2/fbr/fbr_rx.h"
 #include <algorithm>
 #include <cmath>
 #include <complex>
@@ -138,7 +139,8 @@ public:
         c.snrDb = cfg.snrDb;
         c.scenario = std::max(0, std::min(4, cfg.modeOpt[0]));
         c.invert = cfg.modeOpt[1] == 1;
-        c.offsetHz = cfg.modeVal[0] != 0 ? cfg.modeVal[0] : 1500;
+        // the radio sits tuneOffsetHz above the channel (fbrTuning): the carrier is that far below the centre of the capture, as the other generators do
+        c.offsetHz = (cfg.modeVal[0] != 0 ? cfg.modeVal[0] : 1500) - fbrTuning().tuneOffsetHz;
         c.clockPpm = cfg.modeVal[1];
         c.fadeDepthDb = cfg.modeVal[2];
         c.dopplerHzPerS = cfg.modeVal[3];

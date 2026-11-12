@@ -91,9 +91,9 @@ private:
         strength_ = (float)strength;
         std::string cls;
         if (found) {
-            auto near = [&](double v, double c) { return std::fabs(v - c) < 0.02 * c + 0.3; };
-            if (near(f, 100) || near(f, 120)) cls = fmt("power-line noise (twice the %.0f Hz mains)", f > 110 ? 60.0 : 50.0);
-            else if (near(f, 50) || near(f, 60)) cls = fmt("half-wave power-line noise (the %.0f Hz mains)", f > 55 ? 60.0 : 50.0);
+            auto nearL = [&](double v, double c) { return std::fabs(v - c) < 0.02 * c + 0.3; };
+            if (nearL(f, 100) || nearL(f, 120)) cls = fmt("power-line noise (twice the %.0f Hz mains)", f > 110 ? 60.0 : 50.0);
+            else if (nearL(f, 50) || nearL(f, 60)) cls = fmt("half-wave power-line noise (the %.0f Hz mains)", f > 55 ? 60.0 : 50.0);
             else cls = fmt("steady impulses (a switching supply or a clock)");
         }
         // a pattern must hold for two reports before it is logged; it is lost after three without it

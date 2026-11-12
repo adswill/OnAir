@@ -86,7 +86,8 @@ private:
         auto db = [&](double f0, double f1) { return 10 * std::log10(std::max(wl_.band(f0, f1), 1e-12) / (floorP * (f1 - f0) / 2000.0)); };
         sca67Db_ = (float)db(63000, 71000); sca92Db_ = rate_ / 2 > 97000 ? (float)db(87000, 97000) : -99.f;
         level();
-        const bool pilotNow = pilotKhz_ > 2.0f;
+        // the pilot is a line: over the bands either side of it (the discriminator's noise alone gave 4 - 5 kHz of "pilot" in the QA sweep)
+        const bool pilotNow = pilotKhz_ > 2.0f && pilotKhz_ > 3 * (float)(0.5 * (A(19000 - 4 * bw, 19000 - 2 * bw) + A(19000 + 2 * bw, 19000 + 4 * bw)) / 1000);
         const bool rdsNow = rdsKhz_ > 0.3f && rdsKhz_ > 3 * (float)(A(60000, 62500) / 1000);   // above its neighbourhood
         const bool s67 = sca67Db_ > 10.f && A(63000, 71000) > 300, s92 = sca92Db_ > 10.f && A(87000, 97000) > 300;
         const double t = t_;

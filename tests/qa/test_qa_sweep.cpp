@@ -56,8 +56,10 @@ using Clock = std::chrono::steady_clock;
 
 namespace {
 
-const char* const kConds[] = {"clean", "pos", "neg", "snr", "noise", "rate"};   // "rate" is generated at its own sample rate: a second --gen run
-constexpr int kNC = 6;
+// "rate" is generated at its own sample rate: a second --gen run; "rpos" (+2 kHz, +50 ppm) and "rnoise" (noise only) are that run's other files
+const char* const kConds[] = {"clean", "pos", "neg", "snr", "noise", "rate", "rpos", "rnoise"};
+constexpr int kNC = 8, kCRate = 5;
+inline bool isNoiseCond(int c) { return c == 4 || c == 7; }
 static const double kRateMul = getenv("QA_RATEMUL") ? atof(getenv("QA_RATEMUL")) : 1.37, kBwMul = getenv("QA_BWMUL") ? atof(getenv("QA_BWMUL")) : 1.3;   // QA_RATEMUL / QA_BWMUL: for finding which of the two a mode fails on;   // "rate": the clean signal at a sample rate 1.37 x the default (a non-integer ratio) with a 1.3 x wider custom bandwidth
 
 // ------------------------------------------------------------------ known failures: "id/cond" -> reason (the table in the doc says the same)
@@ -354,7 +356,7 @@ int genChild(const Entry& en, double rate, double secs, double snrDb, const std:
     const float g = (float)std::min(1.0, 0.25 / std::sqrt(std::max(1e-12, psig + pn)));   // the noisy files keep a total rms of 0.25 at most
     Writer w[kNC + 1];   // the conditions and silence (the baseline of the saved results)
     for (int c = 0; c <= kNC; c++) {
-        if (c == kNC - 1) continue;   // "rate" is its own generator run (below), not a resampled copy: a copy has no noise outside the old band and no image-free signal
+        if (c >= kCRate && c < kNC) continue;   // "rate" and its variants are their own generator run (below), not a resampled copy: a copy has no noise outside the old band and no image-free signal
         w[c].f = fopen((dir + "/" + (c < kNC ? kConds[c] : "zero") + ".ci16").c_str(), "wb");
         if (!w[c].f) return 4;
         w[c].gain = (c == 3 || c == 4) ? g : clean0;
@@ -431,6 +433,25 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     if (en.stdMode == 39 && !direct && getenv("QA_T0")) e.js8().setStartTime(atof(getenv("QA_T0")));
     DeviceInfo dev; dev.kind = direct ? DeviceInfo::Synthetic : DeviceInfo::File; dev.name = direct ? "synthetic" : path;
     FileOptions fo; fo.path = path; fo.format = FileFormat::CI16; fo.sampleRate = rate; fo.loop = false;
+    struct TapStat { std::atomic<uint64_t> n{0}, nz{0}; std::atomic<double> p{0}; std::vector<double> psd; int segs = 0; std::vector<cf32> pend; } tap;   // QA_SWEEP_VERBOSE: what the engine took in, before any processing
+    if (getenv("QA_SWEEP_VERBOSE")) e.setIqTap([&tap](const std::complex<float>* x, size_t n, double) {
+        double p = 0; uint64_t nz = 0;
+        for (size_t i = 0; i < n; i++) { const float m = std::norm(x[i]); p += m; if (m > 0) nz++; }
+        tap.n += n; tap.nz += nz; tap.p = tap.p.load() + p;
+        constexpr int nf = 4096;   // the spectrum of the first 64 segments: where the energy is
+        static Fft fft(nf);
+        if (tap.psd.empty()) tap.psd.assign(nf, 0.0);
+        tap.pend.insert(tap.pend.end(), x, x + n);
+        while (tap.pend.size() >= (size_t)nf && tap.segs < 64) {
+            std::vector<cf32> fb(nf);
+            for (int k = 0; k < nf; k++) fb[k] = tap.pend[(size_t)k] * (0.5f - 0.5f * (float)cos(2 * M_PI * k / nf));
+            fft.forward(fb.data());
+            for (int k = 0; k < nf; k++) tap.psd[(size_t)k] += std::norm(fb[(size_t)k]);
+            tap.pend.erase(tap.pend.begin(), tap.pend.begin() + nf);
+            tap.segs++;
+        }
+        if (tap.segs >= 64) tap.pend.clear();
+    });
     const double cpu0 = cpuSeconds();
     wd.arm("start", 60);
     if (!e.start(dev, t, fo)) {
@@ -478,6 +499,11 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
             std::this_thread::sleep_for(std::chrono::milliseconds(50));
             if (e.latestRx(rx, seq)) { seq = rx.seq; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } }
         }
+    if (en.stdMode == 34)   // the cell search of the last block runs on its own thread, 1 to 5 s on a CI runner at 20 Msps: let a search that started before the file ended finish
+        for (int i = 0; i < 1500 && e.cell().busy(); i++) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+            if (e.latestRx(rx, seq)) { seq = rx.seq; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } locked = locked || lockOf(rx); }
+        }
     std::this_thread::sleep_for(std::chrono::milliseconds(300));   // the last report
     if (e.latestRx(rx, seq)) { standard = rx.standard; const uint64_t g = goodOf(rx); if (g > good) { good = g; if (firstGood < 0) firstGood = proc; } locked = locked || lockOf(rx); bad = std::max<uint64_t>(bad, rx.blocksBad); }
     if (getenv("QA_SWEEP_VERBOSE")) {   // the engine's log and the last report, for a mode that does not decode
@@ -485,6 +511,19 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
         for (auto& l : e.logSnapshot(n)) fprintf(stderr, "  log: %s\n", l.c_str());
         fprintf(stderr, "  last report: std %d state %d valid %d ok %llu bad %llu cfo %.1f snr %.1f processed %.2f s\n", rx.standard, rx.state, rx.dataValid ? 1 : 0,
                 (unsigned long long)rx.blocksOk, (unsigned long long)rx.blocksBad, rx.cfoHz, rx.dataSnrDb, proc);
+        fprintf(stderr, "  ingest: %llu samples, %.1f %% non-zero, rms %.6g\n", (unsigned long long)tap.n.load(), tap.n ? 100.0 * (double)tap.nz.load() / (double)tap.n.load() : 0.0, tap.n ? std::sqrt(tap.p.load() / (double)tap.n.load()) : 0.0);
+        if (!tap.psd.empty() && tap.segs > 0) {   // the three strongest 1/64 slices of the input band
+            const int nf = (int)tap.psd.size(), sl = nf / 64;
+            std::vector<std::pair<double, int>> pw;
+            double tot = 0;
+            for (int j = 0; j < 64; j++) { double q = 0; for (int k = j * sl; k < (j + 1) * sl; k++) q += tap.psd[(size_t)k]; pw.push_back({q, j}); tot += q; }
+            std::sort(pw.rbegin(), pw.rend());
+            fprintf(stderr, "  input spectrum (first %d segments), strongest slices of %.0f Hz:", tap.segs, rate / 64);
+            for (int q = 0; q < 3; q++) { const int j = pw[(size_t)q].second; fprintf(stderr, " %+.0f Hz %.0f %%", ((double)((j * sl + nf / 2) % nf) - nf / 2 + sl / 2.0) * rate / nf, tot > 0 ? 100.0 * pw[(size_t)q].first / tot : 0.0); }
+            fprintf(stderr, "\n");
+        }
+        if (rx.standard == 641) fprintf(stderr, "  vdl3: syncs %llu noise %.1f dB level %.1f dB rate %.0f ok %d center %.0f now %.2f s\n", (unsigned long long)rx.vdl3.syncs, rx.vdl3.noiseDb, rx.vdl3.levelDb, rx.vdl3.inputRate, rx.vdl3.rateOk ? 1 : 0, rx.vdl3.centerHz, rx.vdl3.nowSec);
+        if (rx.standard == 791) fprintf(stderr, "  ltpos: state %d pulses %llu floor %.1f dB peak %.1f dB threshold %.1f rate %.0f time %.2f s\n", rx.ltpos.state, (unsigned long long)rx.ltpos.pulses, rx.ltpos.floorDb, rx.ltpos.snrDb, rx.ltpos.thresholdDb, rx.ltpos.inputRate, rx.ltpos.timeSec);
         if (rx.standard == 26) fprintf(stderr, "  hfdig: rtty chars %llu text %zu, ftx decodes %zu, audio %.1f dB, level %.1f dB\n", (unsigned long long)rx.hfdig.rtty.chars, rx.hfdig.rtty.text.size(), rx.hfdig.ftx.decodes.size(), rx.hfdig.audioDb, rx.hfdig.levelDb);
     }
     // what the receiver saved (its decoded lists, text, pictures): the measure of the modes that count no blocks
@@ -721,7 +760,7 @@ int main(int argc, char** argv) {
         const Entry* en = find(stId);
         if (!en) return 2;
         if (stage == "--gentx") { printf("TXRATE %.4f\n", writeTx(*en, stSecs, stFile)); fflush(stdout); _exit(0); }
-        return stage == "--gen" ? genChild(*en, stRate, stSecs, snrDb, stFile) : runChild(*en, stRate, stSecs, stFile, stCond == "clean", stCond == "rate");
+        return stage == "--gen" ? genChild(*en, stRate, stSecs, snrDb, stFile) : runChild(*en, stRate, stSecs, stFile, stCond == "clean", stCond == "rate" || stCond == "rpos" || stCond == "rnoise");
     }
     std::vector<const Entry*> sel;
     if (modes.empty()) { for (size_t i = 0; i < all.size(); i++) if ((int)(i % (size_t)shardN) == shardK - 1) sel.push_back(&all[i]); }
@@ -801,6 +840,7 @@ int main(int argc, char** argv) {
             sscanf(g.out.c_str() + rp, "RATE %lf PSIG %lf OBW %lf ACTIVE %lf CLIP %llu", &actual, &psig, &obw, &active, &clip);
             r.rate = actual; r.obw = obw; r.active = active;
             { const size_t tp = g.out.find("TXRATE "); r.txRate = tp == std::string::npos ? 0 : atof(g.out.c_str() + tp + 7); }
+            if (getenv("QA_SWEEP_VERBOSE")) fprintf(stderr, "  signal: rate %.0f psig %.4g obw %.0f Hz active %.3f\n", actual, psig, obw, active);
             if (psig <= 0) r.note = "generator sends silence";
             snprintf(rs, sizeof rs, "%.4f", actual);
             {   // silence first: what the receiver saves with nothing to decode (read as fast as it goes, also on the real-time try)
@@ -810,29 +850,34 @@ int main(int argc, char** argv) {
                 const size_t jp = zr.out.rfind('{');
                 r.resZero = jp == std::string::npos ? 0 : (uint64_t)jnum(zr.out.substr(jp), "res");
             }
+            double newRate = 0; std::string newT0, rateDir = tmpDir + "/rate";
             for (int c = 0; c < kNC; c++) {
                 if (c == 1) r.byRes = r.c[0].good == 0 && r.c[0].res > r.resZero + 16;
                 if (c > 0 && r.m(0) == 0 && !r.c[0].locked) break;   // nothing in the clean run: the others say nothing more
                 std::string runFile = tmpDir + "/" + kConds[c] + ".ci16", savedT0;
                 double runRate = actual;
                 const char* oldT0 = getenv("QA_T0"); if (oldT0) savedT0 = oldT0;
-                if (c == 5) {   // a non-default sample rate: the generator again at 1.37 x the rate, the radio's own noise over the whole new band
-                    const std::string rd = tmpDir + "/rate";
-                    std::filesystem::create_directories(rd);
+                if (c == kCRate) {   // a non-default sample rate: the generator again at 1.37 x the rate, the radio's own noise over the whole new band
+                    std::filesystem::create_directories(rateDir);
                     char rq[64]; snprintf(rq, sizeof rq, "%.4f", actual * kRateMul);
                     setenv("QA_NOTX", "1", 1);
-                    const ChildResult g2 = spawn({self, "--gen", e->id, rq, ss, sn, rd}, 600, 900);
+                    const ChildResult g2 = spawn({self, "--gen", e->id, rq, ss, sn, rateDir}, 600, 900);
                     unsetenv("QA_NOTX");
                     const size_t rp2 = g2.out.find("RATE ");
-                    if (g2.status != 0 || rp2 == std::string::npos) { r.c[c].verdict = g2.timedOut ? "HANG" : "NOGEN2"; continue; }
-                    runRate = atof(g2.out.c_str() + rp2 + 5);
+                    if (g2.status != 0 || rp2 == std::string::npos) { r.c[c].verdict = g2.timedOut ? "HANG" : "NOGEN2"; newRate = 0; continue; }
+                    newRate = atof(g2.out.c_str() + rp2 + 5);
                     const size_t p0 = g2.out.find("T0 ");
-                    if (p0 != std::string::npos && (p0 == 0 || g2.out[p0 - 1] == '\n')) setenv("QA_T0", std::to_string(atof(g2.out.c_str() + p0 + 3)).c_str(), 1);
-                    runFile = rd + "/clean.ci16";
+                    newT0 = (p0 != std::string::npos && (p0 == 0 || g2.out[p0 - 1] == '\n')) ? std::to_string(atof(g2.out.c_str() + p0 + 3)) : "";
+                }
+                if (c >= kCRate) {   // the rate run's files: the clean one, +2 kHz / +50 ppm, noise only
+                    if (newRate <= 0) continue;
+                    runRate = newRate;
+                    runFile = rateDir + "/" + (c == kCRate ? "clean" : c == 6 ? "pos" : "noise") + ".ci16";
+                    if (!newT0.empty()) setenv("QA_T0", newT0.c_str(), 1);
                 }
                 char rsc[64]; snprintf(rsc, sizeof rsc, "%.4f", runRate);
                 const ChildResult cr = spawn({self, "--run", e->id, rsc, ss, runFile, kConds[c]}, std::max(300.0, s * 20), std::max(600.0, s * 30));
-                if (c == 5) { if (oldT0) setenv("QA_T0", savedT0.c_str(), 1); std::error_code ec2; std::filesystem::remove_all(tmpDir + "/rate", ec2); }
+                if (c >= kCRate) { if (oldT0) setenv("QA_T0", savedT0.c_str(), 1); else unsetenv("QA_T0"); if (c == kNC - 1) { std::error_code ec2; std::filesystem::remove_all(rateDir, ec2); } }
                 CondRes& cc = r.c[c];
                 const size_t jp = cr.out.rfind('{');
                 const size_t hp = cr.out.find("HANG ");
@@ -892,7 +937,7 @@ int main(int argc, char** argv) {
                 CondRes& cc = r.c[c];
                 if (cc.verdict != "-") continue;
                 // noise: a decoded block is a false decode; a mode that only locks (audio, spectrum tools) may well lock on noise: shown, not a failure
-                if (c == 4) cc.verdict = blocks ? (r.m(4) == 0 ? "pass" : "FALSE") : (cc.locked ? "lock" : "pass");
+                if (isNoiseCond(c)) cc.verdict = blocks ? (r.m(c) == 0 ? "pass" : "FALSE") : (cc.locked ? "lock" : "pass");
                 else if (c > 0 && !blocks && !r.c[0].locked) cc.verdict = "-";
                 else if (blocks) cc.verdict = r.m(c) > 0 ? (c > 0 && r.m(c) * 2 < r.m(0) ? "weak" : "pass") : "FAIL";
                 else cc.verdict = cc.locked ? "lock" : "FAIL";
@@ -908,8 +953,11 @@ int main(int argc, char** argv) {
             const std::string& v = r.c[c].verdict;
             const bool bad = v == "FAIL" || v == "FALSE" || v == "HANG" || v == "NOGEN2" || v == "NOSTART" || v.rfind("CRASH", 0) == 0;
             const char* why = knownWhy(r.id, kConds[c]);
+            if (!why && c == 6) why = knownWhy(r.id, "pos");     // the variants at the new rate share their parent's known failure
+            if (!why && c == 7) why = knownWhy(r.id, "noise");
+            if (!why && c > kCRate) why = knownWhy(r.id, "rate");   // and a failure of the new rate itself
             if (bad && !why) r.unexpected.push_back(std::string(kConds[c]) + " " + v);
-            if (!bad && why && v != "-" && strict) r.unexpected.push_back(std::string(kConds[c]) + " passes now: drop it from qa_known.inc");
+            if (!bad && why && v != "-" && strict && c <= kCRate) r.unexpected.push_back(std::string(kConds[c]) + " passes now: drop it from qa_known.inc");
         }
         {
             const std::string& v = r.tx.verdict;
@@ -919,16 +967,16 @@ int main(int argc, char** argv) {
             if (!bad && why && v != "-" && strict) r.unexpected.push_back("tx passes now: drop it from qa_known.inc");
         }
         unexpected += (int)r.unexpected.size();
-        fprintf(stderr, "%s %s %s %s %s rate %s tx %s cpu %.4f %s%s\n", r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(), r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.c[5].verdict.c_str(), r.tx.verdict.c_str(), r.cost,
+        fprintf(stderr, "%s %s %s %s %s rate %s %s %s tx %s cpu %.4f %s%s\n", r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(), r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.c[5].verdict.c_str(), r.c[6].verdict.c_str(), r.c[7].verdict.c_str(), r.tx.verdict.c_str(), r.cost,
                 r.note.c_str(), r.unexpected.empty() ? "" : "  <-- UNEXPECTED");
         rows.push_back(r);
     }
     std::error_code ec;
     std::filesystem::remove_all(tmpDir, ec);
-    printf("\n%-16s %4s %9s %6s | %-6s %-6s %-6s %-6s %-6s %-6s %-6s | %8s %9s %s\n", "mode", "std", "rate Msps", "secs", "clean", "pos", "neg", "snr", "noise", "rate", "tx", "cpu", "clean blk", "notes");
+    printf("\n%-16s %4s %9s %6s | %-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s | %8s %9s %s\n", "mode", "std", "rate Msps", "secs", "clean", "pos", "neg", "snr", "noise", "rate", "rpos", "rnoise", "tx", "cpu", "clean blk", "notes");
     for (auto& r : rows) {
-        printf("%-16s %4d %9.4g %6.1f | %-6s %-6s %-6s %-6s %-6s %-6s %-6s | %8.4f %9llu %s%s", r.id.c_str(), r.stdMode, r.rate / 1e6, r.secs, r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(),
-               r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.c[5].verdict.c_str(), r.tx.verdict.c_str(), r.cost, (unsigned long long)r.m(0), ((r.byRes ? "(saved bytes) " : "") + std::string(r.paced ? "(real time) " : "") + r.note).c_str(), r.life != "ok" && r.life != "-" ? (" life:" + r.life).c_str() : "");
+        printf("%-16s %4d %9.4g %6.1f | %-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s %-6s | %8.4f %9llu %s%s", r.id.c_str(), r.stdMode, r.rate / 1e6, r.secs, r.c[0].verdict.c_str(), r.c[1].verdict.c_str(), r.c[2].verdict.c_str(),
+               r.c[3].verdict.c_str(), r.c[4].verdict.c_str(), r.c[5].verdict.c_str(), r.c[6].verdict.c_str(), r.c[7].verdict.c_str(), r.tx.verdict.c_str(), r.cost, (unsigned long long)r.m(0), ((r.byRes ? "(saved bytes) " : "") + std::string(r.paced ? "(real time) " : "") + r.note).c_str(), r.life != "ok" && r.life != "-" ? (" life:" + r.life).c_str() : "");
         for (auto& u : r.unexpected) printf("  [UNEXPECTED %s]", u.c_str());
         printf("\n");
     }

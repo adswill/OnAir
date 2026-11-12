@@ -1,5 +1,6 @@
 // VDL Mode 3 test signal: see vdl3_gen.h.
 #include "dect2/vdl3/vdl3_gen.h"
+#include "dect2/vdl3/vdl3_rx.h"
 #include "dect2/dsp/gen_util.h"
 #include "dect2/source/source.h"
 #include "dect2/vdl2/vdl2_gen.h"
@@ -136,7 +137,8 @@ public:
                 Ev e;
                 e.startS = b.t * fsEff_;
                 e.bits = b.bits();
-                e.car = b.chanHz + b.carOffHz + cfg_.cfoHz + cfg_.modeVal[0] * b.t + cfg_.modeVal[1];
+                // the radio sits tuneOffsetHz above the channel (vdl3Tuning), so the channel is that far below the centre of the capture; the engine mixes it back
+                e.car = b.chanHz + b.carOffHz + cfg_.cfoHz + cfg_.modeVal[0] * b.t + cfg_.modeVal[1] - vdl3Tuning().tuneOffsetHz;
                 e.amp = kAmp * std::pow(10.0, b.levelDb / 20.0);
                 e.phase = 2 * kPi * (double)((phaseRng_ = phaseRng_ * 1103515245u + 12345u) >> 16 & 0xFFFF) / 65536.0;
                 q_.push(std::move(e));

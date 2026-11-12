@@ -26,9 +26,9 @@ int main() {
     { std::vector<Navaid> d2; std::string e; CHECK(navaidParseCsv("not,a,csv\n1,2,3\n", d2, e) == 0 && !e.empty(), "wrong file says so"); }
     { std::vector<Navaid> d2; std::string e; CHECK(navaidParseCsv("", d2, e) == 0 && !e.empty(), "empty file"); }
     const double lat = 54.69, lon = 25.28;
-    auto near = navaidNearest(db, lat, lon, NavaidVor, 500, 10);
-    CHECK(near.size() == 2 && db[near[0].index].ident == "VIL" && db[near[1].index].ident == "RIX", "VOR list sorted, Tokyo out of range, NDB filtered");
-    CHECK(near[0].km < near[1].km && near[0].km < 10, "sorted by distance");
+    auto nearL = navaidNearest(db, lat, lon, NavaidVor, 500, 10);
+    CHECK(nearL.size() == 2 && db[nearL[0].index].ident == "VIL" && db[nearL[1].index].ident == "RIX", "VOR list sorted, Tokyo out of range, NDB filtered");
+    CHECK(nearL[0].km < nearL[1].km && nearL[0].km < 10, "sorted by distance");
     CHECK(navaidNearest(db, lat, lon, NavaidNdb | NavaidDme, 500, 10).size() == 2, "kinds combined");
     CHECK(navaidNearest(db, lat, lon, NavaidVor, 500, 1).size() == 1, "limit");
     int a = -1, b = -1; double x = 0;

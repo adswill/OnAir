@@ -116,9 +116,9 @@ std::vector<SurveyChannel> findActiveChannels(const cf32* x, size_t n, double fs
         std::sort(cand.begin(), cand.end(), [](const Hit& a, const Hit& b) { return a.score > b.score; });
         std::vector<Hit> kept;
         for (const Hit& c : cand) {
-            bool near = false;
-            for (const Hit& q : kept) if (std::fabs(q.off - c.off) < 0.75 * scales[k]) near = true;
-            if (!near) kept.push_back(c);
+            bool nearL = false;
+            for (const Hit& q : kept) if (std::fabs(q.off - c.off) < 0.75 * scales[k]) nearL = true;
+            if (!nearL) kept.push_back(c);
         }
         hits.insert(hits.end(), kept.begin(), kept.end());
     }
@@ -131,7 +131,7 @@ void classifyLora(SurveyEntry& e) {
     char b[160];
     if (!e.decoded) { e.network = "LoRa activity, not decoded"; snprintf(b, sizeof b, "%d preambles at SF%d, %.1f kHz: an implicit header, a rare sync word or a damaged signal", e.preambles, e.sf, e.bwHz / 1e3); e.detail = b; return; }
     const double mhz = e.freqHz / 1e6;
-    auto near = [&](double target, double tolHz) { return e.freqHz > 0 && std::fabs(e.freqHz - target * 1e6) < tolHz; };
+    auto nearL = [&](double target, double tolHz) { return e.freqHz > 0 && std::fabs(e.freqHz - target * 1e6) < tolHz; };
     auto bwIs = [&](double bwHz) { return std::fabs(e.bwHz - bwHz) < 0.03 * bwHz; };
     if (e.syncWord == 0x2B) {
         std::string hit;
@@ -160,7 +160,7 @@ void classifyLora(SurveyEntry& e) {
         return;
     }
     if (e.syncWord == 0x12) {
-        if (e.sf == 12 && bwIs(125e3) && (near(433.775, 20e3) || near(439.9125, 20e3) || near(434.855, 20e3) || near(433.900, 20e3))) {
+        if (e.sf == 12 && bwIs(125e3) && (nearL(433.775, 20e3) || nearL(439.9125, 20e3) || nearL(434.855, 20e3) || nearL(433.900, 20e3))) {
             e.network = "LoRa APRS";
             snprintf(b, sizeof b, "sync word 0x12, SF12, 125 kHz on the APRS frequency %.4f MHz", mhz);
             e.detail = b;

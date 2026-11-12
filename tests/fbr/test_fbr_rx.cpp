@@ -179,6 +179,7 @@ int main() {
         CHECK(sy != nullptr, "the engine's test signal for standard 872");
         if (sy) {
             FbrReceiver r; r.configure(250e3);
+            r.setSignalOffset(-fbrTuning().tuneOffsetHz);   // the test signal sits where a radio tuned tuneOffsetHz above the channel delivers it
             std::vector<cf32> buf(16384);
             for (size_t done = 0; done < (size_t)(12 * 250e3); done += buf.size()) { sy->generate(buf.data(), buf.size()); r.feed(buf.data(), buf.size()); }
             FbrTelemetry t; r.telemetry(t, 0);

@@ -1,6 +1,7 @@
 // The UMTS mode end to end on the test signal: the receiver thread finds both cells and the mode is registered.
 #include "dect2/umts/umts_rx.h"
 #include "dect2/umts/umts_cell.h"
+#include "dect2/engine/mode_synth.h"
 #include <chrono>
 #include <cstdio>
 #include <thread>
@@ -17,6 +18,20 @@ int main() {
     if (!a || !b) { printf("FAIL: cells\n"); return 1; }
     ModeTuning m = umtsTuning();
     if (m.stdMode != 482 || m.minMhz >= m.defMhz) { printf("FAIL: tuning\n"); return 1; }
+    // the test signal at other sample rates (3.9 sent the 7.68 Msps samples under the new rate: a time-scaled signal)
+    for (double rate : {7.68e6, 10.5216e6, 15.36e6}) {
+        SynthConfig sc; sc.snrDb = 12;
+        auto syn = makeModeSynth(482, sc, rate);
+        if (!syn) { printf("FAIL: no synth at %.2f Msps\n", rate / 1e6); return 1; }
+        UmtsReceiver r2; r2.configure(syn->sampleRate());
+        std::vector<cf32> buf(8192);
+        for (size_t d = 0; d < (size_t)(rate * 0.4); d += buf.size()) { syn->generate(buf.data(), buf.size()); r2.feed(buf.data(), buf.size()); }
+        std::this_thread::sleep_for(std::chrono::seconds(4));
+        UmtsTelemetry t2; r2.telemetry(t2, 0);
+        bool a2 = false, b2 = false; for (auto& c : t2.cells) { if (c.psc == 17) a2 = true; if (c.psc == 280) b2 = true; }
+        printf("%.4f Msps: %zu cells\n", rate / 1e6, t2.cells.size());
+        if (!a2 || !b2) { printf("FAIL: cells at %.4f Msps\n", rate / 1e6); return 1; }
+    }
     printf("umts rx passed\n");
     return 0;
 }

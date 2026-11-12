@@ -125,6 +125,10 @@ struct CisHfReceiver::Impl {
         for (const auto& q : s.params) p.params.emplace_back(q.key, q.value);
         p.blocksOk = s.good; p.blocksBad = s.bad;
         p.dataValid = s.state == 2;
+        if (p.identifyOnly) {   // no frames are read: the lock flag is "the modulation was identified" (the analyser's "identified" line names it)
+            p.dataValid = false;
+            for (const auto& q : s.params) if (q.key == "identified" && q.value != "no") p.dataValid = true;
+        }
         p.cfoHz = s.cfoHz;
         p.snrDb = (float)s.snrDb;
         p.levelDb = levelDb;
