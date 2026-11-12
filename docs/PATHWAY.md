@@ -2032,3 +2032,12 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
   Time stations: a minute that matches the expected time code counts (a-priori); measured no gain (the minutes fail by lost seconds), no wrong time.
   GitHub run 43166550047 (sens40x1 passed).
 - Simulated signals only; all measurement on GitHub (the laptop was on battery). Bench and guard: tests/sens/test_sens40x1.cpp (ctest sens40x1).
+
+## 2026-11-12 (feat40-hfdlst): HFDL band choice and nearby ground stations
+- "Follow the best band" stayed on the first band that gave anything (user report). Renamed "Find a working band"; new "Busiest band"
+  (`HfdlBusiestBand`): 75 s survey per candidate band, score = PDU/min + 2 x aircraft + 3 x stations + 0.1 x SNR, stay on the best,
+  survey again every 20 min or at once on a silent window. Candidates from the nearby stations' active frequencies when known.
+- New HFDL > Nearby view (hfdl_stations.cpp, core hfdl_live.h): stations nearest first, distance, bearing, active frequencies as tune
+  buttons, age, source (squitter / hfdl.observer). The hfdl.observer list (its public active.json "Source Data" link, no terms published)
+  is opt-in (Settings > Privacy), off in Offline mode, at most every 2 min, cached. Credits for hfdl.observer and Airframes.io.
+- Tests hfdl_live (saved list in tests/data/hfdl, no network) and hfdl_busy (simulated sky). Simulated only. docs/HFDL-STATIONS-4.0.md.
