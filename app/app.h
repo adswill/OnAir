@@ -1415,6 +1415,8 @@ std::string diagnosticsText(App& a);
 void systemInfoText(std::string& os, std::string& cpu, std::string& gpu);   // diag_ui.cpp: this computer's OS, CPU and graphics names
 bool writeZipFile(const std::string& path, const std::vector<std::pair<std::string, std::string>>& files);   // diag_ui.cpp: a zip, entries stored
 void radioMessagesUi(App& a, bool vertical);
+void recordGroupUi(App& a);   // diag_ui.cpp: the Record group of the Source panel (IQ and audio recording); the Workspace Recorder block too
+void listenGroupUi(App& a);   // diag_ui.cpp: the Listen group (the monitor and its output devices); the Workspace Audio output block too
 // radio_ui.cpp: the "Radio settings" of the selected radio (only the ones it has): a collapsible section in a side panel (vertical), a
 // button with a popup in a one-line bar. A change reaches a running radio at once (a retune, or a restart for one that takes effect at open)
 void radioSettingsUi(App& a, bool vertical);

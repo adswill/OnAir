@@ -15,6 +15,7 @@
 #include <thread>
 #include "../state/workspace.h"
 #include "../state/layout.h"
+#include "../canvas/canvas.h"
 #ifdef _WIN32
 #define NOMINMAX
 #include <windows.h>
@@ -548,9 +549,10 @@ static void viewMenu(App& a) {
     gViewMenuCentre = ImVec2(ImGui::GetCursorScreenPos().x + ImGui::CalcTextSize(tr("View")).x * 0.5f + 6 * gUi, ImGui::GetCursorScreenPos().y + ImGui::GetFrameHeight() * 0.5f);
     if (ImGui::BeginMenu(tr("View"))) {
         if (ImGui::BeginMenu(tr("Layout"))) {   // both switches act at once, the receiver keeps running; the same two values as Settings > Display
-            if (ImGui::MenuItem(tr("Classic"), "Ctrl+Shift+L", !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Unified"), "Ctrl+Shift+L", a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Classic"), "Ctrl+Shift+L", !a.layoutUnified && !canvas::on())) { a.layoutUnified = false; canvas::setOn(false); savePrefs(a); }
+            if (ImGui::MenuItem(tr("Unified"), "Ctrl+Shift+L", a.layoutUnified && !canvas::on())) { a.layoutUnified = true; canvas::setOn(false); savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new layout: the spectrum and waterfall stay on screen above the decoded views"));
+            canvas::layoutMenuItem(a);   // Workspace: blocks on a blank canvas (app/canvas)
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(tr("Look"))) {
@@ -764,6 +766,7 @@ static void menuBarRight(App& a) {
 
 void restoreDefaultView(App& a) {
     a.newUi = true; a.touchUi = false; a.layoutUnified = false; a.uiVariant = 0; a.dockOn = false;
+    canvas::setOn(false);   // the Workspace layout off too
     savePrefs(a);
 }
 

@@ -688,6 +688,13 @@ void radioMessagesUi(App& a, bool vertical) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Saves one zip file with the diagnostics, the log and the last crash report: attach it to a GitHub issue"));
     // the three groups of the Source panel: Radio (above, with its status), Record, Listen; one left edge, a second column for the formats
     panel::subHeading(tr("Record"));
+    recordGroupUi(a);
+    panel::subHeading(tr("Listen"));
+    listenGroupUi(a);
+}
+
+// the Record group of the Source panel, also the Workspace layout's Recorder block (app/canvas)
+void recordGroupUi(App& a) {
     recordUi(a, 1);              // [dot] Record IQ     [8-bit]
     flowEnd();
     recordUi(a, 2);              // SigMF  Rewind  Library
@@ -702,6 +709,9 @@ void radioMessagesUi(App& a, bool vertical) {
     flowEnd();
     audioRecordUi(a, 2);         // Skip silence  Split  Keep recording: they belong to the audio recording
     flowEnd();
-    panel::subHeading(tr("Listen"));
+}
+
+// the Listen group (the monitor: Hear this channel, its demodulator and volume, the output devices), also the Audio output block
+void listenGroupUi(App& a) {
     audioMonitorUi(a);           // Hear this channel  [demod]  volume  Outputs...
 }

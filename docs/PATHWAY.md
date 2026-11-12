@@ -1904,3 +1904,6 @@ Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked
 - NFM click removal built twice and dropped: the 12 dB SINAD point (8.4 dB) is above the FM threshold, gains were 0.3 dB at most.
 - Guard test hfdig_sstv_sens40; bench tests/hfdig/sstv_sens40_bench.cpp (not a ctest).
 - (feat40-sensX2, later) Weather fax: row Wiener filter on weak signals (mean row correlation at 2 dB 0.460 -> 0.634, sens39 passes 0 -> 3 of 3 at 2 and 1 dB). NOAA APT: click median + line Wiener filter with the noise of space A (PSNR at 2 dB 10.2 -> 12.8 dB, at 15 dB 30.5 -> 32.8 dB). Tests marine_fax_sens40, wxsat_apt40, measured on the GitHub Linux runner.
+
+## 2026-11-12 (feat40-canvas): Workspace layout
+View > Layout > Workspace: a blank canvas of blocks (radio source, spectrum and waterfall, demodulator, audio output, decoder, map, satellite tracker, rotator, transmitter, recorder, log, history, frequency list, bookmarks, scanner, clock, notes), each a movable, resizable, collapsible window drawn with the existing panels; one Source block per receiver; snapping to a grid and to other blocks, tabs by dropping on a title, link lines, named workspaces with export / import and four templates. Model in app/canvas/canvas_model.h, tested by test_canvas. Page: docs/WORKSPACE-4.0.md. Classic and Unified are unchanged and stay the default.
