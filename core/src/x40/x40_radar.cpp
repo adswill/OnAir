@@ -141,8 +141,11 @@ private:
         const double dt = 0.02; const int M = (int)((t1 - t0) / dt); if (M < 200) return 0;
         std::vector<double> s(M, 0.0); std::vector<int> c(M, 0);
         for (auto& p : pul_) { const int i = (int)((p.t - t0) / dt); if (i >= 0 && i < M) { s[i] = std::max(s[i], p.amp); c[i]++; } }
-        // fill holes by the previous value, take the log
-        double last = 1e-9; for (int i = 0; i < M; i++) { if (c[i]) last = s[i]; s[i] = std::log(std::max(last, 1e-9)); }
+        // take the log; a bin without a pulse (the beam is away) gets the weakest level seen. Holding the previous value there made a staircase of
+        // each turn's last, near-threshold pulse, whose slowly falling autocorrelation let a third of the turn pass as the period (0.80 s for 2.4 s)
+        double floorAmp = 1e300; for (int i = 0; i < M; i++) if (c[i]) floorAmp = std::min(floorAmp, s[i]);
+        if (floorAmp > 1e299) return 0;
+        for (int i = 0; i < M; i++) s[i] = std::log(std::max(c[i] ? s[i] : floorAmp, 1e-9));
         double mu = 0; for (double v : s) mu += v; mu /= M; for (auto& v : s) v -= mu;
         double e0 = 0; for (double v : s) e0 += v * v; if (e0 < 1e-9) return 0;
         const int lmin = (int)(0.8 / dt), lmax = std::min(M / 2, (int)(12.0 / dt));
