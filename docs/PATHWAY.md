@@ -2081,3 +2081,10 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
 - 50 % / 90 % points in 3 kHz: XPA -14.9 / -12.6 (10 Bd), -12.3 / -11.0 (20 Bd); XPA2 -16.5 / -14.5; CROWD36 -7.1 / -5.4; FSK200/500
   -0.8 / +1.3; FSK200/1000 -2.3 / -0.3; GW FSK +2.8 / +5.0. No false decodes in noise or on a carrier. Simulated signals only.
   Tests x40_xpa, x40_xpa2, x40_crowd36, x40_f01, x40_f06, x40_gwfsk (GitHub quick runs 43195900765, 43197842356).
+
+## 2026-11-12 (feat40-release): 4.0.0 release content
+Version 4.0.0 in CMakeLists.txt, onair.rc, Info.plist and the Dockerfile default (Android versionCode 4000099 from CMake); `check_versions.sh 4.0.0 --final` passes.
+docs/CHANGELOG-4.0.md and docs/RELEASE-NOTES-4.0.0.md from `git log v3.9.0..pub/integ-40`, the *-4.0.md pages and the pathway entries since 3.9:
+128 new mode-list entries (459 in the app, 461 rows in MODES.md; 52 new receivers, 76 type entries), sensitivity table (simulated), screens, marketplace,
+landing predictor accuracy, known limits and next (ATSC #484 recordings, Android TV and USB on a phone, codecs folder, Spectran V6). README 4.0 section and
+mode table, docs index. Generators (modes list, web schema / options, Android modes and results map, credits) had no changes; `tools/gate/run.sh --no-compile` passes.

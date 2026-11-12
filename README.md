@@ -2,7 +2,7 @@
 
 <h1 align="center">OnAir</h1>
 
-<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->331<!-- /modecount --> modes with one software-defined radio.</b><br>
+<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->459<!-- /modecount --> modes with one software-defined radio.</b><br>
 Free and open source, for macOS, Windows, Linux and Android.</p>
 
 <p align="center">
@@ -63,7 +63,7 @@ OnAir is a receiver first. It can also send test signals through a transmit-capa
 ## Contents
 
 - [What it does](#what-it-does)
-- [What is new in 3.9](#what-is-new-in-39) · [3.8](#what-is-new-in-38) · [3.7](#what-is-new-in-37) · [3.0](#what-is-new-in-30) · [0.2.8](#what-is-new-in-028) · [0.2.7](#what-is-new-in-027) · [0.2.6](#what-is-new-in-026)
+- [What is new in 4.0](#what-is-new-in-40) · [3.9](#what-is-new-in-39) · [3.8](#what-is-new-in-38) · [3.7](#what-is-new-in-37) · [3.0](#what-is-new-in-30) · [0.2.8](#what-is-new-in-028) · [0.2.7](#what-is-new-in-027) · [0.2.6](#what-is-new-in-026)
 - [Install](#install) · [Android app](#android-app) · [Development version](#development-version-nightly)
 - [Quick start](#quick-start)
 - [Modes](#modes) · [Tools and notes](#tools-and-notes)
@@ -81,23 +81,37 @@ OnAir is a receiver first. It can also send test signals through a transmit-capa
 <!-- modes-table:begin -->
 | Family | Modes | What you get |
 |---|:---:|---|
-| **TV** | 17 | DVB-T/T2, DVB-S/S2/S2X, DVB-SH, DVB-C2, ISDB-TSB, ISDB-S, TV sat beacon decoder, DVB-C, ATSC 1.0 and 3.0, ISDB-T, DTMB, analogue TV and MAC, analog FPV video (5.8 / 1.2 GHz), with a live player (picture, sound, subtitles, teletext, programme guide), recording, pause and live buffer, and 2-3 adjacent channels from one wide capture |
-| **Broadcast radio** | 7 | DAB+ (with a programme guide), DRM (with its data services), HD Radio, CDR, AM broadcast (medium wave and shortwave), AM stereo (C-QUAM), and FM with RDS, a Mono switch for weak stations and a saved-station library |
-| **Aviation** | 27 | ADS-B with a live map, ASTERIX radar data from UDP or a file, Mode A/C squawks and altitudes, UAT, ACARS, VDL2 and VDL4, HFDL, airband, VOR / ILS / NDB, FLARM, ADS-L, drones |
-| **Maritime** | 8 | AIS (also long-range and satellite AIS), VDES, NAVTEX, DSC, weather fax, Marine VHF voice |
-| **Satellite and navigation** | 55 | Weather pictures from Meteor, NOAA (APT, DSB), GOES, Elektro-L and Arktika-M (RDAS), FengYun-4 (LRIT, HRIT), FengYun-2 (S-VISSR) and MetOp, Iridium, Inmarsat (including BGAN), Orbcomm, QO-100, CubeSat telemetry, GNSS, SBAS corrections, COSPAS-SARSAT 406 MHz distress beacons, GOES / Meteosat DCS platform reports, Argos platforms and downlink |
-| **Two-way radio** | 21 | DMR, P25 (phase 1 and 2, with a trunking follower), NXDN, dPMR, D-STAR, M17, TETRA, TETRAPOL, tone decoders (CTCSS, DCS, DTMF, selcall) |
+| **TV** | 25 | DVB-T/T2, DVB-S/S2/S2X, DVB-SH, DVB-C2, ISDB-TSB, ISDB-S, TV sat beacon decoder, DVB-C, ATSC 1.0 and 3.0, ISDB-T, DTMB, analogue TV and MAC, analog FPV video (5.8 / 1.2 GHz), with a live player (picture, sound, subtitles, teletext, programme guide), recording, pause and live buffer, and 2-3 adjacent channels from one wide capture |
+| **Broadcast radio** | 9 | DAB+ (with a programme guide), DRM (with its data services), HD Radio, CDR, AM broadcast (medium wave and shortwave), AM stereo (C-QUAM), and FM with RDS, a Mono switch for weak stations and a saved-station library |
+| **Aviation** | 30 | ADS-B with a live map, ASTERIX radar data from UDP or a file, Mode A/C squawks and altitudes, UAT, ACARS, VDL2 and VDL4, HFDL, airband, VOR / ILS / NDB, FLARM, ADS-L, drones |
+| **Maritime** | 14 | AIS (also long-range and satellite AIS), VDES, NAVTEX, DSC, weather fax, Marine VHF voice |
+| **Satellite and navigation** | 64 | Weather pictures from Meteor, NOAA (APT, DSB), GOES, Elektro-L and Arktika-M (RDAS), FengYun-4 (LRIT, HRIT), FengYun-2 (S-VISSR) and MetOp, Iridium, Inmarsat (including BGAN), Orbcomm, QO-100, CubeSat telemetry, GNSS, SBAS corrections, COSPAS-SARSAT 406 MHz distress beacons, GOES / Meteosat DCS platform reports, Argos platforms and downlink |
+| **Two-way radio** | 22 | DMR, P25 (phase 1 and 2, with a trunking follower), NXDN, dPMR, D-STAR, M17, TETRA, TETRAPOL, tone decoders (CTCSS, DCS, DTMF, selcall) |
 | **Cellular and rail** | 10 | LTE, 5G NR and NB-IoT cells, GSM-R, LBJ, KLW, TDCS |
 | **Pagers** | 4 | POCSAG, FLEX, Multitone |
-| **IoT and sensors** | 38 | ISM sensors, LoRaWAN, Meshtastic, MeshCore, Bluetooth LE, BLE tracker detector, Zigbee, Thread, Sub-GHz sensors, Wi-Fi, Wi-SUN, Wireless M-Bus, Z-Wave, DECT, ANT+, Sigfox, NFC / RFID, Flipper Zero Sub-GHz chat |
-| **Weather and science** | 51 | Radiosondes, Horus balloons, NOAA HRPT and GAC, Meteor HRPT, AWS, FY-3 AHRPT and MPT, SAME alerts, time signals, e-Czas, ionospheric sounders, radio astronomy, meteor scatter, Sferics (lightning) |
-| **Amateur** | 51 | FT8, FT4, WSPR, JS8Call, RTTY, PSK, MT63, FSQ, IFKP, ARDOP, SSTV, FreeDV, APRS, LoRa APRS, MeshCom and more |
-| **HF utility** | 32 | ALE, beacons, Datawell buoys, CODAR, STANAG 4539, 3G-ALE, Link 11 CLEW, STANAG 4481, CIS data modes |
-| **Tools** | 4 | General receiver, spectrum analyser, spectrum explorer, signal workbench; also a gain optimiser, a direction finder, a pass planner and a remote-control API |
+| **IoT and sensors** | 77 | ISM sensors, LoRaWAN, Meshtastic, MeshCore, Bluetooth LE, BLE tracker detector, Zigbee, Thread, Sub-GHz sensors, Wi-Fi, Wi-SUN, Wireless M-Bus, Z-Wave, DECT, ANT+, Sigfox, NFC / RFID, Flipper Zero Sub-GHz chat |
+| **Weather and science** | 76 | Radiosondes, Horus balloons, NOAA HRPT and GAC, Meteor HRPT, AWS, FY-3 AHRPT and MPT, SAME alerts, time signals, e-Czas, ionospheric sounders, radio astronomy, meteor scatter, Sferics (lightning) |
+| **Amateur** | 52 | FT8, FT4, WSPR, JS8Call, RTTY, PSK, MT63, FSQ, IFKP, ARDOP, SSTV, FreeDV, APRS, LoRa APRS, MeshCom and more |
+| **HF utility** | 41 | ALE, beacons, Datawell buoys, CODAR, STANAG 4539, 3G-ALE, Link 11 CLEW, STANAG 4481, CIS data modes |
+| **Tools** | 29 | General receiver, spectrum analyser, spectrum explorer, signal workbench, measurement meters (MER, SINAD, noise figure, phase noise, occupied bandwidth, intermodulation and more); also a gain optimiser, a direction finder, a pass planner and a remote-control API |
 | **KA family (own modes)** | 6 | KAAL, KAPP, KAFT, KAVB, KAIT, KAWS: digital modes designed for OnAir, in development (see below) |
 <!-- modes-table:end -->
 
 **Many radios:** HackRF, RTL-SDR, Airspy, HydraSDR, SDRplay, BladeRF, LimeSDR, USRP, Pluto, Fobos, RX888, RFNM, network radios, sound cards and Hamlib rigs. The mode counts are generated from the mode list in the app (`tools/release/gen_changelog.py`; the numbering rules are in [docs/MODE-NUMBERS.md](docs/MODE-NUMBERS.md)). Details per mode are under [Modes](#modes).
+
+## What is new in 4.0
+
+The full list, with what was measured and the known limits, is in [docs/CHANGELOG-4.0.md](docs/CHANGELOG-4.0.md) and in the 4.0 release notes on the [releases page](https://github.com/adswill/OnAir/releases/latest). Read the **Known limits** section: nearly everything new was tested on generated signals, not on the air.
+
+- **New modes** (459 in the app's list, 128 more than 3.9; [MODES.md](MODES.md) has 461 rows): six HF data modes from Rivet (XPA, XPA2, CROWD36, FSK200/500, FSK200/1000, GW FSK), DCR (Japan), 45 measurement and monitor modes (FM / AM modulation monitors, radar pulses, ILS markers, SSR interrogations, RFID, Qi, GNSS interference, MER, SINAD, noise figure, phase noise and more), and 76 entries that show one type of an existing receiver (sensor brands, radiosonde types, AIS station kinds, time stations, analog TV standards, GNSS systems).
+- **Better sensitivity**: Argos 13 to -5.5 dB, NDB 14 to 9 dB, ISDB-T TU6 30 to 21 dB, ATSC 3.0 TU6 16 to 6 dB, ATSC 1.0 long echoes, DSC, MPT 1327, Z-Wave, POCSAG, ISM sensors, radiosondes, COSPAS-SARSAT and more (simulated signals; the table is in the changelog).
+- **New screens**: the General receiver, a Workspace canvas of blocks, one Ham station screen, transmit screens with ARM then TRANSMIT, a propagation calculator on ITU-R models, a satellite tracker with a world map, a tinted mode list.
+- **Sharp zoomed waterfall**: a zoom FFT of the visible span and a pixel-exact waterfall; the 3.9 look stays as "Soft zoom".
+- **Settings**: a key editor for every shortcut, profiles, about 70 new settings, hover previews of the looks, grouped menus, a one-row status bar.
+- **Plugin marketplace**: community plugins at plugins.on-air.dev in the Store tab (not reviewed, marked so). **Map badges** with GitHub sign-in.
+- **Radiosondes**: landing predictor with an error ellipse, SondeHub upload, named launch sites. **HFDL**: nearby ground stations and a busiest-band search.
+- **NFM audio**: the General receiver's NFM audio filter is 3 kHz now (was 4 kHz), so NFM sounds less noisy and less bright.
+- **Fixes**: #479 (DCS on transmit), #484 (ATSC 3.0 signalling, partly), #481, and "too slow" / "USB 3" warnings on fast PCs, nRSP-ST above a few Msps.
 
 ## What is new in 3.9
 
@@ -258,7 +272,7 @@ OnAir for Android is the desktop decoder core (the same C++ code, built as `libo
 - **Receive only.** The app never transmits. Network access (for rtl_tcp, SpyServer, map tiles and the in-app update) is its only data link: nothing is sent to any server. Other permissions are for the receive service and the sound (foreground service, wake lock, notifications), the sound-card source (microphone, only while that source runs), a walk-around direction finder (location, only while a walk runs) and installing the in-app update (you confirm it).
 - **Sources:** an RTL-SDR on the USB port (0.2.7), `rtl_tcp` (an RTL-SDR served over the network, or on the phone itself), SpyServer, an IQ file (cs8, cu8, cf32, ci16, cu16, with its sample rate) and a built-in test signal for the selected mode that needs no radio.
 - **Results:** per-mode results (cards and tables), an OpenStreetMap map (tiles are only fetched after you agree), and FM with RDS.
-- **Modes:** the mode list has every row of the desktop list (333 in 3.9; the 3.7 audit found 3 that cannot be used on a phone). Results cards and tables are generated for 107 more modes than before. This was checked on an Android 15 emulator against the built-in test signal, not on a phone or with a real radio ([docs/ANDROID-3.7.md](docs/ANDROID-3.7.md)).
+- **Modes:** the mode list has every row of the desktop list (461 in 4.0; the 3.7 audit found 3 that cannot be used on a phone). Results cards and tables are generated for 107 more modes than before. This was checked on an Android 15 emulator against the built-in test signal, not on a phone or with a real radio ([docs/ANDROID-3.7.md](docs/ANDROID-3.7.md)).
 - **Use it:** pick a source on the Receiver tab, a mode on the Mode tab, press play. Tap the spectrum to tune, drag to move, pinch to zoom (double tap resets).
 - **Install:** download `OnAir-…-android.apk` from the [release](https://github.com/adswill/OnAir/releases/latest), copy it to the phone, open it and allow installs from unknown sources for the app you opened it with. The APK is signed with the project's own key, not a Play Store key; updating later needs the same key.
 - **Limits:** arm64-v8a only, Android 9 (API 28) or newer. Direct USB works for RTL-SDR radios (new in 0.2.7); HackRF and Airspy USB are not supported yet, so use rtl_tcp or SpyServer for those. No vocoder voice (DMR, P25, NXDN, D-STAR, TETRA), no TV video or sound, and no images yet (the satellite pictures and the SSTV / fax pictures). Wide modes (DVB, ATSC, ISDB, DTMB) will usually not keep up on a typical phone. No channel scan and no import screen for voice codec plug-ins.
@@ -286,7 +300,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 ## Modes
 
-<!-- modecount -->331<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons and a Mode Builder entry, so [MODES.md](MODES.md) counts 333). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
+<!-- modecount -->459<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons and a Mode Builder entry, so [MODES.md](MODES.md) counts 461). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
 
 <details>
 <summary><b>All modes, by family</b></summary>
