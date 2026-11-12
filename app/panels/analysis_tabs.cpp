@@ -497,7 +497,9 @@ void constellationsTab(App& a) {
     if (const ModeUi* mu = modeUi(a.family)) { if (mu->panels) mu->panels(a); return; }
     if (a.dabMode) { dabPanels(a); return; }
     if (a.fmMode) { fmPanels(a); return; }
-    if (a.rx.standard == 2) { atscPanels(a); return; }
+    // ATSC 1.0 (family 1) is 8-VSB: one axis of 8 levels, not OFDM. Decide by the selected mode, not only by the last report, so a stopped
+    // receiver or another mode's last report never shows the DVB-T/T2 OFDM plots (TPS / P1 carriers, pilots) for ATSC.
+    if (a.rx.standard == 2 || (a.family == 1 && !a.atsc3Mode)) { atscPanels(a); return; }
     const RxTelemetry& rx = a.rx;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;
     // the new interface packs the plots to the left and uses the rest for numbers, when there is room for them (else they are on the Receiver tab)
