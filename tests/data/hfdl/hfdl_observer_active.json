@@ -1,0 +1,225 @@
+{
+    "ground_stations": [
+        {
+            "id": 1,
+            "last_updated": 1794471059.0,
+            "name": "San Francisco, California",
+            "when": "2026-11-12T08:10:59+00:00",
+            "stratum": 3,
+            "update_source": 5,
+            "frequencies": {
+                "active": [
+                    13276,
+                    17919
+                ]
+            }
+        },
+        {
+            "id": 2,
+            "last_updated": 1794471059.0,
+            "name": "Molokai, Hawaii",
+            "when": "2026-11-12T08:10:59+00:00",
+            "stratum": 3,
+            "update_source": 5,
+            "frequencies": {
+                "active": [
+                    10027,
+                    11312,
+                    13324
+                ]
+            }
+        },
+        {
+            "id": 3,
+            "last_updated": 1794471079.0,
+            "name": "Reykjavik, Iceland",
+            "when": "2026-11-12T08:11:19+00:00",
+            "stratum": 4,
+            "update_source": 3,
+            "frequencies": {
+                "active": [
+                    3900,
+                    5720
+                ]
+            }
+        },
+        {
+            "id": 4,
+            "last_updated": 1794471084.0,
+            "name": "Riverhead, New York",
+            "when": "2026-11-12T08:11:24+00:00",
+            "stratum": 4,
+            "update_source": 4,
+            "frequencies": {
+                "active": [
+                    6661,
+                    8912
+                ]
+            }
+        },
+        {
+            "id": 5,
+            "last_updated": 1794471059.0,
+            "name": "Auckland, New Zealand",
+            "when": "2026-11-12T08:10:59+00:00",
+            "stratum": 4,
+            "update_source": 5,
+            "frequencies": {
+                "active": [
+                    10084,
+                    13351
+                ]
+            }
+        },
+        {
+            "id": 6,
+            "last_updated": 1794471020.0,
+            "name": "Hat Yai, Thailand",
+            "when": "2026-11-12T08:10:20+00:00",
+            "stratum": 3,
+            "update_source": 4,
+            "frequencies": {
+                "active": [
+                    5655,
+                    13270
+                ]
+            }
+        },
+        {
+            "id": 7,
+            "last_updated": 1794471055.0,
+            "name": "Shannon, Ireland",
+            "when": "2026-11-12T08:10:55+00:00",
+            "stratum": 4,
+            "update_source": 7,
+            "frequencies": {
+                "active": [
+                    8942
+                ]
+            }
+        },
+        {
+            "id": 8,
+            "last_updated": 1794471079.0,
+            "name": "Johannesburg, South Africa",
+            "when": "2026-11-12T08:11:19+00:00",
+            "stratum": 3,
+            "update_source": 3,
+            "frequencies": {
+                "active": [
+                    11321,
+                    21949
+                ]
+            }
+        },
+        {
+            "id": 9,
+            "last_updated": 1794468440.0,
+            "name": "Barrow, Alaska",
+            "when": "2026-11-12T07:27:20+00:00",
+            "stratum": 4,
+            "update_source": 9,
+            "frequencies": {
+                "active": [
+                    8936
+                ]
+            }
+        },
+        {
+            "id": 10,
+            "last_updated": 1794469787.0,
+            "name": "Muan, South Korea",
+            "when": "2026-11-12T07:49:47+00:00",
+            "stratum": 4,
+            "update_source": 10,
+            "frequencies": {
+                "active": [
+                    17958,
+                    21931
+                ]
+            }
+        },
+        {
+            "id": 11,
+            "last_updated": 1794471084.0,
+            "name": "Albrook, Panama",
+            "when": "2026-11-12T08:11:24+00:00",
+            "stratum": 3,
+            "update_source": 4,
+            "frequencies": {
+                "active": [
+                    8894
+                ]
+            }
+        },
+        {
+            "id": 13,
+            "last_updated": 1794471069.0,
+            "name": "Santa Cruz, Bolivia",
+            "when": "2026-11-12T08:11:09+00:00",
+            "stratum": 3,
+            "update_source": 17,
+            "frequencies": {
+                "active": [
+                    11318,
+                    13315
+                ]
+            }
+        },
+        {
+            "id": 14,
+            "last_updated": 1794471069.0,
+            "name": "Krasnoyarsk, Russia",
+            "when": "2026-11-12T08:11:09+00:00",
+            "stratum": 3,
+            "update_source": 17,
+            "frequencies": {
+                "active": [
+                    21990
+                ]
+            }
+        },
+        {
+            "id": 15,
+            "last_updated": 1794470998.0,
+            "name": "Al Muharraq, Bahrain",
+            "when": "2026-11-12T08:09:58+00:00",
+            "stratum": 4,
+            "update_source": 15,
+            "frequencies": {
+                "active": [
+                    17967,
+                    21982
+                ]
+            }
+        },
+        {
+            "id": 16,
+            "last_updated": 1794470434.0,
+            "name": "Agana, Guam",
+            "when": "2026-11-12T08:00:34+00:00",
+            "stratum": 4,
+            "update_source": 16,
+            "frequencies": {
+                "active": [
+                    11306,
+                    21928
+                ]
+            }
+        },
+        {
+            "id": 17,
+            "last_updated": 1794471069.0,
+            "name": "Canarias, Spain",
+            "when": "2026-11-12T08:11:09+00:00",
+            "stratum": 4,
+            "update_source": 17,
+            "frequencies": {
+                "active": [
+                    17928
+                ]
+            }
+        }
+    ],
+    "when": "2026-11-12T08:11:27.787264+00:00"
+}

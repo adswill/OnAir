@@ -2043,3 +2043,11 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
 - Cloudflare: R2 bucket and D1 database `onair-plugins` (schema applied), Worker deployed on plugins.on-air.dev, the four secrets set.
   `/api/v1/status` answers signing true, github true.
 - kBuiltInMarketKeyHex is now the server's public key; wrangler.jsonc carries the D1 id and the Client ID (neither is a secret).
+## 2026-11-12 (feat40-hfdlst): HFDL band choice and nearby ground stations
+- "Follow the best band" stayed on the first band that gave anything (user report). Renamed "Find a working band"; new "Busiest band"
+  (`HfdlBusiestBand`): 75 s survey per candidate band, score = PDU/min + 2 x aircraft + 3 x stations + 0.1 x SNR, stay on the best,
+  survey again every 20 min or at once on a silent window. Candidates from the nearby stations' active frequencies when known.
+- New HFDL > Nearby view (hfdl_stations.cpp, core hfdl_live.h): stations nearest first, distance, bearing, active frequencies as tune
+  buttons, age, source (squitter / hfdl.observer). The hfdl.observer list (its public active.json "Source Data" link, no terms published)
+  is opt-in (Settings > Privacy), off in Offline mode, at most every 2 min, cached. Credits for hfdl.observer and Airframes.io.
+- Tests hfdl_live (saved list in tests/data/hfdl, no network) and hfdl_busy (simulated sky). Simulated only. docs/HFDL-STATIONS-4.0.md.
