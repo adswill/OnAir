@@ -2,7 +2,7 @@
 
 > **DMR, P25, NXDN, dPMR and D-STAR voice is silent until you install mbelib.** The calls, IDs and data are shown without it. Its vocoders are patented, so OnAir does not include it: put `libmbe` / `mbelib` in the codecs folder (the **?** button next to the sound has an **Open codecs folder** button), then press **Look again**.
 >
-> **Built codecs on Discord.** Every codec install screen and notice in OnAir (the **?** help, **Help > Voice codecs**, the setup wizard and the voice and sound panels) has a **Join the Discord to get access to built codecs** button. It opens <https://discord.gg/ptxkzCuzR> in your browser and nothing else: OnAir itself never downloads, bundles or installs a codec, so the install-it-yourself steps below stay the way to do it, and you still copy the file into the codecs folder yourself.
+> **Built codecs on Discord.** Every codec install screen and notice in OnAir (the **?** help, **Help > Voice codecs**, the setup wizard and the voice and sound panels) has a **Join the Discord to get access to built codecs** button. It opens <https://discord.gg/ptxkzCuzR> in your browser and nothing else: OnAir itself never downloads, bundles or installs a codec, so the install-it-yourself steps below stay the way to do it, and you still copy the file into the codecs folder yourself. The Dropbox link with the ready-built files for every codec above (Windows, macOS, Linux) is posted in the [OnAir Discord](https://discord.gg/ptxkzCuzR): join it, download the files for your system, put them in the codecs folder and press **Look again**.
 
 > **CDR (China Digital Radio) sound is silent until you install the DRA+ add-on.** The services, signal information and data work without it. See [DRA+ (CDR sound)](#dra-cdr-sound).
 
