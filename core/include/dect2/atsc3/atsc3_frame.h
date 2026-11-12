@@ -52,6 +52,7 @@ struct PlpResult {
     // the tail of one frame and the head of the next together.
     bool straddle = false;
     std::vector<cf32> head, tail;
+    std::vector<float> headW, tailW;              // their channel state weights (empty: none)
 };
 
 struct FrameResult {

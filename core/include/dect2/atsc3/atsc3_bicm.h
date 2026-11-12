@@ -28,7 +28,10 @@ public:
     bool decode(const cf32* cells, float noiseVar, std::vector<uint8_t>& payload, int* ldpcIterations = nullptr) const;
     // Up to 16 blocks at once with the 8-bit layered decoder (one block per vector lane): much faster per block than decode() when several blocks
     // are waiting. payload[b] and ok[b] as for decode().
-    void decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, std::vector<std::vector<uint8_t>>& payload, std::vector<char>& ok) const;
+    // `weights` (optional, one array of cells() values per block): channel state of each cell, |h|^2 against its mean, so that the soft bits are
+    // those of a cell with noise noiseVar / w (4.0, docs/SENSITIVITY-4.0-X3.md); null: every cell with noiseVar
+    void decodeBatch(const std::vector<const cf32*>& cells, float noiseVar, std::vector<std::vector<uint8_t>>& payload, std::vector<char>& ok,
+                     const std::vector<const float*>* weights = nullptr) const;
 
     // the constellation, indexed by the label (y0 most significant)
     const std::vector<cf32>& constellation() const { return points_; }
@@ -36,7 +39,7 @@ public:
     const std::vector<int>& bitPermutation() const { return perm_; }
 
 private:
-    void llrs(const cf32* cells, float noiseVar, std::vector<float>& llr) const;   // soft bits of the code word, limited
+    void llrs(const cf32* cells, float noiseVar, std::vector<float>& llr, const float* w = nullptr) const;   // soft bits of the code word, limited
     bool finish(const std::vector<uint8_t>& hard, std::vector<uint8_t>& payload) const;   // outer code on the decoded word
     bool decodeLlr(const std::vector<float>& llr, std::vector<uint8_t>& hard, int* iters = nullptr) const;   // the LDPC code word from float LLRs
     BicmConfig cfg_;

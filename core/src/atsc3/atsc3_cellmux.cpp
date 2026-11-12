@@ -59,7 +59,7 @@ std::vector<cf32> modulateSubframe(const SubframeParams& s, const std::vector<cf
     return out;
 }
 
-bool demodulateSubframe(const SubframeParams& s, const cf32* x, size_t n, std::vector<cf32>& active, std::vector<float>* noiseVar) {
+bool demodulateSubframe(const SubframeParams& s, const cf32* x, size_t n, std::vector<cf32>& active, std::vector<float>* noiseVar, std::vector<float>* weights) {
     const size_t symLen = (size_t)s.fftSize + s.guard;
     if (n < symLen * s.numSymbols) return false;
     active.clear();
@@ -72,14 +72,17 @@ bool demodulateSubframe(const SubframeParams& s, const cf32* x, size_t n, std::v
     stFft.stop();
     DECT2_STAGE("a3.ofdm.equalise");
     std::vector<cf32> h, cells;
+    std::vector<float> w;
+    if (weights) weights->clear();
     for (int l = 0; l < s.numSymbols; l++) {
         smoothChannel(rx, l, half, h);
-        symbolCells(s, l, rx[(size_t)l], h, cells);
+        symbolCells(s, l, rx[(size_t)l], h, cells, weights ? &w : nullptr);
         int nd = (int)cells.size();
         int nulls = isBoundarySymbol(s, l) ? s.sbsNullCells : 0;
         for (int i = nulls / 2; i < nd - (nulls - nulls / 2); i++) {
             active.push_back(cells[(size_t)i]);
             if (noiseVar) noiseVar->push_back(rx[(size_t)l].nv);
+            if (weights) weights->push_back(w[(size_t)i]);
         }
     }
     return true;

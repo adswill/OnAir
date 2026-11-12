@@ -29,7 +29,9 @@ std::vector<cf32> extractPlpCells(const std::vector<cf32>& active, const PlpAllo
 // The symbols of the subframe as samples (guard + useful part each, back to back); `active` as made by multiplexSubframe (without the prefix cells).
 std::vector<cf32> modulateSubframe(const SubframeParams& s, const std::vector<cf32>& activeAfterPrefix);
 // The reverse: returns the active cells of all symbols in order (the prefix is not part of them) and the noise estimate per cell where asked.
-bool demodulateSubframe(const SubframeParams& s, const cf32* samples, size_t n, std::vector<cf32>& active, std::vector<float>* noiseVar = nullptr);
+// weights (optional): the channel state of each active cell (symbolCells)
+bool demodulateSubframe(const SubframeParams& s, const cf32* samples, size_t n, std::vector<cf32>& active, std::vector<float>* noiseVar = nullptr,
+                        std::vector<float>* weights = nullptr);
 
 } // namespace atsc3
 } // namespace dect2

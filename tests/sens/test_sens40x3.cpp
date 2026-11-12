@@ -91,6 +91,7 @@ Pt run(const Mode& m, const Prep& P, const Scen& sc, double snr, int n, int thre
 const char* offSwitch(const std::string& id) {
     if (id == "isdbt") return "DECT2_ISDBT_NOTI";
     if (id == "atsc") return "ATSC_NOSEG";
+    if (id == "atsc3") return "DECT2_ATSC3_NOCSI";
     return nullptr;
 }
 void setOff(const char* sw, bool off) {
