@@ -19,6 +19,10 @@ struct Atsc3Telemetry {
     double cfoHz = 0;
     long bootstraps = 0, frames = 0, framesFailed = 0, bbPackets = 0, bbBad = 0;
     long alpPackets = 0, udp = 0, llsTables = 0, routeObjects = 0;
+    long alpCompressedIp = 0;            // ALP packets with a compressed IP header (A/330 5.2.1 type 1: not decoded)
+    long alpSignaling = 0;               // link layer signalling packets
+    long llsSigned = 0;                  // signed LLS tables (SignedMultiTable)
+    long slsObjects = 0, slsTables = 0;  // objects on the chosen service's SLS channel, and the documents read from them
     double secSinceFrame = 1e9;          // seconds (of wall clock) since the last decoded frame
     std::vector<atsc3::SltService> services;
     std::vector<atsc3::AeatAlert> alerts;     // advanced emergency alerts in force

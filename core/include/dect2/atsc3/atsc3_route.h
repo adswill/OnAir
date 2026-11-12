@@ -2,6 +2,7 @@
 // layer signaling that arrives as a MIME package (USBD, S-TSID, MPD) on TSI 0, and routes the objects of each component of a service.
 #pragma once
 #include "atsc3_ip.h"
+#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <map>
@@ -71,7 +72,8 @@ struct MimePart {
     std::map<std::string, std::string> headers;   // lower case names
     std::vector<uint8_t> body;
 };
-// Splits a multipart document; the first header block carries the boundary. Returns an empty list when it is not multipart.
+// Splits a multipart document; the first header block carries the boundary (a document that starts with the delimiter line itself, without
+// that header, is split too). Returns an empty list when it is not multipart.
 std::vector<MimePart> parseMultipart(const std::vector<uint8_t>& doc);
 std::vector<uint8_t> makeMultipart(const std::vector<MimePart>& parts, const std::string& boundary);
 
@@ -110,6 +112,8 @@ public:
     const std::vector<RouteComponent>& components() const { return components_; }
     const std::string& mpd() const { return mpd_; }
     const std::string& usbd() const { return usbd_; }
+    long slsObjects() const { return slsObjects_; }   // objects completed on TSI 0 of the SLS session
+    long slsTables() const { return slsTables_; }     // S-TSID, MPD and USBD documents read from them
 
     // Called for every completed object of a component (init segments have codepoints 5 to 7, media segments 8 and 9).
     std::function<void(const RouteComponent&, const RouteObject&)> onObject;
@@ -124,6 +128,7 @@ private:
     std::string mpd_, usbd_;
     std::map<std::tuple<uint32_t, int, uint32_t>, std::unique_ptr<RouteReceiver>> rx_;   // per (ip, port, tsi)
     int stsidVersion_ = -1;
+    std::atomic<long> slsObjects_{0}, slsTables_{0};
 };
 
 } // namespace atsc3

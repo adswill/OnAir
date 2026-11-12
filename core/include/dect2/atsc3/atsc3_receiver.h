@@ -21,6 +21,8 @@ struct ReceiverStats {
     long bbPackets = 0, bbBad = 0;
     long alpPackets = 0, alpIp = 0, alpSignaling = 0, alpTs = 0, alpCompressedIp = 0, alpOther = 0;
     long udp = 0, llsTables = 0, routeObjects = 0, objectsDelivered = 0;
+    long llsSigned = 0;                    // LLS datagrams that were a SignedMultiTable (A/331 6.7)
+    long slsObjects = 0, slsTables = 0;    // objects completed on the SLS channel (TSI 0), and the S-TSID / MPD / USBD documents read from them
 };
 
 struct FrameInfo {
