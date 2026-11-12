@@ -193,6 +193,19 @@ void hamGuideTab(App& a) {
         "The map shows the stations heard with a grid, coloured as the decode list, the great-circle path (short and, if chosen, long) to the "
         "station picked and to the running QSO with distance and bearing, and the grayline (night side shaded, the terminator, the sun). Spots lists "
         "every station heard in the last hour from your own decodes; nothing is fetched from the network.");
+    sec("Cluster (online spots)",
+        "DX cluster, Reverse Beacon Network, POTA, SOTA and PSK Reporter, each off until you switch it on (the cluster and RBN ask for your "
+        "callsign; PSK Reporter is asked who heard your callsign). The list marks what each station would add to your log (new DXCC, band, "
+        "mode, zone, state, grid, prefix); a click tunes there and puts the call in the QSO panel. Alerts: needed stations and your watch list.");
+    sec("Callsign lookup",
+        "The QSO panel shows the name, QTH and grid of the station from your earlier QSOs and the local cache, and from QRZ.com or HamQTH when "
+        "you enter your own account in the station setup. The account stays on this computer and goes only to that service.");
+    sec("Activations (POTA, SOTA, WWFF, IOTA)",
+        "Activate tab: your reference goes into every QSO logged while the activation runs, with the count against the program's minimum and "
+        "the POTA file / SOTA CSV for you to upload. A station picked from a POTA or SOTA spot gets its reference in the log.");
+    sec("Contests on FT8 / FT4",
+        "Operate: choose ARRL Field Day or RTTY Roundup and your exchange. The sequence sends the exchange instead of grid and report, and the "
+        "log keeps it for the Cabrillo export.");
     sec("Macros",
         "The Messages box keeps your own texts. {MYCALL} {MYGRID} {CALL} {GRID} {RST} {SNR} {SERIAL} {EXCH} {NAME} {QTH} are filled in. Click "
         "Send next to send one in the next slot (FT8 free text: 13 characters).");
