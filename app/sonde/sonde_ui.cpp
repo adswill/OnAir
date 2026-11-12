@@ -11,6 +11,7 @@
 #include "ui/kit/mode_frame.h"
 #include "dect2/sonde/sonde_land.h"
 #include "dect2/sonde/sonde_map_overlay.h"
+#include "dect2/sonde/sonde_predict.h"
 #include "dect2/geo/maidenhead.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/sonde/sonde_tel.h"
@@ -22,6 +23,12 @@ void sondeSitesTick(App& a, bool live);   // sonde_sites_ui.cpp
 void sondeSitesView(App& a);
 void sondeSitesDraw(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, int zoom);
 void sondeChaseControls(App& a);   // sonde_chase_ui.cpp
+// sonde_predict_ui.cpp: the landing prediction 4.0
+const dect2::SondePrediction* sondePredict40(const dect2::SondeInfo& s, bool selected, const dect2::tawhiri::Result* tw);
+bool sondePredict40On();
+void sondePredict40Draw(ImDrawList* dl, const dect2::SondePrediction& p);
+void sondePredict40Advanced();
+void sondePredict40Network();
 
 namespace {
 
@@ -40,6 +47,7 @@ struct State {
     int64_t autoFired = 0;             // the last window that used its start
     bool predOnline = false;           // 4.0: the Tawhiri flight prediction of the selected sonde (off until ticked: it asks the SondeHub predictor)
     float predBurstKm = 30.f, predDescent = 5.f;
+    std::string selShown;              // the serial selected() returned last (the one with the ensemble)
 };
 State S;
 dect2::SondePredictor& predictor() { static dect2::SondePredictor* p = new dect2::SondePredictor(); return *p; }
@@ -106,6 +114,12 @@ void predictionDraw(ImDrawList* dl, const SondeInfo* sel, float mapW, ImVec2 p0,
 // landing prediction with the descent smoothed over the user's averaging window (Advanced, 0 to 60 s; 0 is the instantaneous velocity)
 float avgWindowS() { return std::min(60.f, std::max(0.f, (float)plat::prefs().getD("sondeAvgS", 10.0))); }
 dect2::SondeLanding landing(const SondeInfo& s) {
+    if (sondePredict40On()) {   // 4.0: ascent winds, fitted fall rate, drift filter, terrain, forecast (sonde_predict_ui.cpp)
+        dect2::tawhiri::Result tw; double made = 0;
+        const bool haveTw = S.predOnline && predictor().result(s.serial, tw, made) && tw.ok;
+        const dect2::SondePrediction* p = sondePredict40(s, s.serial == S.selShown, haveTw ? &tw : nullptr);
+        return p ? p->legacy() : dect2::SondeLanding();
+    }
     dect2::SondeLandOpts o; o.windowS = avgWindowS();
     static const std::vector<dect2::SondeTrackPoint> none;
     return dect2::predictSondeLandingTrack(s.trackIncluded ? s.track : none, s.lat, s.lon, s.altM, s.vSpeed, s.hSpeed, s.headingDeg, o);
@@ -119,7 +133,8 @@ ImU32 typeColour(int kind, float alpha = 1.f) {
 
 // the selected sonde, or the most recently heard one when nothing is chosen (or the chosen one is gone)
 const SondeInfo* selected(const SondeTelemetry& t) {
-    for (const auto& s : t.sondes) if (s.serial == S.sel) return &s;
+    for (const auto& s : t.sondes) if (s.serial == S.sel) { S.selShown = s.serial; return &s; }
+    if (!t.sondes.empty()) S.selShown = t.sondes.front().serial;
     return t.sondes.empty() ? nullptr : &t.sondes.front();
 }
 
@@ -236,6 +251,8 @@ void mapView(App& a, ImVec2 size) {
         if (isSel) dl->AddCircle(q, 10 * gUi, IM_COL32(255, 255, 255, 230), 28, 1.6f);
         if (s.hasVel && s.vSpeed < -1.0) {   // predicted landing: a dashed line and a cross
             const dect2::SondeLanding ld = landing(s);
+            const dect2::SondePrediction* p40 = (ld.valid && isSel && sondePredict40On()) ? sondePredict40(s, true, nullptr) : nullptr;
+            if (p40) sondePredict40Draw(dl, *p40);   // the selected sonde: path, ensemble, 50 / 95 % circles, ellipse, time to landing
             if (ld.valid) {
                 const ImVec2 e = adsbmap::project(ld.lat, ld.lon);
                 const float dx = e.x - q.x, dy = e.y - q.y, len = std::hypot(dx, dy);
@@ -274,6 +291,8 @@ void mapView(App& a, ImVec2 size) {
         if (ImGui::SliderFloat(tr("descent at sea level (m/s)##sondepd"), &S.predDescent, 2, 12, "%.1f")) plat::prefs().setD("sondePredDescent", S.predDescent);
         ImGui::TextDisabled("%s", tr("Used while the sonde climbs; once it falls, the measured fall rate is used."));
         if (!predictor().lastUrl().empty()) { ImGui::PushTextWrapPos(420 * gUi); ImGui::TextDisabled("%s %s", tr("last request:"), predictor().lastUrl().c_str()); ImGui::PopTextWrapPos(); }
+        ImGui::Separator();
+        sondePredict40Network();
         ImGui::EndPopup();
     }
     ImGui::SameLine(0, 6 * gUi);
@@ -393,6 +412,12 @@ void detailCard(const App& a) {
         if (ld.valid) {
             snprintf(b, sizeof b, "%.4f, %.4f in %d:%02d", ld.lat, ld.lon, (int)ld.secondsLeft / 60, (int)ld.secondsLeft % 60);
             kv("landing (estimate)", b);
+            if (sondePredict40On()) if (const dect2::SondePrediction* p = sondePredict40(s, s.serial == S.selShown, nullptr)) {
+                if (p->hasSpread) { snprintf(b, sizeof b, "50 %% within %.0f m, 95 %% within %.0f m", p->r50M, p->r95M); kv("landing spread", b); }
+                snprintf(b, sizeof b, "%.0f m%s", p->groundM, p->groundFromTerrain ? " (terrain)" : " (no terrain: fixed)");
+                kv("ground there", b);
+                ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", p->text.c_str()); ImGui::PopTextWrapPos();
+            }
             if (receiverLocationSet()) {
                 double mla, mlo, km, br;
                 receiverLocation(mla, mlo);
@@ -637,7 +662,8 @@ void decoder(App& a, bool&) {
         float w = avgWindowS();
         ImGui::TextDisabled("landing average"); ImGui::SameLine(); ImGui::SetNextItemWidth(std::min(100 * gUi, ImGui::GetContentRegionAvail().x));
         if (ImGui::SliderFloat("##sdavg", &w, 0.f, 60.f, "%.0f s")) plat::prefs().setD("sondeAvgS", w);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A sonde under its parachute swings and spirals, which makes the landing prediction jump.\nThe drift is averaged over this many seconds (default 10) and the wind of the layers still below is taken from the way up.\n0 uses the instantaneous velocity.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A sonde under its parachute swings and spirals, which makes the landing prediction jump.\nThe drift is averaged over this many seconds (default 10) and the wind of the layers still below is taken from the way up.\n0 uses the instantaneous velocity. (The 3.9 estimate, used when the landing prediction 4.0 below is off.)");
+        sondePredict40Advanced();
     }
 }
 
