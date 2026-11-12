@@ -478,6 +478,20 @@ void simpleInputs() {
     ImGui::SetNextItemWidth(58 * gUi);
     if (ImGui::Combo("##proppu", &u, "W\0dBW\0dBm\0kW\0")) s.powerUnit = (pr::PowerUnit)u;
     ImGui::TextDisabled("%s", ps[s.preset].note);
+    // 4.0: decode with an OnAir mode (its measured threshold), one click
+    const pr::ModeSnr* cm = s.decodeMode.empty() ? nullptr : pr::findModeThreshold(s.decodeMode);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("Decode with");
+    ImGui::SameLine();
+    ImGui::SetNextItemWidth(190 * gUi);
+    if (ImGui::BeginCombo("##propdmode", cm ? cm->name : "(the preset's SNR)")) {
+        if (ImGui::Selectable("(the preset's SNR)", !cm)) s.decodeMode.clear();
+        for (const pr::ModeSnr& m : pr::modeThresholds())
+            if (ImGui::Selectable(m.name, cm == &m)) s.decodeMode = m.id;
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", "Answer 'will this OnAir mode decode here?': the SNR the mode needs on a real radio, as OnAir measured it, and its bandwidth.");
+    if (cm) { ImGui::SameLine(); ImGui::TextDisabled("needs %.0f dB in %.4g kHz", pr::modeRequiredSnrDb(*cm, s.decodeCondition), cm->bwHz / 1e3); }
     issuesUi(s);
 }
 
