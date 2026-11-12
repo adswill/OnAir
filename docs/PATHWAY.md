@@ -1898,3 +1898,8 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+
+## 2026-11-12 (night): propagation calculator rebuilt on ITU-R models (feat40-prop)
+- VHF and up: ITU-R P.1812-8 (time and location percentages, ducting, troposcatter, delta-Bullington) as the Auto model, matching all 21 x 3 ITU-R SG3 validation results; P.676-13 gases, full P.838-3 rain, P.530 / P.618 rain, P.453 k-factor.
+- HF: P.533-14 with the P.1239-4 CCIR maps, E and F2 modes, long-path method, P.842 reliability, an hour x band chart. Satellite links (look angles, Doppler, P.618 budget). "Will it decode?" from the measured mode thresholds.
+- Screens: Profile with the Fresnel zone, HF hours x bands, Satellite, loss by model; opt-in SRTM tile download. Details and what was validated: docs/PROPAGATION-4.0.md.
