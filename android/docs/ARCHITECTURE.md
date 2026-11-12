@@ -81,7 +81,11 @@ in [../README.md](../README.md).
 5. **The waterfall bitmap is main-thread only** (written by the view model, drawn by Compose).
 6. Engine callbacks (`onFailure`, `onEngineStopped`) run on the receiver thread: keep them short, touch only thread-safe things
    (`MutableStateFlow.update`, `AppLog`, `CrashLog`).
-7. Polling cadence: 35 ms while running with an activity visible (spectrum + AGC), 100 ms running in the background (no spectrum),
+7. **Exceptions to rule 1:** `RadioNative.nativeAudioPush` (the sound-card recording thread) and `tv/TvNative` (the TV player's thread
+   `onair-tv` and the TV controller's poll). Both touch only their own locked buffers in the bridge and the engine's packet tap and
+   service snapshot, which the engine guards itself; neither starts, stops or retunes anything. The TV player (`tv/TvPlayer.kt`)
+   keeps MediaCodec and AudioTrack on its own thread; `surfaceDestroyed` waits (at most a second) until it let go of the Surface.
+8. Polling cadence: 35 ms while running with an activity visible (spectrum + AGC), 100 ms running in the background (no spectrum),
    350 ms idle; telemetry and the C++ log every 350 ms.
 
 ## Lifecycle

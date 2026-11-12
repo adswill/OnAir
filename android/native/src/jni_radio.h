@@ -18,3 +18,10 @@ bool radioDevice(int kind, const std::string& key, dect2::DeviceInfo& out, std::
 std::string deviceJsonOf(const dect2::DeviceInfo& d);
 
 } // namespace onair
+
+namespace dect2 { class Engine; }
+namespace onair {
+// The bridge's one engine (jni_onair.cpp), or nullptr before nativeInit: for jni_tv.cpp's packet tap and service list
+dect2::Engine* bridgeEngine();
+
+} // namespace onair

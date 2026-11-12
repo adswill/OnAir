@@ -186,6 +186,7 @@ void pushGain(Bridge& b) {
 } // namespace
 
 std::string onair::deviceJsonOf(const DeviceInfo& d) { return deviceJson(d); }
+dect2::Engine* onair::bridgeEngine() { return gB ? &gB->eng : nullptr; }
 
 #define FN(ret, name) extern "C" JNIEXPORT ret JNICALL Java_io_github_adswill_onair_OnAirNative_##name
 

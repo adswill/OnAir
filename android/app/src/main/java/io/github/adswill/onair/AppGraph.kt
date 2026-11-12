@@ -14,6 +14,8 @@ object AppGraph {
     val settings: SettingsStore by lazy { SettingsStore(app) }
     val updates: io.github.adswill.onair.update.UpdateManager by lazy { io.github.adswill.onair.update.UpdateManager(app, settings) }
     val repository: ReceiverRepository by lazy { ReceiverRepository(app, settings) }
+    /** TV picture and sound with the phone's decoders (tv/, the Watch panel of the TV modes). */
+    val tv: io.github.adswill.onair.tv.TvController by lazy { io.github.adswill.onair.tv.TvController() }
 
     fun init(application: Application) { app = application }
 }
