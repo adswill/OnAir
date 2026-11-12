@@ -256,6 +256,8 @@ std::string logDir() {
 #ifdef __APPLE__
     return home + "/Library/Logs/OnAir";
 #else
+    const char* x = getenv("XDG_CONFIG_HOME");   // where the settings are (a test or screenshot run with its own folder writes its log there)
+    if (x && x[0] == '/') return std::string(x) + "/onair";
     return home + "/.config/onair";
 #endif
 #endif

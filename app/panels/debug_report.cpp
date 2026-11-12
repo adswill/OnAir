@@ -12,6 +12,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/engine/crash_report.h"
 #include "dect2/engine/debug_dump.h"
+#include <cfloat>
 #include <algorithm>
 #include <atomic>
 #include <chrono>
@@ -341,7 +342,8 @@ bool saveZip(const State& s, const std::string& path) {
 std::string sizeText(uintmax_t bytes) {
     std::string b(32, '\0');
     if (bytes >= (1u << 20)) b.resize((size_t)std::snprintf(b.data(), b.size(), "%.1f MB", (double)bytes / 1048576.0));
-    else b.resize((size_t)std::snprintf(b.data(), b.size(), "%.0f KB", (double)bytes / 1024.0));
+    else if (bytes >= 1024) b.resize((size_t)std::snprintf(b.data(), b.size(), "%.0f KB", (double)bytes / 1024.0));
+    else b.resize((size_t)std::snprintf(b.data(), b.size(), "%u bytes", (unsigned)bytes));
     return b;
 }
 
@@ -350,9 +352,15 @@ void reportWindow(App& a) {
     if (!s.open || ImGui::GetFrameCount() < s.openAtFrame) return;
     const ImGuiViewport* vp = ImGui::GetMainViewport();
     ImGui::SetNextWindowPos(ImVec2(vp->WorkPos.x + vp->WorkSize.x * 0.5f, vp->WorkPos.y + vp->WorkSize.y * 0.5f), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-    ImGui::SetNextWindowSize(ImVec2(std::min(720 * gUi, vp->WorkSize.x * 0.95f), std::min(700 * gUi, vp->WorkSize.y * 0.9f)), ImGuiCond_Appearing);
+    ImGui::SetNextWindowSize(ImVec2(std::min(720 * gUi, vp->WorkSize.x * 0.95f), 0.f), ImGuiCond_Always);   // the height follows the content
+    ImGui::SetNextWindowSizeConstraints(ImVec2(0.f, 0.f), ImVec2(FLT_MAX, vp->WorkSize.y * 0.9f));
     bool open = true;
     if (!ImGui::Begin(trw("Debug report"), &open)) { ImGui::End(); if (!open) s.open = false; return; }
+    {   // the height follows the content: keep the bottom on the screen when it grows
+        const float bottom = vp->WorkPos.y + vp->WorkSize.y;
+        const ImVec2 p = ImGui::GetWindowPos(), sz = ImGui::GetWindowSize();
+        if (p.y + sz.y > bottom) ImGui::SetWindowPos(ImVec2(p.x, std::max(vp->WorkPos.y, bottom - sz.y)));
+    }
 
     ImGui::PushTextWrapPos(0.0f);
     switch (s.trigger) {
@@ -391,7 +399,7 @@ void reportWindow(App& a) {
     ImGui::TextDisabled("%s", tr("The stack memory and the screenshot can hold personal data: keys, passwords, callsigns, positions, messages. Leave them out if that matters. Log lines that may hold a key, a token or a password are left out, and folder paths are shortened."));
     ImGui::PopTextWrapPos();
     if (ImGui::TreeNode(trw("Show the information about this computer"))) {
-        ImGui::BeginChild("##sysinfo", ImVec2(0, 160 * gUi), true);
+        ImGui::BeginChild("##sysinfo", ImVec2(0, 260 * gUi), true);
         ImGui::TextUnformatted(s.system.c_str());
         ImGui::EndChild();
         ImGui::TreePop();
