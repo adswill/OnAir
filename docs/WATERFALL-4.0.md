@@ -71,14 +71,42 @@ Prefs keys: `specZoomFft`, `specZoomMax`, `specWindow`, `specOverlap`, `specResR
 Before = 3.9 (the automatic FFT, one history column per bin, 64k at most); after = 4.0 with the zoom FFT. From
 `tests/app/test_zoom_detail.cpp` (printed on the CI run).
 
-RESOLUTION_TABLE
+| Sample rate | View | Hz per pixel | 3.9: Hz per bin (pixels per bin) | 4.0: Hz per bin |
+|---|---|---|---|---|
+| 2.4 Msps | whole band | 1250 | 73.2 (0.06) | 73.2 (full band) |
+| 2.4 Msps | 240 kHz | 125 | 73.2 (0.6) | 73.2 (full band) |
+| 2.4 Msps | 100 kHz | 52.1 | 73.2 (1.4) | 36.6 (zoom FFT) |
+| 2.4 Msps | 20 kHz | 10.4 | 73.2 (7.0) | 9.16 |
+| 2.4 Msps | 5 kHz | 2.60 | 73.2 (28) | 2.29 |
+| 2.4 Msps | 1 kHz | 0.52 | 73.2 (141) | 0.29 |
+| 10 Msps | whole band | 5208 | 153 (0.03) | 153 (full band) |
+| 10 Msps | 100 kHz | 52.1 | 153 (2.9) | 38.1 |
+| 10 Msps | 20 kHz | 10.4 | 153 (15) | 9.54 |
+| 10 Msps | 5 kHz | 2.60 | 153 (59) | 2.38 |
+| 10 Msps | 1 kHz | 0.52 | 153 (293) | 0.30 |
+| 20 Msps | whole band | 10417 | 305 (0.03) | 305 (full band) |
+| 20 Msps | 100 kHz | 52.1 | 305 (5.9) | 38.1 |
+| 20 Msps | 20 kHz | 10.4 | 305 (29) | 9.54 |
+| 20 Msps | 5 kHz | 2.60 | 305 (117) | 2.38 |
+| 20 Msps | 1 kHz | 0.52 | 305 (586) | 0.30 |
+
+In 3.9 each of those bins was also blended across its pixels (level interpolation plus the GPU's linear stretch). In 4.0 every row
+is drawn a texel per pixel, and wherever the zoom FFT runs there is at least one bin per pixel.
 
 ### CPU (ms of CPU per second of signal, GitHub runner)
 
 From `tests/dsp/test_zoom_spectrum.cpp`: the full-band analyser at its automatic size, the full-band analyser at the size that would be
 as fine as the zoom spectrum for a 10 kHz view on 2000 px (the brute-force alternative, capped at 1M), and the zoom spectrum.
 
-CPU_TABLE
+| Sample rate | Full-band, automatic size | Full-band as fine as the zoom (brute force) | Zoom FFT, 10 kHz view on 2000 px |
+|---|---|---|---|
+| 2.4 Msps | 32.0 (32768 bins, 73 Hz) | 208.4 (512k bins, 4.58 Hz) | 11.9 (D 64, 8192 bins, 4.58 Hz) |
+| 10 Msps | 73.4 (65536 bins, 153 Hz) | 756.8 (1M bins, 9.54 Hz: the cap) | 32.4 (D 256, 8192 bins, 4.77 Hz) |
+| 20 Msps | 91.2 (65536 bins, 305 Hz) | 729.6 (1M bins, 19.1 Hz: the cap) | 60.0 (D 512, 8192 bins, 4.77 Hz) |
+
+Run 43166344847 (ubuntu-24.04, Linux quick job). The first version of the mixer (one phasor rotation chain, `std::complex<float>`
+products) cost 15.8 / 45.6 / 84.8 ms; the mixer now runs eight phasor lanes with the products written out and the CIC registers in
+locals. The full-band analyser itself is unchanged.
 
 The zoom spectrum adds its cost only while it runs (zoomed in past the full-band resolution, window visible).
 
