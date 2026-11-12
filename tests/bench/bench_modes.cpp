@@ -451,6 +451,10 @@ int compareRxThread(const std::string& self, const std::vector<const Entry*>& se
 } // namespace
 
 int main(int argc, char** argv) {
+#ifdef BENCH_PROFILE_PRESET   // test_perf40_profile: the profile run of quick.yml (perf=perf40_profile) starts the binary without arguments
+    static char* preset[] = {argv[0], (char*)"--mode", (char*)"fm,airband", (char*)"--seconds", (char*)"6", (char*)"--rates", (char*)"2.4,10", (char*)"--spectrum", nullptr};
+    if (argc == 1) { argv = preset; argc = 8; }
+#endif
     std::string self = argv[0];
     {
         std::error_code ec;

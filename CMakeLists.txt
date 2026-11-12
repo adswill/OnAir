@@ -1256,6 +1256,11 @@ if(DECT2_BUILD_TESTS)
     # the receiver on its own thread (4.0): the same results as on one thread, and the speed of each, per mode and rate
     add_test(NAME perf40_rx_thread COMMAND bench_modes --compare-rx --mode fm,adsb,ais,dmr,pocsag,airband --seconds 6 --rates 2.4,10,20 --spectrum)
     set_tests_properties(perf40_rx_thread PROPERTIES TIMEOUT 3000 RUN_SERIAL TRUE)
+    add_executable(test_perf40_profile tests/bench/bench_modes.cpp)   # quick.yml perf=perf40_profile: where the slow receivers (FM, airband) spend their time
+    target_link_libraries(test_perf40_profile PRIVATE dect2core)
+    target_compile_definitions(test_perf40_profile PRIVATE BENCH_PROFILE_PRESET)
+    add_test(NAME perf40_profile COMMAND test_perf40_profile)
+    set_tests_properties(perf40_profile PROPERTIES TIMEOUT 1800 RUN_SERIAL TRUE)
     add_test(NAME perf40_rx_thread_tv COMMAND bench_modes --compare-rx --mode t2,dvbt,dab,atsc --seconds 6 --rates default --spectrum)
     set_tests_properties(perf40_rx_thread_tv PROPERTIES TIMEOUT 3000 RUN_SERIAL TRUE)
     # all-modes QA sweep (docs/QA-SWEEP-3.9.md): generator -> engine -> decoder clean, +/-2 kHz with +/-50 ppm, at 12 dB in-channel SNR and on noise

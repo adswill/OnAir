@@ -1898,3 +1898,9 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+
+## 2026-11-12 (feat40-perf): sample-loss warnings, nRSP-ST at 10 Msps, the receiver on its own thread
+- "This computer is too slow" at 3 % CPU: a network radio's reconnect counted as ring overflow, and every overflow was called a slow computer. Source losses are kept apart (`IqRing::lostAtSource`), and each overflow gets a cause from the sample thread's own figures (`overflow_cause.h`: Starting / Cpu / Waiting / Stalled). Only Cpu says "lower the sample rate".
+- "USB 3 port" warnings at LOW rates: the delivered-rate window counted whole transfers against the observer's clock and read 78 % at 250 ksps. `DeliveryRate` measures between the radio's least delayed write stamps: 99-101 % at every rate from 48 kHz to 20 Msps, 90 % radios still read 90 %.
+- nRSP-ST (SDRconnect WebSocket): messages over 1 MiB were refused and the connection dropped (stall above a few Msps). Limit now 16 MiB, buffered reads, vectorised conversion. `nrspst_rate` test: 110-520 Msps into the ring on the CI runners, 10 Msps paced with no drop.
+- The receiver runs on its own thread behind the front end (automatic: 4+ cores, 4 Msps and up, not in Low power mode; Settings > Advanced). `bench_modes --compare-rx` checks the same results and measures 1.0-1.45x. The receivers themselves are the bulk of the cost, so more cores need work inside each receiver. Details and numbers: docs/PERF-4.0.md.
