@@ -1860,3 +1860,10 @@ Tried and not kept: Wi-SUN burst gate (about 1 dB at 90 %, nothing at 50 %), EDA
 feat40-sensA2 and feat40-sensB2 both changed core/src/argos/argos_rx.cpp and core/src/mpt1327/mpt1327_engine.cpp. In integ-40 the Argos receiver is
 the sensB2 version (about -5.5 dB 90 % point) and the MPT 1327 engine the sensA2 version (4.5 kHz carrier-following filter). Both sets of guard tests
 (argos_sens40, sens40b) stay; if one fails the other version of that file is on pub/feat40-sensA2 / pub/feat40-sensB2.
+
+## 2026-11-12: third block of 4.0 signal modes (families 752 - 778, branch feat40-modes3)
+
+Free numbers: a scan of the mode table, registry and poll slots found 406 usable family numbers below 900 (docs/FAMILY-NUMBERS-4.0.md), so kNumFamilies and kPollSeqSlots stay. The x40 receiver now maps variants 15 and up to families 752 and up.
+Twenty-seven new modes (752 - 778): spectrum occupancy monitor, modulation quality (MER) meter, carrier frequency accuracy meter, PTT and duty-cycle logger, intermodulation finder, spur and image finder, satellite Doppler curve logger, frequency-hopper analyser, persistent carrier finder, burst finder, fading analyser, SDR input health meter, phase noise meter, SSB transmitter test meter, FM SINAD meter, FSK parameter analyser, noise figure (Y-factor) meter, CW keying quality meter, noise floor logger, narrowband FM deviation and CTCSS meter, AFSK tone tuner, OOK / ASK pulse analyser, transmitter frequency stability meter, crest factor (PAPR / CCDF) meter, occupied bandwidth meter, spectral kurtosis RFI finder, SDR stream glitch detector. Each has a decoder, a generator in the tests, tests with offsets, drift, noise sweeps and false-report runs, and a page (docs/OCCUPANCY-4.0.md and the others). All checked on simulated signals only.
+
+The tests/app/test_mode_numbers.cpp poll-slot scan now reads the slots of the 4.0 receiver from the DECT2_X40_ACTIVE_CASES macro (it could not read `seqs[a - 1]`; the test failed on integ-40 before this branch).

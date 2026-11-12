@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**348 modes.**
+**375 modes.**
 
 ## TV (17)
 
@@ -78,7 +78,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (56)
+## Satellite & Navigation (57)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -107,6 +107,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Orbcomm** - Orbcomm satellite downlinks: satellite IDs, positions, channel assignments, messages
 - **QO-100** - QO-100: the amateur satellite's transponders with exact frequencies from its beacons
 - **GNSS interference detector** - GNSS interference: class, level, sweep
+- **Satellite Doppler curve logger** - Doppler logger: TCA, Doppler span, slope, carrier
 - **CubeSat telemetry** - CubeSat telemetry: frames from amateur satellites, named and dumped
 - **AX100 Mode 5** - AX100 Mode 5 (ASM + Golay): GOMspace satellite frames, CSP packets
 - **AX100 Mode 6** - AX100 Mode 6 (Reed-Solomon): GOMspace satellite frames, CSP packets
@@ -181,7 +182,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (42)
+## IoT & Sensors (43)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -190,6 +191,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **EM4100 LF RFID (125 kHz)** - EM4100 tags: ID and modulation depth
 - **UHF RFID reader (EPC Gen2)** - UHF RFID: reader commands, Tari and tag rate
 - **Qi wireless charging** - Qi: packets from the phone to the charger
+- **OOK / ASK pulse analyser** - OOK analyser: modulation, bits, timings, repeats
 - **ISM sensors** - ISM sensors: weather stations, TPMS, remotes and meters around you (the rtl_433 idea)
 - **Sub-GHz sensors** - Sub-GHz sensors: the rtl_433 decoders with a live sensor list, history, export and an unknown signal analyser (RTL-SDR or HackRF at 250 kHz and up)
 - **LoRaWAN** - LoRaWAN: IoT devices around you, from the headers every gateway receives
@@ -226,7 +228,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
 - **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
 
-## Weather & Science (54)
+## Weather & Science (55)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -269,6 +271,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **GRAVES meteor echoes** - GRAVES: meteor echo list
 - **Radio Jove bursts** - Radio Jove: burst list
 - **Beacon propagation monitor** - Beacon monitor: path class, level, Doppler spread
+- **Fading analyser** - Fading: K-factor, fade rate and depth, Doppler spread
 - **Sferics (lightning)** - Sferics: lightning strikes counted from their radio crackle
 - **Lightning position (network)** - Lightning position: strikes located from several stations' arrival times
 - **SuperSID (VLF)** - SuperSID: VLF station levels and the sudden changes of solar flares, receive only
@@ -378,9 +381,33 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 
-## General & Tools (5)
+## General & Tools (29)
 
 - **Power-line noise locator** - Noise locator: impulse rate, repetition, level
+- **Spectrum occupancy monitor** - Occupancy: busy channels, duty cycle, transmissions
+- **Modulation quality (MER) meter** - MER meter: modulation, symbol rate, MER, EVM
+- **Carrier frequency accuracy meter** - Frequency meter: offset, ppm, drift, Allan deviation
+- **PTT and duty-cycle logger** - PTT logger: transmissions, lengths, duty cycle
+- **Intermodulation finder** - Intermod finder: products of strong signals and their verdict
+- **Spur and image finder** - Spur finder: DC spike, images, harmonics, fixed spurs
+- **Frequency-hopper analyser** - Hopper analyser: hop rate, channels, spacing, dwell
+- **Persistent carrier (birdie) finder** - Birdie finder: persistent carriers, level, drift
+- **Burst finder** - Burst finder: frequency, length, bandwidth, repetition
+- **SDR input health meter** - Input health: level, clipping, DC, IQ mismatch
+- **Phase noise meter** - Phase noise: L(f), spurs, jitter
+- **SSB transmitter test meter** - SSB test: carrier, opposite sideband, IMD3/5/7
+- **FM SINAD meter** - FM SINAD: SINAD, THD, deviation
+- **FSK parameter analyser** - FSK analyser: baud, levels, shift, index
+- **Noise figure (Y-factor) meter** - Noise figure: Y-factor, NF for the source ENR
+- **CW keying quality meter** - CW keying: wpm, dah ratio, gaps, weight, rise, chirp
+- **Noise floor logger** - Noise floor: sub-band floors, rises, baseline
+- **Narrowband FM deviation and CTCSS meter** - NFM meter: voice deviation, CTCSS tone and deviation
+- **AFSK (TNC) tone tuner** - AFSK tuner: tones, twist, deviation per burst
+- **Transmitter frequency stability meter** - Tx stability: key-up step, settling, drift, offset
+- **Crest factor (PAPR / CCDF) meter** - PAPR: crest factor and CCDF against Gaussian
+- **Occupied bandwidth meter** - Occupied bandwidth: 99 %, x dB, centre, adjacent power
+- **Spectral kurtosis RFI finder** - Spectral kurtosis: clean share, pulsed and steady regions
+- **SDR stream glitch detector** - Glitches: dropped samples, zero runs, repeats, level steps
 - **Signal workbench** - Signal workbench: analyse, demodulate and read any recording
 - **General receiver** - General receiver: NFM, WFM, AM, USB, LSB and CW anywhere
 - **Spectrum explorer** - Spectrum explorer: look, measure and sweep

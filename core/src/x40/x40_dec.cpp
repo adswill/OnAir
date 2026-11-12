@@ -20,6 +20,33 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case GnssJam: return makeGnssJam();
     case Passband: return makePassband();
     case VlfMsk: return makeVlfMsk();
+    case Occupancy: return makeOccupancy();
+    case Evm: return makeEvm();
+    case FreqAcc: return makeFreqAcc();
+    case PttLog: return makePttLog();
+    case Intermod: return makeIntermod();
+    case Spur: return makeSpur();
+    case DopplerLog: return makeDopplerLog();
+    case HopAnalyser: return makeHopAnalyser();
+    case Birdie: return makeBirdie();
+    case Burst: return makeBurst();
+    case Fading: return makeFading();
+    case InputHealth: return makeInputHealth();
+    case PhaseNoise: return makePhaseNoise();
+    case SsbTest: return makeSsbTest();
+    case Sinad: return makeSinad();
+    case FskAnalyser: return makeFskAnalyser();
+    case YFactor: return makeYFactor();
+    case CwKeying: return makeCwKeying();
+    case NoiseFloor: return makeNoiseFloor();
+    case NfmDev: return makeNfmDev();
+    case Afsk: return makeAfsk();
+    case OokPulse: return makeOokPulse();
+    case TxStability: return makeTxStability();
+    case OccBw: return makeOccBw();
+    case Papr: return makePapr();
+    case SpecKurt: return makeSpecKurt();
+    case Glitch: return makeGlitch();
     default: return nullptr;
     }
 }
@@ -27,7 +54,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
 ModeTuning x40Tuning(int v) {
     using namespace x40;
     ModeTuning t;
-    t.stdMode = kFamilyBase + 3 + v;
+    t.stdMode = familyOfVariant(v) + 2;
     struct T { const char* id; double minMhz, maxMhz, defMhz, rate, minRate, bwMhz; bool carrier; };
     static const T k[kNumVariants] = {
         {"rcppm", 26, 75, 72.350, 1000000, 200000, 0.04, false},
@@ -45,6 +72,33 @@ ModeTuning x40Tuning(int v) {
         {"gnssjam", 1100, 1700, 1575.420, 4000000, 2000000, 2.0, false},
         {"passband", 28, 450, 145.900, 96000, 48000, 0.048, false},
         {"vlfmsk", 0.01, 0.03, 0.0240, 48000, 8000, 0.003, true},
+        {"occupancy", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
+        {"evm", 0.1, 6000, 435.000, 250000, 96000, 0.09, true},
+        {"freqacc", 0.1, 6000, 10.000, 48000, 16000, 0.006, true},
+        {"pttlog", 0.1, 6000, 146.520, 48000, 16000, 0.012, false},
+        {"intermod", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
+        {"spur", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
+        {"dopplerlog", 100, 3000, 435.000, 48000, 24000, 0.03, true},
+        {"hop", 0.1, 6000, 433.900, 2000000, 1000000, 2.0, false},
+        {"birdie", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
+        {"burst", 0.1, 6000, 433.920, 2000000, 1000000, 2.0, false},
+        {"fading", 0.1, 6000, 144.400, 48000, 8000, 0.006, true},
+        {"inputhealth", 0.1, 6000, 145.000, 2000000, 100000, 2.0, false},
+        {"phasenoise", 0.1, 6000, 10.000, 250000, 50000, 0.1, true},
+        {"ssbtest", 0.1, 500, 14.200, 48000, 12000, 0.004, false},
+        {"sinad", 26, 6000, 146.520, 48000, 24000, 0.016, true},
+        {"fskan", 0.1, 6000, 433.920, 250000, 48000, 0.1, false},
+        {"yfactor", 0.1, 6000, 145.000, 2000000, 250000, 0.2, false},
+        {"cwkeying", 0.1, 500, 7.030, 48000, 12000, 0.004, true},
+        {"noisefloor", 0.1, 6000, 145.000, 2000000, 500000, 2.0, false},
+        {"nfmdev", 26, 6000, 146.520, 48000, 24000, 0.016, true},
+        {"afsk", 26, 6000, 144.390, 48000, 24000, 0.016, true},
+        {"ookpulse", 26, 2000, 433.920, 250000, 100000, 0.2, false},
+        {"txstability", 26, 6000, 146.520, 48000, 24000, 0.016, true},
+        {"occbw", 0.1, 6000, 145.000, 1000000, 100000, 0.5, false},
+        {"papr", 0.1, 6000, 145.000, 1000000, 100000, 0.5, false},
+        {"speckurt", 0.1, 6000, 145.000, 2000000, 250000, 2.0, false},
+        {"glitch", 0.1, 6000, 145.000, 2000000, 100000, 2.0, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];
