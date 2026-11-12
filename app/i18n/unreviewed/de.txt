@@ -730,3 +730,21 @@ Sensors, Schrader TPMS
 Sensors, Renault TPMS
 Sensors, Toyota TPMS
 Sensors, Citroen TPMS
+Balloons, RS41
+Balloons, RS92
+Balloons, DFM
+Balloons, M10
+Balloons, M20
+Balloons, LMS6
+Balloons, iMet
+Balloons, iMet-54
+Balloons, MRZ
+Balloons, iMS-100
+Meters, S1
+Meters, T1
+Meters, C1
+Meters, R2
+Meters, N1
+Satellites, G3RUH 9600
+Satellites, CCSDS RS
+Satellites, CCSDS concatenated

@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**393 modes.**
+**411 modes.**
 
 ## TV (17)
 
@@ -78,7 +78,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
 
-## Satellite & Navigation (57)
+## Satellite & Navigation (60)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -137,6 +137,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **PSK demodulator (experimental)** - PSK demodulator: blind symbol rate and order, constellation, bits
 - **Inmarsat (all carriers)** - Inmarsat: all Aero P and Inmarsat-C carriers at once, needs an L-band antenna and a wide radio (needs a user test)
 - **Inmarsat BGAN** - Inmarsat BGAN: forward carriers, bearer types, spot beams and network from the broadcast signalling (needs a user test, signalling only)
+- **AX.25 G3RUH 9600 (satellites)** - AX.25 9600 baud G3RUH: amateur satellite packet frames
+- **CCSDS Reed-Solomon (satellites)** - CCSDS Reed-Solomon: satellite telemetry frames
+- **CCSDS concatenated (satellites)** - CCSDS concatenated: Viterbi and Reed-Solomon satellite frames
 
 ## Two-way Radio (21)
 
@@ -182,7 +185,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (61)
+## IoT & Sensors (66)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -245,8 +248,13 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **TPMS: Renault** - Renault TPMS: tyre pressure sensors
 - **TPMS: Toyota** - Toyota TPMS: tyre pressure sensors
 - **TPMS: Citroen / Peugeot / Fiat** - Citroen / Peugeot / Fiat TPMS: tyre pressure sensors
+- **Wireless M-Bus S1** - Wireless M-Bus S1: stationary mode meters on 868.3 MHz
+- **Wireless M-Bus T1** - Wireless M-Bus T1: walk-by and drive-by meters on 868.95 MHz
+- **Wireless M-Bus C1** - Wireless M-Bus C1: compact mode meters on 868.95 MHz
+- **Wireless M-Bus R2** - Wireless M-Bus R2: receive mode meters on 868.03 - 868.15 MHz
+- **Wireless M-Bus N1 (Wize, 169 MHz)** - Wireless M-Bus N1: 169 MHz and Wize meters
 
-## Weather & Science (55)
+## Weather & Science (65)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -303,6 +311,16 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ionospheric sounders** - Ionospheric sounders: chirp ionosondes and the ionogram they give
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
+- **Radiosonde: Vaisala RS41** - Vaisala RS41: weather balloon position and weather data
+- **Radiosonde: Vaisala RS92** - Vaisala RS92: weather balloon position data
+- **Radiosonde: Graw DFM** - Graw DFM: weather balloon position and temperature
+- **Radiosonde: Meteomodem M10** - Meteomodem M10: weather balloon position and weather data
+- **Radiosonde: Meteomodem M20** - Meteomodem M20: weather balloon position and weather data
+- **Radiosonde: Lockheed Martin LMS6** - Lockheed Martin LMS6: L-band weather balloon sondes
+- **Radiosonde: InterMet iMet-4** - InterMet iMet-4: weather balloon position data
+- **Radiosonde: InterMet iMet-54** - InterMet iMet-54: weather balloon position data
+- **Radiosonde: Russian MRZ** - MRZ: Russian weather balloon sondes
+- **Radiosonde: Meisei iMS-100** - Meisei iMS-100: weather balloon position data
 
 ## Amateur - Digital (43)
 

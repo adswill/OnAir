@@ -421,6 +421,24 @@
         <item>TPMS: Renault</item>
         <item>TPMS: Toyota</item>
         <item>TPMS: Citroen / Peugeot / Fiat</item>
+        <item>Radiosonde: Vaisala RS41</item>
+        <item>Radiosonde: Vaisala RS92</item>
+        <item>Radiosonde: Graw DFM</item>
+        <item>Radiosonde: Meteomodem M10</item>
+        <item>Radiosonde: Meteomodem M20</item>
+        <item>Radiosonde: Lockheed Martin LMS6</item>
+        <item>Radiosonde: InterMet iMet-4</item>
+        <item>Radiosonde: InterMet iMet-54</item>
+        <item>Radiosonde: Russian MRZ</item>
+        <item>Radiosonde: Meisei iMS-100</item>
+        <item>Wireless M-Bus S1</item>
+        <item>Wireless M-Bus T1</item>
+        <item>Wireless M-Bus C1</item>
+        <item>Wireless M-Bus R2</item>
+        <item>Wireless M-Bus N1 (Wize, 169 MHz)</item>
+        <item>AX.25 G3RUH 9600 (satellites)</item>
+        <item>CCSDS Reed-Solomon (satellites)</item>
+        <item>CCSDS concatenated (satellites)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -823,6 +841,24 @@
         <item>Renault tyre pressure sensors on 433.92 MHz (the Renault TPMS and the 0435R sensor): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
         <item>Toyota tyre pressure sensors on 433.92 and 315 MHz (the Toyota TPMS and the PMV-107J): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
         <item>Citroen, Peugeot, Fiat and Mitsubishi tyre pressure sensors on 433.92 MHz (the sensor type shared by these makes): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Vaisala RS41 radiosondes (RS41-SG and relatives), 400 - 406 MHz: 4800 bit/s GFSK frames with Reed-Solomon and CRC checks: serial, position, altitude, speed, temperature, humidity, pressure and the calibration progress. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Vaisala RS92 radiosondes, 400 - 406 MHz: Manchester coded frames at 4800 symbols/s with Reed-Solomon, the GPS block and the sensor counts: serial, position, altitude and speed. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Graw DFM-06, DFM-09 and DFM-17 radiosondes, 400 - 406 MHz: 2500 symbols/s Manchester frames with Hamming(8,4) codewords: serial, position, altitude, speed and temperature. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Meteomodem M10 and M10+ radiosondes, 400 - 406 MHz: Manchester coded frames with checksum: serial, position, altitude, speed, temperature, humidity and battery. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Meteomodem M20 radiosondes, 400 - 406 MHz: the M10 line code with the M20 frame: serial, position, altitude, speed, temperature, humidity and battery. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Lockheed Martin LMS6 (Sippican MK2A telemetry) radiosondes at 1680 MHz: UART 8N1 at 9616 baud with a CRC-16 and the GPS subframe: position, altitude and speed. Needs a wide capture around 1680 MHz and an L-band antenna. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>InterMet iMet-1 and iMet-4 radiosondes, 400 - 406 MHz: Bell 202 AFSK, one packet set per second: position, altitude, speed and sensor values. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>InterMet iMet-54 radiosondes, 400 - 406 MHz: 4800 baud UART frames with Hamming(8,4) and a block interleaver: serial, position, altitude and speed. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Russian MRZ (MP3-H1) radiosondes, 400 - 406 MHz: Manchester frames: serial, position and altitude. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Meisei iMS-100 radiosondes, 400 - 406 MHz: biphase-S frames with BCH(46,34) error correction: serial, position and altitude. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
+        <item>Wireless M-Bus (EN 13757-4) mode S1, the stationary mode, on 868.3 MHz: 2-FSK with Manchester chips, frame format A with its block CRCs: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Wireless M-Bus (EN 13757-4) mode T1, the frequent transmit mode, on 868.95 MHz: 2-FSK with 3-out-of-6 chips, frame format A with its block CRCs: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Wireless M-Bus (EN 13757-4) mode C1, the compact mode, on 868.95 MHz: 2-FSK with NRZ chips, frame formats A and B with their block CRCs: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Wireless M-Bus (EN 13757-4) mode R2, the frequent receive mode, on 868.03 - 868.15 MHz: 2-FSK with Manchester chips: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Wireless M-Bus (EN 13757-4) narrowband mode N1 on 169.4 MHz, with the Wize frames (2.4 and 4.8 kbit/s, format B, CI 0x20: network, application, counter and time stamp; the L7 data stays encrypted): manufacturer, meter ID, version and device type. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>AX.25 frames at 9600 baud G3RUH (scrambled FSK / GMSK) from amateur satellites on 70 cm: HDLC framing with bit stuffing and the AX.25 CRC, callsigns, and hex and ASCII dumps. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
+        <item>CCSDS telemetry frames with the 0x1ACFFC1D sync marker and Reed-Solomon (255,223) from amateur and small satellites on 70 cm: the Reed-Solomon check and the frame bytes. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
+        <item>CCSDS concatenated telemetry from amateur and small satellites on 70 cm: convolutional coding (Viterbi) with Reed-Solomon (255,223) behind the 0x1ACFFC1D sync marker. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1225,6 +1261,24 @@
         <item>Sensors, Renault TPMS</item>
         <item>Sensors, Toyota TPMS</item>
         <item>Sensors, Citroen TPMS</item>
+        <item>Balloons, RS41</item>
+        <item>Balloons, RS92</item>
+        <item>Balloons, DFM</item>
+        <item>Balloons, M10</item>
+        <item>Balloons, M20</item>
+        <item>Balloons, LMS6</item>
+        <item>Balloons, iMet</item>
+        <item>Balloons, iMet-54</item>
+        <item>Balloons, MRZ</item>
+        <item>Balloons, iMS-100</item>
+        <item>Meters, S1</item>
+        <item>Meters, T1</item>
+        <item>Meters, C1</item>
+        <item>Meters, R2</item>
+        <item>Meters, N1</item>
+        <item>Satellites, G3RUH 9600</item>
+        <item>Satellites, CCSDS RS</item>
+        <item>Satellites, CCSDS concatenated</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1627,5 +1681,23 @@
         <item>renault tpms tyre tire pressure 0435r 433.92 rtl_433</item>
         <item>toyota tpms tyre tire pressure pmv-107j 433.92 315 rtl_433</item>
         <item>citroen peugeot fiat mitsubishi tpms tyre tire pressure 433.92 rtl_433</item>
+        <item>rs41 vaisala radiosonde weather balloon sonde 403 405 gfsk</item>
+        <item>rs92 vaisala radiosonde weather balloon sonde 403 405</item>
+        <item>dfm graw dfm06 dfm09 dfm17 radiosonde weather balloon sonde 403 405</item>
+        <item>m10 meteomodem m10+ radiosonde weather balloon sonde 403 405</item>
+        <item>m20 meteomodem radiosonde weather balloon sonde 403 405</item>
+        <item>lms6 lockheed martin sippican mk2a radiosonde 1680 l-band weather balloon sonde</item>
+        <item>imet intermet imet-4 imet-1 afsk radiosonde weather balloon sonde 403 405</item>
+        <item>imet-54 intermet imet54 radiosonde weather balloon sonde 403 405</item>
+        <item>mrz mp3-h1 russian radiosonde weather balloon sonde 403 400</item>
+        <item>meisei ims-100 ims100 radiosonde weather balloon sonde 403 400 japan</item>
+        <item>wireless m-bus wmbus mbus s1 868.3 en 13757 meter kamstrup</item>
+        <item>wireless m-bus wmbus mbus t1 868.95 3-out-of-6 en 13757 meter kamstrup</item>
+        <item>wireless m-bus wmbus mbus c1 868.95 nrz en 13757 meter</item>
+        <item>wireless m-bus wmbus mbus r2 868.03 868.15 en 13757 meter</item>
+        <item>wireless m-bus wmbus mbus n1 wize 169.4 169 en 13757 meter grdf</item>
+        <item>ax25 ax.25 g3ruh 9600 packet hdlc fsk gmsk cubesat satellite 435 437</item>
+        <item>ccsds reed solomon rs 255 223 telemetry tm frame cubesat satellite 435 437 sync 1acffc1d</item>
+        <item>ccsds concatenated viterbi convolutional reed solomon telemetry cubesat satellite 435 437 1acffc1d</item>
     </string-array>
 </resources>

@@ -38,6 +38,7 @@ constexpr size_t kMaxChips = 1000;
 }
 
 struct WmbusLiveReceiver::Impl {
+    std::atomic<uint32_t> phyMask{0};    // setPhyMask(): 0 every mode
     // ---- one chip demodulator: clock recovery, sync search and byte assembly for one mode of one channel
     struct Chip {
         Phy phy = Phy::S1;
@@ -420,6 +421,16 @@ bool WmbusLiveReceiver::telemetry(WmbusTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
+    if (const uint32_t m = p_->phyMask.load(std::memory_order_relaxed)) {   // a view onto some modes: their meters and frames only
+        std::vector<WmbusDevice> dk; std::vector<WmbusFrameLog> lk;
+        uint64_t ok = 0, enc = 0;
+        for (const auto& d : out.devices) if ((m >> d.phy) & 1u) { dk.push_back(d); ok += d.count; }
+        for (const auto& l : out.log) if ((m >> l.phy) & 1u) { lk.push_back(l); if (l.crcOk && l.encrypted) enc++; }
+        out.devices.swap(dk); out.log.swap(lk);
+        out.blocksOk = ok; out.encryptedFrames = enc;
+        out.dataValid = out.dataValid && !out.devices.empty();
+        if (out.state == 2 && out.devices.empty()) out.state = 1;
+    }
     return true;
 }
 
@@ -480,6 +491,26 @@ void WmbusLiveReceiver::feed(const cf32* x, size_t n) {
             m.dirty = false;
         }
     }
+}
+
+void WmbusLiveReceiver::setPhyMask(uint32_t m) { p_->phyMask.store(m, std::memory_order_relaxed); }
+
+// 4.0: the modes with a mode-list entry of their own (families 720, 723, 726, 732, 735: family, active standard family + 1, engine standard family + 2, poll slot = family)
+static const WmbusView kWmbusViews[] = {
+    {720, "wmbuss1", "Wireless M-Bus S1", 1u << (int)wmbus::Phy::S1, 868.625, false},
+    {723, "wmbust1", "Wireless M-Bus T1", 1u << (int)wmbus::Phy::T1, 868.625, false},
+    {726, "wmbusc1", "Wireless M-Bus C1", (1u << (int)wmbus::Phy::C1A) | (1u << (int)wmbus::Phy::C1B), 868.625, false},
+    {732, "wmbusr2", "Wireless M-Bus R2", 1u << (int)wmbus::Phy::R2, 868.625, false},
+    {735, "wmbusn1", "Wireless M-Bus N1 (Wize, 169 MHz)", (1u << (int)wmbus::Phy::N1) | (1u << (int)wmbus::Phy::N24), 169.4375, true},
+};
+const WmbusView* wmbusViews(int& count) { count = (int)(sizeof kWmbusViews / sizeof *kWmbusViews); return kWmbusViews; }
+const WmbusView* wmbusViewForActive(int a) { for (const auto& v : kWmbusViews) if (v.family + 1 == a) return &v; return nullptr; }
+const WmbusView* wmbusViewForStd(int s) { for (const auto& v : kWmbusViews) if (v.family + 2 == s) return &v; return nullptr; }
+ModeTuning wmbusViewTuning(int i) {
+    ModeTuning t = wmbusTuning();
+    const WmbusView& v = kWmbusViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name; t.defMhz = v.defMhz;
+    return t;
 }
 
 ModeTuning wmbusTuning() {

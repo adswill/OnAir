@@ -195,7 +195,7 @@ const ModeUi* modeUi(int family) {
     case 10: return &kDrmUi;
     case 11: return &kAdsbUi;
     case 12: return &kGnssUi;
-    case 13: return &kSondeUi;
+    case 13: case 684: case 687: case 690: case 693: case 702: case 705: case 708: case 711: case 714: case 717: return &kSondeUi;   // 684 .. 717: one radiosonde type each, the same panel (sonde_rx.h: sondeViews)
     case 14: return &kAisUi;
     case 15: return &kMarineUi;
     case 16: return &kAcarsUi;
@@ -243,7 +243,7 @@ const ModeUi* modeUi(int family) {
     case 54: return &kWifiUi;
     case 55: return &kGeneralUi;
     case 58: return &kTimeUi;
-    case 61: case 840: case 843: case 846: case 849: case 852: case 855: return &kCubesatUi;   // 840 .. 855: one framing each, the same panel (cubesat_rx.h: cubesatViews)
+    case 61: case 840: case 843: case 846: case 849: case 852: case 855: case 792: case 795: case 804: return &kCubesatUi;   // 840 .. 855: one framing each, the same panel (cubesat_rx.h: cubesatViews)
     case 62: return &kGlobalstarUi;
     case 63: return &kVdesUi;
     case 65: return &kZigbeeUi;
@@ -341,7 +341,7 @@ const ModeUi* modeUi(int family) {
     case 84: return &kWisunUi;
     case 85: return &kEczasUi;
     case 101: return &kFpvUi;
-    case 86: return &kWmbusUi;
+    case 86: case 720: case 723: case 726: case 732: case 735: return &kWmbusUi;   // 720 .. 735: one wireless M-Bus mode each, the same panel (wmbus_live.h: wmbusViews)
     case 89: return &kTonesUi;
     case 92: return &kSarsatUi;
     case 122: return &kKaalUi;

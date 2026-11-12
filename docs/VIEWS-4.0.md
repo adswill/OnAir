@@ -1,0 +1,41 @@
+# Radiosonde, wireless M-Bus and satellite framing entries (4.0, branch feat40-modes4)
+
+Eighteen more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
+No decoder was added or changed. The sensor-family entries of the same branch are in `SENSORVIEWS-4.0.md`.
+
+## Radiosonde types (receiver `SondeReceiver`, `setKindMask`)
+| Mode | Family | Active std | Engine std | Poll slot | Sonde type |
+|---|---|---|---|---|---|
+| Radiosonde: Vaisala RS41 | 684 | 685 | 686 | 684 | RS41 |
+| Radiosonde: Vaisala RS92 | 687 | 688 | 689 | 687 | RS92 |
+| Radiosonde: Graw DFM | 690 | 691 | 692 | 690 | DFM-06 / 09 / 17 |
+| Radiosonde: Meteomodem M10 | 693 | 694 | 695 | 693 | M10 / M10+ |
+| Radiosonde: Meteomodem M20 | 702 | 703 | 704 | 702 | M20 |
+| Radiosonde: Lockheed Martin LMS6 | 705 | 706 | 707 | 705 | LMS6 (1680 MHz) |
+| Radiosonde: InterMet iMet-4 | 708 | 709 | 710 | 708 | iMet-1 / iMet-4 |
+| Radiosonde: InterMet iMet-54 | 711 | 712 | 713 | 711 | iMet-54 |
+| Radiosonde: Russian MRZ | 714 | 715 | 716 | 714 | MRZ (MP3-H1) |
+| Radiosonde: Meisei iMS-100 | 717 | 718 | 719 | 717 | iMS-100 |
+
+`telemetry()` keeps the sondes whose `SondeKind` bit is set in the mask and recomputes the frame counts from them; the carrier list is not filtered. Uploads and the saved results still see every sonde.
+Test: `tests/sonde/test_sonde_views.cpp` (simulated flights of `sonde_gen`: five types together at 28 dB with a +2.5 kHz offset and at 24 dB with -4 kHz and 8-bit samples; iMet, iMet-54, MRZ and iMS-100 one at a time with offsets of 0 / +20 / -20 kHz; noise only):
+a view lists exactly the sondes of its type that the receiver without a view lists, the counts are the sums over them, and a view of a type that is not on the air is empty. **Simulated signals only**; no recording of iMet, iMet-54, MRZ, iMS-100 or LMS6 exists in the repository, LMS6 is checked for the table and the mask only.
+CI result: see the pathway entry.
+
+## Wireless M-Bus modes (receiver `WmbusLiveReceiver`, `setPhyMask`)
+| Mode | Family | Active std | Engine std | Poll slot | Modes of `wmbus::Phy` | Default MHz |
+|---|---|---|---|---|---|---|
+| Wireless M-Bus S1 | 720 | 721 | 722 | 720 | S1 | 868.625 (868 MHz plan) |
+| Wireless M-Bus T1 | 723 | 724 | 725 | 723 | T1 | 868.625 |
+| Wireless M-Bus C1 | 726 | 727 | 728 | 726 | C1A, C1B | 868.625 |
+| Wireless M-Bus R2 | 732 | 733 | 734 | 732 | R2 | 868.625 |
+| Wireless M-Bus N1 (Wize, 169 MHz) | 735 | 736 | 737 | 735 | N1, N24 | 169.4375 (169 MHz plan) |
+
+The receiver still searches every channel; `telemetry()` lists the meters and frame log lines of the selected modes and recounts. Test: `tests/wmbus/test_wmbus_views.cpp` (the simulated meters of `wmbus_gen` on the 868 MHz plan clean, with -12 kHz at 25 dB and +9 kHz at 20 dB, and on the 169 MHz plan clean and with +3 kHz at 22 dB; noise only):
+a view lists exactly the meters and log lines of its modes that the receiver without a view lists, the views together list every meter, and noise gives nothing. **Simulated signals only.**
+
+## Satellite framings (receiver `CubesatReceiver`, `setFramingMask`)
+Three more of the framings that only ran inside CubeSat telemetry: AX.25 G3RUH 9600 (family 792), CCSDS Reed-Solomon (795), CCSDS concatenated, Viterbi + Reed-Solomon (804). Active standard family + 1, engine standard family + 2, poll slot = family.
+`tests/cubesat/test_cubesat_views.cpp` now expects nine views and runs the engine entry of each (its own generated signal, decoded as that framing and no other). **Generated signals only.**
+
+Numbers come from the free ranges of `docs/FAMILY-NUMBERS-4.0.md` (663 - 697, 702 - 727, 732 - 738, 792 - 797, 804 - 817); the integrator resolves any clash with another branch.

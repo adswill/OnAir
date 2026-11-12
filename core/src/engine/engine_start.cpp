@@ -440,6 +440,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
 // Configures the narrow-channel decoders (sondes, ais, acars... tetra, psk, spectrum tools, astro, ...) with their log callbacks
 void Engine::configureDecoderReceivers(const DeviceInfo& dev, const TuneSettings& tune) {
     rxSonde_.configure(rate_);
+    { const SondeView* sv = sondeViewForActive(activeStdFor(stdMode_.load())); rxSonde_.setKindMask(sv ? 1u << sv->kind : 0u); }   // an entry of one sonde type reports that type only
     rxSonde_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAis_.configure(rate_);
     rxAis_.setLogCallback([this](const std::string& s) { rxLog(s); });
@@ -770,6 +771,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxZw_.setLogCallback([this](const std::string& m) { rxLog(m); });
     rxEcz_.configure(rate_);
     rxWmb_.configure(rate_);
+    { const WmbusView* wv = wmbusViewForActive(activeStdFor(stdMode_.load())); rxWmb_.setPhyMask(wv ? wv->phyMask : 0u); }   // an entry of one wireless M-Bus mode lists that mode only
     rxWmb_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxModeAc_.configure(rate_);
     rxModeAc_.setLogCallback([this](const std::string& s) { rxLog(s); });

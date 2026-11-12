@@ -68,7 +68,7 @@ const std::set<std::string>& pagerKinds() {
 const std::set<std::string>& restrictedKnownKinds() {
     static const std::set<std::string> s = {
     "aero", "ale", "ant", "ardop", "astro", "atsc", "atsc3", "atv", "ble", "bletracker", "btc", "cdr", "cell", "codar", "contestia", "cquam",
-    "cubesat", "oregon", "acurite", "lacrosse", "fineoffset", "bresser", "hideki", "tfa", "nexus", "alecto", "ambient", "alarmsens", "x10rf", "ert", "r900", "tpmsschrader", "tpmsrenault", "tpmstoyota", "tpmscitroen", "ax100m5", "ax100m6", "usp", "ngham", "u482c", "beesat", "cw", "dab", "datawell", "dect", "dgps", "dji", "dme", "dominoex", "drm", "dsc", "dtmb", "dvb", "dvbc", "dvbc2", "dvbs", "eczas",
+    "cubesat", "wmbuss1", "wmbust1", "wmbusc1", "wmbusr2", "wmbusn1", "g3ruh9600", "ccsdsrs", "ccsdsconcat", "srs41", "srs92", "sdfm", "sm10", "sm20", "slms6", "simet", "simet54", "smrz", "smeisei", "oregon", "acurite", "lacrosse", "fineoffset", "bresser", "hideki", "tfa", "nexus", "alecto", "ambient", "alarmsens", "x10rf", "ert", "r900", "tpmsschrader", "tpmsrenault", "tpmstoyota", "tpmscitroen", "ax100m5", "ax100m6", "usp", "ngham", "u482c", "beesat", "cw", "dab", "datawell", "dect", "dgps", "dji", "dme", "dominoex", "drm", "dsc", "dtmb", "dvb", "dvbc", "dvbc2", "dvbs", "eczas",
     "adsl", "cv2x", "dsrc", "eot", "ermes", "fanet", "its", "ogn", "eloran", "flarm", "fpv", "freedv", "fsq", "fst4", "ft2", "globalstar", "gnss", "goesdcs", "hrdcp", "gsmr", "halow", "hamdrm", "hdr", "hell",
     "hfbeacon", "hfdig", "hfdl", "ifkp", "ils", "inmc", "iono", "iridium", "isdbt", "isdbtsb", "dvbsh", "ism", "js8", "jt4", "jt65", "jt9", "kaal", "kaft",
     "kait", "kapp", "kavb", "kaws", "klw", "lbj", "loraaprs", "loraraw", "lorawan", "mac", "marine", "mesh", "meshcom", "meshcore",

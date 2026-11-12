@@ -96,6 +96,7 @@
 #include "dect2/vor/vor_rx.h"
 #include "dect2/wifi/wifi_rx.h"
 #include "dect2/wisun/wisun_rx.h"
+#include "dect2/wmbus/wmbus_live.h"
 #include "dect2/xlink/xlink_rx.h"
 #include "dect2/zwave/zwave_rx.h"
 namespace dect2::webschema {
@@ -175,10 +176,11 @@ static bool set_13(Engine& e, const std::string& n, double v) {
     if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
     return false;
 }
-static const char kOpt_14[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static const char kOpt_14[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
 static bool set_14(Engine& e, const std::string& n, double v) {
     auto& r = e.sonde();
     if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
     if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
     return false;
 }
@@ -542,6 +544,12 @@ static const char kOpt_85[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","
 static bool set_85(Engine& e, const std::string& n, double v) {
     auto& r = e.wisun();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
+    return false;
+}
+static const char kOpt_87[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_87(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
     return false;
 }
 static const char kOpt_90[] = R"JSON([{"n":"setSelcalOnly","k":"bool","l":"Selcal Only","h":"only the SELCAL detector runs (the SELCAL mode)","t":"s"},{"n":"setDemod","k":"int","l":"Demod","h":"TonesDemod for a radio's IQ (default FM); a change restarts the chain","t":"s"}])JSON";
@@ -1120,10 +1128,120 @@ static bool set_682(Engine& e, const std::string& n, double v) {
     if (n == "setAutoLevel") { call(r, &Rx<decltype(r)>::setAutoLevel, v); return true; }
     return false;
 }
+static const char kOpt_685[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_685(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_688[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_688(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_691[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_691(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_694[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_694(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
 static const char kOpt_701[] = R"JSON([{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"carrier line over the noise (default 12)","u":"dB","t":"s"}])JSON";
 static bool set_701(Engine& e, const std::string& n, double v) {
     auto& r = e.hrdcp();
     if (n == "setThresholdDb") { call(r, &Rx<decltype(r)>::setThresholdDb, v); return true; }
+    return false;
+}
+static const char kOpt_703[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_703(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_706[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_706(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_709[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_709(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_712[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_712(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_715[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_715(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_718[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static bool set_718(Engine& e, const std::string& n, double v) {
+    auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
+    return false;
+}
+static const char kOpt_721[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_721(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
+static const char kOpt_724[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_724(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
+static const char kOpt_727[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_727(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
+static const char kOpt_733[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_733(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
+static const char kOpt_736[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_736(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
     return false;
 }
 static const char kOpt_742[] = R"JSON([{"n":"setBlocking","k":"bool","l":"Blocking","h":"recordings and tests: wait for the decoder instead of dropping input","t":"s"}])JSON";
@@ -1211,6 +1329,7 @@ const OptEntry kOpt[] = {
     {81, kOpt_81, set_81},
     {84, kOpt_84, set_84},
     {85, kOpt_85, set_85},
+    {87, kOpt_87, set_87},
     {90, kOpt_90, set_90},
     {93, kOpt_93, set_93},
     {96, kOpt_96, set_96},
@@ -1286,7 +1405,22 @@ const OptEntry kOpt[] = {
     {676, kOpt_676, set_676},
     {679, kOpt_679, set_679},
     {682, kOpt_682, set_682},
+    {685, kOpt_685, set_685},
+    {688, kOpt_688, set_688},
+    {691, kOpt_691, set_691},
+    {694, kOpt_694, set_694},
     {701, kOpt_701, set_701},
+    {703, kOpt_703, set_703},
+    {706, kOpt_706, set_706},
+    {709, kOpt_709, set_709},
+    {712, kOpt_712, set_712},
+    {715, kOpt_715, set_715},
+    {718, kOpt_718, set_718},
+    {721, kOpt_721, set_721},
+    {724, kOpt_724, set_724},
+    {727, kOpt_727, set_727},
+    {733, kOpt_733, set_733},
+    {736, kOpt_736, set_736},
     {742, kOpt_742, set_742},
     {747, kOpt_747, set_747},
     {871, kOpt_871, set_871},

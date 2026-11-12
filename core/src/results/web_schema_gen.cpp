@@ -15200,13 +15200,31 @@ static bool put_673(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTe
 static bool put_676(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
 static bool put_679(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
 static bool put_682(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_685(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_688(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_691(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_694(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
 static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTelemetry(s, rx.hrdcp); return true; }
+static bool put_703(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_706(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_709(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_712(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_715(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_718(const RxTelemetry& rx, std::string& s) { ev_dect2__SondeTelemetry(s, rx.sonde); return true; }
+static bool put_721(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
+static bool put_724(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
+static bool put_727(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
+static bool put_733(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
+static bool put_736(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
+static bool put_793(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_796(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_801(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_802(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_803(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
+static bool put_805(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_821(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_824(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_827(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
@@ -15501,13 +15519,31 @@ static const StdEntry kStd[] = {
     {676, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_676},
     {679, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_679},
     {682, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_682},
+    {685, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_685},
+    {688, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_688},
+    {691, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_691},
+    {694, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_694},
     {701, "hrdcp", "dect2::DcsTelemetry", kSchema_dect2__DcsTelemetry, put_701},
+    {703, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_703},
+    {706, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_706},
+    {709, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_709},
+    {712, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_712},
+    {715, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_715},
+    {718, "sonde", "dect2::SondeTelemetry", kSchema_dect2__SondeTelemetry, put_718},
+    {721, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_721},
+    {724, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_724},
+    {727, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_727},
+    {733, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_733},
+    {736, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_736},
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
+    {793, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_793},
+    {796, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_796},
     {801, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_801},
     {802, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_802},
     {803, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_803},
+    {805, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_805},
     {821, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_821},
     {824, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_824},
     {827, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_827},
@@ -15918,6 +15954,24 @@ static const WebModeRow kRows[] = {
     {675, "TPMS: Renault", 8, "Renault TPMS: tyre pressure sensors", "", 677, 676, "sensors"},
     {678, "TPMS: Toyota", 8, "Toyota TPMS: tyre pressure sensors", "", 680, 679, "sensors"},
     {681, "TPMS: Citroen / Peugeot / Fiat", 8, "Citroen / Peugeot / Fiat TPMS: tyre pressure sensors", "", 683, 682, "sensors"},
+    {684, "Radiosonde: Vaisala RS41", 9, "Vaisala RS41: weather balloon position and weather data", "", 686, 685, "sonde"},
+    {687, "Radiosonde: Vaisala RS92", 9, "Vaisala RS92: weather balloon position data", "", 689, 688, "sonde"},
+    {690, "Radiosonde: Graw DFM", 9, "Graw DFM: weather balloon position and temperature", "", 692, 691, "sonde"},
+    {693, "Radiosonde: Meteomodem M10", 9, "Meteomodem M10: weather balloon position and weather data", "", 695, 694, "sonde"},
+    {702, "Radiosonde: Meteomodem M20", 9, "Meteomodem M20: weather balloon position and weather data", "", 704, 703, "sonde"},
+    {705, "Radiosonde: Lockheed Martin LMS6", 9, "Lockheed Martin LMS6: L-band weather balloon sondes", "", 707, 706, "sonde"},
+    {708, "Radiosonde: InterMet iMet-4", 9, "InterMet iMet-4: weather balloon position data", "", 710, 709, "sonde"},
+    {711, "Radiosonde: InterMet iMet-54", 9, "InterMet iMet-54: weather balloon position data", "", 713, 712, "sonde"},
+    {714, "Radiosonde: Russian MRZ", 9, "MRZ: Russian weather balloon sondes", "", 716, 715, "sonde"},
+    {717, "Radiosonde: Meisei iMS-100", 9, "Meisei iMS-100: weather balloon position data", "", 719, 718, "sonde"},
+    {720, "Wireless M-Bus S1", 8, "Wireless M-Bus S1: stationary mode meters on 868.3 MHz", "", 722, 721, "wmbus"},
+    {723, "Wireless M-Bus T1", 8, "Wireless M-Bus T1: walk-by and drive-by meters on 868.95 MHz", "", 725, 724, "wmbus"},
+    {726, "Wireless M-Bus C1", 8, "Wireless M-Bus C1: compact mode meters on 868.95 MHz", "", 728, 727, "wmbus"},
+    {732, "Wireless M-Bus R2", 8, "Wireless M-Bus R2: receive mode meters on 868.03 - 868.15 MHz", "", 734, 733, "wmbus"},
+    {735, "Wireless M-Bus N1 (Wize, 169 MHz)", 8, "Wireless M-Bus N1: 169 MHz and Wize meters", "", 737, 736, "wmbus"},
+    {792, "AX.25 G3RUH 9600 (satellites)", 4, "AX.25 9600 baud G3RUH: amateur satellite packet frames", "", 794, 793, "cube"},
+    {795, "CCSDS Reed-Solomon (satellites)", 4, "CCSDS Reed-Solomon: satellite telemetry frames", "", 797, 796, "cube"},
+    {804, "CCSDS concatenated (satellites)", 4, "CCSDS concatenated: Viterbi and Reed-Solomon satellite frames", "", 806, 805, "cube"},
 };
 } // namespace
 

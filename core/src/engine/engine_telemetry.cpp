@@ -221,6 +221,17 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 12: return pollStd(rxAdsb_, 12, t, seqs[5], &RxTelemetry::adsb);
     case 13: return pollStd(rxGnss_, 13, t, seqs[6], &RxTelemetry::gnss);
     case 14: return pollStd(rxSonde_, 14, t, seqs[7], &RxTelemetry::sonde);
+    // 4.0: one entry per radiosonde type, the same receiver (sonde_rx.h: sondeViews)
+    case 685: return pollStd(rxSonde_, 685, t, seqs[684], &RxTelemetry::sonde);   // radiosonde type entry (family 684)
+    case 688: return pollStd(rxSonde_, 688, t, seqs[687], &RxTelemetry::sonde);   // radiosonde type entry (family 687)
+    case 691: return pollStd(rxSonde_, 691, t, seqs[690], &RxTelemetry::sonde);   // radiosonde type entry (family 690)
+    case 694: return pollStd(rxSonde_, 694, t, seqs[693], &RxTelemetry::sonde);   // radiosonde type entry (family 693)
+    case 703: return pollStd(rxSonde_, 703, t, seqs[702], &RxTelemetry::sonde);   // radiosonde type entry (family 702)
+    case 706: return pollStd(rxSonde_, 706, t, seqs[705], &RxTelemetry::sonde);   // radiosonde type entry (family 705)
+    case 709: return pollStd(rxSonde_, 709, t, seqs[708], &RxTelemetry::sonde);   // radiosonde type entry (family 708)
+    case 712: return pollStd(rxSonde_, 712, t, seqs[711], &RxTelemetry::sonde);   // radiosonde type entry (family 711)
+    case 715: return pollStd(rxSonde_, 715, t, seqs[714], &RxTelemetry::sonde);   // radiosonde type entry (family 714)
+    case 718: return pollStd(rxSonde_, 718, t, seqs[717], &RxTelemetry::sonde);   // radiosonde type entry (family 717)
     case 15: return pollStd(rxAis_, 15, t, seqs[8], &RxTelemetry::ais);
     case 16: return pollStd(rxMarine_, 16, t, seqs[9], &RxTelemetry::marine);
     case 17: return pollStd(rxAcars_, 17, t, seqs[10], &RxTelemetry::acars);
@@ -279,6 +290,9 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 850: return pollStd(rxCube_, 850, t, seqs[850], &RxTelemetry::cube);   // NGHam (family 849)
     case 853: return pollStd(rxCube_, 853, t, seqs[853], &RxTelemetry::cube);   // U482C (family 852)
     case 856: return pollStd(rxCube_, 856, t, seqs[856], &RxTelemetry::cube);   // BEESAT / Mobitex (family 855)
+    case 793: return pollStd(rxCube_, 793, t, seqs[792], &RxTelemetry::cube);   // framing entry (family 792)
+    case 796: return pollStd(rxCube_, 796, t, seqs[795], &RxTelemetry::cube);   // framing entry (family 795)
+    case 805: return pollStd(rxCube_, 805, t, seqs[804], &RxTelemetry::cube);   // framing entry (family 804)
     case 63: return pollStd(rxGs_, 63, t, seqs[57], &RxTelemetry::globalstar);
     case 64: return pollStd(rxVdes_, 64, t, seqs[58], &RxTelemetry::vdes);
     case 65: return pollStd(rxHrpt_, 65, t, seqs[59], &RxTelemetry::hrpt);
@@ -460,6 +474,12 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 86: return pollStd(rxEcz_, 86, t, seqs[80], &RxTelemetry::eczas);
     case 102: return pollStd(rxFpv_, 102, t, seqs[96], &RxTelemetry::fpv);
     case 87: return pollStd(rxWmb_, 87, t, seqs[81], &RxTelemetry::wmbus);
+    // 4.0: one entry per wireless M-Bus mode, the same receiver (wmbus_live.h: wmbusViews)
+    case 721: return pollStd(rxWmb_, 721, t, seqs[720], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 720)
+    case 724: return pollStd(rxWmb_, 724, t, seqs[723], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 723)
+    case 727: return pollStd(rxWmb_, 727, t, seqs[726], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 726)
+    case 733: return pollStd(rxWmb_, 733, t, seqs[732], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 732)
+    case 736: return pollStd(rxWmb_, 736, t, seqs[735], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 735)
     case 90: return pollStd(rxTones_, 90, t, seqs[85], &RxTelemetry::tones);
     case 93: return pollStd(rxSar_, 93, t, seqs[87], &RxTelemetry::sarsat);
     case 96: return pollStd(rxMt63_, 96, t, seqs[88], &RxTelemetry::mt63);

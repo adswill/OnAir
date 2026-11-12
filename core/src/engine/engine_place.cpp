@@ -130,7 +130,7 @@ void Engine::configureReceiver(int a, double r) {
     case 7: rxDvbs_.configure(r); break;   // the second mode beside QO-100 only
     case 10: rxDmr_.configure(r); break;
     case 12: rxAdsb_.configure(r); break;
-    case 14: rxSonde_.configure(r); break;
+    case 14: DECT2_SONDEVIEW_ACTIVE_CASES rxSonde_.configure(r); break;
     case 15: rxAis_.configure(r); break;
     case 16: rxMarine_.configure(r); break;
     case 17: rxAcars_.configure(r); break;
@@ -162,7 +162,7 @@ void Engine::configureReceiver(int a, double r) {
     case 56: rxGeneral_.configure(r); for (auto& g : extraGeneral_) g.configure(r); break;
     case 59: rxTime_.configure(r); break;
     case 60: rxMeteor_.configure(r); break;
-    case 62: case 841: case 844: case 847: case 850: case 853: case 856: rxCube_.configure(r); break;
+    case 62: case 841: case 844: case 847: case 850: case 853: case 856: case 793: case 796: case 805: rxCube_.configure(r); break;
     case 63: rxGs_.configure(r); break;
     case 64: rxVdes_.configure(r); break;
     case 65: rxHrpt_.configure(r); break;
@@ -281,7 +281,7 @@ void Engine::configureReceiver(int a, double r) {
     case 381: rxBtc_.configure(r); break;
     case 86: rxEcz_.configure(r); break;
     case 102: rxFpv_.configure(r); break;
-    case 87: rxWmb_.configure(r); break;
+    case 87: DECT2_WMBUSVIEW_ACTIVE_CASES rxWmb_.configure(r); break;
     case 90: rxTones_.configure(r); break;
     case 93: rxSar_.configure(r); break;
     case 96: rxMt63_.configure(r); break;
@@ -370,7 +370,7 @@ void Engine::setWideDecode(bool on, double spanHz) {
 // Where the receiver of active standard a finds its channel: as start() does for the first mode, one receiver at a time
 void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, double chanHz) {
     switch (a) {
-    case 14: rxSonde_.setSignalOffset(o); break;
+    case 14: DECT2_SONDEVIEW_ACTIVE_CASES rxSonde_.setSignalOffset(o); break;
     case 15: rxAis_.setSignalOffset(o); if (lastDev_.isRadio() && centreHz > 0) rxAis_.setCenterHz(centreHz); break;
     case 16: rxMarine_.setSignalOffset(o); break;
     case 120: rxSitor_.setSignalOffset(o); break;
@@ -400,7 +400,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 56: rxGeneral_.setSignalOffset(o); for (auto& g : extraGeneral_) g.setSignalOffset(o); break;
     case 59: rxTime_.setSignalOffset(o); rxTime_.setDialHz(dialHz); break;
     case 60: rxMeteor_.setSignalOffset(o); break;
-    case 62: case 841: case 844: case 847: case 850: case 853: case 856: rxCube_.setSignalOffset(o); rxCube_.setDialHz(dialHz); break;
+    case 62: case 841: case 844: case 847: case 850: case 853: case 856: case 793: case 796: case 805: rxCube_.setSignalOffset(o); rxCube_.setDialHz(dialHz); break;
     case 63: rxGs_.setSignalOffset(o); rxGs_.setDialHz(dialHz); break;
     case 64: rxVdes_.setSignalOffset(o); rxVdes_.setDialHz(dialHz); break;
     case 65: rxHrpt_.setSignalOffset(o); break;
@@ -518,7 +518,7 @@ void Engine::placeReceiver(int a, double o, double centreHz, double dialHz, doub
     case 85: rxWs_.setSignalOffset(o); rxWs_.setCenterHz(centreHz); rxWs_.setDialHz(dialHz); break;
     case 86: rxEcz_.setSignalOffset(o); break;
     case 102: rxFpv_.setSignalOffset(o); rxFpv_.setCenterHz(centreHz); break;
-    case 87: rxWmb_.setSignalOffset(o); rxWmb_.setCenterHz(centreHz); break;
+    case 87: DECT2_WMBUSVIEW_ACTIVE_CASES rxWmb_.setSignalOffset(o); rxWmb_.setCenterHz(centreHz); break;
     case 90: rxTones_.setSignalOffset(o); break;
     case 93: rxSar_.setSignalOffset(o); break;
     case 96: rxMt63_.setSignalOffset(o); break;
