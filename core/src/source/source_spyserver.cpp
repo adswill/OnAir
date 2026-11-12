@@ -13,6 +13,7 @@
 #include "native_common.h"
 #include "dect2/net/netradio.h"
 #include "dect2/net/net_proto.h"
+#include <algorithm>
 #include <cmath>
 #include <map>
 #include <mutex>
@@ -87,11 +88,12 @@ bool sendHello(sock_t s) {
 }
 
 // one message: the header's fields and its body; false when the connection failed or stalled, or the message makes no sense
-bool readMessage(sock_t s, uint32_t& type, uint32_t& flags, std::vector<unsigned char>& body) {
+bool readMessage(sock_t s, uint32_t& type, uint32_t& flags, std::vector<unsigned char>& body, uint32_t* seq = nullptr) {
     unsigned char h[20];
     if (!sockRecvAll(s, h, sizeof h)) return false;
     uint32_t size = 0;
     if (!netp::spyHeader(h, type, flags, size)) return false;
+    if (seq) *seq = (uint32_t)h[12] | (uint32_t)h[13] << 8 | (uint32_t)h[14] << 16 | (uint32_t)h[15] << 24;   // the header's sequence number
     body.resize(size);
     return size == 0 || sockRecvAll(s, body.data(), size);
 }
@@ -261,12 +263,33 @@ protected:
     bool restartForRate() const override { return false; }   // the server changes the decimation while streaming
     void streamLoop() override {
         std::vector<unsigned char> body;
+        bool haveSeq = false;
+        uint32_t lastIqSeq = 0, otherSince = 0;
+        size_t lastIqSamples = 0;
         while (run_) {
-            uint32_t t = 0, fl = 0;
-            if (!readMessage(sock_, t, fl, body)) break;   // closed, failed or stalled
+            uint32_t t = 0, fl = 0, seq = 0;
+            if (!readMessage(sock_, t, fl, body, &seq)) break;   // closed, failed or stalled
             const float scale = fl ? 1.f / std::pow(10.f, (float)fl / 20.f) : 1.f;   // the server's digital gain, taken back out
             const size_t n = body.size();
             const unsigned char* b = body.data();
+            const size_t bytesPer = t == kMsgIqUint8 ? 2 : t == kMsgIqInt16 ? 4 : t == kMsgIqFloat ? 8 : 0;
+            if (bytesPer) {
+                // #435: a server whose client cannot keep up (a phone on Wi-Fi at 10 Msps) drops whole IQ messages, and the sequence numbers show
+                // it. The lost messages are put back as silence of their length, so the receivers keep their time line (a fixed-phase DTMB header
+                // cannot count the frames a gap took; every frame counter, symbol clock and interleaver after the gap depends on it) and the
+                // engine reports them as samples the link lost. Messages of other types in between may share the counter; they are not IQ.
+                if (haveSeq && lastIqSamples) {
+                    const uint32_t gap = seq - lastIqSeq - 1;
+                    const uint64_t lostMsgs = gap > otherSince ? gap - otherSince : 0;
+                    const uint64_t fill = lostMsgs * lastIqSamples;
+                    if (lostMsgs && fill <= (uint64_t)std::max(1.0, rate_)) {      // at most a second: anything larger is a restart, not a drop
+                        zeros_.assign((size_t)fill, cf32(0, 0));
+                        push(zeros_.data(), zeros_.size());
+                        if (ring_) ring_->noteLost(fill);
+                    }
+                }
+                haveSeq = true; lastIqSeq = seq; otherSince = 0; lastIqSamples = n / bytesPer;
+            } else otherSince++;
             if (t == kMsgIqUint8) {
                 conv_.resize(n / 2);
                 for (size_t k = 0; k < n / 2; k++) conv_[k] = cf32((b[2 * k] - 128.f) / 128.f * scale, (b[2 * k + 1] - 128.f) / 128.f * scale);
@@ -316,6 +339,7 @@ private:
     SpyInfo info_;
     uint32_t sentDec_ = UINT32_MAX, sentFreq_ = UINT32_MAX, sentGain_ = UINT32_MAX, sentFmt_ = UINT32_MAX;
     std::chrono::steady_clock::time_point lostAt_{};
+    std::vector<cf32> zeros_;     // the silence that stands in for IQ messages the server dropped
 };
 
 DeviceInfo spyServerDevice(const std::string& host, int port) {

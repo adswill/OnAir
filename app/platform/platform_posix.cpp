@@ -25,6 +25,7 @@
 #endif
 #include <windows.h>
 #include <commdlg.h>
+#include <shlobj.h>
 #include <direct.h>
 #else
 #include <unistd.h>
@@ -589,7 +590,23 @@ void showFatalError(const char* title, const char* text) {
 #ifdef _WIN32
 std::string openFileDialog() { return fileDialog(false, nullptr); }
 std::string saveFileDialog(const char* name) { return fileDialog(true, name); }
-std::string openFolderDialog() { return {}; }   // Windows: the path is typed in the export dialog
+// The shell's folder browser (#442: Tools > Images > Choose... did nothing on Windows, this returned nothing). The new-style dialog needs COM on
+// this thread; a thread that has it already (S_FALSE, or another apartment) is left as it is.
+std::string openFolderDialog() {
+    const HRESULT co = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    BROWSEINFOW bi{};
+    bi.hwndOwner = GetActiveWindow();
+    bi.lpszTitle = L"Choose a folder";
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_EDITBOX;
+    std::string out;
+    if (LPITEMIDLIST pidl = SHBrowseForFolderW(&bi)) {
+        wchar_t path[MAX_PATH] = {0};
+        if (SHGetPathFromIDListW(pidl, path)) out = utf8(path);
+        CoTaskMemFree(pidl);
+    }
+    if (SUCCEEDED(co)) CoUninitialize();
+    return out;
+}
 #else
 std::string openFolderDialog() {
     if (haveProgram("zenity")) return capture("zenity --file-selection --directory --title='Choose a folder' 2>/dev/null");

@@ -26,6 +26,7 @@ struct Scenario {
     double gapAt = -1, gapSec = 0; bool gapRemove = false;   // a dropout: zeros, or samples that are simply missing
     double resetAt = -1;
     double dropsPerSec = 0; int dropMin = 100, dropMax = 3000;   // radio overflows: runs of dropMin .. dropMax samples lost at random times
+    bool dropZero = false;       // the drops arrive as zeros of the same length (a source that knows how much it lost: SpyServer sequence numbers)
     double stepAt = -1, stepDb = 0;                          // the level changes by stepDb at stepAt (AGC)
     double toneDb = -100, toneHz = 0;                        // a carrier wave at toneDb relative to the signal power, at toneHz from the centre
     double burstsPerSec = 0, burstUs = 20, burstDb = 10;     // impulse noise: bursts of Gaussian noise, burstDb above the signal power
@@ -138,7 +139,7 @@ inline Result run(const Scenario& o, bool verbose = false) {
                 size_t w = 0;
                 for (size_t i = 0; i < n; i++) {
                     if (dropLeft == 0 && ur(rng) < o.dropsPerSec / o.sc.rate) { dropLeft = o.dropMin + (size_t)(ur(rng) * (o.dropMax - o.dropMin)); r.dropped += dropLeft; }
-                    if (dropLeft) { dropLeft--; continue; }
+                    if (dropLeft) { dropLeft--; if (o.dropZero) buf[w++] = cf32(0, 0); continue; }
                     buf[w++] = buf[i];
                 }
                 if (w) rx.feed(buf.data(), w);

@@ -430,7 +430,10 @@ void mapView(App& a, ImVec2 size) {
 bool adsbFullMap(App& a, ImVec2 disp) {
     if (!S.full) return false;
     if (modeUi(a.family) != &kAdsbUi && modeUi(a.family) != &kModeAcUi) { S.full = false; return false; }   // Mode A/C draws this map too (#235: its full screen button did nothing)
-    if (S.viewMode != 0 && S.viewMode != 2) { S.full = false; return false; }
+    // Mode A/C always shows the map; the ADS-B screen's own view (Live table by default) must not decide for it. It did, so the button in Mode A/C
+    // still did nothing unless the ADS-B screen had been left on Map or Radar (#442)
+    const int view = modeUi(a.family) == &kModeAcUi ? 0 : S.viewMode;
+    if (view != 0 && view != 2) { S.full = false; return false; }
     if (!ImGui::GetIO().WantTextInput && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId) && ImGui::IsKeyPressed(ImGuiKey_Escape, false)) { S.full = false; return false; }
     ImGui::SetNextWindowPos(ImVec2(0, 0));
     ImGui::SetNextWindowSize(disp);
@@ -438,7 +441,7 @@ bool adsbFullMap(App& a, ImVec2 disp) {
     // NoBringToFrontOnFocus: a click on the map must not raise it over the aircraft panel (#235: the second aircraft clicked showed no panel)
     ImGui::Begin("##adsbfull", nullptr, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_NoBringToFrontOnFocus);
     ImGui::PopStyleVar();
-    if (S.viewMode == 2) radar(a, ImGui::GetContentRegionAvail());
+    if (view == 2) radar(a, ImGui::GetContentRegionAvail());
     else mapView(a, ImGui::GetContentRegionAvail());
     ImGui::Dummy(ImVec2(0, 0));   // the view leaves the cursor at the bottom edge: an item there so ImGui does not take it as growing the window
     ImGui::End();

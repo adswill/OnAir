@@ -1,5 +1,8 @@
 #include <winver.h>
 1 ICON "OnAir.ico"
+// GLFW gives its windows the icon named GLFW_ICON (its win32 window class); without it the title bar and the taskbar showed the default
+// Windows icon while Explorer showed the logo (#442)
+GLFW_ICON ICON "OnAir.ico"
 VS_VERSION_INFO VERSIONINFO
 FILEVERSION 3,9,0,0
 PRODUCTVERSION 3,9,0,0
