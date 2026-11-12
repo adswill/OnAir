@@ -480,6 +480,9 @@
         <item>Wireless M-Bus: Landis+Gyr</item>
         <item>Wireless M-Bus: Itron</item>
         <item>Wireless M-Bus: Sensus</item>
+        <item>NFC: ISO 14443 Type A</item>
+        <item>NFC: ISO 14443 Type B</item>
+        <item>NFC: ISO 15693</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -941,6 +944,9 @@
         <item>Landis+Gyr (manufacturer code LGB) heat, gas, water and electricity meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send (S1, T1, C1, R2 or N1). The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
         <item>Itron (manufacturer code ITW) water, gas and heat meters on wireless M-Bus (EN 13757-4), also the Wize meters on 169 MHz: the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send. The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
         <item>Sensus (manufacturer code SEN) water and heat meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send. The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>NFC / RFID at 13.56 MHz, ISO/IEC 14443 Type A (Mifare, NTAG, most phones and payment cards): the reader\'s frames (REQA, anticollision, SELECT, READ) and the tag\'s answers (ATQA, UID, SAK), the tags found and their NDEF records. Encrypted traffic after authentication is named and never decoded. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
+        <item>NFC / RFID at 13.56 MHz, ISO/IEC 14443 Type B (some ID, transport and passport cards): the reader\'s REQB and the tag\'s ATQB with its frames. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
+        <item>NFC / RFID at 13.56 MHz, ISO/IEC 15693 vicinity cards (library tags, access and industrial tags, ICODE): the reader\'s inventory and system-information commands and the tag\'s answers with their UIDs. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1402,6 +1408,9 @@
         <item>Meters, Landis+Gyr</item>
         <item>Meters, Itron</item>
         <item>Meters, Sensus</item>
+        <item>RFID, Type A</item>
+        <item>RFID, Type B</item>
+        <item>RFID, ISO 15693</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1863,5 +1872,8 @@
         <item>wireless m-bus wmbus mbus landis gyr landis+gyr lgb meter heat gas water electricity</item>
         <item>wireless m-bus wmbus mbus itron itw wize 169 meter water gas heat</item>
         <item>wireless m-bus wmbus mbus sensus sen xylem meter water heat</item>
+        <item>nfc rfid 13.56 mhz iso 14443 type a mifare ntag uid atqa sak ndef reader tag</item>
+        <item>nfc rfid 13.56 mhz iso 14443 type b reqb atqb card passport</item>
+        <item>nfc rfid 13.56 mhz iso 15693 vicinity icode inventory library tag</item>
     </string-array>
 </resources>

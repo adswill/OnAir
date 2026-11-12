@@ -4218,3 +4218,6 @@ Meters, Kamstrup	Zähler, Kamstrup
 Meters, Landis+Gyr	Zähler, Landis+Gyr
 Meters, Itron	Zähler, Itron
 Meters, Sensus	Zähler, Sensus
+RFID, Type A	RFID, Type A
+RFID, Type B	RFID, Type B
+RFID, ISO 15693	RFID, ISO 15693

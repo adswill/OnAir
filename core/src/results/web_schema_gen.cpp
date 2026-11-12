@@ -15142,7 +15142,10 @@ static bool put_465(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTel
 static bool put_466(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_468(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_471(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
+static bool put_474(const RxTelemetry& rx, std::string& s) { ev_dect2__NfcTelemetry(s, rx.nfc); return true; }
+static bool put_477(const RxTelemetry& rx, std::string& s) { ev_dect2__NfcTelemetry(s, rx.nfc); return true; }
 static bool put_481(const RxTelemetry& rx, std::string& s) { ev_dect2__UmtsTelemetry(s, rx.umts); return true; }
+static bool put_483(const RxTelemetry& rx, std::string& s) { ev_dect2__NfcTelemetry(s, rx.nfc); return true; }
 static bool put_501(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_502(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_503(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
@@ -15498,7 +15501,10 @@ static const StdEntry kStd[] = {
     {466, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_466},
     {468, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_468},
     {471, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_471},
+    {474, "nfc", "dect2::NfcTelemetry", kSchema_dect2__NfcTelemetry, put_474},
+    {477, "nfc", "dect2::NfcTelemetry", kSchema_dect2__NfcTelemetry, put_477},
     {481, "umts", "dect2::UmtsTelemetry", kSchema_dect2__UmtsTelemetry, put_481},
+    {483, "nfc", "dect2::NfcTelemetry", kSchema_dect2__NfcTelemetry, put_483},
     {501, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_501},
     {502, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_502},
     {503, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_503},
@@ -16086,6 +16092,9 @@ static const WebModeRow kRows[] = {
     {797, "Wireless M-Bus: Landis+Gyr", 8, "Wireless M-Bus: Landis+Gyr meters", "", 799, 798, "wmbus"},
     {467, "Wireless M-Bus: Itron", 8, "Wireless M-Bus: Itron meters", "", 469, 468, "wmbus"},
     {470, "Wireless M-Bus: Sensus", 8, "Wireless M-Bus: Sensus meters", "", 472, 471, "wmbus"},
+    {473, "NFC: ISO 14443 Type A", 8, "NFC Type A: tags, readers and NDEF records", "", 475, 474, "nfc"},
+    {476, "NFC: ISO 14443 Type B", 8, "NFC Type B: readers and tag answers", "", 478, 477, "nfc"},
+    {482, "NFC: ISO 15693", 8, "NFC ISO 15693: vicinity tags and readers", "", 484, 483, "nfc"},
 };
 } // namespace
 

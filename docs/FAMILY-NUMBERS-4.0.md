@@ -81,6 +81,7 @@ Every entry is a family F with active standard F + 1, engine standard F + 2 and 
 | Wireless M-Bus modes and manufacturers | 720, 723, 726, 732, 735, 743, 797, 467, 470 | 9 views of Wireless M-Bus |
 | CubeSat framings | 792, 795, 804 | 3 views of CubeSat telemetry |
 | AIS station kinds | 738, 807, 810, 813, 816, 857 | 6 views of AIS |
+| NFC protocols | 473, 476, 482 | 3 views of NFC / RFID 13.56 MHz |
 | Time stations | 607, 610, 613, 616, 628, 631, 634, 637, 642, 645, 648 | 11 views of Time signals |
 | GNSS systems | 860, 866, 872, 875 | 4 views of GNSS |
 | Analog TV standards | 424, 427, 441, 444, 447, 450, 453, 456 | 8 views of Analog TV |

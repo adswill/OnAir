@@ -364,6 +364,7 @@ const ModeUi* modeUi(int family) {
     case 121: return &kDmeUi;
     case 126: return &kElLoranUi;
     case 148: return &kNfcUi;
+    case 473: case 476: case 482: return &kNfcUi;   // 473 .. 482: one NFC protocol each, the same panel (nfc_engine.h: nfcViews)
     case 107: return &kCquamUi;
     case 142: return &kModeAcUi;
     case 98: return &kZwaveUi;

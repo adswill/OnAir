@@ -64,6 +64,7 @@
 #include "dect2/mscatter/mscatter_live.h"
 #include "dect2/mt63/mt63_rx.h"
 #include "dect2/ndb/ndb_rx.h"
+#include "dect2/nfc/nfc_engine.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
 #include "dect2/p25p2/p25p2_rx.h"
 #include "dect2/packet/packet_rx.h"
@@ -660,6 +661,12 @@ static bool set_144(Engine& e, const std::string& n, double v) {
     if (n == "setAlertSeconds") { call(r, &Rx<decltype(r)>::setAlertSeconds, v); return true; }
     return false;
 }
+static const char kOpt_149[] = R"JSON([{"n":"setProtoMask","k":"int","l":"Proto Mask","t":"s"}])JSON";
+static bool set_149(Engine& e, const std::string& n, double v) {
+    auto& r = e.nfc();
+    if (n == "setProtoMask") { call(r, &Rx<decltype(r)>::setProtoMask, v); return true; }
+    return false;
+}
 static const char kOpt_153[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the link follows the dial when the setting is automatic (0: unknown, a file: uplink)","u":"Hz","t":"s"},{"n":"setLink","k":"choice","c":[{"v":0,"l":"automatic"},{"v":1,"l":"uplink"},{"v":2,"l":"downlink"}],"l":"Link","h":"0 automatic, 1 uplink, 2 downlink","t":"s"}])JSON";
 static bool set_153(Engine& e, const std::string& n, double v) {
     auto& r = e.argos();
@@ -1038,6 +1045,24 @@ static const char kOpt_471[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask
 static bool set_471(Engine& e, const std::string& n, double v) {
     auto& r = e.wmbus();
     if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
+static const char kOpt_474[] = R"JSON([{"n":"setProtoMask","k":"int","l":"Proto Mask","t":"s"}])JSON";
+static bool set_474(Engine& e, const std::string& n, double v) {
+    auto& r = e.nfc();
+    if (n == "setProtoMask") { call(r, &Rx<decltype(r)>::setProtoMask, v); return true; }
+    return false;
+}
+static const char kOpt_477[] = R"JSON([{"n":"setProtoMask","k":"int","l":"Proto Mask","t":"s"}])JSON";
+static bool set_477(Engine& e, const std::string& n, double v) {
+    auto& r = e.nfc();
+    if (n == "setProtoMask") { call(r, &Rx<decltype(r)>::setProtoMask, v); return true; }
+    return false;
+}
+static const char kOpt_483[] = R"JSON([{"n":"setProtoMask","k":"int","l":"Proto Mask","t":"s"}])JSON";
+static bool set_483(Engine& e, const std::string& n, double v) {
+    auto& r = e.nfc();
+    if (n == "setProtoMask") { call(r, &Rx<decltype(r)>::setProtoMask, v); return true; }
     return false;
 }
 static const char kOpt_551[] = R"JSON([{"n":"setSystem","k":"int","l":"System","h":"before configure()","t":"s"},{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"0: the system's own","u":"dB","t":"s"}])JSON";
@@ -1719,6 +1744,7 @@ const OptEntry kOpt[] = {
     {142, kOpt_142, set_142},
     {143, kOpt_143, set_143},
     {144, kOpt_144, set_144},
+    {149, kOpt_149, set_149},
     {153, kOpt_153, set_153},
     {181, kOpt_181, set_181},
     {204, kOpt_204, set_204},
@@ -1761,6 +1787,9 @@ const OptEntry kOpt[] = {
     {457, kOpt_457, set_457},
     {468, kOpt_468, set_468},
     {471, kOpt_471, set_471},
+    {474, kOpt_474, set_474},
+    {477, kOpt_477, set_477},
+    {483, kOpt_483, set_483},
     {551, kOpt_551, set_551},
     {552, kOpt_552, set_552},
     {553, kOpt_553, set_553},

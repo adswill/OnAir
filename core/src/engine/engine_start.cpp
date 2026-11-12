@@ -628,6 +628,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxEloran_.configure(rate_);
     rxEloran_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxNfc_.configure(rate_);
+    { const NfcView* nv = nfcViewForActive(activeStdFor(stdMode_.load())); rxNfc_.setProtoMask(nv ? 1u << nv->proto : 0u); }   // an entry of one protocol lists that protocol only
     rxNfc_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxSbas_.configure(rate_);
     rxSbas_.setLogCallback([this](const std::string& s) { rxLog(s); });

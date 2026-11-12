@@ -788,3 +788,6 @@ Meters, Kamstrup
 Meters, Landis+Gyr
 Meters, Itron
 Meters, Sensus
+RFID, Type A
+RFID, Type B
+RFID, ISO 15693

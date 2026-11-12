@@ -1,6 +1,6 @@
 # Radiosonde, wireless M-Bus and satellite framing entries (4.0, branch feat40-modes4)
 
-Fifty-one more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
+Fifty-four more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
 No decoder was added or changed. The sensor-family entries of the same branch are in `SENSORVIEWS-4.0.md`.
 
 ## Radiosonde types (receiver `SondeReceiver`, `setKindMask`)
@@ -90,3 +90,12 @@ the tables of all four (GLONASS at 10 Msps, BeiDou at 1561.098 MHz) are checked;
 The engine tells the receiver the system and the colour system when the entry starts (`setStandard`); the Analog TV screen keeps them (`atv_ui.cpp` pushes the entry's standard instead of the user's hint), and the main screen's picture view works for the entries too (`draw_ui.cpp`). The default frequency is that of Analog TV (600 MHz).
 Test `tests/atv/test_atv_views.cpp`: the test signal of each standard (colour bars, 40 dB, 10 Msps, 8-bit samples, carrier error 0 and +-50 kHz) into a receiver told what the entry tells it: line and field lock, the standard named right, the lines and the field rate of the standard, the offset found, the decoded colour bars within 0.14 of the EBU bars.
 **Simulated signals only**; the behaviour of a forced standard on a signal of another standard is not tested.
+
+## NFC / RFID protocols (receiver `NfcReceiver`, `setProtoMask`)
+| Mode | Family | Active std | Engine std | Poll slot | Protocol |
+|---|---|---|---|---|---|
+| NFC: ISO 14443 Type A | 473 | 474 | 475 | 473 | Type A (Mifare, NTAG, phones) |
+| NFC: ISO 14443 Type B | 476 | 477 | 478 | 476 | Type B |
+| NFC: ISO 15693 | 482 | 483 | 484 | 482 | ISO 15693 vicinity cards |
+
+`telemetry()` keeps the frame log lines of the protocol, the tags of that type and the NDEF records of those tags, and recounts. Test `tests/nfc/test_nfc_views.cpp`: the three sessions of `nfc_gen` (4 Msps, 30 dB, carrier error 0 and +600 Hz) through a receiver without a view and one per view: each view lists exactly the frames and tags of its protocol that the receiver without a view lists, the view of the session's protocol is not empty, the others are empty; noise only: nothing. **Simulated signals only** (the sessions are fabricated examples).
