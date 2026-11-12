@@ -47,7 +47,20 @@ minus what the list and the lower content drew. Computed by `ovl::layout` and `o
 models of each group (tests/app/test_overview_layout.cpp prints the table; the numbers below are from the GitHub Linux runner). They are
 models of what the panels draw, not screenshots of each mode: screenshots of a few modes are still to do (the Mac was on battery).
 
-NUMBERS_TABLE
+| Group (1600 x 900 main area) | Modes | Empty 3.9 | Empty 4.0 | Spectrum pane 3.9 | Spectrum pane 4.0 |
+|---|---|---|---|---|---|
+| 1 no lower content, own list (CODAR, ACARS, AIS, ...) | 268 | 25 % | 0 % | 60 % | 79 % |
+| 2 no lower content, no list (CIS HF, cell, KAAL, ...) | 51 | 40 % | 0 % | 60 % | 100 % |
+| 3 square plot, own list (NOAA DSB, wxsat, ...) | 43 | 21 % | 2 % | 60 % | 79 % |
+| 3 the same while stopped (a two-line list) | | 36 % | 9 % | 60 % | 87 % |
+| 5 a few text lines below, own list (GOES GRB, ...) | 11 | 23 % | 1 % | 60 % | 79 % |
+| 6 full-width plots, own list (FT8 audio, DMR, ...) | 65 | 1 % | 1 % | 60 % | 60 % |
+| 6 a plot shorter than the row (a level history) | | 13 % | 1 % | 60 % | 70 % |
+| 9 the TV and broadcast modes | 11 | 1 % | 1 % | 60 % | 60 % |
+| any mode with no lower content while stopped (one status line) | | 40 % | 0 % | 60 % | 97 % |
+| **All 449 modes, weighted by count (running)** | 449 | **22 %** | **0.4 %** | **60 %** | **78 %** |
+
+The sweep of the same test (10080 window size and content cases) found no case still moving after 4 s.
 
 ### Group 1: no lower content, own list (288 modes)
 
