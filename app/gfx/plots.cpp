@@ -1307,7 +1307,7 @@ void specDisplayPopup(App& a) {
         if (ImGui::IsItemDeactivatedAfterEdit()) save = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How fast the max-hold line falls; 0: it stays until reset"));
         ImGui::SameLine(0, 8 * gUi);
-        if (ImGui::SmallButton(tr("Reset"))) { a.peak = a.smooth; a.minPk.clear(); }
+        if (ImGui::SmallButton(tr("Reset"))) { a.peak = a.smooth; a.minPk.clear(); a.zd.peak = a.zd.smooth; }
     }
     if (ImGui::Checkbox(tr("Min hold"), &a.minHold)) { a.minPk.clear(); save = true; }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The lowest level of each bin: the noise floor under the signals (it rises back at the max-hold fall rate)"));
@@ -1345,7 +1345,7 @@ void specDisplayPopup(App& a) {
         }
     }
     {
-        static const int kFft[] = {0, 4096, 8192, 16384, 32768, 65536, 131072, 262144};   // 262144: the cap (SpectrumAnalyzer::kMaxFft)
+        static const int kFft[] = {0, 4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288, 1048576};   // 1M: the cap (SpectrumAnalyzer::kMaxFft, 4.0)
         char cur[24]; if (a.specFft == 0) snprintf(cur, sizeof cur, "%s (%zu)", tr("Auto"), a.spec.dbfs.size()); else snprintf(cur, sizeof cur, "%d", a.specFft);
         ImGui::SetNextItemWidth(110 * gUi);
         if (ImGui::BeginCombo(tr("FFT size"), cur)) {
@@ -1355,7 +1355,47 @@ void specDisplayPopup(App& a) {
             }
             ImGui::EndCombo();
         }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Bins in the spectrum: more is finer but costs more CPU. Auto follows the sample rate. 128k and 256k are for zooming into narrow signals; they update slower and cost the most."));
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s", tr("Bins in the spectrum: more is finer but costs more CPU. Auto follows the sample rate. 128k and 256k are for zooming into narrow signals; they update slower and cost the most."),
+                                                      tr("512k and 1M update a few times a second. With the zoom FFT on (Resolution below) a zoomed-in view gets a bin per pixel anyway, at far less CPU."));
+    }
+    if (ImGui::TreeNode(tr("Resolution (advanced)"))) {   // 4.0: docs/WATERFALL-4.0.md
+        if (ImGui::Checkbox(tr("Zoom FFT"), &a.specZoomFft)) save = true;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoomed in, the visible part of the band gets its own transform (mixed down and decimated), so the spectrum and the waterfall have at least one real bin per screen pixel. On by default; it runs only while the full-band bins are coarser than the pixels."));
+        if (a.specZoomFft) {
+            static const int kZb[] = {4096, 16384, 65536, 262144, 1048576};
+            char cur[24]; snprintf(cur, sizeof cur, "%d", a.specZoomMaxBins);
+            ImGui::SetNextItemWidth(110 * gUi);
+            if (ImGui::BeginCombo(tr("Zoom FFT bins at most"), cur)) {
+                for (int v : kZb) { char lb[16]; snprintf(lb, sizeof lb, "%d", v); if (ImGui::Selectable(lb, a.specZoomMaxBins == v)) { a.specZoomMaxBins = v; save = true; } }
+                ImGui::EndCombo();
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The zoom transform asks for about four bins per pixel of the view at most this many. Lower saves CPU on very wide windows."));
+            const zoomfft::Plan zp = a.engine.spectrumZoomPlan();
+            if (zp.on) ImGui::TextDisabled(tr("Zoom FFT: decimated by %d to %.4g kHz, %zu bins of %.3g Hz"), zp.decim, zp.rateHz / 1e3, zp.bins, zp.binHz);
+            else ImGui::TextDisabled("%s", tr("Zoom FFT: idle (the full-band bins are fine enough for this view)"));
+        }
+        ImGui::SetNextItemWidth(150 * gUi);
+        if (ImGui::BeginCombo(tr("Window"), tr(specwin::name(a.specWindow)))) {
+            for (int t = 0; t < specwin::NumTypes; t++) if (ImGui::Selectable(tr(specwin::name(t)), a.specWindow == t)) { a.specWindow = t; save = true; }
+            ImGui::EndCombo();
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The window of the display transforms. Hann: the usual. Blackman-Harris and Nuttall: less leakage beside strong signals, slightly wider bins. Flat top: true levels of tones, wide bins. Rectangular: the narrowest bins, the most leakage."));
+        {
+            static const float kOv[] = {-1.f, 0.f, 0.5f, 0.75f, 0.875f};
+            static const char* kOvN[] = {N_("Auto"), "0 %", "50 %", "75 %", "87.5 %"};
+            int cur = 0; for (int i = 0; i < 5; i++) if (std::fabs(a.specOverlap - kOv[i]) < 1e-4f) cur = i;
+            ImGui::SetNextItemWidth(110 * gUi);
+            if (ImGui::BeginCombo(tr("Overlap"), cur == 0 ? tr(kOvN[0]) : kOvN[cur])) {
+                for (int i = 0; i < 5; i++) if (ImGui::Selectable(i == 0 ? tr(kOvN[i]) : kOvN[i], cur == i)) { a.specOverlap = kOv[i]; save = true; }
+                ImGui::EndCombo();
+            }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How much long transforms share with the one before. Auto keeps about 30 rows a second and limits 512k and 1M to 3/4. Less overlap: fewer rows a second and less CPU."));
+        }
+        if (ImGui::Checkbox(tr("Resolution readout"), &a.specResReadout)) save = true;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Hz per bin of the lines drawn and Hz per pixel of the view, at the bottom right of the spectrum"));
+        if (ImGui::Checkbox(tr("Soft zoom (the look before 4.0)"), &a.wfSoft)) save = true;
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoomed in, the waterfall is stretched and its levels blended between bins, and the trace curves between bins. Off: sharp steps, a texel per pixel."));
+        ImGui::TreePop();
     }
     if (ImGui::Checkbox(tr("Grid"), &a.specGrid)) save = true;
     ImGui::Separator();
@@ -1754,9 +1794,21 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
             const int lookPx = std::max(1, std::min(4096, (int)(plotSize.x * std::max(1.f, std::min(2.f, ImGui::GetIO().DisplayFramebufferScale.x)))));
             gBinsPerPx = std::max(1.0, (double)nb * ((vis.X.Max - vis.X.Min) / std::max(1e-9, fsMhz)) / lookPx);   // for the trace average (ingestSpectrum)
             const int passes = a.specSmoothTrace >= 0 ? a.specSmoothTrace : L.smoothPasses;
+            // 4.0 (docs/WATERFALL-4.0.md): the view asks for the zoom spectrum; where it covers the view, the lines come from its real bins
+            // (a bin per pixel or finer). Between bins sparser than pixels the line is straight (the old soft look: a cubic curve)
+            a.zd.request(vis.X.Min, vis.X.Max, rc, lookPx, glfwGetTime());
+            const bool useZ = a.specZoomFft && a.zd.fresh(glfwGetTime()) && a.zd.covers(vis.X.Min, vis.X.Max);
+            const int interp = a.wfSoft ? L.interp : slook::InterpLinear;
+            auto traceAt = [&](const std::vector<float>& y, double tx0, double tdx, bool useMin, int smooth) {
+                if (!look) { plt::envelope(y, tx0, tdx, vis.X.Min, vis.X.Max, wpx, ex, ey); return; }
+                spaint::traceXY(y.data(), y.size(), tx0, tdx, vis, lookPx, interp, useMin, smooth, ex, ey);
+            };
             auto traceLine = [&](const std::vector<float>& y, bool useMin, int smooth) {
-                if (!look) { plt::envelope(y, x0, dx, vis.X.Min, vis.X.Max, wpx, ex, ey); return; }
-                spaint::traceXY(y.data(), y.size(), x0, dx, vis, lookPx, L.interp, useMin, smooth, ex, ey);
+                if (useZ && (&y == &a.smooth || &y == &a.peak || &y == &a.spec.dbfs)) {   // the zoom lines in place of the full-band ones
+                    const std::vector<float>& z = &y == &a.smooth ? a.zd.smooth : &y == &a.peak ? a.zd.peak : a.zd.view;
+                    if (z.size() == a.zd.plan.bins) { traceAt(z, a.zd.x0Mhz(), a.zd.dxMhz(), useMin, smooth); return; }
+                }
+                traceAt(y, x0, dx, useMin, smooth);
             };
             ImVec4 holdC = lightBg ? ImVec4(0.45f, 0.46f, 0.48f, 0.8f) : ImVec4(0.55f, 0.56f, 0.58f, 0.8f);   // grey hold lines
             if (a.holdColor >= 0) { const float* hc = cmap::traceRgb(a.holdColor, lightBg); holdC = ImVec4(hc[0], hc[1], hc[2], 0.75f); }
@@ -1801,6 +1853,20 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
                     const float lx = pp.x + ps.x - ts.x - 8 * gUi;
                     dl->AddRectFilled(ImVec2(lx - 3 * gUi, y - ts.y - 3 * gUi), ImVec2(lx + ts.x + 3 * gUi, y - 1), IM_COL32(0, 0, 0, 140), 2 * gUi);
                     dl->AddText(ImVec2(lx, y - ts.y - 2 * gUi), c, lb);
+                }
+            }
+            if (a.specResReadout) {   // the resolution: Hz per bin of the lines drawn (and Hz per pixel), bottom right above the frequency labels
+                const double binHz = useZ ? a.zd.plan.binHz : fsMhz * 1e6 / (double)nb, pxHz = (vis.X.Max - vis.X.Min) * 1e6 / std::max(1, lookPx);
+                auto hz = [](double v, char* b, size_t n) { if (v >= 1e3) snprintf(b, n, "%.3g kHz", v / 1e3); else snprintf(b, n, "%.3g Hz", v); };
+                char hb[24], pb[24], lb[96];
+                hz(binHz, hb, sizeof hb); hz(pxHz, pb, sizeof pb);
+                snprintf(lb, sizeof lb, "%s %s/%s  %s/px%s", tr("RBW"), hb, tr("bin"), pb, useZ ? tr("  zoom FFT") : "");
+                const ImVec2 pp = plt::GetPlotPos(), ps = plt::GetPlotSize(), ts = ImGui::CalcTextSize(lb);
+                const float lx = pp.x + ps.x - ts.x - 8 * gUi, ly = pp.y + ps.y - ts.y - ImGui::GetFontSize() * 1.9f;
+                if (ly > pp.y + ImGui::GetFontSize() * 2.5f) {
+                    ImDrawList* dl = ImGui::GetWindowDrawList();
+                    dl->AddRectFilled(ImVec2(lx - 3 * gUi, ly - 1), ImVec2(lx + ts.x + 3 * gUi, ly + ts.y + 1), IM_COL32(0, 0, 0, 110), 2 * gUi);
+                    dl->AddText(ImVec2(lx, ly), ImGui::GetColorU32(ImGuiCol_Text, 0.62f), lb);
                 }
             }
             if (a.specPeaks && ex.size() >= 8) {   // the strongest peaks in view, at least 6% of the view apart, and 12 dB over the mean level
@@ -2047,9 +2113,18 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
         bool full = false;
         static std::vector<int> dirty;
         plt::WfView& v = a.wf.view;
-        v.mode = (look && curLook(a).wfSmooth ? plt::WfView::Smooth : 0) | (a.wfLowPass ? plt::WfView::LowPass : 0);
-        if (a.wf.viewImg && a.wf.view.update(a.wf.lv.data(), W, H, a.wf.writeRow, a.wf.rows - 1, a.wf.filled, a.wf.lut, a.wf.lutGen,
-                                              c0, c1, std::max(1, std::min(texW - 1, (int)(psz.x * std::max(1.f, fbs.x)))), k, full, dirty)) {
+        v.mode = (a.wfSoft && look && curLook(a).wfSmooth ? plt::WfView::Smooth : 0) | (a.wfLowPass ? plt::WfView::LowPass : 0);
+        const int pxCols = std::max(1, std::min(texW - 1, (int)std::lround(psz.x * std::max(1.f, fbs.x))));
+        bool changed;
+        if (a.wfSoft) changed = a.wf.viewImg && v.update(a.wf.lv.data(), W, H, a.wf.writeRow, a.wf.rows - 1, a.wf.filled, a.wf.lut, a.wf.lutGen, c0, c1, pxCols, k, full, dirty);
+        else {   // 4.0: a texel per framebuffer pixel over exactly the view, rows from the zoom history where it has them (wf_view.h, zoom_detail.h)
+            plt::WfSrc mainSrc; mainSrc.lv = a.wf.lv.data(); mainSrc.W = W; mainSrc.lo = x0; mainSrc.hi = x1;
+            const plt::WfSrc det = a.zd.src();
+            changed = a.wf.viewImg && a.wf.lv.size() == (size_t)W * H &&
+                      v.updateExact(mainSrc, a.specZoomFft && det.lv ? &det : nullptr, H, a.wf.writeRow, a.wf.rows - 1, a.wf.filled, a.wf.lut, a.wf.lutGen,
+                                    vis.X.Min, vis.X.Max, pxCols, k, full, dirty);
+        }
+        if (changed) {
             if (full) a.wf.viewImg->update(0, 0, v.stride, v.rowsAlloc, v.px.data());
             else for (int r : dirty) a.wf.viewImg->update(0, r, v.stride, 1, v.px.data() + (size_t)r * v.stride);
         }
