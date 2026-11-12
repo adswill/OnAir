@@ -10,6 +10,9 @@ on:
         description: "also re-check the .deb with the Depends rewritten by tools/package/fix_deb_depends.sh"
         type: boolean
         default: true
+  push:   # also on pushes of the branch that changes it (a new workflow cannot be dispatched before it is on the default branch)
+    branches: [ feat40-mint ]
+    paths: [ ".github/workflows/linux-distros.yml", "tools/package/fix_deb_depends.sh" ]
 
 permissions: { contents: read }
 
@@ -23,7 +26,7 @@ jobs:
       matrix:
         image: [ "linuxmintd/mint23-amd64", "linuxmintd/mint22.3-amd64", "ubuntu:26.04", "ubuntu:24.04", "ubuntu:22.04", "debian:13" ]
     env:
-      V: ${{ inputs.version }}
+      V: ${{ inputs.version || '3.9.0' }}
       DEBIAN_FRONTEND: noninteractive
     steps:
       - name: System
@@ -61,7 +64,7 @@ jobs:
           timeout 180 xvfb-run -a -s "-screen 0 1280x800x24" onair --hidden --mute --no-first-run --shot /tmp/deb.png 2>&1 | tail -30
           test "$(stat -c %s /tmp/deb.png)" -gt 10000 && echo "DEB START OK"
       - name: Rewrite the Depends (fix_deb_depends.sh) and install that
-        if: inputs.local_deb && steps.deb.outcome != 'success' && hashFiles('tools/package/fix_deb_depends.sh') != ''
+        if: (github.event_name == 'push' || inputs.local_deb) && steps.deb.outcome != 'success' && hashFiles('tools/package/fix_deb_depends.sh') != ''
         continue-on-error: true
         run: |
           set -o pipefail
