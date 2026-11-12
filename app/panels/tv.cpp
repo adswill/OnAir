@@ -573,6 +573,9 @@ void rightPanel(App& a) {
         if (!a.engine.running() && a.rx.standard > 0) ImGui::TextDisabled(tr("stopped - showing saved results"));
         mu->list(a); return;
     }
+    // a mode with no list of its own that makes no transport stream (CIS HF, the cell modes, KAAL ...): nothing here, rather than the TV
+    // modes' clock and an empty service list (the sidebar layout then gives the spectrum the width: docs/LAYOUT-4.0.md)
+    if (const ModeUi* mu = modeUi(a.family)) if (!mu->list && !mu->stream && a.fitPanels && a.newUi && a.uiVariant == 0 && !a.layoutUnified && !a.touchUi && !a.dockOn) return;
     const bool run = a.engine.running();
     ImDrawList* dl = ImGui::GetWindowDrawList();
     // ---- clock: broadcast time (TDT) when the stream has one, otherwise this computer's clock

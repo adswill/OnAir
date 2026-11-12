@@ -242,12 +242,15 @@ int main() {
     {
         struct G { const char* name; Model r, b; };
         const G groups[] = {
-            {"A no lower content, short list (CODAR stopped)", M(Model::Lines, 2), M(Model::Empty)},
-            {"B no lower content, full list (CODAR, ACARS, ADS-B list)", M(Model::Table), M(Model::Empty)},
-            {"C small plot, short list (NOAA DSB, wxsat)", M(Model::Lines, 2), M(Model::Square, 17)},
-            {"D small plot, full list", M(Model::Table), M(Model::Fixed, 150, 150)},
-            {"E short full-width row (level history)", M(Model::Table), M(Model::FillW, 0, 90)},
-            {"F full lower row (DVB-T, DAB, FM, ATSC)", M(Model::Table), M(Model::Fill)},
+            {"1 no lower content, own list (CODAR, ACARS, AIS, FT8 ...)", M(Model::Table), M(Model::Empty)},
+            {"2 no lower content, no list (CIS HF, cell, KAAL ...)", M(Model::Empty), M(Model::Empty)},
+            {"3 square plot, own list (NOAA DSB, wxsat, PSK sats)", M(Model::Table), M(Model::Square, 17)},
+            {"4 square plot, short list (the same, stopped)", M(Model::Lines, 2), M(Model::Square, 17)},
+            {"5 a few text lines below, own list (GOES GRB ...)", M(Model::Table), M(Model::Lines, 4)},
+            {"6 full-width plots, own list (FT8 audio, DMR ...)", M(Model::Table), M(Model::Fill)},
+            {"7 short full-width row (a level history)", M(Model::Table), M(Model::FillW, 0, 90)},
+            {"8 no lower content, one status line (stopped)", M(Model::Lines, 1), M(Model::Empty)},
+            {"9 the TV modes (DVB-T, DAB, FM, ATSC)", M(Model::Table), M(Model::Fill)},
         };
         std::printf("%-58s %10s %10s %10s %10s\n", "group (1600 x 900)", "empty 3.9", "empty 4.0", "spec 3.9", "spec 4.0");
         for (const G& g : groups) {
