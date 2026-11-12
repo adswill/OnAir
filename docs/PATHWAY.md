@@ -1991,3 +1991,8 @@ the looks. Dev page: --previewgallery. Details: docs/UI-PREVIEW-4.0.md.
 - Sequencer: RR73 sent once then CQ (RRR still waits for 73), a repeated R-report gets RR73 again (logged once), repeats reset the retry count, caller priority by need, CQ modifiers; Q65, FST4, MSK144 in the slot modes.
 - UI: header (frequency, S-meter, band plan hint), band bar with memory for every mode, More modes list, Cluster and Activate tabs, callbook line and split in the QSO panel, log tools, band hopping, CW speed matching, wizard country / position / antennas / callbook.
 - Tests ham_seq, ham_station, ham_spots, ham_callbook, ham_needed, ham_logtools, ham_net (simulated data; no service contacted). docs/HAM-4.0.md.
+
+## 2026-11-12 (night): propagation calculator rebuilt on ITU-R models (feat40-prop)
+- VHF and up: ITU-R P.1812-8 (time and location percentages, ducting, troposcatter, delta-Bullington) as the Auto model, matching all 21 x 3 ITU-R SG3 validation results; P.676-13 gases, full P.838-3 rain, P.530 / P.618 rain, P.453 k-factor.
+- HF: P.533-14 with the P.1239-4 CCIR maps, E and F2 modes, long-path method, P.842 reliability, an hour x band chart. Satellite links (look angles, Doppler, P.618 budget). "Will it decode?" from the measured mode thresholds.
+- Screens: Profile with the Fresnel zone, HF hours x bands, Satellite, loss by model; opt-in SRTM tile download. Details and what was validated: docs/PROPAGATION-4.0.md.

@@ -111,7 +111,7 @@ int main() {
         CHECK(b.rating == 0 && b.atRx.find("short") != std::string::npos);
         bool horizon = false;
         for (const auto& t : b.reasons) horizon |= t.find("horizon") != std::string::npos;
-        CHECK(horizon || far.model == Model::Troposcatter);
+        CHECK(horizon || far.model == Model::Troposcatter || far.model == Model::Ducting);
         Params dead = p; dead.txPowerDbw = -150;
         const Verdict c = verdict(dead, findRange(dead), nullptr, nullptr);
         CHECK(c.headline.find("not be heard") != std::string::npos);
@@ -168,7 +168,7 @@ int main() {
         CHECK(c.y.front() > c.y.back());   // the same antennas reach farther on the lower frequency
         CHECK(seriesCsv({a, b}).find("distance (km)") != std::string::npos);
         Scenario h; applyPreset(h, presetIndex("Ham 40 m SSB"));
-        h.useNow = false; h.month = 6; h.day = 21;
+        h.useNow = false; h.month = 12; h.day = 21;   // winter: a strong day / night MUF swing (in summer the CCIR maps give a small one, as real ionograms do)
         const HfDay d = hfDay(toParams(h), 1000, 90);
         CHECK(d.hour.size() == 49 && d.hour.back() == 24);
         double mx = 0, mn = 1e9;

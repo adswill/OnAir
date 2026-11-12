@@ -7,6 +7,7 @@
 #include <cstdio>
 #include <cstring>
 #include "dect2/common/u8file.h"
+#include "dect2/common/inflate.h"
 
 
 namespace dect2::prop {
@@ -243,7 +244,20 @@ bool loadElevationFile(const std::string& path, Terrain& terr, std::string& err)
     ElevTile t;
     const std::string n = lower(baseName(path));
     bool ok;
-    if (n.size() > 4 && n.substr(n.size() - 4) == ".hgt") ok = parseHgt(n, b, t, err);
+    if (n.size() > 7 && n.substr(n.size() - 7) == ".hgt.gz") {
+        // 4.0: a downloaded tile (demTileUrl): gzip, 1 arc-second; kept at 3 arc-seconds (90 m) to save memory (P.1812 needs no finer)
+        std::vector<uint8_t> raw;
+        if (!gunzip(b.data(), b.size(), raw, (size_t)64 << 20)) { err = "not a valid .gz file (an interrupted download? delete it and try again)"; return false; }
+        ok = parseHgt(n.substr(0, n.size() - 3), raw, t, err);
+        if (ok && t.w == 3601 && t.h == 3601) {
+            ElevTile s;
+            s.latTop = t.latTop; s.lonLeft = t.lonLeft; s.dLat = t.dLat * 3; s.dLon = t.dLon * 3; s.w = s.h = 1201;
+            s.z.resize((size_t)1201 * 1201);
+            for (int r = 0; r < 1201; r++)
+                for (int c = 0; c < 1201; c++) s.z[(size_t)r * 1201 + c] = t.z[(size_t)(3 * r) * 3601 + 3 * c];
+            t = std::move(s);
+        }
+    } else if (n.size() > 4 && n.substr(n.size() - 4) == ".hgt") ok = parseHgt(n, b, t, err);
     else if (b.size() >= 4 && ((b[0] == 'I' && b[1] == 'I') || (b[0] == 'M' && b[1] == 'M'))) ok = parseGeoTiff(b, t, err);
     else { err = "not an .hgt or GeoTIFF (.tif) file"; return false; }
     if (!ok) return false;
@@ -252,6 +266,37 @@ bool loadElevationFile(const std::string& path, Terrain& terr, std::string& err)
         if (e.name == t.name) { e = std::move(t); return true; }   // the same file again: replace it
     terr.tiles.push_back(std::move(t));
     return true;
+}
+
+std::string demTileName(int la, int lo) {
+    char b[16];
+    std::snprintf(b, sizeof b, "%c%02d%c%03d", la >= 0 ? 'N' : 'S', std::abs(la), lo >= 0 ? 'E' : 'W', std::abs(lo));
+    return b;
+}
+
+std::string demTileUrl(int la, int lo) {
+    const std::string n = demTileName(la, lo);
+    return "https://s3.amazonaws.com/elevation-tiles-prod/skadi/" + n.substr(0, 3) + "/" + n + ".hgt.gz";
+}
+
+std::vector<std::pair<int, int>> demTilesFor(double lat, double lon, double radiusKm, double lat2, double lon2, int maxTiles) {
+    std::vector<std::pair<int, int>> v;
+    auto add = [&](double la, double lo) {
+        if (!std::isfinite(la) || !std::isfinite(lo) || std::fabs(la) >= 60) return;   // SRTM covers 60 S .. 60 N
+        lo = std::fmod(lo + 540.0, 360.0) - 180.0;
+        const std::pair<int, int> k{(int)std::floor(la), (int)std::floor(lo)};
+        if ((int)v.size() < maxTiles && std::find(v.begin(), v.end(), k) == v.end()) v.push_back(k);
+    };
+    add(lat, lon);
+    const double dla = radiusKm / 111.0, dlo = radiusKm / (111.0 * std::max(std::cos(lat * 3.14159265358979 / 180), 0.05));
+    for (int i = -1; i <= 1; i++)
+        for (int j = -1; j <= 1; j++) add(lat + i * dla, lon + j * dlo);
+    if (std::isfinite(lat2) && std::isfinite(lon2)) {
+        const double D = greatCircleKm(lat, lon, lat2, lon2), b = bearingDeg(lat, lon, lat2, lon2);
+        for (double x = 0; x <= D; x += 20) { double la, lo; destination(lat, lon, b, x, la, lo); add(la, lo); }
+        add(lat2, lon2);
+    }
+    return v;
 }
 
 Profile pathProfile(const Terrain& t, double lat1, double lon1, double lat2, double lon2, int samples) {

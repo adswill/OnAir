@@ -1,5 +1,9 @@
 # Propagation (Tools > Propagation)
 
+**4.0:** the models were rebuilt on the ITU-R recommendations (P.1812-8, P.533-14 / P.1239-4, P.676-13, P.838-3, P.618-14) with
+validation against the ITU test data; see [PROPAGATION-4.0.md](PROPAGATION-4.0.md). The sections below describe the 3.9 models, which
+stay selectable ("the 3.9 model", "use the 3.9 estimate").
+
 Where can a transmitter be heard? The window has two modes, chosen by the toggle at the top.
 
 **Simple**: put the transmitter on the map (a button arms the next click, or use your location, or type a position or locator), pick what it is
