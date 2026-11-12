@@ -1,6 +1,7 @@
 // The transmit panel's pieces for other screens (tx_api.h): thin wrappers over the panel's own state and drawers.
 #include "tx_api.h"
 #include "tx_state.h"
+#include <cstdio>
 
 using namespace txui;
 
