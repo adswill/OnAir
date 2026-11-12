@@ -1,0 +1,25 @@
+{
+  // OnAir plugin marketplace Worker. Nothing in this repository deploys it: the owner follows README.md in this folder once.
+  // No account id, database id secret, token or key is in this file. The D1 id below is not a secret but differs per account: paste the one
+  // `wrangler d1 create onair-plugins` prints.
+  "name": "onair-plugins",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-05-03",
+  "d1_databases": [
+    { "binding": "DB", "database_name": "onair-plugins", "database_id": "REPLACE-WITH-D1-ID" }
+  ],
+  "r2_buckets": [
+    { "binding": "FILES", "bucket_name": "onair-plugins" }
+  ],
+  "vars": {
+    "PUBLIC_URL": "https://plugins.on-air.dev",
+    "FILES_BASE_URL": "",               // empty: packages are served by this Worker at /files/... (a pulled plugin stops at once)
+    "GITHUB_CLIENT_ID": "",             // the OAuth app's Client ID (public, not a secret)
+    "OWNER_LOGINS": "adswill",          // may publish plugin ids that start with "onair"
+    "MAX_PACKAGE_BYTES": "26214400"     // 25 MiB
+  },
+  // secrets, never in a file: wrangler secret put SIGNING_KEY | SESSION_SECRET | HASH_SALT | ADMIN_TOKEN
+  "triggers": { "crons": ["23 * * * *"] },
+  "routes": [{ "pattern": "plugins.on-air.dev", "custom_domain": true }],
+  "observability": { "enabled": true }
+}

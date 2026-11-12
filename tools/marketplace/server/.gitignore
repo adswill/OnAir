@@ -1,0 +1,6 @@
+# the repository root ignores *.ts (MPEG transport stream captures); TypeScript sources here are code
+!*.ts
+node_modules/
+dist-test/
+.wrangler/
+.dev.vars
