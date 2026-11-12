@@ -58,7 +58,7 @@ int main() {
         std::vector<Burst> q;
         for (int i = 0; i < 6; i++) q.push_back(ppm(24, 300, 500, 1000, j));
         r = run(q);
-        if (r.clusters.size() != 2 || r.guess != "PPM") { std::printf("ppm j=%.2f clusters=%zu guess=%s\n", j, r.clusters.size(), r.guess.c_str()); for (const Cluster& c : r.clusters) std::printf("  %s\n", clusterText(c).c_str()); }
+        if (r.clusters.size() != 2 || r.guess != "PPM") { std::printf("ppm j=%.2f clusters=%zu guess=%s pts=%d comps=%d spread=%.3f\n", j, r.clusters.size(), r.guess.c_str(), r.points, r.components, r.worstSpread); for (const Cluster& c : r.clusters) std::printf("  %s\n", clusterText(c).c_str()); }
         check(r.clusters.size() == 2, "ppm: two clusters");
         check(r.guess == "PPM", "ppm: guess");
         if (r.clusters.size() == 2) check(near2(r.clusters[0].onUs, 300, 0.1f) && near2(r.clusters[0].offUs + r.clusters[1].offUs, 1500, 0.15f), "ppm centres");

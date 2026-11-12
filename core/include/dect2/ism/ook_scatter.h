@@ -25,6 +25,8 @@ struct Result {
     std::vector<int> label;
     std::string guess = "unknown";
     int points = 0;
+    int components = 0;
+    float worstSpread = 0;
 };
 
 constexpr size_t kMaxPoints = 3000;
@@ -152,6 +154,7 @@ inline Result analyse(const std::vector<Pair>& p, float eps = 0.2f, int minPts =
         }
         nc++;
     }
+    r.components = nc;
     const int minSize = std::max(6, n / 20);
     for (int k = 0; k < nc; k++) {
         std::vector<float> on, off;
@@ -161,6 +164,7 @@ inline Result analyse(const std::vector<Pair>& p, float eps = 0.2f, int minPts =
         c.n = (int)on.size();
         c.onUs = detail::median(on); c.offUs = detail::median(off);
         c.onJitter = detail::spread(on, c.onUs); c.offJitter = detail::spread(off, c.offUs);
+        r.worstSpread = std::max(r.worstSpread, std::max(c.onJitter, c.offJitter));
         if (c.onJitter > 0.2f || c.offJitter > 0.2f) continue;
         const int id = (int)r.clusters.size();
         for (int i = 0; i < n; i++) if (comp[(size_t)i] == k) r.label[(size_t)i] = id;
