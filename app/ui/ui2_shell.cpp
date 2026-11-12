@@ -635,6 +635,8 @@ static void viewMenu(App& a) {
             if (ImGui::MenuItem(tr("Classic"), "Ctrl+Shift+L", !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
             if (ImGui::MenuItem(tr("Unified"), "Ctrl+Shift+L", a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new layout: the spectrum and waterfall stay on screen above the decoded views"));
+            if (ImGui::MenuItem(tr("Fit panels to their content"), nullptr, &a.fitPanels)) savePrefs(a);   // ui/overview_layout.h, docs/LAYOUT-4.0.md
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The list on the right and the lower row take only the room they need: an empty row is hidden, a small plot moves beside the list, a list of a line or two becomes a strip over the spectrum. Off: the fixed sizes."));
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
@@ -712,7 +714,7 @@ static void viewMenu(App& a) {
             if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode"));
             if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
-                a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; savePrefs(a); }
+                a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; a.panelSizes.clear(); savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Forgets the saved window positions of every mode and the sizes of the panels"));
             if (ImGui::MenuItem(tr("Reset spectrum"))) resetSpectrum(a);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Put the panels back to their automatic sizes (drag the bars between panels to resize them)"));

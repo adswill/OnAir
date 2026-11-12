@@ -9,6 +9,8 @@
 
 using namespace ui2;
 
+#include "overview_layout_ui.inc"   // fittedArea(): the main area with the panels sized to their content
+
 namespace ui2 {
 
 // ---------------------------------------------------------------- variant 0: sidebar (the parent)
@@ -70,6 +72,7 @@ void bodyParent(App& a, float bodyH, ImVec2 disp) {
     // the analysis row gives up height (down to 150) before the tabs above it go below 240; the list on the right narrows with the window
     const float availH = ImGui::GetContentRegionAvail().y;
     const bool uni = a.layoutUnified && !tx && !a.atsc3Mode;   // Unified: nothing in the central area stays empty (docs/UI-LAYOUT.md)
+    if (!uni) { fittedArea(a, tx); ImGui::PopStyleVar(); ImGui::EndChild(); return; }   // the spectrum, the list and the lower row (docs/LAYOUT-4.0.md)
     ImGuiStorage* stg = ImGui::GetStateStorage();
     const ImGuiID kRightEmpty = ImGui::GetID("##uniRightEmpty"), kAnaFold = ImGui::GetID("##uniAnaFold");
     const bool running = a.engine.running();
