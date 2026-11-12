@@ -76,7 +76,7 @@ inline void trace(const std::vector<double>& ex, const std::vector<double>& ey, 
 // history columns, R the newest row's number, frac the part of a row due since it came (the picture slides down by it).
 inline void wfImage(const plt::WfView& v, ImTextureID tex, int texW, int H, double x0, double x1, int W, long long rows, double frac) {
     if (v.cols <= 0 || rows <= 0) return;
-    const double vx0 = x0 + (x1 - x0) * v.c0 / W, vx1 = x0 + (x1 - x0) * v.c1 / W;
+    const double vx0 = v.exact ? v.vLo : x0 + (x1 - x0) * v.c0 / W, vx1 = v.exact ? v.vHi : x0 + (x1 - x0) * v.c1 / W;   // exact: the view is the pixels
     const float u1 = (float)v.cols / texW;
     const long long R = rows - 1, gN = R / v.k;
     const int w = v.rowOf(gN);

@@ -8,6 +8,7 @@
 #include "dect2/common/verbose_log.h"
 #include "../clips/clips_ui.h"
 #include "../gfx/file_vfo.h"
+#include "../platform/power.h"
 #include <cmath>
 #include <cstring>
 #include "dect2/source/usb_diag.h"
@@ -463,6 +464,11 @@ static void verboseFrameLog(App& a) {
 static void syncSpectrumEngine(App& a) {
     verboseFrameLog(a);
     if (a.engine.spectrumFft() != a.specFft) a.engine.setSpectrumFft(a.specFft);
+    if (a.engine.spectrumWindow() != a.specWindow) a.engine.setSpectrumWindow(a.specWindow);   // 4.0: the display window and overlap
+    {
+        static float ov = -2.f; static const Engine* ow = nullptr;
+        if (ov != a.specOverlap || ow != &a.engine) { ov = a.specOverlap; ow = &a.engine; a.engine.setSpectrumOverlap(a.specOverlap); }
+    }
     static bool on = false; static float thr = 0, wid = 0; static const Engine* who = nullptr;
     if (who != &a.engine || on != a.nbOn || thr != a.nbThr || wid != a.nbWidthUs) {
         who = &a.engine; on = a.nbOn; thr = a.nbThr; wid = a.nbWidthUs;
@@ -505,6 +511,25 @@ static void fastRowsIngest(App& a) {
     (void)dt;
 }
 
+// The zoom spectrum (4.0, docs/WATERFALL-4.0.md): the view the plots asked for goes to the engine (which runs a zoom transform only when the
+// full-band bins are coarser than the pixels), its newest frame into the zoom trace lines (gfx/zoom_detail.h), and its colour range.
+static void zoomIngest(App& a, double now, float dt) {
+    // not while the window is minimised or covered (no one sees it: the transform's CPU is saved)
+    const bool unseen = gWindow && (glfwGetWindowAttrib(gWindow, GLFW_ICONIFIED) || ::power::windowOccluded(gWindow));
+    const bool want = a.specZoomFft && a.zd.wanted(now) && a.engine.running() && !unseen;
+    if (want) a.engine.setSpectrumZoom(a.zd.reqOffHz, a.zd.reqSpanHz, a.zd.reqPx, (size_t)std::max(512, a.specZoomMaxBins));
+    else a.engine.setSpectrumZoom(0, 0, 0);
+    if (!want || !a.engine.spectrumZoomPlan().on) { a.zd.off(); return; }
+    static ZoomFrame f;
+    if (!a.engine.latestZoomSpectrum(f, a.zd.lastSeq)) return;
+    const float off = a.specPerHz ? spipe::perHzOffset(f.plan.rateHz, f.plan.bins) : 0.f;
+    const double bpp = a.zd.reqPx > 0 && f.plan.binHz > 0 ? a.zd.reqSpanHz / a.zd.reqPx / f.plan.binHz : 1.0;   // bins per pixel column
+    const double rc = radioCenterMhz(a);
+    a.zd.take(f, rc, off, now, spipe::alphaFor(dt, spipe::traceTau(a.specAvgSec, bpp)), spipe::alphaFor(dt, a.wf.rowTau), a.holdDecay * dt, Waterfall::H);
+    const double lo = rc + (a.zd.reqOffHz - a.zd.reqSpanHz * 0.5) / 1e6, hi = lo + a.zd.reqSpanHz / 1e6;
+    a.zd.fitRange(a.wf.autoTrack, a.wf.minDb, a.wf.maxDb, a.wf.autoBelow, a.wf.autoSpan, lo, hi, now);
+}
+
 void ingestSpectrum(App& a) {
     syncSpectrumEngine(a);
     ghostTick(a);
@@ -520,7 +545,11 @@ void ingestSpectrum(App& a) {
         slook::demoSpectrum(a.spec.dbfs, 8192, radioCenterMhz(a), fsMhz, t, (uint32_t)(a.lastSeq + 1));
         a.spec.seq = a.lastSeq + 1;
     } else
-    if (!a.engine.latestSpectrum(a.spec, a.lastSeq)) { fastRowsIngest(a); return; }   // straight into the kept frame: no copy that allocates, 30 times a second
+    if (!a.engine.latestSpectrum(a.spec, a.lastSeq)) {   // straight into the kept frame: no copy that allocates, 30 times a second
+        fastRowsIngest(a);
+        a.zd.sync(a.wf.rows, a.wf.writeRow, a.wf.histC, false, glfwGetTime());   // rows written here have no zoom row
+        return;
+    }
     const SpectrumFrame& f = a.spec;
     const uint64_t prevSeq = a.lastSeq;
     a.lastSeq = f.seq;
@@ -565,6 +594,8 @@ void ingestSpectrum(App& a) {
         for (int i = 1; i <= k; i++) a.wf.stamp(t0 + (now - t0) * i / k);
         wfExportRow(a, now);
     }
+    zoomIngest(a, now, dt);
+    a.zd.sync(a.wf.rows, a.wf.writeRow, a.wf.histC, !a.wf.fast(), now);   // the zoom rows beside the rows just written
     roomsFeedRow(a.specView, a.wf.minDb, a.wf.maxDb);   // Live rooms (a flag check when not live)
     clipsui::feed(f.dbfs);   // radio clips: the retroactive history
     if (a.wf.autoTrack && !a.wf.paused && now - a.wf.trackT > 0.25) {

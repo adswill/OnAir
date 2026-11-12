@@ -432,6 +432,7 @@ void Engine::applyReset() {
     analyzer_.resize(specFft_.load() > 0 ? (size_t)specFft_.load() : SpectrumAnalyzer::autoSize(rate_.load()));   // finer bins for a wide capture
     analyzer_.setSampleRate(rate_.load());
     analyzer_.reset();
+    zoom_.reset();   // the zoom spectrum's samples belong to the old tuning too (its plan stays: the screen asks again each frame)
     analyzer_.setFastRows(0, 0); analyzer_.setFastRows(fastRps_.load(), rate_.load());   // the sample rate may have changed: the hop and the row transform follow
     {
         std::lock_guard<std::mutex> lk(tsMu_);

@@ -75,6 +75,7 @@
 using namespace dect2;
 
 #include "gfx/waterfall.h"
+#include "gfx/zoom_detail.h"
 #include "vfo/vfo_state.h"
 
 extern std::string gForceTab;
@@ -470,7 +471,7 @@ struct App {
     float holdDecay = 4.5f;             // dB a second the max-hold line falls (0: it stays until it is reset)
     float specAvgSec = 0.08f;           // time constant of the averaged trace in seconds (0: the raw frames)
     bool specLabels = true; int specLabelMask = 63;   // names drawn on the spectrum and the waterfall (gfx/autolabel.cpp); the mask: which sources (band plan, frequency database, FM, DAB, DVB, memories)
-    int specFft = 0;           // spectrum FFT size: 0 = automatic from the sample rate (8192..32768 bins), else 4096..262144 (#243)
+    int specFft = 0;           // spectrum FFT size: 0 = automatic from the sample rate (8192..65536 bins), else 4096..1048576 (#243; 1M since 4.0)
     int traceColor = 0;        // the trace colour (cmap::kTracePresets; 0: soft white, dark grey on a light theme)
     int holdColor = -1;        // the max-hold line: -1 the usual grey, else a trace preset
     bool minHold = false;      // a min-hold line too (the floor under the signals; it rises back at the hold decay)
@@ -501,6 +502,16 @@ struct App {
     bool specSmoothZoom = true;// the wheel zoom eases in over a few frames
     int specSnapHz = 0;        // a click tunes to a multiple of this (0: the mode's own step)
     bool wfLowPass = false;    // the waterfall's 2D noise reduction (off by default)
+    // 4.0 display resolution (docs/WATERFALL-4.0.md): the zoom spectrum (a bin per pixel when zoomed in; on by default), its bin cap, the
+    // window of the display transforms (specwin::Type), the overlap of long transforms (-1: automatic), the resolution readout, and the
+    // old soft look (levels interpolated between bins, the waterfall stretched) for those who want it back
+    bool specZoomFft = true;
+    int specZoomMaxBins = 65536;
+    int specWindow = 0;
+    float specOverlap = -1.f;
+    bool specResReadout = true;
+    bool wfSoft = false;
+    zdet::ZoomDetail zd;       // the zoom spectrum's trace lines and waterfall rows (gfx/zoom_detail.h)
     bool specDemo = false;     // --specdemo: a synthetic spectrum (FM carriers, an OFDM block, an SSB voice) for screenshots
     double specLastT = 0;               // when the last spectrum frame came in
     ImFont* mono = nullptr;

@@ -5,11 +5,23 @@
 // magnified, and a group keeps its look while it slides. Pure (no ImGui, no GPU): tested in tests/app/test_plot_util.cpp.
 #pragma once
 #include "spec_look.h"
+#include "spec_pipe.h"
 #include <algorithm>
 #include <cstdint>
 #include <vector>
 
 namespace plt {
+
+// One history for the pixel-exact view (4.0, updateExact): W columns per row over [lo, hi) MHz. The zoom history (zoom_detail.h) also has ok
+// (a flag per ring row: that row has a zoom-spectrum row) and the band it can be trusted over [useLo, useHi]; gen changes when its rows move.
+struct WfSrc {
+    const uint8_t* lv = nullptr;
+    int W = 0;
+    double lo = 0, hi = 0;
+    const uint8_t* ok = nullptr;
+    double useLo = 0, useHi = 0;
+    int gen = 0;
+};
 
 struct WfView {
     int c0 = 0, c1 = 0, cols = 0, k = 0, ring = 0;   // source columns [c0, c1) onto cols pixel columns; k rows a group, ring groups kept
@@ -26,6 +38,47 @@ struct WfView {
     int mode = 0, builtMode = 0;
     std::vector<uint32_t> px;   // rowsAlloc rows of stride colours; group g in row rowOf(g) (newer groups above, wrapping, as the history)
     std::vector<uint8_t> acc, lp;
+    // The pixel-exact view (4.0, docs/WATERFALL-4.0.md): px columns are the plot's framebuffer pixels over exactly [vLo, vHi], each from the
+    // history columns under it (spipe::pixelLevels: the peak where columns are finer, sharp steps where they are coarser), so the GPU never
+    // stretches the picture across: no blur when zoomed in. Rows that the zoom history has (det) come from it, at its finer resolution.
+    bool exact = false, detOn = false;
+    double vLo = 0, vHi = 0, mLo = 0, mHi = 0;
+    int mW = 0, detGen = -1;
+    std::vector<uint8_t> rowA, rowB, rowC;
+
+    // As update(), for the view [visLo, visHi] over ncols pixels from main (and det where it has rows and the view is inside its band).
+    bool updateExact(const WfSrc& main, const WfSrc* det, int H, int wr, long long R, int have, const uint32_t* lut, int gen,
+                     double visLo, double visHi, int ncols, int nk, bool& full, std::vector<int>& dirty) {
+        dirty.clear(); full = false;
+        nk = std::max(1, std::min(H, nk));
+        if (!main.lv || main.W < 1 || !(visHi > visLo) || ncols < 1 || R < 0) return false;
+        const bool dOn = det && det->lv && det->ok && det->W > 0 && visLo >= det->useLo && visHi <= det->useHi;
+        const long long gN = R / nk;
+        const bool same = exact && visLo == vLo && visHi == vHi && ncols == cols && nk == k && gen == lutGen && mode == builtMode && newest >= 0
+                          && dOn == detOn && (!dOn || det->gen == detGen) && main.W == mW && main.lo == mLo && main.hi == mHi;
+        if (!same || gN - newest >= ring) {
+            exact = true; vLo = visLo; vHi = visHi; cols = ncols; k = nk; ring = ringFor(k, H); lutGen = gen; builtMode = mode;
+            detOn = dOn; detGen = dOn ? det->gen : -1; mW = main.W; mLo = main.lo; mHi = main.hi;
+            c0 = 0; c1 = main.W;
+            stride = cols + 1; rowsAlloc = ring + (ring < H ? 1 : 0);
+            px.assign((size_t)rowsAlloc * stride, 0xFF000000u);
+            for (long long g = std::max(0LL, gN - ring + 1); g <= gN; g++) buildExact(main, dOn ? det : nullptr, H, wr, R, have, lut, g);
+            newest = gN; lastR = R; full = true;
+            return true;
+        }
+        if (R == lastR) return false;
+        for (long long g = (mode & LowPass) && newest > 0 && gN - (newest - 1) < ring ? newest - 1 : newest; g <= gN; g++) {
+            buildExact(main, dOn ? det : nullptr, H, wr, R, have, lut, g); dirty.push_back(rowOf(g));
+            if (rowOf(g) == 0 && rowsAlloc > ring) dirty.push_back(ring);
+        }
+        // the oldest group kept loses its oldest rows as the ring overwrites them: made again so it shows what a rebuild would
+        if (const long long g0 = gN - ring + 1; g0 >= 0 && g0 < newest) {
+            buildExact(main, dOn ? det : nullptr, H, wr, R, have, lut, g0); dirty.push_back(rowOf(g0));
+            if (rowOf(g0) == 0 && rowsAlloc > ring) dirty.push_back(ring);
+        }
+        newest = gN; lastR = R;
+        return true;
+    }
 
     // The rows a group needs so that rowsShown rows over heightPx pixels are never squeezed (a power of two, at most H).
     static int groupRows(double rowsShown, double heightPx, int H) {
@@ -48,9 +101,9 @@ struct WfView {
         if (nc1 <= nc0 || ncols < 1 || R < 0) return false;
         if (!(mode & Smooth)) ncols = std::min(ncols, nc1 - nc0);
         const long long gN = R / nk;
-        const bool same = nc0 == c0 && nc1 == c1 && ncols == cols && nk == k && gen == lutGen && newest >= 0 && mode == builtMode;
+        const bool same = !exact && nc0 == c0 && nc1 == c1 && ncols == cols && nk == k && gen == lutGen && newest >= 0 && mode == builtMode;
         if (!same || gN - newest >= ring) {
-            c0 = nc0; c1 = nc1; cols = ncols; k = nk; ring = ringFor(k, H); lutGen = gen; builtMode = mode;
+            c0 = nc0; c1 = nc1; cols = ncols; k = nk; ring = ringFor(k, H); lutGen = gen; builtMode = mode; exact = false;
             stride = cols + (cols < W ? 1 : 0); rowsAlloc = ring + (ring < H ? 1 : 0);
             px.assign((size_t)rowsAlloc * stride, 0xFF000000u);
             for (long long g = std::max(0LL, gN - ring + 1); g <= gN; g++) build(lv, W, H, wr, R, have, lut, g);
@@ -68,6 +121,38 @@ struct WfView {
     }
 
 private:
+    // row r (counted from the first) as pixel levels into out; false when the history does not have it
+    bool pixRow(const WfSrc& main, const WfSrc* det, int H, int wr, long long R, int have, long long r, std::vector<uint8_t>& out) {
+        if (r < 0 || r > R || R - r >= have) return false;
+        const size_t ri = (size_t)((wr + (R - r)) % H);
+        out.resize((size_t)cols);
+        if (det && det->ok[ri]) spipe::pixelLevels(det->lv + ri * (size_t)det->W, det->W, det->lo, det->hi, vLo, vHi, cols, out.data(), 0);
+        else spipe::pixelLevels(main.lv + ri * (size_t)main.W, main.W, main.lo, main.hi, vLo, vHi, cols, out.data(), 0);
+        return true;
+    }
+    void buildExact(const WfSrc& main, const WfSrc* det, int H, int wr, long long R, int have, const uint32_t* lut, long long g) {
+        acc.assign((size_t)cols, 0);
+        bool any = false;
+        for (long long r = g * k; r < (g + 1) * k; r++) {
+            if (!pixRow(main, det, H, wr, R, have, r, rowB)) continue;
+            const uint8_t* s = rowB.data();
+            if (mode & LowPass) {   // the row with its neighbours, down and across, on the pixel rows
+                const bool hn = pixRow(main, det, H, wr, R, have, r + 1, rowA), ho = pixRow(main, det, H, wr, R, have, r - 1, rowC);
+                lp.resize((size_t)cols);
+                slook::lowpassRow(hn ? rowA.data() : nullptr, s, ho ? rowC.data() : nullptr, cols, lp.data());
+                s = lp.data();
+            }
+            for (int c = 0; c < cols; c++) acc[(size_t)c] = std::max(acc[(size_t)c], s[c]);
+            any = true;
+        }
+        uint32_t* o = px.data() + (size_t)rowOf(g) * stride;
+        if (!any) std::fill(o, o + stride, 0xFF000000u);
+        else {
+            for (int x = 0; x < cols; x++) o[x] = lut[acc[(size_t)x]];
+            o[cols] = o[cols - 1];
+        }
+        if (rowOf(g) == 0 && rowsAlloc > ring) std::copy(o, o + stride, px.data() + (size_t)ring * stride);
+    }
     void build(const uint8_t* lv, int W, int H, int wr, long long R, int have, const uint32_t* lut, long long g) {
         const int span = c1 - c0;
         acc.assign((size_t)span, 0);

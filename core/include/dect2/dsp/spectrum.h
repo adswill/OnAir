@@ -27,7 +27,7 @@ public:
     explicit SpectrumAnalyzer(size_t fftSize = 4096);
     ~SpectrumAnalyzer();
     size_t fftSize() const { return n_; }
-    static constexpr size_t kMaxFft = 262144;   // the finest manual choice (#243): 2^18 bins, about 9 Hz at 2.4 Msps
+    static constexpr size_t kMaxFft = size_t(1) << 20;   // the finest manual choice: 2^20 bins (1M), about 2.3 Hz at 2.4 Msps (4.0; was 2^18, #243)
     static size_t autoSize(double sampleRate);   // the size that gives bins of about 125 Hz or finer, 8192..65536
 
     // consume samples, averages up to 32 blocks per frame
@@ -54,6 +54,14 @@ public:
     // with 131072 bins). Without it, blocks follow each other as before.
     void setSampleRate(double sampleRateHz);
     void resize(size_t fftSize);        // power of two, 1024..kMaxFft: a new transform size (drops the accumulated data)
+    // The window of the transforms (specwin::Type in zoom_spectrum.h; Hann by default). A change drops the accumulated data.
+    void setWindow(int type);
+    int window() const;
+    // The overlap of long transforms (those for which two blocks do not fit in a frame period): at most this part of a transform is shared
+    // with the one before (0 .. 0.95). Negative: automatic, the transforms start fs / 35 apart, but never more than 3/4 overlapped above
+    // 2^18 bins (a 1M transform at 2.4 Msps then makes about 9 frames a second instead of 35 transforms a second).
+    void setMaxOverlap(double f);
+    static double hopFor(double fs, size_t n, double maxOverlap);   // samples between the starts of two overlapped transforms
     void reset();                       // forget accumulated data (after retuning)
 
 private:

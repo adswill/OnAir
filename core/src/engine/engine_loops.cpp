@@ -67,6 +67,7 @@ void Engine::spectrumLoop() {
             }
         }
         analyzer_.feed(chunk.data(), chunk.size());
+        zoom_.feed(chunk.data(), chunk.size());   // the zoom spectrum (nothing when off)
         tSpec_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
         {   // the block's storage goes back for the next one
             std::lock_guard<std::mutex> lk(specQMu_);
@@ -303,6 +304,10 @@ void Engine::analysisLoop() {
                 spec_ = f;
             }
             bandwidthStep(f, rxTel_, activeStd_.load() == 1 && rxTel_.dvbt.tpsOk);
+        }
+        {   // the zoom spectrum's frame (docs/WATERFALL-4.0.md)
+            static thread_local ZoomFrame zf;
+            if (zoom_.takeFrame(zf)) { std::lock_guard<std::mutex> lk(zoomMu_); std::swap(zoomFrame_, zf); }
         }
         // keep reading while we wait so the ring never fills. Between pieces the thread sleeps until about 5 ms of signal is there (the
         // radio's write wakes it) or the next telemetry tick: an idle radio costs no wake-ups, a slow one one per USB transfer.
