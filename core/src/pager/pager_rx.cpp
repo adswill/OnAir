@@ -142,8 +142,8 @@ struct PagerReceiver::Impl {
     std::atomic<int> pocsagBaudMask{7};   // setPocsagBauds(): 1 512, 2 1200, 4 2400 bd
     std::atomic<bool> pocsagSecond{true};  // setPocsagSecondPath()
 
-    // 4.0: a second, POCSAG-only decoder behind a 7 kHz channel filter (docs/SENSITIVITY-4.0-A3.md). POCSAG (2 level FSK, +-4.5 kHz) is about 3 dB
-    // more sensitive behind a 7 kHz filter than behind the 10 kHz one FLEX needs (4 level 6400 baud collapses behind it). Same samples, own pipeline;
+    // 4.0: a second decoder behind a 7 kHz channel filter (docs/SENSITIVITY-4.0-A3.md). POCSAG and the two level FLEX speeds (+-4.5 kHz) are more
+    // sensitive behind a 7 kHz filter than behind the 10 kHz one the 4 level FLEX speeds need (they collapse behind it; the first decoder keeps them). Same samples, own pipeline;
     // its messages go to the first decoder's list (dedup: the same page seen by both is kept once), its code word counts are merged by maximum.
     std::unique_ptr<Impl> second;
     Impl* sink = nullptr;                  // set in the second decoder: where its messages go
@@ -327,7 +327,7 @@ struct PagerReceiver::Impl {
         pub = tel;
         if (second) {   // the second (narrow) POCSAG decoder: the larger code word count per speed, its signal and lock
             const PagerTelemetry& t2 = second->tel;
-            for (int sp = 0; sp < kFlex1600_2; sp++) {
+            for (int sp = 0; sp < kPagerSpeeds; sp++) {
                 const PagerSpeedStat& a = tel.speeds[sp];
                 const PagerSpeedStat& b = t2.speeds[sp];
                 PagerSpeedStat& o = pub.speeds[sp];
@@ -372,7 +372,7 @@ struct PagerReceiver::Impl {
         applySmartRequests();
         for (size_t mi = 0; mi < v.size(); mi++) {
             PagerMessage& pm = v[mi];
-            if (!flex) {   // the same page from both decoders: the first one counts
+            {   // the same page from both decoders: the first one counts
                 const double tn = nowSec();
                 while (!recent.empty() && tn - recent.front().t > 8.0) recent.pop_front();
                 const uint64_t k = msgKey(pm);
@@ -1050,13 +1050,13 @@ void PagerReceiver::feed(const cf32* x, size_t n) {
     if (im.curRate <= 0) return;
     im.feed(x, n);
     // 4.0: the second, POCSAG-only decoder behind the 7 kHz filter, on a 25 kHz channel (a 12.5 kHz channel's filter is narrower already)
-    const bool want = (im.protoMask.load() & 1) && !im.narrow.load() && im.pocsagSecond.load();
+    const bool want = (im.protoMask.load() & 3) && !im.narrow.load() && im.pocsagSecond.load();
     if (!want) { im.second.reset(); return; }
     if (!im.second) { im.second = std::make_unique<Impl>(); im.second->sink = &im; im.second->finHalfHz = 7000.0; im.second->resetReq = true; }
     Impl& s2 = *im.second;
     if (reset || s2.resetReq.load()) {
         { std::lock_guard<std::mutex> lk(im.mu); s2.rate = im.rate; s2.offsetHz = im.offsetHz; s2.wideInput = im.wideInput; }
-        s2.protoMask = 1; s2.narrow = false; s2.pocsagBaudMask = im.pocsagBaudMask.load(); s2.toneChipsOn = im.toneChipsOn.load();
+        s2.protoMask = im.protoMask.load() & 3; s2.narrow = false; s2.pocsagBaudMask = im.pocsagBaudMask.load(); s2.toneChipsOn = im.toneChipsOn.load();
         s2.selOn = false; s2.combineOn = im.combineOn.load();
         s2.resetReq = false;
         s2.resetState();

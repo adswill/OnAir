@@ -64,7 +64,8 @@ int main(int argc, char** argv) {
         {"pocsag", -4.5, 0, 0, 0.6, 6},         // 3.9: 29 %
         {"pocsag", -4.5, 0, 50, 0.6, 6},
         {"pocsag", 0.0, 3100, 0, 0.65, 4},      // the second path must not cost the carrier error case (3.9: 62 %)
-        {"flex", 8.0, 0, 0, 0.55, 6},            // FLEX is untouched: 67 % with and without the second path
+        {"flex", 8.0, 0, 0, 0.55, 6},            // FLEX at the usual level: 67 % with and without the second path
+        {"flex", 0.0, 0, 0, 0.4, 6},            // 3.9: 21 %. The slow FLEX speeds (1600 / 3200 two level) are decoded by the second path too
         {"zigbee", 1.5, 0, 0, 0.78, 6},         // 3.9: 38 %
         {"zigbee", 1.5, 48000, 0, 0.78, 6},     // 20 ppm at 2.4 GHz (3.9: 36 %)
         {"zigbee", 1.5, 0, 50, 0.65, 6},

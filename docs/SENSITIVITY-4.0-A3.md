@@ -34,10 +34,10 @@ a slot has a standard deviation of about 0.08 dB, so it was the floor tracker's 
 floor follows quiet slots with a 0.3 weight and creeps up at 1 % a slot, a 0.5 dB slow gain change stays under the gate). About 3.5 dB. A real radio's AGC steps and an
 adjacent strong channel leaking into the window are not simulated: the gate is one constant (`kOnDb` / `kOffDb`).
 
-## 3. POCSAG: a second, POCSAG-only decoder behind a 7 kHz channel filter
+## 3. POCSAG and slow FLEX: a second decoder behind a 7 kHz channel filter
 
 A2 found POCSAG 3 dB better behind a narrower filter and FLEX collapsing there (4 level 6400 baud needs 10 kHz). The pager receiver now runs a second complete decoder
-(own filter, discriminator, ring and sync search, POCSAG only, 25 kHz channels only) on the same samples. Its pages go to the first decoder's list through the same
+(own filter, discriminator, ring and sync search, 25 kHz channels only) on the same samples. It decodes POCSAG and FLEX; the 4 level FLEX speeds (3200/4, 6400/4) do not survive 7 kHz, so there the first decoder carries them and the second one finds nothing. Its pages go to the first decoder's list through the same
 `emit`, with a duplicate check (same address, function, type and text within 8 s from the other decoder is dropped); the code word counts of the telemetry are the larger of the
 two per speed; its signal / lock flags are OR-ed. `setPocsagSecondPath(false)` switches it off. CPU: the POCSAG-only pipeline once more (about one more FIR at 96 kS/s and the
 searches).
@@ -52,8 +52,8 @@ searches).
 
 About 1.3 dB at the 50 % point with 7 kHz (-3.9 to -5.0 dB). 6 kHz is better still (1.5 dB) but with a 3.1 kHz carrier error the second path hears almost nothing (the filter edge
 is in the upper tone; the first decoder is unchanged and decodes it as before, so nothing is lost: with +3.1 kHz at 0 dB the first decoder alone had 62 % and the guard row with both is 100 %). 7 kHz keeps a 2 kHz margin.
-FLEX is unaffected (it is not decoded by the second path; 67 % at 8 dB with and without). Noise-only: 0 units. 16 pager tests pass (`pager_rx`, `pager_impair`,
-`pager_flexreal`, `pager_sens`, ...). Guard: `sens40a3` (POCSAG -4.5 dB with 0 and 50 ppm, 0 dB with +3.1 kHz, FLEX 8 dB).
+FLEX in the harness (mixed speeds, 6 trials): 0 dB 41 to 73 %, -1.5 dB 10 to 28 % (about 1 dB at the 50 % point), 3 dB and above unchanged (the 4 level speeds); 67 % at 8 dB with and without. Noise-only: 0 units. 16 pager tests pass (`pager_rx`, `pager_impair`,
+`pager_flexreal`, `pager_sens`, ...). Guard: `sens40a3` (POCSAG -4.5 dB with 0 and 50 ppm, 0 dB with +3.1 kHz, FLEX 8 dB and 0 dB: 3.9 had 21 % there).
 
 ## 4. Zigbee / 802.15.4 (2.4 GHz O-QPSK): chip values bounded and weighted
 
