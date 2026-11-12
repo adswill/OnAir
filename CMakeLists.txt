@@ -1228,8 +1228,6 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_sens40x1 PRIVATE dect2core)
     add_test(NAME sens40x1 COMMAND test_sens40x1)
     set_tests_properties(sens40x1 PROPERTIES TIMEOUT 1500)
-    add_test(NAME sens40x1_curve_sarsat COMMAND test_sens40x1)   # the measurement (prints the curve and the repair cost of every decode); pass/fail is the guard above
-    set_tests_properties(sens40x1_curve_sarsat PROPERTIES TIMEOUT 3000 ENVIRONMENT "ONAIR_X1_CURVE=sarsat;ONAIR_X1_VERBOSE=1;ONAIR_X1_TRIALS=12;ONAIR_X1_POINTS=1,-1,-2,-3,-4,-5,-6,-7")
   endif()
   # run by the build workers (ctest -R sens_quick / sens_full, or -L sens-quick / sens-full); results land in <build>/sens-out/*.json
   add_test(NAME sens_quick COMMAND sens_sweep --quick --mode "dvbt$|dab|fm" --out ${CMAKE_BINARY_DIR}/sens-out)
