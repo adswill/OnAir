@@ -14,6 +14,8 @@
 #include <string>
 #include <vector>
 
+namespace dect2 { class RigKeeper; }   // rig_control.h: the external PTT of a Hamlib rig
+
 namespace txui {
 
 using namespace dect2;
@@ -88,6 +90,11 @@ struct TxUi {
     std::string doneWhy;                     // how it ended
     double doneAt = 0;
     bool wasRunning = false;                 // a session ran last frame (to see one end by itself)
+    // external PTT (Advanced > Radio): a Hamlib rig of the radio list (an amplifier, transverter or sequencer behind the SDR) keyed by its own
+    // PTT method (CAT, RTS, DTR or VOX, from the rig's profile) while a radio transmits; a failure is a warning, never a block. Not saved.
+    bool pttRigOn = false;
+    int pttRigIdx = 0;
+    std::shared_ptr<dect2::RigKeeper> pttKeeper;
     struct Sent { std::string utc, mode, what, ended; double mhz = 0, seconds = 0; bool rf = false; };
     std::vector<Sent> history;               // what was sent this run of the program, newest first (the TX log)
     Sent current;                            // the running one
@@ -192,6 +199,8 @@ constexpr double kArmTimeoutSec = 120;                 // an armed transmitter t
 void txArm(TxUi& s, bool on);                          // arm / disarm (tx_panel.cpp); arming sends nothing
 bool txNeedsArm(const TxUi& s);                        // a radio is the destination: Transmit needs Arm first (a test or a file does not)
 void txSessionEnded(TxUi& s, const char* why);         // the TX log entry of the session that just ended, and the Done state
+void txExternalPtt(App& a, TxUi& s, bool on);         // keys / releases the external PTT rig when it is chosen (tx_ui.cpp)
+void externalPttPanel(App& a, TxUi& s, bool running);  // Advanced > Radio: the external PTT choice (tx_step_settings.cpp)
 void destinationPanel(TxUi& s, const TxModeSpec& mode, bool running);   // Radio or IQ file, the folder, the format, the rate and what has been written (tx_ui.cpp)
 void kavbPanel(TxUi& s, bool running);                // KAVB: callsign, file or test stream, profile A to D, FEC profile (kavb_ui.cpp)
 void kawsPanel(TxUi& s, bool running);                // KAWS: callsign, recipient, message, kind, profile, passes, slot timing (app/kaws/kaws_ui.cpp)

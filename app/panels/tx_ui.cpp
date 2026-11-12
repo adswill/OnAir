@@ -19,6 +19,7 @@
 using namespace dect2;
 
 #include "tx_state.h"
+#include "dect2/source/rig_control.h"
 #include <ctime>
 #include "dect2/hfdig/hfdig_sstv.h"
 #include <algorithm>
@@ -334,6 +335,7 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         mapPauseForTransmit(a);   // before the radio is keyed, so this frame cannot post what the receiver hears from it
     }
     txIqStreamSetConfig(txIqStreamFromPrefs());
+    txExternalPtt(a, s, true);   // the amplifier / sequencer first, then the radio's RF
     if (s.session.start(std::move(sink), req, lim, err)) {
         s.radioName = toFile ? std::string("IQ file ") + s.ifPathUsed : s.dryRun ? std::string(tr("test (no RF)")) : radio->name;
         s.modeName = mode->name; s.freqSent = req.tune.centerHz;
@@ -370,14 +372,42 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         return true;
     }
     s.error = err;
+    txExternalPtt(a, s, false);
     if (!s.session.running()) { release(s); if (!s.dryRun && !toFile) mapTransmitAbort(a); }
     return false;
 }
 
 // stops whatever is running (a transmission or a test), gives the radio back and says why in the engine log
+// the external PTT: keyed just before the radio starts sending, released right after it stopped. Never a block: a rig that does not answer is a note.
+void txExternalPtt(App& a, TxUi& s, bool on) {
+    if (!on) {
+        if (!s.pttKeeper) return;
+        std::string err;
+        if (!s.pttKeeper->ptt(false, err)) a.engine.log("transmit: the rig's PTT could not be released: " + err);
+        else a.engine.log("transmit: rig PTT released");
+        s.pttKeeper->disconnect();
+        s.pttKeeper.reset();
+        return;
+    }
+    if (!s.pttRigOn || noRadio(s) || s.pttKeeper) return;
+    if (s.pttRigIdx < 0 || s.pttRigIdx >= (int)a.hamlibRigs.size()) { s.info = tr("External PTT: the chosen rig is not in the radio list any more; sending without it."); return; }
+    const HamlibRig& rig = a.hamlibRigs[(size_t)s.pttRigIdx];
+    auto k = std::make_shared<RigKeeper>();
+    k->setProfile(rig);
+    std::string err;
+    if (!k->connect(err) || !k->ptt(true, err)) {
+        s.info = std::string(tr("External PTT: the rig could not be keyed; the transmission goes on without it. ")) + hamlibErrorHint(err);
+        a.engine.log("transmit: external PTT failed: " + err);
+        return;
+    }
+    s.pttKeeper = k;
+    a.engine.log(std::string("transmit: rig PTT keyed (") + rigPttName(rig.pttType) + ")");
+}
+
 void stopTx(App& a, TxUi& s, const char* why) {
     const bool was = s.session.running() || s.claimed;
     s.session.stop();
+    txExternalPtt(a, s, false);
     release(s);
     s.radioName.clear(); s.carrierOnly = false; s.carrierHeld = false; s.sessionDry = false; s.sessionFile = false; s.pendingStart = false; s.pendingCarrier = false;
     if (s.schedArmed) a.engine.log("transmit: the schedule is cancelled");

@@ -137,8 +137,11 @@ values remembered per mode and the hand-over to the generator need no per-mode c
 `app/panels/tx_api.h` gives other screens (the Ham station, feat40-ham) the same pieces: choose a mode, set payload texts and table values,
 arm / transmit / stop, and draw the flow, What to send, Advanced and the preview. They act on the one transmitter.
 
-Not done: keying an external PTT line (rig CAT / RTS / DTR) from the generic Transmit panel. The ham transmitter already keys rigs
-(`rig_control.h` CatRigIo); the generic panel drives SDR sinks only. Left for the Ham station work.
+- **External PTT** (Advanced > Radio): "Key a rig's PTT while transmitting" keys a Hamlib rig of the radio list (an amplifier, transverter or
+  sequencer behind the SDR) by its own PTT method (CAT, RTS, DTR or VOX, from the rig's profile) just before the RF starts and releases it right
+  after it stops, also when a one-pass transmission ends by itself. A rig that does not answer is a note; the transmission goes on (never a
+  block). Not saved: it is chosen per session. Not tested against real hardware (the RigKeeper is the ham transmitter's, which has its own tests).
+- The remote API's start (`/tx/start`) is the caller's decision and needs no ARM.
 
 ## 4. Tests
 

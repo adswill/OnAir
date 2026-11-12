@@ -203,6 +203,30 @@ void iqStreamPanel(TxUi& s, bool running) {
     ImGui::EndDisabled();
 }
 
+// External PTT: key a Hamlib rig of the radio list while the SDR transmits (an amplifier, a transverter or a sequencer), by the rig's own PTT method
+void externalPttPanel(App& a, TxUi& s, bool running) {
+    ImGui::BeginDisabled(running || s.dryRun);
+    ImGui::Checkbox(tr("Key a rig's PTT while transmitting"), &s.pttRigOn);
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+        ImGui::SetTooltip("%s", tr("For an amplifier, transverter or sequencer behind the SDR: the rig's PTT (CAT, RTS, DTR or VOX, as set up for the rig in the Ham view) is keyed just before the RF starts and released right after it stops. If the rig does not answer, the transmission goes on and a note says so."));
+    if (s.pttRigOn) {
+        if (a.hamlibRigs.empty()) ImGui::TextDisabled("%s", tr("No Hamlib rig in the radio list: add one with Add Hamlib rig."));
+        else {
+            s.pttRigIdx = std::max(0, std::min((int)a.hamlibRigs.size() - 1, s.pttRigIdx));
+            auto name = [](const HamlibRig& r) { return !r.label.empty() ? r.label : r.path; };
+            ImGui::SetNextItemWidth(260 * gUi);
+            if (ImGui::BeginCombo(tr("Rig"), name(a.hamlibRigs[(size_t)s.pttRigIdx]).c_str())) {
+                for (int i = 0; i < (int)a.hamlibRigs.size(); i++) if (ImGui::Selectable(name(a.hamlibRigs[(size_t)i]).c_str(), i == s.pttRigIdx)) s.pttRigIdx = i;
+                ImGui::EndCombo();
+            }
+            static const char* const ptt[] = {"CAT", "RTS", "DTR", "VOX"};
+            const int pt = std::max(0, std::min(3, a.hamlibRigs[(size_t)s.pttRigIdx].pttType));
+            ImGui::TextDisabled(tr("PTT by %s (the rig's profile in the Ham view)."), ptt[pt]);
+        }
+    }
+    ImGui::EndDisabled();
+}
+
 // The Basic block: radio, level, what to send; then Advanced (folded)
 void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode, bool running) {
     if (!mode) { ImGui::TextDisabled("%s", tr("Choose a signal in the list.")); return; }
@@ -281,7 +305,7 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
         ImGui::EndDisabled();
     }
     auto section = [](const char* name) { ImGui::Spacing(); ImGui::TextDisabled("%s", name); ImGui::Separator(); };
-    if (s.destKind != 1) { section(tr("Radio")); radioControlPanel(s, radio, running); }
+    if (s.destKind != 1) { section(tr("Radio")); radioControlPanel(s, radio, running); externalPttPanel(a, s, running); }
     section(tr("Schedule"));
     schedulePanel(s, running);
     section(tr("Other programs"));

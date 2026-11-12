@@ -100,6 +100,7 @@ void body(App& a, bool inWindow) {
         s.wasRunning = false;
         const TxSession::Stats st = s.session.stats();
         txSessionEnded(s, st.failed ? "(the radio failed)" : "(finished)");
+        txExternalPtt(a, s, false);
         s.armed = false;
     }
     if (s.armed && !running && !s.pendingStart && ImGui::GetTime() - s.armedAt > kArmTimeoutSec) { s.armed = false; s.info = tr("Disarmed: nothing was sent within two minutes of arming."); }
