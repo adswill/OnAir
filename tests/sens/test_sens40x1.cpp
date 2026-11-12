@@ -139,7 +139,7 @@ void sarsatCurve() {
     const int trials = envInt("ONAIR_X1_TRIALS", 16), nb = 4;
     for (const Scen& sc : kScen) {
         printf("COSPAS-SARSAT, %s: share of %d trials identified within 1 / 2 / 4 bursts (3.9 | window + 4-block detection | + coherent bits | + combining = 4.0 | 4.0 without the repair-cost check), 4 bursts 50 s apart\n", sc.name, trials);
-        for (double snr : points("ONAIR_X1_POINTS", {2, 0, -1, -2, -3, -4, -5})) {
+        for (double snr : points("ONAIR_X1_POINTS", {0, -2, -3, -4, -5, -6, -7})) {
             int w[5][3] = {{0}}, wrong[5] = {0, 0, 0, 0, 0}, comb = 0;
             std::mutex mu;
             parallel(5 * trials, [&](int j) {
