@@ -66,7 +66,7 @@ private:
     std::vector<std::complex<double>> tu_, tl_;
     std::complex<double> su_{0, 0}, sl_{0, 0};
     double phU_ = 0, phL_ = 0;
-    float max_ = 0, min_ = 0, decay_ = 0.001f;
+    float max_ = 0, min_ = 0, midC_ = 0, decay_ = 0.001f;
     int afLen_ = 1, afPos_ = 0;
     std::vector<float> afBuf_;
     double afRotRe_[2] = {1, 1}, afRotIm_[2] = {0, 0}, afEndRe_[2] = {1, 1}, afEndIm_[2] = {0, 0};
@@ -75,7 +75,8 @@ private:
 };
 
 inline void SymbolChain::pushTone(std::complex<float> y, float dc) {
-    const double wu = 2 * M_PI * ((double)dc + devHz_) / fs_, wl = 2 * M_PI * ((double)dc - devHz_) / fs_;
+    const double c0 = midpoint_ ? (double)midC_ : (double)dc;
+    const double wu = 2 * M_PI * (c0 + devHz_) / fs_, wl = 2 * M_PI * (c0 - devHz_) / fs_;
     phU_ += wu; phL_ += wl;
     if (phU_ > M_PI) phU_ -= 2 * M_PI; else if (phU_ < -M_PI) phU_ += 2 * M_PI;
     if (phL_ > M_PI) phL_ -= 2 * M_PI; else if (phL_ < -M_PI) phL_ += 2 * M_PI;
@@ -107,6 +108,7 @@ inline void SymbolChain::step(float d, float thr, std::vector<uint8_t>& syms) {
         if (d > max_) max_ = d; else max_ -= (max_ - d) * decay_;
         if (d < min_) min_ = d; else min_ += (d - min_) * decay_;
         thr = 0.5f * (max_ + min_);
+        midC_ = thr;
     }
     wsum_ += d - win_[(size_t)wpos_];
     win_[(size_t)wpos_] = d;

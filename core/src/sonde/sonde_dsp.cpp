@@ -107,7 +107,7 @@ void Decim::process(const cf32* in, size_t n, std::vector<cf32>& out) {
 
 void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint, double devHz) {
     fs_ = fs; baud_ = baud; afsk_ = afsk; midpoint_ = midpoint;
-    devHz_ = (afsk || midpoint) ? 0.0 : devHz;
+    devHz_ = afsk ? 0.0 : devHz;   // 4.0 A4: midpoint chains (iMet-54, MRZ) use the tones too, centred on the middle of the extremes
     Lw_ = std::max(2, (int)std::lround(fs / baud));
     tu_.assign((size_t)Lw_, std::complex<double>(0, 0)); tl_.assign((size_t)Lw_, std::complex<double>(0, 0));
     decay_ = (float)(baud / fs / 12.0);                    // about a dozen symbols
@@ -129,7 +129,7 @@ void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint, double 
 }
 
 void SymbolChain::reset() {
-    max_ = min_ = 0;
+    max_ = min_ = 0; midC_ = 0;
     afPos_ = 0;
     std::fill(afBuf_.begin(), afBuf_.end(), 0.f);
     afRe_[0] = afRe_[1] = afIm_[0] = afIm_[1] = 0;
