@@ -75,7 +75,7 @@ int main() {
         CHECK(std::fabs(hz("351 MHz S1") - 351.16875e6) < 1 && std::fabs(hz("351 MHz S5") - 351.19375e6) < 1, "S1 - S5");
         CHECK(std::fabs(hz("351 MHz S6") - 351.10625e6) < 1 && std::fabs(hz("351 MHz S15") - 351.1625e6) < 1, "S6 - S15");
         CHECK(std::fabs(hz("467 MHz ch 65") - 467.4e6) < 1 && std::fabs(hz("467 MHz ch 66") - 465.096875e6) < 1 && std::fabs(hz("467 MHz ch 75") - 465.153125e6) < 1, "467 / 465 MHz");
-        CHECK(std::fabs(hz("154 MHz ch 28") - 154.6125e6) < 1, "154 MHz ch 28");
+        CHECK(std::fabs(hz("154 MHz ch 28 (data)") - 154.6125e6) < 1, "154 MHz ch 28");
         CHECK(std::fabs(hz("relay D10 input") - 465.090625e6) < 1 && std::fabs(hz("relay D10 output") - 468.853125e6) < 1 && std::fabs(hz("relay D1 output") - 468.796875e6) < 1, "relay pairs");
         std::set<long long> seen; int dup = 0;
         for (const dcr::Channel* c : dcr::channelsOfBand(351)) { const long long k = std::llround(c->hz); if (!seen.insert(k).second) dup++; if (std::fmod((double)std::llround(c->hz - 351.03125e6), 6250.0) != 0) dup += 100; }
@@ -165,7 +165,7 @@ int main() {
 
     // ---- 4. noise sweep, and what must give nothing
     printf("noise sweep (carrier over noise in 6.25 kHz): calls found of 8 / wrong calls / SACCH good frames\n");
-    for (double snr : {30.0, 22.0, 18.0, 16.0, 14.0, 12.0, 10.0, 8.0}) {
+    for (double snr : {30.0, 22.0, 18.0, 14.0, 10.0, 8.0, 6.0, 5.0, 4.0, 3.0, 2.0}) {
         int found = 0, wrong = 0; unsigned long long good = 0;
         for (unsigned seed = 1; seed <= 2; seed++) {
             const auto txs = sweep(8, 20 + seed);
