@@ -666,16 +666,25 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 10: return makeAtvSynth(cfg, sampleRate);
     case 426: case 429: case 443: case 446: case 449: case 452: case 455: case 458: {   // the analog TV standard entries: that standard's test signal
         SynthConfig c1 = cfg;
-        if (const AtvView* tv = atvViewForStd(stdMode)) { c1.modeOpt[0] = tv->sys == kAtvG ? 0 : tv->sys;   // the generator's system numbers: 0 B/G (8 MHz), 1 B, then the AtvSys values c1.modeOpt[1] = tv->colour == kAtvMono ? 4 : tv->colour; }
+        if (const AtvView* tv = atvViewForStd(stdMode)) { c1.modeOpt[0] = tv->sys == kAtvG ? 0 : tv->sys; c1.modeOpt[1] = tv->colour == kAtvMono ? 4 : tv->colour; }   // the generator's system numbers: 0 B/G (8 MHz), 1 B, then the AtvSys values; colour 4 is monochrome
         return makeAtvSynth(c1, sampleRate);
     }
     case 11: return makeDmrSynth(cfg, sampleRate);
     case 12: return makeDrmSynth(cfg, sampleRate);
     case 13: return makeAdsbSynth(cfg, sampleRate);
     case 14: return makeGnssSynth(cfg, sampleRate);
-    case 862: case 865: case 868: case 874: case 877: return makeGnssSynth(cfg, sampleRate);
+    case 862: case 865: case 868: case 874: case 877: {   // the satellite system entries: that system's satellites in its band
+        SynthConfig c1 = cfg;
+        if (const GnssView* gv = gnssViewForStd(stdMode)) { c1.modeOpt[0] = (int)gnssSystemBit(gv->system); c1.modeOpt[5] = (int)std::lround(gv->defMhz * 1000.0); }
+        return makeGnssSynth(c1, sampleRate);
+    }
     case 15: return makeSondeSynth(cfg, sampleRate);
-    case 686: case 689: case 692: case 695: case 704: case 707: case 710: case 713: case 716: case 719: return makeSondeSynth(cfg, sampleRate);
+    case 686: case 689: case 692: case 695: case 704: case 707: case 710: case 713: case 716: case 719: {   // the radiosonde type entries: one sonde of that type
+        static const int kTypeBit[11] = {0, 1, 16, 2, 4, 8, 32, 64, 128, 256, 512};   // by SondeKind: the sonde_gen type mask (bit 0 RS41, 1 DFM, 2 M10, 3 M20, 4 RS92, then LMS6, iMet, iMet-54, MRZ, iMS-100)
+        SynthConfig c1 = cfg;
+        if (const SondeView* sv = sondeViewForStd(stdMode)) { c1.modeOpt[0] = kTypeBit[sv->kind]; c1.modeOpt[1] = 1; }
+        return makeSondeSynth(c1, sampleRate);
+    }
     case 16: return makeAisSynth(cfg, sampleRate);
     case 740: case 809: case 812: case 815: case 818: case 859: return makeAisSynth(cfg, sampleRate);
     case 17: return makeMarineSynth(cfg, sampleRate);
