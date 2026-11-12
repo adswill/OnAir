@@ -178,8 +178,12 @@ struct NdbReceiver::Impl {
             for (int i = 0; i + L < n; i++) acc += x[(size_t)i] * x[(size_t)(i + L)];
             r[(size_t)L] = acc / (n - L) / r0;
         }
-        int best = lMin;
-        for (int L = lMin; L <= lMax; L++) if (r[(size_t)L] > r[(size_t)best]) best = L;
+        int top = lMin;
+        for (int L = lMin; L <= lMax; L++) if (r[(size_t)L] > r[(size_t)top]) top = L;
+        // the ident period, not a multiple of it: the shortest lag that is a local peak within 80 % of the highest (2 and 3 periods correlate as well)
+        int best = top;
+        for (int L = lMin; L < top; L++)
+            if (r[(size_t)L] >= 0.8 * r[(size_t)top] && r[(size_t)L] >= r[(size_t)L - 1] && r[(size_t)L] >= r[(size_t)L + 1]) { best = L; break; }
         // the period must stand out of the autocorrelation at the other lags (robust z-score: median and median absolute deviation)
         std::vector<double> rv(r.begin() + lMin, r.begin() + lMax + 1);
         std::vector<double> srt = rv;
@@ -190,7 +194,9 @@ struct NdbReceiver::Impl {
         const double mad = std::max(srt[srt.size() / 2], 1e-6);
         const double z = (r[(size_t)best] - med) / (1.4826 * mad);
         fi.z = z; fi.period = best / kRate;
-        if (z < 6.0 || r[(size_t)best] < 0.1) return "";
+        // a periodic keying correlates at many lags, which widens the spread the z-score is taken against (measured 3.4 to 5.8 for a real ident at 4 to 7 dB):
+        // the period only has to stand out moderately; the average's contrast, the Morse reading of two copies and two evaluations in a row do the rest
+        if (z < 3.0 || r[(size_t)best] < 0.1) return "";
         // fractional period (parabola through the peak); the fold must not drift by a dot over 20 periods
         const double ra = r[(size_t)best - 1], rb = r[(size_t)best], rc = r[(size_t)best + 1];
         const double den = ra - 2 * rb + rc;
