@@ -1888,3 +1888,12 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - x40 receiver, fourth block (families 779 - 781, docs/X40-4.0.md): ILS marker beacons (MARKER-4.0.md), FSK modems Bell 103 / V.21 / V.23 / Bell 202 (FSKMODEM-4.0.md), SSR interrogations on 1030 MHz (SSRINT-4.0.md). Tests with offsets, fading, clock errors, noise sweeps and false-report runs; simulated signals only.
 - The summary switch in core/src/engine/modes.cpp keeps literal `case N:` labels: android/tools/gen_results_map.py reads them (a macro dropped the Sub-GHz sensors, radiosonde, wireless M-Bus and AIS cards from the Android results map). The existing switch and panel lines stay as they were (tests read them as text); the entries' cases are on lines of their own.
 - tests/qa/qa_known.inc lists the entries whose test signal cannot carry their data (QA sweep).
+
+## 2026-11-12 (feat40-sensX1): repeats and known content (docs/SENSITIVITY-4.0-X1.md)
+- COSPAS-SARSAT: the 3.9 burst ended 200 ms into a weak burst's message (its line shows only in the preamble), now 0.62 s; 4-block spectrum sum for weak
+  bursts; coherent bits against the residual carrier; soft-decision (Chase) BCH; repeat combining of failed bursts aligned by soft-bit correlation; a
+  lower line threshold near a heard beacon's carrier; multi-bit repairs reported only when a later burst confirms the identification. About 4 dB on a
+  single burst (90 % within 2 bursts: +1.5 to -3 dB in 3 kHz), combining about 0.5 dB more (most bursts below -5 dB are not detected). The 3.9 receiver
+  reported wrong identifications at its edge (BCH-1 mis-repairs); 4.0: none measured. GitHub runs 43147175804, 43157120181.
+- NDB ident folding (average of the repeated idents) and the time stations' expected-minute check: see the doc for what was measured.
+- Simulated signals only; all measurement on GitHub (the laptop was on battery). Bench and guard: tests/sens/test_sens40x1.cpp (ctest sens40x1).
