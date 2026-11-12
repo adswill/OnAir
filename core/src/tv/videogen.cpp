@@ -480,12 +480,15 @@ void VideoGenerator::Impl::run(GenConfig c) {
     // output (a preview's sink goes nowhere)
     Sink sink;
     OutputManager net;
+    struct RateGuard { int id = 0; ~RateGuard() { if (id > 0) generatorSetRate(id, 0); } } rateGuard;   // the transmitter's multiplex sees it stop
     if (!c.previewOnly && c.output == Output::File) {
         sink.file = u8fopen(c.tsPath, "wb");
         if (!sink.file) { fail("cannot write " + c.tsPath + ": " + strerror(errno)); return; }
     } else if (!c.previewOnly && c.output == Output::Transmitter) {
         sink.hubId = c.instanceId;
         generatorClear(c.instanceId);
+        generatorSetRate(c.instanceId, bud.mux * 1000.0);   // its share of a multiplex (generatorMuxSource)
+        rateGuard.id = c.instanceId;
     } else if (!c.previewOnly) {
         OutputConfig oc;
         oc.udp = true; oc.host = c.host; oc.port = c.port; oc.ttl = c.ttl; oc.rtp = c.output == Output::Rtp;

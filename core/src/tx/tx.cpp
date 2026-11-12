@@ -41,6 +41,7 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 }
 #include <algorithm>
+#include <array>
 #include <chrono>
 #include <cmath>
 #include <cstdint>
@@ -657,6 +658,37 @@ double txModeTuneOffsetHz(const TxModeSpec& m) {
     return mt ? mt->tuneOffsetHz : 0;
 }
 
+// The Multiplex services whose source is a Digital video generator (#492): their live streams remuxed into one multiplex, each its own
+// programme (ts_remux.h). Empty when no service names a generator. The other services are not in it (they are encoded test cards).
+static std::function<void(uint8_t*)> generatorMux(const TxRequest& r, double br) {
+    std::vector<int> ids;
+    std::vector<std::string> names;
+    int others = 0;
+    for (const auto& p : r.mux) {
+        if (p.generator > 0) { ids.push_back(p.generator); names.push_back(p.name); }
+        else others++;
+    }
+    if (ids.empty()) return {};
+    auto src = vgen::generatorMuxSource(ids, names, r.provider, r.serviceId > 0 ? r.serviceId : 1, br);
+    if (!src) return {};
+    double sum = 0;
+    std::string list, idle;
+    for (int id : ids) {
+        const double g = vgen::generatorRate(id);
+        sum += g;
+        list += (list.empty() ? "" : ", ") + std::to_string(id);
+        if (g <= 0) idle += (idle.empty() ? "" : ", ") + std::to_string(id);
+    }
+    std::array<char, 64> b{};
+    snprintf(b.data(), b.size(), "%.2f of %.2f Mbit/s", sum / 1e6, br / 1e6);
+    std::string note = "multiplex of video generators " + list + " (live, each its own programme): the running ones use " + b.data();
+    if (sum > br * 0.98) note += ". Too much for this channel: lower their mux rates, or pictures will break up";
+    if (!idle.empty()) note += ". Not running yet: " + idle + " (they join when started with Output: Transmitter)";
+    if (others > 0) note += ". " + std::to_string(others) + " service(s) without a generator are left out";
+    const_cast<TxRequest&>(r).fileNote = note;
+    return src;
+}
+
 std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxRequest& r, double rateHz, std::string& err) {
     if (m.stdMode == 125) return makeKavbTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAVB: its own video-container transmitter at the radio's rate
     if (m.stdMode == 126) return makeKappTxGenerator(r, rateHz > 0 ? rateHz : m.nominalRateHz, err);   // KAPP: its own burst transmitter at the radio's rate
@@ -693,6 +725,7 @@ std::unique_ptr<TxGenerator> makeTxGenerator(const TxModeSpec& m, const TxReques
     };
     auto namedTs = [&](std::function<void(uint8_t*)> file, double br) {
         if (file) return file;
+        if (auto gm = generatorMux(r, br > 1e6 ? br : 20e6)) return gm;
         return demoTsSource(br > 1e6 ? br : 20e6, ident(r));
     };
     if (m.stdMode == 0) {

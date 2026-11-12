@@ -10,6 +10,7 @@
 // driver as typed, and the driver's own refusal is shown as it came.
 #include "../app.h"
 #include "dect2/hfdig/hfdig_sstv.h"
+#include "dect2/tv/videogen.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -275,6 +276,7 @@ TxRequest makeReq(const TxUi& s, const TxModeSpec& mode, bool carrier) {
         p.picture = i % 3;
         if (s.svcSrc[i] == 1) p.file = s.svcFile[i];
         if (s.svcSrc[i] == 2) { p.liveCamera = true; p.camera = s.svcCam[i]; }
+        if (s.svcSrc[i] == 3) { p.generator = std::max(1, std::min(dect2::vgen::kMaxInstances, s.svcGen[i])); p.name = s.svc[i]; }   // empty name: the generator's own
         r.mux.push_back(std::move(p));
     }
     paramsApply(s, r);

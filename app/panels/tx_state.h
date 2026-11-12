@@ -53,7 +53,8 @@ struct TxUi {
     std::string rdsRt;
     std::string audioDevice;   // the microphone (listAudioInputs id: its name, which can be longer than 64 bytes); empty = default
     char provider[64] = {}, network[64] = {}, svc[4][48] = {}, svcFile[4][512] = {}, svcCam[4][96] = {}, videoDevice[96] = {};
-    int nsvc = 1, serviceId = 1, videoSrc = 0, svcSrc[4] = {};
+    int nsvc = 1, serviceId = 1, videoSrc = 0, svcSrc[4] = {};   // svcSrc: 0 test card, 1 video file, 2 camera, 3 video generator (svcGen)
+    int svcGen[4] = {1, 2, 3, 4};   // svcSrc 3: which Digital video generator (1..8) is this service (#492)
     int kind = 0, baudIdx = 0, shiftIdx = 0, variant = 0, wpm = 20, dbm = 37, function = 3;
     unsigned address = 0;
     double toneHz = 1000, lat = 0, lon = 0;

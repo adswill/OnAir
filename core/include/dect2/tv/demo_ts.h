@@ -14,6 +14,7 @@ struct DemoTsService {
     std::string file;           // optional video file for this service only
     std::string camera;         // video device id (listVideoInputs); empty = default camera when liveCamera is set
     bool liveCamera = false;    // this programme is a live camera even when `camera` is empty (OS default)
+    int generator = 0;          // 1..8: the live stream of Tools > Digital video generator N (Output: Transmitter); the transmitter remuxes these (#492)
 };
 
 // Names that go in PAT / SDT / the mpegts muxer. Empty services: one programme called "OnAir".

@@ -98,6 +98,13 @@ bool generatorTsSource(int id, std::function<void(uint8_t*)>& out);   // fills o
 size_t generatorQueued(int id);                                      // packets waiting
 void generatorPush(int id, const uint8_t* packets, size_t n);        // (the generator) n whole packets; the oldest go when the queue is full
 void generatorClear(int id);
+bool generatorPop(int id, uint8_t* pk);                              // the next queued packet; false when none is waiting (no null fill)
+void generatorSetRate(int id, double bps);                           // (the generator) its mux rate while it runs, 0 when it stops
+double generatorRate(int id);                                        // 0: not running with Output::Transmitter
+// Several generators as the services of one multiplex (the transmitter's Multiplex, #492): generator ids[k] is programme
+// firstServiceId + k, named names[k] (empty: the generator's own service name), see ts_remux.h. outBitrate: the channel's TS rate.
+std::function<void(uint8_t*)> generatorMuxSource(const std::vector<int>& ids, const std::vector<std::string>& names, const std::string& provider,
+                                                 int firstServiceId, double outBitrate);
 using FrameSink = std::function<void(int w, int h, const uint8_t* rgb24)>;
 void setGeneratorFrameSink(int id, FrameSink s);                     // the picture of every frame, RGB 8 bit packed; an empty function removes it
 bool generatorHasFrameSink(int id);

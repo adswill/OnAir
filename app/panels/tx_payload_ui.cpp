@@ -297,18 +297,37 @@ void muxIdentity(TxUi& s) {
     ImGui::SetNextItemWidth(120 * gUi);
     if (ImGui::SliderInt(tr("Services"), &s.nsvc, 1, 4)) s.nsvc = std::max(1, std::min(4, s.nsvc));
     ImGui::TextDisabled("%s", tr("Each service is its own programme (own video and audio PIDs in the PAT / PMT / SDT). The whole-mux MPEG-TS above, if set, replaces this."));
+    ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled));   // wrapped: it is long
+    ImGui::TextWrapped("%s", tr("Source \"Video generator\": the live stream of Tools > Digital video generator N (Output: Transmitter), e.g. the same picture in H.264 and in H.265. Then only the generator services are sent."));
+    ImGui::PopStyleColor();
     const auto cams = listVideoInputs();
     for (int i = 0; i < s.nsvc; i++) {
         char lb[48];
         snprintf(lb, sizeof lb, "%s %d", tr("Service name"), i + 1);
         ImGui::SetNextItemWidth(220 * gUi);
         ImGui::InputText(lb, s.svc[i], sizeof s.svc[i]);
-        const char* srcn[] = {tr("Test card"), tr("Video file"), tr("Camera / capture card")};
+        const char* srcn[] = {tr("Test card"), tr("Video file"), tr("Camera / capture card"), tr("Video generator")};
         snprintf(lb, sizeof lb, "%s %d", tr("Programme source"), i + 1);
         ImGui::SetNextItemWidth(220 * gUi);
-        if (ImGui::BeginCombo(lb, srcn[std::max(0, std::min(2, s.svcSrc[i]))])) {
-            for (int k = 0; k < 3; k++) if (ImGui::Selectable(srcn[k], s.svcSrc[i] == k)) s.svcSrc[i] = k;
+        if (ImGui::BeginCombo(lb, srcn[std::max(0, std::min(3, s.svcSrc[i]))])) {
+            for (int k = 0; k < 4; k++) if (ImGui::Selectable(srcn[k], s.svcSrc[i] == k)) s.svcSrc[i] = k;
             ImGui::EndCombo();
+        }
+        if (s.svcSrc[i] == 3) {   // a Digital video generator as this programme (#492): the transmitter remuxes the generators' streams
+            snprintf(lb, sizeof lb, "%s %d", tr("Generator"), i + 1);
+            const int cur = std::max(1, std::min(dect2::vgen::kMaxInstances, s.svcGen[i]));
+            const std::string curName = std::to_string(cur) + (dect2::vgen::generatorRate(cur) > 0 ? " *" : "");
+            ImGui::SetNextItemWidth(120 * gUi);
+            if (ImGui::BeginCombo(lb, curName.c_str())) {
+                for (int g = 1; g <= dect2::vgen::kMaxInstances; g++) {
+                    const std::string n = std::to_string(g) + (dect2::vgen::generatorRate(g) > 0 ? " *" : "");
+                    if (ImGui::Selectable(n.c_str(), g == cur)) s.svcGen[i] = g;
+                }
+                ImGui::EndCombo();
+            }
+            ImGui::SameLine();
+            ImGui::TextDisabled("(?)");
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("* = it is sending to the transmitter now. Start it in Tools > Digital video generator with Output \"Transmitter\" and the same number. An empty service name takes the generator's own. Its mux rate is its share of the channel."));
         }
         if (s.svcSrc[i] == 1) {
             snprintf(lb, sizeof lb, "%s %d", tr("Video file"), i + 1);

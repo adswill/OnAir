@@ -114,6 +114,25 @@ On the receiving PC, choose Media > Open Network Stream and enter:
 
 The `@` means "listen here". If nothing arrives, check the firewall of the receiving PC (UDP port 5000 inbound).
 
+### Several generators in one multiplex (transmitter)
+
+Output **Transmitter** hands the stream to the transmitter (Transmit panel) instead of a file or the network; the generator number
+(1 to 8) names it there. One generator can be the whole transport stream (the **Video generator: 1 2 3 4** buttons next to the
+MPEG-TS file). To send several at once in one DVB-T/T2, DVB-S/S2/S2X, DTMB, DVB-C, ATSC or ISDB-T channel, for example the same
+picture in H.264 and in H.265 to compare them on a receiver:
+
+1. Open as many generators as you need (Tools > Digital video generator, one window each), give each its own number, Output
+   **Transmitter**, and its codec and bitrates. Start them.
+2. In the Transmit panel, under **Multiplex**, set **Services** to the number of generators. For each service choose Programme source
+   **Video generator** and its generator number (`*` = it is sending now). Leave the MPEG-TS file empty.
+3. Start the transmitter. Each generator is its own programme: service ID **First service ID** + 0, 1, 2 ..., PMT PID `0x1000` + n,
+   its streams on `0x100` x (n + 1) and up. The service name is the one typed in the Multiplex, or else the generator's own.
+
+The transmitter rewrites the PIDs, the PMTs, the PAT and the SDT; the pictures and sound pass untouched. Each generator gets a fixed share
+of the channel, its mux rate, so its timing (PCR) stays right: **the mux rates together must stay below the channel's bitrate** (the
+transmitter's note shows both). A generator started later joins the multiplex; one that stops leaves it. Services with another source
+(test card, file, camera) are left out while a generator is in the multiplex.
+
 ## Encoding settings
 
 The defaults are a good start for a standard-definition DVB-T test: H.264, 720x576, 15 fps, 1 Mbit/s CBR, GOP 2 s, AAC 96 kbit/s mono.
@@ -284,5 +303,7 @@ How the modes are worked out (the formulas and standard tables of the workbook `
 | VLC shows nothing | Check the address on the receiving PC (`rtp://@:5000`), the firewall, and that both sides use the same protocol (RTP or UDP). |
 | OBS: "Failed to connect to server" | Start the generator first (it listens only while it runs), check the Server in OBS against the one the window shows, and the firewall on the OnAir PC (TCP port 1935). |
 | RTMP: "Cannot listen on port 1935" | Another program (a second generator, a media server) uses the port: give this generator another port, and OBS the same one. |
+| Transmitter: "Too much for this channel" | The generators' mux rates add up to more than the channel carries: lower their bitrates, or choose a channel mode with a higher bitrate. |
+| Transmitter: a generator service is missing | Its generator is not running with Output **Transmitter** and the same number (the transmitter's note lists those not running). |
 | The mux bar has a red outline | The mux rate is lower than the streams need: raise it, or lower the video bitrate. |
 | The picture breaks up on the receiver | The stream is larger than the link: compare the mux rate with the table of DVB-T bitrates, or check the mode on the Digital Television Mode Selector tab. |
