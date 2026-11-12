@@ -17,17 +17,17 @@ public:
         if (!dec_.configure(fs, d, kCut)) return false;
         rate_ = dec_.outRate();
         n_ = 1; while (n_ * 2 <= rate_ / 5.0) n_ *= 2;           // bins of 5 - 10 Hz
-        wl_.configure(rate_, n_); reset(); return true;
+        wl_.configure(rate_, n_); gate_.configure(rate_); reset(); return true;
     }
     void reset() override {
-        dec_.reset(); env_.clear(); t_ = 0; acc_ = cf32(0, 0); prev_ = cf32(1, 0); first_ = true; have_ = false; carrierOn_ = false; cCnt_ = 0; refDb_ = -200;
+        dec_.reset(); gate_.reset(); env_.clear(); t_ = 0; acc_ = cf32(0, 0); prev_ = cf32(1, 0); first_ = true; have_ = false; carrierOn_ = false; cCnt_ = 0; refDb_ = -200;
         carrierDb_ = depthRms_ = depthPos_ = depthNeg_ = humDb_ = -99; offHz_ = 0; bw_ = 0; overFrac_ = 0; nOver_ = 0; wl_.clear(); asym_ = 0; sec_ = 0;
     }
     void feed(const cf32* x, size_t n) override {
         dec_.process(x, n, [&](cf32 a) {
             t_ += 1.0 / rate_;
             if (t_ < 0.1) { prev_ = a; return; }                                    // filter start-up
-            env_.push_back(std::abs(a));
+            env_.push_back(std::abs(a)); gate_.push(a);
             acc_ += a * std::conj(prev_); prev_ = a;
             if (env_.size() >= (size_t)(kReportSec * rate_)) report();
         });
@@ -51,7 +51,7 @@ private:
         const float lvl = toDb((float)(mean * mean));
         carrierDb_ = lvl;
         // the carrier is present when the mean envelope is well over the spread of the envelope's own noise floor: judged against the previous level
-        const bool on = mean > 1e-6;
+        const bool on = mean > 1e-6 && gate_.present();   // a line of the carrier's share, not just any level (noise has a mean envelope too)
         std::vector<float> a(env_); for (auto& v : a) v = (float)(v - mean);
         double ms = 0; for (float v : a) ms += (double)v * v;
         const double rms = std::sqrt(ms / (double)N);
@@ -95,9 +95,9 @@ private:
             for (int k = (int)(30 / wl_.binHz()); k <= kmax; k++) { cum += wl_.band(k * wl_.binHz(), k * wl_.binHz()); (void)tail; if (cum >= 0.99 * tot) { bw_ = (float)(k * wl_.binHz()); break; } }
         }
         // carrier found / lost: the level falls more than 12 dB under the best of the last minute (or comes back within 6 dB of it), held for two seconds
-        if (first_) { first_ = false; refDb_ = lvl; carrierOn_ = true; row("Carrier", "present", fmt("%+.1f Hz, level %.1f dB", offHz_, lvl)); }
+        if (first_) { first_ = false; refDb_ = lvl; carrierOn_ = on; if (on) row("Carrier", "present", fmt("%+.1f Hz, level %.1f dB", offHz_, lvl)); }
         else {
-            const bool want = carrierOn_ ? !(lvl < refDb_ - 12) : (lvl > refDb_ - 6);
+            const bool want = on && (carrierOn_ ? !(lvl < refDb_ - 12) : (lvl > refDb_ - 6));
             if (want != carrierOn_) { if (++cCnt_ >= 2) { carrierOn_ = want; cCnt_ = 0; row("Carrier", want ? "returned" : "lost", fmt("level %.1f dB", lvl)); } } else cCnt_ = 0;
             if (carrierOn_) refDb_ = std::max(lvl, refDb_ - 0.05f);                     // follows slowly downwards (about 1 dB in 20 s)
         }
@@ -107,7 +107,7 @@ private:
         env_.clear();
     }
     void row(const char* kind, const std::string& id, const std::string& text) { out->row(kind, id, text, carrierDb_); }
-    Decimator dec_; RealWelch wl_; double rate_ = 1, t_ = 0; int n_ = 1, cCnt_ = 0, nOver_ = 0, sec_ = 0; std::vector<float> env_; cf32 acc_{0, 0}, prev_{1, 0};
+    Decimator dec_; CarrierGate gate_; RealWelch wl_; double rate_ = 1, t_ = 0; int n_ = 1, cCnt_ = 0, nOver_ = 0, sec_ = 0; std::vector<float> env_; cf32 acc_{0, 0}, prev_{1, 0};
     bool first_ = true, have_ = false, carrierOn_ = false;
     float carrierDb_ = -99, depthRms_ = 0, depthPos_ = 0, depthNeg_ = 0, humDb_ = -99, offHz_ = 0, bw_ = 0, overFrac_ = 0, asym_ = 0, refDb_ = -200; char humHz_[16] = "";
 };

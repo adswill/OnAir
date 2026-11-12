@@ -31,6 +31,14 @@ int main() {
         std::vector<cf32> c(96000 * 60, cf32(1, 0)); addNoise(c, 0.001, 3);
         t = run(x40::Uvb76, c, fs); CHECK(t.rows.empty(), "carrier only: %zu rows", t.rows.size());
     }
+    {   // white noise alone: no carrier, no pilot, no buzz (3.9 of the sweep: the AM monitor "found a carrier", the FM monitor a 4.5 kHz pilot, UVB-76 a buzz)
+        for (double sg : {0.02, 0.1, 0.5}) {
+            std::vector<cf32> x((size_t)(250000 * 8), cf32(0, 0)); addNoise(x, (float)sg, 5);
+            auto t = run(x40::Uvb76, x, 250000);
+            CHECK(t.blocksOk == 0, "UVB-76 on noise (sigma %.2f): %llu decodes", sg, (unsigned long long)t.blocksOk);
+        }
+    }
+
     printf(fails ? "x40 uvb76: %d FAILED\n" : "x40 uvb76: ok\n", fails);
     return fails ? 1 : 0;
 }

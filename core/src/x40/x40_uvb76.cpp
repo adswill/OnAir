@@ -2,7 +2,7 @@
 // the train stops and a voice message follows. This mode times what is on the air: the audio energy is gated into buzz events, the buzz rate, length and
 // regularity are measured, a break in the train and any long transmission are logged. It does not decode or interpret the voice and makes no claim on
 // what a message means. The AM audio is the carrier envelope with the carrier (mean) removed, so a tuning error of a few hundred Hz does not matter.
-#include "x40_int.h"
+#include "x40_dsp.h"
 #include <deque>
 
 namespace dect2::x40 {
@@ -14,17 +14,18 @@ public:
     bool configure(double fs) override {
         const int d = std::max(1, (int)std::floor(fs / kWorkTarget));
         if (!dec_.configure(fs, d, kCut)) return false;
-        rate_ = dec_.outRate(); lp_ = (float)(1 - std::exp(-2 * kPi * 1500.0 / rate_)); blockN_ = std::max(8, (int)(rate_ * kBlock));
+        rate_ = dec_.outRate(); gate_.configure(rate_); lp_ = (float)(1 - std::exp(-2 * kPi * 1500.0 / rate_)); blockN_ = std::max(8, (int)(rate_ * kBlock));
         reset();
         return true;
     }
     void reset() override {
-        dec_.reset(); lp1_ = lp2_ = 0; dc_ = 0; acc_ = 0; cnt_ = 0; t_ = 0; floor_ = -1; on_ = false; onT_ = offT_ = 0; lastOn_ = -1;
+        dec_.reset(); gate_.reset(); lp1_ = lp2_ = 0; dc_ = 0; acc_ = 0; cnt_ = 0; t_ = 0; floor_ = -1; on_ = false; onT_ = offT_ = 0; lastOn_ = -1;
         periods_.clear(); lens_.clear(); smoothDb_ = -200; locked_ = false; started_ = false;
     }
     void feed(const cf32* x, size_t n) override {
         dec_.process(x, n, [&](cf32 a) {
             const float e = std::abs(a);
+            gate_.push(a);
             dc_ += (e - dc_) * (float)(1.0 / (rate_ * 1.0));
             const float raw = e - dc_;
             lp1_ += lp_ * (raw - lp1_); lp2_ += lp_ * (lp1_ - lp2_);   // the buzz is low-pitched: keep about 1.5 kHz of audio and the noise stays out
@@ -57,6 +58,7 @@ private:
         return median(d) * 1e3;
     }
     void block(float p, float carrier) {
+        if (!gate_.present()) { on_ = false; return; }   // no carrier on the channel: noise makes no buzz
         // modulation power relative to the carrier, in dB; the floor follows the quiet level (slowly up, fast down)
         const float db = toDb(p / std::max(carrier * carrier, 1e-12f));
         if (smoothDb_ < -150) smoothDb_ = db; else smoothDb_ += 0.5f * (db - smoothDb_);
@@ -98,7 +100,7 @@ private:
             if (spreadMs() < 0.15 * m * 1e3) { locked_ = true; out->row("Buzz train", fmt("%.1f /min", rate()), fmt("period %.2f s, buzz %.2f s", m, medianLen()), smoothDb_); }
         }
     }
-    Decimator dec_;
+    Decimator dec_; CarrierGate gate_;
     double rate_ = 1, t_ = 0, onT_ = 0, offT_ = 0, lastOn_ = -1, lastOnStart_ = 0;
     int blockN_ = 1, cnt_ = 0, breaks_ = 0, longTx_ = 0;
     float lp1_ = 0, lp2_ = 0, lp_ = 0.5f;

@@ -56,6 +56,14 @@ int main() {
         printf("plain carrier in noise (35 and 22 dB), 10 minutes: %d false reports\n", falseRows);
         CHECK(falseRows == 0, "false reports %d", falseRows);
     }
+    {   // white noise alone: no carrier, no pilot, no buzz (3.9 of the sweep: the AM monitor "found a carrier", the FM monitor a 4.5 kHz pilot, UVB-76 a buzz)
+        for (double sg : {0.02, 0.1, 0.5}) {
+            std::vector<cf32> x((size_t)(250000 * 8), cf32(0, 0)); addNoise(x, (float)sg, 5);
+            auto t = run(x40::FmMon, x, 250000);
+            CHECK(t.blocksOk == 0, "FM monitor on noise (sigma %.2f): %llu decodes", sg, (unsigned long long)t.blocksOk);
+        }
+    }
+
     printf(fails ? "x40 fmmon: %d FAILED\n" : "x40 fmmon: ok\n", fails);
     return fails ? 1 : 0;
 }
