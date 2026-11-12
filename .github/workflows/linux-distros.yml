@@ -1,0 +1,96 @@
+name: Linux distro install check
+# Installs a published OnAir release (.deb, AppImage, portable archive) inside the container images of several distributions
+# and starts it headless, to catch missing libraries and install problems (Linux Mint report, docs/LINUX-MINT-4.0.md).
+# Manual only: gh workflow run linux-distros.yml -R adswill/OnAir --ref <branch> [-f version=3.9.0] [-f local_deb=true]
+on:
+  workflow_dispatch:
+    inputs:
+      version: { description: "release version to download (no v)", default: "3.9.0" }
+      local_deb:
+        description: "also re-check the .deb with the Depends rewritten by tools/package/fix_deb_depends.sh"
+        type: boolean
+        default: true
+
+permissions: { contents: read }
+
+jobs:
+  distro:
+    name: ${{ matrix.image }}
+    runs-on: ubuntu-24.04
+    container: { image: "${{ matrix.image }}", options: "--privileged" }
+    strategy:
+      fail-fast: false
+      matrix:
+        image: [ "linuxmintd/mint23-amd64", "linuxmintd/mint22.3-amd64", "ubuntu:26.04", "ubuntu:24.04", "ubuntu:22.04", "debian:13" ]
+    env:
+      V: ${{ inputs.version }}
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: System
+        run: |
+          cat /etc/os-release; cat /etc/upstream-release/lsb-release 2>/dev/null || true
+          ldd --version | head -1
+          apt-get update -qq
+          apt-get install -y -qq curl ca-certificates file xvfb xauth libgl1-mesa-dri binutils git >/dev/null
+          strings "$(ldconfig -p | awk '/libstdc\+\+\.so\.6 /{print $NF; exit}')" | grep -E '^GLIBCXX_3\.4\.[0-9]+$' | sort -V | tail -1
+      - uses: actions/checkout@v7
+      - name: Download the release
+        run: |
+          mkdir -p /dl && cd /dl
+          for f in onair_${V}_amd64.deb OnAir-${V}-linux-x86_64.AppImage onair-${V}-linux-x86_64-portable.tar.gz; do
+            curl -fsSL --retry 5 -o "$f" "https://github.com/adswill/OnAir/releases/download/v${V}/$f"
+          done
+          ls -l
+          dpkg-deb -f onair_${V}_amd64.deb Depends | tr ',' '\n' | sed 's/^ *//' > /dl/depends.txt
+          cat /dl/depends.txt
+      - name: Which Depends cannot be met here (simulated install)
+        run: apt-get install -s "/dl/onair_${V}_amd64.deb" 2>&1 | tail -25 || true
+      - name: Install the .deb as the README says (apt install ./onair.deb)
+        id: deb
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          apt-get install -y "/dl/onair_${V}_amd64.deb" 2>&1 | tail -25
+      - name: Start the .deb install (version, ldd, headless frame)
+        if: steps.deb.outcome == 'success'
+        continue-on-error: true
+        run: |
+          onair --version || true
+          ldd /usr/bin/onair | grep 'not found' || echo "ldd: all found"
+          export HOME=/tmp/h1; mkdir -p $HOME
+          timeout 180 xvfb-run -a -s "-screen 0 1280x800x24" onair --hidden --mute --no-first-run --shot /tmp/deb.png 2>&1 | tail -30
+          test "$(stat -c %s /tmp/deb.png)" -gt 10000 && echo "DEB START OK"
+      - name: Rewrite the Depends (fix_deb_depends.sh) and install that
+        if: inputs.local_deb && steps.deb.outcome != 'success' && hashFiles('tools/package/fix_deb_depends.sh') != ''
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          bash tools/package/fix_deb_depends.sh "/dl/onair_${V}_amd64.deb" /tmp/onair-fixed.deb
+          dpkg-deb -f /tmp/onair-fixed.deb Depends
+          apt-get install -y /tmp/onair-fixed.deb 2>&1 | tail -15
+          onair --version || true
+          ldd /usr/bin/onair | grep 'not found' || echo "ldd: all found"
+          export HOME=/tmp/h4; mkdir -p $HOME
+          timeout 180 xvfb-run -a -s "-screen 0 1280x800x24" onair --hidden --mute --no-first-run --shot /tmp/debfix.png 2>&1 | tail -30
+          test "$(stat -c %s /tmp/debfix.png)" -gt 10000 && echo "FIXED DEB START OK"
+      - name: AppImage
+        continue-on-error: true
+        run: |
+          A=/dl/OnAir-${V}-linux-x86_64.AppImage; chmod +x $A
+          file $A
+          echo "fusermount: $(command -v fusermount3 fusermount || echo none); libfuse2: $(ldconfig -p | grep -c 'libfuse.so.2')"
+          echo "--- plain run (FUSE): ---"; $A --version 2>&1 | tail -8 || true
+          echo "--- extract-and-run: ---"
+          export HOME=/tmp/h2; mkdir -p $HOME
+          cd /tmp && $A --appimage-extract >/dev/null && ldd squashfs-root/bin/onair | grep 'not found' || echo "ldd: all found"
+          APPIMAGE_EXTRACT_AND_RUN=1 timeout 180 xvfb-run -a -s "-screen 0 1280x800x24" $A --hidden --mute --no-first-run --shot /tmp/ai.png 2>&1 | tail -30
+          test "$(stat -c %s /tmp/ai.png)" -gt 10000 && echo "APPIMAGE START OK"
+      - name: Portable archive
+        continue-on-error: true
+        run: |
+          cd /tmp && tar xzf /dl/onair-${V}-linux-x86_64-portable.tar.gz
+          D=$(ls -d /tmp/onair-*-portable)
+          ldd $D/bin/onair | grep 'not found' || echo "ldd: all found"
+          export HOME=/tmp/h3; mkdir -p $HOME
+          timeout 180 xvfb-run -a -s "-screen 0 1280x800x24" $D/bin/onair --hidden --mute --no-first-run --shot /tmp/port.png 2>&1 | tail -30
+          test "$(stat -c %s /tmp/port.png)" -gt 10000 && echo "PORTABLE START OK"
