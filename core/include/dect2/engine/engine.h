@@ -12,6 +12,7 @@
 #include "dect2/source/iq_record.h"
 #include "dect2/source/time_machine.h"
 #include "dect2/dsp/spectrum.h"
+#include "dect2/dsp/zoom_spectrum.h"
 #include "dect2/dsp/noise_blanker.h"
 #include "dect2/t2/t2rx.h"
 #include "dect2/t2/t2mi_out.h"
@@ -357,7 +358,17 @@ public:
     // no spectrum fft when headless, autobw needs it
     void setSpectrumEnabled(bool on) { analyzer_.setTransform(on); }
     // display cost: FFT blocks averaged per spectrum frame (16 = every sample at 10 Msps; 4 = a quarter of the FFT work, a noisier trace)
-    void setSpectrumBlocksPerFrame(int n) { analyzer_.setBlocksPerFrame((size_t)(n < 1 ? 1 : n)); }
+    void setSpectrumBlocksPerFrame(int n) { analyzer_.setBlocksPerFrame((size_t)(n < 1 ? 1 : n)); zoom_.setBlocksPerFrame((size_t)(n < 1 ? 1 : n)); }
+    // 4.0 display resolution (docs/WATERFALL-4.0.md): the window of the display transforms (specwin::Type), the overlap of long ones
+    // (negative: automatic) and the zoom spectrum. setSpectrumZoom: the view the screen shows (its centre offsetHz from the capture's centre,
+    // spanHz wide, px pixels; spanHz 0 = off). When the full-band FFT has fewer bins than pixels there, the visible part is mixed down,
+    // decimated and transformed on its own (zoomfft::update decides; an unchanged plan costs nothing). latestZoomSpectrum: its newest frame.
+    void setSpectrumWindow(int type) { analyzer_.setWindow(type); zoom_.setWindow(type); }
+    int spectrumWindow() const { return analyzer_.window(); }
+    void setSpectrumOverlap(double maxOverlap) { analyzer_.setMaxOverlap(maxOverlap); }
+    void setSpectrumZoom(double offsetHz, double spanHz, int px, size_t maxBins = zoomfft::kMaxBins);
+    zoomfft::Plan spectrumZoomPlan() const;
+    bool latestZoomSpectrum(ZoomFrame& out, uint64_t lastSeq);
     // The impulse noise blanker on the samples, before the spectrum and every decoder (#264; off by default). threshold: times the mean
     // magnitude; widthUs: the blank after a click. nbBlankedPct: the share of samples blanked over the last second or so.
     void setNoiseBlanker(bool on, float threshold, float widthUs) { nbThr_ = threshold; nbWidthUs_ = widthUs; nbOn_ = on; nbDirty_ = true; }
@@ -901,6 +912,10 @@ private:
     bool recSigmf_ = true;
     std::unique_ptr<IqSource> src_;
     SpectrumAnalyzer analyzer_{8192};
+    ZoomSpectrum zoom_;                 // the zoom spectrum (fed by the spectrum thread after analyzer_, taken by the analysis thread)
+    mutable std::mutex zoomMu_;         // zoomPlan_ and zoomFrame_
+    zoomfft::Plan zoomPlan_;
+    ZoomFrame zoomFrame_;
     std::atomic<double> fastRps_{0};   // the fast waterfall rows wanted (setSpectrumFastRows)
     std::atomic<int> specFft_{0};
     NoiseBlanker nb_;   // the analysis thread's; set from the atomics below when nbDirty_

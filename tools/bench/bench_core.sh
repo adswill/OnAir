@@ -14,5 +14,5 @@ cd "$ROOT"
 LIBS="-lpthread"
 [ "$(uname)" = Darwin ] && LIBS="$LIBS -framework Accelerate"
 nice -n 19 c++ -std=c++20 -O3 $DEFS -Icore/include -Icore/src -w -o "$OUT/bench_core" tools/bench/bench_core.cpp core/src/dsp/dsp_compat.cpp \
-  core/src/dsp/spectrum.cpp core/src/dsp/resampler.cpp core/src/dsp/exact_resampler.cpp core/src/common/threadpool.cpp $LIBS
+  core/src/dsp/spectrum.cpp core/src/dsp/zoom_spectrum.cpp core/src/dsp/resampler.cpp core/src/dsp/exact_resampler.cpp core/src/common/threadpool.cpp $LIBS
 [ -n "$NORUN" ] || nice -n 19 "$OUT/bench_core" "$@"
