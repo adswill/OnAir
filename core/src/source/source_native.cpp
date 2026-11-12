@@ -20,6 +20,10 @@ std::unique_ptr<IqSource> makeRx888(const DeviceInfo& d);
 // ---- icom (IC-R8600 I/Q, receive only)
 void listIcom(std::vector<DeviceInfo>& out);
 std::unique_ptr<IqSource> makeIcom(const DeviceInfo& d);
+// ---- spectran (Aaronia SPECTRAN V6 / V6 ECO through the RTSA API, source_spectran.cpp)
+void listSpectran(std::vector<DeviceInfo>& out);
+std::unique_ptr<IqSource> makeSpectran(const DeviceInfo& d);
+std::unique_ptr<TxSink> makeSpectranTx(const DeviceInfo& d);
 #ifdef DECT2_HAVE_RFNM
 // ---- rfnm
 void listRfnm(std::vector<DeviceInfo>& out);
@@ -43,6 +47,7 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
         native::listFobos(out);      // ---- fobos
         native::listRx888(out);      // ---- rx888
         native::listIcom(out);       // ---- icom
+        native::listSpectran(out);   // ---- spectran
 #ifdef DECT2_HAVE_RFNM
         native::listRfnm(out);       // ---- rfnm
 #endif
@@ -74,6 +79,7 @@ std::vector<DeviceInfo> listNativeDevices(std::string& err) {
 std::unique_ptr<TxSink> makeNativeTxSink(const DeviceInfo& d) {
     if (d.board == "pluto") return native::makePlutoTx(d);
     if (d.board == "usrp") return native::makeUsrpTx(d);
+    if (d.board == "spectran") return native::makeSpectranTx(d);   // ---- spectran
     return nullptr;
 }
 
@@ -98,6 +104,7 @@ std::unique_ptr<IqSource> makeNativeSource(const DeviceInfo& d) {
     if (d.board == "fobos") return native::makeFobos(d);         // ---- fobos
     if (d.board == "rx888") return native::makeRx888(d);         // ---- rx888
     if (d.board == "icr8600") return native::makeIcom(d);        // ---- icom
+    if (d.board == "spectran") return native::makeSpectran(d);   // ---- spectran
 #ifdef DECT2_HAVE_RFNM
     if (d.board == "rfnm") return native::makeRfnm(d);           // ---- rfnm
 #endif

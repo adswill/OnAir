@@ -640,6 +640,7 @@ void listUsrp(std::vector<DeviceInfo>& out);
 void listSdrplay(std::vector<DeviceInfo>& out);
 bool limeLibraryState(std::string* path, int* radios);   // LimeSuite: loaded or not; the radios its last scan found (-1 = not scanned)
 bool sdrplayApiInstalled();   // the SDRplay API library (sdrplay_api.dll / libsdrplay_api) was found
+bool spectranApiInstalled();  // Aaronia's RTSA API library (AaroniaRTSAAPI, from the RTSA-Suite PRO) was found (source_spectran.cpp)
 std::unique_ptr<IqSource> makeRtl(const DeviceInfo& d);
 std::unique_ptr<IqSource> makeAirspy(const DeviceInfo& d);
 std::unique_ptr<IqSource> makeHydra(const DeviceInfo& d);

@@ -11,6 +11,8 @@ namespace dect2 {
 std::vector<std::string> usbRadioHints();
 // An SDRplay RSP is plugged in but the SDRplay API (its driver, which OnAir cannot ship) is not installed: the one hint, or none (any OS)
 std::vector<std::string> sdrplayApiHints();
+// An Aaronia SPECTRAN (USB vendor 2f72) is plugged in but the RTSA-Suite PRO (its RTSA API library) is not installed: the one hint, or none
+std::vector<std::string> spectranApiHints();
 // A LimeSDR Mini is plugged in but LimeSuite is missing or lists no radio: the one hint, or none (any OS)
 std::vector<std::string> limeLibraryHints();
 
