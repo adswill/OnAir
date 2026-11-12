@@ -11,6 +11,7 @@
 #include "ui_common.h"
 #include "tour_logic.h"
 #include "status_strip.h"
+#include "row_tint.h"
 #include "../platform/proc_cpu.h"
 #include <thread>
 #include "../state/workspace.h"
@@ -110,11 +111,22 @@ static void setGroupOpen(App& a, int g, bool on) {
     savePrefs(a);
 }
 
-// the modes as a plain radio list, grouped like the menu
+// the modes as a list grouped like the menu. Each category's heading and its mode rows sit on a background tinted with the category's colour
+// (row_tint.h: opaque mixes, text lifted only where a tint needs it, so every theme keeps 4.5:1); the selected mode on a stronger tint with a
+// bar in the accent colour and its name in semibold; hover a lighter step of the tint; keyboard focus an outline.
 void modeList(App& a) {
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const bool running = a.engine.running();
     const ImVec2 first = ImGui::GetCursorScreenPos();
+    const ImVec4 childBg = ImGui::GetStyleColorVec4(ImGuiCol_ChildBg);
+    const ImVec4 paneV = childBg.w > 0.5f ? childBg : ImGui::GetStyleColorVec4(ImGuiCol_WindowBg);
+    const contrast::Rgb pane{paneV.x, paneV.y, paneV.z};
+    const rowtint::Look look = a.highContrast ? rowtint::Look::HighContrast : (a.lightUi || a.uiTheme == 7) ? rowtint::Look::Light : rowtint::Look::Dark;
+    auto rgb = [](ImVec4 v) { return contrast::Rgb{v.x, v.y, v.z}; };
+    auto col = [](contrast::Rgb c) { return u32(ImVec4(c.r, c.g, c.b, 1)); };
+    auto textOn = [&](contrast::Rgb fill, ImVec4 t) { return col(rowtint::liftText(fill, rgb(t), look)); };
+    const float sp = ImGui::GetStyle().ItemSpacing.y;   // the fills reach over the gap below a row, so a category reads as one block
+    ImFont* semi = typo::fonts().semibold;
     static char q[32] = "";
     ImGui::SetNextItemWidth(-1);
     ImGui::InputTextWithHint("##modeside", tr("search modes (FT8, LoRa, APRS...)"), q, sizeof q);
@@ -131,31 +143,36 @@ void modeList(App& a) {
             if (modeSelected(a, kModes[i])) cur = &kModes[i];
         }
         if (!members || (searching && !matches)) continue;
-        if (shown++) ImGui::Dummy(ImVec2(0, 1 * gUi));   // the same small gap above every heading but the first
-        // the group header: a thin accent in the group's colour, a fold arrow, the name, the member count, and the selected mode when folded
+        if (shown++) ImGui::Dummy(ImVec2(0, 1 * gUi));   // the same small gap above every heading but the first: the untinted line between categories
+        const ImVec4 catV = ImGui::ColorConvertU32ToFloat4(kGroupCols[g]);
+        const contrast::Rgb cat = rgb(catV);
+        // the group header: a fold arrow, the name, the member count, and the selected mode when folded, on the category's tint
         const float hh = ImGui::GetFrameHeight() - 4 * gUi, hw = ImGui::GetContentRegionAvail().x;
         ImGui::PushID(1000 + g);
         if (ImGui::InvisibleButton("##grp", ImVec2(hw, hh)) && !searching) setGroupOpen(a, g, !groupOpen(a, g));
         ImGui::PopID();
         const bool unfolded = searching || groupOpen(a, g);
         const ImVec2 g0 = ImGui::GetItemRectMin();
-        if (ImGui::IsItemHovered()) dl->AddRectFilled(g0, ImVec2(g0.x + hw, g0.y + hh), IM_COL32(255, 255, 255, 10));
-        dl->AddRectFilled(ImVec2(g0.x, g0.y + 3 * gUi), ImVec2(g0.x + 2.5f * gUi, g0.y + hh - 3 * gUi), kGroupCols[g], 1.f);
+        const bool hovHead = ImGui::IsItemHovered();
+        const contrast::Rgb headFill = rowtint::rowFill(pane, cat, rowtint::kHeadAlpha + (hovHead ? 0.06f : 0.f), look);
+        dl->AddRectFilled(g0, ImVec2(g0.x + hw, g0.y + hh + (unfolded ? sp : 0.f)), col(headFill));
+        if (ImGui::IsItemFocused() && ImGui::GetIO().NavVisible) dl->AddRect(ImVec2(g0.x + 1, g0.y + 1), ImVec2(g0.x + hw - 1, g0.y + hh - 1), u32(T.accent), 0, 0, 1.f * gUi);
         const float ty = g0.y + (hh - ImGui::GetTextLineHeight()) * 0.5f;
-        ImGui::RenderArrow(dl, ImVec2(g0.x + 7 * gUi, ty), u32(T.dim), unfolded ? ImGuiDir_Down : ImGuiDir_Right, 0.7f);
+        ImGui::RenderArrow(dl, ImVec2(g0.x + 7 * gUi, ty), textOn(headFill, T.dim), unfolded ? ImGuiDir_Down : ImGuiDir_Right, 0.7f);
         const float nx = g0.x + 22 * gUi;
-        dl->AddText(ImVec2(nx, ty), u32(T.dim), tr(kGroupNames[g]));
+        dl->AddText(ImVec2(nx, ty), textOn(headFill, T.text), tr(kGroupNames[g]));
         char cnt[16];
         if (searching) snprintf(cnt, sizeof cnt, "%d/%d", matches, members); else snprintf(cnt, sizeof cnt, "%d", members);
         const float cx = nx + ImGui::CalcTextSize(tr(kGroupNames[g])).x + 7 * gUi;
         const ImVec2 cs0 = ImGui::CalcTextSize(cnt);
-        dl->AddRectFilled(ImVec2(cx - 3 * gUi, ty), ImVec2(cx + cs0.x + 3 * gUi, ty + cs0.y), IM_COL32(255, 255, 255, 14), 3 * gUi);
-        dl->AddText(ImVec2(cx, ty), (kGroupCols[g] & 0x00FFFFFF) | 0xC0000000, cnt);
+        dl->AddText(ImVec2(cx, ty), textOn(headFill, T.dim), cnt);
         if (!unfolded && cur) {
             const ImVec2 cs = ImGui::CalcTextSize(cur->name);
-            if (cx + cs0.x + 12 * gUi < g0.x + hw - cs.x - 6 * gUi) dl->AddText(ImVec2(g0.x + hw - cs.x - 6 * gUi, ty), u32(T.accent), cur->name);
+            if (cx + cs0.x + 12 * gUi < g0.x + hw - cs.x - 6 * gUi) dl->AddText(ImVec2(g0.x + hw - cs.x - 6 * gUi, ty), textOn(headFill, T.accent), cur->name);
         }
         if (!unfolded) continue;
+        int last = -1;   // the last row of the group gets no reach over the gap below it (that gap separates the categories)
+        for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && modeListed(a, kModes[i], q)) last = i;
         for (int i = 0; i < kNumModes; i++) {
             const ModeDef& m = kModes[i];
             if (m.group != g || !modeListed(a, m, q)) continue;
@@ -164,18 +181,26 @@ void modeList(App& a) {
             const bool clicked = ImGui::InvisibleButton("##mode", ImVec2(w, h));
             ImGui::PopID();
             const bool hov = ImGui::IsItemHovered();
+            const bool focus = ImGui::IsItemFocused() && ImGui::GetIO().NavVisible;
             const ImVec2 p0 = ImGui::GetItemRectMin();
             const bool sel = modeSelected(a, m);
-            if (hov) dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + h), IM_COL32(255, 255, 255, 12));
-            const ImVec2 c(p0.x + 14 * gUi, p0.y + h * 0.5f);   // under the heading's arrow, the name under the heading's name
-            dl->AddCircle(c, 5 * gUi, u32(sel ? T.bright : T.dim), 0, 1.f);
-            if (sel) dl->AddCircleFilled(c, 2.6f * gUi, u32(T.accent));
+            const contrast::Rgb fill = rowtint::rowFill(pane, cat, sel ? rowtint::kSelAlpha : hov ? rowtint::kHoverAlpha : rowtint::kModeAlpha, look);
+            dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + h + (i == last ? 0.f : sp)), col(fill));
+            if (sel) dl->AddRectFilled(p0, ImVec2(p0.x + 3 * gUi, p0.y + h), u32(T.accent));   // the selection bar
+            if (focus) dl->AddRect(ImVec2(p0.x + 1, p0.y + 1), ImVec2(p0.x + w - 1, p0.y + h - 1), u32(T.accent), 0, 0, 1.f * gUi);   // keyboard focus: an outline, never a fill
             const bool hid = searching && modeHiddenNow(a, m);   // found by the search only: tagged
-            dl->AddText(ImVec2(p0.x + 28 * gUi, p0.y + (h - ImGui::GetTextLineHeight()) * 0.5f), u32(sel ? T.bright : (running || hid ? T.dim : T.text)), hid ? (std::string(m.name) + " (" + tr("hidden") + ")").c_str() : m.name);
+            const std::string name = hid ? std::string(m.name) + " (" + tr("hidden") + ")" : std::string(m.name);
+            const ImVec2 np(p0.x + 28 * gUi, p0.y + (h - ImGui::GetTextLineHeight()) * 0.5f);
+            if (sel) {
+                const ImU32 nc = textOn(fill, T.bright);
+                if (semi) dl->AddText(semi, ImGui::GetFontSize(), np, nc, name.c_str());
+                else { dl->AddText(np, nc, name.c_str()); dl->AddText(ImVec2(np.x + 0.6f * gUi, np.y), nc, name.c_str()); }   // semibold by drawing twice
+            } else dl->AddText(np, textOn(fill, running || hid ? T.dim : T.text), name.c_str());
             const char* sub = hid ? "" : tr(m.sub);
             const ImVec2 ss = ImGui::CalcTextSize(sub);
-            if (p0.x + 28 * gUi + ImGui::CalcTextSize(m.name).x + 10 * gUi < p0.x + w - ss.x - 6 * gUi)   // no room: the name alone, not both on top of each other
-                dl->AddText(ImVec2(p0.x + w - ss.x - 6 * gUi, p0.y + (h - ss.y) * 0.5f), u32(T.dim), sub);
+            const float nameW = sel && semi ? semi->CalcTextSizeA(ImGui::GetFontSize(), FLT_MAX, 0, name.c_str()).x : ImGui::CalcTextSize(name.c_str()).x + (sel ? 0.6f * gUi : 0.f);
+            if (np.x + nameW + 10 * gUi < p0.x + w - ss.x - 6 * gUi)   // no room: the name alone, not both on top of each other
+                dl->AddText(ImVec2(p0.x + w - ss.x - 6 * gUi, p0.y + (h - ss.y) * 0.5f), textOn(fill, sel ? T.text : T.dim), sub);
             if (clicked) selectMode(a, m.family, m.subId);
             if (hov && running && !sel) ImGui::SetTooltip("%s", tr("Click to switch mode and restart receiver automatically"));
         }
