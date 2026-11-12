@@ -127,7 +127,7 @@ int main() {
         CHECK(p.badges[5].id == "night_owl" && std::fabs(p.badges[5].frac - 0.8) < 1e-9 && p.badges[5].progress == "4 h of 5 h", "locked, by progress: %s", p.badges[5].progress.c_str());
         const bd::BadgeRow& ps = p.badges[3].id == "plane_spotter" ? p.badges[3] : p.badges[2];
         CHECK(ps.id == "plane_spotter" && ps.progress == "300 of 1,000" && std::fabs(ps.frac - 200.0 / 900.0) < 1e-9, "progress to the next tier: %s", ps.progress.c_str());
-        CHECK(p.badges[0].progress == "287.4 km of 300 km", "range progress: %s", p.badges[0].progress.c_str());
+        CHECK(p.badges[0].progress == "287 km of 300 km", "range progress (whole numbers from 100 up, like the website): %s", p.badges[0].progress.c_str());
         const bd::Profile out = bd::parseMe(R"J({"signedIn":false,"configured":true,"web":false})J");
         CHECK(out.ok && !out.signedIn && out.configured, "signed out");
         CHECK(!bd::parseMe("garbage").ok, "unreadable");
