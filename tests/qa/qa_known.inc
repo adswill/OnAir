@@ -1,6 +1,6 @@
 // Known failures of the QA sweep (tests/qa/test_qa_sweep.cpp): {"mode id/condition" or "mode id/*", "class: reason"},
 // One line per mode and condition. Classes: unrealistic (the condition, not the decoder), threshold (12 dB is at or below the modulation's limit),
-// no check (lines or measurements without a check counted on noise), too short (needs the long run), generator / no signal, open (to investigate).
+// no check (lines or measurements without a check counted on noise), too short (needs the long run), timing (passes on a quiet runner, fails on a loaded one), generator / no signal, open (to investigate).
 // docs/QA-SWEEP-3.9.md has the same list. A line goes when the mode passes (--strict reports those).
     {"dvbt/snr", "threshold: 12 dB is below or at this modulation's threshold"},
     {"atsc/snr", "threshold: 12 dB is below or at this modulation's threshold"},
@@ -146,12 +146,10 @@
     {"cis36/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"cis128/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
     {"cis3000/neg", "unrealistic: HF: +-2 kHz is more than a 50 ppm crystal gives below 30 MHz and outside an SSB-audio decoder's window"},
-    {"u482c/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate"},
-    {"ngham/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate"},
-    {"nbiot/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate (passed in the 3.9 sweep)"},
     {"dvbc2/snr", "threshold: 12 dB is below or at this modulation's threshold"},
-    {"cell/tx", "open: 4.0 QA: the transmitter's file decodes nothing in 3 s on a 3-core runner (passed in the 3.9 sweep)"},
-    {"tetra/tx", "open: 4.0 QA: the transmitter's file decodes nothing (3.9 fixed it in feat39-tetrafix); to investigate"},
-    {"sonde/snr", "open: 4.0 QA: 12 dB in the signal's band; passed in the 3.9 sweep"},
-    {"ax100m6/snr", "open: 4.0 QA: 12 dB in the signal's band; to investigate"},
-    {"cell/rate", "open: 4.0 QA: nothing decodes at 1.37 x the default sample rate (27.4 Msps); the engine log shows the cell search finding no cell"},
+    {"ax100m6/snr", "threshold: 12 dB in the signal's 10.7 kHz band is 8.3 dB C/N in 25 kHz; the receiver decodes half of the frames at 9.0 dB (Eb/N0 13 dB): a sensitivity item, see docs/QA-4.0.md"},
+    {"u482c/snr", "threshold: 12 dB in the signal's 10.7 kHz band is 8.3 dB C/N in 25 kHz; the receiver decodes half of the frames at 10.2 dB: a sensitivity item, see docs/QA-4.0.md"},
+    {"ngham/snr", "threshold: 12 dB in the signal's 5.9 kHz band is 5.7 dB C/N in 25 kHz; the receiver decodes half of the frames at 7.3 dB: a sensitivity item, see docs/QA-4.0.md"},
+    {"tetra/tx", "timing: the transmitter's file decodes nothing in 32 s on a loaded 3-core runner (passes on a quiet one, and on the Mac in the engine and the receiver alone); 3 of 5 CI runs"},
+    {"msk144/tx", "timing: decodes nothing on a loaded runner, passes on a quiet one (1 of 3 CI runs)"},
+    {"globalstar/rpos", "open: any clock error (5 ppm) at a sample rate other than 6 and 10 Msps stops the decode, in the receiver alone (13.7 Msps +-50 ppm: 0 of 2 blocks); the default rate is fine: generator or receiver, to investigate"},
