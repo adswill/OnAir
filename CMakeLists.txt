@@ -305,6 +305,7 @@ target_sources(dect2core PRIVATE core/src/ros/ros_detect.cpp)   # ROS identifier
 option(DECT2_WITH_TLS "Serve the remote-control API over HTTPS / wss (links OpenSSL)" OFF)
 target_sources(dect2core PRIVATE core/src/net/tls_conn.cpp core/src/net/remote_json.cpp)
 target_sources(dect2core PRIVATE core/src/net/sonde_upload.cpp)   # radiosonde upload to APRS-IS aggregators
+target_sources(dect2core PRIVATE core/src/net/sondehub.cpp)   # radiosonde upload to SondeHub (docs/SONDEHUB-4.0.md)
 target_sources(dect2core PRIVATE core/src/integrations/mqtt.cpp core/src/integrations/integrations.cpp core/src/integrations/msg_archive.cpp)   # Integrations: MQTT client, webhook and JSON-lines sinks (docs/INTEGRATIONS.md)
 target_sources(dect2core PRIVATE core/src/net/swarm.cpp core/src/net/swarm_net.cpp core/src/net/swarm_ctl.cpp)   # LAN swarm: announce packets, merged results, range splitting, pairing handshake, memory sync
 if(UNIX AND NOT APPLE AND NOT DECT2_WITH_TLS)

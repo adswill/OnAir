@@ -86,6 +86,10 @@ struct HttpOptions {
     int connectTimeoutMs = 10000, readTimeoutMs = 15000, maxRedirects = 8;
     bool insecureTls = false;   // Advanced: accept a certificate that does not verify (self-signed, expired); off by default, never silent
     std::atomic<bool>* cancel = nullptr;
+    // Uploads (the SondeHub radiosonde upload): method "" is GET; "PUT" / "POST" send requestBody with a Content-Length and follow no redirect.
+    std::string method;
+    std::string requestBody;
+    bool keepErrorBody = false;   // a non-2xx answer still hands back its body (r.status and r.error are set): APIs explain their errors there
 };
 struct HttpResult {
     int status = 0;            // 0 = no response (see error)
@@ -101,6 +105,8 @@ public:
 };
 std::unique_ptr<HttpBody> httpOpen(const std::string& url, const HttpOptions& o, HttpResult& r);
 bool httpGetAll(const std::string& url, const HttpOptions& o, std::string& body, HttpResult& r, size_t maxBytes = 64u << 20);
+// One request with the method and body of o, the whole answer in body; true when an answer came (with keepErrorBody also a 4xx / 5xx one: check r.status)
+bool httpRequestAll(const std::string& url, const HttpOptions& o, std::string& body, HttpResult& r, size_t maxBytes = 1u << 20);
 bool httpsAvailable();    // false when this build can not do TLS (the message to show is in httpsMissingText())
 const char* httpsMissingText();
 // platform TLS back-ends (cocoa / WinHTTP); nullptr when not built

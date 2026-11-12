@@ -87,13 +87,78 @@ void targetsSection(dect2::FeedConfig& c, bool ais, bool& changed) {
     ImGui::PopID();
 }
 
+// SondeHub (tracker.sondehub.org): the fixed first entry of the radiosonde upload list, off until ticked. Not APRS-IS: HTTPS uploads of
+// the SondeHub telemetry format (core: dect2/net/sondehub.h, docs/SONDEHUB-4.0.md). The panel shows what was sent last.
+std::string firstObject(const std::string& arr) {   // the first object of the uploaded array, and how many more
+    if (arr.size() < 2) return {};
+    const size_t e = arr.find("},{\"software_name\"");
+    if (e == std::string::npos) return arr.substr(1, arr.size() - 2);
+    size_t n = 0; for (size_t p = e; (p = arr.find("},{\"software_name\"", p)) != std::string::npos; p++) n++;
+    return arr.substr(1, e) + "   (+" + std::to_string(n) + " " + tr("more frames like it") + ")";
+}
+void sondeHubEntry(dect2::FeedConfig& c, bool& changed) {
+    dect2::SondeHubConfig& h = c.sondeHub;
+    ImGui::PushID("sondehub");
+    if (ImGui::Checkbox(tr("SondeHub (tracker.sondehub.org)"), &h.enabled)) {
+        changed = true;
+        if (h.enabled && h.call.empty()) { h.call = c.aprsCall; if (h.call.empty() && !c.sondeTargets.empty()) h.call = c.sondeTargets.front().call; }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The SondeHub database and map. Not APRS-IS: OnAir sends the frames over HTTPS in SondeHub's own format, every 15 s."));
+    ImGui::Indent();
+    changed |= textField(N_("Uploader callsign"), h.call, 0, 140);
+    changed |= textField(N_("Antenna (optional)"), h.antenna, 0, 180);
+    changed |= ImGui::Checkbox(tr("Send my station position (shown on the SondeHub map)"), &h.sharePos);
+    ImGui::BeginDisabled(!h.sharePos);
+    changed |= ImGui::Checkbox(tr("Chase car: send my moving GPS position every 30 s"), &h.mobile);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Needs a live GPS position (Radiosonde map > My position > GPS). Without one the chase position is not sent."));
+    ImGui::EndDisabled();
+    if (!h.call.empty() && !dect2::sondehub::validUploader(h.call)) ImGui::TextColored(pal::warnAmber(), "%s", tr("The uploader callsign needs 3 to 64 characters."));
+    const dect2::SondeHubStatus s = dect2::SondeHub::get().status();
+    if (!h.enabled) ImGui::TextDisabled("%s", tr("off"));
+    else {
+        ImGui::TextColored(s.connected ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled), tr("%s, %llu frames uploaded, %llu station uploads, %llu dropped, %llu retries"),
+                           s.state.c_str(), (unsigned long long)s.sent, (unsigned long long)s.beacons, (unsigned long long)s.dropped, (unsigned long long)s.reconnects);
+        ImGui::PushTextWrapPos(460 * gUi);
+        if (s.skipped) ImGui::TextDisabled(tr("%llu frames kept back (last: %s)"), (unsigned long long)s.skipped, s.skipWhy.c_str());
+        if (!s.lastError.empty()) ImGui::TextColored(pal::badRed(), "%s", s.lastError.c_str());
+        if (!s.lastLine.empty()) ImGui::TextDisabled("%s %s", tr("last upload:"), s.lastLine.c_str());
+        ImGui::PopTextWrapPos();
+        if (ImGui::TreeNode(trw("What is sent##sondehubjson"))) {
+            ImGui::PushTextWrapPos(460 * gUi);
+            const std::string lj = dect2::SondeHub::get().lastListenerJson(), tj = dect2::SondeHub::get().lastJson();
+            ImGui::TextDisabled("%s", tr("Station record (PUT /listeners):"));
+            ImGui::TextUnformatted(lj.empty() ? tr("(not sent yet)") : lj.c_str());
+            ImGui::TextDisabled("%s", tr("Last telemetry upload (PUT /sondes/telemetry, gzip-compressed):"));
+            const std::string fo = firstObject(tj);
+            ImGui::TextUnformatted(fo.empty() ? tr("(not sent yet)") : fo.c_str());
+            ImGui::PopTextWrapPos();
+            ImGui::TreePop();
+        }
+    }
+    if (ImGui::TreeNode(trw("Advanced##sondehubadv"))) {
+        ImGui::SetNextItemWidth(120 * gUi);
+        changed |= ImGui::SliderInt(tr("upload every (s)##sondehub"), &h.uploadS, 10, 60);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("SondeHub's own uploader uses 15 s. While a DFM or Meisei sonde is heard the wait is 1.5 times longer (at most 30 s) so SondeHub's checks get enough points."));
+        changed |= textField(N_("Contact e-mail (optional, only the SondeHub admins see it)"), h.email, 0, 180);
+        changed |= textField(N_("Server##sondehubsrv"), h.server, 0, 220);
+        ImGui::TreePop();
+    }
+    ImGui::PushTextWrapPos(460 * gUi);
+    ImGui::TextDisabled("%s", tr("Privacy: SondeHub publishes your uploader callsign and, with the box ticked, your station position on tracker.sondehub.org; "
+                                 "the sonde data become part of its open database (CC BY-SA). Only frames with a GPS fix and the sonde's own time are sent; iMet-1/4 are not."));
+    ImGui::PopTextWrapPos();
+    ImGui::Unindent();
+    ImGui::PopID();
+}
+
 // Radiosonde upload to APRS-IS aggregators: a list of targets, each off until its own box is ticked
 void sondeUploadSection(dect2::FeedConfig& c, bool& changed) {
     ImGui::PushID("sondeup");
     ImGui::PushTextWrapPos(460 * gUi);
-    ImGui::TextDisabled("%s", tr("Sends every decoded radiosonde (position, speed, altitude, climb rate, temperature, humidity, pressure, frequency, type) to APRS-IS sites such as wettersonde.net "
+    ImGui::TextDisabled("%s", tr("Sends every decoded radiosonde (position, speed, altitude, climb rate, temperature, humidity, pressure, frequency, type) to SondeHub and to APRS-IS sites such as wettersonde.net "
                                  "and radiosondy.info, after a station beacon with your location. Each target is off until you tick it."));
     ImGui::PopTextWrapPos();
+    sondeHubEntry(c, changed);
     for (size_t i = 0; i < c.sondeTargets.size(); i++) {
         dect2::SondeUploadTarget& t = c.sondeTargets[i];
         ImGui::PushID((int)i);
@@ -181,7 +246,14 @@ void loadFeedPrefs(App& a) {
         t.beaconMin = (int)d.getI((k + "Beacon").c_str(), 10);
         c.sondeTargets.push_back(t);
     }
-    bool any = false;
+    {
+        dect2::SondeHubConfig& h = c.sondeHub;
+        h.enabled = d.getB("sondeHubOn", false); h.call = d.getS("sondeHubCall", ""); h.antenna = d.getS("sondeHubAnt", ""); h.email = d.getS("sondeHubMail", "");
+        h.sharePos = d.getB("sondeHubPos", true); h.mobile = d.getB("sondeHubMobile", false);
+        h.uploadS = std::max(10, std::min(60, (int)d.getI("sondeHubEvery", 15))); h.server = d.getS("sondeHubServer", h.server);
+        if (h.server.empty()) h.server = dect2::SondeHubConfig().server;
+    }
+    bool any = c.sondeHub.enabled;
     for (bool o : c.on) any = any || o;
     for (const dect2::FeedTarget& t : c.targets) any = any || t.enabled;
     for (const dect2::SondeUploadTarget& t : c.sondeTargets) any = any || t.enabled;
@@ -195,7 +267,13 @@ void loadFeedPrefs(App& a) {
 
 // Remote control from the clients of "Share my radio": their frequency and gain commands (only arrive when the box is ticked)
 void shareTick(App& a) {
-    if (a.rxId == 1) { double la = 0, lo = 0; receiverLocation(la, lo); dect2::SondeUpload::get().setStation(la, lo, receiverLocationSet()); }   // the station beacon position
+    if (a.rxId == 1) {   // the station beacon position (APRS-IS) and the SondeHub station: the chase GPS while it has a fix, else the set location
+        double la = 0, lo = 0; receiverLocation(la, lo); dect2::SondeUpload::get().setStation(la, lo, receiverLocationSet());
+        dect2::SondeHubStation st;
+        if (!sondeChasePosition(st.lat, st.lon, st.altM)) { st.lat = la; st.lon = lo; st.altM = receiverAltitudeM(); st.set = receiverLocationSet(); }
+        else { st.set = true; st.live = true; }
+        dect2::SondeHub::get().setStation(st);
+    }
     if (a.rxId != 1 || !a.share.on || !a.share.allowControl) return;
     bool retune = false;
     for (const dect2::ShareCommand& m : dect2::ShareServer::get().takeCommands()) {
@@ -234,6 +312,11 @@ void saveFeedPrefs(const App& a) {
         const dect2::SondeUploadTarget& t = c.sondeTargets[i];
         d.setS((k + "Name").c_str(), t.name); d.setS((k + "Host").c_str(), t.host); d.setI((k + "Port").c_str(), t.port);
         d.setS((k + "Call").c_str(), t.call); d.setS((k + "AprsPass").c_str(), t.pass); d.setB((k + "On").c_str(), t.enabled); d.setI((k + "Beacon").c_str(), t.beaconMin);
+    }
+    {
+        const dect2::SondeHubConfig& h = c.sondeHub;
+        d.setB("sondeHubOn", h.enabled); d.setS("sondeHubCall", h.call); d.setS("sondeHubAnt", h.antenna); d.setS("sondeHubMail", h.email);
+        d.setB("sondeHubPos", h.sharePos); d.setB("sondeHubMobile", h.mobile); d.setI("sondeHubEvery", h.uploadS); d.setS("sondeHubServer", h.server);
     }
     d.setB("shareOn", a.share.on); d.setI("sharePort", a.share.port); d.setI("shareLan", a.share.lan ? 1 : 0); d.setI("shareControl", a.share.allowControl ? 1 : 0);
     remoteApiSavePrefs(a);
@@ -298,7 +381,7 @@ void feedsWindow(App& a) {
     ImGui::Unindent();
     statusLine(dect2::kFeedAprsIs, false);
     ImGui::PopID();
-    typo::separatorText(tr("Radiosonde upload (APRS-IS)"));
+    typo::separatorText(tr("Radiosonde upload (SondeHub, APRS-IS)"));
     sondeUploadSection(c, changed);
     ImGui::PushID("kiss");
     changed |= ImGui::Checkbox(tr("KISS (TCP server)"), &c.on[dect2::kFeedKiss]);
