@@ -60,19 +60,19 @@ int main() {
     }
     // ---- /ingest answers
     {
-        const std::string r = R"({"ok":true,"n":3,"account":{"login":"alice","badges":true,"public":false},"awards":[
+        const std::string r = R"J({"ok":true,"n":3,"account":{"login":"alice","badges":true,"public":false},"awards":[
             {"id":"plane_spotter","tier":2,"name":"Plane spotter (Silver)","icon":"plane"},
-            {"id":"BAD ID","tier":1,"name":"x"},{"id":"first_light","tier":9,"name":"y"},{"id":"long_range","tier":1,"name":""}]})";
+            {"id":"BAD ID","tier":1,"name":"x"},{"id":"first_light","tier":9,"name":"y"},{"id":"long_range","tier":1,"name":""}]})J";
         const bd::IngestAccount a = bd::parseIngestReply(r);
         CHECK(a.present && a.login == "alice" && a.badgesOn && !a.isPublic, "account read");
         CHECK(a.awards.size() == 1 && a.awards[0].id == "plane_spotter" && a.awards[0].tier == 2, "only well-formed awards: %zu", a.awards.size());
         CHECK(bd::toastText(a.awards[0]) == "Badge earned: Plane spotter (Silver)", "toast text");
-        const bd::IngestAccount anon = bd::parseIngestReply(R"({"ok":true,"n":3,"load":{"pct":2}})");
+        const bd::IngestAccount anon = bd::parseIngestReply(R"J({"ok":true,"n":3,"load":{"pct":2}})J");
         CHECK(!anon.present && anon.awards.empty() && anon.error.empty(), "signed-out answer: nothing");
-        const bd::IngestAccount bad = bd::parseIngestReply(R"({"ok":true,"n":3,"account_error":"Your OnAir sign-in has expired"})");
+        const bd::IngestAccount bad = bd::parseIngestReply(R"J({"ok":true,"n":3,"account_error":"Your OnAir sign-in has expired"})J");
         CHECK(!bad.present && has(bad.error, "expired"), "refused token reported");
         CHECK(!bd::parseIngestReply("<html>").present && !bd::parseIngestReply("").present, "garbage");
-        const bd::IngestAccount n = bd::parseIngestReply(R"({"account":{"login":"a","badges":true,"note":"duplicate"}})");
+        const bd::IngestAccount n = bd::parseIngestReply(R"J({"account":{"login":"a","badges":true,"note":"duplicate"}})J");
         CHECK(n.note == "duplicate", "why a post earned nothing");
     }
     // ---- toast queue: once per badge and tier, across restarts, two threads
@@ -104,7 +104,7 @@ int main() {
     }
     // ---- Badges panel model from /api/me
     {
-        const std::string me = R"({"signedIn":true,"login":"alice","badges":true,"public":true,"by":"AliceRx","apps":1,"profile":{
+        const std::string me = R"J({"signedIn":true,"login":"alice","badges":true,"public":true,"by":"AliceRx","apps":1,"profile":{
           "login":"alice","stats":{"hours":12.5,"days":9,"streak":3,"bestStreak":5,"objects":420,"rangeKm":287.4,"countries":["DE","LT","PL"],
             "counts":{"aircraft":300,"vessel":80,"sonde":2,"aprs":30,"sat":4,"ham":3,"fix":1,"acars":0}},
           "badges":[
@@ -115,7 +115,7 @@ int main() {
             {"id":"long_range","name":"Long range","desc":"Range","icon":"range","unit":"km","tiers":[100,200,300,400],"tier":2,"earned":[{"tier":1,"at":100},{"tier":2,"at":4000}],"value":287.4},
             {"id":"night_owl","name":"Night owl","desc":"Night","icon":"moon","unit":"h","tiers":[5,25,100,500],"tier":0,"earned":[],"value":4},
             {"id":"rare_catch","name":"Rare catch","desc":"Rare","icon":"star","unit":"","tiers":[1,3,5,8],"tier":0,"earned":[],"value":0},
-            {"id":"Bad-Id","name":"x","tiers":[1],"tier":1}]}})";
+            {"id":"Bad-Id","name":"x","tiers":[1],"tier":1}]}})J";
         const bd::Profile p = bd::parseMe(me);
         CHECK(p.ok && p.signedIn && p.login == "alice" && p.badgesOn && p.isPublic && p.by == "AliceRx" && p.apps == 1, "account fields");
         CHECK(p.aircraft == 300 && p.ships == 80 && p.countries == 3 && p.objects == 420 && std::fabs(p.hours - 12.5) < 1e-9, "stats");
@@ -128,12 +128,12 @@ int main() {
         const bd::BadgeRow& ps = p.badges[3].id == "plane_spotter" ? p.badges[3] : p.badges[2];
         CHECK(ps.id == "plane_spotter" && ps.progress == "300 of 1,000" && std::fabs(ps.frac - 200.0 / 900.0) < 1e-9, "progress to the next tier: %s", ps.progress.c_str());
         CHECK(p.badges[0].progress == "287.4 km of 300 km", "range progress: %s", p.badges[0].progress.c_str());
-        const bd::Profile out = bd::parseMe(R"({"signedIn":false,"configured":true,"web":false})");
+        const bd::Profile out = bd::parseMe(R"J({"signedIn":false,"configured":true,"web":false})J");
         CHECK(out.ok && !out.signedIn && out.configured, "signed out");
         CHECK(!bd::parseMe("garbage").ok, "unreadable");
         // the next step
         CHECK(bd::panelStep(false, nullptr, false, false) == bd::PanelStep::SignIn, "sign in first");
-        const bd::Profile nc = bd::parseMe(R"({"signedIn":false,"configured":false})");
+        const bd::Profile nc = bd::parseMe(R"J({"signedIn":false,"configured":false})J");
         CHECK(bd::panelStep(true, &nc, true, true) == bd::PanelStep::NotConfigured, "server not set up");
         CHECK(bd::panelStep(true, &out, true, true) == bd::PanelStep::SignIn, "server forgot the sign-in");
         bd::Profile off = p; off.badgesOn = false;

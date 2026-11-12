@@ -4,6 +4,7 @@
 #include "../app.h"
 #include "../platform/platform.h"
 #include "../state/receivers.h"
+#include "../ui/scale.h"
 #include "../ui/theme.h"
 #include "dect2/badges/badges_client.h"
 #include "dect2/engine/updater.h"
@@ -266,8 +267,8 @@ void window(App& a) {
     drawToast(a);
     if (!S.open) { S.fetchedOnce = false; return; }
     if (!S.fetchedOnce) { S.fetchedOnce = true; if (!S.busy) fetchMe(a); }
-    ImGui::SetNextWindowSize(ImVec2(560 * ImGui::GetFontSize() / 13.f, 600 * ImGui::GetFontSize() / 13.f), ImGuiCond_FirstUseEver);
-    if (!ImGui::Begin(tr("Badges###mapbadgeswin"), &S.open)) { ImGui::End(); return; }
+    firstWindowSize(560 * gUi, 600 * gUi);
+    if (!ImGui::Begin(trw("Badges"), &S.open)) { ImGui::End(); return; }
     bd::Profile me; bool haveMe; std::string msg, replyErr; bool msgBad;
     { std::lock_guard<std::mutex> lk(S.mu); me = S.me; haveMe = S.haveMe; msg = S.msg; msgBad = S.msgBad; replyErr = S.replyError; }
     const bool sess = session().valid(nowSec());
