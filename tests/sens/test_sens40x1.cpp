@@ -8,6 +8,10 @@
 #include "dect2/ndb/ndb_rx.h"
 #include "dect2/ndb/ndb_tel.h"
 #include "dect2/sarsat/sarsat_gen.h"
+#include "dect2/time/time_gen.h"
+#include "dect2/time/time_proto.h"
+#include "dect2/time/time_rx.h"
+#include "dect2/time/time_tel.h"
 #include "dect2/sarsat/sarsat_rx.h"
 #include "dect2/sarsat/sarsat_tel.h"
 #include <algorithm>
@@ -287,6 +291,106 @@ void ndbGuard() {
     CHECK(dec == 0, "ndb: %d idents from noise", dec);
 }
 
+// ---------------------------------------------------------------- time stations: the expected minute as an a-priori check
+
+struct TimeResult { int ok = 0, predicted = 0, minutes = 0; bool wrong = false; bool valid = false; };
+
+// `mins` minutes of a station (generator noise: carrier to noise in 1 kHz, the generator's definition) at 48 kS/s from 23 s into a minute.
+// predicted: the a-priori check on. Counted: minutes after the first decoded one that were decoded or matched, and whether the final time is wrong.
+TimeResult timeTrial(int station, bool predicted, double snrDb, double cfoHz, double ppm, int mins, uint64_t seed, bool noiseOnly = false) {
+    TimeGenConfig c;
+    c.station = station; c.rate = 48000; c.snrDb = 200; c.cfoHz = cfoHz; c.clockPpm = ppm;   // the noise is added below
+    c.dialOffsetHz = -timeTuning().tuneOffsetHz;
+    c.startUtc = (double)(1792800000 + (int64_t)(seed % 100000) * 60 + 37);
+    TimeGenerator g(c);
+    TimeReceiver r;
+    r.configure(c.rate);
+    r.setSignalOffset(-timeTuning().tuneOffsetHz);
+    r.setStation(station);
+    r.setClockMode(2, c.startUtc);
+    r.setPredictedMinutes(predicted);
+    std::mt19937_64 rng(seed);
+    const double sigma = std::sqrt(c.amp * c.amp * (c.rate / 1000.0) / std::pow(10.0, snrDb / 10.0) / 2.0);
+    std::normal_distribution<float> N(0.f, (float)sigma);
+    std::vector<cf32> buf(16000);
+    const size_t total = (size_t)((mins * 60.0 + 23) * c.rate);
+    TimeTelemetry last;
+    uint64_t firstOk = 0;
+    bool haveFirst = false;
+    double firstAt = 0;
+    for (size_t done = 0; done < total; done += buf.size()) {
+        if (noiseOnly) std::fill(buf.begin(), buf.end(), cf32(0, 0)); else g.generate(buf.data(), buf.size());
+        if (noiseOnly || snrDb < 90) for (auto& v : buf) v += cf32(N(rng), N(rng));
+        r.feed(buf.data(), buf.size());
+        TimeTelemetry t;
+        if (r.telemetry(t, 0)) {
+            if (!haveFirst && t.blocksOk > 0) { haveFirst = true; firstOk = t.blocksOk; firstAt = (double)done / c.rate; }
+            last = std::move(t);
+        }
+    }
+    TimeResult res;
+    res.valid = last.timeValid;
+    if (haveFirst) {
+        res.ok = (int)(last.blocksOk - firstOk);
+        res.predicted = (int)last.minutesPredicted;
+        res.minutes = (int)std::floor(((double)total / c.rate - firstAt) / 60.0);
+    }
+    if (last.timeValid) {
+        const double truth = c.startUtc + last.timeSec;   // the generator's seconds arrive delayMs (0) after UTC
+        res.wrong = std::fabs(last.utcNow - truth) > 1.5;
+    }
+    if (noiseOnly) res.wrong = last.blocksOk > 0;
+    return res;
+}
+
+void timeCurve() {
+    const int trials = envInt("ONAIR_X1_TRIALS", 6), mins = envInt("ONAIR_X1_MINS", 10);
+    struct St { int id; const char* name; };
+    const St sts[] = {{timesig::Dcf77, "DCF77"}, {timesig::Msf, "MSF"}, {timesig::Wwvb, "WWVB"}};
+    for (const St& st : sts) {
+        printf("%s, %d minutes: minutes counted after the first decoded one (share of the minutes there were), plain | with the expected-minute check\n", st.name, mins);
+        for (double snr : points("ONAIR_X1_POINTS", {14, 11, 8, 5, 2})) {
+            for (const Scen& sc : {Scen{"awgn", 0, 0}, Scen{"cfo 1 Hz, clock 50 ppm", 1.0, 50}}) {
+                double sh[2] = {0, 0};
+                int first[2] = {0, 0}, wrong[2] = {0, 0}, pred = 0;
+                std::mutex mu;
+                parallel(2 * trials, [&](int j) {
+                    const int path = j & 1, i = j >> 1;
+                    const TimeResult r = timeTrial(st.id, path == 1, snr, sc.cfo, sc.ppm, mins, mix64(0x71e0ull + (uint64_t)i * 13 + (uint64_t)((snr + 50) * 10)));
+                    std::lock_guard<std::mutex> lk(mu);
+                    if (r.minutes > 0) { sh[path] += (double)r.ok / r.minutes; first[path]++; }
+                    wrong[path] += r.wrong;
+                    if (path) pred += r.predicted;
+                });
+                printf("  %5.1f dB %-22s: %3.0f %% | %3.0f %% (trials with a first decode %d | %d, expected-minute matches %d, wrong time %d | %d)\n", snr, sc.name,
+                       first[0] ? 100.0 * sh[0] / first[0] : 0.0, first[1] ? 100.0 * sh[1] / first[1] : 0.0, first[0], first[1], pred, wrong[0], wrong[1]);
+                fflush(stdout);
+            }
+        }
+    }
+}
+
+void timeGuard() {
+    // DCF77 after its first decoded minute: at 8 dB in 1 kHz the plain decoder keeps few minutes, the check keeps most; noise alone gives no minute
+    const int trials = envInt("ONAIR_X1_TRIALS", 3);
+    double sh[2] = {0, 0};
+    int n[2] = {0, 0}, wrong = 0;
+    std::mutex mu;
+    parallel(2 * trials, [&](int j) {
+        const int path = j & 1, i = j >> 1;
+        const TimeResult r = timeTrial(timesig::Dcf77, path == 1, 8.0, 0, 0, 8, mix64(0x7e57ull + (uint64_t)i));
+        std::lock_guard<std::mutex> lk(mu);
+        if (r.minutes > 0) { sh[path] += (double)r.ok / r.minutes; n[path]++; }
+        wrong += r.wrong;
+    });
+    printf("dcf77 8 dB: minutes kept after the first, plain %.0f %% (%d trials), with the check %.0f %% (%d), wrong %d\n", n[0] ? 100 * sh[0] / n[0] : 0.0, n[0], n[1] ? 100 * sh[1] / n[1] : 0.0, n[1], wrong);
+    CHECK(n[1] > 0 && sh[1] / n[1] >= 0.6, "time: the expected-minute check keeps too few minutes");
+    CHECK(n[1] > 0 && n[0] > 0 && sh[1] / n[1] > sh[0] / n[0], "time: the check is not better than plain decoding");
+    CHECK(wrong == 0, "time: %d wrong times", wrong);
+    const TimeResult z = timeTrial(timesig::Dcf77, true, 0, 0, 0, 4, 99, true);
+    CHECK(!z.wrong, "time: noise alone gave a minute");
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -298,10 +402,12 @@ int main(int argc, char** argv) {
     if (curve && *curve) {
         if (strstr(curve, "sarsat")) sarsatCurve();
         if (strstr(curve, "ndb")) ndbCurve();
+        if (strstr(curve, "time")) timeCurve();
         return 0;
     }
     if (only.empty() || only == "sarsat") sarsatGuard();
     if (only.empty() || only == "ndb") ndbGuard();
+    if (only.empty() || only == "time") timeGuard();
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("all passed\n");
     return 0;
