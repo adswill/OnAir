@@ -47,7 +47,9 @@ std::vector<cf32> modulatePreambleSymbol(const PreambleParams& p, int cred, int 
 
 // The reverse: `x` points at the first sample of the guard interval (guard + fftSize samples). Returns the equalised data cells in
 // their original order; `noiseVar` is an estimate of the noise power per cell relative to unit cell power.
-bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int symbolIndex, const cf32* x, std::vector<cf32>& cells, float* noiseVar = nullptr);
+// weights (optional): the channel state of each cell, |h|^2 against the symbol's mean, in the order of `cells`
+bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int symbolIndex, const cf32* x, std::vector<cf32>& cells, float* noiseVar = nullptr,
+                              std::vector<float>* weights = nullptr);
 
 } // namespace atsc3
 } // namespace dect2
