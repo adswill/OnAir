@@ -24,7 +24,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        image: [ "linuxmintd/mint23-amd64", "linuxmintd/mint22.3-amd64", "ubuntu:26.04", "ubuntu:24.04", "ubuntu:22.04", "debian:13" ]
+        image: [ "linuxmintd/mint27-amd64", "linuxmintd/mint22.3-amd64", "linuxmintd/lmde7-amd64", "ubuntu:26.04", "ubuntu:24.04", "ubuntu:22.04", "debian:13" ]
+    defaults: { run: { shell: bash } }
     env:
       V: ${{ inputs.version || '3.9.0' }}
       DEBIAN_FRONTEND: noninteractive
@@ -53,7 +54,8 @@ jobs:
         continue-on-error: true
         run: |
           set -o pipefail
-          apt-get install -y "/dl/onair_${V}_amd64.deb" 2>&1 | tail -25
+          type -a apt; head -c 300 /usr/local/bin/apt 2>/dev/null; echo
+          apt install -y "/dl/onair_${V}_amd64.deb" 2>&1 | tail -25   # 'apt' as the README says: on Mint this is Mint's own wrapper
       - name: Start the .deb install (version, ldd, headless frame)
         if: steps.deb.outcome == 'success'
         continue-on-error: true
