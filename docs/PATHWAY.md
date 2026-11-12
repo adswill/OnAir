@@ -1898,3 +1898,9 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+
+## 2026-11-12 (night): SondeHub upload and the radiosonde map (feat40-sondehub)
+- SondeHub uploader: a fixed, off-by-default entry in Data feeds > Radiosonde upload. Gzip JSON PUT to /sondes/telemetry and the station record to /listeners, following the SondeHub wiki and auto_rx / ChaseMapper (15 s batches, longer with DFM / Meisei, 5xx retried up to 5 times, other answers shown). software_name OnAir. Only good frames with a fix, the sonde's own time (within 1 h of the clock) and a serial; iMet-1/4 held back. The HTTP client gained PUT with a body (sockets/OpenSSL, NSURLSession, WinHTTP).
+- Launch sites: "Site 1" came from the learned-site placeholder (no list of real sites). A built-in IGRA 2 list (885 active stations, public domain) and the user's sonde-sites-known.txt name the learned sites, including the 3.9 file's on load. The map shows every known site in view.
+- Map: my station with the callsign, or a chase car from a live GPS (NMEA serial or file, gpsd). Optional Tawhiri prediction of the selected sonde, drawn dotted and labelled as a prediction.
+- Tests: sonde_hub (with a mock HTTP server), sonde_map_overlay, sonde_sites. CI only (on battery). docs/SONDEHUB-4.0.md.
