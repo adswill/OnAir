@@ -4401,3 +4401,33 @@ tracked	verfolgt
 turns	Umläufe
 typically	typisch
 watch	beobachten
+LNB drift watch	LNB-Drift beobachten
+Tune onto a steady beacon or carrier and leave the receiver locked: the offset of the carrier from the tuned frequency is the LNB's error. It shows the error in kHz and ppm of the LO, the drift per minute, and says when it has settled (an LNB drifts while it warms up: wait before fine pointing).	Auf eine stabile Bake oder einen Träger abstimmen und den Empfänger eingerastet lassen: die Ablage des Trägers von der eingestellten Frequenz ist der Fehler des LNB. Angezeigt werden der Fehler in kHz und in ppm des LO, die Drift pro Minute und wann sie sich beruhigt hat (ein LNB driftet beim Warmlaufen: vor der Feinausrichtung warten).
+LNB LO (MHz)	LNB-LO (MHz)
+Collecting: needs about a minute of a locked carrier.	Sammle: braucht etwa eine Minute mit eingerastetem Träger.
+Error	Fehler
+settled	beruhigt
+still drifting	driftet noch
+ATIS letter tracker and VOLMET	ATIS-Buchstabe und VOLMET
+Reads the live transcripts of the airband channels (Transcripts need the speech model). A channel whose label says ATIS or VOLMET, or that read an information letter twice, is an ATIS channel: the current letter, its age, and a notice when the letter changes. A VOLMET read-out lists the airports it named.	Liest die Live-Transkripte der Flugfunkkanäle (Transkripte brauchen das Sprachmodell). Ein Kanal, dessen Name ATIS oder VOLMET enthält oder auf dem zweimal ein Informationsbuchstabe gelesen wurde, gilt als ATIS-Kanal: aktueller Buchstabe, sein Alter und ein Hinweis, wenn der Buchstabe wechselt. Eine VOLMET-Ansage listet die genannten Flughäfen auf.
+No ATIS channel found yet.	Noch kein ATIS-Kanal gefunden.
+information	Information
+minutes ago	Minuten her
+letter not read yet	Buchstabe noch nicht gelesen
+VOLMET airports	VOLMET-Flughäfen
+Constellation check: no regular grid recognised.	Konstellationsprüfung: kein regelmäßiges Raster erkannt.
+The symbol cloud looks like	Die Symbolwolke sieht aus wie
+A check of the received symbols against each QAM grid, judged against what a random cloud would score on the same grid (a finer grid always fits better). The decoder finds its order from the stream by itself; this is a second opinion.	Die empfangenen Symbole werden gegen jedes QAM-Raster geprüft und daran gemessen, was eine zufällige Wolke auf demselben Raster erreichen würde (ein feineres Raster passt immer besser). Der Dekoder bestimmt seine Ordnung selbst aus dem Datenstrom; das hier ist eine zweite Meinung.
+decoder uses	Dekoder nutzt
+Digital sideband levels	Pegel der digitalen Seitenbänder
+Power of the lower and upper digital sideband against the host signal, from the capture spectrum. A first-adjacent station hurts one side: a clear imbalance tells which. Needs a capture at least 440 kHz wide around the station.	Leistung des unteren und oberen digitalen Seitenbands gegenüber dem Hauptsignal, aus dem Spektrum der Aufnahme. Ein Nachbarsender auf dem ersten Nachbarkanal stört eine Seite: ein deutliches Ungleichgewicht zeigt, welche. Braucht eine Aufnahme von mindestens 440 kHz Breite um den Sender.
+The capture is too narrow around the station (needs +-240 kHz, bins under 2 kHz).	Die Aufnahme ist um den Sender zu schmal (braucht +-240 kHz, Bins unter 2 kHz).
+No HD Radio sidebands found in the spectrum.	Keine HD-Radio-Seitenbänder im Spektrum gefunden.
+lower	unten
+upper	oben
+imbalance	Ungleichgewicht
+Free channels for	Freie Kanäle für
+pilots	Piloten
+Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.	Kanäle, die niemand nutzt (aus der letzten Suche), so verteilt, dass sich die Piloten nicht stören: nicht näher als 20 MHz an einem Sender, mindestens 37 MHz auseinander. Nie gemessene Kanäle werden nicht angeboten: zuerst suchen.
+Scan first.	Zuerst suchen.
+No free channel found.	Kein freier Kanal gefunden.

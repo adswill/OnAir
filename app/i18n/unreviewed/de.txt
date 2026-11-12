@@ -970,3 +970,33 @@ tracked
 turns
 typically
 watch
+LNB drift watch
+Tune onto a steady beacon or carrier and leave the receiver locked: the offset of the carrier from the tuned frequency is the LNB's error. It shows the error in kHz and ppm of the LO, the drift per minute, and says when it has settled (an LNB drifts while it warms up: wait before fine pointing).
+LNB LO (MHz)
+Collecting: needs about a minute of a locked carrier.
+Error
+settled
+still drifting
+ATIS letter tracker and VOLMET
+Reads the live transcripts of the airband channels (Transcripts need the speech model). A channel whose label says ATIS or VOLMET, or that read an information letter twice, is an ATIS channel: the current letter, its age, and a notice when the letter changes. A VOLMET read-out lists the airports it named.
+No ATIS channel found yet.
+information
+minutes ago
+letter not read yet
+VOLMET airports
+Constellation check: no regular grid recognised.
+The symbol cloud looks like
+A check of the received symbols against each QAM grid, judged against what a random cloud would score on the same grid (a finer grid always fits better). The decoder finds its order from the stream by itself; this is a second opinion.
+decoder uses
+Digital sideband levels
+Power of the lower and upper digital sideband against the host signal, from the capture spectrum. A first-adjacent station hurts one side: a clear imbalance tells which. Needs a capture at least 440 kHz wide around the station.
+The capture is too narrow around the station (needs +-240 kHz, bins under 2 kHz).
+No HD Radio sidebands found in the spectrum.
+lower
+upper
+imbalance
+Free channels for
+pilots
+Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.
+Scan first.
+No free channel found.

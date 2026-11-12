@@ -1888,3 +1888,8 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - x40 receiver, fourth block (families 779 - 781, docs/X40-4.0.md): ILS marker beacons (MARKER-4.0.md), FSK modems Bell 103 / V.21 / V.23 / Bell 202 (FSKMODEM-4.0.md), SSR interrogations on 1030 MHz (SSRINT-4.0.md). Tests with offsets, fading, clock errors, noise sweeps and false-report runs; simulated signals only.
 - The summary switch in core/src/engine/modes.cpp keeps literal `case N:` labels: android/tools/gen_results_map.py reads them (a macro dropped the Sub-GHz sensors, radiosonde, wireless M-Bus and AIS cards from the Android results map). The existing switch and panel lines stay as they were (tests read them as text); the entries' cases are on lines of their own.
 - tests/qa/qa_known.inc lists the entries whose test signal cannot carry their data (QA sweep).
+
+## 2026-11-12 (night): 4.0 wiring, second pass (feat40-wire2)
+- New cards in `app/d40/`: Sarsat incidents, tone system and DTMF numbers, ISM classifier line, FT8 heard / band summary / clear frequency, CW heard list, GSM-R channel frequencies, talkgroup names, HF beacon best frequency, LNB drift, ATIS / VOLMET, DVB-C QAM check, HD Radio sideband levels, FPV free channels, mesh share columns.
+- `ism_classify.h`: pulse type renamed `IsmTimedPulse` (clash with `ism_proto.h`). `BandClock` got save / load / frequencies.
+- 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
