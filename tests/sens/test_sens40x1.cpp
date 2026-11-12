@@ -406,7 +406,7 @@ int main(int argc, char** argv) {
         if (strstr(curve, "sarsat")) sarsatCurve();
         if (strstr(curve, "ndb")) ndbCurve();
         if (strstr(curve, "time")) timeCurve();
-        return 0;
+        if (!getenv("ONAIR_X1_GUARD_TOO")) return 0;
     }
     if (only.empty() || only == "sarsat") sarsatGuard();
     if (only.empty() || only == "ndb") ndbGuard();
