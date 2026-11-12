@@ -59,6 +59,32 @@ static void mrzTest() {
     }
 }
 
+// 4.0: the MRZ config sub-frames C and D (the serial) survive the reset after a pause, and expire after 5 minutes of stream time
+static void mrzConfigKept() {
+    SondeTruth t = truth();
+    auto d = makeMrzDecoder();
+    std::vector<SondeFix> out;
+    std::vector<uint8_t> pad(50, 1);
+    double tm = 10;
+    for (int sub : {0xC, 0xD, 0x1}) {
+        auto s = mrzSymbols(t, sub, false);
+        d->push(pad.data(), pad.size(), tm, out);
+        d->push(s.data(), s.size(), tm, out);
+        d->reset();   // the pause between bursts
+        tm += 1;
+    }
+    CHECK(out.size() == 3 && out.back().serial == "MRZ-11223-4455");
+    out.clear();
+    auto s = mrzSymbols(t, 0x1, false);
+    d->push(s.data(), s.size(), tm + 100, out);   // within 5 minutes: still known
+    d->reset();
+    CHECK(out.size() == 1 && out[0].serial == "MRZ-11223-4455");
+    out.clear();
+    auto s2 = mrzSymbols(t, 0x2, false);
+    d->push(s2.data(), s2.size(), tm + 400, out);   // after 5 minutes: forgotten
+    CHECK(out.size() == 1 && out[0].serial.empty());
+}
+
 // 4.0: the MRZ sync (9 x 1001 and 10101010) is found with up to 3 symbol errors, at most one in its last 8; copies shifted by 2 and 4 symbols never lock
 static void mrzSyncTolerance() {
     SondeTruth t = truth();
@@ -161,6 +187,7 @@ int main() {
     imetBitsTest();
     mrzTest();
     mrzSyncTolerance();
+    mrzConfigKept();
     imet54Test();
     meiseiTest();
     meiseiSyncTolerance();

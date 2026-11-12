@@ -169,13 +169,20 @@ class MrzDecoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "MRZ"; }
     double symbolRate() const override { return 2400; }
+    bool narrowChannel() const override { return true; }
     bool midpointSlicer() const override { return true; }
-    void reset() override { sync_ = 0; bits_.clear(); run_ = false; cfgC_ = cfgD_ = -1; last_ = -1; }
-    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override {
+    // 4.0: the serial comes from the config sub-frames C and D (one in four frames). reset() (a pause of more than 0.15 s) used to forget them, so on a
+    // signal with pauses the serial was never complete and every frame was dropped for want of a key (about 7 times fewer frames in the generator at 14 dB):
+    // they are kept for 5 minutes of stream time; a new sonde on the channel replaces them with its own C and D frames
+    void reset() override { sync_ = 0; bits_.clear(); run_ = false; last_ = -1; }
+    void push(const uint8_t* sym, size_t n, double t, std::vector<SondeFix>& out) override {
+        if (cfgC_ >= 0 && (t < cfgT_ || t - cfgT_ > 300.0)) cfgC_ = cfgD_ = -1;
+        tPush_ = t;
         for (size_t i = 0; i < n; i++) step(sym[i], out);
     }
 private:
     uint64_t sync_ = 0; std::vector<uint8_t> bits_; bool run_ = false; int inv_ = 0, phase_ = 0, cfgC_ = -1, cfgD_ = -1, last_ = -1;
+    double cfgT_ = 0, tPush_ = 0;
     // on air: the preamble 1001... and then AA BF 35 Manchester coded, MSB first (Manchester: 1 -> 10, 0 -> 01 or the inverse)
     void step(int s, std::vector<SondeFix>& out) {
         if (!run_) {
@@ -212,6 +219,7 @@ private:
         if (!mrzParseFrame(f, sizeof f, o)) return;
         if ((f[3] & 15) == 0xC) cfgC_ = (int)rd32le(f + (rd16le(f + 30) == 0xFFFF ? 41 : 44));
         if ((f[3] & 15) == 0xD) cfgD_ = (int)rd32le(f + (rd16le(f + 30) == 0xFFFF ? 41 : 44));
+        if ((f[3] & 15) == 0xC || (f[3] & 15) == 0xD) cfgT_ = tPush_;
         o.serial = "MRZ-" + (cfgC_ >= 0 ? std::to_string(cfgC_) : std::string("?")) + "-" + (cfgD_ >= 0 ? std::to_string(cfgD_) : std::string("?"));
         if (cfgC_ < 0 || cfgD_ < 0) o.serial.clear();
         // a frame goes out 6 times: report one
