@@ -3,6 +3,7 @@
 //   line 1: "clean 0" while running, "clean 1" after a normal exit
 //   line 2: the record of the session (the same fields as a workspace)
 #include "workspace.h"
+#include "dect2/engine/retired_modes.h"
 #include "../platform/platform.h"
 #include <chrono>
 #include <cstdio>
@@ -59,7 +60,7 @@ std::string encodeRecord(const Workspace& w) {
 bool decodeRecord(const std::string& line, Workspace& w) {
     const std::vector<std::string> f = splitRecord(line);
     if (f.size() < 9) return false;
-    w.name = f[0]; w.devName = f[1]; w.family = atoi(f[2].c_str()); w.subId = f[3];
+    w.name = f[0]; w.devName = f[1]; w.family = dect2::liveFamily(atoi(f[2].c_str())); w.subId = f[3];
     w.freqMhz = atof(f[4].c_str()); w.sampleRateHz = atof(f[5].c_str());
     w.lnaDb = atoi(f[6].c_str()); w.vgaDb = atoi(f[7].c_str()); w.ampOn = f[8] == "1";
     w.panels = f.size() > 9 ? f[9] : std::string();

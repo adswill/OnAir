@@ -498,28 +498,6 @@ void WmbusLiveReceiver::feed(const cf32* x, size_t n) {
 void WmbusLiveReceiver::setPhyMask(uint32_t m) { p_->phyMask.store(m, std::memory_order_relaxed); }
 void WmbusLiveReceiver::setMfrFilter(const std::string& code) { std::lock_guard<std::mutex> lk(p_->mfrMu); p_->mfrFilter = code; }
 
-// 4.0: the modes with a mode-list entry of their own (families 720, 723, 726, 732, 735: family, active standard family + 1, engine standard family + 2, poll slot = family)
-static const WmbusView kWmbusViews[] = {
-    {720, "wmbuss1", "Wireless M-Bus S1", 1u << (int)wmbus::Phy::S1, 868.625, false},
-    {723, "wmbust1", "Wireless M-Bus T1", 1u << (int)wmbus::Phy::T1, 868.625, false},
-    {726, "wmbusc1", "Wireless M-Bus C1", (1u << (int)wmbus::Phy::C1A) | (1u << (int)wmbus::Phy::C1B), 868.625, false},
-    {732, "wmbusr2", "Wireless M-Bus R2", 1u << (int)wmbus::Phy::R2, 868.625, false},
-    {735, "wmbusn1", "Wireless M-Bus N1 (Wize, 169 MHz)", (1u << (int)wmbus::Phy::N1) | (1u << (int)wmbus::Phy::N24), 169.4375, true, ""},
-    {743, "wmbuskam", "Wireless M-Bus: Kamstrup", 0xFFFFFFFFu, 868.625, false, "KAM"},
-    {797, "wmbuslgb", "Wireless M-Bus: Landis+Gyr", 0xFFFFFFFFu, 868.625, false, "LGB"},
-    {467, "wmbusitw", "Wireless M-Bus: Itron", 0xFFFFFFFFu, 868.625, false, "ITW"},
-    {470, "wmbussen", "Wireless M-Bus: Sensus", 0xFFFFFFFFu, 868.625, false, "SEN"},
-};
-const WmbusView* wmbusViews(int& count) { count = (int)(sizeof kWmbusViews / sizeof *kWmbusViews); return kWmbusViews; }
-const WmbusView* wmbusViewForActive(int a) { for (const auto& v : kWmbusViews) if (v.family + 1 == a) return &v; return nullptr; }
-const WmbusView* wmbusViewForStd(int s) { for (const auto& v : kWmbusViews) if (v.family + 2 == s) return &v; return nullptr; }
-ModeTuning wmbusViewTuning(int i) {
-    ModeTuning t = wmbusTuning();
-    const WmbusView& v = kWmbusViews[i];
-    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name; t.defMhz = v.defMhz;
-    return t;
-}
-
 ModeTuning wmbusTuning() {
     ModeTuning t;
     t.stdMode = 88; t.id = "wmbus"; t.name = "Wireless M-Bus (meters)";

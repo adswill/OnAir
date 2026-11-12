@@ -260,22 +260,6 @@ void NfcReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     p_->log = std::move(cb);
 }
 
-// 4.0: the protocols with a mode-list entry of their own (family, active standard family + 1, engine standard family + 2, poll slot = family)
-static const NfcView kNfcViews[] = {
-    {473, "nfctypea", "NFC: ISO 14443 Type A", 0},
-    {476, "nfctypeb", "NFC: ISO 14443 Type B", 1},
-    {482, "nfc15693", "NFC: ISO 15693", 2},
-};
-const NfcView* nfcViews(int& count) { count = (int)(sizeof kNfcViews / sizeof *kNfcViews); return kNfcViews; }
-const NfcView* nfcViewForActive(int a) { for (const auto& v : kNfcViews) if (v.family + 1 == a) return &v; return nullptr; }
-const NfcView* nfcViewForStd(int s) { for (const auto& v : kNfcViews) if (v.family + 2 == s) return &v; return nullptr; }
-ModeTuning nfcViewTuning(int i) {
-    ModeTuning t = nfcTuning();
-    const NfcView& v = kNfcViews[i];
-    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
-    return t;
-}
-
 ModeTuning nfcTuning() {
     ModeTuning t;
     t.stdMode = 150;                 // family 148 + 2

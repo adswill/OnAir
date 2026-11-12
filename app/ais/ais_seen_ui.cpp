@@ -31,7 +31,7 @@ struct St {
 };
 St G;
 
-bool live(const App& a) { return a.rx.standard == 15 || dect2::aisViewForActive(a.rx.standard) != nullptr; }   // as ais_ui.cpp
+bool live(const App& a) { return a.rx.standard == 15; }   // as ais_ui.cpp
 int tzOff() {
     const time_t t = time(nullptr);
     struct tm l = *localtime(&t), g = *gmtime(&t);

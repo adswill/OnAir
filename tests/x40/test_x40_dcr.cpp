@@ -197,7 +197,9 @@ int main() {
             X40Telemetry t; rx.telemetry(t, 0);
             unsigned long long seen, sg; frameCounts(t, seen, sg);
             printf("  %-44s 150 s: %zu rows, %llu frames seen, %llu good SACCH\n", r.name, t.rows.size(), seen, sg);
-            CHECK(t.rows.empty() && sg == 0, "%s: %zu rows, %llu good SACCH", r.name, t.rows.size(), sg);
+            // no message may come out of noise (a SACCH message counts only when it repeats, x40_dcr.cpp confirm()); a single SACCH frame passes its
+            // CRC-6 once in 64 noise frames, so the frames that pass are held to twice that rate instead of none (MinGW's maths gave 1 of 24)
+            CHECK(t.rows.empty() && sg <= 1 + seen / 32, "%s: %zu rows, %llu good SACCH of %llu frames", r.name, t.rows.size(), sg, seen);
         }
     }
 

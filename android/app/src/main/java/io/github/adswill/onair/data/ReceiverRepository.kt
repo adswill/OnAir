@@ -219,7 +219,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         }
         if (CrashLog.hasUnseen(ctx)) _state.update { it.copy(error = ctx.getString(R.string.previous_crash, CrashLog.file(ctx).absolutePath)) }
         val saved = s.modeIndex
-        val idx = if (saved in Modes.all.indices && !Modes.all[saved].removed) saved else Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)
+        val idx = Modes.live(saved).takeIf { it >= 0 } ?: Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)   // a removed type row opens its receiver
         applyMode(idx)
         radios.start()
         refreshCaps(s)

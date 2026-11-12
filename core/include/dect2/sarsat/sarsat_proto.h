@@ -54,6 +54,8 @@ std::vector<uint8_t> syncBits(bool selfTest);
 
 // Checks and (up to 3 / 2 bit errors) repairs bits[0..n) in place, then fills `out`. n is 112 or 144; the sync bits are not checked here.
 bool decode(std::vector<uint8_t>& bits, Beacon& out);
+// Only the BCH-1 repair of decode (bits 25-106 in place): the number of bits repaired, -1 when the word cannot be repaired.
+int bch1Correct(std::vector<uint8_t>& bits);
 
 struct Spec {
     bool longMsg = true;

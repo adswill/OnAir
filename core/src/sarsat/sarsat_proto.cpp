@@ -121,6 +121,8 @@ bool standardLocation(int code) { return code == 2 || code == 3 || code == 4 || 
 
 }  // namespace
 
+int bch1Correct(std::vector<uint8_t>& bits) { return bits.size() < (size_t)kShortBits ? -1 : bch1().correct(bits, 25); }
+
 uint32_t bchRemainder(const std::vector<uint8_t>& bits, int first, int last, uint32_t gen, int degree) {
     uint32_t rem = 0;
     for (int i = first; i <= last; i++) {

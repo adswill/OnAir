@@ -187,7 +187,6 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxDtmb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDtmb_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAtv_.configure(rate_);
-    { const AtvView* tv = atvViewForActive(activeStdFor(stdMode_.load())); if (tv) rxAtv_.setStandard(tv->sys, tv->colour); }   // an entry of one standard tells the receiver the system and the colour system (the screen keeps them: atv_ui.cpp)
     rxAtv_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxDmr_.configure(rate_);
     rxDmr_.setLogCallback([this](const std::string& s) { rxLog(s); });
@@ -196,7 +195,6 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxAdsb_.configure(rate_);
     rxAdsb_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxGnss_.configure(rate_);
-    { const GnssView* gv = gnssViewForActive(activeStdFor(stdMode_.load())); rxGnss_.setSystems(gv ? gnssSystemBit(gv->system) : 0xFFFFFFFFu); }   // an entry of one system wants that system only
     rxGnss_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxGnss_.setClockCompare(dev.isRadio());   // the satellites' UTC against the computer's clock: a radio only (a file or the simulator keeps its own date)
     wide_.setLogCallback([this](const std::string& s) { rxLog(s); });
@@ -442,10 +440,8 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
 // Configures the narrow-channel decoders (sondes, ais, acars... tetra, psk, spectrum tools, astro, ...) with their log callbacks
 void Engine::configureDecoderReceivers(const DeviceInfo& dev, const TuneSettings& tune) {
     rxSonde_.configure(rate_);
-    { const SondeView* sv = sondeViewForActive(activeStdFor(stdMode_.load())); rxSonde_.setKindMask(sv ? 1u << sv->kind : 0u); }   // an entry of one sonde type reports that type only
     rxSonde_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAis_.configure(rate_);
-    { const AisView* av = aisViewForActive(activeStdFor(stdMode_.load())); rxAis_.setStationView(av ? av->classMask : 0u, av ? av->devicesOnly : false); }   // an entry of one kind of station reports that kind only
     rxAis_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxMarine_.configure(rate_);
     rxMarine_.setLogCallback([this](const std::string& s) { rxLog(s); });
@@ -574,7 +570,6 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxIono_.setTimeOrigin(dev.isRadio() ? std::chrono::duration<double>(std::chrono::system_clock::now().time_since_epoch()).count() : 0.0);
     rxQo100_.configure(rate_);
     rxTime_.configure(rate_);
-    { const TimeView* tv = timeViewForActive(activeStdFor(stdMode_.load())); if (tv) rxTime_.setStation(tv->station); }   // an entry of one station fixes that station (the screen keeps it: time_ui.cpp)
     rxCube_.configure(rate_);
     { const CubesatView* cv = cubesatViewForActive(activeStdFor(stdMode_.load())); rxCube_.setFramingMask(cv ? 1u << cv->framing : 0u); }   // an entry of one framing hears that framing only
     rxGs_.configure(rate_);
@@ -628,7 +623,6 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxEloran_.configure(rate_);
     rxEloran_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxNfc_.configure(rate_);
-    { const NfcView* nv = nfcViewForActive(activeStdFor(stdMode_.load())); rxNfc_.setProtoMask(nv ? 1u << nv->proto : 0u); }   // an entry of one protocol lists that protocol only
     rxNfc_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxSbas_.configure(rate_);
     rxSbas_.setLogCallback([this](const std::string& s) { rxLog(s); });
@@ -687,7 +681,6 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     for (auto& r : rxW1a_) { r.configure(rate_); r.setLogCallback([this](const std::string& s) { rxLog(s); }); }
     rxNrf_.configure(rate_);
     rxSens_.configure(rate_);
-    { const SensorsView* sv = sensorsViewForActive(activeStdFor(stdMode_.load())); rxSens_.setView(sv ? sv->patterns : ""); }   // an entry of one sensor family reports that family only
     rxBgan_.configure(rate_);
     rxBgan_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxSfer_.configure(rate_);
@@ -776,7 +769,6 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxZw_.setLogCallback([this](const std::string& m) { rxLog(m); });
     rxEcz_.configure(rate_);
     rxWmb_.configure(rate_);
-    { const WmbusView* wv = wmbusViewForActive(activeStdFor(stdMode_.load())); rxWmb_.setPhyMask(wv ? wv->phyMask : 0u); rxWmb_.setMfrFilter(wv ? wv->mfr : ""); }   // an entry of one wireless M-Bus mode lists that mode only
     rxWmb_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxModeAc_.configure(rate_);
     rxModeAc_.setLogCallback([this](const std::string& s) { rxLog(s); });

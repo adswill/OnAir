@@ -5,6 +5,8 @@ changes: new modes are appended, removed ones stay as hidden placeholders. The o
 The script runs from tools/build_native.sh, so a mode added to the desktop table reaches the app with no Android change.
 Usage: gen_modes.py [<OnAir repo> <android project>] (default: this checkout and its android/ folder)"""
 import re, sys, html, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'tools'))
+import mode_families  # noqa: E402
 _android = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 repo, proj = (sys.argv[1], sys.argv[2]) if len(sys.argv) > 2 else (os.path.dirname(_android), _android)
 src = open(os.path.join(repo, 'app/ui/mode_table.cpp'), encoding='utf-8').read()
@@ -47,7 +49,7 @@ def vec4(s):
 modes = []
 buf = ''
 for line in body.splitlines():
-    if not buf and not re.match(r'\s*\{\d+,', line): continue
+    if not buf and not mode_families.ROW_RE.match(line): continue
     buf += line + '\n'
     st = buf.strip()
     if st.endswith('},') and st.count('{') == st.count('}'):
@@ -55,7 +57,7 @@ for line in body.splitlines():
         col = f[3]
         f += ['""'] * (8 - len(f))
         if f[7] in ('""', ''): f[7] = 'ImVec4(0.7f, 0.74f, 0.8f, 1)'
-        modes.append(dict(family=int(f[0]), name=cstr(f[1]), group=int(f[2]), blurb=cstr(f[4]) or '', tip=cstr(f[5]) or '', sub=cstr(f[6]) or '', accent=vec4(f[7]),
+        modes.append(dict(family=mode_families.family(f[0], repo), name=cstr(f[1]), group=int(f[2]), blurb=cstr(f[4]) or '', tip=cstr(f[5]) or '', sub=cstr(f[6]) or '', accent=vec4(f[7]),
                           subId=(cstr(f[8]) if len(f) > 8 and f[8] != 'nullptr' else None), keys=(cstr(f[9]) or '' if len(f) > 9 else '')))
         buf = ''
 gm = re.search(r'kGroupNames\[kNumGroups\]\s*=\s*\{(.*?)\};', src, re.S)
@@ -95,6 +97,12 @@ for pos, m in enumerate(modes):
     by_key[key_of(m)] = m
 removed = dict(family=-1, name='', group=0, blurb='', tip='', sub='', accent=0xFF808080, subId=None, keys='', order=-1)
 rows = [by_key.get(k, removed) for k in order]
+# a removed row that was one type of an existing receiver (core/include/dect2/engine/retired_modes.h): a saved index opens that receiver
+retired = {int(f): int(pf) for f, pf in re.findall(r'\{(\d+), "[a-z0-9]+", (\d+), "[a-z0-9]+"\}', open(os.path.join(repo, 'core/include/dect2/engine/retired_modes.h'), encoding='utf-8').read())}
+replaced = {}
+for i, k in enumerate(order):
+    f = int(k.split('|')[0])
+    if k not in by_key and f in retired and ('%d|' % retired[f]) in by_key: replaced[i] = order.index('%d|' % retired[f])
 print(len(modes), 'modes,', len(rows), 'rows on Android', len(groups), 'groups')
 
 def xml(s): return html.escape(s or '', quote=False).replace("'", "\\'").replace('"', '\\"').replace('@', '\\@').replace('?', '\\?')
@@ -119,4 +127,8 @@ with open(os.path.join(proj, 'app/src/main/java/io/github/adswill/onair/Modes.kt
     for i, m in enumerate(rows):
         o.write(f'        ModeDef({i}, {m["family"]}, {m["group"]}, 0x{m["accent"]:08X}, {kstr(m["subId"])}, {m["order"]}, {note_of(m) if m["order"] >= 0 else 0}),\n')
     o.write('    )\n')
-    o.write('    /** The modes that exist, in the order of the desktop table. */\n    val shown: List<ModeDef> = all.filter { !it.removed }.sortedBy { it.order }\n}\n')
+    o.write('    /** The modes that exist, in the order of the desktop table. */\n    val shown: List<ModeDef> = all.filter { !it.removed }.sortedBy { it.order }\n')
+    o.write('    /** Removed rows that showed one type of a receiver, by [ModeDef.index]: the index of that receiver (a saved one opens it). */\n')
+    o.write('    val replacedBy: Map<Int, Int> = mapOf(' + ', '.join(f'{i} to {j}' for i, j in sorted(replaced.items())) + ')\n')
+    o.write('    /** The index to open for a saved one: the same, the receiver a removed type row showed, or -1 when it no longer exists. */\n')
+    o.write('    fun live(index: Int): Int = if (index !in all.indices) -1 else if (!all[index].removed) index else replacedBy[index] ?: -1\n}\n')

@@ -330,7 +330,7 @@ static void testServer() {
         Host h2;
         RemoteApiServer srv2(h2);
         RemoteApiConfig c2 = c;
-        c2.ratePerSec = 2; c2.rateBurst = 5;
+        c2.ratePerSec = 0.1; c2.rateBurst = 5;   // a slow refill: on a loaded runner (a second per request) the 30 requests stay a flood
         CHECK(srv2.configure(c2), "second server");
         const int p2 = srv2.config().port;
         int n429 = 0, n200 = 0;

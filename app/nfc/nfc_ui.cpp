@@ -8,7 +8,7 @@
 
 namespace {
 
-bool live(const App& a) { return a.rx.standard == 149 || dect2::nfcViewForActive(a.rx.standard) != nullptr; }   // engine standard 150, active standard 149 (family 148)
+bool live(const App& a) { return a.rx.standard == 149; }   // engine standard 150, active standard 149 (family 148)
 
 const char* protoName(int p) { return p == 0 ? "14443-A" : p == 1 ? "14443-B" : "15693"; }
 
@@ -108,7 +108,19 @@ void list(App& a) {
     if (t.tags.empty()) ImGui::TextDisabled("no tags yet");
 }
 
-void tick(App&) {}
+// the protocol filter: only the frames and tags of one protocol are listed (NfcReceiver::setProtoMask; bit = NfcLogEntry::proto)
+const char* const kProtoNames[] = {"every protocol", "ISO 14443 Type A", "ISO 14443 Type B", "ISO 15693"};
+int& protoFilter() { static int v = std::clamp((int)plat::prefs().getI("nfcProtoFilter", 0), 0, 3); return v; }   // 0 every protocol, else proto + 1
+void pushProtoFilter(App& a) { const int k = protoFilter(); a.engine.nfc().setProtoMask(k ? 1u << (k - 1) : 0u); }   // every frame (an atomic store): each receiver gets it
+
+void tick(App& a) { pushProtoFilter(a); }
+
+void decoder(App& a, bool&) {
+    ImGui::TextDisabled("PROTOCOL"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(std::min(170 * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::Combo("##nfcproto", &protoFilter(), kProtoNames, IM_ARRAYSIZE(kProtoNames))) { plat::prefs().setI("nfcProtoFilter", protoFilter()); pushProtoFilter(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("List the frames, tags and NDEF records of one protocol only. Every frame is still decoded.");
+}
 
 void status(App& a) {
     ImGui::AlignTextToFramePadding();
@@ -134,5 +146,6 @@ const ModeUi kNfcUi = {
     .list = list,
     .status = status,
     .summary = summary,
+    .decoder = decoder,
     .tick = tick,
 };

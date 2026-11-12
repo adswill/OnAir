@@ -1,4 +1,4 @@
-// The time-station entries (families 607 .. 648; time_rx.h: timeViews): the Time signals receiver with the station fixed. The test signal of each station (time_gen.h, a known time, started part way into a minute)
+// The station fixed on the Time signals receiver (TimeReceiver::setStation, the Station choice of the Time signals screen). The test signal of each station (time_gen.h, a known time, started part way into a minute)
 // goes into a receiver fixed to that station, with a carrier error and a sample clock error: the station is the one of the entry, the decoded time is right (DCF77, MSF, WWVB, JJY 40 / 60, WWV, BPM), the first time comes after the first whole minute;
 // a signal of another station gives no time in a fixed receiver (DCF77 in the MSF entry, WWVB in the DCF77 entry, JJY 60 in the WWVB entry), and noise alone gives none in any entry. BPC, HLA, BPM coded and RWM are run too
 // and checked for the station only (their decoding is covered by test_time_burst / test_time_rwm). Simulated signals only.
@@ -41,17 +41,21 @@ static TimeTelemetry run(TimeGenConfig c, int fixedStation, double secs, bool no
 }
 
 int main() {
-    int nv = 0;
-    const TimeView* views = timeViews(nv);
-    CHECK(nv == 11, "%d views", nv);
-    for (int i = 0; i < nv; i++) {
-        CHECK(timeViewForActive(views[i].family + 1) == &views[i] && timeViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
-        const ModeTuning t = timeViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id && std::fabs(t.defMhz - stationKhz(views[i].station) / 1000.0) < 1e-9, "view %d tuning", i);
-        CHECK(views[i].station != Chu, "CHU is not offered");
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && views[j].station != views[i].station && std::strcmp(views[j].id, views[i].id) != 0, "views %d and %d clash", j, i);
-    }
-    CHECK(timeViewForActive(59) == nullptr && timeViewForStd(60) == nullptr, "the Time signals mode is not a view");
+    struct V { const char* id; const char* name; int station; };   // the filters the Time signals screen offers
+    static const V views[] = {
+        {"dcf77", "DCF77 (Germany, 77.5 kHz)", 0},
+        {"msf", "MSF (United Kingdom, 60 kHz)", 1},
+        {"wwvb", "WWVB (United States, 60 kHz)", 2},
+        {"jjy40", "JJY 40 kHz (Japan)", 3},
+        {"jjy60", "JJY 60 kHz (Japan)", 4},
+        {"wwv", "WWV / WWVH (United States, HF)", 5},
+        {"bpm", "BPM (China, HF)", 7},
+        {"bpc", "BPC (China, 68.5 kHz)", 8},
+        {"hla", "HLA (Korea, 5 MHz)", 9},
+        {"bpmcoded", "BPM coded (China, HF)", 10},
+        {"rwm", "RWM (Russia, 9996 kHz)", 11},
+    };
+    const int nv = (int)(sizeof views / sizeof *views);
 
     const double start = (double)(daysFromCivil(2026, 10, 12) * 86400 + 14 * 3600 + 2 * 60 + 37);   // 14:02:37 UTC
     for (int i = 0; i < nv; i++) {

@@ -1,4 +1,5 @@
 #include "dect2/presets/preset.h"
+#include "dect2/engine/retired_modes.h"
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -214,7 +215,7 @@ bool Store::isFavourite(const std::string& id) const { return std::find(favourit
 
 std::vector<const Preset*> Store::forMode(const std::string& mode) const {
     std::vector<const Preset*> r;
-    for (const auto& p : user) if (p.mode == mode) r.push_back(&p);
+    for (const auto& p : user) if (liveModeId(p.mode) == mode) r.push_back(&p);   // a preset of a 4.0 type entry belongs to its receiver (retired_modes.h)
     for (const auto& p : builtinPresets()) if (p.mode == mode) r.push_back(&p);
     std::stable_sort(r.begin(), r.end(), [&](const Preset* a, const Preset* b) {
         const bool fa = isFavourite(a->id), fb = isFavourite(b->id);

@@ -69,18 +69,4 @@ private:
 
 ModeTuning timeTuning();
 
-// 4.0: the time stations that OnAir lists as modes of their own (docs/VIEWS-4.0.md): the Time signals receiver with the station fixed (and its own frequency as the default).
-// family N, active standard N + 1, engine standard N + 2, poll slot N.
-struct TimeView {
-    int family;
-    const char* id;          // dect2cli --standard
-    const char* name;        // the mode-list name
-    int station;             // timesig::Station
-};
-const TimeView* timeViews(int& count);
-const TimeView* timeViewForActive(int activeStd);
-const TimeView* timeViewForStd(int stdMode);
-ModeTuning timeViewTuning(int i);
-#define DECT2_TIMEVIEW_ACTIVE_CASES case 608: case 611: case 614: case 617: case 629: case 632: case 635: case 638: case 643: case 646: case 649:
-
 } // namespace dect2

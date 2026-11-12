@@ -141,14 +141,18 @@ private:
         const double dt = 0.02; const int M = (int)((t1 - t0) / dt); if (M < 200) return 0;
         std::vector<double> s(M, 0.0); std::vector<int> c(M, 0);
         for (auto& p : pul_) { const int i = (int)((p.t - t0) / dt); if (i >= 0 && i < M) { s[i] = std::max(s[i], p.amp); c[i]++; } }
-        // fill holes by the previous value, take the log
-        double last = 1e-9; for (int i = 0; i < M; i++) { if (c[i]) last = s[i]; s[i] = std::log(std::max(last, 1e-9)); }
+        // take the log; a bin without a pulse (the beam is away) gets the weakest level seen. Holding the previous value there made a staircase of
+        // each turn's last, near-threshold pulse, whose slowly falling autocorrelation let a third of the turn pass as the period (0.80 s for 2.4 s)
+        double floorAmp = 1e300; for (int i = 0; i < M; i++) if (c[i]) floorAmp = std::min(floorAmp, s[i]);
+        if (floorAmp > 1e299) return 0;
+        for (int i = 0; i < M; i++) s[i] = std::log(std::max(c[i] ? s[i] : floorAmp, 1e-9));
         double mu = 0; for (double v : s) mu += v; mu /= M; for (auto& v : s) v -= mu;
         double e0 = 0; for (double v : s) e0 += v * v; if (e0 < 1e-9) return 0;
         const int lmin = (int)(0.8 / dt), lmax = std::min(M / 2, (int)(12.0 / dt));
         double best = 0; int bl = 0;
         std::vector<double> r(lmax + 1, 0.0);
-        for (int l = lmin; l <= lmax; l++) { double a = 0; for (int i = 0; i + l < M; i++) a += s[i] * s[i + l]; r[l] = a / e0 * (double)M / (double)(M - l); if (r[l] > best) { best = r[l]; bl = l; } }
+        // (r is also computed one lag below the search: the fundamental test below needs r[l - 1], and an r[lmin - 1] of 0 made lmin look like a peak)
+        for (int l = lmin - 1; l <= lmax; l++) { double a = 0; for (int i = 0; i + l < M; i++) a += s[i] * s[i + l]; r[l] = a / e0 * (double)M / (double)(M - l); if (l >= lmin && r[l] > best) { best = r[l]; bl = l; } }
         // the modulation must be real: strong correlation and the log-level swing of at least 4 dB peak to peak
         double mn = 1e9, mx = -1e9; for (double v : s) { mn = std::min(mn, v); mx = std::max(mx, v); }
         if (best < 0.5 || (mx - mn) * 8.686 < 4.0) return 0;

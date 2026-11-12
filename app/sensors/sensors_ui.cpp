@@ -66,7 +66,7 @@ const RemoveOpt kRemove[] = {{N_("Never"), 0}, {N_("1 minute"), 60}, {N_("5 minu
 const int kRemoveDefaultSec = 3600;   // a car's tyre sensors pass once; an hour is long enough for every normal sensor (they send every 30-180 s) and short enough to tidy the list
 const char* const kBothKey = "*both*";
 
-bool live(const App& a) { return a.rx.standard == 242 || dect2::sensorsViewForActive(a.rx.standard) != nullptr; }   // the engine reports its standard code minus one
+bool live(const App& a) { return a.rx.standard == 242; }   // the engine reports its standard code minus one
 
 std::string join(const std::vector<std::string>& v, char sep) {
     std::string o;

@@ -62,19 +62,4 @@ private:
 
 ModeTuning aisTuning();
 
-// 4.0: the station kinds that OnAir lists as modes of their own (docs/VIEWS-4.0.md): views onto this receiver (the same channels and decoders, the stations of one kind). family N, active standard N + 1, engine standard N + 2, poll slot N.
-struct AisView {
-    int family;
-    const char* id;          // dect2cli --standard
-    const char* name;        // the mode-list name
-    uint32_t classMask;      // bits of AisClass
-    bool devicesOnly;        // MMSI 970 / 972 / 974
-    const char* shortName;
-};
-const AisView* aisViews(int& count);
-const AisView* aisViewForActive(int activeStd);
-const AisView* aisViewForStd(int stdMode);
-ModeTuning aisViewTuning(int i);
-#define DECT2_AISVIEW_ACTIVE_CASES case 739: case 808: case 811: case 814: case 817: case 858:
-
 } // namespace dect2

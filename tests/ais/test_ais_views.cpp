@@ -1,4 +1,4 @@
-// The AIS station-kind entries (families 738, 807, 810, 813, 816, 857; ais_rx.h: aisViews): views onto the AIS receiver that report one kind of station:
+// The station-kind filter of the AIS receiver (AisReceiver::setStationView, the Show choice of the AIS screen): the stations of one kind only.
 // Class A, Class B, base stations, aids to navigation, search and rescue aircraft, and the devices with MMSI 970 / 972 / 974 (AIS-SART, man overboard, EPIRB-AIS).
 //   - the simulated port of ais_gen (class A vessels, a class B, a base station, aids, an aircraft) goes, with a carrier error and noise, into one receiver without a view and one per view, from the same samples:
 //     a view lists exactly the stations of its class that the receiver without a view lists, its messages, application messages and sentences belong to them, and the views together list every station;
@@ -32,16 +32,16 @@ static std::vector<AisTelemetry> runAll(const std::vector<cf32>& x, double rate,
 }
 
 int main() {
-    int nv = 0;
-    const AisView* views = aisViews(nv);
-    CHECK(nv == 6, "%d views", nv);
-    for (int i = 0; i < nv; i++) {
-        CHECK(aisViewForActive(views[i].family + 1) == &views[i] && aisViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
-        const ModeTuning t = aisViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id && t.defMhz == aisTuning().defMhz, "view %d tuning", i);
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0, "views %d and %d clash", j, i);
-    }
-    CHECK(aisViewForActive(15) == nullptr && aisViewForStd(16) == nullptr, "the AIS mode is not a view");
+    struct V { const char* id; const char* name; uint32_t classMask; bool devicesOnly; const char* shortName; };   // the filters the AIS screen offers
+    static const V views[] = {
+        {"aisclassa", "AIS Class A vessels", 1u << AIS_CLASS_A, false, "Class A"},
+        {"aisclassb", "AIS Class B vessels", 1u << AIS_CLASS_B, false, "Class B"},
+        {"aisbase", "AIS base stations", 1u << AIS_CLASS_BASE, false, "Base stations"},
+        {"aisaton", "AIS aids to navigation (AtoN)", 1u << AIS_CLASS_ATON, false, "AtoN"},
+        {"aissar", "AIS search and rescue aircraft", 1u << AIS_CLASS_SAR, false, "SAR aircraft"},
+        {"aissart", "AIS-SART, MOB and EPIRB-AIS", 0, true, "SART / MOB / EPIRB"},
+    };
+    const int nv = (int)(sizeof views / sizeof *views);
 
     std::vector<std::pair<uint32_t, bool>> cfgs{{0, false}};
     for (int i = 0; i < nv; i++) cfgs.push_back({views[i].classMask, views[i].devicesOnly});

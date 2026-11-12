@@ -1,4 +1,4 @@
-// The NFC protocol entries (families 473, 476, 482; nfc_engine.h: nfcViews): views onto the NFC / RFID receiver that report one protocol: ISO 14443 Type A, Type B or ISO 15693.
+// The protocol filter of the NFC / RFID receiver (NfcReceiver::setProtoMask, the Protocol choice of the NFC screen): ISO 14443 Type A, Type B or ISO 15693.
 // The three scripted sessions of nfc_gen (Type A with an NDEF read, ISO 15693 inventory, Type B REQB / ATQB), with a carrier error and noise, go into one receiver without a view and one per view, from the same samples:
 //   - a view lists exactly the frames, tags and NDEF records of the receiver without a view that belong to its protocol, and nothing of another one;
 //   - a view is empty exactly when the receiver without a view has no frame of its protocol; noise alone: a view lists what the receiver without a view lists of its protocol (and nothing else).
@@ -29,17 +29,6 @@ static std::vector<NfcTelemetry> runAll(const SynthConfig& sc, double rate, doub
 static size_t logOf(const NfcTelemetry& t, int proto) { size_t n = 0; for (auto& e : t.log) if (e.proto == proto) n++; return n; }
 
 int main() {
-    int nv = 0;
-    const NfcView* views = nfcViews(nv);
-    CHECK(nv == 3, "%d views", nv);
-    for (int i = 0; i < nv; i++) {
-        CHECK(nfcViewForActive(views[i].family + 1) == &views[i] && nfcViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
-        const ModeTuning t = nfcViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id && t.defMhz == nfcTuning().defMhz && t.sampleRate == nfcTuning().sampleRate, "view %d tuning", i);
-        CHECK(views[i].proto == i, "view %d proto %d", i, views[i].proto);
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0, "views %d and %d clash", j, i);
-    }
-    CHECK(nfcViewForActive(149) == nullptr && nfcViewForStd(150) == nullptr, "the NFC mode is not a view");
     const int session[3] = {0, 2, 1};   // the generator's session for proto 0 (Type A), 1 (Type B), 2 (ISO 15693)
     for (int p = 0; p < 3; p++) for (double cfo : {0.0, 600.0}) {
         SynthConfig sc; sc.modeOpt[0] = session[p]; sc.snrDb = 30; sc.cfoHz = cfo;

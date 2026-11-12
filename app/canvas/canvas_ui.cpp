@@ -21,6 +21,7 @@
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include "dect2/engine/retired_modes.h"
 #include <functional>
 #include <map>
 #include <set>
@@ -135,7 +136,7 @@ std::string modeKey(const App& a) {
 
 const ModeDef* modeRow(const std::string& key) {
     const size_t sl = key.find('/');
-    const int fam = std::atoi(key.substr(0, sl).c_str());
+    const int fam = dect2::liveFamily(std::atoi(key.substr(0, sl).c_str()));   // a 4.0 type entry: its receiver (retired_modes.h)
     const std::string sub = sl == std::string::npos ? std::string() : key.substr(sl + 1);
     const ModeDef* any = nullptr;
     for (int i = 0; i < kNumModes; i++) {
@@ -188,7 +189,7 @@ void applySource(const Block& b, App& r) {
     c.devName = b.get("dev");
     const std::string mk = b.get("mode");
     const size_t sl = mk.find('/');
-    c.family = std::atoi(mk.substr(0, sl).c_str());
+    c.family = dect2::liveFamily(std::atoi(mk.substr(0, sl).c_str()));
     c.subId = sl == std::string::npos ? std::string() : mk.substr(sl + 1);
     c.freqMhz = b.getD("mhz", c.freqMhz); c.sampleRateHz = b.getD("rate", 0);
     c.lnaDb = b.getI("lna", c.lnaDb); c.vgaDb = b.getI("vga", c.vgaDb); c.ampOn = b.getI("amp", 0) != 0;

@@ -1188,7 +1188,7 @@ extern float gSwitchWidth;
 struct ModeDef { int family; const char* name; int group; ImU32 col; const char* blurb; const char* tip; const char* sub; ImVec4 accent; const char* subId = nullptr; const char* keys = nullptr;
     // filled by modeInfoFill() (mode_info.cpp) for the Mode Browser; rows need not set them
     uint32_t tags = 0; uint8_t needs = 0; float minRateMsps = 0; double bandMinMhz = 0, bandMaxMhz = 0; bool isNew = false; };
-constexpr int kModeCapacity = 400;   // the built-in rows and the plugins' (mode_table.cpp)
+constexpr int kModeCapacity = 1024;   // the built-in rows (461 in 4.0) and the plugins' (mode_table.cpp)
 extern ModeDef kModes[];
 extern int kNumModes;
 bool addPluginModeRow(int family, const std::string& name, const std::string& blurb, const std::string& sub);   // appends a row in the PLUGINS group; false when the table is full

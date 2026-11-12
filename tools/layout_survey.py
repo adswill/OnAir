@@ -2,11 +2,13 @@
 # Which modes have what in the sidebar layout's lower row and right column (docs/LAYOUT-4.0.md): reads app/ui/mode_table.cpp and
 # app/panels/modeui.cpp, finds each mode's ModeUi and classifies its panels() from the code. Usage: tools/layout_survey.py <repo> out.json
 import re, os, sys, glob, json, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mode_families  # noqa: E402
 R = sys.argv[1]
 mt = open(f"{R}/app/ui/mode_table.cpp").read()
 rows = []
-for m in re.finditer(r'^\s*\{(\d+), "([^"]+)", (\d+),', mt, re.M):
-    rows.append((int(m.group(1)), m.group(2), int(m.group(3))))
+for m in re.finditer(r'^\s*\{\s*(' + mode_families.TOKEN + r')\s*,\s*"([^"]+)", (\d+),', mt, re.M):
+    rows.append((mode_families.family(m.group(1), R), m.group(2), int(m.group(3))))
 mu = open(f"{R}/app/panels/modeui.cpp").read()
 body = mu[mu.index("const ModeUi* modeUi(int family) {"):]
 body = body[:body.index("\n}\n")]

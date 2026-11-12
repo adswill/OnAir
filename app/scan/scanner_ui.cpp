@@ -7,6 +7,7 @@
 #include "dect2/results/results_io.h"
 #include "dect2/common/timecompat.h"
 #include "scan_list.h"
+#include "dect2/engine/retired_modes.h"
 #include "dect2/common/u8file.h"
 #include <cstring>
 #include <ctime>
@@ -49,7 +50,8 @@ std::string modeKey(const ModeDef& m) {
     return std::to_string(m.family);
 }
 int modeIndex(const std::string& key) {
-    for (int i = 0; i < kNumModes; i++) if (modeKey(kModes[i]) == key) return i;
+    const std::string k = dect2::liveModeId(key);   // a 4.0 type entry: its receiver (retired_modes.h)
+    for (int i = 0; i < kNumModes; i++) if (modeKey(kModes[i]) == k) return i;
     return -1;
 }
 int currentModeIndex(const App& a) {

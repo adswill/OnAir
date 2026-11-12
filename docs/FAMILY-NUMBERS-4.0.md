@@ -71,22 +71,25 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 Families 779 - 787 stay reserved for further modes of this block. A new variant needs: the enum entry and the active-standard `case` label in `x40_rx.h`, `makeX()` in `x40_int.h` / `x40_dec.cpp`, the tuning row in `x40_dec.cpp`, the name in `x40_rx.cpp`, `x40Tuning(v)` in the registry list of `core/src/engine/modes.cpp`, the table sizes and `makeUi<v>()` in `app/x40/x40_ui.cpp`, the `case` in `app/panels/modeui.cpp` and the mode-table row (`x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
 
 ## Numbers taken by feat40-modes4 (2026-11-12)
-Every entry is a family F with active standard F + 1, engine standard F + 2 and poll slot F; none needs `kNumFamilies` or `kPollSeqSlots` to change. Tables of the entries: `docs/SENSORVIEWS-4.0.md`, `docs/VIEWS-4.0.md`, `docs/X40-4.0.md`.
+Every entry is a family F with active standard F + 1, engine standard F + 2 and poll slot F; none needs `kNumFamilies` or `kPollSeqSlots` to change. Tables of the entries: `docs/X40-4.0.md`.
+
+The other rows of this block were entries that showed one type of an existing receiver. They are not in the mode list; the receivers' screens filter by type instead.
+Their families and ids are **retired**: `core/include/dect2/engine/retired_modes.h` maps a saved one to its receiver (desktop settings, workspaces, presets, memories, scan lists, Android indexes), so never give one of these numbers or ids to a new mode.
 
 | Block | Families | What |
 |---|---|---|
 | x40 receiver, fourth block | 779, 780, 781 | ILS marker beacons, FSK modems, SSR interrogations (variants 42 - 44; 782 - 787 stay free for this block) |
-| Sub-GHz sensor families and kinds | 564, 567, 570, 573, 576, 579, 582, 585, 588, 591, 594, 663, 666, 669, 672, 675, 678, 681, 412, 415, 418, 421 | 22 views of Sub-GHz sensors |
-| Radiosonde types | 684, 687, 690, 693, 702, 705, 708, 711, 714, 717 | 10 views of Radiosonde |
-| Wireless M-Bus modes and manufacturers | 720, 723, 726, 732, 735, 743, 797, 467, 470 | 9 views of Wireless M-Bus |
-| CubeSat framings | 792, 795, 804 | 3 views of CubeSat telemetry |
-| AIS station kinds | 738, 807, 810, 813, 816, 857 | 6 views of AIS |
-| NFC protocols | 473, 476, 482 | 3 views of NFC / RFID 13.56 MHz |
-| Time stations | 607, 610, 613, 616, 628, 631, 634, 637, 642, 645, 648 | 11 views of Time signals |
-| GNSS systems | 860, 866, 872, 875 | 4 views of GNSS |
-| Analog TV standards | 424, 427, 441, 444, 447, 450, 453, 456 | 8 views of Analog TV |
+| Retired: Sub-GHz sensor families and kinds | 564, 567, 570, 573, 576, 579, 582, 585, 588, 591, 594, 663, 666, 669, 672, 675, 678, 681, 412, 415, 418, 421 | 22 views of Sub-GHz sensors |
+| Retired: Radiosonde types | 684, 687, 690, 693, 702, 705, 708, 711, 714, 717 | 10 views of Radiosonde |
+| Retired: Wireless M-Bus modes and manufacturers | 720, 723, 726, 732, 735, 743, 797, 467, 470 | 9 views of Wireless M-Bus |
+| Retired: CubeSat framings | 792, 795, 804 | 3 views of CubeSat telemetry |
+| Retired: AIS station kinds | 738, 807, 810, 813, 816, 857 | 6 views of AIS |
+| Retired: NFC protocols | 473, 476, 482 | 3 views of NFC / RFID 13.56 MHz |
+| Retired: Time stations | 607, 610, 613, 616, 628, 631, 634, 637, 642, 645, 648 | 11 views of Time signals |
+| Retired: GNSS systems | 860, 866, 872, 875 | 4 views of GNSS |
+| Retired: Analog TV standards | 424, 427, 441, 444, 447, 450, 453, 456 | 8 views of Analog TV |
 
-The numbers still free are those of the ranges listed above minus the ones in this table (the stride is 3 for a view, 1 for an x40 variant). The integrator resolves any clash with another branch.
+The numbers still free are those of the ranges listed above minus the ones in this table, retired ones included (1 for an x40 variant). The integrator resolves any clash with another branch.
 
 ## DCR (feat40-dcr, 2026-11-12)
 x40 variant 45: family 782, active standard 783, engine standard 784, poll slot 782 (DCR, Japan digital convenience radio, docs/DCR-4.0.md). The x40 variants after SsrInt (44) are variants 45 and up: a merge with another branch that also adds a variant needs the enum order, `kX40Ui[]`, `makeUi<>()` and the `x40Tuning(n)` list settled by hand; `DECT2_X40_ACTIVE_CASES` now ends in 783.
