@@ -30,19 +30,23 @@ namespace dect2 {
 
 struct GeneralTelemetry;   // general_tel.h
 
-enum GeneralDemod { GenNfm = 0, GenWfm, GenAm, GenUsb, GenLsb, GenCw, GenDemodCount };
+// GenDsb: both sidebands, no carrier (a product detector at the dial); GenRaw: no demodulation, the channel's I (in-phase) part is the audio and
+// recordings keep the channel IQ; GenCwl: CW with the beat note below the carrier (the mirror of GenCw). Appended in 4.0: the numbers of the
+// first six stay (saved settings, memories, the remote API and the web / Android clients use them).
+enum GeneralDemod { GenNfm = 0, GenWfm, GenAm, GenUsb, GenLsb, GenCw, GenDsb, GenRaw, GenCwl, GenDemodCount };
+inline bool generalIsCw(int d) { return d == GenCw || d == GenCwl; }
 
 constexpr double kGeneralAudioRate = 48000.0;
 constexpr double kGeneralWideRate = 240000.0;       // WFM demodulation rate (5 x 48 kHz)
 constexpr double kGeneralSsbLowCutHz = 300.0;       // USB / LSB: the passband starts this far from the dial
 
-const char* generalDemodName(int demod);             // "NFM", "WFM", "AM", "USB", "LSB", "CW"
+const char* generalDemodName(int demod);             // "NFM", "WFM", "AM", "USB", "LSB", "CW", "DSB", "RAW", "CW-L"
 // Width presets of a demodulator (Hz), the default among them, and the range a dragged edge may set
 const double* generalWidthPresets(int demod, int& count);
 double generalDefaultWidth(int demod);
 void generalWidthRange(int demod, double& minHz, double& maxHz);
 double generalClampWidth(int demod, double hz);
-// The channel filter relative to the channel frequency: [-w/2, w/2] for NFM / WFM / AM / CW, [300, 300 + w] USB, [-300 - w, -300] LSB
+// The channel filter relative to the channel frequency: [-w/2, w/2] for NFM / WFM / AM / CW / DSB / RAW / CW-L, [300, 300 + w] USB, [-300 - w, -300] LSB
 void generalFilterEdges(int demod, double widthHz, double& loHz, double& hiHz);
 double generalDefaultDeemphUs(int demod);           // WFM 50 us, the others off (0)
 

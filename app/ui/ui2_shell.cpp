@@ -6,6 +6,7 @@
 #include "dect2/dsp/baseband_filter.h"
 #include "ui2_internal.h"
 #include "menu_groups.h"
+#include "../general/general_panels.h"
 #include "../state/listen_freq.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
@@ -211,6 +212,129 @@ void modeList(App& a) {
     a.tgMin[TgSwitch] = first; a.tgMax[TgSwitch] = ImVec2(first.x + ImGui::GetContentRegionAvail().x, ImGui::GetCursorScreenPos().y);
 }
 
+// the bodies of the sidebar sections (sidebar() below; the General screen of 4.0 puts them in its own sidebar, general/general_screen.cpp)
+void sideDisplayBody(App& a) {
+    if (ImGui::Checkbox(tr("Peak hold"), &a.peakHold)) savePrefs(a);
+    const float col = ImGui::GetCursorPosX() + ImGui::CalcTextSize(tr("Waterfall")).x + 8 * gUi;   // the controls line up after the longer label
+    const float autoW = ImGui::CalcTextSize(tr("Auto")).x + ImGui::GetStyle().FramePadding.x * 2 + 4 * gUi;
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Spectrum")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::DragFloatRange2("##specdb", &a.yMin, &a.yMax, 1, -160, 20, "%.0f", "%.0f")) a.specAutoDb = false;
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Waterfall")); ImGui::SameLine(col);
+    ImGui::SetNextItemWidth(std::min(104.f * gUi, ImGui::GetContentRegionAvail().x - autoW));
+    if (ImGui::DragFloatRange2("##wfdb", &a.wf.minDb, &a.wf.maxDb, 1, -160, 20, "%.0f", "%.0f")) a.wf.autoTrack = a.specAutoDb = false;
+    ImGui::SameLine(0, 4 * gUi);
+    wfAutoButton(a);
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Layout")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
+    {
+        const char* lay[2] = {tr("Classic"), tr("Unified")};
+        int cur = a.layoutUnified ? 1 : 0;
+        if (kit::combo("##layoutsel", &cur, lay, 2)) { a.layoutUnified = cur == 1; savePrefs(a); }
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Unified: the spectrum and waterfall stay on screen above the decoded views (F6 folds them)"));
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Look")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
+    {
+        static const char* lk[6] = {N_("Classic"), N_("Dev A"), N_("Dev B"), N_("Studio"), N_("Mono Pro"), N_("Daylight")};
+        const char* names[6] = {tr(lk[0]), tr(lk[1]), tr(lk[2]), tr(lk[3]), tr(lk[4]), tr(lk[5])};
+        int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
+        if (kit::combo("##looksel", &cur, names, 6)) { a.uiTheme = cur == 0 ? 1 : 2 + cur; savePrefs(a); }
+    }
+    if (ImGui::SmallButton(tr("Reset spectrum"))) resetSpectrum(a);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)"));
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Palette")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::BeginCombo("##wfmap", tr(Waterfall::mapName(a.wf.effMap())))) {   // also in the Waterfall popup on the plot
+        for (int i = 0; i < Waterfall::NumMaps; i++)
+            if (ImGui::Selectable(tr(Waterfall::mapName(i)), a.wf.effMap() == i)) { a.wf.map = i; a.wf.palette(); savePrefs(a); }
+        ImGui::EndCombo();
+    }
+    {
+        const char* ts[] = {N_("Classic"), N_("Simple")};
+        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Tuner style")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
+        if (ImGui::BeginCombo("##tunerstyle", tr(ts[std::max(0, std::min(1, a.tunerStyle))]))) {
+            for (int i = 0; i < 2; i++) if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
+            ImGui::EndCombo();
+        }
+    }
+}
+
+bool sideDecoderShown(const App& a) { return a.family == 0 || a.family == 3 || captureRowShown(a) || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family)); }
+
+void sideToolsBody(App& a) {
+    auto tool = [&](const char* label, bool& on, const char* tipText) {
+        if (ImGui::Checkbox(tr(label), &on)) savePrefs(a);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr(tipText));
+    };
+    tool("Passes", a.passesOpen, "Satellite passes and automatic tuning");
+    tool("Scheduler...", a.schedulerOpen, "Timed jobs and satellite passes: tune, record, then put everything back");
+    tool("Recordings...", a.recmgrOpen, "Every recording in one list: search, play, trim, convert, tag, delete with undo");
+    tool("Direction finder", a.dfOpen, N_("Bearing and position of a transmitter from an antenna array such as the KrakenSDR"));
+    tool("Interference hunter", a.rfiOpen, N_("Watch a band for new interference, tell what kind it is, and walk to find it with a loud / quiet meter"));
+    tool("Passive radar", a.passiveRadarOpen, N_("Aircraft from the echoes of a broadcast transmitter, with two coherent channels"));
+    tool("Images", a.galleryOpen, "The pictures the receivers have decoded");
+    tool("Data feeds...", a.feedsOpen, "Send decoded data to other programs and services");
+    tool("EchoLink...", a.echolinkOpen, N_("Talk to EchoLink stations, links, repeaters and conferences over the Internet"));
+    tool("Wireshark...", a.wiresharkOpen, N_("Packets of a mode in Wireshark: capture interface, pcapng files and GSMTAP"));
+    tool("LAN swarm...", a.swarmOpen, "See and cooperate with other OnAir programs on this network (opt-in)");
+    tool("Messages...", a.msgdbOpen, N_("Every decoded message in one searchable database, with filters and export"));
+    tool("Protocol lab...", a.protolabOpen, N_("Work out an unknown digital signal: modulation, baud rate, sync word, CRC and fields, with an export"));
+    tool("nRF24 / ESP32 radio...", a.esp32Open, N_("An ESP32 board (with an nRF24L01+ module) on USB: receive nRF24 packets, Bluetooth LE and WiFi networks; transmit behind the Arm switch"));
+    tool("Signal Lab...", a.signallabOpen, N_("Blind analysis of an unknown digital signal from the spectrum or a recording, stage by stage with confidences, a bit viewer and a Mode Builder export"));
+    tool("Mode Builder...", a.modeBuilderOpen, N_("Build a decoder without code: describe the modulation, sync word, frame, FEC, CRC and fields, test it on a recording, add it to the mode list"));
+    tool("TX studio...", a.txStudioOpen, N_("Make a transmit signal as a file: spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted"));
+    tool("Digital video generator...", a.videoGenOpen, N_("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
+    tool("Integrations...", a.integrationsOpen, N_("Send decoded events (aircraft, ships, APRS, pagers, sondes ...) to an MQTT broker, Home Assistant, a webhook or a JSON-lines file. Off until you set it up"));
+    tool("Conversations...", a.ssbConvOpen, N_("Finds SSB voice on the span and organises it into conversations you can just listen to: auto-listen, record, timeline"));
+    tool("Watchlists...", a.watchlistOpen, N_("Alerts when listed aircraft, ships, call signs, frequencies or words are heard: notification, sound, ntfy, Telegram or webhook"));
+    tool("Automations...", a.automationOpen, N_("Rules and scripts: when something is decoded, notify, record, tune or call a webhook"));
+    tool("Plugins...", a.pluginsOpen, N_("Add decoders and actions without rebuilding OnAir: install, enable and set up plugins"));
+    tool("Memory...", a.memoryOpen, "The frequencies you keep, with mode and settings (Ctrl+M)");
+    tool("Datasets...", a.datasetsOpen, N_("Reference data (frequency lists, airports, band plans): source, licence, your own files over the bundled ones, opt-in updates"));
+    tool("Data packs...", a.packsOpen, N_("Download map tiles, satellite elements and airports once, to work without internet"));
+    tool("Frequencies...", a.freqOpen, "Known frequencies of every mode (Ctrl+Shift+F)");
+    tool("Transmit...", txViewFlag(), N_("Send this mode's own signal through a radio that can transmit. Off until you start it; needs a licence or permission."));
+    tool("Map", a.mapOpen, "A world map: find a position by coordinates or Maidenhead locator, distance and bearing from your location");
+    tool("Propagation...", a.propOpen, "Where a transmitter can be received: Simple (a preset, power, a plain answer and a coverage map) or Advanced (link budget, receiver and SDR, sweeps, compare, terrain from your own elevation file)");
+    tool("Antenna designer...", a.antdOpen, N_("Design and model wire antennas: templates, impedance and SWR across a band, radiation pattern, optimiser, calculators"));
+    tool("Antenna rotator...", a.rotatorOpen, "Connect a GS-232-compatible rotator (serial or TCP), set azimuth and elevation");
+    tool("Sweep scanner", a.sweepOpen, N_("Fast wideband sweep with a noise-floor measurement, signal log and waterfall"));
+    tool("Search everything heard", a.heardOpen, N_("One box for a call sign, ICAO address, MMSI or frequency, across the history of every mode"));
+    tool("Insights", a.insightOpen, N_("What your decodes show: who hears you, antenna pattern, APRS health, talkgroup busy hours, trunk load, automatic pages, overdue broadcasts"));
+    tool("My station", a.stationOpen, N_("Your radios and antennas, entered once: modes pick the right ones and the mode list shows what can be received"));
+    tool("Reception doctor", a.doctorOpen, N_("Why is nothing decoding? Checks overload, level, offset, bandwidth, interferers, drops and the mode from the live signal, with one-click fixes"));
+    tool("RF fingerprint", a.rfFpOpen, N_("Recognise an individual transmitter by its RF fingerprint (carrier offset, key-up transient, pilot, spurs), also when it sends only a carrier. Logs every transmission."));
+    tool("Station health", a.stationHealthOpen, N_("Noise floor, ADC level and reference stations per band, with plain advice on gain, filters and antenna placement"));
+    tool("Scanner (highly experimental)", a.scanViewOpen, "HIGHLY EXPERIMENTAL: memories, scan list and tones in one view; steps through them and stops on activity");
+    ImGui::Separator();
+    themeChoice(a, false);
+    accentMenu();
+    typographyChoice(false);
+    dataFolderChoice();
+    timeDisplayChoice(false);
+    int pct = (int)std::lround(a.uiTextScale * 100);
+    ImGui::SetNextItemWidth(-1);
+    if (ImGui::SliderInt("##sidetxt", &pct, 80, 200, tr("Text size %d%%"))) a.uiTextScale = std::max(0.8f, std::min(2.f, pct / 100.f));
+    if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
+    if (ImGui::Checkbox(tr("Touch interface"), &a.touchUi)) savePrefs(a);   // big targets, a bottom dock, full-screen pickers (ui/touch.h)
+    if (ImGui::IsItemHovered()) wrapTooltip(280 * gUi, tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
+}
+
+void sideLogBody(App& a) {
+    if (ImGui::Checkbox(tr("Verbose"), &a.verboseLog)) savePrefs(a);   // 3.5: the same switch as View > Verbose logging
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall restarts and frame times to the log."));
+    ImGui::SameLine();
+    size_t nl = 0;
+    const std::vector<std::string> all = a.engine.logSnapshot(nl);
+    if (ImGui::SmallButton(tr("Save log..."))) {   // the lines shown below, as a text file to send with a bug report
+        const std::string path = saveFileDialog("onair-log.txt");
+        if (!path.empty()) { if (FILE* f = fopen(path.c_str(), "wb")) { for (const std::string& l : all) { fputs(l.c_str(), f); fputc('\n', f); } fclose(f); } }
+    }
+    ImGui::BeginChild("##logc", ImVec2(0, std::max(40.f * gUi, ImGui::GetContentRegionAvail().y - 4 * gUi)), ImGuiChildFlags_Borders);
+    size_t n = 0;
+    const std::vector<std::string> lines = all;
+    for (const std::string& l : lines) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", l.c_str()); ImGui::PopTextWrapPos(); }
+    if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 2) ImGui::SetScrollHereY(1.f);
+    ImGui::EndChild();
+}
+
 void sidebar(App& a) {
     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8 * gUi, 4 * gUi));
     // the tour points at the sections: Source, and Gain with Tuner (next to each other)
@@ -243,131 +367,23 @@ void sidebar(App& a) {
     if (section(N_("Mode"))) { ImGui::Indent(6 * gUi); modeList(a); ImGui::Unindent(6 * gUi); ImGui::Spacing(); }
     if (section(N_("Display"))) {
         ImGui::Indent(6 * gUi);
-        if (ImGui::Checkbox(tr("Peak hold"), &a.peakHold)) savePrefs(a);
-        const float col = ImGui::GetCursorPosX() + ImGui::CalcTextSize(tr("Waterfall")).x + 8 * gUi;   // the controls line up after the longer label
-        const float autoW = ImGui::CalcTextSize(tr("Auto")).x + ImGui::GetStyle().FramePadding.x * 2 + 4 * gUi;
-        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Spectrum")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
-        if (ImGui::DragFloatRange2("##specdb", &a.yMin, &a.yMax, 1, -160, 20, "%.0f", "%.0f")) a.specAutoDb = false;
-        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Waterfall")); ImGui::SameLine(col);
-        ImGui::SetNextItemWidth(std::min(104.f * gUi, ImGui::GetContentRegionAvail().x - autoW));
-        if (ImGui::DragFloatRange2("##wfdb", &a.wf.minDb, &a.wf.maxDb, 1, -160, 20, "%.0f", "%.0f")) a.wf.autoTrack = a.specAutoDb = false;
-        ImGui::SameLine(0, 4 * gUi);
-        wfAutoButton(a);
-        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Layout")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
-        {
-            const char* lay[2] = {tr("Classic"), tr("Unified")};
-            int cur = a.layoutUnified ? 1 : 0;
-            if (kit::combo("##layoutsel", &cur, lay, 2)) { a.layoutUnified = cur == 1; savePrefs(a); }
-        }
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Unified: the spectrum and waterfall stay on screen above the decoded views (F6 folds them)"));
-        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Look")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
-        {
-            static const char* lk[6] = {N_("Classic"), N_("Dev A"), N_("Dev B"), N_("Studio"), N_("Mono Pro"), N_("Daylight")};
-            const char* names[6] = {tr(lk[0]), tr(lk[1]), tr(lk[2]), tr(lk[3]), tr(lk[4]), tr(lk[5])};
-            int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
-            if (kit::combo("##looksel", &cur, names, 6)) { a.uiTheme = cur == 0 ? 1 : 2 + cur; savePrefs(a); }
-        }
-        if (ImGui::SmallButton(tr("Reset spectrum"))) resetSpectrum(a);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)"));
-        ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Palette")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
-        if (ImGui::BeginCombo("##wfmap", tr(Waterfall::mapName(a.wf.effMap())))) {   // also in the Waterfall popup on the plot
-            for (int i = 0; i < Waterfall::NumMaps; i++)
-                if (ImGui::Selectable(tr(Waterfall::mapName(i)), a.wf.effMap() == i)) { a.wf.map = i; a.wf.palette(); savePrefs(a); }
-            ImGui::EndCombo();
-        }
-        {
-            const char* ts[] = {N_("Classic"), N_("Simple")};
-            ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Tuner style")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
-            if (ImGui::BeginCombo("##tunerstyle", tr(ts[std::max(0, std::min(1, a.tunerStyle))]))) {
-                for (int i = 0; i < 2; i++) if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
-                ImGui::EndCombo();
-            }
-        }
+        sideDisplayBody(a);
         ImGui::Unindent(6 * gUi);
         ImGui::Spacing();
     }
-    if ((a.family == 0 || a.family == 3 || captureRowShown(a) || ((modeUi(a.family) && modeUi(a.family)->decoder) || *dect2::bbf::keyForFamily(a.family))) && section(N_("Decoder"))) {
+    if (sideDecoderShown(a) && section(N_("Decoder"))) {
         ImGui::Indent(6 * gUi);
         toolbarParts(a, TbDecoder, true);
         ImGui::Unindent(6 * gUi);
     }
     if (section(N_("Tools"), false)) {   // what used to be only in the View menu; folded until it is wanted
         ImGui::Indent(6 * gUi);
-        auto tool = [&](const char* label, bool& on, const char* tipText) {
-            if (ImGui::Checkbox(tr(label), &on)) savePrefs(a);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr(tipText));
-        };
-        tool("Passes", a.passesOpen, "Satellite passes and automatic tuning");
-        tool("Scheduler...", a.schedulerOpen, "Timed jobs and satellite passes: tune, record, then put everything back");
-        tool("Recordings...", a.recmgrOpen, "Every recording in one list: search, play, trim, convert, tag, delete with undo");
-        tool("Direction finder", a.dfOpen, N_("Bearing and position of a transmitter from an antenna array such as the KrakenSDR"));
-        tool("Interference hunter", a.rfiOpen, N_("Watch a band for new interference, tell what kind it is, and walk to find it with a loud / quiet meter"));
-        tool("Passive radar", a.passiveRadarOpen, N_("Aircraft from the echoes of a broadcast transmitter, with two coherent channels"));
-        tool("Images", a.galleryOpen, "The pictures the receivers have decoded");
-        tool("Data feeds...", a.feedsOpen, "Send decoded data to other programs and services");
-        tool("EchoLink...", a.echolinkOpen, N_("Talk to EchoLink stations, links, repeaters and conferences over the Internet"));
-        tool("Wireshark...", a.wiresharkOpen, N_("Packets of a mode in Wireshark: capture interface, pcapng files and GSMTAP"));
-        tool("LAN swarm...", a.swarmOpen, "See and cooperate with other OnAir programs on this network (opt-in)");
-        tool("Messages...", a.msgdbOpen, N_("Every decoded message in one searchable database, with filters and export"));
-        tool("Protocol lab...", a.protolabOpen, N_("Work out an unknown digital signal: modulation, baud rate, sync word, CRC and fields, with an export"));
-        tool("nRF24 / ESP32 radio...", a.esp32Open, N_("An ESP32 board (with an nRF24L01+ module) on USB: receive nRF24 packets, Bluetooth LE and WiFi networks; transmit behind the Arm switch"));
-        tool("Signal Lab...", a.signallabOpen, N_("Blind analysis of an unknown digital signal from the spectrum or a recording, stage by stage with confidences, a bit viewer and a Mode Builder export"));
-        tool("Mode Builder...", a.modeBuilderOpen, N_("Build a decoder without code: describe the modulation, sync word, frame, FEC, CRC and fields, test it on a recording, add it to the mode list"));
-        tool("TX studio...", a.txStudioOpen, N_("Make a transmit signal as a file: spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted"));
-        tool("Digital video generator...", a.videoGenOpen, N_("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
-        tool("Integrations...", a.integrationsOpen, N_("Send decoded events (aircraft, ships, APRS, pagers, sondes ...) to an MQTT broker, Home Assistant, a webhook or a JSON-lines file. Off until you set it up"));
-        tool("Conversations...", a.ssbConvOpen, N_("Finds SSB voice on the span and organises it into conversations you can just listen to: auto-listen, record, timeline"));
-        tool("Watchlists...", a.watchlistOpen, N_("Alerts when listed aircraft, ships, call signs, frequencies or words are heard: notification, sound, ntfy, Telegram or webhook"));
-        tool("Automations...", a.automationOpen, N_("Rules and scripts: when something is decoded, notify, record, tune or call a webhook"));
-        tool("Plugins...", a.pluginsOpen, N_("Add decoders and actions without rebuilding OnAir: install, enable and set up plugins"));
-        tool("Memory...", a.memoryOpen, "The frequencies you keep, with mode and settings (Ctrl+M)");
-        tool("Datasets...", a.datasetsOpen, N_("Reference data (frequency lists, airports, band plans): source, licence, your own files over the bundled ones, opt-in updates"));
-        tool("Data packs...", a.packsOpen, N_("Download map tiles, satellite elements and airports once, to work without internet"));
-        tool("Frequencies...", a.freqOpen, "Known frequencies of every mode (Ctrl+Shift+F)");
-        tool("Transmit...", txViewFlag(), N_("Send this mode's own signal through a radio that can transmit. Off until you start it; needs a licence or permission."));
-        tool("Map", a.mapOpen, "A world map: find a position by coordinates or Maidenhead locator, distance and bearing from your location");
-        tool("Propagation...", a.propOpen, "Where a transmitter can be received: Simple (a preset, power, a plain answer and a coverage map) or Advanced (link budget, receiver and SDR, sweeps, compare, terrain from your own elevation file)");
-        tool("Antenna designer...", a.antdOpen, N_("Design and model wire antennas: templates, impedance and SWR across a band, radiation pattern, optimiser, calculators"));
-        tool("Antenna rotator...", a.rotatorOpen, "Connect a GS-232-compatible rotator (serial or TCP), set azimuth and elevation");
-        tool("Sweep scanner", a.sweepOpen, N_("Fast wideband sweep with a noise-floor measurement, signal log and waterfall"));
-        tool("Search everything heard", a.heardOpen, N_("One box for a call sign, ICAO address, MMSI or frequency, across the history of every mode"));
-        tool("Insights", a.insightOpen, N_("What your decodes show: who hears you, antenna pattern, APRS health, talkgroup busy hours, trunk load, automatic pages, overdue broadcasts"));
-        tool("My station", a.stationOpen, N_("Your radios and antennas, entered once: modes pick the right ones and the mode list shows what can be received"));
-        tool("Reception doctor", a.doctorOpen, N_("Why is nothing decoding? Checks overload, level, offset, bandwidth, interferers, drops and the mode from the live signal, with one-click fixes"));
-        tool("RF fingerprint", a.rfFpOpen, N_("Recognise an individual transmitter by its RF fingerprint (carrier offset, key-up transient, pilot, spurs), also when it sends only a carrier. Logs every transmission."));
-        tool("Station health", a.stationHealthOpen, N_("Noise floor, ADC level and reference stations per band, with plain advice on gain, filters and antenna placement"));
-        tool("Scanner (highly experimental)", a.scanViewOpen, "HIGHLY EXPERIMENTAL: memories, scan list and tones in one view; steps through them and stops on activity");
-        ImGui::Separator();
-        themeChoice(a, false);
-        accentMenu();
-        typographyChoice(false);
-        dataFolderChoice();
-        timeDisplayChoice(false);
-        int pct = (int)std::lround(a.uiTextScale * 100);
-        ImGui::SetNextItemWidth(-1);
-        if (ImGui::SliderInt("##sidetxt", &pct, 80, 200, tr("Text size %d%%"))) a.uiTextScale = std::max(0.8f, std::min(2.f, pct / 100.f));
-        if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
-        if (ImGui::Checkbox(tr("Touch interface"), &a.touchUi)) savePrefs(a);   // big targets, a bottom dock, full-screen pickers (ui/touch.h)
-        if (ImGui::IsItemHovered()) wrapTooltip(280 * gUi, tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
+        sideToolsBody(a);
         ImGui::Unindent(6 * gUi);
         ImGui::Spacing();
     }
     if (section(N_("Log"))) {
-        if (ImGui::Checkbox(tr("Verbose"), &a.verboseLog)) savePrefs(a);   // 3.5: the same switch as View > Verbose logging
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall restarts and frame times to the log."));
-        ImGui::SameLine();
-        size_t nl = 0;
-        const std::vector<std::string> all = a.engine.logSnapshot(nl);
-        if (ImGui::SmallButton(tr("Save log..."))) {   // the lines shown below, as a text file to send with a bug report
-            const std::string path = saveFileDialog("onair-log.txt");
-            if (!path.empty()) { if (FILE* f = fopen(path.c_str(), "wb")) { for (const std::string& l : all) { fputs(l.c_str(), f); fputc('\n', f); } fclose(f); } }
-        }
-        ImGui::BeginChild("##logc", ImVec2(0, std::max(40.f * gUi, ImGui::GetContentRegionAvail().y - 4 * gUi)), ImGuiChildFlags_Borders);
-        size_t n = 0;
-        const std::vector<std::string> lines = all;
-        for (const std::string& l : lines) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", l.c_str()); ImGui::PopTextWrapPos(); }
-        if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 2) ImGui::SetScrollHereY(1.f);
-        ImGui::EndChild();
+        sideLogBody(a);
     }
     ImGui::PopStyleVar();
 }
@@ -996,7 +1012,11 @@ void topBar(App& a, ImVec2 disp) {
         if (runButton(running, 40 * gUi) || (!running && a.wizStart)) { if (running) a.engine.stop(); else startReceiver(a); a.wizStart = false; }
         const float W = ImGui::GetContentRegionAvail().x;
         ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y));
-        const float digitsEnd = freqDigits(a);
+        float digitsEnd = freqDigits(a);
+        if (isGeneralFamily(a.family)) {   // 4.0: the General receiver's demodulator and filter as a button by the frequency (a click: the choices)
+            ImGui::SetCursorScreenPos(ImVec2(digitsEnd + 12 * gUi, o.y + 8 * gUi));
+            digitsEnd = generalDemodChip(a);
+        }
         tourMark("freq", ImVec2(o.x - 4 * gUi, o.y), ImVec2(digitsEnd, o.y + 40 * gUi));   // the lessons point at the run button and the digits
         // a narrow window: the level meter and the volume give up width (the meter goes last), then the summary is cut short
         const float sumX = digitsEnd + 34 * gUi;

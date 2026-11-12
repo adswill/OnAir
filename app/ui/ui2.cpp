@@ -4,6 +4,7 @@
 // are in ui2_faces.cpp, the shell in ui2_shell.cpp, the theme in ui2_theme.cpp.
 #include "ui2_internal.h"
 #include "input_map.h"
+#include "../general/general_panels.h"
 #include "dect2/dsp/baseband_filter.h"
 
 using namespace ui2;
@@ -317,6 +318,7 @@ void drawShell2(App& a, ImVec2 disp) {
         if (a.lightUi) ImGui::PopStyleVar();
         ImGui::EndChild();
     } else if (dockActive(a)) dockBody(a, bodyH);   // View > Docking: the panels are windows in a dock space
+    else if (generalScreenActive(a)) generalScreen(a, bodyH, disp);   // 4.0: the General receiver's own screen (general/general_screen.cpp)
     else switch (a.uiVariant) {
     case 1: bodyScope(a, bodyH, disp); break;
     case 2: bodyTiles(a, bodyH, disp); break;

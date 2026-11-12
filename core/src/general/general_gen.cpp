@@ -42,7 +42,8 @@ public:
             case GenAm: amp = a * (1 + frac_ * tone); break;
             case GenUsb: ph += 2 * kPi * toneHz_ * t_; break;
             case GenLsb: ph -= 2 * kPi * toneHz_ * t_; break;
-            default: break;   // CW: a steady carrier
+            case GenDsb: amp = a * tone; break;   // both sidebands, no carrier
+            default: break;   // CW, CW-L, RAW: a steady carrier
             }
             out[i] = quiet_ ? cf32(0, 0) : cf32((float)(amp * std::cos(ph)), (float)(amp * std::sin(ph)));
             t_ += dt;

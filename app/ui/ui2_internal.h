@@ -1,6 +1,6 @@
 // The shared declarations of the new interface (ui2*.cpp): the theme, the small widgets, the shell (menu bar, top and
 // bottom bars, side bar) and the body layouts. Everything lives in namespace ui2 except the entry points in app.h.
-// Included by ui2.cpp, ui2_theme.cpp, ui2_widgets.cpp, ui2_shell.cpp and ui2_faces.cpp only.
+// Included by ui2.cpp, ui2_theme.cpp, ui2_widgets.cpp, ui2_shell.cpp and ui2_faces.cpp, and app/general/general_screen.cpp (the 4.0 General screen).
 #pragma once
 #include "touch.h"
 #include "kit/kit.h"
@@ -62,6 +62,10 @@ float statusStripBlockHeight();
 void summary(App& a, float x, float y, float scale = 1.f, float maxW = FLT_MAX);
 void modeList(App& a);
 void sidebar(App& a);
+void sideDisplayBody(App& a);        // the bodies of sidebar()'s sections, also in the General screen's sidebar (general_screen.cpp)
+bool sideDecoderShown(const App& a);
+void sideToolsBody(App& a);
+void sideLogBody(App& a);
 float menuBar(App& a);
 void restoreDefaultView(App& a);   // the new interface, desktop (not touch), Sidebar layout, no docking: always reachable (Ctrl+Shift+M, View, Settings)
 void topBar(App& a, ImVec2 disp);

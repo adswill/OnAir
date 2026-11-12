@@ -3,6 +3,7 @@
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.
 #include <functional>
 #include "panel_layout.h"
+#include "freq_digits.h"
 #include "ui2_internal.h"
 #include "setpos_guard.h"
 #include "../state/listen_freq.h"
@@ -98,7 +99,7 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
     static double preClickMhz = 0;       // the frequency before the first click of a double click, which the double click undoes
     static char typed[32] = "";
     long long hz = (long long)std::llround(mhzRef * 1e6);
-    constexpr int kD = 13;   // thirteen digits: up to 1000 GHz (10^12 Hz)
+    constexpr int kD = fdigits::kDigits;   // thirteen digits: up to 1000 GHz (10^12 Hz); the arithmetic is ui/freq_digits.h
     char buf[24];
     snprintf(buf, sizeof buf, "%013lld", hz);
     ImGui::PushFont(typo::fonts().monoBold ? typo::fonts().monoBold : a.mono, fontSize);
@@ -113,7 +114,7 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
     float digitX[kD];
     for (int i = 0; i < kD; i++) {
         digitX[i] = x;
-        const long long place = (long long)std::llround(std::pow(10.0, kD - 1 - i));
+        const long long place = fdigits::placeOf(i);
         ImGui::SetCursorScreenPos(ImVec2(x, o.y));
         ImGui::PushID(i);
         ImGui::InvisibleButton("##d", ImVec2(cw, ch));
@@ -127,9 +128,8 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
         if (hov && ImGui::GetIO().MouseWheel != 0) {
             // a mouse wheel notch is 1.0 (one step of this digit); a trackpad sends many small values, which add up to a step each time they reach 1
             static float wheelAcc = 0;
-            wheelAcc += ImGui::GetIO().MouseWheel;
-            const int steps = (int)wheelAcc;
-            if (steps != 0) { delta = (long long)steps * place; wheelAcc -= (float)steps; }
+            const int steps = fdigits::wheelSteps(wheelAcc, ImGui::GetIO().MouseWheel);
+            if (steps != 0) delta = (long long)steps * place;
             ImGui::GetIO().MouseWheel = 0;
         }
         if (hov) {
@@ -154,11 +154,10 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
     if (kbIdx >= 0 && (io.MousePos.x != kbMouse.x || io.MousePos.y != kbMouse.y)) kbIdx = -1;
     const int cur = kbIdx >= 0 ? kbIdx : hovIdx;
     if (cur >= 0 && !io.WantTextInput && !io.KeyCtrl && !io.KeyAlt && !io.KeySuper) {
-        const long long place = (long long)std::llround(std::pow(10.0, kD - 1 - cur));
+        const long long place = fdigits::placeOf(cur);
         for (int k = 0; k < 10; k++)
             if (ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_0 + k), false) || ImGui::IsKeyPressed((ImGuiKey)(ImGuiKey_Keypad0 + k), false)) {
-                const int old = (int)((hz / place) % 10);
-                delta = (long long)(k - old) * place;
+                delta = fdigits::typeDelta(hz, cur, k);
                 kbIdx = std::min(kD - 1, cur + 1); kbMouse = io.MousePos;
             }
         if (ImGui::IsKeyPressed(ImGuiKey_UpArrow)) delta = place;
@@ -191,7 +190,7 @@ float freqDigitsImpl(App& a, double& mhzRef, double lo, double hi, const std::fu
         ImGui::EndPopup();
     }
     if (delta) {
-        const double mhz = std::min(hi, std::max(lo, (double)(hz + delta) / 1e6));
+        const double mhz = fdigits::applyMhz(hz, delta, lo, hi);
         if (std::fabs(mhz - mhzRef) > 1e-9) tune(mhz);
     }
     return endX;

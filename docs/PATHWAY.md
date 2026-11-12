@@ -1926,3 +1926,16 @@ Tools menu split into 9 groups with search, Plugin store entry, Mode menu one su
 - MPEG audio layer II (most SD services) has a small decoder in the app (`tv/Mp2Decoder.kt`), used only when the phone has none; layer II is patent-free; tables from the standard as FFmpeg keeps them (credited).
 - USB: the core's `usbFdKindForId` is one table now with all 42 RTL2832U ids of librtlsdr (was 17); catalog and filter follow, `UsbIdsAgreementTest` checks the core table. android.yml now builds libairspy / libairspyhf (pinned commits with the `*_open_fd` entry points): the APK had never contained them, so Airspy radios could not open on phones.
 - Tested on GitHub only (JVM tests, NDK build, C++ USB tests); no phone, emulator or radio. Details and the radios not added (LimeSDR Mini, bladeRF, PlutoSDR USB, HydraSDR, RX888) in `docs/ANDROID-4.0.md`.
+
+## 2026-11-12 (feat40-general): the General receiver screen
+- New screen for the General receiver (docs/GENERAL-4.0.md). The spectrum and waterfall fill the window. One resizable, hideable sidebar
+  (Ctrl+B) has folding sections, a thin bar carries the step, Snap, Centre and the SNR meter, and a drawer holds the old tabs. The layout
+  is saved in `gen40Layout`. The 3.9 layout stays behind Display > 4.0 General layout.
+- Demodulators: a grid (NFM WFM AM SAM DSB USB LSB CW CW-L RAW), a top-bar button, a right click on the VFO and Alt+letter keys. Auto from
+  the band plan is off by default. Squelch, AGC and gain are now kept per demodulator; old profiles load from the shared keys.
+- Core: DSB, RAW and CW-L appended to `GeneralDemod`, so the old numbers are unchanged.
+- VFO: drag its body (keeps the grab point), drag its edges, the wheel over it steps it, and Snap is optional.
+- Shared spectrum, all modes: the tuning-style pair is one toggle, and the Zoom slider and keys zoom around the tuned frequency inside the
+  captured band.
+- Tests: `general_layout` (111 checks, run locally), plus new DSB / RAW / CW-L cases in `general_rx`. The app was built on GitHub only;
+  screenshots wait for the Mac to be on mains.
