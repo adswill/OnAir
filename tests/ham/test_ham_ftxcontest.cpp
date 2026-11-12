@@ -46,7 +46,7 @@ int main() {
         CHECK(p.kind == ParsedMsg::RExch && p.to == "W9XYZ" && p.exch == "579 MA" && p.contest == 2);
         CHECK(ham::parseMessage("K1ABC W9XYZ R EN37").kind == ParsedMsg::Other || ham::parseMessage("K1ABC W9XYZ R EN37").kind != ParsedMsg::Exch);
         CHECK(ham::parseMessage("CQ FD K1ABC FN42").kind == ParsedMsg::Cq && ham::parseMessage("CQ FD K1ABC FN42").from == "K1ABC");
-        CHECK(ham::parseMessage("TNX BOB 73 GL").kind == ParsedMsg::Other);
+        CHECK(ham::parseMessage("TNX BOB 73 GL").kind != ParsedMsg::Exch && ham::parseMessage("TNX BOB 73 GL").kind != ParsedMsg::RExch);   // free text is never an exchange
         CHECK(ham::msgExch("w9xyz", "k1abc", "2b  ema", true) == "W9XYZ K1ABC R 2B EMA" && ham::msgExch("K1ABC", "W9XYZ", "6A WI", false) == "K1ABC W9XYZ 6A WI");
     }
     // ---- the sequence: we call CQ FD, W9XYZ answers ----
