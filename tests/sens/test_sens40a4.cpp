@@ -61,7 +61,9 @@ int main() {
         {"iMS-100", 512, 24.0, {10, 8, 6, 4, 2, 0}},
     };
     const double cfos[] = {0, 8000};
-    printf("A4_BASE=%s\n", getenv("A4_BASE") ? "1 (before)" : "unset (after)");
+    for (int phase = 0; phase < 2; phase++) {
+    if (phase == 0) setenv("A4_BASE", "1", 1); else unsetenv("A4_BASE");
+    printf("=== %s\n", phase == 0 ? "BEFORE (discriminator symbols)" : "AFTER (tone symbols)");
     for (const R& r : rs) {
         const Case S = makeCase("sonde", r.secs, r.mask);
         for (double cfo : cfos) {
@@ -76,6 +78,7 @@ int main() {
         for (int i = 0; i < 3; i++) falses += trial(S, 10, 0, 0, 1, 1000 + (uint64_t)i);
         printf("%-8s noise only: %.0f units\n", r.name, falses);
         CHECK(falses == 0, "%s noise-only %.0f", r.name, falses);
+    }
     }
     printf(fails ? "FAILED\n" : "OK\n");
     return fails ? 1 : 0;
