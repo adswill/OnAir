@@ -22,7 +22,10 @@ namespace native {
 namespace {
 
 constexpr int kConnectMs = 3000, kStallMs = 5000, kAnswerMs = 3000;
-constexpr size_t kMaxMessage = 1u << 20;   // SDRconnect sends IQ in chunks of a few thousand samples; a message of 1 MiB is not one of its
+// One message at most (4.0: was 1 MiB). The spec gives no size; a server whose IQ messages grow with the rate (a fixed number a second) passes
+// 1 MiB at about 5-10 Msps, and every such message was refused as bad data, the connection dropped and opened again: the stream stalled above a
+// few Msps. 16 MiB is 0.4 s of 10 Msps; the buffer is reused from message to message.
+constexpr size_t kMaxMessage = 16u << 20;
 constexpr const char* kPath = "/";            // ASSUMED: the spec names no path
 constexpr double kMinRate = 62500, kMaxRate = 10e6;   // ASSUMED: the RSP family's range; the nRSP-ST datasheet says "up to 10 MHz of spectrum"
 

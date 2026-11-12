@@ -37,7 +37,7 @@ nRSP-ST's own users and passwords are for SDRconnect/NRSPAdministrator). So OnAi
 ## What works against the fake server (`test_nrspst`)
 
 Handshake with accept-key check, api_version probe, command sequence (device choice, rate, frequency, gain as LNA state, antenna, stream enables), IQ delivery and scaling, live retune,
-rate follow-up, bad JSON, short/odd/unknown-type frames, fragmentation with a ping, a 2 MiB frame (dropped, reconnect), a dropped connection (reconnect with the settings in use), a non-WebSocket
+rate follow-up, bad JSON, short/odd/unknown-type frames, fragmentation with a ping, a frame over the 16 MiB limit (dropped, reconnect; 1 MiB up to 3.9), a dropped connection (reconnect with the settings in use), a non-WebSocket
 server, a silent server, a wrong accept key, JSON fuzzing.
 
 ## What the owner must provide

@@ -1,6 +1,6 @@
 // Throughput of the SDRplay nRSP-ST source (source_nrspst.cpp: SDRconnect's WebSocket IQ, ws_client.h) into the input ring, against a fake
 // SDRconnect on localhost. A Discord report: other programs run the nRSP-ST's "Full IQ" network mode at 0-10 Msps, OnAir stalled above
-// about 5 Msps. Here the fake sends 16-bit IQ in messages of 1024, 4096 and 16384 samples:
+// about 5 Msps. Here the fake sends 16-bit IQ in messages of 1024, 4096, 16384 and 262144 samples (the last is over the 1 MiB that 3.9 took):
 //   - as fast as the source takes them: the rate the WebSocket parser, the conversion and the ring sustain (must be well above 10 Msps)
 //   - paced at 10 Msps for some seconds, with a consumer reading the ring as the engine does: nothing dropped, every sample in order
 // The sample values are a counter, so a lost, repeated or reordered sample is found. Simulated server only: no real nRSP-ST was available.
@@ -195,7 +195,8 @@ int main() {
 #endif
     const double secs = getenv("NRSP_RATE_SECONDS") ? atof(getenv("NRSP_RATE_SECONDS")) : 3.0;
     printf("nRSP-ST source into the ring (fake SDRconnect on localhost, 16-bit IQ):\n");
-    for (size_t perMsg : {1024u, 4096u, 16384u}) {
+    // 262144 samples is a message of 1 MiB and 2 bytes: refused as bad data up to 3.9 (a server that sends ~40 messages a second at 10 Msps)
+    for (size_t perMsg : {1024u, 4096u, 16384u, 262144u}) {
         const Taken a = runOnce(perMsg, 0, secs);
         const double msps = a.sec > 0 ? a.samples / a.sec / 1e6 : 0;
         printf("  %5zu samples a message, as fast as it goes: %6.1f Msps (%.0f MB/s), %llu out of order, %llu dropped\n", perMsg, msps, msps * 4,
