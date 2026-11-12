@@ -1,0 +1,90 @@
+# Sensitivity 4.0, pass X2 (feat40-sensX2): picture, sound and measurement modes
+
+Branch feat40-sensX2 on integ-40. Every figure is from simulated signals (the mode's own generator, white Gaussian noise and the impairments
+named); no off-air recording was used.
+
+## Summary
+
+| mode | figure | 3.9 | 4.0 | conditions | kept |
+|---|---|---|---|---|---|
+| SSTV Martin M1 | mean picture error at 6 dB, test / textured picture | 20.2 / 30.6 levels | 6.6 / 12.6 levels | 3 kHz, no offset, 2 trials | yes |
+| SSTV Martin M1 | PSNR at 6 dB, test / textured | 18.0 / 16.4 dB | 24.3 / 19.8 dB | as above | yes |
+| SSTV Martin M1 | lowest SNR with mean error 20 or less (test picture) | 8 dB (+-50 Hz, +-50 ppm, 6 trials) | about 2 dB (no offset, 2 trials) | 3 kHz | yes |
+| SSTV Robot 36 | mean error at 10 dB, test / textured | 27.0 / 37.4 levels | 12.3 / 19.2 levels | 3 kHz, no offset, 2 trials | yes |
+| SSTV Robot 36 | lowest SNR with mean error 20 or less (test picture) | 14 dB | about 7 dB | 3 kHz | yes |
+| SSTV PD120 | PSNR at 10 dB, test / textured | 15.4 / 12.6 dB (+-50 Hz, +-50 ppm) | 21.9 / 15.5 dB (no offset) | 3 kHz | yes |
+| SSTV Robot 36 | crash on a weak picture | segfault at 4 dB | fixed | | yes |
+| NFM voice (general receiver) | 12 dB SINAD point | 8.4 dB in 12.5 kHz | not changed | 1 kHz tone, 2.5 kHz deviation | no (see below) |
+
+"About" points are between two measured SNRs. The 4.0 filter was finished after the Mac went on battery, so its impairment sweep (offsets,
+6 trials) is left to the guard test on GitHub; the impairment sweep below is of its second step alone.
+
+## Method (SSTV)
+
+`tests/hfdig/sstv_sens40_bench.cpp` (a bench, not a ctest; uses `sstv_sens40_util.h`): `sstv_sens40_bench <mode> <from> <to> <step> <trials>
+[picture] [offHz] [ppm]`. One picture per trial through `makeSstvTx`, white noise in 3 kHz (the definition of test_hfdig_sens39d.cpp), the tuning
+error applied by a Hilbert frequency shifter and the clock error by resampling, so both work with any picture. Two pictures: the test picture
+(colour bars, a grey gradient, block letters: large flat areas) and a textured one (smooth colour fields, sharp-edged shapes, stripes of 4 and 8
+pixel periods, small dots), so a filter that only blurs cannot win. Figures: mean absolute error (levels) and PSNR against the sent picture.
+The PSNR floor at high SNR is the mode itself (chroma subsampling, the 3 kHz audio band): Robot 36 is 22.7 dB on the test picture at 40 dB.
+`SSTV_NF=0` switches the new filter off (the 3.9 picture), same noise.
+
+## SSTV: noise-adaptive picture filter (core/src/hfdig/hfdig_sstv.cpp)
+
+Cause. A pixel is the mean tone over its time slot, i.e. the phase difference over 1.5 (PD120) to 4.6 samples (Martin M1) of 8 kHz audio. FM
+noise rises with frequency, so the error of one pixel is mostly high-frequency noise that neighbouring pixels share with opposite sign; nothing
+in 3.9 removed it.
+
+Changes (both on by default, `HfdigSstv::setNoiseFilter(false)` restores the 3.9 picture):
+1. Along each line. The tone noise of one pixel is measured on every sync pulse (the spread of pixel-long means inside the steady middle of the
+   pulse, averaged over lines). Each pixel's tone goes through a local Wiener filter over 7 pixels with that noise, scaled to the pixel length
+   of the scan. Flat stretches are averaged, edges are kept; on a clean signal the measured noise is near zero and the line is unchanged.
+2. On the picture. The noise of each colour is measured on the picture itself (median absolute 3x3 Laplacian of the raw rows); each row, once
+   its neighbours are final, goes through a 3x3 Lee filter with twice that noise. At 30 levels of noise and more, single pixels far from all
+   eight neighbours (FM clicks) are first replaced by their median. A row is shown raw until it is filtered (one or two rows of lag).
+
+Measured, 3.9 -> 4.0, mean error (levels) / PSNR (dB), 2 trials a point, no offset:
+
+| mode, picture | 22 dB | 14 dB | 10 dB | 6 dB | 2 dB |
+|---|---|---|---|---|---|
+| Robot 36, test | 9.7/21.7 -> 6.2/22.4 | 18.3/18.4 -> 9.0/21.4 | 27.0/15.5 -> 12.3/19.8 | 41.4/12.0 -> 18.4/17.2 | 82.9/6.8 -> 66.2/8.0 |
+| Robot 36, textured | 16.3/19.6 -> 11.5/20.2 | 27.2/16.8 -> 14.8/19.0 | 37.4/14.4 -> 19.2/17.5 | 52.7/11.4 -> 26.8/15.3 | 108.7/5.9 -> 99.0/6.7 |
+| Martin M1, test | 4.1/29.8 -> 2.0/31.2 | 8.5/25.2 -> 3.1/29.5 | 12.9/21.8 -> 4.2/27.6 | 20.2/18.0 -> 6.6/24.3 | 37.5/12.2 -> 19.2/15.0 |
+| Martin M1, textured | 8.4/25.6 -> 5.3/26.3 | 14.7/22.4 -> 6.8/24.6 | 20.8/19.7 -> 8.6/22.8 | 30.6/16.4 -> 12.6/19.8 | picture not complete in both |
+
+PD120 (4.0, no offset): test picture 16 dB 24.7, 10 dB 21.9, 4 dB 14.1 dB PSNR; textured 16.4 / 15.5 / 12.8 dB (3.9 with +-50 Hz, +-50 ppm:
+test 20.3 / 15.4 / 8.0, textured 15.1 / 12.6 / -). A 5-tap line filter is 0.4 to 1 dB worse at 6 to 10 dB, a 9- or 11-tap one 0.1 to 0.8 dB better
+on PD120 only: 7 taps was kept. Twice the measured noise in the line filter loses 0.3 to 0.6 dB on the textured picture.
+
+At 30 to 40 dB every mode and picture is the same or better (textured Martin M1 30 dB 26.5 -> 26.7 dB, Robot 36 20.4 -> 20.5 dB). The second step alone
+(Lee filter, measured over 6 trials with +-50 Hz and +-50 ppm, 2 dB steps): pass point (mean error 20 or less in 6 of 6) Martin M1 8 -> 6 dB,
+Scottie S1 8 -> 6 dB, textured Martin M1 12 -> 6 dB, textured Scottie S1 14 -> 8 dB, Robot 36 and PD120 unchanged (the line filter is what
+helps those). The along-line filter was added after the Mac went on battery, so its numbers above are without offsets and from 2 trials a point;
+the guard test runs it with the offsets. Noise only: 0 pictures in 480 s (the filter does not touch detection).
+
+Bug fixed on the way: Robot 36 on a weak signal crashed the 3.9 decoder (segfault at 4 dB in 3 kHz): when the first line's separator read as
+odd, the decoder used the pending chroma of line -1 (`pendLine == k - 1` with `pendLine = -1`), an empty vector.
+
+Not kept: summing the phase steps as power-weighted vectors (a pulse-pair estimator, to make clicks weightless) instead of unwrapping. The
+oversampled noise has a real lag-1 correlation that pulls every pixel toward 1900 Hz: worse at every SNR (Martin M1 at 8 dB: 1 of 4 pictures
+complete). Widening every pixel's window by a fixed factor helps a noisy picture but blurs a clean one; the measured-noise filter above does
+it only where the noise is.
+
+Guard test: `hfdig_sstv_sens40` (tests/hfdig/test_hfdig_sstv_sens40.cpp): Martin M1 at 6 dB and Robot 36 at 10 dB with +-50 Hz and +-50 ppm,
+filtered mean error under 14 / 18 levels and 4 levels better than unfiltered; textured picture at 30 dB costs at most 0.3 dB PSNR; Robot 36 at
+4 dB does not crash; 60 s of noise give no picture.
+
+## NFM voice: click removal looked at, not kept
+
+General receiver, NFM, 1 kHz tone at 2.5 kHz deviation, SNR in 12.5 kHz, SINAD over 2 s. 3.9 curve: 16 dB 19.8, 12 dB 15.8, 10 dB 13.8,
+9 dB 12.8, 8 dB 11.6, 7 dB 9.9, 6 dB 8.0, 4 dB 4.7 dB SINAD. The 12 dB SINAD point (8.4 dB) is above the FM threshold: a model of the channel
+gives 2 phase slips a second at 8 dB, 30 at 6 dB, 143 at 4 dB, so the noise there is Gaussian and click removal cannot move it.
+Two click removers were built and measured: replacing spike samples in envelope dips by the last good frequency (worse: -1.7 dB SINAD at 7 to
+8 dB, it cuts the non-slip excursions in half) and removing whole cycles from dips whose extra phase is near 2 pi (+0.2 to +0.3 dB from 7 dB down,
+0 above). Neither was kept. What would move the 12 dB SINAD point is the audio bandwidth (4 kHz low-pass now; FM noise rises with frequency,
+3 kHz would be about 3.7 dB less noise) or de-emphasis, which change the default sound of every NFM user: left for the owner.
+
+## Not done in this pass
+
+APT (image filter / PLL FM demodulator), weather fax, analog TV, AM synchronous, hydrogen line, explorer CFAR: the Mac went on battery partway
+through the pass, so no further local measurement was possible; see the branch's final report.

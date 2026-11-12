@@ -1888,3 +1888,9 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - x40 receiver, fourth block (families 779 - 781, docs/X40-4.0.md): ILS marker beacons (MARKER-4.0.md), FSK modems Bell 103 / V.21 / V.23 / Bell 202 (FSKMODEM-4.0.md), SSR interrogations on 1030 MHz (SSRINT-4.0.md). Tests with offsets, fading, clock errors, noise sweeps and false-report runs; simulated signals only.
 - The summary switch in core/src/engine/modes.cpp keeps literal `case N:` labels: android/tools/gen_results_map.py reads them (a macro dropped the Sub-GHz sensors, radiosonde, wireless M-Bus and AIS cards from the Android results map). The existing switch and panel lines stay as they were (tests read them as text); the entries' cases are on lines of their own.
 - tests/qa/qa_known.inc lists the entries whose test signal cannot carry their data (QA sweep).
+
+## 2026-11-12 (feat40-sensX2): SSTV picture filter, NFM click removal looked at
+- SSTV (core/src/hfdig/hfdig_sstv.cpp): noise-adaptive picture filter, on by default (`setNoiseFilter`): a 7-pixel Wiener filter along each line with the pixel noise measured on the sync pulses, then a 3x3 Lee filter (click median at high noise) with the noise measured on the picture. Martin M1 at 6 dB in 3 kHz: mean error 20.2 -> 6.6 levels; Robot 36 at 10 dB 27.0 -> 12.3; no loss at 30-40 dB on a textured picture. Simulated only (docs/SENSITIVITY-4.0-X2.md).
+- Fixed: a weak Robot 36 picture whose first line read as odd crashed the decoder (empty pending chroma).
+- NFM click removal built twice and dropped: the 12 dB SINAD point (8.4 dB) is above the FM threshold, gains were 0.3 dB at most.
+- Guard test hfdig_sstv_sens40; bench tests/hfdig/sstv_sens40_bench.cpp (not a ctest).
