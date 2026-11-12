@@ -2099,4 +2099,4 @@ Then merged integ-40 at f25aff2f1 (feat40-issues2) and added #463, #435, #442 fr
 - Fix: on Linux a fatal start error (no OpenGL 3.0, no window, graphics back end) went only to stderr, so from the menu OnAir seemed to do
   nothing. showFatalError now also writes ~/.config/onair/startup-error.txt and shows a dialog (zenity / kdialog / notify-send / xmessage,
   2 min timeout, ONAIR_NO_DIALOG=1 turns it off) when there is a desktop and no terminal. README Linux row: Mint, terminal start, the file.
-  Packaging unchanged.
+  Packaging unchanged. dect2 built on GitHub quick run 43266619099 (pass).
