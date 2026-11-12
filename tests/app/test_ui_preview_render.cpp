@@ -224,6 +224,7 @@ int main() {
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.IniFilename = nullptr;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;   // as the OpenGL and Metal back ends: a long draw list gets more commands, not wrapped indices
     unsigned char* px; int tw, th;
     io.Fonts->GetTexDataAsRGBA32(&px, &tw, &th);
     gTex = px; gTw = tw; gTh = th;

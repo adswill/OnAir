@@ -23,9 +23,9 @@ float hn(int i, int j) {
 // a weak one; `row` > 0 gives the waterfall rows (the weak signal comes and goes)
 float level(float x, int row, int col) {
     auto bump = [](float x, float c, float w) { const float t = (x - c) / w; return std::exp(-t * t); };
-    float v = 0.16f + 0.10f * hn(col, row);
-    v += 0.70f * bump(x, 0.22f, 0.012f);
-    v += 0.45f * bump(x, 0.58f, 0.055f) * (0.85f + 0.15f * hn(col + 7, row));
+    float v = 0.13f + 0.20f * hn(col, row) * hn(col + 3, row + 1);   // a speckled floor, as a real waterfall's noise
+    v += 0.58f * bump(x, 0.22f, 0.012f);
+    v += 0.38f * bump(x, 0.58f, 0.055f) * (0.75f + 0.25f * hn(col + 7, row));
     if (row < 0 || (row / 3) % 2 == 0) v += 0.30f * bump(x, 0.82f, 0.02f);
     return std::min(1.f, v);
 }
@@ -353,6 +353,7 @@ void draw(ImDrawList* dl, float x, float y, float w, float h, const Desc& d, flo
     dl->PushClipRect(ImVec2(x, y), ImVec2(x + w, y + h), true);
     if (d.plotOnly) {
         float top = y;
+        P.rect(x, y, x + w, y + h, d.bg);
         if (d.strip) { P.strip(x, y, x + w, y + std::max(6.f, 12 * gUi)); top = y + std::max(6.f, 12 * gUi) + std::max(2.f, 4 * gUi); }
         P.plots(x, top, x + w, y + h, 0.42f);
         dl->PopClipRect();
