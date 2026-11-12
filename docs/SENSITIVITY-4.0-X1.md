@@ -13,7 +13,10 @@ off and on (switches: `SarsatReceiver::setWeakBurstPath / setRepeatCombining / s
 
 | mode | technique | before (3.9) | after (4.0) | false decodes (4.0) | conditions / what the gain needs |
 |---|---|---|---|---|---|
-SUMMARY_ROWS
+| COSPAS-SARSAT 406 MHz (first generation) | full burst window, 4-block detection, coherent bits, soft BCH (single burst) | 90 % within 2 bursts at about +1.5 dB in 3 kHz | about -3 dB | 0 wrong identifications (3.9: 1 to 7 in 48 bursts at 0 to -2 dB) | AWGN, 20 ppm carrier, 50 ppm clock, +30 kHz off centre, 4 bursts 50 s apart |
+| COSPAS-SARSAT | repeat combining of failed bursts + expected carrier + confirmation by repeat | (single-burst 4.0 path) | about 0.5 dB more at the 4-burst point (-5 dB: 17 to 25 %, -6 dB: 0 to 8 %) | 0 | needs the beacon's bursts to repeat on the same carrier; below -5 dB most bursts are not detected, which limits it |
+| NDB (400 Hz tone ident) | ident folding: average of the repeated idents | 50 % at about 6.5 dB in 300 Hz (4.0 weak path), 90 % at about 7 dB | 50 % at about 4.5 dB, 90 % at about 6.3 dB (AWGN, 20 ppm, 50 ppm) | 0 added (noise alone: 0 in 12 x 120 s) | 60 s of a beacon repeating its ident; no gain with the carrier 60 Hz off centre |
+| DCF77, MSF, WWVB | expected-minute check (a-priori) | minutes kept after the first: 81 / 64 / 100 % at -5 dB in 1 kHz | the same | 0 wrong times | no gain measured: the check never fired (below) |
 
 ## COSPAS-SARSAT 406 MHz (core/src/sarsat/sarsat_rx.cpp)
 
@@ -102,11 +105,46 @@ and the satellite Doppler drift over a pass (a few Hz per second) are not modell
 
 ## NDB ident folding (core/src/ndb/ndb_rx.cpp)
 
-NDB_BODY
+The receiver keeps the keying depth of each path (400 Hz, 1020 Hz, keyed carrier) at 50 Hz for 3 minutes. Every 5 s: the ident period from the
+autocorrelation (2 to 30 s; the shortest lag within 80 % of the highest peak, so that 2 or 3 periods are not taken; robust z-score 3 or more), the
+last periods averaged with the fractional period (linear interpolation), the average sliced at the middle of its 10th and 90th percentiles when its
+contrast is 6 noise deviations of the average or more, and read as Morse three times over from the longest gap; the ident is the word of the last
+two copies. Two evaluations in a row must read the same word, and the carrier must stand out of the noise (the existing carrier check). The keying
+adds up over the periods while the noise averages down; the weak path's own rule (a word counts only with 5 dB of on / off contrast) is what stops
+a single cycle at about 6.5 dB, and the average does not need it.
+
+Test: generator ident 'BND' at 7 WPM on a 400 Hz tone (80 % AM, a 5.8 s cycle), 60 s from a random point of the cycle, 48 kS/s, SNR = the signal's
+mean power over the noise in 300 Hz, 12 trials a point (GitHub run 43166550047). Share of trials with the ident at the end:
+
+| SNR in 300 Hz | 9 | 7 | 6 | 5 | 4 | 3 | 1 dB |
+|---|---|---|---|---|---|---|---|
+| 3.9 receiver | 0 | 0 | 0 | 0 | 0 | 0 | 0 % |
+| 4.0 weak path (SENSITIVITY-4.0-B2) | 100 | 92 | 17 | 0 | 0 | 0 | 0 % |
+| + ident folding, AWGN | 100 | 100 | 83 | 42 | 50 | 17 | 0 % |
+| + ident folding, 20 ppm carrier (8 Hz) | 100 | 100 | 83 | 42 | 42 | 25 | 0 % |
+| + ident folding, 50 ppm clock | 100 | 100 | 100 | 50 | 58 | 33 | 0 % |
+| + ident folding, carrier 60 Hz off centre | 100 | 92 | 8 | 0 | 0 | 0 | 0 % |
+
+(The 3.9 receiver reads 0 here because this test's SNR is in 300 Hz of the 48 kS/s input and its trial is 60 s; in SENSITIVITY-4.0-B2.md it needed 14 dB.)
+About 2 dB at the 50 % point and about 0.7 dB at the 90 % point, with 60 s (10 cycles); a longer listen averages more cycles. Off centre by 60 Hz the
+folding does not help: the weak path's frequency loop leaves the keying depth too noisy there to average into a readable ident (not investigated further).
+False idents: noise alone with folding, 12 x 120 s and 4 x 120 s in the guard: none. Words that are not part of the ident ("E", "T") appear at 6 to 9 dB
+from the weak path's own reader, as before; folding adds none (8, 4, 1 against 13, 4, 1 in the AWGN rows). Guard: `sens40x1` part `ndb` (folding not
+worse than the weak path at 7 and 5 dB with AWGN, 20 ppm and off centre; noise alone gives nothing). In that run: 5 dB AWGN 0 of 6 without, 4 of 6 with.
+Simulated only: a real NDB's keying, its idents between long dashes and interference from other beacons are not modelled.
 
 ## Time stations: the expected minute (core/src/time/time_rx.cpp)
 
-TIME_BODY
+After one decoded minute the time code of the next minutes is known. A minute whose parity fails now counts when its 60 symbols match the expected
+minute's code (encodeMinute with the last decoded options) in 54 or more seconds and at least 3 better than the minutes around it (+-1 and +-2 minutes,
++-1 hour, +-1 day), so that a wrong second count or a wrong anchor cannot pass. Not for RWM (no time code) and BPC (20 s frames).
+`TimeTelemetry::minutesPredicted` counts them.
+
+Measured (GitHub run 43166550047, 4 trials of 10 minutes a point, SNR = carrier over the noise in 1 kHz): the check **never fired**. DCF77 keeps 100 %
+of the minutes after its first decode down to -2 dB, 81 % at -5 dB (94 % with 1 Hz carrier and 50 ppm clock error), and finds no first minute at -8 dB;
+MSF 100 / 64 / 0 %, WWVB 100 / 100 / 0 %. The receiver folds the seconds over the minute and decides each second against the folded levels, so
+its minutes fail by lost or misplaced seconds (the frame is not a candidate at all), not by one wrong symbol that a prediction could cover. No gain and
+no wrong time (0 in every row and in the guard). Kept because it costs nothing and covers a minute with a single symbol error; it is not counted as a gain.
 
 ## Not done, and why
 
@@ -119,3 +157,14 @@ TIME_BODY
   0.5 dB on the Reed-Solomon cliff (SENSITIVITY-4.0-A.md found the failures at the FM threshold with more than 20 bad bytes a codeword).
   Not done in this pass.
 * **GNSS acquisition assistance**: needs the navigation data bits for coherent integration beyond 20 ms; not started.
+* **CW beacons**: the CW receiver already works in a 100 Hz bandwidth (SENSITIVITY-4.0-A.md); folding repeated beacon messages as for the NDB is the
+  obvious next step for amateur beacons with a fixed message, not done in this pass.
+* **SARSAT second generation (SGB)** and the wide-capture bank: the bank's child receivers get the same switches; SGB bursts are not combined.
+
+## Integrator notes
+
+* The bench is one ctest, `sens40x1` (about 25 minutes on a GitHub runner with the curves, about 8 without: `ONAIR_X1_CURVE` unset).
+* New public API: `SarsatReceiver::setRepeatCombining / setWeakBurstPath / setRepairCostLimit`, `sarsat::decodeCombined`, `sarsat::SoftBurst`,
+  `SarsatEntry::combined / confirmedByRepeat`, `Beacon::repairCost / repairMargin`, `NdbReceiver::setIdentFolding` and the `fold*` telemetry fields,
+  `TimeReceiver::setPredictedMinutes`, `TimeTelemetry::minutesPredicted`. The SARSAT details view shows when a beacon was decoded from combined bursts.
+* No change to modes.cpp, mode_table.cpp, kNumFamilies or kPollSeqSlots.

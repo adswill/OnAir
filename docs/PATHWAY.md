@@ -1895,5 +1895,7 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
   lower line threshold near a heard beacon's carrier; multi-bit repairs reported only when a later burst confirms the identification. About 4 dB on a
   single burst (90 % within 2 bursts: +1.5 to -3 dB in 3 kHz), combining about 0.5 dB more (most bursts below -5 dB are not detected). The 3.9 receiver
   reported wrong identifications at its edge (BCH-1 mis-repairs); 4.0: none measured. GitHub runs 43147175804, 43157120181.
-- NDB ident folding (average of the repeated idents) and the time stations' expected-minute check: see the doc for what was measured.
+- NDB ident folding: the keying of the last ident periods is averaged and read as Morse: 50 % point about 6.5 to 4.5 dB in 300 Hz (60 s), no false idents.
+  Time stations: a minute that matches the expected time code counts (a-priori); measured no gain (the minutes fail by lost seconds), no wrong time.
+  GitHub run 43166550047 (sens40x1 passed).
 - Simulated signals only; all measurement on GitHub (the laptop was on battery). Bench and guard: tests/sens/test_sens40x1.cpp (ctest sens40x1).
