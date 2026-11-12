@@ -70,7 +70,7 @@ private:
         inBurst_ = false; onCnt_ = offCnt_ = 0;
         std::vector<cf32> b; b.swap(burst_);
         const double dur = (double)b.size() / rate_;
-        if (dur < 0.4) return;
+        if (dur < 0.2) return;
         analyse(b, dur);
     }
     // One trial: the channel demodulated as one standard with a tone shift of `off` Hz in one sideband. d = mark minus space over the last bit (normalised, +1 mark, -1 space).

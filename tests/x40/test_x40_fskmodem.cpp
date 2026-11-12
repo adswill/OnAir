@@ -30,6 +30,13 @@ int main() {
             CHECK(m[0].text.find(lower ? "lower sideband" : "upper sideband") != std::string::npos, "%s: sideband in '%s'", modemStd(s).name, m[0].text.c_str());
         }
     }
+    // short bursts like the frames of CHU: 10 characters of 8N2 at 300 baud (0.37 s) with a short idle mark in front, every second, on the answer tones, with a dial error and noise
+    { int frames = 0, perfect = 0, partial = 0;
+      for (unsigned k = 0; k < 6; k++) { const auto d10 = payload(20 + k, 10); auto x = modemBurst(1, d10, fs, 0.6, 0.6, 0.06, k % 2 ? 22.0 : -17.0, false, noiseFor(22, 3000, fs) * 0.25, 40 + k, 0, 2, 0);
+        auto t = run(x40::FskModem, x, fs); const auto m = msgs(t); frames++;
+        if (m.size() == 1) { const auto b = bytesOf(m[0].text); int ok = 0; for (size_t i = 0; i < d10.size() && i < b.size(); i++) ok += b[i] == d10[i]; if (ok == 10 && b.size() == 10) perfect++; else if (ok >= 9) partial++; } }
+      printf("  CHU-like 0.37 s frames: %d of %d read perfectly, %d with one byte missing\n", perfect, frames, partial);
+      CHECK(perfect + partial >= 5 && perfect >= 4, "short frames: %d perfect %d partial of %d", perfect, partial, frames); }
     // noise sweep: bytes right of 24 (signal to noise in 3 kHz)
     printf("noise sweep (tone power to noise in 3 kHz): messages / bytes right of %zu\n", data.size());
     for (int s : {1, 5}) for (double snr : {30.0, 20.0, 14.0, 10.0, 6.0, 3.0}) {
