@@ -2032,3 +2032,10 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
   Time stations: a minute that matches the expected time code counts (a-priori); measured no gain (the minutes fail by lost seconds), no wrong time.
   GitHub run 43166550047 (sens40x1 passed).
 - Simulated signals only; all measurement on GitHub (the laptop was on battery). Bench and guard: tests/sens/test_sens40x1.cpp (ctest sens40x1).
+
+## 2026-11-12: plugin marketplace set up
+- GitHub OAuth app "OnAir" (adswill, Client ID Ov23li3cNdYJUxpl572P, device flow on, redirect URIs https://map.on-air.dev/auth/ and
+  https://plugins.on-air.dev/), shared with the map badges.
+- Cloudflare: R2 bucket and D1 database `onair-plugins` (schema applied), Worker deployed on plugins.on-air.dev, the four secrets set.
+  `/api/v1/status` answers signing true, github true.
+- kBuiltInMarketKeyHex is now the server's public key; wrangler.jsonc carries the D1 id and the Client ID (neither is a secret).

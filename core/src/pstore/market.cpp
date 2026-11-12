@@ -16,8 +16,8 @@ namespace dect2::pstore {
 namespace fs = std::filesystem;
 namespace aj = automation::json;
 
-// All zeros: the marketplace key has not been made yet (tools/marketplace/server/README.md, step 5).
-const char* const kBuiltInMarketKeyHex = "0000000000000000000000000000000000000000000000000000000000000000";
+// The public key of plugins.on-air.dev (made 2026-11-12, tools/marketplace/server/README.md step 5). Changing it needs a new release.
+const char* const kBuiltInMarketKeyHex = "2fff25bf79f6bfe317f5fa2e8de268ee4da8509f69724063898174bc1cb59906";
 const char* const kDefaultMarketUrl = "https://plugins.on-air.dev";
 
 namespace {
