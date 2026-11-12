@@ -370,7 +370,7 @@ void guessUi(App& a) {
     }
     ImGui::EndDisabled();
     tip("Measures the occupied bandwidth and the shape of the spectrum around the listening frequency and suggests the mode (AM, NFM, SSB, CW, FSK, wide FM, OFDM) and where to tune.");
-    if (!guessNote.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", guessNote.c_str()); }
+    if (!guessNote.empty()) { nxt(-1); ImGui::TextDisabled("%s", guessNote.c_str()); }
     for (size_t gi = 0; gi < guess.size() && gi < 3; gi++) {
         const auto& g = guess[gi];
         ImGui::PushID((int)gi);
@@ -386,13 +386,13 @@ void broadcastPresetsUi(App& a) {
     static const struct { const char* name; double khz; } kPre[] = {{"MW 531", 531}, {"MW 999", 999}, {"MW 1368", 1368}, {"MW 1566", 1566}};
     ImGui::TextDisabled("presets");
     for (const auto& pr : kPre) {
-        ImGui::SameLine(0, 4 * gUi);
+        nxt(4);
         if (ImGui::SmallButton(pr.name)) { S.chanOff = 0; tuneFreq(a, pr.khz / 1e3); S.lastDial = a.freqMhz; save(); }
     }
     size_t nsw = 0;
     const dect2::SwBand* sw = dect2::swBroadcastBands(nsw);
     for (size_t i = 0; i < nsw; i++) {   // each band: centre, AM with the synchronous detector, 9 kHz filter, 5 kHz step
-        ImGui::SameLine(0, 4 * gUi);
+        nxt(4);
         ImGui::PushID((int)i);
         if (ImGui::SmallButton(sw[i].name)) {
             setDemod(dect2::GenAm); S.chanOff = 0;
@@ -412,6 +412,7 @@ void broadcastPresetsUi(App& a) {
         }
         ImGui::PopID();
     }
+    if (gSide) flowEnd();
     ImGui::TextDisabled("MW steps are 9 kHz (Europe, Asia) or 10 kHz (Americas); the shortwave buttons use 5 kHz. Needs a radio that reaches medium wave and shortwave (HF / direct sampling).");
 }
 

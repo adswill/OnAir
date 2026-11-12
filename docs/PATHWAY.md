@@ -1898,3 +1898,16 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+
+## 2026-11-12 (feat40-general): the General receiver screen
+- New screen for the General receiver (docs/GENERAL-4.0.md). The spectrum and waterfall fill the window. One resizable, hideable sidebar
+  (Ctrl+B) has folding sections, a thin bar carries the step, Snap, Centre and the SNR meter, and a drawer holds the old tabs. The layout
+  is saved in `gen40Layout`. The 3.9 layout stays behind Display > 4.0 General layout.
+- Demodulators: a grid (NFM WFM AM SAM DSB USB LSB CW CW-L RAW), a top-bar button, a right click on the VFO and Alt+letter keys. Auto from
+  the band plan is off by default. Squelch, AGC and gain are now kept per demodulator; old profiles load from the shared keys.
+- Core: DSB, RAW and CW-L appended to `GeneralDemod`, so the old numbers are unchanged.
+- VFO: drag its body (keeps the grab point), drag its edges, the wheel over it steps it, and Snap is optional.
+- Shared spectrum, all modes: the tuning-style pair is one toggle, and the Zoom slider and keys zoom around the tuned frequency inside the
+  captured band.
+- Tests: `general_layout` (110 checks, run locally), plus new DSB / RAW / CW-L cases in `general_rx`. The app was built on GitHub only;
+  screenshots wait for the Mac to be on mains.
