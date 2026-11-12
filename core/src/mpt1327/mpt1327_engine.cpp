@@ -39,6 +39,7 @@ struct MptReceiver::Impl {
     SpectralAfc afc;
     FmBiquad nbRe[2], nbIm[2];
     bool narrowOn = false;
+    bool weakPath = true;                 // false: the 3.9 receiver without the narrow filter (setWeakSignalPath, for before / after measurements)
     double narrowF0 = 0, narrowPh = 0;
     double offsetHz = 0;
     double centerHz = 0;
@@ -252,7 +253,7 @@ void MptReceiver::feed(const std::complex<float>* x, size_t n) {
             s.accN = 0;
             s.afc.push(&z, 1);
             if (s.afc.settled() && (!s.narrowOn || std::fabs(s.afc.adjustHz() - s.narrowF0) > 150.0)) { s.narrowOn = true; s.narrowF0 = s.afc.adjustHz(); }
-            if (s.narrowOn) {
+            if (s.weakPath && s.narrowOn) {
                 s.narrowPh -= 2 * kPi * s.narrowF0 / s.fsEff;
                 if (s.narrowPh < -kPi) s.narrowPh += 2 * kPi;
                 const double c = std::cos(s.narrowPh), sn = std::sin(s.narrowPh);
@@ -287,6 +288,7 @@ void MptReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     p_->log = std::move(cb);
 }
 
+void MptReceiver::setWeakSignalPath(bool on) { std::lock_guard<std::mutex> l(p_->mu); p_->weakPath = on; }
 void MptReceiver::setFollow(bool on) { std::lock_guard<std::mutex> l(p_->mu); p_->follow = on; p_->snap.follow = on; }
 void MptReceiver::setVoiceSlots(int n) { std::lock_guard<std::mutex> l(p_->mu); p_->one.setSlots(n); p_->snap.voiceSlots = p_->one.slots(); }
 void MptReceiver::setChannelPlan(int controlChannel, double spacingHz) {
