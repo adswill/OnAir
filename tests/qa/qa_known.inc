@@ -152,4 +152,4 @@
     {"ngham/snr", "threshold: 12 dB in the signal's 5.9 kHz band is 5.7 dB C/N in 25 kHz; the receiver decodes half of the frames at 7.3 dB: a sensitivity item, see docs/QA-4.0.md"},
     {"tetra/tx", "timing: the transmitter's file decodes nothing in 32 s on a loaded 3-core runner (passes on a quiet one, and on the Mac in the engine and the receiver alone); 3 of 5 CI runs"},
     {"msk144/tx", "timing: decodes nothing on a loaded runner, passes on a quiet one (1 of 3 CI runs)"},
-    {"globalstar/rpos", "open: any clock error (5 ppm) at a sample rate other than 6 and 10 Msps stops the decode, in the receiver alone (13.7 Msps +-50 ppm: 0 of 2 blocks); the default rate is fine: generator or receiver, to investigate"},
+    {"globalstar/rpos", "open: with any clock error (5 ppm, through the sweep's resampler) at a sample rate other than 6 and 10 Msps no event ever closes in the receiver alone (13.7 Msps +-50 ppm: 0 blocks); the default rate and the file without resampling decode: sweep artefact or receiver, to investigate"},
