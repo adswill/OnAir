@@ -3,7 +3,7 @@
 // seeded trials; a trial passes when the receiver counted at least half the valid units of a clean run (as sens_sweep). Every point is run twice
 // with the same seeds: the new receiver path and the 3.9 path of the same receiver (an A/B switch of the receiver, set through the environment),
 // so before and after come from one binary on one machine. Process CPU time of each run is printed next to it.
-//   default: a short guard (the improved scenario at a fixed SNR must pass, noise alone must give nothing)
+//   default: a short guard (ISDB-T TU6 26 dB and AWGN 20 dB, ATSC 3.0 TU6 10 dB must pass; noise alone must give nothing)
 //   ONAIR_SENS_CALIBRATE=1: the before / after table. X3_MODES (regex, default isdbt), X3_SCEN (regex, default awgn|echo|tu6|rician|phasenoise|combined),
 //   X3_TRIALS (8), X3_SNR "hi:lo:step" (per mode default), X3_SECS (trial length, default the mode's), X3_FD (Doppler, Hz)
 // Simulated signals only: no recording is involved.
@@ -219,6 +219,14 @@ int main() {
     if (t.pass < 0.74) { printf("FAIL: isdbt tu6 26 dB\n"); fails++; }
     if (a.pass < 0.99) { printf("FAIL: isdbt awgn 20 dB\n"); fails++; }
     if (f.pass > 0) { printf("FAIL: isdbt decoded noise\n"); fails++; }
+    // ---- guard: ATSC 3.0 QPSK 8/15 in TU6 at 10 dB, where the 3.9 receiver (one noise figure for every cell, L1 included) lost a frame in five
+    // and passed no trial
+    if (const Mode* ma = findMode(all, "atsc3")) {
+        const Prep Pa = prepare(*ma, ma->secs, std::max(1, std::min(threads, ma->maxJobs)));
+        const Pt t3 = run(*ma, Pa, tu6, 10, 2, std::max(1, std::min(threads, ma->maxJobs)));
+        printf("atsc3: tu6 10 dB pass %.0f%% (units %.0f%%)\n", 100 * t3.pass, 100 * t3.frac);
+        if (t3.pass < 0.99) { printf("FAIL: atsc3 tu6 10 dB\n"); fails++; }
+    }
     printf(fails ? "FAILED\n" : "PASSED\n");
     return fails ? 1 : 0;
 }
