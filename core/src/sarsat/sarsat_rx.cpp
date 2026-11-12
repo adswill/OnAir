@@ -456,6 +456,7 @@ struct SarsatReceiver::Impl {
     // repeat combining: the soft bits of bursts that did not decode, kept for the beacon's next bursts
     struct Kept { double t = 0, carrier = 0; std::vector<std::vector<float>> cands; };   // cands[0]: best-looking timing
     std::vector<Kept> kept;
+    std::vector<std::pair<double, double>> expect;   // (carrier, time) of beacons heard: their next bursts are looked for with a lower line threshold
     bool combineOn = true;
     bool fullWindow = true;   // false: the 3.9 burst end (6 blocks without a line)
     bool coherentOn = true;   // false: the 3.9 differential message bits
@@ -485,7 +486,7 @@ struct SarsatReceiver::Impl {
         std::fill(bg.begin(), bg.end(), 0.f);
         warm = 0; active = false; miss = 0; dets = 0; peaks.clear();
         lastDecodeSec = -1e9; lastPublish = 0;
-        kept.clear(); last4.clear(); last4i = 0; last4n = 0; weakBurst = false;
+        kept.clear(); expect.clear(); last4.clear(); last4i = 0; last4n = 0; weakBurst = false;
     }
 
     // A failed burst at time t on `carrier`: add it to the kept bursts of the same beacon (same carrier, at the repeat interval or a multiple of it),
@@ -610,6 +611,9 @@ struct SarsatReceiver::Impl {
             bool got = sarsat::demodBurst2(y, 0.0, b, combineOn ? &sb : nullptr, coherentOn, costPerBit);
             int combined = 0;
             const double tBurst = (double)firstBlockStart / kDet;
+            if (combineOn) {   // the carriers where a beacon's next burst is expected
+                expect.erase(std::remove_if(expect.begin(), expect.end(), [&](const std::pair<double, double>& e) { return tBurst - e.second > 4 * perMax + 2 || std::fabs(e.first - carrier) <= 60.0; }), expect.end());
+            }
             if (got && combineOn) {   // the beacon decoded: its kept bursts are not needed any more
                 kept.erase(std::remove_if(kept.begin(), kept.end(), [&](const Kept& k) { return std::fabs(k.carrier - carrier) <= 150.0 && tBurst - k.t < 4 * perMax + 2; }), kept.end());
             } else if (combineOn && !sb.soft.empty()) {
@@ -618,6 +622,7 @@ struct SarsatReceiver::Impl {
                 combined = combine(tBurst, carrier, mine, b);
                 got = combined > 0;
             }
+            if (combineOn && (got || !sb.soft.empty())) { expect.emplace_back(carrier, tBurst); if (expect.size() > 8) expect.erase(expect.begin()); }
             if (got || plausible || combined) tel.bursts++;
             if (got) {
                 SarsatEntry e;
@@ -689,7 +694,19 @@ struct SarsatReceiver::Impl {
                 const float med4 = std::max(sq[sq.size() / 2], 1e-20f);
                 size_t qk = 0;
                 for (size_t k = 0; k < kBlock; k++) if (allowed(k) && q[k] > qW && q[k] > 24.f * bg[k]) { qW = q[k]; qk = k; }
-                if (qW >= 8.5f * med4) {
+                bool hit = qW >= 8.5f * med4;
+                // 4.0 a-priori: near the carrier of a beacon heard in the last minutes (decoded or kept for combining) its next burst is expected,
+                // so +-3 bins there take a line at 5.5 x the median (about 3e-6 of noise bins: one false start in tens of minutes, each refused by the checks)
+                if (!hit && combineOn)
+                    for (const auto& ex : expect) {
+                        const long c0 = std::lround(ex.first / kDet * (double)kBlock);
+                        for (long dk = -3; dk <= 3; dk++) {
+                            const size_t k = (size_t)((c0 + dk + (long)kBlock) % (long)kBlock);
+                            if (allowed(k) && q[k] >= 5.5f * med4 && q[k] > 24.f * bg[k] && q[k] > (hit ? q[qk] : 0.f)) { qk = k; hit = true; }
+                        }
+                    }
+                if (hit) {
+                    qW = q[qk];
                     weakDet = true;
                     const size_t a = (qk + kBlock - 1) % kBlock, c = (qk + 1) % kBlock;
                     const double la = std::log((double)q[a] + 1e-30), lb = std::log((double)q[qk] + 1e-30), lc = std::log((double)q[c] + 1e-30);
