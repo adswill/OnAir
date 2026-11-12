@@ -2109,3 +2109,14 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
 - #488: the audio monitor ignored the decode shift of a click / in-band typed frequency; monitorShiftHz adds it.
 - #470: Linux falls back to OpenGL ES 3.0 through EGL when desktop GL is llvmpipe and a GPU node exists; diagnostics in the log.
 - docs/BUGS2-4.1.md. CI results in the final report.
+
+## 2026-11-12 (feat40-mint): OnAir on Linux Mint (docs/LINUX-MINT-4.0.md)
+- Discord: "not working on the newest Linux Mint", no details. Newest stable Mint is 22.3 Zena (Ubuntu 24.04); the next one (mint27 image,
+  "adrien") is on Ubuntu 26.04; LMDE 7 on Debian 13.
+- New manual workflow .github/workflows/linux-distros.yml: v3.9.0 .deb (apt install ./), AppImage and portable in Mint 27, Mint 22.3, LMDE 7,
+  Ubuntu 26.04 / 24.04 / 22.04 and Debian 13 containers, ldd plus a headless start under xvfb. Run 43265138175: all 21 combinations start,
+  no missing libraries, all .deb dependencies resolve; the AppImage runtime is static (no libfuse2, needs fusermount3). Not reproduced.
+- Fix: on Linux a fatal start error (no OpenGL 3.0, no window, graphics back end) went only to stderr, so from the menu OnAir seemed to do
+  nothing. showFatalError now also writes ~/.config/onair/startup-error.txt and shows a dialog (zenity / kdialog / notify-send / xmessage,
+  2 min timeout, ONAIR_NO_DIALOG=1 turns it off) when there is a desktop and no terminal. README Linux row: Mint, terminal start, the file.
+  Packaging unchanged.
