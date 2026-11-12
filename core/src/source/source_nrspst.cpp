@@ -10,7 +10,9 @@
 #include "../net/ws_client.h"
 #include "native_common.h"
 #include "dect2/net/netradio.h"
+#include "dect2/dsp/sample_convert.h"
 #include <cmath>
+#include <cstring>
 #include <map>
 #include <mutex>
 
@@ -322,10 +324,18 @@ protected:
             const size_t n = (m.size() - 2) / 4;
             conv_.resize(n);
             const unsigned char* b = m.data() + 2;
+#if defined(__BYTE_ORDER__) && __BYTE_ORDER__ == __ORDER_BIG_ENDIAN__
             for (size_t k = 0; k < n; k++) {
                 const int16_t re = (int16_t)(b[4 * k] | b[4 * k + 1] << 8), im = (int16_t)(b[4 * k + 2] | b[4 * k + 3] << 8);
                 conv_[k] = cf32(re / 32768.f, im / 32768.f);
             }
+#else
+            // 4.0: little-endian hosts take the 16-bit pairs as they are and convert them in one loop that vectorises (x / 32768 and
+            // x * (1 / 32768) are the same float: the samples are bit for bit the old ones). 10 Msps is 40 MB/s through here.
+            s16_.resize(2 * n);
+            std::memcpy(s16_.data(), b, 4 * n);
+            convertCs16(s16_.data(), n, conv_.data(), 1.0f / 32768);
+#endif
             if ((m.size() - 2) % 4) bad++;
             push(conv_.data(), n);
         }
@@ -362,6 +372,7 @@ private:
     int sentLna_ = -1;
     std::string sentAntenna_;
     std::chrono::steady_clock::time_point lostAt_{};
+    std::vector<int16_t> s16_;   // one IQ message as 16-bit pairs (aligned for the conversion)
 };
 
 static void setCaps(DeviceInfo& d, const NrspInfo& i) {

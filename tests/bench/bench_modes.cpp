@@ -479,10 +479,12 @@ int main(int argc, char** argv) {
     std::error_code ec;
     std::filesystem::remove_all(tmpDir, ec);
     std::stable_sort(rows.begin(), rows.end(), [](const Row& a, const Row& b) { return a.cost > b.cost; });
-    printf("\n%-14s %9s %9s %9s %8s %7s %4s %6s %8s  %s\n", "mode", "rate Msps", "cost", "RT factor", "startup", "RSS MB", "thr", "busy%", "items", "status");
+    printf("\n%-14s %9s %9s %9s %8s %7s %4s %6s %8s %9s  %s\n", "mode", "rate Msps", "cost", "RT factor", "startup", "RSS MB", "thr", "busy%", "items", "max Msps", "status");
     for (auto& r : rows)
-        printf("%-14s %9.4g %9.4f %9.1f %8.2f %7.0f %4d %6.0f %8llu  %s\n", r.id.c_str(), r.rate / 1e6, r.cost, r.rtf, r.startup, r.rss, r.threads, r.busiest * 100, r.items, r.status.c_str());
-    printf("cost = CPU seconds (all threads) per second of signal; RT factor = 1/cost: streams one core could carry; startup = one-off CPU seconds; busy%% = busiest thread's share of the CPU\n");
+        printf("%-14s %9.4g %9.4f %9.1f %8.2f %7.0f %4d %6.0f %8llu %9.1f  %s\n", r.id.c_str(), r.rate / 1e6, r.cost, r.rtf, r.startup, r.rss, r.threads, r.busiest * 100, r.items,
+               r.wallFactor > 0 ? r.rate / 1e6 / r.wallFactor : 0.0, r.status.c_str());
+    printf("cost = CPU seconds (all threads) per second of signal; RT factor = 1/cost: streams one core could carry; startup = one-off CPU seconds; busy%% = busiest thread's share of the CPU;\n"
+           "max Msps = the rate this machine sustains for the mode (signal through the whole receive path per wall second, unpaced: rate x signal / wall)\n");
     if (!outPrefix.empty()) {
         if (FILE* f = fopen((outPrefix + ".json").c_str(), "w")) {
             fprintf(f, "{\"seconds\":%.3f,\"rows\":[\n", secs);
