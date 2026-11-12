@@ -85,4 +85,4 @@ Every entry is a family F with active standard F + 1, engine standard F + 2 and 
 | GNSS systems | 860, 863, 866, 872, 875 | 5 views of GNSS |
 | Analog TV standards | 424, 427, 441, 444, 447, 450, 453, 456 | 8 views of Analog TV |
 
-Ranges of the list above that are still free after this branch (stride 3 for views): 166 - 177, 214 - 216, 247 - 257, 272 - 287, 312 - 317, 324 - 337, 347 - 357, 362 - 377, 382 - 397, 430 - 440 (below 441 where not used), 459 - 477, 482 - 497, 504 - 507, 511 - 527, 598 - 606, 617 - 627, 651 - 657, 688 - 701 where not used, 743, 797 - 803, 819 - 837, 878 - 899. The integrator resolves any clash with another branch.
+The numbers still free are those of the ranges listed above minus the ones in this table (the stride is 3 for a view, 1 for an x40 variant). The integrator resolves any clash with another branch.
