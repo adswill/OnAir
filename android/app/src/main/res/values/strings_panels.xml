@@ -12,4 +12,13 @@
     <string name="panel_no_match">Nothing matches the search</string>
     <string name="panel_count">%1$d of %2$d</string>
     <string name="panel_emergency">Emergency squawk</string>
+    <string name="panel_tv">Watch</string>
+    <string name="tv_no_library">This build has no receiver library, so there is no TV.</string>
+    <string name="tv_waiting">Waiting for the transport stream. Start the receiver on a TV channel; the services appear once it locks.</string>
+    <string name="tv_no_services">The stream arrives, but no service list yet (PAT, PMT and SDT come within a few seconds).</string>
+    <string name="tv_services">Services</string>
+    <string name="tv_sound_tracks">Sound tracks</string>
+    <string name="tv_radio">radio</string>
+    <string name="tv_scrambled">scrambled</string>
+    <string name="tv_honesty">Picture and sound are decoded by this phone\'s own decoders (Android MediaCodec). OnAir ships no codec: a format the phone has no decoder for stays silent or dark, and the screen says which. Wideband TV demodulation is heavy for a phone: expect it to get warm, drain the battery quickly and, on slower phones, not keep up.</string>
 </resources>
