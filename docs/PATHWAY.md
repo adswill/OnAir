@@ -1871,3 +1871,11 @@ The tests/app/test_mode_numbers.cpp poll-slot scan now reads the slots of the 4.
 ISM sensors: 50 % of the packets at 3 dB instead of 6.5 dB (narrow-envelope retry for OOK, tone-energy chips and a relaxed carrier test for FSK; 0 false). Aero: the 11 dB was the test generator's own noise
 (Eb/N0 12 dB baked in): harness fixed, true 90 % point -1 dB, no receiver change. FT8 and friends: the wrong a-priori texts are noise candidates with a sync score under 2.5; the a-priori floor is 2.6 and the
 ftxsmart count that hid them is corrected. Checked at theory: LoRa SF7 to SF12, AX.25 9600, ALE, wM-Bus, CW with carrier error. Details: docs/SENSITIVITY-4.0-B3.md.
+
+## 2026-11-12 (night), 4.0 lane A part 3: gate hunt in the burst and packet receivers (feat40-sensA3)
+Looked for the Argos kind of find (a fixed gate far above what the demodulator needs) in the burst / packet receivers, with before/after curves from sens_curve
+and noise-only runs (docs/SENSITIVITY-4.0-A3.md): HaLow preamble gate 0.55 to 0.30 (about 1.5 dB), Globalstar activity gate 2 to 0.8 dB (about 3.5 dB), POCSAG gets a
+second POCSAG-only decoder behind a 7 kHz filter next to the 10 kHz one FLEX needs (about 1.3 dB, FLEX unchanged), Zigbee chip values as the amplitude weighted sine of
+the phase step (about 1.5 dB), SAME and the CubeSat 1200 baud path on the front end's second 4.5 kHz channel (about 3 dB each), LTR 3.5 kHz with the carrier follow-up
+(decodes with 3.1 kHz carrier error where 3.9 found nothing), MRZ keeps its serial across pauses (it was forgotten at every pause, so the receiver dropped nearly every MRZ frame, which is also why its narrow path had broken sonde_extra_rf), MRZ and iMS-100 accept 3 sync symbol errors and run on the narrow path (MRZ 7 times the frames and about 2 dB, iMS-100 about 3 dB). Tests: sens40a3 (new), same_rx, cubesat_rx, ltr_rx,
+sonde_extra extended. Not kept: Iridium, Aero, ISM, Wi-SUN, BLE, VDL2 gate changes, M10 narrow path (already at theory).

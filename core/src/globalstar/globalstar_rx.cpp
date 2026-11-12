@@ -22,7 +22,7 @@ constexpr double kPublishSec = 0.25;
 constexpr double kPowerHalf = 0.615e6;       // the channel's own bandwidth: 1.23 MHz
 constexpr double kCentroidHalf = 0.64e6;     // the window the centroid is taken over
 constexpr int kWarmSlots = 20;               // the first 0.2 s set the noise floor
-constexpr double kOnDb = 2.0, kOffDb = 1.0;  // activity threshold above the floor, with hysteresis
+constexpr double kOnDb = 0.8, kOffDb = 0.4;  // activity threshold above the floor, with hysteresis
 constexpr int kOnSlots = 3, kOffSlots = 10;
 constexpr double kOccTau = 60.0;             // occupancy window, seconds
 

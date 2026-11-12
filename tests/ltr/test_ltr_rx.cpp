@@ -136,6 +136,15 @@ int main() {
         const int n = found(t, sent, stray);
         CHECK(n == (int)sent.size() && stray == 0, "inverted + offset: found %d, stray %d", n, stray);
     }
+    {   // 4.0: a carrier 3.1 kHz off (a 20 ppm radio at 160 MHz) through noise: the 3.9 receiver found nothing; 3.5 kHz filter + carrier follow-up (docs/SENSITIVITY-4.0-A3.md)
+        for (double car : {3100.0, -3100.0, 0.0}) {
+            const auto sig = ltr::modulate(bits, fs, off + car, 600.0, 0.5f, 1000.0, 1500.0);
+            const LtrTelemetry t = run(sig, fs, off, 1.0);
+            int stray = 0;
+            const int n = found(t, sent, stray);
+            CHECK(n >= (int)sent.size() - 1 && stray == 0, "carrier %+.0f Hz, noise 1.0: found %d of %zu, stray %d", car, n, sent.size(), stray);
+        }
+    }
     {   // noise
         const auto sig = ltr::modulate(bits, fs, off, 600.0, 0.5f, 1000.0, 1500.0);
         const LtrTelemetry t = run(sig, fs, off, 0.15);

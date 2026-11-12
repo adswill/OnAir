@@ -132,7 +132,7 @@ struct TetrapolReceiver::Impl {
     }
 
     void designFir() {
-        const double fc = 6500.0 / kWork;
+        const double fc = 5800.0 / kWork;   // 4.0: 5.8 kHz (was 6.5): about 0.6 dB more at the threshold, no loss with a 3 or 8 kHz carrier error; 5.2 kHz was 1 dB but lost control frames in the 2.5 kHz drift test, 4.5 kHz clips the signal (docs/SENSITIVITY-4.0-A3.md)
         std::vector<float> def(kFirTaps);
         double sum = 0;
         for (int i = 0; i < kFirTaps; i++) {
