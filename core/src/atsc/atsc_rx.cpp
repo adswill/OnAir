@@ -1774,18 +1774,26 @@ struct Core {
         bool secondTry = false;
         // A badly decoded field gets a second try with the other kind of equaliser: after the decision feedback one (which can run away
         // after a wrong decision) the plain one; after the plain one a decision feedback equaliser trained on this field's own decisions.
-        if (st.segments > 0 && st.rsFailed * 5 > st.segments && !shed) {
+        // A dynamic channel (a moving echo, A/74 R.1 / R2: up to 5 Hz) has moved on since the previous field the decision feedback taps were
+        // trained on: a field with 10 % or more of its segments lost is equalised again with taps solved from its own decoded symbols (3.9: the
+        // plain equaliser only, and only from 20 %), then, while still 20 % or more are lost, with the plain one. ATSC_OLDDROP=1: 3.9's order.
+        static const bool oldRetry = getenv("ATSC_OLDDROP") != nullptr;
+        for (int attempt = 0; attempt < 2 && !shed && st.segments > 0; attempt++) {
+            const bool selfDfe = oldRetry ? !usePrev : (attempt == 0);
+            if (oldRetry && attempt > 0) break;
+            if (oldRetry ? !(st.rsFailed * 5 > st.segments) : attempt == 0 ? !(st.rsFailed * 10 > st.segments) : !(st.rsFailed * 5 > st.segments)) break;
             Taps alt;
             std::vector<float> lv2, hv2;
             bool haveAlt = false;
-            if (usePrev) haveAlt = trainFF(view, fsLv, alt);
+            if (!selfDfe) haveAlt = trainFF(view, fsLv, alt);
             else {
                 std::vector<float> selfLv;
                 levelsFromPath(fsLv, psym, hv, tp.B, selfLv);
                 haveAlt = trainDFE(view, view, fsLv, selfLv, lv, 1e-4, alt);
             }
             if (haveAlt) {
-                const double snr2 = equalize(view, fsLv, alt, nullptr, lv2, hv2);
+                const float* h2 = (usePrev && alt.B > 0 && prevLv.size() >= (size_t)kFieldSyms) ? &prevLv[(size_t)(kFieldSyms - alt.B)] : nullptr;
+                const double snr2 = equalize(view, fsLv, alt, h2, lv2, hv2);
                 if (snr2 >= 9.0) {
                     FieldDecoder keep = dec;
                     dec = backup;
