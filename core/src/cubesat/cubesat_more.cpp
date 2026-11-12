@@ -769,6 +769,7 @@ void MoreHunter::configure(const MoreConfig& c) {
             MoreFrame f; f.framing = Mobitex; f.inverted = inv; f.bitPos = st; f.data = mf.reframed; f.callsign = mf.callsign;
             f.name = variant == MobitexBeesat1 ? "BEESAT-1" : variant == MobitexBeesat9 ? "BEESAT-9" : nx ? "Mobitex-NX" : "Mobitex";
             int okb = 0; for (bool k : mf.blockOk) okb += k;
+            f.blocksOk = okb; f.blocksAll = (int)mf.blockOk.size();
             f.how = "FEC + CRC-16 (" + std::to_string(okb) + " of " + std::to_string(mf.blockOk.size()) + " blocks)";
             f.rsErrors = -1;
             p_->emit(f);

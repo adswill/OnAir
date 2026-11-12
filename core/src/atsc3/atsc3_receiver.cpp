@@ -128,7 +128,11 @@ PlpResult Atsc3Receiver::joinStraddle(const PlpResult& in) {
             std::vector<const cf32*> ptr{cells.data()};
             std::vector<std::vector<uint8_t>> pl;
             std::vector<char> good;
-            bicm.decodeBatch(ptr, in.noise, pl, good);
+            // the channel state of both parts when both have it (docs/SENSITIVITY-4.0-X3.md)
+            std::vector<float> w;
+            if (st.tailW.size() == st.tail.size() && in.headW.size() == in.head.size() && !in.headW.empty()) { w = st.tailW; w.insert(w.end(), in.headW.begin(), in.headW.end()); }
+            std::vector<const float*> wp{w.data()};
+            bicm.decodeBatch(ptr, in.noise, pl, good, w.empty() ? nullptr : &wp);
             first.blocks = 1;
             first.ok.push_back(good[0] != 0);
             if (good[0]) { bbScramble(pl[0]); first.packets.push_back(bitsToBytes(pl[0])); first.blocksOk = 1; }
@@ -141,6 +145,7 @@ PlpResult Atsc3Receiver::joinStraddle(const PlpResult& in) {
         out.blocks += first.blocks; out.blocksOk += first.blocksOk;
     }
     st.tail = in.tail;
+    st.tailW = in.tailW;
     return out;
 }
 

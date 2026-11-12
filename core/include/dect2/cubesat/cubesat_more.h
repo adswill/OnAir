@@ -130,6 +130,7 @@ struct MoreFrame {
     bool inverted = false;
     uint64_t bitPos = 0;            // the bit at the end of the sync word
     std::string callsign;           // Mobitex
+    int blocksOk = -1, blocksAll = -1;   // Mobitex: data blocks with a good CRC, data blocks in the frame
 };
 
 // Settings that the satellite table can choose (one frame size per hunter; the rest is tried at once)

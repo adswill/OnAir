@@ -564,7 +564,9 @@ inline std::vector<Mode> allModes() {
     }
     {   // ATSC 3.0 (engine synthetic): baseband packets with a good check
         Mode m = base("atsc3", "ATSC 3.0", "ofdm-tv", 5, 8e6, 4.0, 5.83e6, 600);
-        m.snrHi = 30; m.maxJobs = 2; m.echoUs = 0;
+        // echo at about half the guard interval (GI5_1024: 1024 samples at 6.144 Msps, 167 us), as for the other modes; 0 made the echo row a
+        // copy of the direct path (4.0 X3)
+        m.snrHi = 30; m.maxJobs = 2; m.echoUs = 80;
         m.gen = [](size_t n) { return clean(5, SynthConfig(), 8e6, n); };
         m.make = factory<Atsc3Rx, Atsc3Telemetry>([](Atsc3Rx& rx, double r) { rx.setBlocking(true); rx.configure(r); },
                                                   [](const Atsc3Telemetry& t) { return Metric{(double)t.bbPackets, (double)t.bbBad}; }, true,

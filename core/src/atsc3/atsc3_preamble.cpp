@@ -1,6 +1,7 @@
 #include "dect2/atsc3/atsc3_preamble.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 #include <random>
 
 namespace dect2 {
@@ -70,13 +71,18 @@ PreambleResult decodePreamble(const cf32* x, size_t n, const Bootstrap& bs) {
     const size_t symLen = (size_t)pp.fftSize + pp.guard;
     if (n < symLen) return r;
     std::vector<cf32> cells0;
+    std::vector<float> w0;
     float nv = 0;
-    if (!demodulatePreambleSymbol(pp, 4, 0, x, cells0, &nv)) return r;
+    // 4.0 (docs/SENSITIVITY-4.0-X3.md): the channel state of each cell in the L1 soft bits (DECT2_ATSC3_NOCSI=1: one noise figure, as 3.9)
+    const char* noCsiEnv = getenv("DECT2_ATSC3_NOCSI");
+    const bool csi = !(noCsiEnv && *noCsiEnv && *noCsiEnv != '0');
+    if (!demodulatePreambleSymbol(pp, 4, 0, x, cells0, &nv, csi ? &w0 : nullptr)) return r;
     r.noiseVar = nv;
     int nb = l1BasicCells(pp.l1BasicMode);
     if ((int)cells0.size() < nb) return r;
+    const bool haveW0 = csi && w0.size() == cells0.size();
     float noise = std::max(nv, 0.02f);
-    r.basicOk = decodeL1Basic(cells0.data(), nb, noise, pp.l1BasicMode, r.basic, &r.ldpcIterationsBasic);
+    r.basicOk = decodeL1Basic(cells0.data(), nb, noise, pp.l1BasicMode, r.basic, &r.ldpcIterationsBasic, haveW0 ? w0.data() : nullptr);
     if (!r.basicOk) return r;
     const L1Basic& l1 = r.basic;
     int np = l1.preambleNumSymbols + 1;
@@ -85,10 +91,15 @@ PreambleResult decodePreamble(const cf32* x, size_t n, const Bootstrap& bs) {
     if (n < r.samples) return r;
     // all Preamble symbols; the free cells (all but L1-Basic) in order are the interleaved L1-Detail cells
     std::vector<cf32> free(cells0.begin() + nb, cells0.end());
+    std::vector<float> freeW;
+    if (haveW0) freeW.assign(w0.begin() + nb, w0.end());
+    bool haveW = haveW0;
     for (int s = 1; s < np; s++) {
         std::vector<cf32> c;
-        if (!demodulatePreambleSymbol(pp, creduced(s, l1), s, x + (size_t)s * symLen, c)) return r;
+        std::vector<float> cw;
+        if (!demodulatePreambleSymbol(pp, creduced(s, l1), s, x + (size_t)s * symLen, c, nullptr, haveW ? &cw : nullptr)) return r;
         free.insert(free.end(), c.begin(), c.end());
+        if (haveW && cw.size() == c.size()) freeW.insert(freeW.end(), cw.begin(), cw.end()); else haveW = false;
     }
     int total = l1.l1DetailTotalCells;
     if (total <= 0 || total > (int)free.size()) return r;
@@ -97,6 +108,12 @@ PreambleResult decodePreamble(const cf32* x, size_t n, const Bootstrap& bs) {
     int lr = total / np;
     for (int i = 0; i < np; i++)
         for (int j = 0; j < lr; j++) d[j * np + i] = y[i * lr + j];
+    std::vector<float> dw;
+    if (haveW && freeW.size() >= (size_t)total) {
+        dw.assign(freeW.begin(), freeW.begin() + total);
+        for (int i = 0; i < np; i++)
+            for (int j = 0; j < lr; j++) dw[(size_t)(j * np + i)] = freeW[(size_t)(i * lr + j)];
+    }
     r.leftover.assign(d.begin() + 0, d.begin() + 0);   // filled below
     {   // the cells after the L1-Detail cells (before the block interleaver: interleaving only touches the first total cells)
         size_t after = (size_t)total;
@@ -107,7 +124,7 @@ PreambleResult decodePreamble(const cf32* x, size_t n, const Bootstrap& bs) {
     int need = l1DetailCells(l1.l1DetailSizeBytes, mode);
     if (need <= 0 || need > total) return r;
     std::vector<uint8_t> bits;
-    if (!decodeL1Detail(d.data(), need, noise, mode, l1.l1DetailSizeBytes, bits)) return r;
+    if (!decodeL1Detail(d.data(), need, noise, mode, l1.l1DetailSizeBytes, bits, nullptr, dw.size() >= (size_t)need ? dw.data() : nullptr)) return r;
     r.detailOk = unpackL1Detail(l1, bits, r.detail);
     return r;
 }

@@ -2011,3 +2011,14 @@ feat40-sensA4: iMet-54 and MRZ slicer threshold from the smoothed extremes (iMet
 - Core `dsp/zoom_spectrum.h`: zoom FFT (mix the view to DC, CIC + half-band decimation, ~78 dB alias rejection over the usable band, N = 4x the pixels), plan maths `zoomfft::update` (on only when the full-band bins are coarser than the pixels; one restart per octave; pans keep it), display windows (Hann, Blackman-Harris, Nuttall, flat top, rectangular), overlap cap, FFT cap 1M. Runs on the existing spectrum thread.
 - App: pixel-exact waterfall view (`WfView::updateExact`, a texel per framebuffer pixel, peak per pixel / sharp steps), a zoom waterfall history parallel to the main ring (`gfx/zoom_detail.h`), trace lines from the zoom bins, a resolution readout, Spectrum > Resolution (advanced) settings; the 3.9 look stays as "Soft zoom".
 - Tests `zoom_spectrum`, `zoom_detail` (generated signals only). Numbers in docs/WATERFALL-4.0.md. No local build or screenshot (battery); checked on quick.yml.
+
+## 2026-11-12 feat40-sensX3: sensitivity in realistic channels
+ISDB-T: the demodulator equalised with the newest scattered pilot per grid point (no time interpolation, no averaging, no delay window); the
+DVB-T scheme is ported (8-symbol delay, cubic in time, adaptive averaging, Doppler-free noise estimate, delaySpan window): TU6 30 -> 21 dB,
+echo/phase noise/combined 2 dB, AWGN 1 dB, 0 false, CPU +3 %. CubeSat: narrow 9600 (+-8.5 kHz, new optional third FmFront channel) and
+4800 (+-4.5 kHz) paths beside the wide ones: NGHam / Mobitex about 2 dB, 9600 framings 0.3 to 0.9 dB, with +-1.4 kHz and a 12 kHz drift;
+U482C DC block (it failed with any carrier error under the AFC threshold); narrow paths need two good Mobitex blocks and skip the Mode 6 RS
+salvage (noise-only frames equal to 3.9). ATSC 3.0: per-cell channel state in the data and L1 soft bits (TU6 lost a frame in five to L1 failures): TU6 16 -> 6 dB, AWGN unchanged;
+harness echo 0 -> 80 us. ATSC 1.0
+left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
+

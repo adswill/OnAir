@@ -46,7 +46,8 @@ struct SymbolRx {
 };
 bool receiveSymbol(const SubframeParams& s, int l, const cf32* x, SymbolRx& rx);
 void smoothChannel(const std::vector<SymbolRx>& rx, int l, int half, std::vector<cf32>& out);
-void symbolCells(const SubframeParams& s, int l, const SymbolRx& rx, const std::vector<cf32>& hch, std::vector<cf32>& cells);
+// weights (optional): the channel state of each cell, |h|^2 against the symbol's mean (0 for an erased cell), in the order of `cells`
+void symbolCells(const SubframeParams& s, int l, const SymbolRx& rx, const std::vector<cf32>& hch, std::vector<cf32>& cells, std::vector<float>* weights = nullptr);
 
 } // namespace atsc3
 } // namespace dect2
