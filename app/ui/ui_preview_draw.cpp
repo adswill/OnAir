@@ -315,8 +315,8 @@ struct Painter {
             break;
         }
         case kTouch: {   // big digits, the spectrum, a bottom dock of big buttons
-            y0 = topBar(x0, y0, x1, 1.5f);
-            const float bh = rowH() * 1.1f, yd = y1 - bh - 2 * g;
+            y0 = topBar(x0, y0, x1, 1.15f);
+            const float bh = rowH() * 0.9f, yd = y1 - bh - 2 * g;
             if (d.easy) { plots(x0 + g, y0 + g, x1 - g, y0 + (yd - y0) * 0.55f, 0.5f); decoded(x0, y0 + (yd - y0) * 0.55f + g, x1, yd); }
             else plots(x0 + g, y0 + g, x1 - g, yd - g, 0.45f);
             rect(x0, yd, x1, y1, d.rail);
