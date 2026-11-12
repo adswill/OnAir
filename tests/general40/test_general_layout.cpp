@@ -62,7 +62,8 @@ static void testSide() {
     toggleSide(L, forced, hid);
     CHECK(!L.sideOpen && !forced && sideWidth(1600, L, false) == 0, "second press hides it");
     toggleSide(L, forced, false);
-    CHECK(L.sideOpen && !forced && sideWidth(1600, L, false) == 300, "third press shows it again");
+    CHECK(L.sideOpen && forced && sideWidth(1600, L, forced) == 300, "third press shows it again");
+    CHECK(sideWidth(500, L, forced) == 300, "shown by hand: it stays in a narrow window too (one press, not two)");
     CHECK(sideWidth(0, L, false) == 0 && sideWidth(-10, L, true) == 0, "no width");
 }
 

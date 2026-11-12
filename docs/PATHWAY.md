@@ -1909,5 +1909,5 @@ Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked
 - VFO: drag its body (keeps the grab point), drag its edges, the wheel over it steps it, and Snap is optional.
 - Shared spectrum, all modes: the tuning-style pair is one toggle, and the Zoom slider and keys zoom around the tuned frequency inside the
   captured band.
-- Tests: `general_layout` (110 checks, run locally), plus new DSB / RAW / CW-L cases in `general_rx`. The app was built on GitHub only;
+- Tests: `general_layout` (111 checks, run locally), plus new DSB / RAW / CW-L cases in `general_rx`. The app was built on GitHub only;
   screenshots wait for the Mac to be on mains.

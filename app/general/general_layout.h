@@ -97,9 +97,10 @@ inline float sideWidth(float availW, const Layout& L, bool forced, bool* autoHid
     return 0;
 }
 
-// The sidebar button (and Ctrl+B): hide it when shown; show it when hidden by hand; when the window hid it, show it narrower.
+// The sidebar button (and Ctrl+B): hide it when shown; show it when hidden by hand (also in a narrow window: shown by hand means forced);
+// when the window hid it, show it narrower.
 inline void toggleSide(Layout& L, bool& forced, bool autoHidden) {
-    if (!L.sideOpen) { L.sideOpen = true; forced = autoHidden; return; }
+    if (!L.sideOpen) { L.sideOpen = true; forced = true; return; }
     if (autoHidden && !forced) { forced = true; return; }
     L.sideOpen = false;
     forced = false;

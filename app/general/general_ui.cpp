@@ -682,7 +682,7 @@ void extraChannelsUi(App& a) {
         nxt(8);
         if (ImGui::SmallButton("Listen")) {   // swap with the channel that is heard
             std::swap(S.exOff[i], S.chanOff);
-            std::swap(S.exDemod[i], S.demod);
+            { const int nd = S.exDemod[i]; S.exDemod[i] = S.demod; setDemod(nd); }   // its own squelch and AGC come with the demodulator
             save();
         }
         tip("Hear this channel (it swaps places with the first one)");

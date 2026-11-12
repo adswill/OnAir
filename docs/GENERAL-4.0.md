@@ -7,7 +7,7 @@ one menu on the left and the plots everywhere else. The code and artwork are OnA
 Code: `app/general/general_screen.cpp` (the screen), `app/general/general_ui.cpp` (the receiver's controls and the VFO),
 `app/general/general_layout.h` (pure logic, tested), `app/general/general_panels.h` (the interfaces between them),
 `app/gfx/view_span.h` (the zoom rule), `app/ui/freq_digits.h` (the readout digits). Tests: `tests/general40/test_general_layout.cpp`
-(110 checks) and `tests/general/test_general_rx.cpp` (the new demodulators).
+(111 checks) and `tests/general/test_general_rx.cpp` (the new demodulators).
 
 ## Before (3.9)
 
@@ -165,7 +165,7 @@ what a press does.
 
 ## What was verified
 
-- `general_layout`: 110 checks. They cover layout text round trips, old, damaged and foreign text, clamping, the sidebar width at 1600,
+- `general_layout`: 111 checks. They cover layout text round trips, old, damaged and foreign text, clamping, the sidebar width at 1600,
   640, 500 and 400 points, the toggle, the VFO hit test (edges, body, the USB / LSB centre line, tiny bands), drag and snap (12.5 kHz,
   8.33 kHz, 9 kHz at LW, 6 GHz), edge widths, wheel steps, the readout digits (places, typing, a trackpad's fractions, carry, limits),
   the Auto rules and the zoom rule (centred, repeated steps, edges, outside the band, NaN). It was built and run locally with clang.

@@ -160,7 +160,6 @@ void generalScreen(App& a, float bodyH, ImVec2 disp) {
         ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8 * gUi, 6 * gUi));
         ImGui::BeginChild("##gside", ImVec2(sideW, bodyH), ImGuiChildFlags_AlwaysUseWindowPadding);
         ImGui::PopStyleVar();
-        tgRect(a, TgToolbar);
         sidebarBody(a);
         ImGui::EndChild();
         ImGui::PopStyleColor();
