@@ -775,7 +775,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxZw_.setLogCallback([this](const std::string& m) { rxLog(m); });
     rxEcz_.configure(rate_);
     rxWmb_.configure(rate_);
-    { const WmbusView* wv = wmbusViewForActive(activeStdFor(stdMode_.load())); rxWmb_.setPhyMask(wv ? wv->phyMask : 0u); }   // an entry of one wireless M-Bus mode lists that mode only
+    { const WmbusView* wv = wmbusViewForActive(activeStdFor(stdMode_.load())); rxWmb_.setPhyMask(wv ? wv->phyMask : 0u); rxWmb_.setMfrFilter(wv ? wv->mfr : ""); }   // an entry of one wireless M-Bus mode lists that mode only
     rxWmb_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxModeAc_.configure(rate_);
     rxModeAc_.setLogCallback([this](const std::string& s) { rxLog(s); });

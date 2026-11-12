@@ -1,6 +1,6 @@
 # Radiosonde, wireless M-Bus and satellite framing entries (4.0, branch feat40-modes4)
 
-Forty-seven more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
+Fifty-one more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
 No decoder was added or changed. The sensor-family entries of the same branch are in `SENSORVIEWS-4.0.md`.
 
 ## Radiosonde types (receiver `SondeReceiver`, `setKindMask`)
@@ -30,6 +30,8 @@ CI result: see the pathway entry.
 | Wireless M-Bus C1 | 726 | 727 | 728 | 726 | C1A, C1B | 868.625 |
 | Wireless M-Bus R2 | 732 | 733 | 734 | 732 | R2 | 868.625 |
 | Wireless M-Bus N1 (Wize, 169 MHz) | 735 | 736 | 737 | 735 | N1, N24 | 169.4375 (169 MHz plan) |
+
+Four more entries list the meters of one **manufacturer** (code in the frame header) in every mode: Kamstrup (KAM, family 743), Landis+Gyr (LGB, 797), Itron (ITW, 467) and Sensus (SEN, 470); `setMfrFilter`. The simulated port has Kamstrup, Sensus, Itron and Qundis meters but no Landis+Gyr one, so that entry is checked for the filter only (it lists nothing there).
 
 The receiver still searches every channel; `telemetry()` lists the meters and frame log lines of the selected modes and recounts. Test: `tests/wmbus/test_wmbus_views.cpp` (the simulated meters of `wmbus_gen` on the 868 MHz plan clean, with -12 kHz at 25 dB and +9 kHz at 20 dB, and on the 169 MHz plan clean and with +3 kHz at 22 dB; noise only):
 a view lists exactly the meters and log lines of its modes that the receiver without a view lists, the views together list every meter, and noise gives nothing. **Simulated signals only.**

@@ -63,6 +63,8 @@
     {"simet54/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
     {"smrz/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
     {"smeisei/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
+    {"wmbuslgb/*", "generator / no signal: no Landis+Gyr meter in the simulated port"},
+    {"wmbusitw/*", "generator / no signal: the simulated Itron meters send on 169 MHz, the entry's test signal is the 868 MHz plan"},
     {"dvbt/snr", "threshold: 12 dB is below or at this modulation's threshold"},
     {"atsc/snr", "threshold: 12 dB is below or at this modulation's threshold"},
     {"fm/snr", "threshold: 12 dB is below or at this modulation's threshold"},

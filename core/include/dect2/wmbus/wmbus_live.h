@@ -35,6 +35,7 @@ public:
     void setLogCallback(std::function<void(const std::string&)> cb);
     // 4.0: a view onto some wireless M-Bus modes: bit k of the mask = wmbus::Phy k; only the meters and frames of those modes are reported (telemetry()), 0 = every mode.
     void setPhyMask(uint32_t mask);
+    void setMfrFilter(const std::string& code);   // 4.0: only the meters (and frames) of this manufacturer code ("KAM"); "" every manufacturer. Combined with the mode mask.
 
 private:
     struct Impl;
@@ -52,11 +53,12 @@ struct WmbusView {
     uint32_t phyMask;        // bits of wmbus::Phy
     double defMhz;
     bool plan169;            // the 169 MHz plan (mode N)
+    const char* mfr = "";    // the manufacturer code of the meters shown ("KAM"), empty: every manufacturer
 };
 const WmbusView* wmbusViews(int& count);
 const WmbusView* wmbusViewForActive(int activeStd);
 const WmbusView* wmbusViewForStd(int stdMode);
 ModeTuning wmbusViewTuning(int i);
-#define DECT2_WMBUSVIEW_ACTIVE_CASES case 721: case 724: case 727: case 733: case 736:
+#define DECT2_WMBUSVIEW_ACTIVE_CASES case 721: case 724: case 727: case 733: case 736: case 744: case 798: case 468: case 471:
 
 } // namespace dect2

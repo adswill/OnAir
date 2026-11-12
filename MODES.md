@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**447 modes.**
+**451 modes.**
 
 ## TV (25)
 
@@ -205,7 +205,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (70)
+## IoT & Sensors (74)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -277,6 +277,10 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **TPMS: all makes** - TPMS: tyre pressure sensors of every make
 - **Utility and energy meters** - Utility meters and energy monitors: every brand in one list
 - **Remotes, doorbells and switches** - Remotes, doorbells and switches: the frames they send
+- **Wireless M-Bus: Kamstrup** - Wireless M-Bus: Kamstrup meters
+- **Wireless M-Bus: Landis+Gyr** - Wireless M-Bus: Landis+Gyr meters
+- **Wireless M-Bus: Itron** - Wireless M-Bus: Itron meters
+- **Wireless M-Bus: Sensus** - Wireless M-Bus: Sensus meters
 
 ## Weather & Science (76)
 

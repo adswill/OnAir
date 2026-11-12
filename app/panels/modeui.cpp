@@ -349,7 +349,7 @@ const ModeUi* modeUi(int family) {
     case 85: return &kEczasUi;
     case 101: return &kFpvUi;
     case 86: return &kWmbusUi;
-    case 720: case 723: case 726: case 732: case 735: return &kWmbusUi;   // 720 .. 735: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
+    case 720: case 723: case 726: case 732: case 735: case 743: case 797: case 467: case 470: return &kWmbusUi;   // 720 .. 735: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 89: return &kTonesUi;
     case 92: return &kSarsatUi;
     case 122: return &kKaalUi;

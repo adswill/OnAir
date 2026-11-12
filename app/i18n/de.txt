@@ -4214,3 +4214,7 @@ TV, SECAM L	Fernsehen, SECAM L
 TV, NTSC M	Fernsehen, NTSC M
 TV, PAL M	Fernsehen, PAL M
 TV, PAL N	Fernsehen, PAL N
+Meters, Kamstrup	Zähler, Kamstrup
+Meters, Landis+Gyr	Zähler, Landis+Gyr
+Meters, Itron	Zähler, Itron
+Meters, Sensus	Zähler, Sensus

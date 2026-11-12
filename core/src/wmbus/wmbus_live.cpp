@@ -39,6 +39,7 @@ constexpr size_t kMaxChips = 1000;
 
 struct WmbusLiveReceiver::Impl {
     std::atomic<uint32_t> phyMask{0};    // setPhyMask(): 0 every mode
+    std::mutex mfrMu; std::string mfrFilter;   // setMfrFilter(): "" every manufacturer
     // ---- one chip demodulator: clock recovery, sync search and byte assembly for one mode of one channel
     struct Chip {
         Phy phy = Phy::S1;
@@ -421,11 +422,12 @@ bool WmbusLiveReceiver::telemetry(WmbusTelemetry& out, uint64_t lastSeq) {
     std::lock_guard<std::mutex> lk(p_->mu);
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
-    if (const uint32_t m = p_->phyMask.load(std::memory_order_relaxed)) {   // a view onto some modes: their meters and frames only
+    std::string mfr; { std::lock_guard<std::mutex> ml(p_->mfrMu); mfr = p_->mfrFilter; }
+    if (const uint32_t m = p_->phyMask.load(std::memory_order_relaxed); m || !mfr.empty()) {   // a view onto some modes or one manufacturer: their meters and frames only
         std::vector<WmbusDevice> dk; std::vector<WmbusFrameLog> lk;
         uint64_t ok = 0, enc = 0;
-        for (const auto& d : out.devices) if ((m >> d.phy) & 1u) { dk.push_back(d); ok += d.count; }
-        for (const auto& l : out.log) if ((m >> l.phy) & 1u) { lk.push_back(l); if (l.crcOk && l.encrypted) enc++; }
+        for (const auto& d : out.devices) if ((!m || ((m >> d.phy) & 1u)) && (mfr.empty() || d.mfr == mfr)) { dk.push_back(d); ok += d.count; }
+        for (const auto& l : out.log) if ((!m || ((m >> l.phy) & 1u)) && (mfr.empty() || l.mfr == mfr)) { lk.push_back(l); if (l.crcOk && l.encrypted) enc++; }
         out.devices.swap(dk); out.log.swap(lk);
         out.blocksOk = ok; out.encryptedFrames = enc;
         out.dataValid = out.dataValid && !out.devices.empty();
@@ -494,6 +496,7 @@ void WmbusLiveReceiver::feed(const cf32* x, size_t n) {
 }
 
 void WmbusLiveReceiver::setPhyMask(uint32_t m) { p_->phyMask.store(m, std::memory_order_relaxed); }
+void WmbusLiveReceiver::setMfrFilter(const std::string& code) { std::lock_guard<std::mutex> lk(p_->mfrMu); p_->mfrFilter = code; }
 
 // 4.0: the modes with a mode-list entry of their own (families 720, 723, 726, 732, 735: family, active standard family + 1, engine standard family + 2, poll slot = family)
 static const WmbusView kWmbusViews[] = {
@@ -501,7 +504,11 @@ static const WmbusView kWmbusViews[] = {
     {723, "wmbust1", "Wireless M-Bus T1", 1u << (int)wmbus::Phy::T1, 868.625, false},
     {726, "wmbusc1", "Wireless M-Bus C1", (1u << (int)wmbus::Phy::C1A) | (1u << (int)wmbus::Phy::C1B), 868.625, false},
     {732, "wmbusr2", "Wireless M-Bus R2", 1u << (int)wmbus::Phy::R2, 868.625, false},
-    {735, "wmbusn1", "Wireless M-Bus N1 (Wize, 169 MHz)", (1u << (int)wmbus::Phy::N1) | (1u << (int)wmbus::Phy::N24), 169.4375, true},
+    {735, "wmbusn1", "Wireless M-Bus N1 (Wize, 169 MHz)", (1u << (int)wmbus::Phy::N1) | (1u << (int)wmbus::Phy::N24), 169.4375, true, ""},
+    {743, "wmbuskam", "Wireless M-Bus: Kamstrup", 0xFFFFFFFFu, 868.625, false, "KAM"},
+    {797, "wmbuslgb", "Wireless M-Bus: Landis+Gyr", 0xFFFFFFFFu, 868.625, false, "LGB"},
+    {467, "wmbusitw", "Wireless M-Bus: Itron", 0xFFFFFFFFu, 868.625, false, "ITW"},
+    {470, "wmbussen", "Wireless M-Bus: Sensus", 0xFFFFFFFFu, 868.625, false, "SEN"},
 };
 const WmbusView* wmbusViews(int& count) { count = (int)(sizeof kWmbusViews / sizeof *kWmbusViews); return kWmbusViews; }
 const WmbusView* wmbusViewForActive(int a) { for (const auto& v : kWmbusViews) if (v.family + 1 == a) return &v; return nullptr; }

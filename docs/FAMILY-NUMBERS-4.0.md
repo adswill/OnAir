@@ -78,7 +78,7 @@ Every entry is a family F with active standard F + 1, engine standard F + 2 and 
 | x40 receiver, fourth block | 779, 780, 781 | ILS marker beacons, FSK modems, SSR interrogations (variants 42 - 44; 782 - 787 stay free for this block) |
 | Sub-GHz sensor families and kinds | 564, 567, 570, 573, 576, 579, 582, 585, 588, 591, 594, 663, 666, 669, 672, 675, 678, 681, 412, 415, 418, 421 | 22 views of Sub-GHz sensors |
 | Radiosonde types | 684, 687, 690, 693, 702, 705, 708, 711, 714, 717 | 10 views of Radiosonde |
-| Wireless M-Bus modes | 720, 723, 726, 732, 735 | 5 views of Wireless M-Bus |
+| Wireless M-Bus modes and manufacturers | 720, 723, 726, 732, 735, 743, 797, 467, 470 | 9 views of Wireless M-Bus |
 | CubeSat framings | 792, 795, 804 | 3 views of CubeSat telemetry |
 | AIS station kinds | 738, 807, 810, 813, 816, 857 | 6 views of AIS |
 | Time stations | 607, 610, 613, 616, 628, 631, 634, 637, 642, 645, 648 | 11 views of Time signals |

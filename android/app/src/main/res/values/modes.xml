@@ -476,6 +476,10 @@
         <item>Analog TV: NTSC M</item>
         <item>Analog TV: PAL M</item>
         <item>Analog TV: PAL N</item>
+        <item>Wireless M-Bus: Kamstrup</item>
+        <item>Wireless M-Bus: Landis+Gyr</item>
+        <item>Wireless M-Bus: Itron</item>
+        <item>Wireless M-Bus: Sensus</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -933,6 +937,10 @@
         <item>NTSC M analog television (525 lines, 59.94 fields, 6 MHz channels, FM sound 4.5 MHz above the vision carrier): North America, Japan, South Korea and other countries. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
         <item>PAL M analog television (525 lines, 59.94 fields, PAL colour, 6 MHz channels): Brazil. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
         <item>PAL N analog television (625 lines, 50 fields, 6 MHz channels): Argentina, Paraguay and Uruguay. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
+        <item>Kamstrup (manufacturer code KAM) water, heat and cooling meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send (S1, T1, C1, R2 or N1). The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Landis+Gyr (manufacturer code LGB) heat, gas, water and electricity meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send (S1, T1, C1, R2 or N1). The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Itron (manufacturer code ITW) water, gas and heat meters on wireless M-Bus (EN 13757-4), also the Wize meters on 169 MHz: the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send. The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
+        <item>Sensus (manufacturer code SEN) water and heat meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send. The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1390,6 +1398,10 @@
         <item>TV, NTSC M</item>
         <item>TV, PAL M</item>
         <item>TV, PAL N</item>
+        <item>Meters, Kamstrup</item>
+        <item>Meters, Landis+Gyr</item>
+        <item>Meters, Itron</item>
+        <item>Meters, Sensus</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1847,5 +1859,9 @@
         <item>analog tv ntsc m 525 america usa canada japan korea television video</item>
         <item>analog tv pal m 525 brazil television video</item>
         <item>analog tv pal n 625 argentina paraguay uruguay television video</item>
+        <item>wireless m-bus wmbus mbus kamstrup kam meter water heat cooling multical flowiq</item>
+        <item>wireless m-bus wmbus mbus landis gyr landis+gyr lgb meter heat gas water electricity</item>
+        <item>wireless m-bus wmbus mbus itron itw wize 169 meter water gas heat</item>
+        <item>wireless m-bus wmbus mbus sensus sen xylem meter water heat</item>
     </string-array>
 </resources>

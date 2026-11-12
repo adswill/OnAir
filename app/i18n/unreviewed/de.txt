@@ -784,3 +784,7 @@ TV, SECAM L
 TV, NTSC M
 TV, PAL M
 TV, PAL N
+Meters, Kamstrup
+Meters, Landis+Gyr
+Meters, Itron
+Meters, Sensus

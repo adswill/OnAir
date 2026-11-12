@@ -27,18 +27,18 @@ static std::vector<WmbusTelemetry> runViews(const WmbusGenConfig& c, double seco
     for (size_t i = 0; i < rx.size(); i++) rx[i]->telemetry(out[i], 0);
     return out;
 }
-static std::set<std::string> devKeys(const WmbusTelemetry& t, uint32_t m) { std::set<std::string> s; for (auto& d : t.devices) if (!m || ((m >> d.phy) & 1u)) s.insert(d.mfr + d.id + d.type + std::to_string(d.phy)); return s; }
-static size_t logCount(const WmbusTelemetry& t, uint32_t m) { size_t n = 0; for (auto& l : t.log) if (!m || ((m >> l.phy) & 1u)) n++; return n; }
+static std::set<std::string> devKeys(const WmbusTelemetry& t, uint32_t m, const std::string& mfr = "") { std::set<std::string> s; for (auto& d : t.devices) if ((!m || ((m >> d.phy) & 1u)) && (mfr.empty() || d.mfr == mfr)) s.insert(d.mfr + d.id + d.type + std::to_string(d.phy)); return s; }
+static size_t logCount(const WmbusTelemetry& t, uint32_t m, const std::string& mfr = "") { size_t n = 0; for (auto& l : t.log) if ((!m || ((m >> l.phy) & 1u)) && (mfr.empty() || l.mfr == mfr)) n++; return n; }
 
 int main() {
     int nv = 0;
     const WmbusView* views = wmbusViews(nv);
-    CHECK(nv == 5, "%d views", nv);
+    CHECK(nv == 9, "%d views", nv);   // 5 modes and 4 manufacturers
     for (int i = 0; i < nv; i++) {
         CHECK(wmbusViewForActive(views[i].family + 1) == &views[i] && wmbusViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
         const ModeTuning t = wmbusViewTuning(i);
         CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id, "view %d tuning", i);
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0 && !(views[j].phyMask & views[i].phyMask), "views %d and %d clash", j, i);
+        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0 && (*views[i].mfr || *views[j].mfr || !(views[j].phyMask & views[i].phyMask)), "views %d and %d clash", j, i);
     }
     CHECK(wmbusViewForActive(87) == nullptr && wmbusViewForStd(88) == nullptr, "the Wireless M-Bus mode is not a view");
 
@@ -52,17 +52,20 @@ int main() {
         for (int i = 0; i < nv; i++) {
             const WmbusTelemetry& t = r[(size_t)i + 1];
             const uint32_t m = views[i].phyMask;
-            CHECK(devKeys(t, 0) == devKeys(r[0], m), "%s: view %s lists %zu meters, the receiver without a view %zu of its modes", sc.name, views[i].id, t.devices.size(), devKeys(r[0], m).size());
-            CHECK(t.log.size() == logCount(r[0], m), "%s: view %s has %zu log lines, expected %zu", sc.name, views[i].id, t.log.size(), logCount(r[0], m));
+            const std::string mf = views[i].mfr;
+            CHECK(devKeys(t, 0) == devKeys(r[0], m, mf), "%s: view %s lists %zu meters, the receiver without a view %zu of its modes", sc.name, views[i].id, t.devices.size(), devKeys(r[0], m, mf).size());
+            CHECK(t.log.size() == logCount(r[0], m, mf), "%s: view %s has %zu log lines, expected %zu", sc.name, views[i].id, t.log.size(), logCount(r[0], m, mf));
             uint64_t cnt = 0; for (auto& d : t.devices) cnt += d.count;
             CHECK(t.blocksOk == cnt, "%s: view %s counts %llu vs %llu", sc.name, views[i].id, (unsigned long long)t.blocksOk, (unsigned long long)cnt);
-            const bool onAir = !devKeys(r[0], m).empty();
+            const bool onAir = !devKeys(r[0], m, mf).empty();
             CHECK(t.dataValid == onAir, "%s: view %s dataValid %d, on the air %d", sc.name, views[i].id, (int)t.dataValid, (int)onAir);
-            sumDev += t.devices.size();
+            if (mf.empty()) sumDev += t.devices.size();
             printf("  %-24s %-10s %zu meters, %zu frames\n", sc.name, views[i].id, t.devices.size(), t.log.size());
         }
         CHECK(sumDev == r[0].devices.size(), "%s: the views list %zu meters, without a view %zu", sc.name, sumDev, r[0].devices.size());
         if (sc.plan == 0 && sc.snr >= 25) for (int i = 0; i < 4; i++) CHECK(!r[(size_t)i + 1].devices.empty(), "%s: view %s is empty", sc.name, views[i].id);
+        if (sc.plan == 0 && sc.snr >= 25) { int kam = -1, sen = -1, lgb = -1, itw = -1; for (int i = 0; i < nv; i++) { const std::string m = views[i].mfr; const size_t n = r[(size_t)i + 1].devices.size(); if (m == "KAM") kam = (int)n; if (m == "SEN") sen = (int)n; if (m == "LGB") lgb = (int)n; if (m == "ITW") itw = (int)n; }
+            CHECK(kam >= 1 && sen >= 1 && lgb == 0, "%s: Kamstrup %d Sensus %d Landis+Gyr %d (the simulated port has no Landis+Gyr meter)", sc.name, kam, sen, lgb); (void)itw; }
         if (sc.plan == 1) CHECK(!r[5].devices.empty() && r[1].devices.empty() && r[2].devices.empty(), "%s: the N1 view %zu, S1 %zu, T1 %zu", sc.name, r[5].devices.size(), r[1].devices.size(), r[2].devices.size());
     }
     {   // noise alone

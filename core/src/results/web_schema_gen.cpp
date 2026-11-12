@@ -15140,6 +15140,8 @@ static bool put_463(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTel
 static bool put_464(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_465(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_466(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
+static bool put_468(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
+static bool put_471(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_481(const RxTelemetry& rx, std::string& s) { ev_dect2__UmtsTelemetry(s, rx.umts); return true; }
 static bool put_501(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_502(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
@@ -15241,10 +15243,12 @@ static bool put_733(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTele
 static bool put_736(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_739(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
+static bool put_744(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
 static bool put_793(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_796(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_798(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_801(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_802(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_803(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
@@ -15492,6 +15496,8 @@ static const StdEntry kStd[] = {
     {464, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_464},
     {465, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_465},
     {466, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_466},
+    {468, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_468},
+    {471, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_471},
     {481, "umts", "dect2::UmtsTelemetry", kSchema_dect2__UmtsTelemetry, put_481},
     {501, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_501},
     {502, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_502},
@@ -15593,10 +15599,12 @@ static const StdEntry kStd[] = {
     {736, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_736},
     {739, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_739},
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
+    {744, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_744},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
     {793, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_793},
     {796, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_796},
+    {798, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_798},
     {801, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_801},
     {802, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_802},
     {803, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_803},
@@ -16074,6 +16082,10 @@ static const WebModeRow kRows[] = {
     {450, "Analog TV: NTSC M", 0, "Analog TV: NTSC M (Americas, Japan)", "", 452, 451, "atv"},
     {453, "Analog TV: PAL M", 0, "Analog TV: PAL M (Brazil)", "", 455, 454, "atv"},
     {456, "Analog TV: PAL N", 0, "Analog TV: PAL N (Argentina)", "", 458, 457, "atv"},
+    {743, "Wireless M-Bus: Kamstrup", 8, "Wireless M-Bus: Kamstrup meters", "", 745, 744, "wmbus"},
+    {797, "Wireless M-Bus: Landis+Gyr", 8, "Wireless M-Bus: Landis+Gyr meters", "", 799, 798, "wmbus"},
+    {467, "Wireless M-Bus: Itron", 8, "Wireless M-Bus: Itron meters", "", 469, 468, "wmbus"},
+    {470, "Wireless M-Bus: Sensus", 8, "Wireless M-Bus: Sensus meters", "", 472, 471, "wmbus"},
 };
 } // namespace
 

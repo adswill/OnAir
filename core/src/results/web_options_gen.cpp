@@ -1028,6 +1028,18 @@ static bool set_457(Engine& e, const std::string& n, double v) {
     if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
     return false;
 }
+static const char kOpt_468[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_468(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
+static const char kOpt_471[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_471(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
 static const char kOpt_551[] = R"JSON([{"n":"setSystem","k":"int","l":"System","h":"before configure()","t":"s"},{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"0: the system's own","u":"dB","t":"s"}])JSON";
 static bool set_551(Engine& e, const std::string& n, double v) {
     auto& r = e.satdetect();
@@ -1523,6 +1535,12 @@ static bool set_742(Engine& e, const std::string& n, double v) {
     if (n == "setBlocking") { call(r, &Rx<decltype(r)>::setBlocking, v); return true; }
     return false;
 }
+static const char kOpt_744[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_744(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
 static const char kOpt_747[] = R"JSON([{"n":"setBandwidth","k":"num","l":"Bandwidth","h":"0 automatic (default), or 8, 7, 6, 5, 1.7","t":"s"},{"n":"setLowPriority","k":"bool","l":"Low Priority","h":"hierarchical 16-QAM: the LP stream","t":"s"},{"n":"setWaveform","k":"int","l":"Waveform","h":"0 automatic (default): OFDM and TDM tried in turn, 1 OFDM (SH-A) only, 2 TDM (SH-B) only","t":"s"},{"n":"setTdmGoldCode","k":"int","l":"Tdm Gold Code","h":"TDM PL scrambling code number (default 0)","t":"s"}])JSON";
 static bool set_747(Engine& e, const std::string& n, double v) {
     auto& r = e.dvbsh();
@@ -1530,6 +1548,12 @@ static bool set_747(Engine& e, const std::string& n, double v) {
     if (n == "setLowPriority") { call(r, &Rx<decltype(r)>::setLowPriority, v); return true; }
     if (n == "setWaveform") { call(r, &Rx<decltype(r)>::setWaveform, v); return true; }
     if (n == "setTdmGoldCode") { call(r, &Rx<decltype(r)>::setTdmGoldCode, v); return true; }
+    return false;
+}
+static const char kOpt_798[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_798(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
     return false;
 }
 static const char kOpt_808[] = R"JSON([{"n":"setChannelMask","k":"int","l":"Channel Mask","h":"the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)","t":"s"},{"n":"setSatelliteMode","k":"bool","l":"Satellite Mode","t":"s"},{"n":"setCollisionCancel","k":"bool","l":"Collision Cancel","t":"s"},{"n":"setForwardFeeds","k":"bool","l":"Forward Feeds","h":"the data feeds' AIS output (default on)","t":"s"}])JSON";
@@ -1735,6 +1759,8 @@ const OptEntry kOpt[] = {
     {451, kOpt_451, set_451},
     {454, kOpt_454, set_454},
     {457, kOpt_457, set_457},
+    {468, kOpt_468, set_468},
+    {471, kOpt_471, set_471},
     {551, kOpt_551, set_551},
     {552, kOpt_552, set_552},
     {553, kOpt_553, set_553},
@@ -1796,7 +1822,9 @@ const OptEntry kOpt[] = {
     {736, kOpt_736, set_736},
     {739, kOpt_739, set_739},
     {742, kOpt_742, set_742},
+    {744, kOpt_744, set_744},
     {747, kOpt_747, set_747},
+    {798, kOpt_798, set_798},
     {808, kOpt_808, set_808},
     {811, kOpt_811, set_811},
     {814, kOpt_814, set_814},

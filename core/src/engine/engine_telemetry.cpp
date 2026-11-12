@@ -517,6 +517,10 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 727: return pollStd(rxWmb_, 727, t, seqs[726], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 726)
     case 733: return pollStd(rxWmb_, 733, t, seqs[732], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 732)
     case 736: return pollStd(rxWmb_, 736, t, seqs[735], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 735)
+    case 744: return pollStd(rxWmb_, 744, t, seqs[743], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 743)
+    case 798: return pollStd(rxWmb_, 798, t, seqs[797], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 797)
+    case 468: return pollStd(rxWmb_, 468, t, seqs[467], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 467)
+    case 471: return pollStd(rxWmb_, 471, t, seqs[470], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 470)
     case 90: return pollStd(rxTones_, 90, t, seqs[85], &RxTelemetry::tones);
     case 93: return pollStd(rxSar_, 93, t, seqs[87], &RxTelemetry::sarsat);
     case 96: return pollStd(rxMt63_, 96, t, seqs[88], &RxTelemetry::mt63);
