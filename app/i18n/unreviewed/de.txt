@@ -1309,3 +1309,6 @@ Pink
 Light blue
 Fast
 Slow
+Previews of the looks
+Hover a colour palette, layout, font look, text size or waterfall colour map (in Settings and the View menu) to see a small picture of the interface with it. Nothing changes until you pick one.
+Applies after a restart

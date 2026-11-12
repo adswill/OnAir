@@ -1,4 +1,5 @@
 // spectrum, waterfall, histogram and constellation plots
+#include "../ui/ui_preview.h"
 #include "../app.h"
 #include "imgui_internal.h"   // the drag selftest prints the hovered window and active id on a failure
 #include "plot_util.h"
@@ -1030,7 +1031,10 @@ void specLookSet(App& a, int look, bool save) {
 void specLookCombo(App& a, float width) {
     ImGui::SetNextItemWidth(width);
     if (ImGui::BeginCombo("##specpalette", tr(Waterfall::mapName(a.wf.effMap())))) {
-        for (int i = 0; i < Waterfall::NumMaps; i++) if (ImGui::Selectable(tr(Waterfall::mapName(i)), a.wf.effMap() == i)) setWaterfallMap(a, i);
+        for (int i = 0; i < Waterfall::NumMaps; i++) {
+            if (ImGui::Selectable(tr(Waterfall::mapName(i)), a.wf.effMap() == i)) setWaterfallMap(a, i);
+            uiprev::item(a, uiprev::Opt::WfMap, i);   // a strip and a tiny waterfall in that map (ui/ui_preview.h)
+        }
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The waterfall's colours. Navy heat (the default) and Blue green keep the noise floor dark with its texture; the auto range puts the floor where each palette reads best."));
@@ -1054,7 +1058,7 @@ static void colourMapList(App& a) {
         const bool sel = a.wf.effMap() == i;
         const ImVec2 p = ImGui::GetCursorScreenPos();
         if (ImGui::Selectable("##map", sel, 0, ImVec2(nameW + w + 4 * gUi, h))) setWaterfallMap(a, i);
-        if (ImGui::IsItemHovered() && cmap::colourBlindSafe(i)) ImGui::SetTooltip("%s", tr("Reads the same with the common colour blindnesses"));
+        uiprev::item(a, uiprev::Opt::WfMap, i, cmap::colourBlindSafe(i) ? tr("Reads the same with the common colour blindnesses") : nullptr);
         dl->AddText(ImVec2(p.x + 4 * gUi, p.y + (h - ImGui::GetTextLineHeight()) * 0.5f), ImGui::GetColorU32(ImGuiCol_Text), tr(Waterfall::mapName(i)));
         mapStrip(dl, i, p.x + nameW, p.y + 3 * gUi, w, p.y + h - 3 * gUi);
         if (cmap::colourBlindSafe(i)) {
@@ -1246,7 +1250,10 @@ void specDisplayPopup(App& a) {
         const char* ts[] = {N_("Classic"), N_("Simple")};
         ImGui::SetNextItemWidth(170 * gUi);
         if (ImGui::BeginCombo(tr("Tuner style"), tr(ts[std::max(0, std::min(1, a.tunerStyle))]))) {
-            for (int i = 0; i < 2; i++) if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
+            for (int i = 0; i < 2; i++) {
+                if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::TunerStyle, i);
+            }
             ImGui::EndCombo();
         }
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("How the tuned band is drawn over the spectrum and the waterfall."));
@@ -1347,6 +1354,7 @@ void specDisplayPopup(App& a) {
                 ImGui::SameLine(0, 6 * gUi);
                 ImGui::PushID(i);
                 if (ImGui::Selectable(tr(cmap::kTracePresets[i].name), a.traceColor == i)) { a.traceColor = i; save = true; }
+                uiprev::item(a, uiprev::Opt::TraceColour, i);
                 ImGui::PopID();
             }
             ImGui::EndCombo();

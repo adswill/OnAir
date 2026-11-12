@@ -17,6 +17,7 @@
 #include "kit/mode_panel.h"
 #include "../codec/speech_codec_ui.h"
 #include "ui2_internal.h"
+#include "ui_preview.h"
 #include "dect2/common/u8file.h"
 #include "dect2/engine/updater.h"
 #include "dect2/limits.h"
@@ -121,6 +122,7 @@ const std::map<std::string, Bind>& binds() {
         SW_PT("mapTileUrl"); SW_PI("mapCapMb", 500); SW_PB("mapKeepTiles", true); SW_PB("adsbMap", true);
         SW_NBA("compute", a.computeMode, a.engine.setComputeMode(a.computeMode));
         NB("verboseLog", a.verboseLog);
+        m["uiPreviews"] = Bind{[](App&) -> double { return uiprev::enabled() ? 1.0 : 0.0; }, [](App&, double v) { uiprev::enabled() = v != 0; plat::prefs().setB("uiPreviews", v != 0); }, nullptr, nullptr};
         return m;
     }();
     return mm;
@@ -184,6 +186,17 @@ bool changedNow(App& a, const Info& i) {
 void resetOne(App& a, const Info& i) {
     if (isCustom(i)) { customReset(a, i); return; }
     writeVal(a, i, defaultOf(i));
+}
+
+// the rows whose choices show a hover preview of the look (ui_preview.h); -1: none
+int previewOpt(const char* k) {
+    using O = uiprev::Opt;
+    if (!strcmp(k, "uiTheme")) return (int)O::Theme;
+    if (!strcmp(k, "uiVariant")) return (int)O::Variant;
+    if (!strcmp(k, "layoutUnified")) return (int)O::Unified;
+    if (!strcmp(k, "touchUi")) return (int)O::Touch;
+    if (!strcmp(k, "wfMap3")) return (int)O::WfMap;
+    return -1;
 }
 
 std::string settingsFilePath() { return plat::dataDir() + "/onair-settings-export.txt"; }
@@ -377,6 +390,7 @@ void customRow(App& a, const Info& i) {
     else if (k == "easyMode") {
         bool on = modepanel::easyModeOn();
         if (ImGui::Checkbox(tr("Easy mode"), &on)) modepanel::setEasyMode(on);
+        uiprev::item(a, uiprev::Opt::Easy, on ? 0 : 1);
     } else if (k == "regionPreset") {
         const std::string cur = setup::presetOfCountry(plat::prefs().getS("locCountry", ""));
         std::string picked;
@@ -392,7 +406,7 @@ void customRow(App& a, const Info& i) {
     else if (k == "themeMode") ui2::themeChoice(a, false);
     else if (k == "accent") ui2::accentMenu();
     else if (k == "restoreView") { if (ImGui::Button(tr("Restore the default view"))) ui2::restoreDefaultView(a); }
-    else if (k == "uiTypography") ui2::typographyChoice(false);   // its own heading says it applies after a restart
+    else if (k == "uiTypography") ui2::typographyChoice(false, &a);   // its own heading says it applies after a restart
     else if (k == "timeDisplay") ui2::timeDisplayChoice(false);
     else if (k == "startMode") startModeRow();
     else if (k == "audioDevDefault") audioDeviceRow();
@@ -499,12 +513,16 @@ void control(App& a, const Info& i) {
     if (i.kind == Kind::Bool) {
         bool v = cur.d != 0;
         if (ImGui::Checkbox("##v1", &v)) { cur.d = v; writeVal(a, i, cur); }
+        if (const int o = previewOpt(i.key); o >= 0) uiprev::item(a, (uiprev::Opt)o, v ? 0 : 1);   // the look a click gives
     } else if (i.kind == Kind::Choice) {
         const std::vector<std::string> items = split(i.choices ? i.choices : "", '|');
         const int sel = std::max(0, std::min((int)items.size() - 1, choiceIndex(i, cur.d)));
         if (ImGui::BeginCombo("##v2", items.empty() ? "" : tr(items[(size_t)sel].c_str()))) {
             for (int n = 0; n < (int)items.size(); n++)
+            {
                 if (ImGui::Selectable(tr(items[(size_t)n].c_str()), n == sel)) { cur.d = choiceValue(i, n); writeVal(a, i, cur); }
+                if (const int o = previewOpt(i.key); o >= 0) uiprev::item(a, (uiprev::Opt)o, choiceValue(i, n));
+            }
             ImGui::EndCombo();
         }
     } else if (i.kind == Kind::Int) {

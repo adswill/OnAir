@@ -1958,3 +1958,11 @@ Tools menu split into 9 groups with search, Plugin store entry, Mode menu one su
   crash restore, confirm quit, FFT size, waterfall speed, line colours, default dB range, radio IQ fixes and noise blanker, audio device and new-mode
   AGC/squelch, IQ file name pattern, IQ split and free-space guard, notifications and quiet hours, map tile server and cache); search highlight;
   profiles saved/switched/exported. 3.9 keys unchanged. docs/SETTINGS-4.0.md. Checked on GitHub only (Mac on battery).
+
+## 2026-11-12 (night): hover previews of the looks (feat40-uipreview)
+Hovering or keyboard-focusing an appearance choice (palette, Dark / Light / High contrast, the eight layouts, Classic / Unified, font look,
+text size presets, touch, Easy mode, Classic interface, waterfall colour maps, trace colour, tuner style) in Settings, the View menu, the
+side panel and the plot popups shows a live ImGui miniature of the interface with it; nothing changes until it is picked. The palette
+colours moved to app/ui/palette_data.h, which loadTheme() and the preview both read. Pure description in ui_preview_logic.h, tests
+ui_preview and ui_preview_render (the miniature rasterised on the CPU, pixels checked). Off switch: Settings > Appearance > Previews of
+the looks. Dev page: --previewgallery. Details: docs/UI-PREVIEW-4.0.md.

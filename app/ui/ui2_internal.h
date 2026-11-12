@@ -33,7 +33,7 @@ namespace ui2 {
 // ui2_theme.cpp
 void accentMenu();
 void themeChoice(App& a, bool menu);
-void typographyChoice(bool menu);
+void typographyChoice(bool menu, const App* a = nullptr);   // a: for the hover preview (ui_preview.h)
 void dataFolderChoice();
 void timeDisplayChoice(bool menu);
 

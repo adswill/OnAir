@@ -3,6 +3,8 @@
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.
 #include "dect2/common/time_source.h"
 #include "ui2_internal.h"
+#include "palette_data.h"
+#include "ui_preview.h"
 
 using namespace ui2;
 
@@ -12,19 +14,19 @@ UiTheme T;
 
 void loadTheme(int n) {
     T = UiTheme();
+    {   // the ten base colours: app/ui/palette_data.h (the hover preview of ui_preview.cpp reads the same table)
+        const uipal::Palette P = uipal::palette(n);
+        auto v = [](const uipal::C& c) { return ImVec4(c.r, c.g, c.b, 1); };
+        T.bg = v(P.bg); T.rail = v(P.rail); T.edge = v(P.edge); T.text = v(P.text); T.dim = v(P.dim); T.bright = v(P.bright);
+        T.accent = v(P.accent); T.frame = v(P.frame); T.button = v(P.button); T.plotBg = v(P.plotBg);
+    }
     if (n == 1) {
-        T.bg = ImVec4(0.165f, 0.168f, 0.172f, 1); T.rail = ImVec4(0.135f, 0.138f, 0.142f, 1); T.edge = ImVec4(0.33f, 0.335f, 0.34f, 1);
-        T.text = ImVec4(0.86f, 0.87f, 0.88f, 1); T.dim = ImVec4(0.60f, 0.61f, 0.62f, 1); T.bright = ImVec4(1, 1, 1, 1); T.accent = ImVec4(0.90f, 0.91f, 0.92f, 1);
-        T.frame = ImVec4(0.095f, 0.098f, 0.102f, 1); T.button = ImVec4(0.235f, 0.240f, 0.247f, 1); T.plotBg = ImVec4(0.015f, 0.016f, 0.018f, 1);
         const ImVec4 s[8] = {ImVec4(0.90f, 0.91f, 0.92f, 1), ImVec4(0.55f, 0.80f, 0.62f, 1), ImVec4(0.88f, 0.68f, 0.42f, 1), ImVec4(0.62f, 0.72f, 0.92f, 1), ImVec4(0.80f, 0.58f, 0.78f, 1), ImVec4(0.55f, 0.56f, 0.58f, 1), ImVec4(0.88f, 0.84f, 0.56f, 1), ImVec4(0.35f, 0.36f, 0.38f, 1)};
         for (int k = 0; k < 8; k++) T.series[k] = s[k];
         const ImU32 t[5] = {IM_COL32(120, 128, 138, 255), IM_COL32(58, 62, 68, 255), IM_COL32(84, 90, 98, 255), IM_COL32(170, 176, 184, 255), IM_COL32(225, 228, 232, 255)};
         for (int k = 0; k < 5; k++) T.tone[k] = t[k];
         T.flair = false;
     } else if (n == 2) {
-        T.bg = ImVec4(0.075f, 0.075f, 0.075f, 1); T.rail = ImVec4(0.055f, 0.055f, 0.055f, 1); T.edge = ImVec4(0.22f, 0.22f, 0.22f, 1);
-        T.text = ImVec4(0.84f, 0.84f, 0.84f, 1); T.dim = ImVec4(0.50f, 0.50f, 0.50f, 1); T.bright = ImVec4(1, 1, 1, 1); T.accent = ImVec4(0.92f, 0.92f, 0.92f, 1);
-        T.frame = ImVec4(0.045f, 0.045f, 0.045f, 1); T.button = ImVec4(0.115f, 0.115f, 0.115f, 1); T.plotBg = ImVec4(0.03f, 0.03f, 0.03f, 1);
         const ImVec4 s[8] = {ImVec4(0.93f, 0.93f, 0.93f, 1), ImVec4(0.62f, 0.62f, 0.62f, 1), ImVec4(0.42f, 0.42f, 0.42f, 1), ImVec4(0.80f, 0.80f, 0.80f, 1), ImVec4(0.55f, 0.55f, 0.55f, 1), ImVec4(0.35f, 0.35f, 0.35f, 1), ImVec4(0.72f, 0.72f, 0.72f, 1), ImVec4(0.28f, 0.28f, 0.28f, 1)};
         for (int k = 0; k < 8; k++) T.series[k] = s[k];
         const ImU32 t[5] = {IM_COL32(150, 150, 150, 255), IM_COL32(70, 70, 70, 255), IM_COL32(100, 100, 100, 255), IM_COL32(170, 170, 170, 255), IM_COL32(235, 235, 235, 255)};
@@ -33,15 +35,6 @@ void loadTheme(int n) {
     } else if (n == 3 || n == 4) {
         // Dev A (graphite, after a dark code editor) and Dev B (terminal): flat greys, ONE accent for what is selected, colour elsewhere only for meaning
         auto c8 = [](int r, int g, int b) { return ImVec4(r / 255.f, g / 255.f, b / 255.f, 1); };
-        if (n == 3) {
-            T.bg = c8(30, 30, 30); T.rail = c8(37, 37, 38); T.edge = c8(60, 60, 60);
-            T.text = c8(204, 204, 204); T.dim = c8(133, 133, 133); T.bright = c8(240, 240, 240); T.accent = c8(59, 130, 196);
-            T.frame = c8(24, 24, 24); T.button = c8(51, 51, 52); T.plotBg = c8(18, 18, 18);
-        } else {
-            T.bg = c8(12, 12, 12); T.rail = c8(26, 26, 26); T.edge = c8(51, 51, 51);
-            T.text = c8(200, 200, 200); T.dim = c8(120, 120, 120); T.bright = c8(235, 235, 235); T.accent = c8(127, 217, 98);
-            T.frame = c8(8, 8, 8); T.button = c8(34, 34, 34); T.plotBg = c8(6, 6, 6);
-        }
         const ImVec4 s[8] = {T.accent, c8(210, 160, 70), c8(200, 90, 80), c8(150, 150, 150), c8(120, 170, 210), c8(180, 130, 190), c8(110, 180, 150), c8(230, 230, 230)};
         for (int k = 0; k < 8; k++) T.series[k] = s[k];
         auto u = [](const ImVec4& v, float m) { return IM_COL32((int)(v.x * 255 * m), (int)(v.y * 255 * m), (int)(v.z * 255 * m), 255); };
@@ -54,21 +47,12 @@ void loadTheme(int n) {
         auto c8 = [](int r, int g, int b) { return ImVec4(r / 255.f, g / 255.f, b / 255.f, 1); };
         auto L = [&](int r, int g, int b) { const int m = std::max(r, std::max(g, b)), lo = std::min(r, std::min(g, b)); return c8(r + 255 - m - lo, g + 255 - m - lo, b + 255 - m - lo); };
         if (n == 5) {
-            T.bg = c8(26, 30, 42); T.rail = c8(33, 38, 54); T.edge = c8(54, 62, 86);
-            T.text = c8(216, 222, 238); T.dim = c8(140, 150, 176); T.bright = c8(246, 248, 255); T.accent = c8(150, 112, 255);
-            T.frame = c8(20, 24, 35); T.button = c8(45, 52, 74); T.plotBg = c8(15, 18, 27);
             const ImVec4 s[8] = {T.accent, c8(255, 168, 96), c8(255, 110, 130), c8(150, 160, 190), c8(100, 200, 240), c8(200, 140, 230), c8(110, 215, 170), c8(240, 240, 250)};
             for (int k = 0; k < 8; k++) T.series[k] = s[k];
         } else if (n == 6) {
-            T.bg = c8(3, 3, 3); T.rail = c8(0, 0, 0); T.edge = c8(52, 48, 40);
-            T.text = c8(208, 204, 194); T.dim = c8(128, 120, 102); T.bright = c8(255, 240, 210); T.accent = c8(255, 176, 0);
-            T.frame = c8(0, 0, 0); T.button = c8(16, 15, 12); T.plotBg = c8(0, 0, 0);
             const ImVec4 s[8] = {T.accent, c8(220, 216, 204), c8(255, 110, 60), c8(150, 146, 134), c8(130, 200, 150), c8(210, 170, 110), c8(255, 214, 120), c8(90, 86, 76)};
             for (int k = 0; k < 8; k++) T.series[k] = s[k];
         } else {
-            T.bg = L(243, 245, 250); T.rail = L(255, 255, 255); T.edge = L(196, 205, 222);
-            T.text = L(24, 31, 46); T.dim = L(88, 99, 120); T.bright = L(0, 0, 0); T.accent = L(18, 92, 214);
-            T.frame = L(255, 255, 255); T.button = L(228, 233, 243); T.plotBg = L(252, 253, 255);
             const ImVec4 s[8] = {T.accent, L(214, 98, 10), L(196, 40, 60), L(88, 99, 120), L(0, 130, 150), L(130, 60, 190), L(20, 130, 80), L(24, 31, 46)};
             for (int k = 0; k < 8; k++) T.series[k] = s[k];
         }
@@ -76,9 +60,6 @@ void loadTheme(int n) {
         T.tone[0] = u(T.accent, 0.85f); T.tone[1] = u(T.accent, 0.30f); T.tone[2] = u(T.accent, 0.50f); T.tone[3] = u(T.accent, 0.75f); T.tone[4] = u(T.accent, 1.0f);
         T.flair = false;
     } else {
-        T.bg = ImVec4(0.045f, 0.045f, 0.044f, 1); T.rail = ImVec4(0.037f, 0.037f, 0.036f, 1); T.edge = ImVec4(0.175f, 0.172f, 0.165f, 1);
-        T.text = ImVec4(0.82f, 0.81f, 0.78f, 1); T.dim = ImVec4(0.46f, 0.45f, 0.42f, 1); T.bright = ImVec4(0.96f, 0.95f, 0.92f, 1); T.accent = ImVec4(0.86f, 0.65f, 0.30f, 1);
-        T.frame = ImVec4(0.030f, 0.030f, 0.030f, 1); T.button = ImVec4(0.045f, 0.045f, 0.044f, 1); T.plotBg = ImVec4(0.030f, 0.030f, 0.030f, 1);
         const ImVec4 s[8] = {ImVec4(0.86f, 0.65f, 0.30f, 1), ImVec4(0.82f, 0.81f, 0.77f, 1), ImVec4(0.56f, 0.55f, 0.51f, 1), ImVec4(0.74f, 0.50f, 0.30f, 1), ImVec4(0.62f, 0.68f, 0.52f, 1), ImVec4(0.45f, 0.44f, 0.41f, 1), ImVec4(0.86f, 0.74f, 0.50f, 1), ImVec4(0.35f, 0.35f, 0.33f, 1)};
         for (int k = 0; k < 8; k++) T.series[k] = s[k];
         const ImU32 t[5] = {IM_COL32(166, 122, 46, 255), IM_COL32(86, 68, 36, 255), IM_COL32(110, 84, 36, 255), IM_COL32(168, 146, 104, 255), IM_COL32(232, 190, 112, 255)};
@@ -117,6 +98,13 @@ static void saveUserAccent() {
 
 namespace ui2 {
 
+// the user's own accent colour for the hover preview (ui_preview.cpp)
+bool userAccent(float rgb[3]) {
+    loadUserAccent();
+    for (int i = 0; i < 3; i++) rgb[i] = gUserAccent.c[i];
+    return gUserAccent.on;
+}
+
 void accentMenu() {
     loadUserAccent();
     if (ImGui::Checkbox(tr("Own accent colour"), &gUserAccent.on)) { gAccentDirty = true; saveUserAccent(); }
@@ -127,13 +115,14 @@ void accentMenu() {
 }
 
 // View > Font look: Current (the default), Clean, Compact. Saved now; the fonts are built at start-up, so it applies after a restart.
-void typographyChoice(bool menu) {
+void typographyChoice(bool menu, const App* a) {
     static const char* names[3] = {N_("Current"), N_("Clean"), N_("Compact")};
     const int cur = (int)plat::prefs().getI("uiTypography", 0);
     ImGui::TextDisabled("%s", tr("Font look (applies after a restart)"));
     for (int i = 0; i < 3; i++) {
         const bool hit = menu ? ImGui::MenuItem(tr(names[i]), nullptr, cur == i) : ImGui::RadioButton(tr(names[i]), cur == i);
         if (hit && i != cur) plat::prefs().setI("uiTypography", i);
+        if (a) uiprev::item(*a, uiprev::Opt::Typography, i, tr("Applies after a restart"));
     }
 }
 
@@ -191,6 +180,7 @@ void themeChoice(App& a, bool menu) {
     for (int i = 0; i < 3; i++) {
         const bool hit = menu ? ImGui::MenuItem(tr(names[i]), nullptr, cur == i) : ImGui::RadioButton(tr(names[i]), cur == i);
         if (hit && i != cur) { a.lightUi = i == 1; a.highContrast = i == 2; savePrefs(a); }
+        uiprev::item(a, uiprev::Opt::Mode, i);
     }
 }
 

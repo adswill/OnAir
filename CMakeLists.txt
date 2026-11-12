@@ -715,6 +715,7 @@ if(DECT2_BUILD_APP)
   add_test(NAME picsave COMMAND test_picsave)
   file(GLOB DECT2_D40_UI CONFIGURE_DEPENDS app/d40/*.cpp)   # 4.0 features wired into the mode screens (docs/WIRING-4.0.md)
   list(APPEND APP_SOURCES ${DECT2_D40_UI})
+  list(APPEND APP_SOURCES app/ui/ui_preview.cpp app/ui/ui_preview_draw.cpp)   # the hover preview of the appearance choices (docs/UI-PREVIEW-4.0.md)
   list(APPEND APP_SOURCES app/ui/topo_view.cpp)   # the mesh topology picture shared by the mesh, Zigbee / Thread and Z-Wave screens
   list(APPEND APP_SOURCES app/map/contact_lines.cpp)   # contact lines on the QSO-mode maps
   file(GLOB DECT2_IPTV_UI CONFIGURE_DEPENDS app/iptv/*.cpp)   # Internet TV (family 209): its core is in core/src/tv
@@ -1668,6 +1669,13 @@ if(DECT2_BUILD_TESTS)
     add_executable(test_row_tint tests/app/test_row_tint.cpp)   # the tinted mode list rows keep 4.5:1 in every theme (app/ui/row_tint.h)
     target_include_directories(test_row_tint PRIVATE app)
     add_test(NAME row_tint COMMAND test_row_tint)
+    add_executable(test_ui_preview tests/app/test_ui_preview.cpp)   # the hover preview of the looks: option -> colours, metrics, layout (app/ui/ui_preview_logic.h)
+    target_include_directories(test_ui_preview PRIVATE app)
+    add_test(NAME ui_preview COMMAND test_ui_preview)
+    add_executable(test_ui_preview_render tests/app/test_ui_preview_render.cpp app/ui/ui_preview_draw.cpp)   # the miniature rasterised: its pixels per look
+    target_include_directories(test_ui_preview_render PRIVATE app third_party/stb)
+    target_link_libraries(test_ui_preview_render PRIVATE imgui)
+    add_test(NAME ui_preview_render COMMAND test_ui_preview_render)
     add_executable(test_map_colours tests/app/test_map_colours.cpp)   # the map colour presets and overlay contrast (app/map/map_colours.h)
     target_include_directories(test_map_colours PRIVATE app)
     add_test(NAME map_colours COMMAND test_map_colours)

@@ -6,6 +6,7 @@
 #include "dect2/dsp/baseband_filter.h"
 #include "ui2_internal.h"
 #include "menu_groups.h"
+#include "ui_preview.h"
 #include "../general/general_panels.h"
 #include "../state/listen_freq.h"
 #include "../codec/speech_codec_ui.h"
@@ -227,30 +228,48 @@ void sideDisplayBody(App& a) {
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Layout")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
     {
         const char* lay[2] = {tr("Classic"), tr("Unified")};
-        int cur = a.layoutUnified ? 1 : 0;
-        if (kit::combo("##layoutsel", &cur, lay, 2)) { a.layoutUnified = cur == 1; savePrefs(a); }
+        const int cur = a.layoutUnified ? 1 : 0;
+        if (ImGui::BeginCombo("##layoutsel", lay[cur])) {   // each row shows a preview of the layout when hovered (ui_preview.h)
+            for (int i = 0; i < 2; i++) {
+                if (ImGui::Selectable(lay[i], cur == i)) { a.layoutUnified = i == 1; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::Unified, i);
+            }
+            ImGui::EndCombo();
+        }
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Unified: the spectrum and waterfall stay on screen above the decoded views (F6 folds them)"));
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Look")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
     {
         static const char* lk[6] = {N_("Classic"), N_("Dev A"), N_("Dev B"), N_("Studio"), N_("Mono Pro"), N_("Daylight")};
         const char* names[6] = {tr(lk[0]), tr(lk[1]), tr(lk[2]), tr(lk[3]), tr(lk[4]), tr(lk[5])};
-        int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
-        if (kit::combo("##looksel", &cur, names, 6)) { a.uiTheme = cur == 0 ? 1 : 2 + cur; savePrefs(a); }
+        const int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
+        if (ImGui::BeginCombo("##looksel", names[cur])) {
+            for (int i = 0; i < 6; i++) {
+                if (ImGui::Selectable(names[i], cur == i)) { a.uiTheme = i == 0 ? 1 : 2 + i; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::Theme, i == 0 ? 1 : 2 + i);
+            }
+            ImGui::EndCombo();
+        }
     }
     if (ImGui::SmallButton(tr("Reset spectrum"))) resetSpectrum(a);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Restore the default spectrum and waterfall levels and the usual half-and-half split (does not change panel layout)"));
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Palette")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
     if (ImGui::BeginCombo("##wfmap", tr(Waterfall::mapName(a.wf.effMap())))) {   // also in the Waterfall popup on the plot
         for (int i = 0; i < Waterfall::NumMaps; i++)
+        {
             if (ImGui::Selectable(tr(Waterfall::mapName(i)), a.wf.effMap() == i)) { a.wf.map = i; a.wf.palette(); savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::WfMap, i);
+        }
         ImGui::EndCombo();
     }
     {
         const char* ts[] = {N_("Classic"), N_("Simple")};
         ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("%s", tr("Tuner style")); ImGui::SameLine(col); ImGui::SetNextItemWidth(std::min(150.f * gUi, ImGui::GetContentRegionAvail().x));
         if (ImGui::BeginCombo("##tunerstyle", tr(ts[std::max(0, std::min(1, a.tunerStyle))]))) {
-            for (int i = 0; i < 2; i++) if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
+            for (int i = 0; i < 2; i++) {
+                if (ImGui::Selectable(tr(ts[i]), a.tunerStyle == i)) { a.tunerStyle = i; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::TunerStyle, i);
+            }
             ImGui::EndCombo();
         }
     }
@@ -306,7 +325,7 @@ void sideToolsBody(App& a) {
     ImGui::Separator();
     themeChoice(a, false);
     accentMenu();
-    typographyChoice(false);
+    typographyChoice(false, &a);
     dataFolderChoice();
     timeDisplayChoice(false);
     int pct = (int)std::lround(a.uiTextScale * 100);
@@ -315,6 +334,7 @@ void sideToolsBody(App& a) {
     if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
     if (ImGui::Checkbox(tr("Touch interface"), &a.touchUi)) savePrefs(a);   // big targets, a bottom dock, full-screen pickers (ui/touch.h)
     if (ImGui::IsItemHovered()) wrapTooltip(280 * gUi, tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
+    uiprev::item(a, uiprev::Opt::Touch, a.touchUi ? 0 : 1);
 }
 
 void sideLogBody(App& a) {
@@ -625,31 +645,40 @@ static void viewMenu(App& a) {
     struct Mark { float x0, y0, y1; ~Mark() { tourMark("view", ImVec2(x0, y0), ImVec2(ImGui::GetCursorScreenPos().x, y1)); } } mark{vx0, vy0, vy1};   // the tour points at the View menu
     gViewMenuCentre = ImVec2(ImGui::GetCursorScreenPos().x + ImGui::CalcTextSize(tr("View")).x * 0.5f + 6 * gUi, ImGui::GetCursorScreenPos().y + ImGui::GetFrameHeight() * 0.5f);
     if (ImGui::BeginMenu(tr("View"))) {
-        // 4.0: a short top level of submenus (docs/MENUS-4.0.md). PREVIEW HOOK: feat40-uipreview's hover previews (app/ui/ui_preview.*) go
-        // next to the items of Layout, Theme and Text; each radio item below is one MenuItem followed by its IsItemHovered().
+        // 4.0: a short top level of submenus (docs/MENUS-4.0.md). hover previews (app/ui/ui_preview.h) follow the items of Layout, Theme and Text.
         if (ImGui::BeginMenu(tr("Layout"))) {
             ImGui::TextDisabled("%s", tr("Screen arrangement"));
-            for (int v = 0; v < 8; v++) if (ImGui::MenuItem(tr(kVariantNames[v]), nullptr, a.uiVariant == v)) { a.uiVariant = v; savePrefs(a); }
+            for (int v = 0; v < 8; v++) {
+                if (ImGui::MenuItem(tr(kVariantNames[v]), nullptr, a.uiVariant == v)) { a.uiVariant = v; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::Variant, v);
+            }
             ImGui::Separator();
             ImGui::TextDisabled("%s", tr("Panels"));   // both switches act at once, the receiver keeps running; the same two values as Settings > Display
             if (ImGui::MenuItem(tr("Classic"), inputmap::shortcut(inputmap::Action::LayoutToggle).c_str(), !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
+            uiprev::item(a, uiprev::Opt::Unified, 0);
             if (ImGui::MenuItem(tr("Unified"), inputmap::shortcut(inputmap::Action::LayoutToggle).c_str(), a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new layout: the spectrum and waterfall stay on screen above the decoded views"));
+            uiprev::item(a, uiprev::Opt::Unified, 1);   // after the text tooltip: the picture goes under it
             if (ImGui::MenuItem(tr("Fit panels to their content"), nullptr, &a.fitPanels)) savePrefs(a);   // ui/overview_layout.h, docs/LAYOUT-4.0.md
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The list on the right and the lower row take only the room they need: an empty row is hidden, a small plot moves beside the list, a list of a line or two becomes a strip over the spectrum. Off: the fixed sizes."));
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
+            uiprev::item(a, uiprev::Opt::Touch, a.touchUi ? 0 : 1);
             dockMenu(a);   // Docking (ui2_dock.cpp)
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }   // keeps this menu bar; Ctrl+Shift+M or View > Reset view > Restore the default view comes back
+            uiprev::item(a, uiprev::Opt::NewUi, 0);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(tr("Theme"))) {
             // two separate settings, each with exactly one item checked: the colour scheme (a.uiTheme) and the brightness (Dark, Light, High contrast)
             ImGui::TextDisabled("%s", tr("Colour scheme"));
             static const char* names[8] = {N_("Terminal palette"), N_("Instrument palette"), N_("Mono palette"), N_("Dev A (graphite)"), N_("Dev B (terminal green)"), N_("Studio (slate, rounded)"), N_("Mono Pro (OLED, amber)"), N_("Daylight (light, blue)")};
-            for (int t = 0; t < 8; t++) if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
+            for (int t = 0; t < 8; t++) {
+                if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::Theme, t);
+            }
             ImGui::Separator();
             ImGui::TextDisabled("%s", tr("Brightness"));
             themeChoice(a, true);
@@ -663,10 +692,14 @@ static void viewMenu(App& a) {
             ImGui::SetNextItemWidth(160 * gUi);
             if (ImGui::SliderInt("##txtsz", &pct, 80, 200, "%d%%")) a.uiTextScale = std::max(0.8f, std::min(2.f, pct / 100.f));
             if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
-            for (int p : {80, 100, 125, 150, 200}) { char l[16]; snprintf(l, sizeof l, "%d%%", p); if (ImGui::MenuItem(l, nullptr, pct == p)) { a.uiTextScale = p / 100.f; savePrefs(a); } }
+            for (int p : {80, 100, 125, 150, 200}) {
+                char l[16]; snprintf(l, sizeof l, "%d%%", p);
+                if (ImGui::MenuItem(l, nullptr, pct == p)) { a.uiTextScale = p / 100.f; savePrefs(a); }
+                uiprev::item(a, uiprev::Opt::TextScale, p / 100.0);
+            }
             ImGui::TextDisabled("%s", tr("Ctrl + / Ctrl - / Ctrl 0"));
             ImGui::Separator();
-            typographyChoice(true);
+            typographyChoice(true, &a);
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(tr("Time"))) { timeDisplayChoice(true); ImGui::EndMenu(); }

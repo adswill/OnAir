@@ -59,6 +59,7 @@ inline const std::vector<Info>& table() {
         {"timeDisplay", kUnits, N_("Time display"), N_("Show times in UTC or in this computer's local time, with or without the zone label."), "utc local clock 24h 12h date time zone", K::Custom},
         {"adsbUnits", kUnits, N_("Aircraft units"), N_("ADS-B, Mode A/C and HFDL: aviation units (knots, feet, nautical miles) or metric (km/h or m/s, metres, km). Only what is shown and exported changes; the feeds stay in aviation units."), "distance altitude speed km mi nm nautical miles feet metres knots aviation metric", K::Choice, 0, 0, 0, N_("Aviation (kt, ft, nm)|Metric")},
         {"adsbSpeedUnit", kUnits, N_("Metric speed"), N_("km/h or m/s, when the aircraft units are metric."), "speed kmh ms", K::Choice, 0, 0, 0, "km/h|m/s"},
+        {"uiPreviews", kAppearance, N_("Previews of the looks"), N_("Hover a colour palette, layout, font look, text size or waterfall colour map (in Settings and the View menu) to see a small picture of the interface with it. Nothing changes until you pick one."), "preview hover thumbnail tooltip picture", K::Bool, 1},
         // ---- Spectrum and waterfall
         {"wfMap3", kDisplay, N_("Waterfall colours"), N_("The colour map of the waterfall."), "palette colormap heat viridis", K::Choice, 15, 0, 0,
          "Classic|Viridis|Inferno|Grey|Turbo|Cividis|Magma|Deep heat|Ice|Fire|Night (red)|High contrast|Custom|Smooth heat|Deep blue|Navy heat|Blue green", "0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16"},
