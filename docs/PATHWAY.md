@@ -1850,3 +1850,11 @@ decode with 5 to 6 kHz carrier error where 3.9 had none). Largest find: Argos PT
 coherent 1 ms power for the extent and the length chosen from the phase steps give about 14 dB (90 % at 0 dB in 5 kHz instead of 13 dB). Tests:
 sonde_sens40 (extended), edacs_sens40, argos_sens40. Measured and not kept: ACARS coherent detection with a carrier memory (0.2 dB), POCSAG/FLEX
 narrower filter (POCSAG +3 dB, FLEX collapses), M10 narrow path, MRZ narrow path (breaks a test). At theory: DMR, AIS, APRS, Orbcomm, the IoT set.
+
+## 2026-11-12 (night), 4.0 lane A part 3: gate hunt in the burst and packet receivers (feat40-sensA3)
+Looked for the Argos kind of find (a fixed gate far above what the demodulator needs) in the burst / packet receivers, with before/after curves from sens_curve
+and noise-only runs (docs/SENSITIVITY-4.0-A3.md): HaLow preamble gate 0.55 to 0.30 (about 1.5 dB), Globalstar activity gate 2 to 0.8 dB (about 3.5 dB), POCSAG gets a
+second POCSAG-only decoder behind a 7 kHz filter next to the 10 kHz one FLEX needs (about 1.3 dB, FLEX unchanged), Zigbee chip values as the amplitude weighted sine of
+the phase step (about 1.5 dB), SAME and the CubeSat 1200 baud path on the front end's second 4.5 kHz channel (about 3 dB each), LTR 3.5 kHz with the carrier follow-up
+(decodes with 3.1 kHz carrier error where 3.9 found nothing), MRZ and iMS-100 sondes accept 3 sync symbol errors. Tests: sens40a3 (new), same_rx, cubesat_rx, ltr_rx,
+sonde_extra extended. Not kept: Iridium, Aero, ISM, Wi-SUN, BLE, VDL2 gate changes, M10 and MRZ narrow paths (MRZ still breaks sonde_extra_rf, cause not found).
