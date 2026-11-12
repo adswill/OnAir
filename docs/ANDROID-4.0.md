@@ -99,4 +99,13 @@ double. No radio was streamed on a phone.
 
 ## CI results
 
-(filled in below by the runs of this branch)
+| Run | What | Result |
+|---|---|---|
+| android.yml 43153389068 (Kotlin check, commit 48b16af) | JNI table check (3 bridges, 37 functions), generated files current, debug APK compile, all JVM unit tests | **pass**: 103 tests, 36 of them new (TsDemuxTest 6, AudioFramesTest 9, VideoFramesTest 6, TvServicesTest 6, AvSyncTest 4, Mp2DecoderTest 3, UsbIdsAgreementTest 2). The run before (43150623782) failed one test, the stereo MP2 round trip: the test's own encoder wrote scale factors in the wrong order; fixed in the test, the decoder was right. |
+| android.yml 43153345181 (debug APK with the native library, macOS runner) | libonair.so with the new jni_tv.cpp, libusb1.0.so, and now libairspy.so (29 KB) and libairspyhf.so (25 KB) from the pinned commits, debug APK | **pass** |
+| quick.yml 43150247963 (Linux) | C++ tests usb_fd, usb_fd_open, usb_drops with the new id table | **pass** |
+
+What the tests cover, plainly: the TS/PES, audio framing, video parameter-set, service choice, A/V clock and MP2 logic run on built
+test streams (made by the tests, with lost packets, duplicates, error flags, garbage, odd chunk sizes, the PTS wrap); the MP2 decoder
+round trip reaches the tones it was given (gain within 3 %, SNR above 50 dB mono and 45 dB stereo). MediaCodec, AudioTrack, the
+Surface and the panel are compiled but **never ran**: there was no emulator run and no phone. A real broadcast was not played.
