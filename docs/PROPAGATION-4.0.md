@@ -62,4 +62,79 @@ Read from `core/src/prop/prop.cpp`, `prop_terrain.cpp`, `prop_scenario.cpp`, `ap
 
 ## 2. What 4.0 computes
 
-(Filled in step by step below as each part lands.)
+| Part | Recommendation (version) | Code | Notes |
+|---|---|---|---|
+| Free space | ITU-R P.525 | core/src/prop/prop.cpp | unchanged |
+| Two-ray ground reflection | textbook exact two-ray, plane-earth asymptote | prop.cpp | selectable ("two-ray exact"), drawn in the loss-by-model sweep |
+| VHF/UHF/SHF terrain path (Auto) | **ITU-R P.1812-8 (09/2025)** sections 3.5-4.9, Attachments 1 and 2 | core/src/prop/p1812.cpp | delta-Bullington diffraction for the median and the beta0 earth radius, troposcatter, ducting / layer reflection, the 4.6 blend, location variability; p = 1..50 % of time, pL = 1..99 % of locations; used above 6 GHz too (P.452 shares the mechanisms) |
+| Earth curvature / refraction | ITU-R P.453-14, P.1812 eq. (6) | itu_atmos.cpp | k50 = 157 / (157 - dN) from a typed lapse rate (climate presets); super-refractive k = 3 for the beta0 part |
+| Terrain | SRTM 1 arc-second tiles ("Terrain Tiles" on AWS, opt-in download into the data folder, kept at 3 arc-seconds), or the user's .hgt / GeoTIFF | prop_terrain.cpp, app/prop/prop_adv.cpp | no terrain: a flat sea-level profile, with a warning in the verdict, the Models tab and the Profile tab |
+| Fresnel clearance | first Fresnel radius 17.32 sqrt(d1 d2 / (f d)) | prop_scenario.cpp `profileView` | Profile tab: ground bent for the k-factor, line of sight, first zone, 60 % line, worst clearance |
+| Gases | **ITU-R P.676-13 (08/2022)** Annex 1 (44 O2 + 35 H2O lines), terrestrial (2.1) and layered slant path with ray bending (2.2.1) through **P.835-7** | itu_atmos.cpp | replaces the hand-drawn curve |
+| Rain | **ITU-R P.838-3 (03/2005)** full regression, any tilt and elevation; **P.530-19** 2.4.1 terrestrial; **P.618-14** 2.2.1.1 slant | itu_atmos.cpp | rain height: latitude fit of the P.839-4 map (the map itself is not shipped) |
+| HF sky wave | **ITU-R P.533-14 (08/2019)** with **P.1239-4 (08/2023)** CCIR maps, **P.1240-2** MUF and Rop, **P.842-5** deciles | core/src/prop/hf_p533.cpp | see below |
+| Noise | **ITU-R P.372-18 (09/2026)** man-made Table 1 / 2, galactic | hf_p533.cpp, prop.cpp | atmospheric noise stays a fit (P.372 gives it as maps and a program only) |
+| Satellite links | P.618-14 rain, scintillation (2.4.1), total (2.5), sky noise (3); P.676-13 slant gases | core/src/prop/sat_link.cpp | look angles from a WGS 84 station, LEO range rate and Doppler, G/T, C/N0, margin |
+| Receiver / decode | OnAir's measured thresholds (docs/SENSITIVITY.md) | core/src/prop/mode_snr.cpp | "Will it decode?": 47 modes, white noise / real-radio / fading thresholds and their bandwidths |
+
+### HF in detail
+
+- foF2 and M(3000)F2: the CCIR (Oslo 1966) numerical maps recommended by P.1239-4 (13 x 76 and 9 x 49 coefficients per month and solar
+  level, Table 1 geographic functions), with the modified dip X = atan(I / sqrt(cos lat)) from the epoch-1960 sixth-order field model at
+  300 km (DGRF 1960 coefficients), linear in R12 up to 160. foE from P.1239 section 4 (A B C D, the night minimum).
+- Control points as P.533 Table 1; E modes (hop up to 2000 km, three orders, paths up to 4000 km) with foE sec i110; F2 modes (the lowest
+  order with a hop up to dmax and five more) with the P.1240 / P.533 eqs. (3)-(8) MUF, the 3.5.1.2 rule for paths longer than dmax; E-layer
+  screening (section 4); mirror heights from section 5.1 (the three cases on x = foF2/foE); elevation (13) and slant range (19).
+- Loss per mode (18): free space over the virtual slant range, absorption, above-MUF loss (25)/(26), 2 dB per ground reflection, the auroral
+  loss of Table 2 (geomagnetic latitude, local time, season, range), Lz = 8.72 dB; field (17), power sum (28).
+- Beyond 7000 km the composite method (5.3): fM with the K factor and the 24-hour fBM, fL over 24 hours with the night LUF and the sunset
+  decay, Etl with Gap and Ly, interpolated over 7000-9000 km (42).
+- Operational MUF = basic x Rop (P.1240 Table 1); MUF on 90 % / 10 % of days from the P.1239 Tables 2 and 3 decile factors; the probability
+  of support (P.533 3.6).
+- SNR (45) with the P.372 noise plus the receive chain; deciles: within the hour 8 / 5 dB (HFBC-87), day to day from P.842 Table 2 by
+  f / MUF and geomagnetic latitude, noise deciles from P.372 Table 2 (man-made), 2 dB galactic; BCR as P.842 / P.533 section 10.1.
+- The hour x band chart (HF hours x bands tab): reliability and median SNR for the ten ham bands plus the chosen frequency, 24 UTC hours.
+
+Deviations, on purpose and stated: the absorption Li uses the closed-form CCIR Report 252 expression `677.2 sec(i) (1 + 0.0037 R)
+F(chi) / ((f + fL)^1.98 + 10.2)` at the two 90 km penetration points of each hop, with fL = |fH sin I| from the field model, because P.533's
+AT_noon, phi_n and p come as graphs only (Figs. 1-3); the atmospheric noise is the 3.9 fit; the transmit gain is one value for all
+take-off angles unless a pattern file is loaded; the K index is no longer used (the maps are monthly medians).
+
+## 3. Validation (what matches)
+
+All on GitHub (quick.yml), tests/prop/:
+
+| Test | Reference | Result |
+|---|---|---|
+| test_prop_p1812 | ITU-R SG3 validation set P_1812_8.zip: 7 profiles (sea 91 % / land, horizontal / vertical, 1 to 110 km, LoS, sub-path and trans-horizon, with and without clutter) x 3 time percentages = 21 cases, plus the published intermediate values (dlt, dlr, theta_t, theta_r, beta0, hstd, hsrd, hte, hre, hm, Lbulla, Ldsph, Lbs, Lba) | RESULT_P1812 |
+| test_prop_itu | CG-3M3J-13-ValEx-Rev8.3.0: P.676 specific attenuation at 12 / 20 / 60 / 90 / 130 GHz (oxygen and water vapour separately), P.676 Annex 1 slant path example (28 GHz, 30 deg: 0.4708 dB), P.838-3 kH kV aH aV and gamma at 14.25 GHz, P.618-14 rain at 0.001..1 % for three sites, P.618 scintillation | RESULT_ITU |
+| test_prop_hf | the C++ CCIR map evaluation against an independent evaluation written from the P.1239 text during development (0.01 MHz); the 3000 km MUF = foF2 x M(3000) (the definition of M(3000)); winter anomaly, solar-cycle and day/night behaviour, the dip equator near Huancayo, foE values, textbook band behaviour, skip zone, long-path method and its continuity across 7000-9000 km, the chart | RESULT_HF |
+| test_prop_sat | closed-form GEO look angles (London to 28.2 E: 25.4 deg, 145.6 deg, 39031 km), ISS horizon range rate 7.20 km/s and 3.5 kHz Doppler at 145.8 MHz, a Ku DVB-S2 budget against a hand calculation, the threshold table | RESULT_SAT |
+| test_prop_model / scenario / terrain | the 3.9 regression suite (pinned to the 3.9 models, which stay selectable), plus the 4.0 defaults through evaluate(): the P.1546 100 MHz land band, 1 % time above 50 %, 90 % locations = 1.28 sigma, ADS-B to the radio horizon, HF via P.533; tile names / URL / .hgt.gz reader | RESULT_MODEL |
+
+One finding while validating: the 118.75 GHz oxygen row as extracted from the P.676-13 PDF (a5 = -0.439, a6 = 0.079) does not reproduce the
+ITU's own validation workbook at 90 and 130 GHz (1 % and 5 % off); with the interference coefficients of that one line negated (0.439,
+-0.079) all five frequencies agree to better than 0.02 %, so the table uses those (comment in core/src/prop/p676_lines.inc).
+
+Not validated against published reference values: the HF field strength and reliability (the ITU's P.533 reference program and its
+D1 test data bank were not available), the satellite budget beyond the hand calculation, and anything on real off-air measurements.
+The HF numbers are therefore "P.533 as implemented here", checked for internal consistency and textbook behaviour only.
+
+## 4. Screen (Tools > Propagation, Advanced)
+
+- Inputs: Signal has **Will it decode?** (an OnAir mode and channel condition set the bandwidth and SNR); new **Statistics and climate**
+  section (time %, locations %, location spread, climate presets for dN / N0 with the k-factor shown); Ionosphere has the sunspot number
+  and the 3.9 HF model switch; Path model lists P.1812 (auto), free space, smooth earth, two-ray, the 3.9 model; Terrain has the opt-in
+  **Download elevation tiles** (radius, the path to the chosen point, at most 9 tiles, cached in the data folder under terrain/).
+- Results: Map, Link budget (P.1812 parts, HF reliability and decile MUFs), Sweeps (new: path loss against distance for five models),
+  **Profile** (terrain, line of sight, first Fresnel zone, 60 % line, worst clearance), **HF hours x bands** (reliability heat map with the
+  median SNR in each cell and the MUF by hour), **Satellite** (GEO or LEO, look angles, Doppler, P.618 / P.676 losses, G/T, C/N0, margin
+  against a mode), Models.
+- The map pin, the Simple screen and the verdict work as before; the verdict now names ducting, the flat-earth case and the HF reliability.
+
+## 5. Decisions taken without the owner (asleep)
+
+- Auto now means P.1812-8 (VHF and up) and P.533 (HF); the 3.9 models are kept as choices, and the old regression suite is pinned to them.
+- Default time 50 %, locations 50 % (median); planning users set 90 % locations. Location spread 5.5 dB (P.1812 Table 6).
+- No live solar data: the app fetches none today; SFI or the sunspot number are typed (as before).
+- Tiles from the AWS Terrain Tiles bucket (open data, gzip SRTM 1"), kept at 3" to stay light on phones; only on a button press.

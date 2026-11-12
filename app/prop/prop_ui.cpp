@@ -88,6 +88,8 @@ template <class F> void visit(pr::Scenario& s, F&& f) {
     E("txpol", s.txPol); E("rxpol", s.rxPol); E("env", s.env); f("atm", s.atmosphericNoise); E("gnd", s.ground); E("clut", s.rxClutter);
     E("pmodel", s.pathModel); E("hfmodel", s.hfModel); f("sfi", s.sfi); f("kidx", s.kIndex); f("rain", s.rainMmH); f("gas", s.gas);
     f("now", s.useNow); f("y", s.year); f("mo", s.month); f("d", s.day); f("h", s.hour); f("mi", s.minute);
+    f("tpct", s.timePct); f("lpct", s.locPct); f("sigl", s.sigmaLocDb); f("dn", s.deltaN); f("n0", s.n0);   // 4.0
+    f("hfleg", s.hfLegacy); f("r12", s.r12); f("dmode", s.decodeMode); f("dcond", s.decodeCondition);
 }
 
 std::string keyOf(pr::Scenario s) {
@@ -263,6 +265,22 @@ void compute(Result& r, int n, std::atomic<bool>& cancel) {
             r.day[i] = pr::hfDay(p, std::max(r.sweepKm, 50.0), r.sweepBearing);
         } else r.rangeVsFreq[i] = pr::sweepRangeVsFrequency(p, std::max(30.0, p.fMHz / 3), std::min(100000.0, p.fMHz * 3), 12, r.sweepBearing);
     }
+    // 4.0 views of scenario A, toward the chosen point (or north at the budget / HF chart distance)
+    if (cancel) return;
+    const pr::Params& a = r.p[0];
+    if (a.fMHz >= 30) {
+        r.lossByModel = pr::sweepLossByModel(a, std::max(rad, 10.0), 40, r.sweepBearing);
+        r.profile = pr::profileView(a, r.tgtLat, r.tgtLon, 200);
+    } else {
+        r.lossByModel = pr::sweepLossByModel(a, std::max(rad, 10.0), 40, r.sweepBearing);
+        std::vector<double> fr = pr::hf::hamBandsMHz();
+        if (std::find_if(fr.begin(), fr.end(), [&](double x) { return std::fabs(x - a.fMHz) < 0.05; }) == fr.end()) {
+            fr.push_back(a.fMHz);
+            std::sort(fr.begin(), fr.end());
+        }
+        r.hfChart = pr::hfChartFor(a, r.tgtLat, r.tgtLon, fr);
+        r.haveChart = true;
+    }
 }
 
 std::string jobKey() {
@@ -271,8 +289,8 @@ std::string jobKey() {
     std::string k = keyOf(S.sc[0]);
     if (cmp) k += "#" + keyOf(S.sc[1]);
     char b[200];
-    snprintf(b, sizeof b, "#%d%d%d%p%p%p%.6g", S.advanced, cmp, S.resolution, (const void*)S.terrain.get(), (const void*)S.pattern[0].get(),
-             (const void*)S.pattern[1].get(), S.hfChartKm);
+    snprintf(b, sizeof b, "#%d%d%d%p%p%p%.6g,%.6g", S.advanced, cmp, S.resolution, (const void*)S.terrain.get(), (const void*)S.pattern[0].get(),
+             (const void*)S.pattern[1].get(), S.hfChartKm, S.budgetKm);
     k += b;
     double la, lo; std::string lab;
     if (receiverPoint(la, lo, lab)) { snprintf(b, sizeof b, "#%.5f,%.5f", la, lo); k += b; }   // the sweeps point toward it; HF ranges by bearing
@@ -295,6 +313,8 @@ void startJob() {
         r->sweepBearing = pr::bearingDeg(r->p[0].txLat, r->p[0].txLon, la, lo);
         r->sweepKm = pr::greatCircleKm(r->p[0].txLat, r->p[0].txLon, la, lo);
     } else r->sweepKm = S.hfChartKm;
+    if (receiverPoint(la, lo, lab)) { r->tgtLat = la; r->tgtLon = lo; }
+    else pr::destination(r->p[0].txLat, r->p[0].txLon, 0, r->p[0].fMHz < 30 ? S.hfChartKm : S.budgetKm, r->tgtLat, r->tgtLon);
     const int n = S.advanced ? (S.resolution == 0 ? 40 : S.resolution == 2 ? 140 : 80) : 60;
     S.cancel = false;
     S.busy = true;

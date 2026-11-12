@@ -27,6 +27,22 @@ struct Result {
     double sweepBearing = 0, sweepKm = 0;
     pr::Series sigVsDist[2], rangeVsPower[2], rangeVsFreq[2];
     pr::HfDay day[2];
+    // 4.0
+    double tgtLat = 0, tgtLon = 0;                             // the point the profile and the HF chart are computed toward
+    std::vector<pr::Series> lossByModel;                       // scenario A: path loss against distance, model by model
+    pr::ProfileView profile;                                   // scenario A, 30 MHz and up
+    pr::hf::Chart hfChart;                                     // scenario A, below 30 MHz: hour x band reliability
+    bool haveChart = false;
+};
+
+// Satellite tab (4.0): an earth-space link from the transmitter position (your location) to a satellite
+struct SatUi {
+    int kind = 0;                            // 0 geostationary at a longitude, 1 low orbit at an altitude and elevation
+    double satLon = 19.2, leoAltKm = 820, leoElevDeg = 30;
+    double fGHz = 11.7, eirpDbw = 52, rxGainDbi = 37.6, nfDb = 1, feederDb = 0, dishM = 0.8, eff = 0.6;
+    double r001 = 30, availPct = 99.9, bwHz = 36e6, reqSnrDb = 3, rho0 = 7.5, nWet = 42;
+    int pol = 2;                             // 0 horizontal, 1 vertical, 2 circular
+    int mode = -1;                           // index into modeThresholds() for the required SNR, -1 typed
 };
 
 struct State {
@@ -51,13 +67,21 @@ struct State {
     std::string msg;
     std::string csvMsg;
     float labelCol = 0;                      // numField / enumCombo: x of the input after the label (0: right after it)
+    SatUi sat;
+    // terrain download (opt-in, Advanced > Terrain)
+    std::thread dlTh;
+    std::atomic<bool> dlBusy{false};
+    std::mutex dlMu;
+    std::string dlMsg;                       // under dlMu
+    std::vector<std::string> dlDone;         // files the download finished, picked up by the UI thread (under dlMu)
+    double dlRadiusKm = 60;
     // worker
     std::mutex mu;
     std::thread th;
     std::atomic<bool> busy{false}, cancel{false};
     std::shared_ptr<const Result> result;    // under mu
     std::string lastKey;
-    ~State() { cancel = true; if (th.joinable()) th.join(); }   // never leave a joinable thread at exit
+    ~State() { cancel = true; if (th.joinable()) th.join(); if (dlTh.joinable()) dlTh.join(); }   // never leave a joinable thread at exit
 };
 State& st();
 

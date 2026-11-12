@@ -8,6 +8,7 @@
 #include <cmath>
 #include <cstdio>
 #include <ctime>
+#include <filesystem>
 
 namespace propui {
 
@@ -71,8 +72,55 @@ void txSection(State& S, pr::Scenario& s) {
 void signalSection(State& S, pr::Scenario& s) {
     S.labelCol = 150 * gUi;
     numField("Frequency", &s.fMHz, "MHz", "Below 30 MHz the HF model (ground wave + skywave), from 30 MHz the VHF/UHF model.");
-    numField("Bandwidth", &s.bandwidthHz, "Hz", "The receiver's noise bandwidth: 2400 SSB, 12500 narrow FM, 200000 broadcast FM, 125000 LoRa, 7.6e6 DVB-T.", 100 * gUi, "%.6g");
-    numField("Required SNR", &s.requiredSnrDb, "dB", "SNR in that bandwidth at which the mode just works: narrow FM 12, SSB 10, DAB 10, DVB-T 64QAM about 20, FT8 -21, LoRa SF12 -20.");
+    // 4.0: "will mode X decode here?" from OnAir's measured thresholds
+    const pr::ModeSnr* cm = s.decodeMode.empty() ? nullptr : pr::findModeThreshold(s.decodeMode);
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Will it decode?"); ImGui::SameLine(S.labelCol);
+    ImGui::SetNextItemWidth(210 * gUi);
+    if (ImGui::BeginCombo("##advdmode", cm ? cm->name : "(type the SNR below)")) {
+        if (ImGui::Selectable("(type the SNR below)", !cm)) s.decodeMode.clear();
+        for (const pr::ModeSnr& m : pr::modeThresholds())
+            if (ImGui::Selectable(m.name, cm == &m)) s.decodeMode = m.id;
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", "Pick an OnAir mode: the SNR it needs (measured by OnAir's own sensitivity sweep, docs/SENSITIVITY.md) and its bandwidth "
+                                "replace the two fields below, so the map and the margin answer 'will this mode decode here?'.");
+    if (cm) {
+        enumCombo("Channel", &s.decodeCondition, "clean (white noise)\0real radio (offsets, echo, phase noise)\0mobile fading (TU6)\0",
+                  "Which measured threshold to use: white noise only, the 'combined' set of real-radio impairments, or Rayleigh fading "
+                  "(a car or a handheld on the move). A mode without a figure for that case falls back to the one before it.");
+        ImGui::TextDisabled("%s needs %.0f dB SNR in %.4g kHz (measured on generated signals).", cm->name, pr::modeRequiredSnrDb(*cm, s.decodeCondition), cm->bwHz / 1e3);
+    } else {
+        numField("Bandwidth", &s.bandwidthHz, "Hz", "The receiver's noise bandwidth: 2400 SSB, 12500 narrow FM, 200000 broadcast FM, 125000 LoRa, 7.6e6 DVB-T.", 100 * gUi, "%.6g");
+        numField("Required SNR", &s.requiredSnrDb, "dB", "SNR in that bandwidth at which the mode just works: narrow FM 12, SSB 10, DAB 10, DVB-T 64QAM about 20, FT8 -21, LoRa SF12 -20.");
+    }
+}
+
+void statsSection(State& S, pr::Scenario& s) {
+    S.labelCol = 150 * gUi;
+    if (s.fMHz < 30) ImGui::TextDisabled("Used from 30 MHz (ITU-R P.1812-8, the Auto path model).");
+    numField("Time", &s.timePct, "%", "ITU-R P.1812: the path loss is not exceeded for this % of the time (1 to 50). 50 = the median, normal conditions. "
+             "1 to 10 = the strong signals of super-refraction and ducting (DX, and the interference view).", 70 * gUi);
+    numField("Locations", &s.locPct, "%", "... and at this % of locations around each point (1 to 99). 50 = the median; coverage planning uses 90 or 95 "
+             "(a safe answer: the signal is at least this strong at nine places in ten).", 70 * gUi);
+    numField("Location spread", &s.sigmaLocDb, "dB", "Standard deviation of the location variability (P.1812 Table 6: 5.5 dB for broadcasting; "
+             "8 to 10 dB for a handheld among buildings).", 70 * gUi);
+    struct Cl { const char* name; double dn, n0; };
+    static const Cl cl[] = {{"temperate maritime", 40, 315}, {"temperate continental", 45, 320}, {"Mediterranean", 50, 335}, {"hot desert / Gulf coast", 60, 360},
+                            {"humid tropics", 70, 380}};
+    int sel = -1;
+    for (int i = 0; i < 5; i++) if (std::fabs(s.deltaN - cl[i].dn) < 1e-9 && std::fabs(s.n0 - cl[i].n0) < 1e-9) sel = i;
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Climate"); ImGui::SameLine(S.labelCol);
+    ImGui::SetNextItemWidth(190 * gUi);
+    if (ImGui::BeginCombo("##advclim", sel >= 0 ? cl[sel].name : "custom")) {
+        for (int i = 0; i < 5; i++) if (ImGui::Selectable(cl[i].name, i == sel)) { s.deltaN = cl[i].dn; s.n0 = cl[i].n0; }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", "Typical refractivity for the region (rounded readings of the ITU-R P.453 maps). Over warm seas such as the Gulf the lapse rate "
+                                "is larger: the radio horizon is farther and ducting is common in summer.");
+    numField("Refractivity lapse", &s.deltaN, "N/km", "dN, the average refractivity drop over the lowest 1 km (P.453 map DN50). It sets the median effective "
+             "earth radius k = 157 / (157 - dN): 40 gives 1.34 (about 4/3).", 70 * gUi);
+    ImGui::SameLine(); ImGui::TextDisabled("k = %.2f", 157.0 / (157.0 - std::clamp(s.deltaN, 0.0, 150.0)));
+    numField("Sea-level N0", &s.n0, "N", "Sea-level surface refractivity (P.453 map N050), used by the troposcatter term: 300 dry to 400 humid.", 70 * gUi);
 }
 
 void rxSection(State& S, pr::Scenario& s) {
@@ -120,9 +168,10 @@ void pathSection(State& S, pr::Scenario& s) {
     S.labelCol = 150 * gUi;
     int pm = (int)s.pathModel, hm = (int)s.hfModel, gr = (int)s.ground, cl = (int)s.rxClutter, en = (int)s.env;
     if (s.fMHz >= 30)
-        enumCombo("Path model", &pm, "auto (recommended)\0free space only\0smooth earth only\0two-ray exact\0",
-                  "Auto: the larger of P.526 smooth-earth diffraction and the plane-earth ground reflection, plus troposcatter. Free space: the upper bound. "
-                  "Smooth earth: P.526 alone (no ground reflection). Two-ray exact: with the reflection's peaks and nulls (one per wavelength of path difference).");
+        enumCombo("Path model", &pm, "auto: ITU-R P.1812-8 (recommended)\0free space only\0smooth earth only (P.526)\0two-ray exact\0the 3.9 model\0",
+                  "Auto: ITU-R P.1812-8 over the terrain profile (flat sea level when no terrain is loaded), with the time and location "
+                  "percentages under 'Statistics and climate': line of sight, diffraction, troposcatter and ducting. Free space: the upper "
+                  "bound. Smooth earth: P.526 alone. Two-ray exact: with the reflection's peaks and nulls. The 3.9 model: for comparison.");
     else
         enumCombo("HF modes", &hm, "ground wave + skywave\0ground wave only\0skywave only\0", "Which HF propagation modes are added up.");
     enumCombo("Ground", &gr, "sea\0wet ground\0average land\0dry ground / city\0",
@@ -141,7 +190,13 @@ void ionoSection(State& S, pr::Scenario& s) {
     S.labelCol = 150 * gUi;
     if (s.fMHz >= 30) ImGui::TextDisabled("Used below 30 MHz (and for the atmospheric noise).");
     numField("Solar flux (SFI)", &s.sfi, "sfu", "The 10.7 cm solar flux index, 65 (quiet sun) to 300 (very active). Type today's value from any space-weather source: nothing is downloaded.");
-    numField("K index", &s.kIndex, "", "Planetary K index 0 to 9: 5 and up is a storm (lower MUF, more absorption at high latitudes).", 60 * gUi);
+    numField("Sunspot number", &s.r12, "R12", "The 12-month smoothed sunspot number the ITU-R P.1239 ionospheric maps are indexed by (0 to 160; "
+             "higher counts as 160 for foF2). -1: worked out from the SFI above (ITU-R P.371).", 70 * gUi);
+    if (s.r12 < 0) { ImGui::SameLine(); ImGui::TextDisabled("= %.0f from the SFI", pr::hf::r12FromSfi(s.sfi)); }
+    numField("K index", &s.kIndex, "", "Planetary K index 0 to 9. Used only by the 3.9 HF model (the P.533 maps are monthly medians, not storm-time).", 60 * gUi);
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("HF skywave model"); ImGui::SameLine(S.labelCol);
+    ImGui::Checkbox("use the 3.9 estimate##advhfleg", &s.hfLegacy);
+    ImGui::SetItemTooltip("%s", "Off (default): ITU-R P.533-14 with the CCIR ionospheric maps of P.1239. On: the simple one-layer estimate of 3.9, for comparison.");
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Date and time"); ImGui::SameLine(S.labelCol);
     ImGui::Checkbox("now (UTC)##advnow", &s.useNow);
     if (s.useNow) { ImGui::SameLine(); ImGui::TextDisabled("%04d-%02d-%02d %02d:%02d", s.year, s.month, s.day, s.hour, s.minute); }
@@ -174,12 +229,65 @@ void atmoSection(State& S, pr::Scenario& s) {
     if (ImGui::Combo("##advrain", &sel, "none\0light\0moderate\0heavy\0very heavy\0tropical\0") && sel >= 0) s.rainMmH = rr[sel];
     ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Gases"); ImGui::SameLine(S.labelCol);
     ImGui::Checkbox("oxygen and water vapour##advgas", &s.gas);
-    ImGui::SetItemTooltip("%s", "Sea-level gas absorption (rough P.676 curve): small below 10 GHz, about 0.2 dB/km at 22 GHz, 15 dB/km at 60 GHz.");
+    ImGui::SetItemTooltip("%s", "ITU-R P.676-13 line-by-line absorption of oxygen and water vapour at sea level (15 C, 7.5 g/m3): 0.02 dB/km at 12 GHz, "
+                                "0.2 dB/km at 22 GHz, 15 dB/km at 60 GHz.");
 }
 
-void terrainSection(State& S, pr::Scenario&) {
-    ImGui::TextWrapped("Hills are only modelled from an elevation file you already have: SRTM .hgt tiles (keep their names, like N54E025.hgt) or an "
-                       "uncompressed GeoTIFF in WGS 84 latitude / longitude. Nothing is downloaded.");
+void startTileDownload(State& S, const pr::Scenario& s) {
+    if (S.dlBusy) return;
+    if (S.dlTh.joinable()) S.dlTh.join();
+    double la = NAN, lo = NAN; std::string lab;
+    receiverPoint(la, lo, lab);
+    const auto tiles = pr::demTilesFor(s.txLat, s.txLon, S.dlRadiusKm, la, lo, 9);
+    S.dlBusy = true;
+    { std::lock_guard<std::mutex> lk(S.dlMu); S.dlMsg = tiles.empty() ? "no tiles here (SRTM covers 60 S to 60 N)" : "downloading..."; }
+    S.dlTh = std::thread([tiles] {
+        State& T = st();
+        namespace fs = std::filesystem;
+        const std::string dir = plat::dataDir() + "/terrain";
+        std::error_code ec;
+        fs::create_directories(fs::u8path(dir), ec);
+        int ok = 0, have = 0, bad = 0;
+        std::vector<std::string> files;
+        for (const auto& t : tiles) {
+            const std::string f = dir + "/" + pr::demTileName(t.first, t.second) + ".hgt.gz";
+            if (fs::exists(fs::u8path(f), ec) && fs::file_size(fs::u8path(f), ec) > 1000) { files.push_back(f); have++; continue; }
+            { std::lock_guard<std::mutex> lk(T.dlMu); T.dlMsg = "downloading " + pr::demTileName(t.first, t.second) + "..."; }
+            if (plat::fetchUrl(pr::demTileUrl(t.first, t.second), f, "OnAir")) { files.push_back(f); ok++; }
+            else { fs::remove(fs::u8path(f), ec); bad++; }
+        }
+        char b[200];
+        std::snprintf(b, sizeof b, "%d tile(s) downloaded, %d already here%s", ok, have,
+                      bad ? "; some did not download (offline, too slow, or open sea): try again, or add files yourself" : "");
+        std::lock_guard<std::mutex> lk(T.dlMu);
+        T.dlMsg = b;
+        T.dlDone = files;
+        T.dlBusy = false;
+    });
+}
+
+void terrainSection(State& S, pr::Scenario& s) {
+    {   // tiles finished by the download thread: add them
+        std::vector<std::string> done;
+        { std::lock_guard<std::mutex> lk(S.dlMu); done.swap(S.dlDone); }
+        bool add = false;
+        for (const auto& f : done)
+            if (std::find(S.terrainFiles.begin(), S.terrainFiles.end(), f) == S.terrainFiles.end()) { S.terrainFiles.push_back(f); add = true; }
+        if (add) reloadTerrain();
+    }
+    ImGui::TextWrapped("Without terrain every path is a flat sea-level profile, so hills are ignored. Download elevation tiles (opt-in) or add files "
+                       "you have: SRTM .hgt tiles (keep their names, like N54E025.hgt), downloaded .hgt.gz tiles, or an uncompressed GeoTIFF in "
+                       "WGS 84 latitude / longitude.");
+    S.labelCol = 150 * gUi;
+    numField("Download around", &S.dlRadiusKm, "km", "Tiles of 1 x 1 degree covering this radius around the transmitter, and the path to the chosen point (at most 9).", 70 * gUi);
+    S.dlRadiusKm = std::clamp(S.dlRadiusKm, 1.0, 300.0);
+    ImGui::BeginDisabled(S.dlBusy);
+    if (ImGui::SmallButton("Download elevation tiles")) startTileDownload(S, s);
+    ImGui::EndDisabled();
+    ImGui::SetItemTooltip("%s", "Downloads the public 'Terrain Tiles' (SRTM-based, 1 arc-second, open data on Amazon Web Services; about 3 to 15 MB a tile) "
+                                "into OnAir's data folder (terrain/), kept for next time. Only when you press this button; nothing is sent but the tile names.");
+    { std::lock_guard<std::mutex> lk(S.dlMu); if (!S.dlMsg.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", S.dlMsg.c_str()); } }
+    ImGui::TextDisabled("Elevation data: Terrain Tiles (Mapzen), NASA SRTM and contributors.");
     if (ImGui::SmallButton("Add elevation file...")) {
         const std::string f = openFileDialog();
         if (!f.empty() && std::find(S.terrainFiles.begin(), S.terrainFiles.end(), f) == S.terrainFiles.end()) {
@@ -194,7 +302,7 @@ void terrainSection(State& S, pr::Scenario&) {
     }
     ImGui::TextDisabled("%s", S.terrain ? S.terrain->describe().c_str() : "no terrain: smooth earth");
     if (!S.terrainMsg.empty()) ImGui::TextColored(pal::warnAmber(), "%s", S.terrainMsg.c_str());
-    if (S.terrain) ImGui::TextDisabled("Paths that start or end outside the files use smooth earth. The sweeps always use smooth earth.");
+    if (S.terrain) ImGui::TextDisabled("Paths that start or end outside the tiles use a flat sea-level profile. The sweeps always do; the Profile tab uses the tiles.");
 }
 
 void viewSection(State& S, pr::Scenario&) {
@@ -334,13 +442,28 @@ void sweepsTab(const Result& r) {
                         r.sweepBearing, cmp ? ", blue: B" : "");
     ImGui::TextUnformatted("Signal against distance");
     seriesPlot("##sw1", r, &r.sigVsDist[0], cmp ? &r.sigVsDist[1] : nullptr, r.p[0].requiredSnrDb, "needed");
+    if (!r.lossByModel.empty()) {
+        ImGui::TextUnformatted(r.p[0].fMHz >= 30 ? "Path loss against distance, model by model (scenario A)" : "Path loss against distance (scenario A)");
+        if (plt::BeginPlot("##swloss", ImVec2(-1, 200 * gUi), plt::Flags_NoTitle)) {
+            plt::SetupAxes("distance (km)", "path loss (dB)", plt::AxisFlags_AutoFit, plt::AxisFlags_AutoFit);
+            plt::SetupAxisScale(plt::X1, plt::Scale_Log10);
+            static const ImVec4 col[5] = {ImVec4(0.6f, 0.6f, 0.6f, 1), ImVec4(0.45f, 0.85f, 1, 1), ImVec4(1, 1, 1, 1), ImVec4(1, 0.55f, 0.3f, 1), ImVec4(0.5f, 1, 0.5f, 1)};
+            for (size_t k = 0; k < r.lossByModel.size(); k++) {
+                const pr::Series& s = r.lossByModel[k];
+                plt::Spec sp; sp.LineColor = col[k % 5]; sp.LineWeight = k == 2 ? 2.5f : 1.5f;
+                plt::PlotLine(s.name.c_str(), s.x.data(), s.y.data(), (int)s.x.size(), sp);
+            }
+            plt::EndPlot();
+        }
+        ImGui::TextDisabled("Higher is a weaker signal. The orange (90 %% of locations) curve is the safe planning value; green shows the ducting nights.");
+    }
     ImGui::TextUnformatted("Range against transmitter power");
     seriesPlot("##sw2", r, &r.rangeVsPower[0], cmp ? &r.rangeVsPower[1] : nullptr, 0, nullptr);
     ImGui::TextUnformatted("Range against frequency (same antennas and power)");
     seriesPlot("##sw3", r, &r.rangeVsFreq[0], cmp ? &r.rangeVsFreq[1] : nullptr, 0, nullptr);
     if (r.p[0].fMHz < 30 && !r.day[0].hour.empty()) {
         const pr::HfDay& d = r.day[0];
-        ImGui::Text("HF over the day (UTC), %s path: MUF, FOT (0.85 MUF) and LUF (dots: the lowest frequency that still meets the SNR)", pr::kmText(r.sweepKm).c_str());
+        ImGui::Text("HF over the day (UTC), %s path: median MUF, FOT (the MUF on 90 %% of days) and LUF (dots: the lowest frequency that still meets the SNR)", pr::kmText(r.sweepKm).c_str());
         if (plt::BeginPlot("##swday", ImVec2(-1, 190 * gUi), plt::Flags_NoTitle)) {
             plt::SetupAxes("UTC hour", "MHz", 0, plt::AxisFlags_AutoFit);
             plt::SetupAxisLimits(plt::X1, 0, 24, plt::Cond_Always);
@@ -361,33 +484,178 @@ void sweepsTab(const Result& r) {
     }
 }
 
+void profileTab(const Result& r) {
+    const pr::ProfileView& v = r.profile;
+    if (v.dKm.size() < 2) { ImGui::TextDisabled("computing..."); return; }
+    std::string lab; double la, lo;
+    const bool pt = receiverPoint(la, lo, lab);
+    ImGui::TextWrapped("Toward %s: %.1f km. Ground (brown) bent by the earth's curvature for k = %.2f; the line of sight between the antenna tops "
+                       "(white) and the first Fresnel zone (blue). Worst clearance: %.0f %% of the Fresnel radius at %.1f km (60 %% or more: no "
+                       "diffraction loss; below 0: the path is blocked).",
+                       pt ? lab.c_str() : "north (no point chosen)", v.dKm.back(), v.kFactor, v.worstClearancePct, v.worstKm);
+    if (!v.terrain) ImGui::TextColored(pal::warnAmber(), "%s", "No terrain under this path: a flat sea-level profile. Download tiles in Advanced > Terrain.");
+    const size_t n = v.dKm.size();
+    std::vector<double> top(n), bot(n), f60(n);
+    double gmin = 1e9;
+    for (size_t i = 0; i < n; i++) { top[i] = v.losM[i] + v.fresnelM[i]; bot[i] = v.losM[i] - v.fresnelM[i]; f60[i] = v.losM[i] - 0.6 * v.fresnelM[i]; gmin = std::min(gmin, v.groundM[i]); }
+    if (plt::BeginPlot("##profile", ImVec2(-1, std::max(220 * gUi, ImGui::GetContentRegionAvail().y - 10 * gUi)), plt::Flags_NoTitle)) {
+        plt::SetupAxes("distance from the transmitter (km)", "height above sea level (m)", plt::AxisFlags_AutoFit, plt::AxisFlags_AutoFit);
+        plt::Spec g; g.LineColor = ImVec4(0.65f, 0.45f, 0.25f, 1); g.FillColor = ImVec4(0.45f, 0.32f, 0.18f, 0.6f);
+        plt::PlotShaded("ground", v.dKm.data(), v.groundM.data(), (int)n, gmin - 20, g);
+        plt::PlotLine("ground", v.dKm.data(), v.groundM.data(), (int)n, g);
+        plt::Spec l; l.LineColor = ImVec4(1, 1, 1, 1); l.LineWeight = 2;
+        plt::PlotLine("line of sight", v.dKm.data(), v.losM.data(), (int)n, l);
+        plt::Spec f; f.LineColor = ImVec4(0.45f, 0.75f, 1, 1);
+        plt::PlotLine("first Fresnel zone", v.dKm.data(), top.data(), (int)n, f);
+        plt::PlotLine("first Fresnel zone", v.dKm.data(), bot.data(), (int)n, f);
+        plt::Spec s6; s6.LineColor = pal::warnAmber();
+        plt::PlotLine("60 % of the zone", v.dKm.data(), f60.data(), (int)n, s6);
+        plt::EndPlot();
+    }
+}
+
+void hfChartTab(const Result& r) {
+    if (!r.haveChart || r.hfChart.freqMHz.empty()) { ImGui::TextDisabled("computing..."); return; }
+    const pr::hf::Chart& c = r.hfChart;
+    const pr::Params& p = r.p[0];
+    std::string lab; double la, lo;
+    const bool pt = receiverPoint(la, lo, lab);
+    const double km = pr::greatCircleKm(p.txLat, p.txLon, r.tgtLat, r.tgtLon);
+    ImGui::TextWrapped("ITU-R P.533-14 reliability toward %s (%s), month %d, sunspot number %.0f: the share of days the SNR reaches %.0f dB in %.0f Hz, "
+                       "by UTC hour and band. The number is the median SNR (dB). Your frequency is marked with >.",
+                       pt ? lab.c_str() : "north", pr::kmText(km).c_str(), p.month, p.r12 >= 0 ? p.r12 : pr::hf::r12FromSfi(p.sfi), p.requiredSnrDb, p.bandwidthHz);
+    const size_t nf = c.freqMHz.size();
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const float lw = 80 * gUi, ch = 20 * gUi;
+    const float cw = std::max(14 * gUi, (ImGui::GetContentRegionAvail().x - lw) / 24.0f);
+    ImVec2 o = ImGui::GetCursorScreenPos();
+    for (int h = 0; h < 24; h += 3) {
+        char b[8]; std::snprintf(b, sizeof b, "%02d", h);
+        dl->AddText(ImVec2(o.x + lw + h * cw + 2, o.y), ImGui::GetColorU32(ImGuiCol_TextDisabled), b);
+    }
+    o.y += ch;
+    for (size_t k = 0; k < nf; k++) {
+        const size_t i = nf - 1 - k;   // highest band on top
+        const float y = o.y + k * ch;
+        char b[32];
+        const bool mine = std::fabs(c.freqMHz[i] - p.fMHz) < 0.05;
+        std::snprintf(b, sizeof b, "%s%.4g MHz", mine ? "> " : "", c.freqMHz[i]);
+        dl->AddText(ImVec2(o.x, y + 2), ImGui::GetColorU32(mine ? ImGuiCol_Text : ImGuiCol_TextDisabled), b);
+        for (int h = 0; h < 24; h++) {
+            const float rel = c.rel[h * nf + i], snr = c.snr[h * nf + i];
+            const ImVec4 col = rel < 0.02f ? ImVec4(0.18f, 0.18f, 0.2f, 1) : ImVec4(0.85f * (1 - rel) + 0.1f, 0.25f + 0.6f * rel, 0.2f, 1);
+            const ImVec2 a(o.x + lw + h * cw, y), z(a.x + cw - 1, y + ch - 1);
+            dl->AddRectFilled(a, z, ImGui::GetColorU32(col));
+            if (cw > 22 * gUi && snr > -90) { std::snprintf(b, sizeof b, "%.0f", snr); dl->AddText(ImVec2(a.x + 2, a.y + 2), IM_COL32(255, 255, 255, 200), b); }
+            if (ImGui::IsMouseHoveringRect(a, z)) ImGui::SetTooltip("%02d UTC, %.4g MHz: reliability %.0f %%, median SNR %.1f dB, MUF %.1f MHz", h, c.freqMHz[i], 100 * rel, snr, c.muf[h]);
+        }
+    }
+    ImGui::Dummy(ImVec2(lw + 24 * cw, (nf + 1) * ch + 4));
+    std::string mufs = "Median MUF by hour (MHz):";
+    for (int h = 0; h < 24; h += 2) { char b[16]; std::snprintf(b, sizeof b, " %02d:%.0f", h, c.muf[h]); mufs += b; }
+    ImGui::TextDisabled("%s", mufs.c_str());
+    ImGui::TextDisabled("Green: open on most days; red: rarely; grey: closed. Monthly medians from the CCIR maps: a given day differs, sporadic E is not included.");
+}
+
+void satTab() {
+    State& S = st();
+    SatUi& u = S.sat;
+    const pr::Scenario& s = S.sc[0];
+    S.labelCol = 170 * gUi;
+    ImGui::TextWrapped("An earth-space link from the transmitter position (your station, %.3f, %.3f): geometry, ITU-R P.618-14 rain and scintillation, "
+                       "P.676-13 slant-path gases, the sky noise, and the C/N against what the mode needs.", s.txLat, s.txLon);
+    enumCombo("Satellite", &u.kind, "geostationary\0low orbit (one pass)\0", "A GEO satellite at an orbit longitude, or a low-orbit satellite at an altitude and the elevation you want to look at.");
+    if (u.kind == 0) numField("Orbit longitude", &u.satLon, "deg E", "e.g. Astra 19.2, Eutelsat Hot Bird 13, Es'hail-2 / QO-100 25.9, Arabsat 26, Nilesat 7 W = -7.", 80 * gUi);
+    else {
+        numField("Altitude", &u.leoAltKm, "km", "ISS 420, NOAA / Meteor 820, Iridium 780, Starlink 550, GPS 20200.", 80 * gUi);
+        numField("Elevation", &u.leoElevDeg, "deg", "The elevation of the moment you want the budget for (0 horizon .. 90 overhead).", 80 * gUi);
+    }
+    numField("Frequency", &u.fGHz, "GHz", "Downlink (or uplink) frequency: 0.137 APT, 1.7 HRPT / GOES, 2.4 QO-100 up, 10.5 QO-100 down, 11.7 Ku TV, 20 Ka.", 80 * gUi);
+    numField("EIRP of the sender", &u.eirpDbw, "dBW", "The satellite's EIRP toward you for a downlink (Ku TV 45 to 55, QO-100 NB beacon about 30), or your own for an uplink.", 80 * gUi);
+    numField("Dish diameter", &u.dishM, "m", "Receive antenna diameter (also used for scintillation).", 80 * gUi);
+    ImGui::SameLine();
+    if (ImGui::SmallButton("gain from dish")) u.rxGainDbi = 10 * std::log10(std::max(u.eff, 0.05) * std::pow(3.14159265 * u.dishM * u.fGHz / 0.299792458, 2));
+    numField("Antenna gain", &u.rxGainDbi, "dBi", "Receive antenna gain (a 0.8 m dish at 11.7 GHz with 60 % efficiency: 37.6 dBi; a turnstile for 137 MHz: about 3).", 80 * gUi);
+    numField("LNB / LNA noise figure", &u.nfDb, "dB", "The first amplifier's noise figure (a Ku LNB 0.5 to 1, an SDR alone 4 to 8).", 80 * gUi);
+    numField("Feeder loss", &u.feederDb, "dB", "Loss before the first amplifier (0 for an LNB at the dish).", 80 * gUi);
+    numField("Rain rate R0.01", &u.r001, "mm/h", "The rain rate exceeded 0.01 % of a year (ITU-R P.837 map or local data): Gulf 10 to 25, Northern Europe 20 to 30, "
+             "Mediterranean 30 to 50, tropics 60 to 120.", 80 * gUi);
+    numField("Availability", &u.availPct, "%", "The share of the year the link must work: the rain and scintillation margins are for the rest (99.9 = 8.8 hours a year down).", 80 * gUi);
+    enumCombo("Polarisation", &u.pol, "horizontal\0vertical\0circular\0", "Rain attenuates horizontal polarisation a little more (P.838).");
+    const auto& ms = pr::modeThresholds();
+    ImGui::AlignTextToFramePadding(); ImGui::TextDisabled("Mode"); ImGui::SameLine(S.labelCol);
+    ImGui::SetNextItemWidth(200 * gUi);
+    if (ImGui::BeginCombo("##satmode", u.mode >= 0 && u.mode < (int)ms.size() ? ms[u.mode].name : "(type the bandwidth and SNR)")) {
+        if (ImGui::Selectable("(type the bandwidth and SNR)", u.mode < 0)) u.mode = -1;
+        for (int i = 0; i < (int)ms.size(); i++) if (ImGui::Selectable(ms[i].name, i == u.mode)) u.mode = i;
+        ImGui::EndCombo();
+    }
+    if (u.mode >= 0 && u.mode < (int)ms.size()) { u.bwHz = ms[u.mode].bwHz; u.reqSnrDb = pr::modeRequiredSnrDb(ms[u.mode], 1); }
+    else {
+        numField("Bandwidth", &u.bwHz, "Hz", "Noise bandwidth of the signal.", 100 * gUi, "%.6g");
+        numField("Required C/N", &u.reqSnrDb, "dB", "What the mode needs (DVB-S2 QPSK 1/2 about 1, 8PSK 3/4 about 7.5).", 80 * gUi);
+    }
+    S.labelCol = 0;
+    // compute
+    pr::sat::Link l;
+    l.fGHz = std::max(u.fGHz, 0.01); l.eirpDbw = u.eirpDbw; l.rxGainDbi = u.rxGainDbi; l.rxNoiseFigureDb = u.nfDb; l.rxFeederDb = u.feederDb;
+    l.antennaM = u.dishM; l.efficiency = u.eff; l.stLat = s.txLat; l.stHkm = 0; l.rainR001 = std::max(u.r001, 0.0);
+    l.availabilityPct = std::clamp(u.availPct, 50.0, 99.999); l.tauDeg = u.pol == 0 ? 0 : u.pol == 1 ? 90 : 45;
+    l.bandwidthHz = std::max(u.bwHz, 1.0); l.requiredSnrDb = u.reqSnrDb;
+    double rr = 0;
+    if (u.kind == 0) {
+        const pr::sat::Look k = pr::sat::look(s.txLat, s.txLon, 0, 0, u.satLon, 35786);
+        l.elevDeg = k.elevDeg; l.rangeKm = k.rangeKm;
+        ImGui::Separator();
+        if (k.elevDeg <= 0) { ImGui::TextColored(pal::badRed(), "The satellite is below your horizon (elevation %.1f deg).", k.elevDeg); return; }
+        ImGui::Text("Look angles: elevation %.1f deg, azimuth %.1f deg (true), range %.0f km.", k.elevDeg, k.azDeg, k.rangeKm);
+    } else {
+        l.elevDeg = std::clamp(u.leoElevDeg, 0.0, 90.0); l.rangeKm = pr::sat::slantRangeKm(u.leoAltKm, l.elevDeg);
+        rr = pr::sat::rangeRateKmS(u.leoAltKm, l.elevDeg);
+        ImGui::Separator();
+        ImGui::Text("Range %.0f km at %.0f deg; orbital speed %.2f km/s; Doppler now up to %.2f kHz, at the horizon %.2f kHz (an overhead pass).",
+                    l.rangeKm, l.elevDeg, pr::sat::orbitalSpeedKmS(u.leoAltKm), pr::sat::dopplerHz(l.fGHz * 1000, rr) / 1e3,
+                    pr::sat::dopplerHz(l.fGHz * 1000, pr::sat::rangeRateKmS(u.leoAltKm, 0)) / 1e3);
+    }
+    const pr::sat::Budget b = pr::sat::budget(l);
+    ImGui::Text("Free space %.1f dB, gases %.2f dB, rain %.2f dB and scintillation %.2f dB (exceeded %.3g %% of the year), total %.1f dB.",
+                b.fsplDb, b.gasDb, b.rainDb, b.scintDb, 100 - l.availabilityPct, b.totalLossDb);
+    ImGui::Text("Sky %.0f K, system %.0f K, G/T %.1f dB/K. Received %.1f dBW, C/N0 %.1f dBHz.", b.skyK, b.tsysK, b.gtDbK, b.rxDbw, b.cn0DbHz);
+    const ImVec4 c = b.marginDb >= 3 ? pal::okGreen() : b.marginDb >= 0 ? pal::warnAmber() : pal::badRed();
+    ImGui::TextColored(c, "C/N %.1f dB in %.4g kHz (clear sky %.1f dB): margin %+.1f dB at %.3g %% availability.", b.cnDb, l.bandwidthHz / 1e3,
+                       b.clearSkyCnDb, b.marginDb, l.availabilityPct);
+    ImGui::TextDisabled("Rain height from the latitude (a fit of the P.839 map); no cloud attenuation (P.840 needs its maps). LEO Doppler for a pass through the zenith.");
+}
+
 void modelsTab(const Result& r) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextColored(pal::heading(), "Now: %s", pr::modelName(r.p[0]));
     ImGui::TextWrapped("%s", pr::modelLimits(r.p[0]).c_str());
     ImGui::Separator();
     ImGui::TextColored(pal::heading(), "30 MHz and up");
-    ImGui::BulletText("Free space (ITU-R P.525): the spreading loss 32.45 + 20 log f + 20 log d. The upper bound of any real path.");
-    ImGui::BulletText("Ground reflection (plane earth / two-ray): beyond 4 pi h1 h2 / lambda the reflected wave cancels the direct one and the loss "
-                      "grows 40 dB per decade. Antenna height is worth 6 dB per doubling. Agrees with Okumura-Hata open-area within a few dB.");
-    ImGui::BulletText("Smooth-earth diffraction (ITU-R P.526): the earth's bulge (4/3 radius for normal refraction) blocks the path; it blends in before "
-                      "the radio horizon 4.12 (sqrt h1 + sqrt h2) km and grows fast beyond it.");
-    ImGui::BulletText("Troposcatter (ITU-R P.452, 50 %% of the time): weak scatter from the troposphere, which carries VHF/UHF a few hundred km beyond the horizon.");
-    ImGui::BulletText("Receiver clutter (ITU-R P.2108), rain (P.838 with a P.530 effective length), gases (a rough P.676 curve), polarisation mismatch.");
-    ImGui::BulletText("Terrain (only with your elevation file): delta-Bullington knife-edge diffraction along the path profile (P.526 / P.1812).");
-    ImGui::BulletText("Not modelled: buildings in detail, foliage depth, ducting and anomalous propagation, sporadic E, aircraft scatter, time and location statistics.");
-    ImGui::TextColored(pal::heading(), "Below 30 MHz (an estimate)");
-    ImGui::BulletText("Ground wave: Norton's surface wave over the chosen ground (Terman's form), with the earth's curvature from P.526 far out. "
-                      "Vertical antennas over sea carry farthest; horizontal ones barely have a ground wave.");
-    ImGui::BulletText("Skywave: one F2 layer at 300 km. foF2 from the sun's height at the path midpoint, the season, latitude, the SFI and K index you enter. "
-                      "MUF = foF2 x sec(angle at the layer); hops of at most about 3200 km. D-layer absorption in the CCIR / P.533 form, an above-MUF scatter "
-                      "loss, 2 dB per extra ground reflection and P.533's 8.7 dB excess loss.");
-    ImGui::BulletText("Not modelled: the E layer and sporadic E, monthly ionospheric maps, tilts, the equatorial anomaly, polar-cap events, fading statistics.");
+    ImGui::BulletText("Auto = ITU-R P.1812-8 (09/2025), checked against all 57 published ITU validation results: free space with multipath and focusing "
+                      "corrections, delta-Bullington diffraction over the terrain profile for the median effective earth radius (k from the "
+                      "refractivity lapse rate, P.453) and for the super-refractive k = 3, troposcatter, ducting and layer reflection, blended for "
+                      "the time %% you set, then the location variability for the locations %%.");
+    ImGui::BulletText("Free space (P.525), exact two-ray ground reflection, P.526 smooth earth and the 3.9 combination stay selectable for comparison; "
+                      "the Sweeps tab draws them side by side.");
+    ImGui::BulletText("Gases: ITU-R P.676-13 line by line (44 oxygen and 35 water vapour lines). Rain: ITU-R P.838-3 coefficients with the P.530 "
+                      "path reduction. Receiver clutter: ITU-R P.2108. Terrain: downloaded SRTM tiles or your own files; without them a flat profile.");
+    ImGui::BulletText("Not modelled: buildings in detail, building entry loss, foliage depth, sporadic E, aircraft scatter.");
+    ImGui::TextColored(pal::heading(), "Below 30 MHz");
+    ImGui::BulletText("Sky wave: ITU-R P.533-14 with the ITU-R P.1239-4 ionosphere: the CCIR numerical maps of foF2 and M(3000)F2 for the month, hour "
+                      "and sunspot number (with the 1960 magnetic field for the modified dip), foE, E and F2 modes with E-layer screening, mirror "
+                      "heights, absorption at every 90 km penetration point, auroral loss, the long-path method beyond 7000 km, and the reliability "
+                      "from the decile spread of MUF, signal and noise (P.1239, P.842, P.372).");
+    ImGui::BulletText("Ground wave: Norton's surface wave (Terman's form) over the chosen ground with the earth's curvature from P.526.");
+    ImGui::BulletText("Not modelled: sporadic E, storm-time ionosphere (monthly medians only), antenna patterns by take-off angle unless a pattern file is loaded.");
+    ImGui::TextColored(pal::heading(), "Satellites");
+    ImGui::BulletText("Look angles from a WGS 84 station, slant range, LEO Doppler; ITU-R P.618-14 rain and scintillation for the availability, "
+                      "P.676-13 slant-path gases through the P.835 reference atmosphere, sky noise from the attenuation.");
     ImGui::TextColored(pal::heading(), "Noise and the receiver");
-    ImGui::BulletText("ITU-R P.372: man-made noise by environment, galactic noise above about 10 MHz, atmospheric noise (rough fit: night, summer, tropics). "
-                      "Never below 290 K at the antenna.");
-    ImGui::BulletText("The receive chain by Friis: preamplifier, feeder, radio (its noise figure at the gain setting). Radio figures are typical, a unit can differ by a few dB.");
-    ImGui::TextDisabled("All formulas are written from the public ITU-R texts; the details are in docs/propagation.md.");
+    ImGui::BulletText("ITU-R P.372-18: man-made noise by environment, galactic noise above foF2, atmospheric noise (a fit of the P.372 maps). "
+                      "The receive chain by Friis. 'Will it decode?' uses each mode's measured threshold from docs/SENSITIVITY.md.");
+    ImGui::TextDisabled("All formulas are written from the public ITU-R texts; docs/PROPAGATION-4.0.md lists the versions and the validation.");
     ImGui::PopTextWrapPos();
 }
 
@@ -420,6 +688,7 @@ void advancedInputs(App&) {
     section("Signal", true, signalSection);
     section("Receiver and radio", true, rxSection);
     section("Path and surroundings", false, pathSection);
+    section("Statistics and climate (30 MHz and up)", false, statsSection);
     section("Ionosphere and time (HF)", cur().fMHz < 30, ionoSection);
     section("Rain and gases", cur().fMHz > 5000, atmoSection);
     section("Terrain (your elevation file)", false, terrainSection);
@@ -454,6 +723,24 @@ void advancedResults(App& a, const std::shared_ptr<const Result>& r) {
                 sweepsTab(*r);
                 ImGui::EndChild();
             }
+            ImGui::EndTabItem();
+        }
+        if (r && r->p[0].fMHz >= 30 && ImGui::BeginTabItem("Profile")) {
+            ImGui::BeginChild("##propprofile", ImVec2(0, 0));
+            profileTab(*r);
+            ImGui::EndChild();
+            ImGui::EndTabItem();
+        }
+        if (r && r->p[0].fMHz < 30 && ImGui::BeginTabItem("HF hours x bands")) {
+            ImGui::BeginChild("##prophfchart", ImVec2(0, 0));
+            hfChartTab(*r);
+            ImGui::EndChild();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Satellite")) {
+            ImGui::BeginChild("##propsat", ImVec2(0, 0));
+            satTab();
+            ImGui::EndChild();
             ImGui::EndTabItem();
         }
         if (ImGui::BeginTabItem("Models")) {
