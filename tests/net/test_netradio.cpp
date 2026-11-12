@@ -445,6 +445,8 @@ struct FakeSpy {
     int port = 0;
     std::thread th;
     std::atomic<bool> run{true}, dropNow{false}, canControl{true};
+    std::atomic<int> skipEvery{0}, syncEvery{0};   // #435: leave out every n-th IQ message (its sequence number is used up); a CLIENT_SYNC after every n-th
+    std::atomic<uint64_t> skipped{0};               // IQ messages left out
     std::atomic<int> connections{0};
     std::mutex mu;
     std::vector<std::pair<uint32_t, uint32_t>> sets;
@@ -498,6 +500,8 @@ struct FakeSpy {
             std::vector<unsigned char> pend;
             bool streaming = false;
             uint32_t fmt = 1, seq = 0;
+            uint64_t iqCount = 0;
+            std::vector<unsigned char> syncBody;
             while (run && !dropNow) {
                 fd_set r2; FD_ZERO(&r2); FD_SET(c, &r2);
                 timeval t0{0, 0};
@@ -514,6 +518,7 @@ struct FakeSpy {
                             for (uint32_t v : {canControl ? 1u : 0u, 8u, 100000000u, 100000000u, 100000000u, 99000000u, 101000000u, 99000000u, 101000000u}) put(cs, v);
                             message(c, 0, seq++, di);
                             message(c, 1, seq++, cs);
+                            syncBody = cs;
                         } else if (type == 2 && n >= 8) {
                             const uint32_t id = get(pend.data() + 8), v = get(pend.data() + 12);
                             { std::lock_guard<std::mutex> lk(mu); sets.push_back({id, v}); }
@@ -529,7 +534,11 @@ struct FakeSpy {
                         if (fmt == 2) { const int16_t re = 16384, im = -8192; body.push_back((unsigned char)re); body.push_back((unsigned char)(re >> 8)); body.push_back((unsigned char)im); body.push_back((unsigned char)((uint16_t)im >> 8)); }
                         else { body.push_back(200); body.push_back(50); }
                     }
-                    if (!message(c, fmt == 2 ? 101 : 100, seq++, body)) break;
+                    iqCount++;
+                    const int se = syncEvery.load(), ke = skipEvery.load();
+                    if (se > 0 && iqCount % (uint64_t)se == 0 && !syncBody.empty()) message(c, 1, seq++, syncBody);   // shares the counter, not IQ
+                    if (ke > 0 && iqCount % (uint64_t)ke == 0) { seq++; skipped++; }   // a server that could not send it in time: the number is gone
+                    else if (!message(c, fmt == 2 ? 101 : 100, seq++, body)) break;
                 }
                 std::this_thread::sleep_for(std::chrono::milliseconds(2));
             }
@@ -705,6 +714,38 @@ static void testSpyServer() {
     okVals = true;
     for (size_t i = buf.size() / 2; i < buf.size(); i++) if (std::fabs(buf[i].real() - 0.5f) > 1e-5f || std::fabs(buf[i].imag() + 0.25f) > 1e-5f) okVals = false;
     CHECK(okVals);
+    // #435: messages the server dropped (a gap in the sequence numbers) come back as silence of their length and are counted as lost at the
+    // source; CLIENT_SYNC messages in between share the counter and must not be taken for drops
+    {
+        auto countZeros = [&](size_t want, size_t& zeros, size_t& runsBad) {
+            std::vector<cf32> big(want);
+            ring.clear();
+            const bool ok = readIq(ring, big);
+            zeros = 0; runsBad = 0;
+            size_t run = 0;
+            for (size_t i = 0; i < big.size(); i++) {
+                if (big[i] == cf32(0, 0)) run++;
+                else { if (run && i != run && run % 1024 != 0) runsBad++; zeros += run; run = 0; }   // a run that touches the start may be cut by the read
+            }
+            return ok;
+        };
+        size_t zeros = 0, bad = 0;
+        srv.syncEvery = 3;
+        const uint64_t lost0 = ring.lostAtSource();
+        CHECK(countZeros(64 * 1024, zeros, bad));
+        CHECK(zeros == 0);                              // a sync between IQ messages is not a drop
+        CHECK(ring.lostAtSource() == lost0);
+        srv.skipEvery = 5;
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        const uint64_t sk0 = srv.skipped;
+        CHECK(countZeros(96 * 1024, zeros, bad));
+        CHECK(srv.skipped > sk0);
+        CHECK(zeros >= 1024 && bad == 0);               // whole messages of silence, 1024 samples each
+        CHECK(ring.lostAtSource() > lost0 && (ring.lostAtSource() - lost0) % 1024 == 0);
+        printf("  SpyServer: %llu IQ messages left out by the server, %zu samples of silence in their place in the read window\n",
+               (unsigned long long)(srv.skipped - sk0), zeros);
+        srv.skipEvery = 0; srv.syncEvery = 0;
+    }
     s.centerHz = 3e9;   // beyond the radio's specified range: sent as asked
     CHECK(src->retune(s, err));
     CHECK(srv.waitFor(101, 3000000000u));

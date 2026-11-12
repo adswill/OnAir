@@ -365,6 +365,13 @@ void fmRadioPanel(App& a) {
     const bool run = a.engine.running();
     const bool live = run && a.rx.standard == 6 && fm.carrier;
     sectionHeader(Ic::Radio, "FM radio");
+    // #442: rows come and go with the RDS data (now playing, flags, subcarriers, TMC) and text wraps, so everything below (the saved stations)
+    // jumped up and down while a station was read, under the mouse. The block keeps the tallest height it has had on this frequency: it can
+    // grow, but it only shrinks on a retune or after the receiver stops.
+    static float rdsBlockMaxH = 0;
+    static double rdsBlockFreq = -1;
+    if (std::fabs(rdsBlockFreq - a.freqMhz) > 1e-6 || !run) { rdsBlockMaxH = 0; rdsBlockFreq = a.freqMhz; }
+    const float rdsBlockY0 = ImGui::GetCursorPosY();
     if (ImGui::BeginTable("fmtbl", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 110 * gUi);
         ImGui::TableSetupColumn("");
@@ -545,6 +552,11 @@ void fmRadioPanel(App& a) {
             fmTmcPanel(a);   // fm_tmc_ui.cpp: in plain words with the user's own tables, and the log
         }
         ImGui::Spacing();
+    }
+    {
+        const float h = ImGui::GetCursorPosY() - rdsBlockY0;
+        if (h < rdsBlockMaxH) ImGui::Dummy(ImVec2(1, rdsBlockMaxH - h));
+        else rdsBlockMaxH = h;
     }
     fmSavedPanel(a);   // the saved-stations library, under the RDS decoder
     if (pal::dev()) {   // compact now-playing, then the scanned stations fill the rest of the panel

@@ -29,6 +29,7 @@ using namespace dtmb;
 namespace {
 using dect2::math::kPi;
 constexpr float kPeakNoiseRatio = 25.f;    // a header counts when its strongest tap stands this far (power) above the estimation noise
+constexpr int kMaxSilentFrames = 3200;     // about 2 s of PN945 frames of exact silence, then the lock is given up as usual (a dead source)
 constexpr int kLostFrames = 12;            // frames without a usable header before the lock is given up
 }
 
@@ -147,6 +148,7 @@ struct DtmbReceiver::Impl {
     int siLost = 0;
     uint64_t frames = 0;
     int lostRun = 0;
+    int silentRun = 0;           // frames whose header is exact silence: a gap the source filled with zeros of its length (SpyServer drops, #435)
     double lossAvg = 0;
     double snrPn = 0, merAvg = 0, frameErr = 0; bool snrInit = false;
     double timeInt = 0;
@@ -254,7 +256,7 @@ struct DtmbReceiver::Impl {
         cfoHz = 0; derotPhase = 0;
         reportAt = (long)(symRate * 0.25);
         hyp = 0; sinceAttempt = 1 << 30;
-        state = 0; haveA = false; haveWide = false; frames = 0; lostRun = 0; lossAvg = 0;
+        state = 0; haveA = false; haveWide = false; frames = 0; lostRun = 0; silentRun = 0; lossAvg = 0;
         snrInit = false; timeInt = 0; timeJumpRun = 0;
         resetSi();
         if (chain) chain->reset();
@@ -406,6 +408,14 @@ struct DtmbReceiver::Impl {
         }
     }
 
+    // [pos, pos + n) is a zero-filled gap: after the front end (its DC offset taken out, the carrier turned) the zeros become a constant of one
+    // magnitude, which no signal or noise keeps over a whole header
+    bool silentAt(long pos, int n) const {
+        float mn = 1e30f, mx = 0.f;
+        for (int i = 0; i < n; i++) { const float m = std::norm(*at(pos + i)); mn = std::min(mn, m); mx = std::max(mx, m); if (mx > mn * 1.02f + 1e-12f) return false; }
+        return n > 0;
+    }
+
     bool processFrame() {
         const HeaderInfo& hi = headerInfo(hdr);
         const int Lh = hi.length, Lf = Lh + kBody;
@@ -420,6 +430,17 @@ struct DtmbReceiver::Impl {
         const bool goodB = cleanB.peakPower > kPeakNoiseRatio * rawB.tapVar;
         lossAvg = 0.95 * lossAvg + 0.05 * ((goodA && goodB) ? 0.0 : 1.0);
         frames++;
+        // A header of exact zeros is no signal at all, not a weak one: a source that knows how much it lost (the SpyServer client puts dropped
+        // messages back as zeros of their length) keeps the time line, so the grid is still right. Coast across it with the frames erased and
+        // without counting it towards losing the lock; a fixed-phase header could not count the frames again after a relock (#435).
+        if (!goodB && silentAt(S2, Lh) && silentRun < kMaxSilentFrames) {
+            silentRun++;
+            if (chain && siOk) chain->skipFrame();
+            haveA = false;
+            S += Lf; fnum++;
+            return true;
+        }
+        silentRun = 0;
         if (!goodB) { Prof::Scope pr(prof, 11); if (relock(S2)) { lostRun = 0; return true; } }
         if (!goodB) {
             // no header where it should be: coast on the old timing

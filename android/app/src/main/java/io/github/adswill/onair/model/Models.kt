@@ -130,6 +130,10 @@ enum class LockState { SEARCHING, CONVERGING, LOCKED }
 data class Telemetry(
     val running: Boolean, val available: Boolean, val standard: Int, val state: Int, val locked: Boolean, val snrDb: Double?,
     val summary: String, val cards: List<Pair<String, String>>, val tables: List<ResultTable>, val fm: FmInfo?, val general: GeneralInfo?,
+    /** CDR only (#463): the services and the DRA+ add-on state. */
+    val cdr: CdrInfo? = null,
+    /** A plain warning when a live radio loses part of the signal (#435), else "". */
+    val linkNote: String = "",
 ) {
     val lock: LockState get() = when { locked -> LockState.LOCKED; state == 1 -> LockState.CONVERGING; else -> LockState.SEARCHING }
 
@@ -153,8 +157,29 @@ data class Telemetry(
             return Telemetry(
                 raw.optBoolean("running"), raw.optBoolean("available"), raw.optInt("standard", -1), raw.optInt("state"), raw.optBoolean("locked"),
                 if (!raw.has("snrDb") || raw.isNull("snrDb")) null else raw.optDouble("snrDb"),
-                raw.optString("summary"), cards, tables, fm, gen,
+                raw.optString("summary"), cards, tables, fm, gen, raw.optJSONObject("cdr")?.let { CdrInfo.parse(it) }, raw.optString("linkNote"),
             )
+        }
+    }
+}
+
+/** One CDR service as the bridge lists it. */
+data class CdrService(val id: Int, val audio: Boolean, val name: String, val format: String)
+
+/** CDR: the DRA+ add-on (found, or why not), the service that plays ([playing], 0 none) and the asked-for one ([listen], -1 automatic). */
+data class CdrInfo(
+    val draFound: Boolean, val draProblem: String, val draPath: String, val anyAudio: Boolean, val listen: Int, val playing: Int, val pcmFrames: Long,
+    val services: List<CdrService>,
+) {
+    companion object {
+        fun parse(o: JSONObject): CdrInfo {
+            val a = o.optJSONArray("services")
+            val svc = if (a == null) emptyList() else (0 until a.length()).map { i ->
+                val x = a.getJSONObject(i)
+                CdrService(x.optInt("id"), x.optBoolean("audio"), x.optString("name"), x.optString("format"))
+            }
+            return CdrInfo(o.optBoolean("draFound"), o.optString("draProblem"), o.optString("draPath"), o.optBoolean("anyAudio"), o.optInt("listen", -1),
+                o.optInt("playing"), o.optLong("pcmFrames"), svc)
         }
     }
 }

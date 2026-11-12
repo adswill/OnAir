@@ -38,23 +38,26 @@ object RdsPanel : ModePanel {
         val t by vm.telemetry.collectAsStateWithLifecycle()
         val v = RdsView.of(t?.fm)
         Column(modifier.verticalScroll(rememberScrollState()).padding(12.dp)) {
-            if (v == null) { Label(stringResource(R.string.results_waiting)); return }
-            Column(Modifier.fillMaxWidth().background(p.panel).padding(14.dp)) {
-                Label(stringResource(R.string.fm_station))
-                Text(v.ps, color = p.accent, fontFamily = Mono, fontSize = 32.sp)
+            // no return out of the Column's content (#435: early returns from inline composable lambdas broke the slot table)
+            if (v == null) Label(stringResource(R.string.results_waiting))
+            else {
+                Column(Modifier.fillMaxWidth().background(p.panel).padding(14.dp)) {
+                    Label(stringResource(R.string.fm_station))
+                    Text(v.ps, color = p.accent, fontFamily = Mono, fontSize = 32.sp)
+                    Spacer(Modifier.height(8.dp))
+                    Label(stringResource(R.string.fm_radiotext))
+                    Text(v.radioText.ifBlank { "-" }, color = p.text, fontFamily = Mono, fontSize = 14.sp)
+                }
                 Spacer(Modifier.height(8.dp))
-                Label(stringResource(R.string.fm_radiotext))
-                Text(v.radioText.ifBlank { "-" }, color = p.text, fontFamily = Mono, fontSize = 14.sp)
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Card(stringResource(R.string.fm_rds), stringResource(if (v.synced) R.string.fm_rds_sync else R.string.fm_rds_none), Modifier.weight(1f))
-                Card("Sound", stringResource(if (v.stereo) R.string.fm_stereo else R.string.fm_mono), Modifier.weight(1f))
-            }
-            Spacer(Modifier.height(6.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                Card(stringResource(R.string.fm_pi), v.pi.ifBlank { "-" }, Modifier.weight(1f))
-                Card(stringResource(R.string.fm_programme_type), v.pty.ifBlank { "-" }, Modifier.weight(1f))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Card(stringResource(R.string.fm_rds), stringResource(if (v.synced) R.string.fm_rds_sync else R.string.fm_rds_none), Modifier.weight(1f))
+                    Card("Sound", stringResource(if (v.stereo) R.string.fm_stereo else R.string.fm_mono), Modifier.weight(1f))
+                }
+                Spacer(Modifier.height(6.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Card(stringResource(R.string.fm_pi), v.pi.ifBlank { "-" }, Modifier.weight(1f))
+                    Card(stringResource(R.string.fm_programme_type), v.pty.ifBlank { "-" }, Modifier.weight(1f))
+                }
             }
         }
     }

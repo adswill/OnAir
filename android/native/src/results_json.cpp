@@ -11,6 +11,9 @@
 #include "dect2/packet/packet_tel.h"
 #include "dect2/general/general_tel.h"
 #include "dect2/fm/fm_tel.h"
+#include "dect2/cdr/cdr_tel.h"
+#include "dect2/dtmb/dtmb_tel.h"
+#include "dect2/engine/engine.h"
 #include <cstdio>
 #include <ctime>
 #include <cstdarg>
@@ -606,6 +609,52 @@ void js8(Out& o, const Js8Telemetry& p) {
     if (n) addTable(o, "Stations", s);
 }
 
+// CDR (China Digital Radio, #463): the services with what they carry, and why there is no sound when the DRA+ add-on is missing. `listen` is
+// the service the bridge asked the receiver to play (-1: the first audio service, as the desktop does; 0: none).
+void cdrResults(Out& o, const CdrTelemetry& t, int listen, std::string& extra) {
+    static const char* st[4] = {"searching for a beacon", "beacon found", "system information decoded", "multiplex decoded"};
+    o.card("State", t.state >= 0 && t.state < 4 ? st[t.state] : "-");
+    o.card("SNR", fmt("%.1f dB", t.snrDb));
+    o.card("Carrier error", fmt("%.0f Hz", t.cfoHz));
+    if (t.tm > 0) o.card("Transmission mode", std::to_string(t.tm));
+    if (t.innerKhz > 0 || t.outerKhz > 0) o.card("Digital part", fmt("%d .. %d kHz either side", t.innerKhz, t.outerKhz));
+    o.card("LDPC ok / bad", std::to_string(t.blocksOk) + " / " + std::to_string(t.blocksBad));
+    if (!t.network.empty()) o.card("Network", t.network);
+    if (!t.country.empty()) o.card("Country", t.country);
+    int playing = 0;      // the same choice as CdrReceiver makes for -1: the first audio service
+    for (const auto& s : t.services)
+        if (s.audio && (listen == (int)s.id || listen == -1)) { playing = s.id; break; }
+    bool anyAudio = false;
+    for (const auto& s : t.services) anyAudio |= s.audio;
+    std::string sound;
+    if (!anyAudio) sound = t.services.empty() ? "no services yet" : "no audio service";
+    else if (!t.draFound) sound = t.draProblem.empty() ? "silent: the DRA+ add-on is not installed" : "silent: the DRA+ add-on cannot be used";
+    else if (t.draPcmFrames > 0) sound = fmt("DRA+ %.1f kHz", t.draRateHz / 1000.0);
+    else sound = "DRA+ add-on loaded, waiting for sound";
+    o.card("Sound", sound);
+    auto ch = [](int c) { return c == 1 ? std::string("mono") : c == 2 ? std::string("stereo") : c == 3 ? std::string("5.1") : std::string("-"); };
+    Table tb({"Id", "Kind", "Format", "Kbps", "Language", "Text", "Playing"});
+    std::string svc;
+    for (const auto& s : t.services) {
+        std::string format, lang;
+        if (s.audio && !s.streams.empty()) {
+            const auto& a = s.streams[0];
+            format = a.bitrate > 0 ? fmt("DRA+ %.0f kbit/s, %g kHz %s", a.bitrate / 1000.0, a.sampleRate / 1000.0, ch(a.channelsCode).c_str())
+                                   : fmt("DRA+, %g kHz %s", a.sampleRate / 1000.0, ch(a.channelsCode).c_str());
+            lang = a.language;
+        }
+        const char* kind = s.audio ? "audio" : s.data ? "data" : "-";
+        tb.row({fmt("%04X", s.id), kind, format, fmt("%.1f", s.kbps), lang, s.text, (int)s.id == playing ? "yes" : ""});
+        if (!svc.empty()) svc += ',';
+        svc += "{\"id\":" + std::to_string(s.id) + ",\"audio\":" + (s.audio ? "true" : "false") + ",\"name\":" + q(fmt("%s %04X", kind, s.id)) + ",\"format\":" + q(format) + "}";
+    }
+    if (!t.services.empty()) addTable(o, "Services", tb);
+    if (!t.notes.empty()) { Table n({"Note"}); for (const auto& x : t.notes) n.row({x}); addTable(o, "Notes", n); }
+    extra = ",\"cdr\":{\"draFound\":" + std::string(t.draFound ? "true" : "false") + ",\"draProblem\":" + q(t.draProblem) + ",\"draPath\":" + q(t.draPath) +
+            ",\"anyAudio\":" + (anyAudio ? "true" : "false") + ",\"listen\":" + std::to_string(listen) + ",\"playing\":" + std::to_string(playing) +
+            ",\"pcmFrames\":" + std::to_string(t.draPcmFrames) + ",\"services\":[" + svc + "]}";
+}
+
 // Cards for the video standards from their telemetry (lock, SNR, MER, error counters): the phone has no plots yet
 void tvCards(Out& o, const RxTelemetry& rx) {
     auto cnt = [](uint64_t a, uint64_t b, uint64_t c) { return std::to_string(a) + " / " + std::to_string(b) + " / " + std::to_string(c); };
@@ -640,12 +689,31 @@ void tvCards(Out& o, const RxTelemetry& rx) {
         o.card("MER", fmt("%.1f dB", rx.dvbs.merDb));
         o.card("Data", rx.dvbs.dataValid ? "valid" : "none");
         break;
-    case 8:
-        o.card("SNR", fmt("%.1f dB", rx.dtmb.snrDb));
-        o.card("MER", fmt("%.1f dB", rx.dtmb.merDb));
-        o.card("Carrier to noise", fmt("%.1f dB", rx.dtmb.snrPnDb));
-        o.card("TS lock", rx.dtmb.tsLock ? "yes" : "no");
+    case 8: {
+        const DtmbTelemetry& d = rx.dtmb;
+        static const char* hdr[3] = {"PN420", "PN595", "PN945"};
+        static const char* map[5] = {"4QAM-NR", "4QAM", "16QAM", "32QAM", "64QAM"};
+        static const char* rt[3] = {"0.4", "0.6", "0.8"};
+        o.card("SNR", fmt("%.1f dB", d.snrDb));
+        o.card("MER", fmt("%.1f dB", d.merDb));
+        o.card("Carrier to noise", fmt("%.1f dB", d.snrPnDb));
+        o.card("TS lock", d.tsLock ? "yes" : "no");
+        // #435: the phone showed only the four cards above; the frame and system information are what the desktop shows next to them
+        o.card("Frame header", d.header >= 0 && d.header < 3 ? std::string(hdr[d.header]) + (d.phaseRotates ? ", phase rotates" : ", fixed phase") : "searching");
+        if (d.carriers > 0) o.card("Carriers", d.carriers == 1 ? "single carrier (C=1)" : "multi-carrier (C=3780)");
+        if (d.siOk && d.mapping >= 0 && d.mapping < 5 && d.rate >= 0 && d.rate < 3)
+            o.card("System information", fmt("%s, rate %s, interleaver %d (index %d)", map[d.mapping], rt[d.rate], d.interleaver, d.siIndex));
+        else o.card("System information", d.header >= 0 ? "not decoded yet" : "-");
+        if (d.netMbps > 0) o.card("Payload rate", fmt("%.2f Mbit/s", d.netMbps));
+        o.card("LDPC ok / bad", std::to_string(d.blocksOk) + " / " + std::to_string(d.blocksBad));
+        o.card("TS packets", std::to_string(d.packets));
+        if (d.frames) o.card("Frames without a usable header", fmt("%.0f %%", d.frameLossPct));
+        if (d.cwDropped) o.card("Codewords dropped (phone too slow)", std::to_string(d.cwDropped));
+        if (d.cfoHz != 0) o.card("Carrier offset", fmt("%.0f Hz", d.cfoHz));
+        if (d.clockPpm != 0) o.card("Sample clock", fmt("%+.1f ppm", d.clockPpm));
+        if (d.echoSpanUs > 0) o.card("Echo span", fmt("%.1f us", d.echoSpanUs));
         break;
+    }
     case 41:
         o.card("Symbol rate", fmt("%.2f Msym/s", rx.dvbc.symbolRate / 1e6));
         o.card("QAM", std::to_string((int)rx.dvbc.qam));
@@ -678,7 +746,7 @@ void genericResults(Out& o, const RxTelemetry& rx) {
 }
 } // namespace
 
-std::string resultsJson(const RxTelemetry& rx, bool running, const dect2::DabEnsemble* dabEns) {
+std::string resultsJson(const RxTelemetry& rx, bool running, const dect2::DabEnsemble* dabEns, const dect2::SampleLoss* loss, int cdrListen) {
     Out o;
     std::string extra;
     switch (rx.standard) {
@@ -693,6 +761,7 @@ std::string resultsJson(const RxTelemetry& rx, bool running, const dect2::DabEns
     case 56: general(o, rx.general); extra = ",\"general\":{\"demod\":" + std::to_string(rx.general.demod) + ",\"squelchOpen\":" + (rx.general.squelchOpen ? "true" : "false") +
                                        ",\"levelDb\":" + jsonNum(rx.general.levelDb) + ",\"audioDb\":" + jsonNum(rx.general.audioDb) + ",\"squelchDb\":" + jsonNum(rx.general.squelchDb) + "}"; break;
     case 0: case 1: case 2: case 7: case 8: case 41: tvCards(o, rx); break;
+    case 23: cdrResults(o, rx.cdr, cdrListen, extra); break;
     case 3: dab(o, rx.dab, dabEns); break;
     case 10: dmr(o, rx.dmr); break;
     case 51: p25(o, rx.p25); break;
@@ -714,6 +783,23 @@ std::string resultsJson(const RxTelemetry& rx, bool running, const dect2::DabEns
     case 35: cw(o, rx.cw); break;
     case 38: js8(o, rx.js8); break;
     default: genericResults(o, rx); break;
+    }
+    // #435: a network radio that does not deliver every sample (SpyServer over Wi-Fi at 10 Msps) breaks the wideband modes without an error of
+    // their own; say how much of the signal never arrived, for every mode, and give the app a plain note for its banner
+    if (loss && loss->live) {
+        const double lostSec = loss->radioSec + loss->sourceLostSec;
+        const bool recent = (loss->sinceRadioSec >= 0 && loss->sinceRadioSec < 15) || (loss->sinceSourceLostSec >= 0 && loss->sinceSourceLostSec < 15);
+        if (lostSec > 0) o.card(loss->network ? "Signal lost on the network link" : "Signal lost on the USB link", fmt("%.2f s", lostSec));
+        if (loss->deliveredPct >= 0 && loss->deliveredPct < 99.5f) o.card("Radio delivers", fmt("%.0f %% of the sample rate", loss->deliveredPct));
+        if (loss->cpuSec > 0) o.card("Signal dropped (phone too slow)", fmt("%.2f s", loss->cpuSec));
+        std::string note;
+        if ((recent && lostSec > 0.05) || loss->rateLow)
+            note = loss->network ? "The radio's network link is losing part of the signal" + (loss->deliveredPct >= 0 ? fmt(" (only %.0f %% arrives)", loss->deliveredPct) : std::string()) +
+                                       ". Wideband modes (TV, DAB, DTMB) need every sample: use a wired link, a lower sample rate, or plug the radio into the phone over USB."
+                                 : "The USB link is losing part of the signal. Try another cable or a powered hub, or a lower sample rate.";
+        else if (loss->sinceCpuSec >= 0 && loss->sinceCpuSec < 15 && loss->cpuSec > 0.05)
+            note = "The phone is too slow for this sample rate and drops part of the signal. Close other apps or use a lower sample rate.";
+        if (!note.empty()) extra += ",\"linkNote\":" + q(note);
     }
     const std::string sum = modeSummary(rx);
     std::string core = rxTelemetryJson(rx, nullptr);   // {"seq":..,"standard":..,"state":..,"locked":..,"snrDb":..,"details":{..}}
