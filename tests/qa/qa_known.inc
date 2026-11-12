@@ -58,7 +58,7 @@
     {"sdfm/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
     {"sm10/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
     {"sm20/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
-    {"slms6/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
+    {"slms6/*", "open: the LMS6 entry (L-band, 1680 MHz) was not run through the QA sweep on this branch; the radiosonde test signal has an LMS6 sonde, whether the sweep decodes it at 1680 MHz is not known"},
     {"simet/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
     {"simet54/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
     {"smrz/snr", "open: 4.0 QA: Radiosonde at 12 dB in the signal's band (same as the sonde mode)"},
