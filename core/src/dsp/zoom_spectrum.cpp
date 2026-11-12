@@ -164,36 +164,41 @@ void ZoomDecimator::run(const cf32* x, size_t n, std::vector<cf32>& out) {
     std::vector<cf32>& a = H_ > 0 ? a_ : out;   // with no half-band the CIC writes straight out
     if (H_ > 0) a.clear();
     // mixer + CIC, in pieces of 1024 samples: the phasor is renewed from the double phase at each piece
-    const std::complex<double> stepD = std::polar(1.0, w_);
-    const cf32 step((float)stepD.real(), (float)stepD.imag());
     for (size_t p0 = 0; p0 < n; p0 += 1024) {
         const size_t pn = std::min<size_t>(1024, n - p0);
-        // the products written out: std::complex<float> * goes through the NaN-checking library multiply (__mulsc3) without -ffast-math
-        float pr = (float)std::cos(ph_), pi = (float)std::sin(ph_);
-        const float sr = step.real(), si = step.imag();
+        // The phasors of the piece in eight independent lanes (each steps by step^8), then the mix as one plain loop: one rotation chain
+        // would wait on its own latency every sample. The products are written out: std::complex<float> * calls the NaN-checking library
+        // multiply (__mulsc3) without -ffast-math.
+        float lr[8], li[8];
+        for (int k = 0; k < 8; k++) { const double t = ph_ + w_ * k; lr[k] = (float)std::cos(t); li[k] = (float)std::sin(t); }
+        const float s8r = (float)std::cos(8 * w_), s8i = (float)std::sin(8 * w_);
+        for (size_t i = 0; i < pn; i += 8)
+            for (int k = 0; k < 8; k++) {
+                phr_[i + k] = lr[k]; phi_[i + k] = li[k];
+                const float t = lr[k] * s8r - li[k] * s8i; li[k] = lr[k] * s8i + li[k] * s8r; lr[k] = t;
+            }
         ph_ = std::fmod(ph_ + w_ * (double)pn, 2.0 * kPi);
         const cf32* y = x + p0;
+        const float* f = reinterpret_cast<const float*>(y);
+        for (size_t i = 0; i < pn; i++) {
+            const float yr = f[2 * i], yi = f[2 * i + 1], pr = phr_[i], pi = phi_[i];
+            mr_[i] = yr * pr - yi * pi; mi_[i] = yr * pi + yi * pr;
+        }
         if (R_ == 1) {
-            for (size_t i = 0; i < pn; i++) {
-                const float xr = y[i].real(), xi = y[i].imag();
-                a.push_back(cf32(xr * pr - xi * pi, xr * pi + xi * pr));
-                const float t = pr * sr - pi * si; pi = pr * si + pi * sr; pr = t;
-            }
+            for (size_t i = 0; i < pn; i++) a.push_back(cf32(mr_[i], mi_[i]));
             continue;
         }
         const float sc = (float)scale_;
+        // the integrators in locals for the piece (members behind a vector's push_back would be reloaded every sample)
+        uint64_t i0 = ig_[0][0], i1 = ig_[0][1], i2 = ig_[0][2], i3 = ig_[0][3], q0 = ig_[1][0], q1 = ig_[1][1], q2 = ig_[1][2], q3 = ig_[1][3];
+        int cnt = cnt_;
         for (size_t i = 0; i < pn; i++) {
-            const float yr = y[i].real(), yi = y[i].imag();
-            const float vr = yr * pr - yi * pi, vi = yr * pi + yi * pr;
-            { const float t = pr * sr - pi * si; pi = pr * si + pi * sr; pr = t; }
-            const float re = std::min(8.f, std::max(-8.f, vr)), im = std::min(8.f, std::max(-8.f, vi));
-            const uint64_t xi = (uint64_t)(int64_t)(re * sc), xq = (uint64_t)(int64_t)(im * sc);
-            uint64_t* gi = ig_[0]; uint64_t* gq = ig_[1];
-            gi[0] += xi; gi[1] += gi[0]; gi[2] += gi[1]; gi[3] += gi[2];
-            gq[0] += xq; gq[1] += gq[0]; gq[2] += gq[1]; gq[3] += gq[2];
-            if (++cnt_ < R_) continue;
-            cnt_ = 0;
-            uint64_t ci = gi[3], cq = gq[3];
+            const float re = std::min(8.f, std::max(-8.f, mr_[i])), im = std::min(8.f, std::max(-8.f, mi_[i]));
+            i0 += (uint64_t)(int64_t)(re * sc); i1 += i0; i2 += i1; i3 += i2;
+            q0 += (uint64_t)(int64_t)(im * sc); q1 += q0; q2 += q1; q3 += q2;
+            if (++cnt < R_) continue;
+            cnt = 0;
+            uint64_t ci = i3, cq = q3;
             for (int s = 0; s < 4; s++) {
                 const uint64_t ti = ci - dl_[0][s], tq = cq - dl_[1][s];
                 dl_[0][s] = ci; dl_[1][s] = cq;
@@ -201,6 +206,8 @@ void ZoomDecimator::run(const cf32* x, size_t n, std::vector<cf32>& out) {
             }
             a.push_back(cf32((float)((double)(int64_t)ci * outScale_), (float)((double)(int64_t)cq * outScale_)));
         }
+        ig_[0][0] = i0; ig_[0][1] = i1; ig_[0][2] = i2; ig_[0][3] = i3; ig_[1][0] = q0; ig_[1][1] = q1; ig_[1][2] = q2; ig_[1][3] = q3;
+        cnt_ = cnt;
     }
     if (H_ == 0) return;
     // the half-bands: y[c] = x[c] / 2 + sum_k h_k (x[c - k] + x[c + k]) over the odd k, every second c

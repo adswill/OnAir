@@ -71,6 +71,11 @@ struct WfView {
             buildExact(main, dOn ? det : nullptr, H, wr, R, have, lut, g); dirty.push_back(rowOf(g));
             if (rowOf(g) == 0 && rowsAlloc > ring) dirty.push_back(ring);
         }
+        // the oldest group kept loses its oldest rows as the ring overwrites them: made again so it shows what a rebuild would
+        if (const long long g0 = gN - ring + 1; g0 >= 0 && g0 < newest) {
+            buildExact(main, dOn ? det : nullptr, H, wr, R, have, lut, g0); dirty.push_back(rowOf(g0));
+            if (rowOf(g0) == 0 && rowsAlloc > ring) dirty.push_back(ring);
+        }
         newest = gN; lastR = R;
         return true;
     }

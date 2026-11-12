@@ -80,6 +80,7 @@ private:
     struct Hb { std::vector<cf32> buf; size_t next = 0; };
     std::vector<Hb> hb_;
     std::vector<cf32> a_, b_;
+    float phr_[1032] = {}, phi_[1032] = {}, mr_[1024] = {}, mi_[1024] = {};   // a piece's phasors and mixed samples
 };
 
 // ---- the zoom analyser ------------------------------------------------------------------------------------------------------------------
