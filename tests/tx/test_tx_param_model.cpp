@@ -93,7 +93,9 @@ static bool make(const TxModeSpec& m, const TxParamCtx& c, const std::vector<TxP
     if (audio) { r.audioSrc = 0; r.pullAudio = pullTone; ph = 0; t = 0; }
     keys.clear();
     txTraceKeys(&keys);
-    const double rate = m.stdMode == 0 ? 0 : m.nominalRateHz;
+    double rate = m.stdMode == 0 ? 0 : m.nominalRateHz;
+    // a long window of a mode that can run slower: the rate is lowered so the window fits the sample cap below (NAVTEX, ALE need many seconds)
+    if (rate > 0 && !m.fixedRate && sec * rate > 6e6) rate = std::max(m.minRateHz > 0 ? m.minRateHz : 48000.0, 6e6 / sec);
     auto g = makeTxGenerator(m, r, rate, err);
     if (!g) { txTraceKeys(nullptr); return false; }
     const double fs = g->sampleRate();
