@@ -31,6 +31,7 @@
 #include "../platform/discord_rpc.h"
 #include "../panels/report_problem.h"
 #include "../panels/backup_ui.h"
+#include "../badges/badges_ui.h"
 #include "../gfx/render_caps.h"
 
 // the byte length of the UTF-8 character that starts with `lead` (1 for ASCII and for a stray byte)
@@ -972,6 +973,7 @@ float menuBar(App& a) {
     reportProblemWindow(a);
     modeVisibilityWindow(a);
     settingsWindow(a);
+    badgesui::window(a);   // Server > Badges... and the "Badge earned" toast (app/badges)
     backupWindow(a);
     tx::captionsWindow(a);
     return menuH;

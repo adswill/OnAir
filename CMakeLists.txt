@@ -219,6 +219,7 @@ target_sources(dect2core PRIVATE core/src/backup/backup.cpp)   # Tools > Backup 
   list(APPEND DECT2_MODES cp16)   # CP16, the CRAC 16-carrier picture text (family 880, docs/CP16-3.9.md): core/src/cp16, app/cp16, tests/cp16
   list(APPEND DECT2_MODES xlink)   # Extra links (family 600): core/src/xlink, app/xlink, tests/xlink (docs/LEFTOVERS-3.8.md)
   list(APPEND DECT2_MODES pstore)   # the plugin store client (docs/PLUGIN-MARKETPLACE-3.9.md)
+  list(APPEND DECT2_MODES badges)   # map badges, app side (docs/MAP-BADGES-4.0.md): core/src/badges, app/badges, tests/badges
   list(APPEND DECT2_MODES rclink)   # RC and mesh links (family 360): core/src/rclink, app/rclink, tests/rclink (docs/MESH-RC-3.8.md)
   list(APPEND DECT2_MODES thread)   # Thread (family 244): core/src/thread (6LoWPAN / MLE layer; the receiver is the 802.15.4 one in core/src/zigbee), app/thread, tests/thread
   list(APPEND DECT2_MODES wxsat)   # SatDump-list weather links (families 260 - 271): core/src/wxsat, app/wxsat, tests/wxsat (docs/SATDUMP-TIER1-3.7.md)

@@ -474,7 +474,9 @@ export function publicProfile(u, now) {
   for (const b of BADGES) {
     const list = s.earned[b.id] || [];
     const value = statValue(s, b.stat);
-    badges.push({ id: b.id, tier: list.length ? list[list.length - 1][0] : 0, earned: list.map(([tier, at]) => ({ tier, at })), value: round2(value) });
+    // name, description, icon and thresholds come along, so the app shows them without a copy of the data file
+    badges.push({ id: b.id, name: b.name, desc: b.desc, icon: b.icon, unit: b.unit, tiers: b.tiers,
+      tier: list.length ? list[list.length - 1][0] : 0, earned: list.map(([tier, at]) => ({ tier, at })), value: round2(value) });
   }
   return {
     login: u.login, by: u.by || "", first: s.first || 0,

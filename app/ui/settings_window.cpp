@@ -9,6 +9,7 @@
 #include "../ui/scale.h"
 #include "settings_table.h"
 #include "settings_profile.h"
+#include "../badges/badges_ui.h"
 #include "input_map.h"
 #include "dect2/audio/audio_control.h"
 #include "dect2/audio/audioout.h"
@@ -398,6 +399,7 @@ void customRow(App& a, const Info& i) {
         if (regionPresetRow(cur, picked)) setupApplyPreset(a, picked, (int)plat::prefs().getI("setupUnits", 0));
     }
     else if (k == "pluginsLink") { if (ImGui::Button(tr("Open Plug-ins..."))) a.pluginsOpen = true; }
+    else if (k == "badgesLink") { if (ImGui::Button(tr("Open Badges..."))) badgesui::windowOpen() = true; }
     else if (k == "automationLink") {
         if (ImGui::Button(tr("Open Automations..."))) a.automationOpen = true;
         ImGui::TextDisabled("%s", plat::prefs().getB("automationAllowRun", false) ? tr("Running programs is allowed.") : tr("Running programs is off."));

@@ -9,6 +9,7 @@
 #include "map_ask.h"
 #include "../rooms/rooms.h"
 #include "../webshare/webshare.h"
+#include "../badges/badges_ui.h"
 #include "../adsb/adsb_acars.h"
 #include "../transcribe/transcribe_app.h"
 #ifndef ONAIR_VERSION
@@ -604,8 +605,9 @@ void attachVoice(std::vector<Track>& tracks) {
     if (sent.size() > 3000) sent.clear();
 }
 
-std::string buildJson(const std::string& station, const std::vector<Track>& tracks, const std::string& byName = std::string()) {
+std::string buildJson(const std::string& station, const std::vector<Track>& tracks, const std::string& byName = std::string(), const std::string& home = std::string()) {
     std::string j = "{\"station\":\"" + jsonEsc(station) + "\"";
+    if (!home.empty()) j += ",\"home\":\"" + jsonEsc(home) + "\"";   // map badges, by choice: the receiver's 6-character locator square (range); not stored by the map
     if (!byName.empty()) j += ",\"by\":\"" + jsonEsc(byName) + "\"";   // optional public name, only when the user applied one; old servers ignore it
     j += ",\"tracks\":[";
     bool first = true;
@@ -658,13 +660,21 @@ std::string buildJson(const std::string& station, const std::vector<Track>& trac
     return j;
 }
 
-void startPost(const std::string& url, const std::string& body, int n) {
+// auth: "" posts exactly as before; with the user's OnAir sign-in (map badges, Earn badges on) the post carries it as a header and the
+// answer is read for new badges (app/badges/badges_ui.cpp).
+void startPost(const std::string& url, const std::string& body, int n, const std::string& auth = std::string()) {
     if (gBusy.exchange(true)) return;
     std::lock_guard<std::mutex> lk(gThMu);
     if (gTh.joinable()) gTh.join();
     const std::string ua = std::string("OnAir/") + ONAIR_VERSION + " (map ingest)";
-    gTh = dect2::namedThread("onair-mapsend", [url, body, ua, n] {
-        const bool ok = plat::postJson(url, body, ua);
+    gTh = dect2::namedThread("onair-mapsend", [url, body, ua, n, auth] {
+        bool ok;
+        if (auth.empty()) ok = plat::postJson(url, body, ua);
+        else {
+            const plat::HttpResult r = plat::httpCall("POST", url, body, "application/json", {auth}, ua, 20, 1u << 16);
+            ok = r.status >= 200 && r.status <= 299;
+            if (ok) badgesui::onIngestReply(r.body);
+        }
         const int64_t t = nowMs();
         gLastTryMs.store(t, std::memory_order_relaxed);
         if (ok) {
@@ -1025,6 +1035,7 @@ void mapSendServerMenu(App& a) {
     if (!ImGui::BeginMenu(tr("Server"))) { mapPopups(a); webshare::drawPopups(a); return; }   // the Share on web window stays up after the menu closes
     sendToggle(a, true);
     nameItem(rootApp(a), true);
+    badgesui::openItem(true);
     if (rootApp(a).mapSend) msgsToggle(rootApp(a), true);
     if (rootApp(a).mapSend) voiceToggle(rootApp(a), true);
     if (rootApp(a).mapSend) jamToggle(rootApp(a), true);
@@ -1046,6 +1057,7 @@ void mapSendButton(App& a) {
     if (ImGui::BeginPopup("##serverpop")) {
         sendToggle(a, false);
         nameItem(rootApp(a), false);
+        badgesui::openItem(false);
         if (rootApp(a).mapSend) msgsToggle(rootApp(a), false);
         if (rootApp(a).mapSend) voiceToggle(rootApp(a), false);
         if (rootApp(a).mapSend) jamToggle(rootApp(a), false);
@@ -1184,7 +1196,9 @@ void mapSendTick(App& a) {
     } else if (!ping) return;
     gLastPostMs = now;
     gPingNow = false;
-    startPost(originOf(s) + "/ingest", buildJson(s.mapStationId, tracks, s.mapName), (int)tracks.size());
+    std::string auth, home;
+    badgesui::postExtras(s, auth, home);   // both "" unless signed in with Earn badges on: then the post is the same as before
+    startPost(originOf(s) + "/ingest", buildJson(s.mapStationId, tracks, s.mapName, home), (int)tracks.size(), auth);
 }
 
 // The transmitters tell the map guard themselves (core/src/tx/tx.cpp, ham_tx.cpp): these stay for the callers and change nothing.
