@@ -73,8 +73,8 @@ int main(int argc, char** argv) {
     CHECK(native::spectranRawRateForTest(2e6, true, &c, &k) == 3.84e6 && c == -1 && k == 4);          // 61.44 / 16
     CHECK(native::spectranRawRateForTest(61.44e6, true, &c, &k) == 61.44e6 && k == 0);
     CHECK(native::spectranRawRateForTest(100e6, true, &c, &k) == 61.44e6);                               // the fastest there is
-    CHECK(native::spectranRawRateForTest(2e6, false, &c, &k) == 2.4e6 && c == 4 && k == 9);              // 122.88 / 512 (no slower clock reaches it)
-    CHECK(native::spectranRawRateForTest(23e6, false, &c, &k) == 23.04e6 && c == 3 && k == 2);           // 92.16 / 4, as Aaronia's README
+    CHECK(native::spectranRawRateForTest(2e6, false, &c, &k) == 2.4e6 && c == 2 && k == 5);              // 76.8 / 32
+    CHECK(native::spectranRawRateForTest(23e6, false, &c, &k) == 23.04e6 && c == 0 && k == 1);           // 46.08 / 2 (= 92.16 / 4 of Aaronia's README: the slower clock)
     CHECK(native::spectranRawRateForTest(46.08e6, false, &c, &k) == 46.08e6 && c == 0 && k == 0);        // equal rates: the slower clock
     CHECK(native::spectranRawRateForTest(1e9, false, &c, &k) == 245.76e6 && c == 6 && k == 0);
     CHECK(native::spectranRawRateForTest(1e3, false, &c, &k) == 46.08e6 / 512);
