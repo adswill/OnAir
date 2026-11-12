@@ -17,6 +17,16 @@ New tests:
   against frames sent, wrong frames, and frames out of noise alone, for the 4.0 and the 3.9 receiver. With no environment it is a guard: every framing through the drift at 20 dB, NGHam at 6 dB with a
   1.4 kHz error, and no frame out of noise. `ONAIR_SENS_CALIBRATE=1` gives the table.
 
+## Summary
+
+| item | result |
+|---|---|
+| ISDB-T (64-QAM 3/4, mode 3) | **TU6 30 -> 21 dB (9 dB)**, echo 20 -> 18, phase noise 19 -> 17, combined 20 -> 18, Rician 19 -> 18, AWGN 18 -> 17; Rician at 70 Hz Doppler none -> 22 dB; 0 false; CPU +3 % |
+| CubeSat narrow paths | NGHam and Mobitex about **2 dB**, AX100 Mode 5 1.7 dB, USP / CCSDS concatenated 0.8 dB, CCSDS RS 0.3 to 0.6 dB, the same with a 1.4 kHz error and through a 12 kHz drift; U482C now decodes with a carrier error under the AFC threshold (3.9: not at all); noise only 2 frames in both |
+| ATSC 3.0 | per-cell channel state for data and L1: no loss anywhere, 0.5 to 1 dB below the 90 % points in echo / Rician / combined; TU6: section 3.2 |
+| ATSC 1.0 | written and reverted untested: overlaps feat40-atsc (below) |
+| sens harness | ATSC 3.0 echo moved from 0 us to 80 us; DVB-T, DVB-T2, DAB, DTMB, FM, DRM: penalties listed, not changed (below) |
+
 ## 1. ISDB-T: channel estimation in time (the TU6 gap)
 
 **Harness check first.** C1 suspected that the harness ran without time interleaving (I = 0). It does not: the synth
@@ -54,6 +64,11 @@ no delay window, so the estimate carried the full noise of one pilot. The DVB-T 
 | phase noise (1 Hz, TV tuner) | 19 dB | 17 dB | 2 dB |
 | combined (2 ppm + 20 ppm clock + echo + phase noise) | 20 dB | 18 dB | 2 dB |
 | noise only, 16 runs | 0 packets | 0 packets | |
+
+At 70 Hz Doppler (a car at UHF, `X3_FD=70`, run 43161110467) the Rician channel reaches 90 % at 22 dB, where 3.9 had no point at 30 dB
+(30 dB: 8 % of the units). TU6 at 70 Hz does not decode in either receiver at 30 dB. In mode 3 (1 kHz carrier spacing) that Doppler leaves
+inter-carrier interference near -18 dB, under what 64-QAM 3/4 needs in Rayleigh fading. That is not handled here: there is no ICI
+canceller.
 
 The TU6 penalty against AWGN drops from about 12 dB to 4 dB; DVB-T (no time interleaving) has about 7 dB in the same channel. CPU: +3 %
 (process CPU of the same trials, for example TU6 23.3 s against 22.8 s for 8 trials). Latency: 8 symbols (9 ms) more.
@@ -108,9 +123,34 @@ Mode 5 frames only with Reed-Solomon. The `wrong` column counts frames whose byt
 too: these are Mobitex frames with damaged blocks (reported with the blocks marked) and frames cut by the start or end of a run, not frames
 out of noise.
 
-### 2.1 After the fixes
+### 2.1 After the fixes (final)
 
-(run 43151674213; filled in below)
+Two more problems showed up in run 43151674213 and were fixed:
+
+* The narrow 4800 baud HDLC path produced an AX100 Mode 6 miscorrection: Reed-Solomon "corrected" 9 bytes of a 23-byte frame, and
+  `cubesat_rx` failed on one wrong frame at 18 dB. Mode 6 decodes an HDLC frame that failed its CRC by RS alone. The narrow paths no
+  longer do that salvage; Mode 6 is decoded by the wide path only, giving up its 0.2 dB.
+* Noise alone gave 4 Mobitex frames against 2 in 3.9. The BEESAT-1 form has no callsign check, so one data block's CRC-16 is the only
+  check. A narrow path now needs two good Mobitex blocks (`MoreFrame::blocksOk`).
+
+Final table (macOS run 43160552687, same method; 50 % points interpolated between the 1 dB steps, 3.9 -> 4.0):
+
+| framing | still | +1.4 kHz | -1.4 kHz | drift +6 to -6 kHz |
+|---|---|---|---|---|
+| NGHam (4800) | 7.5 -> **5.4** | 7.6 -> **5.3** | 7.5 -> **5.3** | 7.5 -> **5.3** |
+| Mobitex / BEESAT (4800) | 7.9 -> **6.1** | 7.9 -> **5.9** | 8.3 -> **5.8** | 8.2 -> **6.0** |
+| AX100 Mode 5 (9600 + 4800 frames) | 6.7 -> **5.0** | 6.7 -> 5.0 | 6.7 -> 5.0 | 6.7 -> 5.0 |
+| USP (9600) | 5.6 -> 4.8 | 5.7 -> 5.0 | 5.8 -> 5.3 | 5.7 -> 5.0 |
+| CCSDS concatenated (9600) | 5.9 -> 5.1 | 6.0 -> 5.0 | 5.9 -> 5.3 | 5.8 -> 5.2 |
+| CCSDS RS 255/223 (9600) | 8.4 -> 8.1 | 8.4 -> 8.2 | 8.4 -> 7.9 | 8.3 -> 7.7 |
+| U482C (4800 audio FSK) | 10.0 -> 9.7 | **none** -> 9.8 | **none** -> 9.9 | **none** -> 10.3 |
+| AX.25 G3RUH (9600) | 10.2 -> 10.1 | 10.4 -> 10.4 | 10.4 -> 10.2 | 10.5 -> 10.3 |
+| AX100 Mode 6 (9600) | 9.2 -> 9.2 | 9.1 -> 9.1 | 9.2 -> 9.2 | 8.9 -> 8.9 |
+| noise only, 876 s | 2 frames (Mobitex) | 4.0: 2 frames (Mobitex) | | |
+
+"none" means 3.9 decoded no U482C frame even at 14 dB with that carrier error. All other CubeSat tests pass (`cubesat_rx`, `_more`,
+`_engine`, `_views`, `_grsat`, `_smart`, `_chain`, `_sens`). The extra "wrong" frames of 4.0 at low C/N are all Mobitex frames with
+damaged blocks (real frames, reported with the damaged blocks marked), never frames out of noise.
 
 ## 0. The scenario sweep before any change
 
@@ -129,6 +169,47 @@ out of noise.
 | DTMB | 18 | 20 | 22 | 19 | 19 | 19 | TU6 +4 |
 | DRM mode B | 16 | 20 | 24 | 17 | - | - | phase noise: no point (section 4) |
 | ATSC 3.0 QPSK 8/15 | 2 | -1 (echo at 0 us, see section 3) | 18 | 3 | 3 | 1 | **TU6 +16** (section 3) |
+
+## 3. ATSC 3.0: channel state in the soft bits
+
+**Cause.** `atsc3_subframe.cpp` equalised each cell as y/h and the BICM demapper got one noise figure per symbol. A cell in a deep fade
+looked as reliable to the LDPC decoder as one on a strong carrier. Only fades under 0.1 of the mean were erased.
+
+**Change.** `symbolCells` also returns each cell's channel state w = |h|^2 / mean |h|^2 (0 for an erased cell). The noise of y/h is the
+symbol's noise divided by w. The weights go through the frequency de-interleaver, the PLP cell addressing, the in-subframe hybrid time
+de-interleaver (permuted as the real parts of a cell vector) and the blocks that straddle two frames (`PlpResult::headW/tailW`,
+`Straddle::tailW`). `Bicm::llrs` multiplies each cell's soft bits by w before the limit, which equals demapping with noise
+noiseVar / w. The scalar noise path is unchanged. The convolutional time interleaver path (runCti) keeps one noise figure.
+`DECT2_ATSC3_NOCSI=1` restores the 3.9 path.
+
+**Harness fix.** The ATSC 3.0 harness entry had `echoUs = 0`: the "echo" was a second copy of the direct path at -6 dB (the -1 dB row in
+the table above). It is now 80 us, about half the GI5_1024 guard interval (167 us).
+
+**Result** (`sens40x3`, QPSK 8/15 16K LDPC, no time interleaving, 6 trials a point, 2 dB steps, 4 s trials; GitHub run 43154511269):
+
+| scenario | 3.9 | 4.0 |
+|---|---|---|
+| AWGN | 90 % point 2 dB | 2 dB (same at every point) |
+| echo -6 dB at 80 us | 4 dB (mean unit fraction 72 %) | 4 dB (93 %) |
+| TU6, 10 Hz | 16 dB (14 dB: 50 %) | 16 dB (10 dB: 17 % against 0 %) |
+| Rician K = 10 dB | 4 dB; at 2 dB 17 % of trials / 34 % of units | 4 dB; at 2 dB 50 % / 51 % |
+| combined | 6 dB; at 4 dB 0 % / 0 % | 6 dB; at 4 dB 17 % / 43 % |
+| noise only, 12 runs | 0 | 0 |
+
+So the gain is about 0.5 to 1 dB below the 90 % points in the echo, Rician and combined channels, with no loss in any scenario. CPU is +2 to
+3 %. **TU6 is not changed.** Both receivers sit on a floor of 81 % of the units even at 22 dB, so the TU6 loss is not in the soft bits.
+The per-trial frame counters (`X3_DIAG_ATSC3`, run 43161110467) locate it: section 3.1.
+
+### 3.1 TU6: frames lost in the L1 signalling
+
+At 22 dB, four seeded trials of each channel. AWGN: 21 to 23 frames a trial, none failed. Rician: none failed. TU6: 1, 5, 4 and 3 of about
+20 frames failed. A frame whose L1-Basic or L1-Detail does not decode is lost whole. The preamble symbols were equalised as y/h with one
+noise figure and **no fade erasure at all**, so a cell in a deep fade entered the L1 LDPC decoder at full weight.
+
+Change: `demodulatePreambleSymbol` returns each cell's |h|^2 / mean weight. It goes through the frequency de-interleaver and the
+L1-Detail block de-interleaver into `decodeBlock`, which scales each cell's soft bits by it. The switch is the same `DECT2_ATSC3_NOCSI`.
+Result: section 3.2.
+
 
 ## Not done / not changed
 
