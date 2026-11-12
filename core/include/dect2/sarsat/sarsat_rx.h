@@ -23,6 +23,18 @@ namespace sarsat {
 constexpr double kFs = 32000.0;   // the rate the burst processing works at
 // The demodulator on its own: x holds a burst at kFs with its carrier at carrierHz; fills the message when a sync pattern and the first BCH check pass.
 bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out);
+// Repeat combining (4.0, docs/SENSITIVITY-4.0-X1.md): a beacon sends the same identification every 50 s (+-2.5 s). A burst whose checks failed keeps its
+// soft bits (kLongBits values, > 0 is a 1, sync polarity applied); the soft bits of the same beacon's next bursts are added to them and the sum is decoded.
+struct SoftBurst {
+    std::vector<float> soft;
+    bool test = false;          // the self-test sync word matched better
+    float conf = 0;             // the sync word's correlation (0 to 1)
+};
+// As demodBurst; when nothing decodes and `failed` is set, it gets the soft bits of the best sync candidate (returns false either way).
+bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftBurst* failed, bool coherent = true);
+// Decodes summed soft bits with stricter checks than a single burst (a perfect or 23 of 24 sync word, at most 3 repaired bits, the second BCH intact
+// when more than one bit was repaired in a long message, a country code that exists).
+bool decodeCombined(const std::vector<float>& soft, Beacon& out);
 }
 
 class SarsatReceiver {
@@ -44,6 +56,13 @@ public:
     void setFalseBurstBudget(double seconds);
     uint64_t falseBurstsSkipped() const;
     void setWideSearch(bool on);
+    // Repeat combining (on by default): soft bits of bursts that did not decode are kept up to 4 minutes and summed with the next bursts on the same
+    // carrier (+-150 Hz) at the beacon's repeat interval (47.5 to 52.5 s, or a multiple of it when bursts were missed). period* = the interval accepted.
+    void setRepeatCombining(bool on, double periodMinSec = 47.5, double periodMaxSec = 52.5);
+    // 4.0 single-burst path (both on by default). fullWindow: a burst is processed over at least 0.62 s from its first carrier line, so that a weak
+    // burst (line visible only in the preamble) keeps its whole message; false is the 3.9 end of burst (6 blocks of 32 ms without a line).
+    // coherentBits: the message bits are detected against the burst's own residual carrier (see sarsat_rx.cpp); false is the 3.9 differential slicer.
+    void setWeakBurstPath(bool fullWindow, bool coherentBits);
     bool wideSearch() const;
     double wideSpanHz() const;          // what the bank covers now (0: off)
 

@@ -15,6 +15,7 @@ struct SarsatEntry {
     sarsat::Beacon b;
     float snrDb = 0, levelDb = -200;
     float cfoHz = 0;
+    int combined = 0;    // 0: decoded from one burst; n: from the soft bits of n bursts of the same beacon added together (repeat combining)
 };
 
 constexpr size_t kSarsatLogMax = 200;
