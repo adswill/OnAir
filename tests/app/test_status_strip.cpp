@@ -1,4 +1,4 @@
-// Status strip helpers: frequency digit split, CPU level thresholds, and the cell collapse at many window widths.
+// Status bar helpers: frequency digit split and grouping, CPU level thresholds, and which segments stay at many window widths.
 #include "../../app/ui/status_strip.h"
 #include <cstdio>
 using namespace statusstrip;
@@ -12,23 +12,33 @@ int main() {
     check(splitFreq(-3).lead + splitFreq(-3).rest == "0.000", "negative clamps");
     check(cpuLevel(0) == 0 && cpuLevel(150) == 0 && cpuLevel(150.1f) == 1 && cpuLevel(250) == 1 && cpuLevel(250.1f) == 2, "cpu thresholds");
     check(cpuFill(-5, 4) == 0 && cpuFill(200, 4) == 0.5f && cpuFill(900, 4) == 1.f && cpuFill(50, 0) == 0.5f, "cpu fill");
-    const Widths w{{150, 120}, {70, 50}, {60, 20}, {90, 70}, {110, 90}, 60, 24, 14};
-    Plan p = plan(1000, w);
-    check(p.showCpuLabel && p.showRx && p.captions && p.showCpu && p.showState && p.showMode, "wide shows all");
-    bool sawNoLabel = false, sawNoRx = false, sawNoCap = false;
-    int lastLevel = 0;
-    for (float a = 1000; a >= 40; a -= 5) {
-        p = plan(a, w);
-        const int level = !p.showCpuLabel + !p.showRx + !p.captions + !p.showCpu + !p.showState + !p.showMode;
-        check(level >= lastLevel, "monotonic as the window narrows");
-        lastLevel = level;
-        if (!p.showCpuLabel) sawNoLabel = true;
-        if (!p.showRx) { sawNoRx = true; check(!p.showCpuLabel, "label goes before receiver"); }
-        if (!p.captions) { sawNoCap = true; check(!p.showRx && !p.showCpuLabel, "captions go after receiver"); }
-        if (!p.showCpu) check(!p.captions, "cpu goes after captions");
-        if (a >= 300) check(p.used <= a, "fits at 300+");
+    check(groupedMhz(522.0) == "522.000 000", "522 MHz grouped");
+    check(groupedMhz(1090.0) == "1 090.000 000", "1090 MHz grouped on both sides");
+    check(groupedMhz(93.9) == "93.900 000", "93.9");
+    check(groupedMhz(0.0001) == "0.000 100", "100 Hz");
+    check(groupedMhz(10489.5505) == "10 489.550 500", "QO-100 downlink");
+    check(groupedMhz(-1) == "0.000 000", "negative clamps");
+    // the flat bar: state 0, frequency 0, mode 1, rx 5, rate 3, cpu 2, clock 4 (widths in px)
+    std::vector<Seg> v = {{80, 0}, {130, 0}, {60, 1}, {40, 5}, {90, 3}, {70, 2}, {60, 4}};
+    const float gap = 13;
+    check(fit(v, 2000, gap) == usedWidth(v, gap), "fit reports the width used");
+    bool all = true; for (const Seg& s : v) all = all && s.on;
+    check(all, "wide shows every segment");
+    int lastOn = (int)v.size();
+    for (float avail = 700; avail >= 0; avail -= 7) {
+        const float used = fit(v, avail, gap);
+        int on = 0; for (const Seg& s : v) on += s.on;
+        check(on <= lastOn, "segments only drop as the bar narrows");
+        lastOn = on;
+        check(v[0].on && v[1].on, "state and frequency always stay");
+        if (used > avail) check(on == 2, "only the priority-0 segments may overflow");
+        for (size_t i = 0; i < v.size(); i++) for (size_t j = 0; j < v.size(); j++)
+            if (!v[i].on && v[j].on) check(v[j].prio <= v[i].prio, "nothing more important is dropped before something less important");
     }
-    check(sawNoLabel && sawNoRx && sawNoCap, "all collapse steps reached");
+    // equal priorities: the rightmost goes first
+    std::vector<Seg> t = {{50, 0}, {50, 1}, {50, 1}, {50, 1}};
+    fit(t, 50 * 3 + 2 * gap, gap);
+    check(t[1].on && t[2].on && !t[3].on, "ties drop from the right");
     if (!fails) printf("ok\n");
     return fails;
 }

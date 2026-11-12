@@ -20,8 +20,10 @@ int commandPane();                      // while a Command view pane draws the m
 void navPicked(int* cur, int view, bool hasMap);   // kit::modeNav in a Command view: set *cur to view for this frame (the user's choice comes back after the view); hasMap: the mode has a Map view
 bool inCommandView();                   // true while the Command view is being drawn (kit::modeNav then shows no pills and keeps the first view)
 
-// The row above the tabs: "Simple | Advanced" (a small switch). Drawn by mainTabs() for every mode that has a Simple view.
-void levelBar(App& a);
+// "Simple | Advanced" (a small switch) for every mode that has a Simple view. 4.0: drawn at the right end of the one action row above the
+// tabs (modeActionBar); rightAlign false draws it at the cursor. levelBarWidth() is its width, for the row's layout.
+void levelBar(App& a, bool rightAlign = true);
+float levelBarWidth();
 
 // The Command view of the mode (draws the strip, then mu.command or the generic body). Called by mainTabs() instead of the tab bar in Simple.
 void commandView(App& a, const ModeUi& mu);

@@ -1907,3 +1907,10 @@ Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked
 
 ## 2026-11-12: menus 4.0 (feat40-menus)
 Tools menu split into 9 groups with search, Plugin store entry, Mode menu one submenu per category (chunks over 25), View reduced to 9 entries (Theme / Layout / Text / Time / Reset view / Power and system). docs/MENUS-4.0.md; test menu_groups. Syntax-checked only, CI pending.
+
+## 2026-11-12 (feat40-trackui): tracker, mode list, status bar, top bar, menu bar
+- Satellite tracker (View > Passes, docs/TRACKER-4.0.md): world map with the chosen satellites' orbits, footprints and day/night; satellite search with group chips and a list; pass panel with countdown, quality badge, Doppler, sky plot (AOS/TCA/LOS) and "Track and record this pass"; cleaner pass list, next pass highlighted. New Iridium group (`TagIridium`). Every feature and setting mapped to its new place.
+- Mode list (docs/MODELIST-4.0.md): each category tinted with its colour, the selected mode on a stronger tint with an accent bar and semibold name; hover and focus distinct. Colour maths in app/ui/row_tint.h, test `row_tint` (all palettes, Dark/Light/High contrast, 4.5:1).
+- Status bar (docs/STATUSBAR-4.0.md): one flat row (state dot + word, grouped frequency, mode, RX, signal, rate, level, load, dropped, cpu + sparkline, log, clock, mute), segments dropped by priority (`statusstrip::fit`, test `status_strip`); flat receiver tabs.
+- Top bar gap: rec with time and size, Memory quick list, offset, bandwidth. Above every mode's tabs: one action row (next step + fix, antenna hint, Undo, Auto setup, Reset this mode, Simple/Advanced). Menu bar right-hand items centred and flat, Discord button the text height.
+- Syntax-checked locally (battery: no local build); app build and tests on GitHub quick.yml. No screenshots yet.
