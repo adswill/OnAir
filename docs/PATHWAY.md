@@ -2089,3 +2089,6 @@ docs/CHANGELOG-4.0.md and docs/RELEASE-NOTES-4.0.0.md from `git log v3.9.0..pub/
 landing predictor accuracy, known limits and next (ATSC #484 recordings, Android TV and USB on a phone, codecs folder, Spectran V6). README 4.0 section and
 mode table, docs index. Generators (modes list, web schema / options, Android modes and results map, credits) had no changes; `tools/gate/run.sh --no-compile` passes.
 Then merged integ-40 at f25aff2f1 (feat40-issues2) and added #463, #435, #442 from docs/ISSUES2-4.0.md to the 4.0 notes; dropped an unmapped recording row from docs/REAL-SIGNALS.md.
+
+## 2026-11-12 - OOK on / off-time scatter (feat41-ookxy)
+Added the scatter plot (on time against the following off time per pulse) with cluster centres, an encoding guess (PWM, PPM, Manchester, unknown), burst selection, log or linear axes and CSV copy to the OOK analyser (x40) and the ISM Unknown view. Logic in core/include/dect2/ism/ook_scatter.h, test `ook_scatter`, notes in docs/OOK-SCATTER-4.1.md. Simulated pulse trains only.

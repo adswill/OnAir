@@ -35,6 +35,7 @@ public:
         });
     }
     void fill(X40Telemetry& t) const override {
+        t.ookBursts.assign(scatter_.begin(), scatter_.end());
         if (!have_) { t.headline = "waiting for data"; return; }
         if (!res_.ok) { t.headline = frames_ ? fmt("%d frames seen, none with a recognised pattern yet", frames_) : "no OOK frame yet"; return; }
         t.headline = fmt("%s, %d bits: %s, repeated %d time(s)", res_.mod.c_str(), res_.nbits, res_.hex.c_str(), repeats_);
@@ -71,6 +72,11 @@ private:
     static std::string hexOf(const std::string& bin) { std::string h; for (size_t i = 0; i < bin.size(); i += 4) { int v = 0; for (size_t j = 0; j < 4; j++) v = v * 2 + (i + j < bin.size() ? bin[i + j] - '0' : 0); h += "0123456789ABCDEF"[v]; } return h; }
     void finishFrame(double trail) {
         std::vector<Pulse> P; P.swap(pulses_); frames_++; lastFrameEndT_ = lastEdge_;
+        if (P.size() >= 4) {
+            std::vector<std::pair<float, float>> sb;
+            for (size_t i = 0; i < P.size(); i++) sb.push_back({(float)(P[i].w * 1e6), (float)((i + 1 < P.size() ? P[i + 1].t0 - (P[i].t0 + P[i].w) : trail) * 1e6)});
+            scatter_.push_back(std::move(sb)); if (scatter_.size() > 64) scatter_.pop_front();
+        }
         if ((int)P.size() < kMinPulses) return;
         // drop a long sync gap / first pulse: the gaps between pulses
         std::vector<double> w, g; for (size_t i = 0; i < P.size(); i++) { w.push_back(P[i].w); if (i + 1 < P.size()) g.push_back(P[i + 1].t0 - (P[i].t0 + P[i].w)); }
@@ -119,7 +125,7 @@ private:
         out->row("Frame", fmt("%s %d bits", r.mod.substr(0, r.mod.find(' ')).c_str(), r.nbits), fmt("%s (hex %s); %s; %d pulses in %.1f ms", r.bin.c_str(), r.hex.c_str(), r.timing.c_str(), r.pulses, r.durMs), (float)(pk_));
     }
     Decimator dec_; double rate_ = 1, t_ = 0, env_ = 0, nf_ = 0, pk_ = 0, curStart_ = 0, frameStart_ = 0, lastEdge_ = 0, lastFrameEnd_ = -1e9, lastFrameEndT_ = 0; long n_ = 0; int frames_ = 0, repeats_ = 0, sinceNf_ = 0; size_t skip_ = 0; float sm_ = 0;
-    bool high_ = false, have_ = false; std::deque<float> recent_; std::vector<Pulse> pulses_; std::string lastBits_; Res res_;
+    bool high_ = false, have_ = false; std::deque<float> recent_; std::deque<std::vector<std::pair<float, float>>> scatter_; std::vector<Pulse> pulses_; std::string lastBits_; Res res_;
 };
 }
 

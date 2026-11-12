@@ -29,6 +29,7 @@ struct X40Telemetry {
     std::string headline;            // one line on what is being heard
     std::vector<std::pair<std::string, std::string>> facts;   // label (English, shown through tr()), value
     std::vector<X40Row> rows;        // newest first
+    std::vector<std::vector<std::pair<float, float>>> ookBursts;
 };
 
 inline std::string x40Summary(const X40Telemetry& t) { return t.headline; }
