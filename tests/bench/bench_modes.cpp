@@ -278,7 +278,16 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     const double cpuEnd = cpuSeconds() - cpu0;
     const double wall = std::chrono::duration<double>(Clock::now() - tStart).count();
     threadStats(thr, busiest);
-    if (getenv("BENCH_DRAIN")) e.stop();   // --compare-rx: every block through the receiver before the results are read
+    if (getenv("BENCH_DRAIN")) {   // --compare-rx: the whole file through the receiver, then a full pass (telemetry), then the results
+        auto still = Clock::now();
+        double last = processed();
+        while (Clock::now() - still < std::chrono::milliseconds(1500) && Clock::now() - tStart < std::chrono::seconds(120)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(50));
+            const double p = processed();
+            if (p > last) { last = p; still = Clock::now(); }
+        }
+        e.stop();
+    }
     // steady state: from the point 25% of the signal was processed (skips plan creation and warm-up) when the run is long enough
     double cost = proc > 0 ? cpuEnd / proc : 0, startup = 0;
     if (secs >= 4 && proc > 0) {
@@ -418,11 +427,18 @@ int compareRxThread(const std::string& self, const std::vector<const Entry*>& se
         std::filesystem::remove(file, ec);
         const char* verdict;
         if (!a.ok || !c.ok) { verdict = "run failed"; bad++; }
-        else if (!same(a, b)) verdict = same(a, c) || same(b, c) ? "same (one-thread runs differ from each other)" : "not comparable: one-thread runs differ from each other";
+        else if (!same(a, b)) {
+            // the saved lists of some modes carry the wall-clock time of each entry: then only the counts can be compared
+            auto counts = [](const One& x, const One& y) { return x.blocks == y.blocks && x.bytes == y.bytes && x.ts == y.ts && x.cps == y.cps; };
+            if (same(a, c) || same(b, c)) verdict = "same (one-thread runs differ from each other)";
+            else if (counts(a, b) && counts(a, c)) verdict = "same counts (the saved lists carry times: their hash differs run to run)";
+            else if (counts(a, b)) { verdict = "DIFFERENT counts"; bad++; }
+            else verdict = "not comparable: one-thread runs differ from each other";
+        }
         else if (same(a, c)) verdict = "same";
         else { verdict = "DIFFERENT"; bad++; }
-        printf("%-12s %9.4g %10.1f %10.1f %7.2fx  %s (blocks %.0f, ts %.0f, results %.0f bytes)\n", e->id.c_str(), actual / 1e6, a.maxMsps, c.maxMsps,
-               a.maxMsps > 0 ? c.maxMsps / a.maxMsps : 0.0, verdict, c.blocks, c.ts, c.bytes);
+        printf("%-12s %9.4g %10.1f %10.1f %7.2fx  %s (blocks %.0f/%.0f/%.0f, ts %.0f/%.0f/%.0f, results %.0f/%.0f/%.0f bytes: one thread, again, rx thread)\n", e->id.c_str(),
+               actual / 1e6, a.maxMsps, c.maxMsps, a.maxMsps > 0 ? c.maxMsps / a.maxMsps : 0.0, verdict, a.blocks, b.blocks, c.blocks, a.ts, b.ts, c.ts, a.bytes, b.bytes, c.bytes);
         fflush(stdout);
     }
     unsetenv("ONAIR_RX_THREAD"); unsetenv("BENCH_DRAIN");
