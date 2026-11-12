@@ -4221,3 +4221,183 @@ Meters, Sensus	Zähler, Sensus
 RFID, Type A	RFID, Type A
 RFID, Type B	RFID, Type B
 RFID, ISO 15693	RFID, ISO 15693
+# 4.0 interface (machine translated, listed in unreviewed/de.txt)
+ (from the neighbouring hours)	 (aus den Nachbarstunden)
+%.1f minutes ago	vor %.1f Minuten
+A different frequency is best in	Eine andere Frequenz ist am besten in
+A steady offset of 50 to 200 Hz marks an off-raster or pirate transmitter; it is also what the synchronous detector has to pull in.	Ein gleichbleibender Versatz von 50 bis 200 Hz deutet auf einen Sender neben dem Raster oder einen Piratensender hin; genau so viel muss auch der Synchrondetektor nachziehen.
+Activity map and signal names	Aktivitätskarte und Signalnamen
+Add reading	Messwert hinzufügen
+Advice: back off about %.1f dB%s	Empfehlung: etwa %.1f dB zurücknehmen%s
+Airtime %	Sendezeit %
+Airtime s	Sendezeit s
+Also on	Auch auf
+Altitude ft	Höhe ft
+Antenna direction	Antennenrichtung
+Atmosphere	Atmosphäre
+Averages 40 spectrum frames of the whole capture and lists every carrier: centre, width, symbol rate (snapped to a standard rate) and C/N. Widen the capture to cover the LNB band.	Mittelt 40 Spektrumbilder der ganzen Aufnahme und listet jeden Träger: Mitte, Breite, Symbolrate (auf eine Standardrate gerundet) und C/N. Die Aufnahme verbreitern, um das LNB-Band abzudecken.
+Best beacon frequency for this hour	Beste Bakenfrequenz für diese Stunde
+Best first: a high mean SNR that stays steady and is decoded in every reading. Readings are of the ensemble the service belongs to, so ranking compares services across the ensembles you visit.	Das Beste zuerst: ein hoher mittlerer SNR, der stabil bleibt und bei jeder Messung dekodiert wird. Gemessen wird am Ensemble, zu dem der Dienst gehört; die Rangfolge vergleicht also Dienste über die besuchten Ensembles hinweg.
+Best now	Jetzt am besten
+Blind scan and dish pointing	Blindsuche und Schüsselausrichtung
+Blind sectors (heard on both sides, nothing in between)	Tote Sektoren (links und rechts gehört, dazwischen nichts)
+Built from the decodes of this session. Heard: callsigns in the messages, newest first. Band summary: spots in the last 30 minutes per band, with the farthest one and the directions it is open to (needs your position and the stations' locators). Clear frequency: the widest gap in 200 - 2900 Hz for the even and the odd slot, from the last decodes: call there to avoid sitting on somebody. Suggested band: the busiest of the last hour, every band still revisited every 30 minutes.	Aus den Dekodierungen dieser Sitzung gebaut. Gehört: Rufzeichen in den Nachrichten, neueste zuerst. Bandübersicht: Spots der letzten 30 Minuten je Band, mit dem weitesten und den Richtungen, in die es offen ist (braucht deine Position und die Locator der Stationen). Freie Frequenz: die breiteste Lücke zwischen 200 und 2900 Hz für den geraden und den ungeraden Slot, aus den letzten Dekodierungen: dort rufen, um nicht auf jemandem zu sitzen. Vorgeschlagenes Band: das belebteste der letzten Stunde, jedes Band wird trotzdem alle 30 Minuten besucht.
+Burst finder	Burst-Finder
+Bursts of the same beacon ID grouped. A real beacon repeats about every 50 seconds and, if it carries a position, sends it again; a 5 second echo or a single burst is not flagged. Self-test bursts are counted separately. Receive only: do not rely on this for safety.	Bursts derselben Baken-ID zusammengefasst. Eine echte Bake wiederholt etwa alle 50 Sekunden und sendet, falls sie eine Position trägt, diese erneut; ein Echo nach 5 Sekunden oder ein einzelner Burst wird nicht markiert. Selbsttest-Bursts werden getrennt gezählt. Nur Empfang: verlasse dich dafür nicht auf die Sicherheit.
+Busiest now	Jetzt am meisten los
+Busy hours	Belebte Stunden
+Buzz train timing	Zeitverlauf der Summzüge
+C/N	C/N
+CQ callers only##d40cwh	Nur CQ-Rufer##d40cwh
+CQ callers only##d40ftxh	Nur CQ-Rufer##d40ftxh
+Cable loss TX dB	Kabeldämpfung TX dB
+Callsigns found in the decoded text of all signals in the window, newest first, with the number of times seen. CQ marks a station that was read calling CQ. Garbled text can give false calls: check by ear.	Rufzeichen aus dem dekodierten Text aller Signale im Fenster, neueste zuerst, mit der Anzahl der Beobachtungen. CQ markiert eine Station, die beim CQ-Rufen gelesen wurde. Verstümmelter Text kann falsche Rufzeichen liefern: nach Gehör prüfen.
+Capcode groups	Capcode-Gruppen
+Carrier, sideband and station ID	Träger, Seitenband und Stationskennung
+Channel busy %.0f %% of the last 10 minutes by %d stations	Kanal in %.0f %% der letzten 10 Minuten von %d Stationen belegt
+Channel load	Kanalauslastung
+Channel use	Kanalnutzung
+Classifier	Klassifizierer
+Classifier: no regular line code found.	Klassifizierer: kein regelmäßiger Leitungscode gefunden.
+Clear frequency	Freie Frequenz
+Command	Befehl
+Counts, per 25 kHz cell and hour of the day, how often a signal was there. Saved between runs and merged over days. A signal in a cell that was almost always quiet at this hour raises an alert.	Zählt je 25-kHz-Zelle und Tagesstunde, wie oft ein Signal da war. Wird zwischen den Läufen gespeichert und über die Tage zusammengeführt. Ein Signal in einer Zelle, die um diese Uhrzeit fast immer still war, löst einen Alarm aus.
+Coverage by bearing and ship types	Reichweite nach Richtung und Schiffstypen
+Cumulative share	Kumulierter Anteil
+DX opening alarm	DX-Öffnungsalarm
+Dish pointing aid	Hilfe zur Schüsselausrichtung
+Distance km	Entfernung km
+EIRP %.1f dBm, path loss %.1f dB, received %.1f dBm, margin %+.1f dB, free-space range at zero margin %.1f km	EIRP %.1f dBm, Streckendämpfung %.1f dB, Empfang %.1f dBm, Reserve %+.1f dB, Freiraumreichweite bei null Reserve %.1f km
+Emitter	Sender
+Ensemble changes	Ensemblewechsel
+Fade margin dB	Schwundreserve dB
+Farthest nm	Weitester nm
+Fewest channels for 90 percent of the traffic	Wenigste Kanäle für 90 Prozent des Verkehrs
+Flying circles or a holding pattern:	Kreisflüge oder Warteschleife:
+Forget the map	Karte vergessen
+Free space plus the margin you enter: terrain and buildings are not modelled.	Freiraum plus die eingegebene Reserve: Gelände und Gebäude werden nicht berücksichtigt.
+Good	Gut
+Heard stations, band summary and clear frequency	Gehörte Stationen, Bandübersicht und freie Frequenz
+ID	ID
+Incidents (one row per beacon)	Vorfälle (eine Zeile je Bake)
+Interference	Störung
+Keep an activity map	Aktivitätskarte führen
+Kept for this session; 24 hours of reports.	Für diese Sitzung gespeichert; 24 Stunden an Meldungen.
+Last 50 min	Letzte 50 Min.
+Learn normal band	Normales Band lernen
+Learned from the launches this station heard: the usual time of day of this site's sondes. Tune in about 15 minutes before.	Aus den bisher gehörten Starts gelernt: die übliche Tageszeit der Sonden an diesem Standort. Etwa 15 Minuten vorher einschalten.
+Learned from what this receiver heard at this hour of the day on each beacon frequency (averaged over days, kept between runs in hf_bandclock.txt). It needs a few days of listening; a missing hour is filled from the hours next to it, and says so. No propagation model, nothing is downloaded.	Gelernt aus dem, was dieser Empfänger zu dieser Tagesstunde auf jeder Bakenfrequenz gehört hat (über Tage gemittelt, zwischen den Läufen in hf_bandclock.txt gespeichert). Es braucht einige Tage Zuhören; eine fehlende Stunde wird aus den Nachbarstunden ergänzt und das wird angezeigt. Kein Ausbreitungsmodell, es wird nichts heruntergeladen.
+Line code worked out from the pulse and gap lengths of this burst: how the bits are coded, the short and long length, the gap that separates repeated rows and the bits per row. The flex line can be pasted into rtl_433. Noise bursts are not claimed; the confidence tells how well the lengths fit.	Leitungscode, aus den Impuls- und Pausenlängen dieses Bursts bestimmt: wie die Bits codiert sind, die kurze und lange Länge, die Pause zwischen wiederholten Zeilen und die Bits je Zeile. Die Flex-Zeile lässt sich in rtl_433 einfügen. Rauschbursts werden nicht beansprucht; die Sicherheit sagt, wie gut die Längen passen.
+Link budget, ramp and SWR	Link-Budget, Rampe und SWR
+Look at this	Genauer ansehen
+Mean SNR	Mittlerer SNR
+Median gap s	Mittlere Pause s
+Meteor echoes	Meteorechos
+Names: put talkgroups.csv (decimal id, name; or a RadioReference export) in the data folder.	Namen: talkgroups.csv (Dezimal-ID, Name; oder ein RadioReference-Export) in den Datenordner legen.
+Narrowest carrier (MHz)	Schmalster Träger (MHz)
+Next launch (UTC)	Nächster Start (UTC)
+No aircraft is flying circles (needs about one full turn in 15 minutes).	Kein Flugzeug fliegt Kreise (braucht etwa eine volle Kurve in 15 Minuten).
+No baseline yet: tick Learn normal band.	Noch keine Vergleichsbasis: „Normales Band lernen“ ankreuzen.
+No beacon yet.	Noch keine Bake.
+No carrier line found in the channel.	Keine Trägerlinie im Kanal gefunden.
+No change expected in the next 24 hours.	In den nächsten 24 Stunden ist keine Änderung zu erwarten.
+No change needed.	Keine Änderung nötig.
+No decodes in the last 30 minutes.	Keine Dekodierungen in den letzten 30 Minuten.
+No group calls yet	Noch keine Gruppenrufe
+No keys dialled yet.	Noch keine Tasten gewählt.
+No messages in the last 30 minutes.	Keine Nachrichten in den letzten 30 Minuten.
+No scan yet.	Noch keine Suche.
+No station above 6 dB yet.	Noch keine Station über 6 dB.
+No tone system recognised yet.	Noch kein Tonsystem erkannt.
+No transmitter identification heard yet.	Noch keine Senderkennung gehört.
+None yet: capcodes paged together at least 3 times within 20 seconds form a group.	Noch keine: Capcodes, die mindestens 3-mal innerhalb von 20 Sekunden zusammen gerufen werden, bilden eine Gruppe.
+Notes only: they never block or change a transmission.	Nur Hinweise: sie blockieren oder ändern eine Aussendung nie.
+Nothing learned yet for this hour: leave the beacon monitor running.	Für diese Stunde noch nichts gelernt: den Bakenmonitor weiterlaufen lassen.
+Nothing yet: keep the receiver running.	Noch nichts: den Empfänger weiterlaufen lassen.
+Overhead	Überflug
+Packet	Paket
+Path class	Pfadklasse
+Pattern	Muster
+Per min	Pro Min.
+Per minute	Pro Minute
+Position drift	Positionsdrift
+RC PPM frames	RC-PPM-Rahmen
+RX antenna dBi	RX-Antenne dBi
+RX loss dB	RX-Dämpfung dB
+RX sensitivity dBm	RX-Empfindlichkeit dBm
+Radar	Radar
+Radios	Funkgeräte
+Ramp from dBm	Rampe ab dBm
+Range stats	Reichweitenstatistik
+Rank	Rang
+Ranking needs 3 readings (15 s) of a locked ensemble.	Die Rangfolge braucht 3 Messungen (15 s) eines eingerasteten Ensembles.
+Reload names	Namen neu laden
+Repeat	Wiederholung
+Replay	Wiedergabe
+Replay: where every aircraft was a few minutes ago, from the positions received since this window started (up to one hour back, gaps of more than 2 minutes are not bridged).	Wiedergabe: wo jedes Flugzeug vor einigen Minuten war, aus den seit dem Start dieses Fensters empfangenen Positionen (bis zu einer Stunde zurück, Lücken über 2 Minuten werden nicht überbrückt).
+Reset peak	Spitze zurücksetzen
+SWR %.2f: %.0f %% of the forward power is reflected. %s	SWR %.2f: %.0f %% der Vorwärtsleistung werden reflektiert. %s
+SWR you measured	Gemessenes SWR
+Same text	Gleicher Text
+Scan the capture for carriers	Aufnahme nach Trägern absuchen
+Scanning...	Suche läuft...
+Service ranking and transmitters	Dienstrangfolge und Sender
+Set the level for each step with "Set the level for this power" and watch the SWR.	Den Pegel für jeden Schritt mit „Pegel für diese Leistung setzen“ einstellen und das SWR beobachten.
+Set your position (ADS-B antenna position) for distance and bearing.	Position (ADS-B-Antennenposition) für Entfernung und Peilung eingeben.
+Set your position (ADS-B antenna position) for the coverage.	Position (ADS-B-Antennenposition) für die Reichweite eingeben.
+Share	Anteil
+Ships by type	Schiffe nach Typ
+Shortest s	Kürzeste s
+Spread	Streuung
+Station ID: nothing in your schedule on this frequency now.	Stationskennung: in deinem Sendeplan steht auf dieser Frequenz jetzt nichts.
+Station ID: put a schedule file (khz,HHMM,HHMM,days,name,country; for example from an EiBi export) at am_schedule.csv in the data folder.	Stationskennung: eine Sendeplandatei (khz,HHMM,HHMM,Tage,Name,Land; zum Beispiel aus einem EiBi-Export) als am_schedule.csv in den Datenordner legen.
+Station names and DX alarm	Stationsnamen und DX-Alarm
+Stations heard and CQ callers	Gehörte Stationen und CQ-Rufer
+Steps to the target power	Stufen zur Zielleistung
+Suggested band	Vorgeschlagenes Band
+TX antenna dBi	TX-Antenne dBi
+Tag	Tag
+Talkgroup activity	Gesprächsgruppen-Aktivität
+The link budget needs this radio's power table (Advanced > Calibration).	Das Link-Budget braucht die Leistungstabelle dieses Funkgeräts (Erweitert > Kalibrierung).
+The listened channel is outside the capture.	Der gehörte Kanal liegt außerhalb der Aufnahme.
+The name is the one most reads agree on (8 clean characters). The same programme code on two frequencies within 300 kHz is one station.	Der Name ist der, auf den sich die meisten Lesungen einigen (8 saubere Zeichen). Derselbe Programmcode auf zwei Frequenzen innerhalb von 300 kHz zählt als eine Station.
+The talkgroup with the most airtime in the last 2 minutes. It only changes when another one is clearly busier for a while.	Die Gesprächsgruppe mit der meisten Sendezeit in den letzten 2 Minuten. Sie wechselt nur, wenn eine andere eine Zeit lang deutlich mehr los hat.
+The tones heard in the last 20 seconds are matched against CTCSS, DTMF, the five-tone plans (ZVEI, CCIR, EEA, EIA, DZVEI) and SELCAL. It is a guess to pick the right decoder, not a lock. Dialled keys are joined into numbers and codes; a repeat within 2 minutes is counted, not listed.	Die in den letzten 20 Sekunden gehörten Töne werden mit CTCSS, DTMF, den Fünftonfolgen (ZVEI, CCIR, EEA, EIA, DZVEI) und SELCAL verglichen. Das ist eine Schätzung zur Wahl des richtigen Dekoders, kein Einrasten. Gewählte Tasten werden zu Nummern und Codes zusammengefasst; eine Wiederholung innerhalb von 2 Minuten wird gezählt, nicht aufgelistet.
+Tone system and dialled numbers	Tonsystem und gewählte Nummern
+Transmitter names: put a CSV (main,sub,name,lat,lon[,kW]) at dab_transmitters.csv in the data folder.	Sendernamen: eine CSV-Datei (main,sub,name,lat,lon[,kW]) als dab_transmitters.csv in den Datenordner legen.
+Turn the antenna to a heading, type it, press Add reading. After 4 or more headings that go around the compass the best direction is shown.	Antenne auf eine Richtung drehen, sie eintippen und „Messwert hinzufügen“ drücken. Nach 4 oder mehr Richtungen rund um den Kompass wird die beste Richtung angezeigt.
+Typical nm	Typisch nm
+Usually lands	Landet meist
+Warns when several foreign stations appear that this site does not normally receive (tropo or sporadic-E). Learn this site's normal band first.	Warnt, wenn mehrere ausländische Stationen auftauchen, die dieser Standort sonst nicht empfängt (Tropo oder Sporadic-E). Zuerst das normale Band dieses Standorts lernen.
+aircraft at that time	Flugzeuge zu dieser Zeit
+anticlockwise	gegen den Uhrzeigersinn
+beacons fast	Baken schnell
+big share	großer Anteil
+bits per row	Bits pro Zeile
+capcodes	Capcodes
+clockwise	im Uhrzeigersinn
+downlink / uplink MHz (R = railway band)	Downlink / Uplink MHz (R = Bahnband)
+even	gerade
+even slots	gerade Slots
+h (UTC)	Std. (UTC)
+heading (deg)	Richtung (Grad)
+incidents	Vorfälle
+learning	lernt
+learning: leave the census running for a few minutes, then untick	lernt: die Zählung einige Minuten laufen lassen, dann abhaken
+not in your list	nicht in deiner Liste
+nothing yet	noch nichts
+now: tune in	jetzt: einschalten
+odd	ungerade
+odd slots	ungerade Slots
+quieter	ruhiger
+same text again and again	immer derselbe Text
+self-test	Selbsttest
+stations heard	Stationen gehört
+step dB	Schritt dB
+sweeps added this session; alerts need 20 sweeps at the same hour	Durchläufe in dieser Sitzung; Alarme brauchen 20 Durchläufe zur gleichen Stunde
+talkgroup names loaded from talkgroups.csv	Gesprächsgruppen-Namen aus talkgroups.csv geladen
+test	Test
+tracked	verfolgt
+turns	Umläufe
+typically	typisch
+watch	beobachten

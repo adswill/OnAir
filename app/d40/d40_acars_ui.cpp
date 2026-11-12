@@ -37,5 +37,5 @@ void d40AcarsLoadCard() {
     }
     std::string best;
     for (double f : load.bestChannels(now, 1800)) { char b[24]; snprintf(b, sizeof b, "%s%.3f", best.empty() ? "" : ", ", f); best += b; }
-    ImGui::TextDisabled("%s: %s MHz", tr("Fewest channels for 90 % of the traffic"), best.c_str());
+    ImGui::TextDisabled("%s: %s MHz", tr("Fewest channels for 90 percent of the traffic"), best.c_str());
 }
