@@ -112,6 +112,13 @@ struct NdbReceiver::Impl {
     uint64_t okCount = 0, badCount = 0;
 
     std::vector<float> depthHist[3];       // recent depth of each path, 50 Hz
+    // 4.0 ident folding: depth of each path at 50 Hz for up to 3 minutes, evaluated every 5 s
+    std::atomic<bool> foldOn{true};
+    static constexpr size_t kFoldMax = 9000;
+    std::deque<float> foldHist[3];
+    int foldTick = 0;
+    std::string foldLast;                  // the word the previous evaluation read (two evaluations in a row must agree)
+    uint64_t foldReads = 0;
     int histTick = 0;
     float depth = 0, snr = 0;
     double nextReport = 0, tNow = 0;
@@ -128,6 +135,8 @@ struct NdbReceiver::Impl {
         for (int i = 0; i < 2; i++) { preI[i].lowpass(1500, kFs, 0.7071); preQ[i].lowpass(1500, kFs, 0.7071); }
         peak = 0; carrierLp = 0; cmag = 0; carrPwr = 0; fLp = 0; fPrev = 0; fPh = 0; fEst = 0;
         for (auto& h : depthHist) h.clear();
+        for (auto& h : foldHist) h.clear();
+        foldTick = 0; foldLast.clear();
     }
 
     void resetDemod() {
@@ -142,6 +151,145 @@ struct NdbReceiver::Impl {
         depth = 0; snr = 0; tNow = 0; nextReport = 0.25;
         aud.clear();
         // the confirmed ident and the history stay: a retune does not wipe what was already read
+    }
+
+    // Reads the ident from the average of the last ident periods of one path (50 Hz samples). Returns the word or "".
+    struct FoldInfo { double period = 0, z = 0, qual = 0; std::string text; };
+    FoldInfo lastFold;
+    static std::string foldRead(const std::deque<float>& h, FoldInfo* info) {
+        FoldInfo dummy;
+        FoldInfo& fi = info ? *info : dummy;
+        constexpr double kRate = 50.0;
+        const int n = (int)h.size();
+        const int lMin = (int)(2.0 * kRate), lMax = std::min((int)(30.0 * kRate), n / 3);
+        if (lMax <= lMin + 2) return "";
+        std::vector<double> x(h.begin(), h.end());
+        double mean = 0;
+        for (double v : x) mean += v;
+        mean /= n;
+        for (double& v : x) v -= mean;
+        double r0 = 0;
+        for (double v : x) r0 += v * v;
+        r0 /= n;
+        if (r0 <= 1e-20) return "";
+        std::vector<double> r((size_t)lMax + 2, 0.0);
+        for (int L = lMin - 1; L <= lMax + 1; L++) {
+            double acc = 0;
+            for (int i = 0; i + L < n; i++) acc += x[(size_t)i] * x[(size_t)(i + L)];
+            r[(size_t)L] = acc / (n - L) / r0;
+        }
+        int top = lMin;
+        for (int L = lMin; L <= lMax; L++) if (r[(size_t)L] > r[(size_t)top]) top = L;
+        // the ident period, not a multiple of it: the shortest lag that is a local peak within 80 % of the highest (2 and 3 periods correlate as well)
+        int best = top;
+        for (int L = lMin; L < top; L++)
+            if (r[(size_t)L] >= 0.8 * r[(size_t)top] && r[(size_t)L] >= r[(size_t)L - 1] && r[(size_t)L] >= r[(size_t)L + 1]) { best = L; break; }
+        // the period must stand out of the autocorrelation at the other lags (robust z-score: median and median absolute deviation)
+        std::vector<double> rv(r.begin() + lMin, r.begin() + lMax + 1);
+        std::vector<double> srt = rv;
+        std::nth_element(srt.begin(), srt.begin() + (long)(srt.size() / 2), srt.end());
+        const double med = srt[srt.size() / 2];
+        for (double& v : srt) v = std::fabs(v - med);
+        std::nth_element(srt.begin(), srt.begin() + (long)(srt.size() / 2), srt.end());
+        const double mad = std::max(srt[srt.size() / 2], 1e-6);
+        const double z = (r[(size_t)best] - med) / (1.4826 * mad);
+        fi.z = z; fi.period = best / kRate;
+        // a periodic keying correlates at many lags, which widens the spread the z-score is taken against (measured 3.4 to 5.8 for a real ident at 4 to 7 dB):
+        // the period only has to stand out moderately; the average's contrast, the Morse reading of two copies and two evaluations in a row do the rest
+        if (z < 3.0 || r[(size_t)best] < 0.1) return "";
+        // fractional period (parabola through the peak); the fold must not drift by a dot over 20 periods
+        const double ra = r[(size_t)best - 1], rb = r[(size_t)best], rc = r[(size_t)best + 1];
+        const double den = ra - 2 * rb + rc;
+        const double P = best + (std::fabs(den) > 1e-12 ? std::max(-0.5, std::min(0.5, 0.5 * (ra - rc) / den)) : 0.0);
+        const int K = (int)std::floor((double)n / P);
+        if (K < 3) return "";
+        const int len = (int)std::floor(P);
+        std::vector<double> f((size_t)len, 0.0), f2((size_t)len, 0.0);
+        for (int k = 0; k < K; k++) {
+            const double base = (double)n - (double)(K - k) * P;   // the K most recent periods
+            for (int j = 0; j < len; j++) {
+                const double pos = base + j;
+                const int i0 = (int)std::floor(pos);
+                const double fr = pos - i0;
+                const double v = i0 + 1 < n && i0 >= 0 ? x[(size_t)i0] * (1 - fr) + x[(size_t)(i0 + 1)] * fr : 0.0;
+                f[(size_t)j] += v; f2[(size_t)j] += v * v;
+            }
+        }
+        double resid = 0;
+        for (int j = 0; j < len; j++) { f[(size_t)j] /= K; resid += f2[(size_t)j] / K - f[(size_t)j] * f[(size_t)j]; }
+        const double sigmaAvg = std::sqrt(std::max(resid / len, 1e-30) / std::max(1, K - 1));   // noise of the average
+        std::vector<double> sf = f;
+        std::sort(sf.begin(), sf.end());
+        const double p10 = sf[sf.size() / 10], p90 = sf[sf.size() * 9 / 10];
+        const double qual = (p90 - p10) / sigmaAvg;
+        fi.qual = qual; fi.period = P / kRate;
+        if (qual < 6.0) return "";
+        // key up / down runs of the average, starting after the longest key-up (the gap between idents), read three times over
+        const double thr = 0.5 * (p10 + p90);
+        std::vector<char> on((size_t)len);
+        for (int j = 0; j < len; j++) on[(size_t)j] = f[(size_t)j] > thr;
+        int startJ = 0, bestRun = 0;
+        for (int j = 0; j < len; j++) {
+            if (on[(size_t)j]) continue;
+            int run = 0;
+            while (run < len && !on[(size_t)((j + run) % len)]) run++;
+            if (run > bestRun) { bestRun = run; startJ = (j + run) % len; }
+        }
+        if (bestRun == 0 || bestRun >= len) return "";
+        cw::Timing tm;
+        tm.reset();
+        for (int rep = 0; rep < 3; rep++) {
+            int j = 0;
+            while (j < len) {
+                const bool v = on[(size_t)((startJ + j) % len)] != 0;
+                int run = 0;
+                while (j + run < len && (on[(size_t)((startJ + j + run) % len)] != 0) == v) run++;
+                const double ms = run * 1000.0 / kRate;
+                if (v) tm.mark(ms); else { tm.idle(ms); tm.space(ms); }
+                j += run;
+            }
+        }
+        tm.idle(1e6);
+        const std::string txt = tm.take();
+        fi.text = txt;
+        // the ident is the word read in each of the later copies (the first copy can be lost while the dot length settles)
+        std::vector<std::string> words;
+        std::string w;
+        for (char c : txt) { if (c == ' ') { if (!w.empty()) words.push_back(w); w.clear(); } else w.push_back(c); }
+        if (!w.empty()) words.push_back(w);
+        if (words.size() < 2) return "";
+        const std::string& last = words.back();
+        if (!lettersOnly(last) || words[words.size() - 2] != last) return "";
+        return last;
+    }
+
+    void foldEval() {
+        if (!weak || !foldOn || !carrierOk()) { foldLast.clear(); return; }
+        const int force = forcedPath();
+        std::string best;
+        double bestQ = 0;
+        FoldInfo shown;
+        for (int i = 0; i < 3; i++) {
+            if (force >= 0 && i != force) continue;
+            FoldInfo fi;
+            const std::string w = foldRead(foldHist[i], &fi);
+            if (!w.empty() && fi.qual > bestQ) { bestQ = fi.qual; best = w; }
+            if (fi.z > shown.z) shown = fi;
+        }
+        lastFold = shown;
+        if (!best.empty() && best == foldLast) {
+            foldReads++;
+            if (best == ident) { repeats++; okCount++; }
+            else {
+                ident = best;
+                repeats = 2;
+                okCount++;
+                hist.push_back(best);
+                while (hist.size() > 24) hist.pop_front();
+                if (log) log("NDB ident " + best + " (from the average of repeated idents)");
+            }
+        }
+        foldLast = best;
     }
 
     void confirm(const std::string& w) {
@@ -296,6 +444,13 @@ struct NdbReceiver::Impl {
                 if (depthHist[i].size() > 100) depthHist[i].erase(depthHist[i].begin());
             }
             choosePath();
+            if (weak && foldOn) {
+                for (int i = 0; i < 3; i++) {
+                    foldHist[i].push_back((float)depths[i]);
+                    if (foldHist[i].size() > kFoldMax) foldHist[i].pop_front();
+                }
+                if (++foldTick >= 250) { foldTick = 0; foldEval(); }
+            }
         }
 
         const int use = path;
@@ -362,6 +517,7 @@ struct NdbReceiver::Impl {
         t.history.assign(hist.begin(), hist.end());
         t.blocksOk = okCount;
         t.blocksBad = badCount;
+        t.foldPeriodSec = (float)lastFold.period; t.foldZ = (float)lastFold.z; t.foldQuality = (float)lastFold.qual; t.foldText = lastFold.text;
         t.dataValid = !ident.empty();
         if (path == 0) t.toneHz = 400;
         else if (path == 1) t.toneHz = 1020;
@@ -475,6 +631,7 @@ void NdbReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     p_->log = std::move(cb);
 }
 void NdbReceiver::setWeakSignalPath(bool on) { p_->weak = on; }
+void NdbReceiver::setIdentFolding(bool on) { p_->foldOn = on; }
 void NdbReceiver::setToneMode(int mode) { p_->toneMode = mode < 0 || mode > 3 ? 0 : mode; }
 void NdbReceiver::setListen(bool on) { p_->listen.on = on; }
 bool NdbReceiver::listening() const { return p_->listen.on.load(); }

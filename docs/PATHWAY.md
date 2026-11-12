@@ -2022,3 +2022,13 @@ salvage (noise-only frames equal to 3.9). ATSC 3.0: per-cell channel state in th
 harness echo 0 -> 80 us. ATSC 1.0
 left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
 
+## 2026-11-12 (feat40-sensX1): repeats and known content (docs/SENSITIVITY-4.0-X1.md)
+- COSPAS-SARSAT: the 3.9 burst ended 200 ms into a weak burst's message (its line shows only in the preamble), now 0.62 s; 4-block spectrum sum for weak
+  bursts; coherent bits against the residual carrier; soft-decision (Chase) BCH; repeat combining of failed bursts aligned by soft-bit correlation; a
+  lower line threshold near a heard beacon's carrier; multi-bit repairs reported only when a later burst confirms the identification. About 4 dB on a
+  single burst (90 % within 2 bursts: +1.5 to -3 dB in 3 kHz), combining about 0.5 dB more (most bursts below -5 dB are not detected). The 3.9 receiver
+  reported wrong identifications at its edge (BCH-1 mis-repairs); 4.0: none measured. GitHub runs 43147175804, 43157120181.
+- NDB ident folding: the keying of the last ident periods is averaged and read as Morse: 50 % point about 6.5 to 4.5 dB in 300 Hz (60 s), no false idents.
+  Time stations: a minute that matches the expected time code counts (a-priori); measured no gain (the minutes fail by lost seconds), no wrong time.
+  GitHub run 43166550047 (sens40x1 passed).
+- Simulated signals only; all measurement on GitHub (the laptop was on battery). Bench and guard: tests/sens/test_sens40x1.cpp (ctest sens40x1).

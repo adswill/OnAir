@@ -1257,6 +1257,10 @@ if(DECT2_BUILD_TESTS)
     target_link_libraries(test_sens40x3 PRIVATE dect2core)
     add_test(NAME sens40x3 COMMAND test_sens40x3)
     set_tests_properties(sens40x3 PROPERTIES TIMEOUT 7000)
+    add_executable(test_sens40x1 tests/sens/test_sens40x1.cpp)   # 4.0 pass X1 (docs/SENSITIVITY-4.0-X1.md): repeat combining and weak-burst paths
+    target_link_libraries(test_sens40x1 PRIVATE dect2core)
+    add_test(NAME sens40x1 COMMAND test_sens40x1)
+    set_tests_properties(sens40x1 PROPERTIES TIMEOUT 3600)
   endif()
   # run by the build workers (ctest -R sens_quick / sens_full, or -L sens-quick / sens-full); results land in <build>/sens-out/*.json
   add_test(NAME sens_quick COMMAND sens_sweep --quick --mode "dvbt$|dab|fm" --out ${CMAKE_BINARY_DIR}/sens-out)

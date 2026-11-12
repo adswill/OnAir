@@ -30,6 +30,7 @@ struct TimeTelemetry {
     bool dataValid = false;
     uint64_t blocksOk = 0;            // minutes decoded
     uint64_t blocksBad = 0;           // minutes rejected (parity, fixed bits, range)
+    uint64_t minutesPredicted = 0;    // 4.0: minutes in blocksOk that matched the expected minute's time code (their parity failed)
     // details
     int station = 0;                  // timesig::Station being received
     bool hawaii = false;              // WWV / WWVH: the 1200 Hz ticks of WWVH are the stronger

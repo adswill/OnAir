@@ -22,6 +22,11 @@ struct NdbTelemetry {
     bool dataValid = false;        // a repeated ident is on screen
     uint64_t blocksOk = 0;         // idents accepted
     uint64_t blocksBad = 0;        // Morse characters not in the table
+    // 4.0 ident folding (the average of the repeated idents): the last evaluation of the best path
+    float foldPeriodSec = 0;       // ident period from the autocorrelation (0: none found)
+    float foldZ = 0;               // how far that period stands out of the autocorrelation at other lags (robust z-score)
+    float foldQuality = 0;         // on / off contrast of the average in noise deviations of the average
+    std::string foldText;          // what the average reads as Morse
     int toneHz = 0;                // 400 or 1020; 0 when the path is not a tone yet; -1 keyed carrier (no modulating tone)
     float depth = 0;               // modulation depth of the path in use (0..1)
     float wpm = 0;                 // 0 until the CW timing decoder has a dot length
