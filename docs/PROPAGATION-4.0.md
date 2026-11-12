@@ -124,7 +124,7 @@ Cost on a GitHub runner: an 80 x 80 map takes 0.04 s with P.1812 on a flat profi
 
 ## 4. Screen (Tools > Propagation, Advanced)
 
-- Inputs: Signal has **Will it decode?** (an OnAir mode and channel condition set the bandwidth and SNR); new **Statistics and climate**
+- Inputs: antenna and cable presets next to the gain and feeder fields (13 antennas, 9 cables with their loss at the frequency and length); Signal has **Will it decode?** (an OnAir mode and channel condition set the bandwidth and SNR); new **Statistics and climate**
   section (time %, locations %, location spread, climate presets for dN / N0 with the k-factor shown); Ionosphere has the sunspot number
   and the 3.9 HF model switch; Path model lists P.1812 (auto), free space, smooth earth, two-ray, the 3.9 model; Terrain has the opt-in
   **Download elevation tiles** (radius, the path to the chosen point, at most 9 tiles, cached in the data folder under terrain/).
