@@ -56,7 +56,7 @@ export function makeR2(): R2Bucket & { m: Map<string, Uint8Array> } {
   const m = new Map<string, Uint8Array>();
   const obj = (d: Uint8Array): R2ObjectBody => ({
     size: d.length,
-    body: new Blob([d]).stream() as ReadableStream<Uint8Array>,
+    body: new Blob([d as BlobPart]).stream() as ReadableStream<Uint8Array>,
     async arrayBuffer() { return d.slice().buffer; },
   });
   return {
@@ -173,7 +173,7 @@ export function opened(c: Ctx, r: { j: any }): any {
 
 export function uploadForm(bytes: Uint8Array, fields: Record<string, string> = { title: "Tone finder", description: "Finds steady tones in the band and logs them." }): FormData {
   const fd = new FormData();
-  fd.append("package", new Blob([bytes]), "plugin.onairplugin");
+  fd.append("package", new Blob([bytes as BlobPart]), "plugin.onairplugin");
   for (const [k, v] of Object.entries(fields)) fd.append(k, v);
   return fd;
 }

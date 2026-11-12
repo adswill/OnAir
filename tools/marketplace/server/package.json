@@ -11,9 +11,9 @@
     "test:workerd": "node test/workerd-smoke.mjs"
   },
   "devDependencies": {
-    "@types/node": "^20.17.0",
+    "@types/node": "20.17.0",
     "sql.js": "^1.11.0",
-    "typescript": "^5.6.3",
+    "typescript": "5.6.3",
     "wrangler": "^4.0.0"
   }
 }

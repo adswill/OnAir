@@ -91,7 +91,7 @@ export class Zip {
 async function inflateRaw(src: Uint8Array, expect: number): Promise<Uint8Array> {
   const ds = new DecompressionStream("deflate-raw");
   const w = ds.writable.getWriter();
-  w.write(src).catch(() => {});
+  w.write(src as BufferSource).catch(() => {});
   w.close().catch(() => {});
   const r = ds.readable.getReader();
   const out = new Uint8Array(expect);

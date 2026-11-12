@@ -17,7 +17,7 @@ export function fromHex(s: string): Uint8Array | null {
 }
 export async function sha256Hex(data: ArrayBuffer | Uint8Array | string): Promise<string> {
   const d = typeof data === "string" ? enc.encode(data) : data;
-  return toHex(await crypto.subtle.digest("SHA-256", d));
+  return toHex(await crypto.subtle.digest("SHA-256", d as BufferSource));
 }
 
 // The salted hash under which an install id (likes, download counting) or an address (rate limits) is stored. The salt is a Worker secret,
