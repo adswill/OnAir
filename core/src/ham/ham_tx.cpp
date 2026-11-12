@@ -75,7 +75,7 @@ bool HamSlotTx::send(const HamTxCheck& gateIn, int mode, const std::string& msg,
     auto refuse = [&](const std::string& why) { err = why; au.result = "refused"; au.reason = why; txAuditAdd(au); return false; };
     std::string why;
     if (!hamTxAllowed(gate, why)) return refuse(why);
-    if (!(mode >= 0 && mode <= 5) && mode != 10) return refuse("not a mode the ham transmitter sends");
+    if (!(mode >= 0 && mode <= 8) && mode != 10) return refuse("not a mode the ham transmitter sends");   // 6 Q65, 7 FST4, 8 MSK144 (4.0)
     const int rate = 48000;
     std::vector<float> a((size_t)(slotPeriod(mode) * rate) + rate, 0.f);
     const double amp = level < 0.05 ? 0.05 : level > 0.9 ? 0.9 : level;

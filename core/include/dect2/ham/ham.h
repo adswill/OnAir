@@ -61,7 +61,7 @@ private:
 };
 
 // ---- slot timing ----
-// Mode numbers are those of hfdig_ftx.h: 0 FT8, 1 FT4, 2 FT2, 3 WSPR, 4 JT65, 5 JT9, 10 JT4.
+// Mode numbers are those of hfdig_ftx.h: 0 FT8, 1 FT4, 2 FT2, 3 WSPR, 4 JT65, 5 JT9, 6 Q65, 7 FST4, 8 MSK144, 10 JT4 (Q65 / FST4 at their 60 s default period).
 double slotPeriod(int mode);                                 // 15 / 7.5 / 3.75 s, WSPR 120 s, JT65 / JT9 / JT4 60 s
 const char* hamModeName(int mode);                           // "FT8" .. "JT4" (the ADIF MODE)
 bool hamModeHasQso(int mode);                                // the modes the QSO engine runs: FT8 FT4 FT2 JT65 JT9 JT4
@@ -74,6 +74,7 @@ double txStartDelay(int mode);                               // s after the slot
 
 // ---- message builders (standard FT8 / FT4 / FT2 messages) ----
 std::string msgCq(const std::string& me, const std::string& grid);
+std::string msgCqMod(const std::string& mod, const std::string& me, const std::string& grid);   // "CQ DX ME GRID", "CQ POTA ..." (1-4 letters; "" plain CQ)
 std::string msgGrid(const std::string& to, const std::string& me, const std::string& grid);
 std::string msgReport(const std::string& to, const std::string& me, int snr, bool roger);
 std::string msgRR73(const std::string& to, const std::string& me);
@@ -99,6 +100,7 @@ struct QsoConfig {
     double txHz = 1500;
     int retryLimit = 4;           // transmissions of one message without an answer before the call is given up
     double watchdogSec = 360;     // no user action for this long: halt
+    std::string cqMod;            // "DX", "POTA", "TEST", "NA" ...: CQ DX LY1ABC KO24; "" plain CQ
 };
 
 class QsoEngine {
@@ -123,10 +125,15 @@ public:
     void txSent(double slotUtc);
     std::function<void(const QsoRecord&)> onLog;               // a QSO is complete
     std::function<void(const std::string&)> onEvent;           // "watchdog", "retries"
+    // CQ with several callers in one slot: the caller with the higher priority is answered (e.g. a needed DXCC first); unset: the first one.
+    // A later decode of the same slot replaces the first pick only until the first answer has been sent.
+    std::function<int(const std::string& call)> priority;
+    const std::string& lastDx() const { return lastDx_; }       // the station of the QSO just finished (an R-report again gets RR73 again)
     bool watchdogHit() const { return wd_; }
 
 private:
     void logQso(double nowUtc);
+    void finish(double slotUtc);
     void note(const std::string& s) { if (onEvent) onEvent(s); }
     Config c_;
     State s_ = Idle;
@@ -134,6 +141,9 @@ private:
     int dxSnr_ = 0, sentCount_ = 0;
     double lastUser_ = 0, startUtc_ = 0, nowUtc_ = 0;
     bool resumeCq_ = false, wd_ = false, logged_ = false;
+    std::string lastDx_;
+    double lastDxUntil_ = 0, pickSlot_ = -1;
+    int pickPri_ = 0;
 };
 
 // ---- the WSPR beacon (transmit only): CALL GRID DBM in some of the 2 minute slots, never more than half of them ----

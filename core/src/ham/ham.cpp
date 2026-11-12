@@ -250,12 +250,12 @@ bool WorkedLog::workedOn(const std::string& call, const std::string& band, const
 
 // ---- timing ----
 double slotPeriod(int mode) {
-    switch (mode) { case 1: return 7.5; case 2: return 3.75; case 3: return 120.0; case 4: case 5: case 10: return 60.0; default: return 15.0; }
+    switch (mode) { case 1: return 7.5; case 2: return 3.75; case 3: return 120.0; case 4: case 5: case 6: case 7: case 10: return 60.0; default: return 15.0; }   // Q65 / FST4: their 60 s default period
 }
 const char* hamModeName(int mode) {
-    switch (mode) { case 0: return "FT8"; case 1: return "FT4"; case 2: return "FT2"; case 3: return "WSPR"; case 4: return "JT65"; case 5: return "JT9"; case 10: return "JT4"; default: return "FT8"; }
+    switch (mode) { case 0: return "FT8"; case 1: return "FT4"; case 2: return "FT2"; case 3: return "WSPR"; case 4: return "JT65"; case 5: return "JT9"; case 6: return "Q65"; case 7: return "FST4"; case 8: return "MSK144"; case 10: return "JT4"; default: return "FT8"; }
 }
-bool hamModeHasQso(int mode) { return mode == 0 || mode == 1 || mode == 2 || mode == 4 || mode == 5 || mode == 10; }
+bool hamModeHasQso(int mode) { return mode == 0 || mode == 1 || mode == 2 || mode == 4 || mode == 5 || mode == 6 || mode == 7 || mode == 8 || mode == 10; }
 bool hamModeUsesRRR(int mode) { return mode == 4 || mode == 5 || mode == 10; }
 double hamModeBwHz(int mode, int sub) {
     switch (mode) {
@@ -266,13 +266,16 @@ double hamModeBwHz(int mode, int sub) {
     case 4: return sub == 1 ? 360 : sub == 2 ? 720 : 180;   // JT65 A 177.6 Hz, B 355, C 710 (tone spacing 2.7 Hz x 1/2/4, 65 tones + sync)
     case 5: return 16;
     case 10: { static const double a[] = {18, 36, 72, 144, 288, 576, 1152}; return a[sub < 0 ? 0 : sub > 6 ? 6 : sub]; }   // 4 tones, spacing 4.375 Hz x 1 .. 64
+    case 6: return 110.0 * (1 << (sub < 0 ? 0 : sub > 4 ? 4 : sub));   // Q65-60: 65 tones of 1.67 Hz x 1 .. 16 (A .. E)
+    case 7: return 50;     // FST4-60: 4-GFSK, about 13 Hz; 50 Hz leaves room for the shorter periods
+    case 8: return 2400;   // MSK144: 2000 Bd MSK
     default: return 50;
     }
 }
 long slotIndex(double utc, double period) { return (long)std::floor(utc / period + 1e-9); }
 bool slotEven(double utc, double period) { return (slotIndex(utc, period) & 1) == 0; }
 double slotStart(long index, double period) { return (double)index * period; }
-double txStartDelay(int mode) { return mode == 2 ? 0.2 : (mode == 3 || mode == 4 || mode == 5 || mode == 10) ? 1.0 : 0.5; }
+double txStartDelay(int mode) { return mode == 2 ? 0.2 : (mode == 3 || mode == 4 || mode == 5 || mode == 6 || mode == 7 || mode == 10) ? 1.0 : 0.5; }
 
 // ---- messages ----
 std::string reportText(int snr) {
@@ -282,6 +285,12 @@ std::string reportText(int snr) {
     return b;
 }
 std::string msgCq(const std::string& me, const std::string& grid) { return "CQ " + up(me) + (grid.empty() ? "" : " " + up(grid).substr(0, 4)); }
+std::string msgCqMod(const std::string& mod, const std::string& me, const std::string& grid) {
+    std::string m;
+    for (char c : up(mod)) if (isalpha((unsigned char)c)) m += c;
+    if (m.size() > 4) m = m.substr(0, 4);
+    return m.empty() ? msgCq(me, grid) : "CQ " + m + " " + up(me) + (grid.empty() ? "" : " " + up(grid).substr(0, 4));
+}
 std::string msgGrid(const std::string& to, const std::string& me, const std::string& grid) { return up(to) + " " + up(me) + " " + up(grid).substr(0, 4); }
 std::string msgReport(const std::string& to, const std::string& me, int snr, bool roger) { return up(to) + " " + up(me) + " " + (roger ? "R" : "") + reportText(snr); }
 std::string msgRR73(const std::string& to, const std::string& me) { return up(to) + " " + up(me) + " RR73"; }
@@ -335,7 +344,13 @@ void QsoEngine::callStation(double now, const std::string& call, const std::stri
     c_.txEven = !slotEven(theirSlotUtc, slotPeriod(c_.mode));
     if (!c_.hold && theirHz > 0) c_.txHz = theirHz;
 }
-void QsoEngine::halt() { s_ = Idle; dx_.clear(); sentCount_ = 0; resumeCq_ = false; }
+void QsoEngine::halt() { s_ = Idle; dx_.clear(); sentCount_ = 0; resumeCq_ = false; lastDx_.clear(); lastDxUntil_ = 0; }
+void QsoEngine::finish(double slotUtc) {
+    // the QSO is over: remember the station for a few slots, so a repeated R-report (our RR73 was not copied) gets the RR73 again
+    lastDx_ = dx_; lastDxUntil_ = slotUtc + 4 * slotPeriod(c_.mode);
+    s_ = resumeCq_ ? Cq : Idle;
+    dx_.clear(); sentCount_ = 0;
+}
 
 void QsoEngine::logQso(double now) {
     if (logged_) return;
@@ -350,10 +365,22 @@ void QsoEngine::logQso(double now) {
 
 void QsoEngine::onDecode(double now, const std::string& msg, int snr, double slotUtc, double hz) {
     nowUtc_ = now;
-    if (s_ == Idle || !c_.autoSeq) return;
+    if (!c_.autoSeq) return;
     const ParsedMsg m = parseMessage(msg);
     if (m.to != up(c_.myCall) || m.from.empty()) return;
     using K = ParsedMsg;
+    // a station whose QSO we just finished repeats its R-report: it did not copy our RR73 (WSJT-X sends it again; logged once)
+    if ((s_ == Cq || s_ == Idle) && !lastDx_.empty() && m.from == lastDx_ && m.kind == K::RReport && slotUtc <= lastDxUntil_) {
+        dx_ = lastDx_; s_ = Tx4RR73; sentCount_ = 0; lastDx_.clear();
+        c_.txEven = !slotEven(slotUtc, slotPeriod(c_.mode));
+        return;
+    }
+    if (s_ == Idle) return;
+    // CQ: several callers in the same slot; a better one (the priority hook: needed entity first ...) replaces the first before we answered it
+    if (resumeCq_ && (s_ == Tx2Report || s_ == Tx3RReport) && sentCount_ == 0 && slotUtc == pickSlot_ && m.from != dx_ && priority &&
+        (m.kind == K::Grid || m.kind == K::Report) && priority(m.from) > pickPri_) {
+        s_ = Cq;
+    }
     auto rep = [&](bool r) { rstRcvd_ = reportText(m.report); (void)r; };
     auto done = [&] {
         if (resumeCq_) { s_ = Cq; } else s_ = Idle;
@@ -361,7 +388,8 @@ void QsoEngine::onDecode(double now, const std::string& msg, int snr, double slo
     };
     if (s_ == Cq) {
         if (m.kind == K::Grid || m.kind == K::Report) {
-            dx_ = m.from; dxGrid_ = m.grid; dxSnr_ = snr; sentCount_ = 0; logged_ = false; startUtc_ = now;
+            dx_ = m.from; dxGrid_ = m.grid; dxSnr_ = snr; sentCount_ = 0; logged_ = false; startUtc_ = now; rstRcvd_.clear();
+            pickSlot_ = slotUtc; pickPri_ = priority ? priority(m.from) : 0; lastDx_.clear();
             c_.txEven = !slotEven(slotUtc, slotPeriod(c_.mode));
             (void)hz;
             if (m.kind == K::Grid) s_ = Tx2Report;
@@ -379,10 +407,12 @@ void QsoEngine::onDecode(double now, const std::string& msg, int snr, double slo
         break;
     case Tx2Report:
         if (m.kind == K::RReport) { rep(true); logQso(now); s_ = Tx4RR73; sentCount_ = 0; }
+        else if (m.kind == K::Grid) sentCount_ = 0;   // they call again: our report was not copied, keep sending it
         else if (m.kind == K::RR73 || m.kind == K::Rrr || m.kind == K::Bye73) { logQso(now); done(); }
         break;
     case Tx3RReport:
         if (m.kind == K::RR73 || m.kind == K::Rrr) { logQso(now); s_ = Tx5Bye; sentCount_ = 0; }
+        else if (m.kind == K::Report) { dxSnr_ = snr; rep(false); sentCount_ = 0; }   // they repeat their report: our R-report was not copied
         else if (m.kind == K::Bye73) { logQso(now); done(); }
         break;
     case Tx4RR73:
@@ -401,12 +431,12 @@ std::string QsoEngine::messageForSlot(double slotUtc) {
     const std::string& me = c_.myCall;
     if (s_ != Cq && sentCount_ >= c_.retryLimit) {
         note("retries");
-        if (resumeCq_) { s_ = Cq; dx_.clear(); sentCount_ = 0; return msgCq(me, c_.myGrid); }
+        if (resumeCq_) { s_ = Cq; dx_.clear(); sentCount_ = 0; return msgCqMod(c_.cqMod, me, c_.myGrid); }
         halt();
         return "";
     }
     switch (s_) {
-    case Cq: return msgCq(me, c_.myGrid);
+    case Cq: return msgCqMod(c_.cqMod, me, c_.myGrid);
     case Tx1Grid: return msgGrid(dx_, me, c_.myGrid);
     case Tx2Report: return msgReport(dx_, me, dxSnr_, false);
     case Tx3RReport: return msgReport(dx_, me, dxSnr_, true);
@@ -418,7 +448,9 @@ std::string QsoEngine::messageForSlot(double slotUtc) {
 
 void QsoEngine::txSent(double slotUtc) {
     (void)slotUtc;
-    if (s_ == Tx5Bye) { if (resumeCq_) { s_ = Cq; } else s_ = Idle; dx_.clear(); sentCount_ = 0; return; }
+    if (s_ == Tx5Bye) { finish(slotUtc); return; }
+    // RR73 needs no answer (WSJT-X): one is enough, then CQ again (or idle). RRR (JT65 / JT9 / JT4) waits for the 73.
+    if (s_ == Tx4RR73 && !hamModeUsesRRR(c_.mode)) { finish(slotUtc); return; }
     if (s_ != Cq) sentCount_++;
 }
 
