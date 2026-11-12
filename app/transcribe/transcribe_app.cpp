@@ -1211,3 +1211,13 @@ std::string latestLanguage(double freqHz, float* probability) {
     return "";
 }
 }
+
+namespace tx {
+std::vector<AirbandLine> airbandSince(int64_t since) {
+    std::vector<AirbandLine> out;
+    dect2::TranscriptFilter f; f.mode = "airband"; f.from = since;
+    const auto v = gStore.find(f, 200);   // newest first
+    for (auto it = v.rbegin(); it != v.rend(); ++it) out.push_back({it->wall, it->freqHz, it->channel, it->text});
+    return out;
+}
+}

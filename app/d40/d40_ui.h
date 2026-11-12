@@ -43,3 +43,4 @@ std::string d40GsmrFrequencies(const std::vector<int>& arfcns);   // d40_gsmr_ui
 namespace dect2 { struct HfbTelemetry; }
 void d40HfbFeed(const std::vector<double>& khz, const dect2::HfbTelemetry& t);   // d40_hf_ui.cpp: beacon readings into the hour-of-day table
 void d40HfbBestCard();
+void d40AirbandCard();   // d40_airband_ui.cpp: ATIS letter tracker and VOLMET airports from the live transcripts
