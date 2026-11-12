@@ -39,3 +39,4 @@ namespace dect2 { struct HfdigFtxTelemetry; }
 void d40FtxCard(App& a, const dect2::HfdigFtxTelemetry& f);   // d40_ftx_ui.cpp: heard stations, band summary, clear TX frequency, band suggestion
 namespace dect2 { struct CwTelemetry; }
 void d40CwCard(App& a, const dect2::CwTelemetry& t);   // d40_cw_ui.cpp: callsigns heard and CQ callers
+std::string d40GsmrFrequencies(const std::vector<int>& arfcns);   // d40_gsmr_ui.cpp: "955: 921.2 / 876.2 (R)" per channel number: downlink / uplink MHz, R = railway band
