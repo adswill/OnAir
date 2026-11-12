@@ -1374,7 +1374,7 @@ void specDisplayPopup(App& a) {
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s\n%s", tr("Bins in the spectrum: more is finer but costs more CPU. Auto follows the sample rate. 128k and 256k are for zooming into narrow signals; they update slower and cost the most."),
                                                       tr("512k and 1M update a few times a second. With the zoom FFT on (Resolution below) a zoomed-in view gets a bin per pixel anyway, at far less CPU."));
     }
-    if (ImGui::TreeNode(tr("Resolution (advanced)"))) {   // 4.0: docs/WATERFALL-4.0.md
+    if (ImGui::TreeNode(trw("Resolution (advanced)"))) {   // 4.0: docs/WATERFALL-4.0.md
         if (ImGui::Checkbox(tr("Zoom FFT"), &a.specZoomFft)) save = true;
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoomed in, the visible part of the band gets its own transform (mixed down and decimated), so the spectrum and the waterfall have at least one real bin per screen pixel. On by default; it runs only while the full-band bins are coarser than the pixels."));
         if (a.specZoomFft) {
