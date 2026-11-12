@@ -73,7 +73,7 @@ public:
 protected:
     Search search() const override {
         Search s;
-        s.tones = {-kShift / 2, kShift / 2};
+        s.tones = {-kShift / 2, kShift / 2}; s.minRatio = 1.25;
         s.halfW = std::min(0.35 * kShift, kBaud); s.guardStep = kShift; s.guards = 0; s.minZ = 9;
         s.dfLo = -3000; s.dfHi = 3000; s.track = 20; s.periodic = false; s.replaySec = 16;
         return s;
@@ -83,7 +83,7 @@ protected:
         bank_.configure(rate, {-kShift / 2, kShift / 2}, (int)std::lround(T));
         clk_.configure(T, 32, 16);
     }
-    void restart() override { recent_.clear(); bank_.reset(); clk_.reset(); bits_.assign(kBlockBits, 0); soft_.assign(kBlockBits, 0.f); pos_ = 0; nbits_ = 0; hold_ = 0; }
+    void restart() override { recent_.clear(); lastIdx_ = -1; bank_.reset(); clk_.reset(); bits_.assign(kBlockBits, 0); soft_.assign(kBlockBits, 0.f); pos_ = 0; nbits_ = 0; hold_ = 0; }
     void lost() override {}
     void sample(cf32 y) override {
         bank_.push(y);
@@ -122,6 +122,10 @@ private:
         const bool ok = b.divider || b.crc == b.calc;
         if (!ok && syncErr > 1) return;           // a loose sync match is kept only when the CRC confirms it
         hold_ = kBlockBits - 40;
+        // the 11-bit block number is outside the CRC: a block exactly one block after the last good one takes the next number
+        bool renumbered = false;
+        if (ok && !b.divider && lastIdx_ >= 0 && nbits_ - lastBits_ == kBlockBits && b.index != lastIdx_ + 1) { b.index = lastIdx_ + 1; renumbered = true; }
+        if (ok && !b.divider) { lastIdx_ = b.index; lastBits_ = nbits_; }
         if (ok && !b.divider) {                   // the same block again (a sender repeats blocks): shown once
             for (int i : recent_) if (i == b.index) return;
             recent_.push_back(b.index); if (recent_.size() > 8) recent_.erase(recent_.begin());
@@ -131,7 +135,7 @@ private:
         if (b.divider) { out->row("Divider", "", "divider block", s); return; }
         blocks_++;
         if (ok) { good_++; if (fixedOne) fixed_++; out->good(s, offsetHz()); } else { bad_++; out->bad(); }
-        const char* crcTxt = ok ? (fixedOne ? "CRC OK (one bit corrected)" : "CRC OK") : "CRC error";
+        const char* crcTxt = ok ? (fixedOne ? "CRC OK (one bit corrected)" : renumbered ? "CRC OK (block number from the one before)" : "CRC OK") : "CRC error";
         const uint8_t* d = b.data;
         const std::string id = fmt("#%d", b.index);
         if (b.index % 16 == 0) {
@@ -205,7 +209,7 @@ private:
     int pos_ = 0, hold_ = 0; long nbits_ = 0;
     int tx_ = 0, blocks_ = 0, good_ = 0, bad_ = 0, fixed_ = 0; bool ascii_ = true, inverted_ = false;
     int pos8_[8] = {};
-    std::vector<int> recent_;
+    std::vector<int> recent_; int lastIdx_ = -1; long lastBits_ = 0;
 };
 
 } // namespace

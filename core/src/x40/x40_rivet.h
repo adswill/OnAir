@@ -100,7 +100,7 @@ inline Fit fitComb(const Psd& p, const std::vector<double>& tones, double halfW,
     Fit best;
     if (p.segments() < minSegs || tones.empty()) return best;
     const double bh = p.binHz(), edge = 0.44 * p.rate();
-    const double nb = p.noiseBin(edge);
+    const double nb = p.noiseBin(0.40 * p.rate());   // inside the flat part of the decimator's pass band
     double fmin = tones[0], fmax = tones[0];
     for (double f : tones) { fmin = std::min(fmin, f); fmax = std::max(fmax, f); }
     double bestScore = -1e300, bestIn = 0; int binsIn = 0;
@@ -224,7 +224,7 @@ private:
 // nominal audio frequencies. The tones are followed as they drift; when they are gone for a few searches the mode is told the signal is lost.
 class Continuous : public Decoder {
 public:
-    struct Search { std::vector<double> tones; double halfW = 10, guardStep = 0, minZ = 9, dfLo = -3000, dfHi = 3000, track = 10, replaySec = 16; bool periodic = false; double spacing = 0; int guards = 0; };
+    struct Search { std::vector<double> tones; double minRatio = 1.0, halfW = 10, guardStep = 0, minZ = 9, dfLo = -3000, dfHi = 3000, track = 10, replaySec = 16; bool periodic = false; double spacing = 0; int guards = 0; };
     bool configure(double fs) override {
         if (!front_.configure(fs)) return false;
         rate_ = front_.rate();
@@ -263,7 +263,8 @@ private:
         if (!psd_.push(a)) return;
         segCount_++;
         if (locked_ && (segCount_ & 1)) return;
-        const Fit f = fitComb(psd_, s.tones, s.halfW, s.guardStep, s.guards, s.minZ, s.dfLo, s.dfHi);
+        Fit f = fitComb(psd_, s.tones, s.halfW, s.guardStep, s.guards, s.minZ, s.dfLo, s.dfHi);
+        if (f.ratio < s.minRatio) f.found = false;   // a few per cent of error in the noise estimate must not pass as a signal
         last_ = f;
         if (!locked_) {
             if (f.found) { locked_ = true; df_ = f.df; ph_ = 0; misses_ = 0; restart(); out->energy(); for (const cf32& v : hist_) mixOut(v); }

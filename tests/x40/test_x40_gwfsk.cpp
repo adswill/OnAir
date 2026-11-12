@@ -51,6 +51,7 @@ int main() {
       q.push_back(gwMarker(0x9c)); q.push_back(gwPacket(5, 1, 41, gwShipMmsi("538001234567"))); q.push_back("1010101010");
       auto x = gwSignal(q, 1700, 8000, path(5)); addSnr(x, 15, 8000, 4); const auto t = run(x40::Gw, x, 8000);
       const std::string pos = rowText(t, "Position");
+      if (pos.find("incomplete") != std::string::npos) for (auto& r : t.rows) printf("    [%s] %s %s\n", r.kind.c_str(), r.id.c_str(), r.text.c_str());
       printf("  position report: '%s'\n", pos.c_str());
       CHECK(pos.find("234.56,N,01234.56,E,123456,A*4B<<<<<1234567890,.**<<..AABBEE<<<<<<") != std::string::npos, "position '%s'", pos.c_str());
       CHECK(countKind(t, "ACK") == 1, "%d ACK rows", countKind(t, "ACK"));

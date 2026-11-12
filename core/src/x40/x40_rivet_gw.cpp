@@ -168,15 +168,18 @@ private:
         std::vector<float> es(e.begin(), e.end());
         std::nth_element(es.begin(), es.begin() + (long)(es.size() * 9 / 10), es.end());
         const float thr = 0.5f * es[es.size() * 9 / 10];
-        // the bit phase: the largest mean |d| where the tones are on
-        int bestPh = 0; double bestM = -1;
-        for (int q = 0; q < (int)std::ceil(T); q++) {
-            double m = 0; int c = 0;
-            for (double t = q; t < (double)b.size(); t += T) { const size_t i = (size_t)t; if (e[i] >= thr) { m += std::fabs(d[i]); c++; } }
-            if (c && m / c > bestM) { bestM = m / c; bestPh = q; }
+        // the bit phase and the sender's clock (up to 2 % off): the largest mean |d| where the tones are on
+        int bestPh = 0; double bestM = -1, bestT = T;
+        for (int sc = -8; sc <= 8; sc++) {
+            const double Tq = T * (1 + 0.0025 * sc);
+            for (int q = 0; q < (int)std::ceil(Tq); q++) {
+                double m = 0; int c = 0;
+                for (double t = q; t < (double)b.size(); t += Tq) { const size_t i = (size_t)t; if (e[i] >= thr) { m += std::fabs(d[i]); c++; } }
+                if (c && m / c > bestM) { bestM = m / c; bestPh = q; bestT = Tq; }
+            }
         }
         std::string bits; bool started = false; double dsum = 0;
-        for (double t = bestPh; t < (double)b.size(); t += T) {
+        for (double t = bestPh; t < (double)b.size(); t += bestT) {
             const size_t i = (size_t)t;
             if (e[i] < thr) { if (started) break; continue; }
             started = true; bits += d[i] > 0 ? '1' : '0'; dsum += std::fabs(d[i]);

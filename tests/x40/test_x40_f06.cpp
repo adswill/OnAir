@@ -20,10 +20,11 @@ static Path path(double off, double drift = 0, double ppm = 0) { Path p; p.offse
 struct Msg { std::vector<std::vector<int>> blocks; std::vector<std::string> text; };
 static Msg f06Message(unsigned seed, int n) {
     Msg m; std::mt19937 r(seed);
-    uint8_t h[16] = {}; const int count = n + 2; h[0] = (uint8_t)(count >> 3); h[1] = (uint8_t)(((count & 7) << 5) | 1); h[2] = 0; h[3] = (uint8_t)(2 << 5);   // one message, at block #2
+    uint8_t h[16] = {}; const int count = n + 3; h[0] = (uint8_t)(count >> 3); h[1] = (uint8_t)(((count & 7) << 5) | 1); h[2] = 0; h[3] = (uint8_t)(2 << 5);   // one message, at block #2
     m.blocks.push_back(f06Block(0, h, seed)); m.text.push_back("");
     uint8_t b1[16] = {0x1b}; m.blocks.push_back(f06Block(1, b1, seed + 1)); m.text.push_back("");
     for (int i = 0; i < n; i++) {
+        if ((2 + i) % 16 == 0) { m.blocks.push_back(f06Block(2 + i, h, seed + 99)); m.text.push_back(""); n++; continue; }   // a header block every 16 blocks
         int g[14]; std::string t;
         for (int k = 0; k < 12; k++) { g[k] = (int)(r() % 1000); t += std::to_string(1000 + g[k]).substr(1); }
         g[12] = (int)(r() % 10); g[13] = (int)(r() % 10); t += std::to_string(g[12]) + std::to_string(g[13]);
@@ -67,12 +68,12 @@ int main() {
         const int ok = blocksRight(m, t);
         printf("  %-46s %2d / 20 blocks, header %d | %s\n", c.what, ok, countKind(t, "Header"), t.headline.c_str());
         CHECK(ok >= 19, "%s: %d of 20 blocks", c.what, ok);
-        CHECK(countKind(t, "Header") == 1, "%s: %d header rows", c.what, countKind(t, "Header"));
+        CHECK(countKind(t, "Header") == 2, "%s: %d header rows", c.what, countKind(t, "Header"));
     }
     // the header row: block count and where the message starts
     { auto x = f06Signal(m.blocks, 1500, 8000, path(0)); const auto t = run(x40::F06, x, 8000);
       std::string h; for (auto& r : t.rows) if (r.kind == "Header") h = r.text;
-      CHECK(h.find("22 blocks, 1 message(s)") != std::string::npos && h.find("Message 1 at block #2") != std::string::npos, "header row '%s'", h.c_str()); }
+      CHECK(h.find("23 blocks, 1 message(s)") != std::string::npos && h.find("Message 1 at block #2") != std::string::npos, "header row '%s'", h.c_str()); }
     // one wrong bit in each of three blocks: corrected by the CRC
     { auto blocks = m.blocks; for (int b : {3, 8, 15}) blocks[(size_t)b][(size_t)(60 + 7 * b)] ^= 1;
       auto x = f06Signal(blocks, 1500, 8000, path(0)); addSnr(x, 25, 8000, 4); const auto t = run(x40::F06, x, 8000);

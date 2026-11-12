@@ -23,8 +23,9 @@ public:
     struct Char { int code; bool ok; };
     std::vector<Char> got;
     void configure(double T) { T_ = T; reset(); }
-    void reset() { d_.assign(kRing, 0.f); n_ = 0; hunt_ = 0; pendT_ = -1; got.clear(); valid_.clear(); }
+    void reset() { d_.assign(kRing, 0.f); n_ = 0; hunt_ = 0; pendT_ = -1; got.clear(); valid_.clear(); q_.clear(); }
     double validRatio() const { return valid_.mean(); }
+    double quality() const { return q_.full() ? q_.mean() : 0.0; }
     bool validFull() const { return valid_.full(); }
     void push(float eLow, float eHigh) {
         const float m = lowMark_ ? eLow : eHigh, s = lowMark_ ? eHigh : eLow;
@@ -44,12 +45,13 @@ private:
         int v = 0;
         for (int k = 1; k <= 5; k++) if (atT(tc + (k + 0.5) * T_) > 0) v |= 1 << (k - 1);
         const bool stop = atT(tc + 6.5 * T_) > 0;
+        for (int k = 1; k <= 6; k++) q_.push(std::fabs(atT(tc + (k + 0.5) * T_)));
         valid_.push(stop ? 1.0 : 0.0);
         got.push_back({v, stop});
         hunt_ = stop ? tc + 7.0 * T_ : tc + 1.0 * T_;
     }
     bool lowMark_; double T_ = 40, hunt_ = 0, pendT_ = -1; long n_ = 0;
-    std::vector<float> d_; RunMean valid_{24};
+    std::vector<float> d_; RunMean valid_{24}, q_{24};
 };
 
 class F01Dec : public Continuous {
@@ -65,7 +67,7 @@ public:
 protected:
     Search search() const override {
         Search s;
-        s.tones = {-kShift / 2, kShift / 2};
+        s.tones = {-kShift / 2, kShift / 2}; s.minRatio = 1.25;
         s.halfW = std::min(0.35 * kShift, kBaud); s.guardStep = kShift; s.guards = 0; s.minZ = 9;
         s.dfLo = -3200; s.dfHi = 3200; s.track = 20; s.periodic = false; s.replaySec = 16;
         return s;
@@ -75,14 +77,13 @@ protected:
         bank_.configure(rate, {-kShift / 2, kShift / 2}, (int)std::lround(T_));
         for (auto& a : as_) a.configure(T_);
     }
-    void restart() override { bank_.reset(); for (auto& a : as_) a.reset(); q_.clear(); win_ = -1; line_.clear(); lineChars_ = 0; open_ = false; bitN_ = 0; }
+    void restart() override { bank_.reset(); for (auto& a : as_) a.reset(); win_ = -1; line_.clear(); lineChars_ = 0; open_ = false; }
     void lost() override { flush(); }
     void sample(cf32 y) override {
         bank_.push(y);
         const float lo = bank_.e(0), hi = bank_.e(1);
-        if (++bitN_ >= (long)T_) { bitN_ = 0; q_.push(std::fabs(lo - hi) / (lo + hi + 1e-30f)); }   // decisiveness once a bit time
         for (auto& a : as_) a.push(lo, hi);
-        const bool open = q_.full() && q_.mean() >= kQualityOpen;
+        const bool open = std::max(as_[0].quality(), as_[1].quality()) >= kQualityOpen;   // mean |mark - space| at the bit centres
         if (!open && open_) flush();
         open_ = open;
         if (win_ < 0) {
@@ -97,10 +98,10 @@ protected:
         as_[win_].got.clear();
     }
 private:
-    static constexpr double kQualityOpen = 0.7;   // mean |mark - space| / (mark + space) over 16 bit times; noise gives 0.5
+    static constexpr double kQualityOpen = 0.6;   // over the last 24 bits read; noise gives 0.5, a clean signal 1
     void character(int code, bool ok) {
         if (!ok) ferr_++;
-        if (!ok && line_.empty()) return;   // the reversals and other noise before a line are not text
+        if (!ok && lineChars_ < 6) { line_.clear(); lineChars_ = 0; return; }   // the reversals and other noise before a line are not text
         if (code == 0 || code == 27 || code == 31) return;
         if (code == 2 || code == 8) { flush(); return; }
         line_ += ok ? baudotFigure(code) : "?";
@@ -118,8 +119,8 @@ private:
         }
         line_.clear(); lineChars_ = 0;
     }
-    ToneBank bank_; Async as_[2] = {Async(true), Async(false)}; RunMean q_{16};
-    double T_ = 40; long bitN_ = 0; int win_ = -1, chars_ = 0, ferr_ = 0, lineChars_ = 0; bool open_ = false;
+    ToneBank bank_; Async as_[2] = {Async(true), Async(false)};
+    double T_ = 40; int win_ = -1, chars_ = 0, ferr_ = 0, lineChars_ = 0; bool open_ = false;
     std::string line_;
 };
 
