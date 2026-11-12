@@ -8,6 +8,7 @@
 #include "dect2/common/stable_random.h"
 #include <algorithm>
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <ctime>
@@ -187,7 +188,8 @@ int main() {
             auto x = signal(fs, n, {{off + d, 0.25}}, 0.f, 2);
             std::vector<cf32> y;
             for (size_t p = 0; p < n; p += 50000) dec.run(x.data() + p, std::min<size_t>(50000, n - p), y);
-            check(y.size() + 2 >= n / (size_t)D && y.size() <= n / (size_t)D + 2, "the decimator gives n / D samples");
+            check(y.size() + 24 >= n / (size_t)D && y.size() <= n / (size_t)D + 1, "the decimator gives n / D samples (less the half-bands' delay)");
+            if (y.size() + 24 < n / (size_t)D || y.size() > n / (size_t)D + 1) printf("  D %d: %zu samples from %zu\n", D, y.size(), n);
             double pw = 0; size_t c = 0;
             for (size_t i = y.size() / 3; i < y.size(); i++) { pw += std::norm(y[i]); c++; }
             const double db = 10 * std::log10(pw / std::max<size_t>(1, c) / (0.25 * 0.25));
@@ -294,20 +296,22 @@ int main() {
         std::thread feeder([&] { while (!stop) for (size_t p = 0; p < x.size() && !stop; p += 24000) z.feed(x.data() + p, 24000); });
         bool ok = true; int frames = 0;
         for (int i = 0; i < 400; i++) {
-            zoomfft::Plan p = zoomfft::make(2.4e6, 1000.0 * (i % 7), 20e3 * (1 + i % 3), 600 + 100 * (i % 4));
-            p.id = (uint64_t)i + 1;
+            const int j = i / 50;   // a plan holds for 50 rounds (frames can complete), then another
+            zoomfft::Plan p = zoomfft::make(2.4e6, 1000.0 * (j % 7), 20e3 * (1 + j % 3), 600 + 100 * (j % 4));
+            p.id = (uint64_t)j + 1;
             z.configure(p, 2.4e6);
             if (i % 50 == 0) z.setWindow(i / 50 % specwin::NumTypes);
-            if (i % 30 == 0) z.reset();
+            if (i % 100 == 99) z.reset();
             ZoomFrame f;
             for (int k = 0; k < 3; k++) {
                 if (z.takeFrame(f)) { frames++; ok = ok && f.dbfs.size() == f.plan.bins && f.plan.id == p.id; }
-                std::this_thread::yield();
+                std::this_thread::sleep_for(std::chrono::microseconds(300));
             }
         }
         stop = true; feeder.join();
         check(ok, "threads: each frame matches its plan");
-        printf("  threads: %d frames while the plan changed 400 times\n", frames);
+        printf("  threads: %d frames while the plan changed 8 times and the window and resets came between\n", frames);
+        check(frames > 0, "threads: frames do come");
     }
     {   // CPU (printed for docs/WATERFALL-4.0.md; one check: the zoom spectrum costs less than a full-band FFT as fine)
         auto cpu = [] { return (double)std::clock() / CLOCKS_PER_SEC; };
