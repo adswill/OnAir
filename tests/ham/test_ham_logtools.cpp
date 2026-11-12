@@ -101,6 +101,11 @@ int main() {
         fs::remove_all(dir);
     }
 
+    // ---- TQSL ----
+    CHECK(tqslCommand("", "Home \"QTH\"", "/tmp/a b.adi") == "\"tqsl\" -q -d -u -a compliant -x -l \"Home QTH\" \"/tmp/a b.adi\"");
+    CHECK(tqslCommand("/usr/bin/tqsl", "", "x.adi") == "\"/usr/bin/tqsl\" -q -d -u -a compliant -x \"x.adi\"");
+    CHECK(tqslOk(0) && tqslOk(9) && !tqslOk(1));
+
     // ---- activations ----
     {
         CHECK(refValid(Program::Pota, "US-0001") && refValid(Program::Pota, "k-0001") && refValid(Program::Pota, "DE-01234") && !refValid(Program::Pota, "US0001"));

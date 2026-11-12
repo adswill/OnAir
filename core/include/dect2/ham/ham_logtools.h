@@ -38,6 +38,12 @@ std::string logBackup(const std::string& logPath, const std::string& dir, double
 bool logBackupDue(const std::string& dir, double nowUtc, double minGapSec = 86400);
 std::vector<std::string> logBackups(const std::string& dir);   // newest first
 
+// ---- LoTW through the user's own TQSL (OnAir never holds the certificate) ----
+// The command line that signs and uploads an ADIF file with TQSL: quiet, no date dialog, upload, duplicates skipped ("compliant"), exit after.
+// tqsl: the program ("tqsl" when it is on the PATH); location: the TQSL station location name. Quotes in the arguments are removed.
+std::string tqslCommand(const std::string& tqsl, const std::string& location, const std::string& adifFile);
+bool tqslOk(int exitCode);                               // 0 done, 9 done with some duplicates skipped
+
 // ---- portable activations ----
 enum class Program { None = 0, Pota = 1, Sota = 2, Wwff = 3, Iota = 4 };
 const char* programName(Program p);                      // "POTA", "SOTA", "WWFF", "IOTA", ""

@@ -1,5 +1,6 @@
 // The Ham view's logbook, awards and contest screens: see ham_ops_ui.h.
 #include "ham_ops_ui.h"
+#include "ham_station_ui.h"
 #include "../platform/platform.h"
 #include <algorithm>
 #include <cstdlib>
@@ -138,6 +139,7 @@ size_t gGen = 0;   // grows with every change of the book: the filter is redone
 }  // namespace
 
 HamOps& hamOps() { static HamOps o; return o; }
+void hamLogChanged() { gGen++; hamOps().workedDirty = true; }
 
 // ---- the country file (cty.dat / wl_cty.dat): load, reset, download, the settings block ----
 namespace {
@@ -329,6 +331,7 @@ bool hamLogQso(ham::LogQso q, std::string& err) {
         o.contest.taken();
     }
     if (q.txPwr.empty()) q.txPwr = o.power;
+    hamStationOnLog(q);   // 4.0: activation and hunted references, callbook fields (ham_station_ui.cpp)
     o.log.add(q);
     gGen++;
     if (!o.log.save(o.logPath, err)) return false;
@@ -396,6 +399,7 @@ void hamLogTab(App& a) {
         hamCountryUi();
         ImGui::EndPopup();
     }
+    hamLogToolsUi();   // 4.0: Cabrillo import, QSL confirmations, backups, LoTW through TQSL (ham_station_ui.cpp)
 
     // the filter, redone when the query or the book changed
     if (L.lastQuery != L.search || L.lastSize != o.log.size() || L.lastGen != gGen) {

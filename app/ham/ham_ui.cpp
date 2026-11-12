@@ -6,6 +6,7 @@
 #include "../app.h"
 #include "ham_kbd_ui.h"
 #include "ham_ops_ui.h"
+#include "ham_station_ui.h"
 #include "../platform/platform.h"
 #include "dect2/ham/ham.h"
 #include "dect2/ham/ham_upload.h"
@@ -40,14 +41,19 @@ struct RealIo : ham::HamRigIo {
     std::string device;         // audio output ("" = system default)
     AudioOut out;
     bool drained = false;
-    bool ptt(bool on, std::string& err) override {
-        if (rigIdx < 0) return true;
+    bool ensureOpen(std::string& err) {
+        if (rigIdx < 0) { err = "no rig chosen"; return false; }
         if (!link.isOpen()) {
             const auto rigs = hamlibRigs();
             if (rigIdx >= (int)rigs.size()) { err = "the chosen rig is not in the rig list"; return false; }
             HamlibConn c; c.model = rigs[rigIdx].model; c.path = rigs[rigIdx].path; c.baud = rigs[rigIdx].baud;
             if (!link.open(c, err)) return false;
         }
+        return true;
+    }
+    bool ptt(bool on, std::string& err) override {
+        if (rigIdx < 0) return true;
+        if (!ensureOpen(err)) return false;
         return link.setPtt(on, err);
     }
     bool beginAudio(int rate, std::string& err) override {
@@ -114,7 +120,26 @@ struct HamUi {
 HamUi& H() { static HamUi h; return h; }
 
 struct HamMode { int num; const char* name; const char* subId; };
-const HamMode kHam[] = {{0, "FT8", "ft8"}, {1, "FT4", "ft4"}, {2, "FT2", "ft2"}, {4, "JT65", "jt65"}, {5, "JT9", "jt9"}, {10, "JT4", "jt4"}, {3, "WSPR beacon", "wspr"}};
+const HamMode kHam[] = {{0, "FT8", "ft8"}, {1, "FT4", "ft4"}, {2, "FT2", "ft2"}, {6, "Q65", "q65"}, {7, "FST4", "fst4"}, {8, "MSK144", "msk144"},
+                        {4, "JT65", "jt65"}, {5, "JT9", "jt9"}, {10, "JT4", "jt4"}, {3, "WSPR beacon", "wspr"}};
+// the catalog id of the mode on screen (ham_station.h): the frequency memory is kept per band and per this id
+std::string modeIdOf(const HamUi& h) {
+    if (h.kbdIdx >= 0) {
+        const auto& kp = ham::kbdPresets();
+        const ham::HamModeInfo* m = ham::hamModeByKbd(kp[(size_t)h.kbdIdx].id);
+        return m ? m->id : kp[(size_t)h.kbdIdx].id;
+    }
+    const ham::HamModeInfo* m = ham::hamModeBySlot(h.mode);
+    return m ? m->id : "ft8";
+}
+// after a mode change: the frequency remembered for this band and the new mode, else its usual one
+void tuneForMode(App& a, const HamUi& h) {
+    const std::string b = ham::rxBandNameFor(a.freqMhz * 1e6);
+    if (b.empty()) return;
+    const double usual = (h.kbdIdx >= 0 ? ham::usualDialMhz(b, modeIdOf(h), hamOps().region) : ham::dialFor(b, h.mode)) * 1e6;
+    const double t = hamStation().mem.recall(b, modeIdOf(h), usual);
+    if (t > 0 && std::fabs(t - a.freqMhz * 1e6) > 1) tuneFreq(a, t / 1e6);
+}
 
 void logRecord(HamUi& h, const ham::QsoRecord& r) {
     std::string err;
@@ -298,6 +323,7 @@ void hamPanel(App& a) {
     HamUi& h = H();
     HamOps& o = hamOps();
     load(h);
+    hamStationLoad();
     const double now = (double)time(nullptr);
     ham::QsoConfig& c = h.eng.config();
     c.myCall = h.call; c.myGrid = h.grid; c.mode = h.mode;
@@ -305,6 +331,8 @@ void hamPanel(App& a) {
     o.myCall = h.call; o.myGrid = h.grid;
     const bool isBeacon = h.mode == 3, isKbd = h.kbdIdx >= 0;
     const std::string band = ham::bandNameFor(a.freqMhz * 1e6), modeName = ham::hamModeName(h.mode), rxBand = ham::rxBandNameFor(a.freqMhz * 1e6);   // rxBand: also names 11 m (CB), which can transmit with a warning
+    c.cqMod = hamStation().cqMod;   // CQ DX / CQ POTA ... (4.0)
+    h.eng.priority = [band, modeName](const std::string& cs) { return hamNeedOf(cs, "", band, modeName, false).level; };   // several callers: the most needed first
     if (o.workedDirty) { o.worked.build(o.log.qsos()); o.workedDirty = false; }
     const bool stationOk = ham::hamCallValid(h.call) && ham::hamGridValid(h.grid);
     const bool canCq = stationOk;   // a callsign and a locator are needed to build the messages; the licence box is a reminder, not a lock
@@ -322,8 +350,10 @@ void hamPanel(App& a) {
         if (d) callIt(d->call, d->grid, (int)std::lround(d->snrDb), d->slotUtc, d->hz); else hamToast("No CQ to answer in the last slot");
     };
     auto setBand = [&](const std::string& b) {
-        const double mhz = ham::dialFor(b, h.mode);
+        const std::string mid = modeIdOf(h);
+        const double mhz = hamStation().mem.recall(b, mid, ham::dialFor(b, h.mode) * 1e6) / 1e6;   // where you were last on that band in this mode (4.0)
         if (mhz <= 0) return;
+        if (!rxBand.empty()) hamStation().mem.remember(rxBand, mid, a.freqMhz * 1e6);
         if (h.eng.active()) h.eng.halt();
         tuneFreq(a, mhz);
         h.lastFed = 0;
@@ -359,14 +389,21 @@ void hamPanel(App& a) {
         }
     }
 
+    // ---- the frequency and the meter (4.0) ----
+    {
+        const ham::HamModeInfo* mi = ham::hamModeInfo(modeIdOf(h));
+        hamStationHeader(a, isKbd ? 0.0 : c.txHz, mi ? ham::modeClass(mi->adifMode) : std::string(), a.rx.hfdig.audioDb);
+    }
     // ---- the mode bar ----
     for (const HamMode& hm : kHam) {
         if (&hm != kHam) ImGui::SameLine();
         if (ImGui::RadioButton(hm.name, h.kbdIdx < 0 && h.mode == hm.num) && (h.mode != hm.num || h.kbdIdx >= 0)) {
+            hamRememberFreq(a, modeIdOf(h));
             h.kbdIdx = -1;
             h.mode = hm.num; h.sub = 0; h.eng.halt(); h.beacon.stop(); h.lastFed = 0; h.override.clear();
             for (const auto& m : allModes()) if (m.family == 25 && m.subId && !strcmp(m.subId, hm.subId)) { selectMode(a, m.family, m.subId); break; }
             a.engine.hfdig().ftx().setModeOption(h.mode, 0, 0);
+            tuneForMode(a, h);
         }
     }
     {   // keyboard modes
@@ -375,32 +412,27 @@ void hamPanel(App& a) {
         ImGui::SameLine(); ImGui::SetNextItemWidth(150 * gUi);
         if (ImGui::BeginCombo("##kbdmode", cur.c_str())) {
             for (int i = 0; i < (int)kp.size(); i++)
-                if (ImGui::Selectable(kp[(size_t)i].name, h.kbdIdx == i)) { h.kbdIdx = i; h.eng.halt(); h.beacon.stop(); h.override.clear(); hamKbdSelect(a, i); }
+                if (ImGui::Selectable(kp[(size_t)i].name, h.kbdIdx == i)) {
+                    hamRememberFreq(a, modeIdOf(h));
+                    h.kbdIdx = i; h.eng.halt(); h.beacon.stop(); h.override.clear(); hamKbdSelect(a, i);
+                    tuneForMode(a, h);
+                }
             ImGui::EndCombo();
         }
+        ImGui::SameLine();
+        hamMoreModesCombo(a);   // JS8Call, SSTV, digital voice, packet, SSB / AM / FM: their own screens
     }
-    if (h.kbdIdx < 0 && (h.mode == 4 || h.mode == 10)) {   // sub-mode: JT65 A B C, JT4 A .. G
+    if (h.kbdIdx < 0 && (h.mode == 4 || h.mode == 6 || h.mode == 10)) {   // sub-mode: JT65 A B C, Q65 A .. E, JT4 A .. G
         int sb = h.sub;
         ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
-        if (ImGui::Combo(tr("Sub-mode"), &sb, h.mode == 4 ? "A\0B\0C\0" : "A\0B\0C\0D\0E\0F\0G\0") && sb != h.sub) {
+        if (ImGui::Combo(tr("Sub-mode"), &sb, h.mode == 4 ? "A\0B\0C\0" : h.mode == 6 ? "A\0B\0C\0D\0E\0" : "A\0B\0C\0D\0E\0F\0G\0") && sb != h.sub) {
             h.sub = sb; h.eng.halt();
             a.engine.hfdig().ftx().setModeOption(h.mode, sb, 0);
         }
     }
 
-    // ---- the band bar ----
-    if (!isKbd) {
-        for (const auto& b : ham::bandDials()) {
-            if (ham::dialFor(b.band, h.mode) <= 0) continue;
-            const bool on = rxBand == b.band;
-            if (on) ImGui::PushStyleColor(ImGuiCol_Button, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-            if (ImGui::SmallButton(b.band)) setBand(b.band);
-            if (on) ImGui::PopStyleColor();
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip(std::string(b.band) == "11m" ? "%.4f MHz, CB (not an amateur band: you are responsible for being allowed to transmit here) (Alt+Up / Alt+Down)" : "%.4f MHz (Alt+Up / Alt+Down)", ham::dialFor(b.band, h.mode));
-            ImGui::SameLine(0, 3 * gUi);
-        }
-    }
-    ImGui::TextDisabled("%.4f MHz", a.freqMhz);
+    // ---- the band bar: one click per band, the frequency remembered per band and mode (4.0, ham_station_ui.cpp) ----
+    if (hamBandBar(a, modeIdOf(h), isKbd ? -1 : h.mode)) { if (h.eng.active()) h.eng.halt(); h.lastFed = 0; }
     if (!isKbd && o.region > 0 && !band.empty() && !ham::regionAllows(o.region, a.freqMhz * 1e6 + c.txHz, ham::hamModeBwHz(h.mode, h.sub))) {
         ImGui::SameLine(); ImGui::TextColored(ImVec4(1, 0.6f, 0.2f, 1), "outside the Region %d band plan", o.region);
     } else if (!isKbd && band.empty()) {
@@ -494,6 +526,7 @@ void hamPanel(App& a) {
             if (d.slotUtc <= h.lastSpot || d.call.empty()) continue;
             const double dial = d.dialHz > 0 ? d.dialHz : a.freqMhz * 1e6;
             o.spots.heard(d.call, d.grid, ham::bandNameFor(dial), ham::hamModeName(d.mode), d.slotUtc, dial, d.hz, (int)std::lround(d.snrDb), d.cq, d.msg);
+            hamHopSpot(ham::bandNameFor(dial), d.slotUtc);   // the band hopper's "auto" follows your own decodes
             newest = std::max(newest, d.slotUtc);
         }
         h.lastSpot = newest;
@@ -513,6 +546,16 @@ void hamPanel(App& a) {
     }
     if (!h.armed && h.tx.busy()) h.tx.abort();   // disarm, watchdog and Halt stop a running burst and release PTT at once
     h.io.rigIdx = h.rigSel;
+    // band hopping (4.0): only while nothing runs, at a slot boundary
+    if (!isKbd && !isBeacon && !h.eng.active() && h.override.empty() && h.txState == 0) {
+        HamStation& st = hamStation();
+        const long hi = ham::slotIndex(now, per);
+        if (st.hopOn && hi != st.lastHopSlot) {
+            st.lastHopSlot = hi;
+            const std::string nb = hamHopBand(ham::slotStart(hi, per), per, rxBand);
+            if (!nb.empty() && ham::dialFor(nb, h.mode) > 0) { setBand(nb); hamToast("Band hop: " + nb); }
+        }
+    }
     // the slot scheduler: the one place a slot-mode transmission starts, always through the gate
     if (!isKbd) {
         const long idx = ham::slotIndex(now, per);
@@ -548,7 +591,7 @@ void hamPanel(App& a) {
 
     // ---- the tabs ----
     if (!ImGui::BeginTabBar("##hamtabs")) return;
-    static const char* kTab[] = {"Operate", "Log", "Awards", "Map", "Spots", "Contest", "Guide"};
+    static const char* kTab[] = {"Operate", "Log", "Awards", "Map", "Spots", "Cluster", "Contest", "Activate", "Guide"};   // the order of HamTab
     const int want = o.wantTab;
     o.wantTab = -1;
     for (int t = 0; t < HamTabCount; t++) {
@@ -567,6 +610,11 @@ void hamPanel(App& a) {
         }); break;
         case HamTabContest: hamContestTab(a); break;
         case HamTabGuide: hamGuideTab(a); break;
+        case HamTabCluster: hamClusterTab(a, [&](const std::string& cs, const std::string& gr) {
+            h.selCall = cs; h.selGrid = gr; o.selCall = cs; o.selGrid = gr; h.selMsg.clear();
+            hamToast(cs + " picked: it is in the QSO panel of Operate");
+        }); break;
+        case HamTabActivate: hamActivateTab(a); break;
         default: break;
         }
         if (t != HamTabOperate) { ImGui::EndChild(); ImGui::EndTabItem(); continue; }
@@ -623,8 +671,19 @@ void hamPanel(App& a) {
             ImGui::SameLine();
             if (ImGui::Button(tr("Clear DX"))) { h.eng.halt(); h.override.clear(); h.dxGrid.clear(); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Ends the QSO without sending anything more (F4)"));
+            {   // CQ DX / CQ POTA ...: the CQ the engine sends (4.0)
+                static const char* kMods[] = {"CQ", "CQ DX", "CQ POTA", "CQ SOTA", "CQ WWFF", "CQ TEST", "CQ NA", "CQ EU"};
+                static const char* kIds[] = {"", "DX", "POTA", "SOTA", "WWFF", "TEST", "NA", "EU"};
+                HamStation& st = hamStation();
+                int cur = 0;
+                for (int i = 0; i < 8; i++) if (st.cqMod == kIds[i]) cur = i;
+                ImGui::SameLine(); ImGui::SetNextItemWidth(100 * gUi);
+                if (ImGui::Combo("##cqmod", &cur, kMods, 8)) { st.cqMod = kIds[cur]; hamStationSave(); }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What your CQ says: CQ DX asks for distant stations only, CQ POTA for park hunters ..."));
+            }
         }
         if (ImGui::CollapsingHeader(trw("Rig and audio"))) rigWidgets();
+        if (ImGui::CollapsingHeader(trw("Automation: band hopping"))) hamHopUi();
 
         // meters and the timeline
         const HfdigTelemetry& ht = a.rx.hfdig;
@@ -677,6 +736,7 @@ void hamPanel(App& a) {
                 const ham::DecodeMarks m = o.worked.mark(d.call, d.grid, band, modeName, d.call.empty() ? "" : hamDxccKey(d.call));
                 const bool dupe = o.contestOn && !d.call.empty() && o.contest.dupe(o.log, d.call, band, modeName);
                 const bool toMe = !c.myCall.empty() && d.msg.rfind(c.myCall + " ", 0) == 0;
+                const ham::NeedResult nr = d.call.empty() ? ham::NeedResult() : hamNeedOf(d.call, d.grid, band, modeName, true);   // zones, state, prefix (4.0); alerts
                 if (m.newDxcc) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(150, 40, 150, 90));
                 else if (m.newDxccBand) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(170, 80, 140, 60));
                 else if (m.newGrid) ImGui::TableSetBgColor(ImGuiTableBgTarget_RowBg0, IM_COL32(40, 120, 170, 70));
@@ -712,9 +772,11 @@ void hamPanel(App& a) {
                 if (dupe) ImGui::TextColored(ImVec4(1, 0.4f, 0.3f, 1), "DUPE");
                 else if (m.newDxcc) ImGui::TextColored(ImVec4(1, 0.5f, 1, 1), "NEW DXCC");
                 else if (m.newDxccBand) ImGui::TextColored(ImVec4(1, 0.65f, 0.9f, 1), "new band");
+                else if (nr.level == 3 || nr.level == 4) ImGui::TextColored(ImVec4(1, 0.78f, 0.4f, 1), "%s", nr.label.c_str());
                 else if (m.newGrid) ImGui::TextColored(ImVec4(0.5f, 0.8f, 1, 1), "new grid");
                 else if (m.workedCallBand) ImGui::TextDisabled("B4");
                 else if (m.workedCall) ImGui::TextDisabled("b4 other band");
+                else if (nr.has(ham::NeedPrefix)) ImGui::TextDisabled("new prefix");
                 ImGui::PopID();
             }
             ImGui::EndTable();
@@ -736,6 +798,19 @@ void hamPanel(App& a) {
             if (ham::pathBetween(h.grid, dxg, pi)) ImGui::TextDisabled("%.0f km, %.0f deg (long path %.0f deg)", pi.km, pi.bearing, pi.longBearing);
             const int dupeIdx = o.log.findDupe(dx, band, modeName);
             if (dupeIdx >= 0) ImGui::TextColored(ImVec4(1, 0.75f, 0.3f, 1), "%s %s", tr("Worked before:"), o.log.qsos()[(size_t)dupeIdx].band.c_str());
+            hamCallbookPanel(dx);   // name, QTH, grid from the cache, the log or the online callbook (4.0)
+            {
+                HamStation& st = hamStation();
+                if (st.splitTxHz > 0 && st.splitFor == dx) {
+                    ImGui::TextColored(ImVec4(0.5f, 0.85f, 1, 1), "%s %.3f MHz", tr("Split: they listen on"), st.splitTxHz / 1e6);
+                    if (h.rigSel >= 0) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton(tr("Set the rig's split"))) { std::string err; h.io.rigIdx = h.rigSel; hamToast(h.io.ensureOpen(err) && h.io.link.setSplit(true, st.splitTxHz, err) ? "Split set on the rig" : "Split not set: " + err); }
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton(tr("Split off"))) { std::string err; h.io.rigIdx = h.rigSel; hamToast(h.io.ensureOpen(err) && h.io.link.setSplit(false, 0, err) ? "Split off" : "Split not changed: " + err); }
+                    }
+                }
+            }
             if (h.eng.dxCall().empty()) {
                 ImGui::BeginDisabled(!canCq || isBeacon || h.selCall.empty());
                 if (ImGui::Button(tr("Call"), ImVec2(-1, 0))) callIt(h.selCall, h.selGrid, h.selSnr, h.selSlot, h.selHz);

@@ -210,6 +210,15 @@ bool logBackupDue(const std::string& dir, double now, double minGap) {
     return t <= 0 || now - t >= minGap;
 }
 
+// ---- TQSL ----
+std::string tqslCommand(const std::string& tqsl, const std::string& location, const std::string& file) {
+    auto q = [](const std::string& v) { std::string o; for (char c : v) if (c != '"' && c != '\n' && c != '\r') o += c; return "\"" + o + "\""; };
+    std::string c = q(trim(tqsl).empty() ? "tqsl" : trim(tqsl)) + " -q -d -u -a compliant -x";
+    if (!trim(location).empty()) c += " -l " + q(trim(location));
+    return c + " " + q(file);
+}
+bool tqslOk(int code) { return code == 0 || code == 9; }
+
 // ---- activations ----
 const char* programName(Program p) {
     switch (p) {
