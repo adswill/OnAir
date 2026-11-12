@@ -326,6 +326,8 @@ void listBody(App& a) {
 
 } // namespace
 
+void generalAutoListBody(App& a) { listBody(a); }   // the General 4.0 sidebar (general/general_panels.h)
+
 float generalAutoButton(App& a, ImVec2 plotMin, ImVec2 plotSize, float rightUsed) {
     if (a.family != 55 && S.g.state() != ga::State::Decoding) return 0;
     char lb[96];

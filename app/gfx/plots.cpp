@@ -14,6 +14,7 @@
 #include "../state/tune_worker.h"
 #include "../state/listen_freq.h"
 #include "view_span.h"
+#include "../general/general_panels.h"
 #include "dect2/specan/specan_dsp.h"
 #include <ctime>
 
@@ -1700,6 +1701,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
     const slook::LookSet& L = curLook(a);
     plt::SetNextPlotLook(plotLook(a, true));
     wheelPolicy(a, inputmap::Area::Spectrum, size);
+    if (isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);   // the wheel over the VFO steps it
     plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
     plt::SetNextDragTune(specDragTunes(a), std::round(ImGui::GetFontSize() * 1.5f));   // the frequency labels along the bottom edge are the scale that pans
     if (plt::BeginPlot("##spec", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(0)) || bandEdgeDragging(0) || fileBoxDragging(0) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
@@ -1871,7 +1873,7 @@ static void spectrumPlot(App& a, ImVec2 size, int extraFlags) {
         visLo = plt::GetPlotLimits().X.Min; visHi = plt::GetPlotLimits().X.Max;
         specxDrawBookmarks(ImGui::GetWindowDrawList(), visLo * 1e6, visHi * 1e6,
                            plotMin.x, plotMin.x + plotSize.x, plotMin.y, plotMin.y + plotSize.y);
-        if (plt::IsPlotHovered() && dragtune::menuOpens(specDragTunes(a) ? dragtune::Tune : dragtune::Pan, ImGui::IsMouseClicked(ImGuiMouseButton_Right),
+        if (plt::IsPlotHovered() && !generalVfoMenuTaken() && dragtune::menuOpens(specDragTunes(a) ? dragtune::Tune : dragtune::Pan, ImGui::IsMouseClicked(ImGuiMouseButton_Right),
                                                         ImGui::IsMouseReleased(ImGuiMouseButton_Right), std::sqrt(ImGui::GetIO().MouseDragMaxDistanceSqr[ImGuiMouseButton_Right]))) {
             ctxMhz = plt::GetPlotMousePos().x; openCtx = true;   // Tune: a right drag pans, so the menu opens on a release that did not move
         }
@@ -2015,6 +2017,7 @@ static void waterfallPlot(App& a, ImVec2 size, int extraFlags) {
     const bool look = lookOn(a);
     plt::SetNextPlotLook(plotLook(a, false));
     wheelPolicy(a, inputmap::Area::Waterfall, size);
+    if (isGeneralFamily(a.family)) generalVfoWheel(a, ImGui::GetCursorScreenPos(), size, gXLo, gXHi);
     plt::SetNextZoomMarker(a.freqMhz, 10 * gUi);
     plt::SetNextDragTune(specDragTunes(a), 0);   // no frequency labels of its own: right or middle drag pans
     if (plt::BeginPlot("##wf", size, plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Overlay | plt::Flags_NoDoubleReset | (a.specSmoothZoom ? plt::Flags_SmoothZoom : 0) | extraFlags | ((isGeneralFamily(a.family) && generalDragging(1)) || bandEdgeDragging(1) || fileBoxDragging(1) ? plt::Flags_NoPan : 0) | (a.identifyTool ? plt::Flags_NoPan : 0) | (ImGui::GetIO().KeyShift ? plt::Flags_NoDrag : 0))) {
@@ -2137,6 +2140,7 @@ void spectrumWaterfall(App& a, float& frac, bool drag) {
         dragRetune(a);   // a drag on the waterfall that runs past the band retunes too (its overflow is gone once the next plot begins)
     };
     if (wfFirst) { wfPart(); specPart(); } else { specPart(); wfPart(); }
+    if (isGeneralFamily(a.family)) generalVfoMenu(a);   // a right click on the VFO band: the demodulators and the filter presets
     {   // the part of the band in view: the auto ranges follow its noise floor (a zoom onto a crowded part keeps its own floor dark)
         const double fsM = sampleRateMhz(a), lo = radioCenterMhz(a) - fsM / 2;
         if (fsM > 0 && gXHi > gXLo) { a.wf.viewU0 = (gXLo - lo) / fsM; a.wf.viewU1 = (gXHi - lo) / fsM; }

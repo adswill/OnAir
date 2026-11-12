@@ -20,11 +20,11 @@ using namespace genlayout;
 
 static void testPrefs() {
     Layout L;
-    L.sideW = 333; L.sideOpen = false; L.specFrac = 0.61f; L.drawerOpen = true; L.drawerH = 300; L.open = bit(SecRadio) | bit(SecLog); L.snap = false;
+    L.sideW = 333; L.sideOpen = false; L.specFrac = 0.61f; L.drawerOpen = true; L.drawerH = 300; L.open = bit(SecRadio) | bit(SecLog);
     Layout R;
     CHECK(decode(encode(L), R), "round trip decodes");
     CHECK(std::fabs(R.sideW - 333) < 0.5f && !R.sideOpen && std::fabs(R.specFrac - 0.61f) < 1e-3f && R.drawerOpen && std::fabs(R.drawerH - 300) < 0.5f &&
-          R.open == (bit(SecRadio) | bit(SecLog)) && !R.snap, "round trip keeps every field: %s", encode(R).c_str());
+          R.open == (bit(SecRadio) | bit(SecLog)), "round trip keeps every field: %s", encode(R).c_str());
     // nothing saved yet (an old profile) and damaged or foreign text: the defaults, never a crash
     for (const char* s : {"", "garbage", ";;;", "w=abc;v=x", "0.5,0.5,1", "v=;w=;", "=1;=2"}) {
         Layout D; D.sideW = 1;
@@ -33,7 +33,7 @@ static void testPrefs() {
     // values out of range are clamped; unknown keys (a later version's) are skipped; missing keys keep their default
     Layout C;
     CHECK(decode("v=1;w=99999;f=5;dh=1;zz=7;future=abc;s=ffffffff", C), "clamped text decodes");
-    CHECK(C.sideW == kSideMax && C.specFrac == kFracMax && C.drawerH == kDrawerMin && C.open == kAllSections && C.sideOpen && C.snap, "clamped: %s", encode(C).c_str());
+    CHECK(C.sideW == kSideMax && C.specFrac == kFracMax && C.drawerH == kDrawerMin && C.open == kAllSections && C.sideOpen, "clamped: %s", encode(C).c_str());
     Layout M;
     CHECK(decode("v=1;w=250", M) && M.sideW == 250 && M.specFrac == Layout{}.specFrac && M.open == kDefaultOpen, "missing keys keep defaults");
     Layout N;

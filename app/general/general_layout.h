@@ -1,6 +1,6 @@
 // The General receiver screen of 4.0 (docs/GENERAL-4.0.md): the pure logic under it, with no ImGui, so tests/general40 can check it.
-// The layout state (sidebar width and visibility, the spectrum / waterfall split, the drawer, which sidebar sections are open, snap)
-// and its text form in the preferences; the sidebar width a window of a given width can give; the VFO hit test and the drag maths.
+// The layout state (sidebar width and visibility, the spectrum / waterfall split, the drawer, which sidebar sections are open)
+// and its text form in the preferences (snap to the step is general_ui.cpp's own preference, genSnap); the sidebar width a window of a given width can give; the VFO hit test and the drag maths.
 #pragma once
 #include <algorithm>
 #include <cmath>
@@ -30,9 +30,8 @@ struct Layout {
     bool drawerOpen = false;      // the drawer under the waterfall: Receiver, History, Memory, Frequencies, a second mode
     float drawerH = kDrawerDefault;
     uint32_t open = kDefaultOpen; // the open sections
-    bool snap = true;             // VFO clicks and drags snap to the step
     bool operator==(const Layout& o) const {
-        return sideW == o.sideW && sideOpen == o.sideOpen && specFrac == o.specFrac && drawerOpen == o.drawerOpen && drawerH == o.drawerH && open == o.open && snap == o.snap;
+        return sideW == o.sideW && sideOpen == o.sideOpen && specFrac == o.specFrac && drawerOpen == o.drawerOpen && drawerH == o.drawerH && open == o.open;
     }
 };
 
@@ -47,12 +46,12 @@ inline Layout clamped(Layout L) {
     return L;
 }
 
-// The preferences text: "v=1;w=300;o=1;f=0.420;d=0;dh=240;s=f;n=1". Unknown keys are skipped and missing ones keep their default, so a
+// The preferences text: "v=1;w=300;o=1;f=0.420;d=0;dh=240;s=f". Unknown keys are skipped and missing ones keep their default, so a
 // later version can add keys and an older one still reads what it knows.
 inline std::string encode(const Layout& in) {
     const Layout L = clamped(in);
     char b[160];
-    std::snprintf(b, sizeof b, "v=1;w=%.0f;o=%d;f=%.3f;d=%d;dh=%.0f;s=%x;n=%d", L.sideW, L.sideOpen ? 1 : 0, L.specFrac, L.drawerOpen ? 1 : 0, L.drawerH, L.open, L.snap ? 1 : 0);
+    std::snprintf(b, sizeof b, "v=1;w=%.0f;o=%d;f=%.3f;d=%d;dh=%.0f;s=%x", L.sideW, L.sideOpen ? 1 : 0, L.specFrac, L.drawerOpen ? 1 : 0, L.drawerH, L.open);
     return b;
 }
 
@@ -80,7 +79,6 @@ inline bool decode(const std::string& s, Layout& out) {
         else if (k == "f") L.specFrac = (float)d;
         else if (k == "d") L.drawerOpen = d != 0;
         else if (k == "dh") L.drawerH = (float)d;
-        else if (k == "n") L.snap = d != 0;
     }
     out = v1 ? clamped(L) : Layout{};
     return v1;
