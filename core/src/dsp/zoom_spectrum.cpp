@@ -183,8 +183,8 @@ void ZoomDecimator::run(const cf32* x, size_t n, std::vector<cf32>& out) {
         }
         const float sc = (float)scale_;
         for (size_t i = 0; i < pn; i++) {
-            const float xr = y[i].real(), xi = y[i].imag();
-            const float vr = xr * pr - xi * pi, vi = xr * pi + xi * pr;
+            const float yr = y[i].real(), yi = y[i].imag();
+            const float vr = yr * pr - yi * pi, vi = yr * pi + yi * pr;
             { const float t = pr * sr - pi * si; pi = pr * si + pi * sr; pr = t; }
             const float re = std::min(8.f, std::max(-8.f, vr)), im = std::min(8.f, std::max(-8.f, vi));
             const uint64_t xi = (uint64_t)(int64_t)(re * sc), xq = (uint64_t)(int64_t)(im * sc);
