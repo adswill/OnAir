@@ -70,15 +70,28 @@ public:
 
     bool configure(double fs, double offsetHz) {
         fs_ = fs; off_ = offsetHz; ph_ = 0;
-        d_ = std::max(1, (int)std::floor(fs / 96000.0));
-        if (!dec_.configure(fs, d_, 5000.0)) return false;
+        d_ = std::max(1, (int)std::floor(fs / 48000.0));
+        if (!dec_.configure(fs, d_, 8000.0)) return false;
         fd_ = dec_.outRate();
         step_ = fd_ / kFs;
+        // the narrow channel filter at 48 - 96 ksps (the decimator's own edge is far wider: its -6 dB point lies half way to the output Nyquist
+        // frequency, and the noise it lets through costs the discriminator about 8 dB): Blackman sinc, -6 dB at 5 kHz
+        const int nt = std::max(31, ((int)std::lround(1.1 * fd_ / 1000.0)) | 1);
+        nh_.assign((size_t)nt, 0.f);
+        const double fcn = 5000.0 / fd_;
+        double sum = 0;
+        for (int i = 0; i < nt; i++) {
+            const double m = i - (nt - 1) / 2.0;
+            const double sc = m == 0 ? 2 * fcn : std::sin(2 * kPi * fcn * m) / (kPi * m);
+            const double w = 0.42 - 0.5 * std::cos(2 * kPi * i / (nt - 1)) + 0.08 * std::cos(4 * kPi * i / (nt - 1));
+            nh_[(size_t)i] = (float)(sc * w); sum += nh_[(size_t)i];
+        }
+        for (float& v : nh_) v = (float)(v / sum);
         resetDsp();
         return true;
     }
     void resetDsp() {
-        dec_.reset(); prevZ_ = cf32(0, 0); haveF_ = false; fPrev_ = 0; inIdx_ = 0; pos_ = 1.0;
+        dec_.reset(); nhist_.assign(2 * nh_.size(), cf32(0, 0)); nPos_ = 0; afcHz_ = 0; rot_ = {1, 0}; rotStep_ = {1, 0}; rotN_ = 0; prevZ_ = cf32(0, 0); haveF_ = false; fPrev_ = 0; inIdx_ = 0; pos_ = 1.0;
         chain_.init();
         lvl_ = 0;
     }
@@ -89,7 +102,7 @@ public:
             for (size_t i = 0; i < n; i++) { mix_[i] = x[i] * cf32((float)std::cos(p), (float)std::sin(p)); p += dp; if (p > kPi) p -= 2 * kPi; else if (p < -kPi) p += 2 * kPi; }
             ph_ = p;
         } else std::copy(x, x + n, mix_.begin());
-        dec_.process(mix_.data(), n, [&](cf32 a) { demod(a); });
+        dec_.process(mix_.data(), n, [&](cf32 a) { narrow(a); });
         poll();
     }
     // end a call whose frames stopped
@@ -118,6 +131,26 @@ public:
 
 private:
     // ---------------------------------------------------------------- demodulator
+    void narrow(cf32 a) {
+        const cf32 r((float)rot_.real(), (float)rot_.imag());
+        rot_ *= rotStep_;
+        if (++rotN_ >= 4096) { rotN_ = 0; rot_ /= std::abs(rot_); }
+        const int N = (int)nh_.size();
+        const cf32 in = a * r;
+        nhist_[(size_t)nPos_] = nhist_[(size_t)(nPos_ + N)] = in;
+        nPos_ = (nPos_ + 1) % N;
+        const cf32* x = nhist_.data() + nPos_;
+        cf32 acc(0, 0);
+        for (int k = 0; k < N; k++) acc += x[k] * nh_[(size_t)k];
+        demod(acc);
+    }
+    // the carrier is off: move the oscillator (the narrow filter then sits on the signal) and the level offset of the chain with it
+    void afc(double hz) {
+        if (std::fabs(afcHz_ + hz) > 3500.0) return;
+        afcHz_ += hz;
+        rotStep_ = std::polar(1.0, -2 * kPi * afcHz_ / fd_);
+        chain_.d -= hz;
+    }
     void demod(cf32 a) {
         lvl_ = 0.999 * lvl_ + 0.001 * std::norm(a);
         const cf32 dz = a * std::conj(prevZ_);
@@ -313,12 +346,13 @@ private:
         if (any) {
             lastGood_ = out_->now();
             st_.snrDb = st_.snrDb == 0 ? snr : 0.8 * st_.snrDb + 0.2 * snr;
-            st_.cfoHz = c.d;
+            st_.cfoHz = c.d + afcHz_;
             st_.devHz = 3 * std::fabs(c.g);
             st_.inverted = c.g < 0;
-            out_->good((float)st_.snrDb, c.d);
+            out_->good((float)st_.snrDb, c.d + afcHz_);
         } else out_->bad();
         if (call_.active) call_.lastSec = lastGood_ > call_.lastSec ? lastGood_ : call_.lastSec;
+        if (any && std::fabs(c.d) > 250.0) afc(0.6 * c.d);   // from the next frame on
         return any;
     }
 
@@ -447,6 +481,11 @@ private:
     Decimator dec_;
     std::vector<cf32> mix_;
     cf32 prevZ_{0, 0};
+    std::vector<float> nh_;
+    std::vector<cf32> nhist_;
+    int nPos_ = 0, rotN_ = 0;
+    double afcHz_ = 0;
+    std::complex<double> rot_{1, 0}, rotStep_{1, 0};
     bool haveF_ = false;
     float fPrev_ = 0;
     int64_t inIdx_ = 0;
