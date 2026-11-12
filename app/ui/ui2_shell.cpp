@@ -692,60 +692,69 @@ static void viewMenu(App& a) {
 // background, one gap between them, centred in the bar. Placed from the width the row had last frame (it follows the update button's label).
 static float gBarRestW = 0;
 // Discord icon chip for the menu bar; true when clicked
+// the Discord invite: the same height as the text buttons beside it (a small button's height, the text line), the icon fitted inside
 static bool discordButton() {
     ImGui::PushID("discord_invite");
-    const float h = ImGui::GetFrameHeight();
-    const ImVec2 sz(h * 1.3f, h);
+    const float h = ImGui::GetTextLineHeight();
+    const ImVec2 sz(h * 1.5f, h);
     const ImVec2 p = ImGui::GetCursorScreenPos();
     const bool clicked = ImGui::InvisibleButton("##dc", sz);
     const bool hov = ImGui::IsItemHovered();
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), hov ? IM_COL32(88, 101, 242, 255) : IM_COL32(255, 255, 255, 10), ImGui::GetStyle().FrameRounding);
-    dl->AddRect(p, ImVec2(p.x + sz.x, p.y + sz.y), IM_COL32(255, 255, 255, 31), ImGui::GetStyle().FrameRounding);
-    icons::draw(Ic::Discord, ImVec2(p.x + sz.x * 0.5f, p.y + sz.y * 0.5f), h * 0.62f, hov ? IM_COL32(255, 255, 255, 255) : IM_COL32(150, 165, 245, 255), dl);
+    if (hov) dl->AddRectFilled(p, ImVec2(p.x + sz.x, p.y + sz.y), IM_COL32(88, 101, 242, 255), 2.f * gUi);
+    icons::draw(Ic::Discord, ImVec2(p.x + sz.x * 0.5f, p.y + sz.y * 0.5f), h * 0.72f, hov ? IM_COL32(255, 255, 255, 255) : IM_COL32(150, 165, 245, 255), dl);
     if (hov) ImGui::SetTooltip("%s", tr("Join the OnAir Discord"));
     ImGui::PopID();
     return clicked;
 }
+// The items at the right end of the menu bar (credit, Credits, Support, Discord, version, Clear all). 4.0: flat like the status bar: no frames,
+// a faint fill only under the pointer, thin rules between items, every item the height of the text line and centred in the bar, so there is
+// a gap above and below whatever the text size and typography (the bar's height comes from the frame padding pushed in menuBar()).
 static void menuBarRight(App& a) {
     const ImGuiStyle& ist = ImGui::GetStyle();
     const float g = 6.f * gUi, margin = 12.f * gUi, W = ImGui::GetWindowWidth();
     const char* credit = tr("by: Kristijonas Adomaitis, made with help from the community");
     const float cw = ImGui::CalcTextSize(credit).x + 2.f * ist.FramePadding.x;
     const float lineH = ImGui::GetTextLineHeight();
-    // centred on the line the menu titles are on (their frame is taller than the chips), never touching the bar's bottom edge
-    const float y = std::max(0.f, ImGui::GetCursorPosY() + (ImGui::GetFrameHeight() - lineH) * 0.5f - 1.f * gUi);
+    const float y = std::max(1.f * gUi, std::floor((ImGui::GetWindowHeight() - lineH) * 0.5f));   // centred in the bar itself
     const float minX = ImGui::GetCursorPosX() + 20 * gUi;
     const float xRest = gBarRestW > 0 ? W - margin - gBarRestW : W - margin - 400 * gUi;
-    const bool showBy = gBarRestW > 0 && xRest - g - cw > minX;   // the 'by' text goes first when the menu bar is narrow
+    const bool showBy = gBarRestW > 0 && xRest - 2 * g - 1 - cw > minX;   // the 'by' text goes first when the menu bar is narrow
     if (gBarRestW > 0 && xRest < minX) return;
-    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 1, 1, 0.04f));
+    ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(1, 1, 1, 0));
     ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(1, 1, 1, 0.09f));
-    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1, 1, 1, 0.12f));
-    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1, 1, 1, 0.12f));
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.f);
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, ImVec4(1, 1, 1, 0.14f));
+    ImGui::PushStyleColor(ImGuiCol_Border, ImVec4(1, 1, 1, 0));
+    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
     const ImVec4 dimText(0.62f, 0.68f, 0.75f, 1);
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    const ImU32 rule = IM_COL32(255, 255, 255, 34);
+    const auto next = [&]() {   // a thin rule in the middle of the gap, then the next item on the same centred line
+        const float rx = ImGui::GetItemRectMax().x + g, top = ImGui::GetWindowPos().y + y;
+        dl->AddLine(ImVec2(rx + 0.5f, top + 2 * gUi), ImVec2(rx + 0.5f, top + lineH - 2 * gUi), rule);
+        ImGui::SameLine(0, 2 * g + 1); ImGui::SetCursorPosY(y);
+    };
     if (showBy) {
-        ImGui::SameLine(xRest - g - cw); ImGui::SetCursorPosY(y);
+        ImGui::SameLine(xRest - 2 * g - 1 - cw); ImGui::SetCursorPosY(y);
         ImGui::PushStyleColor(ImGuiCol_Text, dimText);
         if (ImGui::SmallButton(credit)) { a.creditsOpen = true; a.creditsTab = 0; }
         ImGui::PopStyleColor();
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Thank you to everyone who reported bugs, sent recordings and opened pull requests."));
-        ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
+        next();
     } else { ImGui::SameLine(xRest); ImGui::SetCursorPosY(y); }
     ImGui::PushStyleColor(ImGuiCol_Text, dimText);
     if (ImGui::SmallButton(tr("Credits"))) { a.creditsOpen = true; a.creditsTab = 0; }
     ImGui::PopStyleColor();
     const float x0 = ImGui::GetItemRectMin().x;
-    ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
+    next();
     ImGui::PushStyleColor(ImGuiCol_Text, dimText);
     supportButton();
     ImGui::PopStyleColor();
-    ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
+    next();
     if (discordButton()) dect2::openUrl(appcodec::discordInviteUrl());
-    ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
+    next();
     updateButton(a);
-    ImGui::SameLine(0, g); ImGui::SetCursorPosY(y);
+    next();
     clearAllButtonAt(a, false);
     gBarRestW = ImGui::GetItemRectMax().x - x0;
     ImGui::PopStyleVar();

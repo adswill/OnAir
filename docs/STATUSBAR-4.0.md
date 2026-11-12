@@ -74,3 +74,24 @@ Code: `app/ui/ui2_shell.cpp` (`topBar`, `quickStrip`), `app/ui/kit/mode_actions.
 
 Long texts checked by reading the code paths, not on screen yet: "Listening. This mode does not report a lock: watch the list for
 decoded items." is cut to the space left of the antenna hint and buttons and shown whole in the tooltip.
+
+## E. The items at the right of the menu bar
+
+Code: `app/ui/ui2_shell.cpp` (`menuBarRight`, `discordButton`).
+
+### Before (3.9)
+
+The credit line ("by: Kristijonas Adomaitis, made with help from the community"), Credits, Support, the Discord button, the version and
+Clear all were small buttons with a 1 px border and a faint fill, placed at `cursor y + (frame height - line height) / 2 - 1 px`; in the
+taller menu bar their top edges ran into the bar's top line. The Discord button was a full frame high (the menu bar pushes 3 px of extra
+frame padding), 1.3 frames wide, so it was clearly larger than the text buttons beside it.
+
+### After (4.0)
+
+- Every item is the height of the text line and centred in the bar's own height (`(bar height - line height) / 2`, at least 1 px), so there
+  is an equal gap above and below at any text size, UI scale and with the compact typography.
+- Flat: no borders, no fill except under the pointer (9 % white; Discord turns its own blue), a thin 1 px rule between items, the same 6 px
+  spacing on each side of every rule.
+- Discord: 1.5 text lines wide and one high, the icon at 72 % of the line height inside it.
+- Clicks, tooltips, the version / update states and the Clear all confirmation are unchanged; on a narrow bar the credit line still goes
+  first.
