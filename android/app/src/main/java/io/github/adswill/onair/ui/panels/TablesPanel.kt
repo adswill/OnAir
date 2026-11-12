@@ -51,28 +51,31 @@ object TablesPanel : ModePanel {
         var sortCol by rememberSaveable { mutableStateOf(-1) }
         var desc by rememberSaveable { mutableStateOf(false) }
         Column(modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
-            if (tables.isEmpty()) { Label(stringResource(R.string.panel_nothing)); return }
-            val tab = tables[tabIx.coerceIn(0, tables.size - 1)]
-            if (tables.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                tables.forEachIndexed { i, x -> Chip(x.name, color = p.accent, selected = tab === x) { tabIx = i; sortCol = -1 } }
-            }
-            PanelSearch(query, { query = it })
-            Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                tab.cols.forEachIndexed { i, c ->
-                    Chip(c + if (sortCol == i) (if (desc) " ▼" else " ▲") else "", color = p.muted, selected = sortCol == i) {
-                        if (sortCol == i) desc = !desc else { sortCol = i; desc = false }
+            // no return out of the Column's content (#435: early returns from inline composable lambdas broke the slot table)
+            if (tables.isEmpty()) Label(stringResource(R.string.panel_nothing))
+            else {
+                val tab = tables[tabIx.coerceIn(0, tables.size - 1)]
+                if (tables.size > 1) Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    tables.forEachIndexed { i, x -> Chip(x.name, color = p.accent, selected = tab === x) { tabIx = i; sortCol = -1 } }
+                }
+                PanelSearch(query, { query = it })
+                Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    tab.cols.forEachIndexed { i, c ->
+                        Chip(c + if (sortCol == i) (if (desc) " ▼" else " ▲") else "", color = p.muted, selected = sortCol == i) {
+                            if (sortCol == i) desc = !desc else { sortCol = i; desc = false }
+                        }
                     }
                 }
-            }
-            val rows = remember(tab, query, sortCol, desc) { sortRows(filterRows(tab.rows, query), sortCol, desc) }
-            Label(stringResource(R.string.panel_count, rows.size, tab.rows.size), Modifier.padding(vertical = 3.dp), size = 11)
-            if (rows.isEmpty()) { Label(stringResource(R.string.panel_no_match)); return }
-            LazyColumn(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                itemsIndexed(rows) { _, r ->
-                    Column(Modifier.fillMaxWidth().background(p.panel).padding(horizontal = 10.dp, vertical = 6.dp)) {
-                        tab.cols.forEachIndexed { c, name ->
-                            val v = r.getOrNull(c).orEmpty()
-                            if (v.isNotBlank()) Row { Label("$name  ", size = 11); Text(v, color = p.text, fontFamily = Mono, fontSize = 12.sp) }
+                val rows = remember(tab, query, sortCol, desc) { sortRows(filterRows(tab.rows, query), sortCol, desc) }
+                Label(stringResource(R.string.panel_count, rows.size, tab.rows.size), Modifier.padding(vertical = 3.dp), size = 11)
+                if (rows.isEmpty()) Label(stringResource(R.string.panel_no_match))
+                else LazyColumn(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    itemsIndexed(rows) { _, r ->
+                        Column(Modifier.fillMaxWidth().background(p.panel).padding(horizontal = 10.dp, vertical = 6.dp)) {
+                            tab.cols.forEachIndexed { c, name ->
+                                val v = r.getOrNull(c).orEmpty()
+                                if (v.isNotBlank()) Row { Label("$name  ", size = 11); Text(v, color = p.text, fontFamily = Mono, fontSize = 12.sp) }
+                            }
                         }
                     }
                 }

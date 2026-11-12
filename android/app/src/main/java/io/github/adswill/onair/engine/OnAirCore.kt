@@ -64,6 +64,22 @@ class OnAirCore internal constructor() {
     fun recStats(): RecStats = RecStats.parse(OnAirNative.nativeRecStats())
     fun recStop() = OnAirNative.nativeRecStop()
     fun version(): String = OnAirNative.nativeVersion()
+
+    /** CDR (#463): the service whose sound plays; -1 the first audio service, 0 none. */
+    fun cdrListen(serviceId: Int) = OnAirNative.nativeCdrListen(serviceId)
+    /** Points the core at the app's codecs folder ("" keeps the one set before) and looks for the DRA+ add-on again. */
+    fun codecs(dir: String): CodecStatus = CodecStatus.parse(OnAirNative.nativeCodecs(dir))
+}
+
+/** The DRA+ add-on as the core found it: [found] usable; [path] the file; [problem] why a file that was found cannot be used. */
+data class CodecStatus(val found: Boolean, val path: String, val problem: String) {
+    companion object {
+        val none = CodecStatus(false, "", "")
+        fun parse(s: String): CodecStatus {
+            val p = s.split('\t')
+            return CodecStatus(p.getOrNull(0) == "1", p.getOrElse(1) { "" }, p.getOrElse(2) { "" })
+        }
+    }
 }
 
 /** The IQ recorder's state: seconds and bytes so far; [capReached] when it stopped at the size cap. */

@@ -27,6 +27,8 @@ object Std {
     const val HFDL = 36
     const val JS8 = 38
     const val SAME = 77
+    /** CDR (China Digital Radio): its own Sound panel (CdrPanel); the Results panel keeps the cards and tables. */
+    const val CDR = 23
 
     /** Standards whose message-like table (time, header fields, free text) reads best as a list. */
     val messageLists = setOf(ACARS, INMARSAT, AERO, IRIDIUM, MESH, PAGER, VDL2, HFDL, DSTAR, SAME, HFDIG, JS8, PACKET)
