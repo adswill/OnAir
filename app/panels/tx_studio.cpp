@@ -582,7 +582,7 @@ void saveTab(App& a, Studio& s) {
     if (ImGui::BeginCombo("##swkeys", tr("pick"), ImGuiComboFlags_NoPreview)) {
         for (const char* k : {"wpm", "toneHz", "baudIdx", "shiftIdx", "kind", "variant", "dbm", "bandwidthMhz", "deviationHz", "impair.snr", "impair.cfo"})
             if (ImGui::Selectable(k)) snprintf(s.sweepKey, sizeof s.sweepKey, "%s", k);
-        if (s.mode) for (const auto& d : s.ui.params) if (d.bind == Bind::Opt && ImGui::Selectable(d.key)) snprintf(s.sweepKey, sizeof s.sweepKey, "%s", d.key);
+        if (s.mode) for (const auto& d : s.ui.params) if (d.field == dect2::TxPField::None && !d.set && !d.custom && !d.hidden && d.type != dect2::TxPType::Text && d.type != dect2::TxPType::File && ImGui::Selectable(d.key)) snprintf(s.sweepKey, sizeof s.sweepKey, "%s", d.key);
         ImGui::EndCombo();
     }
     ImGui::SetNextItemWidth(260 * gUi);
