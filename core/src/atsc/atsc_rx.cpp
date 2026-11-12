@@ -669,7 +669,7 @@ struct Core {
         seg = false; tau = 0; rate = 2.0; rr = 0; segPos = 0; segSyms.clear(); lowQ = 0; syncQ = 0;
         raw.clear(); rawBase = 0; symAbs = 0; segAbs = 0; gainCorr = 1.0;
         fieldLock = false; fieldStartSeg = -1; fsMisses = 0; lastFsSeg = -1; fsSeen = false; pendingStart = -1;
-        workerReset();
+        workerReset(true);
         tsFlow = 0;
         AtscTelemetry keep;
         keep.seq = t.seq;
@@ -1103,7 +1103,9 @@ struct Core {
     // ---------------------------------------------------------------- field worker
     // The per-field work (equaliser fit, filtering, trellis decoding, Reed-Solomon) runs on its own thread so that the sample thread only
     // does the resampler, the pilot loop and the symbol clock. Fields are processed strictly in order (the de-interleaver needs that).
-    struct Job { int64_t f0 = 0; int parity = 1; int64_t base = 0; std::vector<float> s; };
+    // afterGap: fields before this one were dropped (or the lock was lost and found again): the decoder restarts at it, the equaliser starts
+    // from the taps it had. behind: the worker had at least two more fields waiting when it took this one (it then sheds optional work).
+    struct Job { int64_t f0 = 0; int parity = 1; int64_t base = 0; std::vector<float> s; bool afterGap = false, behind = false; };
     struct DecOut {
         uint64_t fields = 0, segments = 0, rsClean = 0, rsCorrected = 0, rsFailed = 0;
         double snr = 0, dataSnr = 0, segErr = 0;
@@ -1111,48 +1113,106 @@ struct Core {
         AtscMhStatus mh;
         std::vector<float> taps, levels;
         uint64_t seq = 0;
+        double load = 0;   // the worker's time per field over the field's own duration, averaged (1 = just keeping up)
     };
     std::thread worker;
     std::mutex jm;
     std::condition_variable jcv;
     std::deque<Job> jobs;
-    bool stopW = false, decResetReq = true, working = false;
+    bool stopW = false, decResetReq = true, decResetFull = true, working = false;
     std::atomic<bool> blocking{false};   // wait for the worker instead of dropping fields (files, tests)
     std::condition_variable jspace;
     DecOut decOut;
     std::mutex dmu;
     ~Core() { stopWorker(); }
-    void startWorker() { if (worker.joinable()) return; stopW = false; worker = dect2::namedThread("onair-atsc", [this] { workerLoop(); }); }
+    // The decoded packets leave on their own thread: the packet callback (demultiplexer, player, recorder) may take its time or wait on a lock
+    // without holding up the equaliser and the decoder, which must finish a field every 24.2 ms. ATSC_SYNCCB=1: the callback on the worker.
+    struct OutBlk { std::vector<uint8_t> pk; size_t n = 0; double secs = 0; };
+    std::thread outT;
+    std::mutex om;
+    std::condition_variable ocv;
+    std::deque<OutBlk> outQ;
+    bool stopO = false, outBusy = false;
+    std::atomic<uint64_t> packetsDropped{0};
+    void startWorker() {
+        if (!outT.joinable()) { { std::lock_guard<std::mutex> lk(om); stopO = false; } outT = dect2::namedThread("onair-atscout", [this] { outLoop(); }); }
+        if (worker.joinable()) return;
+        stopW = false;
+        worker = dect2::namedThread("onair-atsc", [this] { workerLoop(); });
+    }
     void stopWorker() {
         { std::lock_guard<std::mutex> lk(jm); stopW = true; }
         jcv.notify_all();
         jspace.notify_all();
         if (worker.joinable()) worker.join();
+        { std::lock_guard<std::mutex> lk(om); stopO = true; }
+        ocv.notify_all();
+        if (outT.joinable()) outT.join();
+    }
+    void outLoop() {
+        for (;;) {
+            OutBlk b;
+            {
+                std::unique_lock<std::mutex> lk(om);
+                ocv.wait(lk, [&] { return stopO || !outQ.empty(); });
+                if (outQ.empty()) return;   // stopping, and everything was delivered
+                b = std::move(outQ.front()); outQ.pop_front(); outBusy = true;
+            }
+            if (cb) cb(b.pk.data(), b.n, b.secs);
+            { std::lock_guard<std::mutex> lk(om); outBusy = false; }
+            ocv.notify_all();
+        }
+    }
+    void deliver(const uint8_t* pk, size_t n, double secs) {
+        static const bool syncCb = getenv("ATSC_SYNCCB") != nullptr;
+        if (syncCb) { cb(pk, n, secs); return; }
+        {
+            std::unique_lock<std::mutex> lk(om);
+            // a file or a test (blocking): wait for the consumer; a radio: about ten seconds may wait, then the oldest go
+            if (blocking) ocv.wait(lk, [&] { return outQ.size() < 64 || stopO; });
+            while (outQ.size() >= 400) { packetsDropped += outQ.front().n; outQ.pop_front(); }
+            OutBlk b; b.pk.assign(pk, pk + n * kTsBytes); b.n = n; b.secs = secs;
+            outQ.push_back(std::move(b));
+        }
+        ocv.notify_all();
     }
     void flush() {
         for (int i = 0; i < 4000; i++) {
-            { std::lock_guard<std::mutex> lk(jm); if (jobs.empty() && !working) return; }
+            bool idle;
+            { std::lock_guard<std::mutex> lk(jm); idle = jobs.empty() && !working; }
+            if (idle) { std::lock_guard<std::mutex> lk(om); if (outQ.empty() && !outBusy) return; }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
-    void workerReset() { std::lock_guard<std::mutex> lk(jm); jobs.clear(); decResetReq = true; }
+    // full: a new channel or rate (everything learnt goes). Otherwise the lock was lost and is being looked for again: the decoder restarts, but
+    // the equaliser keeps its taps, so a short fade on a channel with strong echoes does not cost the training from scratch. ATSC_OLDDROP=1:
+    // every reset is full (3.9).
+    void workerReset(bool full = false) {
+        static const bool oldDrop = getenv("ATSC_OLDDROP") != nullptr;
+        std::lock_guard<std::mutex> lk(jm);
+        jobs.clear();
+        if (!decResetReq) decResetFull = full || oldDrop; else decResetFull = decResetFull || full || oldDrop;
+        decResetReq = true;
+    }
     void workerLoop() {
         DenormalsOff ftz;   // x86: no microcode assists on denormal values (nothing elsewhere)
         for (;;) {
             Job j;
-            bool doReset = false;
+            bool doReset = false, full = false;
             {
                 std::unique_lock<std::mutex> lk(jm);
                 jcv.wait(lk, [&] { return stopW || !jobs.empty() || decResetReq; });
                 if (stopW) return;
-                if (decResetReq) { decResetReq = false; doReset = true; }
-                if (!jobs.empty()) { j = std::move(jobs.front()); jobs.pop_front(); working = true; }
+                if (decResetReq) { decResetReq = false; doReset = true; full = decResetFull; decResetFull = false; }
+                if (!jobs.empty()) { j = std::move(jobs.front()); jobs.pop_front(); working = true; j.behind = jobs.size() >= 2; }
             }
             jspace.notify_all();
             if (doReset) {
                 dec.reset();
-                eqLast = Taps(); preD = 0; snrAvg = 0; dataSnrAvg = 0; segErr = 0; cleanFields = 0; havePrev = false;
+                cleanFields = 0; havePrev = false;
                 tsFlow = 0;
+                if (full) { eqLast = Taps(); preD = 0; snrAvg = 0; dataSnrAvg = 0; segErr = 0; gapPending = false; }
+                else gapPending = true;
             }
             if (!j.s.empty()) runJob(j);
             { std::lock_guard<std::mutex> lk(jm); working = false; }
@@ -1169,15 +1229,28 @@ struct Core {
         j.s.resize((size_t)(end - j.base));
         for (size_t k = 0; k < j.s.size(); k++) j.s[k] = rawAt(j.base + (int64_t)k);
         {
+            // A radio: up to ten fields (242 ms) may wait while the worker is slow for a moment (another program, a long field). When even that
+            // is full, the oldest waiting field goes and the decoder restarts after it, keeping its equaliser. 3.9 dropped all fields after three
+            // and started over with no equaliser (ATSC_OLDDROP=1), so a short stall cost a second or more of picture on a channel with echoes.
+            static const bool oldDrop = getenv("ATSC_OLDDROP") != nullptr;
+            static const size_t qMax = getenv("ATSC_QUEUE") ? (size_t)std::max(1, atoi(getenv("ATSC_QUEUE"))) : 10;
             std::unique_lock<std::mutex> lk(jm);
             if (blocking) jspace.wait(lk, [&] { return jobs.size() < 2 || stopW; });
-            if (jobs.size() >= 3) { jobs.clear(); decResetReq = true; t.fieldSyncMisses++; }   // the worker fell behind: start over cleanly
+            if (oldDrop) {
+                if (jobs.size() >= 3) { t.fieldsDropped += jobs.size(); jobs.clear(); decResetReq = true; decResetFull = true; t.fieldSyncMisses++; }
+            } else if (jobs.size() >= qMax) {
+                jobs.pop_front();
+                t.fieldsDropped++;
+                if (!jobs.empty()) jobs.front().afterGap = true; else j.afterGap = true;
+            }
             jobs.push_back(std::move(j));
         }
         jcv.notify_one();
     }
 
     double snrAvg = 0, dataSnrAvg = 0, segErr = 0;   // worker-owned running averages
+    double loadAvg = 0;                              // worker time per field over 24.2 ms, averaged
+    bool gapPending = false;                         // the next field follows a gap (worker-owned)
     AtscMhDetector mh;
 
     // ---- equaliser (worker-owned state)
@@ -1467,6 +1540,14 @@ struct Core {
         if (preD > 0 && cancelPre(view, fsLv, preD, uPre)) view.s = &uPre;
         const double tM0 = now();
         static const bool noDfe = getenv("ATSC_NODFE") != nullptr;   // test: the plain equaliser only
+        static const bool noShed = getenv("ATSC_OLDDROP") != nullptr;
+        // after a gap (dropped fields, a lost and found lock) the decoder starts afresh and the field before is not this one's neighbour, but the
+        // channel is still the one the last taps were solved for: they are tried first (the usual fallbacks follow when they no longer fit)
+        const bool afterGap = job.afterGap || gapPending;
+        gapPending = false;
+        if (afterGap) { dec.reset(); havePrev = false; cleanFields = 0; }
+        // the worker is behind (two or more fields waiting): optional work is left out until it has caught up, so that it does not have to drop fields
+        const bool shed = job.behind && !noShed;
         const bool usePrev = havePrev && cleanFields >= 2 && !noDfe;
         Taps tp;
         bool trained;
@@ -1476,11 +1557,14 @@ struct Core {
             const View pview{&prevS, prevBase, prevF0};
             // A channel that has been decoding cleanly for a while changes slowly: the decision feedback taps are solved afresh every fourth field
             // only (a 190-unknown least squares over thousands of rows: the largest cost of the receiver), the fields between use the last ones.
-            // Any trouble (equaliser SNR under 9 dB, damaged packets) clears cleanFields and the next field solves again.
+            // Any trouble (equaliser SNR under 9 dB, damaged packets) clears cleanFields and the next field solves again. A worker that is behind
+            // reuses the last taps of any channel that decoded well, and solves every second field.
             if (cleanFields >= 6 && (++reuseTick & 3) != 0 && eqLast.ok && eqLast.B > 0 && snrAvg >= 20.0) { tp = eqLast; trained = true; }
+            else if (shed && (reuseTick++ & 1) && eqLast.ok && eqLast.B > 0) { tp = eqLast; trained = true; }
             else { reuseTick = 0; trained = trainDFE(view, pview, fsLv, prevLv, prevY, 1e-5, tp); }
             if (!trained) trained = trainFF(view, fsLv, tp);
-        } else trained = trainFF(view, fsLv, tp);
+        } else if (afterGap && eqLast.ok && !noShed) { tp = eqLast; trained = true; }
+        else trained = trainFF(view, fsLv, tp);
         tLs += now() - tM0;
         stFit.stop();
         DECT2_STAGE_VAR(stEq, "atsc.eq.filter");
@@ -1554,6 +1638,8 @@ struct Core {
             decOut.mh = mh.status();
             decOut.taps = eqLast.ff;
             decOut.levels = levelsOut;
+            loadAvg += 0.05 * ((now() - tD0) / (kFieldSyms / kSymbolRate) - loadAvg);
+            decOut.load = loadAvg;
             decOut.seq++;
         };
         if (!trained || !(snr >= 9.0)) {   // no usable channel estimate: do not feed the decoder garbage
@@ -1578,7 +1664,7 @@ struct Core {
         bool secondTry = false;
         // A badly decoded field gets a second try with the other kind of equaliser: after the decision feedback one (which can run away
         // after a wrong decision) the plain one; after the plain one a decision feedback equaliser trained on this field's own decisions.
-        if (st.segments > 0 && st.rsFailed * 5 > st.segments) {
+        if (st.segments > 0 && st.rsFailed * 5 > st.segments && !shed) {
             Taps alt;
             std::vector<float> lv2, hv2;
             bool haveAlt = false;
@@ -1652,7 +1738,7 @@ struct Core {
         if (np > 0 && cb) {
             const double secs = (double)np * 0.0000774;   // one packet per data segment: 832 symbols / 10.76 MHz
             mh.feed(out.data(), (size_t)np);
-            cb(out.data(), (size_t)np, secs);
+            deliver(out.data(), (size_t)np, secs);
             tsFlow = 6;
         } else if (tsFlow > 0) tsFlow--;
         publishDec(true, &st);
@@ -1723,6 +1809,8 @@ bool AtscReceiver::telemetry(AtscTelemetry& out, uint64_t lastSeq) {
     out.snrDb = d.snr; out.dataSnrDb = d.dataSnr; out.segErrorRate = d.segErr; out.eqTrained = d.eqTrained;
     out.eqTaps = d.taps; out.levels = d.levels;
     out.mhPresent = d.mh.present; out.mhPid = d.mh.pid; out.mhSlotShare = d.mh.slotShare;
+    out.decodeLoad = d.load;
+    out.packetsDropped = p_->c.packetsDropped.load();
     out.seq = seq;
     return true;
 }
