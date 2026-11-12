@@ -43,6 +43,7 @@ public:
     bool loadResults(const std::string& blob);           // false: not this build's format, nothing changes
     void setLogCallback(std::function<void(const std::string&)> cb);
     void setThresholdDb(float db);     // burst detection over the floor, per bin, 8 .. 25 dB (default 13)
+    void setNarrowRetry(bool on);      // 4.0: a burst no protocol reads is sliced again with 40 / 80 / 160 us envelope filters (default on; false = the 3.9 path)
     void setReadingTap(std::function<void(const IsmReading&, double freqHz)> cb);   // tests: every reading (repeats too), from the receiver thread
 
 private:
