@@ -37,3 +37,5 @@ namespace dect2 { struct IsmRaw; }
 void d40IsmClassifyLine(const dect2::IsmRaw& r);   // d40_ism_ui.cpp: under the pulse trace of an unknown burst
 namespace dect2 { struct HfdigFtxTelemetry; }
 void d40FtxCard(App& a, const dect2::HfdigFtxTelemetry& f);   // d40_ftx_ui.cpp: heard stations, band summary, clear TX frequency, band suggestion
+namespace dect2 { struct CwTelemetry; }
+void d40CwCard(App& a, const dect2::CwTelemetry& t);   // d40_cw_ui.cpp: callsigns heard and CQ callers
