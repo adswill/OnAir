@@ -3,6 +3,7 @@
 // map, by their locators) and the WSPR spots.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "ham/ham_events_ui.h"
 #include "../adsb/adsb_map.h"
 #include "ui/kit/kit.h"
@@ -423,6 +424,7 @@ void hfdigFtxTab(App& a, const dect2::HfdigTelemetry& t) {
         ImGui::TextDisabled("%s", tr("The same position as in every other mode (ADS-B antenna position, Passes, Map). It is marked on the map below."));
     }
     bandButtons(a, only >= 0 ? only : 0);
+    d40FtxCard(a, f);   // 4.0: heard stations, band summary, clear TX frequency (app/d40)
     // the clock
     {
         char now[16];
