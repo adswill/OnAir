@@ -83,7 +83,7 @@ protected:
         bank_.configure(rate, {-kShift / 2, kShift / 2}, (int)std::lround(T));
         clk_.configure(T, 32, 16);
     }
-    void restart() override { recent_.clear(); lastIdx_ = -1; bank_.reset(); clk_.reset(); bits_.assign(kBlockBits, 0); soft_.assign(kBlockBits, 0.f); pos_ = 0; nbits_ = 0; hold_ = 0; }
+    void restart() override { recent_.clear(); lastIdx_ = -1; confirmed_ = false; bank_.reset(); clk_.reset(); bits_.assign(kBlockBits, 0); soft_.assign(kBlockBits, 0.f); pos_ = 0; nbits_ = 0; hold_ = 0; }
     void lost() override {}
     void sample(cf32 y) override {
         bank_.push(y);
@@ -124,9 +124,14 @@ private:
         hold_ = kBlockBits - 40;
         // the 11-bit block number is outside the CRC: a block a whole number of blocks after the last good one takes its number from that one
         bool renumbered = false;
-        if (ok && !b.divider && lastIdx_ >= 0) {
+        // (only from a confirmed reference: two good blocks whose numbers agreed with their distance; a misread reference would shift them all)
+        if (ok && !b.divider) {
             const long dist = nbits_ - lastBits_;
-            if (dist > 0 && dist % kBlockBits == 0 && dist / kBlockBits <= 64 && b.index != lastIdx_ + (int)(dist / kBlockBits)) { b.index = lastIdx_ + (int)(dist / kBlockBits); renumbered = true; }
+            const bool predOk = lastIdx_ >= 0 && dist > 0 && dist % kBlockBits == 0 && dist / kBlockBits <= 64;
+            const int pred = predOk ? lastIdx_ + (int)(dist / kBlockBits) : -1;
+            if (predOk && b.index == pred) confirmed_ = true;
+            else if (predOk && confirmed_) { b.index = pred; renumbered = true; }
+            else confirmed_ = false;
         }
         if (ok && !b.divider) { lastIdx_ = b.index; lastBits_ = nbits_; }
         if (ok && !b.divider) {                   // the same block again (a sender repeats blocks): shown once
@@ -212,7 +217,7 @@ private:
     int pos_ = 0, hold_ = 0; long nbits_ = 0;
     int tx_ = 0, blocks_ = 0, good_ = 0, bad_ = 0, fixed_ = 0; bool ascii_ = true, inverted_ = false;
     int pos8_[8] = {};
-    std::vector<int> recent_; int lastIdx_ = -1; long lastBits_ = 0;
+    std::vector<int> recent_; int lastIdx_ = -1; long lastBits_ = 0; bool confirmed_ = false;
 };
 
 } // namespace

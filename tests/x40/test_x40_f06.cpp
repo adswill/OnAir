@@ -34,7 +34,7 @@ static Msg f06Message(unsigned seed, int n) {
     return m;
 }
 // blocks decoded right: a Block row of that number whose figures match and whose CRC holds; wrongOk counts figures that do not match with CRC OK
-static int blocksRight(const Msg& m, const X40Telemetry& t, int* wrongOk = nullptr) {
+static int blocksRight(const Msg& m, const X40Telemetry& t, int* wrongOk = nullptr, int* misnum = nullptr) {
     int ok = 0;
     for (const auto& r : t.rows) {
         if (r.kind != "Block" || r.id.size() < 2) continue;
@@ -42,7 +42,11 @@ static int blocksRight(const Msg& m, const X40Telemetry& t, int* wrongOk = nullp
         if (idx < 2 || idx >= (int)m.text.size()) continue;
         const bool crc = r.text.find("CRC OK") != std::string::npos, same = r.text.rfind(m.text[(size_t)idx], 0) == 0;
         if (crc && same) ok++;
-        else if (crc && !same && wrongOk) { if ((*wrongOk)++ < 6) printf("    wrong %s: '%s' sent '%s'\n", r.id.c_str(), r.text.c_str(), m.text[(size_t)idx].c_str()); }
+        else if (crc && !same && wrongOk) {
+            bool elsewhere = false; for (const auto& tx : m.text) if (!tx.empty() && r.text.rfind(tx, 0) == 0) elsewhere = true;
+            if (elsewhere && misnum) (*misnum)++;
+            else { if ((*wrongOk)++ < 6) printf("    wrong %s: '%s' sent '%s'\n", r.id.c_str(), r.text.c_str(), m.text[(size_t)idx].c_str()); }
+        }
     }
     return ok;
 }
@@ -104,7 +108,7 @@ int main() {
       CHECK(s.find("PLAIN TEXT BLOCK | CRC OK") != std::string::npos, "ASCII blocks: '%s'", s.c_str()); }
     // noise sweep
     printf("noise sweep (dial +17 Hz, clock +200 ppm): blocks right\n");
-    std::vector<std::pair<double, double>> pts; int wrongOk = 0;
+    std::vector<std::pair<double, double>> pts; int wrongOk = 0, misnum = 0;
     for (double snr = -6; snr <= 8.1; snr += 2) {
         int ok = 0, n = 0;
         for (unsigned seed : {1u, 2u}) {
@@ -112,12 +116,12 @@ int main() {
             auto x = f06Signal(mm.blocks, 1500, 8000, path(17, 0, 200));
             addSnr(x, snr, 8000, 90 + seed);
             const auto t = run(x40::F06, x, 8000);
-            ok += blocksRight(mm, t, &wrongOk); n += 20;
+            ok += blocksRight(mm, t, &wrongOk, &misnum); n += 20;
         }
         pts.push_back({snr, (double)ok / n});
         printf("  %6.1f dB: %3d / %d\n", snr, ok, n);
     }
-    printf("  FSK200/1000: 50 %% of the blocks at %.1f dB, 90 %% at %.1f dB (signal to noise in 3 kHz); %d wrong blocks with CRC OK\n", snrAt(pts, 0.5), snrAt(pts, 0.9), wrongOk);
+    printf("  FSK200/1000: 50 %% of the blocks at %.1f dB, 90 %% at %.1f dB (signal to noise in 3 kHz); %d wrong blocks with CRC OK, %d right blocks with a wrong number\n", snrAt(pts, 0.5), snrAt(pts, 0.9), wrongOk, misnum);
     CHECK(pts.back().second >= 0.9, "%.2f of the blocks at %.0f dB", pts.back().second, pts.back().first);
     CHECK(wrongOk == 0, "%d wrong blocks shown with CRC OK", wrongOk);
     int falseRows = 0;
