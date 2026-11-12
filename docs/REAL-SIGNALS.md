@@ -37,7 +37,6 @@ Rules: owner recordings are used with the owner's consent; public files only wit
 | sigidwiki `File:*.zip` | not fetched (licence per file, mostly unstated); to try per mode when a gap matters |
 | sdrplay.com/iq-demo-files, osdn.net | dead ends (known) |
 | owner `DVB-T 5MHz 5333333sps_IQ.wav` (2017, 0.5 s) | origin and licence unknown: not copied; fine for a local check |
-| owner `eDMR ... 39550.00_iq.wav` (12 kHz IQ) | not DMR as OnAir means it (DMR needs 1 Msps+): no mode mapped yet |
 | owner `audio_408...Hz` / 409.184 / 410.1646 MHz, 137.1038 MHz (48 kHz IQ as stereo WAV) | the signal identifier calls them unknown (410.1646 MHz: a 6000 Bd digital signal with no known sync); not identified, so no test |
 | owner `CDRrecording1.mp3` | audio of a CDR station; the DRA clip in `tests/cdr/cdr_dra_clip.h` already covers the audio path |
 | KiwiSDR `SND.*_k_cwn.wav`, `_k_amn.wav` | 1.4 s only |
