@@ -156,8 +156,13 @@ int main() {
     need("app/panels/tx_ui.cpp", txui, "makeIqFileTxSink(fc)");   // the IQ-file destination serves every transmit mode
     need("app/panels/tx_ui.cpp", txui, "!txModeFinite(*mode)");
     const std::string pay = readSource("app/panels/tx_payload_ui.cpp");
-    need("app/panels/tx_payload_ui.cpp", pay, "case TxPayloadKind::Kapp:");
-    need("app/panels/tx_payload_ui.cpp", pay, "case TxPayloadKind::Kaft:");
+    const std::string txpar = readSource("core/src/tx/tx_params.cpp");
+    need("core/src/tx/tx_params.cpp", txpar, "case TxPayloadKind::Kapp:");   // 4.0: the KA* panels are custom rows of the parameter table
+    need("core/src/tx/tx_params.cpp", txpar, "custom(\"kapp.panel\"");
+    need("app/panels/tx_payload_ui.cpp", pay, "k == \"kapp.panel\") kappPanel(s, running);");
+    need("core/src/tx/tx_params.cpp", txpar, "case TxPayloadKind::Kaft:");   // 4.0: the KA* panels are custom rows of the parameter table
+    need("core/src/tx/tx_params.cpp", txpar, "custom(\"kaft.panel\"");
+    need("app/panels/tx_payload_ui.cpp", pay, "k == \"kaft.panel\") kaftPanel(s, running);");
     const std::string txset = readSource("app/panels/tx_step_settings.cpp");
     need("app/panels/tx_step_settings.cpp", txset, "destinationPanel(s, *mode, running);");
 

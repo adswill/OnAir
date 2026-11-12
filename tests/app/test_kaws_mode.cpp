@@ -108,7 +108,10 @@ int main() {
     need("app/panels/tx_ui.cpp", txui, "kaws.profile");
     need("app/panels/tx_ui.cpp", txui, "makeIqFileTxSink(fc)");
     const std::string pay = readSource("app/panels/tx_payload_ui.cpp");
-    need("app/panels/tx_payload_ui.cpp", pay, "case TxPayloadKind::Kaws:");
+    const std::string txpar = readSource("core/src/tx/tx_params.cpp");
+    need("core/src/tx/tx_params.cpp", txpar, "case TxPayloadKind::Kaws:");   // 4.0: the KA* panels are custom rows of the parameter table
+    need("core/src/tx/tx_params.cpp", txpar, "custom(\"kaws.panel\"");
+    need("app/panels/tx_payload_ui.cpp", pay, "k == \"kaws.panel\") kawsPanel(s, running);");
 
     if (fails == 0) std::printf("kaws mode: registered, panel strings, wiring and transmit present\n");
     return fails == 0 ? 0 : 1;

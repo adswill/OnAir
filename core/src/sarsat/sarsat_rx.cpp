@@ -76,6 +76,7 @@ struct Slicer {
     std::vector<double> coherentBits(double t0, double spb, int count, bool llr = true) const {
         constexpr int kPre = 20, kW = 10;
         std::vector<cd> car, dif;
+        if (t0 < 0) return {};   // the message would start before the burst (a refined timing of a candidate at the start): P[] has no negative index
         int first = -kPre;
         while (first < 0 && t0 + first * spb < 0) first++;
         for (int k = first; k < count; k++) {
@@ -181,15 +182,25 @@ template <class T> bool chaseDecode(const std::vector<T>& y, const std::vector<u
     for (int k = kFirst; k <= kLast && k < n0; k++) idx.push_back(k);
     std::partial_sort(idx.begin(), idx.begin() + kL, idx.end(), [&](int a, int b) { return std::fabs((double)y[(size_t)a]) < std::fabs((double)y[(size_t)b]); });
     double d1 = 1e300, d2 = 1e300;
+    // Most test patterns of a real burst repair to the same BCH-1 codeword. A word whose BCH-1 repair gives the best codeword so far is skipped below
+    // anyway, and a codeword that failed (no country, or a long message cut short) fails again: both are told by the BCH-1 repair alone, before the
+    // full decode (strings, hex, protocol fields) that made the 128 patterns of every candidate timing the most of the burst search's CPU.
+    std::vector<std::vector<uint8_t>> failedWords;
+    auto sameWord = [&](const std::vector<uint8_t>& a, const std::vector<uint8_t>& c) { return std::equal(a.begin() + kFirst, a.begin() + kLast + 1, c.begin() + kFirst); };
     for (int pat = 0; pat < (1 << kL); pat++) {
         std::vector<uint8_t> b = hard;
         for (int i = 0; i < kL; i++) if (pat >> i & 1) b[(size_t)idx[(size_t)i]] ^= 1;
+        std::vector<uint8_t> w = b;
+        if (bch1Correct(w) < 0) continue;                                  // decode would fail on it
+        if (!bestBits.empty() && sameWord(w, bestBits)) continue;          // the same codeword again
+        bool bad = false;
+        for (const auto& f : failedWords) if (sameWord(w, f)) { bad = true; break; }
+        if (bad) continue;
         Beacon t;
-        if (!decode(b, t) || t.country.empty()) continue;
+        if (!decode(b, t) || t.country.empty()) { if (failedWords.size() < 32) failedWords.push_back(std::move(w)); continue; }
         const int nb = std::min(n0, t.longMsg ? kLongBits : kShortBits);
         double dist = 0;
         for (int k = kSyncBits; k < nb; k++) if ((b[(size_t)k] & 1) != (hard[(size_t)k] & 1)) dist += std::fabs((double)y[(size_t)k]);
-        if (!bestBits.empty() && std::equal(b.begin() + kFirst, b.begin() + kLast + 1, bestBits.begin() + kFirst)) continue;   // the same codeword again
         if (dist < d1) { d2 = d1; d1 = dist; bestBits = b; best = t; }
         else if (dist < d2) d2 = dist;
     }

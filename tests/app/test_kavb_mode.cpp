@@ -46,7 +46,9 @@ int main() {
     const std::string txui = readSource("app/panels/tx_ui.cpp");
     need("app/panels/tx_ui.cpp", txui, "r.opt[\"kavb.profile\"] = s.kavbProfile;");
     need("app/panels/tx_ui.cpp", txui, "r.file = s.kavbFile;");
-    need("app/panels/tx_payload_ui.cpp", readSource("app/panels/tx_payload_ui.cpp"), "case TxPayloadKind::Kavb:");
+    need("core/src/tx/tx_params.cpp", readSource("core/src/tx/tx_params.cpp"), "case TxPayloadKind::Kavb:");   // 4.0: the KA* panels are custom rows of the parameter table
+    need("core/src/tx/tx_params.cpp", readSource("core/src/tx/tx_params.cpp"), "custom(\"kavb.panel\"");
+    need("app/panels/tx_payload_ui.cpp", readSource("app/panels/tx_payload_ui.cpp"), "k == \"kavb.panel\") kavbPanel(s, running);");
 
     const std::string app = readSource("app/app.h");
     { const size_t q = app.find("constexpr int kNumFamilies = "); if (q == std::string::npos || std::atoi(app.c_str() + q + 29) < 124) { std::printf("FAIL: kNumFamilies below 124\n"); fails++; } }
