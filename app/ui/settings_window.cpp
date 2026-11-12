@@ -121,6 +121,7 @@ const std::map<std::string, Bind>& binds() {
         SW_NBA("tvBufMb", a.tvBufMb, { a.engine.player().setBufferMB(a.tvBufMb); a.tvBufMb = a.engine.player().bufferMB(); });
         SW_PB("notifySystem", true); SW_PB("notifyBanner", true); SW_PI("notifyBannerSec", 10); SW_PB("notifySound", true); SW_PB("notifyQuiet", false); SW_PI("notifyQuietFrom", 1320); SW_PI("notifyQuietTo", 420);
         SW_PT("mapTileUrl"); SW_PI("mapCapMb", 500); SW_PB("mapKeepTiles", true); SW_PB("adsbMap", true);
+        SW_PB("hfdlLiveOn", false); SW_PI("hfdlLiveMin", 5);   // 4.0: the HFDL live ground-station list (app/hfdl/hfdl_stations.cpp)
         SW_NBA("compute", a.computeMode, a.engine.setComputeMode(a.computeMode));
         NB("verboseLog", a.verboseLog);
         m["uiPreviews"] = Bind{[](App&) -> double { return uiprev::enabled() ? 1.0 : 0.0; }, [](App&, double v) { uiprev::enabled() = v != 0; plat::prefs().setB("uiPreviews", v != 0); }, nullptr, nullptr};
