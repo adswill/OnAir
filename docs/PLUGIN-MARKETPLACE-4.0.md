@@ -131,8 +131,8 @@ With the admin token (curl commands in the server README):
   pulled); bans (a renamed account stays banned, pull_plugins); the device flow (pending, ok, the GitHub token is stored nowhere, a
   banned account gets no session); sign-in rate limits; search relevance, sorting, tag, kind and platform filters, `%` and `_` taken
   literally, paging; the hourly clean-up. `npm run test:workerd` repeats the main path in the real Workers runtime (Miniflare's workerd
-  with its local D1 and R2), with the multipart body exactly as the C++ client writes it. All of these passed locally before the
-  battery rule stopped local runs. The GitHub workflow runs them on every push that touches the server.
+  with its local D1 and R2), with the multipart body exactly as the C++ client writes it. All pass on GitHub (`market-server.yml`, run
+  43157632653: type check, 32 of 32, workerd smoke), and they passed locally too. The workflow runs on every push that touches the server.
 - **Client** (`ctest -R pstore_market`). This runs against an in-process fake of the API. It covers: refused answers (tampered, wrong
   key, another request, another kind, replayed after 8 days, from the future, unsigned); a build without the key making no request at
   all; the install id (32 hex, kept, sent with likes and downloads); install only after the confirmation; update; downgrade refused;
@@ -141,7 +141,9 @@ With the admin token (curl commands in the server README):
   unknown id); a withdrawn plugin switched off through the Store's kill switch, and on again after a restore; the sign-in (the address
   shown is always github.com, the session file is private, kept across restarts, dropped on a 401 and on sign-out); the upload
   preview (good, missing library, not a zip, bad id, no manifest); the multipart body and the bearer header; the new-version path;
-  report escaping. Built and run on GitHub `quick.yml` only (no local builds on battery).
+  report escaping. Built and run on GitHub `quick.yml` only (no local builds on battery): `pstore_market` and `pstore_store` pass, and the
+  whole app (`dect2`, with market_ui.cpp and both `httpCall` versions) builds on Linux (run 43151317970), macOS (43151322480) and
+  Windows (43151326598).
 - **Not tested**: the deployed Worker against real GitHub and Cloudflare (nothing is deployed), and `plat::httpCall` against a live
   server (it builds on Linux, macOS and Windows in CI; its curl flags match `httpRequest`). The ImGui panel was not checked on screen:
   it compiles in the CI app build only.
