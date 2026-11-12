@@ -29,12 +29,13 @@ double trial(const Case& C, double snrDb, double cfoHz, double sroPpm, int noise
     return s->poll().good;
 }
 
-Case makeCase(const char* id, double secs = 0) {
+Case makeCase(const char* id, double secs = 0, int sondeMask = 0) {
     Case C;
     auto all = allModes();
     for (auto& m : extraModesD()) all.push_back(std::move(m));
     for (const auto& m : all) if (m.id == id) C.m = m;
     if (secs > 0) C.m.secs = secs;
+    if (sondeMask) C.m.gen = [sondeMask](size_t n) { SynthConfig c; c.modeOpt[0] = sondeMask; c.modeOpt[1] = 1; return clean(15, c, 8e6, n); };
     C.trialN = (size_t)(C.m.secs * C.m.rate);
     C.maxOff = (size_t)(0.5 * C.m.secs * C.m.rate);
     C.base = C.m.gen(C.trialN + C.maxOff + 64);
@@ -49,6 +50,7 @@ double frac(const Case& C, double snr, double cfo, double sro, int n) {
     return s / n;
 }
 struct Row { const char* id; double snr, cfo, sro, need; int n; };
+struct SondeRow { const char* name; int mask; double snr, cfo, need; int n; };
 } // namespace
 
 int main(int argc, char** argv) {
@@ -78,6 +80,27 @@ int main(int argc, char** argv) {
         const double f = frac(C, r.snr, r.cfo, r.sro, r.n);
         printf("%s %.1f dB, carrier %.0f Hz, clock %.0f ppm: %.0f %% (need %.0f %%)\n", r.id, r.snr, r.cfo, r.sro, 100 * f, 100 * r.need);
         CHECK(f >= r.need, "%s %.1f dB %.0f Hz %.0f ppm: %.2f", r.id, r.snr, r.cfo, r.sro, f);
+    }
+    // MRZ and iMS-100 sondes, 24 s trials (one frame a second): 3.9 had the MRZ serial reset at every pause (7 times fewer frames) and both on the 10 kHz path
+    if (!only || std::strcmp(only, "sonde") == 0) {
+        const SondeRow srows[] = {
+            {"MRZ", 256, 14.0, 0, 0.6, 4},          // 3.9: 0.5 frames of 7 a trial
+            {"MRZ", 256, 14.0, 8000, 0.6, 4},
+            {"iMS-100", 512, 6.0, 0, 0.5, 4},       // 3.9: 0 % at 6 dB
+            {"iMS-100", 512, 6.0, 8000, 0.5, 4},
+        };
+        for (const SondeRow& r : srows) {
+            const Case S = makeCase("sonde", 24.0, r.mask);
+            CHECK(S.ref >= 3, "%s clean reference %.1f", r.name, S.ref);
+            const double f = frac(S, r.snr, r.cfo, 0, r.n);
+            printf("%s %.0f dB, carrier %.0f Hz: %.0f %% (need %.0f %%) of %.1f frames\n", r.name, r.snr, r.cfo, 100 * f, 100 * r.need, S.ref);
+            CHECK(f >= r.need, "%s %.0f dB %.0f Hz: %.2f", r.name, r.snr, r.cfo, f);
+        }
+        const Case N = makeCase("sonde", 24.0, 256 | 512);
+        double falses = 0;
+        for (int i = 0; i < 3; i++) falses += trial(N, 10, 0, 0, 1, 1000 + (uint64_t)i);
+        printf("sonde noise only: %.0f units\n", falses);
+        CHECK(falses == 0, "sonde noise-only runs gave %.0f units", falses);
     }
     const char* noiseIds[] = {"halow", "globalstar", "pocsag", "zigbee"};
     for (const char* id : noiseIds) {

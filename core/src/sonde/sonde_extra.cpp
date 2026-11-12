@@ -351,6 +351,7 @@ class MeiseiDecoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "iMS-100"; }
     double symbolRate() const override { return 2400; }
+    bool narrowChannel() const override { return true; }
     void reset() override { hdr_ = 0; run_ = false; std::memset(cfg_, 0, sizeof cfg_); sn_ = 0; }
     void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], out); }
 private:
