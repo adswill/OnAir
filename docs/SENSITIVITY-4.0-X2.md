@@ -16,7 +16,7 @@ named); no off-air recording was used.
 | SSTV Robot 36 | crash on a weak picture | segfault at 4 dB | fixed | | yes |
 | Weather fax 120 lpm | sens39 pass (line lock, mean row correlation over 0.5), 3 trials a point | 3 of 3 at 4 dB, 0 of 3 at 2 dB | 3 of 3 at 2 and 1 dB | 0 .. 6 kHz, +-30 Hz, +-20 ppm | yes |
 | Weather fax 120 lpm | mean row correlation at 4 / 2 / 0 dB | 0.601 / 0.460 / 0.338 | 0.796 / 0.634 / 0.448 | as above | yes |
-| NOAA APT | picture PSNR at 15 / 2 / 0 dB (generator SNR in 40 kHz) | see the APT section | | 2.5 kHz offset, 30 Hz/s, 80 ppm | yes |
+| NOAA APT | picture PSNR at 15 / 5 / 2 / 0 dB (generator SNR in 40 kHz) | 30.5 / 13.8 / 10.2 / 8.4 dB | 32.8 / 15.2 / 12.8 / 11.0 dB | 2.5 kHz offset, 30 Hz/s, 80 ppm | yes |
 | NFM voice (general receiver) | 12 dB SINAD point | 8.4 dB in 12.5 kHz | not changed | 1 kHz tone, 2.5 kHz deviation | no (see below) |
 
 "About" points are between two measured SNRs. The 4.0 filter was finished after the Mac went on battery, so its impairment sweep (offsets,
@@ -100,6 +100,24 @@ About 2 to 3 dB on the sens39 criterion. The line lock (rows, line rate, drift) 
 marine_fax_weak and marine_fax_decode pass. (sens39 recorded its 90 % point at 2 dB over 8 other seeds; on these 3 seeds the 3.9 decoder
 fails at 2 dB, so the seeds here are harder.)
 
+## NOAA APT: line filter (core/src/wxsat/wxsat_apt.cpp)
+
+Each line's space A (47 words of steady grey after sync A; its middle 31) gives the noise of one envelope sample: its variance and its median
+absolute deviation, both averaged over lines. Image A and B of the line then go through (1) a click step: a sample more than 4 robust sigmas from
+the median of its 5 neighbours (an FM click below the 137 MHz carrier's threshold) is replaced by that median, and (2) a local Wiener filter over
+7 samples with the variance. The sync search and line lock are not touched (same lines found both ways at every SNR). `setAptNoiseFilter(false)`
+(WxsatReceiver) gives the 3.9 picture. Test `wxsat_apt40` (receiver test signal, 2.5 kHz offset, 30 Hz/s Doppler rate, 80 ppm clock, PSNR of
+image A and B after a least-squares gain and offset), GitHub Linux runner, one 16 s run a point:
+
+| generator SNR (40 kHz) | 30 | 15 | 10 | 5 | 2 | 0 | -3 dB |
+|---|---|---|---|---|---|---|---|
+| PSNR 3.9 | 32.24 | 30.51 | 17.06 | 13.81 | 10.18 | 8.38 | 6.68 |
+| 4.0 | 34.14 | 32.83 | 17.27 | 15.20 | 12.78 | 10.98 | (Wiener only: 7.45) |
+
+The test picture is smooth (ramps and slow waves with one sharp step), so a real Earth picture with more detail gains less. The step from 15 to
+10 dB is the FM threshold of the carrier; a PLL or feedback FM demodulator (threshold extension) is the next step there and was not tried.
+Meteor LRPT, MetOp / FY-3 AHRPT and GOES / GK-2A HRIT are at theory already (SENSITIVITY-3.9-A.md, SENSITIVITY-4.0-A.md): not changed.
+
 ## NFM voice: click removal looked at, not kept
 
 General receiver, NFM, 1 kHz tone at 2.5 kHz deviation, SNR in 12.5 kHz, SINAD over 2 s. 3.9 curve: 16 dB 19.8, 12 dB 15.8, 10 dB 13.8,
@@ -110,7 +128,11 @@ Two click removers were built and measured: replacing spike samples in envelope 
 0 above). Neither was kept. What would move the 12 dB SINAD point is the audio bandwidth (4 kHz low-pass now; FM noise rises with frequency,
 3 kHz would be about 3.7 dB less noise) or de-emphasis, which change the default sound of every NFM user: left for the owner.
 
-## Not done in this pass
+## Looked at, not changed
 
-APT (image filter / PLL FM demodulator), weather fax, analog TV, AM synchronous, hydrogen line, explorer CFAR: the Mac went on battery partway
-through the pass, so no further local measurement was possible; see the branch's final report.
+* AM: the general receiver's AM processor already picks synchronous detection (both sidebands or the cleaner one) and has log-MMSE noise
+  reduction; the harness criterion (27 dB) is set by the tone test, not the detector.
+* Analog TV: noise reduction modes exist (`AtvReceiver::setNoiseReduction`); not re-measured here.
+* Hydrogen line: integration up to 3600 s, median baselines, RFI flagging and Gaussian fits exist (core/src/astro); nothing missing found.
+* Fast scanner / explorer: the per-bin threshold (8 dB over a 25th-percentile floor) could get a multi-bin test for wide weak carriers at the
+  same false-alarm rate; not built: it changes every scan and needs a local false-alarm sweep, and the Mac went on battery during this pass.
