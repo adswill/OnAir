@@ -216,9 +216,34 @@ struct Demod::Impl {
     bool started = false;
     uint64_t symbols = 0;
     // channel estimation, one grid per run of synchronous segments
-    struct Run { int p0, p1; std::vector<cf32> grid; std::vector<uint8_t> gv; std::vector<cf32> H; int filled = 0; std::complex<double> lag{0, 0}; };
+    struct Run {
+        int p0, p1; std::vector<cf32> grid; std::vector<uint8_t> gv; std::vector<cf32> H; int filled = 0; std::complex<double> lag{0, 0};
+        // time direction (as the DVB-T receiver): the last two raw pilots of each grid point (noise and Doppler statistics, tracking reference),
+        // how many pilots the time average has seen, the last kHist averaged estimates and their symbols, the pilot above the band per symbol,
+        // and the delay window of the channel once it is known
+        std::vector<cf32> raw1, raw2; std::vector<uint8_t> rawN; std::vector<uint16_t> cnt;
+        std::vector<cf32> hv; std::vector<int64_t> ht;
+        std::deque<std::pair<int64_t, cf32>> edge;
+        bool dlyKnown = false; double dlyRel = 0, dlyHalf = 0;
+    };
     std::vector<Run> runs;
-    GridInterpolator interp;
+    GridInterpolator interp, interpN;
+    // ---- channel estimation in time. Every grid point (every third carrier) gets a scattered pilot every fourth symbol. The symbol kTiDelay
+    // back has two estimates on each grid point before it and two after it: its channel is a cubic through them instead of the newest pilot,
+    // which for a moving receiver is up to three symbols (3.4 ms in mode 3) stale: at 10 Hz Doppler an error of about -20 dB, an error floor
+    // for 64-QAM 3/4 in TU6 fading. In a still channel the pilots are averaged over time with a gain chosen from how fast the channel moves
+    // against the noise, and once the delay spread is known the frequency interpolator passes only that window (less noise in the estimate).
+    static constexpr int kHist = 5, kTiDelay = 8;
+    struct Pend { std::vector<cf32> Y; int symIdx = 0; int64_t t = 0; };
+    std::deque<Pend> pend;
+    std::vector<Pend> pendSpare;
+    std::vector<cf32> prevOut;            // the last symbol that went to the equaliser (differential segments)
+    bool prevOutValid = false;
+    double ceD1 = 0, ceD2 = 0, ceAlpha = 1;
+    long ceStats = 0;
+    int64_t outCount = 0;
+    std::vector<cf32> scrG, scrHw;
+    const bool ceNoTi = ofdm::envOn("DECT2_ISDBT_NOTI");   // A/B tests only: the newest pilot per grid point, no averaging, full delay window (as 3.9)
     std::vector<cf32> prevY;
     bool prevValid = false;
     double sigma2 = 1e-3, snr = 0;
@@ -352,6 +377,8 @@ struct Demod::Impl {
             for (int k : tmccCarrierList(mode, pos, seg[s].diff)) tmccCar.push_back({k, seg[s].diff ? 0 : 1});
         }
         started = false; symbols = 0; prevValid = false; sigma2 = 1e-3;
+        for (auto& pe : pend) pendSpare.push_back(std::move(pe));
+        pend.clear(); prevOutValid = false; ceD1 = ceD2 = 0; ceAlpha = 1; ceStats = 0; outCount = 0;
         accPhi = accSlope = 0; cpRefValid = false;
         cpK.clear();
         for (int pos = 0; pos < kSegments; pos++) {
@@ -371,6 +398,8 @@ struct Demod::Impl {
                 const int carriers = (q - pos + 1) * cps + (runTopPilot(q) ? 1 : 0);
                 r.grid.assign((size_t)(carriers + 2) / 3, cf32(0, 0));
                 r.gv.assign(r.grid.size(), 0);
+                r.raw1.assign(r.grid.size(), cf32(0, 0)); r.raw2 = r.raw1; r.rawN.assign(r.grid.size(), 0); r.cnt.assign(r.grid.size(), 0);
+                r.hv.assign(r.grid.size() * kHist, cf32(0, 0)); r.ht.assign(r.grid.size() * kHist, -1);
                 runs.push_back(std::move(r));
                 pos = q + 1;
             } else pos++;
@@ -425,13 +454,15 @@ struct Demod::Impl {
             pts.push_back({k, std::arg(r), w, decided});
         };
         for (auto& r : runs) {
-            if (r.filled < 4 || r.H.empty()) continue;
+            if (r.filled < 4) continue;
             const int k0 = r.p0 * cps;
             for (int pos = r.p0; pos <= r.p1; pos++) {
                 const auto& w = prbsW(mode, kSegmentAtPosition[pos]);
                 for (int i = 3 * sp; i < cps; i += 12) {
                     const int k = pos * cps + i;
-                    collect(k, Yraw[k] / pilotValue(w[(size_t)i]), r.H[(size_t)(k - k0)]);
+                    // against the same pilot four symbols ago (the equaliser's estimate belongs to a symbol kTiDelay back)
+                    const size_t g = (size_t)(k - k0) / 3;
+                    if (r.rawN[g]) collect(k, Yraw[k] / pilotValue(w[(size_t)i]), r.raw1[g]);
                 }
             }
         }
@@ -481,20 +512,43 @@ struct Demod::Impl {
         cpRefValid = true;
     }
 
+    // the time-averaged estimate of grid point g of run r at symbol m: a cubic through the two estimates before m and the two after it, a line
+    // where fewer are known, the newest where nothing follows (as dvbt_rx.cpp timeInterp)
+    cf32 timeInterp(const Run& r, size_t g, int64_t m) const {
+        const cf32* hv = &r.hv[g * kHist]; const int64_t* ht = &r.ht[g * kHist];
+        int j1 = -1;   // the first estimate after m
+        for (int j = 0; j < kHist; j++) if (ht[j] >= 0 && ht[j] > m) { j1 = j; break; }
+        if (j1 < 0) return r.grid[g];
+        if (j1 == 0 || ht[j1 - 1] < 0) return hv[j1];
+        if (j1 >= 2 && j1 + 1 < kHist && ht[j1 - 2] >= 0 && ht[j1 + 1] >= 0) {
+            const double t[4] = {(double)ht[j1 - 2], (double)ht[j1 - 1], (double)ht[j1], (double)ht[j1 + 1]};
+            std::complex<double> acc = 0;
+            for (int a = 0; a < 4; a++) {
+                double w = 1;
+                for (int b = 0; b < 4; b++) if (b != a) w *= ((double)m - t[b]) / (t[a] - t[b]);
+                const cf32 v = hv[j1 - 2 + a];
+                acc += std::complex<double>(v.real(), v.imag()) * w;
+            }
+            return cf32((float)acc.real(), (float)acc.imag());
+        }
+        const double f = (double)(m - ht[j1 - 1]) / (double)(ht[j1] - ht[j1 - 1]);
+        return hv[j1 - 1] + (hv[j1] - hv[j1 - 1]) * (float)f;
+    }
+    // the pilot above the band (a pilot in every symbol) at symbol m: the mean of the symbols m - 1 .. m + 1
+    cf32 edgeAt(const Run& r, int64_t m, cf32 fallback) const {
+        cf32 s(0, 0); int n = 0;
+        for (const auto& e : r.edge) if (e.first >= m - 1 && e.first <= m + 1) { s += e.second; n++; }
+        return n ? s / (float)n : fallback;
+    }
+
     void pushSymbol(const cf32* Yraw, int symIdx) {
-        if (!started && symIdx == 0) started = true;   // the layer decoders begin with a whole frame; tracking and channel estimation run all the time
         symbols++;
         const cf32* Y;
         if (trackOn) { track(Yraw, symIdx); Y = Yd.data(); } else Y = Yraw;
-        const uint16_t* rnd = mode == 1 ? tables::kRandomizing1 : mode == 2 ? tables::kRandomizing2 : tables::kRandomizing3;
-        std::vector<uint8_t> roles((size_t)cps);
-        ceK.resize((size_t)cps);
-        // per segment: received data values and their noise variance, in data-carrier order
-        std::vector<std::vector<cf32>> val(kSegments);
-        std::vector<std::vector<float>> nv(kSegments);
         const int sp = symIdx % 4;
-        // ---- synchronous segments: channel estimate from the scattered pilots
-        double noiseAcc = 0; long noiseCnt = 0;
+        const int64_t now = (int64_t)symbols;
+        // ---- the scattered pilots of this symbol refresh a quarter of each run's grid
+        double d1 = 0, d2 = 0; long n1 = 0, n2 = 0;
         for (auto& r : runs) {
             const int k0 = r.p0 * cps;
             const int top = runTopPilot(r.p1);
@@ -505,13 +559,29 @@ struct Demod::Impl {
                 for (int i = 3 * sp; i < cps; i += 12) {
                     const int k = pos * cps + i;
                     const size_t g = (size_t)(k - k0) / 3;
-                    const cf32 nvv = Y[k] / pilotValue(w[(size_t)i]);
-                    // the same pilot four symbols ago: the difference is noise (twice), the channel hardly moves in that time
-                    if (r.gv[g]) { noiseAcc += 0.5 * std::norm(nvv - r.grid[g]); noiseCnt++; }
-                    r.grid[g] = nvv; r.gv[g] = 1;
+                    const cf32 v = Y[k] / pilotValue(w[(size_t)i]);
+                    // the same pilot four and eight symbols ago: noise (twice) plus how far the channel moved
+                    if (r.rawN[g] >= 1) { d1 += std::norm(v - r.raw1[g]); n1++; }
+                    if (r.rawN[g] >= 2) { d2 += std::norm(v - r.raw2[g]); n2++; }
+                    r.raw2[g] = r.raw1[g]; r.raw1[g] = v; if (r.rawN[g] < 2) r.rawN[g]++;
+                    if (ceNoTi || r.cnt[g] == 0) { r.grid[g] = v; r.cnt[g] = 1; }
+                    else {
+                        r.cnt[g] = (uint16_t)std::min(1000, r.cnt[g] + 1);
+                        const float a = (float)std::max(ceAlpha, 1.0 / r.cnt[g]);
+                        r.grid[g] += a * (v - r.grid[g]);
+                    }
+                    cf32* hv = &r.hv[g * kHist]; int64_t* ht = &r.ht[g * kHist];
+                    for (int j = 0; j + 1 < kHist; j++) { hv[j] = hv[j + 1]; ht[j] = ht[j + 1]; }
+                    hv[kHist - 1] = r.grid[g]; ht[kHist - 1] = now;
+                    r.gv[g] = 1;
                 }
             }
-            if (top) r.grid[(size_t)(carriers - 1) / 3] = Y[top] / cpPilot(top);
+            if (top) {
+                const cf32 v = Y[top] / cpPilot(top);
+                r.grid[(size_t)(carriers - 1) / 3] = v;
+                r.edge.push_back({now, v});
+                while (r.edge.size() > (size_t)(2 * kTiDelay + 4)) r.edge.pop_front();
+            }
             if (r.filled < 4) r.filled++;
             if (r.filled < 4) continue;
             // the delay of the channel (the phase slope of the pilot grid), so that the interpolator sees a nearly flat grid and the ends of the run are
@@ -523,9 +593,99 @@ struct Demod::Impl {
                 if (m > 0) c /= m;
                 r.lag = r.lag == std::complex<double>(0, 0) ? c : 0.85 * r.lag + 0.15 * c;
             }
+        }
+        // ---- noise and the speed of the channel: E|p - p(-4)|^2 = 2 r + q and E|p - p(-8)|^2 = 2 r + 4 q for a channel that changes smoothly
+        // (r: the noise of one pilot, q: the channel's change between two pilots of a grid point). The old estimate, half the first, counted the
+        // Doppler as noise. The averaging gain a: its noise r a / (2 - a), its lag behind a moving channel q ((1 - a) / a)^2 (dvbt_rx.cpp).
+        if (n1 > 0) {
+            const double s2old = std::max(1e-9, 0.5 * d1 / (double)n1 * (16.0 / 9.0) * kNoiseCal);
+            if (ceNoTi || n2 == 0) { if (ceStats < 8 || ceNoTi) sigma2 = 0.9 * sigma2 + 0.1 * s2old; }
+            else {
+                d1 /= (double)n1; d2 /= (double)n2;
+                if (ceStats == 0) { ceD1 = d1; ceD2 = d2; } else { ceD1 += 0.08 * (d1 - ceD1); ceD2 += 0.08 * (d2 - ceD2); }
+                ceStats++;
+                if (ceStats >= 8) {
+                    const double rr = std::max(1e-12, (4 * ceD1 - ceD2) / 6), q = std::max(0.0, (ceD2 - ceD1) / 3);
+                    double best = 1, bestE = 1e300;
+                    for (int i = 1; i <= 20; i++) {
+                        const double a = i / 20.0;
+                        const double e = q * ((1 - a) / a) * ((1 - a) / a) + rr * a / (2 - a);
+                        if (e < bestE) { bestE = e; best = a; }
+                    }
+                    ceAlpha = std::max(1.0 / 10, best);
+                    sigma2 = 0.9 * sigma2 + 0.1 * std::max(1e-9, rr * (16.0 / 9.0) * kNoiseCal);
+                } else sigma2 = 0.9 * sigma2 + 0.1 * s2old;
+            }
+        }
+        if (runs.empty() && cpRefValid) {
+            double noiseAcc = 0; long noiseCnt = 0;
+            for (size_t j = 0; j + 1 < cpK.size(); j++) { noiseAcc += std::norm(Y[(size_t)cpK[j]] / cpPilot(cpK[j]) - cpRef[j]); noiseCnt++; }
+            noiseAcc *= 1.2;
+            if (noiseCnt > 0) sigma2 = 0.9 * sigma2 + 0.1 * std::max(1e-9, noiseAcc / (double)noiseCnt * (16.0 / 9.0) * kNoiseCal);
+        }
+        if (runs.empty() && sigma2 > 0) {   // without scattered pilots: the signal power of all carriers against the noise from the continual pilots
+            double pw = 0; long n = 0;
+            for (int k = firstPosition(p.tsb) * cps; k <= kEdge; k += 5) { pw += std::norm(Y[k]); n++; }
+            if (n) snr = 10 * std::log10(std::max(1e-9, (pw / (double)n - sigma2) / sigma2));
+        }
+        prevY.assign(Y, Y + K);   // the tracking's reference for the TMCC carriers
+        prevValid = true;
+        // ---- the symbol goes to the equaliser kTiDelay symbols later, when its channel can be interpolated in time
+        Pend pe;
+        if (!pendSpare.empty()) { pe = std::move(pendSpare.back()); pendSpare.pop_back(); }
+        pe.Y.assign(Y, Y + K); pe.symIdx = symIdx; pe.t = now;
+        pend.push_back(std::move(pe));
+        const int64_t upTo = now - (ceNoTi ? 0 : kTiDelay);
+        while (!pend.empty() && pend.front().t <= upTo) {
+            Pend q = std::move(pend.front());
+            pend.pop_front();
+            equalise(q);
+            pendSpare.push_back(std::move(q));
+        }
+    }
+
+    void equalise(const Pend& pq) {
+        const cf32* Y = pq.Y.data();
+        const int symIdx = pq.symIdx;
+        if (!started && symIdx == 0) started = true;   // the layer decoders begin with a whole frame; tracking and channel estimation run all the time
+        outCount++;
+        const uint16_t* rnd = mode == 1 ? tables::kRandomizing1 : mode == 2 ? tables::kRandomizing2 : tables::kRandomizing3;
+        std::vector<uint8_t> roles((size_t)cps);
+        ceK.resize((size_t)cps);
+        // per segment: received data values and their noise variance, in data-carrier order
+        std::vector<std::vector<cf32>> val(kSegments);
+        std::vector<std::vector<float>> nv(kSegments);
+        const int sp = symIdx % 4;
+        // ---- synchronous segments: channel estimate from the scattered pilots
+        for (auto& r : runs) {
+            const int k0 = r.p0 * cps;
+            const int top = runTopPilot(r.p1);
+            const int carriers = (r.p1 - r.p0 + 1) * cps + (top ? 1 : 0);
+            if (r.filled < 4) continue;
             const double tauRun = r.lag == std::complex<double>(0, 0) ? tau0 : -std::arg(r.lag) * (double)N / (2.0 * M_PI * 3.0);
-            interp.run(r.grid, 3, carriers, N, tauRun, r.H, 1.0);
-            if (symbols % 4 == 0) {
+            std::vector<cf32>& gi = scrG;
+            if (ceNoTi) gi = r.grid;
+            else {
+                gi.resize(r.grid.size());
+                for (size_t g = 0; g < gi.size(); g++) gi[g] = timeInterp(r, g, pq.t);
+                if (top) gi[(size_t)(carriers - 1) / 3] = edgeAt(r, pq.t, r.grid[(size_t)(carriers - 1) / 3]);
+            }
+            if (!ceNoTi && r.dlyKnown) interpN.run(gi, 3, carriers, N, tauRun + r.dlyRel, r.H, std::min(1.0, r.dlyHalf / ((double)N / 6.0)));
+            else interp.run(gi, 3, carriers, N, tauRun, r.H, 1.0);
+            // the delay window: measured on the full-window estimate every 16 symbols (a narrowed one cannot show an echo that has just appeared
+            // outside it): the paths' span with margin, as the DVB-T receiver does
+            if (!ceNoTi && (outCount == 8 || (outCount > 8 && outCount % 16 == 0))) {
+                std::vector<cf32>& Hw = scrHw;
+                if (r.dlyKnown) interp.run(gi, 3, carriers, N, tauRun, Hw, 1.0); else Hw = r.H;
+                const int c = (int)std::lround(tauRun), lim = N / 6 - 16;
+                int tMin = 0, tMax = 0;
+                if (delaySpan(Hw, N, -lim, lim, c, tMin, tMax)) {
+                    const double centre = 0.5 * (tMin + tMax), half = 0.5 * (tMax - tMin) * 1.4 + 48;
+                    r.dlyKnown = half / ((double)N / 6.0) < 0.9;
+                    r.dlyRel = (double)c + centre - tauRun; r.dlyHalf = half;
+                } else r.dlyKnown = false;
+            }
+            if (outCount % 4 == 0) {
                 if (&r == &runs.front()) pilotShow.clear();
                 for (int pos = r.p0; pos <= r.p1; pos++) {
                     const auto& w = prbsW(mode, kSegmentAtPosition[pos]);
@@ -552,18 +712,7 @@ struct Demod::Impl {
                 carrierErase.apply(val[(size_t)s].data(), nv[(size_t)s].data(), ceK.data(), di, K);   // carriers hit by a narrowband interferer
             }
         }
-        if (noiseCnt == 0 && runs.empty() && cpRefValid) {
-            for (size_t j = 0; j + 1 < cpK.size(); j++) { noiseAcc += std::norm(Y[(size_t)cpK[j]] / cpPilot(cpK[j]) - cpRef[j]); noiseCnt++; }
-            noiseAcc *= 1.2;
-        }
-        if (runs.empty() && sigma2 > 0) {   // without scattered pilots: the signal power of all carriers against the noise from the continual pilots
-            double pw = 0; long n = 0;
-            for (int k = firstPosition(p.tsb) * cps; k <= kEdge; k += 5) { pw += std::norm(Y[k]); n++; }
-            if (n) snr = 10 * std::log10(std::max(1e-9, (pw / (double)n - sigma2) / sigma2));
-        }
-        if (noiseCnt > 0) {
-            const double s2 = std::max(1e-9, noiseAcc / (double)noiseCnt * (16.0 / 9.0) * kNoiseCal);
-            sigma2 = 0.9 * sigma2 + 0.1 * s2;
+        if (!runs.empty()) {
             // power of the channel against the noise
             double hp = 0; long hn = 0;
             for (auto& rr : runs) for (size_t i = 0; i < rr.H.size(); i += 7) { hp += std::norm(rr.H[i]); hn++; }
@@ -600,20 +749,20 @@ struct Demod::Impl {
             segmentRoles(mode, s, true, symIdx, roles.data());
             val[(size_t)s].assign((size_t)dps, cf32(0, 0));
             nv[(size_t)s].assign((size_t)dps, kErasure);
-            if (!prevValid) continue;
+            if (!prevOutValid) continue;
             int di = 0;
             for (int i = 0; i < cps; i++) {
                 if (roles[(size_t)i] != kData) continue;
                 const int k = pos * cps + i;
-                const cf32 u = Y[k] * std::conj(prevY[(size_t)k]);
-                const float pw = std::max(1e-9f, 0.5f * (std::norm(Y[k]) + std::norm(prevY[(size_t)k])) - (float)sigma2);
+                const cf32 u = Y[k] * std::conj(prevOut[(size_t)k]);
+                const float pw = std::max(1e-9f, 0.5f * (std::norm(Y[k]) + std::norm(prevOut[(size_t)k])) - (float)sigma2);
                 const float mag = std::abs(u);
                 if (mag > 1e-12f) { val[(size_t)s][(size_t)di] = u / mag; nv[(size_t)s][(size_t)di] = (float)(2.0 * sigma2 / pw + sigma2 * sigma2 / (pw * pw)) ; }
                 di++;
             }
         }
-        prevY.assign(Y, Y + K);
-        prevValid = true;
+        prevOut.assign(Y, Y + K);
+        prevOutValid = true;
         // ---- frequency de-interleaving, time de-interleaving, back to the layers
         std::vector<std::vector<cf32>> dv(kSegments);
         std::vector<std::vector<float>> dn(kSegments);
@@ -668,7 +817,7 @@ struct Demod::Impl {
             }
         }
         if (started) submit(job);
-        if (symbols % 8 == 0) {
+        if (outCount % 8 == 0) {
             eq.clear();
             for (int s = 0; s < kSegments; s++) if (!val[(size_t)s].empty() && !seg[s].diff) for (int i = 0; i < dps; i += 4) if (nv[(size_t)s][(size_t)i] < 1e6f) eq.push_back(val[(size_t)s][(size_t)i]);
             if (eq.size() > 1500) { std::vector<cf32> e2; for (size_t i = 0; i < eq.size(); i += eq.size() / 1500 + 1) e2.push_back(eq[i]); eq.swap(e2); }
