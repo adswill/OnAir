@@ -15116,6 +15116,8 @@ static bool put_413(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTe
 static bool put_416(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
 static bool put_419(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
 static bool put_422(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_425(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
+static bool put_428(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
 static bool put_431(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_432(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_433(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
@@ -15126,6 +15128,12 @@ static bool put_437(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTel
 static bool put_438(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_439(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_440(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
+static bool put_442(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
+static bool put_445(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
+static bool put_448(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
+static bool put_451(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
+static bool put_454(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
+static bool put_457(const RxTelemetry& rx, std::string& s) { ev_dect2__AtvTelemetry(s, rx.atv); return true; }
 static bool put_461(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_462(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_463(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
@@ -15461,6 +15469,8 @@ static const StdEntry kStd[] = {
     {416, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_416},
     {419, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_419},
     {422, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_422},
+    {425, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_425},
+    {428, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_428},
     {431, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_431},
     {432, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_432},
     {433, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_433},
@@ -15471,6 +15481,12 @@ static const StdEntry kStd[] = {
     {438, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_438},
     {439, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_439},
     {440, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_440},
+    {442, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_442},
+    {445, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_445},
+    {448, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_448},
+    {451, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_451},
+    {454, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_454},
+    {457, "atv", "dect2::AtvTelemetry", kSchema_dect2__AtvTelemetry, put_457},
     {461, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_461},
     {462, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_462},
     {463, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_463},
@@ -16053,6 +16069,14 @@ static const WebModeRow kRows[] = {
     {415, "TPMS: all makes", 8, "TPMS: tyre pressure sensors of every make", "", 417, 416, "sensors"},
     {418, "Utility and energy meters", 8, "Utility meters and energy monitors: every brand in one list", "", 420, 419, "sensors"},
     {421, "Remotes, doorbells and switches", 8, "Remotes, doorbells and switches: the frames they send", "", 423, 422, "sensors"},
+    {424, "Analog TV: PAL B/G", 0, "Analog TV: PAL B/G (Europe)", "", 426, 425, "atv"},
+    {427, "Analog TV: PAL I", 0, "Analog TV: PAL I (UK)", "", 429, 428, "atv"},
+    {441, "Analog TV: PAL D/K", 0, "Analog TV: PAL D/K (China)", "", 443, 442, "atv"},
+    {444, "Analog TV: SECAM D/K", 0, "Analog TV: SECAM D/K (Russia)", "", 446, 445, "atv"},
+    {447, "Analog TV: SECAM L", 0, "Analog TV: SECAM L (France)", "", 449, 448, "atv"},
+    {450, "Analog TV: NTSC M", 0, "Analog TV: NTSC M (Americas, Japan)", "", 452, 451, "atv"},
+    {453, "Analog TV: PAL M", 0, "Analog TV: PAL M (Brazil)", "", 455, 454, "atv"},
+    {456, "Analog TV: PAL N", 0, "Analog TV: PAL N (Argentina)", "", 458, 457, "atv"},
 };
 } // namespace
 

@@ -191,6 +191,7 @@ const ModeUi* modeUi(int family) {
     case 6: return &kDvbsUi;
     case 7: return &kDtmbUi;
     case 8: return &kAtvUi;
+    case 424: case 427: case 441: case 444: case 447: case 450: case 453: case 456: return &kAtvUi;   // 424 .. 456: one analog TV standard each, the same panel (atv_rx.h: atvViews)
     case 9: return &kDmrUi;
     case 10: return &kDrmUi;
     case 11: return &kAdsbUi;

@@ -1,6 +1,6 @@
 # Radiosonde, wireless M-Bus and satellite framing entries (4.0, branch feat40-modes4)
 
-Forty more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
+Forty-eight more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
 No decoder was added or changed. The sensor-family entries of the same branch are in `SENSORVIEWS-4.0.md`.
 
 ## Radiosonde types (receiver `SondeReceiver`, `setKindMask`)
@@ -72,3 +72,19 @@ BPC, HLA, BPM coded and RWM are checked for the station only (their decoding is 
 The engine passes `gnssSystemBit(system)` to `setSystems` when the entry starts (all systems for GNSS itself). The screen is the GNSS screen; the drive-navigation, map and clock-sync parts stay in GNSS.
 Test `tests/gnss/test_gnss_views.cpp`: a simulated L1 sky with GPS, Galileo and QZSS satellites (4 Msps, 8-bit samples, 45 s) through a receiver wanting every system and one per view (GPS, Galileo, QZSS): a view locks none of the other systems and enough of its own;
 the tables of all five (GLONASS at 10 Msps, BeiDou at 1561.098 MHz) are checked; GLONASS and BeiDou use the same mask and their signals are covered by the receiver's own tests. **Simulated signals only.**
+
+## Analog TV standards (receiver `AtvReceiver`, `setStandard`)
+| Mode | Family | Active std | Engine std | Poll slot | System, colour |
+|---|---|---|---|---|---|
+| Analog TV: PAL B/G | 424 | 425 | 426 | 424 | B/G (8 MHz channel), PAL |
+| Analog TV: PAL I | 427 | 428 | 429 | 427 | I, PAL |
+| Analog TV: PAL D/K | 441 | 442 | 443 | 441 | D/K, PAL |
+| Analog TV: SECAM D/K | 444 | 445 | 446 | 444 | D/K, SECAM |
+| Analog TV: SECAM L | 447 | 448 | 449 | 447 | L, SECAM |
+| Analog TV: NTSC M | 450 | 451 | 452 | 450 | M, NTSC |
+| Analog TV: PAL M | 453 | 454 | 455 | 453 | M, PAL |
+| Analog TV: PAL N | 456 | 457 | 458 | 456 | N, PAL |
+
+The engine tells the receiver the system and the colour system when the entry starts (`setStandard`); the Analog TV screen keeps them (`atv_ui.cpp` pushes the entry's standard instead of the user's hint), and the main screen's picture view works for the entries too (`draw_ui.cpp`). The default frequency is that of Analog TV (600 MHz).
+Test `tests/atv/test_atv_views.cpp`: the test signal of each standard (colour bars, 40 dB, 10 Msps, 8-bit samples, carrier error 0 and +-50 kHz) into a receiver told what the entry tells it: line and field lock, the standard named right, the lines and the field rate of the standard, the offset found, the decoded colour bars within 0.14 of the EBU bars.
+**Simulated signals only**; the behaviour of a forced standard on a signal of another standard is not tested.

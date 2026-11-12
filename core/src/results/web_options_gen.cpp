@@ -892,6 +892,142 @@ static bool set_422(Engine& e, const std::string& n, double v) {
     if (n == "setAutoLevel") { call(r, &Rx<decltype(r)>::setAutoLevel, v); return true; }
     return false;
 }
+static const char kOpt_425[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_425(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
+static const char kOpt_428[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_428(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
+static const char kOpt_442[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_442(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
+static const char kOpt_445[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_445(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
+static const char kOpt_448[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_448(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
+static const char kOpt_451[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_451(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
+static const char kOpt_454[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_454(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
+static const char kOpt_457[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setNoiseReduction","k":"int","l":"Noise Reduction","h":"temporal noise reduction of the picture: -1 automatic (default; by the video S/N), 0 off, 1 light, 2 medium, 3 strong","t":"s"},{"n":"setBlackSetup","k":"int","l":"Black Setup","h":"-1 by system (7.5 IRE in M), 0 none, 1 7.5 IRE","t":"s"},{"n":"setChromaDelayNs","k":"num","l":"Chroma Delay Ns","h":"< 0: what the standard says (170 ns)","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"a"},{"n":"setSaturation","k":"num","l":"Saturation","h":"1 = as sent","t":"a"},{"n":"setHue","k":"num","l":"Hue","h":"NTSC tint","t":"a"},{"n":"setChannelWidth","k":"int","l":"Channel Width","h":"6, 7 or 8 (default 8): the channel the user tuned; only matters for the carrier offset of 5.5 MHz sound (B/G)","u":"MHz","t":"a"},{"n":"setSoundSystem","k":"int","l":"Sound System","h":"0 automatic (NICAM-728 or A2 when there, else the FM sound), 1 the FM / AM sound carrier only","t":"a"},{"n":"setDualSound","k":"int","l":"Dual Sound","h":"two-language NICAM or A2: 0 the first channel (sound A), 1 the second (sound B)","t":"a"},{"n":"setDetector","k":"int","l":"Detector","h":"0 automatic (synchronous when the carrier is locked), 1 envelope detector only","t":"a"},{"n":"setModulation","k":"int","l":"Modulation","t":"a"}])JSON";
+static bool set_457(Engine& e, const std::string& n, double v) {
+    auto& r = e.atv();
+    if (n == "setDeinterlace") { call(r, &Rx<decltype(r)>::setDeinterlace, v); return true; }
+    if (n == "setNoiseReduction") { call(r, &Rx<decltype(r)>::setNoiseReduction, v); return true; }
+    if (n == "setBlackSetup") { call(r, &Rx<decltype(r)>::setBlackSetup, v); return true; }
+    if (n == "setChromaDelayNs") { call(r, &Rx<decltype(r)>::setChromaDelayNs, v); return true; }
+    if (n == "setColour") { call(r, &Rx<decltype(r)>::setColour, v); return true; }
+    if (n == "setSaturation") { call(r, &Rx<decltype(r)>::setSaturation, v); return true; }
+    if (n == "setHue") { call(r, &Rx<decltype(r)>::setHue, v); return true; }
+    if (n == "setChannelWidth") { call(r, &Rx<decltype(r)>::setChannelWidth, v); return true; }
+    if (n == "setSoundSystem") { call(r, &Rx<decltype(r)>::setSoundSystem, v); return true; }
+    if (n == "setDualSound") { call(r, &Rx<decltype(r)>::setDualSound, v); return true; }
+    if (n == "setDetector") { call(r, &Rx<decltype(r)>::setDetector, v); return true; }
+    if (n == "setModulation") { call(r, &Rx<decltype(r)>::setModulation, v); return true; }
+    return false;
+}
 static const char kOpt_551[] = R"JSON([{"n":"setSystem","k":"int","l":"System","h":"before configure()","t":"s"},{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"0: the system's own","u":"dB","t":"s"}])JSON";
 static bool set_551(Engine& e, const std::string& n, double v) {
     auto& r = e.satdetect();
@@ -1599,6 +1735,14 @@ const OptEntry kOpt[] = {
     {416, kOpt_416, set_416},
     {419, kOpt_419, set_419},
     {422, kOpt_422, set_422},
+    {425, kOpt_425, set_425},
+    {428, kOpt_428, set_428},
+    {442, kOpt_442, set_442},
+    {445, kOpt_445, set_445},
+    {448, kOpt_448, set_448},
+    {451, kOpt_451, set_451},
+    {454, kOpt_454, set_454},
+    {457, kOpt_457, set_457},
     {551, kOpt_551, set_551},
     {552, kOpt_552, set_552},
     {553, kOpt_553, set_553},

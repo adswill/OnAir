@@ -777,3 +777,11 @@ Sensors, Weather, all brands
 Sensors, Tyre pressure, all makes
 Sensors, Utility and energy meters
 Sensors, Remotes and doorbells
+TV, PAL B/G
+TV, PAL I
+TV, PAL D/K
+TV, SECAM D/K
+TV, SECAM L
+TV, NTSC M
+TV, PAL M
+TV, PAL N

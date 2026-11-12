@@ -216,6 +216,15 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 7: return pollStd(rxDvbs_, 7, t, seqs[0], &RxTelemetry::dvbs);
     case 8: return pollStd(rxDtmb_, 8, t, seqs[1], &RxTelemetry::dtmb);
     case 9: return pollStd(rxAtv_, 9, t, seqs[2], &RxTelemetry::atv);
+    // 4.0: one entry per analog TV standard, the same receiver (atv_rx.h: atvViews)
+    case 425: return pollStd(rxAtv_, 425, t, seqs[424], &RxTelemetry::atv);   // analog TV standard entry (family 424)
+    case 428: return pollStd(rxAtv_, 428, t, seqs[427], &RxTelemetry::atv);   // analog TV standard entry (family 427)
+    case 442: return pollStd(rxAtv_, 442, t, seqs[441], &RxTelemetry::atv);   // analog TV standard entry (family 441)
+    case 445: return pollStd(rxAtv_, 445, t, seqs[444], &RxTelemetry::atv);   // analog TV standard entry (family 444)
+    case 448: return pollStd(rxAtv_, 448, t, seqs[447], &RxTelemetry::atv);   // analog TV standard entry (family 447)
+    case 451: return pollStd(rxAtv_, 451, t, seqs[450], &RxTelemetry::atv);   // analog TV standard entry (family 450)
+    case 454: return pollStd(rxAtv_, 454, t, seqs[453], &RxTelemetry::atv);   // analog TV standard entry (family 453)
+    case 457: return pollStd(rxAtv_, 457, t, seqs[456], &RxTelemetry::atv);   // analog TV standard entry (family 456)
     case 10: return pollStd(rxDmr_, 10, t, seqs[3], &RxTelemetry::dmr);
     case 11: return pollStd(rxDrm_, 11, t, seqs[4], &RxTelemetry::drm);
     case 12: return pollStd(rxAdsb_, 12, t, seqs[5], &RxTelemetry::adsb);

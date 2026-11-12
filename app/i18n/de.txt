@@ -4207,3 +4207,11 @@ Sensors, Weather, all brands	Sensoren, Weather, all brands
 Sensors, Tyre pressure, all makes	Sensoren, Tyre pressure, all makes
 Sensors, Utility and energy meters	Sensoren, Utility and energy meters
 Sensors, Remotes and doorbells	Sensoren, Remotes and doorbells
+TV, PAL B/G	Fernsehen, PAL B/G
+TV, PAL I	Fernsehen, PAL I
+TV, PAL D/K	Fernsehen, PAL D/K
+TV, SECAM D/K	Fernsehen, SECAM D/K
+TV, SECAM L	Fernsehen, SECAM L
+TV, NTSC M	Fernsehen, NTSC M
+TV, PAL M	Fernsehen, PAL M
+TV, PAL N	Fernsehen, PAL N

@@ -187,6 +187,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxDtmb_.setPacketCallback([this](const uint8_t* pk, size_t n, double secs) { onTsPackets(pk, n, secs); });   // runs on the receiver thread
     rxDtmb_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAtv_.configure(rate_);
+    { const AtvView* tv = atvViewForActive(activeStdFor(stdMode_.load())); if (tv) rxAtv_.setStandard(tv->sys, tv->colour); }   // an entry of one standard tells the receiver the system and the colour system (the screen keeps them: atv_ui.cpp)
     rxAtv_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxDmr_.configure(rate_);
     rxDmr_.setLogCallback([this](const std::string& s) { rxLog(s); });

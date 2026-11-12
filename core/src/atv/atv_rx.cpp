@@ -746,6 +746,27 @@ void AtvReceiver::setNbtv(int lines, double frameHz, double devKhz, bool vertica
 }
 void AtvReceiver::setChannelWidth(int mhz) { p_->chanWidthMhz = mhz; }
 
+// 4.0: the standards with a mode-list entry of their own (family, active standard family + 1, engine standard family + 2, poll slot = family)
+static const AtvView kAtvViews[] = {
+    {424, "atvpalbg", "Analog TV: PAL B/G", kAtvG, kAtvPal},
+    {427, "atvpali", "Analog TV: PAL I", kAtvI, kAtvPal},
+    {441, "atvpaldk", "Analog TV: PAL D/K", kAtvDK, kAtvPal},
+    {444, "atvsecamdk", "Analog TV: SECAM D/K", kAtvDK, kAtvSecam},
+    {447, "atvsecaml", "Analog TV: SECAM L", kAtvL, kAtvSecam},
+    {450, "atvntscm", "Analog TV: NTSC M", kAtvM, kAtvNtsc},
+    {453, "atvpalm", "Analog TV: PAL M", kAtvM, kAtvPal},
+    {456, "atvpaln", "Analog TV: PAL N", kAtvN, kAtvPal},
+};
+const AtvView* atvViews(int& count) { count = (int)(sizeof kAtvViews / sizeof *kAtvViews); return kAtvViews; }
+const AtvView* atvViewForActive(int a) { for (const auto& v : kAtvViews) if (v.family + 1 == a) return &v; return nullptr; }
+const AtvView* atvViewForStd(int s) { for (const auto& v : kAtvViews) if (v.family + 2 == s) return &v; return nullptr; }
+ModeTuning atvViewTuning(int i) {
+    ModeTuning t = atvTuning();
+    const AtvView& v = kAtvViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
+    return t;
+}
+
 ModeTuning atvTuning() {
     ModeTuning t;
     t.stdMode = 10; t.id = "atv"; t.name = "Analog TV";

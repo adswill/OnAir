@@ -2198,6 +2198,38 @@ case 422: {
     { Table tb({"Item"}); int n = 0; for (auto it = t.recent.rbegin(); it != t.recent.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Recent", tb); }
     break;
 }
+case 425: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
+    break;
+}
+case 428: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
+    break;
+}
 case 431: {
     const auto& t = rx.hfutil; (void)t;
     cardIf(o, "Cfo Hz", t.cfoHz);
@@ -2366,6 +2398,102 @@ case 440: {
     cardIf(o, "Text", t.text);
     cardIf(o, "Pdus", t.pdus);
     { Table tb({"Utc", "Text"}); int n = 0; for (auto it = t.events.rbegin(); it != t.events.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.utc), cell(e.text)}); } if (n) addTable(o, "Events", tb); }
+    break;
+}
+case 442: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
+    break;
+}
+case 445: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
+    break;
+}
+case 448: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
+    break;
+}
+case 451: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
+    break;
+}
+case 454: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
+    break;
+}
+case 457: {
+    const auto& t = rx.atv; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Modulation", t.modulation);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "System", t.system);
+    cardIf(o, "Colour System", t.colourSystem);
+    cardIf(o, "Lines", t.lines);
+    cardIf(o, "Field Hz", t.fieldHz);
+    cardIf(o, "Vision Hz", t.visionHz);
+    cardIf(o, "Sound Hz", t.soundHz);
+    cardIf(o, "Sound Spacing Mhz", t.soundSpacingMhz);
     break;
 }
 case 481: {

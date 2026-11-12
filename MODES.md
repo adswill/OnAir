@@ -2,9 +2,9 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**440 modes.**
+**448 modes.**
 
-## TV (17)
+## TV (25)
 
 - **DVB** - DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)
 - **TV (auto)** - TV, automatic: the standard and its parameters are measured from the signal
@@ -23,6 +23,14 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Analog TV** - Analogue television (PAL, SECAM, NTSC)
 - **FPV video (analog)** - Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)
 - **MAC** - MAC/packet satellite TV: picture, 4:3 / 16:9, channel name, digital sound, EuroCrypt detected
+- **Analog TV: PAL B/G** - Analog TV: PAL B/G (Europe)
+- **Analog TV: PAL I** - Analog TV: PAL I (UK)
+- **Analog TV: PAL D/K** - Analog TV: PAL D/K (China)
+- **Analog TV: SECAM D/K** - Analog TV: SECAM D/K (Russia)
+- **Analog TV: SECAM L** - Analog TV: SECAM L (France)
+- **Analog TV: NTSC M** - Analog TV: NTSC M (Americas, Japan)
+- **Analog TV: PAL M** - Analog TV: PAL M (Brazil)
+- **Analog TV: PAL N** - Analog TV: PAL N (Argentina)
 
 ## Broadcast Radio (9)
 

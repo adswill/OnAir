@@ -462,6 +462,14 @@ object Modes {
         ModeDef(444, 415, 8, 0xFFFFC7DB, null, 437, 0),
         ModeDef(445, 418, 8, 0xFFFFC7DB, null, 438, 0),
         ModeDef(446, 421, 8, 0xFFFFC7DB, null, 439, 0),
+        ModeDef(447, 424, 0, 0xFFFFC7CC, null, 440, 0),
+        ModeDef(448, 427, 0, 0xFFFFC7CC, null, 441, 0),
+        ModeDef(449, 441, 0, 0xFFFFC7CC, null, 442, 0),
+        ModeDef(450, 444, 0, 0xFFFFC7CC, null, 443, 0),
+        ModeDef(451, 447, 0, 0xFFFFC7CC, null, 444, 0),
+        ModeDef(452, 450, 0, 0xFFFFC7CC, null, 445, 0),
+        ModeDef(453, 453, 0, 0xFFFFC7CC, null, 446, 0),
+        ModeDef(454, 456, 0, 0xFFFFC7CC, null, 447, 0),
     )
     /** The modes that exist, in the order of the desktop table. */
     val shown: List<ModeDef> = all.filter { !it.removed }.sortedBy { it.order }
