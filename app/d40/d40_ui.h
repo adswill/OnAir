@@ -47,3 +47,5 @@ void d40AirbandCard();   // d40_airband_ui.cpp: ATIS letter tracker and VOLMET a
 namespace dect2 { struct DvbcTelemetry; }
 void d40DvbcQamLine(const dect2::DvbcTelemetry& t);   // d40_tv_ui.cpp: the QAM order the symbol cloud looks like
 void d40HdrLevelsCard(App& a);                         // HD Radio digital sideband levels and imbalance
+namespace dect2 { struct FpvTelemetry; }
+void d40FpvPickLine(const dect2::FpvTelemetry& t);     // free FPV channels for N pilots

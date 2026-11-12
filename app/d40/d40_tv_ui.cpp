@@ -3,6 +3,7 @@
 #include "../ui/typography.h"
 #include "dect2/d40/tv_d40.h"
 #include "dect2/dvbc/dvbc_tel.h"
+#include "dect2/fpv/fpv_tel.h"
 #include <cmath>
 #include <complex>
 #include <cstdio>
@@ -40,4 +41,25 @@ void d40HdrLevelsCard(App& a) {
     if (!r.ok) { ImGui::TextDisabled("%s", tr("No HD Radio sidebands found in the spectrum.")); return; }
     ImGui::Text("%s %.1f dBc, %s %.1f dBc, %s %.1f dB: %s", tr("lower"), r.lowerDbc, tr("upper"), r.upperDbc, tr("imbalance"), r.imbalanceDb, r.kind.c_str());
     if (!r.note.empty()) ImGui::TextDisabled("%s", r.note.c_str());
+}
+
+// FPV: free channels for N pilots from the channels measured by the scan
+void d40FpvPickLine(const dect2::FpvTelemetry& t) {
+    static int pilots = -1;
+    if (pilots < 0) pilots = (int)plat::prefs().getI("d40FpvPilots", 2);
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextUnformatted(tr("Free channels for"));
+    ImGui::SameLine(); ImGui::SetNextItemWidth(70 * gUi);
+    if (ImGui::InputInt("##d40fpvn", &pilots, 1, 1)) { pilots = std::max(1, std::min(8, pilots)); plat::prefs().setI("d40FpvPilots", pilots); }
+    ImGui::SameLine(); ImGui::TextUnformatted(tr("pilots"));
+    ImGui::SameLine(); ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first."));
+    std::vector<std::pair<double, double>> lv;
+    for (const auto& c : t.channels) if (c.levelDb > -199.f) lv.push_back({c.freqHz / 1e6, (double)c.levelDb});
+    if (lv.empty()) { ImGui::TextDisabled("%s", tr("Scan first.")); return; }
+    const auto r = d4::pickFpvChannels(lv, pilots);
+    if (r.empty()) { ImGui::TextDisabled("%s", tr("No free channel found.")); return; }
+    std::string s;
+    for (const auto& p : r) { char b[48]; snprintf(b, sizeof b, "%s%s (%.0f MHz)", s.empty() ? "" : ", ", p.name.c_str(), p.mhz); s += b; }
+    ImGui::Text("%s", s.c_str());
 }
