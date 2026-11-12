@@ -2089,3 +2089,15 @@ docs/CHANGELOG-4.0.md and docs/RELEASE-NOTES-4.0.0.md from `git log v3.9.0..pub/
 landing predictor accuracy, known limits and next (ATSC #484 recordings, Android TV and USB on a phone, codecs folder, Spectran V6). README 4.0 section and
 mode table, docs index. Generators (modes list, web schema / options, Android modes and results map, credits) had no changes; `tools/gate/run.sh --no-compile` passes.
 Then merged integ-40 at f25aff2f1 (feat40-issues2) and added #463, #435, #442 from docs/ISSUES2-4.0.md to the 4.0 notes; dropped an unmapped recording row from docs/REAL-SIGNALS.md.
+
+## 2026-11-12 (feat41-spectran): Aaronia SPECTRAN V6 / V6 ECO (#482, docs/SPECTRAN-V6.md)
+- New native driver core/src/source/source_spectran.cpp through Aaronia's RTSA API (AaroniaRTSAAPI from the RTSA-Suite PRO, loaded at run
+  time, not shipped). Interface declared in aartsa_min.h from Aaronia's public RTSA-API-Samples README and samples; result codes checked
+  against SatDump's and two other wrappers' lists; SDR++ spectran_source read as a reference. No Aaronia header is bundled (not public, the
+  samples repository states no licence).
+- Receive: iqreceiver (any rate, span = rate / 1.5) or raw (clock / 2^k); gain = reference level (+10 dBm at 0 dB), scale follows the level
+  the device took; live frequency / level / amplifier; rate changes stop and restart the device; unplug and reopen. Transmit: iqtransmitter,
+  timed packets a lead time ahead of the stream clock, 1.0 = 0 dBm before main/transgain, end flags on close; warn-only.
+- Missing SDK: plain message, Fix it entry, radio-list hint for USB vendor 2f72. Credits rows added (gen_credits.py).
+- Tests: spectran (fake RTSA API: listing, both modes, rate plan, scaling, I/Q order, retunes, unplug, busy, TX pacing / flags) and
+  spectran_missing (no library, Init failing). CI not run yet: the quick run was cancelled for the 4.0 release builds. Untested on a device.
