@@ -12,15 +12,16 @@
 #include <memory>
 #include <algorithm>
 #include <set>
+#include <utility>
 #include <vector>
 using namespace dect2;
 using namespace dect2::wmbus;
 #include "../common/test_util.h"
 
-static std::vector<WmbusTelemetry> runViews(const WmbusGenConfig& c, double seconds, const std::vector<uint32_t>& masks) {
+static std::vector<WmbusTelemetry> runViews(const WmbusGenConfig& c, double seconds, const std::vector<std::pair<uint32_t, std::string>>& masks) {
     WmbusGenerator g(c);
     std::vector<std::unique_ptr<WmbusLiveReceiver>> rx;
-    for (uint32_t m : masks) { rx.emplace_back(new WmbusLiveReceiver); rx.back()->configure(c.rate); rx.back()->setCenterHz(c.centreHz); rx.back()->setPhyMask(m); }
+    for (const auto& m : masks) { rx.emplace_back(new WmbusLiveReceiver); rx.back()->configure(c.rate); rx.back()->setCenterHz(c.centreHz); rx.back()->setPhyMask(m.first); rx.back()->setMfrFilter(m.second); }
     std::vector<cf32> b(20000);
     for (size_t done = 0; done < (size_t)(seconds * c.rate); done += b.size()) { g.generate(b.data(), b.size()); for (auto& r : rx) r->feed(b.data(), b.size()); }
     std::vector<WmbusTelemetry> out(rx.size());
@@ -45,8 +46,8 @@ int main() {
     struct Scene { const char* name; double snr, cfo; int plan; double seconds; };
     for (const Scene& sc : {Scene{"868 clean", 99, 0, 0, 8}, Scene{"868 cfo -12 kHz, 25 dB", 25, -12000, 0, 10}, Scene{"868 cfo +9 kHz, 20 dB", 20, 9000, 0, 12}, Scene{"169 clean", 99, 0, 1, 12}, Scene{"169 cfo +3 kHz, 22 dB", 22, 3000, 1, 14}}) {
         WmbusGenConfig c; c.snrDb = sc.snr; c.cfoHz = sc.cfo; c.gapSec = 0.05; c.plan = sc.plan; if (sc.plan) c.centreHz = 169.4375e6;
-        std::vector<uint32_t> masks{0};
-        for (int i = 0; i < nv; i++) masks.push_back(views[i].phyMask);
+        std::vector<std::pair<uint32_t, std::string>> masks{{0u, ""}};
+        for (int i = 0; i < nv; i++) masks.push_back({views[i].phyMask, views[i].mfr});
         const auto r = runViews(c, sc.seconds, masks);
         size_t sumDev = 0;
         for (int i = 0; i < nv; i++) {
@@ -70,8 +71,8 @@ int main() {
     }
     {   // noise alone
         WmbusGenConfig c; c.silent = true; c.snrDb = 20;
-        std::vector<uint32_t> masks{0};
-        for (int i = 0; i < nv; i++) masks.push_back(views[i].phyMask);
+        std::vector<std::pair<uint32_t, std::string>> masks{{0u, ""}};
+        for (int i = 0; i < nv; i++) masks.push_back({views[i].phyMask, views[i].mfr});
         const auto r = runViews(c, 10, masks);
         for (size_t i = 0; i < r.size(); i++) CHECK(r[i].devices.empty() && r[i].blocksOk == 0, "noise: receiver %zu lists %zu meters", i, r[i].devices.size());
     }
