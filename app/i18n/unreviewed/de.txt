@@ -1000,3 +1000,25 @@ pilots
 Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.
 Scan first.
 No free channel found.
+Search the tools
+No tool matches
+Analysis and measurement
+Scanning and hunting
+Propagation and planning
+Satellites and scheduling
+Voice, messages and archives
+Data feeds and network
+Automation and extending
+Transmit and generate
+Calibration and hardware
+Plugin store...
+Browse, install and update plugins from the signed plugin registry. Nothing is fetched until you ask.
+Screen arrangement
+Panels
+Theme
+Colour scheme
+Brightness
+Power and system
+Reset view
+Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode
+Forgets the saved window positions of every mode and the sizes of the panels

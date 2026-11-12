@@ -4431,3 +4431,25 @@ pilots	Piloten
 Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.	Kanäle, die niemand nutzt (aus der letzten Suche), so verteilt, dass sich die Piloten nicht stören: nicht näher als 20 MHz an einem Sender, mindestens 37 MHz auseinander. Nie gemessene Kanäle werden nicht angeboten: zuerst suchen.
 Scan first.	Zuerst suchen.
 No free channel found.	Kein freier Kanal gefunden.
+Search the tools	Werkzeuge durchsuchen
+No tool matches	Kein Werkzeug gefunden
+Analysis and measurement	Analyse und Messung
+Scanning and hunting	Suchen und Aufspüren
+Propagation and planning	Ausbreitung und Planung
+Satellites and scheduling	Satelliten und Zeitplanung
+Voice, messages and archives	Sprache, Nachrichten und Archive
+Data feeds and network	Datenfeeds und Netzwerk
+Automation and extending	Automatisierung und Erweiterungen
+Transmit and generate	Senden und Erzeugen
+Calibration and hardware	Kalibrierung und Hardware
+Plugin store...	Plugin-Store ...
+Browse, install and update plugins from the signed plugin registry. Nothing is fetched until you ask.	Plugins aus dem signierten Plugin-Verzeichnis durchsuchen, installieren und aktualisieren. Nichts wird geladen, bevor Sie es verlangen.
+Screen arrangement	Bildschirmanordnung
+Panels	Panels
+Theme	Design
+Colour scheme	Farbschema
+Brightness	Helligkeit
+Power and system	Energie und System
+Reset view	Ansicht zurücksetzen
+Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode	Zurück zur Standardoberfläche: neue Oberfläche mit klassischen Panels, Seitenleiste, kein Andocken, kein Touch-Modus
+Forgets the saved window positions of every mode and the sizes of the panels	Vergisst die gespeicherten Fensterpositionen aller Modi und die Panelgrößen

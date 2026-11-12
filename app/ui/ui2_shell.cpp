@@ -5,6 +5,7 @@
 #include "input_map.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "ui2_internal.h"
+#include "menu_groups.h"
 #include "../state/listen_freq.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
@@ -541,159 +542,201 @@ void statusLine(App& a) {
 
 const char* kVariantNames[8] = {N_("Sidebar"), N_("Scope"), N_("Tiles"), N_("Faceplate"), N_("Scope: Cinema"), N_("Scope: Meters"), N_("Scope: Dock"), N_("Panel")};
 
+// one Tools menu item (the label, tooltip, shortcut text and checked state it always had)
+static void toolMenuItem(App& a, const menugroups::ToolItem& it) {
+    using T = menugroups::Tool;
+    const char* lab = tr(it.label);
+    auto tip = [](const char* t) { if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", t); };   // t is already tr()-ed at the call
+    switch (it.id) {
+        case T::Transcripts: if (ImGui::MenuItem(lab, nullptr, tx::windowOpen())) tx::windowOpen() = !tx::windowOpen();
+            tip(tr("What is said on the airband and other voice channels, as text: live captions, search, export. Off until you turn it on.")); break;
+        case T::Passes: ImGui::MenuItem(lab, nullptr, &a.passesOpen); break;
+        case T::Scheduler: ImGui::MenuItem(lab, nullptr, &a.schedulerOpen);
+            tip(tr("Timed jobs and satellite passes: tune the radio, record audio, IQ or the log, then put everything back")); break;
+        case T::Recordings: ImGui::MenuItem(lab, nullptr, &a.recmgrOpen);
+            tip(tr("Every recording in one list: search, play, trim, convert, tag, delete with undo, and a size budget per folder")); break;
+        case T::SatNogs: ImGui::MenuItem(lab, nullptr, &a.satnogsOpen); break;
+        case T::Df: ImGui::MenuItem(lab, nullptr, &a.dfOpen); break;
+        case T::Rfi: ImGui::MenuItem(lab, nullptr, &a.rfiOpen); break;
+        case T::PassiveRadar: ImGui::MenuItem(lab, nullptr, &a.passiveRadarOpen); break;
+        case T::Images: ImGui::MenuItem(lab, nullptr, &a.galleryOpen); break;
+        case T::Feeds: ImGui::MenuItem(lab, nullptr, &a.feedsOpen); break;
+        case T::EchoLink: ImGui::MenuItem(lab, nullptr, &a.echolinkOpen); break;
+        case T::Wireshark: ImGui::MenuItem(lab, nullptr, &a.wiresharkOpen); break;
+        case T::Swarm: ImGui::MenuItem(lab, nullptr, &a.swarmOpen); break;
+        case T::Messages: ImGui::MenuItem(lab, nullptr, &a.msgdbOpen); break;
+        case T::ProtoLab: ImGui::MenuItem(lab, nullptr, &a.protolabOpen); break;
+        case T::Esp32: ImGui::MenuItem(lab, nullptr, &a.esp32Open); break;
+        case T::SignalLab: ImGui::MenuItem(lab, nullptr, &a.signallabOpen);
+            tip(tr("Blind analysis of an unknown digital signal: select it on the spectrum (Identify or Shift+drag) or load a recording")); break;
+        case T::ModeBuilder: ImGui::MenuItem(lab, nullptr, &a.modeBuilderOpen); break;
+        case T::TxStudio: ImGui::MenuItem(lab, nullptr, &a.txStudioOpen);
+            tip(tr("Make a transmit signal as a file, with spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted.")); break;
+        case T::VideoGen: if (ImGui::MenuItem(lab, nullptr, &a.videoGenOpen)) savePrefs(a);
+            tip(tr("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)")); break;
+        case T::Integrations: ImGui::MenuItem(lab, nullptr, &a.integrationsOpen); break;
+        case T::Conversations: ImGui::MenuItem(lab, nullptr, &a.ssbConvOpen); break;
+        case T::Watchlists: ImGui::MenuItem(lab, nullptr, &a.watchlistOpen); break;
+        case T::Automations: ImGui::MenuItem(lab, nullptr, &a.automationOpen); break;
+        case T::Plugins: ImGui::MenuItem(lab, nullptr, &a.pluginsOpen); break;
+        case T::PluginStore: if (ImGui::MenuItem(lab)) pluginStoreOpen(a);   // the plugin window on its Store tab (the marketplace)
+            tip(tr("Browse, install and update plugins from the signed plugin registry. Nothing is fetched until you ask.")); break;
+        case T::Backup: ImGui::MenuItem(lab, nullptr, &a.backupOpen); break;
+        case T::Memory: ImGui::MenuItem(lab, "Ctrl+M", &a.memoryOpen); break;
+        case T::Datasets: ImGui::MenuItem(lab, nullptr, &a.datasetsOpen); break;
+        case T::Packs: ImGui::MenuItem(lab, nullptr, &a.packsOpen); break;
+        case T::Frequencies: ImGui::MenuItem(lab, "Ctrl+Shift+F", &a.freqOpen); break;
+        case T::FreqTab: if (ImGui::MenuItem(lab, nullptr, a.freqTab)) freqdbTabToggle(a); break;
+        case T::Transmit: ImGui::MenuItem(lab, nullptr, &txViewFlag()); break;
+        case T::Map: ImGui::MenuItem(lab, nullptr, &a.mapOpen);
+            tip(tr("A world map: find a position by coordinates or Maidenhead locator, distance and bearing from your location")); break;
+        case T::Sweep: ImGui::MenuItem(lab, nullptr, &a.sweepOpen); break;
+        case T::StationHealth: ImGui::MenuItem(lab, nullptr, &a.stationHealthOpen); break;
+        case T::Heard: ImGui::MenuItem(lab, nullptr, &a.heardOpen); break;
+        case T::Insights: ImGui::MenuItem(lab, nullptr, &a.insightOpen); break;
+        case T::MyStation: ImGui::MenuItem(lab, nullptr, &a.stationOpen); break;
+        case T::Doctor: ImGui::MenuItem(lab, nullptr, &a.doctorOpen); break;
+        case T::RfFp: ImGui::MenuItem(lab, nullptr, &a.rfFpOpen); break;
+        case T::WideAll: ImGui::MenuItem(lab, nullptr, &a.wideAllOpen); break;
+        case T::Trunking: ImGui::MenuItem(lab, nullptr, &a.trunkPoolOpen); break;
+        case T::Scanner: ImGui::MenuItem(lab, nullptr, &a.scanViewOpen);
+            tip(tr("HIGHLY EXPERIMENTAL: step through a list of frequencies and modes, or a band, and stop on activity")); break;
+        case T::Propagation: ImGui::MenuItem(lab, nullptr, &a.propOpen);
+            tip(tr("Where a transmitter can be received: predicted SNR on the map from power, frequency, time and the SNR you need. No terrain.")); break;
+        case T::AntDesigner: ImGui::MenuItem(lab, nullptr, &a.antdOpen);
+            tip(tr("Design and model wire antennas: templates, impedance and SWR across a band, radiation pattern, optimiser, calculators")); break;
+        case T::Rotator: ImGui::MenuItem(lab, nullptr, &a.rotatorOpen); break;
+        case T::VoiceKeys: ImGui::MenuItem(lab, nullptr, &a.voiceKeysOpen);
+            tip(tr("Your own decryption keys for digital voice (P25, NXDN). Nothing is decrypted without a key you add.")); break;
+        case T::Calibrate: if (ImGui::MenuItem(lab)) calibrateFrequencyOpen(a);
+            tip(tr("Measure this radio's frequency error (ppm) against an FM station, an ATSC pilot, a time-signal carrier, or by typing what you see")); break;
+    }
+}
+
 // the View menu: interface variants, text size, light / high contrast, language, accent, the classic interface
 static void viewMenu(App& a) {
     const float vx0 = ImGui::GetCursorScreenPos().x, vy0 = ImGui::GetWindowPos().y, vy1 = vy0 + ImGui::GetWindowHeight();
     struct Mark { float x0, y0, y1; ~Mark() { tourMark("view", ImVec2(x0, y0), ImVec2(ImGui::GetCursorScreenPos().x, y1)); } } mark{vx0, vy0, vy1};   // the tour points at the View menu
     gViewMenuCentre = ImVec2(ImGui::GetCursorScreenPos().x + ImGui::CalcTextSize(tr("View")).x * 0.5f + 6 * gUi, ImGui::GetCursorScreenPos().y + ImGui::GetFrameHeight() * 0.5f);
     if (ImGui::BeginMenu(tr("View"))) {
-        if (ImGui::BeginMenu(tr("Layout"))) {   // both switches act at once, the receiver keeps running; the same two values as Settings > Display
+        // 4.0: a short top level of submenus (docs/MENUS-4.0.md). PREVIEW HOOK: feat40-uipreview's hover previews (app/ui/ui_preview.*) go
+        // next to the items of Layout, Theme and Text; each radio item below is one MenuItem followed by its IsItemHovered().
+        if (ImGui::BeginMenu(tr("Layout"))) {
+            ImGui::TextDisabled("%s", tr("Screen arrangement"));
+            for (int v = 0; v < 8; v++) if (ImGui::MenuItem(tr(kVariantNames[v]), nullptr, a.uiVariant == v)) { a.uiVariant = v; savePrefs(a); }
+            ImGui::Separator();
+            ImGui::TextDisabled("%s", tr("Panels"));   // both switches act at once, the receiver keeps running; the same two values as Settings > Display
             if (ImGui::MenuItem(tr("Classic"), "Ctrl+Shift+L", !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
             if (ImGui::MenuItem(tr("Unified"), "Ctrl+Shift+L", a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new layout: the spectrum and waterfall stay on screen above the decoded views"));
+            ImGui::Separator();
+            if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
+            dockMenu(a);   // Docking (ui2_dock.cpp)
+            ImGui::Separator();
+            if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }   // keeps this menu bar; Ctrl+Shift+M or View > Reset view > Restore the default view comes back
             ImGui::EndMenu();
         }
-        if (ImGui::BeginMenu(tr("Look"))) {
-            const int cur = a.uiTheme == 3 ? 1 : a.uiTheme == 4 ? 2 : a.uiTheme >= 5 ? a.uiTheme - 2 : 0;
-            if (ImGui::MenuItem(tr("Classic"), nullptr, cur == 0)) { if (cur != 0) a.uiTheme = 1; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Studio"), nullptr, cur == 3)) { a.uiTheme = 5; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Mono Pro"), nullptr, cur == 4)) { a.uiTheme = 6; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Daylight"), nullptr, cur == 5)) { a.uiTheme = 7; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Dev A"), nullptr, cur == 1)) { a.uiTheme = 3; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Dev B"), nullptr, cur == 2)) { a.uiTheme = 4; savePrefs(a); }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new look: flat, dense, one accent colour"));
+        if (ImGui::BeginMenu(tr("Theme"))) {
+            // two separate settings, each with exactly one item checked: the colour scheme (a.uiTheme) and the brightness (Dark, Light, High contrast)
+            ImGui::TextDisabled("%s", tr("Colour scheme"));
+            static const char* names[8] = {N_("Terminal palette"), N_("Instrument palette"), N_("Mono palette"), N_("Dev A (graphite)"), N_("Dev B (terminal green)"), N_("Studio (slate, rounded)"), N_("Mono Pro (OLED, amber)"), N_("Daylight (light, blue)")};
+            for (int t = 0; t < 8; t++) if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
+            ImGui::Separator();
+            ImGui::TextDisabled("%s", tr("Brightness"));
+            themeChoice(a, true);
+            ImGui::Separator();
+            accentMenu();
             ImGui::EndMenu();
         }
-        ImGui::Separator();
-        for (int v = 0; v < 8; v++) if (ImGui::MenuItem(tr(kVariantNames[v]), nullptr, a.uiVariant == v)) { a.uiVariant = v; savePrefs(a); }
-        ImGui::Separator();
-        if (ImGui::BeginMenu(tr("Text size"))) {
+        if (ImGui::BeginMenu(tr("Text"))) {
+            ImGui::TextDisabled("%s", tr("Text size"));
             int pct = (int)std::lround(a.uiTextScale * 100);
             ImGui::SetNextItemWidth(160 * gUi);
             if (ImGui::SliderInt("##txtsz", &pct, 80, 200, "%d%%")) a.uiTextScale = std::max(0.8f, std::min(2.f, pct / 100.f));
             if (ImGui::IsItemDeactivatedAfterEdit()) savePrefs(a);
             for (int p : {80, 100, 125, 150, 200}) { char l[16]; snprintf(l, sizeof l, "%d%%", p); if (ImGui::MenuItem(l, nullptr, pct == p)) { a.uiTextScale = p / 100.f; savePrefs(a); } }
-            ImGui::Separator();
             ImGui::TextDisabled("%s", tr("Ctrl + / Ctrl - / Ctrl 0"));
+            ImGui::Separator();
+            typographyChoice(true);
             ImGui::EndMenu();
         }
-        if (ImGui::MenuItem(tr("Touch interface"), nullptr, &a.touchUi)) savePrefs(a);   // the same flag as the side panel: big targets, bottom dock (ui/touch.h)
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("For tablets and touch screens: big buttons, an on-screen keypad for the frequency, a full-screen mode picker."));
-        dockMenu(a);   // View > Docking (ui2_dock.cpp)
-        if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
-        if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
-            a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; savePrefs(a); }
-        if (ImGui::MenuItem(tr("Reset spectrum"))) resetSpectrum(a);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Put the panels back to their automatic sizes (drag the bars between panels to resize them)"));
-        if (ImGui::MenuItem(tr("Full screen"), "F11", gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."));
-        ImGui::Separator();
-        static const char* names[8] = {N_("Terminal palette"), N_("Instrument palette"), N_("Mono palette"), N_("Dev A (graphite)"), N_("Dev B (terminal green)"), N_("Studio (slate, rounded)"), N_("Mono Pro (OLED, amber)"), N_("Daylight (light, blue)")};
-        for (int t = 0; t < 8; t++) if (ImGui::MenuItem(tr(names[t]), nullptr, a.uiTheme == t)) { a.uiTheme = t; savePrefs(a); }
-        themeChoice(a, true);
-        accentMenu();
-        typographyChoice(true);
-        timeDisplayChoice(true);
+        if (ImGui::BeginMenu(tr("Time"))) { timeDisplayChoice(true); ImGui::EndMenu(); }
         if (ImGui::BeginMenu(tr("Language"))) { languageMenuItems(a); ImGui::EndMenu(); }
-        ImGui::Separator();
         if (ImGui::MenuItem(tr("Controls (keys and mouse) ..."), nullptr, &inputmap::windowOpen())) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What the mouse wheel, keys and extra mouse buttons do on the spectrum and waterfall: zoom, tune, pan, step size, shortcuts"));
-        if (ImGui::MenuItem(tr("Performance overlay"), nullptr, &a.perfOverlay)) savePrefs(a);
-        if (ImGui::MenuItem(tr("Verbose logging"), nullptr, &a.verboseLog)) savePrefs(a);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall detections and restarts and frame times to the log. For bug reports: switch it on, reproduce the problem, then Save bug report (Diagnostics)."));
-        if (ImGui::BeginMenu(tr("Power"))) {   // battery life: dect2/power/power.h (update rates, background work) and app/ui/frame_pace.h (redraws)
-            static const char* lp[3] = {N_("Low power mode: off"), N_("Low power mode: automatic (on battery or hot)"), N_("Low power mode: always")};
-            for (int i = 0; i < 3; i++) {
-                if (ImGui::MenuItem(tr(lp[i]), nullptr, a.powerLowMode == i)) { a.powerLowMode = i; savePrefs(a); }
-                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("While it applies: the spectrum and telemetry update less often, the window redraws at 30 fps when you type and at 10 fps behind other windows. A playing TV picture keeps its frame rate."));
-            }
+        ImGui::Separator();
+        if (ImGui::BeginMenu(tr("Power and system"))) {
+            if (ImGui::MenuItem(tr("Performance overlay"), nullptr, &a.perfOverlay)) savePrefs(a);
+            if (ImGui::MenuItem(tr("Verbose logging"), nullptr, &a.verboseLog)) savePrefs(a);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Adds USB transfer counts, bytes per second, stall detections and restarts and frame times to the log. For bug reports: switch it on, reproduce the problem, then Save bug report (Diagnostics)."));
             ImGui::Separator();
-            if (ImGui::MenuItem(tr("Reduce CPU when hidden"), nullptr, &a.reduceCpuHidden)) savePrefs(a);
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("No drawing while the window is minimised or hidden. Decoding goes on."));
-            static const char* sh[3] = {N_("Save power when hidden: off"), N_("Save power when hidden: on battery"), N_("Save power when hidden: always")};
-            for (int i = 0; i < 3; i++) if (ImGui::MenuItem(tr(sh[i]), nullptr, a.powerHidden == i)) { a.powerHidden = i; savePrefs(a); }
-            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("While the window is minimised or hidden: the spectrum and telemetry update a few times a second and scans wait. Decoding and audio go on."));
+            if (ImGui::BeginMenu(tr("Power"))) {   // battery life: dect2/power/power.h (update rates, background work) and app/ui/frame_pace.h (redraws)
+                static const char* lp[3] = {N_("Low power mode: off"), N_("Low power mode: automatic (on battery or hot)"), N_("Low power mode: always")};
+                for (int i = 0; i < 3; i++) {
+                    if (ImGui::MenuItem(tr(lp[i]), nullptr, a.powerLowMode == i)) { a.powerLowMode = i; savePrefs(a); }
+                    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("While it applies: the spectrum and telemetry update less often, the window redraws at 30 fps when you type and at 10 fps behind other windows. A playing TV picture keeps its frame rate."));
+                }
+                ImGui::Separator();
+                if (ImGui::MenuItem(tr("Reduce CPU when hidden"), nullptr, &a.reduceCpuHidden)) savePrefs(a);
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("No drawing while the window is minimised or hidden. Decoding goes on."));
+                static const char* sh[3] = {N_("Save power when hidden: off"), N_("Save power when hidden: on battery"), N_("Save power when hidden: always")};
+                for (int i = 0; i < 3; i++) if (ImGui::MenuItem(tr(sh[i]), nullptr, a.powerHidden == i)) { a.powerHidden = i; savePrefs(a); }
+                if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("While the window is minimised or hidden: the spectrum and telemetry update a few times a second and scans wait. Decoding and audio go on."));
+                ImGui::EndMenu();
+            }
+            rcaps::viewMenuItem();   // Low-power drawing (gfx/render_caps.h)
+            ImGui::Separator();
+            {   // opt-in Discord Rich Presence
+                const bool have = *discord::appId() != 0;
+                ImGui::BeginDisabled(!have);
+                if (ImGui::MenuItem(tr("Show in Discord"), nullptr, &a.discordOn)) savePrefs(a);
+                ImGui::BeginDisabled(!a.discordOn);
+                if (ImGui::MenuItem(tr("Show the frequency"), nullptr, &a.discordFreq)) savePrefs(a);
+                ImGui::EndDisabled();
+                ImGui::EndDisabled();
+                ImGui::SameLine();
+                ImGui::TextDisabled("(?)");
+                if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+                    ImGui::SetTooltip("%s", tr(have ? "Shows on your Discord profile that you are using OnAir, the mode and the frequency. Needs the Discord desktop app running." : "Discord application ID not set in this build"));
+            }
             ImGui::EndMenu();
         }
-        rcaps::viewMenuItem();   // Low-power drawing (gfx/render_caps.h)
-        {   // opt-in Discord Rich Presence
-            const bool have = *discord::appId() != 0;
-            ImGui::BeginDisabled(!have);
-            if (ImGui::MenuItem(tr("Show in Discord"), nullptr, &a.discordOn)) savePrefs(a);
-            ImGui::BeginDisabled(!a.discordOn);
-            if (ImGui::MenuItem(tr("Show the frequency"), nullptr, &a.discordFreq)) savePrefs(a);
-            ImGui::EndDisabled();
-            ImGui::EndDisabled();
-            ImGui::SameLine();
-            ImGui::TextDisabled("(?)");
-            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-                ImGui::SetTooltip("%s", tr(have ? "Shows on your Discord profile that you are using OnAir, the mode and the frequency. Needs the Discord desktop app running." : "Discord application ID not set in this build"));
+        if (ImGui::BeginMenu(tr("Reset view"))) {
+            if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode"));
+            if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
+                a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; savePrefs(a); }
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Forgets the saved window positions of every mode and the sizes of the panels"));
+            if (ImGui::MenuItem(tr("Reset spectrum"))) resetSpectrum(a);
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Put the panels back to their automatic sizes (drag the bars between panels to resize them)"));
+            ImGui::EndMenu();
         }
-        ImGui::Separator();
-        if (ImGui::MenuItem(tr("Classic interface"))) { a.newUi = false; savePrefs(a); }   // keeps this menu bar; Ctrl+Shift+M or View > Restore the default view comes back
+        if (ImGui::MenuItem(tr("Full screen"), "F11", gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."));
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(tr("Tools"))) {
-        if (ImGui::MenuItem(tr("Transcripts ..."), nullptr, tx::windowOpen())) tx::windowOpen() = !tx::windowOpen();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What is said on the airband and other voice channels, as text: live captions, search, export. Off until you turn it on."));
-        if (ImGui::MenuItem(tr("Passes"), nullptr, &a.passesOpen)) {}
-        ImGui::MenuItem(tr("Scheduler..."), nullptr, &a.schedulerOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Timed jobs and satellite passes: tune the radio, record audio, IQ or the log, then put everything back"));
-        ImGui::MenuItem(tr("Recordings..."), nullptr, &a.recmgrOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Every recording in one list: search, play, trim, convert, tag, delete with undo, and a size budget per folder"));
-        ImGui::MenuItem(tr("SatNOGS transmitters"), nullptr, &a.satnogsOpen);
-        ImGui::MenuItem(tr("Direction finder"), nullptr, &a.dfOpen);
-        ImGui::MenuItem(tr("Interference hunter"), nullptr, &a.rfiOpen);
-        ImGui::MenuItem(tr("Passive radar"), nullptr, &a.passiveRadarOpen);
-        ImGui::MenuItem(tr("Images"), nullptr, &a.galleryOpen);
-        ImGui::MenuItem(tr("Data feeds..."), nullptr, &a.feedsOpen);
-        ImGui::MenuItem(tr("EchoLink..."), nullptr, &a.echolinkOpen);
-        ImGui::MenuItem(tr("Wireshark..."), nullptr, &a.wiresharkOpen);
-        ImGui::MenuItem(tr("LAN swarm..."), nullptr, &a.swarmOpen);
-        ImGui::MenuItem(tr("Messages..."), nullptr, &a.msgdbOpen);
-        ImGui::MenuItem(tr("Protocol lab..."), nullptr, &a.protolabOpen);
-        ImGui::MenuItem(tr("nRF24 / ESP32 radio..."), nullptr, &a.esp32Open);
-        ImGui::MenuItem(tr("Signal Lab..."), nullptr, &a.signallabOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Blind analysis of an unknown digital signal: select it on the spectrum (Identify or Shift+drag) or load a recording"));
-        ImGui::MenuItem(tr("Mode Builder..."), nullptr, &a.modeBuilderOpen);
-        ImGui::MenuItem(tr("TX studio..."), nullptr, &a.txStudioOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Make a transmit signal as a file, with spectrum, waterfall, measurements and a decoder check. No radio, nothing is transmitted."));
-        if (ImGui::MenuItem(tr("Digital video generator..."), nullptr, &a.videoGenOpen)) savePrefs(a);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Encode a camera, a still picture or a video file with an overlay into an MPEG transport stream: a .ts file or a UDP / RTP stream (port 5000)"));
-        ImGui::MenuItem(tr("Integrations..."), nullptr, &a.integrationsOpen);
-        ImGui::MenuItem(tr("Conversations..."), nullptr, &a.ssbConvOpen);
-        ImGui::MenuItem(tr("Watchlists..."), nullptr, &a.watchlistOpen);
-        ImGui::MenuItem(tr("Automations..."), nullptr, &a.automationOpen);
-        ImGui::MenuItem(tr("Plugins..."), nullptr, &a.pluginsOpen);
-        ImGui::MenuItem(tr("Backup and restore..."), nullptr, &a.backupOpen);
-        ImGui::MenuItem(tr("Memory..."), "Ctrl+M", &a.memoryOpen);
-        ImGui::MenuItem(tr("Datasets..."), nullptr, &a.datasetsOpen);
-        ImGui::MenuItem(tr("Data packs..."), nullptr, &a.packsOpen);
-        ImGui::MenuItem(tr("Frequencies..."), "Ctrl+Shift+F", &a.freqOpen);
-        if (ImGui::MenuItem(tr("Show Frequencies as a tab"), nullptr, a.freqTab)) freqdbTabToggle(a);
-        ImGui::MenuItem(tr("Transmit..."), nullptr, &txViewFlag());
-        ImGui::MenuItem(tr("Map"), nullptr, &a.mapOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A world map: find a position by coordinates or Maidenhead locator, distance and bearing from your location"));
-        if (ImGui::MenuItem(tr("Sweep scanner"), nullptr, &a.sweepOpen)) {}
-        if (ImGui::MenuItem(tr("Station health"), nullptr, &a.stationHealthOpen)) {}
-        if (ImGui::MenuItem(tr("Search everything heard"), nullptr, &a.heardOpen)) {}
-        if (ImGui::MenuItem(tr("Insights"), nullptr, &a.insightOpen)) {}
-        if (ImGui::MenuItem(tr("My station"), nullptr, &a.stationOpen)) {}
-        if (ImGui::MenuItem(tr("Reception doctor"), nullptr, &a.doctorOpen)) {}
-        if (ImGui::MenuItem(tr("RF fingerprint"), nullptr, &a.rfFpOpen)) {}
-        if (ImGui::MenuItem(tr("Everything in view"), nullptr, &a.wideAllOpen)) {}
-        if (ImGui::MenuItem(tr("Multi-radio trunking"), nullptr, &a.trunkPoolOpen)) {}
-        if (ImGui::MenuItem(tr("Scanner (highly experimental)"), nullptr, &a.scanViewOpen)) {}
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("HIGHLY EXPERIMENTAL: step through a list of frequencies and modes, or a band, and stop on activity"));
-        ImGui::MenuItem(tr("Propagation..."), nullptr, &a.propOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Where a transmitter can be received: predicted SNR on the map from power, frequency, time and the SNR you need. No terrain."));
-        ImGui::MenuItem(tr("Antenna designer..."), nullptr, &a.antdOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Design and model wire antennas: templates, impedance and SWR across a band, radiation pattern, optimiser, calculators"));
-        ImGui::MenuItem(tr("Antenna rotator..."), nullptr, &a.rotatorOpen);
-        ImGui::MenuItem(tr("Voice keys..."), nullptr, &a.voiceKeysOpen);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Your own decryption keys for digital voice (P25, NXDN). Nothing is decrypted without a key you add."));
-        if (ImGui::MenuItem(tr("Calibrate frequency..."))) calibrateFrequencyOpen(a);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Measure this radio's frequency error (ppm) against an FM station, an ATSC pilot, a time-signal carrier, or by typing what you see"));
+        // grouped: the table is app/ui/menu_groups.h; a search entry filters across all groups (docs/MENUS-4.0.md)
+        static char q[64] = "";
+        ImGui::SetNextItemWidth(220 * gUi);
+        ImGui::InputTextWithHint("##toolsearch", tr("Search the tools"), q, sizeof q);
+        ImGui::Separator();
+        int n = 0;
+        const menugroups::ToolItem* items = menugroups::toolItems(n);
+        if (*q) {
+            bool any = false;
+            for (int i = 0; i < n; i++) if (menugroups::matchesQuery(tr(items[i].label), q)) { toolMenuItem(a, items[i]); any = true; }
+            if (!any) ImGui::TextDisabled("%s", tr("No tool matches"));
+        } else {
+            for (int i = 0; i < n; i++) if (items[i].group == menugroups::kTopLevel) toolMenuItem(a, items[i]);
+            ImGui::Separator();
+            for (int g = 0; g < menugroups::kNumToolGroups; g++) {
+                if (!ImGui::BeginMenu(tr(menugroups::toolGroupTitle(g)))) continue;   // hover the title: the next list opens beside it
+                for (int i = 0; i < n; i++) if (items[i].group == g) toolMenuItem(a, items[i]);
+                ImGui::EndMenu();
+            }
+        }
         ImGui::EndMenu();
     }
 }
@@ -783,16 +826,35 @@ float menuBar(App& a) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(tr("Mode"))) {
-            int key = 0;
-            bool firstGroup = true;
+            // one submenu per category of the Mode Browser (kGroupNames, table order); a category over 25 modes gets a second level of chunks
+            // (menu_groups.h). The keys 1-9 still pick the first nine listed modes in table order, whatever the submenus.
+            static std::vector<int> keyOf;
+            keyOf.assign(kNumModes, 0);
+            for (int g = 0, key = 0; g < kNumGroups; g++)
+                for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && modeListed(a, kModes[i])) keyOf[i] = ++key;
+            auto modeItem = [&](int i) {
+                char k[4]; snprintf(k, sizeof k, "%d", keyOf[i]);
+                if (ImGui::MenuItem(kModes[i].name, keyOf[i] <= 9 ? k : nullptr, modeSelected(a, kModes[i]))) selectMode(a, kModes[i].family, kModes[i].subId);   // only 1-9 are keys
+            };
             for (int g = 0; g < kNumGroups; g++) {
                 if (!modeGroupListed(a, g)) continue;   // Modes shown: a hidden group leaves the menu
-                if (!firstGroup) ImGui::Separator();
-                firstGroup = false;
-                for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && modeListed(a, kModes[i])) {
-                    char k[4]; snprintf(k, sizeof k, "%d", ++key);
-                    if (ImGui::MenuItem(kModes[i].name, key <= 9 ? k : nullptr, modeSelected(a, kModes[i]))) selectMode(a, kModes[i].family, kModes[i].subId);   // only 1-9 are keys
+                std::vector<int> rows;
+                bool hasCurrent = false;
+                for (int i = 0; i < kNumModes; i++) if (kModes[i].group == g && modeListed(a, kModes[i])) { rows.push_back(i); hasCurrent |= modeSelected(a, kModes[i]); }
+                const std::string title = std::string(tr(kGroupNames[g])) + "  (" + std::to_string(rows.size()) + ")" + (hasCurrent ? "  *" : "") + "###modegrp" + std::to_string(g);
+                if (!ImGui::BeginMenu(title.c_str())) continue;
+                const int n = (int)rows.size(), chunks = menugroups::chunkCount(n);
+                if (chunks == 1) { for (int i : rows) modeItem(i); }
+                else for (int c = 0; c < chunks; c++) {
+                    int cb, ce; menugroups::chunkRange(n, c, cb, ce);
+                    bool cur = false;
+                    for (int j = cb; j < ce; j++) cur |= modeSelected(a, kModes[rows[j]]);
+                    const std::string ct = std::string(kModes[rows[cb]].name) + "  ...  " + kModes[rows[ce - 1]].name + "  (" + std::to_string(ce - cb) + ")" + (cur ? "  *" : "") + "###modegrp" + std::to_string(g) + "_" + std::to_string(c);
+                    if (!ImGui::BeginMenu(ct.c_str())) continue;
+                    for (int j = cb; j < ce; j++) modeItem(rows[j]);
+                    ImGui::EndMenu();
                 }
+                ImGui::EndMenu();
             }
             ImGui::Separator();
             if (ImGui::MenuItem(tr("Browse all modes..."), "M")) modePickerOpen(a);

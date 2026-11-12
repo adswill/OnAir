@@ -495,11 +495,14 @@ void managerPanel(App& a) {
 }
 
 // the manager with its two tabs: what is installed, and the Store (docs/PLUGIN-MARKETPLACE-3.9.md)
+static bool gWantStoreTab = false;   // Tools > Plugin store: open the window on the Store tab (once)
+
 void managerTabs(App& a) {
     if (!P.inited) { managerPanel(a); return; }
     if (ImGui::BeginTabBar("##plugtabs")) {
         if (ImGui::BeginTabItem(trw("Installed"))) { managerPanel(a); ImGui::EndTabItem(); }
-        if (ImGui::BeginTabItem(trw("Store"))) {
+        const bool pick = gWantStoreTab; gWantStoreTab = false;
+        if (ImGui::BeginTabItem(trw("Store"), nullptr, pick ? ImGuiTabItemFlags_SetSelected : 0)) {
             if (pluginStoreTab(a, *P.mgr, [](const std::string& id) { if (P.activeId == id) stopActive(); })) registerModes();
             ImGui::EndTabItem();
         }
@@ -618,6 +621,8 @@ void pluginShutdown() {
     for (auto& kv : P.images) delete kv.second;
     P.images.clear();
 }
+
+void pluginStoreOpen(App& a) { a.pluginsOpen = true; gWantStoreTab = true; }
 
 void pluginManagerWindow(App& a) {
     if (!a.pluginsOpen || a.rxId != 1) return;
