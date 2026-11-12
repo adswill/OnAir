@@ -1860,3 +1860,7 @@ Tried and not kept: Wi-SUN burst gate (about 1 dB at 90 %, nothing at 50 %), EDA
 feat40-sensA2 and feat40-sensB2 both changed core/src/argos/argos_rx.cpp and core/src/mpt1327/mpt1327_engine.cpp. In integ-40 the Argos receiver is
 the sensB2 version (about -5.5 dB 90 % point) and the MPT 1327 engine the sensA2 version (4.5 kHz carrier-following filter). Both sets of guard tests
 (argos_sens40, sens40b) stay; if one fails the other version of that file is on pub/feat40-sensA2 / pub/feat40-sensB2.
+## 2026-11-12 (night): sensitivity 4.0, pass B3 (feat40-sensB3)
+ISM sensors: 50 % of the packets at 3 dB instead of 6.5 dB (narrow-envelope retry for OOK, tone-energy chips and a relaxed carrier test for FSK; 0 false). Aero: the 11 dB was the test generator's own noise
+(Eb/N0 12 dB baked in): harness fixed, true 90 % point -1 dB, no receiver change. FT8 and friends: the wrong a-priori texts are noise candidates with a sync score under 2.5; the a-priori floor is 2.6 and the
+ftxsmart count that hid them is corrected. Checked at theory: LoRa SF7 to SF12, AX.25 9600, ALE, wM-Bus, CW with carrier error. Details: docs/SENSITIVITY-4.0-B3.md.
