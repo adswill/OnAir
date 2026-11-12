@@ -78,7 +78,8 @@ int main(int argc, char** argv) {
                 const auto d = decode(slotsAudio(tx, Faults(), 100 + seed), 0, kT0);
                 const int n = countMsg(d, weak, how);
                 ok += n;
-                other += (int)d.size() - n - 5;
+                other += std::max(0, (int)d.size() - n - 4);   // four strong messages are sent: every other decode is a text that was not sent (4.0: the count was 5 and hid one a-priori wrong text per run)
+                if (getenv("FTXSMART_LIST")) for (const auto& x : d) printf("   seed %d %.0f dB: %s (how %d)\n", (int)seed, snrs[si], x.msg.c_str(), x.how);
                 runs++;
             }
             printf("apqso %.0f dB: %d of %d weak messages (alone %d, cross-slot %d, apriori %d)\n", snrs[si], ok, runs, how[0], how[1], how[2]);

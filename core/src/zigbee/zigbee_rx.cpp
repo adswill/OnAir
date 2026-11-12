@@ -254,7 +254,11 @@ struct ZigbeeReceiver::Impl {
         const std::complex<float> z = y * std::conj(yring[ph]);   // y four samples ago: one chip
         yring[ph] = y;
         const float v = std::atan2(z.imag(), z.real());
-        vb.push_back(v);
+        // 4.0: the chip value is the imaginary part of the phase step over its running mean amplitude (peak pi/2 at the nominal step, 0 where the step is a
+        // click, small where the signal faded): a click of the discriminator at low SNR no longer swamps a symbol correlation, a weak chip counts less
+        // (docs/SENSITIVITY-4.0-A3.md)
+        zAvg += (std::abs(z) - zAvg) * (1.f / 256);
+        vb.push_back(std::clamp(1.5707963f * z.imag() / std::max(zAvg, 1e-9f), -2.5f, 2.5f));
         pb.push_back(std::norm(y));
         meanSum += v - meanBuf[meanPos]; meanBuf[meanPos] = v; meanPos = (meanPos + 1) % kMean;
         const uint32_t bit = v > (float)(meanSum / kMean) ? 1u : 0u;
@@ -269,6 +273,7 @@ struct ZigbeeReceiver::Impl {
         }
     }
 
+    float zAvg = 0;
     float at(int64_t k) const {
         const int64_t i = k - base;
         return i >= 0 && i < (int64_t)vb.size() ? vb[(size_t)i] : 0.f;

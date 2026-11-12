@@ -217,12 +217,30 @@ bool FskSlicer::step(cf32 x, cf32& y) {
 // ---------------------------------------------------------------------------------------------------------------------------------
 VhfSlicer::VhfSlicer() : slicer_(kBaseRate, 1300.0, 2100.0, 20) {}
 
-void VhfSlicer::reset() { prev_ = cf32(0, 0); lp1_ = lp2_ = 0; slicer_.reset(); }
+void VhfSlicer::reset() { prev_ = cf32(0, 0); lp1_ = lp2_ = 0; for (auto& a : zi_) a[0] = a[1] = 0; for (auto& a : zq_) a[0] = a[1] = 0; afcHz_ = afcPh_ = afcMean_ = 0; slicer_.reset(); }
 
 float VhfSlicer::disc(cf32 x) {
+    if (narrow_) {
+        // 2 pole Butterworth low-pass at 4.5 kHz for a 24 kHz stream (bilinear transform), direct form II transposed, two sections
+        static const float b0 = 0.186694f, b1 = 0.373389f, b2 = 0.186694f, a1 = -0.462938f, a2 = 0.209715f;
+        afcPh_ += 2 * kPi * afcHz_ / kBaseRate;
+        if (afcPh_ > kPi) afcPh_ -= 2 * kPi; else if (afcPh_ < -kPi) afcPh_ += 2 * kPi;
+        x *= cf32((float)std::cos(afcPh_), (float)-std::sin(afcPh_));
+        float xr = x.real(), xi = x.imag();
+        for (int k = 0; k < 2; k++) {
+            const float yr = b0 * xr + zi_[k][0]; zi_[k][0] = b1 * xr - a1 * yr + zi_[k][1]; zi_[k][1] = b2 * xr - a2 * yr; xr = yr;
+            const float yi = b0 * xi + zq_[k][0]; zq_[k][0] = b1 * xi - a1 * yi + zq_[k][1]; zq_[k][1] = b2 * xi - a2 * yi; xi = yi;
+        }
+        x = cf32(xr, xi);
+    }
     const cf32 d = x * std::conj(prev_);
     prev_ = x;
     const float hz = std::atan2(d.imag(), d.real()) * (float)(kBaseRate / (2 * kPi));
+    if (narrow_) {
+        // the mean of the discriminator is the carrier error (mark and space are equally often on the air): 50 ms average, followed by a slow integrator
+        afcMean_ += (hz - afcMean_) * (1.0 / 1200.0);
+        afcHz_ = std::max(-4000.0, std::min(4000.0, afcHz_ + afcMean_ * (1.0 / 12000.0)));
+    }
     lp1_ += 0.5f * (hz - lp1_);
     lp2_ += 0.5f * (lp1_ - lp2_);
     return lp2_ * 0.0003f;                    // about +-1 for a deviation of +-3 kHz

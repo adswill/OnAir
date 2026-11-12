@@ -91,6 +91,7 @@ public:
     bool telemetry(MptTelemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);
     // ---- single-radio trunking (docs/TRUNK1-3.9.md): the traffic channels the GTCs name are followed inside the capture, as FM, several at once
+    void setWeakSignalPath(bool on);                      // 4.0: 5.5 kHz channel filter with a carrier follow-up before the discriminator (default on; off = the 3.9 receiver)
     void setFollow(bool on);                              // follow calls inside the capture (on by default; needs the channel plan)
     void setVoiceSlots(int n);                            // calls followed at once, 1 .. 16 (default 4)
     void setChannelPlan(int controlChannel, double spacingHz);   // the control channel's number and the channel spacing: channel n is at control + (n - control) x spacing

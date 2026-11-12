@@ -376,6 +376,33 @@
         <item>GNSS interference detector</item>
         <item>Passband signal classifier</item>
         <item>VLF MSK transmitter monitor</item>
+        <item>Spectrum occupancy monitor</item>
+        <item>Modulation quality (MER) meter</item>
+        <item>Carrier frequency accuracy meter</item>
+        <item>PTT and duty-cycle logger</item>
+        <item>Intermodulation finder</item>
+        <item>Spur and image finder</item>
+        <item>Satellite Doppler curve logger</item>
+        <item>Frequency-hopper analyser</item>
+        <item>Persistent carrier (birdie) finder</item>
+        <item>Burst finder</item>
+        <item>Fading analyser</item>
+        <item>SDR input health meter</item>
+        <item>Phase noise meter</item>
+        <item>SSB transmitter test meter</item>
+        <item>FM SINAD meter</item>
+        <item>FSK parameter analyser</item>
+        <item>Noise figure (Y-factor) meter</item>
+        <item>CW keying quality meter</item>
+        <item>Noise floor logger</item>
+        <item>Narrowband FM deviation and CTCSS meter</item>
+        <item>AFSK (TNC) tone tuner</item>
+        <item>OOK / ASK pulse analyser</item>
+        <item>Transmitter frequency stability meter</item>
+        <item>Crest factor (PAPR / CCDF) meter</item>
+        <item>Occupied bandwidth meter</item>
+        <item>Spectral kurtosis RFI finder</item>
+        <item>SDR stream glitch detector</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -733,6 +760,33 @@
         <item>GNSS interference detector (L1 1575.42 MHz, L2 1227.6 MHz and others, needs a radio with a few MHz of bandwidth and a GNSS antenna): says whether a navigation band is clean, or holds a tone, narrowband interference, a swept chirp (a car jammer: range, period, rate) or wideband noise, and how strong it is. Detects and describes only; no position is computed. Simulated signals only</item>
         <item>Passband signal classifier: every signal in the 48 kHz around the tuned frequency (a satellite linear transponder, a band segment, a repeater input) is tracked and named after a second and a half: unmodulated carrier, keyed CW, narrow data, SSB or voice-like, or a wideband steady signal, with its offset, width and level. A guess from width and level behaviour; nothing is demodulated. Simulated signals only</item>
         <item>VLF MSK transmitter monitor (10 - 30 kHz naval long-wave stations): the carrier frequency, the bit rate (50 to 300 bit/s) and the level of a station, and when it goes on, off or changes rate; a list of public carrier frequencies hints at the station. The traffic is encrypted and is not decoded. Needs a radio that reaches the VLF band. Simulated signals only</item>
+        <item>Spectrum occupancy monitor: the whole captured span in 25 kHz channels, judged busy or idle every 10 ms against a noise floor that follows the quietest channels. Per channel the share of the time it was busy, the number of transmissions and the longest one; the band occupancy; every finished transmission is listed with its length and strength. What this radio hears in this place. Simulated signals only</item>
+        <item>Modulation quality meter: the MER and EVM of a BPSK, QPSK or 8-PSK carrier found blind (symbol rate, order, carrier offset, roll-off), 300 baud to about 40 kBd in the default 250 ksps channel. Hard decisions: below about 8 dB MER the number reads too good. QAM, APSK, FSK and OFDM are not measured. Simulated signals only</item>
+        <item>Carrier frequency accuracy meter: tune a carrier of a known frequency (a time-signal or broadcast station, a GPS-locked beacon) and read the radio\'s error in Hz and parts per million, its drift in ppm per hour, the Allan deviation from 1 to 32 s, and steps or loss of the carrier. The reading is the radio\'s error plus the transmitter\'s. Simulated signals only</item>
+        <item>PTT and duty-cycle logger for one 12.5 kHz channel: every transmission with its start, length, strength and the gap since the one before; kerchunks (key-ups under half a second), a stuck key after 3 minutes, the duty cycle over the run and the last ten minutes, and the rate per hour. Short fades inside one over do not split it. Simulated signals only</item>
+        <item>Intermodulation finder for a wide capture: finds the strong signals and the peaks at 2 f1 - f2, 2 f2 - f1 and f2 - f1, and tests whether such a peak follows the law of a product as the signals fade (it moves 2 dB per dB of f1 and 1 dB per dB of f2 for a third-order product) or is a transmitter of its own. With steady signals it says it cannot tell. Simulated signals only</item>
+        <item>Spur and image finder for your own SDR: the DC spike, the mirror image of each strong signal at -f (image rejection in dB and the gain or phase mismatch it implies), second and third harmonics folded into the span, and steady spurs at multiples of fs / 16. A peak counts as an image only if it follows the signal; steady signals give \"cannot tell\". Simulated signals only</item>
+        <item>Satellite beacon Doppler curve logger (100 MHz - 3 GHz, a steady carrier within 14 kHz of the tuned frequency): logs the carrier frequency through a pass and fits the flyby curve: time of closest approach, the carrier without Doppler, the largest Doppler, the steepest slope and, with the tuned frequency known, a rough speed and closest distance. Weak beacons are lost where the slope is steepest. Simulated signals only</item>
+        <item>Frequency-hopper analyser for a wide capture: the hop rate, dwell and guard time, the number of channels, their spacing and the span of one hopper (the strongest narrow signal), from at least 40 dwells on 3 channels. Needs a clear signal (about 12 dB over the noise in 25 kHz); channels closer than about 1.5 bins (fs / 256) are not told apart. Does not follow the sequence. Simulated signals only</item>
+        <item>Persistent carrier finder for a wide capture: the narrow, steady carriers (birdies, spurs, switching supplies, a neighbour\'s equipment) present most of the time, with frequency to a few Hz, level, drift in Hz per minute, scatter, and whether each is a bare carrier or something modulated. A new and a vanished carrier are logged. It lists; it does not name the source. Simulated signals only</item>
+        <item>Burst finder for a wide capture: every short transmission wherever it is in the span, with frequency, length, bandwidth (narrow or wide) and level, many at once; bursts at one frequency that repeat with a steady spacing (a telemetry sensor, a key fob, a beacon) are reported as repeating every T s. Needs about 14 dB over the noise in a bin of fs / 256. Lists and times; does not decode. Simulated signals only</item>
+        <item>Fading analyser for one steady carrier (a beacon, a time-signal or broadcast carrier within 2.8 kHz of the tuned frequency): the level distribution over the last minute, the Rician K-factor, the fade rate and average fade length at -10 dB, the Doppler spread and deep fades, to compare a path with theory (Rayleigh: 0.72 fd fades a second). Fading faster than about 200 Hz is cut off. Simulated signals only</item>
+        <item>SDR input health meter: the level of the samples that reach the program (RMS, peak, crest factor, dB re full scale), clipping, the DC offset, and the IQ gain and phase mismatch read blind from the samples with the image rejection they cause, with a plain verdict (too low, good, high, overload). Reads this input, not the radio\'s specification. Simulated signals only</item>
+        <item>Phase noise meter: the single-sideband phase noise of a carrier (a generator, an oscillator, a beacon) in dBc/Hz at 10 Hz to 100 kHz offsets, the spurs next to it and the integrated jitter, from averaged high-resolution spectra. The radio\'s own oscillator and noise floor are part of the reading: tuning a good source on a poor SDR measures the SDR. Simulated signals only</item>
+        <item>SSB transmitter test meter: tune the dial frequency while the transmitter sends one test tone or two: carrier leak, opposite sideband and audio harmonics (one tone), or IMD3, IMD5 and IMD7 under one tone and under PEP (two tones), with the sideband detected. Products under the noise are reported as such. It measures at this radio: use the attenuator to see that the numbers are the transmitter\'s. Simulated signals only</item>
+        <item>FM SINAD meter: a carrier modulated with a test tone (1 kHz) read through the radio: SINAD in 300 - 3000 Hz (flat weighting), THD, peak deviation and carrier offset, with the 12 dB SINAD crossing logged. Measures the transmitter, the path and this SDR together; FM thresholding makes it fall faster than theory under about 10 dB carrier to noise. Simulated signals only</item>
+        <item>FSK parameter analyser for an unknown FSK or GFSK signal: the symbol rate, 2 or 4 levels, the shift, the modulation index (MSK is 0.5), the centre frequency and the eye quality, to know which decoder to try and with what settings. A plain FM discriminator in the whole channel: needs a clean signal (about 18 dB over the noise in 50 kHz for 9600 Bd). Does not decode. Simulated signals only</item>
+        <item>Noise figure (Y-factor) meter: switch a noise source on and off in front of the receiver and read the step in the middle 200 kHz of the capture: Y in dB, and the receiver noise figure NF = ENR - 10 log(Y - 1) for the common source values (ENR 5, 6.5, 15, 25 dB; read the line for your source). Needs fixed gain (no AGC) and only noise in the band. Simulated signals only</item>
+        <item>CW keying quality meter for a keyed carrier within 1.5 kHz of the tuned frequency: speed in wpm (PARIS), dit and dah lengths and their ratio (ideal 3), element, character and word gaps as multiples of the dit, weight, dit scatter (keyer or hand), rise and fall times of the edges (key clicks) and chirp. Rise times under about 1.5 ms read 1.5 ms. Does not copy the text. Simulated signals only</item>
+        <item>Noise floor logger for a wide capture: the noise floor in 16 sub-bands, once a second, over hours (the median bin power, so narrow signals do not count), with the 10th, 50th and 90th percentiles, a baseline from the last ten minutes, and rows when a sub-band rises 3 dB or more for 3 s (a switching supply, an inverter, an LED lamp, a neighbour) and when it falls back; a gain change that moves every sub-band is logged as one whole-band row. Relative dB, not calibrated. Simulated signals only</item>
+        <item>Narrowband FM deviation and CTCSS meter for two-way radio: the voice peak deviation (300 - 3000 Hz), the CTCSS tone (frequency, nearest of the 50 standard tones, deviation in Hz and as a share of 2.5 and 5 kHz), the carrier offset, and over-deviation events over 2.5 and 5 kHz. DCS is not measured. Not a type-approval instrument. Simulated signals only</item>
+        <item>AFSK tone tuner for 1200 baud packet (Bell 202, APRS, AX.25) on FM: for each burst the mark and space tones (error against 1200 and 2200 Hz), the twist (space over mark, dB), the peak deviation (3 kHz is the usual aim on 25 kHz), the length and the gap before it, for setting a TNC or a radio\'s data input level. Does not decode the packets. Simulated signals only</item>
+        <item>OOK / ASK pulse analyser (key fobs, remote switches, sensors, 300 - 920 MHz; like the analyse mode of rtl_433): from the envelope in the 90 kHz around the tuned frequency, the pulse and gap timing, the modulation named (PWM, PPM, Manchester, PCM / NRZ-like), the bits in binary and hex (short = 0, long = 1 is a convention; the real protocol may invert it), the timings in microseconds and the repeats of a frame in a train. Names the pattern, not the product. Simulated signals only</item>
+        <item>Transmitter frequency stability meter for one channel: for every transmission of a second or more the frequency at the start and at the end, the key-up step, the settling time, the drift in Hz per second and the mean offset in Hz and ppm, to see a transmitter warm up and drift. Best with a carrier, a tone or a quiet transmission (speech skews single readings). Simulated signals only</item>
+        <item>Crest factor meter: the distribution of the instantaneous power of the captured signal against its mean: crest factor, and the levels exceeded 10, 1, 0.1 and 0.01 % of the time (CCDF), with Gaussian theory beside them (3.6, 6.6, 8.4, 9.6 dB) to tell OFDM or multi-carrier (Gaussian), single-carrier PSK, constant-envelope FM or FSK, clipped or impulsive signals. Includes the radio\'s own noise and limits. Simulated signals only</item>
+        <item>Occupied bandwidth meter (ITU-R SM.328): for the strongest signal of a wide capture, the 99 % occupied bandwidth, the bandwidths at 3, 6, 20 and 26 dB below the peak, the centre against the tuned frequency, the signal to noise ratio and the adjacent and alternate power (dB under the signal, bands as wide as the signal at 1.25 and 2.5 bandwidths). What arrives at this radio, noise and neighbours included. Simulated signals only</item>
+        <item>Spectral kurtosis RFI finder (the estimator used in radio astronomy) for a wide capture: which frequencies hold something that is not Gaussian noise, and whether it is a steady carrier (SK under 1) or pulsed (SK over 1: radar, TDMA bursts, arcing, switching supplies), with the share of the band that is clean and the share of frames at full power for pulsed ones. Lists and classifies; does not say what the source is. Simulated signals only</item>
+        <item>SDR stream glitch detector, for debugging a radio link or a driver: dropped and repeated samples (a phase step of the strongest steady tone, with the number of samples), runs of zero samples, a block sent twice, and level steps of 1 dB or more (an AGC or gain change), each with its time. A drop cannot be seen without a steady tone 20 dB over the noise. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1090,6 +1144,33 @@
         <item>Interference</item>
         <item>Signal</item>
         <item>Transmitter</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
+        <item>Event</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1447,5 +1528,32 @@
         <item>gnss gps jammer interference chirp jamming spoofing l1 1575 l2 1227 glonass galileo beidou detector sawtooth</item>
         <item>passband signal classifier transponder linear cw ssb carrier rtty psk activity band scan spotter qo-100 satellite transponder</item>
         <item>vlf msk naval 24 khz naa nlk nml npm nwc hwu gqd dho38 submarine 200 baud long wave</item>
+        <item>occupancy channel duty cycle busy spectrum band usage activity monitor</item>
+        <item>mer evm modulation error ratio quality constellation bpsk qpsk 8psk symbol rate blind</item>
+        <item>frequency accuracy ppm calibration reference carrier allan deviation drift offset wwv sdr error</item>
+        <item>ptt duty cycle transmission log kerchunk stuck key repeater usage push to talk</item>
+        <item>intermodulation intermod imd third order product overload front end sdr attenuator ghost signal</item>
+        <item>spur image iq imbalance dc offset harmonic alias mirror sdr rejection converter</item>
+        <item>doppler curve satellite beacon pass tca closest approach cubesat carrier frequency fit</item>
+        <item>frequency hopping hopper fhss hop rate dwell channels spacing spread spectrum analyser</item>
+        <item>birdie persistent carrier interference qrm spur noise source narrow steady rfi drift</item>
+        <item>burst transient short transmission key fob sensor repetition period tdma wide capture</item>
+        <item>fading analyser rician k factor rayleigh fade rate doppler spread multipath level distribution beacon path</item>
+        <item>sdr input health level clipping overload dc offset iq imbalance image rejection gain headroom dbfs</item>
+        <item>phase noise dbc hz oscillator jitter spur reference clock lo single sideband measurement</item>
+        <item>ssb transmitter test imd intermodulation two tone carrier suppression opposite sideband harmonics pep linearity ham</item>
+        <item>sinad fm thd distortion deviation sensitivity 12 db test tone 1 khz repeater audio quality</item>
+        <item>fsk gfsk msk 4fsk symbol rate shift modulation index deviation unknown signal analyser baud</item>
+        <item>noise figure y factor nf enr noise source lna gain measurement sdr sensitivity hot cold</item>
+        <item>cw keying quality morse wpm dit dah weight spacing rise time key clicks chirp fist keyer</item>
+        <item>noise floor logger rfi interference rise baseline sub-band monitor switching supply inverter led urban noise</item>
+        <item>nfm deviation ctcss tone pl two-way radio repeater handheld over-deviation voice peak 12.5 khz</item>
+        <item>afsk bell 202 1200 baud aprs tnc ax.25 twist deviation tone level packet transmitter setup mark space</item>
+        <item>ook ask pulse analyser key fob remote pwm ppm manchester pt2262 ev1527 timing bits 433 315 868 rtl_433</item>
+        <item>transmitter frequency stability drift warm up settling key-up step ppm handheld repeater offset</item>
+        <item>papr crest factor ccdf peak to average power ofdm headroom amplifier backoff clipping gaussian</item>
+        <item>occupied bandwidth 99 percent x db 26 db emission designator itu sm.328 acpr adjacent channel power spectrum width transmitter</item>
+        <item>spectral kurtosis sk rfi pulsed steady carrier radio astronomy non-gaussian interference radar burst detector</item>
+        <item>sdr glitch dropped samples overrun usb buffer repeat zero agc level step stream health debug</item>
     </string-array>
 </resources>

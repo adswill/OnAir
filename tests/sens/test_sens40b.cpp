@@ -104,6 +104,36 @@ std::vector<Mode> modes40b() {
         satdata(on ? "zwave" : "zwave-off", on ? "Z-Wave (4.0 receiver)" : "Z-Wave (3.9 receiver)", 100, 4.0, 100e3, 25, [on](Mode& m) {
             m.make = factory<ZwaveReceiver, ZwaveTelemetry>([on](ZwaveReceiver& rx, double r) { prepGeneric(rx, r, 100); rx.setToneDetection(on != 0); }, blocks<ZwaveTelemetry>);
         });
+    for (int on = 1; on >= 0; on--)
+        satdata(on ? "argos" : "argos-off", on ? "Argos (4.0 receiver)" : "Argos (3.9 receiver)", 154, 6.0, 5e3, 25, [on](Mode& m) {
+            m.make = factory<ArgosReceiver, ArgosTelemetry>([on](ArgosReceiver& rx, double r) { prepGeneric(rx, r, 154); rx.setWeakSignalPath(on != 0); }, blocks<ArgosTelemetry>);
+        });
+    for (int on = 1; on >= 0; on--)
+        satdata(on ? "ndb" : "ndb-off", on ? "NDB (4.0 receiver)" : "NDB (3.9 receiver)", 31, 40.0, 300, 25, [on](Mode& m) {
+            m.make = factory<NdbReceiver, NdbTelemetry>([on](NdbReceiver& rx, double r) { prepGeneric(rx, r, 31); rx.setWeakSignalPath(on != 0); },
+                [](const NdbTelemetry& t) { const bool ok = t.ident.size() == 3 && std::string("BNDBND").find(t.ident) != std::string::npos; return Metric{ok ? (double)t.blocksOk : 0.0, 0.0}; });   // only the generator's ident (any rotation of it) counts
+        });
+    for (int on = 1; on >= 0; on--)
+        satdata(on ? "dsc" : "dsc-off", on ? "Marine DSC VHF ch 70 (4.0 receiver)" : "Marine DSC VHF ch 70 (3.9 receiver)", 17, 25.0, 25e3, 25, [on](Mode& m) {
+            m.mhz = 156.525;
+            m.gen = [r = m.rate](size_t n) { SynthConfig c; c.modeOpt[0] = 4; return clean(17, c, r, n); };
+            m.make = factory<MarineReceiver, MarineTelemetry>([on](MarineReceiver& rx, double r) { prepGeneric(rx, r, 17); rx.setVhfNarrowChannel(on != 0); }, blocks<MarineTelemetry>);
+        });
+    for (int on = 1; on >= 0; on--) {   // MPT 1327 control channel (FFSK on FM), as sens_modes_d.h
+        Mode m; m.id = on ? "mpt1327" : "mpt1327-off"; m.name = on ? "MPT 1327 (4.0 receiver)" : "MPT 1327 (3.9 receiver)"; m.family = "trunking"; m.stdMode = 129;
+        m.rate = 240e3; m.secs = 6.0; m.bwHz = 12.5e3; m.mhz = 170; m.snrHi = 30; m.maxJobs = 4;
+        m.gen = [](size_t n) {
+            using namespace mpt1327;
+            std::vector<uint64_t> cw;
+            for (int k = 0; k < 24; k++) cw.push_back(k % 3 == 0 ? makeGtc(5, 1234 + k, 0, 17, 2003) : k % 3 == 1 ? makeAloha(5, 0, 0, 0) : makeAhy(5, 100 + k));
+            const auto bits = controlChannelBits(20001, cw, 16);
+            const auto aud = ffskAudio(bits, 240e3, false, 0.5f);
+            const auto iq = fmModulate(aud, 240e3, 3000.0, 0.0);
+            return repeatTo(Sig(iq.begin(), iq.end()), n);
+        };
+        m.make = factory<MptReceiver, MptTelemetry>([on](MptReceiver& rx, double r) { rx.configure(r); rx.setSignalOffset(0); rx.setCenterHz(170e6); rx.setWeakSignalPath(on != 0); }, blocks<MptTelemetry>);
+        v.push_back(m);
+    }
     for (int on = 1; on >= 0; on--) {   // radiosondes: an RS41 on the centre, a DFM-17 and an M10 elsewhere (as sens_modes.h)
         Mode m; m.id = on ? "sonde" : "sonde-off"; m.name = on ? "Radiosonde (4.0 receiver)" : "Radiosonde (3.9 receiver)"; m.family = "narrowband-data"; m.stdMode = 15;
         m.rate = 8e6; m.secs = 5.0; m.bwHz = 10e3; m.mhz = 403; m.snrHi = 25; m.maxJobs = 4;
@@ -118,7 +148,7 @@ std::vector<Mode> modes40b() {
 // the guard of the short run: the SNR (dB in the mode's noise bandwidth) a few dB above the 4.0 threshold
 struct Guard { const char* id; double snrDb; };
 const Guard kGuards[] = {
-    {"pocsag", -1}, {"flex", 5}, {"zwave", 14},
+    {"pocsag", -1}, {"flex", 5}, {"zwave", 14}, {"argos", 0}, {"ndb", 10}, {"dsc", 3}, {"mpt1327", 7},
 };
 }
 using namespace s40;
@@ -183,7 +213,7 @@ int points(const std::vector<Mode>& all, const std::regex& want, const char* lis
 int main() {
     const bool full = testLong();
     const char* sel = std::getenv("ONAIR_SENS_MODES");
-    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off|zwave|zwave-off|sonde|sonde-off)$");
+    const std::regex want(sel ? sel : "^(pocsag|pocsag-off|flex|flex-off|zwave|zwave-off|sonde|sonde-off|argos|argos-off|ndb|ndb-off|dsc|dsc-off|mpt1327|mpt1327-off)$");
     const int threads = full ? std::max(1u, std::thread::hardware_concurrency() / 2) : 1;
     int fails = 0;
     const auto all = modes40b();

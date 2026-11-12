@@ -140,6 +140,12 @@ def check_modes(root):
         m = re.search(r"^int\s+([A-Za-z0-9_:]+)\s*\(", line)
         if m:
             fn = m.group(1)
+        if "DECT2_X40_ACTIVE_CASES" in line and "seqs[a - 1]" in line:   # the 4.0 x40 receiver: one poll slot per case, active standard - 1
+            hdr = read(root, "core/include/dect2/x40/x40_rx.h")
+            mm = re.search(r"#define\s+DECT2_X40_ACTIVE_CASES\s+((?:case\s+\d+\s*:\s*\\?\s*)+)", hdr)
+            for c in re.findall(r"case\s+(\d+)", mm.group(1) if mm else ""):
+                slots.setdefault(int(c) - 1, set()).add("x40 case " + c)
+            continue
         m = re.search(r"case\s+([A-Za-z0-9_:+ -]+?)\s*:", line)
         owner = "case " + m.group(1) if m else fn
         for s in re.finditer(r"seqs\[([A-Za-z0-9_: +-]+)\]", line):

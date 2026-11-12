@@ -33,6 +33,14 @@ struct Biquad {
         a1 = -2 * std::cos(w) / a0; a2 = (1 - alpha) / a0;
         z1 = z2 = 0;
     }
+    void lowpass(double f, double fs, double q) {
+        const double w = 2 * kPi * f / fs;
+        const double alpha = std::sin(w) / (2 * q), c = std::cos(w);
+        const double a0 = 1 + alpha;
+        b0 = (1 - c) / 2 / a0; b1 = (1 - c) / a0; b2 = b0;
+        a1 = -2 * c / a0; a2 = (1 - alpha) / a0;
+        z1 = z2 = 0;
+    }
     double run(double x) {
         const double y = b0 * x + z1;
         z1 = b1 * x - a1 * y + z2;
@@ -71,8 +79,16 @@ struct NdbReceiver::Impl {
     cd acc{0, 0};
 
     Biquad bp[kTones];
+    Biquad preI[2], preQ[2];               // 4.0: the 8 kHz stream is limited to +-1.5 kHz before the envelope (the tones are at 400 and 1020 Hz)
+    std::atomic<bool> weak{true};          // false: the 3.9 receiver (no pre-filter)
     Smooth envLp[kTones];
     double peak = 0;
+    cd carrierLp{0, 0}, fLp{0, 0}, fPrev{0, 0};
+    double fPh = 0, fEst = 0;
+    double cmag = 0, carrPwr = 0;
+    bool carrierOk() const { return !weak || carrPwr > kCarrierRatio * 0.0033 * pwr; }   // the carrier line must stand out of the noise in the 3 Hz estimate
+    static constexpr double kCarrierRatio = 5.0;
+    static constexpr float kMinKeySnrDb = 5.0f;
     Smooth cSlow;
     cd cLp{0, 0}, cPrev{0, 0};
     double cfo = 0;
@@ -109,7 +125,8 @@ struct NdbReceiver::Impl {
         bp[1].bandpass(1020, kFs, 6);
         for (int i = 0; i < kTones; i++) envLp[i].set(20, kFs);
         cSlow.set(20, kFs);
-        peak = 0;
+        for (int i = 0; i < 2; i++) { preI[i].lowpass(1500, kFs, 0.7071); preQ[i].lowpass(1500, kFs, 0.7071); }
+        peak = 0; carrierLp = 0; cmag = 0; carrPwr = 0; fLp = 0; fPrev = 0; fPh = 0; fEst = 0;
         for (auto& h : depthHist) h.clear();
     }
 
@@ -129,6 +146,7 @@ struct NdbReceiver::Impl {
 
     void confirm(const std::string& w) {
         if (!lettersOnly(w)) return;
+        if (weak && snr < kMinKeySnrDb) return;   // 4.0: the weak path reads keying down to a few dB, where noise makes 'E' and 'T' words: a word counts only with a clear on / off contrast
         if (w == ident) { repeats++; okCount++; return; }
         ident = w;
         repeats = w.size() == 1 ? 3 : 2;
@@ -142,7 +160,7 @@ struct NdbReceiver::Impl {
         if (!lettersOnly(w)) { lastWord.clear(); streak = 0; return; }
         if (w == lastWord) {
             streak++;
-            const int needN = w.size() == 1 ? 3 : 2;
+            const int needN = w.size() == 1 ? (weak ? 5 : 3) : (weak && w.size() == 2) ? 3 : 2;
             if (streak >= needN) confirm(w);
         } else {
             lastWord = w;
@@ -204,7 +222,8 @@ struct NdbReceiver::Impl {
             if (contrast > best) { best = contrast; bi = i; }
         }
         if (bi < 0 || best < 0.06f) return;
-        if (path < 0 || best > cur * 1.3f) path = bi;
+        // 4.0: the synchronous tone depths of a keyed-carrier station flicker; leaving the keyed carrier for a tone needs a clear margin
+        if (path < 0 || best > cur * (weak && path == 2 && bi != 2 ? 2.5f : 1.3f)) path = bi;
     }
 
     void atMilli(bool raw) {
@@ -230,6 +249,7 @@ struct NdbReceiver::Impl {
     }
 
     void at8k(cd z) {
+        if (weak) z = cd(preI[1].run(preI[0].run(z.real())), preQ[1].run(preQ[0].run(z.imag())));
         tNow += 1.0 / kFs;
         const double env = std::abs(z);
         const double decay = std::exp(-1.0 / (kFs * 5.0));
@@ -240,9 +260,31 @@ struct NdbReceiver::Impl {
 
         double toneAud[kTones];
         double depths[3];
+        // 4.0: the tones are read from the carrier-synchronous component (the in-phase part against a 3 Hz carrier estimate), which has no squaring loss
+        // against noise, and normalised by the carrier amplitude instead of the noise-driven peak of the envelope
+        double toneIn = env, tref = ref;
+        if (weak) {
+            // a frequency loop keeps the carrier at 0 Hz (a radio error of tens of Hz would walk out of the 3 Hz estimate): a 30 Hz average of the
+            // de-rotated stream gives the residual frequency from its phase steps
+            fPh = std::remainder(fPh + 2 * kPi * fEst / kFs, 2 * kPi);
+            const cd zr = z * cd(std::cos(-fPh), std::sin(-fPh));
+            fLp += (zr - fLp) * (1 - std::exp(-2 * kPi * 30.0 / kFs));
+            if (std::abs(fLp) > 1e-12 && std::abs(fPrev) > 1e-12) {
+                const double inst = std::arg(fLp * std::conj(fPrev)) * kFs / (2 * kPi);
+                fEst += std::max(-5.0, std::min(5.0, inst)) * 0.002;
+                fEst = std::max(-200.0, std::min(200.0, fEst));
+            }
+            fPrev = fLp;
+            carrierLp += (zr - carrierLp) * (1 - std::exp(-2 * kPi * 3.0 / kFs));
+            const double cm = std::abs(carrierLp);
+            cmag += (cm - cmag) * 0.001;   // slow, so that a keyed carrier's off periods do not turn the noise into a unit-size signal
+            if (cmag > 1e-12) toneIn = (zr * std::conj(carrierLp)).real() / std::max(std::max(cm, cmag), 1e-12);
+            carrPwr += (cm * cm - carrPwr) * 0.0005;
+            tref = std::max(cmag, 1e-9);
+        }
         for (int i = 0; i < kTones; i++) {
-            toneAud[i] = bp[i].run(env);
-            depths[i] = envLp[i].run(std::fabs(toneAud[i])) / ref;
+            toneAud[i] = bp[i].run(toneIn);
+            depths[i] = envLp[i].run(std::fabs(toneAud[i])) / (weak ? tref : ref);
         }
         const double fast = cSlow.run(env);     // 20 Hz: follows the carrier keying, not the 400 Hz ripple
         depths[2] = fast / ref;
@@ -266,7 +308,7 @@ struct NdbReceiver::Impl {
             std::vector<float> s(depthHist[use].begin(), depthHist[use].end());
             std::sort(s.begin(), s.end());
             p10 = s[s.size() / 10]; p90 = s[s.size() * 9 / 10];
-            present = p90 > 0.05f && p90 > 1.8f * std::max(p10, 1e-4f);
+            present = p90 > 0.05f && p90 > 1.8f * std::max(p10, 1e-4f) && carrierOk();
             const float thr = 0.5f * (p10 + p90);
             if (!present) key = false;
             else if (key) key = metric > thr * 0.85;
@@ -432,6 +474,7 @@ void NdbReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->log = std::move(cb);
 }
+void NdbReceiver::setWeakSignalPath(bool on) { p_->weak = on; }
 void NdbReceiver::setToneMode(int mode) { p_->toneMode = mode < 0 || mode > 3 ? 0 : mode; }
 void NdbReceiver::setListen(bool on) { p_->listen.on = on; }
 bool NdbReceiver::listening() const { return p_->listen.on.load(); }

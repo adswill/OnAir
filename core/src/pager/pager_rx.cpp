@@ -140,6 +140,16 @@ struct PagerReceiver::Impl {
     std::atomic<int> protoMask{3};        // setProtocols(): 1 POCSAG, 2 FLEX
     std::atomic<bool> narrow{false};      // setNarrowChannel(): the channel filter of a 12.5 kHz channel, not 25 kHz
     std::atomic<int> pocsagBaudMask{7};   // setPocsagBauds(): 1 512, 2 1200, 4 2400 bd
+    std::atomic<bool> pocsagSecond{true};  // setPocsagSecondPath()
+
+    // 4.0: a second decoder behind a 7 kHz channel filter (docs/SENSITIVITY-4.0-A3.md). POCSAG and the two level FLEX speeds (+-4.5 kHz) are more
+    // sensitive behind a 7 kHz filter than behind the 10 kHz one the 4 level FLEX speeds need (they collapse behind it; the first decoder keeps them). Same samples, own pipeline;
+    // its messages go to the first decoder's list (dedup: the same page seen by both is kept once), its code word counts are merged by maximum.
+    std::unique_ptr<Impl> second;
+    Impl* sink = nullptr;                  // set in the second decoder: where its messages go
+    double finHalfHz = 0;                  // the second decoder's channel filter half width (0: the usual 10 kHz / 6.5 kHz)
+    struct Recent { uint64_t key; double t; int src; };
+    std::deque<Recent> recent;             // messages of the last seconds, to drop the copy the other decoder reports
 
     // ---- receiver thread
     PagerTelemetry tel;
@@ -274,7 +284,8 @@ struct PagerReceiver::Impl {
             if (!rsPass) rs.reset();
             // 25 kHz channel: +-10 kHz. 12.5 kHz channel: +-6.5 kHz (the pager deviation is 4.5 kHz, so the signal fits and a neighbour
             // 12.5 kHz away, whose nearer edge is at 6.5 kHz, is cut hard instead of reaching the discriminator)
-            if (narrow.load()) fin.design(bbf::overrideTaps("pager", dmr::lowpassTaps(6500.0, 9500.0, kMidRate, 60, 9), kMidRate, 16000.0), 2);
+            if (finHalfHz > 0) fin.design(dmr::lowpassTaps(finHalfHz, finHalfHz + 4000.0, kMidRate, 60, 9), 2);
+            else if (narrow.load()) fin.design(bbf::overrideTaps("pager", dmr::lowpassTaps(6500.0, 9500.0, kMidRate, 60, 9), kMidRate, 16000.0), 2);
             else fin.design(bbf::overrideTaps("pager", dmr::lowpassTaps(10000.0, 14000.0, kMidRate, 60, 9), kMidRate, 24000.0), 2);
             design();
         }
@@ -314,6 +325,22 @@ struct PagerReceiver::Impl {
             listDirty = false;
         }
         pub = tel;
+        if (second) {   // the second (narrow) POCSAG decoder: the larger code word count per speed, its signal and lock
+            const PagerTelemetry& t2 = second->tel;
+            for (int sp = 0; sp < kPagerSpeeds; sp++) {
+                const PagerSpeedStat& a = tel.speeds[sp];
+                const PagerSpeedStat& b = t2.speeds[sp];
+                PagerSpeedStat& o = pub.speeds[sp];
+                if (b.ok + b.fixed > a.ok + a.fixed) pub.blocksOk += (b.ok + b.fixed) - (a.ok + a.fixed);
+                if (b.failed > a.failed) pub.blocksBad += b.failed - a.failed;
+                o.ok = std::max(a.ok, b.ok); o.fixed = std::max(a.fixed, b.fixed); o.failed = std::max(a.failed, b.failed);
+                o.transmissions = std::max(a.transmissions, b.transmissions);
+            }
+            pub.signal = pub.signal || t2.signal;
+            pub.sync = pub.sync || t2.sync;
+            pub.lastPocsagSec = std::max(pub.lastPocsagSec, t2.lastPocsagSec);
+            if (!tel.signal && t2.signal) pub.snrDb = t2.snrDb;
+        }
     }
 
 
@@ -331,8 +358,29 @@ struct PagerReceiver::Impl {
         }
     }
     void emit(std::vector<PagerMessage>& v, int spd, bool flex) {
+        if (sink) { sink->emitFrom(v, spd, flex, 1); return; }
+        emitFrom(v, spd, flex, 0);
+    }
+    static uint64_t msgKey(const PagerMessage& pm) {
+        uint64_t h = 1469598103934665603ull;
+        auto mix = [&](uint64_t x) { h ^= x; h *= 1099511628211ull; };
+        mix(pm.address); mix((uint64_t)pm.function); mix((uint64_t)pm.type);
+        for (unsigned char c : pm.text) mix(c);
+        return h;
+    }
+    void emitFrom(std::vector<PagerMessage>& v, int spd, bool flex, int src) {
         applySmartRequests();
-        for (PagerMessage& pm : v) {
+        for (size_t mi = 0; mi < v.size(); mi++) {
+            PagerMessage& pm = v[mi];
+            {   // the same page from both decoders: the first one counts
+                const double tn = nowSec();
+                while (!recent.empty() && tn - recent.front().t > 8.0) recent.pop_front();
+                const uint64_t k = msgKey(pm);
+                bool dup = false;
+                for (const Recent& r : recent) if (r.key == k && r.src != src) { dup = true; break; }
+                if (dup) continue;
+                recent.push_back({k, tn, src});
+            }
             pm.speed = spd;
             pm.flex = flex;
             brain.process(pm, pm.wallTime ? pm.wallTime : (int64_t)std::time(nullptr));
@@ -997,9 +1045,24 @@ bool PagerReceiver::loadResults(const std::string& blob) {
 
 void PagerReceiver::feed(const cf32* x, size_t n) {
     Impl& im = *p_;
-    if (im.resetReq.exchange(false)) im.resetState();
+    const bool reset = im.resetReq.exchange(false);
+    if (reset) im.resetState();
     if (im.curRate <= 0) return;
     im.feed(x, n);
+    // 4.0: the second, POCSAG-only decoder behind the 7 kHz filter, on a 25 kHz channel (a 12.5 kHz channel's filter is narrower already)
+    const bool want = (im.protoMask.load() & 3) && !im.narrow.load() && im.pocsagSecond.load();
+    if (!want) { im.second.reset(); return; }
+    if (!im.second) { im.second = std::make_unique<Impl>(); im.second->sink = &im; im.second->finHalfHz = 7000.0; im.second->resetReq = true; }
+    Impl& s2 = *im.second;
+    if (reset || s2.resetReq.load()) {
+        { std::lock_guard<std::mutex> lk(im.mu); s2.rate = im.rate; s2.offsetHz = im.offsetHz; s2.wideInput = im.wideInput; }
+        s2.protoMask = im.protoMask.load() & 3; s2.narrow = false; s2.pocsagBaudMask = im.pocsagBaudMask.load(); s2.toneChipsOn = im.toneChipsOn.load();
+        s2.selOn = false; s2.combineOn = im.combineOn.load();
+        s2.resetReq = false;
+        s2.resetState();
+    }
+    s2.pocsagBaudMask = im.pocsagBaudMask.load();
+    if (s2.curRate > 0) s2.feed(x, n);
 }
 
 bool PagerReceiver::telemetry(PagerTelemetry& out, uint64_t lastSeq) {
@@ -1030,6 +1093,8 @@ bool PagerReceiver::combineCopies() const { return p_->combineOn; }
 void PagerReceiver::setSelcall(bool on) { p_->selOn = on; }
 bool PagerReceiver::selcall() const { return p_->selOn; }
 void PagerReceiver::setPocsagBauds(int mask) { p_->pocsagBaudMask = mask & 7; }
+void PagerReceiver::setPocsagSecondPath(bool on) { p_->pocsagSecond = on; }
+bool PagerReceiver::pocsagSecondPath() const { return p_->pocsagSecond.load(); }
 void PagerReceiver::setToneDetection(bool on) { p_->toneChipsOn = on; p_->resetReq = true; }
 bool PagerReceiver::toneDetection() const { return p_->toneChipsOn.load(); }
 void PagerReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }

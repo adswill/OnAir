@@ -205,6 +205,11 @@ private:
         for (int i = 0; i < 206; i++) coded[i] = soft[j0[(size_t)i]];
         uint8_t data[13];
         if (!fano32(coded, 72, data, 8000L * 103)) return false;
+        {   // 4.0: the all-zero word ("000AAA 000AAA RA90") is what the Fano decoder returned for a few candidates beside strong signals; no station sends it
+            bool zero = true;
+            for (int i = 0; i < 9; i++) zero = zero && data[i] == 0;
+            if (zero) return false;
+        }
         uint8_t sym[12];
         for (int i = 0; i < 12; i++) {
             int v = 0;

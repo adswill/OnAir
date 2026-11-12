@@ -54,6 +54,33 @@ std::unique_ptr<Decoder> makeRadar();
 std::unique_ptr<Decoder> makeGnssJam();
 std::unique_ptr<Decoder> makePassband();
 std::unique_ptr<Decoder> makeVlfMsk();
+std::unique_ptr<Decoder> makeOccupancy();
+std::unique_ptr<Decoder> makeEvm();
+std::unique_ptr<Decoder> makeFreqAcc();
+std::unique_ptr<Decoder> makePttLog();
+std::unique_ptr<Decoder> makeIntermod();
+std::unique_ptr<Decoder> makeSpur();
+std::unique_ptr<Decoder> makeDopplerLog();
+std::unique_ptr<Decoder> makeHopAnalyser();
+std::unique_ptr<Decoder> makeBirdie();
+std::unique_ptr<Decoder> makeBurst();
+std::unique_ptr<Decoder> makeFading();
+std::unique_ptr<Decoder> makeInputHealth();
+std::unique_ptr<Decoder> makePhaseNoise();
+std::unique_ptr<Decoder> makeSsbTest();
+std::unique_ptr<Decoder> makeSinad();
+std::unique_ptr<Decoder> makeFskAnalyser();
+std::unique_ptr<Decoder> makeYFactor();
+std::unique_ptr<Decoder> makeCwKeying();
+std::unique_ptr<Decoder> makeNoiseFloor();
+std::unique_ptr<Decoder> makeNfmDev();
+std::unique_ptr<Decoder> makeAfsk();
+std::unique_ptr<Decoder> makeOokPulse();
+std::unique_ptr<Decoder> makeTxStability();
+std::unique_ptr<Decoder> makeOccBw();
+std::unique_ptr<Decoder> makePapr();
+std::unique_ptr<Decoder> makeSpecKurt();
+std::unique_ptr<Decoder> makeGlitch();
 
 // Windowed-sinc low-pass FIR with decimation by an integer factor. Complex in, complex out. Self-contained so the decoders can be tested alone.
 class Decimator {
