@@ -4,6 +4,7 @@
 #include "sens_modes_d.h"
 #include <cstdio>
 #include <cstring>
+#include <string>
 using namespace sens;
 
 namespace {
@@ -62,9 +63,9 @@ int main() {
         {"iMS-100", 512, 24.0, {10, 8, 6, 4, 2, 0}},
     };
     const double cfos[] = {0};
-    for (int phase = 0; phase < 3; phase++) {
-    setenv("A4_VAR", phase == 0 ? "0" : phase == 1 ? "1" : "2", 1);
-    printf("=== A4_VAR %d (0 before, 1 tone + mean threshold, 2 mean threshold only)\n", phase);
+    for (int phase = 0; phase < 5; phase++) {
+    setenv("A4_VAR", std::to_string(phase).c_str(), 1);
+    printf("=== A4_VAR %d (0 before, 1 tone + mean thr, 2 mean thr, 3 smoothed extremes, 4 tone + smoothed extremes)\n", phase);
     for (const R& r : rs) {
         const Case S = makeCase("sonde", r.secs, r.mask);
         for (double cfo : cfos) {

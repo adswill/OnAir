@@ -140,7 +140,7 @@ public:
             const bool mid = d->midpointSlicer();
             const bool nar = hasNarrow && d->narrowChannel();
             for (size_t i = 0; i < chains.size(); i++) if (std::fabs(chains[i].baud() - baud) < 1e-6 && chains[i].midpoint() == mid && chainNarrow[i] == nar) ci = (int)i;
-            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid, (toneChips && !(mid && a4Var() != 1)) ? toneDevFor(baud) : 0.0, a4Var() >= 1); chainNarrow.push_back(nar); ci = (int)chains.size() - 1; }
+            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid, (toneChips && !(mid && a4Var() != 1 && a4Var() != 4)) ? toneDevFor(baud) : 0.0, mid ? (a4Var() == 1 || a4Var() == 2 ? 1 : a4Var() >= 3 ? 2 : 0) : 0); chainNarrow.push_back(nar); ci = (int)chains.size() - 1; }
             Dec e; e.d = std::move(d); e.kind = kind; e.chain = ci; e.rs41 = r41; e.rs92 = r92;
             decs.push_back(std::move(e));
         };
