@@ -156,7 +156,8 @@ int main(int argc, char** argv) {
             CHECK(r.wrong == 0, "Wi-Fi gaps (%s): %llu wrong packets", zero ? "zeros" : "removed", (unsigned long long)r.wrong);
             if (zero) {
                 CHECK(r.lastGoodSec > o.seconds - 0.5, "Wi-Fi gaps filled with zeros: last packet at %.2f s", r.lastGoodSec);
-                CHECK(frac >= 0.5, "Wi-Fi gaps filled with zeros: %.2f of the packets", frac);
+                CHECK(frac >= 0.85, "Wi-Fi gaps filled with zeros: %.2f of the packets", frac);   // 0.92 measured (0.16 with the gaps removed)
+                CHECK(lost == 1, "Wi-Fi gaps filled with zeros: the lock was found %d times", lost);
             }
         }
     }
