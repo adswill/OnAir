@@ -681,6 +681,7 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     for (auto& r : rxW1a_) { r.configure(rate_); r.setLogCallback([this](const std::string& s) { rxLog(s); }); }
     rxNrf_.configure(rate_);
     rxSens_.configure(rate_);
+    { const SensorsView* sv = sensorsViewForActive(activeStdFor(stdMode_.load())); rxSens_.setView(sv ? sv->patterns : ""); }   // an entry of one sensor family reports that family only
     rxBgan_.configure(rate_);
     rxBgan_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxSfer_.configure(rate_);

@@ -403,6 +403,24 @@
         <item>Occupied bandwidth meter</item>
         <item>Spectral kurtosis RFI finder</item>
         <item>SDR stream glitch detector</item>
+        <item>Oregon Scientific sensors</item>
+        <item>Acurite sensors</item>
+        <item>LaCrosse sensors</item>
+        <item>Fine Offset / Ecowitt sensors</item>
+        <item>Bresser sensors</item>
+        <item>Hideki sensors</item>
+        <item>TFA Dostmann sensors</item>
+        <item>Nexus / Prologue sensors</item>
+        <item>Alecto / Esperanza sensors</item>
+        <item>Ambient Weather sensors</item>
+        <item>Wireless alarm sensors</item>
+        <item>X10 RF</item>
+        <item>Itron ERT meters</item>
+        <item>Neptune R900 water meters</item>
+        <item>TPMS: Schrader</item>
+        <item>TPMS: Renault</item>
+        <item>TPMS: Toyota</item>
+        <item>TPMS: Citroen / Peugeot / Fiat</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -787,6 +805,24 @@
         <item>Occupied bandwidth meter (ITU-R SM.328): for the strongest signal of a wide capture, the 99 % occupied bandwidth, the bandwidths at 3, 6, 20 and 26 dB below the peak, the centre against the tuned frequency, the signal to noise ratio and the adjacent and alternate power (dB under the signal, bands as wide as the signal at 1.25 and 2.5 bandwidths). What arrives at this radio, noise and neighbours included. Simulated signals only</item>
         <item>Spectral kurtosis RFI finder (the estimator used in radio astronomy) for a wide capture: which frequencies hold something that is not Gaussian noise, and whether it is a steady carrier (SK under 1) or pulsed (SK over 1: radar, TDMA bursts, arcing, switching supplies), with the share of the band that is clean and the share of frames at full power for pulsed ones. Lists and classifies; does not say what the source is. Simulated signals only</item>
         <item>SDR stream glitch detector, for debugging a radio link or a driver: dropped and repeated samples (a phase step of the strongest steady tone, with the number of samples), runs of zero samples, a block sent twice, and level steps of 1 dB or more (an AGC or gain change), each with its time. A drop cannot be seen without a steady tone 20 dB over the noise. Simulated signals only</item>
+        <item>Oregon Scientific weather sensors on 433.92 MHz (v1, v2.1 and v3.0 temperature and humidity sensors, the SL109H remote thermo-hygro sensor and the WMR500 weather station): temperature, humidity and battery with sensor ID and channel. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Acurite sensors on 433.92 MHz (606TX, 609TXC, 590TX, 592TXR, 3n1, 5n1 and Atlas weather stations, 896 rain gauge, 986 refrigerator thermometer, 00275rm, 01185M grill thermometer): temperature, humidity, wind, rain and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>LaCrosse sensors on 433.92 and 868 MHz (TX141 family, TX29IT, TX31U-IT, TX34-IT, TX35DTH-IT, TX22U-IT, View LTV, WS7000 and others, also sold under TFA and The Weather Channel names): temperature, humidity, wind, rain and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Fine Offset and Ecowitt sensors on 433.92, 868.3 and 915 MHz (WH1080 / WH3080, WH5, WH24 / WH65B, WH31L lightning, WH43 air quality, WH45, WH46, WH51, WH52 soil, WH55 water leak, WS80 / WS85 / WS90 and the WH53 thermometer): temperature, humidity, wind, rain, soil, air quality and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Bresser sensors on 868.3 MHz (3-channel thermo-hygro, 5-in-1, 6-in-1, 7-in-1 weather centres, ST1005H, lightning, leakage, CO2 and air quality, rain gauge): temperature, humidity, wind, rain, UV, lightning and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Hideki TS04 weather sensors on 433.92 MHz: temperature, humidity, wind and rain with channel and battery, Manchester frames with their checksums. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>TFA Dostmann sensors on 433.92 and 868 MHz (30.3208.02, 30.3197, 30.3161 and 30.3209 sensors, Twin Plus, Marbella, Drop, pool thermometer, 14.1504 and the KlimaLogg Pro station): temperature, humidity, rain and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Nexus and Prologue temperature sensors on 433.92 MHz (Nexus, CRX, Prego sauna, FreeTec NC-7345, NX-3980, Solight TE82S, TFA 30.3209, Prologue NC-7104 and NC-7159-675): 36-bit PPM frames with temperature, humidity, channel and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Alecto and Esperanza sensors on 433.92 MHz (Alecto WS3500 / WS4500, Ventus W155 / W044 and the Esperanza EWS): temperature, humidity, wind and rain with channel and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Ambient Weather sensors on 433.92 and 915 MHz (F007TH, TX-8300, WH31E and WH31L, FT005TH, EcoWitt WH40 / WN20): temperature, humidity, rain, lightning and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Wireless alarm sensors on 345 and 433.92 MHz (Honeywell 5800 door and window contacts, DSC security contacts and WS4945, Interlogix / GE and 2Gig sensors, Visonic PowerCode): sensor ID, contact, tamper, battery and supervisory flags. Decodes what the sensor sends, it does not control an alarm system. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>X10 RF remotes and security sensors on 310 and 433.92 MHz: house code, unit and command of the X10 RF frames and the X10 security device codes. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Itron ERT utility meter endpoints on 915 MHz (SCM standard consumption messages, IDM interval data messages and net-meter IDM): endpoint ID, type and consumption counters, read as they are broadcast. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Neptune R900 flow meters on 915 MHz (R900 and R900 BCD): meter ID, consumption, backflow, leak and tamper flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Schrader tyre pressure sensors on 433.92 MHz (Schrader, EG53MA4 used by Saab, Opel, Vauxhall and Chevrolet, SMD3MA4 for Subaru, MRXBC5A4 for BMW, MRXNIS315G3 for Nissan and Infiniti, and the motorcycle sensor): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Renault tyre pressure sensors on 433.92 MHz (the Renault TPMS and the 0435R sensor): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Toyota tyre pressure sensors on 433.92 and 315 MHz (the Toyota TPMS and the PMV-107J): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
+        <item>Citroen, Peugeot, Fiat and Mitsubishi tyre pressure sensors on 433.92 MHz (the sensor type shared by these makes): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1171,6 +1207,24 @@
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
+        <item>Sensors, Oregon Scientific</item>
+        <item>Sensors, Acurite</item>
+        <item>Sensors, LaCrosse</item>
+        <item>Sensors, Fine Offset / Ecowitt</item>
+        <item>Sensors, Bresser</item>
+        <item>Sensors, Hideki</item>
+        <item>Sensors, TFA Dostmann</item>
+        <item>Sensors, Nexus / Prologue</item>
+        <item>Sensors, Alecto / Esperanza</item>
+        <item>Sensors, Ambient Weather</item>
+        <item>Sensors, Wireless alarm sensors</item>
+        <item>Sensors, X10</item>
+        <item>Sensors, Itron ERT</item>
+        <item>Sensors, Neptune R900</item>
+        <item>Sensors, Schrader TPMS</item>
+        <item>Sensors, Renault TPMS</item>
+        <item>Sensors, Toyota TPMS</item>
+        <item>Sensors, Citroen TPMS</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1555,5 +1609,23 @@
         <item>occupied bandwidth 99 percent x db 26 db emission designator itu sm.328 acpr adjacent channel power spectrum width transmitter</item>
         <item>spectral kurtosis sk rfi pulsed steady carrier radio astronomy non-gaussian interference radar burst detector</item>
         <item>sdr glitch dropped samples overrun usb buffer repeat zero agc level step stream health debug</item>
+        <item>oregon scientific thn132n thgr810 sl109h wmr500 weather sensor 433.92 rtl_433</item>
+        <item>acurite 606tx 609txc 592txr 5n1 3n1 atlas 896 986 weather station thermometer rain 433.92 rtl_433</item>
+        <item>lacrosse tx141 tx29it tx31u tx34 tx35 tx22u ltv ws7000 weather sensor 433.92 868 rtl_433</item>
+        <item>fine offset fineoffset ecowitt wh1080 wh3080 wh24 wh65b wh31l wh43 wh45 wh51 wh52 wh55 ws80 ws85 ws90 weather station 433.92 868 915 rtl_433</item>
+        <item>bresser 3ch 5in1 6in1 7in1 st1005h explore scientific lightning leakage weather 868.3 rtl_433</item>
+        <item>hideki ts04 weather sensor wind rain 433.92 rtl_433</item>
+        <item>tfa dostmann klimalogg marbella twin plus drop pool thermometer 30.3208 30.3197 weather 433.92 868 rtl_433</item>
+        <item>nexus prologue crx prego freetec nc-7345 nx-3980 solight te82s nc-7104 temperature humidity 433.92 rtl_433</item>
+        <item>alecto ws3500 ws4500 ventus w155 w044 esperanza ews weather 433.92 rtl_433</item>
+        <item>ambient weather f007th tx-8300 wh31e wh31l ft005th ecowitt wh40 wn20 915 433.92 rtl_433</item>
+        <item>wireless alarm security sensor honeywell 5800 dsc interlogix visonic powercode 2gig door window contact 345 433.92 rtl_433</item>
+        <item>x10 rf security remote house code unit command 310 433.92 rtl_433</item>
+        <item>itron ert scm idm interval consumption water gas electric meter 915 rtl_433</item>
+        <item>neptune r900 bcd water flow meter 915 rtl_433</item>
+        <item>schrader tpms tyre tire pressure eg53ma4 smd3ma4 mrxbc5a4 mrxnis315g3 433.92 rtl_433</item>
+        <item>renault tpms tyre tire pressure 0435r 433.92 rtl_433</item>
+        <item>toyota tpms tyre tire pressure pmv-107j 433.92 315 rtl_433</item>
+        <item>citroen peugeot fiat mitsubishi tpms tyre tire pressure 433.92 rtl_433</item>
     </string-array>
 </resources>

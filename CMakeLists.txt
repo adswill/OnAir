@@ -2915,7 +2915,7 @@ if(DECT2_BUILD_TESTS)
       target_link_libraries(${m}tool PRIVATE dect2core)
     endif()
   endforeach()
-  foreach(t test_sensors_families test_sensors_vectors)   # read the repository's test tables
+  foreach(t test_sensors_families test_sensors_vectors test_sensors_views)   # read the repository's test tables
     if(TARGET ${t})
       target_compile_definitions(${t} PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")
     endif()

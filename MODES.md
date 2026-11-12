@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**375 modes.**
+**393 modes.**
 
 ## TV (17)
 
@@ -182,7 +182,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (43)
+## IoT & Sensors (61)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -227,6 +227,24 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **DECT NR+** - DECT NR+ (ETSI TS 103 636): the license-exempt 1.9 GHz mesh standard. Tune the channel centre (1881.792 MHz and up in 0.864 MHz steps), 4 Msps. Control field only
 - **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
 - **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
+- **Oregon Scientific sensors** - Oregon Scientific: temperature, humidity and weather sensors
+- **Acurite sensors** - Acurite: weather stations, thermometers and rain gauges
+- **LaCrosse sensors** - LaCrosse: temperature, humidity, wind and rain sensors
+- **Fine Offset / Ecowitt sensors** - Fine Offset / Ecowitt: weather stations and add-on sensors
+- **Bresser sensors** - Bresser: weather centres and add-on sensors
+- **Hideki sensors** - Hideki TS04: temperature, humidity, wind and rain sensor
+- **TFA Dostmann sensors** - TFA Dostmann: thermometers, rain gauges and KlimaLogg
+- **Nexus / Prologue sensors** - Nexus / Prologue: simple temperature and humidity sensors
+- **Alecto / Esperanza sensors** - Alecto / Esperanza: weather station sensors
+- **Ambient Weather sensors** - Ambient Weather: thermo-hygro, rain and lightning sensors
+- **Wireless alarm sensors** - Wireless alarm sensors: contact and tamper messages (Honeywell, DSC, Interlogix, Visonic)
+- **X10 RF** - X10: RF remote and security frames
+- **Itron ERT meters** - Itron ERT: SCM and IDM meter messages
+- **Neptune R900 water meters** - Neptune R900: water and flow meters
+- **TPMS: Schrader** - Schrader TPMS: tyre pressure sensors
+- **TPMS: Renault** - Renault TPMS: tyre pressure sensors
+- **TPMS: Toyota** - Toyota TPMS: tyre pressure sensors
+- **TPMS: Citroen / Peugeot / Fiat** - Citroen / Peugeot / Fiat TPMS: tyre pressure sensors
 
 ## Weather & Science (55)
 

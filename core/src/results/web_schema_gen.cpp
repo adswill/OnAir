@@ -15166,6 +15166,17 @@ static bool put_560(const RxTelemetry& rx, std::string& s) { ev_dect2__SatDetect
 static bool put_561(const RxTelemetry& rx, std::string& s) { ev_dect2__SatDetectTelemetry(s, rx.satdetect); return true; }
 static bool put_562(const RxTelemetry& rx, std::string& s) { ev_dect2__NavicTelemetry(s, rx.navic); return true; }
 static bool put_563(const RxTelemetry& rx, std::string& s) { ev_dect2__SatDetectTelemetry(s, rx.satdetect); return true; }
+static bool put_565(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_568(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_571(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_574(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_577(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_580(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_583(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_586(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_589(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_592(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_595(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
 static bool put_601(const RxTelemetry& rx, std::string& s) { ev_dect2__XlinkTelemetry(s, rx.xlink); return true; }
 static bool put_602(const RxTelemetry& rx, std::string& s) { ev_dect2__XlinkTelemetry(s, rx.xlink); return true; }
 static bool put_604(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
@@ -15182,6 +15193,13 @@ static bool put_627(const RxTelemetry& rx, std::string& s) { ev_dect2__CisHfTele
 static bool put_641(const RxTelemetry& rx, std::string& s) { ev_dect2__Vdl3Telemetry(s, rx.vdl3); return true; }
 static bool put_661(const RxTelemetry& rx, std::string& s) { ev_dect2__CdmaTelemetry(s, rx.cdma); return true; }
 static bool put_662(const RxTelemetry& rx, std::string& s) { ev_dect2__TdscdmaTelemetry(s, rx.tdscdma); return true; }
+static bool put_664(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_667(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_670(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_673(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_676(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_679(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_682(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
 static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTelemetry(s, rx.hrdcp); return true; }
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
@@ -15449,6 +15467,17 @@ static const StdEntry kStd[] = {
     {561, "satdetect", "dect2::SatDetectTelemetry", kSchema_dect2__SatDetectTelemetry, put_561},
     {562, "navic", "dect2::NavicTelemetry", kSchema_dect2__NavicTelemetry, put_562},
     {563, "satdetect", "dect2::SatDetectTelemetry", kSchema_dect2__SatDetectTelemetry, put_563},
+    {565, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_565},
+    {568, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_568},
+    {571, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_571},
+    {574, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_574},
+    {577, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_577},
+    {580, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_580},
+    {583, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_583},
+    {586, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_586},
+    {589, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_589},
+    {592, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_592},
+    {595, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_595},
     {601, "xlink", "dect2::XlinkTelemetry", kSchema_dect2__XlinkTelemetry, put_601},
     {602, "xlink", "dect2::XlinkTelemetry", kSchema_dect2__XlinkTelemetry, put_602},
     {604, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_604},
@@ -15465,6 +15494,13 @@ static const StdEntry kStd[] = {
     {641, "vdl3", "dect2::Vdl3Telemetry", kSchema_dect2__Vdl3Telemetry, put_641},
     {661, "cdma", "dect2::CdmaTelemetry", kSchema_dect2__CdmaTelemetry, put_661},
     {662, "tdscdma", "dect2::TdscdmaTelemetry", kSchema_dect2__TdscdmaTelemetry, put_662},
+    {664, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_664},
+    {667, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_667},
+    {670, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_670},
+    {673, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_673},
+    {676, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_676},
+    {679, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_679},
+    {682, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_682},
     {701, "hrdcp", "dect2::DcsTelemetry", kSchema_dect2__DcsTelemetry, put_701},
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
@@ -15864,6 +15900,24 @@ static const WebModeRow kRows[] = {
     {800, "HF packet 300 Bd", 11, "HF packet 300 Bd: AX.25 frames, full decode (simulated only)", "", 802, 801, "w1a"},
     {801, "Voice inversion scrambler", 5, "Voice inversion scrambler: detection and descrambling of full-band inversion (simulated only)", "", 803, 802, "w1a"},
     {802, "ELT 121.5 MHz", 2, "ELT 121.5 MHz: swept-tone detection (simulated only)", "", 804, 803, "w1a"},
+    {564, "Oregon Scientific sensors", 8, "Oregon Scientific: temperature, humidity and weather sensors", "", 566, 565, "sensors"},
+    {567, "Acurite sensors", 8, "Acurite: weather stations, thermometers and rain gauges", "", 569, 568, "sensors"},
+    {570, "LaCrosse sensors", 8, "LaCrosse: temperature, humidity, wind and rain sensors", "", 572, 571, "sensors"},
+    {573, "Fine Offset / Ecowitt sensors", 8, "Fine Offset / Ecowitt: weather stations and add-on sensors", "", 575, 574, "sensors"},
+    {576, "Bresser sensors", 8, "Bresser: weather centres and add-on sensors", "", 578, 577, "sensors"},
+    {579, "Hideki sensors", 8, "Hideki TS04: temperature, humidity, wind and rain sensor", "", 581, 580, "sensors"},
+    {582, "TFA Dostmann sensors", 8, "TFA Dostmann: thermometers, rain gauges and KlimaLogg", "", 584, 583, "sensors"},
+    {585, "Nexus / Prologue sensors", 8, "Nexus / Prologue: simple temperature and humidity sensors", "", 587, 586, "sensors"},
+    {588, "Alecto / Esperanza sensors", 8, "Alecto / Esperanza: weather station sensors", "", 590, 589, "sensors"},
+    {591, "Ambient Weather sensors", 8, "Ambient Weather: thermo-hygro, rain and lightning sensors", "", 593, 592, "sensors"},
+    {594, "Wireless alarm sensors", 8, "Wireless alarm sensors: contact and tamper messages (Honeywell, DSC, Interlogix, Visonic)", "", 596, 595, "sensors"},
+    {663, "X10 RF", 8, "X10: RF remote and security frames", "", 665, 664, "sensors"},
+    {666, "Itron ERT meters", 8, "Itron ERT: SCM and IDM meter messages", "", 668, 667, "sensors"},
+    {669, "Neptune R900 water meters", 8, "Neptune R900: water and flow meters", "", 671, 670, "sensors"},
+    {672, "TPMS: Schrader", 8, "Schrader TPMS: tyre pressure sensors", "", 674, 673, "sensors"},
+    {675, "TPMS: Renault", 8, "Renault TPMS: tyre pressure sensors", "", 677, 676, "sensors"},
+    {678, "TPMS: Toyota", 8, "Toyota TPMS: tyre pressure sensors", "", 680, 679, "sensors"},
+    {681, "TPMS: Citroen / Peugeot / Fiat", 8, "Citroen / Peugeot / Fiat TPMS: tyre pressure sensors", "", 683, 682, "sensors"},
 };
 } // namespace
 

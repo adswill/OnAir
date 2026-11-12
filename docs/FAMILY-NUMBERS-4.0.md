@@ -69,3 +69,6 @@ The x40 receiver now maps a variant to a family through `x40::familyOfVariant(v)
 | SDR stream glitch detector | 778 | 779 | 780 | 778 |
 
 Families 779 - 787 stay reserved for further modes of this block. A new variant needs: the enum entry and the active-standard `case` label in `x40_rx.h`, `makeX()` in `x40_int.h` / `x40_dec.cpp`, the tuning row in `x40_dec.cpp`, the name in `x40_rx.cpp`, `x40Tuning(v)` in the registry list of `core/src/engine/modes.cpp`, the table sizes and `makeUi<v>()` in `app/x40/x40_ui.cpp`, the `case` in `app/panels/modeui.cpp` and the mode-table row (`x40::kNumVariants` and the table arrays in `x40_dec.cpp`, `x40_rx.cpp`, `app/x40/x40_ui.cpp` and `app/panels/modeui.cpp` grow with it).
+
+## Sensor-family entries (feat40-modes4, 2026-11-12)
+Views onto the Sub-GHz sensors receiver, stride 3 (family, active standard +1, engine standard +2, poll slot = family): 564, 567, 570, 573, 576, 579, 582, 585, 588, 591, 594 (in the range 564 - 597) and 663, 666, 669, 672, 675, 678, 681 (in 663 - 697). Table in `docs/SENSORVIEWS-4.0.md`.
