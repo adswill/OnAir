@@ -2,6 +2,7 @@
 // The mode-list entries of 4.0 that showed one type of an existing receiver (a sensor brand, a radiosonde type, an AIS station kind, a time station,
 // an analog TV standard, a GNSS system, an NFC protocol, a wireless M-Bus mode or maker, a satellite framing) are gone: the receiver's own screen
 // filters by type instead. A setting, preset, memory, scan list or workspace saved with one of them opens the receiver it showed.
+// These families and ids are retired: never give one to a new mode (docs/FAMILY-NUMBERS-4.0.md).
 #include <string>
 
 namespace dect2 {

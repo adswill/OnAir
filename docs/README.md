@@ -198,7 +198,6 @@ The table below is the list of topic pages.
 | [RIVET-MODES-4.0.md](RIVET-MODES-4.0.md) | HF data modes from Rivet (XPA, XPA2, CROWD36, F01, F06, GW FSK) |
 | [DCR-4.0.md](DCR-4.0.md) | DCR, Japan's digital convenience radio |
 | [X40-4.0.md](X40-4.0.md) | Measurement and monitor modes (index; one page per mode follows it) |
-| [VIEWS-4.0.md](VIEWS-4.0.md) | Entries for one type of an existing receiver (SENSORVIEWS-4.0.md for the sensors) |
 | [FAMILY-NUMBERS-4.0.md](FAMILY-NUMBERS-4.0.md) | Family numbers taken in 4.0 |
 | [SENSITIVITY-4.0-A.md](SENSITIVITY-4.0-A.md) | Sensitivity 4.0 (A2 to A4, B to B3, C1, X1 to X3 follow) |
 | [FEATURES-4.0-A.md](FEATURES-4.0-A.md) | Per-mode features (B to E follow; WIRING-4.0.md says what is on a screen) |

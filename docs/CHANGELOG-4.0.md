@@ -1,12 +1,12 @@
 # OnAir 4.0
 
-OnAir 4.0 adds 128 modes (464 rows in MODES.md, 462 in the app's mode list, which has no row for Plugins or Mode Builder). 3.9 had 336 rows, not the 333 its notes said: the list generator skipped KLW, TDCS and Horus balloons, which were in the app all along. It brings a new General receiver screen, a Workspace layout, one Ham station screen, new transmit screens, a propagation calculator on ITU-R models, a satellite tracker with a world map, a sharper zoomed waterfall, a community plugin marketplace, better sensitivity in many decoders, and fixes from your reports.
+OnAir 4.0 adds 52 new receivers: 388 entries in MODES.md in total, 386 in the app's mode list (it has no row for Plugins or Mode Builder). 3.9 had 336 rows, not the 333 its notes said: the list generator skipped KLW, TDCS and Horus balloons, which were in the app all along. It brings a new General receiver screen, a Workspace layout, one Ham station screen, new transmit screens, a propagation calculator on ITU-R models, a satellite tracker with a world map, a sharper zoomed waterfall, a community plugin marketplace, better sensitivity in many decoders, and fixes from your reports.
 
 **Measured** numbers come from OnAir's own generated test signals, not from over-the-air recordings, unless a line says so. Read **Known limits** at the end before relying on a new feature.
 
 ## Highlights
 
-- 128 new mode-list entries: 52 new receivers (six HF data modes from Rivet, DCR and 45 measurement and monitor modes) and 76 entries that show one type of an existing receiver (sensor brands, radiosonde types, AIS station kinds, time stations, analog TV standards and more).
+- 52 new receivers in the mode list (six HF data modes from Rivet, DCR and 45 measurement and monitor modes), 388 entries in total.
 - Lower thresholds in many decoders, from 1 dB to about 18 dB; the table is below.
 - New General receiver screen, Workspace canvas, Ham station screen, transmit screens, propagation calculator and satellite tracker.
 - Zoomed in, the waterfall is now sharp: a zoom FFT of the visible span and a pixel-exact waterfall.
@@ -66,7 +66,7 @@ All receive only. They were tested on simulated signals only: no recording of th
   - Science: GRAVES meteor echoes, Radio Jove bursts (a burst list next to the 3.9 Radio Jove entry), beacon propagation monitor, fading analyser (with the S4 scintillation index).
   - HF: UVB-76 buzzer monitor, VLF MSK transmitter monitor (no traffic decoded), FSK modems (Bell 103, V.21, V.23, Bell 202), passband signal classifier.
   - Tools: power-line noise locator, spectrum occupancy monitor, MER meter, carrier frequency accuracy meter, PTT and duty-cycle logger, intermodulation finder, spur and image finder, frequency-hopper analyser, birdie finder, burst finder, SDR input health meter, phase noise meter, SSB transmitter test meter, FM SINAD meter, FSK parameter analyser, noise figure (Y-factor) meter, CW keying quality meter, noise floor logger, NFM deviation and CTCSS meter, AFSK tone tuner, OOK / ASK pulse analyser, transmitter frequency stability meter, crest factor (PAPR / CCDF) meter, occupied bandwidth meter, spectral kurtosis RFI finder, SDR stream glitch detector.
-- **Entries for one type of an existing receiver** (docs/VIEWS-4.0.md, docs/SENSORVIEWS-4.0.md): no decoder changed, the entry shows only that type. 22 Sub-GHz sensor brands and kinds (Oregon Scientific, Acurite, LaCrosse, Fine Offset / Ecowitt, Bresser, tyre pressure sensors, meters, remotes and others), ten radiosonde types, nine Wireless M-Bus modes and manufacturers, three CubeSat framings, six AIS station kinds, eleven time stations, four GNSS systems (GPS, QZSS, GLONASS, BeiDou), eight analog TV standards and three NFC protocols.
+- **Type filters in existing receivers**: the Radiosonde screen can list one sonde type, AIS one kind of station (Class A, Class B, base stations, AtoN, SAR aircraft, AIS-SART / MOB / EPIRB), NFC one protocol, Wireless M-Bus one mode or one manufacturer, and GNSS can track one satellite system. No decoder changed.
 
 ## New features
 
@@ -131,7 +131,7 @@ OnAir's own code carries one attribution term under GPL section 7(b) (see ADDITI
 
 Please read these before relying on a new feature.
 
-- **Almost everything new was tested on simulated signals only.** This holds for all 52 new receivers (the Rivet modes, DCR and every measurement and monitor mode), the 76 type entries, every sensitivity figure above, the landing predictor's simulated table, the HFDL band search, the ham tools (no spot, callbook or log service was contacted) and the transmit screens. If you have a recording, please share it.
+- **Almost everything new was tested on simulated signals only.** This holds for all 52 new receivers (the Rivet modes, DCR and every measurement and monitor mode), the type filters, every sensitivity figure above, the landing predictor's simulated table, the HFDL band search, the ham tools (no spot, callbook or log service was contacted) and the transmit screens. If you have a recording, please share it.
 - **Not decoded**: DCR voice (frames counted only), UHF RFID tag replies, VLF MSK traffic. Encrypted content is never decrypted.
 - **Transmit has not been tried on the air.** The parameter model test checked that every row changes the signal; loopback tests: tx_loopback_tv 10/10, tx_loopback_rest 27/28 (Olivia 8 / 500 info).
 - **Map badges**: the server side was tested with local tests only; badges appear once map.on-air.dev runs the 4.0 hub.
