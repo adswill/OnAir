@@ -370,6 +370,45 @@ HfDay hfDay(const Params& p, double distKm, double bearing) {
     return d;
 }
 
+const std::vector<AntennaPreset>& antennaPresets() {
+    static const std::vector<AntennaPreset> v = {
+        {"isotropic (reference)", 0.0, "0 dBi by definition."},
+        {"rubber duck (handheld)", -3.0, "A short helical whip: -5 to 0 dBi, worse held close to the body."},
+        {"quarter-wave whip / ground plane", 1.5, "On a car roof or with radials: about 1 to 2 dBi toward the horizon."},
+        {"half-wave dipole", 2.15, "The classic reference: 2.15 dBi."},
+        {"5/8-wave vertical", 3.2, "About 3 dBi toward the horizon on a good ground plane."},
+        {"discone (wideband)", 0.0, "0 to 2 dBi over a decade of frequency."},
+        {"collinear (2 x 5/8)", 5.5, "A base-station vertical, 5 to 6 dBi."},
+        {"3-element yagi", 7.5, "About 7 to 8 dBi."},
+        {"7-element yagi", 11.0, "About 10 to 12 dBi."},
+        {"quad / log-periodic", 6.5, "A log-periodic is about 6 to 7 dBi over its range."},
+        {"HF inverted V / dipole at 10 m", 6.0, "Over ground at a sensible height the low-angle gain is about 5 to 7 dBi."},
+        {"HF vertical (quarter wave, radials)", 0.0, "About 0 dBi at low angles over average ground, more over sea."},
+        {"loop on a window (receive)", -15.0, "A small receiving loop: low gain, but often a lower noise pickup."},
+    };
+    return v;
+}
+
+const std::vector<CablePreset>& cablePresets() {
+    static const std::vector<CablePreset> v = {
+        {"RG-174", 2.71, 0.0144},    // 100 MHz 29 dB, 1000 MHz 100 dB per 100 m
+        {"RG-58", 1.536, 0.00643},   // 16 / 55
+        {"RG-8X (mini-8)", 1.052, 0.0098},   // 11.5 / 43
+        {"H155", 1.067, 0.00526},    // 11.2 / 39
+        {"RG-213", 0.643, 0.0057},   // 7 / 26
+        {"Aircell 7", 0.643, 0.00167},   // 6.6 / 22
+        {"LMR-400 / Ecoflex 10", 0.38, 0.00135},   // about 3.9 / 13.4
+        {"RG-6 (75 ohm TV / satellite)", 0.55, 0.0044},   // 6 / 22
+        {"1/2 inch hardline", 0.2, 0.0007},   // 2.1 / 7
+    };
+    return v;
+}
+
+double cableLossDb(const CablePreset& c, double fMHz, double lengthM) {
+    const double f = std::max(fMHz, 0.0);
+    return std::max(lengthM, 0.0) / 100.0 * (c.a * std::sqrt(f) + c.b * f);
+}
+
 std::vector<Series> sweepLossByModel(const Params& p, double maxKm, int n, double bearing) {
     std::vector<Series> out;
     struct V { const char* name; int model; double t, l; };

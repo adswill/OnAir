@@ -1,6 +1,7 @@
 // Satellite links: GEO look angles against the closed-form spherical result, LEO range rate / Doppler at the horizon (ISS, 2 m),
 // a Ku-band DVB-S2 downlink budget against a hand calculation, and the measured mode thresholds table.
 #include "dect2/prop/mode_snr.h"
+#include "dect2/prop/prop_scenario.h"
 #include "dect2/prop/sat_link.h"
 #include <cmath>
 #include <cstdio>
@@ -49,6 +50,17 @@ int main() {
         CHECK(d && modeRequiredSnrDb(*d, 0) == 5 && modeRequiredSnrDb(*d, 1) == 3 && modeRequiredSnrDb(*d, 2) == 9);
         CHECK(m && modeRequiredSnrDb(*m, 2) == 3);       // not measured with fading: falls back
         CHECK(modeThresholds().size() >= 40);
+    }
+    // antenna and cable presets (typical datasheet values: RG-58 16 dB / 100 m at 100 MHz, LMR-400 13.4 dB / 100 m at 1 GHz)
+    {
+        const auto& cs = cablePresets();
+        const CablePreset* rg58 = nullptr; const CablePreset* lmr = nullptr;
+        for (const auto& c : cs) { if (std::string(c.name) == "RG-58") rg58 = &c; if (std::string(c.name).find("LMR-400") == 0) lmr = &c; }
+        CHECK(rg58 && lmr);
+        if (rg58) { NEAR(cableLossDb(*rg58, 100, 100), 16, 0.3); NEAR(cableLossDb(*rg58, 145, 20), 3.9, 0.3); }
+        if (lmr) NEAR(cableLossDb(*lmr, 1000, 100), 13.4, 0.3);
+        CHECK(antennaPresets().size() >= 10);
+        for (const auto& a : antennaPresets()) CHECK(a.gainDbi > -30 && a.gainDbi < 30);
     }
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("prop_sat: all passed\n");

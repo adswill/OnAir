@@ -94,6 +94,13 @@ Series sweepRangeVsFrequency(const Params& p, double f0MHz, double f1MHz, int n,
 struct HfDay { std::vector<double> hour, muf, fot, luf; };                            // luf 0: no usable frequency that hour
 HfDay hfDay(const Params& p, double distKm, double bearing);
 
+// 4.0 presets for the antenna gain and the feeder loss (typical datasheet values)
+struct AntennaPreset { const char* name; double gainDbi; const char* note; };
+const std::vector<AntennaPreset>& antennaPresets();
+struct CablePreset { const char* name; double a, b; };   // loss per 100 m = a sqrt(f MHz) + b f MHz (dB), fitted to datasheets at 100 and 1000 MHz
+const std::vector<CablePreset>& cablePresets();
+double cableLossDb(const CablePreset& c, double fMHz, double lengthM);
+
 // 4.0 views
 // basic path loss against distance for several models side by side: free space, exact two-ray, P.1812 median, P.1812 for 90 % of locations,
 // P.1812 for 1 % of the time (the enhanced / interference case)

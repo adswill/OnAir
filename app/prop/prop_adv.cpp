@@ -27,6 +27,39 @@ void section(const char* title, bool open, void (*body)(State&, pr::Scenario&)) 
     }
 }
 
+// 4.0: preset pickers next to the antenna gain and feeder loss fields (they only fill in the number)
+void antennaPick(const char* id, double* gain) {
+    ImGui::SameLine();
+    if (ImGui::BeginCombo(id, nullptr, ImGuiComboFlags_NoPreview)) {
+        for (const pr::AntennaPreset& a : pr::antennaPresets()) {
+            char b[96];
+            std::snprintf(b, sizeof b, "%s  (%.4g dBi)", a.name, a.gainDbi);
+            if (ImGui::Selectable(b)) *gain = a.gainDbi;
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", a.note);
+        }
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", "Common antennas");
+}
+void cablePick(const char* id, double* loss, double fMHz) {
+    static double lengthM = 20;
+    ImGui::SameLine();
+    if (ImGui::BeginCombo(id, nullptr, ImGuiComboFlags_NoPreview)) {
+        ImGui::SetNextItemWidth(70 * gUi);
+        ImGui::InputDouble("m of", &lengthM, 0, 0, "%.4g");
+        lengthM = std::clamp(lengthM, 0.0, 10000.0);
+        for (const pr::CablePreset& c : pr::cablePresets()) {
+            char b[96];
+            const double l = pr::cableLossDb(c, fMHz, lengthM);
+            std::snprintf(b, sizeof b, "%s  (%.1f dB at %.4g MHz)", c.name, l, fMHz);
+            if (ImGui::Selectable(b)) *loss = l;
+        }
+        ImGui::TextDisabled("Typical datasheet loss; add about 0.2 dB per connector.");
+        ImGui::EndCombo();
+    }
+    ImGui::SetItemTooltip("%s", "Common cables: pick one and its length");
+}
+
 void txSection(State& S, pr::Scenario& s) {
     placeRowUi();
     S.labelCol = 150 * gUi;
@@ -46,7 +79,9 @@ void txSection(State& S, pr::Scenario& s) {
     if (ImGui::Combo("##advpu", &u, "W\0dBW\0dBm\0kW\0")) s.powerUnit = (pr::PowerUnit)u;
     numField("Antenna gain", &s.txGainDbi, "dBi", "Gain toward the horizon over an isotropic antenna: dipole 2.15, 5/8 vertical about 3, small yagi 7 to 10. "
              "Ignored when a pattern file is loaded below.");
+    antennaPick("##txant", &s.txGainDbi);
     numField("Feeder loss", &s.txFeederDb, "dB", "Cable and connectors between the transmitter and the antenna (e.g. 20 m of RG-58 at 145 MHz: about 4 dB).");
+    cablePick("##txcab", &s.txFeederDb, s.fMHz);
     numField("Height above ground", &s.txHeightM, "m", "Antenna height above the ground under it (with terrain: above the terrain at the transmitter).");
     int pol = (int)s.txPol;
     enumCombo("Polarisation", &pol, kPol, "Vertical for most mobile and FM, horizontal for TV and HF dipoles. A mismatch with the receive antenna costs 3 to 20 dB.");
@@ -128,8 +163,10 @@ void statsSection(State& S, pr::Scenario& s) {
 void rxSection(State& S, pr::Scenario& s) {
     S.labelCol = 150 * gUi;
     numField("Antenna gain", &s.rxGainDbi, "dBi", "Receive antenna gain toward the transmitter (a rubber duck is about -5 to 0, a discone 0 to 2, a yagi 7 to 15).");
+    antennaPick("##rxant", &s.rxGainDbi);
     numField("Height above ground", &s.rxHeightM, "m", "A handheld is about 1.5 m, a car 1.5 to 2 m, a roof aerial 10 m.");
     numField("Feeder loss", &s.rxFeederDb, "dB", "Cable loss between the antenna and the radio (or the preamplifier and the radio). It adds to the noise figure.");
+    cablePick("##rxcab", &s.rxFeederDb, s.fMHz);
     int pol = (int)s.rxPol;
     enumCombo("Polarisation", &pol, kPol, "The receive antenna's polarisation.");
     s.rxPol = (pr::Pol)pol;
