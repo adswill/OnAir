@@ -148,7 +148,8 @@ private:
         const int lmin = (int)(0.8 / dt), lmax = std::min(M / 2, (int)(12.0 / dt));
         double best = 0; int bl = 0;
         std::vector<double> r(lmax + 1, 0.0);
-        for (int l = lmin; l <= lmax; l++) { double a = 0; for (int i = 0; i + l < M; i++) a += s[i] * s[i + l]; r[l] = a / e0 * (double)M / (double)(M - l); if (r[l] > best) { best = r[l]; bl = l; } }
+        // (r is also computed one lag below the search: the fundamental test below needs r[l - 1], and an r[lmin - 1] of 0 made lmin look like a peak)
+        for (int l = lmin - 1; l <= lmax; l++) { double a = 0; for (int i = 0; i + l < M; i++) a += s[i] * s[i + l]; r[l] = a / e0 * (double)M / (double)(M - l); if (l >= lmin && r[l] > best) { best = r[l]; bl = l; } }
         // the modulation must be real: strong correlation and the log-level swing of at least 4 dB peak to peak
         double mn = 1e9, mx = -1e9; for (double v : s) { mn = std::min(mn, v); mx = std::max(mx, v); }
         if (best < 0.5 || (mx - mn) * 8.686 < 4.0) return 0;
