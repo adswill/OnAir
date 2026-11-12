@@ -295,10 +295,11 @@ static bool set_29(Engine& e, const std::string& n, double v) {
     if (n == "setThresholdDb") { call(r, &Rx<decltype(r)>::setThresholdDb, v); return true; }
     return false;
 }
-static const char kOpt_30[] = R"JSON([{"n":"setToneMode","k":"int","l":"Tone Mode","t":"s"}])JSON";
+static const char kOpt_30[] = R"JSON([{"n":"setToneMode","k":"int","l":"Tone Mode","t":"s"},{"n":"setIdentFolding","k":"bool","l":"Ident Folding","t":"s"}])JSON";
 static bool set_30(Engine& e, const std::string& n, double v) {
     auto& r = e.ndb();
     if (n == "setToneMode") { call(r, &Rx<decltype(r)>::setToneMode, v); return true; }
+    if (n == "setIdentFolding") { call(r, &Rx<decltype(r)>::setIdentFolding, v); return true; }
     return false;
 }
 static const char kOpt_31[] = R"JSON([{"n":"setFunction","k":"int","l":"Function","t":"s"},{"n":"setIdentFilter","k":"bool","l":"Ident Filter","h":"take the 1020 Hz ident tone out of the voice","u":"Hz","t":"s"}])JSON";
@@ -449,12 +450,13 @@ static bool set_57(Engine& e, const std::string& n, double v) {
     if (n == "setGate") { call(r, &Rx<decltype(r)>::setGate, v); return true; }
     return false;
 }
-static const char kOpt_59[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_59[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_59(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
 static const char kOpt_60[] = R"JSON([{"n":"setModulation","k":"choice","c":[{"v":0,"l":"automatic"},{"v":1,"l":"OQPSK 72k"},{"v":2,"l":"QPSK 72k"},{"v":3,"l":"OQPSK 80k interleaved"}],"l":"Modulation","h":"0 automatic, 1 OQPSK 72k, 2 QPSK 72k, 3 OQPSK 80k interleaved","t":"s"}])JSON";
@@ -560,10 +562,11 @@ static bool set_90(Engine& e, const std::string& n, double v) {
     if (n == "setDemod") { call(r, &Rx<decltype(r)>::setDemod, v); return true; }
     return false;
 }
-static const char kOpt_93[] = R"JSON([{"n":"setFalseBurstBudget","k":"num","l":"False Burst Budget","t":"s"}])JSON";
+static const char kOpt_93[] = R"JSON([{"n":"setFalseBurstBudget","k":"num","l":"False Burst Budget","t":"s"},{"n":"setRepairCostLimit","k":"num","l":"Repair Cost Limit","t":"s"}])JSON";
 static bool set_93(Engine& e, const std::string& n, double v) {
     auto& r = e.sarsat();
     if (n == "setFalseBurstBudget") { call(r, &Rx<decltype(r)>::setFalseBurstBudget, v); return true; }
+    if (n == "setRepairCostLimit") { call(r, &Rx<decltype(r)>::setRepairCostLimit, v); return true; }
     return false;
 }
 static const char kOpt_96[] = R"JSON([{"n":"setBandwidth","k":"int","l":"Bandwidth","h":"0 automatic, or 500 / 1000 / 2000","t":"s"},{"n":"setInterleave","k":"choice","c":[{"v":0,"l":"automatic"},{"v":1,"l":"short"},{"v":2,"l":"long"}],"l":"Interleave","h":"0 automatic, 1 short, 2 long","t":"s"}])JSON";
@@ -1271,92 +1274,103 @@ static bool set_602(Engine& e, const std::string& n, double v) {
     if (n == "setProtocols") { call(r, &Rx<decltype(r)>::setProtocols, v); return true; }
     return false;
 }
-static const char kOpt_608[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_608[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_608(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_611[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_611[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_611(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_614[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_614[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_614(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_617[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_617[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_617(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_629[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_629[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_629(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_632[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_632[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_632(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_635[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_635[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_635(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_638[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_638[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_638(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_643[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_643[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_643(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_646[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_646[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_646(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
-static const char kOpt_649[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_649[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_649(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
 static const char kOpt_664[] = R"JSON([{"n":"setRemoveAfterSec","k":"int","l":"Remove After Sec","u":"s","t":"s"},{"n":"setFskMode","k":"int","l":"Fsk Mode","t":"s"},{"n":"setFixedLevelDb","k":"num","l":"Fixed Level dB","h":"rtl_433 -Y level=","u":"dB","t":"s"},{"n":"setMinLevelDb","k":"num","l":"Min Level dB","h":"rtl_433 -Y minlevel=","u":"dB","t":"s"},{"n":"setAutoLevel","k":"bool","l":"Auto Level","t":"a"}])JSON";

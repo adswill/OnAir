@@ -151,12 +151,13 @@ case 30: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Fold Period Sec", t.foldPeriodSec);
+    cardIf(o, "Fold Z", t.foldZ);
+    cardIf(o, "Fold Quality", t.foldQuality);
+    cardIf(o, "Fold Text", t.foldText);
     cardIf(o, "Tone Hz", t.toneHz);
     cardIf(o, "Depth", t.depth);
     cardIf(o, "Wpm", t.wpm);
-    cardIf(o, "Ident", t.ident);
-    cardIf(o, "Text", t.text);
-    cardIf(o, "Partial", t.partial);
     { Table tb({"Item"}); int n = 0; for (auto it = t.history.rbegin(); it != t.history.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "History", tb); }
     { Table tb({"Offset Hz", "Level Db", "Snr Db", "Wpm", "Tone Hz", "Ident", "Last Wall"}); int n = 0; for (auto it = t.census.rbegin(); it != t.census.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.offsetHz), cell(e.levelDb), cell(e.snrDb), cell(e.wpm), cell(e.toneHz), cell(e.ident), cell(e.lastWall)}); } if (n) addTable(o, "Census", tb); }
     break;
@@ -450,10 +451,10 @@ case 59: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -938,7 +939,7 @@ case 93: {
     cardIf(o, "Input Rate", t.inputRate);
     cardIf(o, "Wide Span Hz", t.wideSpanHz);
     cardIf(o, "Wide Channels", t.wideChannels);
-    { Table tb({"Wall Time", "Time Sec", "Snr Db", "Level Db", "Cfo Hz"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.timeSec), cell(e.snrDb), cell(e.levelDb), cell(e.cfoHz)}); } if (n) addTable(o, "Log", tb); }
+    { Table tb({"Wall Time", "Time Sec", "Snr Db", "Level Db", "Cfo Hz", "Combined"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.timeSec), cell(e.snrDb), cell(e.levelDb), cell(e.cfoHz), cell(e.combined)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
 case 96: {
@@ -3068,10 +3069,10 @@ case 608: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3085,10 +3086,10 @@ case 611: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3102,10 +3103,10 @@ case 614: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3119,10 +3120,10 @@ case 617: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3255,10 +3256,10 @@ case 629: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3272,10 +3273,10 @@ case 632: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3289,10 +3290,10 @@ case 635: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3306,10 +3307,10 @@ case 638: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3340,10 +3341,10 @@ case 643: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3357,10 +3358,10 @@ case 646: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -3374,10 +3375,10 @@ case 649: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
