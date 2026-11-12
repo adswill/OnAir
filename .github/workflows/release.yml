@@ -92,6 +92,7 @@ jobs:
       built: ${{ steps.pfx.outputs.have }}
     env:
       GH_TOKEN: ${{ github.token }}
+      ONAIR_DEBUG_SYMBOLS: "ON"   # -g and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_MAXSIZE: 1G
@@ -135,6 +136,18 @@ jobs:
           ONAIR_WIN_BUILD: build-windows
           ONAIR_WIN_NO_INSTALLER: "1"   # the installer is made on Linux (windows-installer below): Homebrew's makensis crashes on some macOS versions
         run: tools/package/make_windows_cross.sh "${{ needs.version.outputs.ver }}"
+      - name: Debug symbols
+        if: steps.pfx.outputs.have == 'true'
+        run: |
+          cmake --build build-windows --target debug_symbols_zip
+          mv "build-windows/symbols_v${{ needs.version.outputs.ver }}.zip" "build-windows/symbols_v${{ needs.version.outputs.ver }}_windows-x64.zip"
+      - uses: actions/upload-artifact@v7
+        if: steps.pfx.outputs.have == 'true'
+        with:
+          name: symbols_v${{ needs.version.outputs.ver }}_windows-x64
+          path: build-windows/symbols_v*_windows-x64.zip
+          retention-days: 90
+          if-no-files-found: error
       - name: ccache statistics
         if: always() && steps.pfx.outputs.have == 'true'
         run: ccache -s
@@ -188,6 +201,7 @@ jobs:
     if: needs.version.outputs.skip != 'true' && (github.event_name != 'workflow_dispatch' || inputs.platform == 'all' || inputs.platform == 'macos')
     env:
       MACOSX_DEPLOYMENT_TARGET: "15.0"
+      ONAIR_DEBUG_SYMBOLS: "ON"   # -g and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_BASEDIR: ${{ github.workspace }}
       CCACHE_MAXSIZE: 1G
@@ -221,6 +235,16 @@ jobs:
             ccache-release-macos-${{ matrix.arch }}-
       - name: Build the app and the .dmg
         run: FFMPEG_PREFIX="$HOME/ffmpeg" tools/package/make_dmg.sh "${{ needs.version.outputs.ver }}"
+      - name: Debug symbols
+        run: |
+          cmake --build build-release --target debug_symbols_zip
+          mv "build-release/symbols_v${{ needs.version.outputs.ver }}.zip" "build-release/symbols_v${{ needs.version.outputs.ver }}_macos-${{ matrix.arch }}.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: symbols_v${{ needs.version.outputs.ver }}_macos-${{ matrix.arch }}
+          path: build-release/symbols_v*_macos-*.zip
+          retention-days: 90
+          if-no-files-found: error
       - name: Save ccache
         if: always()
         uses: actions/cache/save@v6
@@ -267,6 +291,7 @@ jobs:
             ccache-release-${{ matrix.arch }}-
       - name: Build
         env:
+          ONAIR_DEBUG_SYMBOLS: "ON"   # -g and the target debug_symbols_zip (CMakeLists.txt): the symbols for the debug dumps
           CCACHE_DIR: ${{ github.workspace }}/.ccache
           CCACHE_BASEDIR: ${{ github.workspace }}
           CCACHE_MAXSIZE: 1G
@@ -281,6 +306,16 @@ jobs:
         with:
           path: .ccache
           key: ccache-release-${{ matrix.arch }}-${{ hashFiles('CMakeLists.txt', 'cmake/**') }}-${{ github.sha }}
+      - name: "Debug symbols (before Package: the target strips the debug sections from the programs in build/)"
+        run: |
+          cmake --build build --target debug_symbols_zip
+          mv "build/symbols_v${{ needs.version.outputs.ver }}.zip" "build/symbols_v${{ needs.version.outputs.ver }}_linux-${{ matrix.arch }}.zip"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: symbols_v${{ needs.version.outputs.ver }}_linux-${{ matrix.arch }}
+          path: build/symbols_v*_linux-*.zip
+          retention-days: 90
+          if-no-files-found: error
       - name: Package
         run: |
           cd build && cpack -G DEB

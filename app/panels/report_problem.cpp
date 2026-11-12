@@ -135,7 +135,7 @@ std::string readmeText() {
            "Recordings, settings, keys and passwords are not in this zip.\n";
 }
 
-std::string buildDiagnostics(App& a, const int* answers) {
+std::string buildDiagnostics(App& a, const int* answers, bool withLog = true) {   // answers nullptr: no troubleshooter part
     std::string os, cpu, gpu;
     systemInfoText(os, cpu, gpu);
     std::string s = "OnAir problem report\n";
@@ -184,12 +184,13 @@ std::string buildDiagnostics(App& a, const int* answers) {
     if (a.rx.gpuAvailable) s += "  GPU LDPC decoder\n";
     if (a.netOn) s += "  remote control API\n";
 
-    s += "\nTroubleshooter answers:\n";
-    for (int i = 0; i < kNumQ; i++) {
+    if (answers) s += "\nTroubleshooter answers:\n";
+    for (int i = 0; answers && i < kNumQ; i++) {
         const char* ans = answers[i] == 1 ? "yes" : answers[i] == 2 ? "no" : "not answered";
         s += std::string("  ") + kQuestions[i].ask + " " + ans + "\n";
     }
 
+    if (!withLog) return s;
     size_t total = 0;
     std::vector<std::string> lines = a.engine.logSnapshot(total);
     const size_t from = lines.size() > kLogLines ? lines.size() - kLogLines : 0;
@@ -202,6 +203,10 @@ std::string buildDiagnostics(App& a, const int* answers) {
 }
 
 }  // namespace
+
+std::string reportCleanText(const std::string& text) { return clean(text); }
+bool reportMayHoldSecret(const std::string& line) { return mayHoldSecret(line); }
+std::string reportRadioAndMode(App& a) { return buildDiagnostics(a, nullptr, false); }
 
 void reportProblemWindow(App& a) {
     ReportState& st = state();

@@ -443,6 +443,7 @@ void makeDirs(const std::string& path) {
 bool replaceFile(const std::string& from, const std::string& to) { return MoveFileExW(wide(from).c_str(), wide(to).c_str(), MOVEFILE_REPLACE_EXISTING) != 0; }
 
 std::string fileDialog(bool save, const char* name) {
+    DialogScope blocked;
     wchar_t buf[MAX_PATH * 4] = {0};
     if (save && name) wcsncpy(buf, wide(name).c_str(), MAX_PATH - 1);
     OPENFILENAMEW o{};
@@ -627,6 +628,7 @@ std::string openFolderDialog() {
 }
 #else
 std::string openFolderDialog() {
+    DialogScope blocked;
     if (haveProgram("zenity")) return capture("zenity --file-selection --directory --title='Choose a folder' 2>/dev/null");
     if (haveProgram("kdialog")) return capture("kdialog --getexistingdirectory \"$HOME\" 2>/dev/null");
     fprintf(stderr, "no folder dialog available (install zenity or kdialog); type the path in the text field instead\n");
@@ -634,6 +636,7 @@ std::string openFolderDialog() {
 }
 
 std::string openFileDialog() {
+    DialogScope blocked;
     if (haveProgram("zenity")) return capture("zenity --file-selection --title='Open' 2>/dev/null");
     if (haveProgram("kdialog")) return capture("kdialog --getopenfilename \"$HOME\" 2>/dev/null");
     fprintf(stderr, "no file dialog available (install zenity or kdialog); type the path in the text field instead\n");
@@ -641,6 +644,7 @@ std::string openFileDialog() {
 }
 
 std::string saveFileDialog(const char* name) {
+    DialogScope blocked;
     if (haveProgram("zenity")) return capture("zenity --file-selection --save --confirm-overwrite --filename=" + shellQuote(name) + " 2>/dev/null");
     if (haveProgram("kdialog")) return capture("kdialog --getsavefilename " + shellQuote(name) + " 2>/dev/null");
     fprintf(stderr, "no file dialog available (install zenity or kdialog); type the path in the text field instead\n");

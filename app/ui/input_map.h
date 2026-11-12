@@ -413,6 +413,7 @@ inline const char* reservedReason(const Binding& b) {
     if (b.kind == 1) {
         if (b.code == ImGuiKey_Escape) return N_("Esc closes dialogs and stops the transmitter");
         if (b.code >= ImGuiKey_LeftCtrl && b.code <= ImGuiKey_RightSuper) return N_("A modifier alone cannot be a key");
+        if (b.code == ImGuiKey_D && (b.mods & M_Ctrl) && !(b.mods & ~M_Ctrl)) return N_("Ctrl+D makes a debug report");
         if (b.code == ImGuiKey_Tab && b.mods == 0) return N_("Tab moves between the controls");
         if (b.code >= ImGuiKey_ReservedForModCtrl && b.code <= ImGuiKey_ReservedForModSuper) return N_("A modifier alone cannot be a key");
     }

@@ -9,3 +9,10 @@
 
 // Draws the window while a.reportOpen is set (report_problem.cpp).
 void reportProblemWindow(App& a);
+
+// Shared with the debug report (debug_report.cpp): folder paths shortened (personal folders become "~" or the folder name) ...
+std::string reportCleanText(const std::string& text);
+// ... a line that may hold a key, token, password or serial ...
+bool reportMayHoldSecret(const std::string& line);
+// ... and the version, this computer, the selected source and the active mode, as in diagnostics.txt (without troubleshooter and log).
+std::string reportRadioAndMode(App& a);
