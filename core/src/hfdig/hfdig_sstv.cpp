@@ -11,6 +11,14 @@
 // Receiving: each line's sync pulse is searched near where the previous ones predict it; a straight line fitted through the line start
 // times gives the line period of the sender against this clock (the slant, as a ratio applied to all times inside the line) and the
 // position of each line. A line is cut into pixels when its time has passed.
+// Picture filter (4.0, on by default, setNoiseFilter). First along each line: the tone noise of one pixel is measured on every sync
+// pulse (the spread of pixel-long means inside its steady middle), and each pixel's tone goes through a local Wiener filter over 7
+// pixels with that noise (FM noise rises with frequency, so neighbouring pixels share most of it): flat stretches are averaged, edges
+// kept, a clean line is left as it is. Then the pixels are written to a raw picture; each row, once the rows around it are
+// final, goes to the shown picture through a noise-adaptive filter. The noise of each colour is measured on the picture itself (the
+// median absolute 3x3 Laplacian of the raw rows, which an edge or a texture hardly moves), so a clean picture is left as it was. With
+// the noise known, a 3x3 local Wiener (Lee) filter keeps edges and smooths flat areas; on a very noisy picture (sigma 30 levels and more)
+// the FM clicks (single pixels far from all their neighbours) are first replaced by the median of the eight around them.
 #include "dect2/hfdig/hfdig_sstv.h"
 #include "dect2/hfdig/hfdig_gen.h"
 #include "hfdig_sstv_modes.h"
@@ -78,8 +86,12 @@ struct HfdigSstv::Impl {
         double sk = 0, sc = 0, skk = 0, skc = 0, a = 0, b = 0;
         int missed = 0;
         double slant = 0;
-        std::vector<uint8_t> rgb;
+        std::vector<uint8_t> rgb;            // the picture shown (filtered rows, then raw rows not filtered yet)
+        std::vector<uint8_t> raw;            // the pixels as measured
         int rows = 0;
+        int lapRows = 0, filtRows = 0;
+        double noiseHz2 = -1, noiseL = 0;    // variance (Hz^2) of the mean tone over noiseL samples inside the sync pulses (the line's noise)       // raw rows counted into the noise measure / rows written to rgb through the filter
+        std::vector<uint32_t> lapHist[3];    // per colour: histogram of |3x3 Laplacian| of the final raw rows
         std::vector<double> yPend;           // Robot 36: luma and R-Y of the even line waiting for its B-Y
         std::vector<double> ryPend;
         int pendLine = -1;
@@ -87,6 +99,7 @@ struct HfdigSstv::Impl {
         int64_t t0 = 0;
     } rx;
     bool active = false;
+    bool noiseFilter = true;
 
     // ------------------------------------------------------------ report
     HfdigSstvTelemetry tel;
@@ -240,6 +253,8 @@ struct HfdigSstv::Impl {
         rx.sp = &s; rx.vis = vis; rx.c0 = c0; rx.off = off;
         rx.periodS = s.info.lineMs * 8;
         rx.rgb.assign((size_t)s.info.width * s.info.height * 3, 0);
+        rx.raw = rx.rgb;
+        for (auto& hst : rx.lapHist) hst.assign(kLapBins, 0);
         rx.id = gNextId++;
         rx.t0 = (int64_t)std::time(nullptr);
         active = true; vs = Idle; leadCount = 0; leadSum = 0; leadMean = kCenter; events.clear(); inPulse = false;
@@ -311,6 +326,7 @@ struct HfdigSstv::Impl {
             return;
         }
         rx.missed = 0;
+        measureNoise(tb, W);
         if (!rx.vis) rx.off = rx.nFit == 0 ? mv - 1200 - 12 : 0.9 * rx.off + 0.1 * (mv - 1200 - 12);   // no leader to measure: the sync pulse (its mean sits about 12 Hz high, the filter blurs its edges)
         const double cc = cm - rx.c0;
         rx.nFit++; rx.sk += k; rx.sc += cc; rx.skk += (double)k * k; rx.skc += k * cc;
@@ -333,12 +349,105 @@ struct HfdigSstv::Impl {
         const double t0 = c + startMs * 8 * r, t1 = c + (startMs + lenMs) * 8 * r;
         return meanF(t0, t1);
     }
+    // the frequency noise of one pixel: windows of the shortest pixel inside the steady middle of the sync pulse at tb (width W samples)
+    void measureNoise(double tb, double W) {
+        if (rx.noiseL <= 0) { rx.noiseL = 1e9; for (const Scan& sc : rx.sp->scans) rx.noiseL = std::min(rx.noiseL, sc.lenMs / sc.px * 8); }
+        const double L = rx.noiseL, a = tb + 0.2 * W, b = tb + 0.8 * W;
+        double s1 = 0, s2 = 0; int k = 0;
+        for (double t = a; t + L <= b; t += L) { const double f = meanF(t, t + L); s1 += f; s2 += f * f; k++; }
+        if (k < 3) return;
+        const double v = std::max(0.0, (s2 - s1 * s1 / k) / (k - 1));
+        rx.noiseHz2 = rx.noiseHz2 < 0 ? v : rx.noiseHz2 + 0.1 * (v - rx.noiseHz2);
+    }
     void scan(double c, double r, const Scan& s, std::vector<double>& out) const {
         out.resize((size_t)s.px);
         const double px = s.lenMs / s.px;
-        for (int i = 0; i < s.px; i++) out[(size_t)i] = valueOf(meanOver(c, r, s.startMs + i * px, px));
+        std::vector<double> f((size_t)s.px);
+        for (int i = 0; i < s.px; i++) f[(size_t)i] = meanOver(c, r, s.startMs + i * px, px);
+        if (noiseFilter && rx.noiseHz2 > 0) {   // along the line: a 7-pixel local Wiener filter with the noise of a pixel this long
+            constexpr int RF = 3;
+            const double nv = rx.noiseHz2 * (rx.noiseL / (px * 8)) * (rx.noiseL / (px * 8));
+            const int n = s.px;
+            for (int i = 0; i < n; i++) {
+                double s1 = 0, s2 = 0; int k = 0;
+                for (int d = -RF; d <= RF; d++) { const double v = f[(size_t)std::max(0, std::min(n - 1, i + d))]; s1 += v; s2 += v * v; k++; }
+                const double mu = s1 / k, var = std::max(0.0, s2 / k - mu * mu);
+                const double g = var > 1e-9 ? std::max(0.0, var - nv) / var : 0.0;
+                out[(size_t)i] = valueOf(mu + g * (f[(size_t)i] - mu));
+            }
+            return;
+        }
+        for (int i = 0; i < s.px; i++) out[(size_t)i] = valueOf(f[(size_t)i]);
     }
-    uint8_t* row(int y) { return &rx.rgb[(size_t)y * rx.sp->info.width * 3]; }
+    uint8_t* row(int y) { return &rx.raw[(size_t)y * rx.sp->info.width * 3]; }
+
+    // ------------------------------------------------------------ picture filter
+    static constexpr int kLapBins = 1024;
+    int rawAt(int x, int y, int c) const {
+        const int w = rx.sp->info.width;
+        x = std::max(0, std::min(w - 1, x)); y = std::max(0, std::min(rx.rows - 1, y));
+        return rx.raw[((size_t)y * w + x) * 3 + c];
+    }
+    // the noise of colour c in levels: 1.4826 x median |L| / 6 (L the 3x3 Laplacian [1 -2 1; -2 4 -2; 1 -2 1], 6 its noise gain)
+    double noiseSigma(int c) const {
+        const auto& hst = rx.lapHist[c];
+        uint64_t tot = 0;
+        for (uint32_t v : hst) tot += v;
+        if (tot < 2000) return 0;
+        uint64_t acc = 0;
+        for (int b = 0; b < kLapBins; b++) { acc += hst[(size_t)b]; if (2 * acc >= tot) return 1.4826 * (b + 0.5) / 6.0; }
+        return 1.4826 * kLapBins / 6.0;
+    }
+    // raw rows below `final` will not change any more: count them into the noise measure, then filter what has its rows around it
+    void filterRows(int final, bool all) {
+        const Spec& sp = *rx.sp;
+        const int w = sp.info.width;
+        for (; rx.lapRows + 1 < final; rx.lapRows++) {
+            const int y = rx.lapRows;
+            if (y < 1) continue;
+            for (int x = 1; x + 1 < w; x += 2) for (int c = 0; c < 3; c++) {
+                const int L = rawAt(x - 1, y - 1, c) - 2 * rawAt(x, y - 1, c) + rawAt(x + 1, y - 1, c) - 2 * rawAt(x - 1, y, c) + 4 * rawAt(x, y, c)
+                              - 2 * rawAt(x + 1, y, c) + rawAt(x - 1, y + 1, c) - 2 * rawAt(x, y + 1, c) + rawAt(x + 1, y + 1, c);
+                rx.lapHist[c][(size_t)std::min(kLapBins - 1, std::abs(L))]++;
+            }
+        }
+        const int upTo = all ? rx.rows : rx.lapRows < 8 ? 0 : std::min(final - 1, rx.rows);   // the first rows wait until the noise is known
+        double sg[3];
+        for (int c = 0; c < 3; c++) sg[c] = noiseFilter ? noiseSigma(c) : 0;
+        for (; rx.filtRows < upTo; rx.filtRows++) {
+            const int y = rx.filtRows;
+            uint8_t* o = &rx.rgb[(size_t)y * w * 3];
+            for (int c = 0; c < 3; c++) {
+                const double s = sg[c];
+                if (s < 1.5) { for (int x = 0; x < w; x++) o[x * 3 + c] = (uint8_t)rawAt(x, y, c); continue; }
+                const bool clicks = s >= 30;
+                auto val = [&](int x, int yy) -> double {   // a raw pixel, a click replaced by the median of its eight neighbours
+                    const int v0 = rawAt(x, yy, c);
+                    if (!clicks) return v0;
+                    int nb[8], k = 0;
+                    for (int dy = -1; dy <= 1; dy++) for (int dx = -1; dx <= 1; dx++) if (dx || dy) nb[k++] = rawAt(x + dx, yy + dy, c);
+                    std::sort(nb, nb + 8);
+                    const double med = 0.5 * (nb[3] + nb[4]);
+                    return std::fabs(v0 - med) > 2.5 * s ? med : v0;
+                };
+                const double nv = 2 * s * s;   // twice the measured noise: the FM noise is not white (it rises with the pixel rate)
+                std::vector<double> win(3 * (size_t)w);
+                for (int x = 0; x < w; x++) for (int dy = -1; dy <= 1; dy++) win[(size_t)x * 3 + (size_t)(dy + 1)] = val(x, y + dy);
+                for (int x = 0; x < w; x++) {
+                    double sum = 0, sum2 = 0;
+                    for (int dx = -1; dx <= 1; dx++) {
+                        const int xx = std::max(0, std::min(w - 1, x + dx));
+                        for (int dy = 0; dy < 3; dy++) { const double v = win[(size_t)xx * 3 + (size_t)dy]; sum += v; sum2 += v * v; }
+                    }
+                    const double mu = sum / 9, var = std::max(0.0, sum2 / 9 - mu * mu);
+                    const double g = var > 1e-9 ? std::max(0.0, var - nv) / var : 0.0;
+                    o[x * 3 + c] = clamp8(mu + g * (win[(size_t)x * 3 + 1] - mu));
+                }
+            }
+        }
+        // rows not filtered yet are shown raw
+        for (int y = rx.filtRows; y < rx.rows; y++) std::copy_n(&rx.raw[(size_t)y * w * 3], (size_t)w * 3, &rx.rgb[(size_t)y * w * 3]);
+    }
 
     void extractLine(int k) {
         const Spec& sp = *rx.sp;
@@ -367,8 +476,9 @@ struct HfdigSstv::Impl {
                 for (int x = 0; x < w; x++) yuvToRgb(comp[kY][(size_t)x], chroma[(size_t)x / 2], 128, row(k) + x * 3);
             } else {
                 for (int x = 0; x < w; x++) {
-                    const double ry = rx.pendLine == k - 1 ? rx.ryPend[(size_t)x / 2] : 128;
-                    if (rx.pendLine == k - 1) yuvToRgb(rx.yPend[(size_t)x], ry, chroma[(size_t)x / 2], row(k - 1) + x * 3);
+                    const bool pend = rx.pendLine >= 0 && rx.pendLine == k - 1;   // the first line of a weak picture can read as odd: nothing is waiting then
+                    const double ry = pend ? rx.ryPend[(size_t)x / 2] : 128;
+                    if (pend) yuvToRgb(rx.yPend[(size_t)x], ry, chroma[(size_t)x / 2], row(k - 1) + x * 3);
                     yuvToRgb(comp[kY][(size_t)x], ry, chroma[(size_t)x / 2], row(k) + x * 3);
                 }
                 rx.pendLine = -1;
@@ -385,6 +495,7 @@ struct HfdigSstv::Impl {
             rx.rows = 2 * (k + 1);
             break;
         }
+        filterRows(rx.rows - 2, false);   // Robot 36 rewrites the row before; PD writes two
         dirty = true;
     }
 
@@ -397,6 +508,7 @@ struct HfdigSstv::Impl {
 
     void finish(bool complete) {
         active = false;
+        filterRows(rx.rows, true);
         if (rx.rows > 4 || complete) {
             auto im = snapshot(complete);
             image = im; imageSeq++;
@@ -427,6 +539,7 @@ void HfdigSstv::feedAudio(const float* x, size_t n) {
     p_->tel.audioSamples += n;
 }
 void HfdigSstv::telemetry(HfdigSstvTelemetry& out) const { p_->publish(out); }
+void HfdigSstv::setNoiseFilter(bool on) { p_->noiseFilter = on; }
 void HfdigSstv::setHistory(std::vector<std::shared_ptr<const HfdigSstvImage>> h) {
     for (const auto& im : h) if (im && im->id >= gNextId.load()) gNextId = im->id + 1;   // new pictures get higher numbers (the screen lists by them)
     if (h.size() > (size_t)kSstvHistory) h.resize((size_t)kSstvHistory);

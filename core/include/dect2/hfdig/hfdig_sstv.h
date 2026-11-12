@@ -76,6 +76,8 @@ public:
     void telemetry(HfdigSstvTelemetry& out) const;   // the receiver thread, between feedAudio() calls
     // the receiver thread: the finished pictures from a results file, or none (the user's Clear)
     void setHistory(std::vector<std::shared_ptr<const HfdigSstvImage>> h);
+    // the noise-adaptive picture filter (on by default; a clean picture passes unchanged). Off: the pixels as measured, as in 3.9
+    void setNoiseFilter(bool on);
 
 private:
     struct Impl;

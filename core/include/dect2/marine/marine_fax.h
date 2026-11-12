@@ -45,6 +45,7 @@ public:
     void setSlantPpm(double ppm);       // trim of the line period in ppm (positive = a line lasts longer in audio samples,
                                         // i.e. the audio clock runs fast); changes the rows already received too
     void setAutoSlant(bool on);         // estimate the slant from the phasing lines (default on); the manual value is added to it
+    void setNoiseFilter(bool on);       // weak signals: the noise-adaptive row filter (default on); off: the rows as measured (3.9)
     void setMaxLines(int n);            // image height limit, default 8000 (JMH charts run to 4500 lines, #390); the image stops growing there
     void reset();
     void push(const float* audio, size_t n);

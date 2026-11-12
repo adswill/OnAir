@@ -45,6 +45,7 @@ struct FaxDecoder::State {
     std::atomic<int> lpmSet{0}, iocSet{0}, maxLines{8000};
     std::atomic<double> manualPpm{0};
     std::atomic<bool> autoSlant{true};
+    std::atomic<bool> noiseFilter{true};
 
     std::mutex procMtx;                          // push / configure / reset
     std::mutex pubMtx;                           // what status() and latestImage() read
@@ -702,6 +703,8 @@ struct FaxDecoder::State {
         imgSeq++;
     }
 
+    std::vector<double> fr, ff, dd;   // a row's tones, filtered, second differences (row filter)
+    double nvAvg = -1;               // the row filter's noise (Hz^2), averaged over rows
     void imageLines() {
         applyManual();
         const int W = imgW;
@@ -712,15 +715,38 @@ struct FaxDecoder::State {
             if (rowIdx >= cap) { st.state = 3; break; }
             const double s = imgStart + rowIdx * Puse;
             const double spp = Puse / W;
+            if (rowIdx == 0) nvAvg = -1;
             // the picture: through the narrow filter while the signal is weak (or not measured), the wide one when it is strong
             const std::vector<double>& cp = snrAvg >= kWideSnrDb ? cumW : cum;
             double prev = integ(cp, s);
             const double span = fwUse - fbUse;
+            fr.resize(W);
             for (int j = 0; j < W; j++) {
                 const double nxt = integ(cp, s + (j + 1) * spp);
-                const double f = (nxt - prev) / spp;
+                fr[j] = (nxt - prev) / spp;
                 prev = nxt;
-                const double v = (f - fbUse) / span;
+            }
+            // 4.0 row filter (weak signals only, the narrow path): the noise of one pixel from the row itself (1.4826 x the median
+            // |second difference| / sqrt 6, which edges hardly move), then a local Wiener filter over 7 pixels with it: flat stretches are
+            // averaged, the edges of the chart's lines and letters kept (docs/SENSITIVITY-4.0-X2.md)
+            if (noiseFilter.load() && snrAvg < kWideSnrDb && W >= 16) {
+                dd.clear();
+                for (int j = 1; j + 1 < W; j++) dd.push_back(std::fabs(fr[j - 1] - 2 * fr[j] + fr[j + 1]));
+                std::nth_element(dd.begin(), dd.begin() + dd.size() / 2, dd.end());
+                const double sg = 1.4826 * dd[dd.size() / 2] / std::sqrt(6.0);
+                nvAvg = nvAvg < 0 ? sg * sg : nvAvg + 0.1 * (sg * sg - nvAvg);
+                ff.resize(W);
+                for (int j = 0; j < W; j++) {
+                    double a1 = 0, a2 = 0;
+                    for (int d = -3; d <= 3; d++) { const double v = fr[std::clamp(j + d, 0, W - 1)]; a1 += v; a2 += v * v; }
+                    const double mu = a1 / 7, lv = std::max(0.0, a2 / 7 - mu * mu);
+                    const double g = lv > 1e-12 ? std::max(0.0, lv - nvAvg) / lv : 0.0;
+                    ff[j] = mu + g * (fr[j] - mu);
+                }
+                fr.swap(ff);
+            }
+            for (int j = 0; j < W; j++) {
+                const double v = (fr[j] - fbUse) / span;
                 row[j] = static_cast<uint8_t>(std::lround(255.0 * std::min(1.0, std::max(0.0, v))));
             }
             {
@@ -942,6 +968,7 @@ void FaxDecoder::setLpm(int lpm) { s_->lpmSet = lpm; }
 void FaxDecoder::setIoc(int ioc) { s_->iocSet = ioc; }
 void FaxDecoder::setSlantPpm(double ppm) { s_->manualPpm = std::min(2000.0, std::max(-2000.0, ppm)); }
 void FaxDecoder::setAutoSlant(bool on) { s_->autoSlant = on; }
+void FaxDecoder::setNoiseFilter(bool on) { s_->noiseFilter = on; }
 void FaxDecoder::setMaxLines(int n) { s_->maxLines = std::max(1, n); }
 
 void FaxDecoder::reset() {

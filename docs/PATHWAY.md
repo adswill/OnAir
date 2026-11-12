@@ -1898,3 +1898,9 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+## 2026-11-12 (feat40-sensX2): SSTV picture filter, NFM click removal looked at
+- SSTV (core/src/hfdig/hfdig_sstv.cpp): noise-adaptive picture filter, on by default (`setNoiseFilter`): a 7-pixel Wiener filter along each line with the pixel noise measured on the sync pulses, then a 3x3 Lee filter (click median at high noise) with the noise measured on the picture. Martin M1 at 6 dB in 3 kHz: mean error 20.2 -> 6.6 levels; Robot 36 at 10 dB 27.0 -> 12.3; no loss at 30-40 dB on a textured picture. Simulated only (docs/SENSITIVITY-4.0-X2.md).
+- Fixed: a weak Robot 36 picture whose first line read as odd crashed the decoder (empty pending chroma).
+- NFM click removal built twice and dropped: the 12 dB SINAD point (8.4 dB) is above the FM threshold, gains were 0.3 dB at most.
+- Guard test hfdig_sstv_sens40; bench tests/hfdig/sstv_sens40_bench.cpp (not a ctest).
+- (feat40-sensX2, later) Weather fax: row Wiener filter on weak signals (mean row correlation at 2 dB 0.460 -> 0.634, sens39 passes 0 -> 3 of 3 at 2 and 1 dB). NOAA APT: click median + line Wiener filter with the noise of space A (PSNR at 2 dB 10.2 -> 12.8 dB, at 15 dB 30.5 -> 32.8 dB). Tests marine_fax_sens40, wxsat_apt40, measured on the GitHub Linux runner.
