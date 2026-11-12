@@ -78,7 +78,7 @@ int main() {
         CHECK(std::fabs(hz("154 MHz ch 28") - 154.6125e6) < 1, "154 MHz ch 28");
         CHECK(std::fabs(hz("relay D10 input") - 465.090625e6) < 1 && std::fabs(hz("relay D10 output") - 468.853125e6) < 1 && std::fabs(hz("relay D1 output") - 468.796875e6) < 1, "relay pairs");
         std::set<long long> seen; int dup = 0;
-        for (auto& c : dcr::channelsOfBand(351)) { const long long k = std::llround(c.hz); if (!seen.insert(k).second) dup++; if (std::fmod(std::llround(c.hz - 351.03125e6), 6250.0) != 0) dup += 100; }
+        for (const dcr::Channel* c : dcr::channelsOfBand(351)) { const long long k = std::llround(c->hz); if (!seen.insert(k).second) dup++; if (std::fmod((double)std::llround(c->hz - 351.03125e6), 6250.0) != 0) dup += 100; }
         CHECK(dup == 0, "351 MHz channels repeat or are off the 6.25 kHz grid (%d)", dup);
         const dcr::Channel* c = dcr::findChannel(351.2875e6 + 300);
         CHECK(c && c->label == "351 MHz ch 15" && c->calling, "findChannel near the calling channel");
