@@ -40,7 +40,7 @@ std::vector<Scen> scenarios(const Mode& m) {
 
 struct Prep { Sig base; double power = 0; size_t trialN = 0, maxOff = 0; double need = 1; };
 
-double trial(const Mode& m, const Prep& P, const Scen& sc, double snrDb, uint64_t seed) {
+Sig impaired(const Mode& m, const Prep& P, const Scen& sc, double snrDb, uint64_t seed) {
     std::mt19937 rng((uint32_t)(seed ^ (seed >> 32)));
     const size_t off = P.maxOff ? (size_t)(mix64(seed ^ 0x51ed) % P.maxOff) : 0;
     const size_t pad = (size_t)(m.rate * 0.01) + 64;
@@ -53,6 +53,11 @@ double trial(const Mode& m, const Prep& P, const Scen& sc, double snrDb, uint64_
     shift(x, sc.cfoHz, m.rate, U(rng));
     phaseNoise(x, sc.pnHz, m.rate, rng);
     addNoise(x, P.power * (m.rate / m.bwHz) / std::pow(10.0, snrDb / 10), rng);
+    return x;
+}
+
+double trial(const Mode& m, const Prep& P, const Scen& sc, double snrDb, uint64_t seed) {
+    const Sig x = impaired(m, P, sc, snrDb, seed);
     auto s = m.make(m.rate);
     const size_t chunk = 65536;
     for (size_t o = 0; o < x.size(); o += chunk) s->feed(x.data() + o, std::min(chunk, x.size() - o));
@@ -131,6 +136,28 @@ int main() {
     auto all = allModes();
     for (auto& m : extraModesD()) all.push_back(std::move(m));
     const int threads = std::max(1, (int)std::thread::hardware_concurrency());
+    if (getenv("X3_DIAG_ATSC3")) {   // where ATSC 3.0 loses its units in a channel: bootstraps, frames, failed frames, baseband packets per trial
+        const Mode* ma = findMode(all, "atsc3");
+        if (!ma) return 1;
+        const Prep P = prepare(*ma, ma->secs, 1);
+        const double snr = atof(getenv("X3_DIAG_ATSC3"));
+        for (const auto& sc : scenarios(*ma)) {
+            if (sc.name != "awgn" && sc.name != "tu6" && sc.name != "rician") continue;
+            for (int i = 0; i < 4; i++) {
+                const Sig x = impaired(*ma, P, sc, snr, mix64(hashStr(sc.name) * 131 + (uint64_t)i));
+                Atsc3Rx rx; rx.setBlocking(true); rx.configure(ma->rate);
+                for (size_t o = 0; o < x.size(); o += 65536) rx.feed(x.data() + o, std::min<size_t>(65536, x.size() - o));
+                rx.stop();
+                Atsc3Telemetry t; rx.telemetry(t, 0);
+                long bl = 0, bo = 0;
+                for (const auto& pl : t.frame.plps) { bl += pl.blocks; bo += pl.blocksOk; }
+                printf("diag atsc3 %-6s %4.1f dB trial %d: bootstraps %ld frames %ld failed %ld bb %ld bad %ld (last frame: blocks %ld ok %ld; need %.0f)\n",
+                       sc.name.c_str(), snr, i, t.bootstraps, t.frames, t.framesFailed, t.bbPackets, t.bbBad, bl, bo, P.need);
+                fflush(stdout);
+            }
+        }
+        if (!getenv("ONAIR_SENS_CALIBRATE")) return 0;
+    }
     if (getenv("ONAIR_SENS_CALIBRATE")) {
         const std::regex modeRe(getenv("X3_MODES") ? getenv("X3_MODES") : "isdbt");
         const std::regex scenRe(getenv("X3_SCEN") ? getenv("X3_SCEN") : "awgn|echo|tu6|rician|phasenoise|combined");
