@@ -12,5 +12,11 @@
   },
   "migrations": [{ "tag": "v1", "new_sqlite_classes": ["MapHub"] }],
   "observability": { "enabled": true },
+  // GitHub sign-in and badges (docs/MAP-BADGES-4.0.md). One GitHub app "OnAir" serves the map and the plugin marketplace.
+  // Secrets, never in a file: wrangler secret put SESSION_SECRET (the SAME value as the marketplace's) | GITHUB_CLIENT_SECRET | BADGE_ADMIN_TOKEN
+  "vars": {
+    "GITHUB_CLIENT_ID": "Ov23li3cNdYJUxpl572P",
+    "GITHUB_REDIRECT_URI": "https://map.on-air.dev/auth/callback"
+  },
   "routes": [{ "pattern": "map.on-air.dev", "custom_domain": true }]
 }

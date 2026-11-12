@@ -1,0 +1,38 @@
+/* Profile and leaderboard pages (profile.html, leaders.html). Uses the map's tokens from /styles.css. */
+html, body { background: var(--bg); color: var(--text); }
+body.bp { margin: 0; font: 15px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif; overflow: auto; height: auto; }
+.bp header { display: flex; gap: 12px; align-items: center; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--panel); flex-wrap: wrap; }
+.bp header .brand { font-weight: 650; color: var(--text); text-decoration: none; margin-right: auto; }
+.bp header a { color: var(--accent); text-decoration: none; }
+.bp main { max-width: 980px; margin: 0 auto; padding: 16px; }
+.bp h1 { font-size: 24px; margin: 8px 0 4px; }
+.bp h2 { font-size: 17px; margin: 22px 0 8px; }
+.bp .dim { color: var(--dim); }
+.bp .card { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 12px 14px; }
+.bp .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.bp button, .bp .btn { font: inherit; background: var(--accent-bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 6px 12px; cursor: pointer; text-decoration: none; display: inline-block; }
+.bp button:hover, .bp .btn:hover { background: var(--hover); }
+.bp button.danger { color: var(--alert); background: transparent; }
+.bp input[type="text"] { font: inherit; background: var(--sunk); color: var(--text); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; width: 14em; max-width: 100%; }
+.bp .stats { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.bp .stat { background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; padding: 8px 10px; }
+.bp .stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.bp .stat span { color: var(--dim); font-size: 13px; }
+.bp .bgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.bp .bcard { display: flex; gap: 10px; align-items: flex-start; background: var(--panel); border: 1px solid var(--line-soft); border-radius: 8px; padding: 10px; }
+.bp .bcard.locked { opacity: .72; }
+.bp .bcard .t { font-weight: 600; }
+.bp .bcard .d { color: var(--dim); font-size: 13px; }
+.bp .bar { height: 5px; background: var(--sunk); border-radius: 3px; margin-top: 6px; overflow: hidden; }
+.bp .bar i { display: block; height: 100%; background: var(--accent); }
+.bp table { border-collapse: collapse; width: 100%; }
+.bp td, .bp th { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--line-soft); }
+.bp td.n, .bp th.n { text-align: right; font-variant-numeric: tabular-nums; }
+.bp td a { color: var(--accent); text-decoration: none; }
+.bp .tabs { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+.bp .tabs button[aria-pressed="true"] { border-color: var(--accent); background: var(--accent-bg); font-weight: 600; }
+.bp .msg { margin: 8px 0; color: var(--warn-text); background: var(--warn-bg); border: 1px solid var(--warn-line); border-radius: 6px; padding: 6px 10px; }
+.bp label { display: inline-flex; gap: 6px; align-items: center; }
+.badge-ico { flex: none; }
+.badge-locked { filter: saturate(.2); }
+@media (max-width: 520px) { .bp .bgrid { grid-template-columns: 1fr; } .bp h1 { font-size: 20px; } }

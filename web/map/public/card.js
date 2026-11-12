@@ -4,6 +4,8 @@
 
 import { sparkline, seriesOfTrail } from "./view.js";
 import { SHAPES } from "./shapes.js";
+import { parseShowcase } from "./badges/defs.js";
+import { badgeSvg } from "./badges/art.js";
 import { airportByCode } from "./airports.js";
 import {
   distanceNm, eta, progress, estimateDeparture, squawkMeaning, formatDuration, vrateArrow, flagEmoji,
@@ -335,7 +337,7 @@ export function createCard(host, api) {
   /** Data rows for any track. Rebuilt only when their text changes. */
   function updateRows(t, m, now) {
     const rows = [];
-    const add = (k, v, cls, title) => { if (v !== "" && v != null) rows.push([k, String(v), cls || "", title || ""]); };
+    const add = (k, v, cls, title, raw) => { if (v !== "" && v != null) rows.push([k, String(v), cls || "", title || "", raw || ""]); };
     const src = (t.src || "").toLowerCase();
     const dv = t.dv ? "~" : "";   // speed, track and vertical rate derived from position reports, not broadcast by the aircraft
     const dvTip = t.dv ? "Derived from position reports (distance between two fixes divided by the time); the aircraft did not broadcast it." : "";
@@ -368,11 +370,13 @@ export function createCard(host, api) {
     add("Position", fmtLat(t.lat) + "  " + fmtLon(t.lon));
     add("Position age", ageText((now - posMs(t)) / 1000));
     if (t.by) add("Last heard by", t.by + " " + ageText((now - (t.heard_at || t.t)) / 1000));   // optional public name of the station; shown as text only
+    const sc = t.by ? parseShowcase(t.bb) : null;   // that station's top badge (signed in, public profile): our own art and a link to the profile
+    if (sc) add("Station badge", sc.title, "", "Badges earned by sharing to this map", badgeSvg(sc.badge.icon, sc.tier, { size: 18, title: sc.title }) + ` <a href="/u/${esc(sc.login)}" target="_blank" rel="noopener">${esc(sc.title)}</a>`);
     if (t.kind === "aircraft" || t.kind === "flarm") add("Source", SRC_NAME[src] || t.sub || "");
     if (t.cat && t.kind !== "aircraft") add("Category", t.cat);
     else if (t.cat && /^[AB][0-7]$/.test(t.cat)) add("Emitter category", t.cat);
     // geometric altitude, Mach, IAS and "seen by N stations" are not in the data the hub receives, so they are not shown
-    const html = rows.map(([k, v, c, tip]) => `<div class="${c}"${tip ? ` title="${esc(tip)}"` : ""}><dt>${esc(k)}</dt><dd>${esc(v)}</dd></div>`).join("");
+    const html = rows.map(([k, v, c, tip, raw]) => `<div class="${c}"${tip ? ` title="${esc(tip)}"` : ""}><dt>${esc(k)}</dt><dd>${raw || esc(v)}</dd></div>`).join("");
     if (f.rows._html !== html) { f.rows.innerHTML = html; f.rows._html = html; }
     if (t.extra) { f.extra.hidden = false; set("extra", t.extra); } else f.extra.hidden = true;
     const alertRow = rows.some((r) => r[2] === "alert");

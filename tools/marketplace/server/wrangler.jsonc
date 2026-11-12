@@ -14,7 +14,7 @@
   "vars": {
     "PUBLIC_URL": "https://plugins.on-air.dev",
     "FILES_BASE_URL": "",               // empty: packages are served by this Worker at /files/... (a pulled plugin stops at once)
-    "GITHUB_CLIENT_ID": "",             // the OAuth app's Client ID (public, not a secret)
+    "GITHUB_CLIENT_ID": "Ov23li3cNdYJUxpl572P",   // the "OnAir" GitHub app's Client ID (public), shared with map.on-air.dev
     "OWNER_LOGINS": "adswill",          // may publish plugin ids that start with "onair"
     "MAX_PACKAGE_BYTES": "26214400"     // 25 MiB
   },
