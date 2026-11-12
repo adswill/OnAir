@@ -1,6 +1,6 @@
 # Radiosonde, wireless M-Bus and satellite framing entries (4.0, branch feat40-modes4)
 
-Eighteen more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
+Twenty-four more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
 No decoder was added or changed. The sensor-family entries of the same branch are in `SENSORVIEWS-4.0.md`.
 
 ## Radiosonde types (receiver `SondeReceiver`, `setKindMask`)
@@ -39,3 +39,17 @@ Three more of the framings that only ran inside CubeSat telemetry: AX.25 G3RUH 9
 `tests/cubesat/test_cubesat_views.cpp` now expects nine views and runs the engine entry of each (its own generated signal, decoded as that framing and no other). **Generated signals only.**
 
 Numbers come from the free ranges of `docs/FAMILY-NUMBERS-4.0.md` (663 - 697, 702 - 727, 732 - 738, 792 - 797, 804 - 817); the integrator resolves any clash with another branch.
+
+## AIS station kinds (receiver `AisReceiver`, `setStationView`)
+| Mode | Family | Active std | Engine std | Poll slot | Stations shown |
+|---|---|---|---|---|---|
+| AIS Class A vessels | 738 | 739 | 740 | 738 | Class A |
+| AIS Class B vessels | 807 | 808 | 809 | 807 | Class B |
+| AIS base stations | 810 | 811 | 812 | 810 | base stations (message 4) |
+| AIS aids to navigation (AtoN) | 813 | 814 | 815 | 813 | aids to navigation (message 21) |
+| AIS search and rescue aircraft | 816 | 817 | 818 | 816 | SAR aircraft (message 9) |
+| AIS-SART, MOB and EPIRB-AIS | 857 | 858 | 859 | 857 | MMSI 970xxxxxx, 972xxxxxx, 974xxxxxx |
+
+`telemetry()` keeps the vessels of the class (or the device MMSIs) and, with them, the message records, application messages, alerts, anomalies and sentences of those stations; the counts are recomputed from the vessels' message counts.
+Test `tests/ais/test_ais_views.cpp`: the simulated port of `ais_gen` (30 s, clean at 34 dB and with +3 kHz at 26 dB) through one receiver per view and one without: each view lists exactly the stations of its class that the receiver without a view lists (19 stations in all, every class present),
+bursts of position reports of ships and of MMSI 970123456 / 972123456 / 974123456 (carrier errors of +-800 Hz, 28 dB): the device view lists exactly the three devices; noise only: nothing. **Simulated signals only**, no recording of an AIS-SART was available.

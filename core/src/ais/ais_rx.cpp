@@ -139,6 +139,8 @@ struct Rec {
 } // namespace
 
 struct AisReceiver::Impl {
+    std::atomic<uint32_t> viewClasses{0};   // setStationView(): bit k = AisClass k, 0 every class
+    std::atomic<bool> viewDevices{false};   // setStationView(): MMSI 970 / 972 / 974 only
     std::mutex procMu;          // feed / reset / configure
     std::mutex telMu;           // the published snapshot
     std::function<void(const std::string&)> log;
@@ -824,6 +826,22 @@ bool AisReceiver::telemetry(AisTelemetry& out, uint64_t lastSeq) {
     if (p_->pub.seq <= lastSeq) return false;
     out = p_->pub;
     sess::observeAis(out);
+    const uint32_t cm = p_->viewClasses.load(std::memory_order_relaxed); const bool dev = p_->viewDevices.load(std::memory_order_relaxed);
+    if (cm || dev) {   // a view onto one kind of station: its stations, messages and sentences only
+        std::map<uint32_t, int> cls; for (const auto& v : out.vessels) cls[v.mmsi] = v.cls;
+        auto keep = [&](uint32_t mmsi) { if (dev) { const uint32_t p = mmsi / 1000000u; return p == 970 || p == 972 || p == 974; } const auto it = cls.find(mmsi); return it != cls.end() && ((cm >> it->second) & 1u) != 0; };
+        std::vector<AisVessel> vk; uint64_t ok = 0; for (const auto& v : out.vessels) if (keep(v.mmsi)) { vk.push_back(v); ok += v.messages; }
+        out.vessels.swap(vk); out.vesselCount = (uint32_t)out.vessels.size(); out.blocksOk = ok;
+        std::vector<AisRxRecord> rk; for (const auto& r : out.recent) if (keep(r.mmsi)) rk.push_back(r); out.recent.swap(rk);
+        std::vector<AisAppRecord> ak; for (const auto& r : out.apps) if (keep(r.mmsi)) ak.push_back(r); out.apps.swap(ak);
+        std::vector<AisAlertRecord> lk; for (const auto& r : out.alerts) if (keep(r.mmsi)) lk.push_back(r); out.alerts.swap(lk);
+        std::vector<AisAnomalyRecord> nk; for (const auto& r : out.anomalies) if (keep(r.mmsi)) nk.push_back(r); out.anomalies.swap(nk);
+        std::vector<std::string> sk;
+        for (const auto& s : out.nmea) { std::string chars; int fill = 0, fc = 0, fn = 0; if (ais::parseNmea(s, chars, fill, fc, fn) && fn == 1) { const ais::Bits b = ais::unarmour(chars, fill); if (keep(ais::getU(b, 8, 30))) sk.push_back(s); } }
+        out.nmea.swap(sk);
+        out.dataValid = out.dataValid && !out.vessels.empty();
+        if (out.state == 2 && out.vessels.empty()) out.state = 1;
+    }
     return true;
 }
 void AisReceiver::clearResults() {
@@ -861,6 +879,27 @@ void AisReceiver::setForwardFeeds(bool on) {
 void AisReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     p_->log = std::move(cb);
+}
+
+void AisReceiver::setStationView(uint32_t classMask, bool devicesOnly) { p_->viewClasses.store(classMask, std::memory_order_relaxed); p_->viewDevices.store(devicesOnly, std::memory_order_relaxed); }
+
+// 4.0: the station kinds with a mode-list entry of their own (families 738, 807, 810, 813, 816, 857: family, active standard family + 1, engine standard family + 2, poll slot = family)
+static const AisView kAisViews[] = {
+    {738, "aisclassa", "AIS Class A vessels", 1u << AIS_CLASS_A, false, "Class A"},
+    {807, "aisclassb", "AIS Class B vessels", 1u << AIS_CLASS_B, false, "Class B"},
+    {810, "aisbase", "AIS base stations", 1u << AIS_CLASS_BASE, false, "Base stations"},
+    {813, "aisaton", "AIS aids to navigation (AtoN)", 1u << AIS_CLASS_ATON, false, "AtoN"},
+    {816, "aissar", "AIS search and rescue aircraft", 1u << AIS_CLASS_SAR, false, "SAR aircraft"},
+    {857, "aissart", "AIS-SART, MOB and EPIRB-AIS", 0, true, "SART / MOB / EPIRB"},
+};
+const AisView* aisViews(int& count) { count = (int)(sizeof kAisViews / sizeof *kAisViews); return kAisViews; }
+const AisView* aisViewForActive(int a) { for (const auto& v : kAisViews) if (v.family + 1 == a) return &v; return nullptr; }
+const AisView* aisViewForStd(int s) { for (const auto& v : kAisViews) if (v.family + 2 == s) return &v; return nullptr; }
+ModeTuning aisViewTuning(int i) {
+    ModeTuning t = aisTuning();
+    const AisView& v = kAisViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
+    return t;
 }
 
 ModeTuning aisTuning() {

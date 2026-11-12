@@ -73,3 +73,4 @@ Families 779 - 787 stay reserved for further modes of this block. A new variant 
 ## Sensor-family entries (feat40-modes4, 2026-11-12)
 Views onto the Sub-GHz sensors receiver, stride 3 (family, active standard +1, engine standard +2, poll slot = family): 564, 567, 570, 573, 576, 579, 582, 585, 588, 591, 594 (in the range 564 - 597) and 663, 666, 669, 672, 675, 678, 681 (in 663 - 697). Table in `docs/SENSORVIEWS-4.0.md`.
 Radiosonde types (684, 687, 690, 693, 702, 705, 708, 711, 714, 717), wireless M-Bus modes (720, 723, 726, 732, 735) and three CubeSat framings (792, 795, 804): views, table in `docs/VIEWS-4.0.md`.
+AIS station kinds (738, 807, 810, 813, 816, 857), table in `docs/VIEWS-4.0.md`. SSR interrogations (family 781) are variant 44 of the x40 receiver.

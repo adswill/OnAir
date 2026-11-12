@@ -441,6 +441,13 @@
         <item>CCSDS concatenated (satellites)</item>
         <item>ILS marker beacons (75 MHz)</item>
         <item>FSK modems (Bell 103, V.21, V.23, Bell 202)</item>
+        <item>SSR interrogations (1030 MHz)</item>
+        <item>AIS Class A vessels</item>
+        <item>AIS Class B vessels</item>
+        <item>AIS base stations</item>
+        <item>AIS aids to navigation (AtoN)</item>
+        <item>AIS search and rescue aircraft</item>
+        <item>AIS-SART, MOB and EPIRB-AIS</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -863,6 +870,13 @@
         <item>CCSDS concatenated telemetry from amateur and small satellites on 70 cm: convolutional coding (Viterbi) with Reed-Solomon (255,223) behind the 0x1ACFFC1D sync marker. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
         <item>Instrument landing system marker beacons on 75 MHz (ICAO Annex 10): the AM carrier is keyed with a tone, 400 Hz dashes for the outer marker (2 per second), 1300 Hz dot-dash for the middle marker (95 pairs per minute), 3000 Hz dots for the inner marker (6 per second). Names the marker from the tone, measures the keying and says whether it fits the standard; a tone with the wrong keying is listed as tone only. Simulated signals only</item>
         <item>Telephone-style FSK modems as audio tones in a single-sideband channel: Bell 103 (originate 1070 / 1270 Hz, answer 2025 / 2225 Hz, 300 baud, the time station CHU uses the answer tones), ITU-T V.21 channels 1 and 2 (300 baud), V.23 mode 2 and Bell 202 (1200 baud). Names the standard and the sideband from the two tones, reads the asynchronous bytes (start bit, 8 data bits, stop bits) and shows them in hex and ASCII with the framing errors. Tune the dial so the tones lie in 600 - 2700 Hz above (upper sideband) or below the dial; a dial error up to 40 Hz is accepted. It does not know the meaning of the bytes. Simulated signals only</item>
+        <item>Secondary surveillance radar interrogations on 1030 MHz (ICAO Annex 10): P1 - P3 pulse pairs of Mode 1, 2, A, B, C and D (3, 5, 8, 17, 21 and 25 us), the side-lobe suppression pulse P2, intermode P4 and Mode S (P6 of 56 or 112 bits). Counts per mode, the measured spacing and the interrogation rate every 2 s, and whether P2 marks a side-lobe interrogation. It does not say which radar sent them. Needs a radio with 2 Msps or more. Simulated signals only</item>
+        <item>AIS Class A transponders (SOLAS ships) on 161.975 and 162.025 MHz: position reports (messages 1, 2, 3) and static and voyage data (message 5): name, call sign, ship type, destination, speed, course and navigation status. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
+        <item>AIS Class B transponders (small craft, fishing and leisure boats) on 161.975 and 162.025 MHz: position reports (messages 18 and 19) and static data (message 24): name, call sign, ship type, speed and course. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
+        <item>AIS base stations on 161.975 and 162.025 MHz (message 4): the coast station\'s position and its UTC time, with the vessels it is heard beside. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
+        <item>AIS aids to navigation on 161.975 and 162.025 MHz (message 21): buoys, beacons and lights with their type, name, position, whether they are off position, and virtual aids. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
+        <item>AIS search and rescue aircraft on 161.975 and 162.025 MHz (message 9): position, altitude, speed and course of helicopters and aeroplanes in a search. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
+        <item>Distress devices on the AIS channels 161.975 and 162.025 MHz: AIS-SART (MMSI 970xxxxxx), man-overboard devices (972xxxxxx) and EPIRB-AIS (974xxxxxx, ITU-R M.1371): the stations with these numbers and their position reports. A real alert is shown the same way: nothing here replaces a distress radio. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1285,6 +1299,13 @@
         <item>Satellites, CCSDS concatenated</item>
         <item>Aviation, ILS markers</item>
         <item>Utility, FSK modems</item>
+        <item>Aviation, SSR interrogations</item>
+        <item>Ships, Class A</item>
+        <item>Ships, Class B</item>
+        <item>Ships, Base stations</item>
+        <item>Ships, AtoN</item>
+        <item>Ships, SAR aircraft</item>
+        <item>Ships, SART / MOB / EPIRB</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1707,5 +1728,12 @@
         <item>ccsds concatenated viterbi convolutional reed solomon telemetry cubesat satellite 435 437 1acffc1d</item>
         <item>ils marker beacon outer middle inner 75 mhz 400 1300 3000 hz localizer glide path approach</item>
         <item>bell 103 v.21 v.23 bell 202 fsk modem afsk async 300 baud 1200 baud chu time signal 7850 3330 14670 telephone</item>
+        <item>ssr secondary surveillance radar interrogation 1030 mhz mode a mode c mode s p1 p2 p3 p4 p6 sidelobe suppression iff transponder</item>
+        <item>ais class a transponder ship vessel 161.975 162.025 marine</item>
+        <item>ais class b transponder small craft fishing leisure boat 161.975 162.025 marine</item>
+        <item>ais base station coast station message 4 161.975 162.025 marine</item>
+        <item>ais aton aid to navigation buoy beacon lighthouse virtual message 21 161.975 162.025 marine</item>
+        <item>ais sar search and rescue aircraft helicopter message 9 161.975 162.025 marine</item>
+        <item>ais sart mob man overboard epirb distress alert 970 972 974 gmdss search and rescue 161.975 162.025 marine</item>
     </string-array>
 </resources>

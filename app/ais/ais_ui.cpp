@@ -40,7 +40,7 @@ struct State {
 };
 State S;
 
-bool live(const App& a) { return a.rx.standard == 15; }   // the engine reports its standard code minus one
+bool live(const App& a) { return a.rx.standard == 15 || dect2::aisViewForActive(a.rx.standard) != nullptr; }   // the engine reports its standard code minus one
 
 void loadState() {
     if (S.loaded) return;

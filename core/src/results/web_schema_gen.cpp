@@ -15216,6 +15216,7 @@ static bool put_724(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTele
 static bool put_727(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_733(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
 static bool put_736(const RxTelemetry& rx, std::string& s) { ev_dect2__WmbusTelemetry(s, rx.wmbus); return true; }
+static bool put_739(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
@@ -15225,6 +15226,10 @@ static bool put_801(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTeleme
 static bool put_802(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_803(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_805(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_808(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
+static bool put_811(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
+static bool put_814(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
+static bool put_817(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
 static bool put_821(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_824(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
 static bool put_827(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
@@ -15237,6 +15242,7 @@ static bool put_847(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelem
 static bool put_850(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_853(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_856(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
+static bool put_858(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
 static bool put_871(const RxTelemetry& rx, std::string& s) { ev_dect2__FbrTelemetry(s, rx.fbr); return true; }
 static bool put_881(const RxTelemetry& rx, std::string& s) { ev_dect2__Cp16Telemetry(s, rx.cp16); return true; }
 static const StdEntry kStd[] = {
@@ -15535,6 +15541,7 @@ static const StdEntry kStd[] = {
     {727, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_727},
     {733, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_733},
     {736, "wmbus", "dect2::WmbusTelemetry", kSchema_dect2__WmbusTelemetry, put_736},
+    {739, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_739},
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
@@ -15544,6 +15551,10 @@ static const StdEntry kStd[] = {
     {802, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_802},
     {803, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_803},
     {805, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_805},
+    {808, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_808},
+    {811, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_811},
+    {814, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_814},
+    {817, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_817},
     {821, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_821},
     {824, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_824},
     {827, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_827},
@@ -15556,6 +15567,7 @@ static const StdEntry kStd[] = {
     {850, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_850},
     {853, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_853},
     {856, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_856},
+    {858, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_858},
     {871, "fbr", "dect2::FbrTelemetry", kSchema_dect2__FbrTelemetry, put_871},
     {881, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_881},
 };
@@ -15974,6 +15986,13 @@ static const WebModeRow kRows[] = {
     {804, "CCSDS concatenated (satellites)", 4, "CCSDS concatenated: Viterbi and Reed-Solomon satellite frames", "", 806, 805, "cube"},
     {779, "ILS marker beacons (75 MHz)", 2, "ILS marker beacons: outer, middle and inner marker tones and keying", "", 781, 780, ""},
     {780, "FSK modems (Bell 103, V.21, V.23, Bell 202)", 12, "FSK modems: Bell 103, V.21, V.23 and Bell 202 bytes", "", 782, 781, ""},
+    {781, "SSR interrogations (1030 MHz)", 2, "SSR interrogations: which modes the radars around you ask, and how often", "", 783, 782, ""},
+    {738, "AIS Class A vessels", 3, "AIS Class A: ships' positions and identities", "", 740, 739, "ais"},
+    {807, "AIS Class B vessels", 3, "AIS Class B: small craft positions and identities", "", 809, 808, "ais"},
+    {810, "AIS base stations", 3, "AIS base stations: coast stations and their time", "", 812, 811, "ais"},
+    {813, "AIS aids to navigation (AtoN)", 3, "AIS AtoN: buoys, beacons and virtual aids", "", 815, 814, "ais"},
+    {816, "AIS search and rescue aircraft", 3, "AIS SAR aircraft: search and rescue positions", "", 818, 817, "ais"},
+    {857, "AIS-SART, MOB and EPIRB-AIS", 3, "AIS-SART, MOB and EPIRB-AIS: distress device positions", "", 859, 858, "ais"},
 };
 } // namespace
 

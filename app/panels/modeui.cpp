@@ -196,7 +196,7 @@ const ModeUi* modeUi(int family) {
     case 11: return &kAdsbUi;
     case 12: return &kGnssUi;
     case 13: case 684: case 687: case 690: case 693: case 702: case 705: case 708: case 711: case 714: case 717: return &kSondeUi;   // 684 .. 717: one radiosonde type each, the same panel (sonde_rx.h: sondeViews)
-    case 14: return &kAisUi;
+    case 14: case 738: case 807: case 810: case 813: case 816: case 857: return &kAisUi;   // 738 .. 857: one kind of AIS station each, the same panel (ais_rx.h: aisViews)
     case 15: return &kMarineUi;
     case 16: return &kAcarsUi;
     case 17: return &kInmcUi;

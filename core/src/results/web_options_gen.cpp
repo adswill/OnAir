@@ -1244,6 +1244,15 @@ static bool set_736(Engine& e, const std::string& n, double v) {
     if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
     return false;
 }
+static const char kOpt_739[] = R"JSON([{"n":"setChannelMask","k":"int","l":"Channel Mask","h":"the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)","t":"s"},{"n":"setSatelliteMode","k":"bool","l":"Satellite Mode","t":"s"},{"n":"setCollisionCancel","k":"bool","l":"Collision Cancel","t":"s"},{"n":"setForwardFeeds","k":"bool","l":"Forward Feeds","h":"the data feeds' AIS output (default on)","t":"s"}])JSON";
+static bool set_739(Engine& e, const std::string& n, double v) {
+    auto& r = e.ais();
+    if (n == "setChannelMask") { call(r, &Rx<decltype(r)>::setChannelMask, v); return true; }
+    if (n == "setSatelliteMode") { call(r, &Rx<decltype(r)>::setSatelliteMode, v); return true; }
+    if (n == "setCollisionCancel") { call(r, &Rx<decltype(r)>::setCollisionCancel, v); return true; }
+    if (n == "setForwardFeeds") { call(r, &Rx<decltype(r)>::setForwardFeeds, v); return true; }
+    return false;
+}
 static const char kOpt_742[] = R"JSON([{"n":"setBlocking","k":"bool","l":"Blocking","h":"recordings and tests: wait for the decoder instead of dropping input","t":"s"}])JSON";
 static bool set_742(Engine& e, const std::string& n, double v) {
     auto& r = e.dvbc2();
@@ -1257,6 +1266,51 @@ static bool set_747(Engine& e, const std::string& n, double v) {
     if (n == "setLowPriority") { call(r, &Rx<decltype(r)>::setLowPriority, v); return true; }
     if (n == "setWaveform") { call(r, &Rx<decltype(r)>::setWaveform, v); return true; }
     if (n == "setTdmGoldCode") { call(r, &Rx<decltype(r)>::setTdmGoldCode, v); return true; }
+    return false;
+}
+static const char kOpt_808[] = R"JSON([{"n":"setChannelMask","k":"int","l":"Channel Mask","h":"the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)","t":"s"},{"n":"setSatelliteMode","k":"bool","l":"Satellite Mode","t":"s"},{"n":"setCollisionCancel","k":"bool","l":"Collision Cancel","t":"s"},{"n":"setForwardFeeds","k":"bool","l":"Forward Feeds","h":"the data feeds' AIS output (default on)","t":"s"}])JSON";
+static bool set_808(Engine& e, const std::string& n, double v) {
+    auto& r = e.ais();
+    if (n == "setChannelMask") { call(r, &Rx<decltype(r)>::setChannelMask, v); return true; }
+    if (n == "setSatelliteMode") { call(r, &Rx<decltype(r)>::setSatelliteMode, v); return true; }
+    if (n == "setCollisionCancel") { call(r, &Rx<decltype(r)>::setCollisionCancel, v); return true; }
+    if (n == "setForwardFeeds") { call(r, &Rx<decltype(r)>::setForwardFeeds, v); return true; }
+    return false;
+}
+static const char kOpt_811[] = R"JSON([{"n":"setChannelMask","k":"int","l":"Channel Mask","h":"the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)","t":"s"},{"n":"setSatelliteMode","k":"bool","l":"Satellite Mode","t":"s"},{"n":"setCollisionCancel","k":"bool","l":"Collision Cancel","t":"s"},{"n":"setForwardFeeds","k":"bool","l":"Forward Feeds","h":"the data feeds' AIS output (default on)","t":"s"}])JSON";
+static bool set_811(Engine& e, const std::string& n, double v) {
+    auto& r = e.ais();
+    if (n == "setChannelMask") { call(r, &Rx<decltype(r)>::setChannelMask, v); return true; }
+    if (n == "setSatelliteMode") { call(r, &Rx<decltype(r)>::setSatelliteMode, v); return true; }
+    if (n == "setCollisionCancel") { call(r, &Rx<decltype(r)>::setCollisionCancel, v); return true; }
+    if (n == "setForwardFeeds") { call(r, &Rx<decltype(r)>::setForwardFeeds, v); return true; }
+    return false;
+}
+static const char kOpt_814[] = R"JSON([{"n":"setChannelMask","k":"int","l":"Channel Mask","h":"the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)","t":"s"},{"n":"setSatelliteMode","k":"bool","l":"Satellite Mode","t":"s"},{"n":"setCollisionCancel","k":"bool","l":"Collision Cancel","t":"s"},{"n":"setForwardFeeds","k":"bool","l":"Forward Feeds","h":"the data feeds' AIS output (default on)","t":"s"}])JSON";
+static bool set_814(Engine& e, const std::string& n, double v) {
+    auto& r = e.ais();
+    if (n == "setChannelMask") { call(r, &Rx<decltype(r)>::setChannelMask, v); return true; }
+    if (n == "setSatelliteMode") { call(r, &Rx<decltype(r)>::setSatelliteMode, v); return true; }
+    if (n == "setCollisionCancel") { call(r, &Rx<decltype(r)>::setCollisionCancel, v); return true; }
+    if (n == "setForwardFeeds") { call(r, &Rx<decltype(r)>::setForwardFeeds, v); return true; }
+    return false;
+}
+static const char kOpt_817[] = R"JSON([{"n":"setChannelMask","k":"int","l":"Channel Mask","h":"the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)","t":"s"},{"n":"setSatelliteMode","k":"bool","l":"Satellite Mode","t":"s"},{"n":"setCollisionCancel","k":"bool","l":"Collision Cancel","t":"s"},{"n":"setForwardFeeds","k":"bool","l":"Forward Feeds","h":"the data feeds' AIS output (default on)","t":"s"}])JSON";
+static bool set_817(Engine& e, const std::string& n, double v) {
+    auto& r = e.ais();
+    if (n == "setChannelMask") { call(r, &Rx<decltype(r)>::setChannelMask, v); return true; }
+    if (n == "setSatelliteMode") { call(r, &Rx<decltype(r)>::setSatelliteMode, v); return true; }
+    if (n == "setCollisionCancel") { call(r, &Rx<decltype(r)>::setCollisionCancel, v); return true; }
+    if (n == "setForwardFeeds") { call(r, &Rx<decltype(r)>::setForwardFeeds, v); return true; }
+    return false;
+}
+static const char kOpt_858[] = R"JSON([{"n":"setChannelMask","k":"int","l":"Channel Mask","h":"the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)","t":"s"},{"n":"setSatelliteMode","k":"bool","l":"Satellite Mode","t":"s"},{"n":"setCollisionCancel","k":"bool","l":"Collision Cancel","t":"s"},{"n":"setForwardFeeds","k":"bool","l":"Forward Feeds","h":"the data feeds' AIS output (default on)","t":"s"}])JSON";
+static bool set_858(Engine& e, const std::string& n, double v) {
+    auto& r = e.ais();
+    if (n == "setChannelMask") { call(r, &Rx<decltype(r)>::setChannelMask, v); return true; }
+    if (n == "setSatelliteMode") { call(r, &Rx<decltype(r)>::setSatelliteMode, v); return true; }
+    if (n == "setCollisionCancel") { call(r, &Rx<decltype(r)>::setCollisionCancel, v); return true; }
+    if (n == "setForwardFeeds") { call(r, &Rx<decltype(r)>::setForwardFeeds, v); return true; }
     return false;
 }
 static const char kOpt_871[] = R"JSON([{"n":"setInvert","k":"bool","l":"Invert","h":"flip the bit polarity (the real polarity is not published)","t":"s"}])JSON";
@@ -1421,8 +1475,14 @@ const OptEntry kOpt[] = {
     {727, kOpt_727, set_727},
     {733, kOpt_733, set_733},
     {736, kOpt_736, set_736},
+    {739, kOpt_739, set_739},
     {742, kOpt_742, set_742},
     {747, kOpt_747, set_747},
+    {808, kOpt_808, set_808},
+    {811, kOpt_811, set_811},
+    {814, kOpt_814, set_814},
+    {817, kOpt_817, set_817},
+    {858, kOpt_858, set_858},
     {871, kOpt_871, set_871},
     {881, kOpt_881, set_881},
 };

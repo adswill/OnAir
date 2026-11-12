@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**413 modes.**
+**420 modes.**
 
 ## TV (17)
 
@@ -36,7 +36,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FM modulation monitor** - FM monitor: deviation, pilot, RDS, MPX power
 - **AM modulation monitor** - AM monitor: depth, peaks, hum, bandwidth
 
-## Aviation (29)
+## Aviation (30)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -67,8 +67,9 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ASTERIX** - ASTERIX: radar and ADS-B surveillance data from UDP or a file
 - **ELT 121.5 MHz** - ELT 121.5 MHz: swept-tone detection (simulated only)
 - **ILS marker beacons (75 MHz)** - ILS marker beacons: outer, middle and inner marker tones and keying
+- **SSR interrogations (1030 MHz)** - SSR interrogations: which modes the radars around you ask, and how often
 
-## Maritime (8)
+## Maritime (14)
 
 - **AIS** - AIS: ship positions and identities
 - **VDES** - VDES: ASM frames decoded, VDE-TER bursts logged and classified
@@ -78,6 +79,12 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Marine VHF** - Marine VHF: channel picker, scan, 16 watch, whole-span activity list, recording; regional plans (ITU, Europe, Baltic, USA, Canada)
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
+- **AIS Class A vessels** - AIS Class A: ships' positions and identities
+- **AIS Class B vessels** - AIS Class B: small craft positions and identities
+- **AIS base stations** - AIS base stations: coast stations and their time
+- **AIS aids to navigation (AtoN)** - AIS AtoN: buoys, beacons and virtual aids
+- **AIS search and rescue aircraft** - AIS SAR aircraft: search and rescue positions
+- **AIS-SART, MOB and EPIRB-AIS** - AIS-SART, MOB and EPIRB-AIS: distress device positions
 
 ## Satellite & Navigation (60)
 

@@ -4181,3 +4181,9 @@ Satellites, CCSDS concatenated	Satelliten, CCSDS concatenated
 Aviation, ILS markers	Flugfunk, ILS-Marker
 Utility, FSK modems	Funkdienste, FSK-Modems
 Aviation, SSR interrogations	Flugfunk, SSR-Abfragen
+Ships, Class A	Schiffe, Class A
+Ships, Class B	Schiffe, Class B
+Ships, Base stations	Schiffe, Base stations
+Ships, AtoN	Schiffe, AtoN
+Ships, SAR aircraft	Schiffe, SAR aircraft
+Ships, SART / MOB / EPIRB	Schiffe, SART / MOB / EPIRB

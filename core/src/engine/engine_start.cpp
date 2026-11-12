@@ -443,6 +443,7 @@ void Engine::configureDecoderReceivers(const DeviceInfo& dev, const TuneSettings
     { const SondeView* sv = sondeViewForActive(activeStdFor(stdMode_.load())); rxSonde_.setKindMask(sv ? 1u << sv->kind : 0u); }   // an entry of one sonde type reports that type only
     rxSonde_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAis_.configure(rate_);
+    { const AisView* av = aisViewForActive(activeStdFor(stdMode_.load())); rxAis_.setStationView(av ? av->classMask : 0u, av ? av->devicesOnly : false); }   // an entry of one kind of station reports that kind only
     rxAis_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxMarine_.configure(rate_);
     rxMarine_.setLogCallback([this](const std::string& s) { rxLog(s); });

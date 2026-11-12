@@ -233,6 +233,13 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 715: return pollStd(rxSonde_, 715, t, seqs[714], &RxTelemetry::sonde);   // radiosonde type entry (family 714)
     case 718: return pollStd(rxSonde_, 718, t, seqs[717], &RxTelemetry::sonde);   // radiosonde type entry (family 717)
     case 15: return pollStd(rxAis_, 15, t, seqs[8], &RxTelemetry::ais);
+    // 4.0: one entry per kind of AIS station, the same receiver (ais_rx.h: aisViews)
+    case 739: return pollStd(rxAis_, 739, t, seqs[738], &RxTelemetry::ais);   // AIS station-kind entry (family 738)
+    case 808: return pollStd(rxAis_, 808, t, seqs[807], &RxTelemetry::ais);   // AIS station-kind entry (family 807)
+    case 811: return pollStd(rxAis_, 811, t, seqs[810], &RxTelemetry::ais);   // AIS station-kind entry (family 810)
+    case 814: return pollStd(rxAis_, 814, t, seqs[813], &RxTelemetry::ais);   // AIS station-kind entry (family 813)
+    case 817: return pollStd(rxAis_, 817, t, seqs[816], &RxTelemetry::ais);   // AIS station-kind entry (family 816)
+    case 858: return pollStd(rxAis_, 858, t, seqs[857], &RxTelemetry::ais);   // AIS station-kind entry (family 857)
     case 16: return pollStd(rxMarine_, 16, t, seqs[9], &RxTelemetry::marine);
     case 17: return pollStd(rxAcars_, 17, t, seqs[10], &RxTelemetry::acars);
     case 18: return pollStd(rxInmc_, 18, t, seqs[11], &RxTelemetry::inmc);

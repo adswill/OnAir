@@ -751,3 +751,9 @@ Satellites, CCSDS concatenated
 Aviation, ILS markers
 Utility, FSK modems
 Aviation, SSR interrogations
+Ships, Class A
+Ships, Class B
+Ships, Base stations
+Ships, AtoN
+Ships, SAR aircraft
+Ships, SART / MOB / EPIRB
