@@ -14,6 +14,7 @@
 #include <cctype>
 #include <chrono>
 #include <cmath>
+#include <cstdlib>
 #include <deque>
 #include <memory>
 #include <mutex>
@@ -135,6 +136,7 @@ struct AudioFsk {
 // framings (AX100 Mode 5, CCSDS, and every cubesat_more.h framing) and, for G3RUH / NRZI AX.25, an HDLC slicer.
 struct ExtraPath {
     bool on = false, hdlc = false, audio = false;
+    bool quiet = false;   // a second demodulator of a framing a wider one also decodes: its failed frames are not counted again
     int baud = 0;
     std::string why;
     AudioFsk af;
@@ -163,6 +165,11 @@ struct CubesatReceiver::Impl {
     // 3.9: the cubesat_more.h framings on the 9600 / 4800 slicers, the GOMspace audio FSK (4800 baud on 3600 Hz), and the tracked satellite's own
     MoreHunter more[2];
     ExtraPath afskPath;
+    // 4.0 (docs/SENSITIVITY-4.0-X3.md): narrow paths beside the wide ones, on a channel only as wide as the signal plus the AFC's residual
+    // (it mixes out errors above 1.5 kHz): 9600 baud FSK / GMSK and the U482C audio FSK on +-8.5 kHz (disc3), 4800 baud FSK / GMSK on the
+    // +-4.5 kHz Bell 202 channel (disc2). A frame from both is reported once (the duplicate check). DECT2_CUBESAT_NONARROW=1: off (as 3.9)
+    ExtraPath narrow9600, narrow4800, narrowU482c;
+    bool narrowOn = true;
     std::vector<std::unique_ptr<ExtraPath>> trackPaths;   // one per baud rate / audio carrier of the tracked satellite the fixed ones miss
     const GrTx* trackTx = nullptr;
     MoreConfig moreCfg;
@@ -193,6 +200,8 @@ struct CubesatReceiver::Impl {
         isReady = false;
         fe.chanPass = 12000.0; fe.chanStop = 20000.0; fe.clipHz = 10000.f; fe.afcMaxHz = 15000.0;
         fe.chanPass2 = 4500.0; fe.chanStop2 = fe.chanPass2 * 1.8;   // 4.0: the 1200 baud Bell 202 tones get a channel of their own (docs/SENSITIVITY-4.0-A3.md)
+        { const char* e = getenv("DECT2_CUBESAT_NONARROW"); narrowOn = !(e && *e && *e != '0'); }
+        fe.chanPass3 = narrowOn ? 8500.0 : 0.0; fe.chanStop3 = 13500.0;
         if (!fe.configure(fs, cubesatTuning().minSampleRate)) return;
         audio48.design(dmr::lowpassTaps(3300.0, 8000.0, kMidRate, 50, 9), 2);
         lpG[0].design(dmr::lowpassTaps(5200.0, 11000.0, kMidRate, 40, 9), 1);
@@ -211,6 +220,12 @@ struct CubesatReceiver::Impl {
         for (int i = 0; i < 2; i++) afsk[i].hdlc.setCallback([this, i](const std::vector<uint8_t>& d, bool ok) { onHdlc(Ax25Afsk1200, 1200, i, d, ok, afsk[i].pos * 2); });
         for (int i = 0; i < 2; i++) g3[i].hdlc.setCallback([this, i](const std::vector<uint8_t>& d, bool ok) { onHdlc(Ax25G3ruh, i ? 4800 : 9600, i, d, ok, g3[i].pos); });
         setupPath(afskPath, 4800, 3600.0, false, "GOMspace AFSK 4800");
+        if (narrowOn) {
+            setupPath(narrow9600, 9600, 0.0, true, "9600 baud, narrow channel");
+            setupPath(narrow4800, 4800, 0.0, true, "4800 baud, narrow channel");
+            setupPath(narrowU482c, 4800, 3600.0, false, "GOMspace AFSK 4800, narrow channel");
+            narrow9600.quiet = narrow4800.quiet = narrowU482c.quiet = true;
+        } else narrow9600.on = narrow4800.on = narrowU482c.on = false;
         setupTracked();
         isReady = true;
         resetState();
@@ -223,7 +238,7 @@ struct CubesatReceiver::Impl {
         audio48.reset(); lpG[0].reset(); lpG[1].reset();
         for (auto& a : afsk) a.reset();
         for (int i = 0; i < 2; i++) { g3[i].reset(); plain[i].reset(); framer[i].reset(); framer[i].ccsdsLen = ccsdsLen; more[i].reset(); }
-        std::vector<ExtraPath*> eps{&afskPath};
+        std::vector<ExtraPath*> eps{&afskPath, &narrow9600, &narrow4800, &narrowU482c};
         for (auto& tp : trackPaths) eps.push_back(tp.get());
         for (ExtraPath* ep : eps) { ep->af.reset(); ep->lp.reset(); ep->g3.reset(); ep->plain.reset(); ep->framer.reset(); ep->more.reset(); }
         nextReport = 0;
@@ -362,7 +377,7 @@ struct CubesatReceiver::Impl {
         ExtraPath* p = &ep;
         ep.plain.bitSink = [p](int b) { p->framer.bit(b); p->more.push(b ? 1.f : -1.f); p->plain.locked = p->framer.inFrame() || p->more.busy(); };
         ep.more.onFrame = [this, p](const MoreFrame& m) { onMore(m, p->baud, p->plain.pos); };
-        ep.framer.done = [this, p](bool cc, std::vector<uint8_t>& body, int flags, bool gf) { onAsmAt(p->plain.pos, p->baud, cc, body, flags, gf); };
+        ep.framer.done = [this, p](bool cc, std::vector<uint8_t>& body, int flags, bool gf) { onAsmAt(p->plain.pos, p->baud, cc, body, flags, gf, !p->quiet); };
         ep.g3.hdlc.setCallback([this, p](const std::vector<uint8_t>& d, bool ok) { onHdlc(Ax25G3ruh, p->baud, 1, d, ok, p->g3.pos); });
     }
     // the satellite the pass planner follows: its transmitter from the gr-satellites table chooses the framing parameters and, when the fixed
@@ -378,6 +393,7 @@ struct CubesatReceiver::Impl {
         moreCfg = c;
         for (auto& m : more) m.configure(c);
         afskPath.more.configure(c);
+        narrow9600.more.configure(c); narrow4800.more.configure(c); narrowU482c.more.configure(c);
         trackPaths.clear();
         if (!trackTx || !isReadyFs()) return;
         // every decodable transmitter of the satellite on this dial (SPUTNIX satellites send 1200 .. 9600 baud on one frequency)
@@ -428,18 +444,18 @@ struct CubesatReceiver::Impl {
         }
         accept(std::move(f), tt);
     }
-    void onAsmAt(int64_t tt, int baud, bool cc, std::vector<uint8_t>& body, int flags, bool golayFailed) {
-        if (golayFailed) { fail(tt); return; }
+    void onAsmAt(int64_t tt, int baud, bool cc, std::vector<uint8_t>& body, int flags, bool golayFailed, bool countFail = true) {
+        if (golayFailed) { if (countFail) fail(tt); return; }
         CubeFrame f;
         f.baud = baud;
         int rsErr = -1;
         if (cc) {
             std::vector<uint8_t> data;
-            if (!ccsdsDecode(body.data(), body.size(), data, rsErr)) { fail(tt); return; }
+            if (!ccsdsDecode(body.data(), body.size(), data, rsErr)) { if (countFail) fail(tt); return; }
             f.framing = CcsdsRs; f.rsErrors = rsErr; f.data = data; f.payload = data;
         } else {
             std::vector<uint8_t> csp;
-            if (!ax100Mode5Decode(body.data(), body.size(), flags, csp, rsErr)) { fail(tt); return; }
+            if (!ax100Mode5Decode(body.data(), body.size(), flags, csp, rsErr)) { if (countFail) fail(tt); return; }
             f.framing = Ax100Mode5; f.rsErrors = (flags & kAx100Rs) ? rsErr : -1;
             f.hasCsp = parseCsp(csp, f.csp);
             f.data = csp;
@@ -492,6 +508,11 @@ struct CubesatReceiver::Impl {
             }
             runPath(afskPath, disc);
             for (auto& tp : trackPaths) runPath(*tp, disc);
+            if (narrowOn) {
+                runPath(narrow9600, fe.thirdDisc());
+                runPath(narrowU482c, fe.thirdDisc());
+                runPath(narrow4800, fe.narrowDisc());
+            }
         }
         fe.commit();
         while (fe.n96 >= nextReport) {
@@ -524,6 +545,7 @@ void CubesatReceiver::setCcsdsLength(int bytes) {
     std::lock_guard<std::mutex> lk(p_->procMu);
     p_->ccsdsLen = std::max(kRsParity + 1, std::min(255, bytes));
     for (auto& f : p_->framer) f.ccsdsLen = p_->ccsdsLen;
+    p_->narrow9600.framer.ccsdsLen = p_->narrow4800.framer.ccsdsLen = p_->ccsdsLen;
 }
 void CubesatReceiver::setWallClock(bool on) { std::lock_guard<std::mutex> lk(p_->procMu); p_->wallClock = on; }
 void CubesatReceiver::setFramingMask(uint32_t mask) { p_->framingMask.store(mask, std::memory_order_relaxed); }

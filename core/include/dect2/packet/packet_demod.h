@@ -30,6 +30,9 @@ struct FmFront {
     // optional second, narrower channel with its own discriminator (disc2) on the same signal: the 1200 baud tones need much less than the
     // 9600 baud data, and a narrower IF filter is worth 2-3 dB at the threshold. 0: off (disc2 is then the wide discriminator)
     double chanPass2 = 0, chanStop2 = 0;
+    // optional third channel with its own discriminator (disc3): a receiver's per-framing narrow path (CubeSat 9600 baud FSK needs about
+    // +-8 kHz with the AFC's residual, not the +-12 kHz the wide channel passes for every framing). 0: off (disc3 is then the wide discriminator)
+    double chanPass3 = 0, chanStop3 = 0;
     float clipHz = 8000.f;
     double afcMaxHz = 12000.0;
     // the input is already FM-demodulated audio (a sound card on a radio's discriminator or speaker output): its real part is used, with
@@ -40,10 +43,10 @@ struct FmFront {
     std::vector<dmr::Fir<cf32>> stages;
     ExactResampler rs;
     bool rsPass = true;
-    dmr::Fir<cf32> chan, chan2;
-    cf32 prevY2 = cf32(1.f, 0.f);
-    std::vector<cf32> ch2;
-    std::vector<float> disc2;
+    dmr::Fir<cf32> chan, chan2, chan3;
+    cf32 prevY2 = cf32(1.f, 0.f), prevY3 = cf32(1.f, 0.f);
+    std::vector<cf32> ch2, ch3;
+    std::vector<float> disc2, disc3;
     cf32 prevY = cf32(1.f, 0.f);
     std::vector<cf32> bufA, bufB, mixBuf, o2, ch, clean, afcBuf;
     std::vector<float> disc;
@@ -65,6 +68,7 @@ struct FmFront {
     void reset();
     const std::vector<float>& process(const cf32* x, size_t n);
     const std::vector<float>& narrowDisc() const { return chanPass2 > 0 ? disc2 : disc; }   // valid after process()
+    const std::vector<float>& thirdDisc() const { return chanPass3 > 0 ? disc3 : disc; }    // valid after process()
     void commit() { n96 += (int64_t)pending; pending = 0; }
     double cfoHz() const { return afcHz + cfoEma; }
     float takeLevelDb() { const float l = inN ? (float)(10 * std::log10(inPower / (double)inN + 1e-20)) : -200.f; inPower = 0; inN = 0; return l; }
