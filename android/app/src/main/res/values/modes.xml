@@ -484,6 +484,12 @@
         <item>NFC: ISO 14443 Type B</item>
         <item>NFC: ISO 15693</item>
         <item>DCR (Japan digital convenience radio)</item>
+        <item>XPA (10 / 20 Bd)</item>
+        <item>XPA2</item>
+        <item>CROWD36</item>
+        <item>FSK200/500 (F01)</item>
+        <item>FSK200/1000 (F06, F06a)</item>
+        <item>GW FSK (100 Bd)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -949,6 +955,12 @@
         <item>NFC / RFID at 13.56 MHz, ISO/IEC 14443 Type B (some ID, transport and passport cards): the reader\'s REQB and the tag\'s ATQB with its frames. The receiver has a Type B path, but no test signal with real Type B modulation exists yet: not verified. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
         <item>NFC / RFID at 13.56 MHz, ISO/IEC 15693 vicinity cards (library tags, access and industrial tags, ICODE): the reader\'s inventory and system-information commands and the tag\'s answers with their UIDs. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
         <item>DCR, Japan\'s digital convenience radio (ARIB STD-T98 volume 3): 4-level FSK 2400 symbols/s in 6.25 kHz channels, 351 MHz (registered stations), 467 / 465 MHz and 154 MHz (licensed). Receive only: user codes (0 - 511), manufacturer numbers, normal or privacy-scrambled calls, end-of-call messages, the 9-digit call sign of the synchronous burst, error-corrected data blocks and manufacturer messages; the voice (AMBE+2) frames are counted, there is no audio. With a wide capture (100 kHz or more) tuned in the 351 MHz band every active channel of the plan is decoded at once. Checked against the standard\'s own test frames and on simulated signals; no real DCR recording was available</item>
+        <item>XPA, a number-group sender on HF believed to carry Russian intelligence messages: 20-tone MFSK, 40 Hz apart from 520 Hz, at 10 or 20 Bd (both are tried). Receive only: start tones, message start, the five-figure groups ten to a line, block sync and break groups, the end of the message. Tune the dial frequency in upper sideband; the tones are found anywhere in the channel, lower sideband too. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
+        <item>XPA2, a number-group sender on HF believed to carry Russian intelligence messages: 16-tone MFSK at 7.8125 Bd, 15.625 Hz apart from 978 Hz. Receive only: the five-figure groups ten to a line and the end of the message; the sideband (reversed tones) is found automatically. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
+        <item>CROWD36, used for Russian diplomatic and intelligence messages: 34-tone MFSK at 40 Bd, 40 Hz apart from 1410 to 2730 Hz. Receive only: the sync tones, then the characters (letters and figures with their shift tones, line ends) as Rivet reads them; the traffic is believed to be enciphered and nothing is deciphered. The sync high tone is taken as tone 24 (Rivet\'s default). Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
+        <item>FSK200/500 (Enigma F01), used for Russian diplomatic and intelligence messages: 200 Bd FSK, 500 Hz shift, asynchronous ITA2 characters with 1.5 stop bits. Receive only: the figure groups line by line and the framing errors; the tones and the sense of the shift are found automatically. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
+        <item>FSK200/1000 (Enigma F06 and F06a), used for Russian diplomatic and intelligence messages: 200 Bd FSK, 1000 Hz shift, 288-bit blocks behind a sync word with a CRC-16. Receive only: the header blocks (block count, messages and where they start), F06 figure groups, ASCII blocks and F06a files (name, size, file CRC, contents), each block with its CRC; one wrong bit per block is corrected. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
+        <item>GW FSK, the ship-to-shore data system of Globe Wireless on the HF marine bands: 100 Bd FSK, 200 Hz shift, short packets. Receive only: shore free-channel markers with the station, ship packets with their type, MMSI numbers and commands, position reports put together from their fragments, ACKs. The format was worked out from recordings by Rivet\'s authors; it is not published. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1414,6 +1426,12 @@
         <item>RFID, Type B</item>
         <item>RFID, ISO 15693</item>
         <item>Digital voice, DCR 6.25 kHz</item>
+        <item>HF MFSK, 10 / 20 Bd</item>
+        <item>HF MFSK, 7.8 Bd</item>
+        <item>HF MFSK, 40 Bd</item>
+        <item>HF FSK, 200 Bd 500 Hz</item>
+        <item>HF FSK, 200 Bd 1000 Hz</item>
+        <item>HF FSK, 100 Bd 200 Hz</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1879,5 +1897,11 @@
         <item>nfc rfid 13.56 mhz iso 14443 type b reqb atqb card passport</item>
         <item>nfc rfid 13.56 mhz iso 15693 vicinity icode inventory library tag</item>
         <item>dcr digital convenience radio japan arib std-t98 digital simplified radio kani musen 351 mhz 467 mhz 154 mhz 4fsk nxdn user code call sign icom kenwood</item>
+        <item>xpa xpa1 numbers station number station mfsk 20 tones 10 baud 20 baud russian intelligence rivet priyom enigma 2000 hf</item>
+        <item>xpa2 xpa-2 numbers station number station mfsk 16 tones 7.8125 baud slow russian intelligence rivet priyom enigma 2000 hf</item>
+        <item>crowd36 crowd 36 crowd-36 34 tones mfsk 40 baud russian diplomatic intelligence rivet priyom enigma 2000 hf</item>
+        <item>fsk200/500 fsk 200/500 f01 numbers station 200 baud 500 hz shift ita2 baudot russian diplomatic intelligence rivet priyom enigma 2000 hf</item>
+        <item>fsk200/1000 fsk 200/1000 f06 f06a numbers station 200 baud 1000 hz shift crc blocks file russian diplomatic intelligence rivet priyom enigma 2000 hf</item>
+        <item>gw globe wireless gw fsk 100 baud 200 hz shift ship shore marine mmsi position free channel marker rivet hf</item>
     </string-array>
 </resources>

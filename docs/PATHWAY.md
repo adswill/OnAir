@@ -2072,3 +2072,12 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
   200 m 213 -> 51 m, last frame 366 -> 121 m. Three real SondeHub flights, offline: 2 km 0.8-4.6 km -> 0.5-0.85 km; last frame 12-27 m.
   20 m is not reached in general. Network: one opt-in switch, off under Offline mode. Tests sonde_predict, sonde_predict_harness,
   sonde_predict_real: GitHub run 43198880298 passed; the app (dect2) built in run 43193713308.
+## 2026-11-12 (feat40-rivet): HF data modes from Rivet (docs/RIVET-MODES-4.0.md)
+- Discord request: Rivet (priyom/Rivet, Ian Wraith, GPL-3.0-or-later) modes. New x40 variants 46 - 51, families 370 - 375: XPA (10 / 20 Bd),
+  XPA2, CROWD36, FSK200/500 (F01), FSK200/1000 (F06 and F06a), GW FSK. Protocol tables, framing, F06 block layout and CRC, GW packets ported
+  with Rivet's notices; tone search, matched tone filters and symbol timing new (core/src/x40/x40_rivet.h). Credits row added.
+- Skipped: CIS 36-50 (OnAir's BEE entry already reads the same), CCIR 493-4 (DSC), Baudot (RTTY), FSK raw (FSK analyser), AT-3x04 / CIS-12
+  (Rivet's own decoder is marked not working).
+- 50 % / 90 % points in 3 kHz: XPA -14.9 / -12.6 (10 Bd), -12.3 / -11.0 (20 Bd); XPA2 -16.5 / -14.5; CROWD36 -7.1 / -5.4; FSK200/500
+  -0.8 / +1.3; FSK200/1000 -2.3 / -0.3; GW FSK +2.8 / +5.0. No false decodes in noise or on a carrier. Simulated signals only.
+  Tests x40_xpa, x40_xpa2, x40_crowd36, x40_f01, x40_f06, x40_gwfsk (GitHub quick runs 43195900765, 43197842356).

@@ -51,6 +51,12 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case FskModem: return makeFskModem();
     case SsrInt: return makeSsrInt();
     case Dcr: return makeDcr();
+    case Xpa: return makeXpa();
+    case Xpa2: return makeXpa2();
+    case Crowd36: return makeCrowd36();
+    case F01: return makeF01();
+    case F06: return makeF06();
+    case Gw: return makeGw();
     default: return nullptr;
     }
 }
@@ -107,6 +113,12 @@ ModeTuning x40Tuning(int v) {
         {"fskmodem", 0.1, 6000, 7.85, 48000, 24000, 0.004, false},
         {"ssrint", 1000, 1100, 1030.0, 4000000, 2000000, 2.0, false},
         {"dcr", 150, 470, 351.2875, 250000, 48000, 0.0125, false},
+        {"xpa", 1.6, 30, 8.000, 48000, 8000, 0.004, false},        // HF, upper sideband: the dial frequency
+        {"xpa2", 1.6, 30, 8.000, 48000, 8000, 0.004, false},
+        {"crowd36", 1.6, 30, 10.000, 48000, 8000, 0.004, false},
+        {"f01", 1.6, 30, 9.000, 48000, 8000, 0.004, false},
+        {"f06", 1.6, 30, 6.000, 48000, 8000, 0.004, false},
+        {"gwfsk", 1.6, 30, 8.400, 48000, 8000, 0.004, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

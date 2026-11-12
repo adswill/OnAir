@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**455 modes.**
+**461 modes.**
 
 ## TV (25)
 
@@ -423,7 +423,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 - **HF packet 300 Bd** - HF packet 300 Bd: AX.25 frames, full decode (simulated only)
 
-## HF Utility (35)
+## HF Utility (41)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -460,6 +460,12 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
 - **FSK modems (Bell 103, V.21, V.23, Bell 202)** - FSK modems: Bell 103, V.21, V.23 and Bell 202 bytes
+- **XPA (10 / 20 Bd)** - XPA: five-figure groups of the 10 / 20 Bd MFSK number sender (simulated only)
+- **XPA2** - XPA2: five-figure groups of the 7.8 Bd MFSK number sender (simulated only)
+- **CROWD36** - CROWD36: characters of the 34-tone 40 Bd MFSK (simulated only)
+- **FSK200/500 (F01)** - FSK200/500 (F01): figure groups of the 200 Bd FSK (simulated only)
+- **FSK200/1000 (F06, F06a)** - FSK200/1000 (F06, F06a): blocks, figure groups and files (simulated only)
+- **GW FSK (100 Bd)** - GW FSK: Globe Wireless channel markers, ship packets and positions (simulated only)
 
 ## General & Tools (29)
 
