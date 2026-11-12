@@ -35,12 +35,15 @@ struct SoftBurst {
 };
 // As demodBurst; when nothing decodes and `failed` is set, it gets the soft bits of the best sync candidate (returns false either way).
 bool demodBurst(const std::vector<cf32>& x, double carrierHz, Beacon& out, SoftBurst* failed, bool coherent = true);
-// Decodes summed soft bits with stricter checks than a single burst (a perfect or 23 of 24 sync word, at most 3 repaired bits, the second BCH intact
-// when more than one bit was repaired in a long message, a country code that exists).
-bool decodeCombined(const std::vector<float>& soft, Beacon& out, double costPerBit = 0.6);
 // 4.0: a repair counts only when the soft confidence of the repaired bits stays under costPerBit x the mean confidence per repaired bit (a bit the
 // noise flipped had a small soft value; a decoder that landed on a wrong codeword flips ordinary ones). Applied with the coherent bits.
-constexpr double kRepairCostPerBit = 0.6;
+constexpr double kRepairCostPerBit = 1.0;
+// 4.0: the coherent path decodes by soft decision (Chase: 128 test patterns on the 7 least reliable bits) and keeps a repaired message only when the
+// winning codeword is at least this much closer to the soft bits than the next codeword (in mean |soft| units). A cost limit of 1e8 or more turns both off.
+constexpr double kRepairMargin = 1.5;
+// Decodes summed soft bits by soft decision with the margin check, and a perfect or 23 of 24 sync word, the second BCH intact when more than one bit
+// was repaired in a long message, a country code that exists.
+bool decodeCombined(const std::vector<float>& soft, Beacon& out, double costPerBit = kRepairCostPerBit);
 }
 
 class SarsatReceiver {

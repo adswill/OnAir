@@ -116,8 +116,8 @@ SarsatResult sarsatTrial(int path, double snrDb, double cfoHz, double ppm, int n
         if (rx.telemetry(tel, 0) && tel.blocksOk > seen) {
             for (size_t j = 0; j < tel.blocksOk - seen && j < tel.log.size(); j++) {
                 const SarsatEntry& e = tel.log[j];
-                if (!sent.count(e.b.hexId)) { r.wrong++; if (verbose) printf("    wrong id %s (sent %s), corrected %d, cost %.2f, combined %d\n", e.b.hexId.c_str(), sent.begin()->c_str(), e.b.corrected, e.b.repairCost, e.combined); continue; }
-                if (verbose && e.b.corrected) printf("    right id, corrected %d, cost %.2f, combined %d\n", e.b.corrected, e.b.repairCost, e.combined);
+                if (!sent.count(e.b.hexId)) { r.wrong++; if (verbose) printf("    wrong id %s (sent %s), corrected %d, cost %.2f, margin %.2f, combined %d\n", e.b.hexId.c_str(), sent.begin()->c_str(), e.b.corrected, e.b.repairCost, e.b.repairMargin, e.combined); continue; }
+                if (verbose && e.b.corrected) printf("    right id, corrected %d, cost %.2f, margin %.2f, combined %d\n", e.b.corrected, e.b.repairCost, e.b.repairMargin, e.combined);
                 r.decodes++;
                 if (e.combined) r.combinedDecodes++;
                 if (!r.firstBurst) {   // which burst had just ended

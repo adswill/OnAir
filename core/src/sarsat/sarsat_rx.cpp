@@ -165,6 +165,43 @@ template <class T> float repairCost(const std::vector<T>& d, const std::vector<i
     return (float)(c / mean);
 }
 
+// 4.0: soft-decision (Chase) decoding of the coherent bits. The 7 least reliable bits of the BCH-1 part are flipped in all 128 combinations, each word is
+// repaired by the BCH codes, and the codeword closest to the soft values (the sum of |soft| over the bits it changes) wins. This repairs up to 3 more bits
+// than the hard decoder when they are the doubtful ones, and gives a margin: how much closer the winner is than the next different codeword, in units of
+// the mean |soft|. A word of noise or a burst with too many errors has codewords at nearly the same distance (margin near 0).
+template <class T> bool chaseDecode(const std::vector<T>& y, const std::vector<uint8_t>& hard, Beacon& best, std::vector<uint8_t>& bestBits, float& margin) {
+    const int n0 = (int)std::min(y.size(), hard.size());
+    if (n0 < kShortBits) return false;
+    double mean = 0;
+    for (int k = kSyncBits; k < n0; k++) mean += std::fabs((double)y[(size_t)k]);
+    mean /= std::max(1, n0 - kSyncBits);
+    if (mean <= 0) return false;
+    constexpr int kFirst = 24, kLast = 106, kL = 7;
+    std::vector<int> idx;
+    for (int k = kFirst; k <= kLast && k < n0; k++) idx.push_back(k);
+    std::partial_sort(idx.begin(), idx.begin() + kL, idx.end(), [&](int a, int b) { return std::fabs((double)y[(size_t)a]) < std::fabs((double)y[(size_t)b]); });
+    double d1 = 1e300, d2 = 1e300;
+    for (int pat = 0; pat < (1 << kL); pat++) {
+        std::vector<uint8_t> b = hard;
+        for (int i = 0; i < kL; i++) if (pat >> i & 1) b[(size_t)idx[(size_t)i]] ^= 1;
+        Beacon t;
+        if (!decode(b, t) || t.country.empty()) continue;
+        const int nb = std::min(n0, t.longMsg ? kLongBits : kShortBits);
+        double dist = 0;
+        for (int k = kSyncBits; k < nb; k++) if ((b[(size_t)k] & 1) != (hard[(size_t)k] & 1)) dist += std::fabs((double)y[(size_t)k]);
+        if (!bestBits.empty() && std::equal(b.begin() + kFirst, b.begin() + kLast + 1, bestBits.begin() + kFirst)) continue;   // the same codeword again
+        if (dist < d1) { d2 = d1; d1 = dist; bestBits = b; best = t; }
+        else if (dist < d2) d2 = dist;
+    }
+    if (bestBits.empty()) return false;
+    margin = d2 > 1e299 ? 99.f : (float)((d2 - d1) / mean);
+    int flips = 0;
+    const int nb = std::min(n0, best.longMsg ? kLongBits : kShortBits);
+    for (int k = 0; k < nb; k++) flips += (bestBits[(size_t)k] & 1) != (hard[(size_t)k] & 1);
+    best.corrected = flips;
+    return true;
+}
+
 bool tryDecode(const Slicer& s, const Cand& c, Beacon& out, int& matches) {
     const double spb = kFs / kBitRate * (1 + c.r);
     const std::vector<double> d = s.coherent ? s.coherentBits(c.t0, spb, kLongBits) : s.bits(c.t0, spb, kLongBits);
@@ -179,7 +216,14 @@ bool tryDecode(const Slicer& s, const Cand& c, Beacon& out, int& matches) {
     if (matches < 23) return false;
     Beacon o;
     const std::vector<uint8_t> received = b;
-    if (!decode(b, o)) return false;
+    if (s.coherent) {
+        std::vector<uint8_t> cb;
+        float margin = 0;
+        if (!chaseDecode(d, received, o, cb, margin)) return false;
+        b = cb;
+        o.repairMargin = margin;
+        if (s.costPerBit < 1e8 && o.corrected > 0 && margin < kRepairMargin) return false;
+    } else if (!decode(b, o)) return false;
     // BCH-1 repairs any 82-bit word within 3 bits of a codeword (4.4 % of random words), and this search tries thousands of timings/rates/polarities.
     // So a candidate that needed the full repair must at least have a perfect sync word, a country code that exists and, for a long message,
     // an intact second check; otherwise it is noise or a second-generation burst (issue #404).
@@ -216,8 +260,15 @@ bool decodeCombined(const std::vector<float>& soft, Beacon& out, double costPerB
     if (best < kSyncBits - 1) return false;
     const std::vector<uint8_t> received = b;
     Beacon o;
-    if (!decode(b, o)) return false;
-    if (o.country.empty() || o.corrected > 3) return false;
+    {
+        std::vector<uint8_t> cb;
+        float margin = 0;
+        if (!chaseDecode(soft, received, o, cb, margin)) return false;
+        b = cb;
+        o.repairMargin = margin;
+        if (costPerBit < 1e8 && o.corrected > 0 && margin < kRepairMargin) return false;
+    }
+    if (o.country.empty() || (costPerBit < 1e8 && o.corrected > 6)) return false;
     if (o.longMsg && o.corrected >= 2 && !o.bch2Ok) return false;
     if (o.corrected >= 2 && best < kSyncBits) return false;
     o.selfTest = test;
