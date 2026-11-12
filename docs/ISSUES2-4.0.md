@@ -110,3 +110,4 @@ No phone, emulator, Windows desktop, CDR or DTMB signal was used.
 | android.yml 43207001215 (712a5b6) | JNI table, generated tables, Kotlin compile, JVM unit tests, DRA+ add-on NDK build (symbols checked) | pass |
 | quick.yml 43207706185 (712a5b6, Linux) | dect2 app build; dtmb_faults | app built; dtmb_faults failed its first threshold (0.46 < 0.5), which led to the DTMB coasting fix; native_netradio not run (wrong target name) |
 | quick.yml 43214511990 / 43215392986 (Linux, verbose) | native_netradio, dtmb_faults | pass (figures above) |
+| quick.yml 43218158764 (Windows, MSYS2 UCRT64) | dect2.exe with the folder dialog and onair.rc (GLFW_ICON); usb_fd | pass (built and linked; dialog and icon not seen on a screen) |
