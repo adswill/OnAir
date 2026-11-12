@@ -51,33 +51,35 @@ double frac(const Case& C, double snr, double cfo, double sro, int n) {
     return s / n;
 }
 }
+struct SRow { const char* name; int mask; double secs, snr, cfo, sro, need; };
+}
 int main() {
 #ifndef _WIN32
     setenv("DECT2_NOPACE", "1", 1);
 #endif
     setvbuf(stdout, nullptr, _IONBF, 0);
-    struct R { const char* name; int mask; double secs; double snrs[6]; };
-    const R rs[] = {
-        {"iMet-54", 128, 12.0, {19, 16, 13, 11, 9, 7}},
-        {"MRZ", 256, 24.0, {14, 12, 10, 8, 6, 4}},
-        {"iMS-100", 512, 24.0, {10, 8, 6, 4, 2, 0}},
+    // 4.0 A4: midpoint-sliced sondes (iMet-54, MRZ) take the middle of the extremes of the smoothed discriminator (3.9: of the raw one, which noise spikes pull away).
+    // before (13 / 11 dB for iMet-54, 10 / 8 dB for MRZ): 25 % / 0 %, 0 % / 0 %.
+    const SRow rows[] = {
+        {"iMet-54", 128, 12.0, 13.0, 0, 0, 0.6},
+        {"iMet-54", 128, 12.0, 13.0, 8000, 0, 0.6},
+        {"iMet-54", 128, 12.0, 13.0, 0, 50, 0.6},
+        {"MRZ", 256, 24.0, 10.0, 0, 0, 0.6},
+        {"MRZ", 256, 24.0, 10.0, 8000, 0, 0.6},
+        {"MRZ", 256, 24.0, 10.0, 0, 50, 0.6},
     };
-    const double cfos[] = {0};
-    for (int phase = 0; phase < 5; phase++) {
-    setenv("A4_VAR", std::to_string(phase).c_str(), 1);
-    printf("=== A4_VAR %d (0 before, 1 tone + mean thr, 2 mean thr, 3 smoothed extremes, 4 tone + smoothed extremes)\n", phase);
-    for (const R& r : rs) {
+    for (const SRow& r : rows) {
         const Case S = makeCase("sonde", r.secs, r.mask);
-        for (double cfo : cfos) {
-            printf("%-8s cfo %5.0f ref %.1f:", r.name, cfo, S.ref);
-            for (double snr : r.snrs) printf("  %.0fdB %3.0f%%", snr, 100 * frac(S, snr, cfo, 0, 4));
-            printf("\n");
-        }
+        CHECK(S.ref >= 3, "%s clean reference %.1f", r.name, S.ref);
+        const double f = frac(S, r.snr, r.cfo, r.sro, 4);
+        printf("%s %.0f dB, carrier %.0f Hz, clock %.0f ppm: %.0f %% (need %.0f %%) of %.1f\n", r.name, r.snr, r.cfo, r.sro, 100 * f, 100 * r.need, S.ref);
+        CHECK(f >= r.need, "%s %.0f dB %.0f Hz %.0f ppm: %.2f", r.name, r.snr, r.cfo, r.sro, f);
+    }
+    for (const int mask : {128, 256}) {
+        const Case S = makeCase("sonde", 12.0, mask);
         double falses = 0;
         for (int i = 0; i < 3; i++) falses += trial(S, 10, 0, 0, 1, 1000 + (uint64_t)i);
-        printf("%-8s noise only: %.0f units\n", r.name, falses);
-        CHECK(falses == 0, "%s noise-only %.0f", r.name, falses);
-    }
+        CHECK(falses == 0, "mask %d noise-only %.0f", mask, falses);
     }
     printf(fails ? "FAILED\n" : "OK\n");
     return fails ? 1 : 0;
