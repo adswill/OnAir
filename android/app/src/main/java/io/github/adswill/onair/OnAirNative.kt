@@ -45,5 +45,7 @@ object OnAirNative {
     external fun nativeRecStart(dir: String, hw: String, hasGeo: Boolean, lat: Double, lon: Double, maxBytes: Long): String
     external fun nativeRecStats(): String
     external fun nativeRecStop()
+    external fun nativeCdrListen(serviceId: Int)
+    external fun nativeCodecs(dir: String): String
     external fun nativeVersion(): String
 }

@@ -47,14 +47,17 @@ object MessagesPanel : ModePanel {
         Column(modifier.padding(horizontal = 12.dp, vertical = 6.dp)) {
             PanelSearch(query, { query = it })
             Label(stringResource(R.string.panel_count, rows.size, all.size), Modifier.padding(vertical = 3.dp), size = 11)
-            if (all.isEmpty()) { Label(stringResource(R.string.panel_nothing)); return }
-            if (rows.isEmpty()) { Label(stringResource(R.string.panel_no_match)); return }
-            LazyColumn(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                itemsIndexed(rows) { i, m ->
-                    Column(Modifier.fillMaxWidth().background(p.panel).clickable { open = if (open == i) null else i }.padding(horizontal = 10.dp, vertical = 6.dp)) {
-                        Label((m.time + "  " + m.head).trim(), size = 11)
-                        if (m.text.isNotBlank()) Text(m.text, color = p.text, fontFamily = Mono, fontSize = 12.sp, maxLines = if (open == i) Int.MAX_VALUE else 4)
-                        if (open == i) m.fields.filter { it.second.isNotBlank() }.forEach { (k, v) -> Label("$k: $v", size = 11, color = p.accent) }
+            // no return out of the Column's content (#435: early returns from inline composable lambdas broke the slot table)
+            when {
+                all.isEmpty() -> Label(stringResource(R.string.panel_nothing))
+                rows.isEmpty() -> Label(stringResource(R.string.panel_no_match))
+                else -> LazyColumn(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    itemsIndexed(rows) { i, m ->
+                        Column(Modifier.fillMaxWidth().background(p.panel).clickable { open = if (open == i) null else i }.padding(horizontal = 10.dp, vertical = 6.dp)) {
+                            Label((m.time + "  " + m.head).trim(), size = 11)
+                            if (m.text.isNotBlank()) Text(m.text, color = p.text, fontFamily = Mono, fontSize = 12.sp, maxLines = if (open == i) Int.MAX_VALUE else 4)
+                            if (open == i) m.fields.filter { it.second.isNotBlank() }.forEach { (k, v) -> Label("$k: $v", size = 11, color = p.accent) }
+                        }
                     }
                 }
             }

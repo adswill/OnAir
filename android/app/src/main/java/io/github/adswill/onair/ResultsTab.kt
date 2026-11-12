@@ -41,11 +41,25 @@ import io.github.adswill.onair.ui.ReceiverViewModel
 /** The active mode's results. FM and the general receiver have a screen of their own on top; every mode gets its cards and tables from the JSON. */
 @Composable
 fun ResultsTab(vm: ReceiverViewModel, modifier: Modifier = Modifier) {
-    val p = LocalPalette.current
     val t = vm.telemetry.collectAsStateWithLifecycle().value
     val settings by vm.settings.collectAsStateWithLifecycle()
+    // #435: no early return out of the Column's content (it was `return@Column` while t is null). With the Compose compiler of Kotlin 2.0.21 an
+    // early return from an inline composable lambda followed by remember calls can leave the slot table's groups unbalanced when t flips
+    // between null and a value (a mode change clears the telemetry), and the next recomposition fails with ArrayIndexOutOfBoundsException
+    // (index -2) inside ComposerImpl, the crash in the reports. The body is now its own composable behind a plain if / else.
     Column(modifier.verticalScroll(rememberScrollState()).padding(horizontal = 12.dp, vertical = 8.dp)) {
-        if (t == null) { Label(stringResource(R.string.results_waiting)); return@Column }
+        if (t == null) Label(stringResource(R.string.results_waiting))
+        else ResultsBody(vm, settings, t)
+    }
+}
+
+@Composable
+private fun ResultsBody(vm: ReceiverViewModel, settings: Settings, t: Telemetry) {
+    val p = LocalPalette.current
+    Column {
+        if (t.linkNote.isNotEmpty()) {
+            Text(t.linkNote, Modifier.fillMaxWidth().padding(bottom = 8.dp), color = p.warn, fontFamily = Mono, fontSize = 13.sp)
+        }
         when (t.standard) {
             Telemetry.STD_FM -> FmPanel(t)
             Telemetry.STD_GENERAL -> GeneralPanel(vm, settings, t)

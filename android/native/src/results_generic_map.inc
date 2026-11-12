@@ -107,24 +107,6 @@ case 22: {
     { Table tb({"Port", "Lot", "Name", "Mime", "Size", "Have", "Version", "Expires"}); int n = 0; for (auto it = t.lots.rbegin(); it != t.lots.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.port), cell(e.lot), cell(e.name), cell(e.mime), cell(e.size), cell(e.have), cell(e.version), cell(e.expires)}); } if (n) addTable(o, "Lots", tb); }
     break;
 }
-case 23: {
-    const auto& t = rx.cdr; (void)t;
-    cardIf(o, "Cfo Hz", t.cfoHz);
-    cardIf(o, "Snr Db", t.snrDb);
-    cardIf(o, "Level Db", t.levelDb);
-    cardIf(o, "Clip Pct", t.clipPct);
-    cardIf(o, "Blocks Ok", t.blocksOk);
-    cardIf(o, "Blocks Bad", t.blocksBad);
-    cardIf(o, "Time Sec", t.timeSec);
-    cardIf(o, "Input Rate", t.inputRate);
-    cardIf(o, "Tm", t.tm);
-    cardIf(o, "Sm", t.sm);
-    cardIf(o, "Ni", t.ni);
-    cardIf(o, "Inner Khz", t.innerKhz);
-    { Table tb({"Id", "Smf Id", "Sub Index", "Kbps", "Audio Units", "Audio Bytes", "Data Bytes", "Text"}); int n = 0; for (auto it = t.services.rbegin(); it != t.services.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.smfId), cell(e.subIndex), cell(e.kbps), cell(e.audioUnits), cell(e.audioBytes), cell(e.dataBytes), cell(e.text)}); } if (n) addTable(o, "Services", tb); }
-    { Table tb({"Item"}); int n = 0; for (auto it = t.notes.rbegin(); it != t.notes.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Notes", tb); }
-    break;
-}
 case 27: {
     const auto& t = rx.airband; (void)t;
     cardIf(o, "Cfo Hz", t.cfoHz);
