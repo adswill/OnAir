@@ -31,3 +31,5 @@ void d40PagerFeed(const PagerTelemetry& t);   // d40_pager_ui.cpp: paged capcode
 void d40PagerGroupsCard();
 void d40SarsatFeed(const dect2::SarsatTelemetry& t);   // d40_sarsat_ui.cpp: beacons grouped into incidents
 void d40SarsatIncidentsCard();
+void d40TonesFeed(const dect2::TonesTelemetry& t);   // d40_tones_ui.cpp: DTMF number assembler, tone system guess
+void d40TonesCard(const dect2::TonesTelemetry& t);
