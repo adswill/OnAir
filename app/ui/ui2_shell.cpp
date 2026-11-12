@@ -852,6 +852,67 @@ float menuBar(App& a) {
     return menuH;
 }
 
+// 4.0: the space between the mode's summary and the level meter, which stood empty. The things wanted all the time, as flat segments in the
+// style of the status bar (muted label, monospaced value, thin rules), right-aligned against the meter: IQ record with its time and size, the
+// memories (quick tune), the offset of the listening frequency from the radio's centre, the mode's bandwidth. A narrow window drops them from
+// the right by priority (statusstrip::fit), record last. The same controls stay where they were (Record IQ in the side panel, the Memory menu).
+static void quickStrip(App& a, float x0, float x1, float y, float h) {
+    if (x1 - x0 < 60 * gUi) return;
+    ImDrawList* dl = ImGui::GetWindowDrawList();
+    ImFont* mono = typo::fonts().mono ? typo::fonts().mono : a.mono;
+    const float fs = ImGui::GetFontSize(), pad = 8 * gUi, divW = 2 * pad + 1, fh = ImGui::GetFrameHeight(), ty = y + (h - ImGui::GetTextLineHeight()) * 0.5f, by = y + (h - fh) * 0.5f;
+    const auto textW = [&](const std::string& t, ImFont* f) { ImGui::PushFont(f, fs); const float w = ImGui::CalcTextSize(t.c_str()).x; ImGui::PopFont(); return w; };
+    char off[48], bwv[48];
+    const double offKhz = (a.freqMhz - radioCenterMhz(a)) * 1e3;
+    snprintf(off, sizeof off, "%+.3f kHz", std::fabs(offKhz) < 0.0005 ? 0.0 : offKhz);
+    const double bwMhz = a.tune.bandwidthMhz;
+    if (bwMhz > 0 && bwMhz < 1) snprintf(bwv, sizeof bwv, "%.1f kHz", bwMhz * 1e3); else snprintf(bwv, sizeof bwv, "%.3f MHz", bwMhz);
+    const RecordingStats rs = a.engine.recordingStats();
+    enum { QRec, QMem, QOff, QBw };
+    struct Q { int k; std::string label, value; };
+    const Q items[4] = {{QRec, "", ""}, {QMem, "", tr("Memory")}, {QOff, tr("offset"), off}, {QBw, tr("bw"), bwv}};
+    std::vector<statusstrip::Seg> segs;
+    for (const Q& q : items) {
+        float w = 0; int prio = 1;
+        if (q.k == QRec) { w = 12 * gUi + ImGui::CalcTextSize(rs.active ? "00:00  000.0 MB" : tr("rec")).x + 8 * gUi; prio = 1; }
+        else if (q.k == QMem) { w = ImGui::CalcTextSize(q.value.c_str()).x + 2 * ImGui::GetStyle().FramePadding.x; prio = 2; }
+        else { w = textW(q.label, nullptr) + 5 * gUi + textW(q.value, mono); prio = q.k == QOff ? 3 : 4; }
+        segs.push_back({w, prio, true});
+    }
+    const float used = statusstrip::fit(segs, x1 - x0, divW);
+    bool any = false;
+    for (const statusstrip::Seg& sg : segs) any = any || sg.on;
+    if (!any || used > x1 - x0) return;
+    float x = x1 - used;
+    dl->AddLine(ImVec2(x - pad - 1, y + 4 * gUi), ImVec2(x - pad - 1, y + h - 6 * gUi), IM_COL32(255, 255, 255, 28));   // the same rule as between the top bar's groups
+    bool first = true;
+    for (int i = 0; i < 4; i++) {
+        if (!segs[(size_t)i].on) continue;
+        if (!first) { dl->AddLine(ImVec2(x + pad + 0.5f, by + 3 * gUi), ImVec2(x + pad + 0.5f, by + fh - 3 * gUi), u32(T.edge)); x += divW; }
+        first = false;
+        const Q& q = items[i];
+        ImGui::SetCursorScreenPos(ImVec2(x, by));
+        if (q.k == QRec) recordCompact(a);
+        else if (q.k == QMem) {
+            ImGui::SetCursorScreenPos(ImVec2(x, ty));   // a small button: no vertical frame padding, so on the text line
+            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+            ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.f);
+            memoryToolbarButton(a);   // the quick list: favourites and the ten most recent, Store current..., the Memory panel
+            ImGui::PopStyleVar();
+            ImGui::PopStyleColor();
+        } else {
+            ImGui::PushFont(nullptr, fs); dl->AddText(ImVec2(x, ty), u32(T.dim), q.label.c_str()); const float lw = ImGui::CalcTextSize(q.label.c_str()).x; ImGui::PopFont();
+            ImGui::PushFont(mono, fs); dl->AddText(ImVec2(x + lw + 5 * gUi, ty), u32(T.text), q.value.c_str()); ImGui::PopFont();
+            ImGui::SetCursorScreenPos(ImVec2(x, by));
+            ImGui::PushID(i);
+            ImGui::InvisibleButton("##qs", ImVec2(std::max(1.f, segs[(size_t)i].w), fh));
+            ImGui::PopID();
+            if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", q.k == QOff ? tr("How far the listening frequency is from the radio's centre frequency") : tr("The bandwidth of the mode's channel filter (Reset this mode puts the default back)"));
+        }
+        x += segs[(size_t)i].w;
+    }
+}
+
 void topBar(App& a, ImVec2 disp) {
     ImGui::PushStyleColor(ImGuiCol_ChildBg, kRail);
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(8 * gUi, 4 * gUi));
@@ -888,7 +949,9 @@ void topBar(App& a, ImVec2 disp) {
         }
         ImGui::SetCursorScreenPos(ImVec2(sumX, o.y + 8 * gUi));
         modePickerButton(a, "##modes_top");
-        summary(a, sumX + modesW, o.y + 6 * gUi, 1.f, (mw > 0 ? meterX : o.x + W - vw) - 16 * gUi - sumX - modesW);
+        const float sumMax = (mw > 0 ? meterX : o.x + W - vw) - 16 * gUi - sumX - modesW;
+        summary(a, sumX + modesW, o.y + 6 * gUi, 1.f, sumMax);
+        quickStrip(a, sumX + modesW + std::min(summaryWidth(a), sumMax) + 24 * gUi, (mw > 0 ? meterX : o.x + W - vw) - 18 * gUi, o.y, 40 * gUi);
         if (mw > 0) levelMeter(a, meterX, o.y, mw);
         ImGui::SetCursorScreenPos(ImVec2(o.x + W - vw + 4 * gUi, o.y + 8 * gUi));
         volumeControl(a, vw);

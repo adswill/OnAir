@@ -41,3 +41,36 @@ Code: `app/ui/ui2_shell.cpp` (`statusLine`, `statusStripBlockHeight`), `app/ui/s
 Tests: `groupedMhz` (grouping on both sides of the dot, clamping) and `fit` (wide shows all, priority-0 segments never dropped, monotonic
 as the window narrows, never drops a more important segment before a less important one, ties drop from the right). The old cell-collapse
 `plan` was removed with its test, since nothing else used it.
+
+## D. The top bar and the rows above every mode's tabs
+
+Code: `app/ui/ui2_shell.cpp` (`topBar`, `quickStrip`), `app/ui/kit/mode_actions.cpp` (`modeActionBar`), `app/ui/kit/mode_panel.cpp`
+(`levelBar`, `levelBarWidth`, `commandView`), `app/ui/main_tabs.cpp`, `app/panels/diag_ui.cpp` (`nextStepLine`, `recordCompact`),
+`app/ui/mode_hints.cpp` (`modeHintsLine`, `modeAntennaHint`). The General receiver's own top bar (`app/general/*`) is not touched.
+
+### Before (3.9)
+
+- Top bar: run button, frequency digits, Modes button, the mode name with its state under it, then an empty gap up to the ADC level meter
+  and the volume.
+- Above the tabs of every mode, stacked, each on its own row with the right side empty: Simple / Advanced (right-aligned, modes with a
+  Simple view), the next-step line (e.g. "Stopped. Press Start to listen." in amber), its fix button (Start or Auto gain), the hints (first
+  start, next pass, satellite, navigation), the antenna hint ("Antenna: a vertical or dipole, quarter wave 14 cm."), then Auto setup and
+  Reset this mode with the Undo note. Four or five rows in every mode.
+
+### After (4.0)
+
+- Top bar: the gap now holds flat segments, right-aligned against the meter, in the status bar's style: `rec` (a red dot; while recording
+  a square, `m:ss` and the size, click to stop), `Memory` (the quick list: favourites, the ten most recent, Store current..., the Memory
+  panel), `offset +12.500 kHz` (listening frequency against the radio centre), `bw 8.000 MHz` (the mode's channel bandwidth). They drop
+  from the right by priority when the window narrows (bw, offset, Memory, rec last) and never overlap the mode summary. Nothing was
+  removed from its old place: Record IQ (with its format menu) stays in the side panel, the Memory menu in the menu bar; the sample rate
+  is in the status bar.
+- Above the tabs: one row. Left: a coloured dot, the next-step line on one line (cut with "..." to fit; the whole text in the tooltip) and
+  its fix button (Start, Auto gain) right after it. Middle: the antenna hint as muted text, cut to fit or shortened to "Antenna" when room
+  is short, the whole hint in the tooltip. Right: the Undo note and Undo (for 12 s after Auto setup or Reset), Auto setup, Reset this mode,
+  then Simple / Advanced. When the pane is narrower than the next step needs (220 px) plus the rest, the next step takes the first row and
+  the antenna hint and buttons a second row. The other hints keep their own rows and appear only when they have something to say.
+- The Simple view (Command view) uses the same row, so Simple / Advanced moved into it there too; nothing is drawn twice.
+
+Long texts checked by reading the code paths, not on screen yet: "Listening. This mode does not report a lock: watch the list for
+decoded items." is cut to the space left of the antenna hint and buttons and shown whole in the tooltip.

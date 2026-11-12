@@ -4,6 +4,7 @@
 // and keep an Undo for 12 seconds. Pure parts: mode_actions_logic.h.
 #include "app.h"
 #include "mode_actions_logic.h"
+#include "mode_panel.h"
 #include "state/presets_app.h"
 #include <cstdio>
 #include <string>
@@ -74,23 +75,77 @@ void resetThisMode(App& a) {
 
 }  // namespace
 
+// 4.0: one row instead of four or five. Left: the next step (dot, line, its fix button such as Start); middle: the antenna hint as short muted
+// text (the whole of it in the tooltip); right: the Undo note, Auto setup, Reset this mode, Simple / Advanced. A window too narrow for that
+// puts the next step on a row of its own and the rest on a second row. The other hints (first start, next pass, satellite, navigation) follow
+// on their own rows only when they have something to say.
 void modeActionBar(App& a) {
     ImGui::PushID("##modeactions");
-    nextStepLine(a);
-    modeHintsLine(a);
+    const ImGuiStyle& st = ImGui::GetStyle();
+    const float sp = st.ItemSpacing.x, gap = 14 * gUi;
     const bool radio = hasRadioRunning(a);
-    if (!radio) { ImGui::PopID(); return; }   // no radio selected: two greyed, framed buttons that do nothing are only clutter; draw nothing
-    if (ImGui::SmallButton(tr("Auto setup"))) { const std::string s = autoSetup(a); gUndo.what = std::string(tr("Auto setup: ")) + s; }
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("One click: Auto gain, this mode's own bandwidth and sample rate, and the frequency nudged onto the signal when it is a narrow one. Every step can be undone."));
-    ImGui::SameLine();
-    if (ImGui::SmallButton(tr("Reset this mode"))) resetThisMode(a);
-    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Put this mode's frequency, bandwidth and sample rate back to its defaults. Other modes and your other settings stay as they are."));
-    if (gUndo.have && ImGui::GetTime() < gUndo.until && gUndo.family == presetsapp::modeKey(a)) {
-        ImGui::SameLine();
-        ImGui::TextDisabled("%s", gUndo.what.c_str());
-        ImGui::SameLine();
-        if (ImGui::SmallButton(tr("Undo"))) doUndo(a);
-    } else if (gUndo.have && ImGui::GetTime() >= gUndo.until) gUndo.have = false;
+    const bool level = modepanel::available(a);
+    const auto bw = [&](const char* t) { return ImGui::CalcTextSize(t).x + 2 * st.FramePadding.x; };
+    const bool undo = gUndo.have && ImGui::GetTime() < gUndo.until && gUndo.family == presetsapp::modeKey(a);
+    if (gUndo.have && ImGui::GetTime() >= gUndo.until) gUndo.have = false;
+    float rightW = 0;
+    if (radio) rightW += bw(tr("Auto setup")) + sp + bw(tr("Reset this mode"));
+    if (level) rightW += (rightW > 0 ? gap : 0.f) + modepanel::levelBarWidth();
+    const float undoW = undo ? std::min(ImGui::CalcTextSize(gUndo.what.c_str()).x, 260 * gUi) + sp + bw(tr("Undo")) + sp : 0.f;
+    const std::string ant = modeAntennaHint(a);
+    const float antFull = ant.empty() ? 0.f : ImGui::CalcTextSize(ant.c_str()).x, antMin = ant.empty() ? 0.f : ImGui::CalcTextSize(tr("Antenna")).x;
+    const float avail = ImGui::GetContentRegionAvail().x, x0 = ImGui::GetCursorPosX();
+    const float leftMin = 220 * gUi;   // the next step needs this much to say anything useful on one row
+    const bool oneRow = avail >= leftMin + (antMin > 0 ? antMin + gap : 0.f) + undoW + rightW + gap;
+    // the middle part (antenna) and the right part, drawn after the next step (or on the second row)
+    const auto rest = [&](float startX, float endX) {
+        float x = startX;
+        if (!ant.empty()) {
+            const float room = endX - x - undoW - rightW - gap;
+            if (room >= antMin) {
+                ImGui::SameLine(0, 0); ImGui::SetCursorPosX(x);
+                const std::string t = antFull <= room ? ant : ellipsize(ant, std::max(antMin, std::min(room, antFull)));
+                ImGui::AlignTextToFramePadding();
+                ImGui::TextDisabled("%s", (room < antMin * 3 ? std::string(tr("Antenna")) : t).c_str());
+                if (ImGui::IsItemHovered()) { ImGui::BeginTooltip(); ImGui::PushTextWrapPos(ImGui::GetFontSize() * 30); ImGui::TextUnformatted(ant.c_str()); ImGui::PopTextWrapPos(); ImGui::EndTooltip(); }
+            }
+        }
+        x = std::max(x, endX - undoW - rightW);
+        if (undo) {
+            ImGui::SameLine(0, 0); ImGui::SetCursorPosX(x);
+            ImGui::AlignTextToFramePadding();
+            const std::string t = ellipsize(gUndo.what, 260 * gUi);
+            ImGui::TextDisabled("%s", t.c_str());
+            if (t != gUndo.what && ImGui::IsItemHovered()) ImGui::SetTooltip("%s", gUndo.what.c_str());
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Undo"))) doUndo(a);
+            x = ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x + ImGui::GetScrollX() + sp;
+        }
+        if (radio) {
+            ImGui::SameLine(0, 0); ImGui::SetCursorPosX(std::max(x, endX - rightW));
+            if (ImGui::SmallButton(tr("Auto setup"))) { const std::string s = autoSetup(a); gUndo.what = std::string(tr("Auto setup: ")) + s; }
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("One click: Auto gain, this mode's own bandwidth and sample rate, and the frequency nudged onto the signal when it is a narrow one. Every step can be undone."));
+            ImGui::SameLine();
+            if (ImGui::SmallButton(tr("Reset this mode"))) resetThisMode(a);
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Put this mode's frequency, bandwidth and sample rate back to its defaults. Other modes and your other settings stay as they are."));
+        }
+        if (level) {
+            ImGui::SameLine(0, 0); ImGui::SetCursorPosX(std::max(radio ? ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x + ImGui::GetScrollX() + gap : x, endX - modepanel::levelBarWidth()));
+            modepanel::levelBar(a, false);
+        }
+    };
+    const float endX = x0 + avail;
+    if (oneRow) {
+        const float leftMax = avail - (antMin > 0 ? antMin + gap : 0.f) - undoW - rightW - gap;
+        const bool said = nextStepLine(a, std::max(leftMin, std::min(leftMax, avail * 0.6f)));
+        const float after = said ? ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x + ImGui::GetScrollX() + gap : x0;
+        if (!said) ImGui::Dummy(ImVec2(0, ImGui::GetFrameHeight()));   // the row still holds the buttons
+        rest(after, endX);
+    } else {
+        nextStepLine(a, avail);
+        if (!ant.empty() || undo || radio || level) { ImGui::Dummy(ImVec2(0, 0)); rest(x0, endX); }
+    }
+    modeHintsLine(a, false);   // the other hints, each a row of its own when it has something to say
     ImGui::PopID();
     ImGui::Spacing();
 }

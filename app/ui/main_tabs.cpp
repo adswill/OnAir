@@ -146,9 +146,8 @@ static void mainTabsInner(App& a, bool unified) {
             modepanel::commandView(a, *mu);   // in the window of the tabs (it scrolls like a tab body), not in a child of its own
             return;
         }
-        modepanel::levelBar(a);
     }
-    modeActionBar(a);   // 3.7: the same row (next step, Auto setup, Reset this mode) above the tabs of every mode
+    modeActionBar(a);   // 3.7: the same row (next step, Auto setup, Reset this mode) above the tabs of every mode; 4.0: one row, Simple / Advanced at its right end
     gTightTabs = ImGui::GetContentRegionAvail().x < 760 * gUi;
     if (gTightTabs) ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3 * gUi, ImGui::GetStyle().FramePadding.y));
     const bool bar = pal::dev() ? kit::beginTabs("tabs") : ImGui::BeginTabBar("tabs", 0);

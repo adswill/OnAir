@@ -961,7 +961,8 @@ RxWidthSnap rxWidthSnapshot(const App& a);
 bool rxWidthIsCustom(const App& a);          // a custom width or a chosen sample rate is in force for this mode
 void rxWidthReset(App& a);                   // back to the mode's own bandwidth and rate (the custom values stay saved)
 void rxWidthRestore(App& a, const RxWidthSnap& s);   // Undo of "Reset this mode"
-void nextStepLine(App& a);                   // panels/diag_ui.cpp: the "what do I do next" line of the mode on screen (app/ui/next_step_logic.h), drawn by modepanel::actionBar
+void recordCompact(App& a);                  // panels/diag_ui.cpp: the top bar's flat IQ record control (dot + "rec", or the time and size while recording)
+bool nextStepLine(App& a, float maxW = 0.f); // panels/diag_ui.cpp: the "what do I do next" line of the mode on screen (app/ui/next_step_logic.h), drawn by modeActionBar; maxW > 0: on one row, cut to fit
 void vorUseNavaidFile(const std::string& path);    // vor_ui.cpp: the auto-downloaded navaids.csv becomes the VOR station list unless the user imported one
 void vorSetFixPair(App& a, double mhz1, double mhz2);   // vor_ui.cpp: the two stations of the fix
 bool airbandListenAt(App& a, double lat, double lon, int altFt, std::string& what);   // airband_ui.cpp: E15: the nearest airport's Tower / Approach / Centre for this aircraft
@@ -972,7 +973,8 @@ void firstStartSay(const std::string& text);    // a note in the hint strip for 
 void firstStartHint(App& a);                  // its line in the hint strip
 const char* curModeName(const App& a);        // ui/mode_hints.cpp: the name of the current mode-list entry (null: none)
 std::string modeAntennaNote(const ModeDef& m);
-void modeHintsLine(App& a);                  // ui/mode_hints.cpp: next pass, satellite visibility and other per-mode hints under the next step line
+void modeHintsLine(App& a, bool antenna = true);   // ui/mode_hints.cpp: next pass, satellite visibility and other per-mode hints under the next step line (antenna false: without the antenna line)
+std::string modeAntennaHint(const App& a);    // ui/mode_hints.cpp: the antenna line of the mode on screen ("Antenna: ..."), empty when there is none
 std::string modeGeoNote(const ModeDef& m);   // ui/mode_hints.cpp: non-blocking "below your horizon" note for the mode browser
 void modeActionBar(App& a);                  // ui/kit/mode_actions.cpp: next step line, "Auto setup" and "Reset this mode" with its undo note
 bool captureRowShown(const App& a);           // the Advanced row is drawn for a radio or the test signal (not a recording or a sound card)
