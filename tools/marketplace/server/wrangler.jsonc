@@ -6,7 +6,7 @@
   "main": "src/index.ts",
   "compatibility_date": "2026-05-03",
   "d1_databases": [
-    { "binding": "DB", "database_name": "onair-plugins", "database_id": "REPLACE-WITH-D1-ID" }
+    { "binding": "DB", "database_name": "onair-plugins", "database_id": "50643445-306f-47d2-a16b-d3a60abdc17b" }
   ],
   "r2_buckets": [
     { "binding": "FILES", "bucket_name": "onair-plugins" }
@@ -14,7 +14,7 @@
   "vars": {
     "PUBLIC_URL": "https://plugins.on-air.dev",
     "FILES_BASE_URL": "",               // empty: packages are served by this Worker at /files/... (a pulled plugin stops at once)
-    "GITHUB_CLIENT_ID": "",             // the OAuth app's Client ID (public, not a secret)
+    "GITHUB_CLIENT_ID": "Ov23li3cNdYJUxpl572P",             // the OAuth app's Client ID (public, not a secret)
     "OWNER_LOGINS": "adswill",          // may publish plugin ids that start with "onair"
     "MAX_PACKAGE_BYTES": "26214400"     // 25 MiB
   },

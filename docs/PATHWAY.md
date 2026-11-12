@@ -2037,3 +2037,9 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
 - General receiver NFM: the audio low-pass is now 3 kHz (127 taps) instead of 4 kHz (63 taps). FM noise rises with audio frequency, so this is
   about 3.7 dB less noise at the same signal (sensX2 measurement note); speech up to about 2.7 kHz keeps its level. WFM, AM, SSB and CW unchanged.
 - test_general_rx: a 2.5 kHz tone keeps its level within 1.5 dB, a 3.8 kHz tone is cut by more than 20 dB.
+## 2026-11-12: plugin marketplace set up
+- GitHub OAuth app "OnAir" (adswill, Client ID Ov23li3cNdYJUxpl572P, device flow on, redirect URIs https://map.on-air.dev/auth/ and
+  https://plugins.on-air.dev/), shared with the map badges.
+- Cloudflare: R2 bucket and D1 database `onair-plugins` (schema applied), Worker deployed on plugins.on-air.dev, the four secrets set.
+  `/api/v1/status` answers signing true, github true.
+- kBuiltInMarketKeyHex is now the server's public key; wrangler.jsonc carries the D1 id and the Client ID (neither is a secret).
