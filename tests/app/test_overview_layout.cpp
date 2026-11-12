@@ -43,9 +43,9 @@ struct Sim {
         o = layout(in, st);
         // measure what the panels drew in this frame's boxes: the input of the next frame
         const Box rb = o.probeRight ? o.probeRightBox : o.right;
-        in.right = rb.shown() ? right.in(rb.w - in.pad, rb.h - in.pad, in.lineH) : Extent{};
+        in.right = rb.shown() ? right.in(rb.w - in.padX, rb.h - in.padY, in.lineH) : Extent{};
         const Box bb = o.bottom.shown() ? o.bottom : o.probeBottom ? o.probeBottomBox : Box{};
-        in.bottom = bb.shown() ? bottom.in(bb.w - in.pad, bb.h - in.pad, in.lineH) : Extent{};
+        in.bottom = bb.shown() ? bottom.in(bb.w - in.padX, bb.h - in.padY, in.lineH) : Extent{};
     }
     void run(double from, double to, double dt = 1.0 / 30) { for (double t = from; t < to; t += dt) frame(t); }
 };
@@ -86,7 +86,7 @@ int main() {
         CHECK(s.o.probeBottom, "an empty lower row is still watched");
         CHECK(s.o.rightAt == Right::Strip && s.o.strip.shown() && !s.o.right.shown(), "a one-line list becomes a strip");
         CHECK(s.o.main.w == s.in.W && s.o.main.y + s.o.main.h == s.in.H, "the spectrum takes the full width and the rest of the height");
-        CHECK(s.o.strip.h <= s.in.lineH * 4.4f + s.in.pad, "the strip is short (%g)", s.o.strip.h);
+        CHECK(s.o.strip.h <= s.in.lineH * 4.4f + s.in.padY, "the strip is short (%g)", s.o.strip.h);
         // content arrives (decoding started): the row comes back, not at once, then glides; no switching back and forth
         s.bottom = M(Model::Fill);
         s.frame(2.0);
@@ -134,8 +134,8 @@ int main() {
         CHECK(s.o.main.h == s.in.H && s.o.main.y == 0, "spectrum full height (%g of %g)", s.o.main.h, s.in.H);
         CHECK(s.o.bottom.x >= s.o.right.x && s.o.bottom.y >= s.o.right.y + s.o.right.h, "plot under the list");
         CHECK(s.o.right.w < fullColW(s.in), "the column only as wide as the plot (%g < %g)", s.o.right.w, fullColW(s.in));
-        const Extent e = s.bottom.in(s.o.bottom.w - s.in.pad, s.o.bottom.h - s.in.pad, s.in.lineH);
-        CHECK(e.w <= s.o.bottom.w - s.in.pad + 1 && e.h <= s.o.bottom.h - s.in.pad + 1, "the plot fits its box (%g x %g in %g x %g)", e.w, e.h, s.o.bottom.w, s.o.bottom.h);
+        const Extent e = s.bottom.in(s.o.bottom.w - s.in.padX, s.o.bottom.h - s.in.padY, s.in.lineH);
+        CHECK(e.w <= s.o.bottom.w - s.in.padX + 1 && e.h <= s.o.bottom.h - s.in.padY + 1, "the plot fits its box (%g x %g in %g x %g)", e.w, e.h, s.o.bottom.w, s.o.bottom.h);
         checkBoxes(s.o, s.in, "noaa dsb");
         // stays there (no ratchet, no flip) for a long run
         Out before = s.o;
@@ -151,13 +151,13 @@ int main() {
     {
         Sim s = make(1400, 800, M(Model::Table), M(Model::Fixed, 140, 160));
         s.run(0, 3);
-        CHECK(s.o.bottomAt == Bottom::Column && s.o.bottom.h <= 160 + s.in.pad + 0.5f, "fixed plot in the column (%g)", s.o.bottom.h);
+        CHECK(s.o.bottomAt == Bottom::Column && s.o.bottom.h <= 160 + s.in.padY + 0.5f, "fixed plot in the column (%g)", s.o.bottom.h);
         CHECK(s.o.right.h >= s.in.lineH * 4, "the list keeps room");
         // the plot grows wider than the column (a second plot): back to a row
         s.bottom = M(Model::Fixed, 600, 160);
         s.run(3, 6);
         CHECK(s.o.bottomAt == Bottom::Row, "a wide plot goes back to the row");
-        CHECK(s.o.bottom.h <= 160 + s.in.pad + 0.5f, "and the row is only as tall as the plot (%g)", s.o.bottom.h);
+        CHECK(s.o.bottom.h <= 160 + s.in.padY + 0.5f, "and the row is only as tall as the plot (%g)", s.o.bottom.h);
         checkBoxes(s.o, s.in, "fixed");
     }
     // ---- DVB-T: four plots across the row, as tall as the row: the 3.9 layout
@@ -172,7 +172,7 @@ int main() {
     {
         Sim s = make(1600, 900, M(Model::Table), M(Model::FillW, 0, 80));
         s.run(0, 3);
-        CHECK(s.o.bottomAt == Bottom::Row && std::fabs(s.o.bottom.h - std::max(s.in.minBottomH, 80 + s.in.pad)) < 0.5f, "row shrinks to its content (%g)", s.o.bottom.h);
+        CHECK(s.o.bottomAt == Bottom::Row && std::fabs(s.o.bottom.h - std::max(s.in.minBottomH, 80 + s.in.padY)) < 0.5f, "row shrinks to its content (%g)", s.o.bottom.h);
     }
     // ---- content that sizes itself to 60 % of its box: shrinks once, does not ratchet down
     {
@@ -254,7 +254,7 @@ int main() {
             Sim s = make(1600, 900, g.r, g.b);
             s.run(0, 4);
             const Out f = fixedLayout(s.in);
-            auto nat = [&](const Model& m, const Box& bx) { return bx.shown() ? m.in(bx.w - s.in.pad, bx.h - s.in.pad, s.in.lineH) : Extent{0, 0}; };
+            auto nat = [&](const Model& m, const Box& bx) { return bx.shown() ? m.in(bx.w - s.in.padX, bx.h - s.in.padY, s.in.lineH) : Extent{0, 0}; };
             const Extent fr = nat(g.r, f.right), fb = nat(g.b, f.bottom);
             const Box rb = s.o.right.shown() ? s.o.right : s.o.strip;
             const Extent ar = nat(g.r, s.o.probeRight ? s.o.probeRightBox : rb), ab = nat(g.b, s.o.bottom);

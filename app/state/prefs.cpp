@@ -182,6 +182,7 @@ const std::vector<PrefKey>& keyTable() {
         shared(num("uiTheme32", AT(a.uiTheme), 3, 0, 7, true)),   // 3.2: Dev A is the default look; an older "uiTheme" is carried over once in loadPrefs
         shared(flagB("layoutUnified", AT(a.layoutUnified), false, true)), shared(flagB("sideCollapsed", AT(a.sideCollapsed), false, true)),
         shared(num("uniSide", AT(a.uniSide), 0, 0, 2, true)), shared(text("uniSplit", AT(a.uniSplit))),
+        shared(flagB("fitPanels", AT(a.fitPanels), true, true)), shared(text("panelSizes", AT(a.panelSizes))),
         shared(num("audioIq", AT(a.audioIqMode), 0, 0, 3)),
         shared(num("audioChan", AT(a.audioChan), 0, 0, 2)), shared(dbl("audioIfHz", AT(a.audioIfHz), 0)), shared(flagI("audioInvert", AT(a.audioInvert), false)),
         shared(flagI("audioDc", AT(a.audioDc), true)), shared(flagI("audioAfView", AT(a.audioAfView), true)), shared(dbl("audioGainDb", AT(a.audioGainDb), 0)), shared(num("audioRate", AT(a.audioRate), 48000, 8000, 192000)),

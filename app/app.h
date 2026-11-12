@@ -332,6 +332,8 @@ struct App {
     bool sideCollapsed = false;   // Unified layout: the left controls panel is a thin icon rail
     int uniSide = 0;              // Unified layout on a wide window: 0 automatic, 1 spectrum above, 2 spectrum on the left
     std::string uniSplit;         // Unified layout: per mode "family=share,collapsed;..." (remembered splitter positions)
+    bool fitPanels = true;        // View > Fit panels to their content: the sidebar layout sizes the list and the lower row to what they show (ui/overview_layout.h)
+    std::string panelSizes;       // per mode "family=rightW,bottomH;..." in unscaled points (0 = automatic): the sizes dragged in that layout
     std::string uiLang;       // the interface language chosen in View > Language ("de", "lt" ...), empty: the system's
     int dtmbBwMhz = 8;        // DTMB channel width: 8 MHz (China, Hong Kong), 6 MHz (Cuba)
     bool dtmbAuto = true;     // DTMB: the channel width is measured from the spectrum; picking one below turns it off

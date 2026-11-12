@@ -582,7 +582,9 @@ static void viewMenu(App& a) {
         dockMenu(a);   // View > Docking (ui2_dock.cpp)
         if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
         if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
-            a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; savePrefs(a); }
+            a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; a.panelSizes.clear(); savePrefs(a); }
+        if (ImGui::MenuItem(tr("Fit panels to their content"), nullptr, &a.fitPanels)) savePrefs(a);   // ui/overview_layout.h, docs/LAYOUT-4.0.md
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The list on the right and the lower row take only the room they need: an empty row is hidden, a small plot moves beside the list, a list of a line or two becomes a strip over the spectrum. Off: the fixed sizes."));
         if (ImGui::MenuItem(tr("Reset spectrum"))) resetSpectrum(a);
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Put the panels back to their automatic sizes (drag the bars between panels to resize them)"));
         if (ImGui::MenuItem(tr("Full screen"), "F11", gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();

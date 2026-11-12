@@ -36,7 +36,7 @@ struct In {
     float W = 0, H = 0;            // the area of the three panels
     float gap = 4;                 // between panels
     float lineH = 17;              // one text line with its spacing
-    float pad = 8;                 // a panel's padding, both sides together
+    float padX = 16, padY = 10;    // a panel's padding and border, both sides together
     double now = 0;                // seconds (any clock that moves forward)
     bool adaptive = true;          // false: the fixed layout of 3.9 (View > Fit panels to their content off)
     bool bottomAllowed = true;     // false: no lower row in this view (ATSC 3.0, the transmit view)
@@ -103,7 +103,7 @@ inline void measure(const In& in, State& st) {
     const Out& L = st.last;
     if (in.right.valid()) {   // the list is always measured in a full column box (the real one, or the probe while it is a strip or cut short)
         const Box& b = L.probeRight ? L.probeRightBox : L.right;
-        if (!L.animating || in.right.h > b.h - in.pad + 1) st.natRH = in.right.h;
+        if (!L.animating || in.right.h > b.h - in.padY + 2) st.natRH = in.right.h;
     }
     if (in.bottom.valid()) {
         if (in.bottom.empty()) { st.natBW = 0; st.natBH = 0; return; }   // dispBW / dispBH stay: the box does not shrink while it waits
@@ -112,15 +112,15 @@ inline void measure(const In& in, State& st) {
         const bool fullBox = probe || (L.bottomAt == Bottom::Row && b.h >= fullRowH(in) - 0.5f);
         if (fullBox && !L.animating) { st.natBW = in.bottom.w; st.natBH = in.bottom.h; }
         else {   // a reduced box (a shrunk row, the column): only growth counts, so content that follows its box does not ratchet down
-            if (in.bottom.w > b.w - in.pad + 1) st.natBW = in.bottom.w;
-            if (in.bottom.h > b.h - in.pad + 1) st.natBH = in.bottom.h;
+            if (in.bottom.w > b.w - in.padX + 2) st.natBW = in.bottom.w;
+            if (in.bottom.h > b.h - in.padY + 2) st.natBH = in.bottom.h;
             if (st.natBW < 1 || st.natBH < 1) { st.natBW = in.bottom.w; st.natBH = in.bottom.h; }   // back after drawing nothing
         }
         st.dispBW = st.natBW; st.dispBH = st.natBH;
     }
 }
 
-inline float rightMinH(const In& in) { return in.lineH * 4 + in.pad; }   // the list keeps at least four lines beside a plot in the column
+inline float rightMinH(const In& in) { return in.lineH * 4 + in.padY; }   // the list keeps at least four lines beside a plot in the column
 
 inline Bottom wantBottom(const In& in, const State& st) {
     if (!in.bottomAllowed) return Bottom::Hidden;
@@ -130,8 +130,8 @@ inline Bottom wantBottom(const In& in, const State& st) {
     if (in.userBottomH > 0) return Bottom::Row;
     const float colW = fullColW(in);
     const float margin = st.bottom == Bottom::Column ? 0.f : 8.f;   // a band, so a size at the limit does not flip the place
-    const bool narrow = st.natBW + in.pad <= colW - margin;
-    const bool fitsH = st.natBH + in.pad <= std::min(in.H * 0.6f, in.H - in.gap - rightMinH(in));
+    const bool narrow = st.natBW + in.padX <= colW - margin;
+    const bool fitsH = st.natBH + in.padY <= std::min(in.H * 0.6f, in.H - in.gap - rightMinH(in));
     return narrow && fitsH ? Bottom::Column : Bottom::Row;
 }
 
@@ -190,12 +190,12 @@ inline Out layout(const In& in, State& st) {
     if (column) {
         colT = colFull;
         // a short list over a small plot: the column only as wide as the plot (the spectrum takes the rest)
-        if (st.bottom == Bottom::Column && thinList && in.userRightW <= 0) colT = std::floor(clampf(st.dispBW + in.pad, in.minRightW, colFull));
+        if (st.bottom == Bottom::Column && thinList && in.userRightW <= 0) colT = std::floor(clampf(st.dispBW + in.padX, in.minRightW, colFull));
     }
     float rowT = 0;
     if (st.bottom == Bottom::Row) {
         rowT = rowFull;
-        if (in.userBottomH <= 0 && st.dispBH >= 1) rowT = std::floor(clampf(st.dispBH + in.pad, in.minBottomH, rowFull));   // shorter content: a shorter row
+        if (in.userBottomH <= 0 && st.dispBH >= 1) rowT = std::floor(clampf(st.dispBH + in.padY, in.minBottomH, rowFull));   // shorter content: a shorter row
     }
     const double dt = st.lastNow < 0 ? 0 : in.now - st.lastNow;
     st.lastNow = in.now;
@@ -212,7 +212,7 @@ inline Out layout(const In& in, State& st) {
     const float mainW = in.W - (colW > 0.5f ? colW + in.gap : 0.f);
     float mainY = 0;
     if (st.right == Right::Strip && st.natRH >= 1) {   // a list that drew nothing gets no strip at all (it is still measured)
-        const float sh = std::floor(std::min(std::max(st.natRH, in.lineH), thinLimit(in) * 1.35f) + in.pad);
+        const float sh = std::floor(std::min(std::max(st.natRH, in.lineH), thinLimit(in) * 1.35f) + in.padY);
         o.strip = {0, 0, mainW, sh};
         mainY = sh + in.gap;
     }
@@ -220,9 +220,9 @@ inline Out layout(const In& in, State& st) {
     if (colW > 0.5f) {
         const float x = in.W - colW;
         if (st.bottom == Bottom::Column) {
-            const float bh = std::floor(std::max(0.f, std::min(std::max(0.f, st.dispBH) + in.pad, topH - in.gap - detail::rightMinH(in))));
+            const float bh = std::floor(std::max(0.f, std::min(std::max(0.f, st.dispBH) + in.padY, topH - in.gap - detail::rightMinH(in))));
             if (st.right == Right::Column && !(thinList && st.natRH < 1)) {   // (a list that drew nothing: the plot alone)
-                const float rh = thinList ? std::min(st.natRH + in.pad, topH - bh - in.gap) : topH - bh - in.gap;
+                const float rh = thinList ? std::min(st.natRH + in.padY, topH - bh - in.gap) : topH - bh - in.gap;
                 o.right = {x, 0, colW, std::floor(rh)};
                 o.bottom = {x, o.right.h + in.gap, colW, bh};
             } else o.bottom = {x, 0, colW, bh};
@@ -245,10 +245,10 @@ inline float unusedShare(const In& in, const Out& o, float natRightH, float natB
     const float total = in.W * in.H;
     if (total <= 0) return 0;
     float used = o.main.area();
-    const float rh = std::max(0.f, natRightH) + in.pad;
+    const float rh = std::max(0.f, natRightH) + in.padY;
     if (o.right.shown()) used += o.right.w * std::min(o.right.h, rh);
     if (o.strip.shown()) used += o.strip.w * std::min(o.strip.h, rh);
-    if (o.bottom.shown() && natBottomW > 0 && natBottomH > 0) used += std::min(o.bottom.w, natBottomW + in.pad) * std::min(o.bottom.h, natBottomH + in.pad);
+    if (o.bottom.shown() && natBottomW > 0 && natBottomH > 0) used += std::min(o.bottom.w, natBottomW + in.padX) * std::min(o.bottom.h, natBottomH + in.padY);
     return std::max(0.f, total - used) / total;
 }
 
