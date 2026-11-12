@@ -33,3 +33,5 @@ void d40SarsatFeed(const dect2::SarsatTelemetry& t);   // d40_sarsat_ui.cpp: bea
 void d40SarsatIncidentsCard();
 void d40TonesFeed(const dect2::TonesTelemetry& t);   // d40_tones_ui.cpp: DTMF number assembler, tone system guess
 void d40TonesCard(const dect2::TonesTelemetry& t);
+namespace dect2 { struct IsmRaw; }
+void d40IsmClassifyLine(const dect2::IsmRaw& r);   // d40_ism_ui.cpp: under the pulse trace of an unknown burst

@@ -15,7 +15,7 @@
 
 namespace dect2 {
 
-struct IsmPulse { double onUs = 0, offUs = 0; };
+struct IsmTimedPulse { double onUs = 0, offUs = 0; };
 struct IsmClass {
     std::string coding;          // "PWM", "PPM", "Manchester", "PCM", "unknown"
     double shortUs = 0, longUs = 0;   // PWM: pulse lengths; PPM: gap lengths; Manchester / PCM: the unit and 2 x unit
@@ -48,7 +48,7 @@ inline double fit(const std::vector<double>& v, const std::vector<double>& c) {
 }
 } // namespace ismdetail
 
-inline IsmClass ismClassify(const std::vector<IsmPulse>& p) {
+inline IsmClass ismClassify(const std::vector<IsmTimedPulse>& p) {
     IsmClass r; r.coding = "unknown";
     if (p.size() < 8) return r;
     // gaps above 4 x the median gap separate rows (the last pulse's gap is the end of the burst)
@@ -57,7 +57,7 @@ inline IsmClass ismClassify(const std::vector<IsmPulse>& p) {
     const double med = so[so.size() / 2];
     const double sepLimit = std::max(med * 4.0, 1500.0);
     // rows
-    std::vector<std::vector<IsmPulse>> rows(1);
+    std::vector<std::vector<IsmTimedPulse>> rows(1);
     double resetSum = 0; int resetN = 0;
     for (const auto& x : p) {
         if (x.offUs > sepLimit) { rows.back().push_back({x.onUs, 0}); resetSum += x.offUs; resetN++; rows.emplace_back(); }
