@@ -3,7 +3,8 @@
 # versions change with every Linux release and a package built against one does not install on the next).
 #   tools/package/build_ffmpeg_static.sh <prefix> [ffmpeg-8.0.tar.xz]
 # Used for the Linux packages and the macOS app; LGPL-2.1-or-later only: no --enable-gpl, --enable-version3 or --enable-nonfree, no external libraries
-# (the script stops if the finished configuration says otherwise). Then build OnAir with -DDECT2_FFMPEG_PREFIX=<prefix>. Needs a C compiler, make and nasm (on x86-64); downloads the source when no tarball is given.
+# (the script stops if the finished configuration says otherwise). Network: only FFmpeg's own tcp and rtmp protocols, for the video generator's
+# RTMP server input (core/src/tv/videogen_rtmp.cpp; LGPL like the rest, no librtmp, no TLS). Then build OnAir with -DDECT2_FFMPEG_PREFIX=<prefix>. Needs a C compiler, make and nasm (on x86-64); downloads the source when no tarball is given.
 set -e
 PREFIX=${1:?usage: build_ffmpeg_static.sh <prefix> [tarball]}
 VER=8.0
@@ -23,11 +24,11 @@ if [ "$(uname -s)" = "Darwin" ]; then
 fi
 [ "$(uname -m)" = "x86_64" ] && ! command -v nasm >/dev/null && { echo "nasm is needed for the fast x86-64 code"; exit 1; }
 "$WORK"/ffmpeg-$VER/configure --prefix="$PREFIX" --enable-static --disable-shared --enable-pic \
-  --disable-programs --disable-doc --disable-debug --disable-network --disable-autodetect \
+  --disable-programs --disable-doc --disable-debug --disable-autodetect \
   --disable-avdevice --disable-avfilter \
   --disable-everything \
-  --enable-protocol=file \
-  --enable-demuxer=mpegts,mov \
+  --enable-protocol=file,tcp,rtmp \
+  --enable-demuxer=mpegts,mov,flv \
   --enable-muxer=mpegts,hls,mp4 \
   --enable-parser=h264,hevc,mpegvideo,mpegaudio,aac,aac_latm,ac3,dvbsub,cavsvideo \
   --enable-decoder=h264,hevc,mpeg2video,mp2,mp2float,mp3,mp3float,ac3,eac3,aac,aac_latm,dvbsub,cavs \
