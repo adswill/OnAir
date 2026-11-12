@@ -18,8 +18,8 @@ int main() {
         const double go[5] = {8.6982640687735709E-3, 1.18835504778076E-2, 14.6234747964861, 3.8869711072423499E-2, 4.1509083599522802E-2};
         const double gw[5] = {9.5353882202459297E-3, 9.7047304815111701E-2, 0.15484184063624701, 0.341973394422181, 0.75184470364612899};
         for (int i = 0; i < 5; i++) {
-            REL(gammaOxygenDbKm(f[i], p, e, T), go[i], 2e-4);
-            REL(gammaWaterDbKm(f[i], p, e, T), gw[i], 2e-4);
+            REL(gammaOxygenDbKm(f[i], p, e, T), go[i], 1e-5);
+            REL(gammaWaterDbKm(f[i], p, e, T), gw[i], 1e-5);
         }
     }
     // P.676-13 Annex 1 slant path (sheet "A_Gas_A1_2.2.1a", example 1): 28 GHz, station at sea level, 30 degrees -> 0.47081 dB

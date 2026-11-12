@@ -112,9 +112,9 @@ All on GitHub (quick.yml), tests/prop/:
 | test_prop_sat | closed-form GEO look angles (London to 28.2 E: 25.4 deg, 145.6 deg, 39031 km), ISS horizon range rate 7.20 km/s and 3.5 kHz Doppler at 145.8 MHz, a Ku DVB-S2 budget against a hand calculation, the threshold table | RESULT_SAT |
 | test_prop_model / scenario / terrain | the 3.9 regression suite (pinned to the 3.9 models, which stay selectable), plus the 4.0 defaults through evaluate(): the P.1546 100 MHz land band, 1 % time above 50 %, 90 % locations = 1.28 sigma, ADS-B to the radio horizon, HF via P.533; tile names / URL / .hgt.gz reader | RESULT_MODEL |
 
-One finding while validating: the 118.75 GHz oxygen row as extracted from the P.676-13 PDF (a5 = -0.439, a6 = 0.079) does not reproduce the
-ITU's own validation workbook at 90 and 130 GHz (1 % and 5 % off); with the interference coefficients of that one line negated (0.439,
--0.079) all five frequencies agree to better than 0.02 %, so the table uses those (comment in core/src/prop/p676_lines.inc).
+One finding while validating: the first extraction of the P.676 Table 1 from the PDF lost the a6 value of the 118.75 GHz line; the ITU
+workbook showed it at once (1 % off at 90 GHz, 5 % at 130 GHz). With the published row (a5 = -0.439, a6 = 0.079) all ten values agree to
+better than 0.001 %.
 
 Not validated against published reference values: the HF field strength and reliability (the ITU's P.533 reference program and its
 D1 test data bank were not available), the satellite budget beyond the hand calculation, and anything on real off-air measurements.

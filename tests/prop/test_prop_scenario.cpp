@@ -168,7 +168,7 @@ int main() {
         CHECK(c.y.front() > c.y.back());   // the same antennas reach farther on the lower frequency
         CHECK(seriesCsv({a, b}).find("distance (km)") != std::string::npos);
         Scenario h; applyPreset(h, presetIndex("Ham 40 m SSB"));
-        h.useNow = false; h.month = 6; h.day = 21;
+        h.useNow = false; h.month = 12; h.day = 21;   // winter: a strong day / night MUF swing (in summer the CCIR maps give a small one, as real ionograms do)
         const HfDay d = hfDay(toParams(h), 1000, 90);
         CHECK(d.hour.size() == 49 && d.hour.back() == 24);
         double mx = 0, mn = 1e9;

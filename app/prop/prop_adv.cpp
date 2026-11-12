@@ -246,17 +246,18 @@ void startTileDownload(State& S, const pr::Scenario& s) {
     S.dlTh = std::thread([tiles] {
         State& T = st();
         namespace fs = std::filesystem;
+        auto P = [](const std::string& x) { return fs::path(reinterpret_cast<const char8_t*>(x.c_str())); };
         const std::string dir = plat::dataDir() + "/terrain";
         std::error_code ec;
-        fs::create_directories(fs::u8path(dir), ec);
+        fs::create_directories(P(dir), ec);
         int ok = 0, have = 0, bad = 0;
         std::vector<std::string> files;
         for (const auto& t : tiles) {
             const std::string f = dir + "/" + pr::demTileName(t.first, t.second) + ".hgt.gz";
-            if (fs::exists(fs::u8path(f), ec) && fs::file_size(fs::u8path(f), ec) > 1000) { files.push_back(f); have++; continue; }
+            if (fs::exists(P(f), ec) && fs::file_size(P(f), ec) > 1000) { files.push_back(f); have++; continue; }
             { std::lock_guard<std::mutex> lk(T.dlMu); T.dlMsg = "downloading " + pr::demTileName(t.first, t.second) + "..."; }
             if (plat::fetchUrl(pr::demTileUrl(t.first, t.second), f, "OnAir")) { files.push_back(f); ok++; }
-            else { fs::remove(fs::u8path(f), ec); bad++; }
+            else { fs::remove(P(f), ec); bad++; }
         }
         char b[200];
         std::snprintf(b, sizeof b, "%d tile(s) downloaded, %d already here%s", ok, have,

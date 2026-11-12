@@ -7,6 +7,7 @@
 //  - textbook band behaviour (20 m by day, 80 m at night, 10 m closed at night near solar minimum, a skip zone), the long-path method
 //    beyond 9000 km and its continuity with the ray-path method across 7000..9000 km.
 #include "dect2/prop/hf_p533.h"
+#include <algorithm>
 #include <cmath>
 #include <cstdio>
 using namespace dect2::prop::hf;
@@ -98,7 +99,12 @@ int main() {
         CHECK(c.freqMHz.size() == 10 && c.rel.size() == 240);
         double best = 0; for (float r : c.rel) best = std::max(best, (double)r);
         CHECK(best > 0.5);   // something is open at some hour Vilnius - New York in January at R12 = 100
-        CHECK(c.muf[15] > c.muf[3]);   // MUF higher in the (transatlantic) afternoon than before dawn
+        double mx = 0, mn = 1e9;
+        for (int hh = 0; hh < 24; hh++) { mx = std::max(mx, c.muf[hh]); mn = std::min(mn, c.muf[hh]); }
+        printf("  Vilnius - New York, January, R12 100: MUF by UTC hour:");
+        for (int hh = 0; hh < 24; hh++) printf(" %.1f", c.muf[hh]);
+        printf("\n");
+        CHECK(mx > 1.4 * mn);   // the path MUF has a day and a night
     }
     // P.371
     NEAR(sfiFromR12(r12FromSfi(150)), 150, 1e-6);

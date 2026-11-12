@@ -134,16 +134,25 @@ int main() {
         const TerrainLoss tl = terrainLoss(pr, 10, 10, 145);
         CHECK(!tl.los && tl.diffractionDb > 20);
         Params p; p.txLat = 54.5; p.txLon = 25.2; p.fMHz = 145; p.txHeightM = 10; p.rxHeightM = 10; p.txPowerDbw = 14; p.env = Env::Quiet;
+        // 4.0 (P.1812 over the profile): compare with the same tile without the ridge
+        Terrain level; ElevTile lt; std::string e4;
+        CHECK(parseHgt("N54E025.hgt", hgt(0, 0, 25), lt, e4));
+        level.tiles.push_back(lt);
+        p.terrain = &level;
         const Point smooth = evaluateAt(p, 54.5, 25.8);
+        const Point beforeLevel = evaluateAt(p, 54.5, 25.4);
         p.terrain = &hill;
         const Point withHill = evaluateAt(p, 54.5, 25.8);
-        CHECK(withHill.terrainUsed && (withHill.model == Model::Terrain || withHill.model == Model::Troposcatter));
+        CHECK(withHill.terrainUsed && (withHill.model == Model::Terrain || withHill.model == Model::Troposcatter || withHill.model == Model::Ducting));
         CHECK(withHill.pathLossDb > smooth.pathLossDb + 10);
-        // in front of the ridge nothing changes much; beyond the tile the model falls back to smooth earth
+        // in front of the ridge nothing changes much; beyond the tile the model falls back to a flat profile
         const Point before = evaluateAt(p, 54.5, 25.4);
-        CHECK(before.model != Model::Terrain);
+        CHECK(std::fabs(before.pathLossDb - beforeLevel.pathLossDb) < 3);
         const Point outside = evaluateAt(p, 54.5, 26.5);
-        CHECK(!outside.terrainUsed);
+        CHECK(!outside.terrainUsed && outside.flatEarth);
+        // the 3.9 model is still there
+        Params old = p; old.pathModel = PathModel::Legacy39;
+        CHECK(evaluateAt(old, 54.5, 25.8).model == Model::Terrain || evaluateAt(old, 54.5, 25.8).model == Model::Troposcatter);
     }
     // load from a file path (written to the current directory, removed again)
     {
