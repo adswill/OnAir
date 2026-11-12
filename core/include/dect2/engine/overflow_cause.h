@@ -42,8 +42,9 @@ constexpr double kOnCpu = 0.6;              // of that time at least this share 
 inline OverflowCause classifyOverflow(const OverflowWindow& w) {
     if (w.sinceStartSec < kOverflowStartSec) return OverflowCause::Starting;
     if (w.wallSec <= 0) return OverflowCause::Stalled;
-    // the receive path's time against the signal it handled; with no signal handled at all, against the window
-    const double load = w.busyWallSec / (w.signalSec > 0.01 ? w.signalSec : w.wallSec);
+    // the receive path's time against the signal it handled (however little: right after a hold-up the window is one short pass of one
+    // block); with no signal handled at all, against the window
+    const double load = w.busyWallSec / (w.signalSec > 0 ? w.signalSec : w.wallSec);
     if (load >= kBehindLoad) return w.busyWallSec > 0 && w.busyCpuSec / w.busyWallSec >= kOnCpu ? OverflowCause::Cpu : OverflowCause::Waiting;
     return OverflowCause::Stalled;
 }
