@@ -13,6 +13,9 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
+#include <cctype>
+#include <string>
 #include <fstream>
 #include <random>
 #include <sstream>

@@ -26,6 +26,7 @@
 #include "dect2/dsp/exact_resampler.h"
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <deque>
 #include <mutex>
 #include <unordered_map>

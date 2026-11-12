@@ -6,6 +6,8 @@
 #include <cmath>
 #include <cstdio>
 #include <cstring>
+#include <algorithm>
+#include <string>
 using namespace dect2;
 using namespace dect2::atvkit;
 #include "../common/test_util.h"

@@ -7,6 +7,8 @@
 #include <cstdio>
 #include <cstring>
 #include <set>
+#include <algorithm>
+#include <string>
 using namespace dect2;
 using namespace dect2::gnsstest;
 #include "../common/test_util.h"

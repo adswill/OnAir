@@ -11,6 +11,8 @@
 #include "dect2/ais/ais_testutil.h"
 #include <cstdio>
 #include <memory>
+#include <random>
+#include <cstring>
 #include <set>
 using namespace dect2;
 using namespace dect2::ais;

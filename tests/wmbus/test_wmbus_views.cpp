@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <cstring>
 #include <memory>
+#include <algorithm>
 #include <set>
 #include <vector>
 using namespace dect2;

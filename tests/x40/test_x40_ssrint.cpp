@@ -4,6 +4,8 @@
 #include "x40_gen4.h"
 #include <cstdlib>
 #include <map>
+#include <algorithm>
+#include <string>
 using namespace x40gen; using namespace dect2;
 static int fails = 0;
 #define CHECK(c, ...) do { if (!(c)) { printf("FAIL: "); printf(__VA_ARGS__); printf("\n"); fails++; } } while (0)

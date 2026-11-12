@@ -5,6 +5,9 @@
 //   - a type that is not on the air gives an empty list in its view while the other views are not empty.
 // Simulated signals only (no recording of iMet, iMet-54, MRZ, iMS-100 or LMS6 was available; LMS6 is checked for the table and the mask only).
 #include "dect2/sonde/sonde_testkit.h"
+#include <algorithm>
+#include <cstring>
+#include <memory>
 using namespace dect2;
 using namespace dect2::sondetest;
 static int fails = 0;
