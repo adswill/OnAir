@@ -5,6 +5,7 @@
 #pragma once
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <map>
 #include <string>
 #include <vector>
@@ -39,6 +40,20 @@ public:
         for (int d = 1; d <= 24; d++) { const Pick b = best(freqs, utcHour + d); if (b.ok && b.freqHz != a.freqHz) return d; }
         return 0;
     }
+    // text form for saving between runs: one line "freqHz hour mean count"
+    std::string save() const {
+        std::string o; char b[96];
+        for (const auto& kv : m_) { std::snprintf(b, sizeof b, "%lld %d %.2f %d\n", kv.first.first * 100, kv.first.second, kv.second.mean, kv.second.n); o += b; }
+        return o;
+    }
+    void load(const std::string& text) {
+        m_.clear(); const char* p = text.c_str(); long long f; int h, n; double mean; int used = 0;
+        while (std::sscanf(p, "%lld %d %lf %d%n", &f, &h, &mean, &n, &used) == 4) {
+            if (h >= 0 && h < 24 && n > 0 && std::isfinite(mean)) { Cell c; c.mean = mean; c.n = n; m_[{(f + 50) / 100, h}] = c; }
+            p += used;
+        }
+    }
+    std::vector<double> frequencies() const { std::vector<double> v; for (const auto& kv : m_) { const double f = kv.first.first * 100.0; if (v.empty() || v.back() != f) v.push_back(f); } return v; }
 private:
     static long long key(double f) { return (long long)std::llround(f / 100.0); }   // 100 Hz bins
     struct Cell { double mean = 0; int n = 0; };

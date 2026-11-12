@@ -40,3 +40,6 @@ void d40FtxCard(App& a, const dect2::HfdigFtxTelemetry& f);   // d40_ftx_ui.cpp:
 namespace dect2 { struct CwTelemetry; }
 void d40CwCard(App& a, const dect2::CwTelemetry& t);   // d40_cw_ui.cpp: callsigns heard and CQ callers
 std::string d40GsmrFrequencies(const std::vector<int>& arfcns);   // d40_gsmr_ui.cpp: "955: 921.2 / 876.2 (R)" per channel number: downlink / uplink MHz, R = railway band
+namespace dect2 { struct HfbTelemetry; }
+void d40HfbFeed(const std::vector<double>& khz, const dect2::HfbTelemetry& t);   // d40_hf_ui.cpp: beacon readings into the hour-of-day table
+void d40HfbBestCard();

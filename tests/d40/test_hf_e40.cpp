@@ -16,6 +16,7 @@ int main() {
     CHECK(std::isnan(bc.expected(10.0e6, 5)));
     CHECK(!bc.best(fr, 12, 40).ok);                       // nothing reaches 40 dB: says so instead of guessing
     const int ch = bc.hoursToChange(fr, 5); CHECK(ch == 2);   // 7 MHz until 06, 14 MHz from 07
+    { BandClock r; r.load(bc.save()); CHECK(r.frequencies() == bc.frequencies()); CHECK(std::fabs(r.expected(14.1e6, 3, nullptr) - bc.expected(14.1e6, 3, nullptr)) < 0.01 || std::isnan(bc.expected(14.1e6, 3, nullptr))); CHECK(r.hoursToChange(fr, 5) == ch); BandClock g; g.load("junk 1 2"); CHECK(g.frequencies().empty()); }
     BandClock empty; CHECK(!empty.best(fr, 0).ok && empty.hoursToChange(fr, 0) == 0);
     // fading: flat carrier, 4 fades/min of 12 dB, flutter of 300 /min
     std::normal_distribution<float> n1(0, 0.3f); const double fs = 10;

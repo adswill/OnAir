@@ -5,6 +5,7 @@
 // offset, stepping through bands when the capture is narrower than the list). Clicking a row tunes and listens (Listen).
 #include "dect2/common/timecompat.h"
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "hfprop_ui.h"
 #include "iono_obs_ui.h"
 #include "../adsb/adsb_map.h"
@@ -507,7 +508,11 @@ void tick(App& a) {
     r.setListen(S.listen); r.setVolume(a.volume); r.setMuted(a.muted);
     if (S.sel >= 0 && S.sel < (int)S.list.size()) r.setListenFreqHz(S.list[(size_t)S.sel].khz * 1e3);
     hop(a);
-    if (live(a)) { hfprop_ui::feedBeacons(S.list, a.rx.hfb); ionoobs_ui::feedBeacons(S.list, a.rx.hfb); }
+    if (live(a)) {
+        hfprop_ui::feedBeacons(S.list, a.rx.hfb); ionoobs_ui::feedBeacons(S.list, a.rx.hfb);
+        std::vector<double> khz; for (const auto& b : S.list) khz.push_back(b.khz);
+        d40HfbFeed(khz, a.rx.hfb);   // 4.0: hour-of-day best frequency (app/d40)
+    }
 }
 
 void tab(App& a) {
@@ -522,7 +527,7 @@ void tab(App& a) {
     else if (S.view == 1) bandsView(a);
     else if (S.view == 2) mapView(a);
     else if (S.view == 3) historyView(a);
-    else if (S.view == 5) hfprop_ui::view(a);
+    else if (S.view == 5) { d40HfbBestCard(); hfprop_ui::view(a); }
     else if (S.view == 6) ionoobs_ui::view(a);
     else settingsView(a);
 }
