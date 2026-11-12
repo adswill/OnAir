@@ -12,18 +12,22 @@ const root = new URL("..", import.meta.url).pathname;
 const seed = randomBytes(32).toString("hex");
 const env = { SIGNING_KEY: seed, SESSION_SECRET: "s".repeat(40), HASH_SALT: "h".repeat(40), ADMIN_TOKEN: "a".repeat(40), PUBLIC_URL: "https://plugins.example", GITHUB_CLIENT_ID: "x", OWNER_LOGINS: "owner" };
 const mf = new Miniflare({
-  modules: [
-    { type: "ESModule", path: root + "dist-test/src/index.js" },
-    { type: "ESModule", path: root + "dist-test/src/app.js" },
-    { type: "ESModule", path: root + "dist-test/src/crypto.js" },
-    { type: "ESModule", path: root + "dist-test/src/manifest.js" },
-    { type: "ESModule", path: root + "dist-test/src/zip.js" },
-  ],
-  modulesRoot: root + "dist-test/src",
-  compatibilityDate: "2026-05-03",
-  d1Databases: { DB: "onair-plugins-smoke" },
-  r2Buckets: { FILES: "onair-plugins-smoke" },
-  bindings: env,
+  // the workers list form works with Miniflare 4 old and new (newer releases accept only this form)
+  workers: [{
+    name: "onair-plugins",
+    modules: [
+      { type: "ESModule", path: root + "dist-test/src/index.js" },
+      { type: "ESModule", path: root + "dist-test/src/app.js" },
+      { type: "ESModule", path: root + "dist-test/src/crypto.js" },
+      { type: "ESModule", path: root + "dist-test/src/manifest.js" },
+      { type: "ESModule", path: root + "dist-test/src/zip.js" },
+    ],
+    modulesRoot: root + "dist-test/src",
+    compatibilityDate: "2026-05-03",
+    d1Databases: { DB: "onair-plugins-smoke" },
+    r2Buckets: { FILES: "onair-plugins-smoke" },
+    bindings: env,
+  }],
 });
 try {
   const db = await mf.getD1Database("DB");
