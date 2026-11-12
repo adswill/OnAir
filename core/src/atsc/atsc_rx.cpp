@@ -1370,40 +1370,6 @@ struct Core {
         return true;
     }
 
-    // Decision feedback taps from the rows of one part of a field only, [lo, hi) symbols, on this field's own decided levels lvl[] (the soft
-    // values y[] skip rows where decision and reception disagree): the channel of that part of the field, for a channel that moves within a
-    // field (24 ms; at 10 Hz Doppler a path turns by 1.5 rad in that time and one set of taps for the whole field leaves an error floor)
-    bool trainDFERange(const View& v, const float* fsLv, const std::vector<float>& lvl, const std::vector<float>& y, int lo, int hi, double ridge, Taps& tp) {
-        tp.NP = 40; tp.B = 128;
-        const int L = tp.L(), B = tp.B, n = L + B + 1;
-        std::vector<float> X, tgt;
-        X.reserve((size_t)5000 * n);
-        if (lo < 728) for (int i = std::max(lo, B); i < std::min(hi, 728); i++) {   // field sync: the past symbols are known too
-            const size_t o = X.size(); X.resize(o + n);
-            float* x = &X[o];
-            for (int k = 0; k < L; k++) x[k] = v.at(v.f0 + i + kNFf - k);
-            for (int j = 0; j < B; j++) x[L + j] = fsLv[i - 1 - j];
-            x[n - 1] = 1.f;
-            tgt.push_back(fsLv[i]);
-        }
-        const int first = std::max(kSegSyms + B, lo), last = std::min(kFieldSyms, hi) - 1;
-        const int step = std::max(1, (last - first) / 4000);
-        for (int p = first; p <= last; p += step) {
-            if (std::fabs(y[(size_t)p] - lvl[(size_t)p]) > 1.0f) continue;
-            const size_t o = X.size(); X.resize(o + n);
-            float* x = &X[o];
-            for (int k = 0; k < L; k++) x[k] = v.at(v.f0 + p + kNFf - k);
-            for (int j = 0; j < B; j++) x[L + j] = lvl[(size_t)(p - 1 - j)];
-            x[n - 1] = 1.f;
-            tgt.push_back(lvl[(size_t)p]);
-        }
-        if ((int)tgt.size() < 3 * n) return false;
-        std::vector<double> sol;
-        if (!solveLs(X, tgt, n, ridge, sol)) return false;
-        unpackTaps(sol, tp);
-        return true;
-    }
-
     // Equalises a whole field. `hist` (optional, B levels, oldest first) is the end of the previous field. Fills lv (soft values) and
     // hv (decisions, with B entries of history in front). Returns the SNR measured on the known field sync symbols.
     double equalize(const View& v, const float* fsLv, const Taps& tp, const float* hist, std::vector<float>& lv, std::vector<float>& hv) {
@@ -1637,41 +1603,6 @@ struct Core {
                         snrAvg = snr2; measureData();
                     } else dec = keep;
                 }
-            }
-        }
-        // 4.0 (docs/SENSITIVITY-4.0-X3.md): a field that still has damaged packets gets a third try with taps solved per quarter of the field
-        // on its own decisions (the channel moves within a field under Doppler); kept only when fewer packets fail. ATSC_NOSEG=1: off.
-        const bool noSeg = getenv("ATSC_NOSEG") != nullptr;   // read per field (cheap): the A/B test switches it between receivers
-        const int segQ = [] { const char* e = getenv("ATSC_SEGQ"); const int q = e ? atoi(e) : 4; return std::max(2, std::min(16, q)); }();
-        if (!noSeg && st.segments > 0 && st.rsFailed > 0 && st.rsFailed * 2 < st.segments) {
-            std::vector<float> selfLv;
-            levelsFromPath(fsLv, psym, hv, tp.B, selfLv);
-            const float* hist = (havePrev && prevLv.size() == (size_t)kFieldSyms) ? &prevLv[(size_t)(kFieldSyms - 128)] : nullptr;
-            std::vector<float> lvS((size_t)kFieldSyms, 0.f), hvS((size_t)kFieldSyms + 128, 0.f);
-            bool okAll = true;
-            for (int q = 0; q < segQ && okAll; q++) {
-                const int lo = (int)((int64_t)kFieldSegs * q / segQ) * kSegSyms, hi = (int)((int64_t)kFieldSegs * (q + 1) / segQ) * kSegSyms;
-                Taps tq;
-                // the rows of this part and a little of its neighbours (the solve needs a few thousand rows; the edges get the channel of both sides)
-                const int pad = 8 * kSegSyms;
-                if (!trainDFERange(view, fsLv, selfLv, lv, std::max(0, lo - pad), std::min(kFieldSyms, hi + pad), 1e-4, tq)) { okAll = false; break; }
-                std::vector<float> lq, hq;
-                (void)equalize(view, fsLv, tq, hist, lq, hq);   // its SNR is measured on the field sync, which another part's taps need not fit
-                for (int i = lo; i < hi; i++) { lvS[(size_t)i] = lq[(size_t)i]; hvS[(size_t)(128 + i)] = hq[(size_t)(128 + i)]; }
-                if (q == 0) for (int j = 0; j < 128; j++) hvS[(size_t)j] = hq[(size_t)j];
-                if (q == segQ - 1) { tp = tq; }
-            }
-            if (okAll) {
-                FieldDecoder keep = dec;
-                dec = backup;
-                FieldStats st3;
-                std::vector<uint8_t> out3((size_t)kDataSegs * kTsBytes), psym3((size_t)kFieldSyms, 0);
-                const std::vector<float> lv3d = scaled(lvS);
-                const int np3 = dec.decode(lv3d.data(), out3.data(), &st3, psym3.data());
-                if (st3.rsFailed < st.rsFailed) {
-                    st = st3; np = np3; out = std::move(out3); psym = std::move(psym3); lv = std::move(lvS); hv = std::move(hvS); eqLast = tp;
-                    measureData();
-                } else { dec = keep; tp = eqLast; }
             }
         }
         tVit += now() - tM2;

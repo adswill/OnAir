@@ -90,7 +90,6 @@ Pt run(const Mode& m, const Prep& P, const Scen& sc, double snr, int n, int thre
 // the A/B switch of each receiver (its 3.9 path)
 const char* offSwitch(const std::string& id) {
     if (id == "isdbt") return "DECT2_ISDBT_NOTI";
-    if (id == "atsc") return "ATSC_NOSEG";
     if (id == "atsc3") return "DECT2_ATSC3_NOCSI";
     return nullptr;
 }
