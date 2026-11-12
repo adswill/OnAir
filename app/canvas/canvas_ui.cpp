@@ -491,7 +491,7 @@ void sourceBody(Workspace& w, Block& b) {
     ui2::freqDigits(*r, 22.f);
     toolbarParts(*r, TbSource | TbTuner | TbGain, true);
     if (sourceOptionsOpen(*r)) sourceOptions(*r);
-    if (ImGui::TreeNode(tr("Status"))) { statusBar(*r); ImGui::TreePop(); }
+    if (ImGui::TreeNode(trw("Status"))) { statusBar(*r); ImGui::TreePop(); }
     // the settings that go with the workspace: refreshed while the receiver is stopped or now and then
     static std::map<int, double> lastCap;
     if (ImGui::GetTime() - lastCap[b.id] > 2.0) {
@@ -767,7 +767,7 @@ void toolbarRow(Workspace& w) {
     ImGui::EndDisabled();
     if (ImGui::BeginPopup("##cvdel")) {
         ImGui::Text(tr("Delete the workspace \"%s\"?"), w.name.c_str());
-        if (ImGui::Button(tr("Delete"))) {
+        if (ImGui::Button(tr("Delete it"))) {
             S.all.erase(S.all.begin() + S.cur);
             S.cur = 0;
             freshState();
