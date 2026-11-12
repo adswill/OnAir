@@ -132,6 +132,14 @@ of the one that was opened.
 - SoapySDR: a SoapyFobosSDR module built with Visual Studio (PothosSDR) cannot be loaded by OnAir's Windows build, which is built with
   MinGW; the native driver needs no SoapySDR
 
+# Aaronia SPECTRAN V6 and V6 ECO
+
+Experimental, not tested on a device yet: written from Aaronia's public RTSA API samples and checked against a stand-in library
+(`tests/source/spectran_fake.cpp`). Receive (any rate through the RTSA API's IQ receiver, or the raw clock / decimation rates) and
+transmit (the TX option). It needs Aaronia's **RTSA-Suite PRO** (Windows or Linux, [aaronia.com/downloads](https://aaronia.com/downloads)),
+which OnAir does not ship; close the RTSA-Suite PRO before starting the device in OnAir. Install steps, what is unverified and a test
+checklist: [docs/SPECTRAN-V6.md](docs/SPECTRAN-V6.md).
+
 # LimeSDR Mini (and Mini 2)
 
 **Experimental: written from LimeSuite's public C API (`LimeSuite.h`) and tested only against a fake library. It has not run on a real
