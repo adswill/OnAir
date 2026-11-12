@@ -99,6 +99,9 @@ fun detectAac(b: ByteArray?): AudioFormat? {
     }
 }
 
+/** The decoder name shown for MPEG audio layer II when the phone has none: the app's own (Mp2Decoder). */
+const val BUILTIN_MP2 = "OnAir MP2 decoder (built in)"
+
 /** The MIME type the phone's decoder must offer for an audio format (MPEG audio: layer II, by far the common one in broadcasting). */
 fun audioMimeOf(f: AudioFormat): String = when (f) {
     AudioFormat.AAC_ADTS, AudioFormat.AAC_LATM -> "audio/mp4a-latm"
@@ -118,7 +121,9 @@ fun audioPlayability(s: TvStream, cat: DecoderCatalog, firstPayload: ByteArray? 
     if (s.scrambled) return Playability.Scrambled
     val f = audioFormatOf(s, firstPayload) ?: return Playability.NotHandled(s.codec.ifBlank { "type 0x%02X".format(s.streamType) })
     val mime = audioMimeOf(f)
-    val d = cat.decoderFor(mime) ?: return Playability.NoDecoder(if (f == AudioFormat.MPEG_AUDIO) "MPEG audio layer II (MP2)" else f.label, mime)
+    // MPEG audio layer II: the phone's decoder when it has one, else the app's own (Mp2Decoder: layer II is free of patents)
+    val d = cat.decoderFor(mime) ?: (if (f == AudioFormat.MPEG_AUDIO) BUILTIN_MP2 else null)
+        ?: return Playability.NoDecoder(f.label, mime)
     return Playability.Plays(f.label, mime, d)
 }
 

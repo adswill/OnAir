@@ -86,10 +86,12 @@ class TvServicesTest {
 
     @Test fun plainNotesForWhatThePhoneCannotPlay() {
         val s = TvMux.parse(json).services
+        // MPEG-2 video without a phone decoder: said plainly; its MP2 sound plays with the app's own layer II decoder
         val mpeg2 = playabilityNotes(s[2], s[2].audio[0], typical)
-        assertEquals(2, mpeg2.size)
+        assertEquals(1, mpeg2.size)
         assertTrue(mpeg2[0], mpeg2[0].contains("no MPEG-2 video decoder"))
-        assertTrue(mpeg2[1], mpeg2[1].contains("MP2"))
+        assertEquals(BUILTIN_MP2, (audioPlayability(s[2].audio[0], typical) as Playability.Plays).decoder)
+        assertEquals("dec.audio/mpeg-L2", (audioPlayability(s[2].audio[0], cat(MpegAudioFramer.MIME_MPEG_L2)) as Playability.Plays).decoder)
         assertTrue(playabilityNotes(s[0], s[0].audio[1], typical).isEmpty())
         val dolby = playabilityNotes(s[0], s[0].audio[0], typical)
         assertTrue(dolby.single().contains("AC-3") && dolby.single().contains("Dolby"))

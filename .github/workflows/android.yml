@@ -100,6 +100,22 @@ jobs:
           tools/release/retry.sh git clone --depth 1 --branch v1.0.27 https://github.com/libusb/libusb "$RUNNER_TEMP/libusb-src"
           echo "libusb v1.0.27 commit $(git -C "$RUNNER_TEMP/libusb-src" rev-parse HEAD)"
           echo "LIBUSB_SRC=$RUNNER_TEMP/libusb-src" >> "$GITHUB_ENV"
+      - name: libairspy and libairspyhf sources (pinned commits with airspy_open_fd / airspyhf_open_fd; own empty folders, nothing from them is run)
+        # the tagged releases (airspyone_host v1.0.10, airspyhf 1.6.8) predate the descriptor entry points Android needs, so these are pinned
+        # master commits; without them the APK lists an Airspy but cannot open it (docs/ANDROID-4.0.md)
+        run: |
+          set -eu
+          fetch() {   # repo commit folder
+            mkdir -p "$3"; git -C "$3" init -q; git -C "$3" remote add origin "https://github.com/$1"
+            tools/release/retry.sh git -C "$3" fetch -q --depth 1 origin "$2"; git -C "$3" checkout -q FETCH_HEAD
+            echo "$1 at $(git -C "$3" rev-parse HEAD)"
+          }
+          fetch airspy/airspyone_host fc61ab6be57ed61f0e2bdd9c6dfae74cacef57d0 "$RUNNER_TEMP/airspy-src"
+          fetch airspy/airspyhf 24fe8ffcb00b14f827268bbad89ae1392de055e5 "$RUNNER_TEMP/airspyhf-src"
+          grep -q airspy_open_fd "$RUNNER_TEMP/airspy-src/libairspy/src/airspy.h"
+          grep -q airspyhf_open_fd "$RUNNER_TEMP/airspyhf-src/libairspyhf/src/airspyhf.h"
+          echo "AIRSPY_SRC=$RUNNER_TEMP/airspy-src" >> "$GITHUB_ENV"
+          echo "AIRSPYHF_SRC=$RUNNER_TEMP/airspyhf-src" >> "$GITHUB_ENV"
       - name: Restore ccache
         uses: actions/cache/restore@v6
         with:

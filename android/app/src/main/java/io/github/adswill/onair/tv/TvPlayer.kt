@@ -131,6 +131,8 @@ class TvPlayer(private val catalog: DecoderCatalog, private val onStats: (TvPlay
     private var pcmPtsUs = 0L
     private var pcmFrameBytes = 4
 
+    private val mp2 = Mp2Decoder()
+    private var softAudio = false
     private val audioClock = AudioClock()
     private val wallClock = WallClock()
     private val sync = AvSync()
@@ -173,6 +175,7 @@ class TvPlayer(private val catalog: DecoderCatalog, private val onStats: (TvPlay
         videoQueue.clear(); audioQueue.clear(); notes.clear()
         unwrap.reset(); audioClock.reset(); wallClock.reset(); sync.reset()
         firstVideoOutMs = 0; audioFrames = 0; vFailures = 0; aFailures = 0; width = 0; height = 0
+        softAudio = false; mp2.reset()
         val v = sel.service.video
         videoPid = v?.takeIf { !it.scrambled }?.pid ?: -1
         audioPid = sel.audio?.takeIf { !it.scrambled }?.pid ?: -1
@@ -269,7 +272,7 @@ class TvPlayer(private val catalog: DecoderCatalog, private val onStats: (TvPlay
             return audioClock.nowUs(nowNs)
         }
         // sound is expected but has not started: wait up to 1.5 s for it, then run on the wall clock
-        val audioExpected = audioPid >= 0 && aFailures < 3 && audioFramer != null && (aCfg == null || aCodec != null)
+        val audioExpected = audioPid >= 0 && aFailures < 3 && audioFramer != null && (aCfg == null || aCodec != null || softAudio)
         if (audioExpected && SystemClock.uptimeMillis() - firstVideoOutMs < 1500) return WAIT_FOR_SOUND
         return wallClock.nowUs(nowNs)
     }
@@ -361,6 +364,19 @@ class TvPlayer(private val catalog: DecoderCatalog, private val onStats: (TvPlay
     private fun pumpAudioIn() {
         while (audioQueue.isNotEmpty()) {
             val (fr, cfg) = audioQueue.first()
+            if (cfg.mime == MpegAudioFramer.MIME_MPEG_L2 && catalog.decoderFor(cfg.mime) == null) {   // MP2: the app's own decoder (Mp2Decoder)
+                if (pcm != null) return   // the sink is full: wait
+                audioQueue.removeFirst()
+                val out = mp2.decode(fr.data) ?: continue
+                if (track == null || trackRate != out.sampleRate || trackChannels != out.channels) openTrack(out.sampleRate, out.channels, PcmFormat.ENCODING_PCM_16BIT)
+                val bytes = ByteArray(out.samples.size * 2)
+                for (k in out.samples.indices) { val v = out.samples[k].toInt(); bytes[2 * k] = v.toByte(); bytes[2 * k + 1] = (v shr 8).toByte() }
+                pcm = bytes; pcmOff = 0; pcmPtsUs = fr.ptsUs
+                aCfg = cfg; aName = BUILTIN_MP2; softAudio = true
+                audioFrames++
+                writePcm()
+                continue
+            }
             val c = ensureAudio(cfg) ?: run { if (aFailures >= 3) audioQueue.clear(); return }
             val idx = try { c.dequeueInputBuffer(0) } catch (e: Exception) { audioError(e); return }
             if (idx < 0) return
@@ -400,10 +416,11 @@ class TvPlayer(private val catalog: DecoderCatalog, private val onStats: (TvPlay
         }
     }
 
-    private fun openTrack(f: MediaFormat) {
-        val rate = f.getIntegerOr(MediaFormat.KEY_SAMPLE_RATE, 48000)
-        val ch = f.getIntegerOr(MediaFormat.KEY_CHANNEL_COUNT, 2)
-        val enc = f.getIntegerOr(MediaFormat.KEY_PCM_ENCODING, PcmFormat.ENCODING_PCM_16BIT)
+    private fun openTrack(f: MediaFormat) =
+        openTrack(f.getIntegerOr(MediaFormat.KEY_SAMPLE_RATE, 48000), f.getIntegerOr(MediaFormat.KEY_CHANNEL_COUNT, 2),
+            f.getIntegerOr(MediaFormat.KEY_PCM_ENCODING, PcmFormat.ENCODING_PCM_16BIT))
+
+    private fun openTrack(rate: Int, ch: Int, enc: Int) {
         if (track != null && rate == trackRate && ch == trackChannels) return
         releaseTrack()
         val mask = when (ch) {
@@ -488,7 +505,7 @@ class TvPlayer(private val catalog: DecoderCatalog, private val onStats: (TvPlay
                 videoDecoder = if (vCodec != null) vName else "",
                 width = width, height = height,
                 audioCodec = aCfg?.let { labelOfMime(it.mime) } ?: "",
-                audioDecoder = if (aCodec != null) aName else "",
+                audioDecoder = if (aCodec != null || softAudio) aName else "",
                 audioRate = trackRate, audioChannels = trackChannels,
                 shown = sync.shown, dropped = sync.dropped + (videoFramer?.dropped ?: 0),
                 audioFrames = audioFrames, audioBufferMs = av,
