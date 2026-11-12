@@ -419,6 +419,7 @@ static const ModeDef kBuiltinModes[] = {
 // The table the program uses: the built-in rows, then the rows of the installed plugins' modes (addPluginModeRow, at start and after an install).
 // Rows are only ever appended, so a row's index stays the same for the whole run; the family numbers are the plugins' own stable numbers.
 ModeDef kModes[kModeCapacity];
+static_assert(sizeof kBuiltinModes / sizeof *kBuiltinModes <= kModeCapacity - 64, "kModeCapacity (app.h) is too small for the built-in rows plus room for plugins");
 int kNumModes = 0;
 static const bool kModesFilled = [] {
     kNumModes = (int)(sizeof kBuiltinModes / sizeof *kBuiltinModes);
