@@ -88,14 +88,17 @@ Test `nrspst_rate`: a fake SDRconnect on localhost sends a sample counter in mes
 runs twice: as fast as the source takes it (must be at least 15 Msps) and paced at 10 Msps for 3 s, with a consumer reading the ring as the
 engine does. The paced run must drop nothing and keep every sample in order.
 
-| Message size (samples) | As fast as it goes, macOS runner (macos-15) | Paced at 10 Msps |
+| Message size (samples) | As fast as it goes: macOS / Linux / Windows runner | Paced at 10 Msps (all three) |
 |--:|--:|---|
-| 1024 | 183 Msps (733 MB/s) | 10.02 Msps, 0 dropped, 0 out of order |
-| 4096 | 258 Msps | 10.01 Msps, 0 dropped |
-| 16384 | 517 Msps | 9.97 Msps, 0 dropped |
-| 262144 (1 MiB + 2 B, refused by 3.9) | see the Linux / Windows runs below | |
+| 1024 | 183 / 203 / 78 Msps | 10.0 Msps, 0 dropped, 0 out of order |
+| 4096 | 258 / 307 / 255 Msps | 10.0 Msps, 0 dropped |
+| 16384 | 517 / 314 / 538 Msps | 10.0 Msps, 0 dropped |
+| 262144 (1 MiB + 2 B, refused by 3.9) | 462 / 406 / 749 Msps | 10.0 Msps, 0 dropped |
 
-The parser and the ring are 18 to 50 times faster than 10 Msps needs, so the source side was never the limit once messages were
+(macOS runs 43148986440 / 43152759661, Linux 43158896959, Windows 43158901568. The macOS figures for the first three sizes were read by
+the checking consumer; the others are what the source offered to the ring.)
+
+The parser and the ring are 8 to 75 times faster than 10 Msps needs, so the source side was never the limit once messages were
 accepted. Of the causes above, the message size limit is the one that matches "stalls above about 5 Msps". It is not confirmed on a real
 nRSP-ST, because SDRconnect's message size is not known here.
 
