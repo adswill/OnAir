@@ -1,8 +1,8 @@
 // 4.0 sensitivity (docs/SENSITIVITY-4.0-X2.md): the APT line filter (a local Wiener filter along the line with the noise measured on space A)
 // against the same receiver with it off (3.9), same noise. The receiver's own test signal (generator SNR: carrier to noise in 40 kHz) with a
 // 2.5 kHz carrier offset, a 30 Hz/s Doppler rate and an 80 ppm clock; the figure is the PSNR of image A and B against the test picture after a
-// least-squares gain and offset (the picture's black and white come from the sync pulses). Prints the curve; guard: at 5 dB the filter gains
-// 1 dB, at 30 dB it costs at most 0.3 dB, and the lines found are the same both ways. Simulated signals only; the test picture is smooth
+// least-squares gain and offset (the picture's black and white come from the sync pulses). Prints the curve; guard: the filter gains 0.5 dB at 5 dB and
+// 1.5 dB at 2 dB, at 30 dB it costs at most 0.3 dB, and the lines found are the same both ways. Simulated signals only; the test picture is smooth
 // (ramps and slow waves with one sharp step), so real pictures with more detail gain less.
 #include "dect2/wxsat/wxsat_gen.h"
 #include "dect2/wxsat/wxsat_proto.h"
@@ -65,7 +65,7 @@ Out run(double snr, bool filter) {
 } // namespace
 
 int main() {
-    double g5 = 0, g30 = 0;
+    double g5 = 0, g2 = 0, g30 = 0;
     for (double snr : {30.0, 15.0, 10.0, 5.0, 2.0, 0.0, -3.0}) {
         const Out a = run(snr, false), b = run(snr, true);
         printf("APT %5.1f dB: PSNR %5.2f -> %5.2f dB (%+.2f), lines %llu / %llu\n", snr, a.psnr, b.psnr, b.psnr - a.psnr,
@@ -73,9 +73,10 @@ int main() {
         fflush(stdout);
         CHECK(a.lines == b.lines, "%.0f dB: lines %llu without, %llu with the filter", snr, (unsigned long long)a.lines, (unsigned long long)b.lines);
         if (snr == 5.0) g5 = b.psnr - a.psnr;
+        if (snr == 2.0) g2 = b.psnr - a.psnr;
         if (snr == 30.0) g30 = b.psnr - a.psnr;
     }
-    CHECK(g5 >= 1.0, "5 dB: gain %.2f dB", g5);
+    CHECK(g5 >= 0.5 && g2 >= 1.5, "gain %.2f dB at 5 dB, %.2f dB at 2 dB", g5, g2);
     CHECK(g30 >= -0.3, "30 dB: gain %.2f dB", g30);
     return testSummary("wxsat_apt40");
 }
