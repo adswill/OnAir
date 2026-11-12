@@ -750,3 +750,4 @@ Satellites, CCSDS RS
 Satellites, CCSDS concatenated
 Aviation, ILS markers
 Utility, FSK modems
+Aviation, SSR interrogations

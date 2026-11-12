@@ -4180,3 +4180,4 @@ Satellites, CCSDS RS	Satelliten, CCSDS RS
 Satellites, CCSDS concatenated	Satelliten, CCSDS concatenated
 Aviation, ILS markers	Flugfunk, ILS-Marker
 Utility, FSK modems	Funkdienste, FSK-Modems
+Aviation, SSR interrogations	Flugfunk, SSR-Abfragen

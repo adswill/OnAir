@@ -81,6 +81,7 @@ std::unique_ptr<Decoder> makeOccBw();
 std::unique_ptr<Decoder> makePapr();
 std::unique_ptr<Decoder> makeSpecKurt();
 std::unique_ptr<Decoder> makeGlitch();
+std::unique_ptr<Decoder> makeSsrInt();
 std::unique_ptr<Decoder> makeFskModem();
 std::unique_ptr<Decoder> makeMarker();
 

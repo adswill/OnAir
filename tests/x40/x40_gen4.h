@@ -67,4 +67,37 @@ inline std::vector<cf32> modemBurst(int std_, const std::vector<uint8_t>& bytes,
     return x;
 }
 
+
+// ---- secondary surveillance radar interrogations on 1030 MHz ----
+// kind: 0 Mode 1, 1 Mode 2, 2 Mode A, 3 Mode B, 4 Mode C, 5 Mode D, 6 Mode S (56 bit), 7 Mode S (112 bit); p4: 0 none, 1 short (0.8 us), 2 long (1.6 us); p2: amplitude of P2 relative to P1 (0: none)
+struct SsrTrain { int kind = 2; double prf = 300, amp = 1.0, p2 = 0, p3amp = 1.0; int p4 = 0; double start = 0.01, stop = 1e9, jitterUs = 0.05; };
+inline double ssrSpacing(int kind) { static const double sp[] = {3, 5, 8, 17, 21, 25}; return kind < 6 ? sp[kind] : 0; }
+inline std::vector<cf32> ssrScene(double fs, double seconds, const std::vector<SsrTrain>& trains, double noise, double lo = 0, unsigned seed = 1, double riseUs = 0.1) {
+    const size_t n = (size_t)(fs * seconds); std::vector<float> env(n, 0.f); Rng rng(seed);
+    auto pulse = [&](double t0us, double widthUs, double amp, double t0s) {
+        const double a = t0s + t0us * 1e-6, b = a + widthUs * 1e-6, r = riseUs * 1e-6;
+        const size_t i0 = (size_t)std::max(0.0, (a - r) * fs), i1 = std::min(n, (size_t)((b + r) * fs) + 1);
+        for (size_t i = i0; i < i1; i++) {
+            const double t = i / fs; double g = 1;
+            if (t < a) g = 0.5 - 0.5 * std::cos(kPi * std::max(0.0, (t - (a - r))) / r); else if (t > b) g = 0.5 + 0.5 * std::cos(kPi * std::min(1.0, (t - b) / r));
+            else g = 1.0;
+            if (t < a - r || t > b + r) g = 0;
+            env[i] = std::max(env[i], (float)(amp * g));
+        }
+    };
+    for (const SsrTrain& tr : trains) {
+        const double per = 1.0 / tr.prf;
+        for (double t0 = tr.start; t0 < std::min(seconds - 1e-4, tr.stop); t0 += per * (1.0 + 0.04 * std::max(-1.0f, std::min(1.0f, rng.g() * 0.5f)))) {
+            const double j = tr.jitterUs * rng.g() * 0.5;
+            pulse(0, 0.8, tr.amp, t0);
+            if (tr.p2 > 0) pulse(2.0, 0.8, tr.amp * tr.p2, t0);
+            if (tr.kind < 6) { pulse(ssrSpacing(tr.kind) + j, 0.8, tr.amp * tr.p3amp, t0); if (tr.p4) pulse(ssrSpacing(tr.kind) + 2.0 + j, tr.p4 == 2 ? 1.6 : 0.8, tr.amp * tr.p3amp, t0); }
+            else { pulse(2.0, 0.8, tr.amp, t0); pulse(4.75 + j, tr.kind == 6 ? 16.25 : 30.25, tr.amp, t0); }
+        }
+    }
+    std::vector<cf32> x(n); const float sg = (float)std::sqrt(noise / 2); double ph = 0;
+    for (size_t i = 0; i < n; i++) { ph += 2 * kPi * lo / fs; x[i] = env[i] * cf32((float)std::cos(ph), (float)std::sin(ph)) + cf32(sg * rng.g(), sg * rng.g()); }
+    return x;
+}
+
 }
