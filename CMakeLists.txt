@@ -720,6 +720,8 @@ if(DECT2_BUILD_APP)
   list(APPEND APP_SOURCES app/map/contact_lines.cpp)   # contact lines on the QSO-mode maps
   file(GLOB DECT2_IPTV_UI CONFIGURE_DEPENDS app/iptv/*.cpp)   # Internet TV (family 209): its core is in core/src/tv
   list(APPEND APP_SOURCES ${DECT2_IPTV_UI})
+  file(GLOB DECT2_CANVAS_UI CONFIGURE_DEPENDS app/canvas/*.cpp)   # View > Layout > Workspace: blocks on a canvas (docs/WORKSPACE-4.0.md)
+  list(APPEND APP_SOURCES ${DECT2_CANVAS_UI})
   foreach(m ${DECT2_MODES})   # app/<mode>/*.cpp: the screens of a mode added after FM
     file(GLOB DECT2_MODE_UI CONFIGURE_DEPENDS app/${m}/*.cpp)
     list(APPEND APP_SOURCES ${DECT2_MODE_UI})
@@ -1720,6 +1722,9 @@ if(DECT2_BUILD_TESTS)
     add_executable(test_dock tests/app/test_dock.cpp app/ui/dock_tree.cpp)   # the docking layout tree: dock, tab, split, undock, layout, drop targets, text form (app/ui/dock_tree.h)
     target_include_directories(test_dock PRIVATE app)
     add_test(NAME dock_tree COMMAND test_dock)
+    add_executable(test_canvas tests/app/test_canvas.cpp app/canvas/canvas_model.cpp)   # the Workspace layout's model: blocks, links, tabs, snapping, file form, templates (app/canvas/canvas_model.h)
+    target_include_directories(test_canvas PRIVATE app)
+    add_test(NAME canvas COMMAND test_canvas)
     add_executable(test_sitor_mode tests/app/test_sitor_mode.cpp)   # SITOR is registered: mode table row, UI case, family count (app/hfdig/hfdig_sitor_ui.cpp)
     target_include_directories(test_sitor_mode PRIVATE app)
     target_compile_definitions(test_sitor_mode PRIVATE DECT2_SOURCE_DIR="${ONAIR_ROOT}")

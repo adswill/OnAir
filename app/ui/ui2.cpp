@@ -5,6 +5,7 @@
 #include "ui2_internal.h"
 #include "input_map.h"
 #include "../general/general_panels.h"
+#include "../canvas/canvas.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "ui_preview.h"
 
@@ -292,6 +293,7 @@ void drawShell2(App& a, ImVec2 disp) {
         wasRunning = run;
         if (run && !done && ImGui::GetTime() - t0 > 2.5) { autoRange(a); done = true; }
     }
+    if (canvas::active(a) && !hamViewFlag() && !txViewFlag()) { canvas::frame(a, disp, menuH); return; }   // View > Layout > Workspace: blocks on a canvas (app/canvas)
     pal::panel() = a.uiVariant == 7;
     const bool face = a.uiVariant == 3 || a.uiVariant == 7;
     ImGui::SetNextWindowPos(ImVec2(0, menuH));
