@@ -1871,3 +1871,6 @@ The tests/app/test_mode_numbers.cpp poll-slot scan now reads the slots of the 4.
 ISM sensors: 50 % of the packets at 3 dB instead of 6.5 dB (narrow-envelope retry for OOK, tone-energy chips and a relaxed carrier test for FSK; 0 false). Aero: the 11 dB was the test generator's own noise
 (Eb/N0 12 dB baked in): harness fixed, true 90 % point -1 dB, no receiver change. FT8 and friends: the wrong a-priori texts are noise candidates with a sync score under 2.5; the a-priori floor is 2.6 and the
 ftxsmart count that hid them is corrected. Checked at theory: LoRa SF7 to SF12, AX.25 9600, ALE, wM-Bus, CW with carrier error. Details: docs/SENSITIVITY-4.0-B3.md.
+
+## 2026-11-12 feat40-sensC1
+Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
