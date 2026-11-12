@@ -38,7 +38,7 @@ private:
 // Hard symbol slicer with timing recovery on the (smoothed) discriminator output
 class SymbolChain {
 public:
-    void init(double fs, double baud, bool afsk = false, bool midpoint = false, double devHz = 0);
+    void init(double fs, double baud, bool afsk = false, bool midpoint = false, double devHz = 0, bool hybrid = false);
     void reset();
     // one discriminator sample (Hz), the slicing threshold; appends symbols to syms
     inline void step(float d, float thr, std::vector<uint8_t>& syms);
@@ -66,6 +66,7 @@ private:
     std::vector<std::complex<double>> tu_, tl_;
     std::complex<double> su_{0, 0}, sl_{0, 0};
     double phU_ = 0, phL_ = 0;
+    bool hybrid_ = false;
     float max_ = 0, min_ = 0, midC_ = 0, decay_ = 0.001f;
     int afLen_ = 1, afPos_ = 0;
     std::vector<float> afBuf_;
@@ -107,7 +108,7 @@ inline void SymbolChain::step(float d, float thr, std::vector<uint8_t>& syms) {
         // a frame with a short preamble in an unbalanced line code: slice at the middle of the recent extremes, not at the mean
         if (d > max_) max_ = d; else max_ -= (max_ - d) * decay_;
         if (d < min_) min_ = d; else min_ += (d - min_) * decay_;
-        thr = 0.5f * (max_ + min_);
+        if (!hybrid_ || nOut_ < 64) thr = 0.5f * (max_ + min_);   // after 64 symbols the running mean `thr` (the discriminator's mean) replaces the noisy extremes
         midC_ = thr;
     }
     wsum_ += d - win_[(size_t)wpos_];

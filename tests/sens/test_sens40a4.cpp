@@ -61,10 +61,10 @@ int main() {
         {"MRZ", 256, 24.0, {14, 12, 10, 8, 6, 4}},
         {"iMS-100", 512, 24.0, {10, 8, 6, 4, 2, 0}},
     };
-    const double cfos[] = {0, 8000};
-    for (int phase = 0; phase < 2; phase++) {
-    if (phase == 0) setenv("A4_BASE", "1", 1); else unsetenv("A4_BASE");
-    printf("=== %s\n", phase == 0 ? "BEFORE (discriminator symbols)" : "AFTER (tone symbols)");
+    const double cfos[] = {0};
+    for (int phase = 0; phase < 3; phase++) {
+    setenv("A4_VAR", phase == 0 ? "0" : phase == 1 ? "1" : "2", 1);
+    printf("=== A4_VAR %d (0 before, 1 tone + mean threshold, 2 mean threshold only)\n", phase);
     for (const R& r : rs) {
         const Case S = makeCase("sonde", r.secs, r.mask);
         for (double cfo : cfos) {
@@ -72,9 +72,6 @@ int main() {
             for (double snr : r.snrs) printf("  %.0fdB %3.0f%%", snr, 100 * frac(S, snr, cfo, 0, 4));
             printf("\n");
         }
-        printf("%-8s 50ppm clock:", r.name);
-        for (double snr : r.snrs) printf("  %.0fdB %3.0f%%", snr, 100 * frac(S, snr, 0, 50, 4));
-        printf("\n");
         double falses = 0;
         for (int i = 0; i < 3; i++) falses += trial(S, 10, 0, 0, 1, 1000 + (uint64_t)i);
         printf("%-8s noise only: %.0f units\n", r.name, falses);
