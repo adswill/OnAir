@@ -1898,3 +1898,10 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+
+## 2026-11-12 (feat40-trackui): tracker, mode list, status bar, top bar, menu bar
+- Satellite tracker (View > Passes, docs/TRACKER-4.0.md): world map with the chosen satellites' orbits, footprints and day/night; satellite search with group chips and a list; pass panel with countdown, quality badge, Doppler, sky plot (AOS/TCA/LOS) and "Track and record this pass"; cleaner pass list, next pass highlighted. New Iridium group (`TagIridium`). Every feature and setting mapped to its new place.
+- Mode list (docs/MODELIST-4.0.md): each category tinted with its colour, the selected mode on a stronger tint with an accent bar and semibold name; hover and focus distinct. Colour maths in app/ui/row_tint.h, test `row_tint` (all palettes, Dark/Light/High contrast, 4.5:1).
+- Status bar (docs/STATUSBAR-4.0.md): one flat row (state dot + word, grouped frequency, mode, RX, signal, rate, level, load, dropped, cpu + sparkline, log, clock, mute), segments dropped by priority (`statusstrip::fit`, test `status_strip`); flat receiver tabs.
+- Top bar gap: rec with time and size, Memory quick list, offset, bandwidth. Above every mode's tabs: one action row (next step + fix, antenna hint, Undo, Auto setup, Reset this mode, Simple/Advanced). Menu bar right-hand items centred and flat, Discord button the text height.
+- Syntax-checked locally (battery: no local build); app build and tests on GitHub quick.yml. No screenshots yet.

@@ -139,8 +139,10 @@ void modeActionBar(App& a) {
         const float leftMax = avail - (antMin > 0 ? antMin + gap : 0.f) - undoW - rightW - gap;
         const bool said = nextStepLine(a, std::max(leftMin, std::min(leftMax, avail * 0.6f)));
         const float after = said ? ImGui::GetItemRectMax().x - ImGui::GetWindowPos().x + ImGui::GetScrollX() + gap : x0;
-        if (!said) ImGui::Dummy(ImVec2(0, ImGui::GetFrameHeight()));   // the row still holds the buttons
-        rest(after, endX);
+        if (!ant.empty() || undo || radio || level) {
+            if (!said) ImGui::Dummy(ImVec2(0, ImGui::GetFrameHeight()));   // the row still holds the buttons
+            rest(after, endX);
+        }
     } else {
         nextStepLine(a, avail);
         if (!ant.empty() || undo || radio || level) { ImGui::Dummy(ImVec2(0, 0)); rest(x0, endX); }

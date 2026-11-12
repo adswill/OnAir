@@ -1392,7 +1392,7 @@ const dect2::SatMapPoint* mapTrack(const Sat& s, double now) {
 // footprint and where it is now; the chosen pass's stretch of track in the accent colour; the receiver.
 void bigMap(const Row* sel, double now, float w, float h) {
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
-    { static bool centred = false; if (!centred) { centred = true; S.mapView.lat = std::max(-50.0, std::min(50.0, S.lat)); S.mapView.lon = S.lon; S.mapView.zoom = 2; } }
+    { static bool centred = false; if (!centred && std::fabs(S.lat) <= 90) { centred = true; S.mapView.lat = std::max(-50.0, std::min(50.0, S.lat)); S.mapView.lon = S.lon; S.mapView.zoom = 2; } }   // once the position is known
     adsbmap::draw(S.mapView, ImVec2(w, h));
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + w, p0.y + h), true);
