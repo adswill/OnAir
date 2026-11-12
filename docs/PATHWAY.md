@@ -1879,3 +1879,6 @@ second POCSAG-only decoder behind a 7 kHz filter next to the 10 kHz one FLEX nee
 the phase step (about 1.5 dB), SAME and the CubeSat 1200 baud path on the front end's second 4.5 kHz channel (about 3 dB each), LTR 3.5 kHz with the carrier follow-up
 (decodes with 3.1 kHz carrier error where 3.9 found nothing), MRZ keeps its serial across pauses (it was forgotten at every pause, so the receiver dropped nearly every MRZ frame, which is also why its narrow path had broken sonde_extra_rf), MRZ and iMS-100 accept 3 sync symbol errors and run on the narrow path (MRZ 7 times the frames and about 2 dB, iMS-100 about 3 dB). Tests: sens40a3 (new), same_rx, cubesat_rx, ltr_rx,
 sonde_extra extended. Not kept: Iridium, Aero, ISM, Wi-SUN, BLE, VDL2 gate changes, M10 narrow path (already at theory).
+
+## 2026-11-12 sensitivity A4
+feat40-sensA4: iMet-54 and MRZ slicer threshold from the smoothed extremes (iMet-54 about 2.3 dB, MRZ about 4.5 dB, simulated). Details in docs/SENSITIVITY-4.0-A4.md.
