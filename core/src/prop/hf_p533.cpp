@@ -17,7 +17,6 @@ constexpr double kLz = 8.72;   // P.533-14 section 5.2.2
 constexpr double kLy = -0.14;  // section 5.3.3
 
 double clampd(double v, double lo, double hi) { return v < lo ? lo : v > hi ? hi : v; }
-double wrap180(double x) { x = std::fmod(x + 180.0, 360.0); if (x < 0) x += 360; return x - 180.0; }
 
 // great-circle point at distance x (km) from (la1, lo1) toward (la2, lo2)
 struct GC {

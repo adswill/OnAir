@@ -73,10 +73,10 @@ int main() {
     }
     // skip zone: 14 MHz by day at 300 km is not carried by the F2 layer (above the MUF), at 2000 km it is
     {
-        const Prediction near = predict(path(50, 10, 52.7, 10, 1, 12, 60, 14.1));
-        const Prediction far = predict(path(50, 10, 50, 38, 1, 12, 60, 14.1));
-        CHECK(near.basicMufMHz < 14.1);
-        CHECK(far.basicMufMHz > 14.1);
+        const Prediction nearP = predict(path(50, 10, 52.7, 10, 1, 12, 60, 14.1));
+        const Prediction farP = predict(path(50, 10, 50, 38, 1, 12, 60, 14.1));
+        CHECK(nearP.basicMufMHz < 14.1);
+        CHECK(farP.basicMufMHz > 14.1);
     }
     // long paths: the composite method, finite and continuous with the ray-path method
     {
