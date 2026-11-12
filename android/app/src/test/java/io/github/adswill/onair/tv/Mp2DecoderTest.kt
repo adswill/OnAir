@@ -44,7 +44,7 @@ class Mp2DecoderTest {
             for (i in 0 until 27) for (ch in 0 until nch) w.bits(if (i < usedBands) 15 else 0, rowBits[i])   // 15: 65535 steps, 16 bits
             for (i in 0 until usedBands) for (ch in 0 until nch) w.bits(0, 2)   // scfsi 0: three scale factors
             val sfi = Array(nch) { Array(usedBands) { IntArray(3) } }
-            for (ch in 0 until nch) for (i in 0 until usedBands) for (part in 0 until 3) {
+            for (i in 0 until usedBands) for (ch in 0 until nch) for (part in 0 until 3) {   // subband by subband, then channel (2.4.1.6)
                 var mx = 1e-9f
                 for (t in part * 12 until part * 12 + 12) mx = maxOf(mx, abs(s[ch][t][i]))
                 var idx = 62

@@ -1898,3 +1898,9 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
 ## 2026-11-12 feat40-sensC1
 Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
+
+## 2026-11-12 (night): Android TV picture and sound, USB radios (feat40-android)
+- TV modes on Android get a Watch panel: the core's transport stream (Engine packet tap) is cut to the chosen service's PIDs in a native ring (`android/native/src/jni_tv.cpp`, `tv/TvNative.kt`), reassembled to PES in Kotlin and decoded by the phone's own MediaCodec (H.264, HEVC, MPEG-2 where present; AAC/HE-AAC in ADTS and LATM, AC-3/E-AC-3 where present) onto a SurfaceView and AudioTrack, pictures timed on PTS against the sound clock. No codec is shipped; the panel says which format the phone cannot decode and when a service is scrambled.
+- MPEG audio layer II (most SD services) has a small decoder in the app (`tv/Mp2Decoder.kt`), used only when the phone has none; layer II is patent-free; tables from the standard as FFmpeg keeps them (credited).
+- USB: the core's `usbFdKindForId` is one table now with all 42 RTL2832U ids of librtlsdr (was 17); catalog and filter follow, `UsbIdsAgreementTest` checks the core table. android.yml now builds libairspy / libairspyhf (pinned commits with the `*_open_fd` entry points): the APK had never contained them, so Airspy radios could not open on phones.
+- Tested on GitHub only (JVM tests, NDK build, C++ USB tests); no phone, emulator or radio. Details and the radios not added (LimeSDR Mini, bladeRF, PlutoSDR USB, HydraSDR, RX888) in `docs/ANDROID-4.0.md`.

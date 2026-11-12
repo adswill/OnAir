@@ -64,7 +64,8 @@ fun h264SpsSize(nal: ByteArray): Pair<Int, Int>? = try {
         if (chroma == 3) br.bits(1)
         br.ue(); br.ue(); br.bits(1)   // bit depths, qpprime_y_zero_transform_bypass_flag
         if (br.bit()) {   // seq_scaling_matrix_present_flag
-            for (k in 0 until if (chroma != 3) 8 else 12) if (br.bit()) {
+            val lists = if (chroma != 3) 8 else 12
+            for (k in 0 until lists) if (br.bit()) {
                 val size = if (k < 6) 16 else 64
                 var last = 8; var next = 8
                 for (j in 0 until size) { if (next != 0) { next = (last + br.se() + 256) % 256 }; last = if (next == 0) last else next }
