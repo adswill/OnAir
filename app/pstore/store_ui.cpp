@@ -1,6 +1,7 @@
 // The Store tab of View > Plugins: see store_ui.h. The network work (refresh, the plugin's page, the download and install) runs on one background
 // thread at a time; this file only draws and starts tasks. The core is core/src/pstore.
 #include "store_ui.h"
+#include "market_ui.h"
 #include "../app.h"
 #include "dect2/engine/updater.h"
 #include "dect2/pstore/store.h"
@@ -31,6 +32,8 @@ struct StoreUi {
     char urlBuf[512] = {0}, keyBuf[80] = {0};
     bool bufInit = false, confirmTick = false, openConfirm = false;
     std::string detailTried;           // the plugin whose page was asked for once already (a failure is not retried every frame)
+    std::vector<ps::Revocation> extra;  // from the community marketplace (market_ui.cpp)
+    bool extraPending = false;
 };
 StoreUi S;
 
@@ -71,6 +74,7 @@ void ensureStore(dp::Manager& mgr) {
     c.registryUrl = u; c.publicKeyHex = k; c.cacheDir = mgr.pluginsDir() + "/.store"; c.hostVersion = ONAIR_VERSION;
     c.autoRevocations = false;   // applied below on the UI thread, after the running plugin was stopped
     S.store = std::make_unique<ps::Store>(c, &mgr);
+    S.store->setExtraRevocations(S.extra);
     S.builtUrl = u; S.builtKey = k; S.triedCache = false;
 }
 bool installedHere(dp::Manager& mgr, const std::string& id, std::string* ver = nullptr) { dp::Entry e; const bool f = mgr.find(id, e) && !e.bundled; if (f && ver) *ver = e.m.version; return f; }
@@ -88,9 +92,22 @@ const char* reviewExplain(const std::string& r) {
 void openLink(const std::string& u) { if (u.compare(0, 8, "https://") == 0) dect2::openUrl(u); }
 } // namespace
 
-void pluginStoreShutdown() { joinWorker(); }
+void pluginStoreShutdown() { pluginMarketShutdown(); joinWorker(); }
 
-bool pluginStoreTab(App& a, dp::Manager& mgr, const std::function<void(const std::string&)>& stopIfActive) {
+void pluginStoreSetExtraRevocations(dp::Manager& mgr, const std::vector<ps::Revocation>& r) {
+    S.extra = r;
+    S.extraPending = true;
+    if (S.busy) return;   // applied by pluginStoreTab once the registry task is done
+    ensureStore(mgr);
+    if (!S.store) return;
+    S.store->setExtraRevocations(S.extra);
+    S.store->applyRevocations();
+    S.extraPending = false;
+}
+
+namespace {
+// the 3.9 signed static registry: reviewed and verified plugins
+bool registryPanel(App& a, dp::Manager& mgr, const std::function<void(const std::string&)>& stopIfActive) {
     (void)a;
     bool changed = false;
     if (S.finished.exchange(false)) {   // a task ended: act on the UI thread
@@ -281,4 +298,21 @@ bool pluginStoreTab(App& a, dp::Manager& mgr, const std::function<void(const std
         }
     }
     return changed;
+}
+} // namespace
+
+// Two sources in one tab (4.0): the community marketplace (anyone can publish, unreviewed) and the reviewed registry of 3.9.
+bool pluginStoreTab(App& a, dp::Manager& mgr, const std::function<void(const std::string&)>& stopIfActive) {
+    static int source = -1;
+    if (source < 0) source = plat::prefs().getS("storeSource", "community") == "registry" ? 1 : 0;
+    if (S.extraPending && !S.busy) pluginStoreSetExtraRevocations(mgr, S.extra);
+    int was = source;
+    ImGui::RadioButton(tr("Community marketplace"), &source, 0);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Anyone with a GitHub account can publish here. Plugins are not reviewed."));
+    ImGui::SameLine();
+    ImGui::RadioButton(tr("Reviewed registry"), &source, 1);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("A small signed list kept by the OnAir maintainers: listed, reviewed and verified plugins."));
+    if (source != was) { plat::prefs().setS("storeSource", source ? "registry" : "community"); plat::prefs().flush(); }
+    ImGui::Separator();
+    return source == 0 ? pluginMarketPanel(a, mgr, stopIfActive) : registryPanel(a, mgr, stopIfActive);
 }

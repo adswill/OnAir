@@ -1,0 +1,24 @@
+# The plugin marketplace server (tools/marketplace/server): type check, the Node tests against SQLite and an in-memory R2, and a smoke run in
+# the real Workers runtime (Miniflare). Deploys nothing and needs no secrets.
+name: Marketplace server
+on:
+  workflow_dispatch:
+  push:
+    paths: ["tools/marketplace/server/**", ".github/workflows/market-server.yml"]
+  pull_request:
+    paths: ["tools/marketplace/server/**", ".github/workflows/market-server.yml"]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults: { run: { working-directory: tools/marketplace/server } }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v5
+        with: { node-version: "22" }
+      - run: npm install --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run test:workerd

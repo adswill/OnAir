@@ -1966,3 +1966,17 @@ side panel and the plot popups shows a live ImGui miniature of the interface wit
 colours moved to app/ui/palette_data.h, which loadTheme() and the preview both read. Pure description in ui_preview_logic.h, tests
 ui_preview and ui_preview_render (the miniature rasterised on the CPU, pixels checked). Off switch: Settings > Appearance > Previews of
 the looks. Dev page: --previewgallery. Details: docs/UI-PREVIEW-4.0.md.
+## 2026-11-12 (night, feat40-market): community plugin marketplace
+- Server (tools/marketplace/server): one Cloudflare Worker, D1 and R2. It covers list and search (relevance, likes, downloads, newest;
+  tag, kind and platform), plugin page, counted downloads with the signed sha256, likes once per installation (salted hash), and GitHub
+  device-flow sign-in (no token stored). Upload and new version check the package with a port of plugin::parseManifest, the
+  installer's package rules and the 3.9 listing policy. Report and the admin endpoints (pull/restore, ban, reports) are there too.
+  Listing answers are Ed25519-signed and name their request and time. Nothing is deployed; the README has the owner's setup.
+  32 Node tests (SQLite through sql.js, abuse cases) and a workerd smoke run passed locally; .github/workflows/market-server.yml runs
+  them on GitHub.
+- App: the Store tab has two sources, Community marketplace (default) and Reviewed registry (3.9). The community panel has search,
+  sort, tag chips, cards with the unreviewed badge, and a plugin page with Install (second confirmation), Like, Report and the repo link.
+  The Upload plugin window covers sign-in, file, title, description, link, tags, preview and Publish. Core client in
+  core/src/pstore/market.cpp; plat::httpCall added. Withdrawn plugins installed from the marketplace are switched off through the 3.9
+  kill switch (Store::setExtraRevocations). Test pstore_market, GitHub builds only. kBuiltInMarketKeyHex stays all zeros until the
+  owner makes the key. docs/PLUGIN-MARKETPLACE-4.0.md.
