@@ -68,6 +68,9 @@ public:
     // (what rtl_433 -y does). Returns how many messages were decoded; json gets one rtl_433 JSON line per message.
     int decodeCode(const std::string& code, std::vector<std::string>* json = nullptr);
     void setProtocolsOnly(const std::vector<unsigned>& nums);   // exactly these decoders (protocol numbers), no others
+    // 4.0: a view onto one sensor family: only messages whose model contains one of the '|' separated parts, compared in lower case,
+    // are reported (and the unknown signal analyser is silent); "" = every sensor (the Sub-GHz sensors mode). The user's protocol choice still applies.
+    void setView(const std::string& patterns);
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;
@@ -80,5 +83,23 @@ std::string sensorsJson(const SensorsTelemetry& t);
 std::string sensorsMqtt(const SensorsTelemetry& t, const std::string& prefix = "rtl_433");
 
 ModeTuning sensorsTuning();
+
+// 4.0: the sensor families that OnAir lists as modes of their own (docs/SENSORVIEWS-4.0.md): views onto this receiver (the same decoders, the messages of one family).
+// family N, active standard N + 1 (what Engine::activeStandard() and RxTelemetry::standard report), engine standard N + 2, poll slot N.
+struct SensorsView {
+    int family;
+    const char* id;          // dect2cli --standard
+    const char* name;        // the mode-list name
+    const char* patterns;    // setView()
+    double defMhz;
+    const char* shortName;
+};
+const SensorsView* sensorsViews(int& count);
+const SensorsView* sensorsViewForActive(int activeStd);     // by the active standard (family + 1), nullptr for any other
+const SensorsView* sensorsViewForStd(int stdMode);          // by the engine standard (family + 2), nullptr for any other
+ModeTuning sensorsViewTuning(int i);
+// every active standard of the views, for switch statements
+#define DECT2_SENSVIEW_ACTIVE_CASES case 565: case 568: case 571: case 574: case 577: case 580: case 583: case 586: case 589: case 592: case 595: case 664: case 667: case 670: case 673: case 676: case 679: case 682: case 413: case 416: case 419: case 422:
+// and the poll slots (= the families)
 
 } // namespace dect2

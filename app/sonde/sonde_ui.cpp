@@ -40,7 +40,7 @@ struct State {
 State S;
 
 // standard 14 is the engine's activeStandard for radiosondes
-bool live(const App& a) { return a.rx.standard == 14; }
+bool live(const App& a) { return a.rx.standard == 14 || dect2::sondeViewForActive(a.rx.standard) != nullptr; }
 
 void loadState() {
     if (S.loaded) return;

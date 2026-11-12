@@ -300,6 +300,7 @@ struct SondeReceiver::Impl {
     double fs = 0;
     std::atomic<double> sigOff{0}, centerHz{0};      // set from the interface thread, read by the worker
     std::atomic<int> maxChan{kMaxChan};
+    std::atomic<uint32_t> kindMask{0};               // setKindMask(): 0 every sonde type
     std::atomic<bool> toneChipsOn{true};              // setToneDetection(): symbols of RS41 / RS92 / DFM / M10 / M20 from tone energies
     std::function<void(const std::string&)> log;
     SondeTelemetry tel;
@@ -734,6 +735,7 @@ void SondeReceiver::setSynchronous(bool on) { p_->syncMode = on; }
 void SondeReceiver::setCenterMhz(double mhz) { p_->centerHz = mhz * 1e6; }
 void SondeReceiver::setToneDetection(bool on) { p_->toneChipsOn = on; }
 bool SondeReceiver::toneDetection() const { return p_->toneChipsOn.load(); }
+void SondeReceiver::setKindMask(uint32_t m) { p_->kindMask.store(m, std::memory_order_relaxed); }
 void SondeReceiver::setMaxChannels(int n) { p_->maxChan = std::clamp(n, 1, kMaxChan); }
 void SondeReceiver::clearSondes() {
     // done by the worker's lock: the list belongs to the processing state
@@ -806,6 +808,15 @@ bool SondeReceiver::telemetry(SondeTelemetry& out, uint64_t lastSeq) {
     if (p_->tel.seq <= lastSeq) return false;
     out = p_->tel;
     sess::observeSonde(out);
+    if (const uint32_t m = p_->kindMask.load(std::memory_order_relaxed)) {   // a view onto one sonde type: its sondes and counts only
+        std::vector<SondeInfo> keep;
+        uint64_t ok = 0, bad = 0;
+        for (const SondeInfo& s : out.sondes) if ((m >> s.kind) & 1u) { keep.push_back(s); ok += s.framesOk; bad += s.framesBad; }
+        out.sondes.swap(keep);
+        out.blocksOk = ok; out.blocksBad = bad;
+        out.dataValid = !out.sondes.empty();
+        if (out.state == 2 && out.sondes.empty()) out.state = 1;
+    }
     return true;
 }
 void SondeReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
@@ -814,6 +825,30 @@ bool sondeIsLbandMhz(double mhz) { return mhz > 1500.0; }
 
 double sondeMinSampleRateHz(double centerMhz) {
     return sondeIsLbandMhz(centerMhz) ? 1000000.0 : 2000000.0;
+}
+
+// 4.0: the sonde types with a mode-list entry of their own (families 684 .. 717, stride 3: family, active standard family + 1, engine standard family + 2, poll slot = family)
+static const SondeView kSondeViews[] = {
+    {684, "srs41", "Radiosonde: Vaisala RS41", 1, "RS41"},
+    {687, "srs92", "Radiosonde: Vaisala RS92", 2, "RS92"},
+    {690, "sdfm", "Radiosonde: Graw DFM", 3, "DFM"},
+    {693, "sm10", "Radiosonde: Meteomodem M10", 4, "M10"},
+    {702, "sm20", "Radiosonde: Meteomodem M20", 5, "M20"},
+    {705, "slms6", "Radiosonde: Lockheed Martin LMS6", 6, "LMS6"},
+    {708, "simet", "Radiosonde: InterMet iMet-4", 7, "iMet"},
+    {711, "simet54", "Radiosonde: InterMet iMet-54", 8, "iMet-54"},
+    {714, "smrz", "Radiosonde: Russian MRZ", 9, "MRZ"},
+    {717, "smeisei", "Radiosonde: Meisei iMS-100", 10, "iMS-100"},
+};
+const SondeView* sondeViews(int& count) { count = (int)(sizeof kSondeViews / sizeof *kSondeViews); return kSondeViews; }
+const SondeView* sondeViewForActive(int a) { for (const auto& v : kSondeViews) if (v.family + 1 == a) return &v; return nullptr; }
+const SondeView* sondeViewForStd(int s) { for (const auto& v : kSondeViews) if (v.family + 2 == s) return &v; return nullptr; }
+ModeTuning sondeViewTuning(int i) {
+    ModeTuning t = sondeTuning();
+    const SondeView& v = kSondeViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
+    if (v.kind == SondeLms6) t.defMhz = 1680.0;   // the L-band profile (sondeIsLbandMhz)
+    return t;
 }
 
 ModeTuning sondeTuning() {

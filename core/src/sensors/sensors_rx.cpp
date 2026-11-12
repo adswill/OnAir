@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -185,6 +186,8 @@ struct SensorsReceiver::Impl {
     std::vector<r_device*> devs, customDevs;
     std::mutex setMu;
     bool dirty = true;
+    std::mutex viewMu;
+    std::vector<std::string> viewPat;  // setView(): lower-case parts of the model names this view reports (empty: every sensor)
 
     // pulse pipeline
     pulse_detect_t* pd = nullptr;
@@ -277,9 +280,25 @@ struct SensorsReceiver::Impl {
     }
 
     // ---- results ----
+    bool viewAccepts(const std::string& model, const std::string& kind) {
+        std::lock_guard<std::mutex> lk(viewMu);
+        if (viewPat.empty()) return true;
+        std::string a = model;
+        for (auto& c : a) c = (char)std::tolower((unsigned char)c);
+        for (const auto& p : viewPat) {
+            if (p.rfind("kind:", 0) == 0) { if (kind == p.substr(5)) return true; }       // "kind:meter": the kind the decoder's fields say (kindOf)
+            else if (a.find(p) != std::string::npos) return true;
+        }
+        return false;
+    }
     void onData(r_device* d, data_t* data) {
         std::vector<SensorField> f;
         flatten(f, data, "");
+        {   // a sensor-family entry (setView) reports its own family only; the package still counts as recognised
+            const SensorField* vm = findField(f, "model");
+            const std::string vmodel = vm ? vm->text : std::string(d && d->name ? d->name : "?");
+            if (!viewAccepts(vmodel, kindOf(f, vmodel))) { eventsInPackage++; return; }
+        }
         std::string js;
         dataJson(js, data);
         if (jsonCb) jsonCb(js);
@@ -478,7 +497,7 @@ struct SensorsReceiver::Impl {
         pub.protocols = (unsigned)devs.size();
         pub.customProtocols = (unsigned)customDevs.size();
         pub.devices = devices;
-        pub.unknown = unknown;
+        { std::lock_guard<std::mutex> vl(viewMu); if (viewPat.empty()) pub.unknown = unknown; else pub.unknown.clear(); }
         pub.recent = recent;
     }
 };
@@ -537,6 +556,17 @@ void SensorsReceiver::reset() {
     s.u8.clear(); s.accI = s.accQ = 0; s.accN = 0; s.inputPos = 0; s.nIn = 0;
     s.minLevelAuto = s.noiseLevel = 0;
     pulse_detect_set_levels(s.pd, 0, s.fixedLevel, s.minLevel, s.minSnr, 0);
+}
+
+void SensorsReceiver::setView(const std::string& patterns) {
+    Impl& s = *p_;
+    std::lock_guard<std::mutex> lk(s.viewMu);
+    s.viewPat.clear();
+    std::string cur;
+    for (char c : patterns + "|") {
+        if (c == '|') { if (!cur.empty()) s.viewPat.push_back(cur); cur.clear(); }
+        else cur += (char)std::tolower((unsigned char)c);
+    }
 }
 
 void SensorsReceiver::clearResults() {
@@ -742,6 +772,42 @@ std::string sensorsMqtt(const SensorsTelemetry& t, const std::string& prefix) {
         o += topic + "/rssi " + num3(d.rssiDb) + "\n";
     }
     return o;
+}
+
+// 4.0: the sensor families with a mode-list entry of their own (families 564 .. 594 and 663 .. 681, stride 3: family, active standard family + 1,
+// engine standard family + 2, poll slot = family). The patterns are lower-case parts of the model a decoder reports .
+static const SensorsView kSensViews[] = {
+    {564, "oregon", "Oregon Scientific sensors", "oregon", 433.92, "Oregon Scientific"},
+    {567, "acurite", "Acurite sensors", "acurite", 433.92, "Acurite"},
+    {570, "lacrosse", "LaCrosse sensors", "lacrosse", 433.92, "LaCrosse"},
+    {573, "fineoffset", "Fine Offset / Ecowitt sensors", "fineoffset|fine offset|ecowitt", 868.3, "Fine Offset / Ecowitt"},
+    {576, "bresser", "Bresser sensors", "bresser", 868.3, "Bresser"},
+    {579, "hideki", "Hideki sensors", "hideki", 433.92, "Hideki"},
+    {582, "tfa", "TFA Dostmann sensors", "tfa|klimalogg", 433.92, "TFA Dostmann"},
+    {585, "nexus", "Nexus / Prologue sensors", "nexus|prologue", 433.92, "Nexus / Prologue"},
+    {588, "alecto", "Alecto / Esperanza sensors", "alecto|esperanza", 433.92, "Alecto / Esperanza"},
+    {591, "ambient", "Ambient Weather sensors", "ambient", 915.0, "Ambient Weather"},
+    {594, "alarmsens", "Wireless alarm sensors", "honeywell|visonic|dsc|interlogix", 345.0, "Wireless alarm sensors"},
+    {663, "x10rf", "X10 RF", "x10", 433.92, "X10"},
+    {666, "ert", "Itron ERT meters", "ert-scm|scmplus|idm", 915.0, "Itron ERT"},
+    {669, "r900", "Neptune R900 water meters", "neptune", 915.0, "Neptune R900"},
+    {672, "tpmsschrader", "TPMS: Schrader", "schrader|schraeder", 433.92, "Schrader TPMS"},
+    {675, "tpmsrenault", "TPMS: Renault", "renault", 433.92, "Renault TPMS"},
+    {678, "tpmstoyota", "TPMS: Toyota", "toyota|pmv-107j", 433.92, "Toyota TPMS"},
+    {681, "tpmscitroen", "TPMS: Citroen / Peugeot / Fiat", "citroen|peugeot|fiat|mitsubishi", 433.92, "Citroen TPMS"},
+    {412, "weatherall", "Weather stations (all brands)", "kind:weather", 433.92, "Weather stations, all brands"},
+    {415, "tpmsall", "TPMS: all makes", "kind:tpms", 433.92, "Tyre pressure, all makes"},
+    {418, "metersall", "Utility and energy meters", "kind:meter", 433.92, "Utility and energy meters"},
+    {421, "remotesall", "Remotes, doorbells and switches", "kind:remote", 433.92, "Remotes and doorbells"},
+};
+const SensorsView* sensorsViews(int& count) { count = (int)(sizeof kSensViews / sizeof *kSensViews); return kSensViews; }
+const SensorsView* sensorsViewForActive(int a) { for (const auto& v : kSensViews) if (v.family + 1 == a) return &v; return nullptr; }
+const SensorsView* sensorsViewForStd(int s) { for (const auto& v : kSensViews) if (v.family + 2 == s) return &v; return nullptr; }
+ModeTuning sensorsViewTuning(int i) {
+    ModeTuning t = sensorsTuning();
+    const SensorsView& v = kSensViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name; t.defMhz = v.defMhz;
+    return t;
 }
 
 ModeTuning sensorsTuning() {

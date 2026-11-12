@@ -24,6 +24,9 @@ public:
     // The radio's centre frequency (0 = not known). Known, the four channels are placed by their own frequencies and every pair the capture holds
     // is decoded (AIS 1 + 2, 75 + 76); not known, AIS 1 and 2 sit at -+25 kHz of the signal offset as before (a recording, the test signal).
     void setCenterHz(double hz);
+    // 4.0: a view onto one kind of AIS station: only the stations of the classes in `classMask` (bit k = AisClass k) are reported (vessels, messages, application messages, alerts, sentences); devicesOnly: only
+    // MMSIs 970xxxxxx (AIS-SART), 972xxxxxx (man overboard) and 974xxxxxx (EPIRB-AIS) whatever their class. classMask 0 and !devicesOnly: every station.
+    void setStationView(uint32_t classMask, bool devicesOnly);
     void setChannelMask(int mask);                       // the channels to decode at most (bit c = channel c of AisTelemetry; default 15 = all four)
     // Satellite mode: channel filters wide enough for +-4.5 kHz of Doppler shift, the collision-tolerant decoder (frequency candidates, parts of
     // bursts, successive cancellation) and Doppler tracking. Off by default (a coast receiver does not need it and it costs CPU).
@@ -58,5 +61,20 @@ private:
 };
 
 ModeTuning aisTuning();
+
+// 4.0: the station kinds that OnAir lists as modes of their own (docs/VIEWS-4.0.md): views onto this receiver (the same channels and decoders, the stations of one kind). family N, active standard N + 1, engine standard N + 2, poll slot N.
+struct AisView {
+    int family;
+    const char* id;          // dect2cli --standard
+    const char* name;        // the mode-list name
+    uint32_t classMask;      // bits of AisClass
+    bool devicesOnly;        // MMSI 970 / 972 / 974
+    const char* shortName;
+};
+const AisView* aisViews(int& count);
+const AisView* aisViewForActive(int activeStd);
+const AisView* aisViewForStd(int stdMode);
+ModeTuning aisViewTuning(int i);
+#define DECT2_AISVIEW_ACTIVE_CASES case 739: case 808: case 811: case 814: case 817: case 858:
 
 } // namespace dect2

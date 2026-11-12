@@ -531,7 +531,7 @@ static std::vector<ModeTuning> withSatDetect(std::vector<ModeTuning> t) {
 }
 static const std::vector<ModeTuning>& table() {
     static const std::vector<ModeTuning> t = withSatDetect(anyFrequency({dvbsTuning(), dtmbTuning(), atvTuning(), dmrTuning(), drmTuning(), adsbTuning(), gnssTuning(), sondeTuning(), aisTuning(), marineTuning(), acarsTuning(), inmcTuning(), aeroTuning(), iridiumTuning(), meshTuning(),
-                                               wxsatTuning(0), wxsatTuning(1), wxsatTuning(2), wxsatTuning(3), wxsatTuning(4), wxsatTuning(5), wxsatTuning(6), wxsatTuning(7), wxsatTuning(8), wxsatTuning(9), wxsatTuning(10), wxsatTuning(11), rcLinkTuning(), hdrTuning(), cdrTuning(), pagerTuning(), packetTuning(), hfdigTuning(), airbandTuning(), vdl2Tuning(), ismTuning(), vorTuning(), m17Tuning(), cellTuning(), cwTuning(), dstarTuning(), hfdlTuning(), nxdnTuning(), dpmrTuning(), gsmrTuning(), pskTuning(), js8Tuning(), specxTuning(), specanTuning(), dvbcTuning(), orbcommTuning(), uplinkTuning(), tetraTuning(), aleTuning(), macTuning(), astroTuning(), p25Tuning(), bleTuning(), ionoTuning(), qo100Tuning(), wifiTuning(), generalTuning(), timeTuning(), ridTuning(), meteorTuning(), nrTuning(), cubesatTuning(), goesTuning(), globalstarTuning(), vdesTuning(), hrptTuning(), zigbeeTuning(), threadTuning(), flarmTuning(), hfbeaconTuning(), djiTuning(), nbiotTuning(), halowTuning(), codarTuning(), wbTuning(), datawellTuning(), multitoneTuning(), sameTuning(), loraRawTuning(), antTuning(), dectTuning(), tetrapolTuning(), elektroTuning(), gk2aLritTuning(), gk2aHritTuning(), ndbTuning(), lbjTuning(), klwTuning(), tdcsTuning(), horusTuning(), dgpsTuning(), vdl4Tuning(), wisunTuning(), uatTuning(), eczasTuning(), wmbusTuning(), tonesTuning(), sarsatTuning(), mt63Tuning(), fsqTuning(), ifkpTuning(), kaalTuning(), kavbTuning(), kappTuning(), kaftTuning(), zwaveTuning(), mscatterTuning(), fpvTuning(), cquamTuning(), dmeTuning(), sitorTuning(), elLoranTuning(), mpt1327Tuning(), fusionTuning(), ardopTuning(), goesdcsTuning(), hrdcpTuning(), modeacTuning(), bletrkTuning(), kaitTuning(), satbeaconTuning(), kawsTuning(), milhfTuning(), sbasTuning(), asterixTuning(), ltrTuning(), edacsTuning(), lorawanTuning(), loraSatTuning(), pactorTuning(), esubghzTuning(), roshfTuning(), ssdvTuning(), ebicabTuning(), inmsatTuning(), iptvTuning(), nrf24Tuning(), atisTuning(), fy3AhrptTuning(), fy3MptTuning(), pactor2Tuning(), pactor3Tuning(), pactor4Tuning(), pskdTuning(), p25p2Tuning(), isdbsTuning(), marineVhfTuning(), selcalTuning(), argosTuning(), sigfoxTuning(), nfcTuning(), shortwaveTuning(), fy4LritTuning(), fy4aHritTuning(), fy2SvissrTuning(), sensorsTuning(), bganTuning(), sfericsTuning(), ltposTuning(), adslTuning(), smartnetTuning(), tetraDmoTuning(), openSkyTuning(), btcTuning(), chanVoiceTuning(chv::Service::Cb), chanVoiceTuning(chv::Service::Frs), chanVoiceTuning(chv::Service::Pmr), chanVoiceTuning(chv::Service::Ham), chanVoiceTuning(chv::Service::HfVoice), chanVoiceTuning(chv::Service::Mdc), chanVoiceTuning(chv::Service::Mic), avRoadTuning(0), avRoadTuning(1), avRoadTuning(2), avRoadTuning(3), avRoadTuning(4), avRoadTuning(5), avRoadTuning(6), avRoadTuning(7), avRoadTuning(8), avRoadTuning(9), avRoadTuning(10), avRoadTuning(11), x40Tuning(0), x40Tuning(1), x40Tuning(2), x40Tuning(3), x40Tuning(4), x40Tuning(5), x40Tuning(6), x40Tuning(7), x40Tuning(8), x40Tuning(9), x40Tuning(10), x40Tuning(11), x40Tuning(12), x40Tuning(13), x40Tuning(14), x40Tuning(15), x40Tuning(16), x40Tuning(17), x40Tuning(18), x40Tuning(19), x40Tuning(20), x40Tuning(21), x40Tuning(22), x40Tuning(23), x40Tuning(24), x40Tuning(25), x40Tuning(26), x40Tuning(27), x40Tuning(28), x40Tuning(29), x40Tuning(30), x40Tuning(31), x40Tuning(32), x40Tuning(33), x40Tuning(34), x40Tuning(35), x40Tuning(36), x40Tuning(37), x40Tuning(38), x40Tuning(39), x40Tuning(40), x40Tuning(41), sd3Tuning(0), sd3Tuning(1), sd3Tuning(2), sd3Tuning(3), sd3Tuning(4), sd3Tuning(5), sd3Tuning(6), sd3Tuning(7), sd3Tuning(8), sd3Tuning(9), sd3Tuning(10), hfUtilTuning(0), hfUtilTuning(1), hfUtilTuning(2), hfUtilTuning(3), hfUtilTuning(4), hfUtilTuning(5), hfUtilTuning(6), hfUtilTuning(7), hfUtilTuning(8), hfUtilTuning(9), hamsciTuning(0), hamsciTuning(1), hamsciTuning(2), hamsciTuning(3), hamsciTuning(4), hamsciTuning(5), hamsciTuning(6), hamsciTuning(7), hamsciTuning(8), hamsciTuning(9), hamsciTuning(10), hamsciTuning(11), hamsciTuning(12), hamsciTuning(13), hamsciTuning(14), hamsciTuning(15), xbandTuning(0), xbandTuning(1), xbandTuning(2), xbandTuning(3), xbandTuning(4), xbandTuning(5), xbandTuning(6), xbandTuning(7), xbandTuning(8), xbandTuning(9), xbandTuning(10), xbandTuning(11), xbandTuning(12), xbandTuning(13), xbandTuning(14), xbandTuning(15), xbandTuning(16), xbandTuning(17), xbandTuning(18), xbandTuning(19), xlinkTuning(), xlinkNarrowTuning(), umtsTuning(), isdbtsbTuning(), cdmaTuning(), tdscdmaTuning(), vdl3Tuning(), cp16Tuning(), dvbshTuning(), dvbc2Tuning(), cubesatViewTuning(0), cubesatViewTuning(1), cubesatViewTuning(2), cubesatViewTuning(3), cubesatViewTuning(4), cubesatViewTuning(5), fbrTuning()}));
+                                               wxsatTuning(0), wxsatTuning(1), wxsatTuning(2), wxsatTuning(3), wxsatTuning(4), wxsatTuning(5), wxsatTuning(6), wxsatTuning(7), wxsatTuning(8), wxsatTuning(9), wxsatTuning(10), wxsatTuning(11), rcLinkTuning(), hdrTuning(), cdrTuning(), pagerTuning(), packetTuning(), hfdigTuning(), airbandTuning(), vdl2Tuning(), ismTuning(), vorTuning(), m17Tuning(), cellTuning(), cwTuning(), dstarTuning(), hfdlTuning(), nxdnTuning(), dpmrTuning(), gsmrTuning(), pskTuning(), js8Tuning(), specxTuning(), specanTuning(), dvbcTuning(), orbcommTuning(), uplinkTuning(), tetraTuning(), aleTuning(), macTuning(), astroTuning(), p25Tuning(), bleTuning(), ionoTuning(), qo100Tuning(), wifiTuning(), generalTuning(), timeTuning(), ridTuning(), meteorTuning(), nrTuning(), cubesatTuning(), goesTuning(), globalstarTuning(), vdesTuning(), hrptTuning(), zigbeeTuning(), threadTuning(), flarmTuning(), hfbeaconTuning(), djiTuning(), nbiotTuning(), halowTuning(), codarTuning(), wbTuning(), datawellTuning(), multitoneTuning(), sameTuning(), loraRawTuning(), antTuning(), dectTuning(), tetrapolTuning(), elektroTuning(), gk2aLritTuning(), gk2aHritTuning(), ndbTuning(), lbjTuning(), klwTuning(), tdcsTuning(), horusTuning(), dgpsTuning(), vdl4Tuning(), wisunTuning(), uatTuning(), eczasTuning(), wmbusTuning(), tonesTuning(), sarsatTuning(), mt63Tuning(), fsqTuning(), ifkpTuning(), kaalTuning(), kavbTuning(), kappTuning(), kaftTuning(), zwaveTuning(), mscatterTuning(), fpvTuning(), cquamTuning(), dmeTuning(), sitorTuning(), elLoranTuning(), mpt1327Tuning(), fusionTuning(), ardopTuning(), goesdcsTuning(), hrdcpTuning(), modeacTuning(), bletrkTuning(), kaitTuning(), satbeaconTuning(), kawsTuning(), milhfTuning(), sbasTuning(), asterixTuning(), ltrTuning(), edacsTuning(), lorawanTuning(), loraSatTuning(), pactorTuning(), esubghzTuning(), roshfTuning(), ssdvTuning(), ebicabTuning(), inmsatTuning(), iptvTuning(), nrf24Tuning(), atisTuning(), fy3AhrptTuning(), fy3MptTuning(), pactor2Tuning(), pactor3Tuning(), pactor4Tuning(), pskdTuning(), p25p2Tuning(), isdbsTuning(), marineVhfTuning(), selcalTuning(), argosTuning(), sigfoxTuning(), nfcTuning(), shortwaveTuning(), fy4LritTuning(), fy4aHritTuning(), fy2SvissrTuning(), sensorsTuning(), bganTuning(), sfericsTuning(), ltposTuning(), adslTuning(), smartnetTuning(), tetraDmoTuning(), openSkyTuning(), btcTuning(), chanVoiceTuning(chv::Service::Cb), chanVoiceTuning(chv::Service::Frs), chanVoiceTuning(chv::Service::Pmr), chanVoiceTuning(chv::Service::Ham), chanVoiceTuning(chv::Service::HfVoice), chanVoiceTuning(chv::Service::Mdc), chanVoiceTuning(chv::Service::Mic), avRoadTuning(0), avRoadTuning(1), avRoadTuning(2), avRoadTuning(3), avRoadTuning(4), avRoadTuning(5), avRoadTuning(6), avRoadTuning(7), avRoadTuning(8), avRoadTuning(9), avRoadTuning(10), avRoadTuning(11), x40Tuning(0), x40Tuning(1), x40Tuning(2), x40Tuning(3), x40Tuning(4), x40Tuning(5), x40Tuning(6), x40Tuning(7), x40Tuning(8), x40Tuning(9), x40Tuning(10), x40Tuning(11), x40Tuning(12), x40Tuning(13), x40Tuning(14), x40Tuning(15), x40Tuning(16), x40Tuning(17), x40Tuning(18), x40Tuning(19), x40Tuning(20), x40Tuning(21), x40Tuning(22), x40Tuning(23), x40Tuning(24), x40Tuning(25), x40Tuning(26), x40Tuning(27), x40Tuning(28), x40Tuning(29), x40Tuning(30), x40Tuning(31), x40Tuning(32), x40Tuning(33), x40Tuning(34), x40Tuning(35), x40Tuning(36), x40Tuning(37), x40Tuning(38), x40Tuning(39), x40Tuning(40), x40Tuning(41), x40Tuning(42), x40Tuning(43), x40Tuning(44), sd3Tuning(0), sd3Tuning(1), sd3Tuning(2), sd3Tuning(3), sd3Tuning(4), sd3Tuning(5), sd3Tuning(6), sd3Tuning(7), sd3Tuning(8), sd3Tuning(9), sd3Tuning(10), hfUtilTuning(0), hfUtilTuning(1), hfUtilTuning(2), hfUtilTuning(3), hfUtilTuning(4), hfUtilTuning(5), hfUtilTuning(6), hfUtilTuning(7), hfUtilTuning(8), hfUtilTuning(9), hamsciTuning(0), hamsciTuning(1), hamsciTuning(2), hamsciTuning(3), hamsciTuning(4), hamsciTuning(5), hamsciTuning(6), hamsciTuning(7), hamsciTuning(8), hamsciTuning(9), hamsciTuning(10), hamsciTuning(11), hamsciTuning(12), hamsciTuning(13), hamsciTuning(14), hamsciTuning(15), xbandTuning(0), xbandTuning(1), xbandTuning(2), xbandTuning(3), xbandTuning(4), xbandTuning(5), xbandTuning(6), xbandTuning(7), xbandTuning(8), xbandTuning(9), xbandTuning(10), xbandTuning(11), xbandTuning(12), xbandTuning(13), xbandTuning(14), xbandTuning(15), xbandTuning(16), xbandTuning(17), xbandTuning(18), xbandTuning(19), xlinkTuning(), xlinkNarrowTuning(), umtsTuning(), isdbtsbTuning(), cdmaTuning(), tdscdmaTuning(), vdl3Tuning(), cp16Tuning(), dvbshTuning(), dvbc2Tuning(), cubesatViewTuning(0), cubesatViewTuning(1), cubesatViewTuning(2), cubesatViewTuning(3), cubesatViewTuning(4), cubesatViewTuning(5), cubesatViewTuning(6), cubesatViewTuning(7), cubesatViewTuning(8), sensorsViewTuning(0), sensorsViewTuning(1), sensorsViewTuning(2), sensorsViewTuning(3), sensorsViewTuning(4), sensorsViewTuning(5), sensorsViewTuning(6), sensorsViewTuning(7), sensorsViewTuning(8), sensorsViewTuning(9), sensorsViewTuning(10), sensorsViewTuning(11), sensorsViewTuning(12), sensorsViewTuning(13), sensorsViewTuning(14), sensorsViewTuning(15), sensorsViewTuning(16), sensorsViewTuning(17), sensorsViewTuning(18), sensorsViewTuning(19), sensorsViewTuning(20), sensorsViewTuning(21), sondeViewTuning(0), sondeViewTuning(1), sondeViewTuning(2), sondeViewTuning(3), sondeViewTuning(4), sondeViewTuning(5), sondeViewTuning(6), sondeViewTuning(7), sondeViewTuning(8), sondeViewTuning(9), wmbusViewTuning(0), wmbusViewTuning(1), wmbusViewTuning(2), wmbusViewTuning(3), wmbusViewTuning(4), wmbusViewTuning(5), wmbusViewTuning(6), wmbusViewTuning(7), wmbusViewTuning(8), nfcViewTuning(0), nfcViewTuning(1), nfcViewTuning(2), aisViewTuning(0), aisViewTuning(1), aisViewTuning(2), aisViewTuning(3), aisViewTuning(4), aisViewTuning(5), timeViewTuning(0), timeViewTuning(1), timeViewTuning(2), timeViewTuning(3), timeViewTuning(4), timeViewTuning(5), timeViewTuning(6), timeViewTuning(7), timeViewTuning(8), timeViewTuning(9), timeViewTuning(10), gnssViewTuning(0), gnssViewTuning(1), gnssViewTuning(2), gnssViewTuning(3), atvViewTuning(0), atvViewTuning(1), atvViewTuning(2), atvViewTuning(3), atvViewTuning(4), atvViewTuning(5), atvViewTuning(6), atvViewTuning(7), fbrTuning()}));
     return t;
 }
 
@@ -664,12 +664,29 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 8: return makeDvbsSynth(cfg, sampleRate);
     case 9: return makeDtmbSynth(cfg, sampleRate);
     case 10: return makeAtvSynth(cfg, sampleRate);
+    case 426: case 429: case 443: case 446: case 449: case 452: case 455: case 458: {   // the analog TV standard entries: that standard's test signal
+        SynthConfig c1 = cfg;
+        if (const AtvView* tv = atvViewForStd(stdMode)) { c1.modeOpt[0] = tv->sys == kAtvG ? 0 : tv->sys; c1.modeOpt[1] = tv->colour == kAtvMono ? 4 : tv->colour; }   // the generator's system numbers: 0 B/G (8 MHz), 1 B, then the AtvSys values; colour 4 is monochrome
+        return makeAtvSynth(c1, sampleRate);
+    }
     case 11: return makeDmrSynth(cfg, sampleRate);
     case 12: return makeDrmSynth(cfg, sampleRate);
     case 13: return makeAdsbSynth(cfg, sampleRate);
     case 14: return makeGnssSynth(cfg, sampleRate);
+    case 862: case 868: case 874: case 877: {   // the satellite system entries: that system's satellites in its band
+        SynthConfig c1 = cfg;
+        if (const GnssView* gv = gnssViewForStd(stdMode)) { c1.modeOpt[0] = (int)gnssSystemBit(gv->system); c1.modeOpt[5] = (int)std::lround(gv->defMhz * 1000.0); }
+        return makeGnssSynth(c1, sampleRate);
+    }
     case 15: return makeSondeSynth(cfg, sampleRate);
+    case 686: case 689: case 692: case 695: case 704: case 707: case 710: case 713: case 716: case 719: {   // the radiosonde type entries: one sonde of that type
+        static const int kTypeBit[11] = {0, 1, 16, 2, 4, 8, 32, 64, 128, 256, 512};   // by SondeKind: the sonde_gen type mask (bit 0 RS41, 1 DFM, 2 M10, 3 M20, 4 RS92, then LMS6, iMet, iMet-54, MRZ, iMS-100)
+        SynthConfig c1 = cfg;
+        if (const SondeView* sv = sondeViewForStd(stdMode)) { c1.modeOpt[0] = kTypeBit[sv->kind]; c1.modeOpt[1] = 1; }
+        return makeSondeSynth(c1, sampleRate);
+    }
     case 16: return makeAisSynth(cfg, sampleRate);
+    case 740: case 809: case 812: case 815: case 818: case 859: return makeAisSynth(cfg, sampleRate);
     case 17: return makeMarineSynth(cfg, sampleRate);
     case 121: return makeMarineSynthNavtex(cfg, sampleRate, "");   // SITOR-B: the NAVTEX demo messages are plain FEC text
     case 18: return makeAcarsSynth(cfg, sampleRate);
@@ -708,8 +725,13 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 56: return makeWifiSynth(cfg, sampleRate);
     case 57: return makeGeneralSynth(cfg, sampleRate);
     case 60: return makeTimeSynth(cfg, sampleRate);
+    case 609: case 612: case 615: case 618: case 630: case 633: case 636: case 639: case 644: case 647: case 650: {   // the time station entries: that station's test signal
+        SynthConfig c1 = cfg;
+        if (const TimeView* tv = timeViewForStd(stdMode)) c1.modeOpt[0] = tv->station + 1;
+        return makeTimeSynth(c1, sampleRate);
+    }
     case 63: return makeCubesatSynth(cfg, sampleRate);
-    case 842: case 845: case 848: case 851: case 854: case 857: {   // the framing entries: the test signal of that framing only
+    case 842: case 845: case 848: case 851: case 854: case 857: case 794: case 797: case 806: {   // the framing entries: the test signal of that framing only
         const CubesatView* cv = cubesatViewForStd(stdMode);
         SynthConfig c1 = cfg;
         c1.modeOpt[0] = cv ? 1 + cv->framing : 0;
@@ -765,6 +787,7 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 642: return makeVdl3Synth(cfg, sampleRate);
     case 882: return makeCp16Synth(cfg, sampleRate);
     case 243: return makeSensorsSynth(cfg, sampleRate);   // Sub-GHz sensors (family 241)
+    case 566:     case 569:     case 572:     case 575:     case 578:     case 581:     case 584:     case 587:     case 590:     case 593:     case 596:     case 665:     case 668:     case 671:     case 674:     case 677:     case 680:     case 683: case 414: case 417: case 420: case 423: return makeSensorsSynth(cfg, sampleRate);   // the sensor-family entries
     case 247: return makeBganSynth(cfg, sampleRate);   // Inmarsat BGAN (family 245)
     case 245: return makeSfericsSynth(cfg, sampleRate);   // Sferics (family 243)
     case 792: return ltpos::makeLtposSynth(cfg, sampleRate);   // Lightning position (family 790)
@@ -843,6 +866,11 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 87: return makeEczasSynth(cfg, sampleRate);
     case 103: return makeFpvSynth(cfg, sampleRate);
     case 88: return makeWmbusSynth(cfg, sampleRate);
+    case 722: case 725: case 728: case 734: case 737: case 745: case 799: case 469: case 472: {   // the wireless M-Bus mode entries: the 169 MHz plan for mode N, else the 868 MHz plan
+        SynthConfig c1 = cfg;
+        if (const WmbusView* wv = wmbusViewForStd(stdMode)) c1.modeOpt[0] = wv->plan169 ? 1 : 0;
+        return makeWmbusSynth(c1, sampleRate);
+    }
     case 91: return makeTonesSynth(cfg, sampleRate);
     case 94: return makeSarsatSynth(cfg, sampleRate);
     case 154: return makeArgosSynth(cfg, sampleRate);
@@ -869,6 +897,11 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 802: case 803: case 804: return makeW1aSynth(stdMode - 802, cfg, sampleRate);   // W1A voiceband modes (families 800 - 802)
     case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 562: case 564: return makeSatDetectSynth(stdMode, cfg, sampleRate);
     case 150: return nfc::makeNfcSynth(cfg, sampleRate);   // NFC / RFID (engine standard 150)
+    case 475: case 478: case 484: {   // the NFC protocol entries: that protocol's test session
+        SynthConfig c1 = cfg;
+        if (const NfcView* nv = nfcViewForStd(stdMode)) c1.modeOpt[0] = nv->proto == 0 ? 0 : nv->proto == 1 ? 2 : 1;   // the generator's sessions: 0 Type A, 1 ISO 15693, 2 Type B
+        return nfc::makeNfcSynth(c1, sampleRate);
+    }
     case 152: return makeSbasSynth(cfg, sampleRate);
     case 153: return makeAsterixSynth(cfg, sampleRate);
     case 156: return makeIsdbsSynth(cfg, sampleRate);
@@ -894,12 +927,16 @@ std::string modeSummary(const RxTelemetry& t) {
     case 7: return dvbsSummary(t.dvbs);
     case 8: return dtmbSummary(t.dtmb);
     case 9: return atvSummary(t.atv);
+    case 425: case 428: case 442: case 445: case 448: case 451: case 454: case 457: return atvSummary(t.atv);
     case 10: return dmrSummary(t.dmr);
     case 11: return drmSummary(t.drm);
     case 12: return adsbSummary(t.adsb);
     case 13: return gnssSummary(t.gnss);
+    case 861: case 867: case 873: case 876: return gnssSummary(t.gnss);
     case 14: return sondeSummary(t.sonde);
+    case 685: case 688: case 691: case 694: case 703: case 706: case 709: case 712: case 715: case 718: return sondeSummary(t.sonde);
     case 15: return aisSummary(t.ais);
+    case 739: case 808: case 811: case 814: case 817: case 858: return aisSummary(t.ais);
     case 16: return marineSummary(t.marine);
     case 17: return acarsSummary(t.acars);
     case 18: return inmcSummary(t.inmc);
@@ -940,7 +977,9 @@ std::string modeSummary(const RxTelemetry& t) {
     case 55: return wifiSummary(t.wifi);
     case 56: return generalSummary(t.general);
     case 59: return timeSummary(t.timesig);
+    case 608: case 611: case 614: case 617: case 629: case 632: case 635: case 638: case 643: case 646: case 649: return timeSummary(t.timesig);
     case 62: case 841: case 844: case 847: case 850: case 853: case 856: return cubesatSummary(t.cube);
+    case 793: case 796: case 805: return cubesatSummary(t.cube);
     case 63: return globalstarSummary(t.globalstar);
     case 64: return vdesSummary(t.vdes);
     case 66: return zigbeeSummary(t.zigbee);
@@ -991,6 +1030,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 641: return vdl3Summary(t.vdl3);
     case 881: return cp16Summary(t.cp16);
     case 242: return sensorsSummary(t.sensors);
+    case 565: case 568: case 571: case 574: case 577: case 580: case 583: case 586: case 589: case 592: case 595: case 664: case 667: case 670: case 673: case 676: case 679: case 682: case 413: case 416: case 419: case 422: return sensorsSummary(t.sensors);
     case 246: return bganSummary(t.bgan);
     case 244: return sfericsSummary(t.sferics);
     case 791: return ltposSummary(t.ltpos);
@@ -1041,6 +1081,7 @@ std::string modeSummary(const RxTelemetry& t) {
     case 86: return eczasSummary(t.eczas);
     case 102: return fpvSummary(t.fpv);
     case 87: return wmbusSummary(t.wmbus);
+    case 721: case 724: case 727: case 733: case 736: case 744: case 798: case 468: case 471: return wmbusSummary(t.wmbus);
     case 90: return tonesSummary(t.tones);
     case 93: return sarsatSummary(t.sarsat);
     case 96: return mt63Summary(t.mt63);
@@ -1075,7 +1116,8 @@ std::string modeSummary(const RxTelemetry& t) {
     case 621: case 622: case 623: case 624: case 625: case 626: case 627: return cisHfSummary(t.cishf);   // CIS HF modes
     case 801: case 802: case 803: return w1aSummary(t.w1a);   // W1A voiceband modes
     case 551: case 552: case 553: case 554: case 555: case 556: case 557: case 558: case 559: case 560: case 561: case 563: return sdSummary(t.satdetect);
-    case 149: return nfcSummary(t.nfc);   // NFC / RFID 13.56 MHz (active standard 149)
+    case 149: return nfcSummary(t.nfc);
+    case 474: case 477: case 483: return nfcSummary(t.nfc);   // NFC / RFID 13.56 MHz (active standard 149)
     case 155: return isdbsSummary(t.isdbs);
     case 747: return dvbshSummary(t.dvbsh);
     case 57: return ridSummary(t.rid);

@@ -216,12 +216,44 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 7: return pollStd(rxDvbs_, 7, t, seqs[0], &RxTelemetry::dvbs);
     case 8: return pollStd(rxDtmb_, 8, t, seqs[1], &RxTelemetry::dtmb);
     case 9: return pollStd(rxAtv_, 9, t, seqs[2], &RxTelemetry::atv);
+    // 4.0: one entry per analog TV standard, the same receiver (atv_rx.h: atvViews)
+    case 425: return pollStd(rxAtv_, 425, t, seqs[424], &RxTelemetry::atv);   // analog TV standard entry (family 424)
+    case 428: return pollStd(rxAtv_, 428, t, seqs[427], &RxTelemetry::atv);   // analog TV standard entry (family 427)
+    case 442: return pollStd(rxAtv_, 442, t, seqs[441], &RxTelemetry::atv);   // analog TV standard entry (family 441)
+    case 445: return pollStd(rxAtv_, 445, t, seqs[444], &RxTelemetry::atv);   // analog TV standard entry (family 444)
+    case 448: return pollStd(rxAtv_, 448, t, seqs[447], &RxTelemetry::atv);   // analog TV standard entry (family 447)
+    case 451: return pollStd(rxAtv_, 451, t, seqs[450], &RxTelemetry::atv);   // analog TV standard entry (family 450)
+    case 454: return pollStd(rxAtv_, 454, t, seqs[453], &RxTelemetry::atv);   // analog TV standard entry (family 453)
+    case 457: return pollStd(rxAtv_, 457, t, seqs[456], &RxTelemetry::atv);   // analog TV standard entry (family 456)
     case 10: return pollStd(rxDmr_, 10, t, seqs[3], &RxTelemetry::dmr);
     case 11: return pollStd(rxDrm_, 11, t, seqs[4], &RxTelemetry::drm);
     case 12: return pollStd(rxAdsb_, 12, t, seqs[5], &RxTelemetry::adsb);
     case 13: return pollStd(rxGnss_, 13, t, seqs[6], &RxTelemetry::gnss);
+    // 4.0: one entry per satellite system, the same receiver (gnss_rx.h: gnssViews)
+    case 861: return pollStd(rxGnss_, 861, t, seqs[860], &RxTelemetry::gnss);   // GNSS system entry (family 860)
+    case 867: return pollStd(rxGnss_, 867, t, seqs[866], &RxTelemetry::gnss);   // GNSS system entry (family 866)
+    case 873: return pollStd(rxGnss_, 873, t, seqs[872], &RxTelemetry::gnss);   // GNSS system entry (family 872)
+    case 876: return pollStd(rxGnss_, 876, t, seqs[875], &RxTelemetry::gnss);   // GNSS system entry (family 875)
     case 14: return pollStd(rxSonde_, 14, t, seqs[7], &RxTelemetry::sonde);
+    // 4.0: one entry per radiosonde type, the same receiver (sonde_rx.h: sondeViews)
+    case 685: return pollStd(rxSonde_, 685, t, seqs[684], &RxTelemetry::sonde);   // radiosonde type entry (family 684)
+    case 688: return pollStd(rxSonde_, 688, t, seqs[687], &RxTelemetry::sonde);   // radiosonde type entry (family 687)
+    case 691: return pollStd(rxSonde_, 691, t, seqs[690], &RxTelemetry::sonde);   // radiosonde type entry (family 690)
+    case 694: return pollStd(rxSonde_, 694, t, seqs[693], &RxTelemetry::sonde);   // radiosonde type entry (family 693)
+    case 703: return pollStd(rxSonde_, 703, t, seqs[702], &RxTelemetry::sonde);   // radiosonde type entry (family 702)
+    case 706: return pollStd(rxSonde_, 706, t, seqs[705], &RxTelemetry::sonde);   // radiosonde type entry (family 705)
+    case 709: return pollStd(rxSonde_, 709, t, seqs[708], &RxTelemetry::sonde);   // radiosonde type entry (family 708)
+    case 712: return pollStd(rxSonde_, 712, t, seqs[711], &RxTelemetry::sonde);   // radiosonde type entry (family 711)
+    case 715: return pollStd(rxSonde_, 715, t, seqs[714], &RxTelemetry::sonde);   // radiosonde type entry (family 714)
+    case 718: return pollStd(rxSonde_, 718, t, seqs[717], &RxTelemetry::sonde);   // radiosonde type entry (family 717)
     case 15: return pollStd(rxAis_, 15, t, seqs[8], &RxTelemetry::ais);
+    // 4.0: one entry per kind of AIS station, the same receiver (ais_rx.h: aisViews)
+    case 739: return pollStd(rxAis_, 739, t, seqs[738], &RxTelemetry::ais);   // AIS station-kind entry (family 738)
+    case 808: return pollStd(rxAis_, 808, t, seqs[807], &RxTelemetry::ais);   // AIS station-kind entry (family 807)
+    case 811: return pollStd(rxAis_, 811, t, seqs[810], &RxTelemetry::ais);   // AIS station-kind entry (family 810)
+    case 814: return pollStd(rxAis_, 814, t, seqs[813], &RxTelemetry::ais);   // AIS station-kind entry (family 813)
+    case 817: return pollStd(rxAis_, 817, t, seqs[816], &RxTelemetry::ais);   // AIS station-kind entry (family 816)
+    case 858: return pollStd(rxAis_, 858, t, seqs[857], &RxTelemetry::ais);   // AIS station-kind entry (family 857)
     case 16: return pollStd(rxMarine_, 16, t, seqs[9], &RxTelemetry::marine);
     case 17: return pollStd(rxAcars_, 17, t, seqs[10], &RxTelemetry::acars);
     case 18: return pollStd(rxInmc_, 18, t, seqs[11], &RxTelemetry::inmc);
@@ -269,6 +301,18 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 57: return pollStd(rxRid_, 57, t, seqs[51], &RxTelemetry::rid);
     case 58: return pollStd(rxNr_, 58, t, seqs[52], &RxTelemetry::nr);
     case 59: return pollStd(rxTime_, 59, t, seqs[53], &RxTelemetry::timesig);
+    // 4.0: one entry per time station, the same receiver (time_rx.h: timeViews)
+    case 608: return pollStd(rxTime_, 608, t, seqs[607], &RxTelemetry::timesig);   // time station entry (family 607)
+    case 611: return pollStd(rxTime_, 611, t, seqs[610], &RxTelemetry::timesig);   // time station entry (family 610)
+    case 614: return pollStd(rxTime_, 614, t, seqs[613], &RxTelemetry::timesig);   // time station entry (family 613)
+    case 617: return pollStd(rxTime_, 617, t, seqs[616], &RxTelemetry::timesig);   // time station entry (family 616)
+    case 629: return pollStd(rxTime_, 629, t, seqs[628], &RxTelemetry::timesig);   // time station entry (family 628)
+    case 632: return pollStd(rxTime_, 632, t, seqs[631], &RxTelemetry::timesig);   // time station entry (family 631)
+    case 635: return pollStd(rxTime_, 635, t, seqs[634], &RxTelemetry::timesig);   // time station entry (family 634)
+    case 638: return pollStd(rxTime_, 638, t, seqs[637], &RxTelemetry::timesig);   // time station entry (family 637)
+    case 643: return pollStd(rxTime_, 643, t, seqs[642], &RxTelemetry::timesig);   // time station entry (family 642)
+    case 646: return pollStd(rxTime_, 646, t, seqs[645], &RxTelemetry::timesig);   // time station entry (family 645)
+    case 649: return pollStd(rxTime_, 649, t, seqs[648], &RxTelemetry::timesig);   // time station entry (family 648)
     case 60: return pollStd(rxMeteor_, 60, t, seqs[54], &RxTelemetry::meteor);
     case 61: return pollStd(rxGoes_, 61, t, seqs[55], &RxTelemetry::goes);
     case 62: return pollStd(rxCube_, 62, t, seqs[56], &RxTelemetry::cube);
@@ -279,6 +323,9 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 850: return pollStd(rxCube_, 850, t, seqs[850], &RxTelemetry::cube);   // NGHam (family 849)
     case 853: return pollStd(rxCube_, 853, t, seqs[853], &RxTelemetry::cube);   // U482C (family 852)
     case 856: return pollStd(rxCube_, 856, t, seqs[856], &RxTelemetry::cube);   // BEESAT / Mobitex (family 855)
+    case 793: return pollStd(rxCube_, 793, t, seqs[792], &RxTelemetry::cube);   // framing entry (family 792)
+    case 796: return pollStd(rxCube_, 796, t, seqs[795], &RxTelemetry::cube);   // framing entry (family 795)
+    case 805: return pollStd(rxCube_, 805, t, seqs[804], &RxTelemetry::cube);   // framing entry (family 804)
     case 63: return pollStd(rxGs_, 63, t, seqs[57], &RxTelemetry::globalstar);
     case 64: return pollStd(rxVdes_, 64, t, seqs[58], &RxTelemetry::vdes);
     case 65: return pollStd(rxHrpt_, 65, t, seqs[59], &RxTelemetry::hrpt);
@@ -317,6 +364,10 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 121: return pollStd(rxDgps_, 121, t, seqs[110], &RxTelemetry::dgps);   // DGPS beacons (slot 110)
     case 127: return pollStd(rxEloran_, 127, t, seqs[111], &RxTelemetry::eloran);   // eLoran / Loran-C (slot 111)
     case 149: return pollStd(rxNfc_, 149, t, seqs[141], &RxTelemetry::nfc);   // NFC / RFID 13.56 MHz (slot 141)
+    // 4.0: one entry per NFC protocol, the same receiver (nfc_engine.h: nfcViews)
+    case 474: return pollStd(rxNfc_, 474, t, seqs[473], &RxTelemetry::nfc);   // NFC protocol entry (family 473)
+    case 477: return pollStd(rxNfc_, 477, t, seqs[476], &RxTelemetry::nfc);   // NFC protocol entry (family 476)
+    case 483: return pollStd(rxNfc_, 483, t, seqs[482], &RxTelemetry::nfc);   // NFC protocol entry (family 482)
     case 128: return pollStd(rxMpt_, 128, t, seqs[112], &RxTelemetry::mpt1327);   // MPT1327 trunking (slot 112)
     case 129: return pollStd(rxFusion_, 129, t, seqs[117], &RxTelemetry::fusion);   // Yaesu Fusion (slot 117)
     case 141: return pollStd(rxArd_, 141, t, seqs[118], &RxTelemetry::ardop);   // ARDOP (slot 118)
@@ -342,6 +393,29 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 234: return pollStd(rxFy_, 234, t, seqs[192], &RxTelemetry::fygeo);   // FengYun FY-4A HRIT-II/III (slot 192)
     case 235: return pollStd(rxFy_, 235, t, seqs[193], &RxTelemetry::fygeo);   // FengYun FY-2 S-VISSR (slot 193)
     case 242: return pollStd(rxSens_, 242, t, seqs[201], &RxTelemetry::sensors);   // Sub-GHz sensors (slot 201)
+    // 4.0: one entry per sensor family, the same receiver (sensors_rx.h: sensorsViews)
+    case 565: return pollStd(rxSens_, 565, t, seqs[564], &RxTelemetry::sensors);   // sensor family entry (family 564)
+    case 568: return pollStd(rxSens_, 568, t, seqs[567], &RxTelemetry::sensors);   // sensor family entry (family 567)
+    case 571: return pollStd(rxSens_, 571, t, seqs[570], &RxTelemetry::sensors);   // sensor family entry (family 570)
+    case 574: return pollStd(rxSens_, 574, t, seqs[573], &RxTelemetry::sensors);   // sensor family entry (family 573)
+    case 577: return pollStd(rxSens_, 577, t, seqs[576], &RxTelemetry::sensors);   // sensor family entry (family 576)
+    case 580: return pollStd(rxSens_, 580, t, seqs[579], &RxTelemetry::sensors);   // sensor family entry (family 579)
+    case 583: return pollStd(rxSens_, 583, t, seqs[582], &RxTelemetry::sensors);   // sensor family entry (family 582)
+    case 586: return pollStd(rxSens_, 586, t, seqs[585], &RxTelemetry::sensors);   // sensor family entry (family 585)
+    case 589: return pollStd(rxSens_, 589, t, seqs[588], &RxTelemetry::sensors);   // sensor family entry (family 588)
+    case 592: return pollStd(rxSens_, 592, t, seqs[591], &RxTelemetry::sensors);   // sensor family entry (family 591)
+    case 595: return pollStd(rxSens_, 595, t, seqs[594], &RxTelemetry::sensors);   // sensor family entry (family 594)
+    case 664: return pollStd(rxSens_, 664, t, seqs[663], &RxTelemetry::sensors);   // sensor family entry (family 663)
+    case 667: return pollStd(rxSens_, 667, t, seqs[666], &RxTelemetry::sensors);   // sensor family entry (family 666)
+    case 670: return pollStd(rxSens_, 670, t, seqs[669], &RxTelemetry::sensors);   // sensor family entry (family 669)
+    case 673: return pollStd(rxSens_, 673, t, seqs[672], &RxTelemetry::sensors);   // sensor family entry (family 672)
+    case 676: return pollStd(rxSens_, 676, t, seqs[675], &RxTelemetry::sensors);   // sensor family entry (family 675)
+    case 679: return pollStd(rxSens_, 679, t, seqs[678], &RxTelemetry::sensors);   // sensor family entry (family 678)
+    case 682: return pollStd(rxSens_, 682, t, seqs[681], &RxTelemetry::sensors);   // sensor family entry (family 681)
+    case 413: return pollStd(rxSens_, 413, t, seqs[412], &RxTelemetry::sensors);   // sensor kind entry (family 412)
+    case 416: return pollStd(rxSens_, 416, t, seqs[415], &RxTelemetry::sensors);   // sensor kind entry (family 415)
+    case 419: return pollStd(rxSens_, 419, t, seqs[418], &RxTelemetry::sensors);   // sensor kind entry (family 418)
+    case 422: return pollStd(rxSens_, 422, t, seqs[421], &RxTelemetry::sensors);   // sensor kind entry (family 421)
     case 246: return pollStd(rxBgan_, 246, t, seqs[205], &RxTelemetry::bgan);   // Inmarsat BGAN (slot 205)
     case 244: return pollStd(rxSfer_, 244, t, seqs[203], &RxTelemetry::sferics);   // Sferics (slot 203)
     case 791: return pollStd(rxLtpos_, 791, t, seqs[790], &RxTelemetry::ltpos);   // Lightning position (slot 790)
@@ -441,6 +515,16 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 86: return pollStd(rxEcz_, 86, t, seqs[80], &RxTelemetry::eczas);
     case 102: return pollStd(rxFpv_, 102, t, seqs[96], &RxTelemetry::fpv);
     case 87: return pollStd(rxWmb_, 87, t, seqs[81], &RxTelemetry::wmbus);
+    // 4.0: one entry per wireless M-Bus mode, the same receiver (wmbus_live.h: wmbusViews)
+    case 721: return pollStd(rxWmb_, 721, t, seqs[720], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 720)
+    case 724: return pollStd(rxWmb_, 724, t, seqs[723], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 723)
+    case 727: return pollStd(rxWmb_, 727, t, seqs[726], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 726)
+    case 733: return pollStd(rxWmb_, 733, t, seqs[732], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 732)
+    case 736: return pollStd(rxWmb_, 736, t, seqs[735], &RxTelemetry::wmbus);   // wireless M-Bus mode entry (family 735)
+    case 744: return pollStd(rxWmb_, 744, t, seqs[743], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 743)
+    case 798: return pollStd(rxWmb_, 798, t, seqs[797], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 797)
+    case 468: return pollStd(rxWmb_, 468, t, seqs[467], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 467)
+    case 471: return pollStd(rxWmb_, 471, t, seqs[470], &RxTelemetry::wmbus);   // wireless M-Bus manufacturer entry (family 470)
     case 90: return pollStd(rxTones_, 90, t, seqs[85], &RxTelemetry::tones);
     case 93: return pollStd(rxSar_, 93, t, seqs[87], &RxTelemetry::sarsat);
     case 96: return pollStd(rxMt63_, 96, t, seqs[88], &RxTelemetry::mt63);

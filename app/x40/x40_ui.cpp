@@ -77,5 +77,5 @@ template <int V> constexpr ModeUi makeUi() {
 
 } // namespace
 
-extern const ModeUi kX40Ui[42];
-const ModeUi kX40Ui[42] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>(), makeUi<23>(), makeUi<24>(), makeUi<25>(), makeUi<26>(), makeUi<27>(), makeUi<28>(), makeUi<29>(), makeUi<30>(), makeUi<31>(), makeUi<32>(), makeUi<33>(), makeUi<34>(), makeUi<35>(), makeUi<36>(), makeUi<37>(), makeUi<38>(), makeUi<39>(), makeUi<40>(), makeUi<41>()};
+extern const ModeUi kX40Ui[45];
+const ModeUi kX40Ui[45] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>(), makeUi<23>(), makeUi<24>(), makeUi<25>(), makeUi<26>(), makeUi<27>(), makeUi<28>(), makeUi<29>(), makeUi<30>(), makeUi<31>(), makeUi<32>(), makeUi<33>(), makeUi<34>(), makeUi<35>(), makeUi<36>(), makeUi<37>(), makeUi<38>(), makeUi<39>(), makeUi<40>(), makeUi<41>(), makeUi<42>(), makeUi<43>(), makeUi<44>()};

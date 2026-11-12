@@ -25,12 +25,12 @@ using namespace dect2;
 static void tables() {
     int n = 0;
     const CubesatView* v = cubesatViews(n);
-    CHECK(n == 6, "%d views", n);
+    CHECK(n == 9, "%d views", n);   // 6 in 3.9 (840 .. 855) and, from 4.0, G3RUH 9600 (792), CCSDS Reed-Solomon (795), CCSDS concatenated (804)
     std::set<std::string> ids;
     std::set<int> fr, fam;
     for (int i = 0; i < n; i++) {
         ids.insert(v[i].id); fr.insert(v[i].framing); fam.insert(v[i].family);
-        CHECK(v[i].family >= 840 && v[i].family <= 869 && (v[i].family % 3) == 0, "%s: family %d", v[i].id, v[i].family);
+        CHECK(((v[i].family >= 840 && v[i].family <= 869) || v[i].family == 792 || v[i].family == 795 || v[i].family == 804) && (v[i].family % 3) == 0, "%s: family %d", v[i].id, v[i].family);
         CHECK(cubesatViewForActive(v[i].family + 1) == &v[i] && cubesatViewForStd(v[i].family + 2) == &v[i], "%s: lookup", v[i].id);
         const ModeTuning* mt = modeTuningById(v[i].id);
         CHECK(mt && mt->stdMode == v[i].family + 2 && modeTuning(v[i].family + 2) == mt, "%s: tuning table", v[i].id);
