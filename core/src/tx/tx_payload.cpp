@@ -638,6 +638,7 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         t.src = (int)r.address;
         t.dst = r.dest.empty() ? 200 : atoi(r.dest.c_str());
         t.text = r.text;
+        if (!t.text.empty()) t.kind = NxdnGenTx::Data;   // the text goes out as short data (a voice call carries none)
         c.txs = {t};
         return std::make_unique<WrapGen<NxdnGenerator>>(std::make_unique<NxdnGenerator>(c), rate);
     }
@@ -651,6 +652,7 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         t.own = r.address;
         t.called = r.dest.empty() ? 200 : (uint32_t)atoi(r.dest.c_str());
         t.text = r.text;
+        if (!t.text.empty()) t.kind = DpmrGenTx::Message;   // the text goes out as a message (a voice call carries none)
         c.txs = {t};
         return std::make_unique<WrapGen<DpmrGenerator>>(std::make_unique<DpmrGenerator>(c), rate);
     }

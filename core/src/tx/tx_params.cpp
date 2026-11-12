@@ -238,8 +238,8 @@ void dvbsRows(std::vector<D>& v, double symDef = 5e6) {
         A(SET(pick("dvbs.std", "Standard", "DVB-S2, the older DVB-S, or DVB-S2X.", 0, {"DVB-S2", "DVB-S", "DVB-S2X"}), [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; }), TxPGroup::Modulation),
         W(A(SET(pick("dvbs.mod", "Modulation", "QPSK is the most robust; the APSK constellations carry more.", 0, {"QPSK", "8PSK", "16APSK", "32APSK"}),
                 [](TxRequest& r, double x) { r.synth.modeOpt[1] = (int)x; }), TxPGroup::Modulation), "dvbs.std!=1"),
-        W(A(SET(pick("dvbs.cr", "Code rate", "The DVB-S2 LDPC code rate (2/3 when set to default).", 0, {"default (2/3)", "1/4", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "8/9", "9/10"}),
-                [](TxRequest& r, double x) { r.synth.modeOpt[2] = (int)x; }), TxPGroup::Modulation), "dvbs.std!=1"),
+        W(TV(A(SET(pick("dvbs.cr", "Code rate", "The DVB-S2 LDPC code rate (2/3 when set to default).", 0, {"default (2/3)", "1/4", "1/3", "2/5", "1/2", "3/5", "2/3", "3/4", "4/5", "5/6", "8/9", "9/10"}),
+                [](TxRequest& r, double x) { r.synth.modeOpt[2] = (int)x; }), TxPGroup::Modulation), 4), "dvbs.std!=1"),
         W(TV(A(SET(pick("dvbs.crS", "Code rate", "The DVB-S convolutional code rate.", 0, {"default (2/3)", "1/2", "2/3", "3/4", "5/6", "7/8"}),
                    [](TxRequest& r, double x) { r.synth.modeOpt[2] = (int)x; }), TxPGroup::Modulation), 3), "dvbs.std=1"),
         A(SET(pick("dvbs.rolloff", "Roll-off", "The spectrum's edge: smaller is narrower and needs a better receiver.", 0, {"0.35", "0.25", "0.20", "0.15", "0.10", "0.05"}),
@@ -286,7 +286,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             custom("atv.sound", "Sound carrier", "A tone, a melody, an unmodulated carrier, none, the microphone or a file."),
             A(SET(pick("atv.system", "System", "The line standard and the channel: B/G, I, D/K, M (NTSC) ...", 0, {"B/G", "B (7 MHz)", "I", "D/K", "M (NTSC)", "N", "A (405)", "C", "E (819)", "H", "K'", "L", "L'"}),
                   [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; }), TxPGroup::Modulation),
-            A(SET(pick("atv.colour", "Colour", "The colour system; usual for the system is PAL, or NTSC for M.", 0, {"usual for the system", "PAL", "NTSC", "SECAM", "monochrome"}),
+            A(SET(TV(pick("atv.colour", "Colour", "The colour system; usual for the system is PAL, or NTSC for M.", 0, {"usual for the system", "PAL", "NTSC", "SECAM", "monochrome"}), 2),
                   [](TxRequest& r, double x) { r.synth.modeOpt[1] = (int)x; }), TxPGroup::Modulation),
             A(SET(pick("atv.pattern", "Test picture", "What the test card source draws.", 0, {"test card", "colour bars", "grey ramp"}), [](TxRequest& r, double x) { r.synth.modeOpt[2] = (int)x; }), TxPGroup::Modulation),
         });
@@ -377,7 +377,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
                 v.push_back(A(pick("kbd.variant", "Variant", "The speed and tone set of the family.", kbdDefaultVariant(fam), names[(size_t)fam]), TxPGroup::Modulation));
             }
             hfAudioPos(v, 1500, "Centre frequency", "kbd.lsb");
-            for (auto& d : v) d.probeSec = 1.0;
+            for (auto& d : v) d.probeSec = 4.0;   // MFSK, THOR and DominoEX send a preamble first
         }
         break;
     case TxPayloadKind::Cw:
@@ -423,7 +423,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         static std::once_flag once;
         std::call_once(once, [] { for (int i = 0; i < sstvModeCount(); i++) names.push_back(sstvModeInfo(i).name); });
         add(v, {
-            PROBE(text("sstv.call", "Callsign", "Stamped on the picture.", TxPField::Callsign), 8.0),
+            META(text("sstv.call", "Callsign", "Stamped on the picture.", TxPField::Callsign), "stamped into picture lines that are sent after many seconds"),
             META(file("sstv.file", "Picture (PPM)", "A P6 PPM; any other or empty file sends the test picture."), "a file of the test machine"),
             S(FLD(TV(pick("sstv.mode", "SSTV mode", "The picture format and speed (Martin M1 and Scottie S1 are common).", 0, names), 2), TxPField::Variant)),
         });
@@ -437,7 +437,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         break;
     case TxPayloadKind::Pager:
         add(v, {
-            FLD(TV(intr("pager.capcode", "Capcode", "The pager's address (POCSAG: up to 2097151).", "", 0, 0, 2097151), 1234567), TxPField::Address),
+            FLD(TV(intr("pager.capcode", "Capcode", "The pager's address (POCSAG: up to 2097151; 0 sends to 1234567).", "", 0, 0, 2097151), 1000001), TxPField::Address),
             text("pager.text", "Text", "An alphanumeric page; empty: a tone-only page.", TxPField::Text),
             S(FLD(TV(pick("pager.speed", "Speed", "POCSAG at 512, 1200 or 2400 baud, or FLEX.", 1, {"POCSAG 512", "POCSAG 1200", "POCSAG 2400", "FLEX 1600/2", "FLEX 3200/2", "FLEX 3200/4", "FLEX 6400/4"}), 0), TxPField::BaudIdx)),
             W(A(FLD(intr("pager.function", "Function bits", "The POCSAG function (0 to 3): which beep or display the pager uses (3 is alphanumeric).", "", 3, 0, 3), TxPField::Function), TxPGroup::Framing), "pager.speed<3"),
@@ -529,6 +529,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         break;
     case TxPayloadKind::VoiceDigital: {
         v.push_back(custom("voice.note", "Vocoder", "What the vocoder can encode here, and the analog fall-back."));
+        if (c.analogVoice) { analogSwitch(v, c); for (auto& d : v) if (!d.probeSec) d.probeSec = 0.6; break; }   // analog voice replaces the digital signal: its rows do not apply
         if (id == "dmr") {
             add(v, {
                 text("dmr.call", "Callsign", "Your callsign (sent in the talker alias).", TxPField::Callsign),
@@ -566,7 +567,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             });
         }
         // TETRA: the downlink test pattern only; nothing to type
-        if (!txCanEncodeVoice(m) || c.analogVoice) analogSwitch(v, c);
+        if (!txCanEncodeVoice(m)) analogSwitch(v, c);
         else { audioSource(v); }
         for (auto& d : v) if (!d.probeSec) d.probeSec = 0.6;
         break;
@@ -579,7 +580,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             W(text("navtex.text", "Message", "The NAVTEX message (ZCZC and NNNN are added when missing).", TxPField::Text), "marine.service=0"),
             W(S(FLD(TV(intr("dsc.mmsi", "MMSI", "The calling station's nine-digit identity.", "", 0, 0, 999999999), 247123456), TxPField::Address)), "marine.service=1|3"),
         });
-        for (auto& d : v) d.probeSec = 8.0;   // NAVTEX phasing and the DSC dot pattern come first
+        for (auto& d : v) d.probeSec = 20.0;   // the demo's 6 s idle, NAVTEX phasing and the DSC dot pattern come first
         break;
     case TxPayloadKind::AcarsFamily:
         add(v, {
@@ -587,6 +588,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             text("acars.text", "Text", "The free text of the downlink.", TxPField::Text),
         });
         for (auto& d : v) d.probeSec = 1.5;
+        if (id == "hfdl") for (auto& d : v) if (!d.meta) d.meta = "the aircraft sends in its slot of the 32 s HFDL frame";
         break;
     case TxPayloadKind::Sonde:
         add(v, {
@@ -598,7 +600,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         break;
     case TxPayloadKind::Same:
         v.push_back(TT(text("same.text", "Header", "The SAME header after ZCZC- (ZCZC-WXR-RWT-000000+ is added when it does not start with ZCZC).", TxPField::Text), "0030-3101200-ONAIR"));
-        v.back().probeSec = 1.0;
+        v.back().probeSec = 4.0;
         break;
     case TxPayloadKind::Ale:
         add(v, {
@@ -606,12 +608,12 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             TT(text("ale.to", "Called station", "The address called (empty: CQ).", TxPField::Dest), "N0ABC"),
             text("ale.text", "AMD message", "The automatic message display text.", TxPField::Text),
         });
-        for (auto& d : v) d.probeSec = 4.0;
+        for (auto& d : v) d.probeSec = 15.0;   // the scanning call comes before the addresses and the message
         break;
     case TxPayloadKind::VorIls:
         add(v, {
             TT(text("vor.ident", "Ident", "The Morse identification, up to four letters.", TxPField::Callsign), "DXB"),
-            S(SET(pick("vor.kind", "Navaid", "A VOR, a localizer, a glide slope or a marker beacon.", 0, {"conventional VOR", "Doppler VOR", "localizer", "glide slope", "outer marker", "middle marker", "inner marker"}),
+            S(SET(TV(pick("vor.kind", "Navaid", "A VOR, a localizer, a glide slope or a marker beacon.", 0, {"conventional VOR", "Doppler VOR", "localizer", "glide slope", "outer marker", "middle marker", "inner marker"}), 2),
                   [](TxRequest& r, double x) { r.synth.modeOpt[0] = (int)x; })),
             W(S(SET(TV(num("vor.radial", "Radial", "The bearing a receiver reads from the VOR.", "°", 0, 0, 359.9, "%.1f"), 90), [](TxRequest& r, double x) { r.synth.modeVal[0] = x; })), "vor.kind<2"),
             W(S(SET(TV(num("ils.ddm", "DDM", "The difference in depth of modulation (90 Hz minus 150 Hz): 0 is on the course.", "", 0, -0.4, 0.4, "%.3f"), 0.1), [](TxRequest& r, double x) { r.synth.modeVal[0] = x; })), "vor.kind=2|3"),
@@ -646,6 +648,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         for (auto& d : v) d.probeSec = 1.0;
         break;
     case TxPayloadKind::Mesh:
+        if (c.analogVoice) { analogSwitch(v, c); break; }   // analog voice replaces the mesh packets
         add(v, {
             text("mesh.text", "Text", "Empty: the demo LoRa / mesh scene. With a text: your own Meshtastic node sends it.", TxPField::Text),
             custom("mesh.node", "Your node", "Long and short name, node ID, callsign, channel, PSK and hop limit.", TxPField::Callsign),
@@ -671,7 +674,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             W(A(flag("lora.crc", "CRC", "A checksum after the packet. LoRa APRS receivers expect it.", true), TxPGroup::Framing), "lora.preset=4"),
             META(A(num("lora.gapSec", "Pause between packets", "The packet is sent again after this pause, until Stop.", "s", 10, 1, 600, "%.0f"), TxPGroup::Timing), "the second packet starts after several seconds; tests/tx/test_tx_loraaprs.cpp"),
         });
-        for (auto& d : v) d.probeSec = 0.3;
+        for (auto& d : v) d.probeSec = 3.0;   // an SF12 frame takes over a second
         break;
     }
     case TxPayloadKind::Kaal:
@@ -730,6 +733,8 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         break;
     }
     outputCommon(v);
+    if (id == "wspr" || id == "js8" || id == "kaws")   // the signal waits for its UTC slot (an even minute, 15 s, the KAWS slot): silent at the start
+        for (auto& d : v) if (!d.meta) d.meta = "the transmission waits for its UTC slot; the start is silent";
     return v;
 }
 
@@ -832,6 +837,9 @@ void txParamApply(const TxParamDef& d, double v, const std::string& txt, TxReque
 void txParamsApplyNumbers(const std::vector<TxParamDef>& rows, const std::map<std::string, double>& num, TxRequest& r) {
     for (const auto& d : rows) {
         if (d.type == TxPType::Text || d.type == TxPType::File || d.custom) continue;
+        // a row that is not shown (its condition is false, or a hidden row whose own widget sets it) is not applied: two rows may share one
+        // target (a VOR radial and an ILS DDM), and the shown one wins
+        if (!txParamShown(d, rows, num)) continue;
         const auto it = num.find(d.key);
         txParamApply(d, it == num.end() ? d.def : it->second, "", r);
     }
