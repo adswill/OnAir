@@ -142,8 +142,9 @@ struct Mode {
     Factory make;
 };
 
+inline double g_cleanSnrDb = 120;   // the noise-free signal; the clean-signal probe (tests/sens/probe_clean.cpp) sets it lower to see which generators use SynthConfig::snrDb
 inline Sig clean(int stdMode, SynthConfig c, double rate, size_t n) {
-    c.snrDb = 120;
+    c.snrDb = g_cleanSnrDb;
     auto s = makeModeSynth(stdMode, c, rate);
     Sig v(n);
     if (!s) return v;
@@ -606,11 +607,7 @@ inline std::vector<Mode> allModes() {
         m.snrHi = 25; m.maxJobs = 4;
         m.gen = [](size_t n) {
             SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[2] = 4; c.modeVal[1] = 3;
-            c.snrDb = 25;
-            auto s = makeModeSynth(17, c, 2e6);
-            Sig v(n);
-            if (s) for (size_t o = 0; o < n; o += 65536) s->generate(v.data() + o, std::min<size_t>(65536, n - o));
-            return v;
+            return clean(17, c, 2e6, n);   // was snrDb = 25: noise baked into the 'clean' signal (docs/SENSITIVITY-4.0-C1.md)
         };
         m.make = factory<MarineReceiver, MarineTelemetry>([](MarineReceiver& rx, double r) { prepGeneric(rx, r, 17); rx.setService(1); rx.setFrequencyHz(518e3); }, blocks<MarineTelemetry>);
         add(m);
@@ -620,11 +617,7 @@ inline std::vector<Mode> allModes() {
         m.snrHi = 25; m.maxJobs = 4;
         m.gen = [](size_t n) {
             SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[2] = 4; c.modeVal[1] = 3;
-            c.snrDb = 25;
-            auto s = makeModeSynth(17, c, 2e6);
-            Sig v(n);
-            if (s) for (size_t o = 0; o < n; o += 65536) s->generate(v.data() + o, std::min<size_t>(65536, n - o));
-            return v;
+            return clean(17, c, 2e6, n);   // was snrDb = 25: noise baked into the 'clean' signal (docs/SENSITIVITY-4.0-C1.md)
         };
         m.make = factory<SitorLiveReceiver, SitorTelemetry>([](SitorLiveReceiver& rx, double r) { prepGeneric(rx, r, 121); }, blocks<SitorTelemetry>);
         add(m);
@@ -704,11 +697,7 @@ inline std::vector<Mode> allModes() {
         m.snrHi = 25; m.maxJobs = 4;
         m.gen = [](size_t n) {
             SynthConfig c; c.modeOpt[0] = 1; c.modeOpt[2] = 4; c.modeVal[1] = 3;
-            c.snrDb = 25;
-            auto s = makeModeSynth(17, c, 2e6);
-            Sig v(n);
-            if (s) for (size_t o = 0; o < n; o += 65536) s->generate(v.data() + o, std::min<size_t>(65536, n - o));
-            return v;
+            return clean(17, c, 2e6, n);   // was snrDb = 25: noise baked into the 'clean' signal (docs/SENSITIVITY-4.0-C1.md)
         };
         m.make = factory<MarineReceiver, MarineTelemetry>([](MarineReceiver& rx, double r) { prepGeneric(rx, r, 17); rx.setService(1); rx.setFrequencyHz(518e3); },
             [](const MarineTelemetry& t) {

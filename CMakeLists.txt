@@ -1217,6 +1217,9 @@ if(DECT2_BUILD_TESTS)
     add_executable(sens_curve tests/sens/sens_curve.cpp)   # smooth curve of one mode (fraction of units decoded per SNR, carrier / clock error): docs/SENSITIVITY-4.0-A.md
     target_include_directories(sens_curve PRIVATE tools/sens)
     target_link_libraries(sens_curve PRIVATE dect2core)
+    add_executable(probe_clean tests/sens/probe_clean.cpp)   # is the clean signal of each sens harness mode clean (docs/SENSITIVITY-4.0-C1.md)
+    target_include_directories(probe_clean PRIVATE tools/sens)
+    target_link_libraries(probe_clean PRIVATE dect2core)
     add_executable(sens_lora_sf tests/sens/sens_lora_sf.cpp)   # LoRa frames decoded against the SNR per spreading factor (docs/SENSITIVITY-4.0-B3.md)
     target_link_libraries(sens_lora_sf PRIVATE dect2core)
     add_executable(test_sens40b3 tests/sens/test_sens40b3.cpp)   # 4.0 pass B3 (docs/SENSITIVITY-4.0-B3.md): 3.9 and 4.0 receiver paths side by side

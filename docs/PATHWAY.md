@@ -1896,3 +1896,5 @@ Eighteen mode-list entries (families 564 - 594 and 663 - 681) that show one fami
 - New cards in `app/d40/`: Sarsat incidents, tone system and DTMF numbers, ISM classifier line, FT8 heard / band summary / clear frequency, CW heard list, GSM-R channel frequencies, talkgroup names, HF beacon best frequency, LNB drift, ATIS / VOLMET, DVB-C QAM check, HD Radio sideband levels, FPV free channels, mesh share columns.
 - `ism_classify.h`: pulse type renamed `IsmTimedPulse` (clash with `ism_proto.h`). `BandClock` got save / load / frequencies.
 - 209 German strings in `app/i18n/de.txt` and `unreviewed/de.txt`. `docs/WIRING-4.0.md` lists what is wired and what is left, with reasons. Syntax-checked only; no app build.
+## 2026-11-12 feat40-sensC1
+Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked noise), 50 ppm clock rows were trial-length artefacts; FM RDS, ATSC, DAB, DVB-T/T2/C, DTMB, DVB-S2 at theory (docs/SENSITIVITY-4.0-C1.md).
