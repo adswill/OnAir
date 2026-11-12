@@ -279,12 +279,15 @@ struct SensorsReceiver::Impl {
     }
 
     // ---- results ----
-    bool viewAccepts(const std::string& model) {
+    bool viewAccepts(const std::string& model, const std::string& kind) {
         std::lock_guard<std::mutex> lk(viewMu);
         if (viewPat.empty()) return true;
         std::string a = model;
         for (auto& c : a) c = (char)std::tolower((unsigned char)c);
-        for (const auto& p : viewPat) if (a.find(p) != std::string::npos) return true;
+        for (const auto& p : viewPat) {
+            if (p.rfind("kind:", 0) == 0) { if (kind == p.substr(5)) return true; }       // "kind:meter": the kind the decoder's fields say (kindOf)
+            else if (a.find(p) != std::string::npos) return true;
+        }
         return false;
     }
     void onData(r_device* d, data_t* data) {
@@ -292,7 +295,8 @@ struct SensorsReceiver::Impl {
         flatten(f, data, "");
         {   // a sensor-family entry (setView) reports its own family only; the package still counts as recognised
             const SensorField* vm = findField(f, "model");
-            if (!viewAccepts(vm ? vm->text : std::string(d && d->name ? d->name : "?"))) { eventsInPackage++; return; }
+            const std::string vmodel = vm ? vm->text : std::string(d && d->name ? d->name : "?");
+            if (!viewAccepts(vmodel, kindOf(f, vmodel))) { eventsInPackage++; return; }
         }
         std::string js;
         dataJson(js, data);
@@ -790,6 +794,10 @@ static const SensorsView kSensViews[] = {
     {675, "tpmsrenault", "TPMS: Renault", "renault", 433.92, "Renault TPMS"},
     {678, "tpmstoyota", "TPMS: Toyota", "toyota|pmv-107j", 433.92, "Toyota TPMS"},
     {681, "tpmscitroen", "TPMS: Citroen / Peugeot / Fiat", "citroen|peugeot|fiat|mitsubishi", 433.92, "Citroen TPMS"},
+    {412, "weatherall", "Weather stations (all brands)", "kind:weather", 433.92, "Weather stations, all brands"},
+    {415, "tpmsall", "TPMS: all makes", "kind:tpms", 433.92, "Tyre pressure, all makes"},
+    {418, "metersall", "Utility and energy meters", "kind:meter", 433.92, "Utility and energy meters"},
+    {421, "remotesall", "Remotes, doorbells and switches", "kind:remote", 433.92, "Remotes and doorbells"},
 };
 const SensorsView* sensorsViews(int& count) { count = (int)(sizeof kSensViews / sizeof *kSensViews); return kSensViews; }
 const SensorsView* sensorsViewForActive(int a) { for (const auto& v : kSensViews) if (v.family + 1 == a) return &v; return nullptr; }

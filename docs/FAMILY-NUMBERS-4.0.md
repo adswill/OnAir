@@ -76,3 +76,4 @@ Radiosonde types (684, 687, 690, 693, 702, 705, 708, 711, 714, 717), wireless M-
 AIS station kinds (738, 807, 810, 813, 816, 857), table in `docs/VIEWS-4.0.md`. SSR interrogations (family 781) are variant 44 of the x40 receiver.
 Time stations: 607, 610, 613, 616, 628, 631, 634, 637, 642, 645, 648 (docs/VIEWS-4.0.md).
 Satellite systems: 860, 863, 866, 872, 875 (docs/VIEWS-4.0.md).
+Sensor kinds (Sub-GHz sensors views): 412, 415, 418, 421.

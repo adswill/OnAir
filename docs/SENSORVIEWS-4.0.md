@@ -1,6 +1,6 @@
 # Sensor-family entries (4.0, branch feat40-modes4)
 
-Eighteen mode-list entries that are **views onto the Sub-GHz sensors receiver** (`core/src/sensors`, the rtl_433 decoders in `third_party/rtl_433`): the same pulse detector, slicers and device decoders, a device list that shows one family only.
+Twenty-two mode-list entries that are **views onto the Sub-GHz sensors receiver** (`core/src/sensors`, the rtl_433 decoders in `third_party/rtl_433`): the same pulse detector, slicers and device decoders, a device list that shows one family only.
 The Sub-GHz sensors entry is unchanged and still lists every sensor and has the unknown signal analyser. No decoder was added or changed: what each entry decodes is what rtl_433's decoders of that family decode (rtl_433 is GPL-2.0-or-later, see `THIRD_PARTY.md`).
 
 | Mode | Family | Active std | Engine std | Poll slot | Shows models containing | Default MHz |
@@ -24,17 +24,20 @@ The Sub-GHz sensors entry is unchanged and still lists every sensor and has the 
 | TPMS: Toyota | 678 | 679 | 680 | 678 | toyota, pmv-107j | 433.92 |
 | TPMS: Citroen / Peugeot / Fiat | 681 | 682 | 683 | 681 | citroen, peugeot, fiat, mitsubishi | 433.92 |
 
+Four more entries show a **kind** of sensor of every brand (the kind the Sub-GHz sensors list assigns from a message's fields, `kindOf` in `sensors_rx.cpp`, written `kind:...` in the patterns): Weather stations, all brands (412), TPMS: all makes (415), Utility and energy meters (418), Remotes, doorbells and switches (421); defaults 433.92 MHz.
+Rolling-code remotes are listed as the frames they send; nothing is opened or replayed.
+
 How it works: `SensorsReceiver::setView(patterns)` keeps a message only when the decoder's `model` field contains one of the '|' separated lower-case parts. The engine sets it when the radio starts
 (`engine_start.cpp`), from the table `sensorsViews()` in `sensors_rx.cpp`. The user's protocol selection of the Sub-GHz sensors screen still applies. The unknown signal analyser is silent in a view. The screens are the Sub-GHz sensors panel.
 `DECT2_SENSVIEW_ACTIVE_CASES` (sensors_rx.h) lists the active standards for the engine switches. Numbers come from the free ranges of `docs/FAMILY-NUMBERS-4.0.md` (564 - 597 and 663 - 697); the integrator resolves any clash with another branch.
 
 ## Tests (`tests/sensors/test_sensors_views.cpp`, run on this branch with a hand-built binary)
 The 28 real pulse trains of `tests/sensors/families.txt` (one recording of rtl_433's own test set per family: Acurite, Alecto, Ambient Weather, Bresser, Fine Offset, Hideki, security sensors, LaCrosse, Nexus / Prologue, Oregon, ERT, TFA, Schrader, X10)
-are rebuilt as IQ with three impairment sets each (carrier offset 0 / +18 kHz / -27 kHz, pulse timing x1.00 / x1.04 / x0.96) and run through every one of the 18 views.
-- A message appears in a view exactly when the receiver without a view decodes it and its model belongs to the view's family: 84 recording-and-impairment runs in their own view, 80 decoded (as without a view), 0 lost, 0 leaks into another view.
+are rebuilt as IQ with three impairment sets each (carrier offset 0 / +18 kHz / -27 kHz, pulse timing x1.00 / x1.04 / x0.96) and run through every one of the 22 views.
+- A message appears in a view exactly when the receiver without a view decodes it and its model belongs to the view's family: 152 recording-and-impairment runs in their own view (the kind entries count too), 148 decoded (as without a view), 0 lost, 0 leaks into another view.
 - Carrier to noise in the sample bandwidth, recordings decoded in their own view (OOK recordings, 250 kHz or 1 MHz input): 30 / 20 / 14 / 10 dB: 20 of 21; 6 dB: 17 of 21; 3 and 0 dB: 0 of 21.
 - 20 s of noise and a plain carrier in every view: no message, nothing in the unknown list.
-- Numbers, lookups and tunings of the 18 views are unique and consistent.
+- Numbers, lookups and tunings of the 22 views are unique and consistent.
 
 ## What was not checked
 - **Simulated signals only**, built from recorded pulse trains; no over-the-air capture.

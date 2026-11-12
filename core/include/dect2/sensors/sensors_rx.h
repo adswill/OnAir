@@ -99,7 +99,7 @@ const SensorsView* sensorsViewForActive(int activeStd);     // by the active sta
 const SensorsView* sensorsViewForStd(int stdMode);          // by the engine standard (family + 2), nullptr for any other
 ModeTuning sensorsViewTuning(int i);
 // every active standard of the views, for switch statements
-#define DECT2_SENSVIEW_ACTIVE_CASES case 565: case 568: case 571: case 574: case 577: case 580: case 583: case 586: case 589: case 592: case 595: case 664: case 667: case 670: case 673: case 676: case 679: case 682:
+#define DECT2_SENSVIEW_ACTIVE_CASES case 565: case 568: case 571: case 574: case 577: case 580: case 583: case 586: case 589: case 592: case 595: case 664: case 667: case 670: case 673: case 676: case 679: case 682: case 413: case 416: case 419: case 422:
 // and the poll slots (= the families)
 
 } // namespace dect2

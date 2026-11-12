@@ -15112,6 +15112,10 @@ static bool put_409(const RxTelemetry& rx, std::string& s) { ev_dect2__AvRoadTel
 static bool put_410(const RxTelemetry& rx, std::string& s) { ev_dect2__AvRoadTelemetry(s, rx.avroad); return true; }
 static bool put_411(const RxTelemetry& rx, std::string& s) { ev_dect2__AvRoadTelemetry(s, rx.avroad); return true; }
 static bool put_412(const RxTelemetry& rx, std::string& s) { ev_dect2__AvRoadTelemetry(s, rx.avroad); return true; }
+static bool put_413(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_416(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_419(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
+static bool put_422(const RxTelemetry& rx, std::string& s) { ev_dect2__SensorsTelemetry(s, rx.sensors); return true; }
 static bool put_431(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_432(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
 static bool put_433(const RxTelemetry& rx, std::string& s) { ev_dect2__HfUtilTelemetry(s, rx.hfutil); return true; }
@@ -15453,6 +15457,10 @@ static const StdEntry kStd[] = {
     {410, "avroad", "dect2::AvRoadTelemetry", kSchema_dect2__AvRoadTelemetry, put_410},
     {411, "avroad", "dect2::AvRoadTelemetry", kSchema_dect2__AvRoadTelemetry, put_411},
     {412, "avroad", "dect2::AvRoadTelemetry", kSchema_dect2__AvRoadTelemetry, put_412},
+    {413, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_413},
+    {416, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_416},
+    {419, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_419},
+    {422, "sensors", "dect2::SensorsTelemetry", kSchema_dect2__SensorsTelemetry, put_422},
     {431, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_431},
     {432, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_432},
     {433, "hfutil", "dect2::HfUtilTelemetry", kSchema_dect2__HfUtilTelemetry, put_433},
@@ -16041,6 +16049,10 @@ static const WebModeRow kRows[] = {
     {866, "QZSS L1", 4, "QZSS L1: satellite tracking", "", 868, 867, "gnss"},
     {872, "GLONASS L1", 4, "GLONASS L1: satellite tracking and position fix", "", 874, 873, "gnss"},
     {875, "BeiDou B1I", 4, "BeiDou B1I: satellite tracking and position fix", "", 877, 876, "gnss"},
+    {412, "Weather stations (all brands)", 8, "Weather stations: every brand in one list", "", 414, 413, "sensors"},
+    {415, "TPMS: all makes", 8, "TPMS: tyre pressure sensors of every make", "", 417, 416, "sensors"},
+    {418, "Utility and energy meters", 8, "Utility meters and energy monitors: every brand in one list", "", 420, 419, "sensors"},
+    {421, "Remotes, doorbells and switches", 8, "Remotes, doorbells and switches: the frames they send", "", 423, 422, "sensors"},
 };
 } // namespace
 

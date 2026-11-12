@@ -852,6 +852,46 @@ static bool set_412(Engine& e, const std::string& n, double v) {
     if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
     return false;
 }
+static const char kOpt_413[] = R"JSON([{"n":"setRemoveAfterSec","k":"int","l":"Remove After Sec","u":"s","t":"s"},{"n":"setFskMode","k":"int","l":"Fsk Mode","t":"s"},{"n":"setFixedLevelDb","k":"num","l":"Fixed Level dB","h":"rtl_433 -Y level=","u":"dB","t":"s"},{"n":"setMinLevelDb","k":"num","l":"Min Level dB","h":"rtl_433 -Y minlevel=","u":"dB","t":"s"},{"n":"setAutoLevel","k":"bool","l":"Auto Level","t":"a"}])JSON";
+static bool set_413(Engine& e, const std::string& n, double v) {
+    auto& r = e.sensors();
+    if (n == "setRemoveAfterSec") { call(r, &Rx<decltype(r)>::setRemoveAfterSec, v); return true; }
+    if (n == "setFskMode") { call(r, &Rx<decltype(r)>::setFskMode, v); return true; }
+    if (n == "setFixedLevelDb") { call(r, &Rx<decltype(r)>::setFixedLevelDb, v); return true; }
+    if (n == "setMinLevelDb") { call(r, &Rx<decltype(r)>::setMinLevelDb, v); return true; }
+    if (n == "setAutoLevel") { call(r, &Rx<decltype(r)>::setAutoLevel, v); return true; }
+    return false;
+}
+static const char kOpt_416[] = R"JSON([{"n":"setRemoveAfterSec","k":"int","l":"Remove After Sec","u":"s","t":"s"},{"n":"setFskMode","k":"int","l":"Fsk Mode","t":"s"},{"n":"setFixedLevelDb","k":"num","l":"Fixed Level dB","h":"rtl_433 -Y level=","u":"dB","t":"s"},{"n":"setMinLevelDb","k":"num","l":"Min Level dB","h":"rtl_433 -Y minlevel=","u":"dB","t":"s"},{"n":"setAutoLevel","k":"bool","l":"Auto Level","t":"a"}])JSON";
+static bool set_416(Engine& e, const std::string& n, double v) {
+    auto& r = e.sensors();
+    if (n == "setRemoveAfterSec") { call(r, &Rx<decltype(r)>::setRemoveAfterSec, v); return true; }
+    if (n == "setFskMode") { call(r, &Rx<decltype(r)>::setFskMode, v); return true; }
+    if (n == "setFixedLevelDb") { call(r, &Rx<decltype(r)>::setFixedLevelDb, v); return true; }
+    if (n == "setMinLevelDb") { call(r, &Rx<decltype(r)>::setMinLevelDb, v); return true; }
+    if (n == "setAutoLevel") { call(r, &Rx<decltype(r)>::setAutoLevel, v); return true; }
+    return false;
+}
+static const char kOpt_419[] = R"JSON([{"n":"setRemoveAfterSec","k":"int","l":"Remove After Sec","u":"s","t":"s"},{"n":"setFskMode","k":"int","l":"Fsk Mode","t":"s"},{"n":"setFixedLevelDb","k":"num","l":"Fixed Level dB","h":"rtl_433 -Y level=","u":"dB","t":"s"},{"n":"setMinLevelDb","k":"num","l":"Min Level dB","h":"rtl_433 -Y minlevel=","u":"dB","t":"s"},{"n":"setAutoLevel","k":"bool","l":"Auto Level","t":"a"}])JSON";
+static bool set_419(Engine& e, const std::string& n, double v) {
+    auto& r = e.sensors();
+    if (n == "setRemoveAfterSec") { call(r, &Rx<decltype(r)>::setRemoveAfterSec, v); return true; }
+    if (n == "setFskMode") { call(r, &Rx<decltype(r)>::setFskMode, v); return true; }
+    if (n == "setFixedLevelDb") { call(r, &Rx<decltype(r)>::setFixedLevelDb, v); return true; }
+    if (n == "setMinLevelDb") { call(r, &Rx<decltype(r)>::setMinLevelDb, v); return true; }
+    if (n == "setAutoLevel") { call(r, &Rx<decltype(r)>::setAutoLevel, v); return true; }
+    return false;
+}
+static const char kOpt_422[] = R"JSON([{"n":"setRemoveAfterSec","k":"int","l":"Remove After Sec","u":"s","t":"s"},{"n":"setFskMode","k":"int","l":"Fsk Mode","t":"s"},{"n":"setFixedLevelDb","k":"num","l":"Fixed Level dB","h":"rtl_433 -Y level=","u":"dB","t":"s"},{"n":"setMinLevelDb","k":"num","l":"Min Level dB","h":"rtl_433 -Y minlevel=","u":"dB","t":"s"},{"n":"setAutoLevel","k":"bool","l":"Auto Level","t":"a"}])JSON";
+static bool set_422(Engine& e, const std::string& n, double v) {
+    auto& r = e.sensors();
+    if (n == "setRemoveAfterSec") { call(r, &Rx<decltype(r)>::setRemoveAfterSec, v); return true; }
+    if (n == "setFskMode") { call(r, &Rx<decltype(r)>::setFskMode, v); return true; }
+    if (n == "setFixedLevelDb") { call(r, &Rx<decltype(r)>::setFixedLevelDb, v); return true; }
+    if (n == "setMinLevelDb") { call(r, &Rx<decltype(r)>::setMinLevelDb, v); return true; }
+    if (n == "setAutoLevel") { call(r, &Rx<decltype(r)>::setAutoLevel, v); return true; }
+    return false;
+}
 static const char kOpt_551[] = R"JSON([{"n":"setSystem","k":"int","l":"System","h":"before configure()","t":"s"},{"n":"setThresholdDb","k":"num","l":"Threshold dB","h":"0: the system's own","u":"dB","t":"s"}])JSON";
 static bool set_551(Engine& e, const std::string& n, double v) {
     auto& r = e.satdetect();
@@ -1555,6 +1595,10 @@ const OptEntry kOpt[] = {
     {410, kOpt_410, set_410},
     {411, kOpt_411, set_411},
     {412, kOpt_412, set_412},
+    {413, kOpt_413, set_413},
+    {416, kOpt_416, set_416},
+    {419, kOpt_419, set_419},
+    {422, kOpt_422, set_422},
     {551, kOpt_551, set_551},
     {552, kOpt_552, set_552},
     {553, kOpt_553, set_553},

@@ -78,11 +78,11 @@ static SensorsTelemetry run(const std::vector<cf32>& x, double rate, const std::
     return t;
 }
 
-static bool matches(const std::string& model, const std::string& patterns) {
+static bool matches(const std::string& model, const std::string& patterns, const std::string& kind = "") {
     std::string m = model; for (auto& c : m) c = (char)std::tolower((unsigned char)c);
     std::string cur;
     for (char c : patterns + "|") {
-        if (c == '|') { if (!cur.empty() && m.find(cur) != std::string::npos) return true; cur.clear(); }
+        if (c == '|') { if (!cur.empty()) { if (cur.rfind("kind:", 0) == 0) { if (cur.substr(5) == kind) return true; } else if (m.find(cur) != std::string::npos) return true; } cur.clear(); }
         else cur += c;
     }
     return false;
@@ -91,7 +91,7 @@ static bool matches(const std::string& model, const std::string& patterns) {
 int main() {
     int nv = 0;
     const SensorsView* views = sensorsViews(nv);
-    CHECK(nv == 18, "%d views", nv);
+    CHECK(nv == 22, "%d views", nv);
     for (int i = 0; i < nv; i++) {   // numbers: family, active standard, engine standard, tuning
         CHECK(sensorsViewForActive(views[i].family + 1) == &views[i] && sensorsViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
         const ModeTuning t = sensorsViewTuning(i);
@@ -129,12 +129,12 @@ int main() {
             Entry ee = e; ee.f1 += fo; ee.f2 += fo;
             const auto x = synth(ee, rate, scales[k], off, 0.0, seed++);
             const SensorsTelemetry base = run(x, rate, "");
-            bool baseHit = false; for (const auto& d : base.devices) if (d.model == e.model) baseHit = true;
+            bool baseHit = false; std::string kind; for (const auto& d : base.devices) if (d.model == e.model) { baseHit = true; kind = d.kind; }
             for (int i = 0; i < nv; i++) {
                 const SensorsTelemetry t = run(x, rate, views[i].patterns);
-                const bool mine = matches(e.model, views[i].patterns);
+                const bool mine = matches(e.model, views[i].patterns, kind);
                 size_t foreign = 0, got = 0;
-                for (const auto& d : t.devices) { if (matches(d.model, views[i].patterns)) got++; else foreign++; }
+                for (const auto& d : t.devices) { if (matches(d.model, views[i].patterns, d.kind)) got++; else foreign++; }
                 if (foreign) { leaks++; printf("  LEAK %s view %s: %zu foreign devices (offset %.0f, scale %.2f)\n", e.model.c_str(), views[i].id, foreign, off, scales[k]); }
                 CHECK(t.unknown.empty(), "view %s: the unknown signal analyser is not silent", views[i].id);
                 if (mine) { own++; if (baseHit) { if (got > 0) ownOk++; else { lost++; printf("  LOST %s in its own view %s (offset %.0f, scale %.2f)\n", e.model.c_str(), views[i].id, off, scales[k]); } } }

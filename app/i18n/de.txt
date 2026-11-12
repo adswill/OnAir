@@ -4203,3 +4203,7 @@ Satellites, Galileo	Satelliten, Galileo
 Satellites, QZSS	Satelliten, QZSS
 Satellites, GLONASS	Satelliten, GLONASS
 Satellites, BeiDou	Satelliten, BeiDou
+Sensors, Weather, all brands	Sensoren, Weather, all brands
+Sensors, Tyre pressure, all makes	Sensoren, Tyre pressure, all makes
+Sensors, Utility and energy meters	Sensoren, Utility and energy meters
+Sensors, Remotes and doorbells	Sensoren, Remotes and doorbells

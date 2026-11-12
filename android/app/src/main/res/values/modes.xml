@@ -464,6 +464,10 @@
         <item>QZSS L1</item>
         <item>GLONASS L1</item>
         <item>BeiDou B1I</item>
+        <item>Weather stations (all brands)</item>
+        <item>TPMS: all makes</item>
+        <item>Utility and energy meters</item>
+        <item>Remotes, doorbells and switches</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -909,6 +913,10 @@
         <item>QZSS L1 C/A satellites (PRN 193 - 202, Japan\'s regional system, J01 - J10) on 1575.42 MHz: the satellites in view, their decoded ephemeris and a position fix from QZSS alone. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
         <item>GLONASS L1 satellites on 1598 - 1606 MHz (FDMA, frequency channels -7 to +6 around 1602 MHz): the satellites in view with their frequency channel, the decoded strings and a position fix from GLONASS alone. Needs an active GNSS antenna and a radio with 10 Msps. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
         <item>BeiDou B1I satellites on 1561.098 MHz: the satellites in view, the decoded ephemeris and a position fix from BeiDou alone. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
+        <item>Weather station sensors of every brand the rtl_433 decoders know on 433.92, 868 and 915 MHz: temperature, humidity, wind, rain, pressure, UV and lightning with sensor ID, channel and battery. A sensor counts as a weather sensor when its message carries such a value. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
+        <item>Tyre pressure sensors of every make the rtl_433 decoders know on 433.92 and 315 MHz: sensor ID, pressure, temperature and flags. A sensor counts as a tyre pressure sensor when its model or its message says so. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
+        <item>Utility and energy meter messages the rtl_433 decoders know on 433.92, 868 and 915 MHz (power clamps, electricity, gas and water meters): meter or sensor ID and the readings it sends. A sensor counts as a meter when its message carries energy, power, volume or consumption. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
+        <item>Remote controls, wireless doorbells and switches the rtl_433 decoders know on 433.92 MHz and nearby bands: the button, command or code each frame carries. A sensor counts as a remote when its message carries a button, command or code. Rolling-code remotes are shown as the frames they send, never opened. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1354,6 +1362,10 @@
         <item>Satellites, QZSS</item>
         <item>Satellites, GLONASS</item>
         <item>Satellites, BeiDou</item>
+        <item>Sensors, Weather, all brands</item>
+        <item>Sensors, Tyre pressure, all makes</item>
+        <item>Sensors, Utility and energy meters</item>
+        <item>Sensors, Remotes and doorbells</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1799,5 +1811,9 @@
         <item>qzss michibiki l1 ca 193 202 1575.42 gnss satellite japan</item>
         <item>glonass l1 fdma 1602 gnss satellite fix position time russia</item>
         <item>beidou compass b1i bds 1561.098 gnss satellite fix position time china</item>
+        <item>weather station sensor thermometer hygrometer wind rain all brands 433.92 868 915 rtl_433</item>
+        <item>tpms tyre tire pressure all makes 433.92 315 rtl_433</item>
+        <item>utility meter energy power water gas electricity consumption monitor 433.92 868 915 rtl_433</item>
+        <item>remote doorbell switch button command code garage gate key fob 433.92 315 868 rtl_433</item>
     </string-array>
 </resources>

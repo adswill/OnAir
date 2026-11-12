@@ -306,7 +306,7 @@ const ModeUi* modeUi(int family) {
     case 600: return &kXlinkUi;
     case 210: return &kNrf24Ui;
     case 241: return &kSensorsUi;
-    case 564: case 567: case 570: case 573: case 576: case 579: case 582: case 585: case 588: case 591: case 594: case 663: case 666: case 669: case 672: case 675: case 678: case 681: return &kSensorsUi;   // 564 .. 681: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
+    case 564: case 567: case 570: case 573: case 576: case 579: case 582: case 585: case 588: case 591: case 594: case 663: case 666: case 669: case 672: case 675: case 678: case 681: case 412: case 415: case 418: case 421: return &kSensorsUi;   // 564 .. 681: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 245: return &kBganUi;
     case 243: return &kSfericsUi;
     case 790: return &kLtposUi;

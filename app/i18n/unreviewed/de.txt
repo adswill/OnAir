@@ -773,3 +773,7 @@ Satellites, Galileo
 Satellites, QZSS
 Satellites, GLONASS
 Satellites, BeiDou
+Sensors, Weather, all brands
+Sensors, Tyre pressure, all makes
+Sensors, Utility and energy meters
+Sensors, Remotes and doorbells
