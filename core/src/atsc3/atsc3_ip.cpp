@@ -156,41 +156,94 @@ std::vector<AeatAlert> parseAeat(const std::string& xml) {
     return out;
 }
 
-LlsTable parseLls(const uint8_t* p, size_t n) {
-    LlsTable t;
-    if (n < 4) return t;
-    t.tableId = p[0]; t.groupId = p[1]; t.groupCount = p[2] + 1; t.version = p[3];
-    if (t.tableId >= 1 && t.tableId <= 5) {   // SLT, RRT, SystemTime, AEAT, OnscreenMessageNotification: gzip compressed XML
-        std::vector<uint8_t> x;
-        if (!gunzip(p + 4, n - 4, x, 8u << 20)) return t;
-        t.xml.assign(x.begin(), x.end());
-        if (t.tableId == 1) {
-            auto root = parseXml(t.xml);
-            if (!root || root->local() != "SLT") return t;
-            parseSlt(root, t.slt);
-        }
-        t.ok = true;
+namespace {
+// one LLS table body (gzip compressed XML for the ids 1 to 5)
+bool llsBody(int tableId, const uint8_t* p, size_t n, LlsTable& t) {
+    if (tableId < 1 || tableId > 5) return false;
+    std::vector<uint8_t> x;
+    if (!gunzip(p, n, x, 8u << 20)) return false;
+    t.xml.assign(x.begin(), x.end());
+    if (tableId == 1) {
+        auto root = parseXml(t.xml);
+        if (!root || root->local() != "SLT") return false;
+        parseSlt(root, t.slt);
     }
+    t.ok = true;
+    return true;
+}
+} // namespace
+
+std::vector<LlsTable> parseLlsAll(const uint8_t* p, size_t n) {
+    std::vector<LlsTable> all;
+    if (n < 4) return all;
+    LlsTable h;
+    h.tableId = p[0]; h.groupId = p[1]; h.groupCount = p[2] + 1; h.version = p[3];
+    if (h.tableId != 0xFE) {
+        LlsTable t = h;
+        if (llsBody(t.tableId, p + 4, n - 4, t)) all.push_back(std::move(t));
+        return all;
+    }
+    // SignedMultiTable: LLS_payload_count, then id, version, 16-bit length and the payload for each, then the signature
+    size_t pos = 4;
+    if (pos >= n) return all;
+    const int count = p[pos++];
+    for (int i = 0; i < count; i++) {
+        if (pos + 4 > n) break;
+        LlsTable t = h;
+        t.tableId = p[pos]; t.version = p[pos + 1];
+        const size_t len = ((size_t)p[pos + 2] << 8) | p[pos + 3];
+        pos += 4;
+        if (pos + len > n) break;
+        if (llsBody(t.tableId, p + pos, len, t)) all.push_back(std::move(t));
+        pos += len;
+    }
+    return all;
+}
+
+LlsTable parseLls(const uint8_t* p, size_t n) {
+    auto all = parseLlsAll(p, n);
+    for (auto& t : all) if (t.tableId == 1) return t;
+    if (!all.empty()) return all[0];
+    LlsTable t;
+    if (n >= 4) { t.tableId = p[0]; t.groupId = p[1]; t.groupCount = p[2] + 1; t.version = p[3]; }
     return t;
 }
 
-std::vector<uint8_t> makeLls(int id, int group, int version, const std::string& xml) {
-    // gzip with stored blocks: valid, no compression is needed for generating test data
-    std::vector<uint8_t> v = {(uint8_t)id, (uint8_t)group, 0, (uint8_t)version};
+std::vector<uint8_t> gzipStored(const uint8_t* data, size_t size) {
     std::vector<uint8_t> g = {0x1F, 0x8B, 8, 0, 0, 0, 0, 0, 0, 3};
     size_t pos = 0;
     do {
-        size_t n = std::min<size_t>(65535, xml.size() - pos);
-        bool last = pos + n == xml.size();
+        const size_t n = std::min<size_t>(65535, size - pos);
+        const bool last = pos + n == size;
         g.push_back(last ? 1 : 0);
         g.push_back(n & 255); g.push_back(n >> 8); g.push_back(~n & 255); g.push_back((~n >> 8) & 255);
-        g.insert(g.end(), xml.begin() + pos, xml.begin() + pos + n);
+        g.insert(g.end(), data + pos, data + pos + n);
         pos += n;
-    } while (pos < xml.size());
-    uint32_t crc = crc32Ieee((const uint8_t*)xml.data(), xml.size());
+    } while (pos < size);
+    const uint32_t crc = crc32Ieee(data, size);
     for (int i = 0; i < 4; i++) g.push_back((crc >> (8 * i)) & 255);
-    for (int i = 0; i < 4; i++) g.push_back((xml.size() >> (8 * i)) & 255);
+    for (int i = 0; i < 4; i++) g.push_back((size >> (8 * i)) & 255);
+    return g;
+}
+
+std::vector<uint8_t> makeLls(int id, int group, int version, const std::string& xml) {
+    std::vector<uint8_t> v = {(uint8_t)id, (uint8_t)group, 0, (uint8_t)version};
+    const auto g = gzipStored((const uint8_t*)xml.data(), xml.size());
     v.insert(v.end(), g.begin(), g.end());
+    return v;
+}
+
+std::vector<uint8_t> makeSignedMultiLls(int group, const std::vector<std::tuple<int, int, std::string>>& tables, int sigBytes) {
+    std::vector<uint8_t> v = {0xFE, (uint8_t)group, 0, 1, (uint8_t)tables.size()};
+    for (auto& t : tables) {
+        const std::string& xml = std::get<2>(t);
+        const auto g = gzipStored((const uint8_t*)xml.data(), xml.size());
+        v.push_back((uint8_t)std::get<0>(t)); v.push_back((uint8_t)std::get<1>(t));
+        v.push_back((uint8_t)(g.size() >> 8)); v.push_back((uint8_t)g.size());
+        v.insert(v.end(), g.begin(), g.end());
+    }
+    v.push_back((uint8_t)(sigBytes >> 8)); v.push_back((uint8_t)sigBytes);
+    for (int i = 0; i < sigBytes; i++) v.push_back((uint8_t)(0x30 + i));
     return v;
 }
 

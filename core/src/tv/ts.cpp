@@ -160,6 +160,8 @@ void TsDemux::parseTvct(const uint8_t* s, int len) {
     if (!tsp::parseTvct(s, len, tsid, ch)) return;
     noteIds(tsid, 0);
     for (const tsp::Tvct& c : ch) {
+        // program 0 / 0xFFFF: an entry with no program in this stream (an analog or inactive channel some stations still list): not a service
+        if (c.prog == 0 || c.prog == 0xFFFF) continue;
         TsService& sv = services_[c.prog];
         sv.id = c.prog;
         sv.name = c.name;

@@ -26,7 +26,8 @@ bool parseRoutePacket(const uint8_t* d, size_t n, LctPacket& p) {
     p.closeObject = d[1] & 1;
     const int hdrLen = d[2] * 4;
     p.codePoint = d[3];
-    if (p.psi != 2 || p.version != 1 || hdrLen < 4 || (size_t)hdrLen > n) return false;   // ROUTE source packets: PSI = 10
+    // ROUTE source packets: the most significant bit of the PSI is 1 (A/331 A.3.4); the other bit is not defined there and is not checked
+    if (!(p.psi & 2) || p.version != 1 || hdrLen < 4 || (size_t)hdrLen > n) return false;
     const int cciBytes = (c + 1) * 4, tsiBytes = s * 4 + h * 2, toiBytes = o * 4 + h * 2;
     int pos = 4;
     if (pos + cciBytes + tsiBytes + toiBytes > hdrLen) return false;
@@ -200,16 +201,26 @@ std::vector<MimePart> parseMultipart(const std::vector<uint8_t>& doc) {
     if (hend == std::string::npos) { hend = s.find("\n\n"); skip = 2; }
     if (hend == std::string::npos) return parts;
     std::map<std::string, std::string> top;
-    parseHeaders(s.substr(0, hend), top);
-    auto ct = top.find("content-type");
-    if (ct == top.end() || lower(ct->second).find("multipart/") != 0) return parts;
-    size_t bp = lower(ct->second).find("boundary=");
-    if (bp == std::string::npos) return parts;
-    std::string boundary = trim(ct->second.substr(bp + 9));
-    if (!boundary.empty() && boundary[0] == '"') { size_t q = boundary.find('"', 1); boundary = boundary.substr(1, q == std::string::npos ? std::string::npos : q - 1); }
-    else { size_t q = boundary.find(';'); if (q != std::string::npos) boundary = trim(boundary.substr(0, q)); }
+    std::string boundary;
+    size_t from = hend + skip;
+    if (s.compare(0, 2, "--") == 0) {   // no header block: the document starts with its first delimiter line
+        size_t le = s.find('\n');
+        if (le == std::string::npos) return parts;
+        boundary = trim(s.substr(2, le - 2));
+        from = 0;
+    } else {
+        parseHeaders(s.substr(0, hend), top);
+        auto ct = top.find("content-type");
+        if (ct == top.end() || lower(ct->second).find("multipart/") != 0) return parts;
+        size_t bp = lower(ct->second).find("boundary=");
+        if (bp == std::string::npos) return parts;
+        boundary = trim(ct->second.substr(bp + 9));
+        if (!boundary.empty() && boundary[0] == '"') { size_t q = boundary.find('"', 1); boundary = boundary.substr(1, q == std::string::npos ? std::string::npos : q - 1); }
+        else { size_t q = boundary.find(';'); if (q != std::string::npos) boundary = trim(boundary.substr(0, q)); }
+    }
+    if (boundary.empty()) return parts;
     const std::string delim = "--" + boundary;
-    size_t pos = s.find(delim, hend + skip);
+    size_t pos = s.find(delim, from);
     while (pos != std::string::npos) {
         size_t after = pos + delim.size();
         if (s.compare(after, 2, "--") == 0) break;   // closing delimiter
@@ -292,27 +303,47 @@ bool parseStsid(const std::string& xml, Stsid& out) {
 
 RouteService::RouteService(uint32_t src, uint32_t dst, int port) : slsSrc_(src), slsDst_(dst), slsPort_(port) {}
 
-void RouteService::handleSls(const RouteObject& o) {
-    // the SLS arrives as a multipart package (formatId 3); a bare XML document is accepted too
-    auto parts = parseMultipart(o.data);
-    std::vector<std::pair<std::string, std::string>> docs;   // content type, text
-    if (parts.empty()) docs.push_back({"", std::string(o.data.begin(), o.data.end())});
+namespace {
+bool isGzip(const std::vector<uint8_t>& b) { return b.size() >= 18 && b[0] == 0x1F && b[1] == 0x8B; }
+// The documents of an SLS delivery object (A/331 7.1.6.1, A.3.3.4, A.3.3.5): a multipart/related package, which may be gzip compressed as a
+// whole; in Signed Package Mode a multipart/signed whose first part is that package and whose last is the signature; a part may carry its own
+// Content-Encoding: gzip. A bare XML document is accepted too. Nested packages are opened down to a few levels.
+void slsDocuments(std::vector<uint8_t> data, int depth, std::vector<std::string>& docs) {
+    if (depth > 4) return;
+    if (isGzip(data)) { std::vector<uint8_t> plain; if (gunzip(data.data(), data.size(), plain)) data.swap(plain); else return; }
+    auto parts = parseMultipart(data);
+    if (parts.empty()) { docs.emplace_back(data.begin(), data.end()); return; }
     for (auto& p : parts) {
-        std::string ct = p.headers.count("content-type") ? lower(p.headers["content-type"]) : "";
-        std::vector<uint8_t> body = p.body;
-        if (p.headers.count("content-encoding") && lower(p.headers["content-encoding"]).find("gzip") != std::string::npos) {
-            std::vector<uint8_t> plain;
-            if (gunzip(body.data(), body.size(), plain)) body.swap(plain);
+        const std::string ct = p.headers.count("content-type") ? lower(p.headers["content-type"]) : "";
+        std::vector<uint8_t> body = std::move(p.body);
+        const bool gz = (p.headers.count("content-encoding") && lower(p.headers["content-encoding"]).find("gzip") != std::string::npos) || isGzip(body);
+        if (gz) { std::vector<uint8_t> plain; if (gunzip(body.data(), body.size(), plain)) body.swap(plain); }
+        if (ct.compare(0, 10, "multipart/") == 0) {   // a package inside (the signed content of multipart/signed): give it its header back
+            const std::string h = "Content-Type: " + p.headers["content-type"] + "\r\n\r\n";
+            std::vector<uint8_t> inner(h.begin(), h.end());
+            inner.insert(inner.end(), body.begin(), body.end());
+            slsDocuments(std::move(inner), depth + 1, docs);
+            continue;
         }
-        docs.push_back({ct, std::string(body.begin(), body.end())});
+        if (ct.find("pkcs7") != std::string::npos || ct.find("signature") != std::string::npos) continue;   // the signature (not checked)
+        if (isGzip(body) || (!body.empty() && body[0] == '-')) { slsDocuments(std::move(body), depth + 1, docs); continue; }
+        docs.emplace_back(body.begin(), body.end());
     }
+}
+} // namespace
+
+void RouteService::handleSls(const RouteObject& o) {
+    slsObjects_++;
+    std::vector<std::string> docs;
+    slsDocuments(o.data, 0, docs);
     for (auto& d : docs) {
-        auto root = parseXml(d.second);
+        auto root = parseXml(d);
         if (!root) continue;
         const std::string n = root->local();
         if (n == "S-TSID") {
             Stsid st;
-            if (!parseStsid(d.second, st)) continue;
+            if (!parseStsid(d, st)) continue;
+            slsTables_++;
             stsid_ = st;
             haveStsid_ = true;
             components_.clear();
@@ -325,8 +356,8 @@ void RouteService::handleSls(const RouteObject& o) {
                     components_.push_back(rc);
                 }
             }
-        } else if (n == "MPD") mpd_ = d.second;
-        else if (n == "UserServiceDescription" || n == "BundleDescription") usbd_ = d.second;
+        } else if (n == "MPD") { mpd_ = d; slsTables_++; }
+        else if (n == "UserServiceDescription" || n == "BundleDescription") { usbd_ = d; slsTables_++; }
     }
 }
 

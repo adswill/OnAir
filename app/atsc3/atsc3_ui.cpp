@@ -113,6 +113,12 @@ void atsc3ReceiverTab(App& a) {
     }
     row("baseband packets", "%ld (%ld bad)", t.bbPackets, t.bbBad);
     row("link layer", "%ld ALP packets, %ld UDP datagrams, %ld service list tables, %ld ROUTE objects", t.alpPackets, t.udp, t.llsTables, t.routeObjects);
+    if (t.selected >= 0) row("service signaling", "%ld objects on its signaling channel, %ld documents read%s", t.slsObjects, t.slsTables, t.llsSigned ? " (the station signs its signaling)" : "");
+    if (t.alpCompressedIp > 0) {
+        ImGui::PushTextWrapPos(0);
+        ImGui::TextColored(pal::warnAmber(), "%ld link layer packets have a compressed IP header (ROHC), which OnAir does not decode yet: services sent that way stay silent", t.alpCompressedIp);
+        ImGui::PopTextWrapPos();
+    }
     row("decoder load", "%.0f%% of real time%s", 100 * t.load, t.droppedBlocks ? "  (samples were dropped)" : "");
     ImGui::Spacing();
     if (!t.alerts.empty()) {

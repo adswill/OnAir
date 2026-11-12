@@ -274,7 +274,14 @@ constexpr int kSegSamples = 2 * kSegSyms;               // 1664 samples at 2 per
 constexpr int kNF = 24;                                 // equaliser taps after the cursor (future samples)
 constexpr int kNP = 103;                                // taps before the cursor
 constexpr int kL = kNF + kNP + 1;                       // 128
-constexpr int kMaxPre = 100;                            // the earliest path (symbols before the strongest) the pre-echo canceller handles
+// The earliest path (symbols before the strongest) the pre-echo canceller handles: 330 symbols = 30.7 us, the pre-echo range of A/74 Table 5.6
+// (-30 us at -7 dB). 3.9 stopped at 100 (9.3 us), so the -10, -15 and -30 us guideline echoes were never cancelled. The canceller's fit needs
+// 200 field sync symbols clear of the earlier path, which holds up to about 500.
+constexpr int kMaxPre = 330;
+// The latest path (symbols after the strongest) the post-echo canceller handles: 480 symbols = 44.6 us (A/74: +40 us at -4 dB in Table 5.6,
+// R2.2's path 6 at 39.8 us). The decision feedback taps reach 128 symbols (11.9 us); 3.9 had nothing beyond them.
+constexpr int kMaxPost = 480;
+constexpr int kPostMin = 118;   // nearer post-echoes are the decision feedback equaliser's
 constexpr int kPreTail = 640;                           // symbols kept after a field (the next field sync segment has completed)
 constexpr int kInterpJ = 8;                             // symbol interpolator half length
 constexpr int kInterpPh = 64;
@@ -669,7 +676,7 @@ struct Core {
         seg = false; tau = 0; rate = 2.0; rr = 0; segPos = 0; segSyms.clear(); lowQ = 0; syncQ = 0;
         raw.clear(); rawBase = 0; symAbs = 0; segAbs = 0; gainCorr = 1.0;
         fieldLock = false; fieldStartSeg = -1; fsMisses = 0; lastFsSeg = -1; fsSeen = false; pendingStart = -1;
-        workerReset();
+        workerReset(true);
         tsFlow = 0;
         AtscTelemetry keep;
         keep.seq = t.seq;
@@ -1103,7 +1110,9 @@ struct Core {
     // ---------------------------------------------------------------- field worker
     // The per-field work (equaliser fit, filtering, trellis decoding, Reed-Solomon) runs on its own thread so that the sample thread only
     // does the resampler, the pilot loop and the symbol clock. Fields are processed strictly in order (the de-interleaver needs that).
-    struct Job { int64_t f0 = 0; int parity = 1; int64_t base = 0; std::vector<float> s; };
+    // afterGap: fields before this one were dropped (or the lock was lost and found again): the decoder restarts at it, the equaliser starts
+    // from the taps it had. behind: the worker had at least two more fields waiting when it took this one (it then sheds optional work).
+    struct Job { int64_t f0 = 0; int parity = 1; int64_t base = 0; std::vector<float> s; bool afterGap = false, behind = false; };
     struct DecOut {
         uint64_t fields = 0, segments = 0, rsClean = 0, rsCorrected = 0, rsFailed = 0;
         double snr = 0, dataSnr = 0, segErr = 0;
@@ -1111,48 +1120,106 @@ struct Core {
         AtscMhStatus mh;
         std::vector<float> taps, levels;
         uint64_t seq = 0;
+        double load = 0;   // the worker's time per field over the field's own duration, averaged (1 = just keeping up)
     };
     std::thread worker;
     std::mutex jm;
     std::condition_variable jcv;
     std::deque<Job> jobs;
-    bool stopW = false, decResetReq = true, working = false;
+    bool stopW = false, decResetReq = true, decResetFull = true, working = false;
     std::atomic<bool> blocking{false};   // wait for the worker instead of dropping fields (files, tests)
     std::condition_variable jspace;
     DecOut decOut;
     std::mutex dmu;
     ~Core() { stopWorker(); }
-    void startWorker() { if (worker.joinable()) return; stopW = false; worker = dect2::namedThread("onair-atsc", [this] { workerLoop(); }); }
+    // The decoded packets leave on their own thread: the packet callback (demultiplexer, player, recorder) may take its time or wait on a lock
+    // without holding up the equaliser and the decoder, which must finish a field every 24.2 ms. ATSC_SYNCCB=1: the callback on the worker.
+    struct OutBlk { std::vector<uint8_t> pk; size_t n = 0; double secs = 0; };
+    std::thread outT;
+    std::mutex om;
+    std::condition_variable ocv;
+    std::deque<OutBlk> outQ;
+    bool stopO = false, outBusy = false;
+    std::atomic<uint64_t> packetsDropped{0};
+    void startWorker() {
+        if (!outT.joinable()) { { std::lock_guard<std::mutex> lk(om); stopO = false; } outT = dect2::namedThread("onair-atscout", [this] { outLoop(); }); }
+        if (worker.joinable()) return;
+        stopW = false;
+        worker = dect2::namedThread("onair-atsc", [this] { workerLoop(); });
+    }
     void stopWorker() {
         { std::lock_guard<std::mutex> lk(jm); stopW = true; }
         jcv.notify_all();
         jspace.notify_all();
         if (worker.joinable()) worker.join();
+        { std::lock_guard<std::mutex> lk(om); stopO = true; }
+        ocv.notify_all();
+        if (outT.joinable()) outT.join();
+    }
+    void outLoop() {
+        for (;;) {
+            OutBlk b;
+            {
+                std::unique_lock<std::mutex> lk(om);
+                ocv.wait(lk, [&] { return stopO || !outQ.empty(); });
+                if (outQ.empty()) return;   // stopping, and everything was delivered
+                b = std::move(outQ.front()); outQ.pop_front(); outBusy = true;
+            }
+            if (cb) cb(b.pk.data(), b.n, b.secs);
+            { std::lock_guard<std::mutex> lk(om); outBusy = false; }
+            ocv.notify_all();
+        }
+    }
+    void deliver(const uint8_t* pk, size_t n, double secs) {
+        static const bool syncCb = getenv("ATSC_SYNCCB") != nullptr;
+        if (syncCb) { cb(pk, n, secs); return; }
+        {
+            std::unique_lock<std::mutex> lk(om);
+            // a file or a test (blocking): wait for the consumer; a radio: about ten seconds may wait, then the oldest go
+            if (blocking) ocv.wait(lk, [&] { return outQ.size() < 64 || stopO; });
+            while (outQ.size() >= 400) { packetsDropped += outQ.front().n; outQ.pop_front(); }
+            OutBlk b; b.pk.assign(pk, pk + n * kTsBytes); b.n = n; b.secs = secs;
+            outQ.push_back(std::move(b));
+        }
+        ocv.notify_all();
     }
     void flush() {
         for (int i = 0; i < 4000; i++) {
-            { std::lock_guard<std::mutex> lk(jm); if (jobs.empty() && !working) return; }
+            bool idle;
+            { std::lock_guard<std::mutex> lk(jm); idle = jobs.empty() && !working; }
+            if (idle) { std::lock_guard<std::mutex> lk(om); if (outQ.empty() && !outBusy) return; }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     }
-    void workerReset() { std::lock_guard<std::mutex> lk(jm); jobs.clear(); decResetReq = true; }
+    // full: a new channel or rate (everything learnt goes). Otherwise the lock was lost and is being looked for again: the decoder restarts, but
+    // the equaliser keeps its taps, so a short fade on a channel with strong echoes does not cost the training from scratch. ATSC_OLDDROP=1:
+    // every reset is full (3.9).
+    void workerReset(bool full = false) {
+        static const bool oldDrop = getenv("ATSC_OLDDROP") != nullptr;
+        std::lock_guard<std::mutex> lk(jm);
+        jobs.clear();
+        if (!decResetReq) decResetFull = full || oldDrop; else decResetFull = decResetFull || full || oldDrop;
+        decResetReq = true;
+    }
     void workerLoop() {
         DenormalsOff ftz;   // x86: no microcode assists on denormal values (nothing elsewhere)
         for (;;) {
             Job j;
-            bool doReset = false;
+            bool doReset = false, full = false;
             {
                 std::unique_lock<std::mutex> lk(jm);
                 jcv.wait(lk, [&] { return stopW || !jobs.empty() || decResetReq; });
                 if (stopW) return;
-                if (decResetReq) { decResetReq = false; doReset = true; }
-                if (!jobs.empty()) { j = std::move(jobs.front()); jobs.pop_front(); working = true; }
+                if (decResetReq) { decResetReq = false; doReset = true; full = decResetFull; decResetFull = false; }
+                if (!jobs.empty()) { j = std::move(jobs.front()); jobs.pop_front(); working = true; j.behind = jobs.size() >= 2; }
             }
             jspace.notify_all();
             if (doReset) {
                 dec.reset();
-                eqLast = Taps(); preD = 0; snrAvg = 0; dataSnrAvg = 0; segErr = 0; cleanFields = 0; havePrev = false;
+                cleanFields = 0; havePrev = false;
                 tsFlow = 0;
+                if (full) { eqLast = Taps(); preD = 0; postD = 0; trackOn = false; trackClean = 0; snrAvg = 0; dataSnrAvg = 0; segErr = 0; gapPending = false; }
+                else gapPending = true;
             }
             if (!j.s.empty()) runJob(j);
             { std::lock_guard<std::mutex> lk(jm); working = false; }
@@ -1164,20 +1231,35 @@ struct Core {
         Job j;
         j.f0 = startSeg * kSegSyms;
         j.parity = fieldParity;
-        j.base = j.f0 - kNP - 4;
+        // far enough back for the field sync of an earlier path, and for the post-echo canceller's recursion to settle before the field starts
+        // (three or more echo delays; the buffer keeps two segments, 1664 symbols, before the field)
+        j.base = j.f0 - 1600;
         const int64_t end = j.f0 + kFieldSyms + kPreTail;   // the symbols after the field: the pre-echo canceller runs backwards from there
         j.s.resize((size_t)(end - j.base));
         for (size_t k = 0; k < j.s.size(); k++) j.s[k] = rawAt(j.base + (int64_t)k);
         {
+            // A radio: up to ten fields (242 ms) may wait while the worker is slow for a moment (another program, a long field). When even that
+            // is full, the oldest waiting field goes and the decoder restarts after it, keeping its equaliser. 3.9 dropped all fields after three
+            // and started over with no equaliser (ATSC_OLDDROP=1), so a short stall cost a second or more of picture on a channel with echoes.
+            static const bool oldDrop = getenv("ATSC_OLDDROP") != nullptr;
+            static const size_t qMax = getenv("ATSC_QUEUE") ? (size_t)std::max(1, atoi(getenv("ATSC_QUEUE"))) : 10;
             std::unique_lock<std::mutex> lk(jm);
             if (blocking) jspace.wait(lk, [&] { return jobs.size() < 2 || stopW; });
-            if (jobs.size() >= 3) { jobs.clear(); decResetReq = true; t.fieldSyncMisses++; }   // the worker fell behind: start over cleanly
+            if (oldDrop) {
+                if (jobs.size() >= 3) { t.fieldsDropped += jobs.size(); jobs.clear(); decResetReq = true; decResetFull = true; t.fieldSyncMisses++; }
+            } else if (jobs.size() >= qMax) {
+                jobs.pop_front();
+                t.fieldsDropped++;
+                if (!jobs.empty()) jobs.front().afterGap = true; else j.afterGap = true;
+            }
             jobs.push_back(std::move(j));
         }
         jcv.notify_one();
     }
 
     double snrAvg = 0, dataSnrAvg = 0, segErr = 0;   // worker-owned running averages
+    double loadAvg = 0;                              // worker time per field over 24.2 ms, averaged
+    bool gapPending = false;                         // the next field follows a gap (worker-owned)
     AtscMhDetector mh;
 
     // ---- equaliser (worker-owned state)
@@ -1201,6 +1283,11 @@ struct Core {
     bool havePrev = false;
     double eqSnrNow = 0;
     int preD = 0;   // a pre-echo canceller for an earlier path this many symbols before the strongest is in use
+    unsigned farPreTick = 0;
+    int postD = 0;   // a post-echo canceller for a later path this many symbols after the strongest is in use
+    bool trackOn = false;   // the equaliser follows the channel inside each field (a moving echo was seen)
+    int trackClean = 0;
+    unsigned farPostTick = 0;
 
     static float dotf(const float* a, const float* b, int n) {
 #if defined(__ARM_NEON) && !defined(DECT2_NO_SIMD)
@@ -1253,13 +1340,13 @@ struct Core {
 
     // The earliest path at least 0.4 times as strong as the one the symbol clock follows (the strongest), from the field sync's PN511,
     // in symbols before it; 0: none further than 6 symbols.
-    static int earliestPath(const View& v, const float* fsLv) {
+    static int earliestPath(const View& v, const float* fsLv, double minRel = 0.4, int minLag = 6) {
         auto corr = [&](int l) { double c = 0; for (int i = 4; i < 515; i++) c += (double)v.at(v.f0 + i + l) * fsLv[i]; return std::fabs(c); };
         const double c0 = std::max({corr(-1), corr(0), corr(1)});
         if (c0 <= 0) return 0;
-        for (int l = -kMaxPre; l <= -6; l++) {
+        for (int l = -kMaxPre; l <= -minLag; l++) {
             const double c = corr(l);
-            if (c > 0.4 * c0 && c >= corr(l - 1) && c >= corr(l + 1)) return -l;
+            if (c > minRel * c0 && c >= corr(l - 1) && c >= corr(l + 1)) return -l;
         }
         return 0;
     }
@@ -1312,6 +1399,72 @@ struct Core {
             u[(size_t)m] = r[(size_t)m] - acc;
         }
         float pr = 0, pu = 0;   // a kernel that is not minimum phase makes the recursion grow: refuse it
+        for (size_t m = 0; m < u.size(); m++) { pr = std::max(pr, std::fabs(r[m])); pu = std::max(pu, std::fabs(u[m])); }
+        return std::isfinite(pu) && pu < 4.f * pr;
+    }
+
+    // The strongest path between minLag and maxLag symbols after the one the symbol clock follows, at least minRel as strong, from the field
+    // sync's PN511; 0: none.
+    static int latestPath(const View& v, const float* fsLv, double minRel, int minLag, int maxLag) {
+        auto corr = [&](int l) { double c = 0; for (int i = 4; i < 515; i++) c += (double)v.at(v.f0 + i + l) * fsLv[i]; return std::fabs(c); };
+        const double c0 = std::max({corr(-1), corr(0), corr(1)});
+        if (c0 <= 0) return 0;
+        int best = 0;
+        double bc = minRel * c0;
+        double cm = corr(minLag - 1), cc = corr(minLag);
+        for (int l = minLag; l <= maxLag; l++) {
+            const double cn = corr(l + 1);
+            if (cc > bc && cc >= cm && cc >= cn) { best = l; bc = cc; }
+            cm = cc; cc = cn;
+        }
+        return best;
+    }
+
+    // A path D symbols after the strongest, beyond the reach of the decision feedback taps: r = u + sum_j k_j u[n - D + j]. u is recovered
+    // running forwards in time (stable while the later path is the weaker), the mirror of cancelPre. k comes from a least squares fit of the
+    // field sync, whose symbols D before are known too (the sync itself) for D up to about 510. The result goes to the usual equalisers.
+    static bool cancelPost(const View& v, const float* fsLv, int D, std::vector<float>& u) {
+        constexpr int H = 12, M = 6;
+        const int i0 = D + H, i1 = 728 - M;   // fsLv[i - D + j] and fsLv[i + j] are known field sync symbols for every row
+        if (D <= H || i1 - i0 < 200) return false;
+        const int n1 = 2 * M + 2 * H + 3;
+        std::vector<float> X, tgt;
+        for (int i = i0; i < i1; i++) {
+            const size_t o = X.size(); X.resize(o + n1);
+            float* x = &X[o];
+            for (int j = -M; j <= M; j++) x[j + M] = fsLv[i + j];
+            for (int j = -H; j <= H; j++) x[2 * M + 1 + j + H] = fsLv[i - D + j];
+            x[n1 - 1] = 1.f;
+            tgt.push_back(v.at(v.f0 + i));
+        }
+        std::vector<double> sol;
+        if (!solveLs(X, tgt, n1, 1e-6, sol)) return false;
+        auto uh = [&](int i) { double y = 0; for (int j = -M; j <= M; j++) y += sol[(size_t)(j + M)] * fsLv[i + j]; return (float)y; };
+        const int n2 = 2 * H + 1;
+        X.clear(); tgt.clear();
+        for (int i = i0 + H; i < i1; i++) {   // uh(i - D + j) needs i - D + j - M >= 0
+            const size_t o = X.size(); X.resize(o + n2);
+            for (int j = -H; j <= H; j++) X[o + (size_t)(j + H)] = uh(i - D + j);
+            tgt.push_back(v.at(v.f0 + i) - uh(i) - (float)sol[(size_t)n1 - 1]);
+        }
+        std::vector<double> kk;
+        if (!solveLs(X, tgt, n2, 1e-4, kk)) return false;
+        float k[2 * H + 1];
+        double e = 0;
+        for (int j = 0; j < n2; j++) { k[j] = (float)kk[(size_t)j]; e += (double)k[j] * k[j]; }
+        if (!(e < 0.81) || e < 0.0025) return false;   // the recursion needs the later path weaker; under -26 dB it is not worth it
+        const std::vector<float>& r = *v.s;
+        u = r;
+        const int64_t N = (int64_t)u.size();
+        for (int64_t m = 0; m < N; m++) {
+            float acc = 0;
+            for (int j = 0; j < n2; j++) {
+                const int64_t q = m - D + (j - H);
+                if (q >= 0) acc += k[j] * u[(size_t)q];
+            }
+            u[(size_t)m] = r[(size_t)m] - acc;
+        }
+        float pr = 0, pu = 0;
         for (size_t m = 0; m < u.size(); m++) { pr = std::max(pr, std::fabs(r[m])); pu = std::max(pu, std::fabs(u[m])); }
         return std::isfinite(pu) && pu < 4.f * pr;
     }
@@ -1444,6 +1597,92 @@ struct Core {
         return 10.0 * std::log10(25.0 / std::max(mse, 1e-6));
     }
 
+    // equalize() with taps that follow a channel changing inside the field (a moving echo: A/74 R.1 and R2 turn a path at up to 5 Hz, half a
+    // radian over one field). After every segment the feed-forward and feedback taps and the bias take a normalised LMS step from that
+    // segment's errors against the decisions (every fourth symbol: the steps average over about twenty segments, 1.8 ms). Portable code, one
+    // segment at a time; used only while the channel needs it. `tpOut`: the taps at the end of the field.
+    double equalizeTrack(const View& v, const float* fsLv, const Taps& tp0, const float* hist, std::vector<float>& lv, std::vector<float>& hv, Taps& tpOut) {
+        Taps tp = tp0;
+        const int L = tp.L(), B = tp.B;
+        static const float syncLv[4] = {5, -5, -5, 5};
+        lv.assign((size_t)kFieldSyms, 0.f);
+        hv.assign((size_t)kFieldSyms + B, 0.f);
+        if (hist && B) for (int j = 0; j < B; j++) hv[(size_t)j] = hist[j];
+        std::vector<float> xr((size_t)kFieldSyms + L - 1), wr(L), ffo((size_t)kFieldSyms);
+        for (int k = 0; k < L; k++) wr[k] = tp.ff[L - 1 - k];
+        const int64_t first = v.f0 + kNFf - (L - 1);
+        for (size_t k = 0; k < xr.size(); k++) xr[k] = v.at(first + (int64_t)k);
+        double px = 0; size_t npx = 0;
+        for (size_t k = 0; k < xr.size(); k += 7) { px += (double)xr[k] * xr[k]; npx++; }
+        px /= (double)std::max<size_t>(1, npx);
+        static const double muS = getenv("ATSC_TRACKMU") ? atof(getenv("ATSC_TRACKMU")) : 0.04;
+        const float mu = (float)(muS / std::max(1e-6, L * px + B * 21.0));
+        constexpr int kG = 4;
+        std::vector<float> fbAcc, fbs;
+        if (B) {
+            fbAcc.assign((size_t)kFieldSyms + B + kG, 0.f);
+            if (hist) for (int j = 0; j < B; j++)
+                for (int m = 0; m < B; m++) { const int i = j + 1 + m - B; if (i >= 0 && i < B) fbAcc[(size_t)i] += tp.fb[m] * hist[j]; }
+            fbs.assign((size_t)kG * B, 0.f);
+        }
+        auto rows = [&]() { for (int k = 0; k < kG; k++) for (int m = 0; m < B; m++) fbs[(size_t)k * B + m] = m + k < B ? tp.fb[(size_t)(m + k)] : 0.f; };
+        if (B) rows();
+        double mse = 0; int nm = 0;
+        auto decide = [&](int i, float y) {
+            float dec;
+            if (i < 728) dec = fsLv[i];
+            else if (i % kSegSyms < 4) dec = syncLv[i % kSegSyms];
+            else dec = quant8(y);
+            if (i >= std::max(B, 8) && i < 728) { const double e = y - fsLv[i]; mse += e * e; nm++; }
+            lv[(size_t)i] = y;
+            hv[(size_t)B + i] = dec;
+            return dec;
+        };
+        std::vector<float> gw(L), gf(B);
+        for (int sg = 0; sg < kFieldSegs; sg++) {
+            const int i0 = sg * kSegSyms;
+            convCorr(&xr[(size_t)i0], wr.data(), &ffo[(size_t)i0], 1, kSegSyms, L);
+            const float* fbt = tp.fb.data();
+            for (int i = i0; i < i0 + kSegSyms; i += kG) {
+                const float b0 = ffo[(size_t)i] + tp.bias, b1 = ffo[(size_t)i + 1] + tp.bias, b2 = ffo[(size_t)i + 2] + tp.bias, b3 = ffo[(size_t)i + 3] + tp.bias;
+                if (!B) { decide(i, b0); decide(i + 1, b1); decide(i + 2, b2); decide(i + 3, b3); continue; }
+                const float* c = &fbAcc[(size_t)i];
+                const float d0 = decide(i, b0 + c[0]);
+                const float d1 = decide(i + 1, b1 + c[1] + d0 * fbt[0]);
+                const float d2 = decide(i + 2, b2 + c[2] + d0 * fbt[1] + d1 * fbt[0]);
+                const float d3 = decide(i + 3, b3 + c[3] + d0 * fbt[2] + d1 * fbt[1] + d2 * fbt[0]);
+                float* a = &fbAcc[(size_t)i + kG];
+                const float* f0 = &fbs[0];
+                const float* f1 = &fbs[(size_t)B];
+                const float* f2 = &fbs[(size_t)2 * B];
+                const float* f3 = &fbs[(size_t)3 * B];
+                for (int m = 0; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
+            }
+            // the LMS step from this segment (every fourth symbol, a different phase each segment)
+            std::fill(gw.begin(), gw.end(), 0.f);
+            std::fill(gf.begin(), gf.end(), 0.f);
+            double gb = 0; int ng = 0;
+            for (int t = i0 + (sg & 3); t < i0 + kSegSyms; t += 4) {
+                const float e = lv[(size_t)t] - hv[(size_t)B + t];
+                if (!(std::fabs(e) < 3.f)) continue;   // a wild sample (a burst): no step from it
+                const float* xx = &xr[(size_t)t];
+                for (int k = 0; k < L; k++) gw[k] += e * xx[k];
+                const float* hh = &hv[(size_t)t];   // hv[B + t - 1 - m] for m = 0 .. B-1 is hh[B - 1 - m]
+                for (int m = 0; m < B; m++) gf[m] += e * hh[B - 1 - m];
+                gb += e; ng++;
+            }
+            if (!ng) continue;
+            for (int k = 0; k < L; k++) wr[k] -= mu * gw[k];
+            for (int m = 0; m < B; m++) tp.fb[(size_t)m] -= mu * gf[m];
+            tp.bias -= (float)(0.04 * gb / ng);
+            if (B) rows();
+        }
+        for (int k = 0; k < L; k++) tp.ff[L - 1 - k] = wr[k];
+        tpOut = tp;
+        mse /= std::max(1, nm);
+        return 10.0 * std::log10(25.0 / std::max(mse, 1e-6));
+    }
+
     // the symbol levels of a decoded field: known field sync, known segment syncs, trellis path elsewhere
     void levelsFromPath(const float* fsLv, const std::vector<uint8_t>& psym, const std::vector<float>& hvDec, int B, std::vector<float>& out) {
         static const float syncLv[4] = {5, -5, -5, 5};
@@ -1464,9 +1703,20 @@ struct Core {
         float fsLv[kSegSyms];
         for (int i = 0; i < kSegSyms; i++) fsLv[i] = levelOf(fsSym[i]);
         DECT2_STAGE_VAR(stFit, "atsc.eq.fit");
-        if (preD > 0 && cancelPre(view, fsLv, preD, uPre)) view.s = &uPre;
+        bool preOn = false;
+        if (preD > 0 && cancelPre(view, fsLv, preD, uPre)) { view.s = &uPre; preOn = true; }
+        std::vector<float> uPost;   // and with a far post-echo removed
+        if (postD > 0) { if (cancelPost(view, fsLv, postD, uPost)) view.s = &uPost; else postD = 0; }
         const double tM0 = now();
         static const bool noDfe = getenv("ATSC_NODFE") != nullptr;   // test: the plain equaliser only
+        static const bool noShed = getenv("ATSC_OLDDROP") != nullptr;
+        // after a gap (dropped fields, a lost and found lock) the decoder starts afresh and the field before is not this one's neighbour, but the
+        // channel is still the one the last taps were solved for: they are tried first (the usual fallbacks follow when they no longer fit)
+        const bool afterGap = job.afterGap || gapPending;
+        gapPending = false;
+        if (afterGap) { dec.reset(); havePrev = false; cleanFields = 0; }
+        // the worker is behind (two or more fields waiting): optional work is left out until it has caught up, so that it does not have to drop fields
+        const bool shed = job.behind && !noShed;
         const bool usePrev = havePrev && cleanFields >= 2 && !noDfe;
         Taps tp;
         bool trained;
@@ -1476,16 +1726,25 @@ struct Core {
             const View pview{&prevS, prevBase, prevF0};
             // A channel that has been decoding cleanly for a while changes slowly: the decision feedback taps are solved afresh every fourth field
             // only (a 190-unknown least squares over thousands of rows: the largest cost of the receiver), the fields between use the last ones.
-            // Any trouble (equaliser SNR under 9 dB, damaged packets) clears cleanFields and the next field solves again.
+            // Any trouble (equaliser SNR under 9 dB, damaged packets) clears cleanFields and the next field solves again. A worker that is behind
+            // reuses the last taps of any channel that decoded well, and solves every second field.
             if (cleanFields >= 6 && (++reuseTick & 3) != 0 && eqLast.ok && eqLast.B > 0 && snrAvg >= 20.0) { tp = eqLast; trained = true; }
+            else if (shed && (reuseTick++ & 1) && eqLast.ok && eqLast.B > 0) { tp = eqLast; trained = true; }
             else { reuseTick = 0; trained = trainDFE(view, pview, fsLv, prevLv, prevY, 1e-5, tp); }
             if (!trained) trained = trainFF(view, fsLv, tp);
-        } else trained = trainFF(view, fsLv, tp);
+        } else if (afterGap && eqLast.ok && !noShed) { tp = eqLast; trained = true; }
+        else trained = trainFF(view, fsLv, tp);
         tLs += now() - tM0;
         stFit.stop();
         DECT2_STAGE_VAR(stEq, "atsc.eq.filter");
         const double tM1 = now();
-        if (trained) snr = equalize(view, fsLv, tp, (usePrev && tp.B) ? &prevLv[(size_t)(kFieldSyms - tp.B)] : nullptr, lv, hv);
+        static const bool noTrack = getenv("ATSC_OLDDROP") != nullptr || getenv("ATSC_NOTRACK") != nullptr;
+        bool trackedNow = false;
+        if (trained) {
+            const float* h0 = (usePrev && tp.B) ? &prevLv[(size_t)(kFieldSyms - tp.B)] : nullptr;
+            if (trackOn && !noTrack && !shed) { Taps te; snr = equalizeTrack(view, fsLv, tp, h0, lv, hv, te); trackedNow = true; }
+            else snr = equalize(view, fsLv, tp, h0, lv, hv);
+        }
         if (!trained || snr < 9.0) {   // the plain equaliser does not fit: try the decision feedback one on the sync symbols alone (strong echoes)
             Taps tf;
             const std::vector<float> none;
@@ -1495,9 +1754,15 @@ struct Core {
                 if (!trained || s2 > snr) { tp = tf; lv = std::move(lv2); hv = std::move(hv2); snr = s2; trained = true; }
             }
         }
-        if (!trained || snr < 9.0) {   // still nothing: is the strongest path not the first one?
-            const View orig{&job.s, job.base, f0};
-            const int pre = earliestPath(orig, fsLv);
+        // Is the strongest path not the first one? Always when nothing fits; also when the fit is poor (under 16 dB) and the field sync shows an
+        // earlier path of -14 dB or more beyond the reach of the feed-forward taps (it would leave its own strength as noise). That second look
+        // is cheap (a correlation) and runs at most every eighth field while it does not help.
+        static const bool noFarPre = getenv("ATSC_OLDDROP") != nullptr || getenv("ATSC_NOFARPRE") != nullptr;
+        int pre = 0;
+        const View orig{&job.s, job.base, f0};
+        if (!trained || snr < 9.0) pre = earliestPath(orig, fsLv);
+        else if (!noFarPre && !shed && preD == 0 && snr < 16.0 && (farPreTick++ & 7) == 0) pre = earliestPath(orig, fsLv, 0.2, kNFf + 2);
+        if (pre > 0) {
             std::vector<float> u2;
             if (pre > 0 && cancelPre(orig, fsLv, pre, u2)) {
                 const View v2{&u2, job.base, f0};
@@ -1508,12 +1773,35 @@ struct Core {
                     if (dbg) fprintf(stderr, "[atsc] earlier path %d symbols before the strongest: equaliser SNR %.1f dB after the pre-echo canceller\n", pre, s2);
                     if (!trained || s2 > snr) {
                         tp = t2; lv = std::move(lv2); hv = std::move(hv2); snr = s2; trained = true;
-                        preD = pre; uPre = std::move(u2); view.s = &uPre; havePrev = false; cleanFields = 0;
+                        preD = pre; uPre = std::move(u2); view.s = &uPre; preOn = true; havePrev = false; cleanFields = 0; farPreTick = 0;
                     }
                 }
             }
         }
-        if (view.s == &job.s && trained && snr >= 9.0) preD = 0;
+        // A path later than the decision feedback taps reach (A/74: up to +40 us) leaves its strength as noise: when the fit is under 18 dB,
+        // every eighth field (at most) the field sync is searched for one of -14 dB or more, and its canceller is kept if it helps.
+        static const bool noFarPost = getenv("ATSC_OLDDROP") != nullptr || getenv("ATSC_NOFARPOST") != nullptr;
+        if (!noFarPost && !shed && postD == 0 && (!trained || snr < 18.0) && (farPostTick++ & 7) == 0) {
+            const int post = latestPath(view, fsLv, 0.2, kPostMin, kMaxPost);
+            std::vector<float> u3;
+            if (post > 0 && cancelPost(view, fsLv, post, u3)) {
+                const View v3{&u3, job.base, f0};
+                Taps best;
+                std::vector<float> lvb, hvb;
+                double sb = -1e9;
+                Taps t3;
+                std::vector<float> lv3, hv3;
+                if (trainFF(v3, fsLv, t3)) { const double s3 = equalize(v3, fsLv, t3, nullptr, lv3, hv3); if (s3 > sb) { sb = s3; best = t3; lvb = std::move(lv3); hvb = std::move(hv3); } }
+                const std::vector<float> none;
+                if (trainDFE(v3, v3, fsLv, none, none, 1e-3, t3)) { const double s3 = equalize(v3, fsLv, t3, nullptr, lv3, hv3); if (s3 > sb) { sb = s3; best = t3; lvb = std::move(lv3); hvb = std::move(hv3); } }
+                if (dbg) fprintf(stderr, "[atsc] later path %d symbols after the strongest: equaliser SNR %.1f dB after the post-echo canceller (was %.1f)\n", post, sb, snr);
+                if (best.ok && (!trained || sb > snr + 0.5)) {
+                    tp = best; lv = std::move(lvb); hv = std::move(hvb); snr = sb; trained = true;
+                    postD = post; uPost = std::move(u3); view.s = &uPost; havePrev = false; cleanFields = 0; farPostTick = 0;
+                }
+            }
+        }
+        if (!preOn && trained && snr >= 9.0) preD = 0;
         eqSnrNow = snr;
         snrAvg = snrAvg == 0 ? snr : snrAvg + 0.3 * (snr - snrAvg);
         std::vector<float> levelsOut;
@@ -1554,6 +1842,8 @@ struct Core {
             decOut.mh = mh.status();
             decOut.taps = eqLast.ff;
             decOut.levels = levelsOut;
+            loadAvg += 0.05 * ((now() - tD0) / (kFieldSyms / kSymbolRate) - loadAvg);
+            decOut.load = loadAvg;
             decOut.seq++;
         };
         if (!trained || !(snr >= 9.0)) {   // no usable channel estimate: do not feed the decoder garbage
@@ -1578,18 +1868,36 @@ struct Core {
         bool secondTry = false;
         // A badly decoded field gets a second try with the other kind of equaliser: after the decision feedback one (which can run away
         // after a wrong decision) the plain one; after the plain one a decision feedback equaliser trained on this field's own decisions.
-        if (st.segments > 0 && st.rsFailed * 5 > st.segments) {
+        // A dynamic channel (a moving echo, A/74 R.1 / R2: up to 5 Hz) has moved on since the previous field the decision feedback taps were
+        // trained on: a field with 10 % or more of its segments lost is equalised again with taps solved from its own decoded symbols (3.9: the
+        // plain equaliser only, and only from 20 %), then, while still 20 % or more are lost, with the plain one. ATSC_OLDDROP=1: 3.9's order.
+        static const bool oldRetry = getenv("ATSC_OLDDROP") != nullptr;
+        // the order of the other tries (4.0): the same taps following the channel inside the field (when that was not already the first try),
+        // taps solved from the field's own decoded symbols, the plain equaliser. A try that loses fewer segments replaces the field's result.
+        // While the tracking equaliser wins, it becomes the first try of the next fields (trackOn); after 200 fields that decode clean it stops.
+        bool trackWon = false;
+        for (int attempt = 0; attempt < 3 && !shed && st.segments > 0; attempt++) {
+            int kind;   // 0 tracking, 1 self-trained decision feedback, 2 plain
+            if (oldRetry) { if (attempt > 0) break; kind = usePrev ? 2 : 1; if (!(st.rsFailed * 5 > st.segments)) break; }
+            else {
+                kind = attempt;
+                if (kind == 0 && (trackedNow || noTrack || !trained)) continue;
+                if (kind < 2 ? !(st.rsFailed * 10 > st.segments) : !(st.rsFailed * 5 > st.segments)) break;
+            }
             Taps alt;
             std::vector<float> lv2, hv2;
             bool haveAlt = false;
-            if (usePrev) haveAlt = trainFF(view, fsLv, alt);
+            if (kind == 0) { alt = tp; haveAlt = true; }
+            else if (kind == 2) haveAlt = trainFF(view, fsLv, alt);
             else {
                 std::vector<float> selfLv;
                 levelsFromPath(fsLv, psym, hv, tp.B, selfLv);
                 haveAlt = trainDFE(view, view, fsLv, selfLv, lv, 1e-4, alt);
             }
             if (haveAlt) {
-                const double snr2 = equalize(view, fsLv, alt, nullptr, lv2, hv2);
+                const float* h2 = (usePrev && alt.B > 0 && prevLv.size() >= (size_t)kFieldSyms) ? &prevLv[(size_t)(kFieldSyms - alt.B)] : nullptr;
+                Taps te;
+                const double snr2 = kind == 0 ? equalizeTrack(view, fsLv, alt, h2, lv2, hv2, te) : equalize(view, fsLv, alt, h2, lv2, hv2);
                 if (snr2 >= 9.0) {
                     FieldDecoder keep = dec;
                     dec = backup;
@@ -1599,12 +1907,15 @@ struct Core {
                     const int np2 = dec.decode(lv2d.data(), out2.data(), &st2, psym2.data());
                     if (st2.rsFailed < st.rsFailed) {
                         secondTry = true;
+                        if (kind == 0) trackWon = true;
                         st = st2; np = np2; out = std::move(out2); psym = std::move(psym2); lv = std::move(lv2); hv = std::move(hv2); tp = alt; eqLast = alt;
                         snrAvg = snr2; measureData();
                     } else dec = keep;
                 }
             }
         }
+        if (trackWon) { trackOn = true; trackClean = 0; }
+        else if (trackOn) { if (st.segments > 0 && st.rsFailed == 0) { if (++trackClean >= 200) trackOn = false; } else trackClean = 0; }
         tVit += now() - tM2;
         stRetry.stop();
         DECT2_STAGE("atsc.stats");
@@ -1652,7 +1963,7 @@ struct Core {
         if (np > 0 && cb) {
             const double secs = (double)np * 0.0000774;   // one packet per data segment: 832 symbols / 10.76 MHz
             mh.feed(out.data(), (size_t)np);
-            cb(out.data(), (size_t)np, secs);
+            deliver(out.data(), (size_t)np, secs);
             tsFlow = 6;
         } else if (tsFlow > 0) tsFlow--;
         publishDec(true, &st);
@@ -1723,6 +2034,8 @@ bool AtscReceiver::telemetry(AtscTelemetry& out, uint64_t lastSeq) {
     out.snrDb = d.snr; out.dataSnrDb = d.dataSnr; out.segErrorRate = d.segErr; out.eqTrained = d.eqTrained;
     out.eqTaps = d.taps; out.levels = d.levels;
     out.mhPresent = d.mh.present; out.mhPid = d.mh.pid; out.mhSlotShare = d.mh.slotShare;
+    out.decodeLoad = d.load;
+    out.packetsDropped = p_->c.packetsDropped.load();
     out.seq = seq;
     return true;
 }

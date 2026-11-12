@@ -67,6 +67,9 @@ void receiverTab(App& a) {
         row("fields decoded", "%llu", (unsigned long long)at.fields);
         row("Reed-Solomon", "%llu clean, %llu corrected, %llu failed", (unsigned long long)at.rsClean, (unsigned long long)at.rsCorrected, (unsigned long long)at.rsFailed);
         row("lock losses", "%llu (field sync misses %llu)", (unsigned long long)at.lockLosses, (unsigned long long)at.fieldSyncMisses);
+        row("decoder load", "%.0f%% of real time%s", 100 * at.decodeLoad, at.fieldsDropped ? "" : "  (no field dropped)");
+        if (at.fieldsDropped || at.packetsDropped)
+            row("dropped", "%llu fields (decoder too slow), %llu packets (player or recorder too slow)", (unsigned long long)at.fieldsDropped, (unsigned long long)at.packetsDropped);
         return;
     }
     subNav("rx", a.subRx, {"Sync", "Signalling", "FEC", "Frame map", "Channel"});

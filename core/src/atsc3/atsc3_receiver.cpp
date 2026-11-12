@@ -255,21 +255,24 @@ void Atsc3Receiver::pushIp(const uint8_t* p, size_t n) {
 
 void Atsc3Receiver::onUdp(const UdpDatagram& d) {
     if (d.dstIp == kLlsAddress && d.dstPort == kLlsPort) {
-        auto t = parseLls(d.payload.data(), d.payload.size());
-        if (!t.ok) return;
+        // a station that signs its signalling (A/360) sends its tables inside a SignedMultiTable: every table in it counts
+        const auto tables = parseLlsAll(d.payload.data(), d.payload.size());
         bool start = false;
         {
             std::lock_guard<std::mutex> lk(mu_);
-            st_.llsTables++;
-            if (t.tableId == 4) { alerts_ = parseAeat(t.xml); return; }
-            if (t.tableId != 1) return;
-            lls_[t.groupId] = t;
-            services_.clear();
-            for (auto& g : lls_) services_.insert(services_.end(), g.second.slt.services.begin(), g.second.slt.services.end());
-            start = selected_ >= 0 && !routeStarted_;
-            if (selected_ < 0 && autoSelect_) {
-                for (auto& sv : services_)
-                    if (sv.category == 1 && !sv.hidden && sv.slsProtocol == 1) { selected_ = sv.serviceId; start = true; break; }
+            if (d.payload.size() >= 4 && d.payload[0] == 0xFE) st_.llsSigned++;
+            for (const auto& t : tables) {
+                st_.llsTables++;
+                if (t.tableId == 4) { alerts_ = parseAeat(t.xml); continue; }
+                if (t.tableId != 1) continue;
+                lls_[t.groupId] = t;
+                services_.clear();
+                for (auto& g : lls_) services_.insert(services_.end(), g.second.slt.services.begin(), g.second.slt.services.end());
+                start = start || (selected_ >= 0 && !routeStarted_);
+                if (selected_ < 0 && autoSelect_) {
+                    for (auto& sv : services_)
+                        if (sv.category == 1 && !sv.hidden && sv.slsProtocol == 1) { selected_ = sv.serviceId; start = true; break; }
+                }
             }
         }
         if (start) startRoute();
@@ -358,7 +361,12 @@ bool Atsc3Receiver::serviceReady() const { std::lock_guard<std::mutex> lk(mu_); 
 std::string Atsc3Receiver::mpd() const { std::lock_guard<std::mutex> lk(mu_); return route_ ? route_->mpd() : std::string(); }
 std::vector<RouteComponent> Atsc3Receiver::components() const { std::lock_guard<std::mutex> lk(mu_); return route_ ? route_->components() : std::vector<RouteComponent>(); }
 FrameInfo Atsc3Receiver::frameInfo() const { std::lock_guard<std::mutex> lk(mu_); return info_; }
-ReceiverStats Atsc3Receiver::stats() const { std::lock_guard<std::mutex> lk(mu_); return st_; }
+ReceiverStats Atsc3Receiver::stats() const {
+    std::lock_guard<std::mutex> lk(mu_);
+    ReceiverStats s = st_;
+    if (route_) { s.slsObjects = route_->slsObjects(); s.slsTables = route_->slsTables(); }
+    return s;
+}
 
 } // namespace atsc3
 } // namespace dect2
