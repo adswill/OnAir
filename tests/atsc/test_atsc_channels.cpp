@@ -298,15 +298,38 @@ static std::vector<Case> cases() {
 
 // thresholds the receiver must keep (dB, 1 dB grid; -1 = must decode at the top SNR at all). Measured on the CI runner, see docs/ATSC-4.0.md.
 struct Guard { const char* name; double maxThreshold; };
+// Each is the 4.0 figure plus 2 dB (the cases without a guard do not decode at 32 dB yet, or are diagnostic).
 static const Guard kGuards[] = {
-    {"AWGN, 10 Msps", 16},
+    {"AWGN, 10 Msps", 17},
+    {"burst noise 165 us at -5 dB, 10 Hz", 17},
+    {"carrier 10 dB below the signal at +1.2 MHz", 19},
+    {"adjacent DTV +6 MHz at D/U -20 dB, 20 Msps 8-bit", 17},
+    {"adjacent DTV +6 MHz at D/U -33 dB, 20 Msps", 17},
+    {"A/74 5.6 echo -30 us -7.0 dB", 19},
+    {"A/74 5.6 echo -15 us -5.0 dB", 20},
+    {"A/74 5.6 echo -10 us -3.0 dB", 23},
+    {"A/74 5.6 echo +20 us -2.0 dB", 25},
+    {"A/74 5.6 echo +30 us -3.0 dB", 23},
+    {"A/74 5.6 echo +40 us -4.0 dB", 22},
+    {"A/74 R.1 0.5 us, paths 2+3 at 7 dB, 2 Hz", 18},
+    {"A/74 R.1 2.0 us, paths 2+3 at 7 dB, 2 Hz", 18},
+    {"A/74 R.1 0.5 us, paths 2+3 at 3 dB, 2 Hz", 20},
+    {"A/74 R.1 2.0 us, paths 2+3 at 3 dB, 2 Hz", 21},
+    {"6.500 Msps 8-bit, +38 kHz, +30 ppm", 17},
+    {"7.500 Msps 8-bit, +38 kHz, +30 ppm", 17},
+    {"8.000 Msps 8-bit, +38 kHz, +30 ppm", 17},
+    {"9.143 Msps 8-bit, +38 kHz, +30 ppm", 17},
+    {"10.000 Msps 8-bit, +38 kHz, +30 ppm", 17},
+    {"12.500 Msps 8-bit, +38 kHz, +30 ppm", 17},
+    {"20.000 Msps 8-bit, +38 kHz, +30 ppm", 17},
 };
 
-// ---- a radio in real time: the receiver does not block, the feed is paced to the signal, and the player stalls for 150 ms every 2 s
+// ---- a radio in real time: the receiver does not block, the feed is paced to the signal, and the player stalls for 150 ms now and then.
+// The channel: a -10 us pre-echo at -3 dB plus a 2 Hz R.1 pair at 3 dB (both decode in the blocking runs), 24 dB SNR.
 static int paced() {
     const double rate = 10e6, secs = 6.0;
-    auto x = withPaths(rate, secs, {{0, 0, 0, 0}, {-1.8, 8, 125, 0}, {0.15, 3, 80, 0}, {1.8, 4, 45, 0}, {5.7, 3, 0, 5.0}, {39.8, 12, 90, 0}});
-    addNoise(x, rate, 26, power(x), 3);
+    auto x = withPaths(rate, secs, {{0, 0, 0, 0}, {-10.0, 3, 30, 0.05}, {0.5, 9, 0, 0.05}, {0.5, 9, 0, 2.0}});
+    addNoise(x, rate, 24, power(x), 3);
     AtscReceiver rx;
     rx.configure(rate);
     rx.setBlocking(false);
@@ -330,7 +353,7 @@ static int paced() {
     AtscTelemetry t;
     rx.telemetry(t, 0);
     const double possible = (secs - 0.4) * kPktPerSec;
-    printf("paced, R2.2 #2 at 26 dB, player stalls 150 ms every 80 calls: good %.1f %% (%zu), flagged %zu, fields dropped %llu, packets dropped %llu, "
+    printf("paced, -10 us -3 dB echo + R.1 pair at 24 dB, player stalls 150 ms every 80 calls: good %.1f %% (%zu), flagged %zu, fields dropped %llu, packets dropped %llu, "
            "lock losses %llu, decoder load %.2f%s%s\n",
            100.0 * (double)good / possible, (size_t)good, (size_t)flagged, (unsigned long long)t.fieldsDropped, (unsigned long long)t.packetsDropped,
            (unsigned long long)t.lockLosses, t.decodeLoad, getenv("ATSC_OLDDROP") ? "  [ATSC_OLDDROP]" : "", getenv("ATSC_SYNCCB") ? "  [ATSC_SYNCCB]" : "");

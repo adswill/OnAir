@@ -1218,7 +1218,7 @@ struct Core {
                 dec.reset();
                 cleanFields = 0; havePrev = false;
                 tsFlow = 0;
-                if (full) { eqLast = Taps(); preD = 0; postD = 0; snrAvg = 0; dataSnrAvg = 0; segErr = 0; gapPending = false; }
+                if (full) { eqLast = Taps(); preD = 0; postD = 0; trackOn = false; trackClean = 0; snrAvg = 0; dataSnrAvg = 0; segErr = 0; gapPending = false; }
                 else gapPending = true;
             }
             if (!j.s.empty()) runJob(j);
@@ -1285,6 +1285,8 @@ struct Core {
     int preD = 0;   // a pre-echo canceller for an earlier path this many symbols before the strongest is in use
     unsigned farPreTick = 0;
     int postD = 0;   // a post-echo canceller for a later path this many symbols after the strongest is in use
+    bool trackOn = false;   // the equaliser follows the channel inside each field (a moving echo was seen)
+    int trackClean = 0;
     unsigned farPostTick = 0;
 
     static float dotf(const float* a, const float* b, int n) {
@@ -1595,6 +1597,92 @@ struct Core {
         return 10.0 * std::log10(25.0 / std::max(mse, 1e-6));
     }
 
+    // equalize() with taps that follow a channel changing inside the field (a moving echo: A/74 R.1 and R2 turn a path at up to 5 Hz, half a
+    // radian over one field). After every segment the feed-forward and feedback taps and the bias take a normalised LMS step from that
+    // segment's errors against the decisions (every fourth symbol: the steps average over about twenty segments, 1.8 ms). Portable code, one
+    // segment at a time; used only while the channel needs it. `tpOut`: the taps at the end of the field.
+    double equalizeTrack(const View& v, const float* fsLv, const Taps& tp0, const float* hist, std::vector<float>& lv, std::vector<float>& hv, Taps& tpOut) {
+        Taps tp = tp0;
+        const int L = tp.L(), B = tp.B;
+        static const float syncLv[4] = {5, -5, -5, 5};
+        lv.assign((size_t)kFieldSyms, 0.f);
+        hv.assign((size_t)kFieldSyms + B, 0.f);
+        if (hist && B) for (int j = 0; j < B; j++) hv[(size_t)j] = hist[j];
+        std::vector<float> xr((size_t)kFieldSyms + L - 1), wr(L), ffo((size_t)kFieldSyms);
+        for (int k = 0; k < L; k++) wr[k] = tp.ff[L - 1 - k];
+        const int64_t first = v.f0 + kNFf - (L - 1);
+        for (size_t k = 0; k < xr.size(); k++) xr[k] = v.at(first + (int64_t)k);
+        double px = 0; size_t npx = 0;
+        for (size_t k = 0; k < xr.size(); k += 7) { px += (double)xr[k] * xr[k]; npx++; }
+        px /= (double)std::max<size_t>(1, npx);
+        static const double muS = getenv("ATSC_TRACKMU") ? atof(getenv("ATSC_TRACKMU")) : 0.04;
+        const float mu = (float)(muS / std::max(1e-6, L * px + B * 21.0));
+        constexpr int kG = 4;
+        std::vector<float> fbAcc, fbs;
+        if (B) {
+            fbAcc.assign((size_t)kFieldSyms + B + kG, 0.f);
+            if (hist) for (int j = 0; j < B; j++)
+                for (int m = 0; m < B; m++) { const int i = j + 1 + m - B; if (i >= 0 && i < B) fbAcc[(size_t)i] += tp.fb[m] * hist[j]; }
+            fbs.assign((size_t)kG * B, 0.f);
+        }
+        auto rows = [&]() { for (int k = 0; k < kG; k++) for (int m = 0; m < B; m++) fbs[(size_t)k * B + m] = m + k < B ? tp.fb[(size_t)(m + k)] : 0.f; };
+        if (B) rows();
+        double mse = 0; int nm = 0;
+        auto decide = [&](int i, float y) {
+            float dec;
+            if (i < 728) dec = fsLv[i];
+            else if (i % kSegSyms < 4) dec = syncLv[i % kSegSyms];
+            else dec = quant8(y);
+            if (i >= std::max(B, 8) && i < 728) { const double e = y - fsLv[i]; mse += e * e; nm++; }
+            lv[(size_t)i] = y;
+            hv[(size_t)B + i] = dec;
+            return dec;
+        };
+        std::vector<float> gw(L), gf(B);
+        for (int sg = 0; sg < kFieldSegs; sg++) {
+            const int i0 = sg * kSegSyms;
+            convCorr(&xr[(size_t)i0], wr.data(), &ffo[(size_t)i0], 1, kSegSyms, L);
+            const float* fbt = tp.fb.data();
+            for (int i = i0; i < i0 + kSegSyms; i += kG) {
+                const float b0 = ffo[(size_t)i] + tp.bias, b1 = ffo[(size_t)i + 1] + tp.bias, b2 = ffo[(size_t)i + 2] + tp.bias, b3 = ffo[(size_t)i + 3] + tp.bias;
+                if (!B) { decide(i, b0); decide(i + 1, b1); decide(i + 2, b2); decide(i + 3, b3); continue; }
+                const float* c = &fbAcc[(size_t)i];
+                const float d0 = decide(i, b0 + c[0]);
+                const float d1 = decide(i + 1, b1 + c[1] + d0 * fbt[0]);
+                const float d2 = decide(i + 2, b2 + c[2] + d0 * fbt[1] + d1 * fbt[0]);
+                const float d3 = decide(i + 3, b3 + c[3] + d0 * fbt[2] + d1 * fbt[1] + d2 * fbt[0]);
+                float* a = &fbAcc[(size_t)i + kG];
+                const float* f0 = &fbs[0];
+                const float* f1 = &fbs[(size_t)B];
+                const float* f2 = &fbs[(size_t)2 * B];
+                const float* f3 = &fbs[(size_t)3 * B];
+                for (int m = 0; m < B; m++) a[m] += (d3 * f0[m] + d2 * f1[m]) + (d1 * f2[m] + d0 * f3[m]);
+            }
+            // the LMS step from this segment (every fourth symbol, a different phase each segment)
+            std::fill(gw.begin(), gw.end(), 0.f);
+            std::fill(gf.begin(), gf.end(), 0.f);
+            double gb = 0; int ng = 0;
+            for (int t = i0 + (sg & 3); t < i0 + kSegSyms; t += 4) {
+                const float e = lv[(size_t)t] - hv[(size_t)B + t];
+                if (!(std::fabs(e) < 3.f)) continue;   // a wild sample (a burst): no step from it
+                const float* xx = &xr[(size_t)t];
+                for (int k = 0; k < L; k++) gw[k] += e * xx[k];
+                const float* hh = &hv[(size_t)t];   // hv[B + t - 1 - m] for m = 0 .. B-1 is hh[B - 1 - m]
+                for (int m = 0; m < B; m++) gf[m] += e * hh[B - 1 - m];
+                gb += e; ng++;
+            }
+            if (!ng) continue;
+            for (int k = 0; k < L; k++) wr[k] -= mu * gw[k];
+            for (int m = 0; m < B; m++) tp.fb[(size_t)m] -= mu * gf[m];
+            tp.bias -= (float)(0.04 * gb / ng);
+            if (B) rows();
+        }
+        for (int k = 0; k < L; k++) tp.ff[L - 1 - k] = wr[k];
+        tpOut = tp;
+        mse /= std::max(1, nm);
+        return 10.0 * std::log10(25.0 / std::max(mse, 1e-6));
+    }
+
     // the symbol levels of a decoded field: known field sync, known segment syncs, trellis path elsewhere
     void levelsFromPath(const float* fsLv, const std::vector<uint8_t>& psym, const std::vector<float>& hvDec, int B, std::vector<float>& out) {
         static const float syncLv[4] = {5, -5, -5, 5};
@@ -1650,7 +1738,13 @@ struct Core {
         stFit.stop();
         DECT2_STAGE_VAR(stEq, "atsc.eq.filter");
         const double tM1 = now();
-        if (trained) snr = equalize(view, fsLv, tp, (usePrev && tp.B) ? &prevLv[(size_t)(kFieldSyms - tp.B)] : nullptr, lv, hv);
+        static const bool noTrack = getenv("ATSC_OLDDROP") != nullptr || getenv("ATSC_NOTRACK") != nullptr;
+        bool trackedNow = false;
+        if (trained) {
+            const float* h0 = (usePrev && tp.B) ? &prevLv[(size_t)(kFieldSyms - tp.B)] : nullptr;
+            if (trackOn && !noTrack && !shed) { Taps te; snr = equalizeTrack(view, fsLv, tp, h0, lv, hv, te); trackedNow = true; }
+            else snr = equalize(view, fsLv, tp, h0, lv, hv);
+        }
         if (!trained || snr < 9.0) {   // the plain equaliser does not fit: try the decision feedback one on the sync symbols alone (strong echoes)
             Taps tf;
             const std::vector<float> none;
@@ -1778,14 +1872,23 @@ struct Core {
         // trained on: a field with 10 % or more of its segments lost is equalised again with taps solved from its own decoded symbols (3.9: the
         // plain equaliser only, and only from 20 %), then, while still 20 % or more are lost, with the plain one. ATSC_OLDDROP=1: 3.9's order.
         static const bool oldRetry = getenv("ATSC_OLDDROP") != nullptr;
-        for (int attempt = 0; attempt < 2 && !shed && st.segments > 0; attempt++) {
-            const bool selfDfe = oldRetry ? !usePrev : (attempt == 0);
-            if (oldRetry && attempt > 0) break;
-            if (oldRetry ? !(st.rsFailed * 5 > st.segments) : attempt == 0 ? !(st.rsFailed * 10 > st.segments) : !(st.rsFailed * 5 > st.segments)) break;
+        // the order of the other tries (4.0): the same taps following the channel inside the field (when that was not already the first try),
+        // taps solved from the field's own decoded symbols, the plain equaliser. A try that loses fewer segments replaces the field's result.
+        // While the tracking equaliser wins, it becomes the first try of the next fields (trackOn); after 200 fields that decode clean it stops.
+        bool trackWon = false;
+        for (int attempt = 0; attempt < 3 && !shed && st.segments > 0; attempt++) {
+            int kind;   // 0 tracking, 1 self-trained decision feedback, 2 plain
+            if (oldRetry) { if (attempt > 0) break; kind = usePrev ? 2 : 1; if (!(st.rsFailed * 5 > st.segments)) break; }
+            else {
+                kind = attempt;
+                if (kind == 0 && (trackedNow || noTrack || !trained)) continue;
+                if (kind < 2 ? !(st.rsFailed * 10 > st.segments) : !(st.rsFailed * 5 > st.segments)) break;
+            }
             Taps alt;
             std::vector<float> lv2, hv2;
             bool haveAlt = false;
-            if (!selfDfe) haveAlt = trainFF(view, fsLv, alt);
+            if (kind == 0) { alt = tp; haveAlt = true; }
+            else if (kind == 2) haveAlt = trainFF(view, fsLv, alt);
             else {
                 std::vector<float> selfLv;
                 levelsFromPath(fsLv, psym, hv, tp.B, selfLv);
@@ -1793,7 +1896,8 @@ struct Core {
             }
             if (haveAlt) {
                 const float* h2 = (usePrev && alt.B > 0 && prevLv.size() >= (size_t)kFieldSyms) ? &prevLv[(size_t)(kFieldSyms - alt.B)] : nullptr;
-                const double snr2 = equalize(view, fsLv, alt, h2, lv2, hv2);
+                Taps te;
+                const double snr2 = kind == 0 ? equalizeTrack(view, fsLv, alt, h2, lv2, hv2, te) : equalize(view, fsLv, alt, h2, lv2, hv2);
                 if (snr2 >= 9.0) {
                     FieldDecoder keep = dec;
                     dec = backup;
@@ -1803,12 +1907,15 @@ struct Core {
                     const int np2 = dec.decode(lv2d.data(), out2.data(), &st2, psym2.data());
                     if (st2.rsFailed < st.rsFailed) {
                         secondTry = true;
+                        if (kind == 0) trackWon = true;
                         st = st2; np = np2; out = std::move(out2); psym = std::move(psym2); lv = std::move(lv2); hv = std::move(hv2); tp = alt; eqLast = alt;
                         snrAvg = snr2; measureData();
                     } else dec = keep;
                 }
             }
         }
+        if (trackWon) { trackOn = true; trackClean = 0; }
+        else if (trackOn) { if (st.segments > 0 && st.rsFailed == 0) { if (++trackClean >= 200) trackOn = false; } else trackClean = 0; }
         tVit += now() - tM2;
         stRetry.stop();
         DECT2_STAGE("atsc.stats");
