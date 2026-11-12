@@ -21,6 +21,7 @@
 #include <cstring>
 #include <ctime>
 #include <fstream>
+#include <functional>
 #include <map>
 #include <set>
 #include <sstream>
@@ -73,6 +74,7 @@ struct State {
     std::string status;               // the last export / import message
     double statusAt = -10;
     std::string devArg;               // --workspace
+    std::vector<std::function<void()>> later;   // changes to the list of workspaces: done at the start of the next frame (the frame holds a reference into it)
 } S;
 
 std::string filePath() { return plat::dataDir() + "/workspaces-blocks.txt"; }
@@ -90,7 +92,8 @@ void saveNow() {
 void note(const std::string& s) { S.status = s; S.statusAt = ImGui::GetTime(); }
 
 void freshState() {   // a workspace was switched or loaded: the per-frame bookkeeping starts again
-    S.lastOwner.clear(); S.place.clear(); S.drag.clear(); S.hostedSeen.clear(); S.cog.clear();
+    S.lastOwner.clear(); S.place.clear(); S.drag.clear(); S.hostedSeen.clear(); S.hostedSet.clear(); S.cog.clear();
+    S.hostedApp = nullptr;   // a tool window closed while another workspace (or layout) was shown is not taken for a close of its block
     for (const Block& b : S.all[S.cur].blocks) { S.place.insert(b.id); if (b.tab) S.place.insert(-b.tab); }
 }
 
@@ -687,8 +690,13 @@ void addMenuItems(Workspace& w, ImVec2 at) {
     }
 }
 
+void closeHosted() {
+    if (S.hostedApp) for (const Block& b : cur().blocks) if (bool* f = hostedFlag(*S.hostedApp, b.kind)) *f = false;
+}
+
 void switchTo(int i) {
     if (i < 0 || i >= (int)S.all.size() || i == S.cur) return;
+    closeHosted();   // the old workspace's tool windows close
     S.cur = i;
     freshState();
     markDirty();
@@ -701,17 +709,17 @@ void toolbarRow(Workspace& w) {
     ImGui::SameLine(0, 16 * gUi);
     ImGui::SetNextItemWidth(190 * gUi);
     if (ImGui::BeginCombo("##cvws", w.name.c_str())) {
-        for (int i = 0; i < (int)S.all.size(); i++) { ImGui::PushID(i); if (ImGui::Selectable(S.all[i].name.c_str(), i == S.cur)) switchTo(i); ImGui::PopID(); }
+        for (int i = 0; i < (int)S.all.size(); i++) { ImGui::PushID(i); if (ImGui::Selectable(S.all[i].name.c_str(), i == S.cur)) S.later.push_back([i] { switchTo(i); }); ImGui::PopID(); }
         ImGui::Separator();
         ImGui::TextDisabled("%s", tr("New from a template"));
         for (int t = 0; t < kNumTemplates; t++) {
             ImGui::PushID(100 + t);
-            if (ImGui::Selectable(tr(kTemplateNames[t]))) {
+            if (ImGui::Selectable(tr(kTemplateNames[t]))) S.later.push_back([t] {
                 Workspace n = makeTemplate(t);
                 n.name = uniqueName(S.all, tr(kTemplateNames[t]));
                 S.all.push_back(n);
                 switchTo((int)S.all.size() - 1);
-            }
+            });
             ImGui::PopID();
         }
         ImGui::EndCombo();
@@ -726,8 +734,7 @@ void toolbarRow(Workspace& w) {
         if ((ImGui::Button(tr("Save a copy")) || enter) && S.nameBuf[0]) {
             Workspace c = w;
             c.name = uniqueName(S.all, S.nameBuf);
-            S.all.push_back(c);
-            switchTo((int)S.all.size() - 1);
+            S.later.push_back([c] { S.all.push_back(c); switchTo((int)S.all.size() - 1); });
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -755,9 +762,11 @@ void toolbarRow(Workspace& w) {
         if (!p.empty()) {
             std::ifstream f(p, std::ios::binary);
             std::stringstream ss; ss << f.rdbuf();
-            std::vector<Workspace> got = parseMany(ss.str());
-            for (Workspace& g : got) { g.name = uniqueName(S.all, g.name); S.all.push_back(g); }
-            if (!got.empty()) switchTo((int)S.all.size() - 1);
+            const std::vector<Workspace> got = parseMany(ss.str());
+            if (!got.empty()) S.later.push_back([got] {
+                for (Workspace g : got) { g.name = uniqueName(S.all, g.name); S.all.push_back(g); }
+                switchTo((int)S.all.size() - 1);
+            });
             note(got.empty() ? std::string(tr("Not a workspace file: ")) + p : std::string(tr("Imported ")) + std::to_string(got.size()));
         }
     }
@@ -768,10 +777,14 @@ void toolbarRow(Workspace& w) {
     if (ImGui::BeginPopup("##cvdel")) {
         ImGui::Text(tr("Delete the workspace \"%s\"?"), w.name.c_str());
         if (ImGui::Button(tr("Delete it"))) {
-            S.all.erase(S.all.begin() + S.cur);
-            S.cur = 0;
-            freshState();
-            markDirty();
+            S.later.push_back([] {
+                if (S.all.size() < 2) return;
+                closeHosted();
+                S.all.erase(S.all.begin() + S.cur);
+                S.cur = 0;
+                freshState();
+                markDirty();
+            });
             ImGui::CloseCurrentPopup();
         }
         ImGui::SameLine();
@@ -899,6 +912,8 @@ void layoutMenuItem(App& a) {
 
 void frame(App& a, ImVec2 disp, float top) {
     load();
+    for (auto& f : S.later) f();
+    S.later.clear();
     Workspace& w = cur();
     for (int id : S.removeQ) removeBlock(a, w, id);
     S.removeQ.clear();
