@@ -87,3 +87,78 @@ For the 400 MHz LMS6, OnAir uses `LMS6-400` from the format page's allowed value
 
 Not tested against the real SondeHub server: this was built while the laptop was on battery, with CI only. The HTTPS path is the same
 one Internet TV uses. The first real upload should be checked on tracker.sondehub.org.
+
+## 2. The radiosonde map
+
+### a. Launch sites: "Site 1" at Bergen
+
+The cause: the sites on the map came only from what the station had learned. `SondeSites::update` (`core/src/sonde/sonde_sites.cpp`)
+makes a site from the first low, climbing fix of a sonde and named it `"Site " + id`. The user could rename it with a click in the Sites
+view, but OnAir had no list of real launch sites, so every site started as "Site 1", "Site 2" and so on. The map showed nothing else.
+
+4.0:
+- There is a built-in list of launch sites, `core/src/sonde/sonde_sites_known.cpp`. It has 885 stations: the stations in NOAA NCEI's
+  Integrated Global Radiosonde Archive version 2 station list that have soundings in 2025 or later. That list is a US Government work,
+  in the public domain. It is cited in the header, in THIRD_PARTY.md and in the in-app Credits: Durre et al. 2016, doi:10.7289/V5X63K0Q,
+  https://www.ncei.noaa.gov/data/integrated-global-radiosonde-archive/doc/igra2-station-list.txt. `tools/gen_sonde_sites.py`
+  regenerates it. The names are the archive's names (at most 30 characters, put in title case). Some are truncated or spelled the
+  archive's way, for example "Oberschleia Heim (Aerology)" for Oberschleissheim.
+- The user's own file is `<data folder>/sonde-sites-known.txt`, one site per line: `name; latitude; longitude[; altitude]`. Commas or
+  tabs also work, and `#` starts a comment. Within 15 km a user site is named before a built-in one, and on the map it hides a built-in
+  site within 2 km.
+- A new learned site takes the name of the nearest known site within 15 km (first fixes are often a few km from the launch site). The
+  learned launch clock per site is unchanged. A 3.9 sites file is renamed when it is loaded: a site still called "Site <its id>" takes the
+  known name ("Site 1" at Bergen becomes "Bergen"). A name the user gave is kept.
+- The map shows every launch site in view. A learned site is a filled triangle with its name, plus its landing heat map. A known site
+  OnAir has not heard yet is an outline triangle, with its name from zoom 6. Far out, at most 150 are drawn (400 from zoom 6), thinned
+  evenly. A learned site hides the known site it sits on. The Sites view has an "All known launch sites" switch and the count.
+
+### b. My station and the chase car
+
+The map draws the receiver as a small house labelled with the callsign: the SondeHub uploader callsign, or else the APRS-IS one. The
+position is the location set in View > Map. The "me / prediction" button on the map sets the position source:
+- Location set in View > Map (default),
+- GPS (NMEA): a serial GPS (raw 9600 baud on macOS and Linux; Windows `\\.\COM3`) or an NMEA log file, read through the RFI
+  mapper's GGA/RMC parser. GGA also gives the altitude,
+- gpsd: TCP, port 2947 by default, `?WATCH={"enable":true,"json":true}`, TPV reports (mode 2/3, `altMSL`).
+
+With a fix younger than 10 s, the station is drawn as a chase car (a ringed dot, "<callsign> (GPS)"), so the chase car and the sonde
+are on the same map. The same live position is used for SondeHub's station record. "Chase car" in the SondeHub entry sends it every 30 s
+as `mobile: true`. Code: `core/include/dect2/sonde/sonde_chase.h`, `app/sonde/sonde_chase_ui.cpp`. Before 4.0, no screen read a GPS
+for the receiver position: the RFI mapper had its own NMEA reader, and the GNSS mode only offers its fix once in the first-start helper.
+
+### c. Predicted flight path and landing
+
+OnAir's own landing estimate (the cross at the end of a dashed line while falling, `sonde_land.h`) is unchanged. In the "me /
+prediction" popup, "Online flight prediction of the selected sonde" (off by default) asks Tawhiri, the SondeHub predictor at
+`https://api.v2.sondehub.org/tawhiri` (API: tawhiri.readthedocs.io, `standard_profile`). It asks at most once a minute for each sonde, and
+only for the selected one. The request is built as ChaseMapper builds it:
+- climbing: the measured climb rate (at least 0.1 m/s) up to the assumed burst altitude (30 km by default; 100 m above the sonde when it
+  is already higher), then the sea-level descent rate set in the popup (5 m/s by default),
+- falling: the burst 1 m above the sonde (Tawhiri needs the burst above the start), and the sea-level rate worked out from the measured
+  fall with OnAir's atmosphere model: v * exp(-h / 14 km).
+
+The path is drawn dotted in amber, with the predicted burst as a ring and the predicted landing as a cross, each labelled "predicted",
+plus the landing time. A line at the bottom of the map says "Prediction (Tawhiri, SondeHub predictor), N s old: a forecast from wind
+models, not a measurement", or the predictor's error. The popup shows the last request URL. The request sends the sonde's position,
+altitude, rates and time, nothing about the station.
+
+### Tests
+
+- `tests/sonde/test_sonde_sites.cpp` (ctest `sonde_sites`) checks the built-in list (Lindenberg, WMO 10393), and that a launch 2.4 km
+  from Bergen is called Bergen. It checks that a site with no known site near keeps "Site 2", that a 3.9 file has its placeholder renamed
+  and the user's own name kept, and that the user's file is read (bad lines skipped) and wins.
+- `tests/sonde/test_sonde_map_overlay.cpp` (ctest `sonde_map_overlay`) checks the marks:
+  - the ten German sites in a box over Germany, nothing outside the box,
+  - a learned Bergen hiding the known one,
+  - the station with its callsign, the chase car with a live fix, a station outside the view,
+  - a view across the 180 degree line (Shemya and a user site at 170 W),
+  - the world view thinned to 100 with user sites first, and unthinned.
+
+  It checks the Tawhiri requests for climbing, above the burst, slow, falling (sea-level rate), and without speed, position or time. It
+  checks the exact URL (longitude 0-360, RFC 3339). It parses an answer (burst at 359.9 E back to -0.1, the landing point and time) and
+  an error answer, and rejects junk. For the chase GPS it checks NMEA GGA with altitude and satellites, RMC, RMC without a fix, a bad
+  checksum, and gpsd TPV in 3D and 2D, mode 1 and other reports.
+
+Simulated and offline only: neither the predictor nor gpsd was called during the tests. The map drawing was compiled but not looked at
+on screen (the laptop was on battery, no local app build).
