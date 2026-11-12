@@ -42,13 +42,16 @@ A2 found POCSAG 3 dB better behind a narrower filter and FLEX collapsing there (
 two per speed; its signal / lock flags are OR-ed. `setPocsagSecondPath(false)` switches it off. CPU: the POCSAG-only pipeline once more (about one more FIR at 96 kS/s and the
 searches).
 
-| POCSAG (SNR in 25 kHz, 6 trials) | -3 / -4.5 / -6 dB before | 9 kHz | 7 kHz (kept) | 6 kHz |
-|---|---|---|---|---|
-| AWGN | 70 / 29 / 6 % | | 77 / 67 / 17 % | 81 / 70 / 34 % |
-| 8 kHz | | 74 / 49 / 15 % | | |
+| POCSAG AWGN (SNR in 25 kHz, 6 trials) | -3 dB | -4.5 dB | -6 dB |
+|---|---|---|---|
+| before (one decoder, 10 kHz) | 70 % | 29 % | 6 % |
+| second path 9 kHz | 74 % | 43 % | 10 % |
+| second path 8 kHz | 74 % | 49 % | 15 % |
+| second path 7 kHz (kept) | 77 % | 67 % | 17 % |
+| second path 6 kHz | 81 % | 70 % | 34 % |
 
 About 1.3 dB at the 50 % point with 7 kHz (-3.9 to -5.0 dB). 6 kHz is better still (1.5 dB) but with a 3.1 kHz carrier error the second path hears almost nothing (the filter edge
-is in the upper tone; the first decoder is unchanged and decodes it as before, so nothing is lost: with +3.1 kHz at 0 dB 62 % before, 77 % after). 7 kHz keeps a 2 kHz margin.
+is in the upper tone; the first decoder is unchanged and decodes it as before, so nothing is lost: with +3.1 kHz at 0 dB the first decoder alone had 62 % and the guard row with both is 100 %). 7 kHz keeps a 2 kHz margin.
 FLEX is unaffected (it is not decoded by the second path; 67 % at 8 dB with and without). Noise-only: 0 units. 16 pager tests pass (`pager_rx`, `pager_impair`,
 `pager_flexreal`, `pager_sens`, ...). Guard: `sens40a3` (POCSAG -4.5 dB with 0 and 50 ppm, 0 dB with +3.1 kHz, FLEX 8 dB).
 
