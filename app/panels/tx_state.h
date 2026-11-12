@@ -6,6 +6,7 @@
 #include "dect2/tx/tx.h"
 #include "dect2/tx/tx_iqfile.h"
 #include "dect2/tx/tx_control.h"
+#include "dect2/tx/tx_params.h"
 #include <memory>
 #include <atomic>
 #include <future>
@@ -17,16 +18,9 @@ namespace txui {
 
 using namespace dect2;
 
-// One advanced parameter (tx_params.cpp has the table): where it sits in the panel, what it is called, its range and default, and where its value goes
-enum class Sec { Modulation, Audio, Filters, Output, Timing };
-enum class PType { Float, Int, Bool, Choice };
-enum class Bind { Opt, ToneHz, Deviation, Preemph, Kind, Variant };   // Opt: TxRequest::opt[key]; the others are the request's own fields
-struct PDef {
-    const char* key = ""; Sec sec = Sec::Modulation; PType type = PType::Float; const char* label = ""; const char* tip = "";
-    double def = 0, lo = 0, hi = 1; const char* fmt = "%.2f"; const char* when = nullptr; Bind bind = Bind::Opt;
-    std::vector<const char*> choices; double base = 0;   // Choice: the value sent is base + the chosen index
-    bool hex = false;                                     // Int: shown as 0xNN (a sync word)
-};
+// The parameters of a mode come from the core table (dect2/tx/tx_params.h); tx_params.cpp draws them: the Simple rows in "What to send",
+// the Advanced rows in their groups. A text row edits the TxUi buffer of its field (callsign, text, ...), a number row s.pv[key].
+using PDef = TxParamDef;
 
 struct TxUi {
     TxSession session;
@@ -81,12 +75,22 @@ struct TxUi {
     bool devAutoStart = false;               // dev flag --txdry: start the test (no RF) at the first frame
     float meterPeak = 0, meterRms = 0;       // smoothed meters of what is shown
     // the advanced parameters of the chosen signal
-    std::vector<PDef> params;                // its table
+    std::vector<PDef> params;                // its table (a copy of txParams for the mode and context)
     std::string paramsKey, pvMode;           // what the table was built for; the signal the values belong to
     std::map<std::string, double> pv;        // the values by key
     char presetName[32] = {}, presetNew[32] = {};
     bool advOpen = false;                    // the Advanced block is open
     bool linkRx = false;                     // the transmit frequency follows the receiver's
+    // the transmit flow (tx_panel.cpp): Idle -> Armed -> On air -> Done. Arm is a separate, deliberate step; Transmit only works while armed.
+    bool armed = false;                      // armed by the user (never saved); disarmed on Stop, on a mode or radio change, and after Done
+    double armedAt = 0;                      // ImGui time of the arming (an armed transmitter disarms itself after kArmTimeoutSec)
+    bool doneShown = false;                  // the last transmission ended (by itself or Stop): "Done" until the next arm
+    std::string doneWhy;                     // how it ended
+    double doneAt = 0;
+    bool wasRunning = false;                 // a session ran last frame (to see one end by itself)
+    struct Sent { std::string utc, mode, what, ended; double mhz = 0, seconds = 0; bool rf = false; };
+    std::vector<Sent> history;               // what was sent this run of the program, newest first (the TX log)
+    Sent current;                            // the running one
     bool pttHold = false;                    // voice: transmit only while the PTT button is held
     bool pttDown = false;
     // full control (docs/TX-CONTROL-3.8.md): the radio's analogue filter (0 = automatic), the typed gain stages of a SoapySDR radio, the schedule
@@ -155,6 +159,7 @@ int familyOf(const TxModeSpec& m);                     // engine family of a tra
 const TxModeSpec* rxMode(const App& a);                // the transmit mode of the receiver's current selection
 void ensureTxMode(App& a, TxUi& s);                    // first use: follow the receiver's mode once
 void chooseMode(App& a, TxUi& s, const TxModeSpec& m); // a mode chosen for transmitting
+SynthConfig txSynthFromRx(const TxModeSpec& m, const SynthConfig& rx);   // what of the receiver's test-signal settings a transmitter takes
 std::vector<int> txRadios(const App& a);               // indices of the radios that can transmit
 int rxHolder(const DeviceInfo& d);                     // the receiver holding a radio (0 none)
 void release(TxUi& s);                                 // gives the claimed radio back
@@ -175,10 +180,18 @@ bool isFtxId(const std::string& id);
 bool isKbdId(const std::string& id);
 bool isTvId(const std::string& id);
 void payloadPanel(TxUi& s, const TxModeSpec& mode, bool running);   // the signal's own options (tx_payload_ui.cpp)
+// one row of the table that the mode draws with its own widget (tx_payload_ui.cpp): the audio input, the multiplex, a node identity, the KA* panels ...
+void customRow(TxUi& s, const TxModeSpec& mode, const PDef& d, bool running);
+TxParamCtx paramCtx(const TxUi& s, const TxModeSpec& m);   // what the table depends on besides the mode (tx_params.cpp)
+void simpleRows(TxUi& s, const TxModeSpec& mode, bool running);   // the Simple rows of the table: what to send (tx_params.cpp)
 const DeviceInfo* bindRadio(App& a, TxUi& s, int& conflict);        // the chosen transmit radio (nullptr: none) and the receiver that holds it
 bool canStart(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode);   // everything needed to press Start is there
 bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, bool carrier);
 void stopTx(App& a, TxUi& s, const char* why);         // stops, gives the radio back, logs why
+constexpr double kArmTimeoutSec = 120;                 // an armed transmitter that is not used disarms itself
+void txArm(TxUi& s, bool on);                          // arm / disarm (tx_panel.cpp); arming sends nothing
+bool txNeedsArm(const TxUi& s);                        // a radio is the destination: Transmit needs Arm first (a test or a file does not)
+void txSessionEnded(TxUi& s, const char* why);         // the TX log entry of the session that just ended, and the Done state
 void destinationPanel(TxUi& s, const TxModeSpec& mode, bool running);   // Radio or IQ file, the folder, the format, the rate and what has been written (tx_ui.cpp)
 void kavbPanel(TxUi& s, bool running);                // KAVB: callsign, file or test stream, profile A to D, FEC profile (kavb_ui.cpp)
 void kawsPanel(TxUi& s, bool running);                // KAWS: callsign, recipient, message, kind, profile, passes, slot timing (app/kaws/kaws_ui.cpp)

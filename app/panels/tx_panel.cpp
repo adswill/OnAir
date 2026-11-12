@@ -1,6 +1,7 @@
 // The transmit panel, in the receiver's own style: a top bar with the run button and the big frequency digits (the same widget as the receiver's), then three
 // panes: the signal list, the Basic block (state, radio, level, what to send, with Advanced folded below it) and the preview. A narrow window (or the pop-out
-// window) stacks them in one scrolling column. Space starts / stops and Esc stops when no text box has the keyboard. Nothing starts by itself.
+// window) stacks them in one scrolling column. Sending is two deliberate steps: ARM, then TRANSMIT (a test or an IQ file needs no arming); a big STOP is always
+// there, and Space or Esc stop (and disarm) when no text box has the keyboard. Space never starts anything. Nothing starts by itself.
 #include "tx_state.h"
 #include "../ui/ui2_internal.h"
 #include "../ui/icons.h"
@@ -36,11 +37,11 @@ void banner(Note kind, const char* text) {
 
 namespace {
 
-enum class State { Idle, Preparing, Transmitting, Test, Carrier };
+enum class State { Idle, Armed, Preparing, Transmitting, Test, Carrier, Done };
 
 State stateOf(const TxUi& s) {
     if (s.pendingStart || s.pendingCarrier) return State::Preparing;
-    if (!s.session.running()) return State::Idle;
+    if (!s.session.running()) return s.armed ? State::Armed : s.doneShown ? State::Done : State::Idle;
     const TxSession::Stats st = s.session.stats();
     if (st.samples == 0) return State::Preparing;
     if (s.sessionDry) return State::Test;
@@ -56,36 +57,16 @@ std::string elapsedText(double sec) {
     return b;
 }
 
-// the big button: accent when it starts, red when it stops
-bool bigButton(const char* lab, bool stop, bool enabled, float w) {
-    const float h = ImGui::GetFrameHeight() * 1.7f;
-    ImGui::BeginDisabled(!enabled);
-    if (stop) {
-        ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.75f, 0.10f, 0.10f, 1));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.90f, 0.15f, 0.15f, 1));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-    } else {
-        ImGui::PushStyleColor(ImGuiCol_Button, pal::accent(0.85f));
-        ImGui::PushStyleColor(ImGuiCol_ButtonHovered, pal::accent(1.f));
-        ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.05f, 0.07f, 0.09f, 1));
-    }
-    const bool hit = ImGui::Button(lab, ImVec2(w, h));
-    ImGui::PopStyleColor(3);
-    ImGui::EndDisabled();
-    return hit;
-}
-
 // Space / Esc: only when no text box wants the keyboard
 void shortcuts(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode) {
     ImGuiIO& io = ImGui::GetIO();
     gSpaceClaimFrame = ImGui::GetFrameCount();   // Space is the transmitter's here, not the receiver's
     if (io.WantTextInput || ImGui::IsPopupOpen("##txnotice") || ImGui::IsPopupOpen("##freqtype")) return;
     const bool running = s.session.running();
-    if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) && (running || s.pendingStart || s.schedArmed)) stopTx(a, s, "(Esc)");
-    else if (ImGui::IsKeyPressed(ImGuiKey_Space, false) && !s.pttHold) {
-        if (running || s.schedArmed) stopTx(a, s, "(Space)");
-        else if (canStart(a, s, radio, conflict, mode)) s.pendingStart = true;
-    }
+    (void)radio; (void)conflict; (void)mode;
+    const bool any = running || s.pendingStart || s.schedArmed || s.armed;
+    if (ImGui::IsKeyPressed(ImGuiKey_Escape, false) && any) { stopTx(a, s, "(Esc)"); txArm(s, false); }
+    else if (ImGui::IsKeyPressed(ImGuiKey_Space, false) && any) { stopTx(a, s, "(Space)"); txArm(s, false); }   // Space stops; it never starts
 }
 
 int gBarFrame = -1;   // the frame the TX top bar was drawn in (the new interface); other interfaces get a one-row bar
@@ -115,6 +96,13 @@ void body(App& a, bool inWindow) {
     }
     if (s.pendingCarrier && !running) { s.pendingCarrier = false; if (c.mode && canStart(a, s, c.radio, c.conflict, c.mode)) startTx(a, s, c.radio, c.mode, true); }
     if (s.devAutoStart && c.mode && !running) { s.devAutoStart = false; s.dryRun = true; s.pendingStart = true; }   // dev flag --txdry (no RF)
+    if (s.wasRunning && !running && !s.pendingStart) {   // it ended by itself: one pass done, the message sent, the timeout, or the radio failed
+        s.wasRunning = false;
+        const TxSession::Stats st = s.session.stats();
+        txSessionEnded(s, st.failed ? "(the radio failed)" : "(finished)");
+        s.armed = false;
+    }
+    if (s.armed && !running && !s.pendingStart && ImGui::GetTime() - s.armedAt > kArmTimeoutSec) { s.armed = false; s.info = tr("Disarmed: nothing was sent within two minutes of arming."); }
     shortcuts(a, s, c.radio, c.conflict, c.mode);
 
     const float availW = ImGui::GetContentRegionAvail().x;
@@ -159,62 +147,137 @@ void body(App& a, bool inWindow) {
 
 namespace txui {
 
-// State word and the big button. In a voice signal "Push to talk" turns the button into one that transmits only while it is held.
+bool txNeedsArm(const TxUi& s) { return !noRadio(s); }
+
+void txArm(TxUi& s, bool on) {
+    s.armed = on;
+    if (on) { s.armedAt = ImGui::GetTime(); s.doneShown = false; s.info.clear(); }
+}
+
+void txSessionEnded(TxUi& s, const char* why) {
+    if (s.current.mode.empty()) return;
+    s.current.seconds = std::max(0.0, ImGui::GetTime() - s.startedAt);
+    s.current.ended = why && *why == '(' ? std::string(why).substr(1, std::string(why).size() - 2) : (why ? why : "");
+    s.history.insert(s.history.begin(), s.current);
+    if (s.history.size() > 200) s.history.resize(200);
+    s.current = TxUi::Sent();
+    s.doneShown = true;
+    s.doneWhy = why ? why : "";
+    s.doneAt = ImGui::GetTime();
+}
+
+namespace {
+// a big button of the flow, in its state's colour
+bool flowButton(const char* lab, ImVec4 col, ImVec4 text, bool enabled, float w, float hMul = 1.7f) {
+    const float h = ImGui::GetFrameHeight() * hMul;
+    ImGui::BeginDisabled(!enabled);
+    ImGui::PushStyleColor(ImGuiCol_Button, col);
+    ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(std::min(1.f, col.x * 1.15f + 0.05f), std::min(1.f, col.y * 1.15f + 0.03f), std::min(1.f, col.z * 1.15f + 0.03f), 1));
+    ImGui::PushStyleColor(ImGuiCol_ButtonActive, col);
+    ImGui::PushStyleColor(ImGuiCol_Text, text);
+    const bool hit = ImGui::Button(lab, ImVec2(w, h));
+    ImGui::PopStyleColor(4);
+    ImGui::EndDisabled();
+    return hit;
+}
+const ImVec4 kAmber(0.95f, 0.62f, 0.10f, 1), kOnAir(0.80f, 0.10f, 0.10f, 1), kStopCol(0.70f, 0.06f, 0.06f, 1), kDone(0.25f, 0.62f, 0.35f, 1);
+const ImVec4 kDark(0.05f, 0.07f, 0.09f, 1), kWhite(1, 1, 1, 1);
+
+// how long is left: a one-pass transmission, the timeout timer, or a schedule's next start ("" when it runs until stopped)
+std::string remainingText(const TxUi& s, const TxModeSpec* mode, bool running) {
+    if (!running) return "";
+    const double el = ImGui::GetTime() - s.startedAt;
+    double left = -1;
+    if (!s.loop && !(mode && txModeFinite(*mode))) left = s.onceSeconds - el;
+    const auto tot = s.pv.find("tx.totSec");
+    if (tot != s.pv.end() && tot->second > 0) left = left < 0 ? tot->second - el : std::min(left, tot->second - el);
+    if (mode && txModeFinite(*mode) && left < 0) return tr("until the message is sent");
+    if (left < 0) return tr("until stopped");
+    return std::string(tr("ends in ")) + elapsedText(std::max(0.0, left));
+}
+} // namespace
+
+// The state and the flow: the state word in its colour (Idle grey, Armed amber, On air red, Test blue, Done green), the elapsed time and what is left,
+// then ARM and TRANSMIT as two separate buttons with a STOP that is always there. A test (no RF) or an IQ file starts with one button.
+// In a voice signal "Push to talk" makes TRANSMIT a button that sends only while it is held (once armed).
 void drawStatusHeader(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode) {
     const State st = stateOf(s);
     const bool running = s.session.running();
     const float w = ImGui::GetContentRegionAvail().x;
-    const char* word = st == State::Idle ? tr("Idle") : st == State::Preparing ? tr("Preparing") : st == State::Test ? (s.sessionFile ? "Writing IQ file" : tr("Test (no RF)")) : st == State::Carrier ? tr("Carrier tune") : tr("Transmitting");
-    const ImVec4 col = st == State::Idle ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : st == State::Preparing ? pal::warnAmber() : st == State::Test ? pal::accent() : kRed;
+    const char* word = st == State::Idle ? tr("Idle") : st == State::Armed ? tr("ARMED") : st == State::Preparing ? tr("Preparing")
+                     : st == State::Test ? (s.sessionFile ? tr("Writing IQ file") : tr("Test (no RF)")) : st == State::Carrier ? tr("ON AIR: carrier")
+                     : st == State::Done ? tr("Done") : tr("ON AIR");
+    const ImVec4 col = st == State::Idle ? ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled) : st == State::Armed || st == State::Preparing ? kAmber
+                     : st == State::Test ? pal::accent() : st == State::Done ? kDone : kRed;
     const bool live = st == State::Transmitting || st == State::Carrier;
     const float pulse = live ? 0.5f + 0.5f * (float)std::sin(ImGui::GetTime() * 5.0) : 1.f;
     const ImVec2 p0 = ImGui::GetCursorScreenPos();
-    const float fh = ImGui::GetFrameHeight(), r = fh * 0.28f;
+    const float fh = ImGui::GetFrameHeight(), r = fh * 0.32f;
     ImDrawList* dl = ImGui::GetWindowDrawList();
-    const ImVec2 dc(p0.x + r + 2 * gUi, p0.y + fh * 0.5f);
+    // a band in the state's colour behind the state line, so the state reads from across the room
+    if (st != State::Idle) dl->AddRectFilled(p0, ImVec2(p0.x + w, p0.y + fh + 6 * gUi), ImGui::GetColorU32(ImVec4(col.x, col.y, col.z, live ? 0.18f + 0.10f * pulse : 0.12f)), 4 * gUi);
+    const ImVec2 dc(p0.x + r + 6 * gUi, p0.y + fh * 0.5f + 3 * gUi);
     if (live) dl->AddCircleFilled(dc, r * (1.5f + 0.5f * pulse), ImGui::GetColorU32(ImVec4(col.x, col.y, col.z, 0.25f * pulse)));
     dl->AddCircleFilled(dc, r, ImGui::GetColorU32(col));
-    ImGui::SetCursorScreenPos(ImVec2(p0.x + 2 * r + 12 * gUi, p0.y));
+    ImGui::SetCursorScreenPos(ImVec2(p0.x + 2 * r + 16 * gUi, p0.y + 3 * gUi));
     ImGui::AlignTextToFramePadding();
     ImGui::TextColored(col, "%s", word);
-    if (running) { ImGui::SameLine(0, 12 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text("%s", elapsedText(ImGui::GetTime() - s.startedAt).c_str()); ImGui::PopFont(); }
+    if (running) {
+        ImGui::SameLine(0, 12 * gUi); ImGui::PushFont(a.mono, 0); ImGui::Text("%s", elapsedText(ImGui::GetTime() - s.startedAt).c_str()); ImGui::PopFont();
+        const std::string left = remainingText(s, mode, running);
+        if (!left.empty()) { ImGui::SameLine(0, 10 * gUi); ImGui::TextDisabled("%s", left.c_str()); }
+    } else if (st == State::Armed) {
+        ImGui::SameLine(0, 12 * gUi);
+        ImGui::TextDisabled(tr("disarms in %d s"), (int)std::max(0.0, kArmTimeoutSec - (ImGui::GetTime() - s.armedAt)));
+    } else if (st == State::Done && !s.history.empty()) {
+        ImGui::SameLine(0, 12 * gUi);
+        ImGui::TextDisabled("%.1f s, %s", s.history.front().seconds, s.history.front().ended.c_str());
+    }
     if (mode) { ImGui::SameLine(0, 12 * gUi); ImGui::TextDisabled("%s  %.6f MHz", mode->name, running ? s.freqSent / 1e6 : s.freqMhz); }
+    ImGui::SetCursorScreenPos(ImVec2(p0.x, p0.y + fh + 10 * gUi));
 
     const bool can = canStart(a, s, radio, conflict, mode);
+    const bool needArm = txNeedsArm(s);
     const bool voice = mode && (isVoiceId(mode->id ? mode->id : "") || s.analogVoice);
-    if (voice && s.pttHold) {   // push to talk: down starts, up stops (one button id throughout, so the hold survives the start)
-        const bool on = running || s.pendingStart;
-        ImGui::BeginDisabled(!can && !on);
-        if (on) {
-            ImGui::PushStyleColor(ImGuiCol_Button, ImVec4(0.75f, 0.10f, 0.10f, 1));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, ImVec4(0.75f, 0.10f, 0.10f, 1));
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1, 1, 1, 1));
-        } else {
-            ImGui::PushStyleColor(ImGuiCol_Button, pal::accent(0.85f));
-            ImGui::PushStyleColor(ImGuiCol_ButtonHovered, pal::accent(1.f));
-            ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(0.05f, 0.07f, 0.09f, 1));
-        }
-        std::string lab = std::string(on ? tr("TRANSMITTING (release to stop)") : tr("HOLD TO TRANSMIT")) + "##ptt";
-        ImGui::Button(lab.c_str(), ImVec2(w, ImGui::GetFrameHeight() * 1.7f));
-        ImGui::PopStyleColor(3);
+    const bool busy = running || s.pendingStart || s.schedArmed;
+    const float stopW = std::max(90.f * gUi, w * 0.34f), gapW = 6 * gUi, mainW = w - stopW - gapW;
+    // the main step: ARM, then TRANSMIT (or HOLD TO TALK); one step for a test or a file
+    if (busy && voice && s.pttHold) {   // the push-to-talk button keeps its id (###ptt) while it is held
+        flowButton((std::string(tr("TRANSMITTING (release to stop)")) + "###ptt").c_str(), kOnAir, kWhite, true, mainW);
         const bool down = ImGui::IsItemActive();
-        ImGui::EndDisabled();
-        if (down && !s.pttDown && !running) s.pendingStart = true;
         if (!down && s.pttDown) stopTx(a, s, "(push to talk released)");
         s.pttDown = down;
-    } else if (bigButton(running || s.pendingStart || s.schedArmed ? tr("STOP") : tr("START TRANSMITTING"), running || s.pendingStart || s.schedArmed, can || running || s.pendingStart || s.schedArmed, w)) {
-        if (running || s.pendingStart || s.schedArmed) stopTx(a, s, "by the user");
-        else s.pendingStart = true;
+    } else if (busy) {
+        ImGui::Dummy(ImVec2(mainW, ImGui::GetFrameHeight() * 1.7f));
+    } else if (needArm && !s.armed) {
+        if (flowButton(tr("ARM"), kAmber, kDark, can && mode, mainW)) txArm(s, true);
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%s", !mode ? tr("Choose a signal in the list.") : !can ? tr("Choose a radio below, or send to a dummy load (test, no RF) or an IQ file.")
+                                          : tr("Step 1: arming makes TRANSMIT live. Nothing is sent yet. It disarms itself after two minutes, and on Stop, Space or Esc."));
+    } else if (voice && s.pttHold) {
+        flowButton((std::string(tr("HOLD TO TRANSMIT")) + "###ptt").c_str(), kOnAir, kWhite, can, mainW);
+        const bool down = ImGui::IsItemActive();
+        if (down && !s.pttDown && !running) s.pendingStart = true;
+        s.pttDown = down;
+    } else {
+        const char* lab = !needArm ? (s.destKind == 1 ? tr("WRITE THE IQ FILE") : tr("RUN THE TEST (no RF)")) : scheduleConfigured(s) ? tr("TRANSMIT ON SCHEDULE") : tr("TRANSMIT");
+        if (flowButton(lab, needArm ? kOnAir : pal::accent(0.85f), needArm ? kWhite : kDark, can, mainW)) s.pendingStart = true;
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
+            ImGui::SetTooltip("%s", needArm ? tr("Step 2: the signal goes out now (or at the scheduled time).") : tr("Makes the signal without a radio: the preview, the meters and the log show what would go out."));
     }
-    if (!running && !can && ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled))
-        ImGui::SetTooltip("%s", mode ? tr("Choose a radio below, or switch on the test (no RF).") : tr("Choose a signal in the list."));
+    ImGui::SameLine(0, gapW);
+    // STOP: always there; it stops, cancels a schedule or a pending start, and disarms
+    const bool stopLive = busy || s.armed;
+    if (flowButton(tr("STOP"), stopLive ? kStopCol : ImVec4(0.30f, 0.12f, 0.12f, 1), kWhite, stopLive, stopW)) { stopTx(a, s, "by the user"); txArm(s, false); }
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Stops the transmission, a carrier, a pending start and the schedule, and disarms. Space and Esc do the same."));
     if (voice) {
         ImGui::BeginDisabled(running);
         ImGui::Checkbox(tr("Push to talk (hold the button)"), &s.pttHold);
         ImGui::EndDisabled();
-        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("The signal goes out only while you hold the button down."));
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Once armed, the signal goes out only while you hold the button down."));
+        ImGui::SameLine();
     }
-    ImGui::TextDisabled("%s", s.pttHold && voice ? tr("Esc = stop") : tr("Space = start / stop     Esc = stop"));
+    ImGui::TextDisabled("%s", tr("Space or Esc = STOP"));
     ImGui::Spacing();
 }
 
@@ -237,8 +300,10 @@ void txTopBar(App& a, ImVec2 disp) {
         const float W = ImGui::GetContentRegionAvail().x;
         const bool can = canStart(a, s, c.radio, c.conflict, c.mode);
         ImGui::BeginDisabled(!can && !running && !s.pendingStart);
-        if (runButton(running || s.pendingStart || s.schedArmed, 40 * gUi, running || s.pendingStart || s.schedArmed ? tr("Stop transmitting") : tr("Start transmitting")) && !(s.pttHold)) {
-            if (running || s.pendingStart || s.schedArmed) stopTx(a, s, "by the user"); else s.pendingStart = true;
+        if (runButton(running || s.pendingStart || s.schedArmed, 40 * gUi, running || s.pendingStart || s.schedArmed ? tr("Stop transmitting") : txNeedsArm(s) && !s.armed ? tr("Arm the transmitter (press again to transmit)") : tr("Start transmitting")) && !(s.pttHold)) {
+            if (running || s.pendingStart || s.schedArmed) { stopTx(a, s, "by the user"); txArm(s, false); }
+            else if (txNeedsArm(s) && !s.armed) txArm(s, true);   // the same two steps as the panel: the first press arms
+            else s.pendingStart = true;
         }
         ImGui::EndDisabled();
         ImGui::SetCursorScreenPos(ImVec2(o.x + 58 * gUi, o.y));

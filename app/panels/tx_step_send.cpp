@@ -182,9 +182,9 @@ void stepSend(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxMo
     ImGui::Spacing();
     // carrier tune (hold) and the emergency stop, next to the header's Start / Stop
     const bool can = canStart(a, s, radio, conflict, mode);
-    ImGui::BeginDisabled(!can && !running);
+    ImGui::BeginDisabled((!can || (txNeedsArm(s) && !s.armed)) && !running);
     ImGui::Button(tr("Carrier tune (hold)"));
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting."));
+    if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. On a radio, ARM first."));
     const bool hold = ImGui::IsItemActive();
     if (hold && !s.carrierHeld) {
         s.carrierHeld = true;
@@ -211,6 +211,22 @@ void stepSend(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxMo
         if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY() - 4) ImGui::SetScrollHereY(1.f);
     }
     ImGui::EndChild();
+    // what was sent since the program started: one line a transmission, newest first
+    typo::separatorText(tr("Sent"));
+    if (s.history.empty()) ImGui::TextDisabled("%s", tr("Nothing sent yet."));
+    else if (ImGui::BeginTable("##txhist", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_SizingFixedFit, ImVec2(0, 120 * gUi))) {
+        ImGui::TableSetupColumn(tr("UTC")); ImGui::TableSetupColumn(tr("Signal")); ImGui::TableSetupColumn("MHz"); ImGui::TableSetupColumn(tr("Length"));
+        ImGui::TableSetupColumn(tr("What"), ImGuiTableColumnFlags_WidthStretch);
+        for (const auto& h : s.history) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(h.utc.c_str());
+            ImGui::TableNextColumn(); ImGui::Text("%s%s", h.mode.c_str(), h.rf ? "" : tr(" (no RF)"));
+            ImGui::TableNextColumn(); ImGui::Text("%.6f", h.mhz);
+            ImGui::TableNextColumn(); ImGui::Text("%.1f s", h.seconds);
+            ImGui::TableNextColumn(); ImGui::Text("%s%s%s", h.what.c_str(), h.what.empty() ? "" : ", ", h.ended.c_str());
+        }
+        ImGui::EndTable();
+    }
 }
 
 } // namespace txui

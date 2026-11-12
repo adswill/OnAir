@@ -19,6 +19,7 @@
 using namespace dect2;
 
 #include "tx_state.h"
+#include <ctime>
 #include "dect2/hfdig/hfdig_sstv.h"
 #include <algorithm>
 #include <cmath>
@@ -76,7 +77,14 @@ void ensureTxMode(App& a, TxUi& s) {
     const SubMode* t = subModes(n);
     if (a.sub >= 1 && a.sub <= n) snprintf(s.subId, sizeof s.subId, "%s", t[a.sub - 1].id);
     const TxModeSpec* m = txModeForList(s.family, s.subId[0] ? s.subId : nullptr, s.dvbVariant);
-    if (m) { s.modeId = m->id; s.synth = (rxMode(a) == m) ? a.tune.synth : SynthConfig(); s.freqMhz = a.freqMhz; }
+    if (m) { s.modeId = m->id; s.synth = (rxMode(a) == m) ? txSynthFromRx(*m, a.tune.synth) : SynthConfig(); s.freqMhz = a.freqMhz; }
+}
+
+// The generator settings a transmitter takes from the receiver's test signal: all of them for a test-scene generator (its table has scene.options),
+// none for a mode whose settings are rows of its table (the receiver's fading, mistuning or noise must never be sent; the table sets the rest)
+SynthConfig txSynthFromRx(const TxModeSpec& m, const SynthConfig& rx) {
+    TxParamCtx c;
+    return txParamFind(txParams(m, c), "scene.options") ? rx : SynthConfig();
 }
 
 // the mode chosen for transmitting: its options and frequency start from the receiver's when it is the receiver's own mode
@@ -85,7 +93,8 @@ void chooseMode(App& a, TxUi& s, const TxModeSpec& m) {
     s.modeId = m.id;
     s.bwIdx = 0;
     const TxModeSpec* rm = rxMode(a);
-    if (rm && rm == &m) { s.synth = a.tune.synth; s.freqMhz = a.freqMhz; }
+    s.armed = false;   // a new signal is armed again on purpose
+    if (rm && rm == &m) { s.synth = txSynthFromRx(m, a.tune.synth); s.freqMhz = a.freqMhz; }
     else {
         s.synth = SynthConfig();
         const double def = txModeDefaultMhz(m);
@@ -334,6 +343,28 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         s.sessionFile = toFile;
         s.startedAt = ImGui::GetTime();
         s.appliedMhz = s.freqMhz; s.appliedGain = s.gainDb;
+        s.doneShown = false;
+        s.wasRunning = true;
+        {   // the TX log entry, finished by txSessionEnded
+            s.current = TxUi::Sent();
+            const time_t now = time(nullptr);
+            struct tm u;
+#ifdef _WIN32
+            gmtime_s(&u, &now);
+#else
+            gmtime_r(&now, &u);
+#endif
+            char tb[16]; strftime(tb, sizeof tb, "%H:%M:%S", &u);
+            s.current.utc = tb;
+            s.current.mode = carrier ? std::string(tr("Carrier tune")) : std::string(mode->name);
+            s.current.mhz = s.freqMhz;
+            s.current.rf = !s.dryRun && !toFile;
+            std::string what = !req.callsign.empty() ? req.callsign : "";
+            if (!req.text.empty()) what += (what.empty() ? "" : ": ") + req.text.substr(0, 40);
+            if (what.empty() && !req.file.empty()) what = req.file.substr(req.file.find_last_of("/\\") == std::string::npos ? 0 : req.file.find_last_of("/\\") + 1);
+            if (toFile) what += (what.empty() ? "" : ", ") + std::string("into ") + s.ifPathUsed;
+            s.current.what = what;
+        }
         if (!carrier) pushRecent(s, mode->id, s.freqMhz, s.gainDb);
         a.engine.log(std::string(toFile ? "transmit into an IQ file: " : s.dryRun ? "transmit test (no RF): " : "transmit: ") + (carrier ? "carrier tune " : "") + mode->name + " on " + s.radioName + " at " + std::to_string(s.freqMhz) + " MHz");
         return true;
@@ -352,6 +383,9 @@ void stopTx(App& a, TxUi& s, const char* why) {
     if (s.schedArmed) a.engine.log("transmit: the schedule is cancelled");
     s.schedArmed = false; s.schedRunning = false;   // Stop also cancels a schedule
     if (was) a.engine.log(std::string("transmit: stopped ") + why);
+    if (was) txSessionEnded(s, why);
+    s.armed = false;   // after a transmission the next one is armed again on purpose
+    s.wasRunning = false;
 }
 
 // the chosen transmit radio (the first free one when none is chosen) and the receiver that holds it

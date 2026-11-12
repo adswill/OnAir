@@ -37,7 +37,7 @@ void radioRow(App& a, TxUi& s, const DeviceInfo*& radio, bool running) {
             const int h = rxHolder(d);
             char nm[256];
             if (h) snprintf(nm, sizeof nm, tr("%s (in use by RX %d)"), txRadioLabel(d).c_str(), h); else snprintf(nm, sizeof nm, "%s", txRadioLabel(d).c_str());
-            if (ImGui::Selectable(nm, radio == &d)) { s.radioKey = deviceClaimKey(d); radio = &d; s.gainSet = false; }
+            if (ImGui::Selectable(nm, radio == &d)) { s.radioKey = deviceClaimKey(d); radio = &d; s.gainSet = false; txArm(s, false); }
         }
         ImGui::EndCombo();
     }
@@ -119,13 +119,6 @@ namespace txui {
 void destinationPanel(TxUi& s, const TxModeSpec& mode, bool running) {
     plat::Prefs& pr = plat::basePrefs();
     ImGui::BeginDisabled(running);
-    const char* dn[] = {"Radio", "IQ file"};
-    ImGui::SetNextItemWidth(160 * gUi);
-    if (ImGui::BeginCombo("Destination", dn[s.destKind == 1 ? 1 : 0])) {
-        for (int i = 0; i < 2; i++) if (ImGui::Selectable(dn[i], s.destKind == i)) { s.destKind = i; pr.setI("tx.destKind", i); }
-        ImGui::EndCombo();
-    }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", "Radio sends the signal to the transmit radio. IQ file writes the same IQ to a file instead: no radio is needed.");
     if (s.destKind == 1) {
         ImGui::SetNextItemWidth(std::max(160.f * gUi, ImGui::GetContentRegionAvail().x - 190 * gUi));
         if (ImGui::InputText("Folder##ifp", s.ifPath, sizeof s.ifPath)) pr.setS("tx.ifPath", s.ifPath);
@@ -213,15 +206,37 @@ void iqStreamPanel(TxUi& s, bool running) {
 // The Basic block: radio, level, what to send; then Advanced (folded)
 void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const TxModeSpec* mode, bool running) {
     if (!mode) { ImGui::TextDisabled("%s", tr("Choose a signal in the list.")); return; }
+    // 1. what to send (the Simple rows of the mode's table), 2. where it goes and how strong, 3. ARM and TRANSMIT in the header above
     ImGui::BeginDisabled(running);
-    if (ImGui::Checkbox(tr("Test (dry run, no RF)"), &s.dryRun)) plat::basePrefs().setB("tx.dryRun", s.dryRun);
+    payloadPanel(s, *mode, running);
     ImGui::EndDisabled();
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out."));
+    ImGui::Spacing();
+    // where the signal goes: one choice of three. A radio needs ARM; the dummy load (a test: the generator runs into nothing) and the IQ file do not.
+    typo::separatorText(tr("Send to"));
+    ImGui::BeginDisabled(running);
+    {
+        const int cur = s.destKind == 1 ? 2 : s.dryRun ? 1 : 0;
+        const char* names[] = {tr("Radio"), tr("Dummy load (test, no RF)"), tr("IQ file")};
+        const char* tips[] = {tr("The signal goes to the transmit radio below. TRANSMIT needs ARM first."),
+                              tr("Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The preview, meters and log show what would go out."),
+                              tr("Writes the same IQ to a file instead (SigMF, WAV, raw ...): no radio is needed.")};
+        for (int i = 0; i < 3; i++) {
+            if (i) ImGui::SameLine();
+            if (ImGui::RadioButton(names[i], cur == i) && cur != i) {
+                s.dryRun = i == 1;
+                s.destKind = i == 2 ? 1 : 0;
+                plat::basePrefs().setB("tx.dryRun", s.dryRun);
+                plat::basePrefs().setI("tx.destKind", s.destKind);
+                txArm(s, false);   // a new destination is armed again on purpose
+            }
+            if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tips[i]);
+        }
+    }
+    ImGui::EndDisabled();
 
     scheduleStatus(s);   // a planned start: when, and Cancel
     destinationPanel(s, *mode, running);
-    iqStreamPanel(s, running);
-    radioRow(a, s, radio, running);
+    if (!noRadio(s)) radioRow(a, s, radio, running);
     if (conflict && !noRadio(s)) {
         char b[400];
         snprintf(b, sizeof b, tr("%s is in use by RX %d, and this radio cannot receive and transmit at the same time. Choose another radio for transmitting, or stop that receiver first."), radio->name.c_str(), conflict);
@@ -240,10 +255,6 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
         ImGui::EndDisabled();
     }
 
-    ImGui::Spacing();
-    ImGui::BeginDisabled(running);
-    payloadPanel(s, *mode, running);
-    ImGui::EndDisabled();
 
     ImGui::Spacing();
     ImGui::SetNextItemOpen(s.advOpen, ImGuiCond_Appearing);
@@ -253,10 +264,12 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them."));
     if (!s.advOpen) return;
     advancedPanel(s, *mode, running);
-    // the mode's own modulation settings: the same fields as the receiver's built-in test signal (FFT size, guard, constellation, code rate, ...)
-    if (const ModeUi* mu = modeUi(familyOf(*mode)); mu && mu->synth && !isVoiceId(mode->id ? mode->id : "") && !isFtxId(mode->id ? mode->id : "") && std::string(mode->id) != "rtty" && std::string(mode->id) != "atv") {
+    // the test scene's own settings, for the generators whose table says so (the same widget as the receiver's test signal). Every other mode has its
+    // settings in the table above: there the receiver's widget is not shown, because its noise, offset and fading controls do not belong to a transmitter.
+    if (const ModeUi* mu = modeUi(familyOf(*mode)); mu && mu->synth && txParamFind(s.params, "scene.options")) {
         ImGui::BeginDisabled(running);
-        if (ImGui::TreeNode(trw("Modulation of this mode (the generator's own settings)"))) {
+        if (ImGui::TreeNode(trw("Test scene settings (shared with the receiver's test signal)"))) {
+            ImGui::TextDisabled("%s", tr("Noise, SNR and frequency offsets here are for the receiver's test signal: the transmitter always sends the clean signal."));
             const SynthConfig saved = a.tune.synth;
             a.tune.synth = s.synth;
             bool changed = false;
@@ -271,6 +284,8 @@ void stepSettings(App& a, TxUi& s, const DeviceInfo* radio, int conflict, const 
     if (s.destKind != 1) { section(tr("Radio")); radioControlPanel(s, radio, running); }
     section(tr("Schedule"));
     schedulePanel(s, running);
+    section(tr("Other programs"));
+    iqStreamPanel(s, running);
     if (s.destKind != 1) {
         ImGui::Spacing();
         if (ImGui::TreeNode(trw("Calibration of this radio"))) { calibrationPanel(a, s, radio, running); ImGui::TreePop(); }

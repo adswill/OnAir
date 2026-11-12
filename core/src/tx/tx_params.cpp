@@ -162,7 +162,7 @@ void outputCommon(std::vector<D>& v) {
     add(v, {
         A(num("out.trimDb", "Output trim", "Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping.", "dB", 0, -40, 6, "%.1f"), TxPGroup::Output),
         A(flag("out.swapIq", "Mirror the spectrum", "Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.", false), TxPGroup::Output),
-        TV(A(num("out.rampMs", "Key-up fade-in", "The signal fades in over this time after Start (and out at Stop), so the key-up does not click.", "ms", kTxDefaultRampMs, 0, 500, "%.0f"), TxPGroup::Timing), 100),
+        TV(A(num("out.rampMs", "Soft start (fade-in)", "The signal fades in over this time after TRANSMIT (and out at Stop): a few ms stop the key click, a few seconds bring an amplifier up gently.", "ms", kTxDefaultRampMs, 0, 10000, "%.0f"), TxPGroup::Timing), 100),
         META(A(num("tx.totSec", "Timeout timer", "Ends the transmission by itself after this many seconds, with the key-down fade (0 = off). Your own limit: OnAir sets none.", "s", 0, 0, 3600, "%.0f"), TxPGroup::Timing),
              "ends the session; tests/tx/test_tx_control.cpp checks it"),
     });
@@ -277,7 +277,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
         if (id == "isdbt") isdbtRows(v);
         if (id == "dvbs") dvbsRows(v);
         if (id == "dtmb" || id == "dvbc" || id == "atsc3" || id == "atsc")
-            v.push_back(custom("scene.options", "Generator settings", "The generator's own settings (shared with the receiver's test signal); its noise and offset controls do not apply here."));
+            v.push_back(A(custom("scene.options", "Generator settings", "The generator's own settings (shared with the receiver's test signal); its noise and offset controls do not apply here."), TxPGroup::Modulation));
         break;
     case TxPayloadKind::AnalogTv:
         add(v, {
@@ -724,7 +724,7 @@ std::vector<D> build(const TxModeSpec& m, const TxParamCtx& c) {
             break;
         }
         if (id == "nfc") break;   // the reader frames are fixed
-        v.push_back(custom("scene.options", "Test scene", "This generator sends its built-in test scene; its settings are shared with the receiver's test signal (noise and offsets do not apply here)."));
+        v.push_back(A(custom("scene.options", "Test scene", "This generator sends its built-in test scene; its settings are shared with the receiver's test signal (noise and offsets do not apply here)."), TxPGroup::Modulation));
         analogSwitch(v, c);
         break;
     }
