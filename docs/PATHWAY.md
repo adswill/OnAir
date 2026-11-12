@@ -1904,3 +1904,18 @@ Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked
 - NFM click removal built twice and dropped: the 12 dB SINAD point (8.4 dB) is above the FM threshold, gains were 0.3 dB at most.
 - Guard test hfdig_sstv_sens40; bench tests/hfdig/sstv_sens40_bench.cpp (not a ctest).
 - (feat40-sensX2, later) Weather fax: row Wiener filter on weak signals (mean row correlation at 2 dB 0.460 -> 0.634, sens39 passes 0 -> 3 of 3 at 2 and 1 dB). NOAA APT: click median + line Wiener filter with the noise of space A (PSNR at 2 dB 10.2 -> 12.8 dB, at 15 dB 30.5 -> 32.8 dB). Tests marine_fax_sens40, wxsat_apt40, measured on the GitHub Linux runner.
+
+## 2026-11-12 (night, feat40-market): community plugin marketplace
+- Server (tools/marketplace/server): one Cloudflare Worker, D1 and R2. It covers list and search (relevance, likes, downloads, newest;
+  tag, kind and platform), plugin page, counted downloads with the signed sha256, likes once per installation (salted hash), and GitHub
+  device-flow sign-in (no token stored). Upload and new version check the package with a port of plugin::parseManifest, the
+  installer's package rules and the 3.9 listing policy. Report and the admin endpoints (pull/restore, ban, reports) are there too.
+  Listing answers are Ed25519-signed and name their request and time. Nothing is deployed; the README has the owner's setup.
+  32 Node tests (SQLite through sql.js, abuse cases) and a workerd smoke run passed locally; .github/workflows/market-server.yml runs
+  them on GitHub.
+- App: the Store tab has two sources, Community marketplace (default) and Reviewed registry (3.9). The community panel has search,
+  sort, tag chips, cards with the unreviewed badge, and a plugin page with Install (second confirmation), Like, Report and the repo link.
+  The Upload plugin window covers sign-in, file, title, description, link, tags, preview and Publish. Core client in
+  core/src/pstore/market.cpp; plat::httpCall added. Withdrawn plugins installed from the marketplace are switched off through the 3.9
+  kill switch (Store::setExtraRevocations). Test pstore_market, GitHub builds only. kBuiltInMarketKeyHex stays all zeros until the
+  owner makes the key. docs/PLUGIN-MARKETPLACE-4.0.md.

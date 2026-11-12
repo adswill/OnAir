@@ -20,6 +20,10 @@ Status on integ-36 (2026-11-03). Full reference: `docs/plugins.md`, `docs/automa
 
 A signed static registry with a Store tab, a validator and signing tool: `docs/PLUGIN-MARKETPLACE-3.9.md`.
 
+## Community marketplace (4.0)
+
+Upload from the app (GitHub sign-in), likes, download counts, search; uploads are live at once and marked unreviewed: `docs/PLUGIN-MARKETPLACE-4.0.md`.
+
 ## Not done
 
 - Sandboxed helper process (macOS sandbox profile, Linux seccomp) for untrusted plug-ins.

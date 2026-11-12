@@ -300,7 +300,7 @@ bool pluginMarketPanel(App& a, dp::Manager& mgr, const std::function<void(const 
     const bool busy = U.busy;
     ImGui::PushTextWrapPos(0);
     ImGui::TextColored(pal::warnAmber(), "%s", tr("Community plugins: anyone with a GitHub account can publish here, and nobody reviews them first. A plugin runs with this program's full rights: install only what you trust."));
-    ImGui::TextDisabled("%s", tr("Nothing is fetched until you search or open a plugin. The marketplace server sees your IP address; likes and download counts use a random id of this OnAir installation, stored there only as a salted hash."));
+    ImGui::TextDisabled("%s", tr("Opening this panel fetches the list from plugins.on-air.dev; searching, opening a plugin, liking and installing fetch more. That server sees your IP address; likes and download counts use a random id of this OnAir installation, stored there only as a salted hash."));
     ImGui::PopTextWrapPos();
     if (!m.keyConfigured()) {
         ImGui::TextColored(pal::badRed(), "%s", tr("The community marketplace is not set up in this build yet (no signing key), so nothing is fetched."));
