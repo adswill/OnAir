@@ -1,5 +1,7 @@
 # Voice codec build helper
 
+> **Ready-built files:** if you do not want to build the codecs yourself, join the [OnAir Discord](https://discord.gg/ptxkzCuzR): the Dropbox link with the ready-built codec files is posted there.
+
 Optional scripts that build the voice codec plug-ins (TETRA, AMBE+2, AMBE, IMBE, Yaesu Fusion) **on your own computer**, from the upstream source, and put them where OnAir looks for them. They live in `tools/codec-builder/` in the OnAir repository.
 
 ## Legal note, honestly

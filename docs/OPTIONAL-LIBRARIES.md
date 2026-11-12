@@ -1,5 +1,7 @@
 # Optional libraries and codecs
 
+> **Ready-built files:** if you do not want to build the codecs yourself, join the [OnAir Discord](https://discord.gg/ptxkzCuzR): the Dropbox link with the ready-built codec files is posted there.
+
 OnAir loads a few libraries at run time that it does not ship: audio codecs, voice codecs, and the drivers of some radios. Without them the rest of
 OnAir works; only the feature named in the table stays off. This page lists every one of them, the exact folder to put it in on Windows, macOS and
 Linux, the file names OnAir looks for, and where to get it from its own project. **Settings > Advanced > Optional libraries and codecs** and

@@ -148,7 +148,7 @@ OnAir 3.0 followed 0.2.9. Later releases (3.1 to 3.6) have their own lists in `d
 - **Better weak-signal decoding** (measured on generated signals only): FT8/FT4/FT2, PSK, RTTY, DAB, DRM, RDS, DVB-S2, DVB-T/T2, satellite weather, GNSS, ADS-B, AIS, pagers and digital voice.
 - **Lighter and faster**: less CPU, lower idle power, a faster FFT and a quicker DVB-T.
 - **Easier to use**: a labelled status strip, one signal indicator for every mode, an Audio pop-up, auto gain, first-run setup with lessons, presets, a merged Scanner, Scheduler, Backup and restore.
-- **Voice**: one voice monitor, keys you supply yourself, codecs you install yourself (see [docs/CODECS.md](docs/CODECS.md)); nothing patented is shipped. Every optional library and codec you can add (MP3, AAC, voice codecs, radio drivers), the folder for it on each OS and its official source: [docs/OPTIONAL-LIBRARIES.md](docs/OPTIONAL-LIBRARIES.md).
+- **Voice**: one voice monitor, keys you supply yourself, codecs you install yourself (see [docs/CODECS.md](docs/CODECS.md); ready-built files: join the [Discord](https://discord.gg/ptxkzCuzR) for the Dropbox link); nothing patented is shipped. Every optional library and codec you can add (MP3, AAC, voice codecs, radio drivers), the folder for it on each OS and its official source: [docs/OPTIONAL-LIBRARIES.md](docs/OPTIONAL-LIBRARIES.md).
 - **Network**: a complete Remote API, OnAir Web (listen from a browser), a LAN swarm.
 - **Raspberry Pi**: CM5 waterfall and OpenGL 3.1 fixes.
 
@@ -642,7 +642,7 @@ Off by default. **View > Show in Discord** shows on your Discord profile that yo
 
 - Encrypted (scrambled) services cannot be decoded.
 > [!NOTE]
-> **Built codecs on Discord.** Don't want to build them yourself? Join the [OnAir Discord](https://discord.gg/ptxkzCuzR) to get access to built codecs. Whether you install or use them is your own responsibility: follow the patent and radio-listening law where you live. Details: [docs/CODECS.md](docs/CODECS.md).
+> **Built codecs on Discord.** Don't want to build them yourself? Join the [OnAir Discord](https://discord.gg/ptxkzCuzR): the Dropbox link with the ready-built codec files (DMR / NXDN / dPMR, D-STAR, P25, Yaesu Fusion, TETRA, TETRAPOL, Iridium, Inmarsat Aero, HD Radio, CDR, AC-4; Windows, macOS, Linux) is posted there. Whether you install or use them is your own responsibility: follow the patent and radio-listening law where you live. Details: [docs/CODECS.md](docs/CODECS.md).
 
 > **mbelib is not included from 0.2.6.** DMR, P25, NXDN, dPMR and D-STAR voice is silent until you install mbelib yourself, because the AMBE / IMBE vocoders are patented. Calls, IDs and data work without it. Put the library in the codecs folder (the **?** next to the sound has an **Open codecs folder** button), then press **Look again**. The build helper in **Help > Voice codecs** builds the plug-ins on your computer for you. Steps: **[docs/CODECS.md](docs/CODECS.md)**.
 >
@@ -661,7 +661,7 @@ Off by default. **View > Show in Discord** shows on your Discord profile that yo
 - **The radio is not listed.** Windows: install the WinUSB driver once with [Zadig](https://zadig.akeo.ie), see [Install](#install). SDRplay RSPs need the SDRplay API installed first. Notes per radio are in [DEVICES.md](DEVICES.md).
 - **The picture breaks up.** Use **Auto-tune** or **Optimise gain**, and move the antenna while you watch the quality score, see [Quick start](#quick-start). A weak or echo-filled signal is the usual cause.
 - **macOS will not open the app.** It is not signed with a developer certificate yet: right-click it and choose *Open* on the first launch.
-- **No voice in DMR, P25, NXDN, dPMR or D-STAR.** Install mbelib yourself, see [Good to know](#good-to-know) and [docs/CODECS.md](docs/CODECS.md). Built codecs are available on the [Discord](https://discord.gg/ptxkzCuzR).
+- **No voice in DMR, P25, NXDN, dPMR or D-STAR.** Install mbelib yourself, see [Good to know](#good-to-know) and [docs/CODECS.md](docs/CODECS.md). Built codecs: join the [Discord](https://discord.gg/ptxkzCuzR), the Dropbox link with the files is posted there.
 - **No radio at all.** Open an IQ recording through the *IQ recording file* source, or press **Tour**.
 - **Still stuck.** Press **Save bug report** (one zip with diagnostics, log and crash report) and send it on [Discord](https://discord.gg/ptxkzCuzR) or in [GitHub Issues](https://github.com/adswill/OnAir/issues).
 </details>
