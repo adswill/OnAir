@@ -334,7 +334,9 @@ struct CubesatReceiver::Impl {
             accept(std::move(f), tt);
             return;
         }
-        if (framing == Ax25G3ruh) {     // AX100 Mode 6: an RS block in the HDLC frame
+        // AX100 Mode 6: an RS block in the HDLC frame. Not on a narrow path (variant 2): an HDLC frame that failed its CRC is decoded by the RS
+        // code alone, and a second hunter adds miscorrected frames (seen: 9 bytes "corrected" in a 23 byte frame) for a gain of 0.2 dB
+        if (framing == Ax25G3ruh && variant != 2) {
             std::vector<uint8_t> csp;
             int rsErr = -1;
             if (ax100Mode6Decode(d, csp, rsErr)) {
@@ -384,9 +386,9 @@ struct CubesatReceiver::Impl {
         ep.more.configure(moreCfg);
         ExtraPath* p = &ep;
         ep.plain.bitSink = [p](int b) { p->framer.bit(b); p->more.push(b ? 1.f : -1.f); p->plain.locked = p->framer.inFrame() || p->more.busy(); };
-        ep.more.onFrame = [this, p](const MoreFrame& m) { onMore(m, p->baud, p->plain.pos); };
+        ep.more.onFrame = [this, p](const MoreFrame& m) { onMore(m, p->baud, p->plain.pos, p->quiet); };
         ep.framer.done = [this, p](bool cc, std::vector<uint8_t>& body, int flags, bool gf) { onAsmAt(p->plain.pos, p->baud, cc, body, flags, gf, !p->quiet); };
-        ep.g3.hdlc.setCallback([this, p](const std::vector<uint8_t>& d, bool ok) { onHdlc(Ax25G3ruh, p->baud, 1, d, ok, p->g3.pos); });
+        ep.g3.hdlc.setCallback([this, p](const std::vector<uint8_t>& d, bool ok) { onHdlc(Ax25G3ruh, p->baud, p->quiet ? 2 : 1, d, ok, p->g3.pos); });
     }
     // the satellite the pass planner follows: its transmitter from the gr-satellites table chooses the framing parameters and, when the fixed
     // demodulators do not cover its baud rate, an extra one
@@ -433,7 +435,10 @@ struct CubesatReceiver::Impl {
         if (ep.hdlc) ep.g3.process(ep.f.data(), ep.f.size());
         ep.plain.process(ep.f.data(), ep.f.size());
     }
-    void onMore(const MoreFrame& m, int baud, int64_t tt) {
+    // strict: a narrow path (a second hunter beside a wide one). A Mobitex frame needs two data blocks with a good CRC there: the BEESAT-1 form
+    // has no callsign check, so one block's CRC-16 is all that stands between noise and a frame, and every extra hunter adds such hits
+    void onMore(const MoreFrame& m, int baud, int64_t tt, bool strict = false) {
+        if (strict && m.framing == Mobitex && m.blocksOk >= 0 && m.blocksOk < 2) return;
         CubeFrame f;
         f.framing = m.framing; f.baud = baud; f.rsErrors = m.rsErrors; f.data = m.data; f.payload = m.data;
         if (m.framing == Usp) {

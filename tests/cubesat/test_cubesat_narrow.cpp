@@ -147,6 +147,11 @@ int main() {
         printf("%-22s 6 dB, +1.4 kHz: %5.1f %%\n", framingName(Ngham), pct(r));
         if (pct(r) < 75) { printf("FAIL: NGHam on the narrow path\n"); fails++; }
     }
+    {   // U482C with a carrier error the AFC leaves (3.9: no frame even at 14 dB; the DC block of the audio FSK path)
+        const Res r = runMany(U482c + 1, 12, kScen[2], 6, 2, false);
+        printf("%-22s 12 dB, -1.4 kHz: %5.1f %%\n", framingName(U482c), pct(r));
+        if (pct(r) < 75) { printf("FAIL: U482C with a carrier error\n"); fails++; }
+    }
     const Res f = runMany(0, 0, kScen[0], 20, 2, true);
     printf("noise only: %.0f frames (%s)\n", f.got, byText(f).c_str());
     if (f.got > 0) { printf("FAIL: frames out of noise\n"); fails++; }
