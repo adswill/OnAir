@@ -2032,3 +2032,12 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
   Time stations: a minute that matches the expected time code counts (a-priori); measured no gain (the minutes fail by lost seconds), no wrong time.
   GitHub run 43166550047 (sens40x1 passed).
 - Simulated signals only; all measurement on GitHub (the laptop was on battery). Bench and guard: tests/sens/test_sens40x1.cpp (ctest sens40x1).
+
+## 2026-11-12 (feat40-sondepred): radiosonde landing prediction 4.0 (docs/SONDE-PREDICT-4.0.md)
+- New predictor (core/src/sonde/sonde_predict*.cpp): ascent layer winds with glitch rejection, a sea-level fall rate fitted to the descent in
+  an atmosphere from the sonde's temperatures, a Kalman drift for the final approach, the terrain stop (SRTM tiles, EGM96 geoid for RS41 /
+  RS92 / M10 / MRZ ellipsoid heights), opt-in Open-Meteo GFS or Tawhiri winds, and a Monte Carlo ensemble (ellipse, 50 / 95 % radii) on the map.
+- Simulated (137 flights) median error, old (true ground) -> new + forecast: 10 km 14.0 -> 1.2 km, 2 km 1.1 km -> 402 m, 500 m 308 -> 151 m,
+  200 m 213 -> 51 m, last frame 366 -> 121 m. Three real SondeHub flights, offline: 2 km 0.8-4.6 km -> 0.5-0.85 km; last frame 12-27 m.
+  20 m is not reached in general. Network: one opt-in switch, off under Offline mode. Tests sonde_predict, sonde_predict_harness,
+  sonde_predict_real: GitHub run 43198880298 passed; the app (dect2) built in run 43193713308.
