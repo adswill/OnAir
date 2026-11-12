@@ -66,7 +66,10 @@ int main() {
         // absorption at 7.1 MHz over 1000 km at a summer noon: some 10..35 dB
         const Prediction q7 = predict(path(50, 0, 50, 14.0, 6, 11.5, 100, 7.1));
         CHECK(q7.bestMode >= 0);
-        if (q7.bestMode >= 0) INRANGE(q7.modes[q7.bestMode].absorptionDb, 8, 35);
+        double f1 = -1, e1 = -1;   // the one-hop F2 ray and the one-hop E ray (low, so it crosses the D layer more obliquely)
+        for (const Mode& m : q7.modes) { if (m.layer == 'F' && m.hops == 1) f1 = m.absorptionDb; if (m.layer == 'E' && m.hops == 1) e1 = m.absorptionDb; }
+        INRANGE(f1, 8, 35);
+        CHECK(e1 > f1);
     }
     // skip zone: 14 MHz by day at 300 km is not carried by the F2 layer (above the MUF), at 2000 km it is
     {
