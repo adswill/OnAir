@@ -45,6 +45,8 @@ const double kWfmW[] = {150000, 180000, 200000};
 const double kAmW[] = {4000, 6000, 9000, 12000};
 const double kSsbW[] = {1800, 2400, 2700, 3000};
 const double kCwW[] = {100, 250, 500, 1000};
+const double kDsbW[] = {3000, 5000, 6000, 9000};
+const double kRawW[] = {12000, 24000, 40000};
 
 // Real FIR with a doubled history (the window never wraps), output every `decim` inputs
 class RealFir {
@@ -161,7 +163,7 @@ struct Delay {
 } // namespace
 
 const char* generalDemodName(int d) {
-    static const char* const k[] = {"NFM", "WFM", "AM", "USB", "LSB", "CW"};
+    static const char* const k[] = {"NFM", "WFM", "AM", "USB", "LSB", "CW", "DSB", "RAW", "CW-L"};
     return d >= 0 && d < GenDemodCount ? k[d] : "?";
 }
 
@@ -170,7 +172,9 @@ const double* generalWidthPresets(int d, int& count) {
     case GenWfm: count = 3; return kWfmW;
     case GenAm: count = 4; return kAmW;
     case GenUsb: case GenLsb: count = 4; return kSsbW;
-    case GenCw: count = 4; return kCwW;
+    case GenCw: case GenCwl: count = 4; return kCwW;
+    case GenDsb: count = 4; return kDsbW;
+    case GenRaw: count = 3; return kRawW;
     default: count = 3; return kNfmW;
     }
 }
@@ -180,7 +184,9 @@ double generalDefaultWidth(int d) {
     case GenWfm: return 180000;
     case GenAm: return 9000;
     case GenUsb: case GenLsb: return 2700;
-    case GenCw: return 500;
+    case GenCw: case GenCwl: return 500;
+    case GenDsb: return 6000;
+    case GenRaw: return 24000;
     default: return 12500;
     }
 }
@@ -190,7 +196,9 @@ void generalWidthRange(int d, double& lo, double& hi) {
     case GenWfm: lo = 50000; hi = 220000; break;
     case GenAm: lo = 1000; hi = 20000; break;
     case GenUsb: case GenLsb: lo = 500; hi = 6000; break;
-    case GenCw: lo = 50; hi = 3000; break;
+    case GenCw: case GenCwl: lo = 50; hi = 3000; break;
+    case GenDsb: lo = 1000; hi = 20000; break;
+    case GenRaw: lo = 2000; hi = 44000; break;   // the channel runs at 48 kHz
     default: lo = 2000; hi = 30000; break;
     }
 }
@@ -518,7 +526,7 @@ struct GeneralReceiver::Impl {
             const double thr = std::pow(10.0, cfg.sqDb / 10.0);
             want = lvl >= (open ? thr / 1.26 : thr);
         }
-        if (want) { open = true; hang = cfg.demod == GenCw ? kHangCwSec : kHangSec; }
+        if (want) { open = true; hang = generalIsCw(cfg.demod) ? kHangCwSec : kHangSec; }
         else if (open) { hang -= kBlockSec; if (hang <= 0) open = false; }
         (open ? blkOpen : blkShut)++;
     }
@@ -553,9 +561,9 @@ struct GeneralReceiver::Impl {
             a = (float)(cfg.agc ? (e - car) / std::max(car, 1e-9) * kOutLevel : (e - car) * g);
             break;
         }
-        default: {   // USB, LSB, CW: the real part (CW: moved up by the pitch)
-            cf32 v = z;
-            if (cfg.demod == GenCw) {
+        default: {   // USB, LSB, DSB, RAW, CW: the real part (CW: moved up by the pitch; CW-L: mirrored first, so the note falls as the signal rises)
+            cf32 v = cfg.demod == GenCwl ? std::conj(z) : z;
+            if (generalIsCw(cfg.demod)) {
                 v *= cf32((float)std::cos(bfoPh), (float)std::sin(bfoPh));
                 bfoPh += 2 * kPi * cfg.pitch / demodRate;
                 if (bfoPh > 2 * kPi) bfoPh -= 2 * kPi;
