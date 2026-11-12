@@ -1401,10 +1401,50 @@ static bool set_858(Engine& e, const std::string& n, double v) {
     if (n == "setForwardFeeds") { call(r, &Rx<decltype(r)>::setForwardFeeds, v); return true; }
     return false;
 }
+static const char kOpt_861[] = R"JSON([{"n":"setSystems","k":"int","l":"Systems","h":"gnssSystemBit() of the wanted systems (default: all that the build supports)","t":"s"},{"n":"setSearchRange","k":"num","l":"Search Range","h":"half width of the first search window (default 10 kHz); wider ones follow while nothing is found","u":"kHz","t":"s"},{"n":"setElevationMask","k":"num","l":"Elevation Mask","h":"satellites below this elevation are not used in the fix (default 5)","t":"s"}])JSON";
+static bool set_861(Engine& e, const std::string& n, double v) {
+    auto& r = e.gnss();
+    if (n == "setSystems") { call(r, &Rx<decltype(r)>::setSystems, v); return true; }
+    if (n == "setSearchRange") { call(r, &Rx<decltype(r)>::setSearchRange, v); return true; }
+    if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
+    return false;
+}
+static const char kOpt_864[] = R"JSON([{"n":"setSystems","k":"int","l":"Systems","h":"gnssSystemBit() of the wanted systems (default: all that the build supports)","t":"s"},{"n":"setSearchRange","k":"num","l":"Search Range","h":"half width of the first search window (default 10 kHz); wider ones follow while nothing is found","u":"kHz","t":"s"},{"n":"setElevationMask","k":"num","l":"Elevation Mask","h":"satellites below this elevation are not used in the fix (default 5)","t":"s"}])JSON";
+static bool set_864(Engine& e, const std::string& n, double v) {
+    auto& r = e.gnss();
+    if (n == "setSystems") { call(r, &Rx<decltype(r)>::setSystems, v); return true; }
+    if (n == "setSearchRange") { call(r, &Rx<decltype(r)>::setSearchRange, v); return true; }
+    if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
+    return false;
+}
+static const char kOpt_867[] = R"JSON([{"n":"setSystems","k":"int","l":"Systems","h":"gnssSystemBit() of the wanted systems (default: all that the build supports)","t":"s"},{"n":"setSearchRange","k":"num","l":"Search Range","h":"half width of the first search window (default 10 kHz); wider ones follow while nothing is found","u":"kHz","t":"s"},{"n":"setElevationMask","k":"num","l":"Elevation Mask","h":"satellites below this elevation are not used in the fix (default 5)","t":"s"}])JSON";
+static bool set_867(Engine& e, const std::string& n, double v) {
+    auto& r = e.gnss();
+    if (n == "setSystems") { call(r, &Rx<decltype(r)>::setSystems, v); return true; }
+    if (n == "setSearchRange") { call(r, &Rx<decltype(r)>::setSearchRange, v); return true; }
+    if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
+    return false;
+}
 static const char kOpt_871[] = R"JSON([{"n":"setInvert","k":"bool","l":"Invert","h":"flip the bit polarity (the real polarity is not published)","t":"s"}])JSON";
 static bool set_871(Engine& e, const std::string& n, double v) {
     auto& r = e.fbr();
     if (n == "setInvert") { call(r, &Rx<decltype(r)>::setInvert, v); return true; }
+    return false;
+}
+static const char kOpt_873[] = R"JSON([{"n":"setSystems","k":"int","l":"Systems","h":"gnssSystemBit() of the wanted systems (default: all that the build supports)","t":"s"},{"n":"setSearchRange","k":"num","l":"Search Range","h":"half width of the first search window (default 10 kHz); wider ones follow while nothing is found","u":"kHz","t":"s"},{"n":"setElevationMask","k":"num","l":"Elevation Mask","h":"satellites below this elevation are not used in the fix (default 5)","t":"s"}])JSON";
+static bool set_873(Engine& e, const std::string& n, double v) {
+    auto& r = e.gnss();
+    if (n == "setSystems") { call(r, &Rx<decltype(r)>::setSystems, v); return true; }
+    if (n == "setSearchRange") { call(r, &Rx<decltype(r)>::setSearchRange, v); return true; }
+    if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
+    return false;
+}
+static const char kOpt_876[] = R"JSON([{"n":"setSystems","k":"int","l":"Systems","h":"gnssSystemBit() of the wanted systems (default: all that the build supports)","t":"s"},{"n":"setSearchRange","k":"num","l":"Search Range","h":"half width of the first search window (default 10 kHz); wider ones follow while nothing is found","u":"kHz","t":"s"},{"n":"setElevationMask","k":"num","l":"Elevation Mask","h":"satellites below this elevation are not used in the fix (default 5)","t":"s"}])JSON";
+static bool set_876(Engine& e, const std::string& n, double v) {
+    auto& r = e.gnss();
+    if (n == "setSystems") { call(r, &Rx<decltype(r)>::setSystems, v); return true; }
+    if (n == "setSearchRange") { call(r, &Rx<decltype(r)>::setSearchRange, v); return true; }
+    if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
     return false;
 }
 static const char kOpt_881[] = R"JSON([{"n":"setRead","k":"bool","l":"Read","t":"s"}])JSON";
@@ -1582,7 +1622,12 @@ const OptEntry kOpt[] = {
     {814, kOpt_814, set_814},
     {817, kOpt_817, set_817},
     {858, kOpt_858, set_858},
+    {861, kOpt_861, set_861},
+    {864, kOpt_864, set_864},
+    {867, kOpt_867, set_867},
     {871, kOpt_871, set_871},
+    {873, kOpt_873, set_873},
+    {876, kOpt_876, set_876},
     {881, kOpt_881, set_881},
 };
 } // namespace

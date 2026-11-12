@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**431 modes.**
+**436 modes.**
 
 ## TV (17)
 
@@ -86,7 +86,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AIS search and rescue aircraft** - AIS SAR aircraft: search and rescue positions
 - **AIS-SART, MOB and EPIRB-AIS** - AIS-SART, MOB and EPIRB-AIS: distress device positions
 
-## Satellite & Navigation (60)
+## Satellite & Navigation (65)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -148,6 +148,11 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **AX.25 G3RUH 9600 (satellites)** - AX.25 9600 baud G3RUH: amateur satellite packet frames
 - **CCSDS Reed-Solomon (satellites)** - CCSDS Reed-Solomon: satellite telemetry frames
 - **CCSDS concatenated (satellites)** - CCSDS concatenated: Viterbi and Reed-Solomon satellite frames
+- **GPS L1 C/A** - GPS L1 C/A: satellite tracking and position fix
+- **Galileo E1** - Galileo E1: satellite tracking and position fix
+- **QZSS L1** - QZSS L1: satellite tracking
+- **GLONASS L1** - GLONASS L1: satellite tracking and position fix
+- **BeiDou B1I** - BeiDou B1I: satellite tracking and position fix
 
 ## Two-way Radio (21)
 

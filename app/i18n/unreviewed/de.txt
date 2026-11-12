@@ -768,3 +768,8 @@ Time, BPC
 Time, HLA
 Time, BPM coded
 Time, RWM
+Satellites, GPS
+Satellites, Galileo
+Satellites, QZSS
+Satellites, GLONASS
+Satellites, BeiDou

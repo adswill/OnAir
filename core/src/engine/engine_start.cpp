@@ -195,6 +195,7 @@ void Engine::configureTvReceivers(const DeviceInfo& dev, const TuneSettings& tun
     rxAdsb_.configure(rate_);
     rxAdsb_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxGnss_.configure(rate_);
+    { const GnssView* gv = gnssViewForActive(activeStdFor(stdMode_.load())); rxGnss_.setSystems(gv ? gnssSystemBit(gv->system) : 0xFFFFFFFFu); }   // an entry of one system wants that system only
     rxGnss_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxGnss_.setClockCompare(dev.isRadio());   // the satellites' UTC against the computer's clock: a radio only (a file or the simulator keeps its own date)
     wide_.setLogCallback([this](const std::string& s) { rxLog(s); });

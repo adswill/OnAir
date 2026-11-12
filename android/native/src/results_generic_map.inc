@@ -3894,6 +3894,66 @@ case 858: {
     { Table tb({"Mmsi", "Cls", "Name", "Callsign", "Destination", "Imo", "Ship Type", "Lat"}); int n = 0; for (auto it = t.vessels.rbegin(); it != t.vessels.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.mmsi), cell(e.cls), cell(e.name), cell(e.callsign), cell(e.destination), cell(e.imo), cell(e.shipType), cell(e.lat)}); } if (n) addTable(o, "Vessels", tb); }
     break;
 }
+case 861: {
+    const auto& t = rx.gnss; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Systems Mask", t.systemsMask);
+    cardIf(o, "Active Mask", t.activeMask);
+    cardIf(o, "Decode Mask", t.decodeMask);
+    cardIf(o, "Signal Secs", t.signalSecs);
+    cardIf(o, "N Tracked", t.nTracked);
+    cardIf(o, "Leap Seconds", t.leapSeconds);
+    { Table tb({"Sys", "Prn", "Fcn", "State", "Cn0", "Doppler Hz", "Code Phase", "Az Deg"}); int n = 0; for (auto it = t.channels.rbegin(); it != t.channels.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.state), cell(e.cn0), cell(e.dopplerHz), cell(e.codePhase), cell(e.azDeg)}); } if (n) addTable(o, "Channels", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Az Deg", "El Deg", "Cn0", "Health"}); int n = 0; for (auto it = t.sky.rbegin(); it != t.sky.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.azDeg), cell(e.elDeg), cell(e.cn0), cell(e.health)}); } if (n) addTable(o, "Sky", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Lat", "Lon", "Alt Km", "Health", "Cn0"}); int n = 0; for (auto it = t.sats.rbegin(); it != t.sats.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.lat), cell(e.lon), cell(e.altKm), cell(e.health), cell(e.cn0)}); } if (n) addTable(o, "Sats", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Iode", "Eph Age S", "Health", "Week", "Tow S"}); int n = 0; for (auto it = t.nav.rbegin(); it != t.nav.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.iode), cell(e.ephAgeS), cell(e.health), cell(e.week), cell(e.towS)}); } if (n) addTable(o, "Nav", tb); }
+    break;
+}
+case 864: {
+    const auto& t = rx.gnss; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Systems Mask", t.systemsMask);
+    cardIf(o, "Active Mask", t.activeMask);
+    cardIf(o, "Decode Mask", t.decodeMask);
+    cardIf(o, "Signal Secs", t.signalSecs);
+    cardIf(o, "N Tracked", t.nTracked);
+    cardIf(o, "Leap Seconds", t.leapSeconds);
+    { Table tb({"Sys", "Prn", "Fcn", "State", "Cn0", "Doppler Hz", "Code Phase", "Az Deg"}); int n = 0; for (auto it = t.channels.rbegin(); it != t.channels.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.state), cell(e.cn0), cell(e.dopplerHz), cell(e.codePhase), cell(e.azDeg)}); } if (n) addTable(o, "Channels", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Az Deg", "El Deg", "Cn0", "Health"}); int n = 0; for (auto it = t.sky.rbegin(); it != t.sky.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.azDeg), cell(e.elDeg), cell(e.cn0), cell(e.health)}); } if (n) addTable(o, "Sky", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Lat", "Lon", "Alt Km", "Health", "Cn0"}); int n = 0; for (auto it = t.sats.rbegin(); it != t.sats.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.lat), cell(e.lon), cell(e.altKm), cell(e.health), cell(e.cn0)}); } if (n) addTable(o, "Sats", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Iode", "Eph Age S", "Health", "Week", "Tow S"}); int n = 0; for (auto it = t.nav.rbegin(); it != t.nav.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.iode), cell(e.ephAgeS), cell(e.health), cell(e.week), cell(e.towS)}); } if (n) addTable(o, "Nav", tb); }
+    break;
+}
+case 867: {
+    const auto& t = rx.gnss; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Systems Mask", t.systemsMask);
+    cardIf(o, "Active Mask", t.activeMask);
+    cardIf(o, "Decode Mask", t.decodeMask);
+    cardIf(o, "Signal Secs", t.signalSecs);
+    cardIf(o, "N Tracked", t.nTracked);
+    cardIf(o, "Leap Seconds", t.leapSeconds);
+    { Table tb({"Sys", "Prn", "Fcn", "State", "Cn0", "Doppler Hz", "Code Phase", "Az Deg"}); int n = 0; for (auto it = t.channels.rbegin(); it != t.channels.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.state), cell(e.cn0), cell(e.dopplerHz), cell(e.codePhase), cell(e.azDeg)}); } if (n) addTable(o, "Channels", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Az Deg", "El Deg", "Cn0", "Health"}); int n = 0; for (auto it = t.sky.rbegin(); it != t.sky.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.azDeg), cell(e.elDeg), cell(e.cn0), cell(e.health)}); } if (n) addTable(o, "Sky", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Lat", "Lon", "Alt Km", "Health", "Cn0"}); int n = 0; for (auto it = t.sats.rbegin(); it != t.sats.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.lat), cell(e.lon), cell(e.altKm), cell(e.health), cell(e.cn0)}); } if (n) addTable(o, "Sats", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Iode", "Eph Age S", "Health", "Week", "Tow S"}); int n = 0; for (auto it = t.nav.rbegin(); it != t.nav.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.iode), cell(e.ephAgeS), cell(e.health), cell(e.week), cell(e.towS)}); } if (n) addTable(o, "Nav", tb); }
+    break;
+}
 case 871: {
     const auto& t = rx.fbr; (void)t;
     cardIf(o, "Cfo Hz", t.cfoHz);
@@ -3910,6 +3970,46 @@ case 871: {
     cardIf(o, "Tone Db", t.toneDb);
     { Table tb({"Item"}); int n = 0; for (auto it = t.frameLog.rbegin(); it != t.frameLog.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Frame Log", tb); }
     { Table tb({"Item"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Log", tb); }
+    break;
+}
+case 873: {
+    const auto& t = rx.gnss; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Systems Mask", t.systemsMask);
+    cardIf(o, "Active Mask", t.activeMask);
+    cardIf(o, "Decode Mask", t.decodeMask);
+    cardIf(o, "Signal Secs", t.signalSecs);
+    cardIf(o, "N Tracked", t.nTracked);
+    cardIf(o, "Leap Seconds", t.leapSeconds);
+    { Table tb({"Sys", "Prn", "Fcn", "State", "Cn0", "Doppler Hz", "Code Phase", "Az Deg"}); int n = 0; for (auto it = t.channels.rbegin(); it != t.channels.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.state), cell(e.cn0), cell(e.dopplerHz), cell(e.codePhase), cell(e.azDeg)}); } if (n) addTable(o, "Channels", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Az Deg", "El Deg", "Cn0", "Health"}); int n = 0; for (auto it = t.sky.rbegin(); it != t.sky.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.azDeg), cell(e.elDeg), cell(e.cn0), cell(e.health)}); } if (n) addTable(o, "Sky", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Lat", "Lon", "Alt Km", "Health", "Cn0"}); int n = 0; for (auto it = t.sats.rbegin(); it != t.sats.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.lat), cell(e.lon), cell(e.altKm), cell(e.health), cell(e.cn0)}); } if (n) addTable(o, "Sats", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Iode", "Eph Age S", "Health", "Week", "Tow S"}); int n = 0; for (auto it = t.nav.rbegin(); it != t.nav.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.iode), cell(e.ephAgeS), cell(e.health), cell(e.week), cell(e.towS)}); } if (n) addTable(o, "Nav", tb); }
+    break;
+}
+case 876: {
+    const auto& t = rx.gnss; (void)t;
+    cardIf(o, "Cfo Hz", t.cfoHz);
+    cardIf(o, "Snr Db", t.snrDb);
+    cardIf(o, "Blocks Ok", t.blocksOk);
+    cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Input Rate", t.inputRate);
+    cardIf(o, "Center Mhz", t.centerMhz);
+    cardIf(o, "Systems Mask", t.systemsMask);
+    cardIf(o, "Active Mask", t.activeMask);
+    cardIf(o, "Decode Mask", t.decodeMask);
+    cardIf(o, "Signal Secs", t.signalSecs);
+    cardIf(o, "N Tracked", t.nTracked);
+    cardIf(o, "Leap Seconds", t.leapSeconds);
+    { Table tb({"Sys", "Prn", "Fcn", "State", "Cn0", "Doppler Hz", "Code Phase", "Az Deg"}); int n = 0; for (auto it = t.channels.rbegin(); it != t.channels.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.state), cell(e.cn0), cell(e.dopplerHz), cell(e.codePhase), cell(e.azDeg)}); } if (n) addTable(o, "Channels", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Az Deg", "El Deg", "Cn0", "Health"}); int n = 0; for (auto it = t.sky.rbegin(); it != t.sky.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.azDeg), cell(e.elDeg), cell(e.cn0), cell(e.health)}); } if (n) addTable(o, "Sky", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Lat", "Lon", "Alt Km", "Health", "Cn0"}); int n = 0; for (auto it = t.sats.rbegin(); it != t.sats.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.lat), cell(e.lon), cell(e.altKm), cell(e.health), cell(e.cn0)}); } if (n) addTable(o, "Sats", tb); }
+    { Table tb({"Sys", "Prn", "Fcn", "Iode", "Eph Age S", "Health", "Week", "Tow S"}); int n = 0; for (auto it = t.nav.rbegin(); it != t.nav.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.sys), cell(e.prn), cell(e.fcn), cell(e.iode), cell(e.ephAgeS), cell(e.health), cell(e.week), cell(e.towS)}); } if (n) addTable(o, "Nav", tb); }
     break;
 }
 case 881: {

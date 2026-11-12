@@ -220,6 +220,12 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 11: return pollStd(rxDrm_, 11, t, seqs[4], &RxTelemetry::drm);
     case 12: return pollStd(rxAdsb_, 12, t, seqs[5], &RxTelemetry::adsb);
     case 13: return pollStd(rxGnss_, 13, t, seqs[6], &RxTelemetry::gnss);
+    // 4.0: one entry per satellite system, the same receiver (gnss_rx.h: gnssViews)
+    case 861: return pollStd(rxGnss_, 861, t, seqs[860], &RxTelemetry::gnss);   // GNSS system entry (family 860)
+    case 864: return pollStd(rxGnss_, 864, t, seqs[863], &RxTelemetry::gnss);   // GNSS system entry (family 863)
+    case 867: return pollStd(rxGnss_, 867, t, seqs[866], &RxTelemetry::gnss);   // GNSS system entry (family 866)
+    case 873: return pollStd(rxGnss_, 873, t, seqs[872], &RxTelemetry::gnss);   // GNSS system entry (family 872)
+    case 876: return pollStd(rxGnss_, 876, t, seqs[875], &RxTelemetry::gnss);   // GNSS system entry (family 875)
     case 14: return pollStd(rxSonde_, 14, t, seqs[7], &RxTelemetry::sonde);
     // 4.0: one entry per radiosonde type, the same receiver (sonde_rx.h: sondeViews)
     case 685: return pollStd(rxSonde_, 685, t, seqs[684], &RxTelemetry::sonde);   // radiosonde type entry (family 684)

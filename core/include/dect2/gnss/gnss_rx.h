@@ -75,6 +75,21 @@ ModeTuning gnssTuning();
 // The tunes the GNSS screen offers: L1 / E1 (GPS, Galileo, QZSS, SBAS), BeiDou B1I and GLONASS L1 (its fourteen channels, 1598.06 .. 1605.38 MHz),
 // each on its own carrier, and All systems: one tune at 1582 MHz that spans 1559 .. 1606 MHz at 50 Msps. A tune is recognised by its centre within
 // 1 kHz; any other frequency is a custom one.
+// 4.0: the satellite systems that OnAir lists as modes of their own (docs/VIEWS-4.0.md): the GNSS receiver with one system wanted (setSystems) and that system's band as the default tuning.
+// family N, active standard N + 1, engine standard N + 2, poll slot N.
+struct GnssView {
+    int family;
+    const char* id;          // dect2cli --standard
+    const char* name;        // the mode-list name
+    int system;              // GnssSystem
+    double defMhz;
+};
+const GnssView* gnssViews(int& count);
+const GnssView* gnssViewForActive(int activeStd);
+const GnssView* gnssViewForStd(int stdMode);
+ModeTuning gnssViewTuning(int i);
+#define DECT2_GNSSVIEW_ACTIVE_CASES case 861: case 864: case 867: case 873: case 876:
+
 enum GnssTune { GnssTuneCustom = -1, GnssTuneL1 = 0, GnssTuneB1I = 1, GnssTuneGlo = 2, GnssTuneAll = 3 };
 constexpr double kGnssTuneMhz[4] = {1575.42, 1561.098, 1602.0, 1582.0};
 constexpr double kGnssAllRate = 50e6;          // the All systems tune: B1I's lower lobe to GLONASS k = +6's upper one around 1582 MHz

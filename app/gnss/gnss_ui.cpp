@@ -34,7 +34,7 @@ struct State {
 };
 State S;
 
-bool live(const App& a) { return a.rx.standard == 13; }
+bool live(const App& a) { return a.rx.standard == 13 || dect2::gnssViewForActive(a.rx.standard) != nullptr; }
 
 void loadState() {
     if (S.loaded) return;

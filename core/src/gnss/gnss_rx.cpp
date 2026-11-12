@@ -125,6 +125,25 @@ bool GnssReceiver::getIonoUtc(GpsIono& i, GpsUtc& u) const {
 uint64_t GnssReceiver::workUnitsUsed() const { return p_->units; }
 void GnssReceiver::cpuBreakdown(double* front, double* track, double* acq) const { *front = p_->cpuFront; *track = p_->cpuTrack; *acq = p_->cpuAcq; }
 
+// 4.0: the systems with a mode-list entry of their own (family, active standard family + 1, engine standard family + 2, poll slot = family)
+static const GnssView kGnssViews[] = {
+    {860, "gnssgps", "GPS L1 C/A", GnssGps, 1575.42},
+    {863, "gnssgal", "Galileo E1", GnssGalileo, 1575.42},
+    {866, "gnssqzss", "QZSS L1", GnssQzss, 1575.42},
+    {872, "gnssglo", "GLONASS L1", GnssGlonass, 1602.0},
+    {875, "gnssbds", "BeiDou B1I", GnssBeidou, 1561.098},
+};
+const GnssView* gnssViews(int& count) { count = (int)(sizeof kGnssViews / sizeof *kGnssViews); return kGnssViews; }
+const GnssView* gnssViewForActive(int a) { for (const auto& v : kGnssViews) if (v.family + 1 == a) return &v; return nullptr; }
+const GnssView* gnssViewForStd(int s) { for (const auto& v : kGnssViews) if (v.family + 2 == s) return &v; return nullptr; }
+ModeTuning gnssViewTuning(int i) {
+    ModeTuning t = gnssTuning();
+    const GnssView& v = kGnssViews[i];
+    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name; t.defMhz = v.defMhz;
+    if (std::fabs(v.defMhz - kGnssTuneMhz[GnssTuneGlo]) < 0.001) t.sampleRate = 10e6;   // GLONASS: the 14 channels lie -3.94 .. +3.38 MHz from 1602 MHz (gnssAutoRate)
+    return t;
+}
+
 ModeTuning gnssTuning() {
     ModeTuning t;
     t.stdMode = 14; t.id = "gnss"; t.name = "GNSS";
