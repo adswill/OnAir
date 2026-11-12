@@ -11,6 +11,8 @@ Source text: tools/release/changelog-3.0.src.md (read its header for the rules).
  - Run from the repository root. Nothing is posted anywhere.
 """
 import argparse, json, os, re, subprocess, sys, datetime
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+import mode_families  # noqa: E402
 
 def git(*a):
     return subprocess.run(['git', *a], capture_output=True, text=True).stdout
@@ -29,8 +31,8 @@ def parse_modes(text):
     i = text.index('kBuiltinModes[] = {')
     body = text[i:text.index('\n};', i)]
     rows = []
-    for m in re.finditer(r'^\s*\{(\d+),\s*"((?:[^"\\]|\\.)*)",\s*(\d+),', body, re.M):
-        rows.append((int(m.group(1)), m.group(2), int(m.group(3))))
+    for m in re.finditer(r'^\s*\{\s*(' + mode_families.TOKEN + r')\s*,\s*"((?:[^"\\]|\\.)*)",\s*(\d+),', body, re.M):
+        rows.append((mode_families.family(m.group(1)), m.group(2), int(m.group(3))))
     return rows, groups
 
 def mode_info(ref):

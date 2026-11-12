@@ -9,6 +9,8 @@
 #   python3 tools/gen_web_schema.py           rewrite the generated file, print a coverage report
 #   python3 tools/gen_web_schema.py --check   exit 1 when the generated file is out of date
 import os, re, sys, json, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mode_families  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INC = os.path.join(ROOT, "core", "include")
@@ -338,14 +340,14 @@ def mode_rows():
     groups = [x.strip() for x in strings(g.group(1))] if g else []
     rows = []
     for line in src.splitlines():
-        m = re.match(r"\s*\{(\d+),\s*\"", line)
+        m = mode_families.ROW_RE.match(line)
         if not m:
             continue
         st = strings(line)
         if len(st) < 2:
             continue
-        gm = re.match(r"\s*\{\d+,\s*\"(?:[^\"\\]|\\.)*\",\s*(\d+)\s*,", line)
-        fam = int(m.group(1))
+        gm = re.match(r"\s*\{\s*" + mode_families.TOKEN + r"\s*,\s*\"(?:[^\"\\]|\\.)*\",\s*(\d+)\s*,", line)
+        fam = mode_families.family(m.group(1))
         # the sub-mode id is the last short string of the row (a lower-case token) when the row has one
         sub = ""
         for s in reversed(st):

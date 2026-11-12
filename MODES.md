@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**461 modes.**
+**464 modes.**
 
 ## TV (25)
 
@@ -186,13 +186,15 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Voice inversion scrambler** - Voice inversion scrambler: detection and descrambling of full-band inversion (simulated only)
 - **DCR (Japan digital convenience radio)** - DCR: user codes, call signs, calls and data (351 MHz channel scan)
 
-## Cellular & Rail (10)
+## Cellular & Rail (12)
 
 - **End of train (AAR EOT/HOT)** - End of train: US freight train telemetry
 - **Cell towers** - Cell towers: the public broadcast information of LTE cells
 - **5G NR cells** - 5G NR cells: the public broadcast of NR cells (PSS / SSS / PBCH, MIB)
 - **NB-IoT cells** - NB-IoT cells: the public broadcast information of narrowband IoT carriers (receive only)
 - **GSM-R** - GSM-R: the public broadcast information of railway GSM cells
+- **KLW** - KLW: railway end-of-train data
+- **TDCS** - TDCS: railway train dispatch data
 - **LBJ** - LBJ: railway train warning broadcasts (821 MHz)
 - **UMTS cells** - UMTS: 3G cells by primary scrambling code
 - **CDMA2000 cells** - CDMA2000: base stations by pilot PN, SID / NID and system time from the Sync Channel
@@ -286,7 +288,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **NFC: ISO 14443 Type B** - NFC Type B: readers and tag answers
 - **NFC: ISO 15693** - NFC ISO 15693: vicinity tags and readers
 
-## Weather & Science (76)
+## Weather & Science (77)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -337,6 +339,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Pulsar folding** - Pulsar folding: dedisperse and fold a record to find a pulsar, needs a dish or array
 - **NOAA Weather Radio SAME** - NOAA Weather Radio SAME: weather and emergency alerts, decoded and explained (receive only)
 - **Radiosonde** - Radiosonde weather balloons: position, altitude and weather data
+- **Horus balloons** - Horus Binary and RTTY high-altitude balloons: position, altitude, temperature, voltage, satellites (receive only)
 - **Time signals** - Time signals: the time stations and your computer clock against them
 - **e-Czas (225 kHz, Poland)** - e-Czas: Polish official time on 225 kHz long wave, decoded; needs a long-wave capable radio or an upconverter
 - **Meteor scatter** - Meteor scatter: pings of meteor trails reflecting a distant beacon, counted and logged

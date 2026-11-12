@@ -5,6 +5,8 @@ changes: new modes are appended, removed ones stay as hidden placeholders. The o
 The script runs from tools/build_native.sh, so a mode added to the desktop table reaches the app with no Android change.
 Usage: gen_modes.py [<OnAir repo> <android project>] (default: this checkout and its android/ folder)"""
 import re, sys, html, os
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'tools'))
+import mode_families  # noqa: E402
 _android = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 repo, proj = (sys.argv[1], sys.argv[2]) if len(sys.argv) > 2 else (os.path.dirname(_android), _android)
 src = open(os.path.join(repo, 'app/ui/mode_table.cpp'), encoding='utf-8').read()
@@ -47,7 +49,7 @@ def vec4(s):
 modes = []
 buf = ''
 for line in body.splitlines():
-    if not buf and not re.match(r'\s*\{\d+,', line): continue
+    if not buf and not mode_families.ROW_RE.match(line): continue
     buf += line + '\n'
     st = buf.strip()
     if st.endswith('},') and st.count('{') == st.count('}'):
@@ -55,7 +57,7 @@ for line in body.splitlines():
         col = f[3]
         f += ['""'] * (8 - len(f))
         if f[7] in ('""', ''): f[7] = 'ImVec4(0.7f, 0.74f, 0.8f, 1)'
-        modes.append(dict(family=int(f[0]), name=cstr(f[1]), group=int(f[2]), blurb=cstr(f[4]) or '', tip=cstr(f[5]) or '', sub=cstr(f[6]) or '', accent=vec4(f[7]),
+        modes.append(dict(family=mode_families.family(f[0], repo), name=cstr(f[1]), group=int(f[2]), blurb=cstr(f[4]) or '', tip=cstr(f[5]) or '', sub=cstr(f[6]) or '', accent=vec4(f[7]),
                           subId=(cstr(f[8]) if len(f) > 8 and f[8] != 'nullptr' else None), keys=(cstr(f[9]) or '' if len(f) > 9 else '')))
         buf = ''
 gm = re.search(r'kGroupNames\[kNumGroups\]\s*=\s*\{(.*?)\};', src, re.S)

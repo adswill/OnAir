@@ -1,6 +1,6 @@
 # OnAir 4.0
 
-OnAir 4.0 adds 128 modes (461 rows in MODES.md, 333 in 3.9; 459 in the app's mode list, which has no row for Plugins or Mode Builder). It brings a new General receiver screen, a Workspace layout, one Ham station screen, new transmit screens, a propagation calculator on ITU-R models, a satellite tracker with a world map, a sharper zoomed waterfall, a community plugin marketplace, better sensitivity in many decoders, and fixes from your reports.
+OnAir 4.0 adds 128 modes (464 rows in MODES.md, 462 in the app's mode list, which has no row for Plugins or Mode Builder). 3.9 had 336 rows, not the 333 its notes said: the list generator skipped KLW, TDCS and Horus balloons, which were in the app all along. It brings a new General receiver screen, a Workspace layout, one Ham station screen, new transmit screens, a propagation calculator on ITU-R models, a satellite tracker with a world map, a sharper zoomed waterfall, a community plugin marketplace, better sensitivity in many decoders, and fixes from your reports.
 
 ## Downloads
 

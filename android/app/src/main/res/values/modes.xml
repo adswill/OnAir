@@ -490,6 +490,9 @@
         <item>FSK200/500 (F01)</item>
         <item>FSK200/1000 (F06, F06a)</item>
         <item>GW FSK (100 Bd)</item>
+        <item>KLW</item>
+        <item>TDCS</item>
+        <item>Horus balloons</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -961,6 +964,9 @@
         <item>FSK200/500 (Enigma F01), used for Russian diplomatic and intelligence messages: 200 Bd FSK, 500 Hz shift, asynchronous ITA2 characters with 1.5 stop bits. Receive only: the figure groups line by line and the framing errors; the tones and the sense of the shift are found automatically. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
         <item>FSK200/1000 (Enigma F06 and F06a), used for Russian diplomatic and intelligence messages: 200 Bd FSK, 1000 Hz shift, 288-bit blocks behind a sync word with a CRC-16. Receive only: the header blocks (block count, messages and where they start), F06 figure groups, ASCII blocks and F06a files (name, size, file CRC, contents), each block with its CRC; one wrong bit per block is corrected. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
         <item>GW FSK, the ship-to-shore data system of Globe Wireless on the HF marine bands: 100 Bd FSK, 200 Hz shift, short packets. Receive only: shore free-channel markers with the station, ship packets with their type, MMSI numbers and commands, position reports put together from their fragments, ACKs. The format was worked out from recordings by Rivet\'s authors; it is not published. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
+        <item>Chinese railway end-of-train messages: 1200 bit/s FFSK, BCH and CRC, locomotive and tail IDs, brake pressure, commands and clock calibration (receive only)</item>
+        <item>Chinese railway train dispatch messages: 1200 bit/s FFSK, BCH and CRC, train and locomotive IDs, speed, mileage, consist and station fields (receive only)</item>
+        <item>Project Horus amateur balloon telemetry on 70 cm (434 MHz): Horus Binary v1 / v2 (100 baud 4FSK) and Horus RTTY (UKHAS sentences), every payload in the span on a map</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1432,6 +1438,9 @@
         <item>HF FSK, 200 Bd 500 Hz</item>
         <item>HF FSK, 200 Bd 1000 Hz</item>
         <item>HF FSK, 100 Bd 200 Hz</item>
+        <item>End of train, FFSK</item>
+        <item>Train dispatch, FFSK</item>
+        <item>Amateur balloons, 434 MHz</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1903,5 +1912,8 @@
         <item>fsk200/500 fsk 200/500 f01 numbers station 200 baud 500 hz shift ita2 baudot russian diplomatic intelligence rivet priyom enigma 2000 hf</item>
         <item>fsk200/1000 fsk 200/1000 f06 f06a numbers station 200 baud 1000 hz shift crc blocks file russian diplomatic intelligence rivet priyom enigma 2000 hf</item>
         <item>gw globe wireless gw fsk 100 baud 200 hz shift ship shore marine mmsi position free channel marker rivet hf</item>
+        <item>klw chinese railway end of train tail pressure ffsk cir 客车列尾 风压</item>
+        <item>tdcs dmis chinese railway train dispatch ffsk cir 车次 公里标</item>
+        <item>horus binary 4fsk horusdemodlib horus-gui balloon hab high altitude rtty ukhas rs41ng sondehub amateur payload 434 434.650 437.6</item>
     </string-array>
 </resources>
