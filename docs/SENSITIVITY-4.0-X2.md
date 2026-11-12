@@ -14,6 +14,9 @@ named); no off-air recording was used.
 | SSTV Robot 36 | lowest SNR with mean error 20 or less (test picture) | 14 dB | about 7 dB | 3 kHz | yes |
 | SSTV PD120 | PSNR at 10 dB, test / textured | 15.4 / 12.6 dB (+-50 Hz, +-50 ppm) | 21.9 / 15.5 dB (no offset) | 3 kHz | yes |
 | SSTV Robot 36 | crash on a weak picture | segfault at 4 dB | fixed | | yes |
+| Weather fax 120 lpm | sens39 pass (line lock, mean row correlation over 0.5), 3 trials a point | 3 of 3 at 4 dB, 0 of 3 at 2 dB | 3 of 3 at 2 and 1 dB | 0 .. 6 kHz, +-30 Hz, +-20 ppm | yes |
+| Weather fax 120 lpm | mean row correlation at 4 / 2 / 0 dB | 0.601 / 0.460 / 0.338 | 0.796 / 0.634 / 0.448 | as above | yes |
+| NOAA APT | picture PSNR at 15 / 2 / 0 dB (generator SNR in 40 kHz) | see the APT section | | 2.5 kHz offset, 30 Hz/s, 80 ppm | yes |
 | NFM voice (general receiver) | 12 dB SINAD point | 8.4 dB in 12.5 kHz | not changed | 1 kHz tone, 2.5 kHz deviation | no (see below) |
 
 "About" points are between two measured SNRs. The 4.0 filter was finished after the Mac went on battery, so its impairment sweep (offsets,
@@ -73,6 +76,29 @@ it only where the noise is.
 Guard test: `hfdig_sstv_sens40` (tests/hfdig/test_hfdig_sstv_sens40.cpp): Martin M1 at 6 dB and Robot 36 at 10 dB with +-50 Hz and +-50 ppm,
 filtered mean error under 14 / 18 levels and 4 levels better than unfiltered; textured picture at 30 dB costs at most 0.3 dB PSNR; Robot 36 at
 4 dB does not crash; 60 s of noise give no picture.
+
+## SSTV guard on GitHub (Linux runner, quick.yml run 43144140304)
+
+hfdig_sstv_sens40 with +-50 Hz and +-50 ppm: Martin M1 at 6 dB mean error 21.6 -> 7.5 levels, Robot 36 at 10 dB 28.7 -> 13.2; textured picture at
+30 dB PSNR 26.50 -> 26.59 (Martin M1), 20.37 -> 20.47 dB (Robot 36); Robot 36 at 4 dB no crash; 60 s of noise: 0 pictures. hfdig_sstv (every
+mode at +-100 Hz and +-100 ppm, the engine path) and hfdig_sens39d pass.
+
+## Weather fax: row filter for weak signals (core/src/marine/marine_fax.cpp)
+
+Same cause as SSTV: a pixel is the mean tone over 3.3 samples at 12 kHz. Below the wide-filter SNR (22 dB, the narrow path) each row's tones now go
+through a local Wiener filter over 7 pixels with the pixel noise measured on the row itself (1.4826 x the median absolute second difference /
+sqrt 6, which the chart's edges hardly move), averaged over rows. Strong signals (the wide path) are not touched. `FaxDecoder::setNoiseFilter(false)`
+gives the 3.9 rows. Test `marine_fax_sens40` (conditions of marine_fax_sens39, 3 trials a point, same noise both ways), GitHub Linux runner:
+
+| SNR (0 .. 6 kHz) | 10 | 4 | 2 | 1 | 0 | -1 | -2 dB |
+|---|---|---|---|---|---|---|---|
+| mean row correlation, 3.9 | 0.843 | 0.601 | 0.460 | 0.401 | 0.338 | 0.284 | 0.077 |
+| 4.0 | 0.933 | 0.796 | 0.634 | 0.537 | 0.448 | 0.359 | 0.094 |
+| sens39 passes of 3, 3.9 / 4.0 | 3 / 3 | 3 / 3 | 0 / 3 | 0 / 3 | 0 / 0 | 0 / 0 | 0 / 0 |
+
+About 2 to 3 dB on the sens39 criterion. The line lock (rows, line rate, drift) is the same both ways at every point; marine_fax_sens39,
+marine_fax_weak and marine_fax_decode pass. (sens39 recorded its 90 % point at 2 dB over 8 other seeds; on these 3 seeds the 3.9 decoder
+fails at 2 dB, so the seeds here are harder.)
 
 ## NFM voice: click removal looked at, not kept
 
