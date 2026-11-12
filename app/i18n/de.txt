@@ -4178,3 +4178,5 @@ Meters, N1	Zähler, N1
 Satellites, G3RUH 9600	Satelliten, G3RUH 9600
 Satellites, CCSDS RS	Satelliten, CCSDS RS
 Satellites, CCSDS concatenated	Satelliten, CCSDS concatenated
+Aviation, ILS markers	Flugfunk, ILS-Marker
+Utility, FSK modems	Funkdienste, FSK-Modems

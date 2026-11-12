@@ -169,7 +169,7 @@ extern const ModeUi kBganUi;
 extern const ModeUi kSfericsUi;
 extern const ModeUi kLtposUi;
 extern const ModeUi kFbrUi;
-extern const ModeUi kX40Ui[42];   // app/x40: the 4.0 signal modes (families 881 - 895 and 752 - 759)
+extern const ModeUi kX40Ui[44];   // app/x40: the 4.0 signal modes (families 881 - 895 and 752 - 759)
 extern const ModeUi kHamsciUi[16];   // app/hamsci: the ham science modes by kind (families 460 - 465, 500 - 502, 750, event monitors 820, 823 .. 835)
 extern const ModeUi kAtisUi;
 extern const ModeUi kSelcalUi;
@@ -306,7 +306,7 @@ const ModeUi* modeUi(int family) {
     case 790: return &kLtposUi;
     case 870: return &kFbrUi;
     case 881: case 882: case 883: case 884: case 885: case 886: case 887: case 888: case 889: case 890: case 891: case 892: case 893: case 894: case 895: return &kX40Ui[family - 881];
-    case 752: case 753: case 754: case 755: case 756: case 757: case 758: case 759: case 760: case 761: case 762: case 763: case 764: case 765: case 766: case 767: case 768: case 769: case 770: case 771: case 772: case 773: case 774: case 775: case 776: case 777: case 778: return &kX40Ui[15 + family - 752];
+    case 752: case 753: case 754: case 755: case 756: case 757: case 758: case 759: case 760: case 761: case 762: case 763: case 764: case 765: case 766: case 767: case 768: case 769: case 770: case 771: case 772: case 773: case 774: case 775: case 776: case 777: case 778: case 779: case 780: return &kX40Ui[15 + family - 752];
     case 460: case 461: case 462: case 463: case 464: case 465: return &kHamsciUi[family - 460];
     case 500: case 501: case 502: return &kHamsciUi[6 + family - 500];
     case 750: return &kHamsciUi[9];

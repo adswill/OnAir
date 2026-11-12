@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**411 modes.**
+**413 modes.**
 
 ## TV (17)
 
@@ -36,7 +36,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FM modulation monitor** - FM monitor: deviation, pilot, RDS, MPX power
 - **AM modulation monitor** - AM monitor: depth, peaks, hum, bandwidth
 
-## Aviation (28)
+## Aviation (29)
 
 - **ADS-B** - ADS-B aircraft position and identity reports
 - **Mode S uplink** - Mode S uplink: interrogators, rotation periods, aircraft asked for registers, TCAS coordination
@@ -66,6 +66,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **eLoran / Loran-C** - eLoran / Loran-C: 100 kHz hyperbolic navigation pulses, GRI and station arrival times
 - **ASTERIX** - ASTERIX: radar and ADS-B surveillance data from UDP or a file
 - **ELT 121.5 MHz** - ELT 121.5 MHz: swept-tone detection (simulated only)
+- **ILS marker beacons (75 MHz)** - ILS marker beacons: outer, middle and inner marker tones and keying
 
 ## Maritime (8)
 
@@ -380,7 +381,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ham FM repeaters** - Ham FM repeaters: 2 m and 70 cm outputs with offsets, the tone heard on each, call log and recording (receive only)
 - **HF packet 300 Bd** - HF packet 300 Bd: AX.25 frames, full decode (simulated only)
 
-## HF Utility (34)
+## HF Utility (35)
 
 - **PACTOR-II** - PACTOR-II: HF D-PSK carriers, symbols and frame structure (physical layer only; no text)
 - **PACTOR-III** - PACTOR-III: HF multi-carrier D-PSK, carrier set and frame structure (physical layer only; no text)
@@ -416,6 +417,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **CIS OFDM HDR** - CIS OFDM HDR (CIS-45 / 60 / 93): identification only (simulated only)
 - **CIS-128** - CIS-128: identification only (simulated only)
 - **CIS-3000** - CIS-3000: identification only (simulated only)
+- **FSK modems (Bell 103, V.21, V.23, Bell 202)** - FSK modems: Bell 103, V.21, V.23 and Bell 202 bytes
 
 ## General & Tools (29)
 

@@ -748,3 +748,5 @@ Meters, N1
 Satellites, G3RUH 9600
 Satellites, CCSDS RS
 Satellites, CCSDS concatenated
+Aviation, ILS markers
+Utility, FSK modems

@@ -439,6 +439,8 @@
         <item>AX.25 G3RUH 9600 (satellites)</item>
         <item>CCSDS Reed-Solomon (satellites)</item>
         <item>CCSDS concatenated (satellites)</item>
+        <item>ILS marker beacons (75 MHz)</item>
+        <item>FSK modems (Bell 103, V.21, V.23, Bell 202)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -859,6 +861,8 @@
         <item>AX.25 frames at 9600 baud G3RUH (scrambled FSK / GMSK) from amateur satellites on 70 cm: HDLC framing with bit stuffing and the AX.25 CRC, callsigns, and hex and ASCII dumps. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
         <item>CCSDS telemetry frames with the 0x1ACFFC1D sync marker and Reed-Solomon (255,223) from amateur and small satellites on 70 cm: the Reed-Solomon check and the frame bytes. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
         <item>CCSDS concatenated telemetry from amateur and small satellites on 70 cm: convolutional coding (Viterbi) with Reed-Solomon (255,223) behind the 0x1ACFFC1D sync marker. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
+        <item>Instrument landing system marker beacons on 75 MHz (ICAO Annex 10): the AM carrier is keyed with a tone, 400 Hz dashes for the outer marker (2 per second), 1300 Hz dot-dash for the middle marker (95 pairs per minute), 3000 Hz dots for the inner marker (6 per second). Names the marker from the tone, measures the keying and says whether it fits the standard; a tone with the wrong keying is listed as tone only. Simulated signals only</item>
+        <item>Telephone-style FSK modems as audio tones in a single-sideband channel: Bell 103 (originate 1070 / 1270 Hz, answer 2025 / 2225 Hz, 300 baud, the time station CHU uses the answer tones), ITU-T V.21 channels 1 and 2 (300 baud), V.23 mode 2 and Bell 202 (1200 baud). Names the standard and the sideband from the two tones, reads the asynchronous bytes (start bit, 8 data bits, stop bits) and shows them in hex and ASCII with the framing errors. Tune the dial so the tones lie in 600 - 2700 Hz above (upper sideband) or below the dial; a dial error up to 40 Hz is accepted. It does not know the meaning of the bytes. Simulated signals only</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1279,6 +1283,8 @@
         <item>Satellites, G3RUH 9600</item>
         <item>Satellites, CCSDS RS</item>
         <item>Satellites, CCSDS concatenated</item>
+        <item>Aviation, ILS markers</item>
+        <item>Utility, FSK modems</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1699,5 +1705,7 @@
         <item>ax25 ax.25 g3ruh 9600 packet hdlc fsk gmsk cubesat satellite 435 437</item>
         <item>ccsds reed solomon rs 255 223 telemetry tm frame cubesat satellite 435 437 sync 1acffc1d</item>
         <item>ccsds concatenated viterbi convolutional reed solomon telemetry cubesat satellite 435 437 1acffc1d</item>
+        <item>ils marker beacon outer middle inner 75 mhz 400 1300 3000 hz localizer glide path approach</item>
+        <item>bell 103 v.21 v.23 bell 202 fsk modem afsk async 300 baud 1200 baud chu time signal 7850 3330 14670 telephone</item>
     </string-array>
 </resources>

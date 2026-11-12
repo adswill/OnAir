@@ -47,6 +47,8 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case Papr: return makePapr();
     case SpecKurt: return makeSpecKurt();
     case Glitch: return makeGlitch();
+    case Marker: return makeMarker();
+    case FskModem: return makeFskModem();
     default: return nullptr;
     }
 }
@@ -99,6 +101,8 @@ ModeTuning x40Tuning(int v) {
         {"papr", 0.1, 6000, 145.000, 1000000, 100000, 0.5, false},
         {"speckurt", 0.1, 6000, 145.000, 2000000, 250000, 2.0, false},
         {"glitch", 0.1, 6000, 145.000, 2000000, 100000, 2.0, false},
+        {"marker", 74.5, 75.5, 75.0, 48000, 24000, 0.012, true},
+        {"fskmodem", 0.1, 6000, 7.85, 48000, 24000, 0.004, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

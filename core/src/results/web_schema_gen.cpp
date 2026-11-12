@@ -15972,6 +15972,8 @@ static const WebModeRow kRows[] = {
     {792, "AX.25 G3RUH 9600 (satellites)", 4, "AX.25 9600 baud G3RUH: amateur satellite packet frames", "", 794, 793, "cube"},
     {795, "CCSDS Reed-Solomon (satellites)", 4, "CCSDS Reed-Solomon: satellite telemetry frames", "", 797, 796, "cube"},
     {804, "CCSDS concatenated (satellites)", 4, "CCSDS concatenated: Viterbi and Reed-Solomon satellite frames", "", 806, 805, "cube"},
+    {779, "ILS marker beacons (75 MHz)", 2, "ILS marker beacons: outer, middle and inner marker tones and keying", "", 781, 780, ""},
+    {780, "FSK modems (Bell 103, V.21, V.23, Bell 202)", 12, "FSK modems: Bell 103, V.21, V.23 and Bell 202 bytes", "", 782, 781, ""},
 };
 } // namespace
 
