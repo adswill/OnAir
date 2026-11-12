@@ -483,6 +483,7 @@
         <item>NFC: ISO 14443 Type A</item>
         <item>NFC: ISO 14443 Type B</item>
         <item>NFC: ISO 15693</item>
+        <item>DCR (Japan digital convenience radio)</item>
     </string-array>
     <string-array name="mode_blurbs">
         <item>DVB-T2 / DVB-T, detected automatically</item>
@@ -947,6 +948,7 @@
         <item>NFC / RFID at 13.56 MHz, ISO/IEC 14443 Type A (Mifare, NTAG, most phones and payment cards): the reader\'s frames (REQA, anticollision, SELECT, READ) and the tag\'s answers (ATQA, UID, SAK), the tags found and their NDEF records. Encrypted traffic after authentication is named and never decoded. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
         <item>NFC / RFID at 13.56 MHz, ISO/IEC 14443 Type B (some ID, transport and passport cards): the reader\'s REQB and the tag\'s ATQB with its frames. The receiver has a Type B path, but no test signal with real Type B modulation exists yet: not verified. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
         <item>NFC / RFID at 13.56 MHz, ISO/IEC 15693 vicinity cards (library tags, access and industrial tags, ICODE): the reader\'s inventory and system-information commands and the tag\'s answers with their UIDs. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
+        <item>DCR, Japan\'s digital convenience radio (ARIB STD-T98 volume 3): 4-level FSK 2400 symbols/s in 6.25 kHz channels, 351 MHz (registered stations), 467 / 465 MHz and 154 MHz (licensed). Receive only: user codes (0 - 511), manufacturer numbers, normal or privacy-scrambled calls, end-of-call messages, the 9-digit call sign of the synchronous burst, error-corrected data blocks and manufacturer messages; the voice (AMBE+2) frames are counted, there is no audio. With a wide capture (100 kHz or more) tuned in the 351 MHz band every active channel of the plan is decoded at once. Checked against the standard\'s own test frames and on simulated signals; no real DCR recording was available</item>
     </string-array>
     <string-array name="mode_subs">
         <item>T2 and T, automatic</item>
@@ -1411,6 +1413,7 @@
         <item>RFID, Type A</item>
         <item>RFID, Type B</item>
         <item>RFID, ISO 15693</item>
+        <item>Digital voice, DCR 6.25 kHz</item>
     </string-array>
     <string-array name="mode_keys">
         <item></item>
@@ -1875,5 +1878,6 @@
         <item>nfc rfid 13.56 mhz iso 14443 type a mifare ntag uid atqa sak ndef reader tag</item>
         <item>nfc rfid 13.56 mhz iso 14443 type b reqb atqb card passport</item>
         <item>nfc rfid 13.56 mhz iso 15693 vicinity icode inventory library tag</item>
+        <item>dcr digital convenience radio japan arib std-t98 digital simplified radio kani musen 351 mhz 467 mhz 154 mhz 4fsk nxdn user code call sign icom kenwood</item>
     </string-array>
 </resources>

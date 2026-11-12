@@ -87,3 +87,6 @@ Every entry is a family F with active standard F + 1, engine standard F + 2 and 
 | Analog TV standards | 424, 427, 441, 444, 447, 450, 453, 456 | 8 views of Analog TV |
 
 The numbers still free are those of the ranges listed above minus the ones in this table (the stride is 3 for a view, 1 for an x40 variant). The integrator resolves any clash with another branch.
+
+## DCR (feat40-dcr, 2026-11-12)
+x40 variant 45: family 782, active standard 783, engine standard 784, poll slot 782 (DCR, Japan digital convenience radio, docs/DCR-4.0.md). The x40 variants after SsrInt (44) are variants 45 and up: a merge with another branch that also adds a variant needs the enum order, `kX40Ui[]`, `makeUi<>()` and the `x40Tuning(n)` list settled by hand; `DECT2_X40_ACTIVE_CASES` now ends in 783.

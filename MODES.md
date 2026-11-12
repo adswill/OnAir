@@ -2,7 +2,7 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**454 modes.**
+**455 modes.**
 
 ## TV (25)
 
@@ -161,7 +161,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **GLONASS L1** - GLONASS L1: satellite tracking and position fix
 - **BeiDou B1I** - BeiDou B1I: satellite tracking and position fix
 
-## Two-way Radio (21)
+## Two-way Radio (22)
 
 - **DMR** - DMR (Digital Mobile Radio), two-slot TDMA
 - **Digital voice (auto)** - Digital voice, automatic: every system in the span found from the signal itself, with how sure
@@ -184,6 +184,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **OpenSky identifier** - OpenSky: identification only, the channel is measured and nothing is decoded
 - **EDACS trunking** - EDACS trunking: control channel frames, calls and analog voice following of a trunked system
 - **Voice inversion scrambler** - Voice inversion scrambler: detection and descrambling of full-band inversion (simulated only)
+- **DCR (Japan digital convenience radio)** - DCR: user codes, call signs, calls and data (351 MHz channel scan)
 
 ## Cellular & Rail (10)
 

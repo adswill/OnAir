@@ -16055,6 +16055,7 @@ static const WebModeRow kRows[] = {
     {779, "ILS marker beacons (75 MHz)", 2, "ILS marker beacons: outer, middle and inner marker tones and keying", "", 781, 780, ""},
     {780, "FSK modems (Bell 103, V.21, V.23, Bell 202)", 12, "FSK modems: Bell 103, V.21, V.23 and Bell 202 bytes", "", 782, 781, ""},
     {781, "SSR interrogations (1030 MHz)", 2, "SSR interrogations: which modes the radars around you ask, and how often", "", 783, 782, ""},
+    {782, "DCR (Japan digital convenience radio)", 5, "DCR: user codes, call signs, calls and data (351 MHz channel scan)", "", 784, 783, ""},
     {738, "AIS Class A vessels", 3, "AIS Class A: ships' positions and identities", "", 740, 739, "ais"},
     {807, "AIS Class B vessels", 3, "AIS Class B: small craft positions and identities", "", 809, 808, "ais"},
     {810, "AIS base stations", 3, "AIS base stations: coast stations and their time", "", 812, 811, "ais"},
