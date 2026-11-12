@@ -188,7 +188,7 @@ struct Store::Impl {
     plugin::Manager* mgr = nullptr;
     mutable std::mutex mu;
     std::vector<Listing> items;
-    std::vector<Revocation> revoked;
+    std::vector<Revocation> revoked, extra;
     Source source = Source::None;
     int serial = 0, maxSerial = 0;
     std::string generated, notice, error;
@@ -501,6 +501,7 @@ std::vector<Revocation> Store::applyRevocations() {
     std::vector<Revocation> hit;
     if (!p_->mgr) return hit;
     std::vector<Revocation> rev = revocations();
+    { std::lock_guard<std::mutex> lk(p_->mu); for (const auto& x : p_->extra) if (std::none_of(rev.begin(), rev.end(), [&](const Revocation& r) { return r.id == x.id; })) rev.push_back(x); }
     std::map<std::string, std::pair<std::string, std::string>> want;
     const auto entries = p_->mgr->entries();
     for (const auto& r : rev) {
@@ -516,6 +517,8 @@ std::vector<Revocation> Store::applyRevocations() {
     }
     return hit;
 }
+
+void Store::setExtraRevocations(const std::vector<Revocation>& r) { std::lock_guard<std::mutex> lk(p_->mu); p_->extra = r; }
 
 bool Store::installedInfo(const std::string& id, Installed& out) const {
     std::lock_guard<std::mutex> lk(p_->mu);

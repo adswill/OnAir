@@ -67,6 +67,11 @@ bool postJsonReply(const std::string& url, const std::string& json, const std::s
 // 4 anything else (TLS ...). detail is a short technical text for the log. body is the answer (up to 64 KB).
 struct HttpResult { int status = 0; int net = 0; std::string body; std::string detail; };
 HttpResult httpRequest(const std::string& method, const std::string& url, const std::string& body, const std::string& userAgent, int timeoutSec);
+// Any method with a body of any Content-Type and extra headers ("Authorization: Bearer ..."; passed to curl in a private temporary file, so a
+// token never appears in a process list), the HTTP status and the answer up to maxReply bytes. Used by the plugin marketplace
+// (docs/PLUGIN-MARKETPLACE-4.0.md) for its JSON, multipart uploads and package downloads.
+HttpResult httpCall(const std::string& method, const std::string& url, const std::string& body, const std::string& contentType,
+                    const std::vector<std::string>& headers, const std::string& userAgent, int timeoutSec, size_t maxReply);
 // Starts a program with arguments and does not wait for it. No shell is ever involved: every argument stays one argument. False and err when it did not start.
 bool spawnProgram(const std::string& program, const std::vector<std::string>& args, std::string& err);
 // Starts a program that keeps running, its output (both streams) written to logFile. Returns its process id, 0 and err when it did not start.
