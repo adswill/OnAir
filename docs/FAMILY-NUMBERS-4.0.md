@@ -90,3 +90,17 @@ The numbers still free are those of the ranges listed above minus the ones in th
 
 ## DCR (feat40-dcr, 2026-11-12)
 x40 variant 45: family 782, active standard 783, engine standard 784, poll slot 782 (DCR, Japan digital convenience radio, docs/DCR-4.0.md). The x40 variants after SsrInt (44) are variants 45 and up: a merge with another branch that also adds a variant needs the enum order, `kX40Ui[]`, `makeUi<>()` and the `x40Tuning(n)` list settled by hand; `DECT2_X40_ACTIVE_CASES` now ends in 783.
+
+## Rivet HF modes (feat40-rivet, 2026-11-12)
+x40 variants 46 - 51 (after Dcr), a block of their own: `x40::familyOfVariant(v)` gives family 370 + (v - Xpa) for them (`kRivetFirst`, `kRivetFamily`), active standard family + 1, engine standard family + 2, poll slot = family. 370 - 375 come from the free range 362 - 377; 376 and 377 stay free (as active / engine standards they are taken by 375). Docs: docs/RIVET-MODES-4.0.md.
+
+| Mode | Variant | Family | Active standard | Engine standard | Poll slot |
+|---|---|---|---|---|---|
+| XPA (10 / 20 Bd) | 46 | 370 | 371 | 372 | 370 |
+| XPA2 | 47 | 371 | 372 | 373 | 371 |
+| CROWD36 | 48 | 372 | 373 | 374 | 372 |
+| FSK200/500 (F01) | 49 | 373 | 374 | 375 | 373 |
+| FSK200/1000 (F06, F06a) | 50 | 374 | 375 | 376 | 374 |
+| GW FSK (100 Bd) | 51 | 375 | 376 | 377 | 375 |
+
+Merge note: another branch that adds x40 variants after Dcr (45) needs the enum order, `kX40Ui[]`, `makeUi<>()`, the `x40Tuning(n)` list and the case labels in `app/panels/modeui.cpp` (`&kX40Ui[46 + family - 370]`) settled by hand; the Rivet block keeps its families whatever its variant numbers become, because `kRivetFirst` is the enum value `Xpa`.

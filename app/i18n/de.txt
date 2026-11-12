@@ -4605,3 +4605,9 @@ Slow	Langsam
 Previews of the looks	Vorschau der Darstellungen
 Hover a colour palette, layout, font look, text size or waterfall colour map (in Settings and the View menu) to see a small picture of the interface with it. Nothing changes until you pick one.	Zeigen Sie auf eine Farbpalette, ein Layout, ein Schriftbild, eine Textgröße oder eine Wasserfall-Farbskala (in den Einstellungen und im Menü Ansicht), um ein kleines Bild der Oberfläche damit zu sehen. Erst mit der Auswahl ändert sich etwas.
 Applies after a restart	Gilt nach einem Neustart
+HF MFSK, 10 / 20 Bd	KW-MFSK, 10 / 20 Bd
+HF MFSK, 7.8 Bd	KW-MFSK, 7,8 Bd
+HF MFSK, 40 Bd	KW-MFSK, 40 Bd
+HF FSK, 200 Bd 500 Hz	KW-FSK, 200 Bd 500 Hz
+HF FSK, 200 Bd 1000 Hz	KW-FSK, 200 Bd 1000 Hz
+HF FSK, 100 Bd 200 Hz	KW-FSK, 100 Bd 200 Hz
