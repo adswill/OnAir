@@ -1163,7 +1163,7 @@ void TxSession::generatorLoop() {
             gen_->generate(blk.data(), n);
             txOutputStage(req_, blk.data(), n, made, rate_);
             if (limit != ~0ull) {   // one pass or the timeout: the same raised-cosine fade at the end, so that the key-down does not click either
-                const uint64_t fade = (uint64_t)(std::max(0.0, req_.o("out.rampMs", kTxDefaultRampMs)) * 1e-3 * rate_);
+                const uint64_t fade = (uint64_t)(std::min(500.0, std::max(0.0, req_.o("out.rampMs", kTxDefaultRampMs))) * 1e-3 * rate_);   // a long soft start does not make a long key-down
                 for (size_t i = 0; i < n; i++) {
                     const uint64_t left = limit - (made + i);   // samples still to come, this one included (>= 1)
                     if (left <= fade) blk[i] *= 0.5f - 0.5f * (float)std::cos(math::kPi * (double)(left - 1) / (double)fade);

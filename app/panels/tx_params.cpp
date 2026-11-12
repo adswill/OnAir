@@ -1,8 +1,7 @@
-// The advanced parameters of the transmit panel: ONE declarative table per kind of signal (paramsFor), drawn by one function (advancedPanel) in the sections
-// Modulation, Audio, Filters, Output and Timing. A parameter is one row of the table: its key, label, tooltip, unit, range and default. Adding a mode's
-// parameters means adding rows (or choosing an existing group of rows) in paramsFor(); the panel, the saving of the last values, the presets, "Reset to default"
-// and the hand-over to the generator (TxRequest::opt / the legacy request fields) need no other change. A value only reaches a generator that reads its key.
-// Nothing here limits a value to what is lawful or safe: a slider's range is what the generator can make.
+// The parameters of the transmit panel, drawn from the core table (dect2/tx/tx_params.h, one place for every mode): the Simple rows under "What to send"
+// (simpleRows), the Advanced rows in their groups Modulation, Audio, Filters, Framing, Output and Timing (advancedPanel), with presets and "Reset to default".
+// A row is drawn by one function (paramRow) from its type, range, unit and help, or by the mode's own widget when it is a custom row (customRow,
+// tx_payload_ui.cpp). Every row reaches the generator: tests/tx/test_tx_param_model.cpp checks it. Nothing here limits a value to what is lawful.
 #include "tx_state.h"
 #include "dect2/audio/audio_control.h"
 #include <algorithm>
@@ -16,216 +15,40 @@ using namespace txui;
 namespace {
 
 using P = PDef;
-constexpr double kNoWhen = 0;
 
-// one row; `when` is "key=value" or "key>value" over another parameter of the same table (the row is shown only then)
-P F(const char* key, Sec sec, const char* label, const char* tip, double def, double lo, double hi, const char* fmt, const char* when = nullptr, Bind b = Bind::Opt) {
-    P p; p.key = key; p.sec = sec; p.type = PType::Float; p.label = label; p.tip = tip; p.def = def; p.lo = lo; p.hi = hi; p.fmt = fmt; p.when = when; p.bind = b;
-    return p;
-}
-P I(const char* key, Sec sec, const char* label, const char* tip, double def, double lo, double hi, const char* when = nullptr) {
-    P p = F(key, sec, label, tip, def, lo, hi, "%.0f", when);
-    p.type = PType::Int;
-    return p;
-}
-P B(const char* key, Sec sec, const char* label, const char* tip, bool def, const char* when = nullptr) {
-    P p = F(key, sec, label, tip, def ? 1 : 0, 0, 1, "", when);
-    p.type = PType::Bool;
-    return p;
-}
-P C(const char* key, Sec sec, const char* label, const char* tip, double def, std::vector<const char*> choices, double base = 0, Bind b = Bind::Opt, const char* when = nullptr) {
-    P p = F(key, sec, label, tip, def, 0, (double)choices.size() - 1, "", when, b);
-    p.type = PType::Choice; p.choices = std::move(choices); p.base = base;
-    return p;
-}
+std::string sectionName(TxPGroup g) { return tr(txParamGroupName(g)); }
 
-// Off, then the 50 standard CTCSS tones (kCtcssHz); the choice index n > 0 is kCtcssHz[n - 1] (read in tx_voice.cpp as fm.ctcssIdx)
-std::vector<const char*> ctcssChoices() {
-    static std::vector<std::string> names;
-    static std::vector<const char*> ptrs;
-    if (ptrs.empty()) {
-        names.reserve(51);
-        names.push_back("Off");
-        for (float f : dect2::actl::kCtcssHz) { char b[24]; snprintf(b, sizeof b, "%.1f Hz", f); names.push_back(b); }
-        for (const auto& n : names) ptrs.push_back(n.c_str());
+// the slider format of a row: its own format and its unit ("%" written as "%%")
+std::string fmtOf(const P& d) {
+    std::string f = d.fmt && *d.fmt ? d.fmt : "%.2f";
+    if (d.unit && *d.unit) {
+        f += ' ';
+        for (const char* c = d.unit; *c; c++) { if (*c == '%') f += "%%"; else f += *c; }
     }
-    return ptrs;
+    return f;
 }
 
-// Off, then the usual DCS codes (txDcsCodes); the choice index n > 0 is the n-th code (read in tx_voice.cpp as fm.dcsIdx)
-std::vector<const char*> dcsChoices() {
-    static std::vector<std::string> names;
-    static std::vector<const char*> ptrs;
-    if (ptrs.empty()) {
-        names.push_back("Off");
-        for (int c : txDcsCodes()) { char b[16]; snprintf(b, sizeof b, "D%03d", c); names.push_back(b); }
-        for (const auto& n : names) ptrs.push_back(n.c_str());
+// the TxUi buffer a text row edits (shared between the modes and saved as before), nullptr for a field without one
+char* textBuf(TxUi& s, TxPField f, size_t& cap) {
+    switch (f) {
+    case TxPField::Callsign: cap = sizeof s.callsign; return s.callsign;
+    case TxPField::Grid: cap = sizeof s.grid; return s.grid;
+    case TxPField::Text: cap = sizeof s.text; return s.text;
+    case TxPField::Dest: cap = sizeof s.dest; return s.dest;
+    case TxPField::Path: cap = sizeof s.path; return s.path;
+    case TxPField::File: cap = sizeof s.file; return s.file;
+    case TxPField::Name: cap = sizeof s.name; return s.name;
+    case TxPField::Network: cap = sizeof s.network; return s.network;
+    default: cap = 0; return nullptr;
     }
-    return ptrs;
 }
-
-void add(std::vector<P>& v, std::initializer_list<P> l) { v.insert(v.end(), l.begin(), l.end()); }
-
-// the audio chain every analog voice shares: the test tone, the filters, the speech compressor and the VOX
-void voiceAudio(std::vector<P>& v, double hp, double lp) {
-    add(v, {
-        F("audio.tone", Sec::Audio, N_("Test tone"), N_("The pitch of the test tone, used when the audio input is the test tone."), 1000, 100, 5000, "%.0f Hz", nullptr, Bind::ToneHz),
-        F("audio.toneLevelPct", Sec::Audio, N_("Test tone level"), N_("How loud the test tone is, as a share of full audio."), 50, 0, 100, "%.0f %%"),
-        F("audio.tone2Hz", Sec::Audio, N_("Second test tone"), N_("A second tone added to the first (0 = off). Two tones make a two-tone linearity test."), 0, 0, 5000, "%.0f Hz"),
-        B("audio.compOn", Sec::Audio, N_("Speech compressor"), N_("Evens out loud and quiet speech so the signal stays strong without over-modulating."), false),
-        F("audio.compThreshDb", Sec::Audio, N_("Threshold"), N_("Audio above this level is turned down."), -18, -40, 0, "%.0f dB", "audio.compOn=1"),
-        F("audio.compRatio", Sec::Audio, N_("Ratio"), N_("How strongly audio above the threshold is turned down; 20 is close to a hard limiter."), 4, 1, 20, "%.1f : 1", "audio.compOn=1"),
-        F("audio.compMakeupDb", Sec::Audio, N_("Make-up gain"), N_("Gain added after the compressor."), 0, 0, 20, "%.0f dB", "audio.compOn=1"),
-        F("audio.compReleaseMs", Sec::Audio, N_("Release"), N_("How fast the compressor lets go after a loud passage."), 200, 20, 2000, "%.0f ms", "audio.compOn=1"),
-        F("audio.hpHz", Sec::Filters, N_("High-pass (low cut)"), N_("Removes rumble and hum below this pitch (0 = off)."), hp, 0, 1000, "%.0f Hz"),
-        F("audio.lpHz", Sec::Filters, N_("Low-pass (audio bandwidth)"), N_("Cuts the audio above this pitch, which sets how wide the signal is (0 = off)."), lp, 0, 12000, "%.0f Hz"),
-        B("vox.on", Sec::Timing, N_("VOX (transmit on voice)"), N_("The signal goes out only while there is sound on the audio input."), false),
-        F("vox.threshDb", Sec::Timing, N_("VOX threshold"), N_("How loud the audio must be to open the VOX."), -35, -60, 0, "%.0f dB", "vox.on=1"),
-        F("vox.hangMs", Sec::Timing, N_("VOX hang time"), N_("How long the VOX stays open after the sound stops."), 500, 50, 3000, "%.0f ms", "vox.on=1"),
-    });
-}
-
-void outputCommon(std::vector<P>& v) {
-    add(v, {
-        F("out.trimDb", Sec::Output, N_("Output trim"), N_("Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above."), 0, -40, 6, "%.1f dB"),
-        B("out.swapIq", Sec::Output, N_("Mirror the spectrum"), N_("Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts."), false),
-        F("tx.totSec", Sec::Timing, N_("Timeout timer"), N_("Ends the transmission by itself after this many seconds, with the key-down fade, even when Repeat until stopped is on (0 = off). Your own limit: OnAir sets none."), 0, 0, 3600, "%.0f s"),
-        F("out.rampMs", Sec::Timing, N_("Key-up fade-in"), N_("The signal fades in over this time after Start, so the key-up does not click."), kTxDefaultRampMs, 0, 500, "%.0f ms"),   // also the fade at Stop and at the end of one pass
-    });
-}
-
-// the table of one signal: kind of signal, and the few choices that change it (an analog fall-back, the QO-100 path)
-std::vector<P> build(const TxModeSpec& m, bool analog, int variant) {
-    std::vector<P> v;
-    const std::string id = m.id ? m.id : "";
-    const TxPayloadKind k = txPayloadKind(id);
-    const char* const sideband[] = {N_("Upper sideband (USB)"), N_("Lower sideband (LSB)")};
-    switch (k) {
-    case TxPayloadKind::VoiceAir:
-        add(v, {
-            C("am.type", Sec::Modulation, N_("Type"), N_("AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands."), 0, {N_("AM (carrier and sidebands)"), N_("DSB (suppressed carrier)")}),
-            F("am.depthPct", Sec::Modulation, N_("Modulation depth"), N_("How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts."), 85, 0, 120, "%.0f %%"),
-            F("am.carrierLevel", Sec::Output, N_("Carrier level"), N_("The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale."), 0.55, 0.05, 1.0, "%.2f"),
-        });
-        voiceAudio(v, 0, 4500);
-        break;
-    case TxPayloadKind::Qo100:
-        if (variant == 1) break;   // the DATV path has the TV settings
-        add(v, {
-            C("ssb.sideband", Sec::Modulation, N_("Sideband"), N_("Which sideband is sent."), 0, {sideband[0], sideband[1]}, 2, Bind::Kind),
-            F("ssb.carrierPct", Sec::Modulation, N_("Carrier injection"), N_("0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio."), 0, 0, 100, "%.0f %%"),
-            F("ssb.level", Sec::Output, N_("Peak level"), N_("The largest signal as a share of full scale."), 0.4, 0.05, 1.0, "%.2f"),
-        });
-        voiceAudio(v, 300, 2700);
-        break;
-    case TxPayloadKind::VoiceFm:
-        add(v, {
-            F("fm.deviation", Sec::Modulation, N_("Deviation"), N_("How far the audio swings the frequency. Broadcast FM uses 75 kHz."), 75000, 5000, 100000, "%.0f Hz", nullptr, Bind::Deviation),
-            F("fm.preemph", Sec::Modulation, N_("Pre-emphasis"), N_("Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas."), 50, 25, 100, "%.0f µs", nullptr, Bind::Preemph),
-            B("bfm.stereo", Sec::Modulation, N_("Stereo"), N_("Sends the 19 kHz pilot and the stereo difference signal."), true),
-            F("bfm.pilotPct", Sec::Modulation, N_("Pilot level"), N_("The 19 kHz stereo pilot, as a share of the full deviation."), 9, 0, 20, "%.1f %%", "bfm.stereo=1"),
-            B("bfm.rds", Sec::Modulation, N_("RDS"), N_("Sends the station name, radio text and programme type on a 57 kHz subcarrier."), true),
-            F("bfm.rdsDevKhz", Sec::Modulation, N_("RDS level"), N_("How far the RDS subcarrier deviates the carrier."), 2, 0.2, 7.5, "%.1f kHz", "bfm.rds=1"),
-            I("bfm.pty", Sec::Modulation, N_("Programme type"), N_("The RDS programme type code (0 to 31; 10 is pop music)."), 10, 0, 31, "bfm.rds=1"),
-            B("bfm.tp", Sec::Modulation, N_("Traffic programme"), N_("The RDS flag for a station that carries traffic announcements."), true, "bfm.rds=1"),
-            B("bfm.ta", Sec::Modulation, N_("Traffic announcement now"), N_("The RDS flag that a traffic announcement is on the air."), false, "bfm.rds=1"),
-            B("bfm.ct", Sec::Modulation, N_("Send the clock time"), N_("Sends the computer's UTC time in the RDS clock group so radios set their clock."), false, "bfm.rds=1"),
-            B("bfm.music", Sec::Modulation, N_("Music (not speech)"), N_("The RDS flag for music instead of speech."), true, "bfm.rds=1"),
-            F("audio.tone", Sec::Audio, N_("Left test tone"), N_("The pitch on the left channel, used when the audio input is the test tone."), 1000, 100, 15000, "%.0f Hz", nullptr, Bind::ToneHz),
-            F("bfm.rightHz", Sec::Audio, N_("Right test tone"), N_("The pitch on the right channel (0 = three times the left)."), 0, 0, 15000, "%.0f Hz"),
-            F("bfm.leftAmp", Sec::Audio, N_("Left level"), N_("The left test tone, as a share of full audio."), 0.5, 0, 1, "%.2f"),
-            F("bfm.rightAmp", Sec::Audio, N_("Right level"), N_("The right test tone, as a share of full audio."), 0.5, 0, 1, "%.2f"),
-            F("bfm.level", Sec::Output, N_("RF level"), N_("The size of the signal as a share of full scale."), 0.3, 0.05, 1.0, "%.2f"),
-        });
-        break;
-    case TxPayloadKind::VoiceDigital:
-    case TxPayloadKind::WeatherScene: case TxPayloadKind::SatScene: case TxPayloadKind::Flarm: case TxPayloadKind::Zigbee: case TxPayloadKind::Dji:
-    case TxPayloadKind::HfBeacon: case TxPayloadKind::Vdes: case TxPayloadKind::Uplink: case TxPayloadKind::Mesh: case TxPayloadKind::Mac:
-        if (!analog) break;   // the analog voice settings apply when the analog fall-back is on
-        add(v, {
-            F("fm.deviation", Sec::Modulation, N_("Deviation"), N_("How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel."), 5000, 500, 25000, "%.0f Hz", nullptr, Bind::Deviation),
-            F("fm.preemphUs", Sec::Modulation, N_("Pre-emphasis"), N_("Boosts the high notes before sending (0 = off)."), 50, 0, 150, "%.0f µs"),
-            C("fm.ctcssIdx", Sec::Modulation, N_("CTCSS tone"), N_("A sub-audible tone that opens a receiver's squelch. Pick one of the standard tones (67.0 to 254.1 Hz); Off sends none. Its level is the usual 12 percent of the deviation."), 0, ctcssChoices()),
-            C("fm.dcsIdx", Sec::Modulation, N_("DCS code"), N_("Digital-coded squelch: a 23-bit code word sent below the voice at 134.4 bit/s that opens a receiver set to the same code. It replaces the CTCSS tone when both are set."), 0, dcsChoices()),
-            B("fm.dcsInv", Sec::Modulation, N_("DCS inverted"), N_("Sends the code with the opposite polarity (the codes written with I instead of N)."), false, "fm.dcsIdx>0"),
-            F("fm.dcsPct", Sec::Modulation, N_("DCS level"), N_("The code's deviation as a share of the full deviation."), 12, 2, 30, "%.0f %%", "fm.dcsIdx>0"),
-            F("fm.ctcssPct", Sec::Modulation, N_("CTCSS level"), N_("The tone's deviation as a share of the full deviation (12 percent is the usual 600 Hz at 5 kHz)."), 12, 2, 30, "%.0f %%", "fm.ctcssIdx>0"),
-            F("fm.level", Sec::Output, N_("RF level"), N_("The size of the signal as a share of full scale."), 0.4, 0.05, 1.0, "%.2f"),
-        });
-        voiceAudio(v, 300, 3000);
-        break;
-    case TxPayloadKind::Ftx:
-        add(v, {
-            F("audio.tone", Sec::Modulation, N_("Audio frequency"), N_("Where the signal sits in the audio passband, as an offset above the dial frequency."), 1500, 200, 3000, "%.0f Hz", nullptr, Bind::ToneHz),
-            C("hf.sideband", Sec::Modulation, N_("Sideband"), N_("Which sideband is sent."), 0, {sideband[0], sideband[1]}, 0, Bind::Variant),
-        });
-        break;
-    case TxPayloadKind::Keyboard:
-        if (id == "cp16") {   // read by makeCp16TxGenerator (cp16_gen.h)
-            add(v, {
-                F("cp16.char", Sec::Modulation, N_("Seconds a character"), N_("How long one 16-row character and its blank row take. CRAC finds 1 to 4 seconds readable; slower is stronger."), 2, 0.5, 8, "%.1f s"),
-                F("cp16.spacing", Sec::Modulation, N_("Carrier spacing"), N_("The distance between the 16 carriers. CRAC uses 10 to 20 Hz."), 15, 5, 30, "%.1f Hz"),
-                F("cp16.base", Sec::Modulation, N_("Lowest carrier"), N_("The audio frequency of the left column of the character."), 1000, 200, 3000, "%.0f Hz"),
-                B("cp16.lsb", Sec::Modulation, N_("Lower sideband"), N_("Send below the dial frequency instead of above it."), false),
-            });
-            break;
-        }
-        add(v, {
-            F("audio.tone", Sec::Modulation, N_("Centre frequency"), N_("Where the middle of the signal sits in the audio passband, as an offset above the dial frequency."), 1500, 200, 3000, "%.0f Hz", nullptr, Bind::ToneHz),
-            C("hf.sideband", Sec::Modulation, N_("Sideband"), N_("Which sideband is sent."), 0, {sideband[0], sideband[1]}, 0, Bind::Variant),
-        });
-        break;
-    case TxPayloadKind::Cw:
-        add(v, {F("audio.tone", Sec::Modulation, N_("Pitch"), N_("The pitch of the Morse tone, as an offset above the dial frequency."), 700, 200, 2000, "%.0f Hz", nullptr, Bind::ToneHz)});
-        break;
-    case TxPayloadKind::Psk:
-        add(v, {F("audio.tone", Sec::Modulation, N_("Audio frequency"), N_("Where the signal sits in the audio passband, as an offset above the dial frequency."), 1000, 200, 3000, "%.0f Hz", nullptr, Bind::ToneHz)});
-        break;
-    case TxPayloadKind::LoraAprs: {   // read by txLoraAprsRadio (tx.h)
-        P sync = I("lora.sync", Sec::Modulation, N_("Sync word"), N_("The LoRa sync word (SX127x style, one byte). LoRa APRS uses 0x12 (the private sync word, 0x1424 on an SX126x); LoRaWAN uses 0x34, Meshtastic and MeshCom 0x2B. A receiver only hears frames with its own sync word."), 0x12, 0, 255, "lora.preset=4");
-        sync.hex = true;
-        add(v, {
-            C("lora.preset", Sec::Modulation, N_("LoRa settings"), N_("The settings of the LoRa APRS networks: 125 kHz, preamble 8, sync word 0x12, CRC on, as the lora-aprs and CA2RXU tracker and iGate firmware send. Own settings: every value below can be changed."), 0,
-              {N_("EU: 433.775 MHz, SF12, 4/5"), N_("PL: 434.855 MHz, SF9, 4/7"), N_("UK: 439.9125 MHz, SF12, 4/5"), N_("915 MHz, SF12, 4/5"), N_("Own settings")}),
-            I("lora.sf", Sec::Modulation, N_("Spreading factor"), N_("SF7 to SF12: each step up doubles the time on air and reaches further."), 12, 7, 12, "lora.preset=4"),
-            C("lora.bwIdx", Sec::Modulation, N_("Bandwidth"), N_("The LoRa bandwidth; LoRa APRS uses 125 kHz."), 1, {"62.5 kHz", "125 kHz", "250 kHz", "500 kHz"}, 0, Bind::Opt, "lora.preset=4"),
-            C("lora.cr", Sec::Modulation, N_("Coding rate"), N_("The forward error correction: 4/5 is the least, 4/8 the most."), 0, {"4/5", "4/6", "4/7", "4/8"}, 5, Bind::Opt, "lora.preset=4"),
-            I("lora.preamble", Sec::Modulation, N_("Preamble"), N_("The up-chirps before the sync word; LoRa APRS uses 8."), 8, 6, 64, "lora.preset=4"),
-            sync,
-            B("lora.crc", Sec::Modulation, N_("CRC"), N_("A checksum after the packet. LoRa APRS receivers expect it."), true, "lora.preset=4"),
-            F("lora.gapSec", Sec::Timing, N_("Pause between packets"), N_("The packet is sent again after this pause, until Stop (or once per pass when Repeat until stopped is off)."), 10, 1, 600, "%.0f s"),
-        });
-        break;
+const char* prefKey(TxPField f) {
+    switch (f) {
+    case TxPField::Callsign: return "tx.callsign";
+    case TxPField::Grid: return "tx.grid";
+    case TxPField::Text: return "tx.text";
+    default: return nullptr;
     }
-    default:
-        break;
-    }
-    outputCommon(v);
-    return v;
-}
-
-// "key=value" / "key>value": is the row shown?
-bool shown(const TxUi& s, const P& d) {
-    if (!d.when) return true;
-    const char* w = d.when;
-    const char* op = strpbrk(w, "=>");
-    if (!op) return true;
-    const std::string key(w, (size_t)(op - w));
-    const double want = atof(op + 1);
-    const auto it = s.pv.find(key);
-    const double have = it == s.pv.end() ? 0 : it->second;
-    return *op == '=' ? std::fabs(have - want) < 1e-9 : have > want;
-}
-
-std::string sectionName(Sec sec) {
-    switch (sec) {
-    case Sec::Modulation: return tr("Modulation");
-    case Sec::Audio: return tr("Audio");
-    case Sec::Filters: return tr("Filters");
-    case Sec::Output: return tr("Output");
-    case Sec::Timing: return tr("Timing");
-    }
-    return "";
 }
 
 // "k=v,k=v" of the values, and back
@@ -276,19 +99,28 @@ void savePresets(const TxUi& s, const std::vector<Preset>& v) {
 }
 
 void defaults(TxUi& s) {
-    for (const auto& d : s.params) s.pv[d.key] = d.def;
+    for (const auto& d : s.params) if (!d.custom && d.type != TxPType::Text && d.type != TxPType::File) s.pv[d.key] = d.def;
 }
 
 } // namespace
 
 namespace txui {
 
+TxParamCtx paramCtx(const TxUi& s, const TxModeSpec& m) {
+    TxParamCtx c;
+    c.analogVoice = s.analogVoice;
+    c.variant = m.id && std::string(m.id) == "qo100" && s.variant == 1 ? 1 : 0;
+    c.subId = s.subId;
+    return c;
+}
+
 const std::vector<PDef>& paramsFor(TxUi& s, const TxModeSpec& m) {
-    const std::string key = std::string(m.id) + (s.analogVoice ? "+a" : "") + (s.variant == 1 ? "+v" : "");
+    const TxParamCtx c = paramCtx(s, m);
+    const std::string key = std::string(m.id) + (c.analogVoice ? "+a" : "") + (c.variant == 1 ? "+v" : "") + "/" + c.subId;
     if (key != s.paramsKey) {
         s.paramsKey = key;
-        s.params = build(m, s.analogVoice, s.variant);
-        for (const auto& d : s.params) if (!s.pv.count(d.key)) s.pv[d.key] = d.def;
+        s.params = txParams(m, c);
+        for (const auto& d : s.params) if (!s.pv.count(d.key) && !d.custom && d.type != TxPType::Text && d.type != TxPType::File) s.pv[d.key] = d.def;
     }
     return s.params;
 }
@@ -303,78 +135,123 @@ void paramsEnter(TxUi& s, const TxModeSpec& m) {
     s.pvMode = s.modeId;
 }
 
-// the values into the request: the generator's own keys, and the request fields the older parameters live in
+// the values into the request: every number row of the table (by its field, its setter or opt[key]); then every request field no row of this mode
+// writes is cleared, so nothing typed for another mode reaches this one's generator
 void paramsApply(const TxUi& s, TxRequest& r) {
-    for (const auto& d : s.params) {
-        const auto it = s.pv.find(d.key);
-        if (it == s.pv.end()) continue;
-        const double v = d.type == PType::Choice ? d.base + std::round(it->second) : it->second;
-        switch (d.bind) {
-        case Bind::Opt: r.opt[d.key] = v; break;
-        case Bind::ToneHz: r.toneHz = v; break;
-        case Bind::Deviation: r.deviationHz = v; break;
-        case Bind::Preemph: r.preemphUs = v; break;
-        case Bind::Kind: r.kind = (int)v; break;
-        case Bind::Variant: r.variant = (int)v; break;
-        }
-    }
-    for (const auto& d : s.params) if (d.bind == Bind::Opt && !r.opt.count(d.key)) r.opt[d.key] = d.def;
+    const TxModeSpec* m = txModeById(r.modeId.empty() ? s.modeId : r.modeId);
+    if (!m) return;
+    const TxParamCtx c = paramCtx(s, *m);
+    const auto& rows = txParams(*m, c);
+    txParamsApplyNumbers(rows, s.pv, r);
+    txParamsSanitize(*m, c, r);
 }
 
 namespace {
-// one row: the label on the left (tooltip: what it does and the default), the control on the right; true when the value changed
+// one row: the label on the left (tooltip: what it does and the default), the control on the right; true when the value changed.
+// Text and file rows edit the shared buffer of their field; number rows s.pv[key]. A changed value is shown in the normal colour, a default dimmed.
 bool paramRow(TxUi& s, const PDef& d, bool running) {
+    (void)running;
+    const float labW = std::max(140.f * gUi, ImGui::GetContentRegionAvail().x * 0.38f);
+    const bool isText = d.type == TxPType::Text || d.type == TxPType::File;
     double& v = s.pv[d.key];
-    const float labW = std::max(140.f * gUi, ImGui::GetContentRegionAvail().x * 0.42f);
+    size_t cap = 0;
+    char* buf = isText ? textBuf(s, d.field, cap) : nullptr;
+    if (isText && !buf) return false;
     ImGui::AlignTextToFramePadding();
-    const bool changed0 = std::fabs(v - d.def) > 1e-9;
+    const bool changed0 = isText ? buf[0] != 0 : std::fabs(v - d.def) > 1e-9;
     ImGui::PushStyleColor(ImGuiCol_Text, ImGui::GetStyleColorVec4(changed0 ? ImGuiCol_Text : ImGuiCol_TextDisabled));
     ImGui::TextUnformatted(tr(d.label));
     ImGui::PopStyleColor();
     if (ImGui::IsItemHovered()) {
-        char def[64];
-        if (d.type == PType::Choice) snprintf(def, sizeof def, "%s", tr(d.choices[(size_t)std::max(0.0, std::min(d.hi, d.def))]));
-        else if (d.type == PType::Bool) snprintf(def, sizeof def, "%s", d.def > 0.5 ? tr("on") : tr("off"));
-        else if (d.hex) snprintf(def, sizeof def, "0x%02X", (int)std::lround(d.def));
-        else snprintf(def, sizeof def, d.fmt, d.def);
+        char def[96] = "";
+        if (d.type == TxPType::Choice) snprintf(def, sizeof def, "%s", tr(d.choices[(size_t)std::max(0.0, std::min(d.hi, d.def))]));
+        else if (d.type == TxPType::Bool) snprintf(def, sizeof def, "%s", d.def > 0.5 ? tr("on") : tr("off"));
+        else if (isText) snprintf(def, sizeof def, "%s", tr("empty: the mode's demo content"));
+        else snprintf(def, sizeof def, fmtOf(d).c_str(), d.def);
         ImGui::BeginTooltip();
         ImGui::PushTextWrapPos(320 * gUi);
-        ImGui::TextUnformatted(tr(d.tip));
+        ImGui::TextUnformatted(tr(d.help));
         ImGui::TextDisabled(tr("Default: %s"), def);
         ImGui::PopTextWrapPos();
         ImGui::EndTooltip();
     }
     ImGui::SameLine(labW);
-    ImGui::SetNextItemWidth(-1);
     ImGui::PushID(d.key);
     bool ch = false;
-    (void)running;
-    if (d.type == PType::Float) {
-        float f = (float)v;
-        if (ImGui::SliderFloat("##v", &f, (float)d.lo, (float)d.hi, d.fmt, ImGuiSliderFlags_AlwaysClamp)) { v = f; ch = true; }
-    } else if (d.type == PType::Int) {
-        int n = (int)std::lround(v);
-        if (d.hex) {   // typed as hex digits: a sync word is always written that way
-            ImGui::SetNextItemWidth(80 * gUi);
-            if (ImGui::InputScalar("##v", ImGuiDataType_S32, &n, nullptr, nullptr, "%02X", ImGuiInputTextFlags_CharsHexadecimal)) {
-                v = std::max((int)d.lo, std::min((int)d.hi, n));
-                ch = true;
-            }
-        } else if (ImGui::SliderInt("##v", &n, (int)d.lo, (int)d.hi)) { v = n; ch = true; }
-    } else if (d.type == PType::Bool) {
+    if (isText) {
+        const bool isFile = d.type == TxPType::File;
+        ImGui::SetNextItemWidth(isFile ? std::max(80.f * gUi, ImGui::GetContentRegionAvail().x - 80 * gUi) : -1);
+        if (ImGui::InputText("##t", buf, cap)) { ch = true; if (const char* k = prefKey(d.field)) saveStr(k, buf); }
+        if (isFile) {
+            ImGui::SameLine();
+            if (ImGui::Button(tr("Browse…"))) { const std::string f = openFileDialog(); if (!f.empty()) { snprintf(buf, cap, "%s", f.c_str()); ch = true; } }
+        }
+        ImGui::PopID();
+        return ch;
+    }
+    ImGui::SetNextItemWidth(-1);
+    const std::string f = fmtOf(d);
+    if (d.type == TxPType::Float) {
+        const bool typed = d.hi - d.lo > 20000 || (d.unit && !strcmp(d.unit, "°"));   // a wide range or a position is typed, not dragged
+        if (typed) {
+            double x = v;
+            if (ImGui::InputDouble("##v", &x, 0, 0, f.c_str())) { v = std::max(d.lo, std::min(d.hi, x)); ch = true; }
+        } else {
+            float x = (float)v;
+            if (ImGui::SliderFloat("##v", &x, (float)d.lo, (float)d.hi, f.c_str(), ImGuiSliderFlags_AlwaysClamp)) { v = x; ch = true; }
+        }
+    } else if (d.type == TxPType::Int) {
+        if (d.hi - d.lo > 1000) {
+            double x = v;
+            if (ImGui::InputDouble("##v", &x, 1, 100, "%.0f")) { v = std::max(d.lo, std::min(d.hi, std::round(x))); ch = true; }
+        } else {
+            int n = (int)std::lround(v);
+            std::string fi = "%d";
+            if (d.unit && *d.unit) { fi += ' '; for (const char* c = d.unit; *c; c++) { if (*c == '%') fi += "%%"; else fi += *c; } }
+            if (ImGui::SliderInt("##v", &n, (int)d.lo, (int)d.hi, fi.c_str())) { v = n; ch = true; }
+        }
+    } else if (d.type == TxPType::Hex) {   // typed as hex digits: a sync word, an address, a PI code
+        long long n = std::llround(v);
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::InputScalar("##v", ImGuiDataType_S64, &n, nullptr, nullptr, "%llX", ImGuiInputTextFlags_CharsHexadecimal)) {
+            v = std::max(d.lo, std::min(d.hi, (double)n));
+            ch = true;
+        }
+    } else if (d.type == TxPType::Bool) {
         bool b = v > 0.5;
         if (ImGui::Checkbox("##v", &b)) { v = b ? 1 : 0; ch = true; }
     } else {
-        const int cur = std::max(0, std::min((int)d.hi, (int)std::lround(v)));
+        const int cur = std::max(0, std::min((int)d.choices.size() - 1, (int)std::lround(v)));
         if (ImGui::BeginCombo("##v", tr(d.choices[(size_t)cur]))) {
-            for (int i = 0; i <= (int)d.hi; i++) if (ImGui::Selectable(tr(d.choices[(size_t)i]), i == cur)) { v = i; ch = true; }
+            for (int i = 0; i < (int)d.choices.size(); i++) if (ImGui::Selectable(tr(d.choices[(size_t)i]), i == cur)) { v = i; ch = true; }
             ImGui::EndCombo();
         }
     }
     ImGui::PopID();
     return ch;
 }
+
+// a row is drawn here: shown by its condition, not hidden, and (a custom row) by the mode's own widget
+bool drawRow(TxUi& s, const TxModeSpec& mode, const PDef& d, bool running) {
+    if (!txParamShown(d, s.params, s.pv)) return false;
+    if (d.custom) { ImGui::PushID(d.key); customRow(s, mode, d, running); ImGui::PopID(); return false; }
+    return paramRow(s, d, running);
+}
 } // namespace
+
+// What to send: the Simple rows of the table, in their order (the payload, and the few settings that matter most)
+void simpleRows(TxUi& s, const TxModeSpec& mode, bool running) {
+    if (s.pvMode != s.modeId) paramsEnter(s, mode);
+    paramsFor(s, mode);
+    bool changed = false, any = false;
+    for (const auto& d : s.params) {
+        if (d.level != TxPLevel::Simple) continue;
+        any = true;
+        changed |= drawRow(s, mode, d, running);
+    }
+    if (!any) ImGui::TextDisabled("%s", tr("Nothing to type: this generator sends its built-in test signal."));
+    if (changed) plat::basePrefs().setS(lastKey(s).c_str(), pack(s));
+}
 
 // The Advanced block of the panel: presets and reset on top, then the sections Modulation, Audio, Filters, Output, Timing
 void advancedPanel(TxUi& s, const TxModeSpec& mode, bool running) {
@@ -434,15 +311,15 @@ void advancedPanel(TxUi& s, const TxModeSpec& mode, bool running) {
     }
 
     ImGui::BeginDisabled(running);
-    for (Sec sec : {Sec::Modulation, Sec::Audio, Sec::Filters, Sec::Output, Sec::Timing}) {
-        bool any = sec == Sec::Output || sec == Sec::Timing;
-        for (const auto& d : s.params) if (d.sec == sec) any = true;
+    for (TxPGroup sec : {TxPGroup::Modulation, TxPGroup::Audio, TxPGroup::Filters, TxPGroup::Framing, TxPGroup::Output, TxPGroup::Timing}) {
+        bool any = sec == TxPGroup::Output || sec == TxPGroup::Timing;
+        for (const auto& d : s.params) if (d.level == TxPLevel::Advanced && d.group == sec && !d.hidden) any = true;
         if (!any) continue;
         ImGui::Spacing();
         ImGui::TextDisabled("%s", sectionName(sec).c_str());
         ImGui::Separator();
-        for (const auto& d : s.params) if (d.sec == sec && shown(s, d)) changed |= paramRow(s, d, running);
-        if (sec == Sec::Output) {   // the offset belongs to the radio, not to the signal
+        for (const auto& d : s.params) if (d.level == TxPLevel::Advanced && d.group == sec) changed |= drawRow(s, mode, d, running);
+        if (sec == TxPGroup::Output) {   // the offset belongs to the radio, not to the signal
             const float labW = std::max(140.f * gUi, ImGui::GetContentRegionAvail().x * 0.42f);
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(tr("Frequency offset"));
@@ -454,7 +331,7 @@ void advancedPanel(TxUi& s, const TxModeSpec& mode, bool running) {
             const double modeOff = tm ? txModeTuneOffsetHz(*tm) / 1e6 : 0;   // the radio is tuned this far above the dial, the signal sits that far below the radio's centre (#351)
             if (s.offsetMhz != 0 || modeOff != 0) ImGui::TextDisabled(tr("radio is told %.6f MHz"), s.freqMhz + s.offsetMhz + modeOff);
         }
-        if (sec == Sec::Timing) {
+        if (sec == TxPGroup::Timing) {
             const float labW = std::max(140.f * gUi, ImGui::GetContentRegionAvail().x * 0.42f);
             ImGui::AlignTextToFramePadding();
             ImGui::TextUnformatted(tr("Repeat until stopped"));

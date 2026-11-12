@@ -19,6 +19,8 @@
 using namespace dect2;
 
 #include "tx_state.h"
+#include "dect2/source/rig_control.h"
+#include <ctime>
 #include "dect2/hfdig/hfdig_sstv.h"
 #include <algorithm>
 #include <cmath>
@@ -76,7 +78,14 @@ void ensureTxMode(App& a, TxUi& s) {
     const SubMode* t = subModes(n);
     if (a.sub >= 1 && a.sub <= n) snprintf(s.subId, sizeof s.subId, "%s", t[a.sub - 1].id);
     const TxModeSpec* m = txModeForList(s.family, s.subId[0] ? s.subId : nullptr, s.dvbVariant);
-    if (m) { s.modeId = m->id; s.synth = (rxMode(a) == m) ? a.tune.synth : SynthConfig(); s.freqMhz = a.freqMhz; }
+    if (m) { s.modeId = m->id; s.synth = (rxMode(a) == m) ? txSynthFromRx(*m, a.tune.synth) : SynthConfig(); s.freqMhz = a.freqMhz; }
+}
+
+// The generator settings a transmitter takes from the receiver's test signal: all of them for a test-scene generator (its table has scene.options),
+// none for a mode whose settings are rows of its table (the receiver's fading, mistuning or noise must never be sent; the table sets the rest)
+SynthConfig txSynthFromRx(const TxModeSpec& m, const SynthConfig& rx) {
+    TxParamCtx c;
+    return txParamFind(txParams(m, c), "scene.options") ? rx : SynthConfig();
 }
 
 // the mode chosen for transmitting: its options and frequency start from the receiver's when it is the receiver's own mode
@@ -85,7 +94,8 @@ void chooseMode(App& a, TxUi& s, const TxModeSpec& m) {
     s.modeId = m.id;
     s.bwIdx = 0;
     const TxModeSpec* rm = rxMode(a);
-    if (rm && rm == &m) { s.synth = a.tune.synth; s.freqMhz = a.freqMhz; }
+    s.armed = false;   // a new signal is armed again on purpose
+    if (rm && rm == &m) { s.synth = txSynthFromRx(m, a.tune.synth); s.freqMhz = a.freqMhz; }
     else {
         s.synth = SynthConfig();
         const double def = txModeDefaultMhz(m);
@@ -325,6 +335,7 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         mapPauseForTransmit(a);   // before the radio is keyed, so this frame cannot post what the receiver hears from it
     }
     txIqStreamSetConfig(txIqStreamFromPrefs());
+    txExternalPtt(a, s, true);   // the amplifier / sequencer first, then the radio's RF
     if (s.session.start(std::move(sink), req, lim, err)) {
         s.radioName = toFile ? std::string("IQ file ") + s.ifPathUsed : s.dryRun ? std::string(tr("test (no RF)")) : radio->name;
         s.modeName = mode->name; s.freqSent = req.tune.centerHz;
@@ -334,24 +345,77 @@ bool startTx(App& a, TxUi& s, const DeviceInfo* radio, const TxModeSpec* mode, b
         s.sessionFile = toFile;
         s.startedAt = ImGui::GetTime();
         s.appliedMhz = s.freqMhz; s.appliedGain = s.gainDb;
+        s.doneShown = false;
+        s.wasRunning = true;
+        {   // the TX log entry, finished by txSessionEnded
+            s.current = TxUi::Sent();
+            const time_t now = time(nullptr);
+            struct tm u;
+#ifdef _WIN32
+            gmtime_s(&u, &now);
+#else
+            gmtime_r(&now, &u);
+#endif
+            char tb[16]; strftime(tb, sizeof tb, "%H:%M:%S", &u);
+            s.current.utc = tb;
+            s.current.mode = carrier ? std::string(tr("Carrier tune")) : std::string(mode->name);
+            s.current.mhz = s.freqMhz;
+            s.current.rf = !s.dryRun && !toFile;
+            std::string what = !req.callsign.empty() ? req.callsign : "";
+            if (!req.text.empty()) what += (what.empty() ? "" : ": ") + req.text.substr(0, 40);
+            if (what.empty() && !req.file.empty()) what = req.file.substr(req.file.find_last_of("/\\") == std::string::npos ? 0 : req.file.find_last_of("/\\") + 1);
+            if (toFile) what += (what.empty() ? "" : ", ") + std::string("into ") + s.ifPathUsed;
+            s.current.what = what;
+        }
         if (!carrier) pushRecent(s, mode->id, s.freqMhz, s.gainDb);
         a.engine.log(std::string(toFile ? "transmit into an IQ file: " : s.dryRun ? "transmit test (no RF): " : "transmit: ") + (carrier ? "carrier tune " : "") + mode->name + " on " + s.radioName + " at " + std::to_string(s.freqMhz) + " MHz");
         return true;
     }
     s.error = err;
+    txExternalPtt(a, s, false);
     if (!s.session.running()) { release(s); if (!s.dryRun && !toFile) mapTransmitAbort(a); }
     return false;
 }
 
 // stops whatever is running (a transmission or a test), gives the radio back and says why in the engine log
+// the external PTT: keyed just before the radio starts sending, released right after it stopped. Never a block: a rig that does not answer is a note.
+void txExternalPtt(App& a, TxUi& s, bool on) {
+    if (!on) {
+        if (!s.pttKeeper) return;
+        std::string err;
+        if (!s.pttKeeper->ptt(false, err)) a.engine.log("transmit: the rig's PTT could not be released: " + err);
+        else a.engine.log("transmit: rig PTT released");
+        s.pttKeeper->disconnect();
+        s.pttKeeper.reset();
+        return;
+    }
+    if (!s.pttRigOn || noRadio(s) || s.pttKeeper) return;
+    if (s.pttRigIdx < 0 || s.pttRigIdx >= (int)a.hamlibRigs.size()) { s.info = tr("External PTT: the chosen rig is not in the radio list any more; sending without it."); return; }
+    const HamlibRig& rig = a.hamlibRigs[(size_t)s.pttRigIdx];
+    auto k = std::make_shared<RigKeeper>();
+    k->setProfile(rig);
+    std::string err;
+    if (!k->connect(err) || !k->ptt(true, err)) {
+        s.info = std::string(tr("External PTT: the rig could not be keyed; the transmission goes on without it. ")) + hamlibErrorHint(err);
+        a.engine.log("transmit: external PTT failed: " + err);
+        return;
+    }
+    s.pttKeeper = k;
+    a.engine.log(std::string("transmit: rig PTT keyed (") + rigPttName(rig.pttType) + ")");
+}
+
 void stopTx(App& a, TxUi& s, const char* why) {
     const bool was = s.session.running() || s.claimed;
     s.session.stop();
+    txExternalPtt(a, s, false);
     release(s);
     s.radioName.clear(); s.carrierOnly = false; s.carrierHeld = false; s.sessionDry = false; s.sessionFile = false; s.pendingStart = false; s.pendingCarrier = false;
     if (s.schedArmed) a.engine.log("transmit: the schedule is cancelled");
     s.schedArmed = false; s.schedRunning = false;   // Stop also cancels a schedule
     if (was) a.engine.log(std::string("transmit: stopped ") + why);
+    if (was) txSessionEnded(s, why);
+    s.armed = false;   // after a transmission the next one is armed again on purpose
+    s.wasRunning = false;
 }
 
 // the chosen transmit radio (the first free one when none is chosen) and the receiver that holds it

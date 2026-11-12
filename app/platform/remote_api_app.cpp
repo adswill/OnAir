@@ -244,6 +244,7 @@ struct Host : RemoteApiHost {
                 const dect2::TxModeSpec* m = dect2::txModeById(id);
                 if (!m) { e = "no such transmit mode: " + id; return false; }
                 txui::chooseMode(a, s, *m);
+                txui::paramsEnter(s, *m);   // the mode's own parameter values (tx_params.h), not the last mode's
             }
             const dect2::TxModeSpec* mode = dect2::txModeById(s.modeId);
             if (!mode) { e = "choose a mode: give \"mode\" (a transmit mode id)"; return false; }
