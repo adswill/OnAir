@@ -75,8 +75,75 @@ applied because the Doppler margin had not been measured.
 * A frame decoded by both paths is reported once (the 50 ms duplicate check). Failures of the narrow paths are not counted a second time.
 * `DECT2_CUBESAT_NONARROW=1` restores the 3.9 receiver.
 
-Results: section 2.1.
+**Result** (`cubesat_narrow`, GitHub macOS run 43146216842: 4 runs of 12 cycles of each framing per point, C/N in 25 kHz with the generator's
+own noise; the 50 % point read between the 1 dB steps; same signals for both receivers):
+
+| framing (baud) | 3.9 50 % point | 4.0 50 % point | gain | with +-1.4 kHz / drift +6 to -6 kHz |
+|---|---|---|---|---|
+| NGHam (4800 FSK) | 7.4 dB | 5.3 dB | **2.1 dB** | 2 dB in all three (at 6 dB: 96 to 100 % against 0 %) |
+| Mobitex / BEESAT (4800 GMSK) | 8.1 dB | 6.0 dB | **2.1 dB** | same |
+| AX100 Mode 5 at 4800 (half the Mode 5 frames) | 6.7 dB | 4.5 dB | **2.2 dB** | same |
+| USP (9600 FSK) | 5.6 dB | 5.0 dB | 0.6 dB | 0.6 to 1 dB |
+| CCSDS concatenated (9600 GMSK) | 5.9 dB | 5.0 dB | 0.9 dB | 0.9 dB, drift 0.9 dB |
+| CCSDS RS 255/223 (9600 GMSK) | 8.4 dB | 8.0 dB | 0.4 dB | 0.4 to 0.6 dB |
+| AX100 Mode 6 (9600 G3RUH) | 9.2 dB | 9.0 dB | 0.2 dB | 0.2 to 0.5 dB |
+| AX.25 G3RUH (9600) | 10.1 dB | 10.0 dB | 0.1 to 0.3 dB | |
+| U482C (4800 audio FSK on 3600 Hz) | 10.1 dB | 9.8 dB | 0.3 dB | **0 % in both at 14 dB** with a static 1.4 kHz error or the drift: see below |
+
+CPU of the CubeSat receiver: +10 to +24 % (narrow 9600 and U482C paths, the third channel filter); +36 % in one cell, at the strongest signal.
+
+The 4800 baud gain is the largest: the 4800 slicers used to sit on the +-12 kHz channel, and above the FM threshold the IF width does not
+matter, but at these C/N values it does (clicks). The 9600 framings gain less because their signal already fills most of the channel.
+
+**U482C with a carrier error.** The run also showed a 3.9 fault. U482C failed completely (0 % at 14 dB) whenever the carrier was off by
+less than 1.5 kHz, which the AFC leaves alone, or drifting. Cause: the error is a DC level on the discriminator, and the audio mixer turns
+it into a tone at -3600 Hz inside the low-pass filter's transition band, as strong as the FSK itself. Fix: a 20 ms DC block before the
+mixer (`AudioFsk::dcBlock`). It is on with the 4.0 paths, for U482C and for every tracked satellite's audio-FSK path. The numbers after the
+fix: section 2.1.
+
+**False decodes.** Noise alone, 4 runs of 219 s: 3.9 gave 2 frames and the first 4.0 build gave 5. AX100 Mode 5 without Reed-Solomon has
+no check at all (only the Golay length field), so a second hunter roughly doubles what that framing finds in noise. The narrow paths now take
+Mode 5 frames only with Reed-Solomon. The `wrong` column counts frames whose bytes match no frame that was sent. It is non-zero in 3.9
+too: these are Mobitex frames with damaged blocks (reported with the blocks marked) and frames cut by the start or end of a run, not frames
+out of noise.
+
+### 2.1 After the fixes
+
+(run 43151674213; filled in below)
+
+## 0. The scenario sweep before any change
+
+`sens_sweep --full`, 6 trials a point, 1 dB steps, scenarios awgn/echo/tu6/rician/phasenoise/combined, branch base ead745f20 (GitHub run
+43143235835). Threshold = lowest SNR with 90 % of trials passing; `-` = no 90 % point even at the top SNR. Penalty = scenario minus AWGN.
+
+| mode | awgn | echo | tu6 | rician | phasenoise | combined | largest penalty |
+|---|---|---|---|---|---|---|---|
+| DVB-T2 | 14 | 17 | 20 | 16 | 15 | 18 | TU6 +6 |
+| DVB-T | 15 | 16 | 22 | 16 | 15 | 16 | TU6 +7 |
+| ATSC 1.0 | 15 | 17 | - | 18 | 15 | 17 | TU6 (no point) |
+| DAB | 3 | 3 | 5 | 4 | 5 | 5 | +2 |
+| ISDB-T | 18 | 20 | 30 | 19 | 19 | 20 | **TU6 +12** (fixed, section 1) |
+| FM audio | 5 | 3 | - | 12 | 6 | 3 | TU6 (flat Rayleigh at 200 kHz: deep fades of the whole channel) |
+| FM RDS | 16 | 18 | 26 | 17 | 15 | 14 | TU6 +10 (as above) |
+| DTMB | 18 | 20 | 22 | 19 | 19 | 19 | TU6 +4 |
+| DRM mode B | 16 | 20 | 24 | 17 | - | - | phase noise: no point (section 4) |
+| ATSC 3.0 QPSK 8/15 | 2 | -1 (echo at 0 us, see section 3) | 18 | 3 | 3 | 1 | **TU6 +16** (section 3) |
 
 ## Not done / not changed
 
-(filled in at the end of the pass)
+* **ATSC 1.0** (TU6 without a point, Rician +3). The field equaliser is solved once per 24 ms field, so it cannot follow a 10 Hz Doppler
+  channel. A per-quarter-field decision feedback retry was written (commit d3b51c8ec) and reverted untested (38f8ef1cf): branch
+  feat40-atsc adds an LMS equaliser that tracks the channel inside the field, plus own-symbol retraining, in the same function of
+  atsc_rx.cpp. The two would conflict, so ATSC 1.0 stays with that branch.
+* **DRM**: phase noise and combined have no 90 % point. The harness uses a 1 Hz Wiener linewidth. On 26.7 ms symbols that is about 0.4 rad of
+  random-walk phase per symbol, far worse than an HF receiver's oscillator. A common-phase loop would have to share the three frequency
+  reference tones with the frequency loop. Not changed. The TU6 row (+8) is flat Rayleigh fading over 10 kHz with 2 Hz Doppler, so it is
+  mostly physics; the receiver already has a Wiener filter in time.
+* **DVB-T TU6 +7, DVB-T2 TU6 +6, DTMB TU6 +4.** These receivers already have time interpolation, delay-window narrowing and per-carrier
+  noise (DVB-T, ISDB-T now as well) or adaptive segmented time fits (DVB-T2). DVB-T has no time interleaver, so its TU6 penalty includes the
+  diversity it lacks. No receiver gap was found by reading the code, and none was measured.
+* **FM in TU6**: flat Rayleigh fading over the whole 200 kHz channel; physics, not a receiver gap.
+* **DAB phase noise / combined +2**: DAB already corrects the common phase error (fourth power of the DQPSK cells, dab_rx.cpp); the rest is
+  the inter-carrier interference of a 50 Hz linewidth on 1 kHz spacing.
+* **ATSC 3.0 with the convolutional time interleaver**: the channel-state weights are not carried through the CTI de-interleaver
+  (atsc3_receiver.cpp runCti); that path keeps one noise figure per block.
