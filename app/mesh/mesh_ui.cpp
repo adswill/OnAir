@@ -309,16 +309,21 @@ void receiver(App& a) {
     ImGui::Spacing();
     ImGui::TextDisabled("Packets by type");
     // at least a few rows: in a short tab the pane scrolls to it instead (it was left a sliver of its header)
-    if (ImGui::BeginTable("##mcnt", 3, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY,
+    uint64_t cntTotal = 0;
+    for (const auto& c : t.counts) cntTotal += c.count;   // 4.0: share and rate columns (docs/WIRING-4.0.md)
+    if (ImGui::BeginTable("##mcnt", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit | ImGuiTableFlags_ScrollY,
                           ImVec2(0, std::max(ImGui::GetContentRegionAvail().y, 5 * ImGui::GetTextLineHeightWithSpacing())))) {
         ImGui::TableSetupScrollFreeze(0, 1);
         ImGui::TableSetupColumn("Net"); ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthStretch); ImGui::TableSetupColumn("Count", ImGuiTableColumnFlags_WidthFixed, hdrW("Count", "99999"));
+        ImGui::TableSetupColumn(tr("Share")); ImGui::TableSetupColumn(tr("Per min"));
         ImGui::TableHeadersRow();
         for (const auto& c : t.counts) {
             ImGui::TableNextRow();
             ImGui::TableNextColumn(); ImGui::TextColored(protoColour(c.protocol), "%s", protoTag(c.protocol));
             ImGui::TableNextColumn(); ImGui::TextUnformatted(c.type.c_str());
             ImGui::TableNextColumn(); ImGui::Text("%u", c.count);
+            ImGui::TableNextColumn(); ImGui::Text("%.0f %%", cntTotal ? 100.0 * c.count / (double)cntTotal : 0.0);
+            ImGui::TableNextColumn(); if (t.timeSec >= 60) ImGui::Text("%.1f", c.count * 60.0 / t.timeSec); else ImGui::TextDisabled("-");
         }
         ImGui::EndTable();
     }
