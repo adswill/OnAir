@@ -151,4 +151,17 @@ arm / transmit / stop, and draw the flow, What to send, Advanced and the preview
 
 | `tests/tx/test_tx_loopback.cpp` (`tx_loopback_tv`, `tx_loopback_rest`) | TX generator -> white noise at a set SNR in the occupied bandwidth and a carrier offset -> OnAir's receiver (Engine, file playback) for the table's defaults and a few parameter combinations per mode (DVB-T2 2K / PP2 / 16-QAM, DVB-T 2K 16-QAM 1/2, DVB-S 3/4, APRS 9600, POCSAG 2400, FLEX, CW 30 wpm, RTTY 50 Bd / 425 Hz, BPSK63, Olivia 8 / 500, LoRa SF9 ...); text modes must give the sent text back. Cases that decoded in 3.9 are "must", new combinations are reported |
 
+### Results (GitHub quick.yml, Linux, run 43160509036)
+
+- `tx_param_model`: 197 modes and sub-modes, 2057 rows changed the generated IQ, 476 rows marked as not changing the samples (custom widgets,
+  files, rows that wait for a UTC slot or later lines). The first run found 66 rows that did nothing; each was fixed in the generator or the
+  table (see the commits "rows the model test found doing nothing"), or marked with the reason. 13 signals depend on the clock (DAB, Meshtastic,
+  the FT8 family, WSPR, FLARM, time signals): their rows are not compared sample by sample. No generator read an undeclared key.
+- `tx_loopback_tv`: 10 of 10 decoded (DVB-T2 defaults and 2K / 1/8 / PP2 / 16-QAM, DVB-T defaults and 2K 16-QAM 1/2, ISDB-T, DVB-S2 and
+  DVB-S 3/4 at 2 Msym/s, DTMB, ATSC, DAB) at 12 to 25 dB in the occupied bandwidth.
+- `tx_loopback_rest`: 27 of 28 decoded (FM, DMR, AIS, APRS 1200 and 9600, POCSAG 1200 and 2400, FLEX, CW 20 and 30 wpm, RTTY 45 / 170 and
+  50 / 425, BPSK31, BPSK63, Olivia 32 / 1000, Contestia, DominoEX, FT8, ALE, CubeSat, ADS-B, DRM, LoRa SF7 and SF9 4/7, VOR, SAME, ACARS) with
+  10 to 200 Hz carrier offsets. Not decoded (info): Olivia 8 tones / 500 Hz; probably the receiver's default of 32 tones / 1000 Hz (not checked further).
+- The existing `tx` round trips (sessions, fake Pluto and Soapy radios) still pass.
+
 Simulated only. A row "changes the signal" means the generated IQ differs; whether a receiver decodes the change is the loop-back tests' job.
