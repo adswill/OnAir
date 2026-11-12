@@ -49,7 +49,7 @@ int main() {
     CHECK(old.setKnown(&known) == 1 && old.sites()[0].name == "Bergen" && old.sites()[1].name == "My field" && old.sites()[2].name == "Site 3" && old.dirty(), "3.9 placeholder renamed, the user's name kept");
     // the user's own file wins near its sites
     KnownSondeSites mine;
-    CHECK(mine.addUserText("# my sites\nBergen-Hohne test field; 52.80; 9.90; 70\nbad line\nNowhere, 47.0, -30.0\n91;0;0\n") == 2, "two good lines read");
+    CHECK(mine.addUserText("# my sites\nBergen-Hohne test field; 52.80; 9.90; 70\nbad line\nNowhere, 47.0, -30.0\nToo far north; 91; 0\n") == 2, "two good lines read");
     const SondeSiteRef* u = mine.nearest(52.81, 9.92, KnownSondeSites::kNameKm);
     CHECK(u && u->user && u->name == "Bergen-Hohne test field", "a user site before a built-in one");
     SondeSites h; h.setKnown(&mine);
