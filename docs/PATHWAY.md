@@ -1950,3 +1950,11 @@ Tools menu split into 9 groups with search, Plugin store entry, Mode menu one su
 - Sidebar layout (the default): the spectrum, the list on the right and the lower row are placed by `ovl::layout()` (app/ui/overview_layout.h, pure) from what each drew last frame (app/ui/overview_layout_ui.inc): an empty lower row is hidden (315 of 449 modes have none), a small plot goes into the right column under the list (43 satellite modes), a short wide row shrinks, a list of about three lines becomes a strip above the spectrum. Hold 0.25 / 0.6 s, 1 s dwell, 0.15 s glide. Dragged sizes per mode (`panelSizes`), View > Fit panels to their content (on), Reset layout clears them.
 - 51 modes with no list and no transport stream no longer show the TV clock and an empty service list in that layout (tv.cpp).
 - Test overview_layout (GitHub Linux runner); groups and numbers in docs/LAYOUT-4.0.md (content models, not screenshots); tools/layout_survey.py. The ImGui side was built on GitHub, not run (battery).
+## 2026-11-12 (feat40-settings): Settings 4.0, key editor, profiles
+- One action registry for every shortcut that was written into the code (Ctrl+, Ctrl+K M Ctrl+M Ctrl+Shift+F C I F F6 F11 Alt+Enter Ctrl+= - 0,
+  Ctrl+Shift+L/M, Ctrl+Alt+D, the TV picture's Space/R, the FT8 screen's F1-F8 Ctrl+L Ctrl+F): two keys per action, scopes, conflict marks,
+  press-to-record, import/export as a readable file, menus and tooltips show the user's keys. Fixes F6 and Ctrl+L firing twice in the FT8 screen.
+- Settings: pages Units, Keyboard and mouse, Notifications, Performance, Profiles; about 70 new wired rows (start-up mode/frequency, receiver at launch,
+  crash restore, confirm quit, FFT size, waterfall speed, line colours, default dB range, radio IQ fixes and noise blanker, audio device and new-mode
+  AGC/squelch, IQ file name pattern, IQ split and free-space guard, notifications and quiet hours, map tile server and cache); search highlight;
+  profiles saved/switched/exported. 3.9 keys unchanged. docs/SETTINGS-4.0.md. Checked on GitHub only (Mac on battery).

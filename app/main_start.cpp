@@ -109,7 +109,8 @@ void startApp(App& app, int argc, char** argv) {
         app.engine.log("no radio connected - use the synthetic signal or an IQ file");
 #endif
     }
-    workspaceSessionStart(app, argc == 1);   // the last-session file: a session that did not end is offered for restore
+    settingsStartup(app, argc == 1);   // Settings > General: the start-up frequency and mode, the receiver at launch (ui/settings_apply.cpp)
+    workspaceSessionStart(app, argc == 1 && sessionRestoreChoice() != 2);   // the last-session file: a session that did not end is offered for restore (unless Settings says never)
     if (getenv("DECT2_DEMO")) { wizAction(app, 2); }   // test: start the demo programme straight away
     // the decoded results of the last run (each mode's lists, until its Clear), then saved every 30 s and at exit
     {   // the session store (docs/MODE-EXPERIENCE.md): logging is on by default; it never blocks the start

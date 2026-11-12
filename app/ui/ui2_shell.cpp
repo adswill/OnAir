@@ -588,10 +588,10 @@ static void toolMenuItem(App& a, const menugroups::ToolItem& it) {
         case T::PluginStore: if (ImGui::MenuItem(lab)) pluginStoreOpen(a);   // the plugin window on its Store tab (the marketplace)
             tip(tr("Browse, install and update plugins from the signed plugin registry. Nothing is fetched until you ask.")); break;
         case T::Backup: ImGui::MenuItem(lab, nullptr, &a.backupOpen); break;
-        case T::Memory: ImGui::MenuItem(lab, "Ctrl+M", &a.memoryOpen); break;
+        case T::Memory: ImGui::MenuItem(lab, inputmap::shortcut(inputmap::Action::MemoryWin).c_str(), &a.memoryOpen); break;
         case T::Datasets: ImGui::MenuItem(lab, nullptr, &a.datasetsOpen); break;
         case T::Packs: ImGui::MenuItem(lab, nullptr, &a.packsOpen); break;
-        case T::Frequencies: ImGui::MenuItem(lab, "Ctrl+Shift+F", &a.freqOpen); break;
+        case T::Frequencies: ImGui::MenuItem(lab, inputmap::shortcut(inputmap::Action::FreqDbWin).c_str(), &a.freqOpen); break;
         case T::FreqTab: if (ImGui::MenuItem(lab, nullptr, a.freqTab)) freqdbTabToggle(a); break;
         case T::Transmit: ImGui::MenuItem(lab, nullptr, &txViewFlag()); break;
         case T::Map: ImGui::MenuItem(lab, nullptr, &a.mapOpen);
@@ -632,8 +632,8 @@ static void viewMenu(App& a) {
             for (int v = 0; v < 8; v++) if (ImGui::MenuItem(tr(kVariantNames[v]), nullptr, a.uiVariant == v)) { a.uiVariant = v; savePrefs(a); }
             ImGui::Separator();
             ImGui::TextDisabled("%s", tr("Panels"));   // both switches act at once, the receiver keeps running; the same two values as Settings > Display
-            if (ImGui::MenuItem(tr("Classic"), "Ctrl+Shift+L", !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
-            if (ImGui::MenuItem(tr("Unified"), "Ctrl+Shift+L", a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Classic"), inputmap::shortcut(inputmap::Action::LayoutToggle).c_str(), !a.layoutUnified)) { a.layoutUnified = false; savePrefs(a); }
+            if (ImGui::MenuItem(tr("Unified"), inputmap::shortcut(inputmap::Action::LayoutToggle).c_str(), a.layoutUnified)) { a.layoutUnified = true; savePrefs(a); }
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Try the new layout: the spectrum and waterfall stay on screen above the decoded views"));
             if (ImGui::MenuItem(tr("Fit panels to their content"), nullptr, &a.fitPanels)) savePrefs(a);   // ui/overview_layout.h, docs/LAYOUT-4.0.md
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The list on the right and the lower row take only the room they need: an empty row is hidden, a small plot moves beside the list, a list of a line or two becomes a strip over the spectrum. Off: the fixed sizes."));
@@ -671,7 +671,7 @@ static void viewMenu(App& a) {
         }
         if (ImGui::BeginMenu(tr("Time"))) { timeDisplayChoice(true); ImGui::EndMenu(); }
         if (ImGui::BeginMenu(tr("Language"))) { languageMenuItems(a); ImGui::EndMenu(); }
-        if (ImGui::MenuItem(tr("Controls (keys and mouse) ..."), nullptr, &inputmap::windowOpen())) {}
+        if (ImGui::MenuItem(tr("Controls (keys and mouse) ..."), inputmap::shortcut(inputmap::Action::ControlsWin).c_str(), &inputmap::windowOpen())) {}
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("What the mouse wheel, keys and extra mouse buttons do on the spectrum and waterfall: zoom, tune, pan, step size, shortcuts"));
         ImGui::Separator();
         if (ImGui::BeginMenu(tr("Power and system"))) {
@@ -711,7 +711,7 @@ static void viewMenu(App& a) {
             ImGui::EndMenu();
         }
         if (ImGui::BeginMenu(tr("Reset view"))) {
-            if (ImGui::MenuItem(tr("Restore the default view"), "Ctrl+Shift+M")) restoreDefaultView(a);
+            if (ImGui::MenuItem(tr("Restore the default view"), inputmap::shortcut(inputmap::Action::RestoreView).c_str())) restoreDefaultView(a);
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode"));
             if (ImGui::MenuItem(tr("Reset layout"))) { if (!a.touchUi) layoutReset();   // forgets the saved window positions of every mode
                 a.splitSide = a.splitRight = a.splitBottom = a.splitDock = a.splitBot2 = 0; a.panelSizes.clear(); savePrefs(a); }
@@ -720,8 +720,8 @@ static void viewMenu(App& a) {
             if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Put the panels back to their automatic sizes (drag the bars between panels to resize them)"));
             ImGui::EndMenu();
         }
-        if (ImGui::MenuItem(tr("Full screen"), "F11", gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."));
+        if (ImGui::MenuItem(tr("Full screen"), inputmap::shortcut(inputmap::Action::Fullscreen).c_str(), gWindow && glfwGetWindowMonitor(gWindow))) toggleFullscreen();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", inputmap::tip(tr("Fill the display, hiding the taskbar (F11 or Alt+Enter). The same shortcut leaves it."), inputmap::Action::Fullscreen).c_str());
         ImGui::EndMenu();
     }
     if (ImGui::BeginMenu(tr("Tools"))) {
@@ -884,7 +884,7 @@ float menuBar(App& a) {
         const float mx1 = ImGui::GetCursorScreenPos().x;
         tourMark("memory", ImVec2(mx0, my0), ImVec2(mx1, my1));
         mapSendServerMenu(a);
-        if (ImGui::MenuItem(tr("Settings"))) settingsOpen() = !settingsOpen();   // a window of its own, not a submenu (Ctrl+,)
+        if (ImGui::MenuItem(tr("Settings"), inputmap::shortcut(inputmap::Action::OpenSettings).c_str())) settingsOpen() = !settingsOpen();   // a window of its own, not a submenu (Ctrl+, by default; the menu shows the user's key)
         const float sx1 = ImGui::GetCursorScreenPos().x;
         tourMark("server", ImVec2(mx1, my0), ImVec2(sx1, my1));
         const float hx0 = ImGui::GetCursorScreenPos().x;

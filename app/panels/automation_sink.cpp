@@ -3,6 +3,8 @@
 #include "../app.h"
 #include "../memory/memory_options.h"
 #include "automation_internal.h"
+#include "../ui/notify_logic.h"
+#include <ctime>
 #include "dect2/audio/audio_rec.h"
 #include "dect2/audio/audioout.h"
 #include "dect2/session/record_rules.h"
@@ -132,19 +134,39 @@ void playSound(App& a, const std::string& file, std::string& note) {
     gBeep->write(pcm.data(), (int)(pcm.size() / 2));
 }
 
+// Settings > Notifications: the system notification, the banner and the sounds, and the quiet hours (ui/notify_logic.h)
+bool quietNow() {
+    if (!plat::prefs().getB("notifyQuiet", false)) return false;
+    const std::time_t t = std::time(nullptr);
+    std::tm tm{};
+#ifdef _WIN32
+    localtime_s(&tm, &t);
+#else
+    localtime_r(&t, &tm);
+#endif
+    return notifyset::inQuiet(tm.tm_hour * 60 + tm.tm_min, (int)plat::prefs().getI("notifyQuietFrom", 1320), (int)plat::prefs().getI("notifyQuietTo", 420));
+}
+bool systemNotifyOn() { return plat::prefs().getB("notifySystem", true) && !quietNow(); }
+bool soundsOn() { return plat::prefs().getB("notifySound", true) && !quietNow(); }
+void showBanner(const std::string& title, const std::string& body, double now) {
+    if (!plat::prefs().getB("notifyBanner", true)) return;
+    const double sec = (double)std::max(2L, std::min(120L, plat::prefs().getI("notifyBannerSec", 10)));
+    std::lock_guard<std::mutex> lk(gMu);
+    gBanner = {title, body, now + sec};
+}
+
 std::pair<bool, std::string> doOnUi(App& a, const Pending& p) {
     auto get = [&](const char* k) { auto it = p.p.find(k); return it == p.p.end() ? std::string() : it->second; };
     const double now = nowS();
     if (p.kind == "notify") {
         const std::string title = get("title").empty() ? "OnAir" : get("title"), body = get("body");
-        {
-            std::lock_guard<std::mutex> lk(gMu);
-            gBanner = {title, body, now + 10};
-        }
+        showBanner(title, body, now);
+        if (!systemNotifyOn()) return {true, "shown in OnAir (system notifications are off or in quiet hours: Settings > Notifications)"};
         const bool ok = plat::notify(title, body);
         return {true, ok ? "shown" : "shown in OnAir (the system could not show it)"};
     }
     if (p.kind == "sound") {
+        if (!soundsOn()) return {true, "not played (alert sounds are off or in quiet hours: Settings > Notifications)"};
         std::string note;
         playSound(a, get("file"), note);
         return {note.empty(), note.empty() ? "played" : note};
@@ -256,12 +278,9 @@ public:
 }  // namespace
 
 void alertNow(App& a, const std::string& title, const std::string& body, bool sound) {
-    {
-        std::lock_guard<std::mutex> lk(gMu);
-        gBanner = {title, body, nowS() + 10};
-    }
-    plat::notify(title, body);
-    if (sound) { std::string note; playSound(a, "", note); }
+    showBanner(title, body, nowS());
+    if (systemNotifyOn()) plat::notify(title, body);
+    if (sound && soundsOn()) { std::string note; playSound(a, "", note); }
 }
 
 ActionSink& sink() {

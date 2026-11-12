@@ -709,6 +709,7 @@ if(DECT2_BUILD_APP)
   list(APPEND APP_SOURCES app/ui/synth_group_ui.cpp)
   list(APPEND APP_SOURCES app/state/tune_worker.cpp)   # the radio retune off the UI thread, newest request wins
   list(APPEND APP_SOURCES app/scan/fast_scan_ui.cpp app/ui/input_map.cpp)
+  list(APPEND APP_SOURCES app/ui/settings_apply.cpp)   # 4.0: what Settings does outside its window (start-up, confirm quit, IQ split / disk guard)
   list(APPEND APP_SOURCES app/ui/meter_ui.cpp app/platform/proc_cpu.cpp app/panels/picsave_ui.cpp)
   add_executable(test_picsave tests/app/test_picsave.cpp)   # picture save paths, names, collisions, delete with undo (app/state/picsave.h)
   add_test(NAME picsave COMMAND test_picsave)

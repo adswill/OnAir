@@ -855,13 +855,13 @@ static void dbRangeSliders(App& a, ImVec2 colMin, float colW, float h) {
 // to the default. Only while the spectrum is hovered, like the frequency keys below (#91).
 // The key actions of the range (View > Controls rebinds them): the new lo / hi, false when no key fired
 static bool dbKeyStep(float& lo, float& hi) {
-    const float step = 5;
     using inputmap::Action; using inputmap::pressed;
-    if (pressed(Action::DbWider, true)) { lo -= step; hi += step; }
-    else if (pressed(Action::DbNarrower, true)) { lo += step; hi -= step; }
-    else if (pressed(Action::DbUp, true)) { lo += step; hi += step; }
-    else if (pressed(Action::DbDown, true)) { lo -= step; hi -= step; }
-    else if (pressed(Action::DbReset)) { lo = -110; hi = -30; }
+    auto step = [] { return (float)std::max(1.0, std::min(20.0, plat::prefs().getD("dbKeyStep", 5))); };   // Settings > Spectrum and waterfall > Range keys step
+    if (pressed(Action::DbWider, true)) { const float s = step(); lo -= s; hi += s; }
+    else if (pressed(Action::DbNarrower, true)) { const float s = step(); lo += s; hi -= s; }
+    else if (pressed(Action::DbUp, true)) { const float s = step(); lo += s; hi += s; }
+    else if (pressed(Action::DbDown, true)) { const float s = step(); lo -= s; hi -= s; }
+    else if (pressed(Action::DbReset)) { lo = specDefaultLo(); hi = specDefaultHi(); }
     else return false;
     lo = std::max(-160.f, std::min(20.f, lo)); hi = std::max(-160.f, std::min(20.f, hi));
     return hi - lo >= 10;
@@ -964,8 +964,8 @@ float& specWaterfallSplit() {
 }
 
 void resetSpectrum(App& a) {
-    a.yMin = -110.f;
-    a.yMax = -30.f;
+    a.yMin = specDefaultLo();
+    a.yMax = specDefaultHi();
     a.specZoom = 0.f;
     a.wf.autoTrack = true;
     a.specAutoDb = true;
@@ -973,8 +973,8 @@ void resetSpectrum(App& a) {
         a.wf.fitRange(a.smooth, true);
         a.peak = a.smooth;
     } else {
-        a.wf.minDb = -110.f;
-        a.wf.maxDb = -30.f;
+        a.wf.minDb = specDefaultLo();
+        a.wf.maxDb = specDefaultHi();
     }
     a.wf.paused = false;
     a.wf.nextRowT = 0;

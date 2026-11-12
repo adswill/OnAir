@@ -12,6 +12,7 @@
 #include <map>
 #include "dect2/common/png.h"
 #include "dect2/common/u8file.h"
+#include "../ui/input_map.h"
 
 namespace {
 // ---- channel logos: a PNG the user picked for a service, copied to <data>/tv-logos/<service>.png and shown on the service card
@@ -429,8 +430,9 @@ void playerTab(App& a) {
     ImGui::EndChild();
     if (vboxKeys && pl.selected() >= 0) {
         gSpaceClaimFrame = ImGui::GetFrameCount();
-        if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) { if (pl.shift().paused) pl.play(); else pl.pause(); }
-        if (ImGui::IsKeyPressed(ImGuiKey_R, false)) { if (pl.recording().active) pl.stopRecording(); else tvRecordStart(a); }
+        inputmap::scopeActive(inputmap::Scope::Tv);   // Space and R by default (Settings > Keyboard and mouse)
+        if (inputmap::pressed(inputmap::Action::TvPause)) { if (pl.shift().paused) pl.play(); else pl.pause(); }
+        if (inputmap::pressed(inputmap::Action::TvRecord)) { if (pl.recording().active) pl.stopRecording(); else tvRecordStart(a); }
     }
     const float ctlY = ImGui::GetCursorPosY();
     if (ImGui::Button(pl.selected() >= 0 ? tr("Stop##tvplay") : tr("Play##tvplay"))) { if (pl.selected() >= 0) pl.select(-1); else if (a.playReq < 0 && !a.ts.services.empty()) { int sid = a.ts.services[0].id; pl.select(sid); pl.setVolume(a.volume); } }

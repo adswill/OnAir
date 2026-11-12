@@ -42,6 +42,13 @@ std::string typeOf(const AdsbAircraft& ac) {
 
 std::string sourceName(const dect2::AdsbTelemetry& t, int id) { return id >= 0 && id < (int)t.sources.size() ? (id == 0 ? "local" : t.sources[id].name) : "?"; }
 
+// Settings > Units changed the aircraft units: the screen follows at once
+void unitsFromPrefs() {
+    plat::Prefs& d = plat::prefs();
+    S.units.sys = d.getI("adsbUnits", 0) == 1 ? dect2::adsbu::System::Metric : dect2::adsbu::System::Aviation;
+    S.units.spd = d.getI("adsbSpeedUnit", 0) == 1 ? dect2::adsbu::Speed::MS : dect2::adsbu::Speed::KmH;
+}
+
 void loadState() {
     if (S.loaded) return;
     S.loaded = true;

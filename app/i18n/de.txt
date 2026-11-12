@@ -4460,3 +4460,290 @@ Reset view	Ansicht zurücksetzen
 Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode	Zurück zur Standardoberfläche: neue Oberfläche mit klassischen Panels, Seitenleiste, kein Andocken, kein Touch-Modus
 Forgets the saved window positions of every mode and the sizes of the panels	Vergisst die gespeicherten Fensterpositionen aller Modi und die Panelgrößen
 Digital voice, DCR 6.25 kHz	Digitalfunk, DCR 6,25 kHz
+#  Settings 4.0: keyboard and mouse, new pages, profiles (machine translation, listed in unreviewed/de.txt)
+Nothing in that file could be read: the keys are unchanged.	In dieser Datei konnte nichts gelesen werden: die Tasten bleiben unverändert.
+Imported %d lines, %d not understood	%d Zeilen importiert, %d nicht verstanden
+press a key ...	Taste drücken ...
+not set	nicht belegt
+Warning: this key is also used by	Achtung: diese Taste benutzt auch
+Click Set to record another key, Clear to remove it.	Belegen nimmt eine andere Taste auf, Löschen entfernt sie.
+%d actions share a key with another action: both fire. They are marked in orange.	%d Aktionen teilen eine Taste mit einer anderen Aktion: beide werden ausgelöst. Sie sind orange markiert.
+Keys and mouse buttons	Tasten und Maustasten
+Click Set, then press the key (with Ctrl, Shift or Alt if you like) or the middle / side mouse button. Esc cancels. Every action can have two keys.	Auf Belegen klicken, dann die Taste drücken (gern mit Strg, Umschalt oder Alt) oder die mittlere / seitliche Maustaste. Esc bricht ab. Jede Aktion kann zwei Tasten haben.
+Search actions or keys	Aktionen oder Tasten suchen
+Reads a file written by Export (one action per line). Without a file dialog, onair-keys.txt in the data folder is used.	Liest eine mit Exportieren geschriebene Datei (eine Aktion pro Zeile). Ohne Dateidialog wird onair-keys.txt im Datenordner verwendet.
+Key	Taste
+Second key	Zweite Taste
+Also used by:	Auch belegt von:
+These take the key while their screen is shown:	Diese übernehmen die Taste, solange ihre Ansicht angezeigt wird:
+Set	Belegen
+Set second	Zweite belegen
+Not available for rebinding: the left and right mouse buttons, Esc and Tab. A key of the TV picture or the FT8 screen wins over a global key while that screen is shown.	Nicht neu belegbar: linke und rechte Maustaste, Esc und Tab. Eine Taste des TV-Bilds oder der FT8-Ansicht hat Vorrang vor einer globalen Taste, solange diese Ansicht angezeigt wird.
+The step is used by Tune by the step on the wheel and by the tune up / down and step keys above.	Der Schritt gilt für „Um den Schritt abstimmen“ am Mausrad und für die Abstimm- und Schritttasten oben.
+Reset every key and the wheel to the defaults	Alle Tasten und das Mausrad auf die Standardwerte zurücksetzen
+Every key and the wheel go back to the defaults. Continue?	Alle Tasten und das Mausrad gehen auf die Standardwerte zurück. Fortfahren?
+Choose what the keys, the extra mouse buttons and the mouse wheel do. Nothing here is needed: the defaults are what OnAir has always done. The same page is in Settings > Keyboard and mouse.	Wähle, was die Tasten, die zusätzlichen Maustasten und das Mausrad tun. Nichts davon ist nötig: die Standardwerte entsprechen dem bisherigen Verhalten von OnAir. Dieselbe Seite gibt es unter Einstellungen > Tastatur und Maus.
+over the plots	über den Diagrammen
+on the TV picture	auf dem TV-Bild
+in the FT8 / FT4 / WSPR screen	in der FT8- / FT4- / WSPR-Ansicht
+Start or stop the receiver	Empfänger starten oder stoppen
+Mode 1 of the list	Modus 1 der Liste
+Mode 2 of the list	Modus 2 der Liste
+Mode 3 of the list	Modus 3 der Liste
+Mode 4 of the list	Modus 4 der Liste
+Mode 5 of the list	Modus 5 der Liste
+Mode 6 of the list	Modus 6 der Liste
+Mode 7 of the list	Modus 7 der Liste
+Mode 8 of the list	Modus 8 der Liste
+Mode 9 of the list	Modus 9 der Liste
+Spectrum range up 5 dB	Spektrumbereich 5 dB nach oben
+Spectrum range down 5 dB	Spektrumbereich 5 dB nach unten
+Spectrum range wider	Spektrumbereich breiter
+Spectrum range narrower	Spektrumbereich schmaler
+Spectrum range back to the default	Spektrumbereich zurück auf Standard
+View one width up in frequency	Ansicht eine Breite höher in der Frequenz
+View one width down in frequency	Ansicht eine Breite tiefer in der Frequenz
+Tune up by the step	Um den Schritt höher abstimmen
+Tuning	Abstimmung
+Tune down by the step	Um den Schritt tiefer abstimmen
+Zoom in (frequency)	Hineinzoomen (Frequenz)
+Zoom out (frequency)	Herauszoomen (Frequenz)
+Show the whole band	Das ganze Band zeigen
+Pan the view left	Ansicht nach links schieben
+Pan the view right	Ansicht nach rechts schieben
+Larger tuning step	Größerer Abstimmschritt
+Smaller tuning step	Kleinerer Abstimmschritt
+Pause or resume the waterfall	Wasserfall anhalten oder fortsetzen
+Mute or unmute the sound	Ton stumm oder wieder an
+Open or close Settings	Einstellungen öffnen oder schließen
+Windows	Fenster
+Command palette	Befehlspalette
+Mode picker	Modusauswahl
+Memory panel	Speicherfeld
+Frequencies database	Frequenzdatenbank
+Radio clips	Funkclips
+Keyboard and mouse settings	Tastatur- und Mauseinstellungen
+Classic or Unified layout	Klassisches oder einheitliches Layout
+Docking on or off	Andocken an oder aus
+Video only (picture over the whole screen)	Nur Video (Bild über den ganzen Bildschirm)
+Identify tool (click a signal to identify it)	Erkennungswerkzeug (ein Signal anklicken, um es zu erkennen)
+Unified layout: side column	Einheitliches Layout: Seitenspalte
+Larger text	Größerer Text
+Smaller text	Kleinerer Text
+Text size back to 100 %	Textgröße zurück auf 100 %
+Start or stop an IQ recording	IQ-Aufnahme starten oder stoppen
+Pause or play the TV picture	TV-Bild anhalten oder abspielen
+Record the TV service	TV-Dienst aufnehmen
+Guide tab	Reiter Anleitung
+Station setup	Stationseinrichtung
+Log tab	Reiter Logbuch
+Stop and clear the DX call	Stoppen und DX-Rufzeichen löschen
+Map tab	Reiter Karte
+Call CQ	CQ rufen
+Answer the best caller	Dem besten Anrufer antworten
+Spots tab	Reiter Spots
+Add a contact to the log	Eine Verbindung ins Logbuch eintragen
+Search the log	Im Logbuch suchen
+The left and right mouse buttons are click-to-tune and the menu	Linke und rechte Maustaste sind Klick-zum-Abstimmen und das Menü
+Esc closes dialogs and stops the transmitter	Esc schließt Dialoge und stoppt den Sender
+A modifier alone cannot be a key	Eine Zusatztaste allein kann keine Taste sein
+Tab moves between the controls	Tab wechselt zwischen den Bedienelementen
+Keyboard and mouse	Tastatur und Maus
+Notifications	Benachrichtigungen
+Performance	Leistung
+Profiles	Profile
+Start-up mode	Startmodus
+The mode OnAir opens with: the one you had last (default) or always the same one.	Der Modus, mit dem OnAir startet: der zuletzt benutzte (Standard) oder immer derselbe.
+Start-up frequency	Startfrequenz
+The frequency OnAir starts on: the last one (default) or a fixed frequency below.	Die Frequenz, auf der OnAir startet: die letzte (Standard) oder eine feste Frequenz darunter.
+Fixed start-up frequency (MHz)	Feste Startfrequenz (MHz)
+Used when Start-up frequency is A fixed frequency.	Gilt, wenn Startfrequenz auf „Eine feste Frequenz“ steht.
+Start the receiver when OnAir starts	Empfänger beim Start von OnAir starten
+Opens the radio you used last and starts receiving at once. Off (default): press Start.	Öffnet das zuletzt benutzte Funkgerät und empfängt sofort. Aus (Standard): Start drücken.
+After a crash, restore the last session	Nach einem Absturz die letzte Sitzung wiederherstellen
+When OnAir did not end normally: ask (default), restore it at once, or never offer it.	Wenn OnAir nicht normal beendet wurde: fragen (Standard), sofort wiederherstellen oder nie anbieten.
+Confirm before quitting	Vor dem Beenden nachfragen
+Ask before the window closes: never (default), only while the radio receives or records, or always.	Vor dem Schließen des Fensters fragen: nie (Standard), nur während empfangen oder aufgenommen wird, oder immer.
+Aircraft units	Einheiten für Flugzeuge
+ADS-B, Mode A/C and HFDL: aviation units (knots, feet, nautical miles) or metric (km/h or m/s, metres, km). Only what is shown and exported changes; the feeds stay in aviation units.	ADS-B, Mode A/C und HFDL: Luftfahrteinheiten (Knoten, Fuß, Seemeilen) oder metrisch (km/h oder m/s, Meter, km). Nur Anzeige und Export ändern sich; die Feeds bleiben in Luftfahrteinheiten.
+Metric speed	Metrische Geschwindigkeit
+km/h or m/s, when the aircraft units are metric.	km/h oder m/s, wenn die Flugzeugeinheiten metrisch sind.
+FFT size	FFT-Größe
+Bins of the spectrum. Automatic picks 8192 to 32768 from the sample rate; more bins show finer detail and cost more CPU.	Bins des Spektrums. Automatisch wählt 8192 bis 32768 nach der Abtastrate; mehr Bins zeigen feinere Details und kosten mehr CPU.
+Waterfall speed	Wasserfallgeschwindigkeit
+Rows per second. Every frame (default) is about 30; slower rows each keep the highest level of the frames in between.	Zeilen pro Sekunde. Jedes Bild (Standard) sind etwa 30; langsamere Zeilen behalten jeweils den höchsten Pegel der Bilder dazwischen.
+Max-hold line	Max-Hold-Linie
+A second line that keeps the highest level, falling at the rate above.	Eine zweite Linie, die den höchsten Pegel hält und mit der Rate oben fällt.
+Min-hold line	Min-Hold-Linie
+A line under the signals at the lowest level (the noise floor).	Eine Linie unter den Signalen auf dem niedrigsten Pegel (dem Grundrauschen).
+Noise floor line	Rauschgrenzlinie
+A line at the noise floor with its level.	Eine Linie auf dem Grundrauschen mit ihrem Pegel.
+Station names on the spectrum	Stationsnamen im Spektrum
+Names from the band plan, the frequency database, FM, DAB, DVB and the memories on the spectrum and the waterfall.	Namen aus Bandplan, Frequenzdatenbank, UKW, DAB, DVB und den Speichern im Spektrum und Wasserfall.
+Spectrum line colour	Farbe der Spektrumlinie
+The colour of the spectrum line. The colour-blind safe ones read for everybody.	Die Farbe der Spektrumlinie. Die farbenblind-sicheren sind für alle lesbar.
+Max-hold line colour	Farbe der Max-Hold-Linie
+The usual grey, or one of the line colours.	Das übliche Grau oder eine der Linienfarben.
+Smooth the spectrum line	Spektrumlinie glätten
+Mild smoothing passes over the line; As the look keeps the look's own choice.	Leichte Glättungsdurchgänge über die Linie; „Wie das Aussehen“ behält dessen eigene Wahl.
+Frequency scale	Frequenzskala
+Frequencies, or offsets from the tuned frequency.	Frequenzen oder Abstände zur eingestellten Frequenz.
+Scale text size	Textgröße der Skala
+Size of the scale numbers, times the look's own.	Größe der Skalenzahlen, mal der des Aussehens.
+Smooth zoom	Weiches Zoomen
+The wheel zoom eases in over a few frames. Off: it jumps.	Das Zoomen mit dem Mausrad gleitet über einige Bilder. Aus: es springt.
+Waterfall floor below the noise (dB)	Wasserfall-Untergrenze unter dem Rauschen (dB)
+With the range following the noise floor: how far under the noise the darkest colour sits.	Wenn der Bereich dem Grundrauschen folgt: wie weit unter dem Rauschen die dunkelste Farbe liegt.
+Waterfall range (dB)	Wasserfallbereich (dB)
+With the range following the noise floor: from the darkest to the brightest colour.	Wenn der Bereich dem Grundrauschen folgt: von der dunkelsten bis zur hellsten Farbe.
+Default range: bottom (dB)	Standardbereich: unten (dB)
+Where the spectrum's scale starts after Reset and the range key (Ctrl+Home by default).	Wo die Skala des Spektrums nach Zurücksetzen und der Bereichstaste (standardmäßig Strg+Pos1) beginnt.
+Default range: top (dB)	Standardbereich: oben (dB)
+Where the spectrum's scale ends after Reset and the range key.	Wo die Skala des Spektrums nach Zurücksetzen und der Bereichstaste endet.
+Range keys step (dB)	Schritt der Bereichstasten (dB)
+How far the range keys (Ctrl+Up and Ctrl+Down by default) move the scale.	Wie weit die Bereichstasten (standardmäßig Strg+Auf und Strg+Ab) die Skala verschieben.
+Automatic gain	Automatische Verstärkung
+The radio's gain is set by itself (Auto in the gain control); off: the gains you set.	Die Verstärkung des Funkgeräts stellt sich selbst ein (Auto in der Verstärkungsregelung); aus: die eingestellten Werte.
+Remove the DC spike	DC-Spitze entfernen
+Takes the centre spike of the radio out of the samples.	Entfernt die Mittenspitze des Funkgeräts aus den Abtastwerten.
+Correct IQ imbalance	IQ-Ungleichgewicht korrigieren
+Removes the mirror image a radio's IQ imbalance makes.	Entfernt das Spiegelbild, das ein IQ-Ungleichgewicht erzeugt.
+Tune off-centre by itself	Selbsttätig neben der Mitte abstimmen
+Keeps the wanted signal away from the radio's centre spike.	Hält das gewünschte Signal von der Mittenspitze des Funkgeräts fern.
+Notch fixed spurs	Feste Störträger ausblenden
+Finds carriers that never move (the radio's own) and removes them.	Findet Träger, die sich nie bewegen (die des Funkgeräts selbst), und entfernt sie.
+Noise blanker	Störaustaster
+Cuts short pulses (ignition, power lines).	Schneidet kurze Impulse aus (Zündung, Stromleitungen).
+Noise blanker threshold	Schwelle des Störaustasters
+Times the mean level that counts as a pulse. Lower cuts more.	Vielfaches des mittleren Pegels, ab dem ein Impuls zählt. Niedriger schneidet mehr.
+Noise blanker width (us)	Breite des Störaustasters (µs)
+How long each cut is.	Wie lang jeder Schnitt ist.
+Output device	Ausgabegerät
+The sound output for every mode that has not picked its own in its Audio pop-up. Default: the system's.	Die Tonausgabe für jeden Modus, der in seinem Audio-Fenster keine eigene gewählt hat. Standard: die des Systems.
+Audio AGC for new modes	Audio-AGC für neue Modi
+The audio level control a mode starts with the first time you use it. Each mode keeps its own after that.	Die Pegelregelung, mit der ein Modus bei der ersten Benutzung startet. Danach behält jeder Modus seine eigene.
+Squelch for new modes	Rauschsperre für neue Modi
+The squelch a mode starts with the first time you use it: off, by level, or by speech-to-noise.	Die Rauschsperre, mit der ein Modus bei der ersten Benutzung startet: aus, nach Pegel oder nach Sprache-zu-Rauschen.
+Squelch opens at (dB)	Rauschsperre öffnet bei (dB)
+Level squelch: dBFS. Speech to noise: dB.	Pegelsperre: dBFS. Sprache zu Rauschen: dB.
+FM bass (dB)	UKW-Bass (dB)
+Tone control of FM broadcast.	Klangregelung für UKW-Rundfunk.
+FM treble (dB)	UKW-Höhen (dB)
+FM warm sound	Warmer UKW-Klang
+A gentle -3 dB above 6 kHz.	Sanfte -3 dB oberhalb von 6 kHz.
+FM audio bandwidth	UKW-Audiobandbreite
+Full is 15 kHz; narrower is quieter on a weak station.	Voll sind 15 kHz; schmaler ist bei schwachen Sendern ruhiger.
+Hide short drop-outs	Kurze Aussetzer überbrücken
+Fills short gaps in TV and DAB sound instead of a click.	Füllt kurze Lücken im TV- und DAB-Ton statt eines Knackens.
+Sound card rate (Hz)	Abtastrate der Soundkarte (Hz)
+The sample rate of the sound card input and output.	Die Abtastrate von Ein- und Ausgang der Soundkarte.
+IQ file name	IQ-Dateiname
+Tokens: {mode} {freq} (MHz) {khz} {rate} (Msps) {date} {time} {utcdate} {utctime}. Empty: onair_{mode}_{freq}MHz_{rate}Msps_{date}-{time}. Keep {freq}MHz and {rate}Msps so OnAir can read the file back.	Platzhalter: {mode} {freq} (MHz) {khz} {rate} (Msps) {date} {time} {utcdate} {utctime}. Leer: onair_{mode}_{freq}MHz_{rate}Msps_{date}-{time}. {freq}MHz und {rate}Msps behalten, damit OnAir die Datei wieder lesen kann.
+Split IQ recordings every (MB)	IQ-Aufnahmen teilen alle (MB)
+Starts a new file when one reaches this size. 0: one file.	Beginnt eine neue Datei, wenn eine diese Größe erreicht. 0: eine Datei.
+Stop recording below free space (MB)	Aufnahme stoppen unter freiem Speicher (MB)
+An IQ recording stops when the disk has less than this left. 0: only when it is full.	Eine IQ-Aufnahme stoppt, wenn auf dem Datenträger weniger frei ist. 0: erst wenn er voll ist.
+SigMF metadata beside IQ files	SigMF-Metadaten neben IQ-Dateien
+A .sigmf-meta file with the frequency, rate and mode next to each recording.	Eine .sigmf-meta-Datei mit Frequenz, Rate und Modus neben jeder Aufnahme.
+Audio recording format	Format der Audioaufnahme
+WAV, FLAC or MP3 (MP3 needs the LAME library).	WAV, FLAC oder MP3 (MP3 braucht die LAME-Bibliothek).
+Record audio only while there is sound	Audio nur aufnehmen, solange Ton da ist
+Leaves the silence out.	Lässt die Stille weg.
+One audio file per transmission	Eine Audiodatei pro Aussendung
+A new file each time the sound starts again.	Eine neue Datei, sobald der Ton wieder beginnt.
+Keep recording audio across retunes	Audioaufnahme beim Umstimmen fortsetzen
+Off: a retune ends the file.	Aus: ein Umstimmen beendet die Datei.
+TV pause buffer (MB)	TV-Pausenpuffer (MB)
+How much of the TV service is kept so Pause can go on later.	Wie viel vom TV-Dienst behalten wird, damit Pause später weiterlaufen kann.
+Keys, mouse buttons and wheel	Tasten, Maustasten und Mausrad
+Every action with its keys: Set records a key, Clear removes it, Default puts it back. Conflicts are marked; import and export the whole set.	Jede Aktion mit ihren Tasten: Belegen nimmt eine Taste auf, Löschen entfernt sie, Standard stellt sie wieder her. Konflikte werden markiert; den ganzen Satz importieren und exportieren.
+System notifications	Systembenachrichtigungen
+Alerts (watch lists, automations, pass reminders) also go to the system's notification centre.	Warnungen (Beobachtungslisten, Automationen, Überflug-Erinnerungen) gehen auch an die Mitteilungszentrale des Systems.
+Banner in OnAir	Banner in OnAir
+Alerts show a banner at the top of the OnAir window.	Warnungen zeigen ein Banner oben im OnAir-Fenster.
+Banner time (seconds)	Bannerdauer (Sekunden)
+How long the banner stays.	Wie lange das Banner bleibt.
+Alert sounds	Warntöne
+Alerts that play a sound play it. Off: silent.	Warnungen mit Ton spielen ihn. Aus: still.
+Quiet hours	Ruhezeiten
+No system notifications and no alert sounds between the two times below (the banner still shows).	Keine Systembenachrichtigungen und keine Warntöne zwischen den beiden Zeiten unten (das Banner erscheint weiter).
+Quiet from (minutes after midnight)	Ruhe ab (Minuten nach Mitternacht)
+e.g. 1320 is 22:00. Local time.	z. B. 1320 ist 22:00. Ortszeit.
+Quiet until (minutes after midnight)	Ruhe bis (Minuten nach Mitternacht)
+e.g. 420 is 07:00. Local time.	z. B. 420 ist 07:00. Ortszeit.
+Map tile server	Kartenkachel-Server
+Address of the map tiles with {z} {x} {y}. Empty: OpenStreetMap (https://tile.openstreetmap.org/{z}/{x}/{y}.png). Tiles of another server are cached apart. The server sees which map area you look at.	Adresse der Kartenkacheln mit {z} {x} {y}. Leer: OpenStreetMap (https://tile.openstreetmap.org/{z}/{x}/{y}.png). Kacheln eines anderen Servers werden getrennt zwischengespeichert. Der Server sieht, welchen Kartenausschnitt du ansiehst.
+Map tile cache size (MB)	Größe des Kachelspeichers (MB)
+When the tiles take more room, the ones used longest ago are deleted.	Belegen die Kacheln mehr Platz, werden die am längsten unbenutzten gelöscht.
+Keep map tiles between runs	Kartenkacheln zwischen Starts behalten
+Off: the tiles of a session are deleted when OnAir ends.	Aus: die Kacheln einer Sitzung werden beim Beenden von OnAir gelöscht.
+Fetch online map tiles	Online-Kartenkacheln laden
+The map screens load OpenStreetMap tiles (or your tile server's). Only tile numbers are sent; the server sees your IP address and the area. Off: offline maps only.	Die Kartenansichten laden OpenStreetMap-Kacheln (oder die deines Kachelservers). Nur Kachelnummern werden gesendet; der Server sieht deine IP-Adresse und das Gebiet. Aus: nur Offline-Karten.
+DVB error correction on	DVB-Fehlerkorrektur auf
+CPU, GPU or Automatic (default) for the DVB-T2 LDPC decoder.	CPU, GPU oder Automatisch (Standard) für den DVB-T2-LDPC-Decoder.
+Settings profiles	Einstellungsprofile
+Save every setting of this window and the keys under a name, switch between them (e.g. Home, Portable, Night), and export or import a profile as a file.	Alle Einstellungen dieses Fensters und die Tasten unter einem Namen speichern, zwischen ihnen wechseln (z. B. Zuhause, Unterwegs, Nacht) und ein Profil als Datei exportieren oder importieren.
+Verbose logging	Ausführliche Protokollierung
+USB transfer counts, data rates, stall restarts and frame times in the log. For bug reports.	USB-Transferzahlen, Datenraten, Neustarts nach Hängern und Bildzeiten im Protokoll. Für Fehlerberichte.
+Current profile:	Aktuelles Profil:
+Pick a saved profile	Ein gespeichertes Profil wählen
+Switch to it	Dorthin wechseln
+Profile %s: %d settings	Profil %s: %d Einstellungen
+Could not read that profile	Dieses Profil konnte nicht gelesen werden
+Yes, delete it	Ja, löschen
+Could not delete it	Konnte nicht gelöscht werden
+Profile deleted	Profil gelöscht
+Name, e.g. Night	Name, z. B. Nacht
+Save the current settings as this profile	Die aktuellen Einstellungen als dieses Profil speichern
+Import a profile file...	Eine Profildatei importieren...
+That file is not a settings profile	Diese Datei ist kein Einstellungsprofil
+Could not store the profile	Das Profil konnte nicht gespeichert werden
+The mode of the last run	Der Modus des letzten Laufs
+Search modes	Modi suchen
+The system's default	Standard des Systems
+That device is not connected: the system's default is used.	Dieses Gerät ist nicht angeschlossen: der Standard des Systems wird verwendet.
+Open the key editor	Tasteneditor öffnen
+Every setting in this window, the keys included, goes back to its default. Continue?	Jede Einstellung in diesem Fenster, die Tasten eingeschlossen, geht auf den Standardwert zurück. Fortfahren?
+%d keyboard actions match	%d Tastaturaktionen passen
+Show them	Anzeigen
+Reset this page	Diese Seite zurücksetzen
+A recording is running: it ends when OnAir quits.	Eine Aufnahme läuft: sie endet beim Beenden von OnAir.
+The receiver is running.	Der Empfänger läuft.
+Quit OnAir?	OnAir beenden?
+Settings > General > Confirm before quitting	Einstellungen > Allgemein > Vor dem Beenden nachfragen
+Quit	Beenden
+IQ recording stopped: the disk is almost full	IQ-Aufnahme gestoppt: der Datenträger ist fast voll
+The last frequency	Die letzte Frequenz
+A fixed frequency	Eine feste Frequenz
+Ask	Fragen
+Always restore	Immer wiederherstellen
+Never offer	Nie anbieten
+While receiving or recording	Beim Empfangen oder Aufnehmen
+Aviation (kt, ft, nm)	Luftfahrt (kt, ft, nm)
+Every frame	Jedes Bild
+60 rows/s	60 Zeilen/s
+10 rows/s	10 Zeilen/s
+5 rows/s	5 Zeilen/s
+2 rows/s	2 Zeilen/s
+1 row/s	1 Zeile/s
+1 row per 10 s	1 Zeile pro 10 s
+1 row per minute	1 Zeile pro Minute
+Soft white	Weiches Weiß
+Amber	Bernstein
+Pale cyan	Blasses Cyan
+Pale steel	Blasser Stahl
+Grey (default)	Grau (Standard)
+As the look	Wie das Aussehen
+Offsets from the tuned frequency	Abstände zur eingestellten Frequenz
+Speech to noise	Sprache zu Rauschen
+Full (15 kHz)	Voll (15 kHz)
+Never	Nie
+Always	Immer
+Green	Grün
+Yellow	Gelb
+Orange (CB safe)	Orange (farbenblind-sicher)
+Sky blue (CB safe)	Himmelblau (farbenblind-sicher)
+Pink	Rosa
+Light blue	Hellblau
+Fast	Schnell
+Slow	Langsam

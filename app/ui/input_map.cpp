@@ -1,4 +1,5 @@
-// View > Controls: the keys, mouse buttons and wheel of the spectrum and waterfall, rebindable. The tables and rules are in input_map.h.
+// Keyboard and mouse (Settings > Keyboard and mouse, and View > Controls): every action's keys, the mouse buttons and the wheel of the
+// spectrum and waterfall, rebindable, with conflict warnings, search, import and export. The tables and rules are in input_map.h.
 #include "input_map.h"
 #include "../app.h"
 #include "../i18n/i18n.h"
@@ -8,7 +9,10 @@
 #include <algorithm>
 #include <cfloat>
 #include <cstring>
+#include <fstream>
+#include <sstream>
 #include <string>
+#include "dect2/common/u8file.h"
 
 namespace inputmap {
 
@@ -17,6 +21,10 @@ Settings gS;
 bool gLoaded = false, gOpen = false;
 std::string gMsg;    // why the last key was refused
 int gCapture = -1;   // the action whose binding is being recorded (-1: none)
+int gCaptureSlot = 0;   // which of its two keys
+int gScopeFrame[(int)Scope::Count] = {-10, -10, -10, -10};   // the frame each panel scope was last shown
+char gFind[64] = "";    // the editor's search box
+bool gResetAsk = false;
 
 void loadNow() {
     plat::Prefs& p = plat::basePrefs();
@@ -58,15 +66,18 @@ void hint(const char* text) {
     ImGui::PopStyleColor();
 }
 
-std::string display(const Binding& b) {
-    std::string s = bindingText(b);
 #ifdef __APPLE__
-    // ImGui reports the Command key as Ctrl and the Control key as Super on a Mac
-    auto swap = [&](const char* from, const char* to) { size_t p = s.find(from); if (p != std::string::npos) s.replace(p, strlen(from), to); };
-    if (b.mods & M_Ctrl) swap("Ctrl+", "Cmd+");
-    if (b.mods & M_Super) swap("Super+", "Ctrl+");
+constexpr bool kMac = true;
+#else
+constexpr bool kMac = false;
 #endif
-    return s;
+std::string display(const Binding& b) { return bindingText(b, kMac); }
+
+// the key event this frame for binding b (KeypadEnter counts as Enter)
+bool keyHit(const Binding& b, bool repeat) {
+    if (b.kind == 2) return ImGui::IsMouseClicked(b.code, false);
+    if (ImGui::IsKeyPressed((ImGuiKey)b.code, repeat)) return true;
+    return b.code == ImGuiKey_Enter && ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, repeat);
 }
 }  // namespace
 
@@ -92,25 +103,186 @@ void reload() { loadNow(); }
 bool& windowOpen() { return gOpen; }
 
 bool pressed(Action a, bool repeat) {
-    const Binding& b = settings().bind[(int)a];
-    if (!b.bound() || gCapture >= 0) return false;
+    if (gCapture >= 0) return false;
     ImGuiIO& io = ImGui::GetIO();
-    if (io.WantTextInput) return false;
-    if (modsNow() != b.mods) return false;
-    if (b.kind == 1) return ImGui::IsKeyPressed((ImGuiKey)b.code, repeat);
-    return ImGui::IsMouseClicked(b.code, false);
+    const Settings& st = settings();
+    const int i = (int)a;
+    const Def& d = defs()[i];
+    if (io.WantTextInput && !(d.flags & F_Typing)) return false;
+    if ((d.flags & F_Typing) && !(st.bind[i].mods & (M_Ctrl | M_Alt | M_Super)) && io.WantTextInput) return false;   // a plain letter while typing is text
+    const uint8_t now = modsNow();
+    const int frame = ImGui::GetFrameCount();
+    const bool rep = repeat || (d.flags & F_Repeat);
+    for (int w = 0; w < 2; w++) {
+        const Binding& b = st.slot(i, w);
+        if (!b.bound() || !modsMatch(b, now, d.flags) || !keyHit(b, rep)) continue;
+        if (d.scope == Scope::Global) {   // a panel that is shown takes its own keys
+            bool taken = false;
+            for (int j = 0; j < kActions && !taken; j++) {
+                const Scope sc = defs()[j].scope;
+                if (sc == Scope::Global || sc == Scope::Plot || gScopeFrame[(int)sc] < frame - 1) continue;
+                for (int y = 0; y < 2; y++) if (st.slot(j, y).bound() && st.slot(j, y) == b) taken = true;
+            }
+            if (taken) continue;
+        }
+        return true;
+    }
+    return false;
 }
 
-void window() {
-    if (!gOpen) { gCapture = -1; return; }
-    Settings& s = settings();
-    firstWindowSize(700 * gUi, 640 * gUi);
-    if (!ImGui::Begin(trw("Controls"), &gOpen)) { ImGui::End(); return; }
+void scopeActive(Scope s) { if ((int)s < (int)Scope::Count) gScopeFrame[(int)s] = ImGui::GetFrameCount(); }
+
+std::string shortcut(Action a) { return actionText(settings(), (int)a, kMac); }
+std::string tip(const char* translated, Action a) { return tipWithKeys(translated, settings(), (int)a, kMac); }
+
+std::string exportPath() { return plat::dataDir() + "/onair-keys.txt"; }
+
+bool exportTo(const std::string& path, std::string& msg) {
+    std::ofstream f(dect2::u8file(path));
+    f << exportText(settings());
+    msg = f ? std::string(tr("Exported to ")) + path : std::string(tr("Could not write ")) + path;
+    return (bool)f;
+}
+
+bool importFrom(const std::string& path, std::string& msg) {
+    std::ifstream f(dect2::u8file(path));
+    if (!f) { msg = std::string(tr("No file at ")) + path; return false; }
+    std::stringstream ss; ss << f.rdbuf();
+    std::vector<std::string> bad;
+    Settings s = settings();
+    const int n = importText(s, ss.str(), &bad);
+    if (n == 0) { msg = tr("Nothing in that file could be read: the keys are unchanged."); return false; }
+    settings() = s;
+    save();
+    char b[160];
+    snprintf(b, sizeof b, tr("Imported %d lines, %d not understood"), n, (int)bad.size());
+    msg = b;
+    if (!bad.empty()) msg += ": " + bad[0];
+    return true;
+}
+
+namespace {
+// one key cell: the key text (orange when it clashes), Set / Clear for that key
+bool keyCell(Settings& s, int i, int w, const std::vector<int>& cf) {
     bool changed = false;
-    ImGui::TextWrapped("%s", tr("Choose what the mouse wheel, the keys and the extra mouse buttons do on the spectrum and the waterfall. Nothing here is needed: the defaults are what OnAir has always done."));
-    if (anyConflict(s)) ImGui::TextColored(ImVec4(1.f, 0.55f, 0.2f, 1.f), "%s", tr("Two actions use the same key or button: both will fire. The rows are marked below."));
+    ImGui::PushID(w);
+    const Binding& b = s.slot(i, w);
+    ImGui::AlignTextToFramePadding();
+    if (gCapture == i && gCaptureSlot == w) ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.f, 1.f), "%s", tr("press a key ..."));
+    else if (!b.bound()) ImGui::TextDisabled("%s", w ? "-" : tr("not set"));
+    else if (!cf.empty()) ImGui::TextColored(ImVec4(1.f, 0.55f, 0.2f, 1.f), "%s", display(b).c_str());
+    else ImGui::TextUnformatted(display(b).c_str());
+    if (gCapture == i && gCaptureSlot == w) {
+        Binding nb;
+        if (capture(nb)) {
+            gCapture = -1;
+            if (nb.bound()) {
+                std::vector<int> clash;
+                if (const char* why = assign(s, i, w, nb, &clash)) gMsg = why;
+                else {
+                    changed = true;
+                    gMsg.clear();
+                    if (!clash.empty()) {
+                        gMsg = std::string(tr("Warning: this key is also used by")) + " " + tr(defs()[clash[0]].label) + (clash.size() > 1 ? " (+" + std::to_string(clash.size() - 1) + ")" : "");
+                    }
+                }
+            }
+        }
+        ImGui::SameLine();
+        if (ImGui::SmallButton(tr("Cancel"))) gCapture = -1;
+    } else if (ImGui::IsItemHovered() && b.bound()) ImGui::SetTooltip("%s", tr("Click Set to record another key, Clear to remove it."));
+    ImGui::PopID();
+    return changed;
+}
+}  // namespace
+
+void setFind(const std::string& q) { snprintf(gFind, sizeof gFind, "%s", q.c_str()); }
+
+void editor() {
+    Settings& s = settings();
+    bool changed = false;
+    const int nClash = conflictCount(s);
+    if (nClash) {
+        char b[160];
+        snprintf(b, sizeof b, tr("%d actions share a key with another action: both fire. They are marked in orange."), nClash);
+        ImGui::TextColored(ImVec4(1.f, 0.55f, 0.2f, 1.f), "%s", b);
+    }
     if (!gMsg.empty()) ImGui::TextColored(ImVec4(1.f, 0.55f, 0.2f, 1.f), "%s", tr(gMsg.c_str()));
-    ImGui::Spacing();
+
+    if (ImGui::CollapsingHeader(trw("Keys and mouse buttons"), ImGuiTreeNodeFlags_DefaultOpen)) {
+        hint(tr("Click Set, then press the key (with Ctrl, Shift or Alt if you like) or the middle / side mouse button. Esc cancels. Every action can have two keys."));
+        ImGui::SetNextItemWidth(260 * gUi);
+        ImGui::InputTextWithHint("##keyfind", tr("Search actions or keys"), gFind, sizeof gFind);
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Export..."))) {
+            const std::string p = plat::saveFileDialog("onair-keys.txt");
+            exportTo(p.empty() ? exportPath() : p, gMsg);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Import..."))) {
+            const std::string p = plat::openFileDialog();
+            importFrom(p.empty() ? exportPath() : p, gMsg);
+        }
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Reads a file written by Export (one action per line). Without a file dialog, onair-keys.txt in the data folder is used."));
+        if (ImGui::BeginTable("##keys", 4, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg)) {
+            ImGui::TableSetupColumn(tr("Action"));
+            ImGui::TableSetupColumn(tr("Key"), ImGuiTableColumnFlags_WidthFixed, 170 * gUi);
+            ImGui::TableSetupColumn(tr("Second key"), ImGuiTableColumnFlags_WidthFixed, 150 * gUi);
+            ImGui::TableSetupColumn("##b", ImGuiTableColumnFlags_WidthFixed, 230 * gUi);
+            ImGui::TableHeadersRow();
+            const char* lastGroup = "";
+            const std::string q = gFind;
+            for (int i = 0; i < kActions; i++) {
+                const Def& d = defs()[i];
+                if (!q.empty() && !actionMatches(s, i, q)) {   // the search looks at the translated label too
+                    std::string hay = std::string(tr(d.label)) + " " + tr(d.group);
+                    for (char& c : hay) c = (char)std::tolower((unsigned char)c);
+                    std::string lq = q; for (char& c : lq) c = (char)std::tolower((unsigned char)c);
+                    if (hay.find(lq) == std::string::npos) continue;
+                }
+                if (strcmp(d.group, lastGroup) != 0) {
+                    lastGroup = d.group;
+                    ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TextDisabled("%s", tr(d.group));
+                }
+                ImGui::TableNextRow();
+                ImGui::PushID(i);
+                ImGui::TableSetColumnIndex(0);
+                ImGui::AlignTextToFramePadding();
+                if (!s.actionIsDefault(i)) { ImGui::TextColored(ImVec4(0.95f, 0.72f, 0.25f, 1), "*"); ImGui::SameLine(0, 4 * gUi); }
+                ImGui::TextUnformatted(tr(d.label));
+                if (d.scope != Scope::Global) { ImGui::SameLine(); ImGui::TextDisabled("(%s)", tr(scopeName(d.scope))); }
+                const std::vector<int> cf = conflictsWith(s, i);
+                const std::vector<int> sh = shadowedBy(s, i);
+                if ((!cf.empty() || !sh.empty()) && ImGui::IsItemHovered()) {
+                    std::string t;
+                    if (!cf.empty()) { t = tr("Also used by:"); for (int o : cf) t += std::string("\n  ") + tr(defs()[o].label); }
+                    if (!sh.empty()) { if (!t.empty()) t += "\n"; t += tr("These take the key while their screen is shown:"); for (int o : sh) t += std::string("\n  ") + tr(defs()[o].label) + " (" + tr(scopeName(defs()[o].scope)) + ")"; }
+                    ImGui::SetTooltip("%s", t.c_str());
+                }
+                ImGui::TableSetColumnIndex(1);
+                changed |= keyCell(s, i, 0, cf);
+                ImGui::TableSetColumnIndex(2);
+                changed |= keyCell(s, i, 1, cf);
+                ImGui::TableSetColumnIndex(3);
+                if (gCapture != i) {
+                    if (ImGui::SmallButton(tr("Set"))) { gCapture = i; gCaptureSlot = 0; }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton(tr("Set second"))) { gCapture = i; gCaptureSlot = 1; }
+                    ImGui::SameLine();
+                    if (ImGui::SmallButton(tr("Clear"))) { s.bind[i] = Binding(); s.alt[i] = Binding(); changed = true; }
+                    if (!s.actionIsDefault(i)) {
+                        ImGui::SameLine();
+                        if (ImGui::SmallButton(tr("Default"))) { s.resetAction(i); changed = true; }
+                    }
+                }
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+        hint(tr("Not available for rebinding: the left and right mouse buttons, Esc and Tab. A key of the TV picture or the FT8 screen wins over a global key while that screen is shown."));
+    }
 
     if (ImGui::CollapsingHeader(trw("Mouse wheel"), ImGuiTreeNodeFlags_DefaultOpen)) {
         hint(tr("By default the wheel zooms the frequency and the dB range together (Ctrl: frequency only, Shift: dB only). Pick Zoom the frequency only on the plain wheel to leave the dB range alone."));
@@ -158,80 +330,34 @@ void window() {
             ImGui::EndCombo();
         }
         ImGui::SameLine();
-        ImGui::SetNextItemWidth(70 * gUi);
         ImGui::AlignTextToFramePadding();
         ImGui::TextUnformatted(tr("Wheel notches per step"));
         ImGui::SameLine();
         ImGui::SetNextItemWidth(70 * gUi);
         if (ImGui::SliderInt("##notch", &s.wheelNotch, 1, 5)) changed = true;
-        hint(tr("The step is used by Tune by the step on the wheel and by the tune up / down and step keys below."));
-    }
-
-    if (ImGui::CollapsingHeader(trw("Keys and mouse buttons"), ImGuiTreeNodeFlags_DefaultOpen)) {
-        hint(tr("Click Set, then press the key (with Ctrl, Shift or Alt if you like) or the middle / side mouse button. Esc cancels."));
-        if (ImGui::BeginTable("##keys", 3, ImGuiTableFlags_SizingStretchProp | ImGuiTableFlags_RowBg)) {
-            ImGui::TableSetupColumn(tr("Action"));
-            ImGui::TableSetupColumn(tr("Binding"), ImGuiTableColumnFlags_WidthFixed, 190 * gUi);
-            ImGui::TableSetupColumn("##b", ImGuiTableColumnFlags_WidthFixed, 150 * gUi);
-            ImGui::TableHeadersRow();
-            const char* lastGroup = "";
-            for (int i = 0; i < kActions; i++) {
-                const Def& d = defs()[i];
-                if (strcmp(d.group, lastGroup) != 0) {
-                    lastGroup = d.group;
-                    ImGui::TableNextRow(ImGuiTableRowFlags_Headers);
-                    ImGui::TableSetColumnIndex(0);
-                    ImGui::TextDisabled("%s", tr(d.group));
-                }
-                ImGui::TableNextRow();
-                ImGui::PushID(i);
-                ImGui::TableSetColumnIndex(0);
-                ImGui::AlignTextToFramePadding();
-                ImGui::TextUnformatted(tr(d.label));
-                if (d.plotOnly) { ImGui::SameLine(); ImGui::TextDisabled("(%s)", tr("over the plots")); }
-                const std::vector<int> cf = conflictsWith(s, i);
-                ImGui::TableSetColumnIndex(1);
-                ImGui::AlignTextToFramePadding();
-                if (gCapture == i) ImGui::TextColored(ImVec4(0.4f, 0.8f, 1.f, 1.f), "%s", tr("press a key ..."));
-                else if (!s.bind[i].bound()) ImGui::TextDisabled("%s", tr("not set"));
-                else if (!cf.empty()) ImGui::TextColored(ImVec4(1.f, 0.55f, 0.2f, 1.f), "%s", display(s.bind[i]).c_str());
-                else ImGui::TextUnformatted(display(s.bind[i]).c_str());
-                if (!cf.empty() && ImGui::IsItemHovered()) {
-                    std::string t = tr("Also used by:");
-                    for (int o : cf) t += std::string("\n  ") + tr(defs()[o].label);
-                    ImGui::SetTooltip("%s", t.c_str());
-                }
-                ImGui::TableSetColumnIndex(2);
-                if (gCapture == i) {
-                    Binding nb;
-                    if (capture(nb)) {
-                        gCapture = -1;
-                        if (nb.bound()) {
-                            if (const char* why = reservedReason(nb)) gMsg = why;
-                            else { s.bind[i] = nb; changed = true; gMsg.clear(); }
-                        }
-                    }
-                    if (ImGui::SmallButton(tr("Cancel"))) gCapture = -1;
-                } else {
-                    if (ImGui::SmallButton(tr("Set"))) gCapture = i;
-                    ImGui::SameLine();
-                    if (ImGui::SmallButton(tr("Clear"))) { s.bind[i] = Binding(); changed = true; }
-                    if (s.bind[i] != d.def) {
-                        ImGui::SameLine();
-                        if (ImGui::SmallButton(tr("Default"))) { s.bind[i] = d.def; changed = true; }
-                    }
-                }
-                ImGui::PopID();
-            }
-            ImGui::EndTable();
-        }
-        hint(tr("Not available for rebinding: the left and right mouse buttons, Esc, Ctrl+K (command palette), Ctrl+Shift+L (layout)."));
+        hint(tr("The step is used by Tune by the step on the wheel and by the tune up / down and step keys above."));
     }
     ImGui::Spacing();
     ImGui::BeginDisabled(s.isDefault());
-    if (ImGui::Button(tr("Reset everything to the defaults"))) { s.reset(); gCapture = -1; changed = true; }
+    if (!gResetAsk) { if (ImGui::Button(tr("Reset every key and the wheel to the defaults"))) gResetAsk = true; }
+    else {
+        ImGui::TextUnformatted(tr("Every key and the wheel go back to the defaults. Continue?"));
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Yes, reset all"))) { s.reset(); gCapture = -1; changed = true; gResetAsk = false; gMsg.clear(); }
+        ImGui::SameLine();
+        if (ImGui::Button(tr("Cancel"))) gResetAsk = false;
+    }
     ImGui::EndDisabled();
     if (changed) save();
+}
+
+void window() {
+    if (!gOpen) { gCapture = -1; return; }
+    firstWindowSize(820 * gUi, 640 * gUi);
+    if (!ImGui::Begin(trw("Controls"), &gOpen)) { ImGui::End(); return; }
+    ImGui::TextWrapped("%s", tr("Choose what the keys, the extra mouse buttons and the mouse wheel do. Nothing here is needed: the defaults are what OnAir has always done. The same page is in Settings > Keyboard and mouse."));
+    ImGui::Spacing();
+    editor();
     ImGui::End();
 }
 

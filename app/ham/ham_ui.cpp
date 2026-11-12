@@ -29,6 +29,7 @@
 #include <cstring>
 #include <ctime>
 #include <string>
+#include "../ui/input_map.h"
 
 using namespace dect2;
 
@@ -336,17 +337,19 @@ void hamPanel(App& a) {
         const bool typing = io.WantTextInput;
         const bool focus = ImGui::IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows);
         if (!popup && ImGui::IsKeyPressed(ImGuiKey_Escape, false)) halt();
+        inputmap::scopeActive(inputmap::Scope::Ham);   // F1-F8, Ctrl+L, Ctrl+F by default (Settings > Keyboard and mouse); they win over global keys here
         if (!popup && !typing) {
-            if (ImGui::IsKeyPressed(ImGuiKey_F1, false)) o.wantTab = HamTabGuide;
-            if (ImGui::IsKeyPressed(ImGuiKey_F2, false)) o.openWizard = true;
-            if (ImGui::IsKeyPressed(ImGuiKey_F3, false)) o.wantTab = HamTabLog;
-            if (ImGui::IsKeyPressed(ImGuiKey_F4, false)) { h.eng.halt(); h.override.clear(); h.dxGrid.clear(); h.status = "DX call cleared"; }
-            if (ImGui::IsKeyPressed(ImGuiKey_F5, false)) o.wantTab = HamTabMap;
-            if (ImGui::IsKeyPressed(ImGuiKey_F6, false) && canCq && !isBeacon && !isKbd) { h.eng.startCq(now); c.txHz = h.txHz; h.status.clear(); }
-            if (ImGui::IsKeyPressed(ImGuiKey_F7, false) && !isBeacon && !isKbd) answerBest();
-            if (ImGui::IsKeyPressed(ImGuiKey_F8, false)) o.wantTab = HamTabSpots;
-            if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_L, false)) { o.wantTab = HamTabLog; o.openAdd = true; }
-            if (io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_F, false)) { o.wantTab = HamTabLog; o.focusSearch = true; }
+            using inputmap::Action; using inputmap::pressed;
+            if (pressed(Action::HamGuide)) o.wantTab = HamTabGuide;
+            if (pressed(Action::HamWizard)) o.openWizard = true;
+            if (pressed(Action::HamLog)) o.wantTab = HamTabLog;
+            if (pressed(Action::HamClearDx)) { h.eng.halt(); h.override.clear(); h.dxGrid.clear(); h.status = "DX call cleared"; }
+            if (pressed(Action::HamMap)) o.wantTab = HamTabMap;
+            if (pressed(Action::HamCq) && canCq && !isBeacon && !isKbd) { h.eng.startCq(now); c.txHz = h.txHz; h.status.clear(); }
+            if (pressed(Action::HamAnswer) && !isBeacon && !isKbd) answerBest();
+            if (pressed(Action::HamSpots)) o.wantTab = HamTabSpots;
+            if (pressed(Action::HamAddLog)) { o.wantTab = HamTabLog; o.openAdd = true; }
+            if (pressed(Action::HamFindLog)) { o.wantTab = HamTabLog; o.focusSearch = true; }
             if (focus && io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Z, false) && o.log.undo()) { std::string e; o.log.save(o.logPath, e); o.workedDirty = true; hamToast("Undone"); }
             if (focus && io.KeyCtrl && ImGui::IsKeyPressed(ImGuiKey_Y, false) && o.log.redo()) { std::string e; o.log.save(o.logPath, e); o.workedDirty = true; hamToast("Redone"); }
             if (focus && io.KeyAlt && !isKbd && (ImGui::IsKeyPressed(ImGuiKey_UpArrow) || ImGui::IsKeyPressed(ImGuiKey_DownArrow))) {

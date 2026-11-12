@@ -351,7 +351,7 @@ void loadSpectrumRanges(plat::Prefs& d, App& a) {
     if (d.has("wfMin") && d.has("wfMax")) { a.wf.minDb = (float)d.getD("wfMin", a.wf.minDb); a.wf.maxDb = (float)d.getD("wfMax", a.wf.maxDb); }
     a.wf.setRate((float)d.getD("wfRate", 0.0));
     if (d.has("specMin") && d.has("specMax")) { a.yMin = (float)d.getD("specMin", a.yMin); a.yMax = (float)d.getD("specMax", a.yMax); }
-    if (!(a.yMax - a.yMin >= 10)) { a.yMin = -110; a.yMax = -30; }
+    if (!(a.yMax - a.yMin >= 10)) { a.yMin = specDefaultLo(); a.yMax = specDefaultHi(); }
     if (!(a.wf.maxDb - a.wf.minDb >= 3)) { a.wf.minDb = -100; a.wf.maxDb = -32; }
 }
 
