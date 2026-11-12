@@ -118,7 +118,7 @@ struct Drift {
     int used = 0, rejected = 0;
 };
 // Kalman filter, constant velocity, over the fixes of the last windowS * 3 seconds. The process noise is set so the velocity follows
-// changes with a time constant of windowS / 3; gpsSigmaM is the position noise (GPS plus the swing under the parachute).
+// changes with a time constant of windowS / 5; gpsSigmaM is the position noise (GPS plus the swing under the parachute).
 Drift kalmanDrift(const std::vector<Fix>& f, size_t i0, double windowS, double gpsSigmaM);
 
 }  // namespace sondepred

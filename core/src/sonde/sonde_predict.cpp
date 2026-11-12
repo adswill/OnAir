@@ -356,7 +356,7 @@ Drift kalmanDrift(const std::vector<Fix>& f, size_t i0, double windowS, double g
     for (size_t i = a + 1; i < f.size(); i++) gaps.push_back(f[i].t - f[i - 1].t);
     std::nth_element(gaps.begin(), gaps.begin() + gaps.size() / 2, gaps.end());
     const double dtm = std::max(0.5, gaps[gaps.size() / 2]);
-    const double T = windowS / 3.0, R = gps * gps, Rz = 2.25 * R;
+    const double T = windowS / 5.0, R = gps * gps, Rz = 2.25 * R;
     const double q = R * dtm / (T * T * T * T), qz = Rz * dtm / (T * T * T * T);
     Kf2 E, N, Z;
     const Fix& f0 = f[a]; const Fix& f1 = f[a + 1];
@@ -373,7 +373,7 @@ Drift kalmanDrift(const std::vector<Fix>& f, size_t i0, double windowS, double g
         const double ze = eastM(f[i].lon, L.lon, L.lat), zn = northM(f[i].lat, L.lat);
         const double ye = E.innov(ze), yn = N.innov(zn);
         const double m2 = ye * ye / E.S(R) + yn * yn / N.S(R);
-        if (m2 > 50 && std::hypot(ye, yn) > 30 && bad < 3) { bad++; d.rejected++; tPrev = f[i].t; continue; }   // a glitch
+        if (m2 > 50 && std::hypot(ye, yn) > 100 && bad < 3) { bad++; d.rejected++; tPrev = f[i].t; continue; }   // a glitch
         bad = 0;
         E.update(ze, R); N.update(zn, R); Z.update(f[i].alt, Rz);
         tPrev = f[i].t; d.used++;
@@ -508,13 +508,13 @@ struct WindModel {
     void at(double h, double t, double lat, double lon, double& e, double& n, double& sig, double& c) const {
         const double d = std::max(0.0, H - h);
         c = std::exp(-d / Lc);
-        if (persist) { e = holdE; n = holdN; sig = std::hypot(std::max(sigV, 0.8), 4.0 * (1 - std::exp(-d / 3000.0))); return; }
+        if (persist) { e = holdE; n = holdN; sig = std::hypot(std::max(sigV, 1.5), 4.0 * (1 - std::exp(-d / 3000.0))); return; }
         double pe = 0, pn = 0, ps = 3;
         if (!prior(h, t, lat, lon, pe, pn, ps)) { pe = holdE; pn = holdN; ps = 4; }
         const double g = std::exp(-d / 3000.0);
         e = pe + dAvgE * g + (dNowE - dAvgE) * c;
         n = pn + dAvgN * g + (dNowN - dAvgN) * c;
-        const double sv = std::max(sigV, 0.8);   // gusts: the drift now is not the wind of the next minute
+        const double sv = std::max(sigV, 1.5);   // gusts: the drift now is not the wind of the next minute
         sig = std::sqrt(sv * sv * c * c + ps * ps * (1 - c * c));
     }
 };
@@ -554,7 +554,7 @@ SondePrediction SondeLandTracker::predict(const SondePredictOpts& o, const Sonde
     if (desc && dr.ok && dr.t - f_[top].t < 20) dr.ok = false;   // the burst is still in the window
     // the start
     double lat0 = last.lat, lon0 = last.lon, h0 = last.alt;
-    if (dr.ok) { lat0 = dr.lat; lon0 = dr.lon; h0 = dr.alt; }
+    // start from the newest fix itself: GPS is good to a few metres, a filtered position lags when the drift turns
     const double t0 = last.t;
     // descent rate
     DescentFit fit;
@@ -705,7 +705,7 @@ SondePrediction SondeLandTracker::predict(const SondePredictOpts& o, const Sonde
         for (int m = 0; m < o.members; m++) {
             Run r; r.kMul = std::exp(kSig * nd(rng)); r.gOff = gSig * nd(rng);
             r.burst = P.climbing ? std::max(h0 + 100, burstNom * (1 + 0.08 * nd(rng))) : h0;
-            r.de = dr.ok ? dr.sigmaPos * nd(rng) : 0; r.dn = dr.ok ? dr.sigmaPos * nd(rng) : 0;
+            r.de = 0.7 * o.gpsSigmaM * nd(rng); r.dn = 0.7 * o.gpsSigmaM * nd(rng);
             // unit wind error, correlated over 1.5 km, from the top down; at the sonde's height it is the drift's own error
             double xe = nd(rng), xn = nd(rng);
             for (int i = nw - 1; i >= 0; i--) { we[i] = xe; wn[i] = xn; xe = rho * xe + rq * nd(rng); xn = rho * xn + rq * nd(rng); }
