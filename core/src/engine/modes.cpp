@@ -667,9 +667,12 @@ std::unique_ptr<ModeSynth> makeModeSynth(int stdMode, const SynthConfig& cfg, do
     case 11: return makeDmrSynth(cfg, sampleRate);
     case 12: return makeDrmSynth(cfg, sampleRate);
     case 13: return makeAdsbSynth(cfg, sampleRate);
-    case 14: case 862: case 865: case 868: case 874: case 877: return makeGnssSynth(cfg, sampleRate);
-    case 15: case 686: case 689: case 692: case 695: case 704: case 707: case 710: case 713: case 716: case 719: return makeSondeSynth(cfg, sampleRate);
-    case 16: case 740: case 809: case 812: case 815: case 818: case 859: return makeAisSynth(cfg, sampleRate);
+    case 14: return makeGnssSynth(cfg, sampleRate);
+    case 862: case 865: case 868: case 874: case 877: return makeGnssSynth(cfg, sampleRate);
+    case 15: return makeSondeSynth(cfg, sampleRate);
+    case 686: case 689: case 692: case 695: case 704: case 707: case 710: case 713: case 716: case 719: return makeSondeSynth(cfg, sampleRate);
+    case 16: return makeAisSynth(cfg, sampleRate);
+    case 740: case 809: case 812: case 815: case 818: case 859: return makeAisSynth(cfg, sampleRate);
     case 17: return makeMarineSynth(cfg, sampleRate);
     case 121: return makeMarineSynthNavtex(cfg, sampleRate, "");   // SITOR-B: the NAVTEX demo messages are plain FEC text
     case 18: return makeAcarsSynth(cfg, sampleRate);
@@ -908,9 +911,12 @@ std::string modeSummary(const RxTelemetry& t) {
     case 10: return dmrSummary(t.dmr);
     case 11: return drmSummary(t.drm);
     case 12: return adsbSummary(t.adsb);
-    case 13: case 861: case 864: case 867: case 873: case 876: return gnssSummary(t.gnss);
-    case 14: case 685: case 688: case 691: case 694: case 703: case 706: case 709: case 712: case 715: case 718: return sondeSummary(t.sonde);
-    case 15: case 739: case 808: case 811: case 814: case 817: case 858: return aisSummary(t.ais);
+    case 13: return gnssSummary(t.gnss);
+    case 861: case 864: case 867: case 873: case 876: return gnssSummary(t.gnss);
+    case 14: return sondeSummary(t.sonde);
+    case 685: case 688: case 691: case 694: case 703: case 706: case 709: case 712: case 715: case 718: return sondeSummary(t.sonde);
+    case 15: return aisSummary(t.ais);
+    case 739: case 808: case 811: case 814: case 817: case 858: return aisSummary(t.ais);
     case 16: return marineSummary(t.marine);
     case 17: return acarsSummary(t.acars);
     case 18: return inmcSummary(t.inmc);
@@ -950,8 +956,10 @@ std::string modeSummary(const RxTelemetry& t) {
     case 54: return qo100Summary(t.qo100);
     case 55: return wifiSummary(t.wifi);
     case 56: return generalSummary(t.general);
-    case 59: case 608: case 611: case 614: case 617: case 629: case 632: case 635: case 638: case 643: case 646: case 649: return timeSummary(t.timesig);
-    case 62: case 841: case 844: case 847: case 850: case 853: case 856: case 793: case 796: case 805: return cubesatSummary(t.cube);
+    case 59: return timeSummary(t.timesig);
+    case 608: case 611: case 614: case 617: case 629: case 632: case 635: case 638: case 643: case 646: case 649: return timeSummary(t.timesig);
+    case 62: case 841: case 844: case 847: case 850: case 853: case 856: return cubesatSummary(t.cube);
+    case 793: case 796: case 805: return cubesatSummary(t.cube);
     case 63: return globalstarSummary(t.globalstar);
     case 64: return vdesSummary(t.vdes);
     case 66: return zigbeeSummary(t.zigbee);
@@ -1001,7 +1009,8 @@ std::string modeSummary(const RxTelemetry& t) {
     case 662: return tdscdmaSummary(t.tdscdma);
     case 641: return vdl3Summary(t.vdl3);
     case 881: return cp16Summary(t.cp16);
-    case 242: case 565: case 568: case 571: case 574: case 577: case 580: case 583: case 586: case 589: case 592: case 595: case 664: case 667: case 670: case 673: case 676: case 679: case 682: return sensorsSummary(t.sensors);
+    case 242: return sensorsSummary(t.sensors);
+    case 565: case 568: case 571: case 574: case 577: case 580: case 583: case 586: case 589: case 592: case 595: case 664: case 667: case 670: case 673: case 676: case 679: case 682: return sensorsSummary(t.sensors);
     case 246: return bganSummary(t.bgan);
     case 244: return sfericsSummary(t.sferics);
     case 791: return ltposSummary(t.ltpos);
@@ -1051,7 +1060,8 @@ std::string modeSummary(const RxTelemetry& t) {
     case 381: return btcSummary(t.btc);
     case 86: return eczasSummary(t.eczas);
     case 102: return fpvSummary(t.fpv);
-    case 87: case 721: case 724: case 727: case 733: case 736: return wmbusSummary(t.wmbus);
+    case 87: return wmbusSummary(t.wmbus);
+    case 721: case 724: case 727: case 733: case 736: return wmbusSummary(t.wmbus);
     case 90: return tonesSummary(t.tones);
     case 93: return sarsatSummary(t.sarsat);
     case 96: return mt63Summary(t.mt63);

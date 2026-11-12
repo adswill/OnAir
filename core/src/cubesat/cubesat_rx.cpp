@@ -585,7 +585,7 @@ static const CubesatView kViews[] = {
     {855, "beesat", "BEESAT / Mobitex", Mobitex, "Mobitex"},
     {792, "g3ruh9600", "AX.25 G3RUH 9600 (satellites)", Ax25G3ruh, "G3RUH"},      // 4.0 (docs/VIEWS-4.0.md): families 792, 795, 804
     {795, "ccsdsrs", "CCSDS Reed-Solomon (satellites)", CcsdsRs, "CCSDS"},
-    {804, "ccsdsconcat", "CCSDS concatenated (satellites)", CcsdsConcat, "CCSDS conc."},
+    {804, "ccsdsconcat", "CCSDS concatenated (satellites)", CcsdsConcat, "CCSDS conc"},
 };
 const CubesatView* cubesatViews(int& count) { count = (int)(sizeof kViews / sizeof *kViews); return kViews; }
 const CubesatView* cubesatViewForActive(int a) { for (const auto& v : kViews) if (v.family + 1 == a) return &v; return nullptr; }

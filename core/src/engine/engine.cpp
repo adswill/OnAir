@@ -597,9 +597,12 @@ void Engine::resetReceiver(int a) {
     case 10: rxDmr_.reset(); break;
     case 11: rxDrm_.reset(); break;
     case 12: rxAdsb_.reset(); break;
-    case 13: case 861: case 864: case 867: case 873: case 876: rxGnss_.reset(); break;
-    case 14: DECT2_SONDEVIEW_ACTIVE_CASES rxSonde_.reset(); break;
-    case 15: DECT2_AISVIEW_ACTIVE_CASES rxAis_.reset(); break;
+    case 13: rxGnss_.reset(); break;
+    case 861: case 864: case 867: case 873: case 876: rxGnss_.reset(); break;
+    case 14: rxSonde_.reset(); break;
+    DECT2_SONDEVIEW_ACTIVE_CASES rxSonde_.reset(); break;
+    case 15: rxAis_.reset(); break;
+    DECT2_AISVIEW_ACTIVE_CASES rxAis_.reset(); break;
     case 16: rxMarine_.reset(); break;
     case 17: rxAcars_.reset(); break;
     case 18: rxInmc_.reset(); break;
@@ -644,8 +647,10 @@ void Engine::resetReceiver(int a) {
     case 54: rxQo100_.reset(); break;
     case 55: rxWifi_.reset(); break;
     case 56: rxGeneral_.reset(); for (auto& g : extraGeneral_) g.reset(); break;
-    case 59: DECT2_TIMEVIEW_ACTIVE_CASES rxTime_.reset(); break;
-    case 62: case 841: case 844: case 847: case 850: case 853: case 856: case 793: case 796: case 805: rxCube_.reset(); break;   // 841 .. 856: the framing entries (cubesat_rx.h)
+    case 59: rxTime_.reset(); break;
+    DECT2_TIMEVIEW_ACTIVE_CASES rxTime_.reset(); break;
+    case 62: case 841: case 844: case 847: case 850: case 853: case 856: rxCube_.reset(); break;   // 841 .. 856: the framing entries (cubesat_rx.h)
+    case 793: case 796: case 805: rxCube_.reset(); break;   // 841 .. 856: the framing entries (cubesat_rx.h)
     case 63: rxGs_.reset(); break;
     case 64: rxVdes_.reset(); break;
     case 67: rxFlarm_.reset(); break;
@@ -667,7 +672,8 @@ void Engine::resetReceiver(int a) {
     case 621: case 622: case 623: case 624: case 625: case 626: case 627: rxCis_[a - 621].reset(); break;
     case 801: case 802: case 803: rxW1a_[a - 801].reset(); break;
     case 211: rxNrf_.reset(); break;
-    case 242: DECT2_SENSVIEW_ACTIVE_CASES rxSens_.reset(); break;   // 4.0: the sensor-family entries (sensors_rx.h)
+    case 242: rxSens_.reset(); break;   // 4.0: the sensor-family entries (sensors_rx.h)
+    DECT2_SENSVIEW_ACTIVE_CASES rxSens_.reset(); break;   // 4.0: the sensor-family entries (sensors_rx.h)
     case 246: rxBgan_.reset(); break;
     case 244: rxSfer_.reset(); break;
     case 791: rxLtpos_.reset(); break;
@@ -738,7 +744,8 @@ void Engine::resetReceiver(int a) {
     case 381: rxBtc_.reset(); break;
     case 86: rxEcz_.reset(); break;
     case 102: rxFpv_.reset(); break;
-    case 87: DECT2_WMBUSVIEW_ACTIVE_CASES rxWmb_.reset(); break;
+    case 87: rxWmb_.reset(); break;
+    DECT2_WMBUSVIEW_ACTIVE_CASES rxWmb_.reset(); break;
     case 90: rxTones_.reset(); break;
     case 93: rxSar_.reset(); break;
     case 96: rxMt63_.reset(); break;
