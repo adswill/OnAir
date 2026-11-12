@@ -2051,3 +2051,15 @@ left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
   buttons, age, source (squitter / hfdl.observer). The hfdl.observer list (its public active.json "Source Data" link, no terms published)
   is opt-in (Settings > Privacy), off in Offline mode, at most every 2 min, cached. Credits for hfdl.observer and Airframes.io.
 - Tests hfdl_live (saved list in tests/data/hfdl, no network) and hfdl_busy (simulated sky). Simulated only. docs/HFDL-STATIONS-4.0.md.
+## 2026-11-12 (feat40-issues2): #463 CDR sound on Android, #435 DTMB on Android, #442 bugs
+- #463: the phone never chose a CDR service to play (listen id 0) and could not load the user-installed DRA+ add-on. setListen(-1) = first
+  audio service; JNI nativeCdrListen / nativeCodecs (files/codecs); new Android Sound tab on CDR with Import add-on (.so) and the reason
+  it is silent; CODECS.md "DRA+ on Android" (NDK build, checked in android.yml, never packaged).
+- #435: crash logs = Compose ArrayIndexOutOfBounds index -2; early returns out of inline Column lambdas removed (ResultsTab + 5 panels),
+  likely cause, not proven (no mapping file). The user's SpyServer Wi-Fi link lost up to a third of 10 Msps; SpyServer drops are now
+  zero-filled from the sequence numbers, DTMB coasts over zero-filled headers: fixed-phase 4QAM 0.4 M=720 with 3 % gaps 0.16 -> 0.92 of
+  the packets (simulated). DTMB details and a link-loss warning on the phone.
+- #442: FM RDS block keeps its height (saved stations stop jumping), Mode A/C full screen, Windows folder picker (SHBrowseForFolderW),
+  Windows window icon (GLFW_ICON). Zoom limits were already in 3.7. Feature ideas listed in docs/ISSUES2-4.0.md.
+- CI: android.yml 43198580494, 43207001215; quick 43215392986 (Linux), 43218158764 (Windows): pass. No phone, radio or Windows desktop used.
+
