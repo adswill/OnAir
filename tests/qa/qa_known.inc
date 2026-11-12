@@ -25,8 +25,6 @@
     {"aissart/*", "generator / no signal: no AIS-SART, man-overboard or EPIRB-AIS device in the simulated port (test_ais_views builds their bursts)"},
     {"gnssgps/pos", "unrealistic: GNSS: a 50 ppm sample clock (51 chips/s of code drift) is far beyond a GNSS receiver's TCXO (0.5-2 ppm)"},
     {"gnssgps/neg", "unrealistic: GNSS: a 50 ppm sample clock (51 chips/s of code drift) is far beyond a GNSS receiver's TCXO (0.5-2 ppm)"},
-    {"gnssgal/pos", "unrealistic: GNSS: a 50 ppm sample clock (51 chips/s of code drift) is far beyond a GNSS receiver's TCXO (0.5-2 ppm)"},
-    {"gnssgal/neg", "unrealistic: GNSS: a 50 ppm sample clock (51 chips/s of code drift) is far beyond a GNSS receiver's TCXO (0.5-2 ppm)"},
     {"gnssqzss/pos", "unrealistic: GNSS: a 50 ppm sample clock (51 chips/s of code drift) is far beyond a GNSS receiver's TCXO (0.5-2 ppm)"},
     {"gnssqzss/neg", "unrealistic: GNSS: a 50 ppm sample clock (51 chips/s of code drift) is far beyond a GNSS receiver's TCXO (0.5-2 ppm)"},
     {"gnssglo/pos", "unrealistic: GNSS: a 50 ppm sample clock (51 chips/s of code drift) is far beyond a GNSS receiver's TCXO (0.5-2 ppm)"},

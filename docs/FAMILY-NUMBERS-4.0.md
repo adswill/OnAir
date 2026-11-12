@@ -82,7 +82,7 @@ Every entry is a family F with active standard F + 1, engine standard F + 2 and 
 | CubeSat framings | 792, 795, 804 | 3 views of CubeSat telemetry |
 | AIS station kinds | 738, 807, 810, 813, 816, 857 | 6 views of AIS |
 | Time stations | 607, 610, 613, 616, 628, 631, 634, 637, 642, 645, 648 | 11 views of Time signals |
-| GNSS systems | 860, 863, 866, 872, 875 | 5 views of GNSS |
+| GNSS systems | 860, 866, 872, 875 | 4 views of GNSS |
 | Analog TV standards | 424, 427, 441, 444, 447, 450, 453, 456 | 8 views of Analog TV |
 
 The numbers still free are those of the ranges listed above minus the ones in this table (the stride is 3 for a view, 1 for an x40 variant). The integrator resolves any clash with another branch.

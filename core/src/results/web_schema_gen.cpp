@@ -15267,7 +15267,6 @@ static bool put_853(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelem
 static bool put_856(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_858(const RxTelemetry& rx, std::string& s) { ev_dect2__AisTelemetry(s, rx.ais); return true; }
 static bool put_861(const RxTelemetry& rx, std::string& s) { ev_dect2__GnssTelemetry(s, rx.gnss); return true; }
-static bool put_864(const RxTelemetry& rx, std::string& s) { ev_dect2__GnssTelemetry(s, rx.gnss); return true; }
 static bool put_867(const RxTelemetry& rx, std::string& s) { ev_dect2__GnssTelemetry(s, rx.gnss); return true; }
 static bool put_871(const RxTelemetry& rx, std::string& s) { ev_dect2__FbrTelemetry(s, rx.fbr); return true; }
 static bool put_873(const RxTelemetry& rx, std::string& s) { ev_dect2__GnssTelemetry(s, rx.gnss); return true; }
@@ -15620,7 +15619,6 @@ static const StdEntry kStd[] = {
     {856, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_856},
     {858, "ais", "dect2::AisTelemetry", kSchema_dect2__AisTelemetry, put_858},
     {861, "gnss", "dect2::GnssTelemetry", kSchema_dect2__GnssTelemetry, put_861},
-    {864, "gnss", "dect2::GnssTelemetry", kSchema_dect2__GnssTelemetry, put_864},
     {867, "gnss", "dect2::GnssTelemetry", kSchema_dect2__GnssTelemetry, put_867},
     {871, "fbr", "dect2::FbrTelemetry", kSchema_dect2__FbrTelemetry, put_871},
     {873, "gnss", "dect2::GnssTelemetry", kSchema_dect2__GnssTelemetry, put_873},
@@ -16061,7 +16059,6 @@ static const WebModeRow kRows[] = {
     {645, "BPM coded (China, HF)", 9, "BPM coded: Chinese HF time frames", "", 647, 646, "timesig"},
     {648, "RWM (Russia, 9996 kHz)", 9, "RWM: Russian HF time signal", "", 650, 649, "timesig"},
     {860, "GPS L1 C/A", 4, "GPS L1 C/A: satellite tracking and position fix", "", 862, 861, "gnss"},
-    {863, "Galileo E1", 4, "Galileo E1: satellite tracking and position fix", "", 865, 864, "gnss"},
     {866, "QZSS L1", 4, "QZSS L1: satellite tracking", "", 868, 867, "gnss"},
     {872, "GLONASS L1", 4, "GLONASS L1: satellite tracking and position fix", "", 874, 873, "gnss"},
     {875, "BeiDou B1I", 4, "BeiDou B1I: satellite tracking and position fix", "", 877, 876, "gnss"},

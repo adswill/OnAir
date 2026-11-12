@@ -128,7 +128,6 @@ void GnssReceiver::cpuBreakdown(double* front, double* track, double* acq) const
 // 4.0: the systems with a mode-list entry of their own (family, active standard family + 1, engine standard family + 2, poll slot = family)
 static const GnssView kGnssViews[] = {
     {860, "gnssgps", "GPS L1 C/A", GnssGps, 1575.42},
-    {863, "gnssgal", "Galileo E1", GnssGalileo, 1575.42},
     {866, "gnssqzss", "QZSS L1", GnssQzss, 1575.42},
     {872, "gnssglo", "GLONASS L1", GnssGlonass, 1602.0},
     {875, "gnssbds", "BeiDou B1I", GnssBeidou, 1561.098},

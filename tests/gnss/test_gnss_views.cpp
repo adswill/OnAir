@@ -1,5 +1,5 @@
-// The satellite-system entries (families 860, 863, 866, 872, 875; gnss_rx.h: gnssViews): the GNSS receiver with one system wanted. A simulated sky with GPS, Galileo and QZSS satellites on L1 (4 Msps, 8-bit samples, 45 s)
-// is run through a receiver with every system wanted and through one for each of the three views: the view tracks its own system and no other (no locked channel of another system). The tables (numbers, lookups, tunings: GLONASS 10 Msps at 1602 MHz, BeiDou 1561.098 MHz) are checked for all five; the GLONASS and BeiDou entries use the same mask as the others
+// The satellite-system entries (families 860, 866, 872, 875; gnss_rx.h: gnssViews): the GNSS receiver with one system wanted. A simulated sky with GPS, Galileo and QZSS satellites on L1 (4 Msps, 8-bit samples, 45 s)
+// is run through a receiver with every system wanted and through one for each of the three views: the view tracks its own system and no other (no locked channel of another system). The tables (numbers, lookups, tunings: GLONASS 10 Msps at 1602 MHz, BeiDou 1561.098 MHz) are checked for all four; the GLONASS and BeiDou entries use the same mask as the others
 // and the receiver's own tests cover their signals. Simulated signals only.
 #include "dect2/gnss/gnss_testkit.h"
 #include "dect2/gnss/gnss_rx.h"
@@ -17,7 +17,7 @@ static int lockedOther(const GnssTelemetry& t, int sys) { int n = 0; for (const 
 int main() {
     int nv = 0;
     const GnssView* views = gnssViews(nv);
-    CHECK(nv == 5, "%d views", nv);
+    CHECK(nv == 4, "%d views", nv);
     for (int i = 0; i < nv; i++) {
         CHECK(gnssViewForActive(views[i].family + 1) == &views[i] && gnssViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
         const ModeTuning t = gnssViewTuning(i);
@@ -31,7 +31,7 @@ int main() {
     GnssSimConfig cfg;
     cfg.systems = gnssSystemBit(GnssGps) | gnssSystemBit(GnssGalileo) | gnssSystemBit(GnssQzss);
     struct W { const char* name; unsigned mask; int sys; size_t minLocked; };
-    const W ws[] = {{"all systems", 0xFFFFFFFFu, -1, 0}, {"GPS", gnssSystemBit(GnssGps), GnssGps, 3}, {"Galileo", gnssSystemBit(GnssGalileo), GnssGalileo, 2}, {"QZSS", gnssSystemBit(GnssQzss), GnssQzss, 1}};
+    const W ws[] = {{"all systems", 0xFFFFFFFFu, -1, 0}, {"GPS", gnssSystemBit(GnssGps), GnssGps, 3}, {"QZSS", gnssSystemBit(GnssQzss), GnssQzss, 1}};
     std::set<int> all[6];
     for (const W& w : ws) {
         GnssSim sim(cfg, 4e6);

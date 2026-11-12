@@ -196,7 +196,7 @@ const ModeUi* modeUi(int family) {
     case 10: return &kDrmUi;
     case 11: return &kAdsbUi;
     case 12: return &kGnssUi;
-    case 860: case 863: case 866: case 872: case 875: return &kGnssUi;   // 860 .. 875: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
+    case 860: case 866: case 872: case 875: return &kGnssUi;   // 860 .. 875: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 13: return &kSondeUi;
     case 684: case 687: case 690: case 693: case 702: case 705: case 708: case 711: case 714: case 717: return &kSondeUi;   // 684 .. 717: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 14: return &kAisUi;

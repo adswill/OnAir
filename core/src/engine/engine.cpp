@@ -599,7 +599,7 @@ void Engine::resetReceiver(int a) {
     case 11: rxDrm_.reset(); break;
     case 12: rxAdsb_.reset(); break;
     case 13: rxGnss_.reset(); break;
-    case 861: case 864: case 867: case 873: case 876: rxGnss_.reset(); break;
+    case 861: case 867: case 873: case 876: rxGnss_.reset(); break;
     case 14: rxSonde_.reset(); break;
     DECT2_SONDEVIEW_ACTIVE_CASES rxSonde_.reset(); break;
     case 15: rxAis_.reset(); break;

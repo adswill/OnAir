@@ -1,6 +1,6 @@
 # Radiosonde, wireless M-Bus and satellite framing entries (4.0, branch feat40-modes4)
 
-Forty-eight more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
+Forty-seven more mode-list entries that are **views onto an existing receiver**, in the way 3.9 made entries for the CubeSat framings. The receiver is the same (same band search, same decoders, same screen); the entry lists one type only.
 No decoder was added or changed. The sensor-family entries of the same branch are in `SENSORVIEWS-4.0.md`.
 
 ## Radiosonde types (receiver `SondeReceiver`, `setKindMask`)
@@ -61,17 +61,17 @@ Test `tests/time/test_time_views.cpp`: the test signal of each station (175 s at
 BPC, HLA, BPM coded and RWM are checked for the station only (their decoding is covered by `test_time_burst` and `test_time_rwm`). A DCF77 signal in the MSF entry, WWVB in the DCF77 entry and JJY 60 in the WWVB entry give no time; noise alone gives none in any entry. **Simulated signals only.**
 
 ## Satellite systems (receiver `GnssReceiver`, `setSystems`)
+Galileo is not offered on its own: the receiver acquires Galileo E1-B in the GPS band with the help of a GPS lock (its search window comes from the GPS frequency error), so a Galileo-only entry would find nothing.
 | Mode | Family | Active std | Engine std | Poll slot | System | Default MHz |
 |---|---|---|---|---|---|---|
 | GPS L1 C/A | 860 | 861 | 862 | 860 | GPS | 1575.42 |
-| Galileo E1 | 863 | 864 | 865 | 863 | Galileo | 1575.42 |
 | QZSS L1 | 866 | 867 | 868 | 866 | QZSS | 1575.42 |
 | GLONASS L1 | 872 | 873 | 874 | 872 | GLONASS | 1602.0 (10 Msps) |
 | BeiDou B1I | 875 | 876 | 877 | 875 | BeiDou | 1561.098 |
 
 The engine passes `gnssSystemBit(system)` to `setSystems` when the entry starts (all systems for GNSS itself). The screen is the GNSS screen; the drive-navigation, map and clock-sync parts stay in GNSS.
-Test `tests/gnss/test_gnss_views.cpp`: a simulated L1 sky with GPS, Galileo and QZSS satellites (4 Msps, 8-bit samples, 45 s) through a receiver wanting every system and one per view (GPS, Galileo, QZSS): a view locks none of the other systems and enough of its own;
-the tables of all five (GLONASS at 10 Msps, BeiDou at 1561.098 MHz) are checked; GLONASS and BeiDou use the same mask and their signals are covered by the receiver's own tests. **Simulated signals only.**
+Test `tests/gnss/test_gnss_views.cpp`: a simulated L1 sky with GPS, Galileo and QZSS satellites (4 Msps, 8-bit samples, 45 s) through a receiver wanting every system and one for the GPS and one for the QZSS view: a view locks none of the other systems and enough of its own;
+the tables of all four (GLONASS at 10 Msps, BeiDou at 1561.098 MHz) are checked; GLONASS and BeiDou use the same mask and their signals are covered by the receiver's own tests. **Simulated signals only.**
 
 ## Analog TV standards (receiver `AtvReceiver`, `setStandard`)
 | Mode | Family | Active std | Engine std | Poll slot | System, colour |

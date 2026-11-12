@@ -460,7 +460,7 @@
         <item>BPM coded (China, HF)</item>
         <item>RWM (Russia, 9996 kHz)</item>
         <item>GPS L1 C/A</item>
-        <item>Galileo E1</item>
+        <item></item>
         <item>QZSS L1</item>
         <item>GLONASS L1</item>
         <item>BeiDou B1I</item>
@@ -917,7 +917,7 @@
         <item>BPM coded time signal (the coded time frames of the Chinese HF station BPM, 5 MHz first): time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
         <item>RWM time signal from Moscow, Russia, on 9996 kHz (also 4996 and 14996 kHz): the carrier keyed with the time code: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
         <item>GPS L1 C/A satellites on 1575.42 MHz: the satellites in view with their signal strength and Doppler, the broadcast ephemeris and almanac decoded, the position and time fix, DOP and the sky plot. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
-        <item>Galileo E1 satellites on 1575.42 MHz (E1-B, I/NAV pages with Viterbi and CRC): the satellites in view, the decoded ephemeris and the GST - GPS offset, and a position fix from Galileo alone. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
+        <item></item>
         <item>QZSS L1 C/A satellites (PRN 193 - 202, Japan\'s regional system, J01 - J10) on 1575.42 MHz: the satellites in view, their decoded ephemeris and a position fix from QZSS alone. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
         <item>GLONASS L1 satellites on 1598 - 1606 MHz (FDMA, frequency channels -7 to +6 around 1602 MHz): the satellites in view with their frequency channel, the decoded strings and a position fix from GLONASS alone. Needs an active GNSS antenna and a radio with 10 Msps. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
         <item>BeiDou B1I satellites on 1561.098 MHz: the satellites in view, the decoded ephemeris and a position fix from BeiDou alone. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
@@ -1374,7 +1374,7 @@
         <item>Time, BPM coded</item>
         <item>Time, RWM</item>
         <item>Satellites, GPS</item>
-        <item>Satellites, Galileo</item>
+        <item></item>
         <item>Satellites, QZSS</item>
         <item>Satellites, GLONASS</item>
         <item>Satellites, BeiDou</item>
@@ -1831,7 +1831,7 @@
         <item>bpm coded china chinese hf time signal 5 mhz atomic clock</item>
         <item>rwm russia russian moscow 9996 4996 14996 khz hf time signal atomic clock</item>
         <item>gps navstar l1 ca 1575.42 gnss satellite fix position time</item>
-        <item>galileo e1 e1-b inav boc 1575.42 gnss satellite fix position time</item>
+        <item></item>
         <item>qzss michibiki l1 ca 193 202 1575.42 gnss satellite japan</item>
         <item>glonass l1 fdma 1602 gnss satellite fix position time russia</item>
         <item>beidou compass b1i bds 1561.098 gnss satellite fix position time china</item>

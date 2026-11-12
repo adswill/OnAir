@@ -4199,7 +4199,6 @@ Time, HLA	Zeit, HLA
 Time, BPM coded	Zeit, BPM coded
 Time, RWM	Zeit, RWM
 Satellites, GPS	Satelliten, GPS
-Satellites, Galileo	Satelliten, Galileo
 Satellites, QZSS	Satelliten, QZSS
 Satellites, GLONASS	Satelliten, GLONASS
 Satellites, BeiDou	Satelliten, BeiDou

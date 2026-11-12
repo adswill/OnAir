@@ -231,7 +231,6 @@ int Engine::pollMode(int a, RxTelemetry& t, uint64_t* seqs) {
     case 13: return pollStd(rxGnss_, 13, t, seqs[6], &RxTelemetry::gnss);
     // 4.0: one entry per satellite system, the same receiver (gnss_rx.h: gnssViews)
     case 861: return pollStd(rxGnss_, 861, t, seqs[860], &RxTelemetry::gnss);   // GNSS system entry (family 860)
-    case 864: return pollStd(rxGnss_, 864, t, seqs[863], &RxTelemetry::gnss);   // GNSS system entry (family 863)
     case 867: return pollStd(rxGnss_, 867, t, seqs[866], &RxTelemetry::gnss);   // GNSS system entry (family 866)
     case 873: return pollStd(rxGnss_, 873, t, seqs[872], &RxTelemetry::gnss);   // GNSS system entry (family 872)
     case 876: return pollStd(rxGnss_, 876, t, seqs[875], &RxTelemetry::gnss);   // GNSS system entry (family 875)

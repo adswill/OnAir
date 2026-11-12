@@ -88,7 +88,7 @@ const GnssView* gnssViews(int& count);
 const GnssView* gnssViewForActive(int activeStd);
 const GnssView* gnssViewForStd(int stdMode);
 ModeTuning gnssViewTuning(int i);
-#define DECT2_GNSSVIEW_ACTIVE_CASES case 861: case 864: case 867: case 873: case 876:
+#define DECT2_GNSSVIEW_ACTIVE_CASES case 861: case 867: case 873: case 876:
 
 enum GnssTune { GnssTuneCustom = -1, GnssTuneL1 = 0, GnssTuneB1I = 1, GnssTuneGlo = 2, GnssTuneAll = 3 };
 constexpr double kGnssTuneMhz[4] = {1575.42, 1561.098, 1602.0, 1582.0};
