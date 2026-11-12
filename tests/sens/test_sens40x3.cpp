@@ -143,12 +143,16 @@ int main() {
             const char* sw = offSwitch(m.id);
             double hi = m.snrHi, lo = m.snrHi - 20, st = 2;
             if (getenv("X3_SNR")) sscanf(getenv("X3_SNR"), "%lf:%lf:%lf", &hi, &lo, &st);
+            const std::string own = "X3_SNR_" + m.id;   // per mode: X3_SNR_atsc3=20:-2:2
+            if (getenv(own.c_str())) sscanf(getenv(own.c_str()), "%lf:%lf:%lf", &hi, &lo, &st);
+            const std::string ownScen = "X3_SCEN_" + m.id;
+            const std::regex modeScen(getenv(ownScen.c_str()) ? getenv(ownScen.c_str()) : ".*");
             setOff(sw, false);
             const int thr = std::max(1, std::min(threads, m.maxJobs));
             const Prep P = prepare(m, m.secs, thr);
             printf("== %s (%s): %.1f s trials, need %.1f units, %d trials a point, switch %s\n", m.id.c_str(), m.name.c_str(), m.secs, P.need, n, sw ? sw : "-");
             for (const auto& sc : scenarios(m)) {
-                if (!std::regex_match(sc.name, scenRe)) continue;
+                if (!std::regex_match(sc.name, scenRe) || !std::regex_match(sc.name, modeScen)) continue;
                 printf("-- %s\n   SNR    new pass/frac/cpu      old pass/frac/cpu\n", sc.name.c_str());
                 for (double s = hi; s >= lo - 1e-9; s -= st) {
                     setOff(sw, false);
