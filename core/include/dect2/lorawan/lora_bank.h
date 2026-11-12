@@ -53,6 +53,10 @@ public:
     void configure(double inputRate, const std::vector<Channel>& chans);
     // The samples (any amount); the finished frames are appended to out. Equal results whatever the chunking.
     void feed(const cf32* x, size_t n, std::vector<Decoded>& out);
+    // At end of input, process the Bank's last partial block and append any finished frames to out.
+    // Uses only samples already fed. Does not add silence or flush the channelizer's own filter/FFT lookahead.
+    // No effect if the Bank has no pending samples.
+    void flushPending(std::vector<Decoded>& out);
     double timeSec() const;          // samples fed / rate
     int64_t samples() const;
     const std::vector<DecoderStat>& stats() const;
