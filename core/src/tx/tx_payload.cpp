@@ -430,7 +430,7 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
             return makeHfdigSynthFromAudio(std::move(audio), s, rate, r.variant == 1);
         }
         if (which == 0) {
-            auto audio = makeRttyTxAudio(r.text, r.baudIdx, r.shiftIdx, r.reverse, 2125);
+            auto audio = makeRttyTxAudio(r.text, r.baudIdx, r.shiftIdx, r.reverse, std::max(100.0, r.o("rtty.markHz", 2125)));
             return makeHfdigSynthFromAudio(std::move(audio), s, rate, r.variant == 1);
         }
         if (which >= 26 && which <= 31) {
@@ -438,10 +438,18 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
             k.cfg.family = which - 26;
             if (!r.text.empty()) k.text = r.text;
             if (r.toneHz > 100) k.cfg.centreHz = r.toneHz;
+            // the mode's own settings (tx_params.h): Olivia / Contestia tones and bandwidth, the variant of the others
+            if (k.cfg.family == KbdOlivia || k.cfg.family == KbdContestia) {
+                k.cfg.tones = (int)std::lround(r.o("kbd.tones", k.cfg.tones));
+                k.cfg.bandwidth = (int)std::lround(r.o("kbd.bw", k.cfg.bandwidth));
+            } else if (kbdVariantCount(k.cfg.family) > 1) {
+                k.cfg.variant = std::max(0, std::min(kbdVariantCount(k.cfg.family) - 1, (int)std::lround(r.o("kbd.variant", kbdDefaultVariant(k.cfg.family)))));
+            }
+            k.cfg.autoParams = false;
             auto audio = makeKbdTx(k);
-            // upper sideband: the keyboard payload has no sideband choice, and r.variant is another payload's field (the RTTY sideband, the PSK
-            // variant, the SSTV mode), which put the signal on the lower sideband, below the dial, whenever it was 1 (#225)
-            return makeHfdigSynthFromAudio(std::move(audio), s, rate, false);
+            // the sideband is the mode's own key kbd.lsb, not r.variant: that is another payload's field (the RTTY sideband, the PSK variant, the SSTV
+            // mode), which put the signal on the lower sideband, below the dial, whenever it was 1 (#225)
+            return makeHfdigSynthFromAudio(std::move(audio), s, rate, r.o("kbd.lsb", 0) > 0.5);
         }
         if (which == 2) {   // FreeDV
             SynthConfig sc = s;
@@ -805,6 +813,9 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         c.snrDb = 99;
         c.ident = upper(r.callsign).substr(0, 4);
         c.voice = false;
+        c.kind = std::max(0, std::min(6, s.modeOpt[0]));   // the navaid and its radial / DDM chosen with the ident (they were the demo's only)
+        if (c.kind <= 1) c.radialDeg = s.modeVal[0];
+        else if (c.kind <= 3) c.ddm = s.modeVal[0];
         return std::make_unique<WrapGen<VorGenerator>>(std::make_unique<VorGenerator>(c), rate);
     }
 
@@ -838,8 +849,21 @@ std::unique_ptr<ModeSynth> makeTxPayloadSynth(const TxModeSpec& m, const TxReque
         if (!frames.empty()) {
             frames.resize(1);
             frames[0].payload.assign(r.text.begin(), r.text.end());
+            if (frames[0].payload.size() > 255) frames[0].payload.resize(255);
             frames[0].cfoHz = 0;
+            // the LoRa settings (tx_params.h), the same keys as LoRa APRS's own settings
+            static const double kBw[] = {62500, 125000, 250000, 500000};
+            LoraRawGenFrame& f = frames[0];
+            f.p.sf = std::max(6, std::min(12, (int)std::lround(r.o("lora.sf", 7))));
+            f.p.bwHz = kBw[std::max(0, std::min(3, (int)std::lround(r.o("lora.bwIdx", 1))))];
+            f.p.cr = std::max(5, std::min(8, (int)std::lround(r.o("lora.cr", 5))));
+            f.p.preamble = std::max(6, std::min(65535, (int)std::lround(r.o("lora.preamble", 8))));
+            f.p.syncWord = (uint8_t)std::max(0, std::min(255, (int)std::lround(r.o("lora.sync", 0x12))));
+            f.p.crc = r.o("lora.crc", 1) > 0.5;
+            f.p.ldro = meshLoraLdro(f.p.sf, f.p.bwHz);
+            f.gapSec = std::max(0.1, r.o("lora.gapSec", 2));
         }
+        c.loop = true;
         c.frames = std::move(frames);
         return std::make_unique<WrapGen<LoraRawGenerator>>(std::make_unique<LoraRawGenerator>(c), rate);
     }

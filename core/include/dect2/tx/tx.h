@@ -190,7 +190,12 @@ struct TxRequest {
     // The advanced parameters of the panel (app/panels/tx_params.cpp has the one table): numbers by key, e.g. "am.depth". A generator reads the keys it knows with
     // o(key, default); a key it does not know is ignored. Keys: out.* (every mode), audio.* / am.* / ssb.* / fm.* / vox.* (analog voice), bfm.* (FM broadcast).
     std::map<std::string, double> opt;
-    double o(const char* key, double def) const { const auto it = opt.find(key); return it == opt.end() ? def : it->second; }
+    double o(const char* key, double def) const {
+        if (txKeyTrace) txKeyTrace->push_back(key);   // tests/tx/test_tx_param_model.cpp: every key a generator reads must be a row of tx_params.h
+        const auto it = opt.find(key);
+        return it == opt.end() ? def : it->second;
+    }
+    static thread_local std::vector<std::string>* txKeyTrace;   // set by txTraceKeys (tx_params.h); nullptr otherwise
 };
 
 // Whether this mode's vocoder can encode live speech with a library OnAir already loads (Codec 2 for M17 / FreeDV).
