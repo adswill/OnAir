@@ -62,7 +62,7 @@ models of what the panels draw, not screenshots of each mode: screenshots of a f
 
 The sweep of the same test (10080 window size and content cases) found no case still moving after 4 s.
 
-### Group 1: no lower content, own list (288 modes)
+### Group 1: no lower content, own list (268 modes)
 
 Placement: lower row hidden, list in its column (or a strip while it shows only "stopped" / "starting"). Nothing added to the lower row:
 these modes show their history and tables in their own tab, and the freed height goes to the waterfall, which is where their signals are
@@ -77,7 +77,7 @@ bar and their own tab.
 
 OpenSky identifier, QRSS grabber, DFCW grabber, FSK441, JT6M, Schumann resonance monitor, Whistler and tweek detector, Moon echo (EME) test, Radio Jove, e-CALLISTO solar bursts, Aurora / Es / TEP beacons, ISCAT, PI4, Throb, SuperSID (VLF), Riometer, Pulsar folding, UMTS cells, CDMA2000 cells, TD-SCDMA cells, Zombie satellites, What satellite is this?, UHF SATCOM skimmer, Thuraya GMR-1 channels, Starlink detector, OneWeb detector, TDRS carriers, Tiangong / Shenzhou carriers, Tsikada / Parus, Gonets, Tiantong signalling, Space station, NavIC, FSQ, IFKP, DME, CIS-36-50 / 50-50 (BEE), CIS-14, CIS-12 (MS5), CIS-36 (MFSK), CIS OFDM HDR, CIS-128, CIS-3000, KAAL, KAVB, KAPP, KAFT, KAWS, HF packet 300 Bd, Voice inversion scrambler, ELT 121.5 MHz
 
-### Group 3: a square plot as tall as the row (45 modes, the weather and Earth-observation satellites)
+### Group 3: a square plot as tall as the row (43 modes, the weather and Earth-observation satellites)
 
 `panels` draws one constellation (`scatter`) sized to the row's height, with a caption. Placement: the plot goes into the right column under
 the list (the column narrows to the plot when the list is short); the spectrum takes the full height.
