@@ -41,7 +41,7 @@ int main() {
     for (int i = 0; i < nv; i++) {
         CHECK(sondeViewForActive(views[i].family + 1) == &views[i] && sondeViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
         const ModeTuning t = sondeViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id && t.defMhz == 403, "view %d tuning", i);
+        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id && t.defMhz == (views[i].kind == SondeLms6 ? 1680.0 : 403.0), "view %d tuning", i);
         CHECK(views[i].kind == i + 1, "view %d kind %d", i, views[i].kind);
         for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0, "views %d and %d clash", j, i);
     }

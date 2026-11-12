@@ -847,6 +847,7 @@ ModeTuning sondeViewTuning(int i) {
     ModeTuning t = sondeTuning();
     const SondeView& v = kSondeViews[i];
     t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
+    if (v.kind == SondeLms6) t.defMhz = 1680.0;   // the L-band profile (sondeIsLbandMhz)
     return t;
 }
 
