@@ -3,7 +3,9 @@
 // day), CSV export and a second scenario to compare. See prop_ui.cpp for the window, the worker and the map.
 #include "prop_internal.h"
 #include "../gfx/plot.h"
+#include "../platform/platform.h"
 #include "dect2/common/u8file.h"
+#include "dect2/prop/sat_link.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
