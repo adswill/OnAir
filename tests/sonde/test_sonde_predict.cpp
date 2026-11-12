@@ -79,6 +79,11 @@ int main() {
         CHECK(w.density(10000) / w.rho0() > isaDensity(10000) / isaDensity(0) * 1.02, "warm air: thinner aloft relative to the ground? ratio %.4f vs %.4f",
               w.density(10000) / w.rho0(), isaDensity(10000) / isaDensity(0));
     }
+    // ---- the geoid table (EGM96: 26.1 m at 54 N 25 E, -33.1 m at 25 N 55 E, 17.2 m at 0 N 0 E)
+    CHECK(std::fabs(geoidUndulationM(54, 25) - 26.1) < 2, "geoid 54 25: %.1f", geoidUndulationM(54, 25));
+    CHECK(std::fabs(geoidUndulationM(25, 55) + 33.1) < 3, "geoid 25 55: %.1f", geoidUndulationM(25, 55));
+    CHECK(std::fabs(geoidUndulationM(0, 0) - 17.2) < 2, "geoid 0 0: %.1f", geoidUndulationM(0, 0));
+    CHECK(std::fabs(geoidUndulationM(10, 179.9) - geoidUndulationM(10, -180.1)) < 0.01, "wraps at 180");
     // ---- ascent winds from a track with a swing, noise, glitches and a dropout
     {
         Gen G = fly(5.0, 25000, 300, 1, true);

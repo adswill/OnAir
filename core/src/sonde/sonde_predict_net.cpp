@@ -38,7 +38,7 @@ double slotStart(double t) { return std::floor(t / 10800.0) * 10800.0; }
 
 std::string openMeteoUrl(const std::vector<std::pair<double, double>>& pts, double unixT, const std::string& base) {
     std::string la, lo, v;
-    char b[48];
+    char b[160];
     for (const auto& p : pts) {
         std::snprintf(b, sizeof b, "%s%.2f", la.empty() ? "" : ",", p.first); la += b;
         std::snprintf(b, sizeof b, "%s%.2f", lo.empty() ? "" : ",", p.second); lo += b;

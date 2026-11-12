@@ -44,6 +44,10 @@ struct Atmosphere {
     double rho0() const { return density(0); }
 };
 
+// EGM96 geoid height above the WGS 84 ellipsoid (metres; a 2 degree table, within about 1 m mostly, 4 m in 99 % of places). Terrain
+// models give heights above the geoid (mean sea level); RS41, RS92 and M10 send heights above the ellipsoid.
+double geoidUndulationM(double lat, double lon);
+
 // ---- winds -------------------------------------------------------------------------------------------------------------------------
 struct WindLayer {
     bool ok = false;
@@ -123,7 +127,7 @@ struct SondePredictOpts {
     double layerM = 200;
     bool useAscent = true, useFit = true, useKalman = true, useTerrain = true, useForecast = true;
     double approachBelowM = 2000;   // height above ground below which the final-approach weighting is used
-    double approachWindowS = 90;    // the drift of about the last 30..120 s counts
+    double approachWindowS = 60;    // the drift of about the last 30..120 s counts (60 s: best of 30..120 in the harness)
     double driftCorrLenM = 600;     // how far below the sonde the drift now still says something about the wind
     double windChangeMsPerH = 1.0;  // the ascent wind's error grows by this per hour since it was measured
     double windChangeMsPer100Km = 2.0;   // and by this per 100 km from where it was measured
@@ -132,6 +136,7 @@ struct SondePredictOpts {
     int members = 200;              // ensemble size (0: no ensemble)
     unsigned seed = 1;
     double groundM = 0;             // ground when there is no terrain model
+    bool altEllipsoid = false;      // the sonde's heights are above the ellipsoid: the geoid height is added to the terrain's
     double defaultSeaLevelDescentMs = 5.0;
     double burstM = 30000;          // assumed burst while still climbing
     double descentTauS = 300;       // weight of the descent fit (shorter in the final approach)

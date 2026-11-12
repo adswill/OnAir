@@ -38,6 +38,22 @@ double isaPressurePa(double h) {
 }
 double isaDensity(double h) { return isaPressurePa(h) / (kRd * isaTempK(h)); }
 
+namespace {
+const signed char kEgm96[91 * 180] = {
+#include "egm96_2deg.inc"
+};
+}
+double geoidUndulationM(double lat, double lon) {
+    if (!std::isfinite(lat) || !std::isfinite(lon)) return 0;
+    const double y = (90 - std::max(-90.0, std::min(90.0, lat))) / 2.0;
+    double x = std::fmod(lon + 180.0, 360.0); if (x < 0) x += 360;
+    x /= 2.0;
+    const int i = std::min(89, (int)y), j = (int)x % 180, j2 = (j + 1) % 180;
+    const double u = y - i, v = x - std::floor(x);
+    auto g = [](int r, int c) { return (double)kEgm96[r * 180 + c]; };
+    return (1 - u) * ((1 - v) * g(i, j) + v * g(i, j2)) + u * ((1 - v) * g(i + 1, j) + v * g(i + 1, j2));
+}
+
 // ---- atmosphere -------------------------------------------------------------------------------------------------------------------
 void Atmosphere::buildIsa() { build({}, {}, 250); }
 
@@ -492,13 +508,14 @@ struct WindModel {
     void at(double h, double t, double lat, double lon, double& e, double& n, double& sig, double& c) const {
         const double d = std::max(0.0, H - h);
         c = std::exp(-d / Lc);
-        if (persist) { e = holdE; n = holdN; sig = std::hypot(sigV, 4.0 * (1 - std::exp(-d / 3000.0))); return; }
+        if (persist) { e = holdE; n = holdN; sig = std::hypot(std::max(sigV, 0.8), 4.0 * (1 - std::exp(-d / 3000.0))); return; }
         double pe = 0, pn = 0, ps = 3;
         if (!prior(h, t, lat, lon, pe, pn, ps)) { pe = holdE; pn = holdN; ps = 4; }
         const double g = std::exp(-d / 3000.0);
         e = pe + dAvgE * g + (dNowE - dAvgE) * c;
         n = pn + dAvgN * g + (dNowN - dAvgN) * c;
-        sig = std::sqrt(sigV * sigV * c * c + ps * ps * (1 - c * c));
+        const double sv = std::max(sigV, 0.8);   // gusts: the drift now is not the wind of the next minute
+        sig = std::sqrt(sv * sv * c * c + ps * ps * (1 - c * c));
     }
 };
 
@@ -515,6 +532,7 @@ SondePrediction SondeLandTracker::predict(const SondePredictOpts& o, const Sonde
     const size_t top = burstIndex();
     const bool desc = descending();
     P.climbing = !desc;
+    if (!desc && f_[top].alt - last.alt >= 150) return P;   // came down and is no longer falling: landed (or floating)
     if (P.climbing && last.alt >= o.burstM - 50 && f_.back().alt <= f_[f_.size() - 2].alt) return P;   // at or past the assumed burst but not yet falling
     const Atmosphere atm = atmosphere();
     const double r0 = atm.rho0();
@@ -523,7 +541,7 @@ SondePrediction SondeLandTracker::predict(const SondePredictOpts& o, const Sonde
     const ForecastWinds* fc = (o.useForecast && env.forecast && !env.forecast->empty()) ? env.forecast : nullptr;
     auto groundAt = [&](double la, double lo, bool* fromT) {
         double h;
-        if (o.useTerrain && env.ground && env.ground(la, lo, h) && std::isfinite(h)) { if (fromT) *fromT = true; return h; }
+        if (o.useTerrain && env.ground && env.ground(la, lo, h) && std::isfinite(h)) { if (fromT) *fromT = true; return o.altEllipsoid ? h + geoidUndulationM(la, lo) : h; }
         if (fromT) *fromT = false;
         return o.groundM;
     };
@@ -613,6 +631,7 @@ SondePrediction SondeLandTracker::predict(const SondePredictOpts& o, const Sonde
             }
         };
         double lastPath = -1e9;
+        if (path) { path->push_back({la, lo}); lastPath = t; }
         if (P.climbing) {
             const double top2 = r.burst;
             while (h < top2) {

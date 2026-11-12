@@ -77,10 +77,13 @@ int main() {
             const double eo = o.valid ? errM(o.lat, o.lon, lla, llo) : NAN, en = p.valid ? errM(p.lat, p.lon, lla, llo) : NAN;
             if (slot >= 0) printf("| %5.0f / %-5.0f", eo, en);
             if (last) {
+                printf("\n");
                 for (int k = next; k < 6; k++) printf("| %-13s", "-");
                 printf("| %.0f / %.0f (%.0f m; r50 %.0f, r95 %.0f)\n", eo, en, agl, p.r50M, p.r95M);
                 CHECK(p.valid, "%s: a prediction at the last frame", fn);
-                if (o.valid && p.valid) { sumOld += eo; sumNew += en; n++; }
+                printf("  %s last frame: new drift %.2f %.2f m/s, K %.2f (fitted %d), %.0f s left, start %.0f m from the last fix; old %.0f s left\n", fn,
+                       p.driftVe, p.driftVn, p.seaLevelDescentMs, p.fitted, p.secondsLeft, p.path.empty() ? -1.0 : errM(p.path.front().first, p.path.front().second, r.lat, r.lon), o.secondsLeft);
+                if (p.valid) { sumOld += o.valid ? eo : 0; sumNew += en; n++; }
             }
         }
     }
