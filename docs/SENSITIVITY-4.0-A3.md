@@ -100,13 +100,34 @@ sigma 1.5 / 1.75 / 2 (SNR figure of the test, 6 trials): carrier 0: 5.0 / 1.7 / 
 5.2 / 2.2 / 0.2 after. The voice tone of the test (1.5 kHz deviation) still passes the filter. A carrier 6 kHz off is half found (the work rate's limit), 8 kHz not at all.
 `ltr_rx` has a +-3.1 kHz noise block now (before: the 162-case sweep only used +-900 Hz).
 
-## 8. MRZ and iMS-100 sondes: the sync accepts symbol errors
+## 8. MRZ and iMS-100 sondes: sync with symbol errors, MRZ keeps its serial, both on the narrow path
 
-MRZ matched its 44 symbol sync (9 x 1001 and 10101010) exactly, iMS-100 its 48 symbol word: at a 2 % symbol error rate that is 41 % and 38 % of the frames. Both now accept 3 errors
-(MRZ: at most one in the last 8 symbols, because the repeating preamble shifted by 2 or 4 symbols differs there by 4; iMS-100: no shifted copy of preamble and word comes within 6
-of any of its four words, checked exhaustively). MRZ in the generator: clean units 1.0 to 2.7 a 24 s trial (frames that the exact match lost even clean), the cliff stays at
-13 to 14 dB in 10 kHz (75 % at 14 dB before, 1.0 frames against 0.75 after). The iMS-100 stays unmeasurable in the sens harness (0 % before and after); the gain there is analytic.
-Tests: `sonde_extra` (MRZ 3 / 1-in-tail / 2-in-tail / 4 errors; iMS-100 0, 3, 4, 6), `sonde_extra_rf`, `sonde_all_rf`, `sonde_interf`, `sonde_sens40` pass; noise-only 0 units.
+Three separate things, found one after the other:
+
+* **Sync.** MRZ matched its 44 symbol sync (9 x 1001 and 10101010) exactly, iMS-100 its 48 symbol word: at a 2 % symbol error rate that is 41 % and 38 % of the frames. Both accept 3 errors
+  now (MRZ: at most one in the last 8 symbols, because the repeating preamble shifted by 2 or 4 symbols differs there by 4; iMS-100: no shifted copy of preamble and word comes within 6 of
+  any of its four words, checked exhaustively). MRZ clean units 1.0 to 2.7 a 24 s trial.
+* **MRZ serial (the part-2 "narrow path breaks sonde_extra_rf" mystery).** The serial comes from the config sub-frames C and D (one frame in four). `reset()` after a pause of more than 0.15 s
+  cleared them, so on a signal with pauses the serial was never complete, `handleFix` found no key and dropped every frame. The wide path got through the test only because its bursts did not
+  pause; the narrow path's presence flickered and lost them. The config is now kept for 5 minutes of stream time. (Other types with a serial from a config frame were checked: DFM and iMS-100 keep or
+  rebuild theirs.)
+* **Narrow path.** With the serial fixed, MRZ and iMS-100 run on the 4.5 kHz path of part 1.
+
+| sonde (SNR in 10 kHz, 24 s trials, 4 trials) | 3.9 | after |
+|---|---|---|
+| MRZ frames a trial, clean | 1.0 | 7.3 |
+| MRZ, 14 / 12 / 10 dB, carrier 0 | 0.75 / 0 / 0 frames | 6.1 / 4.0 / 0 frames |
+| MRZ, 14 dB, +8 kHz | 0.5 frames | 6.6 frames |
+| MRZ, 14 dB, +20 kHz | 0 | 5.3 frames |
+| iMS-100 (of 19.7 frames), 10 / 8 / 6 / 4 dB | 93 / 37 / 0 / 0 % | 93 / 98 / 89 / 0 % |
+| iMS-100, +8 kHz and 50 ppm | | same as carrier 0 |
+
+MRZ: the 50 % point moves from about 14 to about 11.7 dB (it was measured as "13 to 14 dB" before only because 1 to 2 frames a trial were left), more than 2 dB, and the number of frames is 7 times
+higher at every SNR. iMS-100: about 3 dB (it was called "cannot be measured in the harness" in part 2: the default 5 s trial is too short for its config frames; `CURVE_SECS=24` shows it).
+A 20 kHz (50 ppm) carrier error needs about 30 s to pull in on the narrow path (the 16 s test of `sonde_extra_rf` runs 40 s for MRZ there); 8 kHz (20 ppm) and below lock as before.
+Noise-only: 0 units. Tests: `sonde_extra` (sync 3 / 1-in-tail / 2-in-tail / 4 errors for MRZ, 0, 3, 4, 6 for iMS-100; the MRZ config kept over a reset, still there at 100 s, gone at 400 s),
+`sonde_extra_rf` (MRZ at +-8 kHz added), `sens40a3` (MRZ 14 dB and iMS-100 6 dB, carrier 0 and 8 kHz, 24 s trials: about 4.5 minutes of the 5 in all), `sonde_all_rf`, `sonde_interf`, `sonde_sens40`,
+`sonde_engine`, `sonde_basic` pass.
 
 ## Measured, not kept
 
@@ -116,9 +137,7 @@ Tests: `sonde_extra` (MRZ 3 / 1-in-tail / 2-in-tail / 4 errors; iMS-100 0, 3, 4,
 * **Aero.** Search threshold 2.0 to 1.5 x floor: no change (9 dB 27 to 14 %). Three carriers (600, 1200, 10500) at different levels in the harness: 90 % at 13 dB in 12.5 kHz is the 10.5 kbit/s one.
 * **ISM.** Burst threshold 13 to 10 dB: worse (clean units fall, 37 % at 14 dB). Wi-SUN burst threshold 5 to 3 x floor: +1 to 2 points. BLE with the discriminator clamped to 600 / 400 kHz: no change (BLE at 8 dB in 1 MHz is
   already better than the spec figure). VDL2 detection (0.56 to 0.45, 3 to 2 x floor): worse (14 dB 57 %).
-* **M10 narrow path** and **MRZ narrow path.** M10 needs no more: it is at 10.5 dB (50 %) in 10 kHz, 10.7 dB Eb/N0 for 9600 baud, below the non-coherent figure, thanks to the tone chips of part B. MRZ on the 4.5 kHz path
-  still breaks `sonde_extra_rf` (nothing decoded, even at 40 dB, also with 6.5 and 9 kHz filters, so it is not the width): the cause is in how that path feeds the MRZ chain (not found). MRZ stays on the wide
-  path; it is 8 dB above theory (13.5 dB in 10 kHz for 1200 bit/s) and is the biggest known gap left in the sondes.
+* **M10 narrow path.** M10 needs no more: with 20 s trials it is at 10.5 dB (50 %) in 10 kHz, 10.7 dB Eb/N0 for 9600 baud, below the non-coherent figure, thanks to the tone chips of part B. (MRZ: see 8.)
 * **Zigbee trigger** (7 to 9 chip errors): no change. **Wi-Fi HaLow 0.25**: clean frames lost.
 * **POCSAG/FLEX single path**: unchanged from A2 (the second decoder is the fix).
 
@@ -131,5 +150,5 @@ M10 (above). The Mesh / LoRa entry of the harness counts something that does not
 
 ## Left for later
 
-Zigbee coherent MSK correlator (about 5 dB), Iridium soft BCH (about 3 dB), MRZ narrow path and soft Manchester (up to 8 dB), HaLow SIG / channel estimate (1 to 2 dB), GNSS acquisition,
+Zigbee coherent MSK correlator (about 5 dB), Iridium soft BCH (about 3 dB), MRZ and iMS-100 soft Manchester and tone energies (they still decide hard symbols: another 3 to 5 dB), HaLow SIG / channel estimate (1 to 2 dB), GNSS acquisition,
 CCSDS, ADS-B overlapping replies, LoRaWAN, Meshtastic (harness first), DSC, NAVTEX gap checks, ALE. The Globalstar gate is an energy detector: decoding the downlink would be a different receiver.
