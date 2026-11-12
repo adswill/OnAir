@@ -84,22 +84,4 @@ std::string sensorsMqtt(const SensorsTelemetry& t, const std::string& prefix = "
 
 ModeTuning sensorsTuning();
 
-// 4.0: the sensor families that OnAir lists as modes of their own (docs/SENSORVIEWS-4.0.md): views onto this receiver (the same decoders, the messages of one family).
-// family N, active standard N + 1 (what Engine::activeStandard() and RxTelemetry::standard report), engine standard N + 2, poll slot N.
-struct SensorsView {
-    int family;
-    const char* id;          // dect2cli --standard
-    const char* name;        // the mode-list name
-    const char* patterns;    // setView()
-    double defMhz;
-    const char* shortName;
-};
-const SensorsView* sensorsViews(int& count);
-const SensorsView* sensorsViewForActive(int activeStd);     // by the active standard (family + 1), nullptr for any other
-const SensorsView* sensorsViewForStd(int stdMode);          // by the engine standard (family + 2), nullptr for any other
-ModeTuning sensorsViewTuning(int i);
-// every active standard of the views, for switch statements
-#define DECT2_SENSVIEW_ACTIVE_CASES case 565: case 568: case 571: case 574: case 577: case 580: case 583: case 586: case 589: case 592: case 595: case 664: case 667: case 670: case 673: case 676: case 679: case 682: case 413: case 416: case 419: case 422:
-// and the poll slots (= the families)
-
 } // namespace dect2

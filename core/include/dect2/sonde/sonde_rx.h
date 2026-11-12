@@ -53,20 +53,6 @@ private:
 
 ModeTuning sondeTuning();
 
-// 4.0: the radiosonde types that OnAir lists as modes of their own (docs/VIEWS-4.0.md): views onto this receiver (the same band search and decoders, the sondes of one type).
-// family N, active standard N + 1, engine standard N + 2, poll slot N.
-struct SondeView {
-    int family;
-    const char* id;          // dect2cli --standard
-    const char* name;        // the mode-list name
-    int kind;                // SondeKind
-    const char* shortName;
-};
-const SondeView* sondeViews(int& count);
-const SondeView* sondeViewForActive(int activeStd);
-const SondeView* sondeViewForStd(int stdMode);
-ModeTuning sondeViewTuning(int i);
-#define DECT2_SONDEVIEW_ACTIVE_CASES case 685: case 688: case 691: case 694: case 703: case 706: case 709: case 712: case 715: case 718:
 bool sondeIsLbandMhz(double mhz);              // LMS6-1680 profile (wide FSK, ~170 kHz)
 double sondeMinSampleRateHz(double centerMhz);
 

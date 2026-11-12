@@ -35,7 +35,7 @@ struct State {
 State S;
 
 // engine standard 9 is analog TV
-bool live(const App& a) { return a.rx.standard == 9 || dect2::atvViewForActive(a.rx.standard) != nullptr; }
+bool live(const App& a) { return a.rx.standard == 9; }
 
 void loadState() {
     if (S.loaded) return;
@@ -55,8 +55,7 @@ const char* const kColNames[] = {"mono", "PAL", "NTSC", "SECAM"};
 void pushControls(App& a) {
     AtvReceiver& rx = a.engine.atv();
     if (S.pushedDeint != S.deint) { rx.setDeinterlace(S.deint); S.pushedDeint = S.deint; }
-    { const AtvView* av = dect2::atvViewForActive(a.engine.activeStandard()); const int sysWant = av ? av->sys : S.sysHint, colWant = av ? av->colour : S.colHint;   // an entry of one standard keeps its standard
-      if (S.pushedSys != sysWant || S.pushedCol != colWant) { rx.setStandard(sysWant, colWant); S.pushedSys = sysWant; S.pushedCol = colWant; } }
+    if (S.pushedSys != S.sysHint || S.pushedCol != S.colHint) { rx.setStandard(S.sysHint, S.colHint); S.pushedSys = S.sysHint; S.pushedCol = S.colHint; }
     if (S.pushedColourOn != S.colourOn) { rx.setColour(S.colourOn); S.pushedColourOn = S.colourOn; }
     if (S.pushedSat != S.saturation) { rx.setSaturation(S.saturation); S.pushedSat = S.saturation; }
     if (S.pushedHue != S.hue) { rx.setHue(S.hue); S.pushedHue = S.hue; }

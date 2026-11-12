@@ -835,30 +835,6 @@ double sondeMinSampleRateHz(double centerMhz) {
     return sondeIsLbandMhz(centerMhz) ? 1000000.0 : 2000000.0;
 }
 
-// 4.0: the sonde types with a mode-list entry of their own (families 684 .. 717, stride 3: family, active standard family + 1, engine standard family + 2, poll slot = family)
-static const SondeView kSondeViews[] = {
-    {684, "srs41", "Radiosonde: Vaisala RS41", 1, "RS41"},
-    {687, "srs92", "Radiosonde: Vaisala RS92", 2, "RS92"},
-    {690, "sdfm", "Radiosonde: Graw DFM", 3, "DFM"},
-    {693, "sm10", "Radiosonde: Meteomodem M10", 4, "M10"},
-    {702, "sm20", "Radiosonde: Meteomodem M20", 5, "M20"},
-    {705, "slms6", "Radiosonde: Lockheed Martin LMS6", 6, "LMS6"},
-    {708, "simet", "Radiosonde: InterMet iMet-4", 7, "iMet"},
-    {711, "simet54", "Radiosonde: InterMet iMet-54", 8, "iMet-54"},
-    {714, "smrz", "Radiosonde: Russian MRZ", 9, "MRZ"},
-    {717, "smeisei", "Radiosonde: Meisei iMS-100", 10, "iMS-100"},
-};
-const SondeView* sondeViews(int& count) { count = (int)(sizeof kSondeViews / sizeof *kSondeViews); return kSondeViews; }
-const SondeView* sondeViewForActive(int a) { for (const auto& v : kSondeViews) if (v.family + 1 == a) return &v; return nullptr; }
-const SondeView* sondeViewForStd(int s) { for (const auto& v : kSondeViews) if (v.family + 2 == s) return &v; return nullptr; }
-ModeTuning sondeViewTuning(int i) {
-    ModeTuning t = sondeTuning();
-    const SondeView& v = kSondeViews[i];
-    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
-    if (v.kind == SondeLms6) t.defMhz = 1680.0;   // the L-band profile (sondeIsLbandMhz)
-    return t;
-}
-
 ModeTuning sondeTuning() {
     ModeTuning t;
     t.stdMode = 15; t.id = "sonde"; t.name = "Radiosonde";

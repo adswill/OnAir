@@ -66,19 +66,6 @@ struct NfcTelemetry {
     double centerHz = 0;
 };
 
-// 4.0: the protocols that OnAir lists as modes of their own (docs/VIEWS-4.0.md): views onto this receiver. family N, active standard N + 1, engine standard N + 2, poll slot N.
-struct NfcView {
-    int family;
-    const char* id;          // dect2cli --standard
-    const char* name;        // the mode-list name
-    int proto;               // NfcLogEntry::proto
-};
-const NfcView* nfcViews(int& count);
-const NfcView* nfcViewForActive(int activeStd);
-const NfcView* nfcViewForStd(int stdMode);
-ModeTuning nfcViewTuning(int i);
-#define DECT2_NFCVIEW_ACTIVE_CASES case 474: case 477: case 483:
-
 class NfcReceiver {
 public:
     NfcReceiver();

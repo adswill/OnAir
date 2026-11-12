@@ -4,6 +4,7 @@
 // that both directions walk, so a key is spelled once; the keys that need real logic (the mode and its gains, the
 // spectrum range, the FM station lists, the wide-capture mask) are written out below the table.
 #include "dect2/limits.h"
+#include "dect2/engine/retired_modes.h"
 #include "../app.h"
 #include "state_internal.h"
 #include "../ais/ais_alerts_ui.h"
@@ -305,7 +306,7 @@ void saveFmStations(plat::Prefs& d, const App& a) {
 // the mode (family and protocol entry) and the gains and frequency each mode remembers
 void loadModeAndGains(plat::Prefs& d, App& a) {
     if (d.has("family")) {
-        const int f = std::max(0, std::min(kNumFamilies - 1, (int)d.getI("family", 0)));
+        const int f = std::max(0, std::min(kNumFamilies - 1, dect2::liveFamily((int)d.getI("family", 0))));   // a 4.0 type entry opens its receiver (retired_modes.h)
         // the protocol entry; settings from before the split (HF digital, Mesh, Pagers, Marine as one entry) open the family's first
         a.sub = subIndexOf(d.getS("subMode", "").c_str());
         a.family = f;

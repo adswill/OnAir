@@ -162,8 +162,9 @@ class ReceiverViewModel(app: Application) : AndroidViewModel(app) {
     fun setUiVisible(v: Boolean) = repo.setUiVisible(v)
 
     /** Mode and frequency together (deep links, bookmarks): the frequency is stored for the mode first, so the switch lands on it. */
-    fun tuneTo(modeIdx: Int?, mhz: Double?) {
+    fun tuneTo(savedIdx: Int?, mhz: Double?) {
         val st = state.value
+        val modeIdx = savedIdx?.let { Modes.live(it) }?.takeIf { it >= 0 } ?: savedIdx   // a bookmark of a removed type row opens its receiver
         if (modeIdx == null || modeIdx == st.modeIndex || modeIdx !in Modes.all.indices) { if (mhz != null && mhz > 0) tune(mhz); return }
         if (mhz != null && mhz > 0) repo.updateSettings { it.copy(freqMhz = it.freqMhz + (modeIdx to mhz)) }
         repo.selectMode(modeIdx)

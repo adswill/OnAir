@@ -1,4 +1,4 @@
-// The wireless M-Bus mode entries (families 720, 723, 726, 732, 735; wmbus_live.h: wmbusViews): views onto the wireless M-Bus receiver that list the meters and frames of some modes.
+// The mode and manufacturer filters of the wireless M-Bus receiver (setPhyMask, setMfrFilter, the Mode and Maker choices of the Wireless M-Bus screen).
 // The simulated meters of wmbus_gen (all modes of the 868 MHz plan, and mode N of the 169 MHz plan) go, with carrier errors and noise, into one receiver without a view and one per view, from the same samples:
 //   - a view lists exactly the meters and the frames of the receiver without a view that belong to its modes, and no others;
 //   - the meter counts of a view are the sums over its meters; every view of a mode on the air is not empty, and one of a mode that is not on the air is;
@@ -32,16 +32,19 @@ static std::set<std::string> devKeys(const WmbusTelemetry& t, uint32_t m, const 
 static size_t logCount(const WmbusTelemetry& t, uint32_t m, const std::string& mfr = "") { size_t n = 0; for (auto& l : t.log) if ((!m || ((m >> l.phy) & 1u)) && (mfr.empty() || l.mfr == mfr)) n++; return n; }
 
 int main() {
-    int nv = 0;
-    const WmbusView* views = wmbusViews(nv);
-    CHECK(nv == 9, "%d views", nv);   // 5 modes and 4 manufacturers
-    for (int i = 0; i < nv; i++) {
-        CHECK(wmbusViewForActive(views[i].family + 1) == &views[i] && wmbusViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
-        const ModeTuning t = wmbusViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id, "view %d tuning", i);
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0 && (*views[i].mfr || *views[j].mfr || !(views[j].phyMask & views[i].phyMask)), "views %d and %d clash", j, i);
-    }
-    CHECK(wmbusViewForActive(87) == nullptr && wmbusViewForStd(88) == nullptr, "the Wireless M-Bus mode is not a view");
+    struct V { const char* id; const char* name; uint32_t phyMask; double defMhz; bool plan169; const char* mfr = ""; };   // the filters the Wireless M-Bus screen offers
+    static const V views[] = {
+        {"wmbuss1", "Wireless M-Bus S1", 1u << (int)wmbus::Phy::S1, 868.625, false},
+        {"wmbust1", "Wireless M-Bus T1", 1u << (int)wmbus::Phy::T1, 868.625, false},
+        {"wmbusc1", "Wireless M-Bus C1", (1u << (int)wmbus::Phy::C1A) | (1u << (int)wmbus::Phy::C1B), 868.625, false},
+        {"wmbusr2", "Wireless M-Bus R2", 1u << (int)wmbus::Phy::R2, 868.625, false},
+        {"wmbusn1", "Wireless M-Bus N1 (Wize, 169 MHz)", (1u << (int)wmbus::Phy::N1) | (1u << (int)wmbus::Phy::N24), 169.4375, true, ""},
+        {"wmbuskam", "Wireless M-Bus: Kamstrup", 0xFFFFFFFFu, 868.625, false, "KAM"},
+        {"wmbuslgb", "Wireless M-Bus: Landis+Gyr", 0xFFFFFFFFu, 868.625, false, "LGB"},
+        {"wmbusitw", "Wireless M-Bus: Itron", 0xFFFFFFFFu, 868.625, false, "ITW"},
+        {"wmbussen", "Wireless M-Bus: Sensus", 0xFFFFFFFFu, 868.625, false, "SEN"},
+    };
+    const int nv = (int)(sizeof views / sizeof *views);
 
     struct Scene { const char* name; double snr, cfo; int plan; double seconds; };
     for (const Scene& sc : {Scene{"868 clean", 99, 0, 0, 8}, Scene{"868 cfo -12 kHz, 25 dB", 25, -12000, 0, 10}, Scene{"868 cfo +9 kHz, 20 dB", 20, 9000, 0, 12}, Scene{"169 clean", 99, 0, 1, 12}, Scene{"169 cfo +3 kHz, 22 dB", 22, 3000, 1, 14}}) {

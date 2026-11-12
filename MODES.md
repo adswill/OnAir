@@ -2,9 +2,9 @@
 
 Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/mode_table.cpp` by `tools/gen_modes_list.py`; don't edit by hand. The quick gate fails when this file is out of date.
 
-**464 modes.**
+**388 modes.**
 
-## TV (25)
+## TV (17)
 
 - **DVB** - DVB-T2 and DVB-T, automatic (Europe, Middle East, Africa, Asia, Australia)
 - **TV (auto)** - TV, automatic: the standard and its parameters are measured from the signal
@@ -23,14 +23,6 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Analog TV** - Analogue television (PAL, SECAM, NTSC)
 - **FPV video (analog)** - Analog FPV video (frequency modulated PAL / NTSC, 5.8 GHz bands A / B / E / F / Raceband / Low race and 1.2 GHz): every channel with its level, a scan that tunes to the strongest transmitter, the live picture with its sound subcarrier (6.0 / 6.5 MHz), snapshots and a recording as numbered pictures. The on-screen display of the flight controller is part of the picture, not decoded. Needs a radio with 20 Msps (a HackRF)
 - **MAC** - MAC/packet satellite TV: picture, 4:3 / 16:9, channel name, digital sound, EuroCrypt detected
-- **Analog TV: PAL B/G** - Analog TV: PAL B/G (Europe)
-- **Analog TV: PAL I** - Analog TV: PAL I (UK)
-- **Analog TV: PAL D/K** - Analog TV: PAL D/K (China)
-- **Analog TV: SECAM D/K** - Analog TV: SECAM D/K (Russia)
-- **Analog TV: SECAM L** - Analog TV: SECAM L (France)
-- **Analog TV: NTSC M** - Analog TV: NTSC M (Americas, Japan)
-- **Analog TV: PAL M** - Analog TV: PAL M (Brazil)
-- **Analog TV: PAL N** - Analog TV: PAL N (Argentina)
 
 ## Broadcast Radio (9)
 
@@ -77,7 +69,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **ILS marker beacons (75 MHz)** - ILS marker beacons: outer, middle and inner marker tones and keying
 - **SSR interrogations (1030 MHz)** - SSR interrogations: which modes the radars around you ask, and how often
 
-## Maritime (14)
+## Maritime (8)
 
 - **AIS** - AIS: ship positions and identities
 - **VDES** - VDES: ASM frames decoded, VDE-TER bursts logged and classified
@@ -87,14 +79,8 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Marine VHF** - Marine VHF: channel picker, scan, 16 watch, whole-span activity list, recording; regional plans (ITU, Europe, Baltic, USA, Canada)
 - **ATIS (inland waterways)** - ATIS: identity of the ship that just stopped talking (country, call sign, name), message list, stations heard, narrow FM audio of the channel
 - **Marine radar (detect)** - Marine radar: rotation and pulse pattern
-- **AIS Class A vessels** - AIS Class A: ships' positions and identities
-- **AIS Class B vessels** - AIS Class B: small craft positions and identities
-- **AIS base stations** - AIS base stations: coast stations and their time
-- **AIS aids to navigation (AtoN)** - AIS AtoN: buoys, beacons and virtual aids
-- **AIS search and rescue aircraft** - AIS SAR aircraft: search and rescue positions
-- **AIS-SART, MOB and EPIRB-AIS** - AIS-SART, MOB and EPIRB-AIS: distress device positions
 
-## Satellite & Navigation (64)
+## Satellite & Navigation (57)
 
 - **GNSS** - GNSS: satellite tracking and position fix
 - **DGPS beacon** - DGPS beacons: the differential correction stations that broadcast GPS corrections
@@ -153,13 +139,6 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **PSK demodulator (experimental)** - PSK demodulator: blind symbol rate and order, constellation, bits
 - **Inmarsat (all carriers)** - Inmarsat: all Aero P and Inmarsat-C carriers at once, needs an L-band antenna and a wide radio (needs a user test)
 - **Inmarsat BGAN** - Inmarsat BGAN: forward carriers, bearer types, spot beams and network from the broadcast signalling (needs a user test, signalling only)
-- **AX.25 G3RUH 9600 (satellites)** - AX.25 9600 baud G3RUH: amateur satellite packet frames
-- **CCSDS Reed-Solomon (satellites)** - CCSDS Reed-Solomon: satellite telemetry frames
-- **CCSDS concatenated (satellites)** - CCSDS concatenated: Viterbi and Reed-Solomon satellite frames
-- **GPS L1 C/A** - GPS L1 C/A: satellite tracking and position fix
-- **QZSS L1** - QZSS L1: satellite tracking
-- **GLONASS L1** - GLONASS L1: satellite tracking and position fix
-- **BeiDou B1I** - BeiDou B1I: satellite tracking and position fix
 
 ## Two-way Radio (22)
 
@@ -208,7 +187,7 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **FLEX** - FLEX pager messages
 - **Multitone Paging** - Multitone Paging: tone and FFSK pagers for hospitals and sites, detector only (receive only)
 
-## IoT & Sensors (77)
+## IoT & Sensors (43)
 
 - **DSRC road toll (EN 12253)** - Road toll beacons: frame structure only
 - **802.11p V2X (ITS-G5, DSRC)** - 802.11p: vehicle safety messages on 5.9 GHz
@@ -253,42 +232,8 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **DECT NR+** - DECT NR+ (ETSI TS 103 636): the license-exempt 1.9 GHz mesh standard. Tune the channel centre (1881.792 MHz and up in 0.864 MHz steps), 4 Msps. Control field only
 - **nRF24L01 (needs a user test)** - nRF24L01: Enhanced ShockBurst frames of mice, sensors and remotes on one 2.4 GHz channel (needs a 2.4 GHz SDR)
 - **Flipper Zero Sub-GHz chat** - Flipper Zero Sub-GHz chat: talk to Flippers on 433.92 MHz, plain or AES-encrypted (receive and send)
-- **Oregon Scientific sensors** - Oregon Scientific: temperature, humidity and weather sensors
-- **Acurite sensors** - Acurite: weather stations, thermometers and rain gauges
-- **LaCrosse sensors** - LaCrosse: temperature, humidity, wind and rain sensors
-- **Fine Offset / Ecowitt sensors** - Fine Offset / Ecowitt: weather stations and add-on sensors
-- **Bresser sensors** - Bresser: weather centres and add-on sensors
-- **Hideki sensors** - Hideki TS04: temperature, humidity, wind and rain sensor
-- **TFA Dostmann sensors** - TFA Dostmann: thermometers, rain gauges and KlimaLogg
-- **Nexus / Prologue sensors** - Nexus / Prologue: simple temperature and humidity sensors
-- **Alecto / Esperanza sensors** - Alecto / Esperanza: weather station sensors
-- **Ambient Weather sensors** - Ambient Weather: thermo-hygro, rain and lightning sensors
-- **Wireless alarm sensors** - Wireless alarm sensors: contact and tamper messages (Honeywell, DSC, Interlogix, Visonic)
-- **X10 RF** - X10: RF remote and security frames
-- **Itron ERT meters** - Itron ERT: SCM and IDM meter messages
-- **Neptune R900 water meters** - Neptune R900: water and flow meters
-- **TPMS: Schrader** - Schrader TPMS: tyre pressure sensors
-- **TPMS: Renault** - Renault TPMS: tyre pressure sensors
-- **TPMS: Toyota** - Toyota TPMS: tyre pressure sensors
-- **TPMS: Citroen / Peugeot / Fiat** - Citroen / Peugeot / Fiat TPMS: tyre pressure sensors
-- **Wireless M-Bus S1** - Wireless M-Bus S1: stationary mode meters on 868.3 MHz
-- **Wireless M-Bus T1** - Wireless M-Bus T1: walk-by and drive-by meters on 868.95 MHz
-- **Wireless M-Bus C1** - Wireless M-Bus C1: compact mode meters on 868.95 MHz
-- **Wireless M-Bus R2** - Wireless M-Bus R2: receive mode meters on 868.03 - 868.15 MHz
-- **Wireless M-Bus N1 (Wize, 169 MHz)** - Wireless M-Bus N1: 169 MHz and Wize meters
-- **Weather stations (all brands)** - Weather stations: every brand in one list
-- **TPMS: all makes** - TPMS: tyre pressure sensors of every make
-- **Utility and energy meters** - Utility meters and energy monitors: every brand in one list
-- **Remotes, doorbells and switches** - Remotes, doorbells and switches: the frames they send
-- **Wireless M-Bus: Kamstrup** - Wireless M-Bus: Kamstrup meters
-- **Wireless M-Bus: Landis+Gyr** - Wireless M-Bus: Landis+Gyr meters
-- **Wireless M-Bus: Itron** - Wireless M-Bus: Itron meters
-- **Wireless M-Bus: Sensus** - Wireless M-Bus: Sensus meters
-- **NFC: ISO 14443 Type A** - NFC Type A: tags, readers and NDEF records
-- **NFC: ISO 14443 Type B** - NFC Type B: readers and tag answers
-- **NFC: ISO 15693** - NFC ISO 15693: vicinity tags and readers
 
-## Weather & Science (77)
+## Weather & Science (56)
 
 - **HRPT / AHRPT** - HRPT / AHRPT: MetOp AVHRR pictures at 1.7 GHz (needs a dish and a fast radio)
 - **NOAA HRPT** - NOAA HRPT: AVHRR pictures at 1.7 GHz (retired 2025, recordings)
@@ -346,27 +291,6 @@ Every mode in OnAir's mode list, grouped as in the app. Generated from `app/ui/m
 - **Ionospheric sounders** - Ionospheric sounders: chirp ionosondes and the ionogram they give
 - **Radio astronomy** - Radio astronomy: the hydrogen line of the Milky Way
 - **SSDV pictures** - SSDV: balloon and satellite pictures, built up packet by packet
-- **Radiosonde: Vaisala RS41** - Vaisala RS41: weather balloon position and weather data
-- **Radiosonde: Vaisala RS92** - Vaisala RS92: weather balloon position data
-- **Radiosonde: Graw DFM** - Graw DFM: weather balloon position and temperature
-- **Radiosonde: Meteomodem M10** - Meteomodem M10: weather balloon position and weather data
-- **Radiosonde: Meteomodem M20** - Meteomodem M20: weather balloon position and weather data
-- **Radiosonde: Lockheed Martin LMS6** - Lockheed Martin LMS6: L-band weather balloon sondes
-- **Radiosonde: InterMet iMet-4** - InterMet iMet-4: weather balloon position data
-- **Radiosonde: InterMet iMet-54** - InterMet iMet-54: weather balloon position data
-- **Radiosonde: Russian MRZ** - MRZ: Russian weather balloon sondes
-- **Radiosonde: Meisei iMS-100** - Meisei iMS-100: weather balloon position data
-- **DCF77 (Germany, 77.5 kHz)** - DCF77: German time code on 77.5 kHz
-- **MSF (United Kingdom, 60 kHz)** - MSF: UK time code on 60 kHz
-- **WWVB (United States, 60 kHz)** - WWVB: US time code on 60 kHz
-- **JJY 40 kHz (Japan)** - JJY 40 kHz: Japanese time code
-- **JJY 60 kHz (Japan)** - JJY 60 kHz: Japanese time code
-- **WWV / WWVH (United States, HF)** - WWV / WWVH: US HF time signals
-- **BPM (China, HF)** - BPM: Chinese HF time signal
-- **BPC (China, 68.5 kHz)** - BPC: Chinese time code on 68.5 kHz
-- **HLA (Korea, 5 MHz)** - HLA: Korean HF time signal
-- **BPM coded (China, HF)** - BPM coded: Chinese HF time frames
-- **RWM (Russia, 9996 kHz)** - RWM: Russian HF time signal
 
 ## Amateur - Digital (43)
 

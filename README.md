@@ -2,7 +2,7 @@
 
 <h1 align="center">OnAir</h1>
 
-<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->462<!-- /modecount --> modes with one software-defined radio.</b><br>
+<p align="center"><b>Receive TV, radio, aircraft, ships, satellites, two-way radio, pagers, time signals and more: <!-- modecount -->386<!-- /modecount --> modes with one software-defined radio.</b><br>
 Free and open source, for macOS, Windows, Linux and Android.</p>
 
 <p align="center">
@@ -81,16 +81,16 @@ OnAir is a receiver first. It can also send test signals through a transmit-capa
 <!-- modes-table:begin -->
 | Family | Modes | What you get |
 |---|:---:|---|
-| **TV** | 25 | DVB-T/T2, DVB-S/S2/S2X, DVB-SH, DVB-C2, ISDB-TSB, ISDB-S, TV sat beacon decoder, DVB-C, ATSC 1.0 and 3.0, ISDB-T, DTMB, analogue TV and MAC, analog FPV video (5.8 / 1.2 GHz), with a live player (picture, sound, subtitles, teletext, programme guide), recording, pause and live buffer, and 2-3 adjacent channels from one wide capture |
+| **TV** | 17 | DVB-T/T2, DVB-S/S2/S2X, DVB-SH, DVB-C2, ISDB-TSB, ISDB-S, TV sat beacon decoder, DVB-C, ATSC 1.0 and 3.0, ISDB-T, DTMB, analogue TV and MAC, analog FPV video (5.8 / 1.2 GHz), with a live player (picture, sound, subtitles, teletext, programme guide), recording, pause and live buffer, and 2-3 adjacent channels from one wide capture |
 | **Broadcast radio** | 9 | DAB+ (with a programme guide), DRM (with its data services), HD Radio, CDR, AM broadcast (medium wave and shortwave), AM stereo (C-QUAM), and FM with RDS, a Mono switch for weak stations and a saved-station library |
 | **Aviation** | 30 | ADS-B with a live map, ASTERIX radar data from UDP or a file, Mode A/C squawks and altitudes, UAT, ACARS, VDL2 and VDL4, HFDL, airband, VOR / ILS / NDB, FLARM, ADS-L, drones |
-| **Maritime** | 14 | AIS (also long-range and satellite AIS), VDES, NAVTEX, DSC, weather fax, Marine VHF voice |
-| **Satellite and navigation** | 64 | Weather pictures from Meteor, NOAA (APT, DSB), GOES, Elektro-L and Arktika-M (RDAS), FengYun-4 (LRIT, HRIT), FengYun-2 (S-VISSR) and MetOp, Iridium, Inmarsat (including BGAN), Orbcomm, QO-100, CubeSat telemetry, GNSS, SBAS corrections, COSPAS-SARSAT 406 MHz distress beacons, GOES / Meteosat DCS platform reports, Argos platforms and downlink |
+| **Maritime** | 8 | AIS (also long-range and satellite AIS), VDES, NAVTEX, DSC, weather fax, Marine VHF voice |
+| **Satellite and navigation** | 57 | Weather pictures from Meteor, NOAA (APT, DSB), GOES, Elektro-L and Arktika-M (RDAS), FengYun-4 (LRIT, HRIT), FengYun-2 (S-VISSR) and MetOp, Iridium, Inmarsat (including BGAN), Orbcomm, QO-100, CubeSat telemetry, GNSS, SBAS corrections, COSPAS-SARSAT 406 MHz distress beacons, GOES / Meteosat DCS platform reports, Argos platforms and downlink |
 | **Two-way radio** | 22 | DMR, P25 (phase 1 and 2, with a trunking follower), NXDN, dPMR, D-STAR, M17, TETRA, TETRAPOL, tone decoders (CTCSS, DCS, DTMF, selcall) |
 | **Cellular and rail** | 12 | LTE, 5G NR and NB-IoT cells, GSM-R, LBJ, KLW, TDCS |
 | **Pagers** | 4 | POCSAG, FLEX, Multitone |
-| **IoT and sensors** | 77 | ISM sensors, LoRaWAN, Meshtastic, MeshCore, Bluetooth LE, BLE tracker detector, Zigbee, Thread, Sub-GHz sensors, Wi-Fi, Wi-SUN, Wireless M-Bus, Z-Wave, DECT, ANT+, Sigfox, NFC / RFID, Flipper Zero Sub-GHz chat |
-| **Weather and science** | 77 | Radiosondes, Horus balloons, NOAA HRPT and GAC, Meteor HRPT, AWS, FY-3 AHRPT and MPT, SAME alerts, time signals, e-Czas, ionospheric sounders, radio astronomy, meteor scatter, Sferics (lightning) |
+| **IoT and sensors** | 43 | ISM sensors, LoRaWAN, Meshtastic, MeshCore, Bluetooth LE, BLE tracker detector, Zigbee, Thread, Sub-GHz sensors, Wi-Fi, Wi-SUN, Wireless M-Bus, Z-Wave, DECT, ANT+, Sigfox, NFC / RFID, Flipper Zero Sub-GHz chat |
+| **Weather and science** | 56 | Radiosondes, Horus balloons, NOAA HRPT and GAC, Meteor HRPT, AWS, FY-3 AHRPT and MPT, SAME alerts, time signals, e-Czas, ionospheric sounders, radio astronomy, meteor scatter, Sferics (lightning) |
 | **Amateur** | 52 | FT8, FT4, WSPR, JS8Call, RTTY, PSK, MT63, FSQ, IFKP, ARDOP, SSTV, FreeDV, APRS, LoRa APRS, MeshCom and more |
 | **HF utility** | 41 | ALE, beacons, Datawell buoys, CODAR, STANAG 4539, 3G-ALE, Link 11 CLEW, STANAG 4481, CIS data modes |
 | **Tools** | 29 | General receiver, spectrum analyser, spectrum explorer, signal workbench, measurement meters (MER, SINAD, noise figure, phase noise, occupied bandwidth, intermodulation and more); also a gain optimiser, a direction finder, a pass planner and a remote-control API |
@@ -300,7 +300,7 @@ No radio? Open an IQ recording through the *IQ recording file* source (cs8, cu8,
 
 ## Modes
 
-<!-- modecount -->462<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons and a Mode Builder entry, so [MODES.md](MODES.md) counts 464). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
+<!-- modecount -->386<!-- /modecount --> modes, grouped as in the app (the list in the app also has a Plugins entry for managing add-ons and a Mode Builder entry, so [MODES.md](MODES.md) counts 464). Every receiver is built from the published specifications and tested on generated signals (carrier offsets, noise, echoes, clock errors) and, where recordings exist, on real captures. Reports and recordings from your own antenna help most: send them on [Discord](https://discord.gg/ptxkzCuzR) or upload them to the [signal sample library](https://files.on-air.dev). Where a mode has a specific caveat it is said below. **Receive only** means nothing is transmitted, decrypted or joined.
 
 <details>
 <summary><b>All modes, by family</b></summary>

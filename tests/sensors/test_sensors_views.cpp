@@ -1,4 +1,4 @@
-// The sensor-family entries (families 564 .. 681, sensors_rx.h: sensorsViews): views onto the Sub-GHz sensors receiver that report one family only.
+// The model filter of the Sub-GHz sensors receiver (SensorsReceiver::setView): the messages of one sensor family or kind only.
 // The real pulse trains of tests/sensors/families.txt (one recording per family of rtl_433's test set) are rebuilt as IQ signals, with a carrier offset,
 // a pulse-timing error of +-4 % (a sensor's clock) and noise, and run through every view:
 //   - a view reports a message exactly when the receiver without a view decodes it and the model belongs to the view's family (no leak to another family's view);
@@ -92,16 +92,32 @@ static bool matches(const std::string& model, const std::string& patterns, const
 }
 
 int main() {
-    int nv = 0;
-    const SensorsView* views = sensorsViews(nv);
-    CHECK(nv == 22, "%d views", nv);
-    for (int i = 0; i < nv; i++) {   // numbers: family, active standard, engine standard, tuning
-        CHECK(sensorsViewForActive(views[i].family + 1) == &views[i] && sensorsViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
-        const ModeTuning t = sensorsViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id, "view %d tuning", i);
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0, "views %d and %d clash", j, i);
-    }
-    CHECK(sensorsViewForActive(242) == nullptr && sensorsViewForStd(243) == nullptr, "the Sub-GHz sensors mode is not a view");
+    struct V { const char* id; const char* name; const char* patterns; double defMhz; const char* shortName; };   // the filters the Sub-GHz sensors screen offers
+    static const V views[] = {
+        {"oregon", "Oregon Scientific sensors", "oregon", 433.92, "Oregon Scientific"},
+        {"acurite", "Acurite sensors", "acurite", 433.92, "Acurite"},
+        {"lacrosse", "LaCrosse sensors", "lacrosse", 433.92, "LaCrosse"},
+        {"fineoffset", "Fine Offset / Ecowitt sensors", "fineoffset|fine offset|ecowitt", 868.3, "Fine Offset / Ecowitt"},
+        {"bresser", "Bresser sensors", "bresser", 868.3, "Bresser"},
+        {"hideki", "Hideki sensors", "hideki", 433.92, "Hideki"},
+        {"tfa", "TFA Dostmann sensors", "tfa|klimalogg", 433.92, "TFA Dostmann"},
+        {"nexus", "Nexus / Prologue sensors", "nexus|prologue", 433.92, "Nexus / Prologue"},
+        {"alecto", "Alecto / Esperanza sensors", "alecto|esperanza", 433.92, "Alecto / Esperanza"},
+        {"ambient", "Ambient Weather sensors", "ambient", 915.0, "Ambient Weather"},
+        {"alarmsens", "Wireless alarm sensors", "honeywell|visonic|dsc|interlogix", 345.0, "Wireless alarm sensors"},
+        {"x10rf", "X10 RF", "x10", 433.92, "X10"},
+        {"ert", "Itron ERT meters", "ert-scm|scmplus|idm", 915.0, "Itron ERT"},
+        {"r900", "Neptune R900 water meters", "neptune", 915.0, "Neptune R900"},
+        {"tpmsschrader", "TPMS: Schrader", "schrader|schraeder", 433.92, "Schrader TPMS"},
+        {"tpmsrenault", "TPMS: Renault", "renault", 433.92, "Renault TPMS"},
+        {"tpmstoyota", "TPMS: Toyota", "toyota|pmv-107j", 433.92, "Toyota TPMS"},
+        {"tpmscitroen", "TPMS: Citroen / Peugeot / Fiat", "citroen|peugeot|fiat|mitsubishi", 433.92, "Citroen TPMS"},
+        {"weatherall", "Weather stations (all brands)", "kind:weather", 433.92, "Weather stations, all brands"},
+        {"tpmsall", "TPMS: all makes", "kind:tpms", 433.92, "Tyre pressure, all makes"},
+        {"metersall", "Utility and energy meters", "kind:meter", 433.92, "Utility and energy meters"},
+        {"remotesall", "Remotes, doorbells and switches", "kind:remote", 433.92, "Remotes and doorbells"},
+    };
+    const int nv = (int)(sizeof views / sizeof *views);
 
     // every decoder of rtl_433 that belongs to a family is reached by exactly one view (the four families without a recording: their decoders exist)
     {

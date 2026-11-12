@@ -350,7 +350,7 @@ void vesselsView() {
     }
 }
 
-bool liveAis(const App& a) { return a.rx.standard == 15 || dect2::aisViewForActive(a.rx.standard) != nullptr; }
+bool liveAis(const App& a) { return a.rx.standard == 15; }
 
 } // namespace
 

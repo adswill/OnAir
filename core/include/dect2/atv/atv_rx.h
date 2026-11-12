@@ -69,18 +69,4 @@ private:
 
 ModeTuning atvTuning();
 
-// 4.0: analog TV standards that OnAir lists as modes of their own (docs/VIEWS-4.0.md): the receiver told the system and the colour system (setStandard) instead of finding them.
-// family N, active standard N + 1, engine standard N + 2, poll slot N.
-struct AtvView {
-    int family;
-    const char* id;          // dect2cli --standard
-    const char* name;        // the mode-list name
-    int sys, colour;         // AtvSys, AtvColourKind
-};
-const AtvView* atvViews(int& count);
-const AtvView* atvViewForActive(int activeStd);
-const AtvView* atvViewForStd(int stdMode);
-ModeTuning atvViewTuning(int i);
-#define DECT2_ATVVIEW_ACTIVE_CASES case 425: case 428: case 442: case 445: case 448: case 451: case 454: case 457:
-
 } // namespace dect2

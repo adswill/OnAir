@@ -1,4 +1,4 @@
-// The analog TV standard entries (families 424, 427, 441, 444, 447, 450, 453, 456; atv_rx.h: atvViews): the Analog TV receiver told the system and the colour system (setStandard).
+// The analog TV standards forced on the receiver (AtvReceiver::setStandard, the System and Colour choices of the Analog TV screen).
 // The test signal of each standard (atv_gen: colour bars card, 40 dB, carrier error of up to +-50 kHz, 10 Msps, 8-bit samples) goes into a receiver told exactly what the entry tells it: line and field lock,
 // the standard named right, 625 or 525 lines, the field rate of the standard, the carrier offset found, and the colour bars of the decoded picture close to the EBU bars. Simulated signals only (no recording of any of these standards was used; the wrong-standard case is not tested).
 #include "dect2/atv/atv_rx.h"
@@ -29,20 +29,21 @@ static Run runView(int sys, int colour, int fedSys, int fedColour, double cfo, d
 }
 
 int main() {
-    int nv = 0;
-    const AtvView* views = atvViews(nv);
-    CHECK(nv == 8, "%d views", nv);
-    for (int i = 0; i < nv; i++) {
-        CHECK(atvViewForActive(views[i].family + 1) == &views[i] && atvViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
-        const ModeTuning t = atvViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id && t.defMhz == atvTuning().defMhz && t.sampleRate == atvTuning().sampleRate, "view %d tuning", i);
-        AtvFormat f; CHECK(atvMakeFormat(views[i].sys, views[i].colour, f), "view %d: no such format", i);
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0 && !(views[j].sys == views[i].sys && views[j].colour == views[i].colour), "views %d and %d clash", j, i);
-    }
-    CHECK(atvViewForActive(9) == nullptr && atvViewForStd(10) == nullptr, "the Analog TV mode is not a view");
+    struct V { const char* id; const char* name; int sys, colour; };   // the filters the Analog TV screen offers
+    static const V views[] = {
+        {"atvpalbg", "Analog TV: PAL B/G", kAtvG, kAtvPal},
+        {"atvpali", "Analog TV: PAL I", kAtvI, kAtvPal},
+        {"atvpaldk", "Analog TV: PAL D/K", kAtvDK, kAtvPal},
+        {"atvsecamdk", "Analog TV: SECAM D/K", kAtvDK, kAtvSecam},
+        {"atvsecaml", "Analog TV: SECAM L", kAtvL, kAtvSecam},
+        {"atvntscm", "Analog TV: NTSC M", kAtvM, kAtvNtsc},
+        {"atvpalm", "Analog TV: PAL M", kAtvM, kAtvPal},
+        {"atvpaln", "Analog TV: PAL N", kAtvN, kAtvPal},
+    };
+    const int nv = (int)(sizeof views / sizeof *views);
 
     for (int i = 0; i < nv; i++) {
-        const AtvView& v = views[i];
+        const V& v = views[i];
         AtvFormat f; atvMakeFormat(v.sys, v.colour, f);
         for (double cfo : {0.0, i % 2 ? 50e3 : -50e3}) {
             const Run r = runView(v.sys, v.colour, v.sys, v.colour, cfo, 2.5);

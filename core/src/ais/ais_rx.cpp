@@ -884,25 +884,6 @@ void AisReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
 
 void AisReceiver::setStationView(uint32_t classMask, bool devicesOnly) { p_->viewClasses.store(classMask, std::memory_order_relaxed); p_->viewDevices.store(devicesOnly, std::memory_order_relaxed); }
 
-// 4.0: the station kinds with a mode-list entry of their own (families 738, 807, 810, 813, 816, 857: family, active standard family + 1, engine standard family + 2, poll slot = family)
-static const AisView kAisViews[] = {
-    {738, "aisclassa", "AIS Class A vessels", 1u << AIS_CLASS_A, false, "Class A"},
-    {807, "aisclassb", "AIS Class B vessels", 1u << AIS_CLASS_B, false, "Class B"},
-    {810, "aisbase", "AIS base stations", 1u << AIS_CLASS_BASE, false, "Base stations"},
-    {813, "aisaton", "AIS aids to navigation (AtoN)", 1u << AIS_CLASS_ATON, false, "AtoN"},
-    {816, "aissar", "AIS search and rescue aircraft", 1u << AIS_CLASS_SAR, false, "SAR aircraft"},
-    {857, "aissart", "AIS-SART, MOB and EPIRB-AIS", 0, true, "SART / MOB / EPIRB"},
-};
-const AisView* aisViews(int& count) { count = (int)(sizeof kAisViews / sizeof *kAisViews); return kAisViews; }
-const AisView* aisViewForActive(int a) { for (const auto& v : kAisViews) if (v.family + 1 == a) return &v; return nullptr; }
-const AisView* aisViewForStd(int s) { for (const auto& v : kAisViews) if (v.family + 2 == s) return &v; return nullptr; }
-ModeTuning aisViewTuning(int i) {
-    ModeTuning t = aisTuning();
-    const AisView& v = kAisViews[i];
-    t.stdMode = v.family + 2; t.id = v.id; t.name = v.name;
-    return t;
-}
-
 ModeTuning aisTuning() {
     ModeTuning t;
     t.stdMode = 16; t.id = "ais"; t.name = "AIS";

@@ -53,7 +53,12 @@ State S;
 dect2::SondePredictor& predictor() { static dect2::SondePredictor* p = new dect2::SondePredictor(); return *p; }
 
 // standard 14 is the engine's activeStandard for radiosondes
-bool live(const App& a) { return a.rx.standard == 14 || dect2::sondeViewForActive(a.rx.standard) != nullptr; }
+bool live(const App& a) { return a.rx.standard == 14; }
+
+// the type filter: only the sondes of one type are listed (SondeReceiver::setKindMask; uploads still see every sonde)
+const char* const kTypeNames[] = {"every type", "Vaisala RS41", "Vaisala RS92", "Graw DFM", "Meteomodem M10", "Meteomodem M20", "Lockheed Martin LMS6", "InterMet iMet-4", "InterMet iMet-54", "Russian MRZ", "Meisei iMS-100"};
+int& typeFilter() { static int v = std::clamp((int)plat::prefs().getI("sondeTypeFilter", 0), 0, 10); return v; }   // SondeKind, 0 every type
+void pushTypeFilter(App& a) { const int k = typeFilter(); a.engine.sonde().setKindMask(k ? 1u << k : 0u); }   // every frame (an atomic store): each receiver gets it
 
 void loadState() {
     if (S.loaded) return;
@@ -180,6 +185,7 @@ bool descending(const SondeInfo& s) { return s.hasVel && s.vSpeed < -1.0 && s.ma
 void tick(App& a) {
     sondeSitesTick(a, live(a));
     loadState();
+    pushTypeFilter(a);
     if (a.engine.running()) {
         dect2::SondeReceiver& r = a.engine.sonde();
         if (S.pushedCenter != a.freqMhz) { r.setCenterMhz(a.freqMhz); S.pushedCenter = a.freqMhz; }
@@ -658,6 +664,10 @@ void decoder(App& a, bool&) {
     sameLineIf(ImGui::CalcTextSize("clear list").x + 2 * ImGui::GetStyle().FramePadding.x, 8 * gUi);
     if (ImGui::SmallButton("clear list")) { a.engine.sonde().clearSondes(); S.sel.clear(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Forget the sondes heard so far (the receiver keeps following the carriers).");
+    ImGui::TextDisabled("TYPE"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(std::min(170 * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::Combo("##sdtype", &typeFilter(), kTypeNames, IM_ARRAYSIZE(kTypeNames))) { plat::prefs().setI("sondeTypeFilter", typeFilter()); pushTypeFilter(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("List the sondes of one type only. Every sonde is still decoded, and uploads still see all of them.");
     if (ImGui::TreeNodeEx("Advanced##sdadv", ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
         float w = avgWindowS();
         ImGui::TextDisabled("landing average"); ImGui::SameLine(); ImGui::SetNextItemWidth(std::min(100 * gUi, ImGui::GetContentRegionAvail().x));

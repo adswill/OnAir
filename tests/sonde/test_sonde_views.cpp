@@ -1,9 +1,9 @@
-// The radiosonde-type entries (families 684 .. 717, sonde_rx.h: sondeViews): views onto the radiosonde receiver that report one type only.
+// The sonde type filter of the radiosonde receiver (SondeReceiver::setKindMask, the Type choice of the Radiosonde screen): one type reported only.
 // The simulated flights of sonde_gen (every type, with carrier offsets, 8-bit quantisation and noise) are fed to one receiver per view and one without a view, from the same samples:
 //   - a view lists the sondes of its type exactly as the receiver without a view lists them, and no other type;
 //   - the counts of a view are the sums over its sondes; the receiver without a view is not changed by the others;
 //   - a type that is not on the air gives an empty list in its view while the other views are not empty.
-// Simulated signals only (no recording of iMet, iMet-54, MRZ, iMS-100 or LMS6 was available; LMS6 is checked for the table and the mask only).
+// Simulated signals only (no recording of iMet, iMet-54, MRZ, iMS-100 or LMS6 was available; LMS6 is checked for the mask only).
 #include "dect2/sonde/sonde_testkit.h"
 #include <algorithm>
 #include <cstring>
@@ -35,18 +35,6 @@ static std::vector<SondeTelemetry> runMasks(const SynthConfig& cfg, double rate,
 static std::vector<std::string> serialsOf(const SondeTelemetry& t, int kind) { std::vector<std::string> v; for (auto& s : t.sondes) if (s.kind == kind) v.push_back(s.serial); std::sort(v.begin(), v.end()); return v; }
 
 int main() {
-    int nv = 0;
-    const SondeView* views = sondeViews(nv);
-    CHECK(nv == 10, "%d views", nv);
-    for (int i = 0; i < nv; i++) {
-        CHECK(sondeViewForActive(views[i].family + 1) == &views[i] && sondeViewForStd(views[i].family + 2) == &views[i], "view %d lookup", i);
-        const ModeTuning t = sondeViewTuning(i);
-        CHECK(t.stdMode == views[i].family + 2 && std::string(t.id) == views[i].id && t.defMhz == (views[i].kind == SondeLms6 ? 1680.0 : 403.0), "view %d tuning", i);
-        CHECK(views[i].kind == i + 1, "view %d kind %d", i, views[i].kind);
-        for (int j = 0; j < i; j++) CHECK(views[j].family != views[i].family && std::strcmp(views[j].id, views[i].id) != 0, "views %d and %d clash", j, i);
-    }
-    CHECK(sondeViewForActive(14) == nullptr && sondeViewForStd(15) == nullptr, "the Radiosonde mode is not a view");
-
     int checkedKinds = 0;
     // scene A: RS41, DFM, M10, M20 and RS92 together, carrier offsets and noise, once with 8-bit samples
     for (int variant = 0; variant < 2; variant++) {

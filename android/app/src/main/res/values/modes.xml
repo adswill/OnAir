@@ -403,86 +403,86 @@
         <item>Occupied bandwidth meter</item>
         <item>Spectral kurtosis RFI finder</item>
         <item>SDR stream glitch detector</item>
-        <item>Oregon Scientific sensors</item>
-        <item>Acurite sensors</item>
-        <item>LaCrosse sensors</item>
-        <item>Fine Offset / Ecowitt sensors</item>
-        <item>Bresser sensors</item>
-        <item>Hideki sensors</item>
-        <item>TFA Dostmann sensors</item>
-        <item>Nexus / Prologue sensors</item>
-        <item>Alecto / Esperanza sensors</item>
-        <item>Ambient Weather sensors</item>
-        <item>Wireless alarm sensors</item>
-        <item>X10 RF</item>
-        <item>Itron ERT meters</item>
-        <item>Neptune R900 water meters</item>
-        <item>TPMS: Schrader</item>
-        <item>TPMS: Renault</item>
-        <item>TPMS: Toyota</item>
-        <item>TPMS: Citroen / Peugeot / Fiat</item>
-        <item>Radiosonde: Vaisala RS41</item>
-        <item>Radiosonde: Vaisala RS92</item>
-        <item>Radiosonde: Graw DFM</item>
-        <item>Radiosonde: Meteomodem M10</item>
-        <item>Radiosonde: Meteomodem M20</item>
-        <item>Radiosonde: Lockheed Martin LMS6</item>
-        <item>Radiosonde: InterMet iMet-4</item>
-        <item>Radiosonde: InterMet iMet-54</item>
-        <item>Radiosonde: Russian MRZ</item>
-        <item>Radiosonde: Meisei iMS-100</item>
-        <item>Wireless M-Bus S1</item>
-        <item>Wireless M-Bus T1</item>
-        <item>Wireless M-Bus C1</item>
-        <item>Wireless M-Bus R2</item>
-        <item>Wireless M-Bus N1 (Wize, 169 MHz)</item>
-        <item>AX.25 G3RUH 9600 (satellites)</item>
-        <item>CCSDS Reed-Solomon (satellites)</item>
-        <item>CCSDS concatenated (satellites)</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>ILS marker beacons (75 MHz)</item>
         <item>FSK modems (Bell 103, V.21, V.23, Bell 202)</item>
         <item>SSR interrogations (1030 MHz)</item>
-        <item>AIS Class A vessels</item>
-        <item>AIS Class B vessels</item>
-        <item>AIS base stations</item>
-        <item>AIS aids to navigation (AtoN)</item>
-        <item>AIS search and rescue aircraft</item>
-        <item>AIS-SART, MOB and EPIRB-AIS</item>
-        <item>DCF77 (Germany, 77.5 kHz)</item>
-        <item>MSF (United Kingdom, 60 kHz)</item>
-        <item>WWVB (United States, 60 kHz)</item>
-        <item>JJY 40 kHz (Japan)</item>
-        <item>JJY 60 kHz (Japan)</item>
-        <item>WWV / WWVH (United States, HF)</item>
-        <item>BPM (China, HF)</item>
-        <item>BPC (China, 68.5 kHz)</item>
-        <item>HLA (Korea, 5 MHz)</item>
-        <item>BPM coded (China, HF)</item>
-        <item>RWM (Russia, 9996 kHz)</item>
-        <item>GPS L1 C/A</item>
         <item></item>
-        <item>QZSS L1</item>
-        <item>GLONASS L1</item>
-        <item>BeiDou B1I</item>
-        <item>Weather stations (all brands)</item>
-        <item>TPMS: all makes</item>
-        <item>Utility and energy meters</item>
-        <item>Remotes, doorbells and switches</item>
-        <item>Analog TV: PAL B/G</item>
-        <item>Analog TV: PAL I</item>
-        <item>Analog TV: PAL D/K</item>
-        <item>Analog TV: SECAM D/K</item>
-        <item>Analog TV: SECAM L</item>
-        <item>Analog TV: NTSC M</item>
-        <item>Analog TV: PAL M</item>
-        <item>Analog TV: PAL N</item>
-        <item>Wireless M-Bus: Kamstrup</item>
-        <item>Wireless M-Bus: Landis+Gyr</item>
-        <item>Wireless M-Bus: Itron</item>
-        <item>Wireless M-Bus: Sensus</item>
-        <item>NFC: ISO 14443 Type A</item>
-        <item>NFC: ISO 14443 Type B</item>
-        <item>NFC: ISO 15693</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>DCR (Japan digital convenience radio)</item>
         <item>XPA (10 / 20 Bd)</item>
         <item>XPA2</item>
@@ -877,86 +877,86 @@
         <item>Occupied bandwidth meter (ITU-R SM.328): for the strongest signal of a wide capture, the 99 % occupied bandwidth, the bandwidths at 3, 6, 20 and 26 dB below the peak, the centre against the tuned frequency, the signal to noise ratio and the adjacent and alternate power (dB under the signal, bands as wide as the signal at 1.25 and 2.5 bandwidths). What arrives at this radio, noise and neighbours included. Simulated signals only</item>
         <item>Spectral kurtosis RFI finder (the estimator used in radio astronomy) for a wide capture: which frequencies hold something that is not Gaussian noise, and whether it is a steady carrier (SK under 1) or pulsed (SK over 1: radar, TDMA bursts, arcing, switching supplies), with the share of the band that is clean and the share of frames at full power for pulsed ones. Lists and classifies; does not say what the source is. Simulated signals only</item>
         <item>SDR stream glitch detector, for debugging a radio link or a driver: dropped and repeated samples (a phase step of the strongest steady tone, with the number of samples), runs of zero samples, a block sent twice, and level steps of 1 dB or more (an AGC or gain change), each with its time. A drop cannot be seen without a steady tone 20 dB over the noise. Simulated signals only</item>
-        <item>Oregon Scientific weather sensors on 433.92 MHz (v1, v2.1 and v3.0 temperature and humidity sensors, the SL109H remote thermo-hygro sensor and the WMR500 weather station): temperature, humidity and battery with sensor ID and channel. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Acurite sensors on 433.92 MHz (606TX, 609TXC, 590TX, 592TXR, 3n1, 5n1 and Atlas weather stations, 896 rain gauge, 986 refrigerator thermometer, 00275rm, 01185M grill thermometer): temperature, humidity, wind, rain and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>LaCrosse sensors on 433.92 and 868 MHz (TX141 family, TX29IT, TX31U-IT, TX34-IT, TX35DTH-IT, TX22U-IT, View LTV, WS7000 and others, also sold under TFA and The Weather Channel names): temperature, humidity, wind, rain and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Fine Offset and Ecowitt sensors on 433.92, 868.3 and 915 MHz (WH1080 / WH3080, WH5, WH24 / WH65B, WH31L lightning, WH43 air quality, WH45, WH46, WH51, WH52 soil, WH55 water leak, WS80 / WS85 / WS90 and the WH53 thermometer): temperature, humidity, wind, rain, soil, air quality and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Bresser sensors on 868.3 MHz (3-channel thermo-hygro, 5-in-1, 6-in-1, 7-in-1 weather centres, ST1005H, lightning, leakage, CO2 and air quality, rain gauge): temperature, humidity, wind, rain, UV, lightning and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Hideki TS04 weather sensors on 433.92 MHz: temperature, humidity, wind and rain with channel and battery, Manchester frames with their checksums. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>TFA Dostmann sensors on 433.92 and 868 MHz (30.3208.02, 30.3197, 30.3161 and 30.3209 sensors, Twin Plus, Marbella, Drop, pool thermometer, 14.1504 and the KlimaLogg Pro station): temperature, humidity, rain and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Nexus and Prologue temperature sensors on 433.92 MHz (Nexus, CRX, Prego sauna, FreeTec NC-7345, NX-3980, Solight TE82S, TFA 30.3209, Prologue NC-7104 and NC-7159-675): 36-bit PPM frames with temperature, humidity, channel and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Alecto and Esperanza sensors on 433.92 MHz (Alecto WS3500 / WS4500, Ventus W155 / W044 and the Esperanza EWS): temperature, humidity, wind and rain with channel and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Ambient Weather sensors on 433.92 and 915 MHz (F007TH, TX-8300, WH31E and WH31L, FT005TH, EcoWitt WH40 / WN20): temperature, humidity, rain, lightning and battery. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Wireless alarm sensors on 345 and 433.92 MHz (Honeywell 5800 door and window contacts, DSC security contacts and WS4945, Interlogix / GE and 2Gig sensors, Visonic PowerCode): sensor ID, contact, tamper, battery and supervisory flags. Decodes what the sensor sends, it does not control an alarm system. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>X10 RF remotes and security sensors on 310 and 433.92 MHz: house code, unit and command of the X10 RF frames and the X10 security device codes. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Itron ERT utility meter endpoints on 915 MHz (SCM standard consumption messages, IDM interval data messages and net-meter IDM): endpoint ID, type and consumption counters, read as they are broadcast. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Neptune R900 flow meters on 915 MHz (R900 and R900 BCD): meter ID, consumption, backflow, leak and tamper flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Schrader tyre pressure sensors on 433.92 MHz (Schrader, EG53MA4 used by Saab, Opel, Vauxhall and Chevrolet, SMD3MA4 for Subaru, MRXBC5A4 for BMW, MRXNIS315G3 for Nissan and Infiniti, and the motorcycle sensor): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Renault tyre pressure sensors on 433.92 MHz (the Renault TPMS and the 0435R sensor): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Toyota tyre pressure sensors on 433.92 and 315 MHz (the Toyota TPMS and the PMV-107J): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Citroen, Peugeot, Fiat and Mitsubishi tyre pressure sensors on 433.92 MHz (the sensor type shared by these makes): sensor ID, pressure, temperature and flags. The Sub-GHz sensors decoders (rtl_433) showing this family only; they also run inside Sub-GHz sensors, which lists every sensor and has the unknown signal analyser</item>
-        <item>Vaisala RS41 radiosondes (RS41-SG and relatives), 400 - 406 MHz: 4800 bit/s GFSK frames with Reed-Solomon and CRC checks: serial, position, altitude, speed, temperature, humidity, pressure and the calibration progress. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Vaisala RS92 radiosondes, 400 - 406 MHz: Manchester coded frames at 4800 symbols/s with Reed-Solomon, the GPS block and the sensor counts: serial, position, altitude and speed. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Graw DFM-06, DFM-09 and DFM-17 radiosondes, 400 - 406 MHz: 2500 symbols/s Manchester frames with Hamming(8,4) codewords: serial, position, altitude, speed and temperature. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Meteomodem M10 and M10+ radiosondes, 400 - 406 MHz: Manchester coded frames with checksum: serial, position, altitude, speed, temperature, humidity and battery. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Meteomodem M20 radiosondes, 400 - 406 MHz: the M10 line code with the M20 frame: serial, position, altitude, speed, temperature, humidity and battery. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Lockheed Martin LMS6 (Sippican MK2A telemetry) radiosondes at 1680 MHz: UART 8N1 at 9616 baud with a CRC-16 and the GPS subframe: position, altitude and speed. Needs a wide capture around 1680 MHz and an L-band antenna. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>InterMet iMet-1 and iMet-4 radiosondes, 400 - 406 MHz: Bell 202 AFSK, one packet set per second: position, altitude, speed and sensor values. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>InterMet iMet-54 radiosondes, 400 - 406 MHz: 4800 baud UART frames with Hamming(8,4) and a block interleaver: serial, position, altitude and speed. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Russian MRZ (MP3-H1) radiosondes, 400 - 406 MHz: Manchester frames: serial, position and altitude. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Meisei iMS-100 radiosondes, 400 - 406 MHz: biphase-S frames with BCH(46,34) error correction: serial, position and altitude. Checked on simulated signals only. The radiosonde receiver showing this type only (it also runs inside Radiosonde, which finds every type in the band)</item>
-        <item>Wireless M-Bus (EN 13757-4) mode S1, the stationary mode, on 868.3 MHz: 2-FSK with Manchester chips, frame format A with its block CRCs: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>Wireless M-Bus (EN 13757-4) mode T1, the frequent transmit mode, on 868.95 MHz: 2-FSK with 3-out-of-6 chips, frame format A with its block CRCs: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>Wireless M-Bus (EN 13757-4) mode C1, the compact mode, on 868.95 MHz: 2-FSK with NRZ chips, frame formats A and B with their block CRCs: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>Wireless M-Bus (EN 13757-4) mode R2, the frequent receive mode, on 868.03 - 868.15 MHz: 2-FSK with Manchester chips: manufacturer, meter ID, version and device type, and the readings of unencrypted frames. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>Wireless M-Bus (EN 13757-4) narrowband mode N1 on 169.4 MHz, with the Wize frames (2.4 and 4.8 kbit/s, format B, CI 0x20: network, application, counter and time stamp; the L7 data stays encrypted): manufacturer, meter ID, version and device type. The Wireless M-Bus receiver showing this mode only (it also runs inside Wireless M-Bus (meters), which lists every mode). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>AX.25 frames at 9600 baud G3RUH (scrambled FSK / GMSK) from amateur satellites on 70 cm: HDLC framing with bit stuffing and the AX.25 CRC, callsigns, and hex and ASCII dumps. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
-        <item>CCSDS telemetry frames with the 0x1ACFFC1D sync marker and Reed-Solomon (255,223) from amateur and small satellites on 70 cm: the Reed-Solomon check and the frame bytes. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
-        <item>CCSDS concatenated telemetry from amateur and small satellites on 70 cm: convolutional coding (Viterbi) with Reed-Solomon (255,223) behind the 0x1ACFFC1D sync marker. The CubeSat telemetry decoder showing this framing only (it also runs inside CubeSat telemetry)</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>Instrument landing system marker beacons on 75 MHz (ICAO Annex 10): the AM carrier is keyed with a tone, 400 Hz dashes for the outer marker (2 per second), 1300 Hz dot-dash for the middle marker (95 pairs per minute), 3000 Hz dots for the inner marker (6 per second). Names the marker from the tone, measures the keying and says whether it fits the standard; a tone with the wrong keying is listed as tone only. Simulated signals only</item>
         <item>Telephone-style FSK modems as audio tones in a single-sideband channel: Bell 103 (originate 1070 / 1270 Hz, answer 2025 / 2225 Hz, 300 baud, the time station CHU uses the answer tones), ITU-T V.21 channels 1 and 2 (300 baud), V.23 mode 2 and Bell 202 (1200 baud). Names the standard and the sideband from the two tones, reads the asynchronous bytes (start bit, 8 data bits, stop bits) and shows them in hex and ASCII with the framing errors. Tune the dial so the tones lie in 600 - 2700 Hz above (upper sideband) or below the dial; a dial error up to 40 Hz is accepted. It does not know the meaning of the bytes. Simulated signals only</item>
         <item>Secondary surveillance radar interrogations on 1030 MHz (ICAO Annex 10): P1 - P3 pulse pairs of Mode 1, 2, A, B, C and D (3, 5, 8, 17, 21 and 25 us), the side-lobe suppression pulse P2, intermode P4 and Mode S (P6 of 56 or 112 bits). Counts per mode, the measured spacing and the interrogation rate every 2 s, and whether P2 marks a side-lobe interrogation. It does not say which radar sent them. Needs a radio with 2 Msps or more. Simulated signals only</item>
-        <item>AIS Class A transponders (SOLAS ships) on 161.975 and 162.025 MHz: position reports (messages 1, 2, 3) and static and voyage data (message 5): name, call sign, ship type, destination, speed, course and navigation status. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
-        <item>AIS Class B transponders (small craft, fishing and leisure boats) on 161.975 and 162.025 MHz: position reports (messages 18 and 19) and static data (message 24): name, call sign, ship type, speed and course. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
-        <item>AIS base stations on 161.975 and 162.025 MHz (message 4): the coast station\'s position and its UTC time, with the vessels it is heard beside. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
-        <item>AIS aids to navigation on 161.975 and 162.025 MHz (message 21): buoys, beacons and lights with their type, name, position, whether they are off position, and virtual aids. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
-        <item>AIS search and rescue aircraft on 161.975 and 162.025 MHz (message 9): position, altitude, speed and course of helicopters and aeroplanes in a search. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
-        <item>Distress devices on the AIS channels 161.975 and 162.025 MHz: AIS-SART (MMSI 970xxxxxx), man-overboard devices (972xxxxxx) and EPIRB-AIS (974xxxxxx, ITU-R M.1371): the stations with these numbers and their position reports. A real alert is shown the same way: nothing here replaces a distress radio. The AIS receiver showing this kind of station only (it also runs inside AIS, which lists every station)</item>
-        <item>DCF77 time signal from Mainflingen, Germany, on 77.5 kHz: the carrier keyed to 15 % for 100 ms (0) or 200 ms (1) each second: time, date, summer time and leap second flags (CET / CEST), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>MSF time signal from Anthorn, United Kingdom, on 60 kHz: the carrier switched off for 100 ms and then bits A and B each second: time, date and summer time flags (UK time), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>WWVB time signal from Fort Collins, United States, on 60 kHz: the carrier lowered by 17 dB for 200 ms (0), 500 ms (1) or 800 ms (marker) each second: time, date, daylight saving and leap second flags, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>JJY time signal from Ohtakadoya, Japan, on 40 kHz: the carrier high for 800 ms (0), 500 ms (1) or 200 ms (marker) each second: time and date (JST), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>JJY time signal from Hagane, Japan, on 60 kHz: the carrier high for 800 ms (0), 500 ms (1) or 200 ms (marker) each second: time and date (JST), the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>WWV and WWVH time signals on 2.5 - 20 MHz (10 MHz first): 5 ms ticks at 1000 Hz (WWV) or 1200 Hz (WWVH), the minute tone and the BCD time code as a 100 Hz subcarrier: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>BPM time signal (Chinese HF time station, 5 MHz first): the seconds tick and the time code: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>BPC time signal from China on 68.5 kHz: the keyed carrier: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>HLA time signal from Korea on 5 MHz: the seconds tick and the time code: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>BPM coded time signal (the coded time frames of the Chinese HF station BPM, 5 MHz first): time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>RWM time signal from Moscow, Russia, on 9996 kHz (also 4996 and 14996 kHz): the carrier keyed with the time code: time and date, the seconds tick, and how far the computer clock is off after the path delay. The Time signals receiver fixed to this station (it also runs inside Time signals, which picks the station from the frequency and has the clock sync section)</item>
-        <item>GPS L1 C/A satellites on 1575.42 MHz: the satellites in view with their signal strength and Doppler, the broadcast ephemeris and almanac decoded, the position and time fix, DOP and the sky plot. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
         <item></item>
-        <item>QZSS L1 C/A satellites (PRN 193 - 202, Japan\'s regional system, J01 - J10) on 1575.42 MHz: the satellites in view, their decoded ephemeris and a position fix from QZSS alone. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
-        <item>GLONASS L1 satellites on 1598 - 1606 MHz (FDMA, frequency channels -7 to +6 around 1602 MHz): the satellites in view with their frequency channel, the decoded strings and a position fix from GLONASS alone. Needs an active GNSS antenna and a radio with 10 Msps. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
-        <item>BeiDou B1I satellites on 1561.098 MHz: the satellites in view, the decoded ephemeris and a position fix from BeiDou alone. Needs an active GNSS antenna and a radio with 4 Msps or more. The GNSS receiver wanting this system only (it also runs inside GNSS, which tracks every system its band holds)</item>
-        <item>Weather station sensors of every brand the rtl_433 decoders know on 433.92, 868 and 915 MHz: temperature, humidity, wind, rain, pressure, UV and lightning with sensor ID, channel and battery. A sensor counts as a weather sensor when its message carries such a value. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
-        <item>Tyre pressure sensors of every make the rtl_433 decoders know on 433.92 and 315 MHz: sensor ID, pressure, temperature and flags. A sensor counts as a tyre pressure sensor when its model or its message says so. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
-        <item>Utility and energy meter messages the rtl_433 decoders know on 433.92, 868 and 915 MHz (power clamps, electricity, gas and water meters): meter or sensor ID and the readings it sends. A sensor counts as a meter when its message carries energy, power, volume or consumption. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
-        <item>Remote controls, wireless doorbells and switches the rtl_433 decoders know on 433.92 MHz and nearby bands: the button, command or code each frame carries. A sensor counts as a remote when its message carries a button, command or code. Rolling-code remotes are shown as the frames they send, never opened. The Sub-GHz sensors decoders (rtl_433) showing this kind of sensor only (they also run inside Sub-GHz sensors, which has the unknown signal analyser)</item>
-        <item>PAL B/G analog television (625 lines, 50 fields, 7 and 8 MHz channels, sound 5.5 MHz above the vision carrier): Europe and many countries elsewhere. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>PAL I analog television (625 lines, 50 fields, 8 MHz channels, sound 6 MHz above the vision carrier): the United Kingdom, Ireland and South Africa. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>PAL D/K analog television (625 lines, 50 fields, 8 MHz channels, sound 6.5 MHz above the vision carrier): China and other countries. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>SECAM D/K analog television (625 lines, 50 fields, 8 MHz channels, sound 6.5 MHz above the vision carrier): Russia and other countries. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>SECAM L analog television (625 lines, 50 fields, positive vision modulation, AM sound): France and its territories. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>NTSC M analog television (525 lines, 59.94 fields, 6 MHz channels, FM sound 4.5 MHz above the vision carrier): North America, Japan, South Korea and other countries. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>PAL M analog television (525 lines, 59.94 fields, PAL colour, 6 MHz channels): Brazil. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>PAL N analog television (625 lines, 50 fields, 6 MHz channels): Argentina, Paraguay and Uruguay. The picture and sound of Analog TV, with the standard fixed instead of found. The Analog TV receiver told this standard (it also runs inside Analog TV, which finds the standard itself)</item>
-        <item>Kamstrup (manufacturer code KAM) water, heat and cooling meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send (S1, T1, C1, R2 or N1). The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>Landis+Gyr (manufacturer code LGB) heat, gas, water and electricity meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send (S1, T1, C1, R2 or N1). The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>Itron (manufacturer code ITW) water, gas and heat meters on wireless M-Bus (EN 13757-4), also the Wize meters on 169 MHz: the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send. The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>Sensus (manufacturer code SEN) water and heat meters on wireless M-Bus (EN 13757-4): the meter IDs, versions and device types, and the readings of unencrypted frames, in whatever mode they send. The Wireless M-Bus receiver showing the meters of this manufacturer only, in every mode (it also runs inside Wireless M-Bus (meters)). Encrypted payloads are listed as encrypted and never decoded. Needs a radio with 1 Msps or more</item>
-        <item>NFC / RFID at 13.56 MHz, ISO/IEC 14443 Type A (Mifare, NTAG, most phones and payment cards): the reader\'s frames (REQA, anticollision, SELECT, READ) and the tag\'s answers (ATQA, UID, SAK), the tags found and their NDEF records. Encrypted traffic after authentication is named and never decoded. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
-        <item>NFC / RFID at 13.56 MHz, ISO/IEC 14443 Type B (some ID, transport and passport cards): the reader\'s REQB and the tag\'s ATQB with its frames. The receiver has a Type B path, but no test signal with real Type B modulation exists yet: not verified. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
-        <item>NFC / RFID at 13.56 MHz, ISO/IEC 15693 vicinity cards (library tags, access and industrial tags, ICODE): the reader\'s inventory and system-information commands and the tag\'s answers with their UIDs. Simulated signals only. The NFC receiver showing this protocol only (it also runs inside NFC / RFID 13.56 MHz, which shows every protocol). Receive only</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>DCR, Japan\'s digital convenience radio (ARIB STD-T98 volume 3): 4-level FSK 2400 symbols/s in 6.25 kHz channels, 351 MHz (registered stations), 467 / 465 MHz and 154 MHz (licensed). Receive only: user codes (0 - 511), manufacturer numbers, normal or privacy-scrambled calls, end-of-call messages, the 9-digit call sign of the synchronous burst, error-corrected data blocks and manufacturer messages; the voice (AMBE+2) frames are counted, there is no audio. With a wide capture (100 kHz or more) tuned in the 351 MHz band every active channel of the plan is decoded at once. Checked against the standard\'s own test frames and on simulated signals; no real DCR recording was available</item>
         <item>XPA, a number-group sender on HF believed to carry Russian intelligence messages: 20-tone MFSK, 40 Hz apart from 520 Hz, at 10 or 20 Bd (both are tried). Receive only: start tones, message start, the five-figure groups ten to a line, block sync and break groups, the end of the message. Tune the dial frequency in upper sideband; the tones are found anywhere in the channel, lower sideband too. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
         <item>XPA2, a number-group sender on HF believed to carry Russian intelligence messages: 16-tone MFSK at 7.8125 Bd, 15.625 Hz apart from 978 Hz. Receive only: the five-figure groups ten to a line and the end of the message; the sideband (reversed tones) is found automatically. Tune the dial frequency in upper sideband. Ported from Rivet (Ian Wraith, GPL-3). Simulated signals only so far</item>
@@ -1351,86 +1351,86 @@
         <item>Event</item>
         <item>Event</item>
         <item>Event</item>
-        <item>Sensors, Oregon Scientific</item>
-        <item>Sensors, Acurite</item>
-        <item>Sensors, LaCrosse</item>
-        <item>Sensors, Fine Offset / Ecowitt</item>
-        <item>Sensors, Bresser</item>
-        <item>Sensors, Hideki</item>
-        <item>Sensors, TFA Dostmann</item>
-        <item>Sensors, Nexus / Prologue</item>
-        <item>Sensors, Alecto / Esperanza</item>
-        <item>Sensors, Ambient Weather</item>
-        <item>Sensors, Wireless alarm sensors</item>
-        <item>Sensors, X10</item>
-        <item>Sensors, Itron ERT</item>
-        <item>Sensors, Neptune R900</item>
-        <item>Sensors, Schrader TPMS</item>
-        <item>Sensors, Renault TPMS</item>
-        <item>Sensors, Toyota TPMS</item>
-        <item>Sensors, Citroen TPMS</item>
-        <item>Balloons, RS41</item>
-        <item>Balloons, RS92</item>
-        <item>Balloons, DFM</item>
-        <item>Balloons, M10</item>
-        <item>Balloons, M20</item>
-        <item>Balloons, LMS6</item>
-        <item>Balloons, iMet</item>
-        <item>Balloons, iMet-54</item>
-        <item>Balloons, MRZ</item>
-        <item>Balloons, iMS-100</item>
-        <item>Meters, S1</item>
-        <item>Meters, T1</item>
-        <item>Meters, C1</item>
-        <item>Meters, R2</item>
-        <item>Meters, N1</item>
-        <item>Satellites, G3RUH 9600</item>
-        <item>Satellites, CCSDS RS</item>
-        <item>Satellites, CCSDS concatenated</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>Aviation, ILS markers</item>
         <item>Utility, FSK modems</item>
         <item>Aviation, SSR interrogations</item>
-        <item>Ships, Class A</item>
-        <item>Ships, Class B</item>
-        <item>Ships, Base stations</item>
-        <item>Ships, AtoN</item>
-        <item>Ships, SAR aircraft</item>
-        <item>Ships, SART / MOB / EPIRB</item>
-        <item>Time, DCF77</item>
-        <item>Time, MSF</item>
-        <item>Time, WWVB</item>
-        <item>Time, JJY 40 kHz</item>
-        <item>Time, JJY 60 kHz</item>
-        <item>Time, WWV / WWVH</item>
-        <item>Time, BPM</item>
-        <item>Time, BPC</item>
-        <item>Time, HLA</item>
-        <item>Time, BPM coded</item>
-        <item>Time, RWM</item>
-        <item>Satellites, GPS</item>
         <item></item>
-        <item>Satellites, QZSS</item>
-        <item>Satellites, GLONASS</item>
-        <item>Satellites, BeiDou</item>
-        <item>Sensors, Weather, all brands</item>
-        <item>Sensors, Tyre pressure, all makes</item>
-        <item>Sensors, Utility and energy meters</item>
-        <item>Sensors, Remotes and doorbells</item>
-        <item>TV, PAL B/G</item>
-        <item>TV, PAL I</item>
-        <item>TV, PAL D/K</item>
-        <item>TV, SECAM D/K</item>
-        <item>TV, SECAM L</item>
-        <item>TV, NTSC M</item>
-        <item>TV, PAL M</item>
-        <item>TV, PAL N</item>
-        <item>Meters, Kamstrup</item>
-        <item>Meters, Landis+Gyr</item>
-        <item>Meters, Itron</item>
-        <item>Meters, Sensus</item>
-        <item>RFID, Type A</item>
-        <item>RFID, Type B</item>
-        <item>RFID, ISO 15693</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>Digital voice, DCR 6.25 kHz</item>
         <item>HF MFSK, 10 / 20 Bd</item>
         <item>HF MFSK, 7.8 Bd</item>
@@ -1825,86 +1825,86 @@
         <item>occupied bandwidth 99 percent x db 26 db emission designator itu sm.328 acpr adjacent channel power spectrum width transmitter</item>
         <item>spectral kurtosis sk rfi pulsed steady carrier radio astronomy non-gaussian interference radar burst detector</item>
         <item>sdr glitch dropped samples overrun usb buffer repeat zero agc level step stream health debug</item>
-        <item>oregon scientific thn132n thgr810 sl109h wmr500 weather sensor 433.92 rtl_433</item>
-        <item>acurite 606tx 609txc 592txr 5n1 3n1 atlas 896 986 weather station thermometer rain 433.92 rtl_433</item>
-        <item>lacrosse tx141 tx29it tx31u tx34 tx35 tx22u ltv ws7000 weather sensor 433.92 868 rtl_433</item>
-        <item>fine offset fineoffset ecowitt wh1080 wh3080 wh24 wh65b wh31l wh43 wh45 wh51 wh52 wh55 ws80 ws85 ws90 weather station 433.92 868 915 rtl_433</item>
-        <item>bresser 3ch 5in1 6in1 7in1 st1005h explore scientific lightning leakage weather 868.3 rtl_433</item>
-        <item>hideki ts04 weather sensor wind rain 433.92 rtl_433</item>
-        <item>tfa dostmann klimalogg marbella twin plus drop pool thermometer 30.3208 30.3197 weather 433.92 868 rtl_433</item>
-        <item>nexus prologue crx prego freetec nc-7345 nx-3980 solight te82s nc-7104 temperature humidity 433.92 rtl_433</item>
-        <item>alecto ws3500 ws4500 ventus w155 w044 esperanza ews weather 433.92 rtl_433</item>
-        <item>ambient weather f007th tx-8300 wh31e wh31l ft005th ecowitt wh40 wn20 915 433.92 rtl_433</item>
-        <item>wireless alarm security sensor honeywell 5800 dsc interlogix visonic powercode 2gig door window contact 345 433.92 rtl_433</item>
-        <item>x10 rf security remote house code unit command 310 433.92 rtl_433</item>
-        <item>itron ert scm idm interval consumption water gas electric meter 915 rtl_433</item>
-        <item>neptune r900 bcd water flow meter 915 rtl_433</item>
-        <item>schrader tpms tyre tire pressure eg53ma4 smd3ma4 mrxbc5a4 mrxnis315g3 433.92 rtl_433</item>
-        <item>renault tpms tyre tire pressure 0435r 433.92 rtl_433</item>
-        <item>toyota tpms tyre tire pressure pmv-107j 433.92 315 rtl_433</item>
-        <item>citroen peugeot fiat mitsubishi tpms tyre tire pressure 433.92 rtl_433</item>
-        <item>rs41 vaisala radiosonde weather balloon sonde 403 405 gfsk</item>
-        <item>rs92 vaisala radiosonde weather balloon sonde 403 405</item>
-        <item>dfm graw dfm06 dfm09 dfm17 radiosonde weather balloon sonde 403 405</item>
-        <item>m10 meteomodem m10+ radiosonde weather balloon sonde 403 405</item>
-        <item>m20 meteomodem radiosonde weather balloon sonde 403 405</item>
-        <item>lms6 lockheed martin sippican mk2a radiosonde 1680 l-band weather balloon sonde</item>
-        <item>imet intermet imet-4 imet-1 afsk radiosonde weather balloon sonde 403 405</item>
-        <item>imet-54 intermet imet54 radiosonde weather balloon sonde 403 405</item>
-        <item>mrz mp3-h1 russian radiosonde weather balloon sonde 403 400</item>
-        <item>meisei ims-100 ims100 radiosonde weather balloon sonde 403 400 japan</item>
-        <item>wireless m-bus wmbus mbus s1 868.3 en 13757 meter kamstrup</item>
-        <item>wireless m-bus wmbus mbus t1 868.95 3-out-of-6 en 13757 meter kamstrup</item>
-        <item>wireless m-bus wmbus mbus c1 868.95 nrz en 13757 meter</item>
-        <item>wireless m-bus wmbus mbus r2 868.03 868.15 en 13757 meter</item>
-        <item>wireless m-bus wmbus mbus n1 wize 169.4 169 en 13757 meter grdf</item>
-        <item>ax25 ax.25 g3ruh 9600 packet hdlc fsk gmsk cubesat satellite 435 437</item>
-        <item>ccsds reed solomon rs 255 223 telemetry tm frame cubesat satellite 435 437 sync 1acffc1d</item>
-        <item>ccsds concatenated viterbi convolutional reed solomon telemetry cubesat satellite 435 437 1acffc1d</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>ils marker beacon outer middle inner 75 mhz 400 1300 3000 hz localizer glide path approach</item>
         <item>bell 103 v.21 v.23 bell 202 fsk modem afsk async 300 baud 1200 baud chu time signal 7850 3330 14670 telephone</item>
         <item>ssr secondary surveillance radar interrogation 1030 mhz mode a mode c mode s p1 p2 p3 p4 p6 sidelobe suppression iff transponder</item>
-        <item>ais class a transponder ship vessel 161.975 162.025 marine</item>
-        <item>ais class b transponder small craft fishing leisure boat 161.975 162.025 marine</item>
-        <item>ais base station coast station message 4 161.975 162.025 marine</item>
-        <item>ais aton aid to navigation buoy beacon lighthouse virtual message 21 161.975 162.025 marine</item>
-        <item>ais sar search and rescue aircraft helicopter message 9 161.975 162.025 marine</item>
-        <item>ais sart mob man overboard epirb distress alert 970 972 974 gmdss search and rescue 161.975 162.025 marine</item>
-        <item>dcf77 germany mainflingen 77.5 khz time signal radio clock atomic clock cet cest utc</item>
-        <item>msf uk united kingdom anthorn 60 khz time signal radio clock atomic clock gmt bst utc</item>
-        <item>wwvb us usa fort collins 60 khz time signal radio clock atomic clock utc nist</item>
-        <item>jjy japan ohtakadoya 40 khz time signal radio clock atomic clock jst</item>
-        <item>jjy japan hagane 60 khz time signal radio clock atomic clock jst</item>
-        <item>wwv wwvh us usa hf time signal 2.5 5 10 15 20 mhz bcd tick atomic clock utc nist</item>
-        <item>bpm china chinese hf time signal 5 mhz atomic clock utc</item>
-        <item>bpc china chinese 68.5 khz time signal radio clock atomic clock</item>
-        <item>hla korea korean 5 mhz hf time signal atomic clock kriss</item>
-        <item>bpm coded china chinese hf time signal 5 mhz atomic clock</item>
-        <item>rwm russia russian moscow 9996 4996 14996 khz hf time signal atomic clock</item>
-        <item>gps navstar l1 ca 1575.42 gnss satellite fix position time</item>
         <item></item>
-        <item>qzss michibiki l1 ca 193 202 1575.42 gnss satellite japan</item>
-        <item>glonass l1 fdma 1602 gnss satellite fix position time russia</item>
-        <item>beidou compass b1i bds 1561.098 gnss satellite fix position time china</item>
-        <item>weather station sensor thermometer hygrometer wind rain all brands 433.92 868 915 rtl_433</item>
-        <item>tpms tyre tire pressure all makes 433.92 315 rtl_433</item>
-        <item>utility meter energy power water gas electricity consumption monitor 433.92 868 915 rtl_433</item>
-        <item>remote doorbell switch button command code garage gate key fob 433.92 315 868 rtl_433</item>
-        <item>analog tv pal b g bg 625 europe vhf uhf television video</item>
-        <item>analog tv pal i 625 uk ireland south africa television video</item>
-        <item>analog tv pal d k dk 625 china television video</item>
-        <item>analog tv secam d k dk 625 russia television video</item>
-        <item>analog tv secam l 625 france positive modulation am sound television video</item>
-        <item>analog tv ntsc m 525 america usa canada japan korea television video</item>
-        <item>analog tv pal m 525 brazil television video</item>
-        <item>analog tv pal n 625 argentina paraguay uruguay television video</item>
-        <item>wireless m-bus wmbus mbus kamstrup kam meter water heat cooling multical flowiq</item>
-        <item>wireless m-bus wmbus mbus landis gyr landis+gyr lgb meter heat gas water electricity</item>
-        <item>wireless m-bus wmbus mbus itron itw wize 169 meter water gas heat</item>
-        <item>wireless m-bus wmbus mbus sensus sen xylem meter water heat</item>
-        <item>nfc rfid 13.56 mhz iso 14443 type a mifare ntag uid atqa sak ndef reader tag</item>
-        <item>nfc rfid 13.56 mhz iso 14443 type b reqb atqb card passport</item>
-        <item>nfc rfid 13.56 mhz iso 15693 vicinity icode inventory library tag</item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
+        <item></item>
         <item>dcr digital convenience radio japan arib std-t98 digital simplified radio kani musen 351 mhz 467 mhz 154 mhz 4fsk nxdn user code call sign icom kenwood</item>
         <item>xpa xpa1 numbers station number station mfsk 20 tones 10 baud 20 baud russian intelligence rivet priyom enigma 2000 hf</item>
         <item>xpa2 xpa-2 numbers station number station mfsk 16 tones 7.8125 baud slow russian intelligence rivet priyom enigma 2000 hf</item>

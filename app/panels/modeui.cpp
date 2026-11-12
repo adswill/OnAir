@@ -191,16 +191,12 @@ const ModeUi* modeUi(int family) {
     case 6: return &kDvbsUi;
     case 7: return &kDtmbUi;
     case 8: return &kAtvUi;
-    case 424: case 427: case 441: case 444: case 447: case 450: case 453: case 456: return &kAtvUi;   // 424 .. 456: one analog TV standard each, the same panel (atv_rx.h: atvViews)
     case 9: return &kDmrUi;
     case 10: return &kDrmUi;
     case 11: return &kAdsbUi;
     case 12: return &kGnssUi;
-    case 860: case 866: case 872: case 875: return &kGnssUi;   // 860 .. 875: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 13: return &kSondeUi;
-    case 684: case 687: case 690: case 693: case 702: case 705: case 708: case 711: case 714: case 717: return &kSondeUi;   // 684 .. 717: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 14: return &kAisUi;
-    case 738: case 807: case 810: case 813: case 816: case 857: return &kAisUi;   // 738 .. 857: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 15: return &kMarineUi;
     case 16: return &kAcarsUi;
     case 17: return &kInmcUi;
@@ -247,9 +243,7 @@ const ModeUi* modeUi(int family) {
     case 54: return &kWifiUi;
     case 55: return &kGeneralUi;
     case 58: return &kTimeUi;
-    case 607: case 610: case 613: case 616: case 628: case 631: case 634: case 637: case 642: case 645: case 648: return &kTimeUi;   // 607 .. 648: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
-    case 61: case 840: case 843: case 846: case 849: case 852: case 855: return &kCubesatUi;
-    case 792: case 795: case 804: return &kCubesatUi;   // 840 .. 855: one framing each, the same panel (cubesat_rx.h: cubesatViews)
+    case 61: case 840: case 843: case 846: case 849: case 852: case 855: return &kCubesatUi;   // 840 .. 855: one framing each, the same panel (cubesat_rx.h: cubesatViews)
     case 62: return &kGlobalstarUi;
     case 63: return &kVdesUi;
     case 65: return &kZigbeeUi;
@@ -307,7 +301,6 @@ const ModeUi* modeUi(int family) {
     case 600: return &kXlinkUi;
     case 210: return &kNrf24Ui;
     case 241: return &kSensorsUi;
-    case 564: case 567: case 570: case 573: case 576: case 579: case 582: case 585: case 588: case 591: case 594: case 663: case 666: case 669: case 672: case 675: case 678: case 681: case 412: case 415: case 418: case 421: return &kSensorsUi;   // 564 .. 681: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 245: return &kBganUi;
     case 243: return &kSfericsUi;
     case 790: return &kLtposUi;
@@ -350,7 +343,6 @@ const ModeUi* modeUi(int family) {
     case 85: return &kEczasUi;
     case 101: return &kFpvUi;
     case 86: return &kWmbusUi;
-    case 720: case 723: case 726: case 732: case 735: case 743: case 797: case 467: case 470: return &kWmbusUi;   // 720 .. 735: the entries of one type each, the same panel (docs/VIEWS-4.0.md)
     case 89: return &kTonesUi;
     case 92: return &kSarsatUi;
     case 122: return &kKaalUi;
@@ -365,7 +357,6 @@ const ModeUi* modeUi(int family) {
     case 121: return &kDmeUi;
     case 126: return &kElLoranUi;
     case 148: return &kNfcUi;
-    case 473: case 476: case 482: return &kNfcUi;   // 473 .. 482: one NFC protocol each, the same panel (nfc_engine.h: nfcViews)
     case 107: return &kCquamUi;
     case 142: return &kModeAcUi;
     case 98: return &kZwaveUi;
