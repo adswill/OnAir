@@ -457,7 +457,7 @@ struct SarsatReceiver::Impl {
     struct Kept { double t = 0, carrier = 0; std::vector<std::vector<float>> cands; };   // cands[0]: best-looking timing
     std::vector<Kept> kept;
     struct Pending { double t = 0, carrier = 0; std::string hexId; };   // repaired decodes waiting for a second burst with the same identification
-    std::vector<Pending> pending;
+    std::vector<Pending> heldIds;
     uint64_t heldBursts = 0;
     std::vector<std::pair<double, double>> expect;   // (carrier, time) of beacons heard: their next bursts are looked for with a lower line threshold
     bool combineOn = true;
@@ -489,7 +489,7 @@ struct SarsatReceiver::Impl {
         std::fill(bg.begin(), bg.end(), 0.f);
         warm = 0; active = false; miss = 0; dets = 0; peaks.clear();
         lastDecodeSec = -1e9; lastPublish = 0;
-        kept.clear(); expect.clear(); pending.clear(); last4.clear(); last4i = 0; last4n = 0; weakBurst = false;
+        kept.clear(); expect.clear(); heldIds.clear(); last4.clear(); last4i = 0; last4n = 0; weakBurst = false;
     }
 
     // A failed burst at time t on `carrier`: add it to the kept bursts of the same beacon (same carrier, at the repeat interval or a multiple of it),
@@ -635,16 +635,17 @@ struct SarsatReceiver::Impl {
             int confirmed = 0;
             if (got && coherentOn) {
                 const bool sure = b.corrected == 0 || (b.corrected == 1 && (!b.longMsg || b.bch2Ok));
-                pending.erase(std::remove_if(pending.begin(), pending.end(), [&](const Pending& q) { return tBurst - q.t > 4 * perMax + 2; }), pending.end());
-                auto same = std::find_if(pending.begin(), pending.end(), [&](const Pending& q) { return q.hexId == b.hexId && std::fabs(q.carrier - carrier) <= 150.0; });
-                if (same != pending.end()) { confirmed = 1; pending.erase(same); }
+                heldIds.erase(std::remove_if(heldIds.begin(), heldIds.end(), [&](const Pending& q) { return tBurst - q.t > 4 * perMax + 2; }), heldIds.end());
+                auto same = std::find_if(heldIds.begin(), heldIds.end(), [&](const Pending& q) { return q.hexId == b.hexId && std::fabs(q.carrier - carrier) <= 150.0; });
+                const bool found = same != heldIds.end();
+                if (found) { confirmed = 1; heldIds.erase(same); }
                 else if (!sure) {
                     Pending q; q.t = tBurst; q.carrier = carrier; q.hexId = b.hexId;
-                    pending.push_back(q);
-                    if (pending.size() > 16) pending.erase(pending.begin());
+                    heldIds.push_back(q);
+                    if (heldIds.size() > 16) heldIds.erase(heldIds.begin());
                     held = true;
                 }
-                if (sure && same == pending.end()) pending.erase(std::remove_if(pending.begin(), pending.end(), [&](const Pending& q) { return std::fabs(q.carrier - carrier) <= 150.0; }), pending.end());
+                if (sure && !found) heldIds.erase(std::remove_if(heldIds.begin(), heldIds.end(), [&](const Pending& q) { return std::fabs(q.carrier - carrier) <= 150.0; }), heldIds.end());
             }
             if (got && held) heldBursts++;
             if (got && !held) {
