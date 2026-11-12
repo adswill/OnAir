@@ -2004,3 +2004,5 @@ View > Layout > Workspace: a blank canvas of blocks (radio source, spectrum and 
 - Flow: Send to (radio / dummy load / IQ file), ARM then TRANSMIT, STOP always visible, Space / Esc stop only, colour states with time left, auto-disarm, Sent table. `app/panels/tx_api.h` for the Ham station.
 - Tests: tx_param_model (every row changes the signal, no undeclared key), tx_loopback_tv / tx_loopback_rest (TX -> RX with noise and offset from the table defaults and combinations). Simulated only.
 - (feat40-tx, results) quick.yml Linux: tx_param_model passes (197 modes / sub-modes, 2057 rows change the IQ, 476 marked, 0 undeclared keys; the first run found 66 dead rows, all fixed or marked); tx_loopback_tv 10/10, tx_loopback_rest 27/28 (Olivia 8 / 500 info); tx, tx_params, tx_control, tx_dtmf, tx_loraaprs pass; app TX objects compile. App not linked or run (battery: no local build).
+## 2026-11-12 sensitivity A4
+feat40-sensA4: iMet-54 and MRZ slicer threshold from the smoothed extremes (iMet-54 about 2.3 dB, MRZ about 4.5 dB, simulated). Details in docs/SENSITIVITY-4.0-A4.md.

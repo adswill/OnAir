@@ -105,7 +105,8 @@ void Decim::process(const cf32* in, size_t n, std::vector<cf32>& out) {
     }
 }
 
-void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint, double devHz) {
+void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint, double devHz, int thrMode) {
+    thrMode_ = thrMode;
     fs_ = fs; baud_ = baud; afsk_ = afsk; midpoint_ = midpoint;
     devHz_ = (afsk || midpoint) ? 0.0 : devHz;
     Lw_ = std::max(2, (int)std::lround(fs / baud));
@@ -129,7 +130,7 @@ void SymbolChain::init(double fs, double baud, bool afsk, bool midpoint, double 
 }
 
 void SymbolChain::reset() {
-    max_ = min_ = 0;
+    max_ = min_ = 0; midC_ = 0;
     afPos_ = 0;
     std::fill(afBuf_.begin(), afBuf_.end(), 0.f);
     afRe_[0] = afRe_[1] = afIm_[0] = afIm_[1] = 0;
