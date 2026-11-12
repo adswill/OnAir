@@ -142,6 +142,11 @@ int main() {
         printf("%-22s 20 dB, drift +6..-6 kHz: %5.1f %% (wrong %.0f)\n", framingName(fr), pct(r), r.wrong);
         if (pct(r) < 90 || r.wrong > 0) { printf("FAIL: %s through the drift\n", framingName(fr)); fails++; }
     }
+    {   // the 4800 baud narrow path: NGHam at 6 dB C/N in 25 kHz with the carrier 1.4 kHz off (3.9: no frame; 4.0: 96 to 100 %)
+        const Res r = runMany(Ngham + 1, 6, kScen[1], 6, 2, false);
+        printf("%-22s 6 dB, +1.4 kHz: %5.1f %%\n", framingName(Ngham), pct(r));
+        if (pct(r) < 75) { printf("FAIL: NGHam on the narrow path\n"); fails++; }
+    }
     const Res f = runMany(0, 0, kScen[0], 20, 2, true);
     printf("noise only: %.0f frames (%s)\n", f.got, byText(f).c_str());
     if (f.got > 0) { printf("FAIL: frames out of noise\n"); fails++; }

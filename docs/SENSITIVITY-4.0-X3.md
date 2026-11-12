@@ -10,21 +10,22 @@ New tests:
 * `test_sens40x3` (ctest `sens40x3`, tests/sens): runs the sens_sweep scenarios through a fresh receiver per trial. A trial passes when it
   counts at least half the units of a clean run (as sens_sweep does). It prints pass rate, mean unit fraction and process CPU for the new
   path and the 3.9 path. With no environment it is a guard: ISDB-T TU6 at 26 dB and AWGN at 20 dB must pass, and noise alone must give no
-  packet. `ONAIR_SENS_CALIBRATE=1` gives the table (`X3_MODES`, `X3_SCEN`, `X3_TRIALS`, `X3_SNR=hi:lo:step`, `X3_SECS`).
+  packet. `ONAIR_SENS_CALIBRATE=1` gives the table (`X3_MODES`, `X3_SCEN`, `X3_TRIALS`, `X3_SNR=hi:lo:step`, `X3_SECS`; per mode
+  `X3_SNR_<id>`, `X3_SCEN_<id>`).
 * `test_cubesat_narrow` (ctest `cubesat_narrow`, tests/cubesat): runs each CubeSat framing at a series of C/N values, with the carrier still,
   held at +-1.4 kHz (just under the AFC threshold, so never corrected), or drifting from +6 to -6 kHz over the run. It reports frames decoded
-  against frames sent, wrong frames, and frames out of noise alone, for the 4.0 and the 3.9 receiver. With no environment it is a guard;
-  `ONAIR_SENS_CALIBRATE=1` gives the table.
+  against frames sent, wrong frames, and frames out of noise alone, for the 4.0 and the 3.9 receiver. With no environment it is a guard: every framing through the drift at 20 dB, NGHam at 6 dB with a
+  1.4 kHz error, and no frame out of noise. `ONAIR_SENS_CALIBRATE=1` gives the table.
 
 ## 1. ISDB-T: channel estimation in time (the TU6 gap)
 
-**Harness check first.** C1 suspected that the harness ran without time interpolation (I = 0). It does not: the synth
+**Harness check first.** C1 suspected that the harness ran without time interleaving (I = 0). It does not: the synth
 (core/src/engine/modes.cpp `IsdbtSynth`) sends layer B (12 segments, 64-QAM 3/4) with time-interleaving code 1, which is I = 1 in mode 3.
 Layer A is QPSK 2/3 with code 2. So the measurement was right, and the gap was in the receiver.
 
 **Cause.** `isdbt_demod.cpp` equalised every symbol with the newest scattered pilot of each grid point (every third carrier). That pilot is
 0 to 3 symbols old (up to 3.4 ms in mode 3). At 10 Hz Doppler the hold error averages about -20 dB against the channel. That is an error
-floor just under what 64-QAM 3/4 needs in fading: the 3.9 receiver had no 90 % point at 30 dB in TU6 (sweep table: `-`). The noise
+floor just under what 64-QAM 3/4 needs in fading: the 3.9 receiver reached 90 % in TU6 only at 30 dB (the 3.6 table had no point at all). The noise
 estimate (half the power of the pilot change over four symbols) also counted the Doppler as noise. There was no averaging over time and
 no delay window, so the estimate carried the full noise of one pilot. The DVB-T receiver already does all three.
 

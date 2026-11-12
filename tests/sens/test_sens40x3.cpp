@@ -5,7 +5,7 @@
 // so before and after come from one binary on one machine. Process CPU time of each run is printed next to it.
 //   default: a short guard (the improved scenario at a fixed SNR must pass, noise alone must give nothing)
 //   ONAIR_SENS_CALIBRATE=1: the before / after table. X3_MODES (regex, default isdbt), X3_SCEN (regex, default awgn|echo|tu6|rician|phasenoise|combined),
-//   X3_TRIALS (8), X3_SNR "hi:lo:step" (per mode default), X3_SECS (trial length, default the mode's)
+//   X3_TRIALS (8), X3_SNR "hi:lo:step" (per mode default), X3_SECS (trial length, default the mode's), X3_FD (Doppler, Hz)
 // Simulated signals only: no recording is involved.
 #include "sens_modes_d.h"
 #include <algorithm>
@@ -139,6 +139,7 @@ int main() {
             if (!std::regex_match(m0.id, modeRe)) continue;
             Mode m = m0;
             if (getenv("X3_SECS")) m.secs = atof(getenv("X3_SECS"));
+            if (getenv("X3_FD")) m.fdHz = atof(getenv("X3_FD"));   // Doppler of the fading scenarios (a car: 50 to 100 Hz at UHF)
             const char* sw = offSwitch(m.id);
             double hi = m.snrHi, lo = m.snrHi - 20, st = 2;
             if (getenv("X3_SNR")) sscanf(getenv("X3_SNR"), "%lf:%lf:%lf", &hi, &lo, &st);
@@ -149,7 +150,7 @@ int main() {
             setOff(sw, false);
             const int thr = std::max(1, std::min(threads, m.maxJobs));
             const Prep P = prepare(m, m.secs, thr);
-            printf("== %s (%s): %.1f s trials, need %.1f units, %d trials a point, switch %s\n", m.id.c_str(), m.name.c_str(), m.secs, P.need, n, sw ? sw : "-");
+            printf("== %s (%s): %.1f s trials, need %.1f units, %d trials a point, Doppler %.0f Hz, switch %s\n", m.id.c_str(), m.name.c_str(), m.secs, P.need, n, m.fdHz, sw ? sw : "-");
             for (const auto& sc : scenarios(m)) {
                 if (!std::regex_match(sc.name, scenRe) || !std::regex_match(sc.name, modeScen)) continue;
                 printf("-- %s\n   SNR    new pass/frac/cpu      old pass/frac/cpu\n", sc.name.c_str());
