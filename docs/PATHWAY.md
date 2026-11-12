@@ -1905,6 +1905,7 @@ DVB-T scheme is ported (8-symbol delay, cubic in time, adaptive averaging, Doppl
 echo/phase noise/combined 2 dB, AWGN 1 dB, 0 false, CPU +3 %. CubeSat: narrow 9600 (+-8.5 kHz, new optional third FmFront channel) and
 4800 (+-4.5 kHz) paths beside the wide ones: NGHam / Mobitex about 2 dB, 9600 framings 0.3 to 0.9 dB, with +-1.4 kHz and a 12 kHz drift;
 U482C DC block (it failed with any carrier error under the AFC threshold); narrow paths need two good Mobitex blocks and skip the Mode 6 RS
-salvage (noise-only frames equal to 3.9). ATSC 3.0: per-cell channel state in the data and L1 soft bits; harness echo 0 -> 80 us. ATSC 1.0
+salvage (noise-only frames equal to 3.9). ATSC 3.0: per-cell channel state in the data and L1 soft bits (TU6 lost a frame in five to L1 failures): TU6 16 -> 6 dB, AWGN unchanged;
+harness echo 0 -> 80 us. ATSC 1.0
 left to feat40-atsc. Tests sens40x3, cubesat_narrow. docs/SENSITIVITY-4.0-X3.md.
 

@@ -23,7 +23,7 @@ New tests:
 |---|---|
 | ISDB-T (64-QAM 3/4, mode 3) | **TU6 30 -> 21 dB (9 dB)**, echo 20 -> 18, phase noise 19 -> 17, combined 20 -> 18, Rician 19 -> 18, AWGN 18 -> 17; Rician at 70 Hz Doppler none -> 22 dB; 0 false; CPU +3 % |
 | CubeSat narrow paths | NGHam and Mobitex about **2 dB**, AX100 Mode 5 1.7 dB, USP / CCSDS concatenated 0.8 dB, CCSDS RS 0.3 to 0.6 dB, the same with a 1.4 kHz error and through a 12 kHz drift; U482C now decodes with a carrier error under the AFC threshold (3.9: not at all); noise only 2 frames in both |
-| ATSC 3.0 | per-cell channel state for data and L1: no loss anywhere, 0.5 to 1 dB below the 90 % points in echo / Rician / combined; TU6: section 3.2 |
+| ATSC 3.0 (QPSK 8/15) | per-cell channel state for the data and the L1 cells: **TU6 16 -> 6 dB (10 dB)**; echo / Rician / combined 0.5 to 1 dB below their 90 % points; AWGN unchanged; 0 false |
 | ATSC 1.0 | written and reverted untested: overlaps feat40-atsc (below) |
 | sens harness | ATSC 3.0 echo moved from 0 us to 80 us; DVB-T, DVB-T2, DAB, DTMB, FM, DRM: penalties listed, not changed (below) |
 
@@ -209,6 +209,19 @@ noise figure and **no fade erasure at all**, so a cell in a deep fade entered th
 Change: `demodulatePreambleSymbol` returns each cell's |h|^2 / mean weight. It goes through the frequency de-interleaver and the
 L1-Detail block de-interleaver into `decodeBlock`, which scales each cell's soft bits by it. The switch is the same `DECT2_ATSC3_NOCSI`.
 Result: section 3.2.
+
+### 3.2 Data and L1 channel state together (run 43166278405, same method)
+
+| scenario | 3.9 | 4.0 |
+|---|---|---|
+| AWGN | 2 dB | 2 dB (same at every point) |
+| TU6, 10 Hz | 16 dB; 81 % of the units even at 22 dB | **6 dB** (4 dB: 50 %); 96 % at 22 dB |
+| Rician K = 10 dB | 4 dB (2 dB: 17 %) | 4 dB (2 dB: 50 %) |
+| combined | 6 dB (4 dB: 0 %) | 6 dB (4 dB: 83 % of trials, 57 % of the units) |
+| noise only, 12 runs | 0 | 0 |
+
+**TU6 16 -> 6 dB**: the penalty against AWGN drops from 14 dB to 4 dB. CPU +0 to 5 %. The other ATSC 3.0 tests pass (`atsc3_l1`,
+`_preamble`, `_frame`, `_receiver`, `_engine`, `_synth_rx`, `_realworld`, `_datapath`). sens40x3 guards it: TU6 at 10 dB must pass.
 
 
 ## Not done / not changed
