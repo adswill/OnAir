@@ -103,14 +103,17 @@ inline Fit fitComb(const Psd& p, const std::vector<double>& tones, double halfW,
     const double nb = p.noiseBin(edge);
     double fmin = tones[0], fmax = tones[0];
     for (double f : tones) { fmin = std::min(fmin, f); fmax = std::max(fmax, f); }
-    const double reach = halfW + guards * guardStep;
     double bestScore = -1e300, bestIn = 0; int binsIn = 0;
     for (double df = dfLo; df <= dfHi; df += bh) {
-        if (fmin + df - reach < -edge || fmax + df + reach > edge) continue;
+        if (fmin + df - halfW < -edge || fmax + df + halfW > edge) continue;
         double in = 0; int nIn = 0;
         for (double f : tones) { int c = 0; in += p.band(f + df - halfW, f + df + halfW, &c); nIn += c; }
-        double gout = 0;
-        for (int g = 1; g <= guards; g++) { gout += p.band(fmin + df - g * guardStep - halfW, fmin + df - g * guardStep + halfW); gout += p.band(fmax + df + g * guardStep - halfW, fmax + df + g * guardStep + halfW); }
+        double gout = 0;   // guard tones outside the band count as empty
+        for (int g = 1; g <= guards; g++) {
+            const double a = fmin + df - g * guardStep, b = fmax + df + g * guardStep;
+            if (a - halfW >= -edge) gout += p.band(a - halfW, a + halfW);
+            if (b + halfW <= edge) gout += p.band(b - halfW, b + halfW);
+        }
         const double score = in - gout;
         if (score > bestScore) { bestScore = score; best.df = df; bestIn = in; binsIn = nIn; }
     }
@@ -271,7 +274,8 @@ private:
         double d = f.df - df_;
         if (s.periodic && s.spacing > 0) d -= s.spacing * std::round(d / s.spacing);   // a comb moved by whole tones is the same signal
         if (std::fabs(d) <= s.track) df_ += 0.5 * d;
-        else { lost(); df_ = f.df; ph_ = 0; restart(); for (const cf32& v : hist_) mixOut(v); }
+        // a larger jump of the best offset is noise on a broad maximum, or another signal: the lock stays until the tones are gone
+        // (a relock with a replay would read the same traffic twice)
     }
     void mixOut(cf32 v) {
         const cf32 lo((float)std::cos(ph_), (float)-std::sin(ph_));

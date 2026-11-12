@@ -66,7 +66,7 @@ protected:
     Search search() const override {
         Search s;
         s.tones = {-kShift / 2, kShift / 2};
-        s.halfW = std::min(0.35 * kShift, kBaud); s.guardStep = kShift; s.guards = 1; s.minZ = 9;
+        s.halfW = std::min(0.35 * kShift, kBaud); s.guardStep = kShift; s.guards = 0; s.minZ = 9;
         s.dfLo = -3200; s.dfHi = 3200; s.track = 20; s.periodic = false; s.replaySec = 16;
         return s;
     }
@@ -100,6 +100,7 @@ private:
     static constexpr double kQualityOpen = 0.7;   // mean |mark - space| / (mark + space) over 16 bit times; noise gives 0.5
     void character(int code, bool ok) {
         if (!ok) ferr_++;
+        if (!ok && line_.empty()) return;   // the reversals and other noise before a line are not text
         if (code == 0 || code == 27 || code == 31) return;
         if (code == 2 || code == 8) { flush(); return; }
         line_ += ok ? baudotFigure(code) : "?";

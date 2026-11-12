@@ -39,6 +39,7 @@ int main() {
         const auto t = run(x40::Gw, x, c.fs, c.rxOff);
         const bool m1 = has(t, "Channel marker", "0xfa (KPH, San Francisco, USA)"), m2 = has(t, "Channel marker", "0xcc (LFI"), p1 = has(t, "Packet", "| AB12E3"), p2 = has(t, "Packet", "MMSI : 235012389"), p3 = has(t, "Packet", "| WN,7.<");
         printf("  %-44s markers %d %d, text %d %d, MMSI %d | %s\n", c.what, m1, m2, p1, p3, p2, t.headline.c_str());
+        if (!(m1 && m2 && p1 && p2 && p3)) { for (auto& f : t.facts) printf("    %s: %s\n", f.first.c_str(), f.second.c_str()); for (auto& r : t.rows) printf("    [%s] %s %s\n", r.kind.c_str(), r.id.c_str(), r.text.c_str()); }
         CHECK(m1 && m2 && p1 && p2 && p3, "%s: markers %d %d text %d %d MMSI %d", c.what, m1, m2, p1, p3, p2);
         CHECK(packets(t) == 5, "%s: %d rows for 5 bursts", c.what, packets(t));
     }

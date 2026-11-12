@@ -32,6 +32,7 @@ int main() {
         const auto t = run(x40::F01, x, c.fs, c.rxOff);
         const int f = groupsFound(g, rowText(t, "Text"));
         printf("  %-46s %2d / %zu groups | %s\n", c.what, f, g.size(), t.headline.c_str());
+        if (f < (int)g.size() - 1) printf("%s", rowText(t, "Text").c_str());
         CHECK(f >= (int)g.size() - 1, "%s: %d of %zu groups", c.what, f, g.size());
     }
     printf("noise sweep (dial +12 Hz, clock +200 ppm): groups right\n");

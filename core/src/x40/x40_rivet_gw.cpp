@@ -118,17 +118,19 @@ private:
         std::vector<double> p((size_t)kFrame);
         for (int i = 0; i < kFrame; i++) p[(size_t)i] = std::norm(a[(size_t)((i - kFrame / 2 + kFrame) % kFrame)]);
         const int w = std::max(3, (int)std::lround(310.0 / binHz_)), lo = (int)(kFrame / 2 - 0.42 * rate_ / binHz_), hi = (int)(kFrame / 2 + 0.42 * rate_ / binHz_);
-        double best = 0, s = 0;
+        double best = 0, s = 0; int at = lo;
         for (int i = lo; i < lo + w; i++) s += p[(size_t)i];
         best = s;
-        for (int i = lo + w; i < hi; i++) { s += p[(size_t)i] - p[(size_t)(i - w)]; best = std::max(best, s); }
+        for (int i = lo + w; i < hi; i++) { s += p[(size_t)i] - p[(size_t)(i - w)]; if (s > best) { best = s; at = i - w + 1; } }
+        // inside a burst its end is judged where the burst started (the strongest stretch of plain noise is well above the mean)
+        if (inBurst_) { best = 0; for (int a = std::max(lo, at0_ - 2); a <= std::min(hi - w, at0_ + 2); a++) { double q = 0; for (int i = a; i < a + w; i++) q += p[(size_t)i]; best = std::max(best, q); } }
         std::vector<double> v(p.begin() + lo, p.begin() + hi);
         std::nth_element(v.begin(), v.begin() + (long)(v.size() / 2), v.end());
         const double nb = std::max(v[v.size() / 2] / 0.69, 1e-30);   // median of exponential bins / mean
         const double r = best / (nb * w);
         const bool on = r > 3.0, off = r < 1.6;
         if (!inBurst_) {
-            if (on) { if (++on_ >= 2) { inBurst_ = true; off_ = 0; burst_ = prev_; } } else on_ = 0;
+            if (on) { if (++on_ >= 2) { inBurst_ = true; off_ = 0; burst_ = prev_; at0_ = at; } } else on_ = 0;
         }
         if (inBurst_) {
             burst_.insert(burst_.end(), fr_.begin(), fr_.end());
@@ -189,6 +191,7 @@ private:
                 if (parse(s->substr((size_t)off), snr, f.df)) { out->good(snr, f.df); return; }
             }
         unknown_++; out->bad();
+        out->row("Unknown", fmt("%zu bits", bits.size()), bits.size() > 200 ? bits.substr(0, 200) + "..." : bits, snr);   // Rivet's "display bad packets"
     }
     static std::vector<int> bytesFrom(const std::string& s, size_t start) {
         std::vector<int> v;
@@ -268,7 +271,7 @@ private:
     }
     Front front_; double rate_ = kWork, binHz_ = 1;
     std::vector<float> win_; std::vector<cf32> fr_, prev_, burst_; std::deque<double> hist_;
-    bool inBurst_ = false; int on_ = 0, off_ = 0;
+    bool inBurst_ = false; int on_ = 0, off_ = 0, at0_ = 0;
     int packets_ = 0, markers_ = 0, bursts_ = 0, unknown_ = 0, posFrag_ = 0; bool posOn_ = false, shore_ = false;
     double lastTones_ = 0; std::string posRep_, lastFrag_, lastStation_;
 };

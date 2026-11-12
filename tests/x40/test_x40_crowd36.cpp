@@ -28,6 +28,7 @@ int main() {
         const auto t = run(x40::Crowd36, x, c.fs, c.rxOff);
         const int f = groupsFound(g, rowText(t, "Text"));
         printf("  %-40s %2d / %zu groups, sync %d | %s\n", c.what, f, g.size(), countKind(t, "Sync"), t.headline.c_str());
+        if (f < (int)g.size() - 1) printf("%s", rowText(t, "Text").c_str());
         CHECK(f >= (int)g.size() - 1, "%s: %d of %zu groups", c.what, f, g.size());
         CHECK(countKind(t, "Sync") >= 1, "%s: no sync", c.what);
     }
