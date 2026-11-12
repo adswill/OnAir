@@ -1227,7 +1227,7 @@ private:
     // correction, offset mixer, noise blanker, the spectrum and second-mode copies, the decode shift) and hands each block, in order, to
     // this stage, which feeds the receiver. Before anything that reads or resets the receiver (telemetry, a reset, a gap mark) the analysis
     // thread waits until the stage is idle, so the receiver gets the same blocks in the same order as on one thread: the same results.
-    struct RxBlock { std::vector<cf32> x; int std = 0; uint64_t raw = 0; };
+    struct RxBlock { std::vector<cf32> x; int mode = 0; uint64_t raw = 0; };   // mode: the active standard when the block left the front end
     std::unique_ptr<StagePipeline<RxBlock>> rxPipe_;   // analysis thread (created and destroyed by analysisLoop)
     std::mutex rxFreeMu_;
     std::vector<std::vector<cf32>> rxFree_;            // block storage handed back by the stage

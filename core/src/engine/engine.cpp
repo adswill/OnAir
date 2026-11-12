@@ -122,7 +122,7 @@ void Engine::ingest(cf32* x, size_t n) {
             RxBlock b;
             { std::lock_guard<std::mutex> lk(rxFreeMu_); if (!rxFree_.empty()) { b.x = std::move(rxFree_.back()); rxFree_.pop_back(); } }
             b.x.assign(x, x + n);
-            b.std = activeStd_.load();
+            b.mode = activeStd_.load();
             b.raw = pendingRaw_; pendingRaw_ = 0;
             rxPipe_->push(std::move(b));
         } else feedRx(x, n);

@@ -126,7 +126,7 @@ void Engine::rxPipeRun(RxBlock&& b) {
     }
     const uint64_t c0 = cpu::threadNs();
     if (b.raw) hwtime::board().consumed(&ring_, b.raw);
-    if (!b.x.empty()) feedReceiver(b.std, b.x.data(), b.x.size());
+    if (!b.x.empty()) feedReceiver(b.mode, b.x.data(), b.x.size());
     rxPipeCpuNs_.fetch_add(cpu::threadNs() - c0, std::memory_order_relaxed);
     std::lock_guard<std::mutex> lk(rxFreeMu_);
     if (rxFree_.size() < 8) rxFree_.push_back(std::move(b.x));
