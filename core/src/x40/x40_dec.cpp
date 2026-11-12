@@ -50,6 +50,7 @@ std::unique_ptr<x40::Decoder> x40::makeDecoder(int v) {
     case Marker: return makeMarker();
     case FskModem: return makeFskModem();
     case SsrInt: return makeSsrInt();
+    case Dcr: return makeDcr();
     default: return nullptr;
     }
 }
@@ -105,6 +106,7 @@ ModeTuning x40Tuning(int v) {
         {"marker", 74.5, 75.5, 75.0, 48000, 24000, 0.012, true},
         {"fskmodem", 0.1, 6000, 7.85, 48000, 24000, 0.004, false},
         {"ssrint", 1000, 1100, 1030.0, 4000000, 2000000, 2.0, false},
+        {"dcr", 150, 470, 351.2875, 250000, 48000, 0.0125, false},
     };
     if (v < 0 || v >= kNumVariants) return t;
     const T& e = k[v];

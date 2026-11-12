@@ -1907,3 +1907,7 @@ Clean-signal probe of the sens harness; NAVTEX/SITOR-B rows were 5 dB off (baked
 
 ## 2026-11-12: menus 4.0 (feat40-menus)
 Tools menu split into 9 groups with search, Plugin store entry, Mode menu one submenu per category (chunks over 25), View reduced to 9 entries (Theme / Layout / Text / Time / Reset view / Power and system). docs/MENUS-4.0.md; test menu_groups. Syntax-checked only, CI pending.
+
+## 2026-11-12: DCR, Japan's digital convenience radio (feat40-dcr)
+- New mode DCR (ARIB STD-T98 volume 3, 4-level FSK, family 782, x40 variant 45): user codes, manufacturer numbers, normal / privacy calls, end of call, 9-digit BCD call sign, data blocks, manufacturer messages; the voice frames are counted. Channel plan of the standard (351 / 467 / 465 / 154 MHz, relay pairs) and a scan of the active channels of a wide capture. docs/DCR-4.0.md lists what it shares with NXDN48 (physical layer, coding, sync, whitening) and what differs (RICH, SACCH units, user code, PICH call sign, deviation).
+- The standard's chapter 7 test frames reproduce bit for bit from the NXDN coding layer (python check), and the receiver reads them. Test `x40_dcr`; no real DCR recording was available.

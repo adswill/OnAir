@@ -4453,3 +4453,4 @@ Power and system	Energie und System
 Reset view	Ansicht zurücksetzen
 Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode	Zurück zur Standardoberfläche: neue Oberfläche mit klassischen Panels, Seitenleiste, kein Andocken, kein Touch-Modus
 Forgets the saved window positions of every mode and the sizes of the panels	Vergisst die gespeicherten Fensterpositionen aller Modi und die Panelgrößen
+Digital voice, DCR 6.25 kHz	Digitalfunk, DCR 6,25 kHz

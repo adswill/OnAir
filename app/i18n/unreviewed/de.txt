@@ -1022,3 +1022,4 @@ Power and system
 Reset view
 Back to the default interface: the new interface with classic panels, the Sidebar arrangement, no docking, no touch mode
 Forgets the saved window positions of every mode and the sizes of the panels
+Digital voice, DCR 6.25 kHz
