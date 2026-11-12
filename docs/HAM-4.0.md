@@ -62,6 +62,8 @@ what 4.0 adds, and what is still missing.
   - Band hopping by a UTC schedule ("0000-0600 40m", "1600-2000 auto"), "auto" choosing the band with the most decodes of the last hour
     and visiting the others now and then; only while no QSO or message is pending.
   - CW speed matching: the keyer follows the WPM of the CW station in focus (outliers ignored, 5 to 45 WPM).
+  - Split "fake it" (slot modes with a CAT rig, opt-in): for each burst the rig's dial moves in 500 Hz steps so the audio stays between
+    1500 and 2000 Hz, then comes back; the RF frequency and the TX gate's check are those of the real signal.
   - Auto log on QSO completion (as before), with the activation, hunted reference and callbook fields.
 - **Logbook tools** (Log tab): Cabrillo import (the export existed, so a contest log round-trips), QSL confirmations merged from a LoTW,
   eQSL or card-list ADIF file (same base call, band, mode class, start within 30 minutes; also the DXCC, zones, state, grid the service
@@ -104,9 +106,6 @@ documented field names. The UI was built on GitHub (quick.yml); it has not been 
 ## Not done / next
 - FT8 contest messages (ARRL Field Day, RTTY Roundup, NA VHF, EU VHF in the 77-bit message types): the contest mode logs the exchange of
   the keyboard modes; the FT8 special messages need the encoder's other message types.
-- Fake-it split for FT8 (shifting the dial in 500 Hz steps to keep the audio between 1500 and 2000 Hz): `fakeItSplit()` is written and
-  tested, the slot transmitter does not use it yet (it would retune the rig around each burst; that belongs to the transmitter panel, owned
-  by feat40-tx).
 - Band hopping changes the band only, not the mode, of a schedule line.
 - FST4W beacon (like the WSPR beacon) and Q65 / FST4 periods other than 60 s in the Ham view.
 - Auto upload to LoTW: TQSL runs only on the button.

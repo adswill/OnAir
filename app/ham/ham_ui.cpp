@@ -101,6 +101,7 @@ struct HamUi {
     double txSlot = 0;
     int rigSel = -1;
     float level = 0.4f;
+    bool fakeIt = false;                // 4.0: WSJT-X "fake it" split: the rig's dial moves in 500 Hz steps so the TX audio stays at 1500 .. 2000 Hz
     ham::HamUploader up;                // logbook uploads: off by default, see uploadSection()
     ham::UpConfig upCfg;
     char qrzKey[64] = {}, clubEmail[64] = {}, clubPw[64] = {}, clubApi[64] = {}, eqslUser[32] = {}, eqslPw[64] = {};
@@ -165,6 +166,7 @@ void load(HamUi& h) {
     h.rigSel = (int)p.getI("ham.rig", -1);
     h.io.device = p.getS("ham.audioOut", "");
     h.txHz = (float)p.getD("ham.txHz", 1500);
+    h.fakeIt = p.getB("ham.fakeIt", false);
     h.logPath = plat::dataDir() + "/onair_ham.adi";
     h.worked.load(h.logPath);
     h.eng.onLog = [&h](const ham::QsoRecord& q) { logRecord(h, q); };
@@ -476,6 +478,11 @@ void hamPanel(App& a) {
         ImGui::SameLine(); ImGui::SetNextItemWidth(90 * gUi);
         ImGui::SliderFloat(tr("Level"), &h.level, 0.05f, 0.9f, "%.2f");
         if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Audio level into the rig. Set it so the rig shows no ALC action and the power stays low."));
+        ImGui::SameLine();
+        ImGui::BeginDisabled(h.rigSel < 0);
+        if (ImGui::Checkbox(tr("Split (fake it)"), &h.fakeIt)) { plat::basePrefs().setB("ham.fakeIt", h.fakeIt); plat::basePrefs().flush(); }
+        ImGui::EndDisabled();
+        if (ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled)) ImGui::SetTooltip("%s", tr("Slot modes with a CAT rig: for each transmission the rig's dial moves in 500 Hz steps so your audio stays between 1500 and 2000 Hz (cleaner, no harmonics in the passband), and comes back after. The RF frequency is the same."));
     };
     hamSetupWizard(a, h.call, sizeof h.call, h.grid, sizeof h.grid, h.licence, rigWidgets, [&h] { save(h); });
 
@@ -577,9 +584,19 @@ void hamPanel(App& a) {
                     if (!why.empty()) h.status = "Warning: " + why;   // sent anyway: the operator is responsible
                     h.txMsg = msg; h.txSlot = ss; h.txState = 1; h.txBeacon = isBeacon; h.txOverride = ovr;
                     const double hz = g.audioHz, lv = h.level; const int md = h.mode, sb = h.sub;
-                    h.worker = std::thread([&h, g, md, msg, hz, lv, sb] {
+                    const bool fake = h.fakeIt && h.rigSel >= 0 && !isBeacon;
+                    h.worker = std::thread([&h, g, md, msg, hz, lv, sb, fake] {
                         std::string err;
-                        const bool ok = h.tx.send(g, md, msg, hz, lv, err, sb);
+                        ham::HamTxCheck gg = g;
+                        double ahz = hz;
+                        bool moved = false;
+                        if (fake) {   // the same RF frequency: dial + shift, audio - shift (4.0)
+                            const ham::SplitTx sp = ham::fakeItSplit(hz);
+                            std::string e2;
+                            if (sp.dialShiftHz != 0 && h.io.ensureOpen(e2) && h.io.link.setFreq(g.dialHz + sp.dialShiftHz, e2)) { gg.dialHz = g.dialHz + sp.dialShiftHz; ahz = sp.audioHz; moved = true; }
+                        }
+                        const bool ok = h.tx.send(gg, md, msg, ahz, lv, err, sb);
+                        if (moved) { std::string e2; h.io.link.setFreq(g.dialHz, e2); }
                         std::lock_guard<std::mutex> l(h.mu);
                         h.txErr = err;
                         h.txState = ok ? 2 : 3;
