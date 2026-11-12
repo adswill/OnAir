@@ -29,3 +29,5 @@ void d40AisFeed(const AisTelemetry& t, double lat, double lon);   // d40_ais_ui.
 void d40AisRangeCard(const AisTelemetry& t);
 void d40PagerFeed(const PagerTelemetry& t);   // d40_pager_ui.cpp: paged capcodes into the group finder
 void d40PagerGroupsCard();
+void d40SarsatFeed(const dect2::SarsatTelemetry& t);   // d40_sarsat_ui.cpp: beacons grouped into incidents
+void d40SarsatIncidentsCard();

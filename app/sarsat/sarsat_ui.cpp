@@ -3,6 +3,7 @@
 #include "dect2/common/time_fmt.h"
 #include "dect2/common/timecompat.h"
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "state/results_export.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/sarsat/sarsat_rx.h"
@@ -162,6 +163,7 @@ void details(App& a, const dect2::SarsatEntry& e) {
 
 void beaconsView(App& a) {
     const dect2::SarsatTelemetry& t = a.rx.sarsat;
+    d40SarsatIncidentsCard();   // 4.0: incidents grouped by beacon (app/d40)
     if (t.log.empty()) {
         ImGui::TextDisabled("%s", tr("no beacon decoded yet; a beacon sends a burst about every 50 seconds"));
         return;
