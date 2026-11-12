@@ -100,6 +100,7 @@ void Engine::catchUp() {
     if (!src_ || !src_->realtimeHardware()) return;
     const size_t skipped = ring_.dropBacklog();
     if (!skipped) return;
+    rxPipeFlush();   // the gap mark comes after the blocks before it (the receiver on its own thread, 4.0)
     if (activeStd_.load() == 0) rx_.markGap(skipped);
     skippedSamples_ += skipped;
     skipEvents_++;

@@ -2,6 +2,7 @@
 #pragma once
 #include "dect2/dsp/gpu_policy.h"
 #include "dect2/common/cpu_meter.h"
+#include "dect2/common/stage_pipeline.h"
 #include "dect2/dsp/iq_correct.h"
 #include "dect2/source/offset_tune.h"
 #include "dect2/dsp/exact_resampler.h"
@@ -357,6 +358,11 @@ public:
     uint64_t droppedSamples() const { return ring_.dropped(); }   // the OnAir side only, in samples (see sampleLoss())
     double backlogSec() const { const double r = srcRate_; return r > 0 ? (double)ring_.available() / r : 0; }   // samples waiting in the input ring, in seconds of signal
     SampleLoss sampleLoss() const;
+    // 4.0: the receiver on its own thread, behind the front end (docs/PERF-4.0.md). 0 = automatic (on with 4 or more hardware threads, from
+    // 4 Msps, not in Low power mode), 1 = always, 2 = never; ONAIR_RX_THREAD=0/1 overrides. Read at start(); the results are the same either way.
+    static void setRxThreadMode(int m);
+    static int rxThreadMode();
+    bool rxThreadActive() const { return rxPipeOn_.load(); }
     std::string loadProfile() const;   // seconds the analysis thread spent on the spectrum and on the receiver, and the signal it has processed (diagnostics)
 
     // Latest spectrum snapshot; returns true if newer than `lastSeq`.
@@ -1217,6 +1223,21 @@ private:
     uint64_t rxPub_ = 0;
     void publishRx(RxTelemetry&& t) { t.seq = ++rxPub_; rxTel_ = std::move(t); }
     std::thread th_;
+    // 4.0 (docs/PERF-4.0.md): the receiver on a thread of its own, behind the front end. The analysis thread runs the front end (IQ
+    // correction, offset mixer, noise blanker, the spectrum and second-mode copies, the decode shift) and hands each block, in order, to
+    // this stage, which feeds the receiver. Before anything that reads or resets the receiver (telemetry, a reset, a gap mark) the analysis
+    // thread waits until the stage is idle, so the receiver gets the same blocks in the same order as on one thread: the same results.
+    struct RxBlock { std::vector<cf32> x; int std = 0; uint64_t raw = 0; };
+    std::unique_ptr<StagePipeline<RxBlock>> rxPipe_;   // analysis thread (created and destroyed by analysisLoop)
+    std::mutex rxFreeMu_;
+    std::vector<std::vector<cf32>> rxFree_;            // block storage handed back by the stage
+    uint64_t pendingRaw_ = 0, rxPipeCpuSeen_ = 0;      // analysis thread
+    std::atomic<uint64_t> rxPipeCpuNs_{0};             // the stage thread's CPU time in the receiver
+    std::atomic<bool> rxPipeOn_{false};
+    void rxPipeStart();
+    void rxPipeStop();
+    void rxPipeFlush();
+    void rxPipeRun(RxBlock&& b);
     std::unique_ptr<power::ReceivingActivity> nap_;   // held while this engine receives: keeps macOS App Nap off only then (power/power.h)
     std::atomic<bool> running_{false}, stopReq_{false};
     std::atomic<uint64_t> startEpoch_{0};

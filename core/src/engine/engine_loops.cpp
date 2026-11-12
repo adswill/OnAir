@@ -16,6 +16,7 @@
 #include <chrono>
 #include "dect2/common/platform.h"
 #include "dect2/common/threadpool.h"
+#include "dect2/source/hw_time.h"
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
@@ -75,6 +76,62 @@ void Engine::spectrumLoop() {
     }
 }
 
+// ---- 4.0: the receiver on its own thread (engine.h, docs/PERF-4.0.md) -------------------------------------------------------------------
+
+namespace { std::atomic<int> gRxThreadMode{0}; }
+void Engine::setRxThreadMode(int m) { gRxThreadMode = m < 0 || m > 2 ? 0 : m; }
+int Engine::rxThreadMode() { return gRxThreadMode.load(); }
+
+// On or off for this run: decided once, when the analysis thread starts (a new start() decides again)
+void Engine::rxPipeStart() {
+    bool on;
+    const char* env = getenv("ONAIR_RX_THREAD");
+    if (env && *env) on = atoi(env) != 0;
+    else if (gRxThreadMode.load() == 1) on = true;
+    else if (gRxThreadMode.load() == 2) on = false;
+    else on = std::thread::hardware_concurrency() >= 4 && std::max(srcRate_, rate_.load()) >= 4e6 && !power::lowPower();
+    if (on && !threadingEnabled()) on = false;   // DECT2_THREADS=0: everything on the calling thread
+    rxPipeCpuNs_ = 0; rxPipeCpuSeen_ = 0; pendingRaw_ = 0;
+    if (on) rxPipe_ = std::make_unique<StagePipeline<RxBlock>>("onair-receiver", [this](RxBlock&& b) { rxPipeRun(std::move(b)); }, 4, QueuePolicy::Block);
+    rxPipeOn_ = (bool)rxPipe_;
+    if (rxPipe_) log("the receiver runs on its own thread, behind the front end");
+}
+
+void Engine::rxPipeStop() {
+    if (!rxPipe_) return;
+    rxPipe_->flush();
+    rxPipe_.reset();   // joins the stage thread
+    rxPipeOn_ = false;
+}
+
+// Waits until every block handed over has gone through the receiver. The wait counts as the receive path's time (the load and the overflow
+// classification see a receiver that is behind, not an idle front end).
+void Engine::rxPipeFlush() {
+    if (!rxPipe_) return;
+    const auto a0 = std::chrono::steady_clock::now();
+    rxPipe_->flush();
+    tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
+    const uint64_t pc = rxPipeCpuNs_.load(std::memory_order_relaxed);
+    tRxCpu_ += (double)(pc - rxPipeCpuSeen_) * 1e-9;
+    rxPipeCpuSeen_ = pc;
+}
+
+void Engine::rxPipeRun(RxBlock&& b) {
+    thread_local bool named = false;
+    if (!named) {   // the stage thread: the same standing as the analysis thread, its CPU to the decoder account
+        named = true;
+        setThreadName("onair-receiver");
+        setThreadPriority(ThreadPriority::Realtime);
+        cpu::bindThread(cpuDec_.load());
+    }
+    const uint64_t c0 = cpu::threadNs();
+    if (b.raw) hwtime::board().consumed(&ring_, b.raw);
+    if (!b.x.empty()) feedReceiver(b.std, b.x.data(), b.x.size());
+    rxPipeCpuNs_.fetch_add(cpu::threadNs() - c0, std::memory_order_relaxed);
+    std::lock_guard<std::mutex> lk(rxFreeMu_);
+    if (rxFree_.size() < 8) rxFree_.push_back(std::move(b.x));
+}
+
 void Engine::analysisLoop() {
     setThreadName("onair-analysis");
     setThreadPriority(ThreadPriority::Realtime); // the sample path must never wait for decoders or the UI
@@ -84,7 +141,9 @@ void Engine::analysisLoop() {
     SpectrumFrame f;
     uint64_t rxSeq = 0;
     rxStartNs_ = steadyNs();
+    rxPipeStart();
     while (!stopReq_) {
+        rxPipeFlush();   // the receiver has had every block before it is reset or read (a no-op when it runs on this thread)
         if (resetReq_.exchange(false)) {
             applyReset(); rxSeq = 0;
             for (auto& q : modeSeq_) q = 0;   // a reset receiver starts its report numbers again from 0: without this its reports would be ignored until it passed the old number (a retune froze TETRAPOL)
@@ -94,6 +153,7 @@ void Engine::analysisLoop() {
         while ((n = ring_.read(buf.data(), buf.size())) > 0) { ingest(buf.data(), n); if (std::chrono::steady_clock::now() > next + std::chrono::milliseconds(250)) break; } // keep publishing spectrum/telemetry even when the receiver is behind
         // 30 spectrum / telemetry updates a second; half of that in Low power mode, a few a second while the window is hidden and the user chose to save power
         next += std::chrono::milliseconds(power::pauseWhenHidden() ? 200 : power::lowPower() ? 66 : 33);
+        rxPipeFlush();   // telemetry, the radio watch and the mode switches below see the receiver as on one thread
         watchRadio();
         checkDelivery();
         syncMultiTv();
@@ -256,6 +316,7 @@ void Engine::analysisLoop() {
             else ring_.waitData(minN, std::chrono::duration_cast<std::chrono::microseconds>(next - now));
         }
     }
+    rxPipeStop();
 }
 
 }   // namespace dect2

@@ -278,6 +278,7 @@ int runChild(const Entry& en, double rate, double secs, const std::string& path,
     const double cpuEnd = cpuSeconds() - cpu0;
     const double wall = std::chrono::duration<double>(Clock::now() - tStart).count();
     threadStats(thr, busiest);
+    if (getenv("BENCH_DRAIN")) e.stop();   // --compare-rx: every block through the receiver before the results are read
     // steady state: from the point 25% of the signal was processed (skips plan creation and warm-up) when the run is long enough
     double cost = proc > 0 ? cpuEnd / proc : 0, startup = 0;
     if (secs >= 4 && proc > 0) {
@@ -376,6 +377,61 @@ std::string jstr(const std::string& s) {
     return o;
 }
 
+// --compare-rx (4.0, docs/PERF-4.0.md): every mode and rate with the receiver on the analysis thread (twice: the control) and on its own thread
+// (ONAIR_RX_THREAD), the engine drained before the results are read. The results (saved lists, blocks decoded, every transport-stream packet)
+// must be the same as on one thread wherever the two single-thread runs agree with each other; the speed is the max Msps of each.
+int compareRxThread(const std::string& self, const std::vector<const Entry*>& sel, const std::string& rates, double secs, double cpuLimit, double wallLimit,
+                    const std::string& tmpDir, bool spectrum) {
+    struct One { bool ok = false; std::string hash, cps; double blocks = 0, bytes = 0, maxMsps = 0, ts = 0; };
+    auto runCfg = [&](const Entry& e, const std::string& rs, const std::string& ss, const std::string& file, double rate, const char* rx) {
+        One o;
+        setenv("ONAIR_RX_THREAD", rx, 1);
+        setenv("BENCH_DRAIN", "1", 1);
+        std::vector<std::string> args{self, "--run", e.id, rs, ss, file};
+        if (spectrum) args.push_back("--spectrum");
+        const ChildResult c = spawn(args, cpuLimit, wallLimit);
+        const size_t jp = c.out.rfind('{');
+        if (c.status != 0 || jp == std::string::npos) return o;
+        const std::string j = c.out.substr(jp);
+        auto str = [&](const char* k) { const std::string kk = std::string("\"") + k + "\":\""; const size_t p = j.find(kk); if (p == std::string::npos) return std::string(); const size_t b = p + kk.size(); return j.substr(b, j.find('"', b) - b); };
+        o.ok = jnum(j, "processed") >= 0.9 * secs;
+        o.hash = str("result_hash"); o.cps = str("ts_cps");
+        o.blocks = jnum(j, "blocks_ok"); o.bytes = jnum(j, "result_bytes"); o.ts = jnum(j, "ts_n");
+        const double wf = jnum(j, "processed") > 0 ? jnum(j, "wall") / jnum(j, "processed") : 0;
+        o.maxMsps = wf > 0 ? rate / 1e6 / wf : 0;
+        return o;
+    };
+    auto same = [](const One& a, const One& b) { return a.ok && b.ok && a.hash == b.hash && a.cps == b.cps && a.blocks == b.blocks && a.bytes == b.bytes && a.ts == b.ts; };
+    int bad = 0;
+    printf("\n%-12s %9s %10s %10s %8s  %s\n", "mode", "rate Msps", "1 thread", "rx thread", "speed-up", "results");
+    for (auto* e : sel) for (double rate : ratesFor(*e, rates)) {
+        const std::string file = tmpDir + "/" + e->id + ".cs8";
+        char rs[64], ss[64];
+        snprintf(rs, sizeof rs, "%.4f", rate); snprintf(ss, sizeof ss, "%.3f", secs);
+        const ChildResult g = spawn({self, "--gen", e->id, rs, ss, file}, cpuLimit, wallLimit);
+        const size_t rp = g.out.find("RATE ");
+        if (g.status != 0 || rp == std::string::npos) { printf("%-12s %9.4g  generator failed\n", e->id.c_str(), rate / 1e6); continue; }
+        const double actual = atof(g.out.c_str() + rp + 5);
+        snprintf(rs, sizeof rs, "%.4f", actual);
+        const One a = runCfg(*e, rs, ss, file, actual, "0"), b = runCfg(*e, rs, ss, file, actual, "0"), c = runCfg(*e, rs, ss, file, actual, "1");
+        std::error_code ec;
+        std::filesystem::remove(file, ec);
+        const char* verdict;
+        if (!a.ok || !c.ok) { verdict = "run failed"; bad++; }
+        else if (!same(a, b)) verdict = same(a, c) || same(b, c) ? "same (one-thread runs differ from each other)" : "not comparable: one-thread runs differ from each other";
+        else if (same(a, c)) verdict = "same";
+        else { verdict = "DIFFERENT"; bad++; }
+        printf("%-12s %9.4g %10.1f %10.1f %7.2fx  %s (blocks %.0f, ts %.0f, results %.0f bytes)\n", e->id.c_str(), actual / 1e6, a.maxMsps, c.maxMsps,
+               a.maxMsps > 0 ? c.maxMsps / a.maxMsps : 0.0, verdict, c.blocks, c.ts, c.bytes);
+        fflush(stdout);
+    }
+    unsetenv("ONAIR_RX_THREAD"); unsetenv("BENCH_DRAIN");
+    std::error_code ec;
+    std::filesystem::remove_all(tmpDir, ec);
+    printf("1 thread / rx thread = the rate this machine sustains for the mode (max Msps, unpaced, spectrum %s); results compared after the engine drained\n", spectrum ? "on" : "off");
+    return bad ? 1 : 0;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -387,7 +443,7 @@ int main(int argc, char** argv) {
     }
     double secs = 10, cpuLimit = 240, wallLimit = 1200;
     std::string modes, rates = "both", outPrefix, tmpDir;
-    bool list = false, spectrum = false;
+    bool list = false, spectrum = false, compareRx = false;
     std::string stage, stId, stFile;
     double stRate = 0, stSecs = 0;
     for (int i = 1; i < argc; i++) {
@@ -397,6 +453,7 @@ int main(int argc, char** argv) {
         else if (a == "--mode") modes = next();
         else if (a == "--seconds") secs = atof(next().c_str());
         else if (a == "--rates") rates = next();
+        else if (a == "--compare-rx") compareRx = true;
         else if (a == "--timeout") cpuLimit = atof(next().c_str());
         else if (a == "--wall-timeout") wallLimit = atof(next().c_str());
         else if (a == "--out") outPrefix = next();
@@ -435,6 +492,7 @@ int main(int argc, char** argv) {
     }
     if (tmpDir.empty()) tmpDir = (std::filesystem::temp_directory_path() / ("bench_modes_" + std::to_string(getpid()))).string();
     std::filesystem::create_directories(tmpDir);
+    if (compareRx) return compareRxThread(self, sel, rates, secs, cpuLimit, wallLimit, tmpDir, spectrum);
     std::vector<Row> rows;
     for (auto* e : sel) for (double rate : ratesFor(*e, rates)) {
         Row r; r.id = e->id; r.name = e->name; r.rate = rate;
@@ -451,7 +509,9 @@ int main(int argc, char** argv) {
         } else {
             r.rate = actual;
             snprintf(rs, sizeof rs, "%.4f", actual);
-            const ChildResult c = spawn({self, "--run", e->id, rs, ss, file}, cpuLimit, wallLimit);
+            std::vector<std::string> args{self, "--run", e->id, rs, ss, file};
+            if (spectrum) args.push_back("--spectrum");   // (4.0: the flag reaches the run; it was parsed but not passed on)
+            const ChildResult c = spawn(args, cpuLimit, wallLimit);
             const size_t jp = c.out.rfind('{');
             if (c.timedOut) r.status = "timeout";
             else if (c.cpuLimit) r.status = "cpu-limit";

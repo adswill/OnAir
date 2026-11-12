@@ -1253,6 +1253,11 @@ if(DECT2_BUILD_TESTS)
     # 4.0 (docs/PERF-4.0.md): the rate the receive path sustains at high sample rates with the spectrum on, as in the app (max Msps column)
     add_test(NAME perf40_engine COMMAND bench_modes --mode fm,adsb,ais,dmr,pocsag --seconds 6 --rates 2.4,10,20 --spectrum)
     set_tests_properties(perf40_engine PROPERTIES TIMEOUT 1800 RUN_SERIAL TRUE)
+    # the receiver on its own thread (4.0): the same results as on one thread, and the speed of each, per mode and rate
+    add_test(NAME perf40_rx_thread COMMAND bench_modes --compare-rx --mode fm,adsb,ais,dmr,pocsag,airband --seconds 6 --rates 2.4,10,20 --spectrum)
+    set_tests_properties(perf40_rx_thread PROPERTIES TIMEOUT 3000 RUN_SERIAL TRUE)
+    add_test(NAME perf40_rx_thread_tv COMMAND bench_modes --compare-rx --mode t2,dvbt,dab,atsc --seconds 6 --rates default --spectrum)
+    set_tests_properties(perf40_rx_thread_tv PROPERTIES TIMEOUT 3000 RUN_SERIAL TRUE)
     # all-modes QA sweep (docs/QA-SWEEP-3.9.md): generator -> engine -> decoder clean, +/-2 kHz with +/-50 ppm, at 12 dB in-channel SNR and on noise
     # alone, plus retune / stop / restart and the CPU per mode. One binary, eight shards of the mode list; the names spread them evenly over the
     # CI shards (tools/ci_select.py hashes the test name)

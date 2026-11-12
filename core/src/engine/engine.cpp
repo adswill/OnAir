@@ -59,7 +59,8 @@ void Engine::ingest(cf32* x, size_t n) {
     // in the load and in the overflow classification as much as the receiver does)
     const auto a0 = std::chrono::steady_clock::now();
     const uint64_t c0 = cpu::threadNs();
-    hwtime::board().consumed(&ring_, n);   // a radio with hardware time: which sample has reached the receivers (one relaxed load otherwise)
+    if (rxPipe_) pendingRaw_ += n;   // counted when the block reaches the receiver on its thread (rxPipeRun)
+    else hwtime::board().consumed(&ring_, n);   // a radio with hardware time: which sample has reached the receivers (one relaxed load otherwise)
     if (convSwap_.load(std::memory_order_relaxed)) swapIq(x, n);   // a converter that mirrors the spectrum: the signal reads the right way round from here on
     rec_.push(x, n);   // the raw samples, before anything touches them
     tm_.push(x, n);    // the time machine's rolling memory (a copy into a ring, nothing else)
@@ -117,10 +118,18 @@ void Engine::ingest(cf32* x, size_t n) {
     {
         cpu::Scope cs(cpuDec_.load(std::memory_order_relaxed));   // the receiver's CPU (and its pool jobs) to the decoder account
         if (!wholeSpan) decodeMix_.mix(x, n);
-        feedRx(x, n);
+        if (rxPipe_) {   // 4.0: the receiver on its own thread gets this block, in order (rxPipeRun)
+            RxBlock b;
+            { std::lock_guard<std::mutex> lk(rxFreeMu_); if (!rxFree_.empty()) { b.x = std::move(rxFree_.back()); rxFree_.pop_back(); } }
+            b.x.assign(x, x + n);
+            b.std = activeStd_.load();
+            b.raw = pendingRaw_; pendingRaw_ = 0;
+            rxPipe_->push(std::move(b));
+        } else feedRx(x, n);
     }
     tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
     tRxCpu_ += (double)(cpu::threadNs() - c0) * 1e-9;
+    if (rxPipe_) { const uint64_t pc = rxPipeCpuNs_.load(std::memory_order_relaxed); tRxCpu_ += (double)(pc - rxPipeCpuSeen_) * 1e-9; rxPipeCpuSeen_ = pc; }
     nSamp_ += n;
 }
 
