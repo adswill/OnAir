@@ -103,6 +103,11 @@ struct AsmFramer {
 struct AudioFsk {
     double fc = 3600;
     double ph = 0;
+    // 4.0: the carrier error the AFC leaves (it mixes out only errors above 1.5 kHz) is a DC level on the discriminator; mixed down by the
+    // audio carrier it becomes a tone at -fc inside the filter's transition band, as strong as the FSK itself: U482C did not decode with a
+    // static error of 1.4 kHz even at 14 dB. A slow DC block (20 ms) removes it; the tones (fc +- the shift) are far above it.
+    bool dcBlock = false;
+    float dc = 0;
     cf32 prev{1.f, 0.f};
     dmr::Fir<cf32> lp;
     std::vector<cf32> mix, flt;
@@ -112,12 +117,15 @@ struct AudioFsk {
         lp.design(dmr::lowpassTaps(pass, stop, kMidRate, 40, 9), 1);
         reset();
     }
-    void reset() { ph = 0; prev = cf32(1.f, 0.f); lp.reset(); }
+    void reset() { ph = 0; prev = cf32(1.f, 0.f); lp.reset(); dc = 0; }
     void run(const float* x, size_t n, std::vector<float>& out) {
         mix.resize(n);
         const double w = 2 * dect2::math::kPi * fc / kMidRate;
+        const float a = (float)(1.0 / (0.02 * kMidRate));
         for (size_t i = 0; i < n; i++) {
-            mix[i] = cf32((float)(x[i] * std::cos(ph)), (float)(-x[i] * std::sin(ph)));
+            float v = x[i];
+            if (dcBlock) { dc += a * (v - dc); v -= dc; }
+            mix[i] = cf32((float)(v * std::cos(ph)), (float)(-v * std::sin(ph)));
             ph += w; if (ph > 2 * dect2::math::kPi) ph -= 2 * dect2::math::kPi;
         }
         flt.clear();
@@ -367,7 +375,7 @@ struct CubesatReceiver::Impl {
     void setupPath(ExtraPath& ep, int baud, double afCarrier, bool hdlc, const std::string& why) {
         ep.on = baud > 0; ep.baud = baud; ep.audio = afCarrier > 0; ep.hdlc = hdlc; ep.why = why;
         if (!ep.on) return;
-        if (ep.audio) ep.af.init(afCarrier, baud);
+        if (ep.audio) { ep.af.init(afCarrier, baud); ep.af.dcBlock = narrowOn; }
         const double pass = std::max(600.0, 0.58 * baud), stop = std::max(pass + 400.0, std::min(1.25 * baud, 46000.0));
         ep.lp.design(dmr::lowpassTaps(pass, stop, kMidRate, 40, 9), 1);
         ep.g3.baud = baud; ep.g3.descramble = true; ep.g3.init(0.70f, 0.80f);
@@ -446,6 +454,9 @@ struct CubesatReceiver::Impl {
     }
     void onAsmAt(int64_t tt, int baud, bool cc, std::vector<uint8_t>& body, int flags, bool golayFailed, bool countFail = true) {
         if (golayFailed) { if (countFail) fail(tt); return; }
+        // a narrow path takes only AX100 Mode 5 frames with Reed-Solomon: without it the frame has no check at all (the Golay length only), and a
+        // second hunter would double the frames such a framing finds in noise
+        if (!countFail && !cc && !(flags & kAx100Rs)) return;
         CubeFrame f;
         f.baud = baud;
         int rsErr = -1;

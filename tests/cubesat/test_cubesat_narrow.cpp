@@ -26,7 +26,7 @@ namespace {
 struct Scen { const char* name; double f0, f1; };   // carrier error at the start and at the end of the run (Hz), linear in between
 const Scen kScen[] = {{"still", 0, 0}, {"+1.4 kHz", 1400, 1400}, {"-1.4 kHz", -1400, -1400}, {"drift +6..-6 kHz", 6000, -6000}};
 
-struct Res { double sent = 0, got = 0, wrong = 0, cpu = 0; };
+struct Res { double sent = 0, got = 0, wrong = 0, cpu = 0; int by[kNumFramings] = {}; };   // by: wrong (or noise) frames per framing
 
 void setNarrow(bool on) {
 #ifndef _WIN32
@@ -70,12 +70,12 @@ Res runOne(int mode, double cn, const Scen& sc, int cycles, bool noiseOnly, uint
     Res res;
     res.cpu = std::chrono::duration<double>(std::chrono::steady_clock::now() - c0).count();
     const std::vector<CubeGenFrame> sent = cubesatGenCycle(mode);
-    if (noiseOnly) { res.got = (double)last.blocksOk; return res; }
+    if (noiseOnly) { res.got = (double)last.blocksOk; for (const CubeFrame& f : last.frames) if (f.framing >= 0 && f.framing < kNumFramings) res.by[f.framing]++; return res; }
     res.sent = (double)sent.size() * (double)cycles;
     for (const CubeFrame& f : last.frames) {
         bool ok = false;
         for (const CubeGenFrame& s : sent) ok |= f.framing == s.framing && f.data == s.data;
-        if (ok) res.got += 1; else res.wrong += 1;
+        if (ok) res.got += 1; else { res.wrong += 1; if (f.framing >= 0 && f.framing < kNumFramings) res.by[f.framing]++; }
     }
     res.got = std::min(res.got, res.sent);
     return res;
@@ -91,11 +91,16 @@ Res runMany(int mode, double cn, const Scen& sc, int cycles, int runs, bool nois
     for (int k = 0; k < nt; k++) th.emplace_back(work);
     for (auto& t : th) t.join();
     Res s;
-    for (const Res& r : rs) { s.sent += r.sent; s.got += r.got; s.wrong += r.wrong; s.cpu += r.cpu; }
+    for (const Res& r : rs) { s.sent += r.sent; s.got += r.got; s.wrong += r.wrong; s.cpu += r.cpu; for (int k = 0; k < kNumFramings; k++) s.by[k] += r.by[k]; }
     return s;
 }
 
 double pct(const Res& r) { return r.sent > 0 ? 100.0 * r.got / r.sent : 0; }
+std::string byText(const Res& r) {
+    std::string t;
+    for (int k = 0; k < kNumFramings; k++) if (r.by[k]) t += std::string(t.empty() ? "" : ", ") + framingName(k) + " " + std::to_string(r.by[k]);
+    return t.empty() ? "-" : t;
+}
 
 } // namespace
 
@@ -116,7 +121,7 @@ int main() {
                     setNarrow(false); const Res b = runMany(fr + 1, cn, sc, cycles, 4, false);
                     setNarrow(true);
                     cpuN += a.cpu; cpuO += b.cpu;
-                    printf("  %5.1f dB   %5.1f %%  (wrong %.0f)   |  %5.1f %%  (wrong %.0f)\n", cn, pct(a), a.wrong, pct(b), b.wrong);
+                    printf("  %5.1f dB   %5.1f %%  (wrong %.0f)   |  %5.1f %%  (wrong %.0f)%s%s\n", cn, pct(a), a.wrong, pct(b), b.wrong, a.wrong > b.wrong ? "   new wrong: " : "", a.wrong > b.wrong ? byText(a).c_str() : "");
                     fflush(stdout);
                     if (a.got == 0 && b.got == 0) break;
                 }
@@ -127,7 +132,7 @@ int main() {
         setNarrow(true); const Res fa = runMany(0, 0, still, 40, 4, true);
         setNarrow(false); const Res fb = runMany(0, 0, still, 40, 4, true);
         setNarrow(true);
-        printf("-- noise only, 4 runs of %.0f s: new %.0f frames, 3.9 %.0f frames\n", 40 * cubesatGenCycleSec(0), fa.got, fb.got);
+        printf("-- noise only, 4 runs of %.0f s: new %.0f frames (%s), 3.9 %.0f frames (%s)\n", 40 * cubesatGenCycleSec(0), fa.got, byText(fa).c_str(), fb.got, byText(fb).c_str());
         return 0;
     }
     int fails = 0;
@@ -138,7 +143,7 @@ int main() {
         if (pct(r) < 90 || r.wrong > 0) { printf("FAIL: %s through the drift\n", framingName(fr)); fails++; }
     }
     const Res f = runMany(0, 0, kScen[0], 20, 2, true);
-    printf("noise only: %.0f frames\n", f.got);
+    printf("noise only: %.0f frames (%s)\n", f.got, byText(f).c_str());
     if (f.got > 0) { printf("FAIL: frames out of noise\n"); fails++; }
     printf(fails ? "FAILED\n" : "PASSED\n");
     return fails ? 1 : 0;
