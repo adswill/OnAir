@@ -50,7 +50,6 @@ double frac(const Case& C, double snr, double cfo, double sro, int n) {
     for (int i = 0; i < n; i++) s += std::min(1.0, trial(C, snr, cfo, sro, 0, mix64(0x40a4ull * 1000 + (uint64_t)((snr + 50) * 10) + (uint64_t)i * 7919)) / C.ref);
     return s / n;
 }
-}
 struct SRow { const char* name; int mask; double secs, snr, cfo, sro, need; };
 }
 int main() {
