@@ -27,6 +27,7 @@ struct IsmReceiver::Impl {
     std::mutex mu;
     double rateSet = 0, offsetSet = 0, centerSet = 0;
     float thrSet = 13;
+    bool narrowRetry = true;
     bool resetReq = true;
     std::atomic<bool> clearReq{false};
     std::function<void(const std::string&)> log;
@@ -357,8 +358,53 @@ struct IsmReceiver::Impl {
             }
         }
         // OOK
-        if (!slice(magN, st)) return;
-        if (span(st, first, last, pOn) < 10) return;
+        // 4.0: a burst that the standard envelope (+-25 kHz) did not give to any protocol is sliced again with narrower ones, 40 / 80 / 160 us
+        // boxcars of the carrier (+-12.5 / 6 / 3 kHz): the noise falls with the filter, and the protocols' own checks (CRC, parity, repeats) accept or refuse the result
+        auto narrowTry = [&]() -> bool {
+            if (!narrowRetry) return false;
+            std::complex<double> acc(0, 0);
+            for (size_t k = 1; k < M; k++) acc += std::complex<double>(y[k].real(), y[k].imag()) * std::conj(std::complex<double>(y[k - 1].real(), y[k - 1].imag()));
+            const double fe = std::arg(acc) * rd / (2 * M_PI);   // the carrier's offset from the centre found by the FFT
+            std::vector<std::complex<double>> z(M);
+            for (size_t k = 0; k < M; k++) z[k] = std::complex<double>(y[k].real(), y[k].imag()) * std::polar(1.0, -2 * M_PI * fe / rd * (double)k);
+            for (const double usN : {40.0, 80.0, 160.0}) {
+                const int w1n = std::max(2, (int)std::lround(rd * usN * 1e-6));
+                std::vector<float> a(M), mg(M);
+                std::complex<double> ca(0, 0);
+                for (size_t k = 0; k < M; k++) {
+                    ca += z[k];
+                    if (k >= (size_t)w1n) ca -= z[k - (size_t)w1n];
+                    a[k] = (float)(std::abs(ca) / (double)std::min<size_t>(k + 1, (size_t)w1n));
+                }
+                double acc2 = 0;
+                for (size_t k = 0; k < M; k++) {
+                    acc2 += a[k];
+                    if (k >= (size_t)W2) acc2 -= a[k - (size_t)W2];
+                    mg[k] = (float)(acc2 / (double)std::min<size_t>(k + 1, (size_t)W2));
+                }
+                std::vector<uint8_t> s2;
+                size_t f2 = M, l2 = 0;
+                double p2 = 0;
+                if (!slice(mg, s2) || span(s2, f2, l2, p2) < 10) continue;
+                IsmTrain t2; t2.fsk = false;
+                size_t j2 = f2;
+                while (j2 <= l2) {
+                    size_t a2 = j2;
+                    while (j2 <= l2 && s2[j2]) j2++;
+                    const size_t pl = j2 - a2;
+                    a2 = j2;
+                    while (j2 <= l2 && !s2[j2]) j2++;
+                    t2.p.push_back({(float)(pl * us), j2 > l2 ? 1e6f : (float)((j2 - a2) * us)});
+                }
+                fold(t2);
+                if (ismDecode(t2).empty()) continue;
+                handle(t2, fAbs + fe, (float)(10 * std::log10(std::max(1e-20, p2))), (float)(10 * std::log10(std::max(1e-20, p2) / noiseP)), 0, sec);
+                return true;
+            }
+            return false;
+        };
+        if (!slice(magN, st)) { narrowTry(); return; }
+        if (span(st, first, last, pOn) < 10) { narrowTry(); return; }
         const float snr = (float)(10 * std::log10(std::max(1e-20, pOn) / noiseP));
         const float rssi = (float)(10 * std::log10(std::max(1e-20, pOn)));
         IsmTrain t; t.fsk = false;
@@ -396,6 +442,7 @@ struct IsmReceiver::Impl {
                 if (!ismDecode(t2).empty()) { handle(t2, fAbs, rssi, snr, 0, sec); return; }
             }
         }
+        if (ismDecode(t).empty() && narrowTry()) return;
         handle(t, fAbs, rssi, snr, 0, sec);
     }
 
@@ -552,6 +599,7 @@ bool IsmReceiver::loadResults(const std::string& blob) {
 }
 void IsmReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }
 void IsmReceiver::setReadingTap(std::function<void(const IsmReading&, double)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->tap = std::move(cb); }
+void IsmReceiver::setNarrowRetry(bool on) { std::lock_guard<std::mutex> lk(p_->mu); p_->narrowRetry = on; }
 void IsmReceiver::setThresholdDb(float db) { std::lock_guard<std::mutex> lk(p_->mu); p_->thrSet = std::max(8.f, std::min(25.f, db)); p_->resetReq = true; }
 
 bool IsmReceiver::telemetry(IsmTelemetry& out, uint64_t lastSeq) {

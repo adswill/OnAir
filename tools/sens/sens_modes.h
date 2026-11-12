@@ -483,7 +483,8 @@ inline std::vector<Mode> allModes() {
     {   // Inmarsat Aero 10500 bit/s P channel
         Mode m = base("aero", "Inmarsat Aero", "satellite-data", 20, 2e6, 6.0, 12.5e3, 1545);
         m.snrHi = 25;
-        m.gen = [](size_t n) { return clean(20, SynthConfig(), 2e6, n); };
+        // the generator bakes noise in at Eb/N0 modeVal[0] (12 dB): a truly clean signal (60 dB) so that the sweep's SNR is the only noise
+        m.gen = [](size_t n) { SynthConfig c; c.modeVal[0] = 60; return clean(20, c, 2e6, n); };
         const double off = modeTuning(20) ? modeTuning(20)->tuneOffsetHz : 0;
         m.make = factory<AeroReceiver, AeroTelemetry>([off](AeroReceiver& rx, double r) { rx.setSignalOffset(-off); rx.configure(r); }, blocks<AeroTelemetry>);
         add(m);
