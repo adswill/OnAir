@@ -145,7 +145,16 @@ int main() {
         const Point withHill = evaluateAt(p, 54.5, 25.8);
         CHECK(withHill.terrainUsed && (withHill.model == Model::Terrain || withHill.model == Model::Troposcatter || withHill.model == Model::Ducting));
         printf("  145 MHz, 10 m antennas, 38 km: level tile %.1f dB, with a 350 m ridge %.1f dB (P.1812)\n", smooth.pathLossDb, withHill.pathLossDb);
-        CHECK(withHill.pathLossDb > smooth.pathLossDb + 3);   // the level path is already beyond the horizon (spherical diffraction): the ridge adds a few dB more
+        // the level path is already beyond the horizon, so the ridge works as a single knife edge and can even lower the loss (obstacle gain,
+        // 142 against 148 dB here): it must change the answer, not necessarily raise it
+        CHECK(std::fabs(withHill.pathLossDb - smooth.pathLossDb) > 3);
+        {   // with 60 m / 30 m masts the level path is line of sight; the ridge then blocks it
+            Params q = p; q.txHeightM = 60; q.rxHeightM = 30;
+            q.terrain = &level; const double lvl = evaluateAt(q, 54.5, 25.8).pathLossDb;
+            q.terrain = &hill; const double rid = evaluateAt(q, 54.5, 25.8).pathLossDb;
+            printf("  60 m / 30 m masts: level %.1f dB, ridge %.1f dB\n", lvl, rid);
+            CHECK(rid > lvl + 15);
+        }
         // in front of the ridge nothing changes much; beyond the tile the model falls back to a flat profile
         const Point before = evaluateAt(p, 54.5, 25.4);
         CHECK(std::fabs(before.pathLossDb - beforeLevel.pathLossDb) < 3);
