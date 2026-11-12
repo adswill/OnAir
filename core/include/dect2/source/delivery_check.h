@@ -76,4 +76,46 @@ private:
     double cur_ = 0, q_[kSpan] = {}, f_ = 0, store_ = 0;
 };
 
+// The rate a radio actually delivers, as a percent of the rate it is set to, from the time stamps of the radio's own writes and not from the
+// clock of whoever looks at the count. A radio hands over whole transfers, so a window on the observer's clock holds a varying number of them
+// and reads up to one transfer short or long; at a low sample rate a transfer is a large part of the window (131072 samples are 0.5 s at
+// 250 ksps) and the 3.9 window read 78 % of a radio that lost nothing: the "use a USB 3 port" warning at low rates. Here each window keeps
+// its least delayed write (the smallest lag, as DeliveryCheck), and the rate is the samples between the least delayed writes of two windows
+// over the time between them, so neither the transfer size nor a late transfer or a short OS hiccup moves it. A radio that stops writing
+// reads low: once its last write is older than one transfer and a quarter of a second, the observer's clock stands in for the next write.
+class DeliveryRate {
+public:
+    void restart() { origin_ = false; prev_ = cur_ = false; pct_ = -1.f; }
+    float pct() const { return pct_; }
+    // offered / ns / block: the ring's last write (total samples offered, its steady-clock time, its size); now: the observer's clock.
+    // Returns the percent of the set rate over the last window (two seconds, or four transfers when that is longer), -1 until there is one.
+    float observe(uint64_t offered, int64_t ns, size_t block, int64_t now, double rate) {
+        if (rate <= 0) return pct_;
+        if (!origin_ || offered < lastOff_) { restart(); origin_ = true; off0_ = offered; ns0_ = ns; startNs_ = now; }
+        lastOff_ = offered;
+        const double blockSec = (double)block / rate;
+        const double win = std::max(2.0, 4.0 * blockSec);
+        take(offered, ns, rate);
+        const int64_t stale = (int64_t)((blockSec + 0.25) * 1e9);
+        if (now - ns > stale) take(offered, now - stale, rate);   // nothing new for too long: the delivery is behind by at least that
+        if ((double)(now - startNs_) * 1e-9 < win) return pct_;
+        if (prev_ && cur_ && curNs_ - prevNs_ > 500000000LL) pct_ = (float)(100.0 * (double)(curOff_ - prevOff_) / (rate * (double)(curNs_ - prevNs_) * 1e-9));
+        if (cur_) { prev_ = true; prevOff_ = curOff_; prevNs_ = curNs_; }
+        cur_ = false;
+        startNs_ = now;
+        return pct_;
+    }
+
+private:
+    void take(uint64_t off, int64_t ns, double rate) {
+        const double lag = (double)(ns - ns0_) * 1e-9 - (double)(off - off0_) / rate;   // seconds behind the set rate (plus a constant)
+        if (!cur_ || lag < curLag_) { cur_ = true; curLag_ = lag; curOff_ = off; curNs_ = ns; }
+    }
+    bool origin_ = false, prev_ = false, cur_ = false;
+    uint64_t off0_ = 0, lastOff_ = 0, prevOff_ = 0, curOff_ = 0;
+    int64_t ns0_ = 0, startNs_ = 0, prevNs_ = 0, curNs_ = 0;
+    double curLag_ = 0;
+    float pct_ = -1.f;
+};
+
 } // namespace dect2

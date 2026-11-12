@@ -7,6 +7,7 @@
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/audio/audio_monitor.h"
 #include "dect2/source/delivery_check.h"
+#include "dect2/engine/overflow_cause.h"
 #include "dect2/source/gain_meter.h"
 #include "dect2/source/source.h"
 #include "dect2/source/iq_record.h"
@@ -264,6 +265,12 @@ struct SampleLoss {
     float deliveredPct = -1;           // samples the radio handed over, percent of the rate it is set to, over the last seconds. -1 = not measured yet
     bool rateLow = false;              // a live radio under about 97% of that rate (the radio or driver, not the receiver's CPU load)
     bool network = false;              // the radio is reached over a network link (rtl_tcp, SpyServer, ...), not USB
+    // 4.0: samples a network radio's source says it never got (its link was down, a reconnect): no longer counted as ring overflow
+    double sourceLostSec = 0;
+    uint64_t sourceLostEvents = 0;
+    double sinceSourceLostSec = -1;
+    // why the latest ring overflow happened (overflow_cause.h): only Cpu means the receiver is short of CPU
+    OverflowCause cpuCause = OverflowCause::None;
 };
 
 class Engine {
@@ -1236,12 +1243,17 @@ private:
     std::atomic<double> radioMissing_{0};
     std::atomic<uint64_t> radioMissEvents_{0}, cpuDropEvents_{0}, ringDroppedSeen_{0};
     std::atomic<int64_t> lastRadioMissNs_{0}, lastCpuDropNs_{0}, lastRadioLogNs_{0};
+    std::atomic<uint64_t> srcLostEvents_{0}, ringLostSeen_{0};   // losses the source reported (IqRing::noteLost), apart from overflow
+    std::atomic<int64_t> lastSrcLostNs_{0};
+    std::atomic<int> cpuCause_{0};   // OverflowCause of the latest overflow
+    LoopMarks loopMarks_;     // the analysis thread's own figures over the last two seconds (overflow_cause.h)
+    int64_t rxStartNs_ = 0;   // the receiver's start or last reset (steady ns)
+    void noteRingLoss();      // analysis thread: new drops in the ring, split into source losses and overflow (with its cause)
     std::atomic<float> loadPct_{0}, cpuPct_{0};
     std::atomic<float> deliveredPct_{-1};   // checkDelivery(): samples the library offered over wall time, percent of srcRate_; -1 until a window completes
     std::atomic<bool> live_{false};   // the source is a live radio (sampleLoss() is read by the interface without touching src_)
     double loadT_ = 0, loadRx_ = 0, loadSamp_ = 0, loadRxCpu_ = 0;   // analysis thread: where the last load measurement started
-    int64_t rateT0_ = 0;       // analysis thread: start of the delivered-rate window (steady ns); 0 = not started
-    uint64_t rateOff0_ = 0;    // offered-sample count at rateT0_
+    DeliveryRate delivRate_;   // analysis thread: the delivered-rate window (delivery_check.h)
     std::string reconnectErr_;
     mutable std::mutex noteMu_;
     std::string startErr_;

@@ -83,6 +83,7 @@ void Engine::analysisLoop() {
     auto next = std::chrono::steady_clock::now();
     SpectrumFrame f;
     uint64_t rxSeq = 0;
+    rxStartNs_ = steadyNs();
     while (!stopReq_) {
         if (resetReq_.exchange(false)) {
             applyReset(); rxSeq = 0;
@@ -98,7 +99,8 @@ void Engine::analysisLoop() {
         syncMultiTv();
         syncWideAll();
         syncSmartCube();
-        if (const uint64_t d = ring_.dropped(); d != ringDroppedSeen_.load()) { ringDroppedSeen_ = d; cpuDropEvents_++; lastCpuDropNs_ = steadyNs(); }
+        loopMarks_.push(steadyNs(), tRx_, tRxCpu_, nSamp_);   // the loop's own figures for the overflow classification (overflow_cause.h)
+        if (ring_.dropped() != ringDroppedSeen_.load()) noteRingLoss();
         {   // the receiver's load: its time on this thread against the signal time it handled, over about two seconds
             const double now = std::chrono::duration<double>(std::chrono::steady_clock::now().time_since_epoch()).count();
             if (loadT_ == 0 || nSamp_ < loadSamp_) { loadT_ = now; loadRx_ = tRx_; loadRxCpu_ = tRxCpu_; loadSamp_ = nSamp_; }

@@ -55,6 +55,10 @@ bool Engine::offsetAllowed() const {
 }
 
 void Engine::ingest(cf32* x, size_t n) {
+    // the whole receive path is timed (4.0: from here, not from the receiver on; the front end before it is on the same thread and counts
+    // in the load and in the overflow classification as much as the receiver does)
+    const auto a0 = std::chrono::steady_clock::now();
+    const uint64_t c0 = cpu::threadNs();
     hwtime::board().consumed(&ring_, n);   // a radio with hardware time: which sample has reached the receivers (one relaxed load otherwise)
     if (convSwap_.load(std::memory_order_relaxed)) swapIq(x, n);   // a converter that mirrors the spectrum: the signal reads the right way round from here on
     rec_.push(x, n);   // the raw samples, before anything touches them
@@ -78,11 +82,9 @@ void Engine::ingest(cf32* x, size_t n) {
             nbSeen0_ = nb_.seen(); nbBlank0_ = nb_.blanked();
         }
     } else if (nbWas_) { nbWas_ = false; nbPct_ = 0.f; nb_.reset(); }   // switched off: the next start learns the level again
-    const auto a0 = std::chrono::steady_clock::now();
-    const uint64_t c0 = cpu::threadNs();
     lastSamples_ = a0;   // the radio is alive, whether or not the resampler gives a sample out of this block
     if (offResample_) { offBuf_.clear(); offRs_.process(x, n, offBuf_); x = offBuf_.data(); n = offBuf_.size(); }
-    if (!n) return;
+    if (!n) { tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count(); tRxCpu_ += (double)(cpu::threadNs() - c0) * 1e-9; return; }
     if (sigid_.armed()) sigid_.push(x, n);
     if (autodet_.armed()) autodet_.push(x, n);
     feedSpectrum(x, n);
@@ -231,6 +233,7 @@ bool Engine::timeMachineSaveTo(const std::string& path, double preSeconds, doubl
 }
 
 void Engine::applyReset() {
+    rxStartNs_ = steadyNs();   // an overflow in the next seconds belongs to the reset (overflow_cause.h)
     tm_.discard();   // the history is at the old centre frequency
     std::lock_guard<std::mutex> secLk(secFeedMu_);   // the second mode's receiver is reset with the rest, never while it takes a block
     {
