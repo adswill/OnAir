@@ -104,6 +104,7 @@ int main() {
         printf("  Vilnius - New York, January, R12 100: MUF by UTC hour:");
         for (int hh = 0; hh < 24; hh++) printf(" %.1f", c.muf[hh]);
         printf("\n");
+        CHECK(mn > 1);           // a MUF every hour (it was 0 when the lowest-order ray was below the horizon)
         CHECK(mx > 1.4 * mn);   // the path MUF has a day and a night
     }
     // P.371

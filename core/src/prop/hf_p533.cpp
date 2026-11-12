@@ -284,8 +284,8 @@ double shortPathField(const Path& p, const GC& g, double r12, double sfi12, Pred
             m.mirrorKm = (hr * 2 + f2MirrorKm(M.c, r12, f, m.hopKm)) / 3;   // mean of the Table 1c control points
         }
         m.elevDeg = elevationDeg(m.hopKm, m.mirrorKm);
-        if (m.elevDeg < 0) continue;
-        if (n == n0) bmufF = m.basicMufMHz;
+        if (n == n0) bmufF = m.basicMufMHz;   // the path basic MUF is the lowest-order mode's, whatever its take-off angle
+        if (m.elevDeg < 0) continue;          // below the horizon for this mirror height: no ray (the next order takes over)
         if (D <= 4000) m.screened = 1.05 * foEscr * incidenceSec(m.elevDeg, 110) >= f;                         // eqs. (11), (12)
         addMode(m);
     }
