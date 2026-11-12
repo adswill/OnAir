@@ -100,6 +100,8 @@
 #include "dect2/hfdig/hfdig_tel.h"
 #include "dect2/hfdl/hfdl_tel.h"
 #include "dect2/hfutil/hfutil_tel.h"
+#include "dect2/horus/horus_proto.h"
+#include "dect2/horus/horus_tel.h"
 #include "dect2/hrpt/hrpt_tel.h"
 #include "dect2/ifkp/ifkp_tel.h"
 #include "dect2/inmc/inmc_tel.h"
@@ -161,6 +163,8 @@
 #include "dect2/psk/psk_tel.h"
 #include "dect2/pskdsp/pskdsp_tel.h"
 #include "dect2/qo100/qo100_tel.h"
+#include "dect2/railway/railway_proto.h"
+#include "dect2/railway/railway_tel.h"
 #include "dect2/rclink/rc_tel.h"
 #include "dect2/rid/rid_tel.h"
 #include "dect2/roshf/roshf_tel.h"
@@ -211,6 +215,7 @@
 #include "dect2/wmbus/wmbus_proto.h"
 #include "dect2/wmbus/wmbus_tel.h"
 #include "dect2/wxsat/wxsat_tel.h"
+#include "dect2/x40/x40_tel.h"
 #include "dect2/xband/xband_tel.h"
 #include "dect2/xlink/xlink_tel.h"
 #include "dect2/zigbee/zigbee_tel.h"
@@ -684,6 +689,8 @@ static void ev_dect2__milhf__Features(std::string& s, const dect2::milhf::Featur
 static void ev_dect2__milhf__Candidate(std::string& s, const dect2::milhf::Candidate& v);
 static void ev_dect2__milhf__Result(std::string& s, const dect2::milhf::Result& v);
 static void ev_dect2__MilhfTelemetry(std::string& s, const dect2::MilhfTelemetry& v);
+static void ev_dect2__railway__Message(std::string& s, const dect2::railway::Message& v);
+static void ev_dect2__RailwayTelemetry(std::string& s, const dect2::RailwayTelemetry& v);
 static void ev_dect2__NfcLogEntry(std::string& s, const dect2::NfcLogEntry& v);
 static void ev_dect2__NfcTag(std::string& s, const dect2::NfcTag& v);
 static void ev_dect2__NfcNdef(std::string& s, const dect2::NfcNdef& v);
@@ -709,6 +716,11 @@ static void ev_dect2__IsdbsTelemetry(std::string& s, const dect2::IsdbsTelemetry
 static void ev_dect2__MarineVhfChannelRow(std::string& s, const dect2::MarineVhfChannelRow& v);
 static void ev_dect2__MarineVhfCall(std::string& s, const dect2::MarineVhfCall& v);
 static void ev_dect2__MarineVhfTelemetry(std::string& s, const dect2::MarineVhfTelemetry& v);
+static void ev_dect2__horus__Packet(std::string& s, const dect2::horus::Packet& v);
+static void ev_dect2__HorusTrackPoint(std::string& s, const dect2::HorusTrackPoint& v);
+static void ev_dect2__HorusPayload(std::string& s, const dect2::HorusPayload& v);
+static void ev_dect2__HorusChannelInfo(std::string& s, const dect2::HorusChannelInfo& v);
+static void ev_dect2__HorusTelemetry(std::string& s, const dect2::HorusTelemetry& v);
 static void ev_dect2__P25p2Call(std::string& s, const dect2::P25p2Call& v);
 static void ev_dect2__P25p2Telemetry(std::string& s, const dect2::P25p2Telemetry& v);
 static void ev_dect2__LorawanSettings(std::string& s, const dect2::LorawanSettings& v);
@@ -817,6 +829,8 @@ static void ev_dect2__ChvTelemetry(std::string& s, const dect2::ChvTelemetry& v)
 static void ev_dect2__RcFrame(std::string& s, const dect2::RcFrame& v);
 static void ev_dect2__RcDevice(std::string& s, const dect2::RcDevice& v);
 static void ev_dect2__RcTelemetry(std::string& s, const dect2::RcTelemetry& v);
+static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v);
+static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v);
 static void ev_dect2__BtcDevice(std::string& s, const dect2::BtcDevice& v);
 static void ev_dect2__BtcPacket(std::string& s, const dect2::BtcPacket& v);
 static void ev_dect2__BtcTelemetry(std::string& s, const dect2::BtcTelemetry& v);
@@ -10692,6 +10706,61 @@ static void ev_dect2__MilhfTelemetry(std::string& s, const dect2::MilhfTelemetry
     o.end();
 }
 
+static void ev_dect2__railway__Message(std::string& s, const dect2::railway::Message& v) {
+    detail::J o(s);
+    o.key("protocol"); detail::vnum(s, (double)(int)(v.protocol));
+    o.key("wallTime"); detail::vi64(s, (long long)(v.wallTime));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("correctedBits"); detail::vnum(s, (double)(v.correctedBits));
+    o.key("raw"); { detail::Arr a(s); const size_t n = (v.raw).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)((v.raw)[i])); } a.end(); }
+    o.key("train"); detail::vstr(s, v.train, 4096);
+    o.key("locomotive"); detail::vstr(s, v.locomotive, 4096);
+    o.key("locoCode"); detail::vstr(s, v.locoCode, 4096);
+    o.key("locoSerial"); detail::vstr(s, v.locoSerial, 4096);
+    o.key("tailId"); detail::vstr(s, v.tailId, 4096);
+    o.key("action"); detail::vstr(s, v.action, 4096);
+    o.key("parameter"); detail::vstr(s, v.parameter, 4096);
+    o.key("clockSync"); detail::vstr(s, v.clockSync, 4096);
+    o.key("extra"); detail::vstr(s, v.extra, 4096);
+    o.key("actionCode"); detail::vnum(s, (double)(v.actionCode));
+    o.key("commandReserved"); detail::vnum(s, (double)(v.commandReserved));
+    o.key("pressureKpa"); detail::vnum(s, (double)(v.pressureKpa));
+    o.key("signalType"); detail::vnum(s, (double)(v.signalType));
+    o.key("semaphoreType"); detail::vnum(s, (double)(v.semaphoreType));
+    o.key("locomotiveRole"); detail::vnum(s, (double)(v.locomotiveRole));
+    o.key("speedKmh"); detail::vnum(s, (double)(v.speedKmh));
+    o.key("weightTonnes"); detail::vnum(s, (double)(v.weightTonnes));
+    o.key("carCount"); detail::vnum(s, (double)(v.carCount));
+    o.key("station"); detail::vnum(s, (double)(v.station));
+    o.key("track"); detail::vnum(s, (double)(v.track));
+    o.key("actualTrack"); detail::vnum(s, (double)(v.actualTrack));
+    o.key("driver"); detail::vnum(s, (double)(v.driver));
+    o.key("length"); detail::vnum(s, (double)(v.length));
+    o.key("kilometer"); detail::vnum(s, (double)(v.kilometer));
+    o.key("kilometerValid"); detail::vbool(s, v.kilometerValid);
+    o.key("increasingMileage"); detail::vbool(s, v.increasingMileage);
+    o.key("testFrame"); detail::vbool(s, v.testFrame);
+    o.end();
+}
+
+static void ev_dect2__RailwayTelemetry(std::string& s, const dect2::RailwayTelemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("blocks"); detail::vu64(s, (unsigned long long)(v.blocks));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("centerHz"); detail::vnum(s, (double)(v.centerHz));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("messages"); { detail::Arr a(s); const size_t n = (v.messages).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__railway__Message(s, (v.messages)[i]); } a.end(); }
+    o.end();
+}
+
 static void ev_dect2__NfcLogEntry(std::string& s, const dect2::NfcLogEntry& v) {
     detail::J o(s);
     o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
@@ -11108,6 +11177,101 @@ static void ev_dect2__MarineVhfTelemetry(std::string& s, const dect2::MarineVhfT
     o.key("callsTotal"); detail::vu64(s, (unsigned long long)(v.callsTotal));
     o.key("rows"); { detail::Arr a(s); const size_t n = (v.rows).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__MarineVhfChannelRow(s, (v.rows)[i]); } a.end(); }
     o.key("calls"); { detail::Arr a(s); const size_t n = (v.calls).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__MarineVhfCall(s, (v.calls)[i]); } a.end(); }
+    o.end();
+}
+
+static void ev_dect2__horus__Packet(std::string& s, const dect2::horus::Packet& v) {
+    detail::J o(s);
+    o.key("kind"); detail::vnum(s, (double)(v.kind));
+    o.key("payloadId"); detail::vnum(s, (double)(v.payloadId));
+    o.key("callsign"); detail::vstr(s, v.callsign, 4096);
+    o.key("seq"); detail::vnum(s, (double)(v.seq));
+    o.key("hour"); detail::vnum(s, (double)(v.hour));
+    o.key("minute"); detail::vnum(s, (double)(v.minute));
+    o.key("second"); detail::vnum(s, (double)(v.second));
+    o.key("lat"); detail::vnum(s, (double)(v.lat));
+    o.key("lon"); detail::vnum(s, (double)(v.lon));
+    o.key("altM"); detail::vnum(s, (double)(v.altM));
+    o.key("speedKmh"); detail::vnum(s, (double)(v.speedKmh));
+    o.key("sats"); detail::vnum(s, (double)(v.sats));
+    o.key("tempC"); detail::vnum(s, (double)(v.tempC));
+    o.key("battV"); detail::vnum(s, (double)(v.battV));
+    o.key("custom"); { detail::Arr a(s); const size_t n = (v.custom).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); s += '['; { detail::vstr(s, ((v.custom)[i]).first, 4096); } s += ','; { detail::vstr(s, ((v.custom)[i]).second, 4096); } s += ']'; } a.end(); }
+    o.key("raw"); { detail::Arr a(s); const size_t n = (v.raw).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)((v.raw)[i])); } a.end(); }
+    o.key("sentence"); detail::vstr(s, v.sentence, 4096);
+    o.key("corrected"); detail::vnum(s, (double)(v.corrected));
+    o.key("baud"); detail::vnum(s, (double)(v.baud));
+    o.key("rttyBits"); detail::vnum(s, (double)(v.rttyBits));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("offsetHz"); detail::vnum(s, (double)(v.offsetHz));
+    o.key("toneSpacingHz"); detail::vnum(s, (double)(v.toneSpacingHz));
+    o.key("channel"); detail::vnum(s, (double)(v.channel));
+    o.key("wallTime"); detail::vi64(s, (long long)(v.wallTime));
+    o.end();
+}
+
+static void ev_dect2__HorusTrackPoint(std::string& s, const dect2::HorusTrackPoint& v) {
+    detail::J o(s);
+    o.key("unixT"); detail::vnum(s, (double)(v.unixT));
+    o.key("lat"); detail::vnum(s, (double)(v.lat));
+    o.key("lon"); detail::vnum(s, (double)(v.lon));
+    o.key("altM"); detail::vnum(s, (double)(v.altM));
+    o.end();
+}
+
+static void ev_dect2__HorusPayload(std::string& s, const dect2::HorusPayload& v) {
+    detail::J o(s);
+    o.key("callsign"); detail::vstr(s, v.callsign, 4096);
+    o.key("payloadId"); detail::vnum(s, (double)(v.payloadId));
+    o.key("last"); ev_dect2__horus__Packet(s, v.last);
+    o.key("track"); { detail::Arr a(s); const size_t n = (v.track).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__HorusTrackPoint(s, (v.track)[i]); } a.end(); }
+    o.key("packets"); detail::vu64(s, (unsigned long long)(v.packets));
+    o.key("firstHeard"); detail::vnum(s, (double)(v.firstHeard));
+    o.key("lastHeard"); detail::vnum(s, (double)(v.lastHeard));
+    o.key("maxAltM"); detail::vnum(s, (double)(v.maxAltM));
+    o.key("ascentMs"); detail::vnum(s, (double)(v.ascentMs));
+    o.key("hasAscent"); detail::vbool(s, v.hasAscent);
+    o.key("active"); detail::vbool(s, v.active);
+    o.key("lastHeardS"); detail::vnum(s, (double)(v.lastHeardS));
+    o.end();
+}
+
+static void ev_dect2__HorusChannelInfo(std::string& s, const dect2::HorusChannelInfo& v) {
+    detail::J o(s);
+    o.key("offsetHz"); detail::vnum(s, (double)(v.offsetHz));
+    o.key("ntones"); detail::vnum(s, (double)(v.ntones));
+    o.key("spacingHz"); detail::vnum(s, (double)(v.spacingHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("mode"); detail::vnum(s, (double)(v.mode));
+    o.key("packets"); detail::vu64(s, (unsigned long long)(v.packets));
+    o.key("syncs"); detail::vu64(s, (unsigned long long)(v.syncs));
+    o.key("failures"); detail::vu64(s, (unsigned long long)(v.failures));
+    o.key("dynamic"); detail::vbool(s, v.dynamic);
+    o.end();
+}
+
+static void ev_dect2__HorusTelemetry(std::string& s, const dect2::HorusTelemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("syncs"); detail::vu64(s, (unsigned long long)(v.syncs));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("centerHz"); detail::vnum(s, (double)(v.centerHz));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("maxChannels"); detail::vnum(s, (double)(v.maxChannels));
+    o.key("wide"); detail::vbool(s, v.wide);
+    o.key("payloads"); { detail::Arr a(s); const size_t n = (v.payloads).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__HorusPayload(s, (v.payloads)[i]); } a.end(); }
+    o.key("packets"); { detail::Arr a(s); const size_t n = (v.packets).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__horus__Packet(s, (v.packets)[i]); } a.end(); }
+    o.key("channels"); { detail::Arr a(s); const size_t n = (v.channels).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__HorusChannelInfo(s, (v.channels)[i]); } a.end(); }
+    o.key("spectrumDb"); { detail::Arr a(s); const size_t n = (v.spectrumDb).size(); for (size_t i = 0; i < n && i < 2048; i++) { a.next(); detail::vnum(s, (double)((v.spectrumDb)[i])); } a.end(); }
+    o.key("specLoHz"); detail::vnum(s, (double)(v.specLoHz));
+    o.key("specStepHz"); detail::vnum(s, (double)(v.specStepHz));
     o.end();
 }
 
@@ -13313,6 +13477,35 @@ static void ev_dect2__RcTelemetry(std::string& s, const dect2::RcTelemetry& v) {
     o.end();
 }
 
+static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v) {
+    detail::J o(s);
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("kind"); detail::vstr(s, v.kind, 4096);
+    o.key("id"); detail::vstr(s, v.id, 4096);
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.end();
+}
+
+static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("variant"); detail::vnum(s, (double)(v.variant));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("headline"); detail::vstr(s, v.headline, 4096);
+    o.key("facts"); { detail::Arr a(s); const size_t n = (v.facts).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); s += '['; { detail::vstr(s, ((v.facts)[i]).first, 4096); } s += ','; { detail::vstr(s, ((v.facts)[i]).second, 4096); } s += ']'; } a.end(); }
+    o.key("rows"); { detail::Arr a(s); const size_t n = (v.rows).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__X40Row(s, (v.rows)[i]); } a.end(); }
+    o.end();
+}
+
 static void ev_dect2__BtcDevice(std::string& s, const dect2::BtcDevice& v) {
     detail::J o(s);
     o.key("lap"); detail::vnum(s, (double)(v.lap));
@@ -14744,6 +14937,8 @@ static const char kSchema_dect2__milhf__Features[] = R"JSON([{"n":"signal","l":"
 static const char kSchema_dect2__milhf__Candidate[] = R"JSON([{"n":"name","l":"Name","k":"text"},{"n":"conf","l":"0..1, an estimate","k":"num"},{"n":"basis","l":"Which measurements support it","k":"text"},{"n":"note","l":"What the waveform is","k":"text"},{"n":"url","l":"Public source","k":"text"}])JSON";
 static const char kSchema_dect2__milhf__Result[] = R"JSON([{"n":"f","l":"F","k":"obj","s":"dect2::milhf::Features","f":[{"n":"signal","l":"Something above the noise floor","k":"bool"},{"n":"snrDb","l":"In-band power over the noise floor","u":"dB","k":"num"},{"n":"loHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"hiHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"bwHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"centreHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"baudHz","l":"Envelope clock line","u":"Hz","k":"num"},{"n":"baudDb","l":"Envelope clock line","u":"dB","k":"num"},{"n":"order","l":"Constellation guess at the baud: 2, 4, 8, 99","u":"Bd","k":"num"},{"n":"orderScore","l":"Strength of the M-th power line","k":"num"},{"n":"frameLagSym","l":"Repetition period of the symbol stream","k":"num"},{"n":"frameLagMs","l":"Frame Lag ms","u":"ms","k":"num"},{"n":"frameCorr","l":"Frame Corr","k":"num"},{"n":"nTones","l":"Spectral peaks in the band","k":"num"},{"n":"toneSpacingHz","l":"Regular tone spacing and how regular","u":"Hz","k":"num"},{"n":"combScore","l":"Regular tone spacing and how regular","k":"num"},{"n":"shiftHz","l":"Two-peak signals: the distance of the peaks","u":"Hz","k":"num"},{"n":"pilot605","l":"Narrow steady tone at 605 Hz","u":"Hz","k":"bool"},{"n":"pilot605Db","l":"Narrow steady tone at 605 Hz","u":"dB","k":"num"},{"n":"sync2915","l":"Narrow tone at 2915 Hz","u":"Hz","k":"bool"},{"n":"carrierHz","l":"Strongest narrow steady line","u":"Hz","k":"num"},{"n":"carrierDb","l":"Strongest narrow steady line","u":"dB","k":"num"},{"n":"envModHz","l":"Strongest slow envelope modulation, 0.5","u":"Hz","k":"num"},{"n":"envModDb","l":"Strongest slow envelope modulation, 0.5","u":"dB","k":"num"},{"n":"duty","l":"Fraction of time on and number of bursts","k":"num"},{"n":"bursts","l":"Fraction of time on and number of bursts","k":"num"}]},{"n":"cands","l":"Best first","k":"table","s":"dect2::milhf::Candidate","f":[{"n":"name","l":"Name","k":"text"},{"n":"conf","l":"0..1, an estimate","k":"num"},{"n":"basis","l":"Which measurements support it","k":"text"},{"n":"note","l":"What the waveform is","k":"text"},{"n":"url","l":"Public source","k":"text"}]}])JSON";
 static const char kSchema_dect2__MilhfTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no input, 1 collecting audio, 2 analysed","k":"num"},{"n":"cfoHz","l":"Not measured","u":"Hz","k":"num"},{"n":"dataValid","l":"A signal was found","k":"bool"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"blocksOk","l":"Analyses done / not used","k":"num"},{"n":"blocksBad","l":"Analyses done / not used","k":"num"},{"n":"analysed","l":"Analysed","k":"bool"},{"n":"res","l":"Features and ranked candidates","k":"obj","s":"dect2::milhf::Result","f":[{"n":"f","l":"F","k":"obj","s":"dect2::milhf::Features","f":[{"n":"signal","l":"Something above the noise floor","k":"bool"},{"n":"snrDb","l":"In-band power over the noise floor","u":"dB","k":"num"},{"n":"loHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"hiHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"bwHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"centreHz","l":"Occupied band","u":"Hz","k":"num"},{"n":"baudHz","l":"Envelope clock line","u":"Hz","k":"num"},{"n":"baudDb","l":"Envelope clock line","u":"dB","k":"num"},{"n":"order","l":"Constellation guess at the baud: 2, 4, 8, 99","u":"Bd","k":"num"},{"n":"orderScore","l":"Strength of the M-th power line","k":"num"},{"n":"frameLagSym","l":"Repetition period of the symbol stream","k":"num"},{"n":"frameLagMs","l":"Frame Lag ms","u":"ms","k":"num"},{"n":"frameCorr","l":"Frame Corr","k":"num"},{"n":"nTones","l":"Spectral peaks in the band","k":"num"},{"n":"toneSpacingHz","l":"Regular tone spacing and how regular","u":"Hz","k":"num"},{"n":"combScore","l":"Regular tone spacing and how regular","k":"num"},{"n":"shiftHz","l":"Two-peak signals: the distance of the peaks","u":"Hz","k":"num"},{"n":"pilot605","l":"Narrow steady tone at 605 Hz","u":"Hz","k":"bool"},{"n":"pilot605Db","l":"Narrow steady tone at 605 Hz","u":"dB","k":"num"},{"n":"sync2915","l":"Narrow tone at 2915 Hz","u":"Hz","k":"bool"},{"n":"carrierHz","l":"Strongest narrow steady line","u":"Hz","k":"num"},{"n":"carrierDb","l":"Strongest narrow steady line","u":"dB","k":"num"},{"n":"envModHz","l":"Strongest slow envelope modulation, 0.5","u":"Hz","k":"num"},{"n":"envModDb","l":"Strongest slow envelope modulation, 0.5","u":"dB","k":"num"},{"n":"duty","l":"Fraction of time on and number of bursts","k":"num"},{"n":"bursts","l":"Fraction of time on and number of bursts","k":"num"}]},{"n":"cands","l":"Best first","k":"table","s":"dect2::milhf::Candidate","f":[{"n":"name","l":"Name","k":"text"},{"n":"conf","l":"0..1, an estimate","k":"num"},{"n":"basis","l":"Which measurements support it","k":"text"},{"n":"note","l":"What the waveform is","k":"text"},{"n":"url","l":"Public source","k":"text"}]}]},{"n":"levelDb","l":"Audio level, dBFS","u":"dB","k":"num"},{"n":"audioRate","l":"The audio rate the analysis ran at","k":"num"},{"n":"audioSecs","l":"Seconds of audio held","u":"s","k":"num"},{"n":"rows","l":"Rows","k":"num"},{"n":"wf","l":"Rows x kMilhfCols, 0..255","u":"dB","k":"list"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerHz","l":"Center Hz","u":"Hz","k":"num"}])JSON";
+static const char kSchema_dect2__railway__Message[] = R"JSON([{"n":"protocol","l":"Protocol","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"correctedBits","l":"Corrected Bits","k":"num"},{"n":"raw","l":"Raw","k":"list"},{"n":"train","l":"Train","k":"text"},{"n":"locomotive","l":"Locomotive","k":"text"},{"n":"locoCode","l":"Loco Code","k":"text"},{"n":"locoSerial","l":"Loco Serial","k":"text"},{"n":"tailId","l":"Tail ID","k":"text"},{"n":"action","l":"Action","k":"text"},{"n":"parameter","l":"Parameter","k":"text"},{"n":"clockSync","l":"Clock Sync","k":"text"},{"n":"extra","l":"Extra","k":"text"},{"n":"actionCode","l":"Action Code","k":"num"},{"n":"commandReserved","l":"Command Reserved","k":"num"},{"n":"pressureKpa","l":"Pressure Kpa","k":"num"},{"n":"signalType","l":"Signal Type","k":"num"},{"n":"semaphoreType","l":"Semaphore Type","k":"num"},{"n":"locomotiveRole","l":"Locomotive Role","k":"num"},{"n":"speedKmh","l":"Speed Kmh","k":"num"},{"n":"weightTonnes","l":"Weight Tonnes","k":"num"},{"n":"carCount","l":"Car Count","k":"num"},{"n":"station","l":"Station","k":"num"},{"n":"track","l":"Track","k":"num"},{"n":"actualTrack","l":"Actual Track","k":"num"},{"n":"driver","l":"Driver","k":"num"},{"n":"length","l":"Length","k":"num"},{"n":"kilometer","l":"Kilometer","k":"num"},{"n":"kilometerValid","l":"Kilometer Valid","k":"bool"},{"n":"increasingMileage","l":"Increasing Mileage","k":"bool"},{"n":"testFrame","l":"Test Frame","k":"bool"}])JSON";
+static const char kSchema_dect2__RailwayTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"blocks","l":"Blocks","k":"num"},{"n":"state","l":"State","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerHz","l":"Center Hz","u":"Hz","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"messages","l":"Messages","k":"table","s":"dect2::railway::Message","f":[{"n":"protocol","l":"Protocol","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"correctedBits","l":"Corrected Bits","k":"num"},{"n":"raw","l":"Raw","k":"list"},{"n":"train","l":"Train","k":"text"},{"n":"locomotive","l":"Locomotive","k":"text"},{"n":"locoCode","l":"Loco Code","k":"text"},{"n":"locoSerial","l":"Loco Serial","k":"text"},{"n":"tailId","l":"Tail ID","k":"text"},{"n":"action","l":"Action","k":"text"},{"n":"parameter","l":"Parameter","k":"text"},{"n":"clockSync","l":"Clock Sync","k":"text"},{"n":"extra","l":"Extra","k":"text"},{"n":"actionCode","l":"Action Code","k":"num"},{"n":"commandReserved","l":"Command Reserved","k":"num"},{"n":"pressureKpa","l":"Pressure Kpa","k":"num"},{"n":"signalType","l":"Signal Type","k":"num"},{"n":"semaphoreType","l":"Semaphore Type","k":"num"},{"n":"locomotiveRole","l":"Locomotive Role","k":"num"},{"n":"speedKmh","l":"Speed Kmh","k":"num"},{"n":"weightTonnes","l":"Weight Tonnes","k":"num"},{"n":"carCount","l":"Car Count","k":"num"},{"n":"station","l":"Station","k":"num"},{"n":"track","l":"Track","k":"num"},{"n":"actualTrack","l":"Actual Track","k":"num"},{"n":"driver","l":"Driver","k":"num"},{"n":"length","l":"Length","k":"num"},{"n":"kilometer","l":"Kilometer","k":"num"},{"n":"kilometerValid","l":"Kilometer Valid","k":"bool"},{"n":"increasingMileage","l":"Increasing Mileage","k":"bool"},{"n":"testFrame","l":"Test Frame","k":"bool"}]}])JSON";
 static const char kSchema_dect2__NfcLogEntry[] = R"JSON([{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"fromReader","l":"From Reader","k":"bool"},{"n":"proto","l":"0 Type A, 1 Type B, 2 ISO 15693","k":"num"},{"n":"hex","l":"The frame bytes as hex","k":"text"},{"n":"note","l":"What the protocol layer called it","k":"text"},{"n":"crcChecked","l":"CRC Checked","k":"bool"},{"n":"crcOk","l":"CRC OK","k":"bool"},{"n":"parityOk","l":"Parity OK","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}])JSON";
 static const char kSchema_dect2__NfcTag[] = R"JSON([{"n":"uid","l":"Hex, most significant byte first","k":"text"},{"n":"type","l":"\"ISO 14443-A\", \"ISO 14443-A","k":"text"},{"n":"atqa","l":"Atqa","k":"num"},{"n":"sak","l":"Sak","k":"num"},{"n":"haveAtqa","l":"Have Atqa","k":"bool"},{"n":"haveSak","l":"Have Sak","k":"bool"},{"n":"ats","l":"Historical bytes as hex","k":"text"},{"n":"firstSeen","l":"First Seen","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"},{"n":"seenCount","l":"Seen Count","k":"num"}])JSON";
 static const char kSchema_dect2__NfcNdef[] = R"JSON([{"n":"uid","l":"Which tag it came from","k":"text"},{"n":"tnf","l":"Tnf","k":"num"},{"n":"type","l":"\"T\" / \"U\" / ","k":"text"},{"n":"text","l":"Text records","k":"text"},{"n":"uri","l":"URI records","k":"text"},{"n":"lang","l":"Lang","k":"text"}])JSON";
@@ -14769,6 +14964,11 @@ static const char kSchema_dect2__IsdbsTelemetry[] = R"JSON([{"n":"seq","l":"Seq"
 static const char kSchema_dect2__MarineVhfChannelRow[] = R"JSON([{"n":"key","l":"Index in marinevhf::channels","k":"num"},{"n":"number","l":"Number","k":"num"},{"n":"suffix","l":"Suffix","k":"num"},{"n":"mhz","l":"The frequency carrying the signal now","k":"num"},{"n":"active","l":"A carrier is on the channel now","k":"bool"},{"n":"open","l":"And the squelch is open","k":"bool"},{"n":"playing","l":"Playing","k":"bool"},{"n":"inScan","l":"In Scan","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"calls","l":"Calls","k":"num"},{"n":"totalSec","l":"Total Sec","u":"s","k":"num"},{"n":"lastHeardAgoSec","l":"-1 never","u":"s","k":"num"},{"n":"lastHeardWall","l":"Last Heard Wall","k":"num"},{"n":"peakDb","l":"Peak dB","u":"dB","k":"num"}])JSON";
 static const char kSchema_dect2__MarineVhfCall[] = R"JSON([{"n":"serial","l":"Serial","k":"num"},{"n":"key","l":"Key","k":"num"},{"n":"number","l":"Number","k":"num"},{"n":"suffix","l":"Suffix","k":"num"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durationSec","l":"Duration Sec","u":"s","k":"num"},{"n":"peakDb","l":"Peak dB","u":"dB","k":"num"},{"n":"meanDb","l":"Mean dB","u":"dB","k":"num"},{"n":"open","l":"Open","k":"bool"},{"n":"file","l":"The recording","k":"text"}])JSON";
 static const char kSchema_dect2__MarineVhfTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no input, 1 listening, 2 a voice channel is open","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"dataValid","l":"At least one transmission heard","k":"bool"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerHz","l":"Center Hz","u":"Hz","k":"num"},{"n":"region","l":"Marinevhf::Region","k":"num"},{"n":"spanCovers","l":"The capture is wider than one channel","k":"bool"},{"n":"carriers","l":"Carriers tracked now","k":"num"},{"n":"playingKey","l":"The channel whose audio plays","k":"num"},{"n":"playingNumber","l":"Playing Number","k":"num"},{"n":"playingSuffix","l":"Playing Suffix","k":"num"},{"n":"playingMhz","l":"Playing Mhz","u":"MHz","k":"num"},{"n":"scanState","l":"ChannelScan::State","k":"num"},{"n":"scanOn","l":"Scan On","k":"bool"},{"n":"recordedFiles","l":"Recorded Files","k":"num"},{"n":"callsTotal","l":"Calls Total","k":"num"},{"n":"rows","l":"Every channel of the region, in plan order","k":"table","s":"dect2::MarineVhfChannelRow","f":[{"n":"key","l":"Index in marinevhf::channels","k":"num"},{"n":"number","l":"Number","k":"num"},{"n":"suffix","l":"Suffix","k":"num"},{"n":"mhz","l":"The frequency carrying the signal now","k":"num"},{"n":"active","l":"A carrier is on the channel now","k":"bool"},{"n":"open","l":"And the squelch is open","k":"bool"},{"n":"playing","l":"Playing","k":"bool"},{"n":"inScan","l":"In Scan","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"calls","l":"Calls","k":"num"},{"n":"totalSec","l":"Total Sec","u":"s","k":"num"},{"n":"lastHeardAgoSec","l":"-1 never","u":"s","k":"num"},{"n":"lastHeardWall","l":"Last Heard Wall","k":"num"},{"n":"peakDb","l":"Peak dB","u":"dB","k":"num"}]},{"n":"calls","l":"Newest first","k":"table","s":"dect2::MarineVhfCall","f":[{"n":"serial","l":"Serial","k":"num"},{"n":"key","l":"Key","k":"num"},{"n":"number","l":"Number","k":"num"},{"n":"suffix","l":"Suffix","k":"num"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durationSec","l":"Duration Sec","u":"s","k":"num"},{"n":"peakDb","l":"Peak dB","u":"dB","k":"num"},{"n":"meanDb","l":"Mean dB","u":"dB","k":"num"},{"n":"open","l":"Open","k":"bool"},{"n":"file","l":"The recording","k":"text"}]}])JSON";
+static const char kSchema_dect2__horus__Packet[] = R"JSON([{"n":"kind","l":"1 Horus Binary v1, 2 Horus Binary v2, 0 RTTY sentence","k":"num"},{"n":"payloadId","l":"Binary: the payload ID","k":"num"},{"n":"callsign","l":"From the ID table, the sentence, or \"ID <n>\"","k":"text"},{"n":"seq","l":"Seq","k":"num"},{"n":"hour","l":"Hour","k":"num"},{"n":"minute","l":"Minute","k":"num"},{"n":"second","l":"Second","k":"num"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"},{"n":"speedKmh","l":"Speed Kmh","k":"num"},{"n":"sats","l":"Sats","k":"num"},{"n":"tempC","l":"Temp C","k":"num"},{"n":"battV","l":"Batt V","k":"num"},{"n":"custom","l":"Custom / extra fields, named when the table knows them","k":"list"},{"n":"raw","l":"Binary: the payload bytes","k":"list"},{"n":"sentence","l":"The packet as a UKHAS sentence","k":"text"},{"n":"corrected","l":"Golay bit corrections","k":"num"},{"n":"baud","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"rttyBits","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"snrDb","l":"Estimated SNR in 3 kHz","u":"dB","k":"num"},{"n":"offsetHz","l":"The signal's centre relative to the dial","u":"Hz","k":"num"},{"n":"toneSpacingHz","l":"Tone Spacing Hz","u":"Hz","k":"num"},{"n":"channel","l":"Channel","k":"num"},{"n":"wallTime","l":"Receive time","k":"num"}])JSON";
+static const char kSchema_dect2__HorusTrackPoint[] = R"JSON([{"n":"unixT","l":"Unix T","k":"num"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"}])JSON";
+static const char kSchema_dect2__HorusPayload[] = R"JSON([{"n":"callsign","l":"Callsign","k":"text"},{"n":"payloadId","l":"Payload ID","k":"num"},{"n":"last","l":"Last","k":"obj","s":"dect2::horus::Packet","f":[{"n":"kind","l":"1 Horus Binary v1, 2 Horus Binary v2, 0 RTTY sentence","k":"num"},{"n":"payloadId","l":"Binary: the payload ID","k":"num"},{"n":"callsign","l":"From the ID table, the sentence, or \"ID <n>\"","k":"text"},{"n":"seq","l":"Seq","k":"num"},{"n":"hour","l":"Hour","k":"num"},{"n":"minute","l":"Minute","k":"num"},{"n":"second","l":"Second","k":"num"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"},{"n":"speedKmh","l":"Speed Kmh","k":"num"},{"n":"sats","l":"Sats","k":"num"},{"n":"tempC","l":"Temp C","k":"num"},{"n":"battV","l":"Batt V","k":"num"},{"n":"custom","l":"Custom / extra fields, named when the table knows them","k":"list"},{"n":"raw","l":"Binary: the payload bytes","k":"list"},{"n":"sentence","l":"The packet as a UKHAS sentence","k":"text"},{"n":"corrected","l":"Golay bit corrections","k":"num"},{"n":"baud","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"rttyBits","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"snrDb","l":"Estimated SNR in 3 kHz","u":"dB","k":"num"},{"n":"offsetHz","l":"The signal's centre relative to the dial","u":"Hz","k":"num"},{"n":"toneSpacingHz","l":"Tone Spacing Hz","u":"Hz","k":"num"},{"n":"channel","l":"Channel","k":"num"},{"n":"wallTime","l":"Receive time","k":"num"}]},{"n":"track","l":"Oldest first, at most 3000 points","k":"table","s":"dect2::HorusTrackPoint","f":[{"n":"unixT","l":"Unix T","k":"num"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"unixT"}},{"n":"packets","l":"Packets","k":"num"},{"n":"firstHeard","l":"Unix seconds","k":"num"},{"n":"lastHeard","l":"Unix seconds","k":"num"},{"n":"maxAltM","l":"The climb rate over the last minute or so","k":"num"},{"n":"ascentMs","l":"The climb rate over the last minute or so","u":"ms","k":"num"},{"n":"hasAscent","l":"Has Ascent","k":"bool"},{"n":"active","l":"Active","k":"bool"},{"n":"lastHeardS","l":"Seconds since","k":"num"}])JSON";
+static const char kSchema_dect2__HorusChannelInfo[] = R"JSON([{"n":"offsetHz","l":"The channel's centre from the dial","u":"Hz","k":"num"},{"n":"ntones","l":"The 4FSK tones it follows, relative to the channel centre","k":"num"},{"n":"spacingHz","l":"Spacing Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"mode","l":"0 nothing decoded yet, 1 Horus Binary, 2 RTTY","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"syncs","l":"Syncs","k":"num"},{"n":"failures","l":"Failures","k":"num"},{"n":"dynamic","l":"Dynamic","k":"bool"}])JSON";
+static const char kSchema_dect2__HorusTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"syncs","l":"Syncs","k":"num"},{"n":"state","l":"0 waiting for samples, 1 listening, 2 decoding","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerHz","l":"Center Hz","u":"Hz","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"maxChannels","l":"Max Channels","k":"num"},{"n":"wide","l":"Wide","k":"bool"},{"n":"payloads","l":"Most recently heard first","k":"table","s":"dect2::HorusPayload","f":[{"n":"callsign","l":"Callsign","k":"text"},{"n":"payloadId","l":"Payload ID","k":"num"},{"n":"last","l":"Last","k":"obj","s":"dect2::horus::Packet","f":[{"n":"kind","l":"1 Horus Binary v1, 2 Horus Binary v2, 0 RTTY sentence","k":"num"},{"n":"payloadId","l":"Binary: the payload ID","k":"num"},{"n":"callsign","l":"From the ID table, the sentence, or \"ID <n>\"","k":"text"},{"n":"seq","l":"Seq","k":"num"},{"n":"hour","l":"Hour","k":"num"},{"n":"minute","l":"Minute","k":"num"},{"n":"second","l":"Second","k":"num"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"},{"n":"speedKmh","l":"Speed Kmh","k":"num"},{"n":"sats","l":"Sats","k":"num"},{"n":"tempC","l":"Temp C","k":"num"},{"n":"battV","l":"Batt V","k":"num"},{"n":"custom","l":"Custom / extra fields, named when the table knows them","k":"list"},{"n":"raw","l":"Binary: the payload bytes","k":"list"},{"n":"sentence","l":"The packet as a UKHAS sentence","k":"text"},{"n":"corrected","l":"Golay bit corrections","k":"num"},{"n":"baud","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"rttyBits","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"snrDb","l":"Estimated SNR in 3 kHz","u":"dB","k":"num"},{"n":"offsetHz","l":"The signal's centre relative to the dial","u":"Hz","k":"num"},{"n":"toneSpacingHz","l":"Tone Spacing Hz","u":"Hz","k":"num"},{"n":"channel","l":"Channel","k":"num"},{"n":"wallTime","l":"Receive time","k":"num"}]},{"n":"track","l":"Oldest first, at most 3000 points","k":"table","s":"dect2::HorusTrackPoint","f":[{"n":"unixT","l":"Unix T","k":"num"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"unixT"}},{"n":"packets","l":"Packets","k":"num"},{"n":"firstHeard","l":"Unix seconds","k":"num"},{"n":"lastHeard","l":"Unix seconds","k":"num"},{"n":"maxAltM","l":"The climb rate over the last minute or so","k":"num"},{"n":"ascentMs","l":"The climb rate over the last minute or so","u":"ms","k":"num"},{"n":"hasAscent","l":"Has Ascent","k":"bool"},{"n":"active","l":"Active","k":"bool"},{"n":"lastHeardS","l":"Seconds since","k":"num"}]},{"n":"packets","l":"Most recent first, at most 200","k":"table","s":"dect2::horus::Packet","f":[{"n":"kind","l":"1 Horus Binary v1, 2 Horus Binary v2, 0 RTTY sentence","k":"num"},{"n":"payloadId","l":"Binary: the payload ID","k":"num"},{"n":"callsign","l":"From the ID table, the sentence, or \"ID <n>\"","k":"text"},{"n":"seq","l":"Seq","k":"num"},{"n":"hour","l":"Hour","k":"num"},{"n":"minute","l":"Minute","k":"num"},{"n":"second","l":"Second","k":"num"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"},{"n":"speedKmh","l":"Speed Kmh","k":"num"},{"n":"sats","l":"Sats","k":"num"},{"n":"tempC","l":"Temp C","k":"num"},{"n":"battV","l":"Batt V","k":"num"},{"n":"custom","l":"Custom / extra fields, named when the table knows them","k":"list"},{"n":"raw","l":"Binary: the payload bytes","k":"list"},{"n":"sentence","l":"The packet as a UKHAS sentence","k":"text"},{"n":"corrected","l":"Golay bit corrections","k":"num"},{"n":"baud","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"rttyBits","l":"RTTY: 7 or 8 data bits","k":"num"},{"n":"snrDb","l":"Estimated SNR in 3 kHz","u":"dB","k":"num"},{"n":"offsetHz","l":"The signal's centre relative to the dial","u":"Hz","k":"num"},{"n":"toneSpacingHz","l":"Tone Spacing Hz","u":"Hz","k":"num"},{"n":"channel","l":"Channel","k":"num"},{"n":"wallTime","l":"Receive time","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"callsign"}},{"n":"channels","l":"Channels","k":"table","s":"dect2::HorusChannelInfo","f":[{"n":"offsetHz","l":"The channel's centre from the dial","u":"Hz","k":"num"},{"n":"ntones","l":"The 4FSK tones it follows, relative to the channel centre","k":"num"},{"n":"spacingHz","l":"Spacing Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"mode","l":"0 nothing decoded yet, 1 Horus Binary, 2 RTTY","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"syncs","l":"Syncs","k":"num"},{"n":"failures","l":"Failures","k":"num"},{"n":"dynamic","l":"Dynamic","k":"bool"}]},{"n":"spectrumDb","l":"The dial channel's averaged spectrum","u":"dB","k":"list"},{"n":"specLoHz","l":"Frequency of spectrumDb[0] from the dial, and the step","u":"Hz","k":"num"},{"n":"specStepHz","l":"Frequency of spectrumDb[0] from the dial, and the step","u":"Hz","k":"num"}])JSON";
 static const char kSchema_dect2__P25p2Call[] = R"JSON([{"n":"slot","l":"Logical channel 1 or 2","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durSec","l":"Dur Sec","u":"s","k":"num"},{"n":"active","l":"Active","k":"bool"},{"n":"kind","l":"0 voice, 1 voice channel grant","k":"num"},{"n":"src","l":"Unit ID","k":"num"},{"n":"dst","l":"Unit ID","k":"num"},{"n":"group","l":"Group","k":"bool"},{"n":"emergency","l":"Emergency","k":"bool"},{"n":"encrypted","l":"Reported only: nothing is decrypted, the voice of such a call never reaches a codec","k":"bool"},{"n":"cryptoKnown","l":"False: joined late and no message has said yet","k":"bool"},{"n":"algId","l":"Alg ID","k":"num"},{"n":"keyId","l":"From the PTT or the encryption sync","k":"num"},{"n":"miValid","l":"Mi Valid","k":"bool"},{"n":"essMissing","l":"Ess Missing","k":"bool"},{"n":"channel","l":"Grants: the channel number","k":"num"},{"n":"freqHz","l":"Grants: its frequency, when the identifier update was heard","u":"Hz","k":"num"},{"n":"lateEntry","l":"Late Entry","k":"bool"},{"n":"endSeen","l":"Ended with an END_PTT","k":"bool"},{"n":"voiceFrames","l":"Voice Frames","k":"num"},{"n":"clearFrames","l":"Clear Frames","k":"num"},{"n":"voice","l":"AMBE+2 decoded to sound","k":"bool"},{"n":"text","l":"Text","k":"text"}])JSON";
 static const char kSchema_dect2__P25p2Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 searching, 1 locked on the sync, 2 a call on air","k":"num"},{"n":"cfoHz","l":"Carrier offset measured on the sync","u":"Hz","k":"num"},{"n":"snrDb","l":"Symbol SNR measured on the sync","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"MAC PDUs that decoded","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"locked","l":"Locked","k":"bool"},{"n":"slotNow","l":"Slot of the superframe","k":"num"},{"n":"syncs","l":"Syncs","k":"num"},{"n":"slots","l":"Slots","k":"num"},{"n":"slotsBad","l":"Slots Bad","k":"num"},{"n":"ischBad","l":"Isch Bad","k":"num"},{"n":"unlocks","l":"Unlocks","k":"num"},{"n":"v4","l":"MacAir: MAC PDUs decoded with the coding of the standard","k":"num"},{"n":"v2","l":"MacAir: MAC PDUs decoded with the coding of the standard","k":"num"},{"n":"sacch","l":"MacAir: MAC PDUs decoded with the coding of the standard","k":"num"},{"n":"facch","l":"MacAir: MAC PDUs decoded with the coding of the standard","k":"num"},{"n":"rsCorrected","l":"MacAir: MAC PDUs decoded with the coding of the standard","k":"num"},{"n":"macAir","l":"MacAir: MAC PDUs decoded with the coding of the standard","k":"num"},{"n":"voiceFrames","l":"Voice Frames","k":"num"},{"n":"voiceDecoded","l":"Voice Decoded","k":"num"},{"n":"encryptedSkipped","l":"Encrypted Skipped","k":"num"},{"n":"slotsSkipped","l":"Bursts dropped until the slot of the superframe is known","k":"num"},{"n":"essReused","l":"Bursts dropped until the slot of the superframe is known","k":"num"},{"n":"unknownSkipped","l":"Bursts dropped until the slot of the superframe is known","k":"num"},{"n":"ischExact","l":"Isch Exact","k":"num"},{"n":"ischCorrected","l":"Isch Corrected","k":"num"},{"n":"duidBad","l":"Duid Bad","k":"num"},{"n":"essOk","l":"Ess OK","k":"num"},{"n":"essBad","l":"Ess Bad","k":"num"},{"n":"realigns","l":"Realigns","k":"num"},{"n":"wacn","l":"The descrambler seed in use","k":"num"},{"n":"sysId","l":"The descrambler seed in use","k":"num"},{"n":"colorCode","l":"The descrambler seed in use","k":"num"},{"n":"followTag","l":"P25p2Receiver::startFollow: the reports since that reset","k":"num"},{"n":"codec","l":"An AMBE+2 decoder","k":"bool"},{"n":"codecPath","l":"Codec Path","k":"text"},{"n":"listenSlot","l":"The choice","k":"num"},{"n":"audioSlot","l":"The choice","k":"num"},{"n":"nac","l":"Colour code of the last END_PTT","k":"num"},{"n":"site","l":"Site","k":"obj","s":"dect2::P25Site","f":[{"n":"valid","l":"Valid","k":"bool"},{"n":"wacn","l":"Wacn","k":"num"},{"n":"sysId","l":"Sys ID","k":"num"},{"n":"rfss","l":"Rfss","k":"num"},{"n":"site","l":"Site","k":"num"},{"n":"nac","l":"Nac","k":"num"},{"n":"channel","l":"Its control channel","k":"num"},{"n":"freqHz","l":"Freq Hz","u":"Hz","k":"num"},{"n":"ssc","l":"System service class","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"}]},{"n":"adjacent","l":"Adjacent","k":"table","s":"dect2::P25Site","f":[{"n":"valid","l":"Valid","k":"bool"},{"n":"wacn","l":"Wacn","k":"num"},{"n":"sysId","l":"Sys ID","k":"num"},{"n":"rfss","l":"Rfss","k":"num"},{"n":"site","l":"Site","k":"num"},{"n":"nac","l":"Nac","k":"num"},{"n":"channel","l":"Its control channel","k":"num"},{"n":"freqHz","l":"Freq Hz","u":"Hz","k":"num"},{"n":"ssc","l":"System service class","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"}]},{"n":"idens","l":"Idens","k":"table","s":"dect2::P25IdenRow","f":[{"n":"valid","l":"Valid","k":"bool"},{"n":"vu","l":"Vu","k":"bool"},{"n":"tdma","l":"IDEN_UP_TDMA","k":"bool"},{"n":"slots","l":"Slots","k":"num"},{"n":"baseHz","l":"Base Hz","u":"Hz","k":"num"},{"n":"spacingHz","l":"Spacing Hz","u":"Hz","k":"num"},{"n":"txOffsetHz","l":"Tx Offset Hz","u":"Hz","k":"num"},{"n":"bwHz","l":"Bw Hz","u":"Hz","k":"num"}]},{"n":"talkgroups","l":"Most recently active first","k":"table","s":"dect2::P25Talkgroup","f":[{"n":"tg","l":"Tg","k":"num"},{"n":"grants","l":"Grants","k":"num"},{"n":"calls","l":"Calls","k":"num"},{"n":"lastSrc","l":"Last Src","k":"num"},{"n":"lastWall","l":"Last Wall","k":"num"},{"n":"lastFreqHz","l":"Last Freq Hz","u":"Hz","k":"num"},{"n":"encrypted","l":"Encrypted","k":"bool"},{"n":"emergency","l":"Emergency","k":"bool"},{"n":"active","l":"Active","k":"bool"}]},{"n":"now","l":"Slot 1 and slot 2","k":"table","s":"dect2::P25p2Call","f":[{"n":"slot","l":"Logical channel 1 or 2","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durSec","l":"Dur Sec","u":"s","k":"num"},{"n":"active","l":"Active","k":"bool"},{"n":"kind","l":"0 voice, 1 voice channel grant","k":"num"},{"n":"src","l":"Unit ID","k":"num"},{"n":"dst","l":"Unit ID","k":"num"},{"n":"group","l":"Group","k":"bool"},{"n":"emergency","l":"Emergency","k":"bool"},{"n":"encrypted","l":"Reported only: nothing is decrypted, the voice of such a call never reaches a codec","k":"bool"},{"n":"cryptoKnown","l":"False: joined late and no message has said yet","k":"bool"},{"n":"algId","l":"Alg ID","k":"num"},{"n":"keyId","l":"From the PTT or the encryption sync","k":"num"},{"n":"miValid","l":"Mi Valid","k":"bool"},{"n":"essMissing","l":"Ess Missing","k":"bool"},{"n":"channel","l":"Grants: the channel number","k":"num"},{"n":"freqHz","l":"Grants: its frequency, when the identifier update was heard","u":"Hz","k":"num"},{"n":"lateEntry","l":"Late Entry","k":"bool"},{"n":"endSeen","l":"Ended with an END_PTT","k":"bool"},{"n":"voiceFrames","l":"Voice Frames","k":"num"},{"n":"clearFrames","l":"Clear Frames","k":"num"},{"n":"voice","l":"AMBE+2 decoded to sound","k":"bool"},{"n":"text","l":"Text","k":"text"}]},{"n":"log","l":"Newest first","k":"table","s":"dect2::P25p2Call","f":[{"n":"slot","l":"Logical channel 1 or 2","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durSec","l":"Dur Sec","u":"s","k":"num"},{"n":"active","l":"Active","k":"bool"},{"n":"kind","l":"0 voice, 1 voice channel grant","k":"num"},{"n":"src","l":"Unit ID","k":"num"},{"n":"dst","l":"Unit ID","k":"num"},{"n":"group","l":"Group","k":"bool"},{"n":"emergency","l":"Emergency","k":"bool"},{"n":"encrypted","l":"Reported only: nothing is decrypted, the voice of such a call never reaches a codec","k":"bool"},{"n":"cryptoKnown","l":"False: joined late and no message has said yet","k":"bool"},{"n":"algId","l":"Alg ID","k":"num"},{"n":"keyId","l":"From the PTT or the encryption sync","k":"num"},{"n":"miValid","l":"Mi Valid","k":"bool"},{"n":"essMissing","l":"Ess Missing","k":"bool"},{"n":"channel","l":"Grants: the channel number","k":"num"},{"n":"freqHz","l":"Grants: its frequency, when the identifier update was heard","u":"Hz","k":"num"},{"n":"lateEntry","l":"Late Entry","k":"bool"},{"n":"endSeen","l":"Ended with an END_PTT","k":"bool"},{"n":"voiceFrames","l":"Voice Frames","k":"num"},{"n":"clearFrames","l":"Clear Frames","k":"num"},{"n":"voice","l":"AMBE+2 decoded to sound","k":"bool"},{"n":"text","l":"Text","k":"text"}]},{"n":"events","l":"Events","k":"lines"}])JSON";
 static const char kSchema_dect2__LorawanSettings[] = R"JSON([{"n":"plan","l":"Lorawan::Plan: EU868, US915, AU915, AS923-1..4, EU433","k":"num"},{"n":"subBand","l":"US915 / AU915: 0 all 64 + 8 channels, 1..8 one sub-band","k":"num"},{"n":"downlinks","l":"Also the gateways' frames","k":"bool"},{"n":"defaultsOnly","l":"Only the plan's default","k":"bool"},{"n":"privateSync","l":"Also sync word 0x12","k":"bool"},{"n":"maxChannels","l":"Demodulator sets run at most","k":"num"},{"n":"include250_500","l":"The 250 kHz","u":"kHz","k":"bool"},{"n":"fsk","l":"Also the plan's FSK channel","u":"kbit/s","k":"bool"}])JSON";
@@ -14877,6 +15077,8 @@ static const char kSchema_dect2__ChvTelemetry[] = R"JSON([{"n":"seq","l":"Seq","
 static const char kSchema_dect2__RcFrame[] = R"JSON([{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"type","l":"Type","k":"text"},{"n":"detail","l":"Detail","k":"text"},{"n":"hex","l":"Hex","k":"text"},{"n":"freqHz","l":"Absolute when the radio's centre is known, else relative to the capture's middle","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"encrypted","l":"Encrypted","k":"bool"}])JSON";
 static const char kSchema_dect2__RcDevice[] = R"JSON([{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"lastType","l":"Last Type","k":"text"},{"n":"lastDetail","l":"Last Detail","k":"text"},{"n":"count","l":"Count","k":"num"},{"n":"firstSeen","l":"First Seen","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"},{"n":"hasPos","l":"Has Pos","k":"bool"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"}])JSON";
 static const char kSchema_dect2__RcTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing, 1 bursts or preambles seen, 2 frames decoded lately","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Frames decoded / bursts or preambles without a frame","k":"num"},{"n":"blocksBad","l":"Frames decoded / bursts or preambles without a frame","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"protocols","l":"Protocols","k":"num"},{"n":"bursts","l":"Bursts","k":"num"},{"n":"loraPreambles","l":"Lora Preambles","k":"num"},{"n":"phraseSet","l":"Phrase Set","k":"bool"},{"n":"frames","l":"Newest first","k":"table","s":"dect2::RcFrame","f":[{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"type","l":"Type","k":"text"},{"n":"detail","l":"Detail","k":"text"},{"n":"hex","l":"Hex","k":"text"},{"n":"freqHz","l":"Absolute when the radio's centre is known, else relative to the capture's middle","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"encrypted","l":"Encrypted","k":"bool"}]},{"n":"devices","l":"Newest first","k":"table","s":"dect2::RcDevice","f":[{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"lastType","l":"Last Type","k":"text"},{"n":"lastDetail","l":"Last Detail","k":"text"},{"n":"count","l":"Count","k":"num"},{"n":"firstSeen","l":"First Seen","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"},{"n":"hasPos","l":"Has Pos","k":"bool"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"id"}}])JSON";
+static const char kSchema_dect2__X40Row[] = R"JSON([{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}])JSON";
+static const char kSchema_dect2__X40Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no signal, 1 energy but nothing decoded lately, 2 decoding","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"variant","l":"X40::Variant","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"headline","l":"One line on what is being heard","k":"text"},{"n":"facts","l":"Label","k":"list"},{"n":"rows","l":"Newest first","k":"table","s":"dect2::X40Row","f":[{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}]}])JSON";
 static const char kSchema_dect2__BtcDevice[] = R"JSON([{"n":"lap","l":"Lap","k":"num"},{"n":"lapText","l":"\"A1B2C3\"","k":"text"},{"n":"kind","l":"\"inquiry","k":"text"},{"n":"hasFhs","l":"An inquiry response was decoded: the full address and the class of device are known","k":"bool"},{"n":"addr","l":"\"00:11:22:33:44:55\"","k":"text"},{"n":"cod","l":"Class of device as text, and its major class","k":"text"},{"n":"major","l":"Class of device as text, and its major class","k":"text"},{"n":"codRaw","l":"Cod Raw","k":"num"},{"n":"clk","l":"CLK27-2 from the FHS, units of 1.25 ms","u":"ms","k":"num"},{"n":"rssi","l":"DBFS of the last packet","u":"dBFS","k":"num"},{"n":"rssiHist","l":"Rssi Hist","k":"list"},{"n":"firstSec","l":"Signal time","u":"s","k":"num"},{"n":"lastSec","l":"Signal time","u":"s","k":"num"},{"n":"firstWall","l":"First Wall","k":"num"},{"n":"lastWall","l":"Last Wall","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"lastMhz","l":"The channel of the last packet","u":"MHz","k":"num"},{"n":"chanLo","l":"Channel k","u":"MHz","k":"num"},{"n":"chanHi","l":"Channel k","u":"MHz","k":"num"}])JSON";
 static const char kSchema_dect2__BtcPacket[] = R"JSON([{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"sec","l":"Sec","k":"num"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"lap","l":"Lap","k":"num"},{"n":"rssi","l":"Rssi","k":"num"},{"n":"errors","l":"Bit errors in the sync word","k":"num"},{"n":"info","l":"\"ID packet, GIAC\", \"inquiry response: 00:11:22:33:44:55, Phone: smartphone\" ","k":"text"}])JSON";
 static const char kSchema_dect2__BtcTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing heard, 1 access codes heard in the last seconds","k":"num"},{"n":"cfoHz","l":"Carrier offset of the last good packet","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR of the last good packets","u":"dB","k":"num"},{"n":"levelDb","l":"Input level, dBFS","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Access codes found","k":"num"},{"n":"blocksBad","l":"Bursts that looked like Bluetooth","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerMhz","l":"The radio's centre","u":"MHz","k":"num"},{"n":"channelsCovered","l":"1 MHz channels inside the sample rate","u":"MHz","k":"num"},{"n":"giacIds","l":"Inquiry ID packets","k":"num"},{"n":"fhsCount","l":"Inquiry responses decoded","k":"num"},{"n":"burstsSeen","l":"Narrow bursts analysed","k":"num"},{"n":"burstsWide","l":"Narrow bursts analysed","k":"num"},{"n":"devices","l":"Most recently heard first","k":"table","s":"dect2::BtcDevice","f":[{"n":"lap","l":"Lap","k":"num"},{"n":"lapText","l":"\"A1B2C3\"","k":"text"},{"n":"kind","l":"\"inquiry","k":"text"},{"n":"hasFhs","l":"An inquiry response was decoded: the full address and the class of device are known","k":"bool"},{"n":"addr","l":"\"00:11:22:33:44:55\"","k":"text"},{"n":"cod","l":"Class of device as text, and its major class","k":"text"},{"n":"major","l":"Class of device as text, and its major class","k":"text"},{"n":"codRaw","l":"Cod Raw","k":"num"},{"n":"clk","l":"CLK27-2 from the FHS, units of 1.25 ms","u":"ms","k":"num"},{"n":"rssi","l":"DBFS of the last packet","u":"dBFS","k":"num"},{"n":"rssiHist","l":"Rssi Hist","k":"list"},{"n":"firstSec","l":"Signal time","u":"s","k":"num"},{"n":"lastSec","l":"Signal time","u":"s","k":"num"},{"n":"firstWall","l":"First Wall","k":"num"},{"n":"lastWall","l":"Last Wall","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"lastMhz","l":"The channel of the last packet","u":"MHz","k":"num"},{"n":"chanLo","l":"Channel k","u":"MHz","k":"num"},{"n":"chanHi","l":"Channel k","u":"MHz","k":"num"}]},{"n":"log","l":"Newest first","k":"table","s":"dect2::BtcPacket","f":[{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"sec","l":"Sec","k":"num"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"lap","l":"Lap","k":"num"},{"n":"rssi","l":"Rssi","k":"num"},{"n":"errors","l":"Bit errors in the sync word","k":"num"},{"n":"info","l":"\"ID packet, GIAC\", \"inquiry response: 00:11:22:33:44:55, Phone: smartphone\" ","k":"text"}]}])JSON";
@@ -15040,12 +15242,15 @@ static bool put_143(const RxTelemetry& rx, std::string& s) { ev_dect2__ModeAcTel
 static bool put_144(const RxTelemetry& rx, std::string& s) { ev_dect2__BletrkTelemetry(s, rx.bletrk); return true; }
 static bool put_145(const RxTelemetry& rx, std::string& s) { ev_dect2__SbTelemetry(s, rx.satbeacon); return true; }
 static bool put_146(const RxTelemetry& rx, std::string& s) { ev_dect2__MilhfTelemetry(s, rx.milhf); return true; }
+static bool put_147(const RxTelemetry& rx, std::string& s) { ev_dect2__RailwayTelemetry(s, rx.klw); return true; }
+static bool put_148(const RxTelemetry& rx, std::string& s) { ev_dect2__RailwayTelemetry(s, rx.tdcs); return true; }
 static bool put_149(const RxTelemetry& rx, std::string& s) { ev_dect2__NfcTelemetry(s, rx.nfc); return true; }
 static bool put_151(const RxTelemetry& rx, std::string& s) { ev_dect2__SbasTelemetry(s, rx.sbas); return true; }
 static bool put_153(const RxTelemetry& rx, std::string& s) { ev_dect2__ArgosTelemetry(s, rx.argos); return true; }
 static bool put_154(const RxTelemetry& rx, std::string& s) { ev_dect2__SigfoxModeTelemetry(s, rx.sigfoxm); return true; }
 static bool put_155(const RxTelemetry& rx, std::string& s) { ev_dect2__IsdbsTelemetry(s, rx.isdbs); return true; }
 static bool put_156(const RxTelemetry& rx, std::string& s) { ev_dect2__MarineVhfTelemetry(s, rx.marinevhf); return true; }
+static bool put_157(const RxTelemetry& rx, std::string& s) { ev_dect2__HorusTelemetry(s, rx.horus); return true; }
 static bool put_181(const RxTelemetry& rx, std::string& s) { ev_dect2__P25p2Telemetry(s, rx.p25p2); return true; }
 static bool put_201(const RxTelemetry& rx, std::string& s) { ev_dect2__LorawanTelemetry(s, rx.lorawan); return true; }
 static bool put_202(const RxTelemetry& rx, std::string& s) { ev_dect2__LoraSatTelemetry(s, rx.lorasat); return true; }
@@ -15108,6 +15313,12 @@ static bool put_345(const RxTelemetry& rx, std::string& s) { ev_dect2__ChvTeleme
 static bool put_346(const RxTelemetry& rx, std::string& s) { ev_dect2__ChvTelemetry(s, rx.chanvoice); return true; }
 static bool put_347(const RxTelemetry& rx, std::string& s) { ev_dect2__ChvTelemetry(s, rx.chanvoice); return true; }
 static bool put_361(const RxTelemetry& rx, std::string& s) { ev_dect2__RcTelemetry(s, rx.rclink); return true; }
+static bool put_371(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_372(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_373(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_374(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_375(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_376(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_381(const RxTelemetry& rx, std::string& s) { ev_dect2__BtcTelemetry(s, rx.btc); return true; }
 static bool put_401(const RxTelemetry& rx, std::string& s) { ev_dect2__AvRoadTelemetry(s, rx.avroad); return true; }
 static bool put_402(const RxTelemetry& rx, std::string& s) { ev_dect2__AvRoadTelemetry(s, rx.avroad); return true; }
@@ -15194,6 +15405,37 @@ static bool put_662(const RxTelemetry& rx, std::string& s) { ev_dect2__TdscdmaTe
 static bool put_701(const RxTelemetry& rx, std::string& s) { ev_dect2__DcsTelemetry(s, rx.hrdcp); return true; }
 static bool put_742(const RxTelemetry& rx, std::string& s) { ev_dect2__Dvbc2Telemetry(s, rx.dvbc2); return true; }
 static bool put_751(const RxTelemetry& rx, std::string& s) { ev_dect2__HamsciTelemetry(s, rx.hamsci); return true; }
+static bool put_753(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_754(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_755(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_756(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_757(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_758(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_759(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_760(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_761(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_762(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_763(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_764(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_765(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_766(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_767(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_768(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_769(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_770(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_771(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_772(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_773(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_774(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_775(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_776(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_777(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_778(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_779(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_780(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_781(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_782(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_783(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_791(const RxTelemetry& rx, std::string& s) { ev_dect2__LtPosTelemetry(s, rx.ltpos); return true; }
 static bool put_801(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
 static bool put_802(const RxTelemetry& rx, std::string& s) { ev_dect2__W1aTelemetry(s, rx.w1a); return true; }
@@ -15212,6 +15454,22 @@ static bool put_853(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelem
 static bool put_856(const RxTelemetry& rx, std::string& s) { ev_dect2__CubeTelemetry(s, rx.cube); return true; }
 static bool put_871(const RxTelemetry& rx, std::string& s) { ev_dect2__FbrTelemetry(s, rx.fbr); return true; }
 static bool put_881(const RxTelemetry& rx, std::string& s) { ev_dect2__Cp16Telemetry(s, rx.cp16); return true; }
+static bool put_882(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_883(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_884(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_885(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_886(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_887(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_888(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_889(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_890(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_891(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_892(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_893(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_894(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_895(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_896(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
+static bool put_897(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static const StdEntry kStd[] = {
     {7, "dvbs", "dect2::DvbsTelemetry", kSchema_dect2__DvbsTelemetry, put_7},
     {8, "dtmb", "dect2::DtmbTelemetry", kSchema_dect2__DtmbTelemetry, put_8},
@@ -15323,12 +15581,15 @@ static const StdEntry kStd[] = {
     {144, "bletrk", "dect2::BletrkTelemetry", kSchema_dect2__BletrkTelemetry, put_144},
     {145, "satbeacon", "dect2::SbTelemetry", kSchema_dect2__SbTelemetry, put_145},
     {146, "milhf", "dect2::MilhfTelemetry", kSchema_dect2__MilhfTelemetry, put_146},
+    {147, "klw", "dect2::RailwayTelemetry", kSchema_dect2__RailwayTelemetry, put_147},
+    {148, "tdcs", "dect2::RailwayTelemetry", kSchema_dect2__RailwayTelemetry, put_148},
     {149, "nfc", "dect2::NfcTelemetry", kSchema_dect2__NfcTelemetry, put_149},
     {151, "sbas", "dect2::SbasTelemetry", kSchema_dect2__SbasTelemetry, put_151},
     {153, "argos", "dect2::ArgosTelemetry", kSchema_dect2__ArgosTelemetry, put_153},
     {154, "sigfoxm", "dect2::SigfoxModeTelemetry", kSchema_dect2__SigfoxModeTelemetry, put_154},
     {155, "isdbs", "dect2::IsdbsTelemetry", kSchema_dect2__IsdbsTelemetry, put_155},
     {156, "marinevhf", "dect2::MarineVhfTelemetry", kSchema_dect2__MarineVhfTelemetry, put_156},
+    {157, "horus", "dect2::HorusTelemetry", kSchema_dect2__HorusTelemetry, put_157},
     {181, "p25p2", "dect2::P25p2Telemetry", kSchema_dect2__P25p2Telemetry, put_181},
     {201, "lorawan", "dect2::LorawanTelemetry", kSchema_dect2__LorawanTelemetry, put_201},
     {202, "lorasat", "dect2::LoraSatTelemetry", kSchema_dect2__LoraSatTelemetry, put_202},
@@ -15391,6 +15652,12 @@ static const StdEntry kStd[] = {
     {346, "chanvoice", "dect2::ChvTelemetry", kSchema_dect2__ChvTelemetry, put_346},
     {347, "chanvoice", "dect2::ChvTelemetry", kSchema_dect2__ChvTelemetry, put_347},
     {361, "rclink", "dect2::RcTelemetry", kSchema_dect2__RcTelemetry, put_361},
+    {371, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_371},
+    {372, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_372},
+    {373, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_373},
+    {374, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_374},
+    {375, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_375},
+    {376, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_376},
     {381, "btc", "dect2::BtcTelemetry", kSchema_dect2__BtcTelemetry, put_381},
     {401, "avroad", "dect2::AvRoadTelemetry", kSchema_dect2__AvRoadTelemetry, put_401},
     {402, "avroad", "dect2::AvRoadTelemetry", kSchema_dect2__AvRoadTelemetry, put_402},
@@ -15477,6 +15744,37 @@ static const StdEntry kStd[] = {
     {701, "hrdcp", "dect2::DcsTelemetry", kSchema_dect2__DcsTelemetry, put_701},
     {742, "dvbc2", "dect2::Dvbc2Telemetry", kSchema_dect2__Dvbc2Telemetry, put_742},
     {751, "hamsci", "dect2::HamsciTelemetry", kSchema_dect2__HamsciTelemetry, put_751},
+    {753, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_753},
+    {754, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_754},
+    {755, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_755},
+    {756, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_756},
+    {757, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_757},
+    {758, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_758},
+    {759, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_759},
+    {760, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_760},
+    {761, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_761},
+    {762, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_762},
+    {763, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_763},
+    {764, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_764},
+    {765, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_765},
+    {766, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_766},
+    {767, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_767},
+    {768, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_768},
+    {769, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_769},
+    {770, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_770},
+    {771, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_771},
+    {772, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_772},
+    {773, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_773},
+    {774, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_774},
+    {775, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_775},
+    {776, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_776},
+    {777, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_777},
+    {778, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_778},
+    {779, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_779},
+    {780, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_780},
+    {781, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_781},
+    {782, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_782},
+    {783, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_783},
     {791, "ltpos", "dect2::LtPosTelemetry", kSchema_dect2__LtPosTelemetry, put_791},
     {801, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_801},
     {802, "w1a", "dect2::W1aTelemetry", kSchema_dect2__W1aTelemetry, put_802},
@@ -15495,6 +15793,22 @@ static const StdEntry kStd[] = {
     {856, "cube", "dect2::CubeTelemetry", kSchema_dect2__CubeTelemetry, put_856},
     {871, "fbr", "dect2::FbrTelemetry", kSchema_dect2__FbrTelemetry, put_871},
     {881, "cp16", "dect2::Cp16Telemetry", kSchema_dect2__Cp16Telemetry, put_881},
+    {882, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_882},
+    {883, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_883},
+    {884, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_884},
+    {885, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_885},
+    {886, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_886},
+    {887, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_887},
+    {888, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_888},
+    {889, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_889},
+    {890, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_890},
+    {891, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_891},
+    {892, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_892},
+    {893, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_893},
+    {894, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_894},
+    {895, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_895},
+    {896, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_896},
+    {897, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_897},
 };
 static const char* const kGroups[] = {"TV", "BROADCAST RADIO", "AVIATION", "MARITIME", "SATELLITE & NAVIGATION", "TWO-WAY RADIO", "CELLULAR & RAIL", "PAGERS", "IoT & SENSORS", "WEATHER & SCIENCE", "AMATEUR - DIGITAL", "AMATEUR - VOICE & PACKET", "HF UTILITY", "GENERAL & TOOLS", "PLUGINS", "Kris custom modes", "CUSTOM MODES"};
 static const WebModeRow kRows[] = {
@@ -15636,48 +15950,48 @@ static const WebModeRow kRows[] = {
     {409, "ERMES paging", 7, "ERMES: European paging on 169 MHz", "", 411, 410, "avroad"},
     {410, "Marine radar (detect)", 3, "Marine radar: rotation and pulse pattern", "", 412, 411, "avroad"},
     {411, "Weather radar (detect)", 9, "Weather radar: scan pattern and pulse timing", "", 413, 412, "avroad"},
-    {881, "RC model PPM (72 MHz)", 8, "RC model PPM: channel count and stick values", "", 883, 882, ""},
-    {882, "UVB-76 buzzer monitor", 12, "UVB-76: buzz rate and breaks", "", 884, 883, ""},
-    {883, "GRAVES meteor echoes", 9, "GRAVES: meteor echo list", "", 885, 884, ""},
-    {884, "Radio Jove bursts", 9, "Radio Jove: burst list", "", 886, 885, ""},
-    {885, "Beacon propagation monitor", 9, "Beacon monitor: path class, level, Doppler spread", "", 887, 886, ""},
-    {886, "EM4100 LF RFID (125 kHz)", 8, "EM4100 tags: ID and modulation depth", "", 888, 887, ""},
-    {887, "UHF RFID reader (EPC Gen2)", 8, "UHF RFID: reader commands, Tari and tag rate", "", 889, 888, ""},
-    {888, "Qi wireless charging", 8, "Qi: packets from the phone to the charger", "", 890, 889, ""},
-    {889, "FM modulation monitor", 1, "FM monitor: deviation, pilot, RDS, MPX power", "", 891, 890, ""},
-    {890, "AM modulation monitor", 1, "AM monitor: depth, peaks, hum, bandwidth", "", 892, 891, ""},
-    {891, "Power-line noise locator", 13, "Noise locator: impulse rate, repetition, level", "", 893, 892, ""},
-    {892, "Radar pulse analyser", 2, "Radar pulses: PRI, width, stagger, antenna turn", "", 894, 893, ""},
-    {893, "GNSS interference detector", 4, "GNSS interference: class, level, sweep", "", 895, 894, ""},
-    {894, "Passband signal classifier", 10, "Passband: what each signal in 48 kHz is", "", 896, 895, ""},
-    {895, "VLF MSK transmitter monitor", 12, "VLF MSK: carrier, bit rate, on / off", "", 897, 896, ""},
-    {752, "Spectrum occupancy monitor", 13, "Occupancy: busy channels, duty cycle, transmissions", "", 754, 753, ""},
-    {753, "Modulation quality (MER) meter", 13, "MER meter: modulation, symbol rate, MER, EVM", "", 755, 754, ""},
-    {754, "Carrier frequency accuracy meter", 13, "Frequency meter: offset, ppm, drift, Allan deviation", "", 756, 755, ""},
-    {755, "PTT and duty-cycle logger", 13, "PTT logger: transmissions, lengths, duty cycle", "", 757, 756, ""},
-    {756, "Intermodulation finder", 13, "Intermod finder: products of strong signals and their verdict", "", 758, 757, ""},
-    {757, "Spur and image finder", 13, "Spur finder: DC spike, images, harmonics, fixed spurs", "", 759, 758, ""},
-    {758, "Satellite Doppler curve logger", 4, "Doppler logger: TCA, Doppler span, slope, carrier", "", 760, 759, ""},
-    {759, "Frequency-hopper analyser", 13, "Hopper analyser: hop rate, channels, spacing, dwell", "", 761, 760, ""},
-    {760, "Persistent carrier (birdie) finder", 13, "Birdie finder: persistent carriers, level, drift", "", 762, 761, ""},
-    {761, "Burst finder", 13, "Burst finder: frequency, length, bandwidth, repetition", "", 763, 762, ""},
-    {762, "Fading analyser", 9, "Fading: K-factor, fade rate and depth, Doppler spread", "", 764, 763, ""},
-    {763, "SDR input health meter", 13, "Input health: level, clipping, DC, IQ mismatch", "", 765, 764, ""},
-    {764, "Phase noise meter", 13, "Phase noise: L(f), spurs, jitter", "", 766, 765, ""},
-    {765, "SSB transmitter test meter", 13, "SSB test: carrier, opposite sideband, IMD3/5/7", "", 767, 766, ""},
-    {766, "FM SINAD meter", 13, "FM SINAD: SINAD, THD, deviation", "", 768, 767, ""},
-    {767, "FSK parameter analyser", 13, "FSK analyser: baud, levels, shift, index", "", 769, 768, ""},
-    {768, "Noise figure (Y-factor) meter", 13, "Noise figure: Y-factor, NF for the source ENR", "", 770, 769, ""},
-    {769, "CW keying quality meter", 13, "CW keying: wpm, dah ratio, gaps, weight, rise, chirp", "", 771, 770, ""},
-    {770, "Noise floor logger", 13, "Noise floor: sub-band floors, rises, baseline", "", 772, 771, ""},
-    {771, "Narrowband FM deviation and CTCSS meter", 13, "NFM meter: voice deviation, CTCSS tone and deviation", "", 773, 772, ""},
-    {772, "AFSK (TNC) tone tuner", 13, "AFSK tuner: tones, twist, deviation per burst", "", 774, 773, ""},
-    {773, "OOK / ASK pulse analyser", 8, "OOK analyser: modulation, bits, timings, repeats", "", 775, 774, ""},
-    {774, "Transmitter frequency stability meter", 13, "Tx stability: key-up step, settling, drift, offset", "", 776, 775, ""},
-    {775, "Crest factor (PAPR / CCDF) meter", 13, "PAPR: crest factor and CCDF against Gaussian", "", 777, 776, ""},
-    {776, "Occupied bandwidth meter", 13, "Occupied bandwidth: 99 %, x dB, centre, adjacent power", "", 778, 777, ""},
-    {777, "Spectral kurtosis RFI finder", 13, "Spectral kurtosis: clean share, pulsed and steady regions", "", 779, 778, ""},
-    {778, "SDR stream glitch detector", 13, "Glitches: dropped samples, zero runs, repeats, level steps", "", 780, 779, ""},
+    {881, "RC model PPM (72 MHz)", 8, "RC model PPM: channel count and stick values", "", 883, 882, "x40"},
+    {882, "UVB-76 buzzer monitor", 12, "UVB-76: buzz rate and breaks", "", 884, 883, "x40"},
+    {883, "GRAVES meteor echoes", 9, "GRAVES: meteor echo list", "", 885, 884, "x40"},
+    {884, "Radio Jove bursts", 9, "Radio Jove: burst list", "", 886, 885, "x40"},
+    {885, "Beacon propagation monitor", 9, "Beacon monitor: path class, level, Doppler spread", "", 887, 886, "x40"},
+    {886, "EM4100 LF RFID (125 kHz)", 8, "EM4100 tags: ID and modulation depth", "", 888, 887, "x40"},
+    {887, "UHF RFID reader (EPC Gen2)", 8, "UHF RFID: reader commands, Tari and tag rate", "", 889, 888, "x40"},
+    {888, "Qi wireless charging", 8, "Qi: packets from the phone to the charger", "", 890, 889, "x40"},
+    {889, "FM modulation monitor", 1, "FM monitor: deviation, pilot, RDS, MPX power", "", 891, 890, "x40"},
+    {890, "AM modulation monitor", 1, "AM monitor: depth, peaks, hum, bandwidth", "", 892, 891, "x40"},
+    {891, "Power-line noise locator", 13, "Noise locator: impulse rate, repetition, level", "", 893, 892, "x40"},
+    {892, "Radar pulse analyser", 2, "Radar pulses: PRI, width, stagger, antenna turn", "", 894, 893, "x40"},
+    {893, "GNSS interference detector", 4, "GNSS interference: class, level, sweep", "", 895, 894, "x40"},
+    {894, "Passband signal classifier", 10, "Passband: what each signal in 48 kHz is", "", 896, 895, "x40"},
+    {895, "VLF MSK transmitter monitor", 12, "VLF MSK: carrier, bit rate, on / off", "", 897, 896, "x40"},
+    {752, "Spectrum occupancy monitor", 13, "Occupancy: busy channels, duty cycle, transmissions", "", 754, 753, "x40"},
+    {753, "Modulation quality (MER) meter", 13, "MER meter: modulation, symbol rate, MER, EVM", "", 755, 754, "x40"},
+    {754, "Carrier frequency accuracy meter", 13, "Frequency meter: offset, ppm, drift, Allan deviation", "", 756, 755, "x40"},
+    {755, "PTT and duty-cycle logger", 13, "PTT logger: transmissions, lengths, duty cycle", "", 757, 756, "x40"},
+    {756, "Intermodulation finder", 13, "Intermod finder: products of strong signals and their verdict", "", 758, 757, "x40"},
+    {757, "Spur and image finder", 13, "Spur finder: DC spike, images, harmonics, fixed spurs", "", 759, 758, "x40"},
+    {758, "Satellite Doppler curve logger", 4, "Doppler logger: TCA, Doppler span, slope, carrier", "", 760, 759, "x40"},
+    {759, "Frequency-hopper analyser", 13, "Hopper analyser: hop rate, channels, spacing, dwell", "", 761, 760, "x40"},
+    {760, "Persistent carrier (birdie) finder", 13, "Birdie finder: persistent carriers, level, drift", "", 762, 761, "x40"},
+    {761, "Burst finder", 13, "Burst finder: frequency, length, bandwidth, repetition", "", 763, 762, "x40"},
+    {762, "Fading analyser", 9, "Fading: K-factor, fade rate and depth, Doppler spread", "", 764, 763, "x40"},
+    {763, "SDR input health meter", 13, "Input health: level, clipping, DC, IQ mismatch", "", 765, 764, "x40"},
+    {764, "Phase noise meter", 13, "Phase noise: L(f), spurs, jitter", "", 766, 765, "x40"},
+    {765, "SSB transmitter test meter", 13, "SSB test: carrier, opposite sideband, IMD3/5/7", "", 767, 766, "x40"},
+    {766, "FM SINAD meter", 13, "FM SINAD: SINAD, THD, deviation", "", 768, 767, "x40"},
+    {767, "FSK parameter analyser", 13, "FSK analyser: baud, levels, shift, index", "", 769, 768, "x40"},
+    {768, "Noise figure (Y-factor) meter", 13, "Noise figure: Y-factor, NF for the source ENR", "", 770, 769, "x40"},
+    {769, "CW keying quality meter", 13, "CW keying: wpm, dah ratio, gaps, weight, rise, chirp", "", 771, 770, "x40"},
+    {770, "Noise floor logger", 13, "Noise floor: sub-band floors, rises, baseline", "", 772, 771, "x40"},
+    {771, "Narrowband FM deviation and CTCSS meter", 13, "NFM meter: voice deviation, CTCSS tone and deviation", "", 773, 772, "x40"},
+    {772, "AFSK (TNC) tone tuner", 13, "AFSK tuner: tones, twist, deviation per burst", "", 774, 773, "x40"},
+    {773, "OOK / ASK pulse analyser", 8, "OOK analyser: modulation, bits, timings, repeats", "", 775, 774, "x40"},
+    {774, "Transmitter frequency stability meter", 13, "Tx stability: key-up step, settling, drift, offset", "", 776, 775, "x40"},
+    {775, "Crest factor (PAPR / CCDF) meter", 13, "PAPR: crest factor and CCDF against Gaussian", "", 777, 776, "x40"},
+    {776, "Occupied bandwidth meter", 13, "Occupied bandwidth: 99 %, x dB, centre, adjacent power", "", 778, 777, "x40"},
+    {777, "Spectral kurtosis RFI finder", 13, "Spectral kurtosis: clean share, pulsed and steady regions", "", 779, 778, "x40"},
+    {778, "SDR stream glitch detector", 13, "Glitches: dropped samples, zero runs, repeats, level steps", "", 780, 779, "x40"},
     {300, "ADS-L", 2, "ADS-L: light aircraft conspicuity on 868 and 869.5 MHz", "", 302, 301, "adsl"},
     {66, "FLARM", 2, "FLARM aircraft: gliders and light aircraft on 868 MHz", "", 68, 67, "flarm"},
     {68, "DJI drones", 2, "DJI drones: OcuSync / Lightbridge-like signals by shape, and DroneID packets decoded", "", 70, 69, "dji"},
@@ -15713,8 +16027,8 @@ static const WebModeRow kRows[] = {
     {57, "5G NR cells", 6, "5G NR cells: the public broadcast of NR cells (PSS / SSS / PBCH, MIB)", "", 59, 58, "nr"},
     {69, "NB-IoT cells", 6, "NB-IoT cells: the public broadcast information of narrowband IoT carriers (receive only)", "", 71, 70, "nbiot"},
     {39, "GSM-R", 6, "GSM-R: the public broadcast information of railway GSM cells", "", 41, 40, "gsmr"},
-    {146, "KLW", 6, "KLW: railway end-of-train data", "", 148, 147, ""},
-    {147, "TDCS", 6, "TDCS: railway train dispatch data", "", 149, 148, ""},
+    {146, "KLW", 6, "KLW: railway end-of-train data", "", 148, 147, "klw"},
+    {147, "TDCS", 6, "TDCS: railway train dispatch data", "", 149, 148, "tdcs"},
     {81, "LBJ", 6, "LBJ: railway train warning broadcasts (821 MHz)", "", 83, 82, "lbj"},
     {23, "POCSAG", 7, "POCSAG pager messages", "pocsag", 25, 24, "pager"},
     {23, "FLEX", 7, "FLEX pager messages", "flex", 25, 24, "pager"},
@@ -15764,7 +16078,7 @@ static const WebModeRow kRows[] = {
     {153, "Sigfox", 8, "Sigfox: uplink device IDs, counters and payloads at 868 / 902 MHz (receive only, no keys)", "", 155, 154, "sigfoxm"},
     {54, "Wi-Fi networks", 8, "Wi-Fi networks: the access points around you, from the beacons they broadcast", "", 56, 55, "wifi"},
     {13, "Radiosonde", 9, "Radiosonde weather balloons: position, altitude and weather data", "", 15, 14, "sonde"},
-    {156, "Horus balloons", 9, "Horus Binary and RTTY high-altitude balloons: position, altitude, temperature, voltage, satellites (receive only)", "", 158, 157, ""},
+    {156, "Horus balloons", 9, "Horus Binary and RTTY high-altitude balloons: position, altitude, temperature, voltage, satellites (receive only)", "", 158, 157, "horus"},
     {58, "Time signals", 9, "Time signals: the time stations and your computer clock against them", "", 60, 59, "timesig"},
     {85, "e-Czas (225 kHz, Poland)", 9, "e-Czas: Polish official time on 225 kHz long wave, decoded; needs a long-wave capable radio or an upconverter", "", 87, 86, "eczas"},
     {104, "Meteor scatter", 9, "Meteor scatter: pings of meteor trails reflecting a distant beacon, counted and logged", "", 106, 105, "mscatter"},
@@ -15876,16 +16190,16 @@ static const WebModeRow kRows[] = {
     {800, "HF packet 300 Bd", 11, "HF packet 300 Bd: AX.25 frames, full decode (simulated only)", "", 802, 801, "w1a"},
     {801, "Voice inversion scrambler", 5, "Voice inversion scrambler: detection and descrambling of full-band inversion (simulated only)", "", 803, 802, "w1a"},
     {802, "ELT 121.5 MHz", 2, "ELT 121.5 MHz: swept-tone detection (simulated only)", "", 804, 803, "w1a"},
-    {779, "ILS marker beacons (75 MHz)", 2, "ILS marker beacons: outer, middle and inner marker tones and keying", "", 781, 780, ""},
-    {780, "FSK modems (Bell 103, V.21, V.23, Bell 202)", 12, "FSK modems: Bell 103, V.21, V.23 and Bell 202 bytes", "", 782, 781, ""},
-    {781, "SSR interrogations (1030 MHz)", 2, "SSR interrogations: which modes the radars around you ask, and how often", "", 783, 782, ""},
-    {782, "DCR (Japan digital convenience radio)", 5, "DCR: user codes, call signs, calls and data (351 MHz channel scan)", "", 784, 783, ""},
-    {370, "XPA (10 / 20 Bd)", 12, "XPA: five-figure groups of the 10 / 20 Bd MFSK number sender (simulated only)", "", 372, 371, ""},
-    {371, "XPA2", 12, "XPA2: five-figure groups of the 7.8 Bd MFSK number sender (simulated only)", "", 373, 372, ""},
-    {372, "CROWD36", 12, "CROWD36: characters of the 34-tone 40 Bd MFSK (simulated only)", "", 374, 373, ""},
-    {373, "FSK200/500 (F01)", 12, "FSK200/500 (F01): figure groups of the 200 Bd FSK (simulated only)", "", 375, 374, ""},
-    {374, "FSK200/1000 (F06, F06a)", 12, "FSK200/1000 (F06, F06a): blocks, figure groups and files (simulated only)", "", 376, 375, ""},
-    {375, "GW FSK (100 Bd)", 12, "GW FSK: Globe Wireless channel markers, ship packets and positions (simulated only)", "", 377, 376, ""},
+    {779, "ILS marker beacons (75 MHz)", 2, "ILS marker beacons: outer, middle and inner marker tones and keying", "", 781, 780, "x40"},
+    {780, "FSK modems (Bell 103, V.21, V.23, Bell 202)", 12, "FSK modems: Bell 103, V.21, V.23 and Bell 202 bytes", "", 782, 781, "x40"},
+    {781, "SSR interrogations (1030 MHz)", 2, "SSR interrogations: which modes the radars around you ask, and how often", "", 783, 782, "x40"},
+    {782, "DCR (Japan digital convenience radio)", 5, "DCR: user codes, call signs, calls and data (351 MHz channel scan)", "", 784, 783, "x40"},
+    {370, "XPA (10 / 20 Bd)", 12, "XPA: five-figure groups of the 10 / 20 Bd MFSK number sender (simulated only)", "", 372, 371, "x40"},
+    {371, "XPA2", 12, "XPA2: five-figure groups of the 7.8 Bd MFSK number sender (simulated only)", "", 373, 372, "x40"},
+    {372, "CROWD36", 12, "CROWD36: characters of the 34-tone 40 Bd MFSK (simulated only)", "", 374, 373, "x40"},
+    {373, "FSK200/500 (F01)", 12, "FSK200/500 (F01): figure groups of the 200 Bd FSK (simulated only)", "", 375, 374, "x40"},
+    {374, "FSK200/1000 (F06, F06a)", 12, "FSK200/1000 (F06, F06a): blocks, figure groups and files (simulated only)", "", 376, 375, "x40"},
+    {375, "GW FSK (100 Bd)", 12, "GW FSK: Globe Wireless channel markers, ship packets and positions (simulated only)", "", 377, 376, "x40"},
 };
 } // namespace
 
