@@ -69,6 +69,9 @@ int main(int argc, char** argv) {
         {"zigbee", 1.5, 0, 0, 0.78, 6},         // 3.9: 38 %
         {"zigbee", 1.5, 48000, 0, 0.78, 6},     // 20 ppm at 2.4 GHz (3.9: 36 %)
         {"zigbee", 1.5, 0, 50, 0.65, 6},
+        {"tetrapol", 7.5, 0, 0, 0.4, 6},        // 3.9: 37 %
+        {"tetrapol", 7.5, 3100, 0, 0.25, 6},    // 3.9: 17 %
+        {"tetrapol", 7.5, 8000, 0, 0.2, 6},     // 3.9: 14 %
         {"globalstar", -4.5, 0, 0, 0.9, 4},     // 3.9: nothing below -2 dB
         {"globalstar", -4.5, 18000, 50, 0.9, 4},
     };
@@ -103,7 +106,7 @@ int main(int argc, char** argv) {
         printf("sonde noise only: %.0f units\n", falses);
         CHECK(falses == 0, "sonde noise-only runs gave %.0f units", falses);
     }
-    const char* noiseIds[] = {"halow", "globalstar", "pocsag", "zigbee"};
+    const char* noiseIds[] = {"halow", "globalstar", "pocsag", "zigbee", "tetrapol"};
     for (const char* id : noiseIds) {
         if (only && std::strcmp(only, id) != 0) continue;
         const Case N = makeCase(id, std::strcmp(id, "globalstar") == 0 ? 20.0 : 0);

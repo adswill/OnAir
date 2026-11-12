@@ -129,6 +129,12 @@ Noise-only: 0 units. Tests: `sonde_extra` (sync 3 / 1-in-tail / 2-in-tail / 4 er
 `sonde_extra_rf` (MRZ at +-8 kHz added), `sens40a3` (MRZ 14 dB and iMS-100 6 dB, carrier 0 and 8 kHz, 24 s trials: about 4.5 minutes of the 5 in all), `sonde_all_rf`, `sonde_interf`, `sonde_sens40`,
 `sonde_engine`, `sonde_basic` pass.
 
+## 9. TETRAPOL: channel filter 6.5 to 5.8 kHz
+
+GMSK 8 kbit/s through a 6.5 kHz half-width filter (13 kHz noise bandwidth). SNR in 12.5 kHz, 4 trials, fraction of the 299 clean units at 7.5 dB: carrier 0 37 % before, 56 % after; +3.1 kHz 16.5 % to 38 %;
++8 kHz 14 % to 36 %; 9 dB 67 to 77 %. About 0.6 dB. 5.2 kHz was 1 dB (7.5 dB 61 %) but lost control frames in the existing drift test (carrier moving -2.5 to +2.5 kHz in 8 s, `tetrapol_rx`), 4.5 kHz clips the
+signal (clean units 299 to 109). The user's own channel filter (#408) still overrides it. Noise-only 0 units. `tetrapol_rx`, `tetrapol_engine`, `tetrapol_filter`, `tetrapol_voice` pass. Guard: `sens40a3`.
+
 ## Measured, not kept
 
 * **Iridium.** The burst detector's 13 dB threshold looked like the Argos gate, but 10 dB gives the same curve (12 dB 80 % to 81 %) and 38 000 false triggers in 24 s of noise; the
