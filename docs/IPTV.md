@@ -34,7 +34,7 @@ OnAir never ends in a bare "failed". It shows the real reason (for example *403 
 
 ## HTTPS and the FFmpeg inside OnAir
 
-The FFmpeg that OnAir ships (`tools/package/build_ffmpeg_static.sh`) is built with `--disable-network` and `--disable-everything` plus a short list of transport stream decoders. It contains no network code and no TLS, on purpose: it keeps the licence simple (LGPL-2.1-or-later, no OpenSSL, GnuTLS or other library inside it) and the attack surface small. OnAir therefore fetches the bytes itself (`core/src/tv/iptv_*.cpp`) and gives the player an MPEG transport stream, exactly like a recording. No patented codec is added: the video and audio are decoded by the same decoders as for the antenna.
+The FFmpeg that OnAir ships (`tools/package/build_ffmpeg.sh`) is built with `--disable-network` and `--disable-everything` plus a short list of transport stream decoders. It contains no network code and no TLS, on purpose: it keeps the licence simple (LGPL-2.1-or-later, no OpenSSL, GnuTLS or other library inside it) and the attack surface small. OnAir therefore fetches the bytes itself (`core/src/tv/iptv_*.cpp`) and gives the player an MPEG transport stream, exactly like a recording. No patented codec is added: the video and audio are decoded by the same decoders as for the antenna.
 
 TLS (https) comes from the system on each platform:
 
