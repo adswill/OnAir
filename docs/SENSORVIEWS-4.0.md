@@ -17,7 +17,7 @@ The Sub-GHz sensors entry is unchanged and still lists every sensor and has the 
 | Ambient Weather sensors | 591 | 592 | 593 | 591 | ambient | 915 |
 | Wireless alarm sensors | 594 | 595 | 596 | 594 | honeywell, visonic, dsc, interlogix | 345 |
 | X10 RF | 663 | 664 | 665 | 663 | x10 | 433.92 |
-| Itron ERT meters | 666 | 667 | 668 | 666 | ert-, ert scm, ert idm, ert net | 915 |
+| Itron ERT meters | 666 | 667 | 668 | 666 | ert-scm, scmplus, idm (the models ERT-SCM, SCMplus, IDM and NETIDM) | 915 |
 | Neptune R900 water meters | 669 | 670 | 671 | 669 | neptune | 915 |
 | TPMS: Schrader | 672 | 673 | 674 | 672 | schrader, schraeder | 433.92 |
 | TPMS: Renault | 675 | 676 | 677 | 675 | renault | 433.92 |

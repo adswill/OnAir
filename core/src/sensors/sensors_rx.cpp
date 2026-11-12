@@ -788,7 +788,7 @@ static const SensorsView kSensViews[] = {
     {591, "ambient", "Ambient Weather sensors", "ambient", 915.0, "Ambient Weather"},
     {594, "alarmsens", "Wireless alarm sensors", "honeywell|visonic|dsc|interlogix", 345.0, "Wireless alarm sensors"},
     {663, "x10rf", "X10 RF", "x10", 433.92, "X10"},
-    {666, "ert", "Itron ERT meters", "ert-|ert scm|ert idm|ert net", 915.0, "Itron ERT"},
+    {666, "ert", "Itron ERT meters", "ert-scm|scmplus|idm", 915.0, "Itron ERT"},
     {669, "r900", "Neptune R900 water meters", "neptune", 915.0, "Neptune R900"},
     {672, "tpmsschrader", "TPMS: Schrader", "schrader|schraeder", 433.92, "Schrader TPMS"},
     {675, "tpmsrenault", "TPMS: Renault", "renault", 433.92, "Renault TPMS"},
