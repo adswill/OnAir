@@ -4,6 +4,7 @@
 //  behaviour), skywave MUF / absorption / skip zone / band closure / LUF against textbook ranges, P.372 noise and link-budget arithmetic.
 #include "dect2/prop/prop.h"
 #include <atomic>
+#include <chrono>
 #include <cmath>
 #include <cstdio>
 #include <string>
@@ -360,6 +361,18 @@ static void itu40() {
     CHECK(q.hfReliability >= 0 && q.hfReliability <= 1);
     CHECK(q.muf > 14.1 && q.hops >= 1);
     CHECK(q.snrDb > 10);
+    // cost of the map (worker thread): an 80 x 80 grid with P.1812 and with P.533
+    {
+        const auto t0 = std::chrono::steady_clock::now();
+        const Grid gv = computeGrid(b, 200, 80);
+        const auto t1 = std::chrono::steady_clock::now();
+        const Grid gh = computeGrid(h, 3000, 80);
+        const auto t2 = std::chrono::steady_clock::now();
+        const double sv = std::chrono::duration<double>(t1 - t0).count(), sh = std::chrono::duration<double>(t2 - t1).count();
+        printf("  80 x 80 map: P.1812 flat %.2f s, HF P.533 %.2f s\n", sv, sh);
+        CHECK(gv.snr.size() == 6400 && gh.snr.size() == 6400);
+        CHECK(sv < 20 && sh < 30);
+    }
 }
 
 int main() {
