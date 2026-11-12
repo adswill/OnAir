@@ -1980,3 +1980,9 @@ the looks. Dev page: --previewgallery. Details: docs/UI-PREVIEW-4.0.md.
   core/src/pstore/market.cpp; plat::httpCall added. Withdrawn plugins installed from the marketplace are switched off through the 3.9
   kill switch (Store::setExtraRevocations). Test pstore_market, GitHub builds only. kBuiltInMarketKeyHex stays all zeros until the
   owner makes the key. docs/PLUGIN-MARKETPLACE-4.0.md.
+
+## 2026-11-12 (feat40-perf): sample-loss warnings, nRSP-ST at 10 Msps, the receiver on its own thread
+- "This computer is too slow" at 3 % CPU: a network radio's reconnect counted as ring overflow, and every overflow was called a slow computer. Source losses are kept apart (`IqRing::lostAtSource`), and each overflow gets a cause from the sample thread's own figures (`overflow_cause.h`: Starting / Cpu / Waiting / Stalled). Only Cpu says "lower the sample rate".
+- "USB 3 port" warnings at LOW rates: the delivered-rate window counted whole transfers against the observer's clock and read 78 % at 250 ksps. `DeliveryRate` measures between the radio's least delayed write stamps: 99-101 % at every rate from 48 kHz to 20 Msps, 90 % radios still read 90 %.
+- nRSP-ST (SDRconnect WebSocket): messages over 1 MiB were refused and the connection dropped (stall above a few Msps). Limit now 16 MiB, buffered reads, vectorised conversion. `nrspst_rate` test: 110-520 Msps into the ring on the CI runners, 10 Msps paced with no drop.
+- The receiver runs on its own thread behind the front end (automatic: 4+ cores, 4 Msps and up, not in Low power mode; Settings > Advanced). `bench_modes --compare-rx` checks the same results and measures 1.0-1.45x. The receivers themselves are the bulk of the cost, so more cores need work inside each receiver. Details and numbers: docs/PERF-4.0.md.

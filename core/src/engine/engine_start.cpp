@@ -39,8 +39,8 @@ bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOp
     noTuneOffset_ = dev.tunesAtDial();   // a sound card or a Hamlib rig's audio has no DC spike to tune off: the signal is where the IF centre puts it (0 Hz)
     ring_.clear();
     ring_.resetDropped();
-    radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0;
-    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
+    radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0; srcLostEvents_ = 0; ringLostSeen_ = 0; lastSrcLostNs_ = 0; cpuCause_ = 0; loopMarks_.clear();
+    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; delivRate_.restart();
     holdDelivery(1000);   // a radio often stutters while its stream starts
     std::string err;
     if (int holder = 0; !claimDevice(dev, receiverId_, &holder)) { log("this radio is in use by " + deviceHolderText(holder)); return false; }

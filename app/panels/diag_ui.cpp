@@ -641,8 +641,11 @@ bool nextStepLine(App& a, float maxW) {
     in.levelCompensated = adcLevelCompensated();
     in.runSec = run ? now - startedAt : 0;
     const SampleLoss sl = a.engine.sampleLoss();
-    in.radioLoss = sl.live && sl.rateLow;
-    in.cpuLoss = sl.live && sl.sinceCpuSec >= 0 && sl.sinceCpuSec < 5;
+    in.network = sl.network;
+    in.radioLoss = sl.live && (sl.rateLow || (sl.sinceSourceLostSec >= 0 && sl.sinceSourceLostSec < 5));   // a network radio's link was down
+    const bool overflow = sl.live && sl.sinceCpuSec >= 0 && sl.sinceCpuSec < 5;   // which kind (overflow_cause.h): one at a start or retune is the start's own
+    in.cpuLoss = overflow && sl.cpuCause == OverflowCause::Cpu;
+    in.heldUp = overflow && (sl.cpuCause == OverflowCause::Waiting || sl.cpuCause == OverflowCause::Stalled);
     in.rmsDbfs = a.spec.stats.rmsDbfs;
     in.clipFraction = a.spec.stats.clipFraction;
     // the lock state is known for the modes whose telemetry the app reads here; the others get only the measured hints

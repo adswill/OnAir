@@ -94,6 +94,7 @@ const std::map<std::string, Bind>& binds() {
         NB("fmMono", a.fmMono); NB("fmStereo", a.fmStereo); NB("fmDeemph", a.fmDeemph); NB("fmRegion", a.fmRegion);
         NB("fmSquelch", a.fmSquelch); NB("ttxPage", a.ttxPage); SB("tvLang", a.tvLang);
         PD("adsbLat"); PD("adsbLon");
+        PD("rxThread");   // 4.0: Engine::setRxThreadMode at the next Start (toolbar_source.cpp)
         NB("updCheck", a.updCheck); NB("updBeta", a.updPre); NB("updAuto", a.updAuto); NB("updSrc", a.updSrc);
         NB("updMirrorOn", a.updMirrorOn); SB("updMirror", a.updMirror);
         PS("staleVdl2", -1); PS("staleAcars", -1); PS("staleHfdl", -1); PS("staleAdsb", -1); PS("staleAis", -1); PS("staleUat", -1); PS("staleInmsat", -1); PS("staleCustomMin", 120);

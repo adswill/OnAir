@@ -48,6 +48,7 @@ static void differential(size_t cap, uint64_t seed, int steps, uint64_t& mismatc
         default: break;
         }
         if (a.available() != b.available() || a.dropped() != b.dropped() || a.capacity() != b.capacity()) mismatches++;
+        if (a.lostAtSource() != b.lostAtSource() || a.lostAtSource() > a.dropped()) mismatches++;   // 4.0: source losses apart, a part of dropped
         uint64_t oa = 0, ob = 0; int64_t na = 0, nb = 0; size_t la = 0, lb = 0;
         bool ra = a.lastWrite(oa, na, la), rb = b.lastWrite(ob, nb, lb);
         // the two stamps use the clock at different instants: compare everything but the time, and the time only for "monotonic and recent"

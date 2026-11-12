@@ -130,7 +130,7 @@ struct Fake {
         int tick = 0;
         while (run) {
             if (dropNow.exchange(0)) return;
-            if (hugeFrame.exchange(0)) { wsSend(c, 2, std::string(2u << 20, 'x')); }
+            if (hugeFrame.exchange(0)) { wsSend(c, 2, std::string(17u << 20, 'x')); }   // over the 16 MiB limit (4.0; was 1 MiB)
             if (badBurst.exchange(0)) sendBad(c);
             if (fragmented.exchange(0)) {   // a ping between the fragments of an IQ message
                 const std::string f = iqFrame(1000, -1000, 400);

@@ -55,7 +55,12 @@ bool Engine::offsetAllowed() const {
 }
 
 void Engine::ingest(cf32* x, size_t n) {
-    hwtime::board().consumed(&ring_, n);   // a radio with hardware time: which sample has reached the receivers (one relaxed load otherwise)
+    // the whole receive path is timed (4.0: from here, not from the receiver on; the front end before it is on the same thread and counts
+    // in the load and in the overflow classification as much as the receiver does)
+    const auto a0 = std::chrono::steady_clock::now();
+    const uint64_t c0 = cpu::threadNs();
+    if (rxPipe_) pendingRaw_ += n;   // counted when the block reaches the receiver on its thread (rxPipeRun)
+    else hwtime::board().consumed(&ring_, n);   // a radio with hardware time: which sample has reached the receivers (one relaxed load otherwise)
     if (convSwap_.load(std::memory_order_relaxed)) swapIq(x, n);   // a converter that mirrors the spectrum: the signal reads the right way round from here on
     rec_.push(x, n);   // the raw samples, before anything touches them
     tm_.push(x, n);    // the time machine's rolling memory (a copy into a ring, nothing else)
@@ -78,11 +83,9 @@ void Engine::ingest(cf32* x, size_t n) {
             nbSeen0_ = nb_.seen(); nbBlank0_ = nb_.blanked();
         }
     } else if (nbWas_) { nbWas_ = false; nbPct_ = 0.f; nb_.reset(); }   // switched off: the next start learns the level again
-    const auto a0 = std::chrono::steady_clock::now();
-    const uint64_t c0 = cpu::threadNs();
     lastSamples_ = a0;   // the radio is alive, whether or not the resampler gives a sample out of this block
     if (offResample_) { offBuf_.clear(); offRs_.process(x, n, offBuf_); x = offBuf_.data(); n = offBuf_.size(); }
-    if (!n) return;
+    if (!n) { tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count(); tRxCpu_ += (double)(cpu::threadNs() - c0) * 1e-9; return; }
     if (sigid_.armed()) sigid_.push(x, n);
     if (autodet_.armed()) autodet_.push(x, n);
     feedSpectrum(x, n);
@@ -115,10 +118,18 @@ void Engine::ingest(cf32* x, size_t n) {
     {
         cpu::Scope cs(cpuDec_.load(std::memory_order_relaxed));   // the receiver's CPU (and its pool jobs) to the decoder account
         if (!wholeSpan) decodeMix_.mix(x, n);
-        feedRx(x, n);
+        if (rxPipe_) {   // 4.0: the receiver on its own thread gets this block, in order (rxPipeRun)
+            RxBlock b;
+            { std::lock_guard<std::mutex> lk(rxFreeMu_); if (!rxFree_.empty()) { b.x = std::move(rxFree_.back()); rxFree_.pop_back(); } }
+            b.x.assign(x, x + n);
+            b.mode = activeStd_.load();
+            b.raw = pendingRaw_; pendingRaw_ = 0;
+            rxPipe_->push(std::move(b));
+        } else feedRx(x, n);
     }
     tRx_ += std::chrono::duration<double>(std::chrono::steady_clock::now() - a0).count();
     tRxCpu_ += (double)(cpu::threadNs() - c0) * 1e-9;
+    if (rxPipe_) { const uint64_t pc = rxPipeCpuNs_.load(std::memory_order_relaxed); tRxCpu_ += (double)(pc - rxPipeCpuSeen_) * 1e-9; rxPipeCpuSeen_ = pc; }
     nSamp_ += n;
 }
 
@@ -231,6 +242,7 @@ bool Engine::timeMachineSaveTo(const std::string& path, double preSeconds, doubl
 }
 
 void Engine::applyReset() {
+    rxStartNs_ = steadyNs();   // an overflow in the next seconds belongs to the reset (overflow_cause.h)
     tm_.discard();   // the history is at the old centre frequency
     std::lock_guard<std::mutex> secLk(secFeedMu_);   // the second mode's receiver is reset with the rest, never while it takes a block
     {

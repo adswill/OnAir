@@ -4,6 +4,7 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <algorithm>
 #include <vector>
 
 using namespace dect2;
@@ -66,6 +67,49 @@ static Result run(const Radio& r, double seconds, uint64_t seed) {
     return {lost, events, trueLost};
 }
 
+// DeliveryRate: the same simulated radios, the percent of the set rate it reads at every look of the sample thread. Also the old way (a
+// window on the sample thread's own clock), to show what it read: whole transfers in a window of varying length.
+struct RateResult { float minPct = 1e9f, maxPct = -1e9f, oldMin = 1e9f; int looks = 0, below97 = 0, oldBelow97 = 0; };
+
+static RateResult runRate(const Radio& r, double seconds, uint64_t seed, double slowFrac = 1.0, double stallAt = -1, double stallSec = 0) {
+    Lcg g{seed};
+    DeliveryRate dr;
+    const int64_t t0 = 1000000000000LL;
+    const double real = r.rate * (1 + r.ppm * 1e-6) * slowFrac;
+    const double blockSec = (double)r.block / real;
+    struct D { int64_t ns; uint64_t off; };
+    std::vector<D> del;
+    uint64_t off = 0;
+    double held = 0, nextHiccup = r.hiccupEvery;
+    for (double t = blockSec; t < seconds + 1; t += blockSec) {
+        if (stallAt >= 0 && t >= stallAt && t < stallAt + stallSec) continue;
+        off += r.block;
+        double at = t + g.u() * r.jitterMs * 1e-3;
+        if (r.hiccupEvery > 0 && t >= nextHiccup) { held = t + r.hiccupMs * 1e-3; nextHiccup += r.hiccupEvery; }
+        if (at < held) at = held + g.u() * 1e-3;
+        if (!del.empty() && at * 1e9 < (double)(del.back().ns - t0)) at = (double)(del.back().ns - t0) * 1e-9;
+        del.push_back({t0 + (int64_t)(at * 1e9), off});
+    }
+    RateResult res;
+    size_t k = 0;
+    int64_t oldT0 = 0; uint64_t oldOff0 = 0;
+    for (double t = 0; t < seconds; t += (g.u() < 0.05 ? 0.3 : 0.033)) {
+        const int64_t now = t0 + (int64_t)(t * 1e9);
+        while (k < del.size() && del[k].ns <= now) k++;
+        if (!k) continue;
+        const float p = dr.observe(del[k - 1].off, del[k - 1].ns, r.block, now, r.rate);
+        if (p >= 0) { res.looks++; res.minPct = std::min(res.minPct, p); res.maxPct = std::max(res.maxPct, p); res.below97 += p < 97.f; }
+        // the 3.9 code: a two-second window on this clock
+        if (oldT0 == 0) { oldT0 = now; oldOff0 = del[k - 1].off; }
+        else if (now - oldT0 >= 2000000000LL) {
+            const float o = (float)(100.0 * (double)(del[k - 1].off - oldOff0) / ((double)(now - oldT0) * 1e-9 * r.rate));
+            res.oldMin = std::min(res.oldMin, o); res.oldBelow97 += o < 97.f;
+            oldT0 = now; oldOff0 = del[k - 1].off;
+        }
+    }
+    return res;
+}
+
 int main() {
     // ---- nothing lost: a HackRF (20 Msps, 6.5 ms transfers) with jitter, hiccups and a clock 50 ppm off; an RTL-SDR on macOS (100 ms
     // blocks, 100 ppm); a radio whose clock is 300 ppm off
@@ -104,6 +148,44 @@ int main() {
         const Result a = run(h, 60, 3);
         printf("  2 %% of transfers lost: %.0f ms counted in %d steps, %.0f ms lost\n", a.lostSec * 1e3, a.events, a.trueLostSec * 1e3);
         CHECK(std::fabs(a.lostSec - a.trueLostSec) < 0.15 * a.trueLostSec, "trickle: %.0f ms counted, %.0f ms lost", a.lostSec * 1e3, a.trueLostSec * 1e3);
+    }
+    // ---- low sample rates: transfers that are a large part of a second. Nothing lost must count nothing (the gap detector), and the
+    // delivered rate must read about 100 % (the 3.9 window read 78 % at 250 ksps: "use a USB 3 port" while nothing was wrong)
+    {
+        struct Case { const char* name; Radio r; };
+        const Case cs[] = {
+            {"62.5 ksps, 16384-sample transfers", {62.5e3, 20, 16384}},
+            {"250 ksps, 131072-sample transfers (0.5 s)", {250e3, -30, 131072}},
+            {"250 ksps, 16384, 50 ms network jitter", {250e3, 0, 16384, 50}},
+            {"1.024 Msps, 131072", {1.024e6, 60, 131072}},
+            {"2.4 Msps, 262144", {2.4e6, -100, 262144, 30, 4, 200}},
+            {"48 kHz sound card, 10 ms buffers", {48e3, 40, 480, 15}},
+            {"10 Msps, 65536", {10e6, 20, 65536}},
+            {"20 Msps, 131072", {20e6, 50, 131072}},
+        };
+        bool oldWrongSomewhere = false;
+        for (const Case& c : cs) {
+            for (uint64_t seed = 1; seed <= 3; seed++) {
+                const Result a = run(c.r, 90, seed);
+                CHECK(a.events == 0, "%s without loss: %d gaps, %.1f ms (seed %llu)", c.name, a.events, a.lostSec * 1e3, (unsigned long long)seed);
+                const RateResult q = runRate(c.r, 90, seed);
+                CHECK(q.looks > 0 && q.below97 == 0 && q.minPct > 98.f && q.maxPct < 102.f, "%s: delivered rate read %.1f..%.1f %% (%d of %d looks under 97 %%), seed %llu",
+                      c.name, q.minPct, q.maxPct, q.below97, q.looks, (unsigned long long)seed);
+                if (seed == 1) printf("  %-44s delivered %.1f..%.1f %%  (3.9 window: lowest %.1f %%)\n", c.name, q.minPct, q.maxPct, q.oldMin);
+                if (q.oldBelow97) oldWrongSomewhere = true;
+            }
+        }
+        CHECK(oldWrongSomewhere, "the 3.9 window should have read under 97 %% at the low rates (the test no longer shows the bug)");
+    }
+    // ---- and a radio that really is short still reads short, at a low and a high rate: 90 % of the rate, and a 1.5 s stall
+    {
+        for (const Radio& r : {Radio{250e3, 0, 131072}, Radio{20e6, 0, 131072}}) {
+            const RateResult slow = runRate(r, 60, 5, 0.90);
+            CHECK(slow.looks > 0 && slow.maxPct < 92.f && slow.minPct > 88.f, "%.0f ksps at 90 %%: read %.1f..%.1f %%", r.rate / 1e3, slow.minPct, slow.maxPct);
+            const RateResult st = runRate(r, 60, 6, 1.0, 30.0, 1.5);
+            CHECK(st.below97 >= 1, "%.0f ksps with a 1.5 s stall: never read under 97 %% (lowest %.1f %%)", r.rate / 1e3, st.minPct);
+            printf("  %.0f ksps: 90 %% radio reads %.1f..%.1f %%; a 1.5 s stall reads %.1f %%\n", r.rate / 1e3, slow.minPct, slow.maxPct, st.minPct);
+        }
     }
     printf(fails ? "delivery check: FAILED\n" : "delivery check: ok\n");
     return fails ? 1 : 0;
