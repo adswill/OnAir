@@ -161,6 +161,31 @@ static void meiseiTest() {
     }
 }
 
+// 4.0: the iMS-100 serial (one frame in 16) survives the reset after a pause, and expires after 5 minutes of stream time
+static void meiseiSerialKept() {
+    SondeTruth t = truth();
+    auto d = makeMeiseiDecoder();
+    std::vector<SondeFix> out;
+    double tm = 5;
+    for (int cnt : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {   // frame 0 carries the serial; a pause (reset) after every frame
+        auto s = meiseiSymbols(t, cnt, 12345678);
+        d->push(s.data(), s.size(), tm, out);
+        d->reset();
+        tm += 1;
+    }
+    int withSerial = 0;
+    for (const auto& o : out) withSerial += o.serial == "12345678";
+    CHECK(withSerial >= 3);   // 3.9: only frame 0 itself (the serial was forgotten at the pause)
+    CHECK(withSerial >= (int)out.size() - 1);
+    out.clear();
+    for (int cnt : {17, 18, 19, 20, 21, 22}) {
+        auto s2 = meiseiSymbols(t, cnt, 12345678);
+        d->push(s2.data(), s2.size(), tm + 500 + cnt, out);   // 500 s later: forgotten, nothing is reported until the next serial frame
+        d->reset();
+    }
+    CHECK(out.empty());
+}
+
 // 4.0: the iMS-100 sync (48 symbols) is found with up to 3 symbol errors
 static void meiseiSyncTolerance() {
     SondeTruth t = truth();
@@ -191,5 +216,6 @@ int main() {
     imet54Test();
     meiseiTest();
     meiseiSyncTolerance();
+    meiseiSerialKept();
     return testSummary("sonde_extra");
 }

@@ -352,13 +352,19 @@ public:
     const char* type() const override { return "iMS-100"; }
     double symbolRate() const override { return 2400; }
     bool narrowChannel() const override { return true; }
-    void reset() override { hdr_ = 0; run_ = false; std::memset(cfg_, 0, sizeof cfg_); sn_ = 0; }
-    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], out); }
+    // 4.0: the serial arrives once in 16 frames; a pause (reset) used to forget it, and every frame was dropped for want of a key until the next one. Kept for 5 minutes of stream time (as MRZ)
+    void reset() override { hdr_ = 0; run_ = false; }
+    void push(const uint8_t* sym, size_t n, double t, std::vector<SondeFix>& out) override {
+        if (sn_ > 0 && (t < cfgT_ || t - cfgT_ > 300.0)) { std::memset(cfg_, 0, sizeof cfg_); sn_ = 0; }
+        tPush_ = t;
+        for (size_t i = 0; i < n; i++) step(sym[i], out);
+    }
 private:
     static constexpr uint64_t kSync0 = 0b101010101011010100101011001101001100101011001101ULL;
     static constexpr uint64_t kSync1 = 0b110011001101001101001101010100101010110010101010ULL;
     uint64_t hdr_ = 0; bool run_ = false, odd_ = false; int nSym_ = 0; std::vector<uint8_t> raw_;
-    float cfg_[64]; int sn_ = 0, cnt_ = -1, ms_ = -1, hh_ = -1, mm_ = -1, date_ = -1;
+    float cfg_[64] = {}; int sn_ = 0, cnt_ = -1, ms_ = -1, hh_ = -1, mm_ = -1, date_ = -1;
+    double cfgT_ = 0, tPush_ = 0;
     double lastLat_ = 0, lastLon_ = 0, lastAlt_ = 0; bool havePos_ = false; double vH_ = 0, vD_ = 0, vU_ = 0;
     void step(int s, std::vector<SondeFix>& out) {
         if (!run_) {
@@ -399,7 +405,7 @@ private:
             uint32_t w = (wordOf(3) << 16) | wordOf(2);
             cfg_[cnt_ & 63] = imsFloat(w);
             if ((cnt_ & 1) == 0) { ms_ = (int)wordOf(10); hh_ = (int)(wordOf(11) >> 8); mm_ = (int)(wordOf(11) & 0xff); }
-            if ((cnt_ & 15) == 0) { const float f = cfg_[cnt_ & 63]; if (f > 0 && f < 1e9f) sn_ = (int)std::lround(f); }
+            if ((cnt_ & 15) == 0) { const float f = cfg_[cnt_ & 63]; if (f > 0 && f < 1e9f) { sn_ = (int)std::lround(f); cfgT_ = tPush_; } }
         } else if ((cnt_ & 1) == 0) {
             date_ = (int)wordOf(0);
             const uint32_t latR = (wordOf(1) << 16) | wordOf(2), lonR = (wordOf(3) << 16) | wordOf(4);
