@@ -155,8 +155,8 @@ static void spotTest() {
     CHECK(v[2].farthestKm == 0 && v[2].spots == 1);
 }
 
-static std::vector<IsmPulse> mkPwm(std::mt19937& rng, double jit, int rows, int bits) {
-    std::vector<IsmPulse> p; std::uniform_real_distribution<double> j(-jit, jit);
+static std::vector<IsmTimedPulse> mkPwm(std::mt19937& rng, double jit, int rows, int bits) {
+    std::vector<IsmTimedPulse> p; std::uniform_real_distribution<double> j(-jit, jit);
     std::mt19937 data(5);
     for (int r = 0; r < rows; r++)
         for (int b = 0; b < bits; b++) {
@@ -174,17 +174,17 @@ static void ismTest() {
         CHECK(c.flex.find("OOK_PWM") != std::string::npos);
     }
     // PPM: constant 100 us pulse, gap 500 / 1000 us
-    std::vector<IsmPulse> p; std::mt19937 d(9); std::uniform_real_distribution<double> j(-0.06, 0.06);
+    std::vector<IsmTimedPulse> p; std::mt19937 d(9); std::uniform_real_distribution<double> j(-0.06, 0.06);
     for (int r = 0; r < 3; r++) for (int b = 0; b < 40; b++) p.push_back({100 * (1 + j(rng)), b == 39 ? 8000.0 : ((d() & 1) ? 1000 : 500) * (1 + j(rng))});
     auto c = ismClassify(p);
     CHECK(c.coding == "PPM" && c.rows == 3 && c.bitsPerRow == 40 && std::fabs(c.shortUs - 500) < 60 && std::fabs(c.longUs - 1000) < 100);
     // Manchester: unit 250 us, pulses and gaps of 250 or 500
-    std::vector<IsmPulse> m; std::mt19937 e(4);
+    std::vector<IsmTimedPulse> m; std::mt19937 e(4);
     for (int k = 0; k < 60; k++) m.push_back({(e() & 1) ? 500.0 : 250.0, (k == 59) ? 9000.0 : ((e() & 1) ? 500.0 : 250.0)});
     c = ismClassify(m); CHECK(c.coding == "Manchester" && std::fabs(c.shortUs - 250) < 30);
     // noise: uniformly random pulse and gap lengths must not be reported as a coded protocol with confidence
     { std::uniform_real_distribution<double> u(80, 2000); int claims = 0;
-      for (int k = 0; k < 200; k++) { std::vector<IsmPulse> n; for (int i = 0; i < 40; i++) n.push_back({u(rng), u(rng)}); if (ismClassify(n).confidence >= 0.8) claims++; }
+      for (int k = 0; k < 200; k++) { std::vector<IsmTimedPulse> n; for (int i = 0; i < 40; i++) n.push_back({u(rng), u(rng)}); if (ismClassify(n).confidence >= 0.8) claims++; }
       CHECK(claims <= 10); }
     // too short to say
     CHECK(ismClassify({{100, 100}, {100, 100}}).coding == "unknown");

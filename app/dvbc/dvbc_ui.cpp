@@ -1,6 +1,7 @@
 // DVB-C screens: status bar, the analysis row (constellation, equaliser taps, MER history, Reed-Solomon losses), the Receiver tab, the tuner
 // (cable channel, symbol rate, QAM, annex) and the test signal options. The TV tab, services and the player are the shared ones.
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "ease/ease_ui.h"
 #include "dect2/dvbc/dvbc_rx.h"
 #include <cmath>
@@ -196,6 +197,7 @@ void receiver(App& a) {
     ImGui::PopTextWrapPos();
     ImGui::Spacing();
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "Start the receiver with DVB-C selected."); return; }
+    d40DvbcQamLine(t);   // 4.0: constellation check (app/d40)
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(190 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
     kv("state", "%s", t.stage.c_str());
     if (!t.note.empty()) kv("note", "%s", t.note.c_str());

@@ -29,3 +29,23 @@ void d40AisFeed(const AisTelemetry& t, double lat, double lon);   // d40_ais_ui.
 void d40AisRangeCard(const AisTelemetry& t);
 void d40PagerFeed(const PagerTelemetry& t);   // d40_pager_ui.cpp: paged capcodes into the group finder
 void d40PagerGroupsCard();
+void d40SarsatFeed(const dect2::SarsatTelemetry& t);   // d40_sarsat_ui.cpp: beacons grouped into incidents
+void d40SarsatIncidentsCard();
+void d40TonesFeed(const dect2::TonesTelemetry& t);   // d40_tones_ui.cpp: DTMF number assembler, tone system guess
+void d40TonesCard(const dect2::TonesTelemetry& t);
+namespace dect2 { struct IsmRaw; }
+void d40IsmClassifyLine(const dect2::IsmRaw& r);   // d40_ism_ui.cpp: under the pulse trace of an unknown burst
+namespace dect2 { struct HfdigFtxTelemetry; }
+void d40FtxCard(App& a, const dect2::HfdigFtxTelemetry& f);   // d40_ftx_ui.cpp: heard stations, band summary, clear TX frequency, band suggestion
+namespace dect2 { struct CwTelemetry; }
+void d40CwCard(App& a, const dect2::CwTelemetry& t);   // d40_cw_ui.cpp: callsigns heard and CQ callers
+std::string d40GsmrFrequencies(const std::vector<int>& arfcns);   // d40_gsmr_ui.cpp: "955: 921.2 / 876.2 (R)" per channel number: downlink / uplink MHz, R = railway band
+namespace dect2 { struct HfbTelemetry; }
+void d40HfbFeed(const std::vector<double>& khz, const dect2::HfbTelemetry& t);   // d40_hf_ui.cpp: beacon readings into the hour-of-day table
+void d40HfbBestCard();
+void d40AirbandCard();   // d40_airband_ui.cpp: ATIS letter tracker and VOLMET airports from the live transcripts
+namespace dect2 { struct DvbcTelemetry; }
+void d40DvbcQamLine(const dect2::DvbcTelemetry& t);   // d40_tv_ui.cpp: the QAM order the symbol cloud looks like
+void d40HdrLevelsCard(App& a);                         // HD Radio digital sideband levels and imbalance
+namespace dect2 { struct FpvTelemetry; }
+void d40FpvPickLine(const dect2::FpvTelemetry& t);     // free FPV channels for N pilots

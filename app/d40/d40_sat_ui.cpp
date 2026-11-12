@@ -19,11 +19,16 @@ struct Sat {
     d4::PointingAid aid;
     bool pointing = false;
     double lastCn = 0;
+    bool lnb = false; float loMhz = 9750.f; d4::LnbDrift drift; double lastDriftT = 0;
 } S;
 }  // namespace
 
 void d40SatTick(App& a) {
-    if (!S.init) { S.init = true; S.minBwMhz = (float)plat::prefs().getD("d40SatMinBw", 1.0); }
+    if (!S.init) { S.init = true; S.minBwMhz = (float)plat::prefs().getD("d40SatMinBw", 1.0); S.loMhz = (float)plat::prefs().getD("d40SatLo", 9750.0); S.lnb = plat::prefs().getI("d40SatLnb", 0) != 0; }
+    if (S.lnb && a.engine.running() && a.rx.standard == 7 && a.rx.dvbs.state >= 1) {   // the carrier's offset from where the radio is tuned: the LNB's error while the user holds the tuning on the carrier
+        const double now = ImGui::GetTime();
+        if (now - S.lastDriftT >= 1.0) { S.lastDriftT = now; S.drift.add(now, 0.0, a.rx.dvbs.cfoHz, S.loMhz * 1e6); }
+    }
     if (S.scanning && a.engine.running() && !a.spec.dbfs.empty()) {
         if (S.acc.size() != a.spec.dbfs.size()) { S.acc.assign(a.spec.dbfs.size(), 0.0); S.frames = 0; }
         for (size_t i = 0; i < a.spec.dbfs.size(); i++) S.acc[i] += std::pow(10.0, a.spec.dbfs[i] / 10.0);
@@ -82,5 +87,17 @@ void d40SatCard(App& a) {
         const int tr_ = S.aid.trend();
         ImGui::Text("C/N %.1f dB, peak %.1f dB, %.1f dB below the peak, %s%s", S.lastCn, S.aid.peakDb(), S.aid.belowPeakDb(), tr_ > 0 ? "rising" : (tr_ < 0 ? "falling" : "steady"), S.aid.atPeak() ? " - at the peak" : "");
         (void)rate;
+    }
+    // LNB warm-up drift
+    if (ImGui::Checkbox(tr("LNB drift watch"), &S.lnb)) { plat::prefs().setI("d40SatLnb", S.lnb ? 1 : 0); S.drift = d4::LnbDrift(); }
+    ImGui::SameLine(); ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Tune onto a steady beacon or carrier and leave the receiver locked: the offset of the carrier from the tuned frequency is the LNB's error. It shows the error in kHz and ppm of the LO, the drift per minute, and says when it has settled (an LNB drifts while it warms up: wait before fine pointing)."));
+    if (S.lnb) {
+        ImGui::SetNextItemWidth(90 * gUi);
+        if (ImGui::InputFloat(tr("LNB LO (MHz)"), &S.loMhz, 0, 0, "%.0f")) plat::prefs().setD("d40SatLo", S.loMhz);
+        bool ok = false;
+        const double d = S.drift.driftKhzPerMin(120, &ok);
+        if (!ok) ImGui::TextDisabled("%s", tr("Collecting: needs about a minute of a locked carrier."));
+        else ImGui::Text("%s %+.1f kHz (%+.1f ppm), %+.1f kHz/min: %s", tr("Error"), S.drift.errorKhz(), S.drift.errorPpm(), d, S.drift.settled() ? tr("settled") : tr("still drifting"));
     }
 }

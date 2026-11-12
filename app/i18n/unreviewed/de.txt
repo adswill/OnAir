@@ -791,3 +791,212 @@ Meters, Sensus
 RFID, Type A
 RFID, Type B
 RFID, ISO 15693
+ (from the neighbouring hours)
+%.1f minutes ago
+A different frequency is best in
+A steady offset of 50 to 200 Hz marks an off-raster or pirate transmitter; it is also what the synchronous detector has to pull in.
+Activity map and signal names
+Add reading
+Advice: back off about %.1f dB%s
+Airtime %
+Airtime s
+Also on
+Altitude ft
+Antenna direction
+Atmosphere
+Averages 40 spectrum frames of the whole capture and lists every carrier: centre, width, symbol rate (snapped to a standard rate) and C/N. Widen the capture to cover the LNB band.
+Best beacon frequency for this hour
+Best first: a high mean SNR that stays steady and is decoded in every reading. Readings are of the ensemble the service belongs to, so ranking compares services across the ensembles you visit.
+Best now
+Blind scan and dish pointing
+Blind sectors (heard on both sides, nothing in between)
+Built from the decodes of this session. Heard: callsigns in the messages, newest first. Band summary: spots in the last 30 minutes per band, with the farthest one and the directions it is open to (needs your position and the stations' locators). Clear frequency: the widest gap in 200 - 2900 Hz for the even and the odd slot, from the last decodes: call there to avoid sitting on somebody. Suggested band: the busiest of the last hour, every band still revisited every 30 minutes.
+Burst finder
+Bursts of the same beacon ID grouped. A real beacon repeats about every 50 seconds and, if it carries a position, sends it again; a 5 second echo or a single burst is not flagged. Self-test bursts are counted separately. Receive only: do not rely on this for safety.
+Busiest now
+Busy hours
+Buzz train timing
+C/N
+CQ callers only##d40cwh
+CQ callers only##d40ftxh
+Cable loss TX dB
+Callsigns found in the decoded text of all signals in the window, newest first, with the number of times seen. CQ marks a station that was read calling CQ. Garbled text can give false calls: check by ear.
+Capcode groups
+Carrier, sideband and station ID
+Channel busy %.0f %% of the last 10 minutes by %d stations
+Channel load
+Channel use
+Classifier
+Classifier: no regular line code found.
+Clear frequency
+Command
+Counts, per 25 kHz cell and hour of the day, how often a signal was there. Saved between runs and merged over days. A signal in a cell that was almost always quiet at this hour raises an alert.
+Coverage by bearing and ship types
+Cumulative share
+DX opening alarm
+Dish pointing aid
+Distance km
+EIRP %.1f dBm, path loss %.1f dB, received %.1f dBm, margin %+.1f dB, free-space range at zero margin %.1f km
+Emitter
+Ensemble changes
+Fade margin dB
+Farthest nm
+Fewest channels for 90 percent of the traffic
+Flying circles or a holding pattern:
+Forget the map
+Free space plus the margin you enter: terrain and buildings are not modelled.
+Good
+Heard stations, band summary and clear frequency
+ID
+Incidents (one row per beacon)
+Interference
+Keep an activity map
+Kept for this session; 24 hours of reports.
+Last 50 min
+Learn normal band
+Learned from the launches this station heard: the usual time of day of this site's sondes. Tune in about 15 minutes before.
+Learned from what this receiver heard at this hour of the day on each beacon frequency (averaged over days, kept between runs in hf_bandclock.txt). It needs a few days of listening; a missing hour is filled from the hours next to it, and says so. No propagation model, nothing is downloaded.
+Line code worked out from the pulse and gap lengths of this burst: how the bits are coded, the short and long length, the gap that separates repeated rows and the bits per row. The flex line can be pasted into rtl_433. Noise bursts are not claimed; the confidence tells how well the lengths fit.
+Link budget, ramp and SWR
+Look at this
+Mean SNR
+Median gap s
+Meteor echoes
+Names: put talkgroups.csv (decimal id, name; or a RadioReference export) in the data folder.
+Narrowest carrier (MHz)
+Next launch (UTC)
+No aircraft is flying circles (needs about one full turn in 15 minutes).
+No baseline yet: tick Learn normal band.
+No beacon yet.
+No carrier line found in the channel.
+No change expected in the next 24 hours.
+No change needed.
+No decodes in the last 30 minutes.
+No group calls yet
+No keys dialled yet.
+No messages in the last 30 minutes.
+No scan yet.
+No station above 6 dB yet.
+No tone system recognised yet.
+No transmitter identification heard yet.
+None yet: capcodes paged together at least 3 times within 20 seconds form a group.
+Notes only: they never block or change a transmission.
+Nothing learned yet for this hour: leave the beacon monitor running.
+Nothing yet: keep the receiver running.
+Overhead
+Packet
+Path class
+Pattern
+Per min
+Per minute
+Position drift
+RC PPM frames
+RX antenna dBi
+RX loss dB
+RX sensitivity dBm
+Radar
+Radios
+Ramp from dBm
+Range stats
+Rank
+Ranking needs 3 readings (15 s) of a locked ensemble.
+Reload names
+Repeat
+Replay
+Replay: where every aircraft was a few minutes ago, from the positions received since this window started (up to one hour back, gaps of more than 2 minutes are not bridged).
+Reset peak
+SWR %.2f: %.0f %% of the forward power is reflected. %s
+SWR you measured
+Same text
+Scan the capture for carriers
+Scanning...
+Service ranking and transmitters
+Set the level for each step with "Set the level for this power" and watch the SWR.
+Set your position (ADS-B antenna position) for distance and bearing.
+Set your position (ADS-B antenna position) for the coverage.
+Share
+Ships by type
+Shortest s
+Spread
+Station ID: nothing in your schedule on this frequency now.
+Station ID: put a schedule file (khz,HHMM,HHMM,days,name,country; for example from an EiBi export) at am_schedule.csv in the data folder.
+Station names and DX alarm
+Stations heard and CQ callers
+Steps to the target power
+Suggested band
+TX antenna dBi
+Tag
+Talkgroup activity
+The link budget needs this radio's power table (Advanced > Calibration).
+The listened channel is outside the capture.
+The name is the one most reads agree on (8 clean characters). The same programme code on two frequencies within 300 kHz is one station.
+The talkgroup with the most airtime in the last 2 minutes. It only changes when another one is clearly busier for a while.
+The tones heard in the last 20 seconds are matched against CTCSS, DTMF, the five-tone plans (ZVEI, CCIR, EEA, EIA, DZVEI) and SELCAL. It is a guess to pick the right decoder, not a lock. Dialled keys are joined into numbers and codes; a repeat within 2 minutes is counted, not listed.
+Tone system and dialled numbers
+Transmitter names: put a CSV (main,sub,name,lat,lon[,kW]) at dab_transmitters.csv in the data folder.
+Turn the antenna to a heading, type it, press Add reading. After 4 or more headings that go around the compass the best direction is shown.
+Typical nm
+Usually lands
+Warns when several foreign stations appear that this site does not normally receive (tropo or sporadic-E). Learn this site's normal band first.
+aircraft at that time
+anticlockwise
+beacons fast
+big share
+bits per row
+capcodes
+clockwise
+downlink / uplink MHz (R = railway band)
+even
+even slots
+h (UTC)
+heading (deg)
+incidents
+learning
+learning: leave the census running for a few minutes, then untick
+not in your list
+nothing yet
+now: tune in
+odd
+odd slots
+quieter
+same text again and again
+self-test
+stations heard
+step dB
+sweeps added this session; alerts need 20 sweeps at the same hour
+talkgroup names loaded from talkgroups.csv
+test
+tracked
+turns
+typically
+watch
+LNB drift watch
+Tune onto a steady beacon or carrier and leave the receiver locked: the offset of the carrier from the tuned frequency is the LNB's error. It shows the error in kHz and ppm of the LO, the drift per minute, and says when it has settled (an LNB drifts while it warms up: wait before fine pointing).
+LNB LO (MHz)
+Collecting: needs about a minute of a locked carrier.
+Error
+settled
+still drifting
+ATIS letter tracker and VOLMET
+Reads the live transcripts of the airband channels (Transcripts need the speech model). A channel whose label says ATIS or VOLMET, or that read an information letter twice, is an ATIS channel: the current letter, its age, and a notice when the letter changes. A VOLMET read-out lists the airports it named.
+No ATIS channel found yet.
+information
+minutes ago
+letter not read yet
+VOLMET airports
+Constellation check: no regular grid recognised.
+The symbol cloud looks like
+A check of the received symbols against each QAM grid, judged against what a random cloud would score on the same grid (a finer grid always fits better). The decoder finds its order from the stream by itself; this is a second opinion.
+decoder uses
+Digital sideband levels
+Power of the lower and upper digital sideband against the host signal, from the capture spectrum. A first-adjacent station hurts one side: a clear imbalance tells which. Needs a capture at least 440 kHz wide around the station.
+The capture is too narrow around the station (needs +-240 kHz, bins under 2 kHz).
+No HD Radio sidebands found in the spectrum.
+lower
+upper
+imbalance
+Free channels for
+pilots
+Channels that nobody is using (from the last scan), spaced so the pilots do not clash: not within 20 MHz of a transmitter, at least 37 MHz apart. Channels never measured are not offered: scan first.
+Scan first.
+No free channel found.

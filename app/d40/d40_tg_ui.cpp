@@ -1,6 +1,8 @@
 // Talkgroup activity (airtime ranking, 50-minute timeline, busiest talkgroup) for P25, NXDN and TETRA, as DMR already has. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"
+#include "../smart5/smart5_ui.h"
+#include "dect2/d40/radio_e40.h"
 #include "dect2/trunkpool/tg_activity.h"
 #include <algorithm>
 #include <cmath>
@@ -8,6 +10,17 @@
 #include <vector>
 
 namespace {
+// talkgroup names from talkgroups.csv in the data folder (RadioReference style "dec,hex,mode,alpha,..." or "dec,name"); nothing is bundled
+dect2::d40::TgAlias gAlias;
+bool gAliasLoaded = false;
+int gAliasRows = 0;
+void loadAlias(bool force = false) {
+    if (gAliasLoaded && !force) return;
+    gAliasLoaded = true; gAlias = dect2::d40::TgAlias();
+    gAliasRows = gAlias.importCsv(s5ui::readData("talkgroups.csv"));
+}
+std::string tgText(uint32_t tg) { return gAliasRows ? gAlias.name((int)tg) : "TG " + std::to_string(tg); }
+
 struct TgCall { uint32_t dst, src; double s, e; };
 
 struct Panel {
@@ -24,14 +37,15 @@ void draw(Panel& P, const char* id, const std::vector<TgCall>& calls, bool showR
     ImGui::PushID(id);
     const auto rows = P.act.ranking(P.nowS, 600);
     if (rows.empty()) { ImGui::TextDisabled("%s", tr("No group calls yet")); ImGui::PopID(); return; }
-    ImGui::Text("%s: TG %u", tr("Busiest now"), P.fol.pick(P.act, P.nowS));
+    loadAlias();
+    ImGui::Text("%s: %s", tr("Busiest now"), tgText(P.fol.pick(P.act, P.nowS)).c_str());
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The talkgroup with the most airtime in the last 2 minutes. It only changes when another one is clearly busier for a while."));
     if (ImGui::BeginTable("##tgact", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn(tr("Talkgroup")); ImGui::TableSetupColumn(tr("Calls")); ImGui::TableSetupColumn(tr("Airtime s")); ImGui::TableSetupColumn(tr("Radios")); ImGui::TableSetupColumn(tr("Last 50 min"), ImGuiTableColumnFlags_WidthStretch);
         ImGui::TableHeadersRow();
         for (size_t i = 0; i < rows.size() && i < 8; i++) {
             const auto& r = rows[i];
-            ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::Text("%u", r.tg);
+            ImGui::TableNextRow(); ImGui::TableNextColumn(); if (gAliasRows) ImGui::Text("%u %s", r.tg, tgText(r.tg).c_str()); else ImGui::Text("%u", r.tg);
             ImGui::TableNextColumn(); ImGui::Text("%d", r.calls);
             ImGui::TableNextColumn(); ImGui::Text("%.0f", r.airtimeS);
             ImGui::TableNextColumn(); if (showRadios) ImGui::Text("%d", r.radios); else ImGui::TextDisabled("-");
@@ -44,6 +58,10 @@ void draw(Panel& P, const char* id, const std::vector<TgCall>& calls, bool showR
         }
         ImGui::EndTable();
     }
+    if (gAliasRows) ImGui::TextDisabled("%d %s", gAliasRows, tr("talkgroup names loaded from talkgroups.csv"));
+    else ImGui::TextDisabled("%s", tr("Names: put talkgroups.csv (decimal id, name; or a RadioReference export) in the data folder."));
+    ImGui::SameLine();
+    if (ImGui::SmallButton(tr("Reload names"))) loadAlias(true);
     ImGui::PopID();
 }
 }  // namespace

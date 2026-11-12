@@ -2,6 +2,7 @@
 // of System Information 1 and 2, the carriers seen in the spectrum, a band scan for radios that cannot take the whole railway band at
 // once, and the log. Only what base stations broadcast to every mobile is shown.
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "state/results_export.h"
 #include "dect2/gsmr/gsmr_rx.h"
 #include "dect2/gsmr/gsmr_si.h"
@@ -161,9 +162,13 @@ void listsView(App& a) {
         any = true;
         char h[96]; snprintf(h, sizeof h, "ARFCN %d %s##l%d_%d", c.arfcn, opText(c).c_str(), c.arfcn, c.bsic);
         if (!ImGui::TreeNode(h)) continue;
-        if (c.hasSi1) ImGui::Text("cell allocation (SI1): %s", listText(c.cellAlloc).c_str());
+        if (c.hasSi1) {
+            ImGui::Text("cell allocation (SI1): %s", listText(c.cellAlloc).c_str());
+            ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s: %s", tr("downlink / uplink MHz (R = railway band)"), d40GsmrFrequencies(c.cellAlloc).c_str()); ImGui::PopTextWrapPos();   // 4.0 (app/d40)
+        }
         if (c.hasSi2) {
             ImGui::Text("BCCH neighbours (SI2): %s", listText(c.neigh).c_str());
+            ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s: %s", tr("downlink / uplink MHz (R = railway band)"), d40GsmrFrequencies(c.neigh).c_str()); ImGui::PopTextWrapPos();   // 4.0 (app/d40)
             ImGui::Text("neighbour NCC permitted: 0x%02X", c.nccPermitted);
         }
         if (!c.neighBis.empty()) ImGui::Text("%s %s", tr("more BCCH neighbours (SI2bis):"), listText(c.neighBis).c_str());

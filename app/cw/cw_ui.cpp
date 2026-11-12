@@ -2,6 +2,7 @@
 // of every signal (frequency, speed, SNR, text) and the focused signal's text in big letters, with the callsigns highlighted; the
 // sidetone switch for the focused signal (off until switched on).
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "ham/ham_events_ui.h"
 #include "gfx/gfx.h"
 #include "dect2/cw/cw_morse.h"
@@ -240,6 +241,7 @@ void tab(App& a) {
     if (!live(a)) return;
     signalTable(a, std::max(80.f, ImGui::GetContentRegionAvail().y * 0.45f));
     ImGui::Spacing();
+    d40CwCard(a, a.rx.cw);   // 4.0: stations heard, CQ callers (app/d40)
     focusView(a);
 }
 
