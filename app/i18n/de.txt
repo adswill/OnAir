@@ -4016,8 +4016,14 @@ Calls followed from this capture	Aus dieser Erfassung verfolgte Anrufe
 Caller	Anrufer
 Slot	Platz
 Input %.0f Hz, centre %.4f MHz. Traffic channels inside the capture are followed as FM; nothing encrypted is decoded.	Eingang %.0f Hz, Mitte %.4f MHz. Verkehrskanäle im Erfassungsbereich werden als FM verfolgt; nichts Verschlüsseltes wird dekodiert.
-Radiosonde upload (APRS-IS)	Radiosonden-Upload (APRS-IS)
-Sends every decoded radiosonde (position, speed, altitude, climb rate, temperature, humidity, pressure, frequency, type) to APRS-IS sites such as wettersonde.net and radiosondy.info, after a station beacon with your location. Each target is off until you tick it.	Sendet jede dekodierte Radiosonde (Position, Geschwindigkeit, Höhe, Steigrate, Temperatur, Feuchte, Druck, Frequenz, Typ) an APRS-IS-Seiten wie wettersonde.net und radiosondy.info, nach einer Stationsbake mit deinem Standort. Jedes Ziel ist aus, bis du es ankreuzt.
+Radiosonde upload (SondeHub, APRS-IS)	Radiosonden-Upload (SondeHub, APRS-IS)
+Sends every decoded radiosonde (position, speed, altitude, climb rate, temperature, humidity, pressure, frequency, type) to SondeHub and to APRS-IS sites such as wettersonde.net and radiosondy.info, after a station beacon with your location. Each target is off until you tick it.	Sendet jede dekodierte Radiosonde (Position, Geschwindigkeit, Höhe, Steigrate, Temperatur, Feuchte, Druck, Frequenz, Typ) an SondeHub und an APRS-IS-Seiten wie wettersonde.net und radiosondy.info, nach einer Stationsbake mit deinem Standort. Jedes Ziel ist aus, bis du es ankreuzt.
+Uploader callsign	Rufzeichen für den Upload
+Antenna (optional)	Antenne (optional)
+Send my station position (shown on the SondeHub map)	Meine Stationsposition senden (auf der SondeHub-Karte zu sehen)
+Chase car: send my moving GPS position every 30 s	Verfolgerfahrzeug: meine GPS-Position alle 30 s senden
+Show my station on the map##sondeme	Meine Station auf der Karte zeigen##sondeme
+All known launch sites##sondeknown	Alle bekannten Startplätze##sondeknown
 Callsign-SSID	Rufzeichen-SSID
 beacon every (min)	Bake alle (min)
 Not a valid callsign (like DG9BFC-10).	Kein gültiges Rufzeichen (z. B. DG9BFC-10).

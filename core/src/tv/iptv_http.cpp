@@ -1,4 +1,4 @@
-// Internet TV: a small HTTP/1.1 client (GET only). Plain http goes over our own sockets everywhere; https goes through OpenSSL when the
+// Internet TV: a small HTTP/1.1 client (GET; PUT / POST with a body for the SondeHub upload). Plain http goes over our own sockets everywhere; https goes through OpenSSL when the
 // build has it (Linux), else through the system's own TLS (macOS: NSURLSession, Windows: WinHTTP/Schannel), see iptv_http_cocoa.mm / iptv_http_win.cpp.
 #include "dect2/tv/iptv.h"
 #include "../net/tcp_client.h"
@@ -172,12 +172,15 @@ std::unique_ptr<HttpBody> httpOpen(const std::string& urlIn, const HttpOptions& 
             c->tc = tls::connect(c->ctx, c->s, u.host, err);
             if (!c->tc) { r.error = err + (o.insecureTls ? "" : " (Advanced > Ignore certificate errors can be ticked for a stream you trust)"); return nullptr; }
         }
-        std::string req = "GET " + u.path + " HTTP/1.1\r\nHost: " + (u.ipv6 ? "[" + u.host + "]" : u.host);
+        const bool upload = !o.method.empty() && o.method != "GET";
+        std::string req = (upload ? o.method : std::string("GET")) + " " + u.path + " HTTP/1.1\r\nHost: " + (u.ipv6 ? "[" + u.host + "]" : u.host);
         if ((u.scheme == "http" && u.port != 80) || (u.scheme == "https" && u.port != 443)) req += ":" + std::to_string(u.port);
         req += "\r\nUser-Agent: " + (o.userAgent.empty() ? std::string("OnAir") : o.userAgent) + "\r\nAccept: */*\r\nConnection: close\r\n";
         if (!o.referer.empty()) req += "Referer: " + o.referer + "\r\n";
         for (auto& h : o.headers) if (h.first.find_first_of("\r\n") == std::string::npos && h.second.find_first_of("\r\n") == std::string::npos) req += h.first + ": " + h.second + "\r\n";
+        if (upload) req += "Content-Length: " + std::to_string(o.requestBody.size()) + "\r\n";
         req += "\r\n";
+        if (upload) req += o.requestBody;
         if (!c->wr(req.data(), req.size())) { r.error = "the connection was closed while sending the request"; return nullptr; }
         // headers
         std::string head;
@@ -207,11 +210,11 @@ std::unique_ptr<HttpBody> httpOpen(const std::string& urlIn, const HttpOptions& 
         }
         r.contentType = r.headers.count("content-type") ? r.headers["content-type"] : "";
         if (r.headers.count("content-length")) r.contentLength = atoll(r.headers["content-length"].c_str());
-        if (r.status >= 300 && r.status < 400 && r.headers.count("location")) {
+        if (!upload && r.status >= 300 && r.status < 400 && r.headers.count("location")) {
             url = resolveUrl(url, r.headers["location"]);
             continue;
         }
-        if (r.status < 200 || r.status >= 300) { r.error = statusText(r.status); return nullptr; }
+        if (r.status < 200 || r.status >= 300) { r.error = statusText(r.status); if (!o.keepErrorBody) return nullptr; }
         auto b = std::make_unique<SocketBody>();
         b->c = std::move(c);
         b->pre = std::move(body);
@@ -236,6 +239,20 @@ bool httpGetAll(const std::string& url, const HttpOptions& o, std::string& body,
         if (k < 0) { if (!body.empty() && r.contentLength < 0) return true; r.error = "the download stopped (timeout or connection lost)"; return false; }
         body.append(buf, (size_t)k);
         if (body.size() > maxBytes) { r.error = "the file is larger than " + std::to_string(maxBytes >> 20) + " MB"; return false; }
+    }
+}
+
+bool httpRequestAll(const std::string& url, const HttpOptions& o, std::string& body, HttpResult& r, size_t maxBytes) {
+    body.clear();
+    auto b = httpOpen(url, o, r);
+    if (!b) return false;
+    char buf[16384];
+    for (;;) {
+        const long k = b->read(buf, sizeof buf);
+        if (k == 0) return true;
+        if (k < 0) return !body.empty() || r.status > 0;   // the status line came: the answer counts even when its text was cut short
+        body.append(buf, (size_t)k);
+        if (body.size() > maxBytes) { body.resize(maxBytes); return true; }
     }
 }
 

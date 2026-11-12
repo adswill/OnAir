@@ -760,6 +760,7 @@ std::string adsbTypeOfIcao(uint32_t icao);          // adsb_ui.cpp: the aircraft
 std::string adsbDistText(double nm);               // adsb_ui.cpp: a distance in the units chosen for ADS-B (NM or km), no unit
 const char* adsbDistUnit();                         // its unit
 double receiverAltitudeM();                         // its height above sea level, metres (0 until set)
+bool sondeChasePosition(double& lat, double& lon, double& altM);   // sonde_chase_ui.cpp: the live GPS position of a moving receiver (chase car), false without a fix
 void receiverLocationClear(App& a, double lat, double lon);   // adsb_ui.cpp: undo an automatic position: the old value, reported as not set
 void setReceiverLocation(App& a, double lat, double lon);   // move it (saved), e.g. View > Map's "Use as my location"
 void syncAdsbReference(App& a);                              // push antenna position into the ADS-B tracker while that mode is running

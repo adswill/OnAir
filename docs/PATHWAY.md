@@ -1914,3 +1914,9 @@ Tools menu split into 9 groups with search, Plugin store entry, Mode menu one su
 - Status bar (docs/STATUSBAR-4.0.md): one flat row (state dot + word, grouped frequency, mode, RX, signal, rate, level, load, dropped, cpu + sparkline, log, clock, mute), segments dropped by priority (`statusstrip::fit`, test `status_strip`); flat receiver tabs.
 - Top bar gap: rec with time and size, Memory quick list, offset, bandwidth. Above every mode's tabs: one action row (next step + fix, antenna hint, Undo, Auto setup, Reset this mode, Simple/Advanced). Menu bar right-hand items centred and flat, Discord button the text height.
 - Syntax-checked locally (battery: no local build); app build and tests on GitHub quick.yml. No screenshots yet.
+
+## 2026-11-12 (night): SondeHub upload and the radiosonde map (feat40-sondehub)
+- SondeHub uploader: a fixed, off-by-default entry in Data feeds > Radiosonde upload. Gzip JSON PUT to /sondes/telemetry and the station record to /listeners, following the SondeHub wiki and auto_rx / ChaseMapper (15 s batches, longer with DFM / Meisei, 5xx retried up to 5 times, other answers shown). software_name OnAir. Only good frames with a fix, the sonde's own time (within 1 h of the clock) and a serial; iMet-1/4 held back. The HTTP client gained PUT with a body (sockets/OpenSSL, NSURLSession, WinHTTP).
+- Launch sites: "Site 1" came from the learned-site placeholder (no list of real sites). A built-in IGRA 2 list (885 active stations, public domain) and the user's sonde-sites-known.txt name the learned sites, including the 3.9 file's on load. The map shows every known site in view.
+- Map: my station with the callsign, or a chase car from a live GPS (NMEA serial or file, gpsd). Optional Tawhiri prediction of the selected sonde, drawn dotted and labelled as a prediction.
+- Tests: sonde_hub (with a mock HTTP server), sonde_map_overlay, sonde_sites. CI only (on battery). docs/SONDEHUB-4.0.md.

@@ -3,6 +3,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/sonde/sonde_rx.h"
 #include "dect2/net/sonde_upload.h"
+#include "dect2/net/sondehub.h"
 #include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
 #include "dect2/dsp/fftutil.h"
@@ -650,6 +651,13 @@ struct SondeReceiver::Impl {
             SondeInfo up = s;
             up.freqHz = centerHz > 0 ? centerHz + s.offsetHz : r->announcedHz;
             SondeUpload::get().frame(up, (double)time(nullptr));
+        }
+        if (f.hasPos && SondeHub::get().wanted()) {   // SondeHub (sondehub.h): off unless enabled; only this frame's own time, fix and counters
+            SondeInfo hub = s;
+            hub.freqHz = centerHz > 0 ? centerHz + s.offsetHz : r->announcedHz;
+            hub.hasTime = f.hasTime; hub.unixTime = f.hasTime ? f.unixTime : 0;
+            hub.frame = f.frame; hub.hasVel = f.hasVel; hub.sats = f.sats; hub.batteryV = f.batteryV; hub.burstKillS = f.burstKillS;
+            SondeHub::get().frame(hub, (double)time(nullptr));
         }
     }
 

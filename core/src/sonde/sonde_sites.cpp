@@ -28,6 +28,7 @@ void SondeSites::update(const std::vector<SondeInfo>& v, int64_t utc) {
                 for (size_t i = 0; i < sites_.size(); i++) { const double d = km(sites_[i].lat, sites_[i].lon, f.lat, f.lon); if (d < bd) { bd = d; best = (int)i; } }
                 if (best < 0 || bd > kSiteKm) {
                     SondeSite n; n.id = nextId_++; n.name = "Site " + std::to_string(n.id); n.lat = f.lat; n.lon = f.lon;
+                    if (known_) if (const SondeSiteRef* k = known_->nearest(f.lat, f.lon, KnownSondeSites::kNameKm)) n.name = k->name;
                     sites_.push_back(n); best = (int)sites_.size() - 1;
                 }
                 SondeSite& st = sites_[(size_t)best];
@@ -52,6 +53,17 @@ void SondeSites::update(const std::vector<SondeInfo>& v, int64_t utc) {
         }
     }
     if (seen_.size() > 5000) seen_.clear();
+}
+
+int SondeSites::setKnown(const KnownSondeSites* known) {
+    known_ = known;
+    int n = 0;
+    if (!known) return 0;
+    for (auto& s : sites_) {
+        if (!placeholderName(s)) continue;
+        if (const SondeSiteRef* k = known->nearest(s.lat, s.lon, KnownSondeSites::kNameKm)) { s.name = k->name; n++; dirty_ = true; }
+    }
+    return n;
 }
 
 void SondeSites::rename(int id, const std::string& name) { for (auto& s : sites_) if (s.id == id && !name.empty()) { s.name = name; dirty_ = true; } }
