@@ -127,26 +127,21 @@ inline std::string guessCode(const std::vector<Cluster>& c) {
     return "unknown";
 }
 
-inline Result analyse(const std::vector<Pair>& p, float eps = 0.2f, int minPts = 4) {
-    Result r;
-    r.points = (int)p.size();
-    const int n = (int)p.size();
-    r.label.assign((size_t)n, -1);
-    if (n < 8) return r;
-    std::vector<float> lx((size_t)n), ly((size_t)n);
-    for (int i = 0; i < n; i++) { lx[(size_t)i] = std::log(p[(size_t)i].on); ly[(size_t)i] = std::log(p[(size_t)i].off); }
-    auto adj = [&](int i, int j) { return std::fabs(lx[(size_t)i] - lx[(size_t)j]) <= eps && std::fabs(ly[(size_t)i] - ly[(size_t)j]) <= eps; };
-    std::vector<int> deg((size_t)n, 0);
-    for (int i = 0; i < n; i++) for (int j = 0; j < n; j++) if (i != j && adj(i, j)) deg[(size_t)i]++;
-    std::vector<int> comp((size_t)n, -1);
+namespace detail {
+
+inline void split(const std::vector<Pair>& p, const std::vector<float>& lx, const std::vector<float>& ly, const std::vector<int>& idx, float eps, int minPts, int minSize, std::vector<std::vector<int>>& out, int& comps) {
+    const int m = (int)idx.size();
+    auto adj = [&](int i, int j) { return std::fabs(lx[(size_t)idx[(size_t)i]] - lx[(size_t)idx[(size_t)j]]) <= eps && std::fabs(ly[(size_t)idx[(size_t)i]] - ly[(size_t)idx[(size_t)j]]) <= eps; };
+    std::vector<int> deg((size_t)m, 0), comp((size_t)m, -1);
+    for (int i = 0; i < m; i++) for (int j = 0; j < m; j++) if (i != j && adj(i, j)) deg[(size_t)i]++;
     int nc = 0;
-    for (int i = 0; i < n; i++) {
+    for (int i = 0; i < m; i++) {
         if (comp[(size_t)i] >= 0 || deg[(size_t)i] < minPts) continue;
         std::vector<int> st{i};
         comp[(size_t)i] = nc;
         while (!st.empty()) {
             const int a = st.back(); st.pop_back();
-            for (int j = 0; j < n; j++) {
+            for (int j = 0; j < m; j++) {
                 if (comp[(size_t)j] >= 0 || !adj(a, j)) continue;
                 comp[(size_t)j] = nc;
                 if (deg[(size_t)j] >= minPts) st.push_back(j);
@@ -154,20 +149,41 @@ inline Result analyse(const std::vector<Pair>& p, float eps = 0.2f, int minPts =
         }
         nc++;
     }
-    r.components = nc;
-    const int minSize = std::max(6, n / 20);
+    comps += nc;
     for (int k = 0; k < nc; k++) {
+        std::vector<int> sub;
         std::vector<float> on, off;
-        for (int i = 0; i < n; i++) if (comp[(size_t)i] == k) { on.push_back(p[(size_t)i].on); off.push_back(p[(size_t)i].off); }
-        if ((int)on.size() < minSize) continue;
+        for (int i = 0; i < m; i++) if (comp[(size_t)i] == k) { sub.push_back(idx[(size_t)i]); on.push_back(p[(size_t)idx[(size_t)i]].on); off.push_back(p[(size_t)idx[(size_t)i]].off); }
+        if ((int)sub.size() < minSize) continue;
+        const float co = median(on), cf = median(off);
+        if (spread(on, co) <= 0.2f && spread(off, cf) <= 0.2f) { out.push_back(sub); continue; }
+        if (eps > 0.06f) split(p, lx, ly, sub, eps * 0.65f, minPts, minSize, out, comps);
+    }
+}
+
+}
+
+inline Result analyse(const std::vector<Pair>& p, float eps = 0.2f, int minPts = 4) {
+    Result r;
+    r.points = (int)p.size();
+    const int n = (int)p.size();
+    r.label.assign((size_t)n, -1);
+    if (n < 8) return r;
+    std::vector<float> lx((size_t)n), ly((size_t)n);
+    std::vector<int> all((size_t)n);
+    for (int i = 0; i < n; i++) { lx[(size_t)i] = std::log(p[(size_t)i].on); ly[(size_t)i] = std::log(p[(size_t)i].off); all[(size_t)i] = i; }
+    std::vector<std::vector<int>> found;
+    detail::split(p, lx, ly, all, eps, minPts, std::max(6, n / 20), found, r.components);
+    for (const auto& sub : found) {
+        std::vector<float> on, off;
+        for (int i : sub) { on.push_back(p[(size_t)i].on); off.push_back(p[(size_t)i].off); }
         Cluster c;
         c.n = (int)on.size();
         c.onUs = detail::median(on); c.offUs = detail::median(off);
         c.onJitter = detail::spread(on, c.onUs); c.offJitter = detail::spread(off, c.offUs);
         r.worstSpread = std::max(r.worstSpread, std::max(c.onJitter, c.offJitter));
-        if (c.onJitter > 0.2f || c.offJitter > 0.2f) continue;
         const int id = (int)r.clusters.size();
-        for (int i = 0; i < n; i++) if (comp[(size_t)i] == k) r.label[(size_t)i] = id;
+        for (int i : sub) r.label[(size_t)i] = id;
         r.clusters.push_back(c);
     }
     std::vector<int> order(r.clusters.size());
