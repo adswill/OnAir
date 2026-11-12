@@ -4,6 +4,7 @@
 #include "dect2/prop/p1812.h"
 #include <cmath>
 #include <cstdio>
+#include <string>
 using namespace dect2::prop;
 
 static int fails = 0;
@@ -11,6 +12,12 @@ static int fails = 0;
 #define CHECK(x) do { if (!(x)) { printf("FAIL line %d: %s\n", __LINE__, #x); fails++; } } while (0)
 
 #include "p1812_cases.inc"
+
+// the published results of one profile use a different frequency for each time percentage
+static double freqOf(const P1812Case& c, int k) {
+    static const double urban[3] = {0.03, 0.09, 0.5};
+    return std::string(c.name) == "rburg_urban_with_clutter" ? urban[k] : c.f;
+}
 
 static p1812::Input inputOf(const P1812Case& c, double p) {
     p1812::Input in;
@@ -25,7 +32,9 @@ int main() {
     double worst = 0;
     for (const P1812Case& c : kP1812Cases) {
         for (int k = 0; k < 3; k++) {
-            const p1812::Result r = p1812::compute(inputOf(c, c.p[k]));
+            p1812::Input in = inputOf(c, c.p[k]);
+            in.fGHz = freqOf(c, k);
+            const p1812::Result r = p1812::compute(in);
             CHECK(r.valid);
             NEAR(r.lb, c.lb[k], 0.02);
             worst = std::max(worst, std::fabs(r.lb - c.lb[k]));

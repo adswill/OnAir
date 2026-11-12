@@ -1,6 +1,7 @@
 // Scenario, presets, radios, input checks, verdict, link budget, sweeps and CSV, see core/include/dect2/prop/prop_scenario.h.
 #include "dect2/prop/prop_scenario.h"
 #include "dect2/prop/prop_terrain.h"
+#include "dect2/prop/itu_atmos.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdarg>
@@ -117,6 +118,12 @@ Params toParams(const Scenario& s, const Terrain* terrain, const AntennaPattern*
     p.year = s.year; p.month = s.month; p.day = s.day; p.utcHour = s.hour + s.minute / 60.0;
     p.rainMmH = std::max(0.0, s.rainMmH); p.gas = s.gas;
     p.terrain = terrain && !terrain->empty() ? terrain : nullptr;
+    p.timePct = clampd(s.timePct, 1, 50); p.locPct = clampd(s.locPct, 1, 99); p.sigmaLocDb = std::max(0.0, s.sigmaLocDb);
+    p.deltaN = clampd(s.deltaN, 0, 150); p.n0 = clampd(s.n0, 250, 450);
+    p.hfLegacy = s.hfLegacy; p.r12 = s.r12;
+    if (!s.decodeMode.empty()) {   // "will mode X decode here?": the measured threshold and its bandwidth replace the typed values
+        if (const ModeSnr* m = findModeThreshold(s.decodeMode)) { p.bandwidthHz = m->bwHz; p.requiredSnrDb = modeRequiredSnrDb(*m, s.decodeCondition); }
+    }
     return p;
 }
 
@@ -209,11 +216,15 @@ Verdict verdict(const Params& p, const Range& r, const Point* q, const char* rxL
             case Model::Troposcatter:
                 add(fmt("Beyond the radio horizon (%s): it arrives by troposcatter, weak and fading (%.0f dB beyond free space).", kmText(q->horizonKm).c_str(), q->excessDb));
                 break;
+            case Model::Ducting:
+                add(fmt("Only when the air forms a duct (super-refraction, %.0f %% of the time here or less): normally it is not heard.", q->beta0));
+                break;
             default:
                 if (q->distKm > q->horizonKm) add(fmt("Beyond the radio horizon (%s), but still in reach.", kmText(q->horizonKm).c_str()));
                 else add("Clear line of sight.");
                 break;
         }
+        if (q->flatEarth) add("No terrain is loaded, so hills are ignored: download elevation tiles (Advanced > Terrain) for a realistic answer.");
         if (q->clutterDb >= 3) add(fmt("Buildings or trees around the receiver cost about %.0f dB.", q->clutterDb));
         if (q->rainDb >= 3) add(fmt("Rain costs %.0f dB.", q->rainDb));
         if (q->polDb > 0) add(fmt("The antennas have different polarisation (%.0f dB lost).", q->polDb));
@@ -222,7 +233,10 @@ Verdict verdict(const Params& p, const Range& r, const Point* q, const char* rxL
             if (p.fMHz > q->muf && q->distKm > 30) add(fmt("No skywave now: %.4g MHz is above the MUF (about %.1f MHz) of this path. Try a lower band or another time of day.", p.fMHz, q->muf));
             else add("Only the ground wave reaches here.");
         } else if (q->model == Model::HfSky) {
-            add(fmt("By skywave, %d hop%s off the F2 layer (MUF about %.1f MHz).", q->hops, q->hops == 1 ? "" : "s", q->muf));
+            add(fmt("By skywave, %d hop%s off the %s layer (MUF about %.1f MHz).", q->hops, q->hops == 1 ? "" : "s", q->hfLayer == 'E' ? "E" : "F2", q->muf));
+            if (q->hfReliability >= 0)
+                add(fmt("Works on about %.0f %% of the days this month at this hour (ITU-R P.533 reliability; band open on %.0f %% of days).",
+                        100 * q->hfReliability, 100 * q->hfMufProb));
             if (q->aboveMufDb > 1) add(fmt("%.4g MHz is above the MUF: only scattered signal gets through (%.0f dB).", p.fMHz, q->aboveMufDb));
             if (q->absorptionDb >= 15) add(fmt("Daytime D-layer absorption costs %.0f dB; it eases after sunset or on a higher band.", q->absorptionDb));
         } else if (q->hops > 0) add("Ground wave and skywave both arrive; the ground wave is stronger here.");
@@ -249,13 +263,27 @@ std::vector<BudgetRow> budget(const Params& p, const Point& q) {
         case Model::Diffraction: ex = "ITU-R P.526 smooth-earth diffraction: the earth's bulge (4/3 radius) blocks the path; it blends in before the horizon."; break;
         case Model::Terrain: ex = "Terrain from your elevation file: delta-Bullington knife-edge diffraction (P.526 / P.1812)."; break;
         case Model::HfGround: ex = "HF ground wave: Norton surface-wave attenuation over the chosen ground, with the earth's curvature beyond it."; break;
-        case Model::HfSky: ex = "HF skywave: free space over the slant path up to the F2 layer and back, D-layer absorption, above-MUF loss, 2 dB per extra ground reflection and 8.7 dB excess loss (P.533)."; break;
+        case Model::HfSky:
+            ex = p.hfLegacy ? "HF skywave (3.9 model): free space over the slant path, D-layer absorption, above-MUF loss, 2 dB per extra ground reflection, 8.7 dB excess."
+                            : "ITU-R P.533-14: the power sum of up to 3 E and 6 F2 modes, each free space over its virtual slant range + absorption + above-MUF "
+                              "loss + ground reflections + auroral loss + 8.72 dB; beyond 7000 km the composite long-path formula.";
+            break;
+        case Model::Troposcatter: ex = "Troposcatter (ITU-R P.1812 4.4 / P.452): scattering by the turbulent troposphere beyond the horizon."; break;
+        case Model::Ducting: ex = "Ducting / layer reflection (ITU-R P.1812 4.5): anomalous refraction traps the signal for a small % of the time."; break;
         default: ex = "Line of sight with clearance: nothing beyond free space."; break;
     }
+    if (p.fMHz >= 30 && p.pathModel == PathModel::Auto)
+        ex += fmt(" ITU-R P.1812-8 for %.0f %% of the time and %.0f %% of locations (k = %.2f; diffraction %.1f dB, troposcatter %.0f dB, ducting %.0f dB basic loss)%s.",
+                  p.timePct, p.locPct, q.kFactor, q.diffDb, q.tropoDb, q.ductDb, q.flatEarth ? ", flat sea-level profile: no terrain" : "");
     v.push_back({std::string("Excess loss (") + pointModelName(q.model) + ")", -q.excessDb, "dB", ex});
     if (p.fMHz < 30) {
         v.push_back({"  of which D-layer absorption", -q.absorptionDb, "dB", "CCIR / ITU-R P.533 form: 677.2 (1 + 0.0037 R) cos(0.881 chi)^1.3 sec(i) / ((f + fH)^1.98 + 10.2) per hop; strongest at noon on the low bands."});
-        v.push_back({"Skywave MUF", q.muf, "MHz", "Maximum usable frequency of the path: foF2 times the secant of the angle at the layer. Above it the signal passes through the ionosphere."});
+        v.push_back({"Skywave MUF", q.muf, "MHz", p.hfLegacy ? "Maximum usable frequency of the path: foF2 times the secant of the angle at the layer."
+                                                             : "Median operational MUF (P.533 3.7 / P.1240): the basic MUF of the lowest-order mode from the CCIR maps, times Rop."});
+        if (q.hfReliability >= 0) {
+            v.push_back({"MUF on 90 % / 10 % of days", q.hfOwf, "MHz", fmt("The MUF exceeded on 90 %% of the days (the optimum working frequency) is %.1f MHz; on 10 %% of days it reaches %.1f MHz (P.1239 decile factors).", q.hfOwf, q.hfHpf)});
+            v.push_back({"Circuit reliability", 100 * q.hfReliability, "%", "P.533 section 10 / P.842: the share of days this month at this hour on which the SNR reaches the required value, from the day-to-day and within-the-hour spread of signal and noise."});
+        }
         v.push_back({"Skywave hops", (double)q.hops, "", "Number of F2 hops (0: no skywave). Each hop is at most about 3200 km (3 degree take-off angle)."});
     }
     v.push_back({"Receiver clutter", -q.clutterDb, "dB", "ITU-R P.2108 terminal clutter loss for a receive antenna below the buildings or trees around it."});
@@ -327,7 +355,7 @@ HfDay hfDay(const Params& p, double distKm, double bearing) {
         const Point a = evaluate(q, distKm, bearing);
         d.hour.push_back(q.utcHour);
         d.muf.push_back(a.muf);
-        d.fot.push_back(0.85 * a.muf);
+        d.fot.push_back(a.hfReliability >= 0 ? a.hfOwf : 0.85 * a.muf);   // P.533: the MUF exceeded on 90 % of days
         // LUF: the lowest frequency whose skywave alone meets the required SNR (scan 1.5 MHz .. the MUF)
         double luf = 0;
         Params s = q;
@@ -341,6 +369,79 @@ HfDay hfDay(const Params& p, double distKm, double bearing) {
     }
     return d;
 }
+
+std::vector<Series> sweepLossByModel(const Params& p, double maxKm, int n, double bearing) {
+    std::vector<Series> out;
+    struct V { const char* name; int model; double t, l; };
+    std::vector<V> vs;
+    if (p.fMHz >= 30) {
+        vs = {{"free space (P.525)", (int)PathModel::FreeSpace, 50, 50}, {"two-ray ground reflection", (int)PathModel::TwoRayExact, 50, 50},
+              {"P.1812 median (50 % time, 50 % locations)", (int)PathModel::Auto, 50, 50},
+              {"P.1812 90 % of locations", (int)PathModel::Auto, 50, 90}, {"P.1812 1 % of the time (enhanced)", (int)PathModel::Auto, 1, 50}};
+    } else {
+        vs = {{"current HF model", (int)p.pathModel, p.timePct, p.locPct}};
+    }
+    n = std::max(n, 2);
+    const double d0 = 0.1, d1 = std::max(maxKm, 0.2);
+    for (const V& v : vs) {
+        Series s; s.name = v.name; s.xLabel = "distance (km)"; s.yLabel = "path loss (dB)"; s.logX = true;
+        Params q = p; q.pathModel = (PathModel)v.model; q.timePct = v.t; q.locPct = v.l;
+        for (int i = 0; i < n; i++) {
+            const double d = d0 * std::pow(d1 / d0, (double)i / (n - 1));
+            s.x.push_back(d); s.y.push_back(evaluate(q, d, bearing).pathLossDb);
+        }
+        out.push_back(std::move(s));
+    }
+    return out;
+}
+
+ProfileView profileView(const Params& p, double rxLat, double rxLon, int n) {
+    ProfileView v;
+    n = std::max(n, 3);
+    std::vector<double> d, h;
+    if (p.terrain && !p.terrain->empty()) {
+        const Profile pr = pathProfile(*p.terrain, p.txLat, p.txLon, rxLat, rxLon, n);
+        if (pr.complete && pr.dKm.size() >= 3) { d = pr.dKm; h = pr.hM; v.terrain = true; }
+    }
+    if (!v.terrain) {
+        const double D = greatCircleKm(p.txLat, p.txLon, rxLat, rxLon);
+        for (int i = 0; i < n; i++) { d.push_back(D * i / (n - 1)); h.push_back(0); }
+    }
+    const double D = std::max(d.back(), 1e-3);
+    v.kFactor = itu::k50FromDeltaN(p.deltaN);
+    const double hts = h.front() + p.txHeightM, hrs = h.back() + p.rxHeightM, fG = std::max(p.fMHz / 1000.0, 1e-4);
+    for (size_t i = 0; i < d.size(); i++) {
+        const double x = d[i];
+        v.dKm.push_back(x);
+        v.groundM.push_back(h[i] + x * (D - x) / (2 * v.kFactor * 6371.0) * 1000.0);   // the bulge of an earth of radius k R
+        const double los = hts + (hrs - hts) * x / D;
+        const double r1 = 17.32 * std::sqrt(x * (D - x) / (fG * D));                    // first Fresnel zone radius, m
+        v.losM.push_back(los); v.fresnelM.push_back(r1);
+        if (i > 0 && i + 1 < d.size() && r1 > 0) {
+            const double c = (los - v.groundM.back()) / r1 * 100;
+            if (c < v.worstClearancePct) { v.worstClearancePct = c; v.worstKm = x; }
+        }
+    }
+    return v;
+}
+
+hf::Path hfPathFor(const Params& p, double rxLat, double rxLon) {
+    hf::Path hp;
+    hp.txLat = p.txLat; hp.txLon = p.txLon; hp.rxLat = rxLat; hp.rxLon = rxLon;
+    hp.year = p.year; hp.month = p.month; hp.day = p.day; hp.utcHour = p.utcHour;
+    hp.r12 = p.r12 >= 0 ? p.r12 : hf::r12FromSfi(p.sfi);
+    hp.sfi12 = p.sfi;
+    hp.fMHz = p.fMHz;
+    hp.txPowerDbw = p.txPowerDbw - p.txFeederDb;
+    hp.txGainDbi = p.txGainDbi; hp.rxGainDbi = p.rxGainDbi;
+    hp.bandwidthHz = p.bandwidthHz; hp.requiredSnrDb = p.requiredSnrDb;
+    hp.noiseEnv = (int)p.env; hp.atmosphericNoise = p.atmosphericNoise;
+    const double nf = cascadeNfDb(p.rxFeederDb, p.rxNfDb, p.preamp, p.preampGainDb, p.preampNfDb);
+    hp.extraNoiseDb = 10 * std::log10(std::max(std::pow(10.0, nf / 10) - 1, 1e-9));
+    return hp;
+}
+
+hf::Chart hfChartFor(const Params& p, double rxLat, double rxLon, const std::vector<double>& f) { return hf::chart(hfPathFor(p, rxLat, rxLon), f); }
 
 std::string budgetCsv(const std::vector<BudgetRow>& a, const std::vector<BudgetRow>* b) {
     std::string s = b ? "term,A,B,unit\n" : "term,value,unit\n";

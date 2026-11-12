@@ -2,6 +2,7 @@
 // diffraction, and the model using a profile when one is loaded.
 #include "dect2/prop/prop.h"
 #include "dect2/prop/prop_terrain.h"
+#include "dect2/winlink/wl_gzip.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -159,6 +160,33 @@ int main() {
         }
         Terrain tt;
         CHECK(!loadElevationFile("does-not-exist.hgt", tt, err) && !err.empty());
+    }
+    // 4.0: downloadable tiles (names, URL, which tiles a path needs) and the .hgt.gz reader
+    CHECK(demTileName(54, 25) == "N54E025");
+    CHECK(demTileName(-34, -71) == "S34W071");
+    CHECK(demTileUrl(25, 55) == "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N25/N25E055.hgt.gz");
+    {
+        const auto one = demTilesFor(54.5, 25.5, 10, NAN, NAN);
+        CHECK(one.size() == 1 && one[0].first == 54 && one[0].second == 25);
+        const auto path = demTilesFor(54.5, 25.5, 10, 54.5, 27.5);   // 130 km east: 3 tiles in a row
+        CHECK(path.size() == 3);
+        CHECK(demTilesFor(54.5, 25.5, 200, 40, 10, 9).size() <= 9);
+        CHECK(demTilesFor(75, 25, 10, NAN, NAN).empty());               // beyond SRTM's 60 N
+    }
+    {
+        const std::vector<uint8_t> raw = hgt(450, 25.5, 25);
+        const std::vector<uint8_t> gz = dect2::winlink::gzipCompress(raw);
+        FILE* f = std::fopen("N54E025.hgt.gz", "wb");
+        CHECK(f != nullptr);
+        if (f) { std::fwrite(gz.data(), 1, gz.size(), f); std::fclose(f); }
+        Terrain tz; std::string e2;
+        CHECK(loadElevationFile("N54E025.hgt.gz", tz, e2));
+        ElevTile direct; std::string e3;
+        CHECK(parseHgt("N54E025.hgt", raw, direct, e3));
+        double a = 0, b = 0;
+        CHECK(tz.heightAt(54.5, 25.5, a) && direct.heightAt(54.5, 25.5, b));
+        NEAR(a, b, 1e-6);
+        std::remove("N54E025.hgt.gz");
     }
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("prop_terrain: ok\n");

@@ -26,6 +26,7 @@ static double hataOpen(double f, double hb, double hm, double d) {
 static Params vhf(double f, double h1, double h2) {
     Params p; p.fMHz = f; p.txHeightM = h1; p.rxHeightM = h2; p.txPowerDbw = 10; p.txGainDbi = 0; p.env = Env::Quiet; p.atmosphericNoise = false;
     p.rxNfDb = 6; p.bandwidthHz = 12500; p.requiredSnrDb = 12; p.gas = false;
+    p.pathModel = PathModel::Legacy39;   // this suite pins the 3.9 formulas; the 4.0 models are checked in itu40() and their own tests
     return p;
 }
 
@@ -134,7 +135,7 @@ static void clutterRainGas() {
     // gases: the 22 GHz water and 60 GHz oxygen lines
     CHECK(gasSpecificDbKm(22200) > gasSpecificDbKm(10000) * 5);
     INRANGE(gasSpecificDbKm(60000), 10, 20);
-    CHECK(gasSpecificDbKm(500) == 0);
+    CHECK(gasSpecificDbKm(500) < 0.01);   // P.676: about 0.006 dB/km at 500 MHz (it adds up only over long paths)
     // polarisation
     CHECK(polLossDb(Pol::Vertical, Pol::Vertical) == 0);
     NEAR(polLossDb(Pol::Vertical, Pol::Horizontal), 20, 1e-9);
@@ -167,6 +168,7 @@ static Params hfPath(double f, double hourUtc, int month, double sfi) {
     Params h; h.txLat = 54.7; h.txLon = 25.3; h.fMHz = f; h.txPowerDbw = 20; h.txGainDbi = 2.15; h.rxGainDbi = 2.15; h.env = Env::Rural;
     h.bandwidthHz = 2400; h.sfi = sfi; h.year = 2026; h.month = month; h.day = 21; h.utcHour = hourUtc; h.requiredSnrDb = 10;
     h.txPol = h.rxPol = Pol::Horizontal; h.txHeightM = h.rxHeightM = 10;
+    h.hfLegacy = true;
     return h;
 }
 
@@ -328,6 +330,34 @@ static void antennaPattern() {
     NEAR(evaluate(v, 10, 270).txGainDbi, -10, 1e-9);
 }
 
+// 4.0 defaults: P.1812-8 over a flat profile (no terrain loaded) and P.533 for the HF skywave, through evaluate()
+static void itu40() {
+    Params b = vhf(100, 150, 10);
+    b.pathModel = PathModel::Auto; b.txPowerDbw = 30; b.txGainDbi = 2.15;
+    // P.1546 land curves for 100 MHz, 150 m, 50 % time / locations: about 85 / 57 / 40 / 20 dBuV/m at 10 / 50 / 100 / 200 km
+    const Point p10 = evaluate(b, 10, 0), p50 = evaluate(b, 50, 0), p100 = evaluate(b, 100, 0), p200 = evaluate(b, 200, 0);
+    INRANGE(p10.fieldDbuvm, 75, 95); INRANGE(p50.fieldDbuvm, 45, 68); INRANGE(p100.fieldDbuvm, 28, 50); INRANGE(p200.fieldDbuvm, 5, 32);
+    CHECK(p50.flatEarth && !p50.terrainUsed);
+    INRANGE(p50.kFactor, 1.3, 1.45);
+    // 1 % of the time the far signal is stronger (ducting / super-refraction); 90 % of locations costs about 1.28 x 5.5 dB
+    Params t1 = b; t1.timePct = 1;
+    CHECK(evaluate(t1, 200, 0).fieldDbuvm > p200.fieldDbuvm + 3);
+    Params l90 = b; l90.locPct = 90;
+    NEAR(p50.fieldDbuvm - evaluate(l90, 50, 0).fieldDbuvm, 1.2816 * 5.5, 0.3);
+    // ADS-B from an aircraft at 10 km: heard to about the radio horizon
+    Params ads = vhf(1090, 10000, 10);
+    ads.pathModel = PathModel::Auto; ads.txPowerDbw = 24; ads.bandwidthHz = 2e6; ads.requiredSnrDb = 10; ads.rxGainDbi = 3; ads.rxNfDb = 4;
+    INRANGE(findRange(ads).maxKm, 300, 650);
+    // HF: 20 m over 1500 km on a spring day uses the P.533 skywave and reports a reliability
+    Params h = hfPath(14.1, 11.0, 4, 150);
+    h.hfLegacy = false;
+    const Point q = evaluate(h, 1500, 270);
+    CHECK(q.model == Model::HfSky);
+    CHECK(q.hfReliability >= 0 && q.hfReliability <= 1);
+    CHECK(q.muf > 14.1 && q.hops >= 1);
+    CHECK(q.snrDb > 10);
+}
+
 int main() {
     freeSpace();
     twoRayAndHorizon();
@@ -339,6 +369,7 @@ int main() {
     noise();
     linkBudget();
     antennaPattern();
+    itu40();
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("prop_model: ok\n");
     return 0;
