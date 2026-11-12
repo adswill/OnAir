@@ -4,6 +4,9 @@
 //
 // default: the guard rows (a few seeded trials each, must beat the 3.9 path)
 // ONAIR_X1_CURVE=sarsat ONAIR_X1_TRIALS=20 ONAIR_X1_POINTS="2,0,-2,-4": the curve (share identified within 1, 2 and 4 bursts) for both paths
+#include "dect2/ndb/ndb_gen.h"
+#include "dect2/ndb/ndb_rx.h"
+#include "dect2/ndb/ndb_tel.h"
 #include "dect2/sarsat/sarsat_gen.h"
 #include "dect2/sarsat/sarsat_rx.h"
 #include "dect2/sarsat/sarsat_tel.h"
@@ -191,6 +194,99 @@ void sarsatGuard() {
     }
 }
 
+// ---------------------------------------------------------------- NDB: ident folding (long integration over the repeated ident)
+
+struct NdbResult { bool ok = false; int wrong = 0; };
+
+// 'BND' at 7 WPM on a 400 Hz tone (80 % AM), `secs` seconds from a random point of the ident cycle, 48 kS/s. snrDb: the signal's mean power over the
+// noise in 300 Hz (the sens_sweep definition). path 0: 3.9 receiver, 1: 4.0 weak-signal path, 2: + ident folding. noiseOnly: no beacon at all.
+NdbResult ndbTrial(int path, double snrDb, double cfoHz, double ppm, double secs, uint64_t seed, bool noiseOnly = false) {
+    const double rate = 48000;
+    NdbGenConfig c;
+    c.rate = rate * (1 + ppm * 1e-6);   // a sample clock error: the receiver takes the samples as 48 kS/s
+    c.snrDb = 200; c.cfoHz = cfoHz; c.dialOffsetHz = -ndbTuning().tuneOffsetHz; c.ident = "BND"; c.seed = 1;
+    NdbGenerator g(c);
+    std::mt19937_64 rng(seed);
+    std::uniform_real_distribution<double> U(0, 1);
+    std::vector<cf32> buf(24000);
+    for (int skip = (int)(U(rng) * 7.0 * rate / buf.size()); skip > 0; skip--) g.generate(buf.data(), buf.size());   // random point of the cycle
+    const double p0 = (double)c.amp * c.amp * (1 + 0.8 * 0.8 / 2 * 0.45);   // carrier plus the tone sidebands at about 45 % key-down
+    const double sigma = std::sqrt(p0 * (rate / 300.0) / std::pow(10.0, snrDb / 10.0) / 2.0);
+    std::normal_distribution<float> N(0.f, (float)sigma);
+    NdbReceiver rx;
+    rx.setSilent(true);
+    rx.configure(rate);
+    rx.setSignalOffset(-ndbTuning().tuneOffsetHz);
+    rx.setWeakSignalPath(path >= 1);
+    rx.setIdentFolding(path >= 2);
+    const size_t total = (size_t)(secs * rate);
+    for (size_t o = 0; o < total; o += buf.size()) {
+        const size_t n = std::min(buf.size(), total - o);
+        g.generate(buf.data(), n);
+        for (size_t i = 0; i < n; i++) buf[i] = (noiseOnly ? cf32(0, 0) : buf[i]) + cf32(N(rng), N(rng));
+        rx.feed(buf.data(), n);
+    }
+    NdbTelemetry t;
+    rx.telemetry(t, 0);
+    auto isRot = [](const std::string& w) { return w == "BND" || w == "NDB" || w == "DBN"; };
+    NdbResult r;
+    r.ok = isRot(t.ident);
+    for (const auto& h : t.history) if (!isRot(h)) r.wrong++;
+    return r;
+}
+
+const Scen kNdbScen[] = {{"awgn", 0, 0}, {"cfo 20 ppm (8 Hz)", 8, 0}, {"clock 50 ppm", 0, 50}, {"off-centre 60 Hz", 60, 0}};
+
+void ndbCurve() {
+    const int trials = envInt("ONAIR_X1_TRIALS", 12);
+    const double secs = envInt("ONAIR_X1_SECS", 60);
+    for (const Scen& sc : kNdbScen) {
+        printf("NDB 'BND' 7 WPM, %.0f s, %s: share of %d trials with the ident (3.9 | 4.0 weak path | + ident folding)\n", secs, sc.name, trials);
+        for (double snr : points("ONAIR_X1_POINTS", {9, 7, 5, 3, 1, -1, -3})) {
+            int ok[3] = {0, 0, 0}, wrong[3] = {0, 0, 0};
+            std::mutex mu;
+            parallel(3 * trials, [&](int j) {
+                const int path = j % 3, i = j / 3;
+                const NdbResult r = ndbTrial(path, snr, sc.cfo, sc.ppm, secs, mix64(0x9db0ull + (uint64_t)i * 31 + (uint64_t)((snr + 50) * 100) * 7));
+                std::lock_guard<std::mutex> lk(mu);
+                ok[path] += r.ok; wrong[path] += r.wrong;
+            });
+            printf("  %5.1f dB: %3.0f | %3.0f | %3.0f %%   wrong idents %d | %d | %d\n", snr, 100.0 * ok[0] / trials, 100.0 * ok[1] / trials, 100.0 * ok[2] / trials, wrong[0], wrong[1], wrong[2]);
+            fflush(stdout);
+        }
+    }
+    int dec = 0;
+    std::mutex mu;
+    parallel(trials, [&](int j) { const NdbResult r = ndbTrial(2, -40, 0, 0, secs * 2, mix64(0x1dbull + (uint64_t)j), true); std::lock_guard<std::mutex> lk(mu); dec += r.ok + r.wrong; });
+    printf("NDB noise only, %d x %.0f s with folding: %d idents\n", trials, secs * 2, dec);
+}
+
+void ndbGuard() {
+    struct G { double snr; const Scen* sc; double need; };
+    const G rows[] = {{4, &kNdbScen[0], 0.6}, {4, &kNdbScen[1], 0.6}, {4, &kNdbScen[2], 0.6}, {4, &kNdbScen[3], 0.6}};
+    const int trials = envInt("ONAIR_X1_TRIALS", 6);
+    for (const G& gr : rows) {
+        int ok[2] = {0, 0}, wrong = 0;
+        std::mutex mu;
+        parallel(2 * trials, [&](int j) {
+            const int path = j & 1, i = j >> 1;
+            const NdbResult r = ndbTrial(path ? 2 : 1, gr.snr, gr.sc->cfo, gr.sc->ppm, 60, mix64(0x4dbull + (uint64_t)i * 977));
+            std::lock_guard<std::mutex> lk(mu);
+            ok[path] += r.ok; wrong += r.wrong;
+        });
+        printf("ndb %s %.0f dB, 60 s: weak path %d / %d, with folding %d / %d, wrong %d\n", gr.sc->name, gr.snr, ok[0], trials, ok[1], trials, wrong);
+        CHECK(ok[1] >= (int)std::ceil(gr.need * trials), "ndb folding %s %.0f dB: %d of %d", gr.sc->name, gr.snr, ok[1], trials);
+        CHECK(ok[1] > ok[0], "ndb folding not better than the weak path alone (%d vs %d)", ok[1], ok[0]);
+        CHECK(wrong == 0, "ndb: %d wrong idents", wrong);
+    }
+    int dec = 0;
+    std::mutex mu;
+    const int n = envInt("ONAIR_X1_NOISE", 4);
+    parallel(n, [&](int j) { const NdbResult r = ndbTrial(2, -40, 0, 0, 120, mix64(0x2dbull + (uint64_t)j), true); std::lock_guard<std::mutex> lk(mu); dec += r.ok + r.wrong; });
+    printf("ndb noise only (%d x 120 s): %d idents\n", n, dec);
+    CHECK(dec == 0, "ndb: %d idents from noise", dec);
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -200,10 +296,12 @@ int main(int argc, char** argv) {
     const char* curve = getenv("ONAIR_X1_CURVE");
     const std::string only = argc > 1 ? argv[1] : "";
     if (curve && *curve) {
-        if (!strcmp(curve, "sarsat")) sarsatCurve();
+        if (strstr(curve, "sarsat")) sarsatCurve();
+        if (strstr(curve, "ndb")) ndbCurve();
         return 0;
     }
     if (only.empty() || only == "sarsat") sarsatGuard();
+    if (only.empty() || only == "ndb") ndbGuard();
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("all passed\n");
     return 0;
