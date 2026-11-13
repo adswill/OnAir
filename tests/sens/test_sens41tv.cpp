@@ -163,6 +163,16 @@ void sweep(const Mode& m0, const std::regex& scenRe, int n, int threads) {
     const Prep P = prepare(m, m.secs);
     printf("== %s (%s): %.1f s trials, need %.1f units, %d trials a point, Doppler %.0f Hz, linewidth %.2f Hz, switch %s\n", m.id.c_str(), m.name.c_str(),
            m.secs, P.need, n, m.fdHz, m.pnHz, sw.empty() ? "-" : sw[0]);
+    if (getenv("S41_ONE")) {   // diagnosis: one trial per scenario at this SNR (with the receiver's own debug output, e.g. ATSC_DBG=1)
+        const double snr = atof(getenv("S41_ONE"));
+        for (const auto& sc : scenarios(m)) {
+            if (!std::regex_match(sc.name, scenRe)) continue;
+            const Tr t = trial(m, P, sc, snr, 12345, true);
+            printf("-- one trial %s %.1f dB: %.0f units (need %.0f), lock %.2f s\n", sc.name.c_str(), snr, t.good, P.need, t.lockS);
+            fflush(stdout);
+        }
+        return;
+    }
     for (const auto& sc : scenarios(m)) {
         if (!std::regex_match(sc.name, scenRe)) continue;
         printf("-- %s\n   SNR    new pass/frac/lock        old pass/frac/lock\n", sc.name.c_str());
