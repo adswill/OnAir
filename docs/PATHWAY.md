@@ -2102,3 +2102,9 @@ Mode count fix: tools/gen_modes_list.py, gen_web_schema.py, android/tools/gen_mo
   Windows window icon (GLFW_ICON). Zoom limits were already in 3.7. Feature ideas listed in docs/ISSUES2-4.0.md.
 - CI: android.yml 43198580494, 43207001215; quick 43215392986 (Linux), 43218158764 (Windows): pass. No phone, radio or Windows desktop used.
 
+
+## 2026-11-13 (feat41-gsc): Golay paging (GSC)
+- New mode "Golay paging (GSC)" (Pagers), x40 variant 52, family 330 / standards 331, 332 (docs/GSC-4.1.md). Requested on Discord by sugusly, approved by the owner.
+- Spec found: CCIR Report 900-2 Annex I (1990, ITU history portal) has the preamble, start code and Word 1 tables, both generators, the comma rules, the data block and character sets; Motorola's GSC guide (OCR of the sigidwiki scan) has the addresses, functions and the activation code. The value of the activation word is published nowhere, so any complement-pair word is accepted. Bit order and the Word 2 rule were cross-checked against the GPL-3 encoders ESPager and gr-mixalot (no code copied).
+- Receiver: FM discriminator, one 600 bit/s Gardner clock (word bits = bit pairs), search for preamble, start code and address, then block lock: start code, BCH (15,7) data blocks, addresses, activation code. Rows: tone, numeric, alphanumeric and voice pages (voice flagged, not decoded), voice end.
+- Generator and test_x40_gsc: format tables, impairments (offset, drift, clock error and clock drift, deviation, inversion, sample rates), batch, non-battery-saver, noise sweep with 50 / 90 % points, zero false pages on noise, carrier, random FSK and voice. Not run yet: no local compile; CI waits for the 4.0 release. Simulated signals only.

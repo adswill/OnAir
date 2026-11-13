@@ -107,3 +107,6 @@ x40 variants 46 - 51 (after Dcr), a block of their own: `x40::familyOfVariant(v)
 | GW FSK (100 Bd) | 51 | 375 | 376 | 377 | 375 |
 
 Merge note: another branch that adds x40 variants after Dcr (45) needs the enum order, `kX40Ui[]`, `makeUi<>()`, the `x40Tuning(n)` list and the case labels in `app/panels/modeui.cpp` (`&kX40Ui[46 + family - 370]`) settled by hand; the Rivet block keeps its families whatever its variant numbers become, because `kRivetFirst` is the enum value `Xpa`.
+
+## GSC (feat41-gsc, 2026-11-13)
+x40 variant 52 (`Gsc`, after Gw): family 330, active standard 331, engine standard 332, poll slot 330 (`x40::kGscFamily`, from the free range 324 - 337). `familyOfVariant` and `variantOfActive` treat it as a special case, so the Rivet block keeps its numbers. Docs: docs/GSC-4.1.md. Merge note: another branch adding an x40 variant after Gw must settle the enum order, `kX40Ui[]`, `makeUi<>()`, the `x40Tuning(n)` list and the case in `app/panels/modeui.cpp` (`&kX40Ui[52]`) by hand.

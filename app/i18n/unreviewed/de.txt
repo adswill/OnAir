@@ -1242,3 +1242,4 @@ HF MFSK, 40 Bd
 HF FSK, 200 Bd 500 Hz
 HF FSK, 200 Bd 1000 Hz
 HF FSK, 100 Bd 200 Hz
+Pagers, 300 / 600 bit/s

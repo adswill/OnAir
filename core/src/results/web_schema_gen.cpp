@@ -820,6 +820,8 @@ static void ev_dect2__TetraDmoRow(std::string& s, const dect2::TetraDmoRow& v);
 static void ev_dect2__TetraDmoCall(std::string& s, const dect2::TetraDmoCall& v);
 static void ev_dect2__TetraDmoTelemetry(std::string& s, const dect2::TetraDmoTelemetry& v);
 static void ev_dect2__OpenSkyTelemetry(std::string& s, const dect2::OpenSkyTelemetry& v);
+static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v);
+static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v);
 static void ev_dect2__chv__SubTone(std::string& s, const dect2::chv::SubTone& v);
 static void ev_dect2__ChvChannelRow(std::string& s, const dect2::ChvChannelRow& v);
 static void ev_dect2__ChvCall(std::string& s, const dect2::ChvCall& v);
@@ -829,8 +831,6 @@ static void ev_dect2__ChvTelemetry(std::string& s, const dect2::ChvTelemetry& v)
 static void ev_dect2__RcFrame(std::string& s, const dect2::RcFrame& v);
 static void ev_dect2__RcDevice(std::string& s, const dect2::RcDevice& v);
 static void ev_dect2__RcTelemetry(std::string& s, const dect2::RcTelemetry& v);
-static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v);
-static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v);
 static void ev_dect2__BtcDevice(std::string& s, const dect2::BtcDevice& v);
 static void ev_dect2__BtcPacket(std::string& s, const dect2::BtcPacket& v);
 static void ev_dect2__BtcTelemetry(std::string& s, const dect2::BtcTelemetry& v);
@@ -13307,6 +13307,35 @@ static void ev_dect2__OpenSkyTelemetry(std::string& s, const dect2::OpenSkyTelem
     o.end();
 }
 
+static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v) {
+    detail::J o(s);
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("kind"); detail::vstr(s, v.kind, 4096);
+    o.key("id"); detail::vstr(s, v.id, 4096);
+    o.key("text"); detail::vstr(s, v.text, 4096);
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.end();
+}
+
+static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v) {
+    detail::J o(s);
+    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
+    o.key("state"); detail::vnum(s, (double)(v.state));
+    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
+    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
+    o.key("dataValid"); detail::vbool(s, v.dataValid);
+    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
+    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
+    o.key("variant"); detail::vnum(s, (double)(v.variant));
+    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
+    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
+    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
+    o.key("headline"); detail::vstr(s, v.headline, 4096);
+    o.key("facts"); { detail::Arr a(s); const size_t n = (v.facts).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); s += '['; { detail::vstr(s, ((v.facts)[i]).first, 4096); } s += ','; { detail::vstr(s, ((v.facts)[i]).second, 4096); } s += ']'; } a.end(); }
+    o.key("rows"); { detail::Arr a(s); const size_t n = (v.rows).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__X40Row(s, (v.rows)[i]); } a.end(); }
+    o.end();
+}
+
 static void ev_dect2__chv__SubTone(std::string& s, const dect2::chv::SubTone& v) {
     detail::J o(s);
     o.key("ctcssIdx"); detail::vnum(s, (double)(v.ctcssIdx));
@@ -13474,35 +13503,6 @@ static void ev_dect2__RcTelemetry(std::string& s, const dect2::RcTelemetry& v) {
     o.key("phraseSet"); detail::vbool(s, v.phraseSet);
     o.key("frames"); { detail::Arr a(s); const size_t n = (v.frames).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__RcFrame(s, (v.frames)[i]); } a.end(); }
     o.key("devices"); { detail::Arr a(s); const size_t n = (v.devices).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__RcDevice(s, (v.devices)[i]); } a.end(); }
-    o.end();
-}
-
-static void ev_dect2__X40Row(std::string& s, const dect2::X40Row& v) {
-    detail::J o(s);
-    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
-    o.key("kind"); detail::vstr(s, v.kind, 4096);
-    o.key("id"); detail::vstr(s, v.id, 4096);
-    o.key("text"); detail::vstr(s, v.text, 4096);
-    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
-    o.end();
-}
-
-static void ev_dect2__X40Telemetry(std::string& s, const dect2::X40Telemetry& v) {
-    detail::J o(s);
-    o.key("seq"); detail::vu64(s, (unsigned long long)(v.seq));
-    o.key("state"); detail::vnum(s, (double)(v.state));
-    o.key("cfoHz"); detail::vnum(s, (double)(v.cfoHz));
-    o.key("snrDb"); detail::vnum(s, (double)(v.snrDb));
-    o.key("dataValid"); detail::vbool(s, v.dataValid);
-    o.key("blocksOk"); detail::vu64(s, (unsigned long long)(v.blocksOk));
-    o.key("blocksBad"); detail::vu64(s, (unsigned long long)(v.blocksBad));
-    o.key("variant"); detail::vnum(s, (double)(v.variant));
-    o.key("timeSec"); detail::vnum(s, (double)(v.timeSec));
-    o.key("inputRate"); detail::vnum(s, (double)(v.inputRate));
-    o.key("levelDb"); detail::vnum(s, (double)(v.levelDb));
-    o.key("headline"); detail::vstr(s, v.headline, 4096);
-    o.key("facts"); { detail::Arr a(s); const size_t n = (v.facts).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); s += '['; { detail::vstr(s, ((v.facts)[i]).first, 4096); } s += ','; { detail::vstr(s, ((v.facts)[i]).second, 4096); } s += ']'; } a.end(); }
-    o.key("rows"); { detail::Arr a(s); const size_t n = (v.rows).size(); for (size_t i = 0; i < n && i < 200; i++) { a.next(); ev_dect2__X40Row(s, (v.rows)[i]); } a.end(); }
     o.end();
 }
 
@@ -15068,6 +15068,8 @@ static const char kSchema_dect2__TetraDmoRow[] = R"JSON([{"n":"wallTime","l":"Wa
 static const char kSchema_dect2__TetraDmoCall[] = R"JSON([{"n":"dest","l":"Dest","k":"num"},{"n":"src","l":"Src","k":"num"},{"n":"mni","l":"Mni","k":"num"},{"n":"commType","l":"Comm Type","k":"num"},{"n":"circuitMode","l":"Circuit Mode","k":"num"},{"n":"priority","l":"Priority","k":"num"},{"n":"group","l":"Group","k":"bool"},{"n":"active","l":"Active","k":"bool"},{"n":"encrypted","l":"Encrypted","k":"bool"},{"n":"e2e","l":"E2e","k":"bool"},{"n":"voice","l":"Voice","k":"bool"},{"n":"wallStart","l":"Wall Start","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durSec","l":"Dur Sec","u":"s","k":"num"},{"n":"voiceBursts","l":"Voice Bursts","k":"num"},{"n":"note","l":"Note","k":"text"}])JSON";
 static const char kSchema_dect2__TetraDmoTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no input, 1 listening, 2 a DSB decoded in the last 5 s","k":"num"},{"n":"locked","l":"Locked","k":"bool"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"dsb","l":"Dsb","k":"num"},{"n":"dnb","l":"Dnb","k":"num"},{"n":"schF","l":"Sch F","k":"num"},{"n":"traffic","l":"Traffic","k":"num"},{"n":"trafficRefused","l":"Traffic Refused","k":"num"},{"n":"commType","l":"Comm Type","k":"num"},{"n":"frame","l":"Frame","k":"num"},{"n":"slot","l":"Slot","k":"num"},{"n":"encState","l":"Enc State","k":"num"},{"n":"lastSrc","l":"Last Src","k":"num"},{"n":"lastDest","l":"Last Dest","k":"num"},{"n":"lastMni","l":"Last Mni","k":"num"},{"n":"rows","l":"Newest first","k":"table","s":"dect2::TetraDmoRow","f":[{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"frame","l":"Frame","k":"num"},{"n":"slot","l":"Slot","k":"num"},{"n":"msgType","l":"Msg Type","k":"num"},{"n":"dest","l":"Dest","k":"num"},{"n":"src","l":"Src","k":"num"},{"n":"mni","l":"Mni","k":"num"},{"n":"encrypted","l":"Encrypted","k":"bool"},{"n":"burst","l":"Burst","k":"text"},{"n":"text","l":"Text","k":"text"}]},{"n":"calls","l":"Active first, then the newest","k":"table","s":"dect2::TetraDmoCall","f":[{"n":"dest","l":"Dest","k":"num"},{"n":"src","l":"Src","k":"num"},{"n":"mni","l":"Mni","k":"num"},{"n":"commType","l":"Comm Type","k":"num"},{"n":"circuitMode","l":"Circuit Mode","k":"num"},{"n":"priority","l":"Priority","k":"num"},{"n":"group","l":"Group","k":"bool"},{"n":"active","l":"Active","k":"bool"},{"n":"encrypted","l":"Encrypted","k":"bool"},{"n":"e2e","l":"E2e","k":"bool"},{"n":"voice","l":"Voice","k":"bool"},{"n":"wallStart","l":"Wall Start","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durSec","l":"Dur Sec","u":"s","k":"num"},{"n":"voiceBursts","l":"Voice Bursts","k":"num"},{"n":"note","l":"Note","k":"text"}]},{"n":"voiceCodec","l":"The user-installed speech codec is in","k":"bool"},{"n":"note","l":"Note","k":"text"}])JSON";
 static const char kSchema_dect2__OpenSkyTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no input, 1 analysing, 2 result","k":"num"},{"n":"locked","l":"A confident match","k":"bool"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"cfoHz","l":"Not measured separately","u":"Hz","k":"num"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"baud","l":"The symbol rate seen in the spectrum of the frequency transitions, 0 none","k":"num"},{"n":"lineDb","l":"How far that line stands above the floor","u":"dB","k":"num"},{"n":"levels","l":"Frequency levels seen: 2, 4, 0 unclear","k":"num"},{"n":"deviationHz","l":"Spread of the level centres","u":"Hz","k":"num"},{"n":"burstPeriodMs","l":"The envelope's repetition period","u":"ms","k":"num"},{"n":"burstDuty","l":"Share of the time the carrier is on","k":"num"},{"n":"occupiedHz","l":"Width holding 90 % of the power","u":"Hz","k":"num"},{"n":"looksLikeOpenSky","l":"9600 baud +- 3 %, four levels","u":"Bd","k":"bool"},{"n":"verdict","l":"Verdict","k":"text"}])JSON";
+static const char kSchema_dect2__X40Row[] = R"JSON([{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}])JSON";
+static const char kSchema_dect2__X40Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no signal, 1 energy but nothing decoded lately, 2 decoding","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"variant","l":"X40::Variant","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"headline","l":"One line on what is being heard","k":"text"},{"n":"facts","l":"Label","k":"list"},{"n":"rows","l":"Newest first","k":"table","s":"dect2::X40Row","f":[{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}]}])JSON";
 static const char kSchema_dect2__chv__SubTone[] = R"JSON([{"n":"ctcssIdx","l":"Index into tones::ctcssHz, -1 none","k":"num"},{"n":"ctcssHz","l":"The nominal tone","u":"Hz","k":"num"},{"n":"dcsCode","l":"As written","k":"num"},{"n":"dcsInverted","l":"Dcs Inverted","k":"bool"},{"n":"dcsAlias","l":"The same waveform also reads as this code","k":"num"},{"n":"dcsAliasInverted","l":"Dcs Alias Inverted","k":"bool"}])JSON";
 static const char kSchema_dect2__ChvChannelRow[] = R"JSON([{"n":"key","l":"Index in chv::channels","k":"num"},{"n":"number","l":"Number","k":"num"},{"n":"label","l":"Label","k":"text"},{"n":"name","l":"Name","k":"text"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"txMhz","l":"Tx Mhz","u":"MHz","k":"num"},{"n":"active","l":"A carrier is on the channel now","k":"bool"},{"n":"open","l":"And the squelch is open","k":"bool"},{"n":"playing","l":"Playing","k":"bool"},{"n":"inScan","l":"In Scan","k":"bool"},{"n":"onAir","l":"HF: the schedule says it is broadcasting now","k":"bool"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"demod","l":"Chv::Demod detected","k":"num"},{"n":"tone","l":"The sub-audible tone heard now","k":"obj","s":"dect2::chv::SubTone","f":[{"n":"ctcssIdx","l":"Index into tones::ctcssHz, -1 none","k":"num"},{"n":"ctcssHz","l":"The nominal tone","u":"Hz","k":"num"},{"n":"dcsCode","l":"As written","k":"num"},{"n":"dcsInverted","l":"Dcs Inverted","k":"bool"},{"n":"dcsAlias","l":"The same waveform also reads as this code","k":"num"},{"n":"dcsAliasInverted","l":"Dcs Alias Inverted","k":"bool"}]},{"n":"lastTone","l":"The last one heard on this channel","k":"obj","s":"dect2::chv::SubTone","f":[{"n":"ctcssIdx","l":"Index into tones::ctcssHz, -1 none","k":"num"},{"n":"ctcssHz","l":"The nominal tone","u":"Hz","k":"num"},{"n":"dcsCode","l":"As written","k":"num"},{"n":"dcsInverted","l":"Dcs Inverted","k":"bool"},{"n":"dcsAlias","l":"The same waveform also reads as this code","k":"num"},{"n":"dcsAliasInverted","l":"Dcs Alias Inverted","k":"bool"}]},{"n":"calls","l":"Calls","k":"num"},{"n":"totalSec","l":"Total Sec","u":"s","k":"num"},{"n":"lastHeardAgoSec","l":"-1 never","u":"s","k":"num"},{"n":"lastHeardWall","l":"Last Heard Wall","k":"num"},{"n":"peakDb","l":"Peak dB","u":"dB","k":"num"}])JSON";
 static const char kSchema_dect2__ChvCall[] = R"JSON([{"n":"serial","l":"Serial","k":"num"},{"n":"key","l":"Key","k":"num"},{"n":"number","l":"Number","k":"num"},{"n":"label","l":"Label","k":"text"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"startSec","l":"Start Sec","u":"s","k":"num"},{"n":"durationSec","l":"Duration Sec","u":"s","k":"num"},{"n":"peakDb","l":"Peak dB","u":"dB","k":"num"},{"n":"meanDb","l":"Mean dB","u":"dB","k":"num"},{"n":"demod","l":"Demod","k":"num"},{"n":"tone","l":"Tone","k":"obj","s":"dect2::chv::SubTone","f":[{"n":"ctcssIdx","l":"Index into tones::ctcssHz, -1 none","k":"num"},{"n":"ctcssHz","l":"The nominal tone","u":"Hz","k":"num"},{"n":"dcsCode","l":"As written","k":"num"},{"n":"dcsInverted","l":"Dcs Inverted","k":"bool"},{"n":"dcsAlias","l":"The same waveform also reads as this code","k":"num"},{"n":"dcsAliasInverted","l":"Dcs Alias Inverted","k":"bool"}]},{"n":"file","l":"The recording","k":"text"}])JSON";
@@ -15077,8 +15079,6 @@ static const char kSchema_dect2__ChvTelemetry[] = R"JSON([{"n":"seq","l":"Seq","
 static const char kSchema_dect2__RcFrame[] = R"JSON([{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"type","l":"Type","k":"text"},{"n":"detail","l":"Detail","k":"text"},{"n":"hex","l":"Hex","k":"text"},{"n":"freqHz","l":"Absolute when the radio's centre is known, else relative to the capture's middle","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"encrypted","l":"Encrypted","k":"bool"}])JSON";
 static const char kSchema_dect2__RcDevice[] = R"JSON([{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"lastType","l":"Last Type","k":"text"},{"n":"lastDetail","l":"Last Detail","k":"text"},{"n":"count","l":"Count","k":"num"},{"n":"firstSeen","l":"First Seen","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"},{"n":"hasPos","l":"Has Pos","k":"bool"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"}])JSON";
 static const char kSchema_dect2__RcTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing, 1 bursts or preambles seen, 2 frames decoded lately","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Frames decoded / bursts or preambles without a frame","k":"num"},{"n":"blocksBad","l":"Frames decoded / bursts or preambles without a frame","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"protocols","l":"Protocols","k":"num"},{"n":"bursts","l":"Bursts","k":"num"},{"n":"loraPreambles","l":"Lora Preambles","k":"num"},{"n":"phraseSet","l":"Phrase Set","k":"bool"},{"n":"frames","l":"Newest first","k":"table","s":"dect2::RcFrame","f":[{"n":"utc","l":"Utc","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"type","l":"Type","k":"text"},{"n":"detail","l":"Detail","k":"text"},{"n":"hex","l":"Hex","k":"text"},{"n":"freqHz","l":"Absolute when the radio's centre is known, else relative to the capture's middle","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"encrypted","l":"Encrypted","k":"bool"}]},{"n":"devices","l":"Newest first","k":"table","s":"dect2::RcDevice","f":[{"n":"proto","l":"Proto","k":"num"},{"n":"id","l":"ID","k":"text"},{"n":"lastType","l":"Last Type","k":"text"},{"n":"lastDetail","l":"Last Detail","k":"text"},{"n":"count","l":"Count","k":"num"},{"n":"firstSeen","l":"First Seen","k":"num"},{"n":"lastSeen","l":"Last Seen","k":"num"},{"n":"hasPos","l":"Has Pos","k":"bool"},{"n":"lat","l":"Lat","k":"num"},{"n":"lon","l":"Lon","k":"num"},{"n":"altM","l":"Alt M","k":"num"}],"map":{"lat":"lat","lon":"lon","label":"id"}}])JSON";
-static const char kSchema_dect2__X40Row[] = R"JSON([{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}])JSON";
-static const char kSchema_dect2__X40Telemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 no signal, 1 energy but nothing decoded lately, 2 decoding","k":"num"},{"n":"cfoHz","l":"CFO Hz","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR dB","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Blocks OK","k":"num"},{"n":"blocksBad","l":"Blocks Bad","k":"num"},{"n":"variant","l":"X40::Variant","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"},{"n":"headline","l":"One line on what is being heard","k":"text"},{"n":"facts","l":"Label","k":"list"},{"n":"rows","l":"Newest first","k":"table","s":"dect2::X40Row","f":[{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"kind","l":"What it is","k":"text"},{"n":"id","l":"What it is","k":"text"},{"n":"text","l":"What it is","k":"text"},{"n":"levelDb","l":"Level dB","u":"dB","k":"num"}]}])JSON";
 static const char kSchema_dect2__BtcDevice[] = R"JSON([{"n":"lap","l":"Lap","k":"num"},{"n":"lapText","l":"\"A1B2C3\"","k":"text"},{"n":"kind","l":"\"inquiry","k":"text"},{"n":"hasFhs","l":"An inquiry response was decoded: the full address and the class of device are known","k":"bool"},{"n":"addr","l":"\"00:11:22:33:44:55\"","k":"text"},{"n":"cod","l":"Class of device as text, and its major class","k":"text"},{"n":"major","l":"Class of device as text, and its major class","k":"text"},{"n":"codRaw","l":"Cod Raw","k":"num"},{"n":"clk","l":"CLK27-2 from the FHS, units of 1.25 ms","u":"ms","k":"num"},{"n":"rssi","l":"DBFS of the last packet","u":"dBFS","k":"num"},{"n":"rssiHist","l":"Rssi Hist","k":"list"},{"n":"firstSec","l":"Signal time","u":"s","k":"num"},{"n":"lastSec","l":"Signal time","u":"s","k":"num"},{"n":"firstWall","l":"First Wall","k":"num"},{"n":"lastWall","l":"Last Wall","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"lastMhz","l":"The channel of the last packet","u":"MHz","k":"num"},{"n":"chanLo","l":"Channel k","u":"MHz","k":"num"},{"n":"chanHi","l":"Channel k","u":"MHz","k":"num"}])JSON";
 static const char kSchema_dect2__BtcPacket[] = R"JSON([{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"sec","l":"Sec","k":"num"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"lap","l":"Lap","k":"num"},{"n":"rssi","l":"Rssi","k":"num"},{"n":"errors","l":"Bit errors in the sync word","k":"num"},{"n":"info","l":"\"ID packet, GIAC\", \"inquiry response: 00:11:22:33:44:55, Phone: smartphone\" ","k":"text"}])JSON";
 static const char kSchema_dect2__BtcTelemetry[] = R"JSON([{"n":"seq","l":"Seq","k":"num"},{"n":"state","l":"0 nothing heard, 1 access codes heard in the last seconds","k":"num"},{"n":"cfoHz","l":"Carrier offset of the last good packet","u":"Hz","k":"num"},{"n":"snrDb","l":"SNR of the last good packets","u":"dB","k":"num"},{"n":"levelDb","l":"Input level, dBFS","u":"dB","k":"num"},{"n":"dataValid","l":"Data Valid","k":"bool"},{"n":"blocksOk","l":"Access codes found","k":"num"},{"n":"blocksBad","l":"Bursts that looked like Bluetooth","k":"num"},{"n":"timeSec","l":"Time Sec","u":"s","k":"num"},{"n":"inputRate","l":"Input Rate","k":"num"},{"n":"centerMhz","l":"The radio's centre","u":"MHz","k":"num"},{"n":"channelsCovered","l":"1 MHz channels inside the sample rate","u":"MHz","k":"num"},{"n":"giacIds","l":"Inquiry ID packets","k":"num"},{"n":"fhsCount","l":"Inquiry responses decoded","k":"num"},{"n":"burstsSeen","l":"Narrow bursts analysed","k":"num"},{"n":"burstsWide","l":"Narrow bursts analysed","k":"num"},{"n":"devices","l":"Most recently heard first","k":"table","s":"dect2::BtcDevice","f":[{"n":"lap","l":"Lap","k":"num"},{"n":"lapText","l":"\"A1B2C3\"","k":"text"},{"n":"kind","l":"\"inquiry","k":"text"},{"n":"hasFhs","l":"An inquiry response was decoded: the full address and the class of device are known","k":"bool"},{"n":"addr","l":"\"00:11:22:33:44:55\"","k":"text"},{"n":"cod","l":"Class of device as text, and its major class","k":"text"},{"n":"major","l":"Class of device as text, and its major class","k":"text"},{"n":"codRaw","l":"Cod Raw","k":"num"},{"n":"clk","l":"CLK27-2 from the FHS, units of 1.25 ms","u":"ms","k":"num"},{"n":"rssi","l":"DBFS of the last packet","u":"dBFS","k":"num"},{"n":"rssiHist","l":"Rssi Hist","k":"list"},{"n":"firstSec","l":"Signal time","u":"s","k":"num"},{"n":"lastSec","l":"Signal time","u":"s","k":"num"},{"n":"firstWall","l":"First Wall","k":"num"},{"n":"lastWall","l":"Last Wall","k":"num"},{"n":"packets","l":"Packets","k":"num"},{"n":"lastMhz","l":"The channel of the last packet","u":"MHz","k":"num"},{"n":"chanLo","l":"Channel k","u":"MHz","k":"num"},{"n":"chanHi","l":"Channel k","u":"MHz","k":"num"}]},{"n":"log","l":"Newest first","k":"table","s":"dect2::BtcPacket","f":[{"n":"wallTime","l":"Wall Time","k":"num"},{"n":"sec","l":"Sec","k":"num"},{"n":"mhz","l":"Mhz","k":"num"},{"n":"lap","l":"Lap","k":"num"},{"n":"rssi","l":"Rssi","k":"num"},{"n":"errors","l":"Bit errors in the sync word","k":"num"},{"n":"info","l":"\"ID packet, GIAC\", \"inquiry response: 00:11:22:33:44:55, Phone: smartphone\" ","k":"text"}]}])JSON";
@@ -15305,6 +15305,7 @@ static bool put_301(const RxTelemetry& rx, std::string& s) { ev_dect2__AdslTelem
 static bool put_321(const RxTelemetry& rx, std::string& s) { ev_dect2__SmartnetTelemetry(s, rx.smartnet); return true; }
 static bool put_322(const RxTelemetry& rx, std::string& s) { ev_dect2__TetraDmoTelemetry(s, rx.tetradmo); return true; }
 static bool put_323(const RxTelemetry& rx, std::string& s) { ev_dect2__OpenSkyTelemetry(s, rx.opensky); return true; }
+static bool put_331(const RxTelemetry& rx, std::string& s) { ev_dect2__X40Telemetry(s, rx.x40); return true; }
 static bool put_341(const RxTelemetry& rx, std::string& s) { ev_dect2__ChvTelemetry(s, rx.chanvoice); return true; }
 static bool put_342(const RxTelemetry& rx, std::string& s) { ev_dect2__ChvTelemetry(s, rx.chanvoice); return true; }
 static bool put_343(const RxTelemetry& rx, std::string& s) { ev_dect2__ChvTelemetry(s, rx.chanvoice); return true; }
@@ -15644,6 +15645,7 @@ static const StdEntry kStd[] = {
     {321, "smartnet", "dect2::SmartnetTelemetry", kSchema_dect2__SmartnetTelemetry, put_321},
     {322, "tetradmo", "dect2::TetraDmoTelemetry", kSchema_dect2__TetraDmoTelemetry, put_322},
     {323, "opensky", "dect2::OpenSkyTelemetry", kSchema_dect2__OpenSkyTelemetry, put_323},
+    {331, "x40", "dect2::X40Telemetry", kSchema_dect2__X40Telemetry, put_331},
     {341, "chanvoice", "dect2::ChvTelemetry", kSchema_dect2__ChvTelemetry, put_341},
     {342, "chanvoice", "dect2::ChvTelemetry", kSchema_dect2__ChvTelemetry, put_342},
     {343, "chanvoice", "dect2::ChvTelemetry", kSchema_dect2__ChvTelemetry, put_343},
@@ -16032,6 +16034,7 @@ static const WebModeRow kRows[] = {
     {81, "LBJ", 6, "LBJ: railway train warning broadcasts (821 MHz)", "", 83, 82, "lbj"},
     {23, "POCSAG", 7, "POCSAG pager messages", "pocsag", 25, 24, "pager"},
     {23, "FLEX", 7, "FLEX pager messages", "flex", 25, 24, "pager"},
+    {330, "Golay paging (GSC)", 7, "GSC pager messages (simulated only)", "", 332, 331, "x40"},
     {28, "ISM sensors", 8, "ISM sensors: weather stations, TPMS, remotes and meters around you (the rtl_433 idea)", "", 30, 29, "ism"},
     {241, "Sub-GHz sensors", 8, "Sub-GHz sensors: the rtl_433 decoders with a live sensor list, history, export and an unknown signal analyser (RTL-SDR or HackRF at 250 kHz and up)", "", 243, 242, "sensors"},
     {243, "Sferics (lightning)", 9, "Sferics: lightning strikes counted from their radio crackle", "", 245, 244, "sferics"},
