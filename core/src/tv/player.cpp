@@ -11,6 +11,7 @@
 #include "dect2/tv/avsplus_dec.h"
 #include "dect2/audio/dolby_audio.h"
 #include "dect2/audio/ac4_dec.h"
+#include "dect2/common/diag.h"
 
 extern "C" {
 #include <libavcodec/avcodec.h>
@@ -331,9 +332,9 @@ bool Player::recDue() const {
 bool Player::startRecording(const std::string& path, double stopAfterSec, int64_t stopAtUnix) {
     std::lock_guard<std::mutex> lk(mu_);
     recWriter_.close();
-    if (sid_ < 0) return false;
+    if (sid_ < 0) { DIAG_DEBUG(991865, "A recording of the playing service was requested but no service is playing, so no recording is started."); return false; }
     recFilter_.select(sid_);
-    if (!recWriter_.open(path)) return false;
+    if (!recWriter_.open(path)) { DIAG_ERROR(357592, "The recording file %s could not be created, so the recording of the playing service is not started.", path.c_str()); return false; }
     recStart_ = std::chrono::steady_clock::now(); recStopAfter_ = stopAfterSec; recStopAt_ = stopAtUnix;
     return true;
 }
@@ -478,8 +479,8 @@ void Player::threadMain() {
             if (f) { AVIOContext* pb = f->pb; avformat_close_input(&f); if (pb) { av_freep(&pb->buffer); avio_context_free(&pb); } }
             else { av_freep(&iobuf); }
         };
-        if (rc < 0 || stop_ || restart_) { cleanup(fmt); if (rc < 0 && !stop_ && !restart_) std::this_thread::sleep_for(std::chrono::milliseconds(200)); continue; }
-        if (avformat_find_stream_info(fmt, nullptr) < 0 || restart_) { cleanup(fmt); continue; }
+        if (rc < 0 || stop_ || restart_) { if (rc < 0 && !stop_ && !restart_) DIAG_DEBUG_EVERY(142335, 10.0, "FFmpeg could not open the transport stream input (error %d), so opening is retried every 200 ms.", rc); cleanup(fmt); if (rc < 0 && !stop_ && !restart_) std::this_thread::sleep_for(std::chrono::milliseconds(200)); continue; }
+        { const int sr = avformat_find_stream_info(fmt, nullptr); if (sr < 0 && !restart_) DIAG_DEBUG_EVERY(498634, 10.0, "FFmpeg could not find the streams in the input (error %d), so the input is opened again.", sr); if (sr < 0 || restart_) { cleanup(fmt); continue; } }
 
         if (getenv("DECT2_PLAYDEBUG")) fprintf(stderr, "[play] streams found: %u\n", fmt->nb_streams);
         int vIdx = av_find_best_stream(fmt, AVMEDIA_TYPE_VIDEO, -1, -1, nullptr, 0);
@@ -587,6 +588,7 @@ void Player::threadMain() {
                 if (!hw) { vctx->flags |= AV_CODEC_FLAG_OUTPUT_CORRUPT; vctx->flags2 |= AV_CODEC_FLAG2_SHOW_ALL; }
                 vctx->thread_count = hw ? 2 : 4;
                 if (avcodec_open2(vctx, c, nullptr) < 0) {
+                    DIAG(283841, "The %s video decoder %s did not open, so this service plays without a picture.", hw ? "hardware" : "software", c->name);
                     avcodec_free_context(&vctx);
                     vctx = nullptr;
                     hw = false;
@@ -616,13 +618,14 @@ void Player::threadMain() {
             AVStream* s = fmt->streams[aIdx[track]];
             const AVCodec* c = avcodec_find_decoder(s->codecpar->codec_id);
             if (!c) {
+                DIAG_DEBUG(678258, "This FFmpeg build has no decoder for audio codec id %d, so that audio track is not played.", (int)s->codecpar->codec_id);
                 // DVB AC-4 (descriptor 0x7F / 0x15): the FFmpeg inside OnAir has no AC-4 decoder; the receiver tab says what is needed
                 if (s->codecpar->codec_id == AV_CODEC_ID_AC4) { ac4NoteSeen("AC-4 (DVB)"); ac4NoteDropped(); }
                 return;
             }
             actx = avcodec_alloc_context3(c);
             avcodec_parameters_to_context(actx, s->codecpar);
-            if (avcodec_open2(actx, c, nullptr) < 0) { avcodec_free_context(&actx); return; }
+            if (avcodec_open2(actx, c, nullptr) < 0) { DIAG(753637, "The %s audio decoder did not open, so that audio track is not played.", c->name); avcodec_free_context(&actx); return; }
             const int layout = dcfg.layout.load();
             const bool dolby = s->codecpar->codec_id == AV_CODEC_ID_AC3 || s->codecpar->codec_id == AV_CODEC_ID_EAC3;
             if (dcfg.passthrough.load() && dolby) {
@@ -658,7 +661,7 @@ void Player::threadMain() {
         AVCodecContext* sctx = nullptr;
         if (sIdx >= 0) {
             const AVCodec* c = avcodec_find_decoder(AV_CODEC_ID_DVB_SUBTITLE);
-            if (c) { sctx = avcodec_alloc_context3(c); avcodec_parameters_to_context(sctx, fmt->streams[sIdx]->codecpar); if (avcodec_open2(sctx, c, nullptr) < 0) avcodec_free_context(&sctx); }
+            if (c) { sctx = avcodec_alloc_context3(c); avcodec_parameters_to_context(sctx, fmt->streams[sIdx]->codecpar); if (avcodec_open2(sctx, c, nullptr) < 0) { DIAG_DEBUG(978603, "The FFmpeg DVB subtitle decoder did not open, so subtitles are not shown."); avcodec_free_context(&sctx); } }
         }
         {
             std::lock_guard<std::mutex> lk(I.smu);
@@ -1042,7 +1045,7 @@ void Player::threadMain() {
             }
             auto openAddon = [&]() {   // true when the picture is now decoded by the add-on
                 auto d = std::make_unique<AvsPlusDecoder>();
-                if (!d->open()) return false;
+                if (!d->open()) { DIAG_DEBUG(775879, "The AVS+ decoder add-on did not open, so this service plays without a picture."); return false; }
                 if (vctx) avcodec_free_context(&vctx);
                 avd = std::move(d);
                 AVRational fr = fmt->streams[vIdx]->avg_frame_rate.num ? fmt->streams[vIdx]->avg_frame_rate : fmt->streams[vIdx]->r_frame_rate;
@@ -1114,6 +1117,7 @@ void Player::threadMain() {
                     // starts the GPU session, so audio plays and no picture ever comes (#410); the CPU decoder shows those
                     if (hwGuard.giveUp(hwNow())) {
                         fprintf(stderr, "player: hardware video decoding gave no picture after %.1f s (%d packets fed, %d held back before a random-access picture): switching to software decoding\n", hwNow(), hwGuard.fed(), hwGuard.skipped());
+                        DIAG(382108, "Hardware video decoding gave no picture after %.1f s, so playback restarts with software decoding.", hwNow());
                         hwFallback_ = true; restart_ = true;
                         av_packet_unref(pkt);
                         continue;

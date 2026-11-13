@@ -6,13 +6,14 @@
 #include "dect2/common/u8file.h"
 #include <chrono>
 #include <cstring>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
 bool TsWriter::open(const std::string& path, size_t maxQueueBytes) {
     close();
     FILE* f = u8fopen(path, "wb");
-    if (!f) return false;
+    if (!f) { DIAG_ERROR(606687, "The transport stream recording file %s could not be created, so nothing is recorded to it.", path.c_str()); return false; }
     { std::lock_guard<std::mutex> lk(mu_); f_ = f; q_.clear(); queued_ = 0; max_ = maxQueueBytes; stop_ = false; failed_ = false; open_ = true; written_ = 0; dropped_ = 0; path_ = path; }
     th_ = dect2::namedThread("onair-tsrec", [this] { run(); });
     return true;
@@ -55,7 +56,7 @@ void TsWriter::run() {
         lk.lock();
         queued_ -= c.size();
         written_ += w;
-        if (w != c.size()) failed_ = true;
+        if (w != c.size()) { failed_ = true; DIAG_EVERY(848183, 30.0, "Writing the transport stream recording %s failed (the disk may be full), so the recording stops.", path_.c_str()); }
     }
 }
 

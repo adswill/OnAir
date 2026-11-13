@@ -7,6 +7,7 @@
 #include <algorithm>
 #include <cstring>
 #include <filesystem>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -63,7 +64,7 @@ bool DiskTimeshift::open(const TimeshiftConfig& c) {
     close();
     std::error_code ec;
     std::filesystem::create_directories(u8file(c.dir), ec);
-    if (ec) return false;
+    if (ec) { DIAG_ERROR(309747, "The timeshift folder %s could not be created, so timeshift is not started.", c.dir.c_str()); return false; }
     // left-overs of an earlier run (a crash): only our own file pattern
     for (auto& e : std::filesystem::directory_iterator(u8file(c.dir), ec)) {
         const std::string n = e.path().filename().string();
@@ -139,7 +140,7 @@ void DiskTimeshift::rollLocked() {
     s.first = head_;
     s.path = segPath(cfg_.dir, serial_++);
     w_ = u8fopen(s.path, "wb");
-    if (!w_) { failed_ = true; return; }
+    if (!w_) { failed_ = true; DIAG_ERROR(727613, "The timeshift segment file %s could not be created, so timeshift stops.", s.path.c_str()); return; }
     segs_.push_back(s);
 }
 
@@ -153,7 +154,7 @@ void DiskTimeshift::push(const uint8_t* p, size_t n) {
             if (failed_) return;
             trimLocked();
         }
-        if (fwrite(p, 1, 188, w_) != 188) { failed_ = true; return; }
+        if (fwrite(p, 1, 188, w_) != 188) { failed_ = true; DIAG_ERROR(700688, "Writing to the timeshift segment file failed (the disk may be full), so timeshift stops."); return; }
         double pcr;
         const int pid = ((p[1] & 0x1F) << 8) | p[2];
         if ((pcrPid_ < 0 || pid == pcrPid_) && tsPcrSeconds(p, pcr)) { pcrPid_ = pid; tl_.add(head_, pcr); }

@@ -15,6 +15,7 @@
 #include "dect2/common/platform.h"
 #include <cstdlib>
 #include <cstdio>
+#include "dect2/common/diag.h"
 
 namespace dect2 {
 
@@ -325,11 +326,11 @@ static bool gpuSynthesisUsable() {
         std::vector<std::shared_ptr<VideoFrame>> cpu, gpu;
         if (!estimateMotion(A, B, gm, sad) || sad > kSceneCutSad) return false;
         synthesizeCpu(A, B, 3, gm, cpu);
-        if (!d3d11Synthesize(A, B, 3, gm, gpu) || gpu.size() != cpu.size()) { fprintf(stderr, "Conceal: self-test failed on \"%s\", using the CPU repair\n", d3d11ConcealDevice()); return false; }
+        if (!d3d11Synthesize(A, B, 3, gm, gpu) || gpu.size() != cpu.size()) { fprintf(stderr, "Conceal: self-test failed on \"%s\", using the CPU repair\n", d3d11ConcealDevice()); DIAG(740063, "The Direct3D 11 picture repair on %s gave no usable result in its self-test, so picture repair runs on the CPU.", d3d11ConcealDevice()); return false; }
         double err = 0; size_t n = 0;
         for (size_t k = 0; k < cpu.size(); k++) for (size_t i = 0; i < cpu[k]->y.size(); i++) { err += std::abs((int)cpu[k]->y[i] - (int)gpu[k]->y[i]); n++; }
         const double mean = err / (double)std::max<size_t>(1, n);
-        if (mean > 1.0) { fprintf(stderr, "Conceal: self-test failed on \"%s\" (mean luma difference %.2f), using the CPU repair\n", d3d11ConcealDevice(), mean); return false; }
+        if (mean > 1.0) { fprintf(stderr, "Conceal: self-test failed on \"%s\" (mean luma difference %.2f), using the CPU repair\n", d3d11ConcealDevice(), mean); DIAG(958199, "The Direct3D 11 picture repair on %s differs from the CPU result by %.2f luma levels in its self-test, so picture repair runs on the CPU.", d3d11ConcealDevice(), mean); return false; }
         return true;
     }();
     return ok;

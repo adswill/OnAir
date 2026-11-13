@@ -10,6 +10,7 @@
 #include <cctype>
 #include <chrono>
 #include <cstring>
+#include "dect2/common/diag.h"
 
 namespace dect2::iptv {
 
@@ -154,10 +155,10 @@ std::unique_ptr<HttpBody> httpOpen(const std::string& urlIn, const HttpOptions& 
         r = HttpResult();
         r.finalUrl = url;
         const Url u = parseUrl(url);
-        if (!u.ok || (u.scheme != "http" && u.scheme != "https")) { r.error = "not a valid http(s) address: " + redactUrl(url); return nullptr; }
+        if (!u.ok || (u.scheme != "http" && u.scheme != "https")) { r.error = "not a valid http(s) address: " + redactUrl(url); DIAG_DEBUG(862743, "The address %s is not a valid http or https address, so it is not opened.", redactUrl(url).c_str()); return nullptr; }
         if (u.scheme == "https") {
 #if !defined(__APPLE__) && !defined(_WIN32)
-            if (!tls::available()) { r.error = httpsMissingText(); return nullptr; }
+            if (!tls::available()) { DIAG(330912, "No TLS library is available for %s, so this https address cannot be opened.", u.host.c_str()); r.error = httpsMissingText(); return nullptr; }
 #else
             bool handled = false;
             auto b = httpOpenPlatform(url, o, r, handled);
@@ -167,7 +168,7 @@ std::unique_ptr<HttpBody> httpOpen(const std::string& urlIn, const HttpOptions& 
         auto c = std::make_unique<Conn>();
         std::string err;
         c->s = tcpConnect(u.host, u.port, o.connectTimeoutMs, err);
-        if (c->s == kBadSock) { r.error = err.empty() ? "could not connect to " + u.host : err; return nullptr; }
+        if (c->s == kBadSock) { DIAG_DEBUG(778759, "Could not connect to %s, so the request fails.", u.host.c_str()); r.error = err.empty() ? "could not connect to " + u.host : err; return nullptr; }
         sockRecvTimeout(c->s, 500);
         if (u.scheme == "https") {
             c->ctx = tls::makeClientCtx(err, o.insecureTls);
@@ -217,7 +218,7 @@ std::unique_ptr<HttpBody> httpOpen(const std::string& urlIn, const HttpOptions& 
             url = resolveUrl(url, r.headers["location"]);
             continue;
         }
-        if (r.status < 200 || r.status >= 300) { r.error = statusText(r.status); if (!o.keepErrorBody) return nullptr; }
+        if (r.status < 200 || r.status >= 300) { DIAG_DEBUG(703935, "The server %s answered with HTTP status %d, so the request is treated as failed.", u.host.c_str(), r.status); r.error = statusText(r.status); if (!o.keepErrorBody) return nullptr; }
         auto b = std::make_unique<SocketBody>();
         b->c = std::move(c);
         b->pre = std::move(body);
@@ -227,6 +228,7 @@ std::unique_ptr<HttpBody> httpOpen(const std::string& urlIn, const HttpOptions& 
         b->remaining = b->chunked ? -1 : r.contentLength;
         return b;
     }
+    DIAG_DEBUG(290642, "The request was redirected more than %d times, so it is given up.", o.maxRedirects);
     r.error = "too many redirects";
     return nullptr;
 }
@@ -239,9 +241,9 @@ bool httpGetAll(const std::string& url, const HttpOptions& o, std::string& body,
     for (;;) {
         const long k = b->read(buf, sizeof buf);
         if (k == 0) return true;
-        if (k < 0) { if (!body.empty() && r.contentLength < 0) return true; r.error = "the download stopped (timeout or connection lost)"; return false; }
+        if (k < 0) { if (!body.empty() && r.contentLength < 0) return true; DIAG_DEBUG(610407, "The download stopped after %zu bytes (timeout or connection lost), so it is treated as failed.", body.size()); r.error = "the download stopped (timeout or connection lost)"; return false; }
         body.append(buf, (size_t)k);
-        if (body.size() > maxBytes) { r.error = "the file is larger than " + std::to_string(maxBytes >> 20) + " MB"; return false; }
+        if (body.size() > maxBytes) { DIAG_DEBUG(180704, "The download is larger than the limit of %zu bytes, so it is given up.", maxBytes); r.error = "the file is larger than " + std::to_string(maxBytes >> 20) + " MB"; return false; }
     }
 }
 
