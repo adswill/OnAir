@@ -68,7 +68,7 @@ int main() {
         CHECK(std::fabs(narrow.x0 - 0.125) < 1e-9 && std::fabs(narrow.x1 - 0.875) < 1e-9 && narrow.y0 == 0 && narrow.y1 == 1, "4:3 in 16:9 takes the middle 75 %% of the width");
         CHECK(std::fabs(wide.y0 - 0.125) < 1e-9 && std::fabs(wide.y1 - 0.875) < 1e-9 && wide.x0 == 0 && wide.x1 == 1, "16:9 in 4:3 takes the middle 75 %% of the height");
     }
-    // a disc that is round on the screen stays round: measured in units of the picture height, 0.6 wide and 0.6 high
+    // a disc that is round on the screen stays round: measured in units of the frame height (0.6 across in the source picture)
     for (int dir = 0; dir < 2; dir++) {
         const double srcA = dir ? 16.0 / 9 : 4.0 / 3, frameA = dir ? 4.0 / 3 : 16.0 / 9;
         const int w = 576, h = 288;
@@ -81,7 +81,9 @@ int main() {
         int minx = w, maxx = -1, miny = h, maxy = -1;
         for (int y = 0; y < h; y++) for (int x = 0; x < w; x++) if (dy[(size_t)y * w + x] > 0.9f) { minx = std::min(minx, x); maxx = std::max(maxx, x); miny = std::min(miny, y); maxy = std::max(maxy, y); }
         const double physW = (maxx - minx + 1) / (double)w * frameA, physH = (maxy - miny + 1) / (double)h;
-        CHECK(std::fabs(physW - 0.6) < 0.02 && std::fabs(physH - 0.6) < 0.02, "dir %d: the disc is %.3f wide and %.3f high (want 0.6)", dir, physW, physH);
+        // pillarbox (dir 0) keeps the full height: 0.6; letterbox (dir 1) shrinks the whole picture to 75 %% of the frame height: 0.6 * 0.75
+        const double want = dir ? 0.6 * 0.75 : 0.6;
+        CHECK(std::fabs(physW - want) < 0.02 && std::fabs(physH - want) < 0.02, "dir %d: the disc is %.3f wide and %.3f high (want %.3f)", dir, physW, physH, want);
         // the bars are black (Y 0, U and V 0) and nothing was left unwritten
         bool bars = true, written = true;
         for (size_t i = 0; i < dy.size(); i++) if (dy[i] < -0.5f || du[i] < -0.5f || dv[i] < -0.5f) written = false;
