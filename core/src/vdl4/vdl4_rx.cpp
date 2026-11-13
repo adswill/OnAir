@@ -38,12 +38,11 @@ constexpr int kStageA = 16;
 // 4.1: alpha 0.2 put the four poles' -3 dB point at 4.8 kHz, the deviation itself (h 0.5 at 19.2 kb/s is +-4.8 kHz): the 0101 training sequence
 // and every short run lost most of its swing, so bursts failed their FCS even at 30 dB and the threshold sat near 24 dB in 25 kHz. 0.36 puts
 // it at 9.5 kHz (about the bit rate across both sides, the usual pre-detection width for GMSK on a discriminator).
-// DECT2_VDL4_LPA overrides it (measurements only).
-double envOr(const char* n, double d) { const char* e = std::getenv(n); return e && *e ? std::atof(e) : d; }
+constexpr double kLpAlpha = 0.36;
+constexpr int kHalf = 2;   // each bit: the sum of 2 kHalf + 1 discriminator samples about its centre
 constexpr int kBurstBits = 480;                 // line bits kept after the sync (a burst is at most a few hundred)
 constexpr int kSyncSamples = kOsr * kVdl4SyncBits;
 constexpr int kSyncErr = 6;
-const bool kDebug = std::getenv("DECT2_VDL4_DEBUG") != nullptr;
 constexpr size_t kLineMax = 4 * (size_t)kOsr * (kBurstBits + 64);
 
 struct Chan {
@@ -86,12 +85,8 @@ struct Vdl4Receiver::Impl {
 
     void log(const std::string& s) { if (logCb) logCb(s); }
 
-    // tuning (environment, measurements only): channel filter pole, data sampling offset in samples, half-width of the sample sum
-    double lpa = 0.36;
-    int half = 2;
+    static constexpr int half = kHalf;
     void rebuildCh() {
-        lpa = envOr("DECT2_VDL4_LPA", 0.36); if (!(lpa > 0.01 && lpa < 1.0)) lpa = 0.36;
-        half = (int)envOr("DECT2_VDL4_HALF", 2); half = std::max(0, std::min(3, half));
         ch.clear();
         rebuild = false;
         if (!(rate >= 1e3) || !std::isfinite(rate)) return;   // unusable rate: no channels, the status line says so
@@ -110,7 +105,6 @@ struct Vdl4Receiver::Impl {
     }
 
     void onFrame(Chan& c, const std::vector<uint8_t>& fr, float snr, float lvl, double cfo) {
-        if (kDebug) std::fprintf(stderr, "vdl4dbg frame f=%.0f len=%zu fcs=%d\n", c.freqHz, fr.size(), (int)vdl4FcsOk(fr.data(), fr.size()));
         if (!vdl4FcsOk(fr.data(), fr.size())) { c.info.bad++; tel.blocksBad++; return; }
         Vdl4BurstFields bf;
         if (!vdl4ParseBurst(fr.data(), fr.size() - 2, bf)) { c.info.bad++; tel.blocksBad++; return; }
@@ -189,7 +183,6 @@ struct Vdl4Receiver::Impl {
         }
         for (long k = centre + kOsr; k + half < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr)
             burst.push_back(sumAt(c, k) > thr ? 1 : 0);
-        if (kDebug) std::fprintf(stderr, "vdl4dbg burst f=%.0f err=%d thr=%.3f\n", c.freqHz, c.bestErr, c.thr);
         std::vector<uint8_t> data;
         if (vdl4BurstDataBits(burst, data)) {
             for (const auto& fr : vdl4HdlcFrames(data)) onFrame(c, fr, snr, 10.f * std::log10(std::max(pwr, 1e-12f)), c.offHz);
@@ -233,7 +226,6 @@ struct Vdl4Receiver::Impl {
                 const size_t k = (size_t)(n - 1 - half - (long)kOsr * j);
                 err += (sumAt(c, (long)k) > thr3 ? 1 : 0) != want;
             }
-            if (kDebug && err <= kSyncErr && c.lockLeft == 0) std::fprintf(stderr, "vdl4dbg sync f=%.0f n=%ld err=%d chp/floor=%.1f\n", c.freqHz, n, err, chp / std::max(c.floor, 1e-12f));
             if (c.lockLeft == 0 && err <= kSyncErr && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; }
             if (c.lockLeft > 0) {
@@ -278,7 +270,7 @@ struct Vdl4Receiver::Impl {
         cd d = c.acc / std::max(c.accN, 1.0);
         const float pwr = c.accPwr / (float)std::max(c.accN, 1.0);
         c.acc = 0; c.accPwr = 0; c.accN = 0;
-        for (auto& st : c.lp) { st += lpa * (d - st); d = st; }
+        for (auto& st : c.lp) { st += kLpAlpha * (d - st); d = st; }
         if (++c.dec4 >= kStageA / kOsr) {
             c.dec4 = 0;
             c.chPwr += (float)((std::norm(d) - c.chPwr) * (1.0 / (kOsr * kVdl4SyncBits)));
