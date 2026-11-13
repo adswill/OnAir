@@ -149,8 +149,9 @@ static void sizesCase(const Case& k, double secs, uint64_t cleanCount) {
         }
         printf("  %-34s per size:%s\n", k.name, per.c_str());
     }
-    printf("  %-34s %llu frames (clean %llu), %llu bad, %zu of %zu sizes, SNR %.1f, offset %+.1f kHz\n", k.name, (unsigned long long)t.espnowFrames,
-           (unsigned long long)cleanCount, (unsigned long long)t.blocksBad, s.size(), c.frames.size(), t.snrDb, t.cfoHz / 1e3);
+    printf("  %-34s %llu frames (clean %llu), %llu bad, %zu of %zu sizes, SNR %.1f, offset %+.1f kHz; SFD %llu, headers %llu good %llu bad\n", k.name,
+           (unsigned long long)t.espnowFrames, (unsigned long long)cleanCount, (unsigned long long)t.blocksBad, s.size(), c.frames.size(), t.snrDb, t.cfoHz / 1e3,
+           (unsigned long long)t.sfdHits, (unsigned long long)t.headersOk, (unsigned long long)t.headersBad);
     CHECK(s.size() == c.frames.size(), "%s: %zu of %zu sizes decoded", k.name, s.size(), c.frames.size());
     CHECK(t.espnowFrames * 10 >= cleanCount * 9, "%s: %llu frames, clean %llu", k.name, (unsigned long long)t.espnowFrames, (unsigned long long)cleanCount);
     for (const auto& m : t.log) {   // every payload exactly as sent

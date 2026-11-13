@@ -329,6 +329,8 @@ void receiver(App& a) {
     else kvRow(a, "channel", "%s", t.centerMhz > 0 ? "no Wi-Fi channel within 12 MHz of the centre" : "at 0 Hz (a file)");
     kvRow(a, "frames", "%llu good 802.11 frames, %llu action frames, %llu ESP-NOW; %llu failed the FCS", (unsigned long long)t.wifiFrames,
           (unsigned long long)t.actionFrames, (unsigned long long)t.espnowFrames, (unsigned long long)t.blocksBad);
+    kvRow(a, "DSSS", "%llu SFDs found, %llu headers good, %llu bad, %llu at CCK rates (not read)", (unsigned long long)t.sfdHits, (unsigned long long)t.headersOk,
+          (unsigned long long)t.headersBad, (unsigned long long)t.otherRate);
     kvRow(a, "ESP-NOW", "%llu broadcast, %llu encrypted, %llu decrypted with your keys", (unsigned long long)t.broadcastFrames,
           (unsigned long long)t.encryptedFrames, (unsigned long long)t.decryptedFrames);
     kvRow(a, "PHY", "DSSS 1 Mbit/s %llu, 2 Mbit/s %llu (short preamble %llu), OFDM 6 Mbit/s %llu, 12 Mbit/s %llu", (unsigned long long)t.perRate[0],

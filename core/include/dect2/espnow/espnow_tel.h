@@ -70,6 +70,7 @@ struct EspnowTelemetry {
     int channel = 0;                   // the Wi-Fi channel listened to (0: a file)
     double offsetHz = 0;               // where it lies from the centre
     uint64_t wifiFrames = 0;           // all good 802.11 frames
+    uint64_t sfdHits = 0, headersOk = 0, headersBad = 0, otherRate = 0;   // the DSSS chain's stages: SFDs found, PLCP headers good / bad, other rates (CCK)
     uint64_t actionFrames = 0;         // of them, action frames
     uint64_t espnowFrames = 0, encryptedFrames = 0, decryptedFrames = 0, broadcastFrames = 0;
     uint64_t perRate[5] = {};          // ESP-NOW frames by PHY: DSSS 1, DSSS 2 long, DSSS 2 short, OFDM 6, OFDM 12 Mbit/s

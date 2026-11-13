@@ -209,6 +209,7 @@ struct EspnowReceiver::Impl {
         if (wifi.telemetry(wt, 0)) {
             tel.levelDb = wt.levelDb;
             tel.blocksBad = wt.blocksBad + wt.ofdmBadFcs;
+            tel.sfdHits = wt.sfdHits; tel.headersOk = wt.headersOk; tel.headersBad = wt.headersBad; tel.otherRate = wt.otherRate;
         }
         for (auto& d : tel.devices) {   // packets per second over a window of 1 - 10 s; 0 once not heard for 10 s
             const double span = tel.timeSec - d.winStart;
