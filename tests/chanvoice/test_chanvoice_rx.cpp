@@ -126,7 +126,7 @@ int main() {
         GenScene sc; sc.rate = 4e6; sc.centreMhz = 174.4; sc.durSec = 3.0; sc.noiseSigma = 0.01;
         auto wm = [&](double mhz, double amp, double dev) { GenTx t; t.mhz = mhz; t.mod = Demod::Wfm; t.amp = amp; t.speech = false; t.devScale = dev; t.startSec = 0.2; t.durSec = 2.6; return t; };
         GenTx am; am.mhz = 174.95; am.mod = Demod::Am; am.amp = 0.1; am.startSec = 0.2; am.durSec = 2.6;
-        sc.tx = {wm(173.850, 0.1, 0.3), wm(174.250, 0.1, 0.3), wm(174.300, 0.1, 0.2), am};
+        sc.tx = {wm(173.850, 0.1, 1.0), wm(174.250, 0.1, 0.8), wm(174.300, 0.1, 0.6), am};   // same deviation scales as the UHF scene: the tone is 0.3 of full scale, so these read about 12, 10 and 7 kHz (the FM test needs more than 3 kHz)
         Run r = run(Service::Mic, rg, sc, [](ChanVoiceReceiver& rx) { rx.setCarrierLimit(8); });
         int found = 0, fm = 0;
         for (const double want : {173.850, 174.250, 174.300}) for (auto& m : r.tel.mics) if (std::fabs(m.mhz - want) < 0.012) { found++; if (m.fmLike) fm++; CHECK(m.band == "VHF 173.8 - 175.0 MHz", "VHF mic %.3f labelled '%s'", want, m.band.c_str()); }
