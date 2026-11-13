@@ -140,6 +140,15 @@ static void sizesCase(const Case& k, double secs, uint64_t cleanCount) {
     c.frames = sizeSchedule(k.phy);
     const EspnowTelemetry t = run(c, secs);
     const std::set<unsigned> s = seqsFrom(t, "24:6F:28:11:22:33");
+    {   // frames per size, to see which ones a failing case loses
+        std::string per;
+        for (size_t i = 0; i < c.frames.size(); i++) {
+            int n = 0;
+            for (const auto& m : t.log) if (m.seq == 10 + i) n++;
+            per += " " + std::to_string(n);
+        }
+        printf("  %-34s per size:%s\n", k.name, per.c_str());
+    }
     printf("  %-34s %llu frames (clean %llu), %llu bad, %zu of %zu sizes, SNR %.1f, offset %+.1f kHz\n", k.name, (unsigned long long)t.espnowFrames,
            (unsigned long long)cleanCount, (unsigned long long)t.blocksBad, s.size(), c.frames.size(), t.snrDb, t.cfoHz / 1e3);
     CHECK(s.size() == c.frames.size(), "%s: %zu of %zu sizes decoded", k.name, s.size(), c.frames.size());
@@ -167,6 +176,10 @@ static void impairments(bool longRun) {
         {"1M 4 dB +40 kHz", 0, 4, 40e3, 0, 20e6, 0.001},
         {"1M 15 dB +60 kHz 25 Msps", 0, 15, 60e3, 10, 25e6, 0.001},
         {"1M 15 dB fractional start", 0, 15, -20e3, -5, 20e6, 0.0010373},
+        {"1M 30 dB 25 Msps", 0, 30, 0, 0, 25e6, 0.001},
+        {"1M 30 dB 25 Msps +10 ppm", 0, 30, 0, 10, 25e6, 0.001},
+        {"1M 30 dB 25 Msps +60 kHz", 0, 30, 60e3, 0, 25e6, 0.001},
+        {"1M 30 dB 30.72 Msps +10 ppm", 0, 30, 0, 10, 30.72e6, 0.001},
         {"1M 15 dB 30.72 Msps", 0, 15, 30e3, 0, 30.72e6, 0.0010011},
         {"2M long 15 dB +40 kHz +20 ppm", 2, 15, 40e3, 20, 20e6, 0.001},
         {"2M long 15 dB -40 kHz -20 ppm", 2, 15, -40e3, -20, 20e6, 0.0010211},
@@ -193,11 +206,11 @@ static void impairments(bool longRun) {
 }
 
 static void offCentreAndRetune() {
-    {   // the radio 3 MHz above channel 1
+    {   // the radio 2 MHz above channel 1 (channel 2 is 3 MHz away)
         WifiGenConfig c; c.snrDb = 20; c.frames = sizeSchedule(0, {20, 100});
-        for (auto& f : c.frames) f.offHz = -3e6;
-        const EspnowTelemetry t = run(c, 0.1, (wifi::channelMhz(1) + 3) * 1e6);
-        CHECK(t.channel == 1 && std::fabs(t.offsetHz + 3e6) < 1 && seqsFrom(t, "24:6F:28:11:22:33").size() == 2, "off centre: channel %d, offset %.0f, %zu", t.channel,
+        for (auto& f : c.frames) f.offHz = -2e6;
+        const EspnowTelemetry t = run(c, 0.1, (wifi::channelMhz(1) + 2) * 1e6);
+        CHECK(t.channel == 1 && std::fabs(t.offsetHz + 2e6) < 1 && seqsFrom(t, "24:6F:28:11:22:33").size() == 2, "off centre: channel %d, offset %.0f, %zu", t.channel,
               t.offsetHz, seqsFrom(t, "24:6F:28:11:22:33").size());
     }
     {   // a hop from channel 1 to channel 6 halfway: the frames go on decoding, counted on both channels
