@@ -14,6 +14,7 @@ GpuLdpc::~GpuLdpc() = default;
 GpuLdpc& GpuLdpc::instance() { static GpuLdpc g; return g; }
 bool GpuLdpc::available() const { return false; }
 const char* GpuLdpc::deviceName() const { return "none"; }
+const char* GpuLdpc::unavailableReason() const { return "this build has no GPU backend"; }
 bool GpuLdpc::decode(const LdpcCode&, const float*, int, int, uint8_t*, uint8_t*, int*, float, bool) { return false; }
 
 bool GpuLdpc::qcAvailable() const { return false; }

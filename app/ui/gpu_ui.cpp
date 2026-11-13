@@ -41,7 +41,8 @@ void gpuModeTick(App& a, const char* mode) {
 // Settings > Decoding: one row per mode with a GPU stage (a tick), then the modes without one (disabled, with the reason)
 void gpuSettingsRow(App& a) {
     int n; const gpulogic::Row* rows = gpulogic::gpuRows(n);
-    ImGui::TextDisabled("%s", GpuLdpc::instance().available() || GpuViterbi::instance().available() ? GpuLdpc::instance().deviceName() : tr("No usable GPU found: everything runs on the CPU."));
+    if (GpuLdpc::instance().available() || GpuViterbi::instance().available()) ImGui::TextDisabled("%s", GpuLdpc::instance().deviceName());
+    else { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s %s", tr("No usable GPU found: everything runs on the CPU. Why:"), GpuLdpc::instance().unavailableReason()); ImGui::PopTextWrapPos(); }   // the reason is a log line, not translated
     for (int i = 0; i < n; i++) {
         gpuModeTick(a, rows[i].mode);
         ImGui::SameLine(0, 8 * gUi); ImGui::TextDisabled("%s", rows[i].mode);

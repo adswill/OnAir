@@ -121,6 +121,13 @@ static void testGroups() {
     // 4A: 2026-10-23 12:34 UTC, +3:00
     const int mjd = 61336, h = 12, m = 34;
     send(B(4, 0, mjd >> 15), (uint16_t)((mjd & 0x7FFF) << 1 | h >> 4), (uint16_t)((h & 15) << 12 | m << 6 | 0 << 5 | 6), 1);
+    // 15A long PS "Radio Pe\xc5\xbd\xc4\x97 FM" (UTF-8, ends with CR), 4 bytes per group
+    send(B(15, 0, 0), (uint16_t)('R' << 8 | 'a'), (uint16_t)('d' << 8 | 'i'));
+    send(B(15, 0, 1), (uint16_t)('o' << 8 | ' '), (uint16_t)('F' << 8 | 'M'));
+    send(B(15, 0, 2), (uint16_t)('\r' << 8 | 0), (uint16_t)0);
+    // DI: stereo (segment 3) = 1, compressed (segment 1) = 0
+    send(B(0, 0, 8 | 4 | 3), (uint16_t)0, (uint16_t)(' ' << 8 | ' '));
+    send(B(0, 0, 8 | 0 | 1), (uint16_t)0, (uint16_t)('S' << 8 | 'T'));
     // 10A PTYN "ROCKPOP "
     send(B(10, 0, 0), (uint16_t)('R' << 8 | 'O'), (uint16_t)('C' << 8 | 'K'));
     send(B(10, 0, 1), (uint16_t)('P' << 8 | 'O'), (uint16_t)('P' << 8 | ' '));
@@ -163,6 +170,8 @@ static void testGroups() {
     CHECK(i.pinDay == 23 && i.pinHour == 14 && i.pinMinute == 5, "PIN %d %d:%d", i.pinDay, i.pinHour, i.pinMinute);
     CHECK(i.clockUtc == 1792758840 && i.clockOffsetMin == 180, "clock %lld offset %d", (long long)i.clockUtc, i.clockOffsetMin);
     CHECK(i.ptyn == "ROCKPOP ", "PTYN '%s'", i.ptyn.c_str());
+    CHECK(i.longPs == "Radio FM", "long PS '%s'", i.longPs.c_str());
+    CHECK((i.diKnown & 0x5) == 0x5 && (i.di & 1) && !(i.di & 4), "DI known %X value %X", i.diKnown, i.di);
     CHECK(i.oda.size() == 2, "ODA list %zu", i.oda.size());
     bool artist = false, title = false;
     for (const auto& t : i.rtPlus) { if (t.type == 4 && t.text == "Hello") artist = true; if (t.type == 1 && t.text == "world") title = true; }

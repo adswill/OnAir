@@ -18,6 +18,7 @@ public:
     static GpuLdpc& instance();
     bool available() const;
     const char* deviceName() const;
+    const char* unavailableReason() const;   // when !available(): one sentence on why (shown in Settings); empty when it works
 #ifdef _WIN32
     size_t dedicatedMemoryMb() const;   // video memory of the chosen adapter that belongs to it (about 128 for integrated graphics)
 #endif

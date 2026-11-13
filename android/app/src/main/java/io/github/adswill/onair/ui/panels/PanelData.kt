@@ -164,10 +164,11 @@ object MessageParser {
 }
 
 /** The FM panel's RDS view. */
-data class RdsView(val ps: String, val radioText: String, val pi: String, val pty: String, val synced: Boolean, val stereo: Boolean) {
+data class RdsView(val ps: String, val radioText: String, val pi: String, val pty: String, val synced: Boolean, val stereo: Boolean,
+                   val rows: List<Pair<String, String>> = emptyList()) {
     companion object {
         fun of(f: FmInfo?) = f?.let {
-            RdsView(it.ps.trim().ifEmpty { "--------" }, it.rt.trim(), if (it.pi != 0) "%04X".format(it.pi) else "", it.pty, it.rdsSync, it.stereo)
+            RdsView(it.ps.trim().ifEmpty { "--------" }, it.rt.trim(), if (it.pi != 0) "%04X".format(it.pi) else "", it.pty, it.rdsSync, it.stereo, it.rdsRows)
         }
     }
 }
