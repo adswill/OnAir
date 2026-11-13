@@ -77,6 +77,8 @@ void tab(App& a) {
     const dect2::UatTelemetry& t = a.rx.uat;
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("Start the receiver.")); }
     else if (t.aircraft.empty() && t.fisb.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", tr("No UAT message yet. UAT is on 978 MHz and is used in the United States; aircraft and FIS-B ground stations appear here as they are heard.")); ImGui::PopTextWrapPos(); }
+    // Its own tab bar: the items used to land in the main tab bar of the window (Overview, UAT, Receiver ...), where clicks did nothing
+    if (!ImGui::BeginTabBar("uat_views")) return;
     if (typo::beginTabItem("Aircraft")) { aircraftTable(t); ImGui::EndTabItem(); }
     if (typo::beginTabItem("FIS-B")) {
         for (const auto& p : t.fisb) {
@@ -116,11 +118,15 @@ void tab(App& a) {
         }
         ImGui::EndTabItem();
     }
+    ImGui::EndTabBar();
 }
 
-void receiver(App& a) {
-    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? "starting" : "stopped"); return; }
-    tab(a);
+void receiver(App& a) {   // the Receiver tab: the receiver's own state; the aircraft, FIS-B, radar and log views are on the UAT tab
+    const dect2::UatTelemetry& t = a.rx.uat;
+    if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("stopped")); return; }
+    ImGui::PushFont(a.mono, 0);
+    ImGui::TextUnformatted(dect2::uatSummary(t).c_str());
+    ImGui::PopFont();
 }
 
 void list(App& a) {

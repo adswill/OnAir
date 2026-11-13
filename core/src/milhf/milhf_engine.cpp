@@ -65,7 +65,7 @@ struct MilhfReceiver::Impl {
         snap.analysed = true;
         snap.dataValid = snap.res.f.signal;
         snap.snrDb = (float)snap.res.f.snrDb;
-        snap.blocksOk++;
+        if (snap.res.f.signal) snap.blocksOk++;   // an analysis of noise is not a block
         snap.state = 2;
         double e = 0;
         const size_t m = std::min<size_t>(aud.size(), 12000);

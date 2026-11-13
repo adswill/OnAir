@@ -12,6 +12,7 @@
 #include <map>
 #include "dect2/common/png.h"
 #include "dect2/common/u8file.h"
+#include "../ui/input_map.h"
 
 namespace {
 // ---- channel logos: a PNG the user picked for a service, copied to <data>/tv-logos/<service>.png and shown on the service card
@@ -429,8 +430,9 @@ void playerTab(App& a) {
     ImGui::EndChild();
     if (vboxKeys && pl.selected() >= 0) {
         gSpaceClaimFrame = ImGui::GetFrameCount();
-        if (ImGui::IsKeyPressed(ImGuiKey_Space, false)) { if (pl.shift().paused) pl.play(); else pl.pause(); }
-        if (ImGui::IsKeyPressed(ImGuiKey_R, false)) { if (pl.recording().active) pl.stopRecording(); else tvRecordStart(a); }
+        inputmap::scopeActive(inputmap::Scope::Tv);   // Space and R by default (Settings > Keyboard and mouse)
+        if (inputmap::pressed(inputmap::Action::TvPause)) { if (pl.shift().paused) pl.play(); else pl.pause(); }
+        if (inputmap::pressed(inputmap::Action::TvRecord)) { if (pl.recording().active) pl.stopRecording(); else tvRecordStart(a); }
     }
     const float ctlY = ImGui::GetCursorPosY();
     if (ImGui::Button(pl.selected() >= 0 ? tr("Stop##tvplay") : tr("Play##tvplay"))) { if (pl.selected() >= 0) pl.select(-1); else if (a.playReq < 0 && !a.ts.services.empty()) { int sid = a.ts.services[0].id; pl.select(sid); pl.setVolume(a.volume); } }
@@ -573,6 +575,9 @@ void rightPanel(App& a) {
         if (!a.engine.running() && a.rx.standard > 0) ImGui::TextDisabled(tr("stopped - showing saved results"));
         mu->list(a); return;
     }
+    // a mode with no list of its own that makes no transport stream (CIS HF, the cell modes, KAAL ...): nothing here, rather than the TV
+    // modes' clock and an empty service list (the sidebar layout then gives the spectrum the width: docs/LAYOUT-4.0.md)
+    if (const ModeUi* mu = modeUi(a.family)) if (!mu->list && !mu->stream && a.fitPanels && a.newUi && a.uiVariant == 0 && !a.layoutUnified && !a.touchUi && !a.dockOn) return;
     const bool run = a.engine.running();
     ImDrawList* dl = ImGui::GetWindowDrawList();
     // ---- clock: broadcast time (TDT) when the stream has one, otherwise this computer's clock

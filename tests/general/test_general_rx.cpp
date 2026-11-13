@@ -76,7 +76,8 @@ int main() {
     struct Case { int d; double tone, amp; const char* name; };
     // the expected peaks: half scale at full deviation / depth, and the synth uses half of it (0.25); SSB and CW sit at 0.5 under the AGC
     const Case cases[] = {{GenNfm, 1000, 0.25, "NFM"}, {GenWfm, 1000, 0.25, "WFM"}, {GenAm, 1000, 0.25, "AM"},
-                          {GenUsb, 1000, 0.5, "USB"}, {GenLsb, 1000, 0.5, "LSB"}, {GenCw, 700, 0.5, "CW"}};
+                          {GenUsb, 1000, 0.5, "USB"}, {GenLsb, 1000, 0.5, "LSB"}, {GenCw, 700, 0.5, "CW"},
+                          {GenDsb, 1000, 0.5, "DSB"}, {GenCwl, 700, 0.5, "CW-L"}};
     for (const Case& c : cases) {
         const Run r = run(c.d, c.d, 1.5, 30, false);
         const double a = toneAmp(r.aud, c.tone), aOff = toneAmp(r.aud, c.tone * 1.37), tot = rms(r.aud) * std::sqrt(2.0);
@@ -87,6 +88,43 @@ int main() {
         CHECK(tot < 1.3 * a, "%s distortion: rms peak %.3f vs tone %.3f", c.name, tot, a);
         CHECK(r.tel.squelchOpen && r.tel.dataValid && r.tel.snrDb > 15, "%s squelch %d snr %.1f", c.name, r.tel.squelchOpen, r.tel.snrDb);
     }
+
+    // 4.0: NFM audio low-pass at 3 kHz (was 4 kHz): speech up to 2.5 kHz keeps its level, 3.8 kHz (passed by the 3.9 filter) is cut
+    {
+        const Run lo = run(GenNfm, GenNfm, 1.5, 30, false, 0, 0, 0, true, true, -60, 2500);
+        const Run hi = run(GenNfm, GenNfm, 1.5, 30, false, 0, 0, 0, true, true, -60, 3800);
+        const double aLo = toneAmp(lo.aud, 2500), aHi = toneAmp(hi.aud, 3800);
+        printf("  NFM 3 kHz low-pass: 2.5 kHz tone %.3f (want 0.25), 3.8 kHz tone %.4f\n", aLo, aHi);
+        CHECK(std::fabs(20 * std::log10(aLo / 0.25)) < 1.5, "NFM 2.5 kHz level %.3f", aLo);
+        CHECK(aHi < 0.1 * 0.25, "NFM 3.8 kHz not cut: %.4f", aHi);
+    }
+
+    // 4.0: CW-L is the mirror of CW (a carrier 100 Hz above the dial: CW 800 Hz, CW-L 600 Hz; 100 Hz below: the other way round);
+    // RAW passes the channel undemodulated (a carrier 1.5 kHz above the dial is a 1.5 kHz tone); the same at 20 dB SNR with the channel
+    // put 25 kHz off the dial (the station there too), so it is not only the clean centred case
+    for (double off : {100.0, -100.0}) {
+        const Run u = run(GenCw, GenCw, 1.5, 30, false, off), l = run(GenCwl, GenCwl, 1.5, 30, false, off);
+        const double up = 700 + off, dn = 700 - off;
+        printf("  CW / CW-L, carrier %+.0f Hz: CW %.3f at %.0f, CW-L %.3f at %.0f\n", off, toneAmp(u.aud, up), up, toneAmp(l.aud, dn), dn);
+        CHECK(toneAmp(u.aud, up) > 0.35 && toneAmp(u.aud, dn) < 0.05, "CW note for a carrier %+.0f Hz", off);
+        CHECK(toneAmp(l.aud, dn) > 0.35 && toneAmp(l.aud, up) < 0.05, "CW-L note for a carrier %+.0f Hz", off);
+    }
+    for (double snr : {30.0, 20.0}) {
+        const Run r = run(GenRaw, GenRaw, 1.5, snr, false, 1500), o = run(GenRaw, GenRaw, 1.5, snr, false, 25000 + 1500, 25000);
+        printf("  RAW at %.0f dB: 1.5 kHz tone %.3f, off the dial %.3f\n", snr, toneAmp(r.aud, 1500), toneAmp(o.aud, 1500));
+        CHECK(toneAmp(r.aud, 1500) > 0.3 && r.tel.squelchOpen, "RAW passes the channel (%.0f dB): %.3f", snr, toneAmp(r.aud, 1500));
+        CHECK(toneAmp(o.aud, 1500) > 0.3, "RAW with the channel off the dial (%.0f dB): %.3f", snr, toneAmp(o.aud, 1500));
+    }
+    {   // DSB at 15 dB: still the tone, and noise alone keeps the squelch shut (no false opening)
+        const Run d = run(GenDsb, GenDsb, 1.5, 15, false), n = run(GenDsb, GenDsb, 2.0, 15, true);
+        printf("  DSB at 15 dB: tone %.3f, noise only open %d\n", toneAmp(d.aud, 1000), n.tel.squelchOpen);
+        CHECK(toneAmp(d.aud, 1000) > 0.3 && d.tel.squelchOpen, "DSB at 15 dB: %.3f", toneAmp(d.aud, 1000));
+        CHECK(!n.tel.squelchOpen && rms(n.aud) < 1e-4, "DSB noise only: squelch shut");
+    }
+    // names and ranges of the new ones; the first six keep their numbers
+    CHECK(GenCw == 5 && GenDsb == 6 && GenRaw == 7 && GenCwl == 8 && GenDemodCount == 9, "demodulator numbers");
+    CHECK(!strcmp(generalDemodName(GenDsb), "DSB") && !strcmp(generalDemodName(GenRaw), "RAW") && !strcmp(generalDemodName(GenCwl), "CW-L") && !strcmp(generalDemodName(99), "?"), "names");
+    CHECK(generalClampWidth(GenRaw, 1e6) == 44000 && generalClampWidth(GenDsb, 10) == 1000 && generalClampWidth(GenCwl, 1e6) == 3000, "new ranges");
 
     // a station 25 kHz above the dial, the channel put on it
     {

@@ -2,7 +2,7 @@
 // Pure logic (no ImGui, no App): app/ui/ui2_shell.cpp (nextStepLine) fills In from the receiver and draws the result; tested by
 // tests/app/test_next_step.cpp. Texts are N_() and go through tr() when shown. House style: plain words, no jargon, no exclamation marks.
 // Honest by design: a mode whose lock state the app cannot read (lockKnown false) never gets "no signal"; it only gets the hints that
-// rest on measured things (overload, too little level, lost samples, a slow computer).
+// rest on measured things (overload, too little level, lost samples, a receiver short of CPU).
 #pragma once
 #include <cmath>
 #include <string>
@@ -13,7 +13,7 @@
 
 namespace nextstep {
 
-enum class State { Stopped, Starting, Good, Weak, NoSignal, Overload, TooLow, LosingSamples, TooSlow, Unknown };
+enum class State { Stopped, Starting, Good, Weak, NoSignal, Overload, TooLow, LosingSamples, TooSlow, HeldUp, Unknown };
 enum class Fix { None, Start, AutoGain };
 
 struct In {
@@ -29,8 +29,12 @@ struct In {
     double rmsDbfs = -120;       // level at the radio's ADC
     double clipFraction = 0;     // share of samples at full scale (0..1)
     bool overload = false;       // the gain meter says the radio is overloaded
-    bool radioLoss = false;      // a live radio under its sample rate (USB, cable, driver)
-    bool cpuLoss = false;        // samples lost because the computer is too slow
+    bool radioLoss = false;      // a live radio under its sample rate (USB, cable, driver; or the network link of a network radio)
+    bool network = false;        // the radio is reached over a network: the advice is the link, not a USB port
+    // Samples OnAir had to throw away (ring overflow), by cause (core/include/dect2/engine/overflow_cause.h). 3.9 said "this computer is
+    // too slow" for every one of them, on machines with the CPU nearly idle; now only when the receiver really is short of CPU.
+    bool cpuLoss = false;        // the receiver needs more than real time on the CPU: its thread fills one core (OverflowCause::Cpu)
+    bool heldUp = false;         // lost while the CPU was not the limit: the receiver waited, or the sample thread was held up (Waiting, Stalled)
 };
 
 struct Out {
@@ -58,8 +62,14 @@ inline Out advise(const In& in) {
     }
     if (in.runSec < kStartSec) { o.state = State::Starting; o.text = N_("Starting..."); return o; }
     // measured problems first: they explain a bad signal and need no lock to be seen
-    if (in.radioLoss) { o.state = State::LosingSamples; o.text = N_("The radio is losing samples. Use a USB 3 port, a short cable, or a lower sample rate."); return o; }
-    if (in.cpuLoss) { o.state = State::TooSlow; o.text = N_("This computer is too slow for this setting. Lower the sample rate or the bandwidth."); return o; }
+    if (in.radioLoss) {
+        o.state = State::LosingSamples;
+        o.text = in.network ? N_("The network radio is not delivering its full rate. Use a wired connection, or a lower sample rate.")
+                            : N_("The radio is losing samples. Use a USB 3 port, a short cable, or a lower sample rate.");
+        return o;
+    }
+    if (in.cpuLoss) { o.state = State::TooSlow; o.text = N_("The receiver cannot keep up at this sample rate: it needs more than one CPU core gives. Lower the sample rate or the bandwidth."); return o; }
+    if (in.heldUp) { o.state = State::HeldUp; o.text = N_("Some samples were lost while the receiver was held up for a moment. The CPU is not the limit; close busy programs if it keeps happening."); return o; }
     if (in.overload || in.clipFraction > kClipFrac) {
         o.state = State::Overload;
         if (in.radioHasGain && !in.autoGain) { o.text = N_("The signal is too strong for the radio. Lower the gain, or let Auto gain do it."); o.fix = Fix::AutoGain; o.fixLabel = N_("Auto gain"); }

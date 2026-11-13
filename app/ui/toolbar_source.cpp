@@ -109,6 +109,7 @@ void startReceiver(App& a) {
     if (isFile && a.file.path.empty()) a.engine.log("choose an IQ file first");
     else {
         if (a.devices[a.devIdx].isAudio() || a.devices[a.devIdx].kind == DeviceInfo::Hamlib) applyAudioSettings(a);
+        dect2::Engine::setRxThreadMode((int)plat::prefs().getD("rxThread", 0));   // Settings > Advanced: the receiver on its own thread (4.0)
         applyGpuPolicy(a); a.engine.setComputeMode(a.computeMode); a.engine.setStandard(engineStd(a));
         a.engine.start(a.devices[a.devIdx], a.tune, a.file);
         savePrefs(a);

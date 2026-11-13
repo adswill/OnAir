@@ -63,8 +63,8 @@ void analyse(App& a) {
     else { c.gainDb = a.tune.lnaDb + a.tune.vgaDb + (a.tune.ampOn ? 14 : 0); c.gainMaxDb = 104; }
     const SampleLoss l = a.engine.sampleLoss();
     c.deliveredPct = l.deliveredPct;
-    c.radioDrops = l.live && l.sinceRadioSec >= 0 && l.sinceRadioSec < 10;
-    c.cpuDrops = l.live && l.sinceCpuSec >= 0 && l.sinceCpuSec < 10;
+    c.radioDrops = l.live && ((l.sinceRadioSec >= 0 && l.sinceRadioSec < 10) || (l.sinceSourceLostSec >= 0 && l.sinceSourceLostSec < 10));
+    c.cpuDrops = l.live && l.sinceCpuSec >= 0 && l.sinceCpuSec < 10 && l.cpuCause == OverflowCause::Cpu;   // only when the CPU is the limit (overflow_cause.h)
     c.modeId = rateModeId(a);
     c.rfHz = a.freqMhz * 1e6;
     std::vector<std::complex<float>> x;

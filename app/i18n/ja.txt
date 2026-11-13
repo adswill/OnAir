@@ -3,47 +3,26 @@
 # Some entries are machine translations that no native speaker has reviewed yet: they are listed in unreviewed/ja.txt. Corrections are welcome.
 #  menus, status words, common buttons
 1 kHz test tone	1 kHz テストトーン
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	P6 PPM は画像として送信されます。それ以外のファイルや空のファイルではテスト画像を使用します。コールサインが画像に刻印されます。
-A SAME header. ZCZC- is added when missing.	SAME ヘッダー。ZCZC- がない場合は追加されます。
-Aircraft registration	航空機登録記号
-An RS41 with this serial. Empty: the demo sondes.	このシリアルの RS41。空の場合: デモゾンデ。
 Are you sure? This clears all previous data and cannot be undone.	よろしいですか？ これまでのデータがすべて消去され、元に戻せません。
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	ATSC 3.0 は ROUTE / fMP4 のデモを使用します。独自の MPEG-TS はペイロード経路ではありません。
 Audio file	音声ファイル
 Audio input	音声入力
-AX.25 UI frame. Empty: the demo CubeSat cycle.	AX.25 UI フレーム。空の場合: デモ CubeSat サイクル。
 Baud	ボー
 Browse…	参照…
-Callsign / my ID	コールサイン / 自分の ID
-Capcode	Capcode
 Carrier tune	キャリア調整
 Clear all	すべて消去
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	すべてのモードのデコード済みリスト (航空機、船舶、メッセージ、画像など) を、開いているすべての受信機で消去します。ディスク上の保存コピーも空になります。
-Code rate / MODCOD index	符号化率 / MODCOD インデックス
-Colour code	カラーコード
 Comment	コメント
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	D2-MAC テストシーン (カスタム映像はこのアナログジェネレーターでは使えません)。
 DATV (DVB-S/S2 file)	DATV (DVB-S/S2 ファイル)
 Default input	既定の入力
 Destination	宛先
-Destination / ID	宛先 / ID
-Destination ID	宛先 ID
 Device ID	デバイス ID
 Dial frequency the decoder should assume (the sound card is not tuned)	デコーダーが仮定するダイヤル周波数（サウンドカードはチューニングしません）
 DVB standard	DVB 規格
-Empty: the demo 802.15.4 scene.	空の場合: デモ 802.15.4 シーン。
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	空の場合: デモ FLARM シーン。この ID は非公開の新しいプロトコルには組み込まれません。
-Empty: the demo Mode S uplink scene.	空の場合: デモ Mode S アップリンクシーン。
-Empty: the demo VDES scene.	空の場合: デモ VDES シーン。
 File	ファイル
-File to send	送信するファイル
 Free text	フリーテキスト
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	ゲイン操作はラジオのみです（録音、サウンドカード、合成信号には使いません）
 I/Q stereo	I/Q ステレオ
-ICAO address	ICAO アドレス
-Image (PNG / PPM)	画像 (PNG / PPM)
-Image (PPM)	画像 (PPM)
 Input device	入力デバイス
 Latitude	緯度
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	libcodec2 が読み込まれていません: ライブエンコードは無効です。1 kHz トーン、無音、WAV/MP3 は引き続き送信できます。
@@ -55,57 +34,30 @@ LSB audio	LSB オーディオ
 Message	メッセージ
 Mic level	マイクレベル
 Microphone	マイク
-MMSI	MMSI
 Mode	モード
-Morse identification, up to four letters.	モールス識別符号、最大4文字。
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX はテキストを送信します (ZCZC / NNNN がない場合は追加されます)。DSC (そのサービス選択時) は MMSI を使用します。
 OnAir still asks the radio for it, but the radio or its driver may not reach this frequency, or the signal may be weak or absent.	OnAir は引き続きラジオにこれを要求しますが、ラジオまたはそのドライバーがこの周波数に届かないか、信号が弱い、または存在しない可能性があります。
-PAN / short address	PAN / ショートアドレス
 Path	経路
-Payload text	ペイロードテキスト
-Power (dBm)	電力 (dBm)
-Pre-emphasis	プリエンファシス
-PSK variant	PSK 方式
 QO-100 path	QO-100 経路
 Radio ID	無線 ID
-Radio text (RT)	ラジオテキスト (RT)
-RDS PI	RDS PI
 Report	レポート
-Reverse (mark is the upper tone)	反転 (マークが上側のトーン)
-RFPI	RFPI
-RFPI of the base station.	基地局の RFPI。
 Roll-off	ロールオフ
-Satellite standard	衛星規格
 Send analog NFM of the audio instead of the digital test pattern	デジタルテストパターンの代わりに音声のアナログ NFM を送信
 Send analog NFM of the microphone or a file instead of the test scene	テストシーンの代わりにマイクまたはファイルのアナログ NFM を送信
-Serial / ID	シリアル / ID
 Shift	シフト
 Sideband	サイドバンド
 Silence	無音
 sound card	サウンドカード
 SSB (microphone)	SSB (マイク)
-SSTV mode	SSTV モード
-Station name (PS)	局名 (PS)
-Symbol rate (Hz)	シンボルレート (Hz)
 Talkgroup	トークグループ
-test DJI DroneID scene (custom serial is not packed)	テスト用 DJI DroneID シーン (カスタムシリアルは組み込まれません)
-test downlink scene (this generator does not take a custom message)	テスト用ダウンリンクシーン (このジェネレーターはカスタムメッセージに対応しません)
-test LRPT/HRIT scene (custom image not wired)	テスト用 LRPT/HRIT シーン (カスタム画像は未対応)
-test NCDXF-style beacon scene	テスト用 NCDXF 形式ビーコンシーン
-test weather-fax chart (custom image not wired)	テスト用ファックス気象図 (カスタム画像は未対応)
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	TETRA ACELP はここではエンコードされません。カラーコードと ID は表示され、ダウンリンクのテストパターンが送信されます。代わりに 1 kHz トーン、無音、または WAV/MP3 をアナログ NFM として送信できます。
 Text	テキスト
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	サウンドカードの取り込みレートです。エンジンはこのレートで動きます。チューニングするラジオはありません。
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	ファイルのバイト列がこのコールサインの HamDRM オブジェクトとして送信されます。ファイルが空の場合: テスト画像。
 The microphone starts only when you press START TRANSMITTING.	マイクは「送信開始」を押したときにのみ起動します。
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	登録記号とフリーテキストが H1 / ACARS ダウンリンクとして送信されます。空の場合: デモトラフィック。
 This frequency is outside what this radio is specified for	この周波数はこのラジオの仕様範囲外です
 this mode has no transmit generator	このモードには送信ジェネレーターがありません
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	このボコーダーはエンコードできません: OnAir は mbelib をデコード専用で読み込みます (AMBE/IMBE)。宛先 ID / トークグループ / カラーコードは送信されますが、音声ビットはテストパターンです。代わりに 1 kHz トーン、無音、または WAV/MP3 をアナログ NFM として送信できます。
-Timeslot	タイムスロット
 To	To
 USB audio	USB オーディオ
-Vessel name	船名
 View	表示
 Help	ヘルプ
 Language	言語
@@ -146,8 +98,6 @@ State	状態
 Channel	チャンネル
 Delay	遅延
 dropped	欠落
-level %.1f dBFS	レベル %.1f dBFS
-load %.0f%%	負荷 %.0f%%
 FM: no station	FM: 放送局なし
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  サービス %d 件
 OK	OK
@@ -492,9 +442,7 @@ Satellite	衛星
 Max el	最大仰角
 Duration	継続時間
 Frequency	周波数
-AOS in %d:%02d:%02d	AOS まで %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s、最大 %.0f 度
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	方位 %.0f  仰角 %.0f  %.0f km\nドップラー %+.0f Hz
 Track	追尾
 Auto start at AOS, stop at LOS	AOS で自動開始、LOS で停止
 Auto record IQ	IQ を自動録音
@@ -990,7 +938,6 @@ Frequency (MHz)	周波数 (MHz)
 +14 dB amplifier	+14 dB アンプ
 Repeat until stopped	停止するまで繰り返す
 seconds	秒
-START TRANSMITTING	送信を開始
 This radio has no transmit driver in OnAir.	この無線機には OnAir の送信ドライバーがありません。
 Before you transmit	送信する前に
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	お住まいの場所で送信するには免許または許可が必要です。発射するものと、他者(安全のために人々が頼るサービスを含む)に混信しないことについては、あなたが責任を負います。開始前に、無線機にアンテナ、アッテネーター、またはダミーロードを接続してください。OnAir は周波数も出力も制限しません。制限は無線機自身のものだけです。
@@ -1145,10 +1092,8 @@ Sample rate	サンプルレート
 Search signals...	信号を検索...
 Settings	設定
 Signal	信号
-Space = start / stop     Esc = stop	スペース = 開始 / 停止     Esc = 停止
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	送信またはテスト、キャリア、保留中の開始をすべて止め、無線機を解放します。
 TEST - NO RF	テスト - RFなし
-Test (dry run, no RF)	テスト(空運転、RFなし)
 Test (no RF)	テスト(RFなし)
 Test: the IQ the radio would get	テスト:無線機に渡されるIQ
 The IQ going to the radio	無線機へ送られているIQ
@@ -1157,8 +1102,6 @@ The transmit panel is in its own window.	送信パネルは別ウィンドウに
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	周波数からずれて発射する無線機のために、無線機へ送る周波数に加算されます。
 TX channel	TXチャンネル
 Transmit	送信
-Transmitting	送信中
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	この周波数とレベルの無変調キャリアで、送信の調整(ドライブ、フィルター、SWR、ダミーロードのレベル)用です。メッセージではありません。ボタンを押し続けてください。停止は常に有効です。送信中としては保存されません。
 What will be sent (preview)	送信される内容(プレビュー)
 at full scale: the limiter will round the peaks	フルスケール:リミッターがピークを丸めます
 making the preview...	プレビューを作成中...
@@ -2750,121 +2693,38 @@ decoder locked: gain frozen	デコーダがロック中: ゲイン固定
 at the end of the gain range	ゲイン範囲の端です
 holding the level	レベルを維持しています
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 は通常の搬送波抑圧です。少し搬送波を入れると受信機が同期しやすくなります。範囲の上限は最も大きい音声と同じ強さです。
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	最初のトーンに加える 2 つ目のトーン（0 = オフ）。2 つのトーンで 2 トーン直線性テストになります。
-AM (carrier and sidebands)	AM（搬送波と側波帯）
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM は搬送波と両側波帯を送ります。搬送波抑圧の両側波帯は側波帯だけを送ります。
-Audio above this level is turned down.	このレベルを超える音声は下げられます。
-Audio frequency	オーディオ周波数
-Boosts the high notes before sending (0 = off).	送信前に高音を持ち上げます（0 = オフ）。
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	送信前に高音を持ち上げます。ヨーロッパや世界の大半では 50 µs、アメリカ大陸では 75 µs。
 CTCSS tone	CTCSS トーン
-Carrier injection	搬送波の注入
-Carrier level	搬送波レベル
-Choose a radio below, or switch on the test (no RF).	下で無線機を選ぶか、テスト（RF なし）をオンにしてください。
 Choose a signal in the list.	リストから信号を選んでください。
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	この音程より上の音声をカットし、信号の幅を決めます（0 = オフ）。
-DSB (suppressed carrier)	DSB（搬送波抑圧）
 Default: %s	既定値: %s
 Deviation	偏移
-Esc = stop	Esc = 停止
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	大きい声と小さい声をならして、過変調にならずに信号の強さを保ちます。
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	この信号のすべての設定: 変調、音声、フィルター、出力、タイミング。既定値は妥当です。変更したいときだけ開いてください。
-Filters	フィルター
 Follow the receiver	受信機に追従
 Frequency offset	周波数オフセット
-Gain added after the compressor.	コンプレッサーの後に加えるゲインです。
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	無線機の直前で信号全体にかけるゲインです。メーターがクリップを示したら下げてください。無線機自体のゲインは上で設定します。
 HOLD TO TRANSMIT	押している間送信
-High-pass (low cut)	ハイパス（低域カット）
-How far the RDS subcarrier deviates the carrier.	RDS 副搬送波が搬送波をどれだけ偏移させるかです。
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	音声が周波数をどれだけ振るかです。2.5 kHz は 12.5 kHz チャンネル、5 kHz は 25 kHz チャンネル向けです。
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	音声が周波数をどれだけ振るかです。放送 FM は 75 kHz を使います。
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	音声が信号をどれだけ振るかです。全変調は 100 パーセントで、それ以上は過変調になり歪みます。
-How fast the compressor lets go after a loud passage.	大きな音の後にコンプレッサーが戻る速さです。
-How long the VOX stays open after the sound stops.	音が止んだ後に VOX が開いたままになる時間です。
-How loud the audio must be to open the VOX.	VOX を開くのに必要な音声の大きさです。
-How loud the test tone is, as a share of full audio.	テストトーンの大きさです（フルオーディオに対する割合）。
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	しきい値を超えた音声をどれだけ下げるかです。20 はハードリミッターに近くなります。
-Key-up fade-in	送信開始のフェードイン
-Left level	左レベル
-Left test tone	左テストトーン
-Low-pass (audio bandwidth)	ローパス（音声帯域幅）
-Lower sideband (LSB)	下側波帯（LSB）
-Make-up gain	メイクアップゲイン
-Mirror the spectrum	スペクトルを反転
-Modulation depth	変調度
 Music (not speech)	音楽（音声ではない）
 Name for a new preset	新しいプリセットの名前
 No presets saved for this signal yet.	この信号のプリセットはまだ保存されていません。
 Output	出力
 Output level	出力レベル
-Output trim	出力トリム
-Peak level	ピークレベル
-Pilot level	パイロットレベル
-Pitch	音程
 Presets	プリセット
 Preview	プレビュー
-Programme type	番組タイプ
 Push to talk (hold the button)	プッシュトゥトーク（ボタンを押している間）
-RDS	RDS
-RDS level	RDS レベル
-RF level	RF レベル
 RX %.6f MHz	RX %.6f MHz
-Ratio	レシオ
-Release	リリース
-Removes rumble and hum below this pitch (0 = off).	この音程より下のゴロゴロ音やハムを除去します（0 = オフ）。
 Reset to default	既定値に戻す
-Right level	右レベル
-Right test tone	右テストトーン
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	信号ジェネレーターを無線機のサンプルレートで空のまま動かします。無線機は開かず、何も送信されません。スペクトルとレベルは送信される内容を示します。
 Save preset	プリセットを保存
 Saves the settings below, the frequency and the level under this name.	下の設定、周波数、レベルをこの名前で保存します。
-Second test tone	2 つ目のテストトーン
-Sends the 19 kHz pilot and the stereo difference signal.	19 kHz パイロットとステレオ差信号を送ります。
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	局名、ラジオテキスト、番組タイプを 57 kHz の副搬送波で送ります。
-Speech compressor	音声コンプレッサー
 Start transmitting	送信を開始
 Stereo	ステレオ
 Stop transmitting	送信を停止
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	I と Q を入れ替えて信号を反転します。上側波帯が下側波帯になります。反転する無線機やミキサー向けです。
 TRANSMITTING (release to stop)	送信中（離すと停止）
 TX = RX	TX = RX
 TX independent	TX は独立
-Test tone	テストトーン
-Test tone level	テストトーンのレベル
-The 19 kHz stereo pilot, as a share of the full deviation.	19 kHz ステレオパイロットの、全偏移に対する割合です。
-The RDS flag for a station that carries traffic announcements.	交通情報を放送する局を示す RDS フラグです。
-The RDS flag for music instead of speech.	音声ではなく音楽を示す RDS フラグです。
-The RDS flag that a traffic announcement is on the air.	交通情報が放送中であることを示す RDS フラグです。
-The RDS programme type code (0 to 31; 10 is pop music).	RDS の番組タイプコードです（0〜31。10 はポップス）。
-The largest signal as a share of full scale.	最大の信号を、フルスケールに対する割合で示します。
-The left test tone, as a share of full audio.	左のテストトーンの、フルオーディオに対する割合です。
-The pitch of the Morse tone, as an offset above the dial frequency.	モールス信号の音程です（ダイヤル周波数からのオフセット）。
-The pitch of the test tone, used when the audio input is the test tone.	音声入力がテストトーンのときに使うテストトーンの音程です。
-The pitch on the left channel, used when the audio input is the test tone.	音声入力がテストトーンのときの左チャンネルの音程です。
-The pitch on the right channel (0 = three times the left).	右チャンネルの音程です（0 = 左の 3 倍）。
 The radio's output level. Start low.	無線機の出力レベルです。低めから始めてください。
-The right test tone, as a share of full audio.	右のテストトーンの、フルオーディオに対する割合です。
-The signal fades in over this time after Start, so the key-up does not click.	開始後この時間をかけて信号がフェードインし、送信開始時のクリック音を防ぎます。
-The signal goes out only while there is sound on the audio input.	音声入力に音がある間だけ信号が送信されます。
-The signal goes out only while you hold the button down.	ボタンを押している間だけ信号が送信されます。
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	搬送波の大きさを、フルスケールに対する割合で示します。変調度 85 パーセントではピークがほぼフルスケールに達します。
-The size of the signal as a share of full scale.	信号の大きさを、フルスケールに対する割合で示します。
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	送信周波数は受信機に追従します。ここで別の周波数を入力すると連動が外れます。クリックで連動を解除します。
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	送信周波数は独立しています。受信機は %.6f MHz です。クリックすると送信側が受信機に追従します。
 Threshold	しきい値
 Timing	タイミング
-Traffic announcement now	交通情報を今放送中
-Traffic programme	交通情報番組
-Upper sideband (USB)	上側波帯（USB）
-VOX (transmit on voice)	VOX（音声で送信）
-VOX hang time	VOX ホールド時間
-VOX threshold	VOX しきい値
 Well-known frequencies of this signal: pick one to set the transmit frequency	この信号のよく知られた周波数: 選ぶと送信周波数に設定されます
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	音声帯域内での信号の中心位置です（ダイヤル周波数からのオフセット）。
-Where the signal sits in the audio passband, as an offset above the dial frequency.	音声帯域内での信号の位置です（ダイヤル周波数からのオフセット）。
-Which sideband is sent.	どちらの側波帯を送るかです。
 follows the receiver	受信機に追従
 on	オン
 # full screen on every map

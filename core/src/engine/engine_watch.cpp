@@ -100,6 +100,7 @@ void Engine::catchUp() {
     if (!src_ || !src_->realtimeHardware()) return;
     const size_t skipped = ring_.dropBacklog();
     if (!skipped) return;
+    rxPipeFlush();   // the gap mark comes after the blocks before it (the receiver on its own thread, 4.0)
     if (activeStd_.load() == 0) rx_.markGap(skipped);
     skippedSamples_ += skipped;
     skipEvents_++;
@@ -121,7 +122,7 @@ void Engine::holdDelivery(int ms) {
 // Samples that never came out of the radio (delivery_check.h), and the rate that did arrive, against the rate the radio was set to.
 void Engine::checkDelivery() {
     if (!src_ || !src_->realtimeHardware() || srcRate_ <= 0) return;
-    if (radioLost_) { holdDelivery(500); rateT0_ = 0; deliveredPct_ = -1.f; return; }   // unplugged: that is reported as such, and the gap is not a loss of the USB link
+    if (radioLost_) { holdDelivery(500); delivRate_.restart(); deliveredPct_ = -1.f; return; }   // unplugged: that is reported as such, and the gap is not a loss of the USB link
     uint64_t off; int64_t ns; size_t block;
     if (!ring_.lastWrite(off, ns, block)) return;
     if (delivReanchor_.exchange(false)) deliv_.restart(delivHoldNs_.load());
@@ -143,17 +144,35 @@ void Engine::checkDelivery() {
             log(b);
         }
     }
-    // Samples the library actually handed over, over about two seconds of wall time, as a percent of the rate the radio is set to.
-    // offered counts every sample the callback brought, including ones the ring then dropped, so this is the radio's rate and not the
-    // receiver's load. A start or retune pauses the radio; that gap is not a short delivery.
+    // Samples the library actually handed over, over about two seconds, as a percent of the rate the radio is set to (DeliveryRate:
+    // between the radio's own write stamps, so a radio that hands over large transfers at a low rate reads 100 % and not 78 %). offered
+    // counts every sample the callback brought, including ones the ring then dropped, so this is the radio's rate and not the receiver's
+    // load. A start or retune pauses the radio; that gap is not a short delivery.
     const int64_t now = steadyNs();
-    if (now < delivHoldNs_.load()) { rateT0_ = 0; deliveredPct_ = -1.f; return; }
-    if (rateT0_ == 0) { rateT0_ = now; rateOff0_ = off; return; }
-    if (now - rateT0_ < 2000000000LL) return;
-    const double dt = (double)(now - rateT0_) * 1e-9;
-    if (dt >= 1.5 && off >= rateOff0_) deliveredPct_ = (float)(100.0 * (double)(off - rateOff0_) / (dt * srcRate_));
-    rateT0_ = now;
-    rateOff0_ = off;
+    if (now < delivHoldNs_.load()) { delivRate_.restart(); deliveredPct_ = -1.f; return; }
+    deliveredPct_ = delivRate_.observe(off, ns, block, now, srcRate_);
+}
+
+// New drops in the ring: the part the source reported as never received (IqRing::noteLost: a network radio's link was down) is the
+// radio side's; the rest is overflow, and the last two seconds of this thread's figures say why (overflow_cause.h).
+void Engine::noteRingLoss() {
+    const uint64_t d = ring_.dropped(), lost = ring_.lostAtSource();
+    const uint64_t dd = d - ringDroppedSeen_.load(), dl = lost >= ringLostSeen_.load() ? lost - ringLostSeen_.load() : 0;
+    ringDroppedSeen_ = d;
+    ringLostSeen_ = lost;
+    const int64_t now = steadyNs();
+    if (dl) { srcLostEvents_++; lastSrcLostNs_ = now; }
+    if (dd <= dl) return;
+    cpuDropEvents_++;
+    lastCpuDropNs_ = now;
+    const OverflowWindow w = loopMarks_.window(rate_.load(), rxStartNs_, now);
+    const OverflowCause c = classifyOverflow(w);
+    cpuCause_ = (int)c;
+    if (getenv("ONAIR_TRACE_OVERFLOW")) {
+        fprintf(stderr, "ring overflow: %llu samples, %s (window %.2f s: %.2f s of signal, %.2f s in the receive path, %.2f s of it on the CPU, %.1f s after the start)\n",
+                (unsigned long long)(dd - dl), overflowCauseName(c), w.wallSec, w.signalSec, w.busyWallSec, w.busyCpuSec, w.sinceStartSec);
+        fflush(stderr);
+    }
 }
 
 SampleLoss Engine::sampleLoss() const {
@@ -162,7 +181,12 @@ SampleLoss Engine::sampleLoss() const {
     l.network = lastNetwork_.load();
     const double r = std::max(1.0, srcRate_);   // the ring holds the radio's samples (before any resampling)
     l.radioSec = radioMissing_.load() / r;
-    l.cpuSec = (double)ring_.dropped() / r;
+    const uint64_t lost = ring_.lostAtSource(), dropped = ring_.dropped();
+    l.cpuSec = (double)(dropped > lost ? dropped - lost : 0) / r;
+    l.sourceLostSec = (double)lost / r;
+    l.sourceLostEvents = srcLostEvents_.load();
+    if (lastSrcLostNs_.load()) l.sinceSourceLostSec = (double)(steadyNs() - lastSrcLostNs_.load()) * 1e-9;
+    l.cpuCause = (OverflowCause)cpuCause_.load();
     l.radioEvents = radioMissEvents_.load();
     l.cpuEvents = cpuDropEvents_.load();
     const int64_t now = steadyNs();

@@ -31,6 +31,7 @@ using cf = std::complex<float>;
 // the plots ask about the touch interface: not here
 namespace touch {
 bool on() { return false; }
+bool longPressHeld() { return false; }
 const GestureFrame& gesture() { static GestureFrame g; return g; }
 }
 

@@ -1,4 +1,8 @@
 // NOAA APT below the FM discriminator: the 2400 Hz amplitude-modulated subcarrier down to 4160 samples a second, the sync A pulse train found by correlation, 2080 samples a line.
+// 4.0 line filter (setNoiseFilter, on by default): the noise of one sample is measured on each line's space A (47 words of steady grey after
+// sync A; its middle 31), averaged over lines; the two pictures of the line then go through a local Wiener filter over 7 samples with that
+// noise: flat stretches are averaged, edges kept, and a clean line (noise near zero) passes unchanged. Before it, a sample more than 4 robust
+// sigmas (median absolute deviation of space A) from the median of its 5 neighbours (an FM click) is replaced by that median. Simulated gains: docs/SENSITIVITY-4.0-X2.md.
 #include "dect2/wxsat/wxsat_rx.h"
 #include <algorithm>
 #include <cmath>
@@ -28,6 +32,9 @@ struct AptDecoder::Impl {
     int64_t expect = 0;     // env position (absolute) of the next line
     uint64_t lines = 0;
     float low = 0, high = 1, level = 0;
+    bool noiseFilter = true;
+    double noiseVar = -1;   // of one envelope sample, from the space A of the lines
+    double noiseRob = -1;   // the same from the median absolute deviation (FM clicks hardly move it)
     std::function<void(int, const uint8_t*)>* cb = nullptr;
 
     Impl() {
@@ -50,7 +57,7 @@ struct AptDecoder::Impl {
     void clear() {
         rpos = 0; boxSum = {0, 0}; std::fill(ring.begin(), ring.end(), std::complex<float>(0, 0));
         phase = 0; take = 0; env.clear(); lastEnv = 0;
-        lock = false; misses = 0; consumed = 0; expect = 0; lineIdx = 0; lines = 0; low = 0; high = 1; level = 0;
+        lock = false; misses = 0; consumed = 0; expect = 0; lineIdx = 0; lines = 0; low = 0; high = 1; level = 0; noiseVar = -1; noiseRob = -1;
     }
 
     float corr(int at, float& energy) const {
@@ -75,9 +82,49 @@ struct AptDecoder::Impl {
         const float a = lines < 4 ? 0.5f : 0.1f;
         low += a * (lo - low); high += a * (hi - high);
         const float range = std::max(1e-6f, high - low);
+        float line[kLine];
+        for (int i = 0; i < kLine; i++) line[i] = env[(size_t)(at + i)];
+        if (noiseFilter) {
+            double s1 = 0, s2 = 0; int k = 0;
+            for (int i = kSync + 8; i < 86 - 8; i++) { const double v = line[i]; s1 += v; s2 += v * v; k++; }
+            const double var = std::max(0.0, (s2 - s1 * s1 / k) / (k - 1));
+            noiseVar = noiseVar < 0 ? var : noiseVar + 0.1 * (var - noiseVar);
+            {
+                float sp[86], dv[86]; int m = 0;
+                for (int i = kSync + 8; i < 86 - 8; i++) sp[m++] = line[i];
+                std::nth_element(sp, sp + m / 2, sp + m);
+                const float med = sp[m / 2];
+                for (int i = 0; i < m; i++) dv[i] = std::fabs(sp[i] - med);
+                std::nth_element(dv, dv + m / 2, dv + m);
+                const double r = 1.4826 * dv[m / 2];
+                noiseRob = noiseRob < 0 ? r * r : noiseRob + 0.1 * (r * r - noiseRob);
+            }
+            constexpr int R = 3;
+            for (const int seg0 : {86, 1126}) {          // image A and image B, 909 words each
+                // FM clicks: a sample more than 4 robust sigmas from the median of the 5 around it is replaced by that median
+                const float lim = (float)(4 * std::sqrt(std::max(0.0, noiseRob)));
+                float c[909];
+                for (int i = 0; i < 909; i++) {
+                    float w5[5];
+                    for (int d = -2; d <= 2; d++) w5[d + 2] = line[seg0 + std::clamp(i + d, 0, 908)];
+                    std::nth_element(w5, w5 + 2, w5 + 5);
+                    c[i] = std::fabs(line[seg0 + i] - w5[2]) > lim ? w5[2] : line[seg0 + i];
+                }
+                std::copy(c, c + 909, line + seg0);
+                float f[909];
+                for (int i = 0; i < 909; i++) {
+                    double a1 = 0, a2 = 0; int n = 0;
+                    for (int d = -R; d <= R; d++) { const int j = std::clamp(i + d, 0, 908); const double v = line[seg0 + j]; a1 += v; a2 += v * v; n++; }
+                    const double mu = a1 / n, lv = std::max(0.0, a2 / n - mu * mu);
+                    const double g = lv > 1e-12 ? std::max(0.0, lv - noiseVar) / lv : 0.0;
+                    f[i] = (float)(mu + g * (line[seg0 + i] - mu));
+                }
+                std::copy(f, f + 909, line + seg0);
+            }
+        }
         uint8_t px[kLine];
         for (int i = 0; i < kLine; i++) {
-            const float v = (env[(size_t)(at + i)] - low) / range * 255.f;
+            const float v = (line[i] - low) / range * 255.f;
             px[i] = (uint8_t)std::clamp((int)std::lround(v), 0, 255);
         }
         lines++;
@@ -151,5 +198,6 @@ void AptDecoder::pushAudio(const float* x, size_t n) { p_->feed(x, n); }
 bool AptDecoder::locked() const { return p_->lock; }
 uint64_t AptDecoder::linesOut() const { return p_->lines; }
 float AptDecoder::carrierLevel() const { return p_->level; }
+void AptDecoder::setNoiseFilter(bool on) { p_->noiseFilter = on; }
 
 } // namespace dect2::wxsat

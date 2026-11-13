@@ -1,0 +1,81 @@
+// The screens of the 4.0 signal modes (families 881 - 885, docs/X40-4.0.md): one table of what was decoded, one Receiver page. One click: the mode tunes and needs no settings.
+#include "app.h"
+#include "dect2/x40/x40_rx.h"
+#include "dect2/x40/x40_tel.h"
+#include <cstdio>
+#include <string>
+
+namespace {
+
+using dect2::X40Row;
+using dect2::X40Telemetry;
+
+template <int V> bool live(const App& a) { return a.rx.standard == dect2::x40::activeOfVariant(V); }
+
+template <int V> void tab(App& a) {
+    if (!live<V>(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); return; }
+    const X40Telemetry& t = a.rx.x40;
+    ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(t.headline.c_str()); ImGui::PopFont();
+    if (t.rows.empty()) { ImGui::TextDisabled("%s", tr("nothing decoded yet")); return; }
+    if (ImGui::BeginTable("##x40", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_ScrollY | ImGuiTableFlags_Resizable, ImVec2(0, ImGui::GetContentRegionAvail().y))) {
+        ImGui::TableSetupColumn(tr("Time")); ImGui::TableSetupColumn(tr("Kind")); ImGui::TableSetupColumn(tr("ID")); ImGui::TableSetupColumn(tr("Decoded"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        for (const X40Row& r : t.rows) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%.1f", r.timeSec);
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(tr(r.kind.c_str()));
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(r.id.c_str());
+            ImGui::TableNextColumn(); ImGui::TextUnformatted(r.text.c_str());
+        }
+        ImGui::EndTable();
+    }
+}
+
+template <int V> void receiver(App& a) {
+    if (!live<V>(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); return; }
+    const X40Telemetry& t = a.rx.x40;
+    auto kv = [&](const char* k, const std::string& v) { ImGui::TextDisabled("%s", tr(k)); kvColumn(150 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(v.c_str()); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
+    char b[160];
+    kv(N_("state"), t.headline);
+    snprintf(b, sizeof b, "%llu good, %llu bad", (unsigned long long)t.blocksOk, (unsigned long long)t.blocksBad); kv(N_("frames"), b);
+    snprintf(b, sizeof b, "%.1f dB", t.snrDb); kv(N_("signal"), b);
+    snprintf(b, sizeof b, "%.0f Hz", t.cfoHz); kv(N_("offset"), b);
+    snprintf(b, sizeof b, "%.3f Msps", t.inputRate / 1e6); kv(N_("input"), b);
+    for (const auto& f : t.facts) kv(f.first.c_str(), f.second);
+}
+
+template <int V> void list(App& a) {
+    if (!live<V>(a)) { ImGui::TextDisabled("%s", tr(a.engine.running() ? "starting" : "stopped")); return; }
+    const X40Telemetry& t = a.rx.x40;
+    int shown = 0;
+    for (const X40Row& r : t.rows) { ImGui::Text("%s  %s", r.kind.c_str(), r.id.c_str()); if (++shown >= 40) break; }
+    if (!shown) ImGui::TextDisabled("%s", tr("nothing yet"));
+}
+
+template <int V> void decoder(App& a, bool&) {
+    if (ImGui::SmallButton(trw("Clear"))) a.engine.x40().clearResults(V);
+}
+
+template <int V> void status(App& a) {
+    const bool run = a.engine.running(), on = live<V>(a);
+    lamp("Decode", !on ? 0 : a.rx.x40.state >= 2 ? 1 : 0);
+    flowNext(10 * gUi);
+    ImGui::TextUnformatted(!on ? tr(run ? "starting" : "stopped") : a.rx.x40.headline.c_str());
+}
+
+template <int V> void summary(const App& a, std::string& l1, std::string& l2) {
+    l1 = dect2::x40::variantName(V);
+    if (live<V>(a)) l2 = a.rx.x40.headline;
+}
+
+template <int V> constexpr ModeUi makeUi() {
+    ModeUi u{};
+    u.sideTitle = "HEARD"; u.tabName = "Decoded"; u.tabIcon = Ic::Signal;
+    u.tab = tab<V>; u.receiver = receiver<V>; u.list = list<V>; u.status = status<V>; u.summary = summary<V>; u.decoder = decoder<V>;
+    return u;
+}
+
+} // namespace
+
+extern const ModeUi kX40Ui[52];
+const ModeUi kX40Ui[52] = {makeUi<0>(), makeUi<1>(), makeUi<2>(), makeUi<3>(), makeUi<4>(), makeUi<5>(), makeUi<6>(), makeUi<7>(), makeUi<8>(), makeUi<9>(), makeUi<10>(), makeUi<11>(), makeUi<12>(), makeUi<13>(), makeUi<14>(), makeUi<15>(), makeUi<16>(), makeUi<17>(), makeUi<18>(), makeUi<19>(), makeUi<20>(), makeUi<21>(), makeUi<22>(), makeUi<23>(), makeUi<24>(), makeUi<25>(), makeUi<26>(), makeUi<27>(), makeUi<28>(), makeUi<29>(), makeUi<30>(), makeUi<31>(), makeUi<32>(), makeUi<33>(), makeUi<34>(), makeUi<35>(), makeUi<36>(), makeUi<37>(), makeUi<38>(), makeUi<39>(), makeUi<40>(), makeUi<41>(), makeUi<42>(), makeUi<43>(), makeUi<44>(), makeUi<45>(), makeUi<46>(), makeUi<47>(), makeUi<48>(), makeUi<49>(), makeUi<50>(), makeUi<51>()};

@@ -1,6 +1,9 @@
 // Propagation prediction, see core/include/dect2/prop/prop.h and docs/propagation.md.
 #include "dect2/prop/prop.h"
 #include "dect2/prop/prop_terrain.h"
+#include "dect2/prop/hf_p533.h"
+#include "dect2/prop/itu_atmos.h"
+#include "dect2/prop/p1812.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
@@ -251,21 +254,9 @@ double clutterLossDb(double fMHz, double hM, Clutter c) {
 }
 
 double rainSpecificDbKm(double fMHz, double rainMmH) {
+    // 4.0: the full ITU-R P.838-3 regression (horizontal polarisation, terrestrial path); itu::rainGammaDbKm takes any tilt
     if (rainMmH <= 0 || fMHz < 1000) return 0;
-    // P.838-3 coefficients (horizontal polarisation) at a few frequencies, interpolated in log f
-    struct C { double f, k, a; };
-    static const C t[] = {{1, 0.0000259, 0.9691}, {2, 0.0000847, 1.0664}, {4, 0.0001071, 1.6009}, {6, 0.0007056, 1.5900}, {8, 0.004115, 1.3905},
-                          {10, 0.01217, 1.2571}, {12, 0.02386, 1.1825}, {15, 0.04481, 1.1233}, {20, 0.09164, 1.0568}, {25, 0.1571, 0.9991},
-                          {30, 0.2403, 0.9485}, {35, 0.3374, 0.9047}, {40, 0.4431, 0.8673}, {50, 0.6600, 0.8084}, {60, 0.8606, 0.7656},
-                          {80, 1.1704, 0.7115}, {100, 1.3671, 0.6815}};
-    const int n = (int)(sizeof t / sizeof t[0]);
-    const double fG = clampd(fMHz / 1000.0, 1, 100);
-    int i = 1;
-    while (i < n - 1 && t[i].f < fG) i++;
-    const double u = (std::log(fG) - std::log(t[i - 1].f)) / (std::log(t[i].f) - std::log(t[i - 1].f));
-    const double k = std::exp(std::log(t[i - 1].k) + (std::log(t[i].k) - std::log(t[i - 1].k)) * u);
-    const double a = t[i - 1].a + (t[i].a - t[i - 1].a) * u;
-    return k * std::pow(rainMmH, a);
+    return itu::rainGammaDbKm(fMHz / 1000.0, rainMmH, 0, 0);
 }
 
 double rainLossDb(double fMHz, double dKm, double rainMmH) {
@@ -276,17 +267,9 @@ double rainLossDb(double fMHz, double dKm, double rainMmH) {
 }
 
 double gasSpecificDbKm(double fMHz) {
-    if (fMHz < 1000) return 0;
-    struct C { double f, g; };   // rough sea-level specific attenuation, 7.5 g/m3 water vapour (oxygen + water), shape of P.676
-    static const C t[] = {{1, 0.005}, {2, 0.006}, {5, 0.008}, {10, 0.012}, {15, 0.025}, {20, 0.11}, {22.2, 0.18}, {25, 0.13}, {30, 0.10},
-                          {40, 0.14}, {50, 0.45}, {55, 4.0}, {57, 10.0}, {60, 15.0}, {63, 8.0}, {66, 1.5}, {70, 0.45}, {80, 0.30},
-                          {90, 0.35}, {100, 0.45}};
-    const int n = (int)(sizeof t / sizeof t[0]);
-    const double fG = clampd(fMHz / 1000.0, 1, 100);
-    int i = 1;
-    while (i < n - 1 && t[i].f < fG) i++;
-    const double u = (std::log(fG) - std::log(t[i - 1].f)) / (std::log(t[i].f) - std::log(t[i - 1].f));
-    return std::exp(std::log(t[i - 1].g) + (std::log(t[i].g) - std::log(t[i - 1].g)) * u);
+    // 4.0: ITU-R P.676-13 Annex 1 line by line, sea level, 15 C, 7.5 g/m3 (was a hand-drawn curve)
+    if (fMHz < 1000) return 0;   // below 1 GHz it is under 0.01 dB/km, and P.1812 (VHF/UHF) leaves it out
+    return itu::gammaGasDbKm(fMHz / 1000.0);
 }
 
 double polLossDb(Pol tx, Pol rx) {
@@ -424,6 +407,36 @@ Point evalPath(const Params& p, double distKm, double brg, double rxLat, double 
     o.horizonKm = radioHorizonKm(p.txHeightM, p.rxHeightM);
     double rxRel = 0;   // received power relative to the transmitter power into the feeder, dB (gains and losses)
     if (f >= kHfMax) {
+        double L = o.fsDb;
+        Model m = Model::LineOfSight;
+        if (p.pathModel == PathModel::Auto) {
+            // 4.0: ITU-R P.1812-8 over the terrain profile, or over a flat sea-level profile when no terrain covers the path
+            p1812::Input in;
+            bool terr = false;
+            if (p.terrain && !p.terrain->empty()) {
+                const int ns = (int)clampd(d / 0.1, 16, 200);
+                const Profile pr = pathProfile(*p.terrain, p.txLat, p.txLon, rxLat, rxLon, ns);
+                if (pr.complete && pr.dKm.size() >= 3) { in.dKm = pr.dKm; in.hM = pr.hM; terr = true; }
+            }
+            if (!terr) {
+                const int ns = (int)clampd(d / 0.5, 16, 100);
+                for (int i = 0; i <= ns; i++) { in.dKm.push_back(d * i / ns); in.hM.push_back(0.0); }
+            }
+            in.fGHz = f / 1000.0; in.timePct = p.timePct; in.locPct = p.locPct;
+            in.txHeightM = std::max(p.txHeightM, 0.5); in.rxHeightM = std::max(p.rxHeightM, 0.5);
+            in.vertical = p.txPol != Pol::Horizontal; in.latDeg = midLat; in.deltaN = p.deltaN; in.n0 = p.n0;
+            in.seaFraction = p.seaFraction >= 0 ? p.seaFraction : (p.ground == Ground::Sea ? 1.0 : 0.0);
+            in.sigmaLocDb = p.sigmaLocDb;
+            const p1812::Result r = p1812::compute(in);
+            if (r.valid) {
+                L = r.lb;
+                o.kFactor = r.ae / kRe; o.diffDb = r.ldp; o.tropoDb = r.lbs; o.ductDb = r.lba; o.beta0 = r.beta0;
+                m = r.mechanism == 2 ? Model::Troposcatter : r.mechanism == 3 ? Model::Ducting
+                  : r.mechanism == 1 ? (terr ? Model::Terrain : Model::Diffraction) : Model::LineOfSight;
+            }
+            o.terrainUsed = terr;
+            o.flatEarth = !terr;
+        } else {
         double diff = 0, plane = 0, theta = -1;
         bool terr = false;
         if (p.terrain && !p.terrain->empty()) {
@@ -442,8 +455,6 @@ Point evalPath(const Params& p, double distKm, double brg, double rxLat, double 
             plane = planeEarthLossDb(d, p.txHeightM, p.rxHeightM);
         }
         o.terrainUsed = terr;
-        double L = o.fsDb;
-        Model m = Model::LineOfSight;
         const Model dm = terr ? Model::Terrain : Model::Diffraction;
         switch (p.pathModel) {
             case PathModel::FreeSpace: m = Model::FreeSpace; break;
@@ -454,7 +465,7 @@ Point evalPath(const Params& p, double distKm, double brg, double rxLat, double 
                 m = o.fsDb + diff >= tr ? (diff > 0.5 ? dm : Model::LineOfSight) : Model::TwoRay;
                 break;
             }
-            case PathModel::Auto: default: {
+            case PathModel::Legacy39: default: {
                 L = std::max(o.fsDb + diff, plane);
                 m = o.fsDb + diff >= plane ? (diff > 0.5 ? dm : Model::LineOfSight) : Model::TwoRay;
                 // troposcatter adds its power to the diffracted field; it carries far beyond the horizon
@@ -463,6 +474,7 @@ Point evalPath(const Params& p, double distKm, double brg, double rxLat, double 
                 L = powerSumLossDb(L, ts);
                 break;
             }
+        }
         }
         o.model = m;
         o.excessDb = L - o.fsDb;
@@ -479,12 +491,44 @@ Point evalPath(const Params& p, double distKm, double brg, double rxLat, double 
         if (p.hfModel != HfModel::SkyOnly) gw = groundWaveLossDb(f, d, p.ground, p.txPol, std::max(p.txHeightM, 0.0), std::max(p.rxHeightM, 0.0));
         // skywave: the fewest F2 hops with a take-off angle of at least 3 degrees
         double sw = kNone;
+        double skyGainOverride = -999;   // the gain used by the P.533 prediction (pattern at the mode's take-off angle)
         const double hm = hopMaxKm(kF2HeightKm, kMinElevDeg);
         const int n = (int)std::max(1.0, std::ceil(d / hm));
         const double hop = d / n;
         o.muf = mufMHz(midLat, midLon, d, p);
         o.elevDeg = hopElevationDeg(hop, kF2HeightKm);
-        if (p.hfModel != HfModel::GroundOnly) {
+        if (p.hfModel != HfModel::GroundOnly && !p.hfLegacy) {
+            // 4.0: ITU-R P.533-14 with the P.1239-4 maps (hf_p533.h)
+            hf::Path hp;
+            hp.txLat = p.txLat; hp.txLon = p.txLon; hp.rxLat = rxLat; hp.rxLon = rxLon;
+            hp.year = p.year; hp.month = p.month; hp.day = p.day; hp.utcHour = p.utcHour;
+            hp.r12 = p.r12 >= 0 ? p.r12 : hf::r12FromSfi(p.sfi);
+            hp.sfi12 = p.sfi;
+            hp.fMHz = f;
+            hp.txPowerDbw = p.txPowerDbw - p.txFeederDb;
+            hp.txGainDbi = patternGain(p, brg, 10);   // a typical take-off angle; refined below with the strongest mode's
+            hp.rxGainDbi = p.rxGainDbi;
+            hp.bandwidthHz = p.bandwidthHz; hp.requiredSnrDb = p.requiredSnrDb;
+            hp.noiseEnv = (int)p.env; hp.atmosphericNoise = p.atmosphericNoise;
+            const double nf = cascadeNfDb(p.rxFeederDb, p.rxNfDb, p.preamp, p.preampGainDb, p.preampNfDb);
+            hp.extraNoiseDb = 10 * std::log10(std::max(std::pow(10.0, nf / 10) - 1, 1e-9));   // the receive chain, as noise above kTB
+            hf::Prediction q = hf::predict(hp);
+            if (q.valid && q.bestMode >= 0 && p.txPattern && p.txPattern->valid()) {
+                hp.txGainDbi = patternGain(p, brg, q.modes[q.bestMode].elevDeg);
+                q = hf::predict(hp);
+            }
+            if (q.valid && q.prDbw > -900) {
+                const double eirp = hp.txPowerDbw + hp.txGainDbi;
+                sw = eirp - (q.prDbw - p.rxGainDbi);   // the isotropic basic loss equivalent to the P.533 available power
+                o.muf = q.opMufMHz; o.hfOwf = q.owfMHz; o.hfHpf = q.hpfMHz; o.hfMufProb = q.mufProb;
+                o.hfReliability = q.reliability; o.hfMethod = q.method;
+                if (q.bestMode >= 0) {
+                    const hf::Mode& bm = q.modes[q.bestMode];
+                    o.elevDeg = bm.elevDeg; o.hops = bm.hops; o.absorptionDb = bm.absorptionDb; o.aboveMufDb = bm.aboveMufDb; o.hfLayer = bm.layer;
+                } else { o.hops = std::max(1, (int)std::ceil(d / 4000.0)); o.elevDeg = 3; }
+                skyGainOverride = hp.txGainDbi;
+            }
+        } else if (p.hfModel != HfModel::GroundOnly) {
             o.aboveMufDb = aboveMufLossDb(f, o.muf);
             if (o.aboveMufDb < 40) {
                 const double R = sfiToSunspot(p.sfi);
@@ -498,7 +542,7 @@ Point evalPath(const Params& p, double distKm, double brg, double rxLat, double 
         }
         o.groundLossDb = gw;
         o.skyLossDb = sw;
-        const double gG = patternGain(p, brg, 0), gS = patternGain(p, brg, o.elevDeg);
+        const double gG = patternGain(p, brg, 0), gS = skyGainOverride > -900 ? skyGainOverride : patternGain(p, brg, o.elevDeg);
         const double tG = gG - gw, tS = gS - sw;   // relative received power of each mode
         const double sum = 10 * std::log10(std::pow(10.0, tG / 10) + std::pow(10.0, tS / 10));
         const bool sky = tS > tG;
@@ -580,19 +624,44 @@ Grid computeGrid(const Params& p, double radiusKm, int n, const std::atomic<bool
 }
 
 const char* modelName(const Params& p) {
-    return p.fMHz < kHfMax ? "HF: ground wave + skywave estimate" : "VHF/UHF: smooth earth (P.526) + ground reflection";
+    if (p.fMHz < kHfMax) return p.hfLegacy ? "HF: ground wave + one-layer skywave estimate (3.9)" : "HF: ground wave + ITU-R P.533-14 skywave (P.1239-4 maps)";
+    switch (p.pathModel) {
+        case PathModel::Auto: return "ITU-R P.1812-8 (time and location statistics) + P.676 gases + P.838 rain";
+        case PathModel::FreeSpace: return "free space (ITU-R P.525)";
+        case PathModel::SmoothEarth: return "smooth-earth diffraction (ITU-R P.526)";
+        case PathModel::TwoRayExact: return "exact two-ray ground reflection";
+        case PathModel::Legacy39: break;
+    }
+    return "VHF/UHF: smooth earth (P.526) + ground reflection (3.9)";
 }
 
 std::string modelLimits(const Params& p) {
+    if (p.fMHz < kHfMax && !p.hfLegacy)
+        return "HF below 30 MHz: Norton ground wave plus the ITU-R P.533-14 sky-wave method: monthly median foF2 and M(3000)F2 from the CCIR "
+               "numerical maps of P.1239-4 for the month, hour and sunspot number, foE, E and F2 modes (up to 3 + 6), E-layer screening, "
+               "D-layer absorption at every penetration point, auroral loss, the composite method beyond 7000 km, P.372 noise and the P.842 "
+               "reliability from the day-to-day spread of signal and noise. Monthly medians: a given day can differ by several MHz and 10 dB; "
+               "no sporadic E, no storm-time ionosphere (the K index is not used), the antenna gain is one value for all take-off angles "
+               "unless a pattern file is loaded.";
     if (p.fMHz < kHfMax)
-        return "HF below 30 MHz: Norton ground wave (with the earth's curvature) plus a one-layer F2 skywave (foF2 from time of day, season, "
+        return "HF below 30 MHz (3.9 model): Norton ground wave (with the earth's curvature) plus a one-layer F2 skywave (foF2 from time of day, season, "
                "latitude, the SFI and K index you enter; D-layer absorption). An estimate within a few MHz and 10 dB or more. No E layer, sporadic E, "
                "tilts, auroral or equatorial effects beyond a rough storm term, no land/sea mixing on the ground wave, no terrain.";
+    if (p.pathModel == PathModel::Auto) {
+        std::string s = "30 MHz and up: ITU-R P.1812-8 (validated against the ITU's own test profiles): line of sight with multipath / focusing, "
+                        "delta-Bullington diffraction over the profile for the median and the super-refractive earth radius, troposcatter, "
+                        "ducting and layer reflection, for the time and location percentages you set; P.676-13 gases, P.838-3 rain. ";
+        s += p.terrain && !p.terrain->empty() ? "Terrain: your elevation tiles (paths outside them use a flat sea-level profile). "
+                                              : "NO TERRAIN LOADED: every path is a flat sea-level profile, so hills are ignored and real coverage "
+                                                "is usually shorter (download tiles in Advanced > Terrain). ";
+        s += "Receiver clutter from the P.2108 class; no building penetration, no sporadic E; valid 30 MHz..6 GHz (used above with P.452's "
+             "mechanisms), 0.25..3000 km.";
+        return s;
+    }
     std::string s = "30 MHz and up: free space, the ground reflection (plane earth) and P.526 smooth-earth diffraction, which blends in before "
                     "the radio horizon and grows beyond it. ";
     s += p.terrain && !p.terrain->empty() ? "Terrain: from your elevation file (delta-Bullington). " : "No terrain (load an elevation file in Advanced). ";
-    s += "No buildings beyond the receiver clutter class, no ducting, tropospheric scatter or sporadic E";
-    s += p.fMHz > 5000 ? "; rain and gas are rough curves." : ".";
+    s += "No buildings beyond the receiver clutter class, no ducting or sporadic E.";
     return s;
 }
 
@@ -606,6 +675,7 @@ const char* pointModelName(Model m) {
         case Model::TwoRay: return "line of sight with ground reflection";
         case Model::Terrain: return "terrain diffraction";
         case Model::Troposcatter: return "troposcatter";
+        case Model::Ducting: return "ducting / layer reflection";
     }
     return "";
 }

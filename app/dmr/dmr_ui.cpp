@@ -10,6 +10,7 @@
 #include "ui/kit/mode_panel.h"
 #include "dmr_map.h"
 #include <ctime>
+#include "dect2/trunkpool/tg_activity.h"
 #include "dect2/dmr/dmr_ambe.h"
 #include "../codec/speech_codec_ui.h"
 #include "../voice/voice_monitor_ui.h"
@@ -283,6 +284,46 @@ void messageTable(App& a, float h) {
     ImGui::EndTable();
 }
 
+// Talkgroup activity (4.0): airtime per talkgroup over the last 10 minutes, a 5-minute-bucket timeline and the busiest talkgroup right now.
+void tgActivity(const DmrTelemetry& t) {
+    static dect2::TgActivity act; static dect2::TgFollower fol; static double built = -1, nowS = 0; static size_t seenLog = 0;
+    if (t.callLog.size() < seenLog) { act = dect2::TgActivity(); built = -1; }   // the log was cleared or the receiver restarted
+    seenLog = t.callLog.size();
+    const double wall = ImGui::GetTime();
+    if (built < 0 || wall - built > 2.0) {
+        built = wall; act = dect2::TgActivity(); nowS = 0;
+        for (const auto& c : t.callLog) {
+            if (c.kind != 0 && c.kind != 2) continue;   // group voice and all calls
+            const double e = c.active ? std::max(c.endSec, c.startSec) : c.endSec;
+            nowS = std::max(nowS, e);
+            act.add(c.dst, c.src, c.startSec, e);
+        }
+    }
+    const auto rows = act.ranking(nowS, 600);
+    if (rows.empty()) { ImGui::TextDisabled("%s", tr("No group calls yet")); return; }
+    const uint32_t busiest = fol.pick(act, nowS);
+    ImGui::Text("%s: TG %u", tr("Busiest now"), busiest);
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The talkgroup with the most airtime in the last 2 minutes. It only changes when another one is clearly busier for a while."));
+    if (ImGui::BeginTable("##dmrtg", 5, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingFixedFit)) {
+        ImGui::TableSetupColumn(tr("Talkgroup")); ImGui::TableSetupColumn(tr("Calls")); ImGui::TableSetupColumn(tr("Airtime s")); ImGui::TableSetupColumn(tr("Radios")); ImGui::TableSetupColumn(tr("Last 50 min"), ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableHeadersRow();
+        for (size_t i = 0; i < rows.size() && i < 8; i++) {
+            const auto& r = rows[i];
+            ImGui::TableNextRow(); ImGui::TableNextColumn(); ImGui::Text("%u", r.tg);
+            ImGui::TableNextColumn(); ImGui::Text("%d", r.calls);
+            ImGui::TableNextColumn(); ImGui::Text("%.0f", r.airtimeS);
+            ImGui::TableNextColumn(); ImGui::Text("%d", r.radios);
+            ImGui::TableNextColumn();
+            const auto tl = act.timeline(r.tg, nowS, 300, 10);
+            std::vector<float> f(tl.begin(), tl.end());
+            ImGui::PushID((int)i);
+            ImGui::PlotHistogram("##tl", f.data(), (int)f.size(), 0, nullptr, 0.f, 300.f, ImVec2(ImGui::GetContentRegionAvail().x, 18 * gUi));
+            ImGui::PopID();
+        }
+        ImGui::EndTable();
+    }
+}
+
 void callsView(App& a) {
     const DmrTelemetry& t = a.rx.dmr;
     const bool on = live(a);
@@ -345,6 +386,7 @@ void callsView(App& a) {
     const float rest = ImGui::GetContentRegionAvail().y;
     const float lh = ImGui::GetTextLineHeightWithSpacing();
     const float msgH = std::max(70.f * gUi, std::min(rest * 0.34f, 150.f * gUi));
+    if (on && ImGui::TreeNode(trw("Talkgroup activity"))) { tgActivity(t); ImGui::TreePop(); }
     ImGui::TextDisabled("Call log (%zu)", on ? t.callLog.size() : (size_t)0);
     callTable(a, std::max(60.f * gUi, rest - msgH - 2 * lh - 8 * gUi));
     { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Text messages (%zu)", on ? t.messages.size() : (size_t)0); ImGui::PopTextWrapPos(); }

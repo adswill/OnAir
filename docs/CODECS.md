@@ -42,7 +42,7 @@ The built files are yours: they are never committed to the OnAir repository and 
 | DMR, P25 Phase 1 and 2, NXDN, dPMR | AMBE+2 / IMBE (patented) | **mbelib** (not included: you install it yourself; voice is silent until you do) |
 | D-STAR | AMBE (patented) | **mbelib** |
 | HD Radio (NRSC-5, FM and AM) | HDC (patented, owned by Xperi) | a **patched FAAD2** (`libfaad_hdc`) that you build yourself (see below); sound is silent until you do |
-| CDR (China Digital Radio) | DRA+ (patent and licence status not verified) | the **DRA+ add-on** (`libonair_dra`) that you build yourself (see [DRA+ (CDR sound)](#dra-cdr-sound)); sound is silent until you do |
+| CDR (China Digital Radio) | DRA+ (patent and licence status not verified) | the **DRA+ add-on** (`libonair_dra`) that you build yourself (see [DRA+ (CDR sound)](#dra-cdr-sound); on Android: [DRA+ on Android](#dra-on-android)); sound is silent until you do |
 | FreeDV 700D / 700E / 1600, M17 | codec2 (open, LGPL) | **codec2**: comes with OnAir (the library `libcodec2` next to the program) |
 | Inmarsat Aero C channel voice (Inmarsat > Voice) | AMBE 4800x3600 (patented) | a **speech codec plug-in** `onair-codec-aeroambe` that you build yourself from `tools/addons/aeroambe` and libaeroambe's mbelib (see [AMBE (Inmarsat Aero voice)](#ambe-inmarsat-aero-voice)); calls, aircraft and ground station are shown without it |
 | Yaesu System Fusion | AMBE+2 class (proprietary, DVSI) | a speech codec **plug-in with the id `ysf`** that you install yourself (see [Speech codec plug-ins](#speech-codec-plug-ins-voice-modes)); callsigns and data are shown without it, no sound |
@@ -319,6 +319,30 @@ downloading, you can point it at a copy of the patch you already have: `python3 
 
 Whether you may build and use it depends on the patent and licence rules of your country; check them first. OnAir has been tested with a stand-in
 library in its automated tests and with the decoder built from the source above on recordings; there is no guarantee for other builds.
+
+### DRA+ on Android
+
+The Android app (4.0) has a **Sound** tab on the CDR mode. Without the add-on it says that the sound is silent and why, in place of silence.
+The phone cannot build the add-on itself: build it on a computer with the **Android NDK** (Android Studio's SDK Manager > SDK Tools > NDK,
+or the zip from developer.android.com/ndk), for arm64:
+```
+git clone https://github.com/adswill/OnAir && cd OnAir/tools/addons/dra
+python3 extract_dra.py
+cmake -S . -B build-android -DDRA_SRC=dra_src -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK/build/cmake/android.toolchain.cmake" \
+      -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28
+cmake --build build-android
+```
+(`$ANDROID_NDK` is the NDK folder, for example `~/Library/Android/sdk/ndk/27.2.12479018` on a Mac or `%LOCALAPPDATA%\Android\Sdk\ndk\...`
+on Windows; on Windows run it in a shell that has CMake and Ninja, and add `-G Ninja`.) Then:
+
+1. Copy `build-android/libonair_dra.so` to the phone (USB cable, cloud drive, e-mail to yourself: anywhere the file picker can reach).
+2. In OnAir, pick the CDR mode, open the **Sound** tab and tap **Import add-on (.so)**; choose the file.
+3. The line turns green (*DRA+ decoder loaded*) and the first audio service plays; tap **Listen** on another service to change it.
+
+The file is copied into the app's own folder (`files/codecs/libonair_dra.so`; Android does not run code from shared storage) and stays there
+across updates. **Remove add-on** deletes it (it stays loaded until the app is closed). A file built for another processor (x86, 32-bit ARM)
+or a library without the five DRA functions is refused with the reason on the same tab. The CI builds the add-on with the NDK as a check that
+these steps work; it is never packaged. The add-on was not run on a phone when this was written (no phone and no CDR signal were available).
 
 ## AVS+, AVS2, AVS3 and DRA (DTMB television in China)
 

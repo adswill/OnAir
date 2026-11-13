@@ -18,7 +18,8 @@ int main() {
         printf("%s\n", t.type);
         for (double cfo : {0.0, 20000.0, -20000.0}) {
             SynthConfig c; c.mode = 15; c.snrDb = 30; c.modeOpt[0] = t.mask; c.modeOpt[1] = 1; c.cfoHz = cfo;
-            Result r = run(c, 8e6, 16);
+            // 4.0: MRZ is on the narrow (4.5 kHz) path; with the carrier 50 ppm off (20 kHz) the follow-up needs about 30 s to pull it in, 20 ppm (8 kHz) and below as before
+            Result r = run(c, 8e6, t.mask == 256 && std::fabs(cfo) > 15000 ? 40 : 16);
             const SondeInfo* s = t.serial ? find(r.tel, t.serial) : (r.tel.sondes.empty() ? nullptr : &r.tel.sondes[0]);
             CHECK(s != nullptr, "%s cfo %.0f: nothing decoded", t.type, cfo);
             if (!s) continue;
@@ -27,6 +28,12 @@ int main() {
             if (s->hasPos) CHECK(std::fabs(s->lat - 25) < 1.5, "%s: lat %.3f", t.type, s->lat);
             else CHECK(false, "%s cfo %.0f: no position", t.type, cfo);
             CHECK(std::fabs(s->offsetHz - (t.offHz + cfo)) < 2500.0, "%s offset %.0f", t.type, s->offsetHz);   // 8N1 is not balanced: its mean offsets the AFC
+        }
+        if (t.mask == 256) for (double cfo : {8000.0, -8000.0}) {   // 4.0: 20 ppm
+            SynthConfig c; c.mode = 15; c.snrDb = 30; c.modeOpt[0] = t.mask; c.modeOpt[1] = 1; c.cfoHz = cfo;
+            Result r = run(c, 8e6, 16);
+            const SondeInfo* s = find(r.tel, t.serial);
+            CHECK(s && s->framesOk >= 2 && s->framesBad == 0, "MRZ cfo %.0f: ok %llu", cfo, (unsigned long long)(s ? s->framesOk : 0));
         }
         for (double snr : {22.0, 18.0}) {
             SynthConfig c; c.mode = 15; c.snrDb = snr; c.modeOpt[0] = t.mask; c.modeOpt[1] = 1;

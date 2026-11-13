@@ -59,6 +59,18 @@ jobs:
         run: ./gradlew --no-daemon assembleDebug
       - name: Unit tests
         run: ./gradlew --no-daemon testDebugUnitTest
+      # docs/CODECS.md "DRA+ on Android": the steps a user follows to build the CDR sound add-on for the phone. Only a check that they work
+      # (the decoder source is downloaded from its own repository by extract_dra.py); the library is never uploaded or packaged.
+      - name: The DRA+ add-on steps build for arm64 with the NDK (not packaged)
+        continue-on-error: true
+        working-directory: tools/addons/dra
+        run: |
+          python3 extract_dra.py
+          cmake -S . -B build-android -DDRA_SRC=dra_src -DCMAKE_TOOLCHAIN_FILE="$ANDROID_NDK_LATEST_HOME/build/cmake/android.toolchain.cmake" -DANDROID_ABI=arm64-v8a -DANDROID_PLATFORM=android-28
+          cmake --build build-android
+          file build-android/libonair_dra.so
+          "$ANDROID_NDK_LATEST_HOME"/toolchains/llvm/prebuilt/linux-x86_64/bin/llvm-nm -D --defined-only build-android/libonair_dra.so | grep -E 'DRADec(Create|Destroy|GetFrameInfo|SendData|RecvFrame)'
+          rm -rf build-android dra_src
       - uses: actions/upload-artifact@v7
         with: { name: onair-android-debug-no-native, path: android/app/build/outputs/apk/debug/*.apk, retention-days: 7 }
 
@@ -100,6 +112,22 @@ jobs:
           tools/release/retry.sh git clone --depth 1 --branch v1.0.27 https://github.com/libusb/libusb "$RUNNER_TEMP/libusb-src"
           echo "libusb v1.0.27 commit $(git -C "$RUNNER_TEMP/libusb-src" rev-parse HEAD)"
           echo "LIBUSB_SRC=$RUNNER_TEMP/libusb-src" >> "$GITHUB_ENV"
+      - name: libairspy and libairspyhf sources (pinned commits with airspy_open_fd / airspyhf_open_fd; own empty folders, nothing from them is run)
+        # the tagged releases (airspyone_host v1.0.10, airspyhf 1.6.8) predate the descriptor entry points Android needs, so these are pinned
+        # master commits; without them the APK lists an Airspy but cannot open it (docs/ANDROID-4.0.md)
+        run: |
+          set -eu
+          fetch() {   # repo commit folder
+            mkdir -p "$3"; git -C "$3" init -q; git -C "$3" remote add origin "https://github.com/$1"
+            tools/release/retry.sh git -C "$3" fetch -q --depth 1 origin "$2"; git -C "$3" checkout -q FETCH_HEAD
+            echo "$1 at $(git -C "$3" rev-parse HEAD)"
+          }
+          fetch airspy/airspyone_host fc61ab6be57ed61f0e2bdd9c6dfae74cacef57d0 "$RUNNER_TEMP/airspy-src"
+          fetch airspy/airspyhf 24fe8ffcb00b14f827268bbad89ae1392de055e5 "$RUNNER_TEMP/airspyhf-src"
+          grep -q airspy_open_fd "$RUNNER_TEMP/airspy-src/libairspy/src/airspy.h"
+          grep -q airspyhf_open_fd "$RUNNER_TEMP/airspyhf-src/libairspyhf/src/airspyhf.h"
+          echo "AIRSPY_SRC=$RUNNER_TEMP/airspy-src" >> "$GITHUB_ENV"
+          echo "AIRSPYHF_SRC=$RUNNER_TEMP/airspyhf-src" >> "$GITHUB_ENV"
       - name: Restore ccache
         uses: actions/cache/restore@v6
         with:

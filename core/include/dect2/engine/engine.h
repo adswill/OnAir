@@ -2,16 +2,19 @@
 #pragma once
 #include "dect2/dsp/gpu_policy.h"
 #include "dect2/common/cpu_meter.h"
+#include "dect2/common/stage_pipeline.h"
 #include "dect2/dsp/iq_correct.h"
 #include "dect2/source/offset_tune.h"
 #include "dect2/dsp/exact_resampler.h"
 #include "dect2/audio/audio_monitor.h"
 #include "dect2/source/delivery_check.h"
+#include "dect2/engine/overflow_cause.h"
 #include "dect2/source/gain_meter.h"
 #include "dect2/source/source.h"
 #include "dect2/source/iq_record.h"
 #include "dect2/source/time_machine.h"
 #include "dect2/dsp/spectrum.h"
+#include "dect2/dsp/zoom_spectrum.h"
 #include "dect2/dsp/noise_blanker.h"
 #include "dect2/t2/t2rx.h"
 #include "dect2/t2/t2mi_out.h"
@@ -130,6 +133,7 @@
 #include "dect2/sferics/sferics_rx.h"
 #include "dect2/sferics/ltpos_rx.h"
 #include "dect2/fbr/fbr_rx.h"
+#include "dect2/x40/x40_rx.h"
 #include "dect2/atis/atis_rx.h"
 #include "dect2/selcal/selcal_rx.h"
 #include "dect2/umts/umts_rx.h"
@@ -263,6 +267,12 @@ struct SampleLoss {
     float deliveredPct = -1;           // samples the radio handed over, percent of the rate it is set to, over the last seconds. -1 = not measured yet
     bool rateLow = false;              // a live radio under about 97% of that rate (the radio or driver, not the receiver's CPU load)
     bool network = false;              // the radio is reached over a network link (rtl_tcp, SpyServer, ...), not USB
+    // 4.0: samples a network radio's source says it never got (its link was down, a reconnect): no longer counted as ring overflow
+    double sourceLostSec = 0;
+    uint64_t sourceLostEvents = 0;
+    double sinceSourceLostSec = -1;
+    // why the latest ring overflow happened (overflow_cause.h): only Cpu means the receiver is short of CPU
+    OverflowCause cpuCause = OverflowCause::None;
 };
 
 class Engine {
@@ -349,6 +359,11 @@ public:
     uint64_t droppedSamples() const { return ring_.dropped(); }   // the OnAir side only, in samples (see sampleLoss())
     double backlogSec() const { const double r = srcRate_; return r > 0 ? (double)ring_.available() / r : 0; }   // samples waiting in the input ring, in seconds of signal
     SampleLoss sampleLoss() const;
+    // 4.0: the receiver on its own thread, behind the front end (docs/PERF-4.0.md). 0 = automatic (on with 4 or more hardware threads, from
+    // 4 Msps, not in Low power mode), 1 = always, 2 = never; ONAIR_RX_THREAD=0/1 overrides. Read at start(); the results are the same either way.
+    static void setRxThreadMode(int m);
+    static int rxThreadMode();
+    bool rxThreadActive() const { return rxPipeOn_.load(); }
     std::string loadProfile() const;   // seconds the analysis thread spent on the spectrum and on the receiver, and the signal it has processed (diagnostics)
 
     // Latest spectrum snapshot; returns true if newer than `lastSeq`.
@@ -356,7 +371,17 @@ public:
     // no spectrum fft when headless, autobw needs it
     void setSpectrumEnabled(bool on) { analyzer_.setTransform(on); }
     // display cost: FFT blocks averaged per spectrum frame (16 = every sample at 10 Msps; 4 = a quarter of the FFT work, a noisier trace)
-    void setSpectrumBlocksPerFrame(int n) { analyzer_.setBlocksPerFrame((size_t)(n < 1 ? 1 : n)); }
+    void setSpectrumBlocksPerFrame(int n) { analyzer_.setBlocksPerFrame((size_t)(n < 1 ? 1 : n)); zoom_.setBlocksPerFrame((size_t)(n < 1 ? 1 : n)); }
+    // 4.0 display resolution (docs/WATERFALL-4.0.md): the window of the display transforms (specwin::Type), the overlap of long ones
+    // (negative: automatic) and the zoom spectrum. setSpectrumZoom: the view the screen shows (its centre offsetHz from the capture's centre,
+    // spanHz wide, px pixels; spanHz 0 = off). When the full-band FFT has fewer bins than pixels there, the visible part is mixed down,
+    // decimated and transformed on its own (zoomfft::update decides; an unchanged plan costs nothing). latestZoomSpectrum: its newest frame.
+    void setSpectrumWindow(int type) { analyzer_.setWindow(type); zoom_.setWindow(type); }
+    int spectrumWindow() const { return analyzer_.window(); }
+    void setSpectrumOverlap(double maxOverlap) { analyzer_.setMaxOverlap(maxOverlap); }
+    void setSpectrumZoom(double offsetHz, double spanHz, int px, size_t maxBins = zoomfft::kMaxBins);
+    zoomfft::Plan spectrumZoomPlan() const;
+    bool latestZoomSpectrum(ZoomFrame& out, uint64_t lastSeq);
     // The impulse noise blanker on the samples, before the spectrum and every decoder (#264; off by default). threshold: times the mean
     // magnitude; widthUs: the blank after a click. nbBlankedPct: the share of samples blanked over the last second or so.
     void setNoiseBlanker(bool on, float threshold, float widthUs) { nbThr_ = threshold; nbWidthUs_ = widthUs; nbOn_ = on; nbDirty_ = true; }
@@ -597,6 +622,7 @@ public:
     ShortwaveReceiver& shortwave() { return rxSw_; }   // Shortwave: the general receiver and the one-click decoders (telemetry through latestRx)
     SensorsReceiver& sensors() { return rxSens_; }   // Sub-GHz sensors: protocols, custom decoders, clear (telemetry through latestRx)
     BganReceiver& bgan() { return rxBgan_; }   // Inmarsat BGAN (telemetry through latestRx)
+    X40Receiver& x40() { return rxX40_; }   // 4.0 signal modes (families 881 - 896; telemetry through latestRx)
     FbrReceiver& fbr() { return rxFbr_; }   // Fleet Broadcast (UHF SATCOM), family 870: bit polarity, clear the log
     LtPosReceiver& ltpos() { return rxLtpos_; }   // Lightning position (network), family 790
     SfericsReceiver& sferics() { return rxSfer_; }   // Sferics (lightning): threshold, mains filter, clear counts (telemetry through latestRx)
@@ -899,6 +925,10 @@ private:
     bool recSigmf_ = true;
     std::unique_ptr<IqSource> src_;
     SpectrumAnalyzer analyzer_{8192};
+    ZoomSpectrum zoom_;                 // the zoom spectrum (fed by the spectrum thread after analyzer_, taken by the analysis thread)
+    mutable std::mutex zoomMu_;         // zoomPlan_ and zoomFrame_
+    zoomfft::Plan zoomPlan_;
+    ZoomFrame zoomFrame_;
     std::atomic<double> fastRps_{0};   // the fast waterfall rows wanted (setSpectrumFastRows)
     std::atomic<int> specFft_{0};
     NoiseBlanker nb_;   // the analysis thread's; set from the atomics below when nbDirty_
@@ -1059,6 +1089,7 @@ private:
     SfericsReceiver rxSfer_;
     LtPosReceiver rxLtpos_;
     FbrReceiver rxFbr_;
+    X40Receiver rxX40_;
     AtisReceiver rxAtis_;
     SelcalReceiver rxSelcal_;
     UmtsReceiver rxUmts_;
@@ -1207,6 +1238,21 @@ private:
     uint64_t rxPub_ = 0;
     void publishRx(RxTelemetry&& t) { t.seq = ++rxPub_; rxTel_ = std::move(t); }
     std::thread th_;
+    // 4.0 (docs/PERF-4.0.md): the receiver on a thread of its own, behind the front end. The analysis thread runs the front end (IQ
+    // correction, offset mixer, noise blanker, the spectrum and second-mode copies, the decode shift) and hands each block, in order, to
+    // this stage, which feeds the receiver. Before anything that reads or resets the receiver (telemetry, a reset, a gap mark) the analysis
+    // thread waits until the stage is idle, so the receiver gets the same blocks in the same order as on one thread: the same results.
+    struct RxBlock { std::vector<cf32> x; int mode = 0; uint64_t raw = 0; };   // mode: the active standard when the block left the front end
+    std::unique_ptr<StagePipeline<RxBlock>> rxPipe_;   // analysis thread (created and destroyed by analysisLoop)
+    std::mutex rxFreeMu_;
+    std::vector<std::vector<cf32>> rxFree_;            // block storage handed back by the stage
+    uint64_t pendingRaw_ = 0, rxPipeCpuSeen_ = 0;      // analysis thread
+    std::atomic<uint64_t> rxPipeCpuNs_{0};             // the stage thread's CPU time in the receiver
+    std::atomic<bool> rxPipeOn_{false};
+    void rxPipeStart();
+    void rxPipeStop();
+    void rxPipeFlush();
+    void rxPipeRun(RxBlock&& b);
     std::unique_ptr<power::ReceivingActivity> nap_;   // held while this engine receives: keeps macOS App Nap off only then (power/power.h)
     std::atomic<bool> running_{false}, stopReq_{false};
     std::atomic<uint64_t> startEpoch_{0};
@@ -1233,12 +1279,17 @@ private:
     std::atomic<double> radioMissing_{0};
     std::atomic<uint64_t> radioMissEvents_{0}, cpuDropEvents_{0}, ringDroppedSeen_{0};
     std::atomic<int64_t> lastRadioMissNs_{0}, lastCpuDropNs_{0}, lastRadioLogNs_{0};
+    std::atomic<uint64_t> srcLostEvents_{0}, ringLostSeen_{0};   // losses the source reported (IqRing::noteLost), apart from overflow
+    std::atomic<int64_t> lastSrcLostNs_{0};
+    std::atomic<int> cpuCause_{0};   // OverflowCause of the latest overflow
+    LoopMarks loopMarks_;     // the analysis thread's own figures over the last two seconds (overflow_cause.h)
+    int64_t rxStartNs_ = 0;   // the receiver's start or last reset (steady ns)
+    void noteRingLoss();      // analysis thread: new drops in the ring, split into source losses and overflow (with its cause)
     std::atomic<float> loadPct_{0}, cpuPct_{0};
     std::atomic<float> deliveredPct_{-1};   // checkDelivery(): samples the library offered over wall time, percent of srcRate_; -1 until a window completes
     std::atomic<bool> live_{false};   // the source is a live radio (sampleLoss() is read by the interface without touching src_)
     double loadT_ = 0, loadRx_ = 0, loadSamp_ = 0, loadRxCpu_ = 0;   // analysis thread: where the last load measurement started
-    int64_t rateT0_ = 0;       // analysis thread: start of the delivered-rate window (steady ns); 0 = not started
-    uint64_t rateOff0_ = 0;    // offered-sample count at rateT0_
+    DeliveryRate delivRate_;   // analysis thread: the delivered-rate window (delivery_check.h)
     std::string reconnectErr_;
     mutable std::mutex noteMu_;
     std::string startErr_;

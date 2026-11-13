@@ -14,6 +14,7 @@
 #include "app.h"
 #include "ui/contrast.h"
 #include "ui/touch.h"
+#include "canvas/canvas.h"
 #include "ui/tour_logic.h"
 #include "ui/setup_logic.h"
 #include "dect2/source/iq_file.h"
@@ -29,6 +30,7 @@
 #include "state/workspace.h"
 #include "gfx/render_caps.h"
 #include "voice/tgdir_ui.h"
+#include "ui/ui_preview.h"
 void recordingLibraryDevOpen();   // panels/recording_library_ui.cpp
 
 // the startup guard (a start that keeps crashing), the first-start tour and setup, the radio list and the results of the last run
@@ -109,7 +111,8 @@ void startApp(App& app, int argc, char** argv) {
         app.engine.log("no radio connected - use the synthetic signal or an IQ file");
 #endif
     }
-    workspaceSessionStart(app, argc == 1);   // the last-session file: a session that did not end is offered for restore
+    settingsStartup(app, argc == 1);   // Settings > General: the start-up frequency and mode, the receiver at launch (ui/settings_apply.cpp)
+    workspaceSessionStart(app, argc == 1 && sessionRestoreChoice() != 2);   // the last-session file: a session that did not end is offered for restore (unless Settings says never)
     if (getenv("DECT2_DEMO")) { wizAction(app, 2); }   // test: start the demo programme straight away
     // the decoded results of the last run (each mode's lists, until its Clear), then saved every 30 s and at exit
     {   // the session store (docs/MODE-EXPERIENCE.md): logging is on by default; it never blocks the start
@@ -231,6 +234,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--viewmenu") app.devViewMenu = 1;
         if (std::string(argv[i]) == "--viewmenu2") app.devViewMenu = 2;
         if (std::string(argv[i]) == "--kitgallery") app.kitGallery = true;   // dev: the UI kit gallery page instead of the main window
+        if (std::string(argv[i]) == "--previewgallery") uiprev::galleryOn() = true;   // dev: every hover preview of the looks on one page (ui/ui_preview.h)
         if (std::string(argv[i]) == "--theme" && i + 1 < argc) app.uiTheme = atoi(argv[++i]);
         if (std::string(argv[i]) == "--light") app.lightUi = true;   // dev: View > Theme > Light
         if (std::string(argv[i]) == "--touch") app.touchUi = true;   // the touch interface (not saved)
@@ -240,6 +244,7 @@ void parseDevFlags(App& app, int argc, char** argv, DevOpts& o) {
         if (std::string(argv[i]) == "--variant" && i + 1 < argc) app.uiVariant = std::max(0, std::min(7, atoi(argv[++i])));
         if (std::string(argv[i]) == "--classic") app.newUi = false;
         if (std::string(argv[i]) == "--dock") app.dockOn = true;   // dev: View > Docking on
+        if (std::string(argv[i]) == "--workspace" && i + 1 < argc) canvas::devStart(argv[++i]);   // dev: the Workspace layout on a template (0-3) or a workspace file (app/canvas)
         if (std::string(argv[i]) == "--dockselftest") { app.dockOn = true; dockDevSelfTest(); }   // dev: drives docking with scripted input and exits (ui2_dock.cpp)
         if (std::string(argv[i]) == "--docktree" && i + 1 < argc) { app.dockOn = true; dockDevTree(argv[++i]); }   // dev: a dock layout in its text form (ui/dock_tree.h)
         if (std::string(argv[i]) == "--rate" && i + 1 < argc) app.file.sampleRate = atof(argv[++i]) * 1e6;

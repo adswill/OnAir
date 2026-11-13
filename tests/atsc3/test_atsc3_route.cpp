@@ -44,6 +44,8 @@ int main() {
     wire[0] = (wire[0] & 0xFC) | 1;
     CHECK(!parseRoutePacket(wire.data(), wire.size(), q), "repair packets (PSI 01) are not source packets");
     CHECK(!parseRoutePacket(wire.data(), 3, q), "short packet");
+    wire[0] = (wire[0] & 0xFC) | 3;   // PSI 11: the source bit is set, the other bit (not defined by A/331) too
+    CHECK(parseRoutePacket(wire.data(), wire.size(), q) && q.tsi == p.tsi, "PSI 11 is a source packet");
 
     // reassembly: shuffled, duplicated, two objects interleaved, with and without a transfer length
     {
@@ -161,6 +163,57 @@ int main() {
         CHECK(rx.openBytes() <= RouteReceiver::kMaxOpenBytes, "open objects bounded");
         p.toi = 7; p.startOffset = 0; p.payload = blob(100); p.closeObject = true; rx.push(p, done);
         CHECK(!done.empty() && done.back().toi == 7 && done.back().data.size() == 100, "a normal object still completes after the flood");
+    }
+    // The SLS as stations send it (A/331 7.1.6.1, A.3.3.4-5): the package gzip compressed as a whole, a signed package (multipart/signed around
+    // the multipart/related one, then the signature), and a package without its top header. 3.9 read none of them: such a service stayed at
+    // "waiting for its signaling" with no ROUTE objects (issue #484 shows these symptoms; its recordings were not available to this test).
+    {
+        auto feedSls = [&](RouteService& s, const std::vector<uint8_t>& obj, int cp) {
+            for (auto& pk : objectPackets(0, 0x10001, cp, obj, 600, true)) {
+                UdpDatagram d; d.srcIp = src; d.dstIp = dst; d.dstPort = 3000; d.payload = makeRoutePacket(pk, true);
+                s.push(d);
+            }
+        };
+        {
+            RouteService s(src, dst, 3000);
+            feedSls(s, gzipStored(pkg.data(), pkg.size()), 3);
+            CHECK(s.ready() && s.components().size() == 3 && s.usbd() == usbd && s.slsObjects() == 1 && s.slsTables() == 2, "SLS package gzip compressed as a whole");
+        }
+        {
+            std::vector<MimePart> sp(2);
+            std::string inner(pkg.begin(), pkg.end());
+            const size_t he = inner.find("\r\n\r\n");
+            sp[0].headers["Content-Type"] = "multipart/related; type=\"application/mbms-envelope+xml\"; boundary=\"bndry\"";
+            sp[0].body.assign(inner.begin() + (ptrdiff_t)he + 4, inner.end());
+            sp[1].headers["Content-Type"] = "application/pkcs7-signature";
+            sp[1].headers["Content-Transfer-Encoding"] = "binary";
+            sp[1].body = blob(400);
+            auto signedPkg = makeMultipart(sp, "sig-outer");
+            std::string sps(signedPkg.begin(), signedPkg.end());
+            sps.replace(0, sps.find("\r\n"), "Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"sig-outer\"");
+            std::vector<uint8_t> obj(sps.begin(), sps.end());
+            RouteService s(src, dst, 3000);
+            feedSls(s, obj, 4);
+            CHECK(s.ready() && s.components().size() == 3 && s.usbd() == usbd, "SLS in Signed Package Mode (multipart/signed)");
+            RouteService s2(src, dst, 3000);
+            feedSls(s2, gzipStored(obj.data(), obj.size()), 4);
+            CHECK(s2.ready() && s2.components().size() == 3, "signed SLS package, gzip compressed");
+        }
+        {
+            std::string body(pkg.begin(), pkg.end());
+            body = body.substr(body.find("--bndry"));
+            std::vector<uint8_t> obj(body.begin(), body.end());
+            RouteService s(src, dst, 3000);
+            feedSls(s, obj, 3);
+            CHECK(s.ready() && s.components().size() == 3, "SLS package without its top header");
+        }
+        {
+            RouteService s(src, dst, 3000);
+            auto junk = blob(3000);
+            junk[0] = 0x1F; junk[1] = 0x8B;   // claims to be gzip, is not
+            feedSls(s, junk, 3);
+            CHECK(!s.ready() && s.slsObjects() == 1 && s.slsTables() == 0, "a broken SLS object is counted, nothing read from it");
+        }
     }
     printf(fails ? "atsc3 route: FAILED\n" : "atsc3 route: ok\n");
     return fails ? 1 : 0;

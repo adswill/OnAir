@@ -2,6 +2,7 @@
 #include "../../app/ui/next_step_logic.h"
 #include <cstdio>
 #include <cstring>
+#include <string>
 static int fails = 0;
 static void check(bool ok, const char* w) { if (!ok) { std::printf("FAIL: %s\n", w); fails++; } }
 using namespace nextstep;
@@ -25,6 +26,10 @@ int main() {
     { In i = run(); i.overload = true; i.autoGain = true; Out o = advise(i); check(o.state == State::Overload && o.fix == Fix::None, "overload with Auto gain: no repeat offer"); }
     { In i = run(); i.radioLoss = true; i.overload = true; Out o = advise(i); check(o.state == State::LosingSamples, "lost samples come first"); }
     { In i = run(); i.cpuLoss = true; Out o = advise(i); check(o.state == State::TooSlow, "slow computer"); }
+    // 4.0: samples lost while the CPU was not the limit are never "too slow"; a network radio gets network advice, not USB
+    { In i = run(); i.heldUp = true; Out o = advise(i); check(o.state == State::HeldUp && std::string(o.text).find("too slow") == std::string::npos && std::string(o.text).find("CPU is not the limit") != std::string::npos, "held up, not slow"); }
+    { In i = run(); i.radioLoss = true; i.network = true; Out o = advise(i); check(o.state == State::LosingSamples && std::string(o.text).find("USB") == std::string::npos && std::string(o.text).find("network") != std::string::npos, "network radio losing samples"); }
+    { In i = run(); i.radioLoss = true; Out o = advise(i); check(std::string(o.text).find("USB") != std::string::npos, "USB radio losing samples"); }
     { In i = run(); i.lockKnown = false; Out o = advise(i); check(o.state == State::Unknown && !o.needsAttention(), "unknown mode: never says no signal"); }
     { In i = run(); i.lockKnown = false; i.overload = true; Out o = advise(i); check(o.state == State::Overload, "unknown mode still reports a measured overload"); }
     { In i = run(); i.lockKnown = false; i.rmsDbfs = -95; Out o = advise(i); check(o.state == State::TooLow, "unknown mode still reports a very low level"); }

@@ -11,6 +11,7 @@
 #include <cmath>
 #include <ctime>
 #include <deque>
+#include <map>
 #include "dect2/common/u8file.h"
 
 namespace {
@@ -82,8 +83,10 @@ std::string satNameK(int sys, int prn, int fcn) {
     return b;
 }
 
+void pushSysFilter(App& a);   // the Systems choice (decoder() below)
 void tick(App& a) {
     loadState();
+    pushSysFilter(a);
     clockPublishGps(a);
     driveNavTick(a);
     a.tune.synth.modeOpt[5] = (int)std::lround(a.freqMhz * 1000.0);    // the test signal renders the sky as the tune sees it
@@ -956,8 +959,29 @@ void tuner(App& a, bool& retune) {
                                                   "and give the antenna a view of the sky. Indoors there is usually nothing to receive.");
 }
 
+// the system filter: one satellite system wanted (GnssReceiver::setSystems). Galileo is not offered alone: its search needs a GPS lock in the same band.
+struct SysChoice { const char* name; int sys; };
+const SysChoice kSysChoices[] = {{"every system", -1}, {"GPS", GnssGps}, {"QZSS", GnssQzss}, {"GLONASS", GnssGlonass}, {"BeiDou", GnssBeidou}};
+constexpr int kNumSysChoices = (int)(sizeof kSysChoices / sizeof *kSysChoices);
+int& sysFilter() { static int v = std::clamp((int)plat::prefs().getI("gnssSysFilter", 0), 0, kNumSysChoices - 1); return v; }
+void pushSysFilter(App& a) {   // on a change only (setSystems replans the search), once per receiver
+    static std::map<const App*, int> pushed;
+    auto it = pushed.find(&a);
+    if (it != pushed.end() && it->second == sysFilter()) return;
+    pushed[&a] = sysFilter();
+    const int s = kSysChoices[sysFilter()].sys;
+    a.engine.gnss().setSystems(s < 0 ? 0xFFFFFFFFu : gnssSystemBit(s));
+}
+
 void decoder(App& a, bool&) {
     loadState();
+    ImGui::TextDisabled("SYSTEMS"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(std::min(140 * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::BeginCombo("##gsys", kSysChoices[sysFilter()].name)) {
+        for (int i = 0; i < kNumSysChoices; i++) if (ImGui::Selectable(kSysChoices[i].name, i == sysFilter())) { sysFilter() = i; plat::prefs().setI("gnssSysFilter", i); pushSysFilter(a); }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("Track one satellite system only, or every system the tune covers. GLONASS and BeiDou need their own tune (Band above).");
     ImGui::TextDisabled("MASK"); ImGui::SameLine(0, 5 * gUi);
     ImGui::SetNextItemWidth(std::min(90 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     float m = (float)S.elMask;

@@ -67,6 +67,9 @@ void receiverTab(App& a) {
         row("fields decoded", "%llu", (unsigned long long)at.fields);
         row("Reed-Solomon", "%llu clean, %llu corrected, %llu failed", (unsigned long long)at.rsClean, (unsigned long long)at.rsCorrected, (unsigned long long)at.rsFailed);
         row("lock losses", "%llu (field sync misses %llu)", (unsigned long long)at.lockLosses, (unsigned long long)at.fieldSyncMisses);
+        row("decoder load", "%.0f%% of real time%s", 100 * at.decodeLoad, at.fieldsDropped ? "" : "  (no field dropped)");
+        if (at.fieldsDropped || at.packetsDropped)
+            row("dropped", "%llu fields (decoder too slow), %llu packets (player or recorder too slow)", (unsigned long long)at.fieldsDropped, (unsigned long long)at.packetsDropped);
         return;
     }
     subNav("rx", a.subRx, {"Sync", "Signalling", "FEC", "Frame map", "Channel"});
@@ -109,6 +112,7 @@ ImU32 scoreColour(double sc) {
 }
 
 static void mainTabsInner(App& a, bool unified);
+#include "ui/input_map.h"
 #include "main_tabs_unified.inc"
 
 void mainTabs(App& a) {
@@ -146,9 +150,8 @@ static void mainTabsInner(App& a, bool unified) {
             modepanel::commandView(a, *mu);   // in the window of the tabs (it scrolls like a tab body), not in a child of its own
             return;
         }
-        modepanel::levelBar(a);
     }
-    modeActionBar(a);   // 3.7: the same row (next step, Auto setup, Reset this mode) above the tabs of every mode
+    modeActionBar(a);   // 3.7: the same row (next step, Auto setup, Reset this mode) above the tabs of every mode; 4.0: one row, Simple / Advanced at its right end
     gTightTabs = ImGui::GetContentRegionAvail().x < 760 * gUi;
     if (gTightTabs) ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(3 * gUi, ImGui::GetStyle().FramePadding.y));
     const bool bar = pal::dev() ? kit::beginTabs("tabs") : ImGui::BeginTabBar("tabs", 0);

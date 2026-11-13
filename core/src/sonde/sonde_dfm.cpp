@@ -261,6 +261,7 @@ class DfmDecoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "DFM"; }
     double symbolRate() const override { return 2500.0; }
+    bool narrowChannel() const override { return true; }
     void push(const uint8_t* sym, size_t n, double timeSec, std::vector<SondeFix>& out) override;
     void reset() override { buf_.clear(); pend_.clear(); base_ = total_ = reg_ = goodEnd_ = 0; st_ = DfmState(); corrected_ = 0; firstT_ = -1; }
 private:

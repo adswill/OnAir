@@ -8,6 +8,8 @@
 #include "dect2/mpt1327/mpt1327_chan.h"
 #include "dect2/trunkpool/one_radio.h"
 #include "dect2/trunkpool/slice_ddc.h"
+#include "dect2/dsp/fm_front.h"
+#include "dect2/dsp/spectral_afc.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -20,6 +22,7 @@ namespace dect2 {
 namespace {
 constexpr double kPi = 3.14159265358979323846;
 constexpr double kTargetFs = 24000.0;
+constexpr double kNarrowHz = 4500.0;
 constexpr size_t kMaxRows = 200;
 constexpr float kAudioScale = 1.0f / 3000.0f;   // discriminator Hz to audio units (any scale works: the detector uses signs)
 }
@@ -30,6 +33,14 @@ struct MptReceiver::Impl {
     double rate = 0;
     int decim = 1;
     double fsEff = 0;
+    // 4.0 (docs/SENSITIVITY-4.0-A2.md): a narrow channel filter next to the plain average. The signal's centre is found from the power
+    // spectrum (open loop); once two looks agree the stream is shifted to 0 Hz, filtered at kNarrowHz and shifted back, so the
+    // discriminator sees the same frequencies as without the filter.
+    SpectralAfc afc;
+    FmBiquad nbRe[2], nbIm[2];
+    bool narrowOn = false;
+    bool weakPath = true;                 // false: the 3.9 receiver without the narrow filter (setWeakSignalPath, for before / after measurements)
+    double narrowF0 = 0, narrowPh = 0;
     double offsetHz = 0;
     double centerHz = 0;
     double phase = 0;
@@ -65,6 +76,9 @@ struct MptReceiver::Impl {
         decim = r > kTargetFs ? (int)std::lround(r / kTargetFs) : 1;
         if (decim < 1) decim = 1;
         fsEff = r > 0 ? r / decim : 0;
+        afc.configure(fsEff > 0 ? fsEff : 24000.0); afc.setOpenLoop(true);
+        for (int i = 0; i < 2; i++) { nbRe[i].lowpass(kNarrowHz, std::max(fsEff, 1.0), i ? 1.3066 : 0.5412); nbIm[i].lowpass(kNarrowHz, std::max(fsEff, 1.0), i ? 1.3066 : 0.5412); }
+        narrowOn = false; narrowF0 = 0; narrowPh = 0;
     }
     void play(int tg, const float* x, size_t cnt, int r) {
         if (audioTap) audioTap(tg, x, cnt, r);
@@ -234,9 +248,19 @@ void MptReceiver::feed(const std::complex<float>* x, size_t n) {
         if (s.phase < -kPi) s.phase += 2 * kPi;
         s.acc += mx;
         if (++s.accN == s.decim) {
-            const std::complex<float> z = s.acc / (float)s.decim;
+            std::complex<float> z = s.acc / (float)s.decim;
             s.acc = {0, 0};
             s.accN = 0;
+            s.afc.push(&z, 1);
+            if (s.afc.settled() && (!s.narrowOn || std::fabs(s.afc.adjustHz() - s.narrowF0) > 150.0)) { s.narrowOn = true; s.narrowF0 = s.afc.adjustHz(); }
+            if (s.weakPath && s.narrowOn) {
+                s.narrowPh -= 2 * kPi * s.narrowF0 / s.fsEff;
+                if (s.narrowPh < -kPi) s.narrowPh += 2 * kPi;
+                const double c = std::cos(s.narrowPh), sn = std::sin(s.narrowPh);
+                double re = z.real() * c - z.imag() * sn, im = z.real() * sn + z.imag() * c;
+                for (int i = 0; i < 2; i++) { re = s.nbRe[i].run(re); im = s.nbIm[i].run(im); }
+                z = std::complex<float>((float)(re * c + im * sn), (float)(im * c - re * sn));
+            }
             s.powSum += (double)std::norm(z);
             s.powN++;
             const std::complex<float> d = z * std::conj(s.lastZ);   // FM discriminator
@@ -264,6 +288,7 @@ void MptReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     p_->log = std::move(cb);
 }
 
+void MptReceiver::setWeakSignalPath(bool on) { std::lock_guard<std::mutex> l(p_->mu); p_->weakPath = on; }
 void MptReceiver::setFollow(bool on) { std::lock_guard<std::mutex> l(p_->mu); p_->follow = on; p_->snap.follow = on; }
 void MptReceiver::setVoiceSlots(int n) { std::lock_guard<std::mutex> l(p_->mu); p_->one.setSlots(n); p_->snap.voiceSlots = p_->one.slots(); }
 void MptReceiver::setChannelPlan(int controlChannel, double spacingHz) {

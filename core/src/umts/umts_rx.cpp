@@ -94,11 +94,27 @@ bool UmtsReceiver::telemetry(UmtsTelemetry& out, uint64_t lastSeq) { std::lock_g
 namespace {
 class UmtsSynth : public ModeSynth {
 public:
-    UmtsSynth(const SynthConfig& c, double rate) : rate_(rate > 0 ? rate : 7.68e6), s_(umtsGenerate({{17, c.cfoHz, 1, 500, 0.4, 1, 1, 2, 0x123456}, {280, 2300 + c.cfoHz, 0.7, 9000, 0.3, 1, 1, 2, 0x234567}}, 38400 * 2 * 4, c.snrDb)) {}
+    UmtsSynth(const SynthConfig& c, double rate) : rate_(rate > 0 ? rate : 7.68e6), s_(umtsGenerate({{17, c.cfoHz, 1, 500, 0.4, 1, 1, 2, 0x123456}, {280, 2300 + c.cfoHz, 0.7, 9000, 0.3, 1, 1, 2, 0x234567}}, 38400 * 2 * 4, c.snrDb)) { step_ = 7.68e6 / rate_; }
     double sampleRate() const override { return rate_; }
-    void generate(cf32* out, size_t n) override { for (size_t i = 0; i < n; i++) { out[i] = s_[pos_] * 0.2f; pos_ = (pos_ + 1) % s_.size(); } }
+    // the signal is made at 7.68 Msps (2 samples a chip); at another rate it is read at that spacing, 4-point Lagrange (3.9 labelled the 7.68 Msps
+    // samples with the new rate, so any other rate was a time-scaled signal no receiver could find). Fine from about 7.68 Msps up.
+    void generate(cf32* out, size_t n) override {
+        const size_t N = s_.size();
+        for (size_t i = 0; i < n; i++) {
+            size_t k = (size_t)pos_;
+            const float f = (float)(pos_ - (double)k);
+            if (f == 0.f) out[i] = s_[k % N] * 0.2f;
+            else {
+                const cf32 a = s_[(k + N - 1) % N], b = s_[k % N], c = s_[(k + 1) % N], d = s_[(k + 2) % N];
+                const float wa = -f * (f - 1) * (f - 2) / 6, wb = (f + 1) * (f - 1) * (f - 2) / 2, wc = -(f + 1) * f * (f - 2) / 2, wd = (f + 1) * f * (f - 1) / 6;
+                out[i] = (a * wa + b * wb + c * wc + d * wd) * 0.2f;
+            }
+            pos_ += step_;
+            if (pos_ >= (double)N) pos_ -= (double)N;
+        }
+    }
 private:
-    double rate_; std::vector<cf32> s_; size_t pos_ = 0;
+    double rate_, step_ = 1, pos_ = 0; std::vector<cf32> s_;
 };
 }  // namespace
 

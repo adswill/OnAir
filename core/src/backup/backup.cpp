@@ -190,8 +190,11 @@ static const char* const kRestoreSafe[] = {
     "userAccentOn", "vdl2Chans", "vdl2Zoom", "vorDb", "vorDwell", "vorFixA", "vorFixB", "vorIdFilter", "vorScan", "vorZoom", "wbAuto", "wbBaud",
     "wbCmap", "wbDbMax", "wbDbMin", "wbFft", "wbKind", "wbOvl", "wbWin", "wfMax", "wfMin", "wfRate", "wideMaskHi", "wideMaskLo", "wifiBand",
     "wifiDomain", "wifiDwellMs", "wifiHop", "wifiPsc", "workspaces", "wsBand", "wsRegion", "zbDwell", "zbScan", "zwRegion",
+    // 4.0 Settings (docs/SETTINGS-4.0.md)
+    "startFreqMode", "startFreqMhz", "startFamily", "startSub", "autoStartRx", "confirmExit", "sessionRestore", "specDefLo", "specDefHi", "dbKeyStep", "aclDefAgc", "aclDefSq", "aclDefSqDb", "audioDevDefault", "recNamePattern", "recSplitMb", "recMinFreeMb", "notifySystem", "notifySound", "notifyBanner", "notifyBannerSec", "notifyQuiet", "notifyQuietFrom", "notifyQuietTo", "settingsProfile",
 };
 static const char* const kRestoreConfirm[] = {
+    "mapTileUrl",   // 4.0: where the map tiles are fetched from (a network address)
     "adsbGpsJam", "aleNets", "antAnyNet", "apiLan", "apiOn", "apiPort", "apiToken", "astroTsys", "automationAllowRun", "backup.auto", "backup.keep",
     "backup.last", "clockSyncSource", "displayServer", "feedAcarsHost", "feedAcarsPort", "feedAisHost", "feedAisPort", "feedAprsCall",
     "feedAprsPass", "feedAprsServer", "feedAprsServerPort", "feedBeastPort", "feedBleHost", "feedBlePort", "feedGnssHost", "feedGnssPort",

@@ -110,4 +110,191 @@ int HfdlBandHopper::update(const Obs& o) {
     return best;
 }
 
+// ---------------------------------------------------------------- busiest band (survey, stay, survey again)
+
+void HfdlBusiestBand::reset() {
+    phase_ = Phase::Idle; sc_.clear(); cand_.clear(); surveyed_.clear(); cur_ = -1; best_ = -1; pending_ = -1; pendingSec_ = 0;
+    stayStartSec_ = 0; hintKhz_.clear(); hintSec_ = -1e18; w_ = Win(); status_.clear(); asked_ = -1;
+}
+
+const HfdlBusiestBand::Score& HfdlBusiestBand::score(int band) const {
+    static const Score none;
+    return band >= 0 && (size_t)band < sc_.size() ? sc_[(size_t)band] : none;
+}
+
+double HfdlBusiestBand::scoreOf(const Score& s) const {
+    return c_.wPdu * s.perMin + c_.wAircraft * s.aircraft + c_.wStation * s.stations + (s.perMin > 0 ? c_.wSnr * std::max(0.0, s.snrDb) : 0.0);
+}
+
+namespace {
+std::vector<std::pair<uint32_t, double>> baseOf(const std::vector<HfdlBusiestBand::Heard>& v) {
+    std::vector<std::pair<uint32_t, double>> b;
+    b.reserve(v.size());
+    for (const auto& h : v) b.push_back({h.key, h.lastSec});
+    std::sort(b.begin(), b.end());
+    return b;
+}
+// keys heard since the base was taken: new keys, or a later last-heard time
+void heardSince(const std::vector<std::pair<uint32_t, double>>& base, const std::vector<HfdlBusiestBand::Heard>& now, std::vector<uint32_t>& out) {
+    for (const auto& h : now) {
+        auto it = std::lower_bound(base.begin(), base.end(), std::make_pair(h.key, -1e300));
+        const bool changed = it == base.end() || it->first != h.key || h.lastSec > it->second;
+        if (changed && std::find(out.begin(), out.end(), h.key) == out.end()) out.push_back(h.key);
+    }
+}
+}  // namespace
+
+void HfdlBusiestBand::startWindow(const Obs& o) {
+    w_ = Win();
+    w_.startSec = w_.lastSec = o.nowSec;
+    w_.startPdus = w_.lastPdus = o.goodPdus;
+    w_.acBase = baseOf(o.aircraft);
+    w_.gsBase = baseOf(o.stations);
+}
+
+void HfdlBusiestBand::feedWindow(const Obs& o) {
+    if (o.goodPdus < w_.lastPdus) { w_.startPdus = o.goodPdus; w_.lastPdus = o.goodPdus; }   // the counters restarted
+    if (o.goodPdus > w_.lastPdus && std::isfinite(o.snrDb)) { w_.snrSum += o.snrDb; w_.snrN++; }
+    w_.lastPdus = o.goodPdus;
+    w_.lastSec = o.nowSec;
+    heardSince(w_.acBase, o.aircraft, w_.ac);
+    heardSince(w_.gsBase, o.stations, w_.gs);
+}
+
+HfdlBusiestBand::Score HfdlBusiestBand::closeWindow(double nowSec) const {
+    Score s;
+    s.measured = true;
+    s.atSec = nowSec;
+    const double dt = std::max(1.0, nowSec - w_.startSec);
+    s.perMin = (double)(w_.lastPdus - w_.startPdus) * 60.0 / dt;
+    s.aircraft = (int)w_.ac.size();
+    s.stations = (int)w_.gs.size();
+    s.snrDb = w_.snrN ? w_.snrSum / w_.snrN : 0.0;
+    s.score = scoreOf(s);
+    return s;
+}
+
+std::vector<int> HfdlBusiestBand::makeCandidates(int current) const {
+    const auto& B = hfdlBands();
+    const int n = (int)B.size();
+    std::vector<double> w((size_t)n, 0.0);
+    for (size_t r = 0; r < hintKhz_.size(); r++) { const int bi = hfdlBandOfKhz(hintKhz_[r]); if (bi >= 0) w[(size_t)bi] += 1.0 / (1.0 + 0.15 * (double)r); }   // the nearest stations' frequencies weigh most
+    std::vector<int> out;
+    if (current >= 0 && current < n) out.push_back(current);   // where the radio is: measured first (no retune)
+    std::vector<int> hinted;
+    for (int i = 0; i < n; i++) if (w[(size_t)i] > 0 && i != current) hinted.push_back(i);
+    std::stable_sort(hinted.begin(), hinted.end(), [&](int a, int b) { return w[(size_t)a] > w[(size_t)b]; });
+    out.insert(out.end(), hinted.begin(), hinted.end());
+    if (hinted.empty() || !c_.onlyHinted)
+        for (int i = 0; i < n; i++) if (B[(size_t)i].common && std::find(out.begin(), out.end(), i) == out.end()) out.push_back(i);
+    return out;
+}
+
+int HfdlBusiestBand::nextSurveyBand() const {
+    for (int b : cand_) if (b != cur_ && (size_t)b < surveyed_.size() && !surveyed_[(size_t)b]) return b;
+    return -1;
+}
+
+int HfdlBusiestBand::update(const Obs& o) {
+    const auto& B = hfdlBands();
+    const int n = (int)B.size();
+    if ((int)sc_.size() != n) { sc_.assign((size_t)n, Score()); surveyed_.assign((size_t)n, false); }
+    const double now = o.nowSec;
+    if (!o.hintKhz.empty()) { hintKhz_ = o.hintKhz; hintSec_ = now; }
+    else if (!hintKhz_.empty() && now - hintSec_ > c_.hintAgeSec) hintKhz_.clear();
+    char s[160];
+    auto name = [&](int b) { return B[(size_t)b].name; };
+    auto hop = [&](int b, const char* whyText) {
+        const std::string why = whyText;   // may be s itself
+        pending_ = b; pendingSec_ = now; asked_ = b;
+        snprintf(s, sizeof s, "%s, going to %s", why.c_str(), name(b));
+        status_ = s;
+        return b;
+    };
+    // a hop asked for and not yet arrived
+    if (pending_ >= 0 && o.band != pending_ && now - pendingSec_ < c_.retuneSec) return -1;
+    if (pending_ >= 0) {
+        pending_ = -1;
+        if (o.band == cur_ && o.band >= 0 && phase_ != Phase::Idle) { asked_ = -1; startWindow(o); status_ = std::string(name(cur_)) + ": the radio did not retune, measuring again"; return -1; }
+    }
+    if (o.band < 0 || o.band >= n) { phase_ = Phase::Idle; cur_ = -1; asked_ = -1; status_ = "not on an HFDL band"; return -1; }
+
+    if (phase_ == Phase::Idle || o.band != cur_) {   // arrived
+        const bool ours = o.band == asked_ && phase_ != Phase::Idle;
+        asked_ = -1;
+        cur_ = o.band;
+        if (phase_ == Phase::Idle) {
+            phase_ = Phase::Survey;
+            cand_ = makeCandidates(cur_);
+            surveyed_.assign((size_t)n, false);
+        } else if (!ours) {   // the user tuned to another HFDL band: stay there
+            phase_ = Phase::Stay;
+            stayStartSec_ = now;
+        }
+        startWindow(o);
+        snprintf(s, sizeof s, "%s: %s", name(cur_), phase_ == Phase::Survey ? "measuring" : "staying");
+        status_ = s;
+        return -1;
+    }
+    feedWindow(o);
+    const double el = now - w_.startSec;
+    if (el < c_.dwellSec) {
+        if (phase_ == Phase::Survey) {
+            int done = 0; for (int b : cand_) done += (size_t)b < surveyed_.size() && surveyed_[(size_t)b];
+            snprintf(s, sizeof s, "Survey %d of %zu: %s, %d PDU, %zu aircraft, %.0f s left", done + 1, cand_.size(), name(cur_),
+                     (int)(w_.lastPdus - w_.startPdus), w_.ac.size(), c_.dwellSec - el);
+        } else {
+            const Score& k = sc_[(size_t)cur_];
+            if (k.measured) snprintf(s, sizeof s, "%s: busiest (score %.0f: %.1f PDU/min, %d aircraft, %d stations), next survey in %.0f min", name(cur_), k.score,
+                                     k.perMin, k.aircraft, k.stations, std::max(0.0, (c_.rescanSec - (now - stayStartSec_)) / 60.0));
+            else snprintf(s, sizeof s, "%s: staying, measuring", name(cur_));
+        }
+        status_ = s;
+        return -1;
+    }
+    // a window is complete
+    sc_[(size_t)cur_] = closeWindow(now);
+    const Score& here = sc_[(size_t)cur_];
+    auto beginSurvey = [&]() {
+        phase_ = Phase::Survey;
+        cand_ = makeCandidates(cur_);
+        surveyed_.assign((size_t)n, false);
+        surveyed_[(size_t)cur_] = true;   // just measured
+    };
+    if (phase_ == Phase::Stay) {
+        const bool silent = here.score <= 0;
+        if (silent || now - stayStartSec_ >= c_.rescanSec) {
+            beginSurvey();
+            const int nx = nextSurveyBand();
+            if (nx >= 0) return hop(nx, silent ? "Nothing heard for a while: surveying the bands" : "Surveying the bands again");
+            phase_ = Phase::Stay; stayStartSec_ = now;   // no other band to try
+        }
+        startWindow(o);
+        return -1;
+    }
+    // survey
+    surveyed_[(size_t)cur_] = true;
+    const int nx = nextSurveyBand();
+    if (nx >= 0) { snprintf(s, sizeof s, "%s scored %.0f", name(cur_), here.score); return hop(nx, s); }
+    // the survey is done: the best band of this survey (the current one wins a tie: no retune)
+    int best = cur_; double bs = here.score;
+    for (int b : cand_) if ((size_t)b < surveyed_.size() && surveyed_[(size_t)b] && sc_[(size_t)b].measured && sc_[(size_t)b].score > bs + 1e-9) { best = b; bs = sc_[(size_t)b].score; }
+    best_ = best;
+    if (bs <= 0) {   // every band silent: survey again (the bands open and close with the time of day)
+        beginSurvey();
+        const int again = nextSurveyBand();
+        if (again >= 0) return hop(again, "Every band was silent, surveying again");
+        startWindow(o);
+        status_ = std::string(name(cur_)) + ": silent, the only candidate";
+        return -1;
+    }
+    phase_ = Phase::Stay;
+    stayStartSec_ = now;
+    if (best != cur_) { snprintf(s, sizeof s, "Survey done: %s is busiest (score %.0f)", name(best), bs); return hop(best, s); }
+    startWindow(o);
+    snprintf(s, sizeof s, "Survey done: %s is busiest (score %.0f), staying", name(cur_), bs);
+    status_ = s;
+    return -1;
+}
+
 }  // namespace dect2

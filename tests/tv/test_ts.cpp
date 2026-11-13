@@ -282,11 +282,25 @@ int main() {
         v.push_back(0x00); v.push_back(0x02);    // service type 2
         v.push_back(0x00); v.push_back(0x01);    // source id
         v.push_back(0xFC); v.push_back(0x00);    // no descriptors
+        {   // a second entry as some stations still send it: an analog channel with no program in this stream (0xFFFF), not a service
+            v[9] = 2;
+            const char* an = "KDEC-AN";
+            for (int k = 0; k < 7; k++) { v.push_back(0); v.push_back((uint8_t)an[k]); }
+            v.push_back(0xF0 | (major >> 6)); v.push_back((uint8_t)(((major & 0x3F) << 2) | 0)); v.push_back(0);
+            v.push_back(0x01);                   // modulation: analog
+            for (int k = 0; k < 4; k++) v.push_back(0);
+            v.push_back(0x00); v.push_back(0x07);
+            v.push_back(0xFF); v.push_back(0xFF);   // program number 0xFFFF
+            v.push_back(0x00); v.push_back(0x01);   // service type 1 (analog television)
+            v.push_back(0x00); v.push_back(0x02);
+            v.push_back(0xFC); v.push_back(0x00);
+        }
         v.push_back(0xFC); v.push_back(0x00);    // additional descriptors length 0
         v[2] = (uint8_t)(v.size() - 3 + 4);
         feedSection(a, 0x1FFB, section(v), c2);
         TsSnapshot sn = a.snapshot();
         bool found = false;
+        for (auto& sv : sn.services) CHECK(sv.id != 0xFFFF && sv.id != 0, "TVCT: an entry without a program (%d) became a service", sv.id);
         for (auto& sv : sn.services) if (sv.id == 3) { found = true; CHECK(sv.name == "KDEC-DT" && sv.provider == "channel 5.1" && sv.lcn == 501, "TVCT: name '%s' provider '%s' lcn %d", sv.name.c_str(), sv.provider.c_str(), sv.lcn); }
         CHECK(found, "TVCT service missing");
         printf("ATSC PSIP (TVCT) checked\n");

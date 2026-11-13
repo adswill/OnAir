@@ -11,7 +11,7 @@
 #include <string>
 #include <vector>
 
-enum HamTab { HamTabOperate, HamTabLog, HamTabAwards, HamTabMap, HamTabSpots, HamTabContest, HamTabGuide, HamTabCount };
+enum HamTab { HamTabOperate, HamTabLog, HamTabAwards, HamTabMap, HamTabSpots, HamTabCluster, HamTabContest, HamTabActivate, HamTabGuide, HamTabCount };   // 4.0: Cluster (online spots), Activate (POTA / SOTA)
 
 struct HamOps {
     bool loaded = false;
@@ -53,6 +53,7 @@ bool hamCountryLoadFile(const std::string& path, std::string& err);   // cty.dat
 void hamCountryReset();                                      // back to the built-in table
 void hamCountryUi();                                         // the "Country file" settings block (Load, Download on click, Reset)
 void hamToast(const std::string& s);
+void hamLogChanged();                                        // the book changed outside the Log tab: its filter and the worked marks are redone
 void hamSaveStation();
 
 void hamLogTab(App& a);

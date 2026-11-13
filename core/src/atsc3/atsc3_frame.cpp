@@ -4,6 +4,7 @@
 #include "dect2/atsc3/atsc3_bb.h"
 #include <algorithm>
 #include <cmath>
+#include <cstdlib>
 
 namespace dect2 {
 namespace atsc3 {
@@ -136,15 +137,16 @@ static bool subframeParams(const L1Basic& l1, const L1Detail& d, int i, Subframe
 }
 
 // Decodes FEC blocks of one PLP (cells of each block in `blocks`) in batches with the 8-bit decoder, into baseband packets.
-static void decodeBlocks(const Bicm& bicm, const std::vector<std::vector<cf32>>& blocks, float noise, PlpResult& pr) {
+static void decodeBlocks(const Bicm& bicm, const std::vector<std::vector<cf32>>& blocks, float noise, PlpResult& pr, const std::vector<std::vector<float>>* weights = nullptr) {
     const size_t bs = 16;
     for (size_t from = 0; from < blocks.size(); from += bs) {
         const size_t to = std::min(blocks.size(), from + bs);
         std::vector<const cf32*> in;
-        for (size_t i = from; i < to; i++) in.push_back(blocks[i].data());
+        std::vector<const float*> win;
+        for (size_t i = from; i < to; i++) { in.push_back(blocks[i].data()); if (weights && i < weights->size()) win.push_back((*weights)[i].data()); }
         std::vector<std::vector<uint8_t>> pl;
         std::vector<char> good;
-        bicm.decodeBatch(in, noise, pl, good);
+        bicm.decodeBatch(in, noise, pl, good, win.size() == in.size() ? &win : nullptr);
         for (size_t i = 0; i < to - from; i++) {
             pr.blocks++;
             pr.ok.push_back(good[i] != 0);
@@ -173,15 +175,20 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
         const size_t symLen = (size_t)s.fftSize + s.guard;
         if (n < pos + symLen * s.numSymbols) { if (si == 0) return r; break; }   // a later subframe that is cut off: what was read before it is still good
         std::vector<cf32> active;
-        std::vector<float> nv;
-        if (!demodulateSubframe(s, x + pos, n - pos, active, &nv)) return r;
+        std::vector<float> nv, wv;
+        // 4.0 (docs/SENSITIVITY-4.0-X3.md): the channel state of each cell goes to the soft bits (DECT2_ATSC3_NOCSI=1: one noise for every cell, as 3.9)
+        const char* noCsiEnv = getenv("DECT2_ATSC3_NOCSI");
+        const bool csi = !(noCsiEnv && *noCsiEnv && *noCsiEnv != '0');
+        if (!demodulateSubframe(s, x + pos, n - pos, active, &nv, csi ? &wv : nullptr)) return r;
         pos += symLen * s.numSymbols;
         // the data cells of the first subframe start in the last Preamble symbol
         std::vector<cf32> all;
-        std::vector<float> noise;
-        if (si == 0) { all = r.preamble.leftover; noise.assign(all.size(), r.preamble.leftoverNoise); }
+        std::vector<float> noise, weight;
+        if (si == 0) { all = r.preamble.leftover; noise.assign(all.size(), r.preamble.leftoverNoise); weight.assign(all.size(), 1.f); }
         all.insert(all.end(), active.begin(), active.end());
         noise.insert(noise.end(), nv.begin(), nv.end());
+        if (csi && wv.size() == active.size()) weight.insert(weight.end(), wv.begin(), wv.end()); else weight.clear();
+        const bool haveW = !weight.empty() && weight.size() == all.size();
         for (auto& pl : d.subframes[(size_t)si].plps) {
             PlpResult pr;
             pr.id = pl.id;
@@ -191,13 +198,15 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
             Bicm bicm(bc);
             PlpAlloc a;
             a.start = pl.start; a.size = pl.size; a.dispersed = pl.type == 1; a.numSubslices = pl.numSubslices; a.subsliceInterval = pl.subsliceInterval;
-            auto planeCells = [&](int first, int count, std::vector<cf32>& cells, double& nsum) {
+            auto planeCells = [&](int first, int count, std::vector<cf32>& cells, double& nsum, std::vector<float>* wout = nullptr) {
                 cells.resize((size_t)count);
+                if (wout) wout->assign((size_t)count, 1.f);
                 nsum = 0;
                 for (int i = 0; i < count; i++) {
                     long idx = plpCellIndex(a, first + i);
                     cells[(size_t)i] = idx >= 0 && idx < (long)all.size() ? all[(size_t)idx] : cf32(0, 0);
                     nsum += idx >= 0 && idx < (long)noise.size() ? noise[(size_t)idx] : 0;
+                    if (wout) (*wout)[(size_t)i] = idx >= 0 && idx < (long)weight.size() ? weight[(size_t)idx] : 0.f;
                 }
             };
             if (bicm.ok() && pl.tiMode == 1 && pl.layer == 0 && a.size > 0) {
@@ -212,21 +221,23 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
                 const int first = std::min(std::max(pl.fecBlockStart, 0), a.size);   // the first complete FEC block starts here
                 const int whole = (a.size - first) / cb;
                 std::vector<std::vector<cf32>> blocks;
+                std::vector<std::vector<float>> wblocks;
                 double nsum = 0;
                 for (int b = 0; b < whole; b++) {
                     blocks.emplace_back();
+                    wblocks.emplace_back();
                     double ns;
-                    planeCells(first + b * cb, cb, blocks.back(), ns);
+                    planeCells(first + b * cb, cb, blocks.back(), ns, haveW ? &wblocks.back() : nullptr);
                     nsum += ns;
                 }
                 const float nz = (float)std::max(nsum / std::max<double>(1.0, (double)blocks.size() * cb), 0.002);
-                if (!blocks.empty()) decodeBlocks(bicm, blocks, nz, pr);
+                if (!blocks.empty()) decodeBlocks(bicm, blocks, nz, pr, haveW ? &wblocks : nullptr);
                 if (first > 0 || first + whole * cb < a.size) {   // blocks across the frame boundaries
                     pr.straddle = true;
                     pr.noise = nz;
                     double ns;
-                    planeCells(0, first, pr.head, ns);
-                    planeCells(first + whole * cb, a.size - first - whole * cb, pr.tail, ns);
+                    planeCells(0, first, pr.head, ns, haveW ? &pr.headW : nullptr);
+                    planeCells(first + whole * cb, a.size - first - whole * cb, pr.tail, ns, haveW ? &pr.tailW : nullptr);
                 }
             } else if (bicm.ok() && pl.tiMode == 2 && pl.layer == 0 && pl.htiInterSubframe == 0 && a.size > 0 && !pl.htiNumFecBlocks.empty()) {
                 // hybrid time interleaver inside the subframe: the interleaving frame is a few TI blocks, each deinterleaved on its own
@@ -235,19 +246,30 @@ FrameResult decodeFrame(const cf32* x, size_t n, const Bootstrap& bs) {
                 const int nFecMax = (pl.htiNumFecBlocksMax + 1 + nTi - 1) / nTi;   // per TI block: the columns of the twisted block interleaver
                 if ((long)nFecIf * cb <= a.size) {
                     std::vector<std::vector<cf32>> blocks;
+                    std::vector<std::vector<float>> wblocks;
                     double nsum = 0;
                     int first = 0;
                     for (int t = 0; t < nTi; t++) {
                         const int nFec = htiBlocksInTiBlock(nFecIf, nTi, t);
                         std::vector<cf32> ti;
+                        std::vector<float> tw;
                         double ns;
-                        planeCells(first, nFec * cb, ti, ns);
+                        planeCells(first, nFec * cb, ti, ns, haveW ? &tw : nullptr);
                         nsum += ns;
                         first += nFec * cb;
                         std::vector<cf32> de = htiDeinterleave(ti, cb, nFec, nFecMax, pl.htiCellInterleaver != 0);
-                        for (int f = 0; f < nFec && (size_t)(f + 1) * cb <= de.size(); f++) blocks.emplace_back(de.begin() + (size_t)f * cb, de.begin() + (size_t)(f + 1) * cb);
+                        std::vector<cf32> dw;
+                        if (haveW) {   // the weights through the same de-interleaver (as the real parts of a cell vector)
+                            std::vector<cf32> twc(tw.size());
+                            for (size_t i = 0; i < tw.size(); i++) twc[i] = cf32(tw[i], 0.f);
+                            dw = htiDeinterleave(twc, cb, nFec, nFecMax, pl.htiCellInterleaver != 0);
+                        }
+                        for (int f = 0; f < nFec && (size_t)(f + 1) * cb <= de.size(); f++) {
+                            blocks.emplace_back(de.begin() + (size_t)f * cb, de.begin() + (size_t)(f + 1) * cb);
+                            if (haveW && dw.size() == de.size()) { wblocks.emplace_back((size_t)cb); for (int i = 0; i < cb; i++) wblocks.back()[(size_t)i] = dw[(size_t)f * cb + i].real(); }
+                        }
                     }
-                    if (!blocks.empty()) decodeBlocks(bicm, blocks, (float)std::max(nsum / ((double)nFecIf * cb), 0.002), pr);
+                    if (!blocks.empty()) decodeBlocks(bicm, blocks, (float)std::max(nsum / ((double)nFecIf * cb), 0.002), pr, haveW && wblocks.size() == blocks.size() ? &wblocks : nullptr);
                 }
             }
             r.plps.push_back(std::move(pr));

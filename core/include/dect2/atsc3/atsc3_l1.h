@@ -57,7 +57,8 @@ std::vector<cf32> encodeL1Basic(const L1Basic& l1, int mode);
 
 // Reverse direction. `cells` are equalised cells, `noiseVar` the noise power per cell (both real dimensions together).
 // Returns true when LDPC converged, BCH was satisfied and the CRC matched.
-bool decodeL1Basic(const cf32* cells, int nCells, float noiseVar, int mode, L1Basic& out, int* ldpcIterations = nullptr);
+// weights (optional): the channel state of each cell, |h|^2 against its mean (4.0, docs/SENSITIVITY-4.0-X3.md)
+bool decodeL1Basic(const cf32* cells, int nCells, float noiseVar, int mode, L1Basic& out, int* ldpcIterations = nullptr, const float* weights = nullptr);
 
 
 // ---------------------------------------------------------------------------------------------------------------------------------
@@ -108,7 +109,8 @@ bool unpackL1Detail(const L1Basic& basic, const std::vector<uint8_t>& bits, L1De
 // modes 1 to 7 (L1B_L1_Detail_fec_type + 1). Additional parity (L1B_L1_Detail_additional_parity_mode) is not supported yet.
 int l1DetailCells(int sizeBytes, int mode);
 std::vector<cf32> encodeL1Detail(const std::vector<uint8_t>& bits, int mode);   // bits.size() = 8 * sizeBytes
-bool decodeL1Detail(const cf32* cells, int nCells, float noiseVar, int mode, int sizeBytes, std::vector<uint8_t>& bits, int* ldpcIterations = nullptr);
+bool decodeL1Detail(const cf32* cells, int nCells, float noiseVar, int mode, int sizeBytes, std::vector<uint8_t>& bits, int* ldpcIterations = nullptr,
+                    const float* weights = nullptr);
 
 } // namespace atsc3
 } // namespace dect2

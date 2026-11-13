@@ -5,6 +5,7 @@
 #include "command_palette.h"
 #include "imgui_internal.h"
 #include "window_fit.h"
+#include "input_map.h"
 
 // Frequency step arrows: one step on press, then after 0.40 s one more step every 0.08 s.
 // At most one step per frame so a hitch does not jump many channels.
@@ -188,11 +189,8 @@ void toggleFullscreen() {
 
 void handleFullscreenHotkeys() {
     ImGuiIO& io = ImGui::GetIO();
-    if (io.WantTextInput) return;   // F11 / Alt+Enter stay with the field while typing
-    const bool f11 = ImGui::IsKeyPressed(ImGuiKey_F11, false);
-    const bool altEnter = io.KeyAlt && !io.KeyCtrl && !io.KeySuper
-        && (ImGui::IsKeyPressed(ImGuiKey_Enter, false) || ImGui::IsKeyPressed(ImGuiKey_KeypadEnter, false));
-    if (f11 || altEnter) toggleFullscreen();
+    if (io.WantTextInput) return;   // F11 / Alt+Enter (by default) stay with the field while typing
+    if (inputmap::pressed(inputmap::Action::Fullscreen)) toggleFullscreen();
 }
 
 bool pillButton(const char* label, bool selected, float padX) {
@@ -504,6 +502,7 @@ std::string lossText(const SampleLoss& l) {
         t = b;
     }
     if (l.radioEvents) t += (t.empty() ? "" : ", ") + dur(l.radioSec) + " " + tr("callback gaps");
+    if (l.sourceLostEvents) t += (t.empty() ? "" : ", ") + dur(l.sourceLostSec) + " " + tr("link gaps");
     if (l.cpuEvents) t += (t.empty() ? "" : ", ") + dur(l.cpuSec) + " " + tr("ring overflow");
     return t.empty() ? "0" : t;
 }
@@ -511,7 +510,7 @@ std::string lossText(const SampleLoss& l) {
 ImVec4 lossColour(const SampleLoss& l, ImVec4 normal) {
     if (l.rateLow) return pal::badRed();
     double since = -1;
-    for (double s : {l.sinceRadioSec, l.sinceCpuSec}) if (s >= 0 && (since < 0 || s < since)) since = s;
+    for (double s : {l.sinceRadioSec, l.sinceCpuSec, l.sinceSourceLostSec}) if (s >= 0 && (since < 0 || s < since)) since = s;
     if (since < 0) return normal;
     return since < 30 ? pal::badRed() : pal::warnAmber();
 }
@@ -534,8 +533,21 @@ void lossTooltip(const SampleLoss& l) {
         ImGui::Text(tr("Callback gaps: %.2f s in %llu gaps, last %s"), l.radioSec, (unsigned long long)l.radioEvents, ago(l.sinceRadioSec).c_str());
         ImGui::TextDisabled("%s", tr("Gaps between the library's callbacks: the radio or its driver delivered less than the set rate, so those samples never entered OnAir."));
         ImGui::Spacing();
+        if (l.sourceLostEvents) {
+            ImGui::Text(tr("Link gaps: %.2f s in %llu gaps, last %s"), l.sourceLostSec, (unsigned long long)l.sourceLostEvents, ago(l.sinceSourceLostSec).c_str());
+            ImGui::TextDisabled("%s", tr("The network radio's stream was down (a reconnect): those samples never reached OnAir. This is the link, not the CPU."));
+            ImGui::Spacing();
+        }
         ImGui::Text(tr("Ring overflow: %.2f s discarded %llu times, last %s"), l.cpuSec, (unsigned long long)l.cpuEvents, ago(l.sinceCpuSec).c_str());
-        ImGui::TextDisabled("%s", tr("OnAir did not read the input ring fast enough, so samples the radio had already delivered were thrown away. Close other programs, or pick a lower sample rate or a narrower channel."));
+        const char* why = tr("OnAir did not read the input ring fast enough, so samples the radio had already delivered were thrown away.");
+        switch (l.cpuCause) {   // overflow_cause.h: what the sample thread was doing at the last one
+        case OverflowCause::Cpu: why = tr("The last one: the receiver needed more than real time on the CPU (its thread fills one core). Pick a lower sample rate or a narrower channel."); break;
+        case OverflowCause::Waiting: why = tr("The last one: the receiver was waiting, not computing (for its worker threads, or for the operating system, which gave its core to other programs). The CPU is not the limit."); break;
+        case OverflowCause::Stalled: why = tr("The last one: the sample thread was held up for a moment while the receiver itself keeps up easily. The CPU is not the limit."); break;
+        case OverflowCause::Starting: why = tr("The last one: while the receiver was starting or retuning (it builds its tables on the first blocks). Once is normal."); break;
+        default: break;
+        }
+        ImGui::TextDisabled("%s", why);
         ImGui::Spacing();
         ImGui::Text(tr("Receiver load: %.0f%% of real time"), l.loadPct);
         ImGui::TextDisabled("%s", tr("Processing time of a block versus its duration, on the sample thread. Near 100% the receiver is just keeping up. High load and lost samples are separate: load can be high with every sample kept, and samples can be lost while load is low."));

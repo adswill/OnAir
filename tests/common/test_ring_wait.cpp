@@ -29,6 +29,15 @@ int main() {
         CHECK(r->waitData(50, milliseconds(0)), "enough there: at once");
         CHECK(r->waitData(500, milliseconds(5)), "less than asked when the time ran out: still true");
     }
+    {   // 4.0: samples the source never got (noteLost) are dropped, and apart from overflow (lostAtSource); resetDropped clears both
+        auto r = std::make_unique<dect2::IqRingCpp>(1u << 10);
+        std::vector<cf32> x(1500);
+        r->write(x.data(), x.size());   // 476 do not fit: overflow
+        r->noteLost(1000);              // a network radio's reconnect
+        CHECK(r->dropped() == 1476 && r->lostAtSource() == 1000, "overflow %llu, source %llu", (unsigned long long)r->dropped(), (unsigned long long)r->lostAtSource());
+        r->resetDropped();
+        CHECK(r->dropped() == 0 && r->lostAtSource() == 0, "reset");
+    }
     {   // woken by the write
         auto r = std::make_unique<dect2::IqRingCpp>(1u << 12);
         std::thread p([&] { std::this_thread::sleep_for(milliseconds(20)); std::vector<cf32> x(64); r->write(x.data(), x.size()); });

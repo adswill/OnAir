@@ -91,7 +91,7 @@ void commandPalette(App& a) {
     static bool closeReq = false, focusSearch = false;
     ImGuiIO& io = ImGui::GetIO();
     const char* id = trw("Command palette");
-    if ((io.KeyCtrl || io.KeySuper) && ImGui::IsKeyPressed(ImGuiKey_K, false)) {   // Ctrl+K (Cmd+K): open, or close when open
+    if (inputmap::pressed(inputmap::Action::CommandPalette)) {   // Ctrl+K (Cmd+K) by default: open, or close when open (it fires while typing, F_Typing)
         if (ImGui::IsPopupOpen(id)) closeReq = true;
         else { ImGui::OpenPopup(id); q[0] = 0; sel = 0; focusSearch = true; }
     }

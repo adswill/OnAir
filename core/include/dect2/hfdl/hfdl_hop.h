@@ -3,7 +3,10 @@
 // PDUs so far, and the frequencies the heard squitters announce as active (the HFDL system table: each ground station's SPDU lists the
 // frequencies in use), and it answers which band to tune to (or -1: stay).
 //
-// Rules: stay on a band that yields PDUs (good rate); on a poor band dwell one look (longer when something is heard), then move to the band
+// Two strategies (4.0, docs/HFDL-STATIONS-4.0.md): HfdlBandHopper "finds a working band" (it leaves a silent band and stays on the first one that
+// gives PDUs), HfdlBusiestBand surveys the bands and stays on the busiest one, surveying again from time to time.
+//
+// Rules of HfdlBandHopper: stay on a band that yields PDUs (good rate); on a poor band dwell one look (longer when something is heard), then move to the band
 // with the best estimate: its recent PDU rate (fading with age), or for a band not yet visited an optimistic guess, plus a bonus for the
 // frequencies other stations announce there. When everything is silent every band is visited in turn (least recently visited first).
 #pragma once
@@ -58,6 +61,73 @@ private:
     int pending_ = -1; double pendingSec_ = 0;   // a hop asked for and not yet seen arrive
     std::string status_;
     double decayed(int i, double now) const;
+};
+
+// "Busiest band": a survey listens to each candidate band for dwellSec and scores it (good PDUs per minute, distinct aircraft and ground stations
+// heard, mean SNR of the good bursts), then the radio goes to the best one and stays. While it stays, the score is measured again over windows of
+// dwellSec; after rescanSec it surveys again (the band it stays on keeps its latest window score), and a window with nothing at all starts a survey
+// at once. Candidates: when hints are given (the active frequencies of the nearby ground stations: squitters and the live list), the bands that
+// hold them, best hinted first, plus the band it is on; without hints every common band. A user's tuning to another HFDL band starts a stay there.
+class HfdlBusiestBand {
+public:
+    struct Config {
+        double dwellSec = 75;        // two squitter frames (32 s) of every station of the band, and a little to settle
+        double rescanSec = 1200;     // survey again after this long on a band
+        double wPdu = 1.0;           // score per good PDU per minute
+        double wAircraft = 2.0;      // per distinct aircraft heard in the window
+        double wStation = 3.0;       // per distinct ground station heard in the window
+        double wSnr = 0.1;           // per dB of mean SNR (only when PDUs were decoded)
+        double hintAgeSec = 900;     // hints older than this are forgotten
+        bool onlyHinted = true;      // with hints, survey only the hinted bands (and the current one)
+        double retuneSec = 6;        // a hop is given this long to arrive
+    };
+    struct Heard { uint32_t key = 0; double lastSec = 0; };   // an aircraft or a ground station with its last-heard time (any clock that grows)
+    struct Obs {
+        double nowSec = 0;
+        int band = -1;                       // the band the radio is on (-1 not an HFDL band)
+        uint64_t goodPdus = 0;               // good PDUs since the receiver started
+        float snrDb = 0;                     // SNR of the last good burst
+        std::vector<Heard> aircraft, stations;
+        std::vector<int> hintKhz;            // active frequencies near the user, most wanted first (empty: none known)
+    };
+    struct Score { bool measured = false; double perMin = 0; int aircraft = 0, stations = 0; double snrDb = 0, score = 0, atSec = 0; };
+    enum class Phase { Idle, Survey, Stay };
+
+    HfdlBusiestBand() = default;
+    explicit HfdlBusiestBand(const Config& c) : c_(c) {}
+    void reset();
+    int update(const Obs& o);                // the band to tune to now, or -1 to stay
+    Phase phase() const { return phase_; }
+    const Score& score(int band) const;      // the last complete measurement of a band
+    double scoreOf(const Score& s) const;    // the weighted sum (exposed for the tests and the panel)
+    std::vector<int> candidates() const { return cand_; }
+    int bestBand() const { return best_; }
+    std::string status() const { return status_; }
+    const Config& config() const { return c_; }
+private:
+    struct Win {                             // one measuring window on the current band
+        double startSec = 0, lastSec = 0;
+        uint64_t startPdus = 0, lastPdus = 0;
+        double snrSum = 0; int snrN = 0;
+        std::vector<std::pair<uint32_t, double>> acBase, gsBase;   // last-heard times at the start
+        std::vector<uint32_t> ac, gs;        // heard during the window
+    };
+    void startWindow(const Obs& o);
+    void feedWindow(const Obs& o);
+    Score closeWindow(double nowSec) const;
+    std::vector<int> makeCandidates(int current) const;
+    int nextSurveyBand() const;
+    Config c_;
+    Phase phase_ = Phase::Idle;
+    std::vector<Score> sc_;
+    std::vector<int> cand_;
+    std::vector<bool> surveyed_;
+    int cur_ = -1, best_ = -1;
+    int pending_ = -1, asked_ = -1; double pendingSec_ = 0;
+    double stayStartSec_ = 0;
+    std::vector<int> hintKhz_; double hintSec_ = -1e18;
+    Win w_;
+    std::string status_;
 };
 
 }  // namespace dect2

@@ -147,6 +147,21 @@ Several branches picked numbers on their own; the later ones were moved (integ-3
 | ELT 121.5 MHz | 802 | 804 | 803 | 803 | feat39-w1a | 3.9; swept-tone detection only; simulated signals only |
 | Fleet Broadcast (UHF SATCOM) | 870 | 872 | 871 | 870 | feat39-fbr | 3.9; 16 x 75 Bd UHF SATCOM multiplex, framing and channel activity only, see docs/FBR-3.9.md; simulated signals only |
 | CP16 | 880 | 882 | 881 | 880 | feat39-cp16 | 3.9; CRAC 16-carrier picture text, receive and transmit, see docs/CP16-3.9.md (renumbered from 790-792 at the merge: those are Lightning position); simulated only (plus two CP16+ software files, not off-air) |
+| RC model PPM (72 MHz) | 881 | 883 | 882 | 881 | feat40-modes1 | 4.0; PPM channel count and pulse spacings, see docs/X40-4.0.md; simulated signals only |
+| UVB-76 buzzer monitor | 882 | 884 | 883 | 882 | feat40-modes1 | 4.0; buzz train timing only, voice not decoded; simulated signals only |
+| GRAVES meteor echoes | 883 | 885 | 884 | 883 | feat40-modes1 | 4.0; carrier and meteor echo finder; simulated signals only |
+| Radio Jove bursts | 884 | 886 | 885 | 884 | feat40-modes1 | 4.0; power burst finder; simulated signals only |
+| Beacon propagation monitor | 885 | 887 | 886 | 885 | feat40-modes1 | 4.0; steady / fading / aurora-like path class of one beacon; simulated signals only |
+| EM4100 LF RFID (125 kHz) | 886 | 888 | 887 | 886 | feat40-modes2 | 4.0; simulated signals only (docs/EM4100-4.0.md) |
+| UHF RFID reader (EPC Gen2) | 887 | 889 | 888 | 887 | feat40-modes2 | 4.0; simulated signals only (docs/UHFRFID-4.0.md) |
+| Qi wireless charging | 888 | 890 | 889 | 888 | feat40-modes2 | 4.0; simulated signals only (docs/QI-4.0.md) |
+| FM modulation monitor | 889 | 891 | 890 | 889 | feat40-modes2 | 4.0; simulated signals only (docs/FMMON-4.0.md) |
+| AM modulation monitor | 890 | 892 | 891 | 890 | feat40-modes2 | 4.0; simulated signals only (docs/AMMON-4.0.md) |
+| Power-line noise locator | 891 | 893 | 892 | 891 | feat40-modes2 | 4.0; simulated signals only (docs/PLNOISE-4.0.md) |
+| Radar pulse analyser | 892 | 894 | 893 | 892 | feat40-modes2 | 4.0; simulated signals only (docs/RADAR-4.0.md) |
+| GNSS interference detector | 893 | 895 | 894 | 893 | feat40-modes2 | 4.0; simulated signals only (docs/GNSSJAM-4.0.md) |
+| Passband signal classifier | 894 | 896 | 895 | 894 | feat40-modes2 | 4.0; simulated signals only (docs/PASSBAND-4.0.md) |
+| VLF MSK transmitter monitor | 895 | 897 | 896 | 895 | feat40-modes2 | 4.0; simulated signals only (docs/VLFMSK-4.0.md) |
 | Plugins | 999 | 1001 | - | - | | |
 | Mode Builder | 19999 | - | - | - | mode-builder-030 | |
 | custom modes (Mode Builder) | 20000+ | family + 2 | - | - | mode-builder-030 | kCustomFamilyBase, saved by number in modes/registered.txt |

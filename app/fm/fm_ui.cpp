@@ -1,4 +1,5 @@
 // FM broadcast radio panels: tuning, status line, station panel with RDS, diagnostic plots and the band scanner.
+#include "../d40/d40_ui.h"
 #include "app.h"
 #include "dab/played_ui.h"
 #include "../ui/typography.h"
@@ -364,6 +365,13 @@ void fmRadioPanel(App& a) {
     const bool run = a.engine.running();
     const bool live = run && a.rx.standard == 6 && fm.carrier;
     sectionHeader(Ic::Radio, "FM radio");
+    // #442: rows come and go with the RDS data (now playing, flags, subcarriers, TMC) and text wraps, so everything below (the saved stations)
+    // jumped up and down while a station was read, under the mouse. The block keeps the tallest height it has had on this frequency: it can
+    // grow, but it only shrinks on a retune or after the receiver stops.
+    static float rdsBlockMaxH = 0;
+    static double rdsBlockFreq = -1;
+    if (std::fabs(rdsBlockFreq - a.freqMhz) > 1e-6 || !run) { rdsBlockMaxH = 0; rdsBlockFreq = a.freqMhz; }
+    const float rdsBlockY0 = ImGui::GetCursorPosY();
     if (ImGui::BeginTable("fmtbl", 2, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
         ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 110 * gUi);
         ImGui::TableSetupColumn("");
@@ -488,6 +496,7 @@ void fmRadioPanel(App& a) {
         ImGui::EndTable();
     }
     ImGui::Spacing();
+    if (live) d40FmCard(a);   // 4.0: station names, DX opening alarm (app/d40)
     if (live) smart5FmCard(a);   // round-5 smart checks: watchdog, BS.412 power, transmitter fingerprint (app/smart5)
     if (live && fm.rdsSync && (!fm.rds.afMhz.empty() || fm.rds.language >= 0 || !fm.rds.ptyn.empty() || fm.rds.clockUtc || fm.rds.ecc >= 0 || !fm.rds.eon.empty() || !fm.rds.oda.empty())) {
         // the rest of RDS: what the station sends beyond the name and the text
@@ -543,6 +552,11 @@ void fmRadioPanel(App& a) {
             fmTmcPanel(a);   // fm_tmc_ui.cpp: in plain words with the user's own tables, and the log
         }
         ImGui::Spacing();
+    }
+    {
+        const float h = ImGui::GetCursorPosY() - rdsBlockY0;
+        if (h < rdsBlockMaxH) ImGui::Dummy(ImVec2(1, rdsBlockMaxH - h));
+        else rdsBlockMaxH = h;
     }
     fmSavedPanel(a);   // the saved-stations library, under the RDS decoder
     if (pal::dev()) {   // compact now-playing, then the scanned stations fill the rest of the panel

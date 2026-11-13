@@ -33,7 +33,7 @@ public:
     uint64_t savedAudioBytes() const;
     void setLogCallback(std::function<void(const std::string&)> cb);   // events for the log pane; may be called from the receiver thread
     // Play this service's DRA+ audio (0: silence). The interface calls it for the service the user picked.
-    void setListen(int serviceId);
+    void setListen(int serviceId);      // 0: none; -1: the first audio service (the phone app)
     void setVolume(float v);
     void setMuted(bool m);
 

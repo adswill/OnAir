@@ -3,6 +3,7 @@
 #include "dect2/common/thread_name.h"
 #include "dect2/sonde/sonde_rx.h"
 #include "dect2/net/sonde_upload.h"
+#include "dect2/net/sondehub.h"
 #include "dect2/automation/engine.h"
 #include "dect2/results/results_io.h"
 #include "dect2/dsp/fftutil.h"
@@ -44,6 +45,10 @@ constexpr int kTrackedSondes = 5;       // sondes whose track goes into a report
 constexpr double kSearchPeriodS = 0.5;
 constexpr double kChanCutoffHz = 10000.0;       // half width of the channel filter (400 MHz sondes)
 constexpr double kChanNoiseBwHz = 20000.0;      // noise bandwidth of it
+// 4.0: sondes of +-2.4 kHz deviation (RS41) also go through a second, tighter filter (4.5 kHz half width, 9 kHz noise bandwidth: 3.5 dB under the
+// wide one), docs/SENSITIVITY-4.0-A.md. The wide path still serves the other types, the carrier follow-up and the presence check.
+constexpr double kNarrowCutoffHz = 4500.0;
+constexpr double kNarrowNoiseBwHz = 2 * kNarrowCutoffHz;
 constexpr double kLbandCutoffHz = 95000.0;      // LMS6-1680: ~170 kHz RF bandwidth
 constexpr double kLbandNoiseBwHz = 190000.0;
 constexpr double kReportPeriodS = 0.25;
@@ -117,21 +122,25 @@ public:
         s1.setMixer(freq / fs);
         const int taps2 = std::max(15, (int)std::ceil(3.2 * fs1 / (lband ? 40000.0 : 12000.0))) | 1;
         s2.init(R2, taps2, cutoff / fs1, 7.0);
-        b1.clear(); b2.clear();
-        prevY = cf32(1, 0);
+        if (!lband) s2n.init(R2, taps2, kNarrowCutoffHz / fs1, 7.0);
+        hasNarrow = !lband;
+        pnN = noiseVar * kNarrowNoiseBwHz / fsIn;
+        b1.clear(); b2.clear(); b2n.clear();
+        prevY = cf32(1, 0); prevYn = cf32(1, 0); pAvgN = 0; dcn = 0; dcnN = 0;
         pAvg = 0; present = false; dc = 0; dcN = 0; afcSum = 0; afcCnt = 0;
         aP = 1.0 / (0.001 * fs2);
         dcTau = 0.08 * fs2;
         afcLen = (int)(0.1 * fs2);
         // decoders
-        decs.clear(); chains.clear(); syms.clear(); symT.clear();
+        decs.clear(); chains.clear(); chainNarrow.clear(); syms.clear(); symT.clear();
         auto addDec = [&](std::unique_ptr<SondeBitDecoder> d, int kind, Rs41Decoder* r41, Rs92Decoder* r92 = nullptr) {
             if (!d) return;
             const double baud = d->symbolRate();
             int ci = -1;
             const bool mid = d->midpointSlicer();
-            for (size_t i = 0; i < chains.size(); i++) if (std::fabs(chains[i].baud() - baud) < 1e-6 && chains[i].midpoint() == mid) ci = (int)i;
-            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid); ci = (int)chains.size() - 1; }
+            const bool nar = hasNarrow && d->narrowChannel();
+            for (size_t i = 0; i < chains.size(); i++) if (std::fabs(chains[i].baud() - baud) < 1e-6 && chains[i].midpoint() == mid && chainNarrow[i] == nar) ci = (int)i;
+            if (ci < 0) { chains.emplace_back(); chains.back().init(fs2, baud, d->isAfsk(), mid, (toneChips && !mid) ? toneDevFor(baud) : 0.0, mid ? 2 : 0); chainNarrow.push_back(nar); ci = (int)chains.size() - 1; }   // 4.0 A4: midpoint chains (iMet-54, MRZ) slice at the middle of the smoothed extremes
             Dec e; e.d = std::move(d); e.kind = kind; e.chain = ci; e.rs41 = r41; e.rs92 = r92;
             decs.push_back(std::move(e));
         };
@@ -151,9 +160,18 @@ public:
         symT.assign(chains.size(), 0.0);
     }
 
+    // 4.0: the FSK deviation of the sonde types whose symbols are decided by tone energies (0: the discriminator, as in 3.9)
+    static double toneDevFor(double baud) {
+        if (std::fabs(baud - 4800) < 1 || std::fabs(baud - 2500) < 1) return 2400.0;   // RS41, RS92, DFM
+        if (std::fabs(baud - 9615) < 1 || std::fabs(baud - 9600) < 1) return 4800.0;   // M10, M20
+        return 0.0;
+    }
+    bool toneChips = true;
+
     void release() { used = false; decs.clear(); chains.clear(); }
     void setNoise(double noiseVar, bool lband) {
         pn = noiseVar * (lband ? kLbandNoiseBwHz : kChanNoiseBwHz) / fs;
+        pnN = noiseVar * kNarrowNoiseBwHz / fs;
     }
     void retune(double f) { freq = f; s1.setMixer(freq / fs); }
 
@@ -162,13 +180,21 @@ public:
         b1.clear(); b2.clear();
         s1.process(x, n, b1);
         s2.process(b1.data(), b1.size(), b2);
+        if (hasNarrow) { b2n.clear(); s2n.process(b1.data(), b1.size(), b2n); }
         const double dt2 = 1.0 / fs2;
         const float scale = (float)(fs2 / (2 * M_PI));
         for (size_t i = 0; i < b2.size(); i++) {
             const cf32 y = b2[i];
             const float p = y.real() * y.real() + y.imag() * y.imag();
             pAvg += (p - pAvg) * aP;
-            const bool pres = present ? (pAvg > 1.8 * pn) : (pAvg > 2.6 * pn);
+            bool narrowPres = false;
+            cf32 yn = y;
+            if (hasNarrow && i < b2n.size()) {
+                yn = b2n[i];
+                pAvgN += (yn.real() * yn.real() + yn.imag() * yn.imag() - pAvgN) * aP;
+                narrowPres = present ? (pAvgN > 1.8 * pnN) : (pAvgN > 2.6 * pnN);
+            }
+            const bool pres = narrowPres || (present ? (pAvg > 1.8 * pn) : (pAvg > 2.6 * pn));
             const double tHere = t0 + (double)i * dt2;
             if (pres != present) {
                 if (!pres) flush(tHere, fixes);
@@ -178,7 +204,7 @@ public:
                 present = pres;
                 for (auto& c : chains) c.reset();
                 if (longGap) for (auto& e : decs) e.d->reset();
-                dc = 0; dcN = 0; afcSum = 0; afcCnt = 0;
+                dc = 0; dcN = 0; afcSum = 0; afcCnt = 0; dcn = 0; dcnN = 0;
             }
             const cf32 cp = y * std::conj(prevY);
             prevY = y;
@@ -188,10 +214,19 @@ public:
             if (dcN < dcTau) { dcN += 1; dc += (d - dc) / (float)dcN; }
             else dc += (d - dc) * (float)(1.0 / dcTau);
             afcSum += d; afcCnt++;
+            float dn = d;
+            if (hasNarrow) {
+                const cf32 cpn = yn * std::conj(prevYn);
+                prevYn = yn;
+                dn = std::atan2(cpn.imag(), cpn.real()) * scale;
+                if (dcnN < dcTau) { dcnN += 1; dcn += (dn - dcn) / (float)dcnN; }
+                else dcn += (dn - dcn) * (float)(1.0 / dcTau);
+            }
             for (size_t c = 0; c < chains.size(); c++) {
                 if (!chainActive(c)) continue;
                 const size_t before = syms[c].size();
-                chains[c].step(d, dc, syms[c]);
+                if (chainNarrow[c]) { if (chains[c].toneOn()) chains[c].pushTone(yn, dcn); chains[c].step(dn, dcn, syms[c]); }
+                else { if (chains[c].toneOn()) chains[c].pushTone(y, dc); chains[c].step(d, dc, syms[c]); }
                 if (before == 0 && !syms[c].empty()) symT[c] = tHere;
             }
             if (afcCnt >= afcLen) {
@@ -200,7 +235,7 @@ public:
                 if (std::fabs(mean) > 40.0) {
                     const double step = std::clamp(0.7 * mean, -2000.0, 2000.0);
                     retune(freq + step);
-                    dc -= (float)step;
+                    dc -= (float)step; dcn -= (float)step;
                 }
             }
         }
@@ -210,9 +245,14 @@ public:
     double noiseVar() const { return pn * fs / kChanNoiseBwHz; }
 
 private:
-    Decim s1, s2;
-    std::vector<cf32> b1, b2;
-    cf32 prevY{1, 0};
+    Decim s1, s2, s2n;
+    std::vector<cf32> b1, b2, b2n;
+    cf32 prevY{1, 0}, prevYn{1, 0};
+    bool hasNarrow = false;
+    double pnN = 1e-9;
+    float pAvgN = 0, dcn = 0;
+    double dcnN = 0;
+    std::vector<bool> chainNarrow;
     double pn = 1e-9;
     float pAvg = 0, aP = 0.01f;
     bool present = false;
@@ -261,6 +301,8 @@ struct SondeReceiver::Impl {
     double fs = 0;
     std::atomic<double> sigOff{0}, centerHz{0};      // set from the interface thread, read by the worker
     std::atomic<int> maxChan{kMaxChan};
+    std::atomic<uint32_t> kindMask{0};               // setKindMask(): 0 every sonde type
+    std::atomic<bool> toneChipsOn{true};              // setToneDetection(): symbols of RS41 / RS92 / DFM / M10 / M20 from tone energies
     std::function<void(const std::string&)> log;
     SondeTelemetry tel;
     bool syncMode = false;
@@ -486,6 +528,7 @@ struct SondeReceiver::Impl {
             int usedN = 0;
             for (auto& ch : chans) { if (ch.used) usedN++; else if (!fr) fr = &ch; }
             if (!fr || usedN >= maxChan.load()) continue;
+            fr->toneChips = toneChipsOn.load();
             fr->init((int)(fr - chans.data()), fs, car.offHz, tNow, noiseVar, lband);
             fr->snrDb = car.level;
             car.assigned = true; car.channel = fr->id;
@@ -609,6 +652,13 @@ struct SondeReceiver::Impl {
             up.freqHz = centerHz > 0 ? centerHz + s.offsetHz : r->announcedHz;
             SondeUpload::get().frame(up, (double)time(nullptr));
         }
+        if (f.hasPos && SondeHub::get().wanted()) {   // SondeHub (sondehub.h): off unless enabled; only this frame's own time, fix and counters
+            SondeInfo hub = s;
+            hub.freqHz = centerHz > 0 ? centerHz + s.offsetHz : r->announcedHz;
+            hub.hasTime = f.hasTime; hub.unixTime = f.hasTime ? f.unixTime : 0;
+            hub.frame = f.frame; hub.hasVel = f.hasVel; hub.sats = f.sats; hub.batteryV = f.batteryV; hub.burstKillS = f.burstKillS;
+            SondeHub::get().frame(hub, (double)time(nullptr));
+        }
     }
 
     void report(double tNow) {
@@ -691,6 +741,9 @@ void SondeReceiver::reset() {
 }
 void SondeReceiver::setSynchronous(bool on) { p_->syncMode = on; }
 void SondeReceiver::setCenterMhz(double mhz) { p_->centerHz = mhz * 1e6; }
+void SondeReceiver::setToneDetection(bool on) { p_->toneChipsOn = on; }
+bool SondeReceiver::toneDetection() const { return p_->toneChipsOn.load(); }
+void SondeReceiver::setKindMask(uint32_t m) { p_->kindMask.store(m, std::memory_order_relaxed); }
 void SondeReceiver::setMaxChannels(int n) { p_->maxChan = std::clamp(n, 1, kMaxChan); }
 void SondeReceiver::clearSondes() {
     // done by the worker's lock: the list belongs to the processing state
@@ -763,6 +816,15 @@ bool SondeReceiver::telemetry(SondeTelemetry& out, uint64_t lastSeq) {
     if (p_->tel.seq <= lastSeq) return false;
     out = p_->tel;
     sess::observeSonde(out);
+    if (const uint32_t m = p_->kindMask.load(std::memory_order_relaxed)) {   // a view onto one sonde type: its sondes and counts only
+        std::vector<SondeInfo> keep;
+        uint64_t ok = 0, bad = 0;
+        for (const SondeInfo& s : out.sondes) if ((m >> s.kind) & 1u) { keep.push_back(s); ok += s.framesOk; bad += s.framesBad; }
+        out.sondes.swap(keep);
+        out.blocksOk = ok; out.blocksBad = bad;
+        out.dataValid = !out.sondes.empty();
+        if (out.state == 2 && out.sondes.empty()) out.state = 1;
+    }
     return true;
 }
 void SondeReceiver::setLogCallback(std::function<void(const std::string&)> cb) { std::lock_guard<std::mutex> lk(p_->mu); p_->log = std::move(cb); }

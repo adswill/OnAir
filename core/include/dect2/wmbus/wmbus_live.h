@@ -33,6 +33,9 @@ public:
     void feed(const cf32* x, size_t n);
     bool telemetry(WmbusTelemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);
+    // 4.0: a view onto some wireless M-Bus modes: bit k of the mask = wmbus::Phy k; only the meters and frames of those modes are reported (telemetry()), 0 = every mode.
+    void setPhyMask(uint32_t mask);
+    void setMfrFilter(const std::string& code);   // 4.0: only the meters (and frames) of this manufacturer code ("KAM"); "" every manufacturer. Combined with the mode mask.
 
 private:
     struct Impl;

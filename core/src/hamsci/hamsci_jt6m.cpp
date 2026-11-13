@@ -178,7 +178,9 @@ bool jt6mDecodeBlock(const float* x, size_t n, double fs, Jt6mBlock& out, double
             }
     }
     if (std::getenv("HS_DEBUG")) std::fprintf(stderr, "jt6m: score %.2f ph %d sh %d fo %d\n", bestScore, bestPh, bestS, bestFo);
-    if (bestScore < 4.0) return false;
+    // the gate: in noise alone the best of the ~900 hypotheses (symbol phase x shift x frame phase) of a 6 s window scores 4 .. 6, which gave a false ping
+    // in 1 of 6 runs of 32 s; 5.5 gave none in 300 runs (QA 4.0). A ping needs about 3 frames at 15 dB over the noise per tone, or a long weak signal
+    if (bestScore < 5.5) return false;
     const long nsym = ((long)nh - bestPh) / 4;
     {   // the shift within a tone either side: the window leaks a strong sync tone -6 dB into the next tone, so a short ping can score nearly the
         // same one tone off. Over the sync symbols that clearly carry it, the true shift holds the most energy

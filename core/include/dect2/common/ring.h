@@ -107,10 +107,12 @@ public:
 
     size_t available() const { return w_.load(std::memory_order_acquire) - r_.load(std::memory_order_acquire); }
     uint64_t dropped() const { return dropped_.load(std::memory_order_relaxed); }
-    // samples the producer never got (a network radio's connection was down): counted as dropped
-    void noteLost(uint64_t n) { dropped_.fetch_add(n, std::memory_order_relaxed); }
+    // samples the producer never got (a network radio's connection was down): counted as dropped, and in lostAtSource() as well, so that
+    // the engine can tell them from samples the ring itself had to throw away
+    void noteLost(uint64_t n) { dropped_.fetch_add(n, std::memory_order_relaxed); lost_.fetch_add(n, std::memory_order_relaxed); }
+    uint64_t lostAtSource() const { return lost_.load(std::memory_order_relaxed); }
     void clear() { r_.store(w_.load(std::memory_order_acquire), std::memory_order_release); }
-    void resetDropped() { dropped_.store(0, std::memory_order_relaxed); }
+    void resetDropped() { dropped_.store(0, std::memory_order_relaxed); lost_.store(0, std::memory_order_relaxed); }
 
 private:
     // the ring is a power of two: a copy is at most two pieces (up to the end of the storage, then from its start)
@@ -127,7 +129,7 @@ private:
     std::vector<cf32> buf_;
     size_t mask_;
     std::atomic<size_t> w_{0}, r_{0};
-    std::atomic<uint64_t> dropped_{0};
+    std::atomic<uint64_t> dropped_{0}, lost_{0};
     std::atomic<uint64_t> seq_{0}, offered_{0};
     std::atomic<int64_t> writeNs_{0};
     std::atomic<size_t> lastN_{0};
@@ -169,9 +171,10 @@ public:
     size_t dropBacklog() { return onair_ring_drop_backlog(hdr_); }
     size_t available() const { return onair_ring_available(hdr_); }
     uint64_t dropped() const { return onair_ring_dropped(hdr_); }
-    void noteLost(uint64_t n) { onair_ring_note_lost(hdr_, n); }
+    void noteLost(uint64_t n) { onair_ring_note_lost(hdr_, n); lost_.fetch_add(n, std::memory_order_relaxed); }
+    uint64_t lostAtSource() const { return lost_.load(std::memory_order_relaxed); }
     void clear() { onair_ring_clear(hdr_); }
-    void resetDropped() { onair_ring_reset_dropped(hdr_); }
+    void resetDropped() { onair_ring_reset_dropped(hdr_); lost_.store(0, std::memory_order_relaxed); }
     // the Rust ring has no wake-up: the old short sleep
     bool waitData(size_t minN, std::chrono::microseconds maxWait) {
         if (available() >= (minN < 1 ? 1 : minN) || maxWait.count() <= 0) return available() > 0;
@@ -181,6 +184,7 @@ public:
 
 private:
     std::vector<cf32> buf_;
+    std::atomic<uint64_t> lost_{0};
     alignas(128) uint8_t hdr_[ONAIR_RING_HDR_BYTES];
 };
 #endif

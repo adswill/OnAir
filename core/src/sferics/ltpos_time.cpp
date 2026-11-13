@@ -185,8 +185,8 @@ void PulseTimer::feed(const std::complex<float>* x, size_t n, std::vector<Pulse>
                 sinceMedian_ = 0;
                 std::vector<float> b(blocks_.begin(), blocks_.end());
                 std::nth_element(b.begin(), b.begin() + (long)b.size() / 2, b.end());
-                floorLin_ = b[b.size() / 2];
-                floorOk_ = blocks_.size() >= 300 && floorLin_ > 0;
+                floorLin_ = std::max<double>(b[b.size() / 2], 1e-12);   // digital silence between strikes (an 8-bit source rounds a quiet floor to zero): never lower than -120 dB
+                floorOk_ = blocks_.size() >= 300;
                 wsum_ = 0; for (float f : win_) wsum_ += f;   // keep the running sum exact
             }
         }

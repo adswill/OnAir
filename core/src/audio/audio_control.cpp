@@ -2,6 +2,7 @@
 // detection, NLMS adaptive line enhancer (B. Widrow et al.), FIR Hilbert frequency shifter, Golay(23,12) DCS words.
 #include "dect2/audio/audio_control.h"
 #include "dect2/audio/audio_cleanup.h"
+#include "dect2/tones/tones_proto.h"
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -121,11 +122,9 @@ bool ToneDetector::process(const float* x, int n) {
 
 // ---- DCS -------------------------------------------------------------------------------------------------------------------------------
 uint32_t dcsWord(int octalCode) {
-    const int d2 = (octalCode / 100) & 7, d1 = (octalCode / 10) & 7, d0 = octalCode % 10 & 7;
-    const uint32_t data = (uint32_t)((d2 * 64 + d1 * 8 + d0) & 0x1FF) | (1u << 9);   // 9 code bits, then the marker 1,0,0
-    uint32_t r = data << 11;
-    for (int b = 22; b >= 11; b--) if (r & (1u << b)) r ^= 0xC75u << (b - 11);      // g(x) = x^11+x^10+x^6+x^5+x^4+x^2+1
-    return data | ((r & 0x7FF) << 12);
+    // One table for the whole program (#479): this used to build its own word with the marker bits and the Golay polynomial the wrong
+    // way round, so a transmitted D023N was read as D411N by a real radio. tones::dcsWord matches the radios (023 = 0x763813).
+    return tones::dcsWord(octalCode);
 }
 static int pop23(uint32_t v) { return __builtin_popcount(v & 0x7FFFFF); }
 void DcsDetector::prepare(float rate, int octalCode) {

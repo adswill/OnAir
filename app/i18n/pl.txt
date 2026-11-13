@@ -3,47 +3,26 @@
 # Some entries are machine translations that no native speaker has reviewed yet: they are listed in unreviewed/pl.txt. Corrections are welcome.
 #  menus, status words, common buttons
 1 kHz test tone	Ton testowy 1 kHz
-A P6 PPM is sent as the picture; any other or empty file uses the test picture. The callsign is stamped on it.	P6 PPM jest wysyłany jako obraz; każdy inny lub pusty plik używa obrazu testowego. Znak wywoławczy jest na nim naniesiony.
-A SAME header. ZCZC- is added when missing.	Nagłówek SAME. ZCZC- jest dodawane, gdy go brakuje.
-Aircraft registration	Znak rejestracyjny statku powietrznego
-An RS41 with this serial. Empty: the demo sondes.	RS41 o tym numerze seryjnym. Puste: sondy demonstracyjne.
 Are you sure? This clears all previous data and cannot be undone.	Czy na pewno? To wyczyści wszystkie dotychczasowe dane i nie można tego cofnąć.
-ATSC 3.0 uses a ROUTE / fMP4 demo; a custom MPEG-TS is not the payload path.	ATSC 3.0 używa dema ROUTE / fMP4; własny MPEG-TS nie jest ścieżką danych.
 Audio file	Plik audio
 Audio input	Wejście audio
-AX.25 UI frame. Empty: the demo CubeSat cycle.	Ramka AX.25 UI. Puste: demonstracyjny cykl CubeSata.
 Baud	Baud
 Browse…	Przeglądaj…
-Callsign / my ID	Znak wywoławczy / mój ID
-Capcode	Capcode
 Carrier tune	Strojenie nośnej
 Clear all	Wyczyść wszystko
 Clears all previous data: the decoded lists of every mode (aircraft, ships, messages, pictures and so on), on every open receiver. The saved copy on disk is emptied too.	Czyści wszystkie dotychczasowe dane: listy zdekodowane w każdym trybie (samoloty, statki, wiadomości, obrazy itd.) w każdym otwartym odbiorniku. Zapisana kopia na dysku również zostaje opróżniona.
-Code rate / MODCOD index	Szybkość kodu / indeks MODCOD
-Colour code	Kod koloru
 Comment	Komentarz
 CQ	CQ
-D2-MAC test scene (custom video is not wired into this analogue generator).	Scena testowa D2-MAC (własne wideo nie jest podłączone do tego generatora analogowego).
 DATV (DVB-S/S2 file)	DATV (plik DVB-S/S2)
 Default input	Wejście domyślne
 Destination	Cel
-Destination / ID	Cel / ID
-Destination ID	ID celu
 Device ID	ID urządzenia
 Dial frequency the decoder should assume (the sound card is not tuned)	Częstotliwość dial, którą dekoder ma przyjąć (karta dźwiękowa nie jest strojona)
 DVB standard	Standard DVB
-Empty: the demo 802.15.4 scene.	Puste: demonstracyjna scena 802.15.4.
-Empty: the demo FLARM scene. This ID is not packed into the unpublished newer protocol.	Puste: demonstracyjna scena FLARM. Ten ID nie jest pakowany do niepublikowanego nowszego protokołu.
-Empty: the demo Mode S uplink scene.	Puste: demonstracyjna scena uplinku Mode S.
-Empty: the demo VDES scene.	Puste: demonstracyjna scena VDES.
 File	Plik
-File to send	Plik do wysłania
 Free text	Dowolny tekst
 Gain controls apply to radios only (not to a recording, a sound card, or the synthetic signal)	Regulacja wzmocnienia dotyczy tylko radiostacji (nie nagrania, karty dźwiękowej ani sygnału syntetycznego)
 I/Q stereo	Stereo I/Q
-ICAO address	Adres ICAO
-Image (PNG / PPM)	Obraz (PNG / PPM)
-Image (PPM)	Obraz (PPM)
 Input device	Urządzenie wejściowe
 Latitude	Szerokość geograficzna
 libcodec2 is not loaded: live encode is off. A 1 kHz tone, silence or a WAV/MP3 can still be sent.	libcodec2 nie jest załadowane: kodowanie na żywo jest wyłączone. Nadal można wysłać ton 1 kHz, ciszę lub WAV/MP3.
@@ -55,57 +34,30 @@ LSB audio	Audio LSB
 Message	Wiadomość
 Mic level	Poziom mikrofonu
 Microphone	Mikrofon
-MMSI	MMSI
 Mode	Tryb
-Morse identification, up to four letters.	Identyfikacja Morse'a, do czterech liter.
-NAVTEX sends the text (ZCZC / NNNN are added when missing). DSC (when that service is selected) uses the MMSI.	NAVTEX wysyła tekst (ZCZC / NNNN są dodawane, gdy ich brakuje). DSC (gdy ta usługa jest wybrana) używa MMSI.
 OnAir still asks the radio for it, but the radio or its driver may not reach this frequency, or the signal may be weak or absent.	OnAir nadal o to prosi radio, ale radio lub jego sterownik może nie obsługiwać tej częstotliwości, albo sygnał może być słaby lub nieobecny.
-PAN / short address	PAN / adres krótki
 Path	Ścieżka
-Payload text	Tekst ładunku
-Power (dBm)	Moc (dBm)
-Pre-emphasis	Pre-emfaza
-PSK variant	Wariant PSK
 QO-100 path	Ścieżka QO-100
 Radio ID	ID radia
-Radio text (RT)	Radiotekst (RT)
-RDS PI	RDS PI
 Report	Raport
-Reverse (mark is the upper tone)	Odwrócone (mark to górny ton)
-RFPI	RFPI
-RFPI of the base station.	RFPI stacji bazowej.
 Roll-off	Roll-off
-Satellite standard	Standard satelitarny
 Send analog NFM of the audio instead of the digital test pattern	Wyślij analogowe NFM audio zamiast cyfrowego wzorca testowego
 Send analog NFM of the microphone or a file instead of the test scene	Wyślij analogowe NFM z mikrofonu lub pliku zamiast sceny testowej
-Serial / ID	Numer seryjny / ID
 Shift	Przesunięcie
 Sideband	Wstęga boczna
 Silence	Cisza
 sound card	karta dźwiękowa
 SSB (microphone)	SSB (mikrofon)
-SSTV mode	Tryb SSTV
-Station name (PS)	Nazwa stacji (PS)
-Symbol rate (Hz)	Szybkość symboli (Hz)
 Talkgroup	Grupa rozmówna
-test DJI DroneID scene (custom serial is not packed)	scena testowa DJI DroneID (własny numer seryjny nie jest pakowany)
-test downlink scene (this generator does not take a custom message)	scena testowa downlinku (ten generator nie przyjmuje własnej wiadomości)
-test LRPT/HRIT scene (custom image not wired)	scena testowa LRPT/HRIT (własny obraz niepodłączony)
-test NCDXF-style beacon scene	scena testowa beacona w stylu NCDXF
-test weather-fax chart (custom image not wired)	testowa mapa weather-fax (własny obraz niepodłączony)
 TETRA ACELP is not encoded here. Colour code and IDs are shown; the downlink test pattern is sent. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	TETRA ACELP nie jest tu kodowane. Pokazywane są kod koloru i ID; wysyłany jest wzorzec testowy downlinku. Zamiast tego można wysłać ton 1 kHz, ciszę lub WAV/MP3 jako analogowe NFM.
 Text	Tekst
 The capture rate of the sound card. The engine runs at this rate; there is no radio to tune.	Szybkość przechwytywania karty dźwiękowej. Silnik działa z tą szybkością; nie ma radia do strojenia.
-The file bytes go out as a HamDRM object with this callsign. Empty file: the test picture.	Bajty pliku są nadawane jako obiekt HamDRM z tym znakiem wywoławczym. Pusty plik: obraz testowy.
 The microphone starts only when you press START TRANSMITTING.	Mikrofon włącza się dopiero po naciśnięciu START TRANSMITTING.
-The registration and free-text go on the air as an H1 / ACARS downlink. Empty: the demo traffic.	Rejestracja i dowolny tekst są nadawane jako downlink H1 / ACARS. Puste: ruch demonstracyjny.
 This frequency is outside what this radio is specified for	Ta częstotliwość leży poza zakresem, dla którego to radio jest przewidziane
 this mode has no transmit generator	ten tryb nie ma generatora nadawania
 This vocoder cannot encode: OnAir loads mbelib for decode only (AMBE/IMBE). Destination ID / talkgroup / colour code still go on the air; voice bits are the test pattern. A 1 kHz tone, silence or a WAV/MP3 can be sent as analog NFM instead.	Ten vocoder nie potrafi kodować: OnAir ładuje mbelib tylko do dekodowania (AMBE/IMBE). ID celu / grupa rozmówna / kod koloru nadal są nadawane; bity głosu to wzorzec testowy. Zamiast tego można wysłać ton 1 kHz, ciszę lub WAV/MP3 jako analogowe NFM.
-Timeslot	Szczelina czasowa
 To	To
 USB audio	Audio USB
-Vessel name	Nazwa jednostki
 View	Widok
 Help	Pomoc
 Language	Język
@@ -146,8 +98,6 @@ State	Stan
 Channel	Kanał
 Delay	Opóźnienie
 dropped	utracone
-level %.1f dBFS	poziom %.1f dBFS
-load %.0f%%	obciążenie %.0f%%
 FM: no station	FM: brak stacji
 %s  SNR %.0f dB  %d services	%s  SNR %.0f dB  usług: %d
 OK	OK
@@ -492,9 +442,7 @@ Satellite	Satelita
 Max el	Maks. elew.
 Duration	Czas trwania
 Frequency	Częstotliwość
-AOS in %d:%02d:%02d	AOS za %d:%02d:%02d
 %s - %s, max %.0f deg	%s - %s, maks. %.0f st.
-az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz	az %.0f  el %.0f  %.0f km\nDoppler %+.0f Hz
 Track	Śledź
 Auto start at AOS, stop at LOS	Automatyczny start przy AOS, stop przy LOS
 Auto record IQ	Automatyczne nagrywanie IQ
@@ -990,7 +938,6 @@ Frequency (MHz)	Częstotliwość (MHz)
 +14 dB amplifier	Wzmacniacz +14 dB
 Repeat until stopped	Powtarzaj do zatrzymania
 seconds	sekund
-START TRANSMITTING	ROZPOCZNIJ NADAWANIE
 This radio has no transmit driver in OnAir.	To radio nie ma sterownika nadawania w OnAir.
 Before you transmit	Zanim zaczniesz nadawać
 Transmitting needs a licence or permission where you are. You are responsible for what you emit and for not interfering with others (including services that people rely on for safety). Connect an antenna, an attenuator or a dummy load to the radio before you start. OnAir does not limit the frequency or the power: the radio's own limits are the only ones.	Nadawanie wymaga licencji lub zezwolenia tam, gdzie jesteś. Odpowiadasz za to, co emitujesz, i za niezakłócanie innych (w tym usług, na których ludzie polegają dla bezpieczeństwa). Przed startem podłącz do radia antenę, tłumik lub sztuczne obciążenie. OnAir nie ogranicza ani częstotliwości, ani mocy: obowiązują tylko granice samego radia.
@@ -1145,10 +1092,8 @@ Sample rate	Częstotliwość próbkowania
 Search signals...	Szukaj sygnałów...
 Settings	Ustawienia
 Signal	Sygnał
-Space = start / stop     Esc = stop	Spacja = start / stop     Esc = stop
 Stops the transmission or test, the carrier and any pending start, and gives the radio back.	Zatrzymuje nadawanie lub test, nośną i oczekujący start oraz zwalnia radio.
 TEST - NO RF	TEST - BEZ RF
-Test (dry run, no RF)	Test (na sucho, bez RF)
 Test (no RF)	Test (bez RF)
 Test: the IQ the radio would get	Test: IQ, które dostałoby radio
 The IQ going to the radio	IQ wysyłane do radia
@@ -1157,8 +1102,6 @@ The transmit panel is in its own window.	Panel nadawania jest we własnym oknie.
 This is added to the frequency sent to the radio, for a radio that radiates off frequency.	Dodawane do częstotliwości wysyłanej do radia, dla radia, które nadaje obok częstotliwości.
 TX channel	Kanał TX
 Transmit	Nadawanie
-Transmitting	Nadawanie
-Unmodulated carrier at this frequency and level, for adjusting the transmission (drive, filter, SWR, dummy-load level), not a message. Hold the button. Stop still applies. Not saved as transmitting.	Niemodulowana nośna na tej częstotliwości i poziomie, do regulacji nadawania (wysterowanie, filtr, WFS, poziom na sztucznym obciążeniu), nie wiadomość. Przytrzymaj przycisk. Stop nadal działa. Nie zapisuje się jako nadawanie.
 What will be sent (preview)	Co zostanie nadane (podgląd)
 at full scale: the limiter will round the peaks	pełna skala: limiter zaokrągli szczyty
 making the preview...	tworzenie podglądu...
@@ -2750,121 +2693,38 @@ decoder locked: gain frozen	dekoder zsynchronizowany: wzmocnienie zamrożone
 at the end of the gain range	na końcu zakresu wzmocnienia
 holding the level	poziom utrzymany
 # transmit panel: top bar, Basic / Advanced, per-signal parameters
-0 is the normal suppressed carrier. A little carrier helps a receiver lock on; the top of the range is as strong as the loudest audio.	0 to zwykła stłumiona fala nośna. Odrobina nośnej pomaga odbiornikowi się zsynchronizować; górny kraniec zakresu jest tak mocny jak najgłośniejszy dźwięk.
-A second tone added to the first (0 = off). Two tones make a two-tone linearity test.	Drugi ton dodany do pierwszego (0 = wyłączony). Dwa tony tworzą dwutonowy test liniowości.
-AM (carrier and sidebands)	AM (nośna i wstęgi boczne)
-AM sends the carrier and both sidebands. Double sideband with suppressed carrier sends only the sidebands.	AM nadaje falę nośną i obie wstęgi boczne. Dwuwstęgowa z tłumioną nośną nadaje tylko wstęgi boczne.
-Audio above this level is turned down.	Dźwięk powyżej tego poziomu jest ściszany.
-Audio frequency	Częstotliwość audio
-Boosts the high notes before sending (0 = off).	Podbija wysokie tony przed nadaniem (0 = wyłączone).
-Boosts the high notes before sending. 50 µs in Europe and most of the world, 75 µs in the Americas.	Podbija wysokie tony przed nadaniem. 50 µs w Europie i większości świata, 75 µs w obu Amerykach.
 CTCSS tone	Ton CTCSS
-Carrier injection	Wstrzyknięcie nośnej
-Carrier level	Poziom nośnej
-Choose a radio below, or switch on the test (no RF).	Wybierz poniżej radio lub włącz test (bez RF).
 Choose a signal in the list.	Wybierz sygnał z listy.
-Cuts the audio above this pitch, which sets how wide the signal is (0 = off).	Obcina dźwięk powyżej tej częstotliwości, co określa szerokość sygnału (0 = wyłączone).
-DSB (suppressed carrier)	DSB (tłumiona nośna)
 Default: %s	Domyślnie: %s
 Deviation	Dewiacja
-Esc = stop	Esc = stop
-Evens out loud and quiet speech so the signal stays strong without over-modulating.	Wyrównuje głośną i cichą mowę, aby sygnał pozostał mocny bez przemodulowania.
 Every setting of this signal: modulation, audio, filters, output and timing. The defaults are sensible; open this only to change them.	Wszystkie ustawienia tego sygnału: modulacja, dźwięk, filtry, wyjście i czas. Wartości domyślne są rozsądne; otwórz to tylko, by je zmienić.
-Filters	Filtry
 Follow the receiver	Podążaj za odbiornikiem
 Frequency offset	Przesunięcie częstotliwości
-Gain added after the compressor.	Wzmocnienie dodawane po kompresorze.
-Gain applied to the whole signal just before the radio. Lower it when the meter shows clipping; the radio's own gain is set above.	Wzmocnienie całego sygnału tuż przed radiem. Zmniejsz je, gdy miernik pokazuje obcinanie; własne wzmocnienie radia ustawia się wyżej.
 HOLD TO TRANSMIT	PRZYTRZYMAJ, ABY NADAWAĆ
-High-pass (low cut)	Górnoprzepustowy (odcięcie basów)
-How far the RDS subcarrier deviates the carrier.	O ile podnośna RDS odchyla nośną.
-How far the audio swings the frequency. 2.5 kHz is a 12.5 kHz channel, 5 kHz a 25 kHz channel.	O ile dźwięk zmienia częstotliwość. 2,5 kHz to kanał 12,5 kHz, 5 kHz to kanał 25 kHz.
-How far the audio swings the frequency. Broadcast FM uses 75 kHz.	O ile dźwięk zmienia częstotliwość. Radiofonia FM używa 75 kHz.
-How far the audio swings the signal. Full modulation is at 100 percent; more than that over-modulates and distorts.	Jak mocno dźwięk moduluje sygnał. Pełna modulacja to 100 procent; więcej powoduje przemodulowanie i zniekształcenia.
-How fast the compressor lets go after a loud passage.	Jak szybko kompresor się zwalnia po głośnym fragmencie.
-How long the VOX stays open after the sound stops.	Jak długo VOX pozostaje otwarty po ustaniu dźwięku.
-How loud the audio must be to open the VOX.	Jak głośny musi być dźwięk, by otworzyć VOX.
-How loud the test tone is, as a share of full audio.	Jak głośny jest ton testowy, jako część pełnego poziomu dźwięku.
-How strongly audio above the threshold is turned down; 20 is close to a hard limiter.	Jak mocno ściszany jest dźwięk powyżej progu; 20 jest bliskie twardemu limiterowi.
-Key-up fade-in	Narastanie po włączeniu nadawania
-Left level	Poziom lewy
-Left test tone	Ton testowy lewy
-Low-pass (audio bandwidth)	Dolnoprzepustowy (pasmo audio)
-Lower sideband (LSB)	Dolna wstęga boczna (LSB)
-Make-up gain	Wzmocnienie wyrównawcze
-Mirror the spectrum	Odbij widmo
-Modulation depth	Głębokość modulacji
 Music (not speech)	Muzyka (nie mowa)
 Name for a new preset	Nazwa nowego ustawienia
 No presets saved for this signal yet.	Nie zapisano jeszcze ustawień dla tego sygnału.
 Output	Wyjście
 Output level	Poziom wyjściowy
-Output trim	Korekta wyjścia
-Peak level	Poziom szczytowy
-Pilot level	Poziom pilota
-Pitch	Wysokość tonu
 Presets	Ustawienia zapisane
 Preview	Podgląd
-Programme type	Typ programu
 Push to talk (hold the button)	Push to talk (przytrzymaj przycisk)
-RDS	RDS
-RDS level	Poziom RDS
-RF level	Poziom RF
 RX %.6f MHz	RX %.6f MHz
-Ratio	Stosunek
-Release	Zwolnienie
-Removes rumble and hum below this pitch (0 = off).	Usuwa dudnienie i brum poniżej tej częstotliwości (0 = wyłączone).
 Reset to default	Przywróć domyślne
-Right level	Poziom prawy
-Right test tone	Ton testowy prawy
-Runs the signal generator at the radio's sample rate into nothing: no radio is opened and nothing is sent. The spectrum and levels show what would go out.	Uruchamia generator sygnału z częstotliwością próbkowania radia w próżnię: żadne radio nie jest otwierane i nic nie jest nadawane. Widmo i poziomy pokazują, co by wyszło.
 Save preset	Zapisz ustawienie
 Saves the settings below, the frequency and the level under this name.	Zapisuje poniższe ustawienia, częstotliwość i poziom pod tą nazwą.
-Second test tone	Drugi ton testowy
-Sends the 19 kHz pilot and the stereo difference signal.	Nadaje pilota 19 kHz i sygnał różnicowy stereo.
-Sends the station name, radio text and programme type on a 57 kHz subcarrier.	Nadaje nazwę stacji, tekst radiowy i typ programu na podnośnej 57 kHz.
-Speech compressor	Kompresor mowy
 Start transmitting	Rozpocznij nadawanie
 Stereo	Stereo
 Stop transmitting	Zatrzymaj nadawanie
-Swaps I and Q so the signal is turned over: an upper sideband becomes a lower one. For a radio or mixer that inverts.	Zamienia I i Q, więc sygnał zostaje odwrócony: górna wstęga boczna staje się dolną. Dla radia lub miksera, który odwraca.
 TRANSMITTING (release to stop)	NADAJE (puść, aby zatrzymać)
 TX = RX	TX = RX
 TX independent	TX niezależny
-Test tone	Ton testowy
-Test tone level	Poziom tonu testowego
-The 19 kHz stereo pilot, as a share of the full deviation.	Pilot stereo 19 kHz jako część pełnej dewiacji.
-The RDS flag for a station that carries traffic announcements.	Flaga RDS dla stacji nadającej komunikaty drogowe.
-The RDS flag for music instead of speech.	Flaga RDS oznaczająca muzykę zamiast mowy.
-The RDS flag that a traffic announcement is on the air.	Flaga RDS informująca, że trwa komunikat drogowy.
-The RDS programme type code (0 to 31; 10 is pop music).	Kod typu programu RDS (od 0 do 31; 10 to muzyka pop).
-The largest signal as a share of full scale.	Największy sygnał jako część pełnej skali.
-The left test tone, as a share of full audio.	Lewy ton testowy jako część pełnego poziomu dźwięku.
-The pitch of the Morse tone, as an offset above the dial frequency.	Wysokość tonu Morse'a jako przesunięcie powyżej częstotliwości strojenia.
-The pitch of the test tone, used when the audio input is the test tone.	Wysokość tonu testowego, używana, gdy wejściem audio jest ton testowy.
-The pitch on the left channel, used when the audio input is the test tone.	Wysokość tonu w lewym kanale, używana, gdy wejściem audio jest ton testowy.
-The pitch on the right channel (0 = three times the left).	Wysokość tonu w prawym kanale (0 = trzykrotność lewego).
 The radio's output level. Start low.	Poziom wyjściowy radia. Zacznij od niskiego.
-The right test tone, as a share of full audio.	Prawy ton testowy jako część pełnego poziomu dźwięku.
-The signal fades in over this time after Start, so the key-up does not click.	Po starcie sygnał narasta przez ten czas, aby włączenie nie trzaskało.
-The signal goes out only while there is sound on the audio input.	Sygnał jest nadawany tylko wtedy, gdy na wejściu audio jest dźwięk.
-The signal goes out only while you hold the button down.	Sygnał jest nadawany tylko wtedy, gdy trzymasz wciśnięty przycisk.
-The size of the carrier as a share of full scale. At a depth of 85 percent the peaks reach about full scale.	Wielkość nośnej jako część pełnej skali. Przy głębokości 85 procent szczyty sięgają prawie pełnej skali.
-The size of the signal as a share of full scale.	Wielkość sygnału jako część pełnej skali.
 The transmit frequency follows the receiver's. Typing a different one here unlinks them. Click to unlink.	Częstotliwość nadawania podąża za odbiornikiem. Wpisanie tu innej rozłącza je. Kliknij, aby rozłączyć.
 The transmit frequency is its own. The receiver is on %.6f MHz. Click to make the transmitter follow it.	Częstotliwość nadawania jest niezależna. Odbiornik jest na %.6f MHz. Kliknij, aby nadajnik za nim podążał.
 Threshold	Próg
 Timing	Czas
-Traffic announcement now	Komunikat drogowy teraz
-Traffic programme	Program drogowy
-Upper sideband (USB)	Górna wstęga boczna (USB)
-VOX (transmit on voice)	VOX (nadawanie na głos)
-VOX hang time	Czas podtrzymania VOX
-VOX threshold	Próg VOX
 Well-known frequencies of this signal: pick one to set the transmit frequency	Znane częstotliwości tego sygnału: wybierz jedną, aby ustawić częstotliwość nadawania
-Where the middle of the signal sits in the audio passband, as an offset above the dial frequency.	Gdzie w paśmie audio leży środek sygnału, jako przesunięcie powyżej częstotliwości strojenia.
-Where the signal sits in the audio passband, as an offset above the dial frequency.	Gdzie w paśmie audio leży sygnał, jako przesunięcie powyżej częstotliwości strojenia.
-Which sideband is sent.	Która wstęga boczna jest nadawana.
 follows the receiver	podąża za odbiornikiem
 on	włączone
 # full screen on every map

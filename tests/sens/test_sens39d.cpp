@@ -31,7 +31,7 @@ const Row kRows[] = {
     {"fusion39", 8, 8, false},
     {"orbcomm", 7, 7, false},
     {"inmc", 0, 0, false},
-    {"pocsag", -1, 1, false},
+    {"pocsag", -3, 1, false},   // 4.0: -1 -> -3 dB (tone-energy symbols, tone-checked sync search; docs/SENSITIVITY-4.0-B.md)
     {"flex", 5, 4, false},
     {"cw", 4, 4, false},
     {"dvbs1", 4, 4, false},

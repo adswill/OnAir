@@ -286,7 +286,7 @@ bool cirDenoiseChannel(int N, int noc, int D, int k0, const std::vector<cf32>& e
     return true;
 }
 
-bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf32* x, std::vector<cf32>& cells, float* noiseVar) {
+bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf32* x, std::vector<cf32>& cells, float* noiseVar, std::vector<float>* weights) {
     Plan pl;
     makePlan(p, cred, pl);
     const int N = p.fftSize, G = p.guard;
@@ -326,8 +326,11 @@ bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf
     }
     double nv = 0; int nn = 0;
     std::vector<cf32> a;   // equalised data cells in carrier order
+    std::vector<float> aw;
+    double hmw = 0;
+    if (weights) { for (auto& c : hch) hmw += std::norm(c); hmw /= std::max(1, pl.noc); }
     for (int k = 0; k < pl.noc; k++)
-        if (pl.kind[k] == 0) a.push_back(y[k] / hch[k]);
+        if (pl.kind[k] == 0) { a.push_back(y[k] / hch[k]); if (weights) aw.push_back(hmw > 0 ? std::min(8.f, (float)(std::norm(hch[k]) / hmw)) : 1.f); }
     // the cells are scaled like the pilots were: the transmitter normalised the whole symbol, so undo that with the pilot reference
     // (the channel estimate above already contains the normalisation, so `a` is on the scale of the transmitted constellation)
     for (size_t i = 0; i + 1 < pk.size(); i++) {   // noise from the difference of neighbouring pilot estimates
@@ -338,6 +341,13 @@ bool demodulatePreambleSymbol(const PreambleParams& p, int cred, int l, const cf
     cells.assign(nd, cf32(0, 0));
     if (N == 32768 && (l % 2) == 0) { for (int q = 0; q < nd; q++) cells[q] = a[h[q]]; }
     else { for (int q = 0; q < nd; q++) cells[h[q]] = a[q]; }
+    if (weights) {
+        weights->assign((size_t)nd, 1.f);
+        if (aw.size() >= (size_t)nd) {
+            if (N == 32768 && (l % 2) == 0) { for (int q = 0; q < nd; q++) (*weights)[(size_t)q] = aw[(size_t)h[q]]; }
+            else { for (int q = 0; q < nd; q++) (*weights)[(size_t)h[q]] = aw[(size_t)q]; }
+        }
+    }
     if (noiseVar) {
         // pilot estimates have noise |N|^2 / |pilot|^2 each; the data cells are noisier by about the pilot-to-data power ratio
         double ap2 = std::pow(preamblePilotAmplitude(p), 2);

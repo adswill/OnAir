@@ -66,7 +66,7 @@ struct Halves {
 
 }  // namespace
 
-bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out) {
+static bool demodCore(const std::vector<cf32>& x, DemodResult& out, long hintStart, bool forceLow, bool legacy) {
     out = DemodResult();
     const size_t n = x.size();
     if (n < (size_t)(kFs * 0.3)) return false;
@@ -77,17 +77,35 @@ bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out) {
     // the burst's extent from its power (1 ms windows)
     const size_t W = 32;
     std::vector<double> env(n / W);
-    for (size_t k = 0; k < env.size(); k++) { double s = 0; for (size_t i = k * W; i < (k + 1) * W; i++) s += std::norm(x[i]); env[k] = s / W; }
+    // 4.0: the carrier is at 0 Hz here, so a 1 ms window is summed coherently (|sum|^2 / W): the noise power per window stays that of one sample while
+    // the carrier grows with W, which is 15 dB more contrast than the mean power of the 32 kHz stream (the old gate lost bursts below about 5 dB in 32 kHz)
+    if (legacy) for (size_t k = 0; k < env.size(); k++) { double s = 0; for (size_t i = k * W; i < (k + 1) * W; i++) s += std::norm(x[i]); env[k] = s / W; }
+    else for (size_t k = 0; k < env.size(); k++) env[k] = std::norm(h.P[(k + 1) * W] - h.P[k * W]) / (double)W;
+    // 4 windows are averaged (a chi-square of 8 degrees of freedom in noise); the 5th percentile of that is 0.37 of the noise mean
+    if (!legacy) {
+        std::vector<double> sm(env.size());
+        for (size_t k = 0; k < env.size(); k++) { double a = 0; int c = 0; for (long j = (long)k - 1; j <= (long)k + 2; j++) if (j >= 0 && j < (long)env.size()) { a += env[(size_t)j]; c++; } sm[k] = a / c; }
+        env = sm;
+    }
     std::vector<double> srt = env;
     std::sort(srt.begin(), srt.end());
-    const double ref = srt[srt.size() * 7 / 10], floorP = srt[srt.size() / 20];
-    if (ref < 4 * floorP) return false;
-    const double gate = floorP + 0.3 * (ref - floorP);
-    size_t s0 = 0, s1 = env.size();
-    while (s0 < env.size() && env[s0] < gate) s0++;
-    while (s1 > s0 && env[s1 - 1] < gate) s1--;
-    if (s1 <= s0 + 10) return false;
-    const double start = (double)(s0 * W), end = (double)(s1 * W);
+    const double ref = srt[srt.size() * 7 / 10], floorP = srt[srt.size() / 20] / (legacy ? 1.0 : 0.37);
+    // 4.0: where the power gate cannot see the burst (the carrier is less than 4 x the noise in a 1 ms window: below about 3 dB in 5 kHz) the extent comes
+    // from the receiver's line detector (hintStart), the message runs to the end of x and its length is the one of the 8 whose bits fit best
+    bool lowSnr = false;
+    double start = 0, end = (double)n;
+    if (forceLow || ref < 4 * floorP) {
+        if (hintStart < 0) return false;
+        lowSnr = true;
+        start = (double)hintStart;
+    } else {
+        const double gate = floorP + 0.3 * (ref - floorP);
+        size_t s0 = 0, s1 = env.size();
+        while (s0 < env.size() && env[s0] < gate) s0++;
+        while (s1 > s0 && env[s1 - 1] < gate) s1--;
+        if (s1 <= s0 + 10) return false;
+        start = (double)(s0 * W); end = (double)(s1 * W);
+    }
     // the carrier section: 2.5 ms sums keep their size while the carrier is bare; Manchester (or any) modulation shrinks them
     {
         const size_t B = 80;
@@ -119,7 +137,7 @@ bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out) {
     if (bestS <= -1e8) { out.kind = out.carrierMs >= 100 ? 2 : 0; return false; }
     // the bit rate over the whole message: 24 bits cannot tell +-0.25 % apart, 300 bits can (a quarter of a bit at the end)
     {
-        const int nb = (int)((end - bestT) / bestSpb) - 1;
+        const int nb = std::min(lowSnr ? kMinBits + 32 : 1000000, (int)((end - bestT) / bestSpb) - 1);
         if (nb > 24) {
             double bs = -1e9, bt = bestT, bp = bestSpb;
             for (int ri = -12; ri <= 12; ri++) {
@@ -133,6 +151,32 @@ bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out) {
             }
             bestT = bt; bestSpb = bp;
         }
+    }
+    if (lowSnr) {
+        // every bit to the end of x; the length is where the running sum of (closeness - 0.75) peaks over the lengths that exist: bits of noise score about
+        // 0.51 and pull it down, bits of the message about 0.7 to 1
+        std::vector<uint8_t> all;
+        std::vector<double> cs;
+        for (double b0 = bestT; b0 + bestSpb <= (double)n; b0 += bestSpb) {
+            double a, m;
+            if (!h.step(b0, bestSpb, a, m)) break;
+            all.push_back(a > 0 ? 1 : 0);
+            cs.push_back(closeness(a));
+        }
+        double run = 0, bestRun = -1e9, qSum = 0, qBest = 0;
+        int L = 0;
+        for (size_t k = 0; k < cs.size(); k++) {
+            run += cs[k] - 0.75; qSum += cs[k];
+            const int cnt = (int)k + 1;
+            if (cnt >= kMinBits && cnt <= kMaxBits && (cnt - kMinBits) % 32 == 0 && run > bestRun) { bestRun = run; L = cnt; qBest = qSum / cnt; }
+        }
+        if (L == 0 || qBest < 0.72) return false;
+        all.resize((size_t)L);
+        out.kind = 1;
+        out.carrierMs = (float)((bestT - start) / kFs * 1000.0);
+        out.quality = (float)qBest;
+        out.bits = all;
+        return true;
     }
     // the bits, to the end of the burst
     std::vector<uint8_t> bits;
@@ -157,6 +201,15 @@ bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out) {
     return false;
 }
 
+bool demodUplinkBurst(const std::vector<cf32>& x, DemodResult& out, long hintStart, bool legacy) {
+    DemodResult r;
+    if (demodCore(x, r, hintStart, false, legacy)) { out = r; return true; }
+    DemodResult r2;
+    if (!legacy && hintStart >= 0 && demodCore(x, r2, hintStart, true, false)) { out = r2; return true; }
+    out = r;
+    return false;
+}
+
 }  // namespace argos
 
 struct ArgosReceiver::Impl {
@@ -166,6 +219,7 @@ struct ArgosReceiver::Impl {
     double fs = 0, offHz = 0, dialHz = 0;
     int linkSet = 0, link = 0;
     bool rateSet = false;
+    bool lowSnr = true;   // the 4.0 weak-signal path (docs/SENSITIVITY-4.0-B2.md); false: the 3.9 receiver
 
     // mixer and the average down to 128 kHz
     static constexpr double kDet = 128000.0;
@@ -184,6 +238,8 @@ struct ArgosReceiver::Impl {
     int warm = 0;
     bool active = false;
     int miss = 0, dets = 0;
+    static constexpr float kWeakLine = 8.f;
+    int candRun = 0; size_t candPk = 0; uint64_t candStart = 0; std::vector<double> candPeaks;
     uint64_t firstBlockStart = 0;
     std::vector<double> peaks;
     float peakSnr = -200, peakLevel = -200;
@@ -233,7 +289,7 @@ struct ArgosReceiver::Impl {
         binEnd = fs > 0 ? fs / kDet : 0;
         n128 = 0;
         std::fill(bg.begin(), bg.end(), 0.f);
-        warm = 0; active = false; miss = 0; dets = 0; peaks.clear();
+        warm = 0; active = false; miss = 0; dets = 0; peaks.clear(); candRun = 0;
         lastDecodeSec = -1e9; lastPublish = 0;
         haveHalf = false; n64 = 0; unlock();
         for (auto& d : dfr) d = argos::HdlcDeframer();
@@ -305,7 +361,7 @@ struct ArgosReceiver::Impl {
                 }
             }
             argos::DemodResult r;
-            const bool got = argos::demodUplinkBurst(y, r);
+            const bool got = argos::demodUplinkBurst(y, r, lowSnr ? (long)((firstBlockStart - from) / 4) : -1L, !lowSnr);
             ArgosBurst e;
             e.wallTime = (int64_t)std::time(nullptr);
             e.timeSec = (double)from / kDet;
@@ -364,7 +420,20 @@ struct ArgosReceiver::Impl {
         size_t pk = 0;
         float pmax = 0;
         for (size_t k = 0; k < kBlock; k++) if (allowed(k) && p[k] > pmax && p[k] > 6.f * bg[k]) { pmax = p[k]; pk = k; }
-        const bool det = warm >= 12 && pmax >= 30.f * med;
+        // 4.0: a weaker line (12 x the median bin) counts when the same bin (+-2) holds one in 3 blocks in a row; one block alone needs 30 x as before
+        const bool strong = warm >= 12 && pmax >= 30.f * med;
+        bool det = strong;
+        if (!strong && lowSnr && warm >= 12 && pmax >= kWeakLine * med) {
+            const long dk = std::labs((long)pk - (long)candPk), wrap = (long)kBlock - dk;
+            if (candRun > 0 && std::min(dk, wrap) <= 2) candRun++; else { candRun = 1; candStart = base; candPeaks.clear(); }
+            candPk = pk;
+            candPeaks.push_back(0);   // the frequency is filled in below
+            bool nearBurst = false;
+            if (active && !peaks.empty()) { const double db = std::fabs((double)(pk < kBlock / 2 ? (long)pk : (long)pk - (long)kBlock) - peaks.back() / kDet * (double)kBlock); nearBurst = db <= 3.0; }
+            if (candRun >= 3 || nearBurst) det = true;
+        } else if (!strong) {
+            candRun = 0;
+        }
         float snr = -200;
         double f = 0;
         if (det) {
@@ -377,6 +446,9 @@ struct ArgosReceiver::Impl {
             const float nm = med / 0.6931f;
             const float s3 = p[a] + p[pk] + p[c];
             snr = 10.f * std::log10(std::max(1e-3f, (s3 - 3 * nm) / (1.5f * nm)));
+        }
+        if (det && !strong && candRun >= 3) {   // the earlier blocks of the run belong to the burst
+            if (!active) { active = true; firstBlockStart = candStart; miss = 0; dets = (int)candRun - 1; peakSnr = -200; peakLevel = -200; peaks.clear(); for (int i = 0; i < candRun - 1; i++) peaks.push_back(f); }
         }
         if (det) {
             if (!active) { active = true; firstBlockStart = base; miss = 0; dets = 0; peakSnr = -200; peakLevel = -200; peaks.clear(); }
@@ -599,6 +671,10 @@ void ArgosReceiver::setLink(int l) {
     p_->linkSet = std::max(0, std::min(2, l));
     p_->chooseLink();
     p_->tel.seq++;
+}
+void ArgosReceiver::setWeakSignalPath(bool on) {
+    std::lock_guard<std::mutex> lk(p_->mu);
+    p_->lowSnr = on;
 }
 bool ArgosReceiver::ready() const {
     std::lock_guard<std::mutex> lk(p_->mu);

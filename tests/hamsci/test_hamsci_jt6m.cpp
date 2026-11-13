@@ -95,6 +95,18 @@ int main() {
             CHECK(!jt6mDecodeBlock(cw.data(), cw.size(), kFs, b), "a carrier at %.0f Hz decoded as '%s'", f, b.pings.empty() ? "" : b.pings[0].text.c_str());
         }
     }
+    // 5b. many noise-only runs of 32 s (the QA sweep's length): the best of the ~900 sync hypotheses must not give a ping (3.9 gave one in six runs)
+    {
+        int falsePings = 0;
+        for (uint32_t seed = 100; seed < 150; seed++) {
+            auto stream = noiseOnly((size_t)(32 * kFs), 0.1, seed);
+            Jt6mDecoder d(kFs);
+            for (size_t i = 0; i < stream.size(); i += 2048) d.feed(stream.data() + i, std::min<size_t>(2048, stream.size() - i));
+            d.flush();
+            if (!d.take().empty()) falsePings++;
+        }
+        CHECK(falsePings == 0, "%d of 50 noise runs of 32 s gave a ping", falsePings);
+    }
     // 6. other sample rates
     for (double fs : {8000.0, 11025.0, 24000.0, 48000.0}) {
         auto x = jt6mGenerate(msg, fs, 3.0, 30.0);

@@ -8,6 +8,7 @@
 #include "mode_visibility.h"
 #include "scale.h"
 #include <cstring>
+#include "input_map.h"
 
 namespace {
 
@@ -138,7 +139,7 @@ void modePickerButton(App& a, const char* id) {
 void modePicker(App& a) {
     ImGuiIO& io = ImGui::GetIO();
     modeInfoFill();
-    if (!S.open && !S.want && ImGui::IsKeyPressed(ImGuiKey_M, false) && !io.WantTextInput && !io.KeyCtrl && !io.KeySuper && !io.KeyAlt && !io.KeyShift
+    if (!S.open && !S.want && inputmap::pressed(inputmap::Action::ModePicker)
         && !ImGui::IsPopupOpen(nullptr, ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel))
     { S.want = true; io.InputQueueCharacters.resize(0); }   // the M that opened it must not land in the search box
     {   // dev/test only: DECT2_MODEPICK="tab=3,group=2,q=adsb,hidden=1,tags=2" opens the window on frame 3 of a hidden --shot run

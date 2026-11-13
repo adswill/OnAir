@@ -10,6 +10,7 @@ import io.github.adswill.onair.R
 import io.github.adswill.onair.OnAirNative
 import io.github.adswill.onair.diag.AppLog
 import io.github.adswill.onair.diag.CrashLog
+import io.github.adswill.onair.engine.CodecStatus
 import io.github.adswill.onair.engine.ReceiverEngine
 import io.github.adswill.onair.model.DeviceCaps
 import io.github.adswill.onair.model.Demod
@@ -209,6 +210,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
             val dir = ctx.filesDir.absolutePath + "/results"
             val (table, version) = engine.call("init") { core -> check(core.init(dir)) { "nativeInit returned false" }; core.modeTable() to core.version() }
             engine.ready = true
+            refreshCodecs()
             _state.update { it.copy(initialised = true, modeTable = table, coreVersion = version) }
             AppLog.i("engine", "core $version, ${table.byStd.size} modes, ${table.bySub.size} protocols")
         } catch (e: Throwable) {
@@ -217,7 +219,7 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
         }
         if (CrashLog.hasUnseen(ctx)) _state.update { it.copy(error = ctx.getString(R.string.previous_crash, CrashLog.file(ctx).absolutePath)) }
         val saved = s.modeIndex
-        val idx = if (saved in Modes.all.indices && !Modes.all[saved].removed) saved else Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)
+        val idx = Modes.live(saved).takeIf { it >= 0 } ?: Modes.all.indexOfFirst { it.family == 5 }.coerceAtLeast(0)   // a removed type row opens its receiver
         applyMode(idx)
         radios.start()
         refreshCaps(s)
@@ -448,6 +450,53 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
     }
 
     /** A recording chosen with the system picker (no storage permission): the fd stays open until the next pick. */
+    // ---- user-installed codec add-ons (docs/CODECS.md; #463: CDR sound needs the DRA+ add-on) ---------------------------------
+    private val _codecs = MutableStateFlow(CodecStatus.none)
+    /** The DRA+ add-on as the core sees it after the last look. */
+    val codecs: StateFlow<CodecStatus> = _codecs.asStateFlow()
+    /** The app's own codecs folder: add-ons the user imported are copied here (the phone's shared storage cannot hold code that runs). */
+    fun codecDir(): File = File(ctx.filesDir, "codecs")
+
+    private fun refreshCodecs() {
+        if (!engine.ready) return
+        val dir = codecDir().apply { mkdirs() }.absolutePath
+        engine.post("codecs") { core ->
+            val st = core.codecs(dir)
+            _codecs.value = st
+            AppLog.i("app", when {
+                st.found -> "DRA+ add-on loaded: ${st.path}"
+                st.problem.isNotEmpty() -> "DRA+ add-on cannot be used: ${st.problem}"
+                else -> "DRA+ add-on not installed (CDR sound stays silent; Import it on the CDR panel)"
+            })
+        }
+    }
+
+    /** Copies a codec add-on the user picked (a .so built for arm64) into [codecDir] under the name the core looks for, then looks again. */
+    fun importCodec(uri: Uri) {
+        scope.launch {
+            try {
+                val cr = ctx.contentResolver
+                val name = cr.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { c -> if (c.moveToFirst()) c.getString(0) else null } ?: ""
+                if (name.isNotEmpty() && !name.endsWith(".so")) AppLog.w("app", "codec file $name does not end in .so; trying it anyway")
+                val dest = File(codecDir().apply { mkdirs() }, DRA_FILE)
+                val tmp = File(dest.parentFile, "$DRA_FILE.part")
+                cr.openInputStream(uri)?.use { input -> tmp.outputStream().use { input.copyTo(it) } } ?: error("the file could not be opened")
+                if (!tmp.renameTo(dest)) { tmp.copyTo(dest, overwrite = true); tmp.delete() }
+                AppLog.i("app", "codec add-on imported as ${dest.absolutePath} (${dest.length()} bytes)")
+                refreshCodecs()
+            } catch (e: Exception) {
+                AppLog.e("app", "codec import failed", e)
+                _state.update { it.copy(error = ctx.getString(R.string.cdr_import_failed, e.message ?: e.javaClass.simpleName)) }
+            }
+        }
+    }
+
+    /** Removes the imported DRA+ add-on. The library stays loaded until the app restarts (Android cannot unload it safely). */
+    fun removeCodec() { File(codecDir(), DRA_FILE).delete(); refreshCodecs() }
+
+    /** CDR: the service whose sound plays; -1 the first audio service. */
+    fun cdrListen(serviceId: Int) { if (engine.ready) engine.post("cdrListen") { it.cdrListen(serviceId) } }
+
     fun openFile(uri: Uri) {
         try {
             val cr = ctx.contentResolver
@@ -470,4 +519,6 @@ class ReceiverRepository(private val ctx: Context, private val store: SettingsSt
             _state.update { it.copy(error = ctx.getString(R.string.file_open_failed)) }
         }
     }
+
+    private companion object { const val DRA_FILE = "libonair_dra.so" }
 }

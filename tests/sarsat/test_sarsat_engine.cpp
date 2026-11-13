@@ -16,9 +16,10 @@
 #include <thread>
 using namespace dect2;
 #include "../common/test_util.h"
+#include "../common/cpu_time.h"
 
 #ifdef _WIN32
-static double cpuSec() { return (double)std::clock() / CLOCKS_PER_SEC; }   // the process CPU time on Windows
+static double cpuSec() { return processCpuSecs(); }   // std::clock() is the wall clock on Windows: a busy runner read 1.000 s/s
 #else
 static double cpuSec() { rusage u; getrusage(RUSAGE_SELF, &u); return u.ru_utime.tv_sec + u.ru_stime.tv_sec + (u.ru_utime.tv_usec + u.ru_stime.tv_usec) * 1e-6; }
 #endif

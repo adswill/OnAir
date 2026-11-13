@@ -11,6 +11,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <cctype>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
@@ -185,6 +186,8 @@ struct SensorsReceiver::Impl {
     std::vector<r_device*> devs, customDevs;
     std::mutex setMu;
     bool dirty = true;
+    std::mutex viewMu;
+    std::vector<std::string> viewPat;  // setView(): lower-case parts of the model names this view reports (empty: every sensor)
 
     // pulse pipeline
     pulse_detect_t* pd = nullptr;
@@ -277,9 +280,25 @@ struct SensorsReceiver::Impl {
     }
 
     // ---- results ----
+    bool viewAccepts(const std::string& model, const std::string& kind) {
+        std::lock_guard<std::mutex> lk(viewMu);
+        if (viewPat.empty()) return true;
+        std::string a = model;
+        for (auto& c : a) c = (char)std::tolower((unsigned char)c);
+        for (const auto& p : viewPat) {
+            if (p.rfind("kind:", 0) == 0) { if (kind == p.substr(5)) return true; }       // "kind:meter": the kind the decoder's fields say (kindOf)
+            else if (a.find(p) != std::string::npos) return true;
+        }
+        return false;
+    }
     void onData(r_device* d, data_t* data) {
         std::vector<SensorField> f;
         flatten(f, data, "");
+        {   // a sensor-family entry (setView) reports its own family only; the package still counts as recognised
+            const SensorField* vm = findField(f, "model");
+            const std::string vmodel = vm ? vm->text : std::string(d && d->name ? d->name : "?");
+            if (!viewAccepts(vmodel, kindOf(f, vmodel))) { eventsInPackage++; return; }
+        }
         std::string js;
         dataJson(js, data);
         if (jsonCb) jsonCb(js);
@@ -478,7 +497,7 @@ struct SensorsReceiver::Impl {
         pub.protocols = (unsigned)devs.size();
         pub.customProtocols = (unsigned)customDevs.size();
         pub.devices = devices;
-        pub.unknown = unknown;
+        { std::lock_guard<std::mutex> vl(viewMu); if (viewPat.empty()) pub.unknown = unknown; else pub.unknown.clear(); }
         pub.recent = recent;
     }
 };
@@ -537,6 +556,17 @@ void SensorsReceiver::reset() {
     s.u8.clear(); s.accI = s.accQ = 0; s.accN = 0; s.inputPos = 0; s.nIn = 0;
     s.minLevelAuto = s.noiseLevel = 0;
     pulse_detect_set_levels(s.pd, 0, s.fixedLevel, s.minLevel, s.minSnr, 0);
+}
+
+void SensorsReceiver::setView(const std::string& patterns) {
+    Impl& s = *p_;
+    std::lock_guard<std::mutex> lk(s.viewMu);
+    s.viewPat.clear();
+    std::string cur;
+    for (char c : patterns + "|") {
+        if (c == '|') { if (!cur.empty()) s.viewPat.push_back(cur); cur.clear(); }
+        else cur += (char)std::tolower((unsigned char)c);
+    }
 }
 
 void SensorsReceiver::clearResults() {

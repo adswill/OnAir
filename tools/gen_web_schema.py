@@ -9,6 +9,8 @@
 #   python3 tools/gen_web_schema.py           rewrite the generated file, print a coverage report
 #   python3 tools/gen_web_schema.py --check   exit 1 when the generated file is out of date
 import os, re, sys, json, collections
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mode_families  # noqa: E402
 
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 INC = os.path.join(ROOT, "core", "include")
@@ -304,8 +306,25 @@ def standard_map(rx_members):
     src = read(TEL)
     body = src[src.index("int Engine::pollMode("):]
     out = {}
+    # case-label macros (DECT2_X40_ACTIVE_CASES) from the headers: their numbers
+    macros = {}
+    for d, _, files in os.walk(os.path.join(ROOT, "core", "include")):
+        for fn in files:
+            if fn.endswith(".h"):
+                for mm in re.finditer(r"#define\s+(DECT2_\w+_CASES)\s+((?:case\s+\d+:\s*)+)", read(os.path.join(d, fn))):
+                    macros[mm.group(1)] = re.findall(r"case (\d+):", mm.group(2))
+    consts = mode_families.constants()
     for line in body.split("\n"):
-        cases = re.findall(r"case (\d+):", line)
+        cases = []
+        for tok in re.findall(r"case\s+(" + mode_families.TOKEN + r")\s*:", line):   # a number or a named constant (railway::kKlwActiveStandard)
+            v = mode_families._eval(tok, consts)
+            if v is None:
+                v = mode_families._eval(tok.split("::")[-1], consts)
+            if v is not None:
+                cases.append(str(v))
+        mc = re.match(r"\s*(DECT2_\w+_CASES)\b", line)
+        if mc and mc.group(1) in macros:
+            cases += macros[mc.group(1)]
         if not cases:
             continue
         m = re.search(r"&RxTelemetry::(\w+)\)", line)
@@ -338,14 +357,14 @@ def mode_rows():
     groups = [x.strip() for x in strings(g.group(1))] if g else []
     rows = []
     for line in src.splitlines():
-        m = re.match(r"\s*\{(\d+),\s*\"", line)
+        m = mode_families.ROW_RE.match(line)
         if not m:
             continue
         st = strings(line)
         if len(st) < 2:
             continue
-        gm = re.match(r"\s*\{\d+,\s*\"(?:[^\"\\]|\\.)*\",\s*(\d+)\s*,", line)
-        fam = int(m.group(1))
+        gm = re.match(r"\s*\{\s*" + mode_families.TOKEN + r"\s*,\s*\"(?:[^\"\\]|\\.)*\",\s*(\d+)\s*,", line)
+        fam = mode_families.family(m.group(1))
         # the sub-mode id is the last short string of the row (a lower-case token) when the row has one
         sub = ""
         for s in reversed(st):

@@ -115,7 +115,7 @@ void drawWarning(App& first) {
     (void)first;
 }
 
-float stripHeight(const App& first) { return ImGui::GetFrameHeight() * (first.touchUi ? 1.35f : 1.f) + 10 * gUi; }
+float stripHeight(const App& first) { return ImGui::GetFrameHeight() * (first.touchUi ? 1.35f : 1.f) + (first.touchUi ? 10.f : 6.f) * gUi; }   // 4.0: thinner, flat like the status bar
 
 float gScroll = 0;   // horizontal scroll of the chips when many receivers are open
 
@@ -144,7 +144,7 @@ void strip(App& first, ImVec2 disp, float h) {
     tourMark("receivers", ImGui::GetWindowPos(), ImVec2(ImGui::GetWindowPos().x + disp.x, ImGui::GetWindowPos().y + h));
     ImDrawList* dl = ImGui::GetWindowDrawList();
     const bool compact = disp.x < 720 * gUi;
-    const float chipH = h - 6 * gUi, rad = pal::rnd(5 * gUi) + (pal::dev() ? 0.f : 0.f);
+    const float chipH = h - 6 * gUi;
     const float x0 = ImGui::GetWindowPos().x + 6 * gUi, y0 = ImGui::GetWindowPos().y + 3 * gUi;
     const float btn = chipH, plusW = chipH + 2 * gUi;
     char cpu[24];
@@ -189,11 +189,15 @@ void strip(App& first, ImVec2 disp, float h) {
         const bool showX = r->rxId > 1 && (hov || sel);
         const ImVec2 xa(b.x - btn, a.y), sa(b.x - btn * (r->rxId > 1 ? 2.f : 1.f), a.y);
         const bool onX = hov && showX && mp.x >= xa.x, onS = hov && !onX && mp.x >= sa.x;
-        ImVec4 bg = sel ? ImGui::GetStyle().Colors[ImGuiCol_TabSelected] : (hov ? ImVec4(0.12f, 0.125f, 0.135f, 1) : ImVec4(0.085f, 0.09f, 0.095f, 1));
-        dl->AddRectFilled(a, b, ImGui::GetColorU32(bg), rad);
-        if (!sel) dl->AddRect(a, b, ImGui::GetColorU32(ImVec4(0.2f, 0.21f, 0.22f, 1)), rad);
+        // flat tabs, as the status bar above them: no frames; the selected one on the frame colour with an accent line on top, hover a faint fill,
+        // a thin rule between tabs
+        if (sel) {
+            dl->AddRectFilled(a, b, ImGui::GetColorU32(ImGuiCol_FrameBg));
+            dl->AddRectFilled(a, ImVec2(b.x, a.y + 2 * gUi), ImGui::GetColorU32(pal::accent()));
+        } else if (hov) dl->AddRectFilled(a, b, ImGui::GetColorU32(ImGuiCol_FrameBgHovered, 0.5f));
+        dl->AddLine(ImVec2(b.x + 2 * gUi, a.y + 4 * gUi), ImVec2(b.x + 2 * gUi, b.y - 4 * gUi), ImGui::GetColorU32(ImGuiCol_Separator));
         const ImVec4 dot = run ? pal::okGreen() : ImVec4(0.42f, 0.44f, 0.46f, 1);
-        dl->AddCircleFilled(ImVec2(a.x + 10 * gUi, a.y + chipH * 0.5f), 3.5f * gUi, ImGui::GetColorU32(dot));
+        dl->AddCircleFilled(ImVec2(a.x + 10 * gUi, a.y + chipH * 0.5f), 3.f * gUi, ImGui::GetColorU32(dot));
         // text: shorten the mode name first so the frequency stays readable
         const float room = c.w - 12 * gUi - 14 * gUi - btn * (r->rxId > 1 ? 2.f : 1.f);
         std::string t = c.txt;
@@ -205,7 +209,7 @@ void strip(App& first, ImVec2 disp, float h) {
             t = rxbar::ellipsize(t, n);
             (void)fq;
         }
-        dl->AddText(ImVec2(a.x + 18 * gUi, a.y + (chipH - ImGui::GetTextLineHeight()) * 0.5f), ImGui::GetColorU32(sel ? ImVec4(1, 1, 1, 1) : ImVec4(0.72f, 0.74f, 0.76f, 1)), t.c_str());
+        dl->AddText(ImVec2(a.x + 18 * gUi, a.y + (chipH - ImGui::GetTextLineHeight()) * 0.5f), ImGui::GetColorU32(sel ? ImGuiCol_Text : ImGuiCol_TextDisabled), t.c_str());
         // speaker: lit when this receiver is the audible one
         const ImVec2 sc(sa.x + btn * 0.5f, a.y + chipH * 0.5f);
         if (onS) dl->AddRectFilled(ImVec2(sa.x + 1, a.y + 2 * gUi), ImVec2(sa.x + btn - 1, b.y - 2 * gUi), ImGui::GetColorU32(ImVec4(1, 1, 1, 0.08f)), 3 * gUi);
@@ -250,8 +254,7 @@ void strip(App& first, ImVec2 disp, float h) {
         const bool hv = ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenDisabled);
         ImGui::EndDisabled();
         const ImVec2 a(px, y0), b(px + plusW, y0 + chipH), c((a.x + b.x) * 0.5f, (a.y + b.y) * 0.5f);
-        dl->AddRectFilled(a, b, ImGui::GetColorU32(hv && room ? ImVec4(0.17f, 0.18f, 0.19f, 1) : ImVec4(0.085f, 0.09f, 0.095f, 1)), rad);
-        dl->AddRect(a, b, ImGui::GetColorU32(ImVec4(0.2f, 0.21f, 0.22f, 1)), rad);
+        if (hv && room) dl->AddRectFilled(a, b, ImGui::GetColorU32(ImGuiCol_FrameBgHovered, 0.5f));   // flat: a fill only under the pointer
         const ImU32 pc = ImGui::GetColorU32(room ? ImVec4(0.8f, 0.82f, 0.84f, 1) : ImVec4(0.4f, 0.4f, 0.4f, 1));
         dl->AddLine(ImVec2(c.x - 4.5f * gUi, c.y), ImVec2(c.x + 4.5f * gUi, c.y), pc, 1.6f * gUi);
         dl->AddLine(ImVec2(c.x, c.y - 4.5f * gUi), ImVec2(c.x, c.y + 4.5f * gUi), pc, 1.6f * gUi);

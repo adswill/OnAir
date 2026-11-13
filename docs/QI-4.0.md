@@ -1,0 +1,10 @@
+# Qi wireless charging (family 888)
+
+Reads what a phone says to its Qi charger (Wireless Power Consortium, baseline power profile, 110 - 205 kHz power signal): the phone changes the load of the power signal by a few percent, 2 kbit/s, differential bi-phase. Receive only; the power signal is not touched.
+**Simulated signals only.** The byte format, the message sizes and the message meanings are written from the public descriptions of the baseline profile as the author knows them, and are checked only against the test generator (`tests/x40/x40_gen2.h`); no charger recording was available. Newer profiles (extended power, authentication) and the charger-to-phone direction (FSK on the power signal) are not decoded.
+
+- Method: envelope of the power signal, hysteresis slicer with interpolated edge times (`core/src/x40/x40_ask.h`), the time between level changes gives a full bit (a 0) or half a bit (two make a 1), clock followed within 12 % of 2 kHz. Byte: start 0, 8 data bits LSB first, odd parity, stop 1. Packet: at least four 1 bits of preamble, header, message (length from the header: 1 byte up to 0x1F, 2 + (h - 0x20) / 16 up to 0x7F, 8 + (h - 0x80) / 8 up to 0xDF, 20 + (h - 0xE0) / 4 above), checksum (XOR of header and message). Parity or checksum failures are counted and not listed.
+- Named: 0x01 signal strength, 0x02 end of power transfer (with the reason), 0x03 control error, 0x04 received power, 0x05 charge status, 0x06 power control hold-off, 0x51 configuration, 0x71 identification (Qi version, manufacturer code, device ID). Other headers are shown as hex.
+- Needs a radio that reaches the LF band and a pick-up loop near the charger.
+- Tested: every named message with its content; bit clock 4 % fast and slow; modulation depth 10 %, 5 %, 3 %; carrier offset 0 (with drift) / +3 / -3 kHz; 30 kHz off-centre tuning; 0.5 Hz, 4 % amplitude wander of the power signal; a wrong checksum and a wrong parity; noise sweep.
+- Noise (5 % depth, carrier to noise in 10 kHz, 3 runs of 9 packets): 27 of 27 at 70, 60, 55 and 50 dB, 24 of 27 at 45 dB, 0 at 40 dB. 15 minutes of noise alone and under a plain power signal: 0 false packets.

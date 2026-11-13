@@ -1,6 +1,7 @@
 #include "dect2/dsp/gpu_fft.h"
 #include "dect2/dsp/gpu_policy.h"
 #include "dect2/dsp/spectrum.h"
+#include "dect2/dsp/zoom_spectrum.h"
 #include "dect2/dsp/dsp_compat.h"
 #include <algorithm>
 #include <atomic>
@@ -60,16 +61,17 @@ struct Worker {
     uint64_t fpos = 0;
     std::vector<cf32> fring;
     std::vector<float> fwin, fre, fim, facc, frow;
-    void reload(size_t nn, double sampleRate) {
-        if (n != nn || window.size() != nn) {   // (a reset with the same size keeps the window)
-            n = nn; log2n = (int)std::lround(std::log2((double)n));
-            window.resize(n); hannWindowNorm(window.data(), (int)n);
+    int winType = 0;
+    void reload(size_t nn, double sampleRate, int wt, double maxOverlap) {
+        if (n != nn || window.size() != nn || winType != wt) {   // (a reset with the same size keeps the window)
+            n = nn; log2n = (int)std::lround(std::log2((double)n)); winType = wt;
+            window.resize(n); specwin::make(wt, window.data(), (int)n);
             re.assign(n, 0.f); im.assign(n, 0.f);
         }
         pending.clear();
         fs = sampleRate;
         overlap = fs > 0 && 2.0 * (double)n / fs > 1.0 / 30.0;
-        hop = fs / 35.0; pos = 0; nextAt = (double)n;   // (a little under the 33 ms tick: every tick finds a fresh block)
+        hop = SpectrumAnalyzer::hopFor(fs, n, maxOverlap); pos = 0; nextAt = (double)n;   // (a little under the 33 ms tick: every tick finds a fresh block)
         if (overlap) ring.assign(n, cf32(0.f, 0.f)); else { ring.clear(); ring.shrink_to_fit(); }
     }
 };
@@ -85,6 +87,8 @@ struct SpectrumAnalyzer::Impl {
     uint64_t seq = 0;
     uint64_t gen = 1;           // bumped by resize() and reset()
     double sampleRate = 0;      // setSampleRate(): 0 = unknown (blocks follow each other, no overlap)
+    int window = 0;             // specwin::Type
+    double maxOverlap = -1;     // setMaxOverlap (negative: automatic)
     std::atomic<bool> transform{true};
     std::atomic<size_t> maxBlocks{SpectrumAnalyzer::kDefaultBlocks};   // blocks averaged into one frame (the rest of the samples only count for the stats)
     // fast rows: the request (setFastRows), the queue the rows wait in (takeFastRows)
@@ -176,7 +180,8 @@ void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
     size_t maxBlocks, curN;
     uint64_t gen;
     bool doFft;
-    double fsNow = 0;
+    double fsNow = 0, maxOv = -1;
+    int winType = 0;
     uint64_t reqGen;
     double reqRps, reqFs;
     {
@@ -234,11 +239,11 @@ void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
         maxBlocks = s.maxBlocks.load(std::memory_order_relaxed);
         doFft = s.transform.load();
         gen = s.gen; curN = n_;
-        fsNow = s.sampleRate;
+        fsNow = s.sampleRate; winType = s.window; maxOv = s.maxOverlap;
         reqGen = s.reqGen; reqRps = s.reqRps; reqFs = s.reqFs;
     }
     if (!doFft) { w.pending.clear(); return; }
-    if (w.gen != gen) { w.reload(curN, fsNow); w.gen = gen; }
+    if (w.gen != gen) { w.reload(curN, fsNow, winType, maxOv); w.gen = gen; }
     // fast rows: their own transforms; the frames below are not touched
     if (w.fastGen != reqGen) {
         w.fastGen = reqGen; w.rps = reqRps;
@@ -366,6 +371,30 @@ void SpectrumAnalyzer::feed(const cf32* x, size_t n) {
 }
 
 void SpectrumAnalyzer::setTransform(bool on) { p_->transform = on; }
+
+void SpectrumAnalyzer::setWindow(int type) {
+    type = std::max(0, std::min((int)specwin::NumTypes - 1, type));
+    std::lock_guard<std::mutex> lk(p_->mu);
+    if (p_->window == type) return;
+    p_->window = type;
+    std::fill(p_->accum.begin(), p_->accum.end(), 0.f);
+    p_->blocks = 0; p_->gen++;
+}
+int SpectrumAnalyzer::window() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->window; }
+
+void SpectrumAnalyzer::setMaxOverlap(double f) {
+    if (f >= 0) f = std::min(0.95, f);
+    std::lock_guard<std::mutex> lk(p_->mu);
+    if (p_->maxOverlap == f) return;
+    p_->maxOverlap = f; p_->gen++;
+}
+
+double SpectrumAnalyzer::hopFor(double fs, size_t n, double maxOverlap) {
+    double hop = fs / 35.0;
+    if (maxOverlap >= 0) hop = std::max(hop, (double)n * (1.0 - std::min(0.95, maxOverlap)));
+    else if (n > (size_t(1) << 18)) hop = std::max(hop, (double)n * 0.25);
+    return std::max(1.0, hop);
+}
 void SpectrumAnalyzer::setBlocksPerFrame(size_t n) { p_->maxBlocks = std::max<size_t>(1, std::min<size_t>(64, n)); }
 size_t SpectrumAnalyzer::blocksPerFrame() const { return p_->maxBlocks.load(); }
 

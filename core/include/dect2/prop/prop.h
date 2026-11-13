@@ -16,9 +16,11 @@ enum class Env { Quiet = 0, Rural, Residential, City };                     // m
 enum class Ground { Sea = 0, Wet, Average, Dry };                           // ground constants (conductivity, permittivity)
 enum class Pol { Vertical = 0, Horizontal, CircularRight, CircularLeft };   // antenna polarisation
 enum class Clutter { Open = 0, Suburban, Urban, DenseUrban, Forest };       // what is around the receive antenna (P.2108 classes)
-enum class PathModel { Auto = 0, FreeSpace, SmoothEarth, TwoRayExact };     // 30 MHz and up: which model decides the path loss
+// 30 MHz and up: which model decides the path loss. Auto (4.0) = ITU-R P.1812-8 over the terrain profile (flat sea-level profile when no
+// terrain is loaded); Legacy39 = the 3.9 combination (P.526 smooth earth / plane earth / troposcatter), kept for comparison.
+enum class PathModel { Auto = 0, FreeSpace, SmoothEarth, TwoRayExact, Legacy39 };
 enum class HfModel { Both = 0, GroundOnly, SkyOnly };                       // below 30 MHz
-enum class Model { FreeSpace = 0, LineOfSight, Diffraction, HfGround, HfSky, TwoRay, Terrain, Troposcatter };   // what decided the loss at a point
+enum class Model { FreeSpace = 0, LineOfSight, Diffraction, HfGround, HfSky, TwoRay, Terrain, Troposcatter, Ducting };   // what decided the loss at a point
 
 struct Terrain;   // prop_terrain.h: elevation tiles the user loaded
 
@@ -63,6 +65,14 @@ struct Params {
     PathModel pathModel = PathModel::Auto;
     HfModel hfModel = HfModel::Both;
     const Terrain* terrain = nullptr;        // optional elevation data (no data: smooth earth)
+    // 4.0 (docs/PROPAGATION-4.0.md)
+    double timePct = 50;                     // P.1812: the loss is not exceeded for this % of the time (1..50; 50 = median, small = ducting)
+    double locPct = 50;                      // P.1812: ... at this % of locations (1..99; 90 = the planning value for coverage)
+    double sigmaLocDb = 5.5;                 // location variability (P.1812 Table 6)
+    double deltaN = 45, n0 = 325;            // refractivity lapse rate (N/km) and sea-level refractivity (P.453 maps; 45 / 325 typical)
+    double seaFraction = -1;                 // fraction of the path over water (< 0: 1 for Ground::Sea, else 0)
+    bool hfLegacy = false;                   // HF skywave: the 3.9 one-layer estimate instead of P.533 / P.1239
+    double r12 = -1;                         // HF: 12-month smoothed sunspot number (< 0: from the SFI, ITU-R P.371)
 };
 double eirpDbw(const Params& p);             // txPowerDbw + txGainDbi - txFeederDb (the pattern peak)
 
@@ -89,6 +99,15 @@ struct Point {
     double elevDeg = 0;       // skywave take-off angle
     int hops = 0;             // 0: no skywave
     double groundLossDb = 0, skyLossDb = 0;   // basic loss of each HF mode (1e9: none)
+    // 4.0
+    bool flatEarth = false;   // VHF and up with Auto: no terrain under this path, a flat sea-level profile was used
+    double kFactor = 0;       // median effective earth radius factor (P.453 / P.1812 eq. 6)
+    double diffDb = 0, tropoDb = 0, ductDb = 0;   // P.1812 diffraction loss, troposcatter and ducting basic losses
+    double beta0 = 0;         // P.1812 % of time with anomalous refraction
+    double hfReliability = -1;   // P.533 basic circuit reliability 0..1 (-1: not HF skywave)
+    double hfOwf = 0, hfHpf = 0, hfMufProb = 0;   // MUF exceeded 90 % / 10 % of days, probability the band is supported
+    int hfMethod = 0;         // 0 ray paths, 1 long path, 2 interpolated
+    char hfLayer = 0;         // 'E' or 'F' of the strongest mode
 };
 
 // Building blocks (documented in docs/propagation.md), exposed for tests

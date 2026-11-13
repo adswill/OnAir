@@ -3,6 +3,7 @@
 #pragma once
 #include "dect2/common/ring.h"
 #include "dect2/dsp/exact_resampler.h"
+#include "dect2/dsp/spectral_afc.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -43,9 +44,13 @@ public:
         return ok_;
     }
     bool ready() const { return ok_; }
-    void setOffset(double hz) { off_ = hz; }   // where the channel sits relative to 0 Hz in the input
+    // Carrier follow-up (opt-in, 4.0), see spectral_afc.h: lets the channel filter be narrow without losing a signal that is off its
+    // nominal frequency (a radio's reference error: 20 ppm is 17 kHz at 850 MHz).
+    void setAfc(bool on, double searchHz = 9000.0, double maxHz = 20000.0) { afcOn_ = on; afc_.configure(work_, searchHz, maxHz); adj_ = 0; }
+    double afcOffsetHz() const { return adj_; }
+    void setOffset(double hz) { if (hz != off_) { adj_ = 0; afc_.clearAdjust(); } off_ = hz; }   // where the channel sits relative to 0 Hz in the input
     void reset() {
-        rs_.reset(); phRe_ = 1; phIm_ = 0; prev_ = cf32(0, 0); pw_ = 0;
+        afc_.restart(); rs_.reset(); phRe_ = 1; phIm_ = 0; prev_ = cf32(0, 0); pw_ = 0;
         for (int i = 0; i < 2; i++) { lr_[i].clear(); li_[i].clear(); }
     }
     double levelDb() const { return pw_ > 0 ? 10 * std::log10(pw_ + 1e-30) : -200; }
@@ -54,7 +59,7 @@ public:
     void feed(const cf32* x, size_t n, std::vector<float>& out) {
         if (!ok_ || !x || !n) return;
         // the mixer: a phasor turned by one step per sample (double, renormalised every 1024 samples) instead of a cos and a sin per sample
-        const double step = -2 * 3.14159265358979323846 * off_ / in_;
+        const double step = -2 * 3.14159265358979323846 * (off_ + adj_) / in_;
         if (step != stepW_) { stepW_ = step; stRe_ = std::cos(step); stIm_ = std::sin(step); }
         mix_.resize(n);
         double pr = phRe_, pi = phIm_;
@@ -69,6 +74,7 @@ public:
         rsb_.clear();
         rs_.process(mix_.data(), n, rsb_);
         const double k = work_ / (2 * 3.14159265358979323846);
+        if (afcOn_) { afc_.push(rsb_.data(), rsb_.size()); adj_ = afc_.adjustHz(); }
         for (const cf32& v : rsb_) {
             double re = lr_[0].run(v.real()), im = li_[0].run(v.imag());
             re = lr_[1].run(re); im = li_[1].run(im);
@@ -79,6 +85,9 @@ public:
         }
     }
 private:
+    SpectralAfc afc_;
+    bool afcOn_ = false;
+    double adj_ = 0;
     double in_ = 0, work_ = 0, off_ = 0, pw_ = 0;
     double phRe_ = 1, phIm_ = 0, stepW_ = 0, stRe_ = 1, stIm_ = 0;   // mixer phasor and its step
     bool ok_ = false;

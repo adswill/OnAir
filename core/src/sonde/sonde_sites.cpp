@@ -28,12 +28,14 @@ void SondeSites::update(const std::vector<SondeInfo>& v, int64_t utc) {
                 for (size_t i = 0; i < sites_.size(); i++) { const double d = km(sites_[i].lat, sites_[i].lon, f.lat, f.lon); if (d < bd) { bd = d; best = (int)i; } }
                 if (best < 0 || bd > kSiteKm) {
                     SondeSite n; n.id = nextId_++; n.name = "Site " + std::to_string(n.id); n.lat = f.lat; n.lon = f.lon;
+                    if (known_) if (const SondeSiteRef* k = known_->nearest(f.lat, f.lon, KnownSondeSites::kNameKm)) n.name = k->name;
                     sites_.push_back(n); best = (int)sites_.size() - 1;
                 }
                 SondeSite& st = sites_[(size_t)best];
                 st.lat = (st.lat * st.launches + f.lat) / (st.launches + 1);
                 st.lon = (st.lon * st.launches + f.lon) / (st.launches + 1);
                 st.launches++; st.lastUtc = utc;
+                st.launchTimes.push_back(utc); if (st.launchTimes.size() > 80) st.launchTimes.erase(st.launchTimes.begin());
                 w.site = st.id;
                 dirty_ = true;
             }
@@ -53,6 +55,17 @@ void SondeSites::update(const std::vector<SondeInfo>& v, int64_t utc) {
     if (seen_.size() > 5000) seen_.clear();
 }
 
+int SondeSites::setKnown(const KnownSondeSites* known) {
+    known_ = known;
+    int n = 0;
+    if (!known) return 0;
+    for (auto& s : sites_) {
+        if (!placeholderName(s)) continue;
+        if (const SondeSiteRef* k = known->nearest(s.lat, s.lon, KnownSondeSites::kNameKm)) { s.name = k->name; n++; dirty_ = true; }
+    }
+    return n;
+}
+
 void SondeSites::rename(int id, const std::string& name) { for (auto& s : sites_) if (s.id == id && !name.empty()) { s.name = name; dirty_ = true; } }
 
 std::string SondeSites::serialize() const {
@@ -61,6 +74,7 @@ std::string SondeSites::serialize() const {
     for (const auto& s : sites_) {
         std::string n = s.name; for (char& c : n) if (c == '\t' || c == '\n') c = ' ';
         o << "S\t" << s.id << '\t' << n << '\t' << s.lat << '\t' << s.lon << '\t' << s.launches << '\t' << s.lastUtc << '\n';
+        for (int64_t t : s.launchTimes) o << "T\t" << s.id << '\t' << t << '\n';
         for (const auto& l : s.landings) o << "L\t" << s.id << '\t' << l.first << '\t' << l.second << '\n';
     }
     return o.str();
@@ -78,6 +92,9 @@ void SondeSites::parse(const std::string& text) {
         if (f.size() >= 7 && f[0] == "S") {
             SondeSite s; s.id = std::atoi(f[1].c_str()); s.name = f[2]; s.lat = std::atof(f[3].c_str()); s.lon = std::atof(f[4].c_str()); s.launches = std::atoi(f[5].c_str()); s.lastUtc = std::atoll(f[6].c_str());
             if (s.id > 0) { sites_.push_back(s); nextId_ = std::max(nextId_, s.id + 1); }
+        } else if (f.size() >= 3 && f[0] == "T") {
+            const int id = std::atoi(f[1].c_str());
+            for (auto& s : sites_) if (s.id == id) s.launchTimes.push_back(std::atoll(f[2].c_str()));
         } else if (f.size() >= 4 && f[0] == "L") {
             const int id = std::atoi(f[1].c_str());
             for (auto& s : sites_) if (s.id == id) s.landings.push_back({(float)std::atof(f[2].c_str()), (float)std::atof(f[3].c_str())});

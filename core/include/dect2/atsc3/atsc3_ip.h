@@ -1,5 +1,6 @@
 // IPv4 and UDP (as carried by ALP) and the ATSC 3.0 low level signaling on top of it: the LLS table header and the Service List Table (A/331 section 6).
 #pragma once
+#include <tuple>
 #include <cstdint>
 #include <map>
 #include <string>
@@ -66,9 +67,16 @@ struct AeatAlert {
 };
 std::vector<AeatAlert> parseAeat(const std::string& xml);
 
-// Parses the payload of a UDP datagram to 224.0.23.60:4937.
+// Parses the payload of a UDP datagram to 224.0.23.60:4937. A SignedMultiTable (LLS_table_id 0xFE, A/331 6.7: the tables of a station
+// that signs its signalling, A/360) carries several tables: parseLls returns its SLT (else its first table), parseLlsAll every one of them,
+// each with the outer group id. The signature is not checked.
 LlsTable parseLls(const uint8_t* payload, size_t size);
+std::vector<LlsTable> parseLlsAll(const uint8_t* payload, size_t size);
 std::vector<uint8_t> makeLls(int tableId, int group, int version, const std::string& xml);
+// A SignedMultiTable of the given tables (id, version, xml), with a dummy signature of `sigBytes` bytes (tests)
+std::vector<uint8_t> makeSignedMultiLls(int group, const std::vector<std::tuple<int, int, std::string>>& tables, int sigBytes = 64);
+// gzip with stored blocks (valid gzip; nothing needs compressing for test data)
+std::vector<uint8_t> gzipStored(const uint8_t* data, size_t size);
 
 } // namespace atsc3
 } // namespace dect2

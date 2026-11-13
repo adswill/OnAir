@@ -1,6 +1,7 @@
 // IPv4/UDP reception (with fragments) and the low level signaling: an SLT compressed by Python's gzip is read, and one made by makeLls() too.
 #include "dect2/atsc3/atsc3_ip.h"
 #include <cstdio>
+#include <tuple>
 #include <random>
 
 using namespace dect2::atsc3;
@@ -45,6 +46,23 @@ int main() {
     CHECK(!parseLls(lls.data(), 3).ok, "short LLS");
     auto bad = lls; bad[30] ^= 0x40;
     CHECK(!parseLls(bad.data(), bad.size()).ok, "corrupted LLS");
+
+    // a station that signs its signalling (A/360): the SLT and a SystemTime inside a SignedMultiTable (A/331 6.7, LLS_table_id 0xFE). 3.9 read
+    // only table ids 1 to 5, so such a station showed no services at all.
+    {
+        const std::string st = "<SystemTime xmlns=\"tag:atsc.org,2016:XMLSchemas/ATSC3/Delivery/SYSTIME/1.0/\" currentUtcOffset=\"37\"/>";
+        auto sm = makeSignedMultiLls(2, {std::make_tuple(3, 4, st), std::make_tuple(1, 7, xml)}, 300);
+        auto all = parseLlsAll(sm.data(), sm.size());
+        CHECK(all.size() == 2 && all[0].tableId == 3 && all[0].version == 4 && all[1].tableId == 1 && all[1].version == 7 && all[1].groupId == 2, "SignedMultiTable: both tables");
+        auto ts = parseLls(sm.data(), sm.size());
+        CHECK(ts.ok && ts.tableId == 1, "SignedMultiTable: parseLls gives its SLT");
+        checkSlt(ts.slt, "signed SLT");
+        for (size_t cut = 0; cut < sm.size(); cut += 37) parseLlsAll(sm.data(), cut);   // truncated: no crash, no read past the end
+        auto broken = sm; broken[5 + 2] = 0xFF; broken[5 + 3] = 0xFF;   // first payload claims 65535 bytes
+        CHECK(parseLlsAll(broken.data(), broken.size()).empty(), "SignedMultiTable: a length past the end is not read");
+        auto plain = parseLlsAll(lls.data(), lls.size());
+        CHECK(plain.size() == 1 && plain[0].tableId == 1, "parseLlsAll of a plain table");
+    }
 
     // through IP: whole packet, and the same fragmented at an MTU of 200 and delivered out of order
     IpReceiver rx;

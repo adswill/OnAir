@@ -32,7 +32,11 @@ public:
     void setProtocols(int mask);                         // 1 POCSAG, 2 FLEX (default 3: both)
     void setSelcall(bool on);                            // also decode five-tone selective calls (CCIR, ZVEI, EEA, EIA, DZVEI) on the channel audio (default off)
     bool selcall() const;
+    void setPocsagSecondPath(bool on);                   // 4.0: a second decoder behind a 7 kHz channel filter (POCSAG and the two level FLEX speeds) next to the 10 kHz one the 4 level FLEX speeds need (default on, 25 kHz channels)
+    bool pocsagSecondPath() const;
     void setPocsagBauds(int mask);                       // 1 512, 2 1200, 4 2400 bd (default 7: all three)
+    void setToneDetection(bool on);                      // POCSAG symbols from tone energies and a sync search that uses them (default on; off: the discriminator only, as in 3.9)
+    bool toneDetection() const;
     void setWideInput(bool on);                          // the input is one carrier brought to 192 ksps by the whole-span bank (accepted below the radio's minimum rate)
     void setNarrowChannel(bool on);                      // channel filter width: false 25 kHz (default), true 12.5 kHz (rejects a neighbouring channel better; the signal must be centred)
     bool narrowChannel() const;

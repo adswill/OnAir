@@ -25,6 +25,7 @@
 #endif
 #include <windows.h>
 #include <commdlg.h>
+#include <shlobj.h>
 #include <direct.h>
 #else
 #include <unistd.h>
@@ -252,6 +253,97 @@ HttpResult httpRequest(const std::string& method, const std::string& url, const 
     if (rc == 6 || rc == 5) { r.net = 1; r.detail = "host name not found"; }
     else if (rc == 7) { r.net = 2; r.detail = "connection refused or unreachable"; }
     else if (rc == 28) { r.net = 3; r.detail = "timed out"; }
+    else if (rc != 0) { r.net = 4; r.detail = "curl error " + std::to_string(rc); }
+    else { r.net = 4; r.detail = "no HTTP status in the answer"; }
+    return r;
+}
+HttpResult httpCall(const std::string& method, const std::string& url, const std::string& body, const std::string& contentType,
+                    const std::vector<std::string>& headers, const std::string& userAgent, int timeoutSec, size_t maxReply) {
+    static std::atomic<unsigned> counter{0};
+    HttpResult r;
+    if (method.empty() || method.find_first_not_of("ABCDEFGHIJKLMNOPQRSTUVWXYZ") != std::string::npos) { r.net = 4; r.detail = "bad method"; return r; }
+    const std::string base = cacheDir() + "/hcall_" + std::to_string(counter++ % 1000);
+    const std::string inFile = base + ".in", outFile = base + ".out", hdrIn = base + ".hin", hdrOut = base + ".hdr";
+    const bool send = !body.empty() || method == "POST" || method == "PUT";
+    std::string hdr;
+    if (send) hdr += "Content-Type: " + (contentType.empty() ? std::string("application/json") : contentType) + "\n";
+    for (const std::string& h : headers) {
+        if (h.find('\n') != std::string::npos || h.find('\r') != std::string::npos) { r.net = 4; r.detail = "bad header"; return r; }
+        hdr += h + "\n";
+    }
+    auto put = [](const std::string& path, const std::string& data, bool priv) {
+#ifdef _WIN32
+        FILE* f = _wfopen(wide(path).c_str(), L"wb");
+        (void)priv;
+#else
+        FILE* f = fopen(path.c_str(), "wb");
+        if (f && priv) fchmod(fileno(f), 0600);
+#endif
+        if (!f) return false;
+        const bool ok = fwrite(data.data(), 1, data.size(), f) == data.size();
+        fclose(f);
+        return ok;
+    };
+    if ((send && !put(inFile, body, false)) || !put(hdrIn, hdr, true)) { r.net = 4; r.detail = "cannot write a temporary file"; return r; }
+    const std::string to = std::to_string(std::max(1, timeoutSec));
+#ifdef _WIN32
+    wchar_t sys[MAX_PATH + 1] = {0};
+    std::wstring exe = GetSystemDirectoryW(sys, MAX_PATH) ? std::wstring(sys) + L"\\curl.exe" : std::wstring(L"curl.exe");
+    if (GetFileAttributesW(exe.c_str()) == INVALID_FILE_ATTRIBUTES) exe = L"curl.exe";
+    std::wstring line = L"\"" + exe + L"\" -sS -L --max-redirs 4 --proto =https --max-time " + wide(to) + L" -A \"" + wide(userAgent) + L"\" -X " + wide(method) +
+                        L" -H @\"" + wide(hdrIn) + L"\" " + (send ? L"--data-binary @\"" + wide(inFile) + L"\" " : std::wstring()) +
+                        L"-D \"" + wide(hdrOut) + L"\" -o \"" + wide(outFile) + L"\" \"" + wide(url) + L"\"";
+    STARTUPINFOW si{};
+    si.cb = sizeof si;
+    PROCESS_INFORMATION pi{};
+    DWORD rcw = 1;
+    if (CreateProcessW(nullptr, line.data(), nullptr, nullptr, FALSE, CREATE_NO_WINDOW, nullptr, nullptr, &si, &pi)) {
+        if (WaitForSingleObject(pi.hProcess, (DWORD)(timeoutSec + 3) * 1000) != WAIT_OBJECT_0) TerminateProcess(pi.hProcess, 28);
+        GetExitCodeProcess(pi.hProcess, &rcw);
+        CloseHandle(pi.hThread);
+        CloseHandle(pi.hProcess);
+    }
+    const int rc = (int)rcw;
+    auto slurp = [&](const std::string& path, size_t cap) {
+        std::string o;
+        FILE* f = _wfopen(wide(path).c_str(), L"rb");
+        if (f) { char b[16384]; size_t n; while ((n = fread(b, 1, sizeof b, f)) > 0 && o.size() <= cap) o.append(b, n); fclose(f); }
+        DeleteFileW(wide(path).c_str());
+        return o;
+    };
+    if (send) DeleteFileW(wide(inFile).c_str());
+    DeleteFileW(wide(hdrIn).c_str());
+#else
+    auto q = [](const std::string& s) { std::string o = "'"; for (char c : s) { if (c == '\'') o += "'\\''"; else o += c; } return o + "'"; };
+    const std::string cmd = "curl -sS -L --max-redirs 4 --proto =https --max-time " + to + " -A " + q(userAgent) + " -X " + method + " -H @" + q(hdrIn) +
+                            (send ? " --data-binary @" + q(inFile) : std::string()) + " -D " + q(hdrOut) + " -o " + q(outFile) + " " + q(url) + " 2>/dev/null";
+    const int st = system(cmd.c_str());
+    const int rc = st == -1 ? 1 : (WIFEXITED(st) ? WEXITSTATUS(st) : 1);
+    auto slurp = [&](const std::string& path, size_t cap) {
+        std::string o;
+        FILE* f = fopen(path.c_str(), "rb");
+        if (f) { char b[16384]; size_t n; while ((n = fread(b, 1, sizeof b, f)) > 0 && o.size() <= cap) o.append(b, n); fclose(f); }
+        std::remove(path.c_str());
+        return o;
+    };
+    if (send) std::remove(inFile.c_str());
+    std::remove(hdrIn.c_str());
+#endif
+    const std::string h = slurp(hdrOut, 65536);
+    r.body = slurp(outFile, maxReply);
+    if (r.body.size() > maxReply) r.body.resize(maxReply + 1);   // one byte more than allowed: the caller sees it is too large
+    for (size_t p = 0; p < h.size();) {
+        size_t e = h.find('\n', p);
+        if (e == std::string::npos) e = h.size();
+        if (h.compare(p, 5, "HTTP/") == 0) { const size_t sp = h.find(' ', p); if (sp != std::string::npos && sp < e) r.status = std::atoi(h.c_str() + sp + 1); }
+        p = e + 1;
+    }
+    if (rc == 0 && r.status > 0) return r;
+    r.status = 0;
+    if (rc == 6 || rc == 5) { r.net = 1; r.detail = "host name not found"; }
+    else if (rc == 7) { r.net = 2; r.detail = "connection refused or unreachable"; }
+    else if (rc == 28) { r.net = 3; r.detail = "timed out"; }
+    else if (rc == 1) { r.net = 4; r.detail = "only https:// addresses are used"; }
     else if (rc != 0) { r.net = 4; r.detail = "curl error " + std::to_string(rc); }
     else { r.net = 4; r.detail = "no HTTP status in the answer"; }
     return r;
@@ -498,7 +590,23 @@ void showFatalError(const char* title, const char* text) {
 #ifdef _WIN32
 std::string openFileDialog() { return fileDialog(false, nullptr); }
 std::string saveFileDialog(const char* name) { return fileDialog(true, name); }
-std::string openFolderDialog() { return {}; }   // Windows: the path is typed in the export dialog
+// The shell's folder browser (#442: Tools > Images > Choose... did nothing on Windows, this returned nothing). The new-style dialog needs COM on
+// this thread; a thread that has it already (S_FALSE, or another apartment) is left as it is.
+std::string openFolderDialog() {
+    const HRESULT co = CoInitializeEx(nullptr, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
+    BROWSEINFOW bi{};
+    bi.hwndOwner = GetActiveWindow();
+    bi.lpszTitle = L"Choose a folder";
+    bi.ulFlags = BIF_RETURNONLYFSDIRS | BIF_NEWDIALOGSTYLE | BIF_EDITBOX;
+    std::string out;
+    if (LPITEMIDLIST pidl = SHBrowseForFolderW(&bi)) {
+        wchar_t path[MAX_PATH] = {0};
+        if (SHGetPathFromIDListW(pidl, path)) out = utf8(path);
+        CoTaskMemFree(pidl);
+    }
+    if (SUCCEEDED(co)) CoUninitialize();
+    return out;
+}
 #else
 std::string openFolderDialog() {
     if (haveProgram("zenity")) return capture("zenity --file-selection --directory --title='Choose a folder' 2>/dev/null");

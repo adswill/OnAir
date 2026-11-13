@@ -244,6 +244,7 @@ struct Host : RemoteApiHost {
                 const dect2::TxModeSpec* m = dect2::txModeById(id);
                 if (!m) { e = "no such transmit mode: " + id; return false; }
                 txui::chooseMode(a, s, *m);
+                txui::paramsEnter(s, *m);   // the mode's own parameter values (tx_params.h), not the last mode's
             }
             const dect2::TxModeSpec* mode = dect2::txModeById(s.modeId);
             if (!mode) { e = "choose a mode: give \"mode\" (a transmit mode id)"; return false; }
@@ -429,7 +430,7 @@ struct Host : RemoteApiHost {
 struct RigAdapter : apipol::RigctlRadio {
     explicit RigAdapter(Host& h) : host(h) {}
     Host& host;
-    static int demodOf(const std::string& m) { return m == "FM" || m == "FMN" || m == "NFM" || m == "PKTFM" ? dect2::GenNfm : m == "WFM" ? dect2::GenWfm : m == "AM" || m == "AMN" || m == "SAM" ? dect2::GenAm : m == "USB" || m == "PKTUSB" ? dect2::GenUsb : m == "LSB" || m == "PKTLSB" ? dect2::GenLsb : m == "CW" || m == "CWR" ? dect2::GenCw : -1; }
+    static int demodOf(const std::string& m) { return m == "FM" || m == "FMN" || m == "NFM" || m == "PKTFM" ? dect2::GenNfm : m == "WFM" ? dect2::GenWfm : m == "AM" || m == "AMN" || m == "SAM" ? dect2::GenAm : m == "USB" || m == "PKTUSB" ? dect2::GenUsb : m == "LSB" || m == "PKTLSB" ? dect2::GenLsb : m == "CW" ? dect2::GenCw : m == "CWR" ? dect2::GenCwl : m == "DSB" ? dect2::GenDsb : -1; }
     bool getFreq(double& hz) override { std::string e; return host.run([&](App& a, std::string&) { hz = listenMhz(a) * 1e6; return true; }, e); }   // the listening frequency (the VFO), as the big readout
     bool setFreq(double hz) override { std::string e; return host.run([hz](App& a, std::string&) { tuneFreq(a, hz / 1e6); return true; }, e); }
     bool getMode(std::string& m, int& pb) override {
@@ -437,7 +438,7 @@ struct RigAdapter : apipol::RigctlRadio {
         return host.run([&](App& a, std::string&) {
             if (a.family != 55) return false;   // only the General receiver has a demodulator that rigctl names
             const std::string n = dect2::generalDemodName(generalApiDemod());
-            m = n == "NFM" ? "FM" : n;
+            m = n == "NFM" ? "FM" : n == "CW-L" ? "CWR" : n;   // hamlib's names (RAW has none: it is reported as RAW)
             pb = 0;
             return true;
         }, e);

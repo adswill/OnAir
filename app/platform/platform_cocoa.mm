@@ -200,6 +200,54 @@ HttpResult httpRequest(const std::string& method, const std::string& url, const 
     }
     return r;
 }
+HttpResult httpCall(const std::string& method, const std::string& url, const std::string& body, const std::string& contentType,
+                    const std::vector<std::string>& headers, const std::string& userAgent, int timeoutSec, size_t maxReply) {
+    HttpResult r;
+    if (url.compare(0, 8, "https://") != 0) { r.net = 4; r.detail = "only https:// addresses are used"; return r; }
+    @autoreleasepool {
+        NSURL* u = [NSURL URLWithString:[NSString stringWithUTF8String:url.c_str()]];
+        if (!u) { r.net = 4; r.detail = "bad URL"; return r; }
+        NSMutableURLRequest* req = [NSMutableURLRequest requestWithURL:u cachePolicy:NSURLRequestReloadIgnoringLocalCacheData timeoutInterval:std::max(1, timeoutSec)];
+        req.HTTPMethod = [NSString stringWithUTF8String:method.c_str()];
+        if (!body.empty() || method == "POST" || method == "PUT") {
+            req.HTTPBody = [NSData dataWithBytes:body.data() length:body.size()];
+            [req setValue:[NSString stringWithUTF8String:(contentType.empty() ? "application/json" : contentType.c_str())] forHTTPHeaderField:@"Content-Type"];
+        }
+        [req setValue:[NSString stringWithUTF8String:userAgent.c_str()] forHTTPHeaderField:@"User-Agent"];
+        for (const std::string& h : headers) {
+            const size_t c = h.find(':');
+            if (c == std::string::npos || c == 0 || h.find('\n') != std::string::npos || h.find('\r') != std::string::npos) continue;
+            size_t v = c + 1;
+            while (v < h.size() && h[v] == ' ') v++;
+            NSString* k = [NSString stringWithUTF8String:h.substr(0, c).c_str()];
+            NSString* val = [NSString stringWithUTF8String:h.substr(v).c_str()];
+            if (k && val) [req setValue:val forHTTPHeaderField:k];
+        }
+        dispatch_semaphore_t sem = dispatch_semaphore_create(0);
+        __block HttpResult res;
+        const size_t cap = maxReply;
+        [[[NSURLSession sharedSession] dataTaskWithRequest:req completionHandler:^(NSData* data, NSURLResponse* resp, NSError* err) {
+            NSHTTPURLResponse* h = (NSHTTPURLResponse*)resp;
+            if (err) {
+                switch (err.code) {
+                    case NSURLErrorCannotFindHost: case NSURLErrorDNSLookupFailed: res.net = 1; break;
+                    case NSURLErrorNotConnectedToInternet: case NSURLErrorCannotConnectToHost: case NSURLErrorNetworkConnectionLost: res.net = 2; break;
+                    case NSURLErrorTimedOut: res.net = 3; break;
+                    default: res.net = 4; break;
+                }
+                const char* d = err.localizedDescription.UTF8String;
+                res.detail = std::string(d ? d : "network error") + " (" + std::to_string((long)err.code) + ")";
+            } else if (h) {
+                res.status = (int)h.statusCode;
+                if (data) res.body.assign((const char*)data.bytes, std::min<size_t>(data.length, cap + 1));
+            } else { res.net = 4; res.detail = "no HTTP answer"; }
+            dispatch_semaphore_signal(sem);
+        }] resume];
+        if (dispatch_semaphore_wait(sem, dispatch_time(DISPATCH_TIME_NOW, (int64_t)(timeoutSec + 2) * NSEC_PER_SEC)) != 0) { r.net = 3; r.detail = "timed out"; return r; }
+        r = res;
+    }
+    return r;
+}
 bool postJson(const std::string& url, const std::string& json, const std::string& userAgent) { return postImpl(url, json, userAgent, nullptr); }
 bool postJsonReply(const std::string& url, const std::string& json, const std::string& userAgent, std::string& reply) { reply.clear(); return postImpl(url, json, userAgent, &reply); }
 

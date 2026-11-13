@@ -12,7 +12,7 @@
 namespace dect2 {
 
 // ---- the kind of satellite (a satellite can be several: an amateur CubeSat is both)
-enum SatTag : unsigned { TagWeather = 1, TagIss = 2, TagOrbcomm = 4, TagAmateur = 8, TagGlobalstar = 16, TagCubesat = 32, TagAll = 63 };
+enum SatTag : unsigned { TagWeather = 1, TagIss = 2, TagOrbcomm = 4, TagAmateur = 8, TagGlobalstar = 16, TagCubesat = 32, TagIridium = 64, TagAll = 127 };
 
 // ---- bands an antenna covers
 enum AntennaBand : unsigned { BandVhf = 1, BandUhf = 2, BandL = 4, BandOther = 8, BandAny = 15 };

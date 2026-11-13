@@ -139,18 +139,10 @@ void geoHint(App& a) {
     ImGui::PopID();
 }
 
-// E11: stated once per mode, while there is nothing else on the air to explain the silence: stopped, or in its first minute
+// E11: stated once per mode, while there is nothing else on the air to explain the silence: stopped, or in its first minute (modeAntennaHint below)
 void antennaHint(App& a) {
-    static const char* lastMode = nullptr;
-    static double shownUntil = 0;
-    const char* name = curModeName(a);
-    const double now = ImGui::GetTime();
-    if (name != lastMode) { lastMode = name; shownUntil = now + 60; }
-    if (a.engine.running() && now > shownUntil) return;
-    const ease::AntennaNeed n = ease::antennaNeed(name, a.freqMhz);
-    if (n.text.empty()) return;
-    const char* warn = ease::antennaWarn(a.setupAntenna, a.freqMhz);
-    ImGui::TextDisabled("%s: %s.%s%s", tr("Antenna"), tr(n.text.c_str()), warn[0] ? " " : "", tr(warn));
+    const std::string t = modeAntennaHint(a);
+    if (!t.empty()) ImGui::TextDisabled("%s", t.c_str());
 }
 
 }  // namespace
@@ -160,12 +152,25 @@ const char* curModeName(const App& a) {
     return nullptr;
 }
 
-void modeHintsLine(App& a) {
+void modeHintsLine(App& a, bool antenna) {
     firstStartHint(a);
     passHint(a);
     geoHint(a);
     navHint(a);
-    antennaHint(a);
+    if (antenna) antennaHint(a);
+}
+
+std::string modeAntennaHint(const App& a) {
+    static const char* lastMode = nullptr;
+    static double shownUntil = 0;
+    const char* name = curModeName(a);
+    const double now = ImGui::GetTime();
+    if (name != lastMode) { lastMode = name; shownUntil = now + 60; }
+    if (a.engine.running() && now > shownUntil) return {};
+    const ease::AntennaNeed n = ease::antennaNeed(name, a.freqMhz);
+    if (n.text.empty()) return {};
+    const char* warn = ease::antennaWarn(a.setupAntenna, a.freqMhz);
+    return std::string(tr("Antenna")) + ": " + tr(n.text.c_str()) + "." + (warn[0] ? " " : "") + tr(warn);
 }
 
 // E11: the browser's antenna row (its wording, not a judgement)

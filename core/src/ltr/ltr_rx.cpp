@@ -153,8 +153,9 @@ LtrReceiver::~LtrReceiver() = default;
 void LtrReceiver::configure(double inputRateHz) {
     std::lock_guard<std::mutex> lk(p_->mu);
     p_->fs = inputRateHz;
-    p_->rateSet = inputRateHz >= ltrTuning().minSampleRate - 1 && p_->fm.configure(inputRateHz, kWork, 4500.0);
+    p_->rateSet = inputRateHz >= ltrTuning().minSampleRate - 1 && p_->fm.configure(inputRateHz, kWork, 3500.0);   // 4.0: 3.5 kHz (was 4.5) with the carrier follow-up, see docs/SENSITIVITY-4.0-A3.md
     p_->fm.setOffset(p_->offHz);
+    p_->fm.setAfc(true, 4000.0, 9000.0);
     p_->lp[0].lowpass(150.0, kWork, 0.5412);
     p_->lp[1].lowpass(150.0, kWork, 1.3066);
     p_->clearState();

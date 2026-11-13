@@ -3,6 +3,7 @@
 #include "dect2/common/time_fmt.h"
 #include "dect2/common/timecompat.h"
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "state/results_export.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/sarsat/sarsat_rx.h"
@@ -121,6 +122,7 @@ std::string reportText(const dect2::SarsatEntry& e) {
     r += "frame as received: " + (b.rxHex.empty() ? b.rawHex : b.rxHex) + "\n";
     r += "frame after repair: " + b.rawHex + "\n";
     r += "bits repaired: " + std::to_string(b.corrected) + (b.fixedBits.empty() ? "" : " (bit numbers " + fixedText(b) + ")") + "\n";
+    if (e.combined) r += "decoded from " + std::to_string(e.combined) + " bursts of this beacon added together (none decoded alone)\n";
     r += "checks: " + checkText(b) + "\n";
     r += "country: " + b.country + " (MID " + std::to_string(b.mid) + ")\n";
     r += "identification: " + b.idText + "\n";
@@ -144,6 +146,7 @@ void details(App& a, const dect2::SarsatEntry& e) {
     kvRow(a, tr("Check bits"), "%s%s", b.second ? tr("BCH(250,202) good") : b.bch2Present ? (b.bch2Ok ? tr("both good") : tr("first good, second failed")) : tr("first good"),
           b.corrected ? (std::string(", ") + std::to_string(b.corrected) + " " + tr("bits repaired")).c_str() : "");
     kvRow(a, tr("Signal"), "%.1f dB, %+.0f Hz, %.0f dBFS", e.snrDb, e.cfoHz, e.levelDb);
+    if (e.combined) kvRow(a, tr("Decoded from"), "%d %s", e.combined, tr("bursts added together (none decoded alone)"));
     if (!b.rawHex.empty()) {
         ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0);
         ImGui::TextDisabled("%s", tr("Frame as received"));
@@ -162,6 +165,7 @@ void details(App& a, const dect2::SarsatEntry& e) {
 
 void beaconsView(App& a) {
     const dect2::SarsatTelemetry& t = a.rx.sarsat;
+    d40SarsatIncidentsCard();   // 4.0: incidents grouped by beacon (app/d40)
     if (t.log.empty()) {
         ImGui::TextDisabled("%s", tr("no beacon decoded yet; a beacon sends a burst about every 50 seconds"));
         return;

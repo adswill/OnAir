@@ -4,6 +4,7 @@
 // that both directions walk, so a key is spelled once; the keys that need real logic (the mode and its gains, the
 // spectrum range, the FM station lists, the wide-capture mask) are written out below the table.
 #include "dect2/limits.h"
+#include "dect2/engine/retired_modes.h"
 #include "../app.h"
 #include "state_internal.h"
 #include "../ais/ais_alerts_ui.h"
@@ -124,13 +125,14 @@ const std::vector<PrefKey>& keyTable() {
         real("ghostThr", AT(a.ghostThr), 1, 40), num("ghostAutoH", AT(a.ghostAutoH), 6, 0, 720, true, true), num("ghostKeep", AT(a.ghostKeep), 28, 1, 500, true, true),
         flagB("specHold", AT(a.peakHold), false, false, true),
         real("holdDecay", AT(a.holdDecay), 0, 60),
-        real("specAvg", AT(a.specAvgSec), 0, 5), num("specFft", AT(a.specFft), 0, 0, 262144, true), real("specLine", AT(a.specLine), 0.6, 3),
+        real("specAvg", AT(a.specAvgSec), 0, 5), num("specFft", AT(a.specFft), 0, 0, 1048576, true), real("specLine", AT(a.specLine), 0.6, 3),
         flagB("specFill", AT(a.specFill), true, false, true), flagB("specGrid", AT(a.specGrid), false, false, true), flagB("specPeaks", AT(a.specPeaks), false, false, true), flagB("specLabels", AT(a.specLabels), true, false, true), num("specLabelMask", AT(a.specLabelMask), 63, 0, 63, true),
         flagB("specReadout", AT(a.specReadout), false, false, true), flagB("specDbm", AT(a.specDbm), false, false, true),
         num("specLook", AT(a.specLook), 1, 0, slook::NumLooks - 1, true), num("tunerLook", AT(a.tunerStyle), 1, 0, 1, true), num("specAxisLabels", AT(a.specAxisLabels), -1, -1, 1, true),
         real("specLabelSize", AT(a.specLabelSize), 0.7, 1.6), num("specSmoothTrace", AT(a.specSmoothTrace), -1, -1, 4, true),
         num("videoFit", AT(a.video.fit), 0, 0, 3, true), flagB("specNfMarker", AT(a.specNfMarker), false, false, true), flagB("specSmoothZoom", AT(a.specSmoothZoom), true, false, true),
-        num("specSnapHz", AT(a.specSnapHz), 0, 0, 1000000, true), flagB("wfLowPass", AT(a.wfLowPass), false, false, true),
+        num("specSnapHz", AT(a.specSnapHz), 0, 0, 1000000, true), flagB("wfLowPass", AT(a.wfLowPass), false, false, true), flagB("specZoomFft", AT(a.specZoomFft), true, false, true), num("specZoomMax", AT(a.specZoomMaxBins), 65536, 512, 1048576, true),
+        num("specWindow", AT(a.specWindow), 0, 0, 4, true), real("specOverlap", AT(a.specOverlap), -1, 0.95), flagB("specResReadout", AT(a.specResReadout), true, false, true), flagB("wfSoft", AT(a.wfSoft), false, false, true),
         real("wfFloorBelow", AT(a.wf.autoBelow), 0, 40), real("wfFloorSpan", AT(a.wf.autoSpan), 20, 120),
         num("tuningMode", AT(a.tuningMode), 0, 0, 1, true),
         flagB("centreTuning", AT(a.centreTuning), false, false, true), flagB("dragMovesTuned", AT(a.dragMovesTuned), false, false, true), num("specDrag", AT(a.specDrag), 0, 0, 1, true),
@@ -182,6 +184,7 @@ const std::vector<PrefKey>& keyTable() {
         shared(num("uiTheme32", AT(a.uiTheme), 3, 0, 7, true)),   // 3.2: Dev A is the default look; an older "uiTheme" is carried over once in loadPrefs
         shared(flagB("layoutUnified", AT(a.layoutUnified), false, true)), shared(flagB("sideCollapsed", AT(a.sideCollapsed), false, true)),
         shared(num("uniSide", AT(a.uniSide), 0, 0, 2, true)), shared(text("uniSplit", AT(a.uniSplit))),
+        shared(flagB("fitPanels", AT(a.fitPanels), true, true)), shared(text("panelSizes", AT(a.panelSizes))),
         shared(num("audioIq", AT(a.audioIqMode), 0, 0, 3)),
         shared(num("audioChan", AT(a.audioChan), 0, 0, 2)), shared(dbl("audioIfHz", AT(a.audioIfHz), 0)), shared(flagI("audioInvert", AT(a.audioInvert), false)),
         shared(flagI("audioDc", AT(a.audioDc), true)), shared(flagI("audioAfView", AT(a.audioAfView), true)), shared(dbl("audioGainDb", AT(a.audioGainDb), 0)), shared(num("audioRate", AT(a.audioRate), 48000, 8000, 192000)),
@@ -303,7 +306,7 @@ void saveFmStations(plat::Prefs& d, const App& a) {
 // the mode (family and protocol entry) and the gains and frequency each mode remembers
 void loadModeAndGains(plat::Prefs& d, App& a) {
     if (d.has("family")) {
-        const int f = std::max(0, std::min(kNumFamilies - 1, (int)d.getI("family", 0)));
+        const int f = std::max(0, std::min(kNumFamilies - 1, dect2::liveFamily((int)d.getI("family", 0))));   // a 4.0 type entry opens its receiver (retired_modes.h)
         // the protocol entry; settings from before the split (HF digital, Mesh, Pagers, Marine as one entry) open the family's first
         a.sub = subIndexOf(d.getS("subMode", "").c_str());
         a.family = f;
@@ -350,7 +353,7 @@ void loadSpectrumRanges(plat::Prefs& d, App& a) {
     if (d.has("wfMin") && d.has("wfMax")) { a.wf.minDb = (float)d.getD("wfMin", a.wf.minDb); a.wf.maxDb = (float)d.getD("wfMax", a.wf.maxDb); }
     a.wf.setRate((float)d.getD("wfRate", 0.0));
     if (d.has("specMin") && d.has("specMax")) { a.yMin = (float)d.getD("specMin", a.yMin); a.yMax = (float)d.getD("specMax", a.yMax); }
-    if (!(a.yMax - a.yMin >= 10)) { a.yMin = -110; a.yMax = -30; }
+    if (!(a.yMax - a.yMin >= 10)) { a.yMin = specDefaultLo(); a.yMax = specDefaultHi(); }
     if (!(a.wf.maxDb - a.wf.minDb >= 3)) { a.wf.minDb = -100; a.wf.maxDb = -32; }
 }
 

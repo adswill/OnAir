@@ -59,6 +59,62 @@ static void mrzTest() {
     }
 }
 
+// 4.0: the MRZ config sub-frames C and D (the serial) survive the reset after a pause, and expire after 5 minutes of stream time
+static void mrzConfigKept() {
+    SondeTruth t = truth();
+    auto d = makeMrzDecoder();
+    std::vector<SondeFix> out;
+    std::vector<uint8_t> pad(50, 1);
+    double tm = 10;
+    for (int sub : {0xC, 0xD, 0x1}) {
+        auto s = mrzSymbols(t, sub, false);
+        d->push(pad.data(), pad.size(), tm, out);
+        d->push(s.data(), s.size(), tm, out);
+        d->reset();   // the pause between bursts
+        tm += 1;
+    }
+    CHECK(out.size() == 3 && out.back().serial == "MRZ-11223-4455");
+    out.clear();
+    auto s = mrzSymbols(t, 0x1, false);
+    d->push(s.data(), s.size(), tm + 100, out);   // within 5 minutes: still known
+    d->reset();
+    CHECK(out.size() == 1 && out[0].serial == "MRZ-11223-4455");
+    out.clear();
+    auto s2 = mrzSymbols(t, 0x2, false);
+    d->push(s2.data(), s2.size(), tm + 400, out);   // after 5 minutes: forgotten
+    CHECK(out.size() == 1 && out[0].serial.empty());
+}
+
+// 4.0: the MRZ sync (9 x 1001 and 10101010) is found with up to 3 symbol errors, at most one in its last 8; copies shifted by 2 and 4 symbols never lock
+static void mrzSyncTolerance() {
+    SondeTruth t = truth();
+    auto s = mrzSymbols(t, 0xC, false);
+    // find the sync: the first position where 44 symbols match the pattern
+    const uint64_t pat = 0x99999999999AAULL & ((1ULL << 44) - 1);
+    size_t end = 0;
+    {
+        uint64_t reg = 0;
+        for (size_t i = 0; i < s.size(); i++) { reg = (reg << 1) | (s[i] & 1); if ((reg & ((1ULL << 44) - 1)) == pat) { end = i + 1; break; } }
+    }
+    CHECK(end >= 44);
+    const struct { int e[4]; int n; bool ok; } cases[] = {
+        {{5, 20, 30, 0}, 3, true},        // three errors in the preamble part
+        {{43, 10, 0, 0}, 2, true},        // one in the last 8 symbols
+        {{43, 42, 0, 0}, 2, false},       // two in the last 8: not accepted
+        {{1, 2, 3, 4}, 4, false},         // four errors
+    };
+    for (const auto& c : cases) {
+        auto d = makeMrzDecoder();
+        std::vector<SondeFix> out;
+        auto q = s;
+        for (int k = 0; k < c.n; k++) q[end - 44 + (size_t)c.e[k]] ^= 1;
+        std::vector<uint8_t> pad(50, 1);
+        d->push(pad.data(), pad.size(), 0, out);
+        d->push(q.data(), q.size(), 0, out);
+        CHECK((out.size() == 1) == c.ok);
+    }
+}
+
 static void imet54Test() {
     SondeTruth t = truth();
     for (int flips : {0, 8, 16}) for (int inv = 0; inv < 2; inv++) {
@@ -105,10 +161,61 @@ static void meiseiTest() {
     }
 }
 
+// 4.0: the iMS-100 serial (one frame in 16) survives the reset after a pause, and expires after 5 minutes of stream time
+static void meiseiSerialKept() {
+    SondeTruth t = truth();
+    auto d = makeMeiseiDecoder();
+    std::vector<SondeFix> out;
+    double tm = 5;
+    for (int cnt : {0, 1, 2, 3, 4, 5, 6, 7, 8, 9}) {   // frame 0 carries the serial; a pause (reset) after every frame
+        auto s = meiseiSymbols(t, cnt, 12345678);
+        d->push(s.data(), s.size(), tm, out);
+        d->reset();
+        tm += 1;
+    }
+    int withSerial = 0;
+    for (const auto& o : out) withSerial += o.serial == "12345678";
+    CHECK(withSerial >= 3);   // 3.9: only frame 0 itself (the serial was forgotten at the pause)
+    CHECK(withSerial >= (int)out.size() - 1);
+    out.clear();
+    for (int cnt : {17, 18, 19, 20, 21, 22}) {
+        auto s2 = meiseiSymbols(t, cnt, 12345678);
+        d->push(s2.data(), s2.size(), tm + 500 + cnt, out);   // 500 s later: forgotten, nothing is reported until the next serial frame
+        d->reset();
+    }
+    CHECK(out.empty());
+}
+
+// 4.0: the iMS-100 sync (48 symbols) is found with up to 3 symbol errors
+static void meiseiSyncTolerance() {
+    SondeTruth t = truth();
+    const uint64_t k0 = 0b101010101011010100101011001101001100101011001101ULL, k1 = 0b110011001101001101001101010100101010110010101010ULL, m = (1ULL << 48) - 1;
+    for (int inv = 0; inv < 2; inv++) for (int e : {0, 3, 4, 6}) {
+        auto d = makeMeiseiDecoder();
+        std::vector<SondeFix> out;
+        for (int cnt = 0; cnt < 18; cnt++) {
+            auto s = meiseiSymbols(t, cnt, 12345678);
+            uint64_t reg = 0; size_t end = 0;
+            for (size_t i = 0; i < s.size(); i++) { reg = (reg << 1) | (s[i] & 1); if ((reg & m) == k0 || (reg & m) == k1) { end = i + 1; break; } }
+            CHECK(end >= 48);
+            for (int k = 0; k < e; k++) s[end - 48 + (size_t)(5 + 9 * k)] ^= 1;
+            if (inv) for (auto& x : s) x = !x;
+            std::vector<uint8_t> pad(64, inv ? 1 : 0);
+            d->push(pad.data(), pad.size(), 0, out);
+            d->push(s.data(), s.size(), 0, out);
+        }
+        CHECK(e <= 3 ? !out.empty() : out.empty());
+    }
+}
+
 int main() {
     imetBitsTest();
     mrzTest();
+    mrzSyncTolerance();
+    mrzConfigKept();
     imet54Test();
     meiseiTest();
+    meiseiSyncTolerance();
+    meiseiSerialKept();
     return testSummary("sonde_extra");
 }

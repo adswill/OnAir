@@ -32,5 +32,5 @@ object MapPanel : ModePanel {
 
 /** Registers the built-in dedicated panels (found by ServiceLoader, see META-INF/services). */
 class BuiltinPanelProvider : ModePanelProvider {
-    override fun panels(): List<ModePanel> = listOf(RdsPanel, AircraftPanel, VesselPanel, MapPanel, MessagesPanel, TablesPanel, io.github.adswill.onair.ui.panels.walkdf.WalkDfPanel)
+    override fun panels(): List<ModePanel> = listOf(TvPanel, CdrPanel, RdsPanel, AircraftPanel, VesselPanel, MapPanel, MessagesPanel, TablesPanel, io.github.adswill.onair.ui.panels.walkdf.WalkDfPanel)
 }

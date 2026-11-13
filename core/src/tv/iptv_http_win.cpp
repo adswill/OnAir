@@ -45,7 +45,8 @@ std::unique_ptr<HttpBody> httpOpenPlatform(const std::string& url, const HttpOpt
     if (!b->con) { r.error = "could not connect"; return nullptr; }
     std::wstring p(path, uc.dwUrlPathLength);
     if (uc.lpszExtraInfo && uc.dwExtraInfoLength) p += std::wstring(uc.lpszExtraInfo, uc.dwExtraInfoLength);
-    b->req = WinHttpOpenRequest(b->con, L"GET", p.c_str(), nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, uc.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0);
+    const bool upload = !o.method.empty() && o.method != "GET";   // an upload (SondeHub): the method and the body as given
+    b->req = WinHttpOpenRequest(b->con, upload ? wide(o.method).c_str() : L"GET", p.c_str(), nullptr, WINHTTP_NO_REFERER, WINHTTP_DEFAULT_ACCEPT_TYPES, uc.nScheme == INTERNET_SCHEME_HTTPS ? WINHTTP_FLAG_SECURE : 0);
     if (!b->req) { r.error = "could not start the request"; return nullptr; }
     if (o.insecureTls) {   // Advanced > Ignore certificate errors
         DWORD fl = SECURITY_FLAG_IGNORE_UNKNOWN_CA | SECURITY_FLAG_IGNORE_CERT_DATE_INVALID | SECURITY_FLAG_IGNORE_CERT_CN_INVALID | SECURITY_FLAG_IGNORE_CERT_WRONG_USAGE;
@@ -55,7 +56,9 @@ std::unique_ptr<HttpBody> httpOpenPlatform(const std::string& url, const HttpOpt
     if (!o.referer.empty()) hdr += "Referer: " + o.referer + "\r\n";
     for (auto& h : o.headers) hdr += h.first + ": " + h.second + "\r\n";
     const std::wstring wh = wide(hdr);
-    if (!WinHttpSendRequest(b->req, wh.c_str(), (DWORD)-1L, nullptr, 0, 0, 0) || !WinHttpReceiveResponse(b->req, nullptr)) {
+    LPVOID sendData = upload && !o.requestBody.empty() ? (LPVOID)o.requestBody.data() : WINHTTP_NO_REQUEST_DATA;
+    const DWORD sendLen = upload ? (DWORD)o.requestBody.size() : 0;
+    if (!WinHttpSendRequest(b->req, wh.c_str(), (DWORD)-1L, sendData, sendLen, sendLen, 0) || !WinHttpReceiveResponse(b->req, nullptr)) {
         const DWORD e = GetLastError();
         r.error = e == ERROR_WINHTTP_SECURE_FAILURE || e == ERROR_WINHTTP_SECURE_CERT_DATE_INVALID || e == ERROR_WINHTTP_SECURE_INVALID_CA || e == ERROR_WINHTTP_SECURE_CERT_CN_INVALID
             ? "certificate problem: the server's certificate is not trusted (Advanced > Ignore certificate errors can be ticked for a stream you trust)"
@@ -71,7 +74,7 @@ std::unique_ptr<HttpBody> httpOpenPlatform(const std::string& url, const HttpOpt
     }
     if (st < 200 || st >= 300) {
         r.error = "HTTP " + std::to_string(st) + (st == 403 ? " Forbidden: the server refuses this request (try another User-Agent or Referer under Advanced, the link may have expired, or the stream is not available in your country)" : st == 404 ? " Not Found: the stream no longer exists at this address" : "");
-        return nullptr;
+        if (!o.keepErrorBody) return nullptr;
     }
     return b;
 }

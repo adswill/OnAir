@@ -179,6 +179,10 @@ int main() {
         f.tagMask = TagAmateur;
         CHECK(!passVisible(TagWeather, false, {vhf}, p, f), "kind filter");
         CHECK(passVisible(TagWeather | TagAmateur, false, {vhf}, p, f), "several kinds");
+        f.tagMask = TagIridium;   // 4.0: the Iridium group of the tracker
+        CHECK(passVisible(TagIridium, false, {vhf}, p, f) && !passVisible(TagWeather, false, {vhf}, p, f), "Iridium kind filter");
+        CHECK((TagAll & TagIridium) && TagAll == 127u, "TagAll covers Iridium");
+        f.tagMask = TagAmateur;
         f.tagMask = TagAll; f.minPeakDeg = 40;
         CHECK(!passVisible(TagWeather, false, {vhf}, p, f), "peak filter");
         f.minPeakDeg = 0;

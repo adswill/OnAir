@@ -1,0 +1,11 @@
+# VLF MSK transmitter monitor (family 895)
+
+Measures the carrier and the bit rate of an MSK station in the 10 - 30 kHz band (the naval long-wave stations) and logs when it goes on, off or changes rate. Receive only. **Simulated signals only**; the generator (`tests/x40/x40_gen2.h`) is not reachable from the application.
+**The traffic of these stations is encrypted: no message is decoded or shown.** Needs a radio that reaches the VLF band (direct sampling or an LF capable SDR) tuned within about 1 kHz of the carrier.
+
+- Method: an MSK carrier has two tones a quarter of the bit rate above and below its centre. Squaring the signal turns them into two lines whose spacing is the bit rate and whose middle is twice the carrier. A 4096-point Welch spectrum of the squared signal over 4 s, parabolic interpolation, lines of at least 9.5 dB over the typical bin: bit rate = spacing, carrier = (f1 + f2) / 4, compared with 50, 75, 100, 150, 200 and 300 bit/s (within 8 %).
+  A state must hold for two reports (8 s) before it is logged: "on", "off", "changed" (the rate moved by more than 8 %). With one line only: "carrier only".
+- Station hint: when the tuning frequency is known and the carrier is within 60 Hz of a frequency in a short built-in list (24.0 NAA, 24.8 NLK, 25.2 NML, 21.4 NPM, 19.8 NWC, 18.3 HWU, 22.1 GQD, 23.4 DHO38, 20.27 ICV, 22.2 JJI kHz), the likely station is named. The list is written from public lists of VLF transmitters and was not checked against a source in this session: treat the name as a hint.
+- Tested at 8 and 48 ksps: 50, 100, 200 and 300 bit/s (rate within 2.5 bit/s) with the carrier at 0 (drifting 0.5 Hz/s), +140 and -260 Hz (within 4 Hz); an announced 600 Hz off-centre tuning; on at 8 s and off at 32 s (one row each); a rate change 50 to 100 bit/s (one row); the station hint.
+- Noise sweep (200 bit/s, 40 s, signal power over the noise in 2 kHz): found, rate within 0.1 bit/s, at +12, +6, +3, 0 and -3 dB; not at -6 dB. Noise alone, 20 minutes (30 runs of 40 s): no false transmitter.
+- Not covered: GMSK or other VLF modulations, the bit stream itself, several stations at once (the strongest is read), a station keyed on and off in a pattern shorter than 8 s.

@@ -208,6 +208,37 @@ void summary(const App& a, std::string& l1, std::string& l2) {
     if (live(a)) l2 = dect2::wmbusSummary(a.rx.wmbus);
 }
 
+// the filters: the meters and frames of one mode, or of one manufacturer (WmbusLiveReceiver::setPhyMask, setMfrFilter); every channel is still searched
+struct PhyChoice { const char* name; uint32_t mask; };
+const PhyChoice kPhys[] = {{"every mode", 0}, {"S1", 1u << (int)dect2::wmbus::Phy::S1}, {"T1", 1u << (int)dect2::wmbus::Phy::T1},
+                           {"C1", (1u << (int)dect2::wmbus::Phy::C1A) | (1u << (int)dect2::wmbus::Phy::C1B)}, {"R2", 1u << (int)dect2::wmbus::Phy::R2},
+                           {"N1 (Wize, 169 MHz)", (1u << (int)dect2::wmbus::Phy::N1) | (1u << (int)dect2::wmbus::Phy::N24)}};
+struct MfrChoice { const char* name; const char* code; };
+const MfrChoice kMfrs[] = {{"every manufacturer", ""}, {"Kamstrup", "KAM"}, {"Landis+Gyr", "LGB"}, {"Itron", "ITW"}, {"Sensus", "SEN"}};
+constexpr int kNumPhys = (int)(sizeof kPhys / sizeof *kPhys), kNumMfrs = (int)(sizeof kMfrs / sizeof *kMfrs);
+int& phyFilter() { static int v = std::clamp((int)plat::prefs().getI("wmbusPhyFilter", 0), 0, kNumPhys - 1); return v; }
+int& mfrFilter() { static int v = std::clamp((int)plat::prefs().getI("wmbusMfrFilter", 0), 0, kNumMfrs - 1); return v; }
+void pushFilters(App& a) { a.engine.wmbus().setPhyMask(kPhys[phyFilter()].mask); a.engine.wmbus().setMfrFilter(kMfrs[mfrFilter()].code); }   // every frame: each receiver gets them
+
+void tick(App& a) { pushFilters(a); }
+
+void decoder(App& a, bool&) {
+    ImGui::TextDisabled("MODE"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(std::min(160 * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::BeginCombo("##wmbphy", kPhys[phyFilter()].name)) {
+        for (int i = 0; i < kNumPhys; i++) if (ImGui::Selectable(kPhys[i].name, i == phyFilter())) { phyFilter() = i; plat::prefs().setI("wmbusPhyFilter", i); pushFilters(a); }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("List the meters and frames of one mode only. Every channel is still searched (N1 needs the 169 MHz plan).");
+    ImGui::TextDisabled("MAKER"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(std::min(160 * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::BeginCombo("##wmbmfr", kMfrs[mfrFilter()].name)) {
+        for (int i = 0; i < kNumMfrs; i++) if (ImGui::Selectable(kMfrs[i].name, i == mfrFilter())) { mfrFilter() = i; plat::prefs().setI("wmbusMfrFilter", i); pushFilters(a); }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("List the meters of one manufacturer only (the code in the frame header), in every mode.");
+}
+
 void synth(App&, bool&) {
     ImGui::PushTextWrapPos(0);
     ImGui::TextDisabled("%s", tr("The test signal sends six simulated meters (S1, T1, C1 in both formats, R2) on the 868 MHz channels, one with an encrypted payload."));
@@ -226,5 +257,7 @@ const ModeUi kWmbusUi = {
     .list = list,
     .status = status,
     .summary = summary,
+    .decoder = decoder,
     .synth = synth,
+    .tick = tick,
 };

@@ -36,6 +36,7 @@ public:
     void setSaveDir(const std::string& dir);          // where files and pictures go ("" nowhere)
     void setFilecastSymbolRate(double hz);            // Advanced: 0 is the link's own rate
     void setFilecastPid(int pid);                     // Advanced: 0 is the link's own PID
+    void setAptNoiseFilter(bool on);                  // APT: the noise-adaptive line filter (on by default; a clean line passes unchanged)
     wxsat::FilecastLayer* fileLayer();                // the file layer behind the radio, null for the other profiles
     void setBlocking(bool blocking);                  // file sources: before the first feed; wait for the decoder instead of losing frames
     void flush();                                     // tests and recordings: everything fed so far is decoded and reported
@@ -60,6 +61,7 @@ public:
     bool locked() const;
     uint64_t linesOut() const;
     float carrierLevel() const;
+    void setNoiseFilter(bool on);   // on by default: see wxsat_apt.cpp
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

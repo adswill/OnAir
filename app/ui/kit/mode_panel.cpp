@@ -86,12 +86,14 @@ void navPicked(int* cur, int view, bool hasMap) {
     if (hasMap) gHasMap[gFamily] = true;
 }
 
-void levelBar(App& a) {
+float levelBarWidth() { return ImGui::CalcTextSize(tr("Simple")).x + ImGui::CalcTextSize(tr("Advanced")).x + 60 * gUi; }
+
+void levelBar(App& a, bool rightAlign) {
     const bool s = simple(a);
     const char* l1 = tr("Simple");
     const char* l2 = tr("Advanced");
-    const float w = ImGui::CalcTextSize(l1).x + ImGui::CalcTextSize(l2).x + 60 * gUi;
-    ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - w));
+    const float w = levelBarWidth();
+    if (rightAlign) ImGui::SetCursorPosX(std::max(ImGui::GetCursorPosX(), ImGui::GetCursorPosX() + ImGui::GetContentRegionAvail().x - w));
     ImGui::PushID("##modelevel");
     if (pillButton(l1, s)) setSimple(a, true);
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Simple: the spectrum and one view with the summary, the live data and the key controls of this mode"));
@@ -150,8 +152,7 @@ static void strip(App& a, const ModeUi& mu) {
 void commandView(App& a, const ModeUi& mu) {
     gInCommand = true;
     gForceTab.clear();   // a forced tab (--tab) has no tab in this view
-    levelBar(a);
-    modeActionBar(a);   // 3.7: the next step, Auto setup and Reset this mode
+    modeActionBar(a);   // 3.7: the next step, Auto setup and Reset this mode; 4.0: with Simple / Advanced at its right end (one row)
     scanIdentifyBar(a);   // 3.6: one-button Scan and Identify for beginners
     if (a.engine.running() && wideAllWorthIt(a)) wideAllButton(a);   // Easy mode: one button for everything in the capture
     strip(a, mu);

@@ -34,6 +34,11 @@ public:
     // Setters for the interface; safe while feed() runs
     void setCenterMhz(double mhz);                       // the tuned centre frequency: lets the telemetry carry absolute frequencies
     void clearSondes();                                  // empty the list of sondes heard (channels keep following their carriers)
+    void setToneDetection(bool on);                      // symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards
+    bool toneDetection() const;
+    // 4.0: a view onto one radiosonde type: bit k of the mask = SondeKind k; only sondes of those types are reported (telemetry()), 0 = every type. The receiver itself
+    // still tries every type, and everything else (uploads, the saved results) is unchanged.
+    void setKindMask(uint32_t mask);
     void setMaxChannels(int n);                          // 1 to 8 (default 8)
     // Tests and tools
     void setSynchronous(bool on);                        // process inside feed() instead of on the worker thread (deterministic; set before the first feed)
@@ -47,6 +52,7 @@ private:
 };
 
 ModeTuning sondeTuning();
+
 bool sondeIsLbandMhz(double mhz);              // LMS6-1680 profile (wide FSK, ~170 kHz)
 double sondeMinSampleRateHz(double centerMhz);
 

@@ -2,6 +2,7 @@
 // diffraction, and the model using a profile when one is loaded.
 #include "dect2/prop/prop.h"
 #include "dect2/prop/prop_terrain.h"
+#include "dect2/winlink/wl_gzip.h"
 #include <cmath>
 #include <cstdio>
 #include <cstring>
@@ -133,16 +134,35 @@ int main() {
         const TerrainLoss tl = terrainLoss(pr, 10, 10, 145);
         CHECK(!tl.los && tl.diffractionDb > 20);
         Params p; p.txLat = 54.5; p.txLon = 25.2; p.fMHz = 145; p.txHeightM = 10; p.rxHeightM = 10; p.txPowerDbw = 14; p.env = Env::Quiet;
+        // 4.0 (P.1812 over the profile): compare with the same tile without the ridge
+        Terrain level; ElevTile lt; std::string e4;
+        CHECK(parseHgt("N54E025.hgt", hgt(0, 0, 25), lt, e4));
+        level.tiles.push_back(lt);
+        p.terrain = &level;
         const Point smooth = evaluateAt(p, 54.5, 25.8);
+        const Point beforeLevel = evaluateAt(p, 54.5, 25.4);
         p.terrain = &hill;
         const Point withHill = evaluateAt(p, 54.5, 25.8);
-        CHECK(withHill.terrainUsed && (withHill.model == Model::Terrain || withHill.model == Model::Troposcatter));
-        CHECK(withHill.pathLossDb > smooth.pathLossDb + 10);
-        // in front of the ridge nothing changes much; beyond the tile the model falls back to smooth earth
+        CHECK(withHill.terrainUsed && (withHill.model == Model::Terrain || withHill.model == Model::Troposcatter || withHill.model == Model::Ducting));
+        printf("  145 MHz, 10 m antennas, 38 km: level tile %.1f dB, with a 350 m ridge %.1f dB (P.1812)\n", smooth.pathLossDb, withHill.pathLossDb);
+        // the level path is already beyond the horizon, so the ridge works as a single knife edge and can even lower the loss (obstacle gain,
+        // 142 against 148 dB here): it must change the answer, not necessarily raise it
+        CHECK(std::fabs(withHill.pathLossDb - smooth.pathLossDb) > 3);
+        {   // with 60 m / 30 m masts the level path is line of sight; the ridge then blocks it
+            Params q = p; q.txHeightM = 60; q.rxHeightM = 30;
+            q.terrain = &level; const double lvl = evaluateAt(q, 54.5, 25.8).pathLossDb;
+            q.terrain = &hill; const double rid = evaluateAt(q, 54.5, 25.8).pathLossDb;
+            printf("  60 m / 30 m masts: level %.1f dB, ridge %.1f dB\n", lvl, rid);
+            CHECK(rid > lvl + 15);
+        }
+        // in front of the ridge nothing changes much; beyond the tile the model falls back to a flat profile
         const Point before = evaluateAt(p, 54.5, 25.4);
-        CHECK(before.model != Model::Terrain);
+        CHECK(std::fabs(before.pathLossDb - beforeLevel.pathLossDb) < 3);
         const Point outside = evaluateAt(p, 54.5, 26.5);
-        CHECK(!outside.terrainUsed);
+        CHECK(!outside.terrainUsed && outside.flatEarth);
+        // the 3.9 model is still there
+        Params old = p; old.pathModel = PathModel::Legacy39;
+        CHECK(evaluateAt(old, 54.5, 25.8).model == Model::Terrain || evaluateAt(old, 54.5, 25.8).model == Model::Troposcatter);
     }
     // load from a file path (written to the current directory, removed again)
     {
@@ -159,6 +179,33 @@ int main() {
         }
         Terrain tt;
         CHECK(!loadElevationFile("does-not-exist.hgt", tt, err) && !err.empty());
+    }
+    // 4.0: downloadable tiles (names, URL, which tiles a path needs) and the .hgt.gz reader
+    CHECK(demTileName(54, 25) == "N54E025");
+    CHECK(demTileName(-34, -71) == "S34W071");
+    CHECK(demTileUrl(25, 55) == "https://s3.amazonaws.com/elevation-tiles-prod/skadi/N25/N25E055.hgt.gz");
+    {
+        const auto one = demTilesFor(54.5, 25.5, 10, NAN, NAN);
+        CHECK(one.size() == 1 && one[0].first == 54 && one[0].second == 25);
+        const auto path = demTilesFor(54.5, 25.5, 10, 54.5, 27.5);   // 130 km east: 3 tiles in a row
+        CHECK(path.size() == 3);
+        CHECK(demTilesFor(54.5, 25.5, 200, 40, 10, 9).size() <= 9);
+        CHECK(demTilesFor(75, 25, 10, NAN, NAN).empty());               // beyond SRTM's 60 N
+    }
+    {
+        const std::vector<uint8_t> raw = hgt(450, 25.5, 25);
+        const std::vector<uint8_t> gz = dect2::winlink::gzipCompress(raw);
+        FILE* f = std::fopen("N54E025.hgt.gz", "wb");
+        CHECK(f != nullptr);
+        if (f) { std::fwrite(gz.data(), 1, gz.size(), f); std::fclose(f); }
+        Terrain tz; std::string e2;
+        CHECK(loadElevationFile("N54E025.hgt.gz", tz, e2));
+        ElevTile direct; std::string e3;
+        CHECK(parseHgt("N54E025.hgt", raw, direct, e3));
+        double a = 0, b = 0;
+        CHECK(tz.heightAt(54.5, 25.5, a) && direct.heightAt(54.5, 25.5, b));
+        NEAR(a, b, 1e-6);
+        std::remove("N54E025.hgt.gz");
     }
     if (fails) { printf("%d failures\n", fails); return 1; }
     printf("prop_terrain: ok\n");

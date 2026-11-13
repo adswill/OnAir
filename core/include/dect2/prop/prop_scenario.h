@@ -2,6 +2,8 @@
 // figures, input checks, the plain-language verdict, the link-budget table, sweeps and CSV. Pure logic, tested by tests/prop/.
 #pragma once
 #include "dect2/prop/prop.h"
+#include "dect2/prop/mode_snr.h"
+#include "dect2/prop/hf_p533.h"
 #include <string>
 #include <vector>
 
@@ -31,6 +33,13 @@ struct Scenario {
     double sfi = 120, kIndex = 2;
     double rainMmH = 0; bool gas = true;
     bool useNow = true; int year = 2026, month = 1, day = 1, hour = 12, minute = 0;
+    // 4.0 (docs/PROPAGATION-4.0.md)
+    double timePct = 50, locPct = 50, sigmaLocDb = 5.5;   // P.1812 time / location percentages and location variability
+    double deltaN = 45, n0 = 325;                          // refractivity (P.453): lapse rate N/km, sea-level N
+    bool hfLegacy = false;                                 // HF: the 3.9 estimate instead of P.533
+    double r12 = -1;                                       // HF sunspot number (< 0: from the SFI)
+    std::string decodeMode;                                // an OnAir mode id (mode_snr.h): its measured threshold sets SNR and bandwidth
+    int decodeCondition = 1;                               // 0 white noise, 1 real-world impairments, 2 fading
 };
 
 struct Preset {
@@ -84,6 +93,31 @@ Series sweepRangeVsPower(const Params& p, int n, double bearing);               
 Series sweepRangeVsFrequency(const Params& p, double f0MHz, double f1MHz, int n, double bearing);
 struct HfDay { std::vector<double> hour, muf, fot, luf; };                            // luf 0: no usable frequency that hour
 HfDay hfDay(const Params& p, double distKm, double bearing);
+
+// 4.0 presets for the antenna gain and the feeder loss (typical datasheet values)
+struct AntennaPreset { const char* name; double gainDbi; const char* note; };
+const std::vector<AntennaPreset>& antennaPresets();
+struct CablePreset { const char* name; double a, b; };   // loss per 100 m = a sqrt(f MHz) + b f MHz (dB), fitted to datasheets at 100 and 1000 MHz
+const std::vector<CablePreset>& cablePresets();
+double cableLossDb(const CablePreset& c, double fMHz, double lengthM);
+
+// 4.0 views
+// basic path loss against distance for several models side by side: free space, exact two-ray, P.1812 median, P.1812 for 90 % of locations,
+// P.1812 for 1 % of the time (the enhanced / interference case)
+std::vector<Series> sweepLossByModel(const Params& p, double maxKm, int n, double bearing);
+// the terrain profile toward a point with the line of sight, the first Fresnel zone and the earth's bulge for the median k-factor
+struct ProfileView {
+    std::vector<double> dKm, groundM;   // ground height above sea level, bent by the earth's curvature (k-factor) relative to the chord
+    std::vector<double> losM, fresnelM; // line of sight between the antenna tops and the first Fresnel zone radius at each point
+    double kFactor = 4.0 / 3.0;
+    double worstClearancePct = 100;     // smallest (line of sight - ground) / first Fresnel radius, % (60 % or more: no diffraction loss)
+    double worstKm = 0;
+    bool terrain = false;               // false: no elevation data under the path (flat sea level)
+};
+ProfileView profileView(const Params& p, double rxLat, double rxLon, int n = 200);
+// the P.533 inputs of a scenario's path and its hour x band chart
+hf::Path hfPathFor(const Params& p, double rxLat, double rxLon);
+hf::Chart hfChartFor(const Params& p, double rxLat, double rxLon, const std::vector<double>& freqMHz);
 
 std::string budgetCsv(const std::vector<BudgetRow>& a, const std::vector<BudgetRow>* b);   // b: the second scenario (compare)
 std::string seriesCsv(const std::vector<Series>& s);

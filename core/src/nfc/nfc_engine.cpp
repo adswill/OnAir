@@ -1,6 +1,8 @@
 // NFC / RFID (13.56 MHz) in the engine: mixes the carrier to 0 Hz and runs the demodulator, then turns recovered frames into a
 // frame log, a tag table and decoded NDEF. Receive only. See nfc_engine.h / nfc_rx.h / nfc_proto.h.
 #include "dect2/nfc/nfc_engine.h"
+#include <atomic>
+#include <set>
 #include <algorithm>
 #include <cmath>
 #include <cstdio>
@@ -21,6 +23,7 @@ std::string toHex(const std::vector<uint8_t>& b) {
 
 struct NfcReceiver::Impl {
     mutable std::mutex mu;
+    std::atomic<uint32_t> protoMask{0};   // setProtoMask(): 0 every protocol
     double rate = 0;
     double offsetHz = 0;
     double centerHz = 0;
@@ -237,8 +240,20 @@ bool NfcReceiver::telemetry(NfcTelemetry& out, uint64_t lastSeq) {
     out = p_->snap;
     out.inputRate = p_->rate;
     out.centerHz = p_->centerHz;
+    if (const uint32_t m = p_->protoMask.load(std::memory_order_relaxed)) {   // a view onto one protocol: its frames, tags and NDEF records only
+        auto protoOfType = [](const std::string& t) { return t.find("14443-B") != std::string::npos ? 1 : t.find("15693") != std::string::npos ? 2 : 0; };
+        std::vector<NfcLogEntry> lk; for (const auto& e : out.log) if ((m >> e.proto) & 1u) lk.push_back(e);
+        std::vector<NfcTag> tk; std::set<std::string> uids; for (const auto& t : out.tags) if ((m >> protoOfType(t.type)) & 1u) { tk.push_back(t); uids.insert(t.uid); }
+        std::vector<NfcNdef> nk; for (const auto& n : out.ndef) if (uids.count(n.uid)) nk.push_back(n);
+        out.log.swap(lk); out.tags.swap(tk); out.ndef.swap(nk);
+        out.blocksOk = out.log.size();
+        out.dataValid = !out.log.empty();
+        if (out.state >= 2 && out.log.empty()) out.state = 1;
+        else if (out.state >= 3 && out.tags.empty()) out.state = 2;
+    }
     return true;
 }
+void NfcReceiver::setProtoMask(uint32_t mask) { p_->protoMask.store(mask, std::memory_order_relaxed); }
 
 void NfcReceiver::setLogCallback(std::function<void(const std::string&)> cb) {
     std::lock_guard<std::mutex> l(p_->mu);

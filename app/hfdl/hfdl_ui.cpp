@@ -23,6 +23,8 @@
 #include <ctime>
 #include "dect2/hfdl/hfdl_hop.h"
 #include "dect2/hfdl/hfdl_learn.h"
+#include "dect2/hfdl/hfdl_live.h"
+#include "hfdl_stations.h"
 #include "platform/platform.h"
 #include <fstream>
 #include <sstream>
@@ -31,7 +33,7 @@ namespace {
 
 struct State {
     bool loaded = false;
-    int viewMode = 0;                    // 0 messages, 1 map, 2 aircraft, 3 ground stations, 4 channels, 5 range
+    int viewMode = 0;                    // 0 messages, 1 map, 2 aircraft, 3 ground stations, 4 channels, 5 range, 7 nearby ground stations (hfdl_stations.cpp)
     char fAir[24] = "";
     char fText[32] = "";
     int fKind = 0;                       // 0 all, 1 ACARS, 2 squitters, 3 positions, 4 logon / link
@@ -43,8 +45,9 @@ struct State {
     uint32_t selAir = 0;
     RangeView range;                     // the receiver-range plot (Range view)
     bool onlyPos = false;                // aircraft tables: only those with a position (pref hfdlOnlyPos)
-    bool autoHop = false;                // follow the best band (pref hfdlHop)
-    dect2::HfdlBandHopper hopper;
+    int hopMode = 0;                     // band choice: 0 stay on the band, 1 find a working band, 2 busiest band (pref hfdlHopMode; before 4.0 the bool hfdlHop)
+    dect2::HfdlBandHopper hopper;        // "Find a working band"
+    dect2::HfdlBusiestBand busiest;      // "Busiest band"
     bool hopWasOn = false;
     std::unordered_map<uint32_t, double> rangeFedT;   // per aircraft: the position report already counted in it
 };
@@ -60,7 +63,7 @@ void loadState() {
     plat::Prefs& d = plat::prefs();
     snprintf(S.chans, sizeof S.chans, "%s", d.getS("hfdlChans", "").c_str());
     S.map.zoom = (int)d.getI("hfdlZoom", 2);
-    S.autoHop = d.getB("hfdlHop", false);
+    S.hopMode = d.has("hfdlHopMode") ? (int)std::max(0L, std::min(2L, d.getI("hfdlHopMode", 0))) : (d.getB("hfdlHop", false) ? 1 : 0);
     S.onlyPos = d.getB("hfdlOnlyPos", false);
     S.map.lat = 40; S.map.lon = -30;
     S.range.plot.configure(5.0, 0.0, 20040.0);   // HF reaches anywhere: the sanity limit is half way round the Earth, not the VHF 1000 km
@@ -157,23 +160,39 @@ void feedRange(const dect2::HfdlTelemetry& t) {
     }
 }
 
-// Follow the best band (dect2/hfdl/hfdl_hop.h): fed once a second with the good PDU count and the frequencies the heard squitters announce
+// The automatic band choice (dect2/hfdl/hfdl_hop.h), fed once a second: "Find a working band" with the good PDU count and the active frequencies
+// (squitters heard and the nearby stations of hfdl_stations.h); "Busiest band" also with the aircraft and ground stations heard and the SNR.
+// The radio goes to the band's tune point: the centre, or where the span covers the nearby stations' frequencies when the band is wider than it.
+void resetHop() { S.hopper.reset(); S.busiest.reset(); }
+
 void hopTick(App& a) {
-    if (!S.autoHop || !live(a) || a.second.drawing || a.wideDecode) { if (S.hopWasOn) { S.hopper.reset(); S.hopWasOn = false; } return; }
+    if (S.hopMode == 0 || !live(a) || a.second.drawing || a.wideDecode) { if (S.hopWasOn) { resetHop(); S.hopWasOn = false; } return; }
     static double lastT = -10;
     const double now = ImGui::GetTime();
     if (now - lastT < 1.0) return;
     lastT = now;
     S.hopWasOn = true;
     const dect2::HfdlTelemetry& t = a.rx.hfdl;
-    dect2::HfdlBandHopper::Obs o;
-    o.nowSec = now; o.band = dect2::hfdlBandOfMhz(a.freqMhz); o.goodPdus = t.blocksOk;
-    for (const auto& g : t.stations) if (g.heardDirect) {   // the learner (hfdl_learn.h) says which announcements to believe: the mask, or what was heard when the station's table changed
-        const std::vector<int> ann = dect2::HfdlFreqLearner::global().announced(g.id, g.activeKhz, (double)std::time(nullptr));
-        o.announcedKhz.insert(o.announcedKhz.end(), ann.begin(), ann.end());
+    const std::vector<int> hints = hfdlst::hintKhz(a);   // nearest station first; includes what the squitters heard here announce
+    const int band = dect2::hfdlBandOfMhz(a.freqMhz);
+    int b = -1;
+    if (S.hopMode == 1) {
+        dect2::HfdlBandHopper::Obs o;
+        o.nowSec = now; o.band = band; o.goodPdus = t.blocksOk;
+        for (const auto& g : t.stations) if (g.heardDirect) {   // the learner (hfdl_learn.h) says which announcements to believe: the mask, or what was heard when the station's table changed
+            const std::vector<int> ann = dect2::HfdlFreqLearner::global().announced(g.id, g.activeKhz, (double)std::time(nullptr));
+            o.announcedKhz.insert(o.announcedKhz.end(), ann.begin(), ann.end());
+        }
+        o.announcedKhz.insert(o.announcedKhz.end(), hints.begin(), hints.end());
+        b = S.hopper.update(o);
+    } else {
+        dect2::HfdlBusiestBand::Obs o;
+        o.nowSec = now; o.band = band; o.goodPdus = t.blocksOk; o.snrDb = t.snrDb; o.hintKhz = hints;
+        for (const auto& c : t.aircraft) o.aircraft.push_back({c.key, c.lastHeardSec});
+        for (const auto& g : t.stations) if (g.heardDirect) o.stations.push_back({(uint32_t)g.id, g.lastHeardSec});
+        b = S.busiest.update(o);
     }
-    const int b = S.hopper.update(o);
-    if (b >= 0) tuneFreq(a, dect2::hfdlBands()[(size_t)b].centreMhz);
+    if (b >= 0) tuneFreq(a, dect2::hfdlTunePointMhz(b, hints, t.inputRate));
 }
 
 // the frequency learner (hfdl_learn.h) keeps its state between runs; it listens only to a live radio (a recording's stations and tables are not today's)
@@ -211,6 +230,7 @@ void tick(App& a) {
     if (!a.engine.running()) { S.pushedChans[0] = '\x01'; S.pushedChans[1] = 0; return; }
     a.engine.hfdl().setWholeSpan(a.family == 35 && a.wideDecode);   // the Whole span switch (top right of the spectrum)
     hopTick(a);
+    hfdlst::tick(a, S.hopMode != 0 && live(a));   // the opt-in live station list, when the band choice uses it
     if (std::strcmp(S.pushedChans, S.chans) != 0) {
         std::vector<double> hz;
         const char* p = S.chans;
@@ -583,9 +603,10 @@ void channelView(const App& a) {
 void tab(App& a) {
     loadState();
     kit::modeHeader({35, "HFDL", live(a) ? 1 : a.engine.running() ? 2 : 0, -1000.f, a.freqMhz * 1e6});
-    kit::modeNav("hfdlv", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 6}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Ground stations"), 3, true}, {tr("Channels"), 4, true}, {tr("Range"), 5, true}, {tr("Weather"), 9, true}});
+    kit::modeNav("hfdlv", S.viewMode, {{tr("Live"), 0}, {tr("Tracks"), 6}, {tr("Map"), 1}, {tr("Aircraft"), 2, true}, {tr("Ground stations"), 3, true}, {tr("Nearby"), 7}, {tr("Channels"), 4, true}, {tr("Range"), 5, true}, {tr("Weather"), 9, true}});
     if (S.viewMode == 9) { acarsWxView(); return; }
     if (S.viewMode == 6) { kit::sessionItems(35, 3, "hfdl"); return; }
+    if (S.viewMode == 7) { hfdlst::panel(a); return; }
     if (S.viewMode == 0) messageView(a);
     else if (S.viewMode == 1) mapView(a);
     else if (S.viewMode == 2) aircraftView(a);
@@ -678,9 +699,21 @@ void tuner(App& a, bool&) {
         ImGui::EndCombo();
     }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Tune to an HFDL band: every ground station frequency of the built-in table inside the sample band is decoded at once.");
-    if (ImGui::Checkbox("Follow the best band##hfhop", &S.autoHop)) { plat::prefs().setB("hfdlHop", S.autoHop); if (!S.autoHop) S.hopper.reset(); }
-    if (ImGui::IsItemHovered()) ImGui::SetTooltip("HF carries a band only at some times of day. With this on, OnAir tunes to the band where ground stations are heard now, stays while it works,\nand moves on when it goes quiet (it listens about a minute per band; the frequencies the ground stations announce in their squitters guide the order).\nIt retunes the radio by itself: leave it off to stay on the band you chose. Off while Whole span is on.");
-    if (S.autoHop && live(a) && !S.hopper.status().empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", S.hopper.status().c_str()); ImGui::PopTextWrapPos(); }
+    {
+        static const char* kHop[] = {"Stay on this band", "Find a working band", "Busiest band"};
+        ImGui::SetNextItemWidth(std::min(200 * gUi, ImGui::GetContentRegionAvail().x));
+        if (ImGui::Combo("##hfhop", &S.hopMode, kHop, 3)) { plat::prefs().setI("hfdlHopMode", S.hopMode); resetHop(); }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("How OnAir chooses the HFDL band (it retunes the radio by itself in the two automatic choices; off while Whole span is on):\n"
+                              "Stay on this band: never retunes.\n"
+                              "Find a working band: leaves a silent band and stays on the first band where it decodes something, even if another band is busier.\n"
+                              "Busiest band: listens to each band for about a minute and a quarter, scores it (messages per minute, aircraft and ground stations heard,\n"
+                              "signal to noise), stays on the best one and checks the others again every 20 minutes, or at once when the band goes quiet.\n"
+                              "Both start with the bands where the nearby ground stations are active (their squitters and, when on, the hfdl.observer list: Nearby view).");
+        const std::string st = S.hopMode == 1 ? S.hopper.status() : S.hopMode == 2 ? S.busiest.status() : std::string();
+        if (S.hopMode && live(a) && !st.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", st.c_str()); ImGui::PopTextWrapPos(); }
+        hfdlst::tunerLine(a);
+    }
     ImGui::TextDisabled("Channels kHz");
     ImGui::SetNextItemWidth(std::min(230 * gUi, ImGui::GetContentRegionAvail().x));
     if (ImGui::InputTextWithHint("##hfch", "the station table", S.chans, sizeof S.chans)) plat::prefs().setS("hfdlChans", S.chans);

@@ -68,6 +68,9 @@ public:
     // (what rtl_433 -y does). Returns how many messages were decoded; json gets one rtl_433 JSON line per message.
     int decodeCode(const std::string& code, std::vector<std::string>* json = nullptr);
     void setProtocolsOnly(const std::vector<unsigned>& nums);   // exactly these decoders (protocol numbers), no others
+    // 4.0: a view onto one sensor family: only messages whose model contains one of the '|' separated parts, compared in lower case,
+    // are reported (and the unknown signal analyser is silent); "" = every sensor (the Sub-GHz sensors mode). The user's protocol choice still applies.
+    void setView(const std::string& patterns);
 private:
     struct Impl;
     std::unique_ptr<Impl> p_;

@@ -96,6 +96,10 @@ std::unique_ptr<HttpBody> httpOpenPlatform(const std::string& url, const HttpOpt
         [req setValue:[NSString stringWithUTF8String:(o.userAgent.empty() ? "OnAir" : o.userAgent.c_str())] forHTTPHeaderField:@"User-Agent"];
         if (!o.referer.empty()) [req setValue:[NSString stringWithUTF8String:o.referer.c_str()] forHTTPHeaderField:@"Referer"];
         for (auto& h : o.headers) [req setValue:[NSString stringWithUTF8String:h.second.c_str()] forHTTPHeaderField:[NSString stringWithUTF8String:h.first.c_str()]];
+        if (!o.method.empty() && o.method != "GET") {   // an upload (SondeHub): the method and the body as given
+            req.HTTPMethod = [NSString stringWithUTF8String:o.method.c_str()];
+            req.HTTPBody = [NSData dataWithBytes:o.requestBody.data() length:o.requestBody.size()];
+        }
         OnAirIptvDelegate* d = [OnAirIptvDelegate new];
         d.mu = &b->mu; d.cv = &b->cv; d.buf = &b->buf; d.finished = &b->finished; d.err = &b->err; d.status = &b->status; d.headers = &b->headers; d.gotHead = &b->gotHead; d.insecure = o.insecureTls;
         NSURLSessionConfiguration* cfg = [NSURLSessionConfiguration ephemeralSessionConfiguration];
@@ -119,7 +123,7 @@ std::unique_ptr<HttpBody> httpOpenPlatform(const std::string& url, const HttpOpt
         if (r.headers.count("content-length")) r.contentLength = atoll(r.headers["content-length"].c_str());
         if (r.status < 200 || r.status >= 300) {
             r.error = "HTTP " + std::to_string(r.status) + (r.status == 403 ? " Forbidden: the server refuses this request (try another User-Agent or Referer under Advanced, the link may have expired, or the stream is not available in your country)" : r.status == 404 ? " Not Found: the stream no longer exists at this address" : "");
-            return nullptr;
+            if (!o.keepErrorBody) return nullptr;
         }
         return b;
     }

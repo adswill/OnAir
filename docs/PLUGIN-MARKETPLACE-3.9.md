@@ -1,5 +1,7 @@
 # Plugin marketplace (3.9)
 
+4.0 adds a community marketplace beside this registry (uploads from the app, likes, downloads): `docs/PLUGIN-MARKETPLACE-4.0.md`. This registry stays as the "Reviewed registry" source of the Store tab.
+
 **Design in two sentences.** The marketplace is a *static registry*: a signed `index.json` plus one page and one package per plugin, hosted as plain files on any HTTPS host (GitHub Pages is enough) or in a local folder, so no server exists to run or attack. OnAir's Store tab (View > Plugins > Store) reads it only when asked, accepts it only if the index is signed with the registry's Ed25519 key, checks every package against the sha256 in the signed listing before a byte reaches the plugins folder, and then uses the existing install path, watchdog, helper process and safe mode.
 
 Status: the registry is live at https://adswill.github.io/onair-plugins/ (repository adswill/onair-plugins). It is signed and empty: no plugins are listed yet. Its public key is built into OnAir (`kBuiltInRegistryKeyHex` in `core/src/pstore/store.cpp`); the private key is kept offline by the owner. The section below, "Host a registry", is for anyone who wants a custom registry.

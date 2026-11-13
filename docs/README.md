@@ -3,14 +3,14 @@
 The user guides and notes that live in the repository. The same text is on the [wiki](https://github.com/adswill/OnAir/wiki) and at [on-air.dev/docs](https://on-air.dev/docs/). The main README is [../README.md](../README.md); radios are in [../DEVICES.md](../DEVICES.md); the code layout is in [../ARCHITECTURE.md](../ARCHITECTURE.md).
 
 
-**Start here (OnAir 3.9.0):**
+**Start here (OnAir 4.0.0):**
 
-- Install and first run: [../README.md](../README.md) (assets: `OnAir-3.9.0-macos-arm64.dmg`, `-macos-x86_64.dmg`, `-windows-x64-setup.exe`, `-windows-x64.zip`, `onair_3.9.0_amd64.deb` / `_arm64.deb`, Linux portable `.tar.gz` and AppImage, the Android APK, `SHA256SUMS`).
+- Install and first run: [../README.md](../README.md) (assets: `OnAir-4.0.0-macos-arm64.dmg`, `-macos-x86_64.dmg`, `-windows-x64-setup.exe`, `-windows-x64.zip`, `onair_4.0.0_amd64.deb` / `_arm64.deb`, Linux portable `.tar.gz` and AppImage, the Android APK, `SHA256SUMS`).
 - Radios: [../DEVICES.md](../DEVICES.md), [NETWORK_RADIOS.md](NETWORK_RADIOS.md), [RASPBERRY_PI.md](RASPBERRY_PI.md). Every mode: [../MODES.md](../MODES.md).
 - Settings and keys: [SETTINGS.md](SETTINGS.md), [CONTROLS.md](CONTROLS.md), [SIMPLE-ADVANCED.md](SIMPLE-ADVANCED.md).
 - Voice codecs and optional libraries (you install them): [CODECS.md](CODECS.md), [OPTIONAL-LIBRARIES.md](OPTIONAL-LIBRARIES.md), [USERLIBS-3.8.md](USERLIBS-3.8.md).
 - Share, serve and automate: [HOST-A-RECEIVER.md](HOST-A-RECEIVER.md), [headless-server.md](headless-server.md), [REMOTE-API.md](REMOTE-API.md), [MCP.md](MCP.md), [INTEGRATIONS.md](INTEGRATIONS.md), [plugins.md](plugins.md).
-- What changed in each release: [CHANGELOG-3.9.md](CHANGELOG-3.9.md), [CHANGELOG-3.8.md](CHANGELOG-3.8.md) and the older `CHANGELOG-*.md` files. Dated files such as `*-3.7.md`, `*-3.8.md`, `*-3.9.md`, `ISSUES-*` and `PATHWAY.md` describe the version in their name.
+- What changed in each release: [CHANGELOG-4.0.md](CHANGELOG-4.0.md) (release notes: [RELEASE-NOTES-4.0.0.md](RELEASE-NOTES-4.0.0.md)), [CHANGELOG-3.9.md](CHANGELOG-3.9.md), [CHANGELOG-3.8.md](CHANGELOG-3.8.md) and the older `CHANGELOG-*.md` files. Dated files such as `*-3.7.md`, `*-3.8.md`, `*-3.9.md`, `*-4.0.md`, `ISSUES-*` and `PATHWAY.md` describe the version in their name.
 
 The table below is the list of topic pages.
 
@@ -169,6 +169,39 @@ The table below is the list of topic pages.
 | [HOST-A-RECEIVER.md](HOST-A-RECEIVER.md) | Host a receiver | Put your radio on the internet and list it on web.on-air.dev. |
 | [OPTIONAL-LIBRARIES.md](OPTIONAL-LIBRARIES.md) | Optional libraries | Codecs and libraries you install yourself. |
 | [PLUGIN-SDK.md](PLUGIN-SDK.md) | Plug-in SDK | What exists for plug-in authors. |
+
+## Added in 4.0
+
+| File | Topic |
+|---|---|
+| [GENERAL-4.0.md](GENERAL-4.0.md) | The General receiver screen |
+| [WORKSPACE-4.0.md](WORKSPACE-4.0.md) | Workspace layout: blocks on a blank canvas |
+| [LAYOUT-4.0.md](LAYOUT-4.0.md) | Panels sized to their content |
+| [HAM-4.0.md](HAM-4.0.md) | Ham station screen: spots, callbook, activation and log tools |
+| [TX-4.0.md](TX-4.0.md) | Transmit parameters and screens |
+| [PROPAGATION-4.0.md](PROPAGATION-4.0.md) | Propagation calculator on ITU-R models |
+| [TRACKER-4.0.md](TRACKER-4.0.md) | Satellite tracker with a world map |
+| [MODELIST-4.0.md](MODELIST-4.0.md) | Mode list tint |
+| [WATERFALL-4.0.md](WATERFALL-4.0.md) | Waterfall and spectrum resolution (zoom FFT) |
+| [SETTINGS-4.0.md](SETTINGS-4.0.md) | Settings 4.0, key editor, profiles |
+| [UI-PREVIEW-4.0.md](UI-PREVIEW-4.0.md) | Hover previews of the looks |
+| [MENUS-4.0.md](MENUS-4.0.md) | Menus 4.0 |
+| [STATUSBAR-4.0.md](STATUSBAR-4.0.md) | Status bar and top bar |
+| [PLUGIN-MARKETPLACE-4.0.md](PLUGIN-MARKETPLACE-4.0.md) | Community plugin marketplace (plugins.on-air.dev) |
+| [MAP-BADGES-4.0.md](MAP-BADGES-4.0.md) | Live map sign-in and badges |
+| [SONDE-PREDICT-4.0.md](SONDE-PREDICT-4.0.md) | Radiosonde landing predictor and its accuracy |
+| [SONDEHUB-4.0.md](SONDEHUB-4.0.md) | SondeHub upload, launch sites, radiosonde map |
+| [HFDL-STATIONS-4.0.md](HFDL-STATIONS-4.0.md) | HFDL nearby ground stations and band choice |
+| [PERF-4.0.md](PERF-4.0.md) | Sample-loss warnings, nRSP-ST, receiver thread |
+| [ATSC-4.0.md](ATSC-4.0.md) | ATSC 1.0 and 3.0 on real channels |
+| [ANDROID-4.0.md](ANDROID-4.0.md) | Android TV picture and sound, USB radios (untested on a phone) |
+| [RIVET-MODES-4.0.md](RIVET-MODES-4.0.md) | HF data modes from Rivet (XPA, XPA2, CROWD36, F01, F06, GW FSK) |
+| [DCR-4.0.md](DCR-4.0.md) | DCR, Japan's digital convenience radio |
+| [X40-4.0.md](X40-4.0.md) | Measurement and monitor modes (index; one page per mode follows it) |
+| [FAMILY-NUMBERS-4.0.md](FAMILY-NUMBERS-4.0.md) | Family numbers taken in 4.0 |
+| [SENSITIVITY-4.0-A.md](SENSITIVITY-4.0-A.md) | Sensitivity 4.0 (A2 to A4, B to B3, C1, X1 to X3 follow) |
+| [FEATURES-4.0-A.md](FEATURES-4.0-A.md) | Per-mode features (B to E follow; WIRING-4.0.md says what is on a screen) |
+| [QA-4.0.md](QA-4.0.md) | QA sweep 4.0 |
 
 ## Added in 3.9
 

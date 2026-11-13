@@ -22,6 +22,9 @@
 #include "dect2/general/general_rx.h"
 #include "dect2/fm/fm_rx.h"
 #include "results_json.h"
+#include "dect2/cdr/cdr_rx.h"
+#include "dect2/cdr/cdr_dra.h"
+#include "dect2/codec/codec_paths.h"
 #include "jni_radio.h"
 
 #define LOGI(...) __android_log_print(ANDROID_LOG_INFO, "OnAir", __VA_ARGS__)
@@ -51,6 +54,7 @@ struct Bridge {
     int gainMax = 0;
     uint64_t specSeq = 0, rxSeq = 0;
     std::string lastError;
+    int cdrListen = -1;           // CDR service to play (#463): -1 the first audio service, as the desktop's panel picks it; 0 none
 };
 Bridge* gB = nullptr;
 
@@ -186,6 +190,7 @@ void pushGain(Bridge& b) {
 } // namespace
 
 std::string onair::deviceJsonOf(const DeviceInfo& d) { return deviceJson(d); }
+dect2::Engine* onair::bridgeEngine() { return gB ? &gB->eng : nullptr; }
 
 #define FN(ret, name) extern "C" JNIEXPORT ret JNICALL Java_io_github_adswill_onair_OnAirNative_##name
 
@@ -196,6 +201,7 @@ FN(jboolean, nativeInit)(JNIEnv* e, jobject, jstring resultsDir) {
     dect2::setDiagSink([](const std::string& s) { if (gB) gB->eng.log(s); });   // driver messages (radio lost, stream restarted, verbose lines) into the log the app shows: stderr goes nowhere on Android
     const std::string dir = jstr(e, resultsDir);
     if (!dir.empty()) gB->eng.setResultsDir(dir);
+    gB->eng.cdr().setListen(gB->cdrListen);
     return JNI_TRUE;
 }
 
@@ -264,6 +270,7 @@ FN(jstring, nativeStart)(JNIEnv* e, jobject, jint kind, jstring host, jint port,
     applySubMode(b.eng, b.sub);
     b.specSeq = 0; b.rxSeq = 0;
     const bool ok = b.eng.start(b.dev, b.tune, b.file);
+    b.eng.cdr().setListen(b.cdrListen);
     b.lastError = ok ? "" : (b.eng.sourceNote().empty() ? "could not start the source" : b.eng.sourceNote());
     return mk(e, b.lastError);
 }
@@ -342,8 +349,9 @@ FN(jstring, nativeTelemetry)(JNIEnv* e, jobject, jboolean force) {
         return mk(e, std::string("{\"running\":") + (b.eng.running() ? "true" : "false") + ",\"available\":false,\"cards\":[],\"tables\":[]}");
     }
     b.rxSeq = rx.seq;
-    if (rx.standard == 3) { dect2::DabEnsemble ens = b.eng.dabEnsemble(); return mk(e, onair::resultsJson(rx, b.eng.running(), &ens)); }
-    return mk(e, onair::resultsJson(rx, b.eng.running()));
+    const dect2::SampleLoss loss = b.eng.sampleLoss();
+    if (rx.standard == 3) { dect2::DabEnsemble ens = b.eng.dabEnsemble(); return mk(e, onair::resultsJson(rx, b.eng.running(), &ens, &loss, b.cdrListen)); }
+    return mk(e, onair::resultsJson(rx, b.eng.running(), nullptr, &loss, b.cdrListen));
 }
 
 // "total\nline\nline..." : the log lines after the first `since` ones
@@ -409,5 +417,22 @@ FN(jstring, nativeRecStats)(JNIEnv* e, jobject) {
                      std::to_string(r.droppedSamples) + "\t" + (gB->eng.recordingCapReached() ? "1" : "0") + "\t" + r.error + "\t" + r.path);
 }
 FN(void, nativeRecStop)(JNIEnv*, jobject) { gB->eng.stopRecording(); }
+
+// CDR (#463): the service whose DRA+ sound plays; -1 the first audio service, 0 none
+FN(void, nativeCdrListen)(JNIEnv*, jobject, jint serviceId) {
+    Bridge& b = *gB;
+    b.cdrListen = serviceId < -1 ? -1 : serviceId;
+    b.eng.cdr().setListen(b.cdrListen);
+}
+// The app's codecs folder (files/codecs: the add-ons the user imported, docs/CODECS.md) and a new look for the DRA+ add-on.
+// Returns "found\tpath\tproblem" (found 1 or 0; problem empty when no library was found at all).
+FN(jstring, nativeCodecs)(JNIEnv* e, jobject, jstring dir) {
+    const std::string d = jstr(e, dir);
+    if (!d.empty()) dect2::codec::setExtraCodecDir(d);
+    const bool ok = dect2::cdr::draRescan();
+    std::string path, problem;
+    dect2::cdr::draAvailable(&path, &problem);
+    return mk(e, std::string(ok ? "1" : "0") + "\t" + path + "\t" + problem);
+}
 
 FN(jstring, nativeVersion)(JNIEnv* e, jobject) { return mk(e, ONAIR_VERSION); }

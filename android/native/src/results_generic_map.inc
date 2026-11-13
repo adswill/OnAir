@@ -107,24 +107,6 @@ case 22: {
     { Table tb({"Port", "Lot", "Name", "Mime", "Size", "Have", "Version", "Expires"}); int n = 0; for (auto it = t.lots.rbegin(); it != t.lots.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.port), cell(e.lot), cell(e.name), cell(e.mime), cell(e.size), cell(e.have), cell(e.version), cell(e.expires)}); } if (n) addTable(o, "Lots", tb); }
     break;
 }
-case 23: {
-    const auto& t = rx.cdr; (void)t;
-    cardIf(o, "Cfo Hz", t.cfoHz);
-    cardIf(o, "Snr Db", t.snrDb);
-    cardIf(o, "Level Db", t.levelDb);
-    cardIf(o, "Clip Pct", t.clipPct);
-    cardIf(o, "Blocks Ok", t.blocksOk);
-    cardIf(o, "Blocks Bad", t.blocksBad);
-    cardIf(o, "Time Sec", t.timeSec);
-    cardIf(o, "Input Rate", t.inputRate);
-    cardIf(o, "Tm", t.tm);
-    cardIf(o, "Sm", t.sm);
-    cardIf(o, "Ni", t.ni);
-    cardIf(o, "Inner Khz", t.innerKhz);
-    { Table tb({"Id", "Smf Id", "Sub Index", "Kbps", "Audio Units", "Audio Bytes", "Data Bytes", "Text"}); int n = 0; for (auto it = t.services.rbegin(); it != t.services.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.id), cell(e.smfId), cell(e.subIndex), cell(e.kbps), cell(e.audioUnits), cell(e.audioBytes), cell(e.dataBytes), cell(e.text)}); } if (n) addTable(o, "Services", tb); }
-    { Table tb({"Item"}); int n = 0; for (auto it = t.notes.rbegin(); it != t.notes.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "Notes", tb); }
-    break;
-}
 case 27: {
     const auto& t = rx.airband; (void)t;
     cardIf(o, "Cfo Hz", t.cfoHz);
@@ -151,12 +133,13 @@ case 30: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Fold Period Sec", t.foldPeriodSec);
+    cardIf(o, "Fold Z", t.foldZ);
+    cardIf(o, "Fold Quality", t.foldQuality);
+    cardIf(o, "Fold Text", t.foldText);
     cardIf(o, "Tone Hz", t.toneHz);
     cardIf(o, "Depth", t.depth);
     cardIf(o, "Wpm", t.wpm);
-    cardIf(o, "Ident", t.ident);
-    cardIf(o, "Text", t.text);
-    cardIf(o, "Partial", t.partial);
     { Table tb({"Item"}); int n = 0; for (auto it = t.history.rbegin(); it != t.history.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e)}); } if (n) addTable(o, "History", tb); }
     { Table tb({"Offset Hz", "Level Db", "Snr Db", "Wpm", "Tone Hz", "Ident", "Last Wall"}); int n = 0; for (auto it = t.census.rbegin(); it != t.census.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.offsetHz), cell(e.levelDb), cell(e.snrDb), cell(e.wpm), cell(e.toneHz), cell(e.ident), cell(e.lastWall)}); } if (n) addTable(o, "Census", tb); }
     break;
@@ -450,10 +433,10 @@ case 59: {
     cardIf(o, "Level Db", t.levelDb);
     cardIf(o, "Blocks Ok", t.blocksOk);
     cardIf(o, "Blocks Bad", t.blocksBad);
+    cardIf(o, "Minutes Predicted", t.minutesPredicted);
     cardIf(o, "Station", t.station);
     cardIf(o, "Tick1000 Db", t.tick1000Db);
     cardIf(o, "Tick1200 Db", t.tick1200Db);
-    cardIf(o, "Time Sec", t.timeSec);
     { Table tb({"Wall Time", "Text", "Bits"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.text), cell(e.bits)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
@@ -938,7 +921,7 @@ case 93: {
     cardIf(o, "Input Rate", t.inputRate);
     cardIf(o, "Wide Span Hz", t.wideSpanHz);
     cardIf(o, "Wide Channels", t.wideChannels);
-    { Table tb({"Wall Time", "Time Sec", "Snr Db", "Level Db", "Cfo Hz"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.timeSec), cell(e.snrDb), cell(e.levelDb), cell(e.cfoHz)}); } if (n) addTable(o, "Log", tb); }
+    { Table tb({"Wall Time", "Time Sec", "Snr Db", "Level Db", "Cfo Hz", "Combined"}); int n = 0; for (auto it = t.log.rbegin(); it != t.log.rend() && n < 80; ++it, ++n) { const auto& e = *it; tb.row({cell(e.wallTime), cell(e.timeSec), cell(e.snrDb), cell(e.levelDb), cell(e.cfoHz), cell(e.combined)}); } if (n) addTable(o, "Log", tb); }
     break;
 }
 case 96: {

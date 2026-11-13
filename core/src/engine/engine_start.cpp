@@ -34,12 +34,13 @@ namespace dect2 {
 bool Engine::start(const DeviceInfo& dev, const TuneSettings& tune, const FileOptions& file) {
     std::lock_guard<std::recursive_mutex> ctl(engineControlMutex());
     stop();
+    { std::lock_guard<std::mutex> lk(rxMu_); rxTel_ = RxTelemetry(); }   // the last report of the previous mode must not be shown as this mode's (its seq stays below rxPub_)
     cpuAccounts();   // the receiver's CPU accounts (its number may have changed since the last start)
     noTuneOffset_ = dev.tunesAtDial();   // a sound card or a Hamlib rig's audio has no DC spike to tune off: the signal is where the IF centre puts it (0 Hz)
     ring_.clear();
     ring_.resetDropped();
-    radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0;
-    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; rateT0_ = 0;
+    radioMissing_ = 0; radioMissEvents_ = 0; cpuDropEvents_ = 0; ringDroppedSeen_ = 0; srcLostEvents_ = 0; ringLostSeen_ = 0; lastSrcLostNs_ = 0; cpuCause_ = 0; loopMarks_.clear();
+    lastRadioMissNs_ = 0; lastCpuDropNs_ = 0; loadPct_ = 0; cpuPct_ = 0; loadT_ = 0; deliveredPct_ = -1; delivRate_.restart();
     holdDelivery(1000);   // a radio often stutters while its stream starts
     std::string err;
     if (int holder = 0; !claimDevice(dev, receiverId_, &holder)) { log("this radio is in use by " + deviceHolderText(holder)); return false; }
@@ -267,6 +268,7 @@ void Engine::placeNarrowReceivers(const DeviceInfo& dev, const TuneSettings& tun
         rxFlarm_.setSignalOffset(o);
         rxAdsl_.setSignalOffset(o);
         rxAvRoad_.setSignalOffset(o);
+        rxX40_.setSignalOffset(o); rxX40_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxAvRoad_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);
         rxAdsl_.setCenterHz(dev.kind != DeviceInfo::File ? radioTune(tune).centerHz : 0.0);   // which channels are in the capture
         rxDji_.setSignalOffset(o);
@@ -581,6 +583,8 @@ void Engine::configureDataReceivers(const DeviceInfo& dev, const TuneSettings& t
     rxFlarm_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAdsl_.configure(rate_);
     if (const int v = avroad::variantOfActive(activeStdFor(stdMode_.load())); v >= 0) { rxAvRoad_.setVariant(v); rxAvRoad_.configure(rate_); }
+    if (const int v = x40::variantOfActive(activeStdFor(stdMode_.load())); v >= 0) { rxX40_.setVariant(v); rxX40_.configure(rate_); }
+    rxX40_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAvRoad_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxAdsl_.setLogCallback([this](const std::string& s) { rxLog(s); });
     rxDji_.configure(rate_);

@@ -107,6 +107,9 @@ public:
     std::vector<UpdateInfo> updates() const;
     // Applies the cached revocations to the plugin manager; returns the installed plugins that are switched off now.
     std::vector<Revocation> applyRevocations();
+    // Revocations from another source that applyRevocations() merges in (4.0: plugins the community marketplace withdrew that were
+    // installed from it, see market.h). The registry's own entries win for the same id.
+    void setExtraRevocations(const std::vector<Revocation>& r);
     bool installedInfo(const std::string& id, Installed& out) const;
 
 private:

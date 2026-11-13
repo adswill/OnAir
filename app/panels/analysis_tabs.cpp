@@ -1,5 +1,6 @@
 // receiver analysis tabs: sync, history, frame map, signalling, constellations, channel, impulse, SNR, FEC, transport stream, log
 #include "../app.h"
+#include "dect2/t2/tv_diag.h"
 #include <cmath>
 #include <ctime>
 
@@ -496,7 +497,9 @@ void constellationsTab(App& a) {
     if (const ModeUi* mu = modeUi(a.family)) { if (mu->panels) mu->panels(a); return; }
     if (a.dabMode) { dabPanels(a); return; }
     if (a.fmMode) { fmPanels(a); return; }
-    if (a.rx.standard == 2) { atscPanels(a); return; }
+    // ATSC 1.0 (family 1) is 8-VSB: one axis of 8 levels, not OFDM. Decide by the selected mode, not only by the last report, so a stopped
+    // receiver or another mode's last report never shows the DVB-T/T2 OFDM plots (TPS / P1 carriers, pilots) for ATSC.
+    if (a.rx.standard == 2 || (a.family == 1 && !a.atsc3Mode)) { atscPanels(a); return; }
     const RxTelemetry& rx = a.rx;
     const float availW = ImGui::GetContentRegionAvail().x, availH = ImGui::GetContentRegionAvail().y;
     // the new interface packs the plots to the left and uses the rest for numbers, when there is room for them (else they are on the Receiver tab)
@@ -681,6 +684,23 @@ void impulseTab(App& a) {
         plt::PlotLine("pdp", xs.data(), rx.irDb.data(), (int)xs.size(), sp);
         plt::EndPlot();
     }
+    // Echo table and verdict (tv_diag.h): which paths there are, which are before the main one or beyond the guard interval, and what to do about it.
+    const dect2::tvdiag::EchoReport er = dect2::tvdiag::findEchoes(rx.irDb, rx.irTauMin, rx.nativeRate, rx.guard);
+    ImGui::PushTextWrapPos(0); ImGui::TextUnformatted(er.verdict.c_str()); ImGui::PopTextWrapPos();
+    if (!er.fix.empty()) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", er.fix.c_str()); ImGui::PopTextWrapPos(); }
+    if (!er.echoes.empty() && ImGui::BeginTable("##echoes", 4, ImGuiTableFlags_RowBg | ImGuiTableFlags_SizingStretchProp)) {
+        ImGui::TableSetupColumn("delay (us)"); ImGui::TableSetupColumn("level (dB)"); ImGui::TableSetupColumn("extra path (km)"); ImGui::TableSetupColumn("kind");
+        ImGui::TableHeadersRow();
+        for (const dect2::tvdiag::Echo& e : er.echoes) {
+            ImGui::TableNextRow();
+            ImGui::TableNextColumn(); ImGui::Text("%+.2f", e.delayUs);
+            ImGui::TableNextColumn(); ImGui::Text("%.1f", e.levelDb);
+            ImGui::TableNextColumn(); ImGui::Text("%.2f", e.extraKm);
+            ImGui::TableNextColumn();
+            ImGui::TextUnformatted(e.kind == dect2::tvdiag::EchoKind::PreEcho ? "pre-echo" : e.kind == dect2::tvdiag::EchoKind::BeyondGuard ? "beyond guard" : "inside guard");
+        }
+        ImGui::EndTable();
+    }
 }
 
 void snrTab(App& a) {
@@ -697,6 +717,17 @@ void snrTab(App& a) {
         plt::Spec sp; sp.LineColor = ImVec4(0.35f, 0.85f, 0.45f, 1); sp.FillFade = 0.9f;
         plt::PlotLine("snr", xs.data(), rx.snrDb.data(), (int)xs.size(), sp);
         plt::EndPlot();
+    }
+    // Narrowband interferers: dips of the per-carrier SNR that a multipath notch does not explain (tv_diag.h).
+    {
+        const auto dips = dect2::tvdiag::findCarrierDips(rx.snrDb, a.freqMhz, binMhz * rx.snrStep);
+        int shown = 0;
+        for (const auto& d : dips) {
+            if (!d.narrow || shown >= 4) continue;
+            ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Narrowband interferer near %.3f MHz: %.0f dB dip, %d points wide. Check for LTE, a radio link or cable ingress on that frequency.", d.freqMhz, d.depthDb, d.widthPoints); ImGui::PopTextWrapPos();
+            shown++;
+        }
+        if (!dips.empty() && shown == 0) { ImGui::PushTextWrapPos(0); ImGui::TextDisabled("Broad dips in the SNR: a multipath notch or tilt, see the Echoes tab."); ImGui::PopTextWrapPos(); }
     }
 }
 

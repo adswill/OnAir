@@ -1,6 +1,7 @@
 // AIS screens: the map of vessels (the ADS-B map underneath), the vessel table, the detail panel, the message counters
 // with the rates of the channels (AIS 1, AIS 2, and the long-range channels 75 and 76 when the capture holds them), the raw NMEA log, and the
 // Satellite AIS panel (ais_sat_ui.cpp).
+#include "../d40/d40_ui.h"
 #include "../panels/photo_links_ui.h"
 #include "ui/kit/mode_panel.h"
 #include "ui/kit/session_list.h"
@@ -629,7 +630,7 @@ void tab(App& a) {
         return;
     }
     if (S.view == 3) { nmeaView(a); return; }
-    if (S.view == 4) { rangeView(S.range, ImGui::GetContentRegionAvail(), 0.5399568, "nm", "ais", receiverLocationSet()); return; }
+    if (S.view == 4) { d40AisRangeCard(a.rx.ais); rangeView(S.range, ImGui::GetContentRegionAvail(), 0.5399568, "nm", "ais", receiverLocationSet()); return; }
     if (S.view == 5) { aisSatPanel(a); return; }
     if (S.view == 6) { kit::sessionItems(14, 3, "ais"); return; }
     if (S.view == 7) { aisAlertsPanel(a); return; }
@@ -680,7 +681,17 @@ void receiver(App& a) {
 }
 
 // every frame while AIS is selected: the positions heard, for the range plot (from the receiver position)
+// the station filter: only the stations of one kind are listed (AisReceiver::setStationView)
+struct StationKind { const char* name; uint32_t classMask; bool devicesOnly; };
+const StationKind kKinds[] = {{"every station", 0, false}, {"Class A vessels", 1u << dect2::AIS_CLASS_A, false}, {"Class B vessels", 1u << dect2::AIS_CLASS_B, false},
+                              {"base stations", 1u << dect2::AIS_CLASS_BASE, false}, {"aids to navigation (AtoN)", 1u << dect2::AIS_CLASS_ATON, false},
+                              {"search and rescue aircraft", 1u << dect2::AIS_CLASS_SAR, false}, {"AIS-SART, MOB and EPIRB-AIS", 0, true}};
+constexpr int kNumKinds = (int)(sizeof kKinds / sizeof *kKinds);
+int& kindFilter() { static int v = std::clamp((int)plat::prefs().getI("aisKindFilter", 0), 0, kNumKinds - 1); return v; }
+void pushKindFilter(App& a) { const StationKind& k = kKinds[kindFilter()]; a.engine.ais().setStationView(k.classMask, k.devicesOnly); }   // every frame (atomic stores): each receiver gets it
+
 void tick(App& a) {
+    pushKindFilter(a);
     aisSatTick(a);
     aisAlertsTick(a);
     aisSeenTick(a);
@@ -690,9 +701,20 @@ void tick(App& a) {
     receiverLocation(lat, lon);
     rangeSetStation(S.range, lat, lon);
     for (const auto& v : a.rx.ais.vessels) if (v.hasPos) rangeFeed(S.range, v.lat, v.lon);
+    d40AisFeed(a.rx.ais, lat, lon);   // 4.0: coverage by bearing (app/d40)
 }
 
 void tuner(App& a, bool& retune) { aisChannelControls(a, retune); }
+
+void decoder(App& a, bool&) {
+    ImGui::TextDisabled("SHOW"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(std::min(200 * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::BeginCombo("##aiskind", kKinds[kindFilter()].name)) {
+        for (int i = 0; i < kNumKinds; i++) if (ImGui::Selectable(kKinds[i].name, i == kindFilter())) { kindFilter() = i; plat::prefs().setI("aisKindFilter", i); pushKindFilter(a); }
+        ImGui::EndCombo();
+    }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("List the stations of one kind only (their messages, alerts and sentences too). Every station is still decoded.");
+}
 
 void summary(const App& a, std::string& l1, std::string& l2) {
     l1 = "AIS";
@@ -720,6 +742,7 @@ const ModeUi kAisUi = {
     .list = list,
     .summary = summary,
     .tuner = tuner,
+    .decoder = decoder,
     .tick = tick,
     .command = command,
 };

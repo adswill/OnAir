@@ -10,6 +10,8 @@
 #include "ui/kit/session_list.h"
 #include "ui/kit/mode_frame.h"
 #include "dect2/sonde/sonde_land.h"
+#include "dect2/sonde/sonde_map_overlay.h"
+#include "dect2/sonde/sonde_predict.h"
 #include "dect2/geo/maidenhead.h"
 #include "../adsb/adsb_map.h"
 #include "dect2/sonde/sonde_tel.h"
@@ -19,7 +21,14 @@
 #include <cmath>
 void sondeSitesTick(App& a, bool live);   // sonde_sites_ui.cpp
 void sondeSitesView(App& a);
-void sondeSitesDraw(ImDrawList* dl);
+void sondeSitesDraw(App& a, ImDrawList* dl, ImVec2 p0, ImVec2 size, int zoom);
+void sondeChaseControls(App& a);   // sonde_chase_ui.cpp
+// sonde_predict_ui.cpp: the landing prediction 4.0
+const dect2::SondePrediction* sondePredict40(const dect2::SondeInfo& s, bool selected, const dect2::tawhiri::Result* tw);
+bool sondePredict40On();
+void sondePredict40Draw(ImDrawList* dl, const dect2::SondePrediction& p);
+void sondePredict40Advanced();
+void sondePredict40Network();
 
 namespace {
 
@@ -36,11 +45,20 @@ struct State {
     uint64_t lastSeq = 0;
     bool autoStart = false;            // start by itself at the next launch window (off until ticked)
     int64_t autoFired = 0;             // the last window that used its start
+    bool predOnline = false;           // 4.0: the Tawhiri flight prediction of the selected sonde (off until ticked: it asks the SondeHub predictor)
+    float predBurstKm = 30.f, predDescent = 5.f;
+    std::string selShown;              // the serial selected() returned last (the one with the ensemble)
 };
 State S;
+dect2::SondePredictor& predictor() { static dect2::SondePredictor* p = new dect2::SondePredictor(); return *p; }
 
 // standard 14 is the engine's activeStandard for radiosondes
 bool live(const App& a) { return a.rx.standard == 14; }
+
+// the type filter: only the sondes of one type are listed (SondeReceiver::setKindMask; uploads still see every sonde)
+const char* const kTypeNames[] = {"every type", "Vaisala RS41", "Vaisala RS92", "Graw DFM", "Meteomodem M10", "Meteomodem M20", "Lockheed Martin LMS6", "InterMet iMet-4", "InterMet iMet-54", "Russian MRZ", "Meisei iMS-100"};
+int& typeFilter() { static int v = std::clamp((int)plat::prefs().getI("sondeTypeFilter", 0), 0, 10); return v; }   // SondeKind, 0 every type
+void pushTypeFilter(App& a) { const int k = typeFilter(); a.engine.sonde().setKindMask(k ? 1u << k : 0u); }   // every frame (an atomic store): each receiver gets it
 
 void loadState() {
     if (S.loaded) return;
@@ -49,11 +67,64 @@ void loadState() {
     S.map.zoom = (int)d.getI("sondeZoom", 8);
     S.autoStart = d.getB("sondeAutoStart", false);
     S.autoFired = (int64_t)d.getD("sondeAutoFired", 0);
+    S.predOnline = d.getB("sondePredOnline", false);
+    S.predBurstKm = (float)d.getD("sondePredBurstKm", 30.0);
+    S.predDescent = (float)d.getD("sondePredDescent", 5.0);
+}
+
+// the online prediction (Tawhiri through SondeHub) of the selected sonde: dotted, with the burst and the landing, marked "prediction"
+void predictionDraw(ImDrawList* dl, const SondeInfo* sel, float mapW, ImVec2 p0, ImVec2 size) {
+    if (!S.predOnline || !sel || !sel->hasPos) return;
+    const double now = (double)time(nullptr);
+    dect2::tawhiri::Request rq;
+    std::string why;
+    if (dect2::tawhiri::requestFor(*sel, S.predBurstKm * 1000.0, S.predDescent, now, rq, &why)) predictor().request(sel->serial, rq, ImGui::GetTime());
+    dect2::tawhiri::Result r; double made = 0;
+    std::string note;
+    if (predictor().result(sel->serial, r, made) && r.ok) {
+        const ImU32 col = IM_COL32(255, 200, 80, 230);
+        ImVec2 prev = adsbmap::project(r.path.front().lat, r.path.front().lon);
+        float off = 0;
+        for (size_t i = 1; i < r.path.size(); i++) {   // dots every 7 px along the path
+            const ImVec2 q = adsbmap::project(r.path[i].lat, r.path[i].lon);
+            const float len = std::hypot(q.x - prev.x, q.y - prev.y);
+            float u = off;
+            for (; u < len; u += 7 * gUi) dl->AddCircleFilled(ImVec2(prev.x + (q.x - prev.x) * u / len, prev.y + (q.y - prev.y) * u / len), 1.6f * gUi, col, 6);
+            off = u - len;
+            prev = q;
+        }
+        if (r.hasBurst && !rq.descending) {
+            const ImVec2 b = adsbmap::project(r.burst.lat, r.burst.lon);
+            dl->AddCircle(b, 6 * gUi, col, 16, 1.8f * gUi);
+            char t[64]; snprintf(t, sizeof t, "predicted burst %.1f km", r.burst.altM / 1000.0);
+            dl->AddText(ImVec2(b.x + 8 * gUi, b.y - 7 * gUi), col, t);
+        }
+        const ImVec2 e = adsbmap::project(r.landing.lat, r.landing.lon);
+        const float k = 7 * gUi;
+        dl->AddLine(ImVec2(e.x - k, e.y - k), ImVec2(e.x + k, e.y + k), col, 2.4f * gUi);
+        dl->AddLine(ImVec2(e.x - k, e.y + k), ImVec2(e.x + k, e.y - k), col, 2.4f * gUi);
+        struct tm l; const time_t lt = (time_t)r.landing.unixT; l = *localtime(&lt);
+        char t[96]; snprintf(t, sizeof t, "predicted landing %02d:%02d (%.4f, %.4f)", l.tm_hour, l.tm_min, r.landing.lat, r.landing.lon);
+        dl->AddText(ImVec2(e.x + 9 * gUi, e.y - 7 * gUi), col, t);
+        char n[160]; snprintf(n, sizeof n, "Prediction (Tawhiri, SondeHub predictor), %.0f s old: a forecast from wind models, not a measurement", ImGui::GetTime() - made);
+        note = n;
+    } else if (r.ok == false && !r.error.empty()) note = "Prediction: " + r.error;
+    else note = predictor().busy() ? "Prediction: asking the SondeHub predictor" : "Prediction: " + why;
+    if (!note.empty()) {
+        (void)mapW;
+        dl->AddText(ImVec2(p0.x + 8 * gUi, p0.y + size.y - 2.4f * ImGui::GetTextLineHeight() - 6 * gUi), IM_COL32(255, 200, 80, 230), note.c_str());
+    }
 }
 
 // landing prediction with the descent smoothed over the user's averaging window (Advanced, 0 to 60 s; 0 is the instantaneous velocity)
 float avgWindowS() { return std::min(60.f, std::max(0.f, (float)plat::prefs().getD("sondeAvgS", 10.0))); }
 dect2::SondeLanding landing(const SondeInfo& s) {
+    if (sondePredict40On()) {   // 4.0: ascent winds, fitted fall rate, drift filter, terrain, forecast (sonde_predict_ui.cpp)
+        dect2::tawhiri::Result tw; double made = 0;
+        const bool haveTw = S.predOnline && predictor().result(s.serial, tw, made) && tw.ok;
+        const dect2::SondePrediction* p = sondePredict40(s, s.serial == S.selShown, haveTw ? &tw : nullptr);
+        return p ? p->legacy() : dect2::SondeLanding();
+    }
     dect2::SondeLandOpts o; o.windowS = avgWindowS();
     static const std::vector<dect2::SondeTrackPoint> none;
     return dect2::predictSondeLandingTrack(s.trackIncluded ? s.track : none, s.lat, s.lon, s.altM, s.vSpeed, s.hSpeed, s.headingDeg, o);
@@ -67,7 +138,8 @@ ImU32 typeColour(int kind, float alpha = 1.f) {
 
 // the selected sonde, or the most recently heard one when nothing is chosen (or the chosen one is gone)
 const SondeInfo* selected(const SondeTelemetry& t) {
-    for (const auto& s : t.sondes) if (s.serial == S.sel) return &s;
+    for (const auto& s : t.sondes) if (s.serial == S.sel) { S.selShown = s.serial; return &s; }
+    if (!t.sondes.empty()) S.selShown = t.sondes.front().serial;
     return t.sondes.empty() ? nullptr : &t.sondes.front();
 }
 
@@ -113,6 +185,7 @@ bool descending(const SondeInfo& s) { return s.hasVel && s.vSpeed < -1.0 && s.ma
 void tick(App& a) {
     sondeSitesTick(a, live(a));
     loadState();
+    pushTypeFilter(a);
     if (a.engine.running()) {
         dect2::SondeReceiver& r = a.engine.sonde();
         if (S.pushedCenter != a.freqMhz) { r.setCenterMhz(a.freqMhz); S.pushedCenter = a.freqMhz; }
@@ -155,8 +228,9 @@ void mapView(App& a, ImVec2 size) {
     const bool clicked = adsbmap::clickedAt(click);
     ImDrawList* dl = ImGui::GetWindowDrawList();
     dl->PushClipRect(p0, ImVec2(p0.x + size.x, p0.y + size.y), true);
-    sondeSitesDraw(dl);   // launch sites and their landings (sonde_sites_ui.cpp)
+    sondeSitesDraw(a, dl, p0, size, S.map.zoom);   // launch sites in view, their landings, my station or chase car (sonde_sites_ui.cpp)
     const SondeInfo* sel = on ? selected(t) : nullptr;
+    predictionDraw(dl, sel, size.x, p0, size);
     const SondeInfo* hit = nullptr;
     float hitD = 18.f * gUi;
     if (on) for (const auto& s : t.sondes) {
@@ -183,6 +257,8 @@ void mapView(App& a, ImVec2 size) {
         if (isSel) dl->AddCircle(q, 10 * gUi, IM_COL32(255, 255, 255, 230), 28, 1.6f);
         if (s.hasVel && s.vSpeed < -1.0) {   // predicted landing: a dashed line and a cross
             const dect2::SondeLanding ld = landing(s);
+            const dect2::SondePrediction* p40 = (ld.valid && isSel && sondePredict40On()) ? sondePredict40(s, true, nullptr) : nullptr;
+            if (p40) sondePredict40Draw(dl, *p40);   // the selected sonde: path, ensemble, 50 / 95 % circles, ellipse, time to landing
             if (ld.valid) {
                 const ImVec2 e = adsbmap::project(ld.lat, ld.lon);
                 const float dx = e.x - q.x, dy = e.y - q.y, len = std::hypot(dx, dy);
@@ -206,7 +282,25 @@ void mapView(App& a, ImVec2 size) {
     if (ImGui::Button("-", ImVec2(26 * gUi, 0))) S.map.zoom = std::max(adsbmap::kMinZoom, S.map.zoom - 1); if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Zoom out"));
     ImGui::SameLine(0, 6 * gUi);
     if (ImGui::Button("follow")) { S.mapFollow = true; if (sel && sel->hasPos) { S.map.lat = sel->lat; S.map.lon = sel->lon; } }
+    ImGui::SameLine(0, 6 * gUi);
+    if (ImGui::Button(tr("me / prediction##sondeme"))) ImGui::OpenPopup("##sondemepop");
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("My station or chase car on the map (GPS), and the online flight prediction"));
     ImGui::PopStyleColor();
+    if (ImGui::BeginPopup("##sondemepop")) {
+        sondeChaseControls(a);
+        ImGui::Separator();
+        if (ImGui::Checkbox(tr("Online flight prediction of the selected sonde (Tawhiri, SondeHub predictor)##sondepred"), &S.predOnline)) plat::prefs().setB("sondePredOnline", S.predOnline);
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("Sends the sonde's position, altitude, climb or fall rate and time to api.v2.sondehub.org/tawhiri, at most once a minute, and draws the predicted path dotted with the burst and landing. Off: nothing is asked."));
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::SliderFloat(tr("burst altitude (km)##sondepb"), &S.predBurstKm, 15, 40, "%.1f")) plat::prefs().setD("sondePredBurstKm", S.predBurstKm);
+        ImGui::SetNextItemWidth(120 * gUi);
+        if (ImGui::SliderFloat(tr("descent at sea level (m/s)##sondepd"), &S.predDescent, 2, 12, "%.1f")) plat::prefs().setD("sondePredDescent", S.predDescent);
+        ImGui::TextDisabled("%s", tr("Used while the sonde climbs; once it falls, the measured fall rate is used."));
+        if (!predictor().lastUrl().empty()) { ImGui::PushTextWrapPos(420 * gUi); ImGui::TextDisabled("%s %s", tr("last request:"), predictor().lastUrl().c_str()); ImGui::PopTextWrapPos(); }
+        ImGui::Separator();
+        sondePredict40Network();
+        ImGui::EndPopup();
+    }
     ImGui::SameLine(0, 6 * gUi);
     adsbmap::tileControls("never the position itself");
     plat::prefs().setI("sondeZoom", S.map.zoom);
@@ -324,6 +418,12 @@ void detailCard(const App& a) {
         if (ld.valid) {
             snprintf(b, sizeof b, "%.4f, %.4f in %d:%02d", ld.lat, ld.lon, (int)ld.secondsLeft / 60, (int)ld.secondsLeft % 60);
             kv("landing (estimate)", b);
+            if (sondePredict40On()) if (const dect2::SondePrediction* p = sondePredict40(s, s.serial == S.selShown, nullptr)) {
+                if (p->hasSpread) { snprintf(b, sizeof b, "50 %% within %.0f m, 95 %% within %.0f m", p->r50M, p->r95M); kv("landing spread", b); }
+                snprintf(b, sizeof b, "%.0f m%s", p->groundM, p->groundFromTerrain ? " (terrain)" : " (no terrain: fixed)");
+                kv("ground there", b);
+                ImGui::PushTextWrapPos(0); ImGui::TextDisabled("%s", p->text.c_str()); ImGui::PopTextWrapPos();
+            }
             if (receiverLocationSet()) {
                 double mla, mlo, km, br;
                 receiverLocation(mla, mlo);
@@ -564,11 +664,16 @@ void decoder(App& a, bool&) {
     sameLineIf(ImGui::CalcTextSize("clear list").x + 2 * ImGui::GetStyle().FramePadding.x, 8 * gUi);
     if (ImGui::SmallButton("clear list")) { a.engine.sonde().clearSondes(); S.sel.clear(); }
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("Forget the sondes heard so far (the receiver keeps following the carriers).");
+    ImGui::TextDisabled("TYPE"); ImGui::SameLine(0, 5 * gUi);
+    ImGui::SetNextItemWidth(std::min(170 * gUi, ImGui::GetContentRegionAvail().x));
+    if (ImGui::Combo("##sdtype", &typeFilter(), kTypeNames, IM_ARRAYSIZE(kTypeNames))) { plat::prefs().setI("sondeTypeFilter", typeFilter()); pushTypeFilter(a); }
+    if (ImGui::IsItemHovered()) ImGui::SetTooltip("List the sondes of one type only. Every sonde is still decoded, and uploads still see all of them.");
     if (ImGui::TreeNodeEx("Advanced##sdadv", ImGuiTreeNodeFlags_NoTreePushOnOpen)) {
         float w = avgWindowS();
         ImGui::TextDisabled("landing average"); ImGui::SameLine(); ImGui::SetNextItemWidth(std::min(100 * gUi, ImGui::GetContentRegionAvail().x));
         if (ImGui::SliderFloat("##sdavg", &w, 0.f, 60.f, "%.0f s")) plat::prefs().setD("sondeAvgS", w);
-        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A sonde under its parachute swings and spirals, which makes the landing prediction jump.\nThe drift is averaged over this many seconds (default 10) and the wind of the layers still below is taken from the way up.\n0 uses the instantaneous velocity.");
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("A sonde under its parachute swings and spirals, which makes the landing prediction jump.\nThe drift is averaged over this many seconds (default 10) and the wind of the layers still below is taken from the way up.\n0 uses the instantaneous velocity. (The 3.9 estimate, used when the landing prediction 4.0 below is off.)");
+        sondePredict40Advanced();
     }
 }
 

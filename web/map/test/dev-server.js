@@ -10,6 +10,10 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { TrackBook, sanitize } from "../src/track-book.js";
+import { BadgeService } from "../src/badge-service.js";
+import { MemoryBadgeBackend } from "../src/badge-stats.js";
+import { makeToken, webSecret, tokenHash, cookie, SESSION_COOKIE } from "../src/auth.js";
+import { fromLocator } from "../src/badge-geo.js";
 
 const PUB = process.env.MAP_PUBLIC || path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "public");   // MAP_PUBLIC: serve another copy of public/ (to compare versions)
 const MIME = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".png": "image/png", ".svg": "image/svg+xml", ".json": "application/json" };
@@ -24,12 +28,13 @@ export function createHub(clock = () => Date.now()) {
       if (tracks.length > 250) return { status: 413, body: { error: "too many" } };   // the real hub refuses a bigger post
       const now = clock();
       let kept = 0;
+      const rows = [];
       for (const raw of tracks) {
-        const t = sanitize(raw, now, station, "");
+        const t = sanitize(raw, now, station, typeof body.by === "string" ? body.by : "");
         if (!t) continue;
-        if (book.accept(t, now)) kept++;
+        if (book.accept(t, now)) { kept++; rows.push(t); }
       }
-      return { status: 200, body: { ok: true, kept, n: tracks.length } };
+      return { status: 200, body: { ok: true, kept, n: tracks.length }, rows };
     },
     live(since) {
       const now = clock();
@@ -73,8 +78,41 @@ async function cached(key, url) {
 }
 const VENDOR = { "maplibre-gl.js": "https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.js", "maplibre-gl.css": "https://unpkg.com/maplibre-gl@5.7.3/dist/maplibre-gl.css" };
 
+/** Badges in the dev server: memory storage, a dev-only secret, and /auth/dev?login=NAME instead of GitHub (never in the Worker). */
+const DEV_SECRET = "dev-secret-not-for-production";
+export function createBadges(port) {
+  return new BadgeService(new MemoryBadgeBackend(), { SESSION_SECRET: DEV_SECRET, MAP_ORIGINS: `http://localhost:${port},http://127.0.0.1:${port}` });
+}
+
 export function start(port = 8791, seed = false, live = true) {
   const hub = createHub();
+  const badges = createBadges(port);
+  const toRequest = (req, body) => new Request("http://localhost:" + port + req.url, { method: req.method, headers: Object.entries(req.headers).filter(([, v]) => typeof v === "string"), body: body && req.method !== "GET" ? body : undefined });
+  const sendResponse = async (res, r) => {
+    const h = {};
+    r.headers.forEach((v, k) => { if (k !== "set-cookie") h[k] = v; });
+    const sc = r.headers.getSetCookie();
+    if (sc.length) h["set-cookie"] = sc;
+    res.writeHead(r.status, h);
+    res.end(Buffer.from(await r.arrayBuffer()));
+  };
+  const credit = (req, r, body, station) => {
+    if (!req.headers.authorization) return Promise.resolve();
+    return badges.fromBearer(toRequest(req)).then((who) => {
+      if (!who) return;
+      if (who.error) { r.body.account_error = who.error; return; }
+      const home = typeof body.home === "string" ? fromLocator(body.home) : null;
+      Object.assign(r.body, badges.creditPost(who, { station, rows: r.rows || [], prev: new Map(), home, extraKeys: [], now: Date.now() }));
+    });
+  };
+  if (seed) {   // a demo account with a public profile, so /u/demo-station and /leaders show something
+    badges.book.setSettings(1001, "demo-station", { badges: true, public: true, by: "DemoRx" });
+    badges.claims.set("demorx", 1001);
+    setTimeout(() => {
+      const r = hub.ingest({ tracks: hub.live().tracks.filter((t) => t.kind !== "fix").slice(0, 200).map((t) => ({ ...t, id: t.id.split(":").slice(1).join(":"), age: 0 })) }, "demo-station-01");
+      badges.creditPost({ uid: 1001, login: "demo-station" }, { station: "demo-station-01", rows: r.rows || [], prev: new Map(), home: fromLocator("KO24pq"), extraKeys: [], now: Date.now() });
+    }, 1500).unref();
+  }
   const sockets = new Set();
   const frame = (str) => { const payload = Buffer.from(str); const head = payload.length < 126 ? Buffer.from([0x81, payload.length]) : payload.length < 65536 ? Buffer.from([0x81, 126, payload.length >> 8, payload.length & 255]) : (() => { const b = Buffer.alloc(10); b[0] = 0x81; b[1] = 127; b.writeBigUInt64BE(BigInt(payload.length), 2); return b; })(); return Buffer.concat([head, payload]); };
   const push = (tracks) => { const f = frame(JSON.stringify({ type: "upsert", tracks })); for (const so of sockets) so.write(f); };
@@ -105,8 +143,40 @@ export function start(port = 8791, seed = false, live = true) {
     if (u.pathname === "/ingest" && req.method === "POST") {
       let b = "";
       req.on("data", (c) => (b += c));
-      req.on("end", () => { let body; try { body = JSON.parse(b); } catch { return json({ error: "bad json" }, 400); } const r = hub.ingest(body, String(body.station || "devstation1")); json(r.body, r.status); });
+      req.on("end", () => {
+        let body; try { body = JSON.parse(b); } catch { return json({ error: "bad json" }, 400); }
+        const st = String(body.station || "devstation1");
+        const r = hub.ingest(body, st);
+        credit(req, r, body, st).then(() => json(r.body, r.status));
+      });
       return;
+    }
+    if (u.pathname === "/auth/dev") {   // dev only: sign in as ?login=NAME (uid from the name) without GitHub
+      const login = (u.searchParams.get("login") || "alice").replace(/[^A-Za-z0-9-]/g, "").slice(0, 39) || "alice";
+      const uid = 100000 + [...login].reduce((a, c) => (a * 31 + c.charCodeAt(0)) % 900000, 7);
+      const nowSec = Math.floor(Date.now() / 1000);
+      makeToken(webSecret(DEV_SECRET), { uid, login, iat: nowSec, exp: nowSec + 86400 }).then(async (tok) => {
+        badges.db.tokenPut(await tokenHash(tok), uid, "web", nowSec + 86400);
+        badges.book.user(uid, login);
+        res.writeHead(302, { Location: "/u/" + login, "Set-Cookie": cookie(SESSION_COOKIE, tok, 86400) });
+        res.end();
+      });
+      return;
+    }
+    if (u.pathname.startsWith("/auth/") || u.pathname === "/api/me" || u.pathname.startsWith("/api/me/") || u.pathname.startsWith("/api/u/") || u.pathname === "/api/leaderboard") {
+      let b = "";
+      req.on("data", (c) => (b += c));
+      req.on("end", async () => {
+        const rq = toRequest(req, b);
+        const r = await badges.handle(rq, new URL(rq.url));
+        if (!r) { res.writeHead(404); return res.end(); }
+        await sendResponse(res, r);
+      });
+      return;
+    }
+    if (/^\/u\/[A-Za-z0-9-]{1,39}\/?$/.test(u.pathname) || u.pathname === "/leaders") {
+      res.writeHead(200, { "Content-Type": "text/html", "Cache-Control": "no-store" });
+      return res.end(fs.readFileSync(path.join(PUB, u.pathname === "/leaders" ? "leaders.html" : "profile.html")));
     }
     if (u.pathname === "/live") return json(hub.live(u.searchParams.get("since")));
     if (u.pathname === "/meta") return json({});

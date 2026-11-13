@@ -294,7 +294,7 @@ struct FlarmReceiver::Impl {
             }
             int order[(1 << L) - 1]; float cost[1 << L];
             for (int m = 1; m < (1 << L); m++) { float sc = 0; for (int j = 0; j < L; j++) if (m >> j & 1) sc += wr[j]; cost[m] = sc; order[m - 1] = m; }
-            std::sort(order, order + (1 << L) - 1, [&](int x, int y) { return cost[x] < cost[y]; });
+            std::sort(order, order + ((1 << L) - 1), [&](int x, int y) { return cost[x] < cost[y]; });
             for (int q = 0; q < (1 << L) - 1 && !ok; q++) {
                 const int m = order[q];
                 for (int pass = 0; pass < 2 && !ok; pass++) {

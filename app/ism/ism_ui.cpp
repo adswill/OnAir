@@ -2,6 +2,7 @@
 // viewer for reporting them, band presets and the privacy note.
 #include "dect2/common/time_fmt.h"
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "ease/ease_ui.h"
 #include "dect2/ism/ism_rx.h"
 #include "dect2/ism/ism_tel.h"
@@ -375,6 +376,7 @@ void pulseViewer(App& a, const dect2::IsmRaw& r) {
     }
     ImGui::Dummy(ImVec2(W, H));
     ImGui::TextDisabled("%.1f ms shown of %.1f ms", span / 1000, total / 1000);
+    d40IsmClassifyLine(r);   // 4.0: line code classifier (app/d40)
     // the timings
     if (ImGui::BeginChild("##isml", ImVec2(0, ImGui::GetContentRegionAvail().y), ImGuiChildFlags_Borders)) {
         ImGui::PushFont(a.mono, 0);

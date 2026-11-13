@@ -230,7 +230,9 @@ struct Vdl3Receiver::Impl {
         if (++blkN >= kFloorBlock) {
             blkMeans.push_back(blkSum / blkN);
             if (blkMeans.size() > (size_t)kFloorBlocks) blkMeans.erase(blkMeans.begin());
-            floor = *std::min_element(blkMeans.begin(), blkMeans.end());
+            // digital silence between bursts (an 8-bit source rounds a noise floor below one step to zero, a recording can be padded): a floor of zero
+            // would keep the squelch shut for ever, so it is never lower than 1e-10 (-100 dB re full scale)
+            floor = std::max(*std::min_element(blkMeans.begin(), blkMeans.end()), 1e-10);
             blkSum = 0; blkN = 0;
         }
         const int64_t r = (int64_t)z.size() - 1, a = zBase + r;

@@ -113,7 +113,11 @@ int main() {
     need("app/panels/tx_ui.cpp", txui, "makeIqFileTxSink(fc)");
     need("app/panels/tx_ui.cpp", txui, "kaal.powerDbm");
     const std::string txset = readSource("app/panels/tx_step_settings.cpp");
-    need("app/panels/tx_step_settings.cpp", txset, "\"Destination\"");
+    need("app/panels/tx_step_settings.cpp", txset, "tr(\"Send to\")");   // 4.0: the destination is the "Send to" choice (radio, dummy load, IQ file)
+    const std::string txpar = readSource("core/src/tx/tx_params.cpp");
+    need("core/src/tx/tx_params.cpp", txpar, "case TxPayloadKind::Kaal:");
+    need("core/src/tx/tx_params.cpp", txpar, "custom(\"kaal.panel\"");
+    need("app/panels/tx_payload_ui.cpp", readSource("app/panels/tx_payload_ui.cpp"), "k == \"kaal.panel\") kaalPanel(s, running);");
     need("app/panels/tx_step_settings.cpp", txset, "\"IQ file\"");
     need("app/panels/tx_step_settings.cpp", txset, "destinationPanel(s, *mode, running);");
 

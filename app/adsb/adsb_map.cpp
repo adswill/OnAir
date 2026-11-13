@@ -5,6 +5,7 @@
 #include "dect2/geo/tilecache.h"
 #include "dect2/geo/worldlow.h"
 #include "map/map_colours.h"
+#include "tile_url.h"
 #include <algorithm>
 #include <atomic>
 #include <cmath>
@@ -46,6 +47,7 @@ bool started = false, inited = false;
 // Two folders of tiles: those kept until the user deletes them, and this session's, deleted when OnAir closes. New tiles go to the first
 // while keepNew is set. Both are read.
 std::string kept, temp;
+std::string tileTpl = tileurl::kDefault;   // the tile server address template (set in init(), before the downloads start)
 std::atomic<bool> keepNew{true};
 bool onlineMap = true;   // the "online map" switch, shared by every map
 
@@ -128,8 +130,10 @@ void init() {
     if (inited) return;
     inited = true;
     const std::string cache = plat::cacheDir();
-    kept = plat::dataDir() + "/maps/osm";
-    temp = cache + "/osm-temp";
+    tileTpl = tileurl::effective(plat::prefs().getS("mapTileUrl", ""));   // Settings > Network and updates > Map tile server (read once: restart)
+    const std::string cname = tileurl::cacheName(tileTpl);   // "osm" for OpenStreetMap, so the tiles of earlier versions stay in use
+    kept = plat::dataDir() + "/maps/" + cname;
+    temp = cache + "/" + cname + "-temp";
     mbx = cache + "/mbtiles-x";
     keepNew = plat::prefs().getB("mapKeepTiles", true);
     onlineMap = plat::prefs().getB("adsbMap", true);   // the key from when only the ADS-B screen had a map
@@ -171,8 +175,7 @@ void run() {
             const std::string path = pathIn(keepNew ? kept : temp, z, x, y);
             std::error_code ec;
             fs::create_directories(fsPath(path).parent_path(), ec);
-            char url[128];
-            snprintf(url, sizeof url, "https://tile.openstreetmap.org/%d/%d/%d.png", z, x, y);
+            const std::string url = tileurl::expand(tileTpl, z, x, y);
             const std::string part = path + ".part";
             if (!ec && plat::fetchUrl(url, part, std::string("OnAir/") + ONAIR_VERSION + " (+https://github.com/adswill/OnAir; ADS-B map)")) {
                 fs::rename(fsPath(part), fsPath(path), ec);
@@ -517,8 +520,7 @@ void dlStart(std::vector<dect2::TileKey> list) {
             if (exists(path) || !found(t.z, t.x, t.y).empty()) { dlDone++; continue; }
             std::error_code ec;
             fs::create_directories(fsPath(path).parent_path(), ec);
-            char url[128];
-            snprintf(url, sizeof url, "https://tile.openstreetmap.org/%d/%d/%d.png", t.z, t.x, t.y);
+            const std::string url = tileurl::expand(tileTpl, t.z, t.x, t.y);
             const std::string part = path + ".part";
             bool ok = false;
             if (!ec && plat::fetchUrl(url, part, std::string("OnAir/") + ONAIR_VERSION + " (+https://github.com/adswill/OnAir; offline area)")) {

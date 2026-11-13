@@ -48,6 +48,7 @@
 #include "dect2/hdr/hdr_rx.h"
 #include "dect2/hfdig/hfdig_rx.h"
 #include "dect2/hfdl/hfdl_rx.h"
+#include "dect2/horus/horus_rx.h"
 #include "dect2/hrpt/hrpt_rx.h"
 #include "dect2/ifkp/ifkp_rx.h"
 #include "dect2/inmc/inmc_rx.h"
@@ -64,6 +65,7 @@
 #include "dect2/mscatter/mscatter_live.h"
 #include "dect2/mt63/mt63_rx.h"
 #include "dect2/ndb/ndb_rx.h"
+#include "dect2/nfc/nfc_engine.h"
 #include "dect2/orbcomm/orbcomm_rx.h"
 #include "dect2/p25p2/p25p2_rx.h"
 #include "dect2/packet/packet_rx.h"
@@ -96,6 +98,8 @@
 #include "dect2/vor/vor_rx.h"
 #include "dect2/wifi/wifi_rx.h"
 #include "dect2/wisun/wisun_rx.h"
+#include "dect2/wmbus/wmbus_live.h"
+#include "dect2/x40/x40_rx.h"
 #include "dect2/xlink/xlink_rx.h"
 #include "dect2/zwave/zwave_rx.h"
 namespace dect2::webschema {
@@ -175,9 +179,11 @@ static bool set_13(Engine& e, const std::string& n, double v) {
     if (n == "setElevationMask") { call(r, &Rx<decltype(r)>::setElevationMask, v); return true; }
     return false;
 }
-static const char kOpt_14[] = R"JSON([{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
+static const char kOpt_14[] = R"JSON([{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"symbols decided by tone energies (default on; off: the discriminator only, as in 3.9); applies to channels opened afterwards","t":"s"},{"n":"setKindMask","k":"int","l":"Kind Mask","t":"s"},{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 (default 8)","t":"s"}])JSON";
 static bool set_14(Engine& e, const std::string& n, double v) {
     auto& r = e.sonde();
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
+    if (n == "setKindMask") { call(r, &Rx<decltype(r)>::setKindMask, v); return true; }
     if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
     return false;
 }
@@ -240,12 +246,13 @@ static bool set_22(Engine& e, const std::string& n, double v) {
     if (n == "setProgram") { call(r, &Rx<decltype(r)>::setProgram, v); return true; }
     return false;
 }
-static const char kOpt_24[] = R"JSON([{"n":"setProtocols","k":"choice","c":[{"v":1,"l":"POCSAG"},{"v":2,"l":"FLEX"}],"l":"Protocols","h":"1 POCSAG, 2 FLEX (default 3: both)","t":"s"},{"n":"setSelcall","k":"bool","l":"Selcall","h":"also decode five-tone selective calls (CCIR, ZVEI, EEA, EIA, DZVEI) on the channel audio (default off)","t":"s"},{"n":"setPocsagBauds","k":"int","l":"Pocsag Bauds","h":"1 512, 2 1200, 4 2400 bd (default 7: all three)","t":"s"},{"n":"setCombineCopies","k":"bool","l":"Combine Copies","h":"multi-copy combining of repeated messages (default on); applies from the next lock","t":"s"},{"n":"setSmartRepair","k":"bool","l":"Smart Repair","t":"a"},{"n":"setSmartInsight","k":"bool","l":"Smart Insight","t":"a"},{"n":"setAnalyseMedical","k":"bool","l":"Analyse Medical","t":"a"}])JSON";
+static const char kOpt_24[] = R"JSON([{"n":"setProtocols","k":"choice","c":[{"v":1,"l":"POCSAG"},{"v":2,"l":"FLEX"}],"l":"Protocols","h":"1 POCSAG, 2 FLEX (default 3: both)","t":"s"},{"n":"setSelcall","k":"bool","l":"Selcall","h":"also decode five-tone selective calls (CCIR, ZVEI, EEA, EIA, DZVEI) on the channel audio (default off)","t":"s"},{"n":"setPocsagBauds","k":"int","l":"Pocsag Bauds","h":"1 512, 2 1200, 4 2400 bd (default 7: all three)","t":"s"},{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"POCSAG symbols from tone energies and a sync search that uses them (default on; off: the discriminator only, as in 3.9)","t":"s"},{"n":"setCombineCopies","k":"bool","l":"Combine Copies","h":"multi-copy combining of repeated messages (default on); applies from the next lock","t":"a"},{"n":"setSmartRepair","k":"bool","l":"Smart Repair","t":"a"},{"n":"setSmartInsight","k":"bool","l":"Smart Insight","t":"a"},{"n":"setAnalyseMedical","k":"bool","l":"Analyse Medical","t":"a"}])JSON";
 static bool set_24(Engine& e, const std::string& n, double v) {
     auto& r = e.pager();
     if (n == "setProtocols") { call(r, &Rx<decltype(r)>::setProtocols, v); return true; }
     if (n == "setSelcall") { call(r, &Rx<decltype(r)>::setSelcall, v); return true; }
     if (n == "setPocsagBauds") { call(r, &Rx<decltype(r)>::setPocsagBauds, v); return true; }
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
     if (n == "setCombineCopies") { call(r, &Rx<decltype(r)>::setCombineCopies, v); return true; }
     if (n == "setSmartRepair") { call(r, &Rx<decltype(r)>::setSmartRepair, v); return true; }
     if (n == "setSmartInsight") { call(r, &Rx<decltype(r)>::setSmartInsight, v); return true; }
@@ -290,10 +297,11 @@ static bool set_29(Engine& e, const std::string& n, double v) {
     if (n == "setThresholdDb") { call(r, &Rx<decltype(r)>::setThresholdDb, v); return true; }
     return false;
 }
-static const char kOpt_30[] = R"JSON([{"n":"setToneMode","k":"int","l":"Tone Mode","t":"s"}])JSON";
+static const char kOpt_30[] = R"JSON([{"n":"setToneMode","k":"int","l":"Tone Mode","t":"s"},{"n":"setIdentFolding","k":"bool","l":"Ident Folding","t":"s"}])JSON";
 static bool set_30(Engine& e, const std::string& n, double v) {
     auto& r = e.ndb();
     if (n == "setToneMode") { call(r, &Rx<decltype(r)>::setToneMode, v); return true; }
+    if (n == "setIdentFolding") { call(r, &Rx<decltype(r)>::setIdentFolding, v); return true; }
     return false;
 }
 static const char kOpt_31[] = R"JSON([{"n":"setFunction","k":"int","l":"Function","t":"s"},{"n":"setIdentFilter","k":"bool","l":"Ident Filter","h":"take the 1020 Hz ident tone out of the voice","u":"Hz","t":"s"}])JSON";
@@ -444,12 +452,13 @@ static bool set_57(Engine& e, const std::string& n, double v) {
     if (n == "setGate") { call(r, &Rx<decltype(r)>::setGate, v); return true; }
     return false;
 }
-static const char kOpt_59[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"}])JSON";
+static const char kOpt_59[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the user's frequency: picks the station when none is set (0: unknown, a file)","u":"Hz","t":"s"},{"n":"setStation","k":"int","l":"Station","h":"timesig::Station, -1 from the dial frequency","t":"s"},{"n":"setPref60","k":"int","l":"Pref60","h":"which station 60 kHz means with the station from the dial","u":"kHz","t":"s"},{"n":"setPredictedMinutes","k":"bool","l":"Predicted Minutes","t":"s"}])JSON";
 static bool set_59(Engine& e, const std::string& n, double v) {
     auto& r = e.timesig();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setStation") { call(r, &Rx<decltype(r)>::setStation, v); return true; }
     if (n == "setPref60") { call(r, &Rx<decltype(r)>::setPref60, v); return true; }
+    if (n == "setPredictedMinutes") { call(r, &Rx<decltype(r)>::setPredictedMinutes, v); return true; }
     return false;
 }
 static const char kOpt_60[] = R"JSON([{"n":"setModulation","k":"choice","c":[{"v":0,"l":"automatic"},{"v":1,"l":"OQPSK 72k"},{"v":2,"l":"QPSK 72k"},{"v":3,"l":"OQPSK 80k interleaved"}],"l":"Modulation","h":"0 automatic, 1 OQPSK 72k, 2 QPSK 72k, 3 OQPSK 80k interleaved","t":"s"}])JSON";
@@ -542,6 +551,12 @@ static bool set_85(Engine& e, const std::string& n, double v) {
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     return false;
 }
+static const char kOpt_87[] = R"JSON([{"n":"setPhyMask","k":"int","l":"Phy Mask","t":"s"}])JSON";
+static bool set_87(Engine& e, const std::string& n, double v) {
+    auto& r = e.wmbus();
+    if (n == "setPhyMask") { call(r, &Rx<decltype(r)>::setPhyMask, v); return true; }
+    return false;
+}
 static const char kOpt_90[] = R"JSON([{"n":"setSelcalOnly","k":"bool","l":"Selcal Only","h":"only the SELCAL detector runs (the SELCAL mode)","t":"s"},{"n":"setDemod","k":"int","l":"Demod","h":"TonesDemod for a radio's IQ (default FM); a change restarts the chain","t":"s"}])JSON";
 static bool set_90(Engine& e, const std::string& n, double v) {
     auto& r = e.tones();
@@ -549,10 +564,11 @@ static bool set_90(Engine& e, const std::string& n, double v) {
     if (n == "setDemod") { call(r, &Rx<decltype(r)>::setDemod, v); return true; }
     return false;
 }
-static const char kOpt_93[] = R"JSON([{"n":"setFalseBurstBudget","k":"num","l":"False Burst Budget","t":"s"}])JSON";
+static const char kOpt_93[] = R"JSON([{"n":"setFalseBurstBudget","k":"num","l":"False Burst Budget","t":"s"},{"n":"setRepairCostLimit","k":"num","l":"Repair Cost Limit","t":"s"}])JSON";
 static bool set_93(Engine& e, const std::string& n, double v) {
     auto& r = e.sarsat();
     if (n == "setFalseBurstBudget") { call(r, &Rx<decltype(r)>::setFalseBurstBudget, v); return true; }
+    if (n == "setRepairCostLimit") { call(r, &Rx<decltype(r)>::setRepairCostLimit, v); return true; }
     return false;
 }
 static const char kOpt_96[] = R"JSON([{"n":"setBandwidth","k":"int","l":"Bandwidth","h":"0 automatic, or 500 / 1000 / 2000","t":"s"},{"n":"setInterleave","k":"choice","c":[{"v":0,"l":"automatic"},{"v":1,"l":"short"},{"v":2,"l":"long"}],"l":"Interleave","h":"0 automatic, 1 short, 2 long","t":"s"}])JSON";
@@ -562,10 +578,11 @@ static bool set_96(Engine& e, const std::string& n, double v) {
     if (n == "setInterleave") { call(r, &Rx<decltype(r)>::setInterleave, v); return true; }
     return false;
 }
-static const char kOpt_99[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","u":"Hz","t":"s"}])JSON";
+static const char kOpt_99[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","u":"Hz","t":"s"},{"n":"setToneDetection","k":"bool","l":"Tone Detection","h":"chips from tone energies (default on; off: the discriminator only, as in 3.9)","t":"s"}])JSON";
 static bool set_99(Engine& e, const std::string& n, double v) {
     auto& r = e.zwave();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
+    if (n == "setToneDetection") { call(r, &Rx<decltype(r)>::setToneDetection, v); return true; }
     return false;
 }
 static const char kOpt_102[] = R"JSON([{"n":"setDeinterlace","k":"int","l":"Deinterlace","h":"0 weave (default), 1 bob","t":"s"},{"n":"setColour","k":"bool","l":"Colour","t":"s"},{"n":"setSaturation","k":"num","l":"Saturation","t":"s"},{"n":"setAudio","k":"bool","l":"Audio","t":"s"},{"n":"setAudioSubcarrier","k":"num","l":"Audio Subcarrier","t":"a"}])JSON";
@@ -649,11 +666,23 @@ static bool set_144(Engine& e, const std::string& n, double v) {
     if (n == "setAlertSeconds") { call(r, &Rx<decltype(r)>::setAlertSeconds, v); return true; }
     return false;
 }
+static const char kOpt_149[] = R"JSON([{"n":"setProtoMask","k":"int","l":"Proto Mask","t":"s"}])JSON";
+static bool set_149(Engine& e, const std::string& n, double v) {
+    auto& r = e.nfc();
+    if (n == "setProtoMask") { call(r, &Rx<decltype(r)>::setProtoMask, v); return true; }
+    return false;
+}
 static const char kOpt_153[] = R"JSON([{"n":"setDialHz","k":"num","l":"Dial Hz","h":"the link follows the dial when the setting is automatic (0: unknown, a file: uplink)","u":"Hz","t":"s"},{"n":"setLink","k":"choice","c":[{"v":0,"l":"automatic"},{"v":1,"l":"uplink"},{"v":2,"l":"downlink"}],"l":"Link","h":"0 automatic, 1 uplink, 2 downlink","t":"s"}])JSON";
 static bool set_153(Engine& e, const std::string& n, double v) {
     auto& r = e.argos();
     if (n == "setDialHz") { call(r, &Rx<decltype(r)>::setDialHz, v); return true; }
     if (n == "setLink") { call(r, &Rx<decltype(r)>::setLink, v); return true; }
+    return false;
+}
+static const char kOpt_157[] = R"JSON([{"n":"setMaxChannels","k":"int","l":"Max Channels","h":"1 to 8 channels (1: the dial only)","t":"s"}])JSON";
+static bool set_157(Engine& e, const std::string& n, double v) {
+    auto& r = e.horus();
+    if (n == "setMaxChannels") { call(r, &Rx<decltype(r)>::setMaxChannels, v); return true; }
     return false;
 }
 static const char kOpt_181[] = R"JSON([{"n":"setListenSlot","k":"int","l":"Listen Slot","t":"s"}])JSON";
@@ -767,6 +796,42 @@ static bool set_361(Engine& e, const std::string& n, double v) {
     auto& r = e.rclink();
     if (n == "setProtocols") { call(r, &Rx<decltype(r)>::setProtocols, v); return true; }
     if (n == "setElrsDomain") { call(r, &Rx<decltype(r)>::setElrsDomain, v); return true; }
+    return false;
+}
+static const char kOpt_371[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_371(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_372[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_372(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_373[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_373(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_374[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_374(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_375[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_375(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_376[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_376(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
     return false;
 }
 static const char kOpt_401[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
@@ -958,6 +1023,192 @@ static bool set_747(Engine& e, const std::string& n, double v) {
     if (n == "setTdmGoldCode") { call(r, &Rx<decltype(r)>::setTdmGoldCode, v); return true; }
     return false;
 }
+static const char kOpt_753[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_753(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_754[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_754(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_755[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_755(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_756[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_756(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_757[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_757(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_758[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_758(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_759[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_759(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_760[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_760(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_761[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_761(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_762[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_762(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_763[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_763(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_764[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_764(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_765[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_765(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_766[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_766(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_767[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_767(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_768[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_768(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_769[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_769(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_770[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_770(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_771[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_771(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_772[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_772(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_773[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_773(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_774[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_774(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_775[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_775(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_776[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_776(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_777[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_777(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_778[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_778(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_779[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_779(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_780[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_780(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_781[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_781(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_782[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_782(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_783[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_783(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
 static const char kOpt_871[] = R"JSON([{"n":"setInvert","k":"bool","l":"Invert","h":"flip the bit polarity (the real polarity is not published)","t":"s"}])JSON";
 static bool set_871(Engine& e, const std::string& n, double v) {
     auto& r = e.fbr();
@@ -968,6 +1219,102 @@ static const char kOpt_881[] = R"JSON([{"n":"setRead","k":"bool","l":"Read","t":
 static bool set_881(Engine& e, const std::string& n, double v) {
     auto& r = e.cp16();
     if (n == "setRead") { call(r, &Rx<decltype(r)>::setRead, v); return true; }
+    return false;
+}
+static const char kOpt_882[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_882(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_883[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_883(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_884[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_884(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_885[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_885(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_886[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_886(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_887[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_887(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_888[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_888(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_889[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_889(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_890[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_890(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_891[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_891(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_892[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_892(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_893[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_893(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_894[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_894(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_895[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_895(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_896[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_896(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
+    return false;
+}
+static const char kOpt_897[] = R"JSON([{"n":"setVariant","k":"int","l":"Variant","h":"before configure()","t":"s"}])JSON";
+static bool set_897(Engine& e, const std::string& n, double v) {
+    auto& r = e.x40();
+    if (n == "setVariant") { call(r, &Rx<decltype(r)>::setVariant, v); return true; }
     return false;
 }
 struct OptEntry { int standard; const char* schema; bool (*set)(Engine&, const std::string&, double); };
@@ -1028,6 +1375,7 @@ const OptEntry kOpt[] = {
     {81, kOpt_81, set_81},
     {84, kOpt_84, set_84},
     {85, kOpt_85, set_85},
+    {87, kOpt_87, set_87},
     {90, kOpt_90, set_90},
     {93, kOpt_93, set_93},
     {96, kOpt_96, set_96},
@@ -1043,7 +1391,9 @@ const OptEntry kOpt[] = {
     {142, kOpt_142, set_142},
     {143, kOpt_143, set_143},
     {144, kOpt_144, set_144},
+    {149, kOpt_149, set_149},
     {153, kOpt_153, set_153},
+    {157, kOpt_157, set_157},
     {181, kOpt_181, set_181},
     {204, kOpt_204, set_204},
     {206, kOpt_206, set_206},
@@ -1059,6 +1409,12 @@ const OptEntry kOpt[] = {
     {301, kOpt_301, set_301},
     {321, kOpt_321, set_321},
     {361, kOpt_361, set_361},
+    {371, kOpt_371, set_371},
+    {372, kOpt_372, set_372},
+    {373, kOpt_373, set_373},
+    {374, kOpt_374, set_374},
+    {375, kOpt_375, set_375},
+    {376, kOpt_376, set_376},
     {401, kOpt_401, set_401},
     {402, kOpt_402, set_402},
     {403, kOpt_403, set_403},
@@ -1088,8 +1444,55 @@ const OptEntry kOpt[] = {
     {701, kOpt_701, set_701},
     {742, kOpt_742, set_742},
     {747, kOpt_747, set_747},
+    {753, kOpt_753, set_753},
+    {754, kOpt_754, set_754},
+    {755, kOpt_755, set_755},
+    {756, kOpt_756, set_756},
+    {757, kOpt_757, set_757},
+    {758, kOpt_758, set_758},
+    {759, kOpt_759, set_759},
+    {760, kOpt_760, set_760},
+    {761, kOpt_761, set_761},
+    {762, kOpt_762, set_762},
+    {763, kOpt_763, set_763},
+    {764, kOpt_764, set_764},
+    {765, kOpt_765, set_765},
+    {766, kOpt_766, set_766},
+    {767, kOpt_767, set_767},
+    {768, kOpt_768, set_768},
+    {769, kOpt_769, set_769},
+    {770, kOpt_770, set_770},
+    {771, kOpt_771, set_771},
+    {772, kOpt_772, set_772},
+    {773, kOpt_773, set_773},
+    {774, kOpt_774, set_774},
+    {775, kOpt_775, set_775},
+    {776, kOpt_776, set_776},
+    {777, kOpt_777, set_777},
+    {778, kOpt_778, set_778},
+    {779, kOpt_779, set_779},
+    {780, kOpt_780, set_780},
+    {781, kOpt_781, set_781},
+    {782, kOpt_782, set_782},
+    {783, kOpt_783, set_783},
     {871, kOpt_871, set_871},
     {881, kOpt_881, set_881},
+    {882, kOpt_882, set_882},
+    {883, kOpt_883, set_883},
+    {884, kOpt_884, set_884},
+    {885, kOpt_885, set_885},
+    {886, kOpt_886, set_886},
+    {887, kOpt_887, set_887},
+    {888, kOpt_888, set_888},
+    {889, kOpt_889, set_889},
+    {890, kOpt_890, set_890},
+    {891, kOpt_891, set_891},
+    {892, kOpt_892, set_892},
+    {893, kOpt_893, set_893},
+    {894, kOpt_894, set_894},
+    {895, kOpt_895, set_895},
+    {896, kOpt_896, set_896},
+    {897, kOpt_897, set_897},
 };
 } // namespace
 

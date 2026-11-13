@@ -29,6 +29,9 @@ bool indicator(std::string& text);
 std::string statusLine(int* level);
 // The language the speech model heard last near freqHz (within 5 kHz, in the last 2 minutes), "" when none (the model is user-installed)
 std::string latestLanguage(double freqHz, float* probability);
+// Airband transcripts newer than `since` (Unix seconds), oldest first: the time, frequency, channel label and the words (for the ATIS tracker)
+struct AirbandLine { int64_t wall = 0; double freqHz = 0; std::string channel, text; };
+std::vector<AirbandLine> airbandSince(int64_t since);
 void shotReport();   // dev (--shot): the status line, the counters and every transcript line on stderr, "tx: ..."
 
 

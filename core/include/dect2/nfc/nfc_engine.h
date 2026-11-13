@@ -79,6 +79,8 @@ public:
     void feed(const std::complex<float>* x, size_t n);
     bool telemetry(NfcTelemetry& out, uint64_t lastSeq);
     void setLogCallback(std::function<void(const std::string&)> cb);
+    // 4.0: a view onto one protocol: bit k of the mask = NfcLogEntry::proto k (0 Type A, 1 Type B, 2 ISO 15693); only its frames, tags and NDEF records are reported (telemetry()), 0 = every protocol.
+    void setProtoMask(uint32_t mask);
 
 private:
     struct Impl;

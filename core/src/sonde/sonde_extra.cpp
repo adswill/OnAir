@@ -169,13 +169,20 @@ class MrzDecoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "MRZ"; }
     double symbolRate() const override { return 2400; }
+    bool narrowChannel() const override { return true; }
     bool midpointSlicer() const override { return true; }
-    void reset() override { sync_ = 0; bits_.clear(); run_ = false; cfgC_ = cfgD_ = -1; last_ = -1; }
-    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override {
+    // 4.0: the serial comes from the config sub-frames C and D (one in four frames). reset() (a pause of more than 0.15 s) used to forget them, so on a
+    // signal with pauses the serial was never complete and every frame was dropped for want of a key (about 7 times fewer frames in the generator at 14 dB):
+    // they are kept for 5 minutes of stream time; a new sonde on the channel replaces them with its own C and D frames
+    void reset() override { sync_ = 0; bits_.clear(); run_ = false; last_ = -1; }
+    void push(const uint8_t* sym, size_t n, double t, std::vector<SondeFix>& out) override {
+        if (cfgC_ >= 0 && (t < cfgT_ || t - cfgT_ > 300.0)) cfgC_ = cfgD_ = -1;
+        tPush_ = t;
         for (size_t i = 0; i < n; i++) step(sym[i], out);
     }
 private:
     uint64_t sync_ = 0; std::vector<uint8_t> bits_; bool run_ = false; int inv_ = 0, phase_ = 0, cfgC_ = -1, cfgD_ = -1, last_ = -1;
+    double cfgT_ = 0, tPush_ = 0;
     // on air: the preamble 1001... and then AA BF 35 Manchester coded, MSB first (Manchester: 1 -> 10, 0 -> 01 or the inverse)
     void step(int s, std::vector<SondeFix>& out) {
         if (!run_) {
@@ -184,8 +191,11 @@ private:
             const uint64_t m = (1ULL << 44) - 1;
             const uint64_t v = sync_ & m;
             int match = -1;
-            if (v == pat) match = 0;   // exact: the preamble repeats, a loose match would lock early
-            else if (v == (pat ^ m)) match = 1;
+            // 4.0: up to 3 symbol errors in the 44 (the preamble repeats: a copy of the pattern shifted by 2 or 4 symbols differs from it by 4 in the last
+            // 8 symbols, so a looser match there could lock early; an exact match needed 44 right symbols in a row, 41 % of the frames at a 2 % symbol error rate)
+            // (the last 8 symbols, 10101010, may have one error at most: a copy of the pattern shifted by 2 or 4 symbols differs there by 4)
+            if (__builtin_popcountll(v ^ pat) <= 3 && __builtin_popcountll((v ^ pat) & 0xFF) <= 1) match = 0;
+            else if (__builtin_popcountll(v ^ (pat ^ m)) <= 3 && __builtin_popcountll((v ^ pat ^ m) & 0xFF) <= 1) match = 1;
             if (match >= 0) { inv_ = match; run_ = true; phase_ = 0; bits_.clear(); }
             return;
         }
@@ -209,6 +219,7 @@ private:
         if (!mrzParseFrame(f, sizeof f, o)) return;
         if ((f[3] & 15) == 0xC) cfgC_ = (int)rd32le(f + (rd16le(f + 30) == 0xFFFF ? 41 : 44));
         if ((f[3] & 15) == 0xD) cfgD_ = (int)rd32le(f + (rd16le(f + 30) == 0xFFFF ? 41 : 44));
+        if ((f[3] & 15) == 0xC || (f[3] & 15) == 0xD) cfgT_ = tPush_;
         o.serial = "MRZ-" + (cfgC_ >= 0 ? std::to_string(cfgC_) : std::string("?")) + "-" + (cfgD_ >= 0 ? std::to_string(cfgD_) : std::string("?"));
         if (cfgC_ < 0 || cfgD_ < 0) o.serial.clear();
         // a frame goes out 6 times: report one
@@ -264,6 +275,7 @@ class Imet54Decoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "iMet-54"; }
     double symbolRate() const override { return 4800; }
+    bool narrowChannel() const override { return true; }
     bool midpointSlicer() const override { return true; }
     void reset() override { hdr_ = 0; run_ = false; bits_.clear(); }
     void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], out); }
@@ -339,20 +351,29 @@ class MeiseiDecoder : public SondeBitDecoder {
 public:
     const char* type() const override { return "iMS-100"; }
     double symbolRate() const override { return 2400; }
-    void reset() override { hdr_ = 0; run_ = false; std::memset(cfg_, 0, sizeof cfg_); sn_ = 0; }
-    void push(const uint8_t* sym, size_t n, double, std::vector<SondeFix>& out) override { for (size_t i = 0; i < n; i++) step(sym[i], out); }
+    bool narrowChannel() const override { return true; }
+    // 4.0: the serial arrives once in 16 frames; a pause (reset) used to forget it, and every frame was dropped for want of a key until the next one. Kept for 5 minutes of stream time (as MRZ)
+    void reset() override { hdr_ = 0; run_ = false; }
+    void push(const uint8_t* sym, size_t n, double t, std::vector<SondeFix>& out) override {
+        if (sn_ > 0 && (t < cfgT_ || t - cfgT_ > 300.0)) { std::memset(cfg_, 0, sizeof cfg_); sn_ = 0; }
+        tPush_ = t;
+        for (size_t i = 0; i < n; i++) step(sym[i], out);
+    }
 private:
     static constexpr uint64_t kSync0 = 0b101010101011010100101011001101001100101011001101ULL;
     static constexpr uint64_t kSync1 = 0b110011001101001101001101010100101010110010101010ULL;
     uint64_t hdr_ = 0; bool run_ = false, odd_ = false; int nSym_ = 0; std::vector<uint8_t> raw_;
-    float cfg_[64]; int sn_ = 0, cnt_ = -1, ms_ = -1, hh_ = -1, mm_ = -1, date_ = -1;
+    float cfg_[64] = {}; int sn_ = 0, cnt_ = -1, ms_ = -1, hh_ = -1, mm_ = -1, date_ = -1;
+    double cfgT_ = 0, tPush_ = 0;
     double lastLat_ = 0, lastLon_ = 0, lastAlt_ = 0; bool havePos_ = false; double vH_ = 0, vD_ = 0, vU_ = 0;
     void step(int s, std::vector<SondeFix>& out) {
         if (!run_) {
             hdr_ = (hdr_ << 1) | (uint64_t)(s & 1);
             const uint64_t m = (1ULL << 48) - 1, v = hdr_ & m;
-            if (v == kSync0) { which_ = 0; inv_ = false; } else if (v == kSync1) { which_ = 1; inv_ = false; }
-            else if (v == (kSync0 ^ m)) { which_ = 0; inv_ = true; } else if (v == (kSync1 ^ m)) { which_ = 1; inv_ = true; } else return;
+            // 4.0: up to 3 symbol errors in the 48 (an exact match needed all 48 right: 38 % of the frames at a 2 % symbol error rate); the four words differ by
+            // far more than that from each other and from their shifts
+            if (__builtin_popcountll(v ^ kSync0) <= 3) { which_ = 0; inv_ = false; } else if (__builtin_popcountll(v ^ kSync1) <= 3) { which_ = 1; inv_ = false; }
+            else if (__builtin_popcountll(v ^ kSync0 ^ m) <= 3) { which_ = 0; inv_ = true; } else if (__builtin_popcountll(v ^ kSync1 ^ m) <= 3) { which_ = 1; inv_ = true; } else return;
             run_ = true; raw_.clear();
             return;
         }
@@ -384,7 +405,7 @@ private:
             uint32_t w = (wordOf(3) << 16) | wordOf(2);
             cfg_[cnt_ & 63] = imsFloat(w);
             if ((cnt_ & 1) == 0) { ms_ = (int)wordOf(10); hh_ = (int)(wordOf(11) >> 8); mm_ = (int)(wordOf(11) & 0xff); }
-            if ((cnt_ & 15) == 0) { const float f = cfg_[cnt_ & 63]; if (f > 0 && f < 1e9f) sn_ = (int)std::lround(f); }
+            if ((cnt_ & 15) == 0) { const float f = cfg_[cnt_ & 63]; if (f > 0 && f < 1e9f) { sn_ = (int)std::lround(f); cfgT_ = tPush_; } }
         } else if ((cnt_ & 1) == 0) {
             date_ = (int)wordOf(0);
             const uint32_t latR = (wordOf(1) << 16) | wordOf(2), lonR = (wordOf(3) << 16) | wordOf(4);

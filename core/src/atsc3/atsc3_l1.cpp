@@ -145,7 +145,8 @@ std::vector<cf32> encodeBlock(const Prot& p, std::vector<uint8_t> bits) {
 }
 
 // The reverse. Returns the ksig information bits (after descrambling) or false when LDPC or BCH fail.
-bool decodeBlock(const Prot& p, const cf32* cells, float noiseVar, int ksig, std::vector<uint8_t>& out, int* iters) {
+// w (optional): the channel state of each cell (|h|^2 against its mean): the cell's soft bits are those of noise noiseVar / w
+bool decodeBlock(const Prot& p, const cf32* cells, float noiseVar, int ksig, std::vector<uint8_t>& out, int* iters, const float* w = nullptr) {
     Sizes z = sizesFor(p, ksig);
     const auto& cons = signallingConstellation(p.nuc);
     const int M = 1 << p.eta;
@@ -160,7 +161,8 @@ bool decodeBlock(const Prot& p, const cf32* cells, float noiseVar, int ksig, std
                 if ((lab >> (p.eta - 1 - j)) & 1) best1[j] = std::min(best1[j], d); else best0[j] = std::min(best0[j], d);
             }
         }
-        for (int j = 0; j < p.eta; j++) word[((p.eta == 2 ? j : (i + j) % p.eta)) * z.rows + i] = (best1[j] - best0[j]) / nv;
+        const float g = w ? w[i] : 1.f;
+        for (int j = 0; j < p.eta; j++) word[((p.eta == 2 ? j : (i + j) % p.eta)) * z.rows + i] = (best1[j] - best0[j]) / nv * g;
     }
     auto pos = infoPositions(p, z.nouter);
     std::vector<float> llr(16200, 0.f);
@@ -259,10 +261,10 @@ std::vector<cf32> encodeL1Basic(const L1Basic& l1, int mode) {
     return encodeBlock(protFor(false, mode), packL1Basic(l1));
 }
 
-bool decodeL1Basic(const cf32* cells, int nCells, float noiseVar, int mode, L1Basic& out, int* iters) {
+bool decodeL1Basic(const cf32* cells, int nCells, float noiseVar, int mode, L1Basic& out, int* iters, const float* weights) {
     if (mode < 1 || mode > 5 || nCells < l1BasicCells(mode)) return false;
     std::vector<uint8_t> bits;
-    if (!decodeBlock(protFor(false, mode), cells, noiseVar, kL1BasicBits, bits, iters)) return false;
+    if (!decodeBlock(protFor(false, mode), cells, noiseVar, kL1BasicBits, bits, iters, weights)) return false;
     return unpackL1Basic(bits, out);
 }
 
@@ -304,7 +306,7 @@ std::vector<cf32> encodeL1Detail(const std::vector<uint8_t>& bits, int mode) {
     return cells;
 }
 
-bool decodeL1Detail(const cf32* cells, int nCells, float noiseVar, int mode, int sizeBytes, std::vector<uint8_t>& bits, int* iters) {
+bool decodeL1Detail(const cf32* cells, int nCells, float noiseVar, int mode, int sizeBytes, std::vector<uint8_t>& bits, int* iters, const float* weights) {
     if (mode < 1 || mode > 7 || sizeBytes < 25 || nCells < l1DetailCells(sizeBytes, mode)) return false;
     Prot p = protFor(true, mode);
     Seg sg = segmentsFor(sizeBytes, mode);
@@ -312,7 +314,7 @@ bool decodeL1Detail(const cf32* cells, int nCells, float noiseVar, int mode, int
     bits.clear();
     for (int i = 0; i < sg.n; i++) {
         std::vector<uint8_t> part;
-        if (!decodeBlock(p, cells + (size_t)i * rows, noiseVar, sg.ksig, part, iters)) return false;
+        if (!decodeBlock(p, cells + (size_t)i * rows, noiseVar, sg.ksig, part, iters, weights ? weights + (size_t)i * rows : nullptr)) return false;
         bits.insert(bits.end(), part.begin(), part.end());
     }
     bits.resize((size_t)sizeBytes * 8);

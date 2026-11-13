@@ -2,6 +2,7 @@
 // spectrum, the 50 CTCSS tones as bars, a history of everything heard (CTCSS, DCS, DTMF, five-tone calls, SELCAL, two-tone pages) and the gate
 // that opens the sound only for a chosen tone or code. Input is an FM channel from a radio or, from a sound-card source, audio.
 #include "app.h"
+#include "../d40/d40_ui.h"
 #include "../ui/msglog_ui.h"
 #include "dect2/tones/tones_proto.h"
 #include "dect2/tones/tones_rx.h"
@@ -106,6 +107,7 @@ void liveView(App& a) {
     const dect2::TonesTelemetry& t = a.rx.tones;
     subAudible(a, t);
     ImGui::Spacing();
+    d40TonesCard(t);   // 4.0: tone system guess, dialled numbers (app/d40)
     if (t.toneHz > 0) kvRow(a, tr("voice-band tone"), "%.1f Hz, %.1f dB", t.toneHz, t.toneDb);
     else kvRow(a, tr("voice-band tone"), "%s", tr("none"));
     kvRow(a, tr("keys"), "%s", t.dtmfString.empty() ? "-" : t.dtmfString.c_str());
