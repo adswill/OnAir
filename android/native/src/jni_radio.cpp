@@ -52,6 +52,7 @@ std::string stagesJson(const DeviceInfo& d) {
     if (d.board == "rtlsdr") return "[" + st("Tuner", 0, 49.6, 0.1) + "]";
     if (d.board == "airspy") return "[" + st("Linearity", 0, 21, 1) + "]";
     if (d.board == "airspyhf") return "[" + st("Attenuator", 0, d.gainMaxDb > 0 ? d.gainMaxDb : 48, 6) + "]";
+    if (d.board == "mirics") return "[" + st("LNA", 0, 24, 24) + "," + st("Mixer", 0, 19, 19) + "," + st("IF", 0, 59, 1) + "]";
     if (d.gainMaxDb > d.gainMinDb) return "[" + st("Gain", d.gainMinDb, d.gainMaxDb, 1) + "]";
     return "[]";
 }
@@ -75,7 +76,7 @@ std::vector<UsbEntry> usbEntries(std::string& err) {
     std::vector<DeviceInfo> all;
     if (!usbFdList("hackrf").empty()) for (auto& d : listHackrfDevices(err)) all.push_back(d);
     std::string e2;
-    for (auto& d : listNativeDevices(e2)) if (d.board == "rtlsdr" || d.board == "airspy" || d.board == "airspyhf") all.push_back(d);
+    for (auto& d : listNativeDevices(e2)) if (d.board == "rtlsdr" || d.board == "airspy" || d.board == "airspyhf" || d.board == "mirics") all.push_back(d);
     if (err.empty()) err = e2;
     const auto rtl = usbFdList("rtlsdr");
     for (const UsbFdRadio& r : usbFdList()) {
@@ -87,6 +88,8 @@ std::vector<UsbEntry> usbEntries(std::string& err) {
                 match = d.board == "rtlsdr" && it != rtl.end() && d.nativeArgs == std::to_string(it - rtl.begin());
             } else if (r.kind == "airspy" || r.kind == "airspyhf")
                 match = d.board == r.kind && d.nativeArgs == std::to_string((unsigned long long)usbFdAirspySerial(r.serial));
+            else if (r.kind == "mirics")   // the Mirics driver names the radio by its registry name ("<name>#vid:pid")
+                match = d.board == "mirics" && d.nativeArgs.rfind(r.name + "#", 0) == 0;
             if (match) { out.push_back({d, r}); break; }
         }
     }
@@ -139,7 +142,7 @@ bool radioDevice(int kind, const std::string& key, DeviceInfo& out, std::string&
 
 #define RFN(ret, name) extern "C" JNIEXPORT ret JNICALL Java_io_github_adswill_onair_usb_RadioNative_##name
 
-// what this build of the library can drive: {"rtlsdr":true,"hackrf":bool,"airspy":bool,"airspyhf":bool}
+// what this build of the library can drive: {"rtlsdr":true,"hackrf":bool,"airspy":bool,"airspyhf":bool,"mirics":bool}
 RFN(jstring, nativeUsbFeatures)(JNIEnv* e, jobject) {
 #ifdef ONAIR_REAL_LIBUSB
     const bool lu = true;
@@ -150,7 +153,7 @@ RFN(jstring, nativeUsbFeatures)(JNIEnv* e, jobject) {
     auto has = [](const char* lib) { void* h = dlopen(lib, RTLD_LAZY | RTLD_LOCAL); if (h) dlclose(h); return h != nullptr; };
     const bool as = lu && has("libairspy.so"), ahf = lu && has("libairspyhf.so");
     std::string s = std::string("{\"rtlsdr\":true,\"hackrf\":") + (lu ? "true" : "false") + ",\"airspy\":" + (as ? "true" : "false") +
-                    ",\"airspyhf\":" + (ahf ? "true" : "false") + "}";
+                    ",\"airspyhf\":" + (ahf ? "true" : "false") + ",\"mirics\":" + (lu ? "true" : "false") + "}";
     return mk(e, s);
 }
 

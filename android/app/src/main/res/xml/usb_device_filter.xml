@@ -64,4 +64,10 @@
     <usb-device vendor-id="7504" product-id="24737" />
     <!-- Airspy HF+ (Dual, Discovery) 03eb:800c -->
     <usb-device vendor-id="1003" product-id="32780" />
+    <!-- SDRplay RSP1 / Mirics MSi2500 1df7:2500, and MSi2500 sticks 2040:d300 07ca:8591 04bb:0537 0511:0037 (OnAir's own driver, untested on hardware) -->
+    <usb-device vendor-id="7671" product-id="9472" />
+    <usb-device vendor-id="8256" product-id="54016" />
+    <usb-device vendor-id="1994" product-id="34193" />
+    <usb-device vendor-id="1211" product-id="1335" />
+    <usb-device vendor-id="1297" product-id="55" />
 </resources>

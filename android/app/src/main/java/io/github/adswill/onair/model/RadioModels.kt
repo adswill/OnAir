@@ -22,7 +22,7 @@ data class RadioInfo(
     val name: String,
     /** USB: the registry key ("/dev/bus/usb/001/004"); "" for a network radio. */
     val usbName: String,
-    /** "rtlsdr", "hackrf", "airspy", "airspyhf", "net". */
+    /** "rtlsdr", "hackrf", "airspy", "airspyhf", "mirics", "net". */
     val driver: String,
     val board: String,
     val serial: String,
@@ -72,13 +72,15 @@ data class RadioInfo(
 }
 
 /** What this build of the native library can drive (nativeUsbFeatures). */
-data class UsbFeatures(val rtlsdr: Boolean, val hackrf: Boolean, val airspy: Boolean, val airspyhf: Boolean) {
-    fun supports(driver: String): Boolean = when (driver) { "rtlsdr" -> rtlsdr; "hackrf" -> hackrf; "airspy" -> airspy; "airspyhf" -> airspyhf; else -> false }
+data class UsbFeatures(val rtlsdr: Boolean, val hackrf: Boolean, val airspy: Boolean, val airspyhf: Boolean, val mirics: Boolean = false) {
+    fun supports(driver: String): Boolean = when (driver) {
+        "rtlsdr" -> rtlsdr; "hackrf" -> hackrf; "airspy" -> airspy; "airspyhf" -> airspyhf; "mirics" -> mirics; else -> false
+    }
 
     companion object {
         val none = UsbFeatures(false, false, false, false)
         fun parse(json: String): UsbFeatures = try {
-            JSONObject(json).let { UsbFeatures(it.optBoolean("rtlsdr"), it.optBoolean("hackrf"), it.optBoolean("airspy"), it.optBoolean("airspyhf")) }
+            JSONObject(json).let { UsbFeatures(it.optBoolean("rtlsdr"), it.optBoolean("hackrf"), it.optBoolean("airspy"), it.optBoolean("airspyhf"), it.optBoolean("mirics")) }
         } catch (_: Exception) { none }
     }
 }

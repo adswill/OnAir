@@ -62,6 +62,11 @@ std::string usbFdKindForId(int vid, int pid) {
         {0x1d50, 0xcc15, "hackrf"},      // rad1o
         {0x1d50, 0x60a1, "airspy"},      // Airspy R2 and Mini
         {0x03eb, 0x800c, "airspyhf"},    // Airspy HF+ (Dual, Discovery)
+        {0x1df7, 0x2500, "mirics"},      // SDRplay RSP1 and its clones (Mirics MSi2500 + MSi001; OnAir's own driver, mirics_usb.cpp)
+        {0x2040, 0xd300, "mirics"},      // Hauppauge WinTV 133559 LF (MSi2500 + MSi001)
+        {0x07ca, 0x8591, "mirics"},      // AverMedia A859 Pure DVBT
+        {0x04bb, 0x0537, "mirics"},      // IO-DATA GV-TV100
+        {0x0511, 0x0037, "mirics"},      // Logitec LDT-1S310U/J
     };
     for (const auto& e : ids) if (vid == e.vid && pid == e.pid) return e.kind;
     return "";
@@ -78,7 +83,7 @@ bool usbFdPlatform() {
 
 bool usbFdPick(const std::string& kind, const std::string& serialWish, UsbFdRadio& out, std::string& err) {
     const auto v = usbFdList(kind);
-    const std::string what = kind == "hackrf" ? "HackRF" : kind == "airspy" ? "Airspy" : kind == "airspyhf" ? "Airspy HF+" : kind == "rtlsdr" ? "RTL-SDR" : "radio";
+    const std::string what = kind == "hackrf" ? "HackRF" : kind == "airspy" ? "Airspy" : kind == "airspyhf" ? "Airspy HF+" : kind == "rtlsdr" ? "RTL-SDR" : kind == "mirics" ? "SDRplay RSP1 / Mirics" : "radio";
     if (v.empty()) {
          DIAG_ERROR(135969, "No %s is connected or Android has not given OnAir permission for it, so it cannot be opened.", what.c_str());
          err = "No " + what + " is connected, or Android has not given OnAir permission for it yet: plug it in (through an OTG adapter) and tap Allow";

@@ -2,7 +2,7 @@
 # MODE/GROUP is for a plugdev member and for a login that does not know uaccess; TAG+="uaccess" gives the user at the desk access
 # on any systemd desktop, so a missing plugdev group does no harm.
 # Every id below comes from the rules file of the radio's own project (hackrf, rtl-sdr-blog, airspyone_host, airspyhf, bladeRF,
-# LimeSuite, uhd, plutosdr-fw, SDRplay, libfobos-sdr-agile), so a radio that works with its own driver works with OnAir.
+# LimeSuite, uhd, plutosdr-fw, SDRplay, libfobos-sdr-agile, libmirisdr), so a radio that works with its own driver works with OnAir.
 
 # HackRF: One and Pro (same id), Jawbreaker, rad1o, and the NXP boot loader (the radio before a firmware update)
 SUBSYSTEM=="usb", ATTR{idVendor}=="1d50", ATTR{idProduct}=="6089", MODE="0660", GROUP="plugdev", TAG+="uaccess"
@@ -46,6 +46,11 @@ SUBSYSTEM=="usb", ATTR{idVendor}=="3923", ATTR{idProduct}=="7814", MODE="0660", 
 
 # SDRplay RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx, RSPdxR2 (every product of the SDRplay vendor id)
 SUBSYSTEM=="usb", ATTR{idVendor}=="1df7", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+# TV sticks with the SDRplay RSP1's chips (Mirics MSi2500 + MSi001), driven by OnAir's own driver (libmirisdr's mirisdr.rules ids)
+SUBSYSTEM=="usb", ATTR{idVendor}=="2040", ATTR{idProduct}=="d300", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="07ca", ATTR{idProduct}=="8591", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="04bb", ATTR{idProduct}=="0537", MODE="0660", GROUP="plugdev", TAG+="uaccess"
+SUBSYSTEM=="usb", ATTR{idVendor}=="0511", ATTR{idProduct}=="0037", MODE="0660", GROUP="plugdev", TAG+="uaccess"
 
 # RTL-SDR: the RTL2832U ids of the osmocom rtl-sdr rules file (the RTL-SDR Blog and Nooelec dongles are 0bda:2838)
 # original RTL2832U vid/pid (hama nano, for example)
