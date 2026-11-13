@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB video / audio layer (spec section 6): the container that carries AV1 and Opus payload packets over the PHY frames, with FEC groups and a bit budget.
 //
 // No codec lives here: video and audio enter as opaque byte units through the PayloadSource / PayloadSink interfaces (an AV1 encoder, an Opus encoder or, in the

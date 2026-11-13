@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B arrivals and departures of one airport: the airport (nearest larger one by default, or a code), the board, every second.
 // Core: dect2/adsb/adsb_airport_board.h; airports from dect2/airports/airports.h.
 #include "adsb_internal.h"

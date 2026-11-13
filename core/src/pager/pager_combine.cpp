@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: multi-copy combining (see pager_combine.h).
 #include "dect2/pager/pager_combine.h"
 #include "dect2/pager/pager_proto.h"

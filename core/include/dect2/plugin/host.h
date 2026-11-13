@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The plugin host: loads plugin libraries, runs each plugin instance on its own worker thread with a watchdog (or in a helper process),
 // keeps the list of installed plugins, their enabled state, permissions and settings, hands out stable mode numbers, and provides safe mode.
 // The C ABI the plugins see is sdk/include/onair_plugin.h; this file is the C++ side the program uses. docs/plugins.md explains it.

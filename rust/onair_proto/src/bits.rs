@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! AIS bit fields. Bits are one per byte in transmission order; only bit 0 of each byte counts (as in the C++ code).
 
 pub use onair_common::bits::unpacked::{get_s, get_u};

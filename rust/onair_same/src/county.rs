@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The user's county table: reads the CSV text into `(SSCCC key, name)` records. Accepted lines are `SSCCC,Name`, `SSSCCC...` (a full SAME code,
 //! the PCA digit ignored), `SS,CCC,Name` and the Census file `national_county.txt` (`AL,01,001,Autauga County,H1`); anything else (a header,
 //! blank lines, county 000 = the whole state) is skipped. Quotes group a field, are dropped, and `\r` is ignored.

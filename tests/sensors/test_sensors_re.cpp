@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reverse engineering of an unknown sensor: generated packets with a CRC-8 or sum, a binary or BCD temperature, a counter and an id. Simulated.
 #include "dect2/sensors/sensors_re.h"
 #include <cmath>

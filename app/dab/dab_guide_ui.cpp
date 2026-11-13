@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB: the programme guide (SPI, ETSI TS 102 818 / TS 102 371). dabSpiTick() runs every frame in DAB mode: it starts the collection of the SPI data
 // service of the ensemble (a packet mode sub-channel decoded next to the playing station), loads and saves the per-ensemble cache, and gives the station
 // logos of the carousel to the logo cache. The Guide tab shows the progress of the acquisition, a services x time grid, a search, a details pane with the

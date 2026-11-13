@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/chanvoice/chv_subtone.h"
 #include "dect2/tones/tones_proto.h"
 #include <algorithm>

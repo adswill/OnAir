@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL transmit generator: see kaal_txgen.h.
 #include "dect2/kaal/kaal_txgen.h"
 #include "dect2/kaal/kaal_tx.h"

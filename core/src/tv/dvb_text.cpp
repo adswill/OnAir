@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB SI text (see dvb_text.h). convertCharset() is the iconv / Windows code page wrapper and stays C++; dvbText() is the prefix dispatch, which the Rust crate
 // rust/onair_dvbsi does (dvb_text_rs.cpp: it calls convertCharset back for the tables the system provides).
 #include "dect2/tv/dvb_text.h"

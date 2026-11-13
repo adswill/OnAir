@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared parts of the Winlink tests: a local mock gateway (the B2F gateway role on a link that listens) and a simulated air between
 // the client station and it. Nothing here opens a network connection or a radio: the "air" is a queue in memory, or the packet / ARDOP
 // generators feeding the receivers in the same process.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus receiver internals (horus_modem.h): channel filter, tone estimator, 4FSK and RTTY demodulators, deframer, wide detector.
 // Written for OnAir; the demodulator design is our own (non-coherent correlators, energy-peak symbol clock), not the codec2 modem.
 #include "horus_modem.h"

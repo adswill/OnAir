@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The atmosphere models against the ITU-R Study Group 3 validation workbook CG-3M3J-13-ValEx-Rev8.3.0 (the published examples for
 // P.676-13, P.838-3 and P.618-14) and a few textbook values for P.453, P.530 and P.835.
 #include "dect2/prop/itu_atmos.h"

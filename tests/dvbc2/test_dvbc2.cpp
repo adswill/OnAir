@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 (EN 302 769): the reference sequences, the Reed-Muller headers, the L1 part 2 fields and coding, the FEC blocks, and the whole
 // receiver against the generator with a carrier offset, a sample clock error, noise and an echo, both guard intervals, Data Slice Types 1
 // and 2 (robust and high efficiency headers), time interleaving, a notch, two PLPs, and the carrier index search without a known centre.

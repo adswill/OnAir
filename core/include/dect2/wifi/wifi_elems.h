@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Information elements of 802.11 beacons, probe responses and FILS discovery frames that say what an access point can do: HT / VHT / HE / EHT
 // capabilities and operation (the channel width and primary channel), the 6 GHz operation information, the Reduced Neighbor Report (co-located
 // 6 GHz APs announced on 2.4 / 5 GHz), RSN key management (AKM suites, management frame protection), country, power constraint and mobility domain.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 8-bit two-run Viterbi (fecp::viterbiRange8x2, DVB-T) against the exact 16-bit one (fecp::viterbiRange): bit error rate on the same
 // noisy K = 7 code words, rate 1/2 and DVB-T's 2/3 puncturing, BPSK in AWGN near the waterfall, each decoder fed the way DVB-T feeds it
 // (exact: soft values scaled to a mean of 22 within +-127; 8-bit: a mean of 14 within +-31), in DVB-T's chunks (16384 steps, 192 overlap).

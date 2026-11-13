@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Synthetic NFC / RFID test signal (see nfc_gen.h). Nothing is transmitted.
 #include "dect2/nfc/nfc_gen.h"
 #include "dect2/nfc/nfc_rx.h"

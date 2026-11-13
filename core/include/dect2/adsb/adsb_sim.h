@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B simulation harness: transmissions from the generator (or a list of frames at chosen times) -> channel impairments -> receiver, with the
 // list of what was sent kept so that every frame can be checked off. The tests and adsbtool use it.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir network: the pure protocol layers of the network code, over byte buffers (no sockets, no threads, no allocation): the remote-control API's HTTP and WebSocket
 //! side (SHA-1 / base64 for the handshake, frames, request head, URL and query text, the flat JSON bodies), the rtl_tcp, SpyServer and SDR++ server protocols, and the
 //! list of network radios the settings keep. Sockets, connections, state and the radio drivers stay in C++. Safe code goes in the modules next to `ffi`; only `ffi` may

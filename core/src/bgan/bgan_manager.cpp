@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN mode manager (bgan_manager.h).
 #include "dect2/bgan/bgan_manager.h"
 #include "dect2/bgan/bgan_demod.h"

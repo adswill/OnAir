@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // drm_proto.h on top of the Rust crate rust/onair_drm: the FAC / SDC / super frame records of drm_msg.h are copied to and from the plain C
 // records of the crate (the SDC parser works in place on them).
 #include "dect2/drm/drm_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink B2F: messages (format, MID, secure login vectors of wl2k-go, Q titles, attachments), the session state machine against the
 // local mock gateway (bytes in every chunk size, wrong password, duplicates, more than one block of proposals, nothing to exchange),
 // and whole sessions of WinlinkStation over the AX.25 and ARDOP links on a simulated air with lost frames (0 .. 30 %, every window

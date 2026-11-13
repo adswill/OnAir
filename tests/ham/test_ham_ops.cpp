@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham operating helpers: contest exchange, serials, contest dupes and the dupe sheet, Cabrillo export; the sun and the grayline,
 // great-circle paths; band dial frequencies and region edges; the spots list; macros.
 #include "dect2/ham/ham_ops.h"

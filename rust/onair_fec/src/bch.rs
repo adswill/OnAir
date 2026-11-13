@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Binary primitive shortened BCH codes of DVB-T2 (EN 302 755 section 6.1.1): normal frames use GF(2^16) (polynomial 0x1002D), short frames GF(2^14)
 //! (0x402B), error correction t = 1..12, generator = product of the first t minimal polynomials of `bch_tables`.
 //!

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the KAIT tests: a synthetic 1080p test picture (gradients, text-like edges, noise texture, discs), seeded Gaussian noise.
 #pragma once
 #include "dect2/kait/kait_codec.h"

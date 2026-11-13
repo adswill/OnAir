@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // L-band carrier quality log (see carrier_log.h).
 #include "dect2/smart5/carrier_log.h"
 #include <algorithm>

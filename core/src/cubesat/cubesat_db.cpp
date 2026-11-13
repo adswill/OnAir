@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Smart CubeSat satellite tables and pass planner: see cubesat_db.h.
 #include "dect2/cubesat/cubesat_db.h"
 #include <algorithm>

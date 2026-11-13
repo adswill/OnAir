@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #344: text drawn with ImGui::Text and friends can be selected with the mouse and copied: drag over a part of it, Ctrl+C copies that part; Ctrl+C with the pointer
 // over an unselected text copies all of it; a wrapped text is selected line by line. Headless: a context, no window, the input events are fed by hand.
 #include "imgui.h"

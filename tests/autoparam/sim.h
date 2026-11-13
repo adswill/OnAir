@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel impairments for the Auto tests: everything on 8 kHz real audio. A carrier offset and slow drift are applied to the whole signal (analytic
 // signal, multiply, keep the real part), so the tones move as they do on air; noise is added last, measured against the signal itself.
 #pragma once

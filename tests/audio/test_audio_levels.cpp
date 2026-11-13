@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound level: the volume taper, the leveller, and the level each main mode hands to the output (measured on the synthetic signals, no sound is played).
 #include "dect2/audio/audiolevel.h"
 #include "dect2/airband/airband_gen.h"

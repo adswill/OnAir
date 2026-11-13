@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) test signal: a small Meshtastic network and a small MeshCore network around Dubai, built packet by packet as the
 // firmware builds them (mesh_proto.h) and modulated as LoRa frames (mesh_lora.h), time-compressed so that a minute shows everything.
 //

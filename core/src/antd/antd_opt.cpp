@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer: the optimiser. Nelder-Mead (downhill simplex) in the box of the chosen template parameters, scaled to 0..1; the cost
 // is the worst SWR over the band above its target, the gain below its target and the front to back below its target, weighted.
 #include "dect2/antd/antd_tools.h"

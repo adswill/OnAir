@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT protocol layer: wraps dump978 uat_decode and maps into UatTelemetry types.
 #include "dect2/uat/uat_proto.h"
 #include "dect2/uat/uat_twgo.h"

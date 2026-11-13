@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The map tile server (Settings > Network and updates > Map tile server, 4.0): the address template, its check, and the cache folder of each
 // server so tiles of different servers never mix. No ImGui, no App: tests/app/test_settings.cpp.
 #pragma once

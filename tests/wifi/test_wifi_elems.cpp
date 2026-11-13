@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi channel plans (wifi_chan.h) and information element parsers (wifi_elems.h) against byte strings built here from the standard's layouts
 // (not from wifi_mk.cpp): IEEE 802.11-2020 9.4.2 / 9.6.7.36, 802.11ax-2021 9.4.2.248 - 9.4.2.249 / 9.4.2.170, 802.11be-2024 9.4.2.313.
 #include "dect2/wifi/wifi_chan.h"

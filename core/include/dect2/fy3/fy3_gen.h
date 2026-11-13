@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT / MPT test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A test picture coded as fy3_proto.h has it: VIRR frames (AHRPT of FY-3A / B / C, virtual channel 5) or MERSI scans (MPT, virtual channel 3; or AHRPT

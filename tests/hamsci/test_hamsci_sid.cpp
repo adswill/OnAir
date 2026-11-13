@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SuperSID monitor on simulated levels and signals: a sudden rise is found, a slow terminator-like drift and noise are not, the receiver front end measures
 // carrier levels, several stations at once. Simulated only: no VLF recording was available. A real flare also needs a check against GOES X-ray data.
 #include "dect2/hamsci/hamsci_dsp.h"

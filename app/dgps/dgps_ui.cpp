@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DGPS beacon screens: the station ID, bit rate, carrier offset, level, message counts, the decoded messages (corrections, reference station position, almanac, text).
 #include "app.h"
 #include "dect2/dgps/dgps_engine.h"

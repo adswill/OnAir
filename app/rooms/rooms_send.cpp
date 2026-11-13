@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Server > Go live: opt-in "Live rooms". Creates a room on the rooms server, then POSTs a small batch every 2 s:
 // one waterfall line a second (512 bins, one byte each), and decoded ACARS text only when the room was started with that box ticked.
 // Audio is not sent: the repo has no Opus encoder. The host token goes in the JSON body, never in a URL. The room page shows the viewers.

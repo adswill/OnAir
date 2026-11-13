@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The receiver's audio path against what a real link does to it (issue #138: sound that stopped and never came back):
 // a real DRA+ stream (tests/cdr/cdr_dra_clip.h) is fed in units that are damaged, lost, or preceded by a long run of junk.
 // The decoder must keep going (skip what is broken) and must recover on its own. Headless: nothing is played.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web: the network side. One listening port (default 8073) serving
 //   GET  /                       the browser UI: static files from web_root (web/onair-web/ by default; a placeholder page when it is missing)
 //   GET  /web/v1/info            public server information (name, users, capture, auth mode); no addresses

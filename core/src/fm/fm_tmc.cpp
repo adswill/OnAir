@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS-TMC decoder, see rds_tmc.h.
 #include "dect2/fm/rds_tmc.h"
 #include <algorithm>

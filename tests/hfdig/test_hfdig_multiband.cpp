@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-band monitor, the logic (hfdig_multiband.h): dial frequencies, coverage of a capture, the best centre, the needed rate, the
 // preference mask and the CPU guard. No DSP here; the decoding is test_hfdig_multiband_dsp.
 #include "dect2/hfdig/hfdig_multiband.h"

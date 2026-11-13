@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT image codec: see kait_codec.h. Layout: colour planes -> CDF 9/7 lifting wavelet -> bands -> embedded bitplane passes (significance, refinement)
 // with a binary range coder. The same pass code runs in the encoder and the decoder (template on the coder), so they cannot drift apart.
 #include "dect2/kait/kait_codec.h"

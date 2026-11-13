@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BTSC: compander round trip across levels and frequencies, and the whole chain from the FM sound carrier (simulated signals only): separation, pilot, SAP, offsets, noise.
 #include "dect2/atv/atv_btsc.h"
 #include <cmath>

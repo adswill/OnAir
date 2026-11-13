@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM packet mode demultiplexer for the Journaline data service (ES 201 980 clause 6.6.1), see dab_journaline.h.
 #include "dect2/dab/dab_journaline.h"
 #include "dect2/dab/dab_proto.h"

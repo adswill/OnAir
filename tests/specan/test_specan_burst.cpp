@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Burst detector on a generated tone burst: power per 1000-sample block of a complex tone over noise. One 60-block burst is found once with
 // its start, length and levels; a 2-block spike is too short to count; a burst still open at the end of the input is flushed; the baseline
 // is not lifted by the burst itself (it is longer than the median window).

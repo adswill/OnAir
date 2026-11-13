@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MHEG-5 (ISO/IEC 13522-5) application files as carried in a DSM-CC object carousel (UK/Ireland/NZ profile ETSI ES 202 184): the files are ASN.1 BER.
 // This parses the BER structure into a tree (class, tag, constructed/primitive, value) that a viewer can list. The names of the group, item-class and common
 // attribute tags come from the ASN.1 module ISO13522-MHEG-5 (ITU-T T.172 02/1998) as published in the RedButton MHEG-5 engine (redbutton-browser/ISO13522-MHEG-5.asn,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Inmarsat all-carriers mode through the engine (setStandard(210)): the synthetic source plays several carriers in one 6 Msps capture
 // (Aero test signal x2, Inmarsat-C with an extra channel, a wide carrier), the receiver reports through latestRx(). Synthetic only.
 #include "dect2/inmsat/inmsat_rx.h"

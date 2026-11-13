@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS generator / receiver: kawstool tx <profile 0-5> <CALL> <text> out.wav   write a 12 kHz WAV burst (1.5 s silence, then the burst) carrying a chat message
 //                           kawstool rx <profile 0-5> in.wav                    search the stream for a burst and print the messages decoded
 #include "dect2/kaws/kaws_arq.h"

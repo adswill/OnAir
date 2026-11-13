@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu Fusion mode (work in progress): the engine tuning is registered under its number, the mode row, the family count and the screen
 // mapping agree with it, the engine is wired for it, and the panel's strings are in the screen source (text checks).
 #include "dect2/engine/mode_tuning.h"

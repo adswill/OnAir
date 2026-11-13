@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdma2000 / IS-95 pilot search and Sync Channel decoding (cdma.h). The pilots are found by a segmented FFT correlation against the
 // complex pilot PN sequence (32 coherent segments of 1024 chips summed in power, carrier offset hypotheses by shifting the spectrum);
 // each pilot is then tracked over the block (timing and sample clock from one correlation per PN period, the carrier from the pilot's

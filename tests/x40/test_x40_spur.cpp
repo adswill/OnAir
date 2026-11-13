@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spur and image finder: a radio with an IQ mismatch (image at -f), a DC offset, second and third harmonics and a constant spur at fs/4, with fading signals; a real signal at -f that
 // does not follow must not be called an image. Image rejection and the mismatch are checked against the generator. Simulated signals only.
 #include "x40_gen3.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SigMF metadata next to IQ recordings (iq_record.h): the JSON has the global datatype, sample_rate and version and a capture with the frequency and
 // the time; the datatype names are the ones IQEngine reads; a real recording gets a .sigmf-meta and a .sigmf-data with the same bytes.
 #include "dect2/source/iq_record.h"

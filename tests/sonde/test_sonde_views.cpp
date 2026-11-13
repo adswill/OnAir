@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The sonde type filter of the radiosonde receiver (SondeReceiver::setKindMask, the Type choice of the Radiosonde screen): one type reported only.
 // The simulated flights of sonde_gen (every type, with carrier offsets, 8-bit quantisation and noise) are fed to one receiver per view and one without a view, from the same samples:
 //   - a view lists the sondes of its type exactly as the receiver without a view lists them, and no other type;

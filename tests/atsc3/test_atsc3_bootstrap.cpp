@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 bootstrap: the generated signal is found in noise at an unknown position and every signalled field is read back.
 #include "dect2/atsc3/atsc3_bootstrap.h"
 #include "dect2/common/stable_random.h"

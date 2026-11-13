@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The General receiver screen of 4.0 (docs/GENERAL-4.0.md): the spectrum and the waterfall take almost the whole window, every control is
 // in one sidebar on the left with folding sections stacked top to bottom (no tabs), a thin bar over the spectrum has the step, Snap, Centre
 // and the channel level with its SNR, and a drawer under the waterfall holds the rest (Receiver details, History, Memory, Frequencies, a

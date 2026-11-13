@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KiwiSDR source (source_kiwisdr.cpp) against a fake KiwiSDR on localhost: the WebSocket upgrade on /kiwi/<time>/SND, "SET auth", the MSG hand-shake
 // (version, audio_rate, sample_rate), the set-up and tuning commands, keepalive, SND IQ frames (flags, sequence, S-meter, GPS block, big-endian s16), a
 // sequence gap, short / odd / compressed / oversize frames, a busy or refusing server, a time limit and the reconnect pause. Also the pure pieces

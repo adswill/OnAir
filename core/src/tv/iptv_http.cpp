@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV: a small HTTP/1.1 client (GET; PUT / POST with a body for the SondeHub upload). Plain http goes over our own sockets everywhere; https goes through OpenSSL when the
 // build has it (Linux), else through the system's own TLS (macOS: NSURLSession, Windows: WinHTTP/Schannel), see iptv_http_cocoa.mm / iptv_http_win.cpp.
 #include "dect2/tv/iptv.h"

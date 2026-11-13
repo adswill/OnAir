@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! NXDN layer 3 messages (NXDN TS 1-D): building and parsing the 72 / 80 / 147-bit message bodies (type byte, call type, option, source and
 //! destination ids, cipher, status, short data text, site / service info), the type and call type names, and the AMBE+2 voice frame bit order.
 

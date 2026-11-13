@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Messages window (View > Messages): the unified database of decoded messages (core/src/msgdb) with search, filters, a timeline, export and the
 // retention settings. The database is fed by a tap on the automation event bus; voice and encrypted content never reaches it.
 #include "dect2/common/time_fmt.h"

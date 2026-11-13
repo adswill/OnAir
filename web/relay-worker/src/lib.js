@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir relay on Cloudflare: pure helpers shared by the Worker, the Durable Objects and the Node tests.
 // Protocol: docs/ONAIR-WEB-RELAY.md (version 1). Nothing here touches the network.
 

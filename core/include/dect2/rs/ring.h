@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_ring (the lock-free SPSC sample ring behind common/ring.h). Written by hand; the Rust test
 // rust/onair/tests/headers.rs checks it against ffi.rs. Only meaningful when DECT2_RUST_RING is defined (see rust/README.md).
 // The caller owns the storage (cap elements of elem bytes, cap a power of two) and a header block of onair_ring_hdr_size() bytes aligned

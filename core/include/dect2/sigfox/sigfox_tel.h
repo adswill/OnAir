@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox mode telemetry. RxTelemetry::sigfoxm, engine standard 155, active standard 154 (family 153). Receive only.
 #pragma once
 #include "dect2/ism/ism_sigfox.h"

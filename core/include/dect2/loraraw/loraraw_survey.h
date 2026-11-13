@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wideband LoRa survey: one capture of a few MHz in, a table of every LoRa transmission found in it out, whatever the spreading factor, bandwidth,
 // coding rate or sync word, with a guess at which network each belongs to (Meshtastic preset, MeshCore, LoRaWAN plan channel, LoRa APRS, other).
 // The user does not pick a preset first: a spectral activity pass finds the occupied channels (centre and width), the width limits the bandwidths

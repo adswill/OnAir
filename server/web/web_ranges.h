@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web: what frequencies the host lets listeners tune and see (docs/ONAIR-WEB.md, "Frequency ranges").
 //
 // The host sets an ALLOW-LIST (web_allow_range, web_range_preset) and a BLOCK-LIST (web_block_range, block presets). A block always wins. When at

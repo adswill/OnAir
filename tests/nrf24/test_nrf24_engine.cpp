@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24L01 through the engine (setStandard(212)): the synthetic source plays Enhanced ShockBurst frames, the receiver reports through latestRx().
 #include "dect2/nrf24/nrf24_rx.h"
 #include "dect2/engine/engine.h"

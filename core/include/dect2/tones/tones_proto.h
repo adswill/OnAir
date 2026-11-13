@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone signalling tables and codes: CTCSS, DCS, DTMF, the five-tone sequential standards, SELCAL. Written from the public descriptions of
 // each system (EIA / TIA-603 tone lists, the Golay (23,12) DCS word, ITU / ZVEI / EEA / EIA tone plans, the ARINC 714 SELCAL plan); no code
 // of other projects is used.

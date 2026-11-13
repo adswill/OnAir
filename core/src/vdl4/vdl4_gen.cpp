@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 test signal: see vdl4_gen.h.
 #include "dect2/vdl4/vdl4_gen.h"
 #include "dect2/common/stable_random.h"

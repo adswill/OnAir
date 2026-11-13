@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmitter frequency stability meter: transmissions with a warm-up (an exponential settling from a start offset), a drift, a tone modulation that must average out, carrier offsets and noise; the start
 // and final frequency, the settling time, the drift and the mean are compared with the generator; short key-ups are not analysed; noise alone gives nothing. Simulated signals only.
 #include "x40_gen3.h"

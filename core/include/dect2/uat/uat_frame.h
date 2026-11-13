@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT downlink frame sizes (RTCA DO-282 / dump978 uat.h).
 #pragma once
 

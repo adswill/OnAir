@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Run the Sub-GHz sensors decoders over rtl_433's test recordings and compare with the expected JSON.
 
   tools/sensors_vectors.py <sensorstool binary> <rtl_433_tests/tests dir> [--report out.json]

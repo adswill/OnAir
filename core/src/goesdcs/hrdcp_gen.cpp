@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteosat HRDCP test signal (see hrdcp_gen.h).
 #include "dect2/goesdcs/hrdcp_gen.h"
 #include "dect2/goesdcs/hrdcp_proto.h"

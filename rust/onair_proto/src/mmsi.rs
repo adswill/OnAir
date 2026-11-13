@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! MMSI plausibility (ITU-R M.585) and the class of the sender.
 
 pub const CLASS_A: i32 = 0;

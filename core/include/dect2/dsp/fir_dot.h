@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A complex-signal FIR dot product the compiler can vectorise without -ffast-math: real taps written twice (h0 h0 h1 h1 ...) against the
 // interleaved re / im floats of the samples, summed into sixteen independent accumulators (four 4-lane vectors), so that the multiply-adds
 // pipeline instead of waiting on one running sum. Used by the transmit generators whose channel / resampling filters were their hot spot.

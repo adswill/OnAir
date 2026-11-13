@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Landing prediction for a falling radiosonde: integrates the descent from the last position, vertical speed and horizontal drift.
 // The parachute falls faster in thin air: speed(h) = speed(now) * sqrt(rho(now) / rho(h)), with an exponential atmosphere (scale height
 // 7 km). The horizontal speed is kept at the last measured value, so the answer is a guide, good to a few km from 10 km up.

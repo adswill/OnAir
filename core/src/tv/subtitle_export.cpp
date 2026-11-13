@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/tv/subtitle_export.h"
 #include "dect2/tv/ts_record.h"
 #include "dect2/common/text_charset.h"

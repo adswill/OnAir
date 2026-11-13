@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 sensitivity pass A (docs/SENSITIVITY-3.9-A.md): broadcast, TV and satellite decoders against the thresholds measured with sens_sweep.
 //
 // Default (short, a few seconds of signal per mode): for every mode in the table below, three seeded trials at the recorded AWGN threshold

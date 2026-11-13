@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! EBU teletext (ETSI EN 300 706) as carried in DVB PES packets (ETSI EN 300 472): Hamming 8/4 and 24/18 decoding, bit reversal, the Latin G0 national
 //! option subsets (table 36), the PES data unit walk and the decoding of one 44 byte data unit into a header / row / Fastext packet record. The page store
 //! (which page a row belongs to, serial transmission, completion) stays in C++.

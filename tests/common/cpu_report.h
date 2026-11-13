@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Speed figures for calibrating the limits on the CI machines: every speed check also prints one line
 //   CPUCAL test=<name> case="<what>" value=<v> <unit> limit<op><l> use=<u> checked=<0|1>
 // use is the share of the limit taken (1.0 at the limit, above 1 fails); checked=0 where the limit is not applied here (CI, sanitizers).

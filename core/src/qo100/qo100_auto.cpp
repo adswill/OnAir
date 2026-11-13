@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 narrowband: the decoders that run on the signals the tracker found (qo100_auto.h). One decoder channel per cluster of signals that fit in
 // 3.4 kHz of audio: the ordinary FT8 / FT4 / SSTV / RTTY (HF digital), JS8Call, PSK and CW receivers, each fed the one decimated copy of the
 // narrowband channel with its own offset, so a whole transponder costs one capture and a few receivers.

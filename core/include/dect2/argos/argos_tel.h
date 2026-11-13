@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos receiver telemetry. RxTelemetry::argos, engine standard 154, active standard 153 (family 152). Receive only.
 #pragma once
 #include "dect2/argos/argos_proto.h"

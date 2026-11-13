@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Check the Brazil band plan (data/bandplans/builtin.json, plan "br") against Anatel's channel plans.
 
 Anatel publishes its Planos Básicos as open data (CC licence), one ZIP with a CSV per plan:

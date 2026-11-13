@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The engine's input guard (dropNonFinite, sample_convert.h): NaN, infinity and magnitudes of 2^20 and more become silence, whole samples;
 // every value a radio can deliver stays bit for bit (full scale 1, unscaled 16-bit 32768, tiny and denormal values, negative zero).
 // Samples of 1e30 once reached the GGAK timing loop as infinity and a float-to-int conversion (UBSan, fuzz_engine_modes).

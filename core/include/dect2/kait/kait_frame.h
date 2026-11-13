@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT, the amateur image burst (spec: KAIT-SPEC-v0.1): framing and the transmit side.
 //
 // One burst of about 10 s: [sweep pair] [header] [layer 0 .. layer N-1] [sweep pair]. Single carrier, 158 ksym/s, root-raised-cosine 0.2 (occupied 189.6 kHz),

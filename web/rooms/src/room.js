@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // room.js - one Durable Object per room. The host POSTs batched pushes (about one every 2 s); viewers hold hibernating WebSockets.
 // Cost notes are in docs/live-rooms.md: outgoing WebSocket messages are not billed per message, incoming ones count 20:1.
 import { LIMITS, WindowLimit, makeToken, verifyToken, randomId, cleanNick, cleanChat, cleanTitle, cleanMode, cleanFreqMhz, parsePush, hashIp } from "./lib.js";

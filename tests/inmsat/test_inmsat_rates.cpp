@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers mode at the sample rates real radios give: Airspy R2 (10 / 2.5 Msps), Airspy Mini (6 / 3 Msps, 10 unofficial),
 // RTL-SDR (2.4 Msps), HackRF. The same Aero test group goes through the manager at each rate, with the Airspy-style impairments
 // (a DC spike, a mirror image from the IQ imbalance, a carrier offset). Synthetic only: a real Airspy capture is still wanted.

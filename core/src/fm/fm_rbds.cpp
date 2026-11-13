@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RBDS tables and call letters: see fm_rbds.h.
 #include "dect2/fm/fm_rbds.h"
 #include <cmath>

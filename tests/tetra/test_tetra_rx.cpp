@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA receiver on the test signal: carriers found in the spectrum, synchronised, SYNC / SYSINFO / neighbour broadcasts decoded;
 // +-2 kHz tuning error, +-100 ppm clock error (and a radio 100 ppm off in both), 15 dB SNR, two carriers in one capture, a low sample
 // rate, and noise only.

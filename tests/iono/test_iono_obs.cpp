@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ionosphere from my own receptions: bins, heard grid, MUF-style estimate, predicted vs observed, terminator, history cap and CSV.
 #include "dect2/iono/iono_obs.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPS interference indicator from ADS-B accuracy data. Aircraft broadcast how good their own GNSS position is (NACp, NIC); when a jammer
 // or spoofer is near, many aircraft in one area report a collapsed NACp / NIC, or their position jumps. This module counts, per 0.5 degree
 // grid cell and sliding window, how many aircraft were heard and how many of them looked degraded. It keeps no aircraft ids in its output.

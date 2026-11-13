@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R physical layer: the convolutional code, the FIRE code, the 4-burst interleaver, the SCH, the System Information messages,
 // and GMSK bursts through the equaliser (noise, echo, small frequency error, timing offset).
 #include "dect2/gsmr/gsmr_gen.h"

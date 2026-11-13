@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Writes tests/kaal/kaal_golden.h from the Python prototype (tests/kaal/proto, same as /tmp/kaal-phy).
 Run: python3 tests/kaal/gen_golden.py > tests/kaal/kaal_golden.h"""
 import os, sys

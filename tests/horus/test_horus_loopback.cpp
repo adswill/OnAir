@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus loopback: the generator into the receiver with noise, a frequency offset and a symbol-rate error, for Horus Binary
 // v2 and v1 and RTTY at 50 / 100 / 300 baud; prints the share of packets decoded against the SNR (in 3 kHz) and checks the floor
 // at the SNRs where the modes must work. "--sweep" prints a finer table. Sound-card rate (48 kHz) so the test stays quick.

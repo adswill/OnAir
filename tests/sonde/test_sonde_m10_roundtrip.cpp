@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M10: truth -> frame -> symbols -> decoder, in every chunk size, both polarities, with errors, and the frames the decoder must leave alone.
 #include "../data/sonde/bits/util.h"
 #include "../../core/src/sonde/sonde_bits_dm.h"

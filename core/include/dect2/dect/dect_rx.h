@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT monitor: the base stations of cordless telephones on one carrier, from their beacons (identity and system information), and how
 // busy the carrier is (bursts from base stations and handsets, slots in use). Receive only; the calls themselves (B-field) are scrambled
 // and encrypted and are not decoded, and there is no voice.

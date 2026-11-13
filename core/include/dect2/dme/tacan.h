@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TACAN bearing from one receiver: the pulse amplitudes carry 15 Hz and 135 Hz amplitude modulation from the beacon's rotating pattern, and reference bursts
 // (MIL-STD-291C 5.4-5.6: main 15 Hz group of 12 pairs on X or 13 single pulses on Y, auxiliary 135 Hz group of 6 pairs on X or 13 pulses on Y) mark the rotation.
 // Convention: the main burst is sent as the pattern maximum points due east, rotating clockwise, so a station-bound radial angle is 90 + phase. Validated on

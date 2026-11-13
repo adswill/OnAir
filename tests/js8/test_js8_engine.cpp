@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JS8Call through the engine (setStandard(39)): the synthetic source plays the test stations in step with the system clock, the
 // receiver takes its slots from the same clock and reports through latestRx().
 #include "dect2/js8/js8_rx.h"

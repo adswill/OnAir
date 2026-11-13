@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The satellite tables and pass planner: the snapshot loads, the planner finds passes for an observer in Lithuania, the Doppler shift has the
 // right size and sign, user transmitters, merging newer TLEs.
 #include "dect2/cubesat/cubesat_db.h"

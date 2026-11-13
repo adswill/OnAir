@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu System Fusion GPS in the slow data of V/D mode 1 and 2: tags 0x22 0x62 or 0x47 0x64, packed digit latitude and longitude, the radio model byte.
 // Layout from Jonathan Naylor's YSFGateway (GPL-2+). Simulated only: no off-air recording of this block was available.
 #pragma once

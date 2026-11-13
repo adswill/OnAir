@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum analyser building blocks: the sweep grid and the stitching of FFT snapshots onto it, spur removal at the tuning steps,
 // the live / peak-hold / averaged traces, CSV export and a small table of European frequency allocations. No radio, no threads.
 #pragma once

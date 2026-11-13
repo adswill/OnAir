@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Windows provider for the voice key store (keychain.h): Credential Manager generic credentials, which Windows protects with DPAPI under
 // the signed-in user's account. Compiled only on Windows (CMake). Only the 32-byte master key is stored, never a voice key.
 #ifdef _WIN32

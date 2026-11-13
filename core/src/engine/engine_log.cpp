@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The engine's log: the line buffer behind log()/logSnapshot() and the per-standard event loggers that turn receiver telemetry
 // changes (lock, parameters, ensembles, services) into log lines.
 #include "dect2/engine/engine.h"

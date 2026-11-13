@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio traffic and weather maps. iHeart TTN stations send the traffic map as nine 200 x 200 tiles (LOT files TMT_*_x_y_YYYYMMDD_HHMM.png) and a radar overlay (DWRO_id_*_YYYYMMDD_HHMM.png) with
 // its corner coordinates in DWRI_ text. This puts the tiles together and reads the overlay's position. File name conventions as in nrsc5-gui. No base map is shipped: the overlay is drawn on a plain background.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde landing prediction, 4.0 (docs/SONDE-PREDICT-4.0.md). Replaces the constant-wind estimate of sonde_land.h in the app; the
 // old functions stay for their callers and tests.
 //

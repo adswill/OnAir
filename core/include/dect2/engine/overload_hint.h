@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Too slow for this computer" hint: pure threshold logic. Fed the engine's cumulative ring-drop event count (SampleLoss::cpuEvents) once
 // per UI frame; says true once per start when more than `threshold` new drop events arrived within the last `windowSec` seconds.
 #pragma once

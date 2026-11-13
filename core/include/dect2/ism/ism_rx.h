@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors receiver: everyday 315 / 345 / 390 / 433.92 / 868 / 915 MHz devices (weather stations, tyre pressure sensors, remotes, energy and water
 // meters), the rtl_433 idea.
 //

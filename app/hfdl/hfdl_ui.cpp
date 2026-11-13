@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL screens: the message log with a filter and a detail pane (ACARS text), a map of the ground stations and the aircraft positions,
 // the aircraft, the ground stations with their status, the channel list with its activity, and the range plot (furthest position report
 // per bearing from the receiver). Band presets in the tuner.

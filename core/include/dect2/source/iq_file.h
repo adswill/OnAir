@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // IQ recordings with a description: SigMF (.sigmf-meta + .sigmf-data) and two-channel WAV. probeIqFile() reads the rate, the centre
 // frequency, the sample format and where the samples start, so the file plays in any mode without typing them in.

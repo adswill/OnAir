@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II on the owner's recording (13:52, 8532.8 kHz USB, 01.11.2026; 26 s at 8 kHz, 8 bit): two D-PSK carriers 200 Hz apart at 100 baud and a frame
 // that repeats every 362 symbols (3.62 s). The symbols themselves are too noisy for exact checks (the channel is poor); what is measured is the structure.
 #include "dect2/pactorhf/pactorhf_dsp.h"

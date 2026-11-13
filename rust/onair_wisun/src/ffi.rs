@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_wisun` (core/include/dect2/rs/wisun.h). Every export is `onair_wisun_*`; pointers come as (pointer, length) pairs and the caller owns all
 //! buffers. A null pointer with a length is read as an empty input. Name functions return pointers to static NUL-terminated text.
 //!

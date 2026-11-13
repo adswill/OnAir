@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Which receiver (Engine) has which radio open, so one radio is never opened twice in a process (multi-SDR, docs/multi-sdr.md).
 #pragma once
 #include "dect2/source/source.h"

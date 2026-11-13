@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span APRS / packet: three channels in one 2 Msps capture, each with its own station (1200 baud on the raster, a weak 9600 baud one off the raster,
 // a 1200 baud one that starts late). Every channel needs its own receiver; each station's frame must come back with the frequency of its own channel
 // and no other; the stations table lists all three; a retune keeps the frequencies; and the single receiver (switch off) is unchanged.

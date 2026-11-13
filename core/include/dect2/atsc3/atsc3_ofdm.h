@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 OFDM layer (A/322 sections 7.2.5, 7.3 and 8): the Preamble symbols that carry L1-Basic and L1-Detail. Pilots, frequency
 // interleaving, IFFT with guard interval, and the way back: FFT, channel estimate from the pilots, equalisation, de-interleaving.
 #pragma once

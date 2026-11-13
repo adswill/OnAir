@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Short adaptive equaliser for the 4-level soft symbols of the C4FM / 4FSK voice links (DMR, P25, NXDN, dPMR, D-STAR is 2-level and keeps its slicer).
 //
 // Simulcast (P25 LSM) and urban repeaters give an echo of a fraction of a symbol or more: the discriminator output then carries inter-symbol

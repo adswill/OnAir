@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for the channelised voice receiver. Nothing is transmitted: the samples only exist in memory or in a file.
 // A scene is a list of transmissions on absolute frequencies (FM, AM, USB, LSB, with speech-like audio, an optional CTCSS tone or DCS code and an optional
 // MDC-1200 burst before the voice) plus noise, placed in a complex baseband span around a centre frequency; the wireless microphone scene is a list of

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdma2000 / IS-95 base stations (spreading rate 1, 1.2288 Mchip/s): the forward pilot and the Sync Channel, from the 3GPP2 specifications
 // C.S0002-0 (physical layer: pilot PN sequences 3.1.3.1.13, Walsh functions, the K = 9 rate 1/2 code 3.1.3.1.4.1.4, symbol repetition and the
 // bit reversal interleaver 3.1.3.1.7), C.S0004-0 (the Sync Channel capsule: SOM bit, MSG_LENGTH, CRC-30, 2.1.1.5.1.2 and 3.1.2.4) and

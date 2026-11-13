@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #454: the multi-programme mux of the TV transmitters, through the real chain: TxRequest -> makeTxGenerator -> IQ at the radio's rate -> receiver -> transport stream.
 // PAT / SDT carry every programme, and the stream's own clock (PCR) runs at the speed of the signal: the padding must fit the channel's real net bit rate.
 #include "dect2/dtmb/dtmb_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MIL-STD-188-110 serial tone and STANAG 4285: the receiver recovers the generator's bits over every rate and interleaver, with frequency offset, noise,
 // a second path and the sample clock off. The generator follows the published documents; no over-the-air recording was available (simulated only).
 #include "dect2/hfutil/hfu_serial.h"

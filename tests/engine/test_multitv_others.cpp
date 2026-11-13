@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole span TV for the raster standards other than DVB-T/T2: two channels of one standard from one capture, each with its own receiver. Simulated (the mode generators).
 #include "dect2/engine/multitv.h"
 #include "dect2/engine/mode_synth.h"

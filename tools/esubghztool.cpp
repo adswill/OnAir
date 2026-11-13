@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat tool: read a recording, or write one message as a file a radio's own tool can send.
 //   esubghztool rx <file.cs8|file.cf32> [--rate Hz] [--offset Hz] [--password P | --hex KEY] [--packets]
 //       .cs8 is what hackrf_transfer -r writes (interleaved int8), .cf32 interleaved float; --offset: where the chat sits from the recording's

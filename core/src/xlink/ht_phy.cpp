@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HT-mixed PHY, one stream, 20 MHz (see ht_phy.h; clause numbers: IEEE 802.11-2020). Convolutional code, Viterbi and scrambler are those of the non-HT receiver.
 #include "dect2/xlink/ht_phy.h"
 #include "dect2/common/mathconst.h"

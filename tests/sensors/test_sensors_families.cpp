@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One real recording per protocol family of rtl_433's test set (tests/sensors/families.txt, reduced to its pulse trains by
 // tools/sensors_make_families.py) rebuilt as an IQ signal (OOK: carrier on during the pulses; FSK: tone at the mark / space frequency) and run through
 // the whole receiver: pulse detector, slicers, the decoders. Each family must be decoded as the model rtl_433 reports for the recording.

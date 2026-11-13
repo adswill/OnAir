@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A simulated sky for the GNSS test signal: a constellation with synthetic but self-consistent orbits (they have the shape of real GPS orbits;
 // they are NOT the orbits of today's satellites), the geometry to a receiver on the ground, the navigation messages and the rendering of the
 // signals as complex baseband at any sample rate. Nothing is transmitted: the samples only exist in memory or in a file.

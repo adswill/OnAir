@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) channel plans of the regions that allow sub-GHz Wi-Fi: country, band, S1G channel number, centre frequency, width and
 // operating class. The S1G channel centre frequency is  start + 0.5 MHz x channel number  (IEEE 802.11-2020 clause 23.3.? / Annex E, certain); the
 // channels of a band are the non-overlapping tiles of each allowed width from the lower band edge up (the way the regulatory plans are cut).

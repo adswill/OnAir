@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPU LDPC decoder (Metal on macOS, Direct3D 11 on Windows, Vulkan on Linux): layered normalised min-sum, one threadgroup (360 threads, one per
 // check of a layer) per FEC block.
 #pragma once

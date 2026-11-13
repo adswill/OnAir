@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic gain on bursty signals (3.2 quality pass): a weak wanted signal with a strong transmitter that keys up now and then, against the
 // simulated radio of autogain_sim.h. Per case: seconds of clipping per burst, gain changes per burst (pumping), the gain lost after the bursts
 // against before, and the seconds from the end of a burst until the gain is back within 3 dB of where it was. Prints the table; the limits are

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sweep scanner against a fake radio: known tones in white noise, a settling transient after every retune.
 #include "dect2/sweep/sweep.h"
 #include "dect2/common/stable_random.h"

@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Source-only checks of the quick gate (tools/gate/run.sh). No compiler, no build: seconds, on every push.
 
 Each check is a Python reading of a C++ test that needs the whole receiver library to link, or of a link error found late:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Long-range AIS: message 27 encode / decode with its CRC (ITU-R M.1371-5 table 79), the channel plan, and the receiver decoding all four channels
 // (AIS 1, AIS 2, 75, 76) from one 6 Msps capture at 159.4 MHz, or the long-range pair alone from a 2 Msps radio at 156.8 MHz, with time stamps.
 #include "dect2/ais/ais_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hytera XPT: see dmr_xpt.h. Field positions from DSD-FME (dmr_csbk.c, dmr_flco.c).
 #include "dect2/dmr/dmr_xpt.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP selective repeat (pure state machines, no radio) and the profile stepping rule.
 //
 // Message layer built on the PHY blocks: every PHY block of a data burst carries a 4 byte header and up to (payloadBytes - 4) message bytes:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The table sizes of the trackers (docs/LIMITS-AUDIT.md). A busy receiver must not hit a wall: the lists are large and old
 // entries are expired by age, not by a small count. The caps below only stop a runaway feed from eating memory.
 // The age is a user setting per mode family (Settings > Decoding, "Remove after"): setStale() is called by the app.

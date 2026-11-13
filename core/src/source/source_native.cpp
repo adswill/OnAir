@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Native radios (RTL-SDR, Airspy, HydraSDR, BladeRF, LimeSDR, PlutoSDR, USRP, SDRplay, Fobos SDR, RFNM): the list of connected ones and the way to open one.
 // The drivers are in source_rtlsdr.cpp, source_airspy.cpp, source_hydrasdr.cpp, source_bladerf.cpp, source_limesdr.cpp, source_plutosdr.cpp, source_usrp.cpp,
 // source_sdrplay.cpp, source_airspyhf.cpp, source_fobos.cpp and source_rx888.cpp;

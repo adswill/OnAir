@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic and MeshCore packet layer: channels, LoRa settings of both protocols, shared helpers.
 // Sources: meshtastic/firmware src/mesh/RadioInterface.cpp (regions, slot hash, applyModemConfig), src/mesh/MeshRadio.h
 // (modemPresetToParams, defaultpsk), src/mesh/Channels.cpp (key expansion, channel hash), src/DisplayFormatters.cpp (preset names);

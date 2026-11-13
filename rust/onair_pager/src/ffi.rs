@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_pager` (core/include/dect2/rs/pager.h). Every export is `onair_pager_*`; pointers come as (pointer, length) pairs and the caller owns all
 //! buffers. Text writers return the length written (the buffers are sized by the caller so that nothing is cut). Out parameters are written only when
 //! the function reports success, like the C++ reference.

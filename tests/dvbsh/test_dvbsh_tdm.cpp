@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH TDM (SH-B, EN 302 583 clause 5.6): the tables (frame width, symbol rate: one TDM SH frame lasts exactly one OFDM SH frame), the
 // signalling field (fields, CRCs, the rate 1/5 turbo code and its bit interleaver through noise), the constellations and the PL scrambling,
 // and generator -> receiver round trips with impairments: unknown start, carrier offset, symbol clock offset, AWGN, the automatic symbol

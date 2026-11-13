@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // geo.js - pure geometry, flight-progress and formatting helpers (no DOM, no network).
 // Used by the aircraft card and covered by web/map/test/geo.test.js.
 

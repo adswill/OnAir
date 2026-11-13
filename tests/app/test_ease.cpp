@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // First-use hints and first-Start decisions (app/ui/ease_logic.h, docs/EASE-3.8.md).
 #include "../../app/ui/ease_logic.h"
 #include "dect2/hfdig/clock_comp.h"

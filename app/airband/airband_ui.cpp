@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband screens: the channel list with live levels and squelch, adding and editing channels (validated to the 25 / 8.33 kHz raster),
 // scan, squelch and hang, the activity log, and the band spectrum with a marker for every channel.
 #include "app.h"

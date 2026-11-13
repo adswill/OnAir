@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SAME / EAS protocol layer on top of the Rust crate rust/onair_same: the functions of same_proto.h; same_proto.cpp keeps the
 // county table (state) and the file loader.
 #include "dect2/same/same_proto.h"

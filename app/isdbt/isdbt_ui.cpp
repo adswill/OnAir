@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T: the status bar and the Receiver tab (lock, carrier layout, the three hierarchical layers with their statistics)
 #include "app.h"
 #include "dect2/isdbt/isdbt.h"

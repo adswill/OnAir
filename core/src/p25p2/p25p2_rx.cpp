@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 receiver (see p25p2_rx.h; the protocol layout is in p25p2_proto.h and is this program's own reading of public descriptions).
 #include "dect2/p25p2/p25p2_rx.h"
 #include "dect2/dsp/fftutil.h"

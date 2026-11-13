@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! NEON kernel of the K = 7 Viterbi decoder (aarch64 only). The same butterflies as `viterbi::range_scalar`, eight states per register: the 64 path
 //! metrics stay in eight registers for the whole run (a store and reload per step would make the chain of steps latency bound), the 64 decisions of a step are
 //! packed to one `u64` by narrowing the comparison masks to bytes, weighting by 1, 2, 4 ... 128 and adding neighbours. This file is the only place outside

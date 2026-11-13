@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TX studio (no GUI): make the signal of a transmit mode into memory, measure it, impair it, decode it with the app's own receiver, and write it to a file.
 // Nothing here opens a radio or transmits. The window is app/panels/tx_studio.cpp; the pure measurements are in tx_measure.h.
 #pragma once

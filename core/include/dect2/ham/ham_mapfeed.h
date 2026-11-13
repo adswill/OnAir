@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham contacts for the public map (opt-in, its own choice next to "Send data to map server"). Pure logic, no network and no clock of its own:
 // the app offers decoded contacts, the feed rounds the locators, deduplicates, rate limits and queues them, and a Sink takes what is due
 // (the app's sink adds them to the ingest post as "ham" tracks; tests use a mock). Sent per contact: the station's callsign, the mode, the

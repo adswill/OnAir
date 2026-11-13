@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Navaid signal check (navaid_check.h): the real VOR / ILS generator through the real receiver (carrier offset, noise sweep), and figures
 // pushed out of the Annex 10 limits. The generator always sends the nominal depths, so out-of-limit depths are tested on telemetry.
 #include "dect2/vor/navaid_check.h"

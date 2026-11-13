@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMF keypad for the analog voice transmitter (tx_dtmf.h)
 #include "dect2/tx/tx_dtmf.h"
 #include "dect2/tones/tones_proto.h"

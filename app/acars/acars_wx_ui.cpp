@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airport weather table (acars_wx_ui.h): the newest METAR / SPECI and TAF per airport found in the datalink messages of the three modes.
 #include "acars_wx_ui.h"
 #include "app.h"

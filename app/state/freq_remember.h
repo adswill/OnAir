@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #393: is a remembered per-mode frequency plausible? The 3.3.0 satellite carry saved a frequency in 1000-2100 MHz (ADS-B's 1090) for modes whose own
 // default is far outside that range (airband, VDL2, AM), and the saved value then won over the mode's default on every later switch.
 #pragma once

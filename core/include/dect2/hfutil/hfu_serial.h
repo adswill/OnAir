@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Single-tone HF serial modems: MIL-STD-188-110A/C fixed-frequency serial tone (75 to 4800 bit/s) and STANAG 4285 (75 to 3600 bit/s), with the
 // STANAG 5066 D_PDU framing that often rides on them. Written from the published documents (MIL-STD-188-110C with Change 1, section 5.3.2; STANAG 4285
 // Annexes A and E; the D_PDU layout as read by Wireshark's packet-s5066dts.c). Nothing is decrypted: payload stays as hex.

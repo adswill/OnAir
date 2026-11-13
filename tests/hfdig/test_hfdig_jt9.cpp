@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, JT9: the code (sync, convolutional coding, Fano), then the whole receiver on synthetic audio
 // (clean, near the threshold, A / B / C, frequency and time offsets, clock error, two stations, noise alone) and on the real recordings of the
 // WSJT-X samples when HFDIG_WSJT_SAMPLES is set.

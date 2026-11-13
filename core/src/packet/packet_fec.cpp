@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FX.25 and IL2P receivers (packet_fec.h).
 #include "dect2/packet/packet_fec.h"
 #include "dect2/packet/packet_ax25.h"

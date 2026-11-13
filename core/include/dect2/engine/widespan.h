@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span decoding (the "wide decode" switch): the visible span of the capture, not one transmission.
 // WideDecimator mixes the dial frequency to 0 Hz and brings the span (clamped to kMaxSpanHz) down to a rate of 1.5 x the span (at least
 // 260 kHz), with a windowed-sinc FIR that is only evaluated at the output samples. The narrowband receivers (CW, PSK, HF digital,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the KAAL voice codec 4 tests: run a signal through an encoder/decoder pair with a channel in between.
 #pragma once
 #include "dect2/kaalvoice/kaal_voice.h"

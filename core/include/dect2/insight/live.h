@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The program-wide insight hub (docs/SMART5-*-3.9.md): fed on the decoders' threads through the automation engine's analyser hook
 // (APRS, pager, session and msg events) and by the FT8 view; the interface thread calls tick() about once a minute, which also sends
 // the findings on as automation events "insight.<kind>" (rules, notifications, integrations). The talkgroup heatmap is kept in a file.

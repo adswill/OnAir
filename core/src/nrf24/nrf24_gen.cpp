@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24L01 Enhanced ShockBurst test signal, see nrf24_gen.h
 #include "dect2/nrf24/nrf24_gen.h"
 #include "dect2/nrf24/nrf24_rx.h"

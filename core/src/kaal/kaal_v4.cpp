@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL frame version 4: four TDMA voice slots, chirp-pair sync every 40 ms, control channel, iterative receiver (kaal_v4.h, docs/KAAL-NEXT.md).
 #include "dect2/kaal/kaal_v4.h"
 #include "dect2/kaal/kaal_fec.h"

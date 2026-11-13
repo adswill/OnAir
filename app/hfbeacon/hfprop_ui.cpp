@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF propagation dashboard: which bands are open now (from what this receiver heard in the last 30 minutes), a 24 hour history per band and the
 // band to try now. See hfprop_ui.h.
 #include "dect2/common/timecompat.h"

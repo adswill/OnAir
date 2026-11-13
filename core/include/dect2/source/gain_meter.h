@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Engine-thread sensors for the automatic gain (docs/AUTOGAIN.md, "Auto v2"). The old loop read the display analyser's statistics: every
 // fourth sample, averaged over a GUI frame, so short overload bursts were under-counted and the loop stalled with the window hidden. The
 // GainMeter looks at EVERY sample of the radio's block, on the engine's thread, before any correction:

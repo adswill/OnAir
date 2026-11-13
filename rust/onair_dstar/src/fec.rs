@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! D-STAR header FEC (JARL D-STAR specification, radio header): the K=3 convolutional code (generators 7 and 5), the 24-column block interleaver over the 660
 //! header bits, the scrambler x^7 + x^4 + 1 (all ones start), a soft Viterbi decoder, and the least-significant-bit-first byte / bit conversions.
 

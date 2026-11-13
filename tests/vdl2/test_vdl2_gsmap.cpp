@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ground stations learned from the aircraft that talk to them: the estimate, coverage and how a taxiing aircraft pulls the estimate. Simulated positions.
 #include "dect2/vdl2/vdl2_tel.h"
 #include <random>

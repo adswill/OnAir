@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink conference hosting and the relay / proxy connection.
 //  - a conference on a fake clock and a simulated network: stations joining, the station list in the info text, the station limit, two
 //    people talking at once (each hears the other, nobody hears himself), the host talking and listening, chat passed on, leaving and

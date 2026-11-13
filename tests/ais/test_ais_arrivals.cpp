@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS arrivals board (round 4 #15): destination spellings (LOCODE with and without a space, a country prefix, ROADS / ANCH suffixes, one typo,
 // FROM>TO, aliases) and refusals, the ETA without a year (and over New Year), the worked-out ETA from distance and speed, the order, the settings text.
 #include "dect2/ais/ais_arrivals.h"

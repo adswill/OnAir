@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The built-in ground station table (frequencies in kHz as published in recent HFDL system tables) and the frequency masks that squitters carry:
 //! bit i of a mask is the i-th frequency of the station, as the system table (HFNPDU 0xD0, not reassembled) would define it.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The two small network outputs of the remote API besides HTTP: a rigctl (Hamlib rigctld subset) TCP server and the UDP broadcast of decoded messages.
 // Both are off until configured. The rigctl port listens on 127.0.0.1 unless allowLan is set (the protocol has no login, so allowLan is an explicit
 // choice for a trusted network); the UDP output sends one JSON line per datagram (see docs/REMOTE-API.md) to the address given, never anywhere else.

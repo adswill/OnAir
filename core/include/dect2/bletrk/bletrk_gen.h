@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLE tracker detector test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of tracker advertisements (an Apple Find My network frame, Tile, Chipolo, Samsung SmartTag and a Google Find My Device tag,

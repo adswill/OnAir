@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // mioty uplink (ETSI TS 103 357 V1.1.1, TS-UNB, UL-ULP mode, standard TSMA mode with a 2 380.371 Hz carrier spacing): a radio frame is split into 24 core radio-bursts
 // (plus one extension burst per payload byte beyond 20) of 36 (G)MSK symbols at 2 380.371 sym/s, spread over time and over 24 carriers by a TSMA pattern.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analogue TV ghost report: the sync pulse pair in an averaged line, and through the generator and receiver. Simulated.
 #include "dect2/atv/atv_ghost.h"
 #include "dect2/atv/atv_testkit.h"

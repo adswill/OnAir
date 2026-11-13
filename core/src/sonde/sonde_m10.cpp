@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteomodem M10 (and M10+ with the Gtop GPS): frame bytes <-> fields, the symbol builder and the decoder.
 //
 // Facts from rs1729/RS demod/mod/m10m20mod.c (frame layout, field scales, serial number, checksum, thermistor, humidity, battery):

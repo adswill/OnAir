@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT through the radio: the DO-282 test frame as binary CPFSK at the real 1.041667 Mbit/s (uat_gen.cpp), at the sample rates radios give,
 // with carrier offsets, a weak input level and white noise, into UatDemod. Simulated signals only.
 // Checks: every rate from 2 to 10 Msps decodes (3.8 needed exactly 2 samples a bit); a signal at 1e-3 of full scale decodes (the 8-bit phase

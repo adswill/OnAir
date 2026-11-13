@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Every engine mode started at every common SDR sample rate (0.25 .. 20 Msps) on its own synthetic signal: no crash, no hang,
 // no division by zero (the UB sanitizer build catches that), and a rate the mode cannot use must be reported, not crash.
 // Each mode runs in a child process (a crash names the mode and rate, an alarm turns a spin into a failure).

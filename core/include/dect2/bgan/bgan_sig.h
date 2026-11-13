@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN forward-bearer signalling (ETSI TS 102 744-3-1): the broadcast Bearer Control PDUs of a FEC block, to plain language.
 // Only broadcast system information is read. PDUs addressed to one terminal (common-signalling addresses carrying IMSI / TMSI / IMEI, connection PDUs,
 // ConnPDU, SpecificAVPList, StatusAckList) are counted and never parsed or stored; no user data and no subscriber identity leaves this file.

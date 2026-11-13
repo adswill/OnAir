@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure plot helpers: trace decimation keeps narrow peaks, frequency ticks get the decimals their step needs, units adapt.
 #include "../../app/gfx/plot_util.h"
 #include "../../app/gfx/colormap.h"

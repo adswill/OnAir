@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SDR transmit path of the ham modes (see ham_sdr.h): audio to single-sideband IQ, ALC, interpolation, and the HamRigIo that keys a TxSink
 // only after the gate.
 #include "dect2/ham/ham_sdr.h"

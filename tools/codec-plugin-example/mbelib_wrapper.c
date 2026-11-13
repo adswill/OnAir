@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* Reference wrapper: an OnAir speech codec plug-in around YOUR OWN mbelib or mbelib-neo. This file contains no codec; it only calls the
  * library you build. OnAir does not ship mbelib, mbelib-neo or any binary built from this file (see docs/CODECS.md, "AMBE+2, AMBE and IMBE
  * plug-ins").

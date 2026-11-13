@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JT6M on simulated signals: tone plan against WSJT's gentone.f, generator round trip over tuning errors and drift, noise sweep, a short ping
 // inside noise (streaming), a continuous weak signal averaged by folding, noise alone, a carrier, other sample rates.
 // Simulated only: no recording of a real JT6M contact was available.

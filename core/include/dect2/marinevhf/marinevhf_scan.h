@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF: the channel scan (dwell, hang, priority watch on channel 16) and the per-channel call log. No engine, no audio: the receiver and the
 // tests feed them the time and which channels are active, and act on what they answer.
 //

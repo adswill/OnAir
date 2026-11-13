@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Local display / HDMI emission: pixel clock harmonics and the line-rate comb, matched against the CEA-861 and VESA timings
 // (dect2/rfi/display_emission.h, docs/HDMI-EMISSION-3.9.md).
 #include "dect2/rfi/display_emission.h"

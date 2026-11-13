@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several PLPs in one signal: a common PLP (type 0), a type 1 data PLP and sub-sliced type 2 PLPs. Every selection decodes identical frames, and the common PLP's packets
 // merge into the data PLP's nulls (annex D). Simulated signals.
 #include "dect2/t2/t2gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WSPRnet (wsprnet.org) spot upload: HTTP POST application/x-www-form-urlencoded to wsprnet.org/post/ (port 80).
 // Off until the user opts in; spots are public and need a valid amateur callsign and locator.
 #pragma once

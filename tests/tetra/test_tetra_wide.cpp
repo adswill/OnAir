@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA on a wide capture (3.4): a HackRF at 5, 10 and 20 Msps sees a 4 to 14 MHz stretch of the band. Every carrier in it must be found and its
 // control channel decoded (cell identity, SYSINFO, main carrier): carriers at different levels (11.5 dB apart), each with its own base-station
 // tuning error, in noise; the shared-FFT channeliser must give what the one-carrier path gives; the carrier search takes any number of carriers

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Personal weather station upload from a Sub-GHz weather sensor (WeeWX, Cumulus): Weather Underground (the PWS upload protocol) and CWOP
 // (an APRS complete weather report, APRS101 chapter 12, over APRS-IS). Off by default; the user's station id and key. docs/PWS-UPLOAD-3.9.md.
 // Windy and AWEKAS are not included: their upload interfaces could not be checked here.

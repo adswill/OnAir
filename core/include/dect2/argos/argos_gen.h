@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos test signal. Nothing is transmitted: the samples only exist in memory or in a file. Made-up platforms (the IDs are not registered
 // ones) and made-up downlink frames. The 24 synchronisation bits of an A2 message are a stand-in (0x5A5A5A): the real pattern is in a CNES
 // document that is not public; the length field holds k (the number of 32 bit words after the first 24 data bits), also a stand-in.

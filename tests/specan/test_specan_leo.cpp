@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LEO carrier detector on generated spectrum frames (100 kHz span, 1000 bins, 100 ms frames, 20 s): a carrier drifting -200 Hz/s is
 // found once with its start frequency, drift, first-seen time and length; a fixed carrier and a 2-frame blip are not reported;
 // empty input gives nothing.

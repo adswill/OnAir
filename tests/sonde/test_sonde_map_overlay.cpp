@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde map overlay (dect2/sonde/sonde_map_overlay.h, sonde_chase.h): the launch sites in view with their names, a learned site
 // hiding the known one it sits on, the station and the chase car with the callsign, a view across the 180 degree line, the thinning when
 // zoomed out; the Tawhiri request built from a climbing and a falling sonde, its URL, and the parse of an answer and of an error; the

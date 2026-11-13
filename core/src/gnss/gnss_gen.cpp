@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS test signal: the simulated sky of gnss_sim.h as the engine's synthetic source (see gnss_gen.h for the options).
 #include "dect2/gnss/gnss_gen.h"
 #include "dect2/gnss/gnss_sim.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the Rust-backed mesh files (mesh_*_rs.cpp): conversions from the flat records of rs/mesh.h and the start-up layout check.
 #pragma once
 #include "dect2/mesh/mesh_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bandwidth detection from modelled spectra: flat-top OFDM with ripple (multipath), noise, a DC spike, deep fades and neighbours.
 #include "dect2/dsp/bandwidth.h"
 #include "dect2/common/stable_random.h"

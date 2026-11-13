@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A picture larger than the GPU's texture limit (app/gfx/tex_shrink.h, #284: the 8192-wide waterfall on the Raspberry Pi's 4096 V3D)
 // is shrunk onto the largest texture the GPU takes, keeping the brightest pixel of each group.
 #include "../../app/gfx/tex_shrink.h"

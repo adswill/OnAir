@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared channel database (github.com/adswill/OnAir-channels): CSV files per mode and country, the merge of a submission into them,
 // and the text a user submits (a pre-filled GitHub issue). Pure functions, no network: scripts/ingest.py in the data repo follows the same rules.
 #pragma once

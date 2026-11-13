@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver: "what is this signal?". From the power spectrum around one carrier (found by the carrier finder or clicked by the user) it measures
 //   occupied bandwidth (the part holding 99 % of the power over the noise floor), where the strongest line sits inside it, how symmetric the power is about the
 //   centre, how flat the top is, and how many separate humps there are,

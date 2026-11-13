@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero: a 10500 bit/s P channel in a crowded band. Ten strong narrow carriers (a busy 600 / 1200 bit/s group, or plain CW)
 // sit in the capture next to the 10500 bit/s channel, which spreads its power over ~10 kHz and so shows a far lower peak. The receiver
 // must still find it, find its rate on its own and decode it, with a carrier offset, at low Eb/N0, and with the carriers

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the Wi-SUN frame layers, meant for DECT2_SANITIZE=ON: parse() of any bytes, the PHY helpers, the name
 // functions and scheduleText must never crash or hang. Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/wisun/wisun_proto.h"

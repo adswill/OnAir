@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! POCSAG code word classification (ITU-R M.584-2): which kind of word came out of the BCH check. The batch / message assembly (state with a growing
 //! bit list) stays in C++ (`PocsagParser` in core/src/pager/pager_proto.cpp); this is its per-word decision.
 use crate::bch::{correct_word, encode_word};

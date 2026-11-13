@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 receiver (EN 302 769), written to the engine's contract: configure() once the sample rate is known, feed() from the analysis
 // thread (the work runs on the receiver's own thread), telemetry() and the setters from the interface thread.
 // Input: complex baseband of a 7.61 MHz tuning window of the C2 system, at least 8 Msample/s (resampled to the 64/7 Msample/s of the

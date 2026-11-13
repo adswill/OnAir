@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Remote-control API: a small HTTP/1.1 + WebSocket (RFC 6455) server so scripts and other programs can list the radios, start and stop the receiver,
 // set the mode, frequency, sample rate and gain, read the telemetry as JSON, subscribe to telemetry and the spectrum over a WebSocket, and fetch
 // the latest spectrum line. No dependencies (sockets only). Off until the user turns it on; it listens on 127.0.0.1 unless "lan" is set, and a

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The sessions (calls, threads, tracks) of the session store as JSON for the remote API and scripts (docs/MODE-EXPERIENCE.md, 2.2 point 3).
 // Paged, never the whole list: limit is at most 200 per page. The payload is sanitised like the summary events: ids as the store keeps them (personal
 // ids are short tags already), the key and title, times and counts; never aliases, tags, notes, message text, file paths or positions.

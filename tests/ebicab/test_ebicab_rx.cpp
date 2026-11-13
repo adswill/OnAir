@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBICab / Eurobalise receiver on the generator's signals: bursts of repeated telegrams (long and short) starting at a random place, clean, then
 // the impairments one by one: carrier offsets of +-40 kHz, the swapped frequencies, a data rate off by +-2 % (the standard allows 2.5 %), timing jitter,
 // a carrier drift, noise, other sample rates; bursts of random bits must give no telegram but must be listed; noise alone gives nothing.

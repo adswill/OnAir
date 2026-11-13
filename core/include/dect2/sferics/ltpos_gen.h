@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network) simulation: strikes at known positions and times, rendered as the IQ that each station's radio would deliver:
 // the propagation delay to that station (fractional samples), its sample clock running fast or slow (ppm), its start time, its noise, and
 // optionally a common-view MSK reference station at an offset in the same band. Also the test signal of the mode (one station's view).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A test signal for the engine's synthetic source made from a mode's own transmit generator (TxGenerator): the real transmitter's output, played as an
 // endless loop. When the generator has finished (a message, a file, a stream) the loop sends a short gap of noise and builds a new generator, so a receiver
 // that starts at any moment joins in. A carrier offset (the radios' oscillators) and a little noise are added; the noise is set from the signal's own

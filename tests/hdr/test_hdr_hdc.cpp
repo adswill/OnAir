@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio sound through a user-installed HDC-patched FAAD2 (hdr_hdc.h), tested with fake libraries (tests/hdr/fake_faad_hdc.c): no codec, no sound
 // device. The fake "decodes" a packet to 2048 stereo frames: L = first byte * 100, R = packet size * 10, and L + 7 for the first packet of a decoder state.
 //  1  the loader: no file, an unknown version, a plain FAAD2, a wrong frame info layout (all refused with a reason), a good one

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE advertising monitor (see ble_rx.h).
 #include "dect2/ble/ble_rx.h"
 #include "dect2/wirecap/wire.h"

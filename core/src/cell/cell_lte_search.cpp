@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE: the cell search over one block of samples. PSS candidates are tracked, the SSS names the cell, the PBCH gives
 // its MIB and the system information is read on SI-RNTI. Decoded cells are cancelled from under weaker ones, in several passes.
 // The state of one search lives in LteSearch; lteSearchDecode() at the end is the public entry point.

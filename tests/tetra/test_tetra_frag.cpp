@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA SDS over the MAC: D-STATUS, the simple text and LIP payloads through parseTlSdu (MLE + CMCE) and the reassembly of fragments (FragReassembler).
 #include "dect2/tetra/tetra_pdu.h"
 #include "dect2/tetra/tetra_sds.h"

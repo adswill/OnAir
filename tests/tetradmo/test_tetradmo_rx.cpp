@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA Direct Mode: the PDUs, the colour code, and the receiver against the generator, with frequency offsets, a clock offset, noise and an encrypted call. Generated signals only: no real
 // DMO radio was heard.
 #include "dect2/tetra/tetra_voice.h"

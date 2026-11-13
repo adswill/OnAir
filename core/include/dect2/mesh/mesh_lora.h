@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa physical layer (explicit header): the coding chain (whitening, Hamming, diagonal interleaving, Gray mapping, header, CRC),
 // a modulator for the test signal and a demodulator for one channel and spreading factor.
 // Facts from tapparelj/gr-lora_sdr (EPFL, GPL-3.0): lib/tables.h (whitening), hamming_enc_impl.cc, interleaver_impl.cc, gray_demap_impl.cc,

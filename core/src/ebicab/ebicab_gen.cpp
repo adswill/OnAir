@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBICab / Eurobalise test signal, see ebicab_gen.h
 #include "dect2/ebicab/ebicab_gen.h"
 #include "dect2/ebicab/ebicab_proto.h"

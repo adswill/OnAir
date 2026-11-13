@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Stores the Windows dependency prefix for release.yml: run this on the maintainer's Mac once, and again when tools/package/cross_deps_windows.sh or
 # packaging/windows/mingw-toolchain.cmake changes (after running cross_deps_windows.sh). The file goes on the draft release "ci-windows-prefix" of
 # adswill/OnAir: a draft is visible only to people with write access, and it never becomes a public release.

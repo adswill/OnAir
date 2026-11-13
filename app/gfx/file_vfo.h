@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tuning inside an IQ recording (tests/app/test_file_vfo.cpp). A file cannot retune a radio: the spectrum stays on the recording's centre
 // frequency and rate, and the tune box (the VFO) only moves the demodulator's offset from that centre. The VFO frequency shown is
 // centre + offset. These are the pure rules: the mapping, the clamp that keeps the passband inside the recorded span, the edge warning, the DC

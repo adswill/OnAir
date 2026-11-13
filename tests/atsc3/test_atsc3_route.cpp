@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROUTE: LCT header round trip, object reassembly from shuffled and duplicated fragments, MIME packages, the S-TSID, and a complete service:
 // signaling on TSI 0, then init and media segments of a video and an audio component delivered to the right callbacks.
 #include "dect2/atsc3/atsc3_route.h"

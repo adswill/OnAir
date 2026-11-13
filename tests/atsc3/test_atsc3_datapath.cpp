@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 data path without time interleaving: baseband packets are scrambled, protected (BICM), multiplexed into the data cells of a
 // subframe (one non-dispersed and one dispersed PLP), sent through a channel with an echo and noise, and recovered.
 #include "dect2/atsc3/atsc3_bb.h"

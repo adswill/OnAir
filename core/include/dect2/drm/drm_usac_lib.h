@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Optional USAC (xHE-AAC) decoder that the user installs: libfdk-aac, found and loaded at run time. It is never shipped or linked.
 // Only the six C functions below are used (TT_MP4_RAW transport, the AudioSpecificConfig built from the DRM config).
 #pragma once

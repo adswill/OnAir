@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: the receiver against a transmitter written separately from OnAir's own generator (issue #87).
 // Nothing here uses ais_gen / ais_testutil / the proto layer's stuff(), nrziEncode(), appendFcs() or burstLineBits(): the frame is built from the
 // gpsd AIVDM document's sentences exactly as ITU-R M.1371-5 annex 2 describes it:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/atsc3/atsc3_l1.h"
 #include "dect2/atsc3/atsc3_bb.h"
 #include "atsc3_constellations.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The heard-over-time store (round 4 #11, #23, #33): unique and new identities per day over three days, a restart in the middle (save and load),
 // the time zone at midnight, a late report of an earlier day, the daily and all-time farthest, the outline per sector and band, bad input.
 #include "dect2/common/seen_store.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL for the engine: IQ in, speech out to the sound card (honours the shared volume and mute), the last beacon in the telemetry.
 // The voice receiver is kaal/kaal_rx.h (it resamples any input rate to 48 kHz itself), the beacon slice receiver is kaal/kaal_beacon.h; both
 // get the same IQ. Family 122, engine standard 124, telemetry 123.

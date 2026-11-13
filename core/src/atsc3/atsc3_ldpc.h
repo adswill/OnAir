@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 LDPC codes (A/322 section 6.1.3 and Annex A), Ninner = 16200. Type A (rates 2/15 to 5/15) has a dual-diagonal part and an
 // identity part, with the parity bits of the first part interleaved; Type B (rates 6/15 and up) is the usual accumulator chain.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry of the channelised analog voice modes (RxTelemetry::chanvoice, engine standard family + 2, active standard family + 1).
 #pragma once
 #include "dect2/chanvoice/chv_plan.h"

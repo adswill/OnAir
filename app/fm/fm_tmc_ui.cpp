@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM: RDS-TMC traffic messages in plain words with the user's own event list and location table, and the TMC log (dect2/fm/tmc_db.h,
 // docs/TMC-PLAIN-3.9.md). The imported files are copied to the settings folder ("tmc") and read again at every start. No table ships with
 // OnAir: without the files the messages keep their codes, with a "?" that says how to import them.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL transmitter against the Python kaal_tx.py: a fixed 1 s tone (tests/kaal/gen_golden_tx.py) gives the same IQ, streaming in any chunk
 // size gives identical samples, and a different output rate keeps length and power.
 #include "dect2/kaal/kaal_tx.h"

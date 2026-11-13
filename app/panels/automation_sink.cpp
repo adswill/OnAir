@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The actions of the Automations inside OnAir: notification, sound (respects Mute), recording, tuning, memories, screenshot, webhook, run.
 #include "dect2/common/thread_name.h"
 #include "../app.h"

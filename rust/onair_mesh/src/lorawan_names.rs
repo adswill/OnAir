@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! LoRaWAN name tables and lookups: MAC command names and payload lengths (TS001 1.0.4 / 1.1 chapter 5), MType names (4.2.1), DevAddr types and the
 //! network of a DevAddr (TS002 6.1 / the LoRa Alliance NetID list), device makers by IEEE OUI, EUI and hex text helpers.
 use onair_common::text::Buf;

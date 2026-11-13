@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transcripts: what was said on a voice channel, as text. Pure data and rules (no radio, no UI, no speech engine): the entry, a store that is
 // searched and filtered, the exports (TXT, SRT, JSON, CSV) and a file (one JSON object per line) with a retention limit.
 #pragma once

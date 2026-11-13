@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MCP server: JSON-RPC 2.0 dispatch (initialize, tools, resources, prompts, ping), the activity log, the rate limit, the stdio transport and the
 // streamable HTTP host. The tools are in mcp_tools.cpp.
 #include "dect2/engine/engine.h"

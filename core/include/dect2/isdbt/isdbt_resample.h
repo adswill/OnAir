@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Rational polyphase resampler for the ISDB-T test signal: the IFFT rate (512/63 MHz) to the radio rate (a small rational ratio, 315/256 for 10 Msps).
 // The ISDB-T signal fills 5.6 MHz of the 8.13 MHz input band, so a short filter (24 taps per phase) is enough; the exact phases come from
 // integer arithmetic, no per-sample position tracking.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink LZHUF (B2 framing): the published wl2k-go vectors decode, and the encoder gives the same bytes; round trips of empty, short,
 // repetitive, random and large (window wrap, frequency rescale) data; corrupted CRC, length and truncated data are refused.
 #include "dect2/winlink/lzhuf.h"

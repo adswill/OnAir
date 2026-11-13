@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Two modes at once (Engine::setSecondary): ACARS (131.5 to 131.8 MHz) as the first mode and VDL Mode 2 (136.725 to 136.975 MHz) as the
 // second, from one 12 Msps capture centred on 132 MHz written by both test generators. Both must decode, the second through latestRx2(),
 // and pairs that cannot work must be refused with a reason.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared state and entry points of the transmit panel: one TxUi, the request builder, the start / stop calls and the block drawers.
 // Files: tx_ui.cpp (state, start / stop, the RX / TX switch), tx_payload_ui.cpp (the signal's own options), tx_panel.cpp (top bar, layout, shortcuts),
 // tx_step_signal.cpp (the signal list), tx_step_settings.cpp (Basic), tx_params.cpp (the table of advanced parameters, presets), tx_step_send.cpp + tx_preview.cpp (preview).

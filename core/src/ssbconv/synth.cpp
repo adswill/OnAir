@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Speech-like SSB test signals (deterministic): voiced syllables on a pitch with vibrato and formants, fricative bursts, word gaps; stations that talk
 // and pause; drift and fading; decoys (ALE 8-FSK, a multi-tone modem, RTTY, PSK31, FT8, AM, band noise, a carrier). Used by the unit tests and by the demo
 // of the panel (screenshots without a radio). Nothing here is a model of real speech; it only has the properties the detector looks at.

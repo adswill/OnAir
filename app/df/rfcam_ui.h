@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The RF camera section of the direction finder window (rfcam_ui.cpp): the bearing spectrum as a heat map over a picture.
 #pragma once
 #include "dect2/df/rfcam.h"

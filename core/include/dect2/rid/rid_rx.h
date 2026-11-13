@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID receiver: the Open Drone ID messages (ASTM F3411 / ASD-STAN EN 4709-002) drones broadcast about themselves and their
 // operator, heard on both broadcast carriers at once from one 20 Msps capture of the 2.4 GHz band. Receive only: Remote ID is a public
 // broadcast by law, meant to be read by anyone; nothing here transmits or answers.

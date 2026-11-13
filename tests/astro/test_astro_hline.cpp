@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hydrogen line toolkit (astro/hline.h): synthetic sky (Gaussian components + Tsys + RFI + drift) calibration recovery, LSR corrections and
 // pointing against published worked examples (Meeus, Astronomical Algorithms 2nd ed.: ex. 12.a sidereal time, 25.a Sun, 47.a Moon, 15.a Venus
 // transit / rise / set at Boston; IAU standard solar apex in galactic coordinates l = 56.1, b = +22.8), Gaussian fit accuracy, the l-v map

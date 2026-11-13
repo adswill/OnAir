@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 3 test signal: D8PSK bursts in the formats of ICAO Annex 10 Vol III 6.4.4 (training sequences S1, S1*, S2, S2*, Golay coded
 // management bursts, V/D bursts with a Reed-Solomon (72,62) data word or stand-in voice bits). Nothing is transmitted; the samples only
 // exist in memory or in a file. Synthetic content: the slot timing (an M burst then a V/D burst in each 30 ms slot, 4 slots per 120 ms

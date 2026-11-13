@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fast scan harness, receive only:
 //   dect2fastscan --from MHz --to MHz [--mode fw|retune|both] [--passes n] [--lna dB] [--vga dB] [--amp] [--step kHz] [--dwell ms] [--thr dB] [--top n]
 // Runs the fast scanner on the first radio. fw: the HackRF firmware sweep (libhackrf hackrf_init_sweep); retune: the ordinary retune loop. Prints

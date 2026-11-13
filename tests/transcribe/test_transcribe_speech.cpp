@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Real English speech through the same path the app uses (Transcriber::feed at the sound card rate -> VoiceSegmenter -> whisper -> filters -> store).
 // Needs DECT2_WHISPER_MODEL (ggml model) and DECT2_SPEECH_WAV (mono 16-bit wav of clear English speech); skipped (passes) without them.
 #include "dect2/transcribe/transcriber.h"

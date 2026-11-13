@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T through the engine, as the GUI uses it: an IQ recording made here (a one-segment layer and a twelve-segment layer carrying the
 // test programme) is opened as a file source with the ISDB-T standard selected; the engine must lock, decode the transport stream and its
 // analysis must see the service with a video and an audio stream.

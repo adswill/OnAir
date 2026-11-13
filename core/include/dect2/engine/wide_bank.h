@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Whole span" decoding for the narrowband modes: one single-channel receiver per carrier the finder (carrierfind.h) found in the captured span.
 // Every receiver is the mode's ordinary class, fed the carrier's own baseband stream by a Channelizer; no state is shared between them.
 //

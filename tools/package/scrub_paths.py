@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Make sure no build-machine details end up in shipped programs.
 Compilers and libraries embed the folder they were built in (assert messages, FFmpeg's configuration line, ...). This replaces the
 current user's name inside those paths with filler of the same length (so the files stay valid) and reports what it found.

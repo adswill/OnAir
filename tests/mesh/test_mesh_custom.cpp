@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa), custom LoRa settings and the Meshtastic regions (issue #60): frames at non-default spreading factors, bandwidths
 // (7.8 - 500 kHz, and the 812.5 kHz of 2.4 GHz LoRa), coding rates, sync words and preamble lengths, through the receiver with
 // setCustom() at the rate the app picks for the bandwidth; a frame on a regional Meshtastic slot through setMeshtasticPlan(); the

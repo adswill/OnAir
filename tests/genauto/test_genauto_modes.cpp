@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General / Auto on the test signals of many modes: each mode's generator is rendered (the same ones as the identifier's matrix), moved off the centre
 // by a random offset with noise, captured through the identifier thread the way the app does (Capture::startAll), and the labels go through the
 // General / Auto state machine: the right label appears at the right place, Decode returns that mode, tuning away returns to General, and tuning

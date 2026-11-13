@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the mesh packet layer (rust/onair_mesh behind dect2::), part 1: the protobuf reader, the Meshtastic name / key helpers and the Meshtastic
 // packet decoder on random and structured protobuf, every port payload (text, position, node info, telemetry, routing, traceroute, neighbours) encrypted with the
 // default key and with a user key, mutated and truncated packets, headers of every length. ONAIR_DIFF_ITERS (default 100000, 200000 verified) per family. Part 2 is

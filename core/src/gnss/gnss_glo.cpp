@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GLONASS L1OF navigation message and orbit (see gnss_glo.h). Bit positions: ICD edition 5.1 Tables 4.6 and 4.11; scale factors Tables 4.5 and 4.9;
 // the check: section 4.7 (Table 4.13); the orbit: Appendix A.3.1.2.
 #include "dect2/gnss/gnss_glo.h"

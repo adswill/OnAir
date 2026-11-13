@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit fixes: the soft limiter and NaN guard before the DAC, the HackRF's int8 packing, retuning a running session, start / stop / read races,
 // bounded memory over a long run, the carrier cross-fade, a missing audio file, the dry-run sink, and the radio range / availability texts.
 // NOTHING is transmitted: every sink here is a counter.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ receiver (engine standard 115, active 114): 1.5, 2, 3, 4.5 and 6 baud speed, found automatically unless forced.
 //
 // The channel is mixed to 0 Hz and brought to 8 kHz complex (the audio passband of an upper sideband receiver, dial + 100 .. 3900 Hz); the

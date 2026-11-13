@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi OFDM receiver for non-HT 6 Mbit/s frames at 20 Msps (see wifi_ofdm.h; IEEE 802.11-2020 clause 17).
 //
 // Stage 1 (every sample): sliding lag-16 autocorrelation of the short training; a plateau of |C|^2 / P^2 above 0.5 triggers.

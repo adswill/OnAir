@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HTTP Live Streaming for one service: takes an MPEG transport stream, copies the video, turns the audio into AAC where needed and
 // cuts the result into short segments with a rolling playlist. Browsers, iPhones, Apple TV and AirPlay play this directly.
 // Everything stays in memory; the network tuner serves the files.

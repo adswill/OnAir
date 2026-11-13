@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // J.83 Annex B: see j83b.h. The clause and figure numbers are of Rec. ITU-T J.83 (12/2007).
 #include "dect2/dvbc/j83b.h"
 #include <algorithm>

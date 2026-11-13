@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS / RBDS data layer, see fm_rds.h.
 #include "dect2/fm/fm_rds.h"
 #include "dect2/common/text_charset.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB frame acquisition (see dtmb_sync.h).
 #include "dect2/dtmb/dtmb_sync.h"
 #include <algorithm>

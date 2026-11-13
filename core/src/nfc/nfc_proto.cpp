@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID protocol parsing (see nfc_proto.h). Clean-room from public specs; receive-only, no cryptography, no cloning.
 #include "dect2/nfc/nfc_proto.h"
 #include <cstdio>

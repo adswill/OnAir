@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tracks of all aircraft of one mode (or of all modes together), keyed by ICAO address or registration, plus the adapters that turn
 // the receivers' aircraft records into fixes. The hub owns the shared wind field and the ground-station positions.
 #pragma once

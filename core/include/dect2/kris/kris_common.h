@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Kris modes (KAVB, KAPP, KAFT, KAAL): QAM mapping and soft demapping, CRCs, Zadoff-Chu sequences, root-raised-cosine taps, the xorshift64 generator. Pure C++.
 #pragma once
 #include <complex>

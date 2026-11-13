@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV (IPTV): OnAir only plays; it ships no channel lists. This header holds
 //  - the playlist and guide parsers (M3U / M3U8 with #EXTINF attributes, XMLTV) and URL handling,
 //  - the HLS playlist parser,

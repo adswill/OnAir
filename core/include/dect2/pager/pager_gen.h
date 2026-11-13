@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makePagerSynth(): an endless loop of POCSAG and FLEX transmissions on one 25 kHz channel, FM modulated. One cycle sends, with half a second

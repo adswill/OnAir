@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Qi receiver-to-transmitter packets: every named message with its content, bit clock 4 % off, power-signal offset, an amplitude wander of the power signal, a noise sweep with the
 // false-packet count and 15 minutes of noise. Simulated signals only.
 #include "x40_gen2.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT session layer: hashes, byte ranges, message codec, compression rule, profile stepper, sender and receiver state machines, PHY glue.
 // See kaft_session.h.
 #include "dect2/kaft/kaft_session.h"

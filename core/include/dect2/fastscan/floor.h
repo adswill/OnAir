@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Dynamic noise floor for the fast scanner: one adaptive floor value per bin of the stitched spectrum, so a detection threshold is
 // "N dB above the local floor" and follows the tilt of the band, the tuner's hop-edge roll-off and slow changes of the noise.
 //

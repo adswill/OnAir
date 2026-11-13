@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Position solver tests on pseudoranges made from the simulated constellation's geometry (noise-free and with noise, with and without the atmosphere),
 // the DOP figures against a separate matrix inversion, the outlier check, and a second system with its own clock.
 #include "dect2/gnss/gnss_sim.h"

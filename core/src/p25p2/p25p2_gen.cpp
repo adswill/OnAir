@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 test signal (see p25p2_gen.h).
 #include "dect2/p25p2/p25p2_gen.h"
 #include "dect2/p25p2/p25p2_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SELCAL receiver (ARINC 714): the two-pair tone call that alerts an aircraft's crew on an HF or VHF voice channel. It runs the SELCAL detector
 // of the tone decoders (tones_rx.h: 16 tones, 100 ms Hann windows, two tones in balance, each pair at least 0.55 s, up to 0.8 s apart) on the
 // radio's channel (USB on the aeronautical HF channels, FM or AM on VHF) or on a sound card, and keeps a call log with the time, the four tone

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by app_state.cpp and prefs.cpp: the few mode helpers the settings loader needs.
 // It exists so prefs.cpp can be a file of its own (it was part of app_state.cpp).
 #pragma once

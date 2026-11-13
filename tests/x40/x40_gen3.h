@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for the third block of 4.0 signal modes (families 752 and up). Generators exist only in the tests; none is reachable from the transmit side.
 // Wide-band scenes are made in one-second chunks so that a 2 Msps run does not hold hundreds of megabytes.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers on HF through a fake HackRF (report: HackRF at 2 Msps, "Auto (2 Msps)", tuned to 6.1625 MHz, the radio at 6.2125 MHz; the POCSAG level
 // stayed at -200 dBFS with Whole span off and nothing decoded with it on). Unlike pager_hf (the synthetic source) this goes through the radio path
 // of the engine: a DeviceInfo::HackRF, realtimeHardware, the automatic offset tuning, the rate and centre the engine asks the driver for. The fake

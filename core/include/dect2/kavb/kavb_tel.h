@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB receiver telemetry. RxTelemetry::kavb, engine standard 125, active standard 124 (family 123), telemetry slot 133.
 #pragma once
 #include <cstdint>

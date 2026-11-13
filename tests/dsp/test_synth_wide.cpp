@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Synthetic wideband (core/include/dect2/dsp/synth_wide.h): pure helpers, then three narrow "radios" hearing the same many-carrier wideband signal
 // through different gain/phase, sample delay, sample clock error (ppm) and frequency error are stitched into one wide stream; checks that the errors
 // are measured (offset Hz, drift ppm, overlap mismatch dB), that every carrier comes out at its true level across the seams, and that a radio that

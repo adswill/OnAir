@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Rewind" (the time machine, core/include/dect2/source/time_machine.h): a rolling memory of the radio's last seconds of raw samples. One button
 // in the diagnostics row opens its window: switch it on, how far back it reaches, the memory it may take, "Save the last N s" with a slider over the
 // ring (the bar shows how much history there is), how long to keep recording after the trigger, and what triggers a save: the button, the squelch of

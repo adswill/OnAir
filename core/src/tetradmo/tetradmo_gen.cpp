@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA Direct Mode test signal (see tetradmo_gen.h).
 #include "dect2/tetradmo/tetradmo_gen.h"
 #include <cmath>

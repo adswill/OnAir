@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DMR block product codes and interleavers (ETSI TS 102 361-1 annex B): BPTC (196,96) of control blocks and rate 1/2 data (B.1.1), the variable length
 //! BPTC of the embedded link control (B.2.1), the short LC in the CACH (B.2.3), the CACH burst with its TACT (B.4.1), the rate 3/4 trellis code
 //! (B.2.4) and rate 1 data (B.2.5).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DOCSIS downstream structure from a J.83 annex B transport stream (PID 0x1FFE): the MAC frames and the clear management messages (SYNC, UCD, MAP, MDD). This shows how
 // the cable plant is built. Only headers and these broadcast management messages are read; subscriber data frames are counted, never kept.
 // Message numbers and TLV identifiers per CM-SP-MULPIv3.1, table 26.

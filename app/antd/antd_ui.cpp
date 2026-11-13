@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Antenna designer: a wire antenna modeller in the spirit of the NEC-based programs. Pick a template (or import a NEC deck, or draw
 // wires in the 3D view), see the impedance and SWR across a band, the radiation pattern in 3D and as azimuth / elevation cuts, the gain,
 // front to back, beamwidth, take-off angle and efficiency, the current on every wire; trim or optimise the dimensions; calculators for the

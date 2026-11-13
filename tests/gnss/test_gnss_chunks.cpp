@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The receiver's result must not depend on how the samples are cut into chunks: the same 5 s of the simulated sky fed in chunks of 1, 7, 4096 and
 // 65536 samples (and a ragged mixture) gives the same channel table, the same states, the same search work and the same report numbers. The Doppler,
 // code phase and C/N0 values agree to the last digits but not always bit for bit: the FFT of the platform (Accelerate) rounds differently depending on

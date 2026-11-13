@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AVS+ video through the user's FFmpeg add-on (avsplus_dec.h). Same loading model as core/src/audio/ac4_dec.cpp.
 #include "dect2/tv/avsplus_dec.h"
 #include "../source/native_common.h"

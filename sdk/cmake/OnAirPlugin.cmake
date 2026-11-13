@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: CC0-1.0
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # onair_add_plugin(<id> SOURCES a.cpp ... [INCLUDE <dir to onair_plugin.h>])
 # Builds <id> as a shared library named <id>.<dylib|so|dll> next to a copy of manifest.json in <build>/plugins/<id>/,
 # ready to be copied into OnAir's plugins folder (or zipped as <id>.onairplugin).

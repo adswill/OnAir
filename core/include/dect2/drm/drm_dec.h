@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM back end: from equalised cells to messages. Reads the FAC of every transmission frame, the SDC of every super frame, and decodes the MSC
 // (time deinterleaver, multilevel decoder, descrambler) into the logical frames of the streams. The OFDM front end (synchronisation, channel
 // estimation) hands it one transmission frame of cells at a time.

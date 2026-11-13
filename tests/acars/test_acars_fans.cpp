@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FANS-1/A over VHF ACARS: a real CPDLC downlink (libacars examples, also in test_aero_cpdlc) sent as the text of every downlink, and the
 // generator's ADS-C reports, through the AM-MSK test signal and the ACARS receiver, with carrier offsets and noise. Every decoded message that
 // carries the CPDLC text must come out with the CRC good and the message decoded; ADS-C reports must show as ADS-C, not CPDLC.

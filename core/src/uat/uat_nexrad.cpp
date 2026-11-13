@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FIS-B NEXRAD block decoding (see uat_nexrad.h).
 #include "dect2/uat/uat_nexrad.h"
 #include <cmath>

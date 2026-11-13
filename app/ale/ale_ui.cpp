@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE screens: the common ALE channels (HFN / amateur, upper sideband dial), the nets known, Listen, then three views: the event
 // log (UTC, frequency, from, to, call type, AMD text and commands, BER, SNR), the stations heard (address, last heard, count), and
 // every word decoded (type, characters, vote and Golay errors).

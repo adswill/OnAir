@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/common/thread_name.h"
 #include "dect2/adsb/adsb_feedin.h"
 #include "dect2/adsb/adsb_msg.h"

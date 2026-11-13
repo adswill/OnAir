@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF telemetry. RxTelemetry::marinevhf, engine standard 157, active standard 156 (family 155).
 #pragma once
 #include <cstdint>

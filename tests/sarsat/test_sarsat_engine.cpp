@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT through the engine at 0.5 Msps (an RTL-SDR / RSPduo style start): which receivers log at start, how much CPU the engine uses next to the
 // bare receiver, and that the generated beacons are decoded with the tuner 20 kHz off the dial.
 #include "dect2/engine/engine.h"

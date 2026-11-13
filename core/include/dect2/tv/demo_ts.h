@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Built-in test multiplex for the synthetic transmitters: MPEG-2 programmes muxed into a transport stream.
 #pragma once
 #include <cstdint>

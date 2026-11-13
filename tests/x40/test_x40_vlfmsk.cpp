@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VLF MSK monitor: bit rate and carrier from the two lines of the squared signal, at 50, 100, 200 and 300 bit/s, carrier offset and drift, off-centre tuning, on / off / rate change logging,
 // the station hint, a noise sweep and noise alone. Simulated signals only.
 #include "x40_gen2.h"

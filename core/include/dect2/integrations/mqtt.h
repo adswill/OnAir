@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small MQTT 3.1.1 client and the packet encoder/decoder under it (QoS 0 and 1, retain, user/password, last will, TLS through core/src/net/tls_conn).
 // Nothing here connects by itself: the Hub (integrations.h) opens a connection only to a broker the user typed and switched on. The decoder side
 // (decodeConnect, decodePublish) exists for the tests' fake broker.

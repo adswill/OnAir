@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B under real-radio faults (REAL_WORLD_CHECKLIST.md), through tests/common/impair.h rather than adsb_sim: 400 extended squitters 1 ms apart,
 // rendered by AdsbMixer, then the faults, then the real receiver. 50 ppm at 1090 MHz is 55 kHz. Long messages (DF17, 112 us) must survive
 // a +-100 ppm sample clock; back-to-back frames and the 2.4 Msps rate of an RTL-SDR are covered too.

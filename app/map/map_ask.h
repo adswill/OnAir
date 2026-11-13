@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The map-server start-up question: when it is asked. Pure, so it can be tested.
 #pragma once
 #include <string>

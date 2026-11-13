@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver, picture side: from the detected video and the complex baseband at the video rate to lines, fields and pictures.
 //   sync slicer (levels found from the signal) -> line phase-locked loop -> field sync (broad pulses) -> line and row assignment
 //   -> clamp and gain from the sync pulses -> luminance and colour decoding (PAL with delay-line averaging, NTSC) -> pictures

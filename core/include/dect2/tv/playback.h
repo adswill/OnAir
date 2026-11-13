@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Playing recorded or timeshifted transport streams through the live player: a file as a PacketSource (with a PCR time map for seeking), the pacer
 // that releases packets at the speed of the stream's own clock, and the feeder thread that reads a PacketSource and hands the packets to a sink
 // (the player's push()). Pause, jump back / forward and "go live" are positions in the source.

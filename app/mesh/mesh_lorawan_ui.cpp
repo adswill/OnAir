@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) screens for LoRaWAN: the device table and the frame log, with their filters and the privacy note.
 // Split from mesh_ui.cpp; the shared state is declared in mesh_internal.h.
 #include "mesh_internal.h"

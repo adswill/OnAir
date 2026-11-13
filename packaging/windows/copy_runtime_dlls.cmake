@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Run after a Windows (MinGW) build: copies every DLL a program needs from the compiler's tree (FFmpeg, GLFW, libhackrf, libusb, the C++
 # runtime ...) next to it, plus any extra DLLs given (a radio library such as LimeSuite.dll), so the program starts from the build folder.
 #   cmake -DEXE=<program> -DSEARCH_DIR=<compiler bin dir> -DOBJDUMP=<objdump> [-DEXTRA=<dll;dll>] -P copy_runtime_dlls.cmake

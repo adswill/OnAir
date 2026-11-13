@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Line codes shared by the packet decoders: NRZI (HDLC/AX.25/AIS) and Manchester (IEEE 802.3 convention
 // for the FLARM chips). Operate on unpacked bit vectors (one bit per byte).
 #pragma once

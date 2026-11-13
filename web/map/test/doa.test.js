@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // doa.test.js - bearing lines: ingest validation, the server-side fix where lines from different stations cross, outliers, freshness.
 import test from "node:test";
 import assert from "node:assert/strict";

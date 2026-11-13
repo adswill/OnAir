@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells search: synthetic SS/PBCH bursts (38.211 / 38.212) through searchDecode at other sample rates, off the centre, with carrier
 // and clock offsets, noise and weak beams; noise alone finds nothing.
 #include "dect2/cell/cell_dsp.h"

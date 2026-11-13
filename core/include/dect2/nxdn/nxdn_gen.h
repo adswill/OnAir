@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of transmissions at either rate: a trunked site's control channel (CAC with SITE_INFO / SRV_INFO), voice calls (FACCH1

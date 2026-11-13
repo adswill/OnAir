@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The result lists the screens keep themselves (the receivers keep theirs: Engine::setResultsDir): the DAB and FM band scans, the
 // TV channel scan (DVB / ATSC / ISDB-T / DTMB), the experimental scanner's hit log, the VOR fix radials and the last weather fax picture. Saved beside the engine's files in <data folder>/results
 // (app-<name>.bin, results_io.h format: a file of another build is discarded) every 30 s and at exit, loaded at start; the interface

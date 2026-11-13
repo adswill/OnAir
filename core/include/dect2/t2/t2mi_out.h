@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T2 baseband export: the BB frames of the decoded PLP written to a file and/or sent by UDP, for tools outside OnAir (t2mi extractors,
 // re-modulators, analysers). Two formats:
 //   Bbf  raw BB frames, each BBHEADER (10 bytes, descrambled) + DATA FIELD + padding, kBch/8 bytes per frame, back to back.

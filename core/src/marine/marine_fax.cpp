@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax (radiofax) on USB audio: decoder and an endless test transmission.
 //
 // Facts used (checked against fldigi src/wefax/wefax.cxx, which follows HAMFAX and ITU-T T.3 / WMO No. 386):

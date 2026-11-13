@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT receiver: preamble search (lag-251 autocorrelation, then correlation with the width's Zadoff-Chu root), timing / carrier offset / phase from
 // the preamble, header decode, pilot-based equalisation, per-block LDPC decode with the CRC-32. See kaft_rx.h.
 #include "dect2/kaft/kaft_rx.h"

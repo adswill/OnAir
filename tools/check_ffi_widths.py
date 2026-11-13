@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Fails if any `extern "C" fn` exported from rust/*/src has a narrow integer/bool/char parameter.
 x86-64 SysV callers (GCC) do not extend narrow arguments to 32 bits but LLVM assumes they did, so
 the Rust side would read garbage in the upper bits. Use u32/i32 parameters and narrow inside the body.

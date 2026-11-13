@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A stand-in for a user-installed HDC-patched FAAD2, for the tests of the runtime loader only: the same entry points OnAir looks up, no codec.
 // Built four times from this file (FAKE_VARIANT, CMakeLists.txt):
 //   0  a good library: any packet "decodes" to 2048 stereo frames at 44.1 kHz, L = first byte * 100, R = packet size * 10; the first packet after

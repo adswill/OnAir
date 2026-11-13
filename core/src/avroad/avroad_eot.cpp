@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AAR end-of-train telemetry (EOT to head of train, 457.9375 MHz) and head-of-train commands (452.9375 MHz): 1200 bit/s AFSK (1200 / 1800 Hz) on NFM. Receive only.
 // Frame: bit sync 101010..., 11 bit frame sync 11100010010, 45 data bits, 18 check bits: BCH(63,45) with the generator and the fixed XOR key published in PyEOT
 // (Eric Reuter, GPL-3, DEF CON 26). Which tone is which, and the field positions, follow PyEOT; demo3eot.wav from that project is the real-signal test.

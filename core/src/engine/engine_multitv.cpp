@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The engine's side of multi-channel TV (multitv.h): when it is asked for and the capture holds more than one channel of the chosen width, the
 // DVB-T / DVB-T2 receiver is replaced by one receiver per occupied channel; the selected channel's packets go the way the single receiver's did.
 #include "dect2/engine/engine.h"

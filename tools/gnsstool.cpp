@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // gnsstool: write the GNSS test signal to a file, run the receiver over a recording, or both in memory.
 //   gnsstool gen <file.cs8|.cf32> <seconds> [options]     write the simulated sky (8 bit signed pairs, or 32 bit float pairs)
 //   gnsstool rx <file> --rate <Hz> [--format cs8|cu8|cf32] [--center <MHz>] [--secs <s>] [--quiet]   run the receiver over a recording

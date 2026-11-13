@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM transmitter fingerprint (3.9, docs/SMART5-broadcast-3.9.md item 3). Networks reuse one PI on many transmitters; on a DX
 // frequency, or when two of them reach you on one channel, the PI alone cannot tell them apart. Each transmitter keeps its own
 // carrier offset (a few Hz to some hundred Hz off nominal), pilot injection and processing (multiplex power). observe() learns

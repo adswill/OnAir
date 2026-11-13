@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Clear transmit frequency finder for slotted weak-signal modes (FT8, FT4, JS8, JT65): from what was decoded in the last slots, find the widest free
 // gap in the audio passband for each slot parity (even / odd), and say which parity is the quieter one. Pure code.
 // Why: calling on a crowded FT8 band on top of another station wastes the whole slot; the quiet gap and the quiet slot are the two choices that matter.

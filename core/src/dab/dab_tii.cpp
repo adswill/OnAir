@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB TII: the patterns of table 26, the carriers of clause 14.8.1 (transmission mode I) and the detector. See dab_tii.h.
 #include "dect2/dab/dab_tii.h"
 #include <algorithm>

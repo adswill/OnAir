@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The rigctl TCP server and the UDP output of the remote API: see dect2/net/api_servers.h.
 #include "dect2/net/api_servers.h"
 #include "dect2/common/thread_name.h"

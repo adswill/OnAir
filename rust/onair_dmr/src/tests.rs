@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests for the DMR layer with the known vectors that do not need the C++ reference: slot type, sync patterns, trellis and BPTC round trips, text formats.
 use crate::bits::Out;
 use crate::burst;

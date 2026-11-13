@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 3D waterfall (as in SDRangel and SDRoxide): the spectrum history as a height field seen through a perspective camera that orbits,
 // pans and zooms. Pure (no ImGui, no GPU): the camera and projection, the decimation of the history to the pixel budget, the mesh in
 // screen space in painter's order (far quads first, so no depth buffer is needed), the peak-hold ridge and the ray pick that turns a

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The plain `repr(C)` records the DAB parsers fill in (safe code: the C ABI that passes them is in `ffi.rs`). The field names follow the C header
 //! core/include/dect2/rs/dab.h. All numbers are `i32` / `u32` unless a smaller type says it is a flag.
 

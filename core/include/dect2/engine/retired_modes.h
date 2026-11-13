@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // The mode-list entries of 4.0 that showed one type of an existing receiver (a sensor brand, a radiosonde type, an AIS station kind, a time station,
 // an analog TV standard, a GNSS system, an NFC protocol, a wireless M-Bus mode or maker, a satellite framing) are gone: the receiver's own screen

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, FT8 / FT4 / FT2 decoding depth: the share decoded at the WSJT-X thresholds (FT8 -21 dB, FT4 -16 dB, FT2 -13 dB in 2500 Hz;
 // eight stations a slot, random DT), a crowded FT8 slot (100 stations at -20 .. 0 dB, overlapping), and slots of noise alone (no false
 // decodes). Before the coherent metrics, OSD and the CQ a-priori pass: FT8 -21 dB 4 %, FT4 -16 dB 4 %, the crowded slot 83 of 100.

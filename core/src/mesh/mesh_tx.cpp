@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh transmit identity and packets: see mesh_tx.h.
 #include "dect2/mesh/mesh_tx.h"
 #include "dect2/mesh/mesh_crypto.h"

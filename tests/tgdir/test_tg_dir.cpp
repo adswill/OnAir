@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Talkgroup directory (core/src/common/tg_dir.cpp): own CSV round trip, RadioReference-style import, headerless, separators, quotes, per-kind
 // separation, edit, filter, damaged rows.
 #include "dect2/common/tg_dir.h"

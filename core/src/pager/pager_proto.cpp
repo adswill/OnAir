@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // POCSAG and FLEX at the bit level (see pager_proto.h).
 #include "dect2/pager/pager_proto.h"
 #include <algorithm>

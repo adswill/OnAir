@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF sky-wave prediction (P.533-14 with the P.1239-4 ionosphere). What can be checked without the ITU's own program:
 //  - the CCIR map evaluation against an independent evaluation of the same coefficients (scratch Python written from the P.1239 text
 //    during development): the port must agree to 0.01 MHz;

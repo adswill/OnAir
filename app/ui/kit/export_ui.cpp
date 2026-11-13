@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GUI half of the shared export row (see export.h).
 #include "export.h"
 #include "../../app.h"

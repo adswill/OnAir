@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun geostationary telemetry (FY-4A / FY-4B LRIT, FY-4A HRIT, FY-2 S-VISSR), shared by the receiver and the UI.
 // The first members are those of GoesTelemetry (copied into RxTelemetry: keep them and their meaning).
 #pragma once

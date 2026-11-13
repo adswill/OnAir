@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The gr-satellites satellite table: see cubesat_grsat.h. Data: gr-satellites python/satyaml (GPL-3.0-or-later, Daniel Estevez EA4GPZ and
 // contributors), converted by tools/cubesat/satyaml2inc.py.
 #include "dect2/cubesat/cubesat_grsat.h"

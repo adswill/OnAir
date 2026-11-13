@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The options of the ATSC 3.0 test signal (SynthConfig::modeOpt, see atsc3_synth.h): every choice of modulation, code rate, FEC frame, guard interval, video
 // codec and L1-Detail mode must give a signal the real receiver decodes into a transport stream with video and sound.
 #include "atsc3_sim.h"

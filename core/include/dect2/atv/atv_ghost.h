@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analogue TV ghost measurement: a ghost is a late copy of the whole signal, so the averaged line shows a second sync pulse, its two edges the sync width apart. Looks for that pair after
 // the main pulse, in the averaged line (blanking 0, sync negative). Delays that put the ghost's falling edge on the main pulse's rising edge cannot be measured and are skipped.
 #pragma once

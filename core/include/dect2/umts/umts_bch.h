@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UMTS broadcast channel: P-CCPCH (SF 256, code 1, 18 bits per slot outside the first 256 chips) -> two interleavers -> rate 1/2 convolutional decoding -> CRC16: one 246-bit transport block per 20 ms; and the
 // BCCH content that names a cell: the master information block (MCC, MNC) and SIB 3 (cell identity), per TS 25.331 (unaligned PER).
 #pragma once

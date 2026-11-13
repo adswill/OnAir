@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tracker book: which tracker advertisements have been heard, for how long and how close, and which of them stay with the receiver.
 // Pure bookkeeping on signal time (no DSP), so it is tested with synthetic hours. Identifiers live in memory only, are dropped after
 // kBletrkForgetSec without a packet and are never written anywhere.

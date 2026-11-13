@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The field insights through the insight hub (insight/field.h, hub.h): the automation events the decoders send ("adsb.aircraft",
 // "ais.vessel", "msg.navtex") become Insight rows with the right area, kind and severity, and the interface feeds (FLARM, LoRaWAN,
 // water meter) land in the same list. Simulated events only.

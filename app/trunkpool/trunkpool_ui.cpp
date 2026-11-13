@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Multi-radio trunking: one radio on the control channel, the others retuned to the voice channels as grants arrive (core/src/trunkpool, docs/TRUNKING.md).
 // This file is the window, the App's receivers as the pool's radios (AppRx), and the feed from the P25 control channel. Receive only. Voice sound and
 // per-call audio need the user-installed vocoder add-on; without it the calls are still logged and a JSON file is kept for each. Encrypted calls are

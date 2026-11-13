@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Timeshift and playback: the PCR time map (rollover, clock jump), the rolling disk buffer (ring behaviour, seek by time, deletion of old segments),
 // a recorded file as a source, the pacer and the feeder thread (real time pacing, pause, skip, go live).
 #include "dect2/tv/playback.h"

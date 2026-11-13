@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // mioty (TS-UNB uplink, ETSI TS 103 357) receiver against its own generator: every uplink TSMA pattern, short and extended frames, frequency offsets inside the channel,
 // noise sweep, two frames overlapping in time, missing bursts, noise only. Simulated signals only: no real mioty recording has been tried.
 #include "dect2/xlink/mioty.h"

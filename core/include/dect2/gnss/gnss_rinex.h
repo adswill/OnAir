@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RINEX 3.04 observation output of the GNSS receiver's measurements (pseudorange, Doppler, C/N0), for post-processing in RTKLIB and
 // similar tools. Code only: the receiver keeps no carrier phase, so there is no L observable.
 // The receiver clock: the first epoch puts the receive time 70 ms after the latest transmit time (whole milliseconds), then it runs

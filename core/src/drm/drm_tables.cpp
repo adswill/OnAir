@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM tables from ETSI ES 201 980 V4.3.1 (2023-11), written by a script from the text of the specification and checked against V4.1.1.
 // Generated data only: the meaning of each table and the code that uses it are in drm_defs.cpp.
 #include "drm_internal.h"

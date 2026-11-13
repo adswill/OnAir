@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunk pool: the same group call granted by two sites is one call (core/src/trunkpool/pool.cpp, PoolConfig::dedupSites). Synthetic harness as in
 // test_trunkpool_pool: fake voice radios, a simulated clock. Covers the merge, the better-copy takeover, the late copy, another caller, and the
 // capacity gain with N radios against the old behaviour.

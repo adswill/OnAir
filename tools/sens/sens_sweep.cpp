@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // sens_sweep: the shared sensitivity / lock-time measurement for every mode that has a built-in test signal. docs/SENSITIVITY.md.
 //
 //   sens_sweep [--list] [--mode REGEX] [--scenario REGEX] [--quick | --full] [--trials N] [--threads N] [--out DIR] [--seed S]

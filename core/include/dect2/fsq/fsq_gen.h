@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ test signal (see kbd33_gen.h for the generator and its channel options). The engine's simulator sends a FSQ message at speed 2.
 //
 // SynthConfig (makeFsqSynth):

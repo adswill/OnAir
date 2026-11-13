@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Signal Lab: blind analysis of an unknown digital signal. The input is the signal selected on the spectrum (the Identify
 // tool or Shift+drag keeps its samples while this window is open), an IQ recording, bits pasted in, or a made-up test signal. The
 // stages (core/src/signallab) run on a worker thread; this file is the window: the stage results, the constellation, the bit viewer

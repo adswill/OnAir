@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Short voice transmissions (0.3 to 1 s) through a P25 or NXDN receiver, from a cold start and under real-world faults (3.2 quality pass).
 // A schedule of short calls with different gaps (the start falls at a different symbol phase each time) is run once clean as the reference, then at
 // each fault; per call the voice frames counted are compared with the clean run.

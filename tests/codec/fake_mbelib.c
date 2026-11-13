@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* Two stand-ins for the user-installed mbelib, no codec in either (tests/codec/test_mbe_abi.cpp). FAKE_NEO: the frame function has
  * mbelib-neo's arguments (short*, mbe_process_result*, fr, d, cur, prev, enh) and the library exports mbe_versionString; otherwise
  * mbelib 1.3's (short*, int*, int*, char*, fr, d, cur, prev, enh, int). Each checks that it was called with its own layout: the frame

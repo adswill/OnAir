@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic standard detection for the one-click "TV (auto)" and "Digital voice (auto)" mode entries (docs/AUTODETECT.md).
 //
 // TV: from a stretch of samples that holds one TV channel it finds out which standard is on the air and the parameters the receiver needs:

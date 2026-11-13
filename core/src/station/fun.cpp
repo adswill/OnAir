@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Surprise me, rare catches, dossier and plain-English messages: see fun.h.
 #include "dect2/station/fun.h"
 #include "dect2/adsb/adsb_reg.h"

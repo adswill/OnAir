@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR subscriber transmit (ETSI TS 102 361-1/-2 Tier II, -4 Tier III subscriber side): OnAir builds a real MS-sourced transmission from the
 // operator's own DMR ID and callsign and the chosen payload, so a radio that transmits can talk on a repeater's input or, where the system
 // allows it, send a control-channel service request. The bursts carry correct framing, sync, colour code, embedded link control, BPTC/FEC,

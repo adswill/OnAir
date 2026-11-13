@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The whole-span detector (core/include/dect2/dsp/carrierfind.h, core/include/dect2/engine/wide_bank.h) on synthetic multi-carrier spans with
 // measured detection and false-alarm rates. Deterministic (a fixed LCG for the symbols and the noise) and quick (a few seconds of a 1 Msps span).
 //

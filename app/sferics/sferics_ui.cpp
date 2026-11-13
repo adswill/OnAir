@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sferics (lightning) screens: strikes, flashes and strikes per minute, a 60 minute activity histogram, the list of the last strikes with
 // their time, strength and width, and the noise floor. One receiver sees when and how strong, not where: no map. Simple view: the meters,
 // the histogram and the list side by side; Advanced: the same with the details. The threshold, the mains filter and the merge time are

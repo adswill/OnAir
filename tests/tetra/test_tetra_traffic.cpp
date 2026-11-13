@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA speech traffic channel (EN 300 395-2 clause 5.5): the channel decoder returns the two 137 bit speech frames that the transmit side of the
 // clause (encodeTchS, written from the same clause) coded; class sizes and order against table 4; the per-call encryption gate; encrypted and
 // unknown-state calls produce no speech frames. No speech codec is involved: a fake plug-in just records the frames it is given.

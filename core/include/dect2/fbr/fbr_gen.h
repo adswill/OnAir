@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fleet Broadcast test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 // SIMULATED: differential BPSK at 1200 Bd carrying 16 channels of one bit per 16-bit frame, built from the public description only. The real sync
 // pattern of channel 0 is not published: the generator uses a 31-bit m-sequence of its own (x^5 + x^3 + 1), so only the modem, the frame finder

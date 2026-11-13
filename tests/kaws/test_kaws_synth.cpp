@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS through the engine on the synthetic source (setStandard(135)): the built-in test signal is the real transmitter's output (a chat message and a short beacon in the UTC slots of the computer clock) with a
 // carrier offset of +30 Hz (after the 20 kHz tuning offset) and a little noise; the receiver must lock, decode and read the carrier offset back. Also: the transmit-mode and tuning tables name it,
 // and a second start with the signal option set (modeOpt[0]) still decodes.

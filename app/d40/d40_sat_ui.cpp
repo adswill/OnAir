@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-S / S2: blind scan of the capture into a transponder list, modcods that fit the measured Es/N0, dish pointing readout. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

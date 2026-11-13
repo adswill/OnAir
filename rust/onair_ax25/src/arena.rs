@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! A bounded byte arena for the text results of the APRS parser: strings are appended once and handed out as (offset, length) spans, so the crate
 //! needs no allocation. Also `C`-style number formatting (`%.Nf`) through the C library, so the digits match the C++ reference exactly.
 

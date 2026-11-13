@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The touch interface's core: metrics, the per-frame gesture feed, long press = right click, tooltips on hold, kinetic scrolling and the
 // window hook that makes popups bottom sheets and floating windows full screen on a narrow display. See touch.h for the map.
 #include "touch.h"

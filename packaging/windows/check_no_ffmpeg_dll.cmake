@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Fails the build when a program built with DECT2_FFMPEG_PREFIX still imports an FFmpeg DLL (avcodec-62.dll ...): it then runs on
 # the host's FFmpeg (MSYS2: --enable-gpl, with libavdevice), not on the local LGPL build the release ships, and a difference such as
 # a missing camera input (no libavdevice) does not show in the developer's build.

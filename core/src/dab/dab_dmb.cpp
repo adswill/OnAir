@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMB video services (see dab_dmb.h): the outer decoder of TS 102 427 and the MPEG-4 Systems remux of TS 102 428.
 #include "dect2/dab/dab_dmb.h"
 #include "dect2/dvbt/dvbt.h"

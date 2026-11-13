@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Opt-in Discord Rich Presence over the local Discord IPC (no SDK). A background thread owns the connection; the UI only posts the wanted state.
 #pragma once
 #include <condition_variable>

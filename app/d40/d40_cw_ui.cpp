@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW: callsigns heard and who is calling CQ, built from the text of every signal. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH (ETSI EN 302 583 V1.2.1): the common channel coding (CRC-16, EHEADER, EScrambler, the 3GPP2 turbo code with the twelve
 // puncturing patterns, the bit-wise interleaver with rate adaptation, the 48-branch convolutional time interleaver) and the OFDM (SH-A)
 // physical layer: the DVB-T OFDM with the extra 1K mode, QPSK / 16-QAM (uniform and non-uniform), the symbol interleaver and the TPS

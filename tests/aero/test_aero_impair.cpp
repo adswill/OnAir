@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero receiver against the impairments of a real radio, on the default test signal (10500 bit/s at -50 kHz, 1200 bit/s at +150 kHz):
 // carrier offset +-10 kHz, drift, bit clock +-50 ppm, 8-bit samples with a DC offset, a 20 ms gap, reset() in the middle of the stream.
 // Every case must decode both channels with no bad SU after the impairment, and every frame handed on must be one the generator sent.

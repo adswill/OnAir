@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator receiver (family 202, engine standard 204, issue #282): a general BPSK / QPSK / OQPSK / 8PSK demodulator with a blind
 // analyser, for satellite and other PSK signals of any symbol rate the radio's sample rate holds (about 50 Bd to a few hundred kBd).
 //

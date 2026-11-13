@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DMR link control and control blocks (ETSI TS 102 361-1 clause 7 and annex B): the full link control of voice calls (FLCO, FID, service options, destination
 //! and source ids), header / terminator bursts (72 bit LC + Reed-Solomon (12,9) parity masked per data type), blocks of 96 bits that end in a CRC-CCITT
 //! (CSBK, data headers, PI header, MBC) and the CSBK itself.

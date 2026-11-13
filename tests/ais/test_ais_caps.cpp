@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: 450 stations are all kept (the table used to evict the oldest above 300), and the receiver keeps real time.
 #include "dect2/ais/ais_testutil.h"
 #include "dect2/limits.h"

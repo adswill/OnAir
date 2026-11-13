@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus receiver for the engine (see wmbus_live.h).
 #include "dect2/wmbus/wmbus_live.h"
 #include "dect2/voicekeys/voice_keys.h"

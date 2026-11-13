@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parsing layer of the MPEG transport-stream analyser (ts.cpp): packet header, section CRC-32 (ISO/IEC 13818-1), PAT / PMT / SDT / NIT / EIT / TDT
 // section parsers (ETSI EN 300 468) and the ATSC virtual channel table (A/65). Text fields come back as byte ranges (Span) of the section: the character
 // set conversion (dvbText, iconv) and every table of state stay in ts.cpp. These functions are implemented by the Rust crate

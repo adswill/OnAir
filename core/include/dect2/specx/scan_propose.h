@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One-button Scan / Identify (docs/SCAN-IDENTIFY.md): the beginner's path. proposeAll() finds every signal in a capture (sigid::findRegions), runs
 // the existing identifier on each (sigid::identify: bandwidth, symbol rate, modulation, frame syncs, mode fingerprints) and returns one ranked
 // proposal per signal, best first: what it probably is, how sure, the runners-up and the Memory that opens it in the right mode. Nothing new is

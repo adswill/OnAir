@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SDR++ server client (source_sdrpp.cpp): the menu of a real server (an Airspy R2 behind sdrpp --server, captured byte for byte), and
 // the whole client against a fake server on localhost that draws the Airspy source's menu as SDR++ does: rate and gain through the menu,
 // the controls SDR++ greys out while streaming changed between a STOP and a START, the server's own settings, one client at a time, and a

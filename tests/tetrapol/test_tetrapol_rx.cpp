@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL frame coding (PAS 0001-2 clause 6), data link (blocks, HDLC, TPDU, TSDU) and the receiver on the control-channel test signal:
 // both polarities (automatic and set by hand), both band codings, frequency and clock offsets, noise.
 #include "dect2/tetrapol/tetrapol_codec.h"

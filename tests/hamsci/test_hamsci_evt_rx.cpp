@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The six event monitors through HamsciReceiver on the mode's own test signal (hamsci_gen.h): tuning, kind and family numbers, telemetry (events as lines,
 // spectrogram rows, trend), the CSV exports and the summary line. Simulated only.
 #include "dect2/hamsci/hamsci_gen.h"

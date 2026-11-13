@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Leak check for the user's own water meter (3.9, docs/SMART5-field-3.9.md item 8), from the volume register a wireless M-Bus meter
 // sends (only meters the user marks as theirs; an encrypted meter needs the user's own key in the wM-Bus mode, nothing is cracked).
 //  - night flow: the use between nightStartH and nightEndH local time (when a household uses no water), in litres per hour, from the

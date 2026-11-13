@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos message layers, from what is public. Receive only.
 //
 // Uplink (PTT to satellite, 401.650 MHz, band 401.618 - 401.680 MHz for Argos 2/3):

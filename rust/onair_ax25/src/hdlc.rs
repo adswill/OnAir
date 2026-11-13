@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! HDLC receiver for AX.25 (ITU-T Q.921 framing as used by AX.25 v2.2 section 3.9): finds flags (0x7E), removes stuffed zeros, aborts on seven ones, cuts out
 //! the frames and checks the FCS. One bit per call; the state is a plain C struct so the C++ class can own it.
 use crate::frame::fcs_ok;

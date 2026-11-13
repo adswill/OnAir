@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM audio tone control: a bass shelf and a treble shelf (each -6 .. +6 dB) and the Warm preset, a gentle -3 dB high shelf above 6 kHz.
 // It works on the 48 kHz stereo audio of the FM receiver. All zero and Warm off is the identity: the audio passes untouched.
 #pragma once

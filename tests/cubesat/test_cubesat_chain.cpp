@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Smart CubeSat demodulation chains on synthetic bursts at 96 kHz: every modulation and framing, with a carrier offset, a Doppler ramp, a
 // transmitter clock error and noise. Each case counts the frames that validated (and match what was sent) against the frames sent.
 #include "dect2/cubesat/cubesat_chain.h"

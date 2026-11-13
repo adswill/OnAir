@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IEEE 802.15.4 sub-GHz BPSK PHY (868.3 MHz 20 kbit/s, 915 MHz channels 40 kbit/s) through the Zigbee receiver. The test signal is built here
 // (differential encoding, 15-chip PN spreading, raised-cosine pulses) with the impairments of real radios: carrier offsets of +-40 ppm,
 // chip clock error, a random timing fraction per frame, noise, other sample rates, noise alone, a wrong FCS. Synthetic only: no real

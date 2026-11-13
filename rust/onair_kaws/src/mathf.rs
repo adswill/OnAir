@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Math functions for the `no_std` crate: the C library in the library build, the std methods under `cargo test`.
 #[cfg(not(test))]
 #[allow(unsafe_code)]

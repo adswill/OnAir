@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fast scanner: dynamic floor, hop calibration, candidates and hit tracker on synthetic spectra (a tilted floor with drifting carriers and
 // bursts), the hop planner and radio ceilings, the filterbank and the channel recorders (one and 100 channels), the scan loop with a simulated
 // radio, and the measured DSP speed per radio profile.

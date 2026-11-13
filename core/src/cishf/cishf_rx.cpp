@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CIS HF modes receiver and engine test signal (see cishf_rx.h).
 #include "dect2/cishf/cishf_rx.h"
 #include "dect2/cishf/cishf_dsp.h"

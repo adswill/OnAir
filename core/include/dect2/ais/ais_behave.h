@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS behaviour flags and anchor watch (3.9, docs/SMART5-marine-3.9.md). These are about what a vessel is doing, next to the anomaly engine
 // (ais_anomaly.h), which is about whether its reports can be true:
 //  - "rendezvous":   two vessels within rendezvousNm of each other, both under 1 kn, for rendezvousMin minutes (a ship-to-ship transfer,

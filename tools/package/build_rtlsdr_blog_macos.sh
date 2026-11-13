@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build RTL-SDR Blog librtlsdr 1.4.0 (commit aed0ea1: V4 Lite support, HF tracking filter bypass) as a dylib for bundling into OnAir.app (stock Homebrew librtlsdr cannot drive the V4 HF upconverter).
 # Usage: build_rtlsdr_blog_macos.sh <output directory>
 set -euo pipefail

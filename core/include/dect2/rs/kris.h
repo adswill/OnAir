@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_kris (Kris modes: LDPC family and the K = 7 convolutional code). Written by hand; the Rust test rust/onair/tests/headers.rs checks it against ffi.rs.
 // Bits are one per byte; LLRs are f32, positive = bit 0 more likely.
 #pragma once

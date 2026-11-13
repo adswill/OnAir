@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the Yaesu Fusion tests: a transmission through the C4FM modulator and the receiver.
 #pragma once
 #include "dect2/fusion/fusion_gen.h"

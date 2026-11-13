@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog FPV video channel plans: the 5.8 GHz bands A, B, E, F (Fatshark / ImmersionRC), R (Raceband) and L (Low race), and the 1.2 GHz plan of
 // the common 8-channel video transmitters. Frequencies are the nominal channel centres in MHz.
 #pragma once

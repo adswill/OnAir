@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EDACS control channel telemetry. RxTelemetry::edacs, engine standard 132, active standard 131 (family 130).
 // Control data, the call and talkgroup tables built from it (published layout: edacs_msg.h), the voice channel activity of a frequency table and the
 // following of one analog voice channel. ProVoice goes to the user-installed IMBE plug-in; nothing encrypted is handled. Receive only.

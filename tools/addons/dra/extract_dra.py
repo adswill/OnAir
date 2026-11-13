@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Pull dradec.c and dradec.h out of maliwen2015's ffmpeg-7.1.2_cavs_dra.patch (https://github.com/maliwen2015/ffmpeg_cavs_dra).
 
 OnAir does not contain that source. Run this yourself if you want to build the optional DRA+ add-on (docs/CODECS.md, "DRA+ (CDR sound)").

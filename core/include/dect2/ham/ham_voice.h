@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The amateur voice band plan for the General receiver: per IARU region the voice segments of 160 m to 10 m (SSB, lower sideband below
 // 10 MHz and upper sideband above, 60 m upper by convention) and the 6 m, 4 m (Region 1), 2 m and 70 cm SSB calling areas and FM
 // simplex / repeater segments. One click tunes a segment and sets its demodulator and filter width (docs/ham-voice.md).

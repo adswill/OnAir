@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic packet layer: header, AES-CTR, Data and the port payloads, builders and decoders.
 // Published vectors: meshtastic/firmware test/test_crypto/test_main.cpp, test_PKC (a real packet header and the decrypted Data
 // "08011204746573744800" = TEXT_MESSAGE_APP "test"). The ciphertext of that Data under the default key was computed with

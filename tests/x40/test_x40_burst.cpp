@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Burst finder: a periodic key-fob style burst (433.92 MHz area), an irregular narrow burst, a wide burst (a Wi-Fi-like 400 kHz) and a fast burst, in a 2 Msps and a 4 Msps capture with the radio's offset;
 // counts, frequencies, lengths, bandwidth class and the repetition period against the generator; a noise sweep; the false bursts on noise alone. Simulated signals only.
 #include "x40_gen3.h"

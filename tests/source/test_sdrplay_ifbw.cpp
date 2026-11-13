@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SDRplay IF filter choice: a narrow channel tuned off the radio's centre must lie inside the filter (issue #199).
 #include "../../core/src/source/sdrplay_api_min.h"
 #include <cstdio>

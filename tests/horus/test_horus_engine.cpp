@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Horus through the whole dect2core: the registry, the engine's idle snapshot on the Horus active standard, the telemetry JSON
 // and the results slot (save, clear, load). No radio, window or results saver is started.
 #include "dect2/engine/engine.h"

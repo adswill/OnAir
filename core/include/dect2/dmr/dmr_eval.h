@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Compare what the DMR receiver reported with what the test signal sent (tests and `dmrtool check`).
 #pragma once
 #include "dmr_gen.h"

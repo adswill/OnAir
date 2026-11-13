@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span decoding for NXDN, P25, dPMR, M17 and D-STAR: two generated carriers of the mode at once (different levels, offsets of +-1 kHz from
 // the 12.5 / 6.25 kHz raster), one of them starting late; each must get its own decoder, lock, and put calls into the merged log with its frequency.
 #include "dect2/engine/modes.h"

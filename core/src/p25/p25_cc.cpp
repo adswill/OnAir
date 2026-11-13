@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // See p25_cc.h.
 #include "dect2/p25/p25_cc.h"
 #include <cstdio>

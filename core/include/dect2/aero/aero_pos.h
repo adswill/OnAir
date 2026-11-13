@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Aircraft positions from Aero ACARS messages: ADS-C reports (aero_adsc.h) and the plain-text position reports whose layout
 // is published. Text formats (each from airframesio/acars-decoder-typescript, lib/plugins, with the example messages of its tests):
 //   any label, ARINC 702 style "POS" report (Label_H1_POS / Arinc702): "POSN43312W123174,EASON,215754,370,..." and the same

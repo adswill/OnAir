@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B display units: conversions between aviation and metric, unit names and CSV headers.
 #include "dect2/adsb/adsb_units.h"
 #include <cmath>

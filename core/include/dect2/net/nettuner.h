@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Network tuner: serves the live channel over HTTP so that phones, TVs, VLC, Plex and Jellyfin can watch it.
 //   /               a small status page
 //   /lineup.m3u     channel list (IPTV playlist)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: coverage by bearing with blind sectors, and the ship type mix. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

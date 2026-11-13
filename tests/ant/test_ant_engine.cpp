@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT+ through the engine (setStandard(79)): the synthetic source plays the test sensors, the receiver reports through latestRx().
 #include "dect2/engine/engine.h"
 #include "dect2/ant/ant_rx.h"

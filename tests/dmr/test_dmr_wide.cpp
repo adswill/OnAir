@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span decoding: the carrier finder on synthetic carriers (offsets, levels, appearing and vanishing, the cap, adjacent channels) and the
 // DMR bank on several generated DMR carriers at once (different levels, offsets of +-1 kHz, one that appears late).
 #include "dect2/dsp/carrierfind.h"

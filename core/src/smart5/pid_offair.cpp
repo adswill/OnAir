@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Service off-air detector (see pid_offair.h).
 #include "dect2/smart5/pid_offair.h"
 #include <cstdio>

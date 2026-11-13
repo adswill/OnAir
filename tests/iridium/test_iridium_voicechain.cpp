@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium voice slots through the whole receiver (generator -> impairments -> demodulator -> frame layer -> call grouping), with known
 // payloads: every voice field must come out bit-exact. Sweeps: carrier offset, off-centre tuning, satellite Doppler and Doppler rate,
 // sample clock error, 8-bit samples, SNR (compared with the theory below). A real recording is not covered: see iridium_voice.h.

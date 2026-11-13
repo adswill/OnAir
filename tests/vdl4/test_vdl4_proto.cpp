@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 link layer without a radio: NRZI, HDLC, CRC, sync/DLS bursts.
 #include "dect2/vdl4/vdl4_proto.h"
 #include <cmath>

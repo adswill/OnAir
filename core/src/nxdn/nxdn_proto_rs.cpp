@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN common air interface on top of the Rust crate rust/onair_nxdn: the functions of nxdn_proto.h
 // (nxdn_proto.cpp keeps the frame sync word table).
 #include "dect2/nxdn/nxdn_proto.h"

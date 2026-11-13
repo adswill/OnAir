@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa sensitivity per spreading factor: the share of CRC-good frames against the SNR in the 125 kHz band, through the Signal Lab demodulator
 // (the Channelizer / Demod pair the LoRa (raw) receiver uses), with an optional carrier offset and sample clock error.
 // Usage: sens_lora_sf <sf> <snrFrom> <snrTo> <step> <frames> [cfoHz] [sroPpm] [bwHz]

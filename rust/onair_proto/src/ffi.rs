@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The C ABI (core/include/dect2/rs/proto.h). The only file with `unsafe`: it turns (pointer, length) pairs into slices and calls the safe
 //! modules. Callers own every buffer; functions that write return the length written, or `usize::MAX` when the buffer is too small.
 #![allow(clippy::missing_safety_doc)]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB video / audio layer: packets, the GF(256) erasure code, fragmentation, packetiser / depacketiser with cell and frame loss, bit budget per profile, and the
 // whole chain (synthetic AV payload -> packetiser -> PHY -> channel -> receiver -> depacketiser) for one second of profile A.
 #include "kavb_test_util.h"

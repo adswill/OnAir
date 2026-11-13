@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode S / ADS-B message layer: CRC-24, field extraction, CPR position, altitude and identity codes, message decoding.
 // No signal processing here, so every function can be checked against published examples.
 // Sources: ICAO Annex 10 Vol. IV (message formats, CRC), RTCA DO-260B (extended squitter formats) and "The 1090 Megahertz Riddle"

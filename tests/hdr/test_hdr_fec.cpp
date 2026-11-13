@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio channel coding against small known cases of the NRSC-5 documents (1011s, 1012s) and round trips: the scrambler polynomial,
 // the impulse responses of the convolutional codes, the soft Viterbi decoder on noisy tail-biting words, the Reed-Solomon header code,
 // the interleaver tables (every position used once; the AM block layout of 1012s figure 10-2), and the Layer 2 pieces (SIS, PDU, HDLC,

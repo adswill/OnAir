@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT receiver on the generated signal: base stations found with their identities, handset bursts counted, CRC forms, noise gives nothing.
 #include "dect2/dect/dect_gen.h"
 #include "dect2/dect/dect_rx.h"

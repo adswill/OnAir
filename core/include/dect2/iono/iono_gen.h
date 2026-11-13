@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the ionospheric sounder mode (makeIonoSynth): two chirp sounders of different rates and timing, each heard on two
 // ionospheric paths (delayed echoes, the delays constant over frequency), in Gaussian noise. Time starts at 0 with the first sample.
 // The generator places the sweeps for a radio tuned to SynthConfig::modeVal[0] MHz (0: kIonoSynthDefMhz).

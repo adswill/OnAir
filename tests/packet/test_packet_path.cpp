@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / packet path graph (packet_path.h): hops from the H bits, aliases, IGates, loops, silent digipeaters, the relayed-station hull and range.
 #include "dect2/packet/packet_path.h"
 #include <cmath>

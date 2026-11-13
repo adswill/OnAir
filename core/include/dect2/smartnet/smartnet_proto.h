@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II trunking (SmartNet, SmartZone): the outbound control channel word (OSW), the band plans that turn its channel numbers into frequencies, and the
 // message layer that reads one to three OSWs as a grant, a site broadcast and so on.
 //

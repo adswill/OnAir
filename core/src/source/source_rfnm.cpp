@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Native driver for the RFNM (rfnm.com): a motherboard with up to two daughterboards (Granita, Lime, Breakout, XMC_RFFE, ...), each with one
 // or more receive channels, on USB or Ethernet. Unlike the other native radios its library, librfnm, has a C++ interface only: it cannot be
 // loaded at run time (native_common.h), so this file is built and linked only when CMake finds librfnm (DECT2_WITH_RFNM -> DECT2_HAVE_RFNM).

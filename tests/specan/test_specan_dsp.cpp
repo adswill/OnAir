@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum analyser maths: the grid, stitching across step edges, spur removal, peak hold and average, CSV, allocations, ticks,
 // and the stepped receiver over a synthetic band (the retune callback moves a made-up radio).
 #include "dect2/specan/specan_dsp.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ham science receivers through the engine's front end on their own test signals (hamsci_gen.h): the audio modes (JT6M too) at 600 ksps, SuperSID at 48 ksps (a flare
 // 17 minutes in), the riometer power trace, the pulsar chain at 2.4 Msps for a few seconds. Simulated only.
 #include "dect2/hamsci/hamsci_gen.h"

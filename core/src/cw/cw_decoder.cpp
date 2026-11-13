@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW adaptive decoder (see cw_decoder.h).
 #include "dect2/cw/cw_decoder.h"
 #include "dect2/cw/cw_lm.h"

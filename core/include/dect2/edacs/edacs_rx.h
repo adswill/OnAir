@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EDACS control channel receiver: FM discriminator at 76.8 kHz (8 samples per bit), dotting search, three-copy majority voting; the message layer on top (assumed
 // layout, edacs_msg.h): calls, talkgroups and site information; and, with a table of the system's voice channel frequencies and a capture wide enough to hold
 // them, a power scan of those channels and the following of one analog voice channel (FM, the sound of the call that the control channel announced, or of a

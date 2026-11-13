@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT protocol layers: known-answer vectors written out here, independent of the code under test, where the standards give them
 // (CCSDS ASM and the convolutional code's impulse response, the NOAA HRPT sync words, 10-bit packing), then round trips of the pieces.
 #include "dect2/hrpt/hrpt_gen.h"

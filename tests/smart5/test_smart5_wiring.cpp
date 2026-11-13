@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The receiver-side parts of the round-5 smart wiring (docs/SMART5-UI-3.9.md), through the real generators and receivers where there is one:
 //  - FM: the ITU-R BS.412 multiplex power measured inside the FM receiver (generator -> receiver, two deviations, noise, carrier offset)
 //  - analogue TV: the blanking lines handed over for the VITS analyser (generator test line -> receiver -> analyseVitsLine), noise sweep

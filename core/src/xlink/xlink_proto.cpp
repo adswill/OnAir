@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // wfb-ng frame layout: svpcom/wfb-ng src/wifibroadcast.hpp (GPL-3). OpenHD: OpenHD/wifibroadcast Ieee80211Header.hpp (GPL-3). Layouts read and re-implemented.
 #include "dect2/xlink/xlink_proto.h"
 #include <cstring>

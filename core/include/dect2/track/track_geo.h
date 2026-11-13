@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Geometry for the position estimator: a local azimuthal-equidistant (ENU) frame, great-circle helpers, small fixed-size matrices.
 // Spherical Earth (R = 6371008.8 m): the frame and its inverse are exact on the sphere, so the filter is self-consistent; against the
 // WGS-84 ellipsoid distances differ by up to 0.3 %. Works over the date line (longitudes are wrapped) and at the poles.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF weak-signal modes (FT8 FT4 FT2 WSPR JT65 JT9 Q65 FST4 JT4): the SNR (in 2500 Hz) at which half and 90 % of the stations are decoded, plain
 // and with a receiving side's faults (dial +40 Hz, +100 ppm clock), and slots of noise alone (no decode allowed). docs/SENSITIVITY-4.0-B.md.
 //   default: a short guard (FT8 and WSPR, a few dB above the measured 50 % point, one scenario)

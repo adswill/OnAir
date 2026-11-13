@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero command line tool.
 //   aerotool gen <secs> <file.cs8|.cf32> [--rate sps] [--ebn0 dB] [--channels mask] [--cfo Hz] [--drift Hz/s] [--ppm p] [--seed n] [--clean]
 //       writes the test signal as the radio would see it (tuned tuneOffsetHz above the user's frequency)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fax decoder: round trip from the test source for each IOC / line rate / audio rate, chunk-size independence,
 // overrides, the line cap and two transmissions in a row.
 #include "../data/marine/fax/fax_util.h"

@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Builds tools/bench/bench_dsp.cpp on its own (only the core sources it needs, not the whole project), at the lowest priority, and runs it.
 #   tools/bench/bench_dsp.sh [build dir] [-- bench_dsp arguments]
 # The objects are cached in the build dir (default /tmp/onair-bench-dsp): a second run only compiles what changed.

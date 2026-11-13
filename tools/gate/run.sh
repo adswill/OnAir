@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # The quick gate: every check that fails a release late, in a few minutes, with no build of the receiver library.
 # CI runs it on every push (.github/workflows/gate.yml; the "Lint (seconds)" job of ci.yml). It works the same on a laptop:
 #   tools/gate/run.sh               everything
@@ -52,6 +55,13 @@ step "web_policy classification (source)" python3 tools/gate/gate_check.py web_p
 step "Android native link (stand-ins)" python3 tools/gate/gate_check.py android
 step "credits generator" credits
 step "Android JNI table and generated files" android_generated
+step "licences: every tracked file covered (tools/release/check_spdx.py)" python3 tools/release/check_spdx.py
+spdx_headers() {   # warns only, so a merged branch with new files does not stop CI; ONAIR_SPDX_STRICT=1 makes it fail
+    python3 tools/release/add_spdx.py --check && return 0
+    [ "${ONAIR_SPDX_STRICT:-0}" = 1 ] && return 1
+    echo "warning only (set ONAIR_SPDX_STRICT=1 to fail)"; return 0
+}
+step "SPDX headers on OnAir source files (tools/release/add_spdx.py --check)" spdx_headers
 
 # The real tests that need no receiver library: built with the same sources and defines as CMakeLists.txt.
 if [ $COMPILE = 1 ]; then

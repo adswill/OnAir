@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM receiver: see flarm_rx.h and flarm_proto.h.
 // Two channel paths (868.2 / 868.4 MHz = -100 / +100 kHz around the radio's centre): mix, low-pass, resample to 800 ksps (8 per chip), FM
 // discriminator, then at each of the 8 sampling phases an integrate-and-dump chip value. A pair of chips is a data bit (second chip above the first

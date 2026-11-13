@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #425, #442: the mouse wheel on a plot stops at limits and never hangs the program. #465: a mode without a slot (Mode Builder, Plugins) can be selected.
 // Drives the real plot code headless with wheel events; a hang ends in the alarm.
 #include "gfx/plot.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-channel TV through the engine (Engine::setMultiChannel): recordings of two and three DVB-T2 channels side by side in one wide capture.
 // With the switch on, every occupied channel locks and shows its service list with the channel it comes from, an empty slot gets no receiver, the
 // channel that plays can be changed, and the load per receiver is printed. With the switch off, or a capture that holds one channel, the single

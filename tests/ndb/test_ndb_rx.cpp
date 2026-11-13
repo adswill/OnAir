@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB ident: a carrier 12 kHz below the capture centre (the mode's tune offset), Morse "NDB" at 7 WPM.
 // Three paths the beacon band actually uses: 400 Hz AM, 1020 Hz AM, and a keyed carrier.
 #include "dect2/ndb/ndb_gen.h"

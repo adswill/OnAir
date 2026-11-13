@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The military UHF air band (225 - 400 MHz AM, 25 kHz channels) in the airband mode: channel names and the raster, the known channels
 // (243.000 guard, 282.800 SAR), and the receiver on the test generator around 243.000 MHz: every keyed channel opens, the empty neighbours
 // 25 kHz away stay shut, through a radio tuning error of up to 30 ppm (7.3 kHz at 243 MHz), a noise sweep, a sample clock error and 8-bit

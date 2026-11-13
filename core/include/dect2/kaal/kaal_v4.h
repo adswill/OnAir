@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL frame version 4 (docs/KAAL-NEXT.md, docs/KAAL-SLOTS.md): 16 ksym/s single carrier, RRC 0.25 (20 kHz), 3 samples per symbol at
 // 48 kHz. Superframe 40 ms = 640 symbols: 16-symbol up-chirp + 16-symbol down-chirp (sync, timing and carrier offset in one step; the
 // down-chirp is negated in superframe 0 of every 10), 32 QPSK control symbols (one rate-1/2 LDPC word per 10 superframes), four slots of

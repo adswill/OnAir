@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Dark "instrument" theme: flat neutral greys, thin rules, one muted accent.
 #pragma once
 #include "imgui.h"

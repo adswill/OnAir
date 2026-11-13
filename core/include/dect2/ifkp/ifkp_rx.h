@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IFKP receiver (engine standard 118, active 117): 0.5, 1.0 and 2.0 speed, found automatically unless forced.
 //
 // The channel is mixed to 0 Hz and brought to 8 kHz complex (the audio passband of an upper sideband receiver, dial + 100 .. 3900 Hz); the

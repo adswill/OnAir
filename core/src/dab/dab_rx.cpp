@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB receiver, transmission mode I: null-symbol and phase-reference synchronisation, carrier and timing tracking, DQPSK
 // demodulation, fast information channel (ensemble, services, labels) and the main service channel of the selected sub-channel.
 #include "dect2/dab/dab_pktfec.h"

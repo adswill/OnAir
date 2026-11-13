@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signals: the test signal of every station (time_gen.h) through the receiver (time_rx.h), started part way into a minute, with a
 // known time: the decoded time and flags, the seconds tick and the computer clock offset after the path delay; a weak signal, a carrier
 // and sample clock error, another rate; noise alone gives nothing.

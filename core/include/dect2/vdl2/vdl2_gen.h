@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 2 test signal: aircraft and ground stations on the VDL2 channels, D8PSK bursts (raised cosine, roll-off 0.6) with the real
 // burst structure (ramp, training sequence, header, scrambled Reed-Solomon coded data, AVLC frames). Nothing is transmitted; the samples
 // only exist in memory or in a file. Synthetic content: registrations, flights and texts are made up in the style of real ones.

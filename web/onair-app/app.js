@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web 3.9: the page. State, the API (fetch with the CSRF header), one WebSocket (status, panel, spectrum, audio), the mode picker,
  * the settings page, login and first-time setup, keyboard shortcuts and the phone layout (tabs). */
 (function () {

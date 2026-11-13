@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Refresh tools/ci_times.tsv (the measured seconds per test that tools/ci_select.py balances the CI shards with) from ci.yml runs.
 
   python3 tools/ci_times.py RUN_ID [RUN_ID ...]          reads the logs with `gh run view --log`, keeps the larger time per test

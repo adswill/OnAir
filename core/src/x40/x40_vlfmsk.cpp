@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VLF MSK transmitter monitor (10 - 30 kHz, the long-wave naval communication stations): a minimum-shift-keyed carrier has two tones, a quarter of the bit rate above and below its
 // centre. Squaring the signal turns them into two lines whose spacing is the bit rate and whose middle is twice the carrier. The mode measures that, over 4 s at a time: the carrier
 // frequency (and its offset from the tuned frequency), the bit rate (compared with 50, 75, 100, 150, 200 and 300 bit/s), the level, and whether the station is on the air; it logs when a

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voiceband detectors and decoders of the W1A batch (families 800 - 802). Receive only. Public sources only (docs/W1A-3.9.md):
 //   Packet   HF packet radio: AX.25 frames in 300 Bd AFSK, tones 1600 / 1800 Hz (200 Hz shift), NRZI, bit stuffing, CRC-16. Full decode: the frames
 //            are read with the repo's own AFSK receiver and AX.25 parser (the receiver the APRS HF side uses).

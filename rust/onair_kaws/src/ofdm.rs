@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Coherent OFDM for the profiles P5-P7 (spec section 2): 48 carriers at 50 Hz (2400 Hz), 20 ms symbol (48 samples at 2400/s) plus a 5 ms cyclic prefix
 //! (12 samples) = 25 ms, 40 symbols/s; every 4th carrier is a pilot (12 pilots, 36 data carriers, 1440 data symbols/s). Data carriers: BPSK (P5) or
 //! QPSK (P6, P7), Gray mapped, unit average power. Pilots: known BPSK from a fixed xorshift sequence, same power as data.

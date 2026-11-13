@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where a mode may use the GPU: one yes / no per GPU-capable decoder family, set from the app's "Use GPU where available" tick and the
 // per-mode overrides. "No" means the CPU path of that decoder, which gives the same output (the GPU kernels are checked against it).
 // Header only, no GPU code here: the decoders keep their own CPU / GPU / Auto choice (0 / 1 / 2); this only forces 0 when the tick is off.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DMR text: short data and talker alias text conversion (ETSI TS 102 361-1 table 9.50, TS 102 361-2 7.1.1.4 and 7.1.1.5): the defined data formats
 //! (binary, BCD, 7 bit, ISO 8859-x, UTF-8 / 16 / 32), clean-up of control characters, format names, and the talker alias assembled from the
 //! embedded link control of a voice call. Text goes into a caller buffer through [`Buf`].

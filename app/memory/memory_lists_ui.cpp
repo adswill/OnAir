@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sharing and organising memories: the import preview (formats other programs use, duplicates, merge rule), "Export as...", the "My lists" manager
 // (enable / order / rename lists, add a built-in list of common services) and the quick-tune bar of starred memories. The models are in core
 // (dect2/channels/memory_formats.h); memory_ui.cpp draws the panel these pieces sit in.

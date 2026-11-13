@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CCIR 476 / SITOR-B / NAVTEX at the bit level: the code table, the FEC time diversity, framing, damage and polarity.
 #include "dect2/marine/marine_navtex.h"
 #include <algorithm>

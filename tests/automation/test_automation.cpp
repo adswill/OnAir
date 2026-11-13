@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automations: the expression language (also malformed and hostile input), rules, cooldowns and limits, geofences, templates and JSON escaping,
 // recipe files, the Lua sandbox (escape attempts, infinite loops, memory bombs) and the engine with a fake action sink.
 #include "dect2/automation/catalog.h"

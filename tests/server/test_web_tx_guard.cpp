@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Web listeners and transmit: the host setting web_allow_tx. OFF by default (a transmit message is "forbidden"); 1 lets listeners transmit through
 // the host's radio (the message reaches the host's transmit handler). Keys, decryption and recording stay forbidden either way.
 #include "../../server/web/web_hub.h"

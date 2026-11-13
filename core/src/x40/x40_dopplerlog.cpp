@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite beacon Doppler curve logger (a steady carrier within +-14 kHz of the tuned frequency: a cubesat or weather-satellite beacon, 100 MHz - 3 GHz). Every window (about
 // 0.7 s) the carrier is found and its frequency logged; every 10 s a row. From the readings of a pass the curve is fitted with the flyby model
 //     f(t) = fc - A (t - t0) / sqrt((t - t0)^2 + B^2)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // types.test.js - tests for public/types.js: ICAO type / ADS-B category / wake / motion / AIS type -> icon shape.
 import test from "node:test";
 import assert from "node:assert/strict";

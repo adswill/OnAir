@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Extra links (family 600, engine standard 602, telemetry 601): digital video and data links with their own entry each. wfb-ng and OpenHD now: 802.11n HT frames injected in monitor mode,
 // structure only (the video stream is encrypted with keys this program never holds). Receive only.
 //

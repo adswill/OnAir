@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The map guard: the ONE transmit rule of OnAir. Transmitting is the operator's decision (OnAir blocks no mode, band or power), but what this app
 // transmits must never come back as "received" data on the shared OnAir map (someone could transmit fake AIS or ADS-B and have it published).
 //  1. While the app is transmitting, and for 10 minutes after the last transmission ends, nothing is uploaded to the map server (holding()).

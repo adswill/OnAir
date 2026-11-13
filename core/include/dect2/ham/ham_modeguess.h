@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Narrow-band digital mode guess (4.0): "what is this signal" from the numbers a spectrum / waterfall measurement gives, so the user clicks a trace and
 // the decoder opens already set (mode, baud, shift). Pure code. Input: occupied bandwidth, number of distinct tones, their spacing, symbol rate,
 // whether the carrier goes completely off between symbols (on-off keying), and the period of a transmit slot when the signal repeats on a clock.

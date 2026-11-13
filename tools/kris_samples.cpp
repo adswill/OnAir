@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Writes sample IQ files of the KAAL, KAPP, KAFT, KAIT and KAWS transmitters through the transmit IQ-file sink (tx_iqfile.h):
 //   kris_samples <out folder> [<folder with 16 kHz mono voice WAV files for KAAL, one per file>]
 // Per signal: a two-channel 16-bit WAV (I left, Q right, opens in SDR++), a SigMF cf32 and a SigMF ci16 file. The rates are the transmitters' own:

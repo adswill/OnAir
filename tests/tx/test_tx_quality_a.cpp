@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit signal quality of the modes acars .. iono (the first half of the TX registry by id): every generator runs into memory with the session's
 // own output stage and limiter, and its IQ is measured: level and clipping, DC, the 99 % occupied band, the leakage into the channels beside it
 // (ACLR), the worst spur outside, the key-up fade, silent stretches, and that the samples do not depend on the block size. The limits sit a few dB

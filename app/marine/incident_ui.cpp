@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sea distress incidents: one card per incident with the position (DSC and AIS), distance and bearing from the receiver, the AIS-SART / MOB / EPIRB
 // devices joined to it, the vessels that can help, the NAVTEX warnings that mention the scene, and a timeline. Nothing here is sent anywhere.
 #include "app.h"

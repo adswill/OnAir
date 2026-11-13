@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // D-STAR protocol pieces (JARL D-STAR specification, DV mode): the radio header and its FEC, the sync patterns, the slow data, and the
 // parsers for the GPS text (NMEA and D-PRS) the slow data carries. Every byte goes on the air least significant bit first.
 #pragma once

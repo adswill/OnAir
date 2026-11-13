@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat BGAN wiring: tuning, mode row, engine and panel wiring, the honesty strings, MODE-NUMBERS row.
 #include <cstdio>
 #include <cstdlib>

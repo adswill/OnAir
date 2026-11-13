@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reference datasets: manifest, versions, validation, layering and the user's override files (see datasets.h). No network code here.
 #include "dect2/packs/datasets.h"
 #include "dect2/channels/freq_db.h"

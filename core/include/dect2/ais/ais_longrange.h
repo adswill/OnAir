@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Long-range AIS: message 27 (ITU-R M.1371-5 section 3.3.8.2.24 and table 79) and the two long-range channels.
 // Message 27 is the 96-bit position report that class A stations send for satellite receivers (the "space AIS" channels 75 = 156.775 MHz and
 // 76 = 156.825 MHz, identified for this by WRC-15): the content of messages 1 - 3 in a short frame (position to 1/10 minute, speed in whole

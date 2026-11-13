@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the renderer can afford: software OpenGL detection (Mesa llvmpipe / softpipe / swrast, Windows "GDI Generic"), the low-power draw
 // mode it offers, the frame-rate floor of the frame loop on Linux, and frame-time statistics. docs/PERF-LINUX.md has the measurements.
 // The policy parts are pure functions (tests/app/test_render_caps.cpp); render_caps.cpp holds the state, the hint window and the waits.

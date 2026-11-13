@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B feeds in from other receivers (dump1090, readsb, another OnAir): Beast binary and SBS / BaseStation text over TCP.
 // Positions from other receivers are shown, not computed: there is no MLAT (that needs synchronised time stamps across sites).
 // The parsers are plain functions on bytes and lines (tests); AdsbFeedIn owns the connections.

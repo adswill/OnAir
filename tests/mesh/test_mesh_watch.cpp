@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh node watch (round 4 #27): a watched node falls silent (one event, again only after it came back), silence across a restart, the battery
 // limit with its 5 % hysteresis, new nodes near you (not those of the first look, not far ones), and the recipes on the engine.
 #include "dect2/mesh/mesh_watch.h"

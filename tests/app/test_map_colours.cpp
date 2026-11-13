@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The map colour presets: valid values, readable labels on every sea colour, today's look unchanged, overlay helpers legible.
 #include "map/map_colours.h"
 #include <cstdio>

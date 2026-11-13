@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the spectrum explorer (makeSpecxSynth): a QPSK carrier (root-raised-cosine, roll-off 0.35, fs / 16 symbols a second)
 // at -0.2 fs, an unmodulated carrier at +0.15 fs, and noise. SynthConfig::snrDb is the QPSK carrier's SNR in its symbol-rate bandwidth.
 #pragma once

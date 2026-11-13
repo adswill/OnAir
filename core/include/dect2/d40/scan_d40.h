@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 explorer / scanner helpers (pure, no GUI). Tests: tests/d40/test_scan_d40.cpp
 //  1. classifyHit      names the kind of signal behind every hit of a sweep from what a sweep can measure over a few passes: width, how often it was there (duty), level
 //                      swing, whether the width is a known channel raster, and the band it sits in. Ranked list with a reason; "unknown" is allowed and honest.

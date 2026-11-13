@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TD-SCDMA cells receiver (tdscdma_rx.h).
 #include "dect2/tdscdma/tdscdma_rx.h"
 #include "dect2/engine/mode_synth.h"

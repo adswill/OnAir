@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM SINAD meter: SINAD, deviation, THD and carrier offset against a generated FM signal (1 kHz tone, 3 kHz deviation) with known distortion and noise, against the FM noise theory
 // (the noise in the demodulated 300 - 3000 Hz band is N0 (f2^3 - f1^3) / (3 A^2) in Hz^2), at three input rates, with a carrier offset and drift; the 12 dB crossing; noise alone. Simulated signals only.
 #include "x40_gen3.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA broadcast PDUs (tetra_pdu.h).
 #include "dect2/tetra/tetra_pdu.h"
 #include <cstdio>

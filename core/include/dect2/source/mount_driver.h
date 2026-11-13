@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna mount drivers behind one small interface: Hamlib rotctld (TCP, any OS) and ASCOM Alpaca (HTTP REST, any OS, no COM).
 // GS-232 stays in rotator.cpp. ASCOM COM drivers on Windows are reached through the ASCOM Remote server, which speaks Alpaca.
 // Goto mounts take Alt/Az positions; tracking mounts (Alpaca MoveAxis) also take a speed per axis, in degrees per second.

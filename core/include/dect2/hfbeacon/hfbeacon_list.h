@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF beacons: the beacon list (editable JSON, shipped default), the NCDXF/IARU International Beacon Project schedule and the planning of
 // radio centre frequencies for a narrow capture. Pure functions, no state. Sources of the default list are named per beacon:
 //  - NCDXF/IARU IBP: ncdxf.org/beacon (transmission schedule text: 3 minute cycle, 10 s slots, callsign + four 1 s dashes at 100 W, 10 W, 1 W, 0.1 W,

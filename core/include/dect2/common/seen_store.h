@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What a receiver has heard over days and years, kept on disk (graphs1090, Virtual Radar Server "first seen", AIS-catcher statistics):
 // every identity ever heard (an aircraft address, an MMSI ...) with its first and last day, a record per day (unique identities, new ones,
 // positions, messages, the farthest one), an all-time range outline per bearing sector and altitude band, and the farthest ever.

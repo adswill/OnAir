@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM on shortwave and medium wave: the census of the capture, what is this station (an estimate), and playing the better of two frequencies. docs/SMART-fmam-3.7.md
 #include "app.h"
 #include "../ui/typography.h"

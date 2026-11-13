@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: the smart layer (pager_intel.h). Positions (decimal, degrees-minutes, UTM, MGRS: round trips over the globe and known points), the
 // text repair of damaged POCSAG pages (measured: characters recovered, wrong guesses, and that novel words are never invented), learned fields,
 // incidents, the place list and the privacy rule.

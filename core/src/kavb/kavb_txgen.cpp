@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB transmit generator: see kavb_txgen.h.
 #include "dect2/kavb/kavb_txgen.h"
 #include "dect2/kavb/kavb_av.h"

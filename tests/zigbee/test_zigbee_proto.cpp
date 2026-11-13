@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Zigbee / IEEE 802.15.4 frame layers against values that do not come from our own encoder: the CRC-16 check value of the "Kermit" CRC the
 // FCS uses, the 16 chip sequences written out bit by bit as the standard's table 24 prints them (against the table in the source),
 // and frames written out byte by byte.

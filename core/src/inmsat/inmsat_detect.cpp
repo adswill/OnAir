@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Carrier detector of the Inmarsat all-carriers mode (inmsat_detect.h). Method as in the Aero receiver's band search (aero_rx.cpp): median floor,
 // regions over a threshold, a new carrier must show in two searches in a row; here for any sample rate and with width classes.
 #include "dect2/inmsat/inmsat_detect.h"

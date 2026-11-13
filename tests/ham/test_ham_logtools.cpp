@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Logbook tools (4.0): Cabrillo export -> import round trip (RST and serial, a two-field exchange without RST, a transmitter id, X-QSO, bad
 // lines), LoTW / card / eQSL confirmations merged into the log, QSL counts, dated backups with pruning, POTA / SOTA / WWFF / IOTA references,
 // the activation count, the POTA file name and the SOTA CSV.

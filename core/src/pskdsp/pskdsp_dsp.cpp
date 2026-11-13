@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator building blocks: filters, the streaming channeliser and the demodulator (matched filter, Gardner timing, Costas carrier).
 #include "dect2/pskdsp/pskdsp.h"
 #include <algorithm>

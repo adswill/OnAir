@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // e-Czas tool: decode a recording, or write the test signal.
 //   eczastool rx <file.wav> [--tone Hz] [--offline]   mono or stereo 16-bit WAV of the radio's audio (BFO recording, carrier at --tone, default 1000 Hz;
 //                                                      the first channel is used), or a stereo IQ WAV / .cf32 with --iq --rate Hz --offset Hz

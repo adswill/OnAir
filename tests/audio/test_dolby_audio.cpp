@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Dolby broadcast audio (core/src/audio/dolby_audio.cpp): detection of Dolby Atmos in E-AC-3 (JOC) and AC-4, the channel bed, the output
 // layout choice and the IEC 61937 packer used for bitstream passthrough.
 //   test_dolby_audio

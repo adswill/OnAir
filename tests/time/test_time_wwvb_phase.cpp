@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WWVB phase code on a simulated 60 kHz carrier: the amplitude keying on top, noise, a frequency offset, a bit error corrected, in both carrier polarities.
 #include "dect2/time/wwvb_phase.h"
 #include "dect2/common/stable_random.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-H link layer (EN 301 192 clauses 7 and 9): MPE, time slicing and MPE-FEC.
 //   1. RS(255,191): random words with errors and erasures up to the limit 2e + s <= 64 corrected, one beyond refused or left alone
 //   2. MpeEncoder -> damaged transport packets (a lost packet loses its whole section) -> MpeDemux: every frame size (256 ... 1024 rows),

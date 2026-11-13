@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Full control over transmitting: calibration, IQ correction, timeout and schedule, and the per-driver plans (tx_control.h).
 #include "dect2/tx/tx_control.h"
 #include "dect2/tx/tx.h"

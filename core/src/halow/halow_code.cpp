@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) channel coding pieces: CRC-4 of the SIG field, scrambler, pilot polarity, the BCC (rate 1/2, K = 7) with its Viterbi
 // decoder and 2/3, 3/4, 5/6 puncturing, the BCC interleaver and the BPSK ... 256-QAM constellations (halow_phy.h). IEEE 802.11-2020 clause 23.3.11
 // (data field coding, the 11a / 11n / 11ac convolutional code), 17.3.5.7 (puncturing), 21.3.10.9 (QAM mapping).

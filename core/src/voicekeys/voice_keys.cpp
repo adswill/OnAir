@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice key store model + per-call matching (see voice_keys.h). No key search or recovery: matching is by the user's own table,
 // and the only "trial" is the user's enabled list in stored order for a call with no key id.
 #include "dect2/voicekeys/voice_keys.h"

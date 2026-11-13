@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Wi-SUN frame layers (rust/onair_wisun behind dect2::wisun): all 65536 PHR values, whitening of buffers up to 3000 octets (past the
 // 2048 octet wrap), both FCS types, every name function, scheduleText of random schedules, and parse() of ONAIR_DIFF_ITERS (default 200000) frames: built with the
 // real builder (all UTT types, secured or not, schedules, PAN IE, network names, EAPOL), randomly structured MAC headers and IE lists (all frame versions and address

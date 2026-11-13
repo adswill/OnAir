@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16 receiver telemetry, shared by the receiver and the interface (cp16_rx.h).
 #pragma once
 #include <array>

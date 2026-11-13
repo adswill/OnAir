@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The LoRa APRS transmit mode ("loraaprs"): the TNC2 packet built from the panel's fields, the radio settings of the presets and of the
 // own settings, and the transmitted IQ decoded back by OnAir's LoRa demodulator: the payload is '<' 0xFF 0x01 + the packet, on the chosen
 // spreading factor, bandwidth, coding rate and sync word (a demodulator on another sync word hears nothing). Generated into memory;

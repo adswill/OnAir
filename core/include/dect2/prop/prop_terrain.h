@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Local elevation data for the propagation tool: SRTM .hgt tiles and simple GeoTIFF files the user already has (nothing is downloaded),
 // height lookups, path profiles and the delta-Bullington terrain diffraction (ITU-R P.526 section 4.5 / P.1812 section 4.3, simplified).
 #pragma once

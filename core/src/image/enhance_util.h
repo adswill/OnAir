@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internal helpers of the image enhancement (enhance*.cpp): row-band parallel loops on the shared pool, clamps, box and gaussian filters.
 #pragma once
 #include "dect2/image/enhance.h"

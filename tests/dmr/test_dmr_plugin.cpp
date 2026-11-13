@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR voice through a user-installed codec plug-in (a stub plug-in library, tests/codec/stub_codec_plugin.c, no codec). Proves the chain:
 //  1. the plug-in loader opens the stub from a codecs folder as onair-codec-ambe2.<ext> and decodes a 12 byte frame to 160 samples;
 //  2. the code words are packed MSB first (packCodeWords);

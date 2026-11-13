@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The conversation tracker of the voice modes (DMR, P25, NXDN, dPMR, D-STAR, Yaesu Fusion, TETRA, M17): turns the monitor's call list
 // (voice_monitor.h) into conversations. A conversation is the run of calls on the same carrier and slot between the same parties (one
 // talkgroup, or the same two radios in either direction) with no more than `gapSec` of quiet between two calls. Pure functions of the

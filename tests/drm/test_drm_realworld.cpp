@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM against the faults of REAL_WORLD_CHECKLIST.md, applied with tests/common/impair.h (written independently of the receiver) to the generator's clean
 // signal: swapped I/Q, NaN samples, every robustness mode with an HF tuning error and a 100 ppm clock, and one combined case
 // (1.5 kHz = 50 ppm at 30 MHz, +80 ppm, an echo inside the guard and 8-bit clipping).

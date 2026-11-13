@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Diversity pair: two radios tuned to the SAME frequency (two dongles, two antennas) whose streams are combined into one better stream for weak
 // narrowband signals. To the engine the pair is one more radio in the list (DeviceInfo::Group, "Diversity: <name>"), so every narrowband mode
 // (FM, AM, voice, paging, telemetry ...) simply hears a cleaner signal. Off by default: nothing changes until the user makes a pair.

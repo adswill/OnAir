@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // My tyres (3.9, docs/SMART5-iot-3.9.md): TPMS sensors the user has marked as their own vehicle's. Each reading's pressure is corrected
 // to 20 C (the gas law on absolute pressure), so a cold morning is not a leak; from the corrected values over the last days: a slow leak
 // (the least squares slope, kPa per day, over at least 2 days and 8 readings), a pressure under the user's minimum, and one tyre far below

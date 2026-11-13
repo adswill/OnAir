@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Configurable keys, mouse buttons and mouse wheel for the spectrum and waterfall (View > Controls). The tables, the defaults, the saved
 // text, the conflict check and the wheel rule are plain code (no ImGui calls, only its key numbers): tested in tests/app/test_input_map.cpp.
 // input_map.cpp polls the keys and draws the Controls window. The defaults are what the program always did, so nothing changes until

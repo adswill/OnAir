@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Amplitude scintillation index S4 (3.9, docs/SMART5-gnss-3.9.md item 22). Per satellite, from the correlator's signal intensity
 // (I^2 + Q^2 of the prompt, or C/N0 in linear units) at 10 - 100 Hz:
 //   S4^2 = (<SI^2> - <SI>^2) / <SI>^2 over 60 s, after the slow trend is divided out (a 0.1 Hz low-pass, so elevation and

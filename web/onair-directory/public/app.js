@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir receiver directory page. Fetches /api/v1/servers once a minute and filters, sorts and draws everything in the browser.
 // Server values go in with textContent only (never innerHTML); links only for http(s) URLs the Worker already validated.
 // Location, if the visitor shares it, is used for distances in this page only and is never sent anywhere. No analytics, no cookies.

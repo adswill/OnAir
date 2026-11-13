@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crest factor (PAPR / CCDF) meter for the whole captured span: the distribution of the instantaneous power of a signal against its mean, which says how much headroom an amplifier needs
 // (an OFDM or multi-carrier transmitter is noise-like: Gaussian statistics give 6.6 dB at 1 %, 8.4 dB at 0.1 %, 9.6 dB at 0.01 %; a constant-envelope signal such as FM or FSK reads 0 dB; a clipped or
 // compressed signal reads less than Gaussian). The band is the whole captured span unless it holds a lot of empty channel: tune and set the sample rate so that the signal fills it. Every second: the mean power,

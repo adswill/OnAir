@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS-IS iGate: the gating rules, duplicate window and rate limits (aprs_gate.h), and the whole path against a fake APRS-IS server on localhost:
 // login, verified / unverified answers, what is uploaded, that the passcode appears nowhere but in the login line, and that nothing is sent back to the radio side.
 #include "dect2/net/aprs_gate.h"

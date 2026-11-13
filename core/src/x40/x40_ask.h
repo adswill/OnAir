@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small envelope slicer for the on-off / ASK style 4.0 decoders: a hysteresis comparator between slowly decaying high and low trackers. It calls back with
 // the time of every level change (interpolated to a fraction of a sample) and the level before it. A swing is only believed when it is well over the noise.
 #pragma once

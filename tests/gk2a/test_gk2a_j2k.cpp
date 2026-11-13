@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JPEG 2000 decoder and DES (the GK-2A session layer): ffmpeg-made codestreams (lossless, tiled RPCL, 9/7), the encoder -> decoder round trip
 // over odd sizes, precisions and levels, damaged streams, the FIPS 46-3 DES vector.
 #include "dect2/common/des.h"

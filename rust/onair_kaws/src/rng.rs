@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! xorshift64 generator with uniform and Gaussian draws (deterministic simulations).
 use crate::mathf;
 

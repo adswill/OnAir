@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Settings window rules: the table is sound, the search finds rows across categories, reset goes to the default, export / import round trip.
 #include "../../app/ui/settings_table.h"
 #include "../../app/ui/settings_profile.h"

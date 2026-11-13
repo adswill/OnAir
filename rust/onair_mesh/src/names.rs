@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Names of the Meshtastic enums used in packet text: hardware models (mesh.proto HardwareModel), port numbers (portnums.proto PortNum), device roles
 //! (config.proto Config.DeviceConfig.Role) and routing errors (mesh.proto Routing.Error); generated from meshtastic/protobufs master of 2026-10.
 

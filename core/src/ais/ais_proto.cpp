@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The generator side of the AIS frame layer (putU, putS, putText, appendFcs, burstLineBits, toNmea); the reading side (bit fields, HDLC, NMEA, message decoding) is Rust:
 // ais_proto_rs.cpp over rust/onair_proto.
 #include "dect2/ais/ais_proto.h"

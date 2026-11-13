@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The remote-control API against a socket client: the HTTP endpoints, the request limits, the Host / Origin / token checks, the WebSocket
 // (handshake, telemetry and spectrum pushes, ping, protocol errors) and, at the end, the real engine on the generated DVB-T2 signal behind it.
 #include "../../core/src/net/tcp_client.h"

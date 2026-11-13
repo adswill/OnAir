@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Checks the layout of the interface for overlapping, cut-off and squashed controls: runs the developer build of the app (configured with
 # -DDECT2_UI_LAYOUT_CHECK=ON, see app/ui/layout_check.cpp) hidden and muted for every mode and tab at the window sizes and display scales of
 # common Windows laptops and monitors, and sums up the reports. It never captures the screen and never plays sound. The app runs as a renamed

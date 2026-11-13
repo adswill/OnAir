@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal identifier (sig_ident.h) on the test signals of the modes: DMR, NXDN96 / NXDN48, P25, dPMR, TETRA, AIS, POCSAG, LoRa, DAB (OFDM),
 // FM broadcast, an AM carrier and plain noise, off the centre and with a carrier error; plus a capture through the Capture thread.
 #include "dect2/ais/ais_gen.h"

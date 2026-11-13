@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS / RBDS data layer (IEC 62106, NRSC-4-B): block synchronisation, error correction and the group decoder.
 //
 // The bits come from the FM receiver's 1187.5 bit/s demodulator (after the differential decoding), each with its reliability. The decoder

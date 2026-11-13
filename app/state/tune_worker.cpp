@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // tune_worker.h: one tuning thread per engine, fed through a LatestSlot.
 #include "tune_worker.h"
 #include "dect2/common/latest_slot.h"

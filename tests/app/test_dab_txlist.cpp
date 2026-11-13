@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB transmitter lists (app/dab/dab_txlist.h): reading a line, writing one, importing a list into the own one (#249)
 #include "../../app/dab/dab_txlist.h"
 #include <cstdio>

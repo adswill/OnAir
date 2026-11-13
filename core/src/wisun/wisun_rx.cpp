@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN monitor (see wisun_rx.h).
 #include "dect2/dsp/fast_phase.h"
 #include "dect2/wirecap/wire.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B feeds from other receivers, offline registrations and countries, range statistics.
 #include "dect2/adsb/adsb_feedin.h"
 #include "dect2/adsb/adsb_msg.h"

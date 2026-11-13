@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto-labelled spectrum, the App side: gathers the names (band plan, frequency database, the FM / DAB / DVB scans and what is heard on the
 // channel now, the user's memories) into a store that is rebuilt only when a source changed, lays them out for the view (autolabel_logic.h),
 // draws them on the spectrum and the waterfall and handles the click (tune, and open the label's mode) and the source toggles. Each plot

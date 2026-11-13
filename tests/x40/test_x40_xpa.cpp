@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // XPA (10 and 20 Bd, 20-tone MFSK). What is checked:
 //  1. messages built from the format as Rivet reads it (start tones, sync, message start, five-figure groups with the repeat tone, the end)
 //     through the receiver with impairments: dial error, off-centre tuning (tones 950 Hz from where they belong, and a receiver offset of

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals of the ham science event monitors (hamsci_evt.h). Simulated: nothing here is a recording of a real event and nothing is transmitted.
 // Noise is complex white noise of variance 1 per sample at the radio rate (scaled by EvtGenOpt::noiseDb); levels are given at the output of the monitor's
 // integrate-and-dump front end (decimation to about 200 Hz / 24 kHz / 2 kHz), where white noise of variance 1 per input sample has variance 1 / decimation.

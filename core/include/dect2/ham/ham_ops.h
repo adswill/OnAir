@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham operating helpers: the sun (grayline, day / night), great-circle paths for the map, standard dial frequencies of the digital modes,
 // the IARU region band edges for the band bar, contest exchange / serial numbers / dupe sheet and the Cabrillo export, the heard-stations
 // (spots) list and the operator's macros. Pure logic; nothing transmits (the Ham view sends only through HamSlotTx and its gate).

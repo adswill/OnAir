@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSK parameter analyser: 2-FSK, GFSK, MSK and 4-FSK signals with known symbol rate, shift and levels (random data), carrier offsets, clock error and noise; the rate, the level count, the shift, the
 // modulation index and the centre are compared with the generator; a noise sweep; false reports on noise, a plain carrier and an FM voice-like signal. Simulated signals only.
 #include "x40_gen3.h"

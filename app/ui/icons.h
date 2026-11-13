@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small vector icons drawn with the ImGui draw list (no icon font needed, crisp at any size and DPI, coloured per use).
 // Every icon is designed on a -1..1 square and scaled to `size` pixels.
 #pragma once

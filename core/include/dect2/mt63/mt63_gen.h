@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // MT63 signals in white noise, each with its own bandwidth (500 / 1000 / 2000 Hz), interleave, audio centre frequency, text, level,

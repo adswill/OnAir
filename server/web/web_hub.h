@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web session manager ("hub"): many listeners, one capture.
 //
 //   pushIq()  (the radio's thread: a copy into a bounded queue, never waits)

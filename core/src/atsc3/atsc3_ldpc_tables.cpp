@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LDPC address tables of A/322 Annex A (Ninner = 16200), generated from the standard's text.
 // For every code rate r/15 the rows are the accumulator addresses of one group of 360 information bits.
 #include "atsc3_ldpc.h"

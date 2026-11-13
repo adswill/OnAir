@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS (Automatic Packet Reporting System) information field parser, after the APRS 1.0.1 specification (APRS101.pdf) and the 1.2 addenda:
 // uncompressed and compressed positions, Mic-E, objects, items, status, messages, weather, telemetry.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The flat `repr(C)` records the decoders fill (see core/include/dect2/rs/mesh.h): text is a length plus a fixed byte array (no NUL, cut if too long),
 //! numbers that are "not in this packet" keep the C++ defaults (-1). Payloads are at most 255 bytes (LoRa), the array sizes are chosen so nothing is cut.
 

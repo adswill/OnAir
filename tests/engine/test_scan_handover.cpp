@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A channel scan started while the receiver runs, in the scan tab's order: the receiver stops (and lets go of the radio), the scanner opens it,
 // and the receiver starts again once the scan is over. The very first scan must measure and lock the channel that carries a DVB-T2 signal,
 // as the second one does, and list only that channel: not the empty one, nor the one with a signal of another kind (ATSC).

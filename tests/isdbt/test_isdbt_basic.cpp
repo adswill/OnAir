@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T basics: geometry and bit rates against the tables of the standard, carrier layout, pilot sequences, TMCC coding, constellations.
 #include "dect2/isdbt/isdbt.h"
 #include "dect2/common/stable_random.h"

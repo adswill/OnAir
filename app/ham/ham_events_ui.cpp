@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ham.decode for every station heard on FT8 / FT4 / FT2 / WSPR / the other WSJT modes and in the CW skimmer, with the logbook's marks.
 // Only built when something listens (automations, Integrations, the message database): automation::wants(FHam).
 #include "i18n/i18n.h"

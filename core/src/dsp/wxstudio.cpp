@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather picture studio helpers: see wxstudio.h. Clean-room from the TIFF 6.0 and GeoTIFF 1.0 specifications.
 #include "dect2/dsp/wxstudio.h"
 #include <algorithm>

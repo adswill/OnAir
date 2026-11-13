@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, MSK144: the frame (sync words, code bits), then the whole receiver on synthetic audio: a continuous transmission over the 15 s
 // period at several levels, meteor-like bursts of 40 .. 400 ms, carrier and clock offsets, 30 s periods, noise alone, and the real recordings of
 // the WSJT-X samples when HFDIG_WSJT_SAMPLES is set.

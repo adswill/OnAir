@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility insight (docs/SMART5-hfutil-3.9.md): overdue broadcasts, learned from when a station is decoded.
 // Simulated schedules only: three broadcasts a day with minutes of jitter, 10 % of them not decoded, stray decodes, days tuned elsewhere.
 #include "dect2/insight/schedule_watch.h"

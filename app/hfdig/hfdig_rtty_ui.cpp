@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, the RTTY view of the main tab (called by hfdig_ui.cpp): the settings, the tones found and the decoded text.
 #include "app.h"
 #include "dect2/hfdig/hfdig_rtty.h"

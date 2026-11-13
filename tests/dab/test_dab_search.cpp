@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB sync search on channels with no DAB: silence and signals with deep power dips look like a null symbol, and the phase reference search that
 // follows is the costly part. It must not run on every block that comes in (that took ten times real time), and a DAB signal that starts after
 // them must still be found.

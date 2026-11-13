@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer: dense complex LU with partial pivoting (float64), right-looking and blocked; the trailing update of a large matrix is
 // split over threads by rows. Row-major storage; whole rows are swapped at each pivot (as LAPACK getrf), so luSolve applies piv in order.
 #include "dect2/antd/antd.h"

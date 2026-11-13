@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit quality of the second half of the TX registry (mode ids "iridium" .. "zwave" in alphabetical order; tests/tx/test_tx_quality_a.cpp has the
 // first half). Each mode's generator is run at its nominal rate in memory (NOTHING is transmitted, no radio is opened) and the IQ is measured:
 //   speed      (thread CPU time) real-time factor of the median block and the slowest 32768-sample block (the session's block) against its own duration

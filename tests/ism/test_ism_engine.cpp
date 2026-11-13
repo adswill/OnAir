@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors through the engine (setStandard(30)): the synthetic source plays the 433.92 MHz test scene, the receiver hears its devices
 // and reports through latestRx() with their real frequencies; a retune keeps the report numbers growing and starts a fresh device list.
 #include "dect2/engine/engine.h"

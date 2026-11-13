@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID physical layer at 13.56 MHz: recover byte frames from complex baseband (carrier mixed to 0 Hz).
 // Receive only; nothing is transmitted here.
 //

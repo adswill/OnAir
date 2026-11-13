@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C: generator to receiver round trip. The loop of five messages must come back bit exact (text, service, priority, id),
 // with normal and inverted polarity, and the channel readings must be sane.
 #include "dect2/inmc/inmc_testutil.h"

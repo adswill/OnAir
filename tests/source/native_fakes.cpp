@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A fake "vendor library" that exports the functions of librtlsdr, libairspy, libbladeRF, LimeSuite, libiio, UHD, the SDRplay API, libairspyhf and
 // libfobos-sdr-agile that OnAir uses, and streams a known tone. The test copies this one file under the real library names. It checks OnAir's driver code (what it asks the
 // libraries to do and how it converts the samples), not the real libraries.

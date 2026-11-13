@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR sensitivity: the test signal at 9 dB (carrier to noise in 6.25 kHz) and 8 dB with a 1 kHz offset decodes almost every block; the
 // receiver before the low-pass symbol filter and the soft Hamming decoding got nothing at 9 dB. Noise alone gives no block.
 #include "dect2/dpmr/dpmr_rx.h"

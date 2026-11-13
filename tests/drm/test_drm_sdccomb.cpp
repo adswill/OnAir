@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A repeated SDC is added to the earlier copies when its CRC fails. Simulated (drm_gen), white noise: the SDC blocks that come through with and without. The transmitter's SDC here repeats unchanged.
 #include "../data/drm/testkit.h"
 #include "dect2/drm/drm_dec.h"

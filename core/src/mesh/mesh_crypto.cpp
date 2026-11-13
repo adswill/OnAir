@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AES, SHA-256, HMAC-SHA256, SHA-512 and the text helpers; Ed25519 is in mesh_crypto_ed25519.cpp.
 #include "dect2/mesh/mesh_crypto.h"
 #include "mesh_crypto_tables.h"

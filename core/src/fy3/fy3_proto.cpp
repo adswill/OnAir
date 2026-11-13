@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT / MPT frame layers (see fy3_proto.h). The instrument formats follow SatDump's fengyun3 plug-in (GPL-3.0-or-later, https://github.com/SatDump/SatDump,
 // plugins/fengyun3_support): the frame layouts, sync words and field positions are its findings; the code here is written for OnAir's own chain.
 #include "dect2/fy3/fy3_proto.h"

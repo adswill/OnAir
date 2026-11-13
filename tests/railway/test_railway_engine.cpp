@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Full dect2core integration: registry -> idle telemetry -> persistent result slots.
 // No radio, network source, window or background results saver is started.
 #include "dect2/engine/engine.h"

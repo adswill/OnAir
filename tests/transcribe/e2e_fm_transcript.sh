@@ -1,4 +1,7 @@
 #!/bin/zsh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # End to end, headless: English speech -> broadcast FM IQ (75 kHz deviation, noise) -> the program's file source with the real FM mode ->
 # audio tap -> transcriber with the DEFAULT settings -> a transcript line. Needs a whisper model in the models folder (nothing is downloaded),
 # macOS `say` and python3 with numpy + scipy. No window, no sound, and a renamed copy of the program so the real settings are not touched.

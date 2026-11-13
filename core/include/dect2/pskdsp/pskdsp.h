@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Generic PSK demodulator and analyser (BPSK / QPSK / OQPSK / 8PSK): the pure DSP of the "PSK demodulator" mode (family 202, issue #282).
 // Everything here works on blocks or streams of complex samples at any rate; no engine, no threads, no I/O.
 //   channel  : find the strongest narrow signal in a span, its carrier and bandwidth (zooming in for narrow signals in wide captures)

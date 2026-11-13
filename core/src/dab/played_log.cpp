@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM / DAB played list: see played_log.h.
 #include "dect2/dab/played_log.h"
 #include <algorithm>

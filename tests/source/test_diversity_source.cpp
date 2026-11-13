@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Diversity pair source: two fake radios (the same narrowband signal, independent noise, one started 18 ms after the other, a frequency offset
 // between them) are combined into one stream. Checks the start-up alignment, the in-band SNR gain against radio A alone, the single-radio
 // fall-back when one member fails, the saved-pair string format (old strings still load) and the radio-list entry.

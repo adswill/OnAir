@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 sensitivity pass D (docs/SENSITIVITY-3.9-D.md): the 90 % threshold of the SSTV and HamDRM decoders on their own test audio
 // (hfdig_gen.h) with white noise; SNR in 3 kHz as in test_hfdig_sstv.cpp and test_hfdig_hamdrm.cpp. SSTV: a trial passes when a complete
 // picture comes out with a mean error of at most 20 levels against the test picture (+-50 Hz tuning error, 50 ppm clock error, a new noise

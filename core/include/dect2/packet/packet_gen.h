@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makePacketSynth(): a few made-up APRS stations near 25.2 N 55.3 E send AX.25 frames on one 25 kHz FM channel, in an endless cycle:

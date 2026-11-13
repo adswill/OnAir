@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Carrier follow-up for narrow channel filters (4.0, docs/SENSITIVITY-4.0-A2.md). Feed it the complex baseband of one channel at a low rate
 // (after the anti-alias filter, before the channel filter). The mean power spectrum is averaged over about 0.8 s, the noise floor is taken
 // from its quietest quarter, and the centroid of what stands above 1.4 x the floor inside +-searchHz is how far the signal sits from the

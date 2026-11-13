@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa demodulator for the Signal Lab (loraraw_lab.h): fixed settings and the automatic parameter search.
 #include "dect2/loraraw/loraraw_lab.h"
 #include "loraraw_bank.h"

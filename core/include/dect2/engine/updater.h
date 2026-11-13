@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Updates: asks GitHub for the newest release, downloads the package that fits this computer, checks its SHA-256 against the digest GitHub lists
 // for the file, prepares it and, when the program closes (or on request), swaps the installed program for the new one and starts it again.
 // The network access goes through the `curl` program every supported system has (Windows 10 and later, macOS, Linux), so no TLS library is linked.

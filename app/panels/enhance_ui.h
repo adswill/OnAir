@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Enhance control shared by every picture view (the gallery viewer and the image tabs of SSTV, weather fax, DRM and DAB slide
 // shows, KAIT, RF camera, analog TV): a toggle, presets, the settings popup with sliders, a before/after split, hold to compare and
 // Save enhanced PNG. The raw picture is never changed: the enhanced picture is a view (worked out on the thread pool, the cheap preview

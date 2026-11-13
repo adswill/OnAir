@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus protocol layer: the CRC and the packet layout against the test packet and test sentence published on the
 // horusdemodlib wiki ("5 Customising a Horus Binary v2 Packet"), the custom field worked example from the same page, Golay
 // correction, the layer 2 frame round trip with bit errors, the tables and the RTTY sentence parser.

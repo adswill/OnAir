@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // macOS backend: an AudioUnit on the default output device.
 #include "audioout_impl.h"
 #import <AudioToolbox/AudioToolbox.h>

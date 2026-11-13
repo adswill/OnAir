@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM split-carrier (het) analyser (3.9, docs/SMART5-broadcast-3.9.md item 4). Medium-wave DXers tell stations on one channel
 // apart by their exact carrier offsets: each transmitter sits a fraction of a hertz to some hertz off the nominal frequency.
 // From complex samples centred on the channel this finds every carrier within +/- spanHz to about 0.05 Hz (Hann window,

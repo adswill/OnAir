@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells receiver (nr_rx.h): blocks of input, the sync raster points inside them searched and the PBCH of every SSB decoded.
 #include "dect2/common/thread_name.h"
 #include "dect2/nr/nr_rx.h"

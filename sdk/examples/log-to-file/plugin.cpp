@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Log to file: an action plugin. Appends every automation event (or only those whose type starts with the "prefix" setting) to events.log in its data folder.
 #include "onair_plugin.h"
 #include <cstdio>

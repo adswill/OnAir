@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The landing prediction on three real RS41 flights from SondeHub (tests/data/sonde/predict/sh_*.csv, SondeHub open data, CC BY-SA 2.0):
 // sondes that kept sending on the ground, so the landing point and the ground height (in the sonde's own altitude reference) are known.
 // Errors of the old (3.9) and the new predictor when the sonde was at each height above that ground and at the last frame before it

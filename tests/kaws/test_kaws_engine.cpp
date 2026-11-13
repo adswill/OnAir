@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS in the engine's wrapper and the transmit session's generator: the transmit generator makes the one-way upper-sideband signal from a chat message
 // or a beacon, KawsLiveReceiver (what the engine feeds) follows the UTC slot grid (a test clock here), finds the woven-lattice preamble, decodes the blocks
 // and lists the message. Profiles P0 and P3 at an easy SNR with a carrier offset of +-50 Hz, noise only (no false message), a beacon, and a TxSession

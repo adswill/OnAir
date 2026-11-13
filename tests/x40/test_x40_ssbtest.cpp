@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSB transmitter test meter: one-tone and two-tone tests of a generated transmitter (upper and lower sideband) with known carrier leak, opposite sideband, harmonics and intermodulation products, the
 // radio tuned off by some tens of Hz, three input rates, unequal tones, a noise sweep, and the answer for no tone or noise only. Simulated signals only.
 #include "x40_gen3.h"

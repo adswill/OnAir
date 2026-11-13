@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL receiver speed: 2 s of noise at the 16, 32 and 64 MHz capture rates, with every dial of the station table as the channel list.
 // The wall-clock time per second of input is printed at every rate, pass or fail. The check fails only above real time on CI:
 // 0.5 x ciSlack() is 1.0 on GitHub Actions (and 0.5 on a developer machine, where the receiver should run well under real time).

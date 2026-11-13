@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR voice: the three AMBE+2 frames of a voice burst reach the vocoder (a fake mbelib stand-in, tests/p25/fake_mbelib.c, loaded at run time) and come out as sound.
 //  1. the 216 voice bits of a burst (burstVoicePayload: the two halves either side of the sync / EMB) are split into three consecutive 72 bit frames;
 //  2. a valid AMBE+2 frame (Golay protected C0 and C1, C1 scrambled by the PN sequence of TS 102 361-1 annex B, built here from the code words) is

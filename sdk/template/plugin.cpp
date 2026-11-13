@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A do-nothing IQ plugin: counts the samples it gets and shows the number as a status line.
 #include "onair_plugin.h"
 #include <cstdio>

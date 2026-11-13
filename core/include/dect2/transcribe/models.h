@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Speech models (whisper.cpp "ggml" files). None is shipped: the user downloads one on an explicit click, from the official model repository
 // (huggingface.co/ggerganov/whisper.cpp, MIT) with its SHA-256 checked, or puts a file in the models folder (docs/TRANSCRIBE.md).
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR subscriber TX slot timing (see dmr_slot_sync.h): a fit of the repeater's outbound TDMA frame from clean CACH reports, and the inbound
 // burst times derived from it per TS 102 361-1 clauses 4.2, 4.5 and 5.1.1.
 #include "dect2/dmr/dmr_slot_sync.h"

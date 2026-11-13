@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi 802.11 DSSS PHY and management frames (see wifi_proto.h).
 #include "dect2/wifi/wifi_proto.h"
 #include <cmath>

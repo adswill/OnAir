@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frequency capture for the 4-level FSK receivers (P25, NXDN): the mean of the FM discriminator output over 20 ms, taken only while a carrier with
 // a modulation-sized spread is there (the spread of noise is several times larger), is the carrier's distance from the oscillator. The balanced
 // symbols of a scrambled or coded frame average to nothing, so the mean is the tuning error; the receiver moves its oscillator by it. Only errors beyond what the receivers' own per-frame offset estimate

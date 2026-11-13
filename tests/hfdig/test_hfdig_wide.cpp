@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital receiver, whole span (hfdig_wide.h) on a 2.4 Msps capture:
 //  1. FT8 on 14.074 and FT4 on 14.080 MHz at once (the radio is tuned to 14.077 MHz, between them): every decode of every slot, with the
 //     slot's dial frequency; the WSPR slot (14.0956) and the slots outside the span are not made; with the switch off nothing is heard

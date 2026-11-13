@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARDOP screens: the band presets (the digital part of each band, upper sideband), Listen, then three views: the frames heard (UTC, frame
 // type, session, calls, locator, level, details: ACK quality, the leader length of a connect acknowledge, the bytes of a data frame), the
 // stations named in connect requests, IDs and pings, and the text of the data frames that passed their CRC. Monitor only.

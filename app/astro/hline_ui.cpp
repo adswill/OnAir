@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hydrogen line toolkit screens: velocity in the LSR frame with Gaussian line fits and exports (CSV, FITS, SigMF), the galactic l-v map with the
 // terminal velocities and a rotation curve, pointing (Az/El, transits, a 24 h visibility plot), calibration (Y-factor, Tsys, RFI), the log and
 // saved sessions.

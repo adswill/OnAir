@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 1: bursts, bandwidth, carrier offset, SNR, duty cycle.
 #include "dect2/signallab/signallab.h"
 #include <algorithm>

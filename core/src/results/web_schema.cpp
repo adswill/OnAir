@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The web panel of every mode: the hand-written part (the common block, the size cap, the value writers, PNG and base64 for pictures).
 // The per-mode exporters and schemas are generated into web_schema_gen.cpp by tools/gen_web_schema.py.
 #include "dect2/results/web_schema.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WINMOR pilot detection: the pilot format is from the protocol specification; the 4FSK frame-type symbols are measured as raw tones. Simulated signals only.
 #include "dect2/xlink/winmor.h"
 #include "dect2/xlink/xlink_rx.h"

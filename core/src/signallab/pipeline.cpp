@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab: the whole pipeline. Stage 1 isolates the channel; stage 2 ranks the modulation families; for the best few, stage 3
 // estimates the rate and recovers symbols, and stages 4-5 try the line codes, descramblers and (PSK) phase rotations, keeping the
 // combination whose frames carry a checksum, or failing that the most consistent sync word. Stage 6 describes the fields.

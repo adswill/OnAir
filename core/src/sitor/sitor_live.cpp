@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR for the engine. See sitor_live.h.
 #include "dect2/sitor/sitor_live.h"
 

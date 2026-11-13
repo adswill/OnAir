@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM receiver front end: decimation to 48 kHz.
 #include "drm_front.h"
 #include <algorithm>

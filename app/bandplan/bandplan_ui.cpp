@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band plans in the interface: the plan picker with import / export / delete (scan tab), the TV channel selector is tvchan_ui.cpp (toolbar) and the scan
 // ranges taken from the active plan. The plans, their files and their validation are in core (dect2/bandplan/bandplan.h); the format is in docs/band-plans.md.
 #include "../app.h"

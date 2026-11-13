@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! VDL Mode 2 burst body and HDLC layer: gathering the data and FEC octets of a burst into Reed-Solomon blocks and correcting them, the HDLC deframer (0x7E flags,
 //! zero-bit insertion, abort on seven ones) and the FCS (CRC-16/X.25, residue 0xF0B8). ICAO Annex 10 Vol III Part I section 6.3.2 (interleaving), ISO 3309.
 use crate::bits::{Layout, RS_K, RS_N};

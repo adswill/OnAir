@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The modes added after FM, seen together: tuning table, test signals, status lines.
 #include "dect2/source/source.h"
 #include <map>

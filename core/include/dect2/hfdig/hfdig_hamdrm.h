@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HamDRM / EasyPal decoder of the HF digital receiver (hfdig_rx.h): digital SSTV as QSSTV and EasyPal send it, a DRM-style OFDM signal in
 // a 2.3 or 2.5 kHz SSB channel carrying a file (usually a JPEG picture) in MOT-style segments, sent several times so that a receiver can
 // fill in what it missed. This header, hfdig_hamdrm*.cpp and app/hfdig/hfdig_hamdrm_ui.cpp belong to HamDRM alone.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / packet path graph (see packet_path.h).
 #include "dect2/packet/packet_path.h"
 #include <algorithm>

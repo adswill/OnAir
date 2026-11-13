@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A fake TETRAPOL speech codec plug-in for the voice-chain test (tests/tetrapol/test_tetrapol_voice.cpp): no codec. It exports the ABI of
 // core/include/dect2/codec/speech_codec.h, accepts only the 16-byte TETRAPOL plug-in frame (tetrapol/tetrapol_voice.h) and answers every
 // frame with 20 ms of a 1 kHz tone at 8 kHz; a frame flagged damaged gives a quieter tone, so a test can tell them apart.

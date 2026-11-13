@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT physical layer: framing, header, one full burst through an AWGN channel with carrier and clock offsets, the layered picture.
 // KRIS_MEASURE=1 in the environment adds the SNR sweep (+12 .. -12 dB) of the whole chain and prints KAIT_MEASURE lines (slow: about a minute).
 #include "kait_test_util.h"

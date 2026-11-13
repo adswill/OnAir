@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: a recording opened for analysis. A Source gives random access to complex samples of any size:
 //  - raw IQ files (.cs8 .cu8 .cf32 .ci16 .cu16, SigMF, IQ WAV) are read from disk on demand and never held in memory,
 //  - audio (WAV, MP3, FLAC, OGG, M4A ... decoded with the FFmpeg libraries OnAir links) is decoded once into memory; it is a real signal

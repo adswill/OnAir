@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The profile ladder (spec section 2): ids 0..7. Profile ids 8..15 are reserved.
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Kind {

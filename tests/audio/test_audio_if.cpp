@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound-card IF/AF input (issue #137): a real tone in a WAV file goes through the sound-card source path (AudioIn File ->
 // audioIfProcess) and must land at (tone - IF offset) Hz in the IQ the decoders get; sideband inversion mirrors it; the rates 8k..192k work;
 // an FT8-like and an RTTY-like signal shifted by the offset are seen at the right frequency; DC removal, channel choice, gain.

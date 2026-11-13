@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Short DMR transmissions (0.4 to 1 s, a handset in direct mode) through the real receiver, from a cold start and under real-world faults:
 // carrier offset, clock offset, noise, a strong neighbour. Measures the share of calls that decode (right IDs, most voice frames) and the delay from
 // the start of the call to the first voice burst handed on. 3.2 quality pass; run with an argument to print only (no thresholds).

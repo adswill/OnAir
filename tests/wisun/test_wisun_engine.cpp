@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN through the engine (setStandard(86)): the synthetic source plays the test schedule at 20 Msps, the receiver reports through latestRx().
 // No sound.
 #include "dect2/wisun/wisun_rx.h"

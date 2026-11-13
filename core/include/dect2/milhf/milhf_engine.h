@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF military / government waveform identifier in the engine: the radio's upper-sideband audio (12 kHz) goes through milhf_rx.h.
 // Engine standard 147 (family 145, "HF waveform ID"). IDENTIFICATION ONLY: nothing is decoded, no message content is read,
 // no encryption is touched. The candidates are estimates from measured physical-layer features.

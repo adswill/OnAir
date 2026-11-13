@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto-gain tests: the device gain models, the mode profiles, the measurements and the SmartAgc control loop against a simulated front end
 // (agc_fake.h). No radio: the loop is driven with a simulated clock.
 #include "agc_fake.h"

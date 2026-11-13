@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The hover preview's miniature rasterised on the CPU (app/ui/ui_preview_draw.cpp): ImGui records the draw lists of every picture of
 // uiprev::kGallery, a small triangle rasteriser (vertex colours, the font atlas, clip rectangles, alpha blending) turns them into
 // pixels, and the pixels are checked: the picture fills its rectangle, has many colours, the title bar has the look's panel colour,

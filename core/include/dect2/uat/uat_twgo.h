@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FIS-B text and graphic overlay products (TWGO, products 8 to 16): DLAC text records and overlay geometry. Field layout read from Rand's fisb-decode (a DO-358B implementation) and the FIS-B Product
 // Definition draft; tested on simulated records only. Segmented APDUs are not reassembled.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm: several OnAir instances on one private network cooperate. This file is the pure logic (no sockets, no clock, no GUI), so every rule is
 // unit-tested with hostile input: announce packets, the node table, merged decoded messages and tracks, range splitting for coordinated scans,
 // the one-time pairing handshake with token and rate limit, and memory sync. Off by default. Never carries IQ or audio. Never reaches past the

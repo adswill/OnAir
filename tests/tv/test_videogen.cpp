@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator (Tools > Digital video generator), the parts without a window:
 //  1. the bitrate estimate: the suggestion follows resolution, frame rate, codec and frame types; the TS budget adds up; the mux rate covers it
 //  2. the encoder settings: the encoders found really open, MPEG-2 is the fallback, the capabilities that grey out the controls

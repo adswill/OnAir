@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BB frame <-> transport stream round trips (normal and high-efficiency mode, with lost frames) and PSI/SI parsing.
 #include "dect2/tv/dvb_text.h"
 #include "dect2/tv/bbunpack.h"

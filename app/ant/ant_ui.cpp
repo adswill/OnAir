@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT+ screens: the sensors heard (heart rate straps, bike sensors, power meters, footpods...), the selected sensor's value over time (the
 // heart rate with the beat count and R-R interval, power, speed, temperature), its pages (manufacturer, serial, battery) and the frame log.
 // Receive only: only the open broadcasts a watch hears, nothing is sent, paired or acknowledged.

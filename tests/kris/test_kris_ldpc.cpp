@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Kris channel codes through the Rust C ABI (dect2::kris wrappers): LDPC encode / decode for every n and rate with a fixed error pattern, argument checks, and the
 // K = 7 convolutional code (both rates, terminated and not) with a Viterbi decode of a damaged block.
 #include "dect2/kris/kris_common.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Audio" (core/include/dect2/audio/audio_control.h, docs/AUDIO.md): one compact pop-up, reachable from every mode, with everything that shapes the
 // sound you hear: volume (remembered per mode), squelch (level / SNR / CTCSS / DCS, hysteresis, hang, tail), high-pass / low-pass, 5-band EQ with
 // presets, notch (manual and automatic), AGC, de-emphasis, stereo, clarifier / CW pitch, output device, latency, recorder, mute / solo of the

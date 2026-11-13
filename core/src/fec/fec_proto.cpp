@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The K = 7 Viterbi decoder of DVB-T / ISDB-T (see fec_proto.h): NEON / SSE2 / AVX2 / portable. The Reed-Solomon, BCH and LDPC parts of the shared forward error
 // correction are Rust (fec_proto_rs.cpp over rust/onair_fec). The Rust NEON Viterbi kernel (ONAIR_RUST_VITERBI, aarch64) is ~4% slower than this one, so it stays opt-in
 // (cmake -DDECT2_RUST_VITERBI=ON) and this C++ decoder is the one in use by default.

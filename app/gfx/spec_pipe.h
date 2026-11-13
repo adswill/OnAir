@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spectrum-to-picture pipeline's pure steps, shared by the app and the offscreen render harness (tools/spec_render.cpp):
 //  - the noise floor of a spectrum (the median of its lowest fifth of bins) and a tracker that follows it with a time constant,
 //  - the waterfall's auto range anchored on that floor (the floor sits at a fixed place of the colour map, the range a fixed width),

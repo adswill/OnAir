@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signal frames (time_proto.h): every station's minute encoded and decoded back over a year of minutes (DST changes, leap years,
 // year ends), single symbol errors caught, the calendar and the path delay.
 #include "dect2/time/time_proto.h"

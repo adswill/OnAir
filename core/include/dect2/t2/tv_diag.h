@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OFDM TV channel diagnosis from what the receivers already measure (DVB-T, DVB-T2, ISDB-T share the layout of the power-delay profile and the per-carrier SNR):
 //  1. findEchoes   the paths in the power-delay profile as a table: delay in us, level in dB under the main path, extra path length in km, and a verdict per path:
 //                  pre-echo (arrives before the main path: the receiver locked onto a weaker, later transmitter), inside the guard interval (harmless),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM (ETSI ES 201 980 V4.3.1): OFDM parameters, pilot, FAC and SDC cell structure, code rate tables.
 #include "dect2/drm/drm_defs.h"
 #include "drm_internal.h"

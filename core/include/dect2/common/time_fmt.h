@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One place that turns an epoch time into text for the screens and exports: UTC or the computer's local time, chosen by the
 // global "Time display" setting (View menu). Stored data stays UTC; only the text shown/exported changes. Pure functions
 // (format) take the zone explicitly so tests do not depend on the machine's time zone or on the global setting.

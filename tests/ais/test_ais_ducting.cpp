@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS ducting detector (ais_ducting.h): simulated traffic around a coastal receiver for two days, with a two-hour duct that brings ships
 // from 120 - 260 km; SAR aircraft, base stations, wrong positions and the satellite channels must not start an event; one far ship alone
 // must not either. Simulated only: no real recording of a ducting night was used.

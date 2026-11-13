@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio blend alignment meter (3.9, docs/SMART5-broadcast-3.9.md item 8). A hybrid station sends the same programme on the
 // analogue FM carrier and digitally; the station delays the analogue audio so that a radio blending between the two hears no
 // jump. When the station's diversity delay is wrong the listener hears an echo or a skip at every blend. This cross-correlates

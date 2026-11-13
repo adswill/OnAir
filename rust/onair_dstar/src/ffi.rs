@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_dstar` (core/include/dect2/rs/dstar.h). Every export is `onair_dstar_*`; pointers come as (pointer, length) pairs or point at fixed-size
 //! arrays documented in the header; the caller owns all buffers. A null pointer where a buffer is needed makes the function fail (false / -1 / 0), nothing is
 //! written. This is also the only module with `unsafe`: besides the C ABI it holds `cfn`, the C library functions (`atof`, `atoi`, `strtoul`, `lround`) that

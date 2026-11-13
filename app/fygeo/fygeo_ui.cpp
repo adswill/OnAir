@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun geostationary screens (FY-4A / FY-4B LRIT, FY-4A HRIT-II/III, FY-2 S-VISSR): the same product list and picture viewer as GOES and Elektro-L,
 // the DVB-S2 / BPSK lock stages of the link, the bit error ratio of S-VISSR and a plain-text hint when nothing decodes.
 #include "ui/kit/mode_panel.h"

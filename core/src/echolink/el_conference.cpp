@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hosting an EchoLink conference: see el_conference.h.
 #include "dect2/echolink/el_conference.h"
 #include <algorithm>

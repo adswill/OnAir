@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Aero SU layer: SU CRC, block sizes, ISU/SSU assembly, ACARS reassembly, logons, system tables.
 // Sources: JAERO JAERO/aerol.cpp and aerol.h (AeroLcrc16, setSettings block sizes, ISUData::update, ParserISU::parse,
 // system table decoding). The real ACARS block is the one in test_aero_acars_real.cpp.

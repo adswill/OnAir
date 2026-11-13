@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 screens: the calling-frequency presets (80 to 10 m), the modulation (BPSK31 / 63, QPSK31 / 63), the waterfall of the audio
 // passband (a click picks a signal), the table of every signal (audio frequency, SNR, AFC, the newest text), and the focused signal's
 // chat log (one row per line, with the time) beside its text in big letters, callsigns highlighted.

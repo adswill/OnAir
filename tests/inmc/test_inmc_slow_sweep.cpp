@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C: Eb/N0 sweep with 8-bit samples. Reports the share of frames whose bulletin board checks, the unique word errors and the Eb/N0 the receiver reads,
 // and finds the point where decoding fails. (The receiver needs its carrier search to lock first, which takes longer near the limit.)
 #include "dect2/inmc/inmc_testutil.h"

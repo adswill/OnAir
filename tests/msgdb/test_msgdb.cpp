@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Message database: insert/search/filter, FTS safety, voice/encrypted refusal, retention limits, exports, the writer thread, the engine tap, persistence.
 #include "dect2/automation/engine.h"
 #include "dect2/msgdb/msgdb.h"

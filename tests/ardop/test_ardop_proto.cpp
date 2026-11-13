@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARDOP frame layer: the frame type table, type parity, CRC-16, Reed-Solomon (golden values from an independent implementation),
 // six-bit call signs, and the bodies of ID, connect, ping, acknowledge and 4FSK data frames.
 #include "dect2/ardop/ardop_proto.h"

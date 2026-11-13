@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Digital voice (auto)": every voice system's own test signal (the app's generators), moved off the centre, with a sample clock error and
 // noise at several SNRs over the signal's width; a confusion matrix, the weakest SNR at which each one is still right, neighbours in one
 // capture (DMR next to P25, DMR next to NXDN one 25 kHz channel away), an inverted spectrum, and noise / analogue FM that must not be

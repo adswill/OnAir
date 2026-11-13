@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Encrypted-at-rest persistence for the voice key store. Keys are serialized and encrypted with AES-256-CTR under a master key that
 // comes from the OS keychain when one is wired in (setSecretProvider), or is derived from a passphrase the user types (PBKDF2-HMAC-SHA256).
 // The plaintext key material never touches disk, logs, crash reports, the remote API or the web server.

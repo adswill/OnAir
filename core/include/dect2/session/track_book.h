@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TrackBook: turns "I just saw this key" observations from a decoder into Sessions (docs/MODE-EXPERIENCE.md, 2.1 rules "tracks = same
 // ICAO/MMSI/serial across gaps shorter than a limit", "pager = capcode plus a 10 min window").
 //   observe(): the first sight of a key begins a session, later sights update it (at most every updateMs), a session whose key was not seen

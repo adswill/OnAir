@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Zigbee / IEEE 802.15.4 monitor: the test signal through the receiver (zigbee_gen.h, zigbee_rx.h): clean frames, noise near the threshold, carrier
 // offsets of +-100 kHz (+-40 ppm at 2.4 GHz), chip clock error and timing offsets, an adjacent-channel transmitter, back-to-back frames, a
 // wrong FCS, another sample rate, and noise alone.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Static preview of an MHEG-5 Scene: the Rectangle, Text and Bitmap items as draw operations. Tag numbers: ISO13522-MHEG-5 ASN.1 module (ITU-T T.172), as published in
 // the RedButton engine (redbutton-browser/ISO13522-MHEG-5.asn); see mheg.h. Nothing is executed. Parts of the data that the standard leaves to a profile (the colour
 // octets, the textual font attributes, the character set) are read the way the UK profile (ETSI ES 202 184) uses them and are tolerant: when they do not fit, defaults are used.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF receiver: narrow-band FM voice on the marine channels (156.025 - 162.025 MHz), all channels of the captured span at once.
 //
 // The carrier finder (dsp/carrierfind.h) looks for carriers on the 25 kHz raster of the marine channels (every marine channel frequency is a

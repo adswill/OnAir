@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham APRS and AX.25 packet: send and receive helpers for the Ham view. Frames are built here (UI frames with a digipeater path, APRS
 // positions, status, messages with numbers and acknowledgements, bulletins, beacons) and turned into audio for the rig:
 //   1200 baud  Bell 202 AFSK, 1200 Hz mark / 2200 Hz space, NRZI, for an FM rig's microphone or data input (VHF / UHF APRS, packet)

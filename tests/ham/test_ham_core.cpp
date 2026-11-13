@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham operation core: band table and TX gate, ADIF round trip and worked-before, slot timing, message parsing, the QSO state machine.
 #include "dect2/ham/ham.h"
 #include <cmath>

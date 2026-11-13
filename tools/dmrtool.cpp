@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR: write the test signal to a file (dmrtool gen ...) or run the receiver on a recording (dmrtool rx ...).
 //
 //   dmrtool gen out.cs8 [--secs 20] [--rate 2400000] [--snr 30] [--cfo 0] [--sro 0] [--cc 1] [--tg 3] [--direct|--mobile] [--traffic 0|1|2] [--seed 1]

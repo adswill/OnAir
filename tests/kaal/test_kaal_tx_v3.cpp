@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL v3 transmitter (VoiceTx with a codec bitrate): the air time per second of speech (12 and 16 kbit/s exactly real time, 24 and 32 twice
 // as long), the receiver decoding the transmitter's own signal at every bitrate with the profile read from the frame headers, the callsign
 // in the sweep, chunk-size independence, and the refused settings.

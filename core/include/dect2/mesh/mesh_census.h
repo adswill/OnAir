@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa / Meshtastic network census (3.9, docs/SMART5-field-3.9.md item 6): from the frames this receiver decoded, the nodes of the mesh
 // (first and last heard, role, the fewest hops any copy of their packets had used, packets, airtime), and the network as a whole: active
 // nodes, roles, the hop histogram, airtime per hour as a share of the channel (channel utilisation as Meshtastic measures it) and the

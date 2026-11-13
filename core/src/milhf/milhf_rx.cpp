@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Military / government HF waveform identifier (see milhf_rx.h). Clean-room: written from the published physical-layer parameters only.
 #include "dect2/milhf/milhf_rx.h"
 #include <algorithm>

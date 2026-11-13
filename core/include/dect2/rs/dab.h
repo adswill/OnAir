@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_dab (DAB data layers). Written by hand; the Rust test rust/onair/tests/headers.rs checks it against ffi.rs.
 // Record arrays are (pointer, capacity); parsers return the number of entries found, counted
 // past the capacity, SIZE_MAX (or false) when the input is too short. The record layouts are checked at start-up with onair_dab_struct_sizes().

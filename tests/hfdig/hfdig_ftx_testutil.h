@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the FT8 / FT4 / FT2 / WSPR tests: audio with stations at known SNRs (in 2500 Hz, as WSJT-X), time offsets and frequencies,
 // the receiving side's faults (dial error, sample clock error, upside down), and a run through the decoder with a known start time.
 #pragma once

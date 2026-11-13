@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tuning/active distinction is an engine contract, not an off-by-one bug.
 #include "dect2/railway/railway_rx.h"
 #include "../../core/src/engine/engine_internal.h"

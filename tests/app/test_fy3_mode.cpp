@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT / MPT wiring: the tunings are registered under their engine standards, the mode rows, family and poll-slot counts, the engine cases, the panel hooks,
 // the doc page, and the screens say what the modes need.
 #include <cstdio>

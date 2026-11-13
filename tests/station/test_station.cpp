@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // My station: verdicts, the automatic radio choice, the assignment of several modes and the single-capture plan.
 #include "dect2/station/station.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave decoder routing without a GUI or a radio: button -> decoder plan, the plan follows a retune, stop / start, several decoders at once,
 // sideband mirroring, the audio shift, options, the identifier hook and the log helper. (The decoders themselves run in test_shortwave_path.)
 #include "dect2/shortwave/shortwave_route.h"

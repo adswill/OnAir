@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sharing frequency lists: the file formats other programs use, an import preview with merge rules, the "My lists" model (lists = the groups of the
 // memory bank: enable / disable / order) and the built-in lists of common services made from the compiled-in data (data/frequencies/*.tsv).
 // Pure model, no UI, no files: the Memory panel and the tests call these. The OnAir formats themselves (JSON / CSV) stay in memory_bank.h.

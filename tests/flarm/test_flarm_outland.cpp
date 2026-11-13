@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Out-landing alert (flarm_outland.h): simulated glider flights with GNSS noise, speed jitter and lost packets.
 #include "dect2/flarm/flarm_outland.h"
 #include <cmath>

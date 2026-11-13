@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus test signal: GFSK bursts of simulated meters (water, heat, electricity, gas, heat cost allocator, one with an encrypted payload)
 // on the channels of the S1, T1, C1, R2 (868 MHz plan) or N1 (169 MHz plan) modes. Nothing is transmitted: the samples only exist in memory or a file.
 //

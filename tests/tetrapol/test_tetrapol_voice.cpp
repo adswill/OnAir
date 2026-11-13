@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL voice plumbing on the traffic-channel test signal: the encryption gate (clear / encrypted / no key reference), the 16-byte plug-in
 // frame, listening off, and the whole chain through a real plug-in file (tests/codec/tone_codec_plugin.c, a fake codec that returns a
 // tone) into the PCM output and the per-call WAV. There is no TETRAPOL codec here and none is needed.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors: the protocol layer. A burst arrives as a train of pulses (OOK: carrier on / off; FSK: the upper / lower tone) with their
 // lengths in microseconds; every device protocol slices it its own way (PWM, PPM, Manchester, NRZ) into rows of bits and checks them.
 //

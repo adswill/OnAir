@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT1327 trunking screens: lock, good and bad codewords, the system identity, the control message list
 // and the channel table.
 #include "app.h"

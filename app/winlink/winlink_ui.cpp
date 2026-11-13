@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink email: Inbox, Outbox, Sent, Compose, Gateways, Modems and Settings, and the Connect button that runs one B2F session with the chosen
 // gateway over packet (1200 / 9600 baud AX.25), ARDOP, an external modem program (ARDOP / VARA / Mercury over TCP), or (only when turned on in Settings) Telnet to the CMS. The gateway list is
 // entered by hand: OnAir never looks gateways up on the internet. The Winlink password stays in memory for this run only.

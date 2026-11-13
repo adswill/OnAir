@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone paging (Multitone Electronics, UK; Mk IV - VII pagers, hospitals and industrial sites) detector: receive only.
 //
 // What is public (sigidwiki.com/wiki/Multitone_Paging, see docs/multitone-research.md): narrowband FM with FFSK, 12.5 / 25 kHz, "coding similar

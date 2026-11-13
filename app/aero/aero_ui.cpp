@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero screens: the ACARS messages with a detail pane, the aircraft map, the aircraft, the log-ons, the P channels and the signal units.
 // What the mode does and does not decode is said on the Channels view and in the Receiver tab.
 #include "dect2/common/time_fmt.h"

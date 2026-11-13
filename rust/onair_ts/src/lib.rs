@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir MPEG-TS: the pure parsing layer of the MPEG-2 transport stream analyser (ISO/IEC 13818-1, ETSI EN 300 468, ATSC A/65): packet header,
 //! section CRC-32, PAT / PMT / SDT / NIT / EIT / TDT / TVCT section parsers and descriptor loops, PAT packet builder. Text fields are returned as byte
 //! ranges of the section: the character set conversion (iconv) and all state (section reassembly, service tables, EPG) stay in C++ (`core/src/tv/ts.cpp`).

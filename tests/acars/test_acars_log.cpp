@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The per-aircraft ACARS log (core/src/acars/acars_log.cpp): which messages are interesting, redaction of phone numbers and e-mail, the
 // attachment of messages to aircraft (by ICAO address, registration, flight; an ambiguous callsign gets nothing), the bounds, and the
 // JSON of an entry with awkward text.

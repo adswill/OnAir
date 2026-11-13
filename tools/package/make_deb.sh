@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build the Linux packages inside a container (needs Docker, for example via Colima on macOS):
 #   onair_<v>_<arch>.deb                       Debian and Ubuntu
 #   onair-<v>-Linux-<arch>.tar.gz              the same files, for unpacking by hand

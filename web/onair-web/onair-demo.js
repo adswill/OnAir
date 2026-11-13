@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web demo mode (?demo=1): a simulated receiver inside the page, so the UI can be previewed without a radio.
  * It replaces WebSocket and the info request with local fakes; nothing is sent over the network and nothing here runs unless the address has ?demo=1. */
 (function () {

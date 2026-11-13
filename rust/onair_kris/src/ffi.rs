@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_kris` (core/include/dect2/rs/kris.h). Every export is `onair_kris_*`; scalars are i32 / u32 (no narrow types), buffers are caller owned,
 //! bits are one per byte. A null pointer or a bad size gives -1.
 #![allow(clippy::missing_safety_doc)]

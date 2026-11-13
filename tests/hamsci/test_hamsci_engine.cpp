@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ham science modes through the engine: setStandard(family + 2), the synthetic source plays the test signal, the receiver reports through latestRx().
 // FSK441 (pings) and Throb2 (text). Simulated only.
 #include "dect2/engine/engine.h"

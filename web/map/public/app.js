@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // app.js - OnAir live map: MapLibre map, layers, live feed (WebSocket + /live), search, stats, selection.
 // Modules: geo.js (maths), types.js (type -> icon shape), shapes.js + icons.js (map icons), airports.js,
 // card.js (info card), demo.js (?demo=1 preview data). Everything here is browser-only glue.

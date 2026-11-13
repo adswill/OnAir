@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transponder detector of whole-span DVB-S/S2 (core/src/engine/transponders.cpp) on synthetic spectra: several carriers, weak and strong, adjacent,
 // a tilted floor, the SDR's DC spike, and things that are not transponders.
 #include "dect2/engine/transponders.h"

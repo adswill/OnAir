@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN monitor: the test signal (lorawan_gen.h) through the receiver (lorawan_rx.h) on the EU868 plan: several channels at once at different spreading
 // factors and bandwidths, the MAC layer (type, DevAddr, counter, port, MIC, MAC commands, join request / accept), the gateways' inverted-IQ frames,
 // carrier offsets, noise, a plan change, the channel limit, the results file, and noise alone.

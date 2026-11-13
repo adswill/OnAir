@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The built-in frequency database: well-known frequencies of every mode (calling channels, beacons, band plans, satellite downlinks ...), compiled
 // in from data/frequencies/*.tsv, plus the user's own entries. Pure model: search, filters, conversion to a Memory (core/include/dect2/channels/memory_bank.h)
 // and import / export (the Memory JSON and CSV files, so a user's list opens in the Memory panel and the other way round). No UI, no network.

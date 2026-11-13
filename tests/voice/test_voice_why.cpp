@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // voiceWhy(): each stage of the chain gives its own verdict, and the per-mode adapters feed it from the telemetry.
 #include "dect2/voice/voice_why_modes.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL layers: check sequences, the interleaver, the code, the PDU builders and parsers, every rate's bit chain end to end.
 #include "dect2/hfdl/hfdl_proto.h"
 #include <cmath>

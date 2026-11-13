@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS anomaly engine (3.7, docs/SMART-maritime-3.7.md): consistency checks on what the receiver hears, the kind of analysis a traffic service does
 // on the server side, here from one receiver and nothing else:
 //  - "jump":       a position that no ship could have reached (speed over the limit since the last report),

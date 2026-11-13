@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors screens: the live list of sensors with a history graph, the message log, the unknown signal analyser with a flex decoder editor,
 // and the decoder list. Receive only. The decoders are rtl_433's (docs/SENSORS-3.7.md says which ones are supported and how far they were tested).
 #include "app.h"

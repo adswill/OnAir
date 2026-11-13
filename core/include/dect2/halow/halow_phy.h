@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (IEEE 802.11ah, S1G) physical layer, receive and test-signal side: the OFDM layouts of the 1, 2, 4, 8 and 16 MHz channels, the
 // three preambles (S1G_1M, S1G_SHORT, S1G_LONG), the SIG fields (CRC-4), scrambler, BCC (rate 1/2 with 2/3, 3/4, 5/6 puncturing), interleaver,
 // BPSK to 256-QAM mapping, MCS 0 - 10 and the PPDU builder. Reference: IEEE 802.11-2020 clause 23 (S1G PHY), derived from the 802.11ac VHT PHY

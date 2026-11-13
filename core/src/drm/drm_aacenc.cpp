@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM AAC encoder for the test signal (see drm_aacenc.h): MDCT with the 960 transform, one flat quantiser step for the whole frame, the Huffman codebooks
 // of drm_aactab.cpp, section data, and the spectral data in the order of the codeword reordering (HCR) of clause 5.4.1.
 #include "dect2/drm/drm_aacenc.h"

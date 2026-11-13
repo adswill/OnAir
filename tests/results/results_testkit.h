@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The decoded-results tests (tests/test_*_results.cpp): a receiver fed with its mode's built-in test signal, then reset, configured
 // again, saved, loaded into a fresh receiver and cleared. The lists must live through all but the Clear.
 #pragma once

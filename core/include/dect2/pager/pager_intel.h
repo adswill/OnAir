@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: the smart layer on top of the decoded messages (3.7). Pure C++ on PagerMessage, no radio, no clock of its own.
 //   - text repair (#13): a POCSAG page that lost a code word keeps the bits that survived; the lost characters are filled in from the words that
 //     capcode (and the channel) sent before, only when one reading clearly beats every other. Guessed characters are always marked.

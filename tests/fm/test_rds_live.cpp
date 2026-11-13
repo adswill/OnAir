@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live RDS control (fm/rds_live.h): the encoder (FmGenerator) takes changes of the station name, text, PTY and flags while it runs; the receiver decodes them back.
 // Also the text commands, the UDP command port on the loopback, the file watch and the clock group.
 #include "dect2/fm/fm_gen.h"

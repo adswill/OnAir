@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band split for 16 kHz speech: a 95-tap Kaiser-windowed low-pass (cut-off 3.75 kHz) decimates to the 8 kHz core and interpolates
 // back. The encoder takes the high band as the exact remainder x - up(down(x)), so the two paths add up to the delayed input.
 #include "kv_internal.h"

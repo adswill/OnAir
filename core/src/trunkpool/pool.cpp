@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The trunk pool controller: device roles, allocation of voice radios to grants, the call state machine, preemption, device loss, the call log
 // (see trunkpool.h). No threads; time is what the host passes in, so every path is testable with a simulated clock.
 #include "dect2/trunkpool/trunkpool.h"

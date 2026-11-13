@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT session layer: hash and CRC known vectors, message round trips, ranges, stepper, compression rule, and a 2 MB transfer through a lossy
 // link with an interruption and a resume
 #include "dect2/kaft/kaft_session.h"

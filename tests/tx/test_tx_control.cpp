@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Full control over transmitting (docs/TX-CONTROL-3.8.md): the per-driver parameter mapping with fake radios that record every call, the per-radio
 // calibration (ppm, offset, DC, I/Q balance, power vs gain table), the IQ correction, the timeout timer, the schedule and DCS on analog FM.
 // Everything is generated into memory and sent to recording sinks; NOTHING is transmitted.

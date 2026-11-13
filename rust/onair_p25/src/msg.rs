@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! P25 Phase 1 message fields (TIA-102.BAAC, BAAA): data unit ids and frame lengths, TSBK blocks (last block flag, protect flag, opcode, manufacturer id,
 //! 64 bits of arguments, CRC-CCITT), link control words of LDU1 and TDULC (group / unit / terminator calls), the encryption sync of LDU2 and the header word
 //! (message indicator, algorithm id, key id, manufacturer id, talkgroup), algorithm / opcode / data unit names and the channel number text.

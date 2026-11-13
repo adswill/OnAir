@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The airport search of the airband panel (see airport_ui.h).
 #include "dect2/common/thread_name.h"
 #include "airband/airport_ui.h"

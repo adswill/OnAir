@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SDR stream glitch detector: a steady tone with noise, then samples removed (a drop of 1 to 6 samples), samples repeated, a run of zeros, a repeated block of 256 samples and a gain step, at known times;
 // the events and their times, the number of samples lost, and no false events on a clean stream, with a slowly drifting tone and with noise only (where a drop cannot be seen). Simulated signals only.
 #include "x40_gen3.h"

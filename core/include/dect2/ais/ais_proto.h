@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS (ITU-R M.1371-5) message layer: bit fields, the HDLC frame (flags, stuffing, NRZI, FCS), message decoding and !AIVDM sentences.
 // Field layouts follow the gpsd AIVDM document (gpsd.gitlab.io/gpsd/AIVDM.html); the frame is plain HDLC (ISO 13239 / ITU-T X.25 FCS).
 #pragma once

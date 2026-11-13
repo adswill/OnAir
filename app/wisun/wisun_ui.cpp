@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN screens: the network list (PAN ID, network name, border router, size, schedule, PHY modes), the node list (EUI-64, vendor, role,
 // routing cost, frame types, channels, schedule, EAPOL), the link list (unicast frames and the levels the acks report), the live frame log and the
 // hop chart (every frame by time and frequency, coloured by sender), and the band plan picker (every region of the Wi-SUN band table).

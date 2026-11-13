@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Baseband filter (dsp/baseband_filter.h): the default design is the HFDL receiver's original filter bit for bit, the response of every shape
 // (pass-band, stop-band, centre offset), the text form, and HFDL decoding through every preset with tuning errors and a strong adjacent channel.
 #include "dect2/dsp/baseband_filter.h"

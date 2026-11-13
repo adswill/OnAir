@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared parts of the native radio drivers (source_rtlsdr.cpp, source_airspy.cpp, source_sdrplay.cpp, ...): loading a radio's own library at run time and the
 // base class every native source builds on.
 #pragma once

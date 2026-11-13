@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR receiver (see cdr_rx.h). GY/T 268.1-2013 physical layer and GY/T 268.2-2013 multiplex. DRA+ audio units of the
 // service the user picked are decoded and played.
 //

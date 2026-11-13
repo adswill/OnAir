@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi information element parsers (see wifi_elems.h).
 #include "dect2/wifi/wifi_elems.h"
 #include "dect2/wifi/wifi_chan.h"

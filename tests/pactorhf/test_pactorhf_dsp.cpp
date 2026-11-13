@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV physical layer on the generator's signals, with the exact symbols known: the carriers, the clock, the phase steps, the frame
 // period and the sync pattern, then the impairments one by one (tuning error, clock error, noise, fading, two paths) over all three modes, and
 // noise or a tone alone (nothing may be found). The generator's frames are not real PACTOR frames (the coding is proprietary).

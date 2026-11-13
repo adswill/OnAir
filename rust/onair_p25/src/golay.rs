@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Short codes of the P25 voice and header frames: Hamming (10,6,3) of the LDU hexbits, Golay (24,12,8) (the extended (23,12) code with generator
 //! x^11 + x^10 + x^6 + x^5 + x^4 + x^2 + 1) and its shortened (18,6,8) form of the header. Decoders search all codewords (4096 / 64).
 

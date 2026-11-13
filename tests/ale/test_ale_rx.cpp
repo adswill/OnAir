@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE receiver against generated calls: a TWS sounding and a long-address TIS sounding, an individual call (TO .. TIS, an LQA,
 // answered and acknowledged), a net call answered by two members, an AMD message, a group call; clean, then at 10 dB SNR in 3 kHz
 // with +50 / -50 Hz tuning errors and 2 % of the bits turned over (the vote and Golay put them right); noise only gives nothing.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The community marketplace inside the Store tab of View > Plugins (docs/PLUGIN-MARKETPLACE-4.0.md): browse, search, sort, tags, likes,
 // install with the "unreviewed" confirmation, report, and Upload plugin (GitHub sign-in, file, title, description, link, tags, preview,
 // Publish). Nothing is fetched until the user opens the panel and presses Search, or acts on a plugin.

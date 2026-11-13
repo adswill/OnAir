@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Native driver for the SDRplay RSPs (RSP1, RSP1A, RSP1B, RSP2, RSPduo, RSPdx, RSPdx-R2) through the SDRplay API 3.x. The API is a
 // service plus a library that the user installs from sdrplay.com (separately from SDRconnect; OnAir does not ship it); the library is
 // loaded at run time like the other radios' libraries (native_common.h). The API's interface is in sdrplay_api_min.h.

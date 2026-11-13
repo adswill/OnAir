@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Teletext: Hamming 8/4 against the table from ETS 300 706, then a page encoded into TS packets and decoded again.
 #include "dect2/tv/teletext.h"
 #include <cstdio>

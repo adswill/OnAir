@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat BGAN screens: one click (Scan 1525 - 1559 MHz) walks the band and lists every forward bearer found, with bearer type, satellite, spot beam, network and
 // load, plus the plain-language log of the system information the network broadcasts. Signalling and structure only; see docs/BGAN-3.7.md.
 #include "app.h"

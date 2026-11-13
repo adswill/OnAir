@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Custom bandwidth and sample rate in EVERY registered mode (3.6; docs/BANDWIDTH-AUDIT.md). The owner's rule: the default of a mode stays
 // its default, and the user can set any bandwidth and any rate in every mode, with nothing clamped (a limit only warns).
 //

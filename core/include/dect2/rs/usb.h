@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_usb (USB SDR drivers). Written by hand; the Rust test rust/onair/tests/headers.rs checks it against ffi.rs.
 // Only meaningful when DECT2_RUST_USB is defined (see rust/README.md). Default OFF: the desktop C++ driver (dlopen of librtlsdr) stays the default.
 //

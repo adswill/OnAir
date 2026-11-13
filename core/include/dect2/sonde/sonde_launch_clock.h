@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde launch clock: learns when each launch site sends its sondes (the UTC time of day of the launches this station heard, kept per site)
 // and predicts the next launch, so the receiver can be tuned to the site's frequency a few minutes ahead. Most sites launch at 00 / 12 UTC (some
 // 06 / 18, some every few hours) at the same minute every day, so a launch time of day clusters tightly. Pure logic; the caller keeps the history.

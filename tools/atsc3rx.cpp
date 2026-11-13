@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // atsc3rx: decodes an ATSC 3.0 IQ recording to a transport stream and prints what it found (services, statistics). For checking recordings
 // and the receiver without the GUI.
 //   atsc3rx recording.cs8 --rate 10e6 [--format cs8|cu8|cf32] [--out out.ts] [--service id]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The MCP server (core/src/mcp): the JSON value, the JSON-RPC protocol, every tool on the real engine with the built-in test signal (ServerHost),
 // the stdio transport, the streamable HTTP transport with its guards (token, Host, Origin, method, size), the activity log and the rate limit.
 // End to end: "there is DRM around 15 MHz, find it and decode it" on the synthetic DRM test signal (the AI starts with the radio in a mode that

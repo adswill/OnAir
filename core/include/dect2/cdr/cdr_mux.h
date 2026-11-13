@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR multiplex (GY/T 268.2-2013 "Digital audio broadcasting in FM band, part 2: multiplexing"): the control multiplex frame that the
 // service description channel carries (clause 6: the service multiplex configuration table and the network information table) and the
 // service multiplex frame of the service data channel (clause 7: multiplex sub-frames with an audio section and a data section).

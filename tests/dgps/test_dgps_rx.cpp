@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DGPS beacons: RTCM SC-104 word parity against the GPS LNAV code OnAir runs on real satellites, the message layers against the decoded example messages of the public
 // "RTCM SC-104 transmission characteristics of marine DGPS stations" paper (types 1, 3, 7), every message type through the MSK demodulator, and a sweep of bit rate,
 // carrier offset, sample rate, clock error, polarity and noise.

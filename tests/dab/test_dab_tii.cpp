@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB TII (EN 300 401 clause 14.8, transmission mode I): the pattern table and the carriers against the standard, then a network of
 // transmitters from the test transmitter through noise, a carrier offset and the real DabReceiver, which has to name them all.
 #include "dect2/dab/dab.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 test signal (see m17_gen.h): whole M17 transmissions as 4FSK, over noise.
 #include "dect2/m17/m17_gen.h"
 #include "dect2/common/stable_random.h"

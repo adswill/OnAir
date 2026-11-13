@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DFM-06, DFM-09, DFM-17: truth -> frames -> symbols -> decoder. Chunk sizes, polarity, bit errors the Hamming code must fix,
 // symbol error sweep, reset, noise.
 #include "../data/sonde/bits/util.h"

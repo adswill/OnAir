@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers shared by the mesh (LoRa) tests: a signal made of LoRa frames plus noise, and a channel + demodulator chain.
 #pragma once
 #include "dect2/dsp/gen_util.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa (raw) monitor (see loraraw_rx.h): channel filters and demodulators of mesh_lora.h, one per bandwidth and per spreading factor / sync word searched.
 #include "dect2/net/feeds.h"
 #include "dect2/automation/engine.h"

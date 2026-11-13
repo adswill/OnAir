@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA Weather Radio SAME / EAS alert messages (47 CFR 11.31): parsing and the plain-English tables. Receive only: the text of an alert
 // is a public broadcast.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL layers: burst structure, scrambler, interleaver, convolutional code, PSK mapping, the PDUs (SPDU squitters, MPDU headers, LPDUs,
 // HFNPDUs, ACARS) and the same in reverse for the test signal. Nothing here touches a radio signal.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CEA-608 and 708 caption decoding from hand-built cc_data (simulated).
 #include "dect2/tv/cc_decode.h"
 #include <cstdio>

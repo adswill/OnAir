@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The one static library the C++ code links (`libonair_rs.a`). A single staticlib avoids duplicate Rust runtime/`core` symbols, which
 //! several per-module staticlibs would each carry. Every module crate keeps its C ABI in its own `ffi.rs`; the `extern "C"` items are
 //! `#[no_mangle]` and therefore end up in this archive, and the `use` lines below make sure each crate is linked in even when no Rust

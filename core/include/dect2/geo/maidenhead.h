@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Maidenhead grid locators (the amateur radio "QTH locator": field, square, subsquare, extended square) and the coordinate text a user
 // types: decimal degrees or degrees, minutes, seconds. Pure functions, no state.
 #pragma once

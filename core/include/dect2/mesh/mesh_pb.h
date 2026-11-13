@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small Protocol Buffers reader and writer for the Meshtastic messages (wire format: protobuf encoding guide).
 // Reader: varint, 64-bit, length-delimited and 32-bit fields, unknown fields are simply returned and ignored by the caller.
 #pragma once

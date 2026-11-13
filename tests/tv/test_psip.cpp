@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC PSIP: MGT, VCT source ids, EIT titles, ETT descriptions and STT through TsDemux, sections built by hand (simulated data).
 #include "dect2/tv/ts.h"
 #include "dect2/tv/ts_proto.h"

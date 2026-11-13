@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio control: the listening chain every audio mode shares (docs/AUDIO.md). Pure float DSP blocks (no allocation, no locks in process()),
 // one AudioControl chain per AudioOut, all of them follow one AudioControlConfig that the UI fills from the settings of the current mode.
 //

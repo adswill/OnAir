@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web end to end on this computer only: relay (relay/relay.js), directory (the real Worker under `wrangler dev --local`), onair-server with the test signal, guests over WebSocket
 // and, when ONAIR_E2E_PLAYWRIGHT points at a playwright-core module, a real headless (muted) Chrome. No request leaves 127.0.0.1 / *.localhost.
 //   node tests/web/webonair_e2e.js build/onair-server

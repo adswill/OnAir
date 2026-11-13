@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C receiver against the test transmitter with impairments: every QAM order, carrier offset, clock offset, an echo, noise near the threshold,
 // a signal off the centre, a wrong manual symbol rate, spectral inversion, annex C, and a HackRF's front end (its DC offset in the middle of
 // the centred channel, and its synthesiser's phase noise out to a few hundred kHz). The transport stream must come out clean, with the PAT.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 codewords: check bits and the address codeword fields of the control channel messages.
 #include "dect2/mpt1327/mpt1327_proto.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Broadcast character sets to UTF-8 (DVB: ETSI EN 300 468 Annex A; DAB: ETSI TS 101 756 Annex C and ETSI EN 300 401 section 5.2.2.2): EBU Latin, ISO/IEC 6937,
 //! UCS-2 (big endian, with surrogate pairs), the DAB charset selector, `clean` (valid UTF-8 with no control or invisible characters, spaces folded) and the DVB
 //! text field with its character table prefix. Output goes into a caller buffer (`Out`: bounded, overflow is reported, never panics). Conversions

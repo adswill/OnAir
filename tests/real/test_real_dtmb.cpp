@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB on the owner's own recording: 554 MHz, Lithuania, HackRF at 10 Msps, int8 IQ; the first 2 MB (0.1 s) of a 12 s capture. A transmitter with PN945
 // headers, 16QAM, code rate 0.8, interleaver mode 2, multi-carrier. 0.1 s is enough for header lock and the system information (the whole capture
 // decodes with 0 bad codewords; it takes about 0.4 s to the first transport stream packet, too much for a file in the repository).

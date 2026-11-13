@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Teletext, wide screen signalling and captions in the blanking lines: the generator's lines through the slicers directly and through the whole receiver. Simulated (atv_gen).
 #include "dect2/atv/atv_vbi.h"
 #include "dect2/atv/atv_testkit.h"

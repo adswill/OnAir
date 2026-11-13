@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio problems where the user looks: the listing error, a failed start, a frequency the radio cannot tune and the USB hints, all under the
 // radio picker, plus a "Copy diagnostics" button that puts what a bug report needs on the clipboard.
 #include "dect2/common/u8file.h"

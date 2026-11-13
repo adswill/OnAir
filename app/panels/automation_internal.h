@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automations, the application side: what the actions do inside OnAir (automation_sink.cpp) and the window (automation_ui.cpp).
 #pragma once
 #include "dect2/automation/engine.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A 5 x 7 pixel font (upper case, digits and a few signs) for the analog TV test card. Drawn by hand for this project.
 #pragma once
 #include <array>

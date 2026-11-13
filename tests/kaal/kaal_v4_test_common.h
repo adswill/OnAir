@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the KAAL frame version 4 tests: a signal maker (FrameTx with random voice payloads), a channel (noise by Es/N0, carrier offset,
 // sample-clock offset, fractional delay, flat Rayleigh fading with Doppler, two-ray multipath, phase noise) and a slot scorer.
 #pragma once

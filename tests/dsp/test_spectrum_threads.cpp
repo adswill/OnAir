@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The spectrum thread feeds while another thread takes frames and changes the settings (resize, reset, sample rate, fast rows): no crash,
 // no frame of a wrong size, and frames keep coming. Run it under ThreadSanitizer to check the locking (DECT2_SANITIZE_THREAD).
 #include "dect2/dsp/spectrum.h"

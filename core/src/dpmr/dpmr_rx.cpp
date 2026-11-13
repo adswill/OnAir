@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR receiver (see dpmr_rx.h).
 #include "dect2/dpmr/dpmr_rx.h"
 #include "dect2/dsp/up6.h"

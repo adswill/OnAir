@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite AIS: what changes when the receiver is on a low earth orbit satellite (or the IQ comes from one) instead of on the coast.
 //  - Doppler: up to about +-4 kHz at 162 MHz from 500 km, changing by up to some 50 Hz/s; every ship has its own shift (aisMaxDopplerHz).
 //  - Long delays: 1.7 to 8 ms from 500 km, so bursts of neighbouring slots from ships at different ranges run into each other.

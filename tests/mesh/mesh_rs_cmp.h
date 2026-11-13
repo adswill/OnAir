@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by tests/mesh/test_mesh_proto_rs.cpp and rs_part2_mesh.cpp: the mesh packet layer (dect2::, Rust-backed) and the digest every decode result goes into.
 #pragma once
 #include "dect2/mesh/mesh_proto.h"

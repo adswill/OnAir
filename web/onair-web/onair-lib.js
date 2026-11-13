@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web: pure helpers (no DOM, no network). Loaded by the page as a plain script and by the node tests (tests/web/).
  * ADPCM decode, frame parsing, message building, frequency and bin mapping, view zoom and pan, palettes, passband rules.
  * Protocol: docs/ONAIR-WEB-PROTOCOL.md (version 1). */

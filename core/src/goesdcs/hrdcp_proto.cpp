@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteosat HRDCP message format and coding (see hrdcp_proto.h). Written from EUMETSAT TD 16; the Reed-Solomon code, the randomiser and the
 // convolutional code are the CCSDS ones already in core/src/ccsds and core/src/meteor.
 #include "dect2/goesdcs/hrdcp_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE word and call layer: Golay (every pattern of up to 3 errors corrected, 4 detected), the Gray tones, a word through the vote
 // with one copy wrong, the long addresses, an AMD text and an LQA report through the assembler.
 #include "dect2/ale/ale_proto.h"

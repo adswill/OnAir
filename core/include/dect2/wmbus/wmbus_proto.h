@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus (EN 13757-4) link layer and application data records, written from the public standard (clean room, no ported code).
 // Frame format A (blocks of 16 data bytes with a CRC each, first block 10 bytes) and B (two blocks, L counts the CRC), the CRC (poly 0x3D65, init 0,
 // result inverted), 3-out-of-6 and Manchester chip coding, the manufacturer code, the device type, the DIF / VIF data records of an unencrypted

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! WebSocket framing (RFC 6455 section 5) as the remote-control API uses it: server frames are never masked; client frames must be (a single frame, at most 4096 bytes
 //! of payload, no fragmentation, text and control opcodes only). The parser works on whatever has arrived and says what to do.
 

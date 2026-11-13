@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radar pulse analyser: constant, staggered and jittered PRI, pulse width, the carrier inside the pulse, an antenna that is seen for a few ms per turn (scan period), emitter loss,
 // a noise sweep and noise alone. Simulated signals only.
 #include "x40_gen2.h"

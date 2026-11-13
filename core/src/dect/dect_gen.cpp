@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT test signal (see dect_gen.h).
 #include "dect2/dect/dect_gen.h"
 #include "dect2/common/stable_random.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator receiver on its own test signal (makePskdSynth): it finds, analyses and locks every order with nothing set by hand,
 // with the radio's tuning error, off the dial, at the radio's 2 Msps with the dial 250 kHz from the centre, as a 48 kHz recording, a slow
 // narrow signal in a wide span (the zoom), a pass's Doppler ramp; the sync words are counted and the bits are saved; settings given by hand

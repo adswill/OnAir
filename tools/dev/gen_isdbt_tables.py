@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Generates core/src/isdbt/isdbt_tables_data.cpp from the text of ARIB STD-B31 (pypdf extraction of the English version 1.6-E2).
 usage: gen_isdbt_tables.py b31.txt > core/src/isdbt/isdbt_tables_data.cpp
 Tables used: 3-13 (carrier randomizing), 3-14 / 3-15 (CP, AC and TMCC carriers), 3-16 (PRBS start values)."""

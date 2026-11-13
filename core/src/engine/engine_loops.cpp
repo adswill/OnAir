@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The engine's two worker threads: the spectrum thread (feedSpectrum, spectrumLoop) and the analysis thread (analysisLoop) that
 // moves samples from the ring into the active receiver.
 #include "dect2/engine/engine.h"

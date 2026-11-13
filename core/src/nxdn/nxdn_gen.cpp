@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN test signal (see nxdn_gen.h): whole transmissions as four-level FSK, over noise.
 #include "dect2/nxdn/nxdn_gen.h"
 #include "dect2/nxdn/nxdn_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Scenario, presets, radios, input checks, verdict, link budget, sweeps and CSV, see core/include/dect2/prop/prop_scenario.h.
 #include "dect2/prop/prop_scenario.h"
 #include "dect2/prop/prop_terrain.h"

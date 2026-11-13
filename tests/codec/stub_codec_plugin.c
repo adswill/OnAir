@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A stand-in speech codec plug-in for the tests of the plug-in loader and of the voice chains (no codec): the four exported functions of the
 // ABI in core/include/dect2/codec/speech_codec.h. Every coded frame "decodes" to 160 samples: a fixed ramp whose first sample carries the
 // first coded byte, so a test can see which frame produced which audio.

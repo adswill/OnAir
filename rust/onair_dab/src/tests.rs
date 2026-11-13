@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests that need no C++ reference: the CRC check value, FIB walk, FIG 0/0, 0/2 and 1, MOT time and group, X-PAD split, dynamic label step.
 use crate::crc::crc16;
 use crate::ffi_types::*;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm receiver (orbcomm_rx.h).
 #include "dect2/session/mode_adapters.h"
 #include "dect2/orbcomm/orbcomm_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite identification by Doppler curve: simulated tracks only (no real recording of a pass goes through this test).
 #include "dect2/satmisc/sat_id.h"
 #include <cmath>

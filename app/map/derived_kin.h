@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Derived ground speed, track and vertical rate for the aircraft that report positions only (ACARS, VDL2, HFDL): the maths is in
 // core/include/dect2/geo/kinematics.h. Here: the fixes out of the track points, the choice between measured / estimated / derived, and the
 // text for the screens and the map upload. Header only.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility modes (receive only): MIL-STD-188-110 serial, STANAG 4285 (with STANAG 5066 framing), ARQ-E, ARQ-N, AUTOSPEC, SPREAD, G-TOR, EFR teleswitch
 // (DCF49 / DCF39), Piccolo Mk VI and Coquelet-8. One class, the kind says which decoder runs. Written to the engine's contract: configure() once the
 // sample rate is known, feed() from the analysis thread, telemetry() and the setters from the interface thread. The decoders are simulated-signal only

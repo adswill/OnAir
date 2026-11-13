@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 narrowband auto decoder and SSB conversation manager on a synthetic passband (qo100_auto.h):
 //  1. one 500 kHz passband with FT8 (several stations), FT4, PSK31, CW, SSTV and two SSB conversations (two stations taking turns on one
 //     frequency, and a later single station) at different levels: every signal is found and classified, the ticked decoders decode their

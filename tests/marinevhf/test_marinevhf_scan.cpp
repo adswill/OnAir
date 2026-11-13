@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF scan logic (whole span and single tuner, dwell, hang, priority watch on 16) and the per-channel call log.
 #include "dect2/marinevhf/marinevhf_scan.h"
 #include <cmath>

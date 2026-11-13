@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // User-installed speech codecs: the plug-in is looked for only in the codecs folder, the legal notice gates loading, a missing codec
 // gives the "not installed" message, and a loaded codec decodes frames to PCM (a fake codec that returns silence stands in for one).
 #include "dect2/codec/speech_codec.h"

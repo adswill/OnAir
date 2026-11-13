@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RINEX 3.04 observation output: the calendar of GPS weeks, the fixed columns of the header and the records, pseudoranges from the
 // transmit times, BeiDou's 14 s, the week roll-over, the millisecond clock steering of a drifting sample clock, GLONASS left out.
 #include "dect2/gnss/gnss_rinex.h"

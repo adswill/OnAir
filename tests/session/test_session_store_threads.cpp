@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SessionStore's threads (docs/MODE-EXPERIENCE.md, 2.2a and 8.1 test_session_store_threads): one writer thread behind a bounded queue, a drop
 // counter that is exact, enqueue that never blocks, decoder threads writing while readers query. Meant to run under ThreadSanitizer too
 // (cmake -DDECT2_SANITIZE_THREAD=ON; the TSAN job of ci.yml builds and runs just this program).

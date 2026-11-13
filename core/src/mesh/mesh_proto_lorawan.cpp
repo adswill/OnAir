@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN PHY payload headers (no keys, nothing decrypted): see mesh_proto.h.
 // Facts: LoRaWAN L2 1.0.4 (TS001-1.0.4) chapters 4 (MAC frame formats) and 5 (MAC commands), LoRaWAN 1.1 (rejoin requests, the 1.1
 // MAC commands), LoRaWAN Backend Interfaces 1.0 (TS002) 6.1 (NetID and DevAddr types), RP002-1.0.4 (EU863-870 and US902-928 channels).

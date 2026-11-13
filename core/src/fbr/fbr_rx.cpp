@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fleet Broadcast monitor: see fbr_rx.h for what is public and what is not.
 //
 // Chain (everything at the radio's rate R is a mix and a box filter):

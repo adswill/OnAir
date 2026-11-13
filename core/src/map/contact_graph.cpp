@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Contact graph for QSO-style modes: message parser, callsign prefix positions, great-circle arcs (contact_graph.h).
 #include "dect2/map/contact_graph.h"
 #include "dect2/geo/maidenhead.h"

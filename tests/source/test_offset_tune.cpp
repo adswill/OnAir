@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Offset tuning (offset_tune.h): the plan puts the channel clear of DC with the rate it needs, refuses radios that are too slow, and the
 // mixer brings a signal at +offset back to DC with no phase jump between blocks and no drift in level over a long run.
 #include "dect2/source/offset_tune.h"

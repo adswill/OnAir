@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A stand-in for the user's DRA+ add-on (libonair_dra), for the tests of the runtime loader and the CDR audio path only: the five entry points
 // OnAir looks up, no codec. Built three times from this file (FAKE_VARIANT, CMakeLists.txt):
 //   0  a good library: a frame sent in (0x7FFF sync, header with the frame size in 32-bit words, exactly that many bytes) "decodes" to 1024

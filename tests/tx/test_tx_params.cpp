@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The advanced transmit parameters (TxRequest::opt): the sideband and the carrier injection of SSB, the AM depth, the speech compressor, the VOX gate, the FM broadcast
 // level and the shared output stage (trim, mirrored spectrum). Everything is generated into memory; NOTHING is transmitted.
 #include "dect2/tx/tx.h"

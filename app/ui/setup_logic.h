@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The setup wizard v2, pure part (no ImGui, no App): places (cities and countries), the mapping from a place to the country, the ITU region,
 // the band plan, the FM step, DAB band III, the TV channel plan and the time zone; the interests and what they set (the modes listed first,
 // the starting mode, a starter preset list); and the rule for who gets the wizard at all. Drawn by wizard.cpp; tested by tests/app/test_setup.cpp.

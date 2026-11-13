@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pass-driven mount plan: what to tell an antenna mount at a moment of a satellite pass.
 // Before AOS the mount is pre-positioned at the rise azimuth (elevation 0); during the pass it follows the satellite,
 // with the azimuth/elevation speeds for tracking mounts; after LOS it is parked.

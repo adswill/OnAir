@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Journaline (ETSI TS 102 979 V1.1.1): the text / menu "news and information" data service of DAB (user application 0x44a) and DRM.
 // Written from the public specification only. Layers: MSC data group (EN 300 401 clause 5.3.3, restricted as in TS 102 979 clause 8.1.1),
 // JML objects (header, deflate, JML codes, escape sequences, general link targets) and TOC management blocks. The DAB packet mode demultiplexer

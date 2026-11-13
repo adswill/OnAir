@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frequency-hopper analyser: a 256-point spectrum every 128 samples over the whole captured span finds the strongest narrow signal in each frame; a run of at least 3 frames at
 // one frequency (within 1.6 bins, one missed frame allowed) is a dwell. From the dwells of the last 400 hops: the hop rate (one over the median time from the start of one dwell to the
 // start of the next), the dwell and the guard time, the number of channels (distinct frequencies visited at least twice), the channel spacing (median distance of neighbouring channels) and the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B filter and search (tar1090's filter box): text over address, callsign, registration, type and operator, an altitude band, squawks, emitter
 // categories, ground / airborne, and military addresses. The table and the map show only what matches. docs/ADSB-FILTER-3.9.md.
 #pragma once

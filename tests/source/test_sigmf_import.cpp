@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SigMF and WAV IQ files (iq_file.h): the built-in FM test signal is recorded as a float file, rewritten as SigMF pairs (cf32_le, cf32_be,
 // ci16_le, ci8, cu8) and a two-channel WAV, each with a different sample_start, and probeIqFile() must give back the rate, the centre frequency and
 // the format; every file played as a source gives the same FM receiver state as the live signal. Bad metas fail with a message.

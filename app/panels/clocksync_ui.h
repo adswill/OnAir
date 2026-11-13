@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The computer clock against GPS or a time station: the "Sync computer clock" section (the measured offset, the source, Sync now) and the optional
 // hobby NTP server, shared by the Time signals and the GNSS screens (time_clocksync.cpp).
 #pragma once

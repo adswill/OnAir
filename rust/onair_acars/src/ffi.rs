@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_acars` (core/include/dect2/rs/acars.h). Every export is `onair_acars_*`; pointers come as (pointer, length) pairs and the caller
 //! owns all buffers. Functions that write text return the length written, or `usize::MAX` when the buffer is too small.
 #![allow(clippy::missing_safety_doc)]

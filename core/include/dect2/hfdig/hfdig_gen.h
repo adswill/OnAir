@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeHfdigSynth(): one upper sideband transmission on the user's (dial) frequency, at -tuneOffsetHz from 0 Hz in the samples, over

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 time interleaving (A/322 section 7.1) for the PLP cells: the Convolutional Time Interleaver (CTI mode) and the cell interleaver
 // and twisted block interleaver of the Hybrid Time Interleaver (HTI mode, intra-subframe). The convolutional delay line of inter-subframe
 // HTI is not implemented.

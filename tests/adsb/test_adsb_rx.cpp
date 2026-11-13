@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B receiver: generator -> impairments -> receiver, with the list of what was sent checked off frame by frame.
 // The signal comes from adsb_gen (pulses, carrier offsets, overlapping bursts, noise) and adsb_sim (impairments, 8 bit rounding, bookkeeping).
 // SNR figures are pulse power over noise power in 2 MHz, which is what the generator's snr setting means; the receiver's own SNR (telemetry) is the pulse

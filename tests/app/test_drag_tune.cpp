@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drag to tune (app/gfx/drag_tune.h): hit testing of the plot and its frequency scale, what each press does in both settings and on touch,
 // the snap steps across modes and zoom levels (with fine steps), the live retune filter, the VFO grab and the right-click menu rule.
 #include "../../app/gfx/drag_tune.h"

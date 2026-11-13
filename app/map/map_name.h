@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The optional public name on the map ("Your name on the map"). Pure, so it can be tested. The same rules as web/map/src/by-name.js;
 // the server checks again and never trusts this. Empty = anonymous. Never filled in by the app: only what the user typed.
 #pragma once

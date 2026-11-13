@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: field analysis across packets (constant / counter / checksum / varying bytes, entropy, correlation) and byte interpretations.
 #include "dect2/protolab/protolab.h"
 #include <algorithm>

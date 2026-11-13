@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dtmbtool: the DTMB test signal and the receiver on files.
 //   dtmbtool gen out.cs8 [signal options] [--seconds 2] [--rate 10e6] [--format cs8|cf32]
 //   dtmbtool rx recording [--rate 10e6] [--format cs8|cu8|cf32] [--ts out.ts] [--check] [--threads n] [--chunk n] [--verbose]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PTT and duty-cycle logger for one channel (12.5 kHz): when the channel is keyed, for how long, and how busy it is. The power of the channel is taken in 5 ms blocks; the noise
 // floor is the 10th percentile of the last minute (so the channel should be idle at least a tenth of the time), a transmission starts when the power is 6 dB over the floor and ends
 // when it has stayed under 3 dB over the floor for 0.3 s (fading and short gaps inside one over do not split it; a longer gap does). Every finished transmission is one row:

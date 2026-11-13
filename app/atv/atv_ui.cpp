@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV screens: the picture with a line scope, the status lamps, the vertical-interval and level panels, the receiver readouts and the options
 // of the test signal. The receiver (AtvReceiver) makes the pictures; the telemetry carries the waveforms and the numbers.
 #include "app.h"

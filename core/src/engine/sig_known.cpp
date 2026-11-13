@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The table of modes (sig_known.h). The widths are the 99 % occupied width as this identifier measures it on the mode's signal; they
 // were checked against the spec values (docs/IDENTIFIER.md) and against the app's own generators. Fields: name, mode id, sub-mode id,
 // family, accepted modulation classes, the usual class, symbol rates (OFDM: useful symbol lengths), widths, FSK deviation, 0 either /

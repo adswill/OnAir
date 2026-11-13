@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General / Auto, the App side (core: dect2/engine/general_auto.h, docs/GENERAL-AUTO.md). In the General receiver the identifier runs in the
 // background at a low rate on the engine's own capture thread; every signal it recognises gets a label on the spectrum and the waterfall
 // ("DVB-T / T2  8 MHz  90 %") with a Decode button. Decode tunes and sets up the matching mode, and the app stays in General: tune away from the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors: pulse slicers and device decoders. See ism_proto.h.
 //
 // Written from rtl_433 (GPL-2.0, https://github.com/merbanan/rtl_433): the slicers follow src/pulse_slicer.c, the bit helpers

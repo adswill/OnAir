@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The talkgroup directory (dect2/common/tg_dir.h) in the voice and trunking panels: the saved file is read at the start, "Talkgroup names" is the
 // editor (add, edit, delete, search, import and export CSV, RadioReference style too), and withName() puts a name beside a talkgroup number.
 // docs/TALKGROUPS.md.

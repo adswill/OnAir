@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB census (ndb_census.h). A 1 Hz-resolution spectrum is not needed: carriers on the 0.5 / 1 kHz grids are found with bins of about 16 Hz (the Morse sidebands
 // sit 400 or 1020 Hz away and are lower); a carrier found in a scan gets a channel: a mixer, a decimator to 48 kHz and a decoder of its own.
 #include "dect2/ndb/ndb_census.h"

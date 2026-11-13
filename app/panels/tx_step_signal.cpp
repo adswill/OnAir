@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The signal list of the transmit panel: choose the signal. A searchable list of every signal OnAir can send, grouped like the receiver's mode list (same headings,
 // colours and one-line descriptions), a small icon per group, the chosen one highlighted; and the last signals sent as one-click buttons.
 #include "tx_state.h"

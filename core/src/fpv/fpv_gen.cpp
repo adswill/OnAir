@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog FPV video test signal, see fpv_gen.h. The composite video comes from the analog TV generator (atv_gen.h) at 12 Msps, is brought to the
 // output rate, gets the sound subcarrier added and frequency modulates the carrier; noise last.
 #include "dect2/fpv/fpv_gen.h"

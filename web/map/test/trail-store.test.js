@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // trail-store.test.js - TrailStore against an in-memory backend: caps, expiry, orphans, global cap, reads.
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Names the threads of the app so profilers, debuggers, Activity Monitor, htop and crash reports show what each one does.
 //
 //   setThreadName("onair-dec")        names the calling thread (call first thing inside a thread function)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! K = 7 convolutional code, rate 1/2 (generators 0o171, 0o133) and rate 1/4 (0o171, 0o133, 0o165, 0o117), and a soft-decision Viterbi decoder.
 //! Register: reg = (input << 6) | state, state = the previous six inputs (newest in bit 5), next state = reg >> 1; output i = parity(reg & g_i).
 //! Terminated blocks append six zero tail bits (coded too). LLR convention: positive = bit 0 more likely.

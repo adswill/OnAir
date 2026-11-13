@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT receiver telemetry, shared by the receiver and the UI.
 // Only what an NB-IoT cell broadcasts to every device is here: its identity, its operator, its operating mode and its level.
 // The first members of NbiotTelemetry are copied into RxTelemetry (history plot, top bar): keep them and their meaning.

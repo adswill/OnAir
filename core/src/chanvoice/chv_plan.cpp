@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel plans of the channelised analog voice services (see chv_plan.h).
 #include "dect2/chanvoice/chv_plan.h"
 #include "dect2/ham/ham_voice.h"

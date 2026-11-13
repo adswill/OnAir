@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS block layer of the Inmarsat Aero SU layer: the user data of one ISU (what the SUs of one ACARS block carry),
 // its parity and block check, and builders for the test signal.
 // Layout (ARINC 618 block as the P channel carries it, per the comment in JAERO's ParserISU::parse, aerol.cpp):

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-I packet layer: CRC, status byte, packet bits round trip, control signals, callsign packets, Huffman text.
 #include "dect2/pactor/pactor_proto.h"
 #include <cstdio>

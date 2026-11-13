@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus balloon telemetry receiver: Horus Binary v1 / v2 (100 baud 4FSK, Golay) and Horus RTTY (50 / 100 / 300 baud,
 // 7N2 / 8N2, UKHAS sentences with CRC16). A channel follows the dial; with a wide input the whole span is searched and further
 // balloons get channels of their own. Works on radio IQ and on sound-card audio (the audio source gives analytic samples).

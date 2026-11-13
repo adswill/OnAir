@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN FSK (DR7, 50 kbit/s GFSK): frame coding, airtime, modulator and receiver (see lorawan_fsk.h; the sources are listed there).
 // Synthetic tests only; not checked against a real transmitter.
 //

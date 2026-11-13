@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer: the thin-wire method of moments (mesh, impedance matrix, excitation, currents, far field, near field). Clean-room from
 // the textbook mixed-potential EFIE (Harrington, "Field Computation by Moment Methods"; Balanis, "Antenna Theory" ch. 8) - see docs/ANTENNA.md.
 #include "dect2/antd/antd.h"

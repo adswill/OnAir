@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ screens (the shared ones are in app/fsq/kbd33_ui.h).
 #include "../fsq/kbd33_ui.h"
 #include "dect2/fsq/fsq_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pilot-map invariants. The full 798-configuration comparison against the reference transmitter was run offline;
 // these are spot checks of the numbers it produced.
 #include "dect2/t2/t2pilots.h"

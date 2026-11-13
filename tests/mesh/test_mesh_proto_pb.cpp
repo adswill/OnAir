@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protobuf reader and writer, and the field layouts of the Meshtastic messages (mesh.proto) with hand-encoded messages.
 // Wire format examples: protobuf encoding guide (field 1 varint 150 = 08 96 01; field 2 string "testing" = 12 07 ...).
 #include "dect2/mesh/mesh_pb.h"

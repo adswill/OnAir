@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto for PSK31 and friends (BPSK31 .. QPSK125): every modulation with offset, drift, clock error and a noise sweep, simulated signals only (PskGenerator).
 #include "dect2/psk/psk_gen.h"
 #include "dect2/psk/psk_rx.h"

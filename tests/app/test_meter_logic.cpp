@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sparkline ring, "too slow" hysteresis, the signal verdict and the one-click fix ladder (app/ui/meter_logic.h).
 #include "../../app/ui/meter_logic.h"
 #include <cstdio>

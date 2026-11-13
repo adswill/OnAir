@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM transmitter fingerprint (see fm_txprint.h).
 #include "dect2/smart5/fm_txprint.h"
 #include <algorithm>

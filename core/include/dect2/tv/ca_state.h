@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Is a TV service really scrambled? Decided from evidence, never from the flags alone (free_CA_mode and CA descriptors are set on free
 // services too). Order of trust: the scrambling bits of the packets of its audio/video PIDs, then whether the player decodes it, then the flags
 // as a hint. Nothing is descrambled.

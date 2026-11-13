@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Regression test for the sound rule of the whole-span banks (core/include/dect2/engine/wide_bank.h): with no carrier chosen the best locked carrier
 // plays (it used to stay silent until a row was clicked); it keeps playing while it is as good as the best (no flapping between equal carriers);
 // a better locked carrier takes over; a chosen carrier plays whatever the others do; clearing the choice goes back to the automatic one; mute silences all.

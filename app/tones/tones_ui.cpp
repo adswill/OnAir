@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tone decoder screens: what is on the audio now (the sub-audible CTCSS tone or DCS code, the strongest voice-band tone, DTMF keys), the audio
 // spectrum, the 50 CTCSS tones as bars, a history of everything heard (CTCSS, DCS, DTMF, five-tone calls, SELCAL, two-tone pages) and the gate
 // that opens the sound only for a chosen tone or code. Input is an FM channel from a radio or, from a sound-card source, audio.

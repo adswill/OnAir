@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Fuzz entry for the transfer layer: `run(data)` drives a whole driver session against a fake dongle whose answers are corrupted according to `data`,
 //! and calls the API in an order `data` chooses. It must never panic, loop forever or index out of range, whatever the bytes are. Used by the
 //! seeded-mutation test; a libFuzzer / AFL harness can call it directly.

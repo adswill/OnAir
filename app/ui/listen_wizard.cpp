@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Get me listening": a three-step wizard for a new user. Step 1 picks a source (a connected radio, the demo signal or an IQ file),
 // step 2 the place (its band plan, from core's bandplan registry), step 3 one of five things to listen to. It only picks settings and
 // calls the existing tune and start code (setFamily / setMode / startReceiver); it adds no DSP of its own.

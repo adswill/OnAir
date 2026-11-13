@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-mode window layout files. See layout.h.
 #include "layout.h"
 #include "../app.h"

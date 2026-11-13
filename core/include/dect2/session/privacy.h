@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Privacy pieces of the session store (docs/MODE-EXPERIENCE.md, 2.7): the per-install salt, salted hashing of personal identifiers with a
 // per-mode "Keep real ids" switch, the single "Redact message text" switch, the escaping helpers every writer uses (radio text is
 // attacker controlled) and the owner-only file helpers.

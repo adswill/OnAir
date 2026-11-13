@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Link 11 CLEW (the conventional parallel-tone waveform): message detector and frame-structure reader, and a test generator.
 // The normative document (MIL-STD-188-203-1A) is not public, so this follows the published summaries (Wavecom's Link 11 notes, sigidwiki):
 // a 605 Hz Doppler tone that is never modulated, 14 data tones from 935 Hz spaced 110 Hz and a data / sync tone at 2915 Hz (15 data tones,

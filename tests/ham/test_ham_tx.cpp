@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HamSlotTx with a fake rig: gate, PTT order, audio produced, abort releases PTT, auto-sequence only advances after a real send.
 #include "dect2/ham/ham.h"
 #include <chrono>

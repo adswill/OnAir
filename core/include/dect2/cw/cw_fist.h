@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW test signals made by human "fists": the timing of hand-sent Morse (straight key, bug, paddles by ear) and a baseband renderer with
 // noise, fading (QSB), drift, key clicks, QRM and noise crashes. Used by the adaptive-decoder tests and the benchmark; nothing is transmitted.
 //

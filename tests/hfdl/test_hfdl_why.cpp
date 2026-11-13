@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "why bad" counters of the HFDL receiver: every failed burst is counted under exactly one reason, a clean burst under none.
 #include "dect2/hfdl/hfdl_gen.h"
 #include "dect2/hfdl/hfdl_rx.h"

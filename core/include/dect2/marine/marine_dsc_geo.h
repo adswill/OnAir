@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC positions as tracks per MMSI, and their export to KML 2.2 (Google Earth, DX-Atlas) and GPX 1.1.
 #pragma once
 #include "marine_mmsi.h"

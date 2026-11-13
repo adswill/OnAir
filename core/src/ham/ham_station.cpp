@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham station helpers (4.0): see ham_station.h.
 #include "dect2/ham/ham_station.h"
 #include "dect2/bandplan/bandplan.h"

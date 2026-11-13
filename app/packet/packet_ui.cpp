@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet screens: the stations heard (table and map, the ADS-B map underneath, as for AIS), the log of raw packets, the state lamps.
 #include "app.h"
 #include "winlink/winlink_ui.h"

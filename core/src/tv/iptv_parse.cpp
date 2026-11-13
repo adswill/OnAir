@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV: URLs, M3U playlists, XMLTV guides, HLS playlists. Pure text handling, no network (see dect2/tv/iptv.h).
 #include "dect2/tv/iptv.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C++ wrapper of the Rust RTL-SDR protocol layer (rs/usb.h), for a platform layer that owns the USB access (libusb on a desktop, a file descriptor of an
 // Android UsbDeviceConnection through JNI). Only meaningful when DECT2_RUST_USB is defined. Header only.
 //

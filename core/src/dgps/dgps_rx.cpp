@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DGPS beacons: MSK demodulation at 25 - 200 bit/s with a bit clock that is followed across blocks, and the RTCM SC-104 word, header and message layer (see dgps_rx.h
 // for the sources).
 #include "dect2/dgps/dgps_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_wisun (Wi-SUN FAN / IEEE 802.15.4g SUN FSK frame layers). Written by hand; the Rust test rust/onair/tests/headers.rs checks it
 // against ffi.rs. Flags are 0 / 1 bytes; text is a length plus bytes (no NUL).
 #pragma once

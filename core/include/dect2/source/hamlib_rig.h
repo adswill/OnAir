@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hamlib CAT rig entries the user adds (serial port + model). IQ/audio uses a separate sound-card path when configured.
 #pragma once
 #include "source.h"

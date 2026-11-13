@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Smart CubeSat decoder: see cubesat_smart.h.
 #include "dect2/cubesat/cubesat_smart.h"
 #include "cubesat_blind.h"

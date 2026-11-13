@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax archive: the pure rules behind the autosave and the gallery (file names, the JSON side-car, the disk-budget cleanup,
 // thumbnail scaling, sort and search). No file or UI access here, so it is unit tested (tests/marine/test_marine_wefax_archive.cpp).
 #pragma once

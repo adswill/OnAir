@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A receiver that is a little too slow must lose whole stretches of signal, not scatter tiny gaps over every frame.
 // A producer replays a generated DVB-T2 signal (16K extended, GI 1/4) in real time into a ring; the consumer feeds the receiver and is slowed
 // down to 92% of real time. A frame carries data only if none of its samples were lost, so the test counts frames that arrived intact.

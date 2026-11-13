@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One incident model for sea distress (3.7, docs/SMART-maritime-3.7.md). A DSC distress alert opens an incident for the MMSI that is in distress and joins:
 //  - the last AIS position of that MMSI (and how far it is from the position the DSC call gave: a big gap is flagged),
 //  - the AIS-SART / MOB / EPIRB-AIS devices (MMSI 970 / 972 / 974) heard near that position (or alone, when no DSC call was heard),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ALE link-quality memory (ale_lqa.h): rank the channels of a station by hour of the day from soundings, against a synthetic ionosphere, and compare with
 // "take the strongest of what was heard lately".
 #include "dect2/ale/ale_lqa.h"

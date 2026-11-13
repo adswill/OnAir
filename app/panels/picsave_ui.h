@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Saving pictures to a folder the user chose (Save pictures to: setting), with a clear message of what was saved and where.
 // The rules are in state/picsave.h (tested). Used by the Images window, the weather-fax list and the SSTV list.
 #pragma once

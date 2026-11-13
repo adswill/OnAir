@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time machine (time_machine.h, Engine::setTimeMachine): the rolling IQ memory and the pre/post-trigger save. A numbered sample pattern goes through
 // the ring and the saved file must hold exactly the samples from `pre` seconds before the trigger to `post` seconds after it, contiguous, with the
 // SigMF metadata; the memory budget shortens the window; decimation averages; a retune (discard) forgets; a second trigger during a save is refused;

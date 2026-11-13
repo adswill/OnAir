@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The BLE tracker detector through the engine (setStandard(145)): the synthetic source plays the trackers and the receiver reports through latestRx().
 #include "dect2/engine/engine.h"
 #include "dect2/bletrk/bletrk_live.h"

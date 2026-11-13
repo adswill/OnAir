@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the Sferics mode: complex noise plus sferics (damped oscillations, a few tens of microseconds) at random times in flashes of 1 to 3
 // strokes, optionally with a regular mains impulse train. Nothing is transmitted.
 // SynthConfig (makeSfericsSynth): snrDb is the peak SNR of a strike, cfoHz a carrier offset; modeOpt[0]: 0 storm, 1 mains only, 2 storm and mains, 3 quiet;

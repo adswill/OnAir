@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // eLoran / Loran-C in the engine: the detector of eloran_rx.h behind the engine's interface (configure, offset, feed, telemetry).
 // Engine stdMode 128, active standard 127 (family 126, "eLoran / Loran-C"). Receive only; nothing is transmitted.
 // Loran-C: GRI, chain, master and secondaries with their arrival times. The eLoran data channel (9th pulse, Eurofix) is not decoded: the Reed-Solomon constants and message

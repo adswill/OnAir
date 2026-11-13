@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel plans: the numbers of CB (FCC and CEPT order of 23 - 25, the German 80 and the UK 27/81 extensions), FRS / GMRS, PMR446, the amateur
 // repeater grids, HF voice schedules, lookups, country and position to region.
 #include "dect2/chanvoice/chv_plan.h"

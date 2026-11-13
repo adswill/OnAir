@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers with a deviation other than the standard 4.5 / 4.8 kHz (networks and transmitters differ), in both polarities: one full cycle must
 // arrive for each. Part of the "pager decodes nothing although the bursts are there" investigation (issue 261).
 #include "dect2/pager/pager_gen.h"

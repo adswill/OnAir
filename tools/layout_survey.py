@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Which modes have what in the sidebar layout's lower row and right column (docs/LAYOUT-4.0.md): reads app/ui/mode_table.cpp and
 # app/panels/modeui.cpp, finds each mode's ModeUi and classifies its panels() from the code. Usage: tools/layout_survey.py <repo> out.json
 import re, os, sys, glob, json, collections

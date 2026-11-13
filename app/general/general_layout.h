@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The General receiver screen of 4.0 (docs/GENERAL-4.0.md): the pure logic under it, with no ImGui, so tests/general40 can check it.
 // The layout state (sidebar width and visibility, the spectrum / waterfall split, the drawer, which sidebar sections are open)
 // and its text form in the preferences (snap to the step is general_ui.cpp's own preference, genSnap); the sidebar width a window of a given width can give; the VFO hit test and the drag maths.

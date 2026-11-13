@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus receiver telemetry: RxTelemetry::horus, active standard 157 (family 156, engine standard 158), poll slot 157.
 #pragma once
 #include "dect2/horus/horus_modes.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers for the marine radio-level tests: play the test signal into the receiver the way the engine does and collect what it reports.
 #pragma once
 #include "dect2/marine/marine_gen.h"

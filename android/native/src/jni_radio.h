@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio access for the Android bridge (jni_radio.cpp): USB radios handed over as descriptors, network radios, the pushed sound-card input.
 // jni_onair.cpp asks it for the DeviceInfo of the source kinds it adds (USB, network, sound card).
 #pragma once

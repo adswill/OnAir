@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES HRIT screens: the product list (full disk, mesoscale, CONUS and relayed images, EMWIN text, admin messages) on the right; the
 // selected product in the Products tab: an image that grows as its lines arrive (Rice and plain images; JPEG / GIF once complete) or
 // its text (EMWIN ZIP files unpacked); Save, and Save automatically into <data folder>/goes/. The receiver's state and the constellation.

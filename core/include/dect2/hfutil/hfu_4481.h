@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // STANAG 4481 naval HF broadcast, FSK part: receiver and test generator. From the text of STANAG 4481 Annex C: single-channel RATT with a
 // +-425 Hz shift about the assigned frequency (the space tone the higher, the mark tone on a frequency ending in 75 Hz), and multi-channel
 // RATT on up to 16 sub-carriers at (255 + 170 n) Hz, n = 1 .. 16, each shifted +-42.5 Hz (channels n and n + 8 may be twinned for

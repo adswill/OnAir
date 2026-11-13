@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A compact table of OUIs (the first three octets of a MAC address, IEEE registry) of the access-point and client vendors most often seen in Wi-Fi
 // scans, for the vendor column (best effort: an address that is not in the table shows no vendor).
 #include "dect2/wifi/wifi_proto.h"

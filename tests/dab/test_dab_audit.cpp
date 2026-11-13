@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB / DAB+ audio continuity audit (docs/DAB-AUDIT.md): the generator's clean ensemble goes through a channel model written here, independently of
 // the receiver (noise, single frequency network echoes inside and beyond the guard interval, Rayleigh fading with Doppler, deep fades, impulsive
 // noise, lost USB blocks, an 8-bit RTL-SDR with tuning error, frequency drift and sample clock error) into the real DabReceiver. The audio it puts

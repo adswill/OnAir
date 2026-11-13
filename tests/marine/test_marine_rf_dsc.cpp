@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC through the radio layer: MF/HF (100 bd FSK) and VHF channel 70 (FM, 1200 bd AFSK).
 #include "../data/marine/rf_util.h"
 using namespace mt;

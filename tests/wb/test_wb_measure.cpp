@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: measurements on synthetic recordings: peak finder accuracy, bandwidth, occupied bandwidth, SNR, symbol rate, bursts.
 #include "dect2/wb/wb_gen.h"
 #include "dect2/common/stable_random.h"

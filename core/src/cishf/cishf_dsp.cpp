@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CIS HF decoders and detectors (cishf_dsp.h). Clean-room from the public descriptions listed in docs/CIS-HF-3.9.md; the CIS 36-50 frame layout
 // (44-bit start word with 21 ones, the 70-bit session key sent twice, 3:4 characters, 0x77 end of message) follows the notes in the Rivet decoder
 // (Ian Wraith, GPL-3.0-or-later, CIS3650.java), read as a description: no code taken.

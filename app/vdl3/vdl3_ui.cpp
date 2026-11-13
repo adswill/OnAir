@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 3 screens: the burst log and the counts per burst kind.
 #include "app.h"
 #include "dect2/vdl3/vdl3_tel.h"

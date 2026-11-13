@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // iridium-toolkit .bits output: every line must match iridium-toolkit bitsparser.py's RAW regex (ported to std::regex) and carry the
 // fields as gr-iridium iridium-extractor prints them. The test signal live (fed straight in) and from a recording file.
 #include "dect2/iridium/iridium_bits.h"

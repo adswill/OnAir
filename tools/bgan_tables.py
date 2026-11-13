@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Builds core/src/bgan/bgan_tables_data.inc from the forward-bearer tables published with ETSI TS 102 744-2-1 (the archive
 # ts_1027440201v010101p0.zip: Annex C.1 turbo interleavers *_TCI.TXT, Annex C.2 puncturing / channel interleaving / symbol mapping *_CIPM.TXT).
 # Usage: tools/bgan_tables.py <dir with the unpacked AnnexC1 and AnnexC2 folders> <output .inc>

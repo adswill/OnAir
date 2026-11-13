@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV: the systems (B/G, I, D/K, M, N, and the positive-modulation systems A, C, E, L, L' with AM sound, plus H and K'), their timing and
 // levels, and the colour encodings (PAL, NTSC, SECAM). Shared by the receiver, the test-signal generator and the tests. Every number comes from
 // ITU-R BT.470-6 (Tables 1 to 3, Figs 1 and 2) and ITU-R BT.1700 unless a comment says otherwise. Systems A, C and E were withdrawn from later

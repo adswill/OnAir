@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather satellite pass report card (SatDump dataset logs, SatNOGS observations): per pass the maximum elevation, SNR, % of frames that
 // decoded, lines and gaps, compared with earlier passes at a similar elevation. Kept as CSV. docs/PASS-REPORT-3.9.md.
 #pragma once

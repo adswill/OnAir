@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver against what a real radio and a real path do to the signal: noise down to the threshold, carrier offset, sample clock error,
 // other sample rates, chunks of any size, 8 bit samples at low level, DC offset and IQ imbalance. The generator makes the signal and draws the
 // card the receiver is compared with. Every line printed here is a number that is in the report.

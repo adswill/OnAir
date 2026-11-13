@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The QSO sequencer with WSJT-X style message flows (4.0): a CQ answered with a report straight away, RR73 sent once (no 73 needed) and sent
 // again when the R-report is repeated (logged once), a station that repeats its grid or report keeps the QSO alive past the retry limit,
 // caller priority among several callers of one slot, CQ DX / CQ POTA, JT65 RRR waiting for the 73, calling a station that works someone else,

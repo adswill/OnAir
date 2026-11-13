@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSTV decoder of the HF digital receiver (hfdig_rx.h): gets the 8 kHz upper sideband audio, finds the VIS header (or, when it was missed,
 // the line sync pulses at a known line period), and builds the picture line by line. Modes: Robot 36 and 72, Martin M1 and M2, Scottie
 // S1, S2 and DX, PD50, PD90, PD120 and PD180, Wraase SC2-180. This header, hfdig_sstv.cpp (+ hfdig_sstv_*.cpp) and app/hfdig/hfdig_sstv_ui.cpp

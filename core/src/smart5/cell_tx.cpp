@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmitter from cell ID (see cell_tx.h).
 #include "dect2/smart5/cell_tx.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband receiver on the test generator with real-world faults (tests/common/impair.h): squelch timing per channel, no false openings on noise
 // or on a strong neighbour 8.33 kHz away, audio SNR, tuning error of +-7 kHz, sample clock, 8-bit clipping, overmodulation, two stations
 // on one channel, very short transmissions, bad samples, channel names.

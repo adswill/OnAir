@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 receiver against generated signals: the three bandwidths with short and long interleave, offsets from the dial and a tuning error,
 // noise, fading and an echo, a symbol clock error, drift, a signal that starts late and one that stops, two different lengths of text,
 // noise only (no text), and a block that is not MT63.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // icons.js - turns the vector shapes (shapes.js) into MapLibre sprite images, lazily and cached, plus the colour logic
 // (altitude gradient, theme variants) and the image ids.
 //

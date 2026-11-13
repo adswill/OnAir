@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The container around saved results (`core/include/dect2/results/results_io.h`): the magic `OARS`, the format number, the hash of the saved types' signature, then the
 //! payload. The payload encoding itself is C++ (it walks the program's own structs); here is the header check and the hash.
 

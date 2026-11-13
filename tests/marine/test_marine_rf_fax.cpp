@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather fax through the radio layer: the USB audio front end feeding the fax decoder. A picture of 60 lines at 240 lpm is sent as radio
 // signal and compared with the chart the test source draws.
 #include "../data/marine/rf_util.h"

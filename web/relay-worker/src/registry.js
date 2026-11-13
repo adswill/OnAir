@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The one global Durable Object: which room holds which server id / address, the opt-in public list, ban lists,
 // and the host-link attempt limits. It sees ids, names and addresses only, never listener traffic.
 import { DurableObject } from 'cloudflare:workers';

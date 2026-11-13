@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM station watchdog (see fm_watchdog.h).
 #include "dect2/smart5/fm_watchdog.h"
 #include "dect2/fm/fm_tel.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VITS analyser (3.9, docs/SMART5-tv-3.9.md item 15). Analogue broadcasters put test signals in the vertical interval
 // (ITU-R BT.473 / BT.628 insertion test signals; CCIR lines 17, 18, 330, 331). When the decoder hands over a line, this finds
 // what is on it without being told the line layout:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Custom bandwidth and sample rate in every family of modes (3.4): what the user types is saved per mode (and per radio), comes back from the
 // settings store, becomes the capture plan (rx_width.h) and reaches the engine, which runs the receiver at that rate. The default (nothing saved,
 // or the Custom tick off) leaves each mode's own values exactly as they were. A rate or width outside what a radio lists is not refused here.

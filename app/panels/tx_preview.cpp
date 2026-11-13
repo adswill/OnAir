@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The preview of what step 3 shows before anything is sent: a short piece of the planned signal, made on a worker thread (some generators take a second
 // to start) a moment after the last change of a setting, at the sample rate the radio would run. While a transmission or a test runs, the session's own
 // tap (the IQ really handed to the radio) is shown instead. The preview never opens a microphone, a camera or a radio.

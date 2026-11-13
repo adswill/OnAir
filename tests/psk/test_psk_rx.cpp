@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 receiver against generated signals: four BPSK31 signals across the passband at once (one drifting, one with a clock error),
 // a tuning error, two signals 70 Hz apart, a weak signal in noise, a fast drift and a large clock error, PSK63, QPSK31 and QPSK63,
 // a picked frequency (the focus), the chat log lines, and noise only (no text).

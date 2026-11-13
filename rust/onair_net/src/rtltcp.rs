@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The rtl_tcp protocol (librtlsdr's `rtl_tcp.c`): the 12 byte greeting ("RTL0", tuner type, number of gains, the numbers big endian), the 5 byte commands (one command
 //! byte and a big endian 32-bit parameter), the gain tables of the tuners, and the `host:port` address form shared with the SpyServer and SDR++ clients.
 use crate::{atoi, Span};

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility receivers (families 430 .. 439, 603 .. 606) telemetry, shared by the receiver and the panel. Keep the first members (copied into RxTelemetry).
 #pragma once
 #include <cstdint>

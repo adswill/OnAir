@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Badge art (public/badges/art.js), the page helpers (public/badges/page.js) and the map-entry badge (defs.js parseShowcase).
 import test from "node:test";
 import assert from "node:assert/strict";

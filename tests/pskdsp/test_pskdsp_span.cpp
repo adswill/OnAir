@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator: the channel bandwidth set by hand (2.5 - 200 kHz, #308) cuts one signal out of several close together
 #include "dect2/pskdsp/pskdsp_rx.h"
 #include "dect2/pskdsp/pskdsp_tel.h"

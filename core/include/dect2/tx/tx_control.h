@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Full control over transmitting (3.8, docs/TX-CONTROL-3.8.md): the per-radio TX calibration, the IQ correction of the output stage, the schedule,
 // and the plan of what each radio driver is asked for (frequency, rate, filter, gain stages, amplifier) worked out from a TxTune without touching
 // the radio. Every driver's transmit sink calls its plan function and writes the values with its own library, so the tests check the real mapping

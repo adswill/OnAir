@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // --list-devices / --device / --antenna: picking a radio from the list by index, serial, name part and antenna socket.
 #include "dect2/source/device_pick.h"
 #include <cstdio>

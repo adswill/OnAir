@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Dolby broadcast audio headers, the output layout and the IEC 61937 packer (dolby_audio.h). Written from the standards: ETSI TS 102 366
 // V1.4.1 (AC-3 / E-AC-3, annex E bsi), ETSI TS 103 420 V1.2.1 clause 8.3 (Atmos flag in addbsi), ETSI TS 103 190-2 V1.3.1 annex E
 // (AC-4 DSI), ETSI EN 300 468 V1.20.1 annex D.7 (AC-4 descriptor), IEC 61937-1/-3 burst framing.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crash reports: when the program dies, a short text file (and on Windows a minidump) says where, so a user has something to send.
 #pragma once
 #include <string>

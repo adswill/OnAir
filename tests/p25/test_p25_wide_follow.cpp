@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The whole-span bank in follow-only mode (WideModes::setFollowOnly), as the P25 trunking follower runs it without whole-span decoding: two P25
 // carriers on the air; with an empty list no decoder starts, with one granted channel only that carrier gets one (and locks), and with the mode
 // off the search finds both again.

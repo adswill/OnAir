@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // W1A voiceband modes receiver (families 800 - 802, receive only; see w1a_dsp.h and docs/W1A-3.9.md). One class for the three kinds: the kind says
 // which decoder runs. The channel is mixed to 0 Hz (marine::Front) and brought to the 12 kHz complex stream the decoders read.
 // Simulated signals only: no real recording went through these modes.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Real modulated IQ -> Welch PSD -> measure() -> guess(). With frequency offset, noise and a span that is not centred on the signal.
 #include "dect2/general/sig_guess.h"
 #include <cmath>

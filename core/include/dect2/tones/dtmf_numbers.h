@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMF number assembler (4.0): turns the stream of DTMF keys heard on a channel into dialled numbers and codes. Keys more than gapS apart start a new
 // entry; an entry ending in '#' is a complete code; one starting with '*' is a feature / access code; an entry of 7 or more digits is a phone number;
 // an entry heard again (the same digits within repeatS) is counted, not listed twice (a repeater's courtesy tone or a keypad bounce). Pure code.

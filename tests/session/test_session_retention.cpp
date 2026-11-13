@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Retention (docs/MODE-EXPERIENCE.md, 2.7): audio and IQ files by age and by size, only files the sessions point at and only inside the library
 // folders, starred sessions kept, sidecars with their file, stale links removed, the trash, and the store's own cleanup of sessions.
 #include "dect2/session/retention.h"

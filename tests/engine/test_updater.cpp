@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The updater: versions, SHA-256, choosing a release and its package from GitHub's answer, and the whole path (check, download, check the
 // checksum, prepare, swap) against a fake release made of local files, with a fake portable Linux installation (not on Windows), and the
 // script and result file of the Windows installation step (on every system).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT as a transmit mode: the generator (TxRequest -> samples at the radio's rate) makes a burst, then silence, then the burst again; a receiver decodes it at that rate.
 #include "kait_test_util.h"
 #include "dect2/kait/kait_image.h"

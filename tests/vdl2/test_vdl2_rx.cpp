@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 2 receiver against the test traffic with real-world faults (tests/common/impair.h and the cases below): frequency offset +-5 kHz,
 // sample clock +-50 ppm, low SNR near the decoding threshold, bursts starting in the middle of a buffer, two overlapping bursts on one
 // channel, a strong neighbour 25 kHz away, and noise only. Every frame sent is looked for among the frames decoded (by source,

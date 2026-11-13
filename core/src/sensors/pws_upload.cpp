@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PWS upload: see pws_upload.h.
 #include "dect2/sensors/pws_upload.h"
 #include "../net/tcp_client.h"

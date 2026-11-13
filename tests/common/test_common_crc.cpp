@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Compares every shared CRC in dect2/common/crc.h against the ORIGINAL per-protocol implementations
 // (embedded here as reference lambdas) on >= 10000 random inputs each, plus the catalogue check vectors.
 #include "dect2/common/crc.h"

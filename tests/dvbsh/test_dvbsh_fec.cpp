@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH channel coding: block sizes of all twelve puncturing patterns, the turbo interleaver, noiseless round trips, EFRAME CRCs, the time
 // interleaver (terrestrial and long early-late profiles), the OFDM tables and the TPS, and the turbo decoder's bit error rate on an AWGN
 // channel against the BPSK capacity limit. ONAIR_TEST_LONG=1 measures more codewords and more points.

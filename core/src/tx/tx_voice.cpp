@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog voice for TX: NFM, AM, USB/LSB of a microphone, a file, a 1 kHz tone or silence. Broadcast FM (stereo + RDS) lives in fm_gen.cpp.
 #include "dect2/tx/tx.h"
 #include "dect2/tx/tx_dtmf.h"

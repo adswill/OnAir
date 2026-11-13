@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto for the keyboard modes (Olivia, Contestia, MFSK, THOR, DominoEX, Hell): every set with offset, drift and noise, simulated signals only (makeKbdTx).
 #include "dect2/hfdig/hfdig_kbd.h"
 #include "dect2/hfdig/hfdig_gen.h"

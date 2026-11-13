@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID receiver (rid_rx.h): the BLE and Wi-Fi demodulators side by side, their good packets decoded as Open Drone ID.
 #include "dect2/rid/rid_rx.h"
 #include "dect2/automation/engine.h"

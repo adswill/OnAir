@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR voice: a voice burst carries 3 AMBE+2 (3600x2450) vocoder frames of 72 bits = 60 ms of speech (ETSI TS 102 361-1 clause 9.1 and annex B; the
 // vocoder is TS 102 361-1 / -2 AMBE+2 half rate). The 216 voice bits of a burst (the two 108 bit halves either side of the sync or embedded
 // signalling, joined by dmr::burstVoicePayload) are three consecutive 72 bit frames; each frame is the same 36 dibit AMBE+2 frame as in NXDN and is

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Round-5 smart engines for broadcast radio in the mode screens (docs/SMART5-broadcast-3.9.md items 1-10, docs/SMART5-UI-3.9.md):
 // FM station watchdog, BS.412 multiplex power (measured in the FM receiver), transmitter fingerprint; AM split carriers and
 // modulation health (one click: a 24 s look at the listened channel); DAB ensemble change log and fault-or-reception; HD Radio

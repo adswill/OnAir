@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog FPV video receiver for the engine: IQ in, picture and channel levels out.
 // Analog FPV links (5.8 GHz bands A / B / E / F / R / L, 1.2 GHz) send composite video (PAL or NTSC, 625 or 525 lines) as frequency modulation of a
 // carrier about 17 MHz wide, with one or two sound subcarriers (6.0 / 6.5 MHz) in the composite. The receiver measures every channel of the plans

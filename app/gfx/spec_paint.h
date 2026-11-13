@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The drawing of the spectrum looks inside a plot (after plt::BeginPlot and the axis setup): the plot look, the passband, the trace with
 // its fill and the waterfall picture. Shared by the app (plots.cpp) and the offscreen render harness (tools/spec_render.cpp), so the
 // harness's pictures are the app's. Uses plt and ImGui only (no App).

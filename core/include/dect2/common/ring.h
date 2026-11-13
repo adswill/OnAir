@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Single-producer / single-consumer lock-free ring of complex float samples.
 #pragma once
 #include <atomic>

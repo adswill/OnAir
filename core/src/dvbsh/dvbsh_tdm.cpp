@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH TDM (SH-B): the frame, the signalling field, the constellations, the generator and the receiver. See dvbsh_tdm.h.
 #include "dect2/dvbsh/dvbsh_tdm.h"
 #include "dect2/dvbs/dvbs_s2.h"

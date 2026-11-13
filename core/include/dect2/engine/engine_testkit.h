@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers for the engine tests: let the synthetic source play as fast as the receiver takes samples, and count the signal instead of the wall clock.
 // (A real radio cannot be hurried, so the source normally plays at the radio's speed. The tests that check what the receiver decodes, not that it
 // keeps up in real time, do not need that: the source waits for a slow receiver, so no sample is lost however slow the machine is.)

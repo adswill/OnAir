@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Light consistency check between the hand-written C headers (core/include/dect2/rs/<module>.h) and each crate's `ffi.rs`:
 //! every `onair_*` function declared in a header is defined as `extern "C"` in ffi.rs and vice versa, and every name carries the
 //! module's prefix (`onair_<module>_`; the proto crate also owns `onair_ais_` and `onair_nmea_`).

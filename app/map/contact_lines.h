@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Contact lines on the maps of the QSO-style modes (FT8 and the other HF digital modes, JS8Call): the options (one setting for every map),
 // the "contact lines" button with its menu, picking a station by a click, and drawing the lines of a dect2::ContactGraph as great-circle
 // arcs on the shared map (adsbmap). Call after adsbmap::draw(), inside the map's clip rectangle.

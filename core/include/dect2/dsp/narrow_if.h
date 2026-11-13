@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A narrow channel filter with a carrier follow-up in front of an FM discriminator (4.0 weak-signal path of the FM-based narrowband data modes).
 // An FM discriminator sits at its threshold when the IF noise bandwidth is several times the signal's: the filter cuts it to the signal's own
 // width, and the follow-up (the 50 ms mean of the discriminator is the carrier error) keeps a radio that is some kHz off in the middle of it.

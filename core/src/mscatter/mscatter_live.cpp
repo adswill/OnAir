@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter detector for the engine (see mscatter_live.h).
 #include "dect2/mscatter/mscatter_live.h"
 #include "dect2/satmisc/line_tracker.h"

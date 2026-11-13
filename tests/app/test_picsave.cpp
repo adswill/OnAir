@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Picture saving rules (app/state/picsave.h): names, paths, collisions, error text, delete with undo.
 #include "../../app/state/picsave.h"
 #include <cstdio>

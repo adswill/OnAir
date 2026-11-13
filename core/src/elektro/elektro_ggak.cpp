@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elektro-L GGAK demodulator and test generator (elektro_ggak.h).
 #include "dect2/elektro/elektro_ggak.h"
 #include "dect2/dsp/rrc.h"

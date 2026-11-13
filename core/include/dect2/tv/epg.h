@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The programme guide (EPG) database of the TV recorder, written from ETSI EN 300 468 (SI in DVB systems) and ETSI TS 102 323 (CRIDs).
 //   - EIT sections (table 0x4E/0x4F present/following, 0x50..0x6F schedule; actual and other transport stream) parsed with every descriptor
 //     the guide needs: short and extended event (with the character set prefix of the text), content (genre), parental rating, content identifier

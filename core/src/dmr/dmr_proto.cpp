@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR burst layout and message formats, see dmr_proto.h.
 #include "dect2/dmr/dmr_proto.h"
 #include "dect2/rs/dmr.h"

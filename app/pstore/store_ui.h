@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Store tab of View > Plugins (docs/PLUGIN-MARKETPLACE-3.9.md): browse a signed plugin registry, install, update and remove. Nothing is fetched
 // until the user presses Refresh / Check for updates (or Install, which downloads one file).
 #pragma once

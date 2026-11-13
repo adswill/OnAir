@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Map badges in the app (docs/MAP-BADGES-4.0.md): the Badges window (Server > Badges..., Settings > Network and updates > Map badges),
 // the "Badge earned" toast, and the two hooks the map share (app/map/map_send.cpp) calls. The logic is in core/src/badges/badges_client.cpp.
 #pragma once

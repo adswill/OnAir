@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The station-kind filter of the AIS receiver (AisReceiver::setStationView, the Show choice of the AIS screen): the stations of one kind only.
 // Class A, Class B, base stations, aids to navigation, search and rescue aircraft, and the devices with MMSI 970 / 972 / 974 (AIS-SART, man overboard, EPIRB-AIS).
 //   - the simulated port of ais_gen (class A vessels, a class B, a base station, aids, an aircraft) goes, with a carrier error and noise, into one receiver without a view and one per view, from the same samples:

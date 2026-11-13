@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS receiver: every ACARS channel in the captured band at once (up to 8 carriers decoded at the same time).
 #pragma once
 #include "dect2/engine/mode_tuning.h"

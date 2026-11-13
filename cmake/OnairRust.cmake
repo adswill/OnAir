@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # The Rust code (the workspace rust/): one static library libonair_rs.a (crate rust/onair) holding every converted module. Rust is MANDATORY:
 # the converted modules (ONAIR_RUST_ALL_MODULES below) exist only in Rust, there is no C++ copy to fall back to, so configuring without a
 # usable cargo/rustc (>= 1.70) and the Rust target for this build stops with an error. Nothing is downloaded: the workspace has no external

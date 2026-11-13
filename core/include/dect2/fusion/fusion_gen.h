@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu System Fusion test signal: whole transmissions (header, communication frames, terminator) as bits, and the C4FM modulator.
 // Voice sub-frames are pseudo-random bytes (there is no speech codec here); tests compare them with what the receiver hands the plug-in.
 #pragma once

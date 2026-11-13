@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DMB video service of the DAB test transmitter (see dab_gen.h): the test picture and its H.264 writer, AAC-LC sound from libavcodec,
 // MPEG-4 Systems in an MPEG-2 transport stream (ETSI TS 102 428) and the outer code of TS 102 427 (RS(204,188) and the Forney interleaver).
 #include "dect2/dab/dab_gen.h"

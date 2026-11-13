@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Callsign lookup without the network: callsign prefix -> DXCC entity, continent, CQ and ITU zone, position. The built-in table is written
 // for OnAir from the public ITU prefix allocations (a subset of about 200 of the 340 entities: every country with a regular amateur
 // population); a full country file in the common cty.dat format (BigCTY, as contest loggers use) can be loaded from a file the user has.

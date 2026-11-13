@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Updates in the window: a check when the program starts (every start, one retry on failure), the download in the background, a button in the top bar that tells
 // the state, and a small window with the notes of the new version and the settings. The new version is put in place when the program closes,
 // or at once on request.

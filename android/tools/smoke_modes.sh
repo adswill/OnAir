@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # The all-modes smoke test: on an emulator or phone with a debug APK installed and the test signal as the source, runs every mode of the list for a few
 # seconds and writes one line per mode: did the process stay up, did the decoder report, lock, CPU use. Debug builds only (the run=1 link).
 # Usage: smoke_modes.sh <output file> [seconds per mode] [first index] [last index]

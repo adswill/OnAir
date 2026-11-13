@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Developer build only (cmake -DDECT2_UI_LAYOUT_CHECK=ON; run by tools/ui_layout_check.sh): finds controls and text that overlap each other,
 // run past the edge of their window or are squashed narrower than their label. Dear ImGui's test-engine hooks report every item with its
 // rectangle, and the copy of imgui_draw.cpp that CMake makes for this build reports every piece of text drawn. DECT2_LAYOUT_AT seconds after

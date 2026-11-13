@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 2 receiver telemetry, shared by the receiver and the UI. RxTelemetry::p25p2, family 180, engine standard 182, active standard 181.
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once

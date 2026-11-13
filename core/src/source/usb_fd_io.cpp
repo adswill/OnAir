@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #if defined(__linux__)
 #include "usb_fd_io.h"
 #include <linux/usbdevice_fs.h>

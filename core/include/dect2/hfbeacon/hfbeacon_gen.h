@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals of the HF beacon mode: keyed carriers at known frequencies, levels and times in complex Gaussian noise, with slow fading.
 // A source is a carrier at freqHz (an RF frequency; the generator is "tuned" to centreHz) whose amplitude follows the keying of its kind:
 //  - Letter: the Morse of the marker letter at `unit` seconds per dot, `gapUnits` between repeats

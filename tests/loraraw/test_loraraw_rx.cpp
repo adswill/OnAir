@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa (raw) monitor: the test signal through the receiver (loraraw_gen.h, loraraw_rx.h): the whole schedule on Auto (SF7 - SF12, 125 / 250 / 500 kHz,
 // 4/5 - 4/8, CRC on and off, payload as hex and text, SNR / level / carrier offset), carrier offsets, a channel off the centre, the transmitter's
 // clock error, noise, implicit header, fixed settings, a wrong sync word, noise alone, and the results file.

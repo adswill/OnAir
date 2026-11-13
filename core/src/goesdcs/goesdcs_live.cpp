@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES DCS receiver for the engine (see goesdcs_live.h). Written from the public description of the DCP radio set standards; no code from other decoders.
 //   Front    : fourth-order CIC decimator, the capture down to about 800 kHz (the 400 kHz uplink band)
 //   Scanner  : averaged spectrum, local noise floor, carrier lines that persist

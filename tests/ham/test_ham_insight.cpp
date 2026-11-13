@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham radio insights (docs/SMART5-ham-3.9.md): who hears me, antenna pattern from decodes, busted calls, APRS network health.
 // Simulated decode streams only: random stations around the world, a known antenna pattern, noise and fading on every SNR.
 #include "dect2/insight/aprs_health.h"

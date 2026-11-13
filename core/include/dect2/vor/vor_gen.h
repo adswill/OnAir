@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VOR / ILS test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // The AM envelope of the beacon (ICAO Annex 10 Volume I) on a carrier at the dial frequency (which sits at -tuneOffsetHz in the samples, as

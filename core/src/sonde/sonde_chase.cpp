@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Chase GPS (sonde_chase.h): NMEA from a serial GPS or a file, or gpsd over TCP.
 #include "dect2/sonde/sonde_chase.h"
 #include "dect2/common/thread_name.h"

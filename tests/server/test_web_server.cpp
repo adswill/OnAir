@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web network server on loopback with real sockets: static files (and every path traversal trick refused), the placeholder page and its
 // headers (CSP, no CORS), /web/v1/info, the WebSocket handshake (version, origin, subprotocol), hello / welcome, wrong password (throttled),
 // messages before hello, rate limiting, the admin API (token, kick, policy with the legal notice, invites), busy refusal, keepalive.

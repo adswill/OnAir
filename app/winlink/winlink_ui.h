@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Winlink email panel (winlink_ui.cpp): a view of the APRS / Packet and ARDOP screens.
 #pragma once
 struct App;

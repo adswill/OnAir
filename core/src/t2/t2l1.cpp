@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include <cstdlib>
 #include "dect2/t2/t2l1.h"
 #include "dect2/dsp/ldpc.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto gain v2 against the simulated front end of autogain_sim.h: the old headroom servo (AgSettings::v2 = false) and the new hill climb on the measured
 // objective run the same scenes (ADC clipping, intermodulation from strong off-channel carriers, weak wanted signals, pulsed signals, a barely locked
 // decoder, a stale remembered gain, a unit whose real gain steps are not the table's) and the final in-channel SNR is compared. Also: the engine-thread

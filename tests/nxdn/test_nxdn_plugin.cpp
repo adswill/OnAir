@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NXDN voice through a user-installed "ambe2" codec plug-in (stub library, no codec): generator -> receiver -> plug-in -> PCM tap. A clear voice
 // call: every received voice frame (72 bits) reaches the plug-in as 12 bytes and gives 160 samples. A call with the cipher flag set is reported
 // as encrypted and none of its frames reaches the plug-in. NOT covered: a real codec or a real NXDN recording.

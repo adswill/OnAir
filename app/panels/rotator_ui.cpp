@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Antenna rotator / mount: GS-232, Hamlib rotctld or ASCOM Alpaca mount, calibration offsets, limits, park, satellite pass tracking.
 #include "../app.h"
 #include "../ui/typography.h"

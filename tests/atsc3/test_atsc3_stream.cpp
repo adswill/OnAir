@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The complete receiver on a continuous signal: frames sent back to back with gaps, the bootstrap of each at 6.144 Msamples/s and the rest at
 // the frame's rate, everything converted to the radio's rate, with a carrier frequency offset, noise and an echo. The synchroniser finds the
 // frames on its own, and the receiver delivers a transport stream with all the video and audio frames.

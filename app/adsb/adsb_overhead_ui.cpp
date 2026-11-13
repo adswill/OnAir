@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B overhead log (planefence): the Overhead view, the "now overhead" line, the day's CSV in the data folder. Core: dect2/adsb/adsb_overhead.h.
 #include "adsb_internal.h"
 #include "dect2/adsb/adsb_overhead.h"

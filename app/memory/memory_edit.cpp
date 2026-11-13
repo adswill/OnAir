@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Memory panel's dialogs: edit a memory (also where "Store current" lands, with the name prefilled) and the question when the same
 // frequency and mode are stored already.
 #include "memory_ui.h"

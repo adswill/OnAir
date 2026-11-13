@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox uplink frame layer, from the public "Sigfox Connected Objects: Radio Specifications" (EP-SPECS Rev. 1.3, February 2019, published by
 // Sigfox on build.sigfox.com). Receive side only: nothing here can make a message the network would accept (the authentication code needs the
 // device's secret key, which is never known here and never checked).

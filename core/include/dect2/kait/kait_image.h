@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pictures for KAIT transmit: load a PNG or a binary PPM (P6) file, shrink to fit 1920x1080, write a PPM. Plain C++, no library.
 // Other formats (JPEG, ...) are converted to PPM by the app, which has the system's picture decoder (app/kait/kait_ui.cpp).
 #pragma once

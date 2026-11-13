@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 1 control channel from a simulcast system: two transmitters send the same symbols, one delayed (delay spread), a little weaker and a few Hz
 // away in carrier. Sent as C4FM and as CQPSK (the linear simulcast modulation: pi/4 differential QPSK with the same phase steps per symbol, root raised
 // cosine pulses, so amplitude dips at the transitions that a C4FM signal does not have), received by the FM discriminator receiver. Measured: share of

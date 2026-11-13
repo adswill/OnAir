@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B frame validation and the aircraft table: CRC and address checks, error correction, CPR position decoding, expiry.
 // No signal processing: the receiver hands in sliced bits, tests can hand in published messages.
 #pragma once

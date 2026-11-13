@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Blind analysis of the Smart CubeSat decoder (internal): the narrow-carrier scan of a wide capture and the classifier of one carrier.
 #pragma once
 #include "dect2/common/ring.h"

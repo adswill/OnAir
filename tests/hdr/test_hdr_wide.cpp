@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio Whole span: the sideband-pair finder, two generated hybrid stations and a plain FM-like carrier in one capture, then the engine's bank. Simulated (hdr_gen).
 #include "dect2/hdr/hdr_find.h"
 #include "dect2/hdr/hdr_gen.h"

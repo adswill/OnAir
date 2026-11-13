@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN user-key decode against the lora-packet example frame, Class B beacons against the LoRaWAN 1.0.2 spec's examples, and a beacon through the LoRa receiver bank with noise. Simulated RF only.
 #include "dect2/lorawan/lora_bank.h"
 #include "dect2/lorawan/lorawan_crypto.h"

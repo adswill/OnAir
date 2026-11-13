@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 satellite and space helpers, group E (pure, no GUI). Tests: tests/d40/test_sat_e40.cpp
 //  1. stitchLag        where does the next pass image start inside the previous one: normalised cross-correlation of the row-mean profiles of the overlapping rows.
 //  2. passLinkBudget   slant range, free-space loss, C/N0 and SNR at an elevation, so a pass can be judged (and the minimum decodable elevation found) before it happens.

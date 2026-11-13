@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 screens: message log and aircraft list.
 #include "../adsb/adsb_map.h"
 #include "app.h"

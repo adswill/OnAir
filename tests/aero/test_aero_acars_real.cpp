@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Aero ACARS block layer, known answers.
 // Source of the real block: the comment in JAERO's ParserISU::parse (JAERO/aerol.cpp), a captured ADS-C contract request
 // (label A6) uplinked to HB-JHM. Its block check (93 AB) was verified here against CRC-16/KERMIT over the raw bytes

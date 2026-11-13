@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-mode window layout file names: stable, distinct per mode and sub-mode, safe characters only.
 #include "state/layout.h"
 #include <cstdio>

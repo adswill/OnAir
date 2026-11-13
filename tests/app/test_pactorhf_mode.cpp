@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV wiring: the tunings are registered under their engine standards, the mode rows, family and poll-slot counts, the engine cases,
 // the panel hooks, the help page and the panel say "physical layer only" and that the coding is proprietary and not decoded.
 #include <cstdio>

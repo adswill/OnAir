@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer: a clean-room thin-wire method-of-moments solver (pure functions, no I/O, no global state). docs/ANTENNA.md.
 //  - the electric-field integral equation in mixed-potential form, Galerkin with triangle (rooftop) basis and testing functions on straight
 //    segments, the reduced thin-wire kernel R = sqrt(|r - r'|^2 + a^2); the static 1/R part is integrated in closed form, the rest by Gauss

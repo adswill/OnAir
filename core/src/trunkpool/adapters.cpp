@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Grants from the P25 / DMR control channel model (dect2/p25/trunk.h) into the pool's protocol-neutral GrantEvent.
 #include "dect2/p25/trunk.h"
 #include "dect2/trunkpool/trunkpool.h"

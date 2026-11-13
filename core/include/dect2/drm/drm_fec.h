@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM channel coding (ETSI ES 201 980 clause 7 and Annex D): CRC, energy dispersal, multilevel coding with the punctured convolutional code,
 // bit and cell interleavers, constellations. The encoder is used by the test signal generator, the soft decoder by the receiver.
 #pragma once

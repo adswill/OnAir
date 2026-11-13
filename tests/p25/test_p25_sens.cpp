@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 phase 1 sensitivity: the test signal (carrier to noise in 12.5 kHz) at 7 dB decodes nine blocks in ten, also 3 kHz off tune; the
 // receiver with the +-8.5 kHz channel filter and hard Hamming / Golay decoding got half at 7 dB. Noise alone gives nothing.
 #include "dect2/p25/p25_rx.h"

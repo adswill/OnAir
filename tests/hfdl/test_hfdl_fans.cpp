@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FANS-1/A over HFDL: an ACARS downlink carrying a real CPDLC message (libacars examples, also in test_aero_cpdlc) and one carrying an ADS-C
 // basic report, each sent as an HFDL burst through the receiver with a tuning error and noise. The CPDLC one must be labelled CPDLC with its
 // text decoded, the ADS-C one ADS-C with its position; a damaged CPDLC text (one character changed) must say the CRC failed.

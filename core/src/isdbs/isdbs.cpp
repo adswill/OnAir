@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S: modulation table, TMCC bits and their RS(64,48) code, the fixed parts of the frame. See isdbs.h and docs/ISDBS.md for the sources.
 #include "dect2/isdbs/isdbs.h"
 #include "dect2/common/mathconst.h"

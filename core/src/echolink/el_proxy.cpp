@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink proxy protocol: see el_proxy.h. Layout after SvxLink's echolib EchoLinkProxy.cpp (GPL-2.0-or-later, Tobias Blomberg SM0SVX).
 #include "dect2/echolink/el_proxy.h"
 #include "dect2/winlink/b2msg.h"   // md5

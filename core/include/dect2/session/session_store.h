@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SessionStore: what the decoders talk to (docs/MODE-EXPERIENCE.md, 2.2 and 2.2a).
 //
 //  - Decoders and audio threads call begin / update / end / link. These only put a small item on a bounded queue (8192 items by default) and

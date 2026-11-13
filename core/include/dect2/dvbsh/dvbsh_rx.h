@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH OFDM (SH-A) receiver: blind FFT-size and guard detection from the cyclic prefix, fractional and integer frequency offset,
 // TPS frame synchronisation with the DVB-SH fields, channel estimation from the scattered and continual pilots with phase and timing
 // tracking, the 16-QAM / QPSK demapper (hierarchical HP or LP), the time de-interleaver, the turbo decoder and the EFRAME CRCs.

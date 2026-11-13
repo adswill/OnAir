@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa APRS and MeshCom in the mesh mode.
 // 1. Packet layer: LoRa APRS (prefix "<\xff\x01" + TNC2) and MeshCom 4 frames built as the firmwares build them decode to the exact
 //    calls, positions, messages and objects; malformed, truncated, non-ASCII and random payloads are refused or cleaned, never crash.

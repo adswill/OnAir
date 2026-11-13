@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Rig setup helpers: the model search, the serial-port filter for every platform, baud choices, host:port detection, and (with Hamlib)
 // the real model list.
 #include "dect2/source/hamlib_rig.h"

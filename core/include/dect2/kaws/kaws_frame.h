@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS framing (spec KAWS-SPEC-v0.1 section 5): callsign (base 40, 9 characters, 48 bits), grid (6 characters, 25 bits), text alphabet (6 bits), block packing
 // (8-bit block header + payload + CRC-16), the beacon (short, full), chat message, ack and data frames, the voice superframe.
 //

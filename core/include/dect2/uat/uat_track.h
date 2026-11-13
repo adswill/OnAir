@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 #include "dect2/uat/uat_nexrad.h"
 #include "uat_proto.h"

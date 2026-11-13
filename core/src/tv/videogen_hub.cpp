@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator: several instances, their outputs for the transmitter, and the free-text FFmpeg arguments (see videogen.h).
 #include "dect2/tv/videogen.h"
 #include "dect2/tv/ts_remux.h"

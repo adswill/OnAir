@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver screens: the listening frequency with a step selector, the demodulator (NFM, WFM, AM, USB, LSB, CW), filter width
 // presets, squelch (auto or level), AGC or a fixed gain, de-emphasis, CW pitch, the shared volume, an S-meter and recording to WAV,
 // over the spectrum and the waterfall. On those plots the channel is a marker: a click puts it there (inside the band the radio

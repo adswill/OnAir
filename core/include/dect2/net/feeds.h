@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Data feeds out to other programs: ADS-B (SBS-1 BaseStation and Beast TCP servers), AIS (NMEA over UDP), APRS (APRS-IS igate
 // client and a KISS TCP server), ACARS and VDL2 (acarsdec / dumpvdl2 JSON over UDP). All off until the user turns one on.
 // The decoders hand their results to Feeds::get(); the network work runs on the feeds' own thread. A decoder never waits:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The long form of a test: ONAIR_TEST_LONG=1 (set by the nightly Full CI and on release tags) runs the whole sweep, the default run a
 // shorter one that still checks every assertion (fewer seconds of signal, fewer sweep points). docs/CI-SPEED-3.9.md.
 //   const bool L = testLong();

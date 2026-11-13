@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // USB radios that the platform opened for us and handed over as a file descriptor (Android: UsbManager.openDevice().getFileDescriptor(), no root,
 // no bus scan). The app registers each opened radio here; the drivers list and open them from this registry instead of scanning the USB bus.
 // The descriptor stays owned by the app (UsbDeviceConnection); detach before closing it.

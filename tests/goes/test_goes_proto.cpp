@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES HRIT layers above the demodulator (goes_proto.h): the header records both ways, the test files through CP_PDUs, M_PDUs and
 // VCDUs (and through the CADU coding with byte errors Reed-Solomon must correct) back into products that match byte for byte: the
 // Rice full disk in two segments, the plain mesoscale image, the JPEG, the admin text and the zipped EMWIN text; a lost VCDU marks the

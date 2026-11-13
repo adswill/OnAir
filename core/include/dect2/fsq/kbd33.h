@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 33-tone keyboard modes of the fldigi family: FSQ (Fast Simple QSO) and IFKP (Incremental Frequency Keying Plus).
 //
 // Both send one of 33 tones per symbol, the tones 3 FFT bins of a 4096-point spectrum apart (FSQ at 12 kHz: 8.789 Hz, IFKP at 16 kHz: 11.719 Hz).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW (Morse) skimmer (see cw_rx.h).
 #include "dect2/cw/cw_rx.h"
 #include "dect2/dsp/baseband_filter.h"

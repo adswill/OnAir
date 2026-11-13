@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers mode on a live Airspy, for the C-channel (voice) work: the radio is driven through libairspy (opened at run time,
 // nothing linked), its samples go to the manager, the voice frames to the voice mixer with the user's aeroambe plug-in, and every 10 s a
 // status line says what decodes. Does nothing (and passes) unless DECT2_LIVE_SECONDS is set: this is a user test with a real radio.

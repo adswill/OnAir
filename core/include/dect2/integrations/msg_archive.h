@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Save decoded messages": every decoded message of every mode, written to a folder you choose, one file per day per mode, as JSON Lines (default),
 // JSON (one array per file, valid at all times) or CSV. It is a sink of the Integrations hub (one hook, Engine::setPublisher), so every mode that raises
 // an automation event is covered. Off until the user ticks it and picks a folder. Docs: docs/INTEGRATIONS.md.

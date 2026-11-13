@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 3 bit layer: the burst formats of ICAO Annex 10 Vol III, Part I, 6.4.4 (2nd edition, amendment 81 and later), and the
 // shared D8PSK modulation of 6.4.2 (10 500 symbols/s, Gray-coded phase steps, raised cosine alpha 0.6). Read from the Annex text:
 //   Training: transmitter ramp-up, then 16 synchronisation symbols (3 bits each, D8PSK phase steps like the Mode 2 unique word):

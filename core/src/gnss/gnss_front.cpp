@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Front end of one GNSS signal band (see gnss_front.h).
 #include "dect2/gnss/gnss_front.h"
 #include "dect2/common/window.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TV channel plans: the numbered channels of a country or region for every kind of TV OnAir receives (DVB-T/T2, ATSC 1.0/3.0, ISDB-T/Tb, DTMB, DVB-C,
 // analog). Pure data plus lookup, no UI; the TV modes' "Channel" selector (app/bandplan/tvchan_ui.cpp), the setup wizard (country -> plan) and
 // tests/channels/test_tvplan.cpp use it. Tables and sources: docs/TV-CHANNELS.md. Frequencies in Hz.

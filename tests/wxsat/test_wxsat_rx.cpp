@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // wxsat links end to end on the built-in test signal, with the real impairments: carrier offset, Doppler rate, clock error, noise sweep.
 #include "dect2/wxsat/wxsat_gen.h"
 #include "dect2/wxsat/wxsat_proto.h"

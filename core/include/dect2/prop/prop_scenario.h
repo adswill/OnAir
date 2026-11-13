@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the Tools > Propagation window edits (one scenario, Simple or Advanced), turned into model Params; presets, receiver (SDR) noise
 // figures, input checks, the plain-language verdict, the link-budget table, sweeps and CSV. Pure logic, tested by tests/prop/.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DJI drones (dji_rx.h) with the test signal (dji_gen.h) at 20 Msps: DroneID bursts decode to the serial number and position sent, with a carrier offset,
 // at lower SNR, with the first symbol left out and at another sample rate; the OcuSync-like (10 and 20 MHz) and Lightbridge-like trains are classified by
 // their shape; Wi-Fi-like wideband bursts and noise are not taken for DJI; DroneID bursts that collide with Wi-Fi-like bursts are reported as they are.

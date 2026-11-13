@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio blend alignment meter (see blend_align.h).
 #include "dect2/smart5/blend_align.h"
 #include "dect2/dsp/fftutil.h"

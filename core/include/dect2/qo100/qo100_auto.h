@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 narrowband auto decoder and SSB conversation manager (docs/qo100-auto.md).
 //
 //  - Qo100Tracker follows every signal of the 500 kHz narrowband transponder over time from the averaged spectrum (about 75 Hz bins, a frame every

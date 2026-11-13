@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Software-renderer detection, low-power drawing, the frame-rate floor and frame-time statistics (render_caps.h, docs/PERF-LINUX.md).
 #include "render_caps.h"
 #include "app.h"

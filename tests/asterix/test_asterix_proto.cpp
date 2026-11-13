@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ASTERIX: records assembled byte by byte from the category descriptions (not by the encoder) decode to the expected fields; the encoder and decoder
 // agree on a range of values; blocks of several records, other categories, truncated blocks and records with an item of unknown length are handled.
 #include "dect2/asterix/asterix_proto.h"

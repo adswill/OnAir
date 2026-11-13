@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The map guard (core/include/dect2/net/map_guard.h): no upload while transmitting and for 10 minutes after; nothing whose identity this app
 // transmitted in the last 24 hours.
 #include "dect2/net/map_guard.h"

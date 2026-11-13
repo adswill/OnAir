@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR (GY/T 268.1-2013) LDPC codes of the service data: code words of 9216 bits, rates 1/4, 1/3, 1/2 and 3/4 (5.2.2, Annex D).
 // The code word is the information bits followed by the parity bits: c = (m_0 .. m_k-1, p_0 .. p_9215-k), H c^T = 0.
 #pragma once

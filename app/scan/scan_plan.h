@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The merged Scanner view's pure logic: the memory table rows, which of them a scan covers (all / a group / a range / the starred), the scan list
 // built from them, next-channel choice, dwell, hold, resume delay and priority revisit, hit bookkeeping and the tone text. No ImGui, no engine:
 // tests/engine/test_scan_plan.cpp drives it. The channel-by-channel state machine itself is scanlist::Machine (scan_list.h); this header decides

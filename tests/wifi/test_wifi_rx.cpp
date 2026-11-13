@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi network monitor: the test signal through the receiver (wifi_gen.h, wifi_rx.h): two APs on channel 6, a bad FCS, carrier
 // offsets of +-50 kHz, 12 dB SNR, a sample clock error, another sample rate, and noise alone.
 #include "dect2/wifi/wifi_gen.h"

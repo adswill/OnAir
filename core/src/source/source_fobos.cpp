@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Native driver for the RigExpert Fobos SDR running the "agile" firmware: the radio's own library (libfobos-sdr-agile: fobos_sdr.dll,
 // libfobos_sdr.so) is loaded at run time when it is installed. See native_common.h.
 // The library only sees radios with the agile firmware (USB device release 0x0101; hardware rev. 4 has it from the factory, rev. 2 and 3 after

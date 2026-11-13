@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // plane-alert-db import (round 4 #31): the real header, rows with quoted commas, lower-case hex, bad addresses, columns in another order,
 // one list per category (off at first), matching an ADS-B event through the watchlist, the table index.
 #include "dect2/watchlist/plane_alert.h"

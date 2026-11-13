@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPS navigation message (LNAV) and the orbit, clock and atmosphere models of IS-GPS-200, plus the coordinate and time helpers every
 // system needs. Facts (field layouts, scale factors, algorithms) are from IS-GPS-200 (sections 20.3.3, 20.3.5 and Tables 20-I to 20-IV, 20-XIV).
 #pragma once

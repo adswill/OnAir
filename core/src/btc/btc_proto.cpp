@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic discovery: see btc_proto.h. The sync word generator matrix and the packet unpacking follow libbtbb (GPL-2.0-or-later).
 #include "dect2/btc/btc_proto.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S (BS satellite television) screens: status bar, the analysis row (constellation, Es/N0), the Receiver tab with the TMCC stream table, the
 // tuner (BS channel, stream to decode) and the test signal options. The TV tab, services and the player are the shared ones (the decoded
 // transport stream goes there like DVB-S's).

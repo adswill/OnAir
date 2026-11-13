@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Maidenhead locators (known pairs, every length, the edges and the poles, round trips), the coordinate parser and the great circle
 #include "dect2/geo/maidenhead.h"
 #include <cmath>

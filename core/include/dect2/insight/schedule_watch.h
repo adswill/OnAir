@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility insight (docs/SMART5-hfutil-3.9.md): overdue broadcasts.
 // Learns, per station and frequency, the times of day (UTC) it is decoded (WEFAX charts, RTTY weather, SITOR, STANAG, ALE
 // soundings, HF beacons, time signals). When a learned slot passes without a decode while the receiver was on that

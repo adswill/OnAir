@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital receiver: one upper sideband channel on the HF bands, demodulated once to audio, and three decoders that all listen to the
 // same audio at the same time: RTTY (hfdig_rtty.h), SSTV (hfdig_sstv.h), FreeDV digital voice (hfdig_freedv.h) and FT8 / FT4 / FT2 /
 // WSPR (hfdig_ftx.h).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The exporters (core/src/export): KML / GPX / GeoJSON / CSV / JSON / text / ADIF writers, escaping, coordinate order, time formats, the sinks.
 #include "dect2/common/xmlmini.h"
 #include "dect2/export/exporters.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio capture: a ring for the microphone, a looped file (WAV / MP3 through FFmpeg), a tone, or silence.
 #include "audioin_impl.h"
 #include <algorithm>

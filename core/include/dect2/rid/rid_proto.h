@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID (ASTM F3411-22a, ASD-STAN EN 4709-002 "Open Drone ID"): the 25-byte messages a drone broadcasts openly about itself
 // and its operator, and the two broadcast carriers this mode hears: Bluetooth LE legacy advertising (service data, UUID 0xFFFA, application
 // code 0x0D, one message per packet) and Wi-Fi beacons (vendor specific element, OUI FA:0B:BC type 0x0D, a message pack). Receive side

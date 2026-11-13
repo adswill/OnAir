@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio clock from GNSS (see gnss_clock.h).
 #include "dect2/smart5/gnss_clock.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IFKP tool: write the test signal, or decode an IQ recording.
 //   ifkptool gen <out.cf32> [--rate Hz] [--secs s] [--speed n] [--centre Hz] [--snr dB] [--cfo Hz] [--text "..."]
 //   ifkptool rx <file.cf32> [--rate Hz] [--offset Hz] [--speed n]

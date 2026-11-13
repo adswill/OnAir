@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE, second generation (MIL-STD-188-141 appendix A, the same as FED-STD-1045): the word layer and the call layer.
 //
 // Signal: 8-FSK on upper sideband, 125 baud (8 ms symbols), tones 750 .. 2500 Hz in 250 Hz steps, three bits a tone (Gray coded:

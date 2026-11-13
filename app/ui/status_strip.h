@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure helpers of the receiver status bar (ui2_shell.cpp, statusLine): the frequency digit split and grouping, the CPU level colour and
 // which segments of the flat bar stay on a narrow window. No ImGui here, so tests/app/test_status_strip.cpp covers them.
 #pragma once

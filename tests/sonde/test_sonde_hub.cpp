@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SondeHub upload (dect2/net/sondehub.h): the names SondeHub expects for every sonde type OnAir decodes, the telemetry and listener JSON
 // (field names, units, what is left out, the rules that keep a frame back), the times, gzip (checked with stb_image's own inflate and the
 // CRC-32 check value), the batch interval and duplicates, the answer text, and the upload thread against a MOCK HTTP server on localhost

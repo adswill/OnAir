@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Light and High contrast: the finished draw lists are recoloured (lightness turned over, text kept readable).
 // Split from main.cpp.
 // Called by main() after ImGui::Render() for each frame while View > Light or High contrast is on.

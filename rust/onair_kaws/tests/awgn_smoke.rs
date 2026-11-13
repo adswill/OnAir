@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 use onair_kaws::*;
 use onair_kaws::cplx::C;
 use onair_kaws::rng::Rng;

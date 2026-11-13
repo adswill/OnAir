@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CODAR / HF ocean radar: the band table, the scan plan and the hint text (codar_rx.h).
 #include "dect2/codar/codar_rx.h"
 #include <cmath>

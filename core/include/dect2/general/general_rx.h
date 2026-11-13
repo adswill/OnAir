@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver: listen anywhere in the radio's band with NFM, WFM (mono), AM, USB, LSB or CW.
 //
 // The channel (dial frequency + a channel offset, set by a click on the spectrum) is mixed to 0 Hz, decimated by two per stage

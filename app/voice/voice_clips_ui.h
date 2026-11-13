@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Recent voice clips": the list of WAV clips a voice mode saved, with Play / Stop inside OnAir, star, save as, delete, open folder and
 // automatic retention (core/include/dect2/voice/clip_history.h). One component for every voice mode that saves calls as WAV. docs/VOICE-CLIPS.md.
 #pragma once

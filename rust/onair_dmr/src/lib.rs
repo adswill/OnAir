@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir DMR: the Tier I / II / III air interface frame layer of ETSI TS 102 361-1 / -2 and TS 102 361-4: error control codes (Golay, QR, Hamming, Reed-Solomon,
 //! CRCs, BPTC (196,96), embedded LC, short LC, CACH, rate 3/4 trellis, rate 1), the nine sync patterns and burst layout, slot type and EMB, full link
 //! control, CSBK, data headers and data blocks, message text conversion and the talker alias. The demodulator, sync search, slot tracking, call logic

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T channel coding loop-back: generator -> FFT with ideal timing -> demodulator core -> transport stream packets, noise free and noisy.
 #include "dect2/dsp/fftutil.h"
 #include "dect2/common/stable_random.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A wiring: the tunings are registered under their engine standards, the mode rows, family and poll-slot counts, the engine cases, the panel hooks,
 // the doc page and the numbers table.
 #include <cstdio>

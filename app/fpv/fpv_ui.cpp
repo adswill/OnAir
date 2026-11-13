@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog FPV video screens: the live picture (with snapshot and recording), the channel grid with the scan, and the capture's spectrum.
 // The receiver (FpvReceiver) measures the channels and makes the pictures; the telemetry carries the levels and the numbers. The on-screen display
 // of the flight controller is part of the picture: it is shown, not decoded.

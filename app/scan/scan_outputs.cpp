@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // the Scan tab and the Outputs tab (network tuner, files, UDP)
 #include "../app.h"
 #include "../state/results_export.h"

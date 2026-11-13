@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // iMet, iMet-54, MRZ and iMS-100 through the whole receiver: serial, position, carrier offset, noise. Simulated signals only.
 #include "dect2/sonde/sonde_testkit.h"
 using namespace dect2;

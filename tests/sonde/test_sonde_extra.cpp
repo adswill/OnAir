@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // iMet-1/4, iMet-54, MRZ and iMS-100: frame layouts, FEC, CRC and sync on symbol streams in both polarities, with bit errors, and the iMet AFSK through the channel's tone
 // detector with noise. Simulated signals only.
 #include "dect2/sonde/sonde_bits.h"

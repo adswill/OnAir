@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frequency-hopper analyser: hop rate, dwell, channel count and spacing against a generated hopper (random channel order, FSK inside the dwell, guard time, jitter in the hop clock),
 // with a radio offset, a drifting radio, a noise sweep, and the false reports for noise, a steady carrier and a chirp. Simulated signals only.
 #include "x40_gen3.h"

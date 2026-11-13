@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Interference hunter: see include/dect2/rfi/rfi.h and docs/rfi-hunter.md. Original code, written from the general shape of the problem
 // (spur picking against a running median, regular-grid fitting, rules of thumb for what typical interferers look like).
 #include "dect2/rfi/rfi.h"

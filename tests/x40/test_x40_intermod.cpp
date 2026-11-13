@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Intermodulation finder: a receiver with a cubic nonlinearity makes products of two fading signals; the finder must list them as following the law, must call a real transmitter on
 // the same frequency independent, must say "cannot tell" when the signals stay steady, and must find nothing in noise or with a single signal. Simulated signals only.
 #include "x40_gen3.h"

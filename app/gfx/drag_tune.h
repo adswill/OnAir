@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drag to tune, like SDR++ (Settings > Radio > Drag on spectrum): the pure decisions, tested in tests/app/test_drag_tune.cpp.
 // Tune (the default): a left press on the spectrum or the waterfall tunes there and a held drag keeps tuning live, snapped to the mode's
 // channel step (or a step that suits the zoom); Shift or Ctrl during the drag gives fine steps. Panning: a left drag on the frequency scale

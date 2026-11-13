@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* Reference harness for the differential tests of rust/onair_usb.
  *
  * Links the ORIGINAL librtlsdr (RTL-SDR Blog fork 1.3.6: librtlsdr.c + tuner_*.c) against a FAKE libusb that models the RTL2832U register file,

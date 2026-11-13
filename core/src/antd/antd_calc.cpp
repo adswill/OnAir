@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer: calculators (wavelength, wire lengths, cable loss, SWR / return loss, matching networks, line transforms, EIRP,
 // antenna factor) and the band presets. Public formulas; docs/ANTENNA.md.
 #include "dect2/antd/antd_tools.h"

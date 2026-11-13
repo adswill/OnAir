@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared forward error correction: byte-wise Reed-Solomon over GF(256), the DVB-T2 binary BCH codes and the LDPC parity-check tables, implemented by the Rust crate
 // onair_fec through core/src/fec/fec_proto_rs.cpp. The K = 7 Viterbi decoder is C++ (core/src/fec/fec_proto.cpp, NEON / SSE2 / AVX2 / portable): it is the fastest one;
 // the Rust NEON kernel is opt-in (cmake -DDECT2_RUST_VITERBI=ON). dvbt.cpp, atsc.cpp, dab_fec.cpp and t2fec.cpp call these functions; tests/fec/test_fec_proto_rs.cpp

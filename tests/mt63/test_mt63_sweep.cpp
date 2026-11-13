@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 receiver sweeps over real-world impairments: the tuning error across the whole +-120 Hz of the specification for every width,
 // the symbol clock error, sample rates from 250 kHz to 2 Msps, the signal level (the weakest that still decodes is printed), a signal that
 // is already running when the receiver starts, and a retune in the middle.

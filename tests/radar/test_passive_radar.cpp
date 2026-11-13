@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Passive radar: clutter cancellation depth, range / Doppler accuracy, detection probability and false alarms against the simulator, tracking
 // of a moving target, range ellipses, two-file source.
 #include "../common/tmp_path.h"

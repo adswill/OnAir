@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Runs a command again when it fails, for the network steps of the release (brew, apt, rustup, downloads): retry.sh [-n tries] <command...>
 # A failure that is not the network costs only the extra tries; the last exit status is passed on.
 n=4

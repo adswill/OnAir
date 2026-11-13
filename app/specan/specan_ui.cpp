@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum analyser screens: the sweep controls (range and presets, resolution, gains, averaging), one wide chart with live, peak-hold
 // and averaged traces or a persistence display, the band allocations in a strip above the chart (height from the font), a hover read-out, a marker and a delta marker,
 // the waterfall of the sweeps below, and CSV export of the current sweep.

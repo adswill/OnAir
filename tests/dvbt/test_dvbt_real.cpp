@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T against real-world faults (REAL_WORLD_CHECKLIST.md), applied with tests/common/impair.h, which was written apart from the receiver:
 // a UHF radio off by up to 50 ppm (+-43 kHz at 860 MHz, far more than 20 carriers in 8K and in narrow channels), a sample clock 80 ppm
 // fast, hierarchical transmissions (the receiver gives the high-priority stream), signalling with a reserved LP code rate in a

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL frame version 4: four independent voice slots (TDMA) in the 20 kHz channel of the 16 ksym/s profile. The slot interface for the
 // voice codec (docs/KAAL-SLOTS.md): per 40 ms superframe every slot carries one payload of a fixed size per profile; the receiver hands
 // it out bit-exact or as an erasure. Header only, no PHY internals (those are in kaal_v4.h).

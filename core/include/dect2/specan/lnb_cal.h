@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LNB oscillator calibration from a known beacon, and a slow drift tracker. Pure functions and a small filter: no radio, no threads.
 #pragma once
 

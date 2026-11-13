@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab exports: the signal description JSON shared with Mode Builder (format in docs/SIGNAL-LAB.md), CSV, hex dump, the
 // saved analysis (description + frames + notes) and a small JSON reader for loading it back.
 #include "dect2/signallab/signallab.h"

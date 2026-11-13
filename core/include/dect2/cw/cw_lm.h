@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW language model: a small character trigram and a word list of amateur-radio traffic (callsigns, reports, Q-codes, abbreviations, names,
 // prosigns), written for this project and built in code at the first use. The adaptive decoder (cw_decoder.h) adds its scores to the timing
 // likelihood so that an ambiguous gap or a doubtful dash resolves to the likelier text.

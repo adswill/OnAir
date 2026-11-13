@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT burst receiver (spec: KAIT-SPEC-v0.1), and the progressive picture.
 //
 // Chain: FFT correlation with the up and down sweep -> start of the burst, carrier offset (up/down pair) -> derotate, matched RRC filter -> header slots, pilot based

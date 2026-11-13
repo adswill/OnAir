@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC PSIP beyond the channel table (A/65): MGT, the source_id of the channels, EIT titles, ETT descriptions, the system time. Text is ATSC multiple-string text in plain
 // (compression 0) form: Latin-1 (mode 0) or UTF-16 (mode 0x3F). Huffman coded text (compression 1 and 2, the standard's Annex C tables) is decoded.
 #pragma once

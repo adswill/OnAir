@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF propagation dashboard model (hfbeacon_prop.h).
 #include "dect2/hfbeacon/hfbeacon_prop.h"
 #include <algorithm>

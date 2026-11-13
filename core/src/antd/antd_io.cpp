@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer: files. NEC-2 card decks (the common geometry, ground, source, load, line and frequency cards) both ways, the OnAir
 // pattern file the propagation tool reads (docs/ANTENNA.md), sweep and current tables.
 #include "dect2/antd/antd_tools.h"

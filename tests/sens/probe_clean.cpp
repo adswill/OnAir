@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Clean-signal probe of the sens harness (docs/SENSITIVITY-4.0-C1.md). For every mode of tools/sens: is the generator's "clean" signal clean?
 // A signal with noise baked in makes every sweep SNR wrong (the signal power the sweep refers to includes that noise: aero, NAVTEX were 5 to 9 dB off).
 // Usage: probe_clean [modeRegex]. Per mode: snrdep = power of (clean at snrDb 12 minus clean at 120) against the signal, about -290 dB when the generator

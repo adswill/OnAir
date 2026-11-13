@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DRM broadcast schedule reader (drm_schedule.h): the page's JSON and medium wave table, times past midnight, day lists and ranges,
 // frequency texts with dates in them, what is on air at a given UTC time, the next start, and pages it cannot read.
 // The page below is a made-up one in the layout of www.drm.org's schedule page (no real schedule data is kept in the repository).

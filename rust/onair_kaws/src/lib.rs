@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir KAWS: the owner's HF weak-signal digital mode (2.4 kHz, UTC slotted; chat, beacon, very low rate voice). Spec: KAWS-SPEC-v0.1.
 //!
 //! This crate holds the signal processing: the cyclic-shift chirp modem (profiles P0-P4), the coherent OFDM modem (P5-P7), the woven-lattice preamble and

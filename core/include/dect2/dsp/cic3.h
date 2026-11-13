@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Three-stage CIC decimator core for complex samples, exact for as long as it runs: fixed point with wrapping 64-bit integrators (the
 // two's-complement wrap cancels in the combs). The double-precision integrators this replaces grow without bound (the third like N^2.5 on
 // noise) and lose their precision: at 30 Msps and a decimation of 300 the output was below the error after about a minute, which looked like

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General / Auto (dect2/engine/general_auto.h): the label hysteresis, the Decode / return-to-General rule, Auto-decode, ignore, the labels that
 // stay when the view moves away, and a full run: a wideband capture with several signals off the centre goes through the real identifier
 // (Capture::startAll) and into the state machine.

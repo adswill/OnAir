@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "backup_ui.h"
 #include "../i18n/i18n.h"
 #include "../ui/scale.h"

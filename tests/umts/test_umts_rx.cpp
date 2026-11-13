@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The UMTS mode end to end on the test signal: the receiver thread finds both cells and the mode is registered.
 #include "dect2/umts/umts_rx.h"
 #include "dect2/umts/umts_cell.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! PSI / SI section parsers: PAT, PMT (ISO/IEC 13818-1 section 2.4.4), SDT and NIT (ETSI EN 300 468 sections 5.2.3 and 5.2.1), the ATSC terrestrial /
 //! cable virtual channel table (A/65 section 6.3) and the TDT (EN 300 468 section 5.2.5). Every parser takes the whole section (header and CRC included,
 //! the CRC already checked by the caller) and writes plain records; text fields are `Span`s into the section. Reads past the end give 0.

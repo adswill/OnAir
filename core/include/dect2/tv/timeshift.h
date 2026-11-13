@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Timeshift: a rolling transport-stream buffer on disk, with a PCR based time map so playback can pause, jump back and forward and return to live.
 // The packets are written to segment files (ts_<n>.seg in the timeshift folder); when the buffer holds more than the configured time (default 30
 // minutes) or bytes, the oldest segment is deleted. Packets are numbered from 0 for ever, like TsRing, so a position stays valid while it is in the

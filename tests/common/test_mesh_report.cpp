@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh session report (mesh_report.h): the summary lines, the nodes most heard first with their SNR range, hops, battery, position,
 // and the packets that did not decrypt.
 #include "dect2/mesh/mesh_report.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde flight track: see sonde_flight.h.
 #include "dect2/sonde/sonde_flight.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 baseband packet header (A/322 5.2.2): the worked example of the standard, round trips, the counter extension, and scrambling.
 #include "dect2/atsc3/atsc3_bb.h"
 #include <cstdio>

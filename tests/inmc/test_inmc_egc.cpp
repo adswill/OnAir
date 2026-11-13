@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C maritime messages: what a SafetyNET / FleetNET message is about (NAVAREA / METAREA, kind, warning number) and the reassembly of
 // messages under real-world impairments: packets out of order, a lost packet healed by the next broadcast, a repeat, a message number that
 // is reused by another message, a corrupted packet, ITA2 text.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Demodulation chains of the Smart CubeSat decoder: see cubesat_chain.h.
 // The FSK / AFSK slicers and the HDLC layer are the ones of the APRS and CubeSat receivers (packet_demod.h, packet_ax25.h); the AX100 / CCSDS
 // framings are cubesat_proto.h; the AO-40 FEC is cubesat_ao40.h.

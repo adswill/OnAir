@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Earth-space links: look angles and slant range (WGS 84 station, satellite given by latitude / longitude / altitude, e.g. a GEO slot),
 // the range rate and Doppler of a circular-orbit satellite at a given elevation, and the link budget with the atmosphere of ITU-R
 // P.618-14 (rain for p % of the year, scintillation, the section 2.5 sum), P.676-13 Annex 1 slant-path gases and the sky noise of

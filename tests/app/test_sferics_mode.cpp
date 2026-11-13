@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sferics wiring: the tuning, the mode row, family and poll-slot counts, the engine cases, the panel hook and the honest doc page.
 #include <cstdio>
 #include <cstdlib>

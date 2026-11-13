@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Out-landing alert (3.9, docs/SMART5-avia-3.9.md) for FLARM, OGN and ADS-L traffic: an aircraft that was flying and is now standing still
 // on the ground, away from every known airfield, is reported once as a "possible out-landing" with its position. Gliders land in fields
 // as a normal part of cross-country flying; the crew then needs a retrieve, and a landing that is not one (a crash) looks the same at

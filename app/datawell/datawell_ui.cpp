@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell Waverider buoy HF link screens: the FSK carrier (spectrum, width, tone shift, symbol clock); for the 2FSK HXV format (DWR-MkIII, DWR-G, WR-SG)
 // the decoded displacements, sea state words (wave height and period, temperatures, position) and the directional spectrum, from the Datawell Waverider
 // Reference Manual; for the 4FSK HVA format only measurements (its over-the-air coding is not public). Receive only.

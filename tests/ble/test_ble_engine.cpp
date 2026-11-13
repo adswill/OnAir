@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE through the engine (setStandard(53)): the synthetic source plays the test schedule, the receiver reports through latestRx().
 // No sound.
 #include "dect2/ble/ble_rx.h"

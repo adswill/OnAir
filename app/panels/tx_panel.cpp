@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transmit panel, in the receiver's own style: a top bar with the run button and the big frequency digits (the same widget as the receiver's), then three
 // panes: the signal list, the Basic block (state, radio, level, what to send, with Advanced folded below it) and the preview. A narrow window (or the pop-out
 // window) stacks them in one scrolling column. Sending is two deliberate steps: ARM, then TRANSMIT (a test or an IQ file needs no arming); a big STOP is always

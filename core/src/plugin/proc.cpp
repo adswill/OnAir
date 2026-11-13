@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The out-of-process runner. A helper executable (onair-plugin-host) loads the library; the app sends it IQ, events, settings and ticks over a pipe and
 // reads results back. Messages are [u32 length][u8 type][body] (results.h, Wire). The helper acknowledges every call; a call that is not acknowledged
 // within the watchdog limit gets the helper killed (SIGKILL), and a crash of the plugin only ends the helper. Nothing but plain data crosses the pipe.

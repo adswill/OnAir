@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa satellite presets (see lorasat_presets.h). Read the warning there: unverified, from public documentation and community lists.
 #include "dect2/lorasat/lorasat_presets.h"
 #include <algorithm>

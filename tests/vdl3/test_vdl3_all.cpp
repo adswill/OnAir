@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 3: the codes (Golay (24,12) from the G matrix of Annex 10, Reed-Solomon (72,62)), the training sequences (S1* and S2* are S1 and
 // S2 with every phase change turned by 180 degrees, as the Annex notes), the burst bits of every burst kind, and the receiver on the test
 // signal: sample rates, carrier offsets, drift, sample rate offset, the channel off the centre, noise, an adjacent channel station, and noise

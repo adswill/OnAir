@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hytera Basic / Enhanced Privacy: known-answer vectors computed with the DSD-FME algorithm (ISC, reference harness reproduced from
 // dsd_mbe.c / crypt-rc4.c), plus synthetic encrypt-then-decrypt of 49-bit frames through the key store and Decryptor.
 // Synthetic only: no live Hytera recording was available, so this proves the implementation matches DSD-FME, not a real radio.

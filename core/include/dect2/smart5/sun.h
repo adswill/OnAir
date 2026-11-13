@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Low-precision Sun position for the smart5 engines (sun outage, drift scan, terminator). The USNO / Astronomical Almanac
 // approximation (mean anomaly g, mean longitude q, ecliptic longitude L = q + 1.915 sin g + 0.020 sin 2g), good to about 0.01 deg
 // between 1950 and 2050: enough for beams of 0.3 deg or wider and for sunrise times to a few seconds.

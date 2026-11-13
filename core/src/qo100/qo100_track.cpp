@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 narrowband: signal tracker, SSB conversation manager and callsign finder (qo100_auto.h).
 #include "dect2/qo100/qo100_auto.h"
 #include "dect2/qo100/qo100_dsp.h"

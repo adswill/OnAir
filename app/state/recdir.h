@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The one recordings folder (docs/RECORDINGS-FOLDER.md). The user may choose it in Settings (pref "recordingsDir"); the default
 // is <dataDir>/recordings. The pure half (recdir::resolve) needs no GUI, so tests link it; app code calls recordingsDir().
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa APRS, MeshCom and LoRaWAN packet layers on top of the Rust crate rust/onair_mesh: the decoders of mesh_proto.h;
 // mesh_proto_aprs.cpp and mesh_proto_lorawan.cpp keep the settings tables and packet builders. The APRS information field itself
 // is parsed by aprs::parse here.

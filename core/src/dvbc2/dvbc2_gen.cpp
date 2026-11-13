@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 test signal generator (EN 302 769 clauses 5 - 10). See dvbc2_gen.h.
 #include "dect2/dvbc2/dvbc2_gen.h"
 #include "dect2/t2/t2interleave.h"

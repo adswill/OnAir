@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) screens: the node table, telemetry table, packet log and the APRS station table.
 // Split from mesh_ui.cpp; the shared state is declared in mesh_internal.h.
 #include "dect2/common/time_source.h"

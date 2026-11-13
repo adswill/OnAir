@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The DRM audio super frame (ES 201 980 clause 5.4): the number of audio frames of a super frame, the frame border header, and the split of a logical frame
 //! into audio frames and their CRC bytes (higher protected part first, lower protected part after it).
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver: the glue between the radio side (atv_front), the picture side (atv_video), the sound and the outside world.
 //
 //   input -> DC removal -> [searching: spectrum -> vision carrier + sound carrier]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fleet Broadcast test signal (simulated, see fbr_gen.h).
 #include "dect2/fbr/fbr_gen.h"
 #include "dect2/fbr/fbr_rx.h"

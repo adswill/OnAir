@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Neural voice noise remover inside the shared audio cleanup chain (audio_cleanup.h, every mode's sound goes through it): off = what the chain
 // did before (no change at all), on = the noise between speech bursts goes down and the speech stays, at every rate that divides 48 kHz, mono and
 // stereo, any chunking, strength 0 passes the dry sound, switching on and off does not blow up, unsupported rates pass through.

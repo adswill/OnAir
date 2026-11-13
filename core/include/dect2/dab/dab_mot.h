@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MOT (Multimedia Object Transfer, ETSI EN 301 234) object reassembly, shared by DAB (X-PAD and packet mode data groups) and DRM (packet mode data units):
 // MSC data groups of type 3 (header), 4 (body) and 6 (directory) -> segments -> objects, in header mode and in directory mode. The parameters of the
 // header extension are parsed here, including the slide show ones of ETSI TS 101 499 (category / slide id, category title, click-through URL,

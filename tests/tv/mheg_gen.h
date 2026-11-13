@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Synthetic MHEG-5 test material (stage 2 of docs/MHEG-REDBUTTON.md). NOT a broadcast: no real UK stream or BBC application is used or copied.
 // Builds a small interactive application written from the ASN.1 module of ISO/IEC 13522-5 (BER, UK profile style): an Application "a" that starts
 // Scene "s1"; the scene shows a Rectangle, a Text, a Bitmap (PNG file of the carousel), an Integer variable "presses" and Links that react to keys:

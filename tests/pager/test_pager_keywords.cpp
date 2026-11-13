@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pager keyword alerts (app/pager/pager_keywords.h): plain and regular-expression keywords, case, the capcode name, comments, bad lines, limits.
 #include "../../app/pager/pager_keywords.h"
 #include "../common/test_util.h"

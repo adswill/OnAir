@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The vector Viterbi decoder (fecp::viterbiRange: NEON, SSE2 or AVX2) against a plain scalar copy of the same trellis: the same decided bits and
 // the same final path metric on coded data with noise, punctured (zero) soft values, pure noise and full-scale values, at chunk sizes the receivers use.
 #include "dect2/fec/fec_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Carrier detector on a real capture, search by search: what it makes of a band (for the C-channel pool, where neighbouring carriers sit
 // 8 to 12 kHz apart). Does nothing (and passes) without DECT2_DETECT_CAPTURE (cf32, DECT2_DETECT_RATE default 10 Msps, DECT2_DETECT_CENTER
 // MHz, DECT2_DETECT_LO / HI MHz: the part of the band to print).

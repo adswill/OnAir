@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB as the recordings of issues #61 and #62 show it: single carrier transmitters (C=1, PN595 with a fixed phase, 4QAM rate 0.8,
 // interleaver mode 2) received at 10 Msps through a channel with an echo 10 us late and 3 dB down, 310 Hz off, the clock 0.5 ppm off.
 // The recordings themselves do not decode: the radio (a network USRP) left out most of the signal, in runs of 1 to 75 ms, and no stretch

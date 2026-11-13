@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto gain in the app (docs/AUTOGAIN.md): the "Auto gain" control on the gain row (Off / Auto / Optimise once / Safe start), the live meter
 // strip (ADC headroom bar with a clip lamp, noise floor, plain-language warnings), the advanced popup (targets, limits, stages, metric, history
 // graph, log, remembered gains, the radio's gain chain), and the glue that drives dect2::ag::AutoGainController (core/src/source/autogain.cpp)

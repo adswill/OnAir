@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Finding and calling the user's DRA+ add-on (cdr_dra.h). The same search as the mbelib and HDC loaders (source/native_common.h).
 #include "dect2/cdr/cdr_dra.h"
 #include "../source/native_common.h"

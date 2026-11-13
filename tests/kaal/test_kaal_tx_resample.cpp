@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAAL transmitter's resampler at output rates other than 48 kHz: when the fractional position rounded up to the next input sample, the
 // kernel read one sample past the end of its buffer (ASan container-overflow under fuzz_engine_modes, in the test-signal generator). Every
 // rate below is run for a few seconds of speech in odd-sized chunks; each must give the expected number of samples. The overflow itself

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General / Auto: the state machine behind "tune around and OnAir finds the signal". A background scan (sigid::Capture::startAll, every few seconds,
 // on the identifier's own thread) hands in the signals it found; this class turns them into labels that do not flicker (a label shows after it was
 // seen twice, or at once when the identifier is very sure, and goes after several misses), keeps the signals it saw outside the current view for a

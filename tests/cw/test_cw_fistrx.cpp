@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The CW skimmer's timing decoder: the adaptive one (cw::FistDecoder) is the default and must read at least as well as the 0.2.7 timing
 // on every case of docs/SENSITIVITY-3.9-E.md section 3, and better on hand keying. Through the whole receiver (CwReceiver) on generated
 // signals (simulated only): steady keying near the decoding limit, hand keying, sloppy keying, Farnsworth spacing, the first character

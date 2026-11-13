@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeLbjSynth(): an endless loop of LBJ bursts (576-bit preamble, POCSAG 1200 bit/s, FM with about 4.2 kHz deviation) with fake train data, half a

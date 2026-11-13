@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dvbstool: DVB-S, DVB-S2 and DVB-S2X test signals and offline reception.
 //
 //   dvbstool gen out.cs8 [--secs 10] [--rate 10] [--std s|s2] [--mod qpsk|8psk|16apsk|32apsk] [--fec 2/3] [--rs 5] [--roll 0.35] [--short] [--pilots]

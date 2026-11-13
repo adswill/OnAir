@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio-control and mesh link monitor; see rc_rx.h and docs/MESH-RC-3.8.md.
 #include "dect2/rclink/rc_rx.h"
 #include "dect2/rclink/rc_fsk.h"

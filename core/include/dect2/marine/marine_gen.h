@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine test signal: NAVTEX, DSC (MF/HF and VHF channel 70) or weather fax, as complex baseband at any rate. Nothing is transmitted.
 //
 // The wanted channel sits at -tuneOffsetHz (20 kHz) from 0 Hz, the carrier / dial frequency at that place; the receiver tunes the

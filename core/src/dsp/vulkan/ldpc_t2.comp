@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #version 450
 // DVB-T2 / DVB-S2 LDPC (the 360-row quasi-cyclic codes of LdpcCode): layered normalised min-sum, one workgroup of 360 invocations per FEC
 // block, invocation m owns check m of every layer. A line-by-line port of the Metal kernel in gpu_ldpc.mm (the same operations in the same

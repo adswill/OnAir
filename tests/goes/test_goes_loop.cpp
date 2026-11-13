@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Full-disk loops (round 4 #24): the GIF encoder against its own reader on frames that fill the 12-bit table many times (noise, gradients,
 // flat), sizes not a multiple of anything, one frame, the GIF89a header and the endless-loop block; the product key; a loop from PNG files.
 #include "dect2/image/gif_loop.h"

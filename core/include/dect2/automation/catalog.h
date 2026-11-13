@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The events the receivers hand to the automations, with their fields: one table that the editor's drop-downs, the sample events of the
 // Test button and docs/automations.md are made from.
 #pragma once

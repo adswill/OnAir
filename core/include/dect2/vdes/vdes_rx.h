@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDES receiver (ITU-R M.2092): ASM on channels 2027 / 2028 (161.950 / 162.000 MHz, 25 kHz either side of AIS 1, GMSK 9.6 kbit/s, HDLC + CRC-16 as AIS; decoded through the AIS
 // physical layer, ais_phy.h), and VDE-TER detection on the 100 kHz channels at 157.2 and 161.8 MHz (four 25 kHz sub-channels each): bursts are found
 // by a power detector per sub-channel, their bandwidth (25 / 50 / 100 kHz) is the number of sub-channels occupied, and the modulation is classified

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JPEG 2000 decoder (j2k.h): codestream syntax (Annex A), packets and tag trees (Annex B), the MQ coder and the bit-plane coding passes
 // (Annexes C and D), dequantisation (E) and the inverse wavelet transforms (F), DC level shift (G).
 #include "dect2/image/j2k.h"

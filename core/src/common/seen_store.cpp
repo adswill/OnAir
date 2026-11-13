@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Heard over days and years: see seen_store.h.
 #include "dect2/common/seen_store.h"
 #include <algorithm>

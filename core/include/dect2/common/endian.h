@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fixed-width integer packing helpers: big-endian (network order) and little-endian writers and readers,
 // for byte buffers and for std::vector<uint8_t>. Replaces the dozens of per-file put16/put32/be32/le32 copies.
 // "put" appends to a vector, "store" writes through a pointer, "load" reads from a pointer; Be = most

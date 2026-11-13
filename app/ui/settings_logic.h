@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Settings window's data and rules, with no ImGui and no App, so they are unit-tested (tests/app/test_settings.cpp).
 // One table of Info rows: the category, the label, the search words, the kind, the default and the limits. The window binds each
 // row to the field that holds the value (settings_window.cpp); a row without a binding is not shown, so there is no dead toggle.

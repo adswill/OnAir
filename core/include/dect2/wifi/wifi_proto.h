@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi (IEEE 802.11) pieces of the network monitor: 2.4 GHz channels, the DSSS PHY's scrambler, PLCP header and CRCs, and the
 // management frames access points announce themselves with (beacons, probe responses and, on 6 GHz, FILS discovery). Built from IEEE 802.11-2020
 // clause 15 (DSSS) and 9.3.3 / 9.4.2 (management frames and elements); the capability and operation elements are in wifi_elems.h, the channel plans

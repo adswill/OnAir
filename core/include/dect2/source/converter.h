@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frequency converter (up-converter or LNB) in front of the radio. The app shows and takes the frequency at the antenna (the RF); the
 // radio is tuned to what comes out of the converter (the IF). This is the one place the two are converted, in both directions.
 //   Add     IF = RF + LO       up-converter (Ham-it-up, SpyVerter): HF at the antenna, the radio tunes LO above it

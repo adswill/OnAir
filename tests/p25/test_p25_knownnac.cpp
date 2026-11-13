@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 frame header with the site's NAC known: how many bit errors it survives, against the BCH decoder, and how often noise is taken for a frame. Simulated bits.
 #include <vector>
 #include "dect2/p25/p25_proto.h"

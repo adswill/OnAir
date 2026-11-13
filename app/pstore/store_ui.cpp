@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Store tab of View > Plugins: see store_ui.h. The network work (refresh, the plugin's page, the download and install) runs on one background
 // thread at a time; this file only draws and starts tasks. The core is core/src/pstore.
 #include "store_ui.h"

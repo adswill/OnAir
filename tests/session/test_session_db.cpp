@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The session database (docs/MODE-EXPERIENCE.md, 2.2): upsert without duplicates, links, notes edited in place, full-text search, paging and
 // sorting, the per-mode quota, the size cap, age limits, crash recovery of orphans, a damaged file moved aside, owner-only permissions.
 // (The kill-in-the-middle-of-a-write test is test_session_crash.cpp.)

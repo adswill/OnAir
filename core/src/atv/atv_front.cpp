@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver, radio side. See atv_front.h.
 #include "atv_front.h"
 #include "atv_dsp.h"

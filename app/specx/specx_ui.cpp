@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum explorer screens: a slim control strip (frequency as text, span, RBW and averaging, peak hold, auto range, gain, sample
 // rate, LNB / converter offset, named point and range bookmarks, help), a band-plan strip, a big spectrum over a waterfall that answer the mouse (crosshair, markers, centre,
 // zoom, pan, region), the region's measurements (with a hand-over to DVB-S/S2), and a sweep across a range that stitches a panorama

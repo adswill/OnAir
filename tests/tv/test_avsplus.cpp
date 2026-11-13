@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AVS+ add-on plumbing (core/src/tv/avsplus_dec.cpp). No AVS+ stream and no AVS+ decoder exist here, so what is checked is everything around the
 // decoder:
 //   - the loader: a folder without libraries, with broken files, with a FFmpeg that has no such decoder: all fail with a plain message

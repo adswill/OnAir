@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // mapui.test.js - ham contacts, clustering, search/filter and consent rules (pure modules).
 import test from "node:test";
 import assert from "node:assert/strict";

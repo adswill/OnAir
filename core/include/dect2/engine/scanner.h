@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel scanner: steps through a frequency range, rejects empty channels from the spectrum, then tries to lock a
 // DVB-T2 signal (P1 -> L1) and optionally reads the service list.
 #pragma once

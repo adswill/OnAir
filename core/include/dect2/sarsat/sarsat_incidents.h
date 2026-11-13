@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cospas-Sarsat 406 MHz beacon incidents (4.0): groups the decoded bursts by the beacon's ID and says what each one is. Pure code on sarsat::Beacon.
 //  - burst count, first and last time, and the interval between bursts (a real beacon repeats about every 50 s with a random spread of +-5 s;
 //    an interval much shorter or exactly regular is not a beacon, it is a decoder echo or a test transmitter),

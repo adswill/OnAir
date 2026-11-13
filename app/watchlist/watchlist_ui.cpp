@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Watchlists window (View > Watchlists): lists of aircraft, ships, APRS call signs, frequencies and words, and how to be told when one is heard
 // (desktop notification, sound, ntfy, Telegram bot, webhook), with a rate limit and quiet hours. The matching is in core/src/watchlist; this file is
 // the window, the saved file and the sink that shows the alerts and sends the web requests. Tokens are written to the file only, never to a log.

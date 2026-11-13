@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SDR transmit path of the ham modes: HamSlotTx audio (48 kHz mono) to single-sideband IQ at the radio's rate, into a TxSink of a radio that
 // transmits (HackRF, LimeSDR, PlutoSDR, USRP, bladeRF). The chain: complex band-pass (300 .. 2900 Hz, the upper sideband; 361 taps, about 70 dB
 // opposite-sideband rejection) -> drive -> ALC (peak hold below the power limit, instant attack, 10 dB/s release) -> cubic B-spline

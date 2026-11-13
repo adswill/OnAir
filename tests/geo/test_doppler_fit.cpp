@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Doppler orbit refinement: a Doppler curve from a perturbed orbit (plus a receiver offset and noise) is fitted from the unperturbed elements;
 // the perturbation must be recovered (the predicted Doppler matches, the timing error shrinks), outliers must not matter, and the peak tracker
 // must follow a synthetic carrier.

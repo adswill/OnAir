@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM data services (ETSI ES 201 980 clauses 6.4.3.6 and 6.6): the application information of the SDC names the application of each data service;
 // the packet mode applications that are decoded here carry MOT objects (ETSI EN 301 234) in MSC data groups: the MOT slide show (user application 0x002,
 // TS 101 499), the MOT broadcast website (0x003, TS 101 498), and EPG (0x007, TS 102 371) which is listed; TPEG (0x004, TS 102 818) is identified and

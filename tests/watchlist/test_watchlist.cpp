@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Watchlists: matching of every list kind, push request building (and that tokens stay out of the history), rate limit, repeat cooldown,
 // quiet hours, the JSON file, the engine hook.
 #include "dect2/automation/engine.h"

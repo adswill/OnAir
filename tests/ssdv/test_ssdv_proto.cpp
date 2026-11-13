@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV packets: the encoder / decoder of fsphil/ssdv through the C++ face (ssdv_proto.h): a test picture cut into packets, the CRC and Reed-Solomon
 // check (up to 16 corrupted bytes are corrected, more are refused), a lost packet, duplicates and packets out of order, a packet without FEC.
 #include "dect2/ssdv/ssdv_proto.h"

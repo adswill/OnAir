@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TD-SCDMA: the code tables (sizes, the complex rules, midamble shifts), then the test transmitter into the search: one to three cells,
 // every code group tried once over the cases, carrier offsets, noise, sample clock error, a capture starting anywhere in the sub-frame, the
 // two SYNC-DL phase quadruples. Checks the SYNC-DL code, the initial cell parameter (from the midamble and the quadruples) and the frame

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT through the engine (setStandard(66)): the synthetic source plays the MetOp test signal, the receiver decodes lines and
 // reports through latestRx(). No sound.
 #include "dect2/hrpt/hrpt_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16: fonts and recognition, the generator through the receiver (speeds, spacings, both sidebands, tuning error, clock error, noise), the
 // transmitter, and the CP16+ reference recordings (MIT, tests/cp16/data). Simulated signals only, apart from the CP16+ files (which are themselves
 // made by the CP16+ software, not received off the air).

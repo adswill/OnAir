@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound-card input for narrowband IF and audio-frequency signals (issue #137): a receiver's 12 kHz IF, SSB audio, an AF tap.
 // The sound card gives real samples; decoders want complex IQ with the signal where the dial says. audioIfProcess() does the steps in order:
 // gain, DC removal, channel choice, real -> analytic (Hilbert), shift the IF down to 0 Hz, optional sideband inversion.

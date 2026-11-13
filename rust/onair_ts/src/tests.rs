@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests that need no C++ reference: CRC check value, packet header, PAT packet round trip, a small PAT / SDT / TDT / EIT.
 use crate::crc::mpeg_crc32;
 use crate::eit::{parse_eit, EitEvent};

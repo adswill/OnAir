@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S: the numbers of ITU-R BO.1408-1 / ARIB TR-B15, the TMCC bits and their RS(64,48) code, the frame coding loop, and the whole
 // receiver against the generator (clean, with noise, with carrier and symbol clock offsets, hierarchical, a TMCC change, data on the
 // bursts). Synthetic signals only: nothing here has met a real BS transponder.

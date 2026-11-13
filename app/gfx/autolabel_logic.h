@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto-labelled spectrum, the pure part: the labels (name, frequency, source), a store sorted by frequency, and the layout that places the names
 // of the frequencies in view on the plot without overlap: highest priority first, stacked in rows, thinned out when the view is wide, and spelled
 // out when there is room. No ImGui and no App in here, so tests/app/test_autolabel.cpp drives it directly. The App side is autolabel.cpp.

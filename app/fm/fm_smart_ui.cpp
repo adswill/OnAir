@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM: the census of the whole capture, following the station to its alternative frequencies, and the DX log. docs/SMART-fmam-3.7.md
 #include "app.h"
 #include "../ui/typography.h"

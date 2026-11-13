@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum occupancy monitor: the whole captured span is cut into 25 kHz channels; every 10 ms each channel is judged busy or idle against a noise floor that follows the
 // quietest fifth of the channels, with hysteresis (on at 6 dB over the floor, off below 4 dB). Per channel: the share of the time it was busy (duty cycle), the number of
 // transmissions and the longest one; the band's occupancy; every finished transmission is logged with its length and strength. It measures what arrives at this radio in this

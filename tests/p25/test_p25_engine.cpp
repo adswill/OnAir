@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 through the engine (setStandard(52)): the synthetic source plays the test schedule, the receiver reports through latestRx().
 // Silent: the receiver never opens the sound device.
 #include "dect2/p25/p25_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet under real-radio faults (REAL_WORLD_CHECKLIST.md): one generator cycle (1200 and 9600 baud) through tests/common/impair.h, then the
 // real receiver. A radio 50 ppm off at 144 MHz is 7.2 kHz out; at 222 MHz 11 kHz. Every frame of the cycle must arrive.
 #include "dect2/packet/packet_gen.h"

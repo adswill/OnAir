@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Capture through miniaudio (WASAPI / ALSA / Pulse / PipeWire). MINIAUDIO_IMPLEMENTATION lives in audioout_miniaudio.cpp.
 #include "audioin_impl.h"
 #include "miniaudio.h"

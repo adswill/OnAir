@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT 406 MHz distress beacon receiver: burst finder (a narrow carrier that appears for half a second), carrier frequency estimate from the
 // 160 ms unmodulated preamble, then 400 bit/s Manchester phase demodulation (+-1.1 rad) with sync search over timing, bit rate and polarity, and the
 // message layer in sarsat_proto.h. Receive only.

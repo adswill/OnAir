@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde upload to APRS-IS aggregators (sonde_upload.h): formats, one thread, a socket per enabled target.
 #include "dect2/net/sonde_upload.h"
 #include "dect2/common/thread_name.h"

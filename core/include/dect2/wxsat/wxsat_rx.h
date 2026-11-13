@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receiver of the wxsat links (wxsat_tel.h): one class, one profile per mode-list entry. PM with a residual carrier (the Manchester links, NOAA HRPT, DSB,
 // Meteor HRPT), BPSK (NOAA GAC, RDAS), QPSK with the CCSDS convolutional code (AWS), or the FM + 2400 Hz AM of APT. Arktika GGAK runs the Elektro GGAK receiver at
 // its own frequency. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread, telemetry() and the setters from the

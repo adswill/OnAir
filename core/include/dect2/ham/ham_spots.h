@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spots from outside the station (4.0), all opt-in and off by default: a DX cluster (telnet), the Reverse Beacon Network (telnet, the same
 // line format), POTA and SOTA activator spots (their public JSON APIs) and PSK Reporter ("who hears me": its public query). This file is the
 // pure part: the parsers, the split read from a spot comment ("UP 2", "QSX 14.205"), the mode guess, and the spot book that merges every

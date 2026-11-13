@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat: GFSK modulator, transmitter and test signal, see esubghz_gen.h
 #include "dect2/esubghz/esubghz_gen.h"
 #include "dect2/esubghz/esubghz_rx.h"

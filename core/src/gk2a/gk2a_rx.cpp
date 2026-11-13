@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A LRIT / HRIT receiver (gk2a_rx.h).
 #include "dect2/gk2a/gk2a_rx.h"
 

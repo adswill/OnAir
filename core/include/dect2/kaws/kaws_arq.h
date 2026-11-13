@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS ARQ (spec 4.5): half-duplex, one slot turnaround. The sender transmits blocks in its slot, the receiver answers in the next slot with an ack frame
 // (message id, a bitmap of the blocks received with a good CRC, the measured SNR, the suggested profile). Missing blocks go again in the next caller slot;
 // a block is abandoned after kMaxAttempts transmissions. Up to 16 blocks per message (4-bit block index).

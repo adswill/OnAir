@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA network information receiver (tetra_rx.h): blocks of input, 25 kHz carriers found in the spectrum, slot synchronised on the
 // training sequences, the broadcast channels decoded.
 #include "dect2/common/thread_name.h"

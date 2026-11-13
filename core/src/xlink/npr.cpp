@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NPR sync word (see npr.h). Modem parameters read from the Si4463 configuration arrays of the NPR-70 firmware (GPL-3, F4HDK): MODEM_DATA_RATE / MODEM_TX_NCO_MODE give the symbol rate,
 // MODEM_FREQ_DEV the outer deviation (half the symbol rate), PREAMBLE_CONFIG 0x31 the standard preamble, SYNC_CONFIG 0x0A a 3-byte sync word in 4FSK; the mapping 00 -3, 01 -1, 11 +1, 10 +3 is
 // MODEM_FSK4_MAP 0 of the EZRadioPRO API documentation.

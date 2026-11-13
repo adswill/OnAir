@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic and MeshCore packet layers and the Meshtastic name / key helpers on top of the Rust crate rust/onair_mesh: the functions of
 // mesh_proto.h; mesh_proto.cpp, mesh_proto_meshtastic.cpp and mesh_proto_meshcore.cpp keep the key-dependent parts and the packet builders. Rust parses and formats; the
 // channel tables, AES-CTR, AES-ECB / HMAC and Ed25519 stay here because they need keys.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TX studio measurements: occupied bandwidth (99 % and -26 dB), PAPR, ACPR, mask check, impairments. Pure functions on synthetic signals with known answers.
 // NOTHING is transmitted and no radio is opened.
 #include "dect2/tx/tx_measure.h"

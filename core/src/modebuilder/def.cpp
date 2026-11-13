@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode definitions: reading the JSON (docs/MODE-BUILDER.md) with a message for every problem, the checks of meaning, and writing it back.
 #include "dect2/modebuilder/modebuilder.h"
 #include "dect2/automation/json_mini.h"

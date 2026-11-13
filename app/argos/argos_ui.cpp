@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Argos screens. Uplink: the bursts heard (PTT-A2 decoded to the platform ID and data, other modulations listed only), the platforms with
 // the frequencies of their bursts (Doppler and drift). Downlink: the carrier followed through the pass with the predicted Doppler of the
 // MetOp satellites above the horizon (from the pass planner's TLEs), and the HDLC frames in hex. Receive only.

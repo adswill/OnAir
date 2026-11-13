@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // trail-store.js - keeps the bounded position history per track. All SQL lives in SqlBackend so the
 // logic in TrailStore can be tested against an in-memory backend (test/trail-store.test.js).
 import {

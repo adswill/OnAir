@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT receiver: streaming frame receiver. Finds the preamble (the Zadoff-Chu root of each width both detects the frame and identifies the width),
 // gets timing, frequency offset and phase, decodes the header, equalises with the pilots, decodes every LDPC block and checks its CRC-32.
 //

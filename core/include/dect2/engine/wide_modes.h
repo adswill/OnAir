@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span decoding for the narrowband channel modes: one WideBank per mode (DMR, M17, D-STAR, NXDN, dPMR, P25, pagers, APRS / packet,
 // the MPT1327 / LTR / EDACS trunking control channels and Yaesu Fusion). The engine routes the span to the bank of the running mode when the
 // switch is on, and takes its telemetry (the selected carrier in detail, every carrier's calls merged in, plus the carriers table and the

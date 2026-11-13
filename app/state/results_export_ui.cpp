@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GUI half of the results export (dialog + button); the pure half is results_export.cpp.
 #include "results_export.h"
 #include "../app.h"

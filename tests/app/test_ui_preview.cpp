@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The hover preview of the appearance choices (app/ui/ui_preview_logic.h, app/ui/palette_data.h): every option value turns into the
 // description the miniature is drawn from. Checked: the palette table holds the colours loadTheme() used before it read the table,
 // every palette and layout gives a different picture, Light / High contrast / Daylight colours as the screen shows them (legible), the

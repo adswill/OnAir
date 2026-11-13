@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-channel TV: two or three adjacent DVB-T / DVB-T2 channels decoded from ONE wide capture (a LimeSDR, USRP, BladeRF or PlutoSDR covers
 // 2-3 channels of 7 / 8 MHz at once).
 //

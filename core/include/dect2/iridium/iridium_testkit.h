@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium test helpers (tests and the tool): random burst scenes, a run through the receiver with impairments, and matching what was
 // received against what was sent. Header only.
 #pragma once

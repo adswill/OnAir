@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // badge-store.js - the hub's SQLite tables for accounts and badges (Durable Object storage, created with CREATE TABLE IF NOT EXISTS like
 // the other tables: no wrangler migration). The logic is in badge-stats.js / badge-service.js; the tests use their memory backends.
 //

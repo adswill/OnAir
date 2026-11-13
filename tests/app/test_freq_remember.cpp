@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #393: ADS-B at 1090 MHz must not stay when switching to airband / VDL2 / AM (a value saved by 3.3.0 must not win over the default).
 #include "../../app/state/freq_remember.h"
 #include <cstdio>

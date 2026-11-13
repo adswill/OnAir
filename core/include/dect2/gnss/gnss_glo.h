@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GLONASS L1OF navigation message and orbit (GLONASS ICD L1, L2, edition 5.1).
 // Strings of 2 s: 85 bits at 50 bps in relative code, each bit sent as two 10 ms halves under the 100 Hz meander (bi-binary), then the 30 chip
 // time mark (0.3 s). Bit 85 (sent first) is the idle 0, bits 84..81 the string number, bits 8..1 the Hamming check bits (ICD 4.3.3, 4.7).

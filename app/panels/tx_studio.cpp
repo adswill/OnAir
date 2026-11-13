@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > TX studio: a bench for making and checking a transmit signal WITHOUT a radio. Pick a mode, edit its parameters and payload, see the signal
 // (spectrum, waterfall, constellation, time view), read the measurements (occupied bandwidth, PAPR, ACPR / mask), run the app's own decoder on it with
 // an optional noise / offset / fading impairment, and save it as an IQ file with a metadata file (or sweep a parameter into many files).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "demod -> decode": a second thread that runs the heavy decode stage of a receiver, fed through a bounded queue (one mutex guards the queue and the busy flag, so flush/reset see a consistent state) (see docs/threading.md).
 //
 //   producer thread (the receiver's feed(), the analysis thread)  --push(item)-->  BoundedQueue  --> stage thread  --> handler(item)

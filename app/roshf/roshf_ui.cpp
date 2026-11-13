@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (HF) screens: the band presets, a waterfall of the sideband audio with the detected tone band marked, what was measured (sub-mode, baud,
 // tone grid, span) and the log of detections. ROS is a proprietary weak-signal chat mode whose framing and FEC are not public: it is detected and
 // named, its text is not decoded ("partial, needs a public spec", docs/ROS.md and docs/roshf.md).

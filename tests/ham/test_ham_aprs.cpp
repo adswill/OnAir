@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham APRS / packet: paths, APRS fields (back through the repo's APRS parser), the message session (two stations), the beacon, and the audio
 // of 1200, 9600 and 300 baud through receivers (pktdemod::Afsk1200, pktdemod::FskSlicer, AfskRx) with noise, clock error, tone twist and
 // tuning error; prints the 50 % frame SNR of each speed. Nothing is transmitted: the rig is a recording fake.

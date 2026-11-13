@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham view's world map (decoded stations, great-circle lines, the grayline, distance and bearing) and the spots panel (every station
 // heard, from the decodes; nothing is fetched from the network): see ham_ops_ui.h.
 #include "ham_ops_ui.h"

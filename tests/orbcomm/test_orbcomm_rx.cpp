@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm receiver against the test transmitter: format helpers, one and two downlinks, Doppler (fixed and a +/-4 kHz ramp), noise
 // near the threshold, symbol clock offset, packets with a broken checksum, ephemeris positions.
 #include "dect2/orbcomm/orbcomm_gen.h"

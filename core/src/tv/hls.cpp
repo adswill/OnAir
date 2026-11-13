@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HTTP Live Streaming of one service, in memory. See hls.h.
 //
 // Input: transport stream bytes through a read callback. Output: the FFmpeg "hls" muxer, whose files (playlist and segments) are captured

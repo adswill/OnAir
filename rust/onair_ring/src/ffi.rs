@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_ring` (core/include/dect2/rs/ring.h). Every export is `onair_ring_*`. The caller owns the storage and the header
 //! block (`onair_ring_hdr_size()` bytes, 128-aligned) and keeps both alive and at the same address while the ring is used.
 //! Safety contract of every function taking `h`: it is a header initialised by `onair_ring_init` that is still alive; the thread rules in

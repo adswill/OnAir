@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channel bandwidth detection from the spectrum: an OFDM signal has a flat top with sharp edges, so the width of that plateau
 // tells which channel raster (1.7, 5, 6, 7 or 8 MHz) is in use.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Small text helpers of the HTTP side of the remote-control API: percent decoding, the query string, the Host header, loopback names, the constant time compare
 //! of the token, reason phrases.
 

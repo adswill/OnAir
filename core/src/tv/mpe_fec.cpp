@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPE, time slicing and MPE-FEC (ETSI EN 301 192 clauses 7 and 9): see mpe_fec.h.
 #include "dect2/tv/mpe_fec.h"
 #include "dect2/tv/ts.h"

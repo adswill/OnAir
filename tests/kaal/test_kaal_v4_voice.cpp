@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL frame version 4 with the real voice codec (KAAL voice codec 4 through kv4SlotCodec): four talkers, one per slot, at the four
 // profiles, with pauses (DTX gives the slot to data). Through the PHY at a good signal the decoded speech of every slot is bit-identical
 // to the codec decoding its own output (the PHY is transparent); at lower signals the payload loss and the speech SNR against that

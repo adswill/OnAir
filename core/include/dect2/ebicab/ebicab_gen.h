@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBICab / Eurobalise test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 // A passing train as seen by the up-link: bursts in which the balise repeats its telegram (3.951 / 4.516 MHz FSK, 564.48 kbit/s, starting at a
 // random place of the telegram, with a clock error and jitter), separated by quiet gaps, in white noise, with a carrier offset and drift.

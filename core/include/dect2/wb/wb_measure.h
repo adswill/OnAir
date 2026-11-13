@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: measurements on a time range and band of a recording: the averaged spectrum, peaks, bandwidths (-3 dB, -20 dB, 99 %
 // occupied), carrier offset, SNR, symbol-rate estimate (cyclostationary lines of the envelope, the FM discriminator and its steps),
 // modulation hints (the signal identifier, dect2/engine/sig_ident.h), power over time and the bursts in it.

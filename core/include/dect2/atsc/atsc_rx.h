@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 1.0 (8-VSB) receiver: matched filter + resampler, pilot carrier loop, symbol clock from the segment sync, field sync
 // detection, per-field least-squares channel equaliser trained on the field/segment sync symbols, trellis/RS decoding.
 #pragma once

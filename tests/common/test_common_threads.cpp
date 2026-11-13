@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tests of the shared threading framework: pool, parallelFor, bounded queue, re-order buffer, stage pipeline.
 // Run normally, with DECT2_THREADS=0 (everything inline) and under -DDECT2_SANITIZE_THREAD=ON.
 #include "dect2/common/queue.h"

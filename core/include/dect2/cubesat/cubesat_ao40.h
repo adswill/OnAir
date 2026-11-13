@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AO-40 FEC framing, as FUNcube-1 (AO-73), Nayif-1 and others send it on BPSK 1200 baud: 256 bytes -> two interleaved Reed-Solomon (160,128)
 // codewords -> CCSDS scrambler -> rate 1/2, K = 7 convolutional code (polynomials 79 and -109 in the GNU Radio notation: 0x4F, and 0x6D with its
 // output inverted), terminated -> 5132 symbols, spread over a 80 x 65 matrix whose first 65 positions carry a distributed sync vector (one

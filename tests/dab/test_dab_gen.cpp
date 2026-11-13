@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB test transmitter: known answers from EN 300 401 / TS 102 563 for every coding step (energy dispersal, CRC-16, Fire code, Reed-Solomon, the convolutional
 // code, the puncturing tables, the frequency interleaver, the phase reference symbol, DQPSK), the same steps compared with the receiver's independent
 // implementation in dab_fec.cpp, the frame structure in the time domain, the AAC-LC encoder (decoded with libavcodec), the superframe, the levels, the

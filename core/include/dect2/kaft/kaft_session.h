@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT session layer: a pure state machine without a radio. OPEN / ACCEPT / START, data bursts with acknowledgement bitmaps, FINISH / VERIFIED,
 // resume from the receiver's block map, whole-file hash (BLAKE2s-256 or SHA-256), optional compression with the 64 kB skip rule and the profile stepper.
 //

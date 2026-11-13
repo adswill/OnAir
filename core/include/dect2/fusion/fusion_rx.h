@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu System Fusion receiver (WIP): C4FM 4800 symbols/s in a 12.5 kHz channel, frame sync D471C9634D, FICH, header / communication /
 // terminator frames, callsigns and slow data. Written from Yaesu's public Amateur Radio Digital Specs (revision 1.01).
 //

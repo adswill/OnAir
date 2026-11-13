@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Intermodulation finder for a wide capture (the radio's whole span): finds the strong signals, then looks for peaks at the frequencies where two of them would produce
 // intermodulation (2 f1 - f2, 2 f2 - f1, f2 - f1) and tests whether such a peak behaves like a product. A product follows its parents by a law: a third-order product moves 2 dB for
 // every dB of f1 and 1 dB for every dB of f2, so when the signals fade and swell the product has to move with them (slope 1 against that law); a real transmitter on the same

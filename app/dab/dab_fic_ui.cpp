@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB: the FIC tab. The tree of everything the fast information channel carries, FIG by FIG, in the manner of etisnoop
 // (https://github.com/Opendigitalradio/etisnoop): a node per FIG type and extension, a node per distinct FIG under it with how often and how
 // regularly it comes, and the decoded fields of that FIG under that (dab_fig.h).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Blind analysis of the Smart CubeSat decoder: the narrow-carrier scan of a wide capture and the modulation / baud classifier of one carrier.
 // Nothing here knows a satellite: the scan finds carriers (centre, width, SNR), the classifier looks at 1.5 s of one carrier at 96 kHz and says
 // which of CW / AFSK / BPSK / FSK it is and at which baud rate, as a ranked list the demodulation chains are then tried in.

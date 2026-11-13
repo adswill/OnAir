@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter hourly rate against the shower calendar (3.9, docs/SMART5-science-3.9.md item 26). Radio meteor counts follow a
 // daily curve (sporadics peak around 06 local time) plus the active showers, whose rate scales with the radiant's elevation.
 // From the hourly counts this learns the station's sporadic curve (a mean and two harmonics of the local solar hour) and its sensitivity to shower meteors, gives the

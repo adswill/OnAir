@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The DRM text message (ES 201 980 clause 6.5): segments of a 2 byte header, 1 to 16 bytes of text and a CRC-16, sent as 4 byte units, one per logical frame
 //! (the reassembly of segments into the message stays in C++).
 use onair_dab::crc::crc16;

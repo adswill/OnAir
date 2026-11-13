@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX through the radio layer: character error rate against signal to noise ratio (noise in 3 kHz), without and with a two-path
 // fading channel (1 ms, 0.5 Hz Doppler spread).
 #include "../data/marine/rf_util.h"

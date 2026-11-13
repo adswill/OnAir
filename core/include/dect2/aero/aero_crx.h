@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One Inmarsat Aero C channel (8400 bit/s OQPSK, circuit-mode voice) from a wideband stream: mixer + decimator to about 48 kHz, the OQPSK
 // demodulator with its own carrier search, the C channel framer (aero_cchan.h). The coded voice frames come out of the callback; what they are
 // (AMBE) and how they become sound is the user-installed codec's business (inmsat_voice.h, docs/CODECS.md).

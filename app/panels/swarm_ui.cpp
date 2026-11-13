@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > LAN swarm: opt-in cooperation between OnAir nodes on this local network. Discovery (swarm_net), the swarm view, pairing, the encrypted control
 // channel (swarm_ctl), pooled results and tracks, coordinated scan and memory sync. Off every time the program starts; before it is switched on the
 // exact announcement is shown. The rules and the threat model are in core/include/dect2/net/swarm.h and docs/LAN-SWARM.md.

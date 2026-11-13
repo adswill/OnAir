@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM SDC data entities 2, 3, 4, 6, 7, 14 from hand-built fields (written with the encoder's sdcPutEntity), and that they go through sdcParse.
 #include "dect2/drm/drm_msg.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero demodulators: Eb/N0 sweep per rate (Eb/N0 per channel bit, the rate the carrier is keyed at).
 // The demodulator runs from the carrier search on (lines of the squared signal) through Viterbi and the SU checks.
 // Asserted: at 5 dB (600 / 1200 bit/s, differential MSK) and 3 dB (10500 bit/s, coherent OQPSK) at least 99 % of the SUs are good.

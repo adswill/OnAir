@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Four small extras on top of My station and the message history: Surprise me, rare catch alerts, the aircraft and ship dossier, plain-English messages.
 // Simple versions; pure logic except the dossier, which reads the message database. Tests in tests/station/test_fun.cpp.
 #pragma once

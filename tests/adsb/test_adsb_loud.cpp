@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B loud-message counter and the coverage by altitude band. Synthetic Mode S extended squitters (AdsbMixer) at different pulse levels, with the radio's
 // noise, a carrier offset and the 2.4 Msps rate of an RTL-SDR, go through the real receiver: the loud counter (level above -7 dBFS, a peak within about 3 dB of full scale, what the automatic
 // gain reads) must follow the level, whatever the offset. The coverage part feeds positions at known ranges, bearings and heights.

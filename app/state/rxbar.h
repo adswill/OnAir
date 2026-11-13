@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure helpers of the receiver strip (receivers.cpp): label shortening, chip widths, Ctrl+digit mapping, tab scroll.
 #pragma once
 #include <algorithm>

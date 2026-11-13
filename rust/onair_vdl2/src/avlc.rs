@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! AVLC (Aviation VHF Link Control, ICAO Annex 10 Vol III Part I section 6.3.4, Doc 9776): the two 4-octet addresses with the A/G and C/R bits, the control octet
 //! (I, S and U frames) and what the information field carries. Frames with a good FCS only (the caller strips the two FCS octets).
 use crate::bits::rev;

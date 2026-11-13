@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! MPEG-2 section CRC-32 (ISO/IEC 13818-1 Annex A): polynomial 0x04C11DB7, start 0xFFFFFFFF, no reflection, no final XOR. A section that includes its
 //! own CRC_32 field gives 0.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wide multi-signal decode with TV in the capture (core/include/dect2/engine/wide_session.h): one 20 Msps capture at 522 MHz holds a DVB-T2 channel
 // (-4 MHz) and a DVB-T channel (+4 MHz), side by side, and two narrowband carriers in the gaps outside them (a DMR base station at +8.9 MHz and a
 // pager carrier at -9.0 MHz on a known channel). The session finds the two TV slots, identifies DVB-T2 and DVB-T from the signal, starts a multi-channel

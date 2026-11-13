@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteosat HRDCP receiver for the engine (see hrdcp_live.h). Written from EUMETSAT TD 16; no code from other decoders.
 //   Front    : fourth-order CIC decimator, the capture down to about 800 kHz
 //   Scanner  : averaged spectrum (about 50 Hz bins), the 2 s carrier that opens every message is a line over the noise

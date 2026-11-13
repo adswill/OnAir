@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound-card IQ source: WebSDR, VAC, or a radio's speaker/line into the computer (not a replacement for an SDR when you need MHz of bandwidth).
 // Reuses AudioIn (CoreAudio / miniaudio). The microphone is never opened until start().
 #include "dect2/common/thread_name.h"

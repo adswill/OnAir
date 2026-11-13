@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Eurobalise telegram coding (UNISIG SUBSET-036 4.3, ebicab_proto.h): the substitution table, the polynomials (the long format's parity check
 // accepts a short telegram repeated three times), encode / decode round trips in both formats for many scrambling values and user data, every
 // cyclic shift of the endless telegram, the inverted telegram, bit errors, a bit slip and random data (no false telegram), the header fields.

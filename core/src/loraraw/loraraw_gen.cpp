@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa (raw) test signal (see loraraw_gen.h).
 #include "dect2/loraraw/loraraw_gen.h"
 #include "dect2/common/stable_random.h"

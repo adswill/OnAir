@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 DAB helpers (pure, no GUI). Tests: tests/d40/test_dab_d40.cpp
 //  1. ServiceRanker   the census merge shows a service once at its best SNR of the moment; this keeps a history per service (mean SNR, share of scans where it decoded, spread) and
 //                     ranks by sustained quality: SNR pulled down by the lock failures and by instability, so the best service to put on a preset is the one that stays good.

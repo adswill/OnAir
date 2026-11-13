@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry of the active mode as JSON for the Kotlin screens (cards + tables). Modes with a dedicated exporter fill tables with the desktop's
 // column names; every other mode gets the common header, its one-line summary and its decoded lists as text (genericResults).
 #include "results_json.h"

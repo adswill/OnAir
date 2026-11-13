@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pulsar folding on simulated filter bank data: detection of a dispersed pulse train in noise, the dispersion measure and period found, several pulsars
 // (periods from 33 ms to 1.3 s), a weak case that must NOT be reported, noise alone, a wrong nominal period inside the search range, the FFT front end on a
 // tone (channel order), and the radiometer arithmetic. Simulated only: no pulsar recording was available, and an ordinary SDR antenna sees none of these.

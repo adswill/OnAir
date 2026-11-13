@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AudioIn: a 30 s file and a 700 s file (past the 600 s in-memory limit) play sample for sample to their end, then loop (#471).
 // The file is mono, so FFmpeg spreads it at -3 dB to both channels.
 #include "dect2/audio/audioin.h"

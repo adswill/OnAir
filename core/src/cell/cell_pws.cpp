@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers: public warning message content (TS 23.041, TS 23.038).
 #include "dect2/cell/cell_pws.h"
 #include <cstdio>

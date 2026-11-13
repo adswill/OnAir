@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-audible tone reader: every CTCSS tone and a set of DCS codes (both polarities) read back from synthetic audio at 48 kHz under speech-like
 // interference and noise, with a frequency error, and no false tone from speech or noise alone. Simulated signals only.
 #include "dect2/chanvoice/chv_subtone.h"

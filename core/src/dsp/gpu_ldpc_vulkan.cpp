@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Vulkan compute LDPC decoder (Linux: NVIDIA, AMD, Intel and any other Vulkan 1.0 driver; no CUDA). The kernels are the Metal ones ported to
 // GLSL (core/src/dsp/vulkan/*.comp) and compiled once to SPIR-V that is committed (vulkan/ldpc_spirv.h, tools/gen_vulkan_spirv.sh), so the
 // build needs neither a shader compiler nor the Vulkan SDK: the loader (libvulkan.so.1) is opened at run time and the few declarations used

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS framing. See kaws_frame.h for the decisions where the spec is open.
 #include "dect2/kaws/kaws_frame.h"
 #include "dect2/kris/kris_common.h"

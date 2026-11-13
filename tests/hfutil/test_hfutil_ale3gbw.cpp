@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3G-ALE traffic bursts (hfutil/hfu_ale3gbw.h, MIL-STD-188-141B Appendix C): the interleavers, codes and CRCs against the text, the
 // TM / HDL / LDL PDUs, and BW1 to BW4 generated and read back with frequency error, drift, a sample clock error, noise in 3 kHz, an echo,
 // a Watterson ITU-R Poor channel (tests/common/watterson.h), chunk sizes, bursts in a row and noise only. Simulated signals only.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KiwiSDR wire pieces without a socket (source_kiwisdr.cpp, tests/source/test_kiwisdr.cpp): the text commands, the server's MSG and SND
 // binary messages, and the interpolator that takes the Kiwi's 12 kHz IQ up to a rate the receivers accept.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band plans: model, validation, JSON / CSV reading and writing, the built-in plans and the user's registry. See bandplan.h and docs/band-plans.md.
 #include "dect2/bandplan/bandplan.h"
 #include "../channels/memory_json.h"

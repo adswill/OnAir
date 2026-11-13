@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One number for "how good is this reception": decoder SNR margin over what the current modulation/code rate needs,
 // weighted by the share of FEC blocks that actually decode.
 #pragma once

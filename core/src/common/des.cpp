@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DES (des.h), straight from FIPS 46-3.
 #include "dect2/common/des.h"
 

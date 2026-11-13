@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 5 and 6 GHz test scene of the Wi-Fi generator (see wifi_gen.h): OFDM beacons of access points of every generation on one primary channel.
 #include "dect2/wifi/wifi_gen.h"
 #include "dect2/wifi/wifi_chan.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM (ETSI ES 201 980): what the standard fixes - OFDM parameters, the position and phase of every pilot, FAC and SDC cell, the cell counts
 // of the channels and the code tables. Shared by the receiver and the test signal generator.
 // Clause numbers refer to V4.3.1 (2023-11). Robustness modes A to D are DRM30 (below 30 MHz), mode E is DRM+ (VHF).

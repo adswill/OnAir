@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Low-SNR sensitivity of the whole chain (detector + demodulator + frame): bursts found and bit-exact per Es/N0 and detection threshold.
 #include "dect2/iridium/iridium_testkit.h"
 #include <cstdio>

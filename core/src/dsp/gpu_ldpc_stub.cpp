@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Builds without a GPU backend (Android): the GPU decoder reports itself as unavailable and the engine's
 // Auto/CPU modes use the CPU decoder. Linux uses gpu_ldpc_vulkan.cpp.
 #include "dect2/dsp/gpu_ldpc.h"

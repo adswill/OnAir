@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 subframe OFDM symbols (A/322 7.2.4, 7.2.6, 7.3 and 8.1): data symbols with scattered pilots, subframe boundary symbols, continual
 // and edge pilots, null cells, frequency interleaving, and the modulator and demodulator for one symbol.
 #pragma once

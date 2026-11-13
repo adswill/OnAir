@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID (13.56 MHz) in the engine: mixes the carrier to 0 Hz and runs the demodulator, then turns recovered frames into a
 // frame log, a tag table and decoded NDEF. Receive only. See nfc_engine.h / nfc_rx.h / nfc_proto.h.
 #include "dect2/nfc/nfc_engine.h"

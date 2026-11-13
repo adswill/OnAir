@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES HRIT .cadu files: the receiver writes every good frame as a 1024 byte CADU (sync word, derandomised bytes, the kind of file SatDump
 // writes), and decodes such a file again through Reed-Solomon and the upper layers without any signal. Both Reed-Solomon bases, frames
 // derandomised or as sent, and a file with damaged frames.

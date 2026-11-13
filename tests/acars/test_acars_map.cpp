@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS positions end to end: the test signal's position reports (ADS-C as B6 and as H1 "#M1B/B6", a POS text report and a label 16 report)
 // through modulation and the receiver into the aircraft table. Each aircraft ends up at a position it sent, the track holds the positions in
 // order, and the ADS-C groups are read.

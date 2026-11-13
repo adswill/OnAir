@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The headless server's radio: an Engine with no window, behind the remote-control API (core/src/net/remote_api.cpp). It owns the device list, the
 // chosen mode / frequency / gain, the receiver's on-off intent (so it comes back after a radio was unplugged), the browser page, the spectrum and
 // telemetry snapshots and the audio hub for the browser's Listen button. The settings that the browser changes are written back to the config file.

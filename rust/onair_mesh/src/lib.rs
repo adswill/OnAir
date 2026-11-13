@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir LoRa mesh: the packet layers of Meshtastic, MeshCore, LoRaWAN, LoRa APRS and MeshCom: protobuf reader, Meshtastic header and Data / port payloads,
 //! MeshCore header and key-free payloads, LoRaWAN MAC frames (MHDR, FHDR, MAC commands, join / rejoin requests), LoRa APRS TNC2 splitting and MeshCom frames,
 //! name tables and key helpers. AES / HMAC / Ed25519 and the channel tables (they need keys), the LoRa PHY, the generators and the settings tables stay in C++

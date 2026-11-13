@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP selective repeat and profile stepping, plus one run through the real PHY.
 #include "kapp_test_util.h"
 

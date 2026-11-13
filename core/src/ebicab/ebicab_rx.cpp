@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBICab / Eurobalise up-link receiver, see ebicab_rx.h
 #include "dect2/ebicab/ebicab_rx.h"
 #include "dect2/ebicab/ebicab_proto.h"

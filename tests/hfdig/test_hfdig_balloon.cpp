@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WSPR balloon telemetry formulas against the S4 page's worked example (altitude, locator letters, GPS flags); simulated values otherwise.
 #include "dect2/hfdig/hfdig_balloon.h"
 #include <cmath>

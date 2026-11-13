@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SUBSET-026 chapter 7 packets from the openETCS XML transcription (no conformance test vectors exist publicly). Simulated user bits only.
 #include "dect2/ebicab/ebicab_proto.h"
 #include <cstdio>

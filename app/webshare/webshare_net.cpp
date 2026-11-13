@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Two small socket helpers of the OnAir Web setup, kept in a file of their own so the Winsock headers stay away from the rest of the app.
 #include "webshare.h"
 #include "../../core/src/net/netcompat.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BTSC multichannel sound for NTSC (FCC OET Bulletin 60): on the FM sound carrier 4.5 MHz above vision, a pilot at the line rate fH = 15734 Hz (5 kHz deviation),
 // L+R at 25 kHz peak with 75 us pre-emphasis, L-R on a DSB-SC subcarrier at 2 fH (50 kHz peak), and the second audio program as FM on 5 fH (+-10 kHz).
 // L-R and SAP go through the dbx-TV compander. The receiver finds the pilot by itself; BtscTx makes the test signal (nothing is transmitted).

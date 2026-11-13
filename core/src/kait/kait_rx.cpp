@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT burst receiver (see kait_rx.h).
 #include "dect2/kait/kait_rx.h"
 #include "dect2/dsp/fftutil.h"

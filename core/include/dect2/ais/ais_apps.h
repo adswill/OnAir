@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS messages beyond positions and static data, turned into readable records: the binary application messages 6 and 8 (IMO SN.1/Circ.236 and 289,
 // CCNR Inland AIS, IALA A-126) and message types 7, 10, 12, 13, 14, 15, 16, 17, 20, 22, 23, 25, 26 of ITU-R M.1371-5.
 // Field layouts are from the gpsd AIVDM document and driver_ais.c.

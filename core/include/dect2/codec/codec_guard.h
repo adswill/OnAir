@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A user-installed voice codec (a plug-in, or mbelib / mbelib-neo loaded directly) is code OnAir did not build: one built for another
 // library version can crash, scribble over memory or never return. Every call into such a codec goes through runGuarded():
 //  - it runs on a codec worker thread, never on the caller's (the receiver keeps its spectrum and its timing even when a codec hangs);

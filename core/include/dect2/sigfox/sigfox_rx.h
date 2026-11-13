@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox uplink mode (its own mode entry; the ISM sensors mode also listens for Sigfox on its bands). The narrow-carrier finder and D-BPSK
 // demodulator of ism_sigfox.h on +-96 kHz around the dial, with the frame layer of sigfox_proto.h: device ID, message counter, payload (hex),
 // authentication code (shown, never checked: it needs the device key), CRC (checked), the three repetitions merged. Receive only.

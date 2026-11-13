@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV through the engine: the synthetic source -> Engine -> telemetry, pictures and sound. The source plays faster than a radio (the decoder is
 // tested, not real time) and the run is counted in seconds of signal; the field rate is checked per second of signal.
 // First the card the app plays by default (PAL B/G, test card, 1 kHz tone with gaps, a carrier offset and noise) for about 15 seconds, then SECAM D/K

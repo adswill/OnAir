@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RF fingerprint on synthetic transmitters that differ in carrier offset, keying transient, I/Q imbalance, spurs, pilot and hum,
 // captured off-centre, with noise, at different sample rates and key-up times. Also the carrier-only log (Watcher) and the library file.
 #include "dect2/fingerprint/rf_fingerprint.h"

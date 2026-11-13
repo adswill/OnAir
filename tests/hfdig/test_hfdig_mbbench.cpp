@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-band monitor CPU: noise IQ at MB_RATE (default 32 Msps) for MB_SECS (default 2) seconds, MB_NB bands selected (FT8 only unless MB_ALL),
 // process CPU seconds (all threads) per second of signal. The noise block is made once and repeated.
 #include "dect2/hfdig/hfdig_multiband.h"

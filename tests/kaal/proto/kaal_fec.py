@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """KAAL FEC: rate-1/2 quasi-cyclic LDPC, n=640, k=320 (Z=32, 10x20 base matrix),
 systematic, IRA-style dual-diagonal parity part, normalised min-sum decoder vectorised across frames.
 Own construction (random QC shifts, 4-cycle free in the base graph), not a standard code."""

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // doa.js - bearing lines ("doa" tracks) shared by stations that run a direction finder, and the server-side fix where they cross.
 // Pure functions (node --test test/doa.test.js). Spherical azimuths on the WGS-84 mean radius: the difference to the ellipsoid is far below
 // the bearing error of any array (about 0.01 degrees over 500 km).

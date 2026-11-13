@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B overlapping replies (3.9, docs/ADSB-REMOTEID-3.9.md): the receiver with its overlap recovery (AdsbDemod step 6: subtraction of decoded
 // frames, retries of the candidates under them, separation slicers) against the same receiver with it switched off, on
 //   1. the overlap scenario of the generator (adsbOverlapScenario): pairs of replies 2 to 118 us apart, -12 to +12 dB, own carrier offsets

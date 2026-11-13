@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice inversion descrambler (voice_inversion.h). Clean-room: a carrier mixer (phase accumulator) and Butterworth / Linkwitz-Riley biquads.
 #include "dect2/audio/voice_inversion.h"
 #include "dect2/dsp/fftutil.h"

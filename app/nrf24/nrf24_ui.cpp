@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24L01 screens: the Enhanced ShockBurst frames heard (address, control field, payload as hex and text), the addresses (devices) and the bursts
 // that gave no frame. Receive only. A 2.4 GHz SDR is needed: HackRF (One, Pro), PlutoSDR (extended range), bladeRF, LimeSDR, USRP B200/B210/B205mini.
 #include "app.h"

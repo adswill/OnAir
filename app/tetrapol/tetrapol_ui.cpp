@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL screens: the cells (D_SYSTEM_INFO), the calls on the traffic channel being received (group, talking party), the group calls a
 // control channel announces, the neighbour cells, every signalling message heard, the frame layer (polarity, band coding, scramble; automatic,
 // set by hand under Advanced) and the voice strip. Receive only. Voice: clear calls only, through the user's own codec plug-in

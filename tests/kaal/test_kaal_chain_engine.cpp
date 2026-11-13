@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAAL receive path of the engine on a recording of the radio chain (8-bit IQ at 2.4 Msps with a carrier offset, written by the transmit generator at the
 // HackRF's rate and the chain model of test_kaal_chain): file source -> engine -> KAAL standard 124. Reads KAAL_CHAIN_FILE (made by test_kaal_chain engine <path>);
 // without it the test passes at once. Use: ./test_kaal_chain engine /tmp/chain.cs8 3000; KAAL_CHAIN_FILE=/tmp/chain.cs8 ./test_kaal_chain_engine

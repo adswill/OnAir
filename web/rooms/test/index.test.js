@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Worker routes against real Room / Lobby objects on a fake namespace.
 import { test } from "node:test";
 import assert from "node:assert/strict";

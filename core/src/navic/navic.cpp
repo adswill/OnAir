@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NavIC L5 SPS receiver (see navic.h).
 #include "dect2/navic/navic.h"
 #include "dect2/dsp/fftutil.h"

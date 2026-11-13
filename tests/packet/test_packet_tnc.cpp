@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / packet TNC benchmark: a signal model written here, independent of packet_gen.cpp, run through the real receiver.
 // 1200 baud Bell 202 AFSK and 9600 baud G3RUH FSK on an FM carrier with noise, a carrier offset, a transmitter baud clock that is off, 2.5 to 5 kHz
 // deviation, transmit pre-emphasis on or off (a radio's microphone input or its flat data port), frame collisions, and the narrow (12.5 kHz) and wide

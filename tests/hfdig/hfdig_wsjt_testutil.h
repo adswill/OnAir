@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the JT65 / JT9 / Q65 / FST4 / MSK144 tests: audio of one mode with stations at known SNRs (in 2500 Hz), offsets and impairments, a run
 // through the HF digital slot decoder with a known start time, and the real recordings of the WSJT-X samples (read from the folder named by the
 // environment variable HFDIG_WSJT_SAMPLES: 8 kHz float32 files; the tests skip them when it is not set).

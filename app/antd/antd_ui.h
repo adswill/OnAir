@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Antenna designer: parts shared by the window (antd_ui.cpp) and the calculators (antd_calc_ui.cpp).
 #pragma once
 #include "../app.h"

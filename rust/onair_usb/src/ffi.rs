@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_usb` (core/include/dect2/rs/usb.h). Every export is `onair_usb_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //!
 //! The RTL-SDR object lives in caller supplied memory (`onair_usb_rtl_size()` bytes, aligned to `onair_usb_rtl_align()`): the crate does not allocate.

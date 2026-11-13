@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Engine: owns the source, the sample ring and the analysis thread. UI talks only to this.
 #pragma once
 #include "dect2/dsp/gpu_policy.h"

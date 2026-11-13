@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DAB fast information channel parsing (ETSI EN 300 401 clause 5.2 and 8, ETSI TS 101 756): the FIB walk, the FIG headers, FIG 0 extensions 0, 1, 2, 3, 10,
 //! 13, 17, 18 and 19 (ensemble id, sub-channel organisation, service organisation, packet mode components, date and time, user applications, programme type,
 //! announcement support and switching) and the label FIGs 1 and 2. Parsers return plain records; the ensemble tables, label segment store and the

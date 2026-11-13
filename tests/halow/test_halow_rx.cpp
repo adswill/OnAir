@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) monitor: the test signal through the receiver (halow_gen.h, halow_rx.h): the whole schedule, every width alone near
 // the threshold, carrier offsets of +-30 kHz (+-33 ppm at 915 MHz), sample clock error, other sample rates, a signal off the centre, a wrong
 // FCS, back-to-back PPDUs, noise alone, a continuous tone, and the results file.

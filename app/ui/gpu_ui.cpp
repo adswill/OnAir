@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Use GPU where available": the global tick, the per-mode overrides, the engine side of both, and the diagnostics lines (app/ui/gpu_logic.h).
 #include "../app.h"
 #include "gpu_logic.h"

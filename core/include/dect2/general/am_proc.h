@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM audio processor of the general receiver: everything DSP can do to make an AM broadcast clear, with one "Auto quality" switch.
 //
 //   complex 48 kHz baseband (the carrier near 0 Hz, the band +-12 kHz or wider)

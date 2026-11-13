@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS test signal: aircraft on several VHF channels, downlinks (OOOI, position, weather request, free text, link test, media
 // advisory) and ground uplinks (acknowledgements, weather text, clearance text), AM with the 2400 bit/s MSK audio, a pre-key, and
 // random timing in which bursts on one channel never overlap. Synthetic content: the texts are made up in the style of real ones.

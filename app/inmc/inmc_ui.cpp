@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C screens: the message list with a reading pane, the channel status with the packet counters, and the system information of the
 // station (bulletin board).
 #include "app.h"

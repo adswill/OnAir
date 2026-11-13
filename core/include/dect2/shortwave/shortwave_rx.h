@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave receiver (engine standard 214, active 213): the general receiver plus one-click decoders on the same channel.
 //
 //   capture --> GeneralReceiver (AM / USB / LSB / CW listening on the channel marker: sound, S-meter, squelch, recording)

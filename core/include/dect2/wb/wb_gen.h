@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: synthetic test signals with known bits (the tests, wbtool gen, the "demo signal" of the screen).
 #pragma once
 #include "wb_demod.h"

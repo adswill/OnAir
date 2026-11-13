@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network): the mode's receiver. It times the sferics of this radio (StationCore) and, by role, only shows them, sends them to a
 // server, or collects them from the clients and locates the strikes (ServerCore). Stations talk over UDP datagrams authenticated with a shared
 // network key: off until the user sets a role and a key, nothing is relayed anywhere else, and a datagram that does not authenticate is dropped.

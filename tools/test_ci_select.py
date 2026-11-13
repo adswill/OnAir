@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Checks of tools/ci_select.py without a build: a made-up build dir (CTestTestfile.cmake + compile_commands.json) over the real sources.
   python3 tools/test_ci_select.py        (the quick gate runs it; needs ctest on the PATH)
 """

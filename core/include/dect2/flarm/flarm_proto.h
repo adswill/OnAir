@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLARM air protocol "version 6" (the old, openly documented one: SoftRF / OGN) and the frame around it.
 //  - on air: 868.2 and 868.4 MHz (Europe), 2-FSK +-50 kHz, 100 kchip/s Manchester coded; sync = Manchester(0xF531FAB6) (chips 55 99 A5 A9 55 66 65 96,
 //    a data 1 is the chip pair 01); then 24 payload bytes and a CRC-16 (CCITT, 0xFFFF start) of them.

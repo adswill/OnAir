@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB: the Analyzer tab, a stream analyser panel: the contents of the ensemble as a tree (ensemble, services
 // with their components, sub-channels, frequency information, links, transmitters), the details of the selected node, and the allocation of the
 // 864 capacity units of the main service channel. Everything comes from the FIC (dab_fig.h): the receiver's ensemble tables plus the FIGs it

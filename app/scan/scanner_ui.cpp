@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The scanner (View > Scanner, HIGHLY EXPERIMENTAL): steps through a scan list of {frequency, mode, name} or a band (start, stop, step, mode),
 // tunes and switches mode the way the mode list does (setMode, then startReceiver), listens for the dwell time, stops on activity (channel
 // power over the noise in the mode's bandwidth, or the mode's own telemetry saying it decodes), holds while active plus a hang time, then

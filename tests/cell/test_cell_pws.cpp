@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers: SIB9, SIB10, SIB11, SIB12 and SIB16, then CB Data text in GSM 7-bit and UCS2, with segmentation in any order, through the UPER coder and
 // the full LTE receiver with noise and frequency offset. Simulated signals only: no real cell warning recording exists.
 #include "dect2/cell/cell_asn.h"

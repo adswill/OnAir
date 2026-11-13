@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-I monitor receiver (experimental, receive only; PACTOR-II, -III and -IV are proprietary and not supported, see docs/pactor.md).
 //
 // The channel is mixed to 0 Hz and brought to 24 kHz complex (marine::Front), then the upper sideband becomes 8 kHz audio

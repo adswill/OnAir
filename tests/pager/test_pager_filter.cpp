@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: the "Decoded only" predicate hides tone-only pages and pages with no text, for POCSAG and FLEX alike.
 #include "../../app/pager/pager_filter.h"
 #include <cstdio>

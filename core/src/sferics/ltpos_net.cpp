@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network): the packet format between stations, its HMAC-SHA256 authentication and the replay guard (ltpos.h).
 #include "dect2/sferics/ltpos.h"
 #include "dect2/mesh/mesh_crypto.h"

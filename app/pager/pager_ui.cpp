@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers screens: lamps for the signal, the sync and the two protocols; the message list with a filter; the statistics per speed.
 #include "../d40/d40_ui.h"
 #include "dect2/common/time_fmt.h"

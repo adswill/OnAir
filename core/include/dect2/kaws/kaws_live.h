@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS for the engine: IQ in, decoded chat messages and beacons out. The radio's IQ (the dial frequency at 0 Hz after the signal offset, upper sideband:
 // audio frequency = offset from the dial) is brought to 24 kHz complex, then to 12 kHz real audio (the sound-card rate of the mode). The slot grid of
 // every slotted profile (P0 120 s, P1 and P2 60 s, P3 30 s, P4 and P5 15 s) comes from the computer clock, which must be UTC-accurate (NTP): a burst

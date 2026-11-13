@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV test signals (physical layer only). Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // The real channel coding is proprietary, so the symbols here are NOT PACTOR frames: every frame is a fixed 40 symbol sync pattern followed by

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hytera Basic / Enhanced Privacy key streams: see hytera.h for the source, licence and what is verified.
 #include "dect2/voicekeys/hytera.h"
 #include "dect2/voicekeys/voice_crypto.h"

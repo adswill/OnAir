@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_drm` (core/include/dect2/rs/drm.h). Every export is `onair_drm_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //! Bits are one per byte (0 or 1), most significant first. Names are written into a caller buffer and the length returned. A null pointer where a buffer is
 //! needed makes a function fail (false / 0), nothing is written. `onair_drm_struct_sizes` lets the C++ side check the record layouts at start-up.

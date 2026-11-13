@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum ghost: a stored earlier spectrum (a snapshot) drawn faintly behind the live trace of the main spectrum, with the signals that are
 // new since then highlighted. Snapshots are small files in <dataDir>/ghost (one per capture; a rolling set is kept by the auto-snapshot).
 // Pure (std only); the plot side is app/gfx/spec_ghost_ui.cpp. docs/SPECTRUM-GHOST.md.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // W1A ELT 121.5 MHz: detector of the swept-tone AM signal of an emergency locator transmitter, and its test generator (see w1a_dsp.h).
 // Public description (UK CAA ELT specification text, ICAO Annex 10 Vol III): AM carrier, modulation factor at least 0.85, the modulating tone sweeps
 // DOWNWARDS over at least 700 Hz inside 1600 - 300 Hz at 2 - 4 sweeps per second, duty cycle 33 - 66 %. Detection only: no beacon data is carried.

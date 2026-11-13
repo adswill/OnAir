@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Affected-test selection for CI and tools/fast_check.sh.
 
 Reads the configured build dir (ctest test list + compile_commands.json, configure with -DCMAKE_EXPORT_COMPILE_COMMANDS=ON),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Annex B through the whole DVB-C demodulator: the test transmitter's pulse shaping, carrier offset and clock error into DvbcReceiver, packets out. Simulated.
 #include "dect2/dvbc/dvbc_rx.h"
 #include "dect2/dvbc/dvbc.h"

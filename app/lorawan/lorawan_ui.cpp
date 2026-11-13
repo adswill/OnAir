@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN (all channels) screens: the frame table (time, channel, SF, type, DevAddr, FCnt, FPort, level, SNR, MAC commands, payload bytes), the device list,
 // the channel list of the plan with its counters, the plan and options. LoRaWAN FSK frames (DR7, lorawan_fsk.h) are in the same table, marked "FSK DR7". Receive only and keyless: the payloads are encrypted with the devices' session keys
 // and are shown as bytes, no key is handled, nothing is decrypted, no MIC is checked, nothing is sent. "Level" is dB below full scale, not calibrated to dBm.

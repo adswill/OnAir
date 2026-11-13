@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AO-40 FEC (FUNcube-1 / Nayif-1 BPSK 1200): the real recording test vector of gr-satellites (tests/data/ao40: 5450 soft symbols, the frame
 // window, the 256 byte frame), encode / decode round trip, noise, the distributed sync hunter (either polarity, offsets, sync errors).
 #include "dect2/cubesat/cubesat_ao40.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The frequency database (core/src/channels/freq_db.cpp, data/frequencies/*.tsv): the data is valid (known mode ids, no duplicate per mode and
 // frequency, frequencies inside each mode's band, categories from the fixed list, a source on every entry, small), search and filters, the
 // conversion to a Memory, and the import / export round trip of the user's entries.

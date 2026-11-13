@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab stage 3a: symbol rate. Four independent estimators and a vote:
 //   cyclostationary : the line at the symbol rate in the spectrum of |x|^2 (linear modulations)
 //   spectral line   : the line in the spectrum of the squared derivative of the symbol signal (transitions)

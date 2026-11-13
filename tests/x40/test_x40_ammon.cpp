@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM modulation monitor: depth, peaks, asymmetry, hum, audio bandwidth, carrier offset and the over-modulation and carrier-loss logs against what the generator put in; input rates,
 // offsets with drift, a noise sweep and a noise-only run. Simulated signals only.
 #include "x40_gen2.h"

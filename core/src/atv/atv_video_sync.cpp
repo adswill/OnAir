@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV picture decoder: sync detection, the line phase-locked loop and the per-line processing.
 #include "atv_video_impl.h"
 

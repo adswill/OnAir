@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF channel plan, 156.000 to 162.025 MHz: channel numbers 1 to 88 with the frequency a ship transmits on and the one a coast station
 // transmits on, simplex / duplex, the A / B designators (22A, 87B ...), what each channel is for, and the regional plans (international, Europe,
 // Baltic Sea, USA, Canada). The table is data/bandplans/marine_vhf_channels.csv, compiled in (CMake) and parsed here; marineVhfParseCsv() is

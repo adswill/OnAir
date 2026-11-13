@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 receiver on the synthetic signal at every common SDR sample rate, with carrier offsets:
 // no crash (run with ASan/UBSan too), no spin (CPU-time guard), and the frames decode where the channels are in the band.
 // Regression for the RSP1B start-up crash at 2 and 4 Msps (burst trimming erased past the end of the line buffer, and the

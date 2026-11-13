@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Retuning a running engine: the radio and hardware tune settings (radioTune/hwTune), retune, retune with receiver reset, and the
 // restart when the sample rate has to change.
 #include "dect2/engine/engine.h"

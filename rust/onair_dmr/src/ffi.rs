@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_dmr` (core/include/dect2/rs/dmr.h). Every export is `onair_dmr_*`; pointers come as (pointer, length) pairs or point at fixed-size bit /
 //! byte arrays documented in the header; the caller owns all buffers. Functions that write text return its length, or `usize::MAX` when the buffer is too
 //! small. Names are static NUL-terminated strings. A null pointer where a buffer is needed makes the function fail (false / -1 / 0), nothing is written.

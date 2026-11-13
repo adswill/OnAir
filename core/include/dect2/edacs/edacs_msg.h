@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EDACS control channel message layer: what the two 28-bit words of a frame mean, Standard / Networked and Extended Addressing, and the same words built for the
 // test signal.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR screens: the SITOR-B (FEC) text of NAVTEX and HF coast stations as it is received, with the tone spacing, the symbol rate and the
 // character counts, and the SITOR-A / AMTOR (ARQ) monitor: selective call, blocks and repeats, link events and the text without repeats. The receiver is core/include/dect2/sitor/sitor_live.h (family 119, engine standard 121, active standard 120).
 #include "app.h"

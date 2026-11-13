@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa / Meshtastic network census (mesh_census.h): the LoRa airtime formula against the Semtech calculator's figures, then two
 // simulated days of a 20-node mesh (three routers, relayed copies with fewer hops left, CRC failures, an evening peak and a flood
 // hour); checks nodes, roles, the fewest hops, unique packets against copies, utilisation, busiest hours and the two insights.

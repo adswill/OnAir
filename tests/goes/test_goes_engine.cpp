@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES HRIT through the engine (setStandard(62)): the synthetic source plays the HRIT test signal, the receiver decodes the products
 // and reports through latestRx(). No sound.
 #include "dect2/goes/goes_rx.h"

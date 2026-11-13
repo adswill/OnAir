@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver: orchestrates the bands, the acquisition, the tracking channels, the navigation data base and the position solution.
 // This file: the public GnssReceiver API, the block loop and the tuning table. The state and the bigger member functions are in
 // gnss_rx_impl.h and gnss_rx_{plan,acq,nav,measure,telemetry}.cpp.

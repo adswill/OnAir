@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR receiver, conditions of the field: other sample rates, dropouts of the radio's stream, a gain step, an adjacent channel as strong as or
 // stronger than the wanted one, impulse noise and a reset in the middle. Compared with what the generator says it sent (dmr_eval.h). The basics are
 // in tests/test_dmr_rx.cpp, handsets (direct mode, mobile station) in tests/test_dmr_handset.cpp.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 sensitivity part 3 (docs/SENSITIVITY-4.0-A3.md): guard for the burst and packet detection gates that were loosened. Each row is the mode's own
 // test signal through white noise (and a carrier / clock error) into a fresh receiver, seeded trials: the fraction of the clean run's units decoded must
 // reach `need` (the 3.9 receiver is below it), and noise alone must give nothing. Simulated signals only.

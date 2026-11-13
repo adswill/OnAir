@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunking logic: the system model from TSBKs, the follow state machine (grant -> follow -> end -> return), priority and lockout, the rotating
 // control channel, the talkgroup CSV, encrypted grants, and malformed / random inputs. No RF: the messages go through tsbkBits / tsbkParse first.
 #include "dect2/p25/trunk.h"

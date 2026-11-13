@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Descriptive tables of the DRM signalling (ES 201 980 tables 18 and 19, clause 6.3.3, table 48) and the application names of the data services (ETSI TS 101 756
 //! table 16, as DRM lists them).
 

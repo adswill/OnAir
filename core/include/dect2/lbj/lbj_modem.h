@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ modem: 1200 bit/s 2-FSK (about +-4 kHz) on a 25 kHz railway channel -> POCSAG codewords. The signal is weak and the
 // transmitters (locomotives) are up to a few kHz off frequency, so the chain is: mix, resample to 48 kHz, 6 kHz channel filter,
 // FM discriminator, 1.5 kHz smoothing, a running mean as the slicer threshold, and a sync-word search at all 40 sample phases in

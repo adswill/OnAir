@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EBICab / Eurobalise through the engine (setStandard(209)): the synthetic source plays bursts of balise telegrams, the receiver reports through latestRx().
 #include "dect2/ebicab/ebicab_rx.h"
 #include "dect2/engine/engine.h"

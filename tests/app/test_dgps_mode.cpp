@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DGPS beacon mode (work in progress): the engine tuning is registered under its number, the mode row and the family
 // count agree with it, and the panel's strings are in the screen source.
 #include <cstdlib>

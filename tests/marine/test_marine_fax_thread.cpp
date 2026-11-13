@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Threads and speed: push() on one thread while status() / latestImage() and the setters run on others, and the
 // real-time factor of push() at 12 kHz and 48 kHz audio.
 #include "../data/marine/fax/fax_util.h"

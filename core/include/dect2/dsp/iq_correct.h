@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Clean-up of the samples of a zero-IF radio before any receiver sees them: the DC spike (the LO leaking into the ADC, a spike in the
 // middle of the spectrum on the HackRF, RTL-SDR and the like) and IQ imbalance (I and Q with slightly different gains or not quite 90
 // degrees apart, which puts a mirror image of every signal on the other side of the centre). Both are measured from the signal itself,

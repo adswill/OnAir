@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdma2000 / IS-95: pilot PN sequences, the K = 9 code, CRC-30, the interleaver and the Sync Channel Message (cdma.h for the references).
 #include "dect2/cdma/cdma.h"
 #include <algorithm>

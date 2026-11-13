@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! DAB programme associated data (ETSI EN 300 401 clause 7.4 and 5.3.3, ETSI TS 102 563 clause 5.2, ETSI TS 102 980 DL Plus): the PAD of a DAB+ access unit
 //! (data stream element) and of an MP2 frame, the F-PAD / X-PAD split into application subfields, the data group length indicator, the dynamic label segment
 //! framing and the DL Plus tag command. The data group, dynamic label and slide show assembly state stays in C++.

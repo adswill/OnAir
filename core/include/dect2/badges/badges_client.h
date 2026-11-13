@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Map badges, the app side (docs/MAP-BADGES-4.0.md). One OnAir GitHub sign-in serves the plugin marketplace and the live map: the
 // marketplace's device flow (core/src/pstore/market.cpp) writes plugins/.market/session.json, and the map share reads the same file and
 // sends the token as "Authorization: Bearer ..." with its posts, only while the user has "Earn badges" on. Signed out, or with badges off,

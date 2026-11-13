@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // auth.js - GitHub sign-in for the map (docs/MAP-BADGES-4.0.md). Pure WebCrypto (crypto.subtle, in Workers and Node), covered by
 // test/auth.test.js.
 //

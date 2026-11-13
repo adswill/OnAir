@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL band hopping: HF only carries a band at a time of day, so the receiver follows the ground stations to the band that works now.
 // The hopper is pure logic (no radio, no clock): every second or so it is given the time, the band the radio is on, the count of good
 // PDUs so far, and the frequencies the heard squitters announce as active (the HFDL system table: each ground station's SPDU lists the

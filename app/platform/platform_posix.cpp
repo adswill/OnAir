@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Linux and Windows services. Linux: dialogs through zenity/kdialog, settings in ~/.config/onair/settings.conf.
 // Windows: the standard Open/Save dialogs, settings in %APPDATA%\\OnAir\\settings.conf.
 #include "platform.h"

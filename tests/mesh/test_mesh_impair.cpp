@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) under impairments, at the LoRa layer: carrier offset +-20 kHz (869 MHz: radio and node crystals), clock offset +-50 ppm
 // (and +-30 ppm on SF12), 8-bit samples, a DC offset, a 20 ms gap, a reset in the middle, chunks of 1 / 7 / 4096 / 65536 samples,
 // two frames at once on different frequencies, and a weak frame right after a strong one.

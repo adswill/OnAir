@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic gain, part 1: the radio models (gain chains with their step tables) and the stage planner. See docs/AUTOGAIN.md.
 // The noise figures and IIP3 values are typical figures from the parts' data sheets and published measurements, good enough to rank two
 // splits of the same overall gain; they are not calibrated per unit.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunk following inside a WIDE capture (p25_scenario.h): the control channel and the voice channels are all in one 1.2 MHz capture at different
 // offsets, the radio never retunes. Phase 1 calls get a slice of the whole-span bank (WideModes follow-only, the app's wideFollow), a Phase 2 call
 // runs on the second Phase 2 receiver; the voice reaches the call log, the slices close with the calls, no retune happens. Also: more granted calls

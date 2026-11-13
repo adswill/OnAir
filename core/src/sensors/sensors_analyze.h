@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The unknown signal analyser of the Sub-GHz sensors mode: from the pulse and gap widths of a package that no decoder took
 // it guesses the modulation, slices the bits with rtl_433's own slicers and writes a flex decoder definition for the result.
 #pragma once

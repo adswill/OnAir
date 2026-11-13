@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The data feeds' thread: TCP servers (SBS, Beast, KISS), UDP senders (AIS, ACARS, VDL2) and the APRS-IS client.
 // The decoders only append to a bounded queue; everything here is non-blocking (the APRS-IS connect excepted, which only
 // holds up this thread). A slow client gets its data dropped once it has 512 kB waiting.

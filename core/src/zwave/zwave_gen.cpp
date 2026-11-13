@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Z-Wave test signal, see zwave_gen.h
 #include "dect2/zwave/zwave_gen.h"
 #include "dect2/zwave/zwave_rx.h"

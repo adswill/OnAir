@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Field parsing of a good ACARS block (ARINC 618 section 3; libacars acars.c for the layout and the H1 sublabel / MFI rule).
 //!
 //! Layout after SOH: mode (1), address (7), technical ack (1), label (2), block id (1), then STX and the text, then the suffix ETX (0x03) or

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SDR transmit path of the ham modes: the SSB chain's spectrum (opposite sideband, interpolation images, spurs, harmonics), the ALC and the
 // power limit, and SdrHamIo through HamSlotTx into a recording sink (nothing is sent anywhere): keyed only through the gate, tuned to the checked
 // frequency, hard stop on a radio error, Halt, the monitor, and an FT8 burst decoded back from the IQ.

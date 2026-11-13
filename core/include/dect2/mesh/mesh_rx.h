@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) receiver: Meshtastic, MeshCore, LoRa APRS and MeshCom at the same time. Each LoRa setting of the region that falls inside the captured band
 // gets a channel filter and a demodulator (mesh_lora.h); good frames go to the packet layer (mesh_proto.h) and fill the tables of
 // MeshTelemetry. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never

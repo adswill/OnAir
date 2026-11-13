@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // macOS bitstream passthrough (bitstream_out.h): CoreAudio hog mode, the output stream switched to a non-mixable physical format that carries
 // IEC 61937 data (kAudioFormat60958AC3, or 16-bit stereo PCM marked non-mixable at the link rate), an IOProc that copies the words untouched.
 // EXPERIMENTAL: written from Apple's CoreAudio headers, NOT tested on real hardware.

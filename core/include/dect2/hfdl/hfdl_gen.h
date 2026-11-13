@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL test signal: ground stations and aircraft on HFDL channels, PSK bursts (root raised cosine, roll-off 0.35, 1800 baud) with the
 // real burst structure (prekey, A1, A2, M1, M2, training, data blocks with probes, scrambled, interleaved, K = 7 coded). Nothing is
 // transmitted; the samples only exist in memory or in a file. Synthetic content: flights, registrations and texts are made up.

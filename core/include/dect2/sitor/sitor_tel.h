@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR telemetry. RxTelemetry::sitor, family 119, active standard 120, engine standard 121. SITOR-B (FEC) and SITOR-A (ARQ) are read
 // side by side from the same FSK; the summary names the one that is on the air.
 #pragma once

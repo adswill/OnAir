@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! NXDN frame scrambler and LICH (NXDN TS 1-A section 4.3): the PN9 sequence applied to the 182 symbols after the frame sync word, and the
 //! 8-bit link information channel (RF channel type, functional channel type, option, direction, even parity).
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C through the engine, as the GUI uses it: the synthetic source plays the test signal (SynthConfig::mode = 42) in real time, the receiver
 // runs on the engine's thread, and the transport stream analysis must find the test programme (PSI: a service with video and audio).
 #include "dect2/dvbc/dvbc_rx.h"

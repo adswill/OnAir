@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio-ID name database for DMR and NXDN: a CSV the user downloads (radioid.net style) or brings, parsed locally, so calls show
 // "1234567  W1ABC Joe Smith" instead of a bare number. The data is never shipped with OnAir (docs/RADIOID.md says where to get it).
 //

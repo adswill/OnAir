@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine through the engine as the interface and dect2cli use it: the synthetic source (8 bit samples at 2 Msps, faster than a radio: the receiver
 // is tested, not real time, and the run is counted in seconds of signal)
 // plays NAVTEX, then an MF/HF DSC sequence, then a VHF one; the engine must decode, report and keep every sample.

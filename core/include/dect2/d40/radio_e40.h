@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 public safety, aviation, rail, LoRa and science helpers, group E (pure, no GUI). Tests: tests/d40/test_radio_e40.cpp
 //  1. TgAlias / TgFollower   talkgroup alias import (RadioReference-style CSV or "id,name") and an auto-follow policy: priority groups pre-empt, equal ones wait for a hold time,
 //                            encrypted calls are skipped.

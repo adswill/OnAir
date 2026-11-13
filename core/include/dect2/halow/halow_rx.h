@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) network monitor: the networks around, from the S1G beacons they broadcast openly in the sub-GHz bands (863 - 868 MHz EU,
 // 902 - 928 MHz US and the other regions of halow_chan.h), as a Wi-Fi list shows them (SSID, BSSID and vendor, channel, bandwidth, MCS, streams,
 // security, level). Passive: it never transmits, probes, associates or joins; the security type is shown as information only and nothing is decrypted.

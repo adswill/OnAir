@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DVB subtitle layer of dvbsub.h on top of the Rust crate rust/onair_dvbsi: PES header, segment walk, the five segment parsers, the colour
 // tables, the run-length pixel decoder, region blending and the PTS arithmetic. The decoder class with its page, region, CLUT and object state stays in
 // dvbsub.cpp.

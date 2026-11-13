@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time stations BPC, HLA and the coded BPM signal (BPMc): the frames and their parities, the generator through the receiver started part way
 // into a minute, a sample clock that runs slow, noise alone gives nothing. With DECT2_TIME_REC_DIR set to a folder holding BPC.wav, HLA.wav and
 // BPM.wav (mono recordings of the stations' audio, read only, never part of the repository) they are decoded too.

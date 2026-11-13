@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The classic interface's main tabs (Overview, Receiver, Stream and the mode's own tab) and the small helpers they share.
 // Split from main.cpp; mainTabs() is called by drawUI() in draw_ui.cpp.
 // The tab bodies are small; the larger panels they show live in analysis_tabs.cpp, tv.cpp and the mode folders.

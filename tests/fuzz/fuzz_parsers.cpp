@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the C++ byte parsers that have no fuzz_<mode>_proto of their own, meant for DECT2_SANITIZE=ON: ATSC PSIP
 // sections (MGT, VCT, EIT, ETT, STT, multiple string text, Huffman titles), CEA-608/708 captions, the ATSC 3.0 ALP reassembler, IPv4/UDP
 // reassembly, LLS / AEAT / S-TSID XML, ROUTE/LCT packets and objects, MIME multipart, raw deflate and gzip, the XML reader, the RDS group

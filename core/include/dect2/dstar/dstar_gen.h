@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // D-STAR test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of calls, each a whole DV transmission: bit sync, frame sync, radio header, voice frames with slow data (the message, the

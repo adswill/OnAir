@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / packet layers without the radio: "fix bits" (destuffing, the repair of one wrong line bit at 1200 baud with NRZI and at 9600 baud
 // through the G3RUH scrambler, the plausibility check of a repaired frame) and aprs::parseFull() (a '!' position after other text, raw NMEA,
 // third-party packets, the reply-ack message number).

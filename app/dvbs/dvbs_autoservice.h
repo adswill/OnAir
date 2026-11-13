@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-S/S2 (and QO-100): start the decoder of a signal that carries a single service by itself, and follow the signal when the
 // receiver is moved to another one (#322). On QO-100 most carriers hold one service, so jumping between them should not need a
 // Stop and a Start on the service each time. A signal with several services stays manual.

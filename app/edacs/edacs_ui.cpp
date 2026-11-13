@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EDACS trunking screens: lock, good / bad frame counts, the frame list and a table of the most frequent data words, then the calls, talkgroups and
 // site information read from the control channel, the voice channel table with its activity, and the following of one analog voice channel.
 // Control data, analog voice, and ProVoice through the user-installed IMBE plug-in; nothing encrypted is handled. The data words are shown raw next to what the

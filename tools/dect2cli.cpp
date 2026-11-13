@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Headless receiver: prints sync / L1 telemetry once per second. Useful for bring-up and logs.
 //   dect2cli --hackrf [--freq MHz] [--lna dB] [--vga dB] [--amp] [--bw MHz] [--secs N]
 //   dect2cli --list-devices   (index, driver, name, serial and antenna of every radio found, then exit)

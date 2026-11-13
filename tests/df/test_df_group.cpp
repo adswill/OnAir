@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Coherent group of independent receivers: start offsets and phase/gain errors recovered from a noise-source calibration, then MUSIC bearing
 // accuracy on the corrected data (synthetic 5-element UCA, known bearings), plus a refusal of incoherent channels.
 #include "dect2/df/group.h"

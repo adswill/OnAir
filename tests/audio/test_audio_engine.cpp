@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sound card (audio device) input through the whole engine, as the app runs it, with a WAV file standing in for the card (issue #137: weather fax
 // from a virtual audio cable neither decoded nor showed on the spectrum). Never opens a real device.
 //  - the audio of a synthetic weather fax at several sample rates, channel layouts, levels, DC offsets, tuning errors and clock errors goes in as the

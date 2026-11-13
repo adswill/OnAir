@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APCO Project 25 Phase 2 receiver (TIA-102.BBAB / BBAC): TDMA, two time slots, 6000 symbols/s differential QPSK in 12.5 kHz. Receive only.
 //
 // The channel is mixed to 0 Hz, decimated to 48 kHz (8 samples per symbol), root raised cosine filtered, and every sample phase is differentially

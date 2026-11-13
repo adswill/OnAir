@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TX studio (no GUI): generate a mode's signal into memory, measure it, write it in every format (read back with the project's reader), batch sweep, list parsing.
 // NOTHING is transmitted and no radio is opened.
 #include "dect2/tx/tx_studio.h"

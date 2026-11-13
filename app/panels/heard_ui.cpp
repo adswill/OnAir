@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Search everything heard (View > Search everything heard): one box for a call sign, ICAO address, MMSI or frequency, over the history of every mode.
 // The search and the grouping are core/src/station/heard.cpp; live positions come from the map screens' tracks.
 #include "../app.h"

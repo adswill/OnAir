@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Privacy of the session data (docs/MODE-EXPERIENCE.md, 2.7): the per-install salt and salted short tags, the "Keep real ids" switch per mode,
 // the single "Redact message text" switch, escaping of exports (formula injection, control characters, invalid UTF-8), the Anonymise option,
 // owner-only files, and "Delete all data for this mode" / "Delete everything".

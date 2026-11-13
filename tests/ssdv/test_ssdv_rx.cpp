@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV receiver on the generator's signals (FSK / GFSK bit streams, plain or RTTY-framed): clean, then the impairments one by one: carrier
 // offsets of +-3 kHz, the swapped frequencies, a clock error of 1000 ppm, a carrier drift, noise, and every speed; noise alone must give nothing.
 // A picture counts as received when it is complete and its JPEG is byte-for-byte the one the packets give directly.

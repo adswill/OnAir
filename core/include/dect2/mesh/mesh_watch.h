@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh node watch (Meshtastic app notifications, MeshSense): a chosen node not heard for N hours, its battery below X %, a new node near you.
 // Turns the node table into lora.node_silent / lora.node_battery / lora.node_new events. docs/MESH-WATCH-3.9.md.
 #pragma once

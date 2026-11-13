@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Reed-Solomon (255,249) over GF(2^8) as VDL Mode 2 uses it: field polynomial 0x187, first root alpha^120, six roots. A burst's last block is shorter and carries
 //! fewer parity octets (the others are erasures for the decoder). ICAO Annex 10 Vol III Part I section 6.3.2, Doc 9776.
 use crate::bits::{RS_K, RS_N};

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Occupied bandwidth meter: PSK signals with root-raised-cosine pulses (known raised-cosine spectra: the 99 % and the x dB bandwidths are integrated / solved in the test), with a carrier offset and a
 // neighbour at a known level; a noise sweep; no signal. Simulated signals only.
 #include "x40_gen3.h"

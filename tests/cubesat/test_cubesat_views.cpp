@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The CubeSat framings with a mode-list entry of their own (cubesat_rx.h: cubesatViews, families 840 .. 855): AX100 Mode 5, AX100 Mode 6,
 // USP, NGHam, U482C and BEESAT / Mobitex. Each entry is the CubeSat telemetry receiver with the frames of one framing; these checks are
 //  - the tables: family / active standard / engine standard (+1 / +2), unique ids, the tuning table finds each one;

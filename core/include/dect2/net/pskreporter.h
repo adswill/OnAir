@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK Reporter (pskreporter.info) reception reports: IPFIX over UDP to report.pskreporter.info:4739, https://pskreporter.info/pskdev.html.
 // The encoder / decoder / batcher are pure (tested without a network); PskReporter is the sender thread. Off until the user opts in:
 // spots are public, and need the user's own amateur callsign and locator.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS voice: superframe assembly and the test stand-in codec. See kaws_voice.h.
 #include "dect2/kaws/kaws_voice.h"
 #include <cmath>

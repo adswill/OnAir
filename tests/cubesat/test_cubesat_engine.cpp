@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry through the engine (setStandard(63)): the synthetic source plays every framing, the receiver reports frames through
 // latestRx(). No sound.
 #include "dect2/cubesat/cubesat_rx.h"

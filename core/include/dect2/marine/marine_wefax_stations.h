@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF radiofax stations of the world and their broadcast times: the table behind the weather fax directory and schedule.
 // The data lives in core/src/marine/marine_wefax_stations.cpp, one line per frequency and per broadcast, so it is easy to update.
 // Source: the NOAA "Worldwide Marine Radiofacsimile Broadcast Schedules" (weather.gov/marine/radiofax) and the stations' own

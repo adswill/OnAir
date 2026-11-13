@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wenet: the high-speed image downlink of Project Horus balloons ("The Swift One", github.com/projecthorus/wenet, GPL-3.0-or-later).
 // A transmitter (Raspberry Pi with an RFM98W / RFM22B / Si4032 on the 70 cm band) sends 2-FSK at 115.2 kbaud (deviation about +-72 kHz, the
 // signal is about 200 kHz wide) or, from a sound-card ("I2S") transmitter, 96 kbaud. Packets of 256 bytes (the first byte is the type: 0x55 is

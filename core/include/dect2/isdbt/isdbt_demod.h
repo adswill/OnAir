@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T demodulator core: from the FFT output of consecutive OFDM symbols (carriers in band order, already corrected for common phase
 // and timing slope) to transport stream packets, layer by layer: channel estimate from the scattered pilots, differential detection
 // of the DQPSK segments, de-interleaving, bit de-interleaving, Viterbi, byte de-interleaving, energy dispersal removal, Reed-Solomon.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DVB-T2 receiver's LDPC decoder: the layered normalised min-sum of LdpcCode::decodeFast (core/src/dsp/ldpc.cpp), with the same
 // arithmetic in the same order (so the same decisions and iteration counts, bit for bit), minus what it cost around the arithmetic:
 //   - the work buffers live on with the thread (the message store alone is over a megabyte for a 64800-bit code: allocated, page-faulted in

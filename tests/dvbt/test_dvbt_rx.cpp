@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // End-to-end DVB-T: generator -> channel impairments -> receiver, checking lock, TPS and transport stream recovery.
 #include "dect2/dvbt/dvbt_gen.h"
 #include "dect2/common/stable_random.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic test signal. See btc_gen.h.
 #include "dect2/btc/btc_gen.h"
 #include "dect2/common/stable_random.h"

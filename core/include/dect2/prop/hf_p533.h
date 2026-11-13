@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF sky-wave prediction after ITU-R P.533-14 (08/2019), written from the recommendation text:
 //  - ionosphere: ITU-R P.1239-4 (08/2023): the CCIR (Oslo 1966) numerical maps of foF2 and M(3000)F2 for each month at R12 = 0 and 100,
 //    evaluated with the modified magnetic dip of an epoch-1960 sixth-order field model at 300 km (DGRF 1960 coefficients); foE from

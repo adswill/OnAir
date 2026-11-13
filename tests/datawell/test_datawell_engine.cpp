@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell buoy HF link through the engine (setStandard(76)): the synthetic source plays the 2FSK HXV test signal, the receiver reports through
 // latestRx(). No sound.
 #include "dect2/datawell/datawell_rx.h"

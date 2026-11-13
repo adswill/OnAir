@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Workspace layout's model (canvas_model.h): blocks, links, tab groups, snapping, the text form, templates.
 #include "canvas_model.h"
 #include <algorithm>

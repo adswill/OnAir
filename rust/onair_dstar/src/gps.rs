@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! GPS text carried in the D-STAR slow data: NMEA sentences ($GPRMC / $GPGGA, also GN, GL ...; checksum checked) and D-PRS lines
 //! (`$$CRCxxxx,CALL>DEST,...:!DDMM.mmN/DDDMM.mmE...`, CRC-CCITT of the text after the comma). Numbers are read with the C library (`atof`, `atoi`,
 //! `strtoul`, `lround`) like the C++ reference, so every value is identical bit for bit. The result codes tell whether the reference would have left the

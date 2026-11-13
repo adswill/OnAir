@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA demodulator sensitivity (3.9): one carrier of the test cell at 72 kHz (4 samples per symbol), with a tuning error, a symbol clock
 // error, a random start and AWGN measured in the 25 kHz channel, through tetra::decodeCarrier. A capture counts as decoded when it gives at
 // least half the signalling blocks (CRC good) the clean capture gives, the criterion of tools/sens/sens_sweep. Simulated signals only.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT (978 MHz): aircraft table, FIS-B weather text, message log.
 #include "../panels/photo_links_ui.h"
 #include "../ui/typography.h"

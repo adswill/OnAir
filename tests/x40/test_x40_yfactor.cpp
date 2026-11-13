@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Noise figure (Y-factor) meter: a noise source switched on and off (steps of 0.5 to 15 dB, 10 s per state), with a slow gain drift, three input rates and a few percent of power jitter; Y and the noise figure
 // for a known ENR are read against the generator; steps under 0.3 dB are not reported; a steady noise gives nothing. Simulated signals only.
 #include "x40_gen3.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tables of A/322 for the data path, generated from the standard's text: constellation position vectors (Annex C), group-wise
 // bit interleaver permutations (Annex B). Indexed by code rate r/15 with r = 2..13.
 #include "atsc3_data_tables.h"

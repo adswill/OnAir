@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ESP32 radio as an OnAir device: an ESP32 board (optionally with an nRF24L01+ module on its SPI bus) on a serial port, speaking the framed protocol of
 // firmware/esp32/onair_esp32/onair_wire.h. Receive: nRF24 packets, BLE advertising, IEEE 802.15.4 frames, WiFi (observation only: networks, clients, signal,
 // channel load). Transmit: nRF24 packets and BLE advertising, only after setTxEnable(true) (the user's Arm). Never any WiFi transmit.

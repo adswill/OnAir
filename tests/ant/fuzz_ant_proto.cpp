@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT frame layer under mutation: libFuzzer entry point (-DONAIR_LIBFUZZER) or a deterministic seeded mutation run (ONAIR_FUZZ_ITERS, default 200000).
 #include "dect2/ant/ant_proto.h"
 #include <cstdio>

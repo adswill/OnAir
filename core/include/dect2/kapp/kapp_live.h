@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP for the engine: IQ in, bursts out. kapp::BurstReceiver finds and decodes the bursts; every data burst goes to a selective-repeat message
 // assembler per sender callsign (kapp::ArqReceiver), a message that is complete goes to the packet list of the telemetry. This receiver only listens:
 // it never sends the ACK that the protocol asks for (OnAir has no half-duplex turnaround), so a sender that waits for ACKs cannot finish through it;

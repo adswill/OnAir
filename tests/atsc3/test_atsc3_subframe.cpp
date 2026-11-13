@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 subframe symbols: the number of data cells per data symbol and per subframe boundary symbol against A/322 Tables 7.3 to 7.6
 // (every FFT size, carrier reduction and scattered pilot pattern), and a round trip through modulation, a channel and demodulation.
 #include "dect2/atsc3/atsc3_subframe.h"

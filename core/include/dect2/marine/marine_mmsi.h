@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MMSI formats (ITU-R M.585): what kind of station a number names and which country the MID belongs to, plus an optional local name table.
 #pragma once
 #include <string>

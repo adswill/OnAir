@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM receiver: how smooth the sound is. Every case runs the synthetic signal through an impairment (noise, the fading channels of Annex B.1, flat
 // Rayleigh fading at several speeds, deep holes in the signal, impulse noise, offsets) into the receiver and listens to the 48 kHz sound as a sound
 // device would play it (testkit.h, listen()). Each line prints the health of every stage (lock, FAC, SDC, multiplex frames, audio frames) and what the

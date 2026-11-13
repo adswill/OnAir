@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers tool: search an IQ recording for LTE cells and print what they broadcast.
 //   celltool <file> <rate Hz> <centre Hz> [cs8|cf32]     the whole receiver (spectrum, every carrier, system information)
 //   celltool --gen <file.cf32> [scene]                     write the test signal (cellTestCell) at its native rate

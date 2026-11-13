@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The interface translations (app/i18n/*.txt):
 //  - every catalog key is text the sources pass to tr(), trw() or N_() (no stale keys); fails otherwise
 //  - every such text missing from a catalog is counted and listed as a warning (the English text is shown for it)

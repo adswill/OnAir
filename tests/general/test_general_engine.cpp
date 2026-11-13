@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver through the engine (setStandard(57)): the synthetic source plays an NFM station on the default frequency, the
 // receiver reports through latestRx() with the squelch open. No sound.
 #include "dect2/general/general_rx.h"

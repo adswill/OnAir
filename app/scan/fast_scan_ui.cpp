@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "Fast scan" scope of the merged Scanner view. See fast_scan_ui.h and docs/fast-scan.md.
 #include "dect2/common/thread_name.h"
 #include "dect2/fastscan/fwsweep.h"

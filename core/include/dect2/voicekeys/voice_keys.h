@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice key store: the named decryption keys the USER imports so OnAir can listen to digital-voice channels the user is authorised to hear.
 //
 // OWNER / LEGAL CONTRACT (do not weaken):

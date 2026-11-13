@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT physical layer: the profile and width tables, block packing, frame / burst builder, preamble, header, RRC shaping.
 // Spec: KAFT-SPEC-v0.1 (ten profiles P0-P9, widths 200 kHz / 500 kHz / 1 MHz, roll-off 0.25). The error coding (LDPC n = 7680, convolutional
 // header code, QAM mapping, CRCs, Zadoff-Chu, RRC taps) is the shared foundation in dect2/kris/.

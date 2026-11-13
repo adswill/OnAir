@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Opt-in logbook uploads for the Ham log: QRZ.com Logbook, Club Log (realtime) and eQSL. Off by default; nothing is sent unless a service is
 // switched on AND its credentials are filled in. Only the ADIF record of the QSO is sent (call, grid, mode, band, frequency, reports, UTC time,
 // your callsign and grid). HTTPS only with certificate verification; credentials travel in POST bodies, never in a URL, and are never logged.

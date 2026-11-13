@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV test-signal generator, checked by an analysis that does not use the receiver: the composite video is read from the generator's
 // tap and measured against the numbers of BT.470-6 (pulse widths, line and field timing, levels, burst, colour bars), and the radio
 // signal is demodulated with an ideal frequency-domain detector and measured against what the standard asks of the transmitted spectrum.

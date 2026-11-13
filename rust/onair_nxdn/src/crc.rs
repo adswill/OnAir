@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! NXDN CRCs over bit arrays (one bit per byte), NXDN TS 1-A section 4: CRC-6, CRC-12 and CRC-16 with all-ones start values.
 
 /// Bitwise CRC over `bits` (one bit per byte, bit 0 used): `w` bits wide, polynomial `poly`, start value `init`.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Long sensor history (WeeWX, Cumulus): per sensor and local day the minimum, maximum and mean of each value, and rain per day from the
 // rain counter (resets skipped), with month and year totals. Kept on disk between sessions. docs/SENSORS-HISTORY-3.9.md.
 #pragma once

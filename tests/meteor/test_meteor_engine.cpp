@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor-M LRPT through the engine (setStandard(61)): the synthetic source plays the test signal (OQPSK 72k, 1 Msps, offset tuning),
 // the receiver reports through latestRx() and the picture grows. No sound.
 #include "dect2/meteor/meteor_rx.h"

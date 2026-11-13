@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 Lane B group 3: tone system identification (links the tone tables of dect2core). Simulated tone lists only.
 #include "dect2/tones/tone_ident.h"
 #include <cstdio>

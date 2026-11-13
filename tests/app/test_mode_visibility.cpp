@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode visibility rules: parse/join, hidden groups and modes, active mode, favourites, search, tree ticks, presets.
 #include "../../app/ui/mode_visibility.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ITU-T J.83 Annex B (North American cable, "clear QAM"): 64-QAM (5.056941 Msym/s, roll-off 0.18) and 256-QAM (5.360537 Msym/s, 0.12).
 // Inner code: a rate-14/15 or 19/20 trellis over 5-symbol groups (punctured 16-state convolutional code on the LSBs, 90-degree invariant precoding).
 // Outer: RS(128,122) over GF(128), convolutional interleaver, a randomizer over GF(128), and an FEC frame with a sync trailer. The transport packets are carried

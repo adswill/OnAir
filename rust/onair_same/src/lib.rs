@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir SAME: NOAA Weather Radio SAME / EAS alert headers (47 CFR 11.31): header parsing and checking, the originator / event /
 //! state / province tables, location codes in words, issue and purge times, and the county-table CSV reader.
 //!

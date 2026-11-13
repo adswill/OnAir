@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_vdl2` (core/include/dect2/rs/vdl2.h). Every export is `onair_vdl2_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //! A null pointer with a length is read as an empty input. Fixed-size arrays (parity, codewords, addresses) must be present.
 //!

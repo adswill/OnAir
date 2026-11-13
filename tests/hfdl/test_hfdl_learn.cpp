@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL ground-station frequency learning (hfdl_learn.h) against a synthetic system table that changes: the masks read against the old built-in table go
 // wrong, the learner must follow what is heard.
 #include "dect2/hfdl/hfdl_learn.h"

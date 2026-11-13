@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MBTiles reader (own SQLite file-format reader) and the coarse world outline. The synthetic file is built here page by page (a table leaf, an
 // index leaf, an overflow chain); when the system has the sqlite3 command-line tool, a second, multi-level file made by real SQLite is read too.
 #include "dect2/geo/mbtiles.h"

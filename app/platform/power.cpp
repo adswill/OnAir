@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Battery state and the process's load per thread (power.h). The macOS window and App Nap parts are in power_cocoa.mm.
 #include "power.h"
 #include <algorithm>

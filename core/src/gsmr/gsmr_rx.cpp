@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R receiver (gsmr_rx.h): blocks of input, 200 kHz carriers found in the spectrum, base stations synchronised and their BCCH decoded.
 #include "dect2/common/thread_name.h"
 #include "dect2/wirecap/wire.h"

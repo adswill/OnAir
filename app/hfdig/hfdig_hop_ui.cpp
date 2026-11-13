@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band hopping for FT8 / FT4 / FT2 / WSPR on one narrow radio: the plan (bands per UTC hour, coordinated or in turn) and the retune at each
 // 2-minute slot. Core: dect2/hfdig/hfdig_hop.h; the dial frequencies are the multiband ones (WSJT-X defaults).
 #include "app.h"

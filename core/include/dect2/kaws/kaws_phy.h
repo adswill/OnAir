@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS physical layer wrapper: bursts, reception, the Watterson channel and the 12 kHz audio / WAV conversion, all through the Rust crate rust/onair_kaws.
 #pragma once
 #include "dect2/kaws/kaws_frame.h"

@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Builds tools/bench/bench_core.cpp with only the DSP sources it needs (no other build needed), at the lowest priority, and runs it.
 #   tools/bench/bench_core.sh [out dir] [-- bench_core arguments]
 # DECT2_PORTABLE=1 builds the portable kernels instead of Accelerate (what Windows and Linux run).

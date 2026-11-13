@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine VHF channel scan and call log: see marinevhf_scan.h.
 #include "dect2/marinevhf/marinevhf_scan.h"
 #include <algorithm>

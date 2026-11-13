@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Offline data packs: lists what can be downloaded for use without internet (map tiles of a region, satellite elements, airports, transmitter lists),
 // and downloads, checks, re-checks and deletes a pack. Nothing is downloaded unless the caller starts a pack (the user's click); no network code
 // of its own: the transfer goes through a Fetcher (curl by default, a local copy in the tests).

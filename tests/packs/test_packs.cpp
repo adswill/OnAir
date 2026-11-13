@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Offline packs: catalog, tile pack plan, download through a local-copy fetcher, resume, checksum failure, cancel, disk guard, verify, delete.
 #include "dect2/packs/packs.h"
 #include "dect2/engine/updater.h"

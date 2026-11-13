@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dect2::window::besselI0 against the original private copies (each with its own term count / early-exit tolerance),
 // compared bit-exactly on random arguments from 0 to 80 plus edge values.
 #include "dect2/common/window.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Bit level helpers of DRM: the CRCs of ES 201 980 annex D over unpacked bits (one bit per byte, only bit 0 used) and a bit reader. Reads past the end give 0.
 
 /// Bit-serial MSB-first CRC over unpacked bits (`width` 1..32), result XORed with `xorout`.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One tracking channel (see gnss_track.h).
 #include "dect2/gnss/gnss_track.h"
 #include "dect2/gnss/gnss_bds.h"

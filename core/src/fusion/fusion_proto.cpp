@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu System Fusion frame coding (see fusion_proto.h).
 #include "dect2/fusion/fusion_proto.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the DVB-C receiver reports (RxTelemetry::dvbc, standard 41).
 #pragma once
 #include "docsis_down.h"

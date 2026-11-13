@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // See audio_if.h. The shift is done on the analytic signal so the other sideband stays suppressed: shifting the real samples would
 // fold the image on top of the wanted signal.
 #include "dect2/source/audio_if.h"

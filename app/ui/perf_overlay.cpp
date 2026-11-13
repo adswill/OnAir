@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Performance overlay: the frame rate and build time, the redraw pace and why, the process's CPU per thread and its wake-ups.
 // DECT2_PERF=1 writes the same once every 5 s to standard error (no window needed). The numbers are read once a second.
 #include "../app.h"

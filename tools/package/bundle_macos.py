@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Copy every non-system dynamic library an executable needs into OnAir.app/Contents/Frameworks and rewrite the load paths,
 so the app runs on a Mac without Homebrew. Usage: bundle_macos.py OnAir.app"""
 import os, re, shutil, subprocess, sys, glob

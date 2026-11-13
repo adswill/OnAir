@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The screens of the modes added after FM: the table that maps a family to its ModeUi, and small helpers for the shell.
 #include "../app.h"
 

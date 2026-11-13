@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B overhead log (round 4 #8): straight passes at several cross-track distances with range jitter, a gap in reception inside one pass, a long
 // gap (two passes), two aircraft at once, the altitude limit, a flight that stays outside, the day of a pass and the CSV round trip.
 #include "dect2/adsb/adsb_overhead.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN forward-bearer demodulator for one carrier: matched filter, pilot comb and unique word acquisition, pilot-aided channel estimate, soft
 // demapping and the turbo decoder, then the signalling parser. Input: complex samples of the carrier near 0 Hz (any rate of at least 2.2 samples per symbol).
 // Designed around the frame structure: every 80 ms frame is measured and decoded on its own (bgan_phy.h).

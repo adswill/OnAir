@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Subtitles saved as text next to a recording: an SRT / WebVTT writer, and a collector that turns the text-based teletext subtitle page of a
 // service into timed cues (time = PCR of the stream, from the first PCR seen). Bitmap DVB subtitles (EN 300 743) are shown by the player and
 // recorded inside the .ts; exporting them as PNG overlays is not done.

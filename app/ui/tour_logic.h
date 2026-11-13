@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The first-run tour, pure part (no ImGui): the step list, the anchor registry (screen rectangles the interface reports each
 // frame) and the rules for which steps are shown and when the tour starts by itself. Drawn by tour.cpp; tested by tests/app/test_tour.cpp.
 #pragma once

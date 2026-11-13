@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Decoded results through the engine, as the user meets them: ACARS messages decoded from the test signal stay through a switch to
 // another mode (QO-100) and back, a retune and a stop / start of the receiver; they go into the results folder, a new engine (the next
 // run of OnAir) shows them again before its radio starts, and only the mode's Clear empties them.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Calls one after another on one channel, each with the answers it gets: a sounding, an individual call (answered, then

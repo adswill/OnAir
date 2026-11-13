@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS network health (docs/SMART5-ham-3.9.md, item 4), from the packets this receiver decodes:
 //  over-beaconing  - a fixed station more often than every 10 minutes, a moving one more often than every minute, over at least 6 beacons
 //  long paths      - WIDEn-N with n > 2, RELAY, TRACE, plain WIDE (the paths most regions ask people not to use any more)

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Loran-C detector (the eLoran data channel is not decoded: see the notes at the end of this header; its 9th pulse position states are here).
 // Works on complex baseband with the 100 kHz carrier at 0 Hz and the band limited to about +-11 kHz, sampled at fs >= 250 kHz.
 //

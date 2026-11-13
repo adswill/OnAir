@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi client view: stations probing for networks, stations seen with an access point, deauthentication floods and counts of 4-way handshakes.
 // Station addresses are hashed with a random per-run salt and shown as a short tag: they are never stored or shown as MAC addresses. Handshakes are
 // counted only, never captured.

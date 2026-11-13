@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL ground-station frequency learning (3.7, docs/SMART-maritime-3.7.md). The receiver reads the frequency masks of the squitters against a built-in
 // station table (hfdl_proto.h); the table the ground stations really use is the HFDL system table (HFNPDU 0xD0) that changes now and then, and the
 // squitter carries its version number. This keeps what the air says, so the plan follows the stations without a table file to maintain:

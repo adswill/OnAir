@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Callsigns in spoken text: "Lufthansa one two three alpha" > DLH123A, "november one two three alpha bravo" > N123AB, "Speedbird 4 7 2" > BAW472,
 // "hotel bravo alpha lima charlie" > HBALC. Whisper writes numbers as digits or as words, so both are read. Pure text rules (no radio).
 // The keys are normalised as acars_log.h does (upper case, no dashes, no leading zeros of the flight number), so they compare with the

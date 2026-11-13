@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES / Meteosat DCS platform message format (public NESDIS / JMA / EUMETSAT descriptions of the DCP radio set standards).
 // On the air, in order: an unmodulated carrier, a bit preamble of alternating 1 and 0 (250 bits at 100 bps, 450 at 300 and 1200 bps), the 15-bit
 // frame sync (a maximal length sequence), the platform address (31 bits: a BCH (31,21) codeword), for the 300 / 1200 bps format a spare bit and an

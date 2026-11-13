@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: the bit-stream transforms, the text views, the pattern search and the exports.
 #include "../common/tmp_path.h"
 #include "wb_test.h"

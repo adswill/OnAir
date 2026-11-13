@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode options for OnAir Web: see web_options.h. The schema strings come from the generated web_options_gen.cpp.
 #include "dect2/results/web_options.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB screens: the receiver panel (state, the symbol rate it listens to, frame and FEC counts, constellation, the packets that arrived, a byte counter and an
 // optional file for the payload) and the transmit options (callsign, a file of bytes or the synthetic test stream, profile A to D, FEC profile) that the TX panel
 // draws for the KAVB signal. English texts only. No AV1 or Opus decoder is built in: the panel says so and shows the packets as they are.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pager insights (docs/SMART5-pager-3.9.md), from the pages this receiver decodes (POCSAG, FLEX):
 //  automatic pages - a capcode that sends near-identical text at a steady interval ("automatic, every 15 min"; can be hidden)
 //  paging burst    - a capcode that suddenly sends many pages after being quiet

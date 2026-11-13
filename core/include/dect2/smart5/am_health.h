@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM modulation health (3.9, docs/SMART5-broadcast-3.9.md item 5): from the envelope of an AM station, second by second,
 // the positive and negative modulation peaks, negative-peak clipping (the carrier pinched off: over-modulation that splatters
 // onto the neighbours), carrier shift (the carrier level moving with the modulation: a weak transmitter supply or a faulty

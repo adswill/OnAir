@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the NXDN frame layer, meant for DECT2_SANITIZE=ON: LICH, CRC, the coded channels, message
 // parse / build and the voice bit order must never crash or hang on any bytes. Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/nxdn/nxdn_proto.h"

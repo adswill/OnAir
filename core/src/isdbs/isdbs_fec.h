@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S: the coding of a frame (internal). One K = 7 (171,133) convolutional code runs over the whole transmitted bit stream of the frames
 // (header, then the bytes of the slots that carry packets, in slot order; BO.1408 Fig. 12 and 6.3), the puncturing starts again at every
 // group of slots (Table 2 note), TC8PSK sends one bit of each pair through the code and the other uncoded (Fig. 14). Super-frame side:

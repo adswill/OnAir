@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ionospheric chirp sounders (ionosondes, oblique sounders), the processing behind IonoReceiver; usable on its own (tests).
 //
 // A sounder sweeps 0 .. 30 MHz linearly at a known rate (100 kHz/s most often, also 125, 150, 200, 500 kHz/s) and starts each sweep at

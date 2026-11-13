@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-I receiver on the generator's signals: the ARQ script clean (connect, speed change, both header values, ASCII and Huffman text, 100 and
 // 200 baud, a repeat, a changeover, QRT, the swapped polarity of every second cycle), then the impairments one by one: tuning errors of +-100 Hz,
 // a sender clock off by 150 ppm, noise, the unproto (FEC) broadcast, memory ARQ on a weak signal, and noise alone (nothing may be reported).

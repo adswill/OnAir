@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT receiver (nbiot_phy.h searchDecode / probe): the four test cells (standalone, guard band, in-band with the same and with another PCI),
 // one and two NRS ports, carrier offsets, sample clock errors, noise, other sample rates, an offset candidate, noise alone.
 #include "dect2/nbiot/nbiot_gen.h"

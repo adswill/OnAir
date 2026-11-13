@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB (family 123, engine standard 125, telemetry slot 133) as a real mode in the group "Kris custom modes": the mode-table row (no longer work in
 // progress), the modeui case, the receive panel, the transmit options, the engine wiring and the transmit registration are in the sources. Text checks only, so it
 // builds without the app. The behaviour is tested in tests/kavb/test_kavb_engine.cpp.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi OFDM PHY for the 5 and 6 GHz beacons: IEEE 802.11-2020 clause 17 (OFDM PHY, "802.11a"), the non-HT format that every access point
 // sends its beacons in on those bands (6 Mbit/s: BPSK, rate 1/2) whatever the channel width of the data it carries. A 40 / 80 / 160 MHz
 // channel sends the same non-HT frame duplicated in each 20 MHz part (clause 17.3.8.2 "non-HT duplicate"), so listening to the 20 MHz primary

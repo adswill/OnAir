@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weak weather fax (issue #103): the picture of a weak signal comes through the narrow filter in front of the discriminator. With the
 // start tone and the phasing at 6 dB and 2 dB (white noise over 0 .. 6 kHz, the fax occupies about a quarter of it), and joined in the
 // middle of a picture (no start tone, no phasing) at 4 dB: the line lock holds and the rows still look like the chart. Before the narrow

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The request bodies of the remote-control API: a flat JSON object (`{"a": 1, "b": "x", "c": true, "d": null}`), no nesting, no arrays, at most 32 keys.
 //! Strings are unescaped (`\uXXXX` becomes UTF-8, a lone surrogate is encoded as is) into the caller's arena; the result is a list of entries that point into it.
 //! A duplicate key replaces the earlier value. Anything malformed gives `None`.

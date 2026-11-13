@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 package io.github.adswill.onair
 
 /** What ModeDef.note means (the numbers are written by tools/gen_modes.py) and its text for the mode list. 0 = nothing to say. */

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signal stations: the minute frames of the amplitude time codes, the stations' sites and the propagation delay.
 //
 // Each second of a minute is one symbol. LF stations key the carrier: DCF77 (77.5 kHz, Mainflingen) drops it to 15 % for 100 ms (0) or

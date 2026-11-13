@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the P25 frame layer, meant for DECT2_SANITIZE=ON: NID, Reed-Solomon, Golay, trellis, TSBK,
 // link control, header / encryption sync words and the IMBE interleave must never crash or hang on any bytes. Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/p25/p25_proto.h"

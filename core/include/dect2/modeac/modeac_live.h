@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C receiver for the engine: IQ in, transponder replies out, beside the Mode S / ADS-B messages of the same capture.
 // The ADS-B receiver (adsb_rx.h) runs on the same samples, so the aircraft it knows are on the map and a Mode A squawk or a Mode C altitude can
 // be matched to them; its decoded messages also tell the reply detector where Mode S messages were on the air (a Mode S message is not a reply).

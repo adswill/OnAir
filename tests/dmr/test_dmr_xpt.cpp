@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hytera XPT inside the DMR receiver: the block parser, and the DMR receiver reading the blocks from the generator's air signal. Field positions come from DSD-FME; no real XPT system was heard.
 #include "dect2/dmr/dmr_gen.h"
 #include "dect2/dmr/dmr_rx.h"

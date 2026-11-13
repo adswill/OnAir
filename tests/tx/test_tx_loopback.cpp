@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit -> receive loop-back for the transmit modes, from the parameter table's defaults (tx_params.h) and a few parameter combinations each:
 // the TX generator's IQ, with white noise at a set SNR in the occupied bandwidth and a carrier offset, is written to a file and played through
 // OnAir's own receiver (the Engine), which must lock and decode (for the text modes: give the sent text back).

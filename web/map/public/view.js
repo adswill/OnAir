@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // view.js - pure helpers of the page chrome (no DOM): layer groups, age fade and age filter, shortcut table, sparkline geometry.
 // Covered by test/view.test.js.
 

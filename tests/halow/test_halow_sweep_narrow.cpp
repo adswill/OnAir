@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow round-trip sweep, 1 / 2 / 4 MHz: every valid MCS (0 - 9, and 10 at 1 MHz) x both preambles (S1G_1M at 1 MHz, S1G_SHORT and S1G_LONG above)
 // x both guard intervals x three impairment sets (clean; carrier offset +30 kHz, signal off the centre, +40 ppm; offset -30 kHz, -40 ppm, a 2 us echo, the
 // stream starting inside a PPDU). Each case must give a good FCS on nearly every PPDU; the frame contents are checked on the first case of every MCS.

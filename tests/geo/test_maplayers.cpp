@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Map layers: result lists to markers, satellite footprint and ground track, circle geometry
 #include "dect2/geo/maplayers.h"
 #include "dect2/geo/maidenhead.h"

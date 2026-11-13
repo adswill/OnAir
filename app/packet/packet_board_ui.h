@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS Weather and Messages views (packet_board_ui.cpp, docs/APRS-BOARD-3.9.md)
 #pragma once
 #include <string>

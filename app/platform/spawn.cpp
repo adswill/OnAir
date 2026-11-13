@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Starting programs and desktop notifications, for the Automations. No shell is used anywhere: a value from a decoded message can be any text,
 // so every argument is passed to the program as one argument.
 #include "dect2/common/thread_name.h"

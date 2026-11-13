@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench: the shared signal-processing pieces: windows, FFT of any power of two, FIR design, band extraction (mix, filter and
 // decimate a time range of a recording to a band), power spectra.
 #pragma once

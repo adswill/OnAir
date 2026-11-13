@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band-hop schedule for an unattended weak-signal receiver (FT8, FT4, WSPR, JS8) on one SDR that can only sit on one band at a time. Pure code.
 // Each slot boundary the scheduler picks the band to listen on next: the bands that produced the most spots in the last hour win, but a band that has
 // not been visited for exploreS gets a turn anyway (an opening starts on a band that was quiet), and a band is kept for at least minDwellSlots so a

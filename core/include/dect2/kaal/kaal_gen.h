@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL test signal for the engine's synthetic source: the real transmitter (VoiceTx: voice codec, 16-QAM LDPC, sweep with the station ID, beacon slice) sending
 // a speech-like test tone sequence, at the radio rate, with a carrier offset (the radios' oscillators) and a little noise.
 //

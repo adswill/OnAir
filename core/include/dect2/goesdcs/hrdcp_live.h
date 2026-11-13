@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteosat HRDCP receiver for the engine: IQ in, platform messages out (hrdcp_proto.h for the format).
 // The receiver watches the captured band for the 2 s carrier that starts every message, follows each carrier on its own (mixer, CIC filter to about
 // 9.6 kHz, root raised cosine matched filter), measures the frequency on the carrier, finds the preamble and marker by correlation (which also gives

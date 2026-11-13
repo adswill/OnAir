@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // N-channel coherent IQ sources for direction finding: a deterministic simulator, an interleaved cf32 / SigMF file reader, a parser for the
 // KrakenSDR Heimdall DAQ IQ frame header (public layout, see docs/direction-finding.md for what is verified) and a tolerant importer of
 // bearings from a KrakenSDR DoA server JSON/CSV line.

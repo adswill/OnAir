@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors, smart-home buses over the air (synthetic): KNX RF and HomeMatic BidCoS in the 868.3 MHz scene (ismTestScene(3)) through the
 // receiver with an offset, noise, a second transmitter on the same frequency and cut-off packets. Every reading must be one of the two test
 // devices with its right values (a wrong reading fails every case); the clean cases must hear both. Simulated signals only.

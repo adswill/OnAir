@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 const LAYERS = [
   ["aircraft", "Aircraft"], ["sonde", "Radiosondes"], ["vessel", "Ships (AIS)"], ["aprs", "APRS stations"],
   ["ham", "Ham"], ["drone", "Drones"], ["flarm", "FLARM"], ["sat", "Satellites"],

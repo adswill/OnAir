@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // View > Controls: the defaults are what the program always did, the saved text round-trips and survives garbage, conflicts and reserved keys
 // are found, the wheel steps and the tuning step list behave. (app/ui/input_map.h; no ImGui context needed)
 #include "../../app/ui/input_map.h"

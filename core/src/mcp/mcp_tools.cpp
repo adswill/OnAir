@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The MCP tools. Each one is a thin layer over the remote-control host (RemoteApiHost) and the engine's signal identifier; no tool touches the
 // file system, a shell, keys, credentials or settings, and the transmit tools exist only when Options::allowTx is on.
 #include "dect2/bandplan/bandplan.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FIS-B TWGO products (uat_twgo.h).
 #include "dect2/uat/uat_twgo.h"
 #include <cstdio>

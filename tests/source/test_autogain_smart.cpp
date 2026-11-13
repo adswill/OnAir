@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Smart auto gain: the band bias, the quick bracketing search of Auto, the explanation line and Re-optimise, against the simulated radio of
 // autogain_sim.h with scenarios: weak target beside strong stations, an empty band, the FM band, bursts, a drifting level. For every scene the
 // controller's result is compared with the exhaustively found best safe gain (the highest in-channel SNR over all reachable totals that do

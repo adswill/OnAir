@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared bits of the Signal workbench tests.
 #pragma once
 #include "dect2/wb/wb_bits.h"

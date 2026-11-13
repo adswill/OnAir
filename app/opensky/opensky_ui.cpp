@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OpenSky identifier screen: the measured symbol rate, levels, width and burst pattern, and whether the signal fits OpenSky. Nothing is decoded: the air interface is not public and the traffic is encrypted.
 #include "app.h"
 #include "i18n/i18n.h"

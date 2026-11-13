@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde receiver (see sonde_rx.h).
 #include "dect2/session/mode_adapters.h"
 #include "dect2/common/thread_name.h"

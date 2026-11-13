@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the mesh packet layer, part 2: MeshCore packets (adverts with valid / forged signatures, group text on the Public channel and a user channel,
 // end-to-end headers, ACK, TRACE, CONTROL, random headers and bodies), LoRaWAN (every MType, FOpts MAC commands, join / rejoin requests, random and mutated
 // frames, the name helpers), LoRa APRS and MeshCom frames. Same method as test_mesh_proto_rs.cpp: every result goes into its digest.

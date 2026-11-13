@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The watch list view and alerts of the voice modes; see watch_ui.h.
 #include "watch_ui.h"
 #include "app.h"

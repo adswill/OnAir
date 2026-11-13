@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APCO Project 25 Phase 1 receiver (TIA-102): C4FM, 4800 symbols/s, 12.5 kHz. Receive only.
 //
 // The channel is mixed to 0 Hz, decimated to 48 kHz and FM-demodulated; a half-symbol filter gives the levels. The 24-symbol frame sync

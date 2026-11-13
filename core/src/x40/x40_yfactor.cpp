@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Noise figure (Y-factor) meter: switch a noise source (or a termination against an antenna on a quiet band) on and off in front of the receiver and read the step. The power in the middle 200 kHz of the
 // capture is taken every 25 ms; in 0.25 s windows the mean and spread are found; a plateau is a run of windows that agree within 0.15 dB; two plateaus that differ by 0.3 dB or more are a hot and a cold
 // state (the higher is hot). Y = P_hot / P_cold, in dB and linear; the noise figure of the receiver is NF = ENR - 10 log(Y - 1) where ENR is the excess noise ratio of the source; since the program does not know it,

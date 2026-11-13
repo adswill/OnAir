@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build and run only the tests a change can affect (tools/ci_select.py), at low priority so the Mac stays usable.
 #   tools/fast_check.sh                 changed files against origin/main (or $BASE)
 #   tools/fast_check.sh --scope wide    every non-slow test; --scope smoke | area | full

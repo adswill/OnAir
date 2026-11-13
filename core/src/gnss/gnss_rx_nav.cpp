@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver, navigation data handling per system and the tracker loop.
 #include "gnss_rx_impl.h"
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde chase: the live position of a moving receiver (chase car) for the sonde map and the SondeHub station record, and the
 // "my station" mark of the map. Core: dect2/sonde/sonde_chase.h (NMEA serial or file, gpsd). Off until a source is chosen.
 #include "app.h"

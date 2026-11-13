@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GW FSK (Globe Wireless, 100 Bd, 200 Hz shift, bursts). What is checked:
 //  1. bursts built from the format as Rivet reads it: free-channel markers (station code and name), 2/106 text packets, 2/101 ship MMSI
 //     packets (the digit coding of Rivet's displayGW_ShipMMSI), 5/41 traffic packets, a position report from 5/102, ten 5/86 fragments and

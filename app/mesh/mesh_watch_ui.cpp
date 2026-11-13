@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh node watch in the app: the watched nodes (right-click a node), the limits, and the lora.node_* events every 10 s. Core: mesh_watch.h.
 #include "app.h"
 #include "dect2/automation/engine.h"

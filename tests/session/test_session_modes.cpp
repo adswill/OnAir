@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The mode adapters (ADS-B, AIS, APRS, POCSAG/FLEX -> Sessions): first sight begins, later sights update, silence ends; pager ids are hashed;
 // nothing from a message body is stored; a stale key is not a new session.
 #include "dect2/adsb/adsb_tel.h"

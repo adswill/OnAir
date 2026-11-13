@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES DCS test signal (see goesdcs_gen.h).
 #include "dect2/goesdcs/goesdcs_gen.h"
 #include "dect2/goesdcs/goesdcs_proto.h"

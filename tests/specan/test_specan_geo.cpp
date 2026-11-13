@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Geostationary look angles for three hand-computed cases (spherical Earth, GEO radius 42164 km, tolerance 0.1 degree):
 // 1. user on the equator at 0 E, satellite at 10 E: due east, elevation atan((42164 cos10 - 6378.1) / (42164 sin10)) = 78.23.
 // 2. user at 45 N, satellite on the same meridian (0 E): due south (180), elevation atan((cos45 - 0.15127) / sin45) = 38.17.

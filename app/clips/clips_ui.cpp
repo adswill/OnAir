@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio clips dialog: choose a range on the history bar (or a preset), choose what goes in, save a folder + zip, copy the Discord text.
 #include "dect2/common/thread_name.h"
 #include "clips_ui.h"

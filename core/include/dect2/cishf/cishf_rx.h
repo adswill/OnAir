@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CIS HF modes receiver (families 620 - 626, receive only; see cishf_dsp.h and docs/CIS-HF-3.9.md). One class for the seven kinds: the kind says
 // which decoder or identifier runs. The channel is mixed to 0 Hz (the upper sideband dial) and brought to 24 kHz complex (marine::Front), then
 // halved to the 12 kHz complex stream the decoders read (audio frequency f of the upper sideband at +f Hz).

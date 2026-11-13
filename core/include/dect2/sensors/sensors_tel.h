@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors telemetry, shared by the receiver and the UI.
 // The decoders come from rtl_433 (third_party/rtl_433, GPL-2.0-or-later); docs/SENSORS-3.7.md says which ones are supported and how they were tested.
 #pragma once

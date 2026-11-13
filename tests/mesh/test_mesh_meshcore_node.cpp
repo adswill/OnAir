@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MeshCore node (meshcore_node.h) and its transmitter (meshcore_tx.h).
 // 1. Frames made by the real MeshCore firmware code: meshcore-dev/MeshCore at 81dbae5 (2026-10-15), its src/Mesh.cpp, Dispatcher.cpp,
 //    Packet.cpp, Utils.cpp, Identity.cpp, helpers/BaseChatMesh.cpp and lib/ed25519 built on a computer behind a fake radio (SHA-256, HMAC and

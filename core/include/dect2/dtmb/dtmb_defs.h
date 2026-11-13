@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB (GB 20600-2006, China / Hong Kong / Macau): frame geometry and the tables that the receiver, the test signal and the tests share.
 // The sources of the numbers are named in dtmb_defs.cpp. Everything here is plain data and small helpers.
 #pragma once

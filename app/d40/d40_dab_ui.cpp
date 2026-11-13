@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB: service ranking by sustained quality, transmitter table from the user's TII CSV. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../smart5/smart5_ui.h"

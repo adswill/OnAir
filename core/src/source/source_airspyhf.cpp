@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Native driver for the Airspy HF+ and HF+ Discovery: the radio's own library (libairspyhf) is loaded at run time when it is installed. See native_common.h.
 // The radio is an HF/VHF receiver with a very narrow output (at most 912 kHz): it suits the narrow modes (DRM, AIS, marine, FM, ...), not TV.
 #include "native_common.h"

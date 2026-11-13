@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SatNOGS DB (db.satnogs.org), read only: the public lists of satellites and transmitters, parsed from the JSON the API answers with,
 // the mapping of SatNOGS mode names to OnAir modes and the list filters. Nothing here touches the network (the panel downloads with curl).
 #pragma once

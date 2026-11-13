@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HRPT / AHRPT end to end on the built-in test signal (hrpt_gen.h; no off-air recording exists for this mode): MetOp AHRPT, FY-3 AHRPT and
 // NOAA HRPT through the receiver with carrier offsets up to +-45 kHz, a Doppler ramp, symbol clock error, noise and different carrier
 // phases (the QPSK phase ambiguity), at 8 Msps and near the lowest rate. Every picture line that comes back must equal the test line

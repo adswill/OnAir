@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal Lab: small DSP helpers (FFT, Welch spectrum, mixer, channeliser). Self-contained so the library has no dependencies.
 #include "dect2/signallab/signallab.h"
 #include <algorithm>

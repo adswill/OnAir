@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SELCAL screens (ARINC 714, the tone call that alerts an aircraft's crew): the call log (time, code, the four tone frequencies, dial frequency,
 // aircraft from your own table), the codes heard (one row per code) and the audio spectrum. A code names an airframe, it carries no position,
 // so there is no map: a file selcal_aircraft.tsv in the data folder (CODE<TAB>registration) shows the registration beside each call.

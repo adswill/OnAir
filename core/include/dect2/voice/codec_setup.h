@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Codec Setup assistant's logic (Help > Voice codecs > Setup): which voice codec plug-ins are installed, loaded or wrong for this
 // computer, and the step-by-step instructions per operating system. Pure functions of what the caller found on disk, so they are
 // unit-tested with made-up folders. OnAir never ships, downloads or builds a codec by itself: the steps tell the user to run the optional

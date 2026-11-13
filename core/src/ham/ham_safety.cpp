@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The safety layer of the ham transmitter: country band plans, duty-cycle limits, the TX audit log. See ham_safety.h.
 #include "dect2/ham/ham_safety.h"
 #include "dect2/bandplan/bandplan.h"

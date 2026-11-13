@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AMBE through the user-installed mbelib (see dstar_ambe.h); the loader is shared with the other voice decoders (source/mbe_dyn.h).
 #include "dect2/dstar/dstar_ambe.h"
 #include "dect2/dstar/dstar_proto.h"

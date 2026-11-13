@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm control channel. See dect2/net/swarm_ctl.h for the wire format and the rules.
 #include "dect2/net/swarm_ctl.h"
 #include "dect2/mesh/mesh_crypto.h"

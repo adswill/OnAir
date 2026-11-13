@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir: the program entry. main() sets up the window, the graphics back end and the App, then runs the frame loop;
 // the per-frame steps and the shutdown are small functions above it. The window and fonts are in main_window.cpp,
 // start-up and the developer flags in main_start.cpp, the main layout in ui/draw_ui.cpp and ui/main_tabs.cpp.

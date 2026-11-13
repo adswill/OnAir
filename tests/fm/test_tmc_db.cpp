@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS-TMC in plain words: importing user event lists and location tables (German and English, ; , and tab, Latin-1 / UTF-8 / BOM / UTF-16,
 // quoted fields, no header, the LCL list and the TISA exchange files), describing messages with and without them, the CSV / text log, and
 // the whole path from generated RDS groups through the FM receiver. Every file here is synthetic (no national table ships with OnAir).

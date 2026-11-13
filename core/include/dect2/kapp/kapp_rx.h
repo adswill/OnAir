@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP burst receiver (streaming). Input: complex baseband at any rate (resampled to 640 ksps inside). Output: decoded bursts.
 //
 // Chain: matched RRC filter (8 samples per symbol) -> preamble search (each Zadoff-Chu half correlated on its own at every sample, so the carrier

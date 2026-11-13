@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS through the engine, as the interface and dect2cli use it: the synthetic source plays the test port (8 bit samples, faster than a radio: the receiver
 // is tested, not real time, and the run is counted in seconds of signal), the engine must decode, keep every sample and report through latestRx().
 #include "dect2/ais/ais_gen.h"

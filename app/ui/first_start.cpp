@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The first Start of a mode: FM and DAB find the stations and play one, the TV modes scan the country's plan and play a service, Airband loads the nearest
 // airport. It happens once per mode (prefs "firstStart.*"), only with a real radio, an empty list and the mode's default frequency, and says what it did.
 // docs/EASE-3.8.md. The decisions are in ease_logic.h.

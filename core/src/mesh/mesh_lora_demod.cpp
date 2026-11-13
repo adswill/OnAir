@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa demodulator: preamble search on de-chirped FFTs, sync word and SFD alignment, fractional carrier and timing estimates from the
 // preamble and the down-chirps, symbol demodulation with a timing loop for clock drift, and the coding chain of mesh_lora_code.cpp.
 // The method follows gr-lora_sdr's frame_sync_impl.cc and fft_demod_impl.cc and the paper named in mesh_lora.h; the code is ours.

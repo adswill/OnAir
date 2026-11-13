@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A simulated front end for the AGC tests: a radio with a gain model, a wanted signal, thermal noise, strong neighbours (blockers), a DC spike,
 // an 8-bit (or deeper) ADC that clips, and a decoder that locks when the in-channel SNR is high enough. Levels are in dB against ADC full scale
 // at 0 dB of radio gain, so the level at the ADC is "input level + total gain". Not a physical model of one radio: it has the properties the AGC

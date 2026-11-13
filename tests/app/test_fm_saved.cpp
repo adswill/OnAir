@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Saved FM stations: persistence, search, rename and delete, kept apart from the band-scan list.
 #include "state/fm_saved.h"
 #include <cstdio>

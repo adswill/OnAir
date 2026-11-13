@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC television screens: the picture (the analog TV video view), with "scrambled (EuroCrypt)" over it when the service is under conditional
 // access, the line and data-eye scopes, the status lamps, the service identification (channel and network name, aspect, access, sound) and
 // the options of the test signal. The receiver (MacReceiver) makes the pictures; the telemetry carries the waveforms and the numbers.

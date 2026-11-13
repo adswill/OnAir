@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pyramid vector quantiser (Fischer 1986): enumeration of the integer vectors of length n with sum |y_i| = k, and the analysis-by-
 // synthesis pulse search of the fixed codebook. The enumeration orders, at each position, the value 0 first, then +1, -1, +2, -2 ...
 #include "kv_internal.h"

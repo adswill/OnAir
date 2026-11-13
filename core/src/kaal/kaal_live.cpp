@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL for the engine: see kaal_live.h.
 #include "dect2/kaal/kaal_live.h"
 #include "dect2/kaal/kaal_rx.h"

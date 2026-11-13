@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // eLoran / Loran-C: the detector finds the GRI, the master and two secondaries and their offsets (within 2 us at 18 dB, scatter of a few us at 0 dB, see below).
 // The synthetic signal is built from the public pulse shape (t^2 exp(-2t/65 us)) and the public phase codes (eloran_gen.h).
 #include "dect2/eloran/eloran_engine.h"

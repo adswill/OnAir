@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The button line over a map wraps instead of running off the edge, at any width
 #include "../../app/map/bar_flow.h"
 #include <cstdio>

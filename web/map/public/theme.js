@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // theme.js - colour scheme: follows prefers-color-scheme unless the visitor chose dark or light (the T key / the theme button, remembered).
 // It tints the raster basemap to match, sets data-theme on <html> for the CSS, and tells the app when the theme flips so icons
 // (outline colour) and label colours can follow.

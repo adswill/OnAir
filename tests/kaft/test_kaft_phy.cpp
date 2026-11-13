@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT physical layer: clean loopback of every profile at every width, AWGN with a carrier offset, width detection from the preamble
 #include "dect2/kaft/kaft_rx.h"
 #include <chrono>

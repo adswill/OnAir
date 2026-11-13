@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WWVB phase modulated time code (NIST "Enhanced WWVB Broadcast Format", 2013): 1 bit a second BPSK on the 60 kHz carrier, frames of 60 bits starting with a 13-bit sync word, a 26-bit minute counter since 2000
 // with Hamming(31,26) parity. Works without the amplitude code. The second boundary and the 180 degree ambiguity are found from the signal.
 #pragma once

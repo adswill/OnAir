@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Interference (RFI) hunter: watches the noise floor and the spurs of repeated sweeps (core/include/dect2/sweep), tells new interference
 // from the baseline, guesses the kind of source from the shape of the spectrum, and turns sweeps into a loud / quiet reading for a walk
 // with a log of readings by time and (optional) position. Source-agnostic: it takes the Sweep structs runSchedule() makes.

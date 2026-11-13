@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crash in the middle of a write (docs/MODE-EXPERIENCE.md, 2.2 crash recovery and 8.1 test_session_db "kill mid-write, reopen, orphans closed").
 // The test runs itself as a child process that writes sessions and then dies without closing anything (_Exit in the middle of an open
 // transaction, and in the middle of the store's queue), and checks what the parent finds when it reopens the file:

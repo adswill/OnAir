@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust protocol crate rust/onair_proto (written by hand: cbindgen is not available offline). Every function takes (pointer, length) pairs and caller-owned output buffers; functions that write return the
 // number of elements written, or SIZE_MAX when the output buffer is too small. Bits are one per byte, in transmission order.
 #pragma once

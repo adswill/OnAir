@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SNR each OnAir mode needs to decode, as measured by OnAir's own sensitivity sweep (docs/SENSITIVITY.md, tools/sens/sens_modes*.h):
 // the lowest SNR with at least 90 % of trials decoding, in the mode's noise bandwidth, for white noise only, for the "combined"
 // impairment set (2 ppm carrier + 20 ppm clock + echo + phase noise) and for TU6 Rayleigh fading. Measured on generated signals, so

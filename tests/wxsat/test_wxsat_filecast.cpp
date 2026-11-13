@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // File broadcasts and MSG raw: bzip2, Fazzt reassembly with hostile input, the transport stream layer, the whole chain on the test signal with impairments, SEVIRI pixels.
 // test_wxsat_filecast real <directory with JMA .bz2 segments> [<himawari-rx samples dir>]: real files, untrusted, not in git.
 #include "dect2/wxsat/filecast.h"

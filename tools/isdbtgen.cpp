@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // isdbtgen: makes a synthetic ISDB-T broadcast as an IQ recording. Nothing here is a real transmission: it is the transmitter chain of this
 // project (Reed-Solomon, interleaving, convolutional coding, OFDM with TMCC) carrying the built-in test programme, followed by a channel model
 // (carrier offset, echo, noise, sample-rate error) and written as 8-bit I/Q like a HackRF would record it. Use it to try the ISDB-T receiver.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors wiring: the tuning (433.92 MHz, 250 kHz), the mode row, family and poll-slot counts, the engine cases, the panel hook,
 // the credits (rtl_433 is GPL-2.0-or-later code that ships in the program) and the doc page's honest wording and test numbers.
 #include <cstdio>

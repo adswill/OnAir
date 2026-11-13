@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Car navigation from a position fix: routes (waypoints clicked on the map, or a GPX file), progress along a route (distance and bearing to the
 // next waypoint, distance left, ETA, off-route), dead-reckoning smoothing between fixes, and a GPX trip log. Pure maths and text, header only,
 // no radio and no UI. Accuracy is whatever the fix gives; nothing here is a safety function.

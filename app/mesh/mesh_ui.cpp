@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) mode entry: the screen state, the mode's tick, and the entry points the shell calls (tab, list, receiver,
 // panels, status, summary, tuner, decoder, synth, meters). The tables, views, LoRaWAN screens and settings are in the other mesh_*.cpp.
 #include "adsb/records_ui.h"

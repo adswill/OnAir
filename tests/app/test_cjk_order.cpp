@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The order of the CJK fonts merged into the UI fonts (app/platform/cjk_order.h): the fonts of the interface language first, so a Japanese
 // line is not drawn half in a Korean font; every other language keeps the order from before.
 #include "../../app/platform/cjk_order.h"

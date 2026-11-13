@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_dvbsi` (core/include/dect2/rs/dvbsi.h). Every export is `onair_dvbsi_*`; pointers come as (pointer, length) pairs and the caller owns all
 //! buffers. Text functions write UTF-8 into a caller buffer and return the length, `usize::MAX` when it is too small (sizes are documented in the header).
 //! Record arrays are (pointer, capacity); parsers count entries past the capacity without storing them. A null pointer where a buffer is needed makes a

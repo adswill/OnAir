@@ -1,4 +1,7 @@
 #!/bin/sh
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Checks for the Rust workspace in rust/: fmt (if rustfmt exists), clippy -D warnings (if clippy exists), cargo test --offline.
 #   tools/rust_check.sh            fmt + clippy + tests
 #   tools/rust_check.sh --sanitize also a sanitizer build of the C++ side with the Rust library linked and the AIS differential/fuzz tests

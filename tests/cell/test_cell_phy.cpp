@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE building blocks: CRC, the tail-biting convolutional code, the turbo code and its rate matching, the QPP interleaver,
 // DCI formats 1A / 1C, the control region mapping, and the SIB1 - SIB5 UPER coder (round trips and fixed points from the specifications).
 #include "dect2/cell/cell_asn.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir speech codec plug-in wrapper for the build helper (tools/codec-builder). This file contains no codec: it only calls the
  * mbelib-neo library that the helper script builds on the user's own computer. OnAir ships neither mbelib-neo nor any binary built from this.
  * ABI: docs/CODECS.md "Speech codec plug-ins" and core/include/dect2/codec/speech_codec.h.

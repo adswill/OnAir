@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC receiver against the test signal: D2-MAC and D-MAC at 20 Msps (the outer part of the 27 MHz channel cut off as a 20 Msps radio
 // does), lock, the picture (colour bars against the test card), the channel name, the tone of the sound, +-200 kHz offset, 18 dB C/N,
 // 16:9, EuroCrypt scrambling, spectrum inversion, noise only. Silent.

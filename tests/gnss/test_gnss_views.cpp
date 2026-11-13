@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The satellite-system filter of the GNSS receiver (GnssReceiver::setSystems, the Systems choice of the GNSS screen): one system wanted. A simulated sky with GPS, Galileo and QZSS satellites on L1 (4 Msps, 8-bit samples, 45 s)
 // is run through a receiver with every system wanted and through one for GPS and one for QZSS: the view tracks its own system and no other (no locked channel of another system).
 // GLONASS and BeiDou use the same mask and the receiver's own tests cover their signals. Simulated signals only.

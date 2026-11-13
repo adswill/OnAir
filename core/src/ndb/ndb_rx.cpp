@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB receiver (see ndb_rx.h).
 #include "dect2/ndb/ndb_rx.h"
 #include "dect2/cw/cw_morse.h"

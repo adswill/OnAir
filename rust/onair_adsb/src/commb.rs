@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Comm-B register inference (DF20 / DF21): which BDS register the 56 bit MB field is, and its content. Follows the checks of the BDS inference
 //! chapter of the Riddle (reserved bits zero, status bits consistent with their values, values in a plausible range); a field that passes for two
 //! formats is not decoded. Register layouts: ICAO Doc 9871 appendix A (tables A-2-16 data link capability, A-2-23 GICB capability, A-2-48 ACAS

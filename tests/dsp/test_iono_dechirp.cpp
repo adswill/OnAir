@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The four-chain dechirp loop of the ionospheric sounder against the one-sample-at-a-time recurrence: the sums, and the phasors left for the next call,
 // agree to a part in 1e9 over runs of every length class, and splitting a run in two calls gives the same as one call.
 #include "dect2/iono/iono_dechirp.h"

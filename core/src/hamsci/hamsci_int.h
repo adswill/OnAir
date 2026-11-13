@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internal helpers of the ham science modes: a small FFT, a noise source, a Fano decoder for the K = 32 rate 1/2 code.
 #pragma once
 #include <algorithm>

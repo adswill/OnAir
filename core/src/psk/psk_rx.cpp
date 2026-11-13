@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 / PSK63 multi-signal receiver (see psk_rx.h), and fldigi's 8PSK125 / 8PSK250 without FEC.
 #include "dect2/psk/psk_rx.h"
 #include "dect2/autoparam/autoparam.h"

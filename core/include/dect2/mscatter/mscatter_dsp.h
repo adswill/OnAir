@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter detector parts, written for the receiver (mscatter_live.cpp) and tested on their own (tests/mscatter).
 //   Front       : third-order CIC decimator, the capture down to about 12 kHz
 //   Detector    : spectrogram (2048-point Hann FFT, hop 256) of the work rate, beacon line follower, per-bin background, echo tracker

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Plugin system: manifest validation (malformed and hostile input), ABI refusal, a fake plugin loaded for real, the watchdog killing a looping
 // plugin (in-process: abandoned; helper process: killed), bounded result marshalling, permission checks, safe mode after a crash, stable mode
 // numbers, installing from a .onairplugin zip (and refusing hostile ones), and the three example plugins.

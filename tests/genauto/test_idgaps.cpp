@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Identifier gaps closed for General / Auto: DVB-T2 8k / 16k / 32k and DVB-T 2k / 8k captured at the native 9.14 MS/s of an 8 MHz channel (and
 // off the centre), and an SSB voice signal (one sideband, no carrier). Each must come out as the right row with the right mode and options.
 #include "dect2/common/stable_random.h"

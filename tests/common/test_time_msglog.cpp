@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Time display helper (dect2/common/time_fmt.h) and the message log writer (dect2/common/msg_log.h).
 #include "dect2/common/msg_log.h"
 #include <cstdlib>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Weather picture studio helpers on top of imgproc.h: histogram, tone curves, colour palettes, simplified coastline and border vectors drawn
 // on a map, crop, stitching several passes into one mosaic, and an own GeoTIFF writer (uncompressed RGBA, EPSG:4326). Pure local processing.
 #pragma once

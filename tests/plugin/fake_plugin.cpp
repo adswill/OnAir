@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A fake plugin for the plugin tests. Its behaviour follows the mode id it is created with. Compiled twice: normally, and with FAKE_BADABI
 // (claims plugin ABI 99, which the host must refuse).
 #include "onair_plugin.h"

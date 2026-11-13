@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD / SD simulcast in the TV player: remembers the services of every scanned multiplex, finds the HD version of the playing service (core/src/tv/hd_pair.h),
 // draws the 'HD' checkbox next to the channel picker and switches between the two, retuning when the other version is in another multiplex.
 #include "../app.h"

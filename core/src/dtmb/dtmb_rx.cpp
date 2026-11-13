@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB receiver (GB 20600-2006, multi-carrier C=3780 mode): matched filter and resampling to the symbol rate, frame search from the PN headers,
 // tracking (timing, carrier offset, channel from the headers), header leakage removal and equalisation of the OFDM body, system information,
 // then the channel decoder. See docs/modes/dtmb.md.

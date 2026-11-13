@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Watterson HF channel simulator (spec section 4.1) on complex baseband at 2400 samples/s: two independent Rayleigh paths of equal average power with a
 //! Gaussian Doppler spectrum on each (Doppler spread = 2 sigma), the second path delayed (fractional delay by a windowed-sinc interpolator), plus a
 //! frequency offset with an optional linear drift, a start delay (clock error), an optional in-band interferer and complex white Gaussian noise.

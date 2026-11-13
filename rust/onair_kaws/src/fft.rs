@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Radix-2 complex FFT (f32) with a cached twiddle table; the forward transform is X[k] = sum x[n] exp(-j 2 pi k n / N).
 use crate::cplx::C;
 use crate::mathf;

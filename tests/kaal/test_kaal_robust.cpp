@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL codec, robustness: random bits, all zeros, all ones, bit-flipped good frames, wrong-shape frames, a partial last frame and an
 // empty stream all decode to the right number of samples without a crash.
 #include "dect2/kaal/kaal_codec.h"

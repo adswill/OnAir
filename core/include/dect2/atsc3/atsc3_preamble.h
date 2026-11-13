@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 Preamble (A/322 7.2.5): L1-Basic in the first Preamble symbol, L1-Detail interleaved over all Preamble symbols.
 // Builds the symbols from the L1 content (for tests) and decodes them (the receiver side).
 #pragma once

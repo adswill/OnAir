@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham JS8 (JS8Call's protocol, from its public description and the repo's js8_proto.h): messages to frames, frames to audio in their slots, and a
 // small sender that keeps a message's frames in consecutive slots. Normal (15 s), fast (10 s) and turbo (6 s) submodes: 8-FSK, 79 symbols,
 // tone spacing = baud (6.25 / 10 / 20 Hz), continuous phase, 10 ms ramps; the burst starts startSec (0.5 / 0.2 / 0.1 s) into the slot.

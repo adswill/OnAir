@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4 on a damaged channel: random and burst frame erasures (also the KAAL v4 PHY pattern: a whole 40 ms payload, i.e.
 // two 20 ms frames, at once), recovery after a burst, damaged importance classes, a bit-error sweep, the importance order of the classes,
 // and random garbage fed to the decoder.

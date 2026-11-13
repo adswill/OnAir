@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Vaisala RS41: frame decoder from hard symbols, and the frame builder for the test signal.
 // Facts (frame layout, whitening mask, CRC, RS code, field positions, temperature / humidity formulas) are from rs1729/RS
 // (demod/mod/rs41mod.c, rs41/rs41ptu.c, demod/mod/bch_ecc_mod.c) and from the example frame in rs41/rs41.txt there.

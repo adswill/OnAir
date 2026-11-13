@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Our own sound output for Windows (WASAPI) and Linux (ALSA, which also reaches PulseAudio and PipeWire through their ALSA plug-ins).
 // macOS has its own file (audioout_coreaudio.mm). When the native backend cannot open a device, the miniaudio backend (audioout_miniaudio.cpp)
 // is tried, which also provides a silent device with correct timing for machines without sound.

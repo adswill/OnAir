@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 control channel codewords, written from the public signalling standard (MPT 1327, 1997 issue, sections 3 and 5):
 // 64-bit codewords (48 information bits + 15 check bits of a (63,48) cyclic code + 1 parity bit), the codeword
 // synchronisation sequences and the address codeword layouts used on a control channel. Receive and decode only.

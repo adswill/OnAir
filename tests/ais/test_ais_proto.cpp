@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS message layer: known answers from gpsd's test/sample.aivdm and sample.aivdm.chk (real sentences, with the values that the noaadata
 // tools and the Maritec decoder gave), the frame check value of the X.25 FCS, NRZI and stuffing round trips, and !AIVDM sentences rebuilt
 // bit for bit from the decoded payload. (The type 5 ETA hour is 14 as in sample.aivdm.chk, the regression file; the comment in sample.aivdm says 16.)

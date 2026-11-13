@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 1.0 (8-VSB) in the channels of ATSC A/74:2010 (Receiver Performance Guidelines), through the real AtscReceiver:
 //   - the single static echoes of Table 5.6 (pre-echoes to -30 us, post-echoes to +40 us) with a slow 0.05 Hz rotation,
 //   - the dynamic ensembles R.1 (two equal echoes at the same delay, one turning at up to 2 Hz: the echo comes and goes, up to 0 dB),

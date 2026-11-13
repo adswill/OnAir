@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Time machine": a rolling memory of the last seconds of the radio's raw IQ, so the signal from just BEFORE an event can be saved too.
 // The analysis thread (Engine::ingest) only converts a block to 8-bit and copies it into a pre-allocated ring: no lock held while copying, no
 // allocation, never waits (so the live path loses nothing). A trigger (button, squelch opening, an automation rule) names how much to keep

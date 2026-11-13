@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN gateway / network health (3.9, docs/SMART5-field-3.9.md item 7), from the frames this receiver hears (LoRaWAN mode and the
 // mesh mode's LoRaWAN channels). Nothing is decrypted: only the MAC header, DevAddr, FCnt and the radio settings are used.
 //  - joins: join requests and join accepts per hour; a device (DevEUI) that sends joinStorm requests within 30 minutes cannot join

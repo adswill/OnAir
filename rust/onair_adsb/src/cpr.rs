@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Compact position reporting, 17 bit, NZ = 15 (ICAO Annex 10 Vol. IV 3.1.2.8.6, DO-260B appendix A.1.7; worked examples in the Riddle).
 #![allow(clippy::manual_range_contains)] // plain comparisons on purpose: a NaN must pass them like it does in the C++ original
 use crate::ffi::math::{self, floor, fmod};

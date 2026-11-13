@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OFDM interferer locator (3.9, docs/SMART5-tv-3.9.md item 12). The per-carrier SNR (or MER) an OFDM decoder already measures
 // shows where in the channel the damage is. Runs of carriers 8 dB or more below the channel's 75th percentile (a reference that
 // holds even when an interferer covers half the channel) are grouped and named:

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Throb and ThrobX on simulated signals: all six variants (text, centre frequency, variant detection), noise sweep, noise alone, other signals, other
 // sample rates and the streaming decoder. Simulated only: no recording of a real Throb transmission was available.
 #include "dect2/hamsci/hamsci_dsp.h"

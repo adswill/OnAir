@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Display aspect ratio: the pure computation, and an MPEG-2 clip with a sample aspect ratio decoded by FFmpeg the way the player does.
 #include "../common/tmp_path.h"
 #include "dect2/tv/player.h"

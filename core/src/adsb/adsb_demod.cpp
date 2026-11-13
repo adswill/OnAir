@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B pulse demodulator (see adsb_demod.h).
 #include "dect2/adsb/adsb_demod.h"
 #include "dect2/dsp/dsp_compat.h"

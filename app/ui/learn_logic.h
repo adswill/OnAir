@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The first-run setup and the lessons, pure part (no ImGui, no App): the goals, the antennas, the regions, a one-line note per radio,
 // the lesson table (data: add a row to add a lesson), the step checks, the saved progress, the checkup rules and the glossary.
 // Drawn by wizard.cpp (the setup) and learn.cpp (lessons, glossary, checkup); tested by tests/app/test_learn.cpp.

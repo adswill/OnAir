@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Rules and scripts of the automations, their JSON files (recipes), and the text templates of the actions.
 #pragma once
 #include "dect2/automation/event.h"

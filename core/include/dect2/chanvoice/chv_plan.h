@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channelised analog voice services: the channel plans (CB, FRS / GMRS, PMR446, amateur FM repeaters, HFGCS and HF aviation voice, UHF
 // wireless microphone bands). Pure data and lookups, no state. Receive aid only: national rules differ and decide what may be used.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa): the test signal through the receiver at the sample rates radios give (2.4, 8, 10 and 20 Msps; 2 Msps is in mesh_rx),
 // with 8-bit samples and odd chunk sizes: every frame decodes, none fails its CRC; the CPU time per second of signal is printed.
 // Also the US region at 10 Msps, where Meshtastic (906.875 MHz) and MeshCore (910.525 MHz) are 3.65 MHz apart.

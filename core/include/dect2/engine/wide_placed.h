@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several modes at once (issue #384): signals the user places at fixed frequencies, each with its own mode, decoded from one capture by the WideSession.
 // The list survives a retune: a signal that leaves the capture stops, and comes back when the capture holds it again. Pure logic, tests/engine/test_wide_placed.cpp.
 #pragma once

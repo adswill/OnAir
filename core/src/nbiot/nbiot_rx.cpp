@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT cells receiver (nbiot_rx.h): blocks of input, raster points searched, cells found and their broadcast decoded.
 #include "dect2/common/thread_name.h"
 #include "dect2/nbiot/nbiot_rx.h"

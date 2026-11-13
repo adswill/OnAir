@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The near-me navaid list: the real column layout of OurAirports navaids.csv, including quoted names and a DME's own frequency.
 #include "dect2/vor/navaid_list.h"
 #include <cmath>

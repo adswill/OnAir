@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24 IQ receiver against the full parameter set the chip allows: data rate 250 k / 1 M / 2 M x address width 3 / 4 / 5 x CRC-8 / CRC-16 x payload length
 // 0 / 1 / 32 x carrier offset -100 / +100 kHz x NO_ACK and PID. Each combination is a stream of one address; the address must be found with the right
 // CRC size and the payload must come back byte for byte. Synthetic signal at 22 dB Eb/N0 (no real recording was available).

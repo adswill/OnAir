@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SBAS L1 receiver in the engine: the GNSS receiver (acquisition, tracking, message layer) restricted to the SBAS PRNs 120..158 with no GPS satellite needed,
 // and the content decoder of sbas_msg.h behind it. Engine standard 152 (family 150, "SBAS"). Receive only: the corrections are shown, not applied.
 // Not covered: the QZSS L1S (SLAS) and L6 signals, which have their own codes and message formats and need the IS-QZSS description; the QZSS L1 C/A

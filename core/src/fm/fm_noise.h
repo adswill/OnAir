@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Gaussian noise table for the FM test signal: unit variance values, read at pseudo random positions (much cheaper than a Gaussian generator per sample).
 #pragma once
 #include <cstdint>

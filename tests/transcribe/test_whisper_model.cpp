@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The real speech engine on generated audio (needs a model: DECT2_WHISPER_MODEL=/path/ggml-tiny.en.bin; without it the test is skipped and passes).
 // 1. Silence and noise must not come out as text (no hallucination reaches the store). 2. The real-time factor on a generated speech-like signal.
 #include "dect2/transcribe/transcriber.h"

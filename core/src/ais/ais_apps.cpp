@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // See ais_apps.h. Every "not available" code of the layouts leaves the value out of the record.
 #include "dect2/ais/ais_apps.h"
 #include <cmath>

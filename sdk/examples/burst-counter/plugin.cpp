@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Burst counter: counts bursts of signal above a threshold over the noise floor, with timestamps and durations.
 #include "onair_plugin.h"
 #include <algorithm>

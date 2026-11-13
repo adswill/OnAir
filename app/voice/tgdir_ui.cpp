@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "voice/tgdir_ui.h"
 #include "app.h"
 #include "i18n/i18n.h"

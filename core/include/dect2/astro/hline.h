@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hydrogen line toolkit (21 cm radio astronomy), pure functions, all in km/s, K, degrees unless a name says otherwise:
 //  - calibration: Y-factor (hot / cold load) -> receiver temperature and gain, antenna temperature from on/off, median baselines, RFI flagging
 //    (robust residual, spectral kurtosis) with mask-and-interpolate

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II test signal (see smartnet_gen.h).
 #include "dect2/smartnet/smartnet_gen.h"
 #include <algorithm>

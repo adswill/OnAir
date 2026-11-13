@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio clips, pure half: histories, range maths, PNG / WAV / ZIP / HTML / Discord text. See clips.h.
 #include "clips.h"
 #include "dect2/common/u8file.h"

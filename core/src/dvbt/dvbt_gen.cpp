@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/dvbt/dvbt_gen.h"
 #include "dect2/dsp/fftutil.h"
 #include "dect2/tv/ts.h"

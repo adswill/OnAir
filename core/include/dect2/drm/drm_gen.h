@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM test signal: a DRM30 transmitter (robustness modes A to D) and a DRM+ one (mode E, 100 kHz) as complex baseband. The synthetic source plays it,
 // drmtool writes it to a file.
 // Nothing is transmitted: the samples only exist in memory or in a file.

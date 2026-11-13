@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 smart features, satellites (docs/SMART5-sat-3.9.md items 16 - 20). Simulated only: synthetic pass tracks with a blocked
 // sector, Sun geometry checked against an independent computation, product and beacon timings with jitter and misses.
 #include "dect2/smart5/beacon_learn.h"

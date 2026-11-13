@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR test signal (see cdr_gen.h): multiplex (GY/T 268.2), channel coding, sub-carrier matrix, OFDM with the windowed guard interval,
 // sub-frame allocation (GY/T 268.1), then resampled to the source's rate with the noise and the carrier offset of the SynthConfig.
 #include "dect2/cdr/cdr_gen.h"

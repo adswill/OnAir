@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The remote-control API inside the app (core/src/net/remote_api.cpp is the server): the host that carries the commands out on the main thread, the
 // published telemetry, the preferences and the settings panel (in View > Data feeds). Off by default; RX 1 only.
 #include "../app.h"

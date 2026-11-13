@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 test signal generator (see mpt1327_gen.h).
 #include "dect2/mpt1327/mpt1327_gen.h"
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-C (FANS-1/A, ARINC 745) downlinks inside ACARS text, as the Aero SU layer delivers it, and builders for the test signal.
 // Layers (ARINC 622 ATS application in the ACARS text, as libacars reads it, arinc.c):
 //   [/]GGGGGGG.ADS.RRRRRRRHEX...CCCC   ground address (7 or 4 characters), IMI "ADS" (or "DIS"), the aircraft address as 7 characters

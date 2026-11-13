@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireless M-Bus through the engine (setStandard(88)): the synthetic source plays the 868 MHz test signal and the receiver reports through latestRx().
 #include "dect2/engine/engine.h"
 #include "dect2/wmbus/wmbus_live.h"

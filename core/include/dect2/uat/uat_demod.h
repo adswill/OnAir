@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT 978 MHz demodulator (dphi slicing at twice the 1.041667 Mbit/s bit rate, after dump978; soft erasures since 3.9: uat_demod.cpp).
 #pragma once
 #include "uat_frame.h"

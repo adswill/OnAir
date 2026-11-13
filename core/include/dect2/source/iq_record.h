@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Recording the radio's IQ samples to a file, for bug reports and for replaying a signal later.
 // The analysis thread only converts a block and puts it in a bounded queue; a separate writer thread does the disk writes, so a slow disk
 // never slows the receiver down: when the queue is full the block is dropped and counted.

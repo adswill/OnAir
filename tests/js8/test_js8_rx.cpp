@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JS8Call receiver against generated stations: the test band (heartbeat, CQ, directed SNR report, a multi-frame free text message, a
 // relay, fast and turbo) with messages put together and grids on the map; then impairments: a tuning error, drift, early and late
 // starts (DT -1.2 / +2.0 s), a weak signal, five signals in one slot close in frequency, and noise only (nothing decoded).

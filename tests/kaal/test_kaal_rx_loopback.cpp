@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL streaming receiver (v3 format), loopback: the transmit signal built from the PHY functions is fed in 1000-sample chunks, for
 // every codec bitrate. Clean: the audio equals the codec-only decode bit for bit and the bitrate is read from the frame header. Noise
 // (Eb/N0 10 dB), a frequency offset of +-200 Hz and a start in the middle of the stream: the frame error rate stays low.

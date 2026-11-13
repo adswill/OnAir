@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IEEE 802.15.4 / Zigbee frame layers, receive only (no decryption, no keys): CRC-16, the 2.4 GHz spreading table, the MAC header (frame
 // type, security bit, PAN ID, short and extended addresses, sequence number, frame version), MAC commands, the Zigbee beacon payload, the
 // Zigbee NWK header and the APS header where the NWK payload is not encrypted, and the vendor of an extended address (a small OUI table).

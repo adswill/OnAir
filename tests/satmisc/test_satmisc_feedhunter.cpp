@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Feed hunter state machine with an invented carrier list (no RF): every carrier is tried, new ones are flagged, wide ones skipped.
 #include "dect2/satmisc/feed_hunter.h"
 #include <cstdio>

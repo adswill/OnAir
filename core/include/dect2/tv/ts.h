@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPEG transport-stream analysis: PSI/SI parsing (PAT, PMT, SDT, NIT, EIT now/next, TDT), per-PID statistics.
 #pragma once
 #include "dect2/tv/psip.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The sample rate a user chooses (Advanced > Custom, or the RATE box) is the rate the radio is asked for: a fake HackRF records what its
 // driver is given (3.5, bug "set 10 Msps, the radio runs 5"). Many modes, several rates, with and without the offset tuning of the DC spike;
 // the rate the radio then runs at is the one the UI shows ("runs at ..."), which is the engine's radioRate().

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T on 7 and 8 MHz channels (ABNT NBR 15601, ISDB-T International: the Maldives): the same signal with every time quantity scaled by
 // the channel width / 6. The built-in test signal (as the app makes it) at each width, received with the width set and on automatic, also
 // 20 kHz off the centre: the TMCC must be found, the transport stream must flow and carry its PAT.

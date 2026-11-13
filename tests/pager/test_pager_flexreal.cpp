@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLEX as real transmitters send it (issues #95 "Flex Next" and #261). multimon-ng's FLEX_NEXT is its newer FLEX decoder, not a new protocol: the
 // recordings users sent are ordinary FLEX (sync codes 0x870C, 0xB068, 0xDEA0) that OnAir did not decode because
 //   1. the FIW and the phase data are sent complemented against the sync code and marker (no real FIW passed its check before),

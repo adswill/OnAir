@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RS41: known answers. The example frame is the one printed in rs1729/RS rs41/rs41.txt (de-whitened bytes; the printed copy has a stray
 // nibble in the parity and loses the last zeros, repaired here: the parity is then confirmed by our own RS encoder, which is a check
 // of the code's polynomial and root choice, and every block CRC is confirmed). Plus RS error correction and the symbol path.

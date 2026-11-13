@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IFKP through the engine (setStandard(118)): the synthetic source plays the test signal, the receiver reports through latestRx().
 #include "dect2/ifkp/ifkp_rx.h"
 #include "dect2/engine/engine.h"

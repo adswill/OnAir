@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UDP streaming when frames come out of the receiver unevenly: several frames finish at once now and then (a busy CPU, the GPU working
 // in batches). Every datagram must still reach the network; before, the whole queue was thrown away (VLC stuttered every few seconds).
 #include "dect2/tv/tsout.h"

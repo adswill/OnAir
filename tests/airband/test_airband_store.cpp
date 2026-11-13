@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The airband channel list in the settings file (#148): add, edit, delete and special characters survive a save and a load, through the same
 // "key=value" line the settings file keeps, and the older forms still load.
 #include "dect2/airband/airband_store.h"

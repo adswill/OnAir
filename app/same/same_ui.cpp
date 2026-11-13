@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA Weather Radio SAME screens: the weather channels (WX1 - WX7), the alert history with every field in plain English (event, originator, the
 // locations with the partial-county direction, purge and issue time, call sign, how many of the three repeats agreed), the 1050 Hz attention
 // tone, a map of the states and provinces named (an approximation: a marker at the centre of the state, nothing more precise) and the raw

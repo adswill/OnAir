@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The safety layer of the ham transmitter: the country band plans, the gate on every path (licence x Arm x band: only all three key anything),
 // the duty-cycle and burst figures (warnings only), no stall stop, the hard stop on an output error, the TX audit log and the slot wait. Fake radios only.
 #include "dect2/ham/ham.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Loran-C detector: matched filter on the envelope, comb over the 8 pulses, fold over the GRI, peel the stations.
 #include "dect2/eloran/eloran_rx.h"
 #include <algorithm>

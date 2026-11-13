@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa receiver benchmark: packet success against SNR (90 % thresholds, with carrier / clock offsets) and CPU cost of the channel bank.
 //   lora_bench sweep <sf> <bwKhz> <cr> [cfoFrac of bw/4... as Hz] [sroPpm] [len] [frames] [floorOffsetDb]
 //   lora_bench cpu [seconds]

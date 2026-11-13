@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Offline map tile cache: tile file naming (root/z/x/y.png), size cap with least-recently-used eviction (by file modification time),
 // and the plan of an area download (how many tiles, about how big, never more than kMaxDownloadTiles). No network and no drawing here.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry parsing: the real FUNcube-1 frame of the gr-satellites test vector (WO10 of AO-73: battery 8140 mV), frame type names, text beacons,
 // and the frames that must not parse.
 #include "dect2/cubesat/cubesat_telem.h"

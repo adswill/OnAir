@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AO-40 FEC: see cubesat_ao40.h.
 #include "dect2/cubesat/cubesat_ao40.h"
 #include "dect2/cubesat/cubesat_proto.h"

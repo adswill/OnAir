@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What a plugin shows: tables, status lamps, a log, plots, images and map points, kept in a bounded store the generic "Plugin mode" panel
 // draws from. Plugin authors write no UI code. Every size is capped here, so a plugin that floods results cannot grow the program's memory:
 // extra rows push out the oldest, oversized text is cut, and what is refused is counted.

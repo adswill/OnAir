@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* A fake speech codec plug-in for tests/codec/test_codec_guard.cpp: no codec in it. Built five times (FAKE_MODE_ok, _crash, _hang,
  * _garbage, _abi) as onair-codec-fake<mode>. It shows that a plug-in that crashes, never returns, reports nonsense or speaks another
  * interface version cannot take OnAir down. */

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The new interface: the shell around the body (menu bar, top bar with the mode combo and summary, bottom bar, the
 // mode list and side bar, the status line and the log console).
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.

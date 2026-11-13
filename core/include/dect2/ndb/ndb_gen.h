@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A carrier at dialOffsetHz (the engine's tune offset puts it on the carrier after the receiver mixes), amplitude-modulated

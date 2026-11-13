@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Rig control for transmitting: the watched CAT link (re-open with back-off, never while keyed), tuning for TX with read-back and split, PTT by
 // CAT / VOX and a failed release, CatRigIo through the ham gate (licence x Arm x band), a rig that drops mid-burst, finding the rig, audio pairing,
 // error hints and the rig profile in the settings. Fake CAT and fake sound card only; the Hamlib part uses the dummy rig (no radio).

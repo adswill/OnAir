@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Round-5 smart engines for satellites in the mode screens (docs/SMART5-sat-3.9.md items 16-20, docs/SMART5-UI-3.9.md):
 // the learned horizon and the next good pass (Meteor LRPT, HRPT, APT and the other weather downlinks), the Sun outage of a
 // geostationary downlink and the product cadence watchdog (GOES, GK-2A, Elektro, FY-4), the L-band carrier quality log

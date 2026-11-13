@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR bit helpers (see dmr_fec.h). The error control codes of ETSI TS 102 361-1 annex B are Rust: dmr_fec_rs.cpp over rust/onair_dmr.
 #include "dect2/dmr/dmr_fec.h"
 #include "dect2/common/bits.h"

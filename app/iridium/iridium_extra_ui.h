@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium ACARS, packet dump and pager screens (tabs next to the Calls view, see iridium_ui.cpp).
 #pragma once
 

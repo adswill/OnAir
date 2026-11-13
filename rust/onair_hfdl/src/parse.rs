@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The PDU of one HFDL burst, read as text and fields (ARINC 635 / ICAO Doc 9741): SPDU squitters, MPDU headers (downlink and uplink), LPDUs (unnumbered data,
 //! logon / logoff), HFNPDUs (performance data, frequency data, system table) with aircraft positions. The ACARS block inside an HFNPDU is only located
 //! (`Msg::acars_at` / `acars_len`); the caller decodes it with the ACARS code and appends to the detail text.

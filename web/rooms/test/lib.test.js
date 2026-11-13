@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 import { test } from "node:test";
 import assert from "node:assert/strict";
 import { makeToken, verifyToken, cleanNick, cleanText, cleanChat, moderate, scrubPersonal, parseWfLine, parsePush, WindowLimit, validRoomId, randomId, LIMITS, b64uEncode } from "../src/lib.js";

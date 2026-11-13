@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Record and replay for any mode (iq_record.h, iq_file.h): a synthetic signal is recorded as 16-bit SigMF in a sweep of modes; each recording's
 // metadata gives back the centre frequency, the rate, the format and the mode, the samples read back exactly (to 16 bits), and the engine
 // replays a recorded FM signal from the file with no radio attached.

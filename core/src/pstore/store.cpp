@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The plugin store client (see core/include/dect2/pstore/store.h and docs/PLUGIN-MARKETPLACE-3.9.md).
 #include "dect2/pstore/store.h"
 #include "dect2/automation/json_mini.h"

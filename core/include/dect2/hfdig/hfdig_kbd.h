@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Keyboard-to-keyboard modes as one decoder of the HF digital receiver (hfdig_rx.h, decoder bit 32): Olivia, Contestia, MFSK,
 // THOR, DominoEX and Hellschreiber. One family runs at a time (setConfig); each is its own entry in the mode list (modes.cpp).
 // This header, hfdig_kbd*.cpp and app/hfdig/hfdig_kbd_ui.cpp belong to these modes alone. The parameters follow fldigi (GPL, w1hkj/fldigi):

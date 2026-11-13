@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dvbText() on top of the Rust crate rust/onair_dvbsi: the prefix dispatch, ISO/IEC 6937 and the clean-up are Rust; the character set tables
 // the system provides come back through convertCharset() (dvb_text.cpp), registered with the crate before main.
 #include <atomic>

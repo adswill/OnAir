@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: station filter, CPA / TCPA and geofence alerts (core/include/dect2/ais/ais_alerts.h, docs/AIS_ALERTS.md).
 // The alerts are off until the user ticks "Close-approach alerts" or writes a geofence. The position CPA is measured from is the receiver position
 // (Settings > Receiver position); a moving own ship can be entered under Advanced. The alerts reach the automations as ais.cpa and ais.geofence.

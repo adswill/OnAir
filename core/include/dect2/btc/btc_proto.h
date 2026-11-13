@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic (BR/EDR) discovery: the baseband pieces needed to find devices from their access codes and inquiry responses
 // (Bluetooth Core Specification vol 2 part B: access code, packet header, FHS packet; the class of device is from the Assigned Numbers).
 // Receive only: nothing here pages, inquires or answers.

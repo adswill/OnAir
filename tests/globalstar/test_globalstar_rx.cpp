@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Globalstar activity monitor: the test signal (globalstar_gen.h) through the receiver (globalstar_rx.h): a steady channel with Doppler offsets, SNRs and
 // a radio clock error; a satellite pass (the Doppler track follows the sweep); bursts on a second channel (the event log); noise alone gives nothing.
 #include "dect2/globalstar/globalstar_gen.h"

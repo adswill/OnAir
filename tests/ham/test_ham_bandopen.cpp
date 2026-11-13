@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // When is the band open (round 4 #38): 20 m open 06-17 UTC every day for 10 days, 40 m at night on 3 of them; the 7 and 30 day matrices
 // count days, spots and the farthest; old days drop out; the saved text.
 #include "dect2/ham/band_open.h"

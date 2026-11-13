@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // In-memory test signal only. No transmitter is registered for these modes.
 #pragma once
 #include "railway_proto.h"

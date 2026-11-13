@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT 406 MHz screens: the beacon messages that were decoded (15 hex ID, type, country, protocol, identification, position, 121.5 MHz homing flag,
 // the two BCH checks), a map of the ones that carry a position, and the raw bits. Receive only: a real beacon means somebody may be in danger.
 #include "dect2/common/time_fmt.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // plane-alert-db (sdr-enthusiasts/plane-alert-db, the list planefence / plane-alert use): aircraft by ICAO address with operator, type, tags and a
 // category (military, government, police, historic ...). Imported as one watchlist per category, so alerts are switched per category, and
 // shown as a column in the ADS-B table. Header (2026-11): $ICAO,$Registration,$Operator,$Type,$ICAO Type,#CMPG,$Tag 1,$#Tag 2,$#Tag 3,Category,$#Link.

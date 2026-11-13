@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator, tab "Digital Television Mode Selector": every standard DVB-T, DVB-T2, DVB-T2 narrow band (1,7 MHz), DVB-S,
 // DVB-S2 and DVB-S2X mode with its occupied bandwidth, net bitrate and minimum C/N on the AWGN channel, and which of them carry a given
 // bitrate in a given bandwidth at a given C/N. The modes and formulas are those of DVB_transmission_modes.xlsx (ETSI EN 300 744, EN 302 755 with

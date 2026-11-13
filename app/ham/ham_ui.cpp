@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham view (third choice of the RX / TX / Ham switch): operation like WSJT-X on one screen. Always on top: the mode and band bars, the
 // station, the licence box, Halt TX and Arm. Then the tabs: Operate (meters, the slot timeline, the decode list coloured by CQ / new DXCC /
 // new grid / worked before, the QSO panel with the auto-sequence steps, the six messages, macros), Log, Awards, Map, Spots, Contest, Guide

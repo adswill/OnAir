@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Tools menu's grouping table (app/ui/menu_groups.h): every item of the old flat menu appears exactly once, every group is a real
 // group, the search matches, and the Mode menu's chunks cover a category exactly with no chunk over the limit.
 #include "ui/menu_groups.h"

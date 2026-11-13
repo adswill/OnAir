@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors test signal. See ism_gen.h. Each frame follows the layout documented in the rtl_433 file named beside its encoder.
 #include "dect2/ism/ism_gen.h"
 #include "dect2/common/stable_random.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ link layer: POCSAG codewords (BCH(31,21) + even parity) turned into numeric pages. Original implementation from the POCSAG
 // standard (ITU-R M.584); no third-party code.
 #pragma once

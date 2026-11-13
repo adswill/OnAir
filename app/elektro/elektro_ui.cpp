@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elektro-L N3 / N4 / N5 HRIT / LRIT screens: the same xRIT product list as GOES, with satellite and link presets.
 #include "ui/kit/mode_panel.h"
 #include "app.h"

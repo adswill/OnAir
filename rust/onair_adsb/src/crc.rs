@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The Mode S parity: CRC-24 and single-bit error correction (ICAO Annex 10 Vol. IV 3.1.2.3.3).
 
 /// G(x) = x^24 + x^23 + ... + x^10 + x^3 + 1 without the x^24 term (Annex 10 Vol. IV 3.1.2.3.3.1).

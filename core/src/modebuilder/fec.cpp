@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder FEC: repetition, positional Hamming (and the extended codes), convolutional codes with a hard-decision Viterbi decoder,
 // and Reed-Solomon over GF(2^m) for any field polynomial, first root and root spacing (Berlekamp-Massey, Chien, Forney).
 #include "dect2/modebuilder/modebuilder.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Derived kinematics (core/include/dect2/geo/kinematics.h): geodesic distance, ground speed, track, vertical rate, the uncertainty from
 // rounded positions, the antimeridian, the rejection rules, the choice of the time stamp, the 3D figure and which source wins.
 #include "dect2/geo/kinematics.h"

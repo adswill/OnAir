@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat BGAN (ETSI TS 102 744 "Family SL") forward bearers, physical layer: bearer parameters, frame layout, unique words, constellations,
 // scrambler, turbo code. TS 102 744-2-1 clauses 5.2 and 5.3, tables from its Annex C (generated from the published .TXT files, tools/bgan_tables.py).
 // Forward bearers only, and only the bearers whose tables are published: F80T1Q-1B is defined in the standard but has no interleaver tables,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Globalstar test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeGlobalstarSynth(): band-limited noise of 1.23 MHz (the look of a CDMA terminal uplink) on the channels of the band that the sample rate covers.

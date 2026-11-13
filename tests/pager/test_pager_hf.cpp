@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers and APRS / Packet on HF through the engine (report: HackRF at 2 Msps on 6.1625 MHz, Whole span off showed -200 dBFS, on never
 // decoded a strong POCSAG 512). The synthetic source plays the test signal at the mode's own rate and offset at an HF frequency and at the
 // usual VHF/UHF one, with Whole span off and on; the receiver must get samples (a real level) and decode every page / frame each time.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB census: every ensemble of Band III inside one wide capture, at once: channel, ensemble, services, TII and quality, with the same service heard on two ensembles shown once
 // (at its best one). One receiver per channel holding a signal, fast information channel only (no audio): the census is what you pick the channel to listen to from.
 #pragma once

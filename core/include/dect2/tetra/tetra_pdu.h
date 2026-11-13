@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA broadcast PDUs (ETSI EN 300 392-2 clauses 18 and 21): what a base station sends in the clear to every terminal.
 //   SYNC (BSCH) with D-MLE-SYNC: system code, colour code, timeslot / frame / multiframe numbers, sharing mode, MCC, MNC
 //   SYSINFO (BNCH) with D-MLE-SYSINFO: main carrier, band, offset, duplex spacing, cell access parameters, location area, services

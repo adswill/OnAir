@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Decode e-Czas time packets from discriminator WAV recordings (scratchpad/eczas_recordings/).
 #include "dect2/eczas/eczas_rx.h"
 #include "dect2/eczas/eczas_live.h"

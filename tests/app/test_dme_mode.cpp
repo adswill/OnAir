@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DME mode (family 121, engine standard 123, active standard 122) is registered: its mode-table row, its panel's strings and its
 // engine wiring are in the sources. Text checks only, so it builds without the app.
 #include <cstdio>

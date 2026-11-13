@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Animated GIF of grey pictures (GIF89a, own LZW encoder) and the full-disk loop of a geostationary channel: the last N full disks of one
 // product as a time-lapse (xrit-rx, goestools users' loops). docs/GEO-LOOP-3.9.md.
 #pragma once

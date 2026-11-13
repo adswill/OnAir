@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PNG decoder (map tiles on Windows and Linux): every colour type and bit depth, all five filters, Adam7, tRNS, broken files.
 // The PNGs are made here with stored deflate blocks, so the test needs no image library. Optional argument: a folder of real PNG
 // tiles that must all decode (e.g. the macOS map cache).

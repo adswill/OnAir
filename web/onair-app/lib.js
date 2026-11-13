@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web 3.9: the page's pure code (no DOM), so it runs in node for the tests (tests/web/app.test.js).
  * Frequencies, the spectrum frame, the audio frame, mode search, the panel model built from a schema and a panel object, settings. */
 (function (root, factory) {

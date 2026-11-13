@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B test signal: a simulated airspace. Aircraft fly great-circle tracks around a reference point and send the Mode S / ADS-B message mix at its
 // real rates; every message is rendered as 1 us pulse-position modulation (8 us preamble, 56 or 112 bits) at any sample rate from 2 Msps up,
 // with overlapping bursts, a carrier frequency error and phase of its own for each transmitter, a level that falls with distance, and noise.

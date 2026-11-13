@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi beacon test signal (see wifi_gen.h).
 #include "dect2/wifi/wifi_gen.h"
 #include "dect2/wifi/wifi_proto.h"

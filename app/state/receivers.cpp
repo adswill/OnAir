@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Several receivers at once: see receivers.h and docs/multi-sdr.md.
 #include "receivers.h"
 #include "rxbar.h"

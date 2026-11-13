@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The QO-100 decimator computes four outputs per pass over a linear buffer; the result must equal the one-output-at-a-time circular-buffer filter
 // to float rounding (the compiler may fuse the multiply-adds differently in the two loops), whatever the block sizes (the filter state and the output phase carry across calls).
 #include "dect2/qo100/qo100_dsp.h"

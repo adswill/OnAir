@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal identifier: what is this carrier? From a stretch of complex samples it measures the centre, the -3 / -20 / -26 dB and 99 % widths
 // (specx::measure on its own spectrum), continuous or bursty (duty, burst length, the spacing of the burst starts), the modulation class (AM, FM,
 // constant envelope, 2- or 4-level FSK, GMSK, BPSK / QPSK / pi/4-DQPSK / 8PSK from the |x|^n lines, QAM, OFDM from the flat top and the cyclic

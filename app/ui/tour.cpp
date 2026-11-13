@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The tours: the first-run tour (the whole window, in order) and the four short guided tours of Help > Guided tours. Each step dims the window except the part it describes, with a small flat callout next to it.
 // The steps and the rules are in tour_logic.h (tested); the parts of the window report themselves with tourMark() every frame, and a step whose
 // part is not on screen (another layout, a mode without it) is skipped.

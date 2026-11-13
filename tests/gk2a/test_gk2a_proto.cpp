@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A xRIT layer: KMA header records (7, 128), key file parsing, the assembler on the test files (plain and DES-encrypted pictures, the
 // key arriving late), channel names.
 #include "dect2/gk2a/gk2a_gen.h"

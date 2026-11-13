@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Burst finder for a wide capture: every transmission shorter than a few seconds, wherever it is in the span: a 256-point spectrum every 128 samples (64 us at 4 Msps, 128 us at 2 Msps),
 // bins 14 dB over the frame's median are hot, hot bins within one bin of each other form a group, groups are followed from frame to frame (centre within two bins) and a group that lasts
 // at least 2 frames is a burst. Each finished burst is a row: frequency, length, bandwidth (width of the group 12 dB under its peak, the widest it got), level. Bursts at the same frequency (within 1.5 bins) are compared:

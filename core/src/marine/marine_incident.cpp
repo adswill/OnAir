@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/marine/marine_incident.h"
 #include "dect2/ais/ais_alerts.h"
 #include "dect2/ais/ais_mid.h"

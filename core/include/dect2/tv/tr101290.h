@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ETSI TR 101 290 stream measurements on a live transport stream: priority 1, 2 and 3 checks, each with a counter and the seconds since it last fired. A separate
 // monitor, driven by the packets as they arrive; `t` is the signal time of the packet (seconds), which on an RF chain comes from the sample clock.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pager watch (4.0): keyword alerts and automatic RIC groups on decoded POCSAG / FLEX messages. Pure code on PagerMessage.
 //  - PagerKeywords: the user's words ("fire", "structure", "ALARM 3"), matched case-insensitively on whole words (a word with spaces is a phrase);
 //    a leading '*' matches inside a word. A message returns the words it hit, so the UI colours the row and the alert rings once per message.

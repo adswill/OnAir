@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // by-name.test.js - the optional public name: validation, server-side sanitising, last-writer-wins, search.
 import test from "node:test";
 import assert from "node:assert/strict";

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Runs `onair --hidden --mute --memory-selftest` from a renamed copy of the program, so the owner's settings (kept under the program's name) and
 # data folder are never touched: the copy gets its own data folder (DECT2_DATA_DIR) and config folders. The self test is app/memory/memory_selftest.cpp.
 file(REMOVE_RECURSE "${DIR}")

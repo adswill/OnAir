@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Riometer on simulated data: the sidereal time, the quiet-day curve built over several simulated days, an absorption event of known depth, interference
 // minutes that must not enter the curve, a gain step, the export / import, and the power estimate from IQ with narrow carriers and bursts in it.
 // Simulated only: a real riometer needs a stable receiver gain over days; an SDR with automatic gain would defeat it (see docs/HAM-SCIENCE-3.8.md).

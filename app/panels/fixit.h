@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "How to fix": one table that maps a failure (a text the app shows, found by a pattern) to a plain explanation, numbered steps for this
 // computer's OS and buttons for the actions that help (open a page, copy a command, open the codecs folder, copy the diagnostics).
 // Pure data and lookup (no ImGui): the popup that shows it is in diag_ui.cpp. All texts go through tr() when shown.

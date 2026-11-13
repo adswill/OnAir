@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GRAVES carrier and meteor echoes: carrier offset and drift, echo Doppler and strength, noise; noise alone and a carrier alone give no echo.
 #include "x40_gen.h"
 using namespace x40gen; using namespace dect2;

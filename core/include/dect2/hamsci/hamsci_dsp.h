@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham science modes, signal processing layer (no engine here): the weak-signal and slow digital modes FSK441, ISCAT, PI4 and Throb, the slow-CW
 // grabbers QRSS / DFCW, and the three science receivers SuperSID (VLF station level and solar flare detector), riometer (cosmic noise absorption)
 // and pulsar folding. Real audio (the upper sideband audio of a receiver, dial at 0 Hz) in for the digital modes, power or complex samples in for the others.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OpenGL 3.2 core back end (falls back to 3.1 and 3.0 where the driver offers no more, see gl_level.h) (Linux, Windows, and macOS when built with DECT2_UI_BACKEND=OpenGL3).
 #include "gfx.h"
 #include "render_caps.h"

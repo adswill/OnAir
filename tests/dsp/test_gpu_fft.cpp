@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPU FFT / power accumulate / FIR decimator (GpuFft, Metal) against the CPU code (fftSplit, a plain FIR loop): the largest relative error, and the
 // time of each per call. A numeric tolerance (float rounding), not bit-exact. Passes without a GPU. The table goes into docs/GPU-AUDIT-3.7.md.
 #include "dect2/dsp/dsp_compat.h"

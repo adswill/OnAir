@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Power and load: is the computer on its battery, can the window be seen, App Nap while receiving, and the process's CPU per thread and
 // wake-ups for View > Performance overlay. power.cpp (all systems), power_cocoa.mm (macOS window and activity parts).
 #pragma once

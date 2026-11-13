@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Optional add-on: the DRA+ decoder for CDR sound, built as libonair_dra (OnAir loads it at run time, docs/CODECS.md "DRA+ (CDR sound)").
 # Not part of the OnAir build, never installed or packaged. The decoder source is NOT in this repository: get it with extract_dra.py.
 #   python3 extract_dra.py                  (downloads maliwen2015's patch, writes dra_src/dradec.c and dradec.h)

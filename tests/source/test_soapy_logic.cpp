@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure SoapySDR helper logic against fake driver tables (no hardware).
 #include "../../core/src/source/soapy_logic.h"
 #include <cstdio>

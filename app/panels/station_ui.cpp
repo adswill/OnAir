@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // My station window (View > My station): the user's radios and antennas, entered once. Radios the program finds are added by themselves; an antenna is one
 // click from the list of common ones, its details under Advanced. The verdicts come from core/src/station/station.cpp (docs/STATION-3.8.md); this file keeps the
 // data in the settings, maps it to the device list, answers the mode list, and moves a receiver to a better free radio when its mode is chosen.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Standard cipher primitives for user-supplied digital-voice keys, written for this project from public specifications only.
 // Nothing here searches for, recovers or brute-forces a key: every function takes a key the user already holds and either produces a
 // keystream or decrypts one block. These are the building blocks the per-protocol glue in voice_decrypt.h uses.

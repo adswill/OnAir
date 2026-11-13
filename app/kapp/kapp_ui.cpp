@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP screens: the receiver panel (state, the last burst, counts, a profile histogram, the constellation of the last burst and the list of messages
 // that arrived whole) and the transmit options (callsign, a text or a file, profile, passes) that the TX panel draws for the KAPP signal. English texts only.
 // KAPP only listens here: it sends no acknowledgement, so the panel says so.

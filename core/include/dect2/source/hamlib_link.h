@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One open Hamlib CAT connection (serial or rigctld network), safe to call from several threads. Only built with DECT2_HAVE_HAMLIB;
 // without it every call fails with a message. Receiving only ever tunes (frequency, mode); setPtt() is used by the transmit sink alone.
 #pragma once

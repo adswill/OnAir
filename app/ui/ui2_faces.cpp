@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The new interface: the Faceplate, Cinema, Meters, Dock and Panel layouts of the body (the "Scope: Cinema" and
 // "Faceplate" variants are instruments in a chassis; Dock and Panel are the two-column ones).
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.

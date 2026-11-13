@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN receive-only packet forwarder: uplinks the mesh mode heard, sent to the user's own network server gateway entry (ChirpStack, The Things
 // Network) over the Semtech UDP protocol (packet_forwarder PROTOCOL.TXT, version 2): PUSH_DATA with an "rxpk" JSON array, PULL_DATA as the
 // keep-alive. Downlinks (PULL_RESP) are never sent on the air: OnAir only listens. docs/LORAWAN-FWD-3.9.md.

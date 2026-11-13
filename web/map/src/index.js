@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 import { validateBy, searchKey, BY_SEARCH_LIMIT } from "./by-name.js";
 import { sanitizeList, mergeStored, takeBudget, MSG_TTL_MS, MSG_TOTAL_MAX, MSG_PER_INGEST } from "./msgs.js";
 import { parseIngestBody } from "./lenient-json.js";

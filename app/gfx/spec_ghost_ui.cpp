@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum ghost, the App side (state/spec_ghost.h): the chosen earlier snapshot drawn faintly behind the live trace, the signals that are new
 // since then in an orange band with a "+N dB" tag, the controls in the spectrum menu, and the rolling auto-snapshot. The averaged trace is what
 // is stored and compared. Nothing here touches the receiver or the other plots.

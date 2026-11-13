@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Station health report: see core/include/dect2/sweep/station_health.h and docs/STATION_HEALTH.md.
 #include "dect2/sweep/station_health.h"
 #include <algorithm>

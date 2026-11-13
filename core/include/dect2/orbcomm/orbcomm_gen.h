@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm test transmitter: one or two subscriber downlinks (orbcomm.h framing, SDPSK, RRC 0.4) with Doppler (fixed or a ramp),
 // symbol clock offset, noise and packets with a broken checksum.
 #pragma once

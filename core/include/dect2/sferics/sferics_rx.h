@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sferics / lightning receiver: the radio impulses of lightning discharges (atmospherics), seen as short wideband bursts above the noise floor.
 // Counts strikes and flashes, strikes per minute, a 60 minute activity histogram, and the time of every strike on the sample clock.
 // Mains interference (a regular impulse train at 100 / 120 Hz) is recognised and left out of the count; impulses longer than 5 ms are not lightning.

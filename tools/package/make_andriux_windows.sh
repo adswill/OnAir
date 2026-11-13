@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Create the Andriux Edition portable Windows x64 package from an EXISTING
 # working MSYS2 UCRT64 build (no rebuild/reconfiguration required).
 set -euo pipefail

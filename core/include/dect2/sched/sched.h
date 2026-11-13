@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The scheduler core: when a job is due (once, every N, daily, weekly, cron-like, satellite pass), how overlapping jobs are resolved, what
 // happens to jobs missed while the machine slept, the disk-space guard, the recording file-name template, and the JSON the jobs and the
 // run history are stored in. No clocks and no radio: time comes in as UTC seconds and the radio sits behind the Host interface, so all of it

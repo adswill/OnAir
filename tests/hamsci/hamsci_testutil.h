@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the ham science tests: noise at a given SNR in 2500 Hz, simple check macro.
 #pragma once
 #include <cmath>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The P2 stage of the DVB-T2 receiver: L1 signalling, extended carriers, integer frequency shift.
 #include "t2rx_impl.h"
 

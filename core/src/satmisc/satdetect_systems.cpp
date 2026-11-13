@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The table of satellite systems handled by detection only (see satdetect_live.h). Every frequency here comes from a public source named in docs/SAT-MISC-3.8.md;
 // a system's note says plainly what is not known. Family numbers: engine standard - 2.
 #include "dect2/satmisc/satdetect_live.h"

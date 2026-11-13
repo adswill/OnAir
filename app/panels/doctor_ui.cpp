@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reception Doctor window (View > Reception doctor): one button takes a short capture from the running receiver and tells, in plain sentences,
 // why the mode may not be decoding, with a one-click fix where that is safe. The analysis is core/src/doctor/reception_doctor.cpp
 // (docs/RECEPTION-DOCTOR.md); this file is the window, the capture through Engine::setIqTap() and the fixes.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH (EN 302 583, OFDM / SH-A) screens: status bar, the analysis row (SNR history), the Receiver tab with the TPS parameters and the
 // time interleaver, the tuner (channel width: automatic on top, a fixed width under Advanced; HP / LP stream) and the test signal options.
 // The TV tab, services and the player are the shared ones (the decoded transport stream goes there like DVB-T's).

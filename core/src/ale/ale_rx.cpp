@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF ALE receiver (see ale_rx.h).
 #include "dect2/ale/ale_rx.h"
 #include "dect2/automation/engine.h"

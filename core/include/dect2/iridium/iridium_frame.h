@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium frame layer (no radio): classify and decode the bits of one demodulated burst, assemble pager messages,
 // and build burst bits for the test signal.
 // Facts: iridium-toolkit (github.com/muccc/iridium-toolkit: bitsparser.py, bch.py, FORMAT.md, tests/test_parser.py) and gr-iridium

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir directory Worker: servers register themselves with Ed25519-signed heartbeats; a public JSON API lists them; the static page in
 // public/ shows them. Storage: D1 (schema.sql). The first registration of an id fixes its public key; everything after must be signed by it.
 //

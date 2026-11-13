@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder generator: a test signal made from a definition (the reverse of the receiver): frame bytes -> bits -> FEC -> interleaver
 // -> scrambler -> preamble and sync -> line code -> symbols -> OOK / ASK / FSK / GFSK / GMSK / PSK at the sample rate, with noise,
 // a frequency error and a clock error. Used by the round trip tests and the "Generate test signal" button.

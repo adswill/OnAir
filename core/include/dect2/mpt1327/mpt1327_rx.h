@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 control channel decoder: FM audio of the control channel in, codewords and messages out.
 // 1200 bit/s FFSK is demodulated as minimum shift keying around 1500 Hz (tones 1200 and 1800 Hz, a phase step of a quarter turn per bit);
 // bit timing is found by running a sync search on every sample phase. The bit polarity (which tone is which bit) is taken from the

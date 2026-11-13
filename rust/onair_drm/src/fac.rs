@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The fast access channel (ES 201 980 clause 6.3): 72 bits (116 in robustness mode E) with a CRC-8, the channel parameters and the service parameters of one
 //! (two in mode E) services.
 use crate::bits::{crc8, BitReader};

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SSB scanner: Welch spectrum of the captured span -> narrow occupied bands -> sideband decision -> per candidate a baseband channel (CIC3 to
 // ~48 kHz, mix the suppressed carrier to 0, FIR, decimate to ~8 kHz) -> VoiceAnalyzer. Tracks keep a station across windows and follow its drift.
 #include "dsp_util.h"

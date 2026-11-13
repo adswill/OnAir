@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir VDL Mode 2 (VHF data link, 136.975 MHz and the other channels): the layers above the modem. The x^15 + x + 1 scrambler, the (25,20) burst header code and
 //! the burst layout, the Reed-Solomon (255,249) code with erasures, the gathering of a burst into blocks, the HDLC deframer and FCS, the AVLC frame (addresses,
 //! control, I / S / U frames) and the protocols the information field carries as text: ISO 8208 / X.25 with CLNP and COTP headers, XID link management. ICAO Annex 10

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where a NAVTEX / SITOR-B message is talking about: positions written in the text ("56-30N 003-15E", "5630.5N 00315.2E", "N56 30 E003 15",
 // "56.5N 3.25E", "56°30'N 003°15'E") and named sea areas ("NORTH SEA", "GULF OF FINLAND" ...). Pure text code, no radio and no clock.
 // The area boxes are coarse (a degree or two): they say "this warning is about that sea", not where exactly.

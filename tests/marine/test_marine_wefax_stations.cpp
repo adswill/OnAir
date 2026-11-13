@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The radiofax directory: every station has frequencies in the HF range, every broadcast names a known station at a valid time,
 // the dial is 1.9 kHz below the carrier, and the "next broadcasts" list is in order and starts within a day.
 #include "dect2/marine/marine_wefax_stations.h"

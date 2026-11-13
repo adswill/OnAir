@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital receiver telemetry, shared by the receiver and the UI: the receiver's own members, then each decoder's telemetry by value
 // (defined in hfdig_rtty.h, hfdig_sstv.h and hfdig_freedv.h).
 // The first members are copied into RxTelemetry (history plot, top bar): keep them and their meaning.

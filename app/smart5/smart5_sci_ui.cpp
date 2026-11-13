@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Round-5 smart engines for GNSS and science in the mode screens (docs/SMART5-gnss-3.9.md items 21-23, docs/SMART5-science-3.9.md
 // items 24-26, docs/SMART5-UI-3.9.md): the radio's crystal error from the GNSS clock drift, the scintillation index S4 and the
 // multipath indicator per satellite, the Sun drift-scan calibration of a radio telescope, the day-night terminator marks of a

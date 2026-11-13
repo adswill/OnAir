@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice transmitter (port of kaal_tx.py, streaming). v3 (setBitrate 12/16/24/32): 16 kHz speech -> codec v3 frames -> rate-matched LDPC words
 // of 480 bits -> 4-word interleave -> 16-QAM in frames of 160 symbols (20 ms) -> RRC -> sweep with the station ID in its variants. Legacy (setBitrate 0):
 // 16 kHz speech -> codec frames (320 bits) -> LDPC -> pseudo-random interleave per

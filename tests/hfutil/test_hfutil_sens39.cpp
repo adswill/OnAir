@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 sensitivity pass D (docs/SENSITIVITY-3.9-D.md): the 90 % threshold of the HF ARQ decoders (ARQ-E, ARQ-N, G-TOR) on their own
 // generator's signal (24 kHz complex, hfu_fsk.h) with white noise; SNR = signal power over the noise in 3 kHz, as in test_hfutil_fsk.cpp.
 // A trial passes when the whole message is read; each trial has its own noise and carrier phase and a tuning error of +-30 Hz.

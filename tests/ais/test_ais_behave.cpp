@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS behaviour flags and anchor watch (ais_behave.h): simulated vessel reports with GNSS noise and lost reports.
 #include "dect2/ais/ais_behave.h"
 #include <cmath>

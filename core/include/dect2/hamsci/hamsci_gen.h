@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals of the ham science modes (nothing is transmitted). SynthConfig: snrDb is the signal to noise ratio in 2500 Hz for the audio modes (a value of 99
 // or more means 30 dB), cfoHz a tuning error of the audio tones. modeOpt[0] chooses a variant: ISCAT 0 = A, 1 = B; Throb 0 .. 5 = Throb1 .. ThrobX4;
 // FSK441 / PI4 / QRSS / DFCW: not used. SuperSID: a flare (+3 dB step on NAA) at 17 minutes when modeOpt[0] = 1. Pulsar: modeVal[0] is the pulse S/N over the whole

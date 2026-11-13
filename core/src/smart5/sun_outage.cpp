@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sun outage predictor (see sun_outage.h).
 #include "dect2/smart5/sun_outage.h"
 #include "dect2/smart5/sun.h"

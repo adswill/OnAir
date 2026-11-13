@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DGPS beacons in the engine: mixes the beacon to 0 Hz, decimates to about 4.8 kHz, feeds dgps::Receiver one second at a time.
 #include "dect2/dgps/dgps_engine.h"
 #include <cmath>

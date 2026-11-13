@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Data in the vertical blanking interval of an analogue picture: teletext (EN 300 706, system B), wide screen signalling (EN 300 294, line 23) and line 21 closed captions (EIA-608,
 // its timing from memory of the standard, not checked against it). Works on the video of one line as a function of the time after the sync's leading edge, black 0, white 1.
 #pragma once

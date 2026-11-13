@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN FSK (data rate DR7: 50 kbit/s GFSK) as LoRaWAN radios send it, both ways: frame coding (length byte, CRC-16, whitening), the airtime of
 // a frame, a modulator for the test signal, and a receiver that finds the frames on the FSK channel(s) of a plan in a wide capture. The PHY
 // payload inside is an ordinary LoRaWAN frame (lorawan::parse). RECEIVE ONLY and keyless, as the LoRaWAN monitor: nothing is decrypted, no MIC

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The CRC-16 of DAB (ETSI EN 300 401 section 5.2.1, FIB / data group / packet / PAD): CCITT polynomial 0x1021, start 0xFFFF, result inverted.
 
 /// Lookup table, built at compile time.

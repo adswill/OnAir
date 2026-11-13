@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure rules of saving pictures (no ImGui, no disk: tests/app/test_picsave.cpp covers them): where a picture goes, what it is called,
 // what happens when the name is taken, the words of an error, and the "deleted, undo for a few seconds" list.
 //   <folder>/<mode>/<YYYYmmdd-HHMMSS>-<mode>.png     (folder: the "Save pictures to" setting, default <home>/Pictures/OnAir)

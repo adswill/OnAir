@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band watch (see airband_seen.h).
 #include "dect2/airband/airband_seen.h"
 #include "dect2/airband/airband_rx.h"

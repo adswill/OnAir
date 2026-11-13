@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Message 27 and the long-range channel plan (ais_longrange.h).
 #include "dect2/ais/ais_longrange.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 HF utility helpers, group E (pure, no GUI). Tests: tests/d40/test_hf_e40.cpp
 //  1. BandClock   "best frequency now" learned from this site's own readings: an exponential average of the SNR per (frequency, UTC hour). Works for NCDXF / IBP beacons, time signals,
 //                 ALE and HFDL channels alike. No propagation model: until an hour has data, the neighbouring hours (a day-night trend) fill in, and unknowns are reported as unknown.

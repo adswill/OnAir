@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS-TMC (Traffic Message Channel, ISO 14819-1/2/3): the ODA announcement in group 3A and the traffic messages in group 8A.
 // Location codes stay numbers: the location tables (one per country, "LTN") are national data and are not shipped.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic gain for every radio and every mode (docs/AUTOGAIN.md). One system with four parts, all plain logic with no clock of its own
 // (the caller passes the time), so it is tested against a simulated radio (tests/source/autogain_sim.h):
 //

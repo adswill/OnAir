@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA Direct Mode Operation (ETSI EN 300 396-2 and -3): the DM bursts (470 modulation bits in the 510 bit slot), the coding of the DM logical channels (the same mother
 // code, CRC and interleaving as TMO, dect2/tetra/tetra_phy.h), the DM colour code, and the layer 2 and layer 3 PDUs a listener reads. Air interface or end-to-end encrypted calls are
 // reported and left alone; nothing is ever decrypted.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Everything in view" window (View > Everything in view; the one button of the Simple views): ONE wide capture, every signal in it found, identified and
 // decoded at once (core/include/dect2/engine/wide_session.h). The list shows each signal with what it is, the decoder's state and its CPU share; a signal
 // can be switched off, pinned (never paused), listened to, given a mode by hand, removed, and signals can be added from the spectrum (the Identify

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave mode routing (see shortwave_route.h).
 #include "dect2/shortwave/shortwave_route.h"
 #include <algorithm>

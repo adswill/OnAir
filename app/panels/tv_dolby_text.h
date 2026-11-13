@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The translated words for Dolby TV sound (dolby_audio.h): the format of a track (Dolby Atmos in E-AC-3 JOC or AC-4, the channel bed),
 // what goes to the sound device (stereo, 5.1, 7.1, Dolby Surround matrix, bitstream passthrough) and why the Atmos objects are not heard.
 // Used by every panel that shows the TV player: DVB-T/T2, ATSC 1.0, ISDB-T, DTMB, DVB-S (tv.cpp), QO-100 (qo100_ui.cpp), IPTV.

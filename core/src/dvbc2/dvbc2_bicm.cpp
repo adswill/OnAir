@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 bit-interleaved coding and modulation of the PLPs (EN 302 769 clause 6): the FEC dimensions (tables 3(a) / 3(b)), the LDPC codes
 // (DVB-T2's tables for 2/3 .. 5/6, DVB-S2's for 8/9 and 9/10: the annexes A and B of EN 302 769 list the same accumulator addresses), the
 // BCH codes, the bit interleaver with the demultiplexer (tables 6, 7 and 10) and the QAM mapping (DVB-T2's unrotated constellations for

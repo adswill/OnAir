@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV: parsers, URL handling, AES-128, and the stream reader against a local HTTP server that serves a self-made HLS stream.
 #include "dect2/tv/iptv.h"
 #include "../../core/src/net/tcp_client.h"

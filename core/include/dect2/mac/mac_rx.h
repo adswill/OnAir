@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC television receiver: D2-MAC/packet and D-MAC/packet over FM (satellite, ETS 300 250 for D2-MAC).
 //
 // The input is the FM channel at the centre (16 Msps or more; at 20 Msps the outer part of the 27 MHz channel is cut off and the decoder

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS2 subcarriers and SCA audio in a simulated FM multiplex: groups come out with good checkwords at every stream, with noise and clock offset, and nothing is
 // reported on a plain stereo + RDS station.
 #include "dect2/fm/fm_subcarrier.h"

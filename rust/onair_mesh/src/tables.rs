@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Meshtastic helpers that are plain functions of their input: the hardware model value by name, the channel hash (Channels.cpp generateHash: xor of the name
 //! bytes, then of the key bytes) and the key expansion of Channels.cpp getKey() (one byte N is the default key with the last byte raised by N - 1, 0 means no
 //! encryption; other short keys are padded with zeros to 16 or 32 bytes).

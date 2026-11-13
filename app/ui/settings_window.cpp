@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Settings (menu bar > Settings, Ctrl+,): one window with every preference gathered in categories, a search across all of them, a reset per
 // setting and per category, a marker for what differs from the default, and an Advanced foldout per category. The rows are in
 // settings_table.h; here each row is bound to the field that holds its value (the same fields the old menus use, saved by

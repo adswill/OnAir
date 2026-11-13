@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Throughput of the SDRplay nRSP-ST source (source_nrspst.cpp: SDRconnect's WebSocket IQ, ws_client.h) into the input ring, against a fake
 // SDRconnect on localhost. A Discord report: other programs run the nRSP-ST's "Full IQ" network mode at 0-10 Msps, OnAir stalled above
 // about 5 Msps. Here the fake sends 16-bit IQ in messages of 1024, 4096, 16384 and 262144 samples (the last is over the 1 MiB that 3.9 took):

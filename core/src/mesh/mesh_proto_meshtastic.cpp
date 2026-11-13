@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic packets: the 16 byte header, AES-CTR with the channel key, the Data protobuf and the port payloads.
 // Sources: meshtastic/firmware src/mesh/RadioInterface.h (PacketHeader, flag masks), src/mesh/CryptoEngine.cpp (initNonce,
 // encryptAESCtr: nonce = packet id as 64 bit little endian, from node, 4 byte counter), src/mesh/Channels.cpp (hash),

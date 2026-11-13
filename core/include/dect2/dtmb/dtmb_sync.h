@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB frame acquisition: finds the PN headers in a block of symbol-rate samples (FFT correlation with the three header sequences), the header
 // mode and the position of a frame inside the super-frame (from the way the PN phase moves from frame to frame).
 #pragma once

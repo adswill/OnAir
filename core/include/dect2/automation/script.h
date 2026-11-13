@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lua scripts of the automations, in a sandbox. A script defines function on_event(e); e is a table with type, mode, freq (Hz), time and the event's
 // fields. Available: base functions (no load, dofile, require, collectgarbage), table, math, utf8 and a reduced string library (no pattern matching:
 // find is plain text only; use contains / starts_with / ends_with / matches (glob) / replace). No io, os, package, debug, coroutine.

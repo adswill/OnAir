@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode > Modes shown...: tick the groups and modes the lists should show. Built from the mode table (kModes, kGroupNames), so new modes
 // and groups appear here by themselves. The rules are in mode_visibility.h. Hidden modes stay reachable by search, --mode and deep links.
 #include "../app.h"

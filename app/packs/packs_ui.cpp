@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Data packs window (View > Data packs): what can be downloaded to work without internet (map tiles of a region, satellite elements, airports,
 // transmitter lists), with size, source, licence and the date of the last download. Every download starts with the user's click on that pack; nothing is
 // fetched by itself. Progress, cancel (a started pack continues where it stopped), checksum check, delete, and a guard against a full disk.

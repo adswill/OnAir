@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sunrise and sunset marks per VLF path (3.9, docs/SMART5-science-3.9.md item 25). A SuperSID / VLF trace has steps every morning
 // and evening as the day-night terminator crosses the path; they look like flares to the eye. For the path from the transmitter
 // to the receiver this gives the times the terminator crosses the transmitter, the great-circle midpoint and the receiver, both

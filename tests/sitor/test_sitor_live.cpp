@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR-B receiver (sitor/sitor_live.h) on generated NAVTEX / FEC signals: sample rates, chunk sizes, carrier offsets, tone polarity,
 // noise, 8 bit samples, DC, a gap, a reset, letters and figures shifts. The text is read without ZCZC framing.
 #include "dect2/engine/mode_synth.h"

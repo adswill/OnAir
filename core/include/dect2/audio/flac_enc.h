@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small FLAC encoder for 16-bit mono or stereo (L/R, interleaved) audio (the recordings of the general receiver): fixed linear predictors of order 0 to 4 chosen per
 // block, one Rice partition, a Vorbis comment block for tags. About half the size of WAV for speech, lossless. The MD5 field is left zero
 // (not computed; decoders skip the check). Not thread safe: one writer per file.

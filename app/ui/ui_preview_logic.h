@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The hover preview of the appearance choices (docs/UI-PREVIEW-4.0.md): hovering a palette, light / high contrast, layout, Classic or
 // Unified, font look, text size, touch, Easy mode, waterfall colour map, trace colour or tuner style shows a small live picture of the
 // interface with that choice. This header is the pure half: the settings in use (Look), the hovered option applied to a copy of them

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ionospheric sounders (HF chirp ionosondes and oblique sounders, as the GNU Radio chirpsounder finds them): no decoder, a tool that
 // detects the linear sweeps passing through the captured span, measures their rate, period and start offset, and builds an ionogram
 // (group range against frequency) of each sounder from the echoes. The processing is in iono_dsp.h.

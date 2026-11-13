@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Regenerates tools/marketplace/sample-registry: the three example plugins of sdk/examples as STUB packages (the "library" in each package is a
 few bytes of text, not a real plugin), a test index and a signature made with a published TEST key. It exists for the tests and as a template for a
 real registry. Never put this registry's key into a real OnAir build. Usage: make_sample_registry.py (from anywhere)."""

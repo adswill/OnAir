@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # An AppImage (one file, runs on most Linux systems without installing; OnAir updates it in place, no root) made from the portable package.
 #   make_appimage.sh <portable .tar.gz> <output dir>
 # Needs appimagetool (APPIMAGETOOL=path, default: appimagetool on PATH; in CI it is fetched at a pinned version and run with --appimage-extract-and-run).

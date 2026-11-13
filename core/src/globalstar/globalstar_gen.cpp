@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Globalstar test signal: see globalstar_gen.h.
 #include "dect2/globalstar/globalstar_gen.h"
 #include "dect2/dsp/fftutil.h"

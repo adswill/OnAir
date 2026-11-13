@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RDS-TMC event lists and location tables from the user's files, messages in words and the TMC log (dect2/fm/tmc_db.h).
 // The column names below are those of ISO 14819-2 / -3 event lists, the LCL lists (German BASt and others) and the TISA location table
 // exchange format as they are commonly published; they are recognised loosely (case, spaces and punctuation ignored) and the content

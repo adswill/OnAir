@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility modes: registered tunings, the mode rows and the engine / panel wiring.
 #include <cstdio>
 #include <cstdlib>

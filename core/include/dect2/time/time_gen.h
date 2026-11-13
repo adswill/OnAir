@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Time signal test signal: DCF77, MSF, WWVB, JJY, WWV / WWVH or CHU carrying a known time. Nothing is transmitted: the samples only exist in
 // memory or in a file.
 //

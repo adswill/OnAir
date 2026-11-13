@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN user-key decryption and beacons (lorawan_crypto.h).
 #include "dect2/lorawan/lorawan_crypto.h"
 #include "dect2/voicekeys/net_crypto.h"

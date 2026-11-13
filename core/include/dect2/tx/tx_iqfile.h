@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit into an IQ file instead of a radio: a TxSink that writes what the generator makes. No radio is opened or claimed and no radio-only prompt
 // applies. The formats: SigMF (.sigmf-data + .sigmf-meta with the rate, the centre frequency and the sample count; cf32_le, ci16_le or ci8_le),
 // a raw .cf32 file, and a two-channel 16-bit WAV (I left, Q right). paced = true writes at the signal's own speed (a microphone as the source);

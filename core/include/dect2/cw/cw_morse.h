@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW (Morse): the code table (ITU-R M.1677-1 letters, figures and punctuation, and the usual prosigns), the callsign pattern, and the
 // timing decoder that turns key-down / key-up durations into text while it follows the speed.
 //

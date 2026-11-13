@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectral kurtosis RFI finder: Gaussian noise gives SK = 1 and a clean band; a steady carrier reads SK near 0; a pulsed carrier reads SK near 1 / q - 1 (q the share of the 0.5 ms frames at full power), and a pulsed signal too weak to show in the
 // averaged spectrum is still found; radio offset and noise sweeps; false regions on noise alone. Simulated signals only.
 #include "x40_gen3.h"

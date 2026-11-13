@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SDR input health meter: what the samples that reach the program look like before any filtering, once a second, for whatever the radio is receiving (best on a band with no single huge signal):
 // the level (RMS and peak in dB re full scale of +-1.0 per component), the crest factor, clipping (samples at full scale: parts per million of the samples, and whether the peak sits on a flat top),
 // the DC offset (mean of I and of Q, in % of full scale and in dB under the RMS level) and the IQ imbalance read blind from the second-order statistics of the samples: the gain mismatch

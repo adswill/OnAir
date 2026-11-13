@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM receiver under impairments: noise, carrier and clock offset, 8 bit quantisation, DC offset, IQ imbalance, interferers, impulse noise, stream faults,
 // echoes and the fading channels of Annex B.1, a reset in the middle. Every line prints the numbers; the checks are set where the receiver is expected to
 // work with some margin, not at the limit (the limits are in docs/modes/drm.md).

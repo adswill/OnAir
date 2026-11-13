@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "TV (auto)" and "Digital voice (auto)": one click, the standard is found from the signal (dect2/autodet/autodet.h, docs/AUTODETECT.md).
 // Picking the row starts the radio in a mode of that kind (DVB for TV, DMR for voice), lets it settle, captures a stretch of what the
 // receivers see and works the standard out on its own thread; then the matching receiver is switched on with the parameters found (the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB channel coding: LDPC encoder against the parity-check matrix, decoder round trips, BCH, scrambler, interleaver, 4QAM-NR.
 #include "dect2/dtmb/dtmb_ldpc.h"
 #include "dect2/common/stable_random.h"

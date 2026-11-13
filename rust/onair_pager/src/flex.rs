@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! FLEX frame handling (no free specification exists; the layout follows the public descriptions of the protocol and the way multimon-ng and
 //! PDW-style decoders read it): sync code table, frame information word (FIW) checksum, and the decoding of one 11-block phase (88 code words,
 //! 8-way bit interleave per block) into address / vector / message words and then pages. The encoder (`flexPhaseBits`) stays in C++.

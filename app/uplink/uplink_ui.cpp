@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode S uplink screens: counters of what is heard on 1030 MHz, then four views: the interrogators (II / SI code, interrogation rate,
 // antenna rotation period from the main-beam bursts, level, last heard), the aircraft they address (how often, the Comm-B registers asked
 // for, by whom; callsigns from ADS-B when that mode ran earlier in the session), the ACAS / TCAS activity, and the message log.

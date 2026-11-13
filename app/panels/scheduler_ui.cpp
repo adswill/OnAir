@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Scheduler: jobs that tune the radio, start the receiver, record audio / IQ / the log, then stop and put everything back. When a job is due
 // (time, daily, weekly, cron-like, or a satellite pass above N degrees), how overlapping jobs are handled and what happens to jobs missed while the
 // computer slept are all in core/src/sched/sched.cpp (tested without a radio); this file is the window, the App as the scheduler's radio, and the

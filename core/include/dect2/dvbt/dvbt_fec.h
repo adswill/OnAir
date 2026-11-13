@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T receive-side channel decoder: equalised data cells in, MPEG transport stream packets out.
 #pragma once
 #include "dvbt.h"

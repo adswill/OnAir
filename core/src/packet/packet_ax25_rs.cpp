@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The AX.25 frame parser, text forms, FCS and HDLC receiver step on top of the Rust crate rust/onair_ax25: the functions of packet_ax25.h;
 // packet_ax25.cpp keeps frame building and the transmit-side bit helpers.
 #include "dect2/packet/packet_ax25.h"

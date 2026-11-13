@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // application state: preferences, device list, bandwidth, ingesting spectrum and receiver telemetry, channel list
 #include "mode_slot.h"
 #include "freq_remember.h"

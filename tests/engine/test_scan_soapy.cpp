@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The channel scan taking a radio over from the receiver, through the fake SoapySDR radio (tests/source/soapy_testdriver.cpp) set to behave as some
 // real radios do: a stream started the moment the previous one ended never sends a sample. The scan tab stops the receiver and starts the
 // scan straight away, so the scan's first open hit that, and the first scan went through every channel seeing nothing (a second scan, with

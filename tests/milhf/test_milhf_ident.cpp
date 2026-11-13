@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF military waveform identifier: synthetic signals at 10 dB SNR must be ranked first, noise must give no signal.
 #include "dect2/milhf/milhf_rx.h"
 #include <cmath>

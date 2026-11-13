@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the Sferics mode (sferics_gen.h): noise, damped-oscillation sferics, an optional mains impulse train.
 #include "dect2/sferics/sferics_gen.h"
 #include "dect2/common/mathconst.h"

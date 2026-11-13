@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAFT screens: the receiver panel (the transfer in progress, the profile ladder, counts, the folder received files are saved to and the files received)
 // and the transmit options (callsign, file, width, profile, passes) that the TX panel draws for the KAFT signal. English texts only.
 // KAFT only listens here: it sends no reply, so the panel says so and shows the profile the receiver would ask for.

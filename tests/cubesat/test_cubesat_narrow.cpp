@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat narrow paths (docs/SENSITIVITY-4.0-X3.md): each framing of the test signal (cubesat_gen.h) at a series of C/N values (dB in 25 kHz,
 // the generator's own noise), with the carrier still, held just under the AFC's 1.5 kHz threshold (an error the AFC never mixes out), or drifting
 // several kHz during the run like a satellite pass. Frames decoded / frames sent, for the 4.0 receiver (narrow paths beside the wide ones) and

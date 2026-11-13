@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wide multi-signal decode: see wide_session.h.
 #include "dect2/engine/wide_session.h"
 #include "dect2/autodet/autodet.h"

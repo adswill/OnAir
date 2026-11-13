@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW screens: the band presets (the CW segments of 160 to 10 m), the waterfall of the skimmer window (a click picks a signal), the table
 // of every signal (frequency, speed, SNR, text) and the focused signal's text in big letters, with the callsigns highlighted; the
 // sidetone switch for the focused signal (off until switched on).

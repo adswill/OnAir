@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator engine (videogen.h). One thread, "onair-videogen": source picture -> fit to the output size -> overlay ->
 // video encoder, the sound -> one encoder per audio track, both into FFmpeg's MPEG-TS muxer (mux rate, service, PIDs), whose packets
 // go to a .ts file (as fast as the encoder runs) or to tsout's paced UDP / RTP sender (in real time). A preview (previewOnly) makes

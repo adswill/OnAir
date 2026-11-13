@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Bit access. Two layouts: packed (8 bits per byte, `get_bits_*`/`put_bits_*`, `BitReader`/`BitWriter`) and unpacked
 //! (one bit per byte, only bit 0 counts, `unpacked`). Reads past the end give 0; writes past the end fail instead of panicking.
 

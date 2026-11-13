@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telemetry of the extra-links family, shared by the receiver and the UI.
 #pragma once
 #include <cstdint>

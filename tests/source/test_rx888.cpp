@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The RX888 MkII driver (core/src/source/source_rx888.cpp) against a FAKE FX3: no radio is involved. What this checks is OnAir's own side: the USB
 // requests in the order the SDDC driver sends them (written from renardspark/SDDC_Driver), the firmware upload to the boot loader and the
 // wait for the radio to come back, discovery (a LimeSDR-USB shares 04b4:00f1), the clock / decimation / input choices, and that a known tone

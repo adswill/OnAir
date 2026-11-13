@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wide multi-signal decode: ONE wide capture, several different signals decoded at once and found automatically.
 //
 //   span -> TV: SpanScanner (which 7 / 8 MHz slots hold a signal) -> detectTv on each (DVB-T or DVB-T2) -> MultiTv per standard, one receiver per slot

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where the time goes for a big spectrum FFT (131072, 262144 ...): the engine side (window, FFT, power, dB conversion in takeFrame) and the
 // per-frame passes of the app (copies, trace and waterfall averaging, history levels). Usage: bench_spectrum [fs_Msps] [seconds]
 // Prints ms per spectrum frame for each part and the CPU share at the frame rate the sample rate allows (max 30 a second).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NPR-70 sync detection (core/src/xlink/npr.cpp) through XlinkReceiver: all five symbol rates, network ids, offsets, noise, frames back to back, noise only.
 // Simulated signals only: the generator follows the firmware's Si4463 settings, but no real NPR recording has been tried.
 #include "dect2/xlink/npr.h"

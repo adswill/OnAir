@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium screens: the map of satellite sub-points with their recent track and the beam centres of the ring alerts, the frame
 // counters and burst rates, the ring alert list, the pager messages with a text panel, the Iridium time, and a burst scatter
 // (time against frequency) of the last 2 s.

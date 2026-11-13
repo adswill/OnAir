@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers screens: the cell table (operator, band, EARFCN, PCI, eNB / sector, TAC, bandwidth, RSRP / RSRQ, last seen), cells grouped
 // by site, the neighbour lists of SIB4 / SIB5, the strongest cell per operator, a band scan over the LTE EARFCN raster, and an optional
 // map of the towers: looked up on OpenCelliD with the user's own API key (only the cell identity and the key are sent; cached on disk), or

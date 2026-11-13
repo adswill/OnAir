@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internet TV: https on Windows through WinHTTP, which uses the system's own TLS (Schannel) and certificate store. Written from the
 // documented WinHTTP API; needs a test on Windows (the CI build compiles and links it).
 #ifdef _WIN32

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) settings: band plan and region, protocols and presets, channel keys, the custom LoRa setting of each entry,
 // and the MeshCore preset list (with its optional refresh from the internet).
 // Split from mesh_ui.cpp; the shared state is declared in mesh_internal.h.

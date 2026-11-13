@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde landing prediction: straight down lands below, drift moves the landing point, a rising sonde has no prediction.
 #include "dect2/sonde/sonde_land.h"
 #include <cmath>

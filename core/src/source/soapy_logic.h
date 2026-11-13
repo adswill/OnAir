@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure helpers of the SoapySDR source: no SoapySDR types, so they are tested against a fake driver table without hardware.
 #pragma once
 #include <algorithm>

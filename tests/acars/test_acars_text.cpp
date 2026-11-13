@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The plain-text ACARS formats (acars_text.h) against the real messages of the acars-decoder-typescript test suite, and the damaged-text cases.
 #include "dect2/acars/acars_text.h"
 #include <cmath>

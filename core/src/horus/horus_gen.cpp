@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus test signals (horus_gen.h): phase-continuous 4FSK / 2FSK at the dial, noise in 3 kHz, frequency and clock errors.
 #include "dect2/horus/horus_gen.h"
 #include "dect2/horus/horus_rx.h"

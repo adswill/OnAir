@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers, bit level: the BCH(31,21) code word (one and two wrong bits repaired, three refused), POCSAG and FLEX pages through the encoders and the parsers.
 #include "dect2/pager/pager_proto.h"
 #include <cstdio>

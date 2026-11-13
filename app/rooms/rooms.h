@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live rooms (Server > Go live): the receiver's waterfall and, if chosen, decoded ACARS text are streamed to an audience on the web. See docs/live-rooms.md.
 #pragma once
 #include <string>

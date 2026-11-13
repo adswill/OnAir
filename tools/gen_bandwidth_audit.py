@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Writes docs/BANDWIDTH-AUDIT.md: the per-mode table of the custom bandwidth / sample rate (3.6).
 
 The numbers come from the code, not from memory:

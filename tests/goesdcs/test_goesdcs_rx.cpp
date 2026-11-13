@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The GOES DCS receiver on generated signals: the three bit rates with Manchester and NRZ coding, several platforms at once on a wide capture, frequency and
 // clock errors, noise, a steady carrier that is not a platform, noise only, bad input, the CSV log and clearing.
 #include "dect2/goesdcs/goesdcs_gen.h"

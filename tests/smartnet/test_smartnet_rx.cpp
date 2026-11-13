@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola Type II: the OSW codec, the band plans, the message layer, and the whole receiver against the generator (one wide capture: control channel and analog voice channels), with
 // a frequency offset, a clock offset, an inverted data polarity, corrupted words and a noise sweep. Generated signals only: no real SmartNet / SmartZone system was heard.
 #include "dect2/smartnet/smartnet_gen.h"

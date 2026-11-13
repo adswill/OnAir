@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Power policy of the app: is the machine on battery, is it hot, is the window hidden, and what that means for the update rates.
 //
 //   dect2::power::settings()          the user's choices (Low power mode: Off / Auto / On; Save power when hidden: Off / On battery / Always)

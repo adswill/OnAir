@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-stage CPU accounting for the receivers (the DVB family first): where does a second of signal go?
 //
 //   DECT2_STAGE("dvbt.fft");      // at the top of a block: the CPU time this thread spends until the end of the block goes to "dvbt.fft"

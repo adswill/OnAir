@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM SINAD meter: a carrier frequency-modulated with a test tone (normally 1 kHz) through the radio: the FM-demodulated audio (24 ksps) is analysed in windows of 2^15 samples (1.4 s, Blackman-Harris).
 // The tone is the strongest line between 300 and 3000 Hz (20 dB over the noise). SINAD = (signal + noise + distortion) / (noise + distortion) = P(300 - 3000 Hz) / (P(300 - 3000 Hz) - P(tone)),
 // in dB, flat-weighted (no psophometric or C-message filter, no de-emphasis). THD = the RMS sum of harmonics 2 to 5 (below 8 kHz) over the tone, in %. Peak deviation = the tone's amplitude in Hz

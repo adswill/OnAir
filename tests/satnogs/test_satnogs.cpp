@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SatNOGS DB: the parsers (a small hand-written sample in the shape of the API answers), the mode mapping, the filters and the cache age.
 #include "dect2/net/satnogs.h"
 #include <cstdio>

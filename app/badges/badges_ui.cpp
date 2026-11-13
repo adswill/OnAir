@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Badges window and toast (see badges_ui.h). Network work runs on one background thread at a time; this file draws and starts tasks.
 // The sign-in is the plugin marketplace's GitHub device flow (core/src/pstore/market.cpp): signing in or out here does it for both.
 #include "badges_ui.h"

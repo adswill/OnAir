@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Writes core/include/dect2/results/results_fields.h: the structured-binding ladder results_io.h uses to visit the fields of a plain struct.
 # Run it again (python3 tools/gen_results_fields.py) when a saved struct grows past kMaxFields fields.
 import os

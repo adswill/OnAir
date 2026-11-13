@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT+ frames: the CRC against frames captured off the air (rtl_433 issue 1990, reverse-engineered with reveng), the field layout, the
 // heart rate and other profile pages.
 #include "dect2/ant/ant_proto.h"

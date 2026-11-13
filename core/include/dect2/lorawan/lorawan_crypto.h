@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN with keys the user imported: data frame MIC and FRMPayload (LoRaWAN L2 1.0.x 4.3.3, 4.4) and Class B beacon frames (15.2, 15.3).
 #pragma once
 #include <cstddef>

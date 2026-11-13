@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa coding chain and the test signal's frame waveform. Sources are named in mesh_lora.h.
 #include "dect2/mesh/mesh_lora.h"
 #include <algorithm>

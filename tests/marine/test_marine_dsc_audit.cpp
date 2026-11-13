@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC audit: MMSI kinds and countries, call kinds, symbol repair with the two copies and the check character, noise and bit offsets.
 #include "dect2/marine/marine_dsc.h"
 #include "dect2/marine/marine_mmsi.h"

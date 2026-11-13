@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite pass prediction: two-line elements, the SGP4 propagator (near-earth part, Vallado et al. 2006 "Revisiting
 // Spacetrack Report #3", WGS-72), look angles from an observer, pass search (AOS, culmination, LOS) and Doppler.
 // Only low earth orbits (period under 225 minutes) are handled: every satellite the pass planner lists is one.

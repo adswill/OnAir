@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN network health (lorawan_health.h): two simulated days of 30 end devices with reception loss, one device losing half its
 // uplinks, a 16-bit counter wrap, a device reset, repeated frames (NbTrans 2), CRC failures, a device that cannot join, an hour of join
 // requests without accepts, and the network falling back to SF12 at the end. Simulated only: no real LoRaWAN capture was used.

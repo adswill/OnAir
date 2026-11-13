@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web 3.9: the shared renderers of a mode's panel. One set of components draws every mode from its schema: figures (tiles), yes/no,
  * text, tables (sortable, with a map when rows carry a position), pictures, constellations, text logs, number lists (sparklines) and
  * nested blocks. The DOM is reused between updates: tables and tiles keep their place, only the values change. */

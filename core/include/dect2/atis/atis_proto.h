@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATIS, the Automatic Transmitter Identification System of the European inland waterways (Rhine, Danube, Rhone ...): ETSI EN 300 698-1 annex B,
 // ITU-R Report M.1159. It is not AIS. A VHF radio sends it by itself after the operator lets go of the push-to-talk key, on the same channel as
 // the voice: 1200 baud FSK, 1300 Hz = Y (1) and 2100 Hz = B (0) on a phase-modulated carrier, in the DSC code (ITU-R M.493, ten bits per symbol:

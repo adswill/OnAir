@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Helpers for the GNSS tests: run the simulated sky through the receiver in chunks, with the impairments of a radio, and compare what comes out with the truth.
 #pragma once
 #include "dect2/common/thread_name.h"

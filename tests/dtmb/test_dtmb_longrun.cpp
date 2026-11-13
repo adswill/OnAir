@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB receiver over a long run with the faults of a real radio coming and going (#319: the app hung after prolonged DTMB reception): radio overflows,
 // impulse noise, dropouts of zeros and of missing samples, level steps, a carrier wave. Checks that no feed() call takes long (a stuck loop), that
 // the receiver locks again after every fault, that the memory does not grow (the maximum resident size of the second half against the first)

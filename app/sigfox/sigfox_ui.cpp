@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox screens: the uplinks heard (device ID, message counter, payload, the ranks of the repetitions, frequency offsets, level, the
 // authentication code and CRC), the 192 kHz waterfall of the bursts, and the devices. Receive only: nothing is decrypted, and the
 // authentication code is never checked (it needs the device's secret key).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Optimise gain": the button, the sweep that drives GainOptimiser (core/src/source/gain_opt.cpp) from the engine's telemetry and spectrum, the progress / result
 // line and the undo. The AGC is paused for the sweep and stays off after it (it would move the gain the sweep chose); Undo puts the gain and the AGC back.
 #include "../app.h"

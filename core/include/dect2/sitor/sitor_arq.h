@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SITOR-A / AMTOR (ITU-R M.476-5 Annex 1 section 3.1, ARQ mode A) monitor and test generator. Written from the Recommendation's text:
 // 100 Bd FSK, 170 Hz shift, the same 7-unit 4-of-7 code as SITOR-B; the information sending station (ISS) sends a block of three
 // characters (210 ms) every 450 ms, the receiving station (IRS) answers in the pause with one 70 ms control signal (CS1 asks for

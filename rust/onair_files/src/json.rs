@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! A small allocation-free JSON reader for SigMF meta files. It accepts exactly what the C++ reader it replaces accepted (see below) and keeps no tree: a value is a
 //! `Val` (kind, byte range, number), objects and arrays are walked again where a member is wanted. The whole document is validated first (any structural error
 //! anywhere rejects the file), then members are looked up with "the last duplicate key wins".

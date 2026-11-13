@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Wi-SUN FAN 1.0 information elements: the unicast / broadcast schedule IEs (US-IE, BS-IE) with their channel information, the header IEs (WH-IE sub-IDs:
 //! UTT, BT, FC, RSL, EA, LBC, ...), the payload IEs (WP-IE sub-IEs: PAN, NETNAME, PANVER, GTKHASH, POM, ...) and the MPX IE with its EAPOL summary.
 //! Wi-SUN FAN TPS 1.0 section 6.3 (frame types and IEs), IEEE 802.15.4-2015 section 7.4 (IE format).

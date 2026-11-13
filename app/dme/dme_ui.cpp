@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DME screens: the channel (number from the tuned frequency, X or Y from the pulse spacing) of the beacon, the pulse-pair rate, the level and the ident letters read so far.
 #include "app.h"
 #include "dect2/dme/dme_tel.h"

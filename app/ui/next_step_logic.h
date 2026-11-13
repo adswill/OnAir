@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "What do I do next": one plain line about how the reception is going and, when a click can help, the one fix to offer.
 // Pure logic (no ImGui, no App): app/ui/ui2_shell.cpp (nextStepLine) fills In from the receiver and draws the result; tested by
 // tests/app/test_next_step.cpp. Texts are N_() and go through tr() when shown. House style: plain words, no jargon, no exclamation marks.

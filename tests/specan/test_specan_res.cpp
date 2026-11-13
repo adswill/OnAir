@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum analyser resolution: the bin width that is applied for the one asked for (dect2/specan/specan_res.h).
 #include "dect2/specan/specan_res.h"
 #include <cmath>

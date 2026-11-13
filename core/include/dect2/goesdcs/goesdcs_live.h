@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES / Meteosat DCS receiver for the engine: IQ in, platform reports out.
 // A data collection platform sends a short report (a few seconds at 100 or 300 bps, a fraction of that at 1200 bps) on its own 1.5 kHz channel of the
 // 401.7 - 402.1 MHz uplink band: unmodulated carrier, bit preamble, frame sync, a BCH-protected platform address and the sensor data in ASCII or

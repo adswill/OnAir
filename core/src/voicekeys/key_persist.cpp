@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Encrypted-at-rest persistence for the voice key store (see key_persist.h). AES-256-CTR + HMAC-SHA256 from dect2::meshcrypto.
 // Key material is never logged and never leaves this file in the clear.
 #include "dect2/voicekeys/key_persist.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web decoders (server/web/web_decoders.cpp): the pure helpers (text clean-up, base64, CRC, PNG, picture strips, USB audio, the event JSON of each
 // table and its size limit), the policy side (only data decoders are registered, the voice / pager ones never; frequency bands), every decoder started
 // through the hub on noise (no crash, valid events, nothing but a subscription), and ADS-B end to end: a synthetic airspace in, an aircraft list out.

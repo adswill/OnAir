@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Engine::start(): opens the source, plans offset tuning, configures every receiver for the new sample rate and channel, and
 // starts the worker threads. The long body is split into small steps called in the original order.
 #include "dect2/engine/engine.h"

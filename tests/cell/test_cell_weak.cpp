@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, weak co-channel cells: one 5 MHz carrier with the sectors of a synchronised network (same frame timing, same SFN), 3 to 9
 // dB under the strongest, one of them sharing its NID2 (the same PSS). Each must be read to its SIB1 (operator and cell identity): the MIB
 // combined over the 40 ms periods, or borrowed from the strong cell, the strong cell's reference signals and PBCH cancelled from under it,

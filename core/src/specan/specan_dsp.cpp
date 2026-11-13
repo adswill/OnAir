@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum analyser maths: see specan_dsp.h
 #include "dect2/specan/specan_dsp.h"
 #include <algorithm>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID messages (ASTM F3411-22a / ASD-STAN EN 4709-002): decoding, encoding (the test signal) and the BLE / Wi-Fi carriers.
 #include "dect2/rid/rid_proto.h"
 #include <cmath>

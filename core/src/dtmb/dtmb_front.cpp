@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB front end (see dtmb_front.h).
 #include "dect2/dtmb/dtmb_front.h"
 #include "dect2/dtmb/dtmb_defs.h"

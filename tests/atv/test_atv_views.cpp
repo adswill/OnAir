@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The analog TV standards forced on the receiver (AtvReceiver::setStandard, the System and Colour choices of the Analog TV screen).
 // The test signal of each standard (atv_gen: colour bars card, 40 dB, carrier error of up to +-50 kHz, 10 Msps, 8-bit samples) goes into a receiver told exactly what the entry tells it: line and field lock,
 // the standard named right, 625 or 525 lines, the field rate of the standard, the carrier offset found, and the colour bars of the decoded picture close to the EBU bars. Simulated signals only (no recording of any of these standards was used; the wrong-standard case is not tested).

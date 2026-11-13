@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink email station: the mailbox folders on disk, the gateway list (entered by hand: OnAir never looks gateways up on the
 // internet), the optional Telnet link to the Winlink CMS (off unless the user turns it on), and WinlinkStation, which runs one B2F
 // session over one link: AX.25 packet 1200 / 9600 baud, ARDOP, or Telnet.

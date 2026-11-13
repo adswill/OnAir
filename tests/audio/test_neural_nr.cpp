@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Neural noise remover (RNNoise): off = bit-identical, delay and size invariants at 8 / 12 / 16 / 24 / 48 kHz, strength 0 = the dry signal
 // delayed, noise between speech-like bursts goes down, chunking does not change the result.
 #include "dect2/audio/neural_nr.h"

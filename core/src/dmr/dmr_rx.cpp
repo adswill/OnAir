@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR receiver: front end (decimation, DC removal, carrier offset correction, channel filter, discriminator, matched filter) and the glue to the link layer.
 #include "dect2/dmr/dmr_rx.h"
 #include "dect2/dmr/dmr_slot_sync.h"

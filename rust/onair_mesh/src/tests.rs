@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests of the mesh layers that do not need the C++ reference.
 use crate::abi::S64;
 use crate::{aprs, lorawan, meshcore, meshtastic, pb, tables};

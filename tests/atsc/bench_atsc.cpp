@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Where does the ATSC receiver lose against an ideal one? Packet error rate against SNR, two ways:
 //   ideal : the field encoder's symbols plus Gaussian noise go straight into the Viterbi + Reed-Solomon decoder (no front end at all)
 //   chain : the generated 8-VSB signal with the same noise goes through the whole receiver (timing, carrier, equaliser, decoder)

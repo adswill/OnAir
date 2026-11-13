@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for the Inmarsat all-carriers mode: carriers of chosen width at chosen offsets (two-pole filtered noise, so any
 // width), with Doppler drift, slow fading and an optional DC spike, in white noise. Only for tests.
 #pragma once

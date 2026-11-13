@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, RTTY: the generator's audio with noise straight into the decoder (three speeds and shifts, tuning offsets, reversed, noise
 // alone), then the whole way through the engine (synthetic source -> USB audio -> decoder). Quick and silent.
 #include "dect2/engine/engine.h"

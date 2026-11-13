@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF waveform ID screens: a spectrogram snippet, the ranked candidates, the measured parameters and a note per candidate with its source.
 // Identification only: nothing is decoded, no message content is read, no encryption is touched. Candidates are estimates.
 #include "app.h"

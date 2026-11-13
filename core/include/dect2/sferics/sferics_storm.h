@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Is the storm coming or going, from one station. Strike rate and median strike strength (relative to this receiver's own floor, so stable for this station) over two
 // five-minute halves of the last ten minutes. A trend, not a position: a strengthening series means nearer or a stronger cell, and either way it deserves attention.
 #pragma once

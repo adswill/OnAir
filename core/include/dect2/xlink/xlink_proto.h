@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frame parsers of the extra-links family (family 600): frames already out of their PHY are turned into a row for the screens. Receive only; payloads that are encrypted
 // stay encrypted, nothing is decrypted here.
 #pragma once

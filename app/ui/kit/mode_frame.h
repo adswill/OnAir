@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The common frame of a mode panel (docs/MODE-EXPERIENCE.md, 1.1 and 1.3): the tab strip Live | <Items> | Map | More and the one-line status header.
 #pragma once
 #include <cstdint>

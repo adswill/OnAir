@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Full-scale bursts after silence into the three receivers that share one Gardner timing loop (GOES HRIT/LRIT, Arktika GGAK, FY-4 LRIT and
 // FY-2 S-VISSR): a spike far above the level the AGC has settled on (or a burst after silence) gives a huge timing error. A negative step sent the loop backwards one
 // sample at a time from far below zero (GOES hung for good under fuzz_engine_modes). Each receiver must take the whole input and keep

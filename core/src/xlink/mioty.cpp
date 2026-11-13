@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // mioty / TS-UNB uplink (see mioty.h). Clause numbers: ETSI TS 103 357 V1.1.1 (2018-06).
 #include "dect2/xlink/mioty.h"
 #include "dect2/common/mathconst.h"

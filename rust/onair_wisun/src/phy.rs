@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! IEEE 802.15.4g SUN FSK PHY pieces: the 2-octet PHR, PN9 data whitening and the two FCS types. Wi-SUN FAN 1.0 PHY specification, IEEE 802.15.4-2015
 //! clause 20 (SUN PHY): PHR bit fields (20.2.2), data whitening (20.2.3), FCS (7.2.11).
 use onair_common::crc;

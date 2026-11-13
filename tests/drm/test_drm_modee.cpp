@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM+ (robustness mode E, 100 kHz, VHF): the generator's mode E signal through the receiver, which must find mode E by itself (the search
 // runs for modes A to D and E at once), read the FAC and the SDC (service label, language, time, text message) and decode the AAC audio
 // frames (an audio super frame of 200 ms in two logical frames of 100 ms). At the rates the app asks for and the least the DRM+ lane takes,

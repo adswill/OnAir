@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 through the engine, as the GUI uses it: an IQ recording (a few frames made here) is opened as a file source with the ATSC 3.0
 // standard selected; the engine must lock, find the service, and its transport stream analysis must see a video and an audio stream.
 #include "atsc3_sim.h"

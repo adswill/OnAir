@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR air interface pieces: syncs, Hamming (12,8) with errors, CRCs, interleaved blocks, header / CCH / end / data round trips,
 // colour codes, the PMR446 channel raster.
 #include "dect2/dpmr/dpmr_proto.h"

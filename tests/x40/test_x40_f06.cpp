@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSK200/1000 (F06 and F06a: 200 Bd, 1000 Hz shift, 288-bit blocks with a CRC-16). What is checked:
 //  1. the block layout and CRC: blocks built from the layout as Rivet unpacks it (an independent CRC-16/X-25 here) decode with "CRC OK",
 //     the header block (block count, messages and where they start), F06 figure blocks, ASCII blocks, an F06a file (name, size, file CRC,

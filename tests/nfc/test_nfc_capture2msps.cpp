@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC at 2 Msps from a weak 8-bit capture (#271): a phone (reader) field of about 4 LSB sitting at DC, as a HackRF / RTL-SDR records it,
 // with the tag's answer far below the quantisation step. The reader's frames must come out exactly (the 7-bit REQA / WUPA, SELECT,
 // MIFARE Classic AUTH, HLTA, ending on a 0 or on a 1), the encrypted traffic after the AUTH is named and not decoded, and the quantisation

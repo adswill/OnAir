@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB screens: status bar, the analysis row (constellation, channel impulse response from the PN header, C/N and MER history, codeword loss),
 // the Receiver tab, the decoder option and the options of the test signal. The TV tab, services and the player are the shared ones.
 #include "app.h"

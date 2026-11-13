@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """A fake OnAir directory Worker for tests (no network, no Cloudflare, no database).
 
 It answers the same routes as web/onair-directory/src/index.js (GET /api/v1/health, GET /api/v1/servers, POST /api/v1/heartbeat) and validates a heartbeat by the

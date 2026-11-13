@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Generates native/src/results_generic_map.inc: for every standard in modeSummary() (core/src/engine/modes.cpp) that has no hand-written exporter
 in results_json.cpp, code that turns the mode's telemetry struct (fields read from the core's headers) into cards and tables with the field names,
 newest list items first. So a new mode's decoded lists reach the phone with no Android change. Only plain fields are used: strings, numbers,

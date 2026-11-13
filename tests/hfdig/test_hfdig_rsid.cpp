@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RSID: the GF(16) code against the table rows of fldigi's rsid.cxx, then generated bursts at several audio frequencies, noise, and a real-looking audio rate. Simulated audio only.
 #include "dect2/hfdig/hfdig_rsid.h"
 #include <cmath>

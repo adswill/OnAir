@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR screens: the Radio tab (the picked service and the signal), the station list (every service tagged DRA+: the sound is not decoded),
 // status lamps (Signal, Sync, SIC, SDC, Data), the analysis plots (SIC / SDC / MSD cells, channel, SNR), the Receiver tab and the test signal.
 #include "app.h"

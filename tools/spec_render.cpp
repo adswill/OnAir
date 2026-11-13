@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Offscreen render harness for the spectrum and waterfall (no window, no GPU, no App): an IQ recording or a built-in realistic signal
 // goes through the app's own pipeline (core SpectrumAnalyzer, the trace average, Waterfall history + auto range, plt::WfView) and the
 // app's own drawing (plt plots with the look, gfx/spec_paint.h), and the ImGui draw lists are rasterised in software into a PNG.

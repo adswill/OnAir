@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R receiver: the railway GSM base stations around you (GSM 900 band, railway allocation 921 - 925 MHz), from what every base station
 // broadcasts in the clear to all mobiles on its BCCH (3GPP TS 44.018 / 45.002 / 45.003 / 45.004): its base station identity code (SCH),
 // and from System Information 1 to 4 its cell identity, location area and operator code, access parameters and channel lists.

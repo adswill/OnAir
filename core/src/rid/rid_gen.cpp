@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID test signal (rid_gen.h): Open Drone ID in BLE advertising and Wi-Fi beacons, through the existing test generators.
 #include "dect2/rid/rid_gen.h"
 #include "dect2/ble/ble_proto.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Engine::pollMode: reads the newest telemetry of one receiver into the shared RxTelemetry (the status bar, the results windows and the
 // logs all read that). One switch case per mode; the modes that copy the common fields use pollStd(), the few that differ have their own
 // pollNN() helper above the switch. The mode number is the engine standard (activeStd + 1).

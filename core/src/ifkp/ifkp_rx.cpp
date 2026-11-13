@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IFKP receiver (see ifkp_rx.h): the common station of kbd33_station.h with this modem.
 #include "dect2/ifkp/ifkp_rx.h"
 #include "dect2/fsq/kbd33_station.h"

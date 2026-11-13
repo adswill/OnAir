@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 2 receiver telemetry, shared by the receiver and the UI.
 // The first members of Vdl2Telemetry are copied into RxTelemetry (history plot, top bar): keep them and their meaning.
 #pragma once

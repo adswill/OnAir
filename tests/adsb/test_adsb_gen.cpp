@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B test signal generator: determinism, levels, options, the message mix at its rates, and the correctness of what is sent (every frame must carry
 // a valid CRC, every address / parity frame the address of an aircraft that also sends clean ones).
 #include "dect2/adsb/adsb_gen.h"

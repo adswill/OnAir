@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus test signals (in memory only; nothing is transmitted). SynthConfig options:
 //   modeOpt[0]  0 Horus Binary v2 (ID 256, 4FSKTEST-V2), 1 Horus Binary v1 (ID 0), 2 RTTY 100 Bd 7N2, 3 RTTY 300 Bd 8N2, 4 RTTY 50 Bd 7N2,
 //               5 three balloons at once: v2 on the dial, v1 12 kHz above, RTTY 100 Bd 18 kHz below (needs 64 kHz of input or more)

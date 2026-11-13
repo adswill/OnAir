@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir DRM (ETSI ES 201 980, ETSI EN 301 775 for DRM+): the parsing side of the signalling and data layers: the FAC and SDC block checks and their fields
 //! (clause 6.3, 6.4), the text message segments (clause 6.5), the AAC audio super frame (clause 5.4), the descriptive tables (languages, programme types,
 //! service counts, application names), MJD calendar conversion and the helpers of the data services (MSC data group payload, text display, text detection).

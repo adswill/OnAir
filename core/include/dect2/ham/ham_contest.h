@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham contest helpers for the keyboard modes (RTTY, CW, PSK): the exchange of the common contests, serial numbers, cut numbers,
 // the received exchange read from the decoded text, the dupe check per band and mode, and the Cabrillo 3.0 QSO line.
 // The exchanges follow the contests' published rules (CQ WW RTTY / CW: RST + CQ zone, plus the state or province from W / VE in RTTY;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Generic CRC in the Rocksoft model (width, poly, init, refin, refout, xorout), bitwise: small and fast enough for frame-sized data.
 
 /// Parameters of a CRC algorithm. `poly`, `init` and `xorout` are in normal (non-reflected) form, as in published catalogues.

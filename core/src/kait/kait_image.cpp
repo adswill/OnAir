@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT picture helpers (see kait_image.h).
 #include "dect2/kait/kait_image.h"
 #include "dect2/common/png.h"

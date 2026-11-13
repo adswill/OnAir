@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The new interface: small widgets used by every layout (bordered panes, flat buttons and links, the big frequency
 // digits, the run button, section headings, meters, splitters, tiles and the faceplate modules).
 // Split from ui2.cpp; the shared declarations are in ui2_internal.h.

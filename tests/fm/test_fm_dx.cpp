@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM DX log: learning the local stations first, a foreign PI raises one alert, the country comes from the ECC or is shown as likely.
 #include "dect2/fm/fm_dx.h"
 #include <cstdio>

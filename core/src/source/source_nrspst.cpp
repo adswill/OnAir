@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SDRplay nRSP-ST (network) through SDRconnect's WebSocket API (spec 1.0.3, docs/nrsp-st.md): the nRSP-ST's own transport to the computer is
 // SDRconnect's, which is not public; SDRconnect (the GUI, or its headless build with --websocket_port) is the program that talks to the radio
 // and offers the radio's IQ to other programs on port 5454. So this source connects to SDRconnect, not to the radio. JSON text messages

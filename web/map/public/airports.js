@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // airports.js - compact table of major airports used for ETA / route progress when the route lookup
 // returned a code without coordinates. Hubs only; coordinates rounded to 0.01 degree, omitted when unsure.
 // Row: [ICAO, IATA, name, city, ISO country, lat, lon]

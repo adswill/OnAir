@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Symbol equaliser (core/src/voice/sym_eq.cpp) for the 4-level voice links: symbol error rate with and without it over echo channels of several
 // shapes, noise levels, gain and offset errors; a clean channel must be left alone.
 #include "dect2/voice/sym_eq.h"

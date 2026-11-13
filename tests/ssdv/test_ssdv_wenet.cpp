@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wenet (projecthorus/wenet): the LDPC code against the reference test vector, the encoder / decoder round trip, and the whole chain on the
 // generator's signals (2-FSK 115.2 kbaud with serial-word framing, and 96 kbaud raw scrambled): clean, carrier offsets, swapped frequencies, clock
 // errors, a carrier drift, noise, bit slips, other sample rates, then noise alone and a fixed wrong speed must give nothing. No real recording was used.

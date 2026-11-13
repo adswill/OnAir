@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL as a transmit mode: the TX session's generator. Speech comes from TxRequest::pullAudio (48 kHz stereo: the microphone, a WAV/MP3 file, a tone
 // or silence, chosen by the session), is brought to 16 kHz mono and goes to kaal::VoiceTx, whose IQ is made at the radio's rate.
 // An empty callsign or grid is the demo identity ONAIR / AA00aa, like the other modes.

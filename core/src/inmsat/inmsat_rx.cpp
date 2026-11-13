@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers receiver (inmsat_rx.h).
 #include "dect2/inmsat/inmsat_rx.h"
 #include "dect2/inmsat/inmsat_tel.h"

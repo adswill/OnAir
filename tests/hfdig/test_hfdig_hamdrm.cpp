@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital HamDRM: the test JPEG in mode B (16-QAM, 2.5 kHz) at 20 dB (signal to noise in 3 kHz) with a +-20 Hz tuning error decodes byte
 // for byte with its name and callsign; segments left out of a transmission are reported missing and filled in by the repeat; the other
 // modes and constellations; noise alone gives nothing; and the whole HF digital receiver on the I/Q test signal.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FPV video receiver on the test signal: the picture locks (PAL and NTSC), the sound subcarrier is demodulated, the channel levels follow what lies in
 // the capture, an empty channel reports nothing, and the signal a MHz or two off the channel centre is still found.
 #include "dect2/fpv/fpv_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Click on the spectrum -> dial: the clicked signal is the dial, the radio sits the mode's offset above it (issue #219).
 #include "dect2/engine/click_tune.h"
 #include <cmath>

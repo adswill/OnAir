@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS test signal: a simulated sky (gnss_sim.h) rendered as complex baseband. Nothing is transmitted; the samples only exist in memory or in a file.
 // The satellites are synthetic: orbits with the shape of real GPS orbits, valid navigation messages (parity, TOW, ephemeris, almanac, ionosphere and
 // UTC parameters), range and Doppler from the geometry to a fixed receiver, ionosphere and troposphere delays, a satellite clock error, 8 bit friendly levels.

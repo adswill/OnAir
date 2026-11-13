@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fast wideband sweep scanner:
 //   dect2sweep --from MHz --to MHz [--bin kHz] [--dwell ms] [--settle ms|auto] [--rate Msps] [--gain dB | --lna dB --vga dB --amp]
 //              [--floor-pct 50] [--thr dB] [--interval s] [--count n] [--csv out.csv] [--signals log.csv]

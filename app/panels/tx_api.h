@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transmit panel's pieces for other screens (the Ham station, a mode's own screen): choose a signal, fill its payload, and draw the same blocks the
 // Transmit panel draws (the state line with ARM / TRANSMIT / STOP, What to send, Advanced, the preview). They all act on the one transmitter (txui::ui()),
 // so a transmission started here is the one the Transmit panel shows, and STOP anywhere stops it. Nothing here starts a transmission by itself.

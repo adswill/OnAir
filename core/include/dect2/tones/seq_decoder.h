@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Five-tone sequential selective calling (ZVEI1 / ZVEI2, CCIR, EEA, EIA, DZVEI ...) on 8 kHz audio, as a stand-alone piece so the Pagers mode can
 // run it on the same channel as POCSAG / FLEX (CCIR selcalls are sent on the same pager frequencies).
 // Input: FM-demodulated audio at 8 kHz in Hz of deviation (the discriminator output), no filtering needed (a DC offset is tolerated).

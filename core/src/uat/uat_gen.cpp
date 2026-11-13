@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UAT test signal: modulated downlink frames (DO-282 vectors via dump978 fec_tests), binary CPFSK at the real bit rate (3.9).
 #include "dect2/uat/uat_gen.h"
 #include "dect2/uat/uat_rx.h"

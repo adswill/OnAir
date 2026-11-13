@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Watchlists and alerts: lists of aircraft, ships, APRS call signs, frequencies and words; a decoded event that matches an entry raises an alert
 // (desktop notification, sound, and a push through ntfy, a Telegram bot or a generic webhook the user sets up). Alerts are rate limited and can be
 // muted in quiet hours. Tokens are the user's; they are never put into the history, the status text or any log line.

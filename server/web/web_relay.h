@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web relay client: makes a server reachable from the internet with no port forwarding, no router settings and no third-party program.
 // The server opens ONE outbound WebSocket to a relay service (default wss://relay.on-air.dev/relay/v1/host), proves who it is with its Ed25519 key
 // (the same key file as the directory listing) and gets a public https address back. Every listener that opens that address is carried to this

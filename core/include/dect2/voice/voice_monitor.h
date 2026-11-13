@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice monitor shared by the digital voice modes (DMR, P25, NXDN, dPMR, D-STAR, Yaesu System Fusion, TETRA, M17): one per mode.
 // The receiver asks it, frame by frame, whether the voice of a call may be played (offer), then hands it the sound that was played
 // (audio) for the recording. The monitor keeps the calls heard (active and history), plays one call at a time per mode (whatever

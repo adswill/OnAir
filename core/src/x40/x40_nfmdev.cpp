@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Narrowband FM deviation and CTCSS meter for two-way radio (a handheld, a repeater, a base): the FM-demodulated audio (24 ksps, in Hz) analysed in windows of 2^15 samples (1.4 s). Peak deviation of the
 // voice band (300 - 3000 Hz, a raised-cosine filter made in the frequency domain, the 99.9th percentile of the absolute value so a noise spike is not a peak), the CTCSS (sub-audible) tone if there is one:
 // its frequency (parabola on a Blackman-Harris spectrum), the nearest of the 50 standard tones (EIA / TIA-603) and the error against it, its deviation in Hz and as a share of 2.5 kHz and of 5.0 kHz (the

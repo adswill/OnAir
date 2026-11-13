@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B automatic gain on message statistics (core/include/dect2/source/pulse_gain.h; docs/AUTOGAIN.md): the loop climbs the good-message rate and
 // stops at a share of loud messages, instead of servoing the headroom of the samples. Here a simulated sky (aircraft at all levels from -105 to -45 dBm,
 // each sending Mode S bursts at a Poisson rate) is received through the simulated front end of tests/source/autogain_sim.h: a message is decoded with a

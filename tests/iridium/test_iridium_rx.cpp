@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium receiver round trip with random payloads: bursts all over the band at every radio rate, any chunk size, downlink and
 // uplink, bursts overlapping in time on other channels; the bits after the unique word must come back exactly.
 #include "dect2/iridium/iridium_testkit.h"

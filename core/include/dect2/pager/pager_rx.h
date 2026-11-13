@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: POCSAG and FLEX paging messages on one 25 kHz (or 12.5 kHz) channel.
 // Skeleton: counts the samples, measures the input level and reports four times a second of signal (state 0: no decoder yet); the
 // mode's worker replaces the body. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis

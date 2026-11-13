@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium test signal: the satellites of a simple Iridium constellation model (66 satellites, 6 planes, 780 km, 86.4 degrees) seen from
 // Dubai, each sending ring alerts (IRA) on the simplex channels, broadcast (IBC) and sync (ISY) bursts on its broadcast channel, pager
 // messages (MSG), ACARS in short burst data (IDA) and voice-like traffic bursts, with the Doppler shift and Doppler rate of its pass. The frames come from the frame

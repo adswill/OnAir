@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B atmosphere sounding and altimetry cross-check (adsb_atmos.h). Simulated aircraft reports from a model atmosphere, with noise.
 #include "dect2/adsb/adsb_atmos.h"
 #include <cmath>

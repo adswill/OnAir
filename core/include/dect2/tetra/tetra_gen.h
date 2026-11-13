@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA test signal: base station carriers sending a continuous downlink as a real cell does: the synchronisation burst (BSCH) and
 // the SYSINFO broadcast (BNCH) in frame 18, the main control channel on timeslot 1 with the neighbour cell broadcast (D-NWRK-BROADCAST)
 // and, on the cell that uses encryption, encrypted signalling (random bits), a traffic timeslot of random bits, and idle null PDUs

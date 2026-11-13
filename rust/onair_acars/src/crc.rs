@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The ACARS block check sequence (ARINC 618 section 3.2.3.4): CRC-16 of the "KERMIT" kind (reflected polynomial 0x8408,
 //! start 0, no final xor), over every byte from the mode character to the suffix and then the two check bytes (low byte first): 0 for a good block.
 

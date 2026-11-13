@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Simulated sky for the GNSS test signal (see gnss_sim.h).
 #include "dect2/gnss/gnss_sim.h"
 #include "dect2/sbas/sbas_msg.h"

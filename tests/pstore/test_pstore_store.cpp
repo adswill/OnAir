@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The plugin store client against local mock registries (never a real network host): a good install, a tampered index, a wrong sha256, a wrong
 // ABI, a too-new minimum version, downgrades, revocation, a failed update that is rolled back, the offline cache, the platform filter, updates
 // and uninstall; plus the checked-in sample registry, which was signed by the Python tool (so this also proves Python signs what C++ verifies).

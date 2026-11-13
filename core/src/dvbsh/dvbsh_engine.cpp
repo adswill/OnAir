@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH in the engine: see dvbsh_engine.h.
 #include "dect2/dvbsh/dvbsh_engine.h"
 #include "dect2/dvbsh/dvbsh_gen.h"

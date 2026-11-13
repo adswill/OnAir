@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver, AM: the synchronous detector (both sidebands, upper, lower) against the envelope detector, and the noise blanker.
 //   selective fading (two paths 0.1 - 0.3 ms apart, the notch sweeping through the carrier): harmonic distortion of a 1 kHz tone
 //   a station 5 kHz above, 10 dB stronger: the lower sideband detector leaves its sideband out

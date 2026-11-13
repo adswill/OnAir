@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 (ETSI EN 302 769 V1.3.1): the parts of the standard shared by the generator and the receiver.
 //  - the OFDM numbers (4K FFT, the 8 MHz raster's 64/7 Msample/s, guard intervals 1/64 and 1/128, the C2 frame of L_P preamble symbols
 //    and 448 data symbols),

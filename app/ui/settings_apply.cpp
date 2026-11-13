@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What Settings does outside its own window (4.0, docs/SETTINGS-4.0.md): the start-up frequency and mode, starting the receiver at launch,
 // the crash-restore choice, Confirm before quitting, the IQ recording's split size and free-space guard, and the Record IQ key.
 // Every value is read from the preferences keys of the Settings rows (settings_table.h), so nothing here has a switch of its own.

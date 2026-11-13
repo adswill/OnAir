@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Image enhancement: conversions, shared filters, the pipeline, presets, parameter text, before/after split and the quality measures.
 #include "enhance_util.h"
 #include <cctype>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NAVTEX / SITOR-B (FEC) receive and transmit side: CCIR 476 code (ITU-R M.476, M.625), time diversity, ZCZC ... NNNN framing (ITU-R M.540).
 // The decoder works on bits, so it is tested without the radio layer.
 #pragma once

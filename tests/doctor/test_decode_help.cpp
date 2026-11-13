@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Decode help: the stage ladder, the automatic opening, the failed-signal clip and the antenna and gain coach.
 #include "dect2/doctor/decode_progress.h"
 #include <cstdio>

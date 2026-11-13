@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Presets, slot rule and channel hashes of Meshtastic, and the MeshCore settings.
 // Sources: meshtastic/firmware src/mesh/MeshRadio.h (modemPresetToParams), RadioInterface.cpp (regions, hash, slot formula),
 // meshtastic.org/docs/overview/radio-settings (EU_868 LongFast 869.525 MHz, US LongFast 906.875 MHz), api.meshcore.nz/api/v1/config.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter through the engine (setStandard(106)): the synthetic source plays the beacon with echoes and the receiver reports through latestRx().
 #include "dect2/engine/engine.h"
 #include "dect2/mscatter/mscatter_live.h"

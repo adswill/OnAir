@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB Transmitter Identification Information (TII), ETSI EN 300 401 clause 14.8, transmission mode I.
 // Every transmitter of a network switches on 4 pairs of adjacent carriers in the null symbol of every other frame (the frames whose CIF
 // count is 0 - 3 modulo 8), repeated in the four quarters of the band: 32 carriers. Which 4 of the 8 pair positions of a comb are on is the

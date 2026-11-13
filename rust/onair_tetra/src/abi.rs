@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! `repr(C)` records shared with C++ (core/include/dect2/rs/tetra.h). All integers are `i32` so the layout is the same everywhere.
 
 /// SYNC PDU (BSCH, 60 bits), EN 300 392-2 clause 21.4.4.1 and D-MLE-SYNC 18.4.2.1.

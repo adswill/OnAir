@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spot-based propagation summary (4.0): from the stations the user's own receiver decoded (FT8, FT4, WSPR, JS8) per band, in the last window:
 // how many, the median and best SNR, the farthest, and the directions open (eight 45 degree sectors with a count), so "20 m: 41 spots, open to the
 // south east, 7500 km" is one line. Pure code. Complements band_open.h, which counts by hour of day over weeks; this is the last half hour.

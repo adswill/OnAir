@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Carrier frequency accuracy meter: the offset and ppm read against a generated carrier, with offsets, a drifting carrier, steps, loss and return, a noise sweep (C/N0 and the
 // scatter of the reading), the Allan deviation of a carrier with a known random walk, and false readings on noise. Simulated signals only.
 #include "x40_gen3.h"

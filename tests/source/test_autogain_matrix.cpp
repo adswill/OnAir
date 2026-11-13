@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto gain, the whole matrix (docs/AUTOGAIN-3.7.md): every mode class on every radio gain model through the scenarios that define "works": settles quickly, ends within
 // about 1 dB of the best quality the radio can give in that scene (an oracle sweeps every gain and stage split), never clips, handles a strong interferer that appears and
 // goes away, does not hunt, does not interrupt the decoder once settled, recovers from a retune and a mode switch, stays still on an idle or bursty channel.

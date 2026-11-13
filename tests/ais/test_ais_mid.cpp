@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MMSI -> station kind and country (ais_mid.h) and the country filter (ais_alerts.h).
 #include "dect2/ais/ais_alerts.h"
 #include "dect2/ais/ais_mid.h"

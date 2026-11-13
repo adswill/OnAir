@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The theoretical range outline on the ADS-B map: imported from heywhatsthat (upintheair.json) or worked out from the elevation files of the
 // propagation tool. Core: dect2/adsb/adsb_horizon.h.
 #include "adsb_internal.h"

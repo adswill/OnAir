@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Motorola LRRP over IP: see dmr_lrrp.h.
 //
 // The layout confirmed from a real capture (2026-10-23, 161.600 MHz, talkgroup 64250):

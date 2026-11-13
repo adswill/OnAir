@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // trail.test.js - pure trail rules (hub side) and the client merge (node --test, no deps).
 import test from "node:test";
 import assert from "node:assert/strict";

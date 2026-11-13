@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec v3: port of kaal_codec_v3.py (see the header). Every name below mirrors the Python.
 #include "dect2/kaal/kaal_codec3.h"
 #include "kaal_codec3_tables.h"

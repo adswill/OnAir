@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bit stream analysis for the Datawell buoy HF link (datawell_frames.h).
 #include "dect2/datawell/datawell_frames.h"
 #include <algorithm>

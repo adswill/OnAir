@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbit refinement from a measured Doppler curve: follow a satellite's carrier during a pass (peak tracker on the spectrum frames), then fit small
 // corrections to its two-line elements (mean motion, mean anomaly, inclination, RAAN, and the receiver's frequency offset) so the SGP4 Doppler curve
 // matches what was measured. Damped Gauss-Newton with a prior on each correction (a TLE is already close), so a single pass cannot throw an

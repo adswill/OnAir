@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL time to lock: stream time from the first sample to lock and to the first audio sample, for CFO, start offset and SNR.
 // Prints the table; checks the bound (stream time, not wall time) at SNR >= 10 dB and offsets up to +-1 kHz, reports the worst case.
 #include "dect2/kaal/kaal_rx.h"

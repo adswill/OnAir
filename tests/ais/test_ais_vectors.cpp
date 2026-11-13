@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: known sentences and field values through the message decoder, and the same messages through the whole receiver at awkward sample rates
 // (issue #87: wrong positions and MMSIs).
 #include "dect2/ais/ais_rx.h"

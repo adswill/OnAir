@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16 ("Chinese Pattern 16"): the 16-carrier picture-text mode of the Chinese Radio Amateurs Club (CRAC), China Radio Association group standard
 // T/RAC 019-2019 (业余无线电16载频图形文字（CP16）技术要求, 2019). A character is a 16 x 16 dot matrix (the GB2312 dot fonts, as HZK16); the transmitter scans it
 // row by row and keys 16 audio carriers on and off, one carrier per column: a waterfall shows the character upright and a person reads it, with no

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD / SD simulcast pairing: finds the HD (or UHD) service that carries the same programme as an SD service, in the same multiplex or in another
 // multiplex of the scan. Evidence, strongest first: a user override, the DVB linkage descriptor (type 0x05 service replacement) of the SDT, the same
 // programme name once the HD/UHD/+1/region decorations are removed, and the logical channel number rule (HD on LCN + 100). The picture size classifies

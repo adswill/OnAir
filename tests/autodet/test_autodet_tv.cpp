@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "TV (auto)": every TV standard's own generator (DVB-T 2K / 8K with each guard, DVB-T2 1K..32K incl. the extended 32K of a real mux, 7 and
 // 6 MHz channels, ISDB-T 6 / 8 MHz, ATSC 1.0, ATSC 3.0, DTMB PN420 / PN945, DVB-S, DVB-S2 QPSK / 8PSK, DVB-C 64 / 256-QAM, analogue B/G, I, M),
 // off the centre, with a sample clock error and noise at several SNRs over the signal's width: the standard and the parameters must come out,

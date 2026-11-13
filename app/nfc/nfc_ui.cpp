@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID (13.56 MHz) screens: the frame log, the tag table (UID, type, ATQA / SAK, time seen, ATS) and decoded NDEF.
 // Receive only. ISO/IEC 14443 Type A / Type B and ISO/IEC 15693 as far as the public specs allow.
 #include "app.h"

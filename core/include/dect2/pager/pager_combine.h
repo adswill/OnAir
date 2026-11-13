@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: multi-copy combining (#20). Paging networks repeat messages; each copy is damaged in a different place, so the copies are voted
 // code word by code word BEFORE the BCH repair decides a word is lost. Pure functions plus a small history, no receiver state.
 #pragma once

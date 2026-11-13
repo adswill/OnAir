@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink frames on OnAir's modems: the link frames (wl_link.h) rendered as IQ by the packet generator (1200 baud AFSK, 9600 baud
 // G3RUH, FM) or the ARDOP generator (upper sideband audio as IQ), and the transmit generator of the "winlink" transmit mode that sends
 // one burst of them and ends. The receiving side is the packet / ARDOP receiver with its frame tap (packet_rx.h, ardop_rx.h).

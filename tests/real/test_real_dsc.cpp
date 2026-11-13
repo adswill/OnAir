@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Marine DSC (MF/HF, 100 bd FSK) on a real recording: 22 s of single sideband audio with two ship-to-ship individual calls on 8291 kHz (from Dsc_examples.mp3 in
 // the owner's downloads; origin of the recording unknown, see docs/REAL-SIGNALS.md). Stored at 12.5 kHz, 8 bit; the audio is played into the receiver as an
 // IQ stream at 250 ksps (x20, linear interpolation, imaginary part 0) with the signal offset at the middle of the two tones (1700 Hz).

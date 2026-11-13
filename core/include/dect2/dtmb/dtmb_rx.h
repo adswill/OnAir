@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB receiver: DTMB / DTMB-A digital terrestrial television (China, Hong Kong), 8 MHz channel.
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),
 // telemetry() and the setters from the interface thread (they must be safe while feed() runs).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa satellite receiver: LoRa frames from (and to) satellites on 400 - 440 MHz and 868 / 915 MHz. Reuses the LoRa physical layer of the mesh receiver
 // (mesh_lora.h) with what a satellite adds: a Doppler shift of up to +-10 kHz at 436 MHz and +-20 kHz at 868 / 915 MHz that moves during every pass, and
 // a Doppler rate (up to about 150 Hz/s at 436 MHz, 300 Hz/s at 868 MHz) that tilts the chirps through a long frame. The channel filter is widened for the

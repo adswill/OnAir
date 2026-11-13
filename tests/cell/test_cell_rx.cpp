@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE receiver against the test signal with real-world faults (tests/common/impair.h): carrier offset +-20 kHz, sample clock
 // +-20 ppm, low SNR, multipath, the input starting inside a frame, the radio's own sample rate, every bandwidth and port count, two cells
 // on one carrier, noise only. The system information must read back exactly as sent; nothing else (paging) may come out.

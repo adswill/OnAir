@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone paging detector: the synthetic test signal through the receiver (multitone_gen.h, multitone_rx.h). The signal is invented (the real
 // format is not public): tones, then FSK words with the POCSAG BCH check behind an invented header. Checked: the tones and their lengths, the
 // baud rate at 512 / 1200 / 2400, both polarities, a carrier error of +-2 kHz, low SNR, other sample rates, noise alone (nothing logged), a

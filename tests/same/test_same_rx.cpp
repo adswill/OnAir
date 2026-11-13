@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SAME receiver on synthetic signals, fed directly: back to back alerts with the attention tone and the end of message, carrier offsets, noise,
 // a corrupted repeat, a missing repeat, partial county codes, many locations, and no false alerts on noise.
 #include "dect2/same/same_gen.h"

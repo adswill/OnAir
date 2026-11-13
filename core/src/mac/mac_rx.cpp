@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC television receiver (see mac_rx.h).
 #include "dect2/mac/mac_rx.h"
 #include "dect2/mac/mac_tel.h"

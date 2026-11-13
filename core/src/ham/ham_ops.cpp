@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham operating helpers: see ham_ops.h.
 #include "dect2/ham/ham_ops.h"
 #include "dect2/ham/ham.h"

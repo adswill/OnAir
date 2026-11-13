@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure decisions for dragging the spectrum and for the two click-tuning styles (tests/app/test_tune_drag.cpp).
 #pragma once
 #include <algorithm>

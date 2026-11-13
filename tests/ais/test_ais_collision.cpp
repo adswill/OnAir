@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Coast-mode collision cancellation: a weaker message under (or partly under) a stronger one in a busy port is found by cancelling the stronger
 // burst. Real-world impairments: carrier offsets of both transmitters, bit clock error, noise, DC offset, 8-bit quantisation, different levels
 // and overlaps. Also: clean traffic costs nothing (the same messages, nothing invented), and switching it off gives the old behaviour.

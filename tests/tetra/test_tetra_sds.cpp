@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA SDS interpreter: D-SDS-DATA, SDS-TL protocol identifier, LIP short location report and simple text, by round trip with the generator, over the
 // whole globe, every code of position error / speed / heading, and truncated or random bits (never a crash, never a false position).
 #include "dect2/tetra/tetra_sds.h"

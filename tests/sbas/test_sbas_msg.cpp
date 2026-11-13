@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SBAS message content: field layouts (DO-229 public description) against messages built here bit by bit, the CRC, and the decoded state of a service
 // (PRN mask, fast corrections, integrity, ionospheric grid, GEO navigation, time offset, almanac, long-term corrections).
 #include "dect2/sbas/sbas_msg.h"

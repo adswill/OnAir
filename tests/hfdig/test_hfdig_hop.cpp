@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band hopping (round 4 #17): the coordinated 20-minute cycle, a band switched off (the next one in the table), bands outside the table,
 // the plain rotation, hours with different bands and with none, slot edges and negative times, the settings text.
 #include "dect2/hfdig/hfdig_hop.h"

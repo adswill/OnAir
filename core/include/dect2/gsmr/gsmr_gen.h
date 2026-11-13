@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R test signal: base station carriers with their broadcast channels (FCCH, SCH, BCCH with System Information 1 to 4 on a real 51 frame
 // schedule, the other slots filled with dummy bursts), built from the same specification tables the receiver reads. It uses the test
 // network code 001-01, not a real operator. Nothing is transmitted: the samples only exist in memory.

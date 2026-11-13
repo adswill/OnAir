@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TV channel plans (tvplan.h): the tables. Every raster below is written once as (first centre, step, width) or as explicit lower edges, so the
 // numbers can be checked against the sources in docs/TV-CHANNELS.md line by line. Centres are exact (kHz integers; ISDB-T adds 1/7 MHz).
 #include "dect2/channels/tvplan.h"

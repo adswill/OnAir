@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The table of receiver modes: one row per mode, the group headings and their colours.
 // Adding a mode is one row here (and its family number in app.h / setFamily). Used by the mode lists, the
 // mode search, the top bar and the 1-9 keys (mode_select.cpp, ui2.cpp, main.cpp).

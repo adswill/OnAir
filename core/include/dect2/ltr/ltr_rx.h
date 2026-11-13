@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LTR control channel receiver: FM discriminator, 150 Hz low pass, 300 bit/s slicer, sync search in both polarities.
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread, telemetry() from the interface thread.
 #pragma once

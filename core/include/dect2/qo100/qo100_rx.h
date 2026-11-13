@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // QO-100 (Es'hail-2) tools: the geostationary amateur satellite's downlink, 10489.5 - 10500 MHz, through a Ku-band LNB (IF 739.5 - 750
 // MHz with the usual 9750 MHz oscillator). No decoder of its own:
 //  - beacon lock: the two CW beacons of the narrowband transponder (10489.500 and 10490.000 MHz) are found in a +-600 kHz search, then

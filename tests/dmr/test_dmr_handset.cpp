@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR receiver, handsets: direct mode (a handset talking to another, one time slot at a time, silence in between, a new timing at every start) and
 // a mobile station talking to a repeater (the same with the mobile station sync patterns). Compared with what the generator says it sent (dmr_eval.h).
 #include "dect2/dmr/dmr_eval.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors receiver over the air (synthetic): the test scenes through the receiver with the faults of tests/common/impair.h and the ones of
 // the band itself. Every reading must be one of the test devices with its right values (a wrong reading is a failure in every case);
 // the clean cases must hear every device.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireshark output: one switch per mode. A decoder hands its packets, exactly as received, to Hub::publish; with the mode's switch on they go to a pcapng
 // file, to a live capture in Wireshark (extcap, tools/onair_extcap.cpp) and, for GSMTAP channels, to UDP. All off by default. docs/WIRESHARK-3.8.md.
 //

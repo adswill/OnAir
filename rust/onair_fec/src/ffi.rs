@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_fec` (core/include/dect2/rs/fec.h). Every export is `onair_fec_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //! Failures never crash: a null pointer or a wrong length gives the documented error value (-2 / false / `usize::MAX`).
 #![allow(clippy::missing_safety_doc)]

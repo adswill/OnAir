@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa), several Meshtastic presets at once (setPresetSearch): a text message on every EU_868 preset that has a slot, each on
 // its own slot frequency and spreading factor, encrypted with the default key under the preset's channel name as the firmware does,
 // some of them on the air at the same time; plus MeshCore. Every one decodes; the CPU cost of the wider search is printed.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR test signal: a GY/T 268 transmitter as complex baseband. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // The multiplex carries two audio services and, optionally, a text service:

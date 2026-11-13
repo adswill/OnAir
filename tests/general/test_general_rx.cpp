@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver: a tone through each demodulator comes out at the right audio frequency and level; the squelch closes on noise
 // (auto and level), opens on a station; a channel off the dial is found by its offset; de-emphasis; WAV recording. No sound.
 #include "dect2/general/general_gen.h"

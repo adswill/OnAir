@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The X-band links end to end on the built-in test signals. Simulated only. Impairments: carrier offset, drift, clock error, noise, phase ambiguity.
 #include "dect2/xband/xband_gen.h"
 #include "dect2/fy3/fy3_gen.h"

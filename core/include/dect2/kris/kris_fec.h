@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Kris modes (KAVB, KAPP, KAFT, KAAL): the channel codes, a thin wrapper over the Rust crate rust/onair_kris (C ABI core/include/dect2/rs/kris.h).
 // LDPC family: n = 1920, 2304, 7680; rates 1/4 .. 9/10 (n = 2304 has no 9/10: ldpcK gives -1). Bits are one per byte. LLR: positive = bit 0 more likely.
 #pragma once

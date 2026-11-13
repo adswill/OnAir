@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B: write the test signal to a file, or decode a recording.
 //   adsbtool gen out.cs8 [--rate 2e6] [--seconds 10] [--snr 30] [--aircraft 12] [--seed 1] [--cfo 0] [--sro 0] [--mult 1] [--filter 0] [--noreplies]
 //                        [--emergency] [--ref lat lon] [--format cs8|cu8|cf32]

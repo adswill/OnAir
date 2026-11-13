@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // fec_proto.h on top of the Rust crate rust/onair_fec: thin wrappers over the C ABI of core/include/dect2/rs/fec.h.
 #include "dect2/fec/fec_proto.h"
 #include "dect2/rs/fec.h"

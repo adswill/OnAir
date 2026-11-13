@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF beacons: the beacon frequency that has been best at this hour of day at this site, learned from the receiver's own readings and kept between runs. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

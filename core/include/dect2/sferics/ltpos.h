@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network): several OnAir stations time the same sferic, one of them (the server) collects the time-stamped detections and
 // finds the strike by time difference of arrival (TDOA). This header is the pure part (no sockets, no clock, no GUI), so every rule is tested:
 //

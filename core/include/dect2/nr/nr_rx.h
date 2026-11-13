@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells receiver: the NR cells around you, from the SS/PBCH blocks every cell broadcasts in the clear to all phones (3GPP TS 38.211 /
 // 212 / 213, 38.104 sync raster): physical cell id (PSS / SSS), SSB index (beam), SS-RSRP / RSRQ / SINR and the MIB (system frame number,
 // common subcarrier spacing, k_SSB, DMRS position, CORESET#0 / search space of SIB1, barred). Receive only. Nothing addressed to a phone is

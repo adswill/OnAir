@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ax25::voteRepair at the bit level: copies of one frame from several demodulators, each wrong where the signal was doubtful.
 // Measures how often the vote gives the frame back when no copy passes the check, and that it never gives a wrong one.
 #include "dect2/packet/packet_ax25.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared export for every table of heard items: one toolbar row = "Save results..." (CSV / KML / GeoJSON ... by format
 // box) + "Copy CSV" (clipboard). Built on resexp (app/state/results_export): CSV with RFC 4180 quoting in UTF-8, KML and
 // GeoJSON for rows with lat/lon. The pure half below needs no GUI, so tests link it.

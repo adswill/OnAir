@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit: which modes OnAir can send, how it makes the signal, and the session that feeds a radio's TxSink (source.h).
 //
 // THE LIST (txModes() in tx.cpp is the single source of truth). Deny-list, not allow-list: every engine mode that has a generator is offered,

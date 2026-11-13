@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM stereo test signal (see cquam_gen.h).
 #include "dect2/cquam/cquam_gen.h"
 #include "dect2/cquam/cquam_rx.h"

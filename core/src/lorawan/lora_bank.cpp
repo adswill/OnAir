@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bank of LoRa channels (see lora_bank.h).
 #include "dect2/lorawan/lora_bank.h"
 #include <algorithm>

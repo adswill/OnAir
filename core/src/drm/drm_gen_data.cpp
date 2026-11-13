@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM test signal: the content of a packet mode data service, MOT objects (ETSI EN 301 234, TS 101 499) in MSC data groups (EN 300 401 clause 5.3.3.1).
 // Written from the standards, not from the receiver's MotDecoder.
 #include "dect2/drm/drm_gen.h"

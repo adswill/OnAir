@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ILS marker beacon receiver: outer (400 Hz dashes, 2 per second), middle (1300 Hz dot-dash, 95 pairs per minute) and inner (3000 Hz dots, 6 per second) markers on an AM carrier with a carrier offset,
 // slow fading and noise; the marker is named from the tone and the keying is measured. Wrong keying is listed as "Tone only"; two tones at once, an identification tone (1020 Hz Morse), noise alone and a plain carrier
 // give no marker. Simulated signals only: no recording of a marker beacon was available.

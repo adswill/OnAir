@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channelised analog voice receiver (see chv_rx.h).
 #include "dect2/chanvoice/chv_rx.h"
 #include "dect2/chanvoice/chv_mdc.h"

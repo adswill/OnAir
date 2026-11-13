@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) receiver: the channel plan of the region, one channel filter per frequency and bandwidth, one LoRa demodulator per
 // setting, the packet layer on every good frame, and the tables of MeshTelemetry.
 #include "dect2/session/mode_adapters.h"

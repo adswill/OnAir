@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: capcodes that are paged together are one group (a station's pagers). docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

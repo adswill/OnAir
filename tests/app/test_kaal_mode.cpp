@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The KAAL mode (family 122, engine standard 124, telemetry 123) and its neighbours in the group "Kris custom modes": KAVB (123, 125, built: tests/app/test_kavb_mode.cpp), KAPP (124, 126) and KAFT (125, 127, both built: tests/app/test_kapp_kaft_mode.cpp): the mode-table rows, the group, the modeui cases, the panel strings, the engine wiring, the transmit
 // registration and the IQ-file destination are in the sources. Text checks only, so it builds without the app.
 #include <cstdio>

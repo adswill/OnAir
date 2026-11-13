@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APCO Project 25 Phase 1 (TIA-102.BAAA) protocol pieces shared by the receiver and the test signal: frame sync, NID with BCH(63,16),
 // status symbols, the Reed-Solomon, Hamming and Golay codes of the header / link control / encryption sync, the rate 1/2 trellis code
 // and interleave of TSBKs and PDU headers, TSBK and link control fields, and the IMBE voice frame interleave.

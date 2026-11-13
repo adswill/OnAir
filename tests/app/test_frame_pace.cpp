@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The frame loop's redraw policy (app/ui/frame_pace.h): the rates of 0.2.9 stay where nothing new applies, a covered window and the
 // battery only ever slow it down, the picture of a playing TV service keeps 60 fps on battery, --shot stays unpaced.
 #include "../../app/ui/frame_pace.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde command line tool.
 //   sondetool gen <secs> <file.cs8|.cf32> [--rate sps] [--snr dB] [--cfo Hz] [--sro ppm] [--types mask] [--count n] [--seed n]
 //                                          [--east m/s] [--drift Hz/min] [--spacing Hz]

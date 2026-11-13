@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! MeshCore packets: the header byte (route type, payload type, version), transport codes, the path length byte (hash size in the top two bits), the path, and
 //! the payload layouts that need no key: ADVERT (public key, time, signature, app data), ACK, TRACE, CONTROL, ANON_REQ and the headers of the encrypted types,
 //! plus the plain text of a decrypted GRP_TXT / GRP_DATA. Sources: meshcore-dev/MeshCore src/Packet.h and Packet.cpp (header byte, transport codes, path length

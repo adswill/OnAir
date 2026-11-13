@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The directory heartbeat: a thread that POSTs a signed JSON body over HTTPS every few minutes, and keeps a status file that says what happened in words a
 // person can act on. The decisions about what is sent live in web_directory_proto.cpp; this file is the key file, the HTTP client and the loop.
 //

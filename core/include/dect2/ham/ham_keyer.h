@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham CW keyer: paddles or a straight key to key-down / key-up edges and to sidetone / transmit audio.
 // Modes (the usual definitions of the Curtis 8044 keyer chip and its successors):
 //   Straight    the key is the key-down

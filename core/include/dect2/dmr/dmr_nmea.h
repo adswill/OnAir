@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NMEA 0183 position sentences ($--RMC / $--GGA) sent as plain text inside DMR short-data messages:
 // some radios send their GPS position this way instead of Motorola LRRP. See dmr_nmea.cpp.
 #pragma once

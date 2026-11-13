@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW (Morse) test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Several keyed carriers in white noise, each with its own frequency, speed, Farnsworth spacing, hand-keying jitter, fading (QSB) and

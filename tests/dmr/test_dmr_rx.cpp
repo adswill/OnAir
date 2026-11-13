@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR receiver: generator -> receiver on simulated radio signals. This file: a clean signal in detail, noise, odd chunk sizes, no signal at all,
 // damaged input. tests/test_dmr_radio.cpp: carrier offset, clock offset, 8 bit rounding, DC spike, IQ imbalance, wrong deviation.
 // tests/test_dmr_field.cpp: other sample rates, direct mode, dropouts, level steps, adjacent channels, impulse noise, reset.

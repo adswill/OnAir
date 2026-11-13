@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // L1 codec round trip: encode -> noise -> decode, plus P2 distribution and interleaver self-consistency.
 #include "dect2/t2/t2interleave.h"
 #include "dect2/common/stable_random.h"

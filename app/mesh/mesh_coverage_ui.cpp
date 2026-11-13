@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh coverage (3.9, docs/SMART5-iot-3.9.md): direct receptions of nodes with a position, kept as 1 km grid cells (dect2/mesh/mesh_coverage.h).
 // No node identity goes into the cells; the packet counter per node below only stops the same packet being counted twice and lives in memory.
 #include "app.h"

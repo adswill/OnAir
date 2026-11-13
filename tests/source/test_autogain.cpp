@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic gain tests (docs/AUTOGAIN.md): the radio models and the stage planner, the measurements (ADC, floor, intermodulation), the mode
 // targets, and the controller's three modes against a simulated radio (autogain_sim.h) with synthetic scenes. No radio, a simulated clock.
 #include "autogain_sim.h"

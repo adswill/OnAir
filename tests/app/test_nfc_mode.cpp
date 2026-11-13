@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID mode wiring: the engine tuning is registered under its number, the mode row, family count and screen mapping agree
 // with it, the engine dispatch and telemetry are in place, and the panel's strings are in the screen source.
 #include "dect2/nfc/nfc_engine.h"

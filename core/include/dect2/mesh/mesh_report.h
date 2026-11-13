@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A short text report of a mesh (LoRa) session: what was heard, how well, and each node with its signal range. Plain text that reads
 // well pasted into a chat or an e-mail; the tables stay in the CSV / JSON export.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS receiver: up to four channels at the same time, in two pairs 50 kHz wide: AIS 1 + 2 (161.975 / 162.025 MHz) and the long-range channels
 // 75 + 76 (156.775 / 156.825 MHz). With the radio's centre known every pair the capture holds is placed by its frequency; without it AIS 1 and 2 sit
 // at -25 and +25 kHz of the user's frequency.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH engine pieces: the test signal (engine standard 748) at radio rates, played into the engine receiver with the automatic channel
 // width, its telemetry and summary, and the tuning row. Simulated signals only.
 #include "dect2/dvbsh/dvbsh_engine.h"

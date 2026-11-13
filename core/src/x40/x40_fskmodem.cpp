@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Telephone-style FSK modems on a radio channel: Bell 103 (originate 1070 / 1270 Hz, answer 2025 / 2225 Hz, 300 baud), ITU-T V.21 (channel 1 980 / 1180 Hz, channel 2 1650 / 1850 Hz, 300 baud), ITU-T V.23 mode 2
 // (1300 Hz mark / 2100 Hz space, 1200 baud) and Bell 202 (1200 Hz mark / 2200 Hz space, 1200 baud) as audio tones in a single-sideband channel (the Canadian time station CHU sends Bell 103 answer tones, 300 baud, on its upper
 // sideband); asynchronous bytes: a start bit (space), eight data bits least significant first, one or more stop bits (mark), idle mark between bytes.

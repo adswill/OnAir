@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 1 receiver against the test signal with real-world faults: +-1 kHz offset, off centre with a 100 ppm clock error, 14 dB SNR,
 // a call joined late and one without its terminator, all at once; an encrypted call is reported as encrypted and never reaches the codec;
 // noise only gives nothing. Silent.

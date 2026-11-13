@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Aircraft list logic of the Inmarsat all-carriers mode, kept out of the screen so it can be tested: merging the aircraft of several windows,
 // how old a position is and how far it fades, names, search, sorting, whether a trail segment crosses the date line.
 // Positions come from every source the Aero receiver decodes (ADS-C reports, ARINC 702 POS reports, label 16 and 20 reports, see aero_pos.h);

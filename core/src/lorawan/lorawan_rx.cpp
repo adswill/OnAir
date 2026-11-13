@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN monitor (see lorawan_rx.h): a bank of LoRa channels (lora_bank.h) over the channels of a regional plan, and the MAC layer parser
 // (lorawan_plan.h) on every frame. Keyless: nothing is decrypted.
 #include "dect2/lorawan/lorawan_rx.h"

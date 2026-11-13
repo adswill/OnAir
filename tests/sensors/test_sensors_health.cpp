@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensor health: interval, silence, outliers, id collision, falling battery. Simulated reading series.
 #include <cmath>
 #include "dect2/sensors/sensors_health.h"

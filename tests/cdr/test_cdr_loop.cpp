@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR generator -> noise and carrier offset -> receiver, for every transmission mode, every spectrum mode (with the analogue FM programme
 // in the hybrid ones), the three constellations, the four code rates and the three sub-frame allocations: synchronisation, the system
 // information, the control tables, the service list and the text must come out exactly, with no failed LDPC code word.

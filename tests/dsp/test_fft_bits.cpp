@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The faster portable kernels give the same bits as the plain loops they replaced (docs/PERFORMANCE-CORE.md):
 //  - fftSplit (portable radix-2: the bit reversal as a tiled gather with the first stage, NEON passes of three stages) against the old
 //    loop, copied here verbatim, for every size 2 .. 2^16, forward and inverse;

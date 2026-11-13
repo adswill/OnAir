@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB transmit-to-file: a profile A burst of synthetic video / audio packets (FEC 14 + 2) is modulated to baseband IQ, written as a little-endian complex float32
 // file (2.8 Msps = 4 x 700 ksym/s) with a small JSON description next to it, read back, passed through a noisy channel and decoded; the packets must come back
 // identical. KAVB_IQ_OUT=<path.cf32> keeps the file at that path (default: a temporary file that is deleted).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde frame decoders that work on demodulated FSK symbols (no radio): one per sonde type, and the symbol
 // streams of single frames for the test signal. The receiver's channels demodulate to hard symbols at symbolRate()
 // and push them into every decoder whose rate matches, until one reports frames.

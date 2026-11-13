@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // When is the band open: see band_open.h.
 #include "dect2/ham/band_open.h"
 #include <algorithm>

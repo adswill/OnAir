@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The P25 rate 1/2 trellis code of TSBKs and PDU headers (TIA-102.BAAA, data block coding) with its 98-dibit interleave, and the CRC-CCITT of those blocks.
 //! 48 input dibits plus a flushing zero dibit give 49 four-bit outputs = 98 dibits; decoding is a Viterbi search over the 4 states on received levels
 //! (about -3..3, C4FM).

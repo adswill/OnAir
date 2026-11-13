@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone airspace alerts (rid_alerts.h): drone fixes with position noise against an airport table and ADS-B traffic. Simulated fixes.
 #include "dect2/rid/rid_alerts.h"
 #include <cmath>

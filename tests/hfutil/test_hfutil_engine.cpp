@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The HF utility receiver through the channel front end: the test signal of every mode, at the wide input rate and 20 kHz below the radio, is read back.
 #include "dect2/hfutil/hfutil_rx.h"
 #include <cstdio>

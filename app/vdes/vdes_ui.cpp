@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDES screens: the ASM frames (decoded: GMSK 9.6 kbit/s, AIS framing, CRC-16 checked, payload as hex) and the VDE-TER burst log (detected only: band,
 // bandwidth, level, modulation class; the content is not decoded).
 #include "app.h"

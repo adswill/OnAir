@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VOR / ILS through the engine (setStandard(32)): the synthetic source plays a Doppler VOR on radial 123.4, the VOR entry measures it
 // and reports through latestRx(); then the ILS entry on a localizer channel reads the DDM; a retune keeps the report numbers growing.
 #include "dect2/engine/engine.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR hybrid modes next to loud analogue FM (#275): the FM programme of the hybrid itself far stronger than the digital sidebands, and a loud
 // neighbouring FM station 200 / 400 kHz away (a recording at 98.2 MHz sees the neighbours of a crowded band II). Same method as
 // test_cdr_realworld.cpp: the generator's clean signal plus the impairment, written independently of the receiver.

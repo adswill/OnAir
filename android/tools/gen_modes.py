@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Reads the desktop mode table (app/ui/mode_table.cpp kBuiltinModes + kGroupNames + kGroupCols) and writes Modes.kt and res/values/modes.xml.
 A mode's index on Android is its position in tools/mode_order.txt: saved settings, favourites and hidden modes store that index, so it never
 changes: new modes are appended, removed ones stay as hidden placeholders. The order on screen follows the desktop table (ModeDef.order).

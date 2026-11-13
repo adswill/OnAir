@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The condition language of the automations: a small expression evaluator written for this purpose (no code from outside is ever run).
 //   operators  or and not  == != < <= > >=  contains startswith endswith matches in  + - * / %  ( )
 //   literals   12  3.5  20km  118.1MHz  'text' "text"  true false null  [1, 2, 3]

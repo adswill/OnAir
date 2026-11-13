@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The protocol filter of the NFC / RFID receiver (NfcReceiver::setProtoMask, the Protocol choice of the NFC screen): ISO 14443 Type A, Type B or ISO 15693.
 // The three scripted sessions of nfc_gen (Type A with an NDEF read, ISO 15693 inventory, Type B REQB / ATQB), with a carrier error and noise, go into one receiver without a view and one per view, from the same samples:
 //   - a view lists exactly the frames, tags and NDEF records of the receiver without a view that belong to its protocol, and nothing of another one;

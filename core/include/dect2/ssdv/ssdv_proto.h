@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV (Slow Scan Digital Video, Philip Heron M0RPH / fsphil): the packet format of amateur satellites and high-altitude balloons.
 // A picture is a baseline JPEG cut into 256-byte packets (sync 0x55, type 0x66 with Reed-Solomon (255,223) or 0x67 without, a base-40 callsign,
 // image id, packet number, size, the MCU where the packet starts, the entropy-coded payload, CRC-32, 32 parity bytes). The check, the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APCO Project 25 Phase 2 (TDMA, TIA-102.BBAB physical layer / BBAC MAC) protocol pieces shared by the receiver and the test signal.
 // Receive only: nothing here is used to transmit.
 //

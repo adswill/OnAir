@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The layout of the names on the spectrum (app/gfx/autolabel_logic.h): the store, merging of the same station, stacking in rows without overlap,
 // thinning when the view is wide, the detail when there is room, the edges of the plot, and the hit test.
 #include "../../app/gfx/autolabel_logic.h"

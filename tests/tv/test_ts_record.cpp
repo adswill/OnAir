@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Recording a service and the live buffer: the single-program filter (a synthetic two-programme multiplex in, one programme out: valid PAT and
 // PMT, continuity counters intact, every PID of the service and nothing else), the packet ring (overflow, reading behind, jump to live), and the
 // writer queue (a stalled disk drops and counts, never blocks).

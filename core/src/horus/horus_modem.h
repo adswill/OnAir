@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus receiver internals (private to core/src/horus): the channel filter, the tone estimator, the non-coherent 4FSK
 // demodulator with its symbol timing, the binary deframer (sync on preamble + unique word, layer 2 decode, CRC), the RTTY
 // demodulator (two-tone correlators, asynchronous framers for 50 / 100 / 300 baud, 7 and 8 data bits, both polarities) and the

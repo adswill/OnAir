@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // sheet.js - phone layout glue: the track card is a bottom sheet with a 'peek' and a 'full' state. While it is open the map's
 // bottom padding equals the sheet height, so the selected marker is centred in the free area above it (not hidden under it).
 import { peekHeight, fullMaxHeight, settleState } from "./viewport.js";

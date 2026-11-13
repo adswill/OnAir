@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver, picture side. See atv_video.h. The state is in atv_video_impl.h; the bigger member functions are in
 // atv_video_{sync,colour,picture}.cpp; this file holds the public AtvVideo class.
 #include "atv_video_impl.h"

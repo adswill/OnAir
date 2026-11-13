@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Elektro-L HRIT / LRIT test signal (elektro_gen.h): GOES xRIT products at the symbol rate of the link in modeOpt[0] (665.4 ksym/s by default).
 #include "dect2/elektro/elektro_gen.h"
 #include "dect2/goes/goes_gen.h"

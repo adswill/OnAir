@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-L test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 // adslBurst(): one frame at baseband. adslScene(): frames on their channels with chosen levels, carrier offsets and clock errors, on a capture tuned to centreHz.
 // makeAdslSynth(): made-up aircraft around the reference position, Traffic and Status on the M-band, Traffic on O-LDR, a Traffic Uplink with FEC on O-HDR.

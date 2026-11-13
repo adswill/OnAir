@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OpenSky identifier: the measurements on generated signals with the published shape of OpenSky (9600 baud, four levels, 4-slot TDMA in 25 kHz) and on other channel shapes it must not call OpenSky.
 // No real OpenSky signal was analysed: the air interface is not public.
 #include "dect2/opensky/opensky_rx.h"

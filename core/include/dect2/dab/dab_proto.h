@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parsing layer of the DAB data decoders (ETSI EN 300 401, TS 101 756, EN 301 234, TS 102 563, TS 102 980, TS 102 979), written as plain structs and
 // functions, implemented by the Rust crate rust/onair_dab (dab_proto_rs.cpp):
 // the FIB walk and FIG parsers behind the ensemble tables and labels, MOT time / header / data group / directory, the PAD split of DAB+ access units and MP2

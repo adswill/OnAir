@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox mode on its test signal: every made-up device must arrive with its ID, payload (or single bit), downlink flag and all three ranks
 // merged into one message: clean, at 14 dB in 100 Hz, with a +-1.5 kHz radio offset, with the carrier drifting 15 Hz/s during each frame
 // (Doppler and oscillator drift), at 600 bit/s, and at another sample rate. Noise alone must give nothing.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dect2::stable_string_hash (dect2/common/stable_random.h) must give libc++'s std::hash<std::string> value on every platform: test_specx_idmatrix
 // seeds each case's offsets and noise from the hash of the case's label, and with libstdc++'s own std::hash (Linux, MinGW) it drew other numbers
 // than on macOS and failed there (frequency known top-1 at 10 dB 40.6 %, digital voice top-1 at 20 dB 72.2 %). The expected values below were

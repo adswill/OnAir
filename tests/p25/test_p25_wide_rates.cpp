@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 on a wide capture (3.4): a HackRF at 5, 10 and 20 Msps. Three P25 carriers sit far from the centre (each with its own tuning error, 6 dB
 // apart, in noise); the whole-span bank must find and lock every one, and in follow-only mode (the trunking follower) a call granted on the farthest
 // carrier must start exactly one decoder that locks. The rate is the user's: nothing here clamps it.

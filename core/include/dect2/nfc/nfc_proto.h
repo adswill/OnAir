@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NFC / RFID at 13.56 MHz: the protocol layer (no DSP). Parses recovered byte frames of ISO/IEC 14443 Type A, Type B
 // and ISO/IEC 15693 into named fields, checks the CRCs, and reads NDEF TLVs from Type 2 tag memory. Receive only; nothing here
 // transmits and nothing is cloned. Clean-room from public summaries of ISO/IEC 14443-2/-3 and 15693 and the NFC Forum Type 2 / NDEF

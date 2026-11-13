@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdrtool: run an IQ recording through the CDR receiver and print one line per second (lock, SNR, level, frames, audio). Muted, no sound.
 // usage: cdrtool FILE ri8|cf32 RATE [skipSec] [maxSec] [serviceHex] [fadeSpec...]
 #include "dect2/cdr/cdr_rx.h"

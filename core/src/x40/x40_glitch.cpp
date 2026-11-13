@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SDR stream glitch detector: what a flaky USB link, a driver or a gain loop does to the samples, for debugging a radio. Four things are watched.
 // 1. Dropped or repeated samples: the phase of the strongest steady tone (at least 20 dB over the noise per sample) is followed sample by sample against its own running frequency; a jump is the tone's frequency times the time of the
 //    missing samples: for a tone at f Hz at rate fs and n samples lost, the phase steps by 2 pi f n / fs (modulo one turn): the number is only known to within whole turns (n = d phase / (2 pi f / fs) + k fs / f), so the estimate is the smallest

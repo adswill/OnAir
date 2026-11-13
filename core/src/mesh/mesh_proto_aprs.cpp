@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRa APRS and MeshCom 4 packet layer: see mesh_proto.h.
 // Sources (read 2026-10-10):
 //   LoRa APRS: richonguzman/LoRa_APRS_iGate (GPL-3.0) src/lora_utils.cpp (prefix "\x3c\xff\x01" on transmit, checked and stripped on

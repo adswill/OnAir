@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPU Viterbi decoder (Metal: gpu_viterbi.mm; Direct3D 11: gpu_viterbi_d3d11.cpp) for the DVB-S / DVB-T convolutional code (rate 1/2, K = 7, 171/133 octal, depunctured soft values).
 // One threadgroup of 64 threads (one per trellis state) decodes one chunk; the chunks are the ones dvbt::Viterbi::decode makes (16384 steps with 192
 // steps of overlap on each side), so a decode of many windows at once gives the bits that the CPU decoder gives, with the same 16 bit saturating

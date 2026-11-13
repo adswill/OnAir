@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The merged Scanner view (View > Scanner): the memory table is also the scan list. Each memory is a row (frequency, mode, name, tone, group, last hit,
 // hit count, lockout, priority, star); the control bar scans all / a group / a range / the starred rows. A scan runs on the scanner's machine
 // (scanner_ui.cpp, scan_list.h); what the scan covers and what a hit writes back is scan_plan.h (unit tested). The scan fields (lockout, priority,

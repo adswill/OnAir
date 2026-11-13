@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi OFDM PHY (wifi_ofdm.h): the code and tables against what the standard fixes, and the transmit half through the receiver with a
 // carrier offset, noise, a gap of silence before, and a frame that starts mid-way.
 #include "dect2/wifi/wifi_ofdm.h"

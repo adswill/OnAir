@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS voice (profiles P6, P7): the pluggable speech codec interface and the superframe assembly. KAWS does not ship a speech codec of its own: the spec's
 // own-codec design (section 6) is open, and Codec2 700C is the reference. A codec is loaded by whoever integrates the mode (user-installed codecs, docs/CODECS.md);
 // this file only fixes the frame contract: 40 ms of 8 kHz speech (320 samples) <-> 28 bits (P6) or 48 bits (P7).

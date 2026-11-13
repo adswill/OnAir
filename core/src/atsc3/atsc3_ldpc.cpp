@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "atsc3_ldpc.h"
 #include "dect2/dsp/simd.h"
 #include "dect2/dsp/minsum_corr.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ASTERIX screens: the track table, the map (the shared slippy map of ADS-B), the data sources and the record viewer, and the input controls (UDP port,
 // multicast group, a file, demo traffic, the radar's position). The data comes from a network or a file, not from the radio: the receiver (in the engine
 // object) runs by itself. Receive only; the UDP port is closed until Listen is pressed and listens on this computer only unless the box is ticked.

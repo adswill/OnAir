@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R receiver telemetry, shared by the receiver and the UI.
 // Only what a GSM / GSM-R base station broadcasts to every mobile on its BCCH is here: its identity (BSIC, cell identity, location area,
 // operator code), its access parameters and the channel lists of System Information 1 to 4.

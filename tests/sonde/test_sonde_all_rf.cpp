@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // All types at once: the default three sondes, then six (two RS41, two DFM, M10, M20), then seven with an RS92, in one band.
 // Every sonde must be found on its own channel, with the position and speed of the test flight.
 #include "dect2/sonde/sonde_testkit.h"

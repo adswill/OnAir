@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the VDL Mode 2 layers (rust/onair_vdl2 behind the D::vdl2* functions): the scrambler, every one of the 2^25 header words, every burst
 // length, Reed-Solomon with random errors and erasures, burst bodies (built by the generator, with bit errors), the FCS, the HDLC deframer on built / damaged /
 // random bit streams, addresses, and AVLC frame decoding of built frames (ACARS, X.25 with CLNP / COTP, call set-up, XID GSIF / link establishment), random

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM 06.10 full-rate codec: see gsm610.h. Section numbers below are those of the GSM 06.10 / ETSI EN 300 961 algorithm description.
 #include "dect2/echolink/gsm610.h"
 #include <cstring>

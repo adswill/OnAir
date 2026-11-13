@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers receiver: POCSAG (512, 1200, 2400 baud) and FLEX (1600/2, 3200/2, 3200/4, 6400/4) on one 25 kHz channel.
 // Front end: mix out the signal offset, decimate to 96 kHz, filter to about +-10 kHz and decimate to 48 kHz, FM discriminator. The discriminator is
 // kept as an unwrapped phase in a ring, so the mean frequency over any window (a symbol) is one subtraction. Four searchers look at every sample for

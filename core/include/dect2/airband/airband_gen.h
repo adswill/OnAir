@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Airband test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Several AM channels around the dial frequency (which sits at -tuneOffsetHz in the samples, as the radio is tuned above it), each with

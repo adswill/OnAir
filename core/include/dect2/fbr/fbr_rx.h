@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fleet Broadcast monitor (UHF SATCOM downlink, 250.450 / 250.550 / 250.650 MHz): receive only, framing and channel activity, nothing decoded.
 //
 // What the public description says (r00t.cz, "Fleet Broadcast Decoder v0.5", 2009): a 16 channel 75 Bd multiplex, differential BPSK at 1200 Bd,

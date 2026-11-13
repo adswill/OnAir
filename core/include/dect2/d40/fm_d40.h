@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 4.0 FM / RDS helpers (pure rules, no GUI). Tests: tests/d40/test_fm_d40.cpp
 //  1. nameStations   turns the raw hits of a span scan (frequency, level, PI, many PS reads) into one named station list: the PS is the majority of the clean reads
 //                    (8 characters, printable, not mid-update), a PI heard on two frequencies within 300 kHz is one station.

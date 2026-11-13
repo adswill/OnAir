@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fleet Broadcast monitor (UHF SATCOM, 250.450 / 250.550 / 250.650 MHz): the SIMULATED test signal through the receiver (fbr_gen.h, fbr_rx.h).
 // The signal is built from the public description only (differential BPSK, 1200 Bd, 16 channels of one bit per frame, channel 0 for sync); its sync
 // pattern is our own 31-bit m-sequence because the real one is not published. So this checks the modem, the 1200 Bd clock, the frame finder and the

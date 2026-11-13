@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (HF) test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 // The publicly reported physical layer only (ros/ros_detect.h): one phase-continuous tone at a time out of 144 on a 15.625 Hz grid, chosen at
 // random every symbol (4, 8 or 16 baud), in the upper sideband of a radio, in white noise, with a tuning offset and a drift. It is NOT ROS

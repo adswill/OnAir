@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small helpers that several screens repeated line for line: a UTC clock text, a "key value" row, the IQ lamp and
 // "State" text of a mode's status line, the zoom buttons of a mode map, and a tooltip with wrapped text.
 // Used so far by the wifi, airband, dstar and orbcomm screens and the top bar / mesh code.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab tests: every stage alone, then the whole pipeline on generated signals of several known protocols.
 #include "dect2/protolab/protolab.h"
 #include "dect2/common/stable_random.h"

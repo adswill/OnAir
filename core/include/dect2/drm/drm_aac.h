@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM AAC core decoder (see drm_aac.cpp): one audio frame of an AAC audio super frame in, 960 samples of mono sound at the core rate out.
 #pragma once
 #include <cstdint>

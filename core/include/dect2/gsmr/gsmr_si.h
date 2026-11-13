@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R: the System Information messages of the broadcast control channel (3GPP TS 44.018 9.1.31 - 9.1.36), parsed and, for the test
 // signal, encoded. Each is one 23 byte layer 2 frame: L2 pseudo length, protocol discriminator (RR, 0x06), message type, the fields.
 // Only the cell's public broadcast is read: its identity, the location area (operator code and area), the access parameters and the

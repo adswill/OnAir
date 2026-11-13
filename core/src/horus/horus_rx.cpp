@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus receiver (horus_rx.h): the channels, the wide-span search, the payload table and the results file.
 #include "dect2/horus/horus_rx.h"
 #include "horus_modem.h"

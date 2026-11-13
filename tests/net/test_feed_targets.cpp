@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Outbound feed targets: Beast over TCP and AIS over UDP to loopback servers, fan-out to two targets, off by default,
 // reconnect after the server goes away.
 #include "dect2/net/feeds.h"

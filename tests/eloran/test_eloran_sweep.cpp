@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Loran-C sweep: every chain of the public GRI list at several sample rates, carrier offsets, tuning errors, noise levels and group phase (A / B first), with the master
 // and two secondaries at random delays; plus the chain names and the 9th pulse states of the eLoran data channel (Lo et al., IEEE TAES 2007, table III).
 #include "dect2/eloran/eloran_engine.h"

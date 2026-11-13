@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The safety layer every ham transmission passes, whatever the radio (a CAT rig, an SDR): the country band plan, the duty-cycle limits per mode and
 // the TX audit log. The gate itself is hamTxAllowed (ham.h): licence confirmed, Arm, callsign, locator, inside an amateur band (and inside the
 // country's own bands when HamTxCheck::country is set). Nothing here keys a radio.

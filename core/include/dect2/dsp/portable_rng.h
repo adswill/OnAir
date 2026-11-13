@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Portable random numbers for test signals: the std distributions (normal, uniform) are implemented differently by libstdc++,
 // libc++ and MSVC, so the same seed gives different noise on each platform. This generator gives the same stream everywhere.
 #pragma once

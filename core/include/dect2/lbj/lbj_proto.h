@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ message layer: numeric POCSAG pages on the railway warning channel (821.2375 MHz) turned into train number, speed,
 // kilometre post, direction and (in the longer messages) locomotive and route. Original implementation; the field layout comes
 // from the public descriptions and the recordings listed in docs/lbj.md.

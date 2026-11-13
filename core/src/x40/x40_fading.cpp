@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Fading analyser for one steady carrier (a beacon, a time-signal or broadcast carrier, a bench source) within +-2.8 kHz of the tuned frequency: what the path does to it. The carrier is
 // followed (1-2 s FFT windows), shifted to 0 Hz and low-passed at 220 Hz, and the envelope is watched over the last 60 s (first reading after 30 s): the level distribution against the mean power
 // (1, 10, 50, 90, 99 % levels, the fade depth), the scintillation index S4 (the square root of var(P) / mean(P)^2), the Rician K-factor by the moment method (K = ((1-g) + sqrt(1-g)) / g with g = var(P) / mean(P)^2, 0 for g >= 1; infinite for a clean carrier), the rate

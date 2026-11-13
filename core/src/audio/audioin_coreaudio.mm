@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // macOS capture: a HAL AudioUnit on the chosen (or default) input device. Nothing is opened until audioInMicStart().
 #include "audioin_impl.h"
 #import <AudioToolbox/AudioToolbox.h>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Burst detector for one watched frequency: a level that rises at least riseDb above the running median of the quiet samples,
 // for at least minMs, counts as a burst. Samples are dB values with a time stamp (ms); no radio, no threads.
 #pragma once

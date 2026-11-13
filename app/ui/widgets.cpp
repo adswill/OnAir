@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // small reusable widgets: pill buttons, lamps, gauges, scatter and history plots, formatting helpers
 #include "../app.h"
 #include "typography.h"

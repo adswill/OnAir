@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi HaLow (802.11ah) test signal (see halow_gen.h).
 #include "dect2/halow/halow_gen.h"
 #include "dect2/dsp/exact_resampler.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // thread_name.h: the name is set on the thread, kept short on Linux, and namedThread names its thread
 #include "dect2/common/thread_name.h"
 #include <cstdio>

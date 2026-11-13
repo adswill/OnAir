@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LPC analysis, line spectral frequencies and the direct-form filters of the 8 kHz core.
 #include "kv_internal.h"
 #include <cmath>

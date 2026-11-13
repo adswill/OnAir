@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channelised voice modes (families 340 - 346): the engine tunings are registered under their numbers, the mode rows, the family count, the
 // screen mapping, the engine cases and the test-signal cases agree.
 #include "dect2/chanvoice/chv_plan.h"

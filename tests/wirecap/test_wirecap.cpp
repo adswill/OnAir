@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireshark output: every channel written through the hub and parsed back (pcapng block structure, link type, the packet's own headers), the extcap program's
 // answers and a live capture through it, the local-only rule, encrypted bytes unchanged, and frames from real decoders fed by their generators.
 // tshark, when it is on the PATH, reads the files too; without it the parser in this file is the check. All signals here are simulated.

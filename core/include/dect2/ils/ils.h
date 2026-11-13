@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ILS channels (ICAO Annex 10 Volume I, 3.1.6.1): the 40 localizer channels (108.10 - 111.95 MHz, odd tenths, 50 kHz steps) and the
 // glide path frequency paired with each (329.15 - 335.00 MHz), and the display conventions.
 #pragma once

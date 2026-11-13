@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Modulation quality meter: BPSK, QPSK and 8-PSK at three symbol rates and two roll-offs, with a carrier offset and drift, a symbol-clock error, a rotated constellation
 // and a noise sweep (the MER read against the Es/N0 the generator put in), and the false locks on noise, a plain carrier and an FM signal. Simulated signals only.
 #include "x40_gen3.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR (China Digital Radio, GY/T 268): OFDM digital radio in the FM band.
 // Skeleton: counts the samples, measures the input level and reports four times a second of signal (state 0: no decoder yet); the
 // mode's worker replaces the body. Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis

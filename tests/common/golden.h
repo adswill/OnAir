@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector helper for the tests of the Rust-backed protocol layers (tests/<mode>/test_<mode>_proto_rs.cpp).
 //
 // The Rust crates replaced C++ implementations. The old tests compared both on seeded random and damaged inputs; the C++ is gone, so each test now feeds

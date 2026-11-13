@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The airport search of the airband panel: type an airport, pick it, and its frequencies become the channel list.
 #pragma once
 #include <functional>

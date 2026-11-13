@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CPU cost of the HF/VHF data receivers (pager, packet, PSK, CW) per second of signal, with a signal and with noise only.
 //   bench_hfdata [secs=20]      prints: mode, rate, CPU-s per s of signal (signal / noise only), digest of the decoded counts
 // Generation of the test signal is NOT in the timed part (it is made first, then fed).

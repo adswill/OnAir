@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio control (audio_control.h): filter responses, notch depth, EQ gains, squelch hysteresis and hang, CTCSS and DCS detection, AGC level,
 // the auto notch, stereo modes, the clarifier shifting a tone, tail delay, settings round trip, device fallback, pass-through when off.
 #include "dect2/audio/audio_control.h"

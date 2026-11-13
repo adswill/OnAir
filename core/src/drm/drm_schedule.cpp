@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The DRM broadcast schedule page: its JSON (short wave) and its medium wave table, and what is on air at a given time. See drm_schedule.h.
 #include "dect2/drm/drm_schedule.h"
 #include "dect2/mcp/mcp.h"

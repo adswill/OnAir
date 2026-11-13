@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN demodulator: every bearer type through the real frame structure, offsets, noise; and sensitivity (run with no arguments = quick pass/fail;
 // `sweep` prints the sensitivity table).
 #include "dect2/bgan/bgan_demod.h"

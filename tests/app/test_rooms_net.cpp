@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live rooms: classification of failures and the availability check, against a fake HTTP server on loopback.
 #include "rooms/rooms_net.h"
 #include <atomic>

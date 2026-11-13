@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! P25 network identifier (NID, TIA-102.BAAA 7.x): NAC (12 bits) and DUID (4 bits) protected by the BCH (63,16,23) code plus an overall parity bit, 64 bits.
 //! Decoding is a nearest codeword search over all 65536 messages (the code is linear, so each codeword is two table lookups).
 

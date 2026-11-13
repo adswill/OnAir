@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live transcription: voice audio in, transcript entries out. Per source (a channel) a VoiceSegmenter cuts the audio into transmissions; each
 // transmission goes to a bounded queue (the oldest is dropped when the engine cannot keep up); worker threads run the speech engine on it (a
 // SpeechBackend: whisper.cpp in the program, a fake one in the tests), the result goes through the hallucination filters, the callsigns in it

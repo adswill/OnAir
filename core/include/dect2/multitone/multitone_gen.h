@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone paging test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // An FM carrier with noise. Multitone's digital format is not public, so the data here is NOT Multitone's: it is FSK with 32-bit words that

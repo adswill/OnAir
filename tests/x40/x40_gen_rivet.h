@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for the HF modes taken over from Rivet (XPA, XPA2, CROWD36, FSK200/500, FSK200/1000 and F06a, GW FSK; docs/RIVET-MODES-4.0.md).
 // Written from the formats as Rivet reads them, not from the decoders here. They exist only in the tests; none is reachable from the
 // transmit side of the application.

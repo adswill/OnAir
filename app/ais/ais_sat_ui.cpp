@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: the channel plan (AIS 1 + 2 and the long-range channels 75 + 76: one wide capture, or a hop plan for a narrow radio) and the Satellite AIS
 // panel: satellite mode, the receiving satellite's elements, its passes over the area of interest with auto-arming, the map of ships heard per
 // pass (the "eavesdropper" diagram), and the statistics of Li, Chen, Chen (Acta Astronautica 2017, doi:10.1016/j.actaastro.2017.02.014):

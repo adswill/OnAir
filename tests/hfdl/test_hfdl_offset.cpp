@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL as the issue #66 receiver has it: an RSP1 at 2 Msps, the whole built-in channel list (no channel set by hand), 8.942 MHz
 // (Shannon) 401 kHz below a 9.343 MHz centre; also the dial on the LO itself (centre 8.942 MHz, the carrier 1440 Hz above the DC spur)
 // and the 8.9 MHz band preset. Each with a tuning error, noise, a strong DC spur and a strong AM carrier 15 kHz away (the Shannon VOLMET

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Thread layers above 802.15.4, against frames written out byte by byte (RFC 4944 / RFC 6282 headers, the Thread beacon payload, MLE).
 #include "dect2/thread/thread_proto.h"
 #include "dect2/zigbee/zigbee_proto.h"

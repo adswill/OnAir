@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES DCS test signal: platforms on their 1.5 kHz channels of the 401.7 - 402.1 MHz uplink band, each sending its report now and then: unmodulated carrier,
 // preamble, frame sync, address, ASCII or pseudo-binary data and the EOT code, carrier phase modulated +-60 degrees with NRZ or Manchester bits, in noise.
 // Nothing is transmitted: the samples only exist in memory or a file.

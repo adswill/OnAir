@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared helpers of the HaLow round-trip sweeps (test_halow_sweep_*.cpp): one frame sent repeatedly through the generator with a set of impairments,
 // received at the radio rate the width needs, and the telemetry read after a flush. Every sweep covers all valid MCS x both preambles x guard intervals
 // x impairment sets for its widths: a result from loopback alone is not claimed fixed, so the sets cover offsets, clock error, echo and a late start.

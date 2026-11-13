@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator (Tools > Digital video generator): the encoding settings, the encoders this FFmpeg really has, and the
 // transport-stream bitrate estimate. No interface and no I/O here, so the tests can check all of it.
 #pragma once

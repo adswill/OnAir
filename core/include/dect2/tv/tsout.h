@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transport-stream outputs: file recording and paced UDP/RTP streaming, optionally filtered to one service.
 #pragma once
 #include "ts.h"

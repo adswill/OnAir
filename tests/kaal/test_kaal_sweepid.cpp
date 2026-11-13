@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL station ID in the sweep: the ID code and the four chirp variants (unit checks against the Python prototype's test vector), then the
 // receivers on a transmitted signal: the in-lock voice receiver and the sweep-only scanner read the callsign, the scanner down to
 // -20 dB per-sample SNR (data power over noise power per 48 kHz sample) and with a frequency offset, and neither reports an ID for noise,

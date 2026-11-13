@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_kaws (KAWS: the HF weak-signal mode, 2.4 kHz). Written by hand; the Rust test rust/onair/tests/headers.rs checks it against ffi.rs.
 // Complex baseband samples are interleaved f32 (re, im) at 2400 samples/s (audio frequency = 1500 Hz + baseband frequency); bits are one per byte.
 #pragma once

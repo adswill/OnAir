@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_uat` (core/include/dect2/rs/uat.h). Every export is `onair_uat_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //! A null frame pointer is read as an empty frame (all zero bytes). This is also the only module with `unsafe`: besides the C ABI it holds `math`, the C
 //! library `atan2` / `sqrt` the decoder shares with the C reference so the speed and track come out identical.

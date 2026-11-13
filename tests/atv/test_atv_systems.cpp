@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV: the systems added after B/G, I, D/K, M and N: the positive-modulation systems with AM sound (A 405 lines, C, E 819 lines, L, L'),
 // the colour combinations NTSC-N, NTSC 4.43 and SECAM-M, and NBTV / mechanical television (atv_nbtv.h). Generator -> receiver: line and field
 // lock, the system found, the test card back within tolerance; positive modulation off frequency; the system found by itself.

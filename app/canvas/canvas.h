@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Workspace layout (View > Layout > Workspace, docs/WORKSPACE-4.0.md): a blank canvas the user fills with blocks (radio sources,
 // spectrum and waterfall, demodulators, audio, decoders, the map, the satellite tracker, the rotator, the transmitter ...), each a
 // movable, resizable window drawn with the panels of the other layouts. The model is canvas_model.h; this is the entry for the shell.

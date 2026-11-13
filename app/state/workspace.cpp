@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Workspaces and the last-session file. A record is one line of '|'-separated fields (escaped: \p is '|', \n a new line, \\ a backslash).
 // The saved list is the prefs key "workspaces" (one record per line); the last session is dataDir()/last-session.txt:
 //   line 1: "clean 0" while running, "clean 1" after a normal exit

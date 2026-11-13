@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 trunking control channel in the engine: the decoder of mpt1327_rx.h behind the engine's interface (configure, offset, feed, telemetry).
 // Engine stdMode 129, active standard 128 (family 127, "MPT1327 trunking (WIP)"). Receive only. The traffic channels inside the capture are followed
 // as analog FM slices of it (single-radio trunking); nothing encrypted is decoded.

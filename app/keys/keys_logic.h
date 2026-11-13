@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Keys window's logic without any drawing, so it can be tested alone: hex entry checks, the edit form, the CSV import preview,
 // masking and the per-call status classes. Key material is only ever returned masked here; the window asks keyHex() itself when the
 // user presses Reveal. Nothing in this file logs or prints a key.

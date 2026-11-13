@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC television test signal (D2-MAC/packet or D-MAC/packet over FM, as a satellite sends it). Nothing is transmitted: the samples only
 // exist in memory or in a file.
 //

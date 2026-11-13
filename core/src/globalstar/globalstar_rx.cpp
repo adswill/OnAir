@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Globalstar activity monitor: see globalstar_rx.h. Windowed FFT frames of the whole sampled band are averaged into 10 ms slots; each of the
 // 1.23 MHz channels gets its power, a noise floor tracker, an on / off decision with hysteresis and, while on, the centroid of its spectrum
 // (the Doppler shift against the channel centre). Nothing is demodulated.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Ignore DC spike": a one-pole DC blocker in front of the receiver (after the spectrum, so the display still shows the spike where it is).
 // It removes the slowly varying mean of the capture, the LO leakage / DC offset that a recording carries at its centre, a few hundred Hz wide.
 #pragma once

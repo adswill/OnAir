@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM best-hour book (3.9, docs/SMART5-broadcast-3.9.md item 10). Shortwave DRM decodes at some hours and not at others. For each
 // station and frequency heard, the seconds listened and the seconds with good audio are counted per UTC hour and kept between
 // sessions (save()/load(), plain text). bestHours() ranks the hours; nextGood() gives the next UTC hour, from a time, whose

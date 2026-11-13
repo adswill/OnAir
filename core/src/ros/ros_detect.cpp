@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS identifier (ros_detect.h): one tone at a time on a fine grid, ~2.25 kHz wide, 4 / 8 / 16 baud. Clean-room, from public descriptions only
 // (docs/ROS.md); nothing of the ROS program was used.
 //

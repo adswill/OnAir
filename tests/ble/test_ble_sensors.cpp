@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BLE sensor payloads in the clear: BTHome v2, pvvx ATC custom format, Ruuvi RAWv2. Vectors from bthome.io, the pvvx README and the docs.ruuvi.com test vector. Simulated data only.
 #include "dect2/ble/ble_proto.h"
 #include <cstdio>

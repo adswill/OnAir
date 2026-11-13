@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B through the engine, as the interface and dect2cli use it: the synthetic source plays the test airspace (8 bit samples),
 // the engine must lock, decode, keep every sample, and report through latestRx(). The source plays faster than a radio (the receiver is what is
 // tested, not real time) and the run is counted in seconds of signal.

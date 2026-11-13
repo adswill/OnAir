@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: the 12.5 / 25 kHz channel filter choice. A POCSAG 1200 cycle at 15 dB, carrier offsets swept, with and without a stronger signal
 // on the next 12.5 kHz channel (another pager sending address 7777). Both widths must decode every page of the wanted channel when it is
 // alone; with the neighbour the narrow filter must keep every page and the wide one must do worse (the point of the setting).

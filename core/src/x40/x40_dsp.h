@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A few DSP helpers shared by the second block of 4.0 signal decoders.
 #pragma once
 #include "x40_int.h"

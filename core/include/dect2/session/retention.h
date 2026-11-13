@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Retention of the library files the sessions point at (docs/MODE-EXPERIENCE.md, 2.7 storage hygiene): audio older than N days or beyond a
 // size cap, IQ recordings the same, and the trash of user deletions.
 //

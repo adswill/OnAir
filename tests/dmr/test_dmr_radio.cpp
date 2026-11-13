@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR receiver and the radio in front of it: carrier offset (the sync tracking and the coarse carrier search, and the neighbouring channel that must
 // not be taken for the wanted one), clock offset of the sample clock, 8 bit rounding, DC spike, IQ imbalance, a transmitter with the wrong deviation.
 // Everything is compared with what the generator says it sent (dmr_eval.h). The other receiver tests are tests/test_dmr_rx.cpp and test_dmr_field.cpp.

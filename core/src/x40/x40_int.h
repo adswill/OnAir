@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inside the 4.0 signal receivers: the decoder interface and the small DSP pieces they share.
 #pragma once
 #include "dect2/x40/x40_rx.h"

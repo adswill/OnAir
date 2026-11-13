@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 8-VSB test signal generator: transport stream -> fields -> 8-level symbols -> VSB baseband (channel centred) with pilot,
 // multipath, carrier offset, noise and sample-rate offset. Never transmitted; used for tests and the built-in synthetic source.
 #pragma once

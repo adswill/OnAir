@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The transport the RTL-SDR protocol layer runs over. Everything above this trait is pure logic: on a desktop an implementation wraps libusb,
 //! on Android it wraps the file descriptor of a `UsbDeviceConnection` (usbdevfs ioctls, or `controlTransfer` / `bulkTransfer` called back through JNI).
 //! Return values follow libusb: the number of bytes transferred (>= 0) or a negative error code (libusb's `LIBUSB_ERROR_*`, e.g. -1 I/O, -7 timeout, -4 no device).

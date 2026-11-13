@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Which frequency is which (SDR++ semantics), as pure functions (tests/app/test_freq_model.cpp):
 //  - the LISTENING frequency: what is being demodulated (the VFO) = the radio centre plus the VFO's offset in the captured band;
 //  - the radio CENTRE: the middle of the captured band (at the antenna, after any converter is undone);

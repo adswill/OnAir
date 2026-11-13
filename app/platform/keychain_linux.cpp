@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Linux provider for the voice key store (keychain.h): the Secret Service through libsecret, loaded with dlopen at run time so OnAir
 // neither links nor requires it. When libsecret is missing, installKeychainProvider() returns "" and the passphrase fallback is used.
 // Compiled on every system that is not Apple or Windows; the real code is only active on Linux. Only the 32-byte master key is stored.

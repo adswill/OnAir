@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder tests: every stage alone (CRC vectors, line codes, scramblers, interleaver, FEC), the JSON reader and its messages, and
 // round trips: a signal generated from a definition (the examples and more), with noise, frequency and clock errors, decoded back.
 // "quick" runs the stages and one round trip per definition; "sweep" adds the lower SNRs, larger offsets and the streaming checks.

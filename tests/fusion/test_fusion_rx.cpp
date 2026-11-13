@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Yaesu Fusion receiver against the generated C4FM signal: every data type, callsigns, slow data, noise, tuning error, a mirrored spectrum,
 // a start in the middle of a transmission, two transmissions in a row, and noise alone.
 #include "fusion_test_util.h"

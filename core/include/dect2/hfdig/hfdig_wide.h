@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole-span decoding of the HF digital receiver (the "wide decode" switch, see widespan.h).
 // The span (up to kWideMaxSpanHz around the dial frequency) is brought down by one WideDecimator, then
 //  - FT8 / FT4 / WSPR: every standard dial slot (kFtxSlots) visible in the span gets its own channel (mix, 24 kHz front end, upper sideband

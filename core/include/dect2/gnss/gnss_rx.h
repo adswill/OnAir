@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS receiver: acquisition, tracking, navigation messages and position fix for the satellite navigation systems.
 // Written to the engine's contract: configure() once the sample rate is known, feed() from the analysis thread (never blocks),
 // telemetry() and the setters from the interface thread (they must be safe while feed() runs).

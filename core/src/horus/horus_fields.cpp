@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus: the user-editable tables (horus_proto.h). The payload ID list ("id, callsign" lines) and the v2 custom field list
 // in the JSON shape the horusdemodlib wiki documents ("struct" with the characters < > B b H h f x, "fields" with the
 // post-processing names none, battery_5v_byte, divide_by_10, divide_by_100). Nothing is downloaded: the user pastes or edits them.

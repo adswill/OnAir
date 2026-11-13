@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder receiver: the pipeline a definition describes, built at configure(). Mixer and decimating channel filter, demodulator
 // (envelope, frequency discriminator or carrier loop), matched filter, Gardner symbol clock with cubic interpolation, adaptive level
 // slicer (FSK / ASK) or decision-directed PSK carrier loop, then the frame engine: every polarity / PSK rotation and line-code phase is

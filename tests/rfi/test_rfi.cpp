@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Interference hunter: spur and comb finding, classification (switching supply, LED lamp, powerline, clock / oscillator leak), the monitor
 // (baseline, new-interference alerts, floor rise, clearing, no false alarms), the walk meter and logs, and the NMEA parser. Synthetic sweeps only.
 #include "../common/tmp_path.h"

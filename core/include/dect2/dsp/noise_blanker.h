@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A baseband impulse noise blanker (#264), the usual kind: the mean magnitude of the samples is followed with a slow average, and a sample
 // more than threshold times above it starts a blank of width seconds (the samples are set to zero; the average does not learn from them).
 // Ignition, power-line and switching clicks are much shorter and much stronger than any wanted signal, so a blank of some tens of

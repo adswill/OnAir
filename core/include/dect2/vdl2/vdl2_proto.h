@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 2 layers above the modem: burst header, scrambler, Reed-Solomon code and interleaving, HDLC framing, AVLC frames, and the
 // protocols the frames carry (ACARS over AVLC, ISO 8208 / X.25 packets with CLNP and COTP headers, XID link management). The same in
 // reverse for the test signal. Nothing here touches a radio signal.

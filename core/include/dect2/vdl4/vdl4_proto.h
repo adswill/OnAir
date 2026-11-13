@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 link layer and PHY helpers (GFSK 19.2 kbit/s, ISO/IEC 13239 framing). Receive only.
 //
 // Facts from ICAO Annex 10 Vol III §6.9.5 (GFSK, NRZI, training sequence), ETSI EN 301 842-2 (burst layout, sync burst,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM sensors, the 3.9 devices (X10 RF, Insteon, inFactory, Ambient Weather WH31E, Nissan and GM TPMS, Efergy Optical, ESIC EMT7110, ERT SCM+).
 //
 //   1. known answers: the check algorithms against frames printed in the rtl_433 notes (real captures): WH31E CRC-8 and SUM-8, SCM+ CRC-16

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C (ETSI EN 300 429, ITU-T J.83 annex A; annex C is the same with a roll-off of 0.13 in 6 MHz channels): the constellations with their
 // quadrant rule, the differential coding of the two most significant bits, the byte to symbol mapping, and the test transmitter.
 // The outer code (energy dispersal, Reed-Solomon (204,188), Forney interleaver I = 12) is the one of DVB-T (dvbt.h) and is shared with it.

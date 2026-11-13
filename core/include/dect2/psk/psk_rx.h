@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 / PSK63 receiver (BPSK and QPSK): decodes every PSK signal in the audio passband of an upper sideband receiver at once.
 //
 // The channel is mixed to 0 Hz and brought to 24 kHz complex (marine::Front). A 4096-point spectrum every 2048 samples (5.9 Hz bins),

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mathematical and physical constants shared by every mode (previously redefined as a local kPi etc. in ~160 files).
 // Only exact, full-precision values live here; modes that deliberately use a different pi (e.g. IS-GPS-200's
 // 3.1415926535898) keep their own constant.

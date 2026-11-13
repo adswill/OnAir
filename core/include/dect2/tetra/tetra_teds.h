@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA Enhanced Data Service (TEDS, ETSI EN 300 392-2 V3.x): identity and signalling only, never user data.
 //
 // What OnAir reads of TEDS:

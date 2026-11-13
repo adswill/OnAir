@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Screens of the SatDump-list weather links (families 260 - 268, one receiver class): the picture of the pass growing line by line, the instrument and channel,
 // Save PNG, the one-click "follow the next pass" button, and the receiver state. docs/SATDUMP-TIER1-3.7.md.
 #include "ui/kit/mode_panel.h"

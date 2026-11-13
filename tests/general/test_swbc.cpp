@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shortwave broadcast band table: complete set, sorted, no overlaps, inside the HF range, and the band-plan template agrees.
 #include "dect2/general/swbc.h"
 #include "dect2/bandplan/bandplan.h"

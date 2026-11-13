@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Integrations: decoded events (ADS-B, AIS, APRS, pagers, ACARS/VDL2, sondes, voice call records ...) published as MQTT messages, posted to a webhook
 // or appended to a JSON-lines file. Everything is off until the user switches it on and types the broker / address; there are no default servers.
 // The password and tokens are the user's: they live in the settings file (owner-only) and are never put into a status text, a log line or an event.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Real samples at fsHz -> complex baseband: a decimating FIR with complex taps. Shared by the native radios that sample a real signal
 // directly (the Fobos SDR's HF inputs, the RX888's ADC): source_fobos.cpp, source_rx888.cpp.
 #pragma once

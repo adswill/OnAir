@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Finds hybrid FM HD Radio stations in a wide capture: a pair of flat digital sidebands 129 to 198 kHz either side of a channel on the 100 kHz raster, with nothing just outside them.
 // Only such a channel gets an HdrReceiver (Whole span), which then proves it by locking.
 #pragma once

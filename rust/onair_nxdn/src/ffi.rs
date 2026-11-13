@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! C ABI of `onair_nxdn` (core/include/dect2/rs/nxdn.h). Every export is `onair_nxdn_*`; pointers come as (pointer, length) pairs and the caller owns all buffers.
 //! Functions with output buffers return false (or `usize::MAX`) when a buffer is too small. Names are static NUL-terminated strings.
 #![allow(clippy::missing_safety_doc)]

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IMM position estimator, see track_imm.h and docs/position-estimation.md.
 #include "dect2/track/track_imm.h"
 #include <algorithm>

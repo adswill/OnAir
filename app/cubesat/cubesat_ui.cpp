@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry screens: the frame log (time, satellite, framing, callsigns or CSP addresses, size, Reed-Solomon corrections) with the
 // selected frame's fields and a hex / ASCII dump, the editable satellite table (name, NORAD number, frequency, framing, speed, callsign)
 // the frames are named after, and the KISS forwarding option. The pass planner (passes_ui.cpp) starts this mode at AOS for its CubeSat rows

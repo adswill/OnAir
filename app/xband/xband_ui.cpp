@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Screens of the X-band links (families 530 - 549, one receiver class): the channels and products of the pass, Save, and the main path: play a recording through the receiver.
 // docs/SAT-XBAND-3.8.md.
 #include "ui/kit/mode_panel.h"

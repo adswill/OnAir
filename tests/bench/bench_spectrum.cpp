@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Spectrum engine alone: CPU seconds per signal second for the sample rates and FFT sizes the analyser runs at.
 // Feeds synthetic IQ (a few tones plus noise) in 64k-sample pieces like the engine does and takes a frame 30 times per signal second,
 // like the display does. Usage: bench_spectrum [seconds_of_signal=2]. Prints one line per rate and size; no pass/fail.

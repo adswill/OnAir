@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pass scheduler: priority on overlaps, trimming, busy windows, short slots, daily windows.
 #include "dect2/geo/pass_sched.h"
 #include <cmath>

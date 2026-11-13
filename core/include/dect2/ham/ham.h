@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham operation (WSJT-X style) for FT8 / FT4 / FT2: the amateur band table, the TX gate, the ADIF log with worked-before, and the QSO
 // auto-sequence engine. Pure logic: no audio, no radio, no clock of its own (the caller passes UTC seconds). Nothing here transmits;
 // the app asks the engine for the message of a slot and sends it only through the TX path when the gate allows it.

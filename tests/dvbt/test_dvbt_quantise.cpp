@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #365: the soft values handed to the 8-bit Viterbi are limited to +-limit (fecp::kViterbi8Max) on every SIMD path (NEON, SSE2, plain C++), also for
 // strong carriers; an unclipped +-127 wraps the decoder's int8 branch metrics. Runs on lengths that use the vector loop and the scalar tail.
 #include "dect2/dvbt/dvbt.h"

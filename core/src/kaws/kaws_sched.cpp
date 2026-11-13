@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS time structure and planning. See kaws_sched.h.
 #include "dect2/kaws/kaws_sched.h"
 #include <cmath>

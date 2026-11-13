@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL streaming voice receiver. Port of kaal_rx.py (batch) to a chunked pipeline; see kaal_rx.h for the overview.
 #include "dect2/kaal/kaal_rx.h"
 #include "dect2/dsp/fftutil.h"

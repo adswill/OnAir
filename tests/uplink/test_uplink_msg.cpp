@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode S uplink message layer: every uplink format encoded and decoded, the AP field giving the address back (parity XOR CRC), the UF11
 // interrogator codes (II and SI through CL), the Comm-B register from RR / DI / RRS, the UF16 resolution message, bit errors.
 #include "dect2/uplink/uplink_msg.h"

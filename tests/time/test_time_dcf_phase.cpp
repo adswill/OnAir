@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DCF77 phase code by correlation: the chip sequence's start and the bit of every second, with noise and a carrier offset (simulated).
 #include "dect2/time/dcf77_phase.h"
 #include "dect2/common/stable_random.h"

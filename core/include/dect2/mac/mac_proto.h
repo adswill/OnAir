@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MAC television (Multiplexed Analogue Components, the MAC/packet family): the numbers and the codes shared by the receiver, the generator
 // and the tests. D2-MAC/packet follows ETS 300 250 (EBU SPB 489), read from the specification: line structure (Part 1 Fig. 1a), line and
 // frame sync words, the special data of line 625 (FSD, UDT, SDF, RDF with their BCH codes), bit interleaving and energy dispersal, duobinary

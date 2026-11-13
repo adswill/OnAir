@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TR 101 290 on simulated transport streams: a clean stream is clean, and each fault fires its check.
 #include "dect2/tv/tr101290.h"
 #include "dect2/tv/ts_proto.h"

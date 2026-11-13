@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The action row every mode shows above its Simple view or its tabs: the "what do I do next" line, [Auto setup] and [Reset this mode].
 // Auto setup: Auto gain, the mode's own bandwidth and sample rate, and the fine frequency (a narrow capture only: the strongest peak near the tuned
 // frequency). Reset this mode: frequency, bandwidth and sample rate back to the mode's defaults, custom width and rate cleared. Both say what they did

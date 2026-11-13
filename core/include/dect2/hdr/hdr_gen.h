@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeHdrSynth(): a hybrid station with its digital sidebands, carrying station information (SIS: call sign WONR, name "OnAir HD", long

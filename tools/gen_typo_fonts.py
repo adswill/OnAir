@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Embeds third_party/fonts/*.ttf into app/ui/typo_fonts.inc as raw-deflate byte arrays (inflated at start-up by dect2::inflateRaw)."""
 import os, zlib, sys
 root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

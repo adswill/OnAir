@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Phase 2: the ACTIVE NFC READER transmitter (ISO/IEC 14443 Type A). It builds a continuous 13.56 MHz carrier modulated with
 // 100% ASK modified-Miller reader frames (REQA, anticollision CL1 / CL2, SELECT, READ for Type 2, GET_VERSION). The carrier never
 // drops between frames (only the short Miller pauses), as a real reader keeps the tag powered.

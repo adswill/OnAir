@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // The antenna inputs of one radio: listed as one device entry per port (SDRplay "<serial>#<n>", SoapySDR "<args>#antenna=<name>").
 // Header only and free of the GUI, so the grouping can be tested.

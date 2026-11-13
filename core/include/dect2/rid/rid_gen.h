@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Drone Remote ID test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // The Bluetooth LE and Wi-Fi test generators (ble_gen.h, wifi_gen.h) with Open Drone ID payloads, made at twice the rate, placed where

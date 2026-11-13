@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Road: 802.11p / ITS-G5 safety messages (J2735 BSM, ETSI CAM) with the Wi-Fi OFDM receiver at 10 MHz; EN 12253 / EN 12795 DSRC tolling (the HDLC framing only, never any content); and GBAS (see below).
 #include "avroad_int.h"
 #include "dect2/avroad/avroad_proto.h"

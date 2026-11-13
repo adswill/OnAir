@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR voice header / terminator repair from the radio and group IDs heard on this channel (voice/heard_ids.h): the destination and source of a link
 // control word whose Reed-Solomon (12,9) check failed are tried again with heard IDs within two bit flips, and a candidate is kept only when the word
 // then checks out clean. Unique or nothing: an ID cannot be made up.

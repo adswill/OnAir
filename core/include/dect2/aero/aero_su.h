@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero signal-unit layer (no radio): the decoded bits of one P-channel block -> signal units (SUs) ->
 // logons and ACARS messages, and blocks for the test signal.
 // Boundary with the demodulator: the information bits of one interleaver block after deinterleaving, Viterbi decoding

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OOK / ASK pulse analyser (key fobs, remote switches, sensors, 300 - 920 MHz): the same job as the "analyse" mode of rtl_433, from the envelope of the signal in the 90 kHz around the tuned frequency:
 // the envelope is sliced with an adaptive threshold (40 % between the noise floor and the recent peak, with hysteresis) into pulses and gaps (4 us resolution at the default 250 ksps); a frame is a run of pulses
 // whose gaps stay under 5 ms (and under 12 times the median pulse width); a frame needs 8 pulses. The pulse widths, gap widths and pulse + gap periods are clustered (1-D, a new cluster where

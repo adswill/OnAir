@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Planning for the fast scanner: per-radio capture profiles (rate, usable fraction, retune cost), the hop plan for a set of bands with
 // exclusion ranges and priority bands, the speed model (the retune-limited ceiling of a radio) and channelisation of a spectrum into
 // channels. Pure code.

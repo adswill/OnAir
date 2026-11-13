@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPU FFT / power spectrum / FIR decimator (Metal on macOS; elsewhere available() is false and the CPU code is used: Vulkan and Direct3D 11
 // versions are not written yet, the app says "GPU: macOS only" for the modes that depend on it). Complex float, power-of-two sizes.
 // The FFT is a Stockham radix-2 autosort in device memory (log2 N passes, ping-pong buffers), the batch is the grid's second dimension.

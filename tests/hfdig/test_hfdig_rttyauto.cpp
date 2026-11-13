@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RTTY auto-lock (rttyAutoAnalyse and HfdigRtty::autoLock): speed, shift and polarity from the audio alone. Synthetic transmissions of every speed
 // (45.45 .. 100 baud) and shift (170 .. 850 Hz), both polarities, tones anywhere in the passband, noise down to a few dB, the lines a little off
 // the table's shifts; noise alone and a CW-like tone must give nothing. With "--sweep" the program prints the table only.

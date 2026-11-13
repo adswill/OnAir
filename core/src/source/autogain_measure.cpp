@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic gain, parts 2 and 3: what is measured (ADC, noise floor, channel SNR, the mode's quality, intermodulation) and what each mode
 // wants. See docs/AUTOGAIN.md.
 #include <string>

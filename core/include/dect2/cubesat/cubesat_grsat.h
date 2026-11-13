@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The satellite table of gr-satellites (python/satyaml, GPL-3.0-or-later, Daniel Estevez EA4GPZ and contributors): per NORAD number the
 // transmitters with frequency, modulation, baud, framing and the telemetry decoder gr-satellites uses. Generated into
 // core/src/cubesat/cubesat_grsat_data.inc by tools/cubesat/satyaml2inc.py (regenerate, do not edit). The CubeSat receiver uses it to set

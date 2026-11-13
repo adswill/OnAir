@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham science wiring: tuning for every kind, mode rows, panel hook, family and poll-slot counts, the engine cases, the number table, and an honest doc page
 // (simulated signals only, what antenna the pulsar mode needs, which of the requested modes were not built and why).
 #include <cstdio>

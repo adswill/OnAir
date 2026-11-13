@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Serial port for the ESP32 radio: an interface (tests use an in-memory pair), the POSIX implementation, and the search for ESP32 boards.
 #pragma once
 #include <cstddef>

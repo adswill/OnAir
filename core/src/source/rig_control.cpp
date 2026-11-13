@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Rig control for transmitting (see rig_control.h): error hints, finding the rig, audio pairing, the watched CAT link and the CAT HamRigIo.
 #include "dect2/source/rig_control.h"
 #include "dect2/audio/audioout.h"

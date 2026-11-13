@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV receiver against the radios and transmitters of issue #239 (an Airspy R2 at 10 Msps looking at a HackRF transmitting analogue TV):
 // the sample rates and tuning errors such a pair gives. The signal is a PAL/SECAM/NTSC test card for the usual systems, the channel is shifted
 // by the tuning error, the spectrum may be mirrored (I and Q swapped), and the level is low. Every line printed is a result of the report.

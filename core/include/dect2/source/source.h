@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IQ sample sources: HackRF, recorded file, built-in synthetic DVB-T2-like signal.
 #pragma once
 #include <functional>

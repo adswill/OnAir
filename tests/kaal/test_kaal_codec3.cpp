@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL codec v3 against the Python kaal_codec_v3.py: the bits of the first frames at 12, 16, 24 and 32 kbit/s are identical, the decode of
 // those bits follows the Python to within one LSB (also with a wrong-profile and a wrong-shape frame), the profile is read from the header
 // by an any-profile stream decoder, and a round trip keeps a tone.

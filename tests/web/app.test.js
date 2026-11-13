@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web 3.9: unit tests of the page's pure code (web/onair-app/lib.js, worklet.js). Node built-ins only: node tests/web/app.test.js
 "use strict";
 const assert = require("assert");

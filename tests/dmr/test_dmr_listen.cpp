@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Listen-pack WAVs of a spoken phrase through every vocoder OnAir is allowed to encode with (Codec 2: M17 and FreeDV).
 // DMR / NXDN / dPMR / P25 / D-STAR have no encoder here (mbelib is decode-only), so those files are not written.
 // Set DECT2_VOICE_LISTEN_DIR (or writes next to the binary). Optional DECT2_VOICE_WAV, else voice_listen/00_original.wav.

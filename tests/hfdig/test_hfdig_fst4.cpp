@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, FST4 and FST4W: the LDPC tables (the generator and the parity-check lists of WSJT-X come from different files: every codeword must
 // satisfy every check), then the whole receiver on synthetic audio (clean, near the threshold, 15 .. 300 s, frequency / time / clock offsets, two
 // stations, noise alone) and the real recordings of the WSJT-X samples when HFDIG_WSJT_SAMPLES is set.

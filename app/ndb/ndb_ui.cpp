@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NDB screens: the Morse ident in large type, the tone it was keyed with, the speed, and the idents read so far.
 // The listener hears the keyed tone. HF beacons stay on their own screen.
 #include "app.h"

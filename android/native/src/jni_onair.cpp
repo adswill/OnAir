@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // JNI bridge: the Android app talks to the desktop receiver library (dect2::Engine) through these functions only.
 // One engine for the whole process. Receive only: nothing here transmits.
 #include <jni.h>

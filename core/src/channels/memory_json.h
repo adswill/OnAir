@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A small JSON reader for memory_io.cpp (the project has only a flat reader in the remote API). Reads any JSON value; limits: depth 24, 16 MB.
 // Internal to core/src/channels; the writer side is plain string building in memory_io.cpp.
 #pragma once

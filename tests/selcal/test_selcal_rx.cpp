@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SELCAL receiver on the built-in test signal (voice, AM-CP, DH-KS, AM-CP in 22 s) as an FM channel at a radio's rate, with a frequency offset and noise,
 // and a second case in the engine's own mode (own log, no other tone decoders).
 #include "dect2/selcal/selcal_rx.h"

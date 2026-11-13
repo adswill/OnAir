@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Doppler-curve orbit refinement: see doppler_fit.h
 #include "dect2/geo/doppler_fit.h"
 #include <algorithm>

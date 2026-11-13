@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The SQLite file format pieces behind the MBTiles map reader (https://www.sqlite.org/fileformat2.html): database header, page header, b-tree cells (table leaf
 //! 13, table interior 5, index leaf 10, index interior 2), variable-length integers, record decoding, overflow payload sizes, and the text checks of the `tiles`
 //! schema. Everything works on page buffers the caller read; the file I/O, the b-tree walks and the overflow chains stay in C++ (`core/include/dect2/geo/mbtiles.h`).

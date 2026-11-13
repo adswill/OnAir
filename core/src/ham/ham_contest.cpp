@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham contest helpers: exchanges, cut numbers, the received exchange, dupes and Cabrillo (ham_contest.h).
 #include "dect2/ham/ham_contest.h"
 #include "dect2/ham/ham.h"

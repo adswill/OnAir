@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM through the engine, as the app uses it: the synthetic source plays the mode's test signal at the rate the tuning table asks for; the engine
 // must lock, decode the multiplex and report it through latestRx without dropping samples. Real time: about 20 s.
 #include "dect2/engine/engine.h"

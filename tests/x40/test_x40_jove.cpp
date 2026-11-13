@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio Jove burst finder: short and long bursts of different strength, a slow baseline drift, and the false-burst rate on noise alone.
 #include "x40_gen.h"
 using namespace x40gen; using namespace dect2;

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA Direct Mode receiver. Mix and resample to 72 kHz (4 samples per symbol), root raised cosine filter, differential symbol at every sample. The DSB is found by the coherent
 // differential correlation against its 38 bit training sequence, which needs no carrier recovery; the rotation of that correlator gives the frequency error. A found DSB is demodulated
 // and its SCH/S and SCH/H decoded. With the slot clock of a good DSB, the slots are read as they come for normal bursts (22 bit training sequence).

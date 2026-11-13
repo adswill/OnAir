@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Frequency list formats (CHIRP, SDR++, SDR#, plain CSV), the import preview and merge rules, "My lists" and the built-in lists. See memory_formats.h.
 #include "dect2/channels/memory_formats.h"
 #include "dect2/channels/freq_db.h"

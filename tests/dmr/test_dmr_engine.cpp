@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR through the engine, as the GUI and dect2cli use it: the built-in synthetic source plays the DMR test signal (SynthConfig::mode = 11), the engine
 // runs the receiver on its analysis thread and publishes RxTelemetry. A base station for 12 s and direct mode for 10 s; the telemetry is read from this
 // thread while the analysis thread feeds, a retune in between must reset the receiver without the sequence number going back, and no samples may be

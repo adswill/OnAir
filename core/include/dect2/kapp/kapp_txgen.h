@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAPP as a transmit mode: the TX session's generator. The message (TxRequest::text, or the bytes of TxRequest::file when one is chosen, up to 8 MiB) is cut
 // into the selective-repeat blocks of kapp_arq.h and sent as bursts at one fixed profile. The transmission is one-way: no ACK is waited for, so the whole
 // message is sent `kapp.repeat` times (a receiver that missed a block gets it on the next pass; one that has the message already ignores the repeat).

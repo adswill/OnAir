@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Single DES (FIPS 46-3), ECB. Used by the GK-2A xRIT session layer, which encrypts every image segment with one 64-bit key
 // per key number (KMA decryption keys, imported by the user). No keys are built in.
 #pragma once

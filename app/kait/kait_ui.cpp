@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT screens: the receiver tab (the picture as it decodes, layer by layer, with the link numbers) and the transmit options (callsign, picture file, profile)
 // that the TX panel draws for the KAIT signal. English texts only.
 #include "app.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A bank of LoRa channels for a wide capture: for every wanted channel (an offset in the input and a bandwidth) one channel filter, and for
 // every spreading factor / sync word one demodulator of the mesh receiver's LoRa physical layer (mesh_lora.h). Optionally a second set per
 // channel for inverted IQ (LoRaWAN gateway downlinks send their chirps the other way round: the channel samples are conjugated for it).

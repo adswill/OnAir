@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna designer tools: every template builds and solves to a sane impedance, the calculators against hand-worked values, the NEC deck
 // and pattern file round trips, and the optimiser trimming a dipole to resonance.
 #include "dect2/antd/antd.h"

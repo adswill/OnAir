@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // spectrum, waterfall, histogram and constellation plots
 #include "../ui/ui_preview.h"
 #include "../app.h"

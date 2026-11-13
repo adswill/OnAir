@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-server: OnAir without a window. The radio is attached to this computer (a Raspberry Pi, a Linux box, a Windows PC with no screen); it is
 // controlled from a web browser (the page this program serves) or by any program that speaks the remote-control API (docs/headless-server.md).
 // No cloud and no relay: the browser connects straight to this program. Access from other computers needs a token; TLS is optional.

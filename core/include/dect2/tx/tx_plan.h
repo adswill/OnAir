@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit planning helpers (warn only, nothing here ever blocks a transmission): a link-budget estimate, a frequency-plan check that lists
 // what a carrier or its harmonics land on, and a power ramp with an SWR-based advice. The panels show these as notes next to the Arm switch.
 #pragma once

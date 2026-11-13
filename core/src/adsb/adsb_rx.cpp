@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B receiver: the pulse demodulator (adsb_demod), the frame checks and the aircraft table (adsb_track), reports four times a second.
 // Everything runs in feed(); telemetry() and the setters only take the lock that protects the table.
 #include "dect2/session/mode_adapters.h"

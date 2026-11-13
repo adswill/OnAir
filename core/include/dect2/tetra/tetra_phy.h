@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA downlink physical layer and lower MAC (ETSI EN 300 392-2 clauses 8 and 9): pi/4-DQPSK at 18 ksym/s, the continuous downlink
 // bursts (normal and synchronisation), the training sequences, and the channel coding of the logical channels a base station broadcasts
 // to every terminal: CRC-16, the 16-state rate 1/4 mother code punctured to 2/3 (RCPC), block interleaving, the colour code scrambling,

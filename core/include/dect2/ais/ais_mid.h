@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The country and the kind of station behind an MMSI (ITU-R M.585): ship stations carry the MID (Maritime Identification Digits) first,
 // coast stations as 00MID, groups as 0MID, SAR aircraft 111MID, auxiliary craft 98MID, aids to navigation 99MID, handhelds 8MID, and the
 // 970 / 972 / 974 devices (AIS-SART, man overboard, EPIRB-AIS) carry no country. The MID list is core/src/ais/ais_mid_table.inc (ITU).

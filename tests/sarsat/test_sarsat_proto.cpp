@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT message layer: every test beacon survives encode -> decode with all its fields, the BCH codes repair up to 3 / 2 damaged bits and refuse
 // more, the fixed fields land where the format puts them, Baudot packing, positions in all four quadrants and the position default.
 #include "dect2/sarsat/sarsat_gen.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The auto-gain loop's glue to the app: it configures SmartAgc (core/src/source/agc.cpp) for the radio and mode in use, feeds it the ADC statistics,
 // the spectrum and the decoder's SNR, applies what it decides, and offers the gear button with the "Let AGC turn the amp on/off by itself" switch.
 // The amp is off by default for everyone and the AGC never touches it unless the user allowed that for this radio (docs/auto-gain.md).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode S uplink receiver: the interrogations ground radars and ACAS aircraft send on 1030 MHz.
 //
 // Pulses are cut from the envelope (runs over a threshold 10 dB above the noise floor, short dips merged, edges at half amplitude), then

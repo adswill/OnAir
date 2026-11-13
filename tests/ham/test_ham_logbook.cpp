@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham logbook: add / edit / delete with undo and redo, dupe check, search, ADIF round trip (every field, unknown fields kept), import
 // of another program's file (header, lower case tags, odd lengths), save and load.
 #include "dect2/ham/ham.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The passive radar window (View > Passive radar): aircraft from the echoes of a broadcast transmitter, with a reference and a surveillance
 // channel. Sources: a built-in simulator with synthetic targets (demo), a two-channel cf32 recording, or two single-channel recordings.
 // Shows the range-Doppler map, a Doppler-time waterfall, the tracks and a local map with the bistatic range ellipses around the illuminator

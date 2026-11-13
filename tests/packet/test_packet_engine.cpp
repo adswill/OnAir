@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS / Packet through the engine, as the interface uses it: the synthetic source plays the mode's test signal (faster than a radio: the receiver
 // is tested, not real time), Engine::setStandard(26) selects the mode, the frames come back through latestRx() with the mode's standard.
 #include "dect2/engine/engine.h"

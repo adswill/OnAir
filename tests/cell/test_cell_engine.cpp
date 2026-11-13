@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers through the engine (setStandard(34)): the synthetic source plays the 10 MHz test cell at 20 Msps; the receiver finds it,
 // reads its MIB and system information and reports through latestRx() with its EARFCN.
 #include "dect2/cell/cell_rx.h"

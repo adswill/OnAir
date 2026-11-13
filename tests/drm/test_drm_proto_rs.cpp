@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the DRM signalling and data layers (dect2::drmp, the Rust crate onair_drm): the CRCs, FAC blocks (both robustness mode families, good and
 // corrupted), SDC data fields (every entity type, parsed twice into the same record so the in-place refinement is covered), SDC block checks, the audio super frame
 // split (consistent and corrupt borders), the text message segment check, the tables, MJD conversion and the data service helpers, over ONAIR_DIFF_ITERS (default

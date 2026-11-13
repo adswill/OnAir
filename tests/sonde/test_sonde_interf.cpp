@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Things in the band that are not sondes: a strong continuous wave and an FSK carrier of 4800 baud with random data (a pager, a telemetry
 // link). The RS41 beside them must still decode; the CW must not make a channel; the FSK carrier takes a channel that never decodes and
 // is given up after 15 s. Also a second RS41 that is 10 dB weaker, 30 kHz away from a strong one.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B manoeuvre alerts (adsb_manoeuvre.h): simulated flights sent as 2 s updates with lost updates, rate and heading noise, and
 // aircraft that send no vertical rate (the rate then comes from the altitude). Simulated only: no real recording of such a flight.
 #include "dect2/adsb/adsb_manoeuvre.h"

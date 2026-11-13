@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NavIC (IRNSS) L5 SPS receiver, ISRO "IRNSS Signal-in-Space ICD for SPS" version 1.1 (2017), section numbers below are of that document.
 // The 1023 chip Gold codes at 1.023 Mcps (section 4.1, Table 7), BPSK data at 50 symbols/s, 600 symbol subframes (16 symbol sync word EB90,
 // 584 convolutionally coded and block interleaved symbols, section 5), CRC-24Q. Acquires, tracks and decodes the navigation message; shows the

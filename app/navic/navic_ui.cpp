@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NavIC screen: satellites tracked, time of week and week number from the navigation message. No position fix (core/src/navic, docs/SAT-MISC-3.8.md).
 #include "app.h"
 #include "dect2/navic/navic.h"

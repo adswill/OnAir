@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Real signal levels: GPS L1 arrives at about -130 dBm, C/N0 35-45 dB-Hz with a good active antenna and 25-35 with a poor one or a partly blocked sky.
 // The simulated satellites are weaker away from the zenith (about 9 dB at the horizon), so a top C/N0 of 40 gives 31-40, 36 gives 27-36, 33 gives 24-33.
 // The receiver must find the weak ones too (a longer search when the first one finds too few), make no false satellites, and still fix.

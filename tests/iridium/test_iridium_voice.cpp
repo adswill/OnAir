@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium voice calls (core/include/dect2/iridium/iridium_voice.h) with synthetic voice slots from our own generator (iridiumBuildVoice) and the
 // stub codec plug-in (tests/codec/stub_codec_plugin.c, no codec). Proves the chain we can prove without a real recording:
 //  1. the 39 voice bytes come out of a burst exactly as built (frame layer, LCW frame type 0);

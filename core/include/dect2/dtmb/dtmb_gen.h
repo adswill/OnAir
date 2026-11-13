@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB test signal: the generator the synthetic source plays and dtmbtool writes to a file. It is a transmitter model (dtmb_tx.h) followed by
 // the square-root raised cosine filter at any sample rate, an echo channel, a carrier and clock offset and noise. Nothing is transmitted.
 //

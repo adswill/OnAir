@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trail drawing for the aircraft map and the radar: which segments of a projected track are worth drawing. Pure (tests/app/test_render_caps.cpp).
 // - decimation: a point closer than minPx to the last point drawn is skipped (the newest point is always kept), so a zoomed-out map with
 //   hundreds of 80-point trails does not draw tens of thousands of sub-pixel lines

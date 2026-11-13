@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """Writes kaal_golden_tx.h: golden samples from the Python transmitter (kaal_tx.py) and the beacon slice (kaal_beacon_slice.py).
 Usage: gen_golden_tx.py [phy_dir=/tmp/kaal-phy] [codec_dir=/tmp/kaal-codec]
 Signal: 1 s, 16 kHz, 8000*sin(2 pi 440 t) truncated to int16 (no RNG). The values are the unscaled Python output (unit-power

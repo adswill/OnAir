@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun file import: a .cadu file (1024 byte frames, no radio) through the FY-4 file layers, an encrypted file (kept and counted, never decoded),
 // a damaged picture segment (listed with errors), a file with a lost packet, and a .svissr file (44356 byte descrambled frames) into the five pictures.
 #include "dect2/fygeo/fygeo_gen.h"

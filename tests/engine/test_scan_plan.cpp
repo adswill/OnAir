@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The merged Scanner view's pure logic (app/scan/scan_plan.h): scope, scan list building, next channel, lockout, priority, hold, hit records, tone text.
 #include "../../app/scan/scan_plan.h"
 #include <cstdio>

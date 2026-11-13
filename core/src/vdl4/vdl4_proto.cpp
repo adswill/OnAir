@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 4 link layer and PHY helpers: see vdl4_proto.h.
 #include "dect2/vdl4/vdl4_proto.h"
 #include "dect2/adsb/adsb_msg.h"

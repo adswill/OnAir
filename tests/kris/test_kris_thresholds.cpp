@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FER-versus-Es/N0 measurement of the Kris profiles on an AWGN channel (KAVB n = 1920, KAPP n = 2304, KAFT n = 7680). Only runs with KRIS_MEASURE=1 in the environment
 // (ctest -R kris_thresholds, slow); without it the test passes at once. For every (n, rate, modulation) it sweeps Es/N0 in 0.5 dB steps from 2 dB below the
 // "Shannon + 1.5 dB" estimate (Shannon: Es/N0 = 2^(rate x bits per symbol) - 1) upwards, 300 codewords per point (a point is abandoned at the 4th frame error), and prints

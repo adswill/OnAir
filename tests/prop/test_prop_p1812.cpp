@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ITU-R P.1812-8 against the ITU-R Study Group 3 validation examples (P_1812_8.zip): 7 published profiles (sea / land, horizontal /
 // vertical, 1 to 110 km, line of sight and trans-horizon, with and without clutter), 3 time percentages each, the basic transmission loss
 // and the published intermediate values. Plus behaviour checks: location percentages, the flat-profile limit, frequency trend.

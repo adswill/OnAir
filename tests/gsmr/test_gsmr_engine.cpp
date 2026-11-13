@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GSM-R through the engine (setStandard(41)): the synthetic source plays the two railway cells at 5 Msps; the receiver finds them and reports
 // through latestRx() with their ARFCNs.
 #include "dect2/engine/engine.h"

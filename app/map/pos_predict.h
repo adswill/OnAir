@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Position prediction on the aircraft maps (ADS-B, VDL2, HFDL, ACARS): one TrackHub per screen, the "Predict positions" and "uncertainty"
 // switches, the ghost marker with its dashed ring and the 95 % ellipse, and the tooltip text. The estimator is core/src/track; see
 // docs/position-estimation.md. Header only; every function is inline so a screen needs no other file.

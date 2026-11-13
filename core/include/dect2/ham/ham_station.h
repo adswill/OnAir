@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham station (4.0): what the Ham screen needs around the operating panels, as pure logic.
 //  - the mode catalog: every amateur mode OnAir decodes, in one list, with where it runs (the slot engine of the Ham screen, the keyboard panel of
 //    the Ham screen, or its own receiver screen), its ADIF mode / submode and the report style (dB, RST 599, RS 59);

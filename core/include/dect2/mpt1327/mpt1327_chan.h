@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 channel number -> frequency. The control channel names traffic channels by number only; the frequency follows from the control channel's own
 // frequency and number and the channel spacing when the plan is contiguous (a duplex gap or a split plan needs the right control channel number).
 // Header only, receive-side helper for the channel table (docs/TRUNK-TRACKING.md).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! A tiny bounded text writer: the protocol crates do not allocate, so text is built in a caller buffer.
 
 /// Appends to a byte buffer; once something does not fit, `overflow` is set and nothing more is written.

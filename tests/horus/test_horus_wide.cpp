@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus: three balloons in one capture (Binary v2 on the dial, Binary v1 12 kHz above, RTTY 18 kHz below) at a radio rate
 // with the dial off the centre and a frequency error; the wide-span search must open channels for the other two. Then the payload
 // table (track, climb rate), the results file round trip, the user tables and the mode numbers.

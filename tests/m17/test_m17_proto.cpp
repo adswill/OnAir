@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 protocol layers against the specification: CRC test vectors, base-40 callsigns, Golay(24,12) corrections, the interleaver, the
 // frame builders and their soft decoders (with bit errors), GNSS and text META.
 #include "dect2/m17/m17_proto.h"

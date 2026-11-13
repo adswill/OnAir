@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 3.9 sensitivity pass D (docs/SENSITIVITY-3.9-D.md): the 90 % threshold of the HF keyboard decoders (Olivia, Contestia, MFSK, THOR,
 // DominoEX) on their own transmitter's audio (8 kHz, hfdig_kbd.h) with white noise; SNR = signal power over the noise power in 2500 Hz,
 // as in test_hfdig_kbd.cpp. A trial passes when the key text appears; each trial has its own noise and its own start in the text.

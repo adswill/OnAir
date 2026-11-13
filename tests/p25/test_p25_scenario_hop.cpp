@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Trunk following on the real receiver path with ONE retunable radio and a voice channel outside the capture (p25_scenario.h): grant -> the radio leaves
 // the control channel -> the voice reaches the call log -> terminator -> back on the control channel and the control messages flow again. Also: the
 // carrier that just stops (hang time), a grant for a channel nobody transmits on (start grace, then home, no hop storm), a voice channel that is

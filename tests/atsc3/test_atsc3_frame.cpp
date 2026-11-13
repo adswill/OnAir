@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A complete frame: Preamble with L1 and a subframe with two PLPs (different FEC and constellation), through a channel with an echo and noise,
 // decoded back to the baseband packets. Frequency interleaving, boundary symbols with null cells, 8K, 16K and 32K FFT sizes.
 #include "dect2/atsc3/atsc3_frame.h"

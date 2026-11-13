@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS: the channel plan controls and the Satellite AIS panel (ais_sat_ui.cpp), called from ais_ui.cpp.
 #pragma once
 struct App;

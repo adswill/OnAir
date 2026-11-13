@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The parameters of every transmit mode, declared in one place (docs/TX-4.0.md). Each row says what the control is called, its type, unit, range,
 // default, whether it is in the Simple view or under Advanced (and in which group), which sub-mode it applies to, a one-line help, and where its value
 // goes in the TxRequest. The transmit panel is drawn from this table, so every control it shows reaches the generator; tests/tx/test_tx_param_model.cpp

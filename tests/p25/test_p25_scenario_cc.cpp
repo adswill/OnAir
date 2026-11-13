@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The real receiver on a synthetic control channel (p25_scenario.h): C4FM from the generator, impaired, through P25Receiver, the TSBK telemetry and the
 // Controller. Band plans of 700 / 800 MHz (12.5 kHz), VHF / UHF (identifier update VU) and a TDMA identifier: the site ids, the identifier maths
 // (base + channel * spacing, TDMA carrier and slot) and the frequency of every grant, clean and with a carrier offset, symbol clock error, noise,

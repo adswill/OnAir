@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Why isn't it decoding": one verdict for the digital voice modes (DMR, P25, NXDN, D-STAR, TETRA), read from the receivers' own counters.
 // Same idea as HfdlTelemetry's why-bad counters: say which stage of the chain stops the signal, so the user knows what to change.
 #pragma once

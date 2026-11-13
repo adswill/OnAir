@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Zigbee / IEEE 802.15.4 monitor (see zigbee_rx.h).
 #include "dect2/zigbee/zigbee_rx.h"
 #include "dect2/wirecap/wire.h"

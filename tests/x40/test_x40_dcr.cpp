@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DCR (Japan's digital convenience radio, ARIB STD-T98 volume 3, 4-level FSK). What is checked:
 //  1. the channel plan of the standard (Tables 3-4 to 3-6): counts, grid, the calling channel;
 //  2. the standard's own interoperability test frames (chapter 7, whitened bits in hexadecimal: synchronous burst with the call sign, 24 audio frames, the end frame;

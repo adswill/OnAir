@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Record audio": the recorder fed by a fake audio source (a fake AudioOut writer): duration, size, WAV/FLAC format, gating, split, stop and start again, stereo.
 #include "dect2/audio/audio_rec.h"
 #include <chrono>

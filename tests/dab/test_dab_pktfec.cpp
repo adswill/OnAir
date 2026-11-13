@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB packet mode FEC (EN 300 401 5.3.5): sets written by the encoder, byte errors in every shape the code can fix, slipped starts, and a stream without FEC sets. Simulated.
 #include "dect2/dab/dab_pktfec.h"
 #include <cstdio>

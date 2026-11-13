@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared by the mesh_proto*.cpp files only.
 #pragma once
 #include "dect2/mesh/mesh_proto.h"

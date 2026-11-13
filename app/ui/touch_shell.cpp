@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The touch interface's shell: a top bar (menu, the mode chip, status), the body (the main tabs of the classic / new interface, or the
 // transmit panel) that scrolls by drag and swipes between tabs, and a bottom dock with the primary controls (start / stop, tuning,
 // gain, volume, tuner, more). Panels are the existing ones: the shell only arranges them and sizes the controls.

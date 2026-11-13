@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL band hopping: finds the band that works, stays on it, follows a change of propagation, uses the announced frequencies,
 // tours every band when all is silent, ignores a user's tuning off the HFDL bands, and the band table covers the station table.
 #include "dect2/hfdl/hfdl_hop.h"

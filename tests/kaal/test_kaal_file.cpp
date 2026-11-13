@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL through the app path: a two-channel 16-bit WAV (made by the transmit generator and the IQ-file sink, or the file named by KAAL_FILE) is played by
 // the engine's file source, the engine runs KAAL (standard 124) and must lock, count good frames and decode the beacon. Prints what the panel would show.
 #include "dect2/engine/engine.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Network radios (netradio.h): the rtl_tcp, SpyServer and Hermes Lite 2 clients against fake servers on localhost, a user-added Pluto
 // address, the saved list.
 #include "../../core/src/net/tcp_client.h"

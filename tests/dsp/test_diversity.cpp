@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Two-branch diversity combiner: two noisy copies of one narrowband signal, heard by free-running radios (delay, frequency offset, drifting
 // sampling phase, complex gain), are combined by selection and by maximal ratio. The in-band SNR of the output is measured against the known
 // clean signal and printed next to the input SNRs. Also: a dead branch A, no common signal, identical branches, config checks.

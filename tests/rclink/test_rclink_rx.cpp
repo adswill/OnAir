@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RC and mesh link receiver on simulated signals (no recording of a real link yet): every protocol, carrier offsets, hopping channels, overlap, noise, sample
 // rates; ExpressLRS channels only with the phrase.
 #include "dect2/rclink/rc_rx.h"

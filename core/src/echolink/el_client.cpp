@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EchoLink client: see el_client.h. Connection behaviour (SDES connect / keep-alive every 10 s, 5 tries, 50 s time-out, BYE, info text on
 // connect) follows SvxLink's EchoLinkQso.cpp (GPL-2.0-or-later, Tobias Blomberg SM0SVX); the code is OnAir's own.
 #include "dect2/echolink/el_client.h"

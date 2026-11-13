@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Automatic standard detection: the capture from the engine and the worker thread (autodet.h).
 #include "dect2/autodet/autodet.h"
 #include "dect2/common/thread_name.h"

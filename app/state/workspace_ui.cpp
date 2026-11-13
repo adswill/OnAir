@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The File menu part of workspaces (save, load, delete) and the two dialogs: the save name and "Restore last session?".
 // The logic is in workspace.cpp. English text only.
 #include "workspace.h"

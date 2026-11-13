@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 3D waterfall in the waterfall's place (Waterfall popup > 3D view): the history as a height field, coloured with the waterfall's
 // palette and levels. The pure parts (camera, decimation, mesh, pick) are in wf3d.h; here the input, the cache and the drawing.
 //

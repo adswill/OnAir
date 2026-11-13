@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Rational polyphase resampler (windowed sinc) for complex samples, used to bring any capture rate to the T2 native rate.
 #pragma once
 #include "dect2/common/ring.h"

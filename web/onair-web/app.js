@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web browser client. Vanilla JS, no build step, no network use except this server. Receive only: no transmit code exists here.
  * Protocol: docs/ONAIR-WEB-PROTOCOL.md. Pure helpers live in onair-lib.js (tested by tests/web/run.js). */
 (function () {

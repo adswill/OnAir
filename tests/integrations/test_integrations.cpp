@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Integrations: the MQTT packet encoder/decoder, topic templates, the event JSON, the settings file, Home Assistant discovery, and the hub against an in-process
 // fake broker on the loopback (login, QoS 0 and 1, retain, will, reconnect, nothing sent unless switched on) plus the JSON-lines and webhook sinks.
 #include "dect2/integrations/integrations.h"

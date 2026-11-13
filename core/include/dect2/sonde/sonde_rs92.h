@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Vaisala RS92: frame decoder from hard symbols, and the frame builder for the test signal. Phase B of the radiosonde mode.
 // Facts from rs1729/RS (demod/mod/rs92mod.c, rs92/rs92.txt, whose example frame the known-answer test uses).
 //

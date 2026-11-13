@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B manoeuvre alerts (3.9, docs/SMART5-field-3.9.md item 1), from what each aircraft broadcasts (the "adsb.aircraft" updates, about
 // one every 2 s per aircraft):
 //  - "emergency":  squawk 7500 (unlawful interference), 7600 (radio failure), 7700 (general emergency), or an emergency state in the

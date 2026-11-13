@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live transcripts in the app. See transcribe_app.h and docs/TRANSCRIBE.md.
 #include "dect2/common/thread_name.h"
 #include "transcribe_app.h"

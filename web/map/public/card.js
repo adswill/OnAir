@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // card.js - the track info card (slide-in panel on desktop, bottom sheet on phones), FlightRadar24 style.
 // build once per selection, then update() rewrites only the text of changed fields (call it at most 1 Hz).
 // Pure helpers live in geo.js / types.js; this file is the only part that touches the DOM for the card.

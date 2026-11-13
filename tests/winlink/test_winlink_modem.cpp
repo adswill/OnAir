@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Winlink over OnAir's own modems, end to end in one process: every frame of a whole B2F session (connect, handshake, proposals,
 // compressed messages, disconnect) is rendered by the packet generator (1200 baud AFSK and 9600 baud G3RUH, FM) or the ARDOP generator
 // (4FSK, upper sideband), with noise and a tuning offset, and read back by the packet / ARDOP receiver through its frame tap, for

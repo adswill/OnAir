@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A LRIT / HRIT receiver (family 230 / 231). Receive only. Wraps the GOES/CGMS xRIT chain (goes_rx.h) with the KMA parameters:
 // LRIT BPSK 128 ksym/s, HRIT QPSK 3 Msym/s, and the KMA file layer (JPEG 2000 pictures, DES with user-imported keys, GK-2A headers).
 #pragma once

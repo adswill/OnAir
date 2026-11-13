@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 import { verifySignature } from "./verify.js";
 import { fetchStats, buildEmbed } from "./stats.js";
 import { getScreenshot } from "./screenshot.js";

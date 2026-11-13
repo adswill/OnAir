@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM split-carrier analyser (see am_carriers.h).
 #include "dect2/smart5/am_carriers.h"
 #include "dect2/dsp/fftutil.h"

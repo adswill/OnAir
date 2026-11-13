@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSB conversations: find single-sideband voice (USB / LSB) on the captured span and organise it into conversations the user can just listen to.
 //
 //   IQ (the wide capture) -> Scanner: Welch spectrum -> narrow occupied bands (1.5 - 3.8 kHz) -> sideband decision (spectral tilt + band convention)

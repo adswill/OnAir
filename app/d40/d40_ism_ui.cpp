@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM: line code classifier for the signals no protocol accepted (PWM / PPM / Manchester / PCM, lengths, rows, rtl_433 flex line). docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "dect2/ism/ism_tel.h"

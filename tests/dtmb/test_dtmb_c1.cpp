@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB single carrier mode (C=1): the transmitter model (36 system information symbols, then 3744 data symbols in the time domain, PN595 header),
 // the frequency domain equaliser against the transmitted symbols, the receiver on the test signal for every modulation, and the carrier mode
 // decision between C=1 and C=3780 for PN595 signals. The C=1 frame layout (system information first, no scrambling beyond the data scrambler) is

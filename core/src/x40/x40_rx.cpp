@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // See x40_rx.h. The receiver moves the signal to 0 Hz and hands it to the decoder of the active mode; it keeps the list of what was decoded.
 #include "x40_int.h"
 #include <deque>

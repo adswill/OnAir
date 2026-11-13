@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB test transmitter: AAC-LC with the 960 transform for DAB+ (ISO/IEC 14496-3 raw_data_block of a channel pair element, long blocks, sine window, one
 // scale factor per channel, no TNS / prediction / M/S) and the DAB+ audio superframe (TS 102 563). The transform and the quantiser follow
 // drm_aacenc.cpp (the DRM test signal's encoder, which libavcodec's decoder accepts); the Huffman tables are the ones of drm_aactab.cpp. What differs

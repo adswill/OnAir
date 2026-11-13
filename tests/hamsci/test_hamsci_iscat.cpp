@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISCAT-A and ISCAT-B on simulated signals: both variants, tuning errors, message lengths, a noise sweep, noise alone, several sample rates, and the
 // streaming decoder. Simulated only: no recording of a real ISCAT transmission was available.
 #include "dect2/hamsci/hamsci_dsp.h"

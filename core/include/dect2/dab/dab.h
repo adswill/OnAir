@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB / DAB+ receiver (ETSI EN 300 401, TS 102 563), transmission mode I (Band III, 1.536 MHz, 1536 carriers).
 #pragma once
 #include "dab_dmb.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Names of the Wi-SUN FAN / 802.15.4 enumerations used in frame text: UTT frame types (Wi-SUN FAN TPS 1.0 table 6-2), 802.15.4 frame types, channel
 //! functions, regulatory domains (Wi-SUN PHY specification frequency band table), and the schedule text. The `*_z` forms end in a NUL byte so the C ABI can
 //! hand out pointers that stay valid forever.

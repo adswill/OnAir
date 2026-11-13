@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 receiver: the open digital voice and data protocol for amateur radio (M17 specification 2.0), 4FSK at 4800 symbols/s in a 9 kHz
 // channel.
 //

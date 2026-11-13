@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham SSTV send: a picture from a file (PNG, BMP, PPM) or from memory, fitted to the mode's size, the callsign stamped on it, as SSTV audio
 // (VIS header, then the lines) for the rig, with an optional CW identification after it. Modes: every one of hfdig_sstv.h (Robot 36 / 72,
 // Martin M1 / M2, Scottie S1 / S2 / DX, PD50 .. PD180, Wraase SC2-180), the same tables the receiver uses. Received pictures come from the

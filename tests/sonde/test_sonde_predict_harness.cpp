@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Accuracy of the landing prediction on simulated flights (tests/sonde/sonde_predict_sim.h, docs/SONDE-PREDICT-4.0.md): the error of the
 // old predictor (3.9, as the app used it: ground at sea level; and with the true ground) and the new one (offline; with a forecast) when
 // the sonde is 10 km, 5 km, 2 km, 1 km, 500 m and 200 m above the ground, and at the last frame heard. Prints the table; checks that

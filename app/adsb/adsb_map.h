@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A slippy map for the ADS-B screen: web-mercator tiles from a tile server, cached on disk, drawn with ImGui. Needs the network for new tiles
 // (curl, as the updater uses) and a picture decoder (macOS only for now); without them it shows a plain graticule.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24 receiver sweep: the share of frames found against Eb/N0 for each data rate (prints the table), a carrier offset and a data-rate error,
 // and the three rates in one channel. The thresholds are the yields the receiver must reach at a realistic Eb/N0.
 #include "dect2/nrf24/nrf24_gen.h"

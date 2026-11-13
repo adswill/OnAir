@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors at home (round 4 #3, #5, #7): sensor names and the battery-change hint, the sensor.reading event from the real receiver on generated
 // Nexus-TH signals (several rates, off the centre, noise, two sensors at once), the built-in threshold recipes and the per-sensor Alert rule on the engine.
 #include "dect2/automation/engine.h"

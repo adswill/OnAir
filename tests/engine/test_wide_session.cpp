@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wide multi-signal decode (core/include/dect2/engine/wide_session.h): ONE 2.4 Msps capture at 125 MHz holds five different signals at once, all off
 // their channel raster: a DMR base station (-603 kHz), a P25 control/voice carrier (+401.7 kHz), a pager carrier (POCSAG 1200, on a known channel,
 // -996 kHz), an APRS packet carrier (on a known channel, +1097 kHz) and an air-band AM station (125.2123 MHz, two tones). The session finds every

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-H data link layer (ETSI EN 301 192 clauses 7 and 9): multiprotocol encapsulation (MPE sections, table_id 0x3E) carrying IP
 // datagrams, time slicing (the real-time parameters: delta-t to the next burst, the table and frame boundaries, the address) and MPE-FEC
 // (sections 0x78 carrying the columns of an RS(255,191) code over the rows of the MPE-FEC frame).

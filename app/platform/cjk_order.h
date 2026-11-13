@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The order the CJK system fonts are merged into the UI fonts. ImGui draws each character from the first merged font that has it, and the
 // Korean and Chinese fonts carry kana and most kanji too, but not the Japanese simplified forms (声 録 断 気): with the Korean font first,
 // a Japanese line mixed two fonts of different sizes and shapes. So the fonts of the interface language go first; the other languages

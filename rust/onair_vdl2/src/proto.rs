@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The protocols an AVLC information field carries, as text for the detail pane: ISO 8208 / X.25 packets (data, call set-up, clear, reset, restart, flow
 //! control), ISO 8473 CLNP headers with the NSAP addresses and the ISO 8073 COTP TPDU around ATN application data (ASN.1 PER, not decoded). ICAO Doc 9880
 //! (ATN/OSI), Doc 9776 (VDL Mode 2 and the SNDCF), ISO 8208, ISO 8473, ISO 8073.

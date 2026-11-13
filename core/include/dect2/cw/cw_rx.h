@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CW (Morse) receiver: a skimmer that decodes every CW signal in a window around the dial frequency at once.
 //
 // The channel is mixed to 0 Hz and brought to 24 kHz complex (marine::Front). A 2048-point spectrum every 1024 samples (11.7 Hz bins),

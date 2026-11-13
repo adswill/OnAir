@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Bit access with the standards' numbering: bit 1 is the first (most significant) bit of the message.
 
 /// Bits `first ..= first + count - 1` (1 based) as a number, `count` <= 32. Bits past the end of `m` read as 0 (a C++ caller would read out of

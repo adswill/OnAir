@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham CW keyer and contest helpers: paddle scripts through every keyer mode (the element sequences of iambic A / B, Ultimatic, bug, straight),
 // the edges back to text with the CW timing decoder, keyed audio without clicks; contest exchanges, cut numbers, the received exchange from
 // decoded text, dupes and the Cabrillo line. Nothing is transmitted.

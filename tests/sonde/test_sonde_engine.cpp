@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde through the engine, as the GUI and dect2cli use it: the built-in synthetic source plays the default test signal (three sondes,
 // SynthConfig::mode = 15) at the mode's sample rate, the receiver runs on its own thread, telemetry comes through latestRx. 20 s; a retune
 // in the middle must reset the receiver without the sequence number going back; no samples may be dropped.

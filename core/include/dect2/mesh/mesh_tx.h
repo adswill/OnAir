@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) transmit: the sender's own Meshtastic identity and the packets built from it. Nothing here blocks a transmission: problems
 // with the settings come back as warnings (meshTxWarnings) that the panel shows, and the packet is built anyway.
 //

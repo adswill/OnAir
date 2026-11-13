@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LBJ (Chinese railway train broadcast) telemetry. RxTelemetry::lbj, engine standard 83, active standard 82.
 //
 // Locomotive-to-ground warning broadcasts on about 821 MHz (FM voice channel, 1200 bit/s FSK payload after

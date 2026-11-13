@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio (NRSC-5) Layer 2 and above, without the audio codec: the transfer frame header (PCI), the audio PDU headers and their packet
 // locators, the HDLC-framed AAS packets (program service data, the station information guide, large objects), the fixed data
 // subchannels, and the station information service (SIS) of the PIDS channel. The audio packets themselves are HDC, a patented codec

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Records board: the personal best distance per mode (and per band for HF): farthest aircraft, ship, APRS station, mesh node, FT8 / WSPR
 // spot ... each with the date, the identity and a few words. Kept on disk. docs/RECORDS-3.9.md.
 #pragma once

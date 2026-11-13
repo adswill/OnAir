@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the HFDL layers, meant for DECT2_SANITIZE=ON: the PDU parser, the FCS, the convolutional decoder with
 // arbitrary soft values and the mask / station functions must never crash or hang on any bytes. Also a libFuzzer target with -DONAIR_LIBFUZZER.
 #include "dect2/hfdl/hfdl_proto.h"

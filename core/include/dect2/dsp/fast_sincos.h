@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cos and sin of a phase from one 4096-point sine table with linear interpolation (error below 3e-7, about -130 dB): for the transmit
 // generators that turn a frequency-modulated phase every sample, where std::cos and std::sin in double were most of the time.
 #pragma once

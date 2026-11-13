@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure logic for the "easy first use" hints (docs/EASE-3.8.md): a next-pass sentence, whether a geostationary satellite is above this
 // location's horizon, what a quiet receiver means for a mode, what antenna a mode needs. No ImGui, no App, so tests/app/test_ease.cpp covers it.
 // The hints only inform: nothing here blocks a mode, changes a setting or starts a radio.

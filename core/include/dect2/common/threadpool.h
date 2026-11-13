@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared worker pool and the thread helpers of the receivers (see docs/threading.md).
 //
 //   ThreadPool::shared()   one pool for the whole process, created on first use, N = hardware_concurrency - 1 (1..8) workers, named "onair-wN"

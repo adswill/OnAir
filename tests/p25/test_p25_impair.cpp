@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 Phase 1 trunking under real-world impairments. A busy synthetic control channel (site broadcasts, identifier update, a new voice grant every
 // 3 s and the update messages of the calls in progress) goes through carrier offsets (also with the channel off centre, as the app tunes it), a
 // noise sweep, a simulcast echo, Rayleigh fading, interference bursts and a sample drop-out, then the receiver, the TSBK decoder and the trunking

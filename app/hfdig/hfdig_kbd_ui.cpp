@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, the keyboard modes view of the main tab (called by hfdig_ui.cpp): Olivia, Contestia, MFSK, THOR, DominoEX and Hellschreiber.
 // The settings of the family (tones and bandwidth, or the variant), the audio frequency of the signal (found by the decoder while none is
 // locked, or typed), the band buttons, the decoded text; Hellschreiber draws what it hears as a picture, lines of columns of 14 pixels.

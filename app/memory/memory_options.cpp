@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What a memory captures from a receiver and how it is applied again (see memory_options.h). The option table lists the App fields of the
 // modes that keep their settings there; modes with state of their own register theirs (the general receiver: general_ui.cpp).
 #include "memory_options.h"

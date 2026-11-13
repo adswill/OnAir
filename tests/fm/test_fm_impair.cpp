@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM receiver against real-world faults (tests/common/impair.h, REAL_WORLD_CHECKLIST.md): the generator's signal is damaged independently of the receiver.
 #include "dect2/fm/fm_gen.h"
 #include "dect2/fm/fm_rx.h"

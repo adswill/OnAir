@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The coded navigation messages: SBAS L1 (RTCA DO-229: 250 bit messages at 250 bps, rate 1/2 convolutional code, 500 symbols a second) and
 // Galileo I/NAV on E1-B (Galileo OS SIS ICD sections 4.1.4, 4.3 and 5.1: page parts of 120 bits, convolutional code with the second branch inverted,
 // a 30 x 8 block interleaver, a 10 symbol synchronisation pattern, 250 symbols a second; words of 128 bits protected by a CRC over the even and odd parts).

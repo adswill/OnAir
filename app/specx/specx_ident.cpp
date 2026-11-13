@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "What is this?": a click or a drag over a signal on the spectrum or the waterfall (the Identify tool, key I, or Shift+drag) hands a region to the
 // engine's capture (dect2/engine/sig_ident.h); a card next to the selection shows what was measured, the ranked modes it could be with how sure
 // each one is (calibrated, docs/IDENTIFIER.md), whether the mode's own detectors confirmed it (the verify step), the evidence of each candidate,

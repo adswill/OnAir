@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Monitor audio": listen to the tuned channel of ANY mode. Most decoders have no sound path of their own (they decode data), so a signal you
 // are trying to recognise stays silent. The monitor takes a copy of the radio's samples (like the second mode), shifts the tuned frequency to
 // 0 Hz, demodulates it (USB, LSB, narrow FM or AM; the demodulators of the ham decoders, hfdig::UsbAudio) and sends the audio to

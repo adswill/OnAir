@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meshtastic channel URLs (round 4 #9): the factory default link, encode/decode round trips over presets, regions, key lengths and options, the
 // slot of a private primary channel (djb2 of its name, as the firmware), channel_num and override frequency, damaged links, and an imported key
 // decrypting a packet built for that channel.

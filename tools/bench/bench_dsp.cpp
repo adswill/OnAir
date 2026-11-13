@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal-processing cost table: CPU seconds per second of signal for the DSP kernels and the receivers that take most of the CPU, measured
 // without the Engine, the GUI or the radio (those are other people's tables). Not part of ctest; build and run with tools/bench/bench_dsp.sh.
 //

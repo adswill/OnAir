@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Extra links screens: the links heard and their frames. Receive only; encrypted payloads stay structure only.
 #include "app.h"
 #include "i18n/i18n.h"

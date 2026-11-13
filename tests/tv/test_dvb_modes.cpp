@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator, tab "Digital Television Mode Selector" (dect2/tv/dvb_modes.h), without a window:
 //  1. the number of modes per system: those of DVB_transmission_modes.xlsx, the satellite ones once per roll-off
 //  2. bandwidth, bitrate and C/N of modes of each system against the values the workbook computes (all 34 980 rows were compared

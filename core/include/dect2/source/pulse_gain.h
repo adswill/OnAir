@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Auto gain for pulsed message modes (ADS-B / Mode S), after readsb's adaptive gain: what counts is the number of good messages per second and
 // the share of LOUD ones (a pulse peak within about 3 dB of full scale), not the headroom of a servo. A pulse is under 0.1 % of the samples, so the headroom
 // of the 99.99 % point says nothing about it; a message does. More gain brings in the weak far aircraft until the near ones start to clip the

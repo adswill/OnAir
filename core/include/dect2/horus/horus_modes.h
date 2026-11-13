@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Project Horus balloon telemetry: the mode numbers. OnAir has three numbering domains: the app family, the engine standard
 // (Engine::setStandard, family + 2) and the active standard (RxTelemetry::standard, feed / poll / reset, engine standard - 1).
 #pragma once

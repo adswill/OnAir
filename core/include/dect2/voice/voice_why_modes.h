@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "why isn't it decoding" verdict (voice_why.h) read from each digital voice mode's telemetry.
 #pragma once
 #include "dect2/dmr/dmr_tel.h"

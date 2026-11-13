@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSK441 generator and receiver. Tones 882 / 1323 / 1764 / 2205 Hz (multiples 2..5 of 441 Hz), 441 baud, three tones per character: the 48-entry
 // character set of WSJT / MSHV as a base 4 number of three digits (the first digit is 0, 1 or 2, so the tone 2205 Hz is never the first of a triple, which
 // lets the receiver find the triple boundary). The receiver finds bursts above the noise, the tuning error, the dit timing and the triple phase itself.

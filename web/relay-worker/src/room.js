@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One Durable Object per host link (one shared radio). It holds the host's WebSocket with the Hibernation API, so a shared
 // radio with nobody listening costs no duration. Browsers' requests arrive here from the Worker: plain HTTP is written to the
 // host as a request head + body and the host's answer is parsed back into a Response; a browser WebSocket is accepted here

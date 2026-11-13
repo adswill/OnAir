@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DME for the engine: the envelope is |IQ|, the detector is dme/dme_rx.cpp. See dme_live.h.
 #include "dect2/dme/dme_live.h"
 

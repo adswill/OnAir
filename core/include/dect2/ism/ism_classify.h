@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISM burst classifier (4.0): for a 433 / 868 / 915 MHz burst the decoder does not know, work out how it is coded from the pulse and gap lengths alone,
 // so the user (or a protocol author) gets the line coding, the short and long lengths, the row separator, the number of repeated rows and the bits per
 // row, instead of a raw pulse list. Pure code; the input is the same pulse train (on / off in microseconds) the ISM receiver already produces.

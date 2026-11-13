@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde launch sites in the app: kept in <data folder>/stats/sonde-sites.txt, the Sites view, the landing dots on the map.
 // 4.0: every known launch site in view on the map with its name (the built-in IGRA 2 list and the user's <data folder>/sonde-sites-known.txt,
 // dect2/sonde/sonde_sites_known.h); a learned site takes the name of the known one it is at, instead of "Site 1". Core: dect2/sonde/sonde_sites.h.

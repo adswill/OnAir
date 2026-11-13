@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The SDRplay nRSP-ST source (source_nrspst.cpp) against a fake SDRconnect on localhost that speaks the public WebSocket API 1.0.3: the
 // upgrade handshake, get_property / set_property / device_stream_enable / iq_stream_enable, property_changed pushes and binary type-2 IQ.
 // Checks the commands the source sends (rate, frequency, gain as an LNA state, antenna, device choice), the IQ it delivers, retuning, a

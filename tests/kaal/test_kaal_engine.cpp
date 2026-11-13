@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL in the engine's wrapper and the transmit session's generator: the transmit generator (the TX path, 48 kHz) makes the signal from speech pulled as
 // 48 kHz stereo, KaalLiveReceiver (what the engine feeds) locks, decodes the speech to its tap and publishes the beacon in the telemetry.
 #include "dect2/kaal/kaal_live.h"

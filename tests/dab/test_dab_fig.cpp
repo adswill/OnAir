@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FIC analysis: the FIG decoders on hand-made FIGs (the layouts of EN 300 401 clause 8), then the receiver against the test transmitter: the
 // analysis holds the FIGs the transmitter sends, counted, and they decode to the ensemble id, the sub-channels and the labels it was given.
 #include "dect2/dab/dab.h"

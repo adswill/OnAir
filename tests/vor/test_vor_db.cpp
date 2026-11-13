@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Station list import (OurAirports and OpenAIP style CSV), ident matching, and the position from two radials with its error ellipse.
 #include "dect2/vor/vor_db.h"
 #include <cmath>

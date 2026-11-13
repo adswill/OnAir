@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE advertising test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of advertising packets (ble_proto.h builds them), each GFSK modulated (BT 0.5, h 0.5, 1 Msym/s) on its channel's whitening,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // All-modes QA sweep (3.9, docs/QA-SWEEP-3.9.md): every mode that has a built-in test signal goes generator -> file -> Engine -> decoder under
 // five conditions, and the mode's own checked output is counted:
 //   clean   the generator's signal as it comes (generator SNR 60 dB, 16-bit file)

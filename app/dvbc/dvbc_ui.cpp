@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C screens: status bar, the analysis row (constellation, equaliser taps, MER history, Reed-Solomon losses), the Receiver tab, the tuner
 // (cable channel, symbol rate, QAM, annex) and the test signal options. The TV tab, services and the player are the shared ones.
 #include "app.h"

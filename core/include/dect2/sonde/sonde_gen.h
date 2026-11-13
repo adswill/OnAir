@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde test signal: several sondes at once in one captured band, centred on 403.0 MHz (the app's default frequency), each sending
 // frames the way its type does (checks, FEC and calibration as a real one; the content is made up).
 //

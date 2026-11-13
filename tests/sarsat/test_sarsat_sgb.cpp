@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // COSPAS-SARSAT second-generation beacons (C/S T.018): the PRN segments against the 64 first chips of Table 2.2, the BCH generator and check against annex B.1,
 // the worked example message (decoded fields, position, 23 hex ID), repair of 6 bit errors, then the receiver on the generated signal: clean, in noise,
 // with carrier offsets, a chip rate error and at other sample rates. Noise alone must give nothing.

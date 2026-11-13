@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Build every installer on this Mac and collect them in release/ with checksums:
 #   OnAir-<v>-macos-arm64.dmg                         macOS (Apple silicon)
 #   onair_<v>_arm64.deb, onair_<v>_amd64.deb (+ .tar.gz)   Linux

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT test signal for the engine's synthetic source (see kait_gen.h).
 #include "dect2/kait/kait_gen.h"
 #include "dect2/kait/kait_txgen.h"

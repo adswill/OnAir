@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV receiver (amateur satellites and high-altitude balloons): one FM / FSK channel (the packet front end, packet_demod.h: offset, decimation to
 // 96 kHz, AFC, channel filter, discriminator) and a bank of bit slicers at the same time, each with its own clock loop:
 //   - plain bit streams at 1200, 2400, 4800, 9600 and 19200 baud;

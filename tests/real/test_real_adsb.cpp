@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B on a real recording: modes1.bin from the dump1090 test files (2 Msps, unsigned 8 bit IQ, 0.18 s, one aircraft, address 4D2023). Every message the
 // receiver reports has passed the CRC; the file holds 57 short and 126 long ones.
 #include "dect2/adsb/adsb_rx.h"

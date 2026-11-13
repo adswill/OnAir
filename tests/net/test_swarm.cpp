@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm pure logic: announce parsing with hostile packets, node table rules, message de-duplication, range splitting, pairing handshake
 // (right code, wrong code, lockout, replay, other peers, malformed lines), tokens, rate limit and memory sync.
 #include "dect2/net/swarm.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde flight track (round 4 #37): a simulated flight up to a 31 km burst and down to 400 m gives an ascent and a descent line, the burst,
 // the landing; a sonde still going up gives one line and its prediction; the KML and GPX carry the lines with altitude.
 #include "dect2/sonde/sonde_flight.h"

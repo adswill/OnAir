@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio Jove (20.1 MHz, Jupiter and solar radio bursts): a power-versus-time burst finder. The band power is taken in 5 ms blocks; the baseline and its
 // scatter follow the quiet level (blocks inside a burst are left out), and a burst is a run of blocks more than 4 scatter widths above it. Bursts of
 // at most 100 ms are called short, longer ones long; the 5 ms resolution cannot resolve the millisecond structure of real S-bursts. Terrestrial

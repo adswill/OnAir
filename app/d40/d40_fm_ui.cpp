@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FM: station auto-naming from the census (one named list, PI on two frequencies = one station) and the DX opening alarm. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../smart5/smart5_ui.h"

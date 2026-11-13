@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi screens, shared pieces: the persistent state (band, regulatory domain, hop list and dwell), the radio checks, the channel scan and
 // the channel occupancy view. wifi_ui.cpp holds the network table and the mode's hooks.
 #pragma once

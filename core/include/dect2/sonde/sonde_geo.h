@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WGS84 helpers for the radiosonde receiver and its test signal: geodetic <-> ECEF, ECEF velocity <-> east / north / up, GPS time.
 #pragma once
 #include <cmath>

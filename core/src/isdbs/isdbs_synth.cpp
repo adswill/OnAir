@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ISDB-S test signal for the built-in synthetic source, see isdbs_rx.h.
 #include "dect2/isdbs/isdbs_rx.h"
 #include "dect2/tv/demo_ts.h"

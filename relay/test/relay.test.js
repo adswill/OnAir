@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 'use strict';
 // End to end on 127.0.0.1: the real relay, a fake OnAir host (signs the hello like onair-server) and a fake browser. Nothing leaves this computer.
 const test = require('node:test');

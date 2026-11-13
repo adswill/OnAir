@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL voice codec 4: the high band (3.6 .. 8 kHz) as a parametric noise envelope. 5 ms MDCT blocks; per 20 ms a level, a spectral
 // shape over six bands and (higher profiles) a time envelope per block. The decoder fills the bins with noise of that envelope.
 #include "kv_core.h"

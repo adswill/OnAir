@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Live transcription without a speech engine: the callsign reader (phonetic and telephony cases), the segmenter, the transcriber with a fake
 // backend (queue overflow, hallucination filters, linking), the store (search, filters, exports, file and retention) and the model list.
 #include "dect2/transcribe/callsign.h"

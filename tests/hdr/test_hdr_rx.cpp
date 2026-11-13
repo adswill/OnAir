@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio: the test signal (FM hybrid MP1, AM hybrid MA1, FM extended hybrid MP3) through noise and a carrier offset into the real
 // receiver, without the engine. Everything the signal carries must come out exactly: the station information, the program list, the program
 // service data of every program and the picture, byte for byte. FM and AM at 15 dB SNR on the (primary) digital subcarriers, offsets of

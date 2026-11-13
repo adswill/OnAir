@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK demodulator test signals: frames with a known payload, any order, rate, pulse shape, offset, Doppler ramp, clock error and noise.
 #include "dect2/pskdsp/pskdsp.h"
 #include <algorithm>

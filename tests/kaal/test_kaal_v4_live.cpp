@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL frame version 4 through the transmit generator (opt kaal.frame 4, the TX and TX-to-IQ-file path) at a radio rate of 240 kHz with a carrier
 // offset into KaalLiveReceiver (what the engine feeds): v4 lock, the beacon from the control channel, a 300-character text from the data slots,
 // and the voice of slot 0 through a stub slot codec (the real codec registers itself the same way, kaal_slots.h).

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (José Alberto Nieto Ros, EA5HVK): a proprietary weak-signal HF chat mode. Its framing, coding and FEC are not publicly specified, so
 // OnAir cannot decode it. This is an identifier only: from the publicly reported physical layer (docs/ROS.md lists the sources) it measures a
 // stretch of samples and says whether it looks like ROS HF and which sub-mode by its symbol rate:

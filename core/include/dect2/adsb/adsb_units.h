@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Display units for ADS-B numbers: aviation (knots, feet, nautical miles, ft/min) or metric (km/h or m/s, metres, km, m/min).
 // The decoder, SBS and the feeds keep the aviation values; only what is shown and exported is converted.
 #pragma once

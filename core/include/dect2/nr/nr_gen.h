@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells test signal: NR SS/PBCH blocks (PSS, SSS, PBCH with its DMRS and the MIB) built from the same specification tables the
 // receiver reads, with random QPSK around them standing in for the rest of the carrier. Nothing is transmitted: the samples only exist in
 // memory.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC receiver: generated 8-VSB signals through the whole receive chain, with carrier offset, clock offset, noise and echoes.
 #include "dect2/atsc/atsc_gen.h"
 #include "dect2/common/stable_random.h"

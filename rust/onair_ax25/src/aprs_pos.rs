@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! APRS positions (APRS101 chapters 8 and 9): uncompressed latitude / longitude, base-91 compressed positions, and Mic-E (chapter 10), where the
 //! latitude is in the destination address and the longitude, speed and course are in the information field.
 use crate::aprs::Info;

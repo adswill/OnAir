@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATIS receiver: bursts after a voice transmission through the narrow FM front end and the DSC decoder, with real-world impairments:
 // carrier offset, the channel off the centre of the capture, noise, a wrong bit clock, phase modulation (as on the air) and flat FM, no dot pattern,
 // swapped tones (inverted spectrum), no voice, and the negatives (noise, voice only).

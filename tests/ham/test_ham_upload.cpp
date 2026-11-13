@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham logbook uploads against a fake HTTP server on loopback (no real network): request shapes, answers, retry queue, persistence, nothing sent while off.
 #include "dect2/ham/ham_upload.h"
 #include "../../core/src/net/tcp_client.h"

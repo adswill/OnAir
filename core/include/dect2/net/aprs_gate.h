@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // APRS-IS iGate rules (receive-only gating of what the packet decoder hears to the APRS Internet System).
 // The Feeds thread logs in to the server the user names with the user's callsign and passcode and sends each gated packet as
 //   FROM>TO,PATH,qAR,MYCALL:info

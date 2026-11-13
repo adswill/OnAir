@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // fldigi's RSID (Reed-Solomon identifier): 15 symbols of 1024 samples at 11025 Hz, tones spaced 11025/1024 Hz, a 12-bit mode number coded RS(15,3) over GF(16) (the code of fldigi's rsid.cxx,
 // GPL-3.0). It names the digital mode and its audio frequency exactly. Detection is matched against the listed modes; up to 2 of the 15 symbols may disagree.
 #pragma once

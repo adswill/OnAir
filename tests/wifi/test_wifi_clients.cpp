@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi client view: probe requests, data frames with their network, deauth flood alarm, EAPOL counted, addresses hashed. Simulated frames only.
 #include "dect2/wifi/wifi_clients.h"
 #include <cstdio>

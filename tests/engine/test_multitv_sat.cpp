@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Whole span for DVB-S/S2 through MultiTv (sat mode): two transponders of different symbol rates and standards side by side in one 20 Msps capture, one
 // of them off centre, plus the SDR's DC spike. Both must be found without being told where they are or how fast they run, both must lock and show
 // their own services; the selected one's packets reach the sink and switching works.

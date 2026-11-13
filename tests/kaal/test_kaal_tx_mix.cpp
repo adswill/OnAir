@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL transmitter with the beacon mix: voice plus slice on the 2 s / 10 s schedule; the slice receiver finds the frames in the output.
 #include "dect2/kaal/kaal_beacon.h"
 #include "dect2/kaal/kaal_tx.h"

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # CMake toolchain file: cross-compile OnAir for Windows x64 from macOS/Linux with mingw-w64.
 # The dependencies (FFmpeg, GLFW, libusb, libhackrf, libiconv) come from tools/package/cross_deps_windows.sh.
 set(CMAKE_SYSTEM_NAME Windows)

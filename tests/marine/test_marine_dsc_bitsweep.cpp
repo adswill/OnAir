@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DSC decoder on bits: call types x dot pattern lengths x end-of-sequence variants x random and burst bit errors, bit slips, truncated phasing,
 // leading noise, repeated back-to-back sequences, soft confidence. Each case is run with many seeds; the rate of exact decodes is reported.
 #include "dect2/marine/marine_dsc.h"

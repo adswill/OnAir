@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR Capacity Plus / Connect Plus CSBKs and Motorola IP services (dmr_vendor.h). Connect Plus grant bytes are the sample in DSD-FME's dmr_csbk.c; the Capacity Plus
 // layouts are from the same file and generated here. Everything else is generated from the same layouts.
 #include "dect2/dmr/dmr_vendor.h"

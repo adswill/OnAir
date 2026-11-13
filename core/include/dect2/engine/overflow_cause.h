@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Why the input ring overflowed: samples the radio had delivered, thrown away because the sample thread did not read them in time.
 // 3.9 called every overflow "this computer is too slow", and fast machines with the CPU nearly idle saw it (a network radio's reconnect
 // was counted as an overflow too, and a one-off hold-up of the sample thread looked the same as a receiver that cannot keep up). The

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C screens: the aircraft map of the ADS-B screen (the Mode S aircraft of the same capture) and the table of transponder codes heard:
 // squawk (Mode A), altitude (Mode C, 100 ft steps), the ident pulse, how often and how strong, and the Mode S aircraft each code was matched to.
 // The map, the aircraft readout and the antenna position are the ADS-B screen's: this file borrows them for the ADS-B front end that runs inside the mode.

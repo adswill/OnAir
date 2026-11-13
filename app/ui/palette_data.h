@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ten base colours of each palette of the new interface (View > palettes, Settings > Appearance > Colour palette), as plain data:
 // ui2_theme.cpp's loadTheme() reads them from here, and so does the hover preview (ui_preview_logic.h), so the preview cannot drift from
 // the real look. No ImGui here: tests/app/test_ui_preview.cpp checks it.

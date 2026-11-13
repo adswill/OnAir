@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Parity and check-sequence repair: a block is repaired when the flipped bits that the parity errors point at explain the
 //! check-sequence residue.
 use crate::crc::{self, MAX_SYN};

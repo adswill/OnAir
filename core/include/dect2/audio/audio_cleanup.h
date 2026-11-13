@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Audio cleanup for listening: noise reduction, automatic and manual notch, leveller with soft limiter, squelch-aware silence muting,
 // voice emphasis and de-esser. One chain per AudioOut (audioout.cpp), all of them follow one shared AudioCleanupConfig, which the UI sets.
 //

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite TV feed hunter: watches the carrier list of the DVB-S receiver (the "carriers in the spectrum" survey) and tries every narrow carrier in turn.
 // A contribution feed is a small carrier (typically a few Msym/s) that appears and goes; the hunter records when each was first and last seen, flags those
 // that were not there when the hunt began, and leaves what the DVB-S receiver reports as the carrier's verdict. Finding a carrier does not make it DVB-S:

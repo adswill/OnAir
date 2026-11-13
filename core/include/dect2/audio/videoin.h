@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Video capture for the transmitter: cameras and HDMI / SDI capture cards, plus a looping file.
 // The device is never opened until start() — TxSession does that only on START TRANSMITTING.
 #pragma once

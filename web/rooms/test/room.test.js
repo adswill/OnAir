@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Room and Lobby objects against a fake Durable Object state (no workerd needed).
 import { test } from "node:test";
 import assert from "node:assert/strict";

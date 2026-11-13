@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // EMWIN bulletins (NOAA/NWS text products relayed on GOES HRIT): the WMO heading, the AWIPS product id, VTEC event codes, UGC areas and warning polygons, so a product
 // list can show what a bulletin is and where it applies. The text formats are NWS Directive 10-1701 (VTEC), 10-1702 (UGC) and FMH-1; only plain text is read.
 #pragma once

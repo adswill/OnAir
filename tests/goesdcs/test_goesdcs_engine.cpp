@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GOES DCS through the engine (setStandard(143)): the synthetic source plays three platforms and the receiver reports through latestRx().
 #include "dect2/engine/engine.h"
 #include "dect2/goesdcs/goesdcs_live.h"

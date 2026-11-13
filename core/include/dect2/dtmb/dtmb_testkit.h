@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB test kit: runs the test signal through a channel of impairments into the receiver and counts the numbered test packets that come out.
 // Used by the tests and by dtmbtool. Header only; not part of the receiver.
 #pragma once

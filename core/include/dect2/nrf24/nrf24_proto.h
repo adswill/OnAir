@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24L01(+) Enhanced ShockBurst (ESB) frames, as the Nordic datasheet describes them (public): 2.4 GHz GFSK at 250 kbit/s, 1 or 2 Mbit/s,
 // channel N at 2400 + N MHz (N = 0..125), bits sent most significant first:
 //

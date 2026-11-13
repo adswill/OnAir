@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_mesh (LoRa mesh packet layers: Meshtastic, MeshCore, LoRaWAN, LoRa APRS, MeshCom). Written by hand; the Rust test
 // rust/onair/tests/headers.rs checks it against ffi.rs.
 // Text in the records is a length plus bytes (no NUL), cut when too long; payloads are LoRa frames of at most 255 bytes. Text writers return the length written or

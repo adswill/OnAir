@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 physical layer frame, after the bootstrap: the Preamble and one subframe. buildFrame() makes a frame from baseband packets (for
 // tests and simulations); decodeFrame() reads the Preamble, finds the PLPs described by L1-Detail, and returns the payload of their
 // baseband packets. Time interleaving, LDM, MIMO and further subframes are not part of this version.

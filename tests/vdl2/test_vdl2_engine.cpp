@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // VDL Mode 2 through the engine (setStandard(29)): the synthetic source plays the test traffic, the receiver decodes it and reports through
 // latestRx(): frames, aircraft with positions, ground stations with their locations, every channel in the band; a retune keeps the report
 // numbers growing.

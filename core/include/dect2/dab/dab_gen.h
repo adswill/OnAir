@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB / DAB+ test transmitter (ETSI EN 300 401 transmission mode I, ETSI TS 102 563 for DAB+): an endless, continuous signal that carries a small
 // ensemble with real audio, so that the DAB receiver can be tried and tested without a radio. Nothing is transmitted; the samples only exist in
 // memory or in a file.

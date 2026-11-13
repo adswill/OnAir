@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Constellations of A/322 section 6.3 and Annex C used by the signalling: QPSK and the non-uniform 16, 64 and 256 point constellations
 // (position vectors of the first quadrant; the other quadrants follow by symmetry). Unit average power.
 #include "atsc3_constellations.h"

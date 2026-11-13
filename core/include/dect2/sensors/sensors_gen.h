@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the Sub-GHz sensors mode: OOK sensors of the Nexus type (PPM, 36 bits sent 12 times: temperature, humidity, battery, channel)
 // and now and then one burst of a PWM format that no decoder knows (for the unknown signal analyser). Nothing is transmitted.
 // SynthConfig (makeSensorsSynth): snrDb is the SNR in the 250 kHz channel, cfoHz the carrier offset; modeOpt[0] = 1 sends no unknown bursts.

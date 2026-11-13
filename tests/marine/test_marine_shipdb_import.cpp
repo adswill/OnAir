@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The MMSI list import (YADDNET-style ship and coast station lists): delimiters, header spellings, columns found by content, degrees / minutes and decimal
 // coordinates, spreadsheet-damaged numbers, the MID table and the merge rules.
 #include "dect2/marine/marine_mmsi.h"

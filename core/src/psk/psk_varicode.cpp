@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PSK31 / PSK63 varicode, convolutional code and Viterbi decoder (see psk_varicode.h).
 #include "dect2/psk/psk_varicode.h"
 #include "../hfdig/hfdig_kbd_tables.h"

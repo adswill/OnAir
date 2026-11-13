@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB ensemble watch: tells you when a multiplex changes. Fed with the census rows (or one ensemble's service list) on every update; reports
 //   - a new ensemble on a block, an ensemble that went away (no signal for `goneSec`),
 //   - services added or removed, a service whose bit rate or codec (DAB / DAB+) changed, the ensemble ID or label changed.

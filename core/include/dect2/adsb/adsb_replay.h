@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Per-aircraft track replay: every position fix of an aircraft is kept (bounded), and the track can be played back at any time between its
 // first and last fix with interpolated position and altitude, so the map can show "where was it ten minutes ago" or run a replay slider.
 // Gaps longer than maxGapS are not bridged (the aircraft left coverage), so the replay never draws a made-up leg. Pure logic.

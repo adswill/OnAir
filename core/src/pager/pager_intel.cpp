@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: text repair, positions, learned fields and incidents (see pager_intel.h).
 #include "dect2/pager/pager_intel.h"
 #include <algorithm>

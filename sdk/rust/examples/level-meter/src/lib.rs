@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: CC0-1.0
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Level meter: average channel power in dBFS, with a peak hold. The smallest useful Rust plugin.
 use onair_plugin::{export_plugin, Host, IqMeta, Lamp, Plugin, CAP_IQ_SINK};
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat all-carriers mode, stage 2: one wide capture in, every carrier decoded in parallel.
 //   CarrierDetector (inmsat_detect.h) finds the carriers; the manager groups them into windows of about 160 kHz, cuts every window out of the
 //   capture with ONE shared forward FFT (lora::FdChannelizer) and runs an Aero receiver (P channels at 600, 1200, 10500 bit/s) and, for

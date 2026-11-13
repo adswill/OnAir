@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C reply detector against the generator's own list: replies among Mode S traffic at 2, 4 and 10 Msps, replies only, noise only
 // (no replies), a carrier error, the SPI pulse, an emergency squawk, and a Mode S-only stream (no phantom replies out of message bits).
 #include "dect2/modeac/modeac_gen.h"

@@ -1,4 +1,7 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir relay service (docs/ONAIR-WEB-RELAY.md, protocol v1). One file, no dependencies, Node 18+.
 // It speaks plain TCP/HTTP: put TLS in front (Caddy, nginx, Cloudflare proxy) for the wildcard certificate.
 //   RELAY_DOMAIN=relay.on-air.dev RELAY_PORT=8080 node relay.js

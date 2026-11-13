@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Voice inversion descrambler (voice_inversion.h): frequency mapping, invert twice = identity, split-band round trip, the auto-search on
 // speech-like signals across noise and levels, thread safety, near-zero CPU while off.
 #include "dect2/audio/voice_inversion.h"

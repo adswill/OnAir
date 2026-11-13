@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAVB physical layer: header, layout, chirp, loopback of every profile, carrier / timing / phase impairments, chunked input, noise and fuzz robustness.
 #include "kavb_test_util.h"
 #include <cstdlib>

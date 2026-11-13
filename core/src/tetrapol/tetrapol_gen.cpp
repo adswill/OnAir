@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRAPOL test signal: PAS 0001-2 frames (control or traffic channel) on a GMSK (BT 0.25, h 0.5) 8 kbit/s carrier.
 #include "dect2/tetrapol/tetrapol_gen.h"
 #include "dect2/tetrapol/tetrapol_codec.h"

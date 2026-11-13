@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GPS interference heatmap: aggregate-only. A station posts, per 0.5 degree grid cell, how many aircraft it heard in the last hour and
 // how many of them reported a degraded GNSS position (NACp / NIC low, or a position jump). No aircraft ids, no tracks, no positions finer
 // than the cell. The hub keeps the newest post of each station (a post replaces the station's earlier one), sums the stations' cells and

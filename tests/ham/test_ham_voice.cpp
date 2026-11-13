@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ham voice band plan: segments per IARU region, sideband convention, and the region of a position / locator.
 #include "dect2/ham/ham_voice.h"
 #include "dect2/ham/ham.h"

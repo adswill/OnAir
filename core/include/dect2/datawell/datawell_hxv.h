@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell HXV real-time format (DWR-MkIII, DWR-G, WR-SG buoys, 2FSK at 81.92 bit/s), decoded from the published description:
 //  - Datawell Waverider Reference Manual DWR-MkIII, section 5.7 "Data format" (cdip.ucsd.edu/m/documents/_downloads/ce99796d384cd0194a745160409da9ba/mk3.pdf)
 //  - Datawell RX-C4 manual, appendix B (the HXV text lines the receiver prints; its examples were used to check the parity code).

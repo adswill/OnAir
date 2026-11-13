@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Crash reports. The handlers do as little as they can: the text is built in a fixed buffer and written with plain system calls,
 // because the heap and the C library may be what is broken. The binaries are stripped, so a report names module+offset and the
 // image base; those can be looked up against the matching symbols later.

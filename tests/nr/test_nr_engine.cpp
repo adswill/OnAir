@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // 5G NR cells through the engine (setStandard(59)): the synthetic source plays two n78 cells at 20 Msps around 3541.44 MHz; the receiver
 // searches the sync raster in the block, decodes both MIBs and reports through latestRx() with their GSCN and band.
 #include "dect2/engine/engine.h"

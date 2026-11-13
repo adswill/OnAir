@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LoRaWAN test signal: LoRaWAN frames on several channels of a regional plan at once (different spreading factors, 125 / 250 / 500 kHz, gateway
 // downlinks with inverted IQ), over complex white noise. The payloads are made-up bytes standing for encrypted data; the MICs are made up too.
 // Nothing is transmitted: the samples only exist in memory or in a file. Uses the LoRa modulator of mesh_lora.h (TxFrame).

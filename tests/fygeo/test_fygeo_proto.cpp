@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FengYun formats: the FY-4 file headers and names, JPEG 2000 round trip (12 bit, lossless), CADUs through transport stream packets (several PIDs,
 // split anywhere), the S-VISSR PN preamble (ends with the sync window), scrambling, packing of the scan lines and the zero spare area.
 #include "dect2/fygeo/fygeo_gen.h"

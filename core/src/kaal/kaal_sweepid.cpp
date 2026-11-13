@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL station ID in the sweep: see kaal_sweepid.h.
 #include "dect2/kaal/kaal_sweepid.h"
 #include "dect2/kaal/kaal_phy.h"

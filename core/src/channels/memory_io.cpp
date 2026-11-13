@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MemoryBank files: JSON (the saved file and an export), CSV (spreadsheets, other programs), the import of simple "frequency,name" lists and of
 // an SDR++ Frequency Manager export, and the atomic save. The format is documented in memory_bank.h and in app/memory/README.md.
 #include "dect2/channels/memory_bank.h"

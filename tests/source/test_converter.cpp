@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The frequency converter (converter.h): the one conversion between the frequency at the antenna and the one the radio is tuned to.
 #include "dect2/source/converter.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (HF) detector receiver, see roshf_rx.h
 #include "dect2/roshf/roshf_rx.h"
 #include "dect2/roshf/roshf_tel.h"

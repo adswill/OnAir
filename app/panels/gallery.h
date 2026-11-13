@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The shared picture gallery (View > Images): every picture the satellite, fax, SSTV and HamDRM receivers finish is handed to publish()
 // below by the receiver's screen code (the DSP is not touched). The pictures are kept in <data folder>/images/ with an index file, capped by size.
 #pragma once

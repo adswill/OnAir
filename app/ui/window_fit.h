@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure logic for floating windows (tested in tests/app/test_gui_rules.cpp): where a window must be moved so that its title bar can
 // still be grabbed, and the first-use size of a window on a small display.
 #pragma once

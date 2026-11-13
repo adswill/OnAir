@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Two-branch diversity combiner (selection and maximal-ratio), see dsp/diversity.h for the method.
 #include "dect2/dsp/diversity.h"
 #include "dect2/dsp/fftutil.h"

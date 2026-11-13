@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Passive coherent location: aircraft detected from the echoes of a broadcast transmitter (FM, DVB-T) using two coherent channels, a reference
 // channel (antenna toward the transmitter) and a surveillance channel (antenna toward the sky). Chain: clutter / direct-path cancellation (ECA
 // least squares or NLMS) -> cross-ambiguity function (bistatic range x Doppler) -> 2-D cell-averaging CFAR -> Kalman tracking of the bistatic

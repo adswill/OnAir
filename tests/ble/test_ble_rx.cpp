@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth LE advertising monitor: the test signal through the receiver (ble_gen.h, ble_rx.h): each advertising channel, beacons,
 // CRC failures, carrier offsets with noise and two devices, another sample rate, and noise alone.
 #include "dect2/ble/ble_gen.h"

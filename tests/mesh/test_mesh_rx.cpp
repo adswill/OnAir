@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) round trip: the test signal (6 Meshtastic + 3 MeshCore nodes, packets built as the firmware builds them) through the
 // receiver at 2 Msps with 8-bit samples. One whole cycle of the scene (60 s): every frame decodes, every node, name, position,
 // battery and message arrives, nothing fails its CRC. Also measures the receiver's speed.

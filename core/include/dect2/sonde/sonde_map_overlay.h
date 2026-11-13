@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What the radiosonde map draws besides the sondes (4.0): every launch site in view with its name (the known list of sonde_sites_known.h,
 // the sites learned from the sondes heard, sonde_sites.h), the user's own station with its callsign (or the chase car, from a live GPS),
 // and the online flight prediction (Tawhiri, the SondeHub predictor) of the selected sonde. Pure data, so the tests can check it.

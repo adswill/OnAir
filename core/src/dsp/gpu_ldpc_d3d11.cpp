@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Direct3D 11 compute LDPC decoder for Windows: the same layered normalised min-sum as the Metal version (one thread group of 360 threads
 // per FEC block), written in HLSL and compiled when the program starts. d3d11.dll and d3dcompiler_47.dll are loaded at run time, so a
 // computer without a usable GPU or driver simply reports the decoder as unavailable and the CPU decoder is used.

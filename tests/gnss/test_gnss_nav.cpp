@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS known-answer tests: the C/A codes against IS-GPS-200 Table 3-I, the word parity and its code properties, the subframe formats,
 // the orbit algorithm against closed forms, the time and coordinate helpers against known dates and points.
 // The navigation messages here come from the simulator (gnss_sim.cpp), which encodes them with its own code: a layout mistake that is the same

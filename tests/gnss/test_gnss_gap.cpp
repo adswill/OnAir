@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Dropouts and a reset. (1) 3.3 ms of samples vanish from the stream after the first fix (a radio that drops a USB transfer): the code phase and carrier
 // phase of every channel jump, the channels are lost and found again, and the fix comes back. (2) Later 5 ms of zeros (a glitch that keeps the timeline):
 // the loops ride through. (3) reset() in the middle of a run: everything is forgotten, the report numbers keep growing, the fix is made again.

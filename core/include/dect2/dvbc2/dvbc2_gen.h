@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-C2 test signal (EN 302 769): one C2 system of up to one L1 block width (3 409 carriers, 7.61 MHz) with its data slices, PLPs and
 // notches, built in the frequency domain symbol by symbol (preamble with the L1 part 2, data symbols with scattered / continual / edge
 // pilots), 4K IFFT at 64/7 Msample/s, guard interval, then an echo, the sample clock error, the carrier offset and noise, resampled to the

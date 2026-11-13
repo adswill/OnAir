@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN (Field Area Network: smart meters, street lights) over the IEEE 802.15.4g SUN FSK PHY, receive only (no keys, no decryption):
 // the PHY header, PN9 data whitening and the 2- and 4-octet FCS; the 802.15.4-2015 MAC header (frame version 2, PAN ID rules, the auxiliary
 // security header); the Wi-SUN header IEs (UTT, BT, FC, RSL, EA, LBC, ...) and, where the frame is not secured (PAN advertisements and their

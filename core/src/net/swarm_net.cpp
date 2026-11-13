@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LAN swarm discovery over UDP multicast. See dect2/net/swarm_net.h.
 #include "dect2/net/swarm_net.h"
 #include "netcompat.h"

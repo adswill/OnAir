@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ROS (HF) test signal, see roshf_gen.h
 #include "dect2/roshf/roshf_gen.h"
 #include "dect2/roshf/roshf_rx.h"

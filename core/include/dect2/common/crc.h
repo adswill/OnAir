@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared CRC engines and named presets, replacing the per-protocol copies.
 // Byte-oriented functions use constexpr 256-entry tables built at compile time (hot paths stay fast);
 // the bit-serial engine (one bit per byte, any width up to 32) serves the air-interface CRCs

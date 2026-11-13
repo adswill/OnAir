@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The transmit parameter table (tx_params.h) against the generators, for EVERY transmit mode (txModes()):
 //   1. every row that is drawn and not marked "meta" changes the generated samples when its value changes (a control that does nothing fails);
 //   2. no generator reads a key of TxRequest::opt that is not a row of its mode (or one of the radio's calibration / output keys);

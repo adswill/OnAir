@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility decodes as automation events (docs/SMART5-UI-3.9.md, smart5b leftover): the decoders below know only their audio offset, not the
 // radio frequency, so the interface thread sends "msg.<kind>" with the tuned frequency when a transmission starts or an event is decoded.
 // The insight hub learns the broadcast schedules from them (overdue alerts, insight/schedule_watch.h); rules and integrations see them too.

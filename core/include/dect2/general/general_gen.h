@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signal of the general receiver (makeGeneralSynth): one station on the dial frequency (the radio sits tuneOffsetHz above it),
 // modulated by a steady tone, over white noise (SynthConfig::snrDb measured in 12.5 kHz).
 // SynthConfig: modeOpt[0] the modulation (GeneralDemod: 0 NFM, 1 WFM, 2 AM, 3 USB, 4 LSB, 5 CW), modeOpt[1] = 1 noise only;

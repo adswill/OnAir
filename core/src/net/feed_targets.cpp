@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Outbound feed targets (feed_targets.h): one thread, a bounded queue, a socket per enabled target.
 #include "dect2/net/feed_targets.h"
 #include "dect2/common/thread_name.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB SPI (electronic programme guide): the TS 102 371 binary encoding and plain XML -> SpiNode tree, time and duration conversions, and the
 // SpiStore model built from the trees. See dab_spi.h.
 #include "dect2/dab/dab_spi.h"

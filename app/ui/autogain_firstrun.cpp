@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The setup's and the lessons' gain call (autogain_iface.h) on top of the real auto gain of autogain-030 (app/panels/autogain_ui.cpp,
 // autogainRun(App&, int how)). It replaces the stand-in that only switched on the old AGC loop.
 #include "autogain_iface.h"

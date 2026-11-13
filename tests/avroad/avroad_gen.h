@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for the aviation, rail and road receivers. These generators exist only in the tests: none of them is reachable from the transmit side of the application.
 #pragma once
 #include "dect2/common/ring.h"

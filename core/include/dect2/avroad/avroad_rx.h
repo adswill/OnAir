@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One receiver object for the twelve aviation, rail and road modes of 3.8 (docs/AVIA-ROAD-3.8.md): which decoder runs is set from the
 // active standard, as the FengYun receiver does. Receive only. Written to the engine's contract: configure() once the sample rate is known,
 // feed() from the analysis thread, telemetry() and the setters from the interface thread.

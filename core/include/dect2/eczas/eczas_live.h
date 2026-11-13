@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // e-Czas (Poland's national time service, 225 kHz long wave) receiver for the engine: IQ in, time packets out.
 // Spec: GUM "e-CzasPL" frame description v1.0; the bit slicer and frame layout are in eczas_rx.h / eczas_proto.h (after sp5wwp/e-Czas, GPL-3.0).
 //

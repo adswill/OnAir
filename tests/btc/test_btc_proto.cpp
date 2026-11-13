@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Bluetooth Classic baseband pieces: the sync word of a LAP (against the General Inquiry Access Code of the specification), access code search with bit
 // errors, the inquiry response (FHS) with every whitening seed, error correction, and the class of device text. The packets are built here by the
 // generator of btc_proto.cpp; the same packets were also decoded by libbtbb (Ubertooth, GPL) when this was written: its decoder read all 300 of them.

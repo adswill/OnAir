@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA APT below the FM discriminator: the 2400 Hz amplitude-modulated subcarrier down to 4160 samples a second, the sync A pulse train found by correlation, 2080 samples a line.
 // 4.0 line filter (setNoiseFilter, on by default): the noise of one sample is measured on each line's space A (47 words of steady grey after
 // sync A; its middle 31), averaged over lines; the two pictures of the line then go through a local Wiener filter over 7 samples with that

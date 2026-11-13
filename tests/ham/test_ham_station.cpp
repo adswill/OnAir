@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Ham station helpers (4.0): the mode catalog (every keyboard entry is a real preset, every slot entry a mode the engine runs), usual dial
 // frequencies, the frequency memory and its text, the band plan segments and their warnings, the S-meter, the region of a country, the setup
 // hints, CW speed matching, the band-hop schedule, the fake-it split.

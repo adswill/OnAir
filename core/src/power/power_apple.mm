@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // macOS side of the power policy: the power source (IOKit), the thermal state (NSProcessInfo) and the App Nap hold.
 #include "dect2/power/power.h"
 #import <Foundation/Foundation.h>

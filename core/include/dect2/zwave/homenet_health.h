@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Home network health (3.9, docs/SMART5-iot-3.9.md) for the user's own Z-Wave home ID or Zigbee PAN: per node, the frames it sent, its
 // retransmissions (the same source, destination and sequence number again within 3 s), the frames that asked for an acknowledgement and
 // got none within 1 s, the signal level now against its first hour, and silence against the node's own learned interval.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM / short wave: carrier offset against the broadcast raster, best sideband, AM / DRM switch hint, station ID from the user's schedule CSV. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../smart5/smart5_ui.h"

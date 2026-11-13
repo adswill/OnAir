@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AM stereo test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // One medium-wave station with C-QUAM stereo: left and right tones (440 and 660 Hz, 0.35 each) on the carrier as z = (1 + L + R) +

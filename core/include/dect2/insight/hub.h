@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The insight hub (docs/SMART5-*-3.9.md): one place that feeds the ham, voice, pager and HF utility analysers from the
 // automation events the decoders already send ("aprs.packet", "pager.message", "session.call") and from FT8 / FT4 / JS8
 // decodes, and gives findings back as Insight rows and as automation events "insight.<kind>" (rules, notifications and the

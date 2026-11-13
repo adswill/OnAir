@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The optional public name on the map: validation (app/map/map_name.h), same rules as the server's by-name.js.
 #include "map_name.h"
 #include <cstdio>

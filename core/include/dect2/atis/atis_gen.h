@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATIS test signal: narrow FM on a VHF marine channel, a voice-like transmission (a few audio tones) and, when it ends, the ATIS burst
 // (dot pattern, DSC phasing, format 121, identity, check symbol; atis_proto.h) as 1300 / 2100 Hz AFSK at 1200 baud. As on the air the
 // tones are on a phase-modulated carrier (modulation index 1.0), so the 2100 Hz tone has more deviation than the 1300 Hz one; phaseMod = false

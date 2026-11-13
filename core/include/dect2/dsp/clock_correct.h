@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sample-clock error correction for OFDM receivers (DVB-T2 uses it; meant for DVB-T, ISDB-T, DTMB, ATSC 3.0 and DAB too).
 #pragma once
 #include "dect2/common/ring.h"

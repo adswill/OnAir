@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // dPMR voice through a user-installed "ambe2" codec plug-in (stub library, no codec): generator -> receiver -> plug-in -> PCM tap. Every received voice
 // frame (72 bits) reaches the plug-in as 12 bytes and gives 160 samples. dPMR has no encryption in the signal OnAir reads, so there is no gate to
 // test. NOT covered: a real codec or a real dPMR recording.

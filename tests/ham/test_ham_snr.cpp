@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity table of the slot modes: the SNR (in 2500 Hz, AWGN) where half of the messages decode, measured through the real modulators
 // (ftxAddTransmissionEx) and the real decoder (HfdigFtx), against the threshold the WSJT-X User Guide publishes for each mode (its
 // "S/N threshold" column). Several stations per slot at the same SNR (spread over the passband, each with its own time and frequency offset),

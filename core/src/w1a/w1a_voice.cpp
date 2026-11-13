@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // W1A voice inversion scrambler: detector, descrambler and the speech-like test signal (see w1a_dsp.h).
 // Full-band frequency inversion maps an audio frequency f to fc - f (a mixer with a carrier fc and a low-pass at fc). The detector measures the
 // long-term spectrum of the voiced frames and compares it with the long-term average speech spectrum, as is, and flipped about every candidate

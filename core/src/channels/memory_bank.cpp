@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MemoryBank: add / update / remove / reorder / search / sort, duplicate detection and the recall order. The files are in memory_io.cpp.
 #include "dect2/channels/memory_bank.h"
 #include <algorithm>

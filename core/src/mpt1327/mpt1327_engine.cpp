@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MPT 1327 trunking control channel in the engine: mixes the channel to 0 Hz, decimates to about 24 kHz, takes the FM discriminator
 // output and hands it to mpt1327::Decoder. A wide capture (1 Msps and up) cuts the control channel out with a FIR channel filter first
 // (SliceDdc), so the other channels of the capture do not alias into it. The GTCs' traffic channels inside the capture are followed as FM

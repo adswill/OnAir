@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital Selective Calling (ITU-R M.493, operation M.541): 10-bit symbols, DX/RX time diversity, phasing, call parsing and builders.
 // The decoder works on bits (100 bd FSK on MF/HF, 1200 bd AFSK on VHF channel 70), so it is tested without the radio layer.
 #pragma once

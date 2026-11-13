@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parts of the per-mode Simple / Advanced view (docs/SIMPLE-ADVANCED.md): the preference key of a mode, the stored text, the
 // default for a profile, and the pane widths of the layout helper. No ImGui here, so tests/app/test_mode_panel.cpp can check them.
 #pragma once

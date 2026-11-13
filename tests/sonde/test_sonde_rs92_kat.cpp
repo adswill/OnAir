@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RS92: known answers from the example frame printed in rs1729/RS rs92/rs92.txt (bytes as sent after Manchester decoding and byte
 // framing): the block CRCs, the Reed-Solomon parity (a check that RS92 uses the same code as the RS41), the fields. Then the symbol path
 // (Manchester, byte framing, both polarities, bit errors) and builder -> decoder round trips.

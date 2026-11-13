@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL codec, decoder against the Python reference: the Python frames decode to the Python PCM (SNR above 60 dB, in practice
 // identical), also with a reserved-type frame and a wrong-shape frame concealed; and the C++ encode -> decode chain follows the Python's.
 #include "dect2/kaal/kaal_codec.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Orbcomm test transmitter (orbcomm_gen.h).
 #include "dect2/orbcomm/orbcomm_gen.h"
 #include "dect2/dsp/portable_rng.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite TV feed hunter (see feed_hunter.h).
 #include "dect2/satmisc/feed_hunter.h"
 #include <algorithm>

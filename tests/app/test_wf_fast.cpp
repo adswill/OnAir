@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Waterfall in fast mode (the CW preset): rates from 28 rows a second up are "fast", the time per row is exact, rows are written one by one
 // and not averaged down the rows, and a batch of rows (several per screen frame) keeps its order and count.
 #include "../../app/gfx/waterfall.h"

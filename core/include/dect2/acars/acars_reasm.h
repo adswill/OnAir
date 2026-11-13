@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-block ACARS message reassembly, shared by the ACARS and VDL2 receivers. A long message (weather, flight plan, ADS-C) is sent
 // as several blocks: every block but the last ends in ETB, the last in ETX. The blocks of one message share the address, the label and
 // (downlinks) the message number M##, and a downlink's block sequence letter goes A, B, C ... This holds the ETB blocks back and gives

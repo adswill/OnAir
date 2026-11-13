@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Tools > Antenna designer > Calculators: wavelength and wire lengths, cable loss, SWR / return loss, matching networks (L network, stub,
 // quarter-wave, gamma, balun / choke), line transforms, series / parallel, EIRP / ERP, antenna factor, band presets. The formulas are in
 // core (dect2/antd/antd_tools.h, docs/ANTENNA.md); this file only lays them out. And the polar plot used by the pattern cuts.

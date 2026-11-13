@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL ground stations near the user and the frequencies they use now (4.0, docs/HFDL-STATIONS-4.0.md). Two sources, merged:
 //  - the squitters this receiver hears: every ground station sends an SPDU every 32 s that lists its active frequencies (free, offline),
 //  - optionally a community list: hfdl.observer/active.json (the Airframes ground-station API shape: {"ground_stations": [{"id", "name",

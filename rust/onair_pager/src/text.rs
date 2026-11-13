@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Message text of POCSAG and FLEX: 7-bit alphanumeric characters, 4-bit numeric digits and the "does this look like real text" test that the
 //! automatic read mode of the receiver uses. Bits come one per byte, first transmitted bit first.
 

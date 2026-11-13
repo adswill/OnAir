@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // badge-service.js - accounts, sign-in and the badge pages' API for the hub (docs/MAP-BADGES-4.0.md). The MapHub owns one instance; the
 // tests run it against MemoryBadgeBackend and a scripted GitHub (test/badge-service.test.js).
 //

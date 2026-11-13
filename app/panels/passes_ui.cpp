@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The satellite tracker (View > Passes, docs/SATTRACK-3.8.md, 4.0 layout in docs/TRACKER-4.0.md): what is overhead now and the passes of the next two days over the
 // receiver's position, for the satellites OnAir's modes receive (the weather and ISS lists here, the CubeSat table of the Smart decoder, the LoRa presets, Orbcomm,
 // Globalstar and Iridium), with a satellite search and groups, filters on peak elevation and what the radio and antenna can hear; a world map with the chosen

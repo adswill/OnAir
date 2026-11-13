@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Conversations: the state machine that turns detections into conversations (overs, speakers, nets, ended / active), the list with filters and sorting,
 // the export, the timeline, the band labels, the auto-listen choice, the sweep plan for narrow radios and the audio clip files. See ssbconv.h.
 #include "dect2/ssbconv/ssbconv.h"

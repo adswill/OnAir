@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NB-IoT cells screens: the cell table (operator, band, EARFCN, PCI, operating mode, eNB / sector, TAC, level, last seen), the details of the
 // selected cell and a band scan over the 100 kHz LTE raster. Only what cells broadcast to every device is shown: NPSS / NSSS, MIB-NB, SIB1-NB.
 // Receive only: nothing addressed to a device is decoded.

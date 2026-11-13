@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ham science event monitors (hamsci_evt.h) on simulated signals: Schumann resonances (sound card rate and 200 Hz, frequency error and drift, noise
 // sweep, 50 Hz mains, transients), whistlers and tweeks (dispersion, noise-only control, 24 and 48 kHz), the Moon echo test (carrier drift, noise, a
 // control without an echo), Radio Jove and CALLISTO-style bursts (narrowband interference keyed in, a gain drift, a drifting burst) and the beacon event log

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // nRF24 Enhanced ShockBurst coding and the sniffer: CRC reference values, every address length / payload length / CRC size / PID / NO_ACK
 // encoded and found again from bits with junk before and after, damaged frames refused, no strong frame in random bits, CRC-8 candidates marked weak.
 #include "dect2/nrf24/nrf24_proto.h"

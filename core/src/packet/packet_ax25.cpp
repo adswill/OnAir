@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AX.25 link layer: see packet_ax25.h. Written from the AX.25 2.2 specification.
 #include "dect2/packet/packet_ax25.h"
 #include <algorithm>

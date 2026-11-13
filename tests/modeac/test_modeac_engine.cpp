@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode A / C through the engine (setStandard(144)): the synthetic source plays the airspace with replies and the receiver reports codes and the
 // Mode S aircraft through latestRx(); some codes are matched to aircraft.
 #include "dect2/engine/engine.h"

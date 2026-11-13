@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // First-adjacent cancellation: a strong neighbour 200 kHz (and 400 kHz) from the wanted station; RDS and the audio with the canceller on and off. A station alone must be
 // untouched (nothing detected).
 #include "dect2/fm/fm_gen.h"

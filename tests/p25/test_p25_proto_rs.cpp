@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust P25 frame layer (rust/onair_p25, dect2::p25): NID over all messages and noisy words, Reed-Solomon of every shape with 0..t+3
 // errors, Golay / Hamming over their word space, CRC, trellis with noisy / NaN / random levels, TSBK, link control, encryption sync and header words, the IMBE
 // interleave and the names, over ONAIR_DIFF_ITERS (default 200000) seeded inputs per family. Every result goes into a digest (tests/common/golden.h; floats

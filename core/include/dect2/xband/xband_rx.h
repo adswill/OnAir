@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Receiver of the X-band links (xband_tel.h): one class, one profile per mode-list entry. BPSK, QPSK or OQPSK with a root raised cosine, Gardner timing and a Costas loop; the phase and
 // pairing ambiguities settled by the sync word; K = 7 Viterbi or none; the shared CADU layer and the instrument decoders. Written to the engine's contract: configure() once the
 // sample rate is known, feed() from the analysis thread, telemetry() and the setters from the interface thread. pushCadu() takes decoded CADUs (a .cadu file) without the demodulator.

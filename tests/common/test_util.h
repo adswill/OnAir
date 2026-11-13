@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared boilerplate for the stand-alone test programs: a failure counter and a CHECK macro that prints the
 // failing line and a printf-style message. Include it once per test (it defines a file-local `fails`),
 // call testSummary() or return `fails ? 1 : 0` at the end of main.

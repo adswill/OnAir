@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde launch sites over time (SondeHub site pages, regular chasers): the site each sonde came from (its first fix, low and climbing),
 // the sites this station hears, and where each site's sondes came down. docs/SONDE-SITES-3.9.md.
 #pragma once

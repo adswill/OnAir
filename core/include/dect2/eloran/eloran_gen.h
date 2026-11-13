@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Synthetic Loran-C pulse groups for tests: one master and any number of secondaries at a chosen GRI, white noise at a chosen SNR.
 // Complex baseband at fs with the 100 kHz carrier at carrierHz (the receiver's signal offset).
 // The 9th pulse of the master takes the phase of its 8th pulse (its own code is not in the public text used).

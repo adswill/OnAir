@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 /* OnAir Web client settings: schema, defaults, validation, persistence, auto-range. Pure code (no DOM): tested by tests/web/run.js.
  * Every value is checked against its schema on load and on import, so a damaged or hand-edited localStorage can never break the page. */
 (function (root, factory) {

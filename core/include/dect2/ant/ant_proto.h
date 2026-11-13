@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ANT / ANT+ air frames and the public ANT+ device profiles (heart rate, bike speed and cadence, bike power, stride-based speed and
 // distance, environment). Receive only: OnAir never transmits, pairs or acknowledges.
 //

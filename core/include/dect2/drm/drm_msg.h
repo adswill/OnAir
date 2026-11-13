@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM signalling and message formats: FAC (clause 6.3), SDC data entities (6.4), the text message (6.5) and the audio super frame (5.2 to 5.4).
 // Bits are one per byte (0 or 1), most significant first, like in drm_fec.h.
 #pragma once

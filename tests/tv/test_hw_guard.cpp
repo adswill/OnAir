@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hardware video start guard: mid-GOP join, silent GPU, intra-refresh stream, copy-out failures.
 #include "dect2/tv/hw_guard.h"
 #include <cstdio>

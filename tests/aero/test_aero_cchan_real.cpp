@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Aero C channel on a REAL recording: 14 s of the 8400 bit/s voice-channel sample from JAERO's sample set (github.com/jontio/JAERO, samples/
 // 8400bps_ambe_sample.ogg, MIT, Jonti Olds; see tests/data/aero/README.txt). The audio is a receiver's 48 kHz output with the carrier at about
 // 2.5 kHz; here it is an 8-bit file. Checks that framing, descrambling and decoding give valid signal units (CRC-16) and the call-progress

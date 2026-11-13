@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Which modes the mode lists show: the rules are plain strings and sets (no ImGui, no mode table), so they are unit-tested.
 // Modes and groups are named by their text, never by number. Hidden modes stay reachable: by search (tagged "hidden"), --mode, --pick and deep links.
 #pragma once

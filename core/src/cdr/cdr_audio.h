@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CDR sound: the DRA+ decoder (the user-installed add-on, cdr_dra.h) and the sound output of the service the user listens to (used by the receiver, cdr_rx.cpp).
 // Everything runs on the receiver thread. The decoder is rebuilt whenever its state could be stale or stuck: a new lock, a lost lock, a manual
 // re-sync, another service, and when many audio units go in without any sound coming out; a failed sound device is opened again.

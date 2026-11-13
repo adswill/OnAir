@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox frame layer: the public example uplink from the renard project's README (device 004D33DB, counter 0x1A0, payload ABAD1DEA) must parse
 // with a good CRC; Table 3-1 and Table 3-3 of the specification as coded; every payload length and rank goes through buildFrame and back; the
 // convolution codes invert; a flipped bit fails the CRC.

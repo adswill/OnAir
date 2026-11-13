@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, "Monitor bands": pick (band, mode) pairs of FT8 / FT4 / FT2 / WSPR from 160 m to 6 m and decode every pair the radio's capture
 // holds at the same time (core: hfdig_multiband.h). Shows what the capture covers, what it does not (and the span that would be needed),
 // a "cover the most selected" button, saved presets, and the state of the CPU guard. The results go to the one combined decode list of

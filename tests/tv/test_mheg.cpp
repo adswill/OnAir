@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MHEG-5 BER structure parser: a synthetic Scene with nested constructed items, high tag numbers, long lengths, an indefinite-length item, and damaged input.
 #include "dect2/common/png.h"
 #include "dect2/tv/dsmcc.h"

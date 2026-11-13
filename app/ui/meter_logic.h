@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pure rules of the signal indicator and the CPU meter (no ImGui, so tests/app/test_meter_logic.cpp covers them):
 //  - Spark: the 30 s ring buffer of the CPU sparkline
 //  - SlowState: "too slow" with hysteresis (CPU over ~85% of the cores it may use, or the receiver falling behind)

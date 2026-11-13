@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-VFO: see vfo.h.
 #include "dect2/engine/vfo.h"
 #include "dect2/engine/channelizer.h"

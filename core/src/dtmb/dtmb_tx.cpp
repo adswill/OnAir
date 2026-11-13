@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB transmitter model (see dtmb_tx.h).
 #include "dect2/dtmb/dtmb_tx.h"
 #include "dect2/dtmb/dtmb_map.h"

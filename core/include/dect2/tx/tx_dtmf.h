@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMF keypad for the analog voice transmitter (NFM, AM, USB / LSB, airband): the keys 0-9, *, #, A-D as the dual tones of ITU-T Q.23
 // (rows 697 / 770 / 852 / 941 Hz, columns 1209 / 1336 / 1477 / 1633 Hz, the table of tones_proto.h). It is for EchoLink / IRLP node control
 // and repeater commands over the air. The panel pushes keys into TxDtmfQueue::global() while a voice transmission is on; the voice generator

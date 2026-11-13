@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A radiosonde flight as a track for Google Earth / OsmAnd (auto_rx KML, SondeHub tracker): the ascent and the descent as two lines with
 // altitude, and points for the launch, the burst, the last position (landed when heard low) and the predicted landing. docs/SONDE-TRACK-3.9.md.
 #pragma once

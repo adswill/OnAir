@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS: channel load ranking and the fewest channels that carry 90 % of the traffic. docs/WIRING-4.0.md
 #include "d40_ui.h"
 #include "../ui/typography.h"

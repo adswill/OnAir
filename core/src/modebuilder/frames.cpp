@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Builder frames: decoding the bits after the sync word into a frame (descramble, deinterleave, FEC, length), the check value,
 // the fields with their units, the display template, and the CSV / JSON export.
 #include "dect2/modebuilder/modebuilder.h"

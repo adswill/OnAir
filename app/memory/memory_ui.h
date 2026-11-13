@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Internal to app/memory: the pieces memory_ui.cpp (the panel) and memory_edit.cpp (the edit and duplicate dialogs) share.
 #pragma once
 #include "memory_options.h"

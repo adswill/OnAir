@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal processing of the marine receiver: channel front end (any input rate -> 24 kHz complex), FSK tone slicer, spectrum and FSK
 // centre finder, USB audio for the fax decoder. No decoding here.
 #pragma once

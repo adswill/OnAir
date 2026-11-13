@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAWS transmit generator: see kaws_txgen.h.
 #include "dect2/kaws/kaws_txgen.h"
 #include "dect2/kaws/kaws_frame.h"

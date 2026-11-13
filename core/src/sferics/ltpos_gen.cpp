@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Lightning position (network) simulation and the mode's test signal (ltpos_gen.h).
 #include "dect2/sferics/ltpos_gen.h"
 #include <algorithm>

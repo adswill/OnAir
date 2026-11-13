@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NavIC: the code table against the ICD's own check column, subframe FEC round trip with noise, and the receiver against its generator. Simulated only:
 // no real recording of a NavIC signal went through this test.
 #include "dect2/navic/navic.h"

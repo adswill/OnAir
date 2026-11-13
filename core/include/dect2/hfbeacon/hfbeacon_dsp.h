@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF beacon detection, the processing behind HfbReceiver; usable on its own (tests).
 //
 // Stage 1 is a Hann-windowed FFT of N samples without overlap (N the largest power of two <= rate / 1500): bin k of successive frames is the

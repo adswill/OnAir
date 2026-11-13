@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Runs a Windows program of build-windows through Wine on this Mac (Rosetta runs the x64 code): CMAKE_CROSSCOMPILING_EMULATOR of the
 # Windows build, so that ctest runs the Windows tests (tools/ci_local.sh). Wine: the Gcenx build that Homebrew's wine-stable uses,
 # unpacked to ~/onair-wine (or ONAIR_WINE = the "Wine Stable.app"); its prefix is ~/onair-wine/prefix, made on the first run.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared "Auto" detectors: what can be read from the signal itself, so a mode need not ask the user. Everything here is pure analysis of a stretch of
 // audio; the decoders call it from a worker thread and apply the result (hfdig_rtty.cpp, hfdig_kbd.cpp).
 //   findFskPairs     two spectral lines a known shift apart (the tones of an FSK signal)

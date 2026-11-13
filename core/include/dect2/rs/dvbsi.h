@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // C ABI of the Rust crate rust/onair_dvbsi (broadcast text character sets, DVB teletext, DVB subtitles). Written by hand; the Rust test rust/onair/tests/headers.rs
 // checks it against ffi.rs. Text functions write UTF-8 into a caller buffer and return the
 // length, SIZE_MAX when it is too small. Record arrays are (pointer, capacity); parsers return / report the number found, counted past the capacity.

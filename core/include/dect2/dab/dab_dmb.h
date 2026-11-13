@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMB video services in a DAB ensemble (T-DMB): ETSI TS 102 427 (the outer code of a transport stream in a stream mode sub-channel) and
 // TS 102 428 (the DMB video service: MPEG-4 Systems in an MPEG-2 transport stream, H.264 video with HE-AAC or BSAC sound).
 //

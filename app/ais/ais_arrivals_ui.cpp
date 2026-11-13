@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AIS arrivals board: the port the user picks (name, UN/LOCODE, other spellings, position) and the vessels heading there by ETA.
 // Core: dect2/ais/ais_arrivals.h.
 #include "app.h"

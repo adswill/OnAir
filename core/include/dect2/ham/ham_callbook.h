@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Callsign lookup for the QSO panel (4.0): name, QTH, state, grid, zones of the station being worked, filled in automatically from
 //  1. the callbook cache (a file in the user's own folder: what earlier lookups found),
 //  2. earlier QSOs in the logbook (the most recent non-empty value of each field),

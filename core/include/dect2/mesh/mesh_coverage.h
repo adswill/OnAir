@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh coverage map from this receiver's own receptions (3.9, docs/SMART5-iot-3.9.md). Every packet heard directly (not relayed) that
 // carries the sender's position (Meshtastic position or node info with hop_start == hop_limit, MeshCore adverts with no path, LoRa APRS
 // without a digipeater) adds its SNR to a grid cell of about cellKm x cellKm: count, best and median SNR. Only cells are kept: no node

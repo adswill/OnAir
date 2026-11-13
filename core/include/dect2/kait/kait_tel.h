@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAIT receiver telemetry. RxTelemetry::kait, engine standard 133, active standard 132.
 #pragma once
 #include "dect2/kait/kait_codec.h"

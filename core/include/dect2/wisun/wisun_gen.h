@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-SUN FAN test signal (IEEE 802.15.4g SUN FSK). Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // A schedule of frames (wisun_proto.h builds them), each on its own channel of the band: preamble (0x55 octets), the start-of-frame delimiter

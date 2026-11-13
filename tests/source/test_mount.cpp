@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Antenna mount control: Hamlib rotctld and ASCOM Alpaca drivers against fake servers, the Rotator worker on top of them
 // (offsets, goto, rate loop with its 3 s watchdog), Alpaca discovery, and the pass-driven mount plan on a real orbit.
 #include "dect2/geo/passes.h"

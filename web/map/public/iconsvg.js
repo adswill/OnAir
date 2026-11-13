@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // iconsvg.js - the icon set as ONE inline SVG sprite (<symbol> per shape, generated from shapes.js) for everything outside the map canvas:
 // layer list, track list, search results, legend, ham contacts. The map itself draws the same shapes through icons.js (canvas -> sprite atlas).
 // One source (shapes.js), one style: flat fill in the track colour, a hairline outline that does not scale with the icon, thin detail strokes.

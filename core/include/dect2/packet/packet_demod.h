@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The radio side of AX.25 packet, shared by the APRS / Packet receiver (packet_rx.cpp) and the CubeSat telemetry receiver (cubesat_rx.cpp):
 // an FM front end (mix out the signal offset, decimate to about 100 kHz, resample to exactly 96 kHz, AFC, channel filter, discriminator,
 // carrier and SNR from 20 ms power blocks), the 1200 baud Bell 202 AFSK demodulator and the direct FSK slicer of G3RUH 9600 baud (and of

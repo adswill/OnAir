@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FIS-B NEXRAD blocks: RLE round trip, geographic placement, empty-block bitmap, garbage. Simulated data only.
 #include "dect2/uat/uat_nexrad.h"
 #include <cmath>

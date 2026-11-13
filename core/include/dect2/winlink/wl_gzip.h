@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // gzip (RFC 1952) compression for Winlink's gzip proposals ("FD", the GZIP_EXPERIMENT of Pat / wl2k-go): one deflate block (RFC 1951)
 // with the fixed Huffman codes and LZ77 matches found through hash chains (32 KB window). Decompression is the shared gunzip()
 // (dect2/common/inflate.h). OnAir's own code.

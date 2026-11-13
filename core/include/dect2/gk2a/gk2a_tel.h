@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GK-2A (GEO-KOMPSAT-2A, Korea, 128.2 E) LRIT and HRIT telemetry. The two links are separate modes with the same receiver chain:
 //   LRIT  1692.14 MHz  BPSK  128 ksym/s   rate 1/2 K=7 + RS(255,223) x4   64 kbps CADUs     (KMA GK2A LRIT mission specification, Table 9.1)
 //   HRIT  1695.4  MHz  QPSK    3 Msym/s   the same coding                  3 Mbps CADUs      (KMA GK2A HRIT mission specification, Table 9.1)

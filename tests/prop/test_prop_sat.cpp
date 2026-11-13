@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite links: GEO look angles against the closed-form spherical result, LEO range rate / Doppler at the horizon (ISS, 2 m),
 // a Ku-band DVB-S2 downlink budget against a hand calculation, and the measured mode thresholds table.
 #include "dect2/prop/mode_snr.h"

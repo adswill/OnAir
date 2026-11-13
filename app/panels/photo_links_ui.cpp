@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "photo_links_ui.h"
 #include "photo_links.h"
 #include "../i18n/i18n.h"

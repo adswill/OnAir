@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Protocol lab: CRC models, and the search for the CRC of an unknown protocol (catalog, then the difference method of CRC RevEng:
 // for equal-length messages the init and xorout cancel in m1^m2, so the polynomial can be solved from the packets alone).
 #include "dect2/protolab/protolab.h"

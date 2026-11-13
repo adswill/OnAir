@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat Aero demodulators on one carrier: modulator -> carrier offset, clock offset, noise -> demodulator -> frames, bit-exact.
 // Each rate at its own sample rate, chunks of 4096; a carrier 230 Hz off.
 #include "dect2/aero/aero_demod.h"

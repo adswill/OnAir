@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 3D waterfall's cached mesh (wf3d.h) into an ImDrawList: a copy of the screen-space vertices and the indices, chunk by chunk (each
 // under 65536 vertices, so the 16-bit indices work; ImGui moves the vertex offset between them). No projection here: when nothing changed
 // a frame costs only this copy. Shared by the app (wf3d_plot.cpp) and the benchmark in tests/app/test_wf3d.cpp.

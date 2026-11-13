@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web DSP: one wideband capture, many virtual receivers.
 //
 //   capture (cf32, rate R) --> SharedFft: overlap-save forward FFT of N points, hop L = 3N/4, computed ONCE for all users

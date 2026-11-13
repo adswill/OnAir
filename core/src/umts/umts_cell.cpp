@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UMTS cell search: see umts_cell.h. Code tables: 3GPP TS 25.213 clauses 5.1.2 (scrambling), 5.2.3 (synchronisation codes) and table 4.
 #include "dect2/umts/umts_cell.h"
 #include "dect2/umts/umts_bch.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMR link layer of the receiver, see dmr_link.h.
 #include "dect2/dmr/dmr_vendor.h"
 #include "dmr_link.h"

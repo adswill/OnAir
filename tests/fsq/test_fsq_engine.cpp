@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ through the engine (setStandard(115)): the synthetic source plays the test signal, the receiver reports through latestRx().
 #include "dect2/fsq/fsq_rx.h"
 #include "dect2/engine/engine.h"

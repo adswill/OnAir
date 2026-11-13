@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DJI drone test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // makeDjiSynth(): a 2.4 GHz-style capture (>= 16 Msps) with, by scenario (SynthConfig::modeOpt[0]):

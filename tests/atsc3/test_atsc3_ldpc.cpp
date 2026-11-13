@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 LDPC (16200): the encoder satisfies every parity check of the matrix built from the tables, and the decoder recovers a code
 // word from noisy soft bits, for all code rates.
 #include "../../core/src/atsc3/atsc3_ldpc.h"

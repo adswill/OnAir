@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // General receiver (see general_rx.h): one channel of the band mixed down, filtered, demodulated (NFM, WFM, AM, USB, LSB, CW),
 // squelched and played; optionally recorded to WAV, one file per transmission.
 #include "dect2/general/general_rx.h"

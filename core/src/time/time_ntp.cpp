@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Clock discipline, the one-click clock sync and the hobby NTP server (see time_ntp.h).
 #include "dect2/common/thread_name.h"
 #include "dect2/time/time_ntp.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! OnAir TETRA: the network information layer of ETSI EN 300 392-2, i.e. only what every cell broadcasts in the clear to all terminals:
 //! the synchronisation PDU (system code, colour code, timeslot / frame / multiframe numbers, sharing mode, MCC, MNC), the system information
 //! broadcast (carrier, band, duplex spacing, access parameters, location area, BS service details, security class), the neighbour cell and

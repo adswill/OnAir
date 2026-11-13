@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Soft-decision Viterbi decoder of the standard K = 7 convolutional code (generators 171 and 133 octal, rate 1/2) of DVB-T (EN 300 744 section 4.3.3), ISDB-T and the
 //! other DVB-family receivers, with punctured positions given as 0. 64 states; the soft values are signed bytes (positive = the bit is more likely 0).
 //!

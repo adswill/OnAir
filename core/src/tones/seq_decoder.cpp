@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Five-tone sequential decoder: see seq_decoder.h. The detection is the one of the Tones mode (Goertzel filters over 16 ms windows every 8 ms,
 // two-hop confirmation of a change).
 #include "dect2/tones/seq_decoder.h"

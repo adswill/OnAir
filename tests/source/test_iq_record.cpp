@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Recording the radio's IQ samples (iq_record.h, Engine::startRecording): 3 s of the built-in FM test signal in both formats. The files have the
 // size the length and the rate say, the name reads back with guessSampleRate() / guessFormat(), nothing was dropped, and the float file played
 // back as a file gives the same receiver state as the live signal. A file source and a stopped engine refuse to record.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ACARS sensitivity: decode rate against carrier-to-noise ratio (7 kHz band), and against AM depth.
 #include "dect2/acars/acars_sim.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the error correction layer (dect2::fecp, the Rust crate onair_fec): Reed-Solomon (204,188) / (207,187) / (120,110) encoders and decoders over
 // ONAIR_DIFF_ITERS (default 100000) random words per code (clean, 1..t+3 byte errors, pure noise, bursts, all-zero / all-one words), the DVB-T2 BCH encoder / decoder
 // (normal and short frames, every t = 1..12, lengths from 1 bit to a full frame, 0..t+3 bit errors, noise), the K = 7 Viterbi decoder and the LDPC parity-check tables.

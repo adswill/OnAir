@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RF camera: the spatial spectrum of the direction finder laid over a picture as a heat map (rfcam.h does the maths). The picture is a built-in
 // demo skyline, a picture or panorama file (reloaded when it changes, so a grabber that rewrites a still gives a live view) or a camera's
 // snapshot URL (JPEG, fetched with curl about once a second). Nothing here talks to a camera or radio: azimuth only, see docs/rf-camera.md.

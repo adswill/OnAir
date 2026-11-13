@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // types.js - pure mapping from ICAO type code / ADS-B emitter category / AIS ship type to an icon shape name.
 // No DOM; covered by web/map/test/types.test.js. Shape names are drawn in shapes.js.
 

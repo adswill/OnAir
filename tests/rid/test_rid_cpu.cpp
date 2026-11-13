@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Remote ID CPU work (3.9, docs/ADSB-REMOTEID-3.9.md): the burst gate in front of the Wi-Fi demodulator, the block front ends of the BLE and Wi-Fi
 // receivers, the narrowband trigger check of the OFDM receiver and the decode of a finished 802.11b frame inside feed(). On the generator's signal:
 //   1. the gate on and off decode the same Remote ID messages (BLE and Wi-Fi) at 30, 15 and 10 dB, with carrier offsets of +-40 kHz

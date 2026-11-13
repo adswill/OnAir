@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Noise floor logger for a wide capture: the receiver's noise floor in 16 sub-bands across the span, once a second, over a long time, so a rise of the noise (a switching supply, a solar inverter, an LED lamp,
 // a neighbour's equipment, the weather) shows up as a number and a time. A 4096-point Hann spectrum every frame; in each sub-band the median bin power (so narrow signals do not count: only noise that
 // raises most of the band does) averaged over one second, in dB against full scale. Per sub-band the last hour's 10th, 50th and 90th percentiles are kept; the baseline is the 20th percentile of the last

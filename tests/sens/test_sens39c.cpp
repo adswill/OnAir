@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sensitivity, offset tolerance, lock time and CPU of the aviation, marine, IoT and drone receivers (docs/SENSITIVITY-3.9-C.md).
 // Every mode's own test signal (makeModeSynth, the same as tools/sens/sens_modes.h) goes through the impairment and white noise into a fresh receiver;
 // a trial passes when the receiver counted at least half the valid units (CRC / FEC passed) of a clean run, as in sens_sweep.

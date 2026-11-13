@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The app side of user-installed speech codecs (see speech_codec_ui.h and docs/CODECS.md).
 #include "speech_codec_ui.h"
 #include "../app.h"

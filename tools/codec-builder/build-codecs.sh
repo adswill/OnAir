@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # OnAir voice codec build helper for macOS and Linux.
 # Run it yourself:  bash tools/codec-builder/build-codecs.sh
 # It asks which plug-ins you want, shows a patent/licence notice, and fetches the upstream source ONLY after you type "yes".

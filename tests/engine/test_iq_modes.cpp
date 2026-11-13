@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Remove DC spike" and "IQ correction" (iq_correct.h) against the receiver of every mode: they must never make a mode worse.
 //
 // For every mode its own test signal goes straight into its own receiver, with the corrections applied the way the engine applies them

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Band plans (core/src/bandplan): the built-in channel tables against known values, validation messages, JSON / CSV round trips,
 // the user's registry (import, replace, delete, reload) and damaged input (truncated, mutated and nonsense files must not crash).
 #include "dect2/bandplan/bandplan.h"

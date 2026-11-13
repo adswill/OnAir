@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One channel out of a wide capture (single-radio trunking, docs/TRUNK1-3.9.md): mixed to 0 Hz, low-passed and decimated to a narrow rate
 // (48 to 96 kHz) in one or two polyphase FIR stages (GroupDecimator), so a voice or control channel decoder runs at the narrow rate instead of
 // mixing and filtering every sample of the capture itself. Cost per channel: one complex mix per input sample plus about 5.5 x input rate

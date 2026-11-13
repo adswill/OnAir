@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham keyboard modes: text to audio for PSK31 / PSK63, RTTY, CW and the hfdig keyboard families, the transmit limits and the macros.
 #include "dect2/ham/ham_kbd.h"
 #include "dect2/cw/cw_morse.h"

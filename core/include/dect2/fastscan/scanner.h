@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The fast wideband scanner: FFT channel power instead of retune-and-listen. Per hop it captures a block at the radio's full rate, computes the
 // averaged power spectrum of all channels in the hop, calibrates it (hop-edge roll-off, DC spike), updates the dynamic floor, finds signals
 // above the floor, feeds the hit tracker and writes the pseudo-spectrum (current / average / max-hold / floor), then moves to the next hop.

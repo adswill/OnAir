@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE: transmit diversity, OFDM and channel estimation shared by the test signal and the receiver (cell_lte_int.h).
 #include "cell_lte_int.h"
 #include "dect2/dsp/fftutil.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BGAN forward-bearer demodulator (bgan_demod.h). ETSI TS 102 744-2-1 frame structure; the method: comb correlation of the pilots finds timing and the
 // fine frequency, the unique word gives the frame start and subtype, then every frame is demodulated with a pilot-based channel estimate.
 #include "dect2/bgan/bgan_demod.h"

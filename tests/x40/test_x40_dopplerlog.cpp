@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Satellite Doppler curve logger: the pass of a circular-orbit satellite (550 km and 800 km) past an observer is generated from the geometry (range rate of the true orbit, not the fit
 // model), with a radio offset and drift, noise and fades; the logger's time of closest approach, no-Doppler carrier and steepest slope are compared with the geometry's. Simulated
 // signals only.

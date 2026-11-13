@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the file format layer (dect2::filesp, the Rust crate onair_files): CSV records / quoting / list splitting, SigMF meta files (built from
 // random members, mutated, truncated, nested too deep, with duplicate keys, escapes and odd numbers) and both SigMF writers, WAV fmt chunks / classification /
 // data end / names, TLE lines (valid sets with mutated columns and checksums) and TLE texts, the SQLite pieces of the MBTiles reader (varints, records, payload

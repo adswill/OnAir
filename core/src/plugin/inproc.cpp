@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The in-process runner: the plugin's code runs on a worker thread of its own, fed through a bounded queue, with a watchdog thread.
 // A plugin call that runs too long marks the plugin Hung: the host stops feeding it and stops waiting for it (a thread inside foreign code cannot
 // be killed safely; it is abandoned and its library stays loaded). Use the helper-process runner for plugins that must be killable.

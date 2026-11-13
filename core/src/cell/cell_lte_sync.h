@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Private header of the LTE cell search: the structures passed between the synchronisation helpers (cell_lte_sync.cpp) and the
 // search itself (cell_lte_search.cpp). Not part of the API.
 #pragma once

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The pure parts of the Linux / software-OpenGL performance work (docs/PERF-LINUX.md): renderer detection, the low-power choice,
 // the frame-gap floor, frame-time percentiles (app/gfx/render_caps.h) and the trail thinning and culling (app/adsb/trail_draw.h).
 #include "../../app/gfx/render_caps.h"

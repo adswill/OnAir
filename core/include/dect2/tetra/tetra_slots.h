@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA traffic-slot selection (pure logic, no radio): which of the four timeslots of a carrier the voice path follows.
 // Encrypted or unknown-state slots are never decoded whatever is chosen here (tetra_voice.h gates every burst first); this only
 // says which slot is asked for and how the slots are described to the user.

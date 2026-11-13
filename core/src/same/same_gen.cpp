@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // NOAA Weather Radio SAME test signal: see same_gen.h.
 #include "dect2/same/same_gen.h"
 #include "dect2/dsp/gen_util.h"

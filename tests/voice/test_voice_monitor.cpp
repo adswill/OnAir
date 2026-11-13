@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The voice monitor (voice_monitor.h) on its own, with a test clock: the ID lists, one call at a time with hang time, the mute and allow
 // lists, hold on a talkgroup, priority calls taking the sound, encrypted and squelched frames, a talkgroup found late, a new talker,
 // the recording of a played call (WAV + JSON, never an encrypted one), the history search and the settings text.

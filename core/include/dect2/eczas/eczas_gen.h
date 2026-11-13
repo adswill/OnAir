@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // e-Czas test signal: the 225 kHz carrier with the phase keying of the GUM description (50 bit/s, a bit that changes the keying state is a 36 degree
 // phase ramp of 19 ms, the 20 slots of the minute frame; some slots carry the time packet, the others other packets). Nothing is
 // transmitted: the samples only exist in memory or in a file.

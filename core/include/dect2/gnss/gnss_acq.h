@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Acquisition: a parallel code-phase search by FFT over a grid of Doppler bins, with coherent integration over 2 ms and non-coherent summing over
 // a few more, run in small slices so that feed() never stalls. One engine per band.
 // The frequency window and the integration length can change between searches (setPlan): a radio's oscillator error moves every satellite by the same

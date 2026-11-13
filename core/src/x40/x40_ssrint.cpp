@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Secondary surveillance radar interrogations on 1030 MHz (ICAO Annex 10 Vol. IV, 3.1.1 and 3.1.2): pulses of 0.8 us in a group.
 //   P1 - P3 spacing: Mode 1 3 us, Mode 2 5 us, Mode A (3/A) 8 us, Mode B 17 us, Mode C 21 us, Mode D 25 us; P2 2 us after P1 is the side-lobe suppression pulse (sent on the control antenna);
 //   P4 2 us after P3: 0.8 us (Mode A/C-only all-call) or 1.6 us (Mode A/C/S all-call) in an intermode interrogation;

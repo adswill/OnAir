@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TV channel plans (core/include/dect2/channels/tvplan.h): every plan is sorted, has no overlapping channels, has sane widths and unique labels;
 // every channel makes the round trip label -> frequency -> label; known channels have the published edges and centres; the defaults per country
 // and standard; the analog carrier positions; and docs/TV-CHANNELS.md names every plan.

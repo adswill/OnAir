@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Hamlib rig control against Hamlib's own dummy rig (model 1), in process and through rigctld (model 2, netrigctl): open and close, both
 // directions of frequency and mode, polling, a rig that disappears and comes back, repeated and concurrent start/stop, mode names, and a
 // check that receiving never keys the transmitter. rigctld missing: the network tests are skipped with a note.

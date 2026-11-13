@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell buoy HF link: the synthetic signals through the receiver (datawell_gen.h, datawell_rx.h).
 //  - 2FSK carries HXV vectors built from the documented layout: carrier detection, symbol clock, vector lock, displacements, system words and the
 //    spectrum points are checked against the numbers that went in, under an offset, a clock error, inverted tones, a low SNR, the WR-SG vector.

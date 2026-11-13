@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Deterministic elementary functions (series in double precision, no libm transcendental calls) and a radix-2 FFT.
 #include "kv_internal.h"
 #include <cmath>

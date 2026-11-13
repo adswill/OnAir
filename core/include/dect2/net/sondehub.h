@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SondeHub radiosonde upload (4.0): decoded sondes go to the SondeHub v2 database (tracker.sondehub.org) the way the reference uploader
 // radiosonde_auto_rx does it, after the SondeHub wiki (github.com/projecthorus/sondehub-infra/wiki: "SondeHub Telemetry Format" and
 // "API (Beta)"):

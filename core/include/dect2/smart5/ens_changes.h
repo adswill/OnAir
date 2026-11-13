@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ensemble / multiplex change log (3.9, docs/SMART5-broadcast-3.9.md item 6). Feed the service list each time the decoder has a
 // complete one (DAB FIC, or a DVB SDT/PMT view); every difference from the last list becomes a timed event: a service added or
 // removed, a label change, a bitrate or protection change, a move to another sub-channel. A short absence (the list being

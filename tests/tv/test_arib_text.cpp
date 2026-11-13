@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ARIB STD-B24 text: alphanumeric, hiragana, katakana, Kanji via designations and shifts (simulated strings).
 #include "dect2/tv/dvb_text.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RC links added in 3.9: Futaba S-FHSS and Spektrum DSM2 / DSMX, on simulated signals only (no recording of either link was available).
 //   1. S-FHSS packets: every hop channel and hop code round-trip, the hop sequence stays on 30 channels, a flipped bit fails the CRC
 //   2. DSM codes: every byte despreads back from its 64 chips for all 40 code sets, also with 8 chip errors; DSMX hop list rules; 10 and 11 bit packets

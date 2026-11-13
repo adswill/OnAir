@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The "open from descriptor" step the Android drivers share (dect2/source/usb_fd.h: usbFdPick / usbFdOpen), with a STUB in place of
 // libusb_wrap_sys_device / airspy_open_fd, plus the plain-language errors, the Airspy serial parsing, the platform switch and the pushed
 // sound-card input (audio_push.h, fed by Android's AudioRecord). No radio and no libusb are involved.

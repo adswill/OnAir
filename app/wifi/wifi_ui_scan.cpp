@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wi-Fi band selector, channel list and hop scan (see wifi_ui_int.h). The radio listens to one 20 MHz channel at a time (20 Msps; a wide capture
 // of a radio that offers 50 Msps or more hears several at once); the hop steps through the chosen list, dwelling a little longer than a
 // beacon interval (102.4 ms) on each. Receive only.

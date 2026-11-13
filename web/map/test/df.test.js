@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // df.test.js - the DF map features: wedge/line/station per bearing, ellipse + marker per fix, expiry and the kind switch.
 import test from "node:test";
 import assert from "node:assert/strict";

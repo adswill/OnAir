@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Generic radios through SoapySDR: Airspy, SDRplay, RTL-SDR, PlutoSDR, LimeSDR, BladeRF, USRP, ... (whatever drivers are installed).
 // The HackRF keeps its own native source (source.cpp); a "hackrf" Soapy entry is hidden so a radio is listed once.
 #include "dect2/tx/tx_control.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TV sound in DRA (DTMB, China): a synthetic transport stream with DRA audio PIDs (stream_type 0x14, and private data with the "DRA1" registration)
 // goes through the stream parser (codec "DRA", language), FFmpeg's demuxer (the player's source of the PES payloads and times) and TvDraDecoder with a
 // FAKE add-on that answers every frame with a constant tone. This checks the plumbing only: it is NOT a test against real DRA audio or a real

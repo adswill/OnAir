@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CIS HF modes screens (families 620 - 626, core/src/cishf, docs/CIS-HF-3.9.md): what was found, the measured parameters, the decoded text
 // (characters, frames or phase steps) and the events. Receive only; nothing is decrypted. Advanced: forced speed and shift for the FSK modes.
 #include "app.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // LMS6-1680: synthetic UART symbols -> decoder, and frame bytes round-trip.
 #include "../data/sonde/bits/util.h"
 #include <cstring>

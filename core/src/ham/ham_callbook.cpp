@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Callsign lookup for the QSO panel (4.0): see ham_callbook.h.
 #include "dect2/ham/ham_callbook.h"
 #include "dect2/common/xmlmini.h"

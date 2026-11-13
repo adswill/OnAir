@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // KAAL receiver telemetry. RxTelemetry::kaal, engine standard 124, active standard 123.
 #pragma once
 #include <cstdint>

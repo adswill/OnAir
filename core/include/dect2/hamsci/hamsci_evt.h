@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham science event monitors (3.9, docs/W1B-3.9.md): Schumann resonance monitor, whistler and tweek detector, Moon-echo (EME) test, Radio Jove,
 // e-CALLISTO style solar burst monitor and the aurora / sporadic-E / TEP beacon event log. One class, constructed with the kind; each kind turns the
 // samples into a spectrogram, a list of timed events and a trend. Receive only. Everything here is new code written from the public descriptions

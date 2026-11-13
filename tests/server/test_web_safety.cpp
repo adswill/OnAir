@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web safety rules, checked three ways:
 //  1. compile time: the web classes have no transmit / arm / key / record member (detection idiom);
 //  2. the protocol: every transmit / key / decrypt / record message type is refused with "forbidden" by default (transmit: unless the host sets

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM data services: packet reassembly -> MSC data groups -> MOT objects (slide show, broadcast website, EPG) and TPEG frames, see drm_data.h.
 #include "dect2/drm/drm_data.h"
 #include "dect2/dab/dab.h"

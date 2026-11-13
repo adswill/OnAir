@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals of the radio-control and mesh link tests: GFSK bursts and LoRa frames written straight into a sample buffer. Only for the tests: the app
 // has no way to transmit these.
 #pragma once

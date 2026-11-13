@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // A tap on the sound every mode plays (AudioOut::write() offers its frames here, as it does to the audio recorder, audio_rec.h): the live
 // transcripts of the modes that have no channel of their own to read (marine, ham, FM, ...). The first output that writes owns the tap; others
 // are ignored until it has been silent for 2 s. The sink gets mono floats at the output's rate; it must not block.

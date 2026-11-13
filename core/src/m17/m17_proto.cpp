@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // M17 protocol layers (see m17_proto.h), from the M17 specification 2.0.
 #include "dect2/m17/m17_proto.h"
 #include <algorithm>

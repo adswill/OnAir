@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TV sound in DRA (GB/T 22726, DTMB / CMMB in China): the elementary stream of a DRA audio PID goes through the DRA add-on the user installs
 // (cdr_dra.h, "libonair_dra"; the same loader as the CDR radio path). OnAir ships no DRA decoder. FFmpeg does not decode DRA, so the player
 // takes the PES payloads of the DRA stream from the demuxer (with their presentation times), cuts them into DRA frames, feeds the add-on one frame at

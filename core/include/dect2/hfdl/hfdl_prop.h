@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HFDL propagation map (3.9, docs/SMART5-field-3.9.md item 3). Every HFDL ground station sends a squitter once per 32 s frame on each
 // frequency it has in use (ARINC 635). So the squitters this receiver decodes, against the time it listened to each frequency, give the
 // share of squitters heard per ground station, frequency and UTC hour: a measured propagation map from the user's own antenna. From it:

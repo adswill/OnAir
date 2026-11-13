@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS interference and spoofing monitor (see gnss_interf.h)
 #include "dect2/gnss/gnss_interf.h"
 #include "dect2/dsp/dsp_compat.h"

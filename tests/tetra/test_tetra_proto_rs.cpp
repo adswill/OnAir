@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the Rust TETRA network information layer (rust/onair_tetra, dect2::tetra): SYNC and SYSINFO parsing (valid, mutated, truncated,
 // random), service / security / carrier helpers over all inputs, network time text, access-assign usage, and the signalling block walk over generated
 // broadcasts (neighbours, time, encrypted, fragments, fill bits) and noise, over ONAIR_DIFF_ITERS (default 200000) seeded inputs per family. Every result goes

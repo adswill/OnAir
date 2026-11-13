@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BB frames -> MPEG transport stream packets (ETSI EN 302 755 clause 5.1: mode adaptation, normal and high-efficiency mode).
 #pragma once
 #include "dect2/t2/t2fec.h"

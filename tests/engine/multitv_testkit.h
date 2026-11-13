@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for the multi-channel TV tests: several DVB-T2 / DVB-T channels side by side in one wide capture. Each channel comes from the test
 // generator (its own service id and name in the transport stream), is resampled from its native rate to the capture rate, shifted to its
 // offset, and the channels are added with noise. Streamed, so a capture of seconds at 28 Msps needs no memory.

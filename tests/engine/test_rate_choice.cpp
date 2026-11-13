@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The sample-rate choices of the app (rate_choice.h): the list per radio and mode, and the check of a typed rate.
 #include "dect2/engine/rate_choice.h"
 #include "dect2/engine/mode_tuning.h"

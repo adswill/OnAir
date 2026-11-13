@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // RC model PPM: frames with every channel count, polarity, offset, noise, clock error and timing jitter; noise alone must decode nothing.
 #include "x40_gen.h"
 using namespace x40gen; using namespace dect2;

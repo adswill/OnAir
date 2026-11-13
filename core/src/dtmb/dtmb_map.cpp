@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB constellation mapping and soft demapping (see dtmb_map.h).
 #include "dect2/dtmb/dtmb_map.h"
 #include <algorithm>

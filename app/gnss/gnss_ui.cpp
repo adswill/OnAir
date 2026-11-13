@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GNSS screens: the sky plot, the signal strength of every satellite, the position (card and map), the channel table, the search,
 // the correlator plots and the options of the test signal.
 #include "app.h"

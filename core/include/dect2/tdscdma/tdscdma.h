@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TD-SCDMA (UTRA TDD 1.28 Mcps, the Chinese 3G system) base stations: the downlink pilot (DwPTS) and the time slot 0 midamble, from the
 // 3GPP specifications TS 25.221 (frame and burst structure 5A.1, 5A.2.2, 5A.3.5; the basic midamble codes, Annex AA, with the binary to
 // complex rule of 5A.2.3) and TS 25.223 (the SYNC-DL codes, Annex AA.1; their phase quadruples, 8.1.1; the mapping of code groups to cell

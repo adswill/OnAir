@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium through the engine as the interface and dect2cli use it: the synthetic source plays the test signal at 10 Msps (8-bit
 // samples, in real time), the engine must decode the satellites, ring alerts, time and pager messages, keep every sample and
 // report through latestRx().

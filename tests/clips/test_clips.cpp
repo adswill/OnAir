@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radio clips: rings, range maths, PNG / ZIP / WAV round trips, HTML escaping, Discord text. With a directory as argument it also writes a sample clip there.
 #include "../../app/clips/clips.h"
 #include "dect2/audio/clip_ring.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // #335: a Motorola LRRP position behind a compressed IP/UDP header (an unconfirmed SAP 9 packet whose second header is proprietary), through
 // the real receiver, octet for octet as in the reporter's log, with the packet CRC as received. The positions must reach the map list.
 // Simulated signal (dmr_gen) carrying the real octets; carrier offset, clock offset and noise.

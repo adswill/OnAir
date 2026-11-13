@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Decode help on top of the Reception Doctor: how far each decoder got (signal, carrier, sync, FEC), when to open the doctor by itself, the clip of a signal
 // that failed (only when the user agrees to that one clip), and the antenna and gain coach. Pure logic, tests in tests/doctor/test_decode_help.cpp.
 #pragma once

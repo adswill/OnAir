@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The status bar under the spectrum (lamps, lock state, signal readouts, level and quality gauges, advice) and the
 // gain control. Split from toolbar.cpp; the entry points statusBar() and gainControl() are declared in app.h.
 // Each line of the bar is one function: lamps, state and mode readouts, numbers, gauges, notes.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // AF follow: the strongest AF with the same PI is taken; a regional variant (another PI) never is; a probe that is not better returns.
 #include "dect2/fm/fm_af.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 use crate::locate::{self, Country};
 use crate::text::Buf;
 use crate::{county, parse, time};

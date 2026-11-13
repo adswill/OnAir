@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Chinese text must use one family at every size, even when system fallbacks overlap.
 #include "typography.h"
 #include "cjk_fonts.h"

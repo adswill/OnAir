@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Logbook tools for the Ham screen (4.0): see ham_logtools.h.
 #include "dect2/ham/ham_logtools.h"
 #include "dect2/ham/ham.h"

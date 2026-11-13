@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Credits table (app/panels/credits_data.h, generated from tools/credits_data.tsv): no empty field, every link is https, no duplicates.
 #include "panels/credits_data.h"
 #include "panels/contributors_data.h"

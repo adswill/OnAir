@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Test signals for the Smart CubeSat decoder. Nothing is transmitted: the samples only exist in memory. One call makes one satellite's burst train
 // (some frames of one framing on one modulation) at any sample rate, with the impairments the real thing has: a carrier offset, a Doppler ramp, a
 // transmitter clock error, noise. Add several into one wide capture with mixInto().

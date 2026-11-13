@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // How a picture fills its box (TV player, issue 318). Pure arithmetic, no ImGui: tests/app/test_video_fit.cpp.
 #pragma once
 namespace vfit {

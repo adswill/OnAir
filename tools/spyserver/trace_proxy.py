@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 """SpyServer TCP protocol tracing proxy. Python 3 standard library only.
 Start: python tools/spyserver/trace_proxy.py
 Connect one client at a time to 127.0.0.1:5556 instead of server:5555.

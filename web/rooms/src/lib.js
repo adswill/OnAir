@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // lib.js - pure helpers for Live rooms: signed tokens, input cleaning, rate limits, light moderation. Tested in test/lib.test.js.
 // Everything a visitor or host sends is cut and cleaned here; the pages show text with textContent only.
 

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH common channel coding (ETSI EN 302 583 V1.2.1 clauses 5.1 - 5.4): CRC-16, EHEADER, padding and EScrambler, the 3GPP2 turbo
 // code with the puncturing and tail tables 5.2 / 5.3, the turbo interleaver (5.3.3), the bit-wise interleaver with the 126-of-128 rate
 // adaptation (5.4.2) and the time interleaver's branch delays (5.4.3 with TS 102 584 clause 7.2.3.3).

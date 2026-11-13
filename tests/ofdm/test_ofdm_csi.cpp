@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-T: channel-state-weighted soft decisions and narrowband-interferer erasure, measured end to end (generator -> channel -> receiver).
 // For each channel (AWGN, static multipath, Doppler echo, CW interferers) and each receiver variant (flat noise weights, channel-state
 // weights, channel-state weights + carrier erasure) the lowest SNR with at most 5 % damaged packets is found; the gains go to the log

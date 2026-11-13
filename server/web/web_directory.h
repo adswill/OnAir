@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // OnAir Web directory: an optional heartbeat that tells a public directory of OnAir Web servers that this one exists (name, location, coverage,
 // user counts). It is OFF by default and nothing is sent anywhere unless the host turns it on with web_directory=1, gives a directory URL
 // (https only) and confirms what will be sent with web_directory_ack (the server prints the exact JSON and the code first). It never sends a

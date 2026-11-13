@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S mode: the mode row, the family count, the screen mapping, the engine wiring and the panel's strings (text checks on the sources).
 #include <cstdlib>
 #include <fstream>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sigfox test signal. Nothing is transmitted: the samples only exist in memory or in a file. Made-up devices (the IDs are not registered ones),
 // made-up authentication bytes (a real code needs the device key), the frame layer of sigfox_proto.h.
 //

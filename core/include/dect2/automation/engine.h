@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The automation engine: takes events from the decoders on a bounded queue and its own thread, runs the rules and scripts, calls the action sink.
 // A decoder never waits for it: emit() only pushes (and throws the event away when the queue is full).
 #pragma once

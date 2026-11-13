@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The complex FFT alone (fftSplit) at the sizes the spectrum uses: microseconds per transform. Build with -DDECT2_PORTABLE to time the
 // portable kernels (Windows, Linux) on any machine; without it Apple's vDSP is timed. Usage: bench_fft [seconds_per_size=0.4]
 #include "dect2/dsp/dsp_compat.h"

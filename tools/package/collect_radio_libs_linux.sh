@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Gathers the libraries of the radios OnAir can drive by itself (RTL-SDR, Airspy, BladeRF, LimeSDR, PlutoSDR, USRP) with everything they need that
 # a Linux system does not have anyway, into one folder. The packages ship that folder with the program, so nothing has to be installed next to it.
 # RTL-SDR is built here from the RTL-SDR Blog fork (1.4.0, the version the Windows build ships) and not taken from the distribution: the

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // BPSK31 sensitivity (docs/SENSITIVITY-3.9-B.md): words of a three-line over decoded at 9 dB in the baud bandwidth (Eb/N0 9 dB), plain and with a
 // 20 Hz tuning error drifting 30 Hz/min, through the whole receiver. With these 3 trials: 76 % and 64 % before the phase-reference decision (3.9), 88 % and 88 % after.
 // ONAIR_TEST_LONG=1: the sweep 10 .. 6 dB. Simulated signals only.

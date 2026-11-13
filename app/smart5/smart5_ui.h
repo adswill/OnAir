@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The 3.9 round-5 smart engines of core/include/dect2/smart5 (docs/SMART5-*-3.9.md) in the mode screens: shared helpers.
 // Each area file feeds its engines from smart5Tick() (every frame, from the Insights tick, whatever screen is open) and draws a
 // compact card in its mode's screen: one status line on top, the tables under "Details". Findings go to View > Insights and out

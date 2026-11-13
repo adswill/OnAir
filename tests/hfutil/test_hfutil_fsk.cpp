@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF utility FSK / MFSK modes: each decoder reads its generator's text back with frequency offset, noise and sample clock error (simulated only).
 #include "dect2/hfutil/hfu_fsk.h"
 #include <cmath>

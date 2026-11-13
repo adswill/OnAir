@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Recordings folder resolution (app/state/recdir_core.cpp): default, custom, unwritable fallback, trailing slash, spaces, non-ASCII.
 #include "../../app/state/recdir.h"
 #include <cstdio>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CubeSat telemetry receiver: amateur satellites on 2 m / 70 cm. One FM channel (the packet front end, packet_demod.h, with a wider filter
 // and AFC for the Doppler left over), and every framing decoded at the same time (cubesat_proto.h):
 //  - AX.25 at 1200 baud AFSK (the APRS demodulators) and at 9600 / 4800 baud G3RUH (descrambler, NRZI, HDLC);

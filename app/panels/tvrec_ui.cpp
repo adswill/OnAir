@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The TV recorder in the interface: the programme guide grid (Guide tab), scheduled recordings and the recordings list (Recordings tab), and the
 // timeshift / playback bar of the Player tab. The work is in core/src/tv (epg, recorder, timeshift, playback); this file keeps the state, feeds it from
 // the engine's packet tap and draws it.

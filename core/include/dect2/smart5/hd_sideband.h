@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio digital sideband level (3.9, docs/SMART5-broadcast-3.9.md item 9). From a power spectrum of the FM channel (centred on
 // the carrier, at least +/- 200 kHz), the power of the lower and upper primary main sidebands (129.4 - 198.4 kHz from the
 // carrier, NRSC-5) against the power of the analogue FM signal (within +/- 100 kHz), in dBc. The total digital power against the

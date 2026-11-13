@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Wireshark output: the table of modes that can send packets to Wireshark. Header only and without dependencies, because the extcap program
 // (tools/onair_extcap.cpp) is a small stand-alone binary that needs the same names and link types. See docs/WIRESHARK-3.8.md.
 #pragma once

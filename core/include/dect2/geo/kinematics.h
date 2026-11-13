@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Derived kinematics: ground speed, track and vertical rate from two position fixes of the same aircraft (ACARS, VDL2 and HFDL reports
 // carry no speed of their own). Pure maths, header only, no radio and no UI.
 //   - horizontal distance on the WGS-84 ellipsoid (Vincenty inverse; haversine on the sphere where it does not converge)

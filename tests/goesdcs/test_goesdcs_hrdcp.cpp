@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteosat HRDCP: the format (the TD 16 CRC check value, header fields, the coding round trip with byte errors) and the receiver on generated signals:
 // short and multi-frame messages, frequency errors to the 125 Hz limit, 1 Hz/s drift, clock errors, phase noise, Eb/N0, two platforms on neighbouring
 // channels, a standard-rate platform beside them, noise only. Simulated signals only: no HRDCP recording was found.

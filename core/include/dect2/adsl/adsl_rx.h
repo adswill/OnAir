@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-L receiver: EASA ADS-L 4 SRD-860 traffic, status and ground uplink on 868.2, 868.4 MHz (M-band) and 869.525 MHz (O-band LDR and HDR), see adsl_proto.h.
 // One capture centred on 868.875 MHz at 2 Msps holds every channel (and FLARM, which the engine feeds from the same samples in this mode); at 1 Msps around
 // 868.3 MHz only the M-band is heard. A channel outside the capture is left out on its own.

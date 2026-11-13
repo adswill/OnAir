@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/common/u8file.h"
 #include "dect2/source/iq_file.h"
 #include "dect2/files/files_proto.h"

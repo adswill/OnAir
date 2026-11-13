@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode Browser logic: filter, tags, tabs, hidden modes, recent list, grid layout and keyboard moves, radio fit (app/ui/mode_picker_logic.h).
 #include "../../app/ui/mode_picker_logic.h"
 #include <cstdio>

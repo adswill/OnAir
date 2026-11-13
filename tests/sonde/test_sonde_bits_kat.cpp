@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Known-answer tests of the radiosonde bit decoders (DFM, M10, M20). Every expected value comes from a published source, named at the check:
 //  [rs]  rs1729/RS demod/mod/dfm09mod.c, m10m20mod.c (header comment with the sync symbols), issue #7 and m10/m10_msp430.txt (serial numbers)
 //  [dxl] oe5hpm/dxlAPRS src/sondeudp.c: a second implementation of the checksum, the byte offsets and scales, the Hamming table

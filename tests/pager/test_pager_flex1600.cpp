@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FLEX at 1600 bit/s, two-level FSK (sync code A 0x870C, the most common FLEX speed) through the real receiver: the generator's 1600/2 frame at several
 // signal to noise ratios, carrier offsets, clock errors and in both polarities. Also the sync layout at the bit level (the code, its complement and the
 // marker as the generator sends them) and the speed table entry. Every page of the frame must arrive with the right text.

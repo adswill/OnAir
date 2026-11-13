@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // GRAVES satellite echoes through the meteor scatter receiver: the beacon and a meteor ping from the mode's generator, and a simulated satellite echo whose
 // Doppler follows the bistatic curve of a known orbit. Simulated only: no real GRAVES recording goes through this test.
 #include "dect2/mscatter/mscatter_gen.h"

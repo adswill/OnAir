@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The computer clock against a time source (GPS or a time station), the one-click clock sync, and the optional hobby NTP server.
 //
 // ClockDiscipline holds the newest measurement of each source: the Time signals and GNSS screens publish into it, the sync button and the NTP server

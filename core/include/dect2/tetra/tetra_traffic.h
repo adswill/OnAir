@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // TETRA speech traffic channel (TCH/S) channel coding, written from the public ETSI EN 300 395-2 V1.3.1 (2005-01), clause 5.5 (normal speech
 // traffic channel, two speech frames per time slot) and the table 4 / table 5 bit orders. CHANNEL coding only: the 137 bit speech frames that come
 // out are handed to the user-installed speech codec plug-in (codec/speech_codec.h); no speech codec is part of OnAir.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // onair-rooms Worker: routes, token checks, edge cache for the room list. Not deployed (see docs/live-rooms.md).
 import { LIMITS, makeToken, verifyToken, randomId, ID_CHARS, validRoomId, cleanTitle, cleanMode, cleanFreqMhz, hashIp } from "./lib.js";
 export { Room } from "./room.js";

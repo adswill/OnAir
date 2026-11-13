@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat wiring: the tuning under its engine standard, the mode row, family and poll-slot counts, the engine cases, the panel
 // hook, the TX row (finite, one line of text), and that the screen keeps the transmit rules (the notice, the claim, the amplifier off, no saved key).
 #include <cstdio>

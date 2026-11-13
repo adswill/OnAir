@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Radiosonde bit decoders (DFM, M10, M20): shared entry points. The decoders are in sonde_dfm.cpp, sonde_m10.cpp, sonde_m20.cpp.
 #include "dect2/sonde/sonde_bits.h"
 

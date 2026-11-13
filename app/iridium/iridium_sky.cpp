@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Iridium > Sky: every Iridium satellite above the horizon from the user's TLEs, the ones identified by their Doppler marked with the number the
 // header gives them, the receiver's frequency error that falls out of the fit, and the ground circle of the newest beams. Automatic: it needs the
 // receiver position (Settings) and TLEs (View > Passes downloads them); nothing is configured here.

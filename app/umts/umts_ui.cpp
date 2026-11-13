@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // UMTS (3G) cells: the table of cells found, by primary scrambling code. The cell's operator and identity are in the broadcast channel, which is not decoded.
 #include "app.h"
 #include "i18n/i18n.h"

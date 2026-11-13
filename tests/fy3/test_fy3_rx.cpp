@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FY-3 AHRPT / MPT end to end on the built-in test signal (fy3_gen.h; no off-air recording is available): the receivers with carrier offsets up to
 // +-45 kHz, a Doppler ramp, symbol clock error, noise, every carrier phase and both polarities / arrangements of the rails, sample rates from 4 to
 // 20 Msps, the symbol rate measured by itself (2.6 and 2.8 Msym/s). Every VIRR line that comes back must equal the test line its on-board time

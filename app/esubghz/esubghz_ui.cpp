@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat screens: the chat (lines heard and sent, a line to type), the packets heard, the key and the transmitter.
 // Sending: the line ("<name>: <text>", encrypted when a key is set) goes out through a radio that can transmit: the receiving radio when it can,
 // otherwise the first free one. A half-duplex radio (a HackRF) cannot do both, so the receiver is stopped for the send and started again after

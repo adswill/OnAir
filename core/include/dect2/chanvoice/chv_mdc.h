@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MDC-1200 (Motorola) burst: 1200 bit/s, tones 1200 and 1800 Hz (a bit that differs from the one before is sent as 1800 Hz, a repeated one as
 // 1200 Hz), 7 bytes of 0x55 and the sync 07 09 2A 44 6F, then 14 bytes: op, argument, unit ID (two bytes), CRC-16 (low byte first), a zero byte and
 // seven bytes of a rate 1/2 convolutional parity (taps 0, 2, 5, 6 of a 7 bit register), the 112 bits interleaved over 7 rows of 16. A "double" packet

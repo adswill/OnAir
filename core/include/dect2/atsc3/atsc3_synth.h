@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ATSC 3.0 test signal: the generator the synthetic source plays, so that the ATSC 3.0 receiver can be tried without a radio or a recording.
 // Nothing is transmitted. One service ("ONAIR", 7.1) is made from nothing but code: a looping test card with a 1 kHz (left) and 3 kHz (right) tone,
 // encoded in memory with libav (HEVC when the linked FFmpeg has an HEVC encoder, else H.264, else MPEG-2 video; AAC audio) and cut into fragmented MP4,

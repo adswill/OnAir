@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The AIS frame layer on top of the Rust crate rust/onair_proto: the functions of ais_proto.h; ais_proto.cpp keeps the
 // generator side (putU, appendFcs, burstLineBits, toNmea).
 #include "dect2/ais/ais_proto.h"

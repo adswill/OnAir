@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-T signal generator (transmitter): transport stream packets per layer in, baseband IQ at 512/63 Msamples/s out.
 // It follows ARIB STD-B31 chapter 3: Reed-Solomon, energy dispersal per frame, byte interleaving, convolutional coding, bit interleaving
 // and mapping, layer combining, time and frequency interleaving, pilots, TMCC and AC, IFFT with guard interval. The delay adjustments

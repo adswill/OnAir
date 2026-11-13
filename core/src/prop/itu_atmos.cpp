@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Atmosphere of a radio path from ITU-R P.835-7, P.676-13, P.838-3, P.453-14, P.530-19, P.618-14 and P.839-4 (see itu_atmos.h).
 // Written from the recommendation texts; the spectral line table is P.676-13 Annex 1 Tables 1 and 2, copied as published.
 #include "dect2/prop/itu_atmos.h"

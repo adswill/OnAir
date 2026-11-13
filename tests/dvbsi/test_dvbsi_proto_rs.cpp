@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Golden-vector test of the DVB service information layers (the Rust crate onair_dvbsi behind dect2::text, dect2::dvbsi and the teletext / DVB subtitle decoders):
 // broadcast character sets and the DVB text field, Hamming codes, G0 subsets, teletext data units, the page renderer and a whole TeletextDecoder fed with PES
 // packets, DVB subtitle segment parsers, colours, run-length pixel strings, blending and a whole DvbSubDecoder fed with PES packets, over ONAIR_DIFF_ITERS

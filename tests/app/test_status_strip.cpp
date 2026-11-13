@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Status bar helpers: frequency digit split and grouping, CPU level thresholds, and which segments stay at many window widths.
 #include "../../app/ui/status_strip.h"
 #include <cstdio>

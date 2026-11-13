@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Ham science modes: telemetry shared by the receiver and the screens (one structure for all ten modes, `kind` says which fields count).
 // Receive only; nothing is transmitted.
 #pragma once

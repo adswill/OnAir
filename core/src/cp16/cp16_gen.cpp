@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CP16 test signal and transmitter (cp16_gen.h).
 #include "dect2/cp16/cp16_gen.h"
 #include "dect2/cp16/cp16_rx.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! The service description channel (ES 201 980 clause 6.4): the data field of entities (multiplex description, label, application information, time and
 //! date, audio information, language and country) and the CRC-16 check of a whole SDC block. The parser works in place on a record that holds the previous
 //! state, like the C++ `SdcInfo` it mirrors: entities only touch what they carry, so a second SDC of the same multiplex refines the first.

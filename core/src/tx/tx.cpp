@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmit: the list of modes OnAir can send (see tx.h for the reasoning), their generators, and the TxSession that feeds a radio.
 #include "dect2/common/thread_name.h"
 #include "dect2/tx/tx.h"

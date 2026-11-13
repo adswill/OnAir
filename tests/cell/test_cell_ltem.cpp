@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE-M (eMTC) indication: the MIB's schedulingInfoSIB1-BR-r13 and systemInfoUnchanged-BR-r15 (TS 36.331 6.2.2) come through the
 // generator and the cell search for several values, carrier offsets and noise levels, on long (20 frame) and short (6 frame) blocks; the
 // cell's SIB1 is still read (the known-signal canceller rebuilds the MIB with these bits). Also the SIB1-BR repetition and transport block

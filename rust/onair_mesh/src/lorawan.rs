@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! LoRaWAN PHY payload headers (no keys, nothing decrypted). Facts: LoRaWAN L2 1.0.4 (LoRa Alliance TS001-1.0.4) chapters 4 (MAC frame formats) and 5 (MAC
 //! commands), LoRaWAN 1.1 (rejoin requests, the 1.1 MAC commands), LoRaWAN Backend Interfaces 1.0 (TS002) 6.1 (NetID and DevAddr types). Decodes MHDR, FHDR
 //! (DevAddr, FCtrl, FCnt, FOpts of 1.0.x with the MAC command names), FPort, the length of the encrypted FRMPayload and the MIC; join requests (JoinEUI,

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Meteor scatter detector parts on synthetic signals: the CIC front, the beacon follower, ping detection against the generator's own list
 // (start, Doppler, peak level, duration, type), no pings in noise, interference bursts rejected, a beacon off the centre, the high-rate path,
 // the counts per hour and day, the shower calendar and the CSV line.

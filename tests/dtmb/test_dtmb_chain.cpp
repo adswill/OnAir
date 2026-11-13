@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Transmitter model -> channel decoder at the symbol level (no radio part): every profile, bit-exact packets, then noise.
 #include "dect2/dtmb/dtmb_chain.h"
 #include "dect2/common/stable_random.h"

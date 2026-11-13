@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DAB+ test transmitter: a slide show picture in the PAD (ETSI TS 102 563 clause 5.2, EN 300 401 clause 7.4, EN 301 234). Written from the standards,
 // without the receiver's code (dab_pad.cpp).
 #include "dect2/dab/dab_gen.h"

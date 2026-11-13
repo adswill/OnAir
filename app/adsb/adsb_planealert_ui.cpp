@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // plane-alert-db in the ADS-B table: the category and tags of an aircraft from the imported file (<data folder>/plane-alert-db.csv).
 #include "adsb_internal.h"
 #include "dect2/watchlist/plane_alert.h"

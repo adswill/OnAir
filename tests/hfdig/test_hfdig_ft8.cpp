@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, FT8: several stations per slot through the decoder, exact messages, at -15 dB (2500 Hz) and with the receiving side's
 // faults: dial error +-100 Hz, sample clock +-100 ppm, DT +-1.5 s, a strong neighbour on top of a weak one (subtraction), upside down
 // (lower sideband), noise alone (no false decodes), a start in the middle of a slot, the clock error shown, a slot search without a

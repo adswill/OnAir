@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Propagation scenario layer: presets, power units, radio noise figures, input checks, the Simple-mode verdict, the link-budget table,
 // sweeps and CSV.
 #include "dect2/prop/prop_scenario.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // T2-MI ingest: baseband frames of a T2 test generator packed as T2-MI in TS packets, mixed with other PIDs, and two PLPs. The inner transport streams must come back whole.
 // Simulated only.
 #include "dect2/t2/t2mi_in.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The auto-gain system ("AGC"): keeps a radio's front end at the best operating point for the active mode. See docs/auto-gain.md.
 //
 // Three parts, all plain logic with no clock of their own (the caller passes the time) so they are tested against a simulated front end

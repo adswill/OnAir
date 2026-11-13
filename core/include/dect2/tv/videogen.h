@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Digital video generator (Tools > Digital video generator): a camera, a still picture, a video file or the transmitter's test picture
 // (Test generator), with the overlay, encoded with
 // FFmpeg (the codec and settings of videogen_params.h) into one MPEG transport stream, written to a .ts file or sent over UDP / RTP.

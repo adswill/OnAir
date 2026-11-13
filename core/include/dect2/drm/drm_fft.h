@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mixed radix complex FFT for the DRM OFDM symbol sizes (1152, 1024, 704, 448 samples at 48 kHz, 216 at 96 kHz ...): any size whose prime factors are small.
 #pragma once
 #include "dect2/common/ring.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The memory bank (core/src/channels/memory_*.cpp): add / update / duplicates / sort / search, JSON and CSV round trips with quotes, commas, line
 // breaks and unicode, imports of simple lists and of an SDR++ export, damaged files, the atomic save, the cap, and the recall order.
 #include "dect2/channels/memory_bank.h"

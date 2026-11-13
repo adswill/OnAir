@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // badge-stats.js - per-user stats and badges, kept by the hub from what a signed-in user actually shares (docs/MAP-BADGES-4.0.md).
 // Pure (no Cloudflare APIs): all storage goes through a backend object (src/badge-store.js has the SQLite one, the tests a memory one).
 //

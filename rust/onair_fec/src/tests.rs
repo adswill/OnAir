@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Unit tests of onair_fec: round trips and known vectors (the C++ differential test covers equality with the old code).
 use crate::bch::BchCtx;
 use crate::gf::GF;

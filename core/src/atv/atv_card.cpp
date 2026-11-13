@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analog TV test card, see atv_card.h.
 #include "dect2/atv/atv_card.h"
 #include "atv_dsp.h"

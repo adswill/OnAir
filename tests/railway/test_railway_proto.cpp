@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/railway/railway_proto.h"
 #include "dect2/railway/railway_gen.h"
 #include "../common/test_util.h"

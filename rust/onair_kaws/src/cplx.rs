@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Minimal complex type (f32) and helpers.
 use crate::mathf;
 use core::ops::{Add, AddAssign, Mul, Sub};

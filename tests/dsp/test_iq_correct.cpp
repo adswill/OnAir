@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DC spike removal and IQ imbalance correction (iq_correct.h): a tone with a DC offset and a 1 dB / 5 degree imbalance must come out with
 // the DC and the mirror image of the tone at least 30 dB lower than before, the tone itself untouched, and nothing changed while off.
 #include "dect2/dsp/iq_correct.h"

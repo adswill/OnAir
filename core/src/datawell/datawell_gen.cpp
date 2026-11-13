@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Datawell buoy HF link test signal (datawell_gen.h): HXV vectors built from the documented layout (2FSK), our own test frames (4FSK).
 #include "dect2/datawell/datawell_gen.h"
 #include "dect2/common/stable_random.h"

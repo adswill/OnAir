@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sub-GHz sensors (433.92 MHz first, also 315, 868 and 915 MHz): pulse detector, slicers and device decoders of rtl_433 (third_party/rtl_433, GPL-2.0-or-later)
 // behind the engine's receiver contract, a device table with history, an unknown signal analyser and flex-style custom decoders.
 //

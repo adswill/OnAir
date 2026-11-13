@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Channel selector of every TV mode (DVB-T/T2, ATSC 1.0 / 3.0, ISDB-T, DTMB, DVB-C, Analog TV): previous / next buttons and a list of the numbered
 // channels of a plan (core/include/dect2/channels/tvplan.h, docs/TV-CHANNELS.md). The plan is the country's by default (the setup wizard stores the
 // country), and can be changed in the list header; picking a channel tunes its centre and sets the plan's channel width where the mode has one.

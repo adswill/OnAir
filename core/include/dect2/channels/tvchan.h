@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // One row of the multi-channel TV table (several adjacent channels decoded from one wide capture, multitv.h).
 #pragma once
 #include <cstdint>

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Reception Doctor on synthetic IQ: clipped, weak, noise only, off-centre, too narrow, adjacent interferer, drops, DC spike, I/Q imbalance, healthy.
 #include "dect2/doctor/reception_doctor.h"
 #include "dect2/common/stable_random.h"

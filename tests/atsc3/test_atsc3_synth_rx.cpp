@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The ATSC 3.0 test signal (atsc3_synth.h) through the real receiver: the generator is played through the ModeSynth interface into Atsc3Rx, the way the app's
 // synthetic source and the engine do. The receiver must find the bootstrap, decode L1 and the frames, learn the service list, and deliver a transport stream
 // with the video and audio of the test card, at several output sample rates, with noise, carrier offset and clock offset.

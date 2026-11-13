@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // IP output of the broadcast data modes (DVB-H MPE / MPE-FEC, DVB-C2 GSE): pcap file and UDP forward. See ip_out.h.
 #include "dect2/tv/ip_out.h"
 #include "dect2/dvbs/dvbs_ip.h"

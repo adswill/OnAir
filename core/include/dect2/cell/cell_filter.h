@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Result filters of the LTE and NR cell lists (#164): which cells the table, the sites view and the export show. Pure functions on the telemetry,
 // so the same rules serve the screens and the tests. A filter never changes what the receiver finds, only what is listed.
 #pragma once

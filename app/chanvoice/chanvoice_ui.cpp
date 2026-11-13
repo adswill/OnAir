@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Channelised analog voice screens (CB, FRS / GMRS, PMR446, ham FM repeaters, HFGCS / HF voice, MDC-1200, wireless mic finder): one UI for the seven
 // families 340 - 346 (engine standards 342 - 348, active standards 341 - 347). A channel plan that follows the location setting (or a manual choice),
 // the busy-channel list with the CTCSS / DCS tone heard on each channel, a squelch, a multi-channel scan (a narrow radio, HF: the scan retunes the

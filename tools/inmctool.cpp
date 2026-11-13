@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C command line tool: write the test signal to a file, or decode a recording.
 //   inmctool gen <secs> <file.cs8|.cf32> [--rate sps] [--ebn0 dB] [--cfo Hz] [--drift Hz/s] [--sro ppm] [--seed n] [--invert] [--noiseless] [--offset Hz]
 //   inmctool rx <file> --rate <sps> [--format cs8|cu8|cf32] [--offset Hz]

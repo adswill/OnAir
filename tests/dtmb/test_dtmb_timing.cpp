@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DTMB packet timing: the seconds the receiver hands over with its packets (the clock the UDP output and the recordings pace on) must add
 // up to the signal time, for every header, mapping, code rate, interleaver mode and both channel widths, so that an outside player is fed
 // at the stream's own rate (#88, #254).

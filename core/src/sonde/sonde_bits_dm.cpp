@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Shared M10/M20 pieces: checksum, line code, sync search, GPS time. See sonde_bits_dm.h for the sources.
 #include "sonde_bits_dm.h"
 #include <algorithm>

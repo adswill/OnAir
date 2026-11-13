@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers: multi-copy combining on the full receiver (#20). A page repeats on air (POCSAG 1200) while 6 ms bursts of strong noise at random times wreck
 // a code word or two of each copy; some are repaired into wrong words, some cut the page short. The receiver with combining must give clearly more
 // complete, correct copies and fewer wrong ones than the one without. Two seeds and two carrier offsets, 30 s of signal each.

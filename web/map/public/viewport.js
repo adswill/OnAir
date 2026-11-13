@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // viewport.js - pure helpers for the phone layout (no DOM): how tall the track sheet is in each state and
 // where the map should keep the selected marker so the sheet does not cover it.
 

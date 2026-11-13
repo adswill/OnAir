@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Propagation terrain: SRTM .hgt and GeoTIFF parsing (built in memory), height lookups, path profiles, Bullington / delta-Bullington
 // diffraction, and the model using a profile when one is loaded.
 #include "dect2/prop/prop.h"

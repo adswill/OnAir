@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Small helpers shared by the test signal generators of ATSC 1.0, ISDB-T and DVB-T: a table of Gaussian noise read from pseudo
 // random positions (dect2::normal_distribution with a Mersenne twister costs more than all the rest of a cheap generator), and a
 // dot product written with independent partial sums so that every compiler vectorises it.

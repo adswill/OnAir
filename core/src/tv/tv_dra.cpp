@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRA sound of a TV service through the user's add-on (tv_dra.h).
 #include "dect2/tv/tv_dra.h"
 #include <algorithm>

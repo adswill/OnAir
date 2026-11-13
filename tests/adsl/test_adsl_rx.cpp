@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-L receiver against the generator (adsl_gen.h) with real impairments: every channel and network parameter combination, carrier offset and clock error sweeps,
 // a noise sweep, overlapping packets (same channel at different levels, adjacent channels at once), a garbled length byte, the capture centre and sample rate, an
 // inverted spectrum, noise alone, and FLARM in the same capture. Loopback against our own generator, not on-air captures: no public ADS-L recording was found.

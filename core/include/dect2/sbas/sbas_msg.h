@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SBAS L1 message content: what the 250 bit messages of WAAS, EGNOS, MSAS, GAGAN, SDCM and the like carry (RTCA DO-229, public description).
 // The bit layer (Viterbi, preamble, CRC-24Q) is in gnss_msg.h; this decodes the data field of a message with a good CRC into the PRN mask,
 // the fast corrections with their UDRE, the integrity flags, the degradation factors, the GEO navigation message, the time offset, the GEO

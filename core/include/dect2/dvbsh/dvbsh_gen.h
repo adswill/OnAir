@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DVB-SH OFDM (SH-A) signal generator: MPEG transport stream in, baseband IQ at the native OFDM rate (dvbsh::sampleRate) out.
 // The full EN 302 583 chain: EFRAMEs, turbo code, bit-wise interleaver, SH frames with padding, the time interleaver, bit demultiplexing,
 // symbol interleaver, QPSK / 16-QAM mapping (hierarchical with an LP stream), pilots and the DVB-SH TPS.

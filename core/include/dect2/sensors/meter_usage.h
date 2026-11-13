@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // My meter consumption (3.9, docs/SMART5-iot-3.9.md): for a meter the user has marked as their own (Sub-GHz sensors: ERT SCM / IDM and the
 // other rtl_433 meters; wireless M-Bus), the cumulative register is turned into usage per hour and per day. A register that steps back to
 // near zero from near a power of ten has rolled over (the counter wrapped); one that steps back otherwise was replaced or reset, and

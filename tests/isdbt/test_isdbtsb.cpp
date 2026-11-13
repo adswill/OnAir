@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-TSB (ARIB STD-B29 / ITU-R BS.1114 System F): one- and three-segment narrow-band signals, generator against receiver.
 //   1. the carrier counts of the narrow band against Table 5 of ITU-R BS.1114 (data, SP, CP, TMCC, AC1, AC2 for every mode), the FFT sizes
 //      (256 ... 2048) and the TMCC system identification (01)

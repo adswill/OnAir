@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The Workspace layout (View > Layout > Workspace, docs/WORKSPACE-4.0.md). A blank canvas below the menu bar with a row of workspace
 // controls; the user adds blocks from the Add block button or a right click. Each block is a movable, resizable window drawn with the
 // panels the other layouts use (the source rows of the toolbar, spectrumWaterfall(), mainTabs(), txPanel(), the Record and Listen groups

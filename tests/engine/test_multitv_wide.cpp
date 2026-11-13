@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multi-channel TV on a 60 Msps capture (a LimeSDR at 61.44 Msps; USRP, BladeRF, PlutoSDR and others at 40 - 56 Msps): the slots of the span, the
 // cost of the channeliser at that rate, the rate ladder the UI offers for a radio that runs that fast, MultiTv with several DVB-T2 channels from
 // generated signals, and the same through the engine from a recorded 8-bit capture. Nothing here needs hardware; what a real LimeSDR's USB link

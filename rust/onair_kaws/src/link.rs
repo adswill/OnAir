@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 //! Block level link: LDPC coding, the whole-block bit interleaver, chirp symbol mapping (Gray), modulation of a data section and the soft demodulator
 //! for the chirp profiles P0-P4. The OFDM profiles are in `ofdm`; the burst assembly with the lattice units is at the end of this file.
 use crate::chirp::{bin_llrs, gray, Modem, Weave};

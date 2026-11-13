@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The scanner (View > Scanner, HIGHLY EXPERIMENTAL): the state machine that steps through a scan list (or a band) and stops on activity.
 // No ImGui, no engine: the window (scanner_ui.cpp) feeds it the time and whether the channel is active, and does the tuning it asks for.
 // tests/engine/test_scanner.cpp drives it with a fake activity source.

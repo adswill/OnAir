@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // PACTOR-II / -III / -IV physical layer (see pactorhf_dsp.h and docs/pactorhf.md).
 #include "dect2/pactorhf/pactorhf_dsp.h"
 #include <algorithm>

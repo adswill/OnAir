@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ISDB-S receiver (BS satellite television, L-band IF after the LNB), written to the engine's contract: configure() once the sample rate is
 // known, feed() from the analysis thread, telemetry() and the setters from the interface thread.
 // Input: complex baseband with the transponder (34.5 MHz wide, 28.86 Msymbol/s) near the centre, at least 39 Msample/s.

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // WINMOR pilot finder (see winmor.h). Sections: 5 and 6.1 of the WINMOR protocol specification Rev 1.0.6: Pilot := Ptun & Pfsync & Pfty.
 #include "dect2/xlink/winmor.h"
 #include "dect2/common/mathconst.h"

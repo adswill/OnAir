@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // by-name.js - the optional public name a station can put on the icons it was the last to hear. Pure (no Cloudflare APIs),
 // covered by test/by-name.test.js. The client (app/map/map_name.h) applies the same rules; the server never trusts it.
 

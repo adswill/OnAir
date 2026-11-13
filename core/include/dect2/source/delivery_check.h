@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Samples that never came out of a radio, found from the times and sizes of its deliveries alone (no help from the driver needed).
 // At each delivery the radio should have handed over (time since the anchor) x (its rate) samples; the shortfall is the lag. A delivery
 // that comes late only adds to the lag for a moment; a lost transfer raises it for good, so the lag is the samples lost so far plus a delay

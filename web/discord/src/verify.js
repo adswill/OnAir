@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 const hex = (s) => {
   if (typeof s !== "string" || s.length % 2 || /[^0-9a-f]/i.test(s)) return null;
   const out = new Uint8Array(s.length / 2);

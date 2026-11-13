@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mode S uplink test signal (1030 MHz interrogations). Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // UplinkGenerator renders the interrogations it is given: Mode A/C (P1, P2 at its own level, P3 8 or 21 us, optional P4 for the intermode

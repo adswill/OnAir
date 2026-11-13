@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // badge-geo.js - the geography the badges need: distance, Maidenhead locators and fields, and the country of registration of an aircraft
 // (from its ICAO 24-bit address block) or a ship (from the MID, the first three digits of its MMSI). Pure, covered by test/badge-stats.test.js.
 // The tables are partial on purpose: an address outside them simply counts for no country. They list the large blocks of the ICAO Annex 10

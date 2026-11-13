@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #include "dect2/fastscan/scanner.h"
 #include "dect2/engine/sig_ident.h"
 #include "dect2/common/threadpool.h"

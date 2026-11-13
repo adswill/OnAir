@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The headless server's settings file: plain "key=value" lines (# starts a comment), so it can be written by hand and kept in /etc or in a service's
 // state directory. Unknown keys and comments are kept when the program saves what it changed (mode, frequency, gain ... after the browser changed them).
 // The file holds the access token, so it is written readable by its owner only.

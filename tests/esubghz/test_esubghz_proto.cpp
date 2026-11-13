@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Flipper Zero Sub-GHz chat protocol layer: the CC1101 CRC, packet layout, message split, keys, AES-256-GCM (the GCM specification's
 // AES-256 test cases 13, 14 and 16), encrypted and plain messages, the replay guard.
 #include "dect2/esubghz/esubghz_proto.h"

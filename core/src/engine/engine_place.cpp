@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Placing and configuring one receiver inside a running engine (configureReceiver, muteReceiver, placeReceiver...) and the
 // rules for which modes may run as the second receiver.
 #include "dect2/engine/engine.h"

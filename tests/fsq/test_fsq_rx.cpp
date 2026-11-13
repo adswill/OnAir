@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // FSQ receiver against generated signals: the five speeds, noise, tuning error, off-centre, symbol clock error, drift, fading, echo,
 // a signal that starts late, a forced speed, directed messages (sender, addressee, command), noise only, a steady carrier and an IFKP signal
 // (other tone spacing: not FSQ).

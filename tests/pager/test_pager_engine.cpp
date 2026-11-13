@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Pagers through the engine, as the interface and dect2cli use it: the synthetic source plays the test signal (8 bit samples, paced like a radio) at
 // 2 Msps and 15 dB, the engine reports through latestRx() with the mode's standard, and every page of a cycle must arrive with its exact text.
 // About 20 s: the test signal needs that long for one cycle.

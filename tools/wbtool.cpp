@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Signal workbench on the command line, no screen: make a test recording with known bits, measure one, demodulate one.
 //   wbtool gen <out.cf32|out.wav|out.sigmf> --kind fsk2|fsk4|ask|afsk|bpsk|qpsk|psk8|msk|gmsk|am|fm --rate R --baud B [--bits N] [--snr dB]
 //                [--offset Hz] [--lead s] [--tail s] [--diff] [--bitsfile f.txt]

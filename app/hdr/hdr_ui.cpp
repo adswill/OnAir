@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HD Radio screens: the Radio tab (Station: call sign, names, slogan, location, message, the programs and what is playing with its album
 // art; Data: the large objects and the other data services; Signal: the receiver's figures), the program list on the right, the status
 // lamps, the analysis row (constellation, MER, P1 frames), the Receiver tab and the options of the test signal. HD Radio sound is HDC, a

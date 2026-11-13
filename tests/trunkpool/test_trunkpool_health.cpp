@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Control channel health: rolling decode-quality score per channel, the move to a clearly better one with hysteresis (no flapping), and the site book.
 #include "dect2/trunkpool/cc_health.h"
 #include <cmath>

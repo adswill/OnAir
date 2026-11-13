@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE: the synchronisation and broadcast helpers of the cell search: PSS correlation and tracking, SSS detection,
 // the PBCH / MIB decode and combining, PCFICH and the reconstruction of known signals. cell_lte_search.cpp drives them.
 #include "cell_lte_sync.h"

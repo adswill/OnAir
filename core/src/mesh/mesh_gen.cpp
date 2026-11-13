@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Mesh (LoRa) test signal: see mesh_gen.h.
 // STOP: a change here also needs a run of the full mesh rates test, which ctest does not run: test_mesh_rates --full
 // (tests/mesh/test_mesh_rates.cpp).

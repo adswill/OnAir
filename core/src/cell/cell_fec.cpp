@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers: channel coding of the LTE broadcast channels (3GPP TS 36.212), see cell_fec.h.
 #include "dect2/cell/cell_fec.h"
 #include <algorithm>

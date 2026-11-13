@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 #pragma once
 // Runtime-dispatched vector code for x86-64 (Linux, Windows, Intel Macs). The release programs are built for the x86-64 baseline (SSE2) so
 // that they start on any 64-bit PC (issue #74); the hot loops are compiled a second time for AVX2 + FMA and picked at run time when the

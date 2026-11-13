@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The OpenGL versions OnAir tries, best first (pure table, no GLFW): a Raspberry Pi 5 / CM5 with Mesa offers only 3.1 (#283).
 // Level 0 is what OnAir always asked for; each later level needs less of the driver. The desktop chain is the first kGlLevelCount entries;
 // kGlesLevel (OpenGL ES 3.0 through EGL) is tried only on Linux, when desktop OpenGL comes back as a software renderer (llvmpipe) while a GPU

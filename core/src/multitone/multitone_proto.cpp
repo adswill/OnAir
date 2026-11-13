@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Multitone paging: FSK slicing of a discriminator recording and the POCSAG-polynomial BCH search on the bits (see multitone_rx.h).
 // Nothing here knows the Multitone format (it is not public); it only measures: baud rate, bits, and which 32-bit words pass the
 // BCH(31,21) + even parity check (generator x^10+x^9+x^8+x^6+x^5+x^3+1, as POCSAG) at the best alignment.

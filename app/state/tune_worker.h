@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The radio retune off the UI thread (owner: "tuning is super unsmooth compared to SDR++"): the frequency box, the digit wheel and a drag
 // past the band post the new settings and return at once; one thread per engine makes the driver call with the NEWEST request only, every
 // request overtaken meanwhile is dropped (dect2::LatestSlot). The interface shows the new frequency at once; the picture follows when the

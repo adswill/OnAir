@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // ADS-B message layer: known answers from published examples (CRC, identification, CPR, altitude codes, velocity, surface, Mode S replies, Comm-B).
 // Examples: "The 1090 Megahertz Riddle" (Junzi Sun, https://mode-s.org/1090mhz, chapters ADS-B 1-8 and Mode S 2, 3, 6, 7) unless a comment says otherwise.
 // The expected numbers below are the ones printed there; a hex string that does not give a zero CRC would show up as a failure here first.

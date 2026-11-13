@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // P25 trunking system model: what the control channel's TSBKs say (TIA-102.AABC), turned into a site, a channel identifier table and Grants.
 // Receive only. Clean-room from the message layouts in the spec; the existing receiver's decoding (p25_rx.cpp) uses the same field positions.
 #include "dect2/p25/trunk.h"

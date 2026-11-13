@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DRM AAC (clause 5.4.1): the ER AAC frame of DRM (960 transform, side information first, Huffman codeword reordering, virtual codebooks) is read here and
 // written again as an ordinary AAC-LC raw data block, which libavcodec then decodes. SBR and PS are not decoded: libavcodec has no SBR for 960 frames, so the
 // core signal is what plays.

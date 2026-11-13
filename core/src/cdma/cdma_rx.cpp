@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // cdma2000 / IS-95 base stations receiver (cdma_rx.h).
 #include "dect2/cdma/cdma_rx.h"
 #include "dect2/engine/mode_synth.h"

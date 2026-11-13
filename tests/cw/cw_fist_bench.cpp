@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // CER vs SNR vs fist: the benchmark behind docs/cw.md. Not a ctest: build by hand (see docs/cw.md), run
 //   cw_fist_bench [seeds=3] [chars=260] [legacy|adaptive|both]
 #include "fist_harness.h"

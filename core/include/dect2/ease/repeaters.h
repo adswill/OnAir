@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // "Repeaters near me": a list the user imported as CSV, or downloaded on request from Open Repeater (openrepeater.org, CC0 data, the
 // user's own free API key); OnAir ships none. Filtered by mode and distance. Pure, no I/O.
 #pragma once

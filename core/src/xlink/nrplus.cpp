@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT NR+ physical control channel receiver (see nrplus.h). Clause numbers: ETSI TS 103 636-3 V1.5.1 unless TS 103 636-4 is named.
 #include "dect2/xlink/nrplus.h"
 #include "dect2/common/mathconst.h"

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // MT63 (Pawel Jalocha SP9VRC) coding layer: the pulse shape, Walsh-Hadamard character code, interleaver and the differential bit rule.
 //
 // 64 carriers, each sent as differential BPSK (bit 1 = no phase change, bit 0 = reversal) once per symbol, 10 symbols/s in the 1000 Hz

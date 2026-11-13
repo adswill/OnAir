@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Narrow spectral lines followed through time: a short-time spectrum, a background estimated across frequency, peaks over it, and tracks that follow a
 // moving line (Doppler). Shared by the satellite carrier modes and the GRAVES echo search.
 #pragma once

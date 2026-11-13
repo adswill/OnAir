@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // What a SafetyNET / FleetNET message is about, read from its service code, its priority and its text: the NAVAREA or METAREA, the kind
 // (navigational warning, weather forecast, distress relay, search and rescue, ...) and the warning number ("123/26").
 //

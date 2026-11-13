@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Cell towers, LTE test signal: one eNodeB carrier with its broadcast channels, built from the same specification tables the receiver
 // reads (36.211 / 36.212). Nothing is transmitted: the samples only exist in memory.
 #include "cell_lte_int.h"

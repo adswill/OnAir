@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DMB video services in DAB (ETSI TS 102 427, TS 102 428): the test transmitter's DMB service against the receiver.
 //   1. the H.264 writer of the generator: libavcodec decodes its pictures to exactly the test picture
 //   2. the generator's transport stream: continuity counters and PCR across the 12 s loop, the tables within 500 ms

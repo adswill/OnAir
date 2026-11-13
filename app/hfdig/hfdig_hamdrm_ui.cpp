@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // HF digital, the HamDRM view of the main tab (called by hfdig_ui.cpp): the file being received with its name, callsign and a progress bar
 // of the segments (and the ones still missing), the last finished picture (scaled to fit), the finished files as a list to click, Save, and
 // "Save every picture" (the files as sent, in <data folder>/hamdrm/, named by the time and the sender's file name).

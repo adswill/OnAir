@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // DECT test signal. Nothing is transmitted: the samples only exist in memory or in a file.
 //
 // Base stations each send one beacon burst per 10 ms frame in their own slot: S-field (preamble and RFP sync word), A-field (Nt with the

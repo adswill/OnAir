@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Demodulation chains of the Smart CubeSat decoder. A chain takes one carrier brought down to a 96 kHz complex baseband stream and tries ONE
 // modulation hypothesis (and every framing that belongs to it) on it; the frames that validate (CRC, Reed-Solomon, Golay, Viterbi + RS, Morse
 // structure) come out as ChainFrame, the counts of every trial as TrialStats.

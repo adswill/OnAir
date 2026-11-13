@@ -1,4 +1,7 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Writes the web panel schema of every mode (docs/WEB-SCHEMA-3.9.md). It reads the telemetry structs of core/include (every struct a mode's
 # RxTelemetry member reaches: rows of its tables, nested blocks, enums), the standard -> member map of core/src/engine/engine_telemetry.cpp
 # and the mode list of app/ui/mode_table.cpp, and generates

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // The feature extractor of the signal identifier (dect2/engine/sig_ident.h) on signals made here, whose bandwidth, symbol rate, modulation,
 // deviation, burst timing and symbol length are known: the measurements must come out within the tolerances below, at any frequency offset,
 // with noise, and fast enough (under 200 ms). Also the region helpers (regionAt, findRegions), the calibrated reject option and the text forms.

@@ -1,4 +1,7 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 # Progress bars for a running tools/ci_local.sh: reads the ctest logs in build/ci-logs and redraws every 2 s. Ctrl-C to stop watching
 # (the CI run itself goes on). Usage: tools/ci_progress.sh [--once]
 cd "$(dirname "$0")/.." || exit 1

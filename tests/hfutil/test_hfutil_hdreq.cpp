@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // STANAG 4539 / MIL-STD-188-110C Appendix C high-rate modem through Watterson-model HF channels (tests/common/watterson.h): the
 // decision-feedback equaliser of hfutil/hfu_hdr against the conditions of C.6 (ITU-R Poor: two equal Rayleigh paths 2 ms apart with a
 // 1 Hz fading spread; ITU-R Moderate: 1 ms, 0.5 Hz; the Doppler shift test of C.6.3 at +-75 Hz), with noise measured in 3 kHz.

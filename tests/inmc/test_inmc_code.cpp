@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Inmarsat-C frame coding: known answers from the open decoder "inmarsatc" (Scytale-C library) and its documentation comments, the encoder against the
 // decoder's own branch table, round trip, and the Viterbi decoder against the well known behaviour of the K = 7 rate 1/2 code.
 // Nothing here is a recorded frame: no recording of a real signal was available.

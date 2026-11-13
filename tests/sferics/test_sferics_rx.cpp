@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Sferics receiver on synthetic scenes: counts, flashes, timing, noise levels, frequency offset, sample rates from 48 kHz to 2.4 Msps, the
 // threshold, mains trains at 50 and 60 Hz (alone and under a storm), and an impulse that is too long. Synthetic signals only: nothing here says how
 // it behaves on a real storm. There are no frames, so no reserved bits: the "variants" are the sample rate, offset, noise and mains settings.

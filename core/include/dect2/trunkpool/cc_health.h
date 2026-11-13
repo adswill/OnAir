@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Control channel health: a rolling hour of decode quality per control channel frequency (good and bad messages, grants, age) and the decision to
 // move the control radio to a clearly better one, with hysteresis so it never flaps. Also the site book: control channels learned from the adjacent-site
 // broadcasts over a whole drive (system, RFSS, site, frequency, when last heard), for the hunt and for export. Plain logic, no threads.

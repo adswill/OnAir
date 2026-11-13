@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Seeded mutation run of the error correction layer, meant for DECT2_SANITIZE=ON: the Reed-Solomon decoders and the BCH
 // decoder must never crash or hang on any bytes (the BCH bits are also fed values above 1 and every length from 0), the encoders on any message length.
 // Buffers are exact-size heap blocks so a sanitizer sees a read or write past the end. Also a libFuzzer target with -DONAIR_LIBFUZZER.

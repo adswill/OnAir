@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // SSDV screens: the band presets, the picture being received (built up as packets arrive, grey where packets are missing), the other pictures
 // of the session, the packets heard, and under Advanced a fixed speed. The receiver writes every picture to <Save pictures to>/SSDV as a JPEG when it is
 // complete (or after 20 s without a new packet); "Save PNG" writes a PNG copy through the shared picture folder. See docs/ssdv.md.

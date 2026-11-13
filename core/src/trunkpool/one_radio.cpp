@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // See one_radio.h.
 #include "dect2/trunkpool/one_radio.h"
 #include <algorithm>

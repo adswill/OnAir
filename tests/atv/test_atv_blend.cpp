@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
+
 // Analogue TV temporal noise reduction: the table-driven blend must give the same bytes as the per-byte reference, for every colour pair.
 #include "dect2/atv/atv_blend.h"
 #include <cmath>
