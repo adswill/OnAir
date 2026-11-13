@@ -7,6 +7,7 @@
 #include "ui2_internal.h"
 #include "dect2/dsp/baseband_filter.h"
 #include "typography.h"
+#include "font_size.h"
 
 using namespace ui2;
 
@@ -144,7 +145,7 @@ void drawMeters(const std::vector<Meter>& ms, float w) {
         const ImVec2 p = ImGui::GetCursorScreenPos();
         const float bh = 9 * gUi;
         dl->AddText(p, u32(T.dim), m.label.c_str());
-        ImGui::PushFont(ImGui::GetFont(), ImGui::GetFontSize() * 1.45f);
+        ImGui::PushFont(ImGui::GetFont(), fontBase() * 1.45f);
         const ImVec2 ts = ImGui::CalcTextSize(m.value.c_str());
         dl->AddText(ImGui::GetFont(), ImGui::GetFontSize(), ImVec2(p.x + w - ts.x, p.y - 4 * gUi), u32(T.bright), m.value.c_str());
         ImGui::PopFont();

@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include "../ui/font_size.h"
 
 namespace {
 
@@ -92,7 +93,7 @@ const char* kindText(int k) {
 }
 
 void subAudible(const App& a, const dect2::TonesTelemetry& t) {
-    ImGui::PushFont(a.mono, 30 * gUi);
+    ImGui::PushFont(a.mono, 30.f);
     if (t.ctcssIdx >= 0) ImGui::TextColored(pal::okGreen(), "%.1f Hz", t.ctcssHz);
     else if (t.dcsCode >= 0) ImGui::TextColored(pal::okGreen(), "D%03d%c", t.dcsCode, t.dcsInv ? 'I' : 'N');
     else ImGui::TextDisabled("--- Hz");

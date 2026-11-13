@@ -16,6 +16,7 @@
 #include <deque>
 #include <map>
 #include "dect2/common/u8file.h"
+#include "../ui/font_size.h"
 
 namespace {
 
@@ -717,7 +718,7 @@ void clockView(App& a) {
     const GnssFix& f = t.fix;
     ImGui::BeginChild("##gnssclk", ImVec2(0, 0));
     auto kv = [&](const char* k, const char* fmt, auto... v) { ImGui::TextDisabled("%s", k); kvColumn(130 * gUi); ImGui::PushFont(a.mono, 0); ImGui::PushTextWrapPos(0); ImGui::Text(fmt, v...); ImGui::PopTextWrapPos(); ImGui::PopFont(); };
-    ImGui::PushFont(a.mono, 30 * gUi);
+    ImGui::PushFont(a.mono, 30.f);
     if (f.valid && f.timeValid) ImGui::TextColored(t.utcValid ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%.19s UTC", gnssUtcText(f).c_str());
     else ImGui::TextDisabled("----.--.-- --:--:-- UTC");
     ImGui::PopFont();

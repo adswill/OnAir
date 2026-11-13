@@ -16,6 +16,7 @@
 #include <ctime>
 #include <fstream>
 #include <sstream>
+#include "../ui/font_size.h"
 
 using namespace dect2;
 
@@ -158,7 +159,7 @@ void hamStationSave() {
 void hamStationHeader(App& a, double txAudioHz, const std::string& modeClass, double rxDb) {
     HamOps& o = hamOps();
     const double hz = a.freqMhz * 1e6;
-    ImGui::PushFont(nullptr, ImGui::GetFontSize() * 1.8f);
+    ImGui::PushFont(nullptr, fontBase() * 1.8f);
     ImGui::Text("%.4f", a.freqMhz);
     ImGui::PopFont();
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("The dial frequency (MHz). The band bar below goes to the frequency you last used on that band in this mode."));

@@ -34,6 +34,7 @@
 #include <ctime>
 #include <string>
 #include "../ui/input_map.h"
+#include "../ui/font_size.h"
 
 using namespace dect2;
 
@@ -831,7 +832,7 @@ void hamPanel(App& a) {
         const std::string dx = !h.eng.dxCall().empty() ? h.eng.dxCall() : h.selCall;
         const std::string dxg = !h.eng.dxCall().empty() ? h.dxGrid : h.selGrid;
         if (!dx.empty()) {
-            ImGui::PushFont(nullptr, ImGui::GetFontSize() * 1.3f);
+            ImGui::PushFont(nullptr, fontBase() * 1.3f);
             ImGui::TextUnformatted(dx.c_str());
             ImGui::PopFont();
             ImGui::SameLine();

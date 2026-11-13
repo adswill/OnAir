@@ -16,6 +16,7 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#include "../ui/font_size.h"
 
 namespace {
 
@@ -143,7 +144,7 @@ void timeView(App& a) {
     notes(a);
     if (!live(a)) { ImGui::TextDisabled("%s", a.engine.running() ? tr("starting") : tr("start the receiver to read the time service")); return; }
     const dect2::EczasTelemetry& t = a.rx.eczas;
-    ImGui::PushFont(a.mono, 30 * gUi);
+    ImGui::PushFont(a.mono, 30.f);
     if (t.timeValid) ImGui::TextColored(t.confirmed ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%s UTC", dateText((int64_t)t.utcNow).c_str());
     else ImGui::TextDisabled("----.--.-- --:--:-- UTC");
     ImGui::PopFont();

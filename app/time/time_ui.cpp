@@ -17,6 +17,7 @@
 #include <ctime>
 #include <string>
 #include <vector>
+#include "../ui/font_size.h"
 
 namespace {
 using namespace dect2::timesig;
@@ -128,7 +129,7 @@ void timeView(App& a) {
     const dect2::TimeTelemetry& t = a.rx.timesig;
     const Fields& f = t.fields;
     // the received time, large
-    ImGui::PushFont(a.mono, 30 * gUi);
+    ImGui::PushFont(a.mono, 30.f);
     if (t.timeValid) ImGui::TextColored(t.confirmed ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%s UTC", utcText(t.utcNow).c_str());
     else ImGui::TextDisabled("----.--.-- --:--:-- UTC");
     ImGui::PopFont();

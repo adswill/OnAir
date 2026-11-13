@@ -38,6 +38,7 @@
 #include <sstream>
 #include <thread>
 #include <vector>
+#include "../ui/font_size.h"
 
 void rotatorPassStep(const dect2::MountPlan& m);   // rotator_ui.cpp
 void hfdigSetDemod(const App& a, int d);           // hfdig_ui.cpp
@@ -1495,7 +1496,7 @@ void passPanel(App& a, const Row* r, double now, float w, float h) {
         const ImVec2 dp = ImGui::GetCursorScreenPos();
         ImGui::GetWindowDrawList()->AddCircleFilled(ImVec2(dp.x + 4 * gUi, dp.y + ImGui::GetTextLineHeight() * 0.5f), 4 * gUi, ImGui::GetColorU32(groupColour(s.group)));
         ImGui::Dummy(ImVec2(10 * gUi, 1)); ImGui::SameLine(0, 2 * gUi);
-        if (ImFont* sb = typo::fonts().semibold) { ImGui::PushFont(sb, ImGui::GetFontSize()); ImGui::TextUnformatted(s.name.c_str()); ImGui::PopFont(); }
+        if (ImFont* sb = typo::fonts().semibold) { ImGui::PushFont(sb, fontBase()); ImGui::TextUnformatted(s.name.c_str()); ImGui::PopFont(); }
         else ImGui::TextUnformatted(s.name.c_str());
     }
     {   // the countdown, large and monospaced
@@ -1505,7 +1506,7 @@ void passPanel(App& a, const Row* r, double now, float w, float h) {
         ImGui::TextDisabled("%s", tr(on ? "LOS in" : "AOS in"));
         ImGui::SameLine();
         ImFont* mono = typo::fonts().mono ? typo::fonts().mono : a.mono;
-        ImGui::PushFont(mono, ImGui::GetFontSize() * 1.5f);
+        ImGui::PushFont(mono, fontBase() * 1.5f);
         ImGui::TextColored(on ? pal::okGreen() : ImGui::GetStyleColorVec4(ImGuiCol_Text), "%s", b);
         ImGui::PopFont();
     }
