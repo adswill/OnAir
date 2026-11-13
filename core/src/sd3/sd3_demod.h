@@ -14,6 +14,16 @@ namespace dect2::sd3 {
 using math::kPi;
 using cfp = std::complex<float>;
 
+// sum of h[k] x[k], k < n, in eight running sums (they vectorise and pipeline; one running sum waited on each add: 4.1, docs/CPU-4.1.md)
+inline float dot8(const float* h, const float* x, int n) {
+    float a[8] = {};
+    int k = 0;
+    for (; k + 8 <= n; k += 8)
+        for (int j = 0; j < 8; j++) a[j] += h[k + j] * x[k + j];
+    for (; k < n; k++) a[0] += h[k] * x[k];
+    return ((a[0] + a[1]) + (a[2] + a[3])) + ((a[4] + a[5]) + (a[6] + a[7]));
+}
+
 // Decimating FIR, complex data, doubled ring
 struct FirDec {
     std::vector<float> taps, re, im;
@@ -41,10 +51,7 @@ struct FirDec {
         im[(size_t)pos] = im[(size_t)pos + n] = x.imag();
         if (++cnt < dec) return false;
         cnt = 0;
-        float a = 0, b = 0;
-        const float* r = &re[(size_t)pos], *i2 = &im[(size_t)pos];
-        for (int k = 0; k < n; k++) { a += taps[(size_t)k] * r[k]; b += taps[(size_t)k] * i2[k]; }
-        out = {a, b};
+        out = {dot8(taps.data(), &re[(size_t)pos], n), dot8(taps.data(), &im[(size_t)pos], n)};
         return true;
     }
 };
@@ -67,15 +74,10 @@ struct Rrc {
     cfp push(cfp x, bool complexIn) {
         pos = (pos == 0 ? n : pos) - 1;
         re[(size_t)pos] = re[(size_t)pos + n] = x.real();
-        float a = 0;
-        const float* r = &re[(size_t)pos];
-        for (int k = 0; k < n; k++) a += h[(size_t)k] * r[k];
+        const float a = dot8(h.data(), &re[(size_t)pos], n);
         if (!complexIn) return {a, 0};
         im[(size_t)pos] = im[(size_t)pos + n] = x.imag();
-        float b = 0;
-        const float* i2 = &im[(size_t)pos];
-        for (int k = 0; k < n; k++) b += h[(size_t)k] * i2[k];
-        return {a, b};
+        return {a, dot8(h.data(), &im[(size_t)pos], n)};
     }
 };
 
