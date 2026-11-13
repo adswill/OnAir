@@ -1,5 +1,25 @@
 # OnAir 4.0
 
+## 4.0.1 (2026-11-13)
+
+Bug fixes, and two video generator features by @peterdewitte.
+
+- #496: OnAir Web starts the receiver when a listener who may tune presses Play (`web_listener_start`, on by default; new error code `not_running`).
+- #495: Hamlib on Windows is loaded at run time from `libhamlib-4.dll` (program folder, codecs folders, PATH); the DLL is not shipped.
+- #491: one guide at a time (setup, first-run tour, Get me listening, lesson card); the tour can be skipped again on a fresh install.
+- #488: "Hear this channel" follows a click on the spectrum or a frequency typed inside the captured band.
+- #470: Linux falls back to OpenGL ES 3.0 through EGL when desktop OpenGL is a software renderer and a GPU exists (`ONAIR_GL=desktop|gles`).
+- Linux: a fatal start error shows a dialog and is written to `~/.config/onair/startup-error.txt` when OnAir is started from the menu.
+- Menu bar: the right-hand items are centred vertically.
+- Airspy HF+: a refused sample rate no longer stops the stream; the bias-tee entry is refreshed at each open.
+- COSPAS-SARSAT: the false-burst search stays within its processor budget in a storm of steady tones.
+- #493 (@peterdewitte): video generator RTMP server input for OBS Studio (#490).
+- #494 (@peterdewitte): several video generators as programmes of the transmitter's multiplex (#492).
+
+Known limits: #470 and the Hamlib DLL were not tried on real hardware (a Raspberry Pi 5, a Windows PC with a rig).
+
+## 4.0.0
+
 OnAir 4.0 adds 52 new receivers: 388 entries in MODES.md in total, 386 in the app's mode list (it has no row for Plugins or Mode Builder). 3.9 had 336 rows, not the 333 its notes said: the list generator skipped KLW, TDCS and Horus balloons, which were in the app all along. It brings a new General receiver screen, a Workspace layout, one Ham station screen, new transmit screens, a propagation calculator on ITU-R models, a satellite tracker with a world map, a sharper zoomed waterfall, a community plugin marketplace, better sensitivity in many decoders, and fixes from your reports.
 
 **Measured** numbers come from OnAir's own generated test signals, not from over-the-air recordings, unless a line says so. Read **Known limits** at the end before relying on a new feature.
