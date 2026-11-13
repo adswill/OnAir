@@ -498,16 +498,15 @@ struct DtmbReceiver::Impl {
             pendingJump = j;
             peakOffUs = (float)(e / (symRate / 1e6));
         }
-        // ---- the body. The header says which carrier mode can be there: PN420 and PN945 go with multi-carrier, PN595 with either (single carrier is
-        // defined with PN595 only); until the system information tells, both are tried
+        // ---- the body. Select the carrier mode from system information, independently of the PN header.
         int8_t chipsA[945], chipsB[945];
         pnHeader(hdr, phA, chipsA); pnHeader(hdr, phB, chipsB);
         const int8_t* ca = chipsA; const int8_t* cb = chipsB;
         // a header that is not usable stands in for its neighbour
         const Taps& ha = goodA ? cleanA : cleanB;
         const double hAmp = std::sqrt(hi.powerRatio / 2.0);
-        const bool tryOfdm = hdr != Header::Pn595 || !siOk || carriers == 3780;
-        const bool trySingle = hdr == Header::Pn595 && (!siOk || carriers == 1);
+        const bool tryOfdm = !siOk || carriers == 3780;
+        const bool trySingle = !siOk || carriers == 1;
         if (tryOfdm) {
             Prof::Scope pe(prof, 2);
             eq.run(at(S + Lh), ha, ca, cleanB, cb, Lh, hAmp, bins.data(), var.data());
@@ -850,7 +849,7 @@ struct DtmbReceiver::Impl {
         t.phaseRotates = rotates;
         t.siOk = siOk; t.siIndex = siOk ? siIndex : 0;
         t.siScore = siOk ? body[carriers == 1 ? 1 : 0].tracker.score : std::max(body[0].tracker.score, body[1].tracker.score);
-        t.carriers = state == 0 ? 0 : siOk ? carriers : (hdr == Header::Pn595 ? 0 : 3780);
+        t.carriers = siOk ? carriers : 0;
         if (siOk) { t.mapping = (int)profile.map; t.rate = (int)profile.rate; t.interleaver = profile.mode2 ? 2 : 1; t.netMbps = (float)(netBitrate(hdr, profile, symRate) / 1e6); }
         t.snrPnDb = state == 0 ? 0.f : (float)snrPn;
         t.snrDb = siOk && merAvg > 8.0 && merAvg < snrPn ? (float)merAvg : t.snrPnDb;
