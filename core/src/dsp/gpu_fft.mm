@@ -100,7 +100,7 @@ GpuFft::GpuFft() : p_(new Impl) {
         if (!d.dev) return;
         NSError* err = nil;
         id<MTLLibrary> lib = [d.dev newLibraryWithSource:kSource options:nil error:&err];
-        if (!lib) { DIAG(347729, "The Metal FFT shaders did not compile (%s), so the CPU FFT is used.", err ? err.localizedDescription.UTF8String : "no reason given"); d.dev = nil; return; }
+        if (!lib) { NSLog(@"GpuFft: shader compile failed: %@", err); DIAG(347729, "The Metal FFT shaders did not compile (%s), so the CPU FFT is used.", err ? err.localizedDescription.UTF8String : "no reason given"); d.dev = nil; return; }
         d.load = d.make(lib, @"load_win"); d.pass = d.make(lib, @"stockham"); d.pow = d.make(lib, @"pow_acc"); d.fir = d.make(lib, @"fir_dec");
         if (!d.load || !d.pass || !d.pow || !d.fir) { DIAG(907996, "A Metal FFT kernel could not be made into a pipeline, so the CPU FFT is used."); d.dev = nil; return; }
         d.queue = [d.dev newCommandQueue];
