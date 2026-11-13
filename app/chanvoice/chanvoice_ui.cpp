@@ -146,6 +146,7 @@ const chv::Channel* selectedChannel(const App& a, chv::Service sv) {
 void pick(App& a, chv::Service sv, const chv::Channel& c) {
     st(sv).sel = c.label; st(sv).listen = c.label;
     if (live(a) && !covered(a.rx.chanvoice, c.mhz)) tuneDialTo(a, c.mhz);
+    else if (!a.engine.running()) tuneFreq(a, c.mhz);   // stopped: the channel sets the frequency too
     save(sv);
 }
 

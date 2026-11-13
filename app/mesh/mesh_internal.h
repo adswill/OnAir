@@ -132,6 +132,7 @@ void pushKeys(App& a);
 int effRegion(const App& a);
 bool planCombo(App& a, const char* id, int& r, bool shortNames);
 void applyRegion(App& a, int region);
+double planMhz(const App& a, int region);   // the frequency a plan tunes to for this mode entry
 State::Custom& customOf(const App& a);
 void settingsView(App& a);
 

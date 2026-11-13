@@ -422,7 +422,7 @@ void tuner(App& a, bool& retune) {
     ImGui::TextDisabled("Band plan");
     ImGui::SetNextItemWidth(std::min(230 * gUi, ImGui::GetContentRegionAvail().x));   // no wider than the side panel
     int r = effRegion(a);
-    if (planCombo(a, "##mreg_t", r, true)) { applyRegion(a, r); retune = true; }
+    if (planCombo(a, "##mreg_t", r, true)) applyRegion(a, r);   // retunes by itself (tuneFreq)
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("EU / US / ANZ: the Meshtastic LongFast channel; MeshCore sits 93 kHz above it in the EU (one capture holds both).\nAPRS / MeshCom: 70 cm LoRa APRS and MeshCom; MeshCom EU at 433.175 MHz also holds LoRa APRS at 433.775 MHz.\nThe frequency box can be changed for other slots: the receiver follows it.");
 }
 

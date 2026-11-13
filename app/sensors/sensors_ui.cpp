@@ -805,6 +805,25 @@ void status(App& a) {
     ImGui::PushFont(a.mono, 0); ImGui::TextUnformatted(!on ? (run ? tr("starting") : tr("stopped")) : dect2::sensorsSummary(a.rx.sensors).c_str()); ImGui::PopFont();
 }
 
+// The band of the sensors to listen to: one button per ISM band, like the Band row of ISM sensors. A click tunes at once, running or stopped.
+void tuner(App& a, bool& retune) {
+    struct P { const char* name; double mhz; const char* tip; };
+    static const P ps[] = {{"315", 315.0, "315 MHz: tyre pressure sensors, garage door and gate remotes, alarm sensors (USA, Canada, Japan)"},
+                           {"433.92", 433.92, "433.92 MHz: weather stations, thermometers, remotes, doorbells, TPMS (Europe, Asia)"},
+                           {"868.3", 868.3, "868.3 MHz: Bresser, LaCrosse IT+, Fine Offset / Ecowitt (Europe); 868.95 MHz wireless M-Bus fits in the same band"},
+                           {"915", 915.0, "915 MHz: weather stations and sensors in the Americas and Australia"}};
+    ImGui::AlignTextToFramePadding();
+    ImGui::TextDisabled("%s", tr("Band"));
+    for (const auto& p : ps) {
+        flowNext(6 * gUi);
+        const bool on = std::fabs(a.freqMhz - p.mhz) < 0.0005;
+        if (on) ImGui::PushStyleColor(ImGuiCol_Button, pal::accent(0.45f));
+        if (ImGui::SmallButton(p.name) && !on) { tuneFreq(a, p.mhz); retune = true; }
+        if (on) ImGui::PopStyleColor();
+        if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", p.tip);
+    }
+}
+
 void summary(const App& a, std::string& l1, std::string& l2) {
     l1 = "Sub-GHz sensors";
     if (live(a)) l2 = dect2::sensorsSummary(a.rx.sensors);
@@ -822,5 +841,6 @@ const ModeUi kSensorsUi = {
     .list = list,
     .status = status,
     .summary = summary,
+    .tuner = tuner,
     .tick = [](App& a) { load(a); pwsTick(a); archTick(a); tick(a); },   // the weather upload and the long history run whatever view is open
 };
