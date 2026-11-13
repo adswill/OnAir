@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/t2/t2mi_out.h"
+#include "dect2/common/diag.h"
 #include <cstring>
 #ifdef _WIN32
 #include <winsock2.h>
@@ -137,21 +138,21 @@ bool T2Export::configure(const T2ExportConfig& c) {
     if (c.file.empty() && c.udpHost.empty()) return true;
     if (!c.file.empty()) {
         f_ = fopen(c.file.c_str(), "wb");
-        if (!f_) { err_ = "cannot open " + c.file; return false; }
+        if (!f_) { DIAG_ERROR(109831, "The T2-MI output file %s could not be opened for writing, so T2-MI output is not started.", c.file.c_str()); err_ = "cannot open " + c.file; return false; }
     }
     if (!c.udpHost.empty()) {
         in_addr a{};
-        if (c.udpPort < 1 || c.udpPort > 65535 || inet_pton(AF_INET, c.udpHost.c_str(), &a) != 1) { err_ = "bad UDP address or port"; close(); return false; }
+        if (c.udpPort < 1 || c.udpPort > 65535 || inet_pton(AF_INET, c.udpHost.c_str(), &a) != 1) { DIAG_ERROR(247836, "The T2-MI UDP address %s with port %d is not valid, so T2-MI output is not started.", c.udpHost.c_str(), (int)c.udpPort); err_ = "bad UDP address or port"; close(); return false; }
 #ifdef _WIN32
         WSADATA w; WSAStartup(MAKEWORD(2, 2), &w);
 #endif
         sock_ = (intptr_t)socket(AF_INET, SOCK_DGRAM, 0);
-        if (sock_ < 0) { err_ = "no UDP socket"; close(); return false; }
+        if (sock_ < 0) { DIAG_ERROR(755647, "The operating system refused to create a UDP socket for T2-MI output, so T2-MI output is not started."); err_ = "no UDP socket"; close(); return false; }
         int yes = 1;
         setsockopt((int)sock_, SOL_SOCKET, SO_BROADCAST, (const char*)&yes, sizeof yes);
         sockaddr_in sa{};
         sa.sin_family = AF_INET; sa.sin_port = htons((uint16_t)c.udpPort); sa.sin_addr = a;
-        if (connect((int)sock_, (sockaddr*)&sa, sizeof sa) != 0) { err_ = "cannot reach the UDP address"; close(); return false; }
+        if (connect((int)sock_, (sockaddr*)&sa, sizeof sa) != 0) { DIAG_ERROR(349995, "The UDP address %s port %d could not be reached for T2-MI output, so T2-MI output is not started.", c.udpHost.c_str(), (int)c.udpPort); err_ = "cannot reach the UDP address"; close(); return false; }
     }
     active_ = true;
     return true;

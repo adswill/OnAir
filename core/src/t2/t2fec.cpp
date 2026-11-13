@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/t2/t2fec.h"
+#include "dect2/common/diag.h"
 #include "dect2/t2/t2fec_tables.h"
 #include "dect2/dsp/simd.h"
 
@@ -36,9 +37,11 @@ const char* rateName(int r) { return (r >= 0 && r < 8) ? kRateNames[r] : "?"; }
 
 FecDims fecDims(const PlpFec& f) {
     FecDims d;
-    if (f.mod < 0 || f.mod > 3 || f.rate < 0 || f.rate > 7) return d;
+    if (f.mod < 0 || f.mod > 3 || f.rate < 0 || f.rate > 7 || (!f.shortFrame && f.rate > 5)) {
+        DIAG_DEBUG_EVERY(838177, 5, "The DVB-T2 PLP uses modulation %d and code rate %d, which is not defined for %s FEC frames, so its blocks are not decoded.", f.mod, f.rate, f.shortFrame ? "short" : "normal");
+        return d;
+    }
     if (!f.shortFrame) {
-        if (f.rate > 5) return d;
         d.nLdpc = 64800; d.kLdpc = kNormalK[f.rate]; d.kBch = kNormalKbch[f.rate]; d.q = kNormalQ[f.rate]; d.t = kNormalT[f.rate];
     } else {
         d.nLdpc = 16200; d.kLdpc = kShortK[f.rate]; d.kBch = kShortKbch[f.rate]; d.q = kShortQ[f.rate]; d.t = 12;
@@ -552,6 +555,7 @@ bool parseBbHeader(const uint8_t* b, BbHeader& h) {
     unsigned got = getBits(b, 72, 8);
     h.hem = crc == (got ^ 0x01u); // MODE bit is XORed into the CRC LSB
     h.crcOk = crc == got || h.hem;
+    if (!h.crcOk) DIAG_DEBUG_EVERY(802683, 5, "A DVB-T2 baseband frame header failed its CRC-8 check, so the frame is dropped.");
     h.tsGs = getBits(b, 0, 2); h.sisMis = b[2]; h.ccmAcm = b[3]; h.issyi = b[4]; h.npd = b[5]; h.ro = getBits(b, 6, 2);
     h.isi = getBits(b, 8, 8);
     h.upl = getBits(b, 16, 16); h.dfl = getBits(b, 32, 16); h.sync = getBits(b, 48, 8); h.syncd = getBits(b, 56, 16);
