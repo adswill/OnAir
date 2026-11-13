@@ -35,18 +35,39 @@ inline cf32 cube(const cf32* p, float f) {       // Catmull-Rom on p[-1..2], f i
     return c0 + f * (c1 + f * (c2 + f * c3));
 }
 
-void fftRadix2(std::vector<cf32>& a) {
-    const int n = int(a.size());
-    for (int i = 1, j = 0; i < n; i++) { int b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) std::swap(a[i], a[j]); }
-    for (int len = 2; len <= n; len <<= 1) {
-        const double w = -2 * kPi / len;
-        const cf32 wn(float(std::cos(w)), float(std::sin(w)));
-        for (int i = 0; i < n; i += len) {
+// Radix-2 FFT with its bit-reversal swaps and twiddles worked out once per size. The twiddles are made by the same running product
+// (c *= wn per step) the butterflies used to do as they went, so every value and every result is the same bit for bit; without that
+// running product in the inner loop the butterflies no longer wait on each other.
+struct FftPlan {
+    int n = 0;
+    std::vector<std::pair<int, int>> swaps;
+    std::vector<cf32> tw;                       // stage len: len / 2 twiddles at offset len / 2 - 1
+    void build(int size) {
+        n = size;
+        swaps.clear();
+        for (int i = 1, j = 0; i < n; i++) { int b = n >> 1; for (; j & b; b >>= 1) j ^= b; j ^= b; if (i < j) swaps.push_back({ i, j }); }
+        tw.assign(size_t(std::max(1, n - 1)), cf32(0, 0));
+        for (int len = 2; len <= n; len <<= 1) {
+            const double w = -2 * kPi / len;
+            const cf32 wn(float(std::cos(w)), float(std::sin(w)));
             cf32 c(1, 0);
-            for (int j = 0; j < len / 2; j++) {
-                const cf32 u = a[i + j], v = a[i + j + len / 2] * c;
-                a[i + j] = u + v; a[i + j + len / 2] = u - v;
-                c *= wn;
+            for (int j = 0; j < len / 2; j++) { tw[size_t(len / 2 - 1 + j)] = c; c *= wn; }
+        }
+    }
+};
+
+void fftRadix2(std::vector<cf32>& a, const FftPlan& p) {
+    const int n = int(a.size());
+    for (const auto& s : p.swaps) std::swap(a[size_t(s.first)], a[size_t(s.second)]);
+    for (int len = 2; len <= n; len <<= 1) {
+        const int h = len / 2;
+        const cf32* tw = &p.tw[size_t(h - 1)];
+        for (int i = 0; i < n; i += len) {
+            cf32* lo = &a[size_t(i)];
+            cf32* hi = lo + h;
+            for (int j = 0; j < h; j++) {
+                const cf32 u = lo[j], v = hi[j] * tw[j];
+                lo[j] = u + v; hi[j] = u - v;
             }
         }
     }
@@ -96,6 +117,7 @@ struct BearerDemod::Impl {
     int nextRate[16], nextMod[16];
     bool nextValid = false;
     int syncRun = 0;                            // frames in a row with unique word and coherent pilots
+    FftPlan plan;                               // the pilot comb search's FFT
 
     void clearNext() { nextValid = false; for (int i = 0; i < 16; i++) { nextRate[i] = -1; nextMod[i] = 0; } }
 
@@ -167,6 +189,7 @@ struct BearerDemod::Impl {
                 const int K = dp.ps;
                 int N = 256; while (N < 2 * K) N *= 2;
                 std::vector<cf32> buf(N);
+                if (plan.n != N) plan.build(N);
                 for (int tau = 0; tau < L * os; tau++) {
                     double sum = 0;
                     std::fill(buf.begin(), buf.end(), cf32(0, 0));
@@ -177,7 +200,7 @@ struct BearerDemod::Impl {
                         buf[k] = z[idx]; count++;
                     }
                     if (count < K * 3 / 4) continue;
-                    fftRadix2(buf);
+                    fftRadix2(buf, plan);
                     float peak = 0; int peakBin = 0;
                     for (int i = 0; i < N; i++) { const float m = std::norm(buf[i]); sum += m; if (m > peak) { peak = m; peakBin = i; } }
                     const double met = peak / (sum / N + 1e-20);
@@ -197,6 +220,16 @@ struct BearerDemod::Impl {
         double bestUw = 0, bestS = 0, bestFa = 0;
         int bestW = -1;
         const int aliases = 4;
+        // the rotation of each unique-word symbol for each alias, worked out once (the same cos and sin of the same phase as in the loop below)
+        double rotC[(2 * aliases + 1) * 40], rotS[(2 * aliases + 1) * 40];
+        for (int m = -aliases; m <= aliases; m++) {
+            const double fa = bestF + double(m) / L;
+            for (int k = 0; k < 40; k++) {
+                const double ph = -2 * kPi * fa * k;
+                rotC[size_t(m + aliases) * 40 + size_t(k)] = std::cos(ph);
+                rotS[size_t(m + aliases) * 40 + size_t(k)] = std::sin(ph);
+            }
+        }
         for (int n = -(frameSym / L + 2); n < frameSym / L + 2; n++) {
             const double s = bestStart + n * L - (40 + bestDs);
             if (s < 2) continue;
@@ -204,6 +237,8 @@ struct BearerDemod::Impl {
             if (s4 + 40 * os + 2 >= zn) continue;
             for (int m = -aliases; m <= aliases; m++) {
                 const double fa = bestF + double(m) / L;
+                const double* cr = &rotC[size_t(m + aliases) * 40];
+                const double* ci = &rotS[size_t(m + aliases) * 40];
                 // cumulative correlator for a list of 15 words with fast sign changes: evaluate per word
                 for (int wi = 0; wi < kSubtypes; wi++) {
                     double re = 0, im = 0;
@@ -211,11 +246,9 @@ struct BearerDemod::Impl {
                     for (int k = 0; k < 40; k++) {
                         const int idx = int(std::lround(s4)) + k * os;
                         const cf32 v = z[idx];
-                        const double ph = -2 * kPi * fa * k;
-                        const double cr = std::cos(ph), ci = std::sin(ph);
                         const double sgn = (word >> (39 - k) & 1) ? 1 : -1;      // sign fixed below for the pilot polarity
-                        re += sgn * (v.real() * cr - v.imag() * ci);
-                        im += sgn * (v.real() * ci + v.imag() * cr);
+                        re += sgn * (v.real() * cr[k] - v.imag() * ci[k]);
+                        im += sgn * (v.real() * ci[k] + v.imag() * cr[k]);
                     }
                     const double met = (re * re + im * im);
                     if (met > bestUw) { bestUw = met; bestS = s; bestFa = fa; bestW = wi; }

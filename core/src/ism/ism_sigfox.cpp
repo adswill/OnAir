@@ -100,6 +100,7 @@ struct SigfoxRx::Impl {
     int hpos = 0;
     uint64_t nframes = 0;
     std::vector<float> wfAcc;
+    std::vector<int> colOf;                     // the waterfall column of each bin
     int wfFrames = 0, rowFrames = 20;
     struct Track { double f = 0; uint64_t start = 0, last = 0; float peak = 0; bool dead = false; };
     std::vector<Track> tracks;
@@ -148,6 +149,8 @@ struct SigfoxRx::Impl {
         hist.assign(kAvg, std::vector<float>(nb, 0.f));
         sum.assign(nb, 0.f); E.assign(nb, 0.f);
         wfAcc.assign(kSigfoxCols, 0.f);
+        colOf.resize(nb);
+        for (int j = 0; j < nb; j++) colOf[j] = (int)((int64_t)j * kSigfoxCols / nb);
         rowFrames = std::max(1, (int)std::lround(0.1 * fs1 / hop));
         tel.cols = kSigfoxCols;
     }
@@ -187,11 +190,15 @@ struct SigfoxRx::Impl {
 
     void frame() {
         const uint64_t base = total1 - N;
-        for (int i = 0; i < N; i++) fb[i] = ring[(base + i) % ring.size()] * win[i];
+        {   // the last N samples of the ring, in two runs (no division per sample)
+            const size_t R = ring.size(), b0 = (size_t)(base % R), n0 = std::min((size_t)N, R - b0);
+            for (size_t i = 0; i < n0; i++) fb[i] = ring[b0 + i] * win[i];
+            for (size_t i = n0; i < (size_t)N; i++) fb[i] = ring[i - n0] * win[i];
+        }
         fft->forward(fb.data());
         std::vector<float>& h = hist[hpos];
         for (int j = 0; j < nb; j++) {
-            const int k = (kLo + j + N) % N;
+            const int k = kLo + j < 0 ? kLo + j + N : kLo + j;   // (kLo + j + N) % N, kLo > -N
             const float p = std::norm(fb[k]);
             sum[j] += p - h[j];
             h[j] = p;
@@ -206,7 +213,7 @@ struct SigfoxRx::Impl {
         const float thr = (float)(kThr * noise);
         // waterfall
         for (int j = 0; j < nb; j++) {
-            const int c = (int)((int64_t)j * kSigfoxCols / nb);
+            const int c = colOf[j];
             wfAcc[c] = std::max(wfAcc[c], E[j] / noise);
         }
         if (++wfFrames >= rowFrames) {
@@ -267,10 +274,13 @@ struct SigfoxRx::Impl {
         if (s1 <= s0 + 1000) return;
         std::vector<cf32> seg(s1 - s0);
         for (uint64_t i = s0; i < s1; i++) seg[i - s0] = ring[i % ring.size()];
+        // the mix to the coarse frequency and its running sum: the same for both bit rates, worked out once
+        std::vector<std::complex<double>> C;
+        mixSum(seg, tr.f, C);
         for (int baud : {100, 600}) {
             SigfoxMessage m;
             double f = 0;
-            if (demod(seg, tr.f, baud, m, f)) {
+            if (demod(C, tr.f, baud, m, f)) {
                 m.sec = sec(s0);
                 report(m, f);
                 return;
@@ -278,23 +288,27 @@ struct SigfoxRx::Impl {
         }
     }
 
-    bool demod(const std::vector<cf32>& seg, double f0, int baud, SigfoxMessage& msg, double& fCarrier) {
+    // seg mixed to the coarse frequency f0, as a cumulative sum (C[i]: the sum of the first i samples)
+    void mixSum(const std::vector<cf32>& seg, double f0, std::vector<std::complex<double>>& C) const {
         const size_t L = seg.size();
+        C.resize(L + 1);
+        std::complex<double> o(1, 0), r = std::polar(1.0, -2 * kPi * f0 / fs1), acc(0, 0);
+        C[0] = 0;
+        for (size_t i = 0; i < L; i++) {
+            o *= r;
+            if ((i & 1023) == 1023) o /= std::abs(o);
+            acc += std::complex<double>(seg[i].real(), seg[i].imag()) * o;
+            C[i + 1] = acc;
+        }
+    }
+
+    // C: mixSum of the carrier's samples
+    bool demod(const std::vector<std::complex<double>>& C, double f0, int baud, SigfoxMessage& msg, double& fCarrier) {
+        const size_t L = C.size() - 1;
         const double R1 = 20.0 * baud, step = fs1 / R1;
         const size_t nOut = (size_t)((double)L / step);
         if (nOut < 20 * 40) return false;
-        // mix to the coarse frequency and cut to 20 samples per symbol with a moving average (cumulative sum, fractional edges)
-        std::vector<std::complex<double>> C(L + 1);
-        {
-            std::complex<double> o(1, 0), r = std::polar(1.0, -2 * kPi * f0 / fs1), acc(0, 0);
-            C[0] = 0;
-            for (size_t i = 0; i < L; i++) {
-                o *= r;
-                if ((i & 1023) == 1023) o /= std::abs(o);
-                acc += std::complex<double>(seg[i].real(), seg[i].imag()) * o;
-                C[i + 1] = acc;
-            }
-        }
+        // cut to 20 samples per symbol with a moving average (the cumulative sum, fractional edges)
         auto at = [&](double t) { const size_t i = std::min(L - 1, (size_t)t); const double fr = t - (double)i; return C[i] + (C[i + 1] - C[i]) * fr; };
         std::vector<std::complex<double>> y(nOut);
         for (size_t k = 0; k < nOut; k++) y[k] = (at((double)(k + 1) * step) - at((double)k * step)) / step;
