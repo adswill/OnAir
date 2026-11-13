@@ -128,6 +128,7 @@ int main() {
         GenTx am; am.mhz = 174.95; am.mod = Demod::Am; am.amp = 0.1; am.startSec = 0.2; am.durSec = 2.6;
         sc.tx = {wm(173.850, 0.1, 1.0), wm(174.250, 0.1, 0.8), wm(174.300, 0.1, 0.6), am};   // same deviation scales as the UHF scene: the tone is 0.3 of full scale, so these read about 12, 10 and 7 kHz (the FM test needs more than 3 kHz)
         Run r = run(Service::Mic, rg, sc, [](ChanVoiceReceiver& rx) { rx.setCarrierLimit(8); });
+        for (auto& m : r.tel.mics) printf("VHF region %d mic %.4f MHz width %.0f kHz snr %.1f dev %.2f kHz fm %d band %s\n", rg, m.mhz, m.widthKhz, m.snrDb, m.devKhz, (int)m.fmLike, m.band.c_str());
         int found = 0, fm = 0;
         for (const double want : {173.850, 174.250, 174.300}) for (auto& m : r.tel.mics) if (std::fabs(m.mhz - want) < 0.012) { found++; if (m.fmLike) fm++; CHECK(m.band == "VHF 173.8 - 175.0 MHz", "VHF mic %.3f labelled '%s'", want, m.band.c_str()); }
         CHECK(found == 3, "VHF region %d: found %d of 3 narrow FM carriers (%zu candidates)", rg, found, r.tel.mics.size());
