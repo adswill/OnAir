@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/common/u8file.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/iq_file.h"
 #include "dect2/files/files_proto.h"
 #include "dect2/source/bluefile.h"
@@ -42,13 +43,13 @@ size_t bytesPerSample(FileFormat f) { return f == FileFormat::CF32 ? 8 : (f == F
 
 bool probeSigmf(const std::string& metaPath, const std::string& dataPathIn, IqFileInfo& out, std::string& err) {
     std::string txt;
-    if (!readAll(metaPath, txt)) { err = "cannot read " + metaPath; return false; }
+    if (!readAll(metaPath, txt)) { DIAG_ERROR(401881, "The SigMF meta file %s could not be read, so the recording is not opened.", metaPath.c_str()); err = "cannot read " + metaPath; return false; }
     // the meta text is read by core/src/files/files_proto.cpp (C++) or the Rust crate onair_files
     const filesp::SigmfMeta m = filesp::sigmfParse(txt);
-    if (m.status == 1) { err = "not a valid SigMF meta file: " + metaPath; return false; }
-    if (m.status == 2) { err = "SigMF meta has no \"global\" section"; return false; }
-    if (m.status == 3) { err = "SigMF meta has no core:datatype"; return false; }
-    if (m.status == 4) { err = "SigMF datatype \"" + m.datatype + "\" is not supported (complex cf32, ci16, cu16, ci8, cu8 are)"; return false; }
+    if (m.status == 1) { DIAG_ERROR(686184, "The file %s is not a valid SigMF meta file, so the recording is not opened.", metaPath.c_str()); err = "not a valid SigMF meta file: " + metaPath; return false; }
+    if (m.status == 2) { DIAG_ERROR(691929, "The SigMF meta file has no global section, so the recording is not opened."); err = "SigMF meta has no \"global\" section"; return false; }
+    if (m.status == 3) { DIAG_ERROR(662344, "The SigMF meta file has no core:datatype entry, so the recording is not opened."); err = "SigMF meta has no core:datatype"; return false; }
+    if (m.status == 4) { DIAG_ERROR(168696, "The SigMF datatype %s is not supported, so the recording is not opened.", m.datatype.c_str()); err = "SigMF datatype \"" + m.datatype + "\" is not supported (complex cf32, ci16, cu16, ci8, cu8 are)"; return false; }
     IqFileInfo r;
     r.format = static_cast<FileFormat>(m.format);   // the same order: CS8, CU8, CF32, CI16, CU16
     r.bigEndian = m.bigEndian;
@@ -68,7 +69,7 @@ bool probeSigmf(const std::string& metaPath, const std::string& dataPathIn, IqFi
         }
         if (data.empty())
             for (const char* ext : {".sigmf-data", ".SIGMF-DATA"}) if (std::filesystem::exists(fsPath(base + ext))) { data = base + ext; break; }
-        if (data.empty()) { err = "no IQ data file for " + metaPath + " (expected .sigmf-data or global core:dataset)"; return false; }
+        if (data.empty()) { DIAG_ERROR(744228, "No IQ data file was found for the SigMF meta file %s, so the recording is not opened.", metaPath.c_str()); err = "no IQ data file for " + metaPath + " (expected .sigmf-data or global core:dataset)"; return false; }
     }
     std::error_code ec;
     const uint64_t size = std::filesystem::file_size(fsPath(data), ec);
@@ -77,7 +78,7 @@ bool probeSigmf(const std::string& metaPath, const std::string& dataPathIn, IqFi
     const uint64_t hdr = m.headerBytes;
     const uint64_t trail = m.trailingBytes;
     r.offsetBytes = hdr + sampleStart * bps;
-    if (r.offsetBytes > size) { err = "SigMF sample_start is past the end of the data file"; return false; }
+    if (r.offsetBytes > size) { DIAG_ERROR(928118, "The SigMF sample_start lies past the end of the data file, so the recording is not opened."); err = "SigMF sample_start is past the end of the data file"; return false; }
     if (trail && trail < size) r.endBytes = std::max(size - trail, r.offsetBytes);
     r.dataPath = data;
     out = r;
@@ -88,9 +89,9 @@ uint32_t rd32(const uint8_t* p) { return (uint32_t)dect2::endian::loadLe32(p); }
 
 bool probeWav(const std::string& path, IqFileInfo& out, std::string& err) {
     std::ifstream f(fsPath(path), std::ios::binary);
-    if (!f) { err = "cannot read " + path; return false; }
+    if (!f) { DIAG_ERROR(545445, "The file %s could not be read, so the recording is not opened.", path.c_str()); err = "cannot read " + path; return false; }
     uint8_t h[12];
-    if (!f.read((char*)h, 12) || memcmp(h, "RIFF", 4) || memcmp(h + 8, "WAVE", 4)) { err = "not a WAV file: " + path; return false; }
+    if (!f.read((char*)h, 12) || memcmp(h, "RIFF", 4) || memcmp(h + 8, "WAVE", 4)) { DIAG_ERROR(239047, "The file %s is not a WAV file, so it is not opened as an IQ recording.", path.c_str()); err = "not a WAV file: " + path; return false; }
     uint16_t tag = 0, ch = 0, bits = 0; uint32_t rate = 0;
     bool haveFmt = false;
     IqFileInfo r;
@@ -105,11 +106,11 @@ bool probeWav(const std::string& path, IqFileInfo& out, std::string& err) {
             haveFmt = true;
             if (len & 1) f.seekg(1, std::ios::cur);
         } else if (!memcmp(ck, "data", 4)) {
-            if (!haveFmt) { err = "WAV data before its format"; return false; }
+            if (!haveFmt) { DIAG_ERROR(870716, "The WAV file has data before its format chunk, so it is not opened as an IQ recording."); err = "WAV data before its format"; return false; }
             int fmtCode = 0;
             const int cls = filesp::wavClassify(filesp::WavFmt{tag, ch, rate, bits}, fmtCode);
-            if (cls == 1) { err = "a WAV needs two channels (I and Q) to play as IQ, this one has " + std::to_string(ch); return false; }
-            if (cls != 0) { err = "WAV sample format not supported (16-bit, 8-bit or 32-bit float are)"; return false; }
+            if (cls == 1) { DIAG_ERROR(704852, "The WAV file has %d channels but IQ playback needs two (I and Q), so it is not opened.", (int)ch); err = "a WAV needs two channels (I and Q) to play as IQ, this one has " + std::to_string(ch); return false; }
+            if (cls != 0) { DIAG_ERROR(222539, "The WAV sample format is not supported (16-bit, 8-bit or 32-bit float are), so the file is not opened."); err = "WAV sample format not supported (16-bit, 8-bit or 32-bit float are)"; return false; }
             r.format = static_cast<FileFormat>(fmtCode);
             r.sampleRate = rate;
             r.offsetBytes = (uint64_t)f.tellg();
@@ -124,7 +125,8 @@ bool probeWav(const std::string& path, IqFileInfo& out, std::string& err) {
         } else f.seekg((std::streamoff)len + (len & 1), std::ios::cur);
         if (!f) break;
     }
-    err = "no audio data in " + path;
+     DIAG_ERROR(103653, "The WAV file %s has no audio data, so it is not opened as an IQ recording.", path.c_str());
+     err = "no audio data in " + path;
     return false;
 }
 
@@ -157,14 +159,14 @@ static bool convertPrivately(const std::string& src, const std::filesystem::path
     std::vector<char> buf(tmpl.begin(), tmpl.end());
     buf.push_back(0);
     const int fd = mkstemp(buf.data());
-    if (fd < 0) { err = "cannot create a private temporary file for the converted copy"; return false; }
+    if (fd < 0) { DIAG_ERROR(126642, "No private temporary file could be created for the converted copy, so the BLUE file is not opened."); err = "cannot create a private temporary file for the converted copy"; return false; }
     fchmod(fd, 0600);
     close(fd);
     const std::string tmp = buf.data();
     if (!blue::convertToCf32(src, tmp, err)) { std::remove(tmp.c_str()); return false; }
     std::error_code ec;
     std::filesystem::rename(tmp, target, ec);
-    if (ec) { std::remove(tmp.c_str()); err = "cannot place the converted copy"; return false; }
+    if (ec) { DIAG_ERROR(383811, "The converted copy of the BLUE file could not be moved into place, so the file is not opened."); std::remove(tmp.c_str()); err = "cannot place the converted copy"; return false; }
     return true;
 #endif
 }
@@ -172,7 +174,7 @@ static bool convertPrivately(const std::string& src, const std::filesystem::path
 bool probeBlue(const std::string& path, IqFileInfo& out, std::string& err, bool allowConvert) {
     blue::Info b;
     if (!blue::probe(path, b, err)) return false;
-    if (!(b.sampleRate >= 1.0 && b.sampleRate <= 1e12)) { err = "the BLUE file does not give a sample rate (xdelta): " + path; return false; }
+    if (!(b.sampleRate >= 1.0 && b.sampleRate <= 1e12)) { DIAG_ERROR(457575, "The BLUE file %s gives no usable sample rate, so it is not opened.", path.c_str()); err = "the BLUE file does not give a sample rate (xdelta): " + path; return false; }
     IqFileInfo r;
     r.blue = true;
     r.sampleRate = b.sampleRate;
@@ -201,7 +203,7 @@ bool probeBlue(const std::string& path, IqFileInfo& out, std::string& err, bool 
     char nm[64];
     snprintf(nm, sizeof nm, "onair-blue-%016llx.cf32", (unsigned long long)h);
     const std::filesystem::path dir = privateTempDir();
-    if (dir.empty()) { err = "no private temporary folder for the converted copy"; return false; }
+    if (dir.empty()) { DIAG_ERROR(448631, "No private temporary folder is available for the converted copy, so the BLUE file is not opened."); err = "no private temporary folder for the converted copy"; return false; }
     const std::filesystem::path tmp = dir / nm;
     const std::string tmpS = tmp.string();
     const uint64_t want = b.samples * 8;
@@ -227,7 +229,7 @@ bool probeIqFile(const std::string& path, IqFileInfo& out, std::string& err, boo
     if (endsWith(path, ".sigmf-meta")) return probeSigmf(path, "", out, err);
     if (endsWith(path, ".sigmf-data")) {
         const std::string meta = path.substr(0, path.size() - strlen(".sigmf-data")) + ".sigmf-meta";
-        if (!std::filesystem::exists(fsPath(meta))) { err = "no .sigmf-meta file beside " + path; return false; }
+        if (!std::filesystem::exists(fsPath(meta))) { DIAG_ERROR(247202, "No .sigmf-meta file was found beside %s, so the file is not opened.", path.c_str()); err = "no .sigmf-meta file beside " + path; return false; }
         return probeSigmf(meta, path, out, err);
     }
     if (endsWith(path, ".wav")) return probeWav(path, out, err);
@@ -304,10 +306,10 @@ const char* sigmfDatatype(FileFormat fmt, bool be) {
 bool writeSigmfMeta(const std::string& metaPath, FileFormat fmt, bool be, double rate, double center, uint64_t sampleStart,
                     const std::string& description, std::string& err) {
     std::ofstream f(fsPath(metaPath), std::ios::binary);
-    if (!f) { err = "cannot create " + metaPath; return false; }
+    if (!f) { DIAG_ERROR(873979, "The SigMF meta file %s could not be created, so the recording has no meta file.", metaPath.c_str()); err = "cannot create " + metaPath; return false; }
     const std::string b = filesp::sigmfToolMeta(sigmfDatatype(fmt, be), rate, center, sampleStart, description);   // the text: files_proto.cpp (C++) or the Rust crate onair_files
     f << b;
-    if (!f) { err = "writing failed: " + metaPath; return false; }
+    if (!f) { DIAG_ERROR(356099, "Writing the SigMF meta file %s failed (the disk may be full), so the meta file is incomplete.", metaPath.c_str()); err = "writing failed: " + metaPath; return false; }
     return true;
 }
 

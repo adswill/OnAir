@@ -5,6 +5,7 @@
 // service plus a library that the user installs from sdrplay.com (separately from SDRconnect; OnAir does not ship it); the library is
 // loaded at run time like the other radios' libraries (native_common.h). The API's interface is in sdrplay_api_min.h.
 #include "native_common.h"
+#include "dect2/common/diag.h"
 #define DECT2_SDRPLAY_CALL DECT2_CALL
 #include "sdrplay_api_min.h"
 #include <chrono>
@@ -92,7 +93,7 @@ struct SdrplayApi {
              lib.get(ReleaseDevice, "sdrplay_api_ReleaseDevice") && lib.get(GetErrorString, "sdrplay_api_GetErrorString") &&
              lib.get(GetDeviceParams, "sdrplay_api_GetDeviceParams") && lib.get(Init, "sdrplay_api_Init") && lib.get(Uninit, "sdrplay_api_Uninit") &&
              lib.get(Update, "sdrplay_api_Update");
-        if (!ok) { fprintf(stderr, "SDRplay API library %s lacks functions OnAir needs (an API older than 3.x?)\n", lib.path.c_str()); fflush(stderr); }
+        if (!ok) { DIAG(720491, "The SDRplay API library %s lacks functions OnAir needs, so SDRplay radios cannot be used (an API older than 3.x?).", lib.path.c_str()); fprintf(stderr, "SDRplay API library %s lacks functions OnAir needs (an API older than 3.x?)\n", lib.path.c_str()); fflush(stderr); }
         if (ok) lib.opt(GetLastError, "sdrplay_api_GetLastError");
     }
     // The API wants Open() first and Close() last; it stays open while OnAir runs (a service that was not running yet is tried again on the
@@ -114,6 +115,7 @@ struct SdrplayApi {
         float v = 0;
         const sp::ErrT ve = ApiVersion(&v);
         if (ve != sp::Success) {   // InvalidServiceVersion: the library and the running service come from different installs
+            DIAG(438831, "The SDRplay API library does not work with the running service (%s), so SDRplay radios cannot be used.", err(ve).c_str());
             fprintf(stderr, "SDRplay API: the library does not work with the running service (%s): reinstall the SDRplay API from sdrplay.com\n", err(ve).c_str());
             fflush(stderr);
             Close();
@@ -121,6 +123,7 @@ struct SdrplayApi {
         }
         // 3.x keeps the layouts of what OnAir uses (sdrplay_api_min.h); 3.07 is the oldest the layouts were checked against
         if (v < 3.065f || v >= 4.0f) {
+            DIAG(105794, "SDRplay API version %.2f is not supported (3.07 or a newer 3.x is needed), so SDRplay radios cannot be used.", v);
             fprintf(stderr, "SDRplay API %.2f is not supported: OnAir needs SDRplay API 3.07 or a newer 3.x (install the current one from sdrplay.com)\n", v);
             fflush(stderr);
             Close();
@@ -300,7 +303,7 @@ public:
 protected:
     bool openDevice(const TuneSettings& s, std::string& err) override {
         SdrplayApi& api = sdrplayApi();
-        if (!api.ensureOpen()) { err = "SDRplay: the SDRplay API service is not running (start it, or reinstall the SDRplay API from sdrplay.com)"; return false; }
+        if (!api.ensureOpen()) { DIAG_ERROR(955729, "The SDRplay API service is not running, so the SDRplay radio cannot be opened."); err = "SDRplay: the SDRplay API service is not running (start it, or reinstall the SDRplay API from sdrplay.com)"; return false; }
         sp::DeviceT devs[sp::kMaxDevices];
         sp::ErrT e = sp::Success;
         int found = -1;
@@ -320,7 +323,8 @@ protected:
         }
         if (found < 0) {
             api.UnlockDeviceApi();
-            err = "SDRplay: the radio " + serial_ + " is not available (in use by another program, or unplugged)";
+             DIAG_ERROR(367548, "The SDRplay radio %s is not available (in use by another program, or unplugged), so it is not opened.", serial_.c_str());
+             err = "SDRplay: the radio " + serial_ + " is not available (in use by another program, or unplugged)";
             openFailure_ = OpenFailure::Final;   // the 4 s above already waited for it: start() trying again would only make the user wait longer
             return false;
         }
@@ -328,7 +332,8 @@ protected:
         if (dev_.hwVer == sp::kRspDuo) {   // the RSPduo: tuner A on its own, like a single-tuner RSP
             if (!(dev_.rspDuoMode & sp::RspDuoMode_Single_Tuner)) {
                 api.UnlockDeviceApi();
-                err = "SDRplay: the RSPduo is in use by another program (only its second tuner is free, which OnAir does not use)";
+                 DIAG_ERROR(228663, "The SDRplay RSPduo is in use by another program and only its second tuner is free, so it is not opened.");
+                 err = "SDRplay: the RSPduo is in use by another program (only its second tuner is free, which OnAir does not use)";
                 return false;
             }
             dev_.tuner = port_ == 1 ? sp::Tuner_B : sp::Tuner_A;   // the socket the user picked: "Tuner 1", "Tuner 2" or "Tuner 1 Hi-Z"
@@ -337,7 +342,7 @@ protected:
         }
         e = api.SelectDevice(&dev_);
         api.UnlockDeviceApi();
-        if (e != sp::Success) { err = "SDRplay: cannot open the radio (in use by another program?): " + api.err(e); return false; }
+        if (e != sp::Success) { DIAG_ERROR(756867, "Opening the SDRplay radio failed (%s), so the radio stays closed.", api.err(e).c_str()); err = "SDRplay: cannot open the radio (in use by another program?): " + api.err(e); return false; }
         selected_ = true;
         bias_ = false;
         { std::lock_guard<std::mutex> lk(api.mu); api.selected++; }
@@ -350,7 +355,8 @@ protected:
         sp::RxChannelParamsT* chan = nullptr;
         if (e == sp::Success && params_) chan = dev_.tuner == sp::Tuner_B ? params_->rxChannelB : params_->rxChannelA;
         if (e != sp::Success || !chan) {
-            err = "SDRplay: cannot read the radio's settings" + (e != sp::Success ? ": " + api.err(e) : std::string(dev_.tuner == sp::Tuner_B ? " (no settings for tuner 2)" : ""));
+             DIAG_ERROR(982095, "Reading the SDRplay radio settings failed (API code %d), so the radio is closed again.", (int)e);
+             err = "SDRplay: cannot read the radio's settings" + (e != sp::Success ? ": " + api.err(e) : std::string(dev_.tuner == sp::Tuner_B ? " (no settings for tuner 2)" : ""));
             params_ = nullptr;
             return false;
         }
@@ -420,7 +426,8 @@ protected:
         }
         radioSettings(s, f, why, why1);
         if (port_ == 2 && (dev_.hwVer == sp::kRsp2 || dev_.hwVer == sp::kRspDuo) && f > kHiZTopHz && err.empty())
-            err = "the SDRplay Hi-Z input is for 1 kHz to 30 MHz: use a 50 ohm input above that";
+             DIAG_ERROR(192547, "The SDRplay Hi-Z input only works from 1 kHz to 30 MHz, so a higher frequency is refused.");
+             err = "the SDRplay Hi-Z input is for 1 kHz to 30 MHz: use a 50 ohm input above that";
         if (!live || (why == sp::Update_None && why1 == sp::Update_Ext1_None)) return true;
         // one update for everything that changed; the API refuses a new one while the last is still being applied
         sp::ErrT e = sp::Success;
@@ -429,7 +436,7 @@ protected:
             if (e != sp::RfUpdateError && e != sp::GainUpdateError && e != sp::FsUpdateError) break;
             std::this_thread::sleep_for(std::chrono::milliseconds(20));
         }
-        if (e != sp::Success) { err = "SDRplay: the radio did not take the new settings: " + sdrplayApi().err(e); return false; }
+        if (e != sp::Success) { DIAG_ERROR(436898, "The SDRplay radio did not take the new settings (%s), so they are not applied.", sdrplayApi().err(e).c_str()); err = "SDRplay: the radio did not take the new settings: " + sdrplayApi().err(e); return false; }
         return true;
     }
 
@@ -466,7 +473,7 @@ protected:
         initState_ = 1;
         while (run_) {
             if (removed_) {   // returning lets the base class release the radio and open it again every second until it is back
-                fprintf(stderr, "SDRplay: the radio was unplugged or stopped working; the stream has ended\n");
+    DIAG(721652, "The SDRplay radio was unplugged or stopped working, so the stream ends.");             fprintf(stderr, "SDRplay: the radio was unplugged or stopped working; the stream has ended\n");
                 fflush(stderr);
                 break;
             }
@@ -498,7 +505,8 @@ private:
         std::unique_lock<std::mutex> lk(st->m);
         if (!st->cv.wait_for(lk, std::chrono::seconds(4), [&] { return st->done; })) {
             uninitStuck_ = true;
-            fprintf(stderr, "SDRplay: the API did not stop the stream within 4 s (the radio or the SDRplay service is stuck); giving up on it. Unplug the radio or restart the SDRplay API service.\n");
+             DIAG(204377, "The SDRplay API did not stop the stream within 4 seconds, so the radio is given up (unplug it or restart the SDRplay API service).");
+             fprintf(stderr, "SDRplay: the API did not stop the stream within 4 s (the radio or the SDRplay service is stuck); giving up on it. Unplug the radio or restart the SDRplay API service.\n");
             fflush(stderr);
         }
     }
@@ -508,7 +516,8 @@ private:
         while (initState_.load() == 0 && std::chrono::steady_clock::now() < deadline)
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         if (initState_.load() == 1) return true;
-        err = initState_.load() < 0 ? initErr_ : "SDRplay: timed out waiting for the radio to start";
+         DIAG_ERROR(492336, "The SDRplay radio did not start streaming in time, so the radio is closed again.");
+         err = initState_.load() < 0 ? initErr_ : "SDRplay: timed out waiting for the radio to start";
         stop();
         return false;
     }
@@ -627,7 +636,7 @@ void listSdrplay(std::vector<DeviceInfo>& out) {
     api.LockDeviceApi();
     const sp::ErrT e = api.GetDevices(devs, &n, sp::kMaxDevices);
     api.UnlockDeviceApi();
-    if (e != sp::Success) { fprintf(stderr, "SDRplay API: cannot list the radios: %s\n", api.err(e).c_str()); fflush(stderr); n = 0; }
+    if (e != sp::Success) { DIAG(345999, "Listing the SDRplay radios failed (%s), so none are shown.", api.err(e).c_str()); fprintf(stderr, "SDRplay API: cannot list the radios: %s\n", api.err(e).c_str()); fflush(stderr); n = 0; }
     std::vector<DeviceInfo> found;
     for (unsigned int i = 0; i < n && i < (unsigned)sp::kMaxDevices; i++) {
         const sp::DeviceT& dv = devs[i];

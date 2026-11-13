@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/source/mount_driver.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/rotator.h"
 #include "../net/netcompat.h"
 #include <algorithm>
@@ -44,9 +45,9 @@ public:
         hints.ai_family = AF_INET;
         hints.ai_socktype = SOCK_STREAM;
         addrinfo* res = nullptr;
-        if (getaddrinfo(h.c_str(), std::to_string(port).c_str(), &hints, &res) != 0 || !res) { err = "unknown host " + host; return false; }
+        if (getaddrinfo(h.c_str(), std::to_string(port).c_str(), &hints, &res) != 0 || !res) { DIAG_ERROR(426765, "The mount host %s could not be resolved, so no connection is made.", host.c_str()); err = "unknown host " + host; return false; }
         sock_t s = socket(AF_INET, SOCK_STREAM, 0);
-        if (s == kBadSock) { freeaddrinfo(res); err = "cannot open a socket"; return false; }
+        if (s == kBadSock) { DIAG_ERROR(630902, "No socket could be opened for the mount connection, so no connection is made."); freeaddrinfo(res); err = "cannot open a socket"; return false; }
         setBlocking(s, false);
         int rc = ::connect(s, res->ai_addr, (int)res->ai_addrlen);
         freeaddrinfo(res);
@@ -61,7 +62,7 @@ public:
                 ok = soerr == 0;
             }
         }
-        if (!ok) { sockClose(s); err = "cannot connect to " + host + ":" + std::to_string(port); return false; }
+        if (!ok) { DIAG_ERROR(379057, "Connecting to the mount at %s port %d failed, so the mount is not controlled.", host.c_str(), (int)port); sockClose(s); err = "cannot connect to " + host + ":" + std::to_string(port); return false; }
         setBlocking(s, true);
         int one = 1;
         setsockopt(s, IPPROTO_TCP, TCP_NODELAY, (const char*)&one, sizeof one);
@@ -148,7 +149,7 @@ public:
         if (parseRprt(l1, code)) { err = "rotctld error " + std::to_string(code); return false; }
         if (!c_.readLine(l2, 1500)) { err = "incomplete position reply"; return false; }
         double az = 0, el = 0;
-        if (!parseRotctldPos(l1, l2, az, el)) { err = "unreadable position from rotctld"; return false; }
+        if (!parseRotctldPos(l1, l2, az, el)) { DIAG_ERROR(739559, "The position reply from rotctld could not be read, so the mount position is not updated."); err = "unreadable position from rotctld"; return false; }
         out.azDeg = normAz(az); out.elDeg = el; out.azValid = out.elValid = true;
         return true;
     }
@@ -176,7 +177,7 @@ public:
     bool connect(std::string& err) override {
         std::string v;
         if (!put("connected", "Connected=true", v, err)) return false;
-        if (get("canslewaltaz", v, err) && v != "true") { err = "this telescope cannot slew to Alt/Az"; return false; }
+        if (get("canslewaltaz", v, err) && v != "true") { DIAG_ERROR(530859, "The ASCOM telescope cannot slew to altitude and azimuth, so it cannot be driven."); err = "this telescope cannot slew to Alt/Az"; return false; }
         std::string r;
         canMove_ = get("canmoveaxis?Axis=0", r, err) && r == "true";   // primary axis = azimuth on an Alt/Az mount
         err.clear();
@@ -212,7 +213,7 @@ public:
     bool supportsRates() const override { return canMove_; }
     bool moveAxes(double azRate, double elRate, std::string& err) override {
         std::string v;
-        if (!canMove_) { err = "this mount cannot move at a set speed"; return false; }
+        if (!canMove_) { DIAG_ERROR(974443, "The mount cannot move at a set speed, so the speed command is refused."); err = "this mount cannot move at a set speed"; return false; }
         const bool a = put("moveaxis", fmt("Axis=0&Rate=%.5f", azRate), v, err);
         const bool b = put("moveaxis", fmt("Axis=1&Rate=%.5f", elRate), v, err);
         moving_ = (azRate != 0 || elRate != 0);
@@ -233,12 +234,12 @@ private:
         } else rq += "\r\n";
         if (!c.writeAll(rq)) { err = "write failed"; return false; }
         std::string resp;
-        if (!c.readAll(resp, 4000)) { err = "no reply from the Alpaca server"; return false; }
+        if (!c.readAll(resp, 4000)) { DIAG_ERROR(593726, "The Alpaca server sent no reply in time, so the request fails."); err = "no reply from the Alpaca server"; return false; }
         const size_t he = resp.find("\r\n\r\n");
-        if (resp.compare(0, 5, "HTTP/") != 0 || he == std::string::npos) { err = "not an HTTP reply"; return false; }
+        if (resp.compare(0, 5, "HTTP/") != 0 || he == std::string::npos) { DIAG_ERROR(306461, "The Alpaca server answered with something that is not an HTTP reply, so the request fails."); err = "not an HTTP reply"; return false; }
         const int status = std::atoi(resp.c_str() + resp.find(' ') + 1);
         std::string json = resp.substr(he + 4);
-        if (status != 200 && json.find("ErrorNumber") == std::string::npos) { err = "HTTP " + std::to_string(status); return false; }
+        if (status != 200 && json.find("ErrorNumber") == std::string::npos) { DIAG_ERROR(779536, "The Alpaca server answered with HTTP status %d, so the request fails.", status); err = "HTTP " + std::to_string(status); return false; }
         return alpacaParseResponse(json, value, err);
     }
     bool get(const std::string& what, std::string& value, std::string& err) {
@@ -292,7 +293,7 @@ bool alpacaParseResponse(const std::string& json, std::string& value, std::strin
         return c;
     };
     const size_t en = field("ErrorNumber");
-    if (en == std::string::npos) { err = "not an Alpaca reply"; return false; }
+    if (en == std::string::npos) { DIAG_ERROR(977138, "The Alpaca server sent a reply that is not in the Alpaca format, so the request fails."); err = "not an Alpaca reply"; return false; }
     const int num = std::atoi(json.c_str() + en);
     if (num != 0) {
         err = "Alpaca error " + std::to_string(num);

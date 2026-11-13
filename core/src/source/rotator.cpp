@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Kristijonas Adomaitis and OnAir contributors
 
 #include "dect2/common/thread_name.h"
+#include "dect2/common/diag.h"
 #include "dect2/source/rotator.h"
 #include "dect2/source/mount_driver.h"
 #include "dect2/net/remote_api.h"
@@ -240,9 +241,9 @@ struct Io {
 bool openSerial(const std::string& dev, int baud, Io& io, std::string& err) {
     io.closeAll();
     const int fd = ::open(dev.c_str(), O_RDWR | O_NOCTTY);
-    if (fd < 0) { err = "cannot open " + dev; return false; }
+    if (fd < 0) { DIAG_ERROR(574439, "The serial port %s could not be opened, so the rotator port is not available.", dev.c_str()); err = "cannot open " + dev; return false; }
     termios t{};
-    if (tcgetattr(fd, &t) != 0) { ::close(fd); err = "cannot read serial settings for " + dev; return false; }
+    if (tcgetattr(fd, &t) != 0) { DIAG_ERROR(613835, "The serial settings of %s could not be read, so the rotator port is not opened.", dev.c_str()); ::close(fd); err = "cannot read serial settings for " + dev; return false; }
     cfmakeraw(&t);
     t.c_cflag |= CLOCAL | CREAD;
     t.c_cflag &= ~CSIZE; t.c_cflag |= CS8;
@@ -263,7 +264,7 @@ bool openSerial(const std::string& dev, int baud, Io& io, std::string& err) {
     }
     cfsetispeed(&t, spd);
     cfsetospeed(&t, spd);
-    if (tcsetattr(fd, TCSANOW, &t) != 0) { ::close(fd); err = "cannot configure " + dev; return false; }
+    if (tcsetattr(fd, TCSANOW, &t) != 0) { DIAG_ERROR(856537, "The serial port %s could not be configured, so the rotator port is not opened.", dev.c_str()); ::close(fd); err = "cannot configure " + dev; return false; }
     io.kind = Io::Serial;
     io.fd = fd;
     return true;
@@ -294,17 +295,19 @@ bool openTcp(const std::string& host, int port, Io& io, std::string& err) {
     io.closeAll();
     netInit();
     sock_t s = socket(AF_INET, SOCK_STREAM, 0);
-    if (s == kBadSock) { err = "cannot open a socket"; return false; }
+    if (s == kBadSock) { DIAG_ERROR(866433, "No socket could be opened for the rotator connection, so no connection is made."); err = "cannot open a socket"; return false; }
     sockaddr_in a{};
     a.sin_family = AF_INET;
     a.sin_port = htons((uint16_t)port);
     if (inet_pton(AF_INET, host.c_str(), &a.sin_addr) != 1) {
-        err = "invalid host address";
+         DIAG_ERROR(346005, "The rotator host address %s is not a valid IPv4 address, so no connection is made.", host.c_str());
+         err = "invalid host address";
         sockClose(s);
         return false;
     }
     if (connect(s, (sockaddr*)&a, sizeof a) != 0) {
-        err = "cannot connect to " + host + ":" + std::to_string(port);
+         DIAG_ERROR(276577, "Connecting to the rotator at %s port %d failed, so the rotator is not controlled.", host.c_str(), (int)port);
+         err = "cannot connect to " + host + ":" + std::to_string(port);
         sockClose(s);
         return false;
     }
@@ -458,7 +461,7 @@ struct Rotator::Impl {
         }
         char buf[32];
         std::snprintf(buf, sizeof buf, "W%03d %03d", (int)std::lround(az) % 360, (int)std::lround(el));
-        if (!io.writeLine(buf)) { err = "move command failed"; return false; }
+        if (!io.writeLine(buf)) { DIAG_ERROR(352862, "Sending the move command to the rotator failed, so the rotator does not move."); err = "move command failed"; return false; }
         return true;
     }
 

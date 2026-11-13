@@ -10,6 +10,7 @@
 // Why our own: the sample stream is the part of the receiver where lost data is most expensive, and this lets the reader run at the highest
 // priority, use large transfers, and write converted samples straight into the receiver's ring buffer, with one conversion and no other copy.
 #include "dect2/tx/tx_control.h"
+#include "dect2/common/diag.h"
 #include "dect2/common/thread_name.h"
 #include "dect2/source/source.h"
 #include "dect2/common/platform.h"
@@ -141,7 +142,7 @@ libusb_context* acquireContext(std::string& err) {
         if (usbFdPlatform()) libusb_set_option(nullptr, LIBUSB_OPTION_NO_DEVICE_DISCOVERY);
 #endif
         const int r = libusb_init(&gCtx);
-        if (r != 0) { err = std::string("libusb_init: ") + libusb_error_name(r); gCtx = nullptr; return nullptr; }
+        if (r != 0) { DIAG_ERROR(892981, "Starting libusb for the HackRF failed (%s), so no HackRF can be opened.", libusb_error_name(r)); err = std::string("libusb_init: ") + libusb_error_name(r); gCtx = nullptr; return nullptr; }
     }
     gCtxRefs++;
     return gCtx;
@@ -174,12 +175,12 @@ struct Handle {
     bool claimed = false;
     bool open(libusb_device* dev, std::string& err) {
         int r = libusb_open(dev, &h);
-        if (r != 0) { err = "open: " + native::usbErrorText(r); h = nullptr; return false; }
+        if (r != 0) { DIAG_ERROR(215872, "Opening the HackRF USB device failed (%s), so the radio stays closed.", native::usbErrorText(r).c_str()); err = "open: " + native::usbErrorText(r); h = nullptr; return false; }
 #ifdef __linux__
         if (libusb_kernel_driver_active(h, 0) == 1) libusb_detach_kernel_driver(h, 0);
 #endif
         r = libusb_claim_interface(h, 0);
-        if (r != 0) { err = "claim interface: " + native::usbErrorText(r); libusb_close(h); h = nullptr; return false; }
+        if (r != 0) { DIAG_ERROR(282609, "Claiming the HackRF USB interface failed (%s), so the radio stays closed.", native::usbErrorText(r).c_str()); err = "claim interface: " + native::usbErrorText(r); libusb_close(h); h = nullptr; return false; }
         claimed = true;
         return true;
     }
@@ -187,7 +188,7 @@ struct Handle {
     bool adopt(libusb_device_handle* wrapped, std::string& err) {
         h = wrapped;
         const int r = libusb_claim_interface(h, 0);
-        if (r != 0) { err = usbFdErrorText(r); libusb_close(h); h = nullptr; return false; }
+        if (r != 0) { DIAG_ERROR(275078, "The system handed over a HackRF that libusb could not use (%s), so the radio stays closed.", usbFdErrorText(r).c_str()); err = usbFdErrorText(r); libusb_close(h); h = nullptr; return false; }
         claimed = true;
         return true;
     }
@@ -224,13 +225,14 @@ bool openHackrfFromFd(libusb_context* ctx, const std::string& serial, Handle& de
 #ifdef DECT2_HACKRF_FD
     libusb_device_handle* h = nullptr;
     const int rc = usbFdOpen("hackrf", serial, [&](int fd) { return libusb_wrap_sys_device(ctx, (intptr_t)fd, &h); }, nullptr, err);
-    if (rc == LIBUSB_ERROR_NOT_SUPPORTED) { err = "HackRF: this build of OnAir has no USB library for the HackRF (android/docs/USB.md: LIBUSB_SRC)"; return false; }
+    if (rc == LIBUSB_ERROR_NOT_SUPPORTED) { DIAG_ERROR(428151, "This build of OnAir has no USB library for the HackRF, so the radio cannot be opened."); err = "HackRF: this build of OnAir has no USB library for the HackRF (android/docs/USB.md: LIBUSB_SRC)"; return false; }
     if (rc != 0 || !h) { err = "HackRF: " + (err.empty() ? usbFdErrorText(rc) : err); return false; }
     if (!dev.adopt(h, err)) { err = "HackRF: " + err; return false; }
     return true;
 #else
     (void)ctx; (void)serial; (void)dev;
-    err = "HackRF: this build's USB library is too old to open a radio the system handed over (libusb 1.0.24 or later is needed)";
+     DIAG_ERROR(728662, "The USB library of this build is too old to open a HackRF the system handed over, so the radio stays closed (libusb 1.0.24 or later is needed).");
+     err = "HackRF: this build's USB library is too old to open a radio the system handed over (libusb 1.0.24 or later is needed)";
     return false;
 #endif
 }
@@ -254,13 +256,14 @@ public:
         stopping_ = false; inflight_ = 0; lost_ = false;
         xfers_.assign(kTransferCount, nullptr);
         bufs_.assign(kTransferCount, std::vector<uint8_t>(kTransferBytes));
-        if (dev_.out(kSetTransceiverMode, 1, 0) < 0) { err = "cannot start receiving"; finish(); return false; }   // finish(): the antenna power goes off again
+        if (dev_.out(kSetTransceiverMode, 1, 0) < 0) { DIAG_ERROR(679718, "The HackRF did not accept the command to start receiving, so the radio is closed again."); err = "cannot start receiving"; finish(); return false; }   // finish(): the antenna power goes off again
         for (int i = 0; i < kTransferCount; i++) {
             xfers_[i] = libusb_alloc_transfer(0);
             libusb_fill_bulk_transfer(xfers_[i], dev_.h, kRxEndpoint, bufs_[i].data(), kTransferBytes, &UsbHackrf::onTransfer, this, 0);
             const int r = libusb_submit_transfer(xfers_[i]);
             if (r != 0) {
-                err = std::string("submit transfer: ") + libusb_error_name(r);
+                 DIAG_ERROR(481238, "The HackRF receive transfer could not be submitted (%s), so the radio is closed again.", libusb_error_name(r));
+                 err = std::string("submit transfer: ") + libusb_error_name(r);
                 finish();
                 return false;
             }
@@ -311,7 +314,7 @@ private:
     }
 
     bool apply(const TuneSettings& s, std::string& err, bool live) {
-        auto fail = [&](const char* what, int r) { err = std::string(what) + ": " + (r < 0 ? libusb_error_name(r) : "the radio refused it"); return false; };
+        auto fail = [&](const char* what, int r) { DIAG_ERROR(276444, "The HackRF refused a setting for %s (%s), so the setting is not applied.", what, r < 0 ? libusb_error_name(r) : "refused by the radio"); err = std::string(what) + ": " + (r < 0 ? libusb_error_name(r) : "the radio refused it"); return false; };
         if (!live || s.sampleRate != rate_) {
             // a sample rate is a frequency and a divider; whole rates need no divider
             double f = s.sampleRate;
@@ -444,19 +447,19 @@ public:
 
     bool open(const TxTune& t, std::string& err) override {
         close();
-        if (t.channel != 0) { err = "this HackRF has one transmit output (TX1)"; return false; }
+        if (t.channel != 0) { DIAG_ERROR(751248, "The HackRF has one transmit output, so a different output is refused."); err = "this HackRF has one transmit output (TX1)"; return false; }
         ctx_ = acquireContext(err);
         if (!ctx_) return false;
         if (!openDevice(err)) { releaseContext(); ctx_ = nullptr; return false; }
         if (!apply(t, err)) { shut(); return false; }
         rate_ = t.sampleRate;
-        if (dev_.out(kSetTransceiverMode, 2, 0) < 0) { err = "the HackRF would not switch to transmit"; shut(); return false; }
+        if (dev_.out(kSetTransceiverMode, 2, 0) < 0) { DIAG_ERROR(217296, "The HackRF did not accept the command to start transmitting, so the transmitter is closed again."); err = "the HackRF would not switch to transmit"; shut(); return false; }
         transmitting_ = true;
         return true;
     }
 
     bool write(const cf32* x, size_t n, std::string& err) override {
-        if (!transmitting_) { err = "the HackRF is not transmitting"; return false; }
+        if (!transmitting_) { DIAG_ERROR(933359, "The HackRF was asked to send samples while it is not transmitting, so nothing is sent."); err = "the HackRF is not transmitting"; return false; }
         std::vector<int8_t> buf;
         size_t i = 0;
         while (i < n) {
@@ -467,9 +470,9 @@ public:
             while (sent < buf.size()) {
                 int got = 0;
                 const int r = libusb_bulk_transfer(dev_.h, kTxEndpoint, reinterpret_cast<unsigned char*>(buf.data()) + sent, (int)(buf.size() - sent), &got, 1000);
-                if (r == LIBUSB_ERROR_NO_DEVICE) { err = "the HackRF was unplugged"; return false; }
-                if (r != 0 && r != LIBUSB_ERROR_TIMEOUT) { err = std::string("sending samples to the HackRF failed: ") + native::usbErrorText(r); return false; }
-                if (r == LIBUSB_ERROR_TIMEOUT && got == 0 && ++stalls_ > 5) { err = "the HackRF stopped taking samples"; return false; }
+                if (r == LIBUSB_ERROR_NO_DEVICE) { DIAG_ERROR(656212, "The HackRF was unplugged during transmit, so sending stops."); err = "the HackRF was unplugged"; return false; }
+                if (r != 0 && r != LIBUSB_ERROR_TIMEOUT) { DIAG_ERROR(225184, "Sending samples to the HackRF failed (%s), so sending stops.", native::usbErrorText(r).c_str()); err = std::string("sending samples to the HackRF failed: ") + native::usbErrorText(r); return false; }
+                if (r == LIBUSB_ERROR_TIMEOUT && got == 0 && ++stalls_ > 5) { DIAG_ERROR(602774, "The HackRF took no transmit samples for several tries in a row, so sending stops."); err = "the HackRF stopped taking samples"; return false; }
                 if (got > 0) stalls_ = 0;
                 sent += (size_t)got;
             }

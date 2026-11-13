@@ -12,6 +12,7 @@
 // Not supported yet: channels that carry a real signal (the XMC_RFFE's HF input, on the I pin), and the Breakout's second channel, whose I and
 // Q pins are swapped.
 #include "native_common.h"
+#include "dect2/common/diag.h"
 #include <librfnm/device.h>
 #include <librfnm/rx_stream.h>
 #include <map>
@@ -111,13 +112,13 @@ protected:
             dev_ = new rfnm::device(transport_, address_);   // throws when it cannot
         } catch (const std::exception& e) {
             dev_ = nullptr;
-            err = std::string("RFNM: cannot open the radio (") + e.what() + "): it is in use by another program, unplugged or not reachable";
+            DIAG_ERROR(376032, "Opening the RFNM radio failed (%s), so the radio stays closed.", e.what()); err = std::string("RFNM: cannot open the radio (") + e.what() + "): it is in use by another program, unplugged or not reachable";
             if (kOnWindows && transport_ == rfnm::TRANSPORT_USB) err += std::string(". If it is plugged in: ") + windowsUsbDriverHint();
             return false;
         }
         gOpen++;
         const rfnm_api_rx_ch* c = ch_ < dev_->get_rx_channel_count() ? dev_->get_rx_channel(ch_) : nullptr;
-        if (!c) { err = "RFNM: the radio has no receive channel " + std::to_string(ch_) + " (another daughterboard?)"; openFailure_ = OpenFailure::Final; return false; }
+        if (!c) { DIAG_ERROR(523785, "The RFNM radio has no receive channel %u, so the radio is not started (another daughterboard?).", (unsigned)ch_); err = "RFNM: the radio has no receive channel " + std::to_string(ch_) + " (another daughterboard?)"; openFailure_ = OpenFailure::Final; return false; }
         info_ = *c;
         const rfnm_dev_hwinfo* hw = dev_->get_hwinfo();
         const std::string sn = hw ? serialOf(*hw) : serial_;
@@ -134,12 +135,14 @@ protected:
                 info_.data_type == RFNM_CH_DATA_TYPE_REAL ? "real" : "complex");
         fflush(stderr);
         if (info_.data_type == RFNM_CH_DATA_TYPE_REAL) {
-            err = "RFNM: channel " + std::to_string(ch_) + " carries a real signal (a directly sampled input), which OnAir does not support yet";
+             DIAG_ERROR(716445, "RFNM channel %u carries a real, directly sampled signal that OnAir does not support yet, so the radio is not started.", (unsigned)ch_);
+             err = "RFNM: channel " + std::to_string(ch_) + " carries a real signal (a directly sampled input), which OnAir does not support yet";
             openFailure_ = OpenFailure::Final;
             return false;
         }
         if (const rfnm_api_failcode r = dev_->set_stream_format(rfnm::STREAM_FORMAT_CF32); r != RFNM_API_OK) {
-            err = "RFNM: the radio refused float samples (" + failText(r) + ")";
+             DIAG_ERROR(524476, "The RFNM radio refused float samples (%s), so the radio is not started.", failText(r).c_str());
+             err = "RFNM: the radio refused float samples (" + failText(r) + ")";
             return false;
         }
         return apply(s, err, false);
@@ -165,7 +168,7 @@ protected:
             try {
                 st = dev_->rx_stream_create(rfnm::channel_flags[ch_]);
             } catch (const std::exception& e) {
-                fprintf(stderr, "RFNM: cannot create the sample stream (%s)\n", e.what());
+                DIAG(228541, "The RFNM sample stream could not be created (%s), so no samples arrive.", e.what()); fprintf(stderr, "RFNM: cannot create the sample stream (%s)\n", e.what());
                 fflush(stderr);
             }
             if (!st) return;
@@ -178,7 +181,7 @@ protected:
         conv_.resize(block);
         try {
             if (const rfnm_api_failcode r = st->start(); r != RFNM_API_OK) {
-                fprintf(stderr, "RFNM: the sample stream did not start (%s)\n", failText(r).c_str());
+                DIAG(570625, "The RFNM sample stream did not start (%s), so no samples arrive.", failText(r).c_str()); fprintf(stderr, "RFNM: the sample stream did not start (%s)\n", failText(r).c_str());
             } else {
                 auto last = std::chrono::steady_clock::now();
                 while (run_) {
@@ -189,13 +192,13 @@ protected:
                     if (!run_) break;
                     const auto now = std::chrono::steady_clock::now();
                     if (n > 0) { push(conv_.data(), n); last = now; }
-                    if (r == RFNM_API_USB_FAIL) { fprintf(stderr, "RFNM: USB failure, stopping the source\n"); break; }
+                    if (r == RFNM_API_USB_FAIL) { DIAG(831775, "The RFNM radio reported a USB failure, so the source stops."); fprintf(stderr, "RFNM: USB failure, stopping the source\n"); break; }
                     // a stream that brings nothing for kStallS seconds is treated as lost, so that the radio is opened again
-                    if (n == 0 && now - last > std::chrono::seconds(kStallS)) { fprintf(stderr, "RFNM: no samples for %d s (%s), stopping the source\n", kStallS, failText(r).c_str()); break; }
+                    if (n == 0 && now - last > std::chrono::seconds(kStallS)) { DIAG(702425, "The RFNM radio delivered no samples for %d seconds (%s), so the source stops.", kStallS, failText(r).c_str()); fprintf(stderr, "RFNM: no samples for %d s (%s), stopping the source\n", kStallS, failText(r).c_str()); break; }
                 }
             }
         } catch (const std::exception& e) {
-            fprintf(stderr, "RFNM: the sample stream failed (%s)\n", e.what());
+            DIAG(254092, "The RFNM sample stream failed with an exception (%s), so the source stops.", e.what()); fprintf(stderr, "RFNM: the sample stream failed (%s)\n", e.what());
         }
         fflush(stderr);
         {
@@ -215,7 +218,7 @@ private:
     // (under api_) live: the stream is running; the sample rate changes only with the stream stopped (NativeSource::retune), since a new
     // rate resets the radio's stream
     bool apply(const TuneSettings& s, std::string& err, bool live) {
-        if (!dev_) return false;
+        if (!dev_) { DIAG_DEBUG(458414, "The RFNM radio was asked to configure itself while no device is open, so nothing is changed."); return false; }
         if (!live) {
             // the smallest rate that is fast enough
             const std::vector<double> rates = rfnmRates();
@@ -223,7 +226,7 @@ private:
             double r = rates.back();
             for (double x : rates) if (x >= want * 0.999) { r = x; break; }
             if (const rfnm_api_failcode e = dev_->set_samp_rate((uint64_t)std::llround(r)); e != RFNM_API_OK) {
-                err = "RFNM: the sample rate of " + mhzText(r) + " was refused (" + failText(e) + ")";
+                DIAG_ERROR(561283, "The RFNM radio refused a sample rate of %.0f Hz (%s), so the radio is not started.", r, failText(e).c_str()); err = "RFNM: the sample rate of " + mhzText(r) + " was refused (" + failText(e) + ")";
                 return false;
             }
             rate_ = r;
@@ -289,7 +292,7 @@ void listRfnm(std::vector<DeviceInfo>& out) {
         found = rfnm::device::find(networkDiscovery() ? rfnm::TRANSPORT_FIND : rfnm::TRANSPORT_USB);   // no network search unless allowed (#215)
     } catch (const std::exception& e) {
         static std::string logged;
-        if (logged != e.what()) { logged = e.what(); fprintf(stderr, "RFNM: the radio search failed (%s)\n", e.what()); fflush(stderr); }
+        if (logged != e.what()) { logged = e.what(); DIAG_DEBUG(663002, "The search for RFNM radios failed (%s), so none are listed.", e.what()); fprintf(stderr, "RFNM: the radio search failed (%s)\n", e.what()); fflush(stderr); }
         return;
     }
     // in the log file as well, when it changes: when the radio does not show up this says whether the library saw it

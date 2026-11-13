@@ -3,6 +3,7 @@
 
 // Rig control for transmitting (see rig_control.h): error hints, finding the rig, audio pairing, the watched CAT link and the CAT HamRigIo.
 #include "dect2/source/rig_control.h"
+#include "dect2/common/diag.h"
 #include "dect2/audio/audioout.h"
 #include <algorithm>
 #include <cctype>
@@ -261,6 +262,7 @@ bool RigKeeper::tuneForTx(double hz, const std::string& mode, std::string& err, 
     if (std::fabs(back - hz) > tolHz) {
         char b[160];
         snprintf(b, sizeof b, "the rig is at %.0f Hz, not at %.0f Hz: not sent (check the rig's VFO and band)", back, hz);
+        DIAG_ERROR(441106, "The rig reports %.0f Hz but %.0f Hz was set, so the frequency is not sent (check the rig VFO and band).", back, hz);
         err = b;
         return false;
     }
@@ -292,7 +294,7 @@ bool RigKeeper::ptt(bool on, std::string& err) {
     if (on) {
         if (st_ != Up) { err = "the rig is not connected" + (status_.empty() ? std::string() : ": " + status_); return false; }
         std::string e;
-        if (!cat_->setPtt(true, e)) { std::string e2; cat_->setPtt(false, e2); err = hamlibErrorHint(e); return false; }
+        if (!cat_->setPtt(true, e)) { DIAG_ERROR(645114, "The rig refused to key the transmitter (%s), so it is switched back to receive.", e.c_str()); std::string e2; cat_->setPtt(false, e2); err = hamlibErrorHint(e); return false; }
         keyed_ = true;
         keyedPing_ = -1e9;
         return true;
@@ -316,7 +318,7 @@ class SoundCardAudio : public RigAudio {
 public:
     bool start(const std::string& device, int rate, std::string& err) override {
         out_.setDevice(device);
-        if (!out_.start(rate)) { err = "cannot open the sound card output" + (device.empty() ? std::string() : " " + device); return false; }
+        if (!out_.start(rate)) { DIAG_ERROR(695177, "The sound card output for the rig audio could not be opened, so the transmit audio does not start."); err = "cannot open the sound card output" + (device.empty() ? std::string() : " " + device); return false; }
         out_.setStartThreshold(rate / 20);
         return true;
     }
@@ -356,7 +358,7 @@ bool CatRigIo::prepare(const ham::HamTxCheck& gate, std::string& err) {
 bool CatRigIo::ptt(bool on, std::string& err) {
     if (on) {
         std::lock_guard<std::mutex> l(mu_);
-        if (!prepared_) { err = "the rig is keyed only through the ham transmitter (Arm), not directly"; return false; }
+        if (!prepared_) { DIAG_ERROR(322004, "Something asked to key the rig directly instead of through the ham transmitter, so the request is refused."); err = "the rig is keyed only through the ham transmitter (Arm), not directly"; return false; }
     } else {
         std::lock_guard<std::mutex> l(mu_);
         prepared_ = false;
