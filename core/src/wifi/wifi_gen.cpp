@@ -110,8 +110,12 @@ struct WifiGenerator::Impl {
         const double amp = cfg.amp * fr.ampScale;
         const double dph = 2 * kPi * off / cfg.rate;
         for (size_t i = 0; i < ns; i++) {
-            const size_t k = (size_t)(i * chipsPerSample);
-            const cf32 v = k < nChips ? sym[k / 11] * (float)wifi::kBarker[k % 11] : cf32(0, 0);
+            // the chips averaged over the sample's interval (an ADC behind its filter), not sampled and held: chip edges fall between samples
+            const double a = (double)i * chipsPerSample, b = a + chipsPerSample;
+            const size_t k = (size_t)a;
+            auto chip = [&](size_t c) { return c < nChips ? sym[c / 11] * (float)wifi::kBarker[c % 11] : cf32(0, 0); };
+            const double wa = std::min(b, (double)(k + 1)) - a, wb = std::max(0.0, b - (double)(k + 1));
+            const cf32 v = (chip(k) * (float)wa + chip(k + 1) * (float)wb) / (float)chipsPerSample;
             ph = std::remainder(ph + dph, 2 * kPi);
             const cf32 lo((float)std::cos(ph), (float)std::sin(ph));
             q.push_back((float)amp * v * lo);
@@ -149,8 +153,12 @@ struct WifiGenerator::Impl {
         const double amp = cfg.amp * fr.ampScale;
         const double dph = 2 * kPi * off / cfg.rate;
         for (size_t i = 0; i < ns; i++) {
-            const size_t k = (size_t)(i * chipsPerSample);
-            const double v = k < nChips ? sym[k / 11] * wifi::kBarker[k % 11] : 0;
+            // the chips averaged over the sample's interval (an ADC behind its filter), not sampled and held: chip edges fall between samples
+            const double a = (double)i * chipsPerSample, b = a + chipsPerSample;
+            const size_t k = (size_t)a;
+            auto chip = [&](size_t c) { return c < nChips ? (double)sym[c / 11] * wifi::kBarker[c % 11] : 0.0; };
+            const double wa = std::min(b, (double)(k + 1)) - a, wb = std::max(0.0, b - (double)(k + 1));
+            const double v = (chip(k) * wa + chip(k + 1) * wb) / chipsPerSample;
             ph = std::remainder(ph + dph, 2 * kPi);
             q.push_back(cf32((float)(amp * v * std::cos(ph)), (float)(amp * v * std::sin(ph))));
             nGen++;
