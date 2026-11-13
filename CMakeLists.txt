@@ -1518,6 +1518,10 @@ if(DECT2_BUILD_TESTS)
   target_link_libraries(test_modebuilder PRIVATE dect2_modebuilder)
   add_test(NAME modebuilder COMMAND test_modebuilder quick)
   add_test(NAME modebuilder_sweep COMMAND test_modebuilder sweep)
+  add_executable(test_mb_signal tests/modebuilder/test_mb_signal.cpp)   # the Signal view (histogram / constellation data) of the Mode Builder
+  target_link_libraries(test_mb_signal PRIVATE dect2_modebuilder)
+  target_compile_definitions(test_mb_signal PRIVATE _USE_MATH_DEFINES)
+  add_test(NAME mb_signal COMMAND test_mb_signal)
 
   # automations: expression language, rules engine, Lua sandbox, templates, recipes
   add_executable(test_automation tests/automation/test_automation.cpp)

@@ -70,6 +70,14 @@ struct Receiver::Impl {
     std::mutex mu;
     std::vector<Frame> out;
     RxStats st;
+    // the Signal view: the symbol-timed values of the last kSigCap symbols
+    static constexpr size_t kSigCap = 2048;
+    mutable std::mutex sigMu;
+    std::vector<float> sigR;         // value at the strobe (FSK: in deviations; envelope: amplitude)
+    std::vector<uint8_t> sigLvl;
+    std::vector<cf> sigZ;            // PSK point after carrier recovery
+    size_t sigPos = 0, sigCnt = 0;
+    double sigLo = -1, sigHi = 1, sigCfreq = 0;
 
     explicit Impl(const Definition& def) : d(def) {}
 
@@ -166,6 +174,11 @@ struct Receiver::Impl {
         lo = -1; hi = 1;
         cph = 0; cfreq = 0; agc = 1; prevIdx = 0;
         S.clear(); Sopen.clear(); Ssnr.clear(); Tpos.clear();
+        {
+            std::lock_guard<std::mutex> sl(sigMu);
+            sigR.assign(kSigCap, 0.f); sigLvl.assign(kSigCap, 0); sigZ.assign(kSigCap, cf(0, 0));
+            sigPos = sigCnt = 0; sigLo = -1; sigHi = 1; sigCfreq = 0;
+        }
         symBase = 0; searchFrom = 0; inCount = 0;
         valueOf.assign((size_t)M, 0);
         for (int L = 0; L < M; L++) valueOf[(size_t)L] = !d.symbolMap.empty() ? d.symbolMap[(size_t)L] : (d.gray && M > 2) ? (L ^ (L >> 1)) : L;
@@ -182,6 +195,101 @@ struct Receiver::Impl {
         st = RxStats{};
         st.fs1 = fs1;
         st.symbolRateHz = Rs;
+    }
+
+
+    SignalView view() const {
+        SignalView v;
+        v.mod = d.mod;
+        v.levels = M;
+        std::lock_guard<std::mutex> sl(sigMu);
+        v.samples = sigCnt;
+        if (sigCnt < 64) return v;
+        v.have = true;
+        const size_t n = sigCnt, first = (sigPos + kSigCap - n) % kSigCap;
+        if (psk) {
+            // least-squares gain onto the ideal points: the displayed constellation and the EVM do not depend on the AGC's level
+            double num = 0;
+            for (size_t i = 0; i < n; i++) {
+                const size_t k = (first + i) % kSigCap;
+                const double ang = 2 * kPi * sigLvl[k] / M;
+                num += sigZ[k].real() * std::cos(ang) + sigZ[k].imag() * std::sin(ang);
+            }
+            const double gain = num > 1e-9 ? (double)n / num : 1.0;
+            double e2 = 0, p2 = 0;
+            for (size_t i = 0; i < n; i++) {
+                const size_t k = (first + i) % kSigCap;
+                const double ang = 2 * kPi * sigLvl[k] / M;
+                const double pe = wrap(std::atan2((double)sigZ[k].imag(), (double)sigZ[k].real()) - ang);
+                p2 += pe * pe;
+                const double dx = gain * sigZ[k].real() - std::cos(ang), dy = gain * sigZ[k].imag() - std::sin(ang);
+                e2 += dx * dx + dy * dy;
+            }
+            const double evm = std::sqrt(e2 / (double)n);
+            v.evmPct = 100 * evm;
+            // the decision is made on the phase: separation = angle between neighbouring points / rms phase error (the amplitude scatter
+            // is in the EVM but does not move a PSK decision)
+            const double sa = std::max(1e-6, std::sqrt(p2 / (double)n));
+            v.separation = std::min(99.0, (2 * kPi / M) / sa);
+            v.snrDb = -20 * std::log10(std::max(evm, 1e-6));
+            v.hasEbn0 = true;
+            v.ebn0Db = v.snrDb - 10 * std::log10((double)bps);
+            v.offsetHz = sigCfreq * Rs / (2 * kPi);
+            v.resolved = v.separation >= 4;
+            v.clusters = v.resolved ? M : 0;
+            const size_t keep = std::min<size_t>(n, 512);
+            for (size_t i = n - keep; i < n; i++) v.points.push_back(sigZ[(first + i) % kSigCap] * (float)gain);
+            return v;
+        }
+        const double sc = fsk ? dev : 1.0;
+        v.unit = fsk ? "Hz" : "";
+        std::vector<double> x(n);
+        std::vector<double> sum((size_t)M, 0.0), sum2((size_t)M, 0.0);
+        std::vector<size_t> cnt((size_t)M, 0);
+        for (size_t i = 0; i < n; i++) {
+            const size_t k = (first + i) % kSigCap;
+            x[i] = sigR[k] * sc;
+            const size_t L = std::min<size_t>(sigLvl[k], (size_t)M - 1);
+            sum[L] += x[i]; sum2[L] += x[i] * x[i]; cnt[L]++;
+        }
+        std::vector<double> srt = x;
+        std::sort(srt.begin(), srt.end());
+        double lo = srt[(size_t)((double)(n - 1) * 0.005)], hi = srt[(size_t)((double)(n - 1) * 0.995)];
+        for (int k = 0; k < M; k++) if (cnt[(size_t)k]) { const double c = sum[(size_t)k] / (double)cnt[(size_t)k]; lo = std::min(lo, c); hi = std::max(hi, c); }
+        const double pad = std::max((hi - lo) * 0.1, 1e-9);
+        v.histMin = lo - pad; v.histMax = hi + pad;
+        v.hist.assign(64, 0.f);
+        for (double xv : x) {
+            const int b = (int)std::floor((xv - v.histMin) / (v.histMax - v.histMin) * 64);
+            if (b >= 0 && b < 64) v.hist[(size_t)b] += 1.f;
+        }
+        // the slicer's thresholds now, and the midpoints of the measured level centres
+        for (int k = 0; k + 1 < M; k++) v.thresholds.push_back((sigLo + (k + 0.5) * (sigHi - sigLo) / (M - 1)) * sc);
+        bool all = true;
+        double var = 0;
+        size_t tot = 0;
+        std::vector<double> cen((size_t)M, 0.0);
+        for (int k = 0; k < M; k++) {
+            const size_t c = cnt[(size_t)k];
+            if (c < 3) { all = false; continue; }
+            cen[(size_t)k] = sum[(size_t)k] / (double)c;
+            var += sum2[(size_t)k] - (double)c * cen[(size_t)k] * cen[(size_t)k];
+            tot += c;
+        }
+        if (!all || tot == 0) return v;
+        const double sigma = std::max(std::sqrt(std::max(var, 0.0) / (double)tot), 1e-12 * std::max(1.0, std::fabs(hi - lo)));
+        double gap = 1e300;
+        for (int k = 0; k + 1 < M; k++) gap = std::min(gap, cen[(size_t)k + 1] - cen[(size_t)k]);
+        v.separation = std::min(99.0, gap / sigma);
+        v.snrDb = 20 * std::log10(std::max(v.separation, 1e-6) / 2);
+        for (int k = 0; k + 1 < M; k++) v.measuredThresholds.push_back((cen[(size_t)k] + cen[(size_t)k + 1]) / 2);
+        v.resolved = gap > 0 && v.separation >= 4;
+        if (v.resolved) {
+            v.clusters = M;
+            v.centres = cen;
+            if (fsk) { v.deviationHz = (cen.back() - cen.front()) / 2; v.offsetHz = (cen.back() + cen.front()) / 2; }
+        }
+        return v;
     }
 
     cf interp(double t) const {
@@ -369,6 +477,10 @@ struct Receiver::Impl {
         }
     }
 
+    // the Signal view takes a symbol only while the signal is really there: not in the squelch hang time after a burst, where the
+    // strobes sit on noise (it would smear every cluster), and not while the levels / the carrier loop settle at the start of a burst (24 symbols, PSK 48)
+    bool present() const { return open && sinceOpen > (psk ? 48 : 24) && pwS > noise * std::max(thrLin, 4.0); }
+
     void strobe() {
         const cf y = interp(tNext), ym = interp(tNext - sps / 2);
         sinceOpen++;
@@ -392,6 +504,12 @@ struct Receiver::Impl {
             e = (B - A) * Mi * 0.5;
             if (fsk && (std::fabs(r) > 1.4 || std::fabs(ym.real()) > 1.4 || std::fabs(yPrev.real()) > 1.4)) e = 0;   // a click (burst edge, impulse)
             yPrev = y;
+            if (present() && (!fsk || std::fabs(r) < 1.4)) {
+                std::lock_guard<std::mutex> sl(sigMu);
+                sigR[sigPos] = (float)r; sigLvl[sigPos] = (uint8_t)level;
+                sigPos = (sigPos + 1) % kSigCap; sigCnt = std::min(sigCnt + 1, kSigCap);
+                sigLo = lo; sigHi = hi;
+            }
         } else {
             const double a = std::abs(y);
             if (open) agc += 0.05 * (a - agc);
@@ -410,6 +528,12 @@ struct Receiver::Impl {
             const cf dz = z - zp;
             e = (dz.real() * zm.real() + dz.imag() * zm.imag()) * 0.5;
             yPrev = y;
+            if (present()) {
+                std::lock_guard<std::mutex> sl(sigMu);
+                sigZ[sigPos] = z; sigLvl[sigPos] = (uint8_t)idx;
+                sigPos = (sigPos + 1) % kSigCap; sigCnt = std::min(sigCnt + 1, kSigCap);
+                sigCfreq = cfreq;
+            }
             if (d.differential) { const int dv = ((idx - prevIdx) % M + M) % M; prevIdx = idx; level = dv; }
             else level = idx;
         }
@@ -597,6 +721,7 @@ std::vector<Frame> Receiver::take() {
     v.swap(p_->out);
     return v;
 }
+SignalView Receiver::signalView() const { return p_->view(); }
 RxStats Receiver::stats() const { std::lock_guard<std::mutex> lk(p_->mu); return p_->st; }
 const Definition& Receiver::definition() const { return p_->d; }
 

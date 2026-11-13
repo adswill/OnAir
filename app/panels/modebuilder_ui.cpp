@@ -129,6 +129,8 @@ struct LiveView {
     std::deque<mb::Frame> frames;
     mb::RxStats stats;
     std::string msg;
+    mb::SignalView sig;            // the Signal view: filled only while its tab is on screen
+    bool wantSig = false;
 };
 LiveView V;
 
@@ -835,6 +837,91 @@ void builderOverview(App& a) {
     }
 }
 
+// ---------------------------------------------------------------- the Signal view: histogram (OOK, ASK, FSK, GFSK, GMSK) or constellation (PSK)
+void signalHistogram(const mb::SignalView& s) {
+    const bool fsk = s.mod == mb::Mod::FSK || s.mod == mb::Mod::GFSK || s.mod == mb::Mod::GMSK;
+    if (!plt::BeginPlot("##mbhist", ImVec2(-1, 220 * gUi), plt::Flags_NoLegend | plt::Flags_NoTitle)) return;
+    plt::SetupAxes(fsk ? tr("instantaneous frequency (Hz)") : tr("envelope (1 = full scale)"), tr("symbols"));
+    plt::SetupAxisLimits(plt::X1, s.histMin, s.histMax, plt::Cond_Always);
+    float h[64], x[64];
+    const double bw = (s.histMax - s.histMin) / 64;
+    float top = 1;
+    for (int i = 0; i < 64; i++) { h[i] = i < (int)s.hist.size() ? s.hist[(size_t)i] : 0.f; x[i] = (float)(s.histMin + (i + 0.5) * bw); top = std::max(top, h[i]); }
+    plt::SetupAxisLimits(plt::Y1, 0, top * 1.15, plt::Cond_Always);
+    plt::Spec bs; bs.FillColor = pal::accent(0.8f);
+    plt::PlotBars("##mbhbars", x, h, 64, bw, bs);
+    if (!s.thresholds.empty()) {   // the slicer's thresholds now
+        plt::Spec ts; ts.LineColor = ImVec4(0.95f, 0.55f, 0.25f, 0.95f); ts.LineWeight = 1.6f;
+        plt::PlotInfLines("##mbhthr", s.thresholds.data(), (int)s.thresholds.size(), ts);
+    }
+    if (!s.centres.empty()) {      // the measured level centres
+        plt::Spec cs; cs.LineColor = ImVec4(0.45f, 0.85f, 0.5f, 0.9f); cs.LineWeight = 1.2f;
+        plt::PlotInfLines("##mbhcen", s.centres.data(), (int)s.centres.size(), cs);
+    }
+    plt::EndPlot();
+}
+
+void signalConstellation(const mb::SignalView& s) {
+    const float side = std::min(ImGui::GetContentRegionAvail().x, 280 * gUi);
+    if (!plt::BeginPlot("##mbconst", ImVec2(side, side), plt::Flags_NoLegend | plt::Flags_NoTitle | plt::Flags_Equal | plt::Flags_NoMouseText)) return;
+    plt::SetupAxes(nullptr, nullptr, plt::AxisFlags_NoTickLabels, plt::AxisFlags_NoTickLabels);
+    plt::SetupAxisLimits(plt::X1, -1.6, 1.6, plt::Cond_Always);
+    plt::SetupAxisLimits(plt::Y1, -1.6, 1.6, plt::Cond_Always);
+    if (!s.points.empty()) {
+        plt::Spec sp; sp.Marker = plt::Marker_Circle; sp.MarkerSize = 1.6f; sp.Stride = sizeof(mb::cf);
+        sp.MarkerFillColor = sp.MarkerLineColor = sp.LineColor = pal::accent(0.6f);
+        const float* d = reinterpret_cast<const float*>(s.points.data());
+        plt::PlotScatter("##mbcpts", d, d + 1, (int)s.points.size(), sp);
+    }
+    std::vector<mb::cf> ideal;
+    for (int k = 0; k < s.levels; k++) ideal.push_back(mb::cf((float)std::cos(2 * 3.14159265358979 * k / s.levels), (float)std::sin(2 * 3.14159265358979 * k / s.levels)));
+    plt::Spec gs; gs.Marker = plt::Marker_Cross; gs.MarkerSize = 5.f; gs.Stride = sizeof(mb::cf);
+    gs.MarkerFillColor = gs.MarkerLineColor = gs.LineColor = ImVec4(1, 1, 1, 0.85f);
+    const float* g = reinterpret_cast<const float*>(ideal.data());
+    plt::PlotScatter("##mbcideal", g, g + 1, (int)ideal.size(), gs);
+    plt::EndPlot();
+}
+
+// Advanced: write what the Signal view measured into the definition (FSK: deviation and offset; GMSK and PSK: offset) and reload the mode
+void applyMeasured(const Registered& r) {
+    const mb::SignalView& s = V.sig;
+    mb::Definition d = V.def;
+    if (s.mod == mb::Mod::FSK) d.deviationHz = std::round(s.deviationHz);   // Gaussian filtering shrinks the symbol-time frequency: not for GFSK / GMSK
+    d.offsetHz += std::round(s.offsetHz);
+    std::string err;
+    if (mb::writeText(modesDir() + "/" + r.id + ".json", mb::toJson(d), err)) { V.msg = tr("Measured values saved to the definition."); V.family = 0; }   // V.family = 0: the mode loads again
+    else V.msg = err;
+}
+
+void signalTab(App& a, const Registered& r) {
+    (void)a;
+    V.wantSig = true;
+    const mb::SignalView& s = V.sig;
+    const bool psk = s.mod == mb::Mod::PSK;
+    if (!s.have) { ImGui::TextDisabled("%s", tr("Waiting for a signal: the view fills while the squelch is open.")); return; }
+    if (psk) signalConstellation(s); else signalHistogram(s);
+    if (!psk) ImGui::TextDisabled("%s", tr("orange: slicer thresholds, green: measured level centres"));
+    else ImGui::TextDisabled("%s", tr("crosses: ideal points, dots: symbols after carrier recovery"));
+    ImGui::Text(tr("%d of %d level clusters found    separation %.1f    %s %.1f dB"), s.clusters, s.levels, s.separation, psk ? tr("Es/N0") : tr("eye SNR"), s.snrDb);
+    if (psk) ImGui::Text(tr("EVM %.1f %%    Eb/N0 %.1f dB    carrier offset %+.0f Hz"), s.evmPct, s.ebn0Db, s.offsetHz);
+    else {
+        const char* u = s.unit;
+        for (size_t i = 0; i < s.thresholds.size() && i < 3; i++) ImGui::Text(tr("threshold %zu: %.4g %s (measured %.4g)"), i + 1, s.thresholds[i], u, i < s.measuredThresholds.size() ? s.measuredThresholds[i] : 0.0);
+        if (s.resolved && s.unit[0]) ImGui::Text(tr("measured deviation %.0f Hz    offset %+.0f Hz"), s.deviationHz, s.offsetHz);
+    }
+    if (!s.resolved) ImGui::TextColored(pal::badRed(), "%s", tr("The clusters are not separate yet: weak signal, wrong symbol rate or deviation, or only noise."));
+    if (ImGui::CollapsingHeader(trw("Advanced"))) {
+        const bool fskLike = s.mod == mb::Mod::FSK;
+        const bool canApply = s.resolved && (fskLike || psk || s.mod == mb::Mod::GMSK || s.mod == mb::Mod::GFSK);
+        ImGui::BeginDisabled(!canApply);
+        if (ImGui::Button(tr("Use measured deviation / offset"))) applyMeasured(r);
+        ImGui::EndDisabled();
+        ImGui::TextDisabled("%s", fskLike ? tr("Writes the measured deviation and the carrier offset into the definition.") :
+                                psk || s.mod == mb::Mod::GMSK || s.mod == mb::Mod::GFSK ? tr("Writes the measured carrier offset into the definition.") :
+                                tr("The slicer thresholds follow the signal by themselves; nothing to write."));
+    }
+}
+
 void customTab(App& a) {
     if (a.family == kCustomFamilyBase - 1) { builderOverview(a); return; }
     const Registered* r = R.byFamily(a.family);
@@ -853,11 +940,22 @@ void customTab(App& a) {
     const mb::RxStats& st = V.stats;
     ImGui::TextDisabled(tr("%s %d, %.0f Bd    symbols %llu    sync words %llu    frames %llu    %s    last SNR %.0f dB"), mb::modName(V.def.mod), V.def.levels(), V.def.symbolRate,
                         (unsigned long long)st.symbols, (unsigned long long)st.syncHits, (unsigned long long)st.frames, st.open ? tr("signal") : tr("quiet"), st.snrDb);
-    exportButtons(V.def, V.frames, V.msg);
-    ImGui::SameLine();
-    if (ImGui::Button(tr("Clear"))) V.frames.clear();
-    if (!V.msg.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", V.msg.c_str()); }
-    framesTable("##mblive", V.def, V.frames, std::max(160.f * gUi, ImGui::GetContentRegionAvail().y));
+    if (ImGui::BeginTabBar("##mbview")) {
+        if (ImGui::BeginTabItem(trw("Frames"))) {
+            exportButtons(V.def, V.frames, V.msg);
+            ImGui::SameLine();
+            if (ImGui::Button(tr("Clear"))) V.frames.clear();
+            if (!V.msg.empty()) { ImGui::SameLine(); ImGui::TextDisabled("%s", V.msg.c_str()); }
+            framesTable("##mblive", V.def, V.frames, std::max(160.f * gUi, ImGui::GetContentRegionAvail().y));
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem(trw("Signal"))) {
+            if (!V.msg.empty()) ImGui::TextDisabled("%s", V.msg.c_str());
+            signalTab(a, *r);
+            ImGui::EndTabItem();
+        }
+        ImGui::EndTabBar();
+    }
 }
 
 void customSummary(const App& a, std::string& l1, std::string& l2) {
@@ -924,6 +1022,7 @@ void modeBuilderFrame(App& a) {
         V.error.clear();
         V.msg.clear();
         V.stats = {};
+        V.sig = mb::SignalView();
         std::unique_ptr<mb::Receiver> rx;
         const Registered* r = R.byFamily(a.family);
         if (!r) V.error = tr("This custom mode is not registered any more.");
@@ -940,6 +1039,9 @@ void modeBuilderFrame(App& a) {
         if (!L.rx) return;
         got = L.rx->take();
         V.stats = L.rx->stats();
+        if (V.wantSig) V.sig = L.rx->signalView();
+        else V.sig = mb::SignalView();
+        V.wantSig = false;
     }
     for (mb::Frame& f : got) V.frames.push_back(std::move(f));
     while (V.frames.size() > kMaxFrames) V.frames.pop_front();

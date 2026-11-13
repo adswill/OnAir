@@ -2180,3 +2180,5 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 - #139 touch control size (docs/TOUCH-SIZE-4.1.md): Settings / View / touch Menu > Touch control size, Small .. Extra large (0.70 .. 1.40,
   Default unchanged), applied live (style rebuilt on change). shellLayout() gives short screens tighter bars and a one-row dock (Step moves
   to More): 640 x 480 panels 253 -> 330 px at Default. Tests: test_touch controlSize(); de/lt strings added (unreviewed).
+## 2026-11-13: Mode Builder Signal view (feat41-mbplots)
+Receiver::signalView() plus a Signal tab for custom modes: histogram (OOK, ASK, FSK, GFSK, GMSK) or constellation with EVM (PSK), clusters, thresholds, SNR, measured deviation and offset, Advanced button to write them to the definition. Test mb_signal; docs/MODEBUILDER-PLOTS-4.1.md.
