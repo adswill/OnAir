@@ -368,12 +368,18 @@ class MicRx {
 public:
     void setActive(bool a, double snrDb) { active_ = a; snr_ = snrDb; }
     void bind(int id, double mhz, std::function<void(const float*, size_t)> audio) { id_ = id; mhz_ = mhz; audio_ = std::move(audio); lp_.design(false, 15000, kChvMicRate, 0.7071); lp2_.design(false, 15000, kChvMicRate, 0.7071); }
+    // VHF channels (25 kHz): a 4th-order low-pass at 24 kHz on I and Q, about -26 dB at a carrier 50 kHz away (the next channel but one)
+    void setNarrow(bool on) {
+        narrow_ = on;
+        if (on) for (Biquad* b : {&nI1_, &nI2_, &nQ1_, &nQ2_}) b->design(false, 24000, kChvMicRate, 0.7071);
+    }
     double devKhz() const { return devKhz_.load(); }
     double meanHz() const { return meanF_; }
     bool fmLike() const { return fmLike_.load(); }
     void feed(const cf32* x, size_t n) {
         for (size_t i = 0; i < n; i++) {
-            const std::complex<double> s(x[i].real(), x[i].imag());
+            std::complex<double> s(x[i].real(), x[i].imag());
+            if (narrow_) s = std::complex<double>(nI2_.run(nI1_.run(s.real())), nQ2_.run(nQ1_.run(s.imag())));
             const double mag = std::abs(s);
             const std::complex<double> d = s * std::conj(prev_);
             prev_ = s;
@@ -400,7 +406,8 @@ private:
     int id_ = 0; double mhz_ = 0;
     bool active_ = false; double snr_ = 0;
     std::function<void(const float*, size_t)> audio_;
-    Biquad lp_, lp2_;
+    Biquad lp_, lp2_, nI1_, nI2_, nQ1_, nQ2_;
+    bool narrow_ = false;
     std::complex<double> prev_{1.0, 0.0};
     double sumM_ = 0, sumM2_ = 0, devAcc_ = 0, meanF_ = 0, maxPw_ = 0;
     int win_ = 0;
@@ -669,11 +676,13 @@ struct ChanVoiceReceiver::Impl {
         double shift = c.hz;
         if (s->fixed && ctr > 0) shift = plan()[(size_t)key].mhz * 1e6 - ctr;
         if (isMic()) {
-            // a VHF microphone channel is 25 kHz: with the UHF filter (160 kHz occupied) a carrier 50 kHz away is inside the passband, beats with this one
-            // and the constant-envelope test calls both "not FM"; the VHF filter keeps about ±16 kHz (measured: at 50 kHz occupied the neighbour still beat, cv above 0.35)
-            const double occ = finder.cfg().stepHz < 50000.0 ? 32000.0 : 160000.0;
+            // the channelizer's low-pass only stops aliasing into the 192 kHz output (occupiedHz sets where it rolls off, not a channel width), so a carrier
+            // 50 kHz away is passed whatever occupiedHz is: run 43498615424 printed the same numbers with 160, 50 and 32 kHz. A VHF channel (25 kHz cells)
+            // gets its own narrow filter inside MicRx instead.
+            const double occ = 160000.0;
             if (!s->ch.configure(rate, kChvMicRate, shift, occ)) return nullptr;
             s->mic = std::make_unique<MicRx>();
+            s->mic->setNarrow(finder.cfg().stepHz < 50000.0);
             const int id = c.id;
             s->mic->bind(id, s->mhz, [this, id](const float* x, size_t n) { if (micListen == id && !silent.load()) { audioWrite(10000 + id, x, n); } });
         } else {
