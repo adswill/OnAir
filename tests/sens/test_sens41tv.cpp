@@ -105,7 +105,6 @@ std::vector<const char*> offSwitches(const std::string& id) {
     if (id == "atsc") return {"DECT2_ATSC_NO41"};
     if (id.rfind("atsc3", 0) == 0) return {"DECT2_ATSC3_NO41"};
     if (id.rfind("drm", 0) == 0) return {"DECT2_DRM_NOCPE"};
-    if (id == "isdbt") return {"DECT2_ISDBT_NOICI"};
     if (id == "dvbt") return {"DECT2_DVBT_NO41"};
     if (id == "dvbt2") return {"DECT2_T2_NO41"};
     if (id == "dtmb") return {"DECT2_DTMB_NO41"};
@@ -210,7 +209,9 @@ int main(int argc, char** argv) {
         for (;;) {
             const size_t b = all.find('/', a);
             std::string cfg = all.substr(a, b == std::string::npos ? std::string::npos : b - a);
-            for (auto& ch : cfg) if (ch == ',') ch = ' ';
+            std::string q;   // each NAME=value quoted for the shell (a regex holds '|')
+            for (size_t i = 0, j; i <= cfg.size(); i = j + 1) { j = cfg.find(',', i); if (j == std::string::npos) j = cfg.size(); q += " '" + cfg.substr(i, j - i) + "'"; }
+            cfg = q;
             printf("######## configuration: %s\n", cfg.c_str());
             fflush(stdout);
             const std::string cmd = "env S41_NOAB=1 " + cfg + " S41_CHILD=1 '" + std::string(argv[0]) + "'";
