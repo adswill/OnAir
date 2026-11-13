@@ -118,9 +118,16 @@ def main():
         aft = after.get(m, {}).get("thr", {}).get("awgn") if m in after else None
         cause = PHY[m][4] if m in PHY else cls.get(m, "")
         if not cause:
-            if ref.get("kind") == "lock": cause = "lock flag only: no checked unit"
-            elif b99 and b99 > 20 * max(1.0, d.get("bw_hz", 0) / 20):
-                cause = SCENE
+            if d.get("error"): cause = "not measured: " + d["error"]
+            elif ref.get("kind") == "lock": cause = "lock flag only: no checked unit"
+            elif ref.get("kind") == "saved": cause = "counts saved output, not checked units"
+            elif meas is None: cause = "no threshold: " + d.get("note", "no point passed")
+            else: cause = "no closed-form model here (coded, multi-carrier or PHY not modelled)"
+        flags = []
+        if ref.get("m0") is not None and ref.get("m0") <= 2: flags.append("1-2 units a trial: coarse")
+        if ref.get("first_s") is not None and ref.get("secs") and ref["first_s"] >= 0.95 * ref["secs"]: flags.append("first unit at the end of the trial: latency-limited")
+        if gap is not None and gap < -2: flags.append("negative gap: the model does not fit the test signal (shorter unit, code, 50 % pass)")
+        if flags: cause += "; " + "; ".join(flags)
         out.append((m, d.get("name", m), meas, aft, th, gap, PHY[m][3] if m in PHY else "", cause, ref.get("m0"), d.get("false_units"), d.get("false_trials")))
     out.sort(key=lambda r: (-(r[5] if r[5] is not None else -99), r[0]))
     print("| mode | measured (dB in B99) | after | theory | gap (dB) | basis | units per trial | false (units / trials) | model / class |")
