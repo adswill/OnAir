@@ -1,9 +1,11 @@
 // Digital video generator: several instances, their outputs for the transmitter, and the free-text FFmpeg arguments (see videogen.h).
 #include "dect2/tv/videogen.h"
+#include "dect2/tv/ts_remux.h"
 #include <algorithm>
 #include <cctype>
 #include <deque>
 #include <map>
+#include <memory>
 #include <mutex>
 
 namespace dect2::vgen {
@@ -13,6 +15,7 @@ struct Fifo { std::deque<uint8_t> bytes; };   // whole 188 byte packets, oldest 
 std::mutex gMu;
 std::map<int, Fifo> gFifo;
 std::map<int, FrameSink> gSink;
+std::map<int, double> gRate;                   // bit/s of each running generator with Output::Transmitter
 constexpr size_t kMaxQueued = 188u * 4000;     // about 6 MB: at 10 Mbit/s a little over 4 s; the oldest packets go first when the transmitter is slower
 }
 
@@ -35,6 +38,46 @@ void generatorPush(int id, const uint8_t* packets, size_t n) {
 }
 
 void generatorClear(int id) { std::lock_guard<std::mutex> lk(gMu); gFifo[id].bytes.clear(); }
+
+bool generatorPop(int id, uint8_t* pk) {
+    std::lock_guard<std::mutex> lk(gMu);
+    auto it = gFifo.find(id);
+    if (it == gFifo.end() || it->second.bytes.size() < 188) return false;
+    std::copy(it->second.bytes.begin(), it->second.bytes.begin() + 188, pk);
+    it->second.bytes.erase(it->second.bytes.begin(), it->second.bytes.begin() + 188);
+    return true;
+}
+
+void generatorSetRate(int id, double bps) { std::lock_guard<std::mutex> lk(gMu); if (bps > 0) gRate[id] = bps; else gRate.erase(id); }
+
+double generatorRate(int id) {
+    std::lock_guard<std::mutex> lk(gMu);
+    auto it = gRate.find(id);
+    return it == gRate.end() ? 0.0 : it->second;
+}
+
+std::function<void(uint8_t*)> generatorMuxSource(const std::vector<int>& ids, const std::vector<std::string>& names, const std::string& provider,
+                                                 int firstServiceId, double outBitrate) {
+    std::vector<TsRemuxInput> in;
+    for (size_t k = 0; k < ids.size(); k++) {
+        const int id = ids[k];
+        if (id < 1 || id > kMaxInstances) return {};
+        TsRemuxInput x;
+        x.pop = [id](uint8_t* pk) { return generatorPop(id, pk); };
+        x.rate = [id] { return generatorRate(id); };
+        x.queued = [id] { return generatorQueued(id); };
+        x.flush = [id] { generatorClear(id); };
+        x.name = k < names.size() ? names[k] : std::string();
+        x.provider = provider;
+        in.push_back(std::move(x));
+    }
+    if (in.empty()) return {};
+    TsRemuxConfig c;
+    c.outBitrate = outBitrate;
+    c.firstServiceId = firstServiceId > 0 ? firstServiceId : 1;
+    auto mux = std::make_shared<TsRemux>(std::move(in), c);
+    return [mux](uint8_t* pk) { mux->next(pk); };
+}
 
 size_t generatorQueued(int id) {
     std::lock_guard<std::mutex> lk(gMu);

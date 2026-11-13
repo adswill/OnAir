@@ -10,7 +10,9 @@
 #include "dect2/audio/audioin.h"
 #include "dect2/audio/videoin.h"
 #include "dect2/common/u8file.h"
+#include "dect2/net/swarm_net.h"
 #include "dect2/tv/videogen.h"
+#include "dect2/tv/videogen_rtmp.h"
 #include <algorithm>
 #include <array>
 #include <atomic>
@@ -33,9 +35,9 @@ const Res kRes[] = {{320, 240}, {352, 288}, {640, 360}, {704, 576}, {720, 576}, 
 const double kFps[] = {1, 2, 5, 10, 12.5, 15, 20, 25, 30};
 const int kAudioKbps[] = {64, 96, 128, 160, 192, 256};
 const int kSampleRates[] = {32000, 44100, 48000};
-const char* const kSourceNames[] = {N_("Camera"), N_("Still picture"), N_("Video file"), N_("Test generator")};
+const char* const kSourceNames[] = {N_("Camera"), N_("Still picture"), N_("Video file"), N_("Test generator"), N_("RTMP server (OBS Studio)")};
 const char* const kPatternNames[] = {N_("Test card"), N_("Colour bars"), N_("Grey ramp")};
-const char* const kAudioNames[] = {N_("Silence"), N_("Test tone (1 kHz)"), N_("Sound of the video file"), N_("Microphone"), N_("Your own sound file / folder")};
+const char* const kAudioNames[] = {N_("Silence"), N_("Test tone (1 kHz)"), N_("Sound of the video file / stream"), N_("Microphone"), N_("Your own sound file / folder")};
 const char* const kOutputNames[] = {N_("MPEG-TS file (.ts)"), N_("UDP stream"), N_("RTP stream"), N_("Transmitter (OnAir TX)")};
 const char* const kFitNames[] = {N_("Stretch"), N_("Letterbox"), N_("Crop")};
 const char* const kContentNames[] = {N_("Video only"), N_("Video + audio"), N_("Video + multiple audio tracks")};
@@ -56,13 +58,14 @@ const ParamGroup kGroups[] = {
 // The "(?)" text of each settings row, by its English label (docs/VIDEO-GENERATOR.md says the same at more length)
 struct RowHelp { const char* label; const char* help; };
 const RowHelp kRowHelp[] = {
-    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer. Test generator: a copy of the transmitter's own moving test picture (the test transport stream the DVB-T2 T2Generator carries in its real PLP). Put a callsign or other text on it with the Preview tab.")},
+    {N_("Input"), N_("What is encoded. Camera: a webcam or an HDMI / SDI capture card, opened only when you press Start. Still picture: one image sent as a continuous stream (a test card, a slide). Video file: any file FFmpeg can read, played from the start and looped when the length is longer. Test generator: a copy of the transmitter's own moving test picture (the test transport stream the DVB-T2 T2Generator carries in its real PLP). RTMP server: OBS Studio, on this PC or another one on the network, streams its picture and sound to OnAir; nothing else needs to be installed. Put a callsign or other text on it with the Preview tab.")},
     {N_("Camera"), N_("The cameras and capture cards found when this window opened. Press Refresh after plugging one in.")},
     {N_("Picture"), N_("A PNG, JPEG, BMP or other picture. It is scaled to the resolution below with the picture fit you choose.")},
     {N_("Video file"), N_("The length below follows the file when you choose it. Picture and sound are decoded in step, so a file is encoded faster than real time when the output is a .ts file.")},
+    {N_("RTMP address"), N_("Where OnAir listens for the RTMP stream, rtmp://address:port/application/stream key. 0.0.0.0 listens on every network card of this PC; port 1935 is the usual RTMP port. In OBS Studio: Settings > Stream, Service \"Custom...\", and copy the Server and Stream key shown below. One sender at a time; when it stops, OnAir waits for the next one and sends a black picture meanwhile. Windows asks once whether OnAir may accept connections from the network: allow it for private networks.")},
     {N_("Pattern"), N_("The test generator's picture. Test card: colour bars, a moving sweep and a chequerboard with a bouncing ball, so motion and lost packets are easy to see. Colour bars and Grey ramp: still pictures to check colours and levels. A white bar grows along the bottom once a second.")},
     {N_("Picture fit"), N_("When the source has another shape than the output (a 4:3 camera in a 16:9 picture). Stretch: fill the picture, shapes look wider or narrower. Letterbox: keep the whole source, with black bars. Crop: fill the picture and cut the edges.")},
-    {N_("Sound"), N_("What the audio tracks carry. The test tone (1 kHz at -20 dBFS) is handy to check a receiver's sound. The sound of the video file is only there with a video file as input. Silence still makes a valid audio track.")},
+    {N_("Sound"), N_("What the audio tracks carry. The test tone (1 kHz at -20 dBFS) is handy to check a receiver's sound. The sound of the video file or of the RTMP stream is only there with a video file or the RTMP server as input. Silence still makes a valid audio track.")},
     {N_("Microphone"), N_("The sound input to use. It is opened only when you press Start.")},
     {N_("Send to"), N_("MPEG-TS file (.ts): a transport stream file; give it to the transmitter as its \"MPEG-TS / video file\", it is sent as it is. UDP or RTP stream: sent over the network in real time, to watch in VLC or feed another program. RTP adds a small header with a sequence number, so a player can see lost packets.")},
     {N_("FFmpeg arguments"), N_("Extra options for the video encoder, written like on the ffmpeg command line: -preset slow -tune zerolatency -x264-params keyint=50. They are passed to the encoder as a list of options, never through a shell, and they win over the settings above. Options that would change the input, output, container, codec, filters or hardware set-up (-i, -f, -c, -vf, -map, -hwaccel ...) are refused. An option the encoder does not know is reported under the picture after starting. Audio options are not taken.")},
@@ -171,7 +174,7 @@ std::string saveCfg(const GenConfig& c, bool advanced) {
     char b[64];
     std::string o = saveSettings(c.enc);
     o += "g.src=" + std::to_string((int)c.source) + "\n" + "g.cam=" + c.cameraId + "\n" + "g.path=" + c.path + "\n" + "g.apath=" + c.audioPath + "\n" + "g.loop=" + (c.loop ? "1" : "0") + "\n";
-    o += "g.pat=" + std::to_string(c.pattern) + "\n";
+    o += "g.pat=" + std::to_string(c.pattern) + "\n" + "g.rtmp=" + c.rtmpUrl + "\n";
     o += "g.audio=" + std::to_string((int)c.audio) + "\n" + "g.mic=" + c.micId + "\n" + "g.out=" + std::to_string((int)c.output) + "\n";
     o += "g.ts=" + c.tsPath + "\n" + "g.host=" + c.host + "\n" + "g.port=" + std::to_string(c.port) + "\n" + "g.ttl=" + std::to_string(c.ttl) + "\n";
     snprintf(b, sizeof b, "%.1f", c.slideSeconds);
@@ -197,9 +200,10 @@ void loadCfg(const std::string& text, GenConfig& c, bool& advanced) {
         if (line.compare(0, 2, "g.") != 0 || eq == std::string::npos) continue;
         const std::string k = line.substr(2, eq - 2), v = line.substr(eq + 1);
         const int i = atoi(v.c_str());
-        if (k == "src") c.source = (Source)std::clamp(i, 0, 3);
+        if (k == "src") c.source = (Source)std::clamp(i, 0, 4);
         else if (k == "pat") c.pattern = std::clamp(i, 0, 2);
         else if (k == "cam") c.cameraId = v;
+        else if (k == "rtmp" && !v.empty()) c.rtmpUrl = v.substr(0, 300);
         else if (k == "path") c.path = v;
         else if (k == "audio") c.audio = (AudioSource)std::clamp(i, 0, 4);
         else if (k == "apath") c.audioPath = v;
@@ -327,7 +331,7 @@ bool previewRunning(const State& s) { return s.gen.running() && s.previewing; }
 
 // the settings that change the preview picture: a change restarts a running preview
 std::string pictureKey(const GenConfig& c) {
-    return std::to_string((int)c.source) + "|" + c.cameraId + "|" + c.path + "|" + std::to_string(c.pattern) + "|" + std::to_string((int)c.fit) +
+    return std::to_string((int)c.source) + "|" + c.cameraId + "|" + c.rtmpUrl + "|" + c.path + "|" + std::to_string(c.pattern) + "|" + std::to_string((int)c.fit) +
            "|" + std::to_string(c.enc.width) + "x" + std::to_string(c.enc.height) + "|" + std::to_string(c.enc.fps) + "|" + (c.loop ? "1" : "0") +
            "|" + std::to_string(c.slideSeconds);
 }
@@ -393,15 +397,55 @@ void applyDrops(State& s) {
     }
 }
 
+// this PC's addresses on the local network, for the OBS settings (looked up once a few seconds, not every frame)
+std::string thisPcAddress() {
+    static std::string cached;
+    static double at = -100;
+    const double now = ImGui::GetTime();
+    if (now - at < 5) return cached;
+    at = now;
+    cached.clear();
+    for (const auto& f : dect2::swarm::privateInterfaces()) {
+        const std::string ip = std::to_string(f.ip >> 24) + "." + std::to_string((f.ip >> 16) & 255) + "." + std::to_string((f.ip >> 8) & 255) + "." + std::to_string(f.ip & 255);
+        cached += (cached.empty() ? "" : " / ") + ip;
+    }
+    return cached;
+}
+
+// RTMP server input: the address to listen on, what to type in OBS, and (streaming) what arrives
+void rtmpRows(State& s, float col, float w) {
+    GenConfig& c = s.cfg;
+    rowLabel(N_("RTMP address"), col);
+    inputText("##vgrtmp", c.rtmpUrl, w - 90 * gUi);
+    ImGui::SameLine();
+    if (ImGui::Button(tr("Default##vgrtmp"))) c.rtmpUrl = kRtmpDefaultUrl;
+    std::string lu, err, why;
+    int port = 0;
+    if (!rtmpSupported(why)) { ImGui::TextColored(ImVec4(1.f, 0.6f, 0.4f, 1), "%s: %s", tr("Not available in this build"), why.c_str()); return; }
+    if (!parseRtmpListenUrl(c.rtmpUrl, lu, port, err)) { ImGui::TextColored(ImVec4(1.f, 0.6f, 0.4f, 1), "%s", err.c_str()); return; }
+    std::string pc = thisPcAddress();
+    const bool several = pc.find(" / ") != std::string::npos;
+    if (pc.empty()) pc = "127.0.0.1";
+    std::string server, key;
+    rtmpObsSettings(c.rtmpUrl, several ? "<" + std::string(tr("this PC")) + ">" : pc, server, key);
+    ImGui::TextDisabled("%s", tr("In OBS Studio: Settings > Stream, Service \"Custom...\""));
+    ImGui::TextDisabled("  %s: %s", tr("Server"), server.c_str());
+    ImGui::TextDisabled("  %s: %s", tr("Stream key"), key.empty() ? tr("(empty)") : key.c_str());
+    if (several && server.find('<') != std::string::npos) ImGui::TextDisabled("  %s: %s", tr("This PC"), pc.c_str());   // only when listening on every card
+    const GenStats st = s.gen.stats();
+    if (s.gen.running() && !st.input.empty()) ImGui::TextColored(ImVec4(0.55f, 0.85f, 0.55f, 1), "%s", st.input.c_str());
+}
+
 void sourceSection(State& s, float col, float w) {
     GenConfig& c = s.cfg;
     ImGui::SeparatorText(tr("Source"));
     rowLabel(N_("Input"), col);
     int src = (int)c.source;
-    if (combo("##vgsrc", src, kSourceNames, 4, w)) {
+    if (combo("##vgsrc", src, kSourceNames, 5, w)) {
         c.source = (Source)src;
         if ((c.source == Source::Picture || c.source == Source::Generator) && !s.lengthEdited) c.seconds = 60;   // one minute unless changed
-        if (c.source != Source::VideoFile && c.audio == AudioSource::FromFile) c.audio = AudioSource::Tone;
+        if (c.source == Source::Rtmp) c.audio = AudioSource::FromFile;   // OBS sends its sound with the picture
+        else if (c.source != Source::VideoFile && c.audio == AudioSource::FromFile) c.audio = AudioSource::Tone;
     }
     if (c.source == Source::Camera) {
         rowLabel(N_("Camera"), col);
@@ -418,6 +462,8 @@ void sourceSection(State& s, float col, float w) {
         if (ImGui::Button(tr("Refresh##vgcam"))) startProbe(s);
         ImGui::EndDisabled();
         if (s.probed && s.cams.empty()) ImGui::TextDisabled("%s", tr("No camera found. Connect one and press Refresh."));
+    } else if (c.source == Source::Rtmp) {
+        rtmpRows(s, col, w);
     } else if (c.source == Source::Generator) {
         rowLabel(N_("Pattern"), col);
         combo("##vgpat", c.pattern, kPatternNames, 3, w);
@@ -455,8 +501,8 @@ void sourceSection(State& s, float col, float w) {
     if (ImGui::IsItemHovered()) ImGui::SetTooltip("%s", tr("When the source has another shape than the output (a 4:3 camera in 16:9): stretch it, keep it whole with black bars, or fill the picture and cut the edges"));
     rowLabel(N_("Sound"), col);
     int au = (int)c.audio;
-    std::vector<bool> en = {true, true, c.source == Source::VideoFile, true, true};
-    if (combo("##vgaudio", au, kAudioNames, 5, w, &en, N_("Only with a video file as input"))) c.audio = (AudioSource)au;
+    std::vector<bool> en = {true, true, c.source == Source::VideoFile || c.source == Source::Rtmp, true, true};
+    if (combo("##vgaudio", au, kAudioNames, 5, w, &en, N_("Only with a video file or the RTMP server as input"))) c.audio = (AudioSource)au;
     if (c.audio == AudioSource::AudioFile) {
         rowLabel(N_("Sound file or folder"), col);
         inputText("##vgapath", c.audioPath, w - 170 * gUi);
