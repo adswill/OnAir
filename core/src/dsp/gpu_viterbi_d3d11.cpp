@@ -206,7 +206,10 @@ struct GpuViterbi::Impl {
     }
     void lost(const char* where) {
         const HRESULT r = dev ? dev->GetDeviceRemovedReason() : S_OK;
-        if (r != S_OK && ready.exchange(false)) fprintf(stderr, "GpuViterbi: the device was lost (%s, 0x%08lx), using the CPU decoder from now on\n", where, (unsigned long)r); DIAG(115213, "The Direct3D 11 device was lost during %s with reason 0x%08lx, so the CPU Viterbi decoder is used from now on.", where, (unsigned long)r);
+        if (r != S_OK && ready.exchange(false)) {
+            fprintf(stderr, "GpuViterbi: the device was lost (%s, 0x%08lx), using the CPU decoder from now on\n", where, (unsigned long)r);
+            DIAG(115213, "The Direct3D 11 device was lost during %s with reason 0x%08lx, so the CPU Viterbi decoder is used from now on.", where, (unsigned long)r);
+        }
     }
 };
 

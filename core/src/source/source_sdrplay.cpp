@@ -425,9 +425,10 @@ protected:
             if (setBias(s.biasTee, why, why1)) bias_ = s.biasTee;
         }
         radioSettings(s, f, why, why1);
-        if (port_ == 2 && (dev_.hwVer == sp::kRsp2 || dev_.hwVer == sp::kRspDuo) && f > kHiZTopHz && err.empty())
-             DIAG_ERROR(192547, "The SDRplay Hi-Z input only works from 1 kHz to 30 MHz, so a higher frequency is refused.");
-             err = "the SDRplay Hi-Z input is for 1 kHz to 30 MHz: use a 50 ohm input above that";
+        if (port_ == 2 && (dev_.hwVer == sp::kRsp2 || dev_.hwVer == sp::kRspDuo) && f > kHiZTopHz && err.empty()) {
+            DIAG_ERROR(192547, "The SDRplay Hi-Z input only works from 1 kHz to 30 MHz, so a higher frequency is refused.");
+            err = "the SDRplay Hi-Z input is for 1 kHz to 30 MHz: use a 50 ohm input above that";
+        }
         if (!live || (why == sp::Update_None && why1 == sp::Update_Ext1_None)) return true;
         // one update for everything that changed; the API refuses a new one while the last is still being applied
         sp::ErrT e = sp::Success;
@@ -473,7 +474,8 @@ protected:
         initState_ = 1;
         while (run_) {
             if (removed_) {   // returning lets the base class release the radio and open it again every second until it is back
-    DIAG(721652, "The SDRplay radio was unplugged or stopped working, so the stream ends.");             fprintf(stderr, "SDRplay: the radio was unplugged or stopped working; the stream has ended\n");
+                DIAG(721652, "The SDRplay radio was unplugged or stopped working, so the stream ends.");
+                fprintf(stderr, "SDRplay: the radio was unplugged or stopped working; the stream has ended\n");
                 fflush(stderr);
                 break;
             }
@@ -516,7 +518,7 @@ private:
         while (initState_.load() == 0 && std::chrono::steady_clock::now() < deadline)
             std::this_thread::sleep_for(std::chrono::milliseconds(5));
         if (initState_.load() == 1) return true;
-         DIAG_ERROR(492336, "The SDRplay radio did not start streaming in time, so the radio is closed again.");
+         DIAG_ERROR(492336, "The SDRplay radio did not start streaming (an error, or no samples within 5 seconds), so the radio is closed again.");
          err = initState_.load() < 0 ? initErr_ : "SDRplay: timed out waiting for the radio to start";
         stop();
         return false;

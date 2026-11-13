@@ -574,11 +574,13 @@ public:
         if (t.sampleRate < 2.083e6) { DIAG_ERROR(735908, "The PlutoSDR converter needs at least 2.083 Msps but %.0f samples per second were asked for, so the transmitter does not start.", t.sampleRate); err = "PlutoSDR: the converter runs from 2.083 Msps up; " + std::to_string(t.sampleRate / 1e6) + " Msps is below that"; shut(); return false; }
         if (radio_->rx) {
             if (radio_->rxFir) {
-    DIAG_ERROR(203937, "The PlutoSDR receiver uses the low-rate filter, so the transmitter does not start until it is turned off.");             err = "PlutoSDR: RX is using the low-rate FIR; disable Low-rate FIR (RX only) and restart RX before starting TX";
+                DIAG_ERROR(203937, "The PlutoSDR receiver uses the low-rate filter, so the transmitter does not start until it is turned off.");
+                err = "PlutoSDR: RX is using the low-rate FIR; disable Low-rate FIR (RX only) and restart RX before starting TX";
                 shut(); return false;
             }
             if (radio_->rxCs8) {
-    DIAG_ERROR(718802, "The PlutoSDR receiver uses 8-bit samples, so the transmitter does not start until it uses CS16.");             err = "PlutoSDR: RX is using CS8; select CS16 in IQ format and restart RX before starting TX";
+                DIAG_ERROR(718802, "The PlutoSDR receiver uses 8-bit samples, so the transmitter does not start until it uses CS16.");
+                err = "PlutoSDR: RX is using CS8; select CS16 in IQ format and restart RX before starting TX";
                 shut(); return false;
             }
             if (!duplexRate(t.sampleRate, radio_->rxRate, err) || !radio_->duplex(err)) { shut(); return false; }

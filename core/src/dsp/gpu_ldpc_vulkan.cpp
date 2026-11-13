@@ -383,8 +383,10 @@ struct GpuLdpc::Impl {
     bool fail(const char* where, Result r) {
         if (r == ERROR_DEVICE_LOST || r == TIMEOUT || r == -1) {
             const bool wasT2 = ready.exchange(false), wasQc = qcReady.exchange(false);
-            if (wasT2 || wasQc)
-                fprintf(stderr, "GpuLdpc: the Vulkan device failed (%s, %d), using the CPU decoder from now on\n", where, (int)r); DIAG(486849, "The Vulkan device failed during %s with result %d, so the CPU LDPC decoder is used from now on.", where, (int)r);
+            if (wasT2 || wasQc) {
+                fprintf(stderr, "GpuLdpc: the Vulkan device failed (%s, %d), using the CPU decoder from now on\n", where, (int)r);
+                DIAG(486849, "The Vulkan device failed during %s with result %d, so the CPU LDPC decoder is used from now on.", where, (int)r);
+            }
         }
         return false;
     }
