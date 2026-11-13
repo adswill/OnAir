@@ -32,7 +32,7 @@ bool syncAt(const std::vector<uint8_t>& bits, size_t i) {
 // decimation factor is needed, so any input rate from 0.1 to 20+ Msps works), takes the FM discriminator at 4x
 // oversampling and looks for the training sequence at the tail of that stream only (O(1) per sample, never a rescan
 // of the whole history: that rescan was the CPU spin seen with an RSP1B at 2 and 4 Msps).
-constexpr int kOsr = 4;
+constexpr int kOsr = 8;   // 4.1: 8 samples per bit (was 4): the timing is chosen to an eighth of a bit
 // Stage A: integrate-and-dump to 16 samples per bit, stage B: four one-pole low-passes (12 kHz) and take every 4th sample.
 constexpr int kStageA = 16;
 // 4.1: alpha 0.2 put the four poles' -3 dB point at 4.8 kHz, the deviation itself (h 0.5 at 19.2 kb/s is +-4.8 kHz): the 0101 training sequence
@@ -88,11 +88,10 @@ struct Vdl4Receiver::Impl {
 
     // tuning (environment, measurements only): channel filter pole, data sampling offset in samples, half-width of the sample sum
     double lpa = 0.36;
-    int dOff = 0, half = 1;
+    int half = 2;
     void rebuildCh() {
         lpa = envOr("DECT2_VDL4_LPA", 0.36); if (!(lpa > 0.01 && lpa < 1.0)) lpa = 0.36;
-        dOff = (int)envOr("DECT2_VDL4_OFF", 0); dOff = std::max(-2, std::min(2, dOff));
-        half = (int)envOr("DECT2_VDL4_HALF", 1); half = std::max(0, std::min(1, half));
+        half = (int)envOr("DECT2_VDL4_HALF", 2); half = std::max(0, std::min(3, half));
         ch.clear();
         rebuild = false;
         if (!(rate >= 1e3) || !std::isfinite(rate)) return;   // unusable rate: no channels, the status line says so
@@ -170,10 +169,26 @@ struct Vdl4Receiver::Impl {
         burst.reserve(kVdl4DataStartBit + kBurstBits);
         for (int i = 0; i < kVdl4RampBits; i++) burst.push_back(1);
         for (int i = 0; i < kVdl4SyncBits; i++) burst.push_back(kVdl4SyncPattern[i]);
-        // 4.1: each bit from three discriminator samples about its centre (half the noise of one sample; a whole bit takes in too much of
-        // the neighbours behind the partial-response GMSK pulse)
-        for (long k = c.syncEnd + kOsr + dOff; k + 2 < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr)
-            burst.push_back(sumAt(c, k) > c.thr ? 1 : 0);
+        // 4.1: the sampling phase: the one (to an eighth of a bit, within half a bit of the sync fit) at which the 24 training bits correlate
+        // best with their pattern, the threshold their mean there. Each bit is then the sum of 2 half + 1 discriminator samples about its
+        // centre (less noise than one sample; a whole bit takes in too much of the neighbours behind the partial-response GMSK pulse).
+        long centre = c.syncEnd;
+        double thr = c.thr, best = -1e300;
+        for (int p = -kOsr / 2; p < kOsr / 2; p++) {
+            double v[kVdl4SyncBits], mean = 0, corr = 0;
+            bool okRange = true;
+            for (int j = 0; j < kVdl4SyncBits; j++) {
+                const long q = c.syncEnd + p - (long)kOsr * j;
+                if (q - half < 0 || q + half >= (long)c.line.size()) { okRange = false; break; }
+                v[j] = sumAt(c, q); mean += v[j];
+            }
+            if (!okRange) continue;
+            mean /= kVdl4SyncBits;
+            for (int j = 0; j < kVdl4SyncBits; j++) corr += kVdl4SyncPattern[kVdl4SyncBits - 1 - j] ? v[j] - mean : mean - v[j];
+            if (corr > best) { best = corr; centre = c.syncEnd + p; thr = mean; }
+        }
+        for (long k = centre + kOsr; k + half < (long)c.line.size() && (int)burst.size() < kVdl4DataStartBit + kBurstBits; k += kOsr)
+            burst.push_back(sumAt(c, k) > thr ? 1 : 0);
         if (kDebug) std::fprintf(stderr, "vdl4dbg burst f=%.0f err=%d thr=%.3f\n", c.freqHz, c.bestErr, c.thr);
         std::vector<uint8_t> data;
         if (vdl4BurstDataBits(burst, data)) {
@@ -215,14 +230,14 @@ struct Vdl4Receiver::Impl {
             const double thr3 = (2 * half + 1) * c.sum96 / kSyncSamples;
             for (int j = 0; j < kVdl4SyncBits + 4 && err <= kSyncErr; j++) {
                 const uint8_t want = j < kVdl4SyncBits ? kVdl4SyncPattern[kVdl4SyncBits - 1 - j] : 1;
-                const size_t k = (size_t)(n - 2 - (long)kOsr * j);
+                const size_t k = (size_t)(n - 1 - half - (long)kOsr * j);
                 err += (sumAt(c, (long)k) > thr3 ? 1 : 0) != want;
             }
             if (kDebug && err <= kSyncErr && c.lockLeft == 0) std::fprintf(stderr, "vdl4dbg sync f=%.0f n=%ld err=%d chp/floor=%.1f\n", c.freqHz, n, err, chp / std::max(c.floor, 1e-12f));
             if (c.lockLeft == 0 && err <= kSyncErr && chp > 2.5f * c.floor) {   // squelch: noise alone must not start a lock
                 c.lockLeft = 5 * kOsr; c.bestErr = 99; }
             if (c.lockLeft > 0) {
-                if (err < c.bestErr) { c.bestErr = err; c.bestN = n - 1; c.bestThr = (2 * half + 1) * c.sum96 / kSyncSamples; }
+                if (err < c.bestErr) { c.bestErr = err; c.bestN = n - 1 - half; c.bestThr = (2 * half + 1) * c.sum96 / kSyncSamples; }
                 if (--c.lockLeft == 0) {
                     c.thr = c.bestThr;
                     c.syncEnd = c.bestN;               // one sample after the fitted bit centre

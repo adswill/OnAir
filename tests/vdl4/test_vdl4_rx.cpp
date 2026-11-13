@@ -66,8 +66,8 @@ int main() {
         }
     }
     if (getenv("DECT2_VDL4_EXPLORE")) {   // temporary: the demodulator's settings against SNR (4.1 tuning)
-        for (const char* lpa : {"0.2", "0.28", "0.36", "0.45"}) for (const char* off : {"-1", "0", "1"}) for (const char* half : {"0", "1"}) {
-            setenv("DECT2_VDL4_LPA", lpa, 1); setenv("DECT2_VDL4_OFF", off, 1); setenv("DECT2_VDL4_HALF", half, 1);
+        for (const char* lpa : {"0.2", "0.28", "0.36", "0.45"}) for (const char* off : {"-"}) for (const char* half : {"0", "1", "2", "3"}) {
+            setenv("DECT2_VDL4_LPA", lpa, 1); setenv("DECT2_VDL4_HALF", half, 1);
             std::string row;
             for (double snr : {12.0, 14.0, 16.0, 18.0, 20.0}) {
                 uint64_t ok = 0;
@@ -83,7 +83,7 @@ int main() {
             }
             printf("EXPLORE lpa %s off %s half %s:%s (of 12)\n", lpa, off, half, row.c_str());
         }
-        unsetenv("DECT2_VDL4_LPA"); unsetenv("DECT2_VDL4_OFF"); unsetenv("DECT2_VDL4_HALF");
+        unsetenv("DECT2_VDL4_LPA"); unsetenv("DECT2_VDL4_HALF");
     }
     // 4.1 sensitivity: SNR in the 25 kHz channel (the generator's definition), 2 Msps, carrier offsets of 0 and +-2.5 kHz, a +50 ppm sample
     // clock on the offset runs, two noise seeds. Before 4.1 the squelch worked on the power of the whole input band and needed about 21 dB here.
