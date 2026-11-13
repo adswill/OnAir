@@ -27,7 +27,7 @@ int main() {
     FileOptions fo;
     e.setStandard(43);
     e.specx().setFftSize(4096);
-    e.specx().setAveraging(8);
+    e.specx().setAveraging(32);   // 8 frames leave the -3 dB edge noisy enough to miss the 5 % symbol-rate band on a slow runner
     CHECK(e.start(dev, t, fo), "engine start");
     CHECK(e.activeStandard() == 42, "active standard %d", e.activeStandard());
     RxTelemetry rx;
