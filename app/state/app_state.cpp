@@ -208,6 +208,7 @@ void refreshDevices(App& a) {
         a.usbHints = usbRadioHints();   // sound cards do not mean a USB radio was found
     for (auto& h : sdrplayApiHints()) a.usbHints.push_back(h);
     for (auto& h : limeLibraryHints()) a.usbHints.push_back(h);
+    for (auto& h : spectranApiHints()) a.usbHints.push_back(h);
     if (hadRadio) {
         int idx = -1;
         for (int i = 2; i < (int)a.devices.size(); i++) if (a.devices[i].name == keep) { idx = i; break; }

@@ -137,6 +137,11 @@ std::vector<std::string> sdrplayApiHints() {
     return {"An SDRplay RSP is plugged in but the SDRplay API is not installed: install the free Hardware API from sdrplay.com/hardware-api (separately from SDRconnect), then restart OnAir"};
 }
 
+std::vector<std::string> spectranApiHints() {
+    if (native::spectranApiInstalled() || !usbVendorPresent(0x2f72)) return {};
+    return {"An Aaronia SPECTRAN is plugged in but the Aaronia RTSA-Suite PRO is not installed: install it from aaronia.com/downloads (it brings the RTSA API library OnAir uses), then restart OnAir"};
+}
+
 std::vector<std::string> limeLibraryHints() {
     // the Mini (FTDI FT601, 0403:601f) is on the bus but the radio list has no LimeSDR: LimeSuite is missing, or it lists nothing
     if (!usbDevicePresent(0x0403, 0x601f)) return {};

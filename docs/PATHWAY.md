@@ -2132,3 +2132,16 @@ README cut from 801 to about 150 lines: what it is, install, quick start, mode t
 
 ## 2026-11-13: licence enforcement note (ARGUS)
 - README (License) and NOTICE.md say OnAir is protected by ARGUS, the project's code-provenance system: public code is scanned for OnAir-derived code, the author is asked first, then a takedown if it isn't fixed.
+
+## 2026-11-12 (feat41-spectran): Aaronia SPECTRAN V6 / V6 ECO (#482, docs/SPECTRAN-V6.md)
+- New native driver core/src/source/source_spectran.cpp through Aaronia's RTSA API (AaroniaRTSAAPI from the RTSA-Suite PRO, loaded at run
+  time, not shipped). Interface declared in aartsa_min.h from Aaronia's public RTSA-API-Samples README and samples; result codes checked
+  against SatDump's and two other wrappers' lists; SDR++ spectran_source read as a reference. No Aaronia header is bundled (not public, the
+  samples repository states no licence).
+- Receive: iqreceiver (any rate, span = rate / 1.5) or raw (clock / 2^k); gain = reference level (+10 dBm at 0 dB), scale follows the level
+  the device took; live frequency / level / amplifier; rate changes stop and restart the device; unplug and reopen. Transmit: iqtransmitter,
+  timed packets a lead time ahead of the stream clock, 1.0 = 0 dBm before main/transgain, end flags on close; warn-only.
+- Missing SDK: plain message, Fix it entry, radio-list hint for USB vendor 2f72. Credits rows added (gen_credits.py).
+- Tests: spectran (fake RTSA API: listing, both modes, rate plan, scaling, I/Q order, retunes, unplug, busy, TX pacing / flags) and
+  spectran_missing (no library, Init failing). GitHub quick run 43363137455: spectran, spectran_missing, fixit, sdrplay passed, dect2 built;
+  native fails 4 RTL-SDR V4 / HF+ checks, the same 4 on integ-40 (run 43368500233), not from this branch. Untested on a device.

@@ -12,6 +12,7 @@ OnAir supports the **HackRF One and HackRF Pro** natively, and drives these radi
 | **PlutoSDR** | ⚠️ | ✅ | Over its USB cable it streams about 4 Msps, too little for a 6 – 8 MHz channel. Library not included on macOS yet: install libiio 0.26 (Analog Devices' macOS package, or Homebrew) |
 | **Airspy R2 / Mini**, **SDRplay RSP** | Should work | ✅ | SDRplay: install the [Hardware API](https://sdrplay.com/hardware-api/) first (RSP1, RSP1A, RSP1B, RSP2, RSPdx, RSPdx-R2). An Airspy Mini lists 6 and 3 Msps; 10 Msps is an opt-in in its settings, untested on a Mini |
 | **HydraSDR RFOne** | Untested | ✅ | Native driver, receive only, 24 MHz to 1.8 GHz, 10 Msps. Needs `libhydrasdr` installed (loaded at run time, not included), see [DEVICES.md](../DEVICES.md) |
+| **Aaronia SPECTRAN V6 / V6 ECO** | Untested | Untested | Receive and transmit through Aaronia's RTSA API; written from Aaronia's documentation, **needs a user test**. Install the RTSA-Suite PRO (Windows or Linux, not included), see [docs/SPECTRAN-V6.md](SPECTRAN-V6.md) |
 | **SDRplay RSPduo** | Streaming tested at 10 MS/s; TV decoding untested | FM and RDS tested on Windows | Select Tuner 1 SMA, Tuner 2 SMA, or Tuner 1 Hi-Z; one input at a time. [Setup and validation](../DEVICES.md#sdrplay-rspduo) |
 | **RTL-SDR** | ❌ | ✅ | An RTL-SDR Blog V4 or V4 Lite works for HF on macOS too |
 | **Airspy HF+** | ❌ | Narrow channels only | Specified for HF and 60 – 260 MHz |
